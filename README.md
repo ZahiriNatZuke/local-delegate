@@ -10,6 +10,12 @@ llama-swap, Ollama, LM Studio, vLLM.
 [![CI](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
+## Demo
+
+![Dashboard de ahorro de local-delegate](docs/assets/dashboard.png)
+
+*Dashboard embebido (datos de ejemplo): tokens de contexto conservados, ahorro por herramienta y modelo, origen del input (`path` = ahorro real) y actividad reciente. Se sirve en `http://127.0.0.1:9393`.*
+
 ## ¿Por qué?
 
 Cuando Claude tiene que resumir un log enorme, clasificar, extraer campos o generar boilerplate,

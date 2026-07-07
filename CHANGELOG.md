@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- Recipes de backends en `docs/recipes/`: llama-swap (RTX 5060 Blackwell) y Ollama.
+- Sección *Demo* en el README con screenshot del dashboard de ahorro.
+
+### Changed
+- `publish.yml`: `uv publish --check-url` para hacer la publicación idempotente ante
+  re-ejecuciones sobre un tag existente.
+
 ## [0.1.0] - 2026-07-07
 
 ### Added

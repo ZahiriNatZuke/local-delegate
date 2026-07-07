@@ -18,6 +18,8 @@ wheels/
 _demo*
 scratch_*
 scratch/
+dashboard.js
+.playwright-mcp/
 
 # Config local de Claude Code (lleva rutas absolutas / puede tener secretos)
 .claude/
