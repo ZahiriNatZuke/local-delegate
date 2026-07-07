@@ -1,0 +1,32 @@
+name: Publish
+
+# Publica en PyPI al empujar un tag vX.Y.Z, usando Trusted Publishing (OIDC):
+# sin tokens guardados en secrets. Requiere configurar un "trusted publisher" en PyPI
+# para el proyecto local-delegate-mcp (owner ZahiriNatZuke, repo local-delegate,
+# workflow publish.yml, environment pypi).
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # necesario para OIDC / Trusted Publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Build
+        run: uv build
+
+      - name: Publish to PyPI (trusted publishing)
+        # --check-url hace el publish idempotente: si la versión ya existe en el índice,
+        # salta los archivos ya subidos en vez de fallar (re-ejecuciones sobre un tag existente).
+        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/
