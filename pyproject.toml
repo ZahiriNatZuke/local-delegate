@@ -1,0 +1,63 @@
+[project]
+name = "local-delegate-mcp"
+version = "0.1.0"
+description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Yohan González Almaguer" }]
+keywords = ["mcp", "llm", "local", "openai-compatible", "claude", "llama-swap", "ollama", "quota"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "mcp>=1.2",
+    "httpx>=0.27",
+    "platformdirs>=4",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
+
+[project.scripts]
+# Dos alias al mismo entry point: `local-delegate-mcp` hace que `uvx local-delegate-mcp`
+# funcione directo (comando == nombre del paquete); `local-delegate` es el alias corto.
+local-delegate-mcp = "local_delegate:main"
+local-delegate = "local_delegate:main"
+
+[project.urls]
+Homepage = "https://github.com/ZahiriNatZuke/local-delegate"
+Repository = "https://github.com/ZahiriNatZuke/local-delegate"
+Issues = "https://github.com/ZahiriNatZuke/local-delegate/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/local_delegate"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "pre-commit>=3.7",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+# Reglas por defecto (E4/E7/E9, F) + imports ordenados (I).
+extend-select = ["I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

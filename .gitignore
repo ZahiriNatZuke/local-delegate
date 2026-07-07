@@ -1,0 +1,27 @@
+# Datos de uso (NUNCA versionar): el log de delegaciones
+usage.jsonl
+*.jsonl
+
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Entornos virtuales
+.venv/
+.env
+
+# Artefactos de demo / scratch
+_demo*
+scratch_*
+scratch/
+
+# Config local de Claude Code (lleva rutas absolutas / puede tener secretos)
+.claude/
+
+# Secretos y credenciales (por si acaso; solo se versionan *.example)
+*.secret
+secrets.*

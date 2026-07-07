@@ -1,0 +1,34 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ZahiriNatZuke/local-delegate",
+  "description": "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota.",
+  "repository": {
+    "url": "https://github.com/ZahiriNatZuke/local-delegate",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "local-delegate-mcp",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "LOCAL_DELEGATE_BASE_URL",
+          "description": "OpenAI-compatible endpoint (llama-swap, Ollama, LM Studio, vLLM). Default http://127.0.0.1:9292/v1",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "LOCAL_DELEGATE_API_KEY",
+          "description": "Bearer token for the endpoint, if it requires one.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

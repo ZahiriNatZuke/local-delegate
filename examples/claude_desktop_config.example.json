@@ -1,0 +1,12 @@
+{
+  "_comment": "Plantilla para Claude Desktop / Claude Code. Copia el bloque mcpServers a tu config real. NUNCA subas tu config real: puede contener secretos.",
+  "mcpServers": {
+    "local-delegate": {
+      "command": "uvx",
+      "args": ["local-delegate-mcp"],
+      "env": {
+        "LOCAL_DELEGATE_BASE_URL": "http://127.0.0.1:9292/v1"
+      }
+    }
+  }
+}
