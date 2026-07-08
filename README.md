@@ -48,7 +48,7 @@ Ver plantillas completas en [`examples/`](./examples).
 Un **endpoint OpenAI-compatible** ya corriendo, accesible en `LOCAL_DELEGATE_BASE_URL`
 (default `http://127.0.0.1:9292/v1`). Cualquiera sirve:
 
-- **llama-swap** — ver [recipe con GPU Blackwell](./docs/recipes/) *(en construcción)*.
+- **llama-swap** — ver [recipe con GPU Blackwell](./docs/recipes/llama-swap-blackwell.md).
 - **Ollama** — `http://127.0.0.1:11434/v1`.
 - **LM Studio**, **vLLM**, o cualquier servidor que hable la API de OpenAI.
 
@@ -100,10 +100,10 @@ cámbialos por los de tu backend.
 El MCP registra cada llamada en `usage.jsonl` y sirve un **dashboard** en
 `http://127.0.0.1:9393`. El *ahorro de contexto* = caracteres de entrada leídos server-side
 (llamadas con `source=path`) ÷ 4 ≈ tokens que nunca entraron al contexto de Claude.
-Detalle en la [wiki](https://github.com/ZahiriNatZuke/local-delegate/wiki) *(en construcción)*.
+Detalle en la [wiki](./docs/wiki/Home.md).
 
 ## Enlaces
 
-- [Wiki](https://github.com/ZahiriNatZuke/local-delegate/wiki) · [Recipes](./docs/recipes)
+- [Wiki](./docs/wiki/Home.md) · [Recipes](./docs/recipes)
 - [CONTRIBUTING](./CONTRIBUTING.md) · [CODE OF CONDUCT](./CODE_OF_CONDUCT.md) · [CHANGELOG](./CHANGELOG.md)
 - [Licencia MIT](./LICENSE)

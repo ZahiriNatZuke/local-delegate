@@ -7,8 +7,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- Recipes de backends en `docs/recipes/`: llama-swap (RTX 5060 Blackwell) y Ollama.
+- Recipes de backends en `docs/recipes/`: llama-swap (RTX 5060 Ti Blackwell) y Ollama.
 - Sección *Demo* en el README con screenshot del dashboard de ahorro.
+- Wiki en `docs/wiki/`: Architecture, Configuration, Savings & metrics, Publishing, Troubleshooting.
 
 ### Changed
 - `publish.yml`: `uv publish --check-url` para hacer la publicación idempotente ante
