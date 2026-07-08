@@ -6,10 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-08
+
+### Fixed
+- Dashboard: el sparkline del KPI "Contexto conservado" ya no dibuja una línea sobre el texto
+  cuando el ahorro es 0; ahora se ancla al borde inferior (`y.min=0`).
+
 ### Added
 - Recipes de backends en `docs/recipes/`: llama-swap (RTX 5060 Ti Blackwell) y Ollama.
 - Sección *Demo* en el README con screenshot del dashboard de ahorro.
-- Wiki en `docs/wiki/`: Architecture, Configuration, Savings & metrics, Publishing, Troubleshooting.
+- Wiki en `docs/wiki/` (+ wiki nativa de GitHub): Architecture, Configuration, Savings & metrics, Publishing, Troubleshooting.
 
 ### Changed
 - `publish.yml`: `uv publish --check-url` para hacer la publicación idempotente ante
@@ -29,5 +35,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ZahiriNatZuke/local-delegate/releases/tag/v0.1.0

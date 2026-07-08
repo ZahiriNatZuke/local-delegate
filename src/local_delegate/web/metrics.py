@@ -608,13 +608,14 @@ function drawSpark(ev){
   const el=document.getElementById('spark'); if(!el) return;
   if(state.charts.spark) state.charts.spark.destroy();
   const days=byDay(ev); let acc=0; const data=days.map(([,v])=>{acc+=tok(v.saved);return acc;});
+  const dmax=Math.max(1,...data);  // ancla el 0 al borde inferior: sin ahorro la linea no cruza el texto
   state.charts.spark = new Chart(el,{type:'line',
     data:{labels:days.map(d=>d[0]).length?days.map(d=>d[0]):[''],datasets:[{data:data.length?data:[0],
       borderColor:cssv('--acc'),borderWidth:2,pointRadius:0,tension:.4,fill:true,
       backgroundColor:c=>vGrad(c.chart,hexA(cssv('--acc'),0),hexA(cssv('--acc'),.32))}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:800},
       plugins:{legend:{display:false},tooltip:{enabled:false},centerText:false},
-      scales:{x:{display:false},y:{display:false}}}});
+      scales:{x:{display:false},y:{display:false,min:0,suggestedMax:dmax}}}});
 }
 
 function drawTs(ev){
