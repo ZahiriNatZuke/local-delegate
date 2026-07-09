@@ -12,6 +12,7 @@ input grande NUNCA entre al contexto de Claude.
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import socket
@@ -312,7 +313,7 @@ def _strip_think(s: str) -> str:
 def _chat(
     model: str,
     system: str,
-    user: str,
+    user: str | list[dict],
     max_tokens: int,
     temperature: float = 0.2,
     *,
@@ -324,8 +325,15 @@ def _chat(
     path: str | None = None,
     response_format: dict | None = None,
     json_schema_fallback: bool = False,
+    feedback_label: str = "chars",
+    feedback_char_estimate: bool = True,
 ) -> str:
-    """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG."""
+    """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
+
+    `user` acepta un `str` (texto->texto) o una lista de bloques de contenido
+    OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
+    local_describe_image).
+    """
     payload = {
         "model": model,
         "messages": [
@@ -379,10 +387,14 @@ def _chat(
         json_schema=json_schema_status,
     )
     if source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        tokens = (
-            result.tokens_in if result.tokens_in is not None else chars_in // config.CHARS_PER_TOKEN
-        )
-        text += f"\n\n(leído server-side: {chars_in:,} chars ≈ {tokens:,} tokens que no entraron a tu contexto)"
+        tokens = result.tokens_in
+        if tokens is None and feedback_char_estimate:
+            tokens = chars_in // config.CHARS_PER_TOKEN
+        if tokens is not None:
+            text += (
+                f"\n\n(leído server-side: {chars_in:,} {feedback_label} ≈ {tokens:,} tokens "
+                "que no entraron a tu contexto)"
+            )
     return text
 
 
@@ -423,6 +435,41 @@ def _guard(formato: str, max_words: int | None = None) -> str:
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
         f"Output EXACTO: {formato}.{limite} Nada fuera del formato."
     )
+
+
+# --- Validación de imagen (local_describe_image, F6) -------------------------
+_IMAGE_MIME: dict[str, str] = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+def _validate_image_path(path: str) -> str:
+    """Valida la ruta de una imagen para local_describe_image. Devuelve su mime type.
+
+    Orden: raíces permitidas -> extensión soportada (sin tocar disco) -> el archivo existe
+    -> tamaño <= MAX_IMAGE_MB (con stat(), sin leer el archivo completo solo para rechazarlo).
+    """
+    _check_allowed_dir(path)
+    p = Path(path)
+    suffix = p.suffix.lower()
+    if suffix not in _IMAGE_MIME:
+        raise ValueError(
+            f"Extensión de imagen no soportada: '{suffix}'. Válidas: {sorted(_IMAGE_MIME)}"
+        )
+    if not p.is_file():
+        raise ValueError(f"No existe el archivo: {path}")
+    size = p.stat().st_size
+    max_bytes = config.MAX_IMAGE_MB * 1024 * 1024
+    if size > max_bytes:
+        raise ValueError(
+            f"Imagen demasiado grande: {size / 1024 / 1024:.1f} MB "
+            f"(máximo {config.MAX_IMAGE_MB} MB)"
+        )
+    return _IMAGE_MIME[suffix]
 
 
 # --- Tools ------------------------------------------------------------------
@@ -793,6 +840,56 @@ def local_explain_code(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
+@mcp.tool()
+def local_describe_image(
+    path: str,
+    question: str | None = None,
+    max_words: int = 200,
+) -> str:
+    """PREFIERE esta tool en vez de adjuntar o leer la imagen tú mismo cuando solo necesitas
+    una descripción, lectura de texto visible (OCR simple) o una respuesta puntual sobre una
+    imagen, no la imagen en sí en tu contexto.
+
+    Describe una imagen (o responde una pregunta sobre ella) con un modelo local de visión.
+    La imagen se lee del lado del servidor: NUNCA entra al contexto de Claude, solo vuelve la
+    respuesta en texto.
+
+    Guardrail de alcance: SOLO imagen->texto (describir, leer texto visible, responder una
+    pregunta puntual sobre la imagen). Esta tool NUNCA genera ni edita imágenes.
+
+    Args:
+        path: Ruta a la imagen (png/jpg/jpeg/webp/gif), leída server-side.
+        question: Pregunta o foco concreto sobre la imagen (opcional; por defecto la describe).
+        max_words: Longitud máxima de la respuesta en palabras.
+    """
+    try:
+        mime = _validate_image_path(path)
+    except ValueError as e:
+        return f"[local-delegate error] {e}"
+    raw_bytes = Path(path).read_bytes()
+    raw_len = len(raw_bytes)
+    b64 = base64.b64encode(raw_bytes).decode("ascii")
+    prompt = question or "Describe esta imagen con detalle."
+    system = _guard("una respuesta en prosa clara sobre la imagen", max_words)
+    content = [
+        {"type": "text", "text": prompt},
+        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+    ]
+    return _chat(
+        config.MODEL_VISION,
+        system,
+        content,
+        max_tokens=int(max_words * 2) + 64,
+        tool="local_describe_image",
+        chars_in=raw_len,
+        source="path",
+        raw_len=raw_len,
+        path=path,
+        feedback_label="bytes imagen",
+        feedback_char_estimate=False,
+    )
+
+
 def _port_listening(host: str, port: int) -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -880,6 +977,7 @@ def local_status() -> str:
         ("fast", config.MODEL_FAST),
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
+    lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
 
     current_log = _current_log_path()
     n_events = 0
