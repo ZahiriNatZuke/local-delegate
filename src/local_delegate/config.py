@@ -71,6 +71,15 @@ _log_dir_env = os.environ.get("LOCAL_DELEGATE_LOG_DIR")
 LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 
 
+# --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
+# Vacía/ausente = sin restricción (comportamiento actual, documentado). Lista separada
+# por ';' de directorios raíz; cualquier 'path' fuera de todos ellos se rechaza.
+_allowed_dirs_raw = os.environ.get("LOCAL_DELEGATE_ALLOWED_DIRS", "")
+ALLOWED_DIRS: list[Path] = [
+    Path(p.strip()).resolve() for p in _allowed_dirs_raw.split(";") if p.strip()
+]
+
+
 # --- Catálogo de modelos (roles configurables, defaults documentados) -------
 MODEL_MECHANICAL = _env(
     "LOCAL_DELEGATE_MODEL_MECHANICAL", "gemma3-4b"

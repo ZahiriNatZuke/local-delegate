@@ -36,5 +36,7 @@ Ajusta el `ttl` de llama-swap para el equilibrio VRAM/latencia — ver
 
 ## El dashboard está vacío
 
-No hay `usage.jsonl` todavía (se crea en la primera delegación tras arrancar el MCP), o
-`LOCAL_DELEGATE_LOG` apunta a otra ruta que la que lee la web.
+No hay ningún `usage-YYYYMM.jsonl` todavía (se crea en la primera delegación tras arrancar
+el MCP), o `LOCAL_DELEGATE_LOG_DIR`/`LOCAL_DELEGATE_LOG` apunta a otra ruta que la que lee
+la web. El pie del dashboard muestra cuántos archivos leyó (`files_read`) — si es 0, es
+justo esto.

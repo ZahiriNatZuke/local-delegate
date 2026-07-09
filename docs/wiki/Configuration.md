@@ -53,6 +53,12 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 |---|---|---|
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `auto` pide `response_format` con schema y cae a modo libre si el backend responde 400; `on` lo exige (propaga el error); `off` nunca lo pide |
 
+## Seguridad — raíces permitidas
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Lista de directorios raíz separados por `;`. Cualquier `path` fuera de todos ellos se rechaza con un error que lista las raíces permitidas |
+
 ## Auto-arranque de llama-swap (opt-in)
 
 Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.

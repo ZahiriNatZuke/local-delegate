@@ -399,3 +399,70 @@ def test_inflight_snapshot_during_and_after_chat(monkeypatch):
     assert snap[0]["elapsed_s"] >= 0
     t.join(timeout=2)
     assert server.inflight_snapshot() == []
+
+
+# --- F5: LOCAL_DELEGATE_ALLOWED_DIRS ----------------------------------------------------
+def test_allowed_dirs_empty_means_unrestricted(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "ALLOWED_DIRS", [])
+    f = tmp_path / "afuera.txt"
+    f.write_text("hola", encoding="utf-8")
+    content, _truncated, _raw_len = server._read_input(None, str(f), max_chars=100)
+    assert content == "hola"
+
+
+def test_allowed_dirs_accepts_path_inside_root(monkeypatch, tmp_path):
+    root = tmp_path / "proyecto"
+    root.mkdir()
+    monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
+    f = root / "dentro.txt"
+    f.write_text("hola", encoding="utf-8")
+    content, _truncated, _raw_len = server._read_input(None, str(f), max_chars=100)
+    assert content == "hola"
+
+
+def test_allowed_dirs_rejects_path_outside_roots(monkeypatch, tmp_path):
+    root = tmp_path / "proyecto"
+    root.mkdir()
+    outside = tmp_path / "otro" / "afuera.txt"
+    outside.parent.mkdir()
+    outside.write_text("hola", encoding="utf-8")
+    monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
+    with pytest.raises(ValueError, match="fuera de las raíces permitidas"):
+        server._read_input(None, str(outside), max_chars=100)
+
+
+def test_allowed_dirs_resolves_relative_paths(monkeypatch, tmp_path):
+    root = tmp_path / "proyecto"
+    root.mkdir()
+    f = root / "sub" / "dentro.txt"
+    f.parent.mkdir()
+    f.write_text("hola", encoding="utf-8")
+    monkeypatch.setattr(config, "ALLOWED_DIRS", [root.resolve()])
+    monkeypatch.chdir(root)
+    content, _truncated, _raw_len = server._read_input(None, "sub/dentro.txt", max_chars=100)
+    assert content == "hola"
+
+
+# --- F5: lock de escritura del log ------------------------------------------------------
+def test_log_event_writes_even_when_lock_times_out(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+
+    class FakeLock:
+        def __init__(self, *_a, **_k):
+            pass
+
+        def __enter__(self):
+            raise server.Timeout("locked")
+
+        def __exit__(self, *_a):
+            return False
+
+    monkeypatch.setattr(server, "FileLock", FakeLock)
+    server._log_event(
+        tool="t", model="m", source="inline", chars_in=1, chars_out=1, latency_ms=1, ok=True
+    )
+    target = tmp_path / "usage-202603.jsonl"
+    assert target.is_file()
+    assert json.loads(target.read_text(encoding="utf-8").strip())["tool"] == "t"

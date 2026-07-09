@@ -25,6 +25,7 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 import httpx
+from filelock import FileLock, Timeout
 from mcp.server.fastmcp import FastMCP
 
 from . import autostart, config
@@ -116,9 +117,20 @@ def _current_log_path() -> Path:
 
 
 
+def _check_allowed_dir(path: str) -> None:
+    """Si LOCAL_DELEGATE_ALLOWED_DIRS está seteado, rechaza rutas fuera de esas raíces."""
+    if not config.ALLOWED_DIRS:
+        return
+    resolved = Path(path).resolve()
+    if not any(resolved.is_relative_to(root) for root in config.ALLOWED_DIRS):
+        roots = "; ".join(str(r) for r in config.ALLOWED_DIRS)
+        raise ValueError(f"Ruta fuera de las raíces permitidas ({roots}): {path}")
+
+
 def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
     if path:
+        _check_allowed_dir(path)
         p = Path(path)
         if not p.is_file():
             raise ValueError(f"No existe el archivo: {path}")
@@ -139,6 +151,22 @@ def _truncation_prefix(content: str, truncated: bool, raw_len: int) -> str:
     if not truncated:
         return ""
     return f"[local-delegate: entrada truncada — procesados {len(content)} de {raw_len} chars]\n"
+
+
+def _append_log_line(log_path: Path, line: str) -> None:
+    """Escribe una línea al log con lock de archivo (Desktop + Code escribiendo a la vez).
+
+    Si no se consigue el lock en 1s, escribe igual sin él (best-effort: nunca bloquea ni
+    rompe la tool por contención).
+    """
+    lock = FileLock(str(log_path) + ".lock", timeout=1)
+    try:
+        with lock:
+            with log_path.open("a", encoding="utf-8") as f:
+                f.write(line)
+    except Timeout:
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
 
 
 def _log_event(
@@ -193,8 +221,7 @@ def _log_event(
             rec["json_schema"] = json_schema
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        with log_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
     except OSError:
         pass  # el logging es best-effort; jamás propaga
 

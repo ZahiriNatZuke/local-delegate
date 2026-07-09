@@ -377,10 +377,11 @@ wheels = [
 
 [[package]]
 name = "local-delegate-mcp"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "filelock" },
     { name = "httpx" },
     { name = "mcp" },
     { name = "platformdirs" },
@@ -398,6 +399,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "filelock", specifier = ">=3" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.2" },
     { name = "platformdirs", specifier = ">=4" },

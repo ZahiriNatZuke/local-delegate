@@ -1,6 +1,6 @@
 [project]
 name = "local-delegate-mcp"
-version = "0.1.1"
+version = "0.2.0"
 description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,6 +24,7 @@ dependencies = [
     "platformdirs>=4",
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "filelock>=3",
 ]
 
 [project.scripts]

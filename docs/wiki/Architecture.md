@@ -9,11 +9,11 @@ Claude (Code / Desktop)
   local-delegate  ──HTTP POST──▶  endpoint OpenAI-compatible
   (server MCP)     /chat/completions   (llama-swap · Ollama · LM Studio · vLLM)
         │
-        ├─ escribe usage.jsonl (una línea por llamada)
+        ├─ escribe usage-YYYYMM.jsonl (una línea por llamada, rotado por mes)
         └─ sirve dashboard web (hilo daemon, :9393)
 ```
 
-`local-delegate` es un **servidor MCP stdio** (Python + FastMCP). Expone 9 tools texto→texto.
+`local-delegate` es un **servidor MCP stdio** (Python + FastMCP). Expone 10 tools texto→texto.
 Cada tool arma un prompt con *guardrails*, hace `POST /chat/completions` al endpoint configurado
 y devuelve **solo texto**.
 

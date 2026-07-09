@@ -63,13 +63,14 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 |---|---|---|
 | `local_summarize` | Resume texto o archivo | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → objeto JSON | mecánico |
+| `local_extract` | Extrae campos → objeto JSON (con `response_format` schema) | mecánico / largo (auto) |
 | `local_boilerplate` | Genera código desde una spec | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
 | `local_commit_msg` | Mensaje de commit desde un diff | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa | código |
+| `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM | — (no llama al backend de chat) |
 
 Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
 endpoint y devuelve **solo texto**.
@@ -84,12 +85,16 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` | Endpoint OpenAI-compatible |
 | `LOCAL_DELEGATE_API_KEY` | *(vacío)* | Bearer token, si tu endpoint lo exige |
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
-| `LOCAL_DELEGATE_LOG` | *(dir de datos de usuario)* | Ruta del `usage.jsonl` |
+| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes |
+| `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Modelo para documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | Modelo para código |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | Modelo ultrarrápido / trivial |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
+| `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
+| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
 | `LOCAL_DELEGATE_WEB` | `1` | Web de métricas embebida (`0` para desactivar) |
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
@@ -97,10 +102,31 @@ cámbialos por los de tu backend.
 
 ## La métrica de ahorro
 
-El MCP registra cada llamada en `usage.jsonl` y sirve un **dashboard** en
-`http://127.0.0.1:9393`. El *ahorro de contexto* = caracteres de entrada leídos server-side
-(llamadas con `source=path`) ÷ 4 ≈ tokens que nunca entraron al contexto de Claude.
-Detalle en la [wiki](./docs/wiki/Home.md).
+El MCP registra cada llamada en un log rotado por mes y sirve un **dashboard** en
+`http://127.0.0.1:9393`, con selector de rango y visibilidad de delegaciones en curso.
+El *ahorro de contexto* = caracteres de entrada leídos server-side (llamadas con
+`source=path`) ÷ 4 (o los tokens reales del backend, cuando los da) ≈ tokens que nunca
+entraron al contexto de Claude. Detalle en la [wiki](./docs/wiki/Home.md).
+
+## Alcance / no-objetivos
+
+`local-delegate` es deliberadamente **texto→texto**: arma el prompt, hace POST a
+`/chat/completions` y devuelve solo texto. Cosas que **no** hace a propósito:
+
+- **Tool-calling local.** Los modelos locales no invocan herramientas ni ejecutan código;
+  eso lo sigue haciendo Claude. Añadirlo convertiría este paquete en un orquestador
+  paralelo, que no es el objetivo.
+- **Audio.** Para transcripción usa el companion
+  [`whisper-transcribe-mcp`](https://github.com/ZahiriNatZuke/whisper-transcribe-mcp) en
+  vez de intentar meter audio aquí.
+- **Sustituir la suscripción.** El objetivo es conservar cuota delegando pasos mecánicos
+  acotados, no enrutar todo el trabajo a modelos locales.
+
+## Hooks de Claude Code (opcional)
+
+Recipe con dos hooks que sugieren delegar en el momento justo sin bloquear nunca la tool
+original (`PreToolUse`/`Read` para archivos grandes, `PostToolUse`/`Bash` para salidas
+largas de lint/tests): [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 
 ## Enlaces
 
