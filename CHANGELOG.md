@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-09
+
 ### Added
 - Nueva tool `local_describe_image(path, question=None, max_words=200)` (F6): describe una
   imagen o responde una pregunta sobre ella con un modelo local de visión. La imagen se lee

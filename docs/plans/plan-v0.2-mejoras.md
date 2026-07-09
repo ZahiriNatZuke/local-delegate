@@ -232,7 +232,8 @@ Ya cubierta por F2.1/F4.4 (`local_status` con VRAM vía nvidia-smi + `/api/backe
 - [x] F3 Awareness (docstrings, feedback, CLAUDE.md, skill, permisos, hooks, agentes) — hooks: recipe+scripts listos, instalación en settings.json pendiente (ver Discrepancias)
 - [x] F4 Log por rango + rotación + inflight
 - [x] F5 Seguridad + lock + release 0.2.0
-- [ ] (aparte) F6 Visión
+- [x] (aparte) F6 Visión — Qwen3-VL-8B Q4_K_M + mmproj Q8_0, tool `local_describe_image`,
+  0.3.0. Ver detalle en `plan-f6-vision.md`.
 - [ ] (aparte) F7 Groups llama-swap en el paquete (check/init + guardrails VRAM)
 
 ## Discrepancias encontradas durante la ejecución

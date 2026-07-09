@@ -1,6 +1,6 @@
 [project]
 name = "local-delegate-mcp"
-version = "0.2.1"
+version = "0.3.0"
 description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
 readme = "README.md"
 requires-python = ">=3.11"
