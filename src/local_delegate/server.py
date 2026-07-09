@@ -13,8 +13,13 @@ input grande NUNCA entre al contexto de Claude.
 from __future__ import annotations
 
 import json
+import re
+import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 import httpx
@@ -25,9 +30,37 @@ from . import autostart, config
 mcp = FastMCP("local-delegate")
 
 
+# --- Versión del paquete (cacheada) ------------------------------------------
+_PACKAGE_VERSION: str | None = None
+
+
+def _get_version() -> str:
+    global _PACKAGE_VERSION
+    if _PACKAGE_VERSION is None:
+        try:
+            _PACKAGE_VERSION = _pkg_version("local-delegate-mcp")
+        except PackageNotFoundError:
+            _PACKAGE_VERSION = "0.0.0"
+    return _PACKAGE_VERSION
+
+
+# --- Cliente httpx module-level (keep-alive entre delegaciones) -------------
+_client: httpx.Client | None = None
+_client_lock = threading.Lock()
+
+
+def _get_client() -> httpx.Client:
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = httpx.Client(timeout=config.HTTP_TIMEOUT)
+    return _client
+
+
 # --- Helpers ----------------------------------------------------------------
-def _read_input(text: str | None, path: str | None, max_chars: int) -> str:
-    """Devuelve el contenido a procesar. Si viene 'path', lo lee server-side."""
+def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
+    """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
     if path:
         p = Path(path)
         if not p.is_file():
@@ -37,17 +70,41 @@ def _read_input(text: str | None, path: str | None, max_chars: int) -> str:
         content = text
     else:
         raise ValueError("Debes proporcionar 'text' o 'path'.")
-    if len(content) > max_chars:
+    raw_len = len(content)
+    truncated = raw_len > max_chars
+    if truncated:
         content = content[:max_chars] + "\n[...contenido truncado...]"
-    return content
+    return content, truncated, raw_len
+
+
+def _truncation_prefix(content: str, truncated: bool, raw_len: int) -> str:
+    """Aviso visible cuando _read_input truncó la entrada (antes era un truncado silencioso)."""
+    if not truncated:
+        return ""
+    return f"[local-delegate: entrada truncada — procesados {len(content)} de {raw_len} chars]\n"
 
 
 def _log_event(
-    *, tool: str, model: str, source: str, chars_in: int, chars_out: int, latency_ms: int, ok: bool
+    *,
+    tool: str,
+    model: str,
+    source: str,
+    chars_in: int,
+    chars_out: int,
+    latency_ms: int,
+    ok: bool,
+    error: str | None = None,
+    finish_reason: str | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    truncated_in: bool = False,
+    truncated_out: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en USAGE_LOG. Nunca debe romper una tool."""
     try:
-        rec = {
+        rec: dict = {
             "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "tool": tool,
             "model": model,
@@ -56,7 +113,24 @@ def _log_event(
             "chars_out": int(chars_out),
             "latency_ms": int(latency_ms),
             "ok": bool(ok),
+            "v": _get_version(),
         }
+        if error is not None:
+            rec["error"] = error
+        if finish_reason is not None:
+            rec["finish_reason"] = finish_reason
+        if tokens_in is not None:
+            rec["tokens_in"] = int(tokens_in)
+        if tokens_out is not None:
+            rec["tokens_out"] = int(tokens_out)
+        if truncated_in:
+            rec["truncated_in"] = True
+        if truncated_out:
+            rec["truncated_out"] = True
+        if raw_len is not None:
+            rec["raw_len"] = int(raw_len)
+        if source == "path" and path is not None:
+            rec["path"] = path
         config.USAGE_LOG.parent.mkdir(parents=True, exist_ok=True)
         with config.USAGE_LOG.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -64,33 +138,88 @@ def _log_event(
         pass  # el logging es best-effort; jamás propaga
 
 
-def _post_chat(model: str, payload: dict) -> str:
+@dataclass
+class ChatResult:
+    text: str
+    ok: bool
+    error: str | None = None  # mensaje corto cuando ok=False
+    finish_reason: str | None = None  # choices[0].finish_reason
+    tokens_in: int | None = None  # usage.prompt_tokens si el backend lo da
+    tokens_out: int | None = None  # usage.completion_tokens
+
+
+def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
     headers = {"Authorization": f"Bearer {config.API_KEY}"} if config.API_KEY else {}
+    client = _get_client()
     for attempt in (1, 2):
         try:
-            with httpx.Client(timeout=config.HTTP_TIMEOUT) as client:
-                r = client.post(
-                    f"{config.BASE_URL}/chat/completions", json=payload, headers=headers
-                )
-                r.raise_for_status()
-                return r.json()["choices"][0]["message"]["content"].strip()
+            r = client.post(f"{config.BASE_URL}/chat/completions", json=payload, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+            choice = data["choices"][0]
+            usage = data.get("usage") or {}
+            return ChatResult(
+                text=choice["message"]["content"].strip(),
+                ok=True,
+                finish_reason=choice.get("finish_reason"),
+                tokens_in=usage.get("prompt_tokens"),
+                tokens_out=usage.get("completion_tokens"),
+            )
         except httpx.ConnectError:
             # El backend no está escuchando. Si el auto-arranque está activo, intenta
             # levantarlo (opt-in, específico de llama-swap) y reintenta una vez.
             if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
                 continue
-            return (
-                f"[local-delegate error] no se pudo conectar al endpoint ({config.BASE_URL}). "
-                "¿Está corriendo tu backend OpenAI-compatible?"
+            return ChatResult(
+                text=(
+                    f"[local-delegate error] no se pudo conectar al endpoint ({config.BASE_URL}). "
+                    "¿Está corriendo tu backend OpenAI-compatible?"
+                ),
+                ok=False,
+                error="connect_error",
             )
         except httpx.HTTPStatusError as e:
-            return f"[local-delegate error] {model} respondió {e.response.status_code}: {e.response.text[:300]}"
+            return ChatResult(
+                text=(
+                    f"[local-delegate error] {model} respondió {e.response.status_code}: "
+                    f"{e.response.text[:300]}"
+                ),
+                ok=False,
+                error=f"http_{e.response.status_code}",
+            )
         except httpx.HTTPError as e:
-            return f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}"
+            return ChatResult(
+                text=f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}",
+                ok=False,
+                error="http_error",
+            )
         except (KeyError, IndexError, ValueError) as e:
-            return f"[local-delegate error] respuesta inesperada de {model}: {e}"
-    return f"[local-delegate error] no se pudo completar la petición a {model}."
+            return ChatResult(
+                text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
+                ok=False,
+                error="bad_response",
+            )
+    return ChatResult(
+        text=f"[local-delegate error] no se pudo completar la petición a {model}.",
+        ok=False,
+        error="retry_exhausted",
+    )
+
+
+_THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
+_THINK_UNCLOSED_RE = re.compile(r"^\s*<think(?:ing)?>.*", re.IGNORECASE | re.DOTALL)
+
+
+def _strip_think(s: str) -> str:
+    """Quita bloques <think>/<thinking> (modelos razonadores tipo Qwen3, R1-distill).
+
+    Cubre también el bloque sin cerrar al inicio (p. ej. truncado por max_tokens a mitad
+    del razonamiento): en ese caso no queda contenido útil que rescatar.
+    """
+    s = _THINK_RE.sub("", s)
+    s = _THINK_UNCLOSED_RE.sub("", s)
+    return s.strip()
 
 
 def _chat(
@@ -103,6 +232,9 @@ def _chat(
     tool: str = "local_delegate",
     chars_in: int = 0,
     source: str = "inline",
+    truncated_in: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG."""
     payload = {
@@ -118,17 +250,28 @@ def _chat(
     t0 = time.monotonic()
     result = _post_chat(model, payload)
     latency_ms = int((time.monotonic() - t0) * 1000)
-    ok = not result.startswith("[local-delegate error]")
+    text = _strip_think(result.text) if result.ok else result.text
+    truncated_out = result.finish_reason == "length"
+    if truncated_out:
+        text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
     _log_event(
         tool=tool,
         model=model,
         source=source,
         chars_in=chars_in,
-        chars_out=len(result),
+        chars_out=len(text),
         latency_ms=latency_ms,
-        ok=ok,
+        ok=result.ok,
+        error=result.error,
+        finish_reason=result.finish_reason,
+        tokens_in=result.tokens_in,
+        tokens_out=result.tokens_out,
+        truncated_in=truncated_in,
+        truncated_out=truncated_out,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
     )
-    return result
+    return text
 
 
 def _strip_fences(s: str) -> str:
@@ -171,12 +314,12 @@ def local_summarize(
         max_words: Longitud máxima del resumen en palabras.
     """
     probe = path and Path(path).is_file()
-    raw_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if raw_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content = _read_input(text, path, config.max_chars_for(model))
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
     system = _guard("un resumen en prosa clara", max_words)
     user = f"Resume el siguiente contenido:\n\n{content}"
-    return _chat(
+    result = _chat(
         model,
         system,
         user,
@@ -184,7 +327,11 @@ def local_summarize(
         tool="local_summarize",
         chars_in=len(content),
         source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool()
@@ -221,20 +368,26 @@ def local_extract(
     """Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
 
     Pasa 'path' para leer el archivo server-side (no gasta contexto de Claude) o 'text'.
-    Devuelve un objeto JSON con exactamente las claves pedidas.
+    Devuelve un objeto JSON con exactamente las claves pedidas. Enruta al modelo mecánico
+    (entradas cortas) o al de contexto largo (documentos grandes) automáticamente: el sondeo
+    de tamaño usa bytes del archivo para 'path' y caracteres para 'text' (~5-10% de diferencia
+    en UTF-8, aceptable).
 
     Args:
         fields: Nombres de los campos a extraer (claves del JSON).
         text: Texto fuente (usa esto o 'path').
         path: Ruta a un archivo fuente (leído server-side).
     """
-    content = _read_input(text, path, config.max_chars_for(config.MODEL_MECHANICAL))
+    probe = path and Path(path).is_file()
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
     claves = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
     user = f"Extrae los campos del siguiente contenido:\n\n{content}"
-    return _strip_fences(
+    result = _strip_fences(
         _chat(
-            config.MODEL_MECHANICAL,
+            model,
             system,
             user,
             max_tokens=512,
@@ -242,8 +395,12 @@ def local_extract(
             tool="local_extract",
             chars_in=len(content),
             source="path" if path else "inline",
+            truncated_in=truncated_in,
+            raw_len=raw_len,
+            path=path,
         )
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool()
@@ -325,16 +482,16 @@ def local_lint_summary(
         max_words: Longitud máxima del resumen en palabras.
     """
     probe = path and Path(path).is_file()
-    raw_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if raw_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content = _read_input(text, path, config.max_chars_for(model))
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
     system = _guard(
         "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
         "error/regla y los más relevantes primero",
         max_words,
     )
     user = f"Resume la siguiente salida de linter/tests:\n\n{content}"
-    return _chat(
+    result = _chat(
         model,
         system,
         user,
@@ -342,7 +499,11 @@ def local_lint_summary(
         tool="local_lint_summary",
         chars_in=len(content),
         source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool()
@@ -362,7 +523,9 @@ def local_commit_msg(
         path: Ruta a un archivo con el diff (leído server-side).
         style: 'conventional' (Conventional Commits) o 'plain'.
     """
-    content = _read_input(diff, path, config.max_chars_for(config.MODEL_CODE))
+    if style not in {"conventional", "plain"}:
+        return f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
+    content, truncated_in, raw_len = _read_input(diff, path, config.max_chars_for(config.MODEL_CODE))
     if style == "conventional":
         fmt = (
             "un mensaje de commit estilo Conventional Commits: primera línea "
@@ -376,7 +539,7 @@ def local_commit_msg(
         )
     system = _guard(fmt)
     user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
-    return _chat(
+    result = _chat(
         config.MODEL_CODE,
         system,
         user,
@@ -385,7 +548,11 @@ def local_commit_msg(
         tool="local_commit_msg",
         chars_in=len(content),
         source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool()
@@ -406,14 +573,14 @@ def local_translate(
         path: Ruta a un archivo cuyo contenido se traduce (leído server-side).
     """
     probe = path and Path(path).is_file()
-    raw_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if raw_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content = _read_input(text, path, config.max_chars_for(model))
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
     system = _guard(
         f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios"
     )
     user = f"Traduce al {target_lang} el siguiente texto:\n\n{content}"
-    return _chat(
+    result = _chat(
         model,
         system,
         user,
@@ -421,7 +588,11 @@ def local_translate(
         tool="local_translate",
         chars_in=len(content),
         source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 @mcp.tool()
@@ -441,13 +612,13 @@ def local_explain_code(
         path: Ruta a un archivo de código (leído server-side).
         question: Pregunta o foco concreto (opcional).
     """
-    content = _read_input(code, path, config.max_chars_for(config.MODEL_CODE))
+    content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for(config.MODEL_CODE))
     extra = f" Enfócate en: {question}." if question else ""
     system = _guard(
         f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
     )
     user = f"Explica el siguiente código:\n\n{content}"
-    return _chat(
+    result = _chat(
         config.MODEL_CODE,
         system,
         user,
@@ -455,7 +626,11 @@ def local_explain_code(
         tool="local_explain_code",
         chars_in=len(content),
         source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
     )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
 def main() -> None:

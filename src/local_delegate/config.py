@@ -38,10 +38,17 @@ def _env_flag(name: str, default: bool) -> bool:
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
 
 
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
 # --- Endpoint OpenAI-compatible ---------------------------------------------
 BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
 API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
-HTTP_TIMEOUT = float(_env("LOCAL_DELEGATE_TIMEOUT", "180"))
+HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
 
 
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------
