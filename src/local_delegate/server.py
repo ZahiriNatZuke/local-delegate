@@ -398,12 +398,19 @@ def _strip_fences(s: str) -> str:
 
 
 def _json_schema_payload(fields: list[str]) -> dict:
-    """response_format json_object+schema para local_extract (ver doc de llama-server)."""
+    """response_format json_object+schema para local_extract (ver doc de llama-server).
+
+    Cada propiedad se restringe a tipos primitivos (string/number/boolean/null): un
+    sub-schema vacío ({}) permite objetos/arrays anidados y algunos modelos (p. ej.
+    gemma3-4b) anidan el valor en vez de devolverlo plano — {"campo": {"valor": "x"}}
+    en lugar de {"campo": "x"}.
+    """
+    primitive = {"type": ["string", "number", "boolean", "null"]}
     return {
         "type": "json_object",
         "schema": {
             "type": "object",
-            "properties": {f: {} for f in fields},
+            "properties": {f: primitive for f in fields},
             "required": list(fields),
         },
     }

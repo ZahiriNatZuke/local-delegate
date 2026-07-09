@@ -210,6 +210,17 @@ def test_local_extract_sends_response_format_by_default(monkeypatch):
     assert sent["response_format"]["schema"]["required"] == ["a"]
 
 
+def test_json_schema_payload_restricts_properties_to_primitives():
+    # Un sub-schema vacío ({}) permite objetos/arrays anidados: algunos modelos (p. ej.
+    # gemma3-4b) responden {"campo": {"valor": "x"}} en vez de {"campo": "x"}. Cada
+    # propiedad debe restringirse a string/number/boolean/null.
+    payload = server._json_schema_payload(["a", "b"])
+    props = payload["schema"]["properties"]
+    assert set(props) == {"a", "b"}
+    for prop in props.values():
+        assert prop == {"type": ["string", "number", "boolean", "null"]}
+
+
 @respx.mock
 def test_local_extract_json_schema_off_skips_response_format(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")

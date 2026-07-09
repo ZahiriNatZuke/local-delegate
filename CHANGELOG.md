@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-09
+
+### Fixed
+- `local_extract`: el schema de `response_format` restringe cada propiedad a tipos
+  primitivos (`string`/`number`/`boolean`/`null`) en vez de un sub-schema vacío. Con el
+  sub-schema vacío, algunos modelos (verificado con `gemma3-4b`) anidaban el valor en
+  vez de devolverlo plano — `{"campo": {"valor": "x"}}` en lugar de `{"campo": "x"}`.
+  Encontrado verificando la 0.2.0 en producción contra el backend real.
+
 ## [0.2.0] - 2026-07-09
 
 ### Added
@@ -82,7 +91,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ZahiriNatZuke/local-delegate/releases/tag/v0.1.0
