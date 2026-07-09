@@ -230,7 +230,7 @@ Ya cubierta por F2.1/F4.4 (`local_status` con VRAM vía nvidia-smi + `/api/backe
 - [x] F1 Fiabilidad del núcleo
 - [x] F2 local_status + json_schema
 - [x] F3 Awareness (docstrings, feedback, CLAUDE.md, skill, permisos, hooks, agentes) — hooks: recipe+scripts listos, instalación en settings.json pendiente (ver Discrepancias)
-- [ ] F4 Log por rango + rotación + inflight
+- [x] F4 Log por rango + rotación + inflight
 - [ ] F5 Seguridad + lock + release 0.2.0
 - [ ] (aparte) F6 Visión
 - [ ] (aparte) F7 Groups llama-swap en el paquete (check/init + guardrails VRAM)

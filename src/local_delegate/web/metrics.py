@@ -1,10 +1,21 @@
 """metrics.py — dashboard de uso/ahorro de local-delegate.
 
-Lee usage.jsonl (una línea por llamada al MCP, escrita por server.py) y sirve:
-  GET /             -> dashboard HTML (Chart.js por CDN; filtros y agregación client-side)
-  GET /api/events   -> eventos crudos (más recientes primero) + meta
-  GET /api/stats    -> agregados JSON (resumen rápido, compatibilidad)
-  GET /favicon.svg  -> icono de marca (chip) servido inline
+Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y sirve:
+  GET /               -> dashboard HTML (Chart.js por CDN; filtros client-side, rango server-side)
+  GET /api/events     -> eventos en [from, to] (más recientes primero) + meta
+  GET /api/stats      -> agregados JSON del mismo rango
+  GET /api/inflight   -> delegaciones en curso EN ESTE PROCESO (ver limitación abajo)
+  GET /api/backend    -> proxy best-effort de /running de llama-swap
+  GET /favicon.svg    -> icono de marca (chip) servido inline
+
+`from`/`to` son ISO 8601 (fecha u datetime); sin parámetros, por defecto los últimos 30 días.
+Solo se abren los archivos cuyo mes interseca el rango pedido — releer un rango de un mes no
+recorre el histórico completo. Cache en memoria por archivo (mtime+size); solo el archivo del
+mes actual cambia entre refrescos.
+
+Limitación de /api/inflight: solo ve las llamadas en vuelo del PROCESO que sirve esta web (el
+MCP que la arrancó). Si tienes varias instancias de Claude con su propio MCP, cada una sirve su
+propia web y su propio /api/inflight — no hay estado compartido entre procesos.
 
 Dos formas de arrancar:
   1) Automática: el MCP (server.py) llama a run_in_thread() en un hilo daemon,
@@ -12,44 +23,140 @@ Dos formas de arrancar:
      (otra instancia de Claude), no monta una segunda.
   2) Manual: ``python -m local_delegate.web.metrics``  (127.0.0.1:9393 por defecto)
 
-Solo LEE el JSONL; no interfiere con el MCP ni con el backend.
+Solo LEE los JSONL; no interfiere con el MCP ni con el backend (salvo el proxy best-effort
+de /api/backend, una lectura de estado sin efectos).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
+import httpx
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import config
+from .. import config, server
 
-USAGE_LOG = config.USAGE_LOG
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
 MAX_EVENTS = 5000  # tope de eventos servidos al cliente
+_MONTH_FILE_RE = re.compile(r"^usage-(\d{6})\.jsonl$")
 
 app = FastAPI(title="local-delegate metrics")
 
+# {ruta: (mtime, size, filas)} — releer un archivo solo si cambió desde la última lectura.
+_FILE_CACHE: dict[str, tuple[float, int, list[dict]]] = {}
 
-def _load() -> list[dict]:
-    """Lee usage.jsonl tolerando líneas corruptas/parciales."""
-    if not USAGE_LOG.is_file():
+
+def _log_files() -> list[tuple]:
+    """Lista (path, ym) de archivos de log candidatos. ym=None = legado, siempre candidato."""
+    files: list[tuple] = []
+    seen = set()
+    log_dir = config.LOG_DIR
+    if log_dir.is_dir():
+        for p in sorted(log_dir.glob("usage-*.jsonl")):
+            m = _MONTH_FILE_RE.match(p.name)
+            if m:
+                files.append((p, m.group(1)))
+                seen.add(p.resolve())
+    legacy = config.USAGE_LOG
+    if legacy.is_file() and legacy.resolve() not in seen:
+        files.append((legacy, None))
+    return files
+
+
+def _read_file_cached(path) -> list[dict]:
+    """Lee un JSONL tolerando líneas corruptas; cachea por (mtime, size)."""
+    try:
+        st = path.stat()
+    except OSError:
         return []
+    key = str(path)
+    cached = _FILE_CACHE.get(key)
+    if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
+        return cached[2]
     rows: list[dict] = []
-    with USAGE_LOG.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                rows.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
+    try:
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    _FILE_CACHE[key] = (st.st_mtime, st.st_size, rows)
     return rows
+
+
+def _month_span(ym: str) -> tuple[datetime, datetime]:
+    year, month = int(ym[:4]), int(ym[4:6])
+    start = datetime(year, month, 1, tzinfo=timezone.utc)
+    end = datetime(year + (month == 12), (month % 12) + 1, 1, tzinfo=timezone.utc)
+    return start, end
+
+
+def _parse_ts(ts) -> datetime | None:
+    if not ts or not isinstance(ts, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(ts)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _parse_range_param(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _resolve_range(from_: str | None, to_: str | None) -> tuple[datetime, datetime]:
+    """Sin from/to -> últimos 30 días. Con solo uno de los dos, el otro se abre hasta el límite."""
+    range_from = _parse_range_param(from_)
+    range_to = _parse_range_param(to_)
+    if range_from is None and range_to is None:
+        range_to = datetime.now(timezone.utc)
+        range_from = range_to - timedelta(days=30)
+    elif range_to is None:
+        range_to = datetime.now(timezone.utc)
+    elif range_from is None:
+        range_from = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    return range_from, range_to
+
+
+def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[str]]:
+    """Eventos en [range_from, range_to], abriendo solo los archivos cuyo mes toca el rango."""
+    rows: list[dict] = []
+    files_read: list[str] = []
+    for path, ym in _log_files():
+        if ym is not None:
+            m_start, m_end = _month_span(ym)
+            if m_start > range_to or m_end <= range_from:
+                continue
+        file_rows = _read_file_cached(path)
+        if not file_rows:
+            continue
+        files_read.append(str(path))
+        for r in file_rows:
+            t = _parse_ts(r.get("ts"))
+            if t is None or t < range_from or t > range_to:
+                continue
+            rows.append(r)
+    return rows, files_read
 
 
 def _aggregate(rows: list[dict]) -> dict:
@@ -123,20 +230,52 @@ def _aggregate(rows: list[dict]) -> dict:
 
 
 @app.get("/api/events")
-def events():
-    rows = _load()
+def events(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+    range_from, range_to = _resolve_range(from_, to)
+    rows, files_read = _load(range_from, range_to)
     rows.reverse()  # más recientes primero
     return JSONResponse(
         {
-            "meta": {"chars_per_token": CHARS_PER_TOKEN, "log": str(USAGE_LOG), "count": len(rows)},
+            "meta": {
+                "chars_per_token": CHARS_PER_TOKEN,
+                "log_dir": str(config.LOG_DIR),
+                "count": len(rows),
+                "files_read": files_read,
+                "range_from": range_from.isoformat(),
+                "range_to": range_to.isoformat(),
+            },
             "events": rows[:MAX_EVENTS],
         }
     )
 
 
 @app.get("/api/stats")
-def stats():
-    return JSONResponse(_aggregate(_load()))
+def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+    range_from, range_to = _resolve_range(from_, to)
+    rows, _files_read = _load(range_from, range_to)
+    return JSONResponse(_aggregate(rows))
+
+
+@app.get("/api/inflight")
+def inflight():
+    """Delegaciones en curso en ESTE proceso (ver limitación en el docstring del módulo)."""
+    return JSONResponse({"inflight": server.inflight_snapshot()})
+
+
+@app.get("/api/backend")
+def backend():
+    """Proxy best-effort de GET {base sin /v1}/running de llama-swap (timeout 1s)."""
+    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    try:
+        with httpx.Client(timeout=1.0) as c:
+            r = c.get(f"{base}/running")
+            if not r.is_success:
+                return JSONResponse({"available": False})
+            data = r.json()
+    except (httpx.HTTPError, ValueError):
+        return JSONResponse({"available": False})
+    running = data.get("running") if isinstance(data, dict) else None
+    return JSONResponse({"available": True, "running": running or []})
 
 
 # Icono de marca: un chip/CPU (cómputo local) en verde esmeralda. SVG escalable.
@@ -393,16 +532,25 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
     <div class="controls">
       <select id="range" class="btn" title="Rango temporal">
-        <option value="all">Todo el histórico</option>
-        <option value="1">Últimas 24 h</option>
+        <option value="today">Hoy</option>
         <option value="7">Últimos 7 días</option>
-        <option value="30">Últimos 30 días</option>
+        <option value="30" selected>Últimos 30 días</option>
+        <option value="prev-month">Mes anterior</option>
+        <option value="all">Todo el histórico</option>
+        <option value="custom">Personalizado…</option>
       </select>
+      <input type="date" id="rangeFrom" class="btn" style="display:none" title="Desde">
+      <input type="date" id="rangeTo" class="btn" style="display:none" title="Hasta">
       <button id="auto" class="btn on" title="Auto-refresco cada 15 s">↻ Auto</button>
       <button id="reload" class="btn icon" title="Refrescar ahora" aria-label="Refrescar">⟳</button>
       <button id="theme" class="btn icon" title="Tema claro / oscuro" aria-label="Cambiar tema">◐</button>
     </div>
   </header>
+
+  <div class="card" id="inflightCard" style="margin-bottom:16px;display:none">
+    <div class="panel-h" style="--hc:var(--amber)"><h2>En curso</h2><span class="mut" id="inflightMeta"></span></div>
+    <div id="inflightBody" style="font-family:var(--mono);font-size:12.5px;color:var(--tx2);line-height:1.9"></div>
+  </div>
 
   <div class="filters" id="filters"></div>
 
@@ -451,7 +599,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 <div class="tt" id="tt"></div>
 <script>
 const CPT = 4, F = new Intl.NumberFormat('es');
-const state = {events:[], tools:new Set(), models:new Set(), range:'all', auto:true, charts:{}};
+const state = {events:[], tools:new Set(), models:new Set(), range:'30', auto:true, charts:{}};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const tok = c => Math.round(c/CPT);
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
@@ -503,19 +651,67 @@ const ICON = {
   err:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a1.7 1.7 0 0 0 1.5 2.6h17.4A1.7 1.7 0 0 0 22.2 18L13.7 3.6a1.7 1.7 0 0 0-2.9 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
 };
 
+// Presets de rango -> {from, to} ISO. 'custom' lee los <input type=date>.
+function computeRange(preset){
+  const now = new Date();
+  if(preset==='today'){
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    return {from:start.toISOString(), to:now.toISOString()};
+  }
+  if(preset==='7') return {from:new Date(now-7*864e5).toISOString(), to:now.toISOString()};
+  if(preset==='30') return {from:new Date(now-30*864e5).toISOString(), to:now.toISOString()};
+  if(preset==='prev-month'){
+    const y=now.getUTCFullYear(), m=now.getUTCMonth();
+    const start=new Date(Date.UTC(y, m-1, 1)), end=new Date(Date.UTC(y, m, 1));
+    return {from:start.toISOString(), to:end.toISOString()};
+  }
+  if(preset==='all') return {from:'2000-01-01T00:00:00Z', to:now.toISOString()};
+  if(preset==='custom'){
+    const f=document.getElementById('rangeFrom').value, t=document.getElementById('rangeTo').value;
+    return {from:f?new Date(f+'T00:00:00Z').toISOString():null, to:t?new Date(t+'T23:59:59Z').toISOString():null};
+  }
+  return {from:null, to:null};
+}
+
 async function fetchData(){
   try{
-    const r = await fetch('/api/events'); const j = await r.json();
+    const {from, to} = computeRange(state.range);
+    const qs = new URLSearchParams();
+    if(from) qs.set('from', from);
+    if(to) qs.set('to', to);
+    const r = await fetch('/api/events?' + qs.toString()); const j = await r.json();
     state.events = j.events||[]; state.meta = j.meta||{};
     buildFilters(); render(); updateLive();
     const cnt = F.format(state.meta.count||0);
+    const filesN = (state.meta.files_read||[]).length;
     document.getElementById('foot').textContent =
-      (state.meta.log||'') + '   ·   ' + cnt + ' eventos   ·   ~' + CPT + ' chars/token   ·   local·delegate';
+      (state.meta.log_dir||'') + '   ·   ' + cnt + ' eventos   ·   ' + filesN + ' archivo(s) leído(s)   ·   ~' + CPT + ' chars/token   ·   local·delegate';
   }catch(e){
     document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
     document.getElementById('live').classList.add('stale');
     document.getElementById('liveTxt').textContent='SIN DATOS';
   }
+}
+
+async function pollInflight(){
+  if(document.visibilityState!=='visible') return;
+  try{
+    const [ir, br] = await Promise.all([fetch('/api/inflight'), fetch('/api/backend')]);
+    const ij = await ir.json(), bj = await br.json();
+    const items = ij.inflight||[];
+    let backendTxt = '';
+    if(bj.available){
+      const models = (bj.running||[]).map(m=>`${m.model||'?'} (${m.state||'?'})`);
+      backendTxt = 'llama-swap: ' + (models.length ? models.join(', ') : 'ningún modelo montado');
+    }
+    const card = document.getElementById('inflightCard');
+    if(!items.length && !backendTxt){ card.style.display='none'; return; }
+    card.style.display='';
+    document.getElementById('inflightMeta').textContent = backendTxt;
+    document.getElementById('inflightBody').innerHTML = items.length
+      ? items.map(it=>`<div>${it.tool} · <span class="badge model">${it.model}</span> · ${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</div>`).join('')
+      : '<div class="mut">Sin delegaciones en curso</div>';
+  }catch(e){ /* la tarjeta de inflight es opcional: si falla, la web sigue funcionando */ }
 }
 
 function updateLive(){
@@ -548,14 +744,8 @@ function buildFilters(){
 }
 
 function filtered(){
-  const now = Date.now();
-  const days = state.range==='all'?null:parseInt(state.range,10);
-  return state.events.filter(e=>{
-    if(!state.tools.has(e.tool)) return false;
-    if(!state.models.has(e.model)) return false;
-    if(days){ const t = Date.parse(e.ts); if(isFinite(t) && (now-t) > days*864e5) return false; }
-    return true;
-  });
+  // el rango temporal ya lo aplicó el servidor (/api/events?from=&to=); aquí solo tools/modelos.
+  return state.events.filter(e => state.tools.has(e.tool) && state.models.has(e.model));
 }
 
 function kpiCard(o){
@@ -710,8 +900,16 @@ function bindTips(){
 }
 
 // controles
-document.getElementById('range').onchange=e=>{state.range=e.target.value;render();};
-document.getElementById('reload').onclick=fetchData;
+document.getElementById('range').onchange=e=>{
+  state.range=e.target.value;
+  const custom = state.range==='custom';
+  document.getElementById('rangeFrom').style.display = custom?'':'none';
+  document.getElementById('rangeTo').style.display = custom?'':'none';
+  if(!custom) fetchData();
+};
+document.getElementById('rangeFrom').onchange=()=>{ if(state.range==='custom') fetchData(); };
+document.getElementById('rangeTo').onchange=()=>{ if(state.range==='custom') fetchData(); };
+document.getElementById('reload').onclick=()=>{ fetchData(); pollInflight(); };
 document.getElementById('theme').onclick=()=>{
   const cur=document.documentElement.getAttribute('data-theme');
   const nx=cur==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',nx);
@@ -721,7 +919,9 @@ document.getElementById('auto').onclick=e=>{ state.auto=!state.auto; e.currentTa
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);
+setInterval(pollInflight,2000);
 fetchData();
+pollInflight();
 </script>
 </body>
 </html>"""

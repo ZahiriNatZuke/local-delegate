@@ -52,12 +52,23 @@ HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
 
 
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------
+# Por defecto se rota por mes: usage-YYYYMM.jsonl dentro de LOG_DIR. Si el usuario fija
+# LOCAL_DELEGATE_LOG (archivo explícito), se usa ESE archivo tal cual, sin rotación —
+# compatibilidad con instalaciones que ya apuntaban a una ruta fija.
+def _default_log_dir() -> Path:
+    return Path(user_data_dir(APP_NAME, appauthor=False))
+
+
 def _default_log() -> Path:
-    return Path(user_data_dir(APP_NAME, appauthor=False)) / "usage.jsonl"
+    return _default_log_dir() / "usage.jsonl"
 
 
 _log_env = os.environ.get("LOCAL_DELEGATE_LOG")
-USAGE_LOG: Path = Path(_log_env) if _log_env else _default_log()
+USAGE_LOG: Path = Path(_log_env) if _log_env else _default_log()  # legado (sin rotación) o default
+LOG_ROTATION_ENABLED: bool = _log_env is None
+
+_log_dir_env = os.environ.get("LOCAL_DELEGATE_LOG_DIR")
+LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 
 
 # --- Catálogo de modelos (roles configurables, defaults documentados) -------

@@ -60,7 +60,62 @@ def _get_client() -> httpx.Client:
     return _client
 
 
+# --- Delegaciones en curso (visibilidad; solo dentro de este proceso) -------
+_inflight_lock = threading.Lock()
+_inflight: dict[int, dict] = {}
+_inflight_next_id = 0
+
+
+def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int:
+    global _inflight_next_id
+    with _inflight_lock:
+        _inflight_next_id += 1
+        entry_id = _inflight_next_id
+        _inflight[entry_id] = {
+            "tool": tool,
+            "model": model,
+            "source": source,
+            "chars_in": chars_in,
+            "started_at": time.time(),
+        }
+    return entry_id
+
+
+def _inflight_end(entry_id: int) -> None:
+    with _inflight_lock:
+        _inflight.pop(entry_id, None)
+
+
+def inflight_snapshot() -> list[dict]:
+    """Copia de las delegaciones en curso, con `elapsed_s`. Usada por la web de métricas."""
+    now = time.time()
+    with _inflight_lock:
+        return [
+            {
+                "id": entry_id,
+                "tool": v["tool"],
+                "model": v["model"],
+                "source": v["source"],
+                "chars_in": v["chars_in"],
+                "elapsed_s": round(now - v["started_at"], 1),
+            }
+            for entry_id, v in _inflight.items()
+        ]
+
+
 # --- Helpers ----------------------------------------------------------------
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _current_log_path() -> Path:
+    """Archivo de log activo: fijo si LOCAL_DELEGATE_LOG está seteado, si no rota por mes UTC."""
+    if not config.LOG_ROTATION_ENABLED:
+        return config.USAGE_LOG
+    return config.LOG_DIR / f"usage-{_utcnow():%Y%m}.jsonl"
+
+
+
 def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
     if path:
@@ -105,10 +160,10 @@ def _log_event(
     path: str | None = None,
     json_schema: str | None = None,
 ) -> None:
-    """Escribe una línea JSONL en USAGE_LOG. Nunca debe romper una tool."""
+    """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
     try:
         rec: dict = {
-            "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "ts": _utcnow().isoformat(timespec="seconds"),
             "tool": tool,
             "model": model,
             "source": source,  # "path" = leído server-side (no entró al contexto de Claude)
@@ -136,8 +191,9 @@ def _log_event(
             rec["path"] = path
         if json_schema is not None:
             rec["json_schema"] = json_schema
-        config.USAGE_LOG.parent.mkdir(parents=True, exist_ok=True)
-        with config.USAGE_LOG.open("a", encoding="utf-8") as f:
+        log_path = _current_log_path()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except OSError:
         pass  # el logging es best-effort; jamás propaga
@@ -257,18 +313,22 @@ def _chat(
     if response_format is not None:
         payload["response_format"] = response_format
 
-    t0 = time.monotonic()
-    result = _post_chat(model, payload)
-    json_schema_status = "used" if response_format is not None else None
-    if response_format is not None and not result.ok and result.error == "http_400":
-        if json_schema_fallback:
-            # El backend no soporta response_format con schema: reintenta en modo libre.
-            payload.pop("response_format", None)
-            result = _post_chat(model, payload)
-            json_schema_status = "fallback"
-        else:
-            json_schema_status = "error"
-    latency_ms = int((time.monotonic() - t0) * 1000)
+    entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
+    try:
+        t0 = time.monotonic()
+        result = _post_chat(model, payload)
+        json_schema_status = "used" if response_format is not None else None
+        if response_format is not None and not result.ok and result.error == "http_400":
+            if json_schema_fallback:
+                # El backend no soporta response_format con schema: reintenta en modo libre.
+                payload.pop("response_format", None)
+                result = _post_chat(model, payload)
+                json_schema_status = "fallback"
+            else:
+                json_schema_status = "error"
+        latency_ms = int((time.monotonic() - t0) * 1000)
+    finally:
+        _inflight_end(entry_id)
 
     text = _strip_think(result.text) if result.ok else result.text
     truncated_out = result.finish_reason == "length"
@@ -778,10 +838,11 @@ def local_status() -> str:
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
 
+    current_log = _current_log_path()
     n_events = 0
     saved_chars = 0
-    if config.USAGE_LOG.is_file():
-        with config.USAGE_LOG.open(encoding="utf-8") as f:
+    if current_log.is_file():
+        with current_log.open(encoding="utf-8") as f:
             for raw_line in f:
                 raw_line = raw_line.strip()
                 if not raw_line:
@@ -794,7 +855,7 @@ def local_status() -> str:
                 if rec.get("source") == "path":
                     saved_chars += int(rec.get("chars_in", 0) or 0)
     lines.append("")
-    lines.append(f"Log: {config.USAGE_LOG}")
+    lines.append(f"Log (mes actual): {current_log}")
     lines.append(
         f"  eventos: {n_events} — contexto ahorrado acumulado: "
         f"~{saved_chars // config.CHARS_PER_TOKEN} tokens"

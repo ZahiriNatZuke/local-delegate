@@ -37,9 +37,21 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 
 ## Log de uso
 
+Por defecto el log rota por mes (`usage-YYYYMM.jsonl`, mes UTC) dentro de `LOG_DIR`. Si
+fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desactiva
+(compatibilidad con instalaciones que ya apuntaban a una ruta fija).
+
 | Variable | Default | Descripción |
 |---|---|---|
-| `LOCAL_DELEGATE_LOG` | *(dir de datos de usuario)* | Ruta del `usage.jsonl`. Por defecto `platformdirs.user_data_dir("local-delegate")` (p. ej. `%LOCALAPPDATA%\local-delegate\usage.jsonl` en Windows) |
+| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio donde se escriben los `usage-YYYYMM.jsonl` rotados. Por defecto `platformdirs.user_data_dir("local-delegate")` (p. ej. `%LOCALAPPDATA%\local-delegate` en Windows) |
+| `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar. El dashboard igual lo lee como fuente adicional aunque uses `LOG_DIR` para el resto |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens" que se anexa al resultado cuando `source=path` |
+
+## `local_extract` — JSON con schema
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `auto` pide `response_format` con schema y cae a modo libre si el backend responde 400; `on` lo exige (propaga el error); `off` nunca lo pide |
 
 ## Auto-arranque de llama-swap (opt-in)
 

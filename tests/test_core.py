@@ -1,9 +1,13 @@
 """Tests de F1 (config._env_float, server._read_input/_strip_think/_strip_fences/_post_chat/
-_chat, enrutado de local_extract) y F2 (response_format json_schema, local_status)."""
+_chat, enrutado de local_extract), F2 (response_format json_schema, local_status), F3
+(feedback de ahorro) y F4 (rotación del log, inflight)."""
 
 from __future__ import annotations
 
 import json
+import threading
+import time as _time
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -253,6 +257,7 @@ def test_json_schema_on_propagates_400(monkeypatch):
 def test_local_status_reports_backend_up_and_models(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     respx.get("http://test-backend/v1/models").mock(
         return_value=httpx.Response(200, json={"data": [{"id": "modelo-a"}]})
     )
@@ -266,6 +271,7 @@ def test_local_status_reports_backend_up_and_models(monkeypatch, tmp_path):
 def test_local_status_reports_backend_down(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
     respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
     text = server.local_status()
@@ -281,6 +287,7 @@ def test_local_status_reports_log_stats(monkeypatch, tmp_path):
         encoding="utf-8",
     )
     monkeypatch.setattr(config, "USAGE_LOG", log)
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
     respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
@@ -338,3 +345,57 @@ def test_chat_no_feedback_for_inline_source(monkeypatch):
         config.MODEL_MECHANICAL, "system", "user", max_tokens=8, chars_in=2000, source="inline"
     )
     assert "leído server-side" not in text
+
+
+# --- F4: rotación del log --------------------------------------------------------------
+def test_current_log_path_rotates_by_month(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    assert server._current_log_path() == tmp_path / "usage-202603.jsonl"
+
+
+def test_current_log_path_legacy_disables_rotation(monkeypatch, tmp_path):
+    fixed = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    monkeypatch.setattr(config, "USAGE_LOG", fixed)
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    assert server._current_log_path() == fixed
+
+
+@respx.mock
+def test_log_event_writes_to_rotated_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
+        )
+    )
+    server._chat(config.MODEL_MECHANICAL, "s", "u", max_tokens=8)
+    assert (tmp_path / "usage-202603.jsonl").is_file()
+
+
+# --- F4: delegaciones en curso (inflight) -----------------------------------------------
+def test_inflight_snapshot_during_and_after_chat(monkeypatch):
+    def slow_post_chat(model, payload):
+        _time.sleep(0.3)
+        return server.ChatResult(text="ok", ok=True, finish_reason="stop")
+
+    monkeypatch.setattr(server, "_post_chat", slow_post_chat)
+    assert server.inflight_snapshot() == []
+    t = threading.Thread(
+        target=server._chat,
+        args=(config.MODEL_MECHANICAL, "s", "u"),
+        kwargs={"max_tokens": 8, "tool": "local_summarize", "chars_in": 10, "source": "path"},
+    )
+    t.start()
+    _time.sleep(0.1)
+    snap = server.inflight_snapshot()
+    assert len(snap) == 1
+    assert snap[0]["tool"] == "local_summarize"
+    assert snap[0]["elapsed_s"] >= 0
+    t.join(timeout=2)
+    assert server.inflight_snapshot() == []
