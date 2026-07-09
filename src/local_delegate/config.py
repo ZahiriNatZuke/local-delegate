@@ -87,6 +87,9 @@ MODEL_MECHANICAL = _env(
 MODEL_LONG = _env("LOCAL_DELEGATE_MODEL_LONG", "llama31-8b")  # documentos largos (ctx amplio)
 MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen25-coder-14b")  # código / boilerplate
 MODEL_FAST = _env("LOCAL_DELEGATE_MODEL_FAST", "qwen35-2b")  # ultrarrápido / trivial
+# Rol de visión (imagen->texto). Fuera de ALLOWED_MODELS a propósito: ese set es para el
+# escape genérico local_delegate (texto->texto puro), que no arma payload multimodal.
+MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "qwen3-vl-8b")
 ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE, MODEL_FAST}
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
@@ -112,6 +115,10 @@ def max_chars_for(model: str) -> int:
 # "on": exige schema, propaga el error si el backend no lo soporta. "off": nunca lo pide.
 _json_schema_raw = _env("LOCAL_DELEGATE_JSON_SCHEMA", "auto").strip().lower()
 JSON_SCHEMA_MODE = _json_schema_raw if _json_schema_raw in {"auto", "on", "off"} else "auto"
+
+
+# --- Tope de tamaño de imagen para local_describe_image (F6) -----------------
+MAX_IMAGE_MB = _env_int("LOCAL_DELEGATE_MAX_IMAGE_MB", 8)
 
 
 # --- Web de métricas embebida -----------------------------------------------
