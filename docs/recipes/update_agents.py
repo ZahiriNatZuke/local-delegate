@@ -51,7 +51,9 @@ CATALOG_BLOCK = f"{CATALOG_BEGIN}\n{CATALOG_BODY}\n{CATALOG_END}\n"
 
 _DELEGACION_HEADING_RE = re.compile(r"^#{1,3}\s*Delegaci[oó]n a modelos locales", re.IGNORECASE)
 _HEADING_RE = re.compile(r"^#{1,3}\s")
-_CATALOG_BLOCK_RE = re.compile(re.escape(CATALOG_BEGIN) + r".*?" + re.escape(CATALOG_END), re.DOTALL)
+_CATALOG_BLOCK_RE = re.compile(
+    re.escape(CATALOG_BEGIN) + r".*?" + re.escape(CATALOG_END), re.DOTALL
+)
 
 
 def _is_delegator(text: str) -> bool:

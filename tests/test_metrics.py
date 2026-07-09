@@ -23,7 +23,9 @@ def test_log_files_lists_rotated_and_legacy(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     for ym in ("202601", "202602", "202603"):
-        _write_jsonl(tmp_path / f"usage-{ym}.jsonl", [{"ts": f"{ym[:4]}-{ym[4:]}-01T00:00:00+00:00"}])
+        _write_jsonl(
+            tmp_path / f"usage-{ym}.jsonl", [{"ts": f"{ym[:4]}-{ym[4:]}-01T00:00:00+00:00"}]
+        )
     _write_jsonl(tmp_path / "usage.jsonl", [{"ts": "2020-01-01T00:00:00+00:00"}])
     metrics._FILE_CACHE.clear()
 
@@ -110,7 +112,15 @@ def test_api_inflight_reflects_server_state(monkeypatch):
     monkeypatch.setattr(
         server,
         "_inflight",
-        {1: {"tool": "t", "model": "m", "source": "path", "chars_in": 5, "started_at": time.time()}},
+        {
+            1: {
+                "tool": "t",
+                "model": "m",
+                "source": "path",
+                "chars_in": 5,
+                "started_at": time.time(),
+            }
+        },
     )
     client = TestClient(metrics.app)
     r = client.get("/api/inflight")

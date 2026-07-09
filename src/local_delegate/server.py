@@ -116,7 +116,6 @@ def _current_log_path() -> Path:
     return config.LOG_DIR / f"usage-{_utcnow():%Y%m}.jsonl"
 
 
-
 def _check_allowed_dir(path: str) -> None:
     """Si LOCAL_DELEGATE_ALLOWED_DIRS está seteado, rechaza rutas fuera de esas raíces."""
     if not config.ALLOWED_DIRS:
@@ -380,7 +379,9 @@ def _chat(
         json_schema=json_schema_status,
     )
     if source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        tokens = result.tokens_in if result.tokens_in is not None else chars_in // config.CHARS_PER_TOKEN
+        tokens = (
+            result.tokens_in if result.tokens_in is not None else chars_in // config.CHARS_PER_TOKEN
+        )
         text += f"\n\n(leído server-side: {chars_in:,} chars ≈ {tokens:,} tokens que no entraron a tu contexto)"
     return text
 
@@ -671,8 +672,12 @@ def local_commit_msg(
         style: 'conventional' (Conventional Commits) o 'plain'.
     """
     if style not in {"conventional", "plain"}:
-        return f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
-    content, truncated_in, raw_len = _read_input(diff, path, config.max_chars_for(config.MODEL_CODE))
+        return (
+            f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
+        )
+    content, truncated_in, raw_len = _read_input(
+        diff, path, config.max_chars_for(config.MODEL_CODE)
+    )
     if style == "conventional":
         fmt = (
             "un mensaje de commit estilo Conventional Commits: primera línea "
@@ -765,7 +770,9 @@ def local_explain_code(
         path: Ruta a un archivo de código (leído server-side).
         question: Pregunta o foco concreto (opcional).
     """
-    content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for(config.MODEL_CODE))
+    content, truncated_in, raw_len = _read_input(
+        code, path, config.max_chars_for(config.MODEL_CODE)
+    )
     extra = f" Enfócate en: {question}." if question else ""
     system = _guard(
         f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
@@ -835,7 +842,9 @@ def _llamaswap_running() -> str | None:
     entries = data.get("running") if isinstance(data, dict) else None
     if not entries:
         return "ningún modelo montado"
-    parts = [f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)]
+    parts = [
+        f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)
+    ]
     return ", ".join(parts) if parts else "ningún modelo montado"
 
 
