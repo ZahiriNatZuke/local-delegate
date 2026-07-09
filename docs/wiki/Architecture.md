@@ -13,9 +13,9 @@ Claude (Code / Desktop)
         └─ sirve dashboard web (hilo daemon, :9393)
 ```
 
-`local-delegate` es un **servidor MCP stdio** (Python + FastMCP). Expone 10 tools texto→texto.
-Cada tool arma un prompt con *guardrails*, hace `POST /chat/completions` al endpoint configurado
-y devuelve **solo texto**.
+`local-delegate` es un **servidor MCP stdio** (Python + FastMCP). Expone 11 tools texto/imagen→texto
+(10 texto→texto + `local_describe_image` imagen→texto). Cada tool arma un prompt con *guardrails*,
+hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
 
 ## Decisiones de diseño
 
@@ -31,9 +31,10 @@ y devuelve **solo texto**.
 - **`path` server-side = el ahorro real.** `summarize`/`extract`/`lint_summary`/… aceptan `path`:
   el MCP lee el archivo **en tu máquina** y solo devuelve el resultado corto. El contenido grande
   **nunca entra al contexto de Claude** → ahí está la cuota conservada.
-- **Roles de modelo.** Las tools enrutan a 4 roles (mecánico, largo, código, rápido), cada uno un
-  id de modelo configurable. Las que dependen del tamaño del input eligen mecánico vs. largo por
-  un umbral (`LOCAL_DELEGATE_LONG_INPUT_CHARS`).
+- **Roles de modelo.** Las tools enrutan a 4 roles de texto (mecánico, largo, código, rápido) más
+  un rol de visión (`local_describe_image`), cada uno un id de modelo configurable. Las que
+  dependen del tamaño del input eligen mecánico vs. largo por un umbral
+  (`LOCAL_DELEGATE_LONG_INPUT_CHARS`).
 - **Backend opt-in.** El auto-arranque de un backend (llama-swap) está **desactivado por defecto**
   (`LOCAL_DELEGATE_AUTOSTART=0`); el paquete asume que tu endpoint ya corre.
 

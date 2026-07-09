@@ -21,10 +21,13 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 | `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | código |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | ultrarrápido / trivial |
+| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada por modelo |
+| `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
 
-> `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids.
+> `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids
+> de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.
 > Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema.
 
 ## Web de métricas

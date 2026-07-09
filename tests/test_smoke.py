@@ -1,4 +1,4 @@
-"""Smoke tests: el paquete importa, registra sus 10 tools y su config está desacoplada."""
+"""Smoke tests: el paquete importa, registra sus 11 tools y su config está desacoplada."""
 
 from __future__ import annotations
 
@@ -17,14 +17,15 @@ EXPECTED_TOOLS = {
     "local_translate",
     "local_explain_code",
     "local_status",
+    "local_describe_image",
 }
 
 
-def test_ten_tools_registered():
+def test_eleven_tools_registered():
     tools = asyncio.run(server.mcp.list_tools())
     names = {t.name for t in tools}
     assert names == EXPECTED_TOOLS
-    assert len(tools) == 10
+    assert len(tools) == 11
 
 
 def test_config_defaults():

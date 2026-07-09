@@ -6,6 +6,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- Nueva tool `local_describe_image(path, question=None, max_words=200)` (F6): describe una
+  imagen o responde una pregunta sobre ella con un modelo local de visión. La imagen se lee
+  server-side (respeta `LOCAL_DELEGATE_ALLOWED_DIRS`), valida extensión
+  (png/jpg/jpeg/webp/gif) y tamaño (`LOCAL_DELEGATE_MAX_IMAGE_MB`, default 8) antes de leerla
+  completa. 11 tools en total. Guardrail de alcance: solo imagen→texto, nunca genera ni edita
+  imágenes.
+- Rol de modelo `LOCAL_DELEGATE_MODEL_VISION` (default `qwen3-vl-8b`), fuera de
+  `ALLOWED_MODELS` (ese set es solo para el escape genérico `local_delegate`, texto→texto).
+- `_chat` acepta `content` multimodal (lista de bloques `text`/`image_url` OpenAI-compatible)
+  además de `str`, sin duplicar el manejo de inflight/log/feedback.
+- `local_status` muestra el rol `vision` en el catálogo.
+- Recipe `docs/recipes/llama-swap-vision.md`: entrada de `config.yaml` con `--mmproj`
+  (Qwen3-VL-8B-Instruct Q4_K_M + mmproj Q8_0, ~5.78 GB), versión de `llama-server` probada
+  pineada (9743/c57607016) con advertencia de multimodal experimental, y MiniCPM-V-4.5 como
+  alternativa documentada.
+
 ## [0.2.1] - 2026-07-09
 
 ### Fixed

@@ -34,6 +34,7 @@ NEW_TOOLS = [
     "mcp__local-delegate__local_translate",
     "mcp__local-delegate__local_explain_code",
     "mcp__local-delegate__local_status",
+    "mcp__local-delegate__local_describe_image",
 ]
 
 CATALOG_BEGIN = "<!-- local-delegate:catalog:begin -->"

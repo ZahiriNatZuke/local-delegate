@@ -70,6 +70,7 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 | `local_commit_msg` | Mensaje de commit desde un diff | código |
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa | código |
+| `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
 | `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM | — (no llama al backend de chat) |
 
 Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
@@ -91,6 +92,8 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Modelo para documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | Modelo para código |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | Modelo ultrarrápido / trivial |
+| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | Modelo de visión para `local_describe_image` |
+| `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
@@ -110,12 +113,16 @@ entraron al contexto de Claude. Detalle en la [wiki](./docs/wiki/Home.md).
 
 ## Alcance / no-objetivos
 
-`local-delegate` es deliberadamente **texto→texto**: arma el prompt, hace POST a
-`/chat/completions` y devuelve solo texto. Cosas que **no** hace a propósito:
+`local-delegate` es deliberadamente **texto/imagen→texto**: arma el prompt (o el payload
+multimodal), hace POST a `/chat/completions` y devuelve solo texto. Cosas que **no** hace
+a propósito:
 
 - **Tool-calling local.** Los modelos locales no invocan herramientas ni ejecutan código;
   eso lo sigue haciendo Claude. Añadirlo convertiría este paquete en un orquestador
   paralelo, que no es el objetivo.
+- **Generación o edición de imágenes.** `local_describe_image` es solo imagen→texto
+  (describir, leer texto visible, responder una pregunta puntual); nada de generar ni
+  editar imágenes.
 - **Audio.** Para transcripción usa el companion
   [`whisper-transcribe-mcp`](https://github.com/ZahiriNatZuke/whisper-transcribe-mcp) en
   vez de intentar meter audio aquí.
