@@ -287,3 +287,54 @@ def test_local_status_reports_log_stats(monkeypatch, tmp_path):
     text = server.local_status()
     assert "eventos: 1" in text
     assert "~100 tokens" in text
+
+
+# --- F3: feedback de ahorro en _chat --------------------------------------------------
+@respx.mock
+def test_chat_appends_feedback_when_source_path(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    respx.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 500, "completion_tokens": 3},
+            },
+        )
+    )
+    text = server._chat(
+        config.MODEL_MECHANICAL, "system", "user", max_tokens=8, chars_in=2000, source="path"
+    )
+    assert "leído server-side: 2,000 chars" in text
+    assert "500 tokens" in text
+
+
+@respx.mock
+def test_chat_feedback_disabled_by_env(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    respx.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200, json={"choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}]}
+        )
+    )
+    text = server._chat(
+        config.MODEL_MECHANICAL, "system", "user", max_tokens=8, chars_in=2000, source="path"
+    )
+    assert "leído server-side" not in text
+
+
+@respx.mock
+def test_chat_no_feedback_for_inline_source(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    respx.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200, json={"choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}]}
+        )
+    )
+    text = server._chat(
+        config.MODEL_MECHANICAL, "system", "user", max_tokens=8, chars_in=2000, source="inline"
+    )
+    assert "leído server-side" not in text

@@ -292,6 +292,9 @@ def _chat(
         path=path if source == "path" else None,
         json_schema=json_schema_status,
     )
+    if source == "path" and result.ok and config.FEEDBACK_ENABLED:
+        tokens = result.tokens_in if result.tokens_in is not None else chars_in // config.CHARS_PER_TOKEN
+        text += f"\n\n(leído server-side: {chars_in:,} chars ≈ {tokens:,} tokens que no entraron a tu contexto)"
     return text
 
 
@@ -334,7 +337,10 @@ def local_summarize(
     path: str | None = None,
     max_words: int = 150,
 ) -> str:
-    """Resume texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un resumen, no el contenido literal.
+
+    Resume texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
 
     Usa esto para resumir archivos/documentos grandes: pasa 'path' y el archivo se lee del lado
     del servidor, de modo que el contenido completo NO entra al contexto de Claude (solo vuelve el
@@ -398,7 +404,10 @@ def local_extract(
     text: str | None = None,
     path: str | None = None,
 ) -> str:
-    """Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas campos estructurados, no el contenido literal.
+
+    Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
 
     Pasa 'path' para leer el archivo server-side (no gasta contexto de Claude) o 'text'.
     Devuelve un objeto JSON con exactamente las claves pedidas. Enruta al modelo mecánico
@@ -505,7 +514,11 @@ def local_lint_summary(
     text: str | None = None,
     max_words: int = 200,
 ) -> str:
-    """Resume salida de linters/tests/CI con un modelo local, sin gastar contexto de Claude.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un resumen agrupado, no el contenido literal. Si
+    ejecutaste un comando cuya salida es larga, vuélcala a un archivo y pasa 'path'.
+
+    Resume salida de linters/tests/CI con un modelo local, sin gastar contexto de Claude.
 
     Pensada para logs largos y ruidosos (ESLint, clippy, pytest, tsc, CI). Pasa 'path' y el
     archivo se lee del lado del servidor, de modo que el log completo NO entra al contexto de
@@ -549,7 +562,10 @@ def local_commit_msg(
     path: str | None = None,
     style: str = "conventional",
 ) -> str:
-    """Redacta un mensaje de commit a partir de un diff, con un modelo local de código.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un mensaje de commit, no el contenido literal.
+
+    Redacta un mensaje de commit a partir de un diff, con un modelo local de código.
 
     Pasa 'path' a un archivo de diff (p. ej. la salida de `git diff` volcada a fichero) y se lee
     server-side, de modo que el diff completo NO entra al contexto de Claude. Alternativamente
@@ -598,7 +614,10 @@ def local_translate(
     text: str | None = None,
     path: str | None = None,
 ) -> str:
-    """Traduce texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas la traducción, no el contenido literal.
+
+    Traduce texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
 
     Pasa 'path' para leer el archivo server-side (el original no entra al contexto de Claude) o
     'text'. Conserva el formato del original y devuelve SOLO la traducción. Enruta al modelo
@@ -638,7 +657,10 @@ def local_explain_code(
     path: str | None = None,
     question: str | None = None,
 ) -> str:
-    """Explica en prosa qué hace un fragmento/archivo de código, con un modelo local de código.
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas una explicación, no el contenido literal.
+
+    Explica en prosa qué hace un fragmento/archivo de código, con un modelo local de código.
 
     Pasa 'path' para leer el archivo server-side (el código completo NO entra al contexto de
     Claude; solo vuelve la explicación) o 'code'. Opcionalmente enfoca la explicación con

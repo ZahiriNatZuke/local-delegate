@@ -103,3 +103,6 @@ CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
 
 # --- Auto-arranque del backend (opt-in, específico de llama-swap) -----------
 AUTOSTART = _env_flag("LOCAL_DELEGATE_AUTOSTART", False)
+
+# --- Feedback de ahorro en el propio texto de respuesta (awareness) ---------
+FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)

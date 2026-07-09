@@ -229,7 +229,7 @@ Ya cubierta por F2.1/F4.4 (`local_status` con VRAM vía nvidia-smi + `/api/backe
 
 - [x] F1 Fiabilidad del núcleo
 - [x] F2 local_status + json_schema
-- [ ] F3 Awareness (docstrings, feedback, CLAUDE.md, skill, permisos, hooks, agentes)
+- [x] F3 Awareness (docstrings, feedback, CLAUDE.md, skill, permisos, hooks, agentes) — hooks: recipe+scripts listos, instalación en settings.json pendiente (ver Discrepancias)
 - [ ] F4 Log por rango + rotación + inflight
 - [ ] F5 Seguridad + lock + release 0.2.0
 - [ ] (aparte) F6 Visión
@@ -237,4 +237,12 @@ Ya cubierta por F2.1/F4.4 (`local_status` con VRAM vía nvidia-smi + `/api/backe
 
 ## Discrepancias encontradas durante la ejecución
 
-(anotar aquí)
+- **F3.6 — hooks no instalados en `~/.claude/settings.json` automáticamente.** El
+  clasificador de auto-mode del harness bloqueó la edición que añadía el bloque
+  `"hooks"` (PreToolUse/Read + PostToolUse/Bash) por ser una auto-modificación
+  "standing" (ejecuta scripts en cada Read/Bash futuro) no autorizada explícitamente.
+  Los scripts (`docs/recipes/hooks/*.py`), la recipe (`docs/recipes/claude-code-hooks.md`)
+  y las copias en `~/.claude/hooks/` SÍ se crearon y se probaron manualmente (stdin JSON
+  simulado). Falta el paso final: pegar el bloque `"hooks"` del recipe en
+  `C:\Users\Yohan\.claude\settings.json` — pendiente de que el usuario lo apruebe/haga
+  él mismo. El permiso `mcp__local-delegate__*` (F3.5) sí se aplicó sin bloqueo.
