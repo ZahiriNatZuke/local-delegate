@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 import re
+import socket
+import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -101,6 +103,7 @@ def _log_event(
     truncated_out: bool = False,
     raw_len: int | None = None,
     path: str | None = None,
+    json_schema: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en USAGE_LOG. Nunca debe romper una tool."""
     try:
@@ -131,6 +134,8 @@ def _log_event(
             rec["raw_len"] = int(raw_len)
         if source == "path" and path is not None:
             rec["path"] = path
+        if json_schema is not None:
+            rec["json_schema"] = json_schema
         config.USAGE_LOG.parent.mkdir(parents=True, exist_ok=True)
         with config.USAGE_LOG.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -235,6 +240,8 @@ def _chat(
     truncated_in: bool = False,
     raw_len: int | None = None,
     path: str | None = None,
+    response_format: dict | None = None,
+    json_schema_fallback: bool = False,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG."""
     payload = {
@@ -247,9 +254,22 @@ def _chat(
         "temperature": temperature,
         "stream": False,
     }
+    if response_format is not None:
+        payload["response_format"] = response_format
+
     t0 = time.monotonic()
     result = _post_chat(model, payload)
+    json_schema_status = "used" if response_format is not None else None
+    if response_format is not None and not result.ok and result.error == "http_400":
+        if json_schema_fallback:
+            # El backend no soporta response_format con schema: reintenta en modo libre.
+            payload.pop("response_format", None)
+            result = _post_chat(model, payload)
+            json_schema_status = "fallback"
+        else:
+            json_schema_status = "error"
     latency_ms = int((time.monotonic() - t0) * 1000)
+
     text = _strip_think(result.text) if result.ok else result.text
     truncated_out = result.finish_reason == "length"
     if truncated_out:
@@ -270,6 +290,7 @@ def _chat(
         truncated_out=truncated_out,
         raw_len=raw_len,
         path=path if source == "path" else None,
+        json_schema=json_schema_status,
     )
     return text
 
@@ -284,6 +305,18 @@ def _strip_fences(s: str) -> str:
             lines = lines[:-1]
         s = "\n".join(lines).strip()
     return s
+
+
+def _json_schema_payload(fields: list[str]) -> dict:
+    """response_format json_object+schema para local_extract (ver doc de llama-server)."""
+    return {
+        "type": "json_object",
+        "schema": {
+            "type": "object",
+            "properties": {f: {} for f in fields},
+            "required": list(fields),
+        },
+    }
 
 
 def _guard(formato: str, max_words: int | None = None) -> str:
@@ -371,7 +404,8 @@ def local_extract(
     Devuelve un objeto JSON con exactamente las claves pedidas. Enruta al modelo mecánico
     (entradas cortas) o al de contexto largo (documentos grandes) automáticamente: el sondeo
     de tamaño usa bytes del archivo para 'path' y caracteres para 'text' (~5-10% de diferencia
-    en UTF-8, aceptable).
+    en UTF-8, aceptable). Por defecto pide al backend un JSON restringido por schema
+    (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend no lo soporta, reintenta en modo libre.
 
     Args:
         fields: Nombres de los campos a extraer (claves del JSON).
@@ -385,6 +419,7 @@ def local_extract(
     claves = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
     user = f"Extrae los campos del siguiente contenido:\n\n{content}"
+    use_schema = config.JSON_SCHEMA_MODE != "off"
     result = _strip_fences(
         _chat(
             model,
@@ -398,6 +433,8 @@ def local_extract(
             truncated_in=truncated_in,
             raw_len=raw_len,
             path=path,
+            response_format=_json_schema_payload(fields) if use_schema else None,
+            json_schema_fallback=config.JSON_SCHEMA_MODE == "auto",
         )
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
@@ -631,6 +668,136 @@ def local_explain_code(
         path=path,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+def _port_listening(host: str, port: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            return s.connect_ex((host, port)) == 0
+    except OSError:
+        return False
+
+
+def _vram_info() -> str | None:
+    """Libre/total de VRAM vía nvidia-smi (best-effort; None si el binario no está)."""
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    line = out.stdout.strip().splitlines()[0]
+    parts = [p.strip() for p in line.split(",")]
+    if len(parts) != 2:
+        return line
+    used, total = parts
+    try:
+        free_mb = float(total.replace("MiB", "").strip()) - float(used.replace("MiB", "").strip())
+        warn = "  ADVERTENCIA: <2 GB libres" if free_mb < 2048 else ""
+    except ValueError:
+        warn = ""
+    return f"{used} / {total} usados{warn}"
+
+
+def _llamaswap_running() -> str | None:
+    """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
+    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    try:
+        with httpx.Client(timeout=1.0) as c:
+            r = c.get(f"{base}/running")
+            if not r.is_success:
+                return None
+            data = r.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    entries = data.get("running") if isinstance(data, dict) else None
+    if not entries:
+        return "ningún modelo montado"
+    parts = [f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)]
+    return ", ".join(parts) if parts else "ningún modelo montado"
+
+
+@mcp.tool()
+def local_status() -> str:
+    """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
+
+    Úsala para saber qué modelos locales hay disponibles y verificar que el backend está vivo
+    antes de delegar en masa, o para diagnosticar por qué una tool local_* falló.
+    """
+    lines: list[str] = [f"local-delegate v{_get_version()}", ""]
+
+    backend_up = False
+    model_ids: list[str] = []
+    try:
+        with httpx.Client(timeout=2.0) as c:
+            r = c.get(f"{config.BASE_URL}/models")
+            r.raise_for_status()
+            model_ids = sorted(m.get("id", "?") for m in r.json().get("data", []))
+            backend_up = True
+    except (httpx.HTTPError, ValueError):
+        backend_up = False
+    lines.append(f"Backend: {config.BASE_URL} — {'arriba' if backend_up else 'CAÍDO'}")
+    if backend_up:
+        lines.append(f"  modelos expuestos: {', '.join(model_ids) if model_ids else '(ninguno)'}")
+
+    lines.append("")
+    lines.append("Catálogo de roles:")
+    for role, model in (
+        ("mechanical", config.MODEL_MECHANICAL),
+        ("long", config.MODEL_LONG),
+        ("code", config.MODEL_CODE),
+        ("fast", config.MODEL_FAST),
+    ):
+        lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
+
+    n_events = 0
+    saved_chars = 0
+    if config.USAGE_LOG.is_file():
+        with config.USAGE_LOG.open(encoding="utf-8") as f:
+            for raw_line in f:
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    rec = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+                n_events += 1
+                if rec.get("source") == "path":
+                    saved_chars += int(rec.get("chars_in", 0) or 0)
+    lines.append("")
+    lines.append(f"Log: {config.USAGE_LOG}")
+    lines.append(
+        f"  eventos: {n_events} — contexto ahorrado acumulado: "
+        f"~{saved_chars // config.CHARS_PER_TOKEN} tokens"
+    )
+
+    lines.append("")
+    if config.WEB_ENABLED:
+        web_up = _port_listening(config.WEB_HOST, config.WEB_PORT)
+        lines.append(
+            f"Web de métricas: {'activa' if web_up else 'inactiva'} "
+            f"(http://{config.WEB_HOST}:{config.WEB_PORT})"
+        )
+    else:
+        lines.append("Web de métricas: deshabilitada (LOCAL_DELEGATE_WEB=0)")
+
+    vram = _vram_info()
+    if vram:
+        lines.append("")
+        lines.append(f"VRAM (nvidia-smi): {vram}")
+
+    running = _llamaswap_running()
+    if running:
+        lines.append(f"llama-swap /running: {running}")
+
+    return "\n".join(lines)
 
 
 def main() -> None:

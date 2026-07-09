@@ -87,6 +87,13 @@ def max_chars_for(model: str) -> int:
     return MAX_CHARS.get(model, _MAX_CHARS_DEFAULT)
 
 
+# --- response_format json_schema en local_extract ----------------------------
+# "auto" (default): pide JSON con schema; si el backend responde 400, reintenta sin schema.
+# "on": exige schema, propaga el error si el backend no lo soporta. "off": nunca lo pide.
+_json_schema_raw = _env("LOCAL_DELEGATE_JSON_SCHEMA", "auto").strip().lower()
+JSON_SCHEMA_MODE = _json_schema_raw if _json_schema_raw in {"auto", "on", "off"} else "auto"
+
+
 # --- Web de métricas embebida -----------------------------------------------
 WEB_ENABLED = _env_flag("LOCAL_DELEGATE_WEB", True)
 WEB_HOST = _env("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
