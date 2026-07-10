@@ -6,6 +6,41 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-10
+
+### Added
+- Dashboard: endpoint `GET /api/status` (versión del MCP en ejecución, modelos que el backend
+  expone de verdad vía `/v1/models` — antes la web solo enseñaba modelos con eventos en el
+  log —, catálogo de roles y lista de tools MCP) y `GET /api/system` (RAM y VRAM de sistema
+  con uso/total/% + consumo por proceso de los servicios de debajo del MCP: llama-swap,
+  llama-server, ollama…, y el propio proceso MCP). Nuevo módulo `web/sysinfo.py`, todo
+  best-effort y de solo lectura; la VRAM por proceso en Windows (WDDM) sale de los perf
+  counters `GPU Process Memory` muestreados en un hilo de fondo con TTL, porque `nvidia-smi
+  --query-compute-apps` no la reporta en ese modo.
+- Dashboard: panel «Backend local» (estado del endpoint, los modelos disponibles con su rol
+  del catálogo y su estado montado/frío en llama-swap, delegaciones en curso, tools MCP) y
+  panel «Sistema» (barras de RAM/VRAM con umbrales de color, utilización de GPU y tabla de
+  procesos). Versión del MCP visible en el header.
+
+### Changed
+- Dashboard: rango temporal por defecto ahora es **Hoy** (antes: últimos 30 días); la tabla
+  de actividad reciente se pagina de 10 en 10 (antes: primeras 30 filas fijas); la
+  explicación de «¿cómo se calcula el ahorro?» pasa de un `<details>` al pie a un diálogo
+  modal accesible desde el icono «?» del header.
+- Dashboard: iconografía rehecha en SVG — botones del header sin glifos de texto ↻/⟳/◐,
+  iconos de KPI nuevos (escudo, rayo, chip, gauge) y el icono de información pasa de un
+  círculo CSS con letra a un SVG nítido; marca/favicon rediseñados para leerse bien a 16px
+  (cuerpo del chip al ~62% del viewBox, solo 2 pines gruesos por lado y doble chevrón » de
+  delegación en el núcleo).
+
+### Removed
+- Dashboard: filas de chips de filtro Tools/Modelos — redundantes con el panel «Backend
+  local» (que ya lista modelos y tools reales) y con el rango temporal server-side; los
+  agregados vuelven a computarse sobre todos los eventos del rango.
+- README: la imagen del demo apunta por URL absoluta a `raw.githubusercontent.com`, de modo
+  que también se renderiza en la página del paquete en PyPI (los links relativos solo
+  funcionan dentro de GitHub); captura regenerada con el dashboard nuevo.
+
 ## [0.5.0] - 2026-07-09
 
 ### Added

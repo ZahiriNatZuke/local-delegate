@@ -150,3 +150,89 @@ def test_api_backend_unavailable(monkeypatch):
     client = TestClient(metrics.app)
     r = client.get("/api/backend")
     assert r.json() == {"available": False}
+
+
+# --- /api/status: versión, modelos reales del backend, catálogo, tools ----------------
+@respx.mock
+def test_api_status_reports_version_models_catalog_tools(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/v1/models").mock(
+        return_value=httpx.Response(
+            200, json={"data": [{"id": "m-b"}, {"id": "m-a"}], "object": "list"}
+        )
+    )
+    client = TestClient(metrics.app)
+    data = client.get("/api/status").json()
+    assert data["version"] == server._get_version()
+    assert data["backend"]["available"] is True
+    assert data["backend"]["models"] == ["m-a", "m-b"]  # ordenados
+    roles = {c["role"] for c in data["catalog"]}
+    assert roles == {"mechanical", "long", "code", "fast", "vision"}
+    tool_names = {t["name"] for t in data["tools"]}
+    assert "local_summarize" in tool_names and "local_status" in tool_names
+
+
+@respx.mock
+def test_api_status_backend_down(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
+    client = TestClient(metrics.app)
+    data = client.get("/api/status").json()
+    assert data["backend"] == {"available": False, "models": []}
+    assert data["catalog"]  # el catálogo local no depende del backend
+
+
+# --- /api/system: RAM/VRAM + procesos (estructura, con sysinfo monkeypatcheado) --------
+def test_api_system_shape(monkeypatch):
+    from local_delegate.web import sysinfo
+
+    monkeypatch.setattr(
+        sysinfo,
+        "ram_stats",
+        lambda: {"used_gb": 10.0, "total_gb": 32.0, "free_gb": 22.0, "pct": 31.3},
+    )
+    monkeypatch.setattr(
+        sysinfo,
+        "vram_stats",
+        lambda: {"used_mb": 2048, "total_mb": 16384, "pct": 12.5, "gpu_util_pct": 7},
+    )
+    monkeypatch.setattr(
+        sysinfo,
+        "interesting_processes",
+        lambda: [
+            {"pid": 1, "name": "llama-server.exe", "ram_mb": 4096, "vram_mb": 3000, "self": False}
+        ],
+    )
+    client = TestClient(metrics.app)
+    data = client.get("/api/system").json()
+    assert data["ram"]["total_gb"] == 32.0
+    assert data["vram"]["pct"] == 12.5
+    assert data["processes"][0]["name"] == "llama-server.exe"
+
+
+def test_api_system_never_crashes_without_platform_support(monkeypatch):
+    from local_delegate.web import sysinfo
+
+    monkeypatch.setattr(sysinfo, "ram_stats", lambda: None)
+    monkeypatch.setattr(sysinfo, "vram_stats", lambda: None)
+    monkeypatch.setattr(sysinfo, "interesting_processes", lambda: [])
+    client = TestClient(metrics.app)
+    r = client.get("/api/system")
+    assert r.status_code == 200
+    assert r.json() == {"ram": None, "vram": None, "processes": []}
+
+
+def test_sysinfo_smoke():
+    """ram/vram/procesos reales: dict con claves esperadas o None/[], nunca excepción."""
+    from local_delegate.web import sysinfo
+
+    ram = sysinfo.ram_stats()
+    if ram is not None:
+        assert set(ram) == {"used_gb", "total_gb", "free_gb", "pct"} and ram["total_gb"] > 0
+    vram = sysinfo.vram_stats()
+    if vram is not None:
+        assert vram["total_mb"] > 0
+    procs = sysinfo.interesting_processes()
+    assert isinstance(procs, list)
+    for p in procs:
+        assert {"pid", "name", "ram_mb", "vram_mb", "self"} <= set(p)
