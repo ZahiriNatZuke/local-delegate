@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import socket
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -925,6 +927,28 @@ def _vram_info() -> str | None:
     return f"{used} / {total} usados{warn}"
 
 
+def _llamaswap_groups() -> str | None:
+    """Nombres de los groups activos en LLAMASWAP_CONFIG (best-effort, F7).
+
+    Requiere el extra opcional [llamaswap] (pyyaml) y que LLAMASWAP_CONFIG apunte a un
+    config.yaml con 'groups:'. Nunca rompe local_status: cualquier fallo (extra ausente,
+    archivo inexistente, YAML inválido) devuelve None y la línea simplemente no aparece.
+    """
+    cfg_path = os.environ.get("LLAMASWAP_CONFIG")
+    if not cfg_path:
+        return None
+    try:
+        from . import llamaswap_config as lc
+
+        data = lc.load_config(Path(cfg_path))
+    except Exception:
+        return None
+    groups = data.get("groups")
+    if not groups:
+        return None
+    return ", ".join(sorted(groups))
+
+
 def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
     base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
@@ -1021,11 +1045,29 @@ def local_status() -> str:
     if running:
         lines.append(f"llama-swap /running: {running}")
 
+    groups = _llamaswap_groups()
+    if groups:
+        lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
+
     return "\n".join(lines)
 
 
+_CLI_COMMANDS = {"check-llamaswap", "init-llamaswap"}  # subcomandos opt-in, ver cli.py
+
+
 def main() -> None:
-    """Punto de entrada del MCP stdio (usado por [project.scripts] local-delegate)."""
+    """Punto de entrada del MCP stdio (usado por [project.scripts] local-delegate).
+
+    Sin argumentos: arranca el servidor MCP stdio (comportamiento de siempre, usado por
+    cualquier host MCP). Con un subcomando conocido (p. ej. ``local-delegate
+    check-llamaswap ...``) delega a los CLIs opt-in de ``cli.py`` (requieren el extra
+    ``[llamaswap]``) y termina — nunca llega a arrancar el servidor MCP en ese caso.
+    """
+    if len(sys.argv) > 1 and sys.argv[1] in _CLI_COMMANDS:
+        from . import cli
+
+        sys.exit(cli.run(sys.argv[1:]))
+
     # Auto-arranque del backend solo si el usuario lo pidió explícitamente (opt-in).
     if config.AUTOSTART:
         autostart.ensure_backend(wait=0)

@@ -307,6 +307,55 @@ def test_local_status_reports_log_stats(monkeypatch, tmp_path):
     assert "~100 tokens" in text
 
 
+# --- F7: línea best-effort de groups activos en local_status --------------------------
+def test_llamaswap_groups_without_env_returns_none(monkeypatch):
+    monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
+    assert server._llamaswap_groups() is None
+
+
+def test_llamaswap_groups_missing_file_returns_none(monkeypatch, tmp_path):
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(tmp_path / "no-existe.yaml"))
+    assert server._llamaswap_groups() is None
+
+
+def test_llamaswap_groups_reports_sorted_names(monkeypatch, tmp_path):
+    from local_delegate import llamaswap_config as lc
+
+    cfg = tmp_path / "config.yaml"
+    lc.dump_config(
+        {"models": {}, "groups": {"swap": {"members": []}, "resident": {"members": []}}}, cfg
+    )
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(cfg))
+    assert server._llamaswap_groups() == "resident, swap"
+
+
+def test_llamaswap_groups_without_pyyaml_returns_none(monkeypatch, tmp_path):
+    from local_delegate import llamaswap_config as lc
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("models: {}\ngroups: {swap: {members: []}}\n", encoding="utf-8")
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(cfg))
+    monkeypatch.setattr(lc, "yaml", None)
+    assert server._llamaswap_groups() is None
+
+
+@respx.mock
+def test_local_status_includes_groups_line(monkeypatch, tmp_path):
+    from local_delegate import llamaswap_config as lc
+
+    cfg = tmp_path / "config.yaml"
+    lc.dump_config({"models": {}, "groups": {"resident": {"members": []}}}, cfg)
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(cfg))
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
+    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    text = server.local_status()
+    assert "groups activos" in text
+    assert "resident" in text
+
+
 # --- F3: feedback de ahorro en _chat --------------------------------------------------
 @respx.mock
 def test_chat_appends_feedback_when_source_path(monkeypatch):

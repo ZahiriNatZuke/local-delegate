@@ -1,6 +1,6 @@
 [project]
 name = "local-delegate-mcp"
-version = "0.3.0"
+version = "0.4.0"
 description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,6 +27,12 @@ dependencies = [
     "filelock>=3",
 ]
 
+[project.optional-dependencies]
+# Extra opt-in para los CLIs `check-llamaswap`/`init-llamaswap` (groups de llama-swap).
+# Sin este extra el paquete se comporta exactamente igual que hoy: nada lo requiere en
+# el flujo normal del MCP.
+llamaswap = ["pyyaml>=6"]
+
 [project.scripts]
 # Dos alias al mismo entry point: `local-delegate-mcp` hace que `uvx local-delegate-mcp`
 # funcione directo (comando == nombre del paquete); `local-delegate` es el alias corto.
@@ -51,6 +57,7 @@ dev = [
     "ruff>=0.6",
     "pre-commit>=3.7",
     "respx>=0.21",
+    "pyyaml>=6",
 ]
 
 [tool.ruff]

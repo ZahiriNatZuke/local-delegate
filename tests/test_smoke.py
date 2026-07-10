@@ -46,3 +46,21 @@ def test_dashboard_html_present():
 
     assert metrics.HTML.lstrip().startswith("<!doctype html>")
     assert "<script>" in metrics.HTML
+
+
+# --- F7: main() delega a los subcomandos CLI opt-in sin arrancar el servidor MCP -------
+def test_main_dispatches_known_cli_subcommand(monkeypatch):
+    import sys
+
+    from local_delegate import cli
+
+    calls = []
+    monkeypatch.setattr(cli, "run", lambda argv: calls.append(argv) or 42)
+    monkeypatch.setattr(sys, "argv", ["local-delegate", "check-llamaswap", "--config", "x"])
+    try:
+        server.main()
+    except SystemExit as e:
+        assert e.code == 42
+    else:  # pragma: no cover - main() debe salir con sys.exit
+        raise AssertionError("se esperaba SystemExit")
+    assert calls == [["check-llamaswap", "--config", "x"]]

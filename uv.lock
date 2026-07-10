@@ -377,7 +377,7 @@ wheels = [
 
 [[package]]
 name = "local-delegate-mcp"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -388,10 +388,16 @@ dependencies = [
     { name = "uvicorn" },
 ]
 
+[package.optional-dependencies]
+llamaswap = [
+    { name = "pyyaml" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pyyaml" },
     { name = "respx" },
     { name = "ruff" },
 ]
@@ -403,13 +409,16 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.2" },
     { name = "platformdirs", specifier = ">=4" },
+    { name = "pyyaml", marker = "extra == 'llamaswap'", specifier = ">=6" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
+provides-extras = ["llamaswap"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pre-commit", specifier = ">=3.7" },
     { name = "pytest", specifier = ">=8" },
+    { name = "pyyaml", specifier = ">=6" },
     { name = "respx", specifier = ">=0.21" },
     { name = "ruff", specifier = ">=0.6" },
 ]
