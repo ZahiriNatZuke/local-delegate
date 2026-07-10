@@ -15,9 +15,9 @@ Solo se abren los archivos cuyo mes interseca el rango pedido — releer un rang
 recorre el histórico completo. Cache en memoria por archivo (mtime+size); solo el archivo del
 mes actual cambia entre refrescos.
 
-Limitación de /api/inflight: solo ve las llamadas en vuelo del PROCESO que sirve esta web (el
-MCP que la arrancó). Si tienes varias instancias de Claude con su propio MCP, cada una sirve su
-propia web y su propio /api/inflight — no hay estado compartido entre procesos.
+/api/inflight lee un archivo compartido (LOG_DIR/inflight.json, ver server._inflight_mutate) en
+vez de memoria local: ve las delegaciones en curso de TODAS las sesiones de Claude activas en
+esta máquina (mismo usuario del SO), no solo la del proceso que sirve esta web.
 
 Dos formas de arrancar:
   1) Automática: el MCP (server.py) llama a run_in_thread() en un hilo daemon,
@@ -550,20 +550,24 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
   border-radius:999px;padding:3px 10px;text-transform:uppercase}
 .pill.up{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
 .pill.down{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 32%,transparent)}
-.mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent)}
+.mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent);border-radius:8px;transition:background .2s}
 .mrow:last-child{border-bottom:0}
+.mrow.busy{background:color-mix(in srgb,var(--amber) 9%,transparent);padding-left:6px;padding-right:6px}
 .mdot{width:8px;height:8px;border-radius:50%;background:var(--faint);opacity:.55;flex:0 0 auto;transition:.2s}
 .mdot.ready{background:var(--acc);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
 .mdot.starting{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent)}
+.mdot.busy{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent);animation:pulse 1.4s infinite}
 .mname{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tx)}
 .mrole{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
   background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--violet)}
 .mstate{margin-left:auto;font-size:11px;color:var(--mut);font-family:var(--mono)}
+.mrow.busy .mstate{color:var(--amber);font-weight:600}
 .subh{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
 .toolchips{display:flex;flex-wrap:wrap;gap:6px}
 .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
 .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
-.ifrow{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2)}
+.tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
+.ifrow{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
 .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -749,7 +753,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 <script>
 const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
 const state = {events:[], range:'today', auto:true, charts:{},
-  page:0, status:null, running:{}, backendUp:undefined};
+  page:0, status:null, running:{}, backendUp:undefined, inflight:[]};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const tok = c => Math.round(c/CPT);
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
@@ -867,25 +871,28 @@ function renderBackend(){
   pill.title = st.base_url||'';
   const models = [...(((st.backend)||{}).models||[])];
   (st.catalog||[]).forEach(c=>{ if(!models.includes(c.model)) models.push(c.model); });
+  const busyModels = new Set((state.inflight||[]).map(it=>it.model));
   const body = document.getElementById('modelsBody');
   if(!models.length){
     body.innerHTML = '<div class="empty" style="padding:16px">El backend no expone modelos ('+(st.base_url||'?')+').</div>';
     return;
   }
   body.innerHTML = models.map(m=>{
+    const busy = busyModels.has(m);
     const run = state.running[m];
-    const cls = run==='ready'?'ready':(run?'starting':'');
-    const stateTxt = run==='ready'?'montado':(run||'frío');
+    const cls = (run==='ready'?'ready':(run?'starting':'')) + (busy?' busy':'');
+    const stateTxt = busy?'procesando':(run==='ready'?'montado':(run||'frío'));
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
-    return `<div class="mrow"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span></div>`;
+    return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span></div>`;
   }).join('');
 }
 
 function renderTools(){
   const tools = ((state.status||{}).tools)||[];
+  const busyTools = new Set((state.inflight||[]).map(it=>it.tool));
   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
   document.getElementById('toolsBody').innerHTML = tools.length
-    ? tools.map(t=>`<span class="tchip" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
+    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
     : '<span class="tchip">sin datos</span>';
 }
 
@@ -897,10 +904,10 @@ async function pollInflight(){
     state.backendUp = !!bj.available;
     state.running = {};
     if(bj.available) (bj.running||[]).forEach(m=>{ if(m.model) state.running[m.model]=m.state||'ready'; });
-    renderBackend();
-    const items = ij.inflight||[];
-    document.getElementById('inflightBody').innerHTML = items.length
-      ? items.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
+    state.inflight = ij.inflight||[];
+    renderBackend(); renderTools();
+    document.getElementById('inflightBody').innerHTML = state.inflight.length
+      ? state.inflight.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
           <span class="badge model">${it.model}</span>
           <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`).join('')
       : '<div class="ifrow" style="color:var(--faint)">Sin delegaciones en curso</div>';

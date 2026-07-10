@@ -64,10 +64,77 @@ def _get_client() -> httpx.Client:
     return _client
 
 
-# --- Delegaciones en curso (visibilidad; solo dentro de este proceso) -------
+# --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ----------------
+# El estado vive en LOG_DIR/inflight.json (mismo directorio de datos que el log de uso), no
+# solo en memoria: así CUALQUIER proceso MCP que sirva la web (metrics.py) ve las delegaciones
+# en curso de TODAS las sesiones de Claude activas en esta máquina, no solo la suya. El
+# contador local (_inflight_lock/_inflight_next_id) solo genera ids únicos por proceso; nunca
+# toca disco.
 _inflight_lock = threading.Lock()
-_inflight: dict[int, dict] = {}
 _inflight_next_id = 0
+_INFLIGHT_STALE_S = 1800  # red de seguridad: entrada huérfana (proceso muerto a media escritura)
+
+
+def _inflight_file() -> Path:
+    return config.LOG_DIR / "inflight.json"
+
+
+def _pid_alive(pid: int) -> bool:
+    """Best-effort: True si el proceso con ese PID sigue vivo. Nunca lanza."""
+    if pid == os.getpid():
+        return True
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFO
+            if not handle:
+                return False
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+def _read_inflight_data(path: Path) -> dict:
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _atomic_write_json(path: Path, data: dict) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _inflight_mutate(mutate_fn) -> None:
+    """Aplica mutate_fn(dict) al archivo compartido de inflight bajo lock exclusivo.
+
+    Best-effort como el resto del logging: si no consigue el lock en 1s, aplica igual sin
+    lock (nunca bloquea ni rompe una delegación). El peor caso es una entrada perdida o
+    duplicada, que se autolimpia por TTL/pid-muerto en inflight_snapshot().
+    """
+    path = _inflight_file()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lock = FileLock(str(path) + ".lock", timeout=1)
+        try:
+            with lock:
+                data = _read_inflight_data(path)
+                mutate_fn(data)
+                _atomic_write_json(path, data)
+        except Timeout:
+            data = _read_inflight_data(path)
+            mutate_fn(data)
+            _atomic_write_json(path, data)
+    except OSError:
+        pass  # el tracking de inflight es best-effort; jamás rompe una delegación
 
 
 def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int:
@@ -75,36 +142,67 @@ def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int
     with _inflight_lock:
         _inflight_next_id += 1
         entry_id = _inflight_next_id
-        _inflight[entry_id] = {
-            "tool": tool,
-            "model": model,
-            "source": source,
-            "chars_in": chars_in,
-            "started_at": time.time(),
-        }
+    pid = os.getpid()
+    key = f"{pid}:{entry_id}"
+    entry = {
+        "tool": tool,
+        "model": model,
+        "source": source,
+        "chars_in": chars_in,
+        "started_at": time.time(),
+        "pid": pid,
+    }
+
+    def _add(data: dict) -> None:
+        data[key] = entry
+
+    _inflight_mutate(_add)
     return entry_id
 
 
 def _inflight_end(entry_id: int) -> None:
-    with _inflight_lock:
-        _inflight.pop(entry_id, None)
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _remove(data: dict) -> None:
+        data.pop(key, None)
+
+    _inflight_mutate(_remove)
 
 
 def inflight_snapshot() -> list[dict]:
-    """Copia de las delegaciones en curso, con `elapsed_s`. Usada por la web de métricas."""
+    """Delegaciones en curso de TODOS los procesos MCP activos, con `elapsed_s`.
+
+    Lee/limpia el archivo compartido de inflight (ver _inflight_mutate). Descarta entradas
+    huérfanas (TTL vencido o proceso ya muerto) en la misma pasada, así no hace falta un hilo
+    de housekeeping aparte. Usada por /api/inflight (web de métricas).
+    """
     now = time.time()
-    with _inflight_lock:
-        return [
-            {
-                "id": entry_id,
-                "tool": v["tool"],
-                "model": v["model"],
-                "source": v["source"],
-                "chars_in": v["chars_in"],
-                "elapsed_s": round(now - v["started_at"], 1),
-            }
-            for entry_id, v in _inflight.items()
-        ]
+    result: list[dict] = []
+
+    def _collect_and_prune(data: dict) -> None:
+        stale = []
+        for key, v in data.items():
+            age = now - v.get("started_at", 0)
+            pid = v.get("pid")
+            if age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid)):
+                stale.append(key)
+                continue
+            result.append(
+                {
+                    "id": key,
+                    "tool": v.get("tool"),
+                    "model": v.get("model"),
+                    "source": v.get("source"),
+                    "chars_in": v.get("chars_in"),
+                    "elapsed_s": round(age, 1),
+                }
+            )
+        for key in stale:
+            data.pop(key, None)
+
+    _inflight_mutate(_collect_and_prune)
+    result.sort(key=lambda e: -e["elapsed_s"])
+    return result
 
 
 # --- Helpers ----------------------------------------------------------------

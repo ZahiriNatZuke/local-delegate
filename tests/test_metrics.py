@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from datetime import datetime, timezone
 
@@ -108,26 +109,49 @@ def test_api_events_default_range_last_30_days(tmp_path, monkeypatch):
     assert len(data["meta"]["files_read"]) == 1
 
 
-def test_api_inflight_reflects_server_state(monkeypatch):
-    monkeypatch.setattr(
-        server,
-        "_inflight",
-        {
-            1: {
-                "tool": "t",
-                "model": "m",
-                "source": "path",
-                "chars_in": 5,
-                "started_at": time.time(),
-            }
+def test_api_inflight_reflects_server_state(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    entry_id = server._inflight_start(tool="t", model="m", source="path", chars_in=5)
+    try:
+        client = TestClient(metrics.app)
+        r = client.get("/api/inflight")
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data["inflight"]) == 1
+        assert data["inflight"][0]["tool"] == "t"
+    finally:
+        server._inflight_end(entry_id)
+
+
+def test_api_inflight_sees_other_process_and_drops_dead_pid(tmp_path, monkeypatch):
+    """/api/inflight lee el archivo compartido: ve entradas de OTROS pids vivos y descarta
+    las de pids muertos, sin que este proceso haya llamado a _inflight_start para ellas."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    other_pid = os.getppid()  # un pid real y vivo, distinto del nuestro
+    path = server._inflight_file()
+    data = {
+        f"{other_pid}:1": {
+            "tool": "local_classify",
+            "model": "m",
+            "source": "inline",
+            "chars_in": 1,
+            "started_at": time.time(),
+            "pid": other_pid,
         },
-    )
+        "999999:1": {
+            "tool": "local_extract",
+            "model": "m",
+            "source": "inline",
+            "chars_in": 1,
+            "started_at": time.time(),
+            "pid": 999999,
+        },
+    }
+    server._atomic_write_json(path, data)
+
     client = TestClient(metrics.app)
-    r = client.get("/api/inflight")
-    assert r.status_code == 200
-    data = r.json()
-    assert len(data["inflight"]) == 1
-    assert data["inflight"][0]["tool"] == "t"
+    tools = {e["tool"] for e in client.get("/api/inflight").json()["inflight"]}
+    assert tools == {"local_classify"}
 
 
 @respx.mock

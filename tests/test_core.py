@@ -459,7 +459,9 @@ def test_log_event_writes_to_rotated_file(monkeypatch, tmp_path):
 
 
 # --- F4: delegaciones en curso (inflight) -----------------------------------------------
-def test_inflight_snapshot_during_and_after_chat(monkeypatch):
+def test_inflight_snapshot_during_and_after_chat(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+
     def slow_post_chat(model, payload):
         _time.sleep(0.3)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")

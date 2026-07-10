@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-10
+
+### Fixed
+- Dashboard: el panel «En curso» nunca mostraba delegaciones activas si el navegador
+  consultaba un proceso MCP distinto del que las ejecutaba (varias sesiones de Claude Code
+  abiertas a la vez, o la web arrancada manualmente con
+  `python -m local_delegate.web.metrics`) — el estado `inflight` vivía solo en memoria del
+  proceso que ganaba el puerto 9393. Ahora `_inflight_start`/`_inflight_end`/
+  `inflight_snapshot()` leen y escriben `LOG_DIR/inflight.json` bajo `FileLock`, así
+  `/api/inflight` ve las delegaciones de **todas** las sesiones activas en la máquina, no
+  solo la del proceso que sirve la web. Autolimpieza de entradas huérfanas (proceso muerto o
+  con más de 30 min sin cerrarse) en cada lectura, sin hilo de fondo dedicado.
+- Dashboard: el mensaje vacío «Sin delegaciones en curso» heredaba `Inter` en vez de
+  `JetBrains Mono` como el resto del panel «Backend local» (badges, nombres de modelo,
+  contador de tiempo).
+
+### Added
+- Dashboard: el modelo que está procesando una delegación ahora se marca en el panel
+  «Backend local» (punto ámbar con pulso, estado «procesando») y la tool en uso se resalta
+  en los chips de «Tools MCP disponibles», cruzando el modelo/tool de cada entrada de
+  `/api/inflight` contra las filas ya renderizadas.
+
 ## [0.6.0] - 2026-07-10
 
 ### Added
