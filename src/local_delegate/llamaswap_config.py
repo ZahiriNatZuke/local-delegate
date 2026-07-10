@@ -179,17 +179,20 @@ def parse_model_gguf_path(cmd: str) -> Path | None:
     return Path(model) if model else None
 
 
-# --- Estimador de VRAM --------------------------------------------------------------------
+# --- Estimadores de VRAM y RAM -----------------------------------------------------------
 
 
 @dataclass
-class VramEstimate:
+class ResourceEstimate:
     model_id: str
     gb: float
-    method: str  # "gguf-metadata" | "flat-fallback" | "override" | "error"
+    method: str  # "gguf-metadata" | "flat-fallback" | "weights-only" | "override" | "error"
     detail: str
     gguf_path: Path | None = None
     error: str | None = None
+
+
+VramEstimate = ResourceEstimate  # alias retrocompatible (nombre histórico de F7.1-F7.7)
 
 
 def estimate_model_vram(
@@ -242,6 +245,39 @@ def estimate_model_vram(
     return VramEstimate(model_id, total, "flat-fallback", detail, gguf_path=gguf_path)
 
 
+def estimate_model_ram(
+    model_id: str, model_entry: dict, override_gb: float | None = None
+) -> ResourceEstimate:
+    """Estima la RAM DE SISTEMA (no VRAM) que ocupa un modelo cargado.
+
+    llama-server mapea el GGUF también en RAM (mmap) aunque el cómputo sea 100% GPU
+    (-ngl alto): en la práctica, la RAM residente observada ronda el tamaño del archivo de
+    pesos, incluso con offload completo. Esta estimación asume justamente eso (offload
+    completo) y usa solo el tamaño de pesos — es un límite INFERIOR razonable para ese caso
+    común, no una simulación: con -ngl bajo (offload parcial) la RAM real será MAYOR (más
+    capas y el KV cache se quedan en CPU), y esta función no lo detecta ni lo compensa.
+    """
+    if override_gb is not None:
+        return ResourceEstimate(
+            model_id, override_gb, "override", f"{override_gb:.2f} GiB (forzado por el usuario)"
+        )
+
+    cmd = model_entry.get("cmd", "") if isinstance(model_entry, dict) else ""
+    gguf_path = parse_model_gguf_path(cmd)
+    if gguf_path is None:
+        return ResourceEstimate(
+            model_id, 0.0, "error", "", error="no se encontró --model/-m en 'cmd'"
+        )
+    if not gguf_path.is_file():
+        return ResourceEstimate(
+            model_id, 0.0, "error", "", gguf_path=gguf_path, error=f"archivo no encontrado: {gguf_path}"
+        )
+
+    size_gb = gguf_path.stat().st_size / 1024**3
+    detail = f"pesos {size_gb:.2f} GiB (mmap; asume offload completo a GPU, -ngl alto)"
+    return ResourceEstimate(model_id, size_gb, "weights-only", detail, gguf_path=gguf_path)
+
+
 @dataclass
 class GroupContribution:
     group: str
@@ -251,16 +287,20 @@ class GroupContribution:
     contribution_gb: float = 0.0
 
 
-def worst_case_vram_gb(
-    groups: dict, estimates: dict[str, VramEstimate]
+def worst_case_gb(
+    groups: dict, estimates: dict[str, ResourceEstimate]
 ) -> tuple[float, list[GroupContribution]]:
-    """Peor caso de VRAM concurrente para un dict 'groups' del config de llama-swap.
+    """Peor caso de un recurso (VRAM o RAM, según qué 'estimates' se pasen) para 'groups'.
 
     Por grupo: si swap=true (default) solo un miembro corre a la vez -> max(miembros). Si
     swap=false, todos corren juntos -> sum(miembros). Se ignora 'exclusive' A PROPÓSITO: cuando
     exclusive=true un grupo descarga a los demás al cargar, lo que solo puede REDUCIR el pico
     real, nunca aumentarlo — sumar todos los grupos da un límite superior seguro (ahí está el
     guardrail anti-OOM). Miembros sin estimación (id no encontrado) no aportan al total.
+
+    Sirve igual para VRAM y para RAM de sistema: cuando llama-swap descarga un modelo mata el
+    proceso completo, liberando ambos recursos a la vez — la aritmética de grupos (swap/sum,
+    exclusive ignorado) es idéntica, solo cambia qué diccionario de estimaciones se le pasa.
     """
     total = 0.0
     breakdown: list[GroupContribution] = []
@@ -277,6 +317,9 @@ def worst_case_vram_gb(
             )
         )
     return total, breakdown
+
+
+worst_case_vram_gb = worst_case_gb  # alias retrocompatible (nombre histórico de F7.1-F7.7)
 
 
 # --- I/O de config.yaml (requiere el extra [llamaswap]) ------------------------------------

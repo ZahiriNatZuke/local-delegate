@@ -4,6 +4,12 @@ Ver docs/recipes/llama-swap-groups.md. El binario ``local-delegate`` SIN argumen
 arrancando el servidor MCP stdio exactamente igual que siempre (ver server.main()); este
 módulo solo se importa cuando el usuario invoca explícitamente uno de estos subcomandos.
 Requieren el extra ``[llamaswap]`` (``pip install "local-delegate-mcp[llamaswap]"``).
+
+El chequeo de RAM de sistema (``--ram-gb``) es OPCIONAL en ambos comandos: si no se pasa, el
+comportamiento es idéntico al de antes de F7.9 (solo VRAM) — compatibilidad hacia atrás con
+0.4.0. Motivo del chequeo de RAM: llama-server mapea el GGUF también en RAM (mmap) aunque el
+cómputo sea 100% GPU, así que un catálogo que cabe holgado en VRAM puede igual agotar la RAM
+del sistema (verificado en vivo: 8.37 GiB de archivo -> ~7.46 GB de RAM residente real).
 """
 
 from __future__ import annotations
@@ -19,14 +25,16 @@ KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap"}
 
 
 def _print_breakdown(
+    title: str,
     total_gb: float,
     breakdown: list[lc.GroupContribution],
-    estimates: dict[str, lc.VramEstimate],
-    vram_gb: float,
+    estimates: dict[str, lc.ResourceEstimate],
+    budget_gb: float,
     margin_gb: float,
 ) -> None:
-    budget = vram_gb - margin_gb
-    print(f"Presupuesto: {vram_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles")
+    budget = budget_gb - margin_gb
+    print(f"--- {title} ---")
+    print(f"Presupuesto: {budget_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles")
     print("")
     for gc in breakdown:
         mode = "swap (1 a la vez)" if gc.swap else "todos juntos"
@@ -38,26 +46,57 @@ def _print_breakdown(
             else:
                 print(f"    {m}: {est.gb:.2f} GiB [{est.method}] — {est.detail}")
     print("")
-    print(f"Total peor caso: {total_gb:.2f} GiB")
+    print(f"Total peor caso ({title}): {total_gb:.2f} GiB")
 
 
 def _estimate_all(
-    groups: dict, models: dict, overrides: dict[str, float]
-) -> dict[str, lc.VramEstimate]:
+    groups: dict, models: dict, overrides: dict[str, float], estimator
+) -> dict[str, lc.ResourceEstimate]:
     member_ids: set[str] = set()
     for g in groups.values():
         if isinstance(g, dict):
             member_ids.update(g.get("members", []))
-    estimates: dict[str, lc.VramEstimate] = {}
+    estimates: dict[str, lc.ResourceEstimate] = {}
     for mid in member_ids:
         entry = models.get(mid)
         if entry is None:
-            estimates[mid] = lc.VramEstimate(
+            estimates[mid] = lc.ResourceEstimate(
                 mid, 0.0, "error", "", error=f"modelo '{mid}' no está en 'models:'"
             )
             continue
-        estimates[mid] = lc.estimate_model_vram(mid, entry, override_gb=overrides.get(mid))
+        estimates[mid] = estimator(mid, entry, override_gb=overrides.get(mid))
     return estimates
+
+
+def _check_budget(
+    label: str,
+    groups: dict,
+    models: dict,
+    overrides: dict[str, float],
+    estimator,
+    budget_gb: float,
+    margin_gb: float,
+) -> tuple[bool, list[str]]:
+    """Corre un chequeo de presupuesto (VRAM o RAM), imprime el desglose, y avisa el resultado.
+
+    Devuelve (cabe, errores). 'cabe' es False también si hubo errores de estimación (no se
+    puede afirmar que cabe sin poder estimar todos los miembros).
+    """
+    estimates = _estimate_all(groups, models, overrides, estimator)
+    total_gb, breakdown = lc.worst_case_gb(groups, estimates)
+    _print_breakdown(label, total_gb, breakdown, estimates, budget_gb, margin_gb)
+    errored = sorted(m for m, e in estimates.items() if e.error)
+    if errored:
+        print("")
+        print(f"error: no se pudo estimar {label} de: {', '.join(errored)}", file=sys.stderr)
+        return False, errored
+    budget = budget_gb - margin_gb
+    print("")
+    if total_gb > budget:
+        print(f"{label} NO CABE: {total_gb:.2f} GiB > {budget:.2f} GiB disponibles")
+        return False, []
+    print(f"{label} OK: cabe con {budget - total_gb:.2f} GiB de margen extra")
+    return True, []
 
 
 def cmd_check_llamaswap(args: argparse.Namespace) -> int:
@@ -74,23 +113,22 @@ def cmd_check_llamaswap(args: argparse.Namespace) -> int:
         return 2
 
     models = data.get("models", {})
-    estimates = _estimate_all(groups, models, overrides={})
-    total_gb, breakdown = lc.worst_case_vram_gb(groups, estimates)
-    _print_breakdown(total_gb, breakdown, estimates, args.vram_gb, args.margin_gb)
-
-    errored = sorted(m for m, e in estimates.items() if e.error)
-    if errored:
-        print("")
-        print(f"error: no se pudo estimar VRAM de: {', '.join(errored)}", file=sys.stderr)
+    vram_ok, vram_errors = _check_budget(
+        "VRAM", groups, models, {}, lc.estimate_model_vram, args.vram_gb, args.margin_gb
+    )
+    if vram_errors:
         return 2
 
-    budget = args.vram_gb - args.margin_gb
-    print("")
-    if total_gb > budget:
-        print(f"NO CABE: {total_gb:.2f} GiB > {budget:.2f} GiB disponibles")
-        return 1
-    print(f"OK: cabe con {budget - total_gb:.2f} GiB de margen extra")
-    return 0
+    ram_ok = True
+    if args.ram_gb is not None:
+        print("")
+        ram_ok, ram_errors = _check_budget(
+            "RAM", groups, models, {}, lc.estimate_model_ram, args.ram_gb, args.ram_margin_gb
+        )
+        if ram_errors:
+            return 2
+
+    return 0 if (vram_ok and ram_ok) else 1
 
 
 def _parse_add_model(spec: str) -> tuple[str, str, float | None]:
@@ -168,23 +206,26 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         groups["swap"] = {"swap": True, "exclusive": False, "members": swap}
     data["groups"] = groups
 
-    estimates = _estimate_all(groups, models, overrides)
-    total_gb, breakdown = lc.worst_case_vram_gb(groups, estimates)
-    _print_breakdown(total_gb, breakdown, estimates, args.vram_gb, args.margin_gb)
-
-    errored = sorted(m for m, e in estimates.items() if e.error)
-    if errored:
-        print("")
-        print(
-            f"error: no se pudo estimar VRAM de: {', '.join(errored)} — no se escribió nada",
-            file=sys.stderr,
-        )
+    vram_ok, vram_errors = _check_budget(
+        "VRAM", groups, models, overrides, lc.estimate_model_vram, args.vram_gb, args.margin_gb
+    )
+    if vram_errors:
+        print("(nada se escribió)", file=sys.stderr)
         return 2
 
-    budget = args.vram_gb - args.margin_gb
-    if total_gb > budget:
+    ram_ok = True
+    if args.ram_gb is not None:
         print("")
-        print(f"NO CABE: {total_gb:.2f} GiB > {budget:.2f} GiB disponibles — no se escribió nada")
+        ram_ok, ram_errors = _check_budget(
+            "RAM", groups, models, overrides, lc.estimate_model_ram, args.ram_gb, args.ram_margin_gb
+        )
+        if ram_errors:
+            print("(nada se escribió)", file=sys.stderr)
+            return 2
+
+    if not (vram_ok and ram_ok):
+        print("")
+        print("no cabe — no se escribió nada")
         return 1
 
     if args.dry_run:
@@ -209,8 +250,6 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 
     lc.dump_config(data, out_path)
     print(f"escrito: {out_path}")
-    print("")
-    print(f"OK: cabe con {budget - total_gb:.2f} GiB de margen extra")
     return 0
 
 
@@ -223,18 +262,30 @@ def build_parser() -> argparse.ArgumentParser:
 
     check = sub.add_parser(
         "check-llamaswap",
-        help="Valida el presupuesto de VRAM de los groups de un config.yaml de llama-swap.",
+        help="Valida el presupuesto de VRAM (y opcionalmente RAM) de los groups de un config.yaml.",
     )
     check.add_argument("--config", required=True, help="ruta al config.yaml de llama-swap")
     check.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
     check.add_argument(
-        "--margin-gb", type=float, default=1.5, help="margen reservado al sistema (default 1.5)"
+        "--margin-gb", type=float, default=1.5, help="margen de VRAM reservado al sistema (default 1.5)"
+    )
+    check.add_argument(
+        "--ram-gb",
+        type=float,
+        default=None,
+        help="si se pasa, también valida la RAM DE SISTEMA total (GiB) — opcional, off por default",
+    )
+    check.add_argument(
+        "--ram-margin-gb",
+        type=float,
+        default=2.0,
+        help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
     )
     check.set_defaults(func=cmd_check_llamaswap)
 
     init = sub.add_parser(
         "init-llamaswap",
-        help="Genera/actualiza groups en un config.yaml de llama-swap con guardrail de VRAM.",
+        help="Genera/actualiza groups en un config.yaml de llama-swap con guardrail de VRAM/RAM.",
     )
     init.add_argument(
         "--config",
@@ -267,7 +318,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
     init.add_argument(
-        "--margin-gb", type=float, default=1.5, help="margen reservado al sistema (default 1.5)"
+        "--margin-gb", type=float, default=1.5, help="margen de VRAM reservado al sistema (default 1.5)"
+    )
+    init.add_argument(
+        "--ram-gb",
+        type=float,
+        default=None,
+        help="si se pasa, también valida la RAM DE SISTEMA total (GiB) — opcional, off por default",
+    )
+    init.add_argument(
+        "--ram-margin-gb",
+        type=float,
+        default=2.0,
+        help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
     )
     init.add_argument(
         "--force", action="store_true", help="sobreescribe --out si ya existe (deja un .bak)"

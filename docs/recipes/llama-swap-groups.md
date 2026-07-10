@@ -85,17 +85,41 @@ Con `resident=[gemma3-4b]` y `swap=[llama31-8b, qwen25-coder-14b]`: peor caso =
 `3.50 + max(6.81, 9.21) = 12.71 GiB`. Con margen de sistema de 1.5 GB, el presupuesto
 disponible en una GPU de 16 GB es 14.5 GiB → **cabe**, con ~1.8 GiB de margen extra.
 
+## Presupuesto de RAM de sistema (opcional, `--ram-gb`)
+
+VRAM no es lo único a cuidar: `llama-server` mapea el GGUF **también en RAM** (mmap) aunque el
+cómputo sea 100% GPU (`-ngl` alto) — verificado en vivo, un modelo de 8.37 GiB en disco usó
+~7.46 GB de RAM residente real mientras corría enteramente en la GPU. Un catálogo que cabe
+holgado en VRAM puede igual acercarse al límite de RAM en una máquina con menos de 32 GB, y
+ahí sí puede afectar otras ejecuciones del MCP (o del sistema en general).
+
+Por eso `check-llamaswap`/`init-llamaswap` aceptan `--ram-gb`/`--ram-margin-gb` (default de
+margen 2 GiB) — **opcional**: si no los pasás, el comportamiento es idéntico al de antes (solo
+VRAM). La estimación de RAM por modelo es más simple que la de VRAM: solo pesos del archivo
+(sin KV, que con offload completo vive en la GPU), marcada `method=weights-only`. Si tu `cmd`
+usa `-ngl` bajo (offload parcial), la RAM real será MAYOR que esta estimación — asume offload
+completo a propósito, documentado como tal.
+
+La aritmética de peor caso por grupo es la MISMA que para VRAM (swap→max, sin-swap→suma):
+cuando llama-swap descarga un modelo mata el proceso entero, liberando VRAM y RAM juntas.
+
+Ejemplo real (mismo catálogo, verificado con `Get-Process` mientras corrían ambos a la vez):
+
+| Modelo | RAM estimada (`weights-only`) | RAM real medida |
+|---|---|---|
+| `gemma3-4b` + `qwen25-coder-14b` cargados a la vez | 10.69 GiB | ~10.30 GB |
+
 ## Los dos comandos
 
 ### `check-llamaswap` — valida un config existente
 
 ```bash
-local-delegate check-llamaswap --config D:\Projects\llms\llama-swap\config.yaml --vram-gb 16
+local-delegate check-llamaswap --config D:\Projects\llms\llama-swap\config.yaml --vram-gb 16 --ram-gb 32
 ```
 
-Imprime el desglose por grupo y modelo, y termina con exit code `0` (cabe), `1` (no cabe) o
-`2` (error de datos: falta `groups:`, un modelo referenciado no existe, o no se pudo ubicar/leer
-su `.gguf`).
+Imprime el desglose por grupo y modelo (VRAM, y RAM si pasaste `--ram-gb`), y termina con exit
+code `0` (cabe en todo lo que se chequeó), `1` (no cabe en VRAM y/o RAM) o `2` (error de datos:
+falta `groups:`, un modelo referenciado no existe, o no se pudo ubicar/leer su `.gguf`).
 
 ### `init-llamaswap` — genera/actualiza `groups` en un config existente
 
@@ -106,13 +130,14 @@ local-delegate init-llamaswap \
   --swap llama31-8b,qwen25-coder-14b \
   --ttl-resident 600 --ttl-swap 300 \
   --vram-gb 16 --margin-gb 1.5 \
+  --ram-gb 32 --ram-margin-gb 4 \
   --force
 ```
 
 - Lee el `--config` existente (donde ya viven tus `cmd` de `llama-server` afinados a mano) y le
   **añade/reemplaza** la sección `groups:`, más `ttl:` en los modelos referenciados.
-- Corre el guardrail de VRAM (igual que `check-llamaswap`) **antes** de escribir — si no cabe,
-  no escribe nada y sale con exit code `1`.
+- Corre el/los guardrail(es) (igual que `check-llamaswap`) **antes** de escribir — si no cabe en
+  VRAM o (si pasaste `--ram-gb`) en RAM, no escribe nada y sale con exit code `1`.
 - `--force` es necesario para sobreescribir un `--config` que ya existe; siempre deja un
   `<config>.bak` con el contenido anterior.
 - `--dry-run` imprime el YAML resultante sin tocar disco — usalo primero para revisar.

@@ -226,6 +226,37 @@ def test_estimate_model_vram_file_not_found(tmp_path):
     assert "no encontrado" in est.error
 
 
+# --- estimate_model_ram (F7.9) ------------------------------------------------------------
+
+
+def test_estimate_model_ram_weights_only(monkeypatch, tmp_path):
+    p = tmp_path / "m.gguf"
+    _write_fake_gguf_with_size(monkeypatch, p, 8 * GIB, n_layer=48, embedding_length=5120)
+    # con --ctx-size (que sí afectaría la vía fina de VRAM), la RAM sigue siendo solo pesos
+    entry = {"cmd": f"llama-server --port 1 --model {p} -ngl 99 --ctx-size 16384"}
+    est = lc.estimate_model_ram("m", entry)
+    assert est.method == "weights-only"
+    assert est.gb == pytest.approx(8.0, rel=1e-6)
+
+
+def test_estimate_model_ram_override():
+    est = lc.estimate_model_ram("m", {"cmd": ""}, override_gb=4.0)
+    assert est.method == "override"
+    assert est.gb == 4.0
+
+
+def test_estimate_model_ram_missing_model_flag():
+    est = lc.estimate_model_ram("m", {"cmd": "docker run x"})
+    assert est.method == "error"
+
+
+def test_estimate_model_ram_file_not_found(tmp_path):
+    entry = {"cmd": f"llama-server --model {tmp_path / 'nope.gguf'}"}
+    est = lc.estimate_model_ram("m", entry)
+    assert est.method == "error"
+    assert "no encontrado" in est.error
+
+
 # --- worst_case_vram_gb ------------------------------------------------------------------
 
 
@@ -473,3 +504,81 @@ def test_init_llamaswap_requires_resident_or_swap(monkeypatch, tmp_path):
     config_path, _ = _base_config(monkeypatch, tmp_path)
     rc = cli.run(["init-llamaswap", "--config", str(config_path), "--vram-gb", "16"])
     assert rc == 2
+
+
+# --- guardrail de RAM (F7.9): --ram-gb en check-llamaswap / init-llamaswap ----------------
+
+
+def test_check_llamaswap_ram_gb_not_passed_skips_ram_check(monkeypatch, tmp_path, capsys):
+    # r=3GiB, a=5GiB -> RAM real (pesos) sería 3+5=8GiB si se sumaran (grupo swap real toma max
+    # de VRAM, pero r+a como RAM del sistema en un budget bajo debería fallar SI se chequeara).
+    groups = {"swap": {"swap": True, "members": ["a"]}}
+    config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 10}, groups)
+    rc = cli.run(["check-llamaswap", "--config", str(config_path), "--vram-gb", "16"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "--- RAM ---" not in out  # sin --ram-gb no se imprime ninguna sección de RAM
+
+
+def test_check_llamaswap_ram_gb_fails_even_if_vram_ok(monkeypatch, tmp_path, capsys):
+    groups = {"swap": {"swap": True, "members": ["a"]}}
+    config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 4}, groups)
+    # VRAM: 4*1.2=4.8 GiB, cabe holgado en 16 GiB. RAM (solo pesos, sin factor): 4 GiB, budget
+    # de RAM absurdamente bajo -> debe fallar el chequeo de RAM aunque VRAM esté OK.
+    rc = cli.run(
+        [
+            "check-llamaswap", "--config", str(config_path),
+            "--vram-gb", "16", "--ram-gb", "1", "--ram-margin-gb", "0",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "VRAM OK" in out
+    assert "RAM NO CABE" in out
+
+
+def test_check_llamaswap_ram_gb_ok(monkeypatch, tmp_path, capsys):
+    groups = {"swap": {"swap": True, "members": ["a"]}}
+    config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 2}, groups)
+    rc = cli.run(
+        [
+            "check-llamaswap", "--config", str(config_path),
+            "--vram-gb", "16", "--ram-gb", "16", "--ram-margin-gb", "2",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "VRAM OK" in out
+    assert "RAM OK" in out
+
+
+def test_init_llamaswap_ram_check_failure_writes_nothing(monkeypatch, tmp_path):
+    config_path, _ = _base_config(monkeypatch, tmp_path)  # r=3GiB, a=5GiB (pesos)
+    original = config_path.read_text(encoding="utf-8")
+    rc = cli.run(
+        [
+            "init-llamaswap", "--config", str(config_path),
+            "--resident", "gemma3-4b", "--swap", "llama31-8b",
+            "--vram-gb", "16",  # VRAM sobra
+            "--ram-gb", "1", "--ram-margin-gb", "0",  # RAM absurdamente baja -> falla
+            "--force",
+        ]
+    )
+    assert rc == 1
+    assert config_path.read_text(encoding="utf-8") == original
+    assert not (config_path.with_suffix(config_path.suffix + ".bak")).exists()
+
+
+def test_init_llamaswap_ram_gb_ok_writes_groups(monkeypatch, tmp_path):
+    config_path, _ = _base_config(monkeypatch, tmp_path)
+    rc = cli.run(
+        [
+            "init-llamaswap", "--config", str(config_path),
+            "--resident", "gemma3-4b", "--swap", "llama31-8b",
+            "--vram-gb", "16", "--ram-gb", "32", "--ram-margin-gb", "2",
+            "--force",
+        ]
+    )
+    assert rc == 0
+    data = lc.load_config(config_path)
+    assert "groups" in data

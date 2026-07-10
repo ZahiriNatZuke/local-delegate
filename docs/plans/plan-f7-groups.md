@@ -258,6 +258,28 @@ seguido — a discutir con el desglose de VRAM en mano).
   personal) se ejecuta y valida después, con tu OK explícito paso a paso, y no bloquea el cierre
   del paquete en sí.
 
+## F7.9 — Guardrail de RAM de sistema (extensión, iniciativa del usuario durante F7.8)
+
+Durante el ritual de aplicación (F7.8) el usuario notó su RAM de sistema al 93% mientras
+verificaba VRAM, y preguntó por la causa: `llama-server` mapea el GGUF también en RAM (mmap)
+aunque el cómputo sea 100% GPU (`-ngl` alto) — confirmado en vivo, un GGUF de 8.37 GiB usó
+~7.46 GB de RAM residente real. Como el guardrail de F7 solo cubría VRAM, se extendió con el
+mismo patrón para RAM, opt-in y retrocompatible:
+
+- `llamaswap_config.py`: `estimate_model_ram()` (pesos del archivo, sin KV — asume offload
+  completo a GPU, documentado como límite inferior si `-ngl` es parcial). La aritmética de
+  peor caso por grupo se generalizó a `worst_case_gb()` (alias `worst_case_vram_gb` para
+  compat) porque VRAM y RAM comparten la misma lógica swap→max / sin-swap→suma: llama-swap
+  libera ambos recursos juntos al descargar un modelo (mata el proceso completo).
+- `cli.py`: `--ram-gb`/`--ram-margin-gb` opcionales en ambos comandos (default de margen 2.0
+  GiB); sin pasarlos, comportamiento idéntico a 0.4.0. `init-llamaswap` no escribe si falla
+  VRAM **o** RAM.
+- `local_status`: línea best-effort de RAM de sistema (`_ram_info()`, Windows vía `ctypes`
+  `GlobalMemoryStatusEx`, Linux vía `/proc/meminfo`, macOS no implementado).
+- Verificado en vivo contra el catálogo real: estimación 10.69 GiB vs. ~10.30 GB medidos con
+  `Get-Process` (gemma3-4b + qwen25-coder-14b cargados a la vez) — conservador, igual que VRAM.
+- Release 0.5.0 (CHANGELOG, README, recipe actualizados, `uv build` OK, 113 tests en verde).
+
 ## Checklist
 
 - [x] F7.1 `llamaswap_config.py` (estimador + parser/emisor YAML + import guard)
@@ -267,7 +289,10 @@ seguido — a discutir con el desglose de VRAM en mano).
 - [x] F7.5 tests (32 tests nuevos en `test_llamaswap_config.py` + 5 en `test_core.py`/`test_smoke.py`)
 - [x] F7.6 dispatcher de CLI en `main()` + `cli.py`
 - [x] F7.7 extra opcional + doc recipe + bump 0.4.0 + CHANGELOG + README + `uv build`
-- [ ] F7.8 ritual de aplicación personal (aparte, con tu OK explícito)
+- [x] F7.8 ritual de aplicación personal — aplicado sobre el config.yaml real, verificado con
+  nvidia-smi (peor caso VRAM real 11.69 GiB vs. estimado 12.71 GiB) y TTL auto-unload
+  confirmado en vivo (qwen25-coder-14b se descargó solo a los 300s).
+- [x] F7.9 guardrail de RAM de sistema (extensión post-F7.8) — 0.5.0
 
 ## Discrepancias encontradas durante la ejecución
 

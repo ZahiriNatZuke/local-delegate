@@ -927,6 +927,55 @@ def _vram_info() -> str | None:
     return f"{used} / {total} usados{warn}"
 
 
+def _ram_info() -> str | None:
+    """Usado/total de RAM DE SISTEMA (best-effort, F7.9; None si no se pudo leer).
+
+    Portable sin dependencias nuevas: Windows vía ctypes (GlobalMemoryStatusEx, sin lanzar
+    procesos), Linux vía /proc/meminfo. macOS no está implementado (devuelve None; nunca
+    rompe local_status). Motivo: llama-server mapea el GGUF también en RAM (mmap) aunque el
+    cómputo sea 100% GPU, así que un catálogo que cabe en VRAM puede igual agotar la RAM.
+    """
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            class _MemoryStatusEx(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            stat = _MemoryStatusEx()
+            stat.dwLength = ctypes.sizeof(_MemoryStatusEx)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                return None
+            total_gb = stat.ullTotalPhys / 1024**3
+            free_gb = stat.ullAvailPhys / 1024**3
+        elif sys.platform.startswith("linux"):
+            info: dict[str, str] = {}
+            with open("/proc/meminfo", encoding="utf-8") as f:
+                for line in f:
+                    key, _, rest = line.partition(":")
+                    info[key] = rest.strip()
+            total_gb = float(info["MemTotal"].split()[0]) / 1024**2
+            avail_raw = info.get("MemAvailable", info.get("MemFree", "0"))
+            free_gb = float(avail_raw.split()[0]) / 1024**2
+        else:
+            return None
+    except Exception:
+        return None
+    used_gb = total_gb - free_gb
+    warn = "  ADVERTENCIA: <2 GB libres" if free_gb < 2 else ""
+    return f"{used_gb:.1f} / {total_gb:.1f} GiB usados{warn}"
+
+
 def _llamaswap_groups() -> str | None:
     """Nombres de los groups activos en LLAMASWAP_CONFIG (best-effort, F7).
 
@@ -1040,6 +1089,10 @@ def local_status() -> str:
     if vram:
         lines.append("")
         lines.append(f"VRAM (nvidia-smi): {vram}")
+
+    ram = _ram_info()
+    if ram:
+        lines.append(f"RAM de sistema: {ram}")
 
     running = _llamaswap_running()
     if running:

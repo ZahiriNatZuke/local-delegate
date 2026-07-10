@@ -307,6 +307,26 @@ def test_local_status_reports_log_stats(monkeypatch, tmp_path):
     assert "~100 tokens" in text
 
 
+# --- F7.9: RAM de sistema en local_status ---------------------------------------------
+def test_ram_info_smoke():
+    # No mockeamos el SO: en cualquier Windows/Linux real debe devolver un string parseable
+    # (o None si la plataforma no está soportada, p. ej. macOS) — nunca debe lanzar.
+    info = server._ram_info()
+    assert info is None or "GiB usados" in info
+
+
+@respx.mock
+def test_local_status_includes_ram_line(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
+    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    text = server.local_status()
+    if server._ram_info() is not None:
+        assert "RAM de sistema:" in text
+
+
 # --- F7: línea best-effort de groups activos en local_status --------------------------
 def test_llamaswap_groups_without_env_returns_none(monkeypatch):
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)

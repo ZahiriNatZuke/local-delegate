@@ -6,6 +6,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-09
+
+### Added
+- Guardrail de **RAM de sistema** (F7.9), además del de VRAM: `check-llamaswap` e
+  `init-llamaswap` ganan flags opcionales `--ram-gb`/`--ram-margin-gb` (default de margen 2.0
+  GiB); si no se pasan, el comportamiento es idéntico al de 0.4.0 (compatibilidad hacia
+  atrás). Motivo: verificado en vivo durante la aplicación del ritual F7.8 que `llama-server`
+  mapea el GGUF también en RAM del sistema (mmap) aunque el cómputo sea 100% GPU — un
+  catálogo que cabe holgado en VRAM puede igual agotar la RAM y afectar otras ejecuciones del
+  MCP en máquinas con menos de 32 GB. Nuevo `estimate_model_ram()` en `llamaswap_config.py`
+  (pesos del GGUF, sin KV — asume offload completo a GPU; documentado como límite inferior si
+  el `-ngl` es parcial); la aritmética de peor caso por grupo se generalizó
+  (`worst_case_gb()`, con `worst_case_vram_gb` como alias retrocompatible) porque es idéntica
+  para VRAM y RAM (llama-swap libera ambos recursos juntos al descargar un modelo).
+- `local_status` añade una línea best-effort de RAM de sistema (Windows vía `ctypes`
+  `GlobalMemoryStatusEx`, Linux vía `/proc/meminfo`; macOS no implementado, nunca rompe la
+  tool). Verificado en vivo: con `qwen25-coder-14b` + `gemma3-4b` cargados a la vez, el
+  estimador dio 10.69 GiB de RAM peor-caso vs. ~10.30 GB medidos con `Get-Process` — conforme
+  al mismo margen conservador que ya tenía el estimador de VRAM.
+
 ## [0.4.0] - 2026-07-09
 
 ### Added

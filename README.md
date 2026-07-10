@@ -71,7 +71,7 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 | `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
 | `local_explain_code` | Explica código en prosa | código |
 | `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
-| `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM | — (no llama al backend de chat) |
+| `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM, RAM de sistema | — (no llama al backend de chat) |
 
 Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
 endpoint y devuelve **solo texto**.
@@ -139,18 +139,20 @@ largas de lint/tests): [`docs/recipes/claude-code-hooks.md`](./docs/recipes/clau
 
 Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles dos CLIs para gestionar
 **groups** de llama-swap (un modelo residente siempre cargado + un pool que se turna) con
-guardrail de VRAM incorporado:
+guardrail de VRAM **y RAM de sistema** incorporado (`--ram-gb` es opcional: `llama-server`
+mapea el GGUF también en RAM aunque el cómputo sea 100% GPU, así que un catálogo que cabe en
+VRAM puede igual agotar la RAM en máquinas con menos de 32 GB):
 
 ```bash
-local-delegate check-llamaswap --config config.yaml --vram-gb 16
-local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b --vram-gb 16
+local-delegate check-llamaswap --config config.yaml --vram-gb 16 --ram-gb 32
+local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b --vram-gb 16 --ram-gb 32
 ```
 
 El paquete **nunca** toca tu `config.yaml` por su cuenta — estos comandos solo corren si vos
-los invocás. `init-llamaswap` corre el guardrail de VRAM antes de escribir (no escribe nada si
-no cabe) y nunca sobreescribe sin `--force` (dejando `.bak`). Detalle completo, semántica de
-`groups` verificada contra el código de llama-swap, y ritual de aplicación en
-[`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md).
+los invocás. `init-llamaswap` corre el/los guardrail(es) antes de escribir (no escribe nada si
+no cabe en VRAM o, si pasaste `--ram-gb`, en RAM) y nunca sobreescribe sin `--force` (dejando
+`.bak`). Detalle completo, semántica de `groups` verificada contra el código de llama-swap, y
+ritual de aplicación en [`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md).
 
 ## Enlaces
 
