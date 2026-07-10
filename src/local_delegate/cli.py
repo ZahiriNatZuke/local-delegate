@@ -34,7 +34,9 @@ def _print_breakdown(
 ) -> None:
     budget = budget_gb - margin_gb
     print(f"--- {title} ---")
-    print(f"Presupuesto: {budget_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles")
+    print(
+        f"Presupuesto: {budget_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles"
+    )
     print("")
     for gc in breakdown:
         mode = "swap (1 a la vez)" if gc.swap else "todos juntos"
@@ -186,7 +188,9 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 
     missing = sorted(m for m in resident + swap if m not in models)
     if missing:
-        print(f"error: modelo(s) no encontrados en 'models:': {', '.join(missing)}", file=sys.stderr)
+        print(
+            f"error: modelo(s) no encontrados en 'models:': {', '.join(missing)}", file=sys.stderr
+        )
         return 2
 
     for m in resident:
@@ -267,7 +271,10 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--config", required=True, help="ruta al config.yaml de llama-swap")
     check.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
     check.add_argument(
-        "--margin-gb", type=float, default=1.5, help="margen de VRAM reservado al sistema (default 1.5)"
+        "--margin-gb",
+        type=float,
+        default=1.5,
+        help="margen de VRAM reservado al sistema (default 1.5)",
     )
     check.add_argument(
         "--ram-gb",
@@ -318,7 +325,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init.add_argument("--vram-gb", required=True, type=float, help="VRAM total de la GPU en GiB")
     init.add_argument(
-        "--margin-gb", type=float, default=1.5, help="margen de VRAM reservado al sistema (default 1.5)"
+        "--margin-gb",
+        type=float,
+        default=1.5,
+        help="margen de VRAM reservado al sistema (default 1.5)",
     )
     init.add_argument(
         "--ram-gb",

@@ -212,12 +212,15 @@ def estimate_model_vram(
     cmd = model_entry.get("cmd", "") if isinstance(model_entry, dict) else ""
     gguf_path = parse_model_gguf_path(cmd)
     if gguf_path is None:
-        return VramEstimate(
-            model_id, 0.0, "error", "", error="no se encontró --model/-m en 'cmd'"
-        )
+        return VramEstimate(model_id, 0.0, "error", "", error="no se encontró --model/-m en 'cmd'")
     if not gguf_path.is_file():
         return VramEstimate(
-            model_id, 0.0, "error", "", gguf_path=gguf_path, error=f"archivo no encontrado: {gguf_path}"
+            model_id,
+            0.0,
+            "error",
+            "",
+            gguf_path=gguf_path,
+            error=f"archivo no encontrado: {gguf_path}",
         )
 
     size_gb = gguf_path.stat().st_size / 1024**3
@@ -229,7 +232,10 @@ def estimate_model_vram(
         bytes_k = _CACHE_TYPE_BYTES.get(flags.get("cache_type_k", ""), _DEFAULT_CACHE_BYTES)
         bytes_v = _CACHE_TYPE_BYTES.get(flags.get("cache_type_v", ""), _DEFAULT_CACHE_BYTES)
         kv_gb = (
-            arch_info["n_layer"] * arch_info["n_head_kv"] * arch_info["head_dim"] * ctx
+            arch_info["n_layer"]
+            * arch_info["n_head_kv"]
+            * arch_info["head_dim"]
+            * ctx
             * (bytes_k + bytes_v)
         ) / 1024**3
         total = size_gb * 1.05 + kv_gb
@@ -241,7 +247,9 @@ def estimate_model_vram(
         return VramEstimate(model_id, total, "gguf-metadata", detail, gguf_path=gguf_path)
 
     total = size_gb * 1.2
-    detail = f"pesos {size_gb:.2f} GiB x1.2 (estimación gruesa: sin metadatos GGUF o sin --ctx-size)"
+    detail = (
+        f"pesos {size_gb:.2f} GiB x1.2 (estimación gruesa: sin metadatos GGUF o sin --ctx-size)"
+    )
     return VramEstimate(model_id, total, "flat-fallback", detail, gguf_path=gguf_path)
 
 
@@ -270,7 +278,12 @@ def estimate_model_ram(
         )
     if not gguf_path.is_file():
         return ResourceEstimate(
-            model_id, 0.0, "error", "", gguf_path=gguf_path, error=f"archivo no encontrado: {gguf_path}"
+            model_id,
+            0.0,
+            "error",
+            "",
+            gguf_path=gguf_path,
+            error=f"archivo no encontrado: {gguf_path}",
         )
 
     size_gb = gguf_path.stat().st_size / 1024**3
@@ -308,11 +321,16 @@ def worst_case_gb(
         members = list(g.get("members", [])) if isinstance(g, dict) else []
         swap = bool(g.get("swap", True)) if isinstance(g, dict) else True
         member_gb = {m: estimates[m].gb for m in members if m in estimates}
-        contribution = (max(member_gb.values()) if swap else sum(member_gb.values())) if member_gb else 0.0
+        contribution = (
+            (max(member_gb.values()) if swap else sum(member_gb.values())) if member_gb else 0.0
+        )
         total += contribution
         breakdown.append(
             GroupContribution(
-                group=gname, swap=swap, members=members, member_gb=member_gb,
+                group=gname,
+                swap=swap,
+                members=members,
+                member_gb=member_gb,
                 contribution_gb=contribution,
             )
         )

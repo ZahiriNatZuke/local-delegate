@@ -177,8 +177,13 @@ def test_estimate_model_vram_gguf_metadata_matches_hand_calc(monkeypatch, tmp_pa
     p = tmp_path / "m.gguf"
     # pesos = 4 GiB exactos; arquitectura conocida; ctx explícito -> debe usar la vía fina.
     _write_fake_gguf_with_size(
-        monkeypatch, p, 4 * GIB,
-        n_layer=32, head_count=32, head_count_kv=8, embedding_length=4096,
+        monkeypatch,
+        p,
+        4 * GIB,
+        n_layer=32,
+        head_count=32,
+        head_count_kv=8,
+        embedding_length=4096,
     )
     entry = {"cmd": f"llama-server --port 1 --model {p} -ngl 99 --ctx-size 16384"}
     est = lc.estimate_model_vram("m", entry)
@@ -192,8 +197,13 @@ def test_estimate_model_vram_gguf_metadata_matches_hand_calc(monkeypatch, tmp_pa
 def test_estimate_model_vram_quantized_cache_smaller_than_fp16(monkeypatch, tmp_path):
     p = tmp_path / "m.gguf"
     _write_fake_gguf_with_size(
-        monkeypatch, p, 8 * GIB,
-        n_layer=48, head_count=40, head_count_kv=8, embedding_length=5120,
+        monkeypatch,
+        p,
+        8 * GIB,
+        n_layer=48,
+        head_count=40,
+        head_count_kv=8,
+        embedding_length=5120,
     )
     fp16_entry = {"cmd": f"llama-server --port 1 --model {p} -ngl 99 --ctx-size 8192"}
     q4_entry = {
@@ -385,10 +395,14 @@ def test_init_llamaswap_writes_groups_and_ttl(monkeypatch, tmp_path):
     rc = cli.run(
         [
             "init-llamaswap",
-            "--config", str(config_path),
-            "--resident", "gemma3-4b",
-            "--swap", "llama31-8b",
-            "--vram-gb", "16",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",
             "--force",
         ]
     )
@@ -405,8 +419,15 @@ def test_init_llamaswap_refuses_overwrite_without_force(monkeypatch, tmp_path):
     config_path, _ = _base_config(monkeypatch, tmp_path)
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b", "--vram-gb", "16",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",
         ]
     )
     assert rc == 2
@@ -418,8 +439,16 @@ def test_init_llamaswap_force_creates_backup(monkeypatch, tmp_path):
     original = config_path.read_text(encoding="utf-8")
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b", "--vram-gb", "16", "--force",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",
+            "--force",
         ]
     )
     assert rc == 0
@@ -430,8 +459,16 @@ def test_init_llamaswap_force_creates_backup(monkeypatch, tmp_path):
 def test_init_llamaswap_idempotent(monkeypatch, tmp_path):
     config_path, _ = _base_config(monkeypatch, tmp_path)
     argv = [
-        "init-llamaswap", "--config", str(config_path),
-        "--resident", "gemma3-4b", "--swap", "llama31-8b", "--vram-gb", "16", "--force",
+        "init-llamaswap",
+        "--config",
+        str(config_path),
+        "--resident",
+        "gemma3-4b",
+        "--swap",
+        "llama31-8b",
+        "--vram-gb",
+        "16",
+        "--force",
     ]
     assert cli.run(argv) == 0
     first = config_path.read_text(encoding="utf-8")
@@ -445,8 +482,16 @@ def test_init_llamaswap_dry_run_writes_nothing(monkeypatch, tmp_path):
     before = config_path.read_text(encoding="utf-8")
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b", "--vram-gb", "16", "--dry-run",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",
+            "--dry-run",
         ]
     )
     assert rc == 0
@@ -460,11 +505,18 @@ def test_init_llamaswap_add_model_creates_minimal_entry(monkeypatch, tmp_path):
     _write_fake_gguf_with_size(monkeypatch, new_gguf, int(2 * GIB))
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--add-model", f"newmodel={new_gguf}",
-            "--resident", "gemma3-4b",
-            "--swap", "llama31-8b,newmodel",
-            "--vram-gb", "16", "--force",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--add-model",
+            f"newmodel={new_gguf}",
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b,newmodel",
+            "--vram-gb",
+            "16",
+            "--force",
         ]
     )
     assert rc == 0
@@ -478,9 +530,15 @@ def test_init_llamaswap_vram_check_failure_writes_nothing(monkeypatch, tmp_path)
     original = config_path.read_text(encoding="utf-8")
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b",
-            "--vram-gb", "1",  # presupuesto absurdamente bajo -> debe fallar
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "1",  # presupuesto absurdamente bajo -> debe fallar
             "--force",
         ]
     )
@@ -493,8 +551,13 @@ def test_init_llamaswap_missing_model_id_errors(monkeypatch, tmp_path):
     config_path, _ = _base_config(monkeypatch, tmp_path)
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "no-existe", "--vram-gb", "16",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "no-existe",
+            "--vram-gb",
+            "16",
         ]
     )
     assert rc == 2
@@ -527,8 +590,15 @@ def test_check_llamaswap_ram_gb_fails_even_if_vram_ok(monkeypatch, tmp_path, cap
     # de RAM absurdamente bajo -> debe fallar el chequeo de RAM aunque VRAM esté OK.
     rc = cli.run(
         [
-            "check-llamaswap", "--config", str(config_path),
-            "--vram-gb", "16", "--ram-gb", "1", "--ram-margin-gb", "0",
+            "check-llamaswap",
+            "--config",
+            str(config_path),
+            "--vram-gb",
+            "16",
+            "--ram-gb",
+            "1",
+            "--ram-margin-gb",
+            "0",
         ]
     )
     out = capsys.readouterr().out
@@ -542,8 +612,15 @@ def test_check_llamaswap_ram_gb_ok(monkeypatch, tmp_path, capsys):
     config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 2}, groups)
     rc = cli.run(
         [
-            "check-llamaswap", "--config", str(config_path),
-            "--vram-gb", "16", "--ram-gb", "16", "--ram-margin-gb", "2",
+            "check-llamaswap",
+            "--config",
+            str(config_path),
+            "--vram-gb",
+            "16",
+            "--ram-gb",
+            "16",
+            "--ram-margin-gb",
+            "2",
         ]
     )
     out = capsys.readouterr().out
@@ -557,10 +634,19 @@ def test_init_llamaswap_ram_check_failure_writes_nothing(monkeypatch, tmp_path):
     original = config_path.read_text(encoding="utf-8")
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b",
-            "--vram-gb", "16",  # VRAM sobra
-            "--ram-gb", "1", "--ram-margin-gb", "0",  # RAM absurdamente baja -> falla
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",  # VRAM sobra
+            "--ram-gb",
+            "1",
+            "--ram-margin-gb",
+            "0",  # RAM absurdamente baja -> falla
             "--force",
         ]
     )
@@ -573,9 +659,19 @@ def test_init_llamaswap_ram_gb_ok_writes_groups(monkeypatch, tmp_path):
     config_path, _ = _base_config(monkeypatch, tmp_path)
     rc = cli.run(
         [
-            "init-llamaswap", "--config", str(config_path),
-            "--resident", "gemma3-4b", "--swap", "llama31-8b",
-            "--vram-gb", "16", "--ram-gb", "32", "--ram-margin-gb", "2",
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--swap",
+            "llama31-8b",
+            "--vram-gb",
+            "16",
+            "--ram-gb",
+            "32",
+            "--ram-margin-gb",
+            "2",
             "--force",
         ]
     )
