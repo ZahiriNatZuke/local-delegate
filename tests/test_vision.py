@@ -129,7 +129,8 @@ def test_describe_image_omits_feedback_when_no_usage(monkeypatch, tmp_path):
     path = _write_png(tmp_path)
     respx.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx.Response(
-            200, json={"choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}]}
+            200,
+            json={"choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}]},
         )
     )
     text = server.local_describe_image(path)
