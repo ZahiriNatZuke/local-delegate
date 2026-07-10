@@ -135,6 +135,23 @@ Recipe con dos hooks que sugieren delegar en el momento justo sin bloquear nunca
 original (`PreToolUse`/`Read` para archivos grandes, `PostToolUse`/`Bash` para salidas
 largas de lint/tests): [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 
+## Groups de llama-swap (opcional)
+
+Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles dos CLIs para gestionar
+**groups** de llama-swap (un modelo residente siempre cargado + un pool que se turna) con
+guardrail de VRAM incorporado:
+
+```bash
+local-delegate check-llamaswap --config config.yaml --vram-gb 16
+local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b --vram-gb 16
+```
+
+El paquete **nunca** toca tu `config.yaml` por su cuenta — estos comandos solo corren si vos
+los invocás. `init-llamaswap` corre el guardrail de VRAM antes de escribir (no escribe nada si
+no cabe) y nunca sobreescribe sin `--force` (dejando `.bak`). Detalle completo, semántica de
+`groups` verificada contra el código de llama-swap, y ritual de aplicación en
+[`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md).
+
 ## Enlaces
 
 - [Wiki](./docs/wiki/Home.md) · [Recipes](./docs/recipes)

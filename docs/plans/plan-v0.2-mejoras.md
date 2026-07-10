@@ -234,7 +234,9 @@ Ya cubierta por F2.1/F4.4 (`local_status` con VRAM vía nvidia-smi + `/api/backe
 - [x] F5 Seguridad + lock + release 0.2.0
 - [x] (aparte) F6 Visión — Qwen3-VL-8B Q4_K_M + mmproj Q8_0, tool `local_describe_image`,
   0.3.0. Ver detalle en `plan-f6-vision.md`.
-- [ ] (aparte) F7 Groups llama-swap en el paquete (check/init + guardrails VRAM)
+- [x] (aparte) F7 Groups llama-swap en el paquete — CLIs `check-llamaswap`/`init-llamaswap`,
+  extra opcional `[llamaswap]`, 0.4.0. Ver detalle en `plan-f7-groups.md`. F7.8 (ritual de
+  aplicación personal) queda aparte, pendiente de tu OK explícito paso a paso.
 
 ## Discrepancias encontradas durante la ejecución
 

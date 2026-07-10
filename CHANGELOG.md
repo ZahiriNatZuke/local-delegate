@@ -6,6 +6,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-09
+
+### Added
+- Dos CLIs opt-in (F7): `local-delegate check-llamaswap --config <path> --vram-gb <N>` valida
+  el peor caso de VRAM de los `groups` de un config.yaml de llama-swap contra un presupuesto
+  con margen de seguridad; `local-delegate init-llamaswap` genera/actualiza `groups` (patrón
+  residente + swap) sobre un config existente, corriendo el mismo guardrail internamente antes
+  de escribir (nunca escribe si no cabe, nunca sobreescribe sin `--force`, siempre deja `.bak`).
+  Requieren el extra opcional `[llamaswap]` (`pip install "local-delegate-mcp[llamaswap]"`,
+  dependencia `pyyaml`); sin el extra, el resto del paquete se comporta exactamente igual que
+  antes. El paquete nunca toca `config.yaml` de llama-swap por su cuenta — estos comandos son
+  100% opt-in.
+- Módulo `llamaswap_config.py`: estimador de VRAM por modelo GGUF con dos vías. Cuando el GGUF
+  trae metadatos de arquitectura (capas, cabezas KV, dimensión de cabeza) y el `cmd` del modelo
+  tiene `--ctx-size` explícito, calcula pesos + KV cache real (respeta `--cache-type-k/v`); si
+  falta cualquiera de las dos cosas, cae a una estimación gruesa documentada
+  (`tamaño_archivo * 1.2`). Verificado contra los GGUF reales del catálogo de referencia: el
+  factor plano por sí solo subestimaba hasta 1.4 GiB en el caso de contexto grande sin
+  cuantizar el KV cache — de ahí la vía fina con parser de header GGUF.
+- `local_status` añade una línea best-effort con los `groups` activos en `LLAMASWAP_CONFIG`
+  (solo si el extra `[llamaswap]` está instalado y el archivo existe; nunca rompe la tool).
+- Recipe `docs/recipes/llama-swap-groups.md`: semántica de `groups` verificada contra el
+  código real de llama-swap (v235/c59816b), presupuesto de VRAM con ejemplo real, los dos
+  comandos, ritual de aplicación, y por qué el paquete no toca `config.yaml` solo.
+
 ## [0.3.0] - 2026-07-09
 
 ### Added

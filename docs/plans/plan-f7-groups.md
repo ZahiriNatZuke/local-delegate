@@ -260,11 +260,29 @@ seguido — a discutir con el desglose de VRAM en mano).
 
 ## Checklist
 
-- [ ] F7.1 `llamaswap_config.py` (estimador + parser/emisor YAML + import guard)
-- [ ] F7.2 CLI `check-llamaswap`
-- [ ] F7.3 CLI `init-llamaswap`
-- [ ] F7.4 confirmación de visibilidad runtime (ya cubierta; solo verificar + línea de groups activos)
-- [ ] F7.5 tests (fixtures + casos de CLI)
-- [ ] F7.6 dispatcher de CLI en `main()` + `cli.py`
-- [ ] F7.7 extra opcional + doc recipe + bump 0.4.0 + CHANGELOG + README + `uv build`
+- [x] F7.1 `llamaswap_config.py` (estimador + parser/emisor YAML + import guard)
+- [x] F7.2 CLI `check-llamaswap`
+- [x] F7.3 CLI `init-llamaswap`
+- [x] F7.4 confirmación de visibilidad runtime (ya cubierta; línea de groups activos añadida)
+- [x] F7.5 tests (32 tests nuevos en `test_llamaswap_config.py` + 5 en `test_core.py`/`test_smoke.py`)
+- [x] F7.6 dispatcher de CLI en `main()` + `cli.py`
+- [x] F7.7 extra opcional + doc recipe + bump 0.4.0 + CHANGELOG + README + `uv build`
 - [ ] F7.8 ritual de aplicación personal (aparte, con tu OK explícito)
+
+## Discrepancias encontradas durante la ejecución
+
+- **Estimador de VRAM (F7.1):** el plan maestro proponía `file_size * 1.15 + kv_estimate(...)`
+  como aproximación "documentada" sin más detalle. Verificado con los GGUF reales del usuario
+  que un factor plano único (`*1.2`) subestima hasta 1.4 GiB en el peor caso (contexto grande,
+  KV sin cuantizar) — ver discusión en la conversación de la sesión. Se implementó en su lugar
+  un parser de header GGUF (arquitectura real: capas, cabezas KV, dimensión de cabeza) que
+  calcula el KV cache exacto cuando hay `--ctx-size` en el `cmd`, con el factor plano como
+  fallback explícito (marcado como tal, nunca silencioso).
+- **Helper de test con archivos "dispersos" (sparse):** el primer intento de simular GGUF de
+  varios GiB con `seek()+write()` esperando semántica de archivo disperso **llenó el disco del
+  usuario dos veces** (146 GB primero, luego de nuevo antes del segundo intento) — en este
+  filesystem (acceso vía la capa POSIX de git-bash/MSYS sobre NTFS) el hueco se materializó
+  como bytes reales en vez de quedar disperso. Solución final: mockear `Path.stat()` para la
+  ruta puntual del GGUF de test (dejando el header real, pequeño, sin tocar) en vez de escribir
+  contenido de tamaño real — cero bytes de más a disco. Ambas limpiezas de disco fueron
+  autorizadas explícitamente por el usuario antes de ejecutarse.
