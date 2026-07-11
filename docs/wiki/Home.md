@@ -7,6 +7,7 @@ Documentación extendida del MCP `local-delegate`. Para empezar rápido, ve al
 
 - **[Architecture](Architecture.md)** — cómo funciona: MCP stdio → endpoint OpenAI-compatible, texto→texto, el guardrail, logging → dashboard.
 - **[Configuration](Configuration.md)** — referencia completa de variables de entorno.
+- **[Backend versions](Backend-versions.md)** — versiones probadas de llama-server/llama-swap, workspace de referencia y `local-delegate doctor`.
 - **[Savings & metrics](Savings-and-metrics.md)** — semántica del ahorro, la web y las APIs.
 - **[Publishing](Publishing.md)** — proceso de release (PyPI + registro MCP + CI/OIDC).
 - **[Troubleshooting](Troubleshooting.md)** — problemas comunes.

@@ -182,18 +182,79 @@ def test_api_status_reports_version_models_catalog_tools(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     respx.get("http://test-backend/v1/models").mock(
         return_value=httpx.Response(
-            200, json={"data": [{"id": "m-b"}, {"id": "m-a"}], "object": "list"}
+            200,
+            json={
+                "data": [
+                    {"id": "m-b", "status": {"value": "unloaded"}},
+                    {"id": "m-a", "status": {"value": "loaded"}},
+                ],
+                "object": "list",
+            },
         )
     )
     client = TestClient(metrics.app)
     data = client.get("/api/status").json()
     assert data["version"] == server._get_version()
     assert data["backend"]["available"] is True
-    assert data["backend"]["models"] == ["m-a", "m-b"]  # ordenados
+    # #901: modelos ordenados con su status loaded/unloaded (objeto anidado de llama-swap)
+    assert data["backend"]["models"] == [
+        {"id": "m-a", "status": "loaded"},
+        {"id": "m-b", "status": "unloaded"},
+    ]
     roles = {c["role"] for c in data["catalog"]}
     assert roles == {"mechanical", "long", "code", "fast", "vision"}
     tool_names = {t["name"] for t in data["tools"]}
     assert "local_summarize" in tool_names and "local_status" in tool_names
+
+
+@respx.mock
+def test_models_with_status_tolerates_missing_and_string(monkeypatch):
+    """#901: status como objeto {value}, como string plano, o ausente (None) — todos válidos."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/v1/models").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"id": "m1"},  # sin status -> None
+                    {"id": "m2", "status": "loaded"},  # string plano
+                    {"id": "m3", "status": {"value": "unloaded"}},  # objeto anidado
+                ]
+            },
+        )
+    )
+    up, models = server._models_with_status()
+    assert up is True
+    assert models == [
+        {"id": "m1", "status": None},
+        {"id": "m2", "status": "loaded"},
+        {"id": "m3", "status": "unloaded"},
+    ]
+
+
+@respx.mock
+def test_api_backend_stats_available(monkeypatch):
+    """#898: proxy de /api/metrics/stats de llama-swap."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/api/metrics/stats").mock(
+        return_value=httpx.Response(
+            200, json={"total_requests": 3, "gen_histogram": {"p50": 40.0, "p95": 55.0}}
+        )
+    )
+    client = TestClient(metrics.app)
+    data = client.get("/api/backend/stats").json()
+    assert data["available"] is True
+    assert data["stats"]["total_requests"] == 3
+    assert data["stats"]["gen_histogram"]["p50"] == 40.0
+
+
+@respx.mock
+def test_api_backend_stats_unavailable_on_404(monkeypatch):
+    """Backend sin #898 (o no llama-swap): 404 -> degrada a {available: false}."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    respx.get("http://test-backend/api/metrics/stats").mock(return_value=httpx.Response(404))
+    client = TestClient(metrics.app)
+    assert client.get("/api/backend/stats").json() == {"available": False}
 
 
 @respx.mock

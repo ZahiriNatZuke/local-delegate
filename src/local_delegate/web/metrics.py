@@ -6,7 +6,9 @@ Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y
   GET /api/stats      -> agregados JSON del mismo rango
   GET /api/inflight   -> delegaciones en curso EN ESTE PROCESO (ver limitación abajo)
   GET /api/backend    -> proxy best-effort de /running de llama-swap
-  GET /api/status     -> versión del MCP, modelos del backend (/v1/models), catálogo y tools
+  GET /api/backend/stats -> proxy best-effort de /api/metrics/stats de llama-swap (#898, SQLite)
+  GET /api/status     -> versión del MCP, modelos del backend con status loaded/unloaded (#901),
+                         catálogo y tools
   GET /api/system     -> RAM/VRAM de sistema + consumo por proceso (best-effort, ver sysinfo)
   GET /favicon.svg    -> icono de marca (chip) servido inline
 
@@ -281,6 +283,27 @@ def backend():
     return JSONResponse({"available": True, "running": running or []})
 
 
+@app.get("/api/backend/stats")
+def backend_stats():
+    """Proxy best-effort de GET {base sin /v1}/api/metrics/stats de llama-swap (#898, timeout 1s).
+
+    Métricas de actividad agregadas (histogramas/percentiles/tokens-por-segundo) que llama-swap
+    persiste en SQLite. Requiere llama-swap >= v236; para que sobrevivan a reinicios necesita
+    `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
+    degrada a {available: false} sin romper el dashboard.
+    """
+    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    try:
+        with httpx.Client(timeout=1.0) as c:
+            r = c.get(f"{base}/api/metrics/stats")
+            if not r.is_success:
+                return JSONResponse({"available": False})
+            data = r.json()
+    except (httpx.HTTPError, ValueError):
+        return JSONResponse({"available": False})
+    return JSONResponse({"available": True, "stats": data})
+
+
 @app.get("/api/status")
 def status():
     """Identidad y disponibilidad: versión del MCP, modelos reales del backend, catálogo, tools.
@@ -288,16 +311,9 @@ def status():
     Los modelos salen de GET {BASE_URL}/models (lo que el backend de verdad expone), no del
     log de eventos — así el dashboard enseña también los modelos aún sin uso registrado.
     """
-    backend_up = False
-    model_ids: list[str] = []
-    try:
-        with httpx.Client(timeout=2.0) as c:
-            r = c.get(f"{config.BASE_URL}/models")
-            r.raise_for_status()
-            model_ids = sorted(m.get("id", "?") for m in r.json().get("data", []))
-            backend_up = True
-    except (httpx.HTTPError, ValueError):
-        pass
+    # Modelos reales del backend con su estado loaded/unloaded (#901); el helper vive en server.py
+    # y tolera backends que no exponen `status` (devuelve status None en ese caso).
+    backend_up, models = server._models_with_status()
     catalog = [
         {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
         {"role": "long", "label": "largo", "model": config.MODEL_LONG},
@@ -317,7 +333,7 @@ def status():
         {
             "version": server._get_version(),
             "base_url": config.BASE_URL,
-            "backend": {"available": backend_up, "models": model_ids},
+            "backend": {"available": backend_up, "models": models},
             "catalog": catalog,
             "tools": tools,
             "log_dir": str(config.LOG_DIR),
@@ -557,6 +573,16 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mdot.ready{background:var(--acc);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
 .mdot.starting{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent)}
 .mdot.busy{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent);animation:pulse 1.4s infinite}
+.mstatus{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-left:auto}
+.mstatus.loaded{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
+.mstatus.unloaded{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+/* #898: métricas persistidas del backend (llama-swap) */
+.bstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px 0 2px}
+.bstat{background:color-mix(in srgb,var(--violet) 7%,transparent);border-radius:10px;padding:9px 10px}
+.bstat .bk{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+.bstat .bv{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--tx);margin-top:2px}
+.bstat .bv .bp{font-size:9.5px;font-weight:600;color:var(--faint);margin-left:4px}
+.bstat .bsub{font-size:10.5px;color:var(--tx2);margin-top:1px;font-family:var(--mono)}
 .mname{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tx)}
 .mrole{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
   background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--violet)}
@@ -678,6 +704,8 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="card" style="--hc:var(--violet)">
       <div class="panel-h"><h2>Backend local</h2><span id="backendPill" class="pill down">sin datos</span></div>
       <div id="modelsBody"><div class="empty" style="padding:16px">Consultando el backend…</div></div>
+      <div class="subh">Rendimiento del backend <span class="mut" id="bstatsHead"></span></div>
+      <div id="backendStats"><div class="empty" style="padding:12px">sin datos</div></div>
       <div class="subh" id="inflightHead">En curso</div>
       <div id="inflightBody"></div>
       <div class="subh">Tools MCP disponibles <span id="toolsCount" class="num" style="color:var(--tx2)"></span></div>
@@ -856,6 +884,9 @@ async function fetchStatus(){
     if(j.version){ const v=document.getElementById('ver'); v.textContent='v'+j.version; v.style.display=''; }
     renderBackend(); renderTools();
   }catch(e){ /* el panel de backend es opcional: si falla, la web sigue funcionando */ }
+  try{
+    const sr = await fetch('/api/backend/stats'); renderBackendStats(await sr.json());
+  }catch(e){ renderBackendStats(null); }
 }
 
 function roleLabels(model){
@@ -869,22 +900,48 @@ function renderBackend(){
   pill.className = 'pill '+(up?'up':'down');
   pill.textContent = up?'conectado':'caído';
   pill.title = st.base_url||'';
-  const models = [...(((st.backend)||{}).models||[])];
-  (st.catalog||[]).forEach(c=>{ if(!models.includes(c.model)) models.push(c.model); });
+  // backend.models es [{id,status}] (#901); status es 'loaded'/'unloaded' o null si el backend
+  // no lo expone. Se completan los ids del catálogo que el backend aún no haya listado.
+  const statusById = {}; const ids = [];
+  (((st.backend)||{}).models||[]).forEach(m=>{
+    const id = (typeof m==='string') ? m : (m&&m.id); if(!id) return;
+    ids.push(id); if(m && typeof m!=='string' && m.status) statusById[id]=m.status;
+  });
+  (st.catalog||[]).forEach(c=>{ if(!ids.includes(c.model)) ids.push(c.model); });
   const busyModels = new Set((state.inflight||[]).map(it=>it.model));
   const body = document.getElementById('modelsBody');
-  if(!models.length){
+  if(!ids.length){
     body.innerHTML = '<div class="empty" style="padding:16px">El backend no expone modelos ('+(st.base_url||'?')+').</div>';
     return;
   }
-  body.innerHTML = models.map(m=>{
+  body.innerHTML = ids.map(m=>{
     const busy = busyModels.has(m);
     const run = state.running[m];
-    const cls = (run==='ready'?'ready':(run?'starting':'')) + (busy?' busy':'');
-    const stateTxt = busy?'procesando':(run==='ready'?'montado':(run||'frío'));
+    const loaded = statusById[m]==='loaded' || run==='ready';   // #901 o /running
+    const cls = (loaded?'ready':(run&&run!=='ready'?'starting':'')) + (busy?' busy':'');
+    const stateTxt = busy?'procesando':(loaded?'montado':(run&&run!=='ready'?run:'frío'));
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
-    return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span></div>`;
+    const badge = statusById[m] ? `<span class="mstatus ${statusById[m]}">${statusById[m]}</span>` : '';
+    return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span>${badge}</div>`;
   }).join('');
+}
+
+// #898: métricas de actividad que llama-swap persiste en SQLite (proxy /api/backend/stats).
+function renderBackendStats(j){
+  const el = document.getElementById('backendStats'); if(!el) return;
+  const head = document.getElementById('bstatsHead');
+  if(!j || !j.available || !j.stats){
+    el.innerHTML = '<div class="empty" style="padding:12px">sin datos (requiere llama-swap ≥ v236)</div>';
+    if(head) head.textContent=''; return;
+  }
+  const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
+  const f1 = x => (x==null ? '–' : (Math.round(x*10)/10));
+  if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' req') : '';
+  el.innerHTML = `<div class="bstats">
+    <div class="bstat"><div class="bk">gen tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
+    <div class="bstat"><div class="bk">prompt tok/s</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
+    <div class="bstat"><div class="bk">tokens in/out</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">cache ${F.format(s.total_cache_tokens||0)}</div></div>
+  </div>`;
 }
 
 function renderTools(){

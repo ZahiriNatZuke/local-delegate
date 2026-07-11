@@ -1096,6 +1096,38 @@ def _llamaswap_groups() -> str | None:
     return ", ".join(sorted(groups))
 
 
+def _model_status_value(m: dict) -> str | None:
+    """Estado de un modelo del campo `status` de /v1/models (#901 de llama-swap).
+
+    llama-swap lo expone como objeto anidado ``{"value": "loaded"|"unloaded"}`` (verificado en
+    vivo). Se tolera también un string plano; otros backends (Ollama, llama-swap < v236) no lo
+    traen y devuelven None, en cuyo caso simplemente no se muestra el estado.
+    """
+    st = m.get("status")
+    if isinstance(st, dict):
+        val = st.get("value")
+        return val if isinstance(val, str) else None
+    return st if isinstance(st, str) else None
+
+
+def _models_with_status() -> tuple[bool, list[dict]]:
+    """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da."""
+    try:
+        with httpx.Client(timeout=2.0) as c:
+            r = c.get(f"{config.BASE_URL}/models")
+            r.raise_for_status()
+            data = r.json().get("data", [])
+    except (httpx.HTTPError, ValueError):
+        return False, []
+    models = [
+        {"id": m.get("id", "?"), "status": _model_status_value(m)}
+        for m in data
+        if isinstance(m, dict)
+    ]
+    models.sort(key=lambda x: x["id"])
+    return True, models
+
+
 def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
     base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
@@ -1125,19 +1157,16 @@ def local_status() -> str:
     """
     lines: list[str] = [f"local-delegate v{_get_version()}", ""]
 
-    backend_up = False
-    model_ids: list[str] = []
-    try:
-        with httpx.Client(timeout=2.0) as c:
-            r = c.get(f"{config.BASE_URL}/models")
-            r.raise_for_status()
-            model_ids = sorted(m.get("id", "?") for m in r.json().get("data", []))
-            backend_up = True
-    except (httpx.HTTPError, ValueError):
-        backend_up = False
+    backend_up, models = _models_with_status()
     lines.append(f"Backend: {config.BASE_URL} — {'arriba' if backend_up else 'CAÍDO'}")
     if backend_up:
-        lines.append(f"  modelos expuestos: {', '.join(model_ids) if model_ids else '(ninguno)'}")
+        if models:
+            shown = ", ".join(
+                f"{m['id']} ({m['status']})" if m["status"] else m["id"] for m in models
+            )
+        else:
+            shown = "(ninguno)"
+        lines.append(f"  modelos expuestos: {shown}")
 
     lines.append("")
     lines.append("Catálogo de roles:")
@@ -1203,7 +1232,7 @@ def local_status() -> str:
     return "\n".join(lines)
 
 
-_CLI_COMMANDS = {"check-llamaswap", "init-llamaswap"}  # subcomandos opt-in, ver cli.py
+_CLI_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor"}  # subcomandos opt-in, ver cli.py
 
 
 def main() -> None:

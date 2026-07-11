@@ -6,6 +6,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-11
+
+### Added
+- **`local-delegate doctor`**: nuevo subcomando (opt-in, junto a `check-llamaswap`/
+  `init-llamaswap`) que diagnostica la instalación del backend local. Detecta las versiones
+  instaladas de `llama-server` (desde el `cmd` del `config.yaml`, con lectura de texto — funciona
+  sin el extra `[llamaswap]`) y `llama-swap` (vía `LLAMASWAP_EXE` o el PATH), comprueba si el
+  backend responde, y las compara contra las versiones probadas de esta release
+  (`RECOMMENDED_VERSIONS` en `doctor.py`). Con `--online` consulta además la última release
+  publicada en GitHub. Exit code `1` si hay actualizaciones sugeridas. Nuevo módulo `doctor.py`.
+- Dashboard: panel **«Rendimiento del backend»** que muestra las métricas de actividad que
+  llama-swap ≥ v236 persiste en SQLite (#898) — total de requests, tokens in/out, y percentiles
+  (p50/p95) de tokens/segundo de generación y de prompt. Nuevo endpoint proxy
+  `GET /api/backend/stats` (best-effort sobre `/api/metrics/stats` de llama-swap; degrada a «sin
+  datos» con otro backend o una versión vieja).
+- `init-llamaswap --store-path`: escribe `store.path` en el `config.yaml` para que las métricas
+  de #898 sobrevivan a los reinicios de llama-swap (sin ella son in-memory).
+- Nueva página de wiki **[Backend versions](docs/wiki/Backend-versions.md)**: versiones probadas
+  de llama-server/llama-swap (b9925 / v238), estructura de workspace de referencia y guía de
+  `local-delegate doctor`.
+
+### Changed
+- Dashboard y `local_status`: los modelos del backend ahora muestran su estado **loaded/unloaded**
+  a partir del campo `status` de `/v1/models` (#901 de llama-swap, que lo expone como objeto
+  anidado `{value: …}`, verificado en vivo). `GET /api/status` devuelve `backend.models` como
+  `[{id, status}]` en vez de `[id]`. Degrada limpio con backends que no exponen `status` (Ollama,
+  llama-swap < v236): `status` queda en `null` y simplemente no se muestra el badge.
+
 ## [0.7.0] - 2026-07-10
 
 ### Fixed

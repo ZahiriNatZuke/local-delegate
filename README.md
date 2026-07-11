@@ -57,6 +57,10 @@ Un **endpoint OpenAI-compatible** ya corriendo, accesible en `LOCAL_DELEGATE_BAS
 El paquete **no arranca** ningún backend por defecto (`LOCAL_DELEGATE_AUTOSTART=0`). El
 auto-arranque de llama-swap es opt-in (ver tabla de configuración).
 
+¿Qué versiones de `llama-server`/`llama-swap` usar y cómo disponer el workspace? Ver
+[Versiones del backend y workspace de referencia](./docs/wiki/Backend-versions.md) (sugerencia
+probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones.
+
 ## Tools
 
 Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → ahorro real de cuota.

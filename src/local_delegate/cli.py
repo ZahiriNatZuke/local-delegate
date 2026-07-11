@@ -19,9 +19,10 @@ import shutil
 import sys
 from pathlib import Path
 
+from . import doctor
 from . import llamaswap_config as lc
 
-KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap"}
+KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor"}
 
 
 def _print_breakdown(
@@ -210,6 +211,11 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         groups["swap"] = {"swap": True, "exclusive": False, "members": swap}
     data["groups"] = groups
 
+    # #898: persistir las métricas de actividad de llama-swap en SQLite (si no, son in-memory y
+    # se pierden al reiniciar). Habilita el panel "Rendimiento del backend" del dashboard.
+    if args.store_path:
+        data["store"] = {"path": args.store_path}
+
     vram_ok, vram_errors = _check_budget(
         "VRAM", groups, models, overrides, lc.estimate_model_vram, args.vram_gb, args.margin_gb
     )
@@ -343,12 +349,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
     )
     init.add_argument(
+        "--store-path",
+        default=None,
+        help="ruta de la BD SQLite de métricas de llama-swap (#898); persiste stats entre reinicios",
+    )
+    init.add_argument(
         "--force", action="store_true", help="sobreescribe --out si ya existe (deja un .bak)"
     )
     init.add_argument(
         "--dry-run", action="store_true", help="imprime el YAML resultante, no escribe nada"
     )
     init.set_defaults(func=cmd_init_llamaswap)
+
+    doc = sub.add_parser(
+        "doctor",
+        help="Diagnostica la instalación del backend: versiones de llama-server/llama-swap vs probadas.",
+    )
+    doc.add_argument(
+        "--config",
+        default=None,
+        help="config.yaml de llama-swap (para localizar llama-server; default: LLAMASWAP_CONFIG)",
+    )
+    doc.add_argument(
+        "--online",
+        action="store_true",
+        help="consulta GitHub por la última release publicada de cada componente",
+    )
+    doc.set_defaults(func=doctor.run_doctor)
 
     return parser
 
