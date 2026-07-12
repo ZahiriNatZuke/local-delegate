@@ -162,7 +162,9 @@ def test_api_backend_available(monkeypatch):
     )
     # /api/backend ahora incluye el status #901 fresco (mismo poll de 2s que /running)
     respx.get("http://test-backend/v1/models").mock(
-        return_value=httpx.Response(200, json={"data": [{"id": "m1", "status": {"value": "loaded"}}]})
+        return_value=httpx.Response(
+            200, json={"data": [{"id": "m1", "status": {"value": "loaded"}}]}
+        )
     )
     client = TestClient(metrics.app)
     data = client.get("/api/backend").json()
