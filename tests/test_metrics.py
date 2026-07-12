@@ -160,20 +160,24 @@ def test_api_backend_available(monkeypatch):
     respx.get("http://test-backend/running").mock(
         return_value=httpx.Response(200, json={"running": [{"model": "m1", "state": "ready"}]})
     )
+    # /api/backend ahora incluye el status #901 fresco (mismo poll de 2s que /running)
+    respx.get("http://test-backend/v1/models").mock(
+        return_value=httpx.Response(200, json={"data": [{"id": "m1", "status": {"value": "loaded"}}]})
+    )
     client = TestClient(metrics.app)
-    r = client.get("/api/backend")
-    data = r.json()
+    data = client.get("/api/backend").json()
     assert data["available"] is True
     assert data["running"][0]["model"] == "m1"
+    assert data["models"] == [{"id": "m1", "status": "loaded"}]
 
 
 @respx.mock
 def test_api_backend_unavailable(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
     client = TestClient(metrics.app)
-    r = client.get("/api/backend")
-    assert r.json() == {"available": False}
+    assert client.get("/api/backend").json() == {"available": False, "running": [], "models": []}
 
 
 # --- /api/status: versión, modelos reales del backend, catálogo, tools ----------------

@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-11
+
+### Fixed
+- Dashboard, panel «Backend local»: el estado **montado/loaded** de un modelo tardaba hasta 60 s
+  en reflejarse porque el status loaded/unloaded (#901) solo se refrescaba vía `/api/status` (cada
+  60 s). Ahora `GET /api/backend` incluye también `models: [{id, status}]` y el poll rápido (2 s) lo
+  mantiene fresco, así un modelo recién cargado se marca «montado» casi al instante.
+- Dashboard, panel «Backend local»: la columna de estado («frío»/«montado») no quedaba alineada
+  entre filas — `.mstate` y `.mstatus` tenían ambos `margin-left:auto`, así que flexbox repartía el
+  hueco y la posición dependía del ancho (variable) del badge de rol. Ahora la columna de estado y el
+  badge tienen ancho fijo y se alinean en todas las filas.
+
 ## [0.8.0] - 2026-07-11
 
 ### Added

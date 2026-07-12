@@ -269,18 +269,26 @@ def inflight():
 
 @app.get("/api/backend")
 def backend():
-    """Proxy best-effort de GET {base sin /v1}/running de llama-swap (timeout 1s)."""
+    """Estado del backend para el poll rápido (2s) del dashboard: modelos montados y su status.
+
+    Combina dos señales, ambas refrescadas en el mismo ciclo de 2s para que el dashboard marque
+    "montado"/loaded sin desfase (antes el status loaded/unloaded solo llegaba vía /api/status,
+    que refresca cada 60s):
+      - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
+      - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
+    """
     base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    running: list = []
     try:
         with httpx.Client(timeout=1.0) as c:
             r = c.get(f"{base}/running")
-            if not r.is_success:
-                return JSONResponse({"available": False})
-            data = r.json()
+            if r.is_success:
+                data = r.json()
+                running = (data.get("running") if isinstance(data, dict) else None) or []
     except (httpx.HTTPError, ValueError):
-        return JSONResponse({"available": False})
-    running = data.get("running") if isinstance(data, dict) else None
-    return JSONResponse({"available": True, "running": running or []})
+        running = []
+    backend_up, models = server._models_with_status()
+    return JSONResponse({"available": backend_up, "running": running, "models": models})
 
 
 @app.get("/api/backend/stats")
@@ -573,7 +581,7 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mdot.ready{background:var(--acc);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
 .mdot.starting{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent)}
 .mdot.busy{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent);animation:pulse 1.4s infinite}
-.mstatus{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-left:auto}
+.mstatus{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-left:10px;min-width:74px;text-align:center}
 .mstatus.loaded{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
 .mstatus.unloaded{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
 /* #898: métricas persistidas del backend (llama-swap) */
@@ -586,7 +594,7 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mname{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tx)}
 .mrole{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
   background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--violet)}
-.mstate{margin-left:auto;font-size:11px;color:var(--mut);font-family:var(--mono)}
+.mstate{margin-left:auto;min-width:58px;text-align:right;font-size:11px;color:var(--mut);font-family:var(--mono)}
 .mrow.busy .mstate{color:var(--amber);font-weight:600}
 .subh{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
 .toolchips{display:flex;flex-wrap:wrap;gap:6px}
@@ -881,6 +889,9 @@ async function fetchStatus(){
   try{
     const r = await fetch('/api/status'); const j = await r.json();
     state.status = j;
+    // status inicial de modelos (#901); el poll de 2s lo mantiene fresco después
+    state.modelStatus = state.modelStatus || {};
+    (((j.backend)||{}).models||[]).forEach(m=>{ if(m && m.id && m.status) state.modelStatus[m.id]=m.status; });
     if(j.version){ const v=document.getElementById('ver'); v.textContent='v'+j.version; v.style.display=''; }
     renderBackend(); renderTools();
   }catch(e){ /* el panel de backend es opcional: si falla, la web sigue funcionando */ }
@@ -900,12 +911,12 @@ function renderBackend(){
   pill.className = 'pill '+(up?'up':'down');
   pill.textContent = up?'conectado':'caído';
   pill.title = st.base_url||'';
-  // backend.models es [{id,status}] (#901); status es 'loaded'/'unloaded' o null si el backend
-  // no lo expone. Se completan los ids del catálogo que el backend aún no haya listado.
-  const statusById = {}; const ids = [];
+  // ids desde el backend + catálogo. El status loaded/unloaded (#901) sale de state.modelStatus,
+  // refrescado en el poll rápido de 2s (no del /api/status de 60s) para que "montado" no se desfase.
+  const statusById = state.modelStatus || {};
+  const ids = [];
   (((st.backend)||{}).models||[]).forEach(m=>{
-    const id = (typeof m==='string') ? m : (m&&m.id); if(!id) return;
-    ids.push(id); if(m && typeof m!=='string' && m.status) statusById[id]=m.status;
+    const id = (typeof m==='string') ? m : (m&&m.id); if(id && !ids.includes(id)) ids.push(id);
   });
   (st.catalog||[]).forEach(c=>{ if(!ids.includes(c.model)) ids.push(c.model); });
   const busyModels = new Set((state.inflight||[]).map(it=>it.model));
@@ -961,6 +972,9 @@ async function pollInflight(){
     state.backendUp = !!bj.available;
     state.running = {};
     if(bj.available) (bj.running||[]).forEach(m=>{ if(m.model) state.running[m.model]=m.state||'ready'; });
+    // #901 fresco cada 2s: loaded/unloaded por modelo (antes solo llegaba vía /api/status a 60s)
+    state.modelStatus = {};
+    (bj.models||[]).forEach(m=>{ if(m && m.id && m.status) state.modelStatus[m.id]=m.status; });
     state.inflight = ij.inflight||[];
     renderBackend(); renderTools();
     document.getElementById('inflightBody').innerHTML = state.inflight.length
