@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Check lockfile up-to-date
+        run: uv lock --check
+
       - name: Build
         run: uv build
 
