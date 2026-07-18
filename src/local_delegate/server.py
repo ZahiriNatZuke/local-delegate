@@ -427,6 +427,7 @@ def _chat(
     json_schema_fallback: bool = False,
     feedback_label: str = "chars",
     feedback_char_estimate: bool = True,
+    skip_lang_instr: bool = False,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -434,10 +435,22 @@ def _chat(
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
     local_describe_image).
     """
+
+    # 语言匹配：将指令注入 system prompt 末尾，确保模型使用与用户输入相同的语言回复。
+    # 避免混入用户消息——用户消息末位是模型注意力的最高权重区，注入指令会污染内容边界。
+    _system_msg = system
+    if not skip_lang_instr:
+        _system_msg = (
+            _system_msg
+            + "\n\n【语言规则】你必须使用与用户输入相同的语言进行回复。"
+            "用户用中文则用中文回复，用户用西班牙语则用西班牙语回复，"
+            "用户用英语则用英语回复。不要切换语言。"
+        )
+
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system},
+            {"role": "system", "content": _system_msg},
             {"role": "user", "content": user},
         ],
         "max_tokens": max_tokens,
@@ -719,6 +732,7 @@ def local_boilerplate(spec: str, language: str) -> str:
             tool="local_boilerplate",
             chars_in=len(spec),
             source="inline",
+            skip_lang_instr=True,
         )
     )
 
@@ -899,6 +913,7 @@ def local_translate(
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
+        skip_lang_instr=True,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
