@@ -1,9 +1,7 @@
 name: Publish
 
-# Publica en PyPI al empujar un tag vX.Y.Z, usando Trusted Publishing (OIDC):
-# sin tokens guardados en secrets. Requiere configurar un "trusted publisher" en PyPI
-# para el proyecto local-delegate-mcp (owner ZahiriNatZuke, repo local-delegate,
-# workflow publish.yml, environment pypi).
+# 推送 vX.Y.Z tag 时自动发布到 PyPI。
+# 需要在 GitHub Secrets 中设置 PYPI_TOKEN（zagan 账号的 API token，scope: Entire account）。
 
 on:
   push:
@@ -12,9 +10,6 @@ on:
 jobs:
   pypi:
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write # necesario para OIDC / Trusted Publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +24,7 @@ jobs:
       - name: Build
         run: uv build
 
-      - name: Publish to PyPI (trusted publishing)
-        # --check-url hace el publish idempotente: si la versión ya existe en el índice,
-        # salta los archivos ya subidos en vez de fallar (re-ejecuciones sobre un tag existente).
-        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/
+      - name: Publish to PyPI
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
