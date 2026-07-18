@@ -414,12 +414,12 @@ def run_in_thread(host: str | None = None, port: int | None = None):
 
 
 HTML = r"""<!doctype html>
-<html lang="es" data-theme="dark">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>local·delegate — panel de ahorro</title>
-<meta name="description" content="Uso y ahorro de cuota de las delegaciones a modelos locales de local-delegate.">
+<title>local·delegate — 用量面板</title>
+<meta name="description" content="local-delegate 本地模型委托的用量与配额节省。">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -680,49 +680,49 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
         </svg>
       </span>
       <div class="brand-txt">
-        <div class="brand-name">local<b>·</b>delegate<span class="ver" id="ver" title="Versión del MCP que sirve este panel" style="display:none"></span></div>
-        <div class="brand-sub">panel de ahorro</div>
+        <div class="brand-name">local<b>·</b>delegate<span class="ver" id="ver" title="服务此面板的 MCP 版本" style="display:none"></span></div>
+        <div class="brand-sub">用量面板</div>
       </div>
-      <span class="live" id="live" title="Estado de los datos"><span class="live-dot"></span><span id="liveTxt">EN VIVO</span></span>
+      <span class="live" id="live" title="数据状态"><span class="live-dot"></span><span id="liveTxt">实时</span></span>
     </div>
     <div class="controls">
-      <select id="range" class="btn" title="Rango temporal">
-        <option value="today" selected>Hoy</option>
-        <option value="7">Últimos 7 días</option>
-        <option value="30">Últimos 30 días</option>
-        <option value="prev-month">Mes anterior</option>
-        <option value="all">Todo el histórico</option>
-        <option value="custom">Personalizado…</option>
+      <select id="range" class="btn" title="时间范围">
+        <option value="today" selected>今天</option>
+        <option value="7">最近7天</option>
+        <option value="30">最近30天</option>
+        <option value="prev-month">上个月</option>
+        <option value="all">全部历史</option>
+        <option value="custom">自定义…</option>
       </select>
-      <input type="date" id="rangeFrom" class="btn" style="display:none" title="Desde">
-      <input type="date" id="rangeTo" class="btn" style="display:none" title="Hasta">
-      <button id="auto" class="btn on" title="Auto-refresco cada 15 s">
+      <input type="date" id="rangeFrom" class="btn" style="display:none" title="从">
+      <input type="date" id="rangeTo" class="btn" style="display:none" title="至">
+      <button id="auto" class="btn on" title="每15秒自动刷新">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         Auto</button>
-      <button id="reload" class="btn icon" title="Refrescar ahora" aria-label="Refrescar">
+      <button id="reload" class="btn icon" title="立即刷新" aria-label="刷新">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
-      <button id="theme" class="btn icon" title="Tema claro / oscuro" aria-label="Cambiar tema">
+      <button id="theme" class="btn icon" title="明暗主题" aria-label="切换主题">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.4 14.2A8.5 8.5 0 0 1 9.8 3.6a8.5 8.5 0 1 0 10.6 10.6z"/></svg></button>
-      <button id="help" class="btn icon" title="¿Cómo se calcula el ahorro?" aria-label="Ayuda">
+      <button id="help" class="btn icon" title="如何计算节省？" aria-label="帮助">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 1 1 3.9 2.6c-.8.4-1.1 1-1.1 1.9"/><path d="M12 17h.01"/></svg></button>
     </div>
   </header>
 
   <div class="grid duo">
     <div class="card" style="--hc:var(--violet)">
-      <div class="panel-h"><h2>Backend local</h2><span id="backendPill" class="pill down">sin datos</span></div>
-      <div id="modelsBody"><div class="empty" style="padding:16px">Consultando el backend…</div></div>
+      <div class="panel-h"><h2>本地后端</h2><span id="backendPill" class="pill down">sin datos</span></div>
+      <div id="modelsBody"><div class="empty" style="padding:16px">正在查询…</div></div>
       <div class="subh">Rendimiento del backend <span class="mut" id="bstatsHead"></span></div>
       <div id="backendStats"><div class="empty" style="padding:12px">sin datos</div></div>
-      <div class="subh" id="inflightHead">En curso</div>
+      <div class="subh" id="inflightHead">进行中</div>
       <div id="inflightBody"></div>
       <div class="subh">Tools MCP disponibles <span id="toolsCount" class="num" style="color:var(--tx2)"></span></div>
       <div class="toolchips" id="toolsBody"><span class="tchip">…</span></div>
     </div>
     <div class="card" style="--hc:var(--amber)">
-      <div class="panel-h"><h2>Sistema</h2><span class="mut" id="gpuUtil"></span></div>
-      <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
-      <div class="subh">Procesos del backend</div>
+      <div class="panel-h"><h2>系统</h2><span class="mut" id="gpuUtil"></span></div>
+      <div id="metersBody"><div class="empty" style="padding:16px">正在读取指标…</div></div>
+      <div class="subh">后端进程</div>
       <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
     </div>
   </div>
@@ -731,28 +731,28 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 
   <div class="grid cols">
     <div class="card chartcard" style="--hc:var(--acc)">
-      <div class="panel-h"><h2>Ahorro de contexto en el tiempo</h2><span class="mut" id="tsMode">tokens · día</span></div>
+      <div class="panel-h"><h2>上下文节省趋势</h2><span class="mut" id="tsMode">tokens · día</span></div>
       <div class="cbox"><canvas id="tsChart"></canvas></div>
     </div>
     <div class="card chartcard" style="--hc:var(--blue)">
-      <div class="panel-h"><h2>Ahorro por herramienta</h2><span class="mut">tokens</span></div>
+      <div class="panel-h"><h2>按工具节省</h2><span class="mut">tokens</span></div>
       <div class="cbox donut"><canvas id="toolDonut"></canvas></div>
     </div>
   </div>
 
   <div class="grid cols2">
     <div class="card chartcard" style="--hc:var(--violet)">
-      <div class="panel-h"><h2>Llamadas por modelo</h2><span class="mut">llamadas</span></div>
+      <div class="panel-h"><h2>按模型调用</h2><span class="mut">llamadas</span></div>
       <div class="cbox donut"><canvas id="modelBar"></canvas></div>
     </div>
     <div class="card chartcard" style="--hc:var(--acc)">
-      <div class="panel-h"><h2>Origen del input</h2><span class="mut">path = ahorro real</span></div>
+      <div class="panel-h"><h2>输入来源</h2><span class="mut">path = ahorro real</span></div>
       <div class="cbox donut"><canvas id="srcDonut"></canvas></div>
     </div>
   </div>
 
   <div class="card tablecard">
-    <div class="panel-h" style="--hc:var(--cyan)"><h2>Actividad reciente</h2><span class="mut" id="actCount"></span></div>
+    <div class="panel-h" style="--hc:var(--cyan)"><h2>最近活动</h2><span class="mut" id="actCount"></span></div>
     <div style="overflow-x:auto"><table id="activity"></table></div>
     <div class="pager" id="pager" style="display:none">
       <button class="pbtn" id="pgPrev" aria-label="Página anterior">
@@ -771,23 +771,178 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="help-h">
       <span class="k-ico" style="--kc:var(--acc)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.9 12a8.9 8.9 0 1 1-3.6-7.2"/><path d="M9 12l2.5 2.5L21 5"/></svg></span>
-      <h3 id="helpTitle">¿Cómo se calcula el ahorro?</h3>
-      <button class="help-x" id="helpClose" aria-label="Cerrar">
+      <h3 id="helpTitle">如何计算节省？</h3>
+      <button class="help-x" id="helpClose" aria-label="关闭">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <p><b>Tokens de contexto conservados</b> = suma de los caracteres de entrada leídos <i>server-side</i>
-    (llamadas con <span class="src path">path</span>) ÷ 4. Ese contenido lo leyó el MCP en tu máquina y
-    <b>nunca entró a la ventana de contexto de Claude</b>: es cuota que no gastaste. Las llamadas
-    <span class="src inline">inline</span> ya viajaron por tu contexto, así que no cuentan como ahorro.</p>
-    <p><b>Tokens generados en local</b> = caracteres de salida ÷ 4: trabajo de generación que hicieron
-    los modelos locales en vez de Claude.</p>
-    <div class="frm">tokens ≈ caracteres ÷ 4 &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
+    <p><b>节省的上下文 token</b> = 服务端读取的输入字符之和（<span class="src path">path</span> 调用）÷ 4。这些内容由 MCP 在本机读取，<b>从未进入 Claude 上下文窗口</b>：这是你未消耗的配额。</p>
+    <p><b>本地生成 token</b> = 输出字符 ÷ 4：本地模型代替 Claude 完成的生成工作。</p>
+    <div class="frm">tokens ≈ 字符数 ÷ 4 &nbsp;·&nbsp; 实际节省 = 仅 source=path 的调用</div>
   </div>
 </dialog>
 
 <div class="tt" id="tt"></div>
 <script>
-const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
+// --- i18n -----------------------------------------------------------
+const L = {
+  zh: {
+    title:'local·delegate — 用量面板',subtitle:'用量面板',desc:'local-delegate 本地模型委托的用量与配额节省。',
+    live:'实时',noData:'无数据',idle:'空闲',
+    today:'今天',last7:'最近 7 天',last30:'最近 30 天',prevMonth:'上个月',all:'全部历史',custom:'自定义…',
+    from:'从',to:'至',
+    auto:'自动',refresh:'刷新',theme:'切换主题',help:'帮助',
+    backend:'本地后端',system:'系统',
+    noData2:'无数据',polling:'正在查询…',
+    backendPerf:'后端性能',inflightHead:'进行中',
+    toolsAvail:'可用 MCP 工具',
+    readingMetrics:'正在读取指标…',
+    backendProcs:'后端进程',noProcDetected:'未检测到后端进程。',process:'进程',
+    ramLabel:'系统内存',vramLabel:'显存',noSysMetrics:'此平台不支持系统指标。',
+    contextSaved:'节省上下文',contextSavedHint:' 个字符由服务端读取',contextSavedTip:'source=path 调用的 chars_in 总和 ÷ 4。MCP 在本机读取的内容，从未进入 Claude 上下文。',
+    delegations:'委托次数',delegationsHint:' 次实际节省',delegationsTip:'选定范围内对本地工具的调用次数。',
+    genLocal:'本地生成',genLocalHint:'模型输出',genLocalTip:'输出字符 ÷ 4：本地模型代替 Claude 完成的生成工作。',
+    avgLatency:'平均延迟',avgLatencyHint:'含模型加载',avgLatencyTip:'latency_ms 平均值。每个模型的首次调用需加载到显存，耗时较长。',
+    errorRate:'错误率',errorRateHint:' 次失败',errorRateTip:'ok=false 的调用百分比。',
+    chartContextSaved:'上下文节省趋势',
+    chartSavingsByTool:'按工具节省',
+    chartTokens:'tokens',
+    chartCallsByModel:'按模型调用',
+    chartCalls:'次',
+    chartInputSource:'输入来源',
+    chartCallsPerDay:'tokens · 天',
+    chartPathReal:'path = 实际节省',
+    recentActivity:'最近活动',
+    perPage:'次调用',
+    noActivity:'选定范围内无活动。',
+    helpTitle:'如何计算节省？',
+    helpBody1:'<b>节省的上下文 token</b> = 服务端读取的输入字符之和（<span class="src path">path</span> 调用）÷ 4。这些内容由 MCP 在本机读取，<b>从未进入 Claude 上下文窗口</b>：这是你未消耗的配额。',
+    helpBody2:'<b>本地生成 token</b> = 输出字符 ÷ 4：本地模型代替 Claude 完成的生成工作。',
+    helpFormula:'tokens ≈ 字符数 ÷ 4 · 实际节省 = 仅 source=path 的调用',
+    connected:'已连接',down:'已断开',processing:'处理中',
+    loaded:'已加载',unloaded:'未加载',cold:'冷',starting:'启动中',
+    noModels:'后端未暴露模型',noDelegations:'无进行中的委托',
+    errFetch:'无法读取 <b>/api/events</b>。MCP 是否在运行中？',
+    footerFiles:' 个文件',
+    chartTokensSaved:'节省 tokens',chartDelegations:'委托次数',backendStatsNA:'无数据（需要 llama-swap ≥ v236）',
+    noStats:'无数据',
+    genTokPS:'生成 tok/s',promptTokPS:'输入 tok/s',tokensIO:'输入/输出 tokens',
+  },
+  en: {
+    title:'local·delegate — savings panel',subtitle:'savings panel',desc:'Usage and quota savings from local-delegate model delegations.',
+    live:'LIVE',noData:'NO DATA',idle:'IDLE',
+    today:'Today',last7:'Last 7 days',last30:'Last 30 days',prevMonth:'Previous month',all:'All history',custom:'Custom…',
+    from:'From',to:'To',
+    auto:'Auto',refresh:'Refresh',theme:'Toggle theme',help:'Help',
+    backend:'Local backend',system:'System',
+    noData2:'no data',polling:'Querying backend…',
+    backendPerf:'Backend performance',inflightHead:'In flight',
+    toolsAvail:'Available MCP tools',
+    readingMetrics:'Reading metrics…',
+    backendProcs:'Backend processes',noProcDetected:'No backend processes detected.',process:'Process',
+    ramLabel:'System RAM',vramLabel:'VRAM',noSysMetrics:'System metrics not available on this platform.',
+    contextSaved:'Context saved',contextSavedHint:' chars read server-side',contextSavedTip:'Sum of chars_in from source=path calls, ÷4. Content the MCP read on your machine and never entered Claude\'s context.',
+    delegations:'Delegations',delegationsHint:' with real savings',delegationsTip:'Number of local tool invocations in the selected range.',
+    genLocal:'Generated locally',genLocalHint:'model output',genLocalTip:'Output characters ÷4: generation done by local models instead of Claude.',
+    avgLatency:'Avg latency',avgLatencyHint:'includes model load',avgLatencyTip:'Average of latency_ms. First call to each model pays VRAM load cost via llama-swap.',
+    errorRate:'Error rate',errorRateHint:' failures',errorRateTip:'Percentage of calls with ok=false.',
+    chartContextSaved:'Context savings over time',
+    chartSavingsByTool:'Savings by tool',
+    chartTokens:'tokens',
+    chartCallsByModel:'Calls by model',
+    chartCalls:'calls',
+    chartInputSource:'Input source',
+    chartCallsPerDay:'tokens · day',
+    chartPathReal:'path = real savings',
+    recentActivity:'Recent activity',
+    perPage:'calls',
+    noActivity:'No activity in the selected range.',
+    helpTitle:'How are savings calculated?',
+    helpBody1:'<b>Context tokens saved</b> = sum of input characters read <i>server-side</i> (calls with <span class="src path">path</span>) ÷ 4. That content was read by the MCP on your machine and <b>never entered Claude\'s context window</b>: quota you didn\'t spend.',
+    helpBody2:'<b>Tokens generated locally</b> = output characters ÷ 4: generation work done by local models instead of Claude.',
+    helpFormula:'tokens ≈ characters ÷ 4 · real savings = only calls with source=path',
+    connected:'connected',down:'down',processing:'processing',
+    loaded:'loaded',unloaded:'unloaded',cold:'cold',starting:'starting',
+    noModels:'Backend exposes no models',noDelegations:'No delegations in flight',
+    errFetch:'Could not read <b>/api/events</b>. Is the MCP running?',
+    footerFiles:' file(s) read',
+    chartTokensSaved:'tokens saved',chartDelegations:'delegations',backendStatsNA:'no data (requires llama-swap ≥ v236)',
+    noStats:'no data',
+    genTokPS:'gen tok/s',promptTokPS:'prompt tok/s',tokensIO:'tokens in/out',
+  },
+  es: {
+    title:'local·delegate — 用量面板',subtitle:'panel de ahorro',desc:'local-delegate 本地模型委托的用量与配额节省。',
+    live:'EN VIVO',noData:'SIN DATOS',idle:'EN REPOSO',
+    today:'Hoy',last7:'Últimos 7 días',last30:'Últimos 30 días',prevMonth:'Mes anterior',all:'Todo el histórico',custom:'Personalizado…',
+    from:'Desde',to:'Hasta',
+    auto:'Auto',refresh:'Refrescar',theme:'Cambiar tema',help:'Ayuda',
+    backend:'Backend local',system:'Sistema',
+    noData2:'sin datos',polling:'Consultando el backend…',
+    backendPerf:'Rendimiento del backend',inflightHead:'En curso',
+    toolsAvail:'Tools MCP disponibles',
+    readingMetrics:'Leyendo métricas…',
+    backendProcs:'Procesos del backend',noProcDetected:''+L.t('noProcDetected')+'',process:'Proceso',
+    ramLabel:'RAM de sistema',vramLabel:'VRAM',noSysMetrics:''+L.t('noSysMetrics')+'',
+    contextSaved:'Contexto conservado',contextSavedHint:' chars leídos server-side',contextSavedTip:'Suma de chars_in de llamadas con source=path, ÷4. Contenido que el MCP leyó en tu máquina y nunca entró al contexto de Claude.',
+    delegations:'Delegaciones',delegationsHint:' con ahorro real',delegationsTip:'Número de invocaciones a tools locales en el rango seleccionado.',
+    genLocal:'Generado en local',genLocalHint:'salida de los modelos',genLocalTip:'Caracteres de salida ÷4: generación que hicieron los modelos locales en vez de Claude.',
+    avgLatency:'Latencia media',avgLatencyHint:'incluye carga de modelo',avgLatencyTip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.',
+    errorRate:'Tasa de error',errorRateHint:' fallos',errorRateTip:'Porcentaje de llamadas con ok=false.',
+    chartContextSaved:'Ahorro de contexto en el tiempo',
+    chartSavingsByTool:'Ahorro por herramienta',
+    chartTokens:'tokens',
+    chartCallsByModel:'Llamadas por modelo',
+    chartCalls:'llamadas',
+    chartInputSource:'Origen del input',
+    chartCallsPerDay:'tokens · día',
+    chartPathReal:'path = ahorro real',
+    recentActivity:'Actividad reciente',
+    perPage:'llamadas',
+    noActivity:''+L.t('noActivity')+'',
+    helpTitle:'如何计算节省？',
+    helpBody1:'<b>Tokens de contexto conservados</b> = suma de los caracteres de entrada leídos <i>server-side</i> (llamadas con <span class="src path">path</span>) ÷ 4. Ese contenido lo leyó el MCP en tu máquina y <b>nunca entró a la ventana de contexto de Claude</b>: es cuota que no gastaste.',
+    helpBody2:'<b>Tokens generados en local</b> = caracteres de salida ÷ 4: trabajo de generación que hicieron los modelos locales en vez de Claude.',
+    helpFormula:'tokens ≈ caracteres ÷ 4 · ahorro real = solo llamadas con source=path',
+    connected:'conectado',down:'caído',processing:'procesando',
+    loaded:'montado',unloaded:'frío',cold:'frío',starting:'iniciando',
+    noModels:''+L.t('noModels')+'',noDelegations:''+L.t('noDelegations')+'',
+    errFetch:''+L.t('errFetch')+'',
+    footerFiles:' archivo(s) leído(s)',
+    backendStatsNA:''+L.t('backendStatsNA')+'',
+    noStats:'sin datos',
+    genTokPS:'gen tok/s',promptTokPS:'prompt tok/s',tokensIO:'tokens in/out',
+  },
+  _lang: 'zh'
+};
+L.t = function(k){ return (L[L._lang][k] || L.en[k] || k); };
+L.setLang = function(lang){
+  L._lang = lang;
+  document.documentElement.lang = lang==='zh'?'zh-CN':lang;
+  try{localStorage.setItem('ld-lang',lang);}catch(e){}
+  // Update static texts (data-i18n attributes)
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=L.t(el.dataset.i18n); });
+  // Re-render dynamic parts
+  if(state.events&&state.events.length||state.meta) renderFull();
+};
+function renderFull(){
+  // Update static UI
+  document.title = L.t('title');
+  document.querySelector('meta[name=description]').content = L.t('desc');
+  // Range select text
+  const rng = document.getElementById('range');
+  ['today','last7','last30','prevMonth','all','custom'].forEach((k,i)=>{ rng.options[i].textContent=L.t(k); });
+  document.getElementById('auto').childNodes[1].textContent = ' '+L.t('auto');
+  document.getElementById('rangeFrom').title = L.t('from');
+  document.getElementById('rangeTo').title = L.t('to');
+  document.getElementById('reload').setAttribute('aria-label',L.t('refresh'));
+  document.getElementById('theme').setAttribute('aria-label',L.t('theme'));
+  document.getElementById('help').setAttribute('aria-label',L.t('help'));
+  // Section headers
+  document.querySelectorAll('[data-h2]').forEach(el=>{ el.childNodes.forEach(c=>{ if(c.nodeType===3) c.textContent=L.t(el.dataset.h2); }); });
+  // KPI and dynamic
+  render(); renderBackend(); renderTools(); pollSystem(); updateLive();
+  if(state.status) fetchStatus();
+}
+const CPT = 4, F = new Intl.NumberFormat('zh-CN'), PAGE = 10;
 const state = {events:[], range:'today', auto:true, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[]};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -876,9 +1031,9 @@ async function fetchData(){
     const cnt = F.format(state.meta.count||0);
     const filesN = (state.meta.files_read||[]).length;
     document.getElementById('foot').textContent =
-      (state.meta.log_dir||'') + '   ·   ' + cnt + ' eventos   ·   ' + filesN + ' archivo(s) leído(s)   ·   ~' + CPT + ' chars/token   ·   local·delegate';
+      (state.meta.log_dir||'') + '   ·   ' + cnt + ' ' + L.t('perPage') + '   ·   ' + filesN + ' ' + L.t('footerFiles') + '   ·   ~' + CPT + ' chars/token   ·   local·delegate';
   }catch(e){
-    document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
+    document.getElementById('kpis').innerHTML='<div class="card empty">'+L.t('errFetch')+'</div>';
     document.getElementById('live').classList.add('stale');
     document.getElementById('liveTxt').textContent='SIN DATOS';
   }
@@ -909,7 +1064,7 @@ function renderBackend(){
   const up = state.backendUp!==undefined ? state.backendUp : !!(st.backend&&st.backend.available);
   const pill = document.getElementById('backendPill');
   pill.className = 'pill '+(up?'up':'down');
-  pill.textContent = up?'conectado':'caído';
+  pill.textContent = up?L.t('connected'):L.t('down');
   pill.title = st.base_url||'';
   // ids desde el backend + catálogo. El status loaded/unloaded (#901) sale de state.modelStatus,
   // refrescado en el poll rápido de 2s (no del /api/status de 60s) para que "montado" no se desfase.
@@ -922,7 +1077,7 @@ function renderBackend(){
   const busyModels = new Set((state.inflight||[]).map(it=>it.model));
   const body = document.getElementById('modelsBody');
   if(!ids.length){
-    body.innerHTML = '<div class="empty" style="padding:16px">El backend no expone modelos ('+(st.base_url||'?')+').</div>';
+    body.innerHTML = '<div class="empty" style="padding:16px">'+L.t('noModels')+' ('+(st.base_url||'?')+').</div>';
     return;
   }
   body.innerHTML = ids.map(m=>{
@@ -930,9 +1085,9 @@ function renderBackend(){
     const run = state.running[m];
     const loaded = statusById[m]==='loaded' || run==='ready';   // #901 o /running
     const cls = (loaded?'ready':(run&&run!=='ready'?'starting':'')) + (busy?' busy':'');
-    const stateTxt = busy?'procesando':(loaded?'montado':(run&&run!=='ready'?run:'frío'));
+    const stateTxt = busy?L.t('processing'):(loaded?L.t('loaded'):(run&&run!=='ready'?run:L.t('cold')));
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
-    const badge = statusById[m] ? `<span class="mstatus ${statusById[m]}">${statusById[m]}</span>` : '';
+    const badge = statusById[m] ? `<span class="mstatus ${statusById[m]}">${L.t(statusById[m])}</span>` : '';
     return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span>${badge}</div>`;
   }).join('');
 }
@@ -942,16 +1097,16 @@ function renderBackendStats(j){
   const el = document.getElementById('backendStats'); if(!el) return;
   const head = document.getElementById('bstatsHead');
   if(!j || !j.available || !j.stats){
-    el.innerHTML = '<div class="empty" style="padding:12px">sin datos (requiere llama-swap ≥ v236)</div>';
+    el.innerHTML = '<div class="empty" style="padding:12px">'+L.t('backendStatsNA')+'</div>';
     if(head) head.textContent=''; return;
   }
   const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
   const f1 = x => (x==null ? '–' : (Math.round(x*10)/10));
   if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' req') : '';
   el.innerHTML = `<div class="bstats">
-    <div class="bstat"><div class="bk">gen tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
-    <div class="bstat"><div class="bk">prompt tok/s</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
-    <div class="bstat"><div class="bk">tokens in/out</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">cache ${F.format(s.total_cache_tokens||0)}</div></div>
+    <div class="bstat"><div class="bk">'+L.t('genTokPS')+'</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
+    <div class="bstat"><div class="bk">'+L.t('promptTokPS')+'</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
+    <div class="bstat"><div class="bk">'+L.t('tokensIO')+'</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">cache ${F.format(s.total_cache_tokens||0)}</div></div>
   </div>`;
 }
 
@@ -961,7 +1116,7 @@ function renderTools(){
   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
   document.getElementById('toolsBody').innerHTML = tools.length
     ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
-    : '<span class="tchip">sin datos</span>';
+    : '<span class="tchip">'+L.t('noData2')+'</span>';
 }
 
 async function pollInflight(){
@@ -981,7 +1136,7 @@ async function pollInflight(){
       ? state.inflight.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
           <span class="badge model">${it.model}</span>
           <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`).join('')
-      : '<div class="ifrow" style="color:var(--faint)">Sin delegaciones en curso</div>';
+      : '<div class="ifrow" style="color:var(--faint)">'+L.t('noDelegations')+'</div>';
   }catch(e){ /* el panel de inflight es opcional: si falla, la web sigue funcionando */ }
 }
 
@@ -997,16 +1152,16 @@ async function pollSystem(){
   try{
     const r = await fetch('/api/system'); const j = await r.json();
     let h = '';
-    if(j.ram) h += meterHTML('RAM de sistema', j.ram.used_gb.toFixed(1)+' / '+j.ram.total_gb.toFixed(1)+' GiB', j.ram.pct);
-    if(j.vram) h += meterHTML('VRAM', (j.vram.used_mb/1024).toFixed(1)+' / '+(j.vram.total_mb/1024).toFixed(1)+' GiB', j.vram.pct);
-    document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">Métricas de sistema no disponibles en esta plataforma.</div>';
+    if(j.ram) h += meterHTML(L.t('ramLabel'), j.ram.used_gb.toFixed(1)+' / '+j.ram.total_gb.toFixed(1)+' GiB', j.ram.pct);
+    if(j.vram) h += meterHTML(L.t('vramLabel'), (j.vram.used_mb/1024).toFixed(1)+' / '+(j.vram.total_mb/1024).toFixed(1)+' GiB', j.vram.pct);
+    document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">'+L.t('noSysMetrics')+'</div>';
     document.getElementById('gpuUtil').textContent = j.vram ? 'GPU '+j.vram.gpu_util_pct+'%' : '';
     const procs = j.processes||[];
     const tbl = document.getElementById('procTable');
     if(!procs.length){
-      tbl.innerHTML='<tbody><tr><td style="color:var(--faint);border:0">Ningún proceso del backend detectado.</td></tr></tbody>';
+      tbl.innerHTML='<tbody><tr><td style="color:var(--faint);border:0">'+L.t('noProcDetected')+'</td></tr></tbody>';
     }else{
-      tbl.innerHTML = '<thead><tr><th>Proceso</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
+      tbl.innerHTML = '<thead><tr><th>'+L.t('process')+'</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
         + procs.map(p=>`<tr><td style="font-family:var(--mono)">${p.name}${p.self?'<span class="selfchip">MCP</span>':''}</td>
             <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
@@ -1017,10 +1172,10 @@ async function pollSystem(){
 
 function updateLive(){
   const live=document.getElementById('live'), txt=document.getElementById('liveTxt');
-  if(!state.events.length){ live.classList.add('stale'); txt.textContent='SIN DATOS'; return; }
+  if(!state.events.length){ live.classList.add('stale'); txt.textContent=L.t('noData'); return; }
   const last=Date.parse(state.events[0].ts); const mins=isFinite(last)?(Date.now()-last)/6e4:1e9;
-  if(mins>30){ live.classList.add('stale'); txt.textContent='EN REPOSO'; }
-  else{ live.classList.remove('stale'); txt.textContent='EN VIVO'; }
+  if(mins>30){ live.classList.add('stale'); txt.textContent=L.t('idle'); }
+  else{ live.classList.remove('stale'); txt.textContent=L.t('live'); }
 }
 
 function kpiCard(o){
@@ -1045,17 +1200,17 @@ function render(){
 
   document.getElementById('kpis').innerHTML =
     kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:'~'+F.format(tok(savedChars)),unit:'tok',
-       lbl:'Contexto conservado',hint:'<span class="num">'+F.format(savedChars)+'</span> chars leídos server-side',
-       tip:'Suma de chars_in de llamadas con source=path, ÷4. Contenido que el MCP leyó en tu máquina y nunca entró al contexto de Claude.'})
-    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(ev.length),lbl:'Delegaciones',
-       hint:'<span class="num">'+F.format(pathCalls)+'</span> con ahorro real',
-       tip:'Número de invocaciones a tools locales en el rango seleccionado.'})
-    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:'~'+F.format(tok(genChars)),unit:'tok',lbl:'Generado en local',
-       hint:'salida de los modelos',tip:'Caracteres de salida ÷4: generación que hicieron los modelos locales en vez de Claude.'})
-    + kpiCard({icon:ICON.lat,kc:'var(--amber)',val:F.format(lat),unit:'ms',lbl:'Latencia media',
-       hint:'incluye carga de modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
-    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Tasa de error',
-       hint:'<span class="num">'+F.format(errs)+'</span> fallos',tip:'Porcentaje de llamadas con ok=false.'});
+       lbl:L.t('contextSaved'),hint:'<span class="num">'+F.format(savedChars)+'</span> '+L.t('contextSavedHint'),
+       tip:L.t('contextSavedTip')})
+    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(ev.length),lbl:L.t('delegations'),
+       hint:'<span class="num">'+F.format(pathCalls)+'</span> '+L.t('delegationsHint'),
+       tip:L.t('delegationsTip')})
+    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:'~'+F.format(tok(genChars)),unit:'tok',lbl:L.t('genLocal'),
+       hint:L.t('genLocalHint'),tip:L.t('genLocalTip')})
+    + kpiCard({icon:ICON.lat,kc:'var(--amber)',val:F.format(lat),unit:'ms',lbl:L.t('avgLatency'),
+       hint:L.t('avgLatencyHint'),tip:L.t('avgLatencyTip')})
+    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:L.t('errorRate'),
+       hint:'<span class="num">'+F.format(errs)+'</span> '+L.t('errorRateHint'),tip:L.t('errorRateTip')});
 
   drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev); drawActivity(ev);
   bindTips();
@@ -1089,10 +1244,10 @@ function drawTs(ev){
   const acc=cssv('--acc'), blue=cssv('--blue'), grid=hexA(cssv('--bd'),.6), mut=cssv('--mut');
   state.charts.tsChart = new Chart(fresh('tsChart'),{
     data:{labels:days.map(d=>d[0]),datasets:[
-      {type:'bar',label:'tokens ahorrados',data:days.map(d=>tok(d[1].saved)),order:2,
+      {type:'bar',label:L.t('chartTokensSaved'),data:days.map(d=>tok(d[1].saved)),order:2,
         backgroundColor:c=>vGrad(c.chart,hexA(acc,.35),acc),hoverBackgroundColor:cssv('--acc2'),
         borderRadius:6,maxBarThickness:46},
-      {type:'line',label:'delegaciones',data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
+      {type:'line',label:L.t('chartDelegations'),data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
         borderColor:blue,borderWidth:2,pointRadius:3,pointBackgroundColor:blue,
         pointBorderColor:cssv('--panel'),pointBorderWidth:1.5,tension:.35,fill:true,
         backgroundColor:c=>vGrad(c.chart,hexA(blue,0),hexA(blue,.14))}]},
@@ -1151,10 +1306,10 @@ function drawSrcDonut(ev){
 }
 
 function drawActivity(ev){
-  document.getElementById('actCount').textContent=F.format(ev.length)+' llamadas';
+  document.getElementById('actCount').textContent=F.format(ev.length)+' '+L.t('perPage');
   const pager=document.getElementById('pager');
   if(!ev.length){
-    document.getElementById('activity').innerHTML='<tbody><tr><td class="empty">Sin actividad en el rango seleccionado.</td></tr></tbody>';
+    document.getElementById('activity').innerHTML='<tbody><tr><td class="empty">'+L.t('noActivity')+'</td></tr></tbody>';
     pager.style.display='none'; return;
   }
   const pages=Math.max(1,Math.ceil(ev.length/PAGE));
@@ -1196,6 +1351,7 @@ document.getElementById('range').onchange=e=>{
 document.getElementById('rangeFrom').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
 document.getElementById('rangeTo').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
 document.getElementById('reload').onclick=()=>{ fetchData(); pollInflight(); pollSystem(); fetchStatus(); };
+document.getElementById('lang').onchange=e=>{ L.setLang(e.target.value); };
 document.getElementById('theme').onclick=()=>{
   const cur=document.documentElement.getAttribute('data-theme');
   const nx=cur==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',nx);
@@ -1209,6 +1365,7 @@ document.getElementById('help').onclick=()=>helpDlg.showModal();
 document.getElementById('helpClose').onclick=()=>helpDlg.close();
 helpDlg.addEventListener('click',e=>{ if(e.target===helpDlg) helpDlg.close(); });
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
+try{const lg=localStorage.getItem('ld-lang'); if(lg&&L[lg]){ L._lang=lg; document.documentElement.lang=lg==='zh'?'zh-CN':lg; document.getElementById('lang').value=lg; }}catch(e){}
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);
 setInterval(pollInflight,2000);
