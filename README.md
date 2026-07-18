@@ -2,9 +2,8 @@
 
 # local-delegate
 
-**Delega tareas mecánicas texto→texto a un LLM local para conservar la cuota de tu suscripción de Claude.**
-Un servidor MCP (stdio) que es cliente **genérico** de cualquier endpoint OpenAI-compatible —
-llama-swap, Ollama, LM Studio, vLLM.
+**把机械性的文本→文本任务委托给本地 LLM，节省 Claude 订阅配额。**
+一个 MCP 服务器（stdio），作为**通用**客户端对接任意 OpenAI 兼容端点——llama-swap、Ollama、LM Studio、vLLM。
 
 [![PyPI](https://img.shields.io/pypi/v/local-delegate-mcp.svg)](https://pypi.org/project/local-delegate-mcp/)
 [![CI](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml)
@@ -12,25 +11,19 @@ llama-swap, Ollama, LM Studio, vLLM.
 
 ## Demo
 
-<!-- URL absoluta a raw.githubusercontent.com para que la imagen también se renderice en
-     PyPI (los links relativos solo se resuelven dentro de GitHub). -->
-![Dashboard de ahorro de local-delegate](https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png)
+![local-delegate 用量面板](https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png)
 
-*Dashboard embebido (datos de ejemplo): estado del backend local (modelos montados, delegaciones en curso, tools MCP), RAM/VRAM del sistema con consumo por proceso, tokens de contexto conservados, ahorro por herramienta y modelo, y actividad reciente paginada. Se sirve en `http://127.0.0.1:9393`.*
+*内置仪表盘（示例数据）：本地后端状态（已加载模型、进行中的委托、MCP 工具），系统 RAM/显存及进程占用，节省的上下文 token，按工具和模型分类的节省统计，分页的最近活动。访问 `http://127.0.0.1:9393`。*
 
-## ¿Por qué?
+## 为什么需要它？
 
-Cuando Claude tiene que resumir un log enorme, clasificar, extraer campos o generar boilerplate,
-gasta cuota de tu suscripción en trabajo **mecánico**. `local-delegate` expone esas tareas como
-tools MCP que corren en un LLM **local**: pasas `path` en vez de `text` y el archivo se lee
-**del lado del servidor**, así el contenido grande **nunca entra al contexto de Claude**. Solo
-vuelve el resultado corto — cuota que no gastaste.
+当 Claude 需要总结大量日志、分类、提取字段或生成样板代码时，会消耗订阅配额来完成**机械性**工作。`local-delegate` 将这些任务暴露为 MCP 工具，由**本地** LLM 执行：传入 `path` 而非 `text`，文件在**服务端读取**，大量内容**从不进入 Claude 上下文**。只有简短结果返回——你未消耗的配额。
 
-## Instalación rápida
+## 快速安装
 
-Con [`uv`](https://docs.astral.sh/uv/) no hay nada que instalar: `uvx` baja y ejecuta el paquete aislado.
+使用 [`uv`](https://docs.astral.sh/uv/) 无需安装任何东西：`uvx` 会下载并在隔离环境中运行。
 
-Añádelo a tu config de MCP (Claude Desktop / Claude Code):
+添加到你的 MCP 配置（Claude Desktop / Claude Code）：
 
 ```json
 {
@@ -43,125 +36,100 @@ Añádelo a tu config de MCP (Claude Desktop / Claude Code):
 }
 ```
 
-Ver plantillas completas en [`examples/`](./examples).
+完整模板见 [`examples/`](./examples)。
 
-## Requisitos
+## 环境要求
 
-Un **endpoint OpenAI-compatible** ya corriendo, accesible en `LOCAL_DELEGATE_BASE_URL`
-(default `http://127.0.0.1:9292/v1`). Cualquiera sirve:
+一个已运行、可通过 `LOCAL_DELEGATE_BASE_URL` 访问的 **OpenAI 兼容端点**（默认 `http://127.0.0.1:9292/v1`）。任意后端均可：
 
-- **llama-swap** — ver [recipe con GPU Blackwell](./docs/recipes/llama-swap-blackwell.md).
-- **Ollama** — `http://127.0.0.1:11434/v1`.
-- **LM Studio**, **vLLM**, o cualquier servidor que hable la API de OpenAI.
+- **llama-swap** — 参见 [Blackwell GPU 方案](./docs/recipes/llama-swap-blackwell.md)。
+- **Ollama** — `http://127.0.0.1:11434/v1`。
+- **LM Studio**、**vLLM**，或任何兼容 OpenAI API 的服务器。
 
-El paquete **no arranca** ningún backend por defecto (`LOCAL_DELEGATE_AUTOSTART=0`). El
-auto-arranque de llama-swap es opt-in (ver tabla de configuración).
+本包默认**不启动**任何后端（`LOCAL_DELEGATE_AUTOSTART=0`）。llama-swap 的自动启动需主动开启（见配置表）。
 
-¿Qué versiones de `llama-server`/`llama-swap` usar y cómo disponer el workspace? Ver
-[Versiones del backend y workspace de referencia](./docs/wiki/Backend-versions.md) (sugerencia
-probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones.
+关于 `llama-server`/`llama-swap` 的推荐版本及工作区布局，参见[后端版本与参考工作区](./docs/wiki/Backend-versions.md)（经验性建议，非强制要求）。`local-delegate doctor` 会将你的安装与推荐版本进行对比。
 
-## Tools
+## 工具
 
-Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → ahorro real de cuota.
+使用 `path`（代替 `text`）可使 MCP 在服务端读取文件 → 实际节省配额。
 
-| Tool | Qué hace | Rol de modelo (default) |
+| 工具 | 功能 | 模型角色（默认） |
 |---|---|---|
-| `local_summarize` | Resume texto o archivo | mecánico / largo (auto) |
-| `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → objeto JSON (con `response_format` schema) | mecánico / largo (auto) |
-| `local_boilerplate` | Genera código desde una spec | código |
-| `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
-| `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
-| `local_commit_msg` | Mensaje de commit desde un diff | código |
-| `local_translate` | Traduce texto o archivo | mecánico / largo (auto) |
-| `local_explain_code` | Explica código en prosa | código |
-| `local_describe_image` | Describe una imagen o responde una pregunta sobre ella (imagen→texto) | visión |
-| `local_status` | Diagnóstico de solo lectura: backend, catálogo, log, VRAM, RAM de sistema | — (no llama al backend de chat) |
+| `local_summarize` | 总结文本或文件 | 机械型 / 长文本型（自动） |
+| `local_classify` | 从列表中返回一个标签 | 机械型 |
+| `local_extract` | 提取字段 → JSON 对象（含 `response_format` schema） | 机械型 / 长文本型（自动） |
+| `local_boilerplate` | 根据描述生成样板代码 | 代码型 |
+| `local_delegate` | 通用文本→文本兜底 | 机械型（或指定模型） |
+| `local_lint_summary` | 总结 lint/测试/CI 日志 | 机械型 / 长文本型（自动） |
+| `local_commit_msg` | 根据 diff 生成 commit 信息 | 代码型 |
+| `local_translate` | 翻译文本或文件 | 机械型 / 长文本型（自动） |
+| `local_explain_code` | 用自然语言解释代码 | 代码型 |
+| `local_describe_image` | 描述图片或回答关于图片的问题（图片→文本） | 视觉型 |
+| `local_status` | 只读诊断：后端、模型目录、日志、显存、系统内存 | —（不调用后端） |
 
-Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
-endpoint y devuelve **solo texto**.
+本地模型**不使用**工具调用：服务器构建 prompt + guardrail，POST 到端点，返回**纯文本**。
 
-## Configuración
+## 配置
 
-Todo por variables de entorno; nada hardcodeado. Los ids de modelo default son solo eso —
-cámbialos por los de tu backend.
+全部通过环境变量配置，无硬编码。默认模型 ID 仅为示例——请按你的后端实际情况替换。
 
-| Variable | Default | Descripción |
+| 变量 | 默认值 | 说明 |
 |---|---|---|
-| `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` | Endpoint OpenAI-compatible |
-| `LOCAL_DELEGATE_API_KEY` | *(vacío)* | Bearer token, si tu endpoint lo exige |
-| `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
-| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes |
-| `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
-| `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
-| `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Modelo para documentos largos |
-| `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | Modelo para código |
-| `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | Modelo ultrarrápido / trivial |
-| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | Modelo de visión para `local_describe_image` |
-| `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
-| `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
-| `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
-| `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
-| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
-| `LOCAL_DELEGATE_WEB` | `1` | Web de métricas embebida (`0` para desactivar) |
-| `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web |
-| `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
-| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1` |
+| `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` | OpenAI 兼容端点 |
+| `LOCAL_DELEGATE_API_KEY` | *(空)* | Bearer token（如端点需要） |
+| `LOCAL_DELEGATE_TIMEOUT` | `180` | HTTP 超时（秒） |
+| `LOCAL_DELEGATE_LOG_DIR` | *(用户数据目录)* | 按月轮转的 `usage-YYYYMM.jsonl` 所在目录 |
+| `LOCAL_DELEGATE_LOG` | *(空 = 启用轮转)* | 若设置，则为固定的 `usage.jsonl` 路径（兼容模式） |
+| `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | 分类/提取/简短总结用模型 |
+| `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | 长文档用模型 |
+| `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | 代码用模型 |
+| `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | 极速/简单任务用模型 |
+| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | `local_describe_image` 视觉模型 |
+| `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | `local_describe_image` 图片大小上限 |
+| `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | 机械型↔长文本型切换阈值 |
+| `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `local_extract` 中 `response_format` schema 模式：`auto`/`on`/`off` |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | `source=path` 时在结果末尾追加节省信息（`0` 关闭） |
+| `LOCAL_DELEGATE_ALLOWED_DIRS` | *(空 = 不限制)* | `path` 参数的允许根目录，`;` 分隔 |
+| `LOCAL_DELEGATE_WEB` | `1` | 内嵌用量仪表盘（`0` 关闭） |
+| `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | 仪表盘的主机/端口 |
+| `LOCAL_DELEGATE_AUTOSTART` | `0` | llama-swap 自动启动（需主动开启） |
+| `LOCAL_DELEGATE_REASONING_EFFORT` | *(不设置)* | 控制混合推理模型的思考量。设为 `"none"` 可在 Qwen3.6/DeepSeek 等模型上禁用思考块。有效值：`"none"`、`"minimal"`、`"low"`、`"medium"`、`"high"`、`"xhigh"`、`"max"` |
+| `LOCAL_DELEGATE_EXTRA_BODY` | *(不设置)* | 注入到每次 API 请求 payload 的额外 JSON 对象。用于传递上述变量未覆盖的自定义参数 |
+| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | 仅在 `AUTOSTART=1` 时生效 |
 
-## La métrica de ahorro
+**语言匹配**：服务器自动在 system prompt 中追加语言指令，确保模型使用与输入内容相同的语言回复。中文输入 → 中文输出，西语输入 → 西语输出，英语输入 → 英语输出。`local_translate` 和 `local_boilerplate` 工具不受此行为影响。
 
-El MCP registra cada llamada en un log rotado por mes y sirve un **dashboard** en
-`http://127.0.0.1:9393`, con selector de rango y visibilidad de delegaciones en curso.
-El *ahorro de contexto* = caracteres de entrada leídos server-side (llamadas con
-`source=path`) ÷ 4 (o los tokens reales del backend, cuando los da) ≈ tokens que nunca
-entraron al contexto de Claude. Detalle en la [wiki](./docs/wiki/Home.md).
+## 节省指标
 
-## Alcance / no-objetivos
+MCP 将每次调用记录在按月轮转的日志中，并在 `http://127.0.0.1:9393` 提供**仪表盘**，支持时间范围选择和进行中委托的实时可见。*上下文节省* = 服务端读取的输入字符数（`source=path` 的调用）÷ 4（或后端提供的实际 token 数）≈ 从未进入 Claude 上下文的 token。详见 [Wiki](./docs/wiki/Home.md)。
 
-`local-delegate` es deliberadamente **texto/imagen→texto**: arma el prompt (o el payload
-multimodal), hace POST a `/chat/completions` y devuelve solo texto. Cosas que **no** hace
-a propósito:
+## 范围 / 非目标
 
-- **Tool-calling local.** Los modelos locales no invocan herramientas ni ejecutan código;
-  eso lo sigue haciendo Claude. Añadirlo convertiría este paquete en un orquestador
-  paralelo, que no es el objetivo.
-- **Generación o edición de imágenes.** `local_describe_image` es solo imagen→texto
-  (describir, leer texto visible, responder una pregunta puntual); nada de generar ni
-  editar imágenes.
-- **Audio.** Para transcripción usa el companion
-  [`whisper-transcribe-mcp`](https://github.com/ZahiriNatZuke/whisper-transcribe-mcp) en
-  vez de intentar meter audio aquí.
-- **Sustituir la suscripción.** El objetivo es conservar cuota delegando pasos mecánicos
-  acotados, no enrutar todo el trabajo a modelos locales.
+`local-delegate` 有意限定为**文本/图片→文本**：构建 prompt（或多模态 payload），POST 到 `/chat/completions`，返回纯文本。以下为刻意不做的事情：
 
-## Hooks de Claude Code (opcional)
+- **本地工具调用。** 本地模型不调用工具也不执行代码；这些仍由 Claude 完成。加入此能力会将本包变成一个并行编排器，偏离设计目标。
+- **生成或编辑图片。** `local_describe_image` 仅支持图片→文本（描述、读取可见文字、回答具体问题）；不生成也不编辑图片。
+- **音频。** 转录请使用配套工具 [`whisper-transcribe-mcp`](https://github.com/ZahiriNatZuke/whisper-transcribe-mcp)，不要在此处理音频。
+- **替代订阅。** 目标是通过委托有限的机械步骤来节省配额，而非将全部工作路由到本地模型。
 
-Recipe con dos hooks que sugieren delegar en el momento justo sin bloquear nunca la tool
-original (`PreToolUse`/`Read` para archivos grandes, `PostToolUse`/`Bash` para salidas
-largas de lint/tests): [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
+## Claude Code Hooks（可选）
 
-## Groups de llama-swap (opcional)
+提供两个 hook 方案，在适当时机建议委托而不阻塞原始工具（`PreToolUse`/`Read` 用于大文件，`PostToolUse`/`Bash` 用于大量 lint/测试输出）：[`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md)。
 
-Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles dos CLIs para gestionar
-**groups** de llama-swap (un modelo residente siempre cargado + un pool que se turna) con
-guardrail de VRAM **y RAM de sistema** incorporado (`--ram-gb` es opcional: `llama-server`
-mapea el GGUF también en RAM aunque el cómputo sea 100% GPU, así que un catálogo que cabe en
-VRAM puede igual agotar la RAM en máquinas con menos de 32 GB):
+## llama-swap Groups（可选）
+
+通过 `pip install "local-delegate-mcp[llamaswap]"` 可使用两个 CLI 来管理 llama-swap 的 **groups**（一个常驻模型始终加载 + 一个轮换池），内置显存**和系统内存** guardrail（`--ram-gb` 可选：即使计算 100% 在 GPU，`llama-server` 也会将 GGUF 映射到 RAM，因此在内存不足 32GB 的机器上，显存放得下的模型目录也可能耗尽内存）：
 
 ```bash
 local-delegate check-llamaswap --config config.yaml --vram-gb 16 --ram-gb 32
 local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b --vram-gb 16 --ram-gb 32
 ```
 
-El paquete **nunca** toca tu `config.yaml` por su cuenta — estos comandos solo corren si vos
-los invocás. `init-llamaswap` corre el/los guardrail(es) antes de escribir (no escribe nada si
-no cabe en VRAM o, si pasaste `--ram-gb`, en RAM) y nunca sobreescribe sin `--force` (dejando
-`.bak`). Detalle completo, semántica de `groups` verificada contra el código de llama-swap, y
-ritual de aplicación en [`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md).
+本包**绝不会**自行修改你的 `config.yaml`——这些命令仅当你主动调用时才会运行。`init-llamaswap` 在写入前会运行 guardrail（若不满足显存或指定了 `--ram-gb` 时内存条件，则不写入），且无 `--force` 不会覆盖（会保留 `.bak`）。完整细节、对照 llama-swap 源码验证的 `groups` 语义以及操作流程，见 [`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md)。
 
-## Enlaces
+## 链接
 
 - [Wiki](./docs/wiki/Home.md) · [Recipes](./docs/recipes)
 - [CONTRIBUTING](./CONTRIBUTING.md) · [CODE OF CONDUCT](./CODE_OF_CONDUCT.md) · [CHANGELOG](./CHANGELOG.md)
-- [Licencia MIT](./LICENSE)
+- [MIT 许可证](./LICENSE)

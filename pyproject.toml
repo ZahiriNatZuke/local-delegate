@@ -1,16 +1,19 @@
 [project]
-name = "local-delegate-mcp"
+name = "local-llm-delegate-mcp"
 version = "0.8.1"
-description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+description = "把机械性的文本→文本任务委托给本地 LLM，节省 Claude 订阅配额。"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Yohan González Almaguer" }]
-keywords = ["mcp", "llm", "local", "openai-compatible", "claude", "llama-swap", "ollama", "quota"]
+keywords = ["mcp", "llm", "local", "openai-compatible", "claude", "llama-swap", "ollama", "quota", "delegate"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: Spanish",
+    "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -36,6 +39,8 @@ llamaswap = ["pyyaml>=6"]
 [project.scripts]
 # Dos alias al mismo entry point: `local-delegate-mcp` hace que `uvx local-delegate-mcp`
 # funcione directo (comando == nombre del paquete); `local-delegate` es el alias corto.
+local-llm-delegate-mcp = "local_delegate:main"
+local-llm-delegate = "local_delegate:main"
 local-delegate-mcp = "local_delegate:main"
 local-delegate = "local_delegate:main"
 

@@ -18,7 +18,7 @@ from pathlib import Path
 
 from platformdirs import user_data_dir
 
-APP_NAME = "local-delegate"
+APP_NAME = "local-llm-delegate"
 
 
 def _env(name: str, default: str) -> str:
