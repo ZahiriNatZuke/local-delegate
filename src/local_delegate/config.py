@@ -12,6 +12,7 @@ los ids de un setup de referencia con llama-swap. Cámbialos por env para tu bac
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -133,3 +134,24 @@ AUTOSTART = _env_flag("LOCAL_DELEGATE_AUTOSTART", False)
 
 # --- Feedback de ahorro en el propio texto de respuesta (awareness) ---------
 FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)
+
+# --- Control de razonamiento (modelos híbridos Qwen3.5/3.6, DeepSeek, etc.) ---
+# reasoning_effort: "none" desactiva el bloque <think> en modelos que lo soportan
+# (Qwen3.6, DeepSeek V4, etc.). None = no se envía el campo (comportamiento por defecto
+# del backend). Valores típicos: "none", "minimal", "low", "medium", "high", "xhigh", "max".
+_reasoning_effort_env = os.environ.get("LOCAL_DELEGATE_REASONING_EFFORT")
+REASONING_EFFORT: str | None = _reasoning_effort_env.strip() if _reasoning_effort_env else None
+
+# --- Cuerpo extra inyectado en cada petición al backend (JSON string) --------
+# Permite pasar parámetros arbitrarios no cubiertos por las variables anteriores
+# (p. ej. chat_template_kwargs para modelos Qwen3). Se mergea shallow en el payload
+# justo antes del POST. Debe ser un objecto JSON válido o se ignora con warning.
+_extra_body_raw = os.environ.get("LOCAL_DELEGATE_EXTRA_BODY")
+EXTRA_BODY: dict | None = None
+if _extra_body_raw and _extra_body_raw.strip():
+    try:
+        parsed = json.loads(_extra_body_raw)
+        if isinstance(parsed, dict):
+            EXTRA_BODY = parsed
+    except json.JSONDecodeError:
+        pass  # se ignora silenciosamente; el usuario puede ver el warning en el log

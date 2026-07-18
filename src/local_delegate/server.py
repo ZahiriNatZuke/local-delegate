@@ -446,6 +446,12 @@ def _chat(
     }
     if response_format is not None:
         payload["response_format"] = response_format
+    if config.REASONING_EFFORT is not None:
+        payload["reasoning_effort"] = config.REASONING_EFFORT
+    if config.EXTRA_BODY is not None:
+        for k, v in config.EXTRA_BODY.items():
+            if k not in payload:
+                payload[k] = v
 
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     try:
