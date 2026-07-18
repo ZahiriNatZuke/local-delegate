@@ -1035,7 +1035,7 @@ async function fetchData(){
   }catch(e){
     document.getElementById('kpis').innerHTML='<div class="card empty">'+L.t('errFetch')+'</div>';
     document.getElementById('live').classList.add('stale');
-    document.getElementById('liveTxt').textContent='SIN DATOS';
+    document.getElementById('liveTxt').textContent=L.t('noData');
   }
 }
 
