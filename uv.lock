@@ -376,7 +376,7 @@ wheels = [
 ]
 
 [[package]]
-name = "local-delegate-mcp"
+name = "local-llm-delegate-mcp"
 version = "0.8.1"
 source = { editable = "." }
 dependencies = [
