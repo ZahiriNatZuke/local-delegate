@@ -48,9 +48,9 @@ local-delegate-mcp = "local_delegate:main"
 local-delegate = "local_delegate:main"
 
 [project.urls]
-Homepage = "https://github.com/ZahiriNatZuke/local-delegate"
-Repository = "https://github.com/ZahiriNatZuke/local-delegate"
-Issues = "https://github.com/ZahiriNatZuke/local-delegate/issues"
+Homepage = "https://github.com/magic-zagan/local-delegate"
+Repository = "https://github.com/magic-zagan/local-delegate"
+Issues = "https://github.com/magic-zagan/local-delegate/issues"
 
 [build-system]
 requires = ["hatchling"]
