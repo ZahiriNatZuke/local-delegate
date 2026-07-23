@@ -39,6 +39,7 @@ cliente. Por ejemplo, para autoarrancar llama-swap:
 $env:LOCAL_DELEGATE_AUTOSTART='1'
 $env:LLAMASWAP_EXE='D:\ruta\llama-swap.exe'
 $env:LLAMASWAP_CONFIG='D:\ruta\config.yaml'
+$env:LLAMASWAP_WATCH_CONFIG='1'
 uvx local-delegate-mcp serve
 ```
 

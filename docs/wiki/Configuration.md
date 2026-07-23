@@ -75,3 +75,4 @@ Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.
 | `LLAMASWAP_EXE` | *(busca `llama-swap` en PATH)* | Ruta al ejecutable |
 | `LLAMASWAP_CONFIG` | *(vacío)* | Ruta al `config.yaml` de llama-swap |
 | `LLAMASWAP_LISTEN` | `127.0.0.1:9292` | host:puerto de llama-swap |
+| `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` cuando hay `LLAMASWAP_CONFIG` |

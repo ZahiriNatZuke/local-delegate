@@ -9,6 +9,7 @@ Config por entorno:
   LLAMASWAP_EXE     ruta al ejecutable (si no, se busca ``llama-swap`` en el PATH)
   LLAMASWAP_CONFIG  ruta al config.yaml de llama-swap (opcional)
   LLAMASWAP_LISTEN  host:puerto en que escucha llama-swap (default 127.0.0.1:9292)
+  LLAMASWAP_WATCH_CONFIG  1 añade -watch-config si hay config (default 0)
 """
 
 from __future__ import annotations
@@ -56,6 +57,9 @@ def ensure_backend(wait: float = 0.0) -> bool:
         args = [exe]
         if cfg:
             args += ["--config", cfg]
+            watch = os.environ.get("LLAMASWAP_WATCH_CONFIG", "0").strip().lower()
+            if watch not in {"0", "false", "no", "off", ""}:
+                args += ["-watch-config"]
         args += ["--listen", listen]
         flags = 0
         if sys.platform == "win32":

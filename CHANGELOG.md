@@ -16,6 +16,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - `check-llamaswap` e `init-llamaswap` rechazan por defecto modelos fuera de todos los `groups`,
   porque quedarían fuera del presupuesto de VRAM/RAM. `--allow-ungrouped` permite la exclusión
   deliberada con un aviso explícito.
+- El autoarranque acepta `LLAMASWAP_WATCH_CONFIG=1` para añadir `-watch-config` cuando existe
+  `LLAMASWAP_CONFIG`, evitando reinicios manuales en cambios futuros del catálogo o los grupos.
 
 ## [0.8.1] - 2026-07-11
 
