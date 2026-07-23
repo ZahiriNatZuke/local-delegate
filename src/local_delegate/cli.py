@@ -1,4 +1,4 @@
-"""cli.py — subcomandos opt-in de línea de comandos: check-llamaswap / init-llamaswap.
+"""cli.py — subcomandos de línea de comandos de local-delegate.
 
 Ver docs/recipes/llama-swap-groups.md. El binario ``local-delegate`` SIN argumentos sigue
 arrancando el servidor MCP stdio exactamente igual que siempre (ver server.main()); este
@@ -22,7 +22,14 @@ from pathlib import Path
 from . import doctor
 from . import llamaswap_config as lc
 
-KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor"}
+KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor", "serve"}
+
+
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Arranca el daemon singleton MCP HTTP + dashboard."""
+    from . import daemon
+
+    return daemon.serve(host=args.host, port=args.port, log_level=args.log_level)
 
 
 def _print_breakdown(
@@ -376,6 +383,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="consulta GitHub por la última release publicada de cada componente",
     )
     doc.set_defaults(func=doctor.run_doctor)
+
+    serve = sub.add_parser(
+        "serve",
+        help="Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como daemon singleton.",
+    )
+    serve.add_argument(
+        "--host", default=None, help="host de escucha (default: web host / 127.0.0.1)"
+    )
+    serve.add_argument(
+        "--port", type=int, default=None, help="puerto único MCP+web (default: 9393)"
+    )
+    serve.add_argument(
+        "--log-level",
+        choices=("critical", "error", "warning", "info", "debug"),
+        default="warning",
+        help="nivel de log de uvicorn (default: warning)",
+    )
+    serve.set_defaults(func=cmd_serve)
 
     return parser
 

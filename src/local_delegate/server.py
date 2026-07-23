@@ -1232,7 +1232,12 @@ def local_status() -> str:
     return "\n".join(lines)
 
 
-_CLI_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor"}  # subcomandos opt-in, ver cli.py
+_CLI_COMMANDS = {
+    "check-llamaswap",
+    "init-llamaswap",
+    "doctor",
+    "serve",
+}  # subcomandos explícitos, ver cli.py
 
 
 def main() -> None:
