@@ -3,8 +3,8 @@
 # local-delegate
 
 **Delega tareas mecánicas texto→texto a un LLM local para conservar la cuota de tu suscripción de Claude.**
-Un servidor MCP (stdio) que es cliente **genérico** de cualquier endpoint OpenAI-compatible —
-llama-swap, Ollama, LM Studio, vLLM.
+Un servidor MCP (`stdio` o daemon HTTP compartido) que es cliente **genérico** de cualquier
+endpoint OpenAI-compatible — llama-swap, Ollama, LM Studio, vLLM.
 
 [![PyPI](https://img.shields.io/pypi/v/local-delegate-mcp.svg)](https://pypi.org/project/local-delegate-mcp/)
 [![CI](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml)
@@ -55,6 +55,13 @@ El daemon sirve MCP en `http://127.0.0.1:9393/mcp` y el dashboard en
 `http://127.0.0.1:9393/`. Codex, Claude Code y cualquier cliente compatible con Streamable HTTP
 pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
 [Daemon compartido](./docs/wiki/Daemon.md).
+
+En Windows, si lo registras como tarea al iniciar sesión, ejecuta el `pythonw.exe` del entorno
+donde instalaste el paquete con `-m local_delegate serve --log-level warning`. `pythonw` no crea
+consola ni botón en la barra de tareas. La tarea pertenece al usuario de **Windows**, no a Codex
+ni a Claude: cualquier cliente local comparte el mismo daemon. El dashboard identifica ese único
+proceso con la insignia `DAEMON MCP`; las sesiones conectadas son clientes HTTP, no procesos MCP
+adicionales.
 
 ## Requisitos
 

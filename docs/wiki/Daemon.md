@@ -72,6 +72,35 @@ En Windows puede registrarse `local-delegate serve` como tarea *AtLogOn*. En Lin
 gestor de servicios del usuario (`systemd --user`, `launchd`, etc.). El comando debe ejecutarse en
 primer plano dentro del gestor; no hace falta que `local-delegate` se daemonice a sí mismo.
 
+### Windows sin ventana visible
+
+Una tarea marcada como `Hidden` queda oculta en el Programador de tareas, pero un ejecutable de
+consola aún puede mostrar una ventana. Para evitar terminal y botón en la barra de tareas, usa el
+`pythonw.exe` del entorno donde está instalado `local-delegate`:
+
+```powershell
+$pythonw = 'C:\ruta\al\entorno\Scripts\pythonw.exe'
+$action = New-ScheduledTaskAction `
+  -Execute $pythonw `
+  -Argument '-m local_delegate serve --log-level warning' `
+  -WorkingDirectory 'C:\ruta\al\workspace'
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName 'LocalDelegateDaemon' -Action $action `
+  -Trigger $trigger -Settings $settings -Description 'Daemon MCP local compartido' -Force
+```
+
+La tarea es de **Windows a nivel del usuario**. No pertenece a Codex ni a Claude Code: se inicia
+una vez al entrar en Windows y atiende a todos los clientes por la misma URL. `IgnoreNew` y el lock
+interno del daemon son dos defensas contra instancias duplicadas.
+
+### Qué significa «DAEMON MCP» en el dashboard
+
+La tabla «Procesos del backend» muestra el daemon, `llama-swap` y los procesos `llama-server`
+detectados. La insignia `DAEMON MCP` marca el proceso servidor compartido; debe existir una sola
+fila con esa insignia. No cuenta sesiones de Codex/Claude ni conexiones HTTP. Una sesión nueva no
+debe crear otra fila: solo abre otra conexión al mismo daemon.
+
 Rollback: detén el servicio/tarea y restaura en cada cliente el bloque `command`/`args` de `stdio`:
 
 ```json

@@ -24,14 +24,30 @@ Requisito único (una vez): configurar un *trusted publisher* en PyPI para el pr
 Luego, para publicar una versión nueva:
 
 ```bash
-# 1. bump de versión en pyproject.toml, server.json, CHANGELOG.md
+# 1. bump de versión en pyproject.toml, uv.lock, server.json y CHANGELOG.md
+uv lock --check
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -q
+uv build
 git commit -am "release: vX.Y.Z"
+
+# 2. publica main y espera a que ci.yml termine en verde
+git push origin main
+gh run watch --exit-status
+
+# 3. solo entonces publica el tag; este dispara publish.yml → PyPI
 git tag vX.Y.Z
-git push origin main vX.Y.Z    # el tag dispara publish.yml → PyPI
+git push origin vX.Y.Z
+gh run watch --exit-status
 ```
 
 `publish.yml` usa `uv publish --check-url https://pypi.org/simple/`, así que reejecutar sobre un
 tag existente es idempotente (salta lo ya subido).
+
+Después del workflow, verifica que PyPI sirva la versión nueva antes de publicar `server.json` en
+el registro MCP. El descriptor del registro conserva transporte `stdio` porque describe cómo el
+paquete se ejecuta en cualquier host; el daemon HTTP local es un modo operativo adicional.
 
 ## Registro oficial MCP
 

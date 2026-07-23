@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-23
+
 ### Added
 - **Daemon singleton HTTP:** `local-delegate serve` publica MCP Streamable HTTP en `/mcp` y el
   dashboard en `/` usando un único proceso persistente y un único puerto (default
@@ -20,6 +22,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `LLAMASWAP_CONFIG`, evitando reinicios manuales en cambios futuros del catálogo o los grupos.
 - Backpressure configurable con `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` (default `2`). En el
   daemon singleton el límite se comparte entre todos los clientes HTTP.
+
+### Fixed
+- El daemon puede ejecutarse con `pythonw.exe` en Windows sin consola visible: si el runtime no
+  define `stdout`/`stderr`, usa `NUL` para que Uvicorn inicialice su logging sin fallar.
+- El dashboard identifica el proceso servidor compartido como `DAEMON MCP`, evitando confundirlo
+  con un proceso nuevo por cada sesión cliente.
 
 ## [0.8.1] - 2026-07-11
 
@@ -267,7 +275,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.8.1...v0.9.0
+[0.8.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.1.0...v0.1.1
