@@ -18,6 +18,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   deliberada con un aviso explícito.
 - El autoarranque acepta `LLAMASWAP_WATCH_CONFIG=1` para añadir `-watch-config` cuando existe
   `LLAMASWAP_CONFIG`, evitando reinicios manuales en cambios futuros del catálogo o los grupos.
+- Backpressure configurable con `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` (default `2`). En el
+  daemon singleton el límite se comparte entre todos los clientes HTTP.
 
 ## [0.8.1] - 2026-07-11
 

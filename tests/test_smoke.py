@@ -32,6 +32,7 @@ def test_config_defaults():
     assert config.BASE_URL == "http://127.0.0.1:9292/v1"
     assert config.AUTOSTART is False  # opt-in por defecto
     assert config.WEB_ENABLED is True
+    assert config.MAX_CONCURRENT_REQUESTS == 2
     # el log vive en el dir de datos de usuario, no en una ruta de máquina concreta
     assert config.USAGE_LOG.name == "usage.jsonl"
 

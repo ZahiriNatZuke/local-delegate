@@ -49,6 +49,9 @@ def _env_float(name: str, default: float) -> float:
 BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
 API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
 HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
+# Backpressure del proceso MCP. En el daemon singleton este límite se comparte entre
+# todos los clientes HTTP; llama-swap sigue siendo la autoridad del routing/VRAM.
+MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", 2))
 
 
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------

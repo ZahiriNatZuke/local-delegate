@@ -483,6 +483,45 @@ def test_inflight_snapshot_during_and_after_chat(tmp_path, monkeypatch):
     assert server.inflight_snapshot() == []
 
 
+def test_chat_applies_process_wide_concurrency_limit(tmp_path, monkeypatch):
+    active = 0
+    peak = 0
+    state_lock = threading.Lock()
+    two_active = threading.Event()
+    release = threading.Event()
+
+    def slow_post_chat(_model, _payload):
+        nonlocal active, peak
+        with state_lock:
+            active += 1
+            peak = max(peak, active)
+            if active == 2:
+                two_active.set()
+        release.wait(timeout=5)
+        with state_lock:
+            active -= 1
+        return server.ChatResult(text="ok", ok=True, finish_reason="stop")
+
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(server, "_post_chat", slow_post_chat)
+    monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(2))
+
+    threads = [threading.Thread(target=server._chat, args=("m", "s", "u", 8)) for _ in range(5)]
+    for thread in threads:
+        thread.start()
+
+    assert two_active.wait(timeout=5)
+    with state_lock:
+        assert active == 2
+        assert peak == 2
+    release.set()
+    for thread in threads:
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+    assert peak == 2
+
+
 # --- F5: LOCAL_DELEGATE_ALLOWED_DIRS ----------------------------------------------------
 def test_allowed_dirs_empty_means_unrestricted(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "ALLOWED_DIRS", [])

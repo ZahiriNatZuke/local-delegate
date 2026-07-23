@@ -62,6 +62,10 @@ Configura todos los clientes contra la misma URL. El daemon y `llama-swap` queda
 únicos procesos persistentes relevantes: el primero posee MCP/dashboard/telemetría; el segundo
 posee el ciclo de vida y routing de modelos.
 
+El daemon aplica además backpressure global con `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` (default
+`2`). Este límite evita que una ráfaga de clientes cree solicitudes ilimitadas; `llama-swap`
+continúa siendo la única fuente de verdad para decidir qué modelos pueden convivir en VRAM.
+
 ## Inicio de sesión y rollback
 
 En Windows puede registrarse `local-delegate serve` como tarea *AtLogOn*. En Linux/macOS usa el

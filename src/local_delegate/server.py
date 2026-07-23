@@ -53,6 +53,7 @@ def _get_version() -> str:
 # --- Cliente httpx module-level (keep-alive entre delegaciones) -------------
 _client: httpx.Client | None = None
 _client_lock = threading.Lock()
+_chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
 
 
 def _get_client() -> httpx.Client:
@@ -450,16 +451,17 @@ def _chat(
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     try:
         t0 = time.monotonic()
-        result = _post_chat(model, payload)
-        json_schema_status = "used" if response_format is not None else None
-        if response_format is not None and not result.ok and result.error == "http_400":
-            if json_schema_fallback:
-                # El backend no soporta response_format con schema: reintenta en modo libre.
-                payload.pop("response_format", None)
-                result = _post_chat(model, payload)
-                json_schema_status = "fallback"
-            else:
-                json_schema_status = "error"
+        with _chat_slots:
+            result = _post_chat(model, payload)
+            json_schema_status = "used" if response_format is not None else None
+            if response_format is not None and not result.ok and result.error == "http_400":
+                if json_schema_fallback:
+                    # El backend no soporta response_format con schema: reintenta en modo libre.
+                    payload.pop("response_format", None)
+                    result = _post_chat(model, payload)
+                    json_schema_status = "fallback"
+                else:
+                    json_schema_status = "error"
         latency_ms = int((time.monotonic() - t0) * 1000)
     finally:
         _inflight_end(entry_id)
@@ -1178,6 +1180,7 @@ def local_status() -> str:
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
+    lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
 
     current_log = _current_log_path()
     n_events = 0
