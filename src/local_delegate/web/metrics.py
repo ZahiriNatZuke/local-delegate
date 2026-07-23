@@ -1009,7 +1009,7 @@ async function pollSystem(){
       tbl.innerHTML='<tbody><tr><td style="color:var(--faint);border:0">Ningún proceso del backend detectado.</td></tr></tbody>';
     }else{
       tbl.innerHTML = '<thead><tr><th>Proceso</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
-        + procs.map(p=>`<tr><td style="font-family:var(--mono)">${p.name}${p.self?'<span class="selfchip">MCP</span>':''}</td>
+        + procs.map(p=>`<tr><td style="font-family:var(--mono)">${p.name}${p.self?'<span class="selfchip">DAEMON MCP</span>':''}</td>
             <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
         + '</tbody>';

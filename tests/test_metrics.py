@@ -313,6 +313,12 @@ def test_api_system_never_crashes_without_platform_support(monkeypatch):
     assert r.json() == {"ram": None, "vram": None, "processes": []}
 
 
+def test_dashboard_identifies_shared_mcp_daemon():
+    client = TestClient(metrics.app)
+    html = client.get("/").text
+    assert "DAEMON MCP" in html
+
+
 def test_sysinfo_smoke():
     """ram/vram/procesos reales: dict con claves esperadas o None/[], nunca excepción."""
     from local_delegate.web import sysinfo

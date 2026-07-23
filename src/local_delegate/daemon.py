@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import sys
 import time
 from pathlib import Path
 
@@ -27,6 +28,22 @@ from .web import metrics
 
 MCP_PATH = "/mcp"
 DAEMON_STATUS_PATH = "/api/daemon"
+_DEVNULL_STREAMS: list[object] = []
+
+
+def _ensure_standard_streams() -> None:
+    """Da streams válidos a librerías de consola cuando se ejecuta con ``pythonw``."""
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            stream = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115 - vive con el daemon
+            _DEVNULL_STREAMS.append(stream)
+            setattr(sys, name, stream)
+
+
+def _console_print(message: str) -> None:
+    """Escribe solo cuando existe consola (``pythonw.exe`` no define stdout)."""
+    if sys.stdout is not None:
+        print(message)
 
 
 def _lock_path() -> Path:
@@ -110,6 +127,7 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette:
 
 def serve(host: str | None = None, port: int | None = None, log_level: str = "warning") -> int:
     """Sirve MCP+dashboard en primer plano; es idempotente por usuario/puerto."""
+    _ensure_standard_streams()
     host = host or config.WEB_HOST
     port = port or config.WEB_PORT
     lock = FileLock(str(_lock_path()))
@@ -119,19 +137,19 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
     except Timeout:
         current = query_daemon(host, port)
         if current:
-            print(f"local-delegate daemon ya está activo (pid={current['pid']})")
-            print(current["mcp_url"])
+            _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
+            _console_print(current["mcp_url"])
             return 0
-        print(f"local-delegate: lock ocupado pero no responde un daemon en {host}:{port}")
+        _console_print(f"local-delegate: lock ocupado pero no responde un daemon en {host}:{port}")
         return 1
 
     try:
         if not _port_available(host, port):
             current = query_daemon(host, port)
             if current:
-                print(f"local-delegate daemon ya está activo (pid={current['pid']})")
+                _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
                 return 0
-            print(f"local-delegate: {host}:{port} está ocupado por otro proceso")
+            _console_print(f"local-delegate: {host}:{port} está ocupado por otro proceso")
             return 1
 
         if config.AUTOSTART:
@@ -140,8 +158,8 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
         payload = _daemon_payload(host, port)
         payload["started_at"] = int(time.time())
         _write_state(payload)
-        print(f"local-delegate daemon -> {payload['mcp_url']}")
-        print(f"dashboard -> {payload['dashboard_url']}")
+        _console_print(f"local-delegate daemon -> {payload['mcp_url']}")
+        _console_print(f"dashboard -> {payload['dashboard_url']}")
 
         app = build_app(host, port)
         uvicorn_config = uvicorn.Config(

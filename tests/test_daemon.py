@@ -91,6 +91,26 @@ def test_serve_treats_ctrl_c_as_clean_shutdown(tmp_path, monkeypatch):
     assert not (tmp_path / "daemon.json").exists()
 
 
+def test_serve_without_stdout_supports_pythonw(tmp_path, monkeypatch):
+    class FakeUvicornServer:
+        started = True
+
+        def __init__(self, _uvicorn_config):
+            pass
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "AUTOSTART", False)
+    monkeypatch.setattr(daemon, "_port_available", lambda _host, _port: True)
+    monkeypatch.setattr(daemon.uvicorn, "Server", FakeUvicornServer)
+    monkeypatch.setattr(daemon.sys, "stdout", None)
+
+    assert daemon.serve("127.0.0.1", 19393) == 0
+    assert not (tmp_path / "daemon.json").exists()
+
+
 def test_cli_serve_dispatches_daemon(monkeypatch):
     calls = []
     monkeypatch.setattr(
