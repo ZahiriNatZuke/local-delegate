@@ -24,9 +24,12 @@ Los ids de modelo configurados no existen en tu backend. Ajusta
 
 ## La web no aparece en `http://127.0.0.1:9393`
 
+- En modo daemon, verifica `GET http://127.0.0.1:9393/api/daemon` y arranca
+  `local-delegate serve` si no responde.
 - ¿`LOCAL_DELEGATE_WEB=0`? Quítalo.
 - Si hay **otra instancia** de Claude (Code + Desktop) ya sirviendo el puerto, la segunda no monta
-  una web nueva (por diseño). Usa la que ya está, o cambia `LOCAL_DELEGATE_WEB_PORT`.
+  una web embebida nueva. Migra los clientes al [daemon compartido](Daemon.md) para eliminar esa
+  dependencia del ciclo de vida de `stdio`.
 
 ## El modelo tarda mucho en la primera llamada
 

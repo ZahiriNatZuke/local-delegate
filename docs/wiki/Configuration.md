@@ -30,13 +30,16 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 > de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.
 > Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema.
 
-## Web de métricas
+## Daemon y web de métricas
+
+`local-delegate serve` usa el host/puerto web para servir MCP en `/mcp` y dashboard en `/`.
+En modo `stdio`, las mismas variables controlan únicamente la web embebida heredada.
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `LOCAL_DELEGATE_WEB` | `1` | `0` desactiva la web embebida |
-| `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de la web |
-| `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto de la web |
+| `LOCAL_DELEGATE_WEB` | `1` | `0` desactiva la web embebida del modo `stdio` |
+| `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon |
+| `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
 
 ## Log de uso
 

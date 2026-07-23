@@ -4,7 +4,7 @@ Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y
   GET /               -> dashboard HTML (Chart.js por CDN; rango temporal server-side)
   GET /api/events     -> eventos en [from, to] (más recientes primero) + meta
   GET /api/stats      -> agregados JSON del mismo rango
-  GET /api/inflight   -> delegaciones en curso EN ESTE PROCESO (ver limitación abajo)
+  GET /api/inflight   -> delegaciones en curso compartidas por usuario (inflight.json)
   GET /api/backend    -> proxy best-effort de /running de llama-swap
   GET /api/backend/stats -> proxy best-effort de /api/metrics/stats de llama-swap (#898, SQLite)
   GET /api/status     -> versión del MCP, modelos del backend con status loaded/unloaded (#901),
@@ -21,7 +21,9 @@ mes actual cambia entre refrescos.
 vez de memoria local: ve las delegaciones en curso de TODAS las sesiones de Claude activas en
 esta máquina (mismo usuario del SO), no solo la del proceso que sirve esta web.
 
-Dos formas de arrancar:
+Tres formas de arrancar:
+  0) Recomendada multi-cliente: ``local-delegate serve`` monta esta app junto al MCP HTTP,
+     con un único proceso persistente y un único puerto.
   1) Automática: el MCP (server.py) llama a run_in_thread() en un hilo daemon,
      de modo que la web vive y muere con el MCP. Si el puerto ya está ocupado
      (otra instancia de Claude), no monta una segunda.

@@ -1245,8 +1245,9 @@ def main() -> None:
 
     Sin argumentos: arranca el servidor MCP stdio (comportamiento de siempre, usado por
     cualquier host MCP). Con un subcomando conocido (p. ej. ``local-delegate
-    check-llamaswap ...``) delega a los CLIs opt-in de ``cli.py`` (requieren el extra
-    ``[llamaswap]``) y termina — nunca llega a arrancar el servidor MCP en ese caso.
+    check-llamaswap ...``) delega a los subcomandos de ``cli.py`` y termina — nunca llega a
+    arrancar el servidor MCP stdio en ese caso. Solo los comandos específicos de configuración
+    de llama-swap requieren el extra ``[llamaswap]``.
     """
     if len(sys.argv) > 1 and sys.argv[1] in _CLI_COMMANDS:
         from . import cli

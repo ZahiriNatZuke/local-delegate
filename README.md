@@ -30,7 +30,7 @@ vuelve el resultado corto — cuota que no gastaste.
 
 Con [`uv`](https://docs.astral.sh/uv/) no hay nada que instalar: `uvx` baja y ejecuta el paquete aislado.
 
-Añádelo a tu config de MCP (Claude Desktop / Claude Code):
+Añádelo a tu config de MCP (Claude Desktop / Claude Code) en modo compatible `stdio`:
 
 ```json
 {
@@ -44,6 +44,17 @@ Añádelo a tu config de MCP (Claude Desktop / Claude Code):
 ```
 
 Ver plantillas completas en [`examples/`](./examples).
+
+Si usas **varias sesiones o varios clientes** en la misma máquina, se recomienda un solo daemon:
+
+```powershell
+uvx local-delegate-mcp serve
+```
+
+El daemon sirve MCP en `http://127.0.0.1:9393/mcp` y el dashboard en
+`http://127.0.0.1:9393/`. Codex, Claude Code y cualquier cliente compatible con Streamable HTTP
+pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
+[Daemon compartido](./docs/wiki/Daemon.md).
 
 ## Requisitos
 
@@ -104,8 +115,8 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
 | `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
-| `LOCAL_DELEGATE_WEB` | `1` | Web de métricas embebida (`0` para desactivar) |
-| `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web |
+| `LOCAL_DELEGATE_WEB` | `1` | Web embebida del modo `stdio` (`0` para desactivarla) |
+| `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
 | `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1` |
 

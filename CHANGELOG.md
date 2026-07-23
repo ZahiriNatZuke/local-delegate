@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **Daemon singleton HTTP:** `local-delegate serve` publica MCP Streamable HTTP en `/mcp` y el
+  dashboard en `/` usando un único proceso persistente y un único puerto (default
+  `127.0.0.1:9393`). Un lock por usuario evita daemons duplicados; `/api/daemon` expone estado,
+  PID y URLs para diagnóstico. El transporte `stdio` sin argumentos se conserva compatible.
+
+### Changed
+- `check-llamaswap` e `init-llamaswap` rechazan por defecto modelos fuera de todos los `groups`,
+  porque quedarían fuera del presupuesto de VRAM/RAM. `--allow-ungrouped` permite la exclusión
+  deliberada con un aviso explícito.
+
 ## [0.8.1] - 2026-07-11
 
 ### Fixed

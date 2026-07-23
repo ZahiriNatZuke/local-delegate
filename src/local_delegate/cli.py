@@ -1,9 +1,10 @@
 """cli.py — subcomandos de línea de comandos de local-delegate.
 
-Ver docs/recipes/llama-swap-groups.md. El binario ``local-delegate`` SIN argumentos sigue
-arrancando el servidor MCP stdio exactamente igual que siempre (ver server.main()); este
-módulo solo se importa cuando el usuario invoca explícitamente uno de estos subcomandos.
-Requieren el extra ``[llamaswap]`` (``pip install "local-delegate-mcp[llamaswap]"``).
+Ver docs/recipes/llama-swap-groups.md y docs/wiki/Daemon.md. El binario ``local-delegate`` SIN
+argumentos sigue arrancando el servidor MCP stdio exactamente igual que siempre (ver
+server.main()); este módulo solo se importa cuando el usuario invoca explícitamente un
+subcomando. Solo los comandos de configuración de llama-swap requieren el extra ``[llamaswap]``
+(``pip install "local-delegate-mcp[llamaswap]"``); ``serve`` usa dependencias base.
 
 El chequeo de RAM de sistema (``--ram-gb``) es OPCIONAL en ambos comandos: si no se pasa, el
 comportamiento es idéntico al de antes de F7.9 (solo VRAM) — compatibilidad hacia atrás con

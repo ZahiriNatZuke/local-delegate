@@ -2,18 +2,20 @@
 
 ## Visión general
 
-```
-Claude (Code / Desktop)
-        │  stdio (MCP)
+```text
+Codex / Claude Code / otros
+        │  Streamable HTTP /mcp
         ▼
-  local-delegate  ──HTTP POST──▶  endpoint OpenAI-compatible
-  (server MCP)     /chat/completions   (llama-swap · Ollama · LM Studio · vLLM)
+  local-delegate daemon ──HTTP POST──▶ endpoint OpenAI-compatible
+  (MCP + dashboard)       /chat/completions  (llama-swap · Ollama · LM Studio · vLLM)
         │
-        ├─ escribe usage-YYYYMM.jsonl (una línea por llamada, rotado por mes)
-        └─ sirve dashboard web (hilo daemon, :9393)
+        ├─ escribe usage-YYYYMM.jsonl
+        └─ sirve dashboard web en /
 ```
 
-`local-delegate` es un **servidor MCP stdio** (Python + FastMCP). Expone 11 tools texto/imagen→texto
+`local-delegate` es un servidor MCP (Python + FastMCP). El modo recomendado para varias sesiones
+es el daemon singleton Streamable HTTP; el transporte `stdio` sigue disponible sin argumentos para
+compatibilidad. Expone 11 tools texto/imagen→texto
 (10 texto→texto + `local_describe_image` imagen→texto). Cada tool arma un prompt con *guardrails*,
 hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
 
@@ -42,7 +44,8 @@ hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
 
 | Módulo | Rol |
 |---|---|
-| `server.py` | Las 9 tools, `_chat`/`_post_chat`, guardrail, logging |
+| `server.py` | Las 11 tools, `_chat`/`_post_chat`, guardrail, logging |
 | `config.py` | Toda la config por env + `platformdirs` (log de usuario) |
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
-| `web/metrics.py` | Dashboard de ahorro (FastAPI, hilo daemon) |
+| `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
+| `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |

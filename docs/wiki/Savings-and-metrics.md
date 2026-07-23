@@ -41,7 +41,8 @@ fuente adicional.
 
 ## La web
 
-Dashboard en `http://127.0.0.1:9393` (embebido en el MCP, hilo daemon). KPIs, serie
+Dashboard en `http://127.0.0.1:9393`. Con `local-delegate serve` vive en el daemon singleton;
+el modo `stdio` conserva la web embebida por compatibilidad. KPIs, serie
 temporal de ahorro, barras por herramienta/modelo, donut `path` vs `inline`, feed de
 actividad, y un selector de **rango** (Hoy / 7 días / 30 días / mes anterior / todo el
 histórico / personalizado) que decide qué llama al backend, no solo un filtro visual: solo
@@ -57,18 +58,16 @@ Tarjeta con polling cada 2 s (solo si la pestaña está visible) que muestra las
 delegaciones que están en vuelo ahora mismo (tool, modelo, segundos transcurridos) y el
 modelo montado en llama-swap si el backend expone `/running`.
 
-**Limitación:** solo ves las llamadas en vuelo del **proceso que sirve esta web** — el MCP
-que la arrancó. Si tienes varias instancias de Claude Code, cada una levanta su propio MCP
-y su propia web (o ninguna, si el puerto ya está ocupado por otra); no hay estado
-compartido entre procesos. Si el puerto 9393 ya lo sirve otra instancia, la tuya no monta
-una segunda web y por tanto no tiene su propio `/api/inflight` — verás el de la instancia
-que sí ganó el puerto.
+El estado en curso vive en `LOG_DIR/inflight.json` con lock y limpieza de PID: el daemon ve las
+llamadas de todas las sesiones que comparten el mismo usuario, incluso durante una migración en la
+que todavía convivan clientes HTTP y procesos `stdio`.
 
 ## APIs
 
 | Endpoint | Devuelve |
 |---|---|
 | `GET /` | Dashboard HTML |
+| `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. |
 | `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, totales, tokens ahorrados) |
 | `GET /api/inflight` | Delegaciones en curso en este proceso, con `elapsed_s` |
