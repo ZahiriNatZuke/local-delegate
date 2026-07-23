@@ -78,6 +78,33 @@ def _estimate_all(
     return estimates
 
 
+def _ungrouped_models(groups: dict, models: dict) -> list[str]:
+    """Modelos invocables que el presupuesto de groups dejaría fuera."""
+    grouped: set[str] = set()
+    for group in groups.values():
+        if isinstance(group, dict):
+            grouped.update(m for m in group.get("members", []) if isinstance(m, str))
+    return sorted(set(models) - grouped)
+
+
+def _reject_ungrouped(groups: dict, models: dict, allow: bool) -> bool:
+    ungrouped = _ungrouped_models(groups, models)
+    if not ungrouped:
+        return False
+    level = "aviso" if allow else "error"
+    print(
+        f"{level}: modelo(s) fuera de todos los groups: {', '.join(ungrouped)}",
+        file=sys.stderr,
+    )
+    if not allow:
+        print(
+            "el presupuesto quedaría incompleto; agrúpalos o usa --allow-ungrouped "
+            "si es deliberado",
+            file=sys.stderr,
+        )
+    return not allow
+
+
 def _check_budget(
     label: str,
     groups: dict,
@@ -123,6 +150,8 @@ def cmd_check_llamaswap(args: argparse.Namespace) -> int:
         return 2
 
     models = data.get("models", {})
+    if _reject_ungrouped(groups, models, args.allow_ungrouped):
+        return 2
     vram_ok, vram_errors = _check_budget(
         "VRAM", groups, models, {}, lc.estimate_model_vram, args.vram_gb, args.margin_gb
     )
@@ -216,6 +245,9 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         }
     if swap:
         groups["swap"] = {"swap": True, "exclusive": False, "members": swap}
+    if _reject_ungrouped(groups, models, args.allow_ungrouped):
+        print("(nada se escribió)", file=sys.stderr)
+        return 2
     data["groups"] = groups
 
     # #898: persistir las métricas de actividad de llama-swap en SQLite (si no, son in-memory y
@@ -301,6 +333,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=2.0,
         help="margen de RAM reservado al SO/otras apps (default 2.0, solo aplica con --ram-gb)",
     )
+    check.add_argument(
+        "--allow-ungrouped",
+        action="store_true",
+        help="permite modelos fuera de groups (se excluyen deliberadamente del presupuesto)",
+    )
     check.set_defaults(func=cmd_check_llamaswap)
 
     init = sub.add_parser(
@@ -365,6 +402,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init.add_argument(
         "--dry-run", action="store_true", help="imprime el YAML resultante, no escribe nada"
+    )
+    init.add_argument(
+        "--allow-ungrouped",
+        action="store_true",
+        help="permite conservar modelos fuera de los groups generados",
     )
     init.set_defaults(func=cmd_init_llamaswap)
 

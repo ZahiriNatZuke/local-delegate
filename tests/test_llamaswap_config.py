@@ -359,6 +359,37 @@ def test_check_llamaswap_no_groups_errors(tmp_path):
     assert rc == 2
 
 
+def test_check_llamaswap_rejects_models_outside_groups(monkeypatch, tmp_path, capsys):
+    groups = {"swap": {"swap": True, "members": ["a"]}}
+    config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 2, "vision": 3}, groups)
+
+    rc = cli.run(["check-llamaswap", "--config", str(config_path), "--vram-gb", "16"])
+
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "vision" in err
+    assert "presupuesto quedaría incompleto" in err
+
+
+def test_check_llamaswap_can_explicitly_allow_ungrouped(monkeypatch, tmp_path, capsys):
+    groups = {"swap": {"swap": True, "members": ["a"]}}
+    config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 2, "vision": 3}, groups)
+
+    rc = cli.run(
+        [
+            "check-llamaswap",
+            "--config",
+            str(config_path),
+            "--vram-gb",
+            "16",
+            "--allow-ungrouped",
+        ]
+    )
+
+    assert rc == 0
+    assert "aviso" in capsys.readouterr().err
+
+
 def test_check_llamaswap_missing_model_file_errors(tmp_path):
     groups = {"swap": {"swap": True, "members": ["ghost"]}}
     config_path = tmp_path / "config.yaml"
@@ -388,6 +419,28 @@ def _base_config(monkeypatch, tmp_path) -> tuple[Path, dict]:
     config_path = tmp_path / "config.yaml"
     lc.dump_config({"models": models}, config_path)
     return config_path, models
+
+
+def test_init_llamaswap_rejects_existing_model_left_ungrouped(monkeypatch, tmp_path, capsys):
+    config_path, _models = _base_config(monkeypatch, tmp_path)
+
+    rc = cli.run(
+        [
+            "init-llamaswap",
+            "--config",
+            str(config_path),
+            "--resident",
+            "gemma3-4b",
+            "--vram-gb",
+            "16",
+            "--force",
+        ]
+    )
+
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "llama31-8b" in err
+    assert "nada se escribió" in err
 
 
 def test_init_llamaswap_writes_groups_and_ttl(monkeypatch, tmp_path):
