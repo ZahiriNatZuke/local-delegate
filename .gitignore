@@ -27,3 +27,7 @@ dashboard.js
 # Secretos y credenciales (por si acaso; solo se versionan *.example)
 *.secret
 secrets.*
+
+# Local Codex configuration
+.codex/
+AGENTS.md
