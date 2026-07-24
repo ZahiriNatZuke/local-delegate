@@ -10,6 +10,16 @@ El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`.
   [recipe de llama-swap](../recipes/llama-swap-blackwell.md).
 - Otros backends (Ollama, LM Studio, vLLM) los arrancas tú; el auto-arranque es solo llama-swap.
 
+Si el backend está en otra máquina:
+
+- `Could not resolve host`: MagicDNS no está resolviendo; prueba primero `tailscale status` y
+  `tailscale ping <PC>` desde la Mac.
+- `Operation timed out`: DNS resolvió, pero falta ruta/grant o Tailscale Serve no está activo.
+- `401`: la red funciona; carga la key desde Keychain y confirma el header Bearer.
+- No cambies a MCP remoto completo para “arreglar” `path`: el MCP debe seguir local en la Mac.
+
+Guía completa: [Backend remoto Mac → PC](Remote-backend.md).
+
 ## `[local-delegate error] <modelo> respondió 404` (o "model not found")
 
 Los ids de modelo configurados no existen en tu backend. Ajusta

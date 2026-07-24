@@ -96,8 +96,18 @@ uvx --from git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA> 
 ```
 
 Esto no publica una release y evita que un cambio posterior en la rama altere la prueba. Despues
-de aprobar el canary se crea la version nueva, se publica en PyPI y se vuelve al comando estable
-`uvx local-delegate-mcp` (o se fija `local-delegate-mcp==<VERSION>` durante el rollout).
+de aprobar el canary se crea la version nueva, se publica en PyPI y se vuelve al comando estable.
+Para el rollout aprobado de 0.10.0 ya no uses el SHA de canary:
+
+```text
+uvx --from local-delegate-mcp==0.10.0 local-delegate-mcp
+```
+
+En la configuracion MCP estable, reemplaza los argumentos del bloque de canary por:
+
+```json
+"args": ["--from", "local-delegate-mcp==0.10.0", "local-delegate-mcp"]
+```
 
 En la entrada `local-delegate` del cliente MCP conserva `command: uvx` y añade este entorno:
 

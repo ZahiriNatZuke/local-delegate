@@ -9,7 +9,7 @@ carpetas con las que el autor verifica cada release. Ni requisito ni obligación
 
 | Componente | Versión probada | Verificado | Notas |
 |---|---|---|---|
-| `local-delegate` | 0.9.0 | 2026-07-23 | esta release |
+| `local-delegate` | 0.10.0 | 2026-07-23 | esta release |
 | `llama-server` (llama.cpp) | **b9925** | 2026-07-11 | RTX 5060 (Blackwell/sm_120), runtime **CUDA 13.3** |
 | `llama-swap` | **v238** | 2026-07-11 | trae `status` en `/v1/models` (#901) y métricas SQLite (#898) |
 

@@ -12,6 +12,10 @@ Nada está hardcodeado.
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Máximo de llamadas al backend simultáneas por proceso; en el daemon se comparte entre clientes |
 
+Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fija
+`LOCAL_DELEGATE_AUTOSTART=0` y carga `LOCAL_DELEGATE_API_KEY` desde Keychain. Ver
+[Backend remoto Mac → PC](Remote-backend.md).
+
 ## Catálogo de modelos (roles)
 
 Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los ids de tu backend.

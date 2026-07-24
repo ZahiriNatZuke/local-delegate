@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "release-0-10-0",
+  "title": "Release 0.10.0, wiki y distribución",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-24T02:22:49.099Z",
+  "updatedAt": "2026-07-24T02:30:18.087Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:24:45.687Z",
+      "evidence": "Eight observable requirements cover hygiene, coordinated versioning, docs, quality, integration, publication, memory and security with explicit failure behavior",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:25:28.718Z",
+      "evidence": "Plan adversarial reviewed with no blockers: irreversible steps gated after quality/CI, PyPI recovery is 0.10.1, no new dependencies or scope leakage",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:30:18.087Z",
+      "evidence": "160 tests, Ruff, format, dashboard JS, clean build, isolated wheel 0.10.0, valid server.json, clean staged and extracted-sdist gitleaks, forbidden sdist paths excluded",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-24T02:22:49.099Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-24T02:24:45.542Z",
+      "reason": "Impact map confirms fast-forward integration, coordinated version files, OIDC PyPI workflow, manual registry/wiki publication and no new Python dependencies"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-24T02:24:45.610Z",
+      "reason": "Research resolved release topology, failure gates, wiki synchronization and exact 0.10.0 scope"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-24T02:24:45.687Z",
+      "evidence": "Eight observable requirements cover hygiene, coordinated versioning, docs, quality, integration, publication, memory and security with explicit failure behavior",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-24T02:24:45.760Z",
+      "reason": "Specification approved; release tasks can now be sequenced by reversibility"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-24T02:25:28.718Z",
+      "evidence": "Plan adversarial reviewed with no blockers: irreversible steps gated after quality/CI, PyPI recovery is 0.10.1, no new dependencies or scope leakage",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-24T02:25:28.786Z",
+      "reason": "Plan gate approved after adversarial review"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-24T02:25:28.856Z",
+      "reason": "Release implementation authorized by approved spec and plan"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-24T02:29:43.861Z",
+      "reason": "Versioning, docs, cleanup, build and local quality checks implemented; external release gates remain"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-24T02:30:18.087Z",
+      "evidence": "160 tests, Ruff, format, dashboard JS, clean build, isolated wheel 0.10.0, valid server.json, clean staged and extracted-sdist gitleaks, forbidden sdist paths excluded",
+      "actor": "user"
+    }
+  ]
+}

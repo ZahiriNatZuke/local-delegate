@@ -40,6 +40,10 @@ gh run watch --exit-status
 git tag vX.Y.Z
 git push origin vX.Y.Z
 gh run watch --exit-status
+
+# 4. verifica PyPI y crea la GitHub Release
+uvx --from local-delegate-mcp==X.Y.Z local-delegate --help
+gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes-file <release-notes.md>
 ```
 
 `publish.yml` usa `uv publish --check-url https://pypi.org/simple/`, así que reejecutar sobre un
@@ -48,6 +52,9 @@ tag existente es idempotente (salta lo ya subido).
 Después del workflow, verifica que PyPI sirva la versión nueva antes de publicar `server.json` en
 el registro MCP. El descriptor del registro conserva transporte `stdio` porque describe cómo el
 paquete se ejecuta en cualquier host; el daemon HTTP local es un modo operativo adicional.
+
+La wiki nativa se sincroniza después desde `docs/wiki/` en un clone temporal de
+`local-delegate.wiki.git`. No publiques la wiki antes de que el tag y PyPI existan.
 
 ## Registro oficial MCP
 

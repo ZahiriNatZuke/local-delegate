@@ -6,12 +6,12 @@
     "url": "https://github.com/ZahiriNatZuke/local-delegate",
     "source": "github"
   },
-  "version": "0.9.0",
+  "version": "0.10.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "local-delegate-mcp",
-      "version": "0.9.0",
+      "version": "0.10.0",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {
