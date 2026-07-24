@@ -157,9 +157,10 @@ Para automatizar tambien preflight, descarga y checkout, usa el wrapper con el S
   https://<PC_MAGICDNS>:9292/v1
 ```
 
-Si `LOCAL_DELEGATE_API_KEY` no esta cargada, el wrapper la pide sin mostrarla ni guardarla. Verifica
-el endpoint autenticado, confirma que el commit existe en GitHub, crea un checkout temporal y corre
-el canary de 20 llamadas desde esa revision exacta.
+La primera pasada puede validar conectividad aunque el canary aun no tenga auth. Para el gate final,
+añade `--expect-auth`; si `LOCAL_DELEGATE_API_KEY` no esta cargada, el wrapper la pide sin mostrarla
+ni guardarla. Verifica el endpoint, confirma que el commit existe en GitHub, crea un checkout
+temporal y corre el canary de 20 llamadas desde esa revision exacta.
 
 Después de reiniciar el cliente, ejecuta `local_status` y dos canaries:
 
