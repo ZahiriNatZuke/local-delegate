@@ -2,7 +2,7 @@
 
 ## Environment
 
-- Revision: worktree local sin commit; stable backend no reemplazado.
+- Revision canary: `a79721f8c64c5be4fda1be025b80f1b7eab67ef0`; stable backend no reemplazado.
 - Hardware: RTX 5060 Ti 16 GiB, 32 GiB RAM.
 - Runtime: Python 3.11, llama-swap v238, llama-server b9925.
 - Candidato: gpt-oss-20b MXFP4 oficial, SHA-256 verificado.
@@ -17,8 +17,8 @@
 | REQ-004 | Contexto 8k/16k/32k y caso 96k caracteres | PASS con nota | rechazos de contexto explícitos; en 32k se observó truncación/degeneración, por lo que chunking queda separado |
 | REQ-005 | Hooks antes de prompt/Read/Bash, metadata-only | PASS local | scripts, settings activo y `tests/test_hook_recipes.py` |
 | REQ-006 | Bandas 8/32 KiB y campos de telemetría | PARTIAL | implementación lista; falta muestra A/B de sesiones reales |
-| REQ-007 | Recipe MCP local Mac -> backend PC | PARTIAL | diseño y auth local verificados; faltan 20 llamadas desde la Mac |
-| REQ-008 | apiKeys por env, Bearer en endpoints, bind privado documentado | PARTIAL | canary 401/200 y secret scan; falta firewall/interfaz privada real |
+| REQ-007 | MCP local Mac -> backend PC por endpoint HTTPS privado | PASS | canary real: 20/20, path exclusivo de Mac, concurrencia 2, dos arranques y p95 7.119 s |
+| REQ-008 | apiKeys por env, Bearer en endpoints, bind privado documentado | PARTIAL | red privada/ACL y secret scan verificados; el canary real todavía respondió 200 sin key |
 | REQ-009 | instalada/probada/latest/edad/issues y gate 7 días | PASS | `doctor --online`: v241/b10098 HOLD y llama-swap #946 |
 | REQ-010 | decisiones adopt/iterate/reject | PASS | `results.md` |
 
@@ -36,7 +36,7 @@
 - [x] `uv lock --check`.
 - [x] `uv run ruff check .`.
 - [x] `uv run ruff format --check .` después de aplicar formato.
-- [x] `uv run pytest -q`: 156 passed, una advertencia de deprecación preexistente Starlette/httpx.
+- [x] `uv run pytest -q`: 157 passed, una advertencia de deprecación preexistente Starlette/httpx.
 - [x] JavaScript del dashboard extraído y `node --check` aprobado.
 - [x] `git diff --check`.
 - [x] Gitleaks limpio en rutas relevantes. El escaneo bruto del workspace marcó seis falsos
@@ -51,5 +51,6 @@
   limitación, la degeneración de tabla y truncaciones son reales.
 - La primera corrida m0 del sweep válido estaba caliente por el smoke; la latencia cold de carga
   está en los canaries inválidos. Memoria steady/hot y la decisión no dependen de ese dato.
-- No hay evidencia desde la Mac ni muestra A/B de hooks todavía. Esas dos faltas bloquean cerrar el
-  gate de conformidad, pero no invalidan las decisiones locales.
+- El canary real desde la Mac pasó conectividad, path, concurrencia y reinicio del proceso. Falta
+  repetirlo con API key y 401 sin credencial, además de la muestra A/B de hooks; ambas faltas
+  bloquean cerrar el gate de conformidad, pero no invalidan las decisiones verificadas.
