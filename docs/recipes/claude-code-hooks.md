@@ -1,36 +1,52 @@
 # Recipe: hooks de Claude Code para sugerir delegación
 
-Dos hooks **opt-in** que sugieren usar las tools `local_*` en el momento justo, sin
-forzar nada: ninguno de los dos bloquea la acción original de Claude, solo le añaden
-contexto adicional (`additionalContext`) para que decida.
+Tres hooks **opt-in y consultivos** sugieren las tools `local_*` antes de gastar contexto. No
+bloquean la acción original ni envían el prompt a otro modelo.
 
-Scripts en [`hooks/`](./hooks/): Python 3 puro (sin dependencias), multiplataforma.
+Scripts en [`hooks/`](./hooks/): Python 3 puro, sin dependencias.
 
-## Qué hace cada uno
+## Hooks
+
+### `suggest_delegate_prompt.py` — `UserPromptSubmit`
+
+Detecta intenciones mecánicas explícitas como resumir, extraer, clasificar, traducir o resumir
+lint. Omite tareas con señales de arquitectura, investigación, seguridad, migración o acciones
+de riesgo. Solo añade un recordatorio corto; Claude conserva la decisión final.
 
 ### `suggest_delegate_read.py` — `PreToolUse`, matcher `Read`
 
-Si el archivo que Claude va a abrir con `Read` pesa más de `LD_HOOK_READ_KB` (default
-**50 KB**), añade una sugerencia de usar `local_summarize(path=...)` o
-`local_extract(path=...)` en vez de leerlo entero. Nunca bloquea: siempre devuelve
-`permissionDecision: "allow"`.
+Usa dos bandas configurables:
 
-### `suggest_lint_summary.py` — `PostToolUse`, matcher `Bash`
+- 8-32 KiB: sugerencia si se necesita una transformación global.
+- más de 32 KiB: recomendación fuerte de `path`.
 
-Si el comando ejecutado matchea `lint|test|tsc|build|pytest|clippy|biome` y su stdout
-supera `LD_HOOK_BASH_LINES` líneas (default **120**), sugiere volcar la salida a
-fichero y usar `local_lint_summary(path=...)`. El tool ya se ejecutó: esto es solo
-feedback, no hay nada que bloquear.
+Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
+
+### `suggest_lint_summary.py` — `PreToolUse`, matcher `Bash`
+
+Detecta comandos `lint|test|tsc|build|pytest|clippy|biome` **antes** de ejecutarlos y recomienda
+redirigir una salida previsiblemente larga a fichero. El hook anterior era `PostToolUse`; llegaba
+demasiado tarde porque la salida ya había entrado al contexto.
 
 ## Instalación
 
-Copia los dos scripts a donde prefieras (por ejemplo `~/.claude/hooks/`) y añade este
-bloque a tu `settings.json` (global `~/.claude/settings.json` o de proyecto
-`.claude/settings.json`), ajustando las rutas:
+Copia los cuatro archivos de `hooks/` (`hook_common.py` y los tres scripts) a
+`~/.claude/hooks/` y añade, ajustando las rutas:
 
 ```json
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": ["/ruta/a/suggest_delegate_prompt.py"]
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read",
@@ -41,9 +57,7 @@ bloque a tu `settings.json` (global `~/.claude/settings.json` o de proyecto
             "args": ["/ruta/a/suggest_delegate_read.py"]
           }
         ]
-      }
-    ],
-    "PostToolUse": [
+      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -59,27 +73,22 @@ bloque a tu `settings.json` (global `~/.claude/settings.json` o de proyecto
 }
 ```
 
-En Windows, `command` puede ser `python` o `py`; en macOS/Linux, `python3`. Verifica
-cuál resuelve en tu `PATH` antes de instalar.
+En Windows, `command` puede ser `python` o `py`; en macOS/Linux, `python3`.
 
-## Configuración (env)
+## Configuración
 
 | Variable | Default | Efecto |
-|---|---|---|
-| `LD_HOOK_READ_KB` | `50` | Umbral en KB para que `suggest_delegate_read.py` sugiera delegar |
-| `LD_HOOK_BASH_LINES` | `120` | Nº de líneas de stdout para que `suggest_lint_summary.py` sugiera resumir |
+|---|---:|---|
+| `LD_HOOK_READ_SUGGEST_KB` | `8` | Inicio de sugerencia para Read |
+| `LD_HOOK_READ_STRONG_KB` | `32` | Inicio de recomendación fuerte |
+| `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
 
-## Por qué opt-in
-
-Estos hooks son una **recipe**, no algo que `local-delegate` instale solo: cada usuario
-decide si los quiere y con qué umbrales. Si prefieres que Claude decida caso a caso sin
-un hook determinista, la [skill `delegacion-local`](../../README.md) ya cubre la regla
-de decisión — los hooks son un empujón adicional, no un reemplazo.
+La telemetría solo guarda timestamp, evento, categoría, tamaño/banda y si hubo sugerencia. Nunca
+guarda prompts, comandos o paths. Es una recipe de usuario; `local-delegate` no instala hooks solo.
 
 ## Verificación manual
 
-Con los hooks instalados, pide a Claude que lea (con `Read`) un archivo de más de 50 KB
-del repo: debería aparecer la sugerencia de `local_summarize`/`local_extract` como
-contexto adicional antes de que Claude decida. Para el segundo hook, corre un comando
-de test/lint con salida larga (`npm test`, `pytest`, `cargo clippy`, …) y verifica que
-aparece la sugerencia de `local_lint_summary` tras la ejecución.
+1. Envía un prompt como “resume este archivo en cinco viñetas”: debe aparecer el recordatorio.
+2. Pide leer un archivo de 10 KiB y otro de 40 KiB: deben aparecer bandas diferentes.
+3. Ejecuta `pytest` o `npm test`: la sugerencia debe aparecer antes de la tool Bash.
+4. Envía “investiga y diseña la arquitectura”: no debe sugerir delegación local.

@@ -4,6 +4,7 @@ config.yaml (sin pyyaml), comparación vs RECOMMENDED_VERSIONS y exit codes."""
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 
 from local_delegate import doctor
 
@@ -70,6 +71,51 @@ def test_compare_line_not_detected():
     line, warn = doctor._compare_line("llama-server", None, online=False)
     assert warn is False  # 'no detectado' no cuenta como warning de actualización
     assert "no detectado" in line
+
+
+def test_release_age_days():
+    now = datetime(2026, 7, 23, 12, tzinfo=UTC)
+    assert doctor._release_age_days("2026-07-20T10:00:00Z", now) == 3
+    assert doctor._release_age_days("", now) is None
+    assert doctor._release_age_days("no-es-fecha", now) is None
+
+
+def test_online_new_release_is_held_before_soak(monkeypatch):
+    monkeypatch.setattr(
+        doctor,
+        "latest_github_info",
+        lambda component: {
+            "tag": "v999",
+            "published_at": datetime.now(UTC).isoformat(),
+            "url": "https://example.invalid/release",
+        },
+    )
+    line, warn = doctor._compare_line("llama-swap", doctor.RECOMMENDED_VERSIONS["llama-swap"], True)
+    assert warn is False
+    assert "HOLD" in line
+    assert "canary" not in line
+
+
+def test_select_relevant_issues_excludes_prs_and_noise():
+    items = [
+        {"number": 1, "title": "Docs typo", "body": "small fix", "html_url": "u1"},
+        {
+            "number": 2,
+            "title": "CUDA crash on unload",
+            "body": "",
+            "html_url": "u2",
+        },
+        {
+            "number": 3,
+            "title": "Windows crash",
+            "body": "",
+            "html_url": "u3",
+            "pull_request": {},
+        },
+    ]
+    assert doctor._select_relevant_issues(items) == [
+        {"number": 2, "title": "CUDA crash on unload", "url": "u2"}
+    ]
 
 
 def test_run_doctor_exit_0_when_up_to_date(monkeypatch):

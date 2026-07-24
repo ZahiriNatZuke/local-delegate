@@ -1,0 +1,50 @@
+# Canary aislado. Requiere estas variables antes de arrancar llama-swap:
+#   LLAMA_SERVER_EXE  ruta absoluta a llama-server
+#   GPT_OSS_GGUF      ruta absoluta a gpt-oss-20b-MXFP4.gguf
+#   CANARY_API_KEY     token efimero; nunca guardarlo en este archivo
+# No contiene keys ni modifica el config estable.
+healthCheckTimeout: 600
+logLevel: info
+globalTTL: 60
+
+apiKeys:
+  - "${env.CANARY_API_KEY}"
+
+macros:
+  server: "${env.LLAMA_SERVER_EXE}"
+  model: "${env.GPT_OSS_GGUF}"
+  common: "--port ${PORT} --host 127.0.0.1 --model ${model} -ngl 99 --jinja --metrics --flash-attn on"
+
+models:
+  gpt-oss-20b-c8k-m0:
+    cmd: "${server} ${common} --ctx-size 8192 --n-cpu-moe 0"
+  gpt-oss-20b-c8k-m6:
+    cmd: "${server} ${common} --ctx-size 8192 --n-cpu-moe 6"
+  gpt-oss-20b-c8k-m12:
+    cmd: "${server} ${common} --ctx-size 8192 --n-cpu-moe 12"
+  gpt-oss-20b-c8k-m18:
+    cmd: "${server} ${common} --ctx-size 8192 --n-cpu-moe 18"
+  gpt-oss-20b-c8k-m24:
+    cmd: "${server} ${common} --ctx-size 8192 --n-cpu-moe 24"
+
+  gpt-oss-20b-c16k-m0:
+    cmd: "${server} ${common} --ctx-size 16384 --n-cpu-moe 0"
+  gpt-oss-20b-c16k-m6:
+    cmd: "${server} ${common} --ctx-size 16384 --n-cpu-moe 6"
+  gpt-oss-20b-c16k-m12:
+    cmd: "${server} ${common} --ctx-size 16384 --n-cpu-moe 12"
+  gpt-oss-20b-c16k-m18:
+    cmd: "${server} ${common} --ctx-size 16384 --n-cpu-moe 18"
+  gpt-oss-20b-c16k-m24:
+    cmd: "${server} ${common} --ctx-size 16384 --n-cpu-moe 24"
+
+  gpt-oss-20b-c32k-m0:
+    cmd: "${server} ${common} --ctx-size 32768 --n-cpu-moe 0"
+  gpt-oss-20b-c32k-m6:
+    cmd: "${server} ${common} --ctx-size 32768 --n-cpu-moe 6"
+  gpt-oss-20b-c32k-m12:
+    cmd: "${server} ${common} --ctx-size 32768 --n-cpu-moe 12"
+  gpt-oss-20b-c32k-m18:
+    cmd: "${server} ${common} --ctx-size 32768 --n-cpu-moe 18"
+  gpt-oss-20b-c32k-m24:
+    cmd: "${server} ${common} --ctx-size 32768 --n-cpu-moe 24"

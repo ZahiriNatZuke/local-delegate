@@ -30,9 +30,22 @@ def test_eleven_tools_registered():
 
 def test_config_defaults():
     assert config.BASE_URL == "http://127.0.0.1:9292/v1"
-    assert config.AUTOSTART is False  # opt-in por defecto
-    assert config.WEB_ENABLED is True
-    assert config.MAX_CONCURRENT_REQUESTS == 2
+
+
+def test_backend_auth_headers(monkeypatch):
+    monkeypatch.setattr(config, "API_KEY", "")
+    assert config.auth_headers() == {}
+    monkeypatch.setattr(config, "API_KEY", "secret-value")
+    assert config.auth_headers() == {"Authorization": "Bearer secret-value"}
+
+
+def test_config_defaults_without_user_environment(monkeypatch):
+    monkeypatch.delenv("LOCAL_DELEGATE_AUTOSTART", raising=False)
+    monkeypatch.delenv("LOCAL_DELEGATE_WEB", raising=False)
+    monkeypatch.delenv("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", raising=False)
+    assert config._env_flag("LOCAL_DELEGATE_AUTOSTART", False) is False
+    assert config._env_flag("LOCAL_DELEGATE_WEB", True) is True
+    assert config._env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", 2) == 2
     # el log vive en el dir de datos de usuario, no en una ruta de máquina concreta
     assert config.USAGE_LOG.name == "usage.jsonl"
 

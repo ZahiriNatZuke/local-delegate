@@ -54,6 +54,11 @@ HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
 MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", 2))
 
 
+def auth_headers() -> dict[str, str]:
+    """Headers del backend sin registrar ni exponer el secreto configurado."""
+    return {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
+
+
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------
 # Por defecto se rota por mes: usage-YYYYMM.jsonl dentro de LOG_DIR. Si el usuario fija
 # LOCAL_DELEGATE_LOG (archivo explícito), se usa ESE archivo tal cual, sin rotación —

@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 from . import autostart, config
@@ -36,6 +37,14 @@ _GITHUB_REPOS: dict[str, str] = {
     "llama-server": "ggml-org/llama.cpp",
     "llama-swap": "mostlygeek/llama-swap",
 }
+_RISK_TERMS = re.compile(
+    r"\b(deadlock|hang|freeze|crash|regression|oom|cuda|windows|ttl|unload|corrupt|security)\b",
+    re.IGNORECASE,
+)
+
+# Una rolling release nueva no se promueve directamente. Primero debe acumular este tiempo sin
+# una regresión relevante y después pasar el canary local.
+MIN_RELEASE_SOAK_DAYS = 7
 
 _CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
@@ -111,8 +120,8 @@ def detect_llamaserver_version(config_path: Path | None) -> tuple[str | None, st
     return f"b{m.group(1)}", None
 
 
-def latest_github(component: str) -> str | None:
-    """Última release publicada en GitHub para el componente ('v238'/'b9964'). Best-effort."""
+def latest_github_info(component: str) -> dict[str, str] | None:
+    """Metadatos de la última release de GitHub. Best-effort y sin autenticación requerida."""
     repo = _GITHUB_REPOS.get(component)
     if not repo:
         return None
@@ -122,10 +131,80 @@ def latest_github(component: str) -> str | None:
         with httpx.Client(timeout=5.0) as c:
             r = c.get(f"https://api.github.com/repos/{repo}/releases/latest")
             r.raise_for_status()
-            tag = r.json().get("tag_name")
-            return tag if isinstance(tag, str) else None
+            data = r.json()
+            tag = data.get("tag_name")
+            if not isinstance(tag, str):
+                return None
+            return {
+                "tag": tag,
+                "published_at": str(data.get("published_at") or ""),
+                "url": str(data.get("html_url") or ""),
+            }
     except Exception:
         return None
+
+
+def latest_github(component: str) -> str | None:
+    """Último tag publicado; wrapper conservado para consumidores anteriores."""
+    info = latest_github_info(component)
+    return info["tag"] if info else None
+
+
+def _select_relevant_issues(items: list[dict], limit: int = 3) -> list[dict[str, str | int]]:
+    """Filtra issues recientes por señales de riesgo; excluye pull requests."""
+    result: list[dict[str, str | int]] = []
+    for item in items:
+        if "pull_request" in item:
+            continue
+        title = str(item.get("title") or "")
+        # El cuerpo de issues de feature suele mencionar plataformas o fallos hipotéticos y genera
+        # demasiados falsos positivos. El título es una señal deliberadamente conservadora.
+        if not _RISK_TERMS.search(title):
+            continue
+        result.append(
+            {
+                "number": int(item.get("number") or 0),
+                "title": title,
+                "url": str(item.get("html_url") or ""),
+            }
+        )
+        if len(result) >= limit:
+            break
+    return result
+
+
+def recent_relevant_issues(component: str) -> list[dict[str, str | int]]:
+    """Issues abiertos y recientes que ameritan revisión antes de un canary. Best-effort."""
+    repo = _GITHUB_REPOS.get(component)
+    if not repo:
+        return []
+    try:
+        import httpx
+
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(
+                f"https://api.github.com/repos/{repo}/issues",
+                params={"state": "open", "sort": "updated", "direction": "desc", "per_page": 30},
+            )
+            response.raise_for_status()
+            data = response.json()
+            return _select_relevant_issues(data if isinstance(data, list) else [])
+    except Exception:
+        return []
+
+
+def _release_age_days(published_at: str, now: datetime | None = None) -> int | None:
+    """Edad completa de una release ISO-8601; None ante una fecha ausente o inválida."""
+    if not published_at:
+        return None
+    try:
+        published = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    current = now or datetime.now(UTC)
+    if published.tzinfo is None:
+        published = published.replace(tzinfo=UTC)
+    return max(0, (current - published).days)
 
 
 def _compare_line(component: str, installed: str | None, online: bool) -> tuple[str, bool]:
@@ -135,13 +214,21 @@ def _compare_line(component: str, installed: str | None, online: bool) -> tuple[
     """
     recommended = RECOMMENDED_VERSIONS[component]
     inst_n, rec_n = _vnum(installed), _vnum(recommended)
-    latest = latest_github(component) if online else None
+    release = latest_github_info(component) if online else None
+    latest = release["tag"] if release else None
     lat_n = _vnum(latest)
 
     extra = ""
     if latest:
         if lat_n is not None and rec_n is not None and lat_n > rec_n:
-            extra = f" · última en GitHub: {latest} (más nueva que la probada)"
+            age = _release_age_days(release.get("published_at", "")) if release else None
+            if age is None:
+                gate = "edad desconocida; revisar antes del canary"
+            elif age < MIN_RELEASE_SOAK_DAYS:
+                gate = f"HOLD: {age}d de {MIN_RELEASE_SOAK_DAYS}d mínimos"
+            else:
+                gate = f"{age}d; candidata a canary, no a promoción directa"
+            extra = f" · última en GitHub: {latest} (más nueva; {gate})"
         else:
             extra = f" · última en GitHub: {latest}"
 
@@ -167,7 +254,7 @@ def _backend_up() -> bool:
         import httpx
 
         with httpx.Client(timeout=2.0) as c:
-            return c.get(f"{config.BASE_URL}/models").is_success
+            return c.get(f"{config.BASE_URL}/models", headers=config.auth_headers()).is_success
     except Exception:
         return False
 
@@ -210,6 +297,19 @@ def run_doctor(args: argparse.Namespace) -> int:
         line, warn = _compare_line("llama-server", lsrv_installed, args.online)
         print(f"  {line}")
         warnings = warnings or warn
+
+    if args.online:
+        print("")
+        print("Issues abiertos con señales de riesgo (revisión manual antes de canary):")
+        for component in ("llama-swap", "llama-server"):
+            issues = recent_relevant_issues(component)
+            if not issues:
+                print(
+                    f"  [ -- ] {component}: ninguno detectado en los 30 actualizados más recientes"
+                )
+                continue
+            for issue in issues:
+                print(f"  [HOLD] {component} #{issue['number']}: {issue['title']} · {issue['url']}")
 
     print("")
     if warnings:

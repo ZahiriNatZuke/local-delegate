@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Hook PostToolUse (matcher: Bash) para local-delegate.
+"""Hook PreToolUse (matcher: Bash) para local-delegate.
 
-Si un comando de lint/test/build produjo una salida larga (> LD_HOOK_BASH_LINES líneas,
-default 120), sugiere volcarla a fichero y resumirla con local_lint_summary en vez de
-dejar que la salida cruda quede en el contexto. NUNCA bloquea: solo añade
-additionalContext. Sin dependencias (stdlib únicamente) y multiplataforma.
+Detecta antes de ejecutar comandos de lint/test/build que suelen ser ruidosos. Sugiere redirigir
+la salida a un fichero y resumirla con local_lint_summary. NUNCA bloquea.
 
 Instalar en settings.json (ver docs/recipes/claude-code-hooks.md):
 
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {"matcher": "Bash", "hooks": [
         {"type": "command", "command": "python", "args": ["/ruta/a/suggest_lint_summary.py"]}
       ]}
@@ -20,9 +18,10 @@ Instalar en settings.json (ver docs/recipes/claude-code-hooks.md):
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
+
+from hook_common import emit, record
 
 _CMD_RE = re.compile(r"\b(lint|test|tsc|build|pytest|clippy|biome)\b", re.IGNORECASE)
 
@@ -35,30 +34,14 @@ def main() -> None:
 
     command = (payload.get("tool_input") or {}).get("command", "") or ""
     if not _CMD_RE.search(command):
-        return
-
-    stdout = (payload.get("tool_response") or {}).get("stdout", "") or ""
-    try:
-        threshold = int(os.environ.get("LD_HOOK_BASH_LINES", "120"))
-    except ValueError:
-        threshold = 120
-    if stdout.count("\n") < threshold:
+        record("PreToolUse", suggested=False, category="bash", command_chars=len(command))
         return
 
     context = (
-        "La salida de este comando es larga. Vuélcala a un archivo y usa "
-        "local_lint_summary(path=...) para resumirla sin gastar tu contexto."
+        "Este comando puede producir salida larga. Si no necesitas verla completa, redirigela a "
+        "un archivo y usa local_lint_summary(path=...) para traer solo el resumen al contexto."
     )
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PostToolUse",
-                    "additionalContext": context,
-                }
-            }
-        )
-    )
+    emit("PreToolUse", context, category="lint", command_chars=len(command))
 
 
 if __name__ == "__main__":

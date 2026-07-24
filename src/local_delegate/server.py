@@ -339,7 +339,7 @@ class ChatResult:
 
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
-    headers = {"Authorization": f"Bearer {config.API_KEY}"} if config.API_KEY else {}
+    headers = config.auth_headers()
     client = _get_client()
     for attempt in (1, 2):
         try:
@@ -1116,7 +1116,7 @@ def _models_with_status() -> tuple[bool, list[dict]]:
     """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da."""
     try:
         with httpx.Client(timeout=2.0) as c:
-            r = c.get(f"{config.BASE_URL}/models")
+            r = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
             r.raise_for_status()
             data = r.json().get("data", [])
     except (httpx.HTTPError, ValueError):
@@ -1135,7 +1135,7 @@ def _llamaswap_running() -> str | None:
     base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
     try:
         with httpx.Client(timeout=1.0) as c:
-            r = c.get(f"{base}/running")
+            r = c.get(f"{base}/running", headers=config.auth_headers())
             if not r.is_success:
                 return None
             data = r.json()
@@ -1236,6 +1236,7 @@ def local_status() -> str:
 
 
 _CLI_COMMANDS = {
+    "benchmark",
     "check-llamaswap",
     "init-llamaswap",
     "doctor",

@@ -20,10 +20,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import doctor
+from . import benchmark, doctor
 from . import llamaswap_config as lc
 
-KNOWN_COMMANDS = {"check-llamaswap", "init-llamaswap", "doctor", "serve"}
+KNOWN_COMMANDS = {"benchmark", "check-llamaswap", "init-llamaswap", "doctor", "serve"}
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -309,6 +309,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="CLIs opcionales de local-delegate para groups de llama-swap (extra [llamaswap]).",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    benchmark.add_parser(sub)
 
     check = sub.add_parser(
         "check-llamaswap",

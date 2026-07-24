@@ -18,3 +18,4 @@ Documentación extendida del MCP `local-delegate`. Para empezar rápido, ve al
 - **[llama-swap (RTX 5060 Ti Blackwell)](../recipes/llama-swap-blackwell.md)**
 - **[Ollama](../recipes/ollama.md)**
 - **[Integración con Claude Code](../recipes/claude-code-integration.md)** (subagentes + skill)
+- **[Backend remoto PC → Mac](../recipes/remote-backend.md)** (MCP local, inferencia remota y paths correctos)

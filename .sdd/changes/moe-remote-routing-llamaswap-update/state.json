@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "slug": "moe-remote-routing-llamaswap-update",
+  "title": "MoE, inferencia de delegacion, MCP remoto y llama-swap actualizado",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-23T21:15:59.697Z",
+  "updatedAt": "2026-07-23T23:24:03.913Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-23T21:27:37.422Z",
+      "evidence": "spec.md defines research-only scope, ten verifiable requirements, quantitative gates, failure behavior, and no implementation before evidence",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-23T21:27:37.569Z",
+      "evidence": "plan.md passed adversarial review: isolated canaries, explicit rollback, requirement traceability, quantitative go/no-go gates, no secret persistence",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-23T21:15:59.697Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-23T21:23:52.786Z",
+      "reason": "Alcance aclarado: estudio de viabilidad y plan antes de implementar"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-23T21:27:37.336Z",
+      "reason": "Research completed with upstream sources, local telemetry, hardware constraints, and MCP inventory"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-23T21:27:37.422Z",
+      "evidence": "spec.md defines research-only scope, ten verifiable requirements, quantitative gates, failure behavior, and no implementation before evidence",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-23T21:27:37.496Z",
+      "reason": "Specification approved; implementation remains explicitly out of scope for this phase"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-23T21:27:37.569Z",
+      "evidence": "plan.md passed adversarial review: isolated canaries, explicit rollback, requirement traceability, quantitative go/no-go gates, no secret persistence",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-23T22:18:55.829Z",
+      "reason": "User explicitly authorized the approved SDD plan; adversarial review recorded no blocking findings"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-23T22:18:55.902Z",
+      "reason": "Plan gate approved and user authorized execution on 2026-07-23"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-23T23:24:03.913Z",
+      "reason": "Local implementation and MoE decision package verified; conformance awaits Claude hook A/B and real Mac-to-PC canary"
+    }
+  ]
+}

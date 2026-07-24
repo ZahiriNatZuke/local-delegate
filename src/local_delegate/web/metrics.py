@@ -283,7 +283,7 @@ def backend():
     running: list = []
     try:
         with httpx.Client(timeout=1.0) as c:
-            r = c.get(f"{base}/running")
+            r = c.get(f"{base}/running", headers=config.auth_headers())
             if r.is_success:
                 data = r.json()
                 running = (data.get("running") if isinstance(data, dict) else None) or []
@@ -305,7 +305,7 @@ def backend_stats():
     base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
     try:
         with httpx.Client(timeout=1.0) as c:
-            r = c.get(f"{base}/api/metrics/stats")
+            r = c.get(f"{base}/api/metrics/stats", headers=config.auth_headers())
             if not r.is_success:
                 return JSONResponse({"available": False})
             data = r.json()

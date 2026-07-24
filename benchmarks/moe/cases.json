@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "description": "Corpus sintetico sin datos privados para comparar modelos densos y MoE.",
+  "cases": [
+    {
+      "id": "summary-2k",
+      "instruction": "Resume en cinco viñetas. Conserva nombres, fechas, cantidades y decisiones.",
+      "facts": [
+        "Proyecto Faro comenzó el 12 de marzo de 2025.",
+        "El presupuesto aprobado fue de 480000 euros.",
+        "La responsable operativa es Elena Cruz.",
+        "El hito Beta se movió al 18 de septiembre.",
+        "El riesgo principal es la latencia del proveedor Atlas.",
+        "La decisión final fue mantener el lanzamiento por fases."
+      ],
+      "filler": "El equipo revisó avances semanales y documentó incidencias sin cambiar los hechos principales.",
+      "target_chars": 8000,
+      "max_tokens": 320,
+      "expected_terms": ["12 de marzo de 2025", "480000", "Elena Cruz", "18 de septiembre", "Atlas", "fases"]
+    },
+    {
+      "id": "summary-8k",
+      "instruction": "Produce un resumen ejecutivo de máximo 250 palabras con hechos y riesgos verificables.",
+      "facts": [
+        "Programa Coral tiene 37 participantes activos.",
+        "La medición inicial fue 71.4 puntos.",
+        "La medición final fue 84.9 puntos.",
+        "Hubo dos interrupciones: 4 de abril y 19 de mayo.",
+        "La sede Norte concentró el 62 por ciento de las mejoras.",
+        "Se recomendó renovar el programa durante seis meses."
+      ],
+      "filler": "Las observaciones intermedias describen reuniones, controles y comunicaciones rutinarias sin añadir resultados nuevos.",
+      "target_chars": 32000,
+      "max_tokens": 512,
+      "expected_terms": ["37", "71.4", "84.9", "4 de abril", "19 de mayo", "62", "seis meses"]
+    },
+    {
+      "id": "summary-24k",
+      "instruction": "Resume el documento completo por secciones y termina con una tabla de decisiones y responsables.",
+      "facts": [
+        "Iniciativa Delta incluye los frentes Río, Monte y Sol.",
+        "Río pertenece a Ana Pérez y vence el 3 de noviembre.",
+        "Monte pertenece a Luis Mora y vence el 17 de noviembre.",
+        "Sol pertenece a Marta León y vence el 1 de diciembre.",
+        "El límite conjunto es 920 horas de trabajo.",
+        "La auditoría exige conservar evidencias durante 24 meses.",
+        "La aprobación depende de cerrar el hallazgo ZX-41."
+      ],
+      "filler": "Cada frente celebró sesiones de seguimiento con notas procedimentales, acuerdos repetidos y recordatorios administrativos.",
+      "target_chars": 96000,
+      "max_tokens": 768,
+      "expected_terms": ["Río", "Ana Pérez", "3 de noviembre", "Monte", "Luis Mora", "17 de noviembre", "Sol", "Marta León", "1 de diciembre", "920", "24 meses", "ZX-41"]
+    },
+    {
+      "id": "extract-json",
+      "instruction": "Devuelve solo JSON válido con las claves project, owner, deadline, budget y risk.",
+      "facts": [
+        "project: Aurora",
+        "owner: Camila Soto",
+        "deadline: 2026-02-14",
+        "budget: 125000",
+        "risk: dependencia del permiso municipal"
+      ],
+      "filler": "Registro auxiliar sin cambios en los cinco campos solicitados.",
+      "target_chars": 12000,
+      "max_tokens": 256,
+      "expected_terms": ["Aurora", "Camila Soto", "2026-02-14", "125000", "permiso municipal"],
+      "expected_json_fields": ["project", "owner", "deadline", "budget", "risk"]
+    },
+    {
+      "id": "lint-summary",
+      "instruction": "Agrupa los problemas por archivo, cuenta cada regla y prioriza errores sobre warnings.",
+      "facts": [
+        "src/api.py:10: E501 line too long",
+        "src/api.py:18: F821 undefined name request_id",
+        "src/core.py:7: F401 unused import json",
+        "tests/test_api.py:44: E501 line too long",
+        "tests/test_api.py:61: F821 undefined name fixture_user"
+      ],
+      "filler": "src/helpers.py:3: W293 blank line contains whitespace",
+      "target_chars": 40000,
+      "max_tokens": 384,
+      "expected_terms": ["src/api.py", "src/core.py", "tests/test_api.py", "E501", "F821", "F401", "W293"]
+    }
+  ]
+}

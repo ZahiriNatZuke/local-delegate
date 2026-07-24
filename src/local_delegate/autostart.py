@@ -29,7 +29,7 @@ def _backend_up() -> bool:
     """True si el endpoint OpenAI-compatible responde a /models."""
     try:
         with httpx.Client(timeout=2.0) as c:
-            return c.get(f"{config.BASE_URL}/models").is_success
+            return c.get(f"{config.BASE_URL}/models", headers=config.auth_headers()).is_success
     except httpx.HTTPError:
         return False
 

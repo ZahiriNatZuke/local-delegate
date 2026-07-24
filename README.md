@@ -56,6 +56,9 @@ El daemon sirve MCP en `http://127.0.0.1:9393/mcp` y el dashboard en
 pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
 [Daemon compartido](./docs/wiki/Daemon.md).
 
+Para usar la GPU de otra máquina manteniendo los paths locales del cliente, usa un MCP local que
+apunte al backend remoto: [recipe Mac → PC](./docs/recipes/remote-backend.md).
+
 En Windows, si lo registras como tarea al iniciar sesión, ejecuta el `pythonw.exe` del entorno
 donde instalaste el paquete con `-m local_delegate serve --log-level warning`. `pythonw` no crea
 consola ni botón en la barra de tareas. La tarea pertenece al usuario de **Windows**, no a Codex

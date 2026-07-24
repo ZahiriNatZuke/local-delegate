@@ -62,6 +62,18 @@ local-delegate doctor --config D:\Projects\llms\llama-swap\config.yaml
 local-delegate doctor --online   # además compara con la última release en GitHub
 ```
 
+Con `--online`, una release más nueva pasa por una compuerta explícita y se listan hasta tres
+issues abiertos recientes cuyos títulos contienen señales como crash, deadlock, regression, CUDA,
+Windows, TTL u OOM:
+
+- menos de **7 días** publicada: `HOLD`; no se prueba ni se promueve todavía;
+- 7 días o más: puede entrar a un canary aislado, pero no sustituye la versión probada;
+- solo después del canary, las pruebas del paquete y una revisión de issues de regresión se
+  actualiza `RECOMMENDED_VERSIONS` y esta página.
+
+`latest` significa solamente «lo último publicado». La fuente de verdad operativa sigue siendo la
+versión probada de la tabla superior.
+
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
   `config.yaml`. Funciona sin el extra `[llamaswap]`.
 - Exit code `0` si todo está al día respecto a lo probado, `1` si hay actualizaciones sugeridas.

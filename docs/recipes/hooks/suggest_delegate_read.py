@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Hook PreToolUse (matcher: Read) para local-delegate.
 
-Si el archivo que Claude va a leer con Read pesa más de LD_HOOK_READ_KB (default 50 KB),
-sugiere delegar a local_summarize/local_extract en vez de leerlo entero al contexto.
+Usa dos bandas: LD_HOOK_READ_SUGGEST_KB (default 8 KB) y LD_HOOK_READ_STRONG_KB
+(default 32 KB). Sugiere delegar transformaciones globales, sin impedir lecturas exactas.
 NUNCA bloquea la tool: siempre permissionDecision="allow". Sin dependencias (stdlib
 únicamente) y multiplataforma.
 
@@ -23,6 +23,8 @@ import json
 import os
 import sys
 
+from hook_common import emit, record
+
 
 def main() -> None:
     try:
@@ -35,29 +37,26 @@ def main() -> None:
         return
 
     try:
-        threshold_kb = float(os.environ.get("LD_HOOK_READ_KB", "50"))
+        suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
+        strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "32"))
         size_kb = os.path.getsize(file_path) / 1024
     except (OSError, ValueError):
         return
 
-    if size_kb <= threshold_kb:
+    if size_kb <= suggest_kb:
+        record("PreToolUse", suggested=False, category="read", size_kb=round(size_kb, 1))
         return
 
-    context = (
-        f"Este archivo pesa {size_kb:.0f} KB. Si solo necesitas resumen/campos, "
-        "local_summarize(path=...) o local_extract(path=...) lo procesan sin gastar tu "
-        "contexto (el archivo se lee server-side)."
-    )
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "allow",
-                    "additionalContext": context,
-                }
-            }
-        )
+    band = "strong" if size_kb > strong_kb else "suggest"
+    strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
+    emit(
+        "PreToolUse",
+        f"{strength}: este archivo pesa {size_kb:.0f} KB. Si necesitas una transformacion "
+        "global (resumen, campos, traduccion o explicacion), usa la tool local_* con path para "
+        "que no entre al contexto. Leelo directamente si necesitas lineas exactas para razonar o editar.",
+        category="read",
+        band=band,
+        size_kb=round(size_kb, 1),
     )
 
 
