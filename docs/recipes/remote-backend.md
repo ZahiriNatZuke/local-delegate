@@ -118,7 +118,7 @@ En la entrada `local-delegate` del cliente MCP conserva `command: uvx` y añade 
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA>",
+        "local-delegate-mcp==0.10.0",
         "local-delegate-mcp"
       ],
       "env": {
@@ -133,6 +133,36 @@ En la entrada `local-delegate` del cliente MCP conserva `command: uvx` y añade 
 Añade `LOCAL_DELEGATE_API_KEY` mediante el almacén de secretos o entorno del cliente solo cuando
 el endpoint lo exija. El auto-arranque debe quedar en `0`: la Mac no puede ni debe iniciar el
 llama-swap de Windows.
+
+Para no repetir los `export`, registra una carga idempotente desde Keychain en `~/.zshrc`. Este
+bloque escribe la URL y el comando de lectura, nunca el valor de la key:
+
+```bash
+export LOCAL_DELEGATE_BASE_URL="https://<PC_MAGICDNS>:9292/v1"
+touch "$HOME/.zshrc"
+python3 - <<'PY'
+import os
+import re
+from pathlib import Path
+
+path = Path.home() / ".zshrc"
+text = path.read_text() if path.exists() else ""
+text = re.sub(
+    r"(?ms)^# local-delegate remote begin\n.*?^# local-delegate remote end\n?",
+    "",
+    text,
+)
+base_url = os.environ["LOCAL_DELEGATE_BASE_URL"]
+block = f'''# local-delegate remote begin
+export LOCAL_DELEGATE_BASE_URL="{base_url}"
+export LOCAL_DELEGATE_AUTOSTART="0"
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password -a \"$USER\" -s local-delegate-remote -w 2>/dev/null)"
+# local-delegate remote end
+'''
+path.write_text(text.rstrip() + "\n\n" + block)
+PY
+source "$HOME/.zshrc"
+```
 
 En Claude Code, la forma menos ambigua de registrar el canary a nivel de usuario es guardar un
 placeholder, no el secreto. Las comillas simples hacen que el shell no expanda la variable al
@@ -157,6 +187,41 @@ claude mcp add-json --scope user local-delegate '{
 }'
 claude mcp get local-delegate
 ```
+
+En Codex, conserva el resto de la configuración y reemplaza solo este MCP. `env_vars` reenvía la
+key heredada desde Keychain sin persistirla en TOML:
+
+```bash
+mkdir -p "$HOME/.codex"
+python3 - <<'PY'
+import json
+import os
+import re
+from pathlib import Path
+
+path = Path.home() / ".codex" / "config.toml"
+text = path.read_text() if path.exists() else ""
+pattern = r"(?ms)^\[mcp_servers\.local-delegate(?:\.[^]]+)?\]\n.*?(?=^\[|\Z)"
+text = re.sub(pattern, "", text).rstrip()
+base_url = json.dumps(os.environ["LOCAL_DELEGATE_BASE_URL"])
+block = f'''[mcp_servers.local-delegate]
+command = "uvx"
+args = ["--from", "local-delegate-mcp==0.10.0", "local-delegate-mcp"]
+env_vars = ["LOCAL_DELEGATE_API_KEY"]
+
+[mcp_servers.local-delegate.env]
+LOCAL_DELEGATE_BASE_URL = {base_url}
+LOCAL_DELEGATE_AUTOSTART = "0"
+'''
+path.write_text((text + "\n\n" if text else "") + block)
+PY
+codex mcp list
+```
+
+Codex CLI hereda la key al abrir una terminal nueva. La app iniciada desde el Dock no hereda
+`~/.zshrc`; para ese caso instala el LaunchAgent documentado en la
+[Wiki de backend remoto](../wiki/Remote-backend.md). El agente lee Keychain al iniciar sesión y
+solo coloca la key en el entorno de `launchd`, no en TOML ni en el plist.
 
 Antes de iniciar Claude Code desde esa terminal, carga el token desde Keychain al entorno. Este
 ejemplo asume que ya existe un item `local-delegate-remote`; no muestra el valor:
