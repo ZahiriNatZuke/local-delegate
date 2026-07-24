@@ -18,7 +18,7 @@
 | REQ-005 | Hooks antes de prompt/Read/Bash, metadata-only | PASS local | scripts, settings activo y `tests/test_hook_recipes.py` |
 | REQ-006 | Bandas 8/32 KiB y campos de telemetría | PARTIAL | implementación lista; falta muestra A/B de sesiones reales |
 | REQ-007 | MCP local Mac -> backend PC por endpoint HTTPS privado | PASS | canary real: 20/20, path exclusivo de Mac, concurrencia 2, dos arranques y p95 7.119 s |
-| REQ-008 | apiKeys por env, Bearer en endpoints, bind privado documentado | PARTIAL | red privada/ACL y secret scan verificados; el canary real todavía respondió 200 sin key |
+| REQ-008 | apiKeys por env, Bearer en endpoints y exposición privada | PASS | DPAPI/Keychain, Tailscale Serve+ACL, 401 sin key, 200 con key y canary autenticado 20/20 |
 | REQ-009 | instalada/probada/latest/edad/issues y gate 7 días | PASS | `doctor --online`: v241/b10098 HOLD y llama-swap #946 |
 | REQ-010 | decisiones adopt/iterate/reject | PASS | `results.md` |
 
@@ -51,6 +51,6 @@
   limitación, la degeneración de tabla y truncaciones son reales.
 - La primera corrida m0 del sweep válido estaba caliente por el smoke; la latencia cold de carga
   está en los canaries inválidos. Memoria steady/hot y la decisión no dependen de ese dato.
-- El canary real desde la Mac pasó conectividad, path, concurrencia y reinicio del proceso. Falta
-  repetirlo con API key y 401 sin credencial, además de la muestra A/B de hooks; ambas faltas
-  bloquean cerrar el gate de conformidad, pero no invalidan las decisiones verificadas.
+- El canary autenticado desde la Mac pasó conectividad, path, concurrencia y reinicio del proceso;
+  el endpoint rechazó la petición sin key. Solo falta la muestra A/B de hooks para cerrar el gate
+  de conformidad.

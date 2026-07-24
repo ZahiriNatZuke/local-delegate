@@ -10,7 +10,7 @@ llama-swap v238 y llama-server b9925.
 | MoE en producto | **ITERATE; no añadir rol/default todavía** | gpt-oss funciona y es rápido, pero no supera la calidad de los densos; 16k/32k exceden el gate de RAM y el resumen largo degeneró al construir una tabla |
 | Qwen3-30B-A3B | **DEFER** | el segundo candidato estaba condicionado a que gpt-oss pasara el gate completo; no lo pasó, y Qwen exige todavía más RAM/offload |
 | Hooks Claude | **ADOPT como piloto medido** | son consultivos, actúan antes de Read/Bash, excluyen tareas de criterio y no guardan contenido; falta medir adopción/falsos positivos en sesiones reales |
-| Backend remoto | **ADOPT topología; auth Mac pendiente** | canary real pasó 20/20, path de Mac, concurrencia y reinicio; falta repetir con auth activa |
+| Backend remoto | **ADOPT** | canary autenticado pasó 20/20, 401 sin key, path de Mac, concurrencia y reinicio |
 | Upgrade backend | **REJECT ahora** | v241/b10098 no tienen 7 días; llama-swap #946 reporta deadlock TTL/request |
 
 ## Respuesta al problema de “cuantos expertos”
@@ -80,11 +80,12 @@ La recipe `docs/recipes/remote-backend.md` fija MCP local en Mac -> llama-swap p
 cliente envía Bearer también a chat, `/models`, `/running` y métricas. La config canary confirmó
 auth nativa de llama-swap (401/200) sin persistir keys.
 
-Canary real en Mac contra la revisión
-`a79721f8c64c5be4fda1be025b80f1b7eab67ef0`: **20/20**, path temporal exclusivo de la Mac,
-concurrencia 2, dos arranques del proceso y p95 7.119 s. El endpoint HTTPS privado respondió 200
-sin credencial; por tanto, conectividad queda aprobada y auth sigue pendiente. No se publica el MCP
-completo desde la PC como default porque rompería paths de `/Users/...`.
+Canary autenticado en Mac contra la revisión
+`6d60980beedb4a4c67ec07207ff3b54c19c1ca4d`: **20/20**, path temporal exclusivo de la Mac,
+concurrencia 2, dos arranques del proceso y p95 2.983 s. El endpoint HTTPS privado respondió 401
+sin credencial y 200 con la key guardada en Keychain; en Windows la key queda cifrada con DPAPI y
+solo se inyecta al entorno del proceso. No se publica el MCP completo desde la PC como default
+porque rompería paths de `/Users/...`.
 
 ## Versiones
 

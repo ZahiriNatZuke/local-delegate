@@ -13,33 +13,63 @@ Esto preserva la ventaja de `local_summarize(path=...)`: la Mac abre el archivo 
 contenido al backend. Si el MCP entero corriera en la PC, un `path=/Users/...` se intentaría abrir
 en Windows y fallaría. Tampoco hace falta un protocolo MCP-a-MCP adicional.
 
-## 1. Exponer solamente el backend de la PC
+## 1. Publicar el loopback dentro del tailnet
 
-Haz que llama-swap escuche en la IP de la interfaz privada, no en Internet público. El detalle de
-la VPN o red queda fuera de esta recipe; usa aquí su dirección alcanzable:
+El flujo validado conserva llama-swap y el dashboard en `127.0.0.1`; Tailscale Serve publica ambos
+solo dentro del tailnet y termina HTTPS. En una terminal administrativa de la PC:
 
 ```powershell
-llama-swap --config D:\Projects\llms\llama-swap\config.yaml --listen <PC_PRIVATE_IP>:9292
+tailscale serve --bg --https=9292 http://127.0.0.1:9292
+tailscale serve --bg --https=9393 http://127.0.0.1:9393
+tailscale serve status
 ```
 
-Restringe el firewall de Windows al perfil/interfaz y a las IP privadas que realmente lo usan.
-No abras `9292` al Internet público. Fuera de loopback, activa las `apiKeys` nativas de llama-swap
-sin persistir el secreto en YAML:
+`--bg` persiste la configuración tras reinicios de Windows/Tailscale. No uses Funnel ni abras los
+puertos en el router. Limita además el flujo Mac -> PC en la policy del tailnet:
+
+```json
+{
+  "src": ["<MAC_TAILSCALE_IP>"],
+  "dst": ["<PC_TAILSCALE_IP>"],
+  "ip": ["tcp:9292", "tcp:9393"]
+}
+```
+
+Si `curl` intenta conectar desde la IP Wi-Fi/LAN en vez de la IP Tailscale, el peer no recibió la
+ruta: revisa el grant, reinicia Tailscale en la Mac y confirma `tailscale ping <PC_TAILSCALE_IP>`.
+Si la ruta funciona pero MagicDNS no resuelve, activa DNS de Tailscale antes de configurar el MCP.
+
+### Autenticación de llama-swap
+
+Activa las `apiKeys` nativas sin persistir el secreto en YAML:
 
 ```yaml
 apiKeys:
   - "${env.LOCAL_DELEGATE_REMOTE_API_KEY}"
 ```
 
-Define `LOCAL_DELEGATE_REMOTE_API_KEY` solamente en el entorno del proceso de llama-swap. En la Mac,
-el mismo valor se entrega al MCP como `LOCAL_DELEGATE_API_KEY`; no lo escribas en documentación ni
-logs. La sintaxis está documentada por llama-swap y mantiene el default sin auth solo cuando la
-lista está ausente o vacía.
+Define `LOCAL_DELEGATE_REMOTE_API_KEY` solamente en el entorno del proceso de llama-swap. Para un
+arranque persistente en Windows, guarda el valor como `SecureString` exportado con `Export-Clixml`
+(DPAPI del usuario) y usa un launcher de la tarea programada que lo importe, lo exponga solo al
+entorno del proceso y arranque `local-delegate serve`. Ese launcher también define
+`LOCAL_DELEGATE_API_KEY`, porque el daemon local consume el mismo backend autenticado. Conserva un
+backup del YAML y de la acción anterior de la tarea para rollback.
+
+En la Mac, el mismo valor se entrega al MCP como `LOCAL_DELEGATE_API_KEY`; guárdalo en Keychain:
+
+```bash
+security add-generic-password -U -a "$USER" -s local-delegate-remote -w
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password \
+  -a "$USER" -s local-delegate-remote -w)"
+```
+
+No escribas el valor en YAML, Git, logs ni configuración MCP compartida. La sintaxis de llama-swap
+mantiene el default sin auth solo cuando `apiKeys` está ausente o vacío.
 
 Canary desde la Mac, antes de registrar el MCP:
 
 ```bash
-curl --fail --max-time 5 http://<PC_PRIVATE_IP>:9292/v1/models
+curl --fail --max-time 5 https://<PC_MAGICDNS>:9292/v1/models
 ```
 
 Si el endpoint exige token:
@@ -47,7 +77,7 @@ Si el endpoint exige token:
 ```bash
 curl --fail --max-time 5 \
   -H "Authorization: Bearer $LOCAL_DELEGATE_API_KEY" \
-  http://<PC_PRIVATE_IP>:9292/v1/models
+  https://<PC_MAGICDNS>:9292/v1/models
 ```
 
 ## 2. Mantener el MCP local en la Mac
@@ -82,7 +112,7 @@ En la entrada `local-delegate` del cliente MCP conserva `command: uvx` y añade 
         "local-delegate-mcp"
       ],
       "env": {
-        "LOCAL_DELEGATE_BASE_URL": "http://<PC_PRIVATE_IP>:9292/v1",
+        "LOCAL_DELEGATE_BASE_URL": "https://<PC_MAGICDNS>:9292/v1",
         "LOCAL_DELEGATE_AUTOSTART": "0"
       }
     }
@@ -110,7 +140,7 @@ claude mcp add-json --scope user local-delegate '{
     "local-delegate-mcp"
   ],
   "env": {
-    "LOCAL_DELEGATE_BASE_URL": "http://<PC_PRIVATE_IP>:9292/v1",
+    "LOCAL_DELEGATE_BASE_URL": "https://<PC_MAGICDNS>:9292/v1",
     "LOCAL_DELEGATE_AUTOSTART": "0",
     "LOCAL_DELEGATE_API_KEY": "${LOCAL_DELEGATE_API_KEY}"
   }
@@ -138,8 +168,9 @@ procesa un archivo temporal exclusivo de la Mac, envia pares concurrentes y rein
 para comprobar reconexion:
 
 ```bash
-export LOCAL_DELEGATE_BASE_URL=http://<PC_PRIVATE_IP>:9292/v1
-export LOCAL_DELEGATE_API_KEY='cargar-desde-tu-keychain'
+export LOCAL_DELEGATE_BASE_URL=https://<PC_MAGICDNS>:9292/v1
+export LOCAL_DELEGATE_API_KEY="$(security find-generic-password \
+  -a "$USER" -s local-delegate-remote -w)"
 python3 scripts/macos_mcp_canary.py \
   --package-source git+https://github.com/ZahiriNatZuke/local-delegate.git@<COMMIT_SHA> \
   --expect-auth
@@ -161,6 +192,12 @@ La primera pasada puede validar conectividad aunque el canary aun no tenga auth.
 añade `--expect-auth`; si `LOCAL_DELEGATE_API_KEY` no esta cargada, el wrapper la pide sin mostrarla
 ni guardarla. Verifica el endpoint, confirma que el commit existe en GitHub, crea un checkout
 temporal y corre el canary de 20 llamadas desde esa revision exacta.
+
+### Resultado validado (2026-07-23)
+
+La pasada autenticada completó 20/20 inferencias, dos arranques, concurrencia 2 y un path temporal
+exclusivo de macOS. `/v1/models` devolvió 401 sin key y 200 con key; p95 observado: 2.983 s. Esta
+medición confirma el circuito, pero no es un benchmark de overhead contra LAN/loopback.
 
 Después de reiniciar el cliente, ejecuta `local_status` y dos canaries:
 
