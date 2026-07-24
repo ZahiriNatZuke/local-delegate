@@ -96,3 +96,10 @@ con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 2. Pide leer un archivo de 10 KiB y otro de 40 KiB: deben aparecer bandas diferentes.
 3. Ejecuta `pytest` o `npm test`: la sugerencia debe aparecer antes de la tool Bash.
 4. Envía “investiga y diseña la arquitectura”: no debe sugerir delegación local.
+
+## Piloto A/B
+
+Usa la suite versionada [`benchmarks/hooks/pilot-prompts.md`](../../benchmarks/hooks/pilot-prompts.md)
+en dos sesiones limpias y equivalentes. La sesión A usa `LD_HOOK_ENABLED=0`; la B usa `1`. Registra
+los timestamps de inicio/fin y calcula llamadas `local_*` por oportunidad, adopción y falsos
+positivos. Gate: adopción >=40%, falsos positivos <=10% y cero bloqueos automáticos.
