@@ -79,12 +79,16 @@ En Windows, `command` puede ser `python` o `py`; en macOS/Linux, `python3`.
 
 | Variable | Default | Efecto |
 |---|---:|---|
+| `LD_HOOK_ENABLED` | `1` | `0` apaga sugerencias y telemetría para una sesión A/B |
 | `LD_HOOK_READ_SUGGEST_KB` | `8` | Inicio de sugerencia para Read |
 | `LD_HOOK_READ_STRONG_KB` | `32` | Inicio de recomendación fuerte |
 | `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
 
 La telemetría solo guarda timestamp, evento, categoría, tamaño/banda y si hubo sugerencia. Nunca
 guarda prompts, comandos o paths. Es una recipe de usuario; `local-delegate` no instala hooks solo.
+
+Para comparar sesiones equivalentes sin editar `settings.json`, inicia Claude desde una terminal
+con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 
 ## Verificación manual
 

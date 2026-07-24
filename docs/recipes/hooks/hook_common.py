@@ -12,7 +12,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 
+def enabled() -> bool:
+    return os.environ.get("LD_HOOK_ENABLED", "1").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
 def record(event: str, **metadata: object) -> None:
+    if not enabled():
+        return
     destination = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
     if not destination:
         return
@@ -27,6 +38,8 @@ def record(event: str, **metadata: object) -> None:
 
 
 def emit(event: str, context: str, **metadata: object) -> None:
+    if not enabled():
+        return
     record(event, suggested=True, **metadata)
     print(
         json.dumps(

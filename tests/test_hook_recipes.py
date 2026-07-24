@@ -41,3 +41,15 @@ def test_hook_telemetry_contains_no_prompt_command_or_path(tmp_path, monkeypatch
     assert "prompt" not in text
     assert "command" not in text
     assert "path" not in text
+
+
+def test_disabled_hook_emits_nothing(tmp_path, monkeypatch, capsys):
+    common = _load("hook_common")
+    log = tmp_path / "hooks.jsonl"
+    monkeypatch.setenv("LD_HOOK_ENABLED", "0")
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+
+    common.emit("UserPromptSubmit", "context", category="summarize")
+
+    assert capsys.readouterr().out == ""
+    assert not log.exists()
