@@ -3,9 +3,9 @@
   "slug": "release-0-10-0",
   "title": "Release 0.10.0, wiki y distribución",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-24T02:22:49.099Z",
-  "updatedAt": "2026-07-24T02:30:18.087Z",
+  "updatedAt": "2026-07-24T02:39:56.104Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:39:02.857Z",
+      "evidence": "REQ-001..007 fully verified; REQ-008 has clean scans/checksum/import audit and explicit Socket indexing follow-up; main, PyPI, GitHub, Registry, wiki and Obsidian verified live",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:39:02.928Z",
+      "evidence": "Canonical Obsidian release note created, overview/canary/dependency audit merged, Claude pointer and Codex ad-hoc memory update synchronized without secrets",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "at": "2026-07-24T02:30:18.087Z",
       "evidence": "160 tests, Ruff, format, dashboard JS, clean build, isolated wheel 0.10.0, valid server.json, clean staged and extracted-sdist gitleaks, forbidden sdist paths excluded",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-24T02:39:02.857Z",
+      "evidence": "REQ-001..007 fully verified; REQ-008 has clean scans/checksum/import audit and explicit Socket indexing follow-up; main, PyPI, GitHub, Registry, wiki and Obsidian verified live",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-24T02:39:02.928Z",
+      "evidence": "Canonical Obsidian release note created, overview/canary/dependency audit merged, Claude pointer and Codex ad-hoc memory update synchronized without secrets",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-24T02:39:55.944Z",
+      "reason": "Fresh result review compared every requirement with live publication evidence"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-24T02:39:56.019Z",
+      "reason": "Conformance approved with only Socket indexing follow-up documented"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-24T02:39:56.104Z",
+      "reason": "Handoff and durable memory completed without secrets"
     }
   ]
 }

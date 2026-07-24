@@ -2,27 +2,28 @@
 
 ## Current state
 
-- SDD status: `verifying`.
-- Last completed gate: `quality` aprobado.
-- Current revision: release commit todavía pendiente sobre `af823bc`.
+- SDD status: listo para `complete`.
+- Last completed gate: quality; conformance/memory listos para aprobación final.
+- Current revision: release `3b8a11c` en main/tag; cierre documental post-release pendiente.
 
 ## What changed
 
-- Bump coordinado a 0.10.0, changelog, README y wiki remota.
-- Tests aislados del log real y sdist protegido contra `.codex/.sdd/.venv/dist`.
-- Build, import de wheel y `server.json` validados.
+- 0.10.0 publicada en PyPI, GitHub Release, MCP Registry y wiki nativa.
+- Backend remoto autenticado Mac→PC, canary, benchmark/doctor y hooks medidos documentados.
+- Tests aislados, telemetría de prueba limpia y sdist sin configuración local/SDD.
 
 ## Decisions
 
-- 0.10.0 sigue beta; 1.0.0 espera observación real.
-- v238/b9925 siguen como backends estables.
-- Prompt+Bash se adoptan; Read permanece apagado por defecto.
+- Mantener 0.10.0 como beta y fijarla en Mac durante rollout.
+- No promover 1.0.0, MoE ni backends nuevos hasta observación/canaries separados.
+- Prompt+Bash adoptados; Read apagado por defecto.
 
 ## Next action
 
-- Crear el commit de release, fast-forward de `main`, esperar CI y solo entonces crear `v0.10.0`.
+- Configurar los clientes MCP de la Mac con `local-delegate-mcp==0.10.0`, endpoint privado y key
+  desde Keychain; ejecutar `local_status`, clasificación y resumen por path.
 
 ## Memory
 
-- Canonical note: pendiente hasta confirmar URLs y estados públicos.
-- Indexes updated: ninguno todavía.
+- Canonical note: `projects/local-delegate/release-0.10.0-remote-backend.md`.
+- Indexes updated: Claude global directo; Codex mediante update note ad-hoc permitido.

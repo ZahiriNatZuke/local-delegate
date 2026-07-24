@@ -72,5 +72,6 @@ Después de reiniciar el cliente:
 4. confirma que el dashboard abre en `https://PC_MAGICDNS:9393`.
 
 El canary completo y el rollback están en la
-[recipe técnica](../recipes/remote-backend.md). El canary autenticado de 0.10.0 pasó 20/20,
+[recipe técnica de v0.10.0](https://github.com/ZahiriNatZuke/local-delegate/blob/v0.10.0/docs/recipes/remote-backend.md).
+El canary autenticado pasó 20/20,
 concurrencia 2, dos arranques, `path` exclusivo de macOS y 401 sin key.

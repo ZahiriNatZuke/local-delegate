@@ -15,10 +15,10 @@
 | REQ-002 | búsqueda coordinada + lock | PASS local | pyproject/runtime/server.json/uv.lock = 0.10.0; changelog creado |
 | REQ-003 | revisión README/wiki/recipe | PASS local | nueva `docs/wiki/Remote-backend.md`, enlaces y troubleshooting |
 | REQ-004 | suite equivalente a CI, build y smoke aislado | PASS local | 160 passed; Ruff/format/JS/build; wheel import = 0.10.0 |
-| REQ-005 | fast-forward y CI main | PENDING external | se ejecuta después del commit de release |
-| REQ-006 | PyPI/GitHub/MCP Registry/uvx | PENDING external | tag solo después de CI main |
-| REQ-007 | wiki nativa y Obsidian | PENDING external | después de publicación verificable |
-| REQ-008 | secrets/checksum/depscore | PARTIAL | publisher SHA-256 coincide; server.json válido; depscore es post-release |
+| REQ-005 | fast-forward y CI main | PASS | main `3b8a11c`; CI run 30061833941 success antes del tag |
+| REQ-006 | PyPI/GitHub/MCP Registry/uvx | PASS | publish run 30061883059; PyPI/uv isolated 0.10.0; GitHub Release; Registry active/latest |
+| REQ-007 | wiki nativa y Obsidian | PASS | wiki `445399a`; nota `projects/local-delegate/release-0.10.0-remote-backend.md` + índices |
+| REQ-008 | secrets/checksum/depscore | PASS con seguimiento | publisher SHA verificado; artefactos publicados limpios; Socket aún no indexa 0.10.0 y quedó registrado |
 
 ## Quality checks
 
@@ -32,6 +32,12 @@
 - [x] `mcp-publisher validate`: server.json válido contra el registro vivo.
 - [x] Sdist reconstruido: 76 entradas, cero `.codex/.sdd/.venv/dist`.
 - [x] Log real sin cambios durante la suite.
+- [x] Main CI: `30061833941`, success.
+- [x] Publish OIDC: `30061883059`, success; PyPI descargado y hashes verificados.
+- [x] GitHub Release pública `v0.10.0` (no draft/prerelease).
+- [x] MCP Registry: 0.10.0 `active`, `isLatest=true`.
+- [x] Wiki nativa actualizada en `445399ad029bafac964438fbde8bf88f8856bd0e`.
+- [x] Obsidian canónico e índices de memoria actualizados sin secretos.
 
 ## Deviations and residual risk
 
@@ -40,4 +46,6 @@
   host y el nuevo inventario tiene cero rutas prohibidas.
 - `local-delegate --help` sin subcomando entra al MCP stdio y consultó el backend, que respondió 401
   sin key; no se usó como prueba de versión. El smoke válido importó el wheel en entorno aislado.
-- CI, registros externos, wiki y depscore siguen pendientes hasta que exista el commit de release.
+- Socket devolvió `No score found` para 0.10.0 inmediatamente después del publish; 0.9.0 conserva
+  100/100/99/97/100. No hay dependencias nuevas y los imports reales se auditaron. Se registró el
+  reintento como seguimiento explícito; no se presenta la ausencia de score como resultado verde.

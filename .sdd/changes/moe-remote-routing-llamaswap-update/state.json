@@ -3,9 +3,9 @@
   "slug": "moe-remote-routing-llamaswap-update",
   "title": "MoE, inferencia de delegacion, MCP remoto y llama-swap actualizado",
   "mode": "standard",
-  "status": "complete",
+  "status": "closed",
   "createdAt": "2026-07-23T21:15:59.697Z",
-  "updatedAt": "2026-07-24T02:15:35.000Z",
+  "updatedAt": "2026-07-24T02:40:27.142Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "codex-result-review"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:40:26.937Z",
+      "evidence": "Canonical Obsidian canary and release notes updated with final A/B, authenticated Mac canary, publication and durable decisions",
+      "actor": "user"
     }
   },
   "history": [
@@ -121,11 +121,33 @@
       "actor": "codex-result-review"
     },
     {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-24T02:40:26.937Z",
+      "evidence": "Canonical Obsidian canary and release notes updated with final A/B, authenticated Mac canary, publication and durable decisions",
+      "actor": "user"
+    },
+    {
       "type": "transition",
       "from": "verifying",
-      "to": "complete",
-      "at": "2026-07-24T02:15:35.000Z",
-      "reason": "Authenticated Mac canary and Claude hook A/B closed the two external evidence gaps"
+      "to": "result-review",
+      "at": "2026-07-24T02:40:27.005Z",
+      "reason": "Final review confirms all ten decision requirements have measured evidence"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-24T02:40:27.075Z",
+      "reason": "Conformance approved; handoff and release note recorded"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-24T02:40:27.142Z",
+      "reason": "Decision package closed after Mac canary, hook A/B and durable memory"
     }
   ]
 }
