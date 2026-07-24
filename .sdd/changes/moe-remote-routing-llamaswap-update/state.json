@@ -3,9 +3,9 @@
   "slug": "moe-remote-routing-llamaswap-update",
   "title": "MoE, inferencia de delegacion, MCP remoto y llama-swap actualizado",
   "mode": "standard",
-  "status": "verifying",
+  "status": "complete",
   "createdAt": "2026-07-23T21:15:59.697Z",
-  "updatedAt": "2026-07-23T23:24:03.913Z",
+  "updatedAt": "2026-07-24T02:15:35.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:15:35.000Z",
+      "evidence": "160 project tests plus 6 targeted hook tests passed; Ruff, format, diff, secret scan and runtime hook smoke are clean",
+      "actor": "codex-result-review"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-24T02:15:35.000Z",
+      "evidence": "REQ-001..010 verified; hook A/B improved eligible adoption from 5/6 to 6/6 and the adopted Prompt+Bash configuration has 0/4 false positives",
+      "actor": "codex-result-review"
     },
     "memory": {
       "status": "pending",
@@ -103,6 +103,29 @@
       "to": "verifying",
       "at": "2026-07-23T23:24:03.913Z",
       "reason": "Local implementation and MoE decision package verified; conformance awaits Claude hook A/B and real Mac-to-PC canary"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-24T02:15:35.000Z",
+      "evidence": "Project and hook suites passed; static, formatting, runtime and security checks clean",
+      "actor": "codex-result-review"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-24T02:15:35.000Z",
+      "evidence": "All requirements have measured evidence and an adopt, iterate or reject decision",
+      "actor": "codex-result-review"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "complete",
+      "at": "2026-07-24T02:15:35.000Z",
+      "reason": "Authenticated Mac canary and Claude hook A/B closed the two external evidence gaps"
     }
   ]
 }

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Hook PreToolUse (matcher: Read) para local-delegate.
 
-Usa dos bandas: LD_HOOK_READ_SUGGEST_KB (default 8 KB) y LD_HOOK_READ_STRONG_KB
-(default 32 KB). Sugiere delegar transformaciones globales, sin impedir lecturas exactas.
+Es experimental y queda apagado por defecto tras el piloto A/B. Se activa con
+LD_HOOK_READ_ENABLED=1. Usa dos bandas: LD_HOOK_READ_SUGGEST_KB (default 8 KB) y
+LD_HOOK_READ_STRONG_KB (default 32 KB). Sugiere delegar transformaciones globales,
+sin impedir lecturas exactas.
 NUNCA bloquea la tool: siempre permissionDecision="allow". Sin dependencias (stdlib
 únicamente) y multiplataforma.
 
@@ -27,6 +29,14 @@ from hook_common import emit, record
 
 
 def main() -> None:
+    if os.environ.get("LD_HOOK_READ_ENABLED", "0").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):

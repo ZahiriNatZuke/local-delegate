@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "suite": "benchmarks/hooks/pilot-prompts.md",
+  "windows_utc": {
+    "A": {
+      "start": "2026-07-24T01:48:19.9666602Z",
+      "end": "2026-07-24T01:55:36.8270126Z",
+      "hooks_enabled": false
+    },
+    "B": {
+      "start": "2026-07-24T01:55:57.4926144Z",
+      "end": "2026-07-24T02:08:41.0655002Z",
+      "hooks_enabled": true
+    }
+  },
+  "eligible_prompts": 6,
+  "negative_prompts": 4,
+  "adoption": {
+    "A": {"adopted": 5, "rate": 0.8333},
+    "B": {"adopted": 6, "rate": 1.0},
+    "absolute_percentage_points": 16.67,
+    "relative_improvement": 0.2
+  },
+  "prompt_hook": {
+    "true_suggestions": 6,
+    "negative_prompt_suggestions": 0,
+    "negative_prompt_false_positive_rate": 0.0
+  },
+  "read_hook": {
+    "suggestions_in_negative_tasks": 5,
+    "negative_tasks_affected": 2,
+    "negative_task_false_positive_rate": 0.5,
+    "decision": "iterate-disabled-by-default"
+  },
+  "adopted_configuration": {
+    "hooks": ["UserPromptSubmit", "PreToolUse/Bash"],
+    "read_hook_enabled": false,
+    "negative_prompt_false_positive_rate": 0.0,
+    "automatic_blocks": 0
+  },
+  "pilot_B_local_calls": {
+    "successful": 6,
+    "errors": 0,
+    "mean_latency_ms": 3567.2,
+    "p95_nearest_rank_ms": 9421,
+    "path_chars_offloaded": 13387,
+    "incremental_net_token_savings_estimate": 70
+  },
+  "data_quality": {
+    "expected_prompt_events_in_B": 10,
+    "observed_prompt_events_in_B": 10,
+    "windows_overlap": false,
+    "content_or_paths_persisted_in_hook_log": false,
+    "excluded_test_telemetry": "pytest emitted fixture rows into the usage log; zero-latency fixture calls and pytest temporary image rows were excluded",
+    "token_savings_method": "approximate character delta divided by four; not provider billing telemetry"
+  }
+}

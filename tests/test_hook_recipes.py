@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import sys
 from pathlib import Path
 
@@ -19,6 +21,7 @@ def _load(name: str):
 
 
 prompt = _load("suggest_delegate_prompt")
+read_hook = _load("suggest_delegate_read")
 
 
 def test_prompt_hook_detects_mechanical_intent():
@@ -53,3 +56,35 @@ def test_disabled_hook_emits_nothing(tmp_path, monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert not log.exists()
+
+
+def test_read_hook_is_disabled_by_default(tmp_path, monkeypatch, capsys):
+    target = tmp_path / "large.txt"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO(json.dumps({"tool_input": {"file_path": str(target)}})),
+    )
+
+    read_hook.main()
+
+    assert capsys.readouterr().out == ""
+
+
+def test_read_hook_can_be_enabled_explicitly(tmp_path, monkeypatch, capsys):
+    target = tmp_path / "large.txt"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO(json.dumps({"tool_input": {"file_path": str(target)}})),
+    )
+
+    read_hook.main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
+    assert "Recomendacion fuerte" in payload["hookSpecificOutput"]["additionalContext"]

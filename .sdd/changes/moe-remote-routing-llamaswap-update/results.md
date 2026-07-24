@@ -9,7 +9,7 @@ llama-swap v238 y llama-server b9925.
 | --- | --- | --- |
 | MoE en producto | **ITERATE; no añadir rol/default todavía** | gpt-oss funciona y es rápido, pero no supera la calidad de los densos; 16k/32k exceden el gate de RAM y el resumen largo degeneró al construir una tabla |
 | Qwen3-30B-A3B | **DEFER** | el segundo candidato estaba condicionado a que gpt-oss pasara el gate completo; no lo pasó, y Qwen exige todavía más RAM/offload |
-| Hooks Claude | **ADOPT como piloto medido** | son consultivos, actúan antes de Read/Bash, excluyen tareas de criterio y no guardan contenido; falta medir adopción/falsos positivos en sesiones reales |
+| Hooks Claude | **ADOPT Prompt+Bash; ITERATE Read** | A/B: adopción 83,3% -> 100% (+20% relativo), 0/4 falsos positivos de prompt; Read avisó en 2/4 tareas negativas y queda apagado por defecto |
 | Backend remoto | **ADOPT** | canary autenticado pasó 20/20, 401 sin key, path de Mac, concurrencia y reinicio |
 | Upgrade backend | **REJECT ahora** | v241/b10098 no tienen 7 días; llama-swap #946 reporta deadlock TTL/request |
 
@@ -64,7 +64,9 @@ no revierte el fallo del gate global de calidad/documentos largos.
 
 ## Delegación Claude
 
-- Read consultivo en 8 KiB; sugerencia fuerte en 32 KiB.
+- Read consultivo en 8 KiB y fuerte en 32 KiB quedó **ITERATE** y apagado por defecto: generó
+  cinco avisos en dos de las cuatro tareas negativas. Se conserva para experimentar solo con
+  `LD_HOOK_READ_ENABLED=1`.
 - Bash ruidoso se detecta en `PreToolUse`, antes de ejecutar, no en `PostToolUse`.
 - `UserPromptSubmit` reconoce resumir/extraer/clasificar/traducir/lint/boilerplate y excluye
   arquitectura, investigación, seguridad, deploy y migraciones.
@@ -72,7 +74,25 @@ no revierte el fallo del gate global de calidad/documentos largos.
 - Auditoría: 27/40 agentes permiten local-delegate. Los 13 excluidos son perfiles de seguridad,
   investigación/revisión SDD o razonamiento especializado; no se amplió su allowlist.
 
-Gate pendiente: medir sesiones reales hasta poder calcular adopción >=40% y falsos positivos <=10%.
+Piloto A/B real con la suite versionada:
+
+| Métrica | A, hooks off | B, hooks on |
+| --- | ---: | ---: |
+| Oportunidades adoptadas | 5/6 (83,3%) | 6/6 (100%) |
+| Llamadas genuinas con error | 0 | 0 |
+| Latencia media de llamadas elegibles | 7.390 ms | 3.567 ms |
+| p95, nearest-rank | 18.437 ms | 9.421 ms |
+
+La mejora fue +16,7 puntos y +20% relativo. `UserPromptSubmit` acertó las seis oportunidades y no
+se activó en ninguno de los cuatro prompts negativos. El hook Read sí produjo ruido durante dos
+tareas negativas (50% por tarea), así que se excluyó de la configuración adoptada. Con Prompt+Bash
+y Read apagado, el gate queda en 100% de adopción, 0/4 falsos positivos y cero bloqueos.
+
+La corrida B procesó 13.387 caracteres mediante `path`. El ahorro neto incremental atribuible al
+sexto caso es una estimación pequeña de ~70 tokens; no es telemetría de facturación. `pytest`
+escribió además filas de fixtures en el JSONL de uso: se excluyeron por sus marcadores de test y
+latencia/tokens nulos. Evidencia agregada sin paths ni contenido:
+`evidence/hooks-pilot-20260724.json`.
 
 ## Remoto
 
@@ -101,3 +121,7 @@ promoción. Se mantienen v238/b9925.
 - Stable: config y binarios no fueron reemplazados; `/v1/models` siguió respondiendo 200.
 - Hooks: backup en
   `%USERPROFILE%\.claude\settings.json.pre-local-delegate-hook-pilot-20260723.bak`.
+- Cierre del piloto: se retiró `LD_HOOK_TELEMETRY_LOG` de `settings.json`, se borraron timestamps,
+  JSONL y temporales A/B, y se eliminaron 192 filas inequívocas de fixtures del log de uso,
+  conservando 76 eventos reales. `tests/conftest.py` aísla los logs runtime en `tmp_path` para que
+  la suite no vuelva a contaminar la telemetría del usuario.

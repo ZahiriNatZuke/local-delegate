@@ -160,9 +160,10 @@ a propósito:
 
 ## Hooks de Claude Code (opcional)
 
-Recipe con dos hooks que sugieren delegar en el momento justo sin bloquear nunca la tool
-original (`PreToolUse`/`Read` para archivos grandes, `PostToolUse`/`Bash` para salidas
-largas de lint/tests): [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
+Recipe con hooks que sugieren delegar sin bloquear nunca la tool original:
+`UserPromptSubmit` para intenciones mecánicas y `PreToolUse`/`Bash` para salidas largas de
+lint/tests. El experimento `PreToolUse`/`Read` queda apagado por defecto después de producir ruido
+en el piloto A/B: [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 
 ## Groups de llama-swap (opcional)
 
