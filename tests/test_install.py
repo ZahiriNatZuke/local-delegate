@@ -199,4 +199,43 @@ def test_foreign_hook_mentioning_local_delegate_is_not_removed(tmp_path):
             ]
         }
     }
-    assert inst.strip_hook_settings(settings, hooks_dir)["hooks"]["Stop"]
+    cleaned, removed = inst.strip_hook_settings(settings, hooks_dir)
+    assert cleaned["hooks"]["Stop"] and removed == 0
+
+
+def test_install_migrates_the_broken_legacy_hook_entries(tmp_path):
+    """La recipe vieja documentaba `{"command":"python","args":[…]}`, formato que Claude Code
+    no ejecuta: esas entradas quedaban muertas en `~/.claude/hooks/` (sin subdirectorio).
+    Instalar debe retirarlas en vez de dejar un duplicado inerte al lado del bueno."""
+    settings_path = tmp_path / ".claude" / "settings.json"
+    settings_path.parent.mkdir(parents=True)
+    settings_path.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "UserPromptSubmit": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "python",
+                                    "args": [
+                                        str(tmp_path / ".claude/hooks/suggest_delegate_prompt.py")
+                                    ],
+                                }
+                            ]
+                        }
+                    ],
+                    "Stop": [{"hooks": [{"type": "command", "command": "~/mio.sh"}]}],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    _install(tmp_path)
+    settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    prompt_hooks = [h for g in settings["hooks"]["UserPromptSubmit"] for h in g["hooks"]]
+    assert len(prompt_hooks) == 1, "la entrada heredada debería haberse retirado"
+    assert "args" not in prompt_hooks[0]
+    assert prompt_hooks[0]["command"].startswith("python3 ")
+    assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "~/mio.sh"

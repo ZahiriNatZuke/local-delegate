@@ -53,6 +53,11 @@ En modo `stdio`, las mismas variables controlan únicamente la web embebida here
 | `LOCAL_DELEGATE_WEB` | `1` | `0` desactiva la web embebida del modo `stdio` |
 | `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon |
 | `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
+| `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts. `0` la desactiva y deja la página con **cero peticiones a terceros** (cae al stack de fuentes del sistema) |
+
+> Chart.js se sirve desde el propio paquete (`/vendor/chart.umd.min.js`), no desde un CDN: el
+> panel funciona en una máquina sin salida a internet y no anuncia a nadie que estás mirando tus
+> métricas. La tipografía es el único recurso externo que queda, y es puramente cosmético.
 
 ## Log de uso
 

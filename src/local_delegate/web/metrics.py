@@ -41,6 +41,8 @@ import re
 import socket
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from importlib.resources import files as _resource_files
+from pathlib import Path
 
 import httpx
 import uvicorn
@@ -464,9 +466,50 @@ def favicon():
     return Response(FAVICON, media_type="image/svg+xml")
 
 
+# Chart.js se sirve DESDE EL PAQUETE, no desde un CDN: el dashboard de una herramienta
+# local-first tiene que funcionar en una máquina sin salida a internet (y sin anunciar a un
+# tercero cada vez que abres tu panel de uso). Copia exacta de la distribución npm
+# chart.js@4.4.1 (MIT, licencia junto al archivo). Se cachea en memoria tras la 1ª lectura.
+_CHART_JS: str | None = None
+
+
+@app.get("/vendor/chart.umd.min.js")
+def vendor_chart_js():
+    global _CHART_JS
+    if _CHART_JS is None:
+        try:
+            _CHART_JS = (
+                Path(str(_resource_files("local_delegate")))
+                / "resources"
+                / "vendor"
+                / "chart.umd.min.js"
+            ).read_text(encoding="utf-8")
+        except OSError:
+            _CHART_JS = ""  # sin gráficos, pero el resto del panel sigue funcionando
+    return Response(
+        _CHART_JS,
+        media_type="application/javascript",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+# La tipografía de marca (Inter / JetBrains Mono) es el ÚNICO recurso externo que queda, y es
+# puramente cosmético: sin red, el stack de fallback del CSS (system-ui / ui-monospace) hace su
+# trabajo. Quien no quiera ni esa petición pone LOCAL_DELEGATE_WEB_FONTS=0 y la página queda con
+# cero peticiones a terceros.
+_WEB_FONTS_TAGS = """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">"""
+
+
+def render_index() -> str:
+    tags = _WEB_FONTS_TAGS if config.WEB_FONTS else "<!-- fuentes web desactivadas -->"
+    return HTML.replace("__WEB_FONTS__", tags)
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return HTML
+    return render_index()
 
 
 def run_in_thread(host: str | None = None, port: int | None = None):
@@ -502,10 +545,10 @@ HTML = r"""<!doctype html>
 <meta name="description" content="Uso y ahorro de cuota de las delegaciones a modelos locales de local-delegate.">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+__WEB_FONTS__
+<!-- Chart.js servido desde el propio paquete: el panel funciona sin conexión y no
+     avisa a ningún tercero de que estás mirando tus métricas. -->
+<script src="/vendor/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#0a0c11; --bg2:#0d1017; --panel:#12161f; --panel2:#0e121a; --bd:#212734; --bd2:#2c3444;

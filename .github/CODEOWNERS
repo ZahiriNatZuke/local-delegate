@@ -1,0 +1,9 @@
+# Revisión por defecto de todo el repo. Con una regla de rama que exija revisión, esto
+# asigna el PR automáticamente.
+* @ZahiriNatZuke
+
+# Superficie sensible: publicación, CI y política de seguridad.
+/.github/workflows/ @ZahiriNatZuke
+/SECURITY.md @ZahiriNatZuke
+/pyproject.toml @ZahiriNatZuke
+/server.json @ZahiriNatZuke

@@ -1,0 +1,28 @@
+version: 2
+
+# Actualizaciones automáticas con PR (que pasan por la CI como cualquier otro cambio).
+# Nota: el ecosistema `uv` entiende pyproject.toml + uv.lock. Si tu instancia de Dependabot
+# aún no lo soporta, cambia `uv` por `pip` (lee pyproject.toml, sin tocar el lockfile).
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # Un solo PR para las de desarrollo: no merece uno por cada bump de ruff/pytest.
+      dev-dependencies:
+        dependency-type: "development"
+
+  # Las actions son código ejecutable con acceso al token del workflow: mantenerlas al día
+  # es parte de la superficie de seguridad del repo, no una tarea cosmética.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(actions)"

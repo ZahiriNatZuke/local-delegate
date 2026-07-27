@@ -31,7 +31,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   la GPU de otra (p. ej. la Mac usando la PC). Los eventos previos se muestran como `n/d`, no
   como locales. `local_status` también lo reporta.
 
+### Security
+- El repositorio incorpora CodeQL, Dependabot (dependencias y actions), `SECURITY.md` con canal
+  privado de reporte, `CODEOWNERS` y `permissions:` de mínimo privilegio en los workflows.
+  `scripts/setup_repo_security.sh` aplica de una vez lo que no puede versionarse: regla sobre
+  `main` (PR obligatorio, CI en verde, sin force-push ni borrado), secret scanning con push
+  protection, alertas de Dependabot y private vulnerability reporting.
+
 ### Changed
+- **Chart.js se sirve desde el propio paquete** (`/vendor/chart.umd.min.js`) en vez de un CDN:
+  el dashboard de una herramienta local-first ahora funciona sin conexión y no anuncia a un
+  tercero que estás mirando tus métricas. La tipografía de marca queda como único recurso
+  externo, es cosmética y se desactiva con `LOCAL_DELEGATE_WEB_FONTS=0`.
 - El dashboard trabaja en la **zona horaria del equipo**: "Hoy" empieza a tu medianoche, las
   barras agrupan por tu día natural, el rango personalizado interpreta las fechas como locales
   y la tabla muestra tu hora (antes todo se calculaba en UTC, así que las delegaciones de la
@@ -52,7 +63,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   puede perderse).
 - Los hooks documentados usaban `{"type":"command","command":"python","args":[…]}`, formato que
   Claude Code no soporta: quedaban registrados pero **nunca ejecutaban** el script. El
-  instalador y la recipe usan un único string de comando.
+  instalador y la recipe usan un único string de comando, y `install` **retira las entradas
+  heredadas** de ese formato en vez de dejarlas como duplicados inertes.
+- Si Chart.js no cargaba, el `Chart.register(...)` inicial abortaba el script del dashboard y se
+  llevaba por delante KPIs, tabla, panel de backend e indicador de actividad. Ahora degrada a
+  "sin gráficos" (además de servirse en local, con lo que el caso es ya improbable).
 - `_pid_alive` en Windows llamaba a `OpenProcess` sin `restype`/`argtypes`, con lo que ctypes
   truncaba el HANDLE de 64 bits y `CloseHandle` recibía un handle inválido: el daemon filtraba
   un handle por cada sondeo del dashboard.

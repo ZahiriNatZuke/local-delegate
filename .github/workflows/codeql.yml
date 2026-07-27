@@ -1,0 +1,39 @@
+name: CodeQL
+
+# Análisis estático de seguridad sobre el código Python del MCP. En repos públicos el code
+# scanning de GitHub es gratuito, y aquí importa especialmente: este paquete lee archivos del
+# disco del usuario a petición de un agente y habla con un endpoint HTTP configurable.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Semanal: coge alertas de reglas nuevas aunque no haya commits.
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write # publicar los resultados en la pestaña Security
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-and-quality
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"

@@ -139,26 +139,45 @@ def hook_command(hooks_dir: Path, script: str, python_exe: str) -> str:
     return f"{python_exe} {_quote(str(hooks_dir / script))}"
 
 
-def _is_ours(command: str, hooks_dir: Path) -> bool:
-    """True solo si el comando apunta a NUESTRO directorio de hooks.
+# Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano
+# siguiendo la recipe vieja, que quedaban en `~/.claude/hooks/` (sin subdirectorio) y con el
+# formato `{"command": "python", "args": [...]}` — formato que Claude Code no ejecuta, así que
+# esas entradas están muertas. Se limpian al instalar en vez de dejar duplicados inertes.
+_SCRIPT_NAMES = (
+    "suggest_delegate_prompt.py",
+    "suggest_delegate_read.py",
+    "suggest_lint_summary.py",
+)
 
-    Se compara contra la ruta completa (o el segmento `hooks/local-delegate`) y no contra
-    el nombre suelto del paquete: un hook propio del usuario que mencione «local-delegate»
-    en otra ruta no debe ser desregistrado ni borrado por nosotros.
+
+def _is_ours(hook: dict, hooks_dir: Path) -> bool:
+    """True si esta entrada de hook la puso local-delegate (ahora o en una versión previa).
+
+    Reconoce el comando actual (ruta a nuestro directorio) y también el formato heredado con
+    `args`. No basta con que el comando mencione «local-delegate»: un hook propio del usuario
+    en otra ruta nunca debe ser desregistrado ni borrado por nosotros — de ahí que se exija la
+    ruta de nuestro directorio o el nombre exacto de uno de nuestros scripts.
     """
-    normalized = command.replace("\\", "/")
-    return f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized
+    parts = [str(hook.get("command", ""))]
+    args = hook.get("args")
+    if isinstance(args, list):
+        parts.extend(str(a) for a in args)
+    normalized = " ".join(parts).replace("\\", "/")
+    if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
+        return True
+    return any(name in normalized for name in _SCRIPT_NAMES)
 
 
 def merge_hook_settings(
     settings: dict, entries: list[tuple[str, str | None, str]], hooks_dir: Path
-) -> dict:
+) -> tuple[dict, int]:
     """Registra nuestros hooks en settings.json quitando primero cualquier versión previa.
 
     `entries` = [(evento, matcher|None, comando)]. Idempotente: reinstalar deja exactamente
-    un registro por hook, y los hooks de terceros no se tocan.
+    un registro por hook, y los hooks de terceros no se tocan. Devuelve (settings, entradas
+    previas retiradas) para poder avisar de una migración desde el formato heredado.
     """
-    settings = strip_hook_settings(settings, hooks_dir)
+    settings, removed = strip_hook_settings(settings, hooks_dir)
     hooks = settings.setdefault("hooks", {})
     if not isinstance(hooks, dict):
         hooks = {}
@@ -169,14 +188,18 @@ def merge_hook_settings(
         if matcher:
             group["matcher"] = matcher
         hooks.setdefault(event, []).append(group)
-    return settings
+    return settings, removed
 
 
-def strip_hook_settings(settings: dict, hooks_dir: Path) -> dict:
-    """Quita del settings.json solo los hooks instalados por local-delegate."""
+def strip_hook_settings(settings: dict, hooks_dir: Path) -> tuple[dict, int]:
+    """Quita del settings.json solo los hooks de local-delegate (incluidos los heredados).
+
+    Devuelve (settings, cuántas entradas se quitaron).
+    """
     hooks = settings.get("hooks")
     if not isinstance(hooks, dict):
-        return settings
+        return settings, 0
+    removed = 0
     for event, groups in list(hooks.items()):
         if not isinstance(groups, list):
             continue
@@ -185,11 +208,12 @@ def strip_hook_settings(settings: dict, hooks_dir: Path) -> dict:
             if not isinstance(group, dict):
                 pruned.append(group)
                 continue
-            inner = [
-                h
-                for h in group.get("hooks", [])
-                if not (isinstance(h, dict) and _is_ours(str(h.get("command", "")), hooks_dir))
-            ]
+            inner = []
+            for h in group.get("hooks", []):
+                if isinstance(h, dict) and _is_ours(h, hooks_dir):
+                    removed += 1
+                    continue
+                inner.append(h)
             if inner:
                 group["hooks"] = inner
                 pruned.append(group)
@@ -199,7 +223,7 @@ def strip_hook_settings(settings: dict, hooks_dir: Path) -> dict:
             hooks.pop(event, None)
     if not hooks:
         settings.pop("hooks", None)
-    return settings
+    return settings, removed
 
 
 # --- Entrada del servidor MCP ------------------------------------------------
@@ -318,9 +342,10 @@ def plan_install(opts: Options) -> list[Action]:
         settings_path = claude / "settings.json"
 
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
-            data = merge_hook_settings(_read_json(path), entries, hooks_dir)
+            data, removed = merge_hook_settings(_read_json(path), entries, hooks_dir)
             _write_json(path, data)
-            return f"{len(entries)} hook(s) registrados"
+            note = f" (retiradas {removed} entrada(s) previa(s))" if removed else ""
+            return f"{len(entries)} hook(s) registrados{note}"
 
         actions.append(
             Action(
@@ -441,8 +466,9 @@ def plan_uninstall(opts: Options) -> list[Action]:
         def _run_settings(path=settings_path, hooks_dir=hooks_dst) -> str:
             if not path.is_file():
                 return "settings.json no existe"
-            _write_json(path, strip_hook_settings(_read_json(path), hooks_dir))
-            return "hooks de local-delegate quitados"
+            data, removed = strip_hook_settings(_read_json(path), hooks_dir)
+            _write_json(path, data)
+            return f"{removed} hook(s) de local-delegate quitados"
 
         actions.append(
             Action("settings", settings_path, "quita los hooks registrados", _run_settings)

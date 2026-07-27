@@ -185,6 +185,10 @@ MAX_IMAGE_MB = _env_int("LOCAL_DELEGATE_MAX_IMAGE_MB", 8)
 WEB_ENABLED = _env_flag("LOCAL_DELEGATE_WEB", True)
 WEB_HOST = _env("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
 WEB_PORT = _env_int("LOCAL_DELEGATE_WEB_PORT", 9393)
+# Tipografía de marca desde Google Fonts: único recurso externo del dashboard y puramente
+# cosmético (sin red cae al stack del sistema). `0` la desactiva y deja la página con cero
+# peticiones a terceros. Chart.js se sirve siempre desde el propio paquete.
+WEB_FONTS = _env_flag("LOCAL_DELEGATE_WEB_FONTS", True)
 CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
 
 

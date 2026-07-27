@@ -423,3 +423,36 @@ def test_dashboard_computes_ranges_in_local_time():
     html = TestClient(metrics.app).get("/").text
     assert "localMidnight" in html and "localDayKey" in html
     assert "Date.UTC(" not in html  # ya no queda ningún rango calculado en UTC
+
+
+# --- El panel no depende de la red -----------------------------------------------------
+def test_chart_js_is_served_from_the_package_not_a_cdn():
+    """El dashboard de una herramienta local-first tiene que funcionar sin salida a internet."""
+    client = TestClient(metrics.app)
+    html = client.get("/").text
+    assert "cdn.jsdelivr.net" not in html
+    assert '<script src="/vendor/chart.umd.min.js">' in html
+
+    r = client.get("/vendor/chart.umd.min.js")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/javascript")
+    assert "Chart.js v4.4.1" in r.text
+    assert len(r.text) > 100_000  # la distribución real, no un stub
+
+
+def test_web_fonts_can_be_disabled_for_zero_third_party_requests(monkeypatch):
+    html = TestClient(metrics.app).get("/").text
+    assert "fonts.googleapis.com" in html  # por defecto sí, es solo tipografía
+
+    monkeypatch.setattr(config, "WEB_FONTS", False)
+    html = metrics.render_index()
+    assert "fonts.googleapis.com" not in html
+    assert "googleapis" not in html and "gstatic" not in html
+    assert "/vendor/chart.umd.min.js" in html  # los gráficos siguen, son locales
+
+
+def test_dashboard_survives_without_chart_js():
+    """Si Chart.js no cargara, el resto del panel (KPIs, tabla, actividad) sigue vivo."""
+    html = TestClient(metrics.app).get("/").text
+    assert "const HAS_CHART = typeof Chart !== 'undefined'" in html
+    assert "if(HAS_CHART) Chart.register" in html
