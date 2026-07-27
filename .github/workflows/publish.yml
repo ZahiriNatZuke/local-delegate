@@ -31,7 +31,7 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: v
         name: Tag, pyproject.toml y server.json coinciden
@@ -83,7 +83,7 @@ jobs:
       contents: read
       id-token: write # necesario para `mcp-publisher login github-oidc`
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # PyPI tarda unos segundos en servir la versión recién subida y el registro la valida
       # antes de aceptar el descriptor. Esperar aquí evita un fallo intermitente que obligaría
