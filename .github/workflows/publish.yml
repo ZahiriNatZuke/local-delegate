@@ -1,19 +1,57 @@
 name: Publish
 
-# Publica en PyPI al empujar un tag vX.Y.Z, usando Trusted Publishing (OIDC):
-# sin tokens guardados en secrets. Requiere configurar un "trusted publisher" en PyPI
-# para el proyecto local-delegate-mcp (owner ZahiriNatZuke, repo local-delegate,
-# workflow publish.yml, environment pypi).
+# Al empujar un tag vX.Y.Z publica la versión en los DOS sitios donde vive este paquete:
+#   1. PyPI, con Trusted Publishing (OIDC) — sin tokens guardados.
+#   2. El registro oficial de MCP, con `mcp-publisher login github-oidc` — tampoco hay secreto:
+#      el registro valida el namespace io.github.ZahiriNatZuke/* contra el token OIDC del propio
+#      workflow.
+#
+# Requisito único de PyPI (una vez): un "trusted publisher" para local-delegate-mcp con owner
+# ZahiriNatZuke, repo local-delegate, workflow publish.yml, environment pypi.
+#
+# Los jobs van en cadena a propósito: el registro MCP valida que el paquete EXISTE en PyPI y que
+# su README lleva la línea `mcp-name:`, así que publicar el descriptor antes de que PyPI sirva la
+# versión falla con "Package validation failed".
 
 on:
   push:
     tags: ["v*"]
 
-# Sin permisos por defecto: el único job los amplía a lo justo (`id-token: write`).
+# Sin permisos por defecto: cada job los amplía a lo justo.
 permissions: {}
 
 jobs:
+  # Guardarraíl barato antes de tocar nada publicable: el tag, pyproject.toml y server.json
+  # tienen que decir la misma versión. Olvidar el bump de server.json es el error clásico, y
+  # cuesta mucho más deshacerlo después de publicar en PyPI (donde no se puede sobreescribir).
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: v
+        name: Tag, pyproject.toml y server.json coinciden
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PY=$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          SRV=$(python3 -c "import json;d=json.load(open('server.json'));print(d['version'])")
+          PKG=$(python3 -c "import json;d=json.load(open('server.json'));print(d['packages'][0]['version'])")
+          echo "tag=$TAG  pyproject=$PY  server.json=$SRV  server.json/packages=$PKG"
+          for got in "$PY" "$SRV" "$PKG"; do
+            if [ "$got" != "$TAG" ]; then
+              echo "::error::la versión $got no coincide con el tag $TAG"
+              exit 1
+            fi
+          done
+          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+
   pypi:
+    needs: check-version
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -37,3 +75,44 @@ jobs:
         # --check-url hace el publish idempotente: si la versión ya existe en el índice,
         # salta los archivos ya subidos en vez de fallar (re-ejecuciones sobre un tag existente).
         run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/
+
+  mcp-registry:
+    needs: [check-version, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # necesario para `mcp-publisher login github-oidc`
+    steps:
+      - uses: actions/checkout@v7
+
+      # PyPI tarda unos segundos en servir la versión recién subida y el registro la valida
+      # antes de aceptar el descriptor. Esperar aquí evita un fallo intermitente que obligaría
+      # a reejecutar el workflow a mano.
+      - name: Esperar a que PyPI sirva la versión
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -sSf "https://pypi.org/pypi/local-delegate-mcp/${VERSION}/json" -o /dev/null; then
+              echo "PyPI ya sirve ${VERSION}"
+              exit 0
+            fi
+            echo "intento $i: PyPI todavía no sirve ${VERSION}; reintento en 10 s"
+            sleep 10
+          done
+          echo "::error::PyPI no sirvió ${VERSION} tras 5 minutos"
+          exit 1
+
+      - name: Install mcp-publisher
+        # Instalación oficial (docs del registro). `latest` a propósito: un binario viejo
+        # falla con "invalid audience" cuando el registro rota su configuración de OIDC.
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --version
+
+      - name: Autenticar en el registro MCP (OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publicar server.json en el registro
+        run: ./mcp-publisher publish
