@@ -16,6 +16,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   coinciden, y antes de publicar el descriptor se espera a que PyPI sirva la versión — el
   registro valida que el paquete exista. La coherencia de versiones se comprueba además en cada
   PR (`tests/test_release_metadata.py`).
+- **`scripts/bump_version.py`:** sube la versión en los **cuatro** sitios donde vive
+  (`pyproject.toml`, las dos de `server.json` y `uv.lock`) de una sola vez, y regenera el lock.
+  Los guardarraíles anteriores solo *detectan* un bump a medias —y el histórico dice que pasa:
+  en la 0.8.1 el lock se quedó en 0.7.0—; este lo evita. `--check` verifica la coherencia en
+  local antes del push (incluido `uv.lock`, que ningún test miraba), `--dry-run` enseña el plan.
+  Edita el texto en vez de reserializar, así el diff son cuatro líneas y no un reformateo.
 - **`local-delegate install` / `uninstall`:** la instalación deja de ser solo el servidor MCP.
   Un comando registra la entrada MCP (Claude Code y Codex), copia los hooks consultivos a
   `~/.claude/hooks/local-delegate/` y los inscribe en `settings.json`, instala la skill
