@@ -23,7 +23,18 @@ from pathlib import Path
 from . import benchmark, doctor
 from . import llamaswap_config as lc
 
-KNOWN_COMMANDS = {"benchmark", "check-llamaswap", "init-llamaswap", "doctor", "serve"}
+KNOWN_COMMANDS = {
+    "benchmark",
+    "check-llamaswap",
+    "init-llamaswap",
+    "doctor",
+    "serve",
+    "install",
+    "uninstall",
+}
+
+_ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp")
+_ALL_TARGETS = ("claude", "codex")
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -31,6 +42,62 @@ def cmd_serve(args: argparse.Namespace) -> int:
     from . import daemon
 
     return daemon.serve(host=args.host, port=args.port, log_level=args.log_level)
+
+
+def _install_options(args: argparse.Namespace):
+    from . import install as inst
+
+    selected = args.target or ["all"]
+    targets = set(_ALL_TARGETS) if "all" in selected else set(selected)
+    components = {c for c in _ALL_COMPONENTS if getattr(args, c.replace("-", "_"))}
+    return inst.Options(
+        home=Path(args.home).expanduser() if args.home else Path.home(),
+        components=components,
+        targets=targets,
+        python_exe=args.python or inst.default_python(),
+        enable_read_hook=getattr(args, "enable_read_hook", False),
+        mcp_mode=getattr(args, "mcp_mode", "stdio"),
+        base_url=getattr(args, "base_url", None),
+        api_key_env=getattr(args, "api_key_env", False),
+        pin_version=getattr(args, "pin_version", None),
+        use_cli=not getattr(args, "no_client_cli", False),
+    )
+
+
+def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
+    from . import install as inst
+
+    opts = _install_options(args)
+    if not opts.components:
+        print("error: no queda ningún componente que instalar (todo desactivado)", file=sys.stderr)
+        return 2
+    if not opts.targets:
+        print("error: no hay ningún cliente seleccionado (--target)", file=sys.stderr)
+        return 2
+    actions = inst.plan_uninstall(opts) if uninstall else inst.plan_install(opts)
+    verb = "Desinstalando" if uninstall else "Instalando"
+    print(f"{verb} local-delegate en {opts.home} — clientes: {', '.join(sorted(opts.targets))}")
+    print(f"componentes: {', '.join(sorted(opts.components))}")
+    print("")
+    failures = inst.apply(actions, dry_run=args.dry_run)
+    print("")
+    if args.dry_run:
+        print("--dry-run: no se escribió nada.")
+        return 0
+    if failures:
+        print(f"{failures} acción(es) fallaron.", file=sys.stderr)
+        return 1
+    if not uninstall:
+        print("Listo. Reinicia el cliente (Claude Code / Codex) para que tome los cambios.")
+    return 0
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    return _run_install(args, uninstall=False)
+
+
+def cmd_uninstall(args: argparse.Namespace) -> int:
+    return _run_install(args, uninstall=True)
 
 
 def _print_breakdown(
@@ -447,7 +514,100 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve.set_defaults(func=cmd_serve)
 
+    _add_install_parsers(sub)
     return parser
+
+
+def _add_common_install_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--target",
+        action="append",
+        choices=("claude", "codex", "all"),
+        default=None,
+        help="cliente a configurar (repetible; default: all)",
+    )
+    p.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
+    p.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
+    p.add_argument(
+        "--python",
+        default=None,
+        help="intérprete con el que se ejecutan los hooks (default: python3 / python en Windows)",
+    )
+    p.add_argument(
+        "--no-hooks", dest="hooks", action="store_false", help="no instalar los hooks consultivos"
+    )
+    p.add_argument(
+        "--no-skill",
+        dest="skill",
+        action="store_false",
+        help="no instalar la skill delegacion-local",
+    )
+    p.add_argument(
+        "--no-memory",
+        dest="memory",
+        action="store_false",
+        help="no tocar CLAUDE.md / AGENTS.md globales",
+    )
+    p.add_argument(
+        "--no-mcp",
+        dest="mcp",
+        action="store_false",
+        help="no registrar el servidor MCP en la config del cliente",
+    )
+    p.add_argument(
+        "--no-client-cli",
+        action="store_true",
+        help="no usar el binario `claude`; edita ~/.claude.json directamente",
+    )
+    p.set_defaults(hooks=True, skill=True, memory=True, mcp=True)
+
+
+def _add_install_parsers(sub) -> None:
+    install = sub.add_parser(
+        "install",
+        help="Instala hooks, skill, bloque de memoria y la entrada MCP en Claude Code / Codex.",
+        description=(
+            "Instala la integración completa en el HOME del usuario: hooks consultivos, la "
+            "skill delegacion-local, un bloque gestionado en CLAUDE.md/AGENTS.md y la entrada "
+            "del servidor MCP. Es idempotente (bloques con marcadores, backups .bak) y se "
+            "revierte con `local-delegate uninstall`."
+        ),
+    )
+    _add_common_install_args(install)
+    install.add_argument(
+        "--enable-read-hook",
+        action="store_true",
+        help="registra también el hook experimental PreToolUse/Read (apagado por defecto)",
+    )
+    install.add_argument(
+        "--mcp-mode",
+        choices=("stdio", "http"),
+        default="stdio",
+        help="stdio (uvx, default) o http (daemon compartido en /mcp)",
+    )
+    install.add_argument(
+        "--base-url",
+        default=None,
+        help="LOCAL_DELEGATE_BASE_URL de la entrada MCP (p. ej. el backend remoto de otra máquina)",
+    )
+    install.add_argument(
+        "--api-key-env",
+        action="store_true",
+        help="reenvía LOCAL_DELEGATE_API_KEY desde el entorno (nunca escribe el secreto)",
+    )
+    install.add_argument(
+        "--pin-version",
+        default=None,
+        help="fija la versión del paquete en la entrada MCP (p. ej. 0.11.0)",
+    )
+    install.set_defaults(func=cmd_install)
+
+    uninstall = sub.add_parser(
+        "uninstall",
+        help="Revierte lo que instaló `local-delegate install` (solo lo suyo).",
+    )
+    _add_common_install_args(uninstall)
+    uninstall.set_defaults(func=cmd_uninstall)
 
 
 def run(argv: list[str]) -> int:

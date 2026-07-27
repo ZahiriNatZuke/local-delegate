@@ -30,6 +30,14 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada por modelo |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
+| `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
+| `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
+| `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | trozo mínimo: por debajo ya no se vuelve a partir aunque el modelo trunque |
+
+> El chunking existe porque traducir/reescribir produce tanta salida como entrada: con una sola
+> llamada un documento de 20 000+ chars choca contra `max_tokens` y vuelve cortado. `CHUNK_CHARS`
+> se elige para que la salida de un trozo quepa holgada bajo `CHUNK_MAX_TOKENS` (3500 chars ≈
+> 875-1200 tokens contra un techo de 2048). Súbelo solo si tu modelo tolera respuestas más largas.
 
 > `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids
 > de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.
@@ -45,6 +53,11 @@ En modo `stdio`, las mismas variables controlan únicamente la web embebida here
 | `LOCAL_DELEGATE_WEB` | `1` | `0` desactiva la web embebida del modo `stdio` |
 | `LOCAL_DELEGATE_WEB_HOST` | `127.0.0.1` | Host de web/daemon |
 | `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
+| `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts. `0` la desactiva y deja la página con **cero peticiones a terceros** (cae al stack de fuentes del sistema) |
+
+> Chart.js se sirve desde el propio paquete (`/vendor/chart.umd.min.js`), no desde un CDN: el
+> panel funciona en una máquina sin salida a internet y no anuncia a nadie que estás mirando tus
+> métricas. La tipografía es el único recurso externo que queda, y es puramente cosmético.
 
 ## Log de uso
 

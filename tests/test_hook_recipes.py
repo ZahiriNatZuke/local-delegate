@@ -8,7 +8,7 @@ import json
 import sys
 from pathlib import Path
 
-HOOKS = Path(__file__).parents[1] / "docs" / "recipes" / "hooks"
+HOOKS = Path(__file__).parents[1] / "src" / "local_delegate" / "resources" / "hooks"
 sys.path.insert(0, str(HOOKS))
 
 

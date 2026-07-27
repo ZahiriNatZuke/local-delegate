@@ -9,11 +9,15 @@ on:
   push:
     tags: ["v*"]
 
+# Sin permisos por defecto: el único job los amplía a lo justo (`id-token: write`).
+permissions: {}
+
 jobs:
   pypi:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
+      contents: read
       id-token: write # necesario para OIDC / Trusted Publishing
     steps:
       - uses: actions/checkout@v4

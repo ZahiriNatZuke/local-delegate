@@ -13,7 +13,7 @@ from pathlib import Path
 
 from local_delegate.web import metrics
 
-# El <script> inline es el que NO tiene atributo src= (el otro es el CDN de Chart.js).
+# El <script> inline es el que NO tiene atributo src= (el otro carga Chart.js del paquete).
 scripts = re.findall(r"<script(?![^>]*src=)[^>]*>(.*?)</script>", metrics.HTML, re.S)
 if not scripts:
     raise SystemExit("no se encontró el <script> inline del dashboard")

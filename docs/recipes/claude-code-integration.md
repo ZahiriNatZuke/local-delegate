@@ -1,15 +1,16 @@
 # Recipe: integración con Claude Code (subagentes + skill)
 
-> Esta guía describe una integración **personal** de `local-delegate` con Claude Code.
-> **No forma parte del paquete publicable**: es un ejemplo de cómo exprimir el MCP en tu
-> propio flujo. Adáptala a tu setup.
-
-El paquete `local-delegate` solo expone las 9 tools MCP (`local_*`). Cómo las uses en Claude
-Code —qué subagentes las heredan, con qué skill las gobiernas— es tuyo. Aquí va cómo lo tengo montado.
+> El camino soportado es `local-delegate install` (entrada MCP + hooks + skill + memoria):
+> ver [Instalación de la integración](../wiki/Integration-install.md). Esta recipe cubre lo
+> que queda **fuera** del instalador: propagar las tools a tus subagentes personales.
 
 ## 1. Registrar el MCP en Claude Code / Desktop
 
-Con el paquete publicado en PyPI, apunta tu config de MCP a `uvx`:
+```bash
+uvx local-delegate-mcp install --target claude
+```
+
+O a mano, apuntando tu config de MCP a `uvx`:
 
 ```json
 {
@@ -41,8 +42,9 @@ tools que falten. No reordena ni toca agentes sin delegación.
 ## 3. Skill de gobierno de la delegación
 
 La regla de oro ("¿el paso se describe en una frase con formato de salida explícito? → delégalo
-a una tool `local_*`") vive en una skill personal (`delegacion-local`) + una entrada en
-`CLAUDE.md`. La skill no se distribuye con el paquete; es guía de comportamiento para tu agente.
+a una tool `local_*`") vive en la skill `delegacion-local` y en un bloque corto de `CLAUDE.md` /
+`AGENTS.md`. Desde v0.11.0 **ambas se distribuyen con el paquete** y las instala
+`local-delegate install` (`--no-skill` / `--no-memory` para excluirlas).
 
 Esquema de la regla:
 

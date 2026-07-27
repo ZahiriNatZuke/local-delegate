@@ -45,6 +45,17 @@ Añádelo a tu config de MCP (Claude Desktop / Claude Code) en modo compatible `
 
 Ver plantillas completas en [`examples/`](./examples).
 
+O deja que el paquete lo configure todo por ti —entrada MCP, hooks, skill y la regla de
+delegación en tu `CLAUDE.md`/`AGENTS.md` global— con un solo comando:
+
+```bash
+uvx local-delegate-mcp install --dry-run   # muestra exactamente qué tocaría
+uvx local-delegate-mcp install             # aplica
+```
+
+Es idempotente, deja `.bak` de lo que edita, no toca configuración ajena y se revierte con
+`local-delegate uninstall`. Detalle y opciones en [Instalación de la integración](./docs/wiki/Integration-install.md).
+
 Si usas **varias sesiones o varios clientes** en la misma máquina, se recomienda un solo daemon:
 
 ```powershell
@@ -105,6 +116,14 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 Los modelos locales **no** usan tool-calling: el server arma el prompt + guardrails, hace POST al
 endpoint y devuelve **solo texto**.
 
+**Documentos largos.** `local_translate` (y `local_delegate` con entradas largas) parten el texto
+por límites naturales —headers Markdown, párrafos, líneas— y procesan **un trozo por llamada**
+respetando el techo de `max_tokens`, concatenando las salidas en orden y conservando el formato en
+las costuras. Un documento de 20 000+ caracteres vuelve completo en vez de cortado a mitad. El log
+registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre. Para tareas
+de reducción sobre el conjunto (contar, elegir un máximo, un único resumen global) usa
+`local_summarize` o `local_delegate(chunk='off')`.
+
 ## Configuración
 
 Todo por variables de entorno; nada hardcodeado. Los ids de modelo default son solo eso —
@@ -125,11 +144,15 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | Modelo de visión para `local_describe_image` |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
+| `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | Tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
+| `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | Techo de `max_tokens` por trozo |
+| `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | Trozo mínimo: por debajo ya no se vuelve a partir |
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
 | `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
 | `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
 | `LOCAL_DELEGATE_WEB` | `1` | Web embebida del modo `stdio` (`0` para desactivarla) |
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon |
+| `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts (`0` = cero peticiones a terceros) |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
 | `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1` |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
@@ -141,6 +164,12 @@ El MCP registra cada llamada en un log rotado por mes y sirve un **dashboard** e
 El *ahorro de contexto* = caracteres de entrada leídos server-side (llamadas con
 `source=path`) ÷ 4 (o los tokens reales del backend, cuando los da) ≈ tokens que nunca
 entraron al contexto de Claude. Detalle en la [wiki](./docs/wiki/Home.md).
+
+Los rangos, los días del gráfico y las horas de la tabla usan **tu zona horaria** (el log se
+escribe en UTC, que es un instante sin ambigüedad; la conversión es de presentación). El
+dashboard también separa **dónde corrió el cómputo**: `local` si el backend escucha en loopback,
+`remote` si la inferencia se fue a otra máquina —por ejemplo esta Mac usando la GPU de la PC—.
+Los eventos anteriores a la v0.11.0 no traen el campo y aparecen como `n/d`.
 
 ## Alcance / no-objetivos
 
@@ -160,12 +189,23 @@ a propósito:
 - **Sustituir la suscripción.** El objetivo es conservar cuota delegando pasos mecánicos
   acotados, no enrutar todo el trabajo a modelos locales.
 
-## Hooks de Claude Code (opcional)
+## Integración con el cliente: hooks, skill y memoria
 
-Recipe con hooks que sugieren delegar sin bloquear nunca la tool original:
-`UserPromptSubmit` para intenciones mecánicas y `PreToolUse`/`Bash` para salidas largas de
-lint/tests. El experimento `PreToolUse`/`Read` queda apagado por defecto después de producir ruido
-en el piloto A/B: [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
+`local-delegate install` deja lista la integración completa en tu HOME:
+
+| Componente | Dónde | Qué hace |
+|---|---|---|
+| Entrada MCP | config de Claude Code / `~/.codex/config.toml` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
+| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar sin bloquear nunca la tool original |
+| Skill | `~/.claude/skills/delegacion-local/` | regla de oro y catálogo de tools |
+| Memoria | bloque gestionado en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | la regla en una nota corta siempre cargada |
+
+Cada pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`) y elegir
+cliente con `--target claude|codex`. Los hooks recomendados tras el piloto A/B son
+`UserPromptSubmit` (intenciones mecánicas) y `PreToolUse`/`Bash` (salidas largas de lint/tests);
+el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`.
+Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y
+[`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 
 ## Groups de llama-swap (opcional)
 

@@ -179,7 +179,13 @@ def test_api_backend_unavailable(monkeypatch):
     respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
     respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
     client = TestClient(metrics.app)
-    assert client.get("/api/backend").json() == {"available": False, "running": [], "models": []}
+    assert client.get("/api/backend").json() == {
+        "available": False,
+        "running": [],
+        "models": [],
+        "origin": "remote",  # host no-loopback => la inferencia correría fuera de esta máquina
+        "host": "test-backend",
+    }
 
 
 # --- /api/status: versión, modelos reales del backend, catálogo, tools ----------------
@@ -269,7 +275,12 @@ def test_api_status_backend_down(monkeypatch):
     respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
     client = TestClient(metrics.app)
     data = client.get("/api/status").json()
-    assert data["backend"] == {"available": False, "models": []}
+    assert data["backend"] == {
+        "available": False,
+        "models": [],
+        "origin": "remote",
+        "host": "test-backend",
+    }
     assert data["catalog"]  # el catálogo local no depende del backend
 
 
@@ -333,3 +344,115 @@ def test_sysinfo_smoke():
     assert isinstance(procs, list)
     for p in procs:
         assert {"pid", "name", "ram_mb", "vram_mb", "self"} <= set(p)
+
+
+# --- Actividad y origen del cómputo (local vs remoto) ---------------------------------
+def test_last_event_ts_ignores_the_selected_range(tmp_path, monkeypatch):
+    """El indicador de actividad mira TODO el histórico, no el rango del selector."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(
+        tmp_path / "usage-202605.jsonl",
+        [{"ts": "2026-05-01T10:00:00+00:00"}, {"ts": "2026-05-02T10:00:00+00:00"}],
+    )
+    _write_jsonl(tmp_path / "usage-202607.jsonl", [{"ts": "2026-07-20T18:30:00+00:00"}])
+    metrics._FILE_CACHE.clear()
+    assert metrics._last_event_ts() == "2026-07-20T18:30:00+00:00"
+
+
+def test_last_event_ts_without_logs_is_none(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    metrics._FILE_CACHE.clear()
+    assert metrics._last_event_ts() is None
+
+
+def test_api_inflight_exposes_activity_signals(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(tmp_path / "usage-202607.jsonl", [{"ts": "2026-07-20T18:30:00+00:00"}])
+    metrics._FILE_CACHE.clear()
+    data = TestClient(metrics.app).get("/api/inflight").json()
+    assert data["inflight"] == [] and data["count"] == 0
+    assert data["last_event_ts"] == "2026-07-20T18:30:00+00:00"
+    assert data["now"]  # hora del servidor: el cliente corrige el desfase de su propio reloj
+
+
+def test_stats_separates_local_and_remote_compute(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    base = {"tool": "local_summarize", "model": "m", "chars_out": 10, "ok": True}
+    _write_jsonl(
+        tmp_path / "usage-202607.jsonl",
+        [
+            {
+                **base,
+                "ts": "2026-07-20T10:00:00+00:00",
+                "source": "path",
+                "chars_in": 4000,
+                "backend": "local",
+                "backend_host": "127.0.0.1:9292",
+            },
+            {
+                **base,
+                "ts": "2026-07-20T11:00:00+00:00",
+                "source": "path",
+                "chars_in": 8000,
+                "backend": "remote",
+                "backend_host": "pc.ts.net:9292",
+            },
+            {**base, "ts": "2026-07-20T12:00:00+00:00", "source": "inline", "chars_in": 100},
+        ],
+    )
+    metrics._FILE_CACHE.clear()
+    data = (
+        TestClient(metrics.app)
+        .get("/api/stats?from=2026-07-01T00:00:00Z&to=2026-07-31T00:00:00Z")
+        .json()
+    )
+    by_backend = {b["backend"]: b for b in data["by_backend"]}
+    assert by_backend["local"]["tokens_saved"] == 1000
+    assert by_backend["remote"]["tokens_saved"] == 2000
+    assert by_backend["remote"]["hosts"] == ["pc.ts.net:9292"]
+    # los eventos previos al campo no se cuentan como locales: quedan como "unknown"
+    assert by_backend["unknown"]["calls"] == 1
+
+
+def test_dashboard_computes_ranges_in_local_time():
+    """El selector 'Hoy' usa la medianoche LOCAL, no la UTC (que corre el día)."""
+    html = TestClient(metrics.app).get("/").text
+    assert "localMidnight" in html and "localDayKey" in html
+    assert "Date.UTC(" not in html  # ya no queda ningún rango calculado en UTC
+
+
+# --- El panel no depende de la red -----------------------------------------------------
+def test_chart_js_is_served_from_the_package_not_a_cdn():
+    """El dashboard de una herramienta local-first tiene que funcionar sin salida a internet."""
+    client = TestClient(metrics.app)
+    html = client.get("/").text
+    assert "cdn.jsdelivr.net" not in html
+    assert '<script src="/vendor/chart.umd.min.js">' in html
+
+    r = client.get("/vendor/chart.umd.min.js")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/javascript")
+    assert "Chart.js v4.4.1" in r.text
+    assert len(r.text) > 100_000  # la distribución real, no un stub
+
+
+def test_web_fonts_can_be_disabled_for_zero_third_party_requests(monkeypatch):
+    html = TestClient(metrics.app).get("/").text
+    assert "fonts.googleapis.com" in html  # por defecto sí, es solo tipografía
+
+    monkeypatch.setattr(config, "WEB_FONTS", False)
+    html = metrics.render_index()
+    assert "fonts.googleapis.com" not in html
+    assert "googleapis" not in html and "gstatic" not in html
+    assert "/vendor/chart.umd.min.js" in html  # los gráficos siguen, son locales
+
+
+def test_dashboard_survives_without_chart_js():
+    """Si Chart.js no cargara, el resto del panel (KPIs, tabla, actividad) sigue vivo."""
+    html = TestClient(metrics.app).get("/").text
+    assert "const HAS_CHART = typeof Chart !== 'undefined'" in html
+    assert "if(HAS_CHART) Chart.register" in html

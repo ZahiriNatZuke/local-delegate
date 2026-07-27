@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: CI solo lee el repo. Cualquier job que necesite más permisos los declara
+# explícitamente (ver publish.yml, que pide `id-token: write` para OIDC).
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

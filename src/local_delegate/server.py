@@ -87,11 +87,19 @@ def _pid_alive(pid: int) -> bool:
     try:
         if sys.platform == "win32":
             import ctypes
+            from ctypes import wintypes
 
-            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFO
+            # restype/argtypes explícitos: sin ellos ctypes asume c_int y TRUNCA el HANDLE de
+            # 64 bits, con lo que CloseHandle recibe un handle inválido y el daemon acaba
+            # filtrando un handle por cada sondeo (el dashboard llama a esto cada 2 s).
+            kernel32 = ctypes.windll.kernel32
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
             if not handle:
                 return False
-            ctypes.windll.kernel32.CloseHandle(handle)
+            kernel32.CloseHandle(handle)
             return True
         os.kill(pid, 0)
         return True
@@ -109,36 +117,57 @@ def _read_inflight_data(path: Path) -> dict:
 
 
 def _atomic_write_json(path: Path, data: dict) -> None:
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(path)
+    # El temporal lleva el pid en el nombre: varios procesos MCP (cada sesión de Claude en
+    # stdio, más el daemon) escriben este mismo archivo, y un ".tmp" compartido hacía que
+    # dos escrituras simultáneas se pisaran el temporal y publicaran contenido mezclado o
+    # perdido — entradas fantasma / delegaciones que nunca aparecían en "En curso".
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)  # si replace() funcionó ya no existe
+        except OSError:
+            pass
 
 
-def _inflight_mutate(mutate_fn) -> None:
+def _inflight_mutate(mutate_fn, *, write_on_timeout: bool = True) -> None:
     """Aplica mutate_fn(dict) al archivo compartido de inflight bajo lock exclusivo.
 
-    Best-effort como el resto del logging: si no consigue el lock en 1s, aplica igual sin
-    lock (nunca bloquea ni rompe una delegación). El peor caso es una entrada perdida o
-    duplicada, que se autolimpia por TTL/pid-muerto en inflight_snapshot().
+    Solo escribe si mutate_fn cambió algo: el dashboard sondea cada 2 s y antes reescribía el
+    archivo en cada sondeo, generando contención inútil con las delegaciones reales.
+
+    Best-effort como el resto del logging: nunca bloquea ni rompe una delegación. Si no
+    consigue el lock a tiempo, `write_on_timeout=True` (alta/baja de una delegación) aplica
+    igual sin lock —el peor caso es una entrada duplicada que se autolimpia por TTL/pid-muerto—
+    y `write_on_timeout=False` (solo lectura/poda) se salta la escritura para no pisar con
+    datos viejos una entrada que otro proceso acaba de registrar.
     """
     path = _inflight_file()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        lock = FileLock(str(path) + ".lock", timeout=1)
+        lock = FileLock(str(path) + ".lock", timeout=2)
         try:
             with lock:
                 data = _read_inflight_data(path)
+                before = json.dumps(data, sort_keys=True)
                 mutate_fn(data)
-                _atomic_write_json(path, data)
+                if json.dumps(data, sort_keys=True) != before:
+                    _atomic_write_json(path, data)
         except Timeout:
             data = _read_inflight_data(path)
+            before = json.dumps(data, sort_keys=True)
             mutate_fn(data)
-            _atomic_write_json(path, data)
+            if write_on_timeout and json.dumps(data, sort_keys=True) != before:
+                _atomic_write_json(path, data)
     except OSError:
         pass  # el tracking de inflight es best-effort; jamás rompe una delegación
 
 
-def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int:
+def _inflight_start(
+    *, tool: str, model: str, source: str, chars_in: int, chunks: int | None = None
+) -> int:
     global _inflight_next_id
     with _inflight_lock:
         _inflight_next_id += 1
@@ -152,13 +181,29 @@ def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int
         "chars_in": chars_in,
         "started_at": time.time(),
         "pid": pid,
+        "backend": config.backend_origin(),
     }
+    if chunks:
+        entry["chunks"] = int(chunks)
+        entry["chunk"] = 1
 
     def _add(data: dict) -> None:
         data[key] = entry
 
     _inflight_mutate(_add)
     return entry_id
+
+
+def _inflight_progress(entry_id: int, chunk: int) -> None:
+    """Marca en qué trozo va una delegación por chunks (visible en el panel 'En curso')."""
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if isinstance(entry, dict):
+            entry["chunk"] = int(chunk)
+
+    _inflight_mutate(_update)
 
 
 def _inflight_end(entry_id: int) -> None:
@@ -181,27 +226,36 @@ def inflight_snapshot() -> list[dict]:
     result: list[dict] = []
 
     def _collect_and_prune(data: dict) -> None:
+        result.clear()  # el fallback sin lock puede reejecutar esta función
         stale = []
         for key, v in data.items():
+            if not isinstance(v, dict):
+                stale.append(key)
+                continue
             age = now - v.get("started_at", 0)
             pid = v.get("pid")
             if age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid)):
                 stale.append(key)
                 continue
-            result.append(
-                {
-                    "id": key,
-                    "tool": v.get("tool"),
-                    "model": v.get("model"),
-                    "source": v.get("source"),
-                    "chars_in": v.get("chars_in"),
-                    "elapsed_s": round(age, 1),
-                }
-            )
+            entry = {
+                "id": key,
+                "tool": v.get("tool"),
+                "model": v.get("model"),
+                "source": v.get("source"),
+                "chars_in": v.get("chars_in"),
+                "backend": v.get("backend"),
+                "elapsed_s": round(age, 1),
+            }
+            if v.get("chunks"):
+                entry["chunks"] = v.get("chunks")
+                entry["chunk"] = v.get("chunk")
+            result.append(entry)
         for key in stale:
             data.pop(key, None)
 
-    _inflight_mutate(_collect_and_prune)
+    # write_on_timeout=False: sondear el panel jamás debe reescribir el archivo con una
+    # foto vieja; si hay contención se pospone la poda al siguiente sondeo.
+    _inflight_mutate(_collect_and_prune, write_on_timeout=False)
     result.sort(key=lambda e: -e["elapsed_s"])
     return result
 
@@ -288,6 +342,7 @@ def _log_event(
     raw_len: int | None = None,
     path: str | None = None,
     json_schema: str | None = None,
+    chunks: int | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
     try:
@@ -300,8 +355,15 @@ def _log_event(
             "chars_out": int(chars_out),
             "latency_ms": int(latency_ms),
             "ok": bool(ok),
+            # dónde corrió la INFERENCIA: "local" (backend en esta máquina) o "remote"
+            # (p. ej. esta Mac usando el llama-swap de la PC). El MCP y la lectura de 'path'
+            # son siempre locales; esto separa el cómputo, no el origen del archivo.
+            "backend": config.backend_origin(),
+            "backend_host": config.backend_host(),
             "v": _get_version(),
         }
+        if chunks is not None and chunks > 1:
+            rec["chunks"] = int(chunks)
         if error is not None:
             rec["error"] = error
         if finish_reason is not None:
@@ -411,6 +473,63 @@ def _strip_think(s: str) -> str:
     return s.strip()
 
 
+def _run_chat(
+    model: str,
+    system: str,
+    user: str | list[dict],
+    max_tokens: int,
+    temperature: float,
+    *,
+    response_format: dict | None = None,
+    json_schema_fallback: bool = False,
+) -> tuple[ChatResult, int, str | None]:
+    """UNA llamada al endpoint bajo el semáforo de concurrencia.
+
+    Devuelve (resultado, latencia_ms, estado_json_schema). No registra nada en el log ni
+    toca el inflight: de eso se encargan _chat (una llamada = un evento) y _chat_chunked
+    (N llamadas = un evento con `chunks`).
+    """
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": False,
+    }
+    if response_format is not None:
+        payload["response_format"] = response_format
+
+    t0 = time.monotonic()
+    with _chat_slots:
+        result = _post_chat(model, payload)
+        json_schema_status = "used" if response_format is not None else None
+        if response_format is not None and not result.ok and result.error == "http_400":
+            if json_schema_fallback:
+                # El backend no soporta response_format con schema: reintenta en modo libre.
+                payload.pop("response_format", None)
+                result = _post_chat(model, payload)
+                json_schema_status = "fallback"
+            else:
+                json_schema_status = "error"
+    return result, int((time.monotonic() - t0) * 1000), json_schema_status
+
+
+def _savings_feedback(chars_in: int, tokens_in: int | None, label: str, char_estimate: bool) -> str:
+    """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side."""
+    tokens = tokens_in
+    if tokens is None and char_estimate:
+        tokens = chars_in // config.CHARS_PER_TOKEN
+    if tokens is None:
+        return ""
+    return (
+        f"\n\n(leído server-side: {chars_in:,} {label} ≈ {tokens:,} tokens "
+        "que no entraron a tu contexto)"
+    )
+
+
 def _chat(
     model: str,
     system: str,
@@ -435,34 +554,17 @@ def _chat(
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
     local_describe_image).
     """
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-        "stream": False,
-    }
-    if response_format is not None:
-        payload["response_format"] = response_format
-
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     try:
-        t0 = time.monotonic()
-        with _chat_slots:
-            result = _post_chat(model, payload)
-            json_schema_status = "used" if response_format is not None else None
-            if response_format is not None and not result.ok and result.error == "http_400":
-                if json_schema_fallback:
-                    # El backend no soporta response_format con schema: reintenta en modo libre.
-                    payload.pop("response_format", None)
-                    result = _post_chat(model, payload)
-                    json_schema_status = "fallback"
-                else:
-                    json_schema_status = "error"
-        latency_ms = int((time.monotonic() - t0) * 1000)
+        result, latency_ms, json_schema_status = _run_chat(
+            model,
+            system,
+            user,
+            max_tokens,
+            temperature,
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
+        )
     finally:
         _inflight_end(entry_id)
 
@@ -489,14 +591,198 @@ def _chat(
         json_schema=json_schema_status,
     )
     if source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        tokens = result.tokens_in
-        if tokens is None and feedback_char_estimate:
-            tokens = chars_in // config.CHARS_PER_TOKEN
-        if tokens is not None:
-            text += (
-                f"\n\n(leído server-side: {chars_in:,} {feedback_label} ≈ {tokens:,} tokens "
-                "que no entraron a tu contexto)"
-            )
+        text += _savings_feedback(
+            chars_in, result.tokens_in, feedback_label, feedback_char_estimate
+        )
+    return text
+
+
+# --- Chunking por límites naturales (local_translate / local_delegate) --------
+# Las tools que transforman el texto ENTERO producen tanta salida como entrada, así que una
+# sola llamada choca contra max_tokens y devuelve el documento cortado. Partimos la entrada
+# por el límite natural más grueso que sirva (headers Markdown -> párrafos -> líneas -> corte
+# duro) y traducimos/transformamos cada trozo por separado.
+#
+# Invariante: "".join(_chunk_text(t, n)) == t. Cada trozo conserva el separador original con
+# el que terminaba, así las costuras se reensamblan sin inventar ni perder saltos de línea.
+def _split_by_headers(text: str) -> list[str]:
+    """Corta justo ANTES de cada header Markdown (`# `…`###### `)."""
+    return [p for p in re.split(r"(?m)(?=^#{1,6} )", text) if p]
+
+
+def _split_by_paragraphs(text: str) -> list[str]:
+    """Corta DESPUÉS de cada línea en blanco (cada trozo conserva su `\\n\\n`)."""
+    return [p for p in re.split(r"(?<=\n\n)", text) if p]
+
+
+def _split_by_lines(text: str) -> list[str]:
+    """Corta después de cada `\\n` (cada trozo conserva su salto)."""
+    return [p for p in re.split(r"(?<=\n)", text) if p]
+
+
+_SPLITTERS = (_split_by_headers, _split_by_paragraphs, _split_by_lines)
+
+
+def _pack(pieces: list[str], max_chars: int) -> list[str]:
+    """Agrupa piezas consecutivas en trozos de <= max_chars (sin partir ninguna pieza)."""
+    packed: list[str] = []
+    current = ""
+    for piece in pieces:
+        if current and len(current) + len(piece) > max_chars:
+            packed.append(current)
+            current = piece
+        else:
+            current += piece
+    if current:
+        packed.append(current)
+    return packed
+
+
+def _chunk_text(text: str, max_chars: int, _level: int = 0) -> list[str]:
+    """Parte `text` en trozos de <= max_chars por el límite natural más grueso posible."""
+    if len(text) <= max_chars:
+        return [text]
+    if _level >= len(_SPLITTERS):
+        # Sin ningún límite natural utilizable (p. ej. un solo párrafo gigantesco): corte duro.
+        return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+    pieces = _SPLITTERS[_level](text)
+    if len(pieces) <= 1:
+        return _chunk_text(text, max_chars, _level + 1)
+    chunks: list[str] = []
+    for chunk in _pack(pieces, max_chars):
+        if len(chunk) > max_chars:
+            chunks.extend(_chunk_text(chunk, max_chars, _level + 1))
+        else:
+            chunks.append(chunk)
+    return chunks
+
+
+def _reattach_separator(chunk: str, output: str) -> str:
+    """Devuelve la salida del trozo con el separador original del final del trozo.
+
+    Conserva el formato en la costura: si el trozo terminaba en línea en blanco, la salida
+    también; si terminaba en un simple `\\n` (mitad de una lista o de un bloque de código),
+    no se inyecta un párrafo que no estaba en el original.
+    """
+    trailing = chunk[len(chunk.rstrip()) :]
+    return output.strip() + trailing
+
+
+def _chat_chunked(
+    model: str,
+    system: str,
+    content: str,
+    build_user,
+    *,
+    tool: str,
+    source: str,
+    temperature: float = 0.2,
+    truncated_in: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
+    chunk_chars: int | None = None,
+) -> str:
+    """Procesa `content` por trozos y concatena las salidas EN ORDEN.
+
+    Una llamada al backend por trozo (cada una con su propio `max_tokens <= CHUNK_MAX_TOKENS`),
+    un único evento en el log con `chunks: N`, y una sola entrada en "En curso" que va marcando
+    el trozo en proceso. Si un trozo aun así sale truncado, se vuelve a partir y se reintenta:
+    el resultado final llega completo en vez de con el aviso `[salida truncada]`.
+    """
+    chunk_chars = chunk_chars or config.CHUNK_CHARS
+    chunks = _chunk_text(content, chunk_chars)
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
+    )
+    outputs: list[str] = []
+    calls = 0
+    latency_ms = 0
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    failed: ChatResult | None = None
+    truncated_out = False
+
+    def _accumulate(result: ChatResult, ms: int) -> None:
+        nonlocal calls, latency_ms, tokens_in, tokens_out
+        calls += 1
+        latency_ms += ms
+        if result.tokens_in is not None:
+            tokens_in = (tokens_in or 0) + result.tokens_in
+        if result.tokens_out is not None:
+            tokens_out = (tokens_out or 0) + result.tokens_out
+
+    def _process(piece: str, depth: int = 0) -> str | None:
+        """Devuelve el texto del trozo, o None si el backend falló (aborta la operación)."""
+        nonlocal failed, truncated_out
+        max_tokens = min(len(piece) // 2 + 128, config.CHUNK_MAX_TOKENS)
+        result, ms, _schema = _run_chat(
+            model, system, build_user(piece.strip()), max_tokens, temperature
+        )
+        _accumulate(result, ms)
+        if not result.ok:
+            failed = result
+            return None
+        if result.finish_reason == "length" and depth < 2 and len(piece) > config.CHUNK_MIN_CHARS:
+            # El trozo seguía siendo demasiado grande para el techo de tokens: pártelo y
+            # reintenta en vez de devolver la salida cortada.
+            halves = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+            if len(halves) > 1:
+                parts: list[str] = []
+                for half in halves:
+                    out = _process(half, depth + 1)
+                    if out is None:
+                        return None
+                    parts.append(_reattach_separator(half, out))
+                return "".join(parts).strip()
+        if result.finish_reason == "length":
+            truncated_out = True
+        return _strip_think(result.text)
+
+    try:
+        for index, piece in enumerate(chunks, start=1):
+            _inflight_progress(entry_id, index)
+            output = _process(piece)
+            if output is None:
+                break
+            outputs.append(_reattach_separator(piece, output))
+    finally:
+        _inflight_end(entry_id)
+
+    if failed is not None:
+        text = failed.text
+        ok = False
+        error = failed.error
+        finish_reason = failed.finish_reason
+    else:
+        text = "".join(outputs).strip()
+        ok = True
+        error = None
+        finish_reason = "length" if truncated_out else "stop"
+        if truncated_out:
+            text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+
+    _log_event(
+        tool=tool,
+        model=model,
+        source=source,
+        chars_in=len(content),
+        chars_out=len(text),
+        latency_ms=latency_ms,
+        ok=ok,
+        error=error,
+        finish_reason=finish_reason,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        truncated_in=truncated_in,
+        truncated_out=truncated_out,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
+        chunks=calls,
+    )
+    if source == "path" and ok and config.FEEDBACK_ENABLED:
+        text += _savings_feedback(len(content), tokens_in, "chars", True)
+    if ok and calls > 1 and config.FEEDBACK_ENABLED:
+        text += f"\n\n(procesado en {calls} trozos por local-delegate)"
     return text
 
 
@@ -725,27 +1011,46 @@ def local_delegate(
     input: str,
     output_format: str,
     model: str | None = None,
+    chunk: str = "auto",
 ) -> str:
     """Tool genérica de escape: delega una tarea texto->texto a un modelo local.
 
     Úsala cuando ninguna tool específica encaje. Arma el prompt con guardrails y devuelve texto.
+
+    Con entradas largas parte el input por límites naturales (headers Markdown, párrafos),
+    aplica la MISMA tarea a cada trozo y concatena las salidas en orden. Eso es lo correcto
+    para transformar todo el texto (traducir, reescribir, reformatear) pero NO para tareas de
+    reducción sobre el conjunto (contar, elegir el máximo, un único resumen global): para esas
+    pasa `chunk='off'` o usa `local_summarize`.
 
     Args:
         task: Instrucción de la tarea (una frase con formato de salida explícito).
         input: Contenido sobre el que operar.
         output_format: Formato exacto de salida esperado.
         model: Modelo a usar; uno de los ids configurados en el catálogo. Por defecto el mecánico.
+        chunk: 'auto' (parte solo si el input es largo), 'on' (parte siempre que se pueda),
+            'off' (una sola llamada; el input largo puede volver truncado).
     """
     chosen = model or config.MODEL_MECHANICAL
     if chosen not in config.ALLOWED_MODELS:
         return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {sorted(config.ALLOWED_MODELS)}"
+    if chunk not in {"auto", "on", "off"}:
+        return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
     system = _guard(output_format)
-    user = f"{task}\n\nInput:\n{input}"
+    if chunk == "on" or (chunk == "auto" and len(input) > config.CHUNK_CHARS):
+        return _chat_chunked(
+            chosen,
+            system,
+            input,
+            lambda piece: f"{task}\n\nInput:\n{piece}",
+            tool="local_delegate",
+            source="inline",
+        )
     return _chat(
         chosen,
         system,
-        user,
-        max_tokens=1024,
+        f"{task}\n\nInput:\n{input}",
+        max_tokens=config.CHUNK_MAX_TOKENS,
         tool="local_delegate",
         chars_in=len(input),
         source="inline",
@@ -871,6 +1176,10 @@ def local_translate(
     'text'. Conserva el formato del original y devuelve SOLO la traducción. Enruta al modelo
     mecánico (corto) o al de contexto largo (largo) automáticamente.
 
+    Los documentos largos se parten por límites naturales (headers Markdown, párrafos) y cada
+    trozo se traduce en su propia llamada; el resultado vuelve completo y en orden, sin el
+    aviso de salida truncada.
+
     Args:
         target_lang: Idioma destino (p. ej. 'español', 'inglés', 'francés').
         text: Texto a traducir (usa esto o 'path').
@@ -883,14 +1192,12 @@ def local_translate(
     system = _guard(
         f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios"
     )
-    user = f"Traduce al {target_lang} el siguiente texto:\n\n{content}"
-    result = _chat(
+    result = _chat_chunked(
         model,
         system,
-        user,
-        max_tokens=min(len(content) // 2 + 128, 2048),
+        content,
+        lambda piece: f"Traduce al {target_lang} el siguiente texto:\n\n{piece}",
         tool="local_translate",
-        chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
         raw_len=raw_len,
@@ -1160,7 +1467,9 @@ def local_status() -> str:
     lines: list[str] = [f"local-delegate v{_get_version()}", ""]
 
     backend_up, models = _models_with_status()
+    origin = "local (esta máquina)" if config.backend_origin() == "local" else "REMOTO"
     lines.append(f"Backend: {config.BASE_URL} — {'arriba' if backend_up else 'CAÍDO'}")
+    lines.append(f"  cómputo: {origin} — {config.backend_host()}")
     if backend_up:
         if models:
             shown = ", ".join(
@@ -1241,6 +1550,8 @@ _CLI_COMMANDS = {
     "init-llamaswap",
     "doctor",
     "serve",
+    "install",
+    "uninstall",
 }  # subcomandos explícitos, ver cli.py
 
 
