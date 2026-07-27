@@ -6,6 +6,57 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`local-delegate install` / `uninstall`:** la instalación deja de ser solo el servidor MCP.
+  Un comando registra la entrada MCP (Claude Code y Codex), copia los hooks consultivos a
+  `~/.claude/hooks/local-delegate/` y los inscribe en `settings.json`, instala la skill
+  `delegacion-local` y escribe un bloque gestionado con la regla de delegación en
+  `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md`. Idempotente (marcadores `begin/end`, hooks
+  desregistrados antes de reinscribirse), con `--dry-run`, backups `.bak`, exclusión por
+  componente (`--no-hooks`/`--no-skill`/`--no-memory`/`--no-mcp`) y reversión completa. Los
+  hooks, la skill y el bloque de memoria ahora viajan **dentro del paquete**
+  (`src/local_delegate/resources/`).
+- **Chunking de salida** en `local_translate` y `local_delegate`: las entradas largas se parten
+  por límites naturales (headers Markdown → párrafos → líneas → corte duro) y se procesa un
+  trozo por llamada respetando `max_tokens`, concatenando en orden y reponiendo el separador
+  original en cada costura. Un documento de 20 000+ caracteres vuelve **completo** en vez de
+  cortado con `[salida truncada]`; si un trozo aun así trunca, se vuelve a partir y se
+  reintenta. La operación se registra como **un** evento con `chunks: N` y el panel "En curso"
+  muestra el progreso `trozo i/N`. Configurable con `LOCAL_DELEGATE_CHUNK_CHARS`,
+  `_CHUNK_MAX_TOKENS` y `_CHUNK_MIN_CHARS`; `local_delegate` acepta `chunk='auto'|'on'|'off'`.
+- **Origen del cómputo en el log y el dashboard:** cada evento registra `backend`
+  (`local`/`remote`, por el host del endpoint) y `backend_host`. El dashboard lo muestra en un
+  donut nuevo, una insignia en el panel de backend, una columna en la actividad y agregados en
+  `/api/stats`, así se distingue lo generado por el backend de esta máquina de lo generado con
+  la GPU de otra (p. ej. la Mac usando la PC). Los eventos previos se muestran como `n/d`, no
+  como locales. `local_status` también lo reporta.
+
+### Changed
+- El dashboard trabaja en la **zona horaria del equipo**: "Hoy" empieza a tu medianoche, las
+  barras agrupan por tu día natural, el rango personalizado interpreta las fechas como locales
+  y la tabla muestra tu hora (antes todo se calculaba en UTC, así que las delegaciones de la
+  tarde/noche caían en el día equivocado o quedaban fuera de "Hoy"). El log sigue en UTC.
+- El indicador de actividad tiene tres estados —`EN CURSO`, `EN VIVO`, `EN REPOSO`— y ya no
+  depende del rango elegido ni del auto-refresco: se apoya en las delegaciones vivas y en el
+  último evento de todo el histórico, se repinta cada segundo y descuenta el desfase entre el
+  reloj del navegador y el del servidor. Los sondeos se refrescan al volver a la pestaña.
+- `local_delegate` sube su techo de salida de 1024 a 2048 tokens.
+
+### Fixed
+- **Delegaciones en curso perdidas o fantasma:** `inflight.json` se publicaba a través de un
+  temporal de nombre **fijo**, así que dos procesos MCP escribiendo a la vez (varias sesiones
+  `stdio`, o una sesión y el daemon) se pisaban el temporal. Ahora el temporal lleva el pid.
+- El sondeo del panel reescribía `inflight.json` cada 2 s aunque no hubiera cambios,
+  compitiendo por el lock con las delegaciones reales; ahora solo se escribe si algo cambió y
+  el sondeo nunca escribe sin el lock (una entrada recién registrada por otro proceso ya no
+  puede perderse).
+- Los hooks documentados usaban `{"type":"command","command":"python","args":[…]}`, formato que
+  Claude Code no soporta: quedaban registrados pero **nunca ejecutaban** el script. El
+  instalador y la recipe usan un único string de comando.
+- `_pid_alive` en Windows llamaba a `OpenProcess` sin `restype`/`argtypes`, con lo que ctypes
+  truncaba el HANDLE de 64 bits y `CloseHandle` recibía un handle inválido: el daemon filtraba
+  un handle por cada sondeo del dashboard.
+
 ## [0.10.0] - 2026-07-23
 
 ### Added

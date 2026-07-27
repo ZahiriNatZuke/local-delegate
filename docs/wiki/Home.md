@@ -7,6 +7,7 @@ Documentación extendida del MCP `local-delegate`. Para empezar rápido, ve al
 
 - **[Architecture](Architecture.md)** — daemon HTTP/compatibilidad stdio → endpoint OpenAI-compatible, guardrail, logging y dashboard.
 - **[Daemon compartido](Daemon.md)** — un solo MCP persistente para Codex, Claude Code y otros clientes.
+- **[Instalación de la integración](Integration-install.md)** — `install`/`uninstall`: entrada MCP, hooks, skill y bloque de memoria en CLAUDE.md/AGENTS.md.
 - **[Configuration](Configuration.md)** — referencia completa de variables de entorno.
 - **[Backend versions](Backend-versions.md)** — versiones probadas de llama-server/llama-swap, workspace de referencia y `local-delegate doctor`.
 - **[Backend remoto Mac → PC](Remote-backend.md)** — MCP local en la Mac, inferencia autenticada en la GPU de la PC y `path` correcto.

@@ -30,6 +30,14 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada por modelo |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
+| `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
+| `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
+| `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | trozo mínimo: por debajo ya no se vuelve a partir aunque el modelo trunque |
+
+> El chunking existe porque traducir/reescribir produce tanta salida como entrada: con una sola
+> llamada un documento de 20 000+ chars choca contra `max_tokens` y vuelve cortado. `CHUNK_CHARS`
+> se elige para que la salida de un trozo quepa holgada bajo `CHUNK_MAX_TOKENS` (3500 chars ≈
+> 875-1200 tokens contra un techo de 2048). Súbelo solo si tu modelo tolera respuestas más largas.
 
 > `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids
 > de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.

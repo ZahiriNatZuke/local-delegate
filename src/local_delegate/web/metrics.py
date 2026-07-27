@@ -166,6 +166,28 @@ def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[st
     return rows, files_read
 
 
+def _last_event_ts() -> str | None:
+    """ts del evento más reciente de TODO el histórico (no del rango elegido).
+
+    El indicador EN CURSO/EN VIVO/EN REPOSO del dashboard tiene que ser independiente del
+    selector de rango: mirar solo el rango hacía que "Hoy" (o un mes pasado) apagara el
+    indicador aunque el MCP acabara de trabajar. Solo abre el archivo más nuevo y se apoya
+    en el cache por (mtime, size), así que sondearlo es barato.
+    """
+    files = _log_files()
+    if not files:
+        return None
+    # el archivo del mes más reciente primero; el legado (ym=None) al final como respaldo
+    ordered = sorted(files, key=lambda f: (f[1] is not None, f[1] or ""), reverse=True)
+    for path, _ym in ordered:
+        rows = _read_file_cached(path)
+        for row in reversed(rows):
+            ts = row.get("ts")
+            if isinstance(ts, str) and ts:
+                return ts
+    return None
+
+
 def _aggregate(rows: list[dict]) -> dict:
     by_tool: dict[str, dict] = defaultdict(
         lambda: {
@@ -178,11 +200,17 @@ def _aggregate(rows: list[dict]) -> dict:
         }
     )
     by_model: dict[str, dict] = defaultdict(lambda: {"calls": 0, "chars_in": 0, "chars_out": 0})
+    # Origen del CÓMPUTO: "local" (backend en esta máquina), "remote" (p. ej. esta Mac usando
+    # la GPU de la PC) o "unknown" para eventos anteriores a que se registrara el campo.
+    by_backend: dict[str, dict] = defaultdict(
+        lambda: {"calls": 0, "chars_in": 0, "chars_out": 0, "saved_chars": 0, "hosts": set()}
+    )
     total = {"calls": 0, "chars_in": 0, "chars_out": 0, "errors": 0, "chars_in_path": 0}
 
     for r in rows:
         tool = str(r.get("tool", "?"))
         model = str(r.get("model", "?"))
+        backend = str(r.get("backend") or "unknown")
         ci = int(r.get("chars_in", 0) or 0)
         co = int(r.get("chars_out", 0) or 0)
         lat = int(r.get("latency_ms", 0) or 0)
@@ -202,6 +230,16 @@ def _aggregate(rows: list[dict]) -> dict:
         m["calls"] += 1
         m["chars_in"] += ci
         m["chars_out"] += co
+
+        b = by_backend[backend]
+        b["calls"] += 1
+        b["chars_in"] += ci
+        b["chars_out"] += co
+        if is_path:
+            b["saved_chars"] += ci
+        host = r.get("backend_host")
+        if isinstance(host, str) and host:
+            b["hosts"].add(host)
 
         total["calls"] += 1
         total["chars_in"] += ci
@@ -226,6 +264,18 @@ def _aggregate(rows: list[dict]) -> dict:
     models = [
         {"model": n, **v} for n, v in sorted(by_model.items(), key=lambda kv: -kv[1]["calls"])
     ]
+    backends = [
+        {
+            "backend": name,
+            "calls": v["calls"],
+            "chars_in": v["chars_in"],
+            "chars_out": v["chars_out"],
+            "tokens_saved": v["saved_chars"] // CHARS_PER_TOKEN,
+            "tokens_generated": v["chars_out"] // CHARS_PER_TOKEN,
+            "hosts": sorted(v["hosts"]),
+        }
+        for name, v in sorted(by_backend.items(), key=lambda kv: -kv[1]["calls"])
+    ]
 
     return {
         "total": total,
@@ -233,6 +283,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "tokens_generated_local": total["chars_out"] // CHARS_PER_TOKEN,
         "by_tool": tools,
         "by_model": models,
+        "by_backend": backends,
     }
 
 
@@ -265,8 +316,21 @@ def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(
 
 @app.get("/api/inflight")
 def inflight():
-    """Delegaciones en curso en ESTE proceso (ver limitación en el docstring del módulo)."""
-    return JSONResponse({"inflight": server.inflight_snapshot()})
+    """Delegaciones en curso de todas las sesiones + señales de actividad del dashboard.
+
+    `last_event_ts` es el evento más reciente de TODO el histórico y `now` la hora del
+    servidor: con esos dos el cliente decide EN CURSO / EN VIVO / EN REPOSO sin depender del
+    rango seleccionado ni de la hora (posiblemente desajustada) del navegador.
+    """
+    snapshot = server.inflight_snapshot()
+    return JSONResponse(
+        {
+            "inflight": snapshot,
+            "count": len(snapshot),
+            "last_event_ts": _last_event_ts(),
+            "now": datetime.now(timezone.utc).isoformat(),
+        }
+    )
 
 
 @app.get("/api/backend")
@@ -290,7 +354,15 @@ def backend():
     except (httpx.HTTPError, ValueError):
         running = []
     backend_up, models = server._models_with_status()
-    return JSONResponse({"available": backend_up, "running": running, "models": models})
+    return JSONResponse(
+        {
+            "available": backend_up,
+            "running": running,
+            "models": models,
+            "origin": config.backend_origin(),
+            "host": config.backend_host(),
+        }
+    )
 
 
 @app.get("/api/backend/stats")
@@ -343,7 +415,13 @@ def status():
         {
             "version": server._get_version(),
             "base_url": config.BASE_URL,
-            "backend": {"available": backend_up, "models": models},
+            "backend": {
+                "available": backend_up,
+                "models": models,
+                # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
+                "origin": config.backend_origin(),
+                "host": config.backend_host(),
+            },
             "catalog": catalog,
             "tools": tools,
             "log_dir": str(config.LOG_DIR),
@@ -482,8 +560,10 @@ a{color:var(--blue);text-decoration:none}
   border:1px solid color-mix(in srgb,var(--acc) 32%,transparent);border-radius:999px;padding:4px 9px;
   align-self:center;transition:.25s}
 .live.stale{color:var(--mut);background:color-mix(in srgb,var(--mut) 12%,transparent);border-color:color-mix(in srgb,var(--mut) 30%,transparent)}
+.live.busy{color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);border-color:color-mix(in srgb,var(--amber) 34%,transparent)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 0 var(--acc);animation:pulse 2s infinite}
 .live.stale .live-dot{background:var(--mut);animation:none}
+.live.busy .live-dot{background:var(--amber);animation:pulse 1.1s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 70%,transparent)}
   70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -539,7 +619,9 @@ select.btn{appearance:none;padding-right:28px;
 
 .cols{grid-template-columns:1.5fr 1fr;margin-top:16px}
 .cols2{grid-template-columns:1fr 1fr;margin-top:16px}
-@media(max-width:880px){.cols,.cols2{grid-template-columns:1fr}}
+.cols3{grid-template-columns:1fr 1fr 1fr;margin-top:16px}
+@media(max-width:1040px){.cols3{grid-template-columns:1fr 1fr}}
+@media(max-width:880px){.cols,.cols2,.cols3{grid-template-columns:1fr}}
 .panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
 .panel-h h2{font-size:13px;font-weight:700;margin:0;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
 .panel-h h2::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--hc,var(--acc));opacity:.9}
@@ -564,6 +646,15 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .src{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
 .src.path{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
 .src.inline{background:color-mix(in srgb,var(--mut) 16%,transparent);color:var(--mut)}
+/* origen del CÓMPUTO (backend local de esta máquina vs GPU remota) */
+.org{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;text-transform:uppercase}
+.org.local{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
+.org.remote{background:color-mix(in srgb,var(--cyan) 16%,transparent);color:var(--cyan)}
+.org.unknown{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.pill.org.local{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
+.pill.org.remote{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 32%,transparent)}
+.chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
+  background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
 .flow{color:var(--faint)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .dot.ok{background:var(--acc);box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
@@ -712,7 +803,9 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 
   <div class="grid duo">
     <div class="card" style="--hc:var(--violet)">
-      <div class="panel-h"><h2>Backend local</h2><span id="backendPill" class="pill down">sin datos</span></div>
+      <div class="panel-h"><h2>Backend</h2><span style="display:flex;gap:6px;align-items:center">
+        <span id="originPill" class="pill org local" style="display:none">cómputo local</span>
+        <span id="backendPill" class="pill down">sin datos</span></span></div>
       <div id="modelsBody"><div class="empty" style="padding:16px">Consultando el backend…</div></div>
       <div class="subh">Rendimiento del backend <span class="mut" id="bstatsHead"></span></div>
       <div id="backendStats"><div class="empty" style="padding:12px">sin datos</div></div>
@@ -742,7 +835,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
   </div>
 
-  <div class="grid cols2">
+  <div class="grid cols3">
     <div class="card chartcard" style="--hc:var(--violet)">
       <div class="panel-h"><h2>Llamadas por modelo</h2><span class="mut">llamadas</span></div>
       <div class="cbox donut"><canvas id="modelBar"></canvas></div>
@@ -750,6 +843,10 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="card chartcard" style="--hc:var(--acc)">
       <div class="panel-h"><h2>Origen del input</h2><span class="mut">path = ahorro real</span></div>
       <div class="cbox donut"><canvas id="srcDonut"></canvas></div>
+    </div>
+    <div class="card chartcard" style="--hc:var(--cyan)">
+      <div class="panel-h"><h2>Dónde corrió el cómputo</h2><span class="mut" id="backendHosts">local vs remoto</span></div>
+      <div class="cbox donut"><canvas id="originDonut"></canvas></div>
     </div>
   </div>
 
@@ -791,7 +888,8 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 <script>
 const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
 const state = {events:[], range:'today', auto:true, charts:{},
-  page:0, status:null, running:{}, backendUp:undefined, inflight:[]};
+  page:0, status:null, running:{}, backendUp:undefined, inflight:[],
+  activity:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const tok = c => Math.round(c/CPT);
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
@@ -806,8 +904,12 @@ function hGrad(chart,from,to){ const a=chart.chartArea; if(!a) return from;
   const g=chart.ctx.createLinearGradient(a.left,0,a.right,0); g.addColorStop(0,from); g.addColorStop(1,to); return g; }
 function palette(){ return [cssv('--acc'),cssv('--blue'),cssv('--violet'),cssv('--amber'),cssv('--cyan'),cssv('--pink'),cssv('--danger')]; }
 
-// texto central en donuts
-Chart.register({ id:'centerText',
+// Chart.js viene de un CDN: en una máquina sin salida a internet (o con el CDN caído) no
+// carga. El panel es local-first, así que degrada a "sin gráficos" en vez de romperse entero:
+// KPIs, tabla de actividad, backend, sistema e indicador de actividad siguen funcionando.
+const HAS_CHART = typeof Chart !== 'undefined';
+
+if(HAS_CHART) Chart.register({ id:'centerText',
   afterDraw(chart,args,opts){
     if(!opts||!opts.text) return;
     const a=chart.chartArea; if(!a) return; const ctx=chart.ctx;
@@ -819,6 +921,7 @@ Chart.register({ id:'centerText',
   }});
 
 function applyDefaults(){
+  if(!HAS_CHART) return;
   Chart.defaults.font.family=SANS; Chart.defaults.font.size=11;
   Chart.defaults.color=cssv('--mut');
   Chart.defaults.animation.duration=650; Chart.defaults.animation.easing='easeOutQuart';
@@ -844,24 +947,40 @@ const ICON = {
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11.2V16"/><path d="M12 8h.01"/></svg>',
 };
 
-// Presets de rango -> {from, to} ISO. 'custom' lee los <input type=date>.
+// --- Zona horaria ------------------------------------------------------------
+// El log se escribe en UTC (instantes sin ambigüedad), pero los rangos, los días del
+// gráfico y las horas de la tabla son del USUARIO: "Hoy" tiene que ser hoy en tu reloj,
+// no el día UTC. Todo lo que se manda al servidor sigue siendo un instante absoluto
+// (toISOString() incluye el offset), así que el backend no necesita saber tu zona.
+const TZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'local';
+const TZ_OFFSET_TXT = (()=>{ const m=-new Date().getTimezoneOffset();
+  const s=m<0?'-':'+', a=Math.abs(m); return 'UTC'+s+String(Math.floor(a/60)).padStart(2,'0')+':'+String(a%60).padStart(2,'0'); })();
+// medianoche LOCAL del día de `d`, desplazada `deltaDays`
+function localMidnight(d, deltaDays){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()+(deltaDays||0)); }
+// clave YYYY-MM-DD en hora LOCAL (no uses toISOString(): eso vuelve a UTC)
+function localDayKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const FMT_TIME = new Intl.DateTimeFormat('es',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+function fmtLocalTs(ts){ const d=new Date(ts); return isFinite(d) ? FMT_TIME.format(d).replace(',','') : (ts||''); }
+
+// Presets de rango -> {from, to} ISO absoluto. 'custom' lee los <input type=date> (que el
+// navegador entrega como fecha local, así que se interpretan en hora local).
 function computeRange(preset){
   const now = new Date();
-  if(preset==='today'){
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    return {from:start.toISOString(), to:now.toISOString()};
-  }
-  if(preset==='7') return {from:new Date(now-7*864e5).toISOString(), to:now.toISOString()};
-  if(preset==='30') return {from:new Date(now-30*864e5).toISOString(), to:now.toISOString()};
+  if(preset==='today') return {from:localMidnight(now).toISOString(), to:now.toISOString()};
+  if(preset==='7') return {from:localMidnight(now,-6).toISOString(), to:now.toISOString()};
+  if(preset==='30') return {from:localMidnight(now,-29).toISOString(), to:now.toISOString()};
   if(preset==='prev-month'){
-    const y=now.getUTCFullYear(), m=now.getUTCMonth();
-    const start=new Date(Date.UTC(y, m-1, 1)), end=new Date(Date.UTC(y, m, 1));
-    return {from:start.toISOString(), to:end.toISOString()};
+    const y=now.getFullYear(), m=now.getMonth();
+    return {from:new Date(y, m-1, 1).toISOString(), to:new Date(y, m, 1).toISOString()};
   }
   if(preset==='all') return {from:'2000-01-01T00:00:00Z', to:now.toISOString()};
   if(preset==='custom'){
     const f=document.getElementById('rangeFrom').value, t=document.getElementById('rangeTo').value;
-    return {from:f?new Date(f+'T00:00:00Z').toISOString():null, to:t?new Date(t+'T23:59:59Z').toISOString():null};
+    const [fy,fm,fd]=(f||'').split('-').map(Number), [ty,tm,td]=(t||'').split('-').map(Number);
+    return {from:f?new Date(fy,fm-1,fd,0,0,0).toISOString():null,
+            to:t?new Date(ty,tm-1,td,23,59,59,999).toISOString():null};
   }
   return {from:null, to:null};
 }
@@ -878,7 +997,8 @@ async function fetchData(){
     const cnt = F.format(state.meta.count||0);
     const filesN = (state.meta.files_read||[]).length;
     document.getElementById('foot').textContent =
-      (state.meta.log_dir||'') + '   ·   ' + cnt + ' eventos   ·   ' + filesN + ' archivo(s) leído(s)   ·   ~' + CPT + ' chars/token   ·   local·delegate';
+      (state.meta.log_dir||'') + '   ·   ' + cnt + ' eventos   ·   ' + filesN + ' archivo(s) leído(s)   ·   ~' + CPT
+      + ' chars/token   ·   horas en ' + TZ + ' (' + TZ_OFFSET_TXT + ')   ·   local·delegate';
   }catch(e){
     document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
     document.getElementById('live').classList.add('stale');
@@ -913,6 +1033,21 @@ function renderBackend(){
   pill.className = 'pill '+(up?'up':'down');
   pill.textContent = up?'conectado':'caído';
   pill.title = st.base_url||'';
+  // Dónde corre la INFERENCIA: loopback = esta máquina; cualquier otro host = GPU remota
+  // (p. ej. esta Mac contra el llama-swap de la PC). El MCP y la lectura de 'path' son
+  // siempre locales — esta insignia habla del cómputo, no de los archivos.
+  const origin = state.backendOrigin || ((st.backend||{}).origin) || null;
+  const host = state.backendHost || ((st.backend||{}).host) || '';
+  const oPill = document.getElementById('originPill');
+  if(oPill){
+    if(origin){
+      oPill.className = 'pill org '+origin;
+      oPill.textContent = origin==='remote' ? 'cómputo remoto' : 'cómputo local';
+      oPill.title = (origin==='remote'
+        ? 'La inferencia corre en otra máquina: ' : 'La inferencia corre en esta máquina: ')+(host||st.base_url||'');
+      oPill.style.display='';
+    } else { oPill.style.display='none'; }
+  }
   // ids desde el backend + catálogo. El status loaded/unloaded (#901) sale de state.modelStatus,
   // refrescado en el poll rápido de 2s (no del /api/status de 60s) para que "montado" no se desfase.
   const statusById = state.modelStatus || {};
@@ -972,18 +1107,34 @@ async function pollInflight(){
     const [ir, br] = await Promise.all([fetch('/api/inflight'), fetch('/api/backend')]);
     const ij = await ir.json(), bj = await br.json();
     state.backendUp = !!bj.available;
+    if(bj.origin) state.backendOrigin = bj.origin;
+    if(bj.host) state.backendHost = bj.host;
     state.running = {};
     if(bj.available) (bj.running||[]).forEach(m=>{ if(m.model) state.running[m.model]=m.state||'ready'; });
     // #901 fresco cada 2s: loaded/unloaded por modelo (antes solo llegaba vía /api/status a 60s)
     state.modelStatus = {};
     (bj.models||[]).forEach(m=>{ if(m && m.id && m.status) state.modelStatus[m.id]=m.status; });
     state.inflight = ij.inflight||[];
-    renderBackend(); renderTools();
+    const serverNow = Date.parse(ij.now), lastMs = ij.last_event_ts ? Date.parse(ij.last_event_ts) : 0;
+    state.activity = {
+      lastEventTs: ij.last_event_ts || null,
+      lastEventMs: isFinite(lastMs) ? lastMs : 0,
+      // desfase reloj-navegador vs reloj-servidor: si el equipo tiene la hora corrida, el
+      // "hace N minutos" seguiría siendo correcto
+      skewMs: isFinite(serverNow) ? (Date.now() - serverNow) : 0,
+    };
+    renderBackend(); renderTools(); updateLive();
     document.getElementById('inflightBody').innerHTML = state.inflight.length
-      ? state.inflight.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-          <span class="badge model">${it.model}</span>
-          <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`).join('')
+      ? state.inflight.map(it=>{
+          const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
+          const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
+          return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
+            <span class="badge model">${it.model}</span>${chunk}${org}
+            <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`;
+        }).join('')
       : '<div class="ifrow" style="color:var(--faint)">Sin delegaciones en curso</div>';
+    document.getElementById('inflightHead').innerHTML =
+      'En curso' + (state.inflight.length ? ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>' : '');
   }catch(e){ /* el panel de inflight es opcional: si falla, la web sigue funcionando */ }
 }
 
@@ -1017,12 +1168,24 @@ async function pollSystem(){
   }catch(e){ /* el panel de sistema es opcional: si falla, la web sigue funcionando */ }
 }
 
+// Estado de actividad. Antes se calculaba SOLO dentro de fetchData(), con el evento más
+// reciente DEL RANGO elegido: con el auto-refresco apagado se congelaba, y con un rango
+// pasado (o "Hoy" en UTC) mentía. Ahora se apoya en /api/inflight (delegaciones vivas +
+// último evento de todo el histórico + hora del servidor) y lo repinta un tick de 1 s.
+const IDLE_MIN = 30;   // minutos sin actividad para considerar reposo
 function updateLive(){
-  const live=document.getElementById('live'), txt=document.getElementById('liveTxt');
-  if(!state.events.length){ live.classList.add('stale'); txt.textContent='SIN DATOS'; return; }
-  const last=Date.parse(state.events[0].ts); const mins=isFinite(last)?(Date.now()-last)/6e4:1e9;
-  if(mins>30){ live.classList.add('stale'); txt.textContent='EN REPOSO'; }
-  else{ live.classList.remove('stale'); txt.textContent='EN VIVO'; }
+  const live=document.getElementById('live'), txt=document.getElementById('liveTxt'), a=state.activity;
+  const set=(cls,label,title)=>{ live.classList.toggle('stale',cls==='stale');
+    live.classList.toggle('busy',cls==='busy'); txt.textContent=label; live.title=title; };
+  if(state.inflight && state.inflight.length){
+    const n=state.inflight.length;
+    return set('busy','EN CURSO'+(n>1?' ('+n+')':''), n+' delegación(es) ejecutándose ahora');
+  }
+  if(!a || !a.lastEventMs){ return set('stale','SIN DATOS','Todavía no hay ninguna delegación registrada'); }
+  // el desfase entre el reloj del navegador y el del servidor se descuenta con a.skewMs
+  const mins=(Date.now()-a.skewMs-a.lastEventMs)/6e4;
+  if(mins>IDLE_MIN) return set('stale','EN REPOSO','Última delegación '+fmtLocalTs(a.lastEventTs)+' ('+Math.round(mins)+' min)');
+  set('','EN VIVO','Última delegación '+fmtLocalTs(a.lastEventTs));
 }
 
 function kpiCard(o){
@@ -1059,14 +1222,25 @@ function render(){
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Tasa de error',
        hint:'<span class="num">'+F.format(errs)+'</span> fallos',tip:'Porcentaje de llamadas con ok=false.'});
 
-  drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev); drawActivity(ev);
+  if(HAS_CHART){
+    drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
+    drawOriginDonut(ev);
+  } else {
+    document.querySelectorAll('.cbox').forEach(el=>{
+      el.innerHTML='<div class="empty">Gráficos no disponibles: no se pudo cargar Chart.js (¿sin conexión?). El resto del panel funciona igual.</div>';
+    });
+  }
+  drawActivity(ev);
   bindTips();
 }
 
+// Agrupado por día LOCAL: el ts del log es UTC, así que un evento de las 21:00 en UTC-5
+// pertenece al día siguiente en UTC y caería en la barra equivocada si se cortara el string.
 function byDay(ev){
   const m = new Map();
-  ev.forEach(e=>{ const d=(e.ts||'').slice(0,10); if(!d) return;
-    const cur=m.get(d)||{saved:0,calls:0}; if(e.source==='path') cur.saved+=e.chars_in||0; cur.calls++; m.set(d,cur); });
+  ev.forEach(e=>{ const d=new Date(e.ts); if(!isFinite(d)) return;
+    const k=localDayKey(d);
+    const cur=m.get(k)||{saved:0,calls:0}; if(e.source==='path') cur.saved+=e.chars_in||0; cur.calls++; m.set(k,cur); });
   return [...m.entries()].sort((a,b)=>a[0]<b[0]?-1:1);
 }
 
@@ -1134,6 +1308,31 @@ function barH(id,pairs,unit,color){
 function drawToolDonut(ev){ barH('toolDonut',agg(ev.filter(e=>e.source==='path'),'tool',e=>tok(e.chars_in||0)),'tok',cssv('--acc')); }
 function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv('--violet')); }
 
+// Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
+// que se registrara el campo salen como "n/d" en vez de asumirse locales.
+function drawOriginDonut(ev){
+  const label=b=>b==='remote'?'remoto':b==='local'?'local':'n/d';
+  const pairs=agg(ev.map(e=>({b:e.backend||'unknown'})),'b',()=>1);
+  const hosts=[...new Set(ev.map(e=>e.backend_host).filter(Boolean))];
+  const hostEl=document.getElementById('backendHosts');
+  if(hostEl) hostEl.textContent = hosts.length?hosts.slice(0,2).join(' · ')+(hosts.length>2?' +'+(hosts.length-2):''):'local vs remoto';
+  const el=fresh('originDonut');
+  const total=pairs.reduce((a,p)=>a+p[1],0);
+  const remoteN=(pairs.find(p=>p[0]==='remote')||[,0])[1];
+  const pct=total?Math.round(100*remoteN/total):0;
+  const colFor=b=>b==='remote'?cssv('--cyan'):b==='local'?cssv('--acc'):cssv('--mut');
+  if(!pairs.length){ return state.charts.originDonut=new Chart(el,{type:'doughnut',
+    data:{labels:['sin datos'],datasets:[{data:[1],backgroundColor:[cssv('--bd')],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},centerText:false}}}); }
+  state.charts.originDonut=new Chart(el,{type:'doughnut',
+    data:{labels:pairs.map(p=>label(p[0])),datasets:[{data:pairs.map(p=>p[1]),
+      backgroundColor:pairs.map(p=>colFor(p[0])),borderColor:cssv('--panel'),borderWidth:3,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
+      plugins:{centerText:{text:pct+'%',sub:'remoto',color:cssv('--cyan')},
+        legend:{position:'bottom',labels:{color:cssv('--mut'),boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'circle',padding:14,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+F.format(c.parsed)+' llamadas'}}}}});
+}
+
 function drawSrcDonut(ev){
   const pairs=agg(ev,'source',()=>1); const el=fresh('srcDonut');
   const total=pairs.reduce((a,p)=>a+p[1],0);
@@ -1162,11 +1361,15 @@ function drawActivity(ev){
   const pages=Math.max(1,Math.ceil(ev.length/PAGE));
   state.page=Math.min(Math.max(state.page,0),pages-1);
   const rows=ev.slice(state.page*PAGE,state.page*PAGE+PAGE);
-  let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Origen</th><th class="mono">Chars in→out</th><th class="mono">Latencia</th><th>OK</th></tr></thead><tbody>';
-  rows.forEach(e=>{ const time=(e.ts||'').replace('T',' ').replace(/(\+.*|Z)$/,'').slice(5,16);
-    h+=`<tr><td class="mono">${time}</td><td><span class="badge">${e.tool}</span></td>
+  let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Input</th><th>Cómputo</th><th class="mono">Chars in→out</th><th class="mono">Latencia</th><th>OK</th></tr></thead><tbody>';
+  rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
+    const org=e.backend||'unknown';
+    const orgTxt=org==='remote'?'remoto':org==='local'?'local':'n/d';
+    const chunks=e.chunks?`<span class="chunkchip" title="Procesado en ${e.chunks} trozos">${e.chunks}×</span>`:'';
+    h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span></td>
       <td><span class="src ${e.source}">${e.source}</span></td>
+      <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
       <td class="mono">${F.format(e.latency_ms||0)} ms</td>
       <td><span class="dot ${e.ok?'ok':'err'}"></span></td></tr>`; });
@@ -1216,6 +1419,14 @@ setInterval(()=>{ if(state.auto) fetchData(); },15000);
 setInterval(pollInflight,2000);
 setInterval(pollSystem,5000);
 setInterval(fetchStatus,60000);
+// El indicador de actividad se repinta cada segundo aunque el auto-refresco esté apagado:
+// "EN VIVO -> EN REPOSO" es una transición por PASO DEL TIEMPO, no por llegada de datos.
+setInterval(updateLive,1000);
+// Los sondeos se pausan con la pestaña oculta; al volver, refresca ya en vez de esperar al
+// siguiente tick (antes se veía el estado congelado de hace horas).
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){ pollInflight(); pollSystem(); if(state.auto) fetchData(); }
+});
 fetchData();
 fetchStatus();
 pollInflight();

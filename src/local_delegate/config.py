@@ -12,8 +12,10 @@ los ids de un setup de referencia con llama-swap. Cámbialos por env para tu bac
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from platformdirs import user_data_dir
 
@@ -57,6 +59,41 @@ MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUEST
 def auth_headers() -> dict[str, str]:
     """Headers del backend sin registrar ni exponer el secreto configurado."""
     return {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
+
+
+# --- Origen del cómputo: backend en esta máquina vs backend remoto -----------
+# El MCP siempre corre en la máquina del cliente (por eso 'path' lee archivos locales),
+# pero la INFERENCIA puede ejecutarse en otra máquina (p. ej. Mac -> llama-swap de la PC
+# por Tailscale). Se clasifica por el host de BASE_URL: loopback = "local", cualquier otro
+# host = "remote". Se registra en cada evento del log para poder separarlo en el dashboard.
+def _split_host_port(url: str) -> tuple[str, str]:
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    port = f":{parts.port}" if parts.port else ""
+    return host, port
+
+
+def _is_loopback_host(host: str) -> bool:
+    if not host:
+        return False
+    if host.lower() in {"localhost", "localhost.localdomain"}:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def backend_origin(url: str | None = None) -> str:
+    """'local' si la inferencia corre en esta máquina (loopback), 'remote' en otro caso."""
+    host, _port = _split_host_port(url if url is not None else BASE_URL)
+    return "local" if _is_loopback_host(host) else "remote"
+
+
+def backend_host(url: str | None = None) -> str:
+    """host[:puerto] del endpoint, sin esquema, ruta ni credenciales (apto para el log)."""
+    host, port = _split_host_port(url if url is not None else BASE_URL)
+    return f"{host}{port}" if host else ""
 
 
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------
@@ -116,6 +153,21 @@ MAX_CHARS: dict[str, int] = {
 def max_chars_for(model: str) -> int:
     """Tope de caracteres de entrada para un modelo (default si no está en el catálogo)."""
     return MAX_CHARS.get(model, _MAX_CHARS_DEFAULT)
+
+
+# --- Chunking de salida (local_translate / local_delegate) -------------------
+# Las tools que TRANSFORMAN el texto completo (traducir, reescribir) producen una salida tan
+# larga como la entrada, así que una sola llamada choca contra max_tokens y devuelve el
+# documento cortado. Para esas tools el input se parte por límites naturales (headers
+# Markdown -> párrafos -> líneas) en trozos de CHUNK_CHARS, cada trozo se traduce en su
+# propia llamada con CHUNK_MAX_TOKENS, y los resultados se concatenan en orden.
+# CHUNK_CHARS por defecto (3500) deja margen: 3500 chars ≈ 875-1200 tokens de salida contra
+# un techo de 2048, suficiente incluso cuando el idioma destino "infla" el texto.
+CHUNK_CHARS = max(500, _env_int("LOCAL_DELEGATE_CHUNK_CHARS", 3500))
+CHUNK_MAX_TOKENS = max(256, _env_int("LOCAL_DELEGATE_CHUNK_MAX_TOKENS", 2048))
+# Un trozo por debajo de este tamaño ya no se vuelve a partir aunque el modelo trunque:
+# evita una recursión infinita si el backend responde corto por otra razón.
+CHUNK_MIN_CHARS = max(200, _env_int("LOCAL_DELEGATE_CHUNK_MIN_CHARS", 400))
 
 
 # --- response_format json_schema en local_extract ----------------------------

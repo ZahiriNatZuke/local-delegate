@@ -5,7 +5,9 @@ Dos hooks **opt-in y consultivos** quedaron recomendados después del piloto A/B
 pero está apagado por defecto porque produjo avisos ruidosos en tareas de arquitectura. Ninguno
 bloquea la acción original ni envía el prompt a otro modelo.
 
-Scripts en [`hooks/`](./hooks/): Python 3 puro, sin dependencias.
+Los scripts se distribuyen **dentro del paquete**
+([`src/local_delegate/resources/hooks/`](../../src/local_delegate/resources/hooks)): Python 3 puro,
+sin dependencias. La forma soportada de instalarlos es `local-delegate install` (ver abajo).
 
 ## Hooks
 
@@ -32,8 +34,18 @@ demasiado tarde porque la salida ya había entrado al contexto.
 
 ## Instalación
 
-Copia los cuatro archivos de `hooks/` (`hook_common.py` y los tres scripts) a
-`~/.claude/hooks/` y añade, ajustando las rutas:
+```bash
+local-delegate install --dry-run    # muestra exactamente qué tocaría
+local-delegate install              # hooks + skill + memoria + entrada MCP
+local-delegate install --no-skill --no-memory --no-mcp   # solo los hooks
+```
+
+El comando copia los cuatro archivos (`hook_common.py` y los tres scripts) a
+`~/.claude/hooks/local-delegate/` y los registra en `~/.claude/settings.json`. Es idempotente
+(reinstalar no duplica entradas), no toca hooks ajenos y se revierte con
+`local-delegate uninstall`. El hook de `Read` solo se registra con `--enable-read-hook`.
+
+El resultado en `settings.json` tiene esta forma:
 
 ```json
 {
@@ -43,30 +55,18 @@ Copia los cuatro archivos de `hooks/` (`hook_common.py` y los tres scripts) a
         "hooks": [
           {
             "type": "command",
-            "command": "python",
-            "args": ["/ruta/a/suggest_delegate_prompt.py"]
+            "command": "python3 /Users/tu-usuario/.claude/hooks/local-delegate/suggest_delegate_prompt.py"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": ["/ruta/a/suggest_delegate_read.py"]
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python",
-            "args": ["/ruta/a/suggest_lint_summary.py"]
+            "command": "python3 /Users/tu-usuario/.claude/hooks/local-delegate/suggest_lint_summary.py"
           }
         ]
       }
@@ -75,7 +75,10 @@ Copia los cuatro archivos de `hooks/` (`hook_common.py` y los tres scripts) a
 }
 ```
 
-En Windows, `command` puede ser `python` o `py`; en macOS/Linux, `python3`.
+`command` es **un único string de shell**: Claude Code no acepta un campo `args` separado (una
+entrada con `args` deja el hook registrado pero sin ejecutar el script). El intérprete por
+defecto es `python3` (`python` en Windows) y se cambia con `--python`; no se usa el intérprete
+actual porque bajo `uvx` vive en un entorno efímero que desaparece al terminar el comando.
 
 ## Configuración
 
@@ -88,7 +91,8 @@ En Windows, `command` puede ser `python` o `py`; en macOS/Linux, `python3`.
 | `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
 
 La telemetría solo guarda timestamp, evento, categoría, tamaño/banda y si hubo sugerencia. Nunca
-guarda prompts, comandos o paths. Es una recipe de usuario; `local-delegate` no instala hooks solo.
+guarda prompts, comandos o paths. Los hooks siguen siendo **opt-in**: el paquete no los activa
+por su cuenta, solo `local-delegate install` los registra cuando tú lo pides.
 
 Para comparar sesiones equivalentes sin editar `settings.json`, inicia Claude desde una terminal
 con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
