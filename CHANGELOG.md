@@ -6,7 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-27
+
 ### Added
+- **Publicación automática en el registro oficial de MCP.** El tag `vX.Y.Z` ya publicaba en PyPI;
+  ahora encadena un job que publica también `server.json` con `mcp-publisher login github-oidc`
+  (sin secretos: el registro valida el namespace contra el token OIDC del workflow). Antes de
+  tocar nada se comprueba que el tag, `pyproject.toml` y **las dos** versiones de `server.json`
+  coinciden, y antes de publicar el descriptor se espera a que PyPI sirva la versión — el
+  registro valida que el paquete exista. La coherencia de versiones se comprueba además en cada
+  PR (`tests/test_release_metadata.py`).
 - **`local-delegate install` / `uninstall`:** la instalación deja de ser solo el servidor MCP.
   Un comando registra la entrada MCP (Claude Code y Codex), copia los hooks consultivos a
   `~/.claude/hooks/local-delegate/` y los inscribe en `settings.json`, instala la skill
