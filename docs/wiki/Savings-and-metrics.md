@@ -98,6 +98,26 @@ en orden reponiendo el separador original de cada trozo, así que las costuras c
 formato. Si un trozo aun así vuelve truncado, se vuelve a partir y se reintenta. El evento del
 log lleva `chunks: N` con la latencia y los tokens sumados de toda la operación.
 
+### Map-reduce en las tools de reducción
+
+El chunking de arriba sirve para **transformar** —traducir, reescribir, reformatear—: cada trozo
+se corresponde con su parte del resultado, así que concatenar las salidas es correcto. Para
+**reducir** a un único resultado (un resumen global) concatenar no vale: daría un resumen por
+trozo pegado con otro, no un resumen del conjunto.
+
+Por eso `local_summarize` y `local_lint_summary` hacen **map-reduce** cuando la entrada no cabe
+en el modelo: resumen cada parte (*map*) y luego resumen los resúmenes (*reduce*). Si los
+parciales tampoco caben, el reduce se repite por niveles, con un tope de tres. Como en el
+chunking, la operación deja **un** evento de log con `chunks: N`.
+
+Hasta la 0.12.0 estas tools simplemente **truncaban** la entrada y avisaban: de un log de CI de
+200 000 caracteres se resumía el principio y el resto se descartaba, que es justo donde suelen
+estar los errores que importan. Ahora se lee entero.
+
+`local_extract` sigue truncando a propósito: fusionar los objetos JSON de varios trozos no tiene
+una respuesta única (¿se queda el primer valor?, ¿se concatenan?, ¿qué pasa si se contradicen?) y
+adivinarla sería peor que avisar.
+
 El estado en curso vive en `LOG_DIR/inflight.json` con lock y limpieza de PID: el daemon ve las
 llamadas de todas las sesiones que comparten el mismo usuario, incluso durante una migración en la
 que todavía convivan clientes HTTP y procesos `stdio`.
