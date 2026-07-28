@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- `scripts/setup_repo_security.sh` protege **`~DEFAULT_BRANCH`** en vez de la rama literal —la
+  regla sigue a la rama por defecto y no se queda protegiendo un nombre viejo si se renombra— y
+  añade la regla **`code_scanning`**: que el job de CodeQL termine en verde no basta, puede acabar
+  bien habiendo encontrado una alerta. Las dos mejoras vienen de comparar con el ruleset que ya
+  tenía `angular-template-project`, al alinear los tres repos.
+
 ## [0.12.1] - 2026-07-27
 
 ### Fixed

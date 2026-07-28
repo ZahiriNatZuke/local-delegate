@@ -117,7 +117,9 @@ print(json.dumps({
     "target": "branch",
     "enforcement": "active",
     "bypass_actors": bypass,
-    "conditions": {"ref_name": {"include": ["refs/heads/" + branch], "exclude": []}},
+    # `~DEFAULT_BRANCH` en vez de la rama literal: la regla sigue a la rama por defecto y no se
+    # queda protegiendo un nombre viejo si algún día se renombra.
+    "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
     "rules": [
         {"type": "deletion"},          # nadie borra main
         {"type": "non_fast_forward"},  # nadie reescribe la historia publicada
@@ -134,6 +136,13 @@ print(json.dumps({
             "do_not_enforce_on_create": False,
             "required_status_checks": checks,
         }},
+        # Que el job de CodeQL termine en verde no basta: puede acabar bien y haber encontrado
+        # una alerta. Esta regla mira las alertas, no el resultado del job.
+        {"type": "code_scanning", "parameters": {"code_scanning_tools": [
+            {"tool": "CodeQL",
+             "security_alerts_threshold": "high_or_higher",
+             "alerts_threshold": "errors"},
+        ]}},
     ],
 }))
 PY
