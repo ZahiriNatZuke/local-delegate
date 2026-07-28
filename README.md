@@ -133,6 +133,7 @@ cámbialos por los de tu backend.
 |---|---|---|
 | `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` | Endpoint OpenAI-compatible |
 | `LOCAL_DELEGATE_API_KEY` | *(vacío)* | Bearer token, si tu endpoint lo exige |
+| `LOCAL_DELEGATE_BACKEND_ORIGIN` | `auto` | `local`/`remote` fuerzan el origen del cómputo; `auto` lo deduce del host. Ponlo si llegas al backend por un **túnel** (`ssh -L`, port-forward): en loopback se vería como local |
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Backpressure máximo por proceso; compartido por todos los clientes del daemon |
 | `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes |
