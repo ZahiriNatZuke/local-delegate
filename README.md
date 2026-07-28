@@ -120,9 +120,14 @@ endpoint y devuelve **solo texto**.
 por límites naturales —headers Markdown, párrafos, líneas— y procesan **un trozo por llamada**
 respetando el techo de `max_tokens`, concatenando las salidas en orden y conservando el formato en
 las costuras. Un documento de 20 000+ caracteres vuelve completo en vez de cortado a mitad. El log
-registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre. Para tareas
-de reducción sobre el conjunto (contar, elegir un máximo, un único resumen global) usa
-`local_summarize` o `local_delegate(chunk='off')`.
+registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras corre.
+
+**Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
+cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
+niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el principio y el resto
+se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero.
+`local_extract` sigue truncando a propósito: fusionar el JSON de varios trozos no tiene una
+respuesta única y adivinarla sería peor que avisar.
 
 `local_summarize` y `local_lint_summary` tampoco truncan ya: cuando el documento no cabe en el
 modelo lo resumen **por partes y luego resumen los resúmenes** (map-reduce, jerárquico si hace
