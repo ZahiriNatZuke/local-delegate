@@ -377,7 +377,7 @@ wheels = [
 
 [[package]]
 name = "local-delegate-mcp"
-version = "0.12.1"
+version = "0.12.2"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -407,7 +407,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "filelock", specifier = ">=3" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "mcp", specifier = ">=1.2" },
+    { name = "mcp", specifier = ">=1.2,<2" },
     { name = "platformdirs", specifier = ">=4" },
     { name = "pyyaml", marker = "extra == 'llamaswap'", specifier = ">=6" },
     { name = "uvicorn", specifier = ">=0.30" },

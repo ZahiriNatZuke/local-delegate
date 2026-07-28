@@ -71,6 +71,40 @@ jobs:
       - name: Tests (pytest)
         run: uv run pytest -q
 
+  # El único job que NO usa `uv.lock`, y esa es exactamente su razón de ser.
+  #
+  # Los demás jobs instalan desde el lock, que fija versiones conocidas y buenas. Eso los protege
+  # del fallo que sufre un usuario real, porque `uvx local-delegate-mcp` no ve el lock: resuelve
+  # las dependencias contra el índice. El 2026-07-28 el SDK `mcp` publicó un major que elimina
+  # `mcp.server.fastmcp` y la 0.12.1 —ya publicada— murió en el import en toda instalación nueva,
+  # con el CI en verde todo el tiempo.
+  #
+  # Aquí se construye el wheel y se instala en un entorno limpio con resolución libre, igual que
+  # haría `uvx`. `--refresh` y `--resolution highest` no son adorno: un entorno limpio no implica
+  # caché limpia, y con una versión vieja cacheada este job pasaría siempre — sería un check
+  # incapaz de fallar.
+  install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      - name: Build del paquete
+        run: uv build
+
+      - name: Entorno limpio
+        run: uv venv .venv-smoke
+
+      - name: Instalar el wheel con resolución libre (sin lock)
+        run: uv pip install --python .venv-smoke/bin/python --refresh --resolution highest dist/*.whl
+
+      - name: Handshake MCP contra el paquete instalado
+        run: .venv-smoke/bin/python scripts/check_install_handshake.py
+
   secrets:
     runs-on: ubuntu-latest
     steps:

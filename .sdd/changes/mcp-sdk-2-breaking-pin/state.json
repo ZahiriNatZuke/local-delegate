@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "mcp-sdk-2-breaking-pin",
+  "title": "Acotar el SDK mcp por debajo del major 2 y cerrar el punto ciego de resolucion libre",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-07-28T22:27:42.069Z",
+  "updatedAt": "2026-07-28T22:35:11.078Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-28T22:32:05.308Z",
+      "evidence": "research.md documenta seis hechos verificados contra PyPI y el wheel de mcp 2.0.0 (fastmcp ausente, ruta nueva mcp.server.mcpserver, latest 2.0.0, ultima 1.x 1.29.0, pyproject sin techo, lock en 1.28.1). La asuncion critica de REQ-003 (handshake initialize sin backend vivo) se valido empiricamente antes de aprobar: respuesta JSON-RPC valida y returncode 0. spec.md tiene 9 requisitos observables, trazabilidad completa y no-goals explicitos.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-28T22:35:11.015Z",
+      "evidence": "Revision adversarial en plan-review.md: 5 hallazgos. F1 BLOQUEANTE (la cache de uv podia dar un falso verde en el job nuevo, haciendolo incapaz de fallar) corregido en el plan con --refresh y --resolution highest. F2 y F3 corregidos. F4 aceptado con razon (el job no sera check requerido). F5 anotado como seguimiento. Limitacion declarada: la revision no fue independiente.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-28T22:27:42.069Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-28T22:32:05.308Z",
+      "evidence": "research.md documenta seis hechos verificados contra PyPI y el wheel de mcp 2.0.0 (fastmcp ausente, ruta nueva mcp.server.mcpserver, latest 2.0.0, ultima 1.x 1.29.0, pyproject sin techo, lock en 1.28.1). La asuncion critica de REQ-003 (handshake initialize sin backend vivo) se valido empiricamente antes de aprobar: respuesta JSON-RPC valida y returncode 0. spec.md tiene 9 requisitos observables, trazabilidad completa y no-goals explicitos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-28T22:33:08.150Z",
+      "reason": "Investigacion verificada contra PyPI y el wheel 2.0.0"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-28T22:33:08.218Z",
+      "reason": "research.md completo, asuncion critica validada"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-28T22:33:08.284Z",
+      "reason": "Gate de spec aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-28T22:35:10.946Z",
+      "reason": "plan.md completo con tareas ordenadas y estrategia de prueba"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-28T22:35:11.015Z",
+      "evidence": "Revision adversarial en plan-review.md: 5 hallazgos. F1 BLOQUEANTE (la cache de uv podia dar un falso verde en el job nuevo, haciendolo incapaz de fallar) corregido en el plan con --refresh y --resolution highest. F2 y F3 corregidos. F4 aceptado con razon (el job no sera check requerido). F5 anotado como seguimiento. Limitacion declarada: la revision no fue independiente.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-28T22:35:11.078Z",
+      "reason": "Gate de plan aprobado sin hallazgos bloqueantes pendientes"
+    }
+  ]
+}
