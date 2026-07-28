@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import threading
 import time as _time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -431,7 +431,7 @@ def test_chat_no_feedback_for_inline_source(monkeypatch):
 def test_current_log_path_rotates_by_month(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=UTC))
     assert server._current_log_path() == tmp_path / "usage-202603.jsonl"
 
 
@@ -439,7 +439,7 @@ def test_current_log_path_legacy_disables_rotation(monkeypatch, tmp_path):
     fixed = tmp_path / "usage.jsonl"
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     monkeypatch.setattr(config, "USAGE_LOG", fixed)
-    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=UTC))
     assert server._current_log_path() == fixed
 
 
@@ -447,7 +447,7 @@ def test_current_log_path_legacy_disables_rotation(monkeypatch, tmp_path):
 def test_log_event_writes_to_rotated_file(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=UTC))
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     respx.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx.Response(
@@ -568,7 +568,7 @@ def test_allowed_dirs_resolves_relative_paths(monkeypatch, tmp_path):
 def test_log_event_writes_even_when_lock_times_out(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=timezone.utc))
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=UTC))
 
     class FakeLock:
         def __init__(self, *_a, **_k):

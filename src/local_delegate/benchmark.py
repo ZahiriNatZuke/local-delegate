@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import httpx
 
@@ -117,7 +117,7 @@ def score_response(case: BenchmarkCase, response: str) -> dict[str, Any]:
     if case.expected_json_fields:
         cleaned = response.strip()
         if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.I)
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
         try:
             payload = json.loads(cleaned)
         except (json.JSONDecodeError, TypeError):
@@ -144,7 +144,7 @@ class MetricsSampler:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
-    def __enter__(self) -> MetricsSampler:
+    def __enter__(self) -> Self:
         def sample() -> None:
             while not self._stop.is_set():
                 try:
@@ -171,7 +171,7 @@ class MetricsSampler:
 
 def _root_url(base_url: str) -> str:
     clean = base_url.rstrip("/")
-    return clean[:-3] if clean.endswith("/v1") else clean
+    return clean.removesuffix("/v1")
 
 
 def run_benchmark(args: argparse.Namespace) -> int:

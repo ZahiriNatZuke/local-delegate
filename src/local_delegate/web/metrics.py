@@ -40,7 +40,7 @@ import os
 import re
 import socket
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
@@ -108,8 +108,8 @@ def _read_file_cached(path) -> list[dict]:
 
 def _month_span(ym: str) -> tuple[datetime, datetime]:
     year, month = int(ym[:4]), int(ym[4:6])
-    start = datetime(year, month, 1, tzinfo=timezone.utc)
-    end = datetime(year + (month == 12), (month % 12) + 1, 1, tzinfo=timezone.utc)
+    start = datetime(year, month, 1, tzinfo=UTC)
+    end = datetime(year + (month == 12), (month % 12) + 1, 1, tzinfo=UTC)
     return start, end
 
 
@@ -120,7 +120,7 @@ def _parse_ts(ts) -> datetime | None:
         dt = datetime.fromisoformat(ts)
     except ValueError:
         return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
 def _parse_range_param(value: str | None) -> datetime | None:
@@ -130,7 +130,7 @@ def _parse_range_param(value: str | None) -> datetime | None:
         dt = datetime.fromisoformat(value)
     except ValueError:
         return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
 def _resolve_range(from_: str | None, to_: str | None) -> tuple[datetime, datetime]:
@@ -138,12 +138,12 @@ def _resolve_range(from_: str | None, to_: str | None) -> tuple[datetime, dateti
     range_from = _parse_range_param(from_)
     range_to = _parse_range_param(to_)
     if range_from is None and range_to is None:
-        range_to = datetime.now(timezone.utc)
+        range_to = datetime.now(UTC)
         range_from = range_to - timedelta(days=30)
     elif range_to is None:
-        range_to = datetime.now(timezone.utc)
+        range_to = datetime.now(UTC)
     elif range_from is None:
-        range_from = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        range_from = datetime(2000, 1, 1, tzinfo=UTC)
     return range_from, range_to
 
 
@@ -330,7 +330,7 @@ def inflight():
             "inflight": snapshot,
             "count": len(snapshot),
             "last_event_ts": _last_event_ts(),
-            "now": datetime.now(timezone.utc).isoformat(),
+            "now": datetime.now(UTC).isoformat(),
         }
     )
 
@@ -345,7 +345,7 @@ def backend():
       - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
       - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
     """
-    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    base = config.BASE_URL.removesuffix("/v1")
     running: list = []
     try:
         with httpx.Client(timeout=1.0) as c:
@@ -376,7 +376,7 @@ def backend_stats():
     `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
     degrada a {available: false} sin romper el dashboard.
     """
-    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx.Client(timeout=1.0) as c:
             r = c.get(f"{base}/api/metrics/stats", headers=config.auth_headers())

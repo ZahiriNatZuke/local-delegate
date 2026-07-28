@@ -198,7 +198,7 @@ def _release_age_days(published_at: str, now: datetime | None = None) -> int | N
     if not published_at:
         return None
     try:
-        published = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+        published = datetime.fromisoformat(published_at)
     except ValueError:
         return None
     current = now or datetime.now(UTC)
@@ -236,8 +236,10 @@ def _compare_line(component: str, installed: str | None, online: bool) -> tuple[
         return f"[ -- ] {component}: no detectado (probada: {recommended}){extra}", False
     if inst_n is not None and rec_n is not None and inst_n < rec_n:
         return (
-            f"[WARN] {component}: {installed} instalada < {recommended} probada — "
-            f"considera actualizar{extra}",
+            (
+                f"[WARN] {component}: {installed} instalada < {recommended} probada — "
+                f"considera actualizar{extra}"
+            ),
             True,
         )
     if inst_n is not None and rec_n is not None and inst_n > rec_n:
@@ -269,14 +271,14 @@ def run_doctor(args: argparse.Namespace) -> int:
 
     warnings = False
     print("local-delegate doctor — diagnóstico de instalación del backend local")
-    print("")
+    print()
 
     # Entorno
     exe = os.environ.get("LLAMASWAP_EXE", "")
     print(f"LLAMASWAP_EXE:    {exe or '(no seteado; se busca llama-swap en el PATH)'}")
     print(f"LLAMASWAP_CONFIG: {config_path or '(no seteado)'}")
     print(f"Backend BASE_URL: {config.BASE_URL} — {'arriba' if _backend_up() else 'CAÍDO'}")
-    print("")
+    print()
 
     # Versiones
     if args.online:
@@ -299,7 +301,7 @@ def run_doctor(args: argparse.Namespace) -> int:
         warnings = warnings or warn
 
     if args.online:
-        print("")
+        print()
         print("Issues abiertos con señales de riesgo (revisión manual antes de canary):")
         for component in ("llama-swap", "llama-server"):
             issues = recent_relevant_issues(component)
@@ -311,7 +313,7 @@ def run_doctor(args: argparse.Namespace) -> int:
             for issue in issues:
                 print(f"  [HOLD] {component} #{issue['number']}: {issue['title']} · {issue['url']}")
 
-    print("")
+    print()
     if warnings:
         print("Resultado: hay actualizaciones sugeridas (ver [WARN] arriba).")
         return 1

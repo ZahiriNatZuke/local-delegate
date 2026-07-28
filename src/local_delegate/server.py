@@ -22,7 +22,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
@@ -262,7 +262,7 @@ def inflight_snapshot() -> list[dict]:
 
 # --- Helpers ----------------------------------------------------------------
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _current_log_path() -> Path:
@@ -316,9 +316,8 @@ def _append_log_line(log_path: Path, line: str) -> None:
     """
     lock = FileLock(str(log_path) + ".lock", timeout=1)
     try:
-        with lock:
-            with log_path.open("a", encoding="utf-8") as f:
-                f.write(line)
+        with lock, log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
     except Timeout:
         with log_path.open("a", encoding="utf-8") as f:
             f.write(line)
@@ -1439,7 +1438,7 @@ def _models_with_status() -> tuple[bool, list[dict]]:
 
 def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
-    base = config.BASE_URL[: -len("/v1")] if config.BASE_URL.endswith("/v1") else config.BASE_URL
+    base = config.BASE_URL.removesuffix("/v1")
     try:
         with httpx.Client(timeout=1.0) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())

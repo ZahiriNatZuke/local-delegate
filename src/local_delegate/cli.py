@@ -78,9 +78,9 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     verb = "Desinstalando" if uninstall else "Instalando"
     print(f"{verb} local-delegate en {opts.home} — clientes: {', '.join(sorted(opts.targets))}")
     print(f"componentes: {', '.join(sorted(opts.components))}")
-    print("")
+    print()
     failures = inst.apply(actions, dry_run=args.dry_run)
-    print("")
+    print()
     if args.dry_run:
         print("--dry-run: no se escribió nada.")
         return 0
@@ -113,7 +113,7 @@ def _print_breakdown(
     print(
         f"Presupuesto: {budget_gb:.2f} GiB - margen {margin_gb:.2f} GiB = {budget:.2f} GiB disponibles"
     )
-    print("")
+    print()
     for gc in breakdown:
         mode = "swap (1 a la vez)" if gc.swap else "todos juntos"
         print(f"grupo '{gc.group}' [{mode}] -> {gc.contribution_gb:.2f} GiB")
@@ -123,7 +123,7 @@ def _print_breakdown(
                 print(f"    {m}: ERROR ({est.error if est else 'sin estimación'})")
             else:
                 print(f"    {m}: {est.gb:.2f} GiB [{est.method}] — {est.detail}")
-    print("")
+    print()
     print(f"Total peor caso ({title}): {total_gb:.2f} GiB")
 
 
@@ -192,11 +192,11 @@ def _check_budget(
     _print_breakdown(label, total_gb, breakdown, estimates, budget_gb, margin_gb)
     errored = sorted(m for m, e in estimates.items() if e.error)
     if errored:
-        print("")
+        print()
         print(f"error: no se pudo estimar {label} de: {', '.join(errored)}", file=sys.stderr)
         return False, errored
     budget = budget_gb - margin_gb
-    print("")
+    print()
     if total_gb > budget:
         print(f"{label} NO CABE: {total_gb:.2f} GiB > {budget:.2f} GiB disponibles")
         return False, []
@@ -228,7 +228,7 @@ def cmd_check_llamaswap(args: argparse.Namespace) -> int:
 
     ram_ok = True
     if args.ram_gb is not None:
-        print("")
+        print()
         ram_ok, ram_errors = _check_budget(
             "RAM", groups, models, {}, lc.estimate_model_ram, args.ram_gb, args.ram_margin_gb
         )
@@ -332,7 +332,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 
     ram_ok = True
     if args.ram_gb is not None:
-        print("")
+        print()
         ram_ok, ram_errors = _check_budget(
             "RAM", groups, models, overrides, lc.estimate_model_ram, args.ram_gb, args.ram_margin_gb
         )
@@ -341,19 +341,19 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
             return 2
 
     if not (vram_ok and ram_ok):
-        print("")
+        print()
         print("no cabe — no se escribió nada")
         return 1
 
     if args.dry_run:
-        print("")
+        print()
         print("--dry-run: no se escribió nada. YAML resultante:")
-        print("")
+        print()
         print(lc.dump_config_str(data))
         return 0
 
     if out_path.exists() and not args.force:
-        print("")
+        print()
         print(
             f"error: {out_path} ya existe — usa --force para sobreescribir (se guarda un .bak)",
             file=sys.stderr,
@@ -362,7 +362,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
     if out_path.exists() and args.force:
         backup = out_path.with_suffix(out_path.suffix + ".bak")
         shutil.copy2(out_path, backup)
-        print("")
+        print()
         print(f"backup: {backup}")
 
     lc.dump_config(data, out_path)
