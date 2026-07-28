@@ -28,13 +28,35 @@ No se pueden versionar, así que van en un script idempotente:
 
 Aplica:
 
-- **Regla sobre `main`**: exige PR, prohíbe `force-push` y el borrado de la rama, exige la CI
-  en verde (`test`, `secrets`, `Analyze (python)`) con la rama al día, y no deja mergear con
-  hilos de revisión sin resolver. Solo squash merge.
+- **Regla sobre la rama por defecto** (`~DEFAULT_BRANCH`, así sigue a la rama y no a su nombre):
+  exige PR, prohíbe `force-push` y el borrado, exige la CI en verde con la rama al día, y no deja
+  mergear con hilos de revisión sin resolver. Solo squash merge.
+- **`code_scanning`**: que el job de CodeQL acabe en verde no basta —puede terminar bien habiendo
+  encontrado una alerta—, así que la regla mira las alertas. Se omite con `--no-code-scanning`.
 - **Secret scanning** con *push protection*: GitHub rechaza el push que contenga un secreto.
 - **Dependabot**: alertas de vulnerabilidades y parches de seguridad automáticos.
 - **Private vulnerability reporting**: el canal que anuncia `SECURITY.md`.
 - **Ajustes de merge**: solo squash, borrado automático de la rama, auto-merge disponible.
+
+### Usarlo en otro repositorio
+
+Los checks requeridos son los nombres de los jobs de *su* CI, así que se pasan por parámetro:
+
+```bash
+./scripts/setup_repo_security.sh --repo OWNER/REPO \
+  --checks "Lint, typecheck and unit tests|End-to-end tests" --no-code-scanning
+```
+
+El separador es `|` y no la coma **a propósito**: los nombres de job llevan comas
+(`Lint, typecheck and unit tests`) y paréntesis (`test (ubuntu-latest)`) con toda naturalidad.
+`--check "X"` es la forma repetible para nombres con cualquier cosa rara.
+
+**Antes de aplicar, el script comprueba que alguien reporta cada check pedido** y aborta si no.
+Es el error más caro de este script: un check exigido que nadie publica —una errata, un job
+renombrado, una matriz que cambió— deja **todos** los PR esperando para siempre. La comprobación
+mira la rama por defecto y el PR más reciente, y consulta *check-runs* **y** *commit statuses*:
+Actions publica lo primero, pero integraciones como Vercel publican lo segundo. Con
+`--skip-verify` se salta, para el caso de un repo cuyo CI todavía no ha corrido nunca.
 
 ### Dos decisiones que no son las de por defecto
 

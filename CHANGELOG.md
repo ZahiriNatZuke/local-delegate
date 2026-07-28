@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`setup_repo_security.sh` sirve para cualquier repositorio.** Los checks requeridos dejan de
+  estar hardcodeados: `--checks "a|b|c"` (separador `|`, porque los nombres de job llevan comas y
+  paréntesis) o `--check` repetible, y `--no-code-scanning` para repos sin CodeQL, donde exigir
+  esa regla bloquearía los PR. Antes de aplicar **comprueba que alguien reporta cada check** y
+  aborta si no: exigir uno que nadie publica deja todos los PR esperando para siempre. La
+  comprobación mira la rama por defecto y el PR más reciente, y consulta *check-runs* **y**
+  *commit statuses* — Actions publica lo primero, integraciones como Vercel lo segundo, y
+  mirando solo check-runs `Vercel` parecía no existir.
+
 ### Changed
 - `scripts/setup_repo_security.sh` protege **`~DEFAULT_BRANCH`** en vez de la rama literal —la
   regla sigue a la rama por defecto y no se queda protegiendo un nombre viejo si se renombra— y
