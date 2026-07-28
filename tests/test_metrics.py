@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from datetime import UTC, datetime
 
@@ -423,6 +424,19 @@ def test_dashboard_computes_ranges_in_local_time():
     html = TestClient(metrics.app).get("/").text
     assert "localMidnight" in html and "localDayKey" in html
     assert "Date.UTC(" not in html  # ya no queda ningún rango calculado en UTC
+
+
+def test_estados_vacios_usan_la_tipografia_del_panel():
+    """`.empty` vive entre texto monoespaciado; sin font-family propia heredaba la sans.
+
+    Se notaba sobre todo en «sin datos (requiere llama-swap ≥ v236)», rodeado de nombres de
+    modelo, badges y chips en mono — y el propio panel llegaba a enseñar dos estados vacíos con
+    tipografías distintas, porque el de tools usa `.tchip`, que sí la declara.
+    """
+    html = TestClient(metrics.app).get("/").text
+    empty_rule = re.search(r"\.empty\{[^}]*\}", html)
+    assert empty_rule, "no se encontró la regla .empty"
+    assert "font-family:var(--mono)" in empty_rule.group(0)
 
 
 # --- El panel no depende de la red -----------------------------------------------------

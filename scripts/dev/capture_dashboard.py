@@ -94,18 +94,26 @@ SEED_AND_MOCK = """() => {
       processes: [{pid: 4242, name: 'llama-server.exe', ram_mb: 7640, vram_mb: 8420, self: false},
         {pid: 4310, name: 'llama-server.exe', ram_mb: 3180, vram_mb: 3470, self: false},
         {pid: 9001, name: 'pythonw.exe', ram_mb: 44, vram_mb: null, self: true}]},
-    '/api/backend/stats': {available: true, stats: {requests: 1284,
-      avg_tokens_per_second: 61.4, avg_time_to_first_token_ms: 214, total_tokens: 486320}},
+    // La forma la impone renderBackendStats: histogramas con p50/p95 y totales. Con otras
+    // claves el panel se pinta con guiones o cae al "sin datos", que es lo que enseñaba la
+    // captura anterior aunque el mock dijera available:true.
+    '/api/backend/stats': {available: true, stats: {
+      total_requests: 1284,
+      gen_histogram: {p50: 61.4, p95: 48.2},
+      prompt_histogram: {p50: 1840.5, p95: 1210.7},
+      total_input_tokens: 486320, total_output_tokens: 138940, total_cache_tokens: 214880}},
   };
 
   const real = window.fetch.bind(window);
   window.fetch = (input, init) => {
     const url = String(typeof input === 'string' ? input : input.url);
-    for (const [key, body] of Object.entries(MOCKS)) {
-      if (url.includes(key)) {
-        return Promise.resolve(new Response(JSON.stringify(body),
-          {status: 200, headers: {'Content-Type': 'application/json'}}));
-      }
+    // Se compara el pathname EXACTO, no `includes`: '/api/backend/stats' contiene
+    // '/api/backend', así que un match por substring devolvía el mock del panel de modelos
+    // al panel de rendimiento, y este se pintaba como "sin datos".
+    const path = new URL(url, location.origin).pathname;
+    if (Object.prototype.hasOwnProperty.call(MOCKS, path)) {
+      return Promise.resolve(new Response(JSON.stringify(MOCKS[path]),
+        {status: 200, headers: {'Content-Type': 'application/json'}}));
     }
     return real(input, init);  // /api/status pasa: versión, catálogo y tools son los reales
   };
@@ -127,7 +135,10 @@ REFRESH = """async () => {
   // el gráfico enseñaría otra.
   const sel = document.getElementById('range');
   if (sel) { sel.value = '30'; sel.dispatchEvent(new Event('change')); }
-  fetchStatus(); pollSystem();
+  // fetchStatus va con await: pinta el panel de backend y, en un segundo fetch, el de
+  // rendimiento. Sin esperarla el screenshot puede salir con ese panel todavía vacío.
+  await fetchStatus();
+  pollSystem();
   await fetchData();
   await pollInflight();
   await new Promise(r => setTimeout(r, 1000));
