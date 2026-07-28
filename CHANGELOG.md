@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-27
+
 ### Added
 - **`local_summarize` y `local_lint_summary` ya no truncan la entrada: hacen map-reduce.** Un
   documento que no cabe en el modelo se resume por partes y luego se resumen los resúmenes,
