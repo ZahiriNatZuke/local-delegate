@@ -83,7 +83,9 @@ run api -X PATCH "repos/$OWNER/$REPO" \
   -F allow_rebase_merge=false \
   -F delete_branch_on_merge=true \
   -F allow_auto_merge=true \
-  -F has_wiki=false \
+  `# La wiki nativa SÍ se usa: Publishing.md documenta sincronizarla desde docs/wiki/ después` \
+  `# de cada tag. Apagarla dejaría esas páginas inalcanzables aunque el contenido siga en el repo.` \
+  -F has_wiki=true \
   -F web_commit_signoff_required=false
 
 # --- 2. Seguridad: alertas, secret scanning y push protection ---------------------------
