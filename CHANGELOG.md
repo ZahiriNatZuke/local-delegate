@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`scripts/update_to_latest.sh`**: pone este cliente en la última versión publicada. Pensado
+  para la máquina que usa `uvx` con la versión fijada —la Mac que apunta al backend de la PC—,
+  donde cada release obligaba a editar el pin a mano en `~/.claude.json` y `~/.codex/config.toml`.
+  Consulta PyPI, cambia **solo** el número de versión (con copia `.bak`), precarga la caché de
+  `uvx` y comprueba que arranca. Idempotente, con `--dry-run`, y no toca la API key ni ninguna
+  otra entrada MCP. Si no hay pin, lo dice y no toca nada: `uvx` ya resuelve la última.
+
 ## [0.12.0] - 2026-07-27
 
 ### Added

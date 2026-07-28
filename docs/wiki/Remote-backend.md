@@ -65,6 +65,24 @@ PY
 source "$HOME/.zshrc"
 ```
 
+## Actualizar la Mac tras una release
+
+Como la entrada lleva la versión fijada, cada release nueva pide cambiar el pin en dos archivos.
+En vez de hacerlo a mano:
+
+```bash
+./scripts/update_to_latest.sh --dry-run   # enseña de qué versión a cuál
+./scripts/update_to_latest.sh             # aplica y precarga la caché de uvx
+```
+
+Consulta la última versión en PyPI, cambia **solo** el número de versión en `~/.claude.json` y
+`~/.codex/config.toml` (con copia `.bak`), y comprueba que `uvx` la ejecuta. No toca la API key
+ni ninguna otra entrada MCP, y es idempotente: si ya estabas al día no hace nada. Si no tienes
+pin, te lo dice y no toca nada — `uvx` ya resuelve la última en cada arranque. Después, reinicia
+Claude Code y Codex.
+
+Es el único paso que hace falta en la Mac: el paquete se descarga solo al arrancar el cliente.
+
 ## Claude Code en la Mac
 
 La entrada se fija a 0.11.0 durante el rollout. La key no se pega en el JSON: Claude expande la
