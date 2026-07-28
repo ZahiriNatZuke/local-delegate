@@ -16,7 +16,7 @@ endpoint OpenAI-compatible — llama-swap, Ollama, LM Studio, vLLM.
      PyPI (los links relativos solo se resuelven dentro de GitHub). -->
 ![Dashboard de ahorro de local-delegate](https://raw.githubusercontent.com/ZahiriNatZuke/local-delegate/main/docs/assets/dashboard.png)
 
-*Dashboard embebido (datos de ejemplo): estado del backend local (modelos montados, delegaciones en curso, tools MCP), RAM/VRAM del sistema con consumo por proceso, tokens de contexto conservados, ahorro por herramienta y modelo, y actividad reciente paginada. Se sirve en `http://127.0.0.1:9393`.*
+*Dashboard embebido (datos de ejemplo): estado del backend local (modelos montados, delegación en curso con su progreso por trozos, tools MCP), RAM/VRAM del sistema con consumo por proceso, tokens de contexto conservados, ahorro por herramienta y modelo, dónde corrió el cómputo —esta máquina o un backend remoto— y actividad reciente paginada en tu hora local. Se sirve en `http://127.0.0.1:9393`.*
 
 ## ¿Por qué?
 
