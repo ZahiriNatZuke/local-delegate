@@ -1,6 +1,6 @@
 [project]
 name = "local-delegate-mcp"
-version = "0.12.1"
+version = "0.12.2"
 description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,7 +19,12 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "mcp>=1.2",
+    # Techo de major deliberado. El SDK `mcp` 2.0.0 eliminó `mcp.server.fastmcp` (el módulo pasó a
+    # `mcp.server.mcpserver`), así que sin techo `uvx` resuelve al major nuevo y el proceso muere en
+    # el import de `server.py` antes de poder hablar MCP: el cliente solo ve
+    # `MCP error -32000: Connection closed`. Pasó de verdad con la 0.12.1 ya publicada.
+    # No se retira hasta migrar la API 2.x, que es un cambio aparte.
+    "mcp>=1.2,<2",
     "httpx>=0.27",
     "platformdirs>=4",
     "fastapi>=0.115",

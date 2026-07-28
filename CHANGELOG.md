@@ -6,7 +6,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-07-28
+
+### Fixed
+- **El paquete dejó de arrancar con el SDK `mcp` 2.0.0.** El SDK publicó un major que elimina
+  `mcp.server.fastmcp` (el módulo pasó a `mcp.server.mcpserver`), y `local-delegate-mcp` declaraba
+  `mcp>=1.2` **sin techo**: `uvx` resolvía al major nuevo y el proceso moría en el import antes de
+  poder hablar MCP. El cliente solo enseña `MCP error -32000: Connection closed`, que es el
+  síntoma del proceso muerto, no la causa — **el traceback real está en el `Server stderr`** del
+  log del cliente (en macOS, `~/Library/Caches/claude-cli-nodejs/<proyecto>/mcp-logs-local-delegate/`).
+  Afectaba a **toda instalación nueva** de la 0.12.1 en cualquier sistema. La dependencia queda
+  acotada a `mcp>=1.2,<2`; migrar a la API 2.x es un cambio aparte. Quien aplicara el workaround
+  `--with "mcp<2"` puede retirarlo, pero no está obligado.
+
 ### Added
+- **Job `install-smoke` en el CI: el paquete construido se instala con resolución libre y se le
+  exige un handshake MCP real.** Es el único job que **no** usa `uv.lock`, y esa es su razón de
+  ser: el lock fija versiones buenas conocidas y por eso el CI estuvo verde mientras el paquete
+  publicado estaba roto para todo el mundo. Instala con `--refresh` y `--resolution highest`
+  porque un entorno limpio no implica caché limpia, y un check que no puede fallar no vigila nada.
+  Cubre también al resto de dependencias: si cualquiera publica un major que rompa el import, este
+  job lo detecta antes que un usuario.
+- `scripts/check_install_handshake.py`, que hace esa comprobación y devuelve códigos de salida
+  distintos para un fallo de import (regresión de dependencia) y uno de red o de arranque.
 - **`setup_repo_security.sh` sirve para cualquier repositorio.** Los checks requeridos dejan de
   estar hardcodeados: `--checks "a|b|c"` (separador `|`, porque los nombres de job llevan comas y
   paréntesis) o `--check` repetible, y `--no-code-scanning` para repos sin CodeQL, donde exigir
