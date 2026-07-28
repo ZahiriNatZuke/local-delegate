@@ -89,10 +89,26 @@ def _backup(path: Path) -> None:
         shutil.copy2(path, path.with_suffix(path.suffix + ".bak"))
 
 
+def _detect_newline(path: Path) -> str:
+    """Terminador de línea dominante del archivo; LF para uno que aún no existe.
+
+    Hace falta porque `write_text` escribe con el terminador de la *plataforma*: en Windows
+    convertiría a CRLF un `CLAUDE.md` guardado en LF, y el usuario vería su archivo entero
+    como modificado —conflictos en git, diff ilegible— por haberle añadido un bloque. Se
+    escribe con el que ya tenía: tocar un archivo ajeno debe notarse solo en lo que cambia.
+    """
+    try:
+        return "\r\n" if b"\r\n" in path.read_bytes() else "\n"
+    except OSError:
+        return "\n"
+
+
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    newline = _detect_newline(path)
     _backup(path)
-    path.write_text(text, encoding="utf-8")
+    normalized = text.replace("\r\n", "\n").replace("\n", newline)
+    path.write_bytes(normalized.encode("utf-8"))
 
 
 def _read_text(path: Path) -> str:
@@ -112,8 +128,10 @@ def _read_json(path: Path) -> dict:
 
 def _write_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    newline = _detect_newline(path)
     _backup(path)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    path.write_bytes(text.replace("\n", newline).encode("utf-8"))
 
 
 def upsert_block(text: str, block: str, begin: str, end: str) -> str:

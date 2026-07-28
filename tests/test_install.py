@@ -132,6 +132,43 @@ def test_uninstall_reverts_only_our_changes(tmp_path):
     assert json.loads((tmp_path / ".claude.json").read_text(encoding="utf-8"))["mcpServers"] == {}
 
 
+def test_install_preserva_el_terminador_de_linea_del_usuario(tmp_path):
+    """Añadir un bloque no debe reescribir el archivo entero.
+
+    `write_text` usa el terminador de la plataforma: en Windows convertía a CRLF un
+    `CLAUDE.md` guardado en LF. El usuario veía su archivo completo como modificado —diff
+    ilegible, y conflictos si lo comparte entre una Mac y un Windows.
+    """
+    original = b"# Mis reglas\n\nNo borrar.\n"
+    memory = tmp_path / ".claude" / "CLAUDE.md"
+    memory.parent.mkdir(parents=True)
+    memory.write_bytes(original)
+
+    _install(tmp_path)
+    tocado = memory.read_bytes()
+    assert b"\r\n" not in tocado, "se convirtió a CRLF un archivo que estaba en LF"
+    assert tocado.startswith(original.rstrip(b"\n"))
+
+    _uninstall(tmp_path)
+    assert memory.read_bytes() == original
+
+
+def test_install_respeta_crlf_si_el_archivo_ya_lo_usaba(tmp_path):
+    """Y al revés: a quien lo tenga en CRLF no se le convierte a LF."""
+    original = b"# Mis reglas\r\n\r\nNo borrar.\r\n"
+    memory = tmp_path / ".claude" / "CLAUDE.md"
+    memory.parent.mkdir(parents=True)
+    memory.write_bytes(original)
+
+    _install(tmp_path)
+    tocado = memory.read_bytes()
+    assert b"\r\n" in tocado
+    assert b"\n" not in tocado.replace(b"\r\n", b""), "quedaron saltos sueltos en LF"
+
+    _uninstall(tmp_path)
+    assert memory.read_bytes() == original
+
+
 def test_dry_run_writes_nothing(tmp_path):
     lines: list[str] = []
     actions = inst.plan_install(_opts(tmp_path))

@@ -24,6 +24,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   es la forma más fiable de acabar no verificando nada.
 
 ### Fixed
+- **El instalador reescribía entero el `CLAUDE.md` del usuario en Windows.** `write_text` usa el
+  terminador de línea de la plataforma, así que añadir el bloque de la regla de delegación a un
+  archivo guardado en LF lo convertía a CRLF: el diff salía completo en rojo y, en un archivo
+  compartido entre una Mac y un Windows, generaba conflictos. Ahora se escribe con el
+  terminador que el archivo ya tenía, y `uninstall` vuelve a dejarlo **byte a byte** como
+  estaba (verificado en Windows, no solo en Linux). Afectaba también a `settings.json` y al
+  `config.toml` de Codex.
 - Los archivos con `#!` (los tres hooks empaquetados y `scripts/bump_version.py`) no tenían el
   bit de ejecución en git. Solo se nota en sistemas POSIX —en Windows ese bit no existe, así
   que un `ruff check` local no puede verlo— y rompía el lint del CI.
