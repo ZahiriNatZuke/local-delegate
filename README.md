@@ -124,6 +124,11 @@ registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras c
 de reducción sobre el conjunto (contar, elegir un máximo, un único resumen global) usa
 `local_summarize` o `local_delegate(chunk='off')`.
 
+`local_summarize` y `local_lint_summary` tampoco truncan ya: cuando el documento no cabe en el
+modelo lo resumen **por partes y luego resumen los resúmenes** (map-reduce, jerárquico si hace
+falta). Importa sobre todo en logs de CI, donde los errores interesantes suelen estar al final
+—que era justo lo que se descartaba al cortar por el techo del modelo.
+
 ## Configuración
 
 Todo por variables de entorno; nada hardcodeado. Los ids de modelo default son solo eso —
