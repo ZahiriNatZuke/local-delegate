@@ -33,7 +33,18 @@ ADMIN_BYPASS=0
 DRY=0
 
 # Nombres de los jobs de .github/workflows que deben estar en verde para poder mergear.
-REQUIRED_CHECKS=("test" "secrets" "Analyze (python)")
+# OJO: tienen que coincidir EXACTAMENTE con el nombre que publica cada job. Un check exigido
+# que nadie reporta deja los PR esperando para siempre, así que si se renombra un job o se
+# cambia su matriz hay que actualizar esta lista y volver a aplicar el script. Los jobs en
+# matriz publican un check por combinación, con el valor entre paréntesis.
+REQUIRED_CHECKS=(
+  "lint"
+  "test (ubuntu-latest)"
+  "test (windows-latest)"
+  "test (macos-latest)"
+  "secrets"
+  "Analyze (python)"
+)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
