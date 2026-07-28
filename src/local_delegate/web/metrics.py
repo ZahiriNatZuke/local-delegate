@@ -787,7 +787,12 @@ dialog.help::backdrop{background:rgba(3,5,9,.6);backdrop-filter:blur(5px)}
 .help-in .frm b{color:var(--acc)}
 
 /* ---------- misc ---------- */
-.empty{color:var(--mut);padding:30px;text-align:center;font-size:13px}
+/* Los estados vacíos viven dentro de paneles técnicos —modelos, métricas del backend, RAM/VRAM,
+   actividad— donde todo lo demás (nombres de modelo, badges, chips, tabla, pie) va en mono. Sin
+   font-family propia heredaban la sans del body y cantaban: el mismo panel llegaba a enseñar dos
+   estados vacíos con tipografías distintas, porque el de tools usa `.tchip`, que sí es mono. */
+.empty{color:var(--mut);padding:30px;text-align:center;font-size:12.5px;
+  font-family:var(--mono);letter-spacing:.01em}
 footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;border-top:1px solid var(--bd);
   text-align:center;font-family:var(--mono);letter-spacing:.01em}
 .tt{position:fixed;z-index:60;max-width:270px;background:var(--bg2);border:1px solid var(--bd2);

@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **Los estados vacíos del dashboard usaban otra tipografía.** `.empty` no declaraba
+  `font-family`, así que heredaba la sans del `body` mientras todo su entorno —nombres de
+  modelo, badges, chips, tabla, pie— va en monoespaciada. Se veía sobre todo en «sin datos
+  (requiere llama-swap ≥ v236)», y el mismo panel llegaba a enseñar **dos** estados vacíos con
+  tipografías distintas, porque el de tools usa `.tchip`, que sí la declara. Afectaba a los
+  ocho estados vacíos del panel.
+
 ### Added
 - **`scripts/update_to_latest.sh`**: pone este cliente en la última versión publicada. Pensado
   para la máquina que usa `uvx` con la versión fijada —la Mac que apunta al backend de la PC—,
