@@ -9,6 +9,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Changed
 - La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
   de la Mac pasa a la versión vigente.
+- **El CI corre los tests en Linux, Windows y macOS.** El paquete es multiplataforma de verdad
+  —rutas, locks entre procesos y llamadas a Win32 por ctypes— y hasta ahora solo se probaba en
+  Ubuntu: la fuga de handles que arregló la 0.11.0 era **exclusiva de Windows** y ningún job
+  podía verla. El lint, el formato y la validación del JS siguen corriendo una sola vez, en un
+  job aparte, porque su veredicto no depende del sistema.
 - **ruff 0.16.0** (solo desarrollo). Promueve a estables reglas que sacaban 79 avisos en código
   hoy limpio; se aplican los arreglos que son mejora real (`datetime.UTC`, `re.MULTILINE`,
   `removeprefix`, `typing.Self` en los `__enter__`, `fromisoformat` sin el reemplazo de `Z` que
