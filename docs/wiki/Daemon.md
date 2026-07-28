@@ -75,8 +75,10 @@ primer plano dentro del gestor; no hace falta que `local-delegate` se daemonice 
 ### Windows sin ventana visible
 
 Una tarea marcada como `Hidden` queda oculta en el Programador de tareas, pero un ejecutable de
-consola aún puede mostrar una ventana. Para evitar terminal y botón en la barra de tareas, usa el
-`pythonw.exe` del entorno donde está instalado `local-delegate`:
+consola aún puede mostrar una ventana. Hay dos casos según necesites o no descifrar un secreto.
+
+**Caso simple (sin backend autenticado).** Usa el `pythonw.exe` del entorno donde está instalado
+`local-delegate`. Al pertenecer al subsistema GUI, nunca crea consola:
 
 ```powershell
 $pythonw = 'C:\ruta\al\entorno\Scripts\pythonw.exe'
@@ -89,6 +91,40 @@ $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName 'LocalDelegateDaemon' -Action $action `
   -Trigger $trigger -Settings $settings -Description 'Daemon MCP local compartido' -Force
 ```
+
+**Caso con secreto DPAPI.** Si el backend está autenticado, la acción ya no puede ser `pythonw`
+directo: hace falta un launcher de PowerShell que importe el `SecureString` antes de arrancar el
+daemon (ver [Remote-backend](Remote-backend)). Ese launcher **reintroduce la ventana**, y
+`-WindowStyle Hidden` no la evita:
+
+- `powershell.exe` pertenece al subsistema de consola, así que Windows le crea una consola al
+  lanzarlo en una tarea con `LogonType = InteractiveToken`.
+- En Windows 11 el terminal por defecto («Que Windows decida», `DelegationConsole` /
+  `DelegationTerminal` a GUID nulo en `HKCU:\Console\%%Startup`) es Windows Terminal, que **ignora
+  la petición `SW_HIDE`** al recibir el *handoff* de la consola. La ventana aparece igual, titulada
+  con la ruta cruda del `.exe`.
+- `Settings.Hidden` no interviene: solo oculta la tarea en la lista del Programador.
+
+La solución es envolver el launcher en `conhost --headless`, que crea un pseudoconsole sin ventana:
+
+```powershell
+$ps1exe  = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+$conhost = "$env:SystemRoot\System32\conhost.exe"
+$arg = '--headless ' + $ps1exe +
+       ' -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "C:\ruta\al\launcher.ps1"'
+$action = New-ScheduledTaskAction -Execute $conhost -Argument $arg `
+  -WorkingDirectory 'C:\ruta\al\workspace'
+Set-ScheduledTask -TaskName 'LocalDelegateDaemon' -Action $action
+```
+
+Mantén `LogonType = InteractiveToken`. La alternativa de pasar la tarea a «ejecutar tanto si el
+usuario inició sesión como si no» también elimina la ventana —corre en la sesión 0—, pero solo
+sirve guardando la contraseña de la cuenta: la variante S4U no desbloquea el master key DPAPI del
+usuario y el `Import-Clixml` del launcher falla.
+
+Si el launcher hace `WaitForExit()` sobre el daemon, la ventana no era un parpadeo sino
+persistente. Al cerrarla a mano el daemon sobrevive huérfano, pero la tarea registra
+`LastTaskResult = 0xC000013A` (`STATUS_CONTROL_C_EXIT`); es la firma de este problema.
 
 La tarea es de **Windows a nivel del usuario**. No pertenece a Codex ni a Claude Code: se inicia
 una vez al entrar en Windows y atiende a todos los clientes por la misma URL. `IgnoreNew` y el lock
