@@ -8,6 +8,19 @@
 #   ./scripts/setup_repo_security.sh                # aplica
 #   ./scripts/setup_repo_security.sh --admin-bypass # deja que un admin salte la regla
 #
+# Sirve para cualquier repo, no solo para este. Los checks requeridos se pasan por parámetro,
+# porque son los nombres de los jobs de SU CI:
+#
+#   ./scripts/setup_repo_security.sh --repo ZahiriNatZuke/nest-template-project \
+#     --checks "Lint, typecheck and unit tests|End-to-end tests" --no-code-scanning
+#
+# El separador es `|` y no la coma a propósito: los nombres de job llevan comas
+# ("Lint, typecheck and unit tests") y paréntesis ("test (ubuntu-latest)") con toda naturalidad.
+# `--check` es la forma repetible, útil cuando el nombre trae cualquier cosa rara.
+#
+# Antes de aplicar se comprueba que alguien reporta cada check pedido: un check exigido que
+# nadie publica deja los PR esperando PARA SIEMPRE, y es el error más fácil de cometer aquí.
+#
 # Requiere `gh` autenticado con permiso de administración sobre el repo.
 #
 # Decisiones (y por qué), para un proyecto público mantenido por una persona:
@@ -31,12 +44,12 @@ BRANCH="${BRANCH:-main}"
 REVIEWS=0
 ADMIN_BYPASS=0
 DRY=0
+CODE_SCANNING=1
+SKIP_VERIFY=0
 
-# Nombres de los jobs de .github/workflows que deben estar en verde para poder mergear.
-# OJO: tienen que coincidir EXACTAMENTE con el nombre que publica cada job. Un check exigido
-# que nadie reporta deja los PR esperando para siempre, así que si se renombra un job o se
-# cambia su matriz hay que actualizar esta lista y volver a aplicar el script. Los jobs en
-# matriz publican un check por combinación, con el valor entre paréntesis.
+# Checks por defecto: los jobs de ESTE repo. Con `--checks`/`--check` se sustituyen por los del
+# repo que toque. Tienen que coincidir EXACTAMENTE con el nombre que publica cada job; los jobs
+# en matriz publican uno por combinación, con el valor entre paréntesis.
 REQUIRED_CHECKS=(
   "lint"
   "test (ubuntu-latest)"
@@ -45,6 +58,15 @@ REQUIRED_CHECKS=(
   "secrets"
   "Analyze (python)"
 )
+checks_overridden=0
+
+add_check() {  # sustituye los defaults la primera vez, acumula a partir de ahí
+  if [[ $checks_overridden -eq 0 ]]; then
+    REQUIRED_CHECKS=()
+    checks_overridden=1
+  fi
+  [[ -n "$1" ]] && REQUIRED_CHECKS+=("$1")
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -52,11 +74,24 @@ while [[ $# -gt 0 ]]; do
     --admin-bypass) ADMIN_BYPASS=1 ;;
     --reviews) REVIEWS="$2"; shift ;;
     --repo) OWNER="${2%%/*}"; REPO="${2##*/}"; shift ;;
-    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+    --checks)  # lista separada por `|`: los nombres de job llevan comas y paréntesis
+      IFS='|' read -r -a _parsed <<< "${2:?falta la lista de --checks}"
+      for c in "${_parsed[@]}"; do add_check "$(echo "$c" | sed 's/^ *//; s/ *$//')"; done
+      shift ;;
+    --check) add_check "${2:?falta el valor de --check}"; shift ;;
+    # Un repo sin CodeQL no puede satisfacer la regla `code_scanning`: exigirla ahí bloquea.
+    --no-code-scanning) CODE_SCANNING=0 ;;
+    --skip-verify) SKIP_VERIFY=1 ;;
+    -h|--help) sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "opción desconocida: $1" >&2; exit 2 ;;
   esac
   shift
 done
+
+if [[ ${#REQUIRED_CHECKS[@]} -eq 0 ]]; then
+  echo "error: la lista de checks requeridos quedó vacía" >&2
+  exit 2
+fi
 
 run() {
   if [[ $DRY -eq 1 ]]; then
@@ -68,6 +103,59 @@ run() {
 
 command -v gh >/dev/null || { echo "falta el CLI 'gh' (https://cli.github.com)" >&2; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "'gh' no está autenticado: corre 'gh auth login'" >&2; exit 1; }
+
+# --- 0. ¿Alguien reporta de verdad los checks que vamos a exigir? -------------------------
+# Es el error más fácil y más caro de este script: exigir un check que nadie publica —por una
+# errata, un job renombrado o una matriz que cambió— deja TODOS los PR esperando para siempre
+# a algo que no va a llegar.
+#
+# Hay que mirar en dos sitios y por dos APIs distintas:
+#   · la rama por defecto Y el PR más reciente, porque comprobaciones como las alertas de PR o
+#     un deploy de preview solo existen dentro de un PR;
+#   · *check-runs* Y *commit statuses*: GitHub Actions publica check-runs, pero integraciones
+#     como Vercel publican un status clásico. Mirando solo los primeros, `Vercel` parecía no
+#     existir y la verificación daba un falso error.
+names_of() {  # $1 = ref; imprime todo lo que reporta algo sobre ese commit
+  gh api "repos/$OWNER/$REPO/commits/$1/check-runs" --jq '.check_runs[].name' 2>/dev/null || true
+  gh api "repos/$OWNER/$REPO/commits/$1/status" --jq '.statuses[].context' 2>/dev/null || true
+}
+
+verify_checks() {
+  local reported missing=() pr
+  reported=$(
+    {
+      names_of "$BRANCH"
+      pr=$(gh api "repos/$OWNER/$REPO/pulls?state=all&per_page=1" --jq '.[0].head.sha' 2>/dev/null || true)
+      [[ -n "$pr" && "$pr" != "null" ]] && names_of "$pr"
+    } | sort -u
+  )
+  if [[ -z "$reported" ]]; then
+    echo "    aviso: no se pudo leer ningún check del repo; no se verifica nada" >&2
+    return 0
+  fi
+  local c
+  for c in "${REQUIRED_CHECKS[@]}"; do
+    grep -Fxq "$c" <<< "$reported" || missing+=("$c")
+  done
+  [[ ${#missing[@]} -eq 0 ]] && { echo "    los ${#REQUIRED_CHECKS[@]} checks pedidos los reporta alguien"; return 0; }
+
+  echo "" >&2
+  echo "    ERROR: nadie reporta estos checks, y exigirlos bloquearía todos los PR:" >&2
+  printf '      · %s\n' "${missing[@]}" >&2
+  echo "    checks que sí se ven en este repo:" >&2
+  sed 's/^/      - /' <<< "$reported" >&2
+  echo "    corrige los nombres, o pasa --skip-verify si sabes que aún no han corrido." >&2
+  return 1
+}
+
+if [[ $SKIP_VERIFY -eq 0 ]]; then
+  echo "==> Comprobando los checks requeridos"
+  if ! verify_checks; then
+    # En dry-run se avisa y se sigue, para poder ver el resto del plan; aplicando, se aborta.
+    [[ $DRY -eq 1 ]] || exit 1
+    echo "    (dry-run: se continúa para enseñar el resto)" >&2
+  fi
+fi
 
 echo "Repositorio: $OWNER/$REPO   ·   rama protegida: $BRANCH"
 [[ $DRY -eq 1 ]] && echo "(dry-run: no se aplica nada)"
@@ -109,9 +197,10 @@ checks_json=$(printf '%s\n' "${REQUIRED_CHECKS[@]}" \
 bypass_json="[]"
 [[ $ADMIN_BYPASS -eq 1 ]] && bypass_json='[{"actor_id":5,"actor_type":"RepositoryRole","bypass_mode":"always"}]'
 
-ruleset=$(python3 - "$BRANCH" "$REVIEWS" "$checks_json" "$bypass_json" <<'PY'
+ruleset=$(python3 - "$BRANCH" "$REVIEWS" "$checks_json" "$bypass_json" "$CODE_SCANNING" <<'PY'
 import json, sys
 branch, reviews, checks, bypass = sys.argv[1], int(sys.argv[2]), json.loads(sys.argv[3]), json.loads(sys.argv[4])
+code_scanning = sys.argv[5] == "1"
 print(json.dumps({
     "name": "protect-" + branch,
     "target": "branch",
@@ -137,12 +226,13 @@ print(json.dumps({
             "required_status_checks": checks,
         }},
         # Que el job de CodeQL termine en verde no basta: puede acabar bien y haber encontrado
-        # una alerta. Esta regla mira las alertas, no el resultado del job.
-        {"type": "code_scanning", "parameters": {"code_scanning_tools": [
+        # una alerta. Esta regla mira las alertas, no el resultado del job. Se omite con
+        # `--no-code-scanning` en repos sin CodeQL, donde exigirla bloquearía los PR.
+        *([{"type": "code_scanning", "parameters": {"code_scanning_tools": [
             {"tool": "CodeQL",
              "security_alerts_threshold": "high_or_higher",
              "alerts_threshold": "errors"},
-        ]}},
+        ]}}] if code_scanning else []),
     ],
 }))
 PY
