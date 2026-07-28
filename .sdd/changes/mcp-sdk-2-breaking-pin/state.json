@@ -3,9 +3,9 @@
   "slug": "mcp-sdk-2-breaking-pin",
   "title": "Acotar el SDK mcp por debajo del major 2 y cerrar el punto ciego de resolucion libre",
   "mode": "standard",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-07-28T22:27:42.069Z",
-  "updatedAt": "2026-07-28T22:35:11.078Z",
+  "updatedAt": "2026-07-28T22:44:29.086Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-28T22:42:13.304Z",
+      "evidence": "Local con '.': ruff check limpio, ruff format 42 archivos, 233 passed, node --check OK, uv lock --check OK. CI del PR #31: los 6 checks requeridos en verde (lint, test ubuntu/windows/macos, secrets, Analyze python) mas install-smoke pass en 13s, CodeQL, Socket y GitGuardian. Prueba negativa: la 0.12.1 publicada resuelve mcp==2.0.0 y el check falla con codigo 1 y el ModuleNotFoundError exacto.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-28T22:44:29.086Z",
+      "evidence": "review.md compara los 9 requisitos contra la implementacion con evidencia fresca. Veredicto conforms-with-notes: 4 notas, todas limitaciones declaradas o trabajo diferido explicito (revision de plan no independiente, verificacion final en la Mac pendiente de publicar, prevencion parcial del resto de dependencias, serverInfo reporta la version del SDK). CI de main verificado DESPUES del merge: CI, CodeQL y Dependency Graph en success.",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -96,6 +96,36 @@
       "to": "implementing",
       "at": "2026-07-28T22:35:11.078Z",
       "reason": "Gate de plan aprobado sin hallazgos bloqueantes pendientes"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-28T22:41:37.009Z",
+      "reason": "Implementacion completa, evidencia local recogida, PR #31 abierto"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-28T22:42:13.304Z",
+      "evidence": "Local con '.': ruff check limpio, ruff format 42 archivos, 233 passed, node --check OK, uv lock --check OK. CI del PR #31: los 6 checks requeridos en verde (lint, test ubuntu/windows/macos, secrets, Analyze python) mas install-smoke pass en 13s, CodeQL, Socket y GitGuardian. Prueba negativa: la 0.12.1 publicada resuelve mcp==2.0.0 y el check falla con codigo 1 y el ModuleNotFoundError exacto.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-28T22:44:29.021Z",
+      "reason": "Verificacion completa: CI del PR y de main en verde, prueba negativa demostrada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-28T22:44:29.086Z",
+      "evidence": "review.md compara los 9 requisitos contra la implementacion con evidencia fresca. Veredicto conforms-with-notes: 4 notas, todas limitaciones declaradas o trabajo diferido explicito (revision de plan no independiente, verificacion final en la Mac pendiente de publicar, prevencion parcial del resto de dependencias, serverInfo reporta la version del SDK). CI de main verificado DESPUES del merge: CI, CodeQL y Dependency Graph en success.",
+      "actor": "user"
     }
   ]
 }
