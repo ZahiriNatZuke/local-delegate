@@ -9,6 +9,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Changed
 - La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
   de la Mac pasa a la versión vigente.
+- **ruff 0.16.0** (solo desarrollo). Promueve a estables reglas que sacaban 79 avisos en código
+  hoy limpio; se aplican los arreglos que son mejora real (`datetime.UTC`, `re.MULTILINE`,
+  `removeprefix`, `typing.Self` en los `__enter__`, `fromisoformat` sin el reemplazo de `Z` que
+  3.11 ya no necesita) y se **ignoran con su motivo** las que chocan con decisiones deliberadas:
+  `BLE001`/`S110` (diagnóstico, sysinfo e instalador son best-effort y nunca deben lanzar) y
+  `PLW1510` (`subprocess.run` comprueba el returncode a mano para dar un mensaje propio). El
+  formateador excluye los `.md`: 0.16 formatea los bloques Python embebidos y reescribía
+  documentación histórica.
 
 ### Fixed
 - **El origen del cómputo mentía detrás de un túnel.** `backend_origin()` clasifica por el host

@@ -13,7 +13,7 @@ from local_delegate import install as inst
 
 
 def _opts(home: Path, **kw) -> inst.Options:
-    base = dict(
+    base = dict(  # noqa: C408 — kwargs legibles, no un literal
         home=home,
         components={"hooks", "skill", "memory", "mcp"},
         targets={"claude", "codex"},

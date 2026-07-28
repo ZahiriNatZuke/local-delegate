@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 # La version MCP es la fecha de la revision de la especificacion, no la fecha actual.
 # Debe mantenerse alineada con LATEST_PROTOCOL_VERSION del SDK `mcp` usado por el paquete.
@@ -49,7 +49,7 @@ class McpStdioClient:
         self.pending: dict[int, dict[str, Any]] = {}
         self.next_id = 1
 
-    def __enter__(self) -> McpStdioClient:
+    def __enter__(self) -> Self:
         self.process = subprocess.Popen(
             self.command,
             stdin=subprocess.PIPE,

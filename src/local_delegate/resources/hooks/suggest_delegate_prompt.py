@@ -10,17 +10,20 @@ import sys
 from hook_common import emit, record
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.I)),
-    ("extract", re.compile(r"\b(extrae|extraer|extract|campos?|fields?)\b", re.I)),
-    ("classify", re.compile(r"\b(clasific|etiquet|classif|label)\w*\b", re.I)),
-    ("translate", re.compile(r"\b(traduc|translate)\w*\b", re.I)),
-    ("lint", re.compile(r"\b(lint|pytest|test output|salida de (?:tests?|pruebas))\b", re.I)),
-    ("boilerplate", re.compile(r"\b(boilerplate|esqueleto|scaffold)\w*\b", re.I)),
+    ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
+    ("extract", re.compile(r"\b(extrae|extraer|extract|campos?|fields?)\b", re.IGNORECASE)),
+    ("classify", re.compile(r"\b(clasific|etiquet|classif|label)\w*\b", re.IGNORECASE)),
+    ("translate", re.compile(r"\b(traduc|translate)\w*\b", re.IGNORECASE)),
+    (
+        "lint",
+        re.compile(r"\b(lint|pytest|test output|salida de (?:tests?|pruebas))\b", re.IGNORECASE),
+    ),
+    ("boilerplate", re.compile(r"\b(boilerplate|esqueleto|scaffold)\w*\b", re.IGNORECASE)),
 )
 _HOST_ONLY = re.compile(
     r"\b(arquitect|diseñ|design|investig|research|multi[- ]?fuente|latest|actual(?:iza)?|"
     r"seguridad|security|credencial|secret|deploy|publica|borra|elimina|migraci)\w*\b",
-    re.I,
+    re.IGNORECASE,
 )
 
 

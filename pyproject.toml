@@ -75,6 +75,26 @@ line-length = 100
 [tool.ruff.lint]
 # Reglas por defecto (E4/E7/E9, F) + imports ordenados (I).
 extend-select = ["I"]
+# ruff 0.16 promovió a estables reglas que chocan con decisiones deliberadas de este proyecto.
+# Se ignoran con su motivo, en vez de reescribir código que está bien a propósito.
+ignore = [
+    # El diagnóstico (`doctor`), la lectura de RAM/VRAM/procesos (`web/sysinfo`) y el
+    # instalador son **best-effort**: un binario ausente, una salida inesperada o un fallo de
+    # red degradan a un aviso y NUNCA lanzan — está escrito en sus docstrings. Ahí
+    # `except Exception` es el contrato, no un descuido, y un `pass` silencioso es la
+    # degradación correcta: reventar el dashboard porque `nvidia-smi` no está sería peor.
+    "BLE001",
+    "S110",
+    # `subprocess.run` sin `check=` es deliberado: el returncode se comprueba a mano para dar
+    # un mensaje propio y accionable en vez de un CalledProcessError crudo.
+    "PLW1510",
+]
+
+[tool.ruff.format]
+# ruff 0.16 formatea también los bloques de código Python embebidos en Markdown. La doc de
+# `docs/plans/` es registro histórico de decisiones y los ejemplos de la wiki se escriben para
+# leerse (comentarios alineados a mano); reformatearlos automáticamente solo genera ruido.
+exclude = ["*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

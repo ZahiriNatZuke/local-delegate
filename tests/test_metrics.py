@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import respx
@@ -56,8 +56,8 @@ def test_load_range_opens_only_intersecting_months(tmp_path, monkeypatch):
         )
     metrics._FILE_CACHE.clear()
 
-    range_from = datetime(2026, 2, 1, tzinfo=timezone.utc)
-    range_to = datetime(2026, 2, 28, tzinfo=timezone.utc)
+    range_from = datetime(2026, 2, 1, tzinfo=UTC)
+    range_to = datetime(2026, 2, 28, tzinfo=UTC)
     rows, files_read = metrics._load(range_from, range_to)
     assert len(rows) == 1
     assert len(files_read) == 1
@@ -85,7 +85,7 @@ def test_load_uses_cache_until_file_changes(tmp_path, monkeypatch):
 def test_api_events_default_range_last_30_days(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ym = now.strftime("%Y%m")
     _write_jsonl(
         tmp_path / f"usage-{ym}.jsonl",
@@ -317,7 +317,7 @@ def test_api_system_never_crashes_without_platform_support(monkeypatch):
 
     monkeypatch.setattr(sysinfo, "ram_stats", lambda: None)
     monkeypatch.setattr(sysinfo, "vram_stats", lambda: None)
-    monkeypatch.setattr(sysinfo, "interesting_processes", lambda: [])
+    monkeypatch.setattr(sysinfo, "interesting_processes", list)
     client = TestClient(metrics.app)
     r = client.get("/api/system")
     assert r.status_code == 200
