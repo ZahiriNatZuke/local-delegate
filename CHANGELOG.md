@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
+  de la Mac pasa a la versión vigente.
+
 ## [0.11.0] - 2026-07-27
 
 ### Added
