@@ -5,7 +5,7 @@ PC. Así `local_summarize(path="/Users/...")` abre el archivo en la Mac y conser
 contexto; un MCP ejecutado entero en Windows no puede abrir ese path.
 
 ```text
-Codex/Claude (Mac) -> local-delegate 0.10.0 (Mac) -> HTTPS privado -> llama-swap (PC) -> GPU
+Codex/Claude (Mac) -> local-delegate 0.11.0 (Mac) -> HTTPS privado -> llama-swap (PC) -> GPU
 ```
 
 ## Requisitos ya listos en la PC
@@ -67,7 +67,7 @@ source "$HOME/.zshrc"
 
 ## Claude Code en la Mac
 
-La entrada se fija a 0.10.0 durante el rollout. La key no se pega en el JSON: Claude expande la
+La entrada se fija a 0.11.0 durante el rollout. La key no se pega en el JSON: Claude expande la
 variable que cargaste desde Keychain al iniciar la sesión.
 
 ```bash
@@ -78,7 +78,7 @@ claude mcp add-json --scope user local-delegate "$(cat <<JSON
   \"command\": \"uvx\",
   \"args\": [
     \"--from\",
-    \"local-delegate-mcp==0.10.0\",
+    \"local-delegate-mcp==0.11.0\",
     \"local-delegate-mcp\"
   ],
   \"env\": {
@@ -113,7 +113,7 @@ text = re.sub(pattern, "", text).rstrip()
 base_url = json.dumps(os.environ["LOCAL_DELEGATE_BASE_URL"])
 block = f'''[mcp_servers.local-delegate]
 command = "uvx"
-args = ["--from", "local-delegate-mcp==0.10.0", "local-delegate-mcp"]
+args = ["--from", "local-delegate-mcp==0.11.0", "local-delegate-mcp"]
 env_vars = ["LOCAL_DELEGATE_API_KEY"]
 
 [mcp_servers.local-delegate.env]
@@ -168,6 +168,6 @@ Después de reiniciar el cliente:
 4. abre el dashboard con `open "https://${PC_MAGICDNS}:9393"`.
 
 El canary completo y el rollback están en la
-[recipe técnica de v0.10.0](https://github.com/ZahiriNatZuke/local-delegate/blob/v0.10.0/docs/recipes/remote-backend.md).
+[recipe técnica de v0.11.0](https://github.com/ZahiriNatZuke/local-delegate/blob/v0.11.0/docs/recipes/remote-backend.md).
 El canary autenticado pasó 20/20,
 concurrencia 2, dos arranques, `path` exclusivo de macOS y 401 sin key.

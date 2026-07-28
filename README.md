@@ -69,7 +69,7 @@ pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
 
 Para usar la GPU de otra máquina manteniendo los paths locales del cliente, usa un MCP local que
 apunte al backend remoto. La versión estable recomendada para el rollout es
-`uvx --from local-delegate-mcp==0.10.0 local-delegate-mcp`: [guía Mac → PC](./docs/wiki/Remote-backend.md)
+`uvx --from local-delegate-mcp==0.11.0 local-delegate-mcp`: [guía Mac → PC](./docs/wiki/Remote-backend.md)
 y [recipe técnica completa](./docs/recipes/remote-backend.md).
 
 En Windows, si lo registras como tarea al iniciar sesión, ejecuta el `pythonw.exe` del entorno
