@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-07-27
+
 ### Fixed
 - **Los estados vacíos del dashboard usaban otra tipografía.** `.empty` no declaraba
   `font-family`, así que heredaba la sans del `body` mientras todo su entorno —nombres de
