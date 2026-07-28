@@ -197,6 +197,22 @@ def test_backend_host_drops_scheme_and_path():
     assert config.backend_host("https://pc.ts.net:9292/v1") == "pc.ts.net:9292"
 
 
+@pytest.mark.parametrize("override", ["local", "remote"])
+def test_backend_origin_override_gana_a_la_heuristica(monkeypatch, override):
+    """El caso del túnel: `ssh -L 9292:...` enseña un backend remoto en 127.0.0.1."""
+    monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", override)
+    assert config.backend_origin("http://127.0.0.1:9292/v1") == override
+    assert config.backend_origin("https://pc.ts.net:9292/v1") == override
+
+
+@pytest.mark.parametrize("value", ["auto", "", "AUTO", "sí", "1"])
+def test_backend_origin_cae_a_la_heuristica_si_el_override_no_sirve(monkeypatch, value):
+    """Una errata en la variable no debe romper el arranque ni mentir: se deduce por host."""
+    monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", value)
+    assert config.backend_origin("http://127.0.0.1:9292/v1") == "local"
+    assert config.backend_origin("https://pc.ts.net:9292/v1") == "remote"
+
+
 @respx.mock
 def test_log_records_where_the_inference_ran(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)

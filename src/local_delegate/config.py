@@ -66,6 +66,16 @@ def auth_headers() -> dict[str, str]:
 # pero la INFERENCIA puede ejecutarse en otra máquina (p. ej. Mac -> llama-swap de la PC
 # por Tailscale). Se clasifica por el host de BASE_URL: loopback = "local", cualquier otro
 # host = "remote". Se registra en cada evento del log para poder separarlo en el dashboard.
+#
+# La heurística falla con un TÚNEL: `ssh -L 9292:localhost:9292` o un port-forward de
+# Tailscale hacen que un backend remoto se vea en 127.0.0.1, y el dashboard reportaría
+# CÓMPUTO LOCAL para inferencia que salió de la máquina. Un túnel es transparente por
+# diseño, así que no hay forma fiable de detectarlo desde aquí: quien lo monta lo declara
+# con LOCAL_DELEGATE_BACKEND_ORIGIN. Se prefiere un override explícito a adivinar, igual
+# que los eventos sin el campo se muestran como 'n/d' en vez de asumirlos locales.
+BACKEND_ORIGIN_OVERRIDE = _env("LOCAL_DELEGATE_BACKEND_ORIGIN", "auto").strip().lower()
+
+
 def _split_host_port(url: str) -> tuple[str, str]:
     parts = urlsplit(url)
     host = parts.hostname or ""
@@ -85,7 +95,14 @@ def _is_loopback_host(host: str) -> bool:
 
 
 def backend_origin(url: str | None = None) -> str:
-    """'local' si la inferencia corre en esta máquina (loopback), 'remote' en otro caso."""
+    """'local' si la inferencia corre en esta máquina, 'remote' en otro caso.
+
+    Con LOCAL_DELEGATE_BACKEND_ORIGIN=local|remote se fuerza el valor (caso del túnel);
+    'auto' —el default— deduce por el host. Un valor inválido cae a 'auto' en vez de
+    reventar: es un dato de presentación y no vale romper el arranque por una errata.
+    """
+    if BACKEND_ORIGIN_OVERRIDE in {"local", "remote"}:
+        return BACKEND_ORIGIN_OVERRIDE
     host, _port = _split_host_port(url if url is not None else BASE_URL)
     return "local" if _is_loopback_host(host) else "remote"
 
