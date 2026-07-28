@@ -10,6 +10,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
   de la Mac pasa a la versión vigente.
 
+### Fixed
+- **El origen del cómputo mentía detrás de un túnel.** `backend_origin()` clasifica por el host
+  de `BASE_URL`, así que un `ssh -L 9292:…` o un port-forward de Tailscale —el backend remoto
+  visto en `127.0.0.1`— se reportaba como **cómputo local**, justo en la topología Mac→PC que el
+  proyecto recomienda. Un túnel es transparente por diseño y no hay forma fiable de detectarlo,
+  así que se añade `LOCAL_DELEGATE_BACKEND_ORIGIN=local|remote` para declararlo; `auto` (el
+  default) mantiene la heurística de siempre y un valor inválido cae a `auto` en vez de romper
+  el arranque.
+
 ## [0.11.0] - 2026-07-27
 
 ### Added
