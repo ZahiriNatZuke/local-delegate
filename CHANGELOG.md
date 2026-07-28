@@ -6,6 +6,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
+  de la Mac pasa a la versión vigente.
+
 ### Fixed
 - **El origen del cómputo mentía detrás de un túnel.** `backend_origin()` clasifica por el host
   de `BASE_URL`, así que un `ssh -L 9292:…` o un port-forward de Tailscale —el backend remoto
