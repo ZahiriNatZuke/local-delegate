@@ -282,6 +282,11 @@ def _check_allowed_dir(path: str) -> None:
         raise ValueError(f"Ruta fuera de las raíces permitidas ({roots}): {path}")
 
 
+# Techo simbólico para leer una entrada COMPLETA: las tools de reducción deciden después si
+# el contenido cabe en el modelo o si toca map-reduce, y para eso necesitan el texto entero.
+_NO_TRUNCATE = 2**31
+
+
 def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
     """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
     if path:
@@ -785,6 +790,138 @@ def _chat_chunked(
     return text
 
 
+def _chat_map_reduce(
+    model: str,
+    system: str,
+    content: str,
+    build_user,
+    *,
+    tool: str,
+    source: str,
+    max_words: int,
+    temperature: float = 0.2,
+    raw_len: int | None = None,
+    path: str | None = None,
+) -> str:
+    """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
+
+    El chunking de `_chat_chunked` sirve para *transformar* (traducir, reescribir): concatenar
+    las salidas es correcto porque cada trozo se corresponde con su parte del resultado. Para
+    **reducir** —un único resumen de todo— concatenar no vale: haría falta un resumen por trozo
+    pegado con otro, no un resumen global. De ahí el map-reduce.
+
+    Hasta ahora estas tools simplemente *truncaban* la entrada y avisaban, que en un documento
+    grande significa resumir el principio e ignorar el resto en silencio útil. Ahora se lee
+    entero.
+
+    El reduce es jerárquico: si los resúmenes parciales tampoco caben, se vuelven a resumir por
+    niveles (tope de 3, suficiente para cualquier archivo realista y con final garantizado).
+    Como en `_chat_chunked`: N llamadas, **un** evento de log con `chunks: N`.
+    """
+    budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(model) * 0.8))
+    pieces = _chunk_text(content, budget)
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
+    )
+    calls = 0
+    latency_ms = 0
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    failed: ChatResult | None = None
+
+    def _one(sys_prompt: str, user: str, words: int) -> str | None:
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed
+        result, ms, _schema = _run_chat(model, sys_prompt, user, int(words * 2) + 64, temperature)
+        calls += 1
+        latency_ms += ms
+        if result.tokens_in is not None:
+            tokens_in = (tokens_in or 0) + result.tokens_in
+        if result.tokens_out is not None:
+            tokens_out = (tokens_out or 0) + result.tokens_out
+        if not result.ok:
+            failed = result
+            return None
+        return _strip_think(result.text)
+
+    # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
+    # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
+    partial_words = max(80, max_words)
+    reduce_system = _guard(
+        "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
+        max_words,
+    )
+
+    try:
+        summaries: list[str] = []
+        for index, piece in enumerate(pieces, start=1):
+            _inflight_progress(entry_id, index)
+            out = _one(system, build_user(piece.strip()), partial_words)
+            if out is None:
+                break
+            summaries.append(out)
+
+        text = ""
+        if failed is None:
+            if len(summaries) == 1:
+                text = summaries[0]
+            else:
+                for _level in range(3):
+                    joined = "\n\n".join(summaries)
+                    if len(joined) <= budget:
+                        out = _one(
+                            reduce_system,
+                            "Estos son resúmenes parciales y EN ORDEN de un mismo documento. "
+                            f"Redacta un único resumen global:\n\n{joined}",
+                            max_words,
+                        )
+                        text = out or ""
+                        break
+                    # Ni los parciales caben: se reducen por grupos y se repite.
+                    grouped: list[str] = []
+                    for group in _chunk_text(joined, budget):
+                        out = _one(reduce_system, build_user(group.strip()), partial_words)
+                        if out is None:
+                            break
+                        grouped.append(out)
+                    if failed is not None:
+                        break
+                    summaries = grouped
+                else:
+                    text = "\n\n".join(summaries)
+    finally:
+        _inflight_end(entry_id)
+
+    ok = failed is None
+    if not ok:
+        text, error, finish_reason = failed.text, failed.error, failed.finish_reason
+    else:
+        error, finish_reason = None, "stop"
+
+    _log_event(
+        tool=tool,
+        model=model,
+        source=source,
+        chars_in=len(content),
+        chars_out=len(text),
+        latency_ms=latency_ms,
+        ok=ok,
+        error=error,
+        finish_reason=finish_reason,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        truncated_in=False,  # el sentido de todo esto es que ya no se trunca
+        truncated_out=False,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
+        chunks=calls,
+    )
+    if source == "path" and ok and config.FEEDBACK_ENABLED:
+        text += _savings_feedback(len(content), tokens_in, "chars", True)
+    if ok and calls > 1 and config.FEEDBACK_ENABLED:
+        text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
+    return text
+
+
 def _strip_fences(s: str) -> str:
     """Quita fences markdown (```json / ```python / ```) que a veces envuelven la salida."""
     s = s.strip()
@@ -884,9 +1021,28 @@ def local_summarize(
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     system = _guard("un resumen en prosa clara", max_words)
-    user = f"Resume el siguiente contenido:\n\n{content}"
+
+    def _build(piece: str) -> str:
+        return f"Resume el siguiente contenido:\n\n{piece}"
+
+    if len(content) > config.max_chars_for(model):
+        # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
+        # truncaba, o sea que se resumía el principio y el resto se ignoraba.
+        return _chat_map_reduce(
+            model,
+            system,
+            content,
+            _build,
+            tool="local_summarize",
+            source="path" if path else "inline",
+            max_words=max_words,
+            raw_len=raw_len,
+            path=path,
+        )
+
+    user = _build(content)
     result = _chat(
         model,
         system,
@@ -1082,13 +1238,32 @@ def local_lint_summary(
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     system = _guard(
         "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
         "error/regla y los más relevantes primero",
         max_words,
     )
-    user = f"Resume la siguiente salida de linter/tests:\n\n{content}"
+
+    def _build(piece: str) -> str:
+        return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
+
+    if len(content) > config.max_chars_for(model):
+        # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
+        # estar al final, y era exactamente lo que se descartaba.
+        return _chat_map_reduce(
+            model,
+            system,
+            content,
+            _build,
+            tool="local_lint_summary",
+            source="path" if path else "inline",
+            max_words=max_words,
+            raw_len=raw_len,
+            path=path,
+        )
+
+    user = _build(content)
     result = _chat(
         model,
         system,

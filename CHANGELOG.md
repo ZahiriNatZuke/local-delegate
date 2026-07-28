@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`local_summarize` y `local_lint_summary` ya no truncan la entrada: hacen map-reduce.** Un
+  documento que no cabe en el modelo se resume por partes y luego se resumen los resúmenes,
+  jerárquicamente si hace falta (tope de 3 niveles). Antes se cortaba en
+  `max_chars_for(modelo)` con un aviso, o sea que se resumía el principio y el resto se
+  descartaba — en un log de CI eso significa perderse justo los errores del final, que suelen
+  ser los que importan. El chunking de la 0.11.0 resolvía el caso de *transformar* (traducir,
+  reescribir), donde concatenar las salidas es correcto; *reducir* pide otro diseño. Como allí:
+  N llamadas, **un** evento de log con `chunks: N` y el progreso visible en «En curso».
+  Verificado con un documento de 145.584 caracteres, procesado entero en 16 pasadas.
+
 ### Changed
 - La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
   de la Mac pasa a la versión vigente.
