@@ -9,6 +9,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Changed
 - La documentación del backend remoto fija ya **0.11.0** en vez de 0.10.0: el rollout controlado
   de la Mac pasa a la versión vigente.
+- **El CI corre los tests en Linux, Windows y macOS.** El paquete es multiplataforma de verdad
+  —rutas, locks entre procesos y llamadas a Win32 por ctypes— y hasta ahora solo se probaba en
+  Ubuntu: la fuga de handles que arregló la 0.11.0 era **exclusiva de Windows** y ningún job
+  podía verla. El lint, el formato y la validación del JS siguen corriendo una sola vez, en un
+  job aparte, porque su veredicto no depende del sistema.
+
+### Added
+- **`scripts/dev/`**: los bancos de prueba que la suite automática no cubre — un backend
+  OpenAI-compatible falso y lento (para ver el panel «En curso» de verdad y ejercitar el
+  chunking sin GPU), un comprobador del dashboard con la zona horaria forzada vía Playwright, y
+  el procedimiento del instalador contra un HOME simulado. Se habían montado durante el
+  desarrollo de la 0.11.0 y se perdieron al cerrar la sesión; reconstruir un banco de pruebas
+  es la forma más fiable de acabar no verificando nada.
+
+### Fixed
+- Los archivos con `#!` (los tres hooks empaquetados y `scripts/bump_version.py`) no tenían el
+  bit de ejecución en git. Solo se nota en sistemas POSIX —en Windows ese bit no existe, así
+  que un `ruff check` local no puede verlo— y rompía el lint del CI.
 - **ruff 0.16.0** (solo desarrollo). Promueve a estables reglas que sacaban 79 avisos en código
   hoy limpio; se aplican los arreglos que son mejora real (`datetime.UTC`, `re.MULTILINE`,
   `removeprefix`, `typing.Self` en los `__enter__`, `fromisoformat` sin el reemplazo de `Z` que
