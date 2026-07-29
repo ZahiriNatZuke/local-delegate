@@ -6,12 +6,15 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 import backend_mock
 import httpx2
+import pytest
 from fastapi.testclient import TestClient
 
 from local_delegate import config, server
@@ -484,3 +487,231 @@ def test_dashboard_survives_without_chart_js():
     html = TestClient(metrics.app).get("/").text
     assert "const HAS_CHART = typeof Chart !== 'undefined'" in html
     assert "if(HAS_CHART) Chart.register" in html
+
+
+# --- Contabilidad del troceado: ahorro frente a coste -------------------------
+# El defecto que cierran estos tests: N llamadas al backend se registraban como UN evento y el
+# dashboard sumaba solo `chars_in ÷ 4`, así que una delegación eficiente y otra que quemó la GPU
+# 16 veces daban exactamente el mismo número. El dato real (`chunks`, `tokens_in`) ya estaba en el
+# log; nadie lo leía.
+
+
+def _ev(**kw) -> dict:
+    base = {
+        "ts": "2026-07-15T10:00:00+00:00",
+        "tool": "local_summarize",
+        "model": "m",
+        "source": "path",
+        "chars_in": 4000,
+        "chars_out": 400,
+        "latency_ms": 100,
+        "ok": True,
+    }
+    base.update(kw)
+    return base
+
+
+def test_accounting_una_llamada_sin_trocear():
+    a = metrics._accounting(_ev(tokens_in=1100, tokens_out=90))
+    assert a == {
+        "backend_calls": 1,
+        "tokens_in": 1100,
+        "tokens_out": 90,
+        "saved": 1000,  # chars_in ÷ 4: el contenido que no entró al contexto
+        "estimated": False,
+    }
+
+
+def test_accounting_troceado_separa_ahorro_de_coste():
+    """El caso que da nombre al change, con los números del evento REAL del log."""
+    a = metrics._accounting(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    assert a["backend_calls"] == 4  # cuatro llamadas al backend, no una
+    assert a["tokens_in"] == 26131  # coste real, con el prompt de sistema repetido 4 veces
+    assert a["saved"] == 21044  # ahorro: el documento UNA vez, no cuatro
+    assert a["tokens_in"] > a["saved"]  # el troceo lo paga la GPU, no el contexto
+
+
+def test_accounting_sin_tokens_estima_y_lo_declara():
+    a = metrics._accounting(_ev())
+    assert a["tokens_in"] == 1000 and a["tokens_out"] == 100
+    assert a["estimated"] is True
+
+
+def test_accounting_imagen_usa_el_token_real_y_no_los_bytes():
+    """chars_in son BYTES del PNG: dividirlos entre 4 inventaba un ahorro ×48."""
+    a = metrics._accounting(
+        _ev(
+            tool="local_describe_image",
+            input_unit="bytes",
+            chars_in=504780,
+            tokens_in=2758,
+            tokens_out=37,
+        )
+    )
+    assert a["saved"] == 2758
+    assert a["tokens_in"] == 2758
+
+
+def test_accounting_imagen_historica_sin_marca_se_reconoce_por_la_tool():
+    """Los eventos anteriores al campo `input_unit` no se pueden reescribir: hay 4 en el log."""
+    a = metrics._accounting(
+        _ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37)
+    )
+    assert a["saved"] == 2758
+
+
+def test_accounting_imagen_sin_token_real_no_inventa_numero():
+    a = metrics._accounting(_ev(tool="local_describe_image", input_unit="bytes", chars_in=504780))
+    assert a["saved"] == 0  # ni estimable ni real: 0 antes que un número falso
+    assert a["tokens_in"] == 0
+    assert a["estimated"] is True
+
+
+def test_accounting_inline_no_cuenta_como_ahorro():
+    a = metrics._accounting(_ev(source="inline", tokens_in=1100, tokens_out=90))
+    assert a["saved"] == 0
+    assert a["tokens_in"] == 1100  # pero el coste sí se cuenta: la GPU lo gastó igual
+
+
+def test_accounting_fallo_a_mitad_cuenta_las_llamadas_gastadas():
+    a = metrics._accounting(_ev(chunks=3, ok=False, tokens_in=900, tokens_out=10))
+    assert a["backend_calls"] == 3
+
+
+def test_stats_distingue_delegaciones_de_llamadas_al_backend(tmp_path, monkeypatch):
+    """Escenario de aceptación: dos eventos, uno troceado -> 2 delegaciones, 5 llamadas."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(
+        tmp_path / "usage-202607.jsonl",
+        [
+            _ev(tokens_in=1100, tokens_out=90),
+            _ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786),
+        ],
+    )
+    metrics._FILE_CACHE.clear()
+
+    r = TestClient(metrics.app).get(
+        "/api/stats?from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00"
+    )
+    j = r.json()
+    assert j["total"]["calls"] == 2
+    assert j["backend_calls"] == 5
+    assert j["tokens_local_input"] == 27231
+    assert j["tokens_context_saved"] == 22044
+    assert j["estimated_events"] == 0
+    tool = j["by_tool"][0]
+    assert tool["backend_calls"] == 5 and tool["tokens_in"] == 27231
+
+
+def test_stats_marca_los_eventos_que_hubo_que_estimar(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(tmp_path / "usage-202607.jsonl", [_ev(), _ev(tokens_in=10, tokens_out=1)])
+    metrics._FILE_CACHE.clear()
+
+    j = (
+        TestClient(metrics.app)
+        .get("/api/stats?from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00")
+        .json()
+    )
+    assert j["estimated_events"] == 1
+
+
+def test_dashboard_pide_los_kpis_al_servidor():
+    """Una sola implementación de las cuentas: el panel no las recalcula en el cliente."""
+    html = TestClient(metrics.app).get("/").text
+    assert "fetch('/api/stats?'" in html
+
+
+def _extraer_funcion_js(fuente: str, cabecera: str) -> str:
+    """Recorta una función del <script> inline balanceando llaves (no hay strings con '{' dentro)."""
+    i = fuente.index(cabecera)
+    depth, j = 0, i
+    while True:
+        if fuente[j] == "{":
+            depth += 1
+        elif fuente[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return fuente[i : j + 1]
+        j += 1
+
+
+def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+    """Las series por día se agrupan en el navegador (dependen de tu zona), así que la regla de
+    contabilidad vive por duplicado. Este test ata las dos copias: si divergen, el gráfico
+    contradiría al KPI que tiene encima — el mismo defecto que este change vino a cerrar."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node no está en el PATH")
+
+    acct_js = _extraer_funcion_js(metrics.HTML, "function acct(e){")
+    casos = [
+        _ev(tokens_in=1100, tokens_out=90),
+        _ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786),
+        _ev(),  # sin tokens: estimado
+        _ev(chars_in=4002, tokens_out=7),  # impar: caza floor contra round
+        _ev(
+            tool="local_describe_image",
+            input_unit="bytes",
+            chars_in=504780,
+            tokens_in=2758,
+            tokens_out=37,
+        ),
+        _ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37),
+        _ev(tool="local_describe_image", input_unit="bytes", chars_in=504780),
+        _ev(source="inline", tokens_in=1100, tokens_out=90),
+        _ev(chunks=3, ok=False, tokens_in=900, tokens_out=10),
+    ]
+    entrada = tmp_path / "casos.json"
+    entrada.write_text(json.dumps(casos), encoding="utf-8")
+    programa = tmp_path / "paridad.mjs"
+    programa.write_text(
+        "import {readFileSync} from 'node:fs';\n"
+        "const CPT = 4;\n"
+        "const tok = c => Math.floor(c/CPT);\n"
+        f"{acct_js}\n"
+        f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
+        "console.log(JSON.stringify(casos.map(acct)));\n",
+        encoding="utf-8",
+    )
+    salida = subprocess.run(
+        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
+    )
+    desde_js = json.loads(salida.stdout)
+
+    for caso, js in zip(casos, desde_js, strict=True):
+        py = metrics._accounting(caso)
+        assert js["calls"] == py["backend_calls"], caso
+        assert js["tokensIn"] == py["tokens_in"], caso
+        assert js["tokensOut"] == py["tokens_out"], caso
+        assert js["saved"] == py["saved"], caso
+        assert js["estimated"] == py["estimated"], caso
+
+
+def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
+    """Tercera superficie: `local_status` tenía su propia copia de la cuenta (chars_in ÷ 4 a
+    mano, imágenes incluidas), así que habría seguido dando un número distinto al del panel
+    sobre el MISMO log."""
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "USAGE_LOG", log)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    filas = [
+        _ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786),
+        _ev(
+            tool="local_describe_image",
+            input_unit="bytes",
+            chars_in=504780,
+            tokens_in=2758,
+            tokens_out=37,
+        ),
+    ]
+    _write_jsonl(log, filas)
+    metrics._FILE_CACHE.clear()
+
+    agregado = metrics._aggregate(filas)
+    texto = server.local_status()
+    assert f"~{agregado['tokens_context_saved']} tokens" in texto
+    assert f"({agregado['backend_calls']} llamadas al backend)" in texto

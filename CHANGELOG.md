@@ -6,6 +6,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El dashboard mide ahora el coste, no solo el ahorro.** Nuevo KPI **Coste local** con los tokens
+  de entrada que consumió de verdad el backend sumando **todas** las llamadas, y el KPI de
+  delegaciones muestra al lado las **llamadas reales al backend**. Hasta ahora N llamadas se
+  registraban como un evento y el panel no distinguía una delegación resuelta en una llamada de una
+  que quemó la GPU dieciséis veces: el dato (`chunks`, `tokens_in`) ya estaba en el log y nadie lo
+  leía. `/api/stats` expone `backend_calls`, `tokens_local_input` y `estimated_events`.
+
+### Changed
+- **Las cuentas usan el token real que reporta el backend**, no la estimación `chars ÷ 4`, que ahora
+  es solo el respaldo para cuando el backend no da `usage`. El panel indica cuántos eventos del rango
+  hubo que estimar. Medido sobre un log real, la estimación se desviaba entre **+8 %** y **+613 %**
+  según la tool.
+- **Los KPIs se sirven de `/api/stats` en vez de recalcularse en el navegador**: una sola
+  implementación de la contabilidad. De paso cierra una incoherencia latente — el panel los sumaba
+  sobre la lista de eventos **topada a 5000** mientras mostraba al lado el total real, así que en
+  rangos grandes **subestimaba**.
+- El **ahorro de contexto no cambia de definición** para texto: sigue siendo el contenido leído
+  server-side contado **una vez** aunque se trocee. El trabajo extra de trocear lo paga la GPU, no
+  el contexto de Claude, y por eso vive en el KPI de coste.
+
+### Fixed
+- **`local_describe_image` inflaba el ahorro ×46.** Su `chars_in` son **bytes de la imagen**, y el
+  dashboard los dividía entre 4 como si fueran caracteres de texto: un solo PNG aportaba más ahorro
+  fantasma que todo el resto del log junto. El evento declara ahora `input_unit: "bytes"` y esos
+  casos se contabilizan con el token real. **El KPI «Contexto conservado» bajará** al aplicarse la
+  corrección: es el arreglo de un defecto, no una regresión.
+
 ## [0.13.1] - 2026-07-29
 
 ### Changed

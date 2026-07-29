@@ -174,9 +174,12 @@ cámbialos por los de tu backend.
 
 El MCP registra cada llamada en un log rotado por mes y sirve un **dashboard** en
 `http://127.0.0.1:9393`, con selector de rango y visibilidad de delegaciones en curso.
-El *ahorro de contexto* = caracteres de entrada leídos server-side (llamadas con
-`source=path`) ÷ 4 (o los tokens reales del backend, cuando los da) ≈ tokens que nunca
-entraron al contexto de Claude. Detalle en la [wiki](./docs/wiki/Home.md).
+El *ahorro de contexto* = la entrada leída server-side (llamadas con `source=path`) ≈ tokens que
+nunca entraron al contexto de Claude, contados **una vez por delegación** aunque el MCP la trocee.
+Enfrente, el *coste local* = los tokens que consumió de verdad tu GPU **sumando todas** las
+llamadas: una delegación troceada repite el prompt de sistema en cada trozo, y esa diferencia es
+lo que costó trocear. Se usa siempre el token real que reporta el backend; `chars ÷ 4` es solo el
+respaldo cuando no lo da. Detalle en la [wiki](./docs/wiki/Home.md).
 
 Los rangos, los días del gráfico y las horas de la tabla usan **tu zona horaria** (el log se
 escribe en UTC, que es un instante sin ambigüedad; la conversión es de presentación). El
