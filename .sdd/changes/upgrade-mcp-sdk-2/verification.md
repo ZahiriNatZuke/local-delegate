@@ -145,6 +145,53 @@ supiera. `tests/backend_mock.py` lo resuelve sustituyendo la clase `httpx2.Clien
 test e invalidando el cliente cacheado de `server`, que si se creó antes del mock traería su
 transport real.
 
+## Fase 2 — implementada en rama aparte y verificada contra el backend real
+
+Rama **`feat/mcp-sdk-2-fase2`**, sobre la de la fase 1. **239 tests**, los cuatro pasos del CI en
+verde en local, handshake OK.
+
+Verificado el 2026-07-29 con `scratchpad/verifica_fase2.py`, que comprueba las tres cosas **tal como
+las ve un cliente por el protocolo** (`list_tools` y `call_tool`), no leyendo el código:
+
+| Req | Qué exige | Estado | Evidencia |
+| --- | --- | --- | --- |
+| REQ-007 | `annotations` que reflejen la verdad | ✅ | `list_tools` devuelve **11/11** con `title`, `read_only_hint=True`, `open_world_hint=False`, y **sin** `destructive_hint`/`idempotent_hint` |
+| REQ-008 | `local_extract` con salida estructurada | ✅ | `output_schema` = `{"type": "object", "additionalProperties": true}` (antes `{"result": {"type": "string"}}`). **Contra llama-swap real:** `{"host": "127.0.0.1", "puerto": "9393"}`, dos peticiones 200, claves exactas en la raíz y sin `_local_delegate` cuando no hubo truncamiento. `structured_content` llega igual, y `content` conserva el JSON como texto para clientes que no leen salida estructurada |
+| REQ-009 | `title` y `description` del server | ✅ | `title="Local Delegate"`, `description` y `website_url`, con `version` 0.12.2 |
+
+**La degradación por error también quedó probada contra el backend real**, y no por un mock: el
+ensayo previo del script corrió sin la API key, el backend respondió **401**, y `local_extract`
+devolvió `{"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": "…401…"}}` con
+`is_error: False`. Quien llama ve qué pasó en vez de comerse una excepción de protocolo, que es
+justo lo que ese `try/except json.JSONDecodeError` promete.
+
+**Decisiones que conviene no re-discutir:**
+
+- `destructive_hint` e `idempotent_hint` **se omiten**: el protocolo solo les da sentido cuando
+  `read_only_hint` es falso, así que declararlos junto a `read_only_hint=True` sería ruido que
+  además se contradice. REQ-007 pedía «ninguna es destructiva» y eso ya lo dice `read_only_hint`.
+- `read_only_hint=True` **pese al log de uso**, porque ese log es contabilidad interna del servidor
+  —lo que alimenta el dashboard—, no un efecto sobre los datos de quien llama.
+- La forma de `local_extract` la eligió el usuario entre tres opciones: **claves pedidas en la raíz**
+  y lo que no son datos bajo la clave reservada `_local_delegate`. El aviso de truncamiento antes
+  iba como texto **delante** del JSON, de modo que la salida ni siquiera era parseable.
+
+**Dos tests existentes cambiaron**, y REQ-005 mandaba señalarlo: comparaban contra la cadena que
+`local_extract` ya no devuelve. Ninguno se borró; se añadieron tres.
+
+**Susto descartado:** el SDK 2.x genera `output_schema`/`structured_content` también para tools que
+devuelven `str` (`{"result": …}`), lo que parecía un cambio observable no detectado de la fase 1.
+**Verificado contra `mcp` 1.29.0: ya pasaba igual.** La única diferencia es interna de Python.
+
+**PR #35, en draft, con base en `feat/mcp-sdk-2` y no en `main`**, para que el diff que se revise
+sea solo el de las capacidades nuevas y no arrastre la fase 1. **9 checks en verde**: `lint`,
+`secrets`, `install-smoke`, `test` en los tres sistemas, GitGuardian y los dos de Socket Security.
+
+**Son 9 y no los 11 del PR #34, y es por diseño, no por una regresión:** `codeql.yml` solo se
+dispara en `push`/`pull_request` contra `main`, así que CodeQL no corre en un PR entre ramas de
+trabajo. Correrá cuando la fase 2 llegue a `main`. Conviene saberlo para no leer «9 verdes» como
+cobertura perdida.
+
 ## Deviations and residual risk
 
 - ~~REQ-006 sin cumplir.~~ **Resuelto:** las 11 tools se ejecutaron contra llama-swap real, 11/11

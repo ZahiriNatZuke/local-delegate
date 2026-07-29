@@ -78,6 +78,21 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 |---|---|---|
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `auto` pide `response_format` con schema y cae a modo libre si el backend responde 400; `on` lo exige (propaga el error); `off` nunca lo pide |
 
+Desde la migración al SDK `mcp` 2.x, `local_extract` devuelve **un objeto validado**, no una cadena
+con JSON dentro: quien llama ya no tiene que parsearlo. Las claves son exactamente las pedidas,
+salvo dos casos que viajan bajo la clave reservada `_local_delegate` para no ensuciar el resto:
+
+```jsonc
+// normal
+{ "host": "127.0.0.1", "puerto": "9393" }
+
+// entrada truncada — el aviso iba antes como texto DELANTE del JSON, y había que limpiarlo
+{ "host": "127.0.0.1", "_local_delegate": { "truncado": true, "aviso": "entrada truncada — …" } }
+
+// el modelo no devolvió JSON, o el backend falló
+{ "_local_delegate": { "error": "respuesta no parseable como JSON", "crudo": "…" } }
+```
+
 ## Seguridad — raíces permitidas
 
 | Variable | Default | Descripción |

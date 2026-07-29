@@ -26,10 +26,12 @@ from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
+from typing import Any
 
 import httpx2
 from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
 
 from . import autostart, config
 
@@ -50,7 +52,33 @@ def _get_version() -> str:
 
 # `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el
 # handshake `initialize`, de modo que un cliente no tenía forma de saber qué local-delegate corre.
-mcp = MCPServer("local-delegate", version=_get_version())
+mcp = MCPServer(
+    "local-delegate",
+    title="Local Delegate",
+    description=(
+        "Delega tareas mecánicas de texto e imagen a un modelo local por un endpoint "
+        "compatible con OpenAI, para conservar cuota de la suscripción."
+    ),
+    website_url="https://github.com/ZahiriNatZuke/local-delegate",
+    version=_get_version(),
+)
+
+
+def _anotaciones(titulo: str) -> ToolAnnotations:
+    """Anotaciones comunes a las 11 tools, que son todas de la misma naturaleza.
+
+    `read_only_hint`: ninguna tool modifica nada del entorno de quien llama. Escriben en el log de
+    uso, pero eso es contabilidad interna del propio servidor —lo que alimenta el dashboard—, no un
+    efecto sobre los datos del usuario. `destructive_hint` e `idempotent_hint` se omiten a
+    propósito: el protocolo solo les da sentido cuando `read_only_hint` es falso, y ponerlos aquí
+    sería ruido que además se contradice con lo anterior.
+
+    `open_world_hint` en falso: el dominio es cerrado y conocido —el endpoint configurado en
+    `LOCAL_DELEGATE_BASE_URL` y los archivos bajo las raíces permitidas—. Ninguna tool sale a
+    buscar a un mundo abierto, y para un cliente eso es la diferencia entre delegar a tu GPU o a
+    algo que puede tocar internet.
+    """
+    return ToolAnnotations(title=titulo, read_only_hint=True, open_world_hint=False)
 
 
 # --- Cliente httpx2 module-level (keep-alive entre delegaciones) -------------
@@ -1000,7 +1028,7 @@ def _validate_image_path(path: str) -> str:
 
 
 # --- Tools ------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Resumir texto o archivo"))
 def local_summarize(
     text: str | None = None,
     path: str | None = None,
@@ -1061,7 +1089,7 @@ def local_summarize(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Clasificar en una etiqueta"))
 def local_classify(text: str, labels: list[str]) -> str:
     """Clasifica un texto en UNA de las etiquetas dadas, con un modelo local.
 
@@ -1086,19 +1114,22 @@ def local_classify(text: str, labels: list[str]) -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Extraer campos como JSON"))
 def local_extract(
     fields: list[str],
     text: str | None = None,
     path: str | None = None,
-) -> str:
+) -> dict[str, Any]:
     """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
     (>200 líneas / >10 KB) y solo necesitas campos estructurados, no el contenido literal.
 
     Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
 
     Pasa 'path' para leer el archivo server-side (no gasta contexto de Claude) o 'text'.
-    Devuelve un objeto JSON con exactamente las claves pedidas. Enruta al modelo mecánico
+    Devuelve un objeto con exactamente las claves pedidas, ya validado: quien llama no tiene que
+    parsear una cadena. Si la entrada hubo que truncarla, se añade además la clave reservada
+    `_local_delegate` con el aviso — antes ese aviso iba como texto delante del JSON, donde
+    obligaba a limpiar la cadena antes de poder parsearla. Enruta al modelo mecánico
     (entradas cortas) o al de contexto largo (documentos grandes) automáticamente: el sondeo
     de tamaño usa bytes del archivo para 'path' y caracteres para 'text' (~5-10% de diferencia
     en UTF-8, aceptable). Por defecto pide al backend un JSON restringido por schema
@@ -1134,10 +1165,26 @@ def local_extract(
             json_schema_fallback=config.JSON_SCHEMA_MODE == "auto",
         )
     )
-    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+    try:
+        datos = json.loads(result)
+    except json.JSONDecodeError:
+        # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
+        # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
+        # de recibir una excepción de protocolo.
+        return {"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": result}}
+    if not isinstance(datos, dict):
+        return {"_local_delegate": {"error": "la respuesta no es un objeto JSON", "crudo": result}}
+
+    if truncated_in:
+        datos["_local_delegate"] = {
+            "truncado": True,
+            "aviso": f"entrada truncada — procesados {len(content)} de {raw_len} chars",
+        }
+    return datos
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Generar código boilerplate"))
 def local_boilerplate(spec: str, language: str) -> str:
     """Genera código boilerplate a partir de una especificación, con un modelo local de código.
 
@@ -1163,7 +1210,7 @@ def local_boilerplate(spec: str, language: str) -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Delegar una tarea genérica"))
 def local_delegate(
     task: str,
     input: str,
@@ -1215,7 +1262,7 @@ def local_delegate(
     )
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Resumir salida de lint o tests"))
 def local_lint_summary(
     path: str | None = None,
     text: str | None = None,
@@ -1282,7 +1329,7 @@ def local_lint_summary(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Redactar mensaje de commit"))
 def local_commit_msg(
     diff: str | None = None,
     path: str | None = None,
@@ -1338,7 +1385,7 @@ def local_commit_msg(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Traducir texto o archivo"))
 def local_translate(
     target_lang: str,
     text: str | None = None,
@@ -1383,7 +1430,7 @@ def local_translate(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Explicar código"))
 def local_explain_code(
     code: str | None = None,
     path: str | None = None,
@@ -1426,7 +1473,7 @@ def local_explain_code(
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Describir una imagen"))
 def local_describe_image(
     path: str,
     question: str | None = None,
@@ -1634,7 +1681,7 @@ def _llamaswap_running() -> str | None:
     return ", ".join(parts) if parts else "ningún modelo montado"
 
 
-@mcp.tool()
+@mcp.tool(annotations=_anotaciones("Diagnóstico del backend local"))
 def local_status() -> str:
     """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
 
