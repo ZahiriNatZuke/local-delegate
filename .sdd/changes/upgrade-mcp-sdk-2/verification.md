@@ -145,6 +145,38 @@ supiera. `tests/backend_mock.py` lo resuelve sustituyendo la clase `httpx2.Clien
 test e invalidando el cliente cacheado de `server`, que si se creó antes del mock traería su
 transport real.
 
+## Fase 2 — implementada en rama aparte, sin verificar contra el backend real
+
+Rama **`feat/mcp-sdk-2-fase2`**, sobre la de la fase 1, sin PR todavía. **239 tests**, los cuatro
+pasos del CI en verde en local, handshake OK.
+
+| Req | Qué exige | Estado | Evidencia |
+| --- | --- | --- | --- |
+| REQ-007 | `annotations` que reflejen la verdad | ✅ | las 11 con `title`, `read_only_hint=True`, `open_world_hint=False` |
+| REQ-008 | `local_extract` con salida estructurada | ✅ | `output_schema` pasó de `{"result": {"type": "string"}}` a objeto abierto; devuelve `dict` |
+| REQ-009 | `title` y `description` del server | ✅ | más `website_url` |
+
+**Decisiones que conviene no re-discutir:**
+
+- `destructive_hint` e `idempotent_hint` **se omiten**: el protocolo solo les da sentido cuando
+  `read_only_hint` es falso, así que declararlos junto a `read_only_hint=True` sería ruido que
+  además se contradice. REQ-007 pedía «ninguna es destructiva» y eso ya lo dice `read_only_hint`.
+- `read_only_hint=True` **pese al log de uso**, porque ese log es contabilidad interna del servidor
+  —lo que alimenta el dashboard—, no un efecto sobre los datos de quien llama.
+- La forma de `local_extract` la eligió el usuario entre tres opciones: **claves pedidas en la raíz**
+  y lo que no son datos bajo la clave reservada `_local_delegate`. El aviso de truncamiento antes
+  iba como texto **delante** del JSON, de modo que la salida ni siquiera era parseable.
+
+**Dos tests existentes cambiaron**, y REQ-005 mandaba señalarlo: comparaban contra la cadena que
+`local_extract` ya no devuelve. Ninguno se borró; se añadieron tres.
+
+**Susto descartado:** el SDK 2.x genera `output_schema`/`structured_content` también para tools que
+devuelven `str` (`{"result": …}`), lo que parecía un cambio observable no detectado de la fase 1.
+**Verificado contra `mcp` 1.29.0: ya pasaba igual.** La única diferencia es interna de Python.
+
+**Falta:** probar `local_extract` contra el backend real (no contra mocks) y abrir su PR, con base
+en `feat/mcp-sdk-2` y **no en `main`**.
+
 ## Deviations and residual risk
 
 - ~~REQ-006 sin cumplir.~~ **Resuelto:** las 11 tools se ejecutaron contra llama-swap real, 11/11
