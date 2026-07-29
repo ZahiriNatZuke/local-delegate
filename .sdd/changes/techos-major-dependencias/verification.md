@@ -71,6 +71,20 @@ El único warning de la suite es el `StarletteDeprecationWarning` de `httpx` que
 `main`** — y que es, de hecho, el ejemplo de rotura por transitiva que cita la documentación nueva.
 Desaparece con la migración a `mcp` 2.x. No es una regresión de este cambio.
 
+### CI del PR #36
+
+**11 checks en verde**: `lint`, `secrets`, `install-smoke`, `test` en ubuntu/macOS/Windows, CodeQL
+(`Analyze (python)` + el check agregado), GitGuardian y los dos de Socket Security. Son los 11 y no
+9 porque este PR va contra `main`, que es lo que dispara `codeql.yml`.
+
+**`install-smoke` es el check que importa aquí**: construye el wheel y lo instala en un venv limpio
+con `--resolution highest`, o sea que resuelve **al máximo que permiten los techos nuevos** y hace el
+handshake MCP contra el paquete instalado. Es la comprobación de que acotar no rompió la instalación
+real — REQ-005 cerrado por ejecución, no por razonamiento.
+
+**Socket Security no levantó alerta**: acotar un rango no añade superficie, así que no hacía falta
+depscore nuevo, y el reporte lo confirma.
+
 ## Deviations and residual risk
 
 - **No protege a nadie hasta que se publique.** Los techos viajan en el wheel; la 0.12.2 que está en
