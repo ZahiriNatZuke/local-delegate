@@ -17,7 +17,7 @@
 | REQ-004 | Techo `mcp>=2,<3` | ✅ | `pyproject.toml`; `uv lock` resuelve `mcp==2.0.0`; **`install-smoke` en verde** resolviendo libremente con `--resolution highest`, que es el escenario de `uvx` que rompió la 0.12.1 |
 | REQ-005 | Las 11 tools conservan nombre, firma y salida | ✅ | **11/11 ejecutadas contra llama-swap real** con salidas correctas (ver abajo). Apareció un cambio observable no previsto —el 421 por `Host`—, corregido |
 | REQ-006 | Verificar ejecutando, contra el backend real | ✅ | `httpx2` 2.9.1 en el camino, `API_KEY` presente, 12 peticiones HTTP reales a `127.0.0.1:9292`, todas 200 |
-| REQ-011 | Declara `httpx2`, nada arrastra `httpx` | ✅ | `httpx` tiene **0 menciones** en `uv.lock`; el único `name = "httpx…"` es `httpx2`. `uv pip list` sin `httpx` |
+| REQ-011 | Declara `httpx2`, nada arrastra `httpx` | ✅ | `httpx` tiene **0 menciones** en `uv.lock` y **0 en `uv pip tree`** sobre el entorno resuelto (las dos comprobaciones que pedía el hallazgo F4); el único `name = "httpx…"` es `httpx2` |
 | REQ-012 | Sin `respx`, sin perder cobertura, ≥233 tests | ✅ | **236 tests** (233 + 3 nuevos). `tests/backend_mock.py` sobre `httpx2.MockTransport` |
 | REQ-013 | `pywin32` documentada como heredada | ✅ | sección «Dependencias» de `SECURITY.md`, con sus puntuaciones y por qué no es evitable |
 
@@ -65,6 +65,32 @@ se comprobó que la salida es correcta, no solo presente.
 | `local_translate` | 0.1 | `The backend is down.` |
 | `local_explain_code` | 2.4 | explicación correcta de la función |
 | `local_describe_image` | 16.5 | describe el dashboard de verdad, con el sufijo del ahorro server-side |
+
+### Comparación contra la línea base (tarea 7)
+
+La línea base de la tarea 1 **no se capturó a tiempo** (se empezó por el spike con la rama ya
+creada), así que se reconstruyó después: `local-delegate-mcp==0.12.2` instalado desde PyPI en un
+entorno limpio, que resuelve **`mcp` 1.29.0 + `httpx` 0.28.1** — el mundo previo exacto. Las mismas
+11 tools, con las mismas entradas, contra el mismo backend.
+
+| | Resultado |
+| --- | --- |
+| **Idénticas carácter a carácter** | **9 / 11** |
+| `ok` en 1.x / en 2.x | 11/11 / 11/11 |
+| Degradadas | ninguna, en ninguno de los dos |
+
+Las dos que difieren, verificadas una a una:
+
+- **`local_status`** — tres líneas: el contador de eventos del log (79 → 90) y la VRAM
+  (1785 → 1811 MiB), **volátiles por definición**; y la línea de groups de llama-swap, que falta en
+  la línea base porque el entorno se instaló **sin el extra opcional `[llamaswap]`** (pyyaml) y esa
+  línea lo requiere — degradación documentada en el docstring de `_llamaswap_groups`, no regresión.
+  Artefacto del montaje de la comparación, no del SDK.
+- **`local_explain_code`** — mismo contenido y estructura, redacción distinta. El modelo corre con
+  temperatura: la igualdad carácter a carácter no es exigible aquí.
+
+**Ninguna diferencia es atribuible al SDK ni a `httpx2`.** Esto es lo que convierte REQ-005 de «las
+salidas se ven bien» en «el comportamiento no cambió».
 
 Cubre las tres familias que el plan exigía por separado: **texto** (`local_summarize`), **código**
 (`local_explain_code`, `local_boilerplate`, con `qwen25-coder-14b`) y **visión**
@@ -133,6 +159,14 @@ transport real.
   Code delega contra él sin cambios. El protocolo negociado sigue siendo `2024-11-05`. **Codex no se
   ha probado**, aunque comparte transporte y el riesgo que quedaba era el nivel de protocolo, que ya
   está descartado.
+- **Depscore del paquete publicado (tarea 8): `100/100/99/96/100` en la 0.12.2, idéntico a la
+  0.12.1.** Es la línea base contra la que comparar cuando se publique la 0.13.0; el paquete migrado
+  todavía no está en PyPI, así que su propio depscore no se puede medir hasta entonces. El árbol
+  nuevo sí está medido pieza a pieza y sale limpio salvo `pywin32`.
+- **Fallo de proceso, anotado para no repetirlo:** la línea base de la tarea 1 no se capturó antes de
+  empezar; se reconstruyó a posteriori instalando la versión publicada. Salió bien porque el paquete
+  estaba en PyPI y el backend seguía disponible — si cualquiera de las dos cosas hubiera cambiado, la
+  comparación se habría perdido sin remedio.
 - **Riesgo de calendario, ya aceptado en el spec:** `mcp` 2.0.0 se publicó el mismo día que rompió
   la 0.12.1. La recomendación de no publicar hasta 2.0.1+ o unas semanas de rodaje sigue en pie, y
   esta rama no la toca.
