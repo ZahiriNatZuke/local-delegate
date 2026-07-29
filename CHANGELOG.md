@@ -20,6 +20,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   dependencias de desarrollo —declara `httpx>=0.25.0` y no soporta `httpx2`—: su sitio lo ocupa
   `tests/backend_mock.py`, construido sobre `httpx2.MockTransport`. Los 233 tests siguen ahí.
 
+- **`local_extract` devuelve un objeto validado, no una cadena con JSON dentro.** Quien llamaba
+  tenía que hacer un `json.loads` del resultado —y antes limpiar el aviso de truncamiento, que iba
+  como texto **delante** del JSON y lo hacía imparseable—. Ahora las claves son exactamente las
+  pedidas, y los dos casos que no son datos viajan bajo la clave reservada `_local_delegate`:
+  `{"truncado": true, "aviso": …}` cuando hubo que recortar la entrada, y `{"error": …, "crudo": …}`
+  cuando el modelo no devolvió JSON o el backend falló. **Cambio de contrato**: quien parseara la
+  salida a mano debe quitar ese paso. Los clientes que no leen salida estructurada siguen recibiendo
+  el JSON como texto, así que para ellos no cambia nada.
+- **Las 11 tools se declaran como de solo lectura y de dominio cerrado** (`annotations`), y el
+  servidor se presenta con `title`, `description` y `website_url`. Las anotaciones son las mismas
+  para todas porque todas son de la misma naturaleza: ninguna toca los datos de quien llama —el log
+  de uso es contabilidad interna del servidor— y ninguna sale a un mundo abierto, solo al endpoint
+  configurado y a los archivos bajo las raíces permitidas.
+
 ### Fixed
 - **El handshake ya dice qué versión de `local-delegate` corre.** `serverInfo.version` reportaba la
   versión **del SDK**, de modo que un `initialize` no servía para saber qué versión del paquete

@@ -248,9 +248,10 @@ def test_json_schema_auto_falls_back_on_400(monkeypatch):
         ),
     ]
     route = backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=responses)
-    text = server.local_extract(fields=["a"], text="hola")
+    datos = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 2
-    assert text == '{"a": 1}'
+    # Objeto ya parseado, no una cadena con JSON dentro.
+    assert datos == {"a": 1}
 
 
 @backend_mock.mock
@@ -260,9 +261,65 @@ def test_json_schema_on_propagates_400(monkeypatch):
     route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(400, text="unsupported response_format")
     )
-    text = server.local_extract(fields=["a"], text="hola")
+    datos = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 1
-    assert "[local-delegate error]" in text
+    # El fallo del backend no puede quedar mudo por devolver un objeto: viaja bajo la clave
+    # reservada, que es donde quien llama puede encontrarlo sin adivinar.
+    assert "[local-delegate error]" in datos["_local_delegate"]["crudo"]
+
+
+# --- salida estructurada de local_extract (REQ-008) -----------------------------------
+@backend_mock.mock
+def test_local_extract_devuelve_objeto_con_las_claves_pedidas(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": '{"host": "127.0.0.1", "puerto": "9393"}'},
+                        "finish_reason": "stop",
+                    }
+                ]
+            },
+        )
+    )
+    datos = server.local_extract(fields=["host", "puerto"], text="algo")
+    assert datos == {"host": "127.0.0.1", "puerto": "9393"}
+    # Sin truncamiento, exactamente las claves pedidas y ninguna más.
+    assert "_local_delegate" not in datos
+
+
+@backend_mock.mock
+def test_local_extract_avisa_del_truncamiento_sin_romper_las_claves(monkeypatch):
+    """El aviso iba delante del JSON como texto; ahora va aparte y no estorba al parseo."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "MAX_CHARS", {config.MODEL_MECHANICAL: 10}, raising=False)
+    monkeypatch.setattr(config, "max_chars_for", lambda _model: 10)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]},
+        )
+    )
+    datos = server.local_extract(fields=["a"], text="x" * 500)
+    assert datos["a"] == 1
+    assert datos["_local_delegate"]["truncado"] is True
+    assert "500" in datos["_local_delegate"]["aviso"]
+
+
+@backend_mock.mock
+def test_local_extract_degrada_si_la_respuesta_no_es_json(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={"choices": [{"message": {"content": "no soy JSON"}, "finish_reason": "stop"}]},
+        )
+    )
+    datos = server.local_extract(fields=["a"], text="algo")
+    assert datos["_local_delegate"]["crudo"] == "no soy JSON"
 
 
 # --- F2: local_status ----------------------------------------------------------------

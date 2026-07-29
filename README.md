@@ -103,7 +103,7 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 |---|---|---|
 | `local_summarize` | Resume texto o archivo | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
-| `local_extract` | Extrae campos → objeto JSON (con `response_format` schema) | mecánico / largo (auto) |
+| `local_extract` | Extrae campos → **objeto validado**, no una cadena que haya que parsear | mecánico / largo (auto) |
 | `local_boilerplate` | Genera código desde una spec | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
