@@ -56,6 +56,27 @@ Hoy la versión vive en un comentario de `metrics.py:472`. Si se añade el manif
 comentario, hay dos sitios que pueden contradecirse. La tarea 5 lo resuelve haciendo que el
 comentario **remita** al manifiesto en vez de repetir el número.
 
+## F7 (DESCUBIERTO EN LA IMPLEMENTACIÓN, CORREGIDO) — git le cambia los bytes al blob en Windows
+
+Ni el plan ni esta revisión lo vieron, y lo cazó el CI: con `core.autocrlf=true` —el valor por
+defecto de Git for Windows y el del runner `windows-latest`— **git convierte los LF del blob en CRLF
+al hacer checkout**. El fichero pasa a medir 205 139 bytes en vez de 205 125 y el hash no cuadra
+**sin que nadie lo haya tocado**. En Ubuntu y macOS pasaba en verde; en la máquina de desarrollo
+también, porque tiene `core.autocrlf=false`.
+
+Sin esto, el vigilante sería inútil en cualquier clon de Windows —fallaría siempre, se acabaría
+ignorando— y además el wheel construido allí llevaría un JavaScript distinto del publicado desde
+Linux. O sea que la premisa de fondo del cambio, *«el contenido es byte a byte el declarado»*, no se
+sostenía sola.
+
+Corregido con `.gitattributes` (`resources/vendor/** -text`), un test que fija esa premisa y una
+pista explícita en la salida del script cuando detecta CRLF y exceso de tamaño: un fin de línea
+distinto no es un ataque, y el mensaje tiene que decirlo antes de que alguien busque uno.
+
+**La lección que deja:** el plan verificó la procedencia del blob contra la red y no se preguntó qué
+le hace *el propio git* entre el repositorio y el disco. Una matriz de CI en tres sistemas se ganó
+otra vez su coste.
+
 ## Veredicto
 
 F1 ya está corregido en el plan. F2 y F3 refuerzan tareas existentes sin cambiar el alcance. F4

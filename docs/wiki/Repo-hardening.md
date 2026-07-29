@@ -159,6 +159,15 @@ era el proceso que lo vigile:
 | `src/local_delegate/resources/vendor/vendor.json` | manifiesto: nombre, versión, ecosistema, origen, licencia y **SHA-256** de cada fichero. Fuente de verdad de la versión. Viaja en el wheel, así que quien instala puede comprobar qué lleva |
 | `scripts/check_vendor.py` | la comprobación. **Solo stdlib**: es herramienta de CI, no puede engordar el árbol de quien instala |
 | `.github/workflows/vendor-audit.yml` | lo corre en cada PR/push a `main` **y** en un cron semanal |
+| `.gitattributes` | `-text` sobre `resources/vendor/`: git no puede tocarle un byte al contenido vendorizado |
+
+**Lo del `.gitattributes` no es un detalle.** Con `core.autocrlf=true` —el valor por defecto de Git
+for Windows, y el del runner `windows-latest`— git convierte los LF del blob en CRLF al hacer
+checkout: 205 139 bytes en vez de 205 125 y el hash deja de cuadrar **sin que nadie haya tocado
+nada**. Peor: un wheel construido en esa máquina llevaría un JavaScript distinto del que se publica
+desde Linux. Se descubrió porque el CI de Windows lo cazó mientras Ubuntu y macOS pasaban en verde,
+y por eso hay un test que fija ese `-text`. Si algún día el hash falla solo en Windows, la causa es
+esa y el propio script lo dice en la salida.
 
 ### Qué rompe el CI y qué solo avisa
 

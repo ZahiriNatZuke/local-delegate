@@ -1,0 +1,10 @@
+# El contenido vendorizado se compara por SHA-256: git no puede tocarle ni un byte.
+#
+# Sin esto, un clon en Windows con `core.autocrlf=true` —el valor por defecto de Git for Windows
+# y el del runner `windows-latest`— convierte los LF del blob en CRLF al hacer checkout, y el
+# fichero en disco deja de ser el que se declaró: 205 139 bytes en vez de 205 125. La
+# comprobación de `scripts/check_vendor.py` falla ahí sin que nadie haya tocado nada, y el wheel
+# construido en esa máquina lleva un JavaScript distinto del publicado desde Linux.
+#
+# Se descubrió porque el CI de Windows lo cazó; en Ubuntu y macOS pasaba en verde.
+src/local_delegate/resources/vendor/** -text

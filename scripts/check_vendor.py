@@ -157,12 +157,22 @@ def comprobar_integridad(manifiesto: dict, directorio: Path) -> list[str]:
         real = hashlib.sha256(datos).hexdigest()
         esperado = entrada.get("sha256")
         if real != esperado:
-            errores.append(
+            mensaje = (
                 f"{nombre_fichero}: el sha256 no coincide.\n"
                 f"    esperado: {esperado}\n"
                 f"    real:     {real}\n"
                 f"    ({len(datos)} bytes en disco, {entrada.get('bytes')} declarados)"
             )
+            # La causa más probable en Windows no es un fichero adulterado: es git convirtiendo
+            # los LF en CRLF al hacer checkout (`core.autocrlf=true`, el valor por defecto de Git
+            # for Windows). Decirlo aquí ahorra buscar un ataque donde solo hay un fin de línea.
+            if b"\r\n" in datos and len(datos) > (entrada.get("bytes") or 0):
+                mensaje += (
+                    "\n    PISTA: el fichero tiene CRLF y pesa de más. Casi seguro que git te lo"
+                    "\n    normalizó al clonar. Comprueba que `.gitattributes` marca este"
+                    "\n    directorio con `-text` y vuelve a hacer checkout del fichero."
+                )
+            errores.append(mensaje)
         elif entrada.get("bytes") is not None and len(datos) != entrada["bytes"]:
             # Con el hash bueno el tamaño no puede diferir; si difiere, el manifiesto miente.
             errores.append(

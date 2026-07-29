@@ -119,6 +119,32 @@ def test_el_manifiesto_declara_la_trampa_del_banner():
     assert "274" in texto
 
 
+def test_gitattributes_protege_el_vendorizado_de_la_normalizacion():
+    """La premisa sin la que nada de esto funciona, y que el CI de Windows cazó.
+
+    Con `core.autocrlf=true` —el valor por defecto de Git for Windows y el del runner
+    `windows-latest`— git convierte los LF del blob en CRLF al hacer checkout: 205 139 bytes en
+    vez de 205 125, y el hash deja de cuadrar sin que nadie haya tocado nada. Este test fija el
+    `-text` que lo impide; borrarlo rompe el vigilante en toda máquina Windows.
+    """
+    texto = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+    assert "resources/vendor/** -text" in texto
+
+
+def test_la_pista_de_crlf_sale_cuando_toca(vendor_copia):
+    """Un fin de línea distinto no es un ataque; el mensaje tiene que decirlo."""
+    blob = vendor_copia.parent / "chart.umd.min.js"
+    blob.write_bytes(blob.read_bytes().replace(b"\n", b"\r\n"))
+    manifiesto = json.loads(vendor_copia.read_text(encoding="utf-8"))
+
+    errores = check_vendor.comprobar_integridad(manifiesto, vendor_copia.parent)
+
+    assert len(errores) == 1
+    assert "PISTA" in errores[0]
+    assert ".gitattributes" in errores[0]
+
+
 # --- CVEs: lo que TIENE que romper el CI ---------------------------------------------------------
 def test_vulnerabilidad_confirmada_falla(vendor_copia, monkeypatch):
     _sin_red(
