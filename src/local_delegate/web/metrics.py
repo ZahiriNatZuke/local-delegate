@@ -168,13 +168,17 @@ def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[st
     return rows, files_read
 
 
-def _last_event_ts() -> str | None:
-    """ts del evento más reciente de TODO el histórico (no del rango elegido).
+def _last_event() -> dict | None:
+    """El evento más reciente de TODO el histórico (no del rango elegido).
 
     El indicador EN CURSO/EN VIVO/EN REPOSO del dashboard tiene que ser independiente del
     selector de rango: mirar solo el rango hacía que "Hoy" (o un mes pasado) apagara el
     indicador aunque el MCP acabara de trabajar. Solo abre el archivo más nuevo y se apoya
     en el cache por (mtime, size), así que sondearlo es barato.
+
+    Devuelve la fila entera —y no solo su `ts`— porque el panel "En curso" enseña la última
+    delegación **terminada** cuando no hay ninguna viva: las tareas mecánicas duran 2-4 s y un
+    panel que solo muestra lo que corre ahora mismo está vacío casi siempre.
     """
     files = _log_files()
     if not files:
@@ -186,8 +190,14 @@ def _last_event_ts() -> str | None:
         for row in reversed(rows):
             ts = row.get("ts")
             if isinstance(ts, str) and ts:
-                return ts
+                return row
     return None
+
+
+def _last_event_ts() -> str | None:
+    """`ts` del evento más reciente, o `None` si el log está vacío."""
+    evento = _last_event()
+    return evento.get("ts") if evento else None
 
 
 def _aggregate(rows: list[dict]) -> dict:
@@ -325,11 +335,20 @@ def inflight():
     rango seleccionado ni de la hora (posiblemente desajustada) del navegador.
     """
     snapshot = server.inflight_snapshot()
+    ultimo = _last_event()
     return JSONResponse(
         {
             "inflight": snapshot,
             "count": len(snapshot),
-            "last_event_ts": _last_event_ts(),
+            "last_event_ts": (ultimo or {}).get("ts"),
+            # Resumen de la última delegación TERMINADA, para que el panel diga algo cuando no
+            # hay nada corriendo. Solo los campos que se pintan: el log entero no hace falta.
+            "last_event": {
+                k: ultimo.get(k)
+                for k in ("ts", "tool", "model", "backend", "chars_in", "latency_ms", "ok")
+            }
+            if ultimo
+            else None,
             "now": datetime.now(UTC).isoformat(),
         }
     )
@@ -941,7 +960,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
 const state = {events:[], range:'today', auto:true, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
-  activity:null, backendOrigin:null, backendHost:null};
+  activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const tok = c => Math.round(c/CPT);
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
@@ -1175,19 +1194,58 @@ async function pollInflight(){
       // "hace N minutos" seguiría siendo correcto
       skewMs: isFinite(serverNow) ? (Date.now() - serverNow) : 0,
     };
-    renderBackend(); renderTools(); updateLive();
-    document.getElementById('inflightBody').innerHTML = state.inflight.length
-      ? state.inflight.map(it=>{
-          const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
-          const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
-          return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-            <span class="badge model">${it.model}</span>${chunk}${org}
-            <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`;
-        }).join('')
-      : '<div class="ifrow" style="color:var(--faint)">Sin delegaciones en curso</div>';
-    document.getElementById('inflightHead').innerHTML =
-      'En curso' + (state.inflight.length ? ' <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>' : '');
+    state.lastEvent = ij.last_event || null;
+    renderBackend(); renderTools(); updateLive(); renderInflight();
   }catch(e){ /* el panel de inflight es opcional: si falla, la web sigue funcionando */ }
+}
+
+// Pinta el panel "En curso". Se llama desde pollInflight (datos frescos, 2s) y desde updateLive
+// (1s), para que el "hace Ns" de la última terminada suba suave sin pedir nada al servidor.
+function renderInflight(){
+  const body = document.getElementById('inflightBody');
+  const head = document.getElementById('inflightHead');
+  if(!body || !head) return;
+
+  if(state.inflight.length){
+    body.innerHTML = state.inflight.map(it=>{
+      const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
+      const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
+      return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
+        <span class="badge model">${it.model}</span>${chunk}${org}
+        <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`;
+    }).join('');
+    head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
+    return;
+  }
+
+  // Nada corriendo. Una delegación mecánica dura 2-4 s, así que este es el estado normal del
+  // panel aunque el MCP acabe de trabajar: enseñar la última terminada evita que parezca que
+  // no pasó nada. El desfase de reloj ya está medido en state.activity.skewMs.
+  const ev = state.lastEvent;
+  if(ev && ev.ts){
+    const skew = (state.activity && state.activity.skewMs) || 0;
+    const hace = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
+    const org = ev.backend ? `<span class="org ${ev.backend}">${ev.backend==='remote'?'remoto':'local'}</span>` : '';
+    const dur = ev.latency_ms!=null ? (ev.latency_ms/1000).toFixed(1)+'s · ' : '';
+    const marca = ev.ok===false
+      ? '<span class="num" style="color:var(--red)">✕</span>'
+      : '<span class="num" style="color:var(--ok)">✓</span>';
+    body.innerHTML = `<div class="ifrow" style="opacity:.75">${marca}
+      <span class="num" style="color:var(--faint)">hace ${fmtHace(hace)}</span>
+      <span class="badge">${ev.tool||'?'}</span>
+      <span class="badge model">${ev.model||'?'}</span>${org}
+      <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} chars</span></div>`;
+  } else {
+    body.innerHTML = '<div class="ifrow" style="color:var(--faint)">Sin delegaciones todavía</div>';
+  }
+  head.innerHTML = 'En curso';
+}
+
+function fmtHace(s){
+  if(s < 60) return s+'s';
+  if(s < 3600) return Math.floor(s/60)+' min';
+  if(s < 86400) return Math.floor(s/3600)+' h';
+  return Math.floor(s/86400)+' d';
 }
 
 // --- Sistema: /api/system (RAM/VRAM + procesos, 5s) ---
@@ -1471,9 +1529,10 @@ setInterval(()=>{ if(state.auto) fetchData(); },15000);
 setInterval(pollInflight,2000);
 setInterval(pollSystem,5000);
 setInterval(fetchStatus,60000);
-// El indicador de actividad se repinta cada segundo aunque el auto-refresco esté apagado:
-// "EN VIVO -> EN REPOSO" es una transición por PASO DEL TIEMPO, no por llegada de datos.
-setInterval(updateLive,1000);
+// El indicador de actividad y el "hace Ns" del panel se repintan cada segundo aunque el
+// auto-refresco esté apagado: "EN VIVO -> EN REPOSO" y "hace 8s -> hace 9s" son transiciones
+// por PASO DEL TIEMPO, no por llegada de datos.
+setInterval(()=>{ updateLive(); renderInflight(); },1000);
 // Los sondeos se pausan con la pestaña oculta; al volver, refresca ya en vez de esperar al
 // siguiente tick (antes se veía el estado congelado de hace horas).
 document.addEventListener('visibilitychange',()=>{
