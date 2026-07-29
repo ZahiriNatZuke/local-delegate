@@ -145,16 +145,25 @@ supiera. `tests/backend_mock.py` lo resuelve sustituyendo la clase `httpx2.Clien
 test e invalidando el cliente cacheado de `server`, que si se creó antes del mock traería su
 transport real.
 
-## Fase 2 — implementada en rama aparte, sin verificar contra el backend real
+## Fase 2 — implementada en rama aparte y verificada contra el backend real
 
-Rama **`feat/mcp-sdk-2-fase2`**, sobre la de la fase 1, sin PR todavía. **239 tests**, los cuatro
-pasos del CI en verde en local, handshake OK.
+Rama **`feat/mcp-sdk-2-fase2`**, sobre la de la fase 1. **239 tests**, los cuatro pasos del CI en
+verde en local, handshake OK.
+
+Verificado el 2026-07-29 con `scratchpad/verifica_fase2.py`, que comprueba las tres cosas **tal como
+las ve un cliente por el protocolo** (`list_tools` y `call_tool`), no leyendo el código:
 
 | Req | Qué exige | Estado | Evidencia |
 | --- | --- | --- | --- |
-| REQ-007 | `annotations` que reflejen la verdad | ✅ | las 11 con `title`, `read_only_hint=True`, `open_world_hint=False` |
-| REQ-008 | `local_extract` con salida estructurada | ✅ | `output_schema` pasó de `{"result": {"type": "string"}}` a objeto abierto; devuelve `dict` |
-| REQ-009 | `title` y `description` del server | ✅ | más `website_url` |
+| REQ-007 | `annotations` que reflejen la verdad | ✅ | `list_tools` devuelve **11/11** con `title`, `read_only_hint=True`, `open_world_hint=False`, y **sin** `destructive_hint`/`idempotent_hint` |
+| REQ-008 | `local_extract` con salida estructurada | ✅ | `output_schema` = `{"type": "object", "additionalProperties": true}` (antes `{"result": {"type": "string"}}`). **Contra llama-swap real:** `{"host": "127.0.0.1", "puerto": "9393"}`, dos peticiones 200, claves exactas en la raíz y sin `_local_delegate` cuando no hubo truncamiento. `structured_content` llega igual, y `content` conserva el JSON como texto para clientes que no leen salida estructurada |
+| REQ-009 | `title` y `description` del server | ✅ | `title="Local Delegate"`, `description` y `website_url`, con `version` 0.12.2 |
+
+**La degradación por error también quedó probada contra el backend real**, y no por un mock: el
+ensayo previo del script corrió sin la API key, el backend respondió **401**, y `local_extract`
+devolvió `{"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": "…401…"}}` con
+`is_error: False`. Quien llama ve qué pasó en vez de comerse una excepción de protocolo, que es
+justo lo que ese `try/except json.JSONDecodeError` promete.
 
 **Decisiones que conviene no re-discutir:**
 
@@ -174,8 +183,8 @@ pasos del CI en verde en local, handshake OK.
 devuelven `str` (`{"result": …}`), lo que parecía un cambio observable no detectado de la fase 1.
 **Verificado contra `mcp` 1.29.0: ya pasaba igual.** La única diferencia es interna de Python.
 
-**Falta:** probar `local_extract` contra el backend real (no contra mocks) y abrir su PR, con base
-en `feat/mcp-sdk-2` y **no en `main`**.
+**Falta:** que el CI corra sobre esta rama. Su PR va con base en `feat/mcp-sdk-2` y **no en `main`**,
+para que el diff que se revise sea solo el de las capacidades nuevas y no arrastre la fase 1.
 
 ## Deviations and residual risk
 
