@@ -3,9 +3,9 @@
   "slug": "vigilante-vendorizado",
   "title": "Vigilante del vendorizado de Chart.js: integridad, CVEs y version",
   "mode": "standard",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-07-29T13:13:10.569Z",
-  "updatedAt": "2026-07-29T13:32:33.414Z",
+  "updatedAt": "2026-07-29T14:17:35.046Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T14:15:12.341Z",
+      "evidence": "Los cuatro pasos del CI en local sobre el worktree: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando (22 nuevos en tests/test_vendor.py) y extract_dashboard_js.py + node --check OK. En el PR #39 los 12 checks en verde: lint, secrets, test en ubuntu/macOS/windows, install-smoke, audit (el workflow nuevo), CodeQL/Analyze, GitGuardian y los dos de Socket. Verificacion contra los servicios reales: OSV.dev devuelve cero vulnerabilidades para chart.js 4.4.1 y npm hace avisar de 4.5.1 sin romper (exit 0), tanto en local como en el runner. Con una copia del blob alterada en un byte el script sale con exit 1 y el diagnostico completo. La primera corrida FALLO en windows-latest y el fallo era real, no del test: con core.autocrlf=true git convierte los LF del blob en CRLF al hacer checkout (205139 bytes en vez de 205125) y el hash no cuadra sin que nadie lo toque; corregido con .gitattributes (-text sobre resources/vendor), un test que fija esa premisa y una pista en la salida del script. Anotado como F7 en plan-review.md.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T14:17:35.046Z",
+      "evidence": "Revision fresca contra spec.md, escrita en verification.md. Los 8 requisitos cubiertos con evidencia concreta: REQ-001 el manifiesto y metrics.py remitiendo a el; REQ-002 test que altera un byte de una copia y exige exit 1; REQ-003 test de vulnerabilidad (exit 2) mas ejecucion real contra OSV (cero para 4.4.1); REQ-004 aviso real de 4.5.1 con job verde en el runner; REQ-005 tres tests de red caida y respuesta malformada con exit 0; REQ-006 la trampa del banner en el manifiesto, con test; REQ-007 workflow propio con push/pull_request y cron semanal, corrio en el PR en 4s; REQ-008 la seccion de Repo-hardening.md con las dos tablas y el procedimiento de actualizacion. Los tres casos limite de la spec tienen test. No funcionales cumplidos: cero dependencias nuevas (solo stdlib, pyproject intacto), 4-5s de job y la parte que puede fallar el CI no toca la red. Los cuatro no-goals respetados: Chart.js sigue en 4.4.1, el vendorizado no se retira, no se vendoriza nada mas y el job no se exige como check requerido. Una desviacion respecto al plan, a favor: .gitattributes, que no estaba previsto y lo obligo el CI de Windows (F7).",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -96,6 +96,36 @@
       "to": "implementing",
       "at": "2026-07-29T13:32:33.414Z",
       "reason": "Gates de spec y plan aprobados; la implementacion se hace en una sesion nueva"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T14:15:12.177Z",
+      "reason": "Las 5 tareas del plan implementadas; PR #39 abierto con los 12 checks en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T14:15:12.341Z",
+      "evidence": "Los cuatro pasos del CI en local sobre el worktree: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando (22 nuevos en tests/test_vendor.py) y extract_dashboard_js.py + node --check OK. En el PR #39 los 12 checks en verde: lint, secrets, test en ubuntu/macOS/windows, install-smoke, audit (el workflow nuevo), CodeQL/Analyze, GitGuardian y los dos de Socket. Verificacion contra los servicios reales: OSV.dev devuelve cero vulnerabilidades para chart.js 4.4.1 y npm hace avisar de 4.5.1 sin romper (exit 0), tanto en local como en el runner. Con una copia del blob alterada en un byte el script sale con exit 1 y el diagnostico completo. La primera corrida FALLO en windows-latest y el fallo era real, no del test: con core.autocrlf=true git convierte los LF del blob en CRLF al hacer checkout (205139 bytes en vez de 205125) y el hash no cuadra sin que nadie lo toque; corregido con .gitattributes (-text sobre resources/vendor), un test que fija esa premisa y una pista en la salida del script. Anotado como F7 en plan-review.md.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T14:17:34.872Z",
+      "reason": "verification.md relleno con la traza requisito por requisito y los 12 checks del PR #39 en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T14:17:35.046Z",
+      "evidence": "Revision fresca contra spec.md, escrita en verification.md. Los 8 requisitos cubiertos con evidencia concreta: REQ-001 el manifiesto y metrics.py remitiendo a el; REQ-002 test que altera un byte de una copia y exige exit 1; REQ-003 test de vulnerabilidad (exit 2) mas ejecucion real contra OSV (cero para 4.4.1); REQ-004 aviso real de 4.5.1 con job verde en el runner; REQ-005 tres tests de red caida y respuesta malformada con exit 0; REQ-006 la trampa del banner en el manifiesto, con test; REQ-007 workflow propio con push/pull_request y cron semanal, corrio en el PR en 4s; REQ-008 la seccion de Repo-hardening.md con las dos tablas y el procedimiento de actualizacion. Los tres casos limite de la spec tienen test. No funcionales cumplidos: cero dependencias nuevas (solo stdlib, pyproject intacto), 4-5s de job y la parte que puede fallar el CI no toca la red. Los cuatro no-goals respetados: Chart.js sigue en 4.4.1, el vendorizado no se retira, no se vendoriza nada mas y el job no se exige como check requerido. Una desviacion respecto al plan, a favor: .gitattributes, que no estaba previsto y lo obligo el CI de Windows (F7).",
+      "actor": "user"
     }
   ]
 }

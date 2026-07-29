@@ -65,10 +65,10 @@ Las del `plan.md` se mantienen todas. Lo que se decidió **durante** la implemen
 
 ## Next action
 
-1. Esperar el CI del PR #39 y **revisar `gh run list` completo**, no solo los checks del PR.
-2. Aprobar los gates `quality` y `conformance` con la evidencia de esa corrida.
-3. Mergear con squash y **verificar el CI de `main` después del merge**.
-4. Cerrar el gate `memory`: nota en el vault y puntero en la memoria de Claude Code.
+1. Mergear el PR #39 con squash y **verificar el CI de `main` después del merge** con
+   `gh run list`, no solo los checks del PR.
+2. Cerrar el gate `memory`: nota en el vault y puntero en la memoria de Claude Code.
+3. Retirar el worktree `D:\Projects\local-delegate-vendor` cuando ya no haga falta.
 
 Lo que queda **fuera** de este cambio y es su continuación natural: subir Chart.js a 4.5.1, que será
 el primer encargo del vigilante.
