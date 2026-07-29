@@ -405,10 +405,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "filelock", specifier = ">=3" },
+    { name = "filelock", specifier = ">=3,<4" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mcp", specifier = ">=1.2,<2" },
-    { name = "platformdirs", specifier = ">=4" },
+    { name = "platformdirs", specifier = ">=4,<5" },
     { name = "pyyaml", marker = "extra == 'llamaswap'", specifier = ">=6" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
