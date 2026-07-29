@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "slug": "upgrade-mcp-sdk-2",
+  "title": "Analisis del upgrade al SDK mcp 2.x: ajuste de lo implementado y mejoras aprovechables",
+  "mode": "standard",
+  "status": "plan-review",
+  "createdAt": "2026-07-29T00:35:37.856Z",
+  "updatedAt": "2026-07-29T01:16:11.168Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T01:16:10.976Z",
+      "evidence": "Analisis con evidencia del wheel 2.0.0 y de PyPI: MCPServer sustituye a FastMCP, solo daemon.py:116 rompe, y el coste real esta en el arbol de dependencias (httpx2, opentelemetry-api, pyjwt, jsonschema, pywin32 en Windows). Decision del usuario tomada: una sola libreria HTTP, httpx2 (depscore 100/100/100/100/100). Spec con 13 requisitos en tres fases, no-goals y calendario.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T01:16:11.168Z",
+      "evidence": "Revision adversarial en plan-review.md: F1 BLOQUEANTE (fastapi TestClient va sobre httpx y se usa en ~22 puntos de test_metrics y test_daemon; quitar httpx podia romperlos) corregido anadiendo un spike de viabilidad ANTES de tocar pyproject. F2 resuelto verificando que httpx2 expone Response/Request/ConnectError/HTTPError/TimeoutException/HTTPStatusError/Timeout/Limits. F3 concreta que la version es minor 0.13.0. F4 concreta como comprobar que httpx no entra. F5 aceptado. Limitacion: revision no independiente.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-29T00:35:37.856Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-29T00:39:34.006Z",
+      "reason": "Analisis hecho leyendo el wheel 2.0.0 y comparando requires_dist en PyPI"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-29T00:39:34.074Z",
+      "reason": "research.md completo; spec redactada con fases y decision pendiente"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-29T01:16:10.976Z",
+      "evidence": "Analisis con evidencia del wheel 2.0.0 y de PyPI: MCPServer sustituye a FastMCP, solo daemon.py:116 rompe, y el coste real esta en el arbol de dependencias (httpx2, opentelemetry-api, pyjwt, jsonschema, pywin32 en Windows). Decision del usuario tomada: una sola libreria HTTP, httpx2 (depscore 100/100/100/100/100). Spec con 13 requisitos en tres fases, no-goals y calendario.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-29T01:16:11.040Z",
+      "reason": "Gate de spec aprobado con la decision de httpx2 tomada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-29T01:16:11.105Z",
+      "reason": "plan.md con cuatro fases, tareas ordenadas y estrategia de prueba"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-29T01:16:11.168Z",
+      "evidence": "Revision adversarial en plan-review.md: F1 BLOQUEANTE (fastapi TestClient va sobre httpx y se usa en ~22 puntos de test_metrics y test_daemon; quitar httpx podia romperlos) corregido anadiendo un spike de viabilidad ANTES de tocar pyproject. F2 resuelto verificando que httpx2 expone Response/Request/ConnectError/HTTPError/TimeoutException/HTTPStatusError/Timeout/Limits. F3 concreta que la version es minor 0.13.0. F4 concreta como comprobar que httpx no entra. F5 aceptado. Limitacion: revision no independiente.",
+      "actor": "user"
+    }
+  ]
+}
