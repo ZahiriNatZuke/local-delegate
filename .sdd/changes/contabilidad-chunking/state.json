@@ -3,9 +3,9 @@
   "slug": "contabilidad-chunking",
   "title": "Contabilidad real del chunking y map-reduce en las metricas, y papel de OpenTelemetry",
   "mode": "standard",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-29T18:49:06.567Z",
-  "updatedAt": "2026-07-29T19:33:29.558Z",
+  "updatedAt": "2026-07-29T19:43:08.715Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T19:42:43.916Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/contabilidad-chunking.md. Backlog del vault actualizado (punto cerrado, OTel fuera de la fase 3, daemon/Mac ya al dia, matiz sobre los tests del JS). Puntero y correcciones en la memoria del proyecto de Claude Code, mas la nota de feedback contar-las-superficies.md. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -77,6 +77,77 @@
       "at": "2026-07-29T19:33:29.558Z",
       "evidence": "Revision fresca contra los 10 requisitos en review.md: veredicto conforms-with-notes, todos cumplidos con evidencia. No-goals respetados. Cinco hallazgos documentados, dos de ellos consecuencia directa de REQ-002b: aparecio una TERCERA superficie con la misma cuenta (local_status recorria el log sumando chars_in//4 a mano), asi que la contabilidad se movio a server.py y las tres la comparten -- verificado en vivo, local_status y /api/stats dan 118 llamadas y 256732 tok identicos. Ademas se cazo que el tok() del JS redondeaba donde Python trunca, una regresion visual propia en la reticula de KPIs y codigo muerto propio (saved_chars). 277 tests, cuatro pasos del CI en verde.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T19:42:43.916Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/contabilidad-chunking.md. Backlog del vault actualizado (punto cerrado, OTel fuera de la fase 3, daemon/Mac ya al dia, matiz sobre los tests del JS). Puntero y correcciones en la memoria del proyecto de Claude Code, mas la nota de feedback contar-las-superficies.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-29T19:43:07.224Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-29T19:43:07.407Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-29T19:43:07.583Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-29T19:43:07.782Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-29T19:43:07.968Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T19:43:08.157Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T19:43:08.342Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-29T19:43:08.528Z",
+      "reason": "traza retrospectiva del flujo completado"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-29T19:43:08.715Z",
+      "reason": "traza retrospectiva del flujo completado"
     }
   ]
 }
