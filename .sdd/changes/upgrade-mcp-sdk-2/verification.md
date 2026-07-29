@@ -15,8 +15,8 @@
 | REQ-002 | Versión propia en el handshake | ✅ | `check_install_handshake.py` → «respondido por local-delegate (versión 0.12.2)»; antes imprimía la del SDK. Test `test_handshake_declara_la_version_del_paquete` |
 | REQ-003 | Ruta del MCP como argumento | ✅ | `build_app()` expone `/api/daemon`, `/mcp` y el dashboard en la raíz; `settings.streamable_http_path` ya no se toca |
 | REQ-004 | Techo `mcp>=2,<3` | ✅ | `pyproject.toml`; `uv lock` resuelve `mcp==2.0.0`; **`install-smoke` en verde** resolviendo libremente con `--resolution highest`, que es el escenario de `uvx` que rompió la 0.12.1 |
-| REQ-005 | Las 11 tools conservan nombre, firma y salida | ⚠️ parcial | 11 tools registradas; la suite pasa sin perder casos. **Falta ejecutarlas contra el backend real.** Además apareció un cambio observable no previsto (el 421 por `Host`), corregido — ver abajo |
-| REQ-006 | Verificar ejecutando, contra el backend real | ❌ pendiente | bloqueado por la API key (ver *Deviations*) |
+| REQ-005 | Las 11 tools conservan nombre, firma y salida | ✅ | **11/11 ejecutadas contra llama-swap real** con salidas correctas (ver abajo). Apareció un cambio observable no previsto —el 421 por `Host`—, corregido |
+| REQ-006 | Verificar ejecutando, contra el backend real | ✅ | `httpx2` 2.9.1 en el camino, `API_KEY` presente, 12 peticiones HTTP reales a `127.0.0.1:9292`, todas 200 |
 | REQ-011 | Declara `httpx2`, nada arrastra `httpx` | ✅ | `httpx` tiene **0 menciones** en `uv.lock`; el único `name = "httpx…"` es `httpx2`. `uv pip list` sin `httpx` |
 | REQ-012 | Sin `respx`, sin perder cobertura, ≥233 tests | ✅ | **236 tests** (233 + 3 nuevos). `tests/backend_mock.py` sobre `httpx2.MockTransport` |
 | REQ-013 | `pywin32` documentada como heredada | ✅ | sección «Dependencias» de `SECURITY.md`, con sus puntuaciones y por qué no es evitable |
@@ -45,6 +45,32 @@ supply chain. `pywin32` es el único punto flojo y no es evitable sin renunciar 
   GitGuardian y CodeQL también.
 - [x] No unrelated changes are present. — el diff toca solo la migración, su documentación y la
   traza SDD.
+
+## Las 11 tools contra el backend real (REQ-006)
+
+Ejecutadas el 2026-07-28 contra llama-swap en `127.0.0.1:9292`, con el código ya migrado y
+`httpx2` 2.9.1 como cliente. **12 peticiones HTTP reales, todas 200.** No basta con que respondan:
+se comprobó que la salida es correcta, no solo presente.
+
+| Tool | s | Salida |
+| --- | --- | --- |
+| `local_status` | 0.2 | catálogo de los 5 modelos, VRAM, RAM, groups de llama-swap |
+| `local_summarize` | 5.8 | resumen fiel del texto de entrada |
+| `local_classify` | 0.1 | `red` — la etiqueta correcta de `[red, cocina, arte]` |
+| `local_extract` | 0.3 | `{"host": "127.0.0.1", "puerto": "9393"}`, JSON válido |
+| `local_boilerplate` | 18.0 | la función pedida, sin explicación alrededor |
+| `local_delegate` | 0.1 | `OK` |
+| `local_lint_summary` | 0.4 | agrupa F401 y E501 con su conteo |
+| `local_commit_msg` | 0.5 | `chore(x.py): agregar tipos a la función suma` |
+| `local_translate` | 0.1 | `The backend is down.` |
+| `local_explain_code` | 2.4 | explicación correcta de la función |
+| `local_describe_image` | 16.5 | describe el dashboard de verdad, con el sufijo del ahorro server-side |
+
+Cubre las tres familias que el plan exigía por separado: **texto** (`local_summarize`), **código**
+(`local_explain_code`, `local_boilerplate`, con `qwen25-coder-14b`) y **visión**
+(`local_describe_image`, con `qwen3-vl-8b`). Que los modelos de 14B y de visión se monten y
+respondan prueba que el ciclo completo con llama-swap —incluido el swap de modelos, que es el que
+más tarda— sigue funcionando tras cambiar de librería HTTP.
 
 ## Hallazgos de la ejecución que el análisis no había visto
 
@@ -76,13 +102,10 @@ transport real.
 
 ## Deviations and residual risk
 
-- **REQ-006 sin cumplir: las 11 tools no se han ejecutado contra el backend local real.** La API
-  key vive cifrada con DPAPI (`%LOCALAPPDATA%\local-delegate\remote-api-key.clixml`) y descifrarla
-  quedó fuera de lo que la sesión podía hacer. Mitigación parcial: `httpx2` **sí** completó una
-  conversación HTTP real con llama-swap en `:9292` —volvió un 401 legítimo, parseado y elevado como
-  `HTTPStatusError`—, así que el transporte y el manejo de errores funcionan contra el backend de
-  verdad; lo que falta es el tramo autenticado y la comparación de salidas tool a tool.
-  **La evidencia todavía NO es suficiente para cerrar la fase 1.**
+- ~~REQ-006 sin cumplir.~~ **Resuelto:** las 11 tools se ejecutaron contra llama-swap real, 11/11
+  con salida correcta. La API key la cargó el usuario en su propia sesión (vive cifrada con DPAPI en
+  `%LOCALAPPDATA%\local-delegate\remote-api-key.clixml`) y se borró del entorno al terminar; su
+  valor no aparece en ningún artefacto.
 - ~~El CI no ha corrido.~~ **Resuelto:** PR #34 (draft) con los **11 checks en verde**, incluidos
   `install-smoke`, `test` en los tres sistemas (ubuntu, macOS, Windows), `lint`, `secrets`, CodeQL,
   GitGuardian y los dos de Socket Security — que **no** levantaron alerta por `pywin32` ni por el
