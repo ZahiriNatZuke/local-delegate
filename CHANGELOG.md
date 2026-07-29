@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-07-29
+
 ### Changed
 - **El panel «En curso» del dashboard ya no se queda en blanco cuando no hay nada corriendo:**
   enseña la **última delegación terminada** con cuánto hace, su tool, su modelo, su duración y el
