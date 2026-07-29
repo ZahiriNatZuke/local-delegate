@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-07-29T00:35:37.856Z",
-  "updatedAt": "2026-07-29T01:24:40.103Z",
+  "updatedAt": "2026-07-29T02:44:16.442Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,10 +20,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T02:33:23.439Z",
+      "evidence": "Fase 1 verificada. Local: ruff check ., ruff format --check ., pytest -q (236 passed), extract_dashboard_js.py + node --check. CI del PR 34 (draft): 11 checks en verde, incluidos install-smoke (resolucion libre con --resolution highest, el escenario de uvx que rompio la 0.12.1), test en ubuntu/macOS/Windows, CodeQL, GitGuardian y los dos de Socket Security, sin alerta por pywin32. REQ-006: las 11 tools ejecutadas contra llama-swap real con httpx2 2.9.1, 12 peticiones HTTP todas 200, 11/11 con salida correcta en las tres familias (texto, codigo con qwen25-coder-14b, vision con qwen3-vl-8b). httpx con 0 menciones en uv.lock.",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -32,10 +32,10 @@
       "actor": null
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T02:44:16.442Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/migracion-mcp-sdk-2.md, enlazada desde el incidente y el backlog. Backlog actualizado como nota viva: se cierran 'migrar a la API mcp 2.x' y 'serverInfo reporta la version del SDK', y se ajusta la seccion de techos de major (httpx salio del proyecto). Punteros en la memoria de Claude Code del proyecto, con el aviso de que el daemon local corre la rama y no main. Sin secretos ni datos personales: la API key se cargo en la sesion del usuario y se borro al terminar, su valor no aparece en ningun artefacto.",
+      "actor": "user"
     }
   },
   "history": [
@@ -96,6 +96,22 @@
       "to": "implementing",
       "at": "2026-07-29T01:24:40.103Z",
       "reason": "Spike 1b verde: TestClient de Starlette 1.3.1 prefiere httpx2 y funciona sin httpx (cierra F1); MockTransport cubre los patrones de respx. 14/14 tests del spike."
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T02:33:23.439Z",
+      "evidence": "Fase 1 verificada. Local: ruff check ., ruff format --check ., pytest -q (236 passed), extract_dashboard_js.py + node --check. CI del PR 34 (draft): 11 checks en verde, incluidos install-smoke (resolucion libre con --resolution highest, el escenario de uvx que rompio la 0.12.1), test en ubuntu/macOS/Windows, CodeQL, GitGuardian y los dos de Socket Security, sin alerta por pywin32. REQ-006: las 11 tools ejecutadas contra llama-swap real con httpx2 2.9.1, 12 peticiones HTTP todas 200, 11/11 con salida correcta en las tres familias (texto, codigo con qwen25-coder-14b, vision con qwen3-vl-8b). httpx con 0 menciones en uv.lock.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T02:44:16.442Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/migracion-mcp-sdk-2.md, enlazada desde el incidente y el backlog. Backlog actualizado como nota viva: se cierran 'migrar a la API mcp 2.x' y 'serverInfo reporta la version del SDK', y se ajusta la seccion de techos de major (httpx salio del proyecto). Punteros en la memoria de Claude Code del proyecto, con el aviso de que el daemon local corre la rama y no main. Sin secretos ni datos personales: la API key se cargo en la sesion del usuario y se borro al terminar, su valor no aparece en ningun artefacto.",
+      "actor": "user"
     }
   ]
 }
