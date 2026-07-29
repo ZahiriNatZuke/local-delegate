@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-07-29
+
 ### Changed
 - **Chart.js sube de 4.4.1 a 4.5.1**, dos minors de atraso que el vigilante nuevo sacó a la luz en
   su primera corrida. Es el estreno del proceso, y funcionó de punta a punta: el aviso lo dio el CI,
@@ -29,12 +31,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   por OSV.dev; **solo avisan** que exista una versión más nueva y que OSV o npm no respondan: un CI
   que se pone rojo porque alguien publicó algo, o porque un servicio ajeno está caído, se acaba
   ignorando. El manifiesto documenta además la trampa que hace perder una tarde a quien verifique
-  a mano: jsDelivr antepone un banner propio de 274 bytes, así que comparar el hash contra su URL
-  da siempre distinto. Nada de esto entra en el runtime del paquete. Chart.js **no** se actualiza
-  aquí (sigue en 4.4.1, con 4.5.1 publicada): el vigilante se estrena con una versión de estado
-  conocido y subirla será su primer encargo, aparte.
+  a mano: jsDelivr antepone a veces un banner propio de 274 bytes, así que comparar el hash contra
+  su URL puede dar distinto sin que nada esté adulterado. Nada de esto entra en el runtime del
+  paquete. El vigilante se estrenó con 4.4.1 —una versión de estado conocido— y su primer encargo
+  fue subirla, que es el cambio de arriba.
 
 ### Fixed
+- **`scripts/bump_version.py` se caía en la consola de Windows.** Imprime un `→` para marcar qué
+  archivos cambia, y en una consola cp1252 —lo normal en Windows— eso es un `UnicodeEncodeError`
+  que aborta el bump. Se descubrió preparando esta misma versión. Falla imprimiendo y no
+  escribiendo, así que nunca dejó un bump a medias, pero un release que se cae con un traceback de
+  codificación invita a hacer el bump a mano, que es justo lo que ese script existe para evitar.
 - **`.gitattributes` impide que git normalice los finales de línea del contenido vendorizado.** Con
   `core.autocrlf=true` —el valor por defecto de Git for Windows— el checkout convertía los LF del
   blob de Chart.js en CRLF: 205 139 bytes en vez de 205 125. Un wheel construido en esa máquina

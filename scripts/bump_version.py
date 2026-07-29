@@ -205,6 +205,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-lock", action="store_true", help="no regenerar uv.lock")
     args = parser.parse_args(argv)
 
+    # Este script se ejecuta en Windows justo antes de publicar, y ahí la consola suele ser
+    # cp1252: el `→` de más abajo la revienta con UnicodeEncodeError y aborta el bump. Falla
+    # imprimiendo, no escribiendo —los archivos se tocan después—, pero un release que se cae
+    # con un traceback de codificación invita a hacer el bump a mano, que es exactamente lo que
+    # este script existe para evitar.
+    for flujo in (sys.stdout, sys.stderr):
+        if hasattr(flujo, "reconfigure"):
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+
     try:
         if args.check:
             if args.version:
