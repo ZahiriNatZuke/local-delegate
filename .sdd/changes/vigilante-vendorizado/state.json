@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "vigilante-vendorizado",
+  "title": "Vigilante del vendorizado de Chart.js: integridad, CVEs y version",
+  "mode": "standard",
+  "status": "result-review",
+  "createdAt": "2026-07-29T13:13:10.569Z",
+  "updatedAt": "2026-07-29T14:17:35.046Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T13:32:33.194Z",
+      "evidence": "Decisiones del usuario: hash y CVE rompen el CI, version nueva y servicios caidos solo avisan, y NO se sube a 4.5.1 en este cambio. Research verificado por ejecucion: el blob local es byte a byte el chart.umd.min.js de jsDelivr 4.4.1 (el desajuste inicial de hash era un banner propio de jsDelivr de 274 bytes); NO existe ningun hash registrado en el repo, corrigiendo lo que decia el backlog; la version esta dos minors atrasada (4.4.1 frente a 4.5.1); OSV.dev responde sin credenciales y hoy da cero vulnerabilidades para 4.4.1. La spec anade dos cosas que salieron del research: documentar la trampa del banner y correr tambien en cron semanal, porque los CVE se publican cuando les toca y un repo sin PRs no se enteraria.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T13:32:33.359Z",
+      "evidence": "Revision adversarial en plan-review.md. F1 corregido ANTES de escribir el plan: el cron no puede ir en ci.yml porque disparara todos sus jobs (test en tres sistemas, lint, secrets, install-smoke) cada semana solo para mirar un hash; va en workflow propio vendor-audit.yml, siguiendo el precedente de codeql.yml. F2: el test que vale es el inverso (alterar una copia y exigir fallo), sobre tmp_path y nunca sobre el fichero real. F3 limite declarado y no vendido como resuelto: un aviso en un job verde no lo lee nadie, que es justo por lo que Chart.js lleva dos minors atrasado; se mitiga escribiendo al summary del job, sin construir issues automaticos. F4 verificado: packages igual a src/local_delegate hace que el manifiesto viaje en el wheel. F5 aceptado: el vigilante compara contra el manifiesto y no contra la red, para ser determinista. F6: el comentario de metrics.py pasara a remitir al manifiesto para no tener dos fuentes de la version. Limitacion: revision no independiente.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T14:15:12.341Z",
+      "evidence": "Los cuatro pasos del CI en local sobre el worktree: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando (22 nuevos en tests/test_vendor.py) y extract_dashboard_js.py + node --check OK. En el PR #39 los 12 checks en verde: lint, secrets, test en ubuntu/macOS/windows, install-smoke, audit (el workflow nuevo), CodeQL/Analyze, GitGuardian y los dos de Socket. Verificacion contra los servicios reales: OSV.dev devuelve cero vulnerabilidades para chart.js 4.4.1 y npm hace avisar de 4.5.1 sin romper (exit 0), tanto en local como en el runner. Con una copia del blob alterada en un byte el script sale con exit 1 y el diagnostico completo. La primera corrida FALLO en windows-latest y el fallo era real, no del test: con core.autocrlf=true git convierte los LF del blob en CRLF al hacer checkout (205139 bytes en vez de 205125) y el hash no cuadra sin que nadie lo toque; corregido con .gitattributes (-text sobre resources/vendor), un test que fija esa premisa y una pista en la salida del script. Anotado como F7 en plan-review.md.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T14:17:35.046Z",
+      "evidence": "Revision fresca contra spec.md, escrita en verification.md. Los 8 requisitos cubiertos con evidencia concreta: REQ-001 el manifiesto y metrics.py remitiendo a el; REQ-002 test que altera un byte de una copia y exige exit 1; REQ-003 test de vulnerabilidad (exit 2) mas ejecucion real contra OSV (cero para 4.4.1); REQ-004 aviso real de 4.5.1 con job verde en el runner; REQ-005 tres tests de red caida y respuesta malformada con exit 0; REQ-006 la trampa del banner en el manifiesto, con test; REQ-007 workflow propio con push/pull_request y cron semanal, corrio en el PR en 4s; REQ-008 la seccion de Repo-hardening.md con las dos tablas y el procedimiento de actualizacion. Los tres casos limite de la spec tienen test. No funcionales cumplidos: cero dependencias nuevas (solo stdlib, pyproject intacto), 4-5s de job y la parte que puede fallar el CI no toca la red. Los cuatro no-goals respetados: Chart.js sigue en 4.4.1, el vendorizado no se retira, no se vendoriza nada mas y el job no se exige como check requerido. Una desviacion respecto al plan, a favor: .gitattributes, que no estaba previsto y lo obligo el CI de Windows (F7).",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-29T13:13:10.569Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-29T13:32:33.086Z",
+      "reason": "Research verificado por ejecucion: procedencia byte a byte contra jsDelivr, OSV consultable sin auth, no hay hash registrado"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-29T13:32:33.142Z",
+      "reason": "spec.md con 8 requisitos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-29T13:32:33.194Z",
+      "evidence": "Decisiones del usuario: hash y CVE rompen el CI, version nueva y servicios caidos solo avisan, y NO se sube a 4.5.1 en este cambio. Research verificado por ejecucion: el blob local es byte a byte el chart.umd.min.js de jsDelivr 4.4.1 (el desajuste inicial de hash era un banner propio de jsDelivr de 274 bytes); NO existe ningun hash registrado en el repo, corrigiendo lo que decia el backlog; la version esta dos minors atrasada (4.4.1 frente a 4.5.1); OSV.dev responde sin credenciales y hoy da cero vulnerabilidades para 4.4.1. La spec anade dos cosas que salieron del research: documentar la trampa del banner y correr tambien en cron semanal, porque los CVE se publican cuando les toca y un repo sin PRs no se enteraria.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-29T13:32:33.249Z",
+      "reason": "plan.md con 5 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-29T13:32:33.301Z",
+      "reason": "plan-review.md con la revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-29T13:32:33.359Z",
+      "evidence": "Revision adversarial en plan-review.md. F1 corregido ANTES de escribir el plan: el cron no puede ir en ci.yml porque disparara todos sus jobs (test en tres sistemas, lint, secrets, install-smoke) cada semana solo para mirar un hash; va en workflow propio vendor-audit.yml, siguiendo el precedente de codeql.yml. F2: el test que vale es el inverso (alterar una copia y exigir fallo), sobre tmp_path y nunca sobre el fichero real. F3 limite declarado y no vendido como resuelto: un aviso en un job verde no lo lee nadie, que es justo por lo que Chart.js lleva dos minors atrasado; se mitiga escribiendo al summary del job, sin construir issues automaticos. F4 verificado: packages igual a src/local_delegate hace que el manifiesto viaje en el wheel. F5 aceptado: el vigilante compara contra el manifiesto y no contra la red, para ser determinista. F6: el comentario de metrics.py pasara a remitir al manifiesto para no tener dos fuentes de la version. Limitacion: revision no independiente.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-29T13:32:33.414Z",
+      "reason": "Gates de spec y plan aprobados; la implementacion se hace en una sesion nueva"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T14:15:12.177Z",
+      "reason": "Las 5 tareas del plan implementadas; PR #39 abierto con los 12 checks en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T14:15:12.341Z",
+      "evidence": "Los cuatro pasos del CI en local sobre el worktree: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando (22 nuevos en tests/test_vendor.py) y extract_dashboard_js.py + node --check OK. En el PR #39 los 12 checks en verde: lint, secrets, test en ubuntu/macOS/windows, install-smoke, audit (el workflow nuevo), CodeQL/Analyze, GitGuardian y los dos de Socket. Verificacion contra los servicios reales: OSV.dev devuelve cero vulnerabilidades para chart.js 4.4.1 y npm hace avisar de 4.5.1 sin romper (exit 0), tanto en local como en el runner. Con una copia del blob alterada en un byte el script sale con exit 1 y el diagnostico completo. La primera corrida FALLO en windows-latest y el fallo era real, no del test: con core.autocrlf=true git convierte los LF del blob en CRLF al hacer checkout (205139 bytes en vez de 205125) y el hash no cuadra sin que nadie lo toque; corregido con .gitattributes (-text sobre resources/vendor), un test que fija esa premisa y una pista en la salida del script. Anotado como F7 en plan-review.md.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T14:17:34.872Z",
+      "reason": "verification.md relleno con la traza requisito por requisito y los 12 checks del PR #39 en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T14:17:35.046Z",
+      "evidence": "Revision fresca contra spec.md, escrita en verification.md. Los 8 requisitos cubiertos con evidencia concreta: REQ-001 el manifiesto y metrics.py remitiendo a el; REQ-002 test que altera un byte de una copia y exige exit 1; REQ-003 test de vulnerabilidad (exit 2) mas ejecucion real contra OSV (cero para 4.4.1); REQ-004 aviso real de 4.5.1 con job verde en el runner; REQ-005 tres tests de red caida y respuesta malformada con exit 0; REQ-006 la trampa del banner en el manifiesto, con test; REQ-007 workflow propio con push/pull_request y cron semanal, corrio en el PR en 4s; REQ-008 la seccion de Repo-hardening.md con las dos tablas y el procedimiento de actualizacion. Los tres casos limite de la spec tienen test. No funcionales cumplidos: cero dependencias nuevas (solo stdlib, pyproject intacto), 4-5s de job y la parte que puede fallar el CI no toca la red. Los cuatro no-goals respetados: Chart.js sigue en 4.4.1, el vendorizado no se retira, no se vendoriza nada mas y el job no se exige como check requerido. Una desviacion respecto al plan, a favor: .gitattributes, que no estaba previsto y lo obligo el CI de Windows (F7).",
+      "actor": "user"
+    }
+  ]
+}

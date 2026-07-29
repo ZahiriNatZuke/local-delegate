@@ -1,0 +1,35 @@
+name: Vendor audit
+
+# Vigila el JavaScript vendorizado en `src/local_delegate/resources/vendor/`: 205 KB de Chart.js
+# que ninguna otra pieza del CI mira. Dependabot solo ve `pyproject.toml` y las actions, CodeQL
+# analiza el Python, y Socket cubre dependencias declaradas — un blob no es ninguna de esas cosas.
+#
+# Workflow propio y NO un job dentro de `ci.yml` a propósito: el cron semanal metido allí
+# dispararía todos sus jobs (tests en tres sistemas, lint, secrets, install-smoke) cada semana
+# solo para mirar el hash de un fichero. `codeql.yml` ya sienta el precedente de un workflow con
+# su propio cron.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Semanal: los CVE se publican cuando les toca, no cuando hay PRs. Un repo tranquilo no se
+    # enteraría nunca, que es exactamente cómo Chart.js llegó a estar dos minors atrasado.
+    - cron: "41 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # El script es solo stdlib **por diseño**, así que aquí no se instala nada: ni uv, ni
+      # dependencias, ni `setup-python`. El Python del runner basta, el job tarda segundos y no
+      # añade superficie que mantener.
+      - name: Auditar el vendorizado
+        run: python3 scripts/check_vendor.py
