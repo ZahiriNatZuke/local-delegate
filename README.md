@@ -68,9 +68,13 @@ pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
 [Daemon compartido](./docs/wiki/Daemon.md).
 
 Para usar la GPU de otra máquina manteniendo los paths locales del cliente, usa un MCP local que
-apunte al backend remoto. La versión estable recomendada para el rollout es
-`uvx --from local-delegate-mcp==0.11.0 local-delegate-mcp`: [guía Mac → PC](./docs/wiki/Remote-backend.md)
-y [recipe técnica completa](./docs/recipes/remote-backend.md).
+apunte al backend remoto: [guía Mac → PC](./docs/wiki/Remote-backend.md) y
+[recipe técnica completa](./docs/recipes/remote-backend.md).
+
+> **No fijes una versión vieja «por estabilidad».** Un pin (`==X.Y.Z`) congela también los rangos de
+> dependencias que declaraba aquel wheel, y eso envejece mal: las versiones anteriores a la 0.12.2
+> pedían `mcp` **sin techo**, así que hoy resuelven al SDK 2.x y **mueren en el import**. Si necesitas
+> fijar, fija la **actual**, y súbela cuando salga una nueva.
 
 En Windows, si lo registras como tarea al iniciar sesión, ejecuta el `pythonw.exe` del entorno
 donde instalaste el paquete con `-m local_delegate serve --log-level warning`. `pythonw` no crea
@@ -81,7 +85,10 @@ adicionales.
 
 ## Requisitos
 
-Un **endpoint OpenAI-compatible** ya corriendo, accesible en `LOCAL_DELEGATE_BASE_URL`
+**Python 3.11+** — con `uvx` no tienes que instalarlo tú, lo resuelve él; solo importa si instalas
+con `pip` en un entorno propio.
+
+Y un **endpoint OpenAI-compatible** ya corriendo, accesible en `LOCAL_DELEGATE_BASE_URL`
 (default `http://127.0.0.1:9292/v1`). Cualquiera sirve:
 
 - **llama-swap** — ver [recipe con GPU Blackwell](./docs/recipes/llama-swap-blackwell.md).
@@ -129,11 +136,6 @@ se descartaba en silencio, que es justo donde suelen estar los errores— y ahor
 `local_extract` sigue truncando a propósito: fusionar el JSON de varios trozos no tiene una
 respuesta única y adivinarla sería peor que avisar.
 
-`local_summarize` y `local_lint_summary` tampoco truncan ya: cuando el documento no cabe en el
-modelo lo resumen **por partes y luego resumen los resúmenes** (map-reduce, jerárquico si hace
-falta). Importa sobre todo en logs de CI, donde los errores interesantes suelen estar al final
-—que era justo lo que se descartaba al cortar por el techo del modelo.
-
 ## Configuración
 
 Todo por variables de entorno; nada hardcodeado. Los ids de modelo default son solo eso —
@@ -159,7 +161,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | Techo de `max_tokens` por trozo |
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | Trozo mínimo: por debajo ya no se vuelve a partir |
 | `LOCAL_DELEGATE_JSON_SCHEMA` | `auto` | `response_format` con schema en `local_extract`: `auto`/`on`/`off` |
-| `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga) |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | Línea de ahorro anexada al resultado cuando `source=path` (`0` la apaga). En `local_extract` no se anexa al texto —rompería el JSON—: va dentro de `_local_delegate` |
 | `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Raíces permitidas para `path`, separadas por `;` |
 | `LOCAL_DELEGATE_WEB` | `1` | Web embebida del modo `stdio` (`0` para desactivarla) |
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon |

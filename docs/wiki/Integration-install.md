@@ -58,7 +58,7 @@ En la Mac, con el MCP local y la inferencia en la PC:
 uvx local-delegate-mcp install \
   --base-url "https://PC_MAGICDNS:9292/v1" \
   --api-key-env \
-  --pin-version 0.11.0
+  --pin-version 0.13.0
 ```
 
 Los `path` se siguen leyendo en la Mac (que es lo que conserva el ahorro de contexto) y el

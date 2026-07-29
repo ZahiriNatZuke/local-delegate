@@ -310,6 +310,44 @@ def test_local_extract_avisa_del_truncamiento_sin_romper_las_claves(monkeypatch)
 
 
 @backend_mock.mock
+def test_local_extract_con_path_no_rompe_el_json_con_la_linea_de_ahorro(monkeypatch, tmp_path):
+    """La regresión que se coló en la 0.13.0, encontrada usando el propio MCP.
+
+    `_chat` anexa la línea «(leído server-side: N chars…)» al texto cuando la entrada vino de un
+    `path`. Como esta tool **parsea** el resultado, ese sufijo convertía un JSON perfecto en uno
+    imparseable y `local_extract(path=…)` devolvía siempre `_local_delegate.error` — justo en el
+    modo que ahorra contexto, que es el que vale la pena usar.
+
+    Ningún test lo vio porque **todos** los de `local_extract` usaban `text=`.
+    """
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    fuente = tmp_path / "fuente.md"
+    fuente.write_text("host 127.0.0.1 puerto 9393\n" * 40, encoding="utf-8")
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": '{"host": "127.0.0.1", "puerto": "9393"}'},
+                        "finish_reason": "stop",
+                    }
+                ]
+            },
+        )
+    )
+
+    datos = server.local_extract(fields=["host", "puerto"], path=str(fuente))
+
+    assert datos["host"] == "127.0.0.1"
+    assert datos["puerto"] == "9393"
+    assert "error" not in datos.get("_local_delegate", {})
+    # El dato de ahorro no se pierde: se recoloca donde no estorba al parseo.
+    assert datos["_local_delegate"]["leido_server_side"]["chars"] > 0
+
+
+@backend_mock.mock
 def test_local_extract_degrada_si_la_respuesta_no_es_json(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.post("http://test-backend/v1/chat/completions").mock(

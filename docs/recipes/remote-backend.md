@@ -59,7 +59,7 @@ backup del YAML y de la acción anterior de la tarea para rollback.
 > hace aparecer una ventana de consola al iniciar sesión. `-WindowStyle Hidden` **no** la evita en
 > Windows 11, porque Windows Terminal ignora la petición de ocultar al recibir la consola.
 > Registra la acción envuelta en `conhost --headless`; el procedimiento y el porqué están en
-> [Daemon → Windows sin ventana visible](Daemon).
+> [Daemon → Windows sin ventana visible](../wiki/Daemon.md).
 
 En la Mac, el mismo valor se entrega al MCP como `LOCAL_DELEGATE_API_KEY`; guárdalo en Keychain:
 

@@ -37,8 +37,12 @@ Requisito único de PyPI (una vez): configurar un *trusted publisher* para el pr
 Luego, para publicar una versión nueva:
 
 ```bash
-# 1. bump de versión en pyproject.toml, uv.lock, server.json y CHANGELOG.md
-uv lock
+# 1. cerrar la sección `## [Unreleased]` del CHANGELOG con la versión y la fecha, y bumpear.
+#    `bump_version.py` toca los CUATRO sitios de una vez y regenera el lock: acertar cuatro
+#    veces a mano es justo lo que falló en la 0.8.1, donde el lock se quedó atrás.
+uv run python scripts/bump_version.py X.Y.Z
+uv run python scripts/bump_version.py --check     # los cuatro declaran lo mismo
+
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -q          # test_release_metadata.py valida el bump completo
@@ -76,9 +80,22 @@ Es un script local y no una acción de GitHub a propósito: `gh release create` 
 credencial y por eso dispara `publish.yml`. Un tag empujado por un workflow con el `GITHUB_TOKEN`
 no dispararía nada — GitHub lo bloquea para evitar bucles entre workflows.
 
-**Al verificar, ojo con la caché**: PyPI sirve el índice y el JSON del paquete con caché y puede
-anunciar la versión anterior durante unos minutos. Comprobar demasiado pronto enseña la vieja —
-pasó en vivo con la 0.12.2, donde una instalación de prueba trajo la 0.12.1 recién publicada.
+**Al verificar, ojo con la caché**: el índice simple y el JSON del paquete se sirven por caminos
+distintos y **cualquiera de los dos puede ir por detrás** unos minutos. Comprobar demasiado pronto
+enseña la versión vieja y parece que el release falló. Pasó en las dos direcciones: con la 0.12.2 el
+índice trajo la 0.12.1 recién publicada, y con la 0.13.0 fue al revés — el índice ya servía la nueva
+mientras el JSON seguía anunciando la anterior. Espera un par de minutos y repite con `--refresh`.
+
+**Si la versión cambia algo visible del dashboard, regenera la captura del README** *después* del
+bump, porque la imagen enseña el badge de versión:
+
+```bash
+uv run python -m local_delegate.web.metrics &            # o el daemon ya corriendo
+uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9393/
+```
+
+Usa datos de ejemplo deterministas, así que no publica tu actividad real; el pie del README lo
+declara y ese pie es parte del trato.
 
 `publish.yml` usa `uv publish --check-url https://pypi.org/simple/`, así que reejecutar sobre un
 tag existente es idempotente (salta lo ya subido).
@@ -108,5 +125,16 @@ mcp-publisher publish          # publica server.json (desde la raíz del repo)
 
 ## CI
 
-[`ci.yml`](../../.github/workflows/ci.yml) en cada push/PR: `ruff check`, `ruff format --check`,
-`pytest`, `node --check` del `<script>` del dashboard, y **gitleaks** (escaneo de secretos).
+[`ci.yml`](../../.github/workflows/ci.yml) en cada push/PR:
+
+| Job | Qué hace |
+|---|---|
+| `lint` | `uv lock --check`, `ruff check`, `ruff format --check` y `node --check` del `<script>` del dashboard |
+| `test` | `pytest` en **matriz de tres sistemas** (ubuntu, windows, macOS): rutas, locks entre procesos y ctypes se comportan distinto en cada uno |
+| `install-smoke` | el **único** que no usa `uv.lock`: construye el wheel, lo instala con resolución libre y le exige un handshake MCP. Es lo que caza un major de dependencia que rompa el import |
+| `secrets` | gitleaks |
+
+Además, en workflows propios: [`codeql.yml`](../../.github/workflows/codeql.yml) (análisis estático,
+también en cron semanal) y [`vendor-audit.yml`](../../.github/workflows/vendor-audit.yml), que vigila
+el JavaScript vendorizado —integridad, CVEs en OSV y versión publicada— en cada PR y en cron. El
+detalle de los dos está en [Configuración del repositorio](Repo-hardening.md).

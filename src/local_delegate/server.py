@@ -582,6 +582,7 @@ def _chat(
     json_schema_fallback: bool = False,
     feedback_label: str = "chars",
     feedback_char_estimate: bool = True,
+    feedback: bool = True,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -625,7 +626,9 @@ def _chat(
         path=path if source == "path" else None,
         json_schema=json_schema_status,
     )
-    if source == "path" and result.ok and config.FEEDBACK_ENABLED:
+    # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
+    # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
+    if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
         text += _savings_feedback(
             chars_in, result.tokens_in, feedback_label, feedback_char_estimate
         )
@@ -1163,6 +1166,10 @@ def local_extract(
             path=path,
             response_format=_json_schema_payload(fields) if use_schema else None,
             json_schema_fallback=config.JSON_SCHEMA_MODE == "auto",
+            # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese sufijo
+            # convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja unas
+            # líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
+            feedback=False,
         )
     )
 
@@ -1176,11 +1183,17 @@ def local_extract(
     if not isinstance(datos, dict):
         return {"_local_delegate": {"error": "la respuesta no es un objeto JSON", "crudo": result}}
 
+    meta: dict = {}
     if truncated_in:
-        datos["_local_delegate"] = {
-            "truncado": True,
-            "aviso": f"entrada truncada — procesados {len(content)} de {raw_len} chars",
+        meta["truncado"] = True
+        meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
+    if path and config.FEEDBACK_ENABLED:
+        meta["leido_server_side"] = {
+            "chars": len(content),
+            "tokens_aprox": len(content) // config.CHARS_PER_TOKEN,
         }
+    if meta:
+        datos["_local_delegate"] = meta
     return datos
 
 

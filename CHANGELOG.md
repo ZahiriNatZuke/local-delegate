@@ -6,6 +6,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`local_extract` con `path` devolvía siempre un error en vez de los datos.** La línea de ahorro
+  («leído server-side: N chars…») se anexaba al texto del resultado, y como esta tool **parsea** su
+  salida, ese sufijo convertía un JSON perfecto en uno imparseable: la respuesta acababa siendo
+  `{"_local_delegate": {"error": "respuesta no parseable como JSON", …}}`. Afectaba justo al modo
+  que ahorra contexto —el que vale la pena usar— y no al de `text`, que es por donde pasaban
+  **todos** los tests de esa tool; de ahí que nadie lo viera. El dato de ahorro no se pierde: pasa a
+  `_local_delegate.leido_server_side`, que es donde va lo que no son datos. Se apareció usando el
+  propio MCP para revisar esta documentación.
+
+### Changed
+- **Revisión completa del README y la wiki.** Lo que estaba mal: el README recomendaba fijar
+  `local-delegate-mcp==0.11.0` para el rollout remoto, y ese consejo hoy **rompe la instalación**
+  —las versiones anteriores a la 0.12.2 piden `mcp` sin techo y mueren con el SDK 2.x—; había dos
+  párrafos seguidos explicando lo mismo del map-reduce; la tabla de versiones probadas seguía en
+  0.11.0; los ejemplos de configuración remota fijaban esa misma versión; y dos links internos
+  estaban rotos. Lo que faltaba: Python 3.11+ en los requisitos, el subcomando `benchmark` —que no
+  estaba documentado en ninguna parte—, y en *Troubleshooting* los tres fallos que este proyecto sí
+  ha tenido (`Connection closed` por un major de dependencia y dónde está el traceback de verdad,
+  el `421` del SDK 2.x fuera de loopback, y el dashboard enseñando gráficos viejos por la caché de
+  24 h). *Publishing* recoge ahora `bump_version.py`, el CI completo con `install-smoke` y
+  `vendor-audit`, y el paso de regenerar la captura del README.
+
 ## [0.13.0] - 2026-07-29
 
 ### Changed

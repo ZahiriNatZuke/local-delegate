@@ -94,7 +94,7 @@ Register-ScheduledTask -TaskName 'LocalDelegateDaemon' -Action $action `
 
 **Caso con secreto DPAPI.** Si el backend está autenticado, la acción ya no puede ser `pythonw`
 directo: hace falta un launcher de PowerShell que importe el `SecureString` antes de arrancar el
-daemon (ver [Remote-backend](Remote-backend)). Ese launcher **reintroduce la ventana**, y
+daemon (ver [Remote-backend](Remote-backend.md)). Ese launcher **reintroduce la ventana**, y
 `-WindowStyle Hidden` no la evita:
 
 - `powershell.exe` pertenece al subsistema de consola, así que Windows le crea una consola al

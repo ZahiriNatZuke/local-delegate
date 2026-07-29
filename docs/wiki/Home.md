@@ -21,4 +21,6 @@ Documentación extendida del MCP `local-delegate`. Para empezar rápido, ve al
 - **[llama-swap (RTX 5060 Ti Blackwell)](../recipes/llama-swap-blackwell.md)**
 - **[Ollama](../recipes/ollama.md)**
 - **[Integración con Claude Code](../recipes/claude-code-integration.md)** (subagentes + skill)
-- **[Recipe técnica del backend remoto](https://github.com/ZahiriNatZuke/local-delegate/blob/v0.11.0/docs/recipes/remote-backend.md)** (canary, rollback y alternativa MCP remoto completo)
+- **[Recipe técnica del backend remoto](../recipes/remote-backend.md)** (canary, rollback y alternativa MCP remoto completo)
+- **[llama-swap · groups](../recipes/llama-swap-groups.md)** y **[llama-swap · visión](../recipes/llama-swap-vision.md)**
+- **[Hooks de Claude Code](../recipes/claude-code-hooks.md)**

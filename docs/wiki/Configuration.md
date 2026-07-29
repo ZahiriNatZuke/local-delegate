@@ -70,7 +70,7 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 |---|---|---|
 | `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio donde se escriben los `usage-YYYYMM.jsonl` rotados. Por defecto `platformdirs.user_data_dir("local-delegate")` (p. ej. `%LOCALAPPDATA%\local-delegate` en Windows) |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar. El dashboard igual lo lee como fuente adicional aunque uses `LOG_DIR` para el resto |
-| `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens" que se anexa al resultado cuando `source=path` |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens" que se anexa al resultado cuando `source=path`. En `local_extract` no se anexa al texto sino que viaja dentro de `_local_delegate` (ver abajo): pegarla rompería el JSON |
 
 ## `local_extract` — JSON con schema
 
@@ -89,9 +89,17 @@ salvo dos casos que viajan bajo la clave reservada `_local_delegate` para no ens
 // entrada truncada — el aviso iba antes como texto DELANTE del JSON, y había que limpiarlo
 { "host": "127.0.0.1", "_local_delegate": { "truncado": true, "aviso": "entrada truncada — …" } }
 
+// leída de un `path`: el dato de ahorro va aquí, NO pegado al texto (rompería el JSON)
+{ "host": "127.0.0.1", "_local_delegate": { "leido_server_side": { "chars": 2848, "tokens_aprox": 712 } } }
+
 // el modelo no devolvió JSON, o el backend falló
 { "_local_delegate": { "error": "respuesta no parseable como JSON", "crudo": "…" } }
 ```
+
+> El tercer caso es el que corrige la 0.13.1. Hasta la 0.13.0, la línea de ahorro se anexaba al
+> texto también en esta tool, y como aquí el resultado **se parsea**, convertía un JSON perfecto en
+> uno imparseable: `local_extract(path=…)` devolvía siempre `_local_delegate.error`, justo en el modo
+> que ahorra contexto. Ningún test lo vio porque todos usaban `text=`.
 
 ## Seguridad — raíces permitidas
 
