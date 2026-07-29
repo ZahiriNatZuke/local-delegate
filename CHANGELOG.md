@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`scripts/release.py`: un comando para todo el release.** Construye, crea la GitHub Release con
+  las notas sacadas de la sección del `CHANGELOG.md`, le adjunta wheel y sdist, y crea el tag que
+  dispara `publish.yml`. Antes el tag se hacía a mano y dejaba fuera dos pasos que había que
+  recordar cada vez —adjuntar los artefactos y crear la Release, que el workflow **no** crea—; en
+  la 0.12.2 se olvidaron los dos. Aborta antes de tocar nada remoto si la versión no está en los
+  tres archivos, si `main` no está sincronizada con el remoto, o si el tag o la release ya existen:
+  **PyPI es inmutable** y publicar mal no se deshace. Tiene `--dry-run`.
+
 ## [0.12.2] - 2026-07-28
 
 ### Fixed

@@ -48,17 +48,37 @@ uv build
 gh pr create --title "chore: release vX.Y.Z" --fill
 gh pr merge --squash
 
-# 3. solo entonces publica el tag; dispara publish.yml → PyPI → registro MCP
+# 3. solo entonces publica; un comando hace el resto
 git checkout main && git pull
-git tag vX.Y.Z
-git push origin vX.Y.Z
-gh run watch --exit-status
+uv run python scripts/release.py X.Y.Z --dry-run   # comprueba y enseña el plan
+uv run python scripts/release.py X.Y.Z
 
-# 4. verifica las dos publicaciones y crea la GitHub Release
+# 4. verifica las dos publicaciones
 uvx --from local-delegate-mcp==X.Y.Z local-delegate --help
-curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ZahiriNatZuke/local-delegate" | jq '.servers[0].version'
-gh release create vX.Y.Z --verify-tag --title "vX.Y.Z" --notes-file <release-notes.md>
+curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ZahiriNatZuke/local-delegate" | jq '.servers[] | select(._meta."io.modelcontextprotocol.registry/official".isLatest) | .server.version'
 ```
+
+## `scripts/release.py`
+
+Un solo comando para todo el release: construye, crea la **GitHub Release** con las notas sacadas
+de la sección `## [X.Y.Z]` del `CHANGELOG.md`, le adjunta wheel y sdist, y crea el tag — que es lo
+que dispara `publish.yml` → PyPI → registro MCP.
+
+Existe porque el tag a mano dejaba fuera dos pasos que había que recordar cada vez: adjuntar los
+artefactos y crear la Release, **que `publish.yml` no crea**.
+
+Aborta antes de tocar nada remoto si: la versión no tiene forma `X.Y.Z`; `pyproject.toml` o
+cualquiera de las dos de `server.json` no la declaran; no estás en `main`; `main` local y
+`origin/main` difieren; el tag o la release ya existen; o el `CHANGELOG.md` no tiene su sección.
+**PyPI es inmutable**: publicar mal no se deshace, solo se tapa con otra versión.
+
+Es un script local y no una acción de GitHub a propósito: `gh release create` crea el tag con tu
+credencial y por eso dispara `publish.yml`. Un tag empujado por un workflow con el `GITHUB_TOKEN`
+no dispararía nada — GitHub lo bloquea para evitar bucles entre workflows.
+
+**Al verificar, ojo con la caché**: PyPI sirve el índice y el JSON del paquete con caché y puede
+anunciar la versión anterior durante unos minutos. Comprobar demasiado pronto enseña la vieja —
+pasó en vivo con la 0.12.2, donde una instalación de prueba trajo la 0.12.1 recién publicada.
 
 `publish.yml` usa `uv publish --check-url https://pypi.org/simple/`, así que reejecutar sobre un
 tag existente es idempotente (salta lo ya subido).
