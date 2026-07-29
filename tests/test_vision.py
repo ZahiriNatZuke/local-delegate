@@ -5,8 +5,8 @@ from __future__ import annotations
 import base64
 import json
 
-import httpx
-import respx
+import backend_mock
+import httpx2
 
 from local_delegate import config, server
 
@@ -22,12 +22,12 @@ def _write_png(tmp_path, name: str = "img.png") -> str:
     return str(p)
 
 
-@respx.mock
+@backend_mock.mock
 def test_describe_image_sends_multimodal_payload(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     path = _write_png(tmp_path)
-    route = respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": "una imagen vacía"}, "finish_reason": "stop"}],
@@ -80,15 +80,15 @@ def test_describe_image_rejects_path_outside_allowed_dirs(monkeypatch, tmp_path)
     assert "fuera de las raíces permitidas" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_describe_image_logs_real_tokens_and_path(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     log = tmp_path / "usage.jsonl"
     monkeypatch.setattr(config, "USAGE_LOG", log)
     path = _write_png(tmp_path)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}],
@@ -103,13 +103,13 @@ def test_describe_image_logs_real_tokens_and_path(monkeypatch, tmp_path):
     assert rec["path"] == path
 
 
-@respx.mock
+@backend_mock.mock
 def test_describe_image_feedback_uses_real_tokens(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
     path = _write_png(tmp_path)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}],
@@ -121,14 +121,14 @@ def test_describe_image_feedback_uses_real_tokens(monkeypatch, tmp_path):
     assert "leído server-side: 68 bytes imagen ≈ 300 tokens" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_describe_image_omits_feedback_when_no_usage(monkeypatch, tmp_path):
     """Sin usage.prompt_tokens no se estima con chars/4: esa heurística no aplica a bytes de imagen."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
     path = _write_png(tmp_path)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={"choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}]},
         )

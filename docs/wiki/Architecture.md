@@ -13,7 +13,8 @@ Codex / Claude Code / otros
         └─ sirve dashboard web en /
 ```
 
-`local-delegate` es un servidor MCP (Python + FastMCP). El modo recomendado para varias sesiones
+`local-delegate` es un servidor MCP (Python + `MCPServer`, del SDK `mcp` 2.x; hasta la 0.12.x era
+`FastMCP`, que ese major eliminó). El modo recomendado para varias sesiones
 es el daemon singleton Streamable HTTP; el transporte `stdio` sigue disponible sin argumentos para
 compatibilidad. Expone 11 tools texto/imagen→texto
 (10 texto→texto + `local_describe_image` imagen→texto). Cada tool arma un prompt con *guardrails*,

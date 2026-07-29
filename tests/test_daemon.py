@@ -7,7 +7,7 @@ import json
 from fastapi.testclient import TestClient
 from filelock import FileLock
 
-from local_delegate import cli, config, daemon
+from local_delegate import cli, config, daemon, server
 
 
 def test_combined_app_serves_daemon_status_dashboard_and_mcp_route():
@@ -26,6 +26,67 @@ def test_combined_app_serves_daemon_status_dashboard_and_mcp_route():
         # Sin un payload MCP válido debe fallar como protocolo, no como ruta ausente.
         mcp = client.post("/mcp")
         assert mcp.status_code != 404
+
+
+def _handshake(client: TestClient, host: str):
+    """Manda un `initialize` al MCP con un header Host concreto."""
+    return client.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "test", "version": "1"},
+            },
+        },
+        headers={
+            "Host": host,
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        },
+    )
+
+
+def test_mcp_en_loopback_acepta_localhost_y_rechaza_hosts_ajenos():
+    """Con host de loopback el SDK activa solo la protección contra DNS rebinding."""
+    app = daemon.build_app("127.0.0.1", 19393)
+
+    with TestClient(app) as client:
+        for host in ("127.0.0.1:19393", "localhost:19393"):
+            assert _handshake(client, host).status_code == 200, host
+
+        # Un Host que no es loopback es justo el vector del ataque: 421, no 200.
+        assert _handshake(client, "atacante.example:19393").status_code == 421
+
+
+def test_mcp_publicado_en_la_lan_no_rechaza_por_host():
+    """`LOCAL_DELEGATE_WEB_HOST=0.0.0.0` publica en la red local, y el proyecto lo permite.
+
+    La protección del SDK solo se auto-activa con loopback; si se activara aquí, el daemon
+    respondería 421 a todo cliente que llegara por la IP de la LAN.
+    """
+    app = daemon.build_app("0.0.0.0", 19393)
+
+    with TestClient(app) as client:
+        assert _handshake(client, "192.168.1.50:19393").status_code == 200
+
+
+def test_handshake_declara_la_version_del_paquete():
+    """`serverInfo.version` reportaba la del SDK, que no dice qué local-delegate corre."""
+    app = daemon.build_app("127.0.0.1", 19393)
+
+    with TestClient(app) as client:
+        respuesta = _handshake(client, "127.0.0.1:19393")
+
+    carga = next(
+        json.loads(linea[6:]) for linea in respuesta.text.splitlines() if linea.startswith("data: ")
+    )
+    info = carga["result"]["serverInfo"]
+    assert info["name"] == "local-delegate"
+    assert info["version"] == server._get_version()
 
 
 def test_serve_writes_state_holds_singleton_and_cleans_up(tmp_path, monkeypatch):

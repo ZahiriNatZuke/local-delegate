@@ -11,9 +11,9 @@ import threading
 import time as _time
 from datetime import UTC, datetime
 
-import httpx
+import backend_mock
+import httpx2
 import pytest
-import respx
 
 from local_delegate import config, server
 
@@ -99,11 +99,11 @@ def test_strip_fences_no_fence():
 
 
 # --- server._post_chat -----------------------------------------------------------
-@respx.mock
+@backend_mock.mock
 def test_post_chat_ok_with_usage_and_finish_reason(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": " hola "}, "finish_reason": "length"}],
@@ -119,11 +119,11 @@ def test_post_chat_ok_with_usage_and_finish_reason(monkeypatch):
     assert result.tokens_out == 5
 
 
-@respx.mock
+@backend_mock.mock
 def test_post_chat_http_500(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(500, text="boom")
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(500, text="boom")
     )
     result = server._post_chat("modelo", {"model": "modelo"})
     assert result.ok is False
@@ -131,23 +131,23 @@ def test_post_chat_http_500(monkeypatch):
     assert "[local-delegate error]" in result.text
 
 
-@respx.mock
+@backend_mock.mock
 def test_post_chat_connect_error_no_autostart(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "AUTOSTART", False)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        side_effect=httpx.ConnectError("no route")
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        side_effect=httpx2.ConnectError("no route")
     )
     result = server._post_chat("modelo", {"model": "modelo"})
     assert result.ok is False
     assert result.error == "connect_error"
 
 
-@respx.mock
+@backend_mock.mock
 def test_chat_appends_visible_notice_on_truncation(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={"choices": [{"message": {"content": "parcial"}, "finish_reason": "length"}]},
         )
@@ -156,11 +156,11 @@ def test_chat_appends_visible_notice_on_truncation(monkeypatch):
     assert "[local-delegate aviso: salida truncada por max_tokens]" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_post_chat_response_without_usage_has_none_tokens(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
         )
     )
@@ -197,12 +197,12 @@ def test_local_extract_routes_short_input_to_model_mechanical(monkeypatch):
 
 
 # --- F2: response_format json_schema en local_extract ------------------------------
-@respx.mock
+@backend_mock.mock
 def test_local_extract_sends_response_format_by_default(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "auto")
-    route = respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]}
         )
     )
@@ -223,12 +223,12 @@ def test_json_schema_payload_restricts_properties_to_primitives():
         assert prop == {"type": ["string", "number", "boolean", "null"]}
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_extract_json_schema_off_skips_response_format(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "off")
-    route = respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]}
         )
     )
@@ -237,28 +237,28 @@ def test_local_extract_json_schema_off_skips_response_format(monkeypatch):
     assert "response_format" not in sent
 
 
-@respx.mock
+@backend_mock.mock
 def test_json_schema_auto_falls_back_on_400(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "auto")
     responses = [
-        httpx.Response(400, text="unsupported response_format"),
-        httpx.Response(
+        httpx2.Response(400, text="unsupported response_format"),
+        httpx2.Response(
             200, json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]}
         ),
     ]
-    route = respx.post("http://test-backend/v1/chat/completions").mock(side_effect=responses)
+    route = backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=responses)
     text = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 2
     assert text == '{"a": 1}'
 
 
-@respx.mock
+@backend_mock.mock
 def test_json_schema_on_propagates_400(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "JSON_SCHEMA_MODE", "on")
-    route = respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(400, text="unsupported response_format")
+    route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(400, text="unsupported response_format")
     )
     text = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 1
@@ -266,32 +266,32 @@ def test_json_schema_on_propagates_400(monkeypatch):
 
 
 # --- F2: local_status ----------------------------------------------------------------
-@respx.mock
+@backend_mock.mock
 def test_local_status_reports_backend_up_and_models(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
-    respx.get("http://test-backend/v1/models").mock(
-        return_value=httpx.Response(200, json={"data": [{"id": "modelo-a"}]})
+    backend_mock.get("http://test-backend/v1/models").mock(
+        return_value=httpx2.Response(200, json={"data": [{"id": "modelo-a"}]})
     )
-    respx.get("http://test-backend/running").mock(return_value=httpx.Response(404))
+    backend_mock.get("http://test-backend/running").mock(return_value=httpx2.Response(404))
     text = server.local_status()
     assert "arriba" in text
     assert "modelo-a" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_status_reports_backend_down(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
-    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
     text = server.local_status()
     assert "CAÍDO" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_status_reports_log_stats(monkeypatch, tmp_path):
     log = tmp_path / "usage.jsonl"
     log.write_text(
@@ -302,8 +302,8 @@ def test_local_status_reports_log_stats(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "USAGE_LOG", log)
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
-    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
     text = server.local_status()
     assert "eventos: 1" in text
     assert "~100 tokens" in text
@@ -317,13 +317,13 @@ def test_ram_info_smoke():
     assert info is None or "GiB usados" in info
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_status_includes_ram_line(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
-    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
     text = server.local_status()
     if server._ram_info() is not None:
         assert "RAM de sistema:" in text
@@ -361,7 +361,7 @@ def test_llamaswap_groups_without_pyyaml_returns_none(monkeypatch, tmp_path):
     assert server._llamaswap_groups() is None
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_status_includes_groups_line(monkeypatch, tmp_path):
     from local_delegate import llamaswap_config as lc
 
@@ -371,20 +371,20 @@ def test_local_status_includes_groups_line(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
-    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
     text = server.local_status()
     assert "groups activos" in text
     assert "resident" in text
 
 
 # --- F3: feedback de ahorro en _chat --------------------------------------------------
-@respx.mock
+@backend_mock.mock
 def test_chat_appends_feedback_when_source_path(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}],
@@ -399,12 +399,12 @@ def test_chat_appends_feedback_when_source_path(monkeypatch):
     assert "500 tokens" in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_chat_feedback_disabled_by_env(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}]}
         )
     )
@@ -414,12 +414,12 @@ def test_chat_feedback_disabled_by_env(monkeypatch):
     assert "leído server-side" not in text
 
 
-@respx.mock
+@backend_mock.mock
 def test_chat_no_feedback_for_inline_source(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}]}
         )
     )
@@ -445,14 +445,14 @@ def test_current_log_path_legacy_disables_rotation(monkeypatch, tmp_path):
     assert server._current_log_path() == fixed
 
 
-@respx.mock
+@backend_mock.mock
 def test_log_event_writes_to_rotated_file(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 3, 15, tzinfo=UTC))
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.post("http://test-backend/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
         )
     )

@@ -27,16 +27,14 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
-import httpx
+import httpx2
 from filelock import FileLock, Timeout
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from . import autostart, config
 
-mcp = FastMCP("local-delegate")
-
-
 # --- Versión del paquete (cacheada) ------------------------------------------
+# Se define antes de instanciar el server porque este la declara en su constructor.
 _PACKAGE_VERSION: str | None = None
 
 
@@ -50,18 +48,23 @@ def _get_version() -> str:
     return _PACKAGE_VERSION
 
 
-# --- Cliente httpx module-level (keep-alive entre delegaciones) -------------
-_client: httpx.Client | None = None
+# `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el
+# handshake `initialize`, de modo que un cliente no tenía forma de saber qué local-delegate corre.
+mcp = MCPServer("local-delegate", version=_get_version())
+
+
+# --- Cliente httpx2 module-level (keep-alive entre delegaciones) -------------
+_client: httpx2.Client | None = None
 _client_lock = threading.Lock()
 _chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
 
 
-def _get_client() -> httpx.Client:
+def _get_client() -> httpx2.Client:
     global _client
     if _client is None:
         with _client_lock:
             if _client is None:
-                _client = httpx.Client(timeout=config.HTTP_TIMEOUT)
+                _client = httpx2.Client(timeout=config.HTTP_TIMEOUT)
     return _client
 
 
@@ -421,7 +424,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 tokens_in=usage.get("prompt_tokens"),
                 tokens_out=usage.get("completion_tokens"),
             )
-        except httpx.ConnectError:
+        except httpx2.ConnectError:
             # El backend no está escuchando. Si el auto-arranque está activo, intenta
             # levantarlo (opt-in, específico de llama-swap) y reintenta una vez.
             if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
@@ -434,7 +437,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 ok=False,
                 error="connect_error",
             )
-        except httpx.HTTPStatusError as e:
+        except httpx2.HTTPStatusError as e:
             return ChatResult(
                 text=(
                     f"[local-delegate error] {model} respondió {e.response.status_code}: "
@@ -443,7 +446,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 ok=False,
                 error=f"http_{e.response.status_code}",
             )
-        except httpx.HTTPError as e:
+        except httpx2.HTTPError as e:
             return ChatResult(
                 text=f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}",
                 ok=False,
@@ -1596,11 +1599,11 @@ def _model_status_value(m: dict) -> str | None:
 def _models_with_status() -> tuple[bool, list[dict]]:
     """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da."""
     try:
-        with httpx.Client(timeout=2.0) as c:
+        with httpx2.Client(timeout=2.0) as c:
             r = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
             r.raise_for_status()
             data = r.json().get("data", [])
-    except (httpx.HTTPError, ValueError):
+    except (httpx2.HTTPError, ValueError):
         return False, []
     models = [
         {"id": m.get("id", "?"), "status": _model_status_value(m)}
@@ -1615,12 +1618,12 @@ def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
     base = config.BASE_URL.removesuffix("/v1")
     try:
-        with httpx.Client(timeout=1.0) as c:
+        with httpx2.Client(timeout=1.0) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())
             if not r.is_success:
                 return None
             data = r.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx2.HTTPError, ValueError):
         return None
     entries = data.get("running") if isinstance(data, dict) else None
     if not entries:

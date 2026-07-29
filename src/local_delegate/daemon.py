@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-import httpx
+import httpx2
 import uvicorn
 from filelock import FileLock, Timeout
 from starlette.applications import Starlette
@@ -97,24 +97,37 @@ def _port_available(host: str, port: int) -> bool:
 def query_daemon(host: str, port: int, timeout: float = 1.0) -> dict | None:
     """Devuelve el estado del daemon si el puerto pertenece a local-delegate."""
     try:
-        with httpx.Client(timeout=timeout) as client:
+        with httpx2.Client(timeout=timeout) as client:
             response = client.get(f"http://{host}:{port}{DAEMON_STATUS_PATH}")
             response.raise_for_status()
             data = response.json()
         if data.get("service") == "local-delegate" and data.get("mode") == "daemon":
             return data
-    except (httpx.HTTPError, ValueError, TypeError):
+    except (httpx2.HTTPError, ValueError, TypeError):
+        # La pregunta que responde esta función es «¿este puerto es un daemon nuestro?», y
+        # cualquier fallo significa que no lo es: nadie escucha, responde otra cosa, no habla
+        # HTTP o devuelve algo que no es JSON. Todas esas respuestas son el mismo `None`, y
+        # distinguirlas no cambiaría lo que hace quien llama.
         pass
     return None
 
 
 def build_app(host: str | None = None, port: int | None = None) -> Starlette:
-    """Construye el ASGI combinado preservando el lifespan de FastMCP."""
+    """Construye el ASGI combinado preservando el lifespan del server MCP."""
     host = host or config.WEB_HOST
     port = port or config.WEB_PORT
 
-    server.mcp.settings.streamable_http_path = MCP_PATH
-    mcp_app = server.mcp.streamable_http_app()
+    # La ruta va como argumento: el SDK 2.x sacó los campos de transporte de `Settings`, así que
+    # `settings.streamable_http_path` ya no existe.
+    #
+    # `host` no es decorativo: con un host de loopback el SDK activa **solo** la protección contra
+    # DNS rebinding y rechaza con 421 cualquier petición cuyo header `Host` no sea
+    # `127.0.0.1`/`localhost`/`[::1]`. Pasarle el host configurado es lo que hace lo correcto en los
+    # dos casos: en el normal (loopback) la protección queda puesta gratis, y con
+    # `LOCAL_DELEGATE_WEB_HOST=0.0.0.0` —publicar en la red local, que el proyecto permite— no se
+    # activa y el daemon sigue respondiendo a quien llegue por la IP de la LAN. Sin esto, ese
+    # segundo escenario se rompía en silencio al migrar.
+    mcp_app = server.mcp.streamable_http_app(streamable_http_path=MCP_PATH, host=host)
 
     async def daemon_status(_request: Request) -> JSONResponse:
         return JSONResponse(_daemon_payload(host, port))
