@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-07-29
+
 ### Changed
 - **`platformdirs` y `filelock` quedan acotadas por debajo del major siguiente** (`<5` y `<4`). Para
   quien instala, el efecto es solo futuro: cuando salga `platformdirs` 5 o `filelock` 4, una
@@ -521,7 +523,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.2...v0.12.3
+[0.12.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.8.0...v0.8.1
