@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **El panel «En curso» del dashboard ya no se queda en blanco cuando no hay nada corriendo:**
+  enseña la **última delegación terminada** con cuánto hace, su tool, su modelo, su duración y el
+  tamaño de la entrada, y el contador sube en vivo. Antes solo mostraba lo que se estaba
+  ejecutando **en ese instante**, y como una tarea mecánica dura 2-4 segundos, el panel estaba
+  vacío casi siempre: se delegaba, terminaba, y quien miraba el dashboard un momento después no
+  veía **nada** — parecía que no había pasado. Se comprobó grabando el DOM durante una delegación
+  real de 3,4 s. (El refresco al volver a la pestaña ya existía; el problema no era ese.)
+
 ### Fixed
 - **`local_extract` con `path` devolvía siempre un error en vez de los datos.** La línea de ahorro
   («leído server-side: N chars…») se anexaba al texto del resultado, y como esta tool **parsea** su
