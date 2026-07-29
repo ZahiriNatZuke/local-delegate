@@ -3,9 +3,9 @@
   "slug": "chartjs-4-5-1",
   "title": "Sube el Chart.js vendorizado a 4.5.1",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-29T15:11:19.023Z",
-  "updatedAt": "2026-07-29T15:21:16.213Z",
+  "updatedAt": "2026-07-29T15:25:34.741Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T15:25:34.215Z",
+      "evidence": "review.md con veredicto conforms-with-notes. Los 5 requisitos cumplidos y verificados: procedencia por dos caminos (tarball de npm y jsDelivr dan el mismo sha256 y los mismos 208522 bytes), manifiesto al dia con la nota de procedencia reescrita, licencia actualizada (sigue MIT, copyright 2014-2024), el vigilante verde y SIN UN SOLO AVISO, y el dashboard verificado a ojo con linea base previa (6 instancias y 5 canvas pintados con cero errores de consola, antes y despues). Cuatro hallazgos anotados, tres de ellos correcciones ya aplicadas: el procedimiento documentado bajaba de un CDN y estaba mal, quedaban dos sitios clavando la version pese al manifiesto, y la cache de 24h del endpoint disfraza el resultado al verificar. El cuarto es menor y sin accion (el canvas spark sale igual en ambas versiones). Sin follow-up para cerrar; fuera del change queda publicar.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T15:25:34.552Z",
+      "evidence": "Nota canonica projects/local-delegate/vigilante-vendorizado.md actualizada con la subida y las cuatro lecciones del estreno. backlog.md cierra el pendiente de 4.5.1 y deja publicar como lo unico vivo. Memoria de proyecto de Claude Code al dia. handoff.md con el estado final. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "at": "2026-07-29T15:21:16.213Z",
       "evidence": "Los cuatro pasos del CI en local: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando, y extract_dashboard_js.py + node --check. El vigilante contra los servicios reales sale VERDE Y SIN UN SOLO AVISO: integridad OK, OSV sin vulnerabilidades para 4.5.1 y version al dia, que es el criterio de exito del cambio. Procedencia establecida por dos caminos: el tarball oficial de npm y jsDelivr dan el mismo sha256 48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a y los mismos 208522 bytes. Dashboard verificado A OJO antes y despues con datos: 4.4.1 daba 6 instancias de Chart y 5 canvas pintados con cero errores de consola; 4.5.1 da lo mismo. Capturas de pagina completa de ambas. Detalle en verification.md.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T15:25:34.039Z",
+      "reason": "verification.md y review.md rellenos; los 12 checks del PR #41 en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T15:25:34.215Z",
+      "evidence": "review.md con veredicto conforms-with-notes. Los 5 requisitos cumplidos y verificados: procedencia por dos caminos (tarball de npm y jsDelivr dan el mismo sha256 y los mismos 208522 bytes), manifiesto al dia con la nota de procedencia reescrita, licencia actualizada (sigue MIT, copyright 2014-2024), el vigilante verde y SIN UN SOLO AVISO, y el dashboard verificado a ojo con linea base previa (6 instancias y 5 canvas pintados con cero errores de consola, antes y despues). Cuatro hallazgos anotados, tres de ellos correcciones ya aplicadas: el procedimiento documentado bajaba de un CDN y estaba mal, quedaban dos sitios clavando la version pese al manifiesto, y la cache de 24h del endpoint disfraza el resultado al verificar. El cuarto es menor y sin accion (el canvas spark sale igual en ambas versiones). Sin follow-up para cerrar; fuera del change queda publicar.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-29T15:25:34.388Z",
+      "reason": "Conformance aprobado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T15:25:34.552Z",
+      "evidence": "Nota canonica projects/local-delegate/vigilante-vendorizado.md actualizada con la subida y las cuatro lecciones del estreno. backlog.md cierra el pendiente de 4.5.1 y deja publicar como lo unico vivo. Memoria de proyecto de Claude Code al dia. handoff.md con el estado final. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-29T15:25:34.741Z",
+      "reason": "Los cinco gates aprobados y la memoria persistida"
     }
   ]
 }
