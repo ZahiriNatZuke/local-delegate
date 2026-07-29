@@ -3,9 +3,9 @@
   "slug": "upgrade-mcp-sdk-2",
   "title": "Analisis del upgrade al SDK mcp 2.x: ajuste de lo implementado y mejoras aprovechables",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-07-29T00:35:37.856Z",
-  "updatedAt": "2026-07-29T11:50:57.825Z",
+  "updatedAt": "2026-07-29T17:18:48.462Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,15 +26,15 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T17:18:47.958Z",
+      "evidence": "Fases 1 y 2 implementadas, mergeadas y publicadas en la 0.13.0. Los 12 checks del CI verdes en ambos PRs (el #35 ya con CodeQL, al cambiar su base a main). Verificacion final con instalacion limpia desde PyPI con resolucion libre: local-delegate-mcp 0.13.0, mcp 2.0.0, httpx2 2.9.1 y httpx AUSENTE, o sea que la decision de una sola libreria HTTP se cumple en la instalacion real y no solo en el lock; handshake OK reportando la version del paquete, que era uno de los defectos que este cambio cerraba; y el vendorizado viaja en el wheel con su hash cuadrando. Registro MCP en 0.13.0 active/isLatest. Desviacion respecto al plan, y a favor: se publico SIN esperar a mcp 2.0.1, decision revisada con datos (cero vulnerabilidades en OSV para 2.0.0, y 1.29.0 y 2.0.0 publicadas con cuatro minutos de diferencia, o sea release coordinada y no major apurado) frente a un coste de espera que si crecia: las ramas estaban 7 commits detras de main. El rebase cazo ademas una regresion silenciosa que ningun check habria visto: la rama era anterior a la politica de techos y traia platformdirs y httpx2 sin techo, asi que publicarla tal cual habria revertido la politica de la 0.12.3; se recuperaron platformdirs<5 y filelock<4 y se anadio httpx2>=2.5,<3, este ultimo verificado por ejecucion (httpx2 esta en el camino de import de arranque y tiene major real).",
+      "actor": "user"
     },
     "memory": {
       "status": "approved",
-      "updatedAt": "2026-07-29T02:44:16.442Z",
-      "evidence": "Nota canonica en el vault: projects/local-delegate/migracion-mcp-sdk-2.md, enlazada desde el incidente y el backlog. Backlog actualizado como nota viva: se cierran 'migrar a la API mcp 2.x' y 'serverInfo reporta la version del SDK', y se ajusta la seccion de techos de major (httpx salio del proyecto). Punteros en la memoria de Claude Code del proyecto, con el aviso de que el daemon local corre la rama y no main. Sin secretos ni datos personales: la API key se cargo en la sesion del usuario y se borro al terminar, su valor no aparece en ningun artefacto.",
+      "updatedAt": "2026-07-29T17:18:48.294Z",
+      "evidence": "Nota canonica projects/local-delegate/migracion-mcp-sdk-2.md actualizada: publicada en la 0.13.0, por que no se espero a 2.0.1, y la regresion silenciosa que cazo el rebase con su leccion general (una rama larga en draft puede revertir en silencio politicas aprobadas mientras dormia). Frontmatter a version 0.13.0 y status publicada. backlog.md cierra la entrada de la migracion y deja la fase 3 y probar Codex como lo unico vivo. handoff.md con el estado final. Sin secretos ni datos personales.",
       "actor": "user"
     }
   },
@@ -120,6 +120,50 @@
       "at": "2026-07-29T11:50:57.825Z",
       "evidence": "Fase 1 (sin cambios): 236 tests, CI del PR 34 en verde con 11 checks, las 11 tools contra llama-swap real. Fase 2 anadida: los cuatro pasos del CI en local sobre feat/mcp-sdk-2-fase2 (ruff check ., ruff format --check . con 44 ficheros, 239 tests, extract_dashboard_js.py + node --check), y el CI del PR 35 en verde en sus dos runs (9 checks: lint, secrets, install-smoke, test en ubuntu/macOS/Windows, GitGuardian y los dos de Socket Security); son 9 y no 11 porque codeql.yml solo se dispara contra main, no por una regresion. REQ-007/008/009 verificados contra el backend real el 2026-07-29 por el protocolo (list_tools y call_tool), no leyendo el codigo: list_tools devuelve 11/11 con title, read_only_hint y open_world_hint en falso y sin destructive/idempotent; output_schema de local_extract es un objeto abierto; local_extract extrajo host 127.0.0.1 y puerto 9393 con dos peticiones 200, claves exactas en la raiz y sin la clave reservada. Tambien quedo probada contra el backend la degradacion por error: con 401 devuelve _local_delegate.error con is_error false, no una excepcion de protocolo.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T17:18:47.628Z",
+      "reason": "Fases 1 y 2 mergeadas (PRs #34 y #35) y publicada la 0.13.0"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T17:18:47.794Z",
+      "reason": "Verificado con instalacion limpia desde PyPI: mcp 2.0.0, httpx2 2.9.1, httpx ausente, handshake reportando la version del paquete"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T17:18:47.958Z",
+      "evidence": "Fases 1 y 2 implementadas, mergeadas y publicadas en la 0.13.0. Los 12 checks del CI verdes en ambos PRs (el #35 ya con CodeQL, al cambiar su base a main). Verificacion final con instalacion limpia desde PyPI con resolucion libre: local-delegate-mcp 0.13.0, mcp 2.0.0, httpx2 2.9.1 y httpx AUSENTE, o sea que la decision de una sola libreria HTTP se cumple en la instalacion real y no solo en el lock; handshake OK reportando la version del paquete, que era uno de los defectos que este cambio cerraba; y el vendorizado viaja en el wheel con su hash cuadrando. Registro MCP en 0.13.0 active/isLatest. Desviacion respecto al plan, y a favor: se publico SIN esperar a mcp 2.0.1, decision revisada con datos (cero vulnerabilidades en OSV para 2.0.0, y 1.29.0 y 2.0.0 publicadas con cuatro minutos de diferencia, o sea release coordinada y no major apurado) frente a un coste de espera que si crecia: las ramas estaban 7 commits detras de main. El rebase cazo ademas una regresion silenciosa que ningun check habria visto: la rama era anterior a la politica de techos y traia platformdirs y httpx2 sin techo, asi que publicarla tal cual habria revertido la politica de la 0.12.3; se recuperaron platformdirs<5 y filelock<4 y se anadio httpx2>=2.5,<3, este ultimo verificado por ejecucion (httpx2 esta en el camino de import de arranque y tiene major real).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-29T17:18:48.121Z",
+      "reason": "Conformance aprobado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T17:18:48.294Z",
+      "evidence": "Nota canonica projects/local-delegate/migracion-mcp-sdk-2.md actualizada: publicada en la 0.13.0, por que no se espero a 2.0.1, y la regresion silenciosa que cazo el rebase con su leccion general (una rama larga en draft puede revertir en silencio politicas aprobadas mientras dormia). Frontmatter a version 0.13.0 y status publicada. backlog.md cierra la entrada de la migracion y deja la fase 3 y probar Codex como lo unico vivo. handoff.md con el estado final. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-29T17:18:48.462Z",
+      "reason": "Los cinco gates aprobados y la memoria persistida"
     }
   ]
 }

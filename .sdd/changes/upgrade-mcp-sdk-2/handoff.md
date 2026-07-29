@@ -2,15 +2,44 @@
 
 ## Current state
 
-- SDD status: `plan-review`, con los gates **`spec` y `plan` aprobados**. La implementación no ha
-  empezado.
-- Current revision: rama **`feat/mcp-sdk-2`** (local y remoto), salida de `main` en `cf3692f`.
-- `main` sigue en `mcp` 1.x y publicando 0.12.x con normalidad. La migración no la bloquea.
+- SDD status: `closed`. **Los cinco gates aprobados.**
+- Current revision: **PRs #34 (fase 1) y #35 (fase 2) mergeados** en `main`, y **publicado en la
+  0.13.0** el 2026-07-29 (PR #43 de preparación). `publish.yml` verde en sus tres jobs, registro MCP
+  en `0.13.0` `active`/`isLatest`.
+- **Verificado con instalación limpia desde PyPI**, resolución libre: `local-delegate-mcp` 0.13.0,
+  `mcp` **2.0.0**, `httpx2` 2.9.1 y **`httpx` ausente** — la migración a una sola librería HTTP se
+  cumple en la instalación real, no solo en el lock. Handshake OK, y **reporta la versión del
+  paquete** (0.13.0), que era uno de los defectos que este cambio cerraba.
+
+## Por qué se publicó ahora, y no esperando a `mcp` 2.0.1
+
+Estaba en draft «hasta 2.0.1» por prudencia, sin criterio de salida. Al revisarlo con datos, la
+espera no compraba nada: **cero vulnerabilidades** conocidas de 2.0.0, ningún bug que nos afectara,
+y un dato que cambió la lectura — **1.29.0 y 2.0.0 se publicaron con cuatro minutos de diferencia**
+(13:41 y 13:45 del 2026-07-28). No fue un major apurado, fue una release coordinada. Lo que rompió
+la 0.12.1 no fue que 2.0.0 fuera malo: fue **no tener techo**.
+
+Lo que sí crecía era el coste de esperar: las dos ramas estaban ya **7 commits detrás de `main`**, y
+cada release las alejaba más.
+
+## Lo que cazó el rebase, y habría sido una regresión silenciosa
+
+La rama era **anterior a la política de techos** de la 0.12.3, así que traía `platformdirs>=4` y
+`httpx2>=2.5` **sin techo**: publicarla tal cual habría revertido esa política recién publicada, y
+**ningún check lo habría visto** — `install-smoke` resuelve *dentro* del rango declarado, así que le
+habría parecido correcto. Al resolver el conflicto se recuperaron `platformdirs<5` y `filelock<4`, y
+se añadió `httpx2>=2.5,<3`.
+
+Ese techo de `httpx2` no se puso por simetría: se **verificó por ejecución** que cumple las dos
+condiciones del criterio — importar el paquete carga `httpx2` (camino de arranque) y su versionado
+tiene major real. De paso se confirmó que en 2.x se mantiene el resto del análisis: `uvicorn` sigue
+entrando por el SDK vía `sse_starlette`, y `fastapi` sigue **sin** entrar (import perezoso intacto).
 
 ## What changed
 
-Solo análisis; ni una línea de código del paquete. La investigación salió de **leer el wheel
-`mcp-2.0.0`** y comparar `requires_dist` en PyPI, no de documentación:
+Las **fases 1 y 2 están implementadas, mergeadas y publicadas**. Lo que sigue es el análisis previo,
+que se conserva porque su evidencia sigue valiendo: salió de **leer el wheel `mcp-2.0.0`** y comparar
+`requires_dist` en PyPI, no de documentación. Se cumplió punto por punto:
 
 - El código casi no rompe: `MCPServer` sustituye a `FastMCP`, los 11 decoradores y `run()` son
   compatibles, `streamable_http_app()` sigue existiendo. **El único punto que rompe de verdad es
@@ -31,78 +60,31 @@ Solo análisis; ni una línea de código del paquete. La investigación salió d
 - **Las features solo entran si cierran deuda ya apuntada** en el backlog. Las que no, se anotan
   como descartadas para no re-descubrirlas: `cache_hints`, `subscriptions`, `extensions`,
   `request_state_security`.
-- **Versión de la migración: minor, `0.13.0`.**
-- **No publicar hasta que el SDK tenga un patch (2.0.1+)** o unas semanas de rodaje: 2.0.0 se
-  publicó el mismo día que rompió la 0.12.1.
+- **Versión de la migración: minor, `0.13.0`.** Se cumplió, y el minor está justificado por el
+  cambio de contrato de `local_extract`, no solo por el tamaño del cambio.
+- ~~**No publicar hasta que el SDK tenga un patch (2.0.1+)**~~ — **revisada y descartada el
+  2026-07-29**, ver la sección de arriba. Era prudencia sin criterio de salida, y el coste de
+  esperar (el desfase creciente de las ramas) resultó mayor que el riesgo de publicar.
 - `pywin32` es una dependencia **heredada**, no elegida. Este repo ya la evitaba a propósito
   (`_pid_alive` usa `ctypes`) y 2.x la mete por la puerta de atrás.
 
 ## Next action
 
-**La tarea 1b del plan: el spike de viabilidad de `httpx2`, antes de tocar `pyproject.toml`.**
+El change está cerrado y publicado en la 0.13.0. Lo que queda es de fuera:
 
-En un entorno desechable con `httpx2` y **sin `httpx`**, comprobar que
-`fastapi.testclient.TestClient` arranca y sirve una app Starlette. Se usa en **~22 puntos** de
-`tests/test_metrics.py` y `tests/test_daemon.py`, que cubren dashboard y daemon.
-
-**Si no funciona, parar y volver al usuario**: la decisión de una sola librería HTTP habría que
-revisarla, no forzarla. Es el hallazgo bloqueante F1 de `plan-review.md`.
-
-### Prompt de arranque para una sesión nueva
-
-```
-Retoma la implementación del upgrade del SDK `mcp` a 2.x en D:\Projects\local-delegate.
-
-Usa /personal-sdd-workflow. El change YA EXISTE: slug `upgrade-mcp-sdk-2`, en estado
-`plan-review` con los gates `spec` y `plan` aprobados. NO crees uno nuevo.
-
-Antes de tocar nada, lee en este orden:
-- .sdd/changes/upgrade-mcp-sdk-2/research.md   (evidencia: sale de leer el wheel 2.0.0, no de docs)
-- .sdd/changes/upgrade-mcp-sdk-2/spec.md       (13 requisitos en 3 fases)
-- .sdd/changes/upgrade-mcp-sdk-2/plan.md       (tareas ordenadas)
-- .sdd/changes/upgrade-mcp-sdk-2/plan-review.md (el hallazgo bloqueante F1)
-
-Trabaja en la rama `feat/mcp-sdk-2`, que ya existe en local y en remoto.
-
-EMPIEZA POR LA TAREA 1b DEL PLAN: el spike de viabilidad de httpx2, ANTES de tocar
-pyproject.toml. En un entorno desechable con httpx2 y SIN httpx, comprueba que
-`fastapi.testclient.TestClient` arranca y sirve una app Starlette — se usa en ~22 puntos de
-tests/test_metrics.py y tests/test_daemon.py. Si NO funciona, PARA y pregúntame: la decisión
-de una sola librería HTTP habría que revisarla, no forzarla.
-
-Contexto ya decidido, no lo vuelvas a analizar:
-- Una sola librería HTTP: httpx2 (decisión mía; depscore 100 en las cinco dimensiones).
-- respx NO soporta httpx2 y sale de la suite: 122 ocurrencias en 5 ficheros, a httpx2.MockTransport.
-- El techo de major NO se elimina, se sube a `mcp>=2,<3`.
-- Solo daemon.py:116 rompe de verdad: `settings.streamable_http_path` ya no existe, la ruta
-  se pasa a `streamable_http_app(streamable_http_path=...)`.
-- `MCPServer(..., version=...)` arregla que serverInfo reporte hoy la versión del SDK.
-- pywin32 (license 70, supplyChain 73) entra obligatoria en Windows por el SDK y no es
-  evitable. Documentarla como dependencia heredada.
-- Primero equivalencia, después capacidades. Nada de features en la fase 1.
-- La versión de la migración será minor: 0.13.0.
-
-Reglas duras del proyecto:
-- NO publicar a PyPI sin confirmación explícita mía.
-- `main` está protegida: todo entra por PR, solo squash, con los checks en verde.
-- Antes de cada push, los CUATRO pasos del CI con `.` (no rutas parciales).
-- Verificar el CI de `main` DESPUÉS del merge con `gh run list`, no solo los checks del PR.
-- Todo en español. Sin `Co-Authored-By: Claude` en los commits.
-
-Gotchas de esta máquina:
-- pytest necesita `--basetemp` propio: falla al limpiar el symlink pytest-current del temp
-  de Windows (PermissionError WinError 5). No es un fallo de la suite.
-- El daemon corre del venv EDITABLE del repo: `uv sync` + `Stop-Process` del pid +
-  `Start-ScheduledTask LocalDelegateDaemon`. Ahora está en 0.12.2.
-- PyPI sirve el índice con caché: verificar demasiado pronto devuelve la versión anterior.
-
-Contexto de fondo en Obsidian: projects/local-delegate/overview.md, backlog.md e
-incidente-mcp-sdk-2-2026-07-28.md.
-```
+1. **Actualizar el daemon local**: corría del venv editable en la rama `feat/mcp-sdk-2-fase2`, que
+   ya no existe como tal — su contenido está en `main`. `git switch main && uv sync` + reinicio de
+   la tarea programada.
+2. **Actualizar la Mac** con `./scripts/update_to_latest.sh` (salta de 0.10.0 a 0.13.0 de una vez).
+3. **La fase 3 sigue sin empezar**, cada mejora en su propio cambio SDD: OpenTelemetry,
+   `middleware`, elicitation y `auth`. Las cuatro capacidades descartadas siguen descartadas y
+   están anotadas para no re-descubrirlas: `cache_hints`, `subscriptions`, `extensions` y
+   `request_state_security`.
 
 ## Memory
 
-- Canonical note: `projects/local-delegate/incidente-mcp-sdk-2-2026-07-28.md` (por qué existe este
-  trabajo). El backlog recoge la migración como deuda declarada.
-- Indexes updated: pendiente hasta que la migración avance; hoy el vault ya dice que el techo es
-  deuda y que migrar a 2.x es un cambio SDD aparte.
+- Canonical note: `projects/local-delegate/migracion-mcp-sdk-2.md`, actualizada con la publicación
+  en la 0.13.0 y con lo que cazó el rebase. `incidente-mcp-sdk-2-2026-07-28.md` sigue siendo el
+  porqué de fondo.
+- Indexes updated: sí. El `backlog.md` cierra la entrada de la migración y deja anotada la fase 3
+  como lo único que queda; la memoria de proyecto de Claude Code lleva el puntero al día.
