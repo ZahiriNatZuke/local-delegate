@@ -10,9 +10,9 @@ from __future__ import annotations
 import json
 import threading
 
-import httpx
+import backend_mock
+import httpx2
 import pytest
-import respx
 
 from local_delegate import config, server
 
@@ -76,19 +76,19 @@ def test_reattach_separator_keeps_paragraph_and_line_seams():
 
 
 # --- Ejecución por trozos -----------------------------------------------------
-@respx.mock
+@backend_mock.mock
 def _run_translate(monkeypatch, tmp_path, text: str, *, finish_reason: str = "stop"):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     seen: list[dict] = []
 
-    def _handler(request: httpx.Request) -> httpx.Response:
+    def _handler(request: httpx2.Request) -> httpx2.Response:
         payload = json.loads(request.content)
         seen.append(payload)
         # devuelve el trozo recibido con una marca, para poder comprobar el orden final
         content = payload["messages"][1]["content"].split(":\n\n", 1)[-1]
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "choices": [
@@ -97,7 +97,7 @@ def _run_translate(monkeypatch, tmp_path, text: str, *, finish_reason: str = "st
             },
         )
 
-    respx.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
     result = server.local_translate("inglés", text=text)
     return result, seen
 
@@ -130,42 +130,42 @@ def test_short_translation_still_uses_a_single_call_without_chunks_field(monkeyp
     assert "chunks" not in record
 
 
-@respx.mock
+@backend_mock.mock
 def test_backend_error_in_a_chunk_aborts_and_reports(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     calls = {"n": 0}
 
-    def _handler(request: httpx.Request) -> httpx.Response:
+    def _handler(request: httpx2.Request) -> httpx2.Response:
         calls["n"] += 1
         if calls["n"] >= 2:
-            return httpx.Response(500, text="boom")
-        return httpx.Response(
+            return httpx2.Response(500, text="boom")
+        return httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
         )
 
-    respx.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
     result = server.local_translate("inglés", text=_document(20, 600))
     assert "[local-delegate error]" in result
     record = _log_records(tmp_path)[0]
     assert record["ok"] is False
 
 
-@respx.mock
+@backend_mock.mock
 def test_local_delegate_chunk_off_does_a_single_call(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     seen: list[dict] = []
 
-    def _handler(request: httpx.Request) -> httpx.Response:
+    def _handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(json.loads(request.content))
-        return httpx.Response(
+        return httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
         )
 
-    respx.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
     long_input = _document(30, 800)
     server.local_delegate("Reescribe", long_input, "texto", chunk="off")
     assert len(seen) == 1
@@ -213,13 +213,13 @@ def test_backend_origin_cae_a_la_heuristica_si_el_override_no_sirve(monkeypatch,
     assert config.backend_origin("https://pc.ts.net:9292/v1") == "remote"
 
 
-@respx.mock
+@backend_mock.mock
 def test_log_records_where_the_inference_ran(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "https://pc.ts.net:9292/v1")
-    respx.post("https://pc.ts.net:9292/v1/chat/completions").mock(
-        return_value=httpx.Response(
+    backend_mock.post("https://pc.ts.net:9292/v1/chat/completions").mock(
+        return_value=httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
         )
     )

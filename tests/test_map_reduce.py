@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 
-import httpx
-import respx
+import backend_mock
+import httpx2
 
 from local_delegate import config, server
 
@@ -21,7 +21,7 @@ def _document(sections: int, chars: int) -> str:
     )
 
 
-@respx.mock
+@backend_mock.mock
 def _run(monkeypatch, tmp_path, fn, **kwargs):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
@@ -29,10 +29,10 @@ def _run(monkeypatch, tmp_path, fn, **kwargs):
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
     seen: list[dict] = []
 
-    def _handler(request: httpx.Request) -> httpx.Response:
+    def _handler(request: httpx2.Request) -> httpx2.Response:
         payload = json.loads(request.content)
         seen.append(payload)
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json={
                 "choices": [{"message": {"content": "RESUMEN"}, "finish_reason": "stop"}],
@@ -40,7 +40,7 @@ def _run(monkeypatch, tmp_path, fn, **kwargs):
             },
         )
 
-    respx.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
     return fn(**kwargs), seen
 
 
@@ -103,9 +103,9 @@ def test_un_fallo_del_backend_no_se_reporta_como_resumen_correcto(monkeypatch, t
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     texto = _document(60, 2000)
 
-    with respx.mock:
-        respx.post("http://test-backend/v1/chat/completions").mock(
-            return_value=httpx.Response(500, json={"error": "boom"})
+    with backend_mock.mock:
+        backend_mock.post("http://test-backend/v1/chat/completions").mock(
+            return_value=httpx2.Response(500, json={"error": "boom"})
         )
         server.local_summarize(text=texto)
 

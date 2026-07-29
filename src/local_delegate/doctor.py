@@ -126,9 +126,9 @@ def latest_github_info(component: str) -> dict[str, str] | None:
     if not repo:
         return None
     try:
-        import httpx
+        import httpx2
 
-        with httpx.Client(timeout=5.0) as c:
+        with httpx2.Client(timeout=5.0) as c:
             r = c.get(f"https://api.github.com/repos/{repo}/releases/latest")
             r.raise_for_status()
             data = r.json()
@@ -179,9 +179,9 @@ def recent_relevant_issues(component: str) -> list[dict[str, str | int]]:
     if not repo:
         return []
     try:
-        import httpx
+        import httpx2
 
-        with httpx.Client(timeout=5.0) as client:
+        with httpx2.Client(timeout=5.0) as client:
             response = client.get(
                 f"https://api.github.com/repos/{repo}/issues",
                 params={"state": "open", "sort": "updated", "direction": "desc", "per_page": 30},
@@ -253,9 +253,9 @@ def _compare_line(component: str, installed: str | None, online: bool) -> tuple[
 def _backend_up() -> bool:
     """True si el endpoint OpenAI-compatible responde a /models (best-effort)."""
     try:
-        import httpx
+        import httpx2
 
-        with httpx.Client(timeout=2.0) as c:
+        with httpx2.Client(timeout=2.0) as c:
             return c.get(f"{config.BASE_URL}/models", headers=config.auth_headers()).is_success
     except Exception:
         return False

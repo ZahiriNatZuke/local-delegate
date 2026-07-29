@@ -100,7 +100,12 @@ def main() -> int:
             continue
         info = mensaje.get("result", {}).get("serverInfo")
         if info:
-            print(f"OK: handshake respondido por {info.get('name')} (SDK {info.get('version')}).")
+            # Desde la migración al SDK 2.x el server declara su propia `version=`, así que esto
+            # es la versión del paquete. Antes salía la del SDK, que no decía nada útil sobre qué
+            # local-delegate estaba corriendo.
+            print(
+                f"OK: handshake respondido por {info.get('name')} (versión {info.get('version')})."
+            )
             return 0
 
     print("FALLO: el proceso arrancó pero no devolvió un handshake válido.")

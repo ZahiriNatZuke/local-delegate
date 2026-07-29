@@ -20,7 +20,7 @@ import sys
 import time
 from pathlib import Path
 
-import httpx
+import httpx2
 
 from . import config
 
@@ -28,9 +28,9 @@ from . import config
 def _backend_up() -> bool:
     """True si el endpoint OpenAI-compatible responde a /models."""
     try:
-        with httpx.Client(timeout=2.0) as c:
+        with httpx2.Client(timeout=2.0) as c:
             return c.get(f"{config.BASE_URL}/models", headers=config.auth_headers()).is_success
-    except httpx.HTTPError:
+    except httpx2.HTTPError:
         return False
 
 

@@ -10,8 +10,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-import httpx
-import respx
+import backend_mock
+import httpx2
 from fastapi.testclient import TestClient
 
 from local_delegate import config, server
@@ -156,15 +156,15 @@ def test_api_inflight_sees_other_process_and_drops_dead_pid(tmp_path, monkeypatc
     assert tools == {"local_classify"}
 
 
-@respx.mock
+@backend_mock.mock
 def test_api_backend_available(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/running").mock(
-        return_value=httpx.Response(200, json={"running": [{"model": "m1", "state": "ready"}]})
+    backend_mock.get("http://test-backend/running").mock(
+        return_value=httpx2.Response(200, json={"running": [{"model": "m1", "state": "ready"}]})
     )
     # /api/backend ahora incluye el status #901 fresco (mismo poll de 2s que /running)
-    respx.get("http://test-backend/v1/models").mock(
-        return_value=httpx.Response(
+    backend_mock.get("http://test-backend/v1/models").mock(
+        return_value=httpx2.Response(
             200, json={"data": [{"id": "m1", "status": {"value": "loaded"}}]}
         )
     )
@@ -175,11 +175,11 @@ def test_api_backend_available(monkeypatch):
     assert data["models"] == [{"id": "m1", "status": "loaded"}]
 
 
-@respx.mock
+@backend_mock.mock
 def test_api_backend_unavailable(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/running").mock(side_effect=httpx.ConnectError("down"))
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
     client = TestClient(metrics.app)
     assert client.get("/api/backend").json() == {
         "available": False,
@@ -191,11 +191,11 @@ def test_api_backend_unavailable(monkeypatch):
 
 
 # --- /api/status: versión, modelos reales del backend, catálogo, tools ----------------
-@respx.mock
+@backend_mock.mock
 def test_api_status_reports_version_models_catalog_tools(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(
-        return_value=httpx.Response(
+    backend_mock.get("http://test-backend/v1/models").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "data": [
@@ -221,12 +221,12 @@ def test_api_status_reports_version_models_catalog_tools(monkeypatch):
     assert "local_summarize" in tool_names and "local_status" in tool_names
 
 
-@respx.mock
+@backend_mock.mock
 def test_models_with_status_tolerates_missing_and_string(monkeypatch):
     """#901: status como objeto {value}, como string plano, o ausente (None) — todos válidos."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(
-        return_value=httpx.Response(
+    backend_mock.get("http://test-backend/v1/models").mock(
+        return_value=httpx2.Response(
             200,
             json={
                 "data": [
@@ -246,12 +246,12 @@ def test_models_with_status_tolerates_missing_and_string(monkeypatch):
     ]
 
 
-@respx.mock
+@backend_mock.mock
 def test_api_backend_stats_available(monkeypatch):
     """#898: proxy de /api/metrics/stats de llama-swap."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/api/metrics/stats").mock(
-        return_value=httpx.Response(
+    backend_mock.get("http://test-backend/api/metrics/stats").mock(
+        return_value=httpx2.Response(
             200, json={"total_requests": 3, "gen_histogram": {"p50": 40.0, "p95": 55.0}}
         )
     )
@@ -262,19 +262,21 @@ def test_api_backend_stats_available(monkeypatch):
     assert data["stats"]["gen_histogram"]["p50"] == 40.0
 
 
-@respx.mock
+@backend_mock.mock
 def test_api_backend_stats_unavailable_on_404(monkeypatch):
     """Backend sin #898 (o no llama-swap): 404 -> degrada a {available: false}."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/api/metrics/stats").mock(return_value=httpx.Response(404))
+    backend_mock.get("http://test-backend/api/metrics/stats").mock(
+        return_value=httpx2.Response(404)
+    )
     client = TestClient(metrics.app)
     assert client.get("/api/backend/stats").json() == {"available": False}
 
 
-@respx.mock
+@backend_mock.mock
 def test_api_status_backend_down(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    respx.get("http://test-backend/v1/models").mock(side_effect=httpx.ConnectError("down"))
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
     client = TestClient(metrics.app)
     data = client.get("/api/status").json()
     assert data["backend"] == {

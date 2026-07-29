@@ -19,17 +19,18 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    # Techo de major deliberado. El SDK `mcp` 2.0.0 eliminó `mcp.server.fastmcp` (el módulo pasó a
-    # `mcp.server.mcpserver`), así que sin techo `uvx` resuelve al major nuevo y el proceso muere en
-    # el import de `server.py` antes de poder hablar MCP: el cliente solo ve
-    # `MCP error -32000: Connection closed`. Pasó de verdad con la 0.12.1 ya publicada.
-    # No se retira hasta migrar la API 2.x, que es un cambio aparte.
-    "mcp>=1.2,<2",
-    # `httpx` NO lleva techo, por dos razones: está en `0.x`, donde un `<1` no protegería de nada
-    # (la ruptura llega por minor), y además **sale del proyecto** con la migración a `mcp` 2.x, que
-    # la sustituye por `httpx2`. El techo de su sustituto (`httpx2>=2.5,<3`, donde el major sí es
-    # real) va en esa rama, no aquí.
-    "httpx>=0.27",
+    # Techo de major deliberado, ahora sobre el major 2. Se sube, no se quita: la lección que dejó
+    # la 0.12.1 es que un rango sin techo es una bomba de tiempo (el 2.0.0 eliminó
+    # `mcp.server.fastmcp` y `uvx` resolvió al major nuevo, matando el proceso en el import antes de
+    # hablar MCP), no que este techo concreto sobrara.
+    "mcp>=2,<3",
+    # `httpx2` y no `httpx`: es lo que usa el SDK 2.x, y tener las dos librerías HTTP instaladas a
+    # la vez para siempre es peor que migrar una vez. Starlette 1.3 ya la prefiere para su
+    # `TestClient` y deprecó `httpx`. **Con techo**, y no por simetría: cumple las dos condiciones
+    # del criterio —está en el camino de import de arranque (`server.py` la usa para hablar con el
+    # backend) y su versionado tiene major real—, al revés que `httpx`, que estaba en `0.x` y por
+    # eso no lo llevaba.
+    "httpx2>=2.5,<3",
     # Techo de major: `platformdirs` y `filelock` están en el **camino de import de arranque**
     # (`server.py` las carga al importarse, `platformdirs` vía `config.py`), así que si un major
     # nuevo rompe, el proceso muere antes de poder hablar MCP y el cliente solo ve
@@ -40,15 +41,13 @@ dependencies = [
     # mezclarlas:
     #
     # `fastapi`: está en `0.x` (un `<1` sería decorativo: rompe por minor) **y** no está en el
-    # camino de arranque, porque `web/metrics.py` entra por import perezoso (`server.py:1753`). Su
-    # rotura afecta al dashboard, donde se ve, no a `uvx local-delegate-mcp` por stdio.
-    # `tests/test_core.py` fija esa invariante para que un refactor no la rompa en silencio.
+    # camino de arranque, porque `web/metrics.py` entra por import perezoso. `tests/test_core.py`
+    # fija esa invariante para que un refactor no la rompa en silencio.
     #
     # `uvicorn`: está en `0.x` igual, pero **sí se carga al arrancar** — y no por culpa de este
-    # paquete: lo arrastra el SDK (`mcp.server.fastmcp` → `mcp/server/sse.py` → `sse_starlette` →
-    # `uvicorn`). Quien gobierna de verdad esa compatibilidad es el rango de `sse-starlette`, que
-    # es transitiva y no se declara aquí; un techo nuestro daría cobertura aparente sin cambiar
-    # nada. Verificado por ejecución, no supuesto.
+    # paquete: lo arrastra el SDK. Quien gobierna de verdad esa compatibilidad es el rango de
+    # `sse-starlette`, que es transitiva y no se declara aquí; un techo nuestro daría cobertura
+    # aparente sin cambiar nada. Verificado por ejecución, no supuesto.
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "filelock>=3,<4",
@@ -91,7 +90,9 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
     "pre-commit>=3.7",
-    "respx>=0.21",
+    # `respx` sale de la suite: declara `httpx>=0.25.0` y no soporta `httpx2`, así que dejarlo
+    # arrastraría de vuelta la librería que la migración quita. Su sitio lo ocupa
+    # `httpx2.MockTransport`.
     "pyyaml>=6",
 ]
 

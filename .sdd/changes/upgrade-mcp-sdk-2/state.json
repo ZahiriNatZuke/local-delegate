@@ -3,9 +3,9 @@
   "slug": "upgrade-mcp-sdk-2",
   "title": "Analisis del upgrade al SDK mcp 2.x: ajuste de lo implementado y mejoras aprovechables",
   "mode": "standard",
-  "status": "plan-review",
+  "status": "implementing",
   "createdAt": "2026-07-29T00:35:37.856Z",
-  "updatedAt": "2026-07-29T01:16:11.168Z",
+  "updatedAt": "2026-07-29T01:24:40.103Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -89,6 +89,13 @@
       "at": "2026-07-29T01:16:11.168Z",
       "evidence": "Revision adversarial en plan-review.md: F1 BLOQUEANTE (fastapi TestClient va sobre httpx y se usa en ~22 puntos de test_metrics y test_daemon; quitar httpx podia romperlos) corregido anadiendo un spike de viabilidad ANTES de tocar pyproject. F2 resuelto verificando que httpx2 expone Response/Request/ConnectError/HTTPError/TimeoutException/HTTPStatusError/Timeout/Limits. F3 concreta que la version es minor 0.13.0. F4 concreta como comprobar que httpx no entra. F5 aceptado. Limitacion: revision no independiente.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-29T01:24:40.103Z",
+      "reason": "Spike 1b verde: TestClient de Starlette 1.3.1 prefiere httpx2 y funciona sin httpx (cierra F1); MockTransport cubre los patrones de respx. 14/14 tests del spike."
     }
   ]
 }

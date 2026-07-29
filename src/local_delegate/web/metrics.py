@@ -44,7 +44,7 @@ from datetime import UTC, datetime, timedelta
 from importlib.resources import files as _resource_files
 from pathlib import Path
 
-import httpx
+import httpx2
 import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -348,12 +348,12 @@ def backend():
     base = config.BASE_URL.removesuffix("/v1")
     running: list = []
     try:
-        with httpx.Client(timeout=1.0) as c:
+        with httpx2.Client(timeout=1.0) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())
             if r.is_success:
                 data = r.json()
                 running = (data.get("running") if isinstance(data, dict) else None) or []
-    except (httpx.HTTPError, ValueError):
+    except (httpx2.HTTPError, ValueError):
         running = []
     backend_up, models = server._models_with_status()
     return JSONResponse(
@@ -378,12 +378,12 @@ def backend_stats():
     """
     base = config.BASE_URL.removesuffix("/v1")
     try:
-        with httpx.Client(timeout=1.0) as c:
+        with httpx2.Client(timeout=1.0) as c:
             r = c.get(f"{base}/api/metrics/stats", headers=config.auth_headers())
             if not r.is_success:
                 return JSONResponse({"available": False})
             data = r.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx2.HTTPError, ValueError):
         return JSONResponse({"available": False})
     return JSONResponse({"available": True, "stats": data})
 

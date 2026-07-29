@@ -43,3 +43,30 @@ conviene tener presentes al reportar o al desplegar:
 Los secretos (`LOCAL_DELEGATE_API_KEY`) nunca se escriben en el log de uso, en la configuración
 que genera `local-delegate install` ni en los mensajes de error: se referencian por variable de
 entorno.
+
+## Dependencias
+
+La política del proyecto es no añadir una dependencia directa cuyo *depscore* de Socket baje de
+**0.7** en cualquiera de sus cinco dimensiones. Las directas se mantienen al mínimo, y esa
+ligereza es parte del argumento del paquete.
+
+### `pywin32`: heredada, no elegida
+
+Desde la migración al SDK `mcp` 2.x, una instalación **en Windows** arrastra `pywin32`, que el SDK
+declara obligatoria para `sys_platform == "win32"`. Sus puntuaciones rozan el umbral:
+
+| Paquete | license | maintenance | quality | supplyChain | vulnerability |
+|---|---|---|---|---|---|
+| `pywin32` 312 | **70** | 100 | 100 | **73** | 100 |
+
+Se documenta en vez de silenciarse, y con tres precisiones:
+
+- **El proyecto no la eligió y no la usa.** Ninguna línea de `local_delegate` la importa. De hecho
+  se evitó a propósito: `_pid_alive` comprueba procesos con `ctypes` justo para no depender de
+  ella. Entra por el árbol del SDK, por debajo.
+- **No es evitable sin renunciar al SDK 2.x.** No es un extra opcional ni tiene alternativa
+  declarable desde aquí; excluirla rompería la instalación del propio `mcp`.
+- **Solo afecta a Windows.** En Linux y macOS no entra.
+
+Si en el futuro el SDK la hiciera opcional, o sus puntuaciones cayeran por debajo del umbral, es
+motivo para reevaluar la dependencia del SDK, no para asumirlo en silencio.

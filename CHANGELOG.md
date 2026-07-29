@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **Migración al SDK `mcp` 2.x.** El import pasa de `mcp.server.fastmcp.FastMCP` a
+  `mcp.server.mcpserver.MCPServer`, y el daemon fija la ruta del MCP con
+  `streamable_http_app(streamable_http_path=…)` porque el major sacó los campos de transporte de
+  `Settings`. Las 11 tools conservan nombre, firma y salida: **la equivalencia es el criterio de
+  éxito**, así que esta entrega no añade ninguna capacidad de las que 2.x trae. El techo se sube a
+  `mcp>=2,<3` en vez de quitarse: la lección de la 0.12.1 fue que un rango sin techo es una bomba
+  de tiempo, no que ese techo concreto sobrara.
+- **Una sola librería HTTP: `httpx` sale y entra `httpx2`.** El SDK 2.x usa `httpx2`, y mantener el
+  cliente propio en `httpx` habría dejado las dos instaladas para siempre. `httpx2` es de pydantic
+  y marca 100 en las cinco dimensiones de Socket. Como efecto colateral, `respx` sale de las
+  dependencias de desarrollo —declara `httpx>=0.25.0` y no soporta `httpx2`—: su sitio lo ocupa
+  `tests/backend_mock.py`, construido sobre `httpx2.MockTransport`. Los 233 tests siguen ahí.
+
+### Fixed
+- **El handshake ya dice qué versión de `local-delegate` corre.** `serverInfo.version` reportaba la
+  versión **del SDK**, de modo que un `initialize` no servía para saber qué versión del paquete
+  había enfrente. Ahora el server la declara con el `version=` que acepta `MCPServer`.
+
 ## [0.12.4] - 2026-07-29
 
 ### Changed

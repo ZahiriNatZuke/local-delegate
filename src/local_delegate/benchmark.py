@@ -18,12 +18,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
-import httpx
+import httpx2
 
 from . import config
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpx2").setLevel(logging.WARNING)
 
 _METRIC_RE = re.compile(r"^(?P<name>[a-zA-Z_:][a-zA-Z0-9_:]*)(?:\{[^}]*\})?\s+(?P<value>\S+)$")
 _TRACKED_METRICS = {
@@ -148,10 +148,10 @@ class MetricsSampler:
         def sample() -> None:
             while not self._stop.is_set():
                 try:
-                    response = httpx.get(self.url, timeout=1.0, headers=self.headers)
+                    response = httpx2.get(self.url, timeout=1.0, headers=self.headers)
                     if response.is_success:
                         self.samples.append(parse_prometheus_metrics(response.text))
-                except httpx.HTTPError:
+                except httpx2.HTTPError:
                     pass
                 self._stop.wait(self.interval)
 
@@ -198,7 +198,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
 
     failures = 0
     with (
-        httpx.Client(timeout=args.timeout, headers=headers) as client,
+        httpx2.Client(timeout=args.timeout, headers=headers) as client,
         output.open("a", encoding="utf-8") as sink,
     ):
         for case in cases:
@@ -239,9 +239,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                         finish_reason = choice.get("finish_reason")
                         usage = data.get("usage") or {}
                         timings = data.get("timings") or {}
-                    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+                    except (httpx2.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
                         error = f"{type(exc).__name__}: {exc}"
-                        if isinstance(exc, httpx.HTTPStatusError):
+                        if isinstance(exc, httpx2.HTTPStatusError):
                             detail = exc.response.text.strip().replace("\n", " ")[:500]
                             if detail:
                                 error = f"{error} · backend={detail}"
