@@ -14,7 +14,7 @@
 | REQ-001 | Import y clase del server | ✅ | `type(server.mcp).__module__` → `mcp.server.mcpserver.server`, clase `MCPServer` |
 | REQ-002 | Versión propia en el handshake | ✅ | `check_install_handshake.py` → «respondido por local-delegate (versión 0.12.2)»; antes imprimía la del SDK. Test `test_handshake_declara_la_version_del_paquete` |
 | REQ-003 | Ruta del MCP como argumento | ✅ | `build_app()` expone `/api/daemon`, `/mcp` y el dashboard en la raíz; `settings.streamable_http_path` ya no se toca |
-| REQ-004 | Techo `mcp>=2,<3` | ✅ | `pyproject.toml`; `uv lock` resuelve `mcp==2.0.0` |
+| REQ-004 | Techo `mcp>=2,<3` | ✅ | `pyproject.toml`; `uv lock` resuelve `mcp==2.0.0`; **`install-smoke` en verde** resolviendo libremente con `--resolution highest`, que es el escenario de `uvx` que rompió la 0.12.1 |
 | REQ-005 | Las 11 tools conservan nombre, firma y salida | ⚠️ parcial | 11 tools registradas; la suite pasa sin perder casos. **Falta ejecutarlas contra el backend real.** Además apareció un cambio observable no previsto (el 421 por `Host`), corregido — ver abajo |
 | REQ-006 | Verificar ejecutando, contra el backend real | ❌ pendiente | bloqueado por la API key (ver *Deviations*) |
 | REQ-011 | Declara `httpx2`, nada arrastra `httpx` | ✅ | `httpx` tiene **0 menciones** en `uv.lock`; el único `name = "httpx…"` es `httpx2`. `uv pip list` sin `httpx` |
@@ -41,7 +41,8 @@ supply chain. `pywin32` es el único punto flojo y no es evitable sin renunciar 
 - [x] Lint, formatting, type checking, and build checks pass where applicable. — `ruff check .`
   (All checks passed), `ruff format --check .` (44 files already formatted),
   `extract_dashboard_js.py` + `node --check` OK.
-- [x] Secret scanning passes. — gitleaks del pre-commit, en verde al commitear.
+- [x] Secret scanning passes. — gitleaks del pre-commit, en verde al commitear; en el PR, `secrets`,
+  GitGuardian y CodeQL también.
 - [x] No unrelated changes are present. — el diff toca solo la migración, su documentación y la
   traza SDD.
 
@@ -82,9 +83,10 @@ transport real.
   `HTTPStatusError`—, así que el transporte y el manejo de errores funcionan contra el backend de
   verdad; lo que falta es el tramo autenticado y la comparación de salidas tool a tool.
   **La evidencia todavía NO es suficiente para cerrar la fase 1.**
-- **El CI no ha corrido.** El workflow solo se dispara en `push` a `main` o en `pull_request`, así
-  que `install-smoke` —el check que resuelve libremente y habría cazado el incidente de la 0.12.1—
-  no se ha ejecutado con `mcp` 2.x. Requiere abrir un PR.
+- ~~El CI no ha corrido.~~ **Resuelto:** PR #34 (draft) con los **11 checks en verde**, incluidos
+  `install-smoke`, `test` en los tres sistemas (ubuntu, macOS, Windows), `lint`, `secrets`, CodeQL,
+  GitGuardian y los dos de Socket Security — que **no** levantaron alerta por `pywin32` ni por el
+  árbol de dependencias nuevo.
 - **Clientes reales sin probar.** Claude Code y Codex contra el daemon migrado, por si 2.x negocia
   otro nivel de protocolo. El daemon en ejecución sigue siendo el de 0.12.2 sobre `mcp` 1.x.
 - **Riesgo de calendario, ya aceptado en el spec:** `mcp` 2.0.0 se publicó el mismo día que rompió
