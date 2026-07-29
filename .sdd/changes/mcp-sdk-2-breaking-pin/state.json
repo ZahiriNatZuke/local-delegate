@@ -3,9 +3,9 @@
   "slug": "mcp-sdk-2-breaking-pin",
   "title": "Acotar el SDK mcp por debajo del major 2 y cerrar el punto ciego de resolucion libre",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-28T22:27:42.069Z",
-  "updatedAt": "2026-07-28T22:44:29.086Z",
+  "updatedAt": "2026-07-28T22:49:19.793Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-28T22:49:06.502Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/incidente-mcp-sdk-2-2026-07-28.md. Actualizados backlog.md (Mac al dia, Codex-en-Mac reclasificado como no-aplica, publicar 0.12.2 como unico urgente, deudas nuevas) y overview.md. Punteros de Claude Code al dia: local-delegate-status, backlog-pendientes y MEMORY.md. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "at": "2026-07-28T22:44:29.086Z",
       "evidence": "review.md compara los 9 requisitos contra la implementacion con evidencia fresca. Veredicto conforms-with-notes: 4 notas, todas limitaciones declaradas o trabajo diferido explicito (revision de plan no independiente, verificacion final en la Mac pendiente de publicar, prevencion parcial del resto de dependencias, serverInfo reporta la version del SDK). CI de main verificado DESPUES del merge: CI, CodeQL y Dependency Graph en success.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-28T22:49:06.502Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/incidente-mcp-sdk-2-2026-07-28.md. Actualizados backlog.md (Mac al dia, Codex-en-Mac reclasificado como no-aplica, publicar 0.12.2 como unico urgente, deudas nuevas) y overview.md. Punteros de Claude Code al dia: local-delegate-status, backlog-pendientes y MEMORY.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-28T22:49:19.728Z",
+      "reason": "Los cinco gates aprobados, traza mergeada, CI de main verde tras ambos merges"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-28T22:49:19.793Z",
+      "reason": "Cambio completo en main. La publicacion de la 0.12.2 queda como accion de release, pendiente de confirmacion explicita del usuario"
     }
   ]
 }
