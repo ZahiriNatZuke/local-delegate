@@ -194,33 +194,50 @@ El job **no** se exige como check requerido en la protección de rama, por la mi
 
 ### Cómo actualizar el vendorizado
 
-Que sea tarea repetible y no arqueología. Con Chart.js como ejemplo, para subir a `X.Y.Z`:
+Que sea tarea repetible y no arqueología. Este procedimiento **está ejecutado**, no imaginado: es el
+que se siguió para subir Chart.js de 4.4.1 a 4.5.1. Con Chart.js como ejemplo, para subir a `X.Y.Z`:
 
 ```bash
-# 1. Bajar la distribución. jsDelivr es la fuente verificada de la copia actual.
-curl -sL https://cdn.jsdelivr.net/npm/chart.js@X.Y.Z/dist/chart.umd.min.js -o /tmp/chart.js
+# 1. Bajar el TARBALL OFICIAL de npm, no un CDN. Un CDN puede transformar lo que sirve, y de
+#    hecho lo hace (ver la trampa del banner, abajo). El tarball es la fuente canónica.
+curl -sL https://registry.npmjs.org/chart.js/-/chart.js-X.Y.Z.tgz -o /tmp/chart.tgz
 
-# 2. QUITAR EL BANNER DE JSDELIVR (ver abajo) y calcular el hash del contenido real.
+# 2. Sacar el dist, calcular su hash y comprobar la licencia — que también cambia.
 python - <<'PY'
-import hashlib, pathlib
-datos = pathlib.Path("/tmp/chart.js").read_bytes()
-if datos.startswith(b"/**"):
-    datos = datos[datos.index(b"*/") + 3:].lstrip(b"\r\n")
-print(hashlib.sha256(datos).hexdigest(), len(datos))
+import hashlib, tarfile, json
+with tarfile.open("/tmp/chart.tgz") as tf:
+    blob = tf.extractfile("package/dist/chart.umd.min.js").read()
+    lic  = tf.extractfile("package/LICENSE.md").read()
+    pkg  = json.loads(tf.extractfile("package/package.json").read())
+print(hashlib.sha256(blob).hexdigest(), len(blob), "licencia:", pkg.get("license"))
+open("chart.umd.min.js", "wb").write(blob)
+open("chart.js-LICENSE.md", "wb").write(lic)   # al subir a 4.5.1 cambió el rango de años
 PY
 
-# 3. Reemplazar el blob, actualizar `version`, `source`, `sha256` y `bytes` en vendor.json,
-#    y revisar si la licencia cambió.
-# 4. Comprobar:
+# 3. Mover los dos ficheros a resources/vendor/ y actualizar en vendor.json:
+#    `version`, `source`, `sha256`, `bytes` y la nota de procedencia.
+# 4. Comprobar. Tiene que decir "está al día" y no avisar de nada:
 python scripts/check_vendor.py
-# 5. Abrir el dashboard y mirar que los gráficos siguen pintando.
+# 5. Suite completa: hay tests que leen la versión del manifiesto.
+uv run pytest -q
+# 6. Abrir el dashboard y mirar que los gráficos siguen pintando (ojo con la caché, abajo).
 ```
 
-**La trampa del banner de jsDelivr.** Descargar esa URL y comparar el sha256 con el del manifiesto
-da **siempre distinto**, y no porque el fichero esté adulterado: jsDelivr antepone 274 bytes propios
-(`/** Skipped minification because the original files appears to be already minified.`). Hay que
-quitarlos antes de comparar. La copia de 4.4.1 se verificó así, byte a byte, y coincide exactamente.
-**cdnjs no sirve como referencia**: distribuye otra minificación (200 807 bytes frente a 205 125).
+**La trampa del banner de jsDelivr.** Descargar de jsDelivr y comparar el sha256 con el del
+manifiesto puede dar **distinto** sin que el fichero esté adulterado: a veces antepone 274 bytes
+propios (`/** Skipped minification because the original files appears to be already minified.`). Le
+pasó a la 4.4.1 —de ahí que la copia vieja se verificara quitándoselos— y **no** le pasó a la 4.5.1.
+Que sea intermitente es justo lo que lo hace traicionero. No confundirlo con el banner **legítimo**
+de Chart.js, que empieza por `/*!` y sí forma parte del fichero distribuido. **cdnjs no sirve como
+referencia**: distribuye otra minificación. Bajando del tarball no hay nada de esto que sortear, que
+es por lo que el procedimiento cambió.
+
+**La caché de 24 h engaña al verificar.** El endpoint sirve el JS con
+`Cache-Control: public, max-age=86400`, así que tras actualizar el blob **el navegador sigue
+enseñando el viejo**: al comprobar la 4.5.1, `window.Chart.version` seguía diciendo `4.4.1` con el
+servidor sirviendo ya los bytes nuevos. Hace falta recarga forzada. Vale también para el usuario que
+actualice el paquete: verá los gráficos viejos hasta un día después, lo cual es inofensivo pero
+conviene saberlo antes de salir a buscar un bug que no existe.
 
 La comprobación diaria compara contra el **manifiesto**, no contra la red — si no, dependería de un
 servicio ajeno y dejaría de ser determinista. La *procedencia* se verifica cuando cambia, es decir

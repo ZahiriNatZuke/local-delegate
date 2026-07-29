@@ -10,22 +10,24 @@
     {
       "file": "chart.umd.min.js",
       "name": "chart.js",
-      "version": "4.4.1",
+      "version": "4.5.1",
       "ecosystem": "npm",
-      "source": "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
+      "source": "https://registry.npmjs.org/chart.js/-/chart.js-4.5.1.tgz#package/dist/chart.umd.min.js",
       "license": "MIT",
       "licenseFile": "chart.js-LICENSE.md",
-      "sha256": "74401d738dd3e03ee5dfb3b6841210fe2c4ead8a960c4011ca4ba0b78a9fd8f3",
-      "bytes": 205125,
+      "sha256": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
+      "bytes": 208522,
       "_procedencia": [
-        "Verificado byte a byte el 2026-07-29: este fichero es exactamente el",
-        "dist/chart.umd.min.js de chart.js 4.4.1 tal como lo sirve jsDelivr.",
-        "TRAMPA: descargar esa URL y comparar el sha256 directamente da SIEMPRE distinto.",
-        "jsDelivr antepone un banner propio de 274 bytes que empieza por",
-        "'/** Skipped minification because the original files appears to be already minified.'",
-        "Hay que quitar esos 274 bytes iniciales antes de comparar. Con banner el fichero mide",
-        "205399 bytes y su sha256 es d2af8974...681e; sin banner coincide con el de aquí.",
-        "cdnjs NO sirve como referencia: distribuye otra minificación (200807 bytes)."
+        "Verificado el 2026-07-29 contra el TARBALL OFICIAL de npm, que es la fuente canónica:",
+        "package/dist/chart.umd.min.js del .tgz de chart.js 4.5.1. jsDelivr sirve exactamente el",
+        "mismo contenido, byte a byte, así que la procedencia está establecida por dos caminos.",
+        "Baja del tarball, no de un CDN: un CDN puede transformar lo que sirve, y de hecho lo hace.",
+        "TRAMPA HISTÓRICA, que sigue viva: jsDelivr a veces antepone un banner propio de 274 bytes",
+        "que empieza por '/** Skipped minification because the original files appears to be already",
+        "minified.'. Le pasó a la 4.4.1 y por eso comparar el hash contra su URL daba SIEMPRE",
+        "distinto; a la 4.5.1 no se lo puso. No confundirlo con el banner legítimo de Chart.js, que",
+        "empieza por '/*!' y SÍ forma parte del fichero distribuido.",
+        "cdnjs NO sirve como referencia: distribuye otra minificación."
       ]
     }
   ]
