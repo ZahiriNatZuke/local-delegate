@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "chartjs-4-5-1",
+  "title": "Sube el Chart.js vendorizado a 4.5.1",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-07-29T15:11:19.023Z",
+  "updatedAt": "2026-07-29T15:21:16.213Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T15:20:35.613Z",
+      "evidence": "Brief y spec con 5 requisitos observables. Origen: el propio vigilante avisando en su primera corrida de que 4.4.1 esta dos minors atrasada. Decidido antes de tocar nada: bajar del tarball oficial de npm y no de un CDN (un CDN puede transformar lo que sirve, como probo el banner de 274 bytes de jsDelivr con la 4.4.1), y verificar el dashboard a ojo con linea base previa porque ningun test de este repo ve una regresion visual de una libreria de graficos. Verificado antes de implementar: OSV da cero vulnerabilidades para 4.5.1 y la licencia sigue siendo MIT (solo cambia el rango de anos del copyright).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T15:20:35.782Z",
+      "evidence": "Plan de 5 tareas con revision en el propio plan.md, y su limitacion declarada: no es independiente. El hallazgo que gobierna el plan es que un cambio de version de una libreria de graficos NO lo cubre ningun test del repo, asi que la comprobacion visual pasa de conviene a tarea propia y con linea base tomada ANTES de tocar nada, sin la cual un fallo no se podria atribuir. Rollback explicito en cada tarea; la tarea 4 acota el alcance a lo que la subida destape.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T15:21:16.213Z",
+      "evidence": "Los cuatro pasos del CI en local: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando, y extract_dashboard_js.py + node --check. El vigilante contra los servicios reales sale VERDE Y SIN UN SOLO AVISO: integridad OK, OSV sin vulnerabilidades para 4.5.1 y version al dia, que es el criterio de exito del cambio. Procedencia establecida por dos caminos: el tarball oficial de npm y jsDelivr dan el mismo sha256 48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a y los mismos 208522 bytes. Dashboard verificado A OJO antes y despues con datos: 4.4.1 daba 6 instancias de Chart y 5 canvas pintados con cero errores de consola; 4.5.1 da lo mismo. Capturas de pagina completa de ambas. Detalle en verification.md.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-29T15:11:19.023Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-29T15:20:35.613Z",
+      "evidence": "Brief y spec con 5 requisitos observables. Origen: el propio vigilante avisando en su primera corrida de que 4.4.1 esta dos minors atrasada. Decidido antes de tocar nada: bajar del tarball oficial de npm y no de un CDN (un CDN puede transformar lo que sirve, como probo el banner de 274 bytes de jsDelivr con la 4.4.1), y verificar el dashboard a ojo con linea base previa porque ningun test de este repo ve una regresion visual de una libreria de graficos. Verificado antes de implementar: OSV da cero vulnerabilidades para 4.5.1 y la licencia sigue siendo MIT (solo cambia el rango de anos del copyright).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-29T15:20:35.782Z",
+      "evidence": "Plan de 5 tareas con revision en el propio plan.md, y su limitacion declarada: no es independiente. El hallazgo que gobierna el plan es que un cambio de version de una libreria de graficos NO lo cubre ningun test del repo, asi que la comprobacion visual pasa de conviene a tarea propia y con linea base tomada ANTES de tocar nada, sin la cual un fallo no se podria atribuir. Rollback explicito en cada tarea; la tarea 4 acota el alcance a lo que la subida destape.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-29T15:21:01.828Z",
+      "reason": "Modo lite: procedencia verificada contra el tarball de npm y contra jsDelivr, OSV sin CVEs para 4.5.1, licencia revisada"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-29T15:21:02.017Z",
+      "reason": "brief.md y spec.md con 5 requisitos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-29T15:21:02.190Z",
+      "reason": "plan.md con 5 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-29T15:21:02.355Z",
+      "reason": "Revision dentro del propio plan.md, con su limitacion declarada"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-29T15:21:02.519Z",
+      "reason": "Gates de spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T15:21:02.696Z",
+      "reason": "Las 5 tareas hechas; el vigilante sale verde y sin avisos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T15:21:16.213Z",
+      "evidence": "Los cuatro pasos del CI en local: ruff check . y ruff format --check . limpios, pytest -q con 256 pasando, y extract_dashboard_js.py + node --check. El vigilante contra los servicios reales sale VERDE Y SIN UN SOLO AVISO: integridad OK, OSV sin vulnerabilidades para 4.5.1 y version al dia, que es el criterio de exito del cambio. Procedencia establecida por dos caminos: el tarball oficial de npm y jsDelivr dan el mismo sha256 48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a y los mismos 208522 bytes. Dashboard verificado A OJO antes y despues con datos: 4.4.1 daba 6 instancias de Chart y 5 canvas pintados con cero errores de consola; 4.5.1 da lo mismo. Capturas de pagina completa de ambas. Detalle en verification.md.",
+      "actor": "user"
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import os
 import re
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 import respx
@@ -450,8 +451,19 @@ def test_chart_js_is_served_from_the_package_not_a_cdn():
     r = client.get("/vendor/chart.umd.min.js")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("application/javascript")
-    assert "Chart.js v4.4.1" in r.text
     assert len(r.text) > 100_000  # la distribución real, no un stub
+
+    # La versión se lee del manifiesto, NO se escribe aquí: `vendor.json` es su fuente de verdad
+    # y clavarla en un test la convierte en una segunda que hay que acordarse de actualizar.
+    # Este assert existía con «Chart.js v4.4.1» a mano y fue una de las dos cosas que hubo que
+    # tocar al subir a 4.5.1.
+    manifiesto = json.loads(
+        (Path(metrics.__file__).parents[1] / "resources" / "vendor" / "vendor.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    version = next(f["version"] for f in manifiesto["files"] if f["file"] == "chart.umd.min.js")
+    assert f"Chart.js v{version}" in r.text
 
 
 def test_web_fonts_can_be_disabled_for_zero_third_party_requests(monkeypatch):

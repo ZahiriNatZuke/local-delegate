@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **Chart.js sube de 4.4.1 a 4.5.1**, dos minors de atraso que el vigilante nuevo sacó a la luz en
+  su primera corrida. Es el estreno del proceso, y funcionó de punta a punta: el aviso lo dio el CI,
+  la copia se bajó del **tarball oficial de npm** —no de un CDN— y se verificó byte a byte, OSV no
+  conoce vulnerabilidades para 4.5.1, y el dashboard se comprobó a ojo antes y después (mismos seis
+  gráficos, cero errores de consola). Se actualiza también `chart.js-LICENSE.md`: sigue siendo MIT,
+  cambia el rango de años del copyright.
+  De paso caen **dos sitios que todavía clavaban la versión a mano** —un assert de
+  `tests/test_metrics.py` y los tests de versión del vigilante—, que ahora la leen del manifiesto.
+  Era exactamente el problema que `vendor.json` vino a resolver, y solo se ve cuando actualizas.
+
 ### Added
 - **El JavaScript vendorizado deja de estar sin vigilancia.** `resources/vendor/` son 205 KB de
   Chart.js que ninguna herramienta miraba: Dependabot solo ve manifiestos, CodeQL analiza el

@@ -38,6 +38,17 @@ def _load_script():
 
 check_vendor = _load_script()
 
+# La versión vendorizada se LEE del manifiesto, nunca se escribe en este archivo: si se clava,
+# cada subida de Chart.js obliga a tocar tests que no tienen nada que ver con lo que prueban.
+# Pasó al subir de 4.4.1 a 4.5.1, y por eso los tests de versión usan `VERSION_VENDORIZADA`
+# («al día») y `MUY_POSTERIOR` («hay una más nueva») en vez de números concretos.
+VERSION_VENDORIZADA = next(
+    f["version"]
+    for f in json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))["files"]
+    if f["file"] == "chart.umd.min.js"
+)
+MUY_POSTERIOR = "99.0.0"
+
 
 @pytest.fixture
 def vendor_copia(tmp_path):
@@ -150,7 +161,7 @@ def test_vulnerabilidad_confirmada_falla(vendor_copia, monkeypatch):
     _sin_red(
         monkeypatch,
         osv=lambda: {"vulns": [{"id": "GHSA-xxxx-yyyy-zzzz"}]},
-        npm=lambda: {"version": "4.4.1"},
+        npm=lambda: {"version": VERSION_VENDORIZADA},
     )
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == (
@@ -165,7 +176,7 @@ def _caido():
 
 def test_osv_caido_no_falla(vendor_copia, monkeypatch, capsys):
     """Un servicio ajeno caído no puede bloquear un PR legítimo: la integridad ya se comprobó."""
-    _sin_red(monkeypatch, osv=_caido, npm=lambda: {"version": "4.4.1"})
+    _sin_red(monkeypatch, osv=_caido, npm=lambda: {"version": VERSION_VENDORIZADA})
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
     assert "AVISO" in capsys.readouterr().out
@@ -187,16 +198,16 @@ def test_osv_malformado_no_falla(vendor_copia, monkeypatch, capsys):
 
 
 def test_version_nueva_avisa_sin_fallar(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": "4.5.1"})
+    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUY_POSTERIOR})
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
     salida = capsys.readouterr().out
     assert "AVISO" in salida
-    assert "4.5.1" in salida
+    assert MUY_POSTERIOR in salida
 
 
 def test_version_al_dia_no_avisa(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": "4.4.1"})
+    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": VERSION_VENDORIZADA})
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
     assert "AVISO" not in capsys.readouterr().out
@@ -207,7 +218,9 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
     blob = vendor_copia.parent / "chart.umd.min.js"
     blob.write_bytes(b"contenido sustituido")
     _sin_red(
-        monkeypatch, osv=lambda: {"vulns": [{"id": "GHSA-x"}]}, npm=lambda: {"version": "4.4.1"}
+        monkeypatch,
+        osv=lambda: {"vulns": [{"id": "GHSA-x"}]},
+        npm=lambda: {"version": VERSION_VENDORIZADA},
     )
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.FALLO_INTEGRIDAD)
@@ -240,8 +253,10 @@ def test_el_informe_va_tambien_al_summary(vendor_copia, monkeypatch, tmp_path):
     """Un aviso enterrado en el log de un job verde no lo lee nadie (F3 de la revisión del plan)."""
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": "4.5.1"})
+    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUY_POSTERIOR})
 
     check_vendor.main(["--manifest", str(vendor_copia)])
 
-    assert "4.5.1" in summary.read_text(encoding="utf-8")
+    contenido = summary.read_text(encoding="utf-8")
+    assert "AVISO" in contenido
+    assert MUY_POSTERIOR in contenido
