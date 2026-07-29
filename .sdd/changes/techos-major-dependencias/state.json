@@ -3,9 +3,9 @@
   "slug": "techos-major-dependencias",
   "title": "Politica de techos de major para las dependencias de runtime",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-07-29T12:00:29.171Z",
-  "updatedAt": "2026-07-29T12:25:40.763Z",
+  "updatedAt": "2026-07-29T12:48:34.439Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T12:47:04.609Z",
+      "evidence": "Local sobre el worktree: ruff check . (All checks passed), ruff format --check . (43 ficheros), pytest -q con 234 passed (233 de main mas 1 nuevo, ningun test existente tocado), extract_dashboard_js.py mas node --check, uv lock --check y uv build. El unico warning es el StarletteDeprecationWarning de httpx que YA existe en main y desaparece con la migracion; no es regresion. CI del PR 36: 11 checks en verde, incluidos CodeQL (corre porque el PR va contra main), install-smoke (que resuelve con --resolution highest DENTRO de los techos nuevos y hace el handshake contra el paquete instalado, o sea REQ-005 cerrado por ejecucion) y los dos de Socket Security sin alerta. Tras el merge, el CI de main verificado con gh run list: CI, CodeQL y Dependency Graph los tres en success sobre 39cc69e. Verificacion clave: los techos se comprobaron en el METADATA del WHEEL (Requires-Dist filelock menor que 4 y platformdirs menor que 5), no solo en pyproject.toml, porque el artefacto es lo que viaja a PyPI y lo que rompio la 0.12.1.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T12:47:04.664Z",
+      "evidence": "review.md con revision fresca contra el arbol de main ya mergeado (39cc69e), requisito por requisito, ejecutando o leyendo el fichero en su estado final. Veredicto conforms-with-notes: REQ-001, 002, 003, 003b, 004, 005 y 006 cumplidos; REQ-007 parcial porque su vigilancia depende de una comprobacion pendiente (Dependabot el lunes 2026-08-03). Hallazgo principal: el test de la invariante caso un error del analisis ANTES de mergear (se habia deducido leyendo imports que uvicorn no estaba en el camino de arranque, y si lo esta porque lo arrastra el SDK via sse_starlette); la decision practica no cambio pero la mitad de su justificacion si, y spec.md y research.md quedaron corregidos con la enmienda marcada. Limite declarado: la politica no cubre transitivas y el arranque depende de sse_starlette y starlette, que ni declaramos.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T12:47:04.716Z",
+      "evidence": "Nota canonica nueva en el vault: projects/local-delegate/techos-major-dependencias.md, enlazada desde el incidente, la migracion, el backlog y el overview. Backlog actualizado como nota viva: la entrada de las cinco dependencias sin techo se sustituye por la politica cerrada mas lo que queda (publicar, y la comprobacion de Dependabot del lunes). Puntero en la memoria de Claude Code del proyecto con las dos trampas que importan: no protege hasta publicar, y uvicorn si esta en el arranque via el SDK. Sin secretos ni datos personales: el cambio no toca credenciales ni configuracion sensible.",
+      "actor": "user"
     }
   },
   "history": [
@@ -96,6 +96,58 @@
       "to": "implementing",
       "at": "2026-07-29T12:25:40.763Z",
       "reason": "Gate de plan aprobado por el usuario tras corregir F1 (test de la invariante de imports) y F2 (declarar el alcance)"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T12:47:04.609Z",
+      "evidence": "Local sobre el worktree: ruff check . (All checks passed), ruff format --check . (43 ficheros), pytest -q con 234 passed (233 de main mas 1 nuevo, ningun test existente tocado), extract_dashboard_js.py mas node --check, uv lock --check y uv build. El unico warning es el StarletteDeprecationWarning de httpx que YA existe en main y desaparece con la migracion; no es regresion. CI del PR 36: 11 checks en verde, incluidos CodeQL (corre porque el PR va contra main), install-smoke (que resuelve con --resolution highest DENTRO de los techos nuevos y hace el handshake contra el paquete instalado, o sea REQ-005 cerrado por ejecucion) y los dos de Socket Security sin alerta. Tras el merge, el CI de main verificado con gh run list: CI, CodeQL y Dependency Graph los tres en success sobre 39cc69e. Verificacion clave: los techos se comprobaron en el METADATA del WHEEL (Requires-Dist filelock menor que 4 y platformdirs menor que 5), no solo en pyproject.toml, porque el artefacto es lo que viaja a PyPI y lo que rompio la 0.12.1.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T12:47:04.664Z",
+      "evidence": "review.md con revision fresca contra el arbol de main ya mergeado (39cc69e), requisito por requisito, ejecutando o leyendo el fichero en su estado final. Veredicto conforms-with-notes: REQ-001, 002, 003, 003b, 004, 005 y 006 cumplidos; REQ-007 parcial porque su vigilancia depende de una comprobacion pendiente (Dependabot el lunes 2026-08-03). Hallazgo principal: el test de la invariante caso un error del analisis ANTES de mergear (se habia deducido leyendo imports que uvicorn no estaba en el camino de arranque, y si lo esta porque lo arrastra el SDK via sse_starlette); la decision practica no cambio pero la mitad de su justificacion si, y spec.md y research.md quedaron corregidos con la enmienda marcada. Limite declarado: la politica no cubre transitivas y el arranque depende de sse_starlette y starlette, que ni declaramos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T12:47:04.716Z",
+      "evidence": "Nota canonica nueva en el vault: projects/local-delegate/techos-major-dependencias.md, enlazada desde el incidente, la migracion, el backlog y el overview. Backlog actualizado como nota viva: la entrada de las cinco dependencias sin techo se sustituye por la politica cerrada mas lo que queda (publicar, y la comprobacion de Dependabot del lunes). Puntero en la memoria de Claude Code del proyecto con las dos trampas que importan: no protege hasta publicar, y uvicorn si esta en el arranque via el SDK. Sin secretos ni datos personales: el cambio no toca credenciales ni configuracion sensible.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-29T12:47:27.455Z",
+      "reason": "Cambio mergeado a main en 39cc69e con los 11 checks verdes"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-29T12:47:52.647Z",
+      "reason": "review.md con la revision fresca contra el arbol de main mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-29T12:48:34.382Z",
+      "reason": "handoff.md escrito y memoria persistida en el vault"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-29T12:48:34.439Z",
+      "reason": "Los cinco gates aprobados; mergeado en 39cc69e con el CI de main verde. Dos seguimientos anotados que no bloquean: publicar y la comprobacion de Dependabot del lunes 2026-08-03"
     }
   ]
 }
