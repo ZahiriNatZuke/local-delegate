@@ -104,6 +104,10 @@ def query_daemon(host: str, port: int, timeout: float = 1.0) -> dict | None:
         if data.get("service") == "local-delegate" and data.get("mode") == "daemon":
             return data
     except (httpx2.HTTPError, ValueError, TypeError):
+        # La pregunta que responde esta función es «¿este puerto es un daemon nuestro?», y
+        # cualquier fallo significa que no lo es: nadie escucha, responde otra cosa, no habla
+        # HTTP o devuelve algo que no es JSON. Todas esas respuestas son el mismo `None`, y
+        # distinguirlas no cambiaría lo que hace quien llama.
         pass
     return None
 

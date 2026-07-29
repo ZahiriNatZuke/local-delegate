@@ -152,6 +152,10 @@ class MetricsSampler:
                     if response.is_success:
                         self.samples.append(parse_prometheus_metrics(response.text))
                 except httpx2.HTTPError:
+                    # Muestreo best-effort: si una lectura falla —el backend está ocupado
+                    # cargando un modelo, o cierra la conexión— se descarta ESA muestra y se
+                    # sigue muestreando. Propagar mataría el hilo, y con él el benchmark entero
+                    # que es lo que se está midiendo.
                     pass
                 self._stop.wait(self.interval)
 
