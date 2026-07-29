@@ -183,8 +183,14 @@ justo lo que ese `try/except json.JSONDecodeError` promete.
 devuelven `str` (`{"result": …}`), lo que parecía un cambio observable no detectado de la fase 1.
 **Verificado contra `mcp` 1.29.0: ya pasaba igual.** La única diferencia es interna de Python.
 
-**Falta:** que el CI corra sobre esta rama. Su PR va con base en `feat/mcp-sdk-2` y **no en `main`**,
-para que el diff que se revise sea solo el de las capacidades nuevas y no arrastre la fase 1.
+**PR #35, en draft, con base en `feat/mcp-sdk-2` y no en `main`**, para que el diff que se revise
+sea solo el de las capacidades nuevas y no arrastre la fase 1. **9 checks en verde**: `lint`,
+`secrets`, `install-smoke`, `test` en los tres sistemas, GitGuardian y los dos de Socket Security.
+
+**Son 9 y no los 11 del PR #34, y es por diseño, no por una regresión:** `codeql.yml` solo se
+dispara en `push`/`pull_request` contra `main`, así que CodeQL no corre en un PR entre ramas de
+trabajo. Correrá cuando la fase 2 llegue a `main`. Conviene saberlo para no leer «9 verdes» como
+cobertura perdida.
 
 ## Deviations and residual risk
 
