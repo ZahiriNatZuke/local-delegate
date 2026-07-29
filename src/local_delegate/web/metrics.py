@@ -200,24 +200,62 @@ def _last_event_ts() -> str | None:
     return evento.get("ts") if evento else None
 
 
+# La contabilidad por evento vive en `server.py`, junto a `_log_event` que define el formato
+# del log: es la ÚNICA implementación, y así `local_status` y el dashboard no pueden dar
+# números distintos del mismo log.
+_accounting = server._accounting
+
+
 def _aggregate(rows: list[dict]) -> dict:
     by_tool: dict[str, dict] = defaultdict(
         lambda: {
             "calls": 0,
+            "backend_calls": 0,
             "chars_in": 0,
             "chars_out": 0,
             "latency_ms": 0,
             "errors": 0,
-            "saved_chars": 0,
+            "saved": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
         }
     )
-    by_model: dict[str, dict] = defaultdict(lambda: {"calls": 0, "chars_in": 0, "chars_out": 0})
+    by_model: dict[str, dict] = defaultdict(
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "chars_in": 0,
+            "chars_out": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
+    )
     # Origen del CÓMPUTO: "local" (backend en esta máquina), "remote" (p. ej. esta Mac usando
     # la GPU de la PC) o "unknown" para eventos anteriores a que se registrara el campo.
     by_backend: dict[str, dict] = defaultdict(
-        lambda: {"calls": 0, "chars_in": 0, "chars_out": 0, "saved_chars": 0, "hosts": set()}
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "chars_in": 0,
+            "chars_out": 0,
+            "saved": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "hosts": set(),
+        }
     )
-    total = {"calls": 0, "chars_in": 0, "chars_out": 0, "errors": 0, "chars_in_path": 0}
+    total = {
+        "calls": 0,  # eventos, o sea delegaciones que pidió Claude
+        "backend_calls": 0,  # llamadas REALES al backend: una troceada gasta N
+        "chars_in": 0,
+        "chars_out": 0,
+        "errors": 0,
+        "chars_in_path": 0,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "saved": 0,
+        "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
+    }
 
     for r in rows:
         tool = str(r.get("tool", "?"))
@@ -228,34 +266,48 @@ def _aggregate(rows: list[dict]) -> dict:
         lat = int(r.get("latency_ms", 0) or 0)
         ok = bool(r.get("ok", True))
         is_path = r.get("source") == "path"
+        acc = _accounting(r)
 
         t = by_tool[tool]
         t["calls"] += 1
+        t["backend_calls"] += acc["backend_calls"]
         t["chars_in"] += ci
         t["chars_out"] += co
         t["latency_ms"] += lat
+        t["tokens_in"] += acc["tokens_in"]
+        t["tokens_out"] += acc["tokens_out"]
+        t["saved"] += acc["saved"]
         if not ok:
             t["errors"] += 1
-        if is_path:
-            t["saved_chars"] += ci
         m = by_model[model]
         m["calls"] += 1
+        m["backend_calls"] += acc["backend_calls"]
         m["chars_in"] += ci
         m["chars_out"] += co
+        m["tokens_in"] += acc["tokens_in"]
+        m["tokens_out"] += acc["tokens_out"]
 
         b = by_backend[backend]
         b["calls"] += 1
+        b["backend_calls"] += acc["backend_calls"]
         b["chars_in"] += ci
         b["chars_out"] += co
-        if is_path:
-            b["saved_chars"] += ci
+        b["tokens_in"] += acc["tokens_in"]
+        b["tokens_out"] += acc["tokens_out"]
+        b["saved"] += acc["saved"]
         host = r.get("backend_host")
         if isinstance(host, str) and host:
             b["hosts"].add(host)
 
         total["calls"] += 1
+        total["backend_calls"] += acc["backend_calls"]
         total["chars_in"] += ci
         total["chars_out"] += co
+        total["tokens_in"] += acc["tokens_in"]
+        total["tokens_out"] += acc["tokens_out"]
+        total["saved"] += acc["saved"]
+        if acc["estimated"]:
+            total["estimated_events"] += 1
         if not ok:
             total["errors"] += 1
         if is_path:
@@ -265,13 +317,16 @@ def _aggregate(rows: list[dict]) -> dict:
         {
             "tool": name,
             "calls": t["calls"],
+            "backend_calls": t["backend_calls"],
             "chars_in": t["chars_in"],
             "chars_out": t["chars_out"],
             "errors": t["errors"],
-            "tokens_saved": t["saved_chars"] // CHARS_PER_TOKEN,
+            "tokens_saved": t["saved"],
+            "tokens_in": t["tokens_in"],
+            "tokens_out": t["tokens_out"],
             "avg_latency_ms": round(t["latency_ms"] / t["calls"]) if t["calls"] else 0,
         }
-        for name, t in sorted(by_tool.items(), key=lambda kv: -kv[1]["saved_chars"])
+        for name, t in sorted(by_tool.items(), key=lambda kv: -kv[1]["saved"])
     ]
     models = [
         {"model": n, **v} for n, v in sorted(by_model.items(), key=lambda kv: -kv[1]["calls"])
@@ -280,10 +335,12 @@ def _aggregate(rows: list[dict]) -> dict:
         {
             "backend": name,
             "calls": v["calls"],
+            "backend_calls": v["backend_calls"],
             "chars_in": v["chars_in"],
             "chars_out": v["chars_out"],
-            "tokens_saved": v["saved_chars"] // CHARS_PER_TOKEN,
-            "tokens_generated": v["chars_out"] // CHARS_PER_TOKEN,
+            "tokens_saved": v["saved"],
+            "tokens_in": v["tokens_in"],
+            "tokens_generated": v["tokens_out"],
             "hosts": sorted(v["hosts"]),
         }
         for name, v in sorted(by_backend.items(), key=lambda kv: -kv[1]["calls"])
@@ -291,8 +348,14 @@ def _aggregate(rows: list[dict]) -> dict:
 
     return {
         "total": total,
-        "tokens_context_saved": total["chars_in_path"] // CHARS_PER_TOKEN,
-        "tokens_generated_local": total["chars_out"] // CHARS_PER_TOKEN,
+        # Ahorro: contenido leído server-side que no entró al contexto de Claude, contado UNA vez
+        # por delegación aunque se troceara.
+        "tokens_context_saved": total["saved"],
+        "tokens_generated_local": total["tokens_out"],
+        # Coste: lo que gastó de verdad el backend, con el prompt de sistema repetido por trozo.
+        "tokens_local_input": total["tokens_in"],
+        "backend_calls": total["backend_calls"],
+        "estimated_events": total["estimated_events"],
         "by_tool": tools,
         "by_model": models,
         "by_backend": backends,
@@ -651,7 +714,10 @@ select.btn{appearance:none;padding-right:28px;
 
 /* ---------- grid + cards ---------- */
 .grid{display:grid;gap:16px}
-.kpis{grid-template-columns:1.7fr 1fr 1fr 1fr 1fr}
+/* 6 tarjetas: el hero + ahorro/coste/generado/latencia/error. Los breakpoints de abajo las
+   reparten en 3+3 y 2+2+2, así que ninguna se queda sola en una fila con el hueco al lado. */
+.kpis{grid-template-columns:1.7fr repeat(5,1fr)}
+@media(max-width:1320px){.kpis{grid-template-columns:1.7fr 1fr 1fr}}
 @media(max-width:1040px){.kpis{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
 @media(max-width:460px){.kpis{grid-template-columns:1fr}}
@@ -945,24 +1011,32 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <button class="help-x" id="helpClose" aria-label="Cerrar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <p><b>Tokens de contexto conservados</b> = suma de los caracteres de entrada leídos <i>server-side</i>
-    (llamadas con <span class="src path">path</span>) ÷ 4. Ese contenido lo leyó el MCP en tu máquina y
-    <b>nunca entró a la ventana de contexto de Claude</b>: es cuota que no gastaste. Las llamadas
-    <span class="src inline">inline</span> ya viajaron por tu contexto, así que no cuentan como ahorro.</p>
-    <p><b>Tokens generados en local</b> = caracteres de salida ÷ 4: trabajo de generación que hicieron
-    los modelos locales en vez de Claude.</p>
-    <div class="frm">tokens ≈ caracteres ÷ 4 &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
+    <p><b>Contexto conservado</b> = el contenido de entrada que el MCP leyó <i>server-side</i>
+    (llamadas con <span class="src path">path</span>) y que <b>nunca entró a la ventana de contexto de
+    Claude</b>: es cuota que no gastaste. Las llamadas <span class="src inline">inline</span> ya
+    viajaron por tu contexto, así que no cuentan como ahorro. Se cuenta <b>una vez</b> por delegación
+    aunque el MCP la trocee: lo que no entró a tu contexto es el documento, no el trabajo de la GPU.</p>
+    <p><b>Coste local</b> = los tokens de entrada que consumió de verdad el backend, sumando
+    <b>todas</b> las llamadas. Una delegación troceada repite el prompt de sistema en cada trozo, así
+    que aquí sí paga el troceo. Enfrentado al ahorro, distingue una delegación eficiente de una que
+    quemó la GPU varias veces.</p>
+    <p><b>Generado en local</b> = tokens de salida: trabajo de generación que hicieron los modelos
+    locales en vez de Claude.</p>
+    <div class="frm">se usa el token <b>real</b> que reporta el backend &nbsp;·&nbsp; caracteres ÷ 4 solo
+    cuando falta &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
   </div>
 </dialog>
 
 <div class="tt" id="tt"></div>
 <script>
 const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
-const state = {events:[], range:'today', auto:true, charts:{},
+const state = {events:[], stats:null, range:'today', auto:true, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const tok = c => Math.round(c/CPT);
+// floor, no round: `_accounting` en Python usa `// CHARS_PER_TOKEN`, y con redondeo las series
+// del gráfico se irían un token respecto a la tarjeta que tienen encima.
+const tok = c => Math.floor(c/CPT);
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
 const SANS = "'Inter',system-ui,sans-serif";
 
@@ -1014,6 +1088,7 @@ const ICON = {
   calls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2.5 4.5 13H11l-1 8.5L18.5 11H12z"/></svg>',
   gen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="13" height="13" rx="2.6"/><rect x="9.6" y="9.6" width="4.8" height="4.8" rx="1"/><path d="M9.5 2.6v2.9M14.5 2.6v2.9M9.5 18.5v2.9M14.5 18.5v2.9M2.6 9.5h2.9M2.6 14.5h2.9M18.5 9.5h2.9M18.5 14.5h2.9"/></svg>',
   lat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/></svg>',
+  cost:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.5c3.9 0 6.4-2.6 6.4-5.9 0-4.4-3.9-5.9-4.9-9.8-2 1.5-3 3.4-3 5.4-1-.5-1.5-1.5-1.5-2.4-1 1.4-3.4 3.9-3.4 6.8 0 3.3 2.5 5.9 6.4 5.9z"/></svg>',
   err:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.6 1.8 18a1.7 1.7 0 0 0 1.5 2.6h17.4A1.7 1.7 0 0 0 22.2 18L13.7 3.6a1.7 1.7 0 0 0-2.9 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11.2V16"/><path d="M12 8h.01"/></svg>',
 };
@@ -1062,8 +1137,16 @@ async function fetchData(){
     const qs = new URLSearchParams();
     if(from) qs.set('from', from);
     if(to) qs.set('to', to);
-    const r = await fetch('/api/events?' + qs.toString()); const j = await r.json();
+    // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
+    // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
+    // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
+    const [r, rs] = await Promise.all([
+      fetch('/api/events?' + qs.toString()),
+      fetch('/api/stats?' + qs.toString()),
+    ]);
+    const j = await r.json();
     state.events = j.events||[]; state.meta = j.meta||{};
+    try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
     render(); updateLive();
     const cnt = F.format(state.meta.count||0);
     const filesN = (state.meta.files_read||[]).length;
@@ -1308,26 +1391,56 @@ function kpiCard(o){
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
 
+// Contabilidad de UN evento. Espejo exacto de `_accounting` en metrics.py: las series por día se
+// agrupan en el navegador (dependen de tu zona horaria) y no pueden venir del servidor, así que la
+// regla vive aquí también. `test_metrics.py` corre esta función con node y la compara con la de
+// Python: si divergen, el gráfico contradiría a la tarjeta que tiene encima.
+function acct(e){
+  const ci = e.chars_in||0, co = e.chars_out||0;
+  const calls = e.chunks || 1;            // `chunks` son LLAMADAS al backend; se omite cuando es 1
+  const ti = e.tokens_in, to = e.tokens_out;
+  const estimated = (ti===undefined||ti===null) || (to===undefined||to===null);
+  // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen
+  const unit = e.input_unit || (e.tool==='local_describe_image' ? 'bytes' : 'chars');
+  const estimable = unit==='chars';
+  const tokensIn  = (ti!==undefined&&ti!==null) ? ti : (estimable ? tok(ci) : 0);
+  const tokensOut = (to!==undefined&&to!==null) ? to : tok(co);
+  let saved = 0;
+  if(e.source!=='path') saved = 0;
+  else if(estimable) saved = tok(ci);
+  else if(ti!==undefined&&ti!==null) saved = ti;
+  return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, estimated:estimated};
+}
+
 function render(){
   // el rango temporal ya lo aplicó el servidor (/api/events?from=&to=)
   const ev = state.events;
-  const savedChars = ev.filter(e=>e.source==='path').reduce((a,e)=>a+(e.chars_in||0),0);
-  const genChars = ev.reduce((a,e)=>a+(e.chars_out||0),0);
-  const errs = ev.filter(e=>!e.ok).length;
+  const s = state.stats||{}; const tt = s.total||{};
+  const errs = tt.errors!==undefined ? tt.errors : ev.filter(e=>!e.ok).length;
+  const nEv  = tt.calls!==undefined ? tt.calls : ev.length;
   const lat = ev.length? Math.round(ev.reduce((a,e)=>a+(e.latency_ms||0),0)/ev.length):0;
-  const errPct = ev.length? (100*errs/ev.length).toFixed(1):'0.0';
-  const pathCalls = ev.filter(e=>e.source==='path').length;
+  const errPct = nEv? (100*errs/nEv).toFixed(1):'0.0';
+  const saved = s.tokens_context_saved||0;
+  const gen = s.tokens_generated_local||0;
+  const costIn = s.tokens_local_input||0;
+  const bCalls = s.backend_calls||nEv;
+  const estN = s.estimated_events||0;
+  const extra = bCalls>nEv ? ' (+'+F.format(bCalls-nEv)+' por trocear)' : '';
+  const estTxt = estN ? ' · '+F.format(estN)+' estimado(s)' : '';
 
   document.getElementById('kpis').innerHTML =
-    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:'~'+F.format(tok(savedChars)),unit:'tok',
-       lbl:'Contexto conservado',hint:'<span class="num">'+F.format(savedChars)+'</span> chars leídos server-side',
-       tip:'Suma de chars_in de llamadas con source=path, ÷4. Contenido que el MCP leyó en tu máquina y nunca entró al contexto de Claude.'})
-    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(ev.length),lbl:'Delegaciones',
-       hint:'<span class="num">'+F.format(pathCalls)+'</span> con ahorro real',
-       tip:'Número de invocaciones a tools locales en el rango seleccionado.'})
-    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:'~'+F.format(tok(genChars)),unit:'tok',lbl:'Generado en local',
-       hint:'salida de los modelos',tip:'Caracteres de salida ÷4: generación que hicieron los modelos locales en vez de Claude.'})
-    + kpiCard({icon:ICON.lat,kc:'var(--amber)',val:F.format(lat),unit:'ms',lbl:'Latencia media',
+    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(saved),unit:'tok',
+       lbl:'Contexto conservado',hint:'lo que el MCP leyó y nunca entró a tu contexto',
+       tip:'Contenido leído server-side (source=path) que no viajó al contexto de Claude. Se cuenta UNA vez por delegación aunque se trocee: el trabajo extra de trocear lo pagó tu GPU, no el contexto.'})
+    + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
+       hint:'<span class="num">'+F.format(bCalls)+'</span> al backend'+extra,
+       tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'})
+    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:'Generado en local',
+       hint:'salida de los modelos'+estTxt,tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'})
+    + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
+       hint:'entrada consumida por la GPU',
+       tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso supera al contexto conservado en las delegaciones troceadas.'})
+    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:F.format(lat),unit:'ms',lbl:'Latencia media',
        hint:'incluye carga de modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Tasa de error',
        hint:'<span class="num">'+F.format(errs)+'</span> fallos',tip:'Porcentaje de llamadas con ok=false.'});
@@ -1350,7 +1463,9 @@ function byDay(ev){
   const m = new Map();
   ev.forEach(e=>{ const d=new Date(e.ts); if(!isFinite(d)) return;
     const k=localDayKey(d);
-    const cur=m.get(k)||{saved:0,calls:0}; if(e.source==='path') cur.saved+=e.chars_in||0; cur.calls++; m.set(k,cur); });
+    const a=acct(e);
+    const cur=m.get(k)||{saved:0,calls:0,backendCalls:0};
+    cur.saved+=a.saved; cur.calls++; cur.backendCalls+=a.calls; m.set(k,cur); });
   return [...m.entries()].sort((a,b)=>a[0]<b[0]?-1:1);
 }
 
@@ -1359,7 +1474,8 @@ function fresh(id){ if(state.charts[id]) state.charts[id].destroy(); return docu
 function drawSpark(ev){
   const el=document.getElementById('spark'); if(!el) return;
   if(state.charts.spark) state.charts.spark.destroy();
-  const days=byDay(ev); let acc=0; const data=days.map(([,v])=>{acc+=tok(v.saved);return acc;});
+  // byDay ya devuelve `saved` EN TOKENS (via acct): no se vuelve a dividir entre 4
+  const days=byDay(ev); let acc=0; const data=days.map(([,v])=>{acc+=v.saved;return acc;});
   const dmax=Math.max(1,...data);  // ancla el 0 al borde inferior: sin ahorro la linea no cruza el texto
   state.charts.spark = new Chart(el,{type:'line',
     data:{labels:days.map(d=>d[0]).length?days.map(d=>d[0]):[''],datasets:[{data:data.length?data:[0],
@@ -1375,7 +1491,7 @@ function drawTs(ev){
   const acc=cssv('--acc'), blue=cssv('--blue'), grid=hexA(cssv('--bd'),.6), mut=cssv('--mut');
   state.charts.tsChart = new Chart(fresh('tsChart'),{
     data:{labels:days.map(d=>d[0]),datasets:[
-      {type:'bar',label:'tokens ahorrados',data:days.map(d=>tok(d[1].saved)),order:2,
+      {type:'bar',label:'tokens ahorrados',data:days.map(d=>d[1].saved),order:2,
         backgroundColor:c=>vGrad(c.chart,hexA(acc,.35),acc),hoverBackgroundColor:cssv('--acc2'),
         borderRadius:6,maxBarThickness:46},
       {type:'line',label:'delegaciones',data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
@@ -1415,7 +1531,7 @@ function barH(id,pairs,unit,color){
         y:{ticks:{color:cssv('--tx2'),font:{family:MONO,size:11}},grid:{display:false},border:{display:false}}}}});
 }
 
-function drawToolDonut(ev){ barH('toolDonut',agg(ev.filter(e=>e.source==='path'),'tool',e=>tok(e.chars_in||0)),'tok',cssv('--acc')); }
+function drawToolDonut(ev){ barH('toolDonut',agg(ev.filter(e=>e.source==='path'),'tool',e=>acct(e).saved),'tok',cssv('--acc')); }
 function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv('--violet')); }
 
 // Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
@@ -1475,7 +1591,8 @@ function drawActivity(ev){
   rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
     const orgTxt=org==='remote'?'remoto':org==='local'?'local':'n/d';
-    const chunks=e.chunks?`<span class="chunkchip" title="Procesado en ${e.chunks} trozos">${e.chunks}×</span>`:'';
+    // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
+    const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span></td>
       <td><span class="src ${e.source}">${e.source}</span></td>

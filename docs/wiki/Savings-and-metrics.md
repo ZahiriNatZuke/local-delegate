@@ -28,24 +28,50 @@ fuente adicional.
   el `host:puerto` del endpoint, sin esquema ni credenciales. Ojo: describe el **cómputo**, no
   el archivo — el MCP y la lectura de `path` son siempre locales. Los eventos anteriores a la
   v0.11.0 no traen el campo y el dashboard los muestra como `n/d`, nunca como locales.
-- `chunks` (solo si > 1): número de llamadas al backend en que se partió la operación (ver
-  *Chunking* abajo). Una operación por trozos es **un** evento, no N.
+- `chunks` (solo si > 1): **número de llamadas al backend** en que se partió la operación (ver
+  *Chunking* abajo). Ojo con el nombre: son llamadas, no trozos — en el map-reduce el *reduce*
+  suma llamadas propias. Una operación por trozos es **un** evento, no N, así que quien agregue
+  debe leerlo como `chunks or 1`.
+- `input_unit` (solo si no es `chars`): qué mide `chars_in`. En `local_describe_image` vale
+  `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
+  número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
+  lo traen y se reconocen por el nombre de la tool.
 - `error` (solo si `ok=false`), `truncated_in`/`truncated_out`, `raw_len`, `path`, `v`
   (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos
   campos se sigue leyendo sin romperse.
 
-## Cómo se calcula el ahorro
+## Cómo se calcula el ahorro… y el coste
 
-- **Tokens de contexto conservados** = Σ `chars_in` de las llamadas con `source=path`, ÷ 4
-  (o la suma de `tokens_in` reales cuando el backend los da). Ese contenido lo leyó el MCP
-  en tu máquina y **nunca entró a la ventana de contexto de Claude**: es cuota que no
-  gastaste. Las llamadas `inline` **no** cuentan como ahorro (ya viajaron por tu contexto).
-- **Tokens generados en local** = Σ `chars_out` ÷ 4: generación que hicieron los modelos
-  locales en vez de Claude.
-- La aproximación es **~4 chars/token** (`CHARS_PER_TOKEN`) cuando no hay tokens reales.
+Son **dos magnitudes distintas**, y confundirlas era el defecto que el panel arrastraba: medía el
+ahorro y no medía nada enfrente, así que una delegación resuelta en una llamada y otra que quemó
+la GPU dieciséis veces daban el mismo número.
+
+- **Contexto conservado (ahorro)** = el contenido de entrada de las llamadas con `source=path`.
+  Lo leyó el MCP en tu máquina y **nunca entró a la ventana de contexto de Claude**: es cuota que
+  no gastaste. Se cuenta **una vez por delegación aunque se trocee** — lo que no entró a tu
+  contexto es el documento, no el trabajo de la GPU. Las llamadas `inline` **no** cuentan (ya
+  viajaron por tu contexto).
+- **Coste local** = Σ `tokens_in` de **todas** las llamadas al backend. Una delegación troceada
+  repite el prompt de sistema en cada trozo, así que aquí sí paga el troceo: en un caso real de
+  cuatro trozos, 26 131 tokens de coste frente a 21 044 de ahorro, un **+24 %** que antes no se
+  veía en ningún sitio.
+- **Generado en local** = Σ `tokens_out`: generación que hicieron los modelos locales en vez de
+  Claude.
+- **Se usa siempre el token real** que reporta el backend (`usage`). La aproximación de
+  **~4 chars/token** (`CHARS_PER_TOKEN`) es solo el respaldo para cuando el backend no los da, y
+  el dashboard indica cuántos eventos del rango hubo que estimar.
+- **Delegaciones** frente a **llamadas al backend**: el KPI muestra las dos, y su diferencia es
+  exactamente lo que costó trocear.
 
 > Por eso conviene pasar `path` (no `text`) siempre que la fuente sea un archivo: es lo que
 > convierte la delegación en ahorro real de cuota.
+
+### Por qué las cuentas viven en el servidor
+
+`/api/stats` es la **única** implementación de la contabilidad; el panel pide los KPIs ahí en vez
+de sumar en el navegador. Solo las series por día se calculan en el cliente, porque agrupar por
+«tu día natural» depende de tu zona horaria y el servidor no la conoce; esa copia en JS está atada
+a la de Python por un test de paridad que las ejecuta con `node` y compara.
 
 ## La web
 
@@ -129,7 +155,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. |
-| `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, totales, tokens ahorrados) |
+| `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, totales): `tokens_context_saved`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Proxy best-effort de `/running` de llama-swap, modelos con status, y `origin`/`host` del endpoint (`{"available": false}` si no responde) |
 | `GET /favicon.svg` | Icono de marca |

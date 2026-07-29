@@ -40,6 +40,18 @@ hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
   (`LOCAL_DELEGATE_LONG_INPUT_CHARS`).
 - **Backend opt-in.** El auto-arranque de un backend (llama-swap) está **desactivado por defecto**
   (`LOCAL_DELEGATE_AUTOSTART=0`); el paquete asume que tu endpoint ya corre.
+- **Un fichero JSONL es toda la telemetría, y OpenTelemetry queda descartado.** Decidido en la
+  v0.14.0 tras evaluarlo con el SDK `mcp` 2.x ya migrado, y anotado aquí para no re-evaluarlo desde
+  cero. Tres razones, las tres comprobadas ejecutando:
+  1. El `OpenTelemetryMiddleware` que el SDK monta por defecto instrumenta el **borde MCP** —*«un
+     cliente llamó a `local_summarize`»*—, **no las llamadas al backend**, que es justo lo que hacía
+     falta contar. Habría que escribir spans propios igualmente.
+  2. Lo que entra como dependencia es `opentelemetry-api`, **la mitad emisora**. Sin
+     `opentelemetry-sdk` —que no se instala— los spans son `NonRecordingSpan`: se generan y se
+     descartan. El «coste cero» vale para instrumentar, no para recoger.
+  3. Recoger de verdad exigiría SDK, exportador y un colector corriendo. El dashboard tiene que
+     funcionar **recién instalado y sin configurar servicios**; el `usage-YYYYMM.jsonl` es lo que lo
+     permite.
 
 ## Módulos
 

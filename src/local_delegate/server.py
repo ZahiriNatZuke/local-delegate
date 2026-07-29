@@ -378,6 +378,7 @@ def _log_event(
     path: str | None = None,
     json_schema: str | None = None,
     chunks: int | None = None,
+    input_unit: str = "chars",
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
     try:
@@ -397,8 +398,16 @@ def _log_event(
             "backend_host": config.backend_host(),
             "v": _get_version(),
         }
+        # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
+        # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
+        # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
         if chunks is not None and chunks > 1:
             rec["chunks"] = int(chunks)
+        # `chars_in` no siempre son caracteres de texto: en local_describe_image son BYTES de un
+        # binario, y estimar tokens dividiéndolos entre 4 da un número disparatado (×46 medido).
+        # Solo se escribe cuando NO es texto, para no engordar cada línea del log.
+        if input_unit != "chars":
+            rec["input_unit"] = input_unit
         if error is not None:
             rec["error"] = error
         if finish_reason is not None:
@@ -422,6 +431,63 @@ def _log_event(
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
     except OSError:
         pass  # el logging es best-effort; jamás propaga
+
+
+def _accounting(row: dict) -> dict:
+    """Contabilidad normalizada de UN evento. Única fuente de las cuentas del panel.
+
+    Separa dos magnitudes que el dashboard confundía en una sola estimación por caracteres:
+
+    - **ahorro** (`saved`): lo que NO entró al contexto de Claude. Es el contenido leído
+      server-side contado **una vez**, aunque se troceara: el trabajo extra de trocear lo pagó
+      la GPU local, no el contexto.
+    - **coste** (`tokens_in`/`tokens_out`, `backend_calls`): lo que gastó de verdad el backend,
+      con el prompt de sistema repetido en cada trozo.
+
+    Se prefiere SIEMPRE el token real que reportó el backend (`usage`); la estimación
+    `chars ÷ 4` es solo el respaldo cuando falta, y entonces el evento se marca `estimated`.
+    """
+    chars_in = int(row.get("chars_in", 0) or 0)
+    chars_out = int(row.get("chars_out", 0) or 0)
+    # `chunks` es el número REAL de llamadas al backend y se omite cuando vale 1 (ver
+    # `_log_event`). Lo ha sido desde el commit que introdujo el chunking, así que esto
+    # contabiliza bien también el histórico ya grabado.
+    backend_calls = int(row.get("chunks") or 1)
+
+    raw_in = row.get("tokens_in")
+    raw_out = row.get("tokens_out")
+    estimated = raw_in is None or raw_out is None
+
+    # `chars_in` no siempre son caracteres: en local_describe_image son BYTES de la imagen.
+    # Los eventos anteriores al campo `input_unit` se reconocen por el nombre de la tool.
+    unit = row.get("input_unit") or (
+        "bytes" if row.get("tool") == "local_describe_image" else "chars"
+    )
+    estimable = unit == "chars"
+
+    tokens_in = (
+        int(raw_in)
+        if raw_in is not None
+        else (chars_in // config.CHARS_PER_TOKEN if estimable else 0)
+    )
+    tokens_out = int(raw_out) if raw_out is not None else chars_out // config.CHARS_PER_TOKEN
+
+    if row.get("source") != "path":
+        saved = 0  # el input ya viajó por el contexto de Claude: no hay ahorro que apuntar
+    elif estimable:
+        saved = chars_in // config.CHARS_PER_TOKEN
+    elif raw_in is not None:
+        saved = int(raw_in)  # imagen: el token real es el único orden de magnitud honesto
+    else:
+        saved = 0  # ni token real ni unidad estimable: 0 antes que un número inventado
+
+    return {
+        "backend_calls": backend_calls,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "saved": saved,
+        "estimated": estimated,
+    }
 
 
 @dataclass
@@ -583,6 +649,7 @@ def _chat(
     feedback_label: str = "chars",
     feedback_char_estimate: bool = True,
     feedback: bool = True,
+    input_unit: str = "chars",
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -625,6 +692,7 @@ def _chat(
         raw_len=raw_len,
         path=path if source == "path" else None,
         json_schema=json_schema_status,
+        input_unit=input_unit,
     )
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
@@ -1533,6 +1601,7 @@ def local_describe_image(
         path=path,
         feedback_label="bytes imagen",
         feedback_char_estimate=False,
+        input_unit="bytes",
     )
 
 
@@ -1730,7 +1799,8 @@ def local_status() -> str:
 
     current_log = _current_log_path()
     n_events = 0
-    saved_chars = 0
+    backend_calls = 0
+    saved_tokens = 0
     if current_log.is_file():
         with current_log.open(encoding="utf-8") as f:
             for raw_line in f:
@@ -1742,13 +1812,16 @@ def local_status() -> str:
                 except json.JSONDecodeError:
                     continue
                 n_events += 1
-                if rec.get("source") == "path":
-                    saved_chars += int(rec.get("chars_in", 0) or 0)
+                # Misma contabilidad que el dashboard: si aquí se sumara `chars_in // 4` a mano,
+                # esta tool y el panel darían números distintos del MISMO log.
+                acc = _accounting(rec)
+                backend_calls += acc["backend_calls"]
+                saved_tokens += acc["saved"]
     lines.append("")
     lines.append(f"Log (mes actual): {current_log}")
     lines.append(
-        f"  eventos: {n_events} — contexto ahorrado acumulado: "
-        f"~{saved_chars // config.CHARS_PER_TOKEN} tokens"
+        f"  eventos: {n_events} ({backend_calls} llamadas al backend) — "
+        f"contexto ahorrado acumulado: ~{saved_tokens} tokens"
     )
 
     lines.append("")

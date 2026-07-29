@@ -101,6 +101,31 @@ def test_describe_image_logs_real_tokens_and_path(monkeypatch, tmp_path):
     assert rec["tool"] == "local_describe_image"
     assert rec["tokens_in"] == 300
     assert rec["path"] == path
+    # `chars_in` aquí son BYTES de la imagen, no caracteres de texto: sin esta marca el
+    # dashboard los dividía entre 4 y contaba un ahorro fantasma (×48 medido en el log real).
+    assert rec["input_unit"] == "bytes"
+    assert rec["chars_in"] == len(_TINY_PNG)
+
+
+@backend_mock.mock
+def test_text_tool_does_not_write_input_unit(monkeypatch, tmp_path):
+    """La marca solo viaja cuando NO es texto: el resto de tools no engorda cada línea."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "USAGE_LOG", log)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "resumen"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 30, "completion_tokens": 5},
+            },
+        )
+    )
+    server.local_summarize(text="un texto cualquiera para resumir")
+    rec = json.loads(log.read_text(encoding="utf-8").strip().splitlines()[-1])
+    assert "input_unit" not in rec
 
 
 @backend_mock.mock

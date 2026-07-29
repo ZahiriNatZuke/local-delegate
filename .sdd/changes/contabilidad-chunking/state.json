@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "slug": "contabilidad-chunking",
+  "title": "Contabilidad real del chunking y map-reduce en las metricas, y papel de OpenTelemetry",
+  "mode": "standard",
+  "status": "understanding",
+  "createdAt": "2026-07-29T18:49:06.567Z",
+  "updatedAt": "2026-07-29T19:33:29.558Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T19:09:00.305Z",
+      "evidence": "Research por ejecucion sobre 111 eventos reales y sobre el wheel mcp 2.0.0: tokens_in/tokens_out no aparecen ni una vez en metrics.py y chunks no entra en ningun agregado; desvio medido de chars/4 entre +8% y +613% en texto y -98% en local_describe_image (chars_in son bytes). Decisiones del usuario tomadas antes de especificar: OTel descartado como fuente (spans NonRecordingSpan sin opentelemetry-sdk, y el middleware solo cubre el borde MCP) y el sesgo de imagen entra en este change. Spec con 9 requisitos, 5 escenarios y no-goals. Aprobada por el usuario.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T19:15:15.925Z",
+      "evidence": "Revision adversarial en plan-review.md con 6 hallazgos, ninguno bloqueante. Supuesto critico convertido en evidencia: git log -S confirma que _log_event escribe chunks=calls desde el commit 28dd5c3 que introdujo el chunking, asi que el historico queda bien contabilizado. Dos hallazgos incorporados al plan: los KPIs del JS se calculan hoy sobre la lista truncada a MAX_EVENTS=5000 mientras se muestra el total real al lado (incoherencia latente que la tarea 4 cierra), y la justificacion del test de paridad con node se acoto a las series por dia. 7 tareas, todo aditivo, sin dependencias nuevas. Aprobado por el usuario.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T19:28:54.220Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check limpio, ruff format 46 ficheros ya formateados, pytest 276 pasan (263 previos + 13 nuevos, ninguno perdido), extract_dashboard_js.py + node --check OK. Verificado ademas por EJECUCION contra el backend real: delegacion troceada de 95016 chars en 4 llamadas da ahorro 23754 tok frente a coste 29068 tok (+22% de overhead), y el panel en vivo muestra 12 delegaciones / 18 al backend (+6 por trocear). Los tests se comprobaron al reves rompiendo la regla a proposito: el de paridad falla con assert 126195 == 2758, el numero fantasma del defecto original. Detalle en verification.md.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T19:33:29.558Z",
+      "evidence": "Revision fresca contra los 10 requisitos en review.md: veredicto conforms-with-notes, todos cumplidos con evidencia. No-goals respetados. Cinco hallazgos documentados, dos de ellos consecuencia directa de REQ-002b: aparecio una TERCERA superficie con la misma cuenta (local_status recorria el log sumando chars_in//4 a mano), asi que la contabilidad se movio a server.py y las tres la comparten -- verificado en vivo, local_status y /api/stats dan 118 llamadas y 256732 tok identicos. Ademas se cazo que el tok() del JS redondeaba donde Python trunca, una regresion visual propia en la reticula de KPIs y codigo muerto propio (saved_chars). 277 tests, cuatro pasos del CI en verde.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-29T18:49:06.567Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-29T19:09:00.305Z",
+      "evidence": "Research por ejecucion sobre 111 eventos reales y sobre el wheel mcp 2.0.0: tokens_in/tokens_out no aparecen ni una vez en metrics.py y chunks no entra en ningun agregado; desvio medido de chars/4 entre +8% y +613% en texto y -98% en local_describe_image (chars_in son bytes). Decisiones del usuario tomadas antes de especificar: OTel descartado como fuente (spans NonRecordingSpan sin opentelemetry-sdk, y el middleware solo cubre el borde MCP) y el sesgo de imagen entra en este change. Spec con 9 requisitos, 5 escenarios y no-goals. Aprobada por el usuario.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-29T19:15:15.925Z",
+      "evidence": "Revision adversarial en plan-review.md con 6 hallazgos, ninguno bloqueante. Supuesto critico convertido en evidencia: git log -S confirma que _log_event escribe chunks=calls desde el commit 28dd5c3 que introdujo el chunking, asi que el historico queda bien contabilizado. Dos hallazgos incorporados al plan: los KPIs del JS se calculan hoy sobre la lista truncada a MAX_EVENTS=5000 mientras se muestra el total real al lado (incoherencia latente que la tarea 4 cierra), y la justificacion del test de paridad con node se acoto a las series por dia. 7 tareas, todo aditivo, sin dependencias nuevas. Aprobado por el usuario.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T19:28:54.220Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check limpio, ruff format 46 ficheros ya formateados, pytest 276 pasan (263 previos + 13 nuevos, ninguno perdido), extract_dashboard_js.py + node --check OK. Verificado ademas por EJECUCION contra el backend real: delegacion troceada de 95016 chars en 4 llamadas da ahorro 23754 tok frente a coste 29068 tok (+22% de overhead), y el panel en vivo muestra 12 delegaciones / 18 al backend (+6 por trocear). Los tests se comprobaron al reves rompiendo la regla a proposito: el de paridad falla con assert 126195 == 2758, el numero fantasma del defecto original. Detalle en verification.md.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-29T19:33:29.558Z",
+      "evidence": "Revision fresca contra los 10 requisitos en review.md: veredicto conforms-with-notes, todos cumplidos con evidencia. No-goals respetados. Cinco hallazgos documentados, dos de ellos consecuencia directa de REQ-002b: aparecio una TERCERA superficie con la misma cuenta (local_status recorria el log sumando chars_in//4 a mano), asi que la contabilidad se movio a server.py y las tres la comparten -- verificado en vivo, local_status y /api/stats dan 118 llamadas y 256732 tok identicos. Ademas se cazo que el tok() del JS redondeaba donde Python trunca, una regresion visual propia en la reticula de KPIs y codigo muerto propio (saved_chars). 277 tests, cuatro pasos del CI en verde.",
+      "actor": "user"
+    }
+  ]
+}
