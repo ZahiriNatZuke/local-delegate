@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-07-29T00:35:37.856Z",
-  "updatedAt": "2026-07-29T02:44:16.442Z",
+  "updatedAt": "2026-07-29T11:50:57.825Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -21,8 +21,8 @@
     },
     "quality": {
       "status": "approved",
-      "updatedAt": "2026-07-29T02:33:23.439Z",
-      "evidence": "Fase 1 verificada. Local: ruff check ., ruff format --check ., pytest -q (236 passed), extract_dashboard_js.py + node --check. CI del PR 34 (draft): 11 checks en verde, incluidos install-smoke (resolucion libre con --resolution highest, el escenario de uvx que rompio la 0.12.1), test en ubuntu/macOS/Windows, CodeQL, GitGuardian y los dos de Socket Security, sin alerta por pywin32. REQ-006: las 11 tools ejecutadas contra llama-swap real con httpx2 2.9.1, 12 peticiones HTTP todas 200, 11/11 con salida correcta en las tres familias (texto, codigo con qwen25-coder-14b, vision con qwen3-vl-8b). httpx con 0 menciones en uv.lock.",
+      "updatedAt": "2026-07-29T11:50:57.825Z",
+      "evidence": "Fase 1 (sin cambios): 236 tests, CI del PR 34 en verde con 11 checks, las 11 tools contra llama-swap real. Fase 2 anadida: los cuatro pasos del CI en local sobre feat/mcp-sdk-2-fase2 (ruff check ., ruff format --check . con 44 ficheros, 239 tests, extract_dashboard_js.py + node --check), y el CI del PR 35 en verde en sus dos runs (9 checks: lint, secrets, install-smoke, test en ubuntu/macOS/Windows, GitGuardian y los dos de Socket Security); son 9 y no 11 porque codeql.yml solo se dispara contra main, no por una regresion. REQ-007/008/009 verificados contra el backend real el 2026-07-29 por el protocolo (list_tools y call_tool), no leyendo el codigo: list_tools devuelve 11/11 con title, read_only_hint y open_world_hint en falso y sin destructive/idempotent; output_schema de local_extract es un objeto abierto; local_extract extrajo host 127.0.0.1 y puerto 9393 con dos peticiones 200, claves exactas en la raiz y sin la clave reservada. Tambien quedo probada contra el backend la degradacion por error: con 401 devuelve _local_delegate.error con is_error false, no una excepcion de protocolo.",
       "actor": "user"
     },
     "conformance": {
@@ -111,6 +111,14 @@
       "status": "approved",
       "at": "2026-07-29T02:44:16.442Z",
       "evidence": "Nota canonica en el vault: projects/local-delegate/migracion-mcp-sdk-2.md, enlazada desde el incidente y el backlog. Backlog actualizado como nota viva: se cierran 'migrar a la API mcp 2.x' y 'serverInfo reporta la version del SDK', y se ajusta la seccion de techos de major (httpx salio del proyecto). Punteros en la memoria de Claude Code del proyecto, con el aviso de que el daemon local corre la rama y no main. Sin secretos ni datos personales: la API key se cargo en la sesion del usuario y se borro al terminar, su valor no aparece en ningun artefacto.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-29T11:50:57.825Z",
+      "evidence": "Fase 1 (sin cambios): 236 tests, CI del PR 34 en verde con 11 checks, las 11 tools contra llama-swap real. Fase 2 anadida: los cuatro pasos del CI en local sobre feat/mcp-sdk-2-fase2 (ruff check ., ruff format --check . con 44 ficheros, 239 tests, extract_dashboard_js.py + node --check), y el CI del PR 35 en verde en sus dos runs (9 checks: lint, secrets, install-smoke, test en ubuntu/macOS/Windows, GitGuardian y los dos de Socket Security); son 9 y no 11 porque codeql.yml solo se dispara contra main, no por una regresion. REQ-007/008/009 verificados contra el backend real el 2026-07-29 por el protocolo (list_tools y call_tool), no leyendo el codigo: list_tools devuelve 11/11 con title, read_only_hint y open_world_hint en falso y sin destructive/idempotent; output_schema de local_extract es un objeto abierto; local_extract extrajo host 127.0.0.1 y puerto 9393 con dos peticiones 200, claves exactas en la raiz y sin la clave reservada. Tambien quedo probada contra el backend la degradacion por error: con 401 devuelve _local_delegate.error con is_error false, no una excepcion de protocolo.",
       "actor": "user"
     }
   ]
