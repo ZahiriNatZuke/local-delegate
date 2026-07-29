@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "techos-major-dependencias",
+  "title": "Politica de techos de major para las dependencias de runtime",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-07-29T12:00:29.171Z",
+  "updatedAt": "2026-07-29T12:25:40.763Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T12:17:13.383Z",
+      "evidence": "Politica elegida por el usuario entre tres opciones: techo solo donde protege de verdad. platformdirs<5 y filelock<4 en main (camino de import de arranque y major real). fastapi y uvicorn SIN techo a proposito: estan en 0.x, donde un menor que 1 no protege porque la ruptura llega por minor, y ademas entran por import perezoso (server.py:1753, cli.py:42) asi que no estan en el camino de arranque del MCP. httpx no se toca porque esta en 0.x y sale del proyecto con la migracion; su sustituto httpx2 mayor o igual a 2.5 y menor que 3 va en la rama de migracion. Research con evidencia: install-smoke solo detecta majors ya publicados cuando corre el CI (la 0.12.1 paso verde porque mcp 2.0.0 no existia aun) mientras que el techo viaja dentro del wheel y protege despues de publicar. Decision de release aplazada a cuando el PR este listo; la 0.12.2 publicada sigue expuesta mientras tanto y queda anotado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-29T12:25:22.933Z",
+      "evidence": "Revision adversarial en plan-review.md. F1 BLOQUEANTE: la politica se apoyaba en que fastapi y uvicorn entran por import perezoso, propiedad del codigo que nadie vigila (grep confirma que no existe ningun test que mire sys.modules); un refactor que suba el import al nivel de modulo dejaria la politica desactualizada en silencio. Corregido anadiendo una tarea de test en subproceso limpio. F2 IMPORTANTE: el techo no cubre transitivas y no es hipotetico (starlette salto de 0.x a 1.3.1 arrastrada por un minor de fastapi); corregido exigiendo que la documentacion declare su alcance. F3 MENOR anotado: documentar en Repo-hardening.md es un compromiso para no chocar con SECURITY.md. F4 verificado sin accion: los techos no cambian ninguna resolucion actual y uv lock --check esta en el CI. F5 aceptado: no protege hasta publicar. Limitacion: revision no independiente.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-29T12:00:29.171Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-29T12:07:33.473Z",
+      "reason": "Research hecho: install-smoke solo protege hacia atras, fastapi y uvicorn no estan en el camino de arranque y estan en 0.x"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-29T12:07:33.530Z",
+      "reason": "spec.md con 7 requisitos, escenarios y no-goals"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-29T12:17:13.383Z",
+      "evidence": "Politica elegida por el usuario entre tres opciones: techo solo donde protege de verdad. platformdirs<5 y filelock<4 en main (camino de import de arranque y major real). fastapi y uvicorn SIN techo a proposito: estan en 0.x, donde un menor que 1 no protege porque la ruptura llega por minor, y ademas entran por import perezoso (server.py:1753, cli.py:42) asi que no estan en el camino de arranque del MCP. httpx no se toca porque esta en 0.x y sale del proyecto con la migracion; su sustituto httpx2 mayor o igual a 2.5 y menor que 3 va en la rama de migracion. Research con evidencia: install-smoke solo detecta majors ya publicados cuando corre el CI (la 0.12.1 paso verde porque mcp 2.0.0 no existia aun) mientras que el techo viaja dentro del wheel y protege despues de publicar. Decision de release aplazada a cuando el PR este listo; la 0.12.2 publicada sigue expuesta mientras tanto y queda anotado.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-29T12:17:13.437Z",
+      "reason": "Gate de spec aprobado con la politica elegida"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-29T12:25:22.933Z",
+      "evidence": "Revision adversarial en plan-review.md. F1 BLOQUEANTE: la politica se apoyaba en que fastapi y uvicorn entran por import perezoso, propiedad del codigo que nadie vigila (grep confirma que no existe ningun test que mire sys.modules); un refactor que suba el import al nivel de modulo dejaria la politica desactualizada en silencio. Corregido anadiendo una tarea de test en subproceso limpio. F2 IMPORTANTE: el techo no cubre transitivas y no es hipotetico (starlette salto de 0.x a 1.3.1 arrastrada por un minor de fastapi); corregido exigiendo que la documentacion declare su alcance. F3 MENOR anotado: documentar en Repo-hardening.md es un compromiso para no chocar con SECURITY.md. F4 verificado sin accion: los techos no cambian ninguna resolucion actual y uv lock --check esta en el CI. F5 aceptado: no protege hasta publicar. Limitacion: revision no independiente.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-29T12:25:40.708Z",
+      "reason": "plan.md con 6 tareas y plan-review.md con la revision adversarial"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-29T12:25:40.763Z",
+      "reason": "Gate de plan aprobado por el usuario tras corregir F1 (test de la invariante de imports) y F2 (declarar el alcance)"
+    }
+  ]
+}

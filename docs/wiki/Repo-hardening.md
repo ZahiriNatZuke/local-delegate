@@ -77,6 +77,72 @@ momento necesitas la vía de escape: `--admin-bypass`.
 - **Settings → Actions**: *Workflow permissions* en **read-only** y desmarcar *Allow GitHub
   Actions to create and approve pull requests*.
 
+## Política de techos de major en las dependencias
+
+Quien instala desde PyPI **resuelve libre y para siempre**: el wheel publicado es inmutable, así que
+un major nuevo de una dependencia puede tumbar instalaciones de una versión que llevaba meses
+funcionando. Pasó de verdad: `mcp` 2.0.0 salió el 2026-07-28 y dejó la 0.12.1 —ya publicada— muerta
+en el import, con el cliente viendo solo `MCP error -32000: Connection closed`.
+
+**`install-smoke` no puede cubrir eso.** Resuelve con `--resolution highest`, sí, pero **cuando corre
+el CI** y contra lo que exista en PyPI ese día. El CI de la 0.12.1 pasó en verde porque `mcp` 2.0.0
+todavía no existía. Un techo declarado, en cambio, viaja **dentro del wheel** y sigue protegiendo
+después de publicar. No son alternativas: `install-smoke` protege hacia atrás y el techo hacia
+adelante.
+
+### El criterio
+
+Un techo se pone donde **protege de verdad** y donde el fallo sería **silencioso**. Las dos
+condiciones a la vez:
+
+1. **La dependencia está en el camino de import de arranque** — si rompe, el proceso muere antes de
+   hablar MCP y el cliente no puede distinguirlo de un problema de conexión.
+2. **Su versionado tiene major real.** En `0.x` la ruptura llega por *minor*, así que un `<1` es
+   decorativo: da cobertura aparente sin cambiar nada.
+
+| Dependencia | Techo | Por qué |
+|---|---|---|
+| `mcp` | **sí** | arranque + major real; es la que ya nos costó un incidente |
+| `platformdirs` | **sí** | arranque (vía `config.py`) + major real |
+| `filelock` | **sí** | arranque + major real |
+| `httpx` | no | `0.x`, y **sale del proyecto** con la migración a `mcp` 2.x (su sustituto `httpx2` sí lo lleva, con major real) |
+| `fastapi` | no | `0.x` **y** fuera del arranque: `web/metrics.py` entra por import perezoso |
+| `uvicorn` | no | `0.x`; **sí** se carga al arrancar, pero lo arrastra el SDK (`mcp` → `sse_starlette`), no este paquete: quien gobierna esa compatibilidad es `sse-starlette`, que ni declaramos |
+
+**El techo se sube, no se quita.** Cuando salga un major nuevo se adopta en un cambio propio, con la
+suite y `install-smoke` en verde. Retirarlo «porque molesta» es volver al estado que produjo el
+incidente.
+
+### Alcance: solo dependencias directas
+
+Esta política **no cubre el árbol transitivo**, y conviene tenerlo claro para no confiarse. Un
+ejemplo real: `starlette` saltó de `0.x` a `1.3.1` arrastrada por un **minor** de `fastapi`, cambió
+la preferencia de `TestClient` de `httpx` a `httpx2` y dejó un `DeprecationWarning` en la suite
+durante semanas. Ningún techo de este `pyproject.toml` lo habría evitado. Lo mismo vale para
+`sse_starlette`, `pydantic`, `anyio` o `httpcore`, que entran por `mcp` y `fastapi` — y de las que
+`sse_starlette` está **en el camino de arranque**.
+
+Lo que cubre el resto: `install-smoke` por detección, los PRs semanales de Dependabot con el CI
+detrás, y `uv.lock` para desarrollo y CI (que **no** protege a quien instala desde PyPI).
+
+### Lo que cuesta
+
+1. **Adoptar un major nuevo exige publicar una versión.** Con `scripts/release.py` es un comando.
+2. **Un techo olvidado envejece en silencio.** `install-smoke` no avisa: resuelve *dentro* del rango
+   declarado, así que un techo viejo le parece correcto. Lo que vigila esto son los PRs de
+   Dependabot; si alguna vez deja de proponer subidas de rango, hace falta otra salvaguarda.
+3. **Puede chocar con otras dependencias** del entorno de quien instala. Riesgo bajo: el modo
+   recomendado es `uvx`, que aísla por herramienta, y un choque de resolución es un error visible,
+   no un fallo mudo.
+
+### La premisa que hay que vigilar
+
+Que `fastapi` no lleve techo depende de que `web/metrics.py` y `daemon.py` sigan entrando por import
+**perezoso**. Un refactor que los suba al nivel de módulo invalidaría la política sin que nadie se
+diera cuenta, así que hay un test que lo fija
+(`tests/test_core.py::test_importar_el_paquete_no_arrastra_el_stack_web_propio`): corre en un
+subproceso limpio y falla apuntando a esta página.
+
 ## Convención de ramas
 
 Rama por cambio, con prefijo según lo que hace y un nombre que describa el cambio:

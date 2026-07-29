@@ -5,6 +5,8 @@ _chat, enrutado de local_extract), F2 (response_format json_schema, local_status
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import threading
 import time as _time
 from datetime import UTC, datetime
@@ -587,3 +589,38 @@ def test_log_event_writes_even_when_lock_times_out(monkeypatch, tmp_path):
     target = tmp_path / "usage-202603.jsonl"
     assert target.is_file()
     assert json.loads(target.read_text(encoding="utf-8").strip())["tool"] == "t"
+
+
+# --- Invariante de arranque: el stack web propio no entra al importar el paquete ---------
+def test_importar_el_paquete_no_arrastra_el_stack_web_propio():
+    """Importar `local_delegate` no debe cargar `fastapi` ni los módulos del daemon/dashboard.
+
+    De esto depende una decisión escrita en `pyproject.toml`: `fastapi` es dependencia de runtime
+    **sin** techo de major, y una de sus dos razones es que no está en el camino de import de
+    arranque —`web/metrics.py` y `daemon.py` entran perezosamente, desde dentro de una función—,
+    así que una rotura suya no puede matar `uvx local-delegate-mcp` por stdio antes de que hable
+    MCP. Basta un refactor que suba `from .web import metrics` al nivel de módulo para invalidar
+    esa premisa **en silencio**; este test la convierte en un fallo visible.
+
+    `uvicorn` queda deliberadamente **fuera** de la comprobación: sí se carga al arrancar, pero no
+    por este paquete — lo arrastra el propio SDK (`mcp.server.fastmcp` → `mcp/server/sse.py` →
+    `sse_starlette` → `uvicorn`). No es una invariante que este repo pueda sostener, así que
+    afirmarla aquí sería fijar un detalle interno del SDK.
+
+    Corre en un subproceso limpio a propósito: dentro de la suite otros tests ya han importado el
+    stack web, así que el `sys.modules` de este proceso no serviría de nada.
+    """
+    vigilados = ("fastapi", "local_delegate.web.metrics", "local_delegate.daemon")
+    code = (
+        "import sys; import local_delegate; "
+        f"print(','.join(m for m in {vigilados!r} if m in sys.modules))"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=60, check=True
+    )
+    cargados = r.stdout.strip()
+    assert cargados == "", (
+        f"importar local_delegate arrastró {cargados}: la premisa del techo de dependencias en "
+        "pyproject.toml ya no se cumple. O se restaura el import perezoso, o hay que revisar la "
+        "política (ver docs/wiki/Repo-hardening.md)."
+    )
