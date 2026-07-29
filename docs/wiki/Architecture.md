@@ -50,3 +50,8 @@ hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
 | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
+| `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
+
+**Una sola librería HTTP: `httpx2`.** Es la que usa el SDK `mcp` 2.x, y el cliente propio del
+backend migró a ella en vez de dejar las dos instaladas para siempre. Por eso `respx` salió de la
+suite —no la soporta— y su lugar lo ocupa `tests/backend_mock.py`, sobre `httpx2.MockTransport`.

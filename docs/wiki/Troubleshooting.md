@@ -1,5 +1,42 @@
 # Troubleshooting
 
+## `MCP error -32000: Connection closed` — el cliente no ve nada más
+
+Ese mensaje es el **síntoma de un proceso muerto**, no la causa, y el cliente no enseña más. La
+causa suele ser que el paquete **no importa**: una dependencia publicó un major incompatible y
+`uvx` resolvió a él.
+
+**El traceback real está en el `Server stderr` del log de tu cliente**, no en la ventana de chat.
+En macOS, `~/Library/Caches/claude-cli-nodejs/<proyecto>/mcp-logs-local-delegate/`.
+
+Pasó de verdad con la 0.12.1: el SDK `mcp` publicó 2.0.0, que eliminó `mcp.server.fastmcp`, y la
+versión publicada declaraba `mcp>=1.2` sin techo. Toda instalación nueva moría. Por eso hoy las
+dependencias del camino de arranque llevan techo de major (ver
+[Configuración del repositorio](Repo-hardening.md)) y hay un job `install-smoke` que instala el
+wheel con resolución libre y le exige un handshake.
+
+**Si te pasa:** mira el stderr, y como parche inmediato acota la dependencia culpable
+(`uvx --with "mcp<3" …`). Fijar una versión **vieja** del paquete no ayuda — al contrario: congela
+rangos de dependencias aún más antiguos.
+
+## El daemon responde `421 Misdirected Request`
+
+Solo con el SDK `mcp` 2.x, y solo si publicaste el daemon fuera de loopback. `streamable_http_app`
+activa por su cuenta la protección contra *DNS rebinding* cuando el host es de loopback, y entonces
+**solo admite** `127.0.0.1:*`, `localhost:*` y `[::1]:*`: cualquier cliente que llegue por la IP de
+la LAN recibe 421.
+
+Se corrigió pasándole el host configurado, así que con `LOCAL_DELEGATE_WEB_HOST=0.0.0.0` la
+protección no se activa y la LAN funciona. Si lo ves igualmente, comprueba que el cliente manda el
+header `Host` que esperas y que el daemon corre una versión **0.13.0 o posterior**.
+
+## El dashboard sigue enseñando los gráficos viejos tras actualizar
+
+No es un fallo: el endpoint sirve Chart.js con `Cache-Control: public, max-age=86400`, así que tras
+actualizar el paquete **el navegador sigue usando el de la caché hasta 24 h**. Fuerza la recarga
+(Ctrl+F5) y se acabó. Despista mucho al verificar una actualización: `window.Chart.version` puede
+seguir diciendo la versión vieja con el servidor sirviendo ya la nueva.
+
 ## `[local-delegate error] no se pudo conectar al endpoint`
 
 El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`.

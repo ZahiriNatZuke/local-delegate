@@ -9,7 +9,7 @@ carpetas con las que el autor verifica cada release. Ni requisito ni obligación
 
 | Componente | Versión probada | Verificado | Notas |
 |---|---|---|---|
-| `local-delegate` | 0.11.0 | 2026-07-27 | esta release |
+| `local-delegate` | 0.13.0 | 2026-07-29 | esta release |
 | `llama-server` (llama.cpp) | **b9925** | 2026-07-11 | RTX 5060 (Blackwell/sm_120), runtime **CUDA 13.3** |
 | `llama-swap` | **v238** | 2026-07-11 | trae `status` en `/v1/models` (#901) y métricas SQLite (#898) |
 
@@ -73,6 +73,21 @@ Windows, TTL u OOM:
 
 `latest` significa solamente «lo último publicado». La fuente de verdad operativa sigue siendo la
 versión probada de la tabla superior.
+
+## Medir un canary: `local-delegate benchmark`
+
+Lo que `doctor` no puede decirte es si una versión nueva del backend **rinde** igual. Para eso está
+`benchmark`, que corre un corpus versionado contra un backend candidato y escribe los resultados en
+JSONL, con las condiciones anotadas (cuantización, contexto, `--n-cpu-moe`, versiones de
+llama-server/llama-swap), para que dos corridas sean comparables:
+
+```bash
+local-delegate benchmark --model <id-del-canary> --label gptoss-ncmoe12-c8k \
+  --cases benchmarks/moe/cases.json --runs 3
+```
+
+Es la herramienta del paso «canary aislado» de arriba: mide antes de promover, en vez de decidir
+por impresión.
 
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
   `config.yaml`. Funciona sin el extra `[llamaswap]`.

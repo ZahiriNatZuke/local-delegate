@@ -13,7 +13,7 @@ fuente adicional.
 {"ts":"2026-07-07T21:20:00+00:00","tool":"local_summarize","model":"llama31-8b",
  "source":"path","chars_in":28654,"chars_out":919,"latency_ms":502,"ok":true,
  "backend":"remote","backend_host":"pc.tailnet.ts.net:9292",
- "v":"0.11.0","finish_reason":"stop","tokens_in":7163,"tokens_out":230}
+ "v":"0.13.0","finish_reason":"stop","tokens_in":7163,"tokens_out":230}
 ```
 
 - `source`: **`path`** = el input se leyó *server-side* (no entró al contexto de Claude) ·
