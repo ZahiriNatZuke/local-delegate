@@ -72,6 +72,25 @@ Cubre las tres familias que el plan exigía por separado: **texto** (`local_summ
 respondan prueba que el ciclo completo con llama-swap —incluido el swap de modelos, que es el que
 más tarda— sigue funcionando tras cambiar de librería HTTP.
 
+## El daemon migrado y los clientes reales
+
+El daemon de Windows se actualizó a esta rama (`uv sync` + `Stop-Process` + `Start-ScheduledTask`) y
+quedó corriendo sobre `mcp` 2.0.0. Verificado contra `http://127.0.0.1:9393/mcp`:
+
+| Comprobación | Resultado |
+| --- | --- |
+| `initialize` | 200, `serverInfo` = `{"name": "local-delegate", "version": "0.12.2"}` |
+| **`protocolVersion` negociado** | **`2024-11-05`** — el mismo que pidió el cliente |
+| `tools/list` | las 11 tools, con sus nombres intactos |
+| `Host` ajeno | **421**, que confirma que el proceso corre el SDK 2.x |
+| Dashboard en la raíz | 200, HTML completo |
+| `/api/daemon` | 200 |
+| **Claude Code** (cliente real, por el daemon) | `local_status` y `local_translate` respondieron; delegación real de extremo a extremo |
+
+**La duda del nivel de protocolo queda despejada:** era el riesgo declarado en el spec («si 2.x
+negocia un nivel de protocolo distinto, un cliente antiguo podría quedar fuera»). No lo negocia:
+respeta el que pide el cliente. No hay ruptura para clientes viejos.
+
 ## Hallazgos de la ejecución que el análisis no había visto
 
 Los dos salieron de **ejecutar**, que es exactamente lo que REQ-006 exigía y lo que leer firmas no
@@ -110,8 +129,10 @@ transport real.
   `install-smoke`, `test` en los tres sistemas (ubuntu, macOS, Windows), `lint`, `secrets`, CodeQL,
   GitGuardian y los dos de Socket Security — que **no** levantaron alerta por `pywin32` ni por el
   árbol de dependencias nuevo.
-- **Clientes reales sin probar.** Claude Code y Codex contra el daemon migrado, por si 2.x negocia
-  otro nivel de protocolo. El daemon en ejecución sigue siendo el de 0.12.2 sobre `mcp` 1.x.
+- ~~Clientes reales sin probar.~~ **Resuelto para Claude Code:** el daemon corre la rama y Claude
+  Code delega contra él sin cambios. El protocolo negociado sigue siendo `2024-11-05`. **Codex no se
+  ha probado**, aunque comparte transporte y el riesgo que quedaba era el nivel de protocolo, que ya
+  está descartado.
 - **Riesgo de calendario, ya aceptado en el spec:** `mcp` 2.0.0 se publicó el mismo día que rompió
   la 0.12.1. La recomendación de no publicar hasta 2.0.1+ o unas semanas de rodaje sigue en pie, y
   esta rama no la toca.
