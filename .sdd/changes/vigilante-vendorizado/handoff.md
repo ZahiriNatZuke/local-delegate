@@ -2,12 +2,12 @@
 
 ## Current state
 
-- SDD status: `implementing`. Gates `spec` y `plan` **aprobados**; `quality`, `conformance` y
-  `memory` pendientes de la corrida del CI en el PR.
-- Current revision: rama `feat/vigilante-vendorizado` (worktree `D:\Projects\local-delegate-vendor`),
-  commit `f9205f9`, **PR #39** contra `main`.
-- **Las 5 tareas del plan están implementadas.** El checkout principal (`D:\Projects\local-delegate`)
-  sigue en `feat/mcp-sdk-2-fase2`, sin tocar.
+- SDD status: `closed`. **Los cinco gates aprobados.**
+- Current revision: **PR #39 mergeado** en `main` con squash (`dbe5dfa`). El CI de `main` después
+  del merge: `CI`, `CodeQL` y `Vendor audit`, los tres en verde.
+- **Las 5 tareas del plan están implementadas**, más una sexta que obligó el CI (`.gitattributes`).
+  El checkout principal (`D:\Projects\local-delegate`) sigue en `feat/mcp-sdk-2-fase2`, sin tocar.
+- **Está en `Unreleased`: todavía no publicado en PyPI.**
 
 ## What changed
 
@@ -65,18 +65,28 @@ Las del `plan.md` se mantienen todas. Lo que se decidió **durante** la implemen
 
 ## Next action
 
-1. Mergear el PR #39 con squash y **verificar el CI de `main` después del merge** con
-   `gh run list`, no solo los checks del PR.
-2. Cerrar el gate `memory`: nota en el vault y puntero en la memoria de Claude Code.
+El change está cerrado. Lo que deja pendiente, y no es de este cambio:
+
+1. **Subir Chart.js a 4.5.1** — el primer encargo del vigilante, en un cambio aparte. El
+   procedimiento está en `docs/wiki/Repo-hardening.md`. Ojo: el aviso vive en un job **verde**, que
+   es justo el mecanismo por el que nadie se enteró la primera vez.
+2. Nada de esto está publicado: va en `Unreleased`, saldrá con la próxima versión.
 3. Retirar el worktree `D:\Projects\local-delegate-vendor` cuando ya no haga falta.
+
+## Un tropiezo que conviene no repetir
+
+**El rebase sobre `main` metió la entrada del CHANGELOG dentro de `[0.12.3]`**, que ya estaba
+publicada: el commit de preparación de esa versión había renombrado `Unreleased` justo donde
+aterrizaba el diff, y git no ve conflicto ahí. Se corrigió antes de mergear. Al rebasar después de
+un release, revisar el `CHANGELOG.md` a mano.
 
 Lo que queda **fuera** de este cambio y es su continuación natural: subir Chart.js a 4.5.1, que será
 el primer encargo del vigilante.
 
 ## Memory
 
-- Canonical note: pendiente — se crea al cerrar el change. Contexto de fondo en
-  `projects/local-delegate/backlog.md` (entrada de Chart.js) y en
-  `projects/local-delegate/techos-major-dependencias.md`, que declara explícitamente que la política
-  de techos **no** cubre el vendorizado: este cambio cierra ese hueco.
-- Indexes updated: todavía no.
+- Canonical note: `projects/local-delegate/vigilante-vendorizado.md` en el vault de Obsidian, con el
+  criterio, los tres gotchas y lo que queda vivo.
+- Indexes updated: sí. `backlog.md` cierra la entrada de Chart.js y la sustituye por el pendiente
+  real (subir a 4.5.1); `techos-major-dependencias.md` remite a la nota nueva para el hueco del
+  vendorizado que declaraba no cubrir; y la memoria de proyecto de Claude Code lleva el puntero.

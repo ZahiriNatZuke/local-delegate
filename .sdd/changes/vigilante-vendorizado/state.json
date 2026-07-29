@@ -3,9 +3,9 @@
   "slug": "vigilante-vendorizado",
   "title": "Vigilante del vendorizado de Chart.js: integridad, CVEs y version",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-29T13:13:10.569Z",
-  "updatedAt": "2026-07-29T14:17:35.046Z",
+  "updatedAt": "2026-07-29T14:35:32.472Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-29T14:35:32.284Z",
+      "evidence": "Nota canonica creada en el vault: projects/local-delegate/vigilante-vendorizado.md, con el criterio de que rompe y que solo avisa, los tres gotchas (el banner de 274 bytes de jsDelivr, el core.autocrlf de Windows que convierte los LF del blob en CRLF y tumba el hash, y el rebase que metio la entrada del CHANGELOG en una version ya publicada) y lo que queda vivo. Indices actualizados: backlog.md cierra la entrada de Chart.js y la sustituye por el pendiente real de subir a 4.5.1; techos-major-dependencias.md remite a la nota nueva para el hueco del vendorizado que declaraba no cubrir; y la memoria de proyecto de Claude Code lleva el puntero. handoff.md actualizado con el estado final. Sin secretos ni datos personales: lo unico sensible del cambio son hashes publicos.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "at": "2026-07-29T14:17:35.046Z",
       "evidence": "Revision fresca contra spec.md, escrita en verification.md. Los 8 requisitos cubiertos con evidencia concreta: REQ-001 el manifiesto y metrics.py remitiendo a el; REQ-002 test que altera un byte de una copia y exige exit 1; REQ-003 test de vulnerabilidad (exit 2) mas ejecucion real contra OSV (cero para 4.4.1); REQ-004 aviso real de 4.5.1 con job verde en el runner; REQ-005 tres tests de red caida y respuesta malformada con exit 0; REQ-006 la trampa del banner en el manifiesto, con test; REQ-007 workflow propio con push/pull_request y cron semanal, corrio en el PR en 4s; REQ-008 la seccion de Repo-hardening.md con las dos tablas y el procedimiento de actualizacion. Los tres casos limite de la spec tienen test. No funcionales cumplidos: cero dependencias nuevas (solo stdlib, pyproject intacto), 4-5s de job y la parte que puede fallar el CI no toca la red. Los cuatro no-goals respetados: Chart.js sigue en 4.4.1, el vendorizado no se retira, no se vendoriza nada mas y el job no se exige como check requerido. Una desviacion respecto al plan, a favor: .gitattributes, que no estaba previsto y lo obligo el CI de Windows (F7).",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-29T14:35:32.108Z",
+      "reason": "PR #39 mergeado en main con squash (dbe5dfa); CI, CodeQL y Vendor audit en verde en main despues del merge"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-29T14:35:32.284Z",
+      "evidence": "Nota canonica creada en el vault: projects/local-delegate/vigilante-vendorizado.md, con el criterio de que rompe y que solo avisa, los tres gotchas (el banner de 274 bytes de jsDelivr, el core.autocrlf de Windows que convierte los LF del blob en CRLF y tumba el hash, y el rebase que metio la entrada del CHANGELOG en una version ya publicada) y lo que queda vivo. Indices actualizados: backlog.md cierra la entrada de Chart.js y la sustituye por el pendiente real de subir a 4.5.1; techos-major-dependencias.md remite a la nota nueva para el hueco del vendorizado que declaraba no cubrir; y la memoria de proyecto de Claude Code lleva el puntero. handoff.md actualizado con el estado final. Sin secretos ni datos personales: lo unico sensible del cambio son hashes publicos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-29T14:35:32.472Z",
+      "reason": "Los cinco gates aprobados, trabajo mergeado y memoria persistida"
     }
   ]
 }
