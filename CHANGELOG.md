@@ -6,20 +6,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-## [0.12.3] - 2026-07-29
-
-### Changed
-- **`platformdirs` y `filelock` quedan acotadas por debajo del major siguiente** (`<5` y `<4`). Para
-  quien instala, el efecto es solo futuro: cuando salga `platformdirs` 5 o `filelock` 4, una
-  instalación nueva se quedará en la serie que el proyecto probó en vez de saltar a ciegas. Ninguna
-  instalación existente cambia de resolución, porque los techos van por encima de lo que ya se usa.
-  Es la misma lección de la 0.12.1, generalizada: el wheel publicado es inmutable y resuelve libre
-  **para siempre**, así que `install-smoke` —que corre cuando corre el CI— no puede cubrir un major
-  que salga después del release; el techo, que viaja dentro del wheel, sí.
-  `fastapi`, `uvicorn` y `httpx` **no** llevan techo, y el porqué de cada una está junto a su línea
-  en `pyproject.toml`. El criterio completo, con su alcance y su coste, está en
-  `docs/wiki/Repo-hardening.md`.
-
 ### Added
 - **El JavaScript vendorizado deja de estar sin vigilancia.** `resources/vendor/` son 205 KB de
   Chart.js que ninguna herramienta miraba: Dependabot solo ve manifiestos, CodeQL analiza el
@@ -36,6 +22,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   da siempre distinto. Nada de esto entra en el runtime del paquete. Chart.js **no** se actualiza
   aquí (sigue en 4.4.1, con 4.5.1 publicada): el vigilante se estrena con una versión de estado
   conocido y subirla será su primer encargo, aparte.
+
+### Fixed
+- **`.gitattributes` impide que git normalice los finales de línea del contenido vendorizado.** Con
+  `core.autocrlf=true` —el valor por defecto de Git for Windows— el checkout convertía los LF del
+  blob de Chart.js en CRLF: 205 139 bytes en vez de 205 125. Un wheel construido en esa máquina
+  llevaría un JavaScript distinto del que se publica desde Linux, y la comprobación de integridad
+  nueva fallaría en cualquier clon de Windows sin que nadie hubiera tocado nada.
+
+## [0.12.3] - 2026-07-29
+
+### Changed
+- **`platformdirs` y `filelock` quedan acotadas por debajo del major siguiente** (`<5` y `<4`). Para
+  quien instala, el efecto es solo futuro: cuando salga `platformdirs` 5 o `filelock` 4, una
+  instalación nueva se quedará en la serie que el proyecto probó en vez de saltar a ciegas. Ninguna
+  instalación existente cambia de resolución, porque los techos van por encima de lo que ya se usa.
+  Es la misma lección de la 0.12.1, generalizada: el wheel publicado es inmutable y resuelve libre
+  **para siempre**, así que `install-smoke` —que corre cuando corre el CI— no puede cubrir un major
+  que salga después del release; el techo, que viaja dentro del wheel, sí.
+  `fastapi`, `uvicorn` y `httpx` **no** llevan techo, y el porqué de cada una está junto a su línea
+  en `pyproject.toml`. El criterio completo, con su alcance y su coste, está en
+  `docs/wiki/Repo-hardening.md`.
+
+### Added
 - **`scripts/release.py`: un comando para todo el release.** Construye, crea la GitHub Release con
   las notas sacadas de la sección del `CHANGELOG.md`, le adjunta wheel y sdist, y crea el tag que
   dispara `publish.yml`. Antes el tag se hacía a mano y dejaba fuera dos pasos que había que
