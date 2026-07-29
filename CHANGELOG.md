@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-29
+
 ### Changed
 - **Migración al SDK `mcp` 2.x.** El import pasa de `mcp.server.fastmcp.FastMCP` a
   `mcp.server.mcpserver.MCPServer`, y el daemon fija la ruta del MCP con
