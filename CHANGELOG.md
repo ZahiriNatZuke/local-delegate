@@ -21,6 +21,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `docs/wiki/Repo-hardening.md`.
 
 ### Added
+- **El JavaScript vendorizado deja de estar sin vigilancia.** `resources/vendor/` son 205 KB de
+  Chart.js que ninguna herramienta miraba: Dependabot solo ve manifiestos, CodeQL analiza el
+  Python y Socket cubre dependencias declaradas. No había ni un hash registrado, así que un cambio
+  en ese fichero no dejaba rastro y un CVE publicado mañana no avisaba a nadie. Ahora hay un
+  manifiesto (`resources/vendor/vendor.json`, que viaja en el wheel y es la **fuente de verdad de
+  la versión**), un `scripts/check_vendor.py` de **solo stdlib** y un workflow propio
+  `vendor-audit.yml` que corre en cada PR y en un cron semanal —los CVE se publican cuando les
+  toca, no cuando hay PRs—. **Rompen el CI** un hash que no cuadra y una vulnerabilidad confirmada
+  por OSV.dev; **solo avisan** que exista una versión más nueva y que OSV o npm no respondan: un CI
+  que se pone rojo porque alguien publicó algo, o porque un servicio ajeno está caído, se acaba
+  ignorando. El manifiesto documenta además la trampa que hace perder una tarde a quien verifique
+  a mano: jsDelivr antepone un banner propio de 274 bytes, así que comparar el hash contra su URL
+  da siempre distinto. Nada de esto entra en el runtime del paquete. Chart.js **no** se actualiza
+  aquí (sigue en 4.4.1, con 4.5.1 publicada): el vigilante se estrena con una versión de estado
+  conocido y subirla será su primer encargo, aparte.
 - **`scripts/release.py`: un comando para todo el release.** Construye, crea la GitHub Release con
   las notas sacadas de la sección del `CHANGELOG.md`, le adjunta wheel y sdist, y crea el tag que
   dispara `publish.yml`. Antes el tag se hacía a mano y dejaba fuera dos pasos que había que

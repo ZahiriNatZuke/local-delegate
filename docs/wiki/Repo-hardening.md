@@ -143,6 +143,80 @@ diera cuenta, así que hay un test que lo fija
 (`tests/test_core.py::test_importar_el_paquete_no_arrastra_el_stack_web_propio`): corre en un
 subproceso limpio y falla apuntando a esta página.
 
+## Vigilancia del JavaScript vendorizado
+
+La política de arriba cubre lo que se **declara** en `pyproject.toml`. `resources/vendor/` es
+justo lo contrario: 205 KB de Chart.js dentro del repositorio que **ninguna herramienta mira**.
+Dependabot solo ve manifiestos, CodeQL analiza el Python y Socket cubre dependencias declaradas
+— un blob no es ninguna de esas cosas. Hasta este cambio no había ni un hash registrado: modificar
+ese fichero no dejaba rastro, y un CVE publicado mañana no avisaba a nadie.
+
+Vendorizar sigue siendo correcto (el dashboard tiene que funcionar sin internet). Lo que faltaba
+era el proceso que lo vigile:
+
+| Pieza | Qué aporta |
+|---|---|
+| `src/local_delegate/resources/vendor/vendor.json` | manifiesto: nombre, versión, ecosistema, origen, licencia y **SHA-256** de cada fichero. Fuente de verdad de la versión. Viaja en el wheel, así que quien instala puede comprobar qué lleva |
+| `scripts/check_vendor.py` | la comprobación. **Solo stdlib**: es herramienta de CI, no puede engordar el árbol de quien instala |
+| `.github/workflows/vendor-audit.yml` | lo corre en cada PR/push a `main` **y** en un cron semanal |
+
+### Qué rompe el CI y qué solo avisa
+
+El criterio es que **lo que puede poner un job en rojo tiene que ser determinista**:
+
+| Comprobación | Efecto | Por qué |
+|---|---|---|
+| El sha256 del fichero no coincide con el manifiesto | **falla** | offline, sin red: siempre fiable |
+| Falta un fichero declarado, o hay uno en `vendor/` sin declarar | **falla** | un vendorizado no declarado es el punto ciego que esto cierra |
+| OSV.dev reporta una vulnerabilidad de la versión declarada | **falla** | es un problema real |
+| npm publicó una versión más nueva | avisa | que alguien publique algo no es un fallo de este repo |
+| OSV o npm no responden, o responden algo ininteligible | avisa | un servicio ajeno caído no puede bloquear PRs legítimos — la lección ya anotada sobre `install-smoke` |
+
+El cron semanal no es adorno: **los CVE se publican cuando les toca, no cuando hay PRs**. Un repo
+tranquilo no se enteraría nunca.
+
+**Límite conocido, no resuelto:** un aviso dentro de un job verde no lo lee nadie — es exactamente
+así como Chart.js llegó a estar dos minors atrasado sin que nadie se enterara. Se mitiga escribiendo
+el informe al *summary* del job (`GITHUB_STEP_SUMMARY`), que se ve sin abrir la corrida. No se crean
+issues automáticos: sería alcance nuevo.
+
+El job **no** se exige como check requerido en la protección de rama, por la misma razón que
+`install-smoke`: depende de servicios en vivo.
+
+### Cómo actualizar el vendorizado
+
+Que sea tarea repetible y no arqueología. Con Chart.js como ejemplo, para subir a `X.Y.Z`:
+
+```bash
+# 1. Bajar la distribución. jsDelivr es la fuente verificada de la copia actual.
+curl -sL https://cdn.jsdelivr.net/npm/chart.js@X.Y.Z/dist/chart.umd.min.js -o /tmp/chart.js
+
+# 2. QUITAR EL BANNER DE JSDELIVR (ver abajo) y calcular el hash del contenido real.
+python - <<'PY'
+import hashlib, pathlib
+datos = pathlib.Path("/tmp/chart.js").read_bytes()
+if datos.startswith(b"/**"):
+    datos = datos[datos.index(b"*/") + 3:].lstrip(b"\r\n")
+print(hashlib.sha256(datos).hexdigest(), len(datos))
+PY
+
+# 3. Reemplazar el blob, actualizar `version`, `source`, `sha256` y `bytes` en vendor.json,
+#    y revisar si la licencia cambió.
+# 4. Comprobar:
+python scripts/check_vendor.py
+# 5. Abrir el dashboard y mirar que los gráficos siguen pintando.
+```
+
+**La trampa del banner de jsDelivr.** Descargar esa URL y comparar el sha256 con el del manifiesto
+da **siempre distinto**, y no porque el fichero esté adulterado: jsDelivr antepone 274 bytes propios
+(`/** Skipped minification because the original files appears to be already minified.`). Hay que
+quitarlos antes de comparar. La copia de 4.4.1 se verificó así, byte a byte, y coincide exactamente.
+**cdnjs no sirve como referencia**: distribuye otra minificación (200 807 bytes frente a 205 125).
+
+La comprobación diaria compara contra el **manifiesto**, no contra la red — si no, dependería de un
+servicio ajeno y dejaría de ser determinista. La *procedencia* se verifica cuando cambia, es decir
+al actualizar la versión, que es lo que documenta el procedimiento de arriba.
+
 ## Convención de ramas
 
 Rama por cambio, con prefijo según lo que hace y un nombre que describa el cambio:

@@ -468,8 +468,12 @@ def favicon():
 
 # Chart.js se sirve DESDE EL PAQUETE, no desde un CDN: el dashboard de una herramienta
 # local-first tiene que funcionar en una máquina sin salida a internet (y sin anunciar a un
-# tercero cada vez que abres tu panel de uso). Copia exacta de la distribución npm
-# chart.js@4.4.1 (MIT, licencia junto al archivo). Se cachea en memoria tras la 1ª lectura.
+# tercero cada vez que abres tu panel de uso). Copia exacta de la distribución npm (MIT,
+# licencia junto al archivo). Se cachea en memoria tras la 1ª lectura.
+#
+# La versión NO se anota aquí a propósito: la declara `resources/vendor/vendor.json`, que es su
+# fuente de verdad y lo que comprueba `scripts/check_vendor.py`. Dos sitios con el número se
+# contradicen tarde o temprano, y el que se queda viejo es siempre el comentario.
 _CHART_JS: str | None = None
 
 
