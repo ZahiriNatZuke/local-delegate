@@ -75,18 +75,36 @@ Runner = Callable[[list[str]], subprocess.CompletedProcess]
 
 @dataclass
 class Options:
-    """Lo que pidió el usuario, más los colaboradores que los tests doblan."""
+    """Lo que pidió el usuario, más los colaboradores que los tests doblan.
+
+    Los colaboradores se declaran ``None`` y se resuelven en ``__post_init__`` en vez de poner
+    la función directamente como valor por defecto. Escrito de la otra forma, un análisis
+    estático lee ``Options.runner`` como un método y cuenta un ``self`` que en tiempo de
+    ejecución no existe —el ``__init__`` del dataclass asigna el default a la instancia—, así
+    que la llamada parece tener un argumento de más. Funciona igual, pero la ambigüedad es real
+    y CodeQL la reporta como error: mejor no dejarla escrita.
+    """
 
     home: Path
     dry_run: bool = False
     version: str | None = None
     restart_backend: bool = False
     no_restart: bool = False
-    runner: Runner = _default_runner
-    daemon_status: Callable[[str, int], dict | None] = checks._default_daemon_status
-    sleep: Callable[[float], None] = time.sleep
-    clock: Callable[[], float] = time.monotonic
+    runner: Runner | None = None
+    daemon_status: Callable[[str, int], dict | None] | None = None
+    sleep: Callable[[float], None] | None = None
+    clock: Callable[[], float] | None = None
     spawn: Callable[[list[str]], None] | None = None
+
+    def __post_init__(self) -> None:
+        if self.runner is None:
+            self.runner = _default_runner
+        if self.daemon_status is None:
+            self.daemon_status = checks._default_daemon_status
+        if self.sleep is None:
+            self.sleep = time.sleep
+        if self.clock is None:
+            self.clock = time.monotonic
 
     @property
     def simulated_home(self) -> bool:
