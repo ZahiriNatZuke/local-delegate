@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "slug": "codex-config-local",
+  "title": "Arregla los dos hallazgos de configuracion de Codex: choque de github y rtk fuera del PATH",
+  "mode": "lite",
+  "status": "closing",
+  "createdAt": "2026-07-30T12:54:10.480Z",
+  "updatedAt": "2026-07-30T13:03:20.099Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:57:44.504Z",
+      "evidence": "spec.md con 6 requisitos observables. Diagnostico por ejecucion: codex mcp list falla dentro del repo con 'url is not supported for stdio in mcp_servers.github'; codex sandbox demuestra que rtk.exe SI se ejecuta por ruta absoluta (rtk 0.34.0) pero C:\\Users\\Yohan no es enumerable bajo el restricted token, mientras .local\\bin si lo es (uvx resuelve ahi).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:59:36.309Z",
+      "evidence": "Revision adversarial con 4 objeciones registradas en plan.md, ninguna bloqueante: (1) quoting del shim .cmd -> se anade verificacion con argumento entrecomillado; (2) el shim NO tapa al .exe fuera del sandbox porque C:\\Users\\Yohan precede a .local\\bin en el PATH y la resolucion agota extensiones directorio por directorio; (3) CODEX_GITHUB_PERSONAL_ACCESS_TOKEN existe en el entorno de usuario (comprobada existencia, no valor); (4) git check-ignore confirma que .gitignore:32 es .codex/ y cubre el .bak.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:02:48.588Z",
+      "evidence": "277 passed (pytest -q --basetemp), ruff check All checks passed, ruff format 46 files already formatted, extract_dashboard_js.py + node --check exit 0. Sin cambios ajenos: git status solo muestra .sdd/changes/codex-config-local/. Sin secretos: de las variables del bearer solo se comprobo existencia.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:03:19.851Z",
+      "evidence": "review.md: veredicto conforms. Los 6 requisitos implementados y verificados por ejecucion contra la spec (codex mcp list exit 0 con los cinco MCP del repo + local-delegate + github HTTP una sola vez; Get-Command rtk dentro del sandbox devuelve .local/bin/rtk.cmd con rtk 0.34.0; git status solo la traza SDD). Sin hallazgos de seguridad ni de alcance.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T12:54:10.480Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T12:57:43.970Z",
+      "reason": "Diagnostico de los dos hallazgos cerrado por ejecucion"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T12:57:44.235Z",
+      "reason": "Causa raiz de ambos hallazgos identificada; el hallazgo 2 corrige la nota del backlog"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T12:57:44.504Z",
+      "evidence": "spec.md con 6 requisitos observables. Diagnostico por ejecucion: codex mcp list falla dentro del repo con 'url is not supported for stdio in mcp_servers.github'; codex sandbox demuestra que rtk.exe SI se ejecuta por ruta absoluta (rtk 0.34.0) pero C:\\Users\\Yohan no es enumerable bajo el restricted token, mientras .local\\bin si lo es (uvx resuelve ahi).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T12:58:32.582Z",
+      "reason": "spec aprobada; plan de dos ediciones locales reversibles"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T12:58:32.829Z",
+      "reason": "plan.md listo para revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T12:59:36.309Z",
+      "evidence": "Revision adversarial con 4 objeciones registradas en plan.md, ninguna bloqueante: (1) quoting del shim .cmd -> se anade verificacion con argumento entrecomillado; (2) el shim NO tapa al .exe fuera del sandbox porque C:\\Users\\Yohan precede a .local\\bin en el PATH y la resolucion agota extensiones directorio por directorio; (3) CODEX_GITHUB_PERSONAL_ACCESS_TOKEN existe en el entorno de usuario (comprobada existencia, no valor); (4) git check-ignore confirma que .gitignore:32 es .codex/ y cubre el .bak.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T12:59:36.571Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T13:02:48.345Z",
+      "reason": "Implementacion hecha; verificacion por ejecucion registrada"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T13:02:48.588Z",
+      "evidence": "277 passed (pytest -q --basetemp), ruff check All checks passed, ruff format 46 files already formatted, extract_dashboard_js.py + node --check exit 0. Sin cambios ajenos: git status solo muestra .sdd/changes/codex-config-local/. Sin secretos: de las variables del bearer solo se comprobo existencia.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T13:02:48.830Z",
+      "reason": "quality aprobado; toca revisar contra la spec"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T13:03:19.851Z",
+      "evidence": "review.md: veredicto conforms. Los 6 requisitos implementados y verificados por ejecucion contra la spec (codex mcp list exit 0 con los cinco MCP del repo + local-delegate + github HTTP una sola vez; Get-Command rtk dentro del sandbox devuelve .local/bin/rtk.cmd con rtk 0.34.0; git status solo la traza SDD). Sin hallazgos de seguridad ni de alcance.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T13:03:20.099Z",
+      "reason": "conformance aprobado; queda handoff y memoria"
+    }
+  ]
+}
