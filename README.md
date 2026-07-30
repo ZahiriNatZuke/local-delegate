@@ -100,7 +100,9 @@ auto-arranque de llama-swap es opt-in (ver tabla de configuración).
 
 ¿Qué versiones de `llama-server`/`llama-swap` usar y cómo disponer el workspace? Ver
 [Versiones del backend y workspace de referencia](./docs/wiki/Backend-versions.md) (sugerencia
-probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones.
+probada, no requisito). `local-delegate doctor` compara tu instalación contra esas versiones y, de
+paso, comprueba el resto del andamiaje —hooks, skill, memoria, entradas MCP y el daemon— sin
+escribir nada ([qué mira cada check](./docs/wiki/Integration-install.md#comprobar-la-instalación-local-delegate-doctor)).
 
 ## Tools
 
