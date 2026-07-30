@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-30
+
 ### Added
 - **`local-delegate update`: un subcomando que revisa, completa, actualiza y deja el daemon
   arriba.** Sustituye a `scripts/update_to_latest.sh`, que solo cambiaba un número de versión y
@@ -816,7 +818,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.13.1...v0.14.0
