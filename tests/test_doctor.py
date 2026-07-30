@@ -1,12 +1,15 @@
 """Tests del subcomando `doctor` (doctor.py): parseo de versiones, detección desde el
-config.yaml (sin pyyaml), comparación vs RECOMMENDED_VERSIONS y exit codes."""
+config.yaml (sin pyyaml), comparación vs RECOMMENDED_VERSIONS, salida del registro de
+comprobaciones y exit codes."""
 
 from __future__ import annotations
 
 import argparse
 from datetime import UTC, datetime
 
-from local_delegate import doctor
+from conftest import make_home, snapshot
+
+from local_delegate import checks, daemon, doctor
 
 
 def test_vnum_extracts_number():
@@ -118,27 +121,102 @@ def test_select_relevant_issues_excludes_prs_and_noise():
     ]
 
 
-def test_run_doctor_exit_0_when_up_to_date(monkeypatch):
-    monkeypatch.setattr(
-        doctor, "detect_llamaswap_version", lambda: doctor.RECOMMENDED_VERSIONS["llama-swap"]
-    )
+def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True):
+    """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta."""
+    version = doctor.RECOMMENDED_VERSIONS["llama-swap"] if swap == "ok" else swap
+    monkeypatch.setattr(doctor, "detect_llamaswap_version", lambda: version)
     monkeypatch.setattr(
         doctor,
         "detect_llamaserver_version",
         lambda cfg: (doctor.RECOMMENDED_VERSIONS["llama-server"], None),
     )
-    monkeypatch.setattr(doctor, "_backend_up", lambda: True)
-    args = argparse.Namespace(config=None, online=False)
+    monkeypatch.setattr(doctor, "_backend_up", lambda: backend)
+    monkeypatch.setattr(
+        daemon,
+        "query_daemon",
+        lambda host, port, timeout=1.0: (
+            {"version": "0.13.1", "pid": 42, "mcp_url": f"http://{host}:{port}/mcp"}
+            if daemon_alive
+            else None
+        ),
+    )
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
+
+
+def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, capsys):
+    _stub_environment(monkeypatch)
+    home = make_home(tmp_path)
+    args = argparse.Namespace(config=None, online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
+    # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("  [")]
+    assert lines and all(line.startswith("  [ OK ]") for line in lines)
 
 
-def test_run_doctor_exit_1_when_outdated(monkeypatch):
-    monkeypatch.setattr(doctor, "detect_llamaswap_version", lambda: "v100")  # muy vieja
-    monkeypatch.setattr(
-        doctor,
-        "detect_llamaserver_version",
-        lambda cfg: (doctor.RECOMMENDED_VERSIONS["llama-server"], None),
-    )
-    monkeypatch.setattr(doctor, "_backend_up", lambda: False)
-    args = argparse.Namespace(config=None, online=False)
+def test_run_doctor_exit_1_when_outdated(tmp_path, monkeypatch):
+    _stub_environment(monkeypatch, swap="v100", backend=False)  # versión muy vieja
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
     assert doctor.run_doctor(args) == 1
+
+
+def test_run_doctor_on_empty_home_reports_missing_and_exits_1(tmp_path, monkeypatch, capsys):
+    _stub_environment(monkeypatch)
+    home = make_home(tmp_path, complete=False)
+    args = argparse.Namespace(config=None, online=False, home=str(home))
+    assert doctor.run_doctor(args) == 1
+    out = capsys.readouterr().out
+    assert "[FALT]" in out
+    assert "arréglalo con: local-delegate install" in out
+
+
+def test_run_doctor_reports_the_dead_daemon(tmp_path, monkeypatch, capsys):
+    _stub_environment(monkeypatch, daemon_alive=False)
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
+    assert doctor.run_doctor(args) == 1
+    out = capsys.readouterr().out
+    assert "nadie escucha" in out
+    assert "local-delegate serve" in out
+
+
+def test_run_doctor_keeps_the_previous_output(tmp_path, monkeypatch, capsys):
+    """REQ-010: lo que el doctor ya imprimía sigue estando, con el mismo texto."""
+    _stub_environment(monkeypatch, backend=False)
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
+    doctor.run_doctor(args)
+    out = capsys.readouterr().out
+    assert "LLAMASWAP_EXE:" in out
+    assert "LLAMASWAP_CONFIG:" in out
+    assert "CAÍDO" in out
+    assert "Versiones (instalada vs probada; usa --online para comparar con GitHub):" in out
+    assert f"llama-swap: {doctor.RECOMMENDED_VERSIONS['llama-swap']} (= probada)" in out
+    assert f"llama-server: {doctor.RECOMMENDED_VERSIONS['llama-server']} (= probada)" in out
+
+
+def test_run_doctor_without_network_does_not_fail(tmp_path, monkeypatch, capsys):
+    """Sin GitHub ni backend ni daemon, el diagnóstico se completa y no lanza."""
+    _stub_environment(monkeypatch, backend=False, daemon_alive=False)
+    monkeypatch.setattr(doctor, "latest_github_info", lambda component: None)
+    monkeypatch.setattr(doctor, "recent_relevant_issues", lambda component: [])
+    args = argparse.Namespace(config=None, online=True, home=str(make_home(tmp_path)))
+    assert doctor.run_doctor(args) == 1
+    out = capsys.readouterr().out
+    assert "Issues abiertos con señales de riesgo" in out
+    assert "ninguno detectado" in out
+
+
+def test_run_doctor_writes_nothing_in_the_simulated_home(tmp_path, monkeypatch):
+    """REQ-013: el árbol del HOME simulado queda idéntico, byte a byte."""
+    _stub_environment(monkeypatch, daemon_alive=False)
+    home = make_home(tmp_path)
+    before = snapshot(home)
+    doctor.run_doctor(argparse.Namespace(config=None, online=False, home=str(home)))
+    assert snapshot(home) == before
+
+
+def test_run_doctor_writes_nothing_in_an_empty_home(tmp_path, monkeypatch):
+    """El caso peligroso: con todo por instalar, el doctor sigue sin escribir."""
+    _stub_environment(monkeypatch, daemon_alive=False)
+    home = make_home(tmp_path, complete=False)
+    before = snapshot(home)
+    doctor.run_doctor(argparse.Namespace(config=None, online=False, home=str(home)))
+    assert snapshot(home) == before

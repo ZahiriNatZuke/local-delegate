@@ -1,0 +1,340 @@
+"""Tests del registro de comprobaciones (checks.py).
+
+Ningún test sale a la red ni lanza procesos: los tres colaboradores del `Context` se inyectan
+y el HOME es siempre un `tmp_path`. Lo que más se vigila aquí no es que un check diga «ok»,
+sino que **nunca diga `missing` cuando en realidad no pudo comprobar**: ese falso `missing`
+es el que llevaría a un `fix` posterior a sobrescribir configuración ajena.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+
+import pytest
+from conftest import make_home, snapshot
+
+from local_delegate import checks, doctor, install
+
+
+def make_ctx(home, **kwargs):
+    """Context con los colaboradores doblados: nada de red ni de procesos."""
+    defaults = {
+        "daemon_status": lambda host, port: {
+            "version": "0.13.1",
+            "pid": 42,
+            "mcp_url": f"http://{host}:{port}/mcp",
+        },
+        "backend_models": lambda: True,
+        "version_of": lambda component, cfg: (doctor.RECOMMENDED_VERSIONS[component], None),
+    }
+    defaults.update(kwargs)
+    return checks.Context(home=home, **defaults)
+
+
+def result_for(check_id, ctx):
+    return {check.id: result for check, result in checks.run_all(ctx)}[check_id]
+
+
+# --- Estructura del registro --------------------------------------------------
+
+
+def test_registry_has_the_eleven_checks_with_unique_ids():
+    assert len(checks.CHECKS) == 11
+    assert len({check.id for check in checks.CHECKS}) == 11
+    assert {check.group for check in checks.CHECKS} == {
+        "cliente",
+        "andamiaje",
+        "servicio",
+        "backend",
+    }
+
+
+def test_every_status_has_a_label_and_only_warn_and_missing_count():
+    assert set(checks.STATUS_LABEL) == {checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN}
+    assert checks.is_warning(checks.MISSING) and checks.is_warning(checks.WARN)
+    assert not checks.is_warning(checks.OK) and not checks.is_warning(checks.UNKNOWN)
+
+
+def test_run_all_survives_a_broken_probe(monkeypatch, tmp_path):
+    def explota(_ctx):
+        raise RuntimeError("boom")
+
+    roto = checks.Check("test.roto", "cliente", "roto", explota)
+    monkeypatch.setattr(checks, "CHECKS", (roto,) + checks.CHECKS)
+    results = dict(checks.run_all(make_ctx(make_home(tmp_path))))
+    assert results[roto].status == checks.UNKNOWN
+    assert "boom" in results[roto].detail
+
+
+# --- HOME completo: todo ok ---------------------------------------------------
+
+
+def test_complete_home_is_all_ok(tmp_path):
+    ctx = make_ctx(make_home(tmp_path))
+    for check, result in checks.run_all(ctx):
+        assert result.status == checks.OK, f"{check.id}: {result.detail}"
+
+
+# --- HOME vacío: missing con pista, nunca sin explicación ----------------------
+
+
+def test_empty_home_reports_missing_with_fix_hint(tmp_path):
+    ctx = make_ctx(make_home(tmp_path, complete=False))
+    scaffold = [
+        (check, result)
+        for check, result in checks.run_all(ctx)
+        if check.group == "andamiaje" and check.id != "scaffold.memory"
+    ]
+    assert scaffold
+    for check, result in scaffold:
+        assert result.status == checks.MISSING, f"{check.id}: {result.detail}"
+        assert result.fix_hint == checks.INSTALL_HINT
+
+
+def test_memory_missing_in_both_clients(tmp_path):
+    ctx = make_ctx(make_home(tmp_path, complete=False))
+    result = result_for("scaffold.memory", ctx)
+    assert result.status == checks.MISSING
+    assert "Claude" in result.detail and "Codex" in result.detail
+
+
+# --- REQ-003: cliente ausente y permisos son unknown, nunca missing ------------
+
+
+def test_absent_client_is_unknown_not_missing(tmp_path):
+    ctx = make_ctx(make_home(tmp_path, claude=False, codex=False))
+    for check, result in checks.run_all(ctx):
+        if check.group == "andamiaje":
+            assert result.status == checks.UNKNOWN, f"{check.id}: {result.detail}"
+    assert result_for("client.presence", ctx).status == checks.UNKNOWN
+
+
+def test_only_codex_installed_leaves_claude_checks_unknown(tmp_path):
+    ctx = make_ctx(make_home(tmp_path, claude=False))
+    assert result_for("scaffold.skill", ctx).status == checks.UNKNOWN
+    assert result_for("scaffold.hook_files", ctx).status == checks.UNKNOWN
+    assert result_for("scaffold.mcp_codex", ctx).status == checks.OK
+    memory = result_for("scaffold.memory", ctx)
+    assert memory.status == checks.OK  # el único cliente presente lo tiene
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod no quita permisos de lectura en Windows")
+def test_unreadable_file_is_unknown_not_missing(tmp_path):
+    home = make_home(tmp_path)
+    settings = home / ".claude" / "settings.json"
+    settings.chmod(0o000)
+    try:
+        result = result_for("scaffold.hook_settings", make_ctx(home))
+    finally:
+        settings.chmod(0o644)
+    assert result.status == checks.UNKNOWN
+    assert result.fix_hint == ""
+
+
+def test_unreadable_file_is_unknown_via_read_helpers(tmp_path, monkeypatch):
+    """El mismo contrato que el test anterior, verificable en cualquier plataforma."""
+    path = tmp_path / "settings.json"
+    path.write_text("{}", encoding="utf-8")
+
+    def denegado(*_args, **_kwargs):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr("pathlib.Path.read_text", denegado)
+    text, reason = checks.read_text(path)
+    assert text is None and reason and "no se pudo leer" in reason
+    data, reason = checks.read_json(path)
+    assert data is None and reason
+
+
+def test_invalid_json_is_unknown(tmp_path):
+    home = make_home(tmp_path)
+    (home / ".claude" / "settings.json").write_text("{ roto", encoding="utf-8")
+    result = result_for("scaffold.hook_settings", make_ctx(home))
+    assert result.status == checks.UNKNOWN
+    assert "JSON" in result.detail
+
+
+# --- Hooks: distinguir los nuestros de los del usuario (REQ-005) --------------
+
+
+def test_foreign_hook_is_not_counted_as_ours(tmp_path):
+    home = make_home(tmp_path, complete=False)
+    settings = home / ".claude" / "settings.json"
+    settings.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "UserPromptSubmit": [
+                        {"hooks": [{"type": "command", "command": "python /otro/hook.py"}]}
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = result_for("scaffold.hook_settings", make_ctx(home))
+    assert result.status == checks.MISSING
+    assert "/otro/hook.py" not in result.detail
+
+
+def test_our_hook_alongside_a_foreign_one_is_ok(tmp_path):
+    home = make_home(tmp_path)
+    settings = home / ".claude" / "settings.json"
+    data = json.loads(settings.read_text(encoding="utf-8"))
+    data["hooks"].setdefault("UserPromptSubmit", []).append(
+        {"hooks": [{"type": "command", "command": "python /otro/hook.py"}]}
+    )
+    settings.write_text(json.dumps(data), encoding="utf-8")
+    result = result_for("scaffold.hook_settings", make_ctx(home))
+    assert result.status == checks.OK
+    assert "UserPromptSubmit" in result.detail
+
+
+def test_legacy_hook_format_is_warn_not_ok(tmp_path):
+    """Una instalación vieja deja entradas con `args` que Claude Code no ejecuta."""
+    home = make_home(tmp_path, complete=False)
+    settings = home / ".claude" / "settings.json"
+    settings.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "UserPromptSubmit": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "python",
+                                    "args": [
+                                        str(home / ".claude/hooks/suggest_delegate_prompt.py")
+                                    ],
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = result_for("scaffold.hook_settings", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "heredado" in result.detail
+    assert result.fix_hint == checks.INSTALL_HINT
+
+
+def test_missing_hook_script_is_warn_not_missing(tmp_path):
+    home = make_home(tmp_path)
+    script = install._HOOK_EVENTS[0][0]
+    (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / script).unlink()
+    result = result_for("scaffold.hook_files", make_ctx(home))
+    assert result.status == checks.WARN
+    assert script in result.detail
+
+
+def test_skill_directory_without_skill_md_is_warn(tmp_path):
+    home = make_home(tmp_path)
+    (home / ".claude" / "skills" / install.SKILL_NAME / "SKILL.md").unlink()
+    assert result_for("scaffold.skill", make_ctx(home)).status == checks.WARN
+
+
+# --- Entradas MCP -------------------------------------------------------------
+
+
+def test_codex_mcp_written_by_hand_is_warn(tmp_path):
+    home = make_home(tmp_path, complete=False)
+    (home / ".codex" / "config.toml").write_text(
+        f'[mcp_servers.{install.SERVER_NAME}]\nurl = "http://127.0.0.1:9393/mcp"\n',
+        encoding="utf-8",
+    )
+    result = result_for("scaffold.mcp_codex", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "a mano" in result.detail
+
+
+def test_claude_mcp_entry_reports_its_type(tmp_path):
+    ctx = make_ctx(make_home(tmp_path))
+    result = result_for("scaffold.mcp_claude", ctx)
+    assert result.status == checks.OK
+    assert "http" in result.detail
+
+
+def test_claude_mcp_missing_entry(tmp_path):
+    home = make_home(tmp_path)
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"otro": {}}}), encoding="utf-8")
+    result = result_for("scaffold.mcp_claude", make_ctx(home))
+    assert result.status == checks.MISSING
+    assert result.fix_hint == checks.INSTALL_HINT
+
+
+# --- Daemon y backend ---------------------------------------------------------
+
+
+def test_daemon_alive_is_ok_with_version_and_pid(tmp_path):
+    result = result_for("service.daemon", make_ctx(make_home(tmp_path)))
+    assert result.status == checks.OK
+    assert "0.13.1" in result.detail and "42" in result.detail
+
+
+def test_daemon_down_is_missing_with_hint(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
+    ctx = make_ctx(make_home(tmp_path), daemon_status=lambda host, port: None)
+    result = result_for("service.daemon", ctx)
+    assert result.status == checks.MISSING
+    assert result.fix_hint == checks.SERVE_HINT
+
+
+def test_port_taken_by_another_process_is_warn_not_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
+    ctx = make_ctx(make_home(tmp_path), daemon_status=lambda host, port: None)
+    result = result_for("service.daemon", ctx)
+    assert result.status == checks.WARN
+    assert "no es nuestro daemon" in result.detail
+
+
+def test_backend_down_is_warn(tmp_path):
+    ctx = make_ctx(make_home(tmp_path), backend_models=lambda: False)
+    result = result_for("service.backend", ctx)
+    assert result.status == checks.WARN
+    assert checks.is_warning(result.status)
+
+
+# --- Versiones: se envuelve el doctor, no se reescribe -------------------------
+
+
+def test_older_version_is_warn(tmp_path):
+    ctx = make_ctx(
+        make_home(tmp_path),
+        version_of=lambda component, cfg: ("v100" if component == "llama-swap" else "b1", None),
+    )
+    result = result_for("backend.llamaswap", ctx)
+    assert result.status == checks.WARN
+    assert "considera actualizar" in result.detail
+
+
+def test_undetected_version_is_unknown_not_missing(tmp_path):
+    ctx = make_ctx(make_home(tmp_path), version_of=lambda component, cfg: (None, None))
+    result = result_for("backend.llamaserver", ctx)
+    assert result.status == checks.UNKNOWN
+    assert "no detectado" in result.detail
+    assert not checks.is_warning(result.status)
+
+
+def test_undetected_version_with_reason_keeps_the_reason(tmp_path):
+    ctx = make_ctx(
+        make_home(tmp_path),
+        version_of=lambda component, cfg: (None, "config no encontrado: X"),
+    )
+    result = result_for("backend.llamaserver", ctx)
+    assert result.status == checks.UNKNOWN
+    assert "config no encontrado: X" in result.detail
+
+
+# --- Ningún probe escribe (REQ-013 a nivel de registro) -----------------------
+
+
+def test_no_probe_writes_anything(tmp_path):
+    home = make_home(tmp_path)
+    before = snapshot(home)
+    checks.run_all(make_ctx(home))
+    assert snapshot(home) == before

@@ -1,10 +1,14 @@
-"""doctor.py — diagnóstico de instalación/entorno del backend local (subcomando ``doctor``).
+"""doctor.py — diagnóstico de la instalación completa (subcomando ``doctor``).
 
 Complementa a la tool MCP ``local_status`` (que mira el *runtime*: backend vivo, modelos,
-VRAM/RAM) chequeando la *instalación*: qué versiones de ``llama-server`` (llama.cpp) y
-``llama-swap`` tienes instaladas, y si conviene actualizarlas respecto a las versiones que
-esta release ha probado (``RECOMMENDED_VERSIONS``). Con ``--online`` consulta además la última
-release publicada en GitHub.
+VRAM/RAM) chequeando la *instalación*: el andamiaje en los clientes (hooks, skill, memoria y
+entradas MCP), el daemon, y qué versiones de ``llama-server`` (llama.cpp) y ``llama-swap``
+tienes instaladas respecto a las que esta release ha probado (``RECOMMENDED_VERSIONS``). Con
+``--online`` consulta además la última release publicada en GitHub.
+
+Qué se comprueba y cómo no lo decide este módulo: vive una sola vez en ``checks.CHECKS``, y
+aquí solo se recorre y se imprime. Este módulo sigue aportando la parte de versiones
+(``detect_*``, ``_compare_line``, los issues de GitHub), que los probes envuelven.
 
 Todo es best-effort y de solo lectura: cualquier binario ausente, salida inesperada o fallo de
 red degrada a un aviso y nunca lanza. No requiere el extra ``[llamaswap]``: la ruta de
@@ -21,7 +25,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import autostart, config
+from . import autostart, checks, config
 
 # --- Fuente de verdad de versiones probadas ----------------------------------------------
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
@@ -261,46 +265,74 @@ def _backend_up() -> bool:
         return False
 
 
+# Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
+# depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
+_GROUP_HEADINGS: dict[str, str] = {
+    "cliente": "Clientes:",
+    "andamiaje": "Andamiaje (hooks, skill, memoria y entradas MCP):",
+    "servicio": "Servicios:",
+}
+
+
+def _versions_heading(online: bool) -> str:
+    if online:
+        return "Versiones (instalada vs probada; consultando GitHub por la última)…"
+    return "Versiones (instalada vs probada; usa --online para comparar con GitHub):"
+
+
+def _print_group(group: str, results: list[tuple[checks.Check, checks.Result]]) -> None:
+    for check, result in results:
+        if check.group != group:
+            continue
+        print(f"  {checks.STATUS_LABEL[result.status]} {check.title}: {result.detail}")
+        if result.fix_hint and checks.is_warning(result.status):
+            # Sin caracteres fuera de cp1252: la consola de Windows revienta con una flecha
+            # «→» y el diagnóstico moriría justo cuando más falta hace (algo está mal).
+            print(f"         arréglalo con: {result.fix_hint}")
+
+
 def run_doctor(args: argparse.Namespace) -> int:
-    """Imprime el diagnóstico de instalación y devuelve exit code (0 OK, 1 hay warnings)."""
+    """Imprime el diagnóstico completo y devuelve exit code (0 sin avisos, 1 con al menos uno)."""
     config_path: Path | None = None
     if getattr(args, "config", None):
         config_path = Path(args.config)
     elif os.environ.get("LLAMASWAP_CONFIG"):
         config_path = Path(os.environ["LLAMASWAP_CONFIG"])
 
-    warnings = False
-    print("local-delegate doctor — diagnóstico de instalación del backend local")
+    home_arg = getattr(args, "home", None)
+    home = Path(home_arg).expanduser() if home_arg else Path.home()
+    online = bool(getattr(args, "online", False))
+
+    # Los probes corren antes de imprimir: la cabecera necesita el resultado del backend y así
+    # el estado se consulta una sola vez, no una por cada sitio donde se muestra.
+    results = checks.run_all(
+        checks.Context(home=home, config_path=config_path, online=online),
+    )
+    by_id = {check.id: result for check, result in results}
+
+    print("local-delegate doctor — diagnóstico del andamiaje, los servicios y el backend local")
     print()
 
     # Entorno
     exe = os.environ.get("LLAMASWAP_EXE", "")
+    backend_ok = by_id["service.backend"].status == checks.OK
     print(f"LLAMASWAP_EXE:    {exe or '(no seteado; se busca llama-swap en el PATH)'}")
     print(f"LLAMASWAP_CONFIG: {config_path or '(no seteado)'}")
-    print(f"Backend BASE_URL: {config.BASE_URL} — {'arriba' if _backend_up() else 'CAÍDO'}")
+    print(f"Backend BASE_URL: {config.BASE_URL} — {'arriba' if backend_ok else 'CAÍDO'}")
+    print(f"HOME:             {home}")
+    print()
+    print("Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar")
     print()
 
-    # Versiones
-    if args.online:
-        print("Versiones (instalada vs probada; consultando GitHub por la última)…")
-    else:
-        print("Versiones (instalada vs probada; usa --online para comparar con GitHub):")
+    for group, heading in _GROUP_HEADINGS.items():
+        print(heading)
+        _print_group(group, results)
+        print()
 
-    ls_installed = detect_llamaswap_version()
-    line, warn = _compare_line("llama-swap", ls_installed, args.online)
-    print(f"  {line}")
-    warnings = warnings or warn
+    print(_versions_heading(online))
+    _print_group("backend", results)
 
-    lsrv_installed, reason = detect_llamaserver_version(config_path)
-    if lsrv_installed is None and reason:
-        recommended = RECOMMENDED_VERSIONS["llama-server"]
-        print(f"  [ -- ] llama-server: no detectado (probada: {recommended}) — {reason}")
-    else:
-        line, warn = _compare_line("llama-server", lsrv_installed, args.online)
-        print(f"  {line}")
-        warnings = warnings or warn
-
-    if args.online:
+    if online:
         print()
         print("Issues abiertos con señales de riesgo (revisión manual antes de canary):")
         for component in ("llama-swap", "llama-server"):
@@ -313,9 +345,10 @@ def run_doctor(args: argparse.Namespace) -> int:
             for issue in issues:
                 print(f"  [HOLD] {component} #{issue['number']}: {issue['title']} · {issue['url']}")
 
+    warnings = sum(1 for _check, result in results if checks.is_warning(result.status))
     print()
     if warnings:
-        print("Resultado: hay actualizaciones sugeridas (ver [WARN] arriba).")
+        print(f"Resultado: {warnings} aviso(s) — revisa [FALT] y [WARN] arriba.")
         return 1
-    print("Resultado: todo al día respecto a las versiones probadas.")
+    print("Resultado: todo a punto (andamiaje, servicios y versiones probadas).")
     return 0

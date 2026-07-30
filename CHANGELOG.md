@@ -7,6 +7,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`doctor` ve por fin el sistema entero, no solo el backend.** Nace un registro único de
+  comprobaciones (`checks.py`) con las **once** piezas del andamiaje —clientes, hooks copiados,
+  hooks registrados, skill, memoria, entradas MCP de Claude y Codex, daemon, `/models` y las dos
+  versiones del backend—, cada una con un `probe` **sin efectos**. Hasta ahora cada subcomando
+  sabía un pedazo: `doctor` solo miraba el backend, `install` escribía sin verificar y nadie
+  miraba el daemon. Cuatro estados (`[ OK ]`, `[WARN]`, `[FALT]`, `[ -- ]`) y, cuando algo falta,
+  la línea de abajo dice qué comando lo arregla. Nuevo flag `--home DIR` para diagnosticar contra
+  un HOME simulado.
+- **Lo que no se pudo comprobar sale `[ -- ]`, nunca «falta».** Un cliente que no está instalado o
+  un archivo sin permisos no son una ausencia: reportarlos como falta llevaría a que un arreglo
+  automático sobrescribiera configuración ajena. `[ -- ]` no cuenta para el exit code, que
+  conserva su semántica de siempre (0 sin avisos, 1 con al menos uno).
 - **El dashboard mide ahora el coste, no solo el ahorro.** Nuevo KPI **Coste local** con los tokens
   de entrada que consumió de verdad el backend sumando **todas** las llamadas, y el KPI de
   delegaciones muestra al lado las **llamadas reales al backend**. Hasta ahora N llamadas se

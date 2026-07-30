@@ -31,3 +31,6 @@ secrets.*
 # Local Codex configuration
 .codex/
 AGENTS.md
+
+# IDEs de JetBrains
+.idea/
