@@ -1854,31 +1854,52 @@ def local_status() -> str:
     return "\n".join(lines)
 
 
-_CLI_COMMANDS = {
-    "benchmark",
-    "check-llamaswap",
-    "init-llamaswap",
-    "doctor",
-    "serve",
-    "install",
-    "uninstall",
-}  # subcomandos explícitos, ver cli.py
+def _aviso_de_terminal_interactiva() -> None:
+    """Dice por qué no pasa nada cuando una persona escribe el comando a secas.
+
+    Sin argumentos esto es un servidor MCP stdio, que se queda esperando mensajes JSON-RPC:
+    para quien lo escribió en su terminal es idéntico a un cuelgue. El aviso va por **stderr**
+    a propósito —stdout es el canal del protocolo— y solo cuando stdin es una TTY, que es lo
+    único que distingue a una persona de un host MCP. No cambia nada: el servidor arranca igual.
+
+    Detalle de Windows, comprobado en vivo y no obvio: redirigiendo desde ``/dev/null`` en Git
+    Bash **sí** sale el aviso, porque MSYS lo traduce a ``NUL``, que es un dispositivo de
+    carácter y hace que ``isatty()`` devuelva ``True``. No es un fallo del criterio: un host MCP
+    no redirige desde ``NUL``, usa una **tubería**, y con una tubería no sale nada (verificado).
+    """
+    try:
+        interactiva = sys.stdin is not None and sys.stdin.isatty()
+    except (AttributeError, ValueError, OSError):
+        return  # bajo un host MCP stdin puede estar cerrado o no ser un fichero de verdad
+    if not interactiva:
+        return
+    print(
+        "local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\n"
+        "               Si buscabas los comandos: local-delegate --help",
+        file=sys.stderr,
+    )
 
 
 def main() -> None:
-    """Punto de entrada del MCP stdio (usado por [project.scripts] local-delegate).
+    """Punto de entrada del binario (usado por [project.scripts] local-delegate).
 
-    Sin argumentos: arranca el servidor MCP stdio (comportamiento de siempre, usado por
-    cualquier host MCP). Con un subcomando conocido (p. ej. ``local-delegate
-    check-llamaswap ...``) delega a los subcomandos de ``cli.py`` y termina — nunca llega a
-    arrancar el servidor MCP stdio en ese caso. Solo los comandos específicos de configuración
-    de llama-swap requieren el extra ``[llamaswap]``.
+    Una sola frontera: **con argumentos es un CLI, sin argumentos es un servidor MCP stdio.**
+
+    Aquí hubo una lista literal de subcomandos que decidía el despacho, y todo lo que no
+    estuviera en ella —``--help`` incluido— caía al servidor MCP y se colgaba esperando stdin.
+    Quien sabe qué subcomandos existen es el parser de ``cli.py``, así que se le entregan todos
+    los argumentos y él responde: ayuda, subcomando válido, o «invalid choice» con código 2.
+    Importar ``cli`` es seguro sin el extra ``[llamaswap]``: ``llamaswap_config`` resuelve su
+    ``import yaml`` en un ``try/except``.
+
+    Sin argumentos no cambia nada, y es deliberado: así es como lo lanzan los hosts MCP.
     """
-    if len(sys.argv) > 1 and sys.argv[1] in _CLI_COMMANDS:
+    if len(sys.argv) > 1:
         from . import cli
 
         sys.exit(cli.run(sys.argv[1:]))
 
+    _aviso_de_terminal_interactiva()
     # Auto-arranque del backend solo si el usuario lo pidió explícitamente (opt-in).
     if config.AUTOSTART:
         autostart.ensure_backend(wait=0)

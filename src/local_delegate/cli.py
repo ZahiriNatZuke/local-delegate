@@ -2,9 +2,11 @@
 
 Ver docs/recipes/llama-swap-groups.md y docs/wiki/Daemon.md. El binario ``local-delegate`` SIN
 argumentos sigue arrancando el servidor MCP stdio exactamente igual que siempre (ver
-server.main()); este módulo solo se importa cuando el usuario invoca explícitamente un
-subcomando. Solo los comandos de configuración de llama-swap requieren el extra ``[llamaswap]``
-(``pip install "local-delegate-mcp[llamaswap]"``); ``serve`` usa dependencias base.
+server.main()); este módulo se importa en cuanto hay **algún** argumento, y su parser es el
+único sitio donde está escrito qué subcomandos existen: ``--help`` y los nombres inválidos los
+responde él, no una lista aparte. Solo los comandos de configuración de llama-swap requieren el
+extra ``[llamaswap]`` (``pip install "local-delegate-mcp[llamaswap]"``); ``serve`` usa
+dependencias base.
 
 El chequeo de RAM de sistema (``--ram-gb``) es OPCIONAL en ambos comandos: si no se pasa, el
 comportamiento es idéntico al de antes de F7.9 (solo VRAM) — compatibilidad hacia atrás con
@@ -22,16 +24,6 @@ from pathlib import Path
 
 from . import benchmark, doctor
 from . import llamaswap_config as lc
-
-KNOWN_COMMANDS = {
-    "benchmark",
-    "check-llamaswap",
-    "init-llamaswap",
-    "doctor",
-    "serve",
-    "install",
-    "uninstall",
-}
 
 _ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp")
 _ALL_TARGETS = ("claude", "codex")
@@ -392,7 +384,11 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="local-delegate",
-        description="CLIs opcionales de local-delegate para groups de llama-swap (extra [llamaswap]).",
+        description=(
+            "Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario arranca "
+            "el servidor MCP stdio, que es como lo lanzan Claude Code y Codex. "
+            "`check-llamaswap` e `init-llamaswap` piden el extra [llamaswap]."
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
