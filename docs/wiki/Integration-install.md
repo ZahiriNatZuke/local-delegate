@@ -58,7 +58,7 @@ En la Mac, con el MCP local y la inferencia en la PC:
 uvx local-delegate-mcp install \
   --base-url "https://PC_MAGICDNS:9292/v1" \
   --api-key-env \
-  --pin-version 0.13.0
+  --pin-version 0.14.0
 ```
 
 Los `path` se siguen leyendo en la Mac (que es lo que conserva el ahorro de contexto) y el
@@ -106,9 +106,9 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 | Estado | Significa | Cuenta para el exit code |
 |---|---|---|
 | `[ OK ]` | está y como debe estar | no |
-| `[WARN]` | está, pero no como debería (versión vieja, entrada puesta a mano, hooks en el formato heredado) | sí |
+| `[WARN]` | está, pero no como debería (versión vieja, entrada puesta a mano, hooks de una instalación anterior) | sí |
 | `[FALT]` | falta de verdad, y la línea de abajo dice qué comando lo arregla | sí |
-| `[ -- ]` | **no se pudo comprobar**: el cliente no está instalado, faltan permisos o no hay datos | no |
+| `[ -- ]` | **no se pudo comprobar**: el cliente no está instalado, faltan permisos, o el backend responde `401` (está arriba y falta la credencial en este entorno) | no |
 
 `[ -- ]` nunca es `[FALT]` a propósito: si un archivo ilegible o un cliente ausente se reportaran
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El

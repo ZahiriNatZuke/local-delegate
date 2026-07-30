@@ -63,6 +63,34 @@ Los ids de modelo configurados no existen en tu backend. Ajusta
 `LOCAL_DELEGATE_MODEL_MECHANICAL/_LONG/_CODE/_FAST` a los ids reales (p. ej. con Ollama,
 `llama3.1`, `qwen2.5-coder:14b`…). Ver [Configuration](Configuration.md).
 
+## `UserPromptSubmit operation blocked by hook` — Claude Code no te deja escribir
+
+Síntoma exacto, en cada prompt:
+
+```
+UserPromptSubmit operation blocked by hook:
+python.exe: can't open file 'C:\\UsersTuUsuario.claudehookslocal-delegatesuggest_delegate_prompt.py'
+```
+
+Fíjate en la ruta: **perdió las barras**. Las versiones **anteriores a la 0.14.0** registraban el
+hook como `python C:\Users\...\hook.py` sin comillas, y el shell al que Claude Code entrega ese
+comando interpreta cada `\` como escape y lo borra. Solo afecta a Windows, y con
+`UserPromptSubmit` no degrada: bloquea.
+
+Cómo salir:
+
+1. Quita las entradas de local-delegate de `~/.claude/settings.json` (las que apuntan a
+   `hooks/local-delegate/`) para poder volver a escribir.
+2. Actualiza a **0.14.0 o posterior** y reinstala: `uvx local-delegate-mcp install`. Desde esa
+   versión la ruta va citada y con barras `/`, que funciona en sh, cmd y PowerShell.
+3. Comprueba con `local-delegate doctor` — «hooks registrados» debe salir `[ OK ]`.
+
+## `doctor` dice que el backend está CAÍDO pero llama-swap está corriendo
+
+Si además responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
+entorno**. Desde la 0.14.0 el `doctor` lo distingue y lo reporta como `[ -- ] … responde 401`, que
+no cuenta como aviso. Exporta `LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
+
 ## `uvx` no encuentra el comando / Claude no arranca el MCP
 
 - Usa la ruta absoluta a `uvx` en `command` (Claude Desktop puede no heredar tu PATH),
