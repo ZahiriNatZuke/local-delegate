@@ -3,9 +3,9 @@
   "slug": "sdist-sin-scripts",
   "title": "Sacar scripts/ del sdist y retirar el instalador de hooks de macOS",
   "mode": "standard",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-07-30T19:55:40.911Z",
-  "updatedAt": "2026-07-30T20:05:22.989Z",
+  "updatedAt": "2026-07-30T20:18:06.901Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T20:17:56.876Z",
+      "evidence": "ruff check y format limpios, 386 tests pasan (1 saltado ajeno), extract_dashboard_js + node --check OK, 12 checks del PR 69 en verde incluidos install-smoke, Socket y GitGuardian",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T20:17:56.941Z",
+      "evidence": "review.md: los cinco requisitos implementados y verificados. REQ-003 comparado contra un worktree de main (30=30 identicas) y REQ-004 probado en los dos sentidos (sdist sin scripts -> saltados; scripts sin el fichero -> FileNotFoundError)",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -96,6 +96,36 @@
       "to": "implementing",
       "at": "2026-07-30T20:05:22.989Z",
       "reason": "Gates de spec y plan aprobados, rama fix/sdist-sin-scripts creada"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T20:15:29.181Z",
+      "reason": "Implementado, verificado y PR 69 abierto"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T20:17:56.876Z",
+      "evidence": "ruff check y format limpios, 386 tests pasan (1 saltado ajeno), extract_dashboard_js + node --check OK, 12 checks del PR 69 en verde incluidos install-smoke, Socket y GitGuardian",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T20:17:56.941Z",
+      "evidence": "review.md: los cinco requisitos implementados y verificados. REQ-003 comparado contra un worktree de main (30=30 identicas) y REQ-004 probado en los dos sentidos (sdist sin scripts -> saltados; scripts sin el fichero -> FileNotFoundError)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T20:18:06.901Z",
+      "reason": "Gates de calidad y conformidad aprobados"
     }
   ]
 }

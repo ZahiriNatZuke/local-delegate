@@ -67,25 +67,30 @@ source "$HOME/.zshrc"
 
 ## Actualizar la Mac tras una release
 
-Como la entrada lleva la versión fijada, cada release nueva pide cambiar el pin en dos archivos.
-En vez de hacerlo a mano:
+Como la entrada lleva la versión fijada, cada release nueva pide cambiar el pin. Lo hace el propio
+CLI:
 
 ```bash
-./scripts/update_to_latest.sh --dry-run   # enseña de qué versión a cuál
-./scripts/update_to_latest.sh             # aplica y precarga la caché de uvx
+local-delegate update --dry-run   # enseña qué cambiaría, sin escribir nada
+local-delegate update             # aplica y deja el daemon arriba
 ```
 
-Consulta la última versión en PyPI, cambia **solo** el número de versión en `~/.claude.json` y
-`~/.codex/config.toml` (con copia `.bak`), y comprueba que `uvx` la ejecuta. No toca la API key
-ni ninguna otra entrada MCP, y es idempotente: si ya estabas al día no hace nada. Si no tienes
-pin, te lo dice y no toca nada — `uvx` ya resuelve la última en cada arranque. Después, reinicia
-Claude Code y Codex.
+Revisa el estado real de la máquina con las mismas comprobaciones que `doctor`, actualiza el pin
+donde exista, completa la configuración que falte y termina dejando el daemon arriba: lo reinicia si
+corría, lo levanta si no. Es idempotente. El backend de inferencia **no se toca** salvo que lo pidas
+con `--restart-backend`, porque reiniciar llama-swap descargaría los modelos de la VRAM.
 
-Es el único paso que hace falta en la Mac: el paquete se descarga solo al arrancar el cliente.
+Después, reinicia Claude Code y Codex; el paquete se descarga solo al arrancar el cliente.
+
+**Por qué esto vive en el CLI y no en `scripts/`.** Antes había un `scripts/update_to_latest.sh` que
+nunca llegó a hacer este trabajo: el paquete publicado no empaqueta `scripts/`, así que el script no
+estaba en la máquina que tenía que actualizarse. La regla que salió de ahí vale para todo el
+repositorio — **lo que ejecuta el usuario va al CLI; lo que ejecuta el repositorio se queda en
+`scripts/`**, que además ya ni siquiera se publica (ver `Repo-hardening.md`).
 
 ## Claude Code en la Mac
 
-La entrada se fija a la versión actual (0.14.0) durante el rollout. **Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían `mcp` sin techo, así que hoy mueren en el import. La key no se pega en el JSON: Claude expande la
+La entrada se fija a la versión actual durante el rollout. **Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían `mcp` sin techo, así que hoy mueren en el import. La key no se pega en el JSON: Claude expande la
 variable que cargaste desde Keychain al iniciar la sesión.
 
 ```bash
