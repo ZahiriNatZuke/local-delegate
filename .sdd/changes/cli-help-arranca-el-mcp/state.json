@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "slug": "cli-help-arranca-el-mcp",
+  "title": "local-delegate --help arranca el servidor MCP en vez de imprimir la ayuda",
+  "mode": "lite",
+  "status": "understanding",
+  "createdAt": "2026-07-30T15:47:17.803Z",
+  "updatedAt": "2026-07-30T15:50:45.702Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T15:49:58.516Z",
+      "evidence": "7 requisitos observables y 4 escenarios, respaldados por reproduccion en vivo (exit 0 y cero bytes de ayuda con --help) y por tres evidencias de codigo: server.py:1877 filtra por lista literal, cli.py:26 KNOWN_COMMANDS es codigo muerto (grep en src/ tests/ docs/ scripts/ devuelve solo su definicion) e install.py:262-284 confirma que la entrada MCP stdio no pasa argumentos al programa.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T15:50:45.702Z",
+      "evidence": "Plan de 5 tareas: el arreglo es quitar una condicion (server.py:1877 pasa de filtrar por lista literal a preguntar si hay argumentos), mas el borrado de las dos copias de la lista de subcomandos, mas 5 tests y CHANGELOG. Riesgo unico identificado -romper el arranque MCP sin argumentos- cubierto con test dedicado y rollback de 3 lineas. Verificado antes de planificar que el import incondicional de cli es seguro sin el extra [llamaswap] (llamaswap_config.py:21-23 deja yaml=None en un try/except).",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T15:47:17.803Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T15:49:58.516Z",
+      "evidence": "7 requisitos observables y 4 escenarios, respaldados por reproduccion en vivo (exit 0 y cero bytes de ayuda con --help) y por tres evidencias de codigo: server.py:1877 filtra por lista literal, cli.py:26 KNOWN_COMMANDS es codigo muerto (grep en src/ tests/ docs/ scripts/ devuelve solo su definicion) e install.py:262-284 confirma que la entrada MCP stdio no pasa argumentos al programa.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T15:50:45.702Z",
+      "evidence": "Plan de 5 tareas: el arreglo es quitar una condicion (server.py:1877 pasa de filtrar por lista literal a preguntar si hay argumentos), mas el borrado de las dos copias de la lista de subcomandos, mas 5 tests y CHANGELOG. Riesgo unico identificado -romper el arranque MCP sin argumentos- cubierto con test dedicado y rollback de 3 lineas. Verificado antes de planificar que el import incondicional de cli es seguro sin el extra [llamaswap] (llamaswap_config.py:21-23 deja yaml=None en un try/except).",
+      "actor": "user"
+    }
+  ]
+}

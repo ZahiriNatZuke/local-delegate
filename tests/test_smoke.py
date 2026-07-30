@@ -78,3 +78,119 @@ def test_main_dispatches_known_cli_subcommand(monkeypatch):
     else:  # pragma: no cover - main() debe salir con sys.exit
         raise AssertionError("se esperaba SystemExit")
     assert calls == [["check-llamaswap", "--config", "x"]]
+
+
+# --- El binario responde a --help en vez de arrancar el servidor MCP -------------------
+# Todo esto existe porque `local-delegate --help` no imprimía nada y se colgaba: `--help` no
+# estaba en la lista literal de subcomandos que decidía el despacho, así que caía al servidor
+# MCP stdio a esperar por stdin. Los cuatro primeros tests clavan la frontera nueva; el quinto,
+# que sin argumentos NO se toca (es como lanzan el binario los hosts MCP).
+def _run_main(monkeypatch, argv: list[str]) -> int:
+    """Ejecuta main() con ese argv y devuelve el código de salida."""
+    import sys
+
+    monkeypatch.setattr(sys, "argv", ["local-delegate", *argv])
+    try:
+        server.main()
+    except SystemExit as exc:
+        return int(exc.code or 0)
+    return 0
+
+
+def test_help_imprime_la_ayuda_y_no_arranca_el_servidor(monkeypatch, capsys):
+    from local_delegate import server as srv
+
+    def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
+        raise AssertionError("--help no debe arrancar el servidor MCP")
+
+    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    assert _run_main(monkeypatch, ["--help"]) == 0
+    assert "usage" in capsys.readouterr().out.lower()
+
+
+def test_subcomando_desconocido_falla_en_vez_de_colgarse(monkeypatch, capsys):
+    from local_delegate import server as srv
+
+    def _no_arrancar():  # pragma: no cover
+        raise AssertionError("un nombre inválido no debe arrancar el servidor MCP")
+
+    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    assert _run_main(monkeypatch, ["doctro"]) == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_sin_argumentos_sigue_arrancando_el_servidor_mcp(monkeypatch):
+    """El contrato con los hosts MCP: romperlo deja a Claude Code y Codex sin servidor."""
+    import sys
+
+    from local_delegate import cli
+    from local_delegate import server as srv
+
+    arrancado = []
+    monkeypatch.setattr(srv.mcp, "run", lambda: arrancado.append(True))
+    monkeypatch.setattr(srv.config, "AUTOSTART", False)
+    monkeypatch.setattr(srv.config, "WEB_ENABLED", False)
+    monkeypatch.setattr(cli, "run", lambda argv: 0)  # no debe llamarse
+    monkeypatch.setattr(sys, "argv", ["local-delegate"])
+    server.main()
+    assert arrancado == [True]
+
+
+def test_el_aviso_de_terminal_solo_sale_con_tty_y_por_stderr(monkeypatch, capsys):
+    import sys
+
+    class _Stdin:
+        def __init__(self, tty: bool) -> None:
+            self._tty = tty
+
+        def isatty(self) -> bool:
+            return self._tty
+
+    monkeypatch.setattr(sys, "stdin", _Stdin(False))
+    server._aviso_de_terminal_interactiva()
+    assert capsys.readouterr().err == ""
+
+    monkeypatch.setattr(sys, "stdin", _Stdin(True))
+    server._aviso_de_terminal_interactiva()
+    salida = capsys.readouterr()
+    assert "local-delegate --help" in salida.err
+    assert salida.out == ""  # stdout es el canal del protocolo MCP: jamás se escribe ahí
+
+
+def test_el_aviso_no_revienta_con_un_stdin_raro(monkeypatch, capsys):
+    """Bajo un host MCP stdin puede estar cerrado o no ser un fichero de verdad."""
+    import sys
+
+    class _Cerrado:
+        def isatty(self) -> bool:
+            raise ValueError("I/O operation on closed file")
+
+    monkeypatch.setattr(sys, "stdin", None)
+    server._aviso_de_terminal_interactiva()
+    monkeypatch.setattr(sys, "stdin", _Cerrado())
+    server._aviso_de_terminal_interactiva()
+    assert capsys.readouterr().err == ""
+
+
+def test_los_subcomandos_estan_definidos_una_sola_vez(monkeypatch):
+    """REQ-006/007: el parser es la única fuente; añadir uno no exige tocar nada más.
+
+    Si vuelve a aparecer una lista literal de nombres, este test la detecta: cualquier
+    subcomando registrado en el parser tiene que ser despachable sin que nadie lo dé de alta
+    en otro sitio.
+    """
+    from local_delegate import cli
+    from local_delegate import server as srv
+
+    assert not hasattr(srv, "_CLI_COMMANDS")
+    assert not hasattr(cli, "KNOWN_COMMANDS")
+
+    sub = cli.build_parser()._subparsers._group_actions[0]  # type: ignore[union-attr]
+    registrados = set(sub.choices)
+    assert {"doctor", "install", "serve"} <= registrados
+
+    recibidos: list[list[str]] = []
+    monkeypatch.setattr(cli, "run", lambda argv: recibidos.append(argv) or 0)
+    for nombre in sorted(registrados):
+        assert _run_main(monkeypatch, [nombre]) == 0
+    assert recibidos == [[nombre] for nombre in sorted(registrados)]

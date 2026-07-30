@@ -6,6 +6,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`local-delegate --help` arrancaba el servidor MCP y se colgaba.** El despacho del binario
+  comparaba el primer argumento contra una lista literal de siete subcomandos, y todo lo que no
+  estuviera en ella caía al servidor MCP stdio a esperar por stdin: `--help` no imprimía nada,
+  `-h` tampoco, y un subcomando mal escrito (`doctro`) se quedaba clavado en vez de decir «invalid
+  choice». Ahora la frontera es una sola: **con argumentos es un CLI, sin argumentos es un servidor
+  MCP stdio**, y de los argumentos responde el parser, que es quien sabe qué subcomandos existen.
+  La invocación sin argumentos —la que usan Claude Code y Codex— no cambia.
+- **La lista de subcomandos estaba escrita tres veces**: la que decidía el despacho, una copia
+  muerta que no leía nadie, y las llamadas reales al parser. Queda solo la última, así que añadir
+  un subcomando ya no exige darlo de alta en ningún otro sitio.
+
+### Changed
+- Escribir `local-delegate` a secas en una terminal avisa **por stderr** de que está arrancando el
+  servidor MCP stdio y señala `local-delegate --help`. Solo cuando stdin es una TTY; con una
+  tubería —o sea, bajo un host MCP— no se imprime nada. El servidor arranca igual en ambos casos.
+- La descripción de `--help` ya no dice que el CLI sea solo para los groups de llama-swap.
+
 ## [0.15.0] - 2026-07-30
 
 ### Added
