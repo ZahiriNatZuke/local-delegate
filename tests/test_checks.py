@@ -411,3 +411,31 @@ def test_no_probe_writes_anything(tmp_path):
     before = snapshot(home)
     checks.run_all(make_ctx(home))
     assert snapshot(home) == before
+
+
+# --- El módulo no puede mentir sobre su propio tamaño ------------------------
+
+_NUMERO = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce"}
+
+
+def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
+    """El registro dice su tamaño en cuatro sitios, y llegó a decir «once» con doce dentro.
+
+    `cli.path` entró en el PR #61 y nadie actualizó el texto, así que durante dos sesiones el
+    módulo afirmaba un número falso sobre sí mismo — y se llegó a planificar sobre ese dato.
+    Un comentario no es evidencia, salvo que algo lo obligue a serlo: esto lo obliga.
+    """
+    from pathlib import Path
+
+    cuantos = _NUMERO[len(checks.CHECKS)]
+    fuente = Path(checks.__file__).read_text(encoding="utf-8")
+
+    afirmaciones = (
+        f"los {cuantos} elementos del andamiaje",
+        f"{cuantos.capitalize()} checks son una tupla",
+        f"{cuantos.capitalize()} elementos, en orden de grupo",
+        f"Corre los {cuantos} probes",
+        f"ver los otros {_NUMERO[len(checks.CHECKS) - 1]}",
+    )
+    faltan = [texto for texto in afirmaciones if texto not in fuente]
+    assert not faltan, f"el docstring de checks.py quedó desfasado: {faltan}"
