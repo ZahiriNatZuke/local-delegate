@@ -83,6 +83,11 @@ exclude = [
     "/.sdd",
     "/.venv",
     "/dist",
+    # `scripts/` es el taller del repositorio (release, bump de versión, canarios, handshake de
+    # instalación): nada de ahí lo ejecuta quien instala el paquete, y publicarlo solo amplía la
+    # superficie que un auditor de cadena de suministro tiene que mirar. Quien desarrolla clona el
+    # repositorio; el sdist distribuye el paquete, no el taller.
+    "/scripts",
 ]
 
 [dependency-groups]

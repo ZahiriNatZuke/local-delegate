@@ -85,6 +85,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   señalaba como el camino bueno. Ahora el resalte cae solo sobre «la nube» y va en el gris de la
   vía cara, la misma decisión que ya estaba tomada en la tarjeta social. Un test ata las dos cosas.
 
+### Security
+- **El paquete publicado deja de traer un instalador que descargaba código de la red y lo
+  ejecutaba.** `scripts/install_claude_code_hooks_macos.sh` bajaba cuatro `.py` de
+  `raw.githubusercontent.com` con `curl`, los registraba en `~/.claude/settings.json` y los
+  ejecutaba acto seguido, sin verificar hash ni firma. No estaba roto: estaba **congelado en el tag
+  `v0.10.0`** y seguía sirviendo hooks de seis versiones atrás. Nadie lo referenciaba, y su función
+  ya la cumple `local-delegate install` desde `resources/hooks/`, sin tocar la red. Se borra sin
+  sustituto.
+- **`scripts/` sale del sdist.** El wheel nunca lo llevó, pero el sdist publicaba el repositorio
+  entero —124 entradas— y es lo que analizan los auditores de cadena de suministro. El taller
+  (release, bump de versión, canarios, handshake de instalación) no lo ejecuta quien instala el
+  paquete. Los dos tests que cargan un script del taller se saltan cuando `scripts/` no está, y la
+  condición mira el **directorio** y no el fichero: si el directorio está pero el script no, eso es
+  un borrado accidental y la suite tiene que fallar, no callarse.
+
 ## [0.16.0] - 2026-07-30
 
 ### Fixed

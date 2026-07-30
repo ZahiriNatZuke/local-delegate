@@ -25,12 +25,22 @@ import pytest
 
 ROOT = Path(__file__).parents[1]
 VENDOR_REAL = ROOT / "src" / "local_delegate" / "resources" / "vendor"
+SCRIPTS = ROOT / "scripts"
+
+# `scripts/` no viaja en el sdist (ver `[tool.hatch.build.targets.sdist]`), así que estas pruebas
+# no pueden correr sobre un tarball desempaquetado. La condición mira el **directorio**, no el
+# fichero: si `scripts/` está pero `check_vendor.py` no, eso es un borrado accidental y el test
+# tiene que fallar, no saltarse. Un skip que tape eso deja el vigilante del vendorizado sin
+# cobertura y el CI en verde.
+if not SCRIPTS.is_dir():
+    pytest.skip(
+        "scripts/ no está en el árbol (sdist): estas pruebas necesitan el repositorio",
+        allow_module_level=True,
+    )
 
 
 def _load_script():
-    spec = importlib.util.spec_from_file_location(
-        "check_vendor", ROOT / "scripts" / "check_vendor.py"
-    )
+    spec = importlib.util.spec_from_file_location("check_vendor", SCRIPTS / "check_vendor.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

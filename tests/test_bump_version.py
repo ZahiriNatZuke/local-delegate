@@ -14,12 +14,22 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parents[1]
+SCRIPTS = ROOT / "scripts"
+
+# Mismo criterio que en `test_vendor.py`: `scripts/` no viaja en el sdist, y la condición mira el
+# **directorio** y no el fichero para que un borrado accidental de `bump_version.py` siga rompiendo
+# la suite. A este script no lo cubre ningún workflow aparte —a diferencia de `check_vendor.py`,
+# que `vendor-audit.yml` ejecuta directo—, así que su ausencia no se notaría hasta el próximo
+# release.
+if not SCRIPTS.is_dir():
+    pytest.skip(
+        "scripts/ no está en el árbol (sdist): estas pruebas necesitan el repositorio",
+        allow_module_level=True,
+    )
 
 
 def _load_script():
-    spec = importlib.util.spec_from_file_location(
-        "bump_version", ROOT / "scripts" / "bump_version.py"
-    )
+    spec = importlib.util.spec_from_file_location("bump_version", SCRIPTS / "bump_version.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
