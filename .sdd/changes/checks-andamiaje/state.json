@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "slug": "checks-andamiaje",
+  "title": "Registro unico de comprobaciones del andamiaje y doctor que ve el sistema entero",
+  "mode": "standard",
+  "status": "plan-review",
+  "createdAt": "2026-07-30T13:49:06.804Z",
+  "updatedAt": "2026-07-30T13:52:01.890Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:51:03.366Z",
+      "evidence": "spec.md con 14 requisitos y 5 escenarios, respaldada por research verificado: doctor.py:264-330 solo mira el backend (LLAMASWAP_EXE, /models, versiones vs RECOMMENDED_VERSIONS b9925/v238, issues); install.py:343-428 escribe hooks/skill/memoria/MCP sin verificar; daemon.query_daemon (daemon.py:97-110) existe y nadie la usa para diagnosticar. Limite duro: doctor no escribe nada, verificado byte a byte contra HOME simulado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:52:01.890Z",
+      "evidence": "Revision adversarial con 5 objeciones registradas en plan.md, ninguna bloqueante: (1) riesgo de sobre-ingenieria -> lista estatica CHECKS, prohibidos registro dinamico/entry points/herencia; (2) romper salidas del doctor -> REQ-010 conserva _compare_line e issues y test_doctor.py existente hace de red; (3) un missing por permisos llevaria a que B/C sobrescriban -> REQ-003 y test dedicado, permisos y cliente ausente son unknown; (4) semantica del exit code fijada en REQ-008/009; (5) doctor --home podria escribir -> tarea 5 compara el arbol byte a byte.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T13:49:06.804Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T13:49:07.068Z",
+      "reason": "Mapeo de lo que comprueba doctor hoy y de lo que instala install"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T13:51:03.114Z",
+      "reason": "Research cerrado: los 11 elementos del andamiaje y quien los sabe hoy"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T13:51:03.366Z",
+      "evidence": "spec.md con 14 requisitos y 5 escenarios, respaldada por research verificado: doctor.py:264-330 solo mira el backend (LLAMASWAP_EXE, /models, versiones vs RECOMMENDED_VERSIONS b9925/v238, issues); install.py:343-428 escribe hooks/skill/memoria/MCP sin verificar; daemon.query_daemon (daemon.py:97-110) existe y nadie la usa para diagnosticar. Limite duro: doctor no escribe nada, verificado byte a byte contra HOME simulado.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T13:51:03.593Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T13:52:01.650Z",
+      "reason": "plan listo para revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T13:52:01.890Z",
+      "evidence": "Revision adversarial con 5 objeciones registradas en plan.md, ninguna bloqueante: (1) riesgo de sobre-ingenieria -> lista estatica CHECKS, prohibidos registro dinamico/entry points/herencia; (2) romper salidas del doctor -> REQ-010 conserva _compare_line e issues y test_doctor.py existente hace de red; (3) un missing por permisos llevaria a que B/C sobrescriban -> REQ-003 y test dedicado, permisos y cliente ausente son unknown; (4) semantica del exit code fijada en REQ-008/009; (5) doctor --home podria escribir -> tarea 5 compara el arbol byte a byte.",
+      "actor": "user"
+    }
+  ]
+}
