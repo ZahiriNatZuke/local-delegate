@@ -7,6 +7,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`update` dice de dónde sacó la versión, y detecta el desfase de justo después de publicar.**
+  La línea ahora nombra la fuente (el índice simple de PyPI, que se sirve con caché) y, cuando la
+  versión **instalada** es más nueva que la que anuncia PyPI —la firma exacta de una release que
+  aún no se ha propagado—, lo dice y recuerda `--version X.Y.Z` con la versión ya sustituida. El
+  aviso es informativo: no cambia el plan de acciones ni el exit code. De paso deja de afirmar
+  «última versión publicada» cuando la versión la escribió el usuario en `--version`.
 - **`doctor` avisa cuando la instalación se quedó atrás de PyPI.** Comprobación nueva del
   registro (grupo *Entorno*): compara la versión instalada con la última publicada y la marca
   `[WARN]` si es más vieja, con el comando que la actualiza —`uv tool upgrade` o, si la
