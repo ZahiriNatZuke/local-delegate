@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-30
+
 ### Fixed
 - **`local-delegate --help` arrancaba el servidor MCP y se colgaba.** El despacho del binario
   comparaba el primer argumento contra una lista literal de siete subcomandos, y todo lo que no
@@ -720,7 +722,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.13.1...v0.14.0
 [0.13.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.13.0...v0.13.1
