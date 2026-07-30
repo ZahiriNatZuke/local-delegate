@@ -49,9 +49,15 @@ O deja que el paquete lo configure todo por ti —entrada MCP, hooks, skill y la
 delegación en tu `CLAUDE.md`/`AGENTS.md` global— con un solo comando:
 
 ```bash
-uvx local-delegate-mcp install --dry-run   # muestra exactamente qué tocaría
-uvx local-delegate-mcp install             # aplica
+uv tool install local-delegate-mcp          # deja `local-delegate` en el PATH
+local-delegate install --dry-run            # muestra exactamente qué tocaría
+local-delegate install                      # aplica
 ```
+
+También sirve `uvx local-delegate-mcp install` para probarlo sin instalar nada, pero ten en cuenta
+que **`uvx` no deja el comando disponible**: monta un entorno efímero y lo borra al terminar, así
+que después `local-delegate doctor` responderá «command not found». El propio `install` te lo avisa
+si detecta ese caso.
 
 Es idempotente, deja `.bak` de lo que edita, no toca configuración ajena y se revierte con
 `local-delegate uninstall`. Detalle y opciones en [Instalación de la integración](./docs/wiki/Integration-install.md).

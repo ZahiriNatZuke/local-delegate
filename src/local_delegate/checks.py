@@ -23,9 +23,11 @@ que encontró. Ejecutarlos es trabajo de ``update`` e ``install``.
 from __future__ import annotations
 
 import json
+import shutil
 import socket
 from collections.abc import Callable
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 
 from . import config, install
@@ -46,6 +48,8 @@ STATUS_LABEL: dict[str, str] = {
 
 INSTALL_HINT = "local-delegate install"
 SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
+CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
+RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
 
 
 def is_warning(status: str) -> bool:
@@ -201,6 +205,37 @@ def _probe_clients(ctx: Context) -> Result:
     if not present:
         return Result(UNKNOWN, f"no hay ~/.claude ni ~/.codex bajo {ctx.home}")
     return Result(OK, "detectados: " + ", ".join(present))
+
+
+def _installed_version() -> str | None:
+    """Versión del paquete instalado, o None si no se puede saber.
+
+    Nunca lanza: si la versión no se puede averiguar, quien la use simplemente no compara. El
+    diagnóstico no puede caerse por no saber un dato accesorio.
+    """
+    try:
+        return metadata.version("local-delegate-mcp")
+    except Exception:  # PackageNotFoundError y cualquier metadato roto o ausente
+        return None
+
+
+def _probe_cli(ctx: Context) -> Result:
+    """¿Se puede escribir `local-delegate` a secas, desde cualquier carpeta?
+
+    Toda la documentación —y los `fix_hint` de este mismo registro— dicen «corre
+    `local-delegate <algo>`». Si el paquete se instaló con `uvx`, ese comando **no existe**:
+    `uvx` monta un entorno efímero y lo borra al terminar. Un CLI que se documenta como comando
+    global y no comprueba serlo deja al usuario buscando por qué «no se encuentra el comando».
+    """
+    found = shutil.which("local-delegate")
+    if not found:
+        return Result(
+            MISSING,
+            "el comando `local-delegate` no está en el PATH (¿instalado con `uvx`, que es efímero?)",
+            CLI_HINT,
+        )
+    installed = _installed_version()
+    return Result(OK, f"{found}{f' (versión {installed})' if installed else ''}")
 
 
 def _claude_absent(ctx: Context) -> Result | None:
@@ -371,7 +406,18 @@ def _probe_daemon(ctx: Context) -> Result:
     if status:
         version = status.get("version") or "?"
         pid = status.get("pid") or "?"
-        return Result(OK, f"local-delegate {version} · pid {pid} · {status.get('mcp_url', '')}")
+        detail = f"local-delegate {version} · pid {pid} · {status.get('mcp_url', '')}"
+        installed = _installed_version()
+        if installed and version != "?" and version != installed:
+            # El daemon es un proceso largo: sigue sirviendo el código con el que arrancó. Tras
+            # actualizar, los clientes hablan con la versión vieja y nada lo dice — el síntoma es
+            # «actualicé y el arreglo no está».
+            return Result(
+                WARN,
+                f"{detail} — pero la versión instalada es {installed}: el daemon sirve la vieja",
+                RESTART_HINT,
+            )
+        return Result(OK, detail)
     if _port_taken(host, port):
         return Result(WARN, f"alguien escucha en {host}:{port} pero no es nuestro daemon")
     return Result(MISSING, f"nadie escucha en {host}:{port}", SERVE_HINT)
@@ -425,7 +471,8 @@ def _probe_llamaserver(ctx: Context) -> Result:
 # Once elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 CHECKS: tuple[Check, ...] = (
-    Check("client.presence", "cliente", "clientes", _probe_clients),
+    Check("cli.path", "entorno", "CLI local-delegate", _probe_cli),
+    Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
     Check("scaffold.skill", "andamiaje", f"skill {install.SKILL_NAME}", _probe_skill),

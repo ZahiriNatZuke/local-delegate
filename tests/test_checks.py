@@ -18,10 +18,15 @@ from local_delegate import checks, doctor, install
 
 
 def make_ctx(home, **kwargs):
-    """Context con los colaboradores doblados: nada de red ni de procesos."""
+    """Context con los colaboradores doblados: nada de red ni de procesos.
+
+    El daemon devuelve **la versión instalada** a propósito: si devolviera una fija, el check de
+    daemon desincronizado la marcaría `warn` y los tests de «todo ok» dependerían de qué versión
+    lleve el repo ese día.
+    """
     defaults = {
         "daemon_status": lambda host, port: {
-            "version": "0.13.1",
+            "version": checks._installed_version(),
             "pid": 42,
             "mcp_url": f"http://{host}:{port}/mcp",
         },
@@ -39,15 +44,58 @@ def result_for(check_id, ctx):
 # --- Estructura del registro --------------------------------------------------
 
 
-def test_registry_has_the_eleven_checks_with_unique_ids():
-    assert len(checks.CHECKS) == 11
-    assert len({check.id for check in checks.CHECKS}) == 11
+def test_registry_ids_are_unique_and_groups_are_known():
+    assert len({check.id for check in checks.CHECKS}) == len(checks.CHECKS)
     assert {check.group for check in checks.CHECKS} == {
-        "cliente",
+        "entorno",
         "andamiaje",
         "servicio",
         "backend",
     }
+
+
+# --- El CLI tiene que existir como comando -----------------------------------
+
+
+def test_cli_missing_from_path_is_reported_with_the_command_that_fixes_it(tmp_path, monkeypatch):
+    """Instalar con `uvx` deja el andamiaje puesto y el comando inexistente."""
+    monkeypatch.setattr(checks.shutil, "which", lambda name: None)
+    result = result_for("cli.path", make_ctx(make_home(tmp_path)))
+    assert result.status == checks.MISSING
+    assert result.fix_hint == checks.CLI_HINT
+    assert "uvx" in result.detail
+
+
+def test_cli_in_path_is_ok(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
+    result = result_for("cli.path", make_ctx(make_home(tmp_path)))
+    assert result.status == checks.OK
+    assert "/usr/local/bin/local-delegate" in result.detail
+
+
+# --- El daemon puede estar sirviendo la versión vieja -------------------------
+
+
+def test_daemon_running_an_older_version_is_warn(tmp_path, monkeypatch):
+    """Un daemon es un proceso largo: tras actualizar sigue sirviendo el código viejo."""
+    monkeypatch.setattr(checks, "_installed_version", lambda: "0.14.0")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: {"version": "0.13.1", "pid": 42, "mcp_url": "u"},
+    )
+    result = result_for("service.daemon", ctx)
+    assert result.status == checks.WARN
+    assert "0.13.1" in result.detail and "0.14.0" in result.detail
+    assert result.fix_hint == checks.RESTART_HINT
+
+
+def test_daemon_on_the_installed_version_is_ok(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks, "_installed_version", lambda: "0.14.0")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: {"version": "0.14.0", "pid": 42, "mcp_url": "u"},
+    )
+    assert result_for("service.daemon", ctx).status == checks.OK
 
 
 def test_every_status_has_a_label_and_only_warn_and_missing_count():
@@ -70,7 +118,8 @@ def test_run_all_survives_a_broken_probe(monkeypatch, tmp_path):
 # --- HOME completo: todo ok ---------------------------------------------------
 
 
-def test_complete_home_is_all_ok(tmp_path):
+def test_complete_home_is_all_ok(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
     ctx = make_ctx(make_home(tmp_path))
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
@@ -279,7 +328,7 @@ def test_claude_mcp_missing_entry(tmp_path):
 def test_daemon_alive_is_ok_with_version_and_pid(tmp_path):
     result = result_for("service.daemon", make_ctx(make_home(tmp_path)))
     assert result.status == checks.OK
-    assert "0.13.1" in result.detail and "42" in result.detail
+    assert str(checks._installed_version()) in result.detail and "42" in result.detail
 
 
 def test_daemon_down_is_missing_with_hint(tmp_path, monkeypatch):

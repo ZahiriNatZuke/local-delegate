@@ -139,12 +139,19 @@ def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True
         daemon,
         "query_daemon",
         lambda host, port, timeout=1.0: (
-            {"version": "0.13.1", "pid": 42, "mcp_url": f"http://{host}:{port}/mcp"}
+            {
+                # La instalada, no una fija: si no, el check de daemon desincronizado la marcaría
+                # `warn` y estos tests dependerían de la versión que lleve el repo ese día.
+                "version": checks._installed_version(),
+                "pid": 42,
+                "mcp_url": f"http://{host}:{port}/mcp",
+            }
             if daemon_alive
             else None
         ),
     )
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
+    monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
 
 
 def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, capsys):
