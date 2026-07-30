@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "planning",
   "createdAt": "2026-07-30T13:13:44.494Z",
-  "updatedAt": "2026-07-30T13:44:57.306Z",
+  "updatedAt": "2026-07-30T16:38:42.559Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -14,10 +14,10 @@
       "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T16:38:42.559Z",
+      "evidence": "plan.md reescrito para consumir checks.CHECKS: el diagnostico es checks.run_all y update solo aporta la tabla estatica REPAIRS (check.id -> accion, y bajo que estados) mas la escritura, que es el contrato que dejo A. Reglas duras: unknown nunca repara, warn solo repara en los tres casos que significan 'es nuestro y esta viejo' (mcp_codex en warn NO se toca por ser config del usuario), el pid solo sale de /api/daemon y nunca de daemon.json, y --restart-backend no intenta nada si config.backend_origin() no es 'local'. Revision adversarial hecha con tres hallazgos ya incorporados: B-1 bloqueante (REQ-014, la deteccion de instalacion editable, no tenia tarea -> tarea 5 nueva por PEP 610), B-2 (reparar hook_settings replanificaba la copia del arbol, que hace rmtree del destino -> deduplicacion por (kind,target)) y B-3 (--home simulado reiniciaba el daemon real -> con --home distinto del real no se toca ningun servicio). Verificado por ejecucion antes de escribirlo: len(checks.CHECKS)==12 pese a que el docstring dice 'once' en cuatro sitios, y que config.backend_origin() ya distingue local de remoto.",
+      "actor": "user"
     },
     "quality": {
       "status": "pending",
@@ -74,6 +74,14 @@
       "to": "planning",
       "at": "2026-07-30T13:44:57.306Z",
       "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T16:38:42.559Z",
+      "evidence": "plan.md reescrito para consumir checks.CHECKS: el diagnostico es checks.run_all y update solo aporta la tabla estatica REPAIRS (check.id -> accion, y bajo que estados) mas la escritura, que es el contrato que dejo A. Reglas duras: unknown nunca repara, warn solo repara en los tres casos que significan 'es nuestro y esta viejo' (mcp_codex en warn NO se toca por ser config del usuario), el pid solo sale de /api/daemon y nunca de daemon.json, y --restart-backend no intenta nada si config.backend_origin() no es 'local'. Revision adversarial hecha con tres hallazgos ya incorporados: B-1 bloqueante (REQ-014, la deteccion de instalacion editable, no tenia tarea -> tarea 5 nueva por PEP 610), B-2 (reparar hook_settings replanificaba la copia del arbol, que hace rmtree del destino -> deduplicacion por (kind,target)) y B-3 (--home simulado reiniciaba el daemon real -> con --home distinto del real no se toca ningun servicio). Verificado por ejecucion antes de escribirlo: len(checks.CHECKS)==12 pese a que el docstring dice 'once' en cuatro sitios, y que config.backend_origin() ya distingue local de remoto.",
+      "actor": "user"
     }
   ]
 }

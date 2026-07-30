@@ -7,6 +7,7 @@ __pycache__/
 *.py[oc]
 build/
 dist/
+_site/          # salida de scripts/build_site.py (GitHub Pages)
 wheels/
 *.egg-info/
 

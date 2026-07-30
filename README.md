@@ -10,6 +10,9 @@ endpoint OpenAI-compatible — llama-swap, Ollama, LM Studio, vLLM.
 [![CI](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/ZahiriNatZuke/local-delegate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
+**[zahirinatzuke.github.io/local-delegate](https://zahirinatzuke.github.io/local-delegate/)** — qué
+hace y por qué, en una página (es/en). Su fuente está en [`site/`](./site).
+
 ## Demo
 
 <!-- URL absoluta a raw.githubusercontent.com para que la imagen también se renderice en
