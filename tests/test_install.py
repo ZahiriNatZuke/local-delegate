@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import shlex
 import tomllib
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from local_delegate import install as inst
 
@@ -73,8 +73,10 @@ def test_hook_command_survives_a_windows_path(tmp_path):
     Con `UserPromptSubmit` eso no degrada nada: **bloquea cada prompt** del usuario. Pasó de
     verdad en Windows, así que la propiedad se prueba con la forma exacta del bug.
     """
+    # PureWindowsPath y no Path: en Linux, `Path(r"C:\\Users\\…")` es un nombre de archivo con
+    # barras invertidas dentro, no una ruta con separadores, y el test no probaría nada.
     command = inst.hook_command(
-        Path(r"C:\Users\Yohan\.claude\hooks\local-delegate"),
+        PureWindowsPath(r"C:\Users\Yohan\.claude\hooks\local-delegate"),
         "suggest_delegate_prompt.py",
         "python",
     )

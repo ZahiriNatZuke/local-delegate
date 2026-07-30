@@ -30,7 +30,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from importlib.resources import files as _resource_files
-from pathlib import Path
+from pathlib import Path, PurePath
 
 # Marcadores de los bloques gestionados en archivos que también edita el usuario.
 MD_BEGIN = "<!-- local-delegate:begin -->"
@@ -152,7 +152,7 @@ def remove_block(text: str, begin: str, end: str) -> str:
 
 
 # --- Hooks de Claude Code ----------------------------------------------------
-def hook_command(hooks_dir: Path, script: str, python_exe: str) -> str:
+def hook_command(hooks_dir: PurePath, script: str, python_exe: str) -> str:
     """Comando del hook: un único string que Claude Code entrega a un shell.
 
     La ruta va **siempre entre comillas y con barras `/`**, no solo cuando tiene espacios. En
