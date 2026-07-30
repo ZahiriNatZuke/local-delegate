@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "slug": "probar-codex-daemon",
+  "title": "Probar Codex contra el daemon migrado al SDK mcp 2.x",
+  "mode": "lite",
+  "status": "closed",
+  "createdAt": "2026-07-30T12:28:07.616Z",
+  "updatedAt": "2026-07-30T12:41:36.934Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:39:44.996Z",
+      "evidence": "Change lite de verificacion, sin cambios de codigo. 4 requisitos: transporte reconocido, llamada real a una tool, registro en el log del daemon (verificacion por los dos extremos) y acotar cualquier fallo a su causa.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:41:35.425Z",
+      "evidence": "Modo lite y change de verificacion sin cambios de codigo: el plan es la propia spec (4 requisitos con su comprobacion). No hay diseno que revisar adversarialmente porque no se implementa nada.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:39:45.216Z",
+      "evidence": "Verificado por ejecucion: codex mcp get da transport streamable_http contra el 9393; codex exec llamo a local_classify y la tool completo; el daemon registro el evento con ok=true, tokens_in 67, v 0.13.1. Sin cambios de codigo del proyecto, sin tocar la config de Codex del usuario, sin secretos.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:39:45.478Z",
+      "evidence": "Los 4 requisitos cumplidos. De regalo dos confirmaciones: Codex lee structuredContent (la salida estructurada de la fase 2) y la contabilidad del PR #48 procesa bien una llamada que no vino de Claude Code. El 'error' final no era un fallo: era la etiqueta devuelta por local_classify. Dos hallazgos ajenos al repo documentados y NO tocados.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T12:41:05.147Z",
+      "evidence": "Backlog del vault actualizado: punto de probar Codex cerrado con su evidencia y el fleco (path server-side y Desktop sin probar), mas el hallazgo del choque de config de Codex anotado como pendiente de decision. Memoria del proyecto en Claude Code: puntero del cierre mas la nota codex-mcp-choque-proyecto-global.md. Sin secretos.",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T12:28:07.616Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T12:39:44.996Z",
+      "evidence": "Change lite de verificacion, sin cambios de codigo. 4 requisitos: transporte reconocido, llamada real a una tool, registro en el log del daemon (verificacion por los dos extremos) y acotar cualquier fallo a su causa.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T12:39:45.216Z",
+      "evidence": "Verificado por ejecucion: codex mcp get da transport streamable_http contra el 9393; codex exec llamo a local_classify y la tool completo; el daemon registro el evento con ok=true, tokens_in 67, v 0.13.1. Sin cambios de codigo del proyecto, sin tocar la config de Codex del usuario, sin secretos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T12:39:45.478Z",
+      "evidence": "Los 4 requisitos cumplidos. De regalo dos confirmaciones: Codex lee structuredContent (la salida estructurada de la fase 2) y la contabilidad del PR #48 procesa bien una llamada que no vino de Claude Code. El 'error' final no era un fallo: era la etiqueta devuelta por local_classify. Dos hallazgos ajenos al repo documentados y NO tocados.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T12:41:05.147Z",
+      "evidence": "Backlog del vault actualizado: punto de probar Codex cerrado con su evidencia y el fleco (path server-side y Desktop sin probar), mas el hallazgo del choque de config de Codex anotado como pendiente de decision. Memoria del proyecto en Claude Code: puntero del cierre mas la nota codex-mcp-choque-proyecto-global.md. Sin secretos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T12:41:05.398Z",
+      "reason": "traza del flujo lite completado"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T12:41:05.632Z",
+      "reason": "traza del flujo lite completado"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T12:41:35.157Z",
+      "reason": "modo lite: sin plan aparte, la spec lleva la traza"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T12:41:35.425Z",
+      "evidence": "Modo lite y change de verificacion sin cambios de codigo: el plan es la propia spec (4 requisitos con su comprobacion). No hay diseno que revisar adversarialmente porque no se implementa nada.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T12:41:35.673Z",
+      "reason": "flujo lite"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T12:41:35.920Z",
+      "reason": "flujo lite"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T12:41:36.171Z",
+      "reason": "flujo lite"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T12:41:36.420Z",
+      "reason": "flujo lite"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T12:41:36.672Z",
+      "reason": "flujo lite"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T12:41:36.934Z",
+      "reason": "flujo lite"
+    }
+  ]
+}
