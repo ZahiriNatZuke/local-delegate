@@ -31,8 +31,10 @@
   `--online` sigue mostrando el sufijo de GitHub y la compuerta de soak sin duplicar lógica.
 - **Nada de caracteres fuera de cp1252 en la salida.** Una flecha `→` en el `fix_hint` mataba el
   diagnóstico en la consola de Windows justo cuando algo estaba mal.
-- **Los hooks en el formato heredado (`args`) son `warn`, no `ok`**: Claude Code no los ejecuta.
-  Ampliación no prevista en el plan, decidida al ver el resultado real en esta máquina.
+- **Los hooks de una instalación anterior (`args` + scripts en otra ruta) son `warn`, no `ok`** —
+  pero **sí se ejecutan**: `args` es el *exec form* del schema de Claude Code. El primer intento
+  decía que estaban muertos, copiando un comentario de `install.py` que era falso; se corrigieron
+  los dos. Si vuelve a aparecer esa afirmación en el repo, es un error conocido.
 - **El backend caído cuenta como aviso** (exit 1), donde antes no; lo pide el escenario de
   aceptación y queda en el CHANGELOG.
 

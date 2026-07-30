@@ -33,9 +33,13 @@ Encontró tres cosas ciertas que nadie veía antes:
 
 1. `[FALT] hooks copiados` — los scripts viven en `~/.claude/hooks/` (instalación **heredada**),
    no en `~/.claude/hooks/local-delegate/`.
-2. `[WARN] hooks registrados: 3 de 3 en el formato heredado con 'args', que Claude Code no
-   ejecuta` — las tres entradas están **muertas**. Sin este matiz el check habría dicho `ok`
-   sobre hooks que no corren: el falso `ok` más caro del registro.
+2. `[WARN] hooks registrados: 3 de 3 vienen de una instalación anterior` — formato `args` y
+   scripts fuera de `hooks/local-delegate/`. **Corrección importante:** la primera redacción decía
+   «que Claude Code no ejecuta … están muertas», copiando un comentario de `install.py:160-163`.
+   Es **falso**: `args` es el *exec form* del schema y se ejecuta sin shell. Está verificado dos
+   veces (2026-07-29 en el backlog del vault, y otra vez el 2026-07-30 viendo disparar
+   `suggest_lint_summary.py` en vivo durante esta misma sesión). Se corrigieron el detalle del
+   check y el comentario de `install.py` que originó el error.
 3. `[WARN] MCP en Codex: entrada http … puesta a mano (sin marcadores)` — coherente con la
    edición manual del PR #51.
 
@@ -59,9 +63,12 @@ Encontró tres cosas ciertas que nadie veía antes:
   checks salen `[ -- ]`, no `[FALT]`, porque no hay ni `~/.claude` ni `~/.codex` y manda REQ-003
   (regla) sobre el ejemplo del escenario. Los `[FALT]` con su pista aparecen en cuanto el
   directorio del cliente existe pero el andamiaje no — verificado con `--home` en esa forma.
-- **Ampliación deliberada respecto al plan:** el check de hooks registrados distingue el formato
-  heredado (`args`) y lo reporta `warn`. No estaba en el plan; salió de la ejecución real y cabe
-  en REQ-002 («está pero no como debería»). Son cinco líneas, no un mecanismo nuevo.
+- **Ampliación deliberada respecto al plan:** el check de hooks registrados distingue una
+  instalación anterior (formato `args`, scripts en otra ruta) y la reporta `warn`. No estaba en el
+  plan; salió de la ejecución real y cabe en REQ-002 («está pero no como debería»). Son cinco
+  líneas, no un mecanismo nuevo. **El primer intento afirmaba que esas entradas no se ejecutan, y
+  era falso** — un falso `warn` de manual, nacido de creerle a un comentario del repo en vez de a
+  la evidencia. Corregido en el PR de seguimiento.
 - **Cambio de comportamiento consciente:** el backend caído ahora cuenta como aviso (exit 1),
   donde antes no. Lo pide el escenario de aceptación («exit 0 si el backend también está sano»);
   queda anotado en el CHANGELOG.

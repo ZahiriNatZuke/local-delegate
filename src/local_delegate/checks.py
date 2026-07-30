@@ -257,13 +257,16 @@ def _probe_hook_settings(ctx: Context) -> Result:
     if not registered:
         return Result(MISSING, f"ningún hook de local-delegate en {path}", INSTALL_HINT)
     if legacy:
-        # El formato heredado `{"command": "python", "args": [...]}` sigue en el archivo pero
-        # Claude Code no lo ejecuta: son entradas muertas. Decir «ok» aquí sería el falso ok
-        # más caro del registro, porque el usuario cree que la delegación está sugiriéndose.
+        # El formato `{"command": "python", "args": [...]}` es el *exec form* del schema de
+        # Claude Code y **sí se ejecuta** — verificado en vivo el 2026-07-29 y otra vez el
+        # 2026-07-30, viendo disparar `suggest_lint_summary.py`. No es un hook muerto: es una
+        # instalación anterior, con los scripts fuera de `hooks/local-delegate/`. Por eso es
+        # `warn` y no `missing` ni `ok`, y por eso el detalle dice que funcionan.
         return Result(
             WARN,
-            f"{legacy} de {len(registered)} en el formato heredado con 'args', "
-            f"que Claude Code no ejecuta ({path})",
+            f"{legacy} de {len(registered)} vienen de una instalación anterior "
+            f"(formato 'args' y scripts fuera de {ctx.hooks_dir}); funcionan, pero reinstalar "
+            f"los deja como los pone la versión actual",
             INSTALL_HINT,
         )
     return Result(OK, f"{len(registered)} registrado(s): {', '.join(registered)}")

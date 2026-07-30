@@ -192,7 +192,12 @@ def test_our_hook_alongside_a_foreign_one_is_ok(tmp_path):
 
 
 def test_legacy_hook_format_is_warn_not_ok(tmp_path):
-    """Una instalación vieja deja entradas con `args` que Claude Code no ejecuta."""
+    """Una instalación anterior deja entradas con `args` y los scripts en otra ruta.
+
+    Ojo con el matiz: esas entradas **sí se ejecutan** (`args` es el exec form del schema), así
+    que el detalle no puede decir que estén muertas. Es `warn` porque no es lo que instala la
+    versión actual, no porque no funcionen.
+    """
     home = make_home(tmp_path, complete=False)
     settings = home / ".claude" / "settings.json"
     settings.write_text(
@@ -219,7 +224,8 @@ def test_legacy_hook_format_is_warn_not_ok(tmp_path):
     )
     result = result_for("scaffold.hook_settings", make_ctx(home))
     assert result.status == checks.WARN
-    assert "heredado" in result.detail
+    assert "instalación anterior" in result.detail
+    assert "funcionan" in result.detail
     assert result.fix_hint == checks.INSTALL_HINT
 
 
