@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "metadatos-checker-og",
+  "title": "Cerrar los avisos del checker de OpenGraph en la landing",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-30T19:13:18.315Z",
+  "updatedAt": "2026-07-30T19:23:29.445Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T19:21:26.144Z",
+      "evidence": "spec.md con los siete avisos y su veredicto; dos decisiones del usuario resueltas (handle de X y manifest minimo)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T19:22:32.128Z",
+      "evidence": "plan lite: rasterizar el SVG canonico con Playwright (sin dependencias nuevas), manifest display:browser, JSON-LD SoftwareApplication, rutas relativas; revisado contra la spec",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T19:21:26.206Z",
+      "evidence": "386 tests, ruff check y format, node --check; seis defectos inyectados y cazados por sus tests",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T19:13:18.315Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T19:21:26.144Z",
+      "evidence": "spec.md con los siete avisos y su veredicto; dos decisiones del usuario resueltas (handle de X y manifest minimo)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T19:21:26.206Z",
+      "evidence": "386 tests, ruff check y format, node --check; seis defectos inyectados y cazados por sus tests",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T19:22:10.618Z",
+      "reason": "prueba"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T19:22:24.811Z",
+      "reason": "los siete avisos del checker analizados uno a uno; seis reales y uno falso positivo"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T19:22:24.874Z",
+      "reason": "plan: rasterizar el SVG canonico, manifest honesto, JSON-LD de programa, todo con rutas relativas"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T19:22:32.128Z",
+      "evidence": "plan lite: rasterizar el SVG canonico con Playwright (sin dependencias nuevas), manifest display:browser, JSON-LD SoftwareApplication, rutas relativas; revisado contra la spec",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T19:23:29.308Z",
+      "reason": "plan revisado contra la spec: sin dependencias nuevas y con las rutas relativas como requisito propio"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T19:23:29.382Z",
+      "reason": "cambio acotado a site/, tests y build_site"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T19:23:29.445Z",
+      "reason": "386 tests verdes y seis defectos inyectados y cazados; queda comprobar el despliegue"
+    }
+  ]
+}

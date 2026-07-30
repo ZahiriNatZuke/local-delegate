@@ -46,7 +46,10 @@ def construir(destino: Path, version: str) -> list[Path]:
 
     escritos: list[Path] = []
     for ruta in sorted(destino.rglob("*")):
-        if not ruta.is_file() or ruta.suffix.lower() not in {".html", ".css", ".js", ".json"}:
+        # `.webmanifest` es JSON con otra extensión. Entra en la lista aunque hoy no traiga el
+        # marcador: si algún día lo trae, `comprobar()` lo vería pendiente y tumbaría el deploy.
+        sustituibles = {".html", ".css", ".js", ".json", ".webmanifest"}
+        if not ruta.is_file() or ruta.suffix.lower() not in sustituibles:
             continue
         texto = ruta.read_text(encoding="utf-8")
         if MARCADOR in texto:

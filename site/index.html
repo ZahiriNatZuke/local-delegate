@@ -8,8 +8,18 @@
 <link rel="canonical" href="https://zahirinatzuke.github.io/local-delegate/">
 
 <!-- Marca: el MISMO fichero que sirve el dashboard en /favicon.svg. La copia canónica vive en
-     src/local_delegate/resources/brand/favicon.svg y un test compara las dos byte a byte. -->
+     src/local_delegate/resources/brand/favicon.svg y un test compara las dos byte a byte. Los dos
+     PNG no son otro dibujo: son rasterizaciones de ese SVG (ver site/icon.src.html). Hacen falta
+     porque iOS no usa el SVG para la pantalla de inicio —sin PNG hace una captura de la página— y
+     porque no todo buscador rasteriza un vectorial.
+
+     Las rutas van RELATIVAS a propósito. Esto es un GitHub Pages *de proyecto*: un "/favicon.ico"
+     apuntaría a la raíz de zahirinatzuke.github.io, que no pertenece a este repo (comprobado: da
+     404). Es el error que traen todos los snippets de los analizadores de metadatos. -->
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
 <meta name="theme-color" content="#0D1A1D">
 
 <!-- Open Graph. La página es bilingüe en cliente (data-t), pero un crawler solo ve el HTML
@@ -21,7 +31,10 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:url" content="https://zahirinatzuke.github.io/local-delegate/">
 <meta property="og:title" content="local-delegate — delega lo mecánico a un modelo local">
-<meta property="og:description" content="Resumir, clasificar, extraer, escribir el mensaje de commit: lo mecánico no tiene por qué ir a la nube. Un servidor MCP que lo delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.">
+<!-- La descripción es la MISMA que la de Twitter, y por dos razones. La larga que había aquí
+     (213 caracteres) la truncan casi todas las plataformas, que cortan entre 110 y 160; y dos
+     textos que dicen lo mismo son dos textos que se separan con el tiempo. -->
+<meta property="og:description" content="Lo mecánico no tiene por qué ir a la nube. Un servidor MCP que delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.">
 <meta property="og:image" content="https://zahirinatzuke.github.io/local-delegate/og-image.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
@@ -33,10 +46,41 @@
      como fallback, pero se declaran explícitas porque otros clientes (Slack, Discord, Telegram)
      no siempre hacen ese fallback igual. -->
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@ZahiriNatZuke">
+<meta name="twitter:creator" content="@ZahiriNatZuke">
 <meta name="twitter:title" content="local-delegate — delega lo mecánico a un modelo local">
 <meta name="twitter:description" content="Lo mecánico no tiene por qué ir a la nube. Un servidor MCP que delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.">
 <meta name="twitter:image" content="https://zahirinatzuke.github.io/local-delegate/og-image.png">
 <meta name="twitter:image:alt" content="local-delegate: lo mecánico no tiene por qué ir a la nube. MCP, modelo local, cuota intacta.">
+
+<!-- Datos estructurados. El tipo es `SoftwareApplication` y no la `WebPage` genérica que sugieren
+     los analizadores: esto no es una página que habla de algo, es un programa —gratuito, MIT, para
+     los tres sistemas— y ese es el vocabulario que un buscador puede usar para algo. La versión
+     entra por el marcador que sustituye `build_site.py`; escrita a mano sería una copia más de un
+     número que ya vive en `pyproject.toml`. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "local-delegate",
+  "url": "https://zahirinatzuke.github.io/local-delegate/",
+  "description": "Lo mecánico no tiene por qué ir a la nube. Un servidor MCP que delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "softwareVersion": "__LD_VERSION__",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "image": "https://zahirinatzuke.github.io/local-delegate/og-image.png",
+  "downloadUrl": "https://pypi.org/project/local-delegate-mcp/",
+  "author": { "@type": "Person", "name": "Yohan González Almaguer" },
+  "sameAs": [
+    "https://github.com/ZahiriNatZuke/local-delegate",
+    "https://pypi.org/project/local-delegate-mcp/",
+    "https://x.com/ZahiriNatZuke"
+  ]
+}
+</script>
 </head>
 <body>
 <style>
