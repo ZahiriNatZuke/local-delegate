@@ -5,7 +5,7 @@
   "mode": "lite",
   "status": "understanding",
   "createdAt": "2026-07-30T15:47:17.803Z",
-  "updatedAt": "2026-07-30T15:50:45.702Z",
+  "updatedAt": "2026-07-30T16:14:26.235Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T15:56:56.714Z",
+      "evidence": "Los cuatro pasos del CI en verde en local: ruff check (All checks passed), ruff format --check (48 files), pytest 322 passed 1 skipped (antes 316), extract_dashboard_js.py + node --check OK. Ademas los cuatro casos verificados por ejecucion real y los tests verificados al reves: reintroduciendo el filtro por lista literal fallan 4 tests. Hallazgo colateral documentado: /dev/null en Git Bash es NUL y hace isatty() True, asi que el caso del host MCP se verifico con tuberia real.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T16:14:26.235Z",
+      "evidence": "Revision fresca contra los 7 requisitos: REQ-001 --help imprime usage y sale 0 sin tocar la red; REQ-002 'doctro' sale 2 con invalid choice; REQ-003 el test preexistente de despacho sigue verde; REQ-004 sin argumentos arranca el MCP, verificado con tuberia real (0 bytes en stderr); REQ-005 el aviso solo con isatty y solo por stderr, con stdout limpio; REQ-006 grep sin resultados y dos asserts de que los atributos no existen; REQ-007 test que recorre build_parser y despacha los 7 subcomandos sin alta en otro sitio. Merge en main via PR #63 con 12 checks verdes; CI, CodeQL y Vendor audit verdes en main tras el merge.",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -60,6 +60,22 @@
       "status": "approved",
       "at": "2026-07-30T15:50:45.702Z",
       "evidence": "Plan de 5 tareas: el arreglo es quitar una condicion (server.py:1877 pasa de filtrar por lista literal a preguntar si hay argumentos), mas el borrado de las dos copias de la lista de subcomandos, mas 5 tests y CHANGELOG. Riesgo unico identificado -romper el arranque MCP sin argumentos- cubierto con test dedicado y rollback de 3 lineas. Verificado antes de planificar que el import incondicional de cli es seguro sin el extra [llamaswap] (llamaswap_config.py:21-23 deja yaml=None en un try/except).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T15:56:56.714Z",
+      "evidence": "Los cuatro pasos del CI en verde en local: ruff check (All checks passed), ruff format --check (48 files), pytest 322 passed 1 skipped (antes 316), extract_dashboard_js.py + node --check OK. Ademas los cuatro casos verificados por ejecucion real y los tests verificados al reves: reintroduciendo el filtro por lista literal fallan 4 tests. Hallazgo colateral documentado: /dev/null en Git Bash es NUL y hace isatty() True, asi que el caso del host MCP se verifico con tuberia real.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T16:14:26.235Z",
+      "evidence": "Revision fresca contra los 7 requisitos: REQ-001 --help imprime usage y sale 0 sin tocar la red; REQ-002 'doctro' sale 2 con invalid choice; REQ-003 el test preexistente de despacho sigue verde; REQ-004 sin argumentos arranca el MCP, verificado con tuberia real (0 bytes en stderr); REQ-005 el aviso solo con isatty y solo por stderr, con stdout limpio; REQ-006 grep sin resultados y dos asserts de que los atributos no existen; REQ-007 test que recorre build_parser y despacha los 7 subcomandos sin alta en otro sitio. Merge en main via PR #63 con 12 checks verdes; CI, CodeQL y Vendor audit verdes en main tras el merge.",
       "actor": "user"
     }
   ]
