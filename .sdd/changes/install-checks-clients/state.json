@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "install-checks-clients",
+  "title": "install consume checks.CHECKS y anade --clients auto|claude,codex",
+  "mode": "standard",
+  "status": "result-review",
+  "createdAt": "2026-07-30T20:51:02.176Z",
+  "updatedAt": "2026-07-30T21:35:26.935Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:16:44.816Z",
+      "evidence": "18 requisitos observables, cada uno trazado a research.md con cita de fichero y linea; las tres decisiones de contrato (confirmacion interactiva en Codex a mano, exit 0 sin clientes, reporte final siempre) las fijo el usuario; alcance acotado sin tocar checks.py, doctor.py ni update.py",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:22:13.316Z",
+      "evidence": "Revision adversarial en plan-review.md con 3 bloqueantes (fuente de la presencia de clientes, contradiccion REQ-005/REQ-012, uninstall sin verificar) y 4 no bloqueantes, todos remediados en plan.md y spec.md; afirmaciones contrastadas contra checks.py:199, update.py:167, install.py:319 y :568, y tests/test_smoke.py:139; sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:33:26.967Z",
+      "evidence": "ruff check y format limpios, 415 passed 1 skipped (386 antes), extract_dashboard_js + node --check exit 0; sin dependencias nuevas (diff vacio en pyproject.toml y uv.lock); sin secretos en el diff; end-to-end en PowerShell, cmd y sh contra HOME simulado con el ~/.claude.json real identico por SHA-256 antes y despues de install y uninstall",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:35:17.617Z",
+      "evidence": "Revision en frio del diff completo contra los 18 requisitos en review.md: los 18 implementados y verificados. Un hallazgo propio (F-1: el reporte no salia cuando una accion fallaba, contra REQ-012) corregido con prueba nueva; 416 passed 1 skipped. Tres notas deliberadas y una limitacion aceptada (respuesta afirmativa por teclado sin tty real).",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T20:51:02.176Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T20:54:11.084Z",
+      "reason": "Brief escrito con evidencia en codigo; toca mapear impacto en tests y docs"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T21:15:42.262Z",
+      "reason": "Investigacion cerrada con evidencia y tres decisiones de contrato confirmadas por el usuario"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T21:16:44.816Z",
+      "evidence": "18 requisitos observables, cada uno trazado a research.md con cita de fichero y linea; las tres decisiones de contrato (confirmacion interactiva en Codex a mano, exit 0 sin clientes, reporte final siempre) las fijo el usuario; alcance acotado sin tocar checks.py, doctor.py ni update.py",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T21:16:53.044Z",
+      "reason": "Gate spec aprobado; toca plan de implementacion con propiedad de ficheros"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T21:22:13.316Z",
+      "evidence": "Revision adversarial en plan-review.md con 3 bloqueantes (fuente de la presencia de clientes, contradiccion REQ-005/REQ-012, uninstall sin verificar) y 4 no bloqueantes, todos remediados en plan.md y spec.md; afirmaciones contrastadas contra checks.py:199, update.py:167, install.py:319 y :568, y tests/test_smoke.py:139; sin bloqueantes abiertos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T21:22:23.410Z",
+      "reason": "Revision adversarial escrita en plan-review.md"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T21:22:23.471Z",
+      "reason": "Gate plan aprobado sin bloqueantes abiertos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T21:31:38.538Z",
+      "reason": "Implementacion completa; los cuatro pasos del CI en verde y end-to-end en los tres shells"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T21:33:26.967Z",
+      "evidence": "ruff check y format limpios, 415 passed 1 skipped (386 antes), extract_dashboard_js + node --check exit 0; sin dependencias nuevas (diff vacio en pyproject.toml y uv.lock); sin secretos en el diff; end-to-end en PowerShell, cmd y sh contra HOME simulado con el ~/.claude.json real identico por SHA-256 antes y despues de install y uninstall",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T21:35:17.617Z",
+      "evidence": "Revision en frio del diff completo contra los 18 requisitos en review.md: los 18 implementados y verificados. Un hallazgo propio (F-1: el reporte no salia cuando una accion fallaba, contra REQ-012) corregido con prueba nueva; 416 passed 1 skipped. Tres notas deliberadas y una limitacion aceptada (respuesta afirmativa por teclado sin tty real).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T21:35:26.935Z",
+      "reason": "Gates quality y conformance aprobados; revision de resultado escrita"
+    }
+  ]
+}

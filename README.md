@@ -227,8 +227,9 @@ a propósito:
 | Skill | `~/.claude/skills/delegacion-local/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | la regla en una nota corta siempre cargada |
 
-Cada pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`) y elegir
-cliente con `--target claude|codex`. Los hooks recomendados tras el piloto A/B son
+Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
+`--clients claude|codex`. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`,
+`--no-memory`, `--no-mcp`). Los hooks recomendados tras el piloto A/B son
 `UserPromptSubmit` (intenciones mecánicas) y `PreToolUse`/`Bash` (salidas largas de lint/tests);
 el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`.
 Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y

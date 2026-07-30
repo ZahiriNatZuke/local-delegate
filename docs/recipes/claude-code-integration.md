@@ -7,7 +7,7 @@
 ## 1. Registrar el MCP en Claude Code / Desktop
 
 ```bash
-uvx local-delegate-mcp install --target claude
+uvx local-delegate-mcp install --clients claude
 ```
 
 O a mano, apuntando tu config de MCP a `uvx`:

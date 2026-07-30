@@ -56,6 +56,36 @@ def resources_dir() -> Path:
     return Path(str(_resource_files("local_delegate"))) / "resources"
 
 
+# --- Dos preguntas sobre el HOME, con una sola respuesta cada una -------------
+# Las dos las necesitan `install`, `update` y el CLI. Viven aquí —el módulo más bajo de los
+# tres— porque tenerlas duplicadas es exactamente la clase de verdad repartida que ya costó
+# caro en este repo (tres copias de la cuenta de tokens, dos derivaciones del host del daemon).
+def is_simulated_home(home: Path) -> bool:
+    """True si ``home`` apunta fuera del HOME real: entonces no se toca nada global.
+
+    «Global» son dos cosas distintas y las dos importan: los servicios de la máquina (lo que ya
+    cuidaba ``update``) y el binario ``claude``, que con ``mcp add-json --scope user`` escribe
+    **siempre** en el ``~/.claude.json`` del usuario que ejecuta, ignorando cualquier ``--home``.
+    """
+    try:
+        return home.resolve() != Path.home().resolve()
+    except OSError:
+        # Una ruta irresoluble se trata como simulada: el lado seguro es no tocar lo global.
+        return True
+
+
+def present_targets(home: Path) -> set[str]:
+    """Clientes que existen de verdad bajo ``home``.
+
+    Mismo criterio que el check ``client.presence``, y a propósito una función y no una lectura
+    de su ``Result``: el ``detail`` de un check es texto de presentación («detectados: Claude
+    Code, Codex»), no un dato. Derivar de ahí a quién se le escribe la configuración ataría el
+    instalador a un string de interfaz.
+    """
+    pairs = (("claude", ".claude"), ("codex", ".codex"))
+    return {name for name, sub in pairs if (home / sub).is_dir()}
+
+
 def default_python() -> str:
     """Intérprete con el que se ejecutarán los hooks.
 
@@ -334,6 +364,11 @@ class Options:
     api_key_env: bool = False
     pin_version: str | None = None
     use_cli: bool = True
+    # Suprime SOLO la escritura de la entrada MCP de Codex. Lo decide quien llama (el CLI, tras
+    # ver el check `scaffold.mcp_codex` en `warn` y preguntar), y se pasa como dato en vez de
+    # filtrar la lista de acciones por su `kind`: un filtro por string desde fuera sería frágil
+    # y, sobre todo, mudo — nadie sabría por qué falta esa acción.
+    skip_codex_mcp: bool = False
 
 
 def _claude_dir(opts: Options) -> Path:
@@ -424,7 +459,7 @@ def plan_install(opts: Options) -> list[Action]:
                     lambda entry=entry: _register_claude_mcp(opts, entry),
                 )
             )
-        if "codex" in opts.targets:
+        if "codex" in opts.targets and not opts.skip_codex_mcp:
             config_path = codex / "config.toml"
 
             def _run_codex(path=config_path, entry=entry) -> str:
@@ -554,6 +589,11 @@ def plan_uninstall(opts: Options) -> list[Action]:
         if "codex" in opts.targets:
             config_path = codex / "config.toml"
 
+            # `skip_codex_mcp` NO se consulta aquí, y la asimetría con `plan_install` es
+            # deliberada: al instalar, reemplazar una entrada puesta a mano cambia la
+            # configuración del usuario por la nuestra —de ahí la pregunta—, mientras que al
+            # desinstalar la sección `[mcp_servers.local-delegate]` es nuestra por definición y
+            # retirarla es justo lo que se pidió. Preguntar aquí sería estorbar.
             def _run_codex(path=config_path) -> str:
                 if not path.is_file():
                     return "no existía"

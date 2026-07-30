@@ -6,6 +6,36 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`install` y `uninstall` aceptan `--clients auto|claude|codex`** (repetible). Con `auto`
+  —el nuevo valor por defecto— se configuran **solo los clientes que están instalados**,
+  mirando si existen `~/.claude` y `~/.codex` con la misma definición que usan `doctor` y
+  `update`. Nombrar un cliente sigue siendo una orden: se configura exista o no.
+- **`install` termina diciendo el estado real del andamiaje**, con los mismos checks y el mismo
+  formato que `doctor`, en vez de un «Listo» que solo contaba acciones aplicadas. El reporte es
+  informativo y **no** altera el exit code, porque tras un install correcto quedan avisos
+  legítimos (el CLI fuera del PATH si se instaló con `uvx`, un cliente ausente). No mira el
+  daemon ni el backend a propósito: instalar unos hooks no es motivo para salir a la red.
+- **`install` pregunta antes de reemplazar una entrada MCP de Codex escrita a mano.** Si
+  `~/.codex/config.toml` tiene una sección `[mcp_servers.local-delegate]` sin marcadores, la
+  escribió el usuario; ahora se pide confirmación en vez de pisarla. Sin terminal —CI, salida
+  redirigida— se conserva y se sigue con el resto del plan; `--force-mcp-codex` la reemplaza sin
+  preguntar. `uninstall` sí la retira sin preguntar: ahí es justo lo que se pidió.
+
+### Changed
+- **Cambio de comportamiento: el default deja de escribir en clientes que no existen.** Antes,
+  sin flags, `install` equivalía a `--target all` y creaba `~/.codex/AGENTS.md` y
+  `~/.codex/config.toml` en máquinas sin Codex. `--target` se conserva con su semántica exacta
+  —incluido `all`, que sigue forzando los dos— y es la vía para el comportamiento anterior; lo
+  que no se admite es combinarlo con `--clients`, que termina en error de uso sin escribir nada.
+
+### Fixed
+- **`install --home` y `uninstall --home` ya no escriben fuera del HOME simulado.** El camino
+  preferido para registrar el MCP es `claude mcp add-json --scope user`, que escribe **siempre**
+  en el `~/.claude.json` del usuario real e ignora `--home`: instalando duplicaba configuración y
+  desinstalando la borraba de verdad. `update` ya lo había corregido; `install` arrastraba el
+  defecto, y la suite no podía verlo porque todas sus pruebas desactivaban ese camino.
+
 ## [0.17.0] - 2026-07-30
 
 ### Added

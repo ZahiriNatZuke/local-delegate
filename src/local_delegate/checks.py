@@ -496,10 +496,19 @@ CHECKS: tuple[Check, ...] = (
 )
 
 
-def run_all(ctx: Context) -> list[tuple[Check, Result]]:
-    """Corre los doce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico."""
+def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
+    """Corre los doce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+
+    Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
+    ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
+    ``servicio`` y ``backend`` saldría a la red y lanzaría los binarios de llama-swap por el
+    simple hecho de haber instalado unos hooks. El filtro no toca ni el registro ni los probes:
+    sin el argumento, el comportamiento es exactamente el de antes.
+    """
     results: list[tuple[Check, Result]] = []
     for check in CHECKS:
+        if groups is not None and check.group not in groups:
+            continue
         try:
             result = check.probe(ctx)
         except Exception as exc:  # un check roto no debe impedir ver los otros once

@@ -26,12 +26,34 @@ local-delegate uninstall             # revierte solo lo que instaló
 | Skill | `~/.claude/skills/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | resumen corto de la regla, siempre cargado |
 
+## A quién configura
+
+Por defecto (`--clients auto`), **solo los clientes que están instalados**: se mira si existen
+`~/.claude` y `~/.codex`. En una máquina con un solo cliente ya no se crea el directorio del
+otro, que era lo que pasaba con el antiguo default `--target all`.
+
+```bash
+local-delegate install                      # los que estén instalados
+local-delegate install --clients codex      # ese, exista o no (orden explícita)
+local-delegate install --target all         # los dos, como antes
+```
+
+Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termina bien (exit 0).
+
 ## Garantías
 
 - **Idempotente.** Los bloques de Markdown/TOML van entre marcadores `local-delegate:begin/end`
   y se reemplazan, nunca se duplican; los hooks se desregistran antes de volver a registrarse.
 - **No pisa nada ajeno.** Los hooks de terceros, el resto de `settings.json`, el resto de tu
   `CLAUDE.md` y las otras entradas de `config.toml` se conservan intactos.
+- **Pregunta antes de reemplazar tu entrada MCP de Codex.** Si en `~/.codex/config.toml` hay una
+  sección `[mcp_servers.local-delegate]` que escribiste tú (sin marcadores), `install` pide
+  confirmación. Sin terminal para preguntar —CI, salida redirigida— la conserva y sigue con el
+  resto; `--force-mcp-codex` la reemplaza sin preguntar. Al **desinstalar** sí se quita sin
+  preguntar: ahí retirarla es justo lo que pediste.
+- **`--home` es de verdad un sandbox.** Con un HOME simulado no se invoca el binario `claude`,
+  porque `claude mcp add-json --scope user` escribe siempre en tu `~/.claude.json` real, ignore
+  lo que ignore el `--home`.
 - **Backups.** Cada archivo compartido que se edita deja un `.bak` al lado.
 - **Sin secretos.** `--api-key-env` reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno
   (`${LOCAL_DELEGATE_API_KEY}` en Claude Code, `env_vars` en Codex): la key nunca se escribe.
@@ -42,7 +64,9 @@ local-delegate uninstall             # revierte solo lo que instaló
 | Flag | Efecto |
 |---|---|
 | `--dry-run` | describe los cambios sin escribir nada |
-| `--target claude \| codex \| all` | cliente(s) a configurar (repetible; default `all`) |
+| `--clients auto \| claude \| codex` | cliente(s) a configurar (repetible; default `auto`) |
+| `--force-mcp-codex` | reemplaza sin preguntar una entrada de Codex escrita a mano |
+| `--target claude \| codex \| all` | histórico, equivale a `--clients`; `all` fuerza los dos aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--enable-read-hook` | registra también el experimental `PreToolUse`/`Read` |
 | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp` |
@@ -74,9 +98,15 @@ dashboard marcará esas delegaciones como **cómputo remoto**. Ver
 
 ## Después de instalar
 
+`install` termina imprimiendo el estado real del andamiaje —los mismos checks que el `doctor`,
+con el mismo formato—, así que ya no hace falta ejecutarlo aparte para saber cómo quedó. Ese
+reporte es informativo: **no** cambia el exit code, porque tras un install correcto quedan avisos
+legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no está).
+
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las once piezas (ver abajo).
+- `local-delegate doctor` → comprueba de una vez las doce piezas (ver abajo), incluidos el
+  daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
 - `http://127.0.0.1:9393` → panel de ahorro.
