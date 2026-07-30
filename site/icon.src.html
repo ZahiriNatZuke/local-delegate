@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>local-delegate — fuente de los iconos PNG</title>
+<!--
+  FUENTE de site/apple-touch-icon.png (180x180) y site/favicon-32x32.png (32x32).
+
+  No dibuja la marca: la CARGA de `favicon.svg`, el mismo fichero canónico que sirven el
+  dashboard y la landing. Así los PNG son una rasterización del icono, no una tercera copia que
+  se puede desincronizar en silencio.
+
+  El fondo es sólido a propósito. La marca es solo trazo sobre transparente, y iOS no respeta la
+  transparencia del apple-touch-icon: la compone sobre negro. Un fondo declarado —el mismo
+  `--ink` que la página ya usa en `theme-color`— es la diferencia entre un icono y un accidente.
+  El fondo llega hasta el borde porque iOS aplica su propia máscara redondeada encima.
+
+  REGENERAR los PNG (sin ninguna dependencia nueva del proyecto):
+
+    1. python -m http.server 8765 --bind 127.0.0.1     (desde site/)
+    2. Abrir http://127.0.0.1:8765/icon.src.html y capturar el viewport —no la página entera—
+       una vez por tamaño:
+         page.set_viewport_size({"width":180,"height":180})
+         page.screenshot(path="apple-touch-icon.png", scale="css")
+         page.set_viewport_size({"width":32,"height":32})
+         page.screenshot(path="favicon-32x32.png", scale="css")
+    3. Guardar en site/.
+
+  `scale="css"` importa: con `device` el PNG sale al doble en una pantalla retina y deja de medir
+  lo que declaran el `sizes` del <link> y el manifest. Hay tests que leen la cabecera de cada PNG.
+
+  No se abre con file:// — el navegador bloquea ese protocolo y por eso hace falta el paso 1.
+-->
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+  body {
+    background: #0D1A1D;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* 68%: deja aire suficiente para que la máscara redondeada de iOS no muerda el trazo. */
+  img { width: 68%; height: 68%; display: block; }
+</style>
+</head>
+<body>
+  <img src="favicon.svg" alt="">
+</body>
+</html>

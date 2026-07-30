@@ -54,6 +54,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   prototipo llegó a mentir con la primera release. Un test falla si alguien escribe una versión
   literal en la página.
 
+- **La landing pasa el examen de un checker de OpenGraph, menos en lo que ese checker se
+  equivoca.** Siete avisos, seis reales. Ahora sirve `apple-touch-icon.png` (180×180) y
+  `favicon-32x32.png` —rasterizaciones del MISMO `favicon.svg` canónico, con su fuente
+  revisable en `site/icon.src.html`—, porque iOS no usa el SVG para la pantalla de inicio y
+  sin PNG hace una captura de la página. Declara además `twitter:site` y `twitter:creator`,
+  un `site.webmanifest` honesto (`display: browser`: esto no es una PWA y el manifest no
+  finge que lo sea) y datos estructurados JSON-LD de tipo `SoftwareApplication` —no la
+  `WebPage` genérica que sugería el informe—, que es el vocabulario con el que un buscador
+  puede hacer algo con un programa gratuito y MIT. La `og:description` baja de 213 a 149
+  caracteres reutilizando la de Twitter: por encima de 160 las plataformas truncan, y dos
+  textos que dicen lo mismo acaban separándose. **El séptimo aviso se descartó**: decía que
+  el `canonical` apunta a otra URL, pero se analizó la dirección sin barra final y GitHub
+  Pages responde 301 justo hacia la que el `canonical` ya declara. Ninguna ruta nueva es
+  absoluta —los snippets del informe lo eran, y en un Pages *de proyecto* apuntan fuera del
+  repo—, y hay un test que lo vigila.
+
 ### Fixed
 - **`update --home <simulado>` ya no escribe en la configuración real del usuario.** El registro
   del MCP en Claude Code se hace con `claude mcp add-json --scope user`, que escribe siempre en el

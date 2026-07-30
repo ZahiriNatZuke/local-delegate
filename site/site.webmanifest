@@ -1,0 +1,16 @@
+{
+  "name": "local-delegate",
+  "short_name": "local-delegate",
+  "description": "Servidor MCP que delega los pasos mecánicos a un modelo local para conservar la cuota de tu suscripción.",
+  "lang": "es",
+  "start_url": ".",
+  "scope": ".",
+  "display": "browser",
+  "background_color": "#0D1A1D",
+  "theme_color": "#0D1A1D",
+  "icons": [
+    { "src": "favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
