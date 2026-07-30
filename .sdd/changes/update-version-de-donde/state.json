@@ -3,9 +3,9 @@
   "slug": "update-version-de-donde",
   "title": "update dice de donde saco la version publicada y como saltarse la cache",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-30T22:34:31.781Z",
-  "updatedAt": "2026-07-30T22:42:13.127Z",
+  "updatedAt": "2026-07-30T23:18:13.979Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:18:13.436Z",
+      "evidence": "handoff.md escrito con el estado (PR #77 mergeado, main en 5afe69b, CI completo verde, en Unreleased), las cuatro decisiones que no se deducen del codigo, lo que queda abierto a proposito y COMO cerrarlo (mirar en la proxima publicacion si aparece el bloque de 'la instalada es MAS NUEVA' y cuanto tarda en dejar de aparecer). Recoge ademas el incidente de infraestructura del PR #77, que no era del codigo: el job test (windows-latest) quedo 29 minutos en estado fantasma con todos sus pasos ya terminados en 86s -- incluido 'Complete job' -- mientras GitHub lo reportaba in_progress y GitHub Status decia All Systems Operational; se resolvio con gh run rerun y el repetido tardo 66s, en linea con los siete runs anteriores (55-67s). La leccion queda escrita: mirar los steps del job con gh api antes de culpar al codigo, porque el reloj de la interfaz cuenta desde el encolado y no distingue 'tarda' de 'termino y nadie lo marco'; y gh run cancel puede responder 'Cannot cancel a workflow run that is completed' sobre un run que la API acababa de enseñar como in_progress. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-30T22:42:13.127Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T23:18:13.436Z",
+      "evidence": "handoff.md escrito con el estado (PR #77 mergeado, main en 5afe69b, CI completo verde, en Unreleased), las cuatro decisiones que no se deducen del codigo, lo que queda abierto a proposito y COMO cerrarlo (mirar en la proxima publicacion si aparece el bloque de 'la instalada es MAS NUEVA' y cuanto tarda en dejar de aparecer). Recoge ademas el incidente de infraestructura del PR #77, que no era del codigo: el job test (windows-latest) quedo 29 minutos en estado fantasma con todos sus pasos ya terminados en 86s -- incluido 'Complete job' -- mientras GitHub lo reportaba in_progress y GitHub Status decia All Systems Operational; se resolvio con gh run rerun y el repetido tardo 66s, en linea con los siete runs anteriores (55-67s). La leccion queda escrita: mirar los steps del job con gh api antes de culpar al codigo, porque el reloj de la interfaz cuenta desde el encolado y no distingue 'tarda' de 'termino y nadie lo marco'; y gh run cancel puede responder 'Cannot cancel a workflow run that is completed' sobre un run que la API acababa de enseñar como in_progress. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T23:18:13.717Z",
+      "reason": "gates completos, PR #77 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T23:18:13.979Z",
+      "reason": "change cerrado"
     }
   ]
 }

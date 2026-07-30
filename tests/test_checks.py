@@ -194,6 +194,28 @@ def test_una_consulta_que_revienta_no_tumba_el_diagnostico(tmp_path, monkeypatch
     assert por_id["cli.published"].status == checks.UNKNOWN
 
 
+def test_la_pista_depende_de_como_este_instalado(tmp_path, monkeypatch):
+    """Los tres comandos no son intercambiables, y darle el que no toca es un consejo que falla.
+
+    En una editable `uv tool upgrade` no actualiza nada —el código sale del repo— y a quien
+    instaló con `pip` mandarlo a `uv tool` lo deja igual que estaba. La decisión de cuál es cuál
+    vive en `update.install_kind`, en un solo sitio.
+    """
+    from local_delegate import update
+
+    def pista(modo, carpeta):
+        monkeypatch.setattr(update, "install_kind", lambda: modo)
+        return _publicada(tmp_path / carpeta, monkeypatch, "0.16.0", "0.17.0").fix_hint
+
+    assert pista(update.UV_TOOL, "a") == update.UV_TOOL_UPGRADE
+
+    monkeypatch.setattr(update, "editable_origin", lambda: tmp_path / "repo")
+    hint = pista(update.EDITABLE, "b")
+    assert "git -C" in hint and "uv sync" in hint
+
+    assert pista(update.OTHER, "c") == update.GENERIC_UPGRADE
+
+
 def test_el_detalle_y_la_pista_caben_en_la_consola_de_windows(tmp_path, monkeypatch):
     """Una flecha `→` mata el doctor con UnicodeEncodeError en la consola cp1252."""
     result = _publicada(tmp_path, monkeypatch, "0.16.0", "0.17.0")

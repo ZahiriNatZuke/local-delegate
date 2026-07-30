@@ -174,6 +174,112 @@ def test_dry_run_no_reinicia_el_daemon(tmp_path):
     assert runner.calls == []
 
 
+# --- Cómo está instalado esto -------------------------------------------------
+# `update` actualiza el pin, el andamiaje y el daemon, pero NO el ejecutable de `uv tool`. Y no
+# puede hacerlo: probado en Windows, reinstalar el entorno desde el que corre el proceso falla al
+# borrar `Scripts/` y deja la instalación destruida (ya había borrado el paquete).
+
+
+def _finge_prefix(monkeypatch, tmp_path, receipt: str | None):
+    """Un `sys.prefix` de mentira, con o sin `uv-receipt.toml` dentro."""
+    monkeypatch.setattr(update, "editable_origin", lambda: None)
+    monkeypatch.setattr(update.sys, "prefix", str(tmp_path))
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    if receipt is not None:
+        (tmp_path / "uv-receipt.toml").write_text(receipt, encoding="utf-8")
+    return tmp_path
+
+
+def test_reconoce_una_instalacion_de_uv_tool(monkeypatch, tmp_path):
+    _finge_prefix(
+        monkeypatch, tmp_path, f'[tool]\nrequirements = [{{ name = "{update.PACKAGE}" }}]'
+    )
+    assert update.install_kind() == update.UV_TOOL
+    assert update.upgrade_command() == update.UV_TOOL_UPGRADE
+
+
+def test_sin_receipt_no_se_afirma_nada(monkeypatch, tmp_path):
+    """`pip`, `pipx`, conda… no se adivina: comando genérico, no uno que podría fallar."""
+    _finge_prefix(monkeypatch, tmp_path, None)
+    assert update.install_kind() == update.OTHER
+    assert update.upgrade_command() == update.GENERIC_UPGRADE
+
+
+def test_un_receipt_de_otro_paquete_no_es_el_nuestro(monkeypatch, tmp_path):
+    _finge_prefix(monkeypatch, tmp_path, '[tool]\nrequirements = [{ name = "otra-cosa" }]')
+    assert update.install_kind() == update.OTHER
+
+
+def test_la_editable_gana_sobre_el_receipt(monkeypatch, tmp_path):
+    """Si se dieran los dos, manda la editable: es lo que gobierna de dónde sale el código."""
+    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    monkeypatch.setattr(update, "editable_origin", lambda: tmp_path / "repo")
+    assert update.install_kind() == update.EDITABLE
+    assert "git -C" in update.upgrade_command()
+
+
+def test_un_prefix_ilegible_no_revienta_la_deteccion(monkeypatch):
+    monkeypatch.setattr(update, "editable_origin", lambda: None)
+    monkeypatch.setattr(update.sys, "prefix", "\x00 ruta imposible \x00")
+    assert update.install_kind() == update.OTHER
+
+
+def test_el_aviso_de_uv_tool_da_la_version_y_el_comando(monkeypatch, tmp_path):
+    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    texto = "\n".join(update.uv_tool_lines("0.18.0"))
+    assert "0.17.0" in texto
+    assert update.UV_TOOL_UPGRADE in texto
+    assert "reinstalaría el entorno" in texto, "tiene que decir POR QUÉ no lo hace él"
+
+
+@pytest.mark.parametrize("publicada", ["0.17.0", "0.16.0", None])
+def test_sin_nada_que_avisar_el_bloque_no_aparece(monkeypatch, tmp_path, publicada):
+    """Al día, por delante, o sin red: un aviso que sale siempre deja de leerse."""
+    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    assert update.uv_tool_lines(publicada) == []
+
+
+def test_una_editable_no_recibe_el_aviso_de_uv_tool(monkeypatch, tmp_path):
+    """Ya tiene el suyo, con `git pull` + `uv sync`. Dos avisos serían uno de más."""
+    monkeypatch.setattr(update, "editable_origin", lambda: tmp_path)
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    assert update.uv_tool_lines("0.18.0") == []
+
+
+def test_el_aviso_de_uv_tool_cabe_en_la_consola_de_windows(monkeypatch, tmp_path):
+    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    "\n".join(update.uv_tool_lines("0.18.0")).encode("cp1252")
+    update.GENERIC_UPGRADE.encode("cp1252")
+
+
+def test_el_aviso_de_uv_tool_no_cambia_el_plan_ni_el_exit_code(tmp_path, monkeypatch):
+    monkeypatch.setattr(update, "latest_version", lambda timeout=0: ("0.18.0", None))
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    home = make_home(tmp_path, complete=False)
+
+    _finge_prefix(monkeypatch, tmp_path / "pref", f'[tool]\nname = "{update.PACKAGE}"')
+    con: list[str] = []
+    code_con = update.run_update(opts_for(home, dry_run=True), out=con.append)
+    extra = update.uv_tool_lines("0.18.0")
+
+    monkeypatch.setattr(update, "install_kind", lambda: update.OTHER)
+    sin: list[str] = []
+    code_sin = update.run_update(opts_for(home, dry_run=True), out=sin.append)
+
+    assert code_con == code_sin
+    assert extra, "el caso de uv tool debería aportar líneas"
+
+    # Se ignoran las vacías: son maquetación, y el aviso añade una de separación. Lo que se
+    # compara es el contenido — si el plan de acciones cambiara, aquí se vería.
+    def sin_aviso(salida):
+        return [x for x in salida if x.strip() and x not in extra]
+
+    assert sin_aviso(con) == sin_aviso(sin)
+
+
 # --- De dónde salió la versión, y el desfase tras publicar --------------------
 # Justo después de publicar, `update` anuncia como «última» la anterior. Desde el comando no se
 # puede distinguir «PyPI sirve caché» de «la publicación no ha terminado» —eso pediría medir
