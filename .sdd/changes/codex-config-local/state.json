@@ -3,9 +3,9 @@
   "slug": "codex-config-local",
   "title": "Arregla los dos hallazgos de configuracion de Codex: choque de github y rtk fuera del PATH",
   "mode": "lite",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-30T12:54:10.480Z",
-  "updatedAt": "2026-07-30T13:03:20.099Z",
+  "updatedAt": "2026-07-30T13:10:23.299Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:10:23.083Z",
+      "evidence": "Backlog del vault actualizado (punto borrado, es nota viva). Memoria del proyecto: codex-mcp-choque-proyecto-global.md marcada como resuelta con la via correcta (otro nombre de servidor), nueva codex-sandbox-no-enumera-perfil.md con la causa raiz real y codex sandbox como herramienta de diagnostico sin cuota, y punteros en MEMORY.md. Sin secretos ni datos personales: de las variables del bearer solo se registro su existencia.",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-30T13:03:20.099Z",
       "reason": "conformance aprobado; queda handoff y memoria"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T13:10:23.083Z",
+      "evidence": "Backlog del vault actualizado (punto borrado, es nota viva). Memoria del proyecto: codex-mcp-choque-proyecto-global.md marcada como resuelta con la via correcta (otro nombre de servidor), nueva codex-sandbox-no-enumera-perfil.md con la causa raiz real y codex sandbox como herramienta de diagnostico sin cuota, y punteros en MEMORY.md. Sin secretos ni datos personales: de las variables del bearer solo se registro su existencia.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T13:10:23.299Z",
+      "reason": "PR #51 mergeado en d0983b5; CI, CodeQL y Vendor audit verdes en main; memoria actualizada"
     }
   ]
 }
