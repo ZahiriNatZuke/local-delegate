@@ -27,6 +27,7 @@ import shutil
 import socket
 from collections.abc import Callable
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 
 from . import config, install
@@ -207,12 +208,14 @@ def _probe_clients(ctx: Context) -> Result:
 
 
 def _installed_version() -> str | None:
-    """Versión del paquete instalado, o None si no se puede saber."""
-    try:
-        from importlib.metadata import PackageNotFoundError, version
+    """Versión del paquete instalado, o None si no se puede saber.
 
-        return version("local-delegate-mcp")
-    except (PackageNotFoundError, Exception):
+    Nunca lanza: si la versión no se puede averiguar, quien la use simplemente no compara. El
+    diagnóstico no puede caerse por no saber un dato accesorio.
+    """
+    try:
+        return metadata.version("local-delegate-mcp")
+    except Exception:  # PackageNotFoundError y cualquier metadato roto o ausente
         return None
 
 
