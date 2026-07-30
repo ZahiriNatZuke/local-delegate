@@ -158,4 +158,4 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, totales): `tokens_context_saved`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Proxy best-effort de `/running` de llama-swap, modelos con status, y `origin`/`host` del endpoint (`{"available": false}` si no responde) |
-| `GET /favicon.svg` | Icono de marca |
+| `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |

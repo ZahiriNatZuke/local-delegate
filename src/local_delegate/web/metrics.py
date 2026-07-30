@@ -593,7 +593,11 @@ _WEB_FONTS_TAGS = """<link rel="preconnect" href="https://fonts.googleapis.com">
 
 def render_index() -> str:
     tags = _WEB_FONTS_TAGS if config.WEB_FONTS else "<!-- fuentes web desactivadas -->"
-    return HTML.replace("__WEB_FONTS__", tags)
+    # La marca del header se **inyecta** desde el mismo fichero que sirve `/favicon.svg` en vez
+    # de estar escrita en el HTML. Antes había un SVG dibujado a mano ahí: al unificar la marca
+    # se actualizó el favicon y el header se quedó con el icono viejo, así que el panel enseñaba
+    # una marca y su propia pestaña otra. Inyectándolo no pueden volver a separarse.
+    return HTML.replace("__WEB_FONTS__", tags).replace("__BRAND_MARK__", FAVICON.strip())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -897,21 +901,11 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 <div class="wrap">
   <header class="topbar">
     <div class="brand">
-      <span class="mark">
-        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#6ee7b7"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
-          <g stroke="#10b981" stroke-width="2.6" stroke-linecap="round">
-            <path d="M12 5.6V2.6"/><path d="M20 5.6V2.6"/>
-            <path d="M12 26.4v3"/><path d="M20 26.4v3"/>
-            <path d="M5.6 12H2.6"/><path d="M5.6 20H2.6"/>
-            <path d="M26.4 12h3"/><path d="M26.4 20h3"/></g>
-          <rect x="6" y="6" width="20" height="20" rx="6.5" fill="url(#mg)"/>
-          <rect x="9" y="9" width="14" height="14" rx="4.4" fill="#0a0c11"/>
-          <path d="M11.4 11.4 16 16l-4.6 4.6" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M18.9 13.4 21.5 16l-2.6 2.6" stroke="#34d399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".65"/>
-        </svg>
-      </span>
+      <!-- El icono sale de resources/brand/favicon.svg, el mismo que sirve /favicon.svg y usa
+           la landing. `aria-hidden` en el contenedor oculta todo el subárbol al lector de
+           pantalla, incluido el aria-label del propio SVG: el nombre ya lo dice .brand-name
+           justo al lado y repetirlo sería ruido. -->
+      <span class="mark" aria-hidden="true">__BRAND_MARK__</span>
       <div class="brand-txt">
         <div class="brand-name">local<b>·</b>delegate<span class="ver" id="ver" title="Versión del MCP que sirve este panel" style="display:none"></span></div>
         <div class="brand-sub">panel de ahorro</div>
