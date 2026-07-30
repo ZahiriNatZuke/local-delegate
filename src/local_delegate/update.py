@@ -387,6 +387,81 @@ def editable_origin() -> Path | None:
     return Path(url) if url else None
 
 
+# --- Cómo está instalado esto -------------------------------------------------
+EDITABLE = "editable"  # el código sale de un repo clonado
+UV_TOOL = "uv-tool"  # instalado con `uv tool install`
+OTHER = "other"  # pip, pipx, conda… no lo sabemos, y no lo adivinamos
+
+UV_TOOL_UPGRADE = f"uv tool upgrade {PACKAGE}"
+GENERIC_UPGRADE = f"actualiza {PACKAGE} con el gestor con el que lo instalaste"
+
+
+def install_kind() -> str:
+    """Cómo está instalado el paquete **que se está ejecutando**.
+
+    El matiz de «que se está ejecutando» es el importante: en una máquina pueden convivir la
+    instalación de ``uv tool`` y una editable del repo, y de hecho conviven en la de desarrollo.
+    Responder por la que no corre sería el mismo falso diagnóstico que ya costó caro aquí con el
+    backend en 401.
+
+    ``uv tool`` deja un ``uv-receipt.toml`` en la raíz del entorno; el ``.venv`` de un repo no lo
+    tiene. Se mira ese fichero y no ``uv tool dir``, ni ``UV_TOOL_DIR``, ni una ruta por sistema
+    operativo: es una lectura local que responde igual en los tres, sin depender de que ``uv``
+    esté en el PATH de este proceso.
+    """
+    if editable_origin():
+        # Gana sobre cualquier otra cosa: es lo que gobierna de dónde sale el código.
+        return EDITABLE
+    try:
+        # `sys.prefix` se lee AQUÍ y no en una constante del módulo: capturado al importar, un
+        # test no podría doblarlo y estaría comprobando la máquina en la que corre.
+        receipt = Path(sys.prefix) / "uv-receipt.toml"
+        text = receipt.read_text(encoding="utf-8", errors="replace")
+    except Exception:  # no existe, no se puede leer, sys.prefix raro… nada que afirmar
+        return OTHER
+    # Basta con que nombre nuestro paquete: parsear el TOML sería precisión que no hace falta
+    # para responder «¿este entorno es el nuestro?». `local-delegate-mcp` es distintivo de sobra;
+    # con un nombre corto esta comparación por subcadena daría falsos positivos.
+    return UV_TOOL if PACKAGE in text else OTHER
+
+
+def upgrade_command() -> str:
+    """El comando que actualiza **esta** instalación, o el genérico si no se reconoce."""
+    kind = install_kind()
+    if kind == EDITABLE:
+        origin = editable_origin()
+        return f"git -C {origin} pull && uv sync --project {origin}"
+    return UV_TOOL_UPGRADE if kind == UV_TOOL else GENERIC_UPGRADE
+
+
+def uv_tool_lines(version: str | None) -> list[str]:
+    """Aviso de que el CLI de ``uv tool`` se queda atrás, y qué hacer.
+
+    ``update`` actualiza el pin, el andamiaje y el daemon, pero **no** el ejecutable de
+    ``uv tool``: son dos pasos donde el usuario espera uno y el segundo no lo decía nadie.
+
+    Y no lo ejecuta él a propósito. Probado en Windows el 2026-07-30 con un paquete de prueba:
+    ``uv tool install <pkg>@latest --force`` lanzado desde el Python de ese mismo entorno falla
+    con ``Acceso denegado`` al borrar ``Scripts/`` —el proceso lo tiene bloqueado— pero **ya ha
+    borrado el paquete**, así que deja la instalación destruida: ``uv tool list`` pasa a decir
+    «Failed find package» y el ejecutable revienta con ``ModuleNotFoundError``.
+    """
+    installed = checks._installed_version()
+    if not version or not installed or install_kind() != UV_TOOL:
+        return []
+    if checks._compare_versions(installed, version) != -1:
+        # Al día (o por delante): un aviso que sale siempre deja de leerse.
+        return []
+    # Sin línea en blanco delante: esto devuelve **el aviso**, no su maquetación. La separación
+    # la pone quien imprime, que es el que sabe qué hay encima.
+    return [
+        f"El CLI está instalado como `uv tool` en la versión {installed}.",
+        "  `update` no puede actualizarlo: reinstalaría el entorno desde el que se está",
+        "  ejecutando, y eso deja la instalación rota. Hazlo tú, en otra terminal:",
+        f"    {UV_TOOL_UPGRADE}",
+    ]
+
+
 # --- Control del daemon -------------------------------------------------------
 def _launch_target() -> str:
     """Dominio del LaunchAgent. ``os.getuid`` no existe en Windows, y el camino de macOS
@@ -645,6 +720,13 @@ def run_update(opts: Options, out=print) -> int:
         out("  Reiniciar el daemon NO cambia la versión. Para actualizar de verdad:")
         out(f"    git -C {editable} pull")
         out(f"    uv sync --project {editable}")
+
+    # El hermano del bloque de arriba para el otro modo de instalación: `update` tampoco cambia
+    # la versión del ejecutable de `uv tool`, y hasta ahora no lo decía nadie.
+    if aviso := uv_tool_lines(version):
+        out("")
+        for line in aviso:
+            out(line)
 
     # 3. Plan: pines + reparaciones del andamiaje.
     actions = plan_pin(opts, version) if version else []

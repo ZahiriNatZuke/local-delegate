@@ -51,7 +51,8 @@ INSTALL_HINT = "local-delegate install"
 SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
-UPGRADE_HINT = "uv tool upgrade local-delegate-mcp"
+# El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
+# decisión vive en `update.upgrade_command()`, que es de donde la toma `_upgrade_hint`.
 
 # Cuánto se espera a PyPI. Corto a propósito: la comparación con lo publicado corre en **toda**
 # ejecución de `doctor`, y un diagnóstico que se cuelga es peor que uno que dice «no pude».
@@ -290,16 +291,15 @@ def _compare_versions(installed: str, latest: str) -> int | None:
 def _upgrade_hint() -> str:
     """Qué comando actualiza **esta** instalación.
 
-    En una instalación editable ``uv tool upgrade`` no actualiza nada, porque el código se sirve
-    del repo clonado. Y el caso no es teórico: es el de una segunda máquina que se quedó por
-    detrás de un release hecho desde otra.
+    Los tres modos dan comandos distintos y no intercambiables: en una editable
+    ``uv tool upgrade`` no actualiza nada —el código sale del repo clonado—, y a quien instaló con
+    ``pip`` mandarlo a ``uv tool upgrade`` es un consejo que falla. La decisión de cuál es cuál
+    vive en ``update.install_kind``, en un solo sitio, porque el otro consumidor es el propio
+    ``update``.
     """
     from . import update
 
-    origin = update.editable_origin()
-    if origin:
-        return f"git -C {origin} pull && uv sync --project {origin}"
-    return UPGRADE_HINT
+    return update.upgrade_command()
 
 
 def _probe_published(ctx: Context) -> Result:

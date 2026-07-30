@@ -80,6 +80,19 @@ donde exista, completa la configuración que falte y termina dejando el daemon a
 corría, lo levanta si no. Es idempotente. El backend de inferencia **no se toca** salvo que lo pidas
 con `--restart-backend`, porque reiniciar llama-swap descargaría los modelos de la VRAM.
 
+**Lo que `update` NO hace: actualizar el propio CLI si lo instalaste con `uv tool`.** Te lo dice al
+terminar, con el comando:
+
+```bash
+uv tool upgrade local-delegate-mcp
+```
+
+No lo ejecuta él, y no es pereza: `uv tool` reinstala el entorno entero, que es **el mismo desde el
+que `update` se está ejecutando**. Probado en Windows, la reinstalación falla al borrar `Scripts/`
+—el proceso lo tiene bloqueado— *después* de haber borrado el paquete, así que deja la instalación
+rota: `uv tool list` pasa a decir «Failed find package» y el ejecutable revienta. Por eso el
+segundo paso lo das tú, desde otra terminal.
+
 Después, reinicia Claude Code y Codex; el paquete se descarga solo al arrancar el cliente.
 
 **Por qué esto vive en el CLI y no en `scripts/`.** Antes había un `scripts/update_to_latest.sh` que

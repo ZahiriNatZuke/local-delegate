@@ -7,6 +7,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`update` avisa de que no actualiza el CLI instalado como `uv tool`, y dice cómo hacerlo.**
+  Actualiza el pin, el andamiaje y el daemon, pero el ejecutable de `uv tool` se quedaba donde
+  estaba sin que nadie lo dijera. Ahora, cuando hay una versión más nueva publicada, lo detecta
+  —por el `uv-receipt.toml` del entorno, sin ejecutar `uv` ni depender de rutas de cada sistema— y
+  da el comando exacto. **No lo ejecuta él a propósito:** probado en Windows, reinstalar el
+  entorno desde el que corre el proceso falla al borrar `Scripts/` **y deja la instalación rota**,
+  porque ya ha borrado el paquete. Como efecto colateral, la pista del `doctor` deja de sugerir
+  `uv tool upgrade` a instalaciones que no lo son (`pip`, `pipx`): ahora distingue los tres modos.
 - **`update` dice de dónde sacó la versión, y detecta el desfase de justo después de publicar.**
   La línea ahora nombra la fuente (el índice simple de PyPI, que se sirve con caché) y, cuando la
   versión **instalada** es más nueva que la que anuncia PyPI —la firma exacta de una release que

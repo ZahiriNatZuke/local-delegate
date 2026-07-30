@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "update-detecta-uv-tool",
+  "title": "update detecta el CLI instalado como uv tool y dice como actualizarlo",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-30T23:23:03.841Z",
+  "updatedAt": "2026-07-30T23:34:30.612Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:24:54.629Z",
+      "evidence": "spec.md con 13 requisitos observables y 4 escenarios, sobre un research que resolvio POR EXPERIMENTO la pregunta que decidia el diseño. Probado con un paquete inocuo (cowsay) para no tocar la instalacion real: 'uv tool install <pkg>@latest --force' lanzado desde el Python del propio entorno falla en Windows con 'failed to remove directory Scripts: Acceso denegado (os error 5)' Y DEJA EL ENTORNO DESTRUIDO -- 'uv tool list' pasa a decir 'Failed find package' y el ejecutable revienta con ModuleNotFoundError, porque alcanza a borrar el paquete antes de estrellarse contra el Scripts que el proceso tiene bloqueado. Experimento limpiado (uv tool uninstall cowsay) y comprobado que local-delegate-mcp sigue intacto en 0.17.0. Con ese dato delante el usuario decidio: detectar y decir, nunca ejecutar -- que ademas es lo que update ya hace con la instalacion editable. La deteccion sale tambien del research y es mejor de lo esperado: una instalacion de uv tool deja 'uv-receipt.toml' en la raiz del entorno y el .venv del repo NO lo tiene (comprobado), asi que basta Path(sys.prefix)/'uv-receipt.toml' -- sin ejecutar uv, sin variables de entorno (UV_TOOL_DIR y XDG_DATA_HOME estan sin definir aqui, comprobado) y sin rutas por sistema operativo, que es lo que la haria fragil en macOS y Linux. Restriccion anotada: en esta maquina conviven las dos instalaciones, asi que el mensaje debe hablar de la que ESTA CORRIENDO.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:27:00.842Z",
+      "evidence": "plan.md con 6 tareas. El diseño reune en install_kind() lo que hoy preguntan dos consumidores por separado (el mensaje de update y el fix_hint de cli.published, que asume 'uv tool upgrade' para todo lo que no sea editable, incluido pip), reusando editable_origin() que ya existe. La deteccion de uv tool es lectura de fichero local (uv-receipt.toml en sys.prefix), sin ejecutar uv, sin variables de entorno y sin rutas por sistema. Revision adversarial con cuatro hallazgos incorporados: R-1 BLOQUEANTE, sys.prefix hay que leerlo EN TIEMPO DE LLAMADA y no en una constante del modulo, porque si no el monkeypatch de los tests no llega y estarian probando la maquina en la que corren en vez del codigo -- es el mismo error que ya se pago en el change anterior con el default del dataclass que capturaba la referencia al definirse; R-2, el camino nuevo NO se recorre desde 'uv run', que es como se prueba todo aqui (ahi sys.prefix apunta al .venv del repo), asi que hay que ejecutar el CLI de uv tool o se daria por buena una verificacion que nunca toco el codigo nuevo; R-3, PACKAGE in texto casa por subcadena, aceptable con un nombre tan distintivo pero anotado; R-4, la wiki se busco ANTES de planificar y no despues: Remote-backend.md:78-83 describe que hace update y es donde falta decir lo que no hace, mientras que Daemon.md:72 solo lo menciona para los nombres de servicio y no aplica.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:34:30.035Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 451 passed, 1 skipped (+13); extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (904 CRLF, 0 LF sueltos). Verificacion al reves: sustituida la deteccion por 'return OTHER' fallan los tres tests que la protegen y ninguno mas. Y se cubrio el riesgo R-2 del plan, que era el importante: desde 'uv run' el camino de uv tool NO se recorre porque sys.prefix apunta al .venv del repo, asi que se ejecuto el Python del entorno de uv tool con el codigo del repo en PYTHONPATH -- sys.prefix real con receipt, codigo nuevo -- y se vio install_kind()='uv-tool', el comando correcto y el aviso completo, mas el caso 'al dia' devolviendo nada. Desde el repo editable se comprobo lo contrario (bloque EDITABLE, sin aviso de uv tool). Sin tocar la instalacion real del usuario: no se instalo ni desinstalo nada y local-delegate sigue en 0.17.0. Sin secretos, sin subprocesos nuevos, sin red y sin dependencias -- el cambio precisamente NO ejecuta el upgrade.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:34:30.313Z",
+      "evidence": "Revision fresca del diff contra los 13 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. REQ-005 se cumple de forma verificable: checks._upgrade_hint pasa a llamar a update.upgrade_command() y se RETIRO checks.UPGRADE_HINT, para no dejar el mismo comando escrito en dos sitios -- que es justo el defecto que este change ataca. Un desvio respecto al plan, documentado: la primera version de uv_tool_lines devolvia una linea vacia inicial como separador y eso rompio su propio test de REQ-009, porque el filtro 'line not in extra' borraba TODAS las vacias de la salida y desalineaba la comparacion; se corrigio en el codigo y no en el test -- la funcion devuelve el aviso, no su maquetacion. Efecto colateral deliberado y anotado: el fix_hint deja de sugerir 'uv tool upgrade' a instalaciones de pip o pipx, que caen en OTHER con texto generico; es una correccion, porque ese consejo en esas instalaciones no hace nada.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T23:23:03.841Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T23:23:04.097Z",
+      "reason": "Experimento sobre el bloqueo de Windows y mapeo de como se detecta el modo de instalacion"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T23:24:08.650Z",
+      "reason": "Research cerrado: el experimento descarta ejecutar el upgrade y uv-receipt.toml da la deteccion sin rutas por sistema"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T23:24:54.629Z",
+      "evidence": "spec.md con 13 requisitos observables y 4 escenarios, sobre un research que resolvio POR EXPERIMENTO la pregunta que decidia el diseño. Probado con un paquete inocuo (cowsay) para no tocar la instalacion real: 'uv tool install <pkg>@latest --force' lanzado desde el Python del propio entorno falla en Windows con 'failed to remove directory Scripts: Acceso denegado (os error 5)' Y DEJA EL ENTORNO DESTRUIDO -- 'uv tool list' pasa a decir 'Failed find package' y el ejecutable revienta con ModuleNotFoundError, porque alcanza a borrar el paquete antes de estrellarse contra el Scripts que el proceso tiene bloqueado. Experimento limpiado (uv tool uninstall cowsay) y comprobado que local-delegate-mcp sigue intacto en 0.17.0. Con ese dato delante el usuario decidio: detectar y decir, nunca ejecutar -- que ademas es lo que update ya hace con la instalacion editable. La deteccion sale tambien del research y es mejor de lo esperado: una instalacion de uv tool deja 'uv-receipt.toml' en la raiz del entorno y el .venv del repo NO lo tiene (comprobado), asi que basta Path(sys.prefix)/'uv-receipt.toml' -- sin ejecutar uv, sin variables de entorno (UV_TOOL_DIR y XDG_DATA_HOME estan sin definir aqui, comprobado) y sin rutas por sistema operativo, que es lo que la haria fragil en macOS y Linux. Restriccion anotada: en esta maquina conviven las dos instalaciones, asi que el mensaje debe hablar de la que ESTA CORRIENDO.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T23:24:54.856Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T23:27:00.842Z",
+      "evidence": "plan.md con 6 tareas. El diseño reune en install_kind() lo que hoy preguntan dos consumidores por separado (el mensaje de update y el fix_hint de cli.published, que asume 'uv tool upgrade' para todo lo que no sea editable, incluido pip), reusando editable_origin() que ya existe. La deteccion de uv tool es lectura de fichero local (uv-receipt.toml en sys.prefix), sin ejecutar uv, sin variables de entorno y sin rutas por sistema. Revision adversarial con cuatro hallazgos incorporados: R-1 BLOQUEANTE, sys.prefix hay que leerlo EN TIEMPO DE LLAMADA y no en una constante del modulo, porque si no el monkeypatch de los tests no llega y estarian probando la maquina en la que corren en vez del codigo -- es el mismo error que ya se pago en el change anterior con el default del dataclass que capturaba la referencia al definirse; R-2, el camino nuevo NO se recorre desde 'uv run', que es como se prueba todo aqui (ahi sys.prefix apunta al .venv del repo), asi que hay que ejecutar el CLI de uv tool o se daria por buena una verificacion que nunca toco el codigo nuevo; R-3, PACKAGE in texto casa por subcadena, aceptable con un nombre tan distintivo pero anotado; R-4, la wiki se busco ANTES de planificar y no despues: Remote-backend.md:78-83 describe que hace update y es donde falta decir lo que no hace, mientras que Daemon.md:72 solo lo menciona para los nombres de servicio y no aplica.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T23:27:01.368Z",
+      "reason": "plan revisado adversarialmente, 4 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T23:27:02.113Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T23:34:29.771Z",
+      "reason": "6 tareas implementadas; CI local verde y ejecucion real en los dos contextos de instalacion"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T23:34:30.035Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 451 passed, 1 skipped (+13); extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (904 CRLF, 0 LF sueltos). Verificacion al reves: sustituida la deteccion por 'return OTHER' fallan los tres tests que la protegen y ninguno mas. Y se cubrio el riesgo R-2 del plan, que era el importante: desde 'uv run' el camino de uv tool NO se recorre porque sys.prefix apunta al .venv del repo, asi que se ejecuto el Python del entorno de uv tool con el codigo del repo en PYTHONPATH -- sys.prefix real con receipt, codigo nuevo -- y se vio install_kind()='uv-tool', el comando correcto y el aviso completo, mas el caso 'al dia' devolviendo nada. Desde el repo editable se comprobo lo contrario (bloque EDITABLE, sin aviso de uv tool). Sin tocar la instalacion real del usuario: no se instalo ni desinstalo nada y local-delegate sigue en 0.17.0. Sin secretos, sin subprocesos nuevos, sin red y sin dependencias -- el cambio precisamente NO ejecuta el upgrade.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T23:34:30.313Z",
+      "evidence": "Revision fresca del diff contra los 13 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. REQ-005 se cumple de forma verificable: checks._upgrade_hint pasa a llamar a update.upgrade_command() y se RETIRO checks.UPGRADE_HINT, para no dejar el mismo comando escrito en dos sitios -- que es justo el defecto que este change ataca. Un desvio respecto al plan, documentado: la primera version de uv_tool_lines devolvia una linea vacia inicial como separador y eso rompio su propio test de REQ-009, porque el filtro 'line not in extra' borraba TODAS las vacias de la salida y desalineaba la comparacion; se corrigio en el codigo y no en el test -- la funcion devuelve el aviso, no su maquetacion. Efecto colateral deliberado y anotado: el fix_hint deja de sugerir 'uv tool upgrade' a instalaciones de pip o pipx, que caen en OTHER con texto generico; es una correccion, porque ese consejo en esas instalaciones no hace nada.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T23:34:30.612Z",
+      "reason": "gates quality y conformance aprobados"
+    }
+  ]
+}
