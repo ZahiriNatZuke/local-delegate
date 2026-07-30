@@ -1,0 +1,70 @@
+name: Pages
+
+# La landing se publica desde `site/`, no desde `docs/`. `docs/` guarda la wiki, las recipes y
+# `plans/`, y servir esa carpeta entera pondría todo eso en una URL pública sin que nadie lo
+# haya decidido. Un directorio propio hace explícito qué se publica.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "pyproject.toml"          # la versión inyectada sale de aquí
+      - "scripts/build_site.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez, y sin cancelar el que ya está a medias: cancelar un deploy de Pages
+# deja el sitio en un estado a medio publicar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      # Sin `uv sync`: el script es solo stdlib a propósito, igual que check_vendor.py.
+      - name: Build site
+        run: uv run --no-project python scripts/build_site.py
+
+      - name: Verify no placeholder survived
+        run: uv run --no-project python scripts/build_site.py --check
+
+      - name: Validate page JS
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          html = pathlib.Path("_site/index.html").read_text(encoding="utf-8")
+          js = "\n".join(re.findall(r"<script>(.*?)</script>", html, re.S))
+          pathlib.Path("page.js").write_text(js, encoding="utf-8")
+          print(f"{len(js.splitlines())} lineas de JS extraidas")
+          PY
+          node --check page.js
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Solo este job recibe los permisos de escritura de Pages; el build corre sin ellos.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

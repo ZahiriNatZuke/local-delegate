@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>local-delegate — delega lo mecánico a un modelo local</title>
+<meta name="description" content="Servidor MCP que delega los pasos mecanicos a un modelo local para conservar la cuota de tu suscripcion.">
+<meta property="og:title" content="local-delegate">
+<meta property="og:description" content="Lo mecanico no tiene por que ir a la nube.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230D1A1D'/><path d='M8 1v6H3v8' stroke='%23E8B500' stroke-width='2' fill='none'/></svg>">
+</head>
+<body>
+<style>
+/* ============================================================================
+   DIAGRAMA DE CONMUTACIÓN — local-delegate
+   La página es un diagrama de ruteo. Baja una troncal; en cada estación se
+   bifurca: la rama fina y apagada sube a la nube, la troncal sigue a tu máquina.
+   El adorno ES la arquitectura.
+   Paleta: sal fría + tinta verdeazulada + amarillo de señal (rutas, no marca).
+   ========================================================================= */
+
+:root {
+  /* Tinta con sesgo teal: un gris puro habría sido heredado, no elegido */
+  --ink:        #0D1A1D;
+  --ink-2:      #1E3236;
+  --muted:      #5A6E71;
+  --hair:       #C3CCC9;
+
+  /* Sal: gris frío con sesgo verde, como acero galvanizado */
+  --paper:      #DFE5E2;
+  --paper-hi:   #EEF2F0;
+
+  /* Las dos ramas: semánticas, no decorativas */
+  --local:      #E8B500;   /* amarillo de señal: la vía que se toma */
+  --local-deep: #A88100;
+  --cloud:      #8792A3;   /* azul-gris deliberadamente sosa: la vía cara */
+
+  --spine-w: 3px;
+  --rail: 108px;           /* carril del diagrama en escritorio */
+  --dot-top: 82px;         /* lo leen el CSS y el JS: una sola posición del punto */
+  --dot-size: 15px;
+
+  --term-bg:    #0D1A1D;
+  --term-fg:    #C9D6D3;
+  --term-hi:    #FFFFFF;
+
+  --sans: "Corbel", "Candara", "Optima", "Gill Sans", "Trebuchet MS", sans-serif;
+  --cond: "Bahnschrift", "DIN Alternate", "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --mono: "Cascadia Mono", "Consolas", "SF Mono", "Menlo", "DejaVu Sans Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #E4EBE8; --ink-2: #B6C4C1; --muted: #82969B; --hair: #2A3C40;
+    --paper: #0C1618; --paper-hi: #142326;
+    --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D;
+    --term-bg: #081113; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #E4EBE8; --ink-2: #B6C4C1; --muted: #82969B; --hair: #2A3C40;
+  --paper: #0C1618; --paper-hi: #142326;
+  --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D;
+  --term-bg: #081113; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
+}
+:root[data-theme="light"] {
+  --ink: #0D1A1D; --ink-2: #1E3236; --muted: #5A6E71; --hair: #C3CCC9;
+  --paper: #DFE5E2; --paper-hi: #EEF2F0;
+  --local: #E8B500; --local-deep: #A88100; --cloud: #8792A3;
+  --term-bg: #0D1A1D; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
+}
+
+/* El selector universal a secas NO alcanza a los pseudo-elementos, y aquí importa:
+   el punto de estación se dibuja con ::before y sin esto medía 15+3+3 = 21px, con su
+   centro 3,5px a la derecha de la troncal. */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    linear-gradient(var(--hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hair) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px;
+  background-position: -1px -1px;
+}
+body::before {
+  /* difumina la retícula hacia el centro para que no compita con el texto */
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 90% 60% at 50% 40%, var(--paper) 35%, transparent 100%);
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+/* --- Tipografía ---------------------------------------------------------- */
+h1, h2, h3, .eyebrow, .station-no { font-family: var(--cond); font-weight: 600; }
+h1, h2, h3 { text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+
+h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); line-height: 0.98; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.05; }
+h3 { font-size: 1.12rem; letter-spacing: 0.01em; }
+
+.eyebrow {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--muted); margin: 0 0 14px;
+}
+p { margin: 0 0 1.1em; max-width: 62ch; }
+.lede { font-size: 1.18rem; color: var(--ink-2); }
+strong { font-weight: 700; color: var(--ink); }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+a { color: var(--ink); text-decoration-color: var(--local); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--local); outline-offset: 3px; border-radius: 2px;
+}
+
+/* --- Selector de idioma --------------------------------------------------- */
+.lang {
+  display: flex; gap: 0; justify-content: flex-end;
+  padding-top: 22px; font-family: var(--cond);
+}
+.lang button {
+  background: none; border: 1px solid var(--hair); color: var(--muted);
+  font: inherit; font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 6px 13px; cursor: pointer; transition: color 160ms, border-color 160ms;
+}
+.lang button + button { border-left: 0; }
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed="true"] {
+  color: var(--ink); border-color: var(--local); background: var(--local);
+  color: #0D1A1D;
+}
+
+/* --- El carril del diagrama ---------------------------------------------- */
+.diagram { position: relative; padding-left: var(--rail); }
+@media (max-width: 720px) { :root { --rail: 46px; } }
+
+/* La troncal recorre TODO el diagrama, la última estación incluida, y termina en un
+   remate horizontal: una línea que se corta en el aire parece rota, no acabada. */
+.spine, .spine-fill {
+  position: absolute; left: calc(var(--rail) / 2 - var(--spine-w) / 2);
+  width: var(--spine-w); top: 0;
+}
+.spine { background: var(--hair); bottom: 0; }
+.spine-fill {
+  background: var(--local); height: 0;
+  transition: height 90ms linear;
+  box-shadow: 0 0 12px -2px var(--local);
+}
+.diagram::after {  /* remate de fin de línea */
+  content: ""; position: absolute; bottom: 0;
+  left: calc(var(--rail) / 2 - 11px); width: 22px; height: var(--spine-w);
+  background: var(--hair); transition: background-color 240ms ease;
+}
+.diagram.terminada::after { background: var(--local); }
+
+/* estación: el punto donde la línea se detiene. Se centra sobre la troncal restando
+   la MITAD del ancho total del punto al centro del carril, y el número vive en el
+   gutter de fuera, como en un mapa de metro: nunca invade la línea. */
+.station { position: relative; padding: 76px 0; }
+.station::before {
+  content: ""; position: absolute;
+  left: calc(var(--rail) / -2 - var(--dot-size) / 2); top: var(--dot-top);
+  width: var(--dot-size); height: var(--dot-size); border-radius: 50%;
+  background: var(--paper); border: var(--spine-w) solid var(--hair);
+  transition: border-color 240ms ease, transform 240ms ease;
+}
+.station.lit::before { border-color: var(--local); transform: scale(1.3); }
+
+.station-no {
+  position: absolute; left: calc(var(--rail) * -1); top: 80px;
+  width: calc(var(--rail) / 2 - 20px); text-align: right;
+  font-size: 0.78rem; letter-spacing: 0.08em; color: var(--muted);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.station.lit .station-no { color: var(--local-deep); }
+@media (max-width: 720px) { .station-no { display: none; } }
+
+/* Sin esto el h2 (margin 0 de la regla tipográfica) se pega a lo que venga debajo. */
+.station h2 { margin-bottom: 26px; }
+
+/* --- Hero ---------------------------------------------------------------- */
+.hero { padding: 60px 0 40px; }
+.hero h1 { text-transform: uppercase; }
+.hero h1 .hl {
+  color: var(--local-deep);
+  text-decoration: underline;
+  text-decoration-thickness: 6px;
+  text-underline-offset: 8px;
+  text-decoration-color: var(--local);
+}
+.hero .lede { margin-top: 26px; }
+.meta {
+  display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 26px;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+}
+.meta span { white-space: nowrap; }
+
+/* --- Una tarea, dos vias (pieza del hero) --------------------------------
+   Aqui hubo un diagrama de bifurcacion con la pregunta del cruce y dos listas de
+   categorias. Se quito: no demostraba nada que no dijeran ya el lede, la seccion 01
+   (la regla) y la 02 (las tools) -- era la misma idea por tercera vez. Lo que el hero
+   si puede hacer y nadie mas hace es ensenar UNA tarea real y que le pasa a tu ventana
+   de contexto por cada via. Un numero contra otro, sin taxonomias. */
+.fork {
+  margin: 46px 0 8px; border: 1px solid var(--hair); background: var(--paper-hi);
+  padding: 24px 26px 22px;
+}
+.task {
+  font-family: var(--mono); font-size: 0.8rem; color: var(--muted);
+  margin: 0 0 22px; max-width: none; padding-bottom: 16px;
+  border-bottom: 1px solid var(--hair);
+}
+.task b { color: var(--ink); font-weight: 400; }
+.cmp { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 700px) { .cmp { grid-template-columns: 1fr 1fr; gap: 0; } }
+
+.lane { padding: 0 24px; border-left: var(--spine-w) solid var(--hair); }
+.lane.down { border-left-color: var(--local); }
+@media (max-width: 699px) { .lane { padding-left: 20px; } }
+
+.lane-k {
+  font-family: var(--cond); font-size: 0.72rem; letter-spacing: 0.18em;
+  text-transform: uppercase; display: block; margin-bottom: 10px;
+}
+.lane.up   .lane-k { color: var(--cloud); }
+.lane.down .lane-k { color: var(--local-deep); }
+.lane-n {
+  font-family: var(--mono); font-size: 2.5rem; line-height: 1; display: block;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+}
+.lane.up   .lane-n { color: var(--cloud); }
+.lane.down .lane-n { color: var(--local-deep); }
+.lane-n small { font-size: 0.32em; letter-spacing: 0.14em; color: var(--muted); }
+.lane p { font-size: 0.94rem; color: var(--ink-2); margin: 14px 0 0; max-width: 34ch; }
+.cmp-foot {
+  margin: 24px 0 0; padding-top: 16px; border-top: 1px solid var(--hair);
+  font-size: 0.9rem; color: var(--muted); max-width: none;
+}
+.cmp-foot strong { color: var(--ink); }
+
+/* --- Contenido de estación ---------------------------------------------- */
+.cols { display: grid; grid-template-columns: 1fr; gap: 30px; }
+@media (min-width: 860px) { .cols.split { grid-template-columns: 1.15fr 1fr; gap: 52px; } }
+
+.rule {
+  border-left: var(--spine-w) solid var(--local);
+  padding: 6px 0 6px 22px; margin: 26px 0;
+  font-family: var(--cond); font-size: 1.35rem; line-height: 1.28;
+}
+.rule em { font-style: normal; color: var(--local-deep); }
+
+.tools { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.82rem; }
+.tools caption {
+  text-align: left; font-family: var(--cond); font-size: 0.72rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted); padding-bottom: 12px;
+}
+.tools td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--hair); vertical-align: baseline; }
+.tools tr td:first-child { color: var(--ink); white-space: nowrap; }
+.tools tr td:last-child { color: var(--muted); }
+.tbl-scroll { overflow-x: auto; }
+
+.term {
+  background: var(--term-bg); color: var(--term-fg); font-family: var(--mono);
+  font-size: 0.85rem; line-height: 1.75; padding: 20px 22px; overflow-x: auto;
+  border-left: var(--spine-w) solid var(--local);
+}
+.term .c { color: var(--cloud); }
+.term .y { color: var(--local); }
+.term b { color: var(--term-hi); font-weight: 600; }
+
+/* --- El recibo: desenlace del recorrido --------------------------------- */
+.receipt {
+  background: var(--paper-hi); border: 1px solid var(--hair);
+  padding: 34px 30px; font-family: var(--mono); font-size: 0.86rem;
+  max-width: 480px; position: relative;
+}
+.receipt::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 10px;
+  background: repeating-linear-gradient(135deg, var(--paper) 0 6px, transparent 6px 12px);
+}
+.receipt h3 {
+  font-family: var(--cond); font-size: 0.78rem; letter-spacing: 0.2em;
+  text-transform: uppercase; margin-bottom: 18px; color: var(--muted);
+}
+.line { display: flex; justify-content: space-between; gap: 14px; padding: 4px 0; color: var(--ink-2); }
+.line .dots { flex: 1; border-bottom: 1px dotted var(--hair); transform: translateY(-4px); }
+.line .n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.line .was { color: var(--muted); text-decoration: line-through; }
+.line .now { color: var(--local-deep); }
+.receipt hr { border: 0; border-top: 1px solid var(--hair); margin: 16px 0; }
+.total { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+.total .k { font-family: var(--cond); letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.76rem; }
+.total .v { font-size: 1.5rem; color: var(--local-deep); font-variant-numeric: tabular-nums; }
+.receipt .foot { color: var(--muted); font-size: 0.74rem; margin-top: 18px; line-height: 1.5; }
+
+/* --- CTA final ----------------------------------------------------------- */
+.cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 26px; }
+.btn {
+  font-family: var(--cond); font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 13px 24px; border: var(--spine-w) solid var(--ink); background: var(--local);
+  color: #0D1A1D; text-decoration: none; display: inline-block;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.btn.ghost { background: transparent; color: var(--ink); }
+
+footer {
+  border-top: 1px solid var(--hair); margin-top: 90px; padding: 30px 0 60px;
+  font-family: var(--mono); font-size: 0.76rem; color: var(--muted);
+  display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <nav class="lang" aria-label="Idioma / Language">
+    <button type="button" data-lang="es" aria-pressed="true">ES</button>
+    <button type="button" data-lang="en" aria-pressed="false">EN</button>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow" data-t="hero_eyebrow"></p>
+    <h1 data-t="hero_h1"></h1>
+    <p class="lede" data-t="hero_lede"></p>
+
+    <div class="fork">
+      <p class="task" data-t="cmp_task"></p>
+      <div class="cmp">
+        <div class="lane up">
+          <span class="lane-k" data-t="cmp_up_k"></span>
+          <span class="lane-n">40 000 <small>tok</small></span>
+          <p data-t="cmp_up_p"></p>
+        </div>
+        <div class="lane down">
+          <span class="lane-k" data-t="cmp_down_k"></span>
+          <span class="lane-n">~300 <small>tok</small></span>
+          <p data-t="cmp_down_p"></p>
+        </div>
+      </div>
+      <p class="cmp-foot" data-t="cmp_foot"></p>
+    </div>
+
+    <div class="meta">
+      <span>llama-swap</span><span>Ollama</span><span>LM Studio</span><span>vLLM</span>
+      <span data-t="meta_tail"></span>
+    </div>
+  </header>
+
+  <main class="diagram">
+    <div class="spine" aria-hidden="true"></div>
+    <div class="spine-fill" id="fill" aria-hidden="true"></div>
+
+    <section class="station">
+      <span class="station-no">01</span>
+      <p class="eyebrow" data-t="s1_eyebrow"></p>
+      <h2 data-t="s1_h2"></h2>
+      <div class="rule" data-t="s1_rule"></div>
+      <p data-t="s1_p"></p>
+    </section>
+
+    <section class="station">
+      <span class="station-no">02</span>
+      <p class="eyebrow" data-t="s2_eyebrow"></p>
+      <h2 data-t="s2_h2"></h2>
+      <div class="cols split">
+        <div class="tbl-scroll">
+          <table class="tools">
+            <caption data-t="s2_caption"></caption>
+            <tbody>
+              <tr><td>local_summarize</td><td data-t="t_sum"></td></tr>
+              <tr><td>local_classify</td><td data-t="t_cls"></td></tr>
+              <tr><td>local_extract</td><td data-t="t_ext"></td></tr>
+              <tr><td>local_boilerplate</td><td data-t="t_boil"></td></tr>
+              <tr><td>local_commit_msg</td><td data-t="t_commit"></td></tr>
+              <tr><td>local_lint_summary</td><td data-t="t_lint"></td></tr>
+              <tr><td>local_translate</td><td data-t="t_tr"></td></tr>
+              <tr><td>local_explain_code</td><td data-t="t_expl"></td></tr>
+              <tr><td>local_describe_image</td><td data-t="t_img"></td></tr>
+              <tr><td>local_delegate</td><td data-t="t_gen"></td></tr>
+              <tr><td>local_status</td><td data-t="t_status"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 data-t="s2_h3"></h3>
+          <p data-t="s2_p"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="station">
+      <span class="station-no">03</span>
+      <p class="eyebrow" data-t="s3_eyebrow"></p>
+      <h2 data-t="s3_h2"></h2>
+      <div class="term" data-t="s3_term"></div>
+      <p style="margin-top:22px" data-t="s3_p"></p>
+    </section>
+
+    <section class="station">
+      <span class="station-no">04</span>
+      <p class="eyebrow" data-t="s4_eyebrow"></p>
+      <h2 data-t="s4_h2"></h2>
+      <div class="cols split">
+        <div class="receipt">
+          <h3 data-t="r_title"></h3>
+          <div class="line"><span data-t="r_1"></span><span class="dots"></span><span class="n">4.50 M</span></div>
+          <div class="line"><span data-t="r_2"></span><span class="dots"></span><span class="n">1.50 M</span></div>
+          <div class="line"><span data-t="r_3"></span><span class="dots"></span><span class="n">0.24 M</span></div>
+          <div class="line"><span data-t="r_4"></span><span class="dots"></span><span class="n">0.12 M</span></div>
+          <div class="line"><span data-t="r_5"></span><span class="dots"></span><span class="n">0.06 M</span></div>
+          <hr>
+          <div class="line"><span data-t="r_cloud"></span><span class="dots"></span><span class="n">6.42 M</span></div>
+          <div class="line"><span data-t="r_gpu"></span><span class="dots"></span><span class="n now">0</span></div>
+          <hr>
+          <div class="total"><span class="k" data-t="r_total_k"></span><span class="v" data-t="r_total_v"></span></div>
+          <div class="line" style="margin-top:10px"><span data-t="r_usd_k"></span><span class="dots"></span><span class="n now" data-t="r_usd_v"></span></div>
+          <p class="foot" data-t="r_foot"></p>
+        </div>
+        <div>
+          <p data-t="s4_p"></p>
+          <div class="cta">
+            <a class="btn" href="https://github.com/ZahiriNatZuke/local-delegate" data-t="cta_gh"></a>
+            <a class="btn ghost" href="https://pypi.org/project/local-delegate-mcp/">PyPI</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span data-t="foot_l"></span>
+    <span data-t="foot_r"></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // --- La versión, en UN solo sitio ---------------------------------------
+  // Estaba escrita dos veces (el eyebrow y el bloque de terminal) y con la primera
+  // release ya mentía en una. Vive aquí y se sustituye por {v} en cualquier cadena.
+  // En el despliegue real de GitHub Pages este literal no se escribe a mano: lo inyecta
+  // el paso de publicación, o se lee de https://pypi.org/pypi/local-delegate-mcp/json
+  // (fuera de un artifact, donde el CSP no bloquea la petición) con esto de respaldo.
+  var VERSION = "__LD_VERSION__";
+
+  var T = {
+    es: {
+      title: "local-delegate — delega lo mecánico a un modelo local",
+      hero_eyebrow: "Servidor MCP · v{v} · MIT",
+      hero_h1: 'Lo mecánico<br>no tiene por qué<br><span class="hl">ir a la nube</span>',
+      hero_lede: "Resumir un fichero, clasificar un prompt, escribir un mensaje de commit desde un diff. Tu agente los manda arriba y los pagas a precio de razonamiento. <strong>local-delegate los desvía a un modelo que ya corre en tu máquina</strong>, y devuelve el resultado por el mismo protocolo. El agente no se entera. Tu cuota, sí.",
+      cmp_task: "TAREA — <b>el agente necesita el resumen de un fichero de 40 000 tokens</b>",
+      cmp_up_k: "Sin el desvío · la nube",
+      cmp_up_p: "El fichero entero entra en el contexto del agente para que pueda leerlo, y se paga a precio de razonamiento.",
+      cmp_down_k: "Con el desvío · tu máquina",
+      cmp_down_p: "El fichero lo lee el servidor MCP, ahí mismo en tu máquina. Al agente solo le vuelve el resumen.",
+      cmp_foot: "Es el mismo trabajo y el mismo resultado. Lo que cambia es que <strong>el fichero nunca entra en tu ventana</strong> — ni la ocupa, ni la paga.",
+      meta_tail: "— cualquier endpoint OpenAI-compatible",
+
+      s1_eyebrow: "Dónde está el desvío",
+      s1_h2: "Una frase decide la vía",
+      s1_rule: "Si el paso cabe en <em>una sola frase</em> con un formato de salida explícito, se delega. Si necesita criterio, arquitectura o hilar varias fuentes, <em>lo hace el de arriba</em>.",
+      s1_p: "No es una heurística que tengas que recordar tú: viaja instalada. <code>local-delegate install</code> deja la regla en la memoria global de tu cliente y una skill que la desarrolla, así que el agente toma el desvío solo.",
+
+      s2_eyebrow: "Qué para en cada andén",
+      s2_h2: "Once paradas",
+      s2_caption: "tools expuestas por el servidor",
+      t_sum: "resumen con formato pedido", t_cls: "etiqueta de un conjunto cerrado",
+      t_ext: "campos a JSON validado", t_boil: "código de plantilla",
+      t_commit: "mensaje desde un diff", t_lint: "salida de lint y tests",
+      t_tr: "texto o fichero entero", t_expl: "qué hace este fichero",
+      t_img: "lectura de una captura", t_gen: "la genérica, con tu prompt",
+      t_status: "¿está vivo el backend?",
+      s2_h3: "El ahorro de verdad está en <code>path</code>",
+      s2_p: "Pasar <code>path=</code> en vez del texto es la diferencia entre ahorrar un poco y ahorrar de golpe: <strong>el fichero lo lee el servidor</strong> y su contenido nunca entra en el contexto del agente. Un fichero de 40 000 tokens cuesta la llamada, no el fichero.",
+
+      s3_eyebrow: "Cómo se toma",
+      s3_h2: "Dos comandos",
+      s3_term: '<span class="c"># deja el comando en el PATH (uvx monta un entorno efímero y lo borra)</span><br><b>uv tool install local-delegate-mcp</b><br><br><span class="c"># hooks, skill, bloque de memoria y entrada MCP en Claude Code y Codex</span><br><b>local-delegate install --mcp-mode http</b><br><br><span class="c"># y cuando algo no cuadre, que te lo diga el producto y no tú</span><br><b>local-delegate doctor</b><br><span class="y">[ OK ] daemon: local-delegate {v} · pid 5012</span><br><span class="y">[ OK ] backend: /models responde</span><br>Resultado: todo a punto.',
+      s3_p: "El panel de ahorro queda en <code>127.0.0.1:9393</code>, con el coste enfrente del ahorro y las llamadas reales al backend — no estimaciones.",
+
+      s4_eyebrow: "Fin de línea",
+      s4_h2: "El recibo",
+      r_title: "Un mes de trabajo · tokens que no subieron",
+      r_1: "150 resúmenes de fichero", r_2: "300 resúmenes de lint y tests",
+      r_3: "120 mensajes de commit", r_4: "600 prompts clasificados",
+      r_5: "40 capturas descritas",
+      r_cloud: "habría ido a la nube", r_gpu: "pagado a tu GPU",
+      r_total_k: "Contexto conservado", r_total_v: "6.42 M tok",
+      r_usd_k: "a tarifa de API pública", r_usd_v: "≈ 24 USD",
+      r_foot: "Volumen de ejemplo, un mes de uso intenso. No hay tarifa inflada: son los mismos tokens por tarea, contados a más tareas. El equivalente en dólares usa precio de API pública; con suscripción lo que se conserva es cuota. Las cifras tuyas las mide el panel con lo que devuelve tu backend.",
+      s4_p: "Lo que se ahorra no es solo dinero: es <strong>contexto</strong>. Cada resumen que no sube deja sitio en la ventana para lo que sí necesita al modelo grande.",
+      cta_gh: "Ver en GitHub",
+      foot_l: "local-delegate · MIT · Yohan González Almaguer",
+      foot_r: "cliente genérico de cualquier endpoint OpenAI-compatible"
+    },
+    en: {
+      title: "local-delegate — delegate the mechanical to a local model",
+      hero_eyebrow: "MCP server · v{v} · MIT",
+      hero_h1: 'The mechanical<br>does not have to<br><span class="hl">go to the cloud</span>',
+      hero_lede: "Summarize a file, classify a prompt, write a commit message from a diff. Your agent sends them upstream and you pay reasoning prices for them. <strong>local-delegate reroutes them to a model already running on your machine</strong>, and returns the result over the same protocol. The agent never notices. Your quota does.",
+      cmp_task: "TASK — <b>the agent needs a summary of a 40,000-token file</b>",
+      cmp_up_k: "Without the detour · the cloud",
+      cmp_up_p: "The whole file enters the agent's context so it can read it, and you pay reasoning prices for it.",
+      cmp_down_k: "With the detour · your machine",
+      cmp_down_p: "The MCP server reads the file itself, right there on your machine. All the agent gets back is the summary.",
+      cmp_foot: "Same work, same result. What changes is that <strong>the file never enters your window</strong> — it neither fills it nor bills it.",
+      meta_tail: "— any OpenAI-compatible endpoint",
+
+      s1_eyebrow: "Where the detour is",
+      s1_h2: "One sentence picks the track",
+      s1_rule: "If the step fits in <em>a single sentence</em> with an explicit output format, it gets delegated. If it needs judgment, architecture or threading several sources, <em>the model upstairs does it</em>.",
+      s1_p: "It is not a heuristic you have to remember: it ships installed. <code>local-delegate install</code> writes the rule into your client's global memory, plus a skill that expands on it, so the agent takes the detour on its own.",
+
+      s2_eyebrow: "What stops at each platform",
+      s2_h2: "Eleven stops",
+      s2_caption: "tools exposed by the server",
+      t_sum: "summary in the format you ask for", t_cls: "a label from a closed set",
+      t_ext: "fields into validated JSON", t_boil: "boilerplate code",
+      t_commit: "message from a diff", t_lint: "lint and test output",
+      t_tr: "text or a whole file", t_expl: "what this file does",
+      t_img: "reading a screenshot", t_gen: "the generic one, with your prompt",
+      t_status: "is the backend alive?",
+      s2_h3: "The real saving is in <code>path</code>",
+      s2_p: "Passing <code>path=</code> instead of the text is the difference between saving a little and saving all at once: <strong>the server reads the file</strong> and its contents never enter the agent's context. A 40,000-token file costs you the call, not the file.",
+
+      s3_eyebrow: "How to take it",
+      s3_h2: "Two commands",
+      s3_term: '<span class="c"># put the command on your PATH (uvx builds a throwaway env and deletes it)</span><br><b>uv tool install local-delegate-mcp</b><br><br><span class="c"># hooks, skill, memory block and MCP entry in Claude Code and Codex</span><br><b>local-delegate install --mcp-mode http</b><br><br><span class="c"># and when something is off, let the product tell you, not the other way round</span><br><b>local-delegate doctor</b><br><span class="y">[ OK ] daemon: local-delegate {v} · pid 5012</span><br><span class="y">[ OK ] backend: /models responds</span><br>Result: all set.',
+      s3_p: "The savings dashboard lives at <code>127.0.0.1:9393</code>, showing cost against saving with the real calls made to your backend — not estimates.",
+
+      s4_eyebrow: "End of the line",
+      s4_h2: "The receipt",
+      r_title: "One month of work · tokens that never went up",
+      r_1: "150 file summaries", r_2: "300 lint and test summaries",
+      r_3: "120 commit messages", r_4: "600 prompts classified",
+      r_5: "40 screenshots described",
+      r_cloud: "would have gone to the cloud", r_gpu: "paid to your GPU",
+      r_total_k: "Context preserved", r_total_v: "6.42 M tok",
+      r_usd_k: "at public API rates", r_usd_v: "≈ 24 USD",
+      r_foot: "Example volume for a month of heavy use. No inflated rate: the same tokens per task, counted over more tasks. The dollar figure uses public API pricing; on a subscription what you preserve is quota. Your own numbers are measured by the dashboard from what your backend returns.",
+      s4_p: "What you save is not only money: it is <strong>context</strong>. Every summary that does not go up leaves room in the window for what genuinely needs the big model.",
+      cta_gh: "View on GitHub",
+      foot_l: "local-delegate · MIT · Yohan González Almaguer",
+      foot_r: "a generic client for any OpenAI-compatible endpoint"
+    }
+  };
+
+  var LS = "ld-lang";
+  var botones = Array.prototype.slice.call(document.querySelectorAll(".lang button"));
+  var ranuras = Array.prototype.slice.call(document.querySelectorAll("[data-t]"));
+
+  function guardado() {
+    try { return localStorage.getItem(LS); } catch (e) { return null; }
+  }
+  function pintar(lang) {
+    var dic = T[lang] || T.es;
+    for (var i = 0; i < ranuras.length; i++) {
+      var txt = dic[ranuras[i].getAttribute("data-t")];
+      if (txt != null) ranuras[i].innerHTML = txt.split("{v}").join(VERSION);
+    }
+    document.title = dic.title;
+    document.documentElement.lang = lang;
+    botones.forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
+    });
+    try { localStorage.setItem(LS, lang); } catch (e) { /* modo privado: da igual */ }
+    if (typeof medir === "function") { medir(); onScroll(); }  // el texto cambia de alto
+  }
+
+  botones.forEach(function (b) {
+    b.addEventListener("click", function () { pintar(b.getAttribute("data-lang")); });
+  });
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var fill = document.getElementById("fill");
+  var diagram = document.querySelector(".diagram");
+  var stations = Array.prototype.slice.call(document.querySelectorAll(".station"));
+
+  // Una sola verdad: la posición del relleno en píxeles. El punto se enciende cuando el
+  // relleno lo ALCANZA, no con un umbral suyo aparte — antes eran dos números distintos
+  // y el círculo se ponía amarillo antes de que llegara la línea.
+  var largo = 0;     // alto total de la troncal
+  var centros = [];  // y del centro de cada punto, relativa al diagrama
+
+  function medir() {
+    var css = getComputedStyle(document.documentElement);
+    var dotTop = parseFloat(css.getPropertyValue("--dot-top"));
+    var radio = parseFloat(css.getPropertyValue("--dot-size")) / 2;
+    centros = stations.map(function (s) { return s.offsetTop + dotTop + radio; });
+    largo = diagram.offsetHeight;
+  }
+
+  function onScroll() {
+    // El llenado se mapea sobre el recorrido de scroll REALMENTE disponible, no sobre una
+    // línea fija de la ventana: con una línea fija la troncal jamás llegaba al final,
+    // porque abajo del diagrama queda el footer y la página deja de poder desplazarse.
+    var doc = document.documentElement;
+    var y = window.pageYOffset || doc.scrollTop;
+    var arriba = diagram.getBoundingClientRect().top + y;   // y del diagrama en el documento
+    var marca = window.innerHeight * 0.55;
+    var desde = arriba - marca;
+    var hasta = Math.min(arriba + largo - marca, doc.scrollHeight - window.innerHeight);
+    var pct = hasta > desde ? (y - desde) / (hasta - desde) : 1;
+    var lleno = Math.max(0, Math.min(1, pct)) * largo;
+
+    fill.style.height = lleno + "px";
+    diagram.classList.toggle("terminada", lleno >= largo - 1);
+    for (var i = 0; i < stations.length; i++) {
+      stations[i].classList.toggle("lit", lleno >= centros[i]);
+    }
+  }
+
+  var idioma = guardado();
+  if (idioma !== "es" && idioma !== "en") {
+    idioma = (navigator.language || "es").toLowerCase().indexOf("en") === 0 ? "en" : "es";
+  }
+  pintar(idioma);
+  medir();
+
+  if (reduce) {
+    fill.style.height = largo + "px";
+    diagram.classList.add("terminada");
+    stations.forEach(function (s) { s.classList.add("lit"); });
+  } else {
+    var pend = false;
+    window.addEventListener("scroll", function () {
+      if (pend) return;
+      pend = true;
+      requestAnimationFrame(function () { onScroll(); pend = false; });
+    }, { passive: true });
+    window.addEventListener("resize", function () { medir(); onScroll(); });
+    window.addEventListener("load", function () { medir(); onScroll(); });
+    onScroll();
+  }
+})();
+</script>
+</body>
+</html>

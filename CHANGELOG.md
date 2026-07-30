@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **La landing del proyecto vive en `site/` y se publica sola en GitHub Pages.** Un workflow
+  (`pages.yml`) la despliega en cada push a `main` que la toque. Se publica un directorio propio y
+  no `docs/`, que guarda la wiki, las recipes y `plans/`: servir esa carpeta entera pondría todo eso
+  en una URL pública sin que nadie lo haya decidido.
+- **El número de versión de la página no se escribe a mano.** La landing trae un marcador
+  `__LD_VERSION__` y `scripts/build_site.py` lo sustituye por lo que declare `pyproject.toml` al
+  desplegar. Ya había cuatro copias de ese número en el repo; esta habría sido la quinta, y en el
+  prototipo llegó a mentir con la primera release. Un test falla si alguien escribe una versión
+  literal en la página.
+
 ## [0.16.0] - 2026-07-30
 
 ### Fixed
