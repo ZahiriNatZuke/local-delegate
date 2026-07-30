@@ -159,8 +159,13 @@ def hook_command(hooks_dir: Path, script: str, python_exe: str) -> str:
 
 # Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano
 # siguiendo la recipe vieja, que quedaban en `~/.claude/hooks/` (sin subdirectorio) y con el
-# formato `{"command": "python", "args": [...]}` — formato que Claude Code no ejecuta, así que
-# esas entradas están muertas. Se limpian al instalar en vez de dejar duplicados inertes.
+# formato `{"command": "python", "args": [...]}`.
+#
+# Aquí decía que ese formato «Claude Code no lo ejecuta, así que esas entradas están muertas»:
+# es **falso**, y conviene no volver a escribirlo. `args` es el *exec form* del schema y se
+# ejecuta sin shell; se verificó en vivo viendo disparar `suggest_lint_summary.py`. Se limpian
+# al instalar porque cambió la ruta y el formato que ponemos, no porque no funcionen: dejarlas
+# produciría hooks duplicados que sugieren dos veces lo mismo.
 _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
