@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "slug": "marca-header-dashboard",
+  "title": "El header del dashboard usa el favicon canonico y se regenera la captura",
+  "mode": "lite",
+  "status": "understanding",
+  "createdAt": "2026-07-30T21:39:06.807Z",
+  "updatedAt": "2026-07-30T21:47:43.858Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:47:43.795Z",
+      "evidence": "ruff check y format limpios, 417 passed 1 skipped (416 antes), node --check exit 0; test nuevo verificado al reves (quitada la inyeccion, falla); captura regenerada sirviendo el dashboard DEL REPO en el 9494 y verificada visualmente con el badge v0.17.0; daemon real intacto en 0.17.0 pid 5900",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:47:43.858Z",
+      "evidence": "El header inyecta el mismo fichero que sirve /favicon.svg, asi que no pueden diferir por construccion; test que ademas exige un solo <svg> en el contenedor; CHANGELOG y docs/wiki/Savings-and-metrics.md actualizados; captura del README regenerada",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T21:39:06.807Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T21:47:43.795Z",
+      "evidence": "ruff check y format limpios, 417 passed 1 skipped (416 antes), node --check exit 0; test nuevo verificado al reves (quitada la inyeccion, falla); captura regenerada sirviendo el dashboard DEL REPO en el 9494 y verificada visualmente con el badge v0.17.0; daemon real intacto en 0.17.0 pid 5900",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T21:47:43.858Z",
+      "evidence": "El header inyecta el mismo fichero que sirve /favicon.svg, asi que no pueden diferir por construccion; test que ademas exige un solo <svg> en el contenedor; CHANGELOG y docs/wiki/Savings-and-metrics.md actualizados; captura del README regenerada",
+      "actor": "user"
+    }
+  ]
+}

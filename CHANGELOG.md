@@ -30,6 +30,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que no se admite es combinarlo con `--clients`, que termina en error de uso sin escribir nada.
 
 ### Fixed
+- **El header del dashboard enseñaba el icono anterior a la marca única.** Ahí había un SVG
+  dibujado a mano, así que al unificar la marca se actualizó el favicon —el que sirve
+  `/favicon.svg` y usa la landing— y el header se quedó con el viejo: el panel enseñaba una marca
+  y su propia pestaña otra. Ahora se **inyecta** el mismo fichero (`resources/brand/favicon.svg`)
+  y no pueden volver a separarse; hay un test que lo comprueba. La captura del README se regeneró
+  en consecuencia.
 - **`install --home` y `uninstall --home` ya no escriben fuera del HOME simulado.** El camino
   preferido para registrar el MCP es `claude mcp add-json --scope user`, que escribe **siempre**
   en el `~/.claude.json` del usuario real e ignora `--home`: instalando duplicaba configuración y

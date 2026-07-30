@@ -3,9 +3,9 @@
   "slug": "install-checks-clients",
   "title": "install consume checks.CHECKS y anade --clients auto|claude,codex",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closing",
   "createdAt": "2026-07-30T20:51:02.176Z",
-  "updatedAt": "2026-07-30T21:35:26.935Z",
+  "updatedAt": "2026-07-30T21:38:40.645Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -126,6 +126,13 @@
       "to": "result-review",
       "at": "2026-07-30T21:35:26.935Z",
       "reason": "Gates quality y conformance aprobados; revision de resultado escrita"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T21:38:40.645Z",
+      "reason": "PR #73 mergeado en main (6b5a856) con los 12 checks en verde"
     }
   ]
 }

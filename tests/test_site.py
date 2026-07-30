@@ -141,6 +141,26 @@ def test_el_dashboard_sirve_ese_mismo_favicon():
     assert metrics.FAVICON.strip() == FAVICON_PAQUETE.read_text(encoding="utf-8").strip()
 
 
+def test_el_header_del_dashboard_lleva_la_marca_canonica():
+    """El icono del header **es** el favicon, no una copia parecida.
+
+    Hasta la 0.17.0 ahí había un SVG dibujado a mano: al unificar la marca se actualizó el
+    favicon y el header se quedó con el icono anterior, así que el panel enseñaba una marca y
+    su propia pestaña otra. Ahora se inyecta el mismo fichero y no pueden separarse.
+    """
+    from local_delegate.web import metrics
+
+    pagina = metrics.render_index()
+    canonico = FAVICON_PAQUETE.read_text(encoding="utf-8").strip()
+
+    assert canonico in pagina, "el header no lleva el favicon canónico"
+    assert "__BRAND_MARK__" not in pagina, "quedó el marcador sin sustituir"
+    # Un solo <svg> dentro del contenedor de marca: si alguien vuelve a escribir uno a mano al
+    # lado del inyectado, esto lo caza.
+    marca = pagina.split('<span class="mark"', 1)[1].split("</span>", 1)[0]
+    assert marca.count("<svg") == 1
+
+
 def test_la_pagina_apunta_al_favicon_como_fichero_y_no_inline():
     texto = INDEX.read_text(encoding="utf-8")
     assert 'href="favicon.svg"' in texto
