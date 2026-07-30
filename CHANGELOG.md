@@ -7,6 +7,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Una sola marca para la landing y el dashboard.** Hasta ahora eran dos iconos distintos —la
+  landing con un glifo amarillo, el dashboard con un chip esmeralda—, y encima el amarillo es el
+  color que el propio CSS de la landing declara como «de señal, rutas, no marca». Ahora hay un
+  icono nuevo (un corchete de terminal abrazando el chevrón de delegación: «lo que entra aquí se
+  queda aquí») y vive en **un solo fichero**, `resources/brand/favicon.svg`, que el dashboard
+  sirve y la landing copia. Un test compara las dos copias byte a byte.
+- **La landing declara Open Graph y Twitter Cards completas.** Antes tenía tres etiquetas `og:*`
+  y ninguna de Twitter, así que el enlace compartido salía sin imagen. Ahora van `og:url`,
+  `og:site_name`, `og:locale` (+ el inglés como alternativo), la imagen con sus medidas y texto
+  alternativo, `canonical`, `theme-color` y `twitter:card=summary_large_image` — sin esa última,
+  la imagen se recorta a un cuadrado diminuto.
+- **Imagen social propia** (`site/og-image.png`, 1200×630) con el diagrama de conmutación que ya
+  es la tesis de la página: la troncal baja entera y la rama a la nube se queda a medias. El PNG
+  es un binario que no se puede revisar en un diff, así que **se versiona el HTML que lo genera**
+  (`site/og-image.src.html`, con el procedimiento de regeneración dentro) y un test lee la
+  cabecera del PNG para comprobar que mide de verdad lo que declaran los metadatos.
+- **`build_site.py` ya no publica los ficheros fuente** (`*.src.html`): son la fuente revisable de
+  un artefacto, no páginas del sitio. Mismo criterio por el que se publica `site/` y no `docs/`.
+
 - **La landing del proyecto vive en `site/` y se publica sola en GitHub Pages.** Un workflow
   (`pages.yml`) la despliega en cada push a `main` que la toque. Se publica un directorio propio y
   no `docs/`, que guarda la wiki, las recipes y `plans/`: servir esa carpeta entera pondría todo eso

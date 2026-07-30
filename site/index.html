@@ -4,11 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>local-delegate — delega lo mecánico a un modelo local</title>
-<meta name="description" content="Servidor MCP que delega los pasos mecanicos a un modelo local para conservar la cuota de tu suscripcion.">
-<meta property="og:title" content="local-delegate">
-<meta property="og:description" content="Lo mecanico no tiene por que ir a la nube.">
+<meta name="description" content="Servidor MCP que delega los pasos mecánicos a un modelo local para conservar la cuota de tu suscripción.">
+<link rel="canonical" href="https://zahirinatzuke.github.io/local-delegate/">
+
+<!-- Marca: el MISMO fichero que sirve el dashboard en /favicon.svg. La copia canónica vive en
+     src/local_delegate/resources/brand/favicon.svg y un test compara las dos byte a byte. -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="theme-color" content="#0D1A1D">
+
+<!-- Open Graph. La página es bilingüe en cliente (data-t), pero un crawler solo ve el HTML
+     servido: por eso estos textos van en español, que es el `lang` del documento, con el inglés
+     declarado como alternativo. -->
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230D1A1D'/><path d='M8 1v6H3v8' stroke='%23E8B500' stroke-width='2' fill='none'/></svg>">
+<meta property="og:site_name" content="local-delegate">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:url" content="https://zahirinatzuke.github.io/local-delegate/">
+<meta property="og:title" content="local-delegate — delega lo mecánico a un modelo local">
+<meta property="og:description" content="Resumir, clasificar, extraer, escribir el mensaje de commit: lo mecánico no tiene por qué ir a la nube. Un servidor MCP que lo delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.">
+<meta property="og:image" content="https://zahirinatzuke.github.io/local-delegate/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="local-delegate: lo mecánico no tiene por qué ir a la nube. MCP, modelo local, cuota intacta.">
+
+<!-- Twitter/X. `summary_large_image` es lo que hace que la tarjeta salga con la imagen grande;
+     con `summary` a secas el PNG se recorta a un cuadrado diminuto. X ya lee las etiquetas og:*
+     como fallback, pero se declaran explícitas porque otros clientes (Slack, Discord, Telegram)
+     no siempre hacen ese fallback igual. -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="local-delegate — delega lo mecánico a un modelo local">
+<meta name="twitter:description" content="Lo mecánico no tiene por qué ir a la nube. Un servidor MCP que delega a un modelo en tu máquina y te deja la cuota para lo que de verdad la necesita.">
+<meta name="twitter:image" content="https://zahirinatzuke.github.io/local-delegate/og-image.png">
+<meta name="twitter:image:alt" content="local-delegate: lo mecánico no tiene por qué ir a la nube. MCP, modelo local, cuota intacta.">
 </head>
 <body>
 <style>

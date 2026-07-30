@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>local-delegate — fuente de og-image.png</title>
+<!--
+  FUENTE de site/og-image.png (1200x630). El PNG es un binario que no se puede revisar en un
+  diff, así que lo que se versiona y se revisa es ESTE fichero; el PNG es su salida.
+
+  REGENERAR el PNG (no hace falta ninguna dependencia nueva del proyecto):
+
+    1. python -m http.server 8765 --bind 127.0.0.1     (desde site/)
+    2. Abrir http://127.0.0.1:8765/og-image.src.html con el viewport a EXACTAMENTE 1200x630
+       y capturar el viewport —no la página entera— en PNG.
+       Con Playwright:  page.set_viewport_size({"width":1200,"height":630})
+                        page.screenshot(path="og-image.png", scale="css")
+    3. Guardar como site/og-image.png.
+
+  `scale="css"` importa: con `device` el PNG sale al doble en una pantalla retina y deja de
+  medir 1200x630, que es lo que declaran og:image:width/height. Hay un test que lee la cabecera
+  del PNG y lo comprueba.
+
+  No se abre con file:// — el navegador bloquea ese protocolo y por eso hace falta el paso 1.
+
+  El diagrama de la derecha no es adorno: es la misma tesis de la landing. La troncal baja
+  entera y gruesa (tu máquina) y la rama fina se escapa hacia la nube y se queda a medias.
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1200px; height:630px; overflow:hidden; }
+  body {
+    background:#0D1A1D;
+    color:#EEF2F0;
+    font:400 16px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; position:relative;
+  }
+  /* Trama de fondo: retícula técnica, muy tenue */
+  body::before {
+    content:""; position:absolute; inset:0;
+    background-image:linear-gradient(#ffffff08 1px, transparent 1px),
+                     linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+    background-size:48px 48px;
+  }
+  .left { position:relative; padding:64px 0 64px 72px; width:735px; display:flex;
+          flex-direction:column; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:16px; }
+  .brand .name { font-size:27px; font-weight:650; letter-spacing:-.015em; color:#EEF2F0; }
+  h1 { font-size:60px; line-height:1.08; font-weight:680; letter-spacing:-.03em;
+       color:#EEF2F0; max-width:16ch; }
+  /* «nube» va en el MISMO gris apagado con que el diagrama pinta la rama que se escapa, no en
+     el verde de marca: aquí el verde significa «local», y resaltar la nube con él diría lo
+     contrario de lo que dice la frase. */
+  h1 em { font-style:normal; color:#8792A3; }
+  .rule { width:96px; height:4px; background:#10b981; border-radius:99px; margin:30px 0 22px; }
+  .kicker { font-size:22px; color:#9DB0AE; letter-spacing:-.01em; }
+  .kicker b { color:#DFE5E2; font-weight:600; }
+  .dot { color:#3d5457; padding:0 10px; }
+  .url { font:500 19px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#5A7275;
+         letter-spacing:-.01em; }
+  /* Diagrama. El selector va acotado a `.right`: sin acotar alcanzaba también al icono de la
+     marca y lo estiraba a 630px de alto, que empujaba el titular fuera del lienzo. */
+  .right { position:relative; flex:1; }
+  .right svg { position:absolute; right:24px; top:0; height:630px; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand">
+      <svg width="46" height="46" viewBox="0 0 32 32" fill="none">
+        <path d="M11.5 4.5H5.5v23h6" stroke="#10b981" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20.5 4.5h6v23h-6" stroke="#10b981" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
+        <path d="M14 11.5 18.5 16 14 20.5" stroke="#10b981" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="name">local-delegate</span>
+    </div>
+
+    <div>
+      <h1>Lo mecánico no tiene por qué ir a la <em>nube</em>.</h1>
+      <div class="rule"></div>
+      <p class="kicker"><b>Servidor MCP</b><span class="dot">·</span>modelo local<span class="dot">·</span>tu cuota intacta</p>
+    </div>
+
+    <p class="url">zahirinatzuke.github.io/local-delegate</p>
+  </div>
+
+  <div class="right">
+    <svg width="470" height="630" viewBox="0 0 470 630" fill="none">
+      <!-- rama a la nube: fina, apagada, se corta antes de llegar -->
+      <path d="M235 300 L385 150" stroke="#8792A3" stroke-width="6" stroke-linecap="round" opacity=".38"/>
+      <circle cx="385" cy="150" r="7" fill="#8792A3" opacity=".3"/>
+      <text x="404" y="140" fill="#6c7c8c" font-size="19" font-family="ui-sans-serif,system-ui,Segoe UI,sans-serif" opacity=".85">nube</text>
+      <text x="404" y="163" fill="#55636f" font-size="15" font-family="ui-sans-serif,system-ui,Segoe UI,sans-serif">(cuota)</text>
+
+      <!-- troncal: gruesa, entera, de arriba abajo -->
+      <path d="M235 40 L235 590" stroke="#10b981" stroke-width="11" stroke-linecap="round"/>
+      <!-- nodo del desvío -->
+      <circle cx="235" cy="300" r="17" fill="#0D1A1D" stroke="#10b981" stroke-width="9"/>
+
+      <text x="272" y="420" fill="#DFE5E2" font-size="21" font-family="ui-sans-serif,system-ui,Segoe UI,sans-serif" font-weight="600">tu máquina</text>
+      <text x="272" y="447" fill="#6f8785" font-size="16" font-family="ui-sans-serif,system-ui,Segoe UI,sans-serif">resumir · clasificar</text>
+      <text x="272" y="470" fill="#6f8785" font-size="16" font-family="ui-sans-serif,system-ui,Segoe UI,sans-serif">extraer · commit</text>
+    </svg>
+  </div>
+</body>
+</html>

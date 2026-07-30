@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "slug": "marca-open-graph",
+  "title": "Marca unica y metadatos sociales en la landing",
+  "mode": "lite",
+  "status": "understanding",
+  "createdAt": "2026-07-30T18:32:15.385Z",
+  "updatedAt": "2026-07-30T18:32:15.385Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T18:32:15.385Z",
+      "reason": "SDD change created"
+    }
+  ]
+}
