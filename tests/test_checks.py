@@ -25,7 +25,7 @@ def make_ctx(home, **kwargs):
             "pid": 42,
             "mcp_url": f"http://{host}:{port}/mcp",
         },
-        "backend_models": lambda: True,
+        "backend_models": lambda: (True, ""),
         "version_of": lambda component, cfg: (doctor.RECOMMENDED_VERSIONS[component], None),
     }
     defaults.update(kwargs)
@@ -299,10 +299,28 @@ def test_port_taken_by_another_process_is_warn_not_missing(tmp_path, monkeypatch
 
 
 def test_backend_down_is_warn(tmp_path):
-    ctx = make_ctx(make_home(tmp_path), backend_models=lambda: False)
+    ctx = make_ctx(
+        make_home(tmp_path), backend_models=lambda: (False, "no responde (ConnectError)")
+    )
     result = result_for("service.backend", ctx)
     assert result.status == checks.WARN
     assert checks.is_warning(result.status)
+
+
+def test_backend_401_is_unknown_not_down(tmp_path):
+    """Un 401 es «está arriba y falta la key aquí», no «caído».
+
+    Pasó de verdad: con la key sin cargar en el entorno del agente, el doctor decía CAÍDO sobre
+    un llama-swap vivo y sirviendo, y mandaba a arrancarlo.
+    """
+    ctx = make_ctx(
+        make_home(tmp_path),
+        backend_models=lambda: (False, "responde 401: está arriba pero rechaza la credencial"),
+    )
+    result = result_for("service.backend", ctx)
+    assert result.status == checks.UNKNOWN
+    assert not checks.is_warning(result.status)
+    assert "401" in result.detail
 
 
 # --- Versiones: se envuelve el doctor, no se reescribe -------------------------

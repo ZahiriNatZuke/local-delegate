@@ -130,7 +130,11 @@ def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True
         "detect_llamaserver_version",
         lambda cfg: (doctor.RECOMMENDED_VERSIONS["llama-server"], None),
     )
-    monkeypatch.setattr(doctor, "_backend_up", lambda: backend)
+    monkeypatch.setattr(
+        doctor,
+        "backend_probe",
+        lambda: (True, "") if backend else (False, "no responde (ConnectError)"),
+    )
     monkeypatch.setattr(
         daemon,
         "query_daemon",

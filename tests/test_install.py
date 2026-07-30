@@ -6,6 +6,7 @@ Todo corre contra un HOME de prueba (`tmp_path`); ninguna prueba toca el HOME re
 from __future__ import annotations
 
 import json
+import shlex
 import tomllib
 from pathlib import Path
 
@@ -55,7 +56,7 @@ def test_install_writes_hooks_skill_memory_and_mcp(tmp_path):
 
 
 def test_hook_command_is_a_single_shell_string(tmp_path):
-    """Claude Code ejecuta `command` como UN string; el formato con `args` nunca corría."""
+    """Claude Code entrega `command` a un shell como UN string."""
     _install(tmp_path)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     entries = [h for groups in settings["hooks"].values() for g in groups for h in g["hooks"]]
@@ -64,6 +65,30 @@ def test_hook_command_is_a_single_shell_string(tmp_path):
         assert set(entry) == {"type", "command"}
         assert entry["type"] == "command"
         assert entry["command"].startswith("python3 ")
+
+
+def test_hook_command_survives_a_windows_path(tmp_path):
+    """La ruta va citada y con `/`, o el shell se come los `\\` y el hook no abre el archivo.
+
+    Con `UserPromptSubmit` eso no degrada nada: **bloquea cada prompt** del usuario. Pasó de
+    verdad en Windows, así que la propiedad se prueba con la forma exacta del bug.
+    """
+    command = inst.hook_command(
+        Path(r"C:\Users\Yohan\.claude\hooks\local-delegate"),
+        "suggest_delegate_prompt.py",
+        "python",
+    )
+    assert command == (
+        'python "C:/Users/Yohan/.claude/hooks/local-delegate/suggest_delegate_prompt.py"'
+    )
+    assert "\\" not in command  # ni un solo escape que el shell pueda comerse
+    # Lo que de verdad importa: el argumento que recibiría el intérprete sigue siendo la ruta.
+    assert shlex.split(command)[1].endswith("local-delegate/suggest_delegate_prompt.py")
+
+
+def test_hook_command_quotes_paths_with_spaces(tmp_path):
+    command = inst.hook_command(tmp_path / "con espacio", "x.py", "python3")
+    assert shlex.split(command)[1].endswith("con espacio/x.py")
 
 
 def test_read_hook_is_opt_in(tmp_path):

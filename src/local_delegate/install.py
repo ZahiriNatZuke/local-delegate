@@ -153,8 +153,17 @@ def remove_block(text: str, begin: str, end: str) -> str:
 
 # --- Hooks de Claude Code ----------------------------------------------------
 def hook_command(hooks_dir: Path, script: str, python_exe: str) -> str:
-    """Comando del hook. Claude Code ejecuta UN string de shell; no acepta `args`."""
-    return f"{python_exe} {_quote(str(hooks_dir / script))}"
+    """Comando del hook: un único string que Claude Code entrega a un shell.
+
+    La ruta va **siempre entre comillas y con barras `/`**, no solo cuando tiene espacios. En
+    Windows, pasar `C:\\Users\\...` desnudo llega al shell como `C:UsersYohan.claudehooks...`
+    —el shell interpreta cada `\\` como escape y lo borra— y el hook muere con «can't open
+    file». Cuando eso le pasa a `UserPromptSubmit`, **bloquea cada prompt del usuario**: no es
+    un hook que no sugiere, es un cliente inutilizable. Python abre rutas con `/` en Windows sin
+    problema, así que la forma citada y con barras funciona en los tres shells (sh, cmd,
+    PowerShell) y en los tres sistemas.
+    """
+    return f'{python_exe} "{(hooks_dir / script).as_posix()}"'
 
 
 # Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano

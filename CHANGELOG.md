@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El instalador dejaba los hooks rotos en Windows, y con `UserPromptSubmit` eso bloquea todos los
+  prompts del usuario.** El comando se registraba como `python C:\Users\...\hook.py` sin comillas;
+  Claude Code lo entrega a un shell, que interpreta cada `\` como escape y lo borra, así que al
+  intérprete le llegaba `C:UsersYohan.claudehooks...` y el hook moría con «can't open file». Ahora
+  la ruta va **siempre entre comillas y con barras `/`** —Python las acepta en Windows—, que
+  funciona en sh, cmd y PowerShell. Si te pasó: borra las entradas de local-delegate de
+  `~/.claude/settings.json` y reinstala con esta versión.
+- **`doctor` daba por CAÍDO un backend vivo que respondía 401.** Ahora distingue «no responde» de
+  «responde 401/403 — está arriba y falta la credencial en este entorno», que se reporta `[ -- ]`
+  en vez de mandarte a arrancar un servicio que ya está corriendo.
+
 ### Added
 - **`doctor` ve por fin el sistema entero, no solo el backend.** Nace un registro único de
   comprobaciones (`checks.py`) con las **once** piezas del andamiaje —clientes, hooks copiados,

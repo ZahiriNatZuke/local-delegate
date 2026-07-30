@@ -256,13 +256,32 @@ def _compare_line(component: str, installed: str | None, online: bool) -> tuple[
 
 def _backend_up() -> bool:
     """True si el endpoint OpenAI-compatible responde a /models (best-effort)."""
+    return backend_probe()[0]
+
+
+def backend_probe() -> tuple[bool, str]:
+    """(¿está sano?, motivo si no). Distingue «no responde» de «responde 401».
+
+    Un 401 significa que el backend **está arriba** y que falta la key en este entorno, no que
+    esté caído. Confundirlos manda a arrancar un servicio que ya está corriendo, y ese falso
+    diagnóstico se dio de verdad: con la key sin cargar, `doctor` decía CAÍDO sobre un
+    llama-swap vivo y sirviendo.
+    """
     try:
         import httpx2
 
         with httpx2.Client(timeout=2.0) as c:
-            return c.get(f"{config.BASE_URL}/models", headers=config.auth_headers()).is_success
-    except Exception:
-        return False
+            response = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
+    except Exception as exc:
+        return False, f"no responde ({type(exc).__name__})"
+    if response.is_success:
+        return True, ""
+    if response.status_code in (401, 403):
+        return False, (
+            f"responde {response.status_code}: está arriba pero rechaza la credencial "
+            "(¿falta LOCAL_DELEGATE_API_KEY en este entorno?)"
+        )
+    return False, f"responde HTTP {response.status_code}"
 
 
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
@@ -315,10 +334,16 @@ def run_doctor(args: argparse.Namespace) -> int:
 
     # Entorno
     exe = os.environ.get("LLAMASWAP_EXE", "")
-    backend_ok = by_id["service.backend"].status == checks.OK
+    backend_status = by_id["service.backend"].status
+    # `unknown` aquí es el 401/403: el backend está arriba y falta la credencial. Llamarlo
+    # CAÍDO manda a arrancar algo que ya corre.
+    backend_word = {
+        checks.OK: "arriba",
+        checks.UNKNOWN: "arriba (rechaza la credencial de este entorno)",
+    }.get(backend_status, "CAÍDO")
     print(f"LLAMASWAP_EXE:    {exe or '(no seteado; se busca llama-swap en el PATH)'}")
     print(f"LLAMASWAP_CONFIG: {config_path or '(no seteado)'}")
-    print(f"Backend BASE_URL: {config.BASE_URL} — {'arriba' if backend_ok else 'CAÍDO'}")
+    print(f"Backend BASE_URL: {config.BASE_URL} — {backend_word}")
     print(f"HOME:             {home}")
     print()
     print("Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar")

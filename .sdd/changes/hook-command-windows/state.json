@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "slug": "hook-command-windows",
+  "title": "El comando del hook se rompe en Windows y bloquea cada prompt",
+  "mode": "lightweight",
+  "status": "closed",
+  "createdAt": "2026-07-30T14:50:00.000Z",
+  "updatedAt": "2026-07-30T15:05:00.000Z",
+  "gates": {
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T15:05:00.000Z",
+      "evidence": "312 tests, ruff check, ruff format --check y node --check verdes. Bug reproducido con `sh -c` antes de tocar nada y fix verificado por ejecucion en la maquina donde fallo: el comando citado corre y emite additionalContext con exit 0. Ademas backend_probe distingue 401/403 de caido, verificado contra el llama-swap vivo (pid 6800) que el doctor daba por muerto.",
+      "actor": "assistant"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "implementing",
+      "at": "2026-07-30T14:50:00.000Z",
+      "reason": "modo ligero: bug reproducido, causa identificada y alcance de dos funciones"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T15:05:00.000Z",
+      "evidence": "ver brief.md",
+      "actor": "assistant"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "closed",
+      "at": "2026-07-30T15:05:00.000Z",
+      "reason": "fix verificado por ejecucion; queda registrar de nuevo los hooks del usuario"
+    }
+  ]
+}

@@ -83,10 +83,10 @@ def _default_daemon_status(host: str, port: int) -> dict | None:
     return daemon.query_daemon(host, port, timeout=1.0)
 
 
-def _default_backend_models() -> bool:
+def _default_backend_models() -> tuple[bool, str]:
     from . import doctor
 
-    return doctor._backend_up()
+    return doctor.backend_probe()
 
 
 def _default_version_of(component: str, config_path: Path | None) -> tuple[str | None, str | None]:
@@ -123,7 +123,7 @@ class Context:
     config_path: Path | None = None
     online: bool = False
     daemon_status: Callable[[str, int], dict | None] = _default_daemon_status
-    backend_models: Callable[[], bool] = _default_backend_models
+    backend_models: Callable[[], tuple[bool, str]] = _default_backend_models
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = _default_version_of
 
     @property
@@ -378,11 +378,16 @@ def _probe_daemon(ctx: Context) -> Result:
 
 
 def _probe_backend_models(ctx: Context) -> Result:
-    if ctx.backend_models():
+    healthy, reason = ctx.backend_models()
+    if healthy:
         return Result(OK, f"{config.BASE_URL}/models responde")
+    if reason.startswith(("responde 401", "responde 403")):
+        # El backend está vivo; lo que falta es la credencial en **este** entorno. Decir
+        # «caído» mandaría a arrancar un servicio que ya corre.
+        return Result(UNKNOWN, f"{config.BASE_URL}/models {reason}")
     return Result(
         WARN,
-        f"{config.BASE_URL}/models no responde (backend caído)",
+        f"{config.BASE_URL}/models {reason or 'no responde'} (backend caído)",
         "arranca llama-swap (o revisa LOCAL_DELEGATE_BASE_URL)",
     )
 
