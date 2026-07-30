@@ -525,22 +525,25 @@ def system():
     )
 
 
-# Icono de marca: un chip/CPU (cómputo local) en verde esmeralda con doble chevrón » de
-# delegación en el núcleo. Solo 2 pines gruesos por lado y cuerpo al ~62% del viewBox:
-# silueta simple que se lee nítida incluso a 16px de favicon.
-FAVICON = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-<stop offset="0" stop-color="#6ee7b7"/><stop offset="1" stop-color="#059669"/></linearGradient></defs>
-<g stroke="#10b981" stroke-width="2.6" stroke-linecap="round">
-<path d="M12 5.6V2.6"/><path d="M20 5.6V2.6"/>
-<path d="M12 26.4v3"/><path d="M20 26.4v3"/>
-<path d="M5.6 12H2.6"/><path d="M5.6 20H2.6"/>
-<path d="M26.4 12h3"/><path d="M26.4 20h3"/></g>
-<rect x="6" y="6" width="20" height="20" rx="6.5" fill="url(#g)"/>
-<rect x="9" y="9" width="14" height="14" rx="4.4" fill="#0a0c11"/>
-<path d="M11.4 11.4 16 16l-4.6 4.6" stroke="#6ee7b7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M18.9 13.4 21.5 16l-2.6 2.6" stroke="#34d399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" opacity=".65"/>
-</svg>"""
+# Icono de marca: un corchete de terminal abrazando el chevrón de delegación — «lo que entra
+# aquí, se queda aquí». El corchete de cierre va a menos opacidad para que el chevrón sea lo
+# primero que se lee; a 16px la silueta son dos formas con aire entre ellas, que es lo que
+# aguanta el tamaño mínimo.
+#
+# NO se escribe aquí: vive en `resources/brand/favicon.svg`, y la landing (`site/favicon.svg`)
+# sirve **el mismo fichero**. Tenerlo dos veces es exactamente la clase de verdad duplicada que
+# este repo ya ha pagado varias veces; hay un test que compara las dos copias byte a byte.
+def _load_favicon() -> str:
+    try:
+        return (
+            Path(str(_resource_files("local_delegate"))) / "resources" / "brand" / "favicon.svg"
+        ).read_text(encoding="utf-8")
+    except OSError:
+        # Un icono ausente no puede tumbar el dashboard: se sirve un SVG vacío y ya.
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>'
+
+
+FAVICON = _load_favicon()
 
 
 @app.get("/favicon.svg")

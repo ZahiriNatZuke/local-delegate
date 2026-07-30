@@ -27,6 +27,11 @@ ORIGEN = RAIZ / "site"
 DESTINO = RAIZ / "_site"
 MARCADOR = "__LD_VERSION__"
 
+# Ficheros que viven en `site/` pero NO se publican: son la fuente revisable de un artefacto
+# (hoy, el HTML del que sale `og-image.png`), no una página del sitio. Es el mismo criterio por
+# el que se publica `site/` y no `docs/`: nada llega a una URL pública sin que se haya decidido.
+SUFIJO_FUENTE = ".src.html"
+
 
 def version_declarada() -> str:
     datos = tomllib.loads((RAIZ / "pyproject.toml").read_text(encoding="utf-8"))
@@ -37,7 +42,7 @@ def construir(destino: Path, version: str) -> list[Path]:
     """Copia `site/` sustituyendo el marcador. Devuelve los ficheros escritos."""
     if destino.exists():
         shutil.rmtree(destino)
-    shutil.copytree(ORIGEN, destino)
+    shutil.copytree(ORIGEN, destino, ignore=shutil.ignore_patterns(f"*{SUFIJO_FUENTE}"))
 
     escritos: list[Path] = []
     for ruta in sorted(destino.rglob("*")):

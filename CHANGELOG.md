@@ -25,16 +25,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`docs/wiki/Daemon.md` gana las recetas completas de macOS (LaunchAgent) y Linux
   (`systemd --user`)**, con los nombres canónicos que busca `update`. Un test falla si el módulo
   y la wiki se separan.
-
-### Fixed
-- **`update --home <simulado>` ya no escribe en la configuración real del usuario.** El registro
-  del MCP en Claude Code se hace con `claude mcp add-json --scope user`, que escribe siempre en el
-  `~/.claude.json` de verdad ignorando el HOME que se le pase. Se descubrió al comprobar la
-  idempotencia: la segunda pasada volvía a planificar la misma acción —el probe seguía viendo
-  vacío el árbol simulado— mientras la configuración real sí se había reescrito.
-- **El registro de comprobaciones decía que tenía once elementos y tiene doce.** `cli.path` entró
-  en el PR #61 y el texto quedó desfasado en cuatro sitios; se llegó a planificar sobre ese dato
-  falso. Ahora hay un test que compara las cuatro afirmaciones contra `len(CHECKS)`.
+- **Una sola marca para la landing y el dashboard.** Hasta ahora eran dos iconos distintos —la
+  landing con un glifo amarillo, el dashboard con un chip esmeralda—, y encima el amarillo es el
+  color que el propio CSS de la landing declara como «de señal, rutas, no marca». Ahora hay un
+  icono nuevo (un corchete de terminal abrazando el chevrón de delegación: «lo que entra aquí se
+  queda aquí») y vive en **un solo fichero**, `resources/brand/favicon.svg`, que el dashboard
+  sirve y la landing copia. Un test compara las dos copias byte a byte.
+- **La landing declara Open Graph y Twitter Cards completas.** Antes tenía tres etiquetas `og:*`
+  y ninguna de Twitter, así que el enlace compartido salía sin imagen. Ahora van `og:url`,
+  `og:site_name`, `og:locale` (+ el inglés como alternativo), la imagen con sus medidas y texto
+  alternativo, `canonical`, `theme-color` y `twitter:card=summary_large_image` — sin esa última,
+  la imagen se recorta a un cuadrado diminuto.
+- **Imagen social propia** (`site/og-image.png`, 1200×630) con el diagrama de conmutación que ya
+  es la tesis de la página: la troncal baja entera y la rama a la nube se queda a medias. El PNG
+  es un binario que no se puede revisar en un diff, así que **se versiona el HTML que lo genera**
+  (`site/og-image.src.html`, con el procedimiento de regeneración dentro) y un test lee la
+  cabecera del PNG para comprobar que mide de verdad lo que declaran los metadatos.
+- **`build_site.py` ya no publica los ficheros fuente** (`*.src.html`): son la fuente revisable de
+  un artefacto, no páginas del sitio. Mismo criterio por el que se publica `site/` y no `docs/`.
 
 - **La landing del proyecto vive en `site/` y se publica sola en GitHub Pages.** Un workflow
   (`pages.yml`) la despliega en cada push a `main` que la toque. Se publica un directorio propio y
@@ -45,6 +53,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   desplegar. Ya había cuatro copias de ese número en el repo; esta habría sido la quinta, y en el
   prototipo llegó a mentir con la primera release. Un test falla si alguien escribe una versión
   literal en la página.
+
+### Fixed
+- **`update --home <simulado>` ya no escribe en la configuración real del usuario.** El registro
+  del MCP en Claude Code se hace con `claude mcp add-json --scope user`, que escribe siempre en el
+  `~/.claude.json` de verdad ignorando el HOME que se le pase. Se descubrió al comprobar la
+  idempotencia: la segunda pasada volvía a planificar la misma acción —el probe seguía viendo
+  vacío el árbol simulado— mientras la configuración real sí se había reescrito.
+- **El registro de comprobaciones decía que tenía once elementos y tiene doce.** `cli.path` entró
+  en el PR #61 y el texto quedó desfasado en cuatro sitios; se llegó a planificar sobre ese dato
+  falso. Ahora hay un test que compara las cuatro afirmaciones contra `len(CHECKS)`.
+- **El titular de la landing ya no resalta «la nube» con el amarillo de la vía local.** En esa
+  paleta el amarillo significa una sola cosa —la vía que se toma, tu máquina— y el titular dice
+  justo lo contrario de la nube: pintarla de amarillo, y encima subrayarla con un trazo de 6px, la
+  señalaba como el camino bueno. Ahora el resalte cae solo sobre «la nube» y va en el gris de la
+  vía cara, la misma decisión que ya estaba tomada en la tarjeta social. Un test ata las dos cosas.
 
 ## [0.16.0] - 2026-07-30
 
