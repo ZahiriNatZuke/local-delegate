@@ -243,6 +243,35 @@ La comprobación diaria compara contra el **manifiesto**, no contra la red — s
 servicio ajeno y dejaría de ser determinista. La *procedencia* se verifica cuando cambia, es decir
 al actualizar la versión, que es lo que documenta el procedimiento de arriba.
 
+## Qué se publica y qué no
+
+Se publican **dos** artefactos y no son lo mismo. El wheel lo define
+`packages = ["src/local_delegate"]` y es lo que instala todo el mundo. El sdist, en cambio, empaqueta
+el árbol entero salvo lo que se excluya a mano — y **es el que analizan los auditores de cadena de
+suministro**: la URL de las alertas de Socket para este paquete termina en `/tar-gz`.
+
+Confundir los dos costó una alerta real. Se dio por hecho que `scripts/` no se publicaba porque «el
+wheel no lo empaqueta», y era cierto; pero el sdist sí lo llevaba, con
+`install_claude_code_hooks_macos.sh` dentro: un instalador que bajaba cuatro `.py` de
+`raw.githubusercontent.com` y los ejecutaba sin verificar hash ni firma. Socket lo marcó con impacto
+0.75 y tenía razón.
+
+El criterio, desde entonces:
+
+| Qué | Wheel | Sdist | Por qué |
+|---|---|---|---|
+| `src/local_delegate/` | sí | sí | es el paquete |
+| `tests/`, `docs/`, `site/`, `benchmarks/` | no | sí | quien reconstruye el paquete puede querer verificarlo |
+| `scripts/` | no | **no** | es el taller: release, bump de versión, canarios, handshake. Nadie que instale lo ejecuta, y publicarlo solo amplía la superficie a auditar |
+| `.sdd/`, `.codex/`, `.venv/`, `dist/` | no | no | ruido de trabajo |
+
+**El taller no se publica, pero los tests sí**, y dos de ellos cargan un script del taller
+(`test_vendor.py` y `test_bump_version.py`). Se saltan cuando `scripts/` no está — y la condición
+mira el **directorio**, nunca el fichero suelto. La diferencia importa: si `scripts/` existe pero el
+script no, eso es un borrado accidental y la suite tiene que romperse. Un `skip` condicionado al
+fichero convertiría ese borrado en un CI verde, que es justo el fallo contra el que existe el resto
+de esta página.
+
 ## Convención de ramas
 
 Rama por cambio, con prefijo según lo que hace y un nombre que describa el cambio:

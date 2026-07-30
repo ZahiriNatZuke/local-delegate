@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "sdist-sin-scripts",
+  "title": "Sacar scripts/ del sdist y retirar el instalador de hooks de macOS",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-07-30T19:55:40.911Z",
+  "updatedAt": "2026-07-30T20:05:22.989Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T19:59:57.548Z",
+      "evidence": "spec.md con 5 requisitos observables y 4 escenarios; investigacion verificada por ejecucion (uv build --sdist con 124 entradas, grep sin referencias al .sh, ruta docs/recipes/hooks inexistente en main, depscore de todas las versiones publicadas)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T20:03:05.695Z",
+      "evidence": "Revision adversarial en plan-review.md: H1 corrige una afirmacion falsa de research.md (el script funciona, la ruta vive en el tag v0.10.0) y H2 bloqueante ya incorporado (el skip se condiciona al directorio scripts/ y no al fichero, para que un borrado accidental siga fallando). H3 al backlog.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T19:55:40.911Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T19:59:03.226Z",
+      "reason": "Investigacion completada con capturas de Socket y verificacion por ejecucion"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T19:59:03.296Z",
+      "reason": "Hallazgos cerrados, se redacta la especificacion"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T19:59:57.548Z",
+      "evidence": "spec.md con 5 requisitos observables y 4 escenarios; investigacion verificada por ejecucion (uv build --sdist con 124 entradas, grep sin referencias al .sh, ruta docs/recipes/hooks inexistente en main, depscore de todas las versiones publicadas)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T19:59:57.617Z",
+      "reason": "Spec aprobada, se redacta el plan"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T20:03:05.621Z",
+      "reason": "Plan redactado, pasa a revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T20:03:05.695Z",
+      "evidence": "Revision adversarial en plan-review.md: H1 corrige una afirmacion falsa de research.md (el script funciona, la ruta vive en el tag v0.10.0) y H2 bloqueante ya incorporado (el skip se condiciona al directorio scripts/ y no al fichero, para que un borrado accidental siga fallando). H3 al backlog.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T20:05:22.989Z",
+      "reason": "Gates de spec y plan aprobados, rama fix/sdist-sin-scripts creada"
+    }
+  ]
+}
