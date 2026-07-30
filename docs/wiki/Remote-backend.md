@@ -5,7 +5,7 @@ PC. Así `local_summarize(path="/Users/...")` abre el archivo en la Mac y conser
 contexto; un MCP ejecutado entero en Windows no puede abrir ese path.
 
 ```text
-Codex/Claude (Mac) -> local-delegate 0.13.0 (Mac) -> HTTPS privado -> llama-swap (PC) -> GPU
+Codex/Claude (Mac) -> local-delegate 0.14.0 (Mac) -> HTTPS privado -> llama-swap (PC) -> GPU
 ```
 
 ## Requisitos ya listos en la PC
@@ -85,7 +85,7 @@ Es el único paso que hace falta en la Mac: el paquete se descarga solo al arran
 
 ## Claude Code en la Mac
 
-La entrada se fija a la versión actual (0.13.0) durante el rollout. **Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían `mcp` sin techo, así que hoy mueren en el import. La key no se pega en el JSON: Claude expande la
+La entrada se fija a la versión actual (0.14.0) durante el rollout. **Fija la actual, no una vieja**: un pin congela también los rangos de dependencias de aquel wheel, y las anteriores a la 0.12.2 pedían `mcp` sin techo, así que hoy mueren en el import. La key no se pega en el JSON: Claude expande la
 variable que cargaste desde Keychain al iniciar la sesión.
 
 ```bash
@@ -96,7 +96,7 @@ claude mcp add-json --scope user local-delegate "$(cat <<JSON
   \"command\": \"uvx\",
   \"args\": [
     \"--from\",
-    \"local-delegate-mcp==0.13.0\",
+    \"local-delegate-mcp==0.14.0\",
     \"local-delegate-mcp\"
   ],
   \"env\": {
@@ -131,7 +131,7 @@ text = re.sub(pattern, "", text).rstrip()
 base_url = json.dumps(os.environ["LOCAL_DELEGATE_BASE_URL"])
 block = f'''[mcp_servers.local-delegate]
 command = "uvx"
-args = ["--from", "local-delegate-mcp==0.13.0", "local-delegate-mcp"]
+args = ["--from", "local-delegate-mcp==0.14.0", "local-delegate-mcp"]
 env_vars = ["LOCAL_DELEGATE_API_KEY"]
 
 [mcp_servers.local-delegate.env]
