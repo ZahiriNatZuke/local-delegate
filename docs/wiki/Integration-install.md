@@ -105,7 +105,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las doce piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las trece piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -127,6 +127,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Grupo | Comprobación | Qué mira |
 |---|---|---|
 | Entorno | CLI local-delegate | que el comando exista en el PATH — con `uvx` **no queda instalado** |
+| Entorno | versión publicada | la instalada vs la última en PyPI, para que una instalación vieja no pase el diagnóstico en silencio |
 | Entorno | clientes | si existen `~/.claude` y `~/.codex` |
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
@@ -146,8 +147,14 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 | `[ OK ]` | está y como debe estar | no |
 | `[WARN]` | está, pero no como debería (versión vieja, entrada puesta a mano, hooks de una instalación anterior) | sí |
 | `[FALT]` | falta de verdad, y la línea de abajo dice qué comando lo arregla | sí |
-| `[ -- ]` | **no se pudo comprobar**: el cliente no está instalado, faltan permisos, o el backend responde `401` (está arriba y falta la credencial en este entorno) | no |
+| `[ -- ]` | **no se pudo comprobar**: el cliente no está instalado, faltan permisos, no hay red, o el backend responde `401` (está arriba y falta la credencial en este entorno) | no |
 
 `[ -- ]` nunca es `[FALT]` a propósito: si un archivo ilegible o un cliente ausente se reportaran
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
+
+De las trece comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
+reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
+porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión
+por su cuenta y sería consultar dos veces lo mismo—.

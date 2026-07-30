@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los doce elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los trece elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Doce checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Trece checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -23,6 +23,7 @@ que encontró. Ejecutarlos es trabajo de ``update`` e ``install``.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import socket
 from collections.abc import Callable
@@ -50,6 +51,11 @@ INSTALL_HINT = "local-delegate install"
 SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
+UPGRADE_HINT = "uv tool upgrade local-delegate-mcp"
+
+# Cuánto se espera a PyPI. Corto a propósito: la comparación con lo publicado corre en **toda**
+# ejecución de `doctor`, y un diagnóstico que se cuelga es peor que uno que dice «no pude».
+PYPI_TIMEOUT = 2.0
 
 
 def is_warning(status: str) -> bool:
@@ -104,6 +110,28 @@ def _default_version_of(component: str, config_path: Path | None) -> tuple[str |
     return doctor.detect_llamaserver_version(config_path)
 
 
+def _default_latest_release() -> tuple[str | None, str | None]:
+    """(última versión publicada en PyPI, motivo si no se pudo saber).
+
+    Delega en ``update.latest_version`` en vez de reimplementar la consulta: «cuál es la última
+    publicada» tiene **una sola** definición en el repo, con su porqué escrito (se consulta el
+    índice simple y no el JSON, que se vio desfasado en vivo con la 0.12.0). El import es
+    diferido porque ``update`` importa este módulo y a nivel superior sería un ciclo.
+    """
+    from . import update
+
+    return update.latest_version(timeout=PYPI_TIMEOUT)
+
+
+def SKIP_PYPI() -> tuple[str | None, str | None]:
+    """Colaborador para quien corre el registro y **no** quiere salir a la red.
+
+    Lo inyectan ``install`` (instalar unos hooks no es motivo para consultar PyPI) y ``update``
+    (que ya pregunta por su cuenta, y dos consultas en el mismo comando serían una de más).
+    """
+    return None, "no se consulta PyPI en este comando"
+
+
 def _port_taken(host: str, port: int) -> bool:
     """True si alguien escucha en el puerto (sea o no nuestro daemon)."""
     try:
@@ -118,9 +146,9 @@ def _port_taken(host: str, port: int) -> bool:
 class Context:
     """Lo que los probes necesitan, **inyectado** y no descubierto.
 
-    Los tres colaboradores —dos que hablan por red y uno que lanza procesos— tienen un default
-    que delega en el módulo real; doblarlos es lo que hace los tests deterministas sin salir a
-    la red ni ejecutar binarios.
+    Los cuatro colaboradores —tres que hablan por red y uno que lanza procesos— tienen un
+    default que delega en el módulo real; doblarlos es lo que hace los tests deterministas sin
+    salir a la red ni ejecutar binarios.
     """
 
     home: Path
@@ -129,6 +157,9 @@ class Context:
     daemon_status: Callable[[str, int], dict | None] = _default_daemon_status
     backend_models: Callable[[], tuple[bool, str]] = _default_backend_models
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = _default_version_of
+    # Al final y con default: las llamadas que no lo pasan siguen funcionando igual. Quien no
+    # quiera salir a la red inyecta `SKIP_PYPI` **explícitamente**, y así se ve en su línea.
+    latest_release: Callable[[], tuple[str | None, str | None]] = _default_latest_release
 
     @property
     def claude_dir(self) -> Path:
@@ -236,6 +267,65 @@ def _probe_cli(ctx: Context) -> Result:
         )
     installed = _installed_version()
     return Result(OK, f"{found}{f' (versión {installed})' if installed else ''}")
+
+
+def _version_key(version: str) -> list[int]:
+    """Componentes numéricos de una versión, para compararla como número y no como texto."""
+    return [int(part) for part in re.findall(r"\d+", version)]
+
+
+def _compare_versions(installed: str, latest: str) -> int | None:
+    """-1, 0 o 1. ``None`` si alguna de las dos no tiene ni un número que comparar."""
+    left, right = _version_key(installed), _version_key(latest)
+    if not left or not right:
+        return None
+    # A la misma longitud antes de comparar: sin esto `0.17` saldría **menor** que `0.17.0` y el
+    # check avisaría de una actualización que no existe.
+    width = max(len(left), len(right))
+    left += [0] * (width - len(left))
+    right += [0] * (width - len(right))
+    return (left > right) - (left < right)
+
+
+def _upgrade_hint() -> str:
+    """Qué comando actualiza **esta** instalación.
+
+    En una instalación editable ``uv tool upgrade`` no actualiza nada, porque el código se sirve
+    del repo clonado. Y el caso no es teórico: es el de una segunda máquina que se quedó por
+    detrás de un release hecho desde otra.
+    """
+    from . import update
+
+    origin = update.editable_origin()
+    if origin:
+        return f"git -C {origin} pull && uv sync --project {origin}"
+    return UPGRADE_HINT
+
+
+def _probe_published(ctx: Context) -> Result:
+    """¿La versión instalada es la última publicada?
+
+    Sin esto, una instalación vieja pasa el diagnóstico entero sin una sola señal: pasó el
+    2026-07-30, con el CLI en 0.16.0, la 0.17.0 publicada y `doctor` diciendo «todo a punto».
+    """
+    installed = _installed_version()
+    if installed is None:
+        return Result(UNKNOWN, "no se pudo saber qué versión del paquete está instalada")
+    latest, reason = ctx.latest_release()
+    if latest is None:
+        return Result(UNKNOWN, f"instalada {installed}; {reason or 'PyPI no respondió'}")
+    order = _compare_versions(installed, latest)
+    if order is None:
+        return Result(UNKNOWN, f"no se pudieron comparar '{installed}' y '{latest}'")
+    if order < 0:
+        return Result(
+            WARN,
+            f"instalada {installed}, publicada {latest}: la instalación está atrasada",
+            _upgrade_hint(),
+        )
+    if order > 0:
+        return Result(OK, f"instalada {installed}, por delante de la publicada {latest}")
+    return Result(OK, f"{installed} (la última publicada)")
 
 
 def _claude_absent(ctx: Context) -> Result | None:
@@ -473,7 +563,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Doce elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Trece elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cuatro sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -482,6 +572,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 # que hace que alguien planifique sobre un dato falso.
 CHECKS: tuple[Check, ...] = (
     Check("cli.path", "entorno", "CLI local-delegate", _probe_cli),
+    Check("cli.published", "entorno", "versión publicada", _probe_published),
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -497,7 +588,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los doce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los trece probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -511,7 +602,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros once
+        except Exception as exc:  # un check roto no debe impedir ver los otros doce
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

@@ -32,6 +32,9 @@ def make_ctx(home, **kwargs):
         },
         "backend_models": lambda: (True, ""),
         "version_of": lambda component, cfg: (doctor.RECOMMENDED_VERSIONS[component], None),
+        # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
+        # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
+        "latest_release": lambda: (checks._installed_version(), None),
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -58,17 +61,37 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     """`install` reporta el andamiaje que acaba de escribir, y solo eso.
 
     Correr también `servicio` y `backend` saldría a la red y lanzaría los binarios de llama-swap
-    por haber instalado unos hooks. Los colaboradores revientan el test si alguien los llama.
-    """
+    por haber instalado unos hooks.
 
-    def _prohibido(*_a, **_kw):
-        raise AssertionError("el reporte del andamiaje no debe salir a la red ni lanzar binarios")
+    Los colaboradores **anotan** que se les llamó en vez de lanzar: `run_all` captura las
+    excepciones de los probes (un check roto no debe ocultar los otros doce), así que un
+    `raise` a secas se tragaría en silencio y el test pasaría con la red ya tocada.
+
+    `latest_release` **no** entra aquí, y el motivo importa: `cli.published` vive en el grupo
+    `entorno`, así que el filtro no lo excluye ni debe hacerlo. A ese lo frena `SKIP_PYPI`, que
+    es otro mecanismo y se prueba en su propio sitio —
+    `test_install_clients.py::test_install_no_consulta_pypi_al_reportar_el_andamiaje`.
+    """
+    llamados: list[str] = []
+
+    def _anota(nombre):
+        def _colaborador(*_a, **_kw):
+            llamados.append(nombre)
+            raise AssertionError(f"{nombre} no debe correr en el reporte del andamiaje")
+
+        return _colaborador
 
     home = make_home(tmp_path, complete=False)
-    ctx = make_ctx(home, daemon_status=_prohibido, backend_models=_prohibido, version_of=_prohibido)
+    ctx = make_ctx(
+        home,
+        daemon_status=_anota("daemon_status"),
+        backend_models=_anota("backend_models"),
+        version_of=_anota("version_of"),
+    )
 
     results = checks.run_all(ctx, groups=("entorno", "andamiaje"))
 
+    assert llamados == [], f"el reporte del andamiaje salió a la red: {llamados}"
     esperados = [c.id for c in checks.CHECKS if c.group in ("entorno", "andamiaje")]
     assert [check.id for check, _r in results] == esperados
     assert len(results) < len(checks.CHECKS)
@@ -97,6 +120,84 @@ def test_cli_in_path_is_ok(tmp_path, monkeypatch):
     result = result_for("cli.path", make_ctx(make_home(tmp_path)))
     assert result.status == checks.OK
     assert "/usr/local/bin/local-delegate" in result.detail
+
+
+# --- ...y estar al día ---------------------------------------------------------
+# El caso que motivó este check: el 2026-07-30, con el CLI en 0.16.0 y la 0.17.0 publicada,
+# `doctor` decía «todo a punto». Sabía la versión instalada y sabía preguntar por la última,
+# pero nadie juntaba las dos cosas.
+
+
+def _publicada(tmp_path, monkeypatch, instalada, ultima, motivo=None):
+    """Resultado de `cli.published` con las dos versiones forzadas."""
+    monkeypatch.setattr(checks, "_installed_version", lambda: instalada)
+    ctx = make_ctx(make_home(tmp_path), latest_release=lambda: (ultima, motivo))
+    return result_for("cli.published", ctx)
+
+
+def test_instalacion_atrasada_avisa_con_el_comando_que_la_actualiza(tmp_path, monkeypatch):
+    result = _publicada(tmp_path, monkeypatch, "0.16.0", "0.17.0")
+    assert result.status == checks.WARN
+    assert "0.16.0" in result.detail and "0.17.0" in result.detail
+    assert result.fix_hint
+
+
+def test_instalacion_al_dia_es_ok(tmp_path, monkeypatch):
+    result = _publicada(tmp_path, monkeypatch, "0.17.0", "0.17.0")
+    assert result.status == checks.OK
+    assert not checks.is_warning(result.status)
+
+
+def test_repo_por_delante_de_lo_publicado_es_ok(tmp_path, monkeypatch):
+    """Lo normal mientras se trabaja: el repo lleva el bump y PyPI todavía no."""
+    result = _publicada(tmp_path, monkeypatch, "0.18.0", "0.17.0")
+    assert result.status == checks.OK
+    assert "por delante" in result.detail
+
+
+def test_las_versiones_se_comparan_como_numeros_y_no_como_texto(tmp_path, monkeypatch):
+    """Comparadas como texto, `"0.9.0" > "0.11.0"`. Si alguien compara strings, esto lo caza."""
+    result = _publicada(tmp_path, monkeypatch, "0.9.0", "0.11.0")
+    assert result.status == checks.WARN
+
+
+@pytest.mark.parametrize(("instalada", "ultima"), [("0.17", "0.17.0"), ("0.17.0", "0.17")])
+def test_una_version_mas_corta_no_inventa_una_actualizacion(
+    tmp_path, monkeypatch, instalada, ultima
+):
+    """`0.17` y `0.17.0` son la misma: sin rellenar a la misma longitud, una saldría menor."""
+    assert _publicada(tmp_path, monkeypatch, instalada, ultima).status == checks.OK
+
+
+def test_sin_red_no_se_puede_comparar_y_eso_no_es_una_falta(tmp_path, monkeypatch):
+    """`unknown`, nunca `missing`: no saber la última publicada no es que falte nada."""
+    result = _publicada(tmp_path, monkeypatch, "0.17.0", None, "no se pudo consultar PyPI (…)")
+    assert result.status == checks.UNKNOWN
+    assert not checks.is_warning(result.status)
+    assert "PyPI" in result.detail
+
+
+def test_sin_version_instalada_tampoco_se_compara(tmp_path, monkeypatch):
+    result = _publicada(tmp_path, monkeypatch, None, "0.17.0")
+    assert result.status == checks.UNKNOWN
+
+
+def test_una_consulta_que_revienta_no_tumba_el_diagnostico(tmp_path, monkeypatch):
+    """El diagnóstico se ejecuta justo cuando algo va mal; no puede caerse por un dato accesorio."""
+
+    def _revienta():
+        raise RuntimeError("boom")
+
+    results = checks.run_all(make_ctx(make_home(tmp_path), latest_release=_revienta))
+    assert len(results) == len(checks.CHECKS)
+    por_id = {check.id: result for check, result in results}
+    assert por_id["cli.published"].status == checks.UNKNOWN
+
+
+def test_el_detalle_y_la_pista_caben_en_la_consola_de_windows(tmp_path, monkeypatch):
+    """Una flecha `→` mata el doctor con UnicodeEncodeError en la consola cp1252."""
+    result = _publicada(tmp_path, monkeypatch, "0.16.0", "0.17.0")
+    (result.detail + result.fix_hint).encode("cp1252")
 
 
 # --- El daemon puede estar sirviendo la versión vieja -------------------------

@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 from conftest import make_home, snapshot
 
-from local_delegate import checks, daemon, doctor
+from local_delegate import checks, daemon, doctor, update
 
 
 def test_vnum_extracts_number():
@@ -152,6 +152,18 @@ def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True
     )
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
     monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
+    # `run_doctor` arma el `Context` por dentro, así que aquí no hay kwarg que doblar. Y doblar
+    # `checks._default_latest_release` tampoco serviría: el dataclass capturó la referencia a esa
+    # función al definirse, igual que con `_default_daemon_status`. Lo que se dobla es el módulo
+    # al que llama por dentro, que es lo mismo que hacen las tres líneas de arriba.
+    #
+    # No es cosmético: sin esto la suite consultaría PyPI de verdad y
+    # `test_run_doctor_exit_0_when_everything_is_in_place` pasaría a depender de él — publicar
+    # una versión rompería el CI sin que nadie tocara el código. Se devuelve **la instalada** por
+    # el mismo motivo que el daemon: si no, el resultado dependería de la versión del repo.
+    monkeypatch.setattr(
+        update, "latest_version", lambda timeout=0: (checks._installed_version(), None)
+    )
 
 
 def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, capsys):

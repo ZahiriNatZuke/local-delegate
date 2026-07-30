@@ -7,6 +7,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`doctor` avisa cuando la instalación se quedó atrás de PyPI.** Comprobación nueva del
+  registro (grupo *Entorno*): compara la versión instalada con la última publicada y la marca
+  `[WARN]` si es más vieja, con el comando que la actualiza —`uv tool upgrade` o, si la
+  instalación es editable, el `git pull` + `uv sync` del repo del que se sirve el código—. Hasta
+  ahora ese caso pasaba el diagnóstico en silencio: con el CLI en 0.16.0 y la 0.17.0 publicada,
+  `doctor` decía «todo a punto». Consulta con un timeout de dos segundos y degrada a `[ -- ]` sin
+  red, así que un diagnóstico sin conexión sigue funcionando entero. **Solo la hace `doctor`**:
+  ni el reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella.
 - **`install` y `uninstall` aceptan `--clients auto|claude|codex`** (repetible). Con `auto`
   —el nuevo valor por defecto— se configuran **solo los clientes que están instalados**,
   mirando si existen `~/.claude` y `~/.codex` con la misma definición que usan `doctor` y
