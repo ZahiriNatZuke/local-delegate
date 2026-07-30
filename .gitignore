@@ -7,7 +7,9 @@ __pycache__/
 *.py[oc]
 build/
 dist/
-_site/          # salida de scripts/build_site.py (GitHub Pages)
+# Salida de scripts/build_site.py (GitHub Pages). El comentario va en su propia linea:
+# .gitignore NO admite comentarios al final de un patron, se los traga como parte del nombre.
+_site/
 wheels/
 *.egg-info/
 
