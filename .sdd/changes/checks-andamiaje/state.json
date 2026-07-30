@@ -3,9 +3,9 @@
   "slug": "checks-andamiaje",
   "title": "Registro unico de comprobaciones del andamiaje y doctor que ve el sistema entero",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-30T13:49:06.804Z",
-  "updatedAt": "2026-07-30T14:20:00.000Z",
+  "updatedAt": "2026-07-30T14:35:00.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "assistant"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T14:35:00.000Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/registro-checks-andamiaje.md. backlog.md actualizado (A cerrado, B con su plan por reescribir, y la tercera confirmacion de que los hooks con 'args' si se ejecutan). Puntero en la memoria del proyecto de Claude Code.",
+      "actor": "assistant"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-30T14:20:00.000Z",
       "reason": "conformidad aprobada; queda el PR y el registro en memoria"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T14:35:00.000Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/registro-checks-andamiaje.md. backlog.md actualizado (A cerrado, B con su plan por reescribir, y la tercera confirmacion de que los hooks con 'args' si se ejecutan). Puntero en la memoria del proyecto de Claude Code.",
+      "actor": "assistant"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T14:35:00.000Z",
+      "reason": "PRs #54 y #55 mergeados, CI de main verde y memoria persistida"
     }
   ]
 }
