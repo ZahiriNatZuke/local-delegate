@@ -152,6 +152,7 @@ def _ctx(home):
         daemon_status=lambda host, port: None,
         backend_models=lambda: (True, ""),
         version_of=lambda component, cfg: ("v238", None),
+        latest_release=checks.SKIP_PYPI,
     )
 
 
@@ -171,6 +172,26 @@ def test_dry_run_no_reinicia_el_daemon(tmp_path):
     opts = opts_for(make_home(tmp_path, complete=False), dry_run=True, runner=runner)
     update.run_update(opts, out=lambda *a: None)
     assert runner.calls == []
+
+
+def test_pypi_se_consulta_una_sola_vez_en_todo_el_comando(tmp_path, monkeypatch):
+    """`update` ya pregunta por la última versión; el check del registro no debe repetirlo.
+
+    Se cuentan las consultas en vez de prohibirlas: la de `run_update` es legítima y necesaria,
+    y lo que se vigila es que no aparezca una **segunda** por correr el diagnóstico.
+    """
+    consultas: list[float] = []
+
+    def _espia(timeout=0.0):
+        consultas.append(timeout)
+        return "9.9.9", None
+
+    monkeypatch.setattr(update, "latest_version", _espia)
+    opts = opts_for(make_home(tmp_path, complete=False), dry_run=True)
+
+    update.run_update(opts, out=lambda *a: None)
+
+    assert len(consultas) == 1, f"PyPI se consultó {len(consultas)} veces en un solo comando"
 
 
 # --- Los mecanismos de arranque ----------------------------------------------

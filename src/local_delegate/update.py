@@ -581,8 +581,12 @@ def run_update(opts: Options, out=print) -> int:
         out("  (--home simulado: se repara ese árbol y NO se toca ningún servicio)")
     out("")
 
-    # 1. Diagnóstico: el mismo que ve `doctor`, sin lógica propia.
-    ctx = checks.Context(home=opts.home, daemon_status=opts.daemon_status)
+    # 1. Diagnóstico: el mismo que ve `doctor`, sin lógica propia. Con `SKIP_PYPI` porque la
+    # última versión publicada la pregunta el paso 2 unas líneas más abajo, y dejar que el check
+    # la preguntase otra vez sería consultar dos veces lo mismo en un solo comando.
+    ctx = checks.Context(
+        home=opts.home, daemon_status=opts.daemon_status, latest_release=checks.SKIP_PYPI
+    )
     results = checks.run_all(ctx)
 
     # 2. La versión: la que pidió el usuario, o la última publicada.

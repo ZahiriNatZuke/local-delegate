@@ -225,6 +225,31 @@ def test_auto_explicito_no_pelea_con_un_cliente_nombrado(monkeypatch, tmp_path):
     assert not (home / ".codex" / "AGENTS.md").exists(), "lo explícito debe ganar sobre `auto`"
 
 
+def test_install_no_consulta_pypi_al_reportar_el_andamiaje(monkeypatch, tmp_path, capsys):
+    """Instalar unos hooks no es motivo para salir a internet.
+
+    El reporte final de `install` corre el grupo `entorno`, donde vive la comprobación de la
+    versión publicada. Se dobla `update.latest_version` —el destino real del colaborador por
+    defecto, no un kwarg— para que el test ejercite el camino de `cli.py` y no el doble.
+    """
+    from local_delegate import update as upd
+
+    consultas: list[float] = []
+
+    def _espia(timeout=0.0):
+        consultas.append(timeout)
+        return "9.9.9", None
+
+    monkeypatch.setattr(upd, "latest_version", _espia)
+    _home_real(monkeypatch, tmp_path / "real")
+    home = make_home(tmp_path, claude=True, codex=False, complete=False)
+
+    assert cli.run(["install", "--home", str(home)]) == 0
+
+    assert consultas == [], "el reporte del andamiaje consultó PyPI"
+    assert "no se consulta PyPI" in capsys.readouterr().out
+
+
 def test_uninstall_auto_limpia_solo_los_clientes_presentes(monkeypatch, tmp_path):
     _home_real(monkeypatch, tmp_path / "real")
     home = make_home(tmp_path, claude=True, codex=True, complete=True)

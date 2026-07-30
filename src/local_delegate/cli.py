@@ -154,7 +154,11 @@ def _reporte_del_andamiaje(home: Path, dry_run: bool) -> None:
     """
     from . import checks, doctor
 
-    results = checks.run_all(checks.Context(home=home), groups=_SCAFFOLD_GROUPS)
+    # `SKIP_PYPI` por el mismo motivo que el filtro por grupos: haber instalado unos hooks no es
+    # motivo para salir a la red. La comprobación aparece igual en el reporte, como `[ -- ]`.
+    results = checks.run_all(
+        checks.Context(home=home, latest_release=checks.SKIP_PYPI), groups=_SCAFFOLD_GROUPS
+    )
     print()
     if dry_run:
         print("Estado ACTUAL del andamiaje (no se escribió nada):")

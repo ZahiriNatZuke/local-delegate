@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "doctor-version-publicada",
+  "title": "doctor compara la version instalada contra la publicada en PyPI",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-30T22:11:09.700Z",
+  "updatedAt": "2026-07-30T22:30:29.923Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:17:19.855Z",
+      "evidence": "spec.md con 15 requisitos observables y 6 escenarios, respaldada por research verificado por ejecucion: latest_version() responde en 0.08s y 0.07s en dos consultas seguidas al indice simple (asi que consultar siempre es viable, que es la decision que tomo el usuario); el dato ya existe repartido entre checks._installed_version (checks.py:210-219) y update.latest_version (update.py:259-280) sin que nadie los junte; el riesgo real esta identificado y acotado: cli.py:157 corre groups=('entorno','andamiaje') y update.py:585 corre el registro entero, los dos con Context sin colaboradores, asi que un check que consulte por defecto los ataria a la red -- de ahi REQ-010 y REQ-011; doctor._vnum NO sirve para comparar (extrae UN solo numero, 'v238'->238) y hay que usar la misma clave que latest_version; y REQ-015 aplica de verdad: docs/wiki/Integration-install.md:108 dice 'las doce piezas' y las lineas 127-140 son la tabla de las doce.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:20:42.133Z",
+      "evidence": "plan.md con 8 tareas, cada una con ficheros, requisitos y verificacion. El diseno repite el patron que checks.py ya usa tres veces (colaborador inyectable en Context con default diferido) en vez de inventar mecanismo: latest_release, con default que llama a update.latest_version (unica fuente de 'cual es la ultima publicada') y SKIP_PYPI para quien no quiere red. Revision adversarial hecha con cuatro hallazgos, todos incorporados: R-1 BLOQUEANTE, la tarea de tests cubria la mitad de los sitios afectados -- tests/test_doctor.py (6 tests de run_doctor) y tests/test_install_clients.py (10 llamadas a cli.run install) llegan al probe con los DEFAULTS porque construyen el Context por dentro, asi que un kwarg no llega y hay que doblar checks._default_latest_release; sin eso la suite sale a la red y test_run_doctor_exit_0_when_everything_is_in_place pasa a depender de PyPI, o sea que publicar una version romperia el CI sin tocar codigo. R-2, comparar 0.17 contra 0.17.0 da WARN falso por longitudes distintas. R-3, el fix_hint manda a 'uv tool upgrade' incluso en instalacion editable, donde lo correcto es git pull + uv sync (caso real: la segunda maquina con el repo clonado). R-4, se acepta el ruido del '[ -- ]' en el reporte de install antes que anadir un exclude a run_all, que seria la primera grieta hacia el framework que la regla 3 del modulo prohibe.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:29:45.240Z",
+      "evidence": "Los cuatro pasos del CI en verde en local: 'uv run ruff check .' -> All checks passed; 'uv run ruff format --check .' -> 53 files already formatted; 'uv run pytest -q --basetemp=<propio>' -> 429 passed, 1 skipped (417 al empezar, +12); extract_dashboard_js.py + node --check -> OK (39395 chars). Verificacion al reves hecha y documentada: revertida la inyeccion de SKIP_PYPI en cli.py y update.py, FALLAN los dos tests que la protegen (test_install_no_consulta_pypi_al_reportar_el_andamiaje y test_pypi_se_consulta_una_sola_vez_en_todo_el_comando, este ultimo con 'assert 2 == 1 where 2 = len([2.0, 0.0])', que nombra las dos llamadas). Ejecucion real ademas de los tests: doctor en esta PC (AC-2 en vivo), los tres desenlaces forzados (AC-1, AC-3, AC-4) y 'install --home <sim>' con el reporte enseñando la linea '[ -- ] no se consulta PyPI en este comando' (AC-5). El ~/.claude.json real quedo identico por sha256 (5d493a7a18d21952) antes y despues del install simulado. Sin secretos ni dependencias nuevas: urllib es stdlib y la peticion es al indice simple publico de PyPI, la misma que update ya hacia. CHANGELOG con CRLF intacto (890 CRLF, 0 LF sueltos).",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:30:14.674Z",
+      "evidence": "Revision fresca del diff completo (9 ficheros, +291/-18) contra los 15 requisitos y los 6 escenarios; tabla requisito-a-evidencia en verification.md, con ejecucion real y no solo tests para AC-1..AC-5. REQ-012 se cumple por omision verificada: doctor.py NO aparece en git diff --stat, o sea que --online conserva su semantica intacta, y los 6 tests de run_doctor siguen verdes. REQ-007 comprobado por grep: 'pypi.org/simple' sale en un solo sitio del repo (update.latest_version), asi que no se creo una segunda definicion. REQ-005 (el probe no escribe) se sostiene porque _probe_published no toca el sistema de ficheros y el test de arbol byte a byte del registro sigue verde. REQ-014 verificado por bytes: 890 CRLF y 0 LF sueltos, con git diff --stat en 8 insertions y 0 deletions. Dos desviaciones del plan, las dos documentadas: (1) doblar checks._default_latest_release NO habria funcionado porque el dataclass captura la referencia al definir el campo -- se dobla update.latest_version, que es lo que ya hacia _stub_environment con daemon.query_daemon; (2) meter latest_release entre los colaboradores prohibidos del test del filtro por grupos era un error conceptual, y el test fallo y lo cazó: cli.published vive en 'entorno' y el filtro no lo excluye ni debe; quien lo frena es SKIP_PYPI, que es otro mecanismo y se prueba aparte. Los dos quedan probados por separado y el docstring lo explica para que nadie los vuelva a mezclar.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T22:11:09.700Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T22:15:08.326Z",
+      "reason": "Mapeo de checks.py, doctor.py, update.latest_version y de quien construye Context"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T22:15:45.936Z",
+      "reason": "Research cerrado: el dato existe repartido, el riesgo es atar install y update a la red, y latest_version es la unica fuente"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T22:17:19.855Z",
+      "evidence": "spec.md con 15 requisitos observables y 6 escenarios, respaldada por research verificado por ejecucion: latest_version() responde en 0.08s y 0.07s en dos consultas seguidas al indice simple (asi que consultar siempre es viable, que es la decision que tomo el usuario); el dato ya existe repartido entre checks._installed_version (checks.py:210-219) y update.latest_version (update.py:259-280) sin que nadie los junte; el riesgo real esta identificado y acotado: cli.py:157 corre groups=('entorno','andamiaje') y update.py:585 corre el registro entero, los dos con Context sin colaboradores, asi que un check que consulte por defecto los ataria a la red -- de ahi REQ-010 y REQ-011; doctor._vnum NO sirve para comparar (extrae UN solo numero, 'v238'->238) y hay que usar la misma clave que latest_version; y REQ-015 aplica de verdad: docs/wiki/Integration-install.md:108 dice 'las doce piezas' y las lineas 127-140 son la tabla de las doce.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T22:17:35.250Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T22:20:42.133Z",
+      "evidence": "plan.md con 8 tareas, cada una con ficheros, requisitos y verificacion. El diseno repite el patron que checks.py ya usa tres veces (colaborador inyectable en Context con default diferido) en vez de inventar mecanismo: latest_release, con default que llama a update.latest_version (unica fuente de 'cual es la ultima publicada') y SKIP_PYPI para quien no quiere red. Revision adversarial hecha con cuatro hallazgos, todos incorporados: R-1 BLOQUEANTE, la tarea de tests cubria la mitad de los sitios afectados -- tests/test_doctor.py (6 tests de run_doctor) y tests/test_install_clients.py (10 llamadas a cli.run install) llegan al probe con los DEFAULTS porque construyen el Context por dentro, asi que un kwarg no llega y hay que doblar checks._default_latest_release; sin eso la suite sale a la red y test_run_doctor_exit_0_when_everything_is_in_place pasa a depender de PyPI, o sea que publicar una version romperia el CI sin tocar codigo. R-2, comparar 0.17 contra 0.17.0 da WARN falso por longitudes distintas. R-3, el fix_hint manda a 'uv tool upgrade' incluso en instalacion editable, donde lo correcto es git pull + uv sync (caso real: la segunda maquina con el repo clonado). R-4, se acepta el ruido del '[ -- ]' en el reporte de install antes que anadir un exclude a run_all, que seria la primera grieta hacia el framework que la regla 3 del modulo prohibe.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T22:20:47.881Z",
+      "reason": "plan revisado adversarialmente, 4 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T22:20:48.132Z",
+      "reason": "gate plan aprobado; se ejecutan las 8 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T22:29:33.059Z",
+      "reason": "8 tareas implementadas; CI local en verde y ejecucion real en esta PC"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T22:29:45.240Z",
+      "evidence": "Los cuatro pasos del CI en verde en local: 'uv run ruff check .' -> All checks passed; 'uv run ruff format --check .' -> 53 files already formatted; 'uv run pytest -q --basetemp=<propio>' -> 429 passed, 1 skipped (417 al empezar, +12); extract_dashboard_js.py + node --check -> OK (39395 chars). Verificacion al reves hecha y documentada: revertida la inyeccion de SKIP_PYPI en cli.py y update.py, FALLAN los dos tests que la protegen (test_install_no_consulta_pypi_al_reportar_el_andamiaje y test_pypi_se_consulta_una_sola_vez_en_todo_el_comando, este ultimo con 'assert 2 == 1 where 2 = len([2.0, 0.0])', que nombra las dos llamadas). Ejecucion real ademas de los tests: doctor en esta PC (AC-2 en vivo), los tres desenlaces forzados (AC-1, AC-3, AC-4) y 'install --home <sim>' con el reporte enseñando la linea '[ -- ] no se consulta PyPI en este comando' (AC-5). El ~/.claude.json real quedo identico por sha256 (5d493a7a18d21952) antes y despues del install simulado. Sin secretos ni dependencias nuevas: urllib es stdlib y la peticion es al indice simple publico de PyPI, la misma que update ya hacia. CHANGELOG con CRLF intacto (890 CRLF, 0 LF sueltos).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T22:30:14.674Z",
+      "evidence": "Revision fresca del diff completo (9 ficheros, +291/-18) contra los 15 requisitos y los 6 escenarios; tabla requisito-a-evidencia en verification.md, con ejecucion real y no solo tests para AC-1..AC-5. REQ-012 se cumple por omision verificada: doctor.py NO aparece en git diff --stat, o sea que --online conserva su semantica intacta, y los 6 tests de run_doctor siguen verdes. REQ-007 comprobado por grep: 'pypi.org/simple' sale en un solo sitio del repo (update.latest_version), asi que no se creo una segunda definicion. REQ-005 (el probe no escribe) se sostiene porque _probe_published no toca el sistema de ficheros y el test de arbol byte a byte del registro sigue verde. REQ-014 verificado por bytes: 890 CRLF y 0 LF sueltos, con git diff --stat en 8 insertions y 0 deletions. Dos desviaciones del plan, las dos documentadas: (1) doblar checks._default_latest_release NO habria funcionado porque el dataclass captura la referencia al definir el campo -- se dobla update.latest_version, que es lo que ya hacia _stub_environment con daemon.query_daemon; (2) meter latest_release entre los colaboradores prohibidos del test del filtro por grupos era un error conceptual, y el test fallo y lo cazó: cli.published vive en 'entorno' y el filtro no lo excluye ni debe; quien lo frena es SKIP_PYPI, que es otro mecanismo y se prueba aparte. Los dos quedan probados por separado y el docstring lo explica para que nadie los vuelva a mezclar.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T22:30:29.923Z",
+      "reason": "gates quality y conformance aprobados"
+    }
+  ]
+}
