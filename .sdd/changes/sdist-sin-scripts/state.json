@@ -3,9 +3,9 @@
   "slug": "sdist-sin-scripts",
   "title": "Sacar scripts/ del sdist y retirar el instalador de hooks de macOS",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-30T19:55:40.911Z",
-  "updatedAt": "2026-07-30T20:18:06.901Z",
+  "updatedAt": "2026-07-30T20:39:37.418Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T20:39:37.278Z",
+      "evidence": "Nota de jornada en el vault (projects/local-delegate/jornada-2026-07-30-noche-socket-y-la-0-17-0.md), diagnostico completo en dependency-audit-socket.md, backlog actualizado con los pendientes nuevos y las dos afirmaciones falsas corregidas, y punteros sincronizados en la memoria del proyecto",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-30T20:18:06.901Z",
       "reason": "Gates de calidad y conformidad aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T20:39:37.278Z",
+      "evidence": "Nota de jornada en el vault (projects/local-delegate/jornada-2026-07-30-noche-socket-y-la-0-17-0.md), diagnostico completo en dependency-audit-socket.md, backlog actualizado con los pendientes nuevos y las dos afirmaciones falsas corregidas, y punteros sincronizados en la memoria del proyecto",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T20:39:37.349Z",
+      "reason": "Resultado conforme y memoria persistida"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T20:39:37.418Z",
+      "reason": "Publicado en la 0.17.0"
     }
   ]
 }
