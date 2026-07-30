@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El `doctor` comprueba que `local-delegate` exista como comando.** Toda la documentación manda
+  correr `local-delegate <algo>`, pero la instalación recomendada (`uvx local-delegate-mcp
+  install`) **no deja ese comando en ninguna parte**: `uvx` monta un entorno efímero y lo borra al
+  terminar. El andamiaje quedaba perfecto y el primer comando de la doc respondía «command not
+  found». Ahora sale `[FALT]` con el arreglo (`uv tool install local-delegate-mcp`), y el propio
+  `install` lo avisa al terminar en vez de dejar que lo descubras.
+- **El `doctor` avisa si el daemon sirve una versión distinta de la instalada.** Un daemon es un
+  proceso largo: tras actualizar sigue corriendo el código con el que arrancó, y los clientes
+  hablan con la versión vieja sin que nada lo diga — el síntoma es «actualicé y el arreglo no
+  está». Ahora es `[WARN]` con la comparación explícita.
+
 ## [0.14.0] - 2026-07-30
 
 ### Fixed

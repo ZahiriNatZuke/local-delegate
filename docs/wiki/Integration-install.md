@@ -5,10 +5,17 @@ cliente además tiene los **hooks**, la **skill** y la **regla en memoria**. `lo
 install` deja las cuatro piezas puestas de una vez, de forma idempotente y reversible.
 
 ```bash
-uvx local-delegate-mcp install --dry-run   # muestra cada cambio, sin escribir
-uvx local-delegate-mcp install             # aplica
-uvx local-delegate-mcp uninstall           # revierte solo lo que instaló
+uv tool install local-delegate-mcp   # deja `local-delegate` en el PATH (recomendado)
+local-delegate install --dry-run     # muestra cada cambio, sin escribir
+local-delegate install               # aplica
+local-delegate uninstall             # revierte solo lo que instaló
 ```
+
+> **Sobre `uvx`.** `uvx local-delegate-mcp install` funciona y deja el andamiaje idéntico, pero
+> **no instala el comando**: `uvx` monta un entorno efímero para esa ejecución y lo borra al
+> terminar. El resultado desconcierta —todo queda configurado y `local-delegate doctor` responde
+> «command not found»—, así que desde la 0.15.0 el `install` lo avisa al terminar y el `doctor` lo
+> reporta como `[FALT]` con el comando que lo arregla.
 
 ## Qué instala
 
@@ -89,14 +96,15 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 
 | Grupo | Comprobación | Qué mira |
 |---|---|---|
-| Clientes | clientes | si existen `~/.claude` y `~/.codex` |
+| Entorno | CLI local-delegate | que el comando exista en el PATH — con `uvx` **no queda instalado** |
+| Entorno | clientes | si existen `~/.claude` y `~/.codex` |
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
 | Andamiaje | skill | `~/.claude/skills/delegacion-local/SKILL.md` |
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
-| Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid) |
+| Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
 | Servicios | backend | `BASE_URL/models` |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |

@@ -89,7 +89,26 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         return 1
     if not uninstall:
         print("Listo. Reinicia el cliente (Claude Code / Codex) para que tome los cambios.")
+        _avisa_si_el_cli_no_esta_en_el_path()
     return 0
+
+
+def _avisa_si_el_cli_no_esta_en_el_path() -> None:
+    """Avisa si el comando que toda la documentación manda usar no existe en esta máquina.
+
+    Pasa siempre que se instala con `uvx`, que es lo que recomienda el README: `uvx` monta un
+    entorno efímero, corre el comando y lo borra. El andamiaje queda perfecto y `local-delegate
+    doctor` —lo primero que dice la doc después de instalar— responde «command not found».
+    Decirlo aquí es barato; que lo descubra el usuario, no.
+    """
+    from . import checks
+
+    if shutil.which("local-delegate"):
+        return
+    print()
+    print("Aviso: el comando `local-delegate` no quedó en el PATH.")
+    print("       Pasa cuando se instala con `uvx`, que borra su entorno al terminar.")
+    print(f"       Para tenerlo siempre disponible:  {checks.CLI_HINT}")
 
 
 def cmd_install(args: argparse.Namespace) -> int:
