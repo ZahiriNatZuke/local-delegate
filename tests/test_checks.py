@@ -54,6 +54,32 @@ def test_registry_ids_are_unique_and_groups_are_known():
     }
 
 
+def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
+    """`install` reporta el andamiaje que acaba de escribir, y solo eso.
+
+    Correr también `servicio` y `backend` saldría a la red y lanzaría los binarios de llama-swap
+    por haber instalado unos hooks. Los colaboradores revientan el test si alguien los llama.
+    """
+
+    def _prohibido(*_a, **_kw):
+        raise AssertionError("el reporte del andamiaje no debe salir a la red ni lanzar binarios")
+
+    home = make_home(tmp_path, complete=False)
+    ctx = make_ctx(home, daemon_status=_prohibido, backend_models=_prohibido, version_of=_prohibido)
+
+    results = checks.run_all(ctx, groups=("entorno", "andamiaje"))
+
+    esperados = [c.id for c in checks.CHECKS if c.group in ("entorno", "andamiaje")]
+    assert [check.id for check, _r in results] == esperados
+    assert len(results) < len(checks.CHECKS)
+
+
+def test_sin_filtro_run_all_se_comporta_igual_que_siempre(tmp_path):
+    ctx = make_ctx(make_home(tmp_path, complete=False))
+    assert len(checks.run_all(ctx)) == len(checks.CHECKS)
+    assert checks.run_all(ctx, groups=None) == checks.run_all(ctx)
+
+
 # --- El CLI tiene que existir como comando -----------------------------------
 
 

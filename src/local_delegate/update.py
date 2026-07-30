@@ -108,11 +108,13 @@ class Options:
 
     @property
     def simulated_home(self) -> bool:
-        """True si ``--home`` apunta fuera del HOME real: entonces no se toca ningún servicio."""
-        try:
-            return self.home.resolve() != Path.home().resolve()
-        except OSError:
-            return True
+        """True si ``--home`` apunta fuera del HOME real: entonces no se toca ningún servicio.
+
+        La regla vive en ``install`` desde el change ``install-checks-clients``, porque ahí la
+        necesita también el instalador para no dejar que el binario ``claude`` escriba fuera del
+        árbol simulado. Una sola definición, dos consumidores.
+        """
+        return install.is_simulated_home(self.home)
 
 
 # --- La tabla de reparaciones -------------------------------------------------
@@ -165,13 +167,8 @@ REPAIRS: tuple[Repair, ...] = (
 
 
 def _present_targets(home: Path) -> set[str]:
-    """Clientes que existen en esta máquina."""
-    present = set()
-    if (home / ".claude").is_dir():
-        present.add("claude")
-    if (home / ".codex").is_dir():
-        present.add("codex")
-    return present
+    """Clientes que existen en esta máquina. La definición vive en ``install`` (ver arriba)."""
+    return install.present_targets(home)
 
 
 def _infer_mcp_mode(results: list[tuple[checks.Check, checks.Result]]) -> str:

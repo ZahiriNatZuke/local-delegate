@@ -27,6 +27,12 @@ from . import llamaswap_config as lc
 
 _ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp")
 _ALL_TARGETS = ("claude", "codex")
+_CLIENT_DIR = {"claude": "~/.claude", "codex": "~/.codex"}
+
+# El reporte final de `install` mira SOLO estos dos grupos del registro. Los otros dos
+# —`servicio` y `backend`— salen a la red y lanzan los binarios de llama-swap, y haber
+# instalado unos hooks no es motivo para nada de eso.
+_SCAFFOLD_GROUPS = ("entorno", "andamiaje")
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -36,14 +42,42 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return daemon.serve(host=args.host, port=args.port, log_level=args.log_level)
 
 
-def _install_options(args: argparse.Namespace):
+def _resolve_clients(args: argparse.Namespace, home: Path) -> tuple[set[str], str]:
+    """(clientes a configurar, por qué esos). Lanza ValueError si la petición es contradictoria.
+
+    `--clients` es el flag actual y `--target` el histórico; combinarlos no tiene una lectura
+    obvia (¿unión? ¿cuál gana?), así que se rechaza en vez de elegir una a espaldas del usuario.
+    """
     from . import install as inst
 
-    selected = args.target or ["all"]
-    targets = set(_ALL_TARGETS) if "all" in selected else set(selected)
+    clients = getattr(args, "clients", None)
+    target = getattr(args, "target", None)
+    if clients and target:
+        raise ValueError("--clients y --target no se combinan: usa uno de los dos")
+
+    if target:  # semántica histórica intacta: `all` fuerza los dos, existan o no
+        chosen = set(_ALL_TARGETS) if "all" in target else set(target)
+        return chosen, f"por --target: {', '.join(sorted(chosen))}"
+
+    explicit = {c for c in (clients or []) if c != "auto"}
+    if explicit:
+        # Pedir un cliente por su nombre es una orden, no una sugerencia: se configura aunque no
+        # esté instalado (caso legítimo, p. ej. preparar el HOME antes de instalar el cliente).
+        return explicit, f"por --clients: {', '.join(sorted(explicit))}"
+
+    present = inst.present_targets(home)
+    return present, "deteccion automatica (--clients auto): " + (
+        ", ".join(sorted(present)) if present else "no se encontró ninguno"
+    )
+
+
+def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp: bool = False):
+    from . import install as inst
+
+    home = Path(args.home).expanduser() if args.home else Path.home()
     components = {c for c in _ALL_COMPONENTS if getattr(args, c.replace("-", "_"))}
     return inst.Options(
-        home=Path(args.home).expanduser() if args.home else Path.home(),
+        home=home,
         components=components,
         targets=targets,
         python_exe=args.python or inst.default_python(),
@@ -52,37 +86,148 @@ def _install_options(args: argparse.Namespace):
         base_url=getattr(args, "base_url", None),
         api_key_env=getattr(args, "api_key_env", False),
         pin_version=getattr(args, "pin_version", None),
-        use_cli=not getattr(args, "no_client_cli", False),
+        # El HOME simulado apaga el camino por CLI, y no es una precaución teórica: `claude mcp
+        # add-json --scope user` escribe SIEMPRE en el `~/.claude.json` del usuario real,
+        # ignorando `--home`. Instalando duplicaba configuración; desinstalando la borraba.
+        use_cli=not getattr(args, "no_client_cli", False) and not inst.is_simulated_home(home),
+        skip_codex_mcp=skip_codex_mcp,
     )
 
 
+def _hay_terminal() -> bool:
+    """True si se puede preguntar de verdad. Un stdin raro NO es una terminal."""
+    try:
+        return bool(sys.stdin) and sys.stdin.isatty()
+    except (AttributeError, ValueError, OSError):
+        # stdin cerrado, redirigido o un objeto sin `isatty` usable: no hay a quién preguntar.
+        return False
+
+
+def _codex_mcp_puesto_a_mano(results) -> str:
+    """Ruta del `config.toml` con una entrada nuestra escrita a mano, o "" si no la hay.
+
+    El `warn` de `scaffold.mcp_codex` significa exactamente eso: la sección existe **sin** los
+    marcadores gestionados, o sea la escribió el usuario. Reemplazarla sin avisar es el fallo
+    contra el que existe la regla de `unknown` en todo el registro.
+    """
+    from . import checks
+
+    for check, result in results:
+        if check.id == "scaffold.mcp_codex" and result.status == checks.WARN:
+            return result.detail
+    return ""
+
+
+def _decide_sobre_el_codex_ajeno(detalle: str, args: argparse.Namespace) -> bool:
+    """True si hay que SALTAR la escritura de la entrada MCP de Codex."""
+    if getattr(args, "force_mcp_codex", False):
+        print(f"Aviso: {detalle}")
+        print("       --force-mcp-codex: se reemplaza (queda una copia .bak al lado).")
+        return False
+    if args.dry_run:
+        print(f"Aviso: {detalle}")
+        print("       En una ejecución real se pediría confirmación antes de reemplazarla.")
+        return False
+    if not _hay_terminal():
+        print(f"Aviso: {detalle}")
+        print("       Sin terminal para preguntar: se conserva tal cual y no se toca.")
+        print("       Para reemplazarla sin preguntar: --force-mcp-codex")
+        return True
+    print(f"Aviso: {detalle}")
+    try:
+        respuesta = input("       ¿Reemplazarla por la entrada gestionada? [s/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        respuesta = ""
+    if respuesta in ("s", "si", "sí", "y", "yes"):
+        return False
+    print("       Se conserva la entrada del usuario; el resto sí se instala.")
+    return True
+
+
+def _reporte_del_andamiaje(home: Path, dry_run: bool) -> None:
+    """Estado real tras escribir, con el mismo formato y los mismos checks que el doctor.
+
+    Se recorre el registro **otra vez** a propósito: la primera pasada describe el sistema como
+    estaba ANTES de escribir, y un reporte que use esos resultados diría lo contrario de lo que
+    afirma. Es barato — estos dos grupos solo miran ficheros y el PATH.
+    """
+    from . import checks, doctor
+
+    results = checks.run_all(checks.Context(home=home), groups=_SCAFFOLD_GROUPS)
+    print()
+    if dry_run:
+        print("Estado ACTUAL del andamiaje (no se escribió nada):")
+    else:
+        print("Estado del andamiaje después de escribir:")
+    print("Estados: [ OK ] a punto · [WARN] revisar · [FALT] falta · [ -- ] no se pudo comprobar")
+    for group in _SCAFFOLD_GROUPS:
+        print()
+        print(doctor._GROUP_HEADINGS[group])
+        doctor._print_group(group, results)
+
+
 def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
+    from . import checks
     from . import install as inst
 
-    opts = _install_options(args)
+    home = Path(args.home).expanduser() if args.home else Path.home()
+    try:
+        targets, motivo = _resolve_clients(args, home)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    verb = "Desinstalando" if uninstall else "Instalando"
+    print(f"{verb} local-delegate en {home}")
+    print(f"clientes: {motivo}")
+
+    if not targets:
+        # Con `auto` y ningún cliente, no hay nada que hacer y casi siempre significa un --home
+        # equivocado. No es un error: no se escribe nada, se dice qué se buscó y se sigue.
+        print()
+        print("No se encontró ningún cliente: se buscaron " + " y ".join(_CLIENT_DIR.values()))
+        print(f"bajo {home}. No se escribió nada.")
+        print("Si querías configurarlo igual:  --clients claude   (o --clients codex)")
+        _reporte_del_andamiaje(home, dry_run=True)
+        return 0
+
+    # Primera pasada del registro: para saber si hay configuración del usuario que no se puede
+    # pisar sin preguntar. Solo hace falta cuando de verdad vamos a escribir la entrada de Codex.
+    skip_codex_mcp = False
+    if not uninstall and "codex" in targets and getattr(args, "mcp", True):
+        detalle = _codex_mcp_puesto_a_mano(
+            checks.run_all(checks.Context(home=home), groups=("andamiaje",))
+        )
+        if detalle:
+            skip_codex_mcp = _decide_sobre_el_codex_ajeno(detalle, args)
+
+    opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
     if not opts.components:
         print("error: no queda ningún componente que instalar (todo desactivado)", file=sys.stderr)
         return 2
-    if not opts.targets:
-        print("error: no hay ningún cliente seleccionado (--target)", file=sys.stderr)
-        return 2
     actions = inst.plan_uninstall(opts) if uninstall else inst.plan_install(opts)
-    verb = "Desinstalando" if uninstall else "Instalando"
-    print(f"{verb} local-delegate en {opts.home} — clientes: {', '.join(sorted(opts.targets))}")
     print(f"componentes: {', '.join(sorted(opts.components))}")
     print()
     failures = inst.apply(actions, dry_run=args.dry_run)
     print()
     if args.dry_run:
         print("--dry-run: no se escribió nada.")
+        _reporte_del_andamiaje(opts.home, dry_run=True)
         return 0
-    if failures:
-        print(f"{failures} acción(es) fallaron.", file=sys.stderr)
-        return 1
-    if not uninstall:
+    if not uninstall and not failures:
         print("Listo. Reinicia el cliente (Claude Code / Codex) para que tome los cambios.")
         _avisa_si_el_cli_no_esta_en_el_path()
         _deja_el_daemon_arriba(opts)
+    # El reporte va ANTES del código de salida, y también cuando algo falló: si una acción no
+    # pudo escribir, saber qué quedó a medias es justo lo que hace falta para arreglarlo.
+    # Es informativo y NO cambia el exit code — tras un install correcto quedan avisos legítimos
+    # (el CLI fuera del PATH con `uvx`, un cliente ausente) y devolver 1 por eso rompería
+    # cualquier script de instalación.
+    _reporte_del_andamiaje(opts.home, dry_run=False)
+    if failures:
+        print(f"{failures} acción(es) fallaron.", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -578,11 +723,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _add_common_install_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
+        "--clients",
+        action="append",
+        choices=("auto", "claude", "codex"),
+        default=None,
+        help="cliente a configurar (repetible; default: auto = los que estén instalados)",
+    )
+    p.add_argument(
         "--target",
         action="append",
         choices=("claude", "codex", "all"),
         default=None,
-        help="cliente a configurar (repetible; default: all)",
+        help="histórico, equivale a --clients; `all` fuerza los dos aunque no estén instalados",
     )
     p.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
     p.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
@@ -657,6 +809,11 @@ def _add_install_parsers(sub) -> None:
         "--pin-version",
         default=None,
         help="fija la versión del paquete en la entrada MCP (p. ej. 0.11.0)",
+    )
+    install.add_argument(
+        "--force-mcp-codex",
+        action="store_true",
+        help="reemplaza sin preguntar una entrada de Codex escrita a mano (deja .bak)",
     )
     install.set_defaults(func=cmd_install)
 

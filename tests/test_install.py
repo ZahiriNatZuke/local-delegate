@@ -267,10 +267,17 @@ def test_foreign_hook_mentioning_local_delegate_is_not_removed(tmp_path):
     assert cleaned["hooks"]["Stop"] and removed == 0
 
 
-def test_install_migrates_the_broken_legacy_hook_entries(tmp_path):
-    """La recipe vieja documentaba `{"command":"python","args":[…]}`, formato que Claude Code
-    no ejecuta: esas entradas quedaban muertas en `~/.claude/hooks/` (sin subdirectorio).
-    Instalar debe retirarlas en vez de dejar un duplicado inerte al lado del bueno."""
+def test_install_migrates_the_legacy_hook_entries(tmp_path):
+    """La recipe vieja documentaba `{"command":"python","args":[…]}` y dejaba los scripts en
+    `~/.claude/hooks/` (sin subdirectorio).
+
+    Ese formato **sí se ejecuta**: es el *exec form* del schema de Claude Code, verificado en
+    vivo dos veces viendo disparar `suggest_lint_summary.py`. Aquí se decía lo contrario —«un
+    formato que Claude Code no ejecuta, entradas muertas»— y era falso; el mismo comentario ya
+    provocó un falso positivo en un check (PR #55), así que conviene no volver a escribirlo.
+
+    Se retiran porque cambió la ruta y el formato que ponemos, no porque estuvieran rotas:
+    dejarlas produciría dos hooks vivos sugiriendo lo mismo."""
     settings_path = tmp_path / ".claude" / "settings.json"
     settings_path.parent.mkdir(parents=True)
     settings_path.write_text(
