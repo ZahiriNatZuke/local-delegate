@@ -3,9 +3,9 @@
   "slug": "install-checks-clients",
   "title": "install consume checks.CHECKS y anade --clients auto|claude,codex",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-30T20:51:02.176Z",
-  "updatedAt": "2026-07-30T21:38:40.645Z",
+  "updatedAt": "2026-07-30T21:53:03.505Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:52:56.099Z",
+      "evidence": "Nota canonica projects/local-delegate/jornada-2026-07-30-el-tercer-verbo.md en el vault; registro-checks-andamiaje.md y backlog.md actualizados; puntero en la memoria de Claude Code del proyecto; handoff.md escrito. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-30T21:38:40.645Z",
       "reason": "PR #73 mergeado en main (6b5a856) con los 12 checks en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T21:52:56.099Z",
+      "evidence": "Nota canonica projects/local-delegate/jornada-2026-07-30-el-tercer-verbo.md en el vault; registro-checks-andamiaje.md y backlog.md actualizados; puntero en la memoria de Claude Code del proyecto; handoff.md escrito. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T21:53:03.505Z",
+      "reason": "Mergeado en main (6b5a856), CI completo verde, memoria persistida"
     }
   ]
 }
