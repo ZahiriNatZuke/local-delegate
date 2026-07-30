@@ -68,9 +68,19 @@ continúa siendo la única fuente de verdad para decidir qué modelos pueden con
 
 ## Inicio de sesión y rollback
 
-En Windows puede registrarse `local-delegate serve` como tarea *AtLogOn*. En Linux/macOS usa el
-gestor de servicios del usuario (`systemd --user`, `launchd`, etc.). El comando debe ejecutarse en
-primer plano dentro del gestor; no hace falta que `local-delegate` se daemonice a sí mismo.
+El daemon se registra en el gestor de servicios del usuario de cada sistema, con estos **nombres
+canónicos** —los mismos que busca `local-delegate update` para reiniciarlo:
+
+| Sistema | Mecanismo | Nombre |
+|---|---|---|
+| Windows | Tarea programada *AtLogOn* | `LocalDelegateDaemon` |
+| macOS | LaunchAgent | `com.local-delegate.daemon` |
+| Linux | `systemd --user` | `local-delegate.service` |
+
+Si el nombre no coincide, `update` no encuentra el servicio y cae al fallback (terminar el proceso
+y relanzar `serve` desacoplado), que funciona pero deja el arranque automático sin usar. El comando
+debe ejecutarse en **primer plano** dentro del gestor; no hace falta que `local-delegate` se
+daemonice a sí mismo.
 
 ### Windows sin ventana visible
 
@@ -129,6 +139,86 @@ persistente. Al cerrarla a mano el daemon sobrevive huérfano, pero la tarea reg
 La tarea es de **Windows a nivel del usuario**. No pertenece a Codex ni a Claude Code: se inicia
 una vez al entrar en Windows y atiende a todos los clientes por la misma URL. `IgnoreNew` y el lock
 interno del daemon son dos defensas contra instancias duplicadas.
+
+### macOS: LaunchAgent
+
+El label **debe** ser `com.local-delegate.daemon`. Guarda esto en
+`~/Library/LaunchAgents/com.local-delegate.daemon.plist`, sustituyendo las dos rutas:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.local-delegate.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/ruta/al/entorno/bin/python3</string>
+    <string>-m</string>
+    <string>local_delegate</string>
+    <string>serve</string>
+    <string>--log-level</string>
+    <string>warning</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/local-delegate.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/local-delegate.err</string>
+</dict>
+</plist>
+```
+
+Se carga y se comprueba así:
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.local-delegate.daemon.plist
+launchctl print gui/$(id -u)/com.local-delegate.daemon   # lo que consulta `update`
+```
+
+Para reiniciarlo a mano, el mismo comando que usa `update`:
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.local-delegate.daemon
+```
+
+`KeepAlive` hace que launchd lo reponga si muere. Si el backend está autenticado, la key no puede
+ir en el plist: exporta la variable desde un script envoltorio y apunta `ProgramArguments` a él.
+
+### Linux: `systemd --user`
+
+La unidad **debe** llamarse `local-delegate.service`. En
+`~/.config/systemd/user/local-delegate.service`:
+
+```ini
+[Unit]
+Description=Daemon MCP local compartido (local-delegate)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/ruta/al/entorno/bin/python3 -m local_delegate serve --log-level warning
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now local-delegate.service
+systemctl --user cat local-delegate.service    # lo que consulta `update`
+systemctl --user restart local-delegate.service
+```
+
+Si el daemon tiene que sobrevivir al cierre de sesión, habilita *lingering* para tu usuario con
+`loginctl enable-linger $USER`; sin eso systemd cierra los servicios de usuario al salir.
 
 ### Qué significa «DAEMON MCP» en el dashboard
 

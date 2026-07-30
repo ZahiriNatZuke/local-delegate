@@ -82,7 +82,27 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     if not uninstall:
         print("Listo. Reinicia el cliente (Claude Code / Codex) para que tome los cambios.")
         _avisa_si_el_cli_no_esta_en_el_path()
+        _deja_el_daemon_arriba(opts)
     return 0
+
+
+def _deja_el_daemon_arriba(opts) -> None:
+    """Tras instalar en modo HTTP, el daemon tiene que existir: la entrada MCP apunta a él.
+
+    Con `stdio` no se toca nada, porque ahí quien arranca el MCP es el propio cliente vía
+    `uvx`. Y con un HOME simulado tampoco: se acaba de escribir en un árbol de pruebas, y
+    reiniciar el servicio real de la máquina por eso sería un efecto sorpresa.
+    """
+    from . import update as upd
+
+    if opts.mcp_mode != "http":
+        return
+    update_opts = upd.Options(home=opts.home)
+    if update_opts.simulated_home:
+        print("HOME simulado: no se toca el daemon de la máquina.")
+        return
+    print()
+    upd.restart_daemon(update_opts)
 
 
 def _avisa_si_el_cli_no_esta_en_el_path() -> None:
@@ -101,6 +121,24 @@ def _avisa_si_el_cli_no_esta_en_el_path() -> None:
     print("Aviso: el comando `local-delegate` no quedó en el PATH.")
     print("       Pasa cuando se instala con `uvx`, que borra su entorno al terminar.")
     print(f"       Para tenerlo siempre disponible:  {checks.CLI_HINT}")
+
+
+def _update_options(args: argparse.Namespace):
+    from . import update as upd
+
+    return upd.Options(
+        home=Path(args.home).expanduser() if args.home else Path.home(),
+        dry_run=args.dry_run,
+        version=args.version,
+        restart_backend=args.restart_backend,
+        no_restart=args.no_restart,
+    )
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    from . import update as upd
+
+    return upd.run_update(_update_options(args))
 
 
 def cmd_install(args: argparse.Namespace) -> int:
@@ -621,6 +659,33 @@ def _add_install_parsers(sub) -> None:
         help="fija la versión del paquete en la entrada MCP (p. ej. 0.11.0)",
     )
     install.set_defaults(func=cmd_install)
+
+    upd = sub.add_parser(
+        "update",
+        help="Actualiza el pin, completa lo que falte del andamiaje y deja el daemon arriba.",
+        description=(
+            "Revisa el estado real de la máquina con las mismas comprobaciones que `doctor`, "
+            "actualiza el pin de versión donde exista, completa la configuración que falte y "
+            "termina dejando el daemon arriba: lo reinicia si corría, lo levanta si no. El "
+            "backend de inferencia no se toca salvo que se pida con --restart-backend."
+        ),
+    )
+    upd.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
+    upd.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
+    upd.add_argument(
+        "--version",
+        default=None,
+        help="versión a fijar en el pin (default: la última publicada en PyPI)",
+    )
+    upd.add_argument(
+        "--restart-backend",
+        action="store_true",
+        help="reinicia también llama-swap (por defecto NO se toca: descarga los modelos de VRAM)",
+    )
+    upd.add_argument(
+        "--no-restart", action="store_true", help="no toca el daemon; solo repara e informa"
+    )
+    upd.set_defaults(func=cmd_update)
 
     uninstall = sub.add_parser(
         "uninstall",
