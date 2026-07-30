@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "slug": "update-reinicia-daemon",
+  "title": "update_to_latest.sh reinicia el daemon MCP segun el mecanismo de cada sistema",
+  "mode": "standard",
+  "status": "planning",
+  "createdAt": "2026-07-30T13:13:44.494Z",
+  "updatedAt": "2026-07-30T13:44:57.306Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T13:44:57.104Z",
+      "evidence": "spec.md con 17 requisitos observables y 5 escenarios de aceptacion, respaldada por research verificado: el wheel 0.13.1 no contiene scripts/ (28 entradas, 0 coincidencias) asi que el .sh no llega a la maquina que debe actualizar; pyproject.toml:62-66 ya expone dos entry points de CLI; install.py:312/343/575 aporta el patron plan/apply reusable; daemon.py:97-110 aporta query_daemon para verificar reinicio por pid distinto.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T13:13:44.494Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T13:42:03.691Z",
+      "reason": "Mapeo del script, del CLI, de install.py y de los mecanismos de arranque por sistema"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T13:44:56.878Z",
+      "reason": "Research cerrado: criterio CLI vs scripts, mecanismos por sistema y piezas reusables"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T13:44:57.104Z",
+      "evidence": "spec.md con 17 requisitos observables y 5 escenarios de aceptacion, respaldada por research verificado: el wheel 0.13.1 no contiene scripts/ (28 entradas, 0 coincidencias) asi que el .sh no llega a la maquina que debe actualizar; pyproject.toml:62-66 ya expone dos entry points de CLI; install.py:312/343/575 aporta el patron plan/apply reusable; daemon.py:97-110 aporta query_daemon para verificar reinicio por pid distinto.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T13:44:57.306Z",
+      "reason": "spec aprobada"
+    }
+  ]
+}
