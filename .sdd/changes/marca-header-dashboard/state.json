@@ -3,21 +3,21 @@
   "slug": "marca-header-dashboard",
   "title": "El header del dashboard usa el favicon canonico y se regenera la captura",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-30T21:39:06.807Z",
-  "updatedAt": "2026-07-30T21:47:43.858Z",
+  "updatedAt": "2026-07-30T21:54:52.093Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:54:12.768Z",
+      "evidence": "Cinco requisitos observables sobre un defecto de presentacion acotado; causa identificada en metrics.py (SVG a mano en el header frente al favicon canonico)",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:54:21.975Z",
+      "evidence": "Change lite: inyectar el favicon en vez de mantener dos copias, siguiendo el patron de marcador que ya usa __WEB_FONTS__; riesgo bajo, rollback de dos lineas, verificacion al reves obligatoria",
+      "actor": "user"
     },
     "quality": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T21:52:56.162Z",
+      "evidence": "Cubierto en la misma nota de jornada y en el backlog (la trampa del serve singleton al regenerar la captura); puntero propio en la memoria de Claude Code del proyecto.",
+      "actor": "user"
     }
   },
   "history": [
@@ -61,6 +61,93 @@
       "at": "2026-07-30T21:47:43.858Z",
       "evidence": "El header inyecta el mismo fichero que sirve /favicon.svg, asi que no pueden diferir por construccion; test que ademas exige un solo <svg> en el contenedor; CHANGELOG y docs/wiki/Savings-and-metrics.md actualizados; captura del README regenerada",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T21:52:56.162Z",
+      "evidence": "Cubierto en la misma nota de jornada y en el backlog (la trampa del serve singleton al regenerar la captura); puntero propio en la memoria de Claude Code del proyecto.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T21:54:12.768Z",
+      "evidence": "Cinco requisitos observables sobre un defecto de presentacion acotado; causa identificada en metrics.py (SVG a mano en el header frente al favicon canonico)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T21:54:12.836Z",
+      "reason": "Causa localizada: SVG a mano en el header, distinto del canonico"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T21:54:12.904Z",
+      "reason": "spec lite escrita"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T21:54:12.973Z",
+      "reason": "plan lite escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T21:54:21.975Z",
+      "evidence": "Change lite: inyectar el favicon en vez de mantener dos copias, siguiendo el patron de marcador que ya usa __WEB_FONTS__; riesgo bajo, rollback de dos lineas, verificacion al reves obligatoria",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T21:54:22.041Z",
+      "reason": "Plan lite revisado: riesgo acotado, sin revision adversarial separada"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T21:54:22.107Z",
+      "reason": "Gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T21:54:22.177Z",
+      "reason": "Implementado y captura regenerada"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T21:54:22.242Z",
+      "reason": "Verificacion escrita con la prueba al reves"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T21:54:22.306Z",
+      "reason": "PR #74 mergeado en main (ca7e0bd), CI completo verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T21:54:52.093Z",
+      "reason": "Mergeado en main (ca7e0bd), CI completo verde, memoria persistida"
     }
   ]
 }
