@@ -7,6 +7,35 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`local-delegate update`: un subcomando que revisa, completa, actualiza y deja el daemon
+  arriba.** Sustituye a `scripts/update_to_latest.sh`, que solo cambiaba un número de versión y
+  que además **nunca llegaba a la máquina que debía actualizar**: el wheel no empaqueta
+  `scripts/`. Ahora el diagnóstico es el mismo que ve `doctor` —consume `checks.run_all`, sin una
+  segunda definición de «estar a punto»— y lo que aporta el módulo nuevo es decidir qué se repara
+  y controlar el ciclo de vida del daemon. Reinicia por el mecanismo registrado en cada sistema
+  (tarea programada, LaunchAgent o `systemd --user`) y **verifica que el pid cambió**; si no hay
+  ninguno registrado, cae a terminar y relanzar. Acepta `--dry-run`, `--home`, `--version`,
+  `--restart-backend` y `--no-restart`.
+- **El backend de inferencia no se toca al reiniciar el daemon.** Son dos procesos distintos y
+  reiniciar llama-swap descargaría los modelos de la VRAM; hay que pedirlo con
+  `--restart-backend`, que además no intenta nada si el backend es remoto y exige que el proceso
+  del puerto se llame `llama-swap` antes de mandarle una señal.
+- **`install` en modo `http` termina dejando el daemon arriba**, que es coherente con lo que
+  acaba de escribir: la entrada MCP apunta a un servicio que tiene que existir.
+- **`docs/wiki/Daemon.md` gana las recetas completas de macOS (LaunchAgent) y Linux
+  (`systemd --user`)**, con los nombres canónicos que busca `update`. Un test falla si el módulo
+  y la wiki se separan.
+
+### Fixed
+- **`update --home <simulado>` ya no escribe en la configuración real del usuario.** El registro
+  del MCP en Claude Code se hace con `claude mcp add-json --scope user`, que escribe siempre en el
+  `~/.claude.json` de verdad ignorando el HOME que se le pase. Se descubrió al comprobar la
+  idempotencia: la segunda pasada volvía a planificar la misma acción —el probe seguía viendo
+  vacío el árbol simulado— mientras la configuración real sí se había reescrito.
+- **El registro de comprobaciones decía que tenía once elementos y tiene doce.** `cli.path` entró
+  en el PR #61 y el texto quedó desfasado en cuatro sitios; se llegó a planificar sobre ese dato
+  falso. Ahora hay un test que compara las cuatro afirmaciones contra `len(CHECKS)`.
+
 - **La landing del proyecto vive en `site/` y se publica sola en GitHub Pages.** Un workflow
   (`pages.yml`) la despliega en cada push a `main` que la toque. Se publica un directorio propio y
   no `docs/`, que guarda la wiki, las recipes y `plans/`: servir esa carpeta entera pondría todo eso

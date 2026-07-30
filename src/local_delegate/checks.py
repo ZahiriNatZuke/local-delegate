@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los once elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los doce elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Once checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Doce checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -394,14 +394,19 @@ def _probe_mcp_codex(ctx: Context) -> Result:
 
 
 # --- Probes de servicios y backend --------------------------------------------
-def _daemon_host_port() -> tuple[str, int]:
-    """Dónde preguntar por el daemon: con 0.0.0.0 configurado se pregunta por loopback."""
+def daemon_host_port() -> tuple[str, int]:
+    """Dónde preguntar por el daemon: con 0.0.0.0 configurado se pregunta por loopback.
+
+    Pública porque ``update`` necesita saber a dónde preguntar para reiniciarlo, y esa
+    respuesta debe salir del mismo sitio que la del diagnóstico: dos derivaciones del host
+    y el puerto es exactamente la clase de verdad duplicada que ya costó caro en este repo.
+    """
     host = config.WEB_HOST
     return ("127.0.0.1" if host in ("0.0.0.0", "::", "") else host), config.WEB_PORT
 
 
 def _probe_daemon(ctx: Context) -> Result:
-    host, port = _daemon_host_port()
+    host, port = daemon_host_port()
     status = ctx.daemon_status(host, port)
     if status:
         version = status.get("version") or "?"
@@ -468,8 +473,13 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Once elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Doce elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
+#
+# El número se dice en cuatro sitios de este módulo y llegó a decir «once» con doce checks ya
+# dentro: `cli.path` entró después y nadie actualizó el texto. Hay un test que compara los
+# cuatro contra `len(CHECKS)`, porque un comentario que miente sobre el propio registro es lo
+# que hace que alguien planifique sobre un dato falso.
 CHECKS: tuple[Check, ...] = (
     Check("cli.path", "entorno", "CLI local-delegate", _probe_cli),
     Check("client.presence", "entorno", "clientes", _probe_clients),
@@ -487,12 +497,12 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context) -> list[tuple[Check, Result]]:
-    """Corre los once probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico."""
+    """Corre los doce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico."""
     results: list[tuple[Check, Result]] = []
     for check in CHECKS:
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros diez
+        except Exception as exc:  # un check roto no debe impedir ver los otros once
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results
