@@ -36,6 +36,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   prototipo llegó a mentir con la primera release. Un test falla si alguien escribe una versión
   literal en la página.
 
+### Fixed
+- **El titular de la landing ya no resalta `«la nube`» con el amarillo de la vía local.** En esa
+  paleta el amarillo significa una sola cosa —la vía que se toma, tu máquina— y el titular dice
+  justo lo contrario de la nube: pintarla de amarillo, y encima subrayarla con un trazo de 6px, la
+  señalaba como el camino bueno. Ahora el resalte cae solo sobre `«la nube`» y va en el gris de la
+  vía cara, la misma decisión que ya estaba tomada en la tarjeta social. Un test ata las dos cosas.
+
 ## [0.16.0] - 2026-07-30
 
 ### Fixed

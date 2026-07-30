@@ -146,6 +146,30 @@ def test_la_pagina_apunta_al_favicon_como_fichero_y_no_inline():
     assert "data:image/svg+xml" not in texto, "el icono volvió a estar incrustado en el HTML"
 
 
+def test_el_titular_no_resalta_la_nube_con_el_amarillo_de_la_via_local():
+    """El amarillo de esta paleta significa una cosa sola: la vía que se toma, tu máquina.
+
+    El titular dice «lo mecánico no tiene por qué ir a la nube»; pintar «la nube» con ese
+    amarillo —y encima subrayarla— la señalaba como el camino bueno, justo lo contrario de lo
+    que dice la frase. La tarjeta social ya lo tenía resuelto en gris y la landing no.
+    """
+    texto = INDEX.read_text(encoding="utf-8")
+
+    regla = re.search(r"\.hero h1 \.hl\s*\{([^}]*)\}", texto)
+    assert regla, "no se encontró la regla del resalte del titular"
+    assert "--local" not in regla.group(1), (
+        "el resalte del titular volvió al amarillo de la vía local: " + regla.group(1).strip()
+    )
+
+    for lang, esperado in (("es", "la nube"), ("en", "the cloud")):
+        bloque = re.search(rf"^    {lang}: \{{(.*?)^    \}}", texto, re.DOTALL | re.MULTILINE)
+        assert bloque, f"no se encontró el diccionario '{lang}'"
+        resaltado = re.search(r'hero_h1:.*?<span class="hl">(.*?)</span>', bloque.group(1))
+        assert resaltado, f"el titular de '{lang}' no resalta nada"
+        real = resaltado.group(1)
+        assert real == esperado, f"el titular de '{lang}' resalta «{real}» y no «{esperado}»"
+
+
 # --- Metadatos sociales -------------------------------------------------------
 
 

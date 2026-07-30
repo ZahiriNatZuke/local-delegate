@@ -63,6 +63,7 @@
   --local:      #E8B500;   /* amarillo de señal: la vía que se toma */
   --local-deep: #A88100;
   --cloud:      #8792A3;   /* azul-gris deliberadamente sosa: la vía cara */
+  --cloud-deep: #5B6878;   /* la misma vía, con contraste para texto sobre el papel */
 
   --spine-w: 3px;
   --rail: 108px;           /* carril del diagrama en escritorio */
@@ -82,20 +83,20 @@
   :root {
     --ink: #E4EBE8; --ink-2: #B6C4C1; --muted: #82969B; --hair: #2A3C40;
     --paper: #0C1618; --paper-hi: #142326;
-    --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D;
+    --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D; --cloud-deep: #93A3B4;
     --term-bg: #081113; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
   }
 }
 :root[data-theme="dark"] {
   --ink: #E4EBE8; --ink-2: #B6C4C1; --muted: #82969B; --hair: #2A3C40;
   --paper: #0C1618; --paper-hi: #142326;
-  --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D;
+  --local: #FFCE1F; --local-deep: #FFE083; --cloud: #5C6C7D; --cloud-deep: #93A3B4;
   --term-bg: #081113; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
 }
 :root[data-theme="light"] {
   --ink: #0D1A1D; --ink-2: #1E3236; --muted: #5A6E71; --hair: #C3CCC9;
   --paper: #DFE5E2; --paper-hi: #EEF2F0;
-  --local: #E8B500; --local-deep: #A88100; --cloud: #8792A3;
+  --local: #E8B500; --local-deep: #A88100; --cloud: #8792A3; --cloud-deep: #5B6878;
   --term-bg: #0D1A1D; --term-fg: #C9D6D3; --term-hi: #FFFFFF;
 }
 
@@ -216,13 +217,12 @@ a:focus-visible, button:focus-visible {
 /* --- Hero ---------------------------------------------------------------- */
 .hero { padding: 60px 0 40px; }
 .hero h1 { text-transform: uppercase; }
-.hero h1 .hl {
-  color: var(--local-deep);
-  text-decoration: underline;
-  text-decoration-thickness: 6px;
-  text-underline-offset: 8px;
-  text-decoration-color: var(--local);
-}
+/* El resalte del titular va en el gris de la nube, NUNCA en el amarillo. En esta paleta el
+   amarillo significa una cosa sola —la vía que se toma, tu máquina— y el titular dice justo lo
+   contrario de la nube: pintarla de amarillo, y encima subrayarla, la señalaba como el camino
+   bueno. Es la misma decisión que ya está tomada en og-image.src.html. Sin subrayado: aquí el
+   destacado es semántico, no un realce. */
+.hero h1 .hl { color: var(--cloud-deep); }
 .hero .lede { margin-top: 26px; }
 .meta {
   display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 26px;
@@ -486,7 +486,7 @@ footer {
     es: {
       title: "local-delegate — delega lo mecánico a un modelo local",
       hero_eyebrow: "Servidor MCP · v{v} · MIT",
-      hero_h1: 'Lo mecánico<br>no tiene por qué<br><span class="hl">ir a la nube</span>',
+      hero_h1: 'Lo mecánico<br>no tiene por qué<br>ir a <span class="hl">la nube</span>',
       hero_lede: "Resumir un fichero, clasificar un prompt, escribir un mensaje de commit desde un diff. Tu agente los manda arriba y los pagas a precio de razonamiento. <strong>local-delegate los desvía a un modelo que ya corre en tu máquina</strong>, y devuelve el resultado por el mismo protocolo. El agente no se entera. Tu cuota, sí.",
       cmp_task: "TAREA — <b>el agente necesita el resumen de un fichero de 40 000 tokens</b>",
       cmp_up_k: "Sin el desvío · la nube",
@@ -536,7 +536,7 @@ footer {
     en: {
       title: "local-delegate — delegate the mechanical to a local model",
       hero_eyebrow: "MCP server · v{v} · MIT",
-      hero_h1: 'The mechanical<br>does not have to<br><span class="hl">go to the cloud</span>',
+      hero_h1: 'The mechanical<br>does not have to<br>go to <span class="hl">the cloud</span>',
       hero_lede: "Summarize a file, classify a prompt, write a commit message from a diff. Your agent sends them upstream and you pay reasoning prices for them. <strong>local-delegate reroutes them to a model already running on your machine</strong>, and returns the result over the same protocol. The agent never notices. Your quota does.",
       cmp_task: "TASK — <b>the agent needs a summary of a 40,000-token file</b>",
       cmp_up_k: "Without the detour · the cloud",
