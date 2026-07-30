@@ -482,7 +482,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     doc = sub.add_parser(
         "doctor",
-        help="Diagnostica la instalación del backend: versiones de llama-server/llama-swap vs probadas.",
+        help="Diagnostica el andamiaje (hooks, skill, memoria, MCP), el daemon y el backend.",
     )
     doc.add_argument(
         "--config",
@@ -493,6 +493,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--online",
         action="store_true",
         help="consulta GitHub por la última release publicada de cada componente",
+    )
+    doc.add_argument(
+        "--home",
+        default=None,
+        help="HOME alternativo para diagnosticar (default: el del usuario); solo se lee",
     )
     doc.set_defaults(func=doctor.run_doctor)
 

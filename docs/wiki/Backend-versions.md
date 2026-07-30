@@ -55,7 +55,9 @@ El detalle de GPU (build CUDA para Blackwell, `-ngl`, flash-attn) está en el
 
 ## Chequear tu instalación: `local-delegate doctor`
 
-Detecta las versiones instaladas y avisa si conviene actualizar respecto a las probadas:
+Detecta las versiones instaladas y avisa si conviene actualizar respecto a las probadas (además
+del andamiaje y el daemon, que se documentan en
+[Instalación de la integración](./Integration-install.md#comprobar-la-instalación-local-delegate-doctor)):
 
 ```bash
 local-delegate doctor --config D:\Projects\llms\llama-swap\config.yaml

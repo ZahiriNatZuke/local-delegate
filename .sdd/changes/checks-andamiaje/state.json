@@ -3,9 +3,9 @@
   "slug": "checks-andamiaje",
   "title": "Registro unico de comprobaciones del andamiaje y doctor que ve el sistema entero",
   "mode": "standard",
-  "status": "plan-review",
+  "status": "closing",
   "createdAt": "2026-07-30T13:49:06.804Z",
-  "updatedAt": "2026-07-30T13:52:01.890Z",
+  "updatedAt": "2026-07-30T14:20:00.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T14:12:00.000Z",
+      "evidence": "309 tests (antes 277, +32) y 1 skip esperado; ruff check y ruff format --check limpios; extract_dashboard_js.py + node --check OK. Ejecucion real del doctor en esta PC, contra un HOME simulado vacio y contra uno con clientes vacios, y con --online contra GitHub. Un bug real encontrado por ejecucion: la flecha del fix_hint reventaba la consola cp1252 de Windows.",
+      "actor": "assistant"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T14:20:00.000Z",
+      "evidence": "review.md: conforms-with-notes. Los 14 requisitos implementados y verificados por ejecucion. Notas: (a) el check de hooks registrados distingue ademas el formato heredado con 'args' y lo reporta warn -- ampliacion fuera del plan que evita un falso ok sobre hooks que Claude Code no ejecuta; (b) con un HOME totalmente vacio los once checks salen unknown y no missing, porque manda REQ-003 sobre el ejemplo del escenario. El backend caido pasa a contar como aviso (exit 1), como pide el escenario de aceptacion.",
+      "actor": "assistant"
     },
     "memory": {
       "status": "pending",
@@ -89,6 +89,50 @@
       "at": "2026-07-30T13:52:01.890Z",
       "evidence": "Revision adversarial con 5 objeciones registradas en plan.md, ninguna bloqueante: (1) riesgo de sobre-ingenieria -> lista estatica CHECKS, prohibidos registro dinamico/entry points/herencia; (2) romper salidas del doctor -> REQ-010 conserva _compare_line e issues y test_doctor.py existente hace de red; (3) un missing por permisos llevaria a que B/C sobrescriban -> REQ-003 y test dedicado, permisos y cliente ausente son unknown; (4) semantica del exit code fijada en REQ-008/009; (5) doctor --home podria escribir -> tarea 5 compara el arbol byte a byte.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T13:55:00.000Z",
+      "reason": "plan aprobado; se implementa el registro y el doctor"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T14:05:00.000Z",
+      "reason": "checks.py, doctor y tests listos; toca verificar por ejecucion"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T14:12:00.000Z",
+      "reason": "cuatro pasos del CI verdes y doctor ejecutado contra el sistema real y HOME simulado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T14:12:00.000Z",
+      "evidence": "309 tests (antes 277, +32) y 1 skip esperado; ruff check y ruff format --check limpios; extract_dashboard_js.py + node --check OK. Ejecucion real del doctor en esta PC, contra un HOME simulado vacio y contra uno con clientes vacios, y con --online contra GitHub. Un bug real encontrado por ejecucion: la flecha del fix_hint reventaba la consola cp1252 de Windows.",
+      "actor": "assistant"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T14:20:00.000Z",
+      "evidence": "review.md: conforms-with-notes. Los 14 requisitos implementados y verificados por ejecucion. Notas: (a) el check de hooks registrados distingue ademas el formato heredado con 'args' y lo reporta warn -- ampliacion fuera del plan que evita un falso ok sobre hooks que Claude Code no ejecuta; (b) con un HOME totalmente vacio los once checks salen unknown y no missing, porque manda REQ-003 sobre el ejemplo del escenario. El backend caido pasa a contar como aviso (exit 1), como pide el escenario de aceptacion.",
+      "actor": "assistant"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T14:20:00.000Z",
+      "reason": "conformidad aprobada; queda el PR y el registro en memoria"
     }
   ]
 }
