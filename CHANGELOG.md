@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-30
+
 ### Fixed
 - **El instalador dejaba los hooks rotos en Windows, y con `UserPromptSubmit` eso bloquea todos los
   prompts del usuario.** El comando se registraba como `python C:\Users\...\hook.py` sin comillas;
@@ -686,7 +688,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.13.1...v0.14.0
+[0.13.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.13.0...v0.13.1
+[0.13.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.4...v0.13.0
+[0.12.4]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.12.0...v0.12.1
