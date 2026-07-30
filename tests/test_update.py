@@ -174,6 +174,87 @@ def test_dry_run_no_reinicia_el_daemon(tmp_path):
     assert runner.calls == []
 
 
+# --- De dónde salió la versión, y el desfase tras publicar --------------------
+# Justo después de publicar, `update` anuncia como «última» la anterior. Desde el comando no se
+# puede distinguir «PyPI sirve caché» de «la publicación no ha terminado» —eso pediría medir
+# durante una publicación real—, pero sí se puede detectar la firma del caso y decirla.
+
+
+def test_la_version_pedida_a_mano_no_se_presenta_como_la_ultima_publicada():
+    """`--version 0.17.0` no comprueba nada de PyPI; decir que es «la última» era mentira."""
+    lineas = update.version_lines("0.17.0", None, from_user=True)
+    assert lineas == ["Versión pedida con --version: 0.17.0"]
+    assert not any("publicada" in line for line in lineas)
+
+
+def test_la_version_consultada_dice_de_donde_salio(monkeypatch):
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    (linea,) = update.version_lines("0.17.0", None, from_user=False)
+    assert "0.17.0" in linea
+    assert update.PYPI_SOURCE in linea
+
+
+def test_instalada_mas_nueva_que_la_publicada_avisa_y_recuerda_el_flag(monkeypatch):
+    """La firma exacta de una release recién publicada que PyPI todavía no anuncia."""
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    texto = "\n".join(update.version_lines("0.16.0", None, from_user=False))
+    assert "0.16.0" in texto and "0.17.0" in texto
+    # La versión ya sustituida, no un placeholder: quien lee esto acaba de publicar y algo no le
+    # cuadra; traducir `X.Y.Z` mentalmente es justo lo que no debe tener que hacer.
+    assert "--version 0.17.0" in texto
+
+
+def test_sin_desfase_no_hay_aviso(monkeypatch):
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    assert len(update.version_lines("0.17.0", None, from_user=False)) == 1
+    assert len(update.version_lines("0.18.0", None, from_user=False)) == 1
+
+
+@pytest.mark.parametrize("instalada", [None, "sin-numeros"])
+def test_sin_con_que_comparar_se_calla(monkeypatch, instalada):
+    """`unknown` no inventa: sin versión instalada utilizable, no hay aviso que dar."""
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: instalada)
+    assert len(update.version_lines("0.16.0", None, from_user=False)) == 1
+
+
+def test_sin_red_se_conserva_el_aviso_de_siempre():
+    (linea,) = update.version_lines(None, "no se pudo consultar PyPI (URLError)", from_user=False)
+    assert "no se pudo consultar PyPI" in linea
+    assert "sin tocar los pines" in linea
+
+
+def test_las_lineas_caben_en_la_consola_de_windows(monkeypatch):
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    for args in [("0.16.0", None, True), ("0.16.0", None, False), (None, "motivo", False)]:
+        version, reason, from_user = args
+        "\n".join(update.version_lines(version, reason, from_user=from_user)).encode("cp1252")
+
+
+def test_el_aviso_de_desfase_no_cambia_el_plan_ni_el_exit_code(tmp_path, monkeypatch):
+    """Es información, no un cambio de comportamiento: `update` hace exactamente lo mismo."""
+    monkeypatch.setattr(update, "latest_version", lambda timeout=0: ("0.16.0", None))
+    home = make_home(tmp_path, complete=False)
+
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
+    salida_con: list[str] = []
+    code_con = update.run_update(opts_for(home, dry_run=True), out=salida_con.append)
+    # Las líneas que aporta el aviso, tomadas **con la instalada todavía en 0.17.0**.
+    extra = update.version_lines("0.16.0", None, from_user=False)[1:]
+
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.16.0")
+    salida_sin: list[str] = []
+    code_sin = update.run_update(opts_for(home, dry_run=True), out=salida_sin.append)
+
+    assert code_con == code_sin
+    assert any("MÁS NUEVA" in line for line in salida_con), "no salió el aviso"
+    assert not any("MÁS NUEVA" in line for line in salida_sin)
+
+    # Y lo único que cambia es ese bloque: quitadas sus líneas exactas —las que `version_lines`
+    # añade de más, no las que casen con un substring— las dos salidas son idénticas.
+    assert extra, "el caso de desfase debería aportar líneas"
+    assert [line for line in salida_con if line not in extra] == salida_sin
+
+
 def test_pypi_se_consulta_una_sola_vez_en_todo_el_comando(tmp_path, monkeypatch):
     """`update` ya pregunta por la última versión; el check del registro no debe repetirlo.
 

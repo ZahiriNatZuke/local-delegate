@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "update-version-de-donde",
+  "title": "update dice de donde saco la version publicada y como saltarse la cache",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-30T22:34:31.781Z",
+  "updatedAt": "2026-07-30T22:42:13.127Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:37:26.996Z",
+      "evidence": "spec.md con 11 requisitos observables y 4 escenarios, sobre un research que REPLANTEO el pendiente y lo corrigio con datos: la causa que afirmaba el backlog era falsa por partida doble -- latest_version() (update.py:259-280) YA consulta el indice simple, con el porque escrito, y ademas cambiar al JSON habria EMPEORADO el sintoma, porque el indice simple sirve con cache-control max-age=600 y el JSON con max-age=900 (sondeados los dos endpoints en esta sesion). Descartado por medicion, no por opinion. Dos datos mas que acotan el alcance: no existe header Age en la respuesta, asi que reportar la edad seria inventar una cifra; y el workflow publish.yml tarda ~40s (medido en las tres releases del 2026-07-30), asi que parte de la ventana del sintoma puede ser simplemente la publicacion sin terminar. Hallazgo extra encontrado leyendo el codigo: update.py:589-591 imprime 'Ultima version publicada: X' TAMBIEN cuando el usuario paso --version, o sea que afirma algo que no comprobo. La causa raiz no se puede aislar sin publicar (y publicar necesita confirmacion explicita), asi que el alcance es el que el propio backlog anticipo: que update diga lo que sabe -- y el aviso de 'instalada mas nueva que la publicada' es justo la firma de una release sin propagar, con lo que la proxima publicacion real dejara evidencia en pantalla.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:38:31.496Z",
+      "evidence": "plan.md con 6 tareas. El cambio es SOLO de salida: ni peticion nueva, ni flag, ni rama de comportamiento -- y hay un requisito (REQ-007) con test que fija que el plan de acciones y el exit code no cambian. Decision de diseño que lo sostiene: el aviso se emite por una condicion que el comando YA puede comprobar (instalada mas nueva que la publicada), que es la firma exacta del caso y no una heuristica de 'acabas de publicar'. La logica se aisla en una funcion en vez de encadenar ifs dentro de run_update, porque probarla a traves del comando entero obligaria a montar HOME, daemon y runner para aseverar sobre una linea de texto. La comparacion reusa checks._compare_versions del change anterior. Revision adversarial con tres hallazgos incorporados: P-1, el aviso saldra en cada update de la maquina de desarrollo porque el repo va por delante de PyPI casi siempre -- se ACEPTA, porque la afirmacion ahi es cierta y suprimirlo en instalaciones editables lo apagaria justo en la maquina desde la que se publica, que es donde ocurre el sintoma; P-2, el recordatorio debe llevar la version ya sustituida y no un placeholder, exigido por test; P-3, riesgo de romper tests que aseveren sobre la cadena del mensaje -- VERIFICADO por grep antes de tocar nada: 'Ultima version publicada' no aparece en ningun test, solo en update.py:595.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:42:12.647Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 438 passed, 1 skipped (+9). Verificacion al reves hecha: sustituida la condicion del aviso por 'if False:', fallan EXACTAMENTE los dos tests que lo protegen y ninguno mas. Ejecucion real de los tres casos visibles, no solo tests: AC-3 contra PyPI de verdad ('Ultima version publicada: 0.17.0 (indice simple de PyPI, que se sirve con cache)'), AC-2 con --version 0.99.0 ('Version pedida con --version: 0.99.0', sin la frase de 'ultima publicada') y AC-1 con la publicada forzada a 0.16.0, que enseña las tres lineas del aviso con '--version 0.17.0' ya sustituida. CHANGELOG con CRLF intacto (896 CRLF, 0 LF sueltos). Sin peticiones nuevas, sin dependencias y sin secretos: el cambio es de texto de salida.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:42:12.870Z",
+      "evidence": "Revision fresca del diff contra los 11 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. REQ-007 (el aviso no cambia el plan ni el exit code) se verifica de forma exacta y no por substring: el test compara las dos salidas quitando LAS LINEAS EXACTAS que aporta version_lines, no las que casen con un texto. REQ-008 comprobado por grep: no hay una segunda comparacion de versiones en update.py, se llama a checks._compare_versions. La correccion del diagnostico queda escrita donde se decide, en el docstring de latest_version: 600s vs 900s medidos, y por que cambiar de endpoint empeoraria. Un desvio consciente respecto al pendiente original: NO se cambia el endpoint ni se reintenta, porque lo primero esta descartado por medicion y lo segundo colgaria el comando contra un CDN ajeno. La causa raiz queda abierta a proposito y el cambio esta diseñado para que la proxima publicacion real deje constancia en pantalla.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-30T22:34:31.781Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-30T22:36:06.557Z",
+      "reason": "Replanteo del pendiente: medicion de los dos endpoints de PyPI y lectura de run_update"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-30T22:36:42.570Z",
+      "reason": "Research cerrado: el arreglo del backlog ya estaba aplicado y habria empeorado el sintoma; medidos 600s vs 900s"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-30T22:37:26.996Z",
+      "evidence": "spec.md con 11 requisitos observables y 4 escenarios, sobre un research que REPLANTEO el pendiente y lo corrigio con datos: la causa que afirmaba el backlog era falsa por partida doble -- latest_version() (update.py:259-280) YA consulta el indice simple, con el porque escrito, y ademas cambiar al JSON habria EMPEORADO el sintoma, porque el indice simple sirve con cache-control max-age=600 y el JSON con max-age=900 (sondeados los dos endpoints en esta sesion). Descartado por medicion, no por opinion. Dos datos mas que acotan el alcance: no existe header Age en la respuesta, asi que reportar la edad seria inventar una cifra; y el workflow publish.yml tarda ~40s (medido en las tres releases del 2026-07-30), asi que parte de la ventana del sintoma puede ser simplemente la publicacion sin terminar. Hallazgo extra encontrado leyendo el codigo: update.py:589-591 imprime 'Ultima version publicada: X' TAMBIEN cuando el usuario paso --version, o sea que afirma algo que no comprobo. La causa raiz no se puede aislar sin publicar (y publicar necesita confirmacion explicita), asi que el alcance es el que el propio backlog anticipo: que update diga lo que sabe -- y el aviso de 'instalada mas nueva que la publicada' es justo la firma de una release sin propagar, con lo que la proxima publicacion real dejara evidencia en pantalla.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-30T22:37:27.224Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-30T22:38:31.496Z",
+      "evidence": "plan.md con 6 tareas. El cambio es SOLO de salida: ni peticion nueva, ni flag, ni rama de comportamiento -- y hay un requisito (REQ-007) con test que fija que el plan de acciones y el exit code no cambian. Decision de diseño que lo sostiene: el aviso se emite por una condicion que el comando YA puede comprobar (instalada mas nueva que la publicada), que es la firma exacta del caso y no una heuristica de 'acabas de publicar'. La logica se aisla en una funcion en vez de encadenar ifs dentro de run_update, porque probarla a traves del comando entero obligaria a montar HOME, daemon y runner para aseverar sobre una linea de texto. La comparacion reusa checks._compare_versions del change anterior. Revision adversarial con tres hallazgos incorporados: P-1, el aviso saldra en cada update de la maquina de desarrollo porque el repo va por delante de PyPI casi siempre -- se ACEPTA, porque la afirmacion ahi es cierta y suprimirlo en instalaciones editables lo apagaria justo en la maquina desde la que se publica, que es donde ocurre el sintoma; P-2, el recordatorio debe llevar la version ya sustituida y no un placeholder, exigido por test; P-3, riesgo de romper tests que aseveren sobre la cadena del mensaje -- VERIFICADO por grep antes de tocar nada: 'Ultima version publicada' no aparece en ningun test, solo en update.py:595.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-30T22:38:31.754Z",
+      "reason": "plan revisado adversarialmente, 3 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-30T22:38:31.994Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-30T22:42:12.432Z",
+      "reason": "6 tareas implementadas; CI local verde y ejecucion real de los tres casos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-30T22:42:12.647Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 438 passed, 1 skipped (+9). Verificacion al reves hecha: sustituida la condicion del aviso por 'if False:', fallan EXACTAMENTE los dos tests que lo protegen y ninguno mas. Ejecucion real de los tres casos visibles, no solo tests: AC-3 contra PyPI de verdad ('Ultima version publicada: 0.17.0 (indice simple de PyPI, que se sirve con cache)'), AC-2 con --version 0.99.0 ('Version pedida con --version: 0.99.0', sin la frase de 'ultima publicada') y AC-1 con la publicada forzada a 0.16.0, que enseña las tres lineas del aviso con '--version 0.17.0' ya sustituida. CHANGELOG con CRLF intacto (896 CRLF, 0 LF sueltos). Sin peticiones nuevas, sin dependencias y sin secretos: el cambio es de texto de salida.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-30T22:42:12.870Z",
+      "evidence": "Revision fresca del diff contra los 11 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. REQ-007 (el aviso no cambia el plan ni el exit code) se verifica de forma exacta y no por substring: el test compara las dos salidas quitando LAS LINEAS EXACTAS que aporta version_lines, no las que casen con un texto. REQ-008 comprobado por grep: no hay una segunda comparacion de versiones en update.py, se llama a checks._compare_versions. La correccion del diagnostico queda escrita donde se decide, en el docstring de latest_version: 600s vs 900s medidos, y por que cambiar de endpoint empeoraria. Un desvio consciente respecto al pendiente original: NO se cambia el endpoint ni se reintenta, porque lo primero esta descartado por medicion y lo segundo colgaria el comando contra un CDN ajeno. La causa raiz queda abierta a proposito y el cambio esta diseñado para que la proxima publicacion real deje constancia en pantalla.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-30T22:42:13.127Z",
+      "reason": "gates quality y conformance aprobados"
+    }
+  ]
+}

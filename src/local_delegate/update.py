@@ -262,6 +262,12 @@ def latest_version(timeout: float = 30.0) -> tuple[str | None, str | None]:
     Se consulta el **índice simple** y no ``/pypi/<pkg>/json``: ese endpoint se sirve con
     caché y puede tardar en reflejar una release recién publicada — se vio en vivo con la
     0.12.0. Portado tal cual del bash, incluido el porqué.
+
+    Medido el 2026-07-30, por si alguien vuelve a proponer el cambio: el índice simple responde
+    con ``cache-control: max-age=600`` y el JSON con ``max-age=900``. O sea que el que ya se usa
+    es **el más fresco de los dos**, y cambiar de endpoint empeoraría el síntoma en vez de
+    arreglarlo. Los dos se sirven con caché; ninguno da un header ``Age`` con el que saber si lo
+    servido está desfasado, y de ahí que la salida de ``update`` lo diga en vez de adivinarlo.
     """
     request = urllib.request.Request(
         f"https://pypi.org/simple/{PACKAGE}/",
@@ -278,6 +284,43 @@ def latest_version(timeout: float = 30.0) -> tuple[str | None, str | None]:
         return None, "PyPI no devolvió ninguna versión utilizable"
     # Ordena por número y no alfabéticamente: "0.9.0" es MENOR que "0.11.0".
     return max(versions, key=lambda v: [int(p) for p in re.findall(r"\d+", v)]), None
+
+
+PYPI_SOURCE = "índice simple de PyPI, que se sirve con caché"
+
+
+def version_lines(version: str | None, reason: str | None, *, from_user: bool) -> list[str]:
+    """Las líneas que `update` imprime sobre la versión, con su procedencia.
+
+    Antes esto era un ``if/else`` de dos ramas que decía *«Última versión publicada: X»* incluso
+    cuando la X la había escrito el usuario en ``--version``: el mensaje afirmaba algo que nadie
+    había comprobado.
+
+    Y añade el aviso que da nombre a este cambio. Justo después de publicar, ``update`` anuncia
+    como «última» la **anterior**, y el usuario no tiene forma de saber si es que PyPI todavía
+    sirve caché o si la publicación no terminó. No se puede distinguir desde aquí — pero sí se
+    puede detectar la **firma** del caso, que es exacta y no una heurística: al publicar la
+    0.17.0 desde el repo, la instalación local **es** 0.17.0 y PyPI todavía dice 0.16.0. O sea,
+    la instalada más nueva que la publicada.
+    """
+    if from_user:
+        return [f"Versión pedida con --version: {version}"]
+    if version is None:
+        # Sin red no se puede resolver el pin, pero completar y reiniciar sí se puede: se avisa
+        # y se sigue. No es un error (edge case de la spec).
+        return [f"Aviso: {reason}. Se sigue sin tocar los pines."]
+
+    lines = [f"Última versión publicada: {version} ({PYPI_SOURCE})"]
+    installed = checks._installed_version()
+    # `_compare_versions` devuelve None si alguna no es comparable; ahí se calla en vez de
+    # inventarse un aviso, que es la misma regla que gobierna todo el registro de checks.
+    if installed and checks._compare_versions(installed, version) == 1:
+        lines += [
+            f"  Ojo: la instalada ({installed}) es MÁS NUEVA que la que anuncia PyPI.",
+            "  Suele significar que la publicación aún no se propagó (o no ha terminado).",
+            f"  Si es la que quieres fijar: local-delegate update --version {installed}",
+        ]
+    return lines
 
 
 _PIN_RE = re.compile(re.escape(PACKAGE) + r"==[\d.]+")
@@ -589,14 +632,11 @@ def run_update(opts: Options, out=print) -> int:
     )
     results = checks.run_all(ctx)
 
-    # 2. La versión: la que pidió el usuario, o la última publicada.
+    # 2. La versión: la que pidió el usuario, o la última publicada. Las líneas dicen de dónde
+    # salió el dato; el aviso de desfase que puedan traer es informativo y no toca el plan.
     version, reason = (opts.version, None) if opts.version else latest_version()
-    if version:
-        out(f"Última versión publicada: {version}")
-    else:
-        # Sin red no se puede resolver el pin, pero completar y reiniciar sí se puede: se avisa
-        # y se sigue. No es un error (edge case de la spec).
-        out(f"Aviso: {reason}. Se sigue sin tocar los pines.")
+    for line in version_lines(version, reason, from_user=bool(opts.version)):
+        out(line)
 
     editable = editable_origin()
     if editable:

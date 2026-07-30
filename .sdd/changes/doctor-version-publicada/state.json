@@ -3,9 +3,9 @@
   "slug": "doctor-version-publicada",
   "title": "doctor compara la version instalada contra la publicada en PyPI",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-30T22:11:09.700Z",
-  "updatedAt": "2026-07-30T22:30:29.923Z",
+  "updatedAt": "2026-07-30T22:34:25.040Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T22:34:24.547Z",
+      "evidence": "handoff.md escrito con el estado (PR #76 mergeado, main en f05b4e2, CI completo verde, en Unreleased sin publicar), las cinco decisiones que no se deducen del codigo y los tres gotchas que costaron tiempo: (1) doblar checks._default_latest_release con monkeypatch NO funciona porque el dataclass captura la referencia al definir el campo -- hay que doblar el destino, update.latest_version; (2) un colaborador que lanza AssertionError no hace fallar un test del registro, porque run_all captura las excepciones de los probes a proposito, asi que hay que anotar la llamada y aseverar sobre la anotacion; (3) el filtro por grupos y SKIP_PYPI son dos mecanismos distintos y no deben mezclarse en el mismo test. Incluye el dato medido que sirve al siguiente pendiente: el indice simple sirve con max-age=600 y el JSON con max-age=900, o sea que latest_version ya usa el mas fresco. Sin secretos, credenciales ni datos personales. La nota del vault se escribe al cerrar la sesion.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-30T22:30:29.923Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T22:34:24.547Z",
+      "evidence": "handoff.md escrito con el estado (PR #76 mergeado, main en f05b4e2, CI completo verde, en Unreleased sin publicar), las cinco decisiones que no se deducen del codigo y los tres gotchas que costaron tiempo: (1) doblar checks._default_latest_release con monkeypatch NO funciona porque el dataclass captura la referencia al definir el campo -- hay que doblar el destino, update.latest_version; (2) un colaborador que lanza AssertionError no hace fallar un test del registro, porque run_all captura las excepciones de los probes a proposito, asi que hay que anotar la llamada y aseverar sobre la anotacion; (3) el filtro por grupos y SKIP_PYPI son dos mecanismos distintos y no deben mezclarse en el mismo test. Incluye el dato medido que sirve al siguiente pendiente: el indice simple sirve con max-age=600 y el JSON con max-age=900, o sea que latest_version ya usa el mas fresco. Sin secretos, credenciales ni datos personales. La nota del vault se escribe al cerrar la sesion.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T22:34:24.794Z",
+      "reason": "gates completos y PR #76 mergeado con el CI de main en verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T22:34:25.040Z",
+      "reason": "change cerrado"
     }
   ]
 }
