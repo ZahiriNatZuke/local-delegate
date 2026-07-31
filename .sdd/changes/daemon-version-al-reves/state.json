@@ -5,7 +5,7 @@
   "mode": "lite",
   "status": "understanding",
   "createdAt": "2026-07-31T18:14:55.200Z",
-  "updatedAt": "2026-07-31T18:17:14.957Z",
+  "updatedAt": "2026-07-31T18:20:07.547Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:20:07.547Z",
+      "evidence": "Revision de los 6 requisitos contra el diff; 3 mutantes rompen cada uno su test; cli.published comprobada y no tiene el defecto simetrico",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -60,6 +60,14 @@
       "status": "approved",
       "at": "2026-07-31T18:17:14.957Z",
       "evidence": "556 passed 1 skipped; ruff check y format en verde; 3 tests nuevos (los dos sentidos y el incomparable)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T18:20:07.547Z",
+      "evidence": "Revision de los 6 requisitos contra el diff; 3 mutantes rompen cada uno su test; cli.published comprobada y no tiene el defecto simetrico",
       "actor": "user"
     }
   ]
