@@ -99,9 +99,15 @@ def preguntar(mensaje: str, modelo: type[ModeloT]) -> ModeloT | None:
     async def _con_plazo():
         # El plazo va AQUÍ, dentro de la corrutina que corre en el event loop. Ponerlo del lado
         # del hilo lanza NoEventLoopError; está medido.
-        with anyio.move_on_after(config.ASK_TIMEOUT):
-            return await ctx.session.elicit_form(mensaje, esquema)
-        return None
+        #
+        # Se lee el `cancel_scope` en vez de poner un `return None` detrás del `with`: aquel
+        # camino es perfectamente alcanzable —es lo que hace anyio al cancelar— pero CodeQL no
+        # modela la cancelación y lo marcaba como código muerto. Así no hay que suprimir un aviso
+        # falso, y de paso queda explícito por qué la respuesta puede faltar.
+        respuesta = None
+        with anyio.move_on_after(config.ASK_TIMEOUT) as scope:
+            respuesta = await ctx.session.elicit_form(mensaje, esquema)
+        return None if scope.cancelled_caught else respuesta
 
     try:
         resultado = anyio.from_thread.run(_con_plazo)
