@@ -3,9 +3,9 @@
   "slug": "version-derivada",
   "title": "__version__ deja de ser un literal clavado y sale de la metadata del paquete",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closing",
   "createdAt": "2026-07-31T20:30:38.654Z",
-  "updatedAt": "2026-07-31T20:36:57.239Z",
+  "updatedAt": "2026-07-31T20:42:01.027Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T20:42:00.886Z",
+      "evidence": "review.md verdict=conforms; los 4 requisitos implementados y verificados; CI del PR 106 con los 13 checks en SUCCESS (ci-gate y test windows incluidos); mergeado en 5809003",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -111,6 +111,28 @@
       "at": "2026-07-31T20:36:57.239Z",
       "evidence": "570 passed 1 skipped (569 antes); ruff check All checks passed; ruff format 61 files already formatted; extract_dashboard_js + node --check OK. Mutante del literal: cae SOLO el test nuevo, con el mensaje que apunta a __init__.py",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T20:42:00.886Z",
+      "evidence": "review.md verdict=conforms; los 4 requisitos implementados y verificados; CI del PR 106 con los 13 checks en SUCCESS (ci-gate y test windows incluidos); mergeado en 5809003",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T20:42:00.955Z",
+      "reason": "CI en verde y PR mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T20:42:01.027Z",
+      "reason": "Sin follow-up requerido; queda la nota del vault al cierre de sesion"
     }
   ]
 }

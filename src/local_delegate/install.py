@@ -295,12 +295,26 @@ def strip_hook_settings(settings: dict, hooks_dir: Path) -> tuple[dict, int]:
 
 
 # --- Entrada del servidor MCP ------------------------------------------------
-def mcp_entry(mode: str, base_url: str | None, api_key_env: bool, version: str | None) -> dict:
+WEB_TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
+
+
+def mcp_entry(
+    mode: str,
+    base_url: str | None,
+    api_key_env: bool,
+    version: str | None,
+    web_token_env: bool = False,
+) -> dict:
     """Entrada de servidor MCP para Claude Code (stdio vía uvx, o HTTP contra el daemon)."""
     if mode == "http":
         port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "9393")
         host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
-        return {"type": "http", "url": f"http://{host}:{port}/mcp"}
+        entry: dict = {"type": "http", "url": f"http://{host}:{port}/mcp"}
+        if web_token_env:
+            # Se referencia la variable, nunca su valor. Medido contra Claude Code 2.1.220: la
+            # expansión de `${VAR}` dentro de `headers` funciona y llega al servidor ya resuelta.
+            entry["headers"] = {"Authorization": f"Bearer ${{{WEB_TOKEN_VAR}}}"}
+        return entry
     package = f"local-delegate-mcp=={version}" if version else "local-delegate-mcp"
     entry: dict = {
         "type": "stdio",
@@ -324,6 +338,13 @@ def codex_mcp_block(entry: dict) -> str:
     lines = [f"[mcp_servers.{SERVER_NAME}]"]
     if entry.get("type") == "http":
         lines.append(f"url = {json.dumps(entry['url'])}")
+        if entry.get("headers"):
+            # Codex NO expande `${VAR}` (ver más abajo, el caso stdio), pero para `streamable_http`
+            # tiene la clave exacta que hace falta: `bearer_token_env_var` toma el **nombre** de la
+            # variable y la lee él. No es una preferencia de estilo — su validador rechaza de plano
+            # el `bearer_token` literal en este transporte, así que escribir el secreto aquí ni
+            # siquiera sería posible.
+            lines.append(f"bearer_token_env_var = {json.dumps(WEB_TOKEN_VAR)}")
         return "\n".join(lines)
     lines.append(f"command = {json.dumps(entry['command'])}")
     lines.append("args = [" + ", ".join(json.dumps(a) for a in entry.get("args", [])) + "]")
@@ -368,6 +389,8 @@ class Options:
     mcp_mode: str = "stdio"
     base_url: str | None = None
     api_key_env: bool = False
+    # Solo tiene efecto con `mcp_mode="http"`: es el puerto del daemon el que puede exigir token.
+    web_token_env: bool = False
     pin_version: str | None = None
     use_cli: bool = True
     # Suprime SOLO la escritura de la entrada MCP de Codex. Lo decide quien llama (el CLI, tras
@@ -561,7 +584,13 @@ def plan_install(opts: Options) -> list[Action]:
             actions.append(Action("markdown", path, "bloque de regla de delegación", _run_md))
 
     if "mcp" in opts.components:
-        entry = mcp_entry(opts.mcp_mode, opts.base_url, opts.api_key_env, opts.pin_version)
+        entry = mcp_entry(
+            opts.mcp_mode,
+            opts.base_url,
+            opts.api_key_env,
+            opts.pin_version,
+            opts.web_token_env,
+        )
         if "claude" in opts.targets:
             actions.append(
                 Action(
