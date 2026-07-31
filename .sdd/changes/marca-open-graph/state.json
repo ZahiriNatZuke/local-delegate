@@ -3,39 +3,39 @@
   "slug": "marca-open-graph",
   "title": "Marca unica y metadatos sociales en la landing",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-30T18:32:15.385Z",
-  "updatedAt": "2026-07-30T18:32:15.385Z",
+  "updatedAt": "2026-07-31T12:35:28.526Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:35:07.938Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla, igual que en landing-github-pages. Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado del PR #67 y el cuerpo del commit, NO como documento que guio el trabajo. Ocho requisitos observables derivados del diff: icono canonico en un solo fichero con la copia identica byte a byte, dashboard que lo lee del recurso en vez de inline, el fichero viaja en el wheel, metadatos sociales completos, imagen social de 1200x630 cuyas medidas reales coinciden con las declaradas, se versiona el generador y no el artefacto, los .src.html no se publican, y el titular no resalta la nube con el amarillo de la via local.",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:35:08.651Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla, igual que en landing-github-pages. Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado del PR #67 y el cuerpo del commit, NO como documento que guio el trabajo. Cuatro tareas con fichero y verificacion derivadas del diff real: el icono canonico y sus dos consumidores, los metadatos sociales, la imagen social con su fuente revisable, y el amarillo del titular. La salvaguarda del riesgo principal -dos copias del icono que se separan- esta en el codigo: el test byte a byte. Compatibilidad tratada: el dashboard pasa de SVG inline a leer un recurso, asi que habia que comprobar que viaja en el wheel o el panel se quedaria sin icono en instalacion real.",
+      "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:35:27.347Z",
+      "evidence": "Verificacion fresca del 2026-07-31 por ejecucion: 23 tests de tests/test_site.py verdes, incluido el que ata las dos mitades del titular; SHA-256 del favicon canonico y el de la landing IDENTICOS (8b26059aa8c1d5059953...); IHDR real de la og-image publicada 1200x630, igual que lo declarado; el build no copia ningun .src.html y og-image.src.html responde 404 en produccion; metrics.py lee el recurso del paquete. Sin dependencias nuevas y sin secretos en juego.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:35:27.573Z",
+      "evidence": "Los ocho requisitos verificados contra el sitio PUBLICADO y el arbol de main, detalle en review.md. Veredicto conforms-with-notes con DOS notas: una de proceso (la traza se relleno despues del merge) y una de alcance que sigue viva y queda registrada -la correccion del amarillo se aplico al titular y NO al boton de idioma, que sigue usando --local para su estado aria-pressed; es la misma mezcla de significado y el mismo patron de no contar las superficies antes de arreglar una. No es regresion de este cambio y se ataca aparte.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:35:28.074Z",
+      "evidence": "handoff.md relleno con las cinco decisiones que no se deducen del codigo (dos copias del icono atadas por un test, porque son dos despliegues distintos y eliminar una no es opcion; de la imagen social se versiona el generador y no el artefacto, porque un PNG no se revisa en un diff; los .src.html no se publican por el mismo criterio de site/ y no docs/; el titular pintaba de amarillo -la via que se toma- justo lo que la frase niega, y se corrige con un --cloud-deep de contraste 4.4:1 y 7.1:1 sin subrayado porque el destacado es semantico; y twitter:card=summary_large_image no es cosmetico, sin el la imagen se recorta). Ademas queda escrito lo que el cambio NO cubrio: el boton de idioma. Nota canonica del vault: projects/local-delegate/jornada-2026-07-30-noche-socket-y-la-0-17-0.md. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -45,6 +45,109 @@
       "to": "understanding",
       "at": "2026-07-30T18:32:15.385Z",
       "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T12:35:07.702Z",
+      "reason": "traza en plantilla; se reconstruye desde el diff mergeado del PR #67 y verificacion fresca"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T12:35:07.938Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla, igual que en landing-github-pages. Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado del PR #67 y el cuerpo del commit, NO como documento que guio el trabajo. Ocho requisitos observables derivados del diff: icono canonico en un solo fichero con la copia identica byte a byte, dashboard que lo lee del recurso en vez de inline, el fichero viaja en el wheel, metadatos sociales completos, imagen social de 1200x630 cuyas medidas reales coinciden con las declaradas, se versiona el generador y no el artefacto, los .src.html no se publican, y el titular no resalta la nube con el amarillo de la via local.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T12:35:08.185Z",
+      "reason": "reconstruccion de traza"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T12:35:08.416Z",
+      "reason": "reconstruccion de traza"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T12:35:08.651Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla, igual que en landing-github-pages. Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado del PR #67 y el cuerpo del commit, NO como documento que guio el trabajo. Cuatro tareas con fichero y verificacion derivadas del diff real: el icono canonico y sus dos consumidores, los metadatos sociales, la imagen social con su fuente revisable, y el amarillo del titular. La salvaguarda del riesgo principal -dos copias del icono que se separan- esta en el codigo: el test byte a byte. Compatibilidad tratada: el dashboard pasa de SVG inline a leer un recurso, asi que habia que comprobar que viaja en el wheel o el panel se quedaria sin icono en instalacion real.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T12:35:08.887Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #67"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T12:35:09.109Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #67"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T12:35:09.353Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #67"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T12:35:27.347Z",
+      "evidence": "Verificacion fresca del 2026-07-31 por ejecucion: 23 tests de tests/test_site.py verdes, incluido el que ata las dos mitades del titular; SHA-256 del favicon canonico y el de la landing IDENTICOS (8b26059aa8c1d5059953...); IHDR real de la og-image publicada 1200x630, igual que lo declarado; el build no copia ningun .src.html y og-image.src.html responde 404 en produccion; metrics.py lee el recurso del paquete. Sin dependencias nuevas y sin secretos en juego.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T12:35:27.573Z",
+      "evidence": "Los ocho requisitos verificados contra el sitio PUBLICADO y el arbol de main, detalle en review.md. Veredicto conforms-with-notes con DOS notas: una de proceso (la traza se relleno despues del merge) y una de alcance que sigue viva y queda registrada -la correccion del amarillo se aplico al titular y NO al boton de idioma, que sigue usando --local para su estado aria-pressed; es la misma mezcla de significado y el mismo patron de no contar las superficies antes de arreglar una. No es regresion de este cambio y se ataca aparte.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T12:35:27.828Z",
+      "reason": "conformance aprobado con verificacion fresca contra el sitio publicado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T12:35:28.074Z",
+      "evidence": "handoff.md relleno con las cinco decisiones que no se deducen del codigo (dos copias del icono atadas por un test, porque son dos despliegues distintos y eliminar una no es opcion; de la imagen social se versiona el generador y no el artefacto, porque un PNG no se revisa en un diff; los .src.html no se publican por el mismo criterio de site/ y no docs/; el titular pintaba de amarillo -la via que se toma- justo lo que la frase niega, y se corrige con un --cloud-deep de contraste 4.4:1 y 7.1:1 sin subrayado porque el destacado es semantico; y twitter:card=summary_large_image no es cosmetico, sin el la imagen se recorta). Ademas queda escrito lo que el cambio NO cubrio: el boton de idioma. Nota canonica del vault: projects/local-delegate/jornada-2026-07-30-noche-socket-y-la-0-17-0.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T12:35:28.295Z",
+      "reason": "result review conforms-with-notes; el fleco del boton de idioma se trabaja en su propio cambio"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T12:35:28.526Z",
+      "reason": "trabajo mergeado en el PR #67 y publicado en la 0.17.0; traza reconstruida y verificada"
     }
   ]
 }
