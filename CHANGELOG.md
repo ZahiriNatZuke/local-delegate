@@ -6,6 +6,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-31
+
+> La tanda que **vació el backlog auditado**: los siete puntos que la auditoría del 2026-07-31
+> dejó confirmados, más el `Ctrl+C` reportado durante la propia sesión.
+
 ### Added
 - **Los PNG de la marca quedan atados al `favicon.svg` del que salen.** `icon.src.html` ya cargaba
   el SVG canónico en vez de redibujar la marca, pero **nada obligaba a regenerar los PNG cuando el
