@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El paquete deja de declarar su versión a mano.** `local_delegate.__version__` estaba clavado
+  en `"0.10.0"` y llevaba **nueve releases mintiendo**: `scripts/bump_version.py` sube la versión
+  en los cuatro sitios que conoce —`pyproject.toml`, las dos de `server.json` y `uv.lock`— y ese
+  atributo no estaba en la lista, así que nadie lo tocaba nunca. Ahora se deriva de la metadata
+  del paquete instalado, por la **misma** llamada que el servidor MCP usa para declararse en el
+  handshake `initialize`, de modo que los dos canales públicos no pueden discrepar.
+
+  No engañaba a nadie dentro del repo (nadie lo leía), pero es el dato que consulta quien importa
+  el paquete. Se descartó añadirlo a `bump_version.py`: eso convertiría cuatro declaraciones
+  coordinadas en cinco, o sea un sitio más donde mentir. Un test nuevo lo ata a `pyproject.toml`
+  y distingue en su mensaje «alguien clavó un literal» de «el entorno está desincronizado», para
+  no mandar a mirar el fichero equivocado.
+
 ## [0.19.0] - 2026-07-31
 
 ### Added
