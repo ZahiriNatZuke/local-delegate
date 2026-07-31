@@ -672,13 +672,34 @@ def _probe_daemon(ctx: Context) -> Result:
         detail = f"local-delegate {version} · pid {pid} · {status.get('mcp_url', '')}"
         installed = _installed_version()
         if installed and version != "?" and version != installed:
-            # El daemon es un proceso largo: sigue sirviendo el código con el que arrancó. Tras
-            # actualizar, los clientes hablan con la versión vieja y nada lo dice — el síntoma es
-            # «actualicé y el arreglo no está».
+            # Que difieran no dice CUÁL de las dos está atrasada, y son dos averías distintas con
+            # arreglos distintos. Comparar con `!=` y asumir siempre que el viejo es el daemon
+            # mandaba a reiniciarlo cuando el atrasado era el CLI — un arreglo que no arregla.
+            # Visto en producción tras publicar la 0.18.0: daemon del venv editable en 0.18.0 y
+            # CLI de `uv tool` en 0.17.0.
+            order = _compare_versions(version, installed)
+            if order is None:
+                # Sin poder ordenarlas, se avisa de la diferencia y NO se ofrece arreglo: cualquiera
+                # de los dos que se sugiriera podría ser el equivocado.
+                return Result(
+                    WARN, f"{detail} — la instalada es {installed} y no se pudieron comparar"
+                )
+            if order < 0:
+                # El daemon es un proceso largo: sigue sirviendo el código con el que arrancó. Tras
+                # actualizar, los clientes hablan con la versión vieja y nada lo dice — el síntoma
+                # es «actualicé y el arreglo no está».
+                return Result(
+                    WARN,
+                    f"{detail} — pero la versión instalada es {installed}: el daemon sirve la vieja",
+                    RESTART_HINT,
+                )
+            # Al revés: el daemon corre código más nuevo que el paquete instalado. Pasa con una
+            # instalación editable mientras el CLI publicado va por detrás. Reiniciar el daemon no
+            # cambiaría nada; lo que hay que subir es la instalación.
             return Result(
                 WARN,
-                f"{detail} — pero la versión instalada es {installed}: el daemon sirve la vieja",
-                RESTART_HINT,
+                f"{detail} — pero la versión instalada es {installed}: la instalación está atrasada",
+                _upgrade_hint(),
             )
         return Result(OK, detail)
     if _port_taken(host, port):

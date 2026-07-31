@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`doctor` decía «el daemon sirve la vieja» aunque fuera al revés, y ofrecía un arreglo que no
+  arreglaba.** El check comparaba las dos versiones con `!=`, que dice que difieren pero no **cuál**
+  está atrasada, y asumía siempre que la vieja era la del daemon. Con una instalación editable —el
+  daemon corriendo del repo, por delante del CLI publicado— el mensaje afirmaba lo contrario de lo
+  que pasaba y mandaba **reiniciar el daemon**, que ahí no cambia nada.
+
+  Ahora se comparan como números, con la misma función que ya usaba el check de versión publicada, y
+  cada sentido dice lo suyo: si el atrasado es el daemon, reiniciar; si es la instalación, el comando
+  de actualización que corresponda a **esa** instalación. Y si las dos versiones no se pueden ordenar
+  se avisa de la diferencia **sin** ofrecer arreglo, porque cualquiera de los dos podría ser el
+  equivocado.
+
+  Encontrado en uso real justo después de publicar la 0.18.0.
+
 ## [0.18.0] - 2026-07-31
 
 ### Added

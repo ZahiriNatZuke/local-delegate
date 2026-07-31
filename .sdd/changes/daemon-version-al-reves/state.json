@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "slug": "daemon-version-al-reves",
+  "title": "El check del daemon compara versiones por desigualdad, no por cual es mas nueva",
+  "mode": "lite",
+  "status": "understanding",
+  "createdAt": "2026-07-31T18:14:55.200Z",
+  "updatedAt": "2026-07-31T18:17:14.957Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:17:14.894Z",
+      "evidence": "Defecto reproducido en produccion por el usuario; brief.md con la salida literal y el patron correcto que ya existe en cli.published",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:17:14.957Z",
+      "evidence": "556 passed 1 skipped; ruff check y format en verde; 3 tests nuevos (los dos sentidos y el incomparable)",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T18:14:55.200Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T18:17:14.894Z",
+      "evidence": "Defecto reproducido en produccion por el usuario; brief.md con la salida literal y el patron correcto que ya existe en cli.published",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T18:17:14.957Z",
+      "evidence": "556 passed 1 skipped; ruff check y format en verde; 3 tests nuevos (los dos sentidos y el incomparable)",
+      "actor": "user"
+    }
+  ]
+}
