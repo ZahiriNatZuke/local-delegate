@@ -73,14 +73,32 @@ soporta, una tool esperando una respuesta que no llega es **peor** que fallar r�
 revisión de protocolo que declara cada cliente en `initialize`, y conectar Claude Code y Codex. Es
 útil por sí mismo —hoy no sabemos con qué hablamos— y decide esta capacidad y las dos siguientes.
 
-### 3. `auth` — **NO se hace**
+### 3. `auth` — **el servidor OAuth2, NO. `bearer_auth`, queda abierto**
 
-Es un servidor de autorización OAuth2 completo. Este daemon escucha en **loopback**, con un usuario
-y una máquina; el `SECURITY.md` ya asume ese modelo. Montar OAuth aquí es infraestructura pesada
-para un problema que no existe.
+**Corregido tras una pregunta del usuario: la primera redacción decía «no se hace» a secas y metía
+en el mismo saco dos cosas que no lo son.** El paquete contiene:
 
-**Cuándo cambiaría:** solo si el daemon se expusiera fuera de loopback. Y ahí ya hay precedente de
-que ese camino tiene sus propias trampas — el 421 por el header `Host` con `WEB_HOST=0.0.0.0`.
+```
+mcp.server.auth: errors, handlers, json_response, middleware, provider, routes, settings
+  middleware: auth_context, bearer_auth, client_auth
+  provider:   AccessToken, AuthorizationCode, AuthorizationParams, ...
+```
+
+- **El servidor de autorización OAuth2** (`provider`, `handlers`, `routes`) — **descartado con
+  confianza.** Emite authorization codes y access tokens: es para un MCP multiusuario expuesto a
+  internet. Aquí, un usuario y una máquina.
+- **`middleware/bearer_auth`** — **no evaluado, y no debía ir en el mismo saco.** Es la pieza
+  ligera: validar un token por petición.
+
+**Por qué importa la distinción:** el daemon **sí puede salir de loopback**. `WEB_HOST` es
+`127.0.0.1` por defecto pero lo fija la env var `LOCAL_DELEGATE_WEB_HOST` (`config.py:203`), ya hubo
+un caso real con `0.0.0.0` —el 421 por el header `Host`— y «el dashboard no tiene autenticación»
+sigue abierto en el backlog.
+
+**Queda condicionado**, no cerrado: si se decide exponer el daemon, evaluar `bearer_auth` en su
+propio change. Y comprobar antes algo que este análisis no comprobó: **el endpoint MCP y el
+dashboard de métricas son dos apps distintas**, así que un middleware del SDK no cubre las dos por
+sí solo.
 
 ### 4. `caching` — **NO se hace**
 
@@ -90,9 +108,15 @@ kilobytes de listado y ni un token de modelo.
 
 ### 5. `subscriptions` — **NO se hace**
 
-`subscriptions/listen` sirve para que el cliente escuche cambios del servidor (recursos, prompts).
-El dashboard **ya tiene su propio canal** y su propia contabilidad; no hay nada que un cliente MCP
-necesite escuchar aquí.
+`subscriptions/listen` notifica al cliente eventos del servidor: `ResourceUpdated`,
+`ResourcesListChanged`, `PromptsListChanged`. O sea, **eventos sobre recursos y prompts**.
+
+Y este servidor no expone **ni uno**: `@mcp.resource` y `@mcp.prompt` dan **cero coincidencias** en
+todo `src/`. Solo hay 11 tools. No es que aporte poco: **no habría nada que emitir**.
+
+Para que sirviera habría que primero exponer recursos MCP —el estado del backend, los modelos
+cargados—, que es un cambio de producto con su propia justificación. `subscriptions` sería la
+consecuencia, nunca el motivo.
 
 Además, junto con `caching`, pertenece a la revisión **2026-07-28**, publicada hace tres días, con el
 propio SDK negociando por defecto **2025-03-26**: implementarlas hoy sería escribir código que
@@ -103,11 +127,16 @@ probablemente ningún cliente negocia.
 | Capacidad | Veredicto |
 | --- | --- |
 | `extension` / interceptor | **no**, por la objeción del PR #48, ahora medida |
-| `elicitation` | **pendiente de una medición**, la única con recorrido |
-| `auth` | **no**, loopback |
+| `elicitation` | **pendiente de una medición**, la única con recorrido inmediato |
+| `auth` — servidor OAuth2 | **no**, un usuario y una máquina |
+| `auth` — `bearer_auth` | **condicionado**: solo si se expone el daemon fuera de loopback |
 | `caching` | **no**, el coste no está ahí |
-| `subscriptions` | **no**, sin nada que escuchar y revisión demasiado nueva |
+| `subscriptions` | **no**, no hay recursos ni prompts que notificar |
 
-De cinco, **cuatro se descartan con motivo escrito** y una queda a expensas de un experimento que
-además vale por sí solo. Es el resultado esperable de convertir una lista heredada en un
-diagnóstico.
+De las cinco, **tres se descartan del todo con motivo escrito**, `auth` se parte en dos —el servidor
+OAuth2 fuera, `bearer_auth` condicionado— y `elicitation` queda a expensas de un experimento que
+además vale por sí solo.
+
+**El descarte que más cuesta ver, y por eso va con el número delante:** el del interceptor. Los
+otros se sostienen en «aquí no existe eso»; ese se sostiene en un conteo — tres puntos de
+telemetría, no once.
