@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "cancelled-ci-main",
+  "title": "El cancelled del CI en main tiene causa conocida y firma reconocible",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-31T21:41:26.677Z",
+  "updatedAt": "2026-07-31T21:55:34.382Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:55:34.001Z",
+      "evidence": "spec.md con 5 requisitos; la premisa del pendiente se refuta por medicion: 3 runs a 13:00 exactos con estados internos distintos",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:55:34.067Z",
+      "evidence": "plan.md con 5 tareas y revision adversarial; un solo cambio de comportamiento (limite del paso) y esta razonado",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:55:34.382Z",
+      "evidence": "623 passed 1 skipped; ruff y format limpios; node --check OK; 4 mutantes sobre ci.yml, 3 cazados y el cuarto no cae por el mutante (el texto cita la firma dos veces), no por el test",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T21:41:26.677Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T21:55:33.651Z",
+      "reason": "avance del change"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T21:55:33.712Z",
+      "reason": "avance del change"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T21:55:34.001Z",
+      "evidence": "spec.md con 5 requisitos; la premisa del pendiente se refuta por medicion: 3 runs a 13:00 exactos con estados internos distintos",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T21:55:34.067Z",
+      "evidence": "plan.md con 5 tareas y revision adversarial; un solo cambio de comportamiento (limite del paso) y esta razonado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T21:55:34.137Z",
+      "reason": "gates aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T21:55:34.200Z",
+      "reason": "gates aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T21:55:34.261Z",
+      "reason": "gates aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T21:55:34.324Z",
+      "reason": "gates aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T21:55:34.382Z",
+      "evidence": "623 passed 1 skipped; ruff y format limpios; node --check OK; 4 mutantes sobre ci.yml, 3 cazados y el cuarto no cae por el mutante (el texto cita la firma dos veces), no por el test",
+      "actor": "user"
+    }
+  ]
+}

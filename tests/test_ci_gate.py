@@ -290,3 +290,54 @@ def test_los_jobs_esperados_son_exactamente_los_de_ci_yml():
 
 def test_el_gate_esta_declarado_en_ci_yml():
     assert ci_gate.NOMBRE_DEL_GATE in _jobs_declarados_en_ci()
+
+
+# --- Los números del cuelgue de Windows, atados a lo que declara `ci.yml` --------------------
+#
+# Estos dos tests existen porque el comentario de `ci.yml` sostuvo durante días un diagnóstico
+# falso —«`timeout-minutes` no dispara»— y nadie podía verlo: un comentario no falla nunca. El
+# 2026-07-31 se midió que sí dispara y que la firma del cuelgue son 13 minutos (8 del límite + 5
+# de gracia de GitHub). Si alguien cambia el límite, el texto que explica el 13 se queda viejo, y
+# eso es lo que se impide aquí.
+
+TIMEOUT_JOB_TEST = 8
+GRACIA_GITHUB = 5
+
+
+def _job_test() -> dict:
+    return yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]["test"]
+
+
+def test_el_limite_del_job_de_tests_es_el_que_explica_la_firma_de_13_minutos():
+    """El `13:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
+
+    Se ata porque la conclusión operativa depende de él — «un cancelled de 13:00 en main es el
+    cuelgue conocido y no una avería»— y esa frase deja de ser cierta si el límite cambia.
+    """
+    assert _job_test()["timeout-minutes"] == TIMEOUT_JOB_TEST
+
+    firma = TIMEOUT_JOB_TEST + GRACIA_GITHUB
+    texto = CI_YML.read_text(encoding="utf-8")
+    assert f"{firma}:00" in texto, (
+        f"el comentario de ci.yml debe explicar la firma de {firma}:00 "
+        f"({TIMEOUT_JOB_TEST} de límite + {GRACIA_GITHUB} de gracia)"
+    )
+
+
+def test_el_paso_de_tests_tiene_su_propio_limite_y_es_menor_que_el_del_job():
+    """Cubre el cuelgue de **pytest**, distinto del cuelgue del runner.
+
+    En dos de los tres `cancelled` medidos, `Tests (pytest)` seguía `in_progress` al morir el job.
+    Un límite de paso corta eso pronto y con log; si fuera mayor o igual que el del job, no
+    llegaría a actuar nunca y sería decoración.
+    """
+    pasos = _job_test()["steps"]
+    tests = [p for p in pasos if p.get("name") == "Tests (pytest)"]
+    assert tests, "el job `test` ya no tiene un paso llamado 'Tests (pytest)'"
+
+    limite = tests[0].get("timeout-minutes")
+    assert limite is not None, "el paso de tests perdió su `timeout-minutes`"
+    assert limite < TIMEOUT_JOB_TEST, (
+        f"el límite del paso ({limite}) tiene que ser menor que el del job "
+        f"({TIMEOUT_JOB_TEST}) para llegar a actuar"
+    )

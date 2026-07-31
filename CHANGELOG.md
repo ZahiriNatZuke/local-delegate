@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El `cancelled` del CI en `main` tenía la causa mal diagnosticada, y ahora tiene firma
+  reconocible.** `ci.yml`, `ci_gate.py` y `Repo-hardening.md` sostenían que `timeout-minutes` «no
+  dispara» sobre el job colgado de Windows, deducido de verlo más de 10 minutos vivo con el límite
+  en 8. **Es falso**: lo que se estaba viendo era el periodo de gracia.
+
+  La medición que lo tumba son los tres runs `cancelled` de `main` del 2026-07-31: los tres
+  murieron a los **13:00 exactos** desde el inicio del job, y con **estados internos distintos** —
+  dos con `Tests (pytest)` todavía `in_progress` y uno con todos los pasos en `success`,
+  `Complete job` incluido. Trece minutos clavados con tres estados distintos solo lo explica un
+  temporizador, y **13 = 8 del límite + 5 de gracia**. De ahí que la conclusión sea `cancelled` y
+  no `timed_out`.
+
+  Consecuencia práctica, que antes no se podía dar: un `cancelled` en `main` de ~13 minutos **no es
+  una avería del repo**, y ahora está escrito dónde se busca.
+
+  Además, la medición enseñó que en dos de los tres casos quien seguía corriendo era **pytest** y
+  no el runner, así que el paso `Tests (pytest)` pasa a tener su propio `timeout-minutes: 5`: corta
+  ese cuelgue pronto y **con log**, en vez de arrastrar trece minutos que acaban sin log
+  (`BlobNotFound`). Dos tests atan los números al texto que los explica — un comentario no falla
+  nunca por su cuenta, y este ya estuvo equivocado una vez.
+
 ### Added
 - **La wiki nativa se sincroniza sola desde `docs/wiki/`.** Era el último fleco manual del release:
   `scripts/release.py` no mencionaba la wiki y ningún workflow la tocaba (`pages.yml` publica
