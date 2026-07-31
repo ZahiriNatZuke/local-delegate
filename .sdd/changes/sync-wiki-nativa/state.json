@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "sync-wiki-nativa",
+  "title": "La wiki nativa se sincroniza sola desde docs/wiki",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-31T21:29:27.814Z",
+  "updatedAt": "2026-07-31T21:37:33.143Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:37:32.654Z",
+      "evidence": "spec.md con 7 requisitos observables; decision push-a-main vs tag razonada; medicion previa: 11 ficheros divergidos y 18 enlaces que se publicaban rotos",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:37:32.870Z",
+      "evidence": "plan.md con 4 tareas y revision adversarial; la operacion destructiva acotada a *.md del raiz con rollback por el historial de la wiki",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:37:33.143Z",
+      "evidence": "620 passed 1 skipped (611 antes); ruff y format limpios; node --check OK; 5 mutantes, 5 cazados tras arreglar un test que no podia ver lo que decia comprobar",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T21:29:27.814Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T21:37:32.587Z",
+      "reason": "wiki clonada y comparada: 11 ficheros divergidos, 18 enlaces rotos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T21:37:32.654Z",
+      "evidence": "spec.md con 7 requisitos observables; decision push-a-main vs tag razonada; medicion previa: 11 ficheros divergidos y 18 enlaces que se publicaban rotos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T21:37:32.726Z",
+      "reason": "research cerrado"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T21:37:32.796Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T21:37:32.870Z",
+      "evidence": "plan.md con 4 tareas y revision adversarial; la operacion destructiva acotada a *.md del raiz con rollback por el historial de la wiki",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T21:37:32.941Z",
+      "reason": "avance"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T21:37:33.009Z",
+      "reason": "avance"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T21:37:33.077Z",
+      "reason": "avance"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T21:37:33.143Z",
+      "evidence": "620 passed 1 skipped (611 antes); ruff y format limpios; node --check OK; 5 mutantes, 5 cazados tras arreglar un test que no podia ver lo que decia comprobar",
+      "actor": "user"
+    }
+  ]
+}

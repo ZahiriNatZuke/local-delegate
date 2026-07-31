@@ -1,0 +1,76 @@
+name: Wiki
+
+# La wiki nativa de GitHub vive en un repositorio APARTE (`<repo>.wiki.git`) que nada del CI
+# tocaba: `pages.yml` publica `site/`, y `scripts/release.py` no la menciona. La fuente es
+# `docs/wiki/` y la copia se hacía a mano, o sea que no se hacía.
+#
+# Lo que costó, medido el 2026-07-31: los ONCE ficheros divergidos —`Repo-hardening.md` 291 líneas,
+# `Daemon.md` 154, `Integration-install.md` 142— y tres releases de retraso (0.18.0, 0.18.1 y
+# 0.19.0), con la wiki congelada desde el 28 de julio.
+#
+# Se dispara en `push` a `main` y no en el release a propósito: la wiki documenta lo que está en
+# `main`, no lo último publicado. Atarla al tag la dejaría mintiendo entre release y release, que
+# es una versión más lenta del mismo problema.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+# `contents: write` es lo que necesita el `GITHUB_TOKEN` para empujar al repo de la wiki; es el
+# mismo permiso del repo de código y no hay uno más fino para la wiki.
+permissions:
+  contents: write
+
+# Dos sincronizaciones a la vez se pisarían empujando sobre la misma rama. No se cancela la que ya
+# corre: dejar la wiki a medias es peor que esperar.
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Clonar la wiki
+        run: |
+          git clone \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" \
+            wiki
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      # Espejo, no copia: un `.md` borrado de `docs/wiki/` tiene que desaparecer de la wiki, o la
+      # página huérfana seguiría publicada para siempre. Solo se tocan los `.md` del raíz, que es
+      # todo lo que la wiki de GitHub sabe servir.
+      #
+      # Y no es un `cp`: el script reescribe los enlaces que salen de `docs/wiki/` a URLs absolutas
+      # del repo, porque en la wiki no existe el árbol al que suben. Sin ese paso se publicaban 18
+      # enlaces rotos. `--no-project` porque el script es solo stdlib, igual que `build_site.py`.
+      - name: Sincronizar docs/wiki -> wiki
+        run: |
+          find wiki -maxdepth 1 -name '*.md' -delete
+          uv run --no-project python scripts/sync_wiki.py wiki
+
+      - name: Publicar si algo cambió
+        working-directory: wiki
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          # `--quiet` sale 1 cuando SÍ hay cambios: sin el `if`, un push sin diferencias
+          # fallaría el job y llenaría el historial de rojos que no son fallos.
+          if git diff --cached --quiet; then
+            echo "La wiki ya estaba al día; no se empuja nada."
+          else
+            git commit -m "docs: sincroniza la wiki desde docs/wiki (${GITHUB_SHA:0:7})"
+            git push
+            echo "Wiki actualizada."
+          fi

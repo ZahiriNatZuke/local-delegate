@@ -119,8 +119,21 @@ tag existente es idempotente (salta lo ya subido).
 El descriptor del registro conserva transporte `stdio` porque describe cómo el paquete se
 ejecuta en cualquier host; el daemon HTTP local es un modo operativo adicional.
 
-La wiki nativa se sincroniza después desde `docs/wiki/` en un clone temporal de
-`local-delegate.wiki.git`. No publiques la wiki antes de que el tag y PyPI existan.
+**La wiki nativa ya no se toca a mano.** La sincroniza `.github/workflows/wiki.yml` en cada push a
+`main` que cambie `docs/wiki/**`, así que documenta lo que está en `main` y no lo último publicado:
+atarla al tag la dejaría desfasada entre release y release.
+
+Dos consecuencias que conviene tener presentes:
+
+- **La wiki es un artefacto generado.** Editarla desde la web de GitHub sirve de poco: el siguiente
+  push a `docs/wiki/` sobrescribe la página, y una que se borre del repo desaparece de la wiki.
+- **Los enlaces se reescriben al publicar.** `scripts/sync_wiki.py` convierte los que salen de
+  `docs/wiki/` —`../recipes/…`, `../../README.md`— en URLs absolutas del repo, porque en la wiki no
+  existe el árbol al que suben. Los enlaces entre páginas hermanas se dejan relativos a propósito,
+  que es lo que mantiene la navegación dentro de la wiki.
+
+Se puede ver qué haría, sin escribir nada, con `uv run --no-project python scripts/sync_wiki.py
+--check`.
 
 ## Registro oficial MCP
 

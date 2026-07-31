@@ -7,6 +7,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **La wiki nativa se sincroniza sola desde `docs/wiki/`.** Era el último fleco manual del release:
+  `scripts/release.py` no mencionaba la wiki y ningún workflow la tocaba (`pages.yml` publica
+  `site/`, no `docs/`). El resultado, medido: los **once** ficheros divergidos —`Repo-hardening.md`
+  291 líneas, `Daemon.md` 154, `Integration-install.md` 142— y la wiki congelada desde el 28 de
+  julio, con tres releases publicadas encima.
+
+  El nuevo `wiki.yml` se dispara en cada push a `main` que cambie `docs/wiki/**`, **no en el tag**:
+  la wiki documenta lo que está en `main`, y atarla al release la dejaría mintiendo entre versión y
+  versión — una forma más lenta del mismo problema.
+
+  De paso se arregla algo que la copia manual venía publicando roto: **18 enlaces en 6 páginas**.
+  Los que salen del directorio (`../recipes/…`, `../../README.md`) son un 404 en la wiki, donde los
+  `.md` se sirven planos y en otro repositorio, y no se ven rotos en el fuente porque navegando el
+  repo funcionan. `scripts/sync_wiki.py` los reescribe a URLs absolutas al publicar, y deja
+  relativos los enlaces entre páginas hermanas — convertirlos también sacaría al lector de la wiki
+  en cada clic.
+
+  De propina, un test que caza en Windows algo que `ruff` solo ve en Linux: **un script con
+  shebang tiene que estar marcado ejecutable en git** (`EXE001`). El bit de ejecución no existe en
+  Windows, así que el lint local pasa en verde y el CI falla — la peor forma de enterarse, y pasó
+  con este mismo script. El test lee el modo que git registra, que sí es el mismo dato en los tres
+  sistemas.
 - **El puerto del daemon puede exigir un token, y con él se cierra de una vez el endpoint MCP, el
   dashboard y `/api/*`.** Define `LOCAL_DELEGATE_WEB_TOKEN` en el entorno del daemon y todo el
   puerto lo pide; sin la variable no cambia absolutamente nada, porque exigirlo siempre rompería
