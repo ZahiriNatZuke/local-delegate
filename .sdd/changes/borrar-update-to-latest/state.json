@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "borrar-update-to-latest",
+  "title": "Borrar scripts/update_to_latest.sh, que el CLI sustituyo",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-31T01:16:30.270Z",
+  "updatedAt": "2026-07-31T01:19:41.201Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T01:17:33.355Z",
+      "evidence": "spec.md con 4 requisitos y 2 escenarios, sobre un research que CORRIGIO la premisa del pendiente: decia 'huerfano' y no lo era. El fichero documenta su propia razon de existir en su cabecera -- preservar el habito de teclear ./scripts/update_to_latest.sh en la Mac -- y su fallback a 'python3 -m local_delegate update' funciona, verificado por ejecucion ('uv run python -m local_delegate update --help' imprime el usage). Se borra por decision explicita del usuario tomada con ese dato delante, no por estar muerto. Lo demas del research: las tres referencias que quedan (CHANGELOG.md:86, CHANGELOG.md:450 y docs/wiki/Remote-backend.md:98) lo nombran EN PASADO, asi que borrarlo las hace mas exactas y no hay que tocarlas; ningun test lo referencia; ningun workflow del CI lo invoca (grep sobre .github/); y scripts/ no viaja ni en el wheel ni en el sdist (pyproject.toml:90), asi que ningun usuario instalado se ve afectado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T01:18:13.812Z",
+      "evidence": "plan.md con 3 tareas; corto porque el trabajo lo es y el research ya descarto todo lo que podia complicarlo. Revision adversarial con dos hallazgos incorporados: R-1, la tentacion de 'actualizar' las tres menciones en pasado (CHANGELOG.md:86 y :450, docs/wiki/Remote-backend.md:98) -- NO se tocan, porque nombran el script para explicar de donde salio la regla del repositorio ('lo que ejecuta el usuario va al CLI'), y borrar el porque junto con la cosa es justo lo que permitiria que alguien vuelva a poner un instalador en scripts/; R-2, el grep de verificacion tiene que excluir .sdd/, porque las trazas de changes anteriores lo mencionan y siempre lo haran, asi que sin excluirlas la comprobacion de 'no quedan referencias' daria un falso positivo permanente. La operacion destructiva es reversible con git revert y el contenido queda en el historico.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T01:19:40.599Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped; CHANGELOG con CRLF intacto (925 CRLF, 0 LF sueltos). AC-1 verificado con grep sobre el arbol excluyendo .sdd (hallazgo R-2 del plan): quedan cuatro menciones y las cuatro son historico -- la entrada nueva del CHANGELOG, dos lineas de versiones ya publicadas y docs/wiki/Remote-backend.md:98, que lo nombra en pasado para explicar la regla del repositorio. AC-2 verificado por ejecucion: 'local-delegate update --dry-run --home <sim>' funciona, que es literalmente lo que hacia el envoltorio con su 'exec local-delegate update'. Seguridad: el cambio RETIRA un fichero ejecutable del repositorio, o sea reduce superficie.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T01:19:40.912Z",
+      "evidence": "Revision fresca contra los 4 requisitos y los 2 escenarios. El cambio toca exactamente tres cosas: el borrado, el CHANGELOG y la traza SDD. REQ-002 se cumple en su lectura correcta y no en la literal: quedan menciones, pero todas en pasado, y NO se tocaron a proposito -- explican de donde salio la regla 'lo que ejecuta el usuario va al CLI; lo que ejecuta el repositorio se queda en scripts/', y borrar el porque junto con la cosa es justo lo que permitiria que alguien vuelva a poner un instalador ahi. Queda anotado en verification.md que la premisa del pendiente era falsa: el fichero no estaba huerfano, documentaba su razon de existir y su fallback funcionaba; se retiro por decision explicita del usuario con ese dato delante.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T01:16:30.270Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T01:16:30.518Z",
+      "reason": "Leido el script entero y verificado quien lo referencia"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T01:16:52.755Z",
+      "reason": "Research cerrado: cero referencias vivas, ningun test lo toca y no viaja en el sdist"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T01:17:33.355Z",
+      "evidence": "spec.md con 4 requisitos y 2 escenarios, sobre un research que CORRIGIO la premisa del pendiente: decia 'huerfano' y no lo era. El fichero documenta su propia razon de existir en su cabecera -- preservar el habito de teclear ./scripts/update_to_latest.sh en la Mac -- y su fallback a 'python3 -m local_delegate update' funciona, verificado por ejecucion ('uv run python -m local_delegate update --help' imprime el usage). Se borra por decision explicita del usuario tomada con ese dato delante, no por estar muerto. Lo demas del research: las tres referencias que quedan (CHANGELOG.md:86, CHANGELOG.md:450 y docs/wiki/Remote-backend.md:98) lo nombran EN PASADO, asi que borrarlo las hace mas exactas y no hay que tocarlas; ningun test lo referencia; ningun workflow del CI lo invoca (grep sobre .github/); y scripts/ no viaja ni en el wheel ni en el sdist (pyproject.toml:90), asi que ningun usuario instalado se ve afectado.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T01:17:33.710Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T01:18:13.812Z",
+      "evidence": "plan.md con 3 tareas; corto porque el trabajo lo es y el research ya descarto todo lo que podia complicarlo. Revision adversarial con dos hallazgos incorporados: R-1, la tentacion de 'actualizar' las tres menciones en pasado (CHANGELOG.md:86 y :450, docs/wiki/Remote-backend.md:98) -- NO se tocan, porque nombran el script para explicar de donde salio la regla del repositorio ('lo que ejecuta el usuario va al CLI'), y borrar el porque junto con la cosa es justo lo que permitiria que alguien vuelva a poner un instalador en scripts/; R-2, el grep de verificacion tiene que excluir .sdd/, porque las trazas de changes anteriores lo mencionan y siempre lo haran, asi que sin excluirlas la comprobacion de 'no quedan referencias' daria un falso positivo permanente. La operacion destructiva es reversible con git revert y el contenido queda en el historico.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T01:18:14.102Z",
+      "reason": "plan revisado adversarialmente, 2 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T01:18:14.378Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T01:19:40.291Z",
+      "reason": "3 tareas; grep limpio y CI local verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T01:19:40.599Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped; CHANGELOG con CRLF intacto (925 CRLF, 0 LF sueltos). AC-1 verificado con grep sobre el arbol excluyendo .sdd (hallazgo R-2 del plan): quedan cuatro menciones y las cuatro son historico -- la entrada nueva del CHANGELOG, dos lineas de versiones ya publicadas y docs/wiki/Remote-backend.md:98, que lo nombra en pasado para explicar la regla del repositorio. AC-2 verificado por ejecucion: 'local-delegate update --dry-run --home <sim>' funciona, que es literalmente lo que hacia el envoltorio con su 'exec local-delegate update'. Seguridad: el cambio RETIRA un fichero ejecutable del repositorio, o sea reduce superficie.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T01:19:40.912Z",
+      "evidence": "Revision fresca contra los 4 requisitos y los 2 escenarios. El cambio toca exactamente tres cosas: el borrado, el CHANGELOG y la traza SDD. REQ-002 se cumple en su lectura correcta y no en la literal: quedan menciones, pero todas en pasado, y NO se tocaron a proposito -- explican de donde salio la regla 'lo que ejecuta el usuario va al CLI; lo que ejecuta el repositorio se queda en scripts/', y borrar el porque junto con la cosa es justo lo que permitiria que alguien vuelva a poner un instalador ahi. Queda anotado en verification.md que la premisa del pendiente era falsa: el fichero no estaba huerfano, documentaba su razon de existir y su fallback funcionaba; se retiro por decision explicita del usuario con ese dato delante.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T01:19:41.201Z",
+      "reason": "gates aprobados"
+    }
+  ]
+}

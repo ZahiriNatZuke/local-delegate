@@ -79,6 +79,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   desinstalando la borraba de verdad. `update` ya lo había corregido; `install` arrastraba el
   defecto, y la suite no podía verlo porque todas sus pruebas desactivaban ese camino.
 
+### Removed
+- **`scripts/update_to_latest.sh`** (solo desarrollo). Había quedado reducido a un envoltorio de
+  tres líneas que delegaba en `local-delegate update`, y mantener una segunda puerta de entrada al
+  mismo comando obliga a acordarse de ella. La vía es `local-delegate update`, que además es la
+  única que llega a la máquina que hay que actualizar: `scripts/` no viaja en el paquete.
+
 ## [0.17.0] - 2026-07-30
 
 ### Added
