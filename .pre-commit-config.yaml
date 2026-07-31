@@ -1,14 +1,31 @@
 # pre-commit: bloquea secretos y aplica lint/formato antes de cada commit.
 # Instala con:  uv run pre-commit install
 repos:
+  # gitleaks SÍ se fija por `rev`: es un binario ajeno al proyecto, no una dependencia suya.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
+    rev: v8.30.1
     hooks:
       - id: gitleaks
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+  # ruff NO se fija aquí, y es deliberado: son hooks locales que ejecutan el ruff del propio
+  # entorno, o sea la versión que fija `uv.lock` y la misma que corre el CI.
+  #
+  # Con el hook remoto había DOS versiones —el `rev` de este fichero y el lock— y se separaban
+  # sin que nadie se enterara: el 2026-07-30 el hook estaba en 0.6.9 con el proyecto en 0.16.0,
+  # que formatean distinto un `assert x == y, "mensaje largo"`. El hook reformateaba, el
+  # `ruff format --check` del CI lo deshacía y el commit se abortaba. Subir el `rev` habría
+  # arreglado ese día y roto el siguiente, que es justo como se llegó a 0.6.9.
+  #
+  # Si alguien "arregla" esto devolviéndolo a `repo: astral-sh/ruff-pre-commit`, vuelve el bug.
+  - repo: local
     hooks:
       - id: ruff
-        args: [--fix]
+        name: ruff (del entorno del proyecto)
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
       - id: ruff-format
+        name: ruff-format (del entorno del proyecto)
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]

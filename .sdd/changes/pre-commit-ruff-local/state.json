@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "pre-commit-ruff-local",
+  "title": "El hook de ruff usa el del proyecto y gitleaks sube a la ultima",
+  "mode": "lite",
+  "status": "implementing",
+  "createdAt": "2026-07-31T00:24:53.230Z",
+  "updatedAt": "2026-07-31T00:26:27.994Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:25:37.011Z",
+      "evidence": "spec.md con 6 requisitos y 3 escenarios. El research reencuadro el pendiente: la causa no es que la version este vieja sino que hay DOS fuentes de version, asi que subir el rev lo arregla hoy y lo rompe otra vez en cuanto ruff suba en el lock -- que es exactamente como llego a estar en 0.6.9. Medido: uv.lock fija ruff 0.16.0 (verificado en el lock y con 'uv run ruff --version'), el hook traia v0.6.9, y la ultima de ruff-pre-commit es v0.16.1 (publicada hoy), o sea que ni siquiera casar el rev con la ultima seria correcto: habria que casarlo con el lock y volver a hacerlo en cada subida. Decision del usuario: hooks locales con el ruff del entorno, que elimina la clase de problema por construccion. Segundo dato del research: gitleaks esta en v8.18.4 y la ultima es v8.30.1 (2026-03-21), doce versiones menores atrasado en un detector de secretos; el usuario aprobo subirlo en el mismo cambio. REQ-006 es el que da la prueba util: 'pre-commit run --all-files' debe dejar el repo sin cambios, porque si el hook y el CI estuvieran desalineados se veria justo ahi.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:26:27.500Z",
+      "evidence": "plan.md con 3 tareas sobre un solo fichero de configuracion. Decision de diseño: solo ruff pasa a local; gitleaks conserva su rev remoto porque es un binario que NO forma parte del entorno del proyecto, y esa asimetria queda escrita en el fichero para que nadie la 'arregle'. Revision adversarial con tres hallazgos incorporados: R-1, 'uv run' dentro de un hook de git puede no encontrar uv si el PATH no se hereda (caso clasico de cliente grafico) -- aceptable aqui porque el repo se trabaja desde terminal, y ademas el fallo diria 'uv: command not found', que al menos explica algo, frente al fallo actual que reformatea en silencio y aborta el commit sin decir por que; R-2, types_or [python, pyi] tiene que cubrir lo mismo que declaraba ruff-pre-commit en su propio .pre-commit-hooks.yaml o el hook correria sobre todos los ficheros; R-3, 'pre-commit run --all-files' pasa TODOS los ficheros mientras que un commit pasa solo los staged, asi que hay que ejercitar los dos caminos y no solo el primero. La verificacion al reves no aplica en el sentido habitual (no hay rama de codigo que romper) pero hay equivalente y es la prueba de fondo: el git status limpio tras run --all-files es justo lo que fallaria si las versiones estuvieran desalineadas.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T00:24:53.230Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T00:24:53.476Z",
+      "reason": "Medidas las versiones: lock en ruff 0.16.0 vs hook en 0.6.9, y gitleaks 12 menores atrasado"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T00:24:53.715Z",
+      "reason": "Research cerrado: la causa es tener dos fuentes de version, no una version vieja"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T00:25:37.011Z",
+      "evidence": "spec.md con 6 requisitos y 3 escenarios. El research reencuadro el pendiente: la causa no es que la version este vieja sino que hay DOS fuentes de version, asi que subir el rev lo arregla hoy y lo rompe otra vez en cuanto ruff suba en el lock -- que es exactamente como llego a estar en 0.6.9. Medido: uv.lock fija ruff 0.16.0 (verificado en el lock y con 'uv run ruff --version'), el hook traia v0.6.9, y la ultima de ruff-pre-commit es v0.16.1 (publicada hoy), o sea que ni siquiera casar el rev con la ultima seria correcto: habria que casarlo con el lock y volver a hacerlo en cada subida. Decision del usuario: hooks locales con el ruff del entorno, que elimina la clase de problema por construccion. Segundo dato del research: gitleaks esta en v8.18.4 y la ultima es v8.30.1 (2026-03-21), doce versiones menores atrasado en un detector de secretos; el usuario aprobo subirlo en el mismo cambio. REQ-006 es el que da la prueba util: 'pre-commit run --all-files' debe dejar el repo sin cambios, porque si el hook y el CI estuvieran desalineados se veria justo ahi.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T00:25:37.313Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T00:26:27.500Z",
+      "evidence": "plan.md con 3 tareas sobre un solo fichero de configuracion. Decision de diseño: solo ruff pasa a local; gitleaks conserva su rev remoto porque es un binario que NO forma parte del entorno del proyecto, y esa asimetria queda escrita en el fichero para que nadie la 'arregle'. Revision adversarial con tres hallazgos incorporados: R-1, 'uv run' dentro de un hook de git puede no encontrar uv si el PATH no se hereda (caso clasico de cliente grafico) -- aceptable aqui porque el repo se trabaja desde terminal, y ademas el fallo diria 'uv: command not found', que al menos explica algo, frente al fallo actual que reformatea en silencio y aborta el commit sin decir por que; R-2, types_or [python, pyi] tiene que cubrir lo mismo que declaraba ruff-pre-commit en su propio .pre-commit-hooks.yaml o el hook correria sobre todos los ficheros; R-3, 'pre-commit run --all-files' pasa TODOS los ficheros mientras que un commit pasa solo los staged, asi que hay que ejercitar los dos caminos y no solo el primero. La verificacion al reves no aplica en el sentido habitual (no hay rama de codigo que romper) pero hay equivalente y es la prueba de fondo: el git status limpio tras run --all-files es justo lo que fallaria si las versiones estuvieran desalineadas.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T00:26:27.759Z",
+      "reason": "plan revisado adversarialmente, 3 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T00:26:27.994Z",
+      "reason": "gate plan aprobado"
+    }
+  ]
+}
