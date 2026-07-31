@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "slug": "amarillo-boton-idioma",
+  "title": "El amarillo del boton de idioma es color de UI, no de ruta",
+  "mode": "lite",
+  "status": "closed",
+  "createdAt": "2026-07-31T13:38:53.806Z",
+  "updatedAt": "2026-07-31T13:42:58.372Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:39:37.493Z",
+      "evidence": "Premisa reproducida leyendo el fichero: site/index.html:107 declara --local como 'amarillo de senal: la via que se toma' y :208-211 lo usa para border-color y background del estado aria-pressed del selector de idioma. Misma mezcla que corrigio el PR #67 en el titular. PERO el segundo detalle del backlog resulta ser lo contrario de lo que parecia: el color declarado dos veces NO es residuo, porque --ink vale #0D1A1D en claro y #E4EBE8 en oscuro -casi blanco-, que sobre el amarillo daria contraste pesimo; el literal es una correccion deliberada y la que sobra es la primera declaracion. Ademas se contaron las 18 superficies que usan --local antes de tocar una, que es el error que el repo ya pago: 14 son de ruta y correctas, el CTA es literalmente la via que se toma, foco y subrayado usan el amarillo como acento interactivo, y solo el boton de idioma es mezcla real. Cuatro requisitos observables.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:39:38.196Z",
+      "evidence": "Cambio de una sola regla CSS mas un test. Sustituto elegido: inversion -fondo --ink, texto --paper-, que (a) no usa ningun token de ruta, (b) funciona en los dos temas SIN literales porque --ink y --paper se invierten juntos, lo que hace desaparecer el color duplicado de forma natural en vez de borrarlo a mano, y (c) MEJORA el contraste: 13.90:1 en claro y 15.17:1 en oscuro, frente a 9.34:1 y 11.92:1 actuales, calculado con la formula de luminancia relativa de WCAG. Riesgo unico: que el estado activo deje de distinguirse; cubierto por el contraste calculado y por comprobacion visual en los dos temas.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:42:57.209Z",
+      "evidence": "482 tests (eran 481), ruff check y format limpios, node --check OK, CHANGELOG CRLF puro. Contraste MEDIDO EN EL NAVEGADOR con Playwright tras esperar la transicion: 13.90:1 en claro y 15.17:1 en oscuro, coincidiendo con el calculo previo; el inactivo queda transparente con texto --muted. Inspeccion visual del selector en los dos temas. Test verificado AL REVES con los dos defectos: vuelve el amarillo (1 falla) y vuelve el color duplicado (1 falla), restaurado 24 pasan. Registrado un error propio de medicion: la primera lectura se tomo durante la transicion de 160 ms y daba un valor que no cuadraba con ningun token.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:42:57.435Z",
+      "evidence": "Los cuatro requisitos verificados, detalle en review.md. Hallazgo que corrige al backlog: decia que el color duplicado eran 'el mismo valor, mirar si es residuo' y NO lo son -coinciden solo en tema claro, porque --ink vale #E4EBE8 en oscuro-, asi que el literal era una correccion deliberada y borrarlo sin mas habria dejado texto casi blanco sobre amarillo. Y se contaron las 18 superficies antes de tocar una, que es justo el error cometido al corregir el titular: 14 son de ruta, el CTA es literalmente la via que se toma, foco y subrayado son acento interactivo, y solo el boton de idioma era mezcla.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:42:57.899Z",
+      "evidence": "handoff.md con las tres decisiones que no se deducen del codigo: la inversion se eligio porque se resuelve sola en los dos temas (--ink y --paper se intercambian juntos) y no por estetica; el color duplicado NO era residuo y quien vea uno parecido debe mirar si el token cambia entre temas antes de borrarlo; y solo se corrigio una de las cuatro superficies de UI a proposito, con las otras tres nombradas en verification.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T13:38:53.806Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T13:39:20.565Z",
+      "reason": "premisa reproducida y superficies contadas"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T13:39:20.798Z",
+      "reason": "spec escrita"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T13:39:37.493Z",
+      "evidence": "Premisa reproducida leyendo el fichero: site/index.html:107 declara --local como 'amarillo de senal: la via que se toma' y :208-211 lo usa para border-color y background del estado aria-pressed del selector de idioma. Misma mezcla que corrigio el PR #67 en el titular. PERO el segundo detalle del backlog resulta ser lo contrario de lo que parecia: el color declarado dos veces NO es residuo, porque --ink vale #0D1A1D en claro y #E4EBE8 en oscuro -casi blanco-, que sobre el amarillo daria contraste pesimo; el literal es una correccion deliberada y la que sobra es la primera declaracion. Ademas se contaron las 18 superficies que usan --local antes de tocar una, que es el error que el repo ya pago: 14 son de ruta y correctas, el CTA es literalmente la via que se toma, foco y subrayado usan el amarillo como acento interactivo, y solo el boton de idioma es mezcla real. Cuatro requisitos observables.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T13:39:37.728Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T13:39:37.966Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T13:39:38.196Z",
+      "evidence": "Cambio de una sola regla CSS mas un test. Sustituto elegido: inversion -fondo --ink, texto --paper-, que (a) no usa ningun token de ruta, (b) funciona en los dos temas SIN literales porque --ink y --paper se invierten juntos, lo que hace desaparecer el color duplicado de forma natural en vez de borrarlo a mano, y (c) MEJORA el contraste: 13.90:1 en claro y 15.17:1 en oscuro, frente a 9.34:1 y 11.92:1 actuales, calculado con la formula de luminancia relativa de WCAG. Riesgo unico: que el estado activo deje de distinguirse; cubierto por el contraste calculado y por comprobacion visual en los dos temas.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T13:39:38.451Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T13:42:56.969Z",
+      "reason": "implementado, medido en el navegador y verificado al reves"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T13:42:57.209Z",
+      "evidence": "482 tests (eran 481), ruff check y format limpios, node --check OK, CHANGELOG CRLF puro. Contraste MEDIDO EN EL NAVEGADOR con Playwright tras esperar la transicion: 13.90:1 en claro y 15.17:1 en oscuro, coincidiendo con el calculo previo; el inactivo queda transparente con texto --muted. Inspeccion visual del selector en los dos temas. Test verificado AL REVES con los dos defectos: vuelve el amarillo (1 falla) y vuelve el color duplicado (1 falla), restaurado 24 pasan. Registrado un error propio de medicion: la primera lectura se tomo durante la transicion de 160 ms y daba un valor que no cuadraba con ningun token.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T13:42:57.435Z",
+      "evidence": "Los cuatro requisitos verificados, detalle en review.md. Hallazgo que corrige al backlog: decia que el color duplicado eran 'el mismo valor, mirar si es residuo' y NO lo son -coinciden solo en tema claro, porque --ink vale #E4EBE8 en oscuro-, asi que el literal era una correccion deliberada y borrarlo sin mas habria dejado texto casi blanco sobre amarillo. Y se contaron las 18 superficies antes de tocar una, que es justo el error cometido al corregir el titular: 14 son de ruta, el CTA es literalmente la via que se toma, foco y subrayado son acento interactivo, y solo el boton de idioma era mezcla.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T13:42:57.654Z",
+      "reason": "conformance aprobado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T13:42:57.899Z",
+      "evidence": "handoff.md con las tres decisiones que no se deducen del codigo: la inversion se eligio porque se resuelve sola en los dos temas (--ink y --paper se intercambian juntos) y no por estetica; el color duplicado NO era residuo y quien vea uno parecido debe mirar si el token cambia entre temas antes de borrarlo; y solo se corrigio una de las cuatro superficies de UI a proposito, con las otras tres nombradas en verification.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T13:42:58.137Z",
+      "reason": "result review conforms sin seguimiento"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T13:42:58.372Z",
+      "reason": "verificado; queda mergear"
+    }
+  ]
+}

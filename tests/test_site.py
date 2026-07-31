@@ -191,6 +191,32 @@ def test_el_titular_no_resalta_la_nube_con_el_amarillo_de_la_via_local():
         assert real == esperado, f"el titular de '{lang}' resalta «{real}» y no «{esperado}»"
 
 
+def test_el_idioma_activo_no_se_marca_con_el_amarillo_de_la_via_local():
+    """Elegir idioma no es tomar una ruta, y el amarillo de esta paleta significa exactamente eso.
+
+    Es la misma mezcla del titular, en otra superficie: un token semántico usado como color de
+    estado de una UI. Se marca invirtiendo (`--ink` de fondo, `--paper` de texto), que además
+    se resuelve solo en los dos temas.
+    """
+    texto = INDEX.read_text(encoding="utf-8")
+
+    regla = re.search(r'\.lang button\[aria-pressed="true"\]\s*\{([^}]*)\}', texto)
+    assert regla, "no se encontró la regla del idioma activo"
+    cuerpo = regla.group(1)
+
+    assert "--local" not in cuerpo, (
+        "el idioma activo volvió al amarillo de la vía local: " + cuerpo.strip()
+    )
+
+    # El `color` iba declarado dos veces, y la segunda no era residuo: `--ink` es casi blanco en
+    # tema oscuro, así que hacía falta un literal para que el texto no desapareciera sobre el
+    # amarillo. Al invertir deja de hacer falta — pero si alguien reintroduce el duplicado, es
+    # señal de que el fondo volvió a ser un color que no acompaña a `--ink`.
+    assert cuerpo.count("color:") == cuerpo.count("-color:") + 1, (
+        "la regla del idioma activo declara `color` más de una vez: " + cuerpo.strip()
+    )
+
+
 # --- Metadatos sociales -------------------------------------------------------
 
 
