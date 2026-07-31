@@ -8,3 +8,8 @@
 #
 # Se descubrió porque el CI de Windows lo cazó; en Ubuntu y macOS pasaba en verde.
 src/local_delegate/resources/vendor/** -text
+
+# Misma razón para la captura del README, que `tests/test_captura.py` compara por SHA-256. Git
+# detecta los PNG como binarios por heurística y hoy no los toca —comprobado—, pero el precedente
+# de arriba costó demasiado como para dejarlo en manos de una heurística: se declara explícito.
+docs/assets/*.png -text
