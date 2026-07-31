@@ -3,9 +3,9 @@
   "slug": "hooks-huerfanos",
   "title": "Detectar y retirar los scripts de hooks huerfanos de instalaciones anteriores",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T00:03:16.794Z",
-  "updatedAt": "2026-07-31T00:12:48.775Z",
+  "updatedAt": "2026-07-31T00:17:21.238Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:17:20.715Z",
+      "evidence": "handoff.md con el estado (PR #79 mergeado, main en ac9a736, CI completo verde, en Unreleased), las cinco decisiones que no se deducen del codigo y los dos gotchas: (1) ctx.hooks_dir YA es hooks/local-delegate y no la raiz, asi que un probe que mire ahi reportaria como huerfanos los scripts recien instalados e install los borraria, dejando la maquina sin hooks y en bucle -- esta a un identificador de distancia y hay test dedicado; (2) un test puede no probar nada aunque el codigo este bien: el del directorio homonimo pasaba igual con el is_file() quitado porque unlink sobre un directorio lanza OSError y el except del retirado se lo traga, y solo lo destapo la verificacion al reves. Anotado el pendiente operativo: los cuatro huerfanos siguen en esta maquina y se limpian con 'local-delegate install', pero eso borra ficheros del HOME real y la autorizacion se pide aparte. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-31T00:12:48.775Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T00:17:20.715Z",
+      "evidence": "handoff.md con el estado (PR #79 mergeado, main en ac9a736, CI completo verde, en Unreleased), las cinco decisiones que no se deducen del codigo y los dos gotchas: (1) ctx.hooks_dir YA es hooks/local-delegate y no la raiz, asi que un probe que mire ahi reportaria como huerfanos los scripts recien instalados e install los borraria, dejando la maquina sin hooks y en bucle -- esta a un identificador de distancia y hay test dedicado; (2) un test puede no probar nada aunque el codigo este bien: el del directorio homonimo pasaba igual con el is_file() quitado porque unlink sobre un directorio lanza OSError y el except del retirado se lo traga, y solo lo destapo la verificacion al reves. Anotado el pendiente operativo: los cuatro huerfanos siguen en esta maquina y se limpian con 'local-delegate install', pero eso borra ficheros del HOME real y la autorizacion se pide aparte. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T00:17:20.982Z",
+      "reason": "gates completos, PR #79 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T00:17:21.238Z",
+      "reason": "change cerrado"
     }
   ]
 }

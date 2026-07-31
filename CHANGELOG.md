@@ -53,6 +53,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   preguntar. `uninstall` sí la retira sin preguntar: ahí es justo lo que se pidió.
 
 ### Changed
+- **Los hooks de ruff en `pre-commit` pasan a ser locales** (solo desarrollo). Ejecutan el ruff
+  del entorno del proyecto —el que fija `uv.lock` y el que corre el CI— en vez de descargar el
+  suyo. Había **dos** versiones que se separaban en silencio: el hook estaba en 0.6.9 con el
+  proyecto en 0.16.0, y formatean distinto un `assert x == y, "mensaje largo"`, así que el hook
+  reformateaba, el `ruff format --check` del CI lo deshacía y el commit se abortaba. Subir el
+  `rev` habría arreglado ese día y roto el siguiente, que es justo como se llegó a 0.6.9. De paso,
+  `gitleaks` sube de `v8.18.4` a `v8.30.1`.
 - **Cambio de comportamiento: el default deja de escribir en clientes que no existen.** Antes,
   sin flags, `install` equivalía a `--target all` y creaba `~/.codex/AGENTS.md` y
   `~/.codex/config.toml` en máquinas sin Codex. `--target` se conserva con su semántica exacta
