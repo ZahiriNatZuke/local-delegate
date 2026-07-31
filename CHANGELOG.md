@@ -7,6 +7,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **El daemon ya sabe con qué cliente habla: registra qué capabilities declara cada uno y qué
+  revisión de protocolo negoció de verdad.** Hasta ahora no había ni una ocurrencia de
+  `capabilities` en el paquete, así que preguntas como «¿puede este cliente responder a una
+  pregunta de una tool?» no tenían respuesta más que suponiendo. Un `ServerMiddleware` observa cada
+  conexión y deja el dato en dos sitios: una línea por cliente en `clients.jsonl` (junto al log de
+  uso) y el estado en vivo en `GET /api/status`, bajo la clave `clients`.
+
+  Tres cosas se midieron contra el SDK antes de escribir el código, y las tres cambiaron el diseño.
+  **En `initialize` no hay nada que leer**: el middleware corre antes del commit del handshake y ve
+  `None` en capabilities y en identidad, así que registrar «en `initialize`» —que era el plan
+  original— no habría registrado nada; el primer mensaje útil es `notifications/initialized`. **La
+  revisión negociada no la predicen las constantes del SDK**: con `LATEST_PROTOCOL_VERSION` en
+  `2026-07-28` y el defecto en `2025-03-26`, lo negociado fue `2025-11-25`, que no es ninguna de las
+  dos — motivo suficiente para medirla en vez de deducirla. Y desde la revisión `2026-07-28` **las
+  capabilities pueden llegar sin identidad** (el `client_info` es opcional), así que las dos cosas
+  se leen por separado y el nombre puede faltar.
+
+  Es un `ServerMiddleware`, **no** el `Extension`/`intercept_tool_call` que este repo descartó: aquel
+  se descartó porque la telemetría de coste vive en los caminos al backend y el borde MCP no ve los
+  tokens reales; el dato de identidad, al revés, **solo** existe en el borde. Observar nunca altera
+  la petición: un fallo del registro no llega al cliente.
+
 - **`ci-gate`: un job que da el veredicto del run mirando los *steps*, para que el «job fantasma» no
   bloquee un merge.** GitHub dejaba `test (windows-latest)` en `in_progress` **para siempre** con
   sus ocho pasos en `success` —incluido el `Complete job` que pone el propio runner— y

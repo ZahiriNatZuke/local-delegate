@@ -159,7 +159,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_BACKEND_ORIGIN` | `auto` | `local`/`remote` fuerzan el origen del cómputo; `auto` lo deduce del host. Ponlo si llegas al backend por un **túnel** (`ssh -L`, port-forward): en loopback se vería como local |
 | `LOCAL_DELEGATE_TIMEOUT` | `180` | Timeout HTTP (segundos) |
 | `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` | `2` | Backpressure máximo por proceso; compartido por todos los clientes del daemon |
-| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes |
+| `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes y del `clients.jsonl` |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Modelo para documentos largos |

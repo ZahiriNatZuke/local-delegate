@@ -3,39 +3,39 @@
   "slug": "sdk-fase-3-evaluacion",
   "title": "Evaluacion de la fase 3 del SDK mcp 2.x: que aporta cada capacidad y cual se implementa",
   "mode": "standard",
-  "status": "researching",
+  "status": "closed",
   "createdAt": "2026-07-31T15:03:22.590Z",
-  "updatedAt": "2026-07-31T15:07:28.963Z",
+  "updatedAt": "2026-07-31T16:06:37.152Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:05:02.993Z",
+      "evidence": "Cinco requisitos observables con escenarios: veredicto por capacidad, evidencia por ejecucion, escritura en Architecture.md, lo bloqueado declarado como tal y evaluacion pieza a pieza de modulos heterogeneos",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:05:03.553Z",
+      "evidence": "Cinco tareas trazadas a los requisitos; el paso de inventario lleva la precaucion de buscar desde Python y no con ripgrep, que es el error que este change ya cometio una vez",
+      "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:05:04.292Z",
+      "evidence": "Change documental: sin codigo, sin dependencias; cada afirmacion de Architecture.md rastreable a una comprobacion ejecutada en research.md; sin secretos ni datos personales",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:05:05.024Z",
+      "evidence": "Los cinco requisitos cumplidos y verificados en review.md; veredicto conforms",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:06:16.641Z",
+      "evidence": "handoff.md con los cinco veredictos, sus motivos y los condicionantes; descartes escritos en Architecture.md",
+      "actor": "user"
     }
   },
   "history": [
@@ -52,6 +52,102 @@
       "to": "researching",
       "at": "2026-07-31T15:07:28.963Z",
       "reason": "Analisis de las cinco capacidades hecho contra el SDK instalado y server.py"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T16:04:45.435Z",
+      "reason": "Cierre de la evaluacion: veredicto de las cinco capacidades escrito en Architecture.md"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T16:05:02.993Z",
+      "evidence": "Cinco requisitos observables con escenarios: veredicto por capacidad, evidencia por ejecucion, escritura en Architecture.md, lo bloqueado declarado como tal y evaluacion pieza a pieza de modulos heterogeneos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T16:05:03.291Z",
+      "reason": "Plan del change de decision"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T16:05:03.553Z",
+      "evidence": "Cinco tareas trazadas a los requisitos; el paso de inventario lleva la precaucion de buscar desde Python y no con ripgrep, que es el error que este change ya cometio una vez",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T16:05:03.775Z",
+      "reason": "Plan revisado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T16:05:04.044Z",
+      "reason": "Seccion escrita en Architecture.md y traza rellenada"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T16:05:04.292Z",
+      "evidence": "Change documental: sin codigo, sin dependencias; cada afirmacion de Architecture.md rastreable a una comprobacion ejecutada en research.md; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T16:05:04.541Z",
+      "reason": "Verificacion escrita con la tabla de comprobaciones"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T16:05:04.772Z",
+      "reason": "Revision del resultado escrita"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T16:05:05.024Z",
+      "evidence": "Los cinco requisitos cumplidos y verificados en review.md; veredicto conforms",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T16:06:16.641Z",
+      "evidence": "handoff.md con los cinco veredictos, sus motivos y los condicionantes; descartes escritos en Architecture.md",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T16:06:36.909Z",
+      "reason": "Traza completa"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T16:06:37.152Z",
+      "reason": "Veredicto de las cinco capacidades escrito en Architecture.md"
     }
   ]
 }
