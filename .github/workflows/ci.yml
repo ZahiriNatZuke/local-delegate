@@ -66,14 +66,19 @@ jobs:
   #
   # El cuelgue es POSTERIOR a nuestro código: el runner terminó y lo que falta es que GitHub cierre
   # el job. Se descartó por ejecución un proceso huérfano reteniendo handles —el fallo clásico en
-  # Windows—: la suite no deja procesos vivos. Eso no lo podemos arreglar; lo que sí es que no
-  # espere las 6 HORAS del default de GitHub. Con esto, un cuelgue es un fallo en 8 minutos que se
-  # relanza con `gh run rerun`.
+  # Windows—: la suite no deja procesos vivos.
   #
-  # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj del timeout
-  # corre sobre la EJECUCIÓN del job, no sobre la espera en cola. Ajustarlo de menos convertiría
-  # un día lento en un rojo que no es del código; ajustarlo de más es tiempo perdido cada vez que
-  # se cuelga, que ya van dos en dos días.
+  # OJO, y esto se comprobó a base de equivocarse: `timeout-minutes` NO rescata de ese cuelgue.
+  # Lo aplica el RUNNER sobre un job que sigue ejecutándose, y aquí el runner ya terminó — no hay
+  # nada que matar. Medido en el PR #88: el job estuvo más de 10 minutos `in_progress` con este
+  # límite en 8 y no disparó. Para el job fantasma sigue haciendo falta `gh run cancel` + `rerun`.
+  #
+  # Entonces, ¿para qué está? Para el otro modo de fallo, el que sí existe y este repo no cubría:
+  # un job que de verdad se atasca EJECUTANDO (un test que no termina, una descarga que cuelga).
+  # Ahí sin esto regirían las 6 HORAS del default de GitHub.
+  #
+  # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj corre sobre la
+  # ejecución del job, no sobre la espera en cola.
   test:
     strategy:
       # Sin fail-fast: si un sistema falla interesa ver también qué hicieron los otros dos,

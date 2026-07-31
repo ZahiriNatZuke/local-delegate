@@ -41,10 +41,32 @@ Qué hacer: `gh run cancel <run-id>` y luego `gh run rerun <run-id>`. Ojo, **el 
 retraso en las dos direcciones**: la cancelación puede tardar en verse, y `gh run rerun --job`
 responde «cannot be rerun» mientras el job siga `in_progress`.
 
-Por eso `ci.yml` declara `timeout-minutes` en **todos** sus jobs: sin ellos rige el default de
-GitHub, **360 minutos**. Y declara `concurrency`, para que un push nuevo a una rama de trabajo
-cancele el run anterior — en `main` no, porque ahí el run es el registro de que ese estado pasó
-el CI.
+### `timeout-minutes` NO rescata de esto, y conviene saberlo
+
+Se intentó y **no funciona**, comprobado en el PR #88: el job estuvo más de 10 minutos
+`in_progress` con `timeout-minutes: 8` y no disparó. La razón encaja con el diagnóstico —
+`timeout-minutes` lo aplica el **runner**, matando un job que sigue **ejecutándose**, y aquí el
+runner ya terminó: no hay nada que matar. Quien no cierra el job es el backend de GitHub, y a ese
+no lo alcanza.
+
+`ci.yml` lo declara igualmente porque cubre **el otro** modo de fallo, el que sí es nuestro: un
+job que de verdad se atasca ejecutando (un test que no termina, una descarga colgada). Sin él
+regirían las **6 horas** del default. Pero para el job fantasma, el único remedio hoy es
+`cancel` + `rerun` a mano.
+
+**Es un problema conocido de GitHub y sin solución oficial** — ver la
+[discusión #161434](https://github.com/orgs/community/discussions/161434), con el mismo síntoma
+exacto (job en `success`, estado que nunca llega al PR, merge bloqueado) y sin más respuesta que
+la del bot.
+
+**La vía que queda por explorar**, y no es trivial: un job *gate* requerido que consulte la API y
+mire los **steps** de los demás jobs en vez de su estado agregado — como los steps sí terminan,
+el gate pasaría aunque el job siga colgado. Ojo: el patrón habitual para esto (`needs` +
+`always()`) **no sirve aquí**, porque `needs` espera a que el job termine y es justo lo que no
+pasa.
+
+`ci.yml` declara además `concurrency`, para que un push nuevo a una rama de trabajo cancele el run
+anterior — en `main` no, porque ahí el run es el registro de que ese estado pasó el CI.
 
 ## En los ajustes de GitHub
 
