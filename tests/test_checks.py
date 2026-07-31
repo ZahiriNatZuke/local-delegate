@@ -39,6 +39,10 @@ def make_ctx(home, **kwargs):
         # donde corra: verde en CI (donde no existe) y potencialmente otra cosa en la máquina de
         # quien desarrolla. El default se ejercita aparte, con `config.LOG_DIR` en un tmp_path.
         "clients_seen": checks.NO_CLIENTS,
+        # Quinto colaborador de red, doblado por la misma razón que los otros cuatro: sin esto
+        # cada `run_all` de la suite pediría `/models` al backend REAL de la máquina. Devuelve
+        # «no exige credencial», que es el caso en el que la entrada MCP da igual.
+        "backend_needs_key": lambda: (False, ""),
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -574,6 +578,63 @@ def test_claude_mcp_missing_entry(tmp_path):
     assert result.fix_hint == checks.INSTALL_HINT
 
 
+# --- Credencial del backend por el camino del cliente -------------------------
+# El check nace de una avería que ningún otro veía: entradas MCP en `stdio`, el secreto solo en el
+# lanzador del daemon y todas las tools `local_*` devolviendo 401 mientras `doctor` daba todo OK.
+
+
+def _con_stdio(home):
+    """Deja la entrada de Claude Code en modo stdio, como la escribe `install` por defecto."""
+    (home / ".claude.json").write_text(
+        json.dumps({"mcpServers": {install.SERVER_NAME: {"type": "stdio", "command": "uvx"}}}),
+        encoding="utf-8",
+    )
+    return home
+
+
+def test_credencial_ok_cuando_el_backend_no_exige_key(tmp_path, monkeypatch):
+    """Sin credencial de por medio, el modo de la entrada MCP no cambia nada."""
+    monkeypatch.setattr(checks.config, "API_KEY", "")
+    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (False, ""))
+    assert result_for("service.credential", ctx).status == checks.OK
+
+
+def test_credencial_ok_cuando_las_entradas_van_por_el_daemon(tmp_path, monkeypatch):
+    """Mismo backend que el test de abajo: lo único que cambia es el modo de la entrada.
+
+    Los dos tests son pareja a propósito. Un probe que mirase solo el backend —y no el modo—
+    pasaría este y fallaría el siguiente; uno que mirase solo el modo, al revés. Separados, ninguna
+    de las dos mitades puede aprobar por la guarda de la otra.
+    """
+    monkeypatch.setattr(checks.config, "API_KEY", "")
+    ctx = make_ctx(make_home(tmp_path), backend_needs_key=lambda: (True, ""))  # http
+    assert result_for("service.credential", ctx).status == checks.OK
+
+
+def test_credencial_warn_cuando_el_cliente_habla_por_stdio_sin_key(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks.config, "API_KEY", "")
+    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
+    result = result_for("service.credential", ctx)
+    assert result.status == checks.WARN
+    assert "Claude Code" in result.detail and "401" in result.detail
+    assert result.fix_hint == checks.CREDENTIAL_HINT
+
+
+def test_credencial_ok_si_la_key_esta_en_el_entorno(tmp_path, monkeypatch):
+    """Con la variable cargada, la entrada stdio la hereda y el 401 no llega a pasar."""
+    monkeypatch.setattr(checks.config, "API_KEY", "secreto-de-mentira")
+    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
+    assert result_for("service.credential", ctx).status == checks.OK
+
+
+def test_credencial_unknown_si_no_se_pudo_preguntar(tmp_path):
+    """Sin respuesta del backend no hay veredicto: lo no comprobable es `unknown`, nunca `missing`."""
+    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=checks.NO_KEY_PROBE)
+    result = result_for("service.credential", ctx)
+    assert result.status == checks.UNKNOWN
+    assert result.fix_hint == ""
+
+
 # --- Daemon y backend ---------------------------------------------------------
 
 
@@ -827,7 +888,15 @@ def test_no_probe_writes_anything(tmp_path):
 
 # --- El módulo no puede mentir sobre su propio tamaño ------------------------
 
-_NUMERO = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce", 15: "quince"}
+_NUMERO = {
+    10: "diez",
+    11: "once",
+    12: "doce",
+    13: "trece",
+    14: "catorce",
+    15: "quince",
+    16: "dieciséis",
+}
 
 
 def test_el_docstring_dice_cuantos_checks_hay_de_verdad():

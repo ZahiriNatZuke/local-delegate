@@ -130,6 +130,7 @@ def _stub_environment(
     daemon_alive=True,
     log_dir=None,
     backend_via_daemon=None,
+    needs_key=False,
 ):
     """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta.
 
@@ -161,6 +162,10 @@ def _stub_environment(
         "backend_probe",
         lambda: (True, "") if backend else (False, "no responde (ConnectError)"),
     )
+    # Mismo caso que `query_backend`: sin doblarlo, `service.credential` pediría `/models` al
+    # backend REAL de la máquina, verde en CI y otra cosa aquí. Por defecto «no exige credencial»,
+    # que es el escenario donde el modo de la entrada MCP no cambia nada.
+    monkeypatch.setattr(doctor, "backend_requires_key", lambda: (needs_key, ""))
     monkeypatch.setattr(
         daemon,
         "query_daemon",

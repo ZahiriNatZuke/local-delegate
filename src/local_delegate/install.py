@@ -108,6 +108,12 @@ class Action:
     target: Path | str
     detail: str
     run: object = field(repr=False, default=None)  # callable() -> str | None
+    # Lo que se va a escribir, **textual**. Solo lo imprime `--dry-run`, y existe por un caso
+    # concreto: el incidente de los hooks en Windows del 2026-07-30. El plan decía «registra 2
+    # hook(s)» y el defecto vivía en el *string generado* —un comando de shell sin comillas—, así
+    # que revisar el plan antes de aplicarlo no habría avisado de nada. Un resumen dice cuántas
+    # cosas se escriben; esto dice **qué** se escribe, que es lo único revisable.
+    literal: str = ""
 
     def describe(self) -> str:
         return f"[{self.kind}] {self.target} — {self.detail}"
@@ -510,6 +516,10 @@ def plan_install(opts: Options) -> list[Action]:
                 f"registra {len(entries)} hook(s): "
                 + ", ".join(f"{e}{'/' + m if m else ''}" for e, m, _c in entries),
                 _run_settings,
+                literal="\n".join(
+                    f"{e}{'/' + m if m else ''}: {json.dumps(c, ensure_ascii=False)}"
+                    for e, m, c in entries
+                ),
             )
         )
 
@@ -559,6 +569,7 @@ def plan_install(opts: Options) -> list[Action]:
                     "claude",
                     f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
                     lambda entry=entry: _register_claude_mcp(opts, entry),
+                    literal=json.dumps(entry, ensure_ascii=False),
                 )
             )
         if "codex" in opts.targets and not opts.skip_codex_mcp:
@@ -574,6 +585,7 @@ def plan_install(opts: Options) -> list[Action]:
                     config_path,
                     f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
                     _run_codex,
+                    literal=codex_mcp_block(entry),
                 )
             )
     return actions
@@ -734,6 +746,11 @@ def apply(actions: list[Action], *, dry_run: bool, out=print) -> int:
     for action in actions:
         if dry_run:
             out(f"[dry-run] {action.describe()}")
+            # El literal SOLO aquí: al aplicar de verdad, la salida ya la escribe `action.run()`
+            # con lo que pasó, y repetir lo que se iba a escribir sobraría. En `--dry-run` es al
+            # revés: es lo único que se puede revisar antes de que toque el disco.
+            for linea in action.literal.splitlines():
+                out(f"          {linea}")
             continue
         out(action.describe())
         try:

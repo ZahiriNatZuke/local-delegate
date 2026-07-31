@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los quince elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los dieciséis elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Quince checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Dieciséis checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -52,6 +52,7 @@ INSTALL_HINT = "local-delegate install"
 SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
+CREDENTIAL_HINT = "local-delegate install --mcp-mode http  (el daemon sí tiene la credencial)"
 # El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
 # decisión vive en `update.upgrade_command()`, que es de donde la toma `_upgrade_hint`.
 
@@ -119,6 +120,23 @@ def _default_backend_models() -> tuple[bool, str]:
         # no una duda: aquí no cabe el `unknown` del 401.
         return False, "no responde (según el daemon, que sí tiene credencial)"
     return doctor.backend_probe()
+
+
+def _default_backend_needs_key() -> tuple[bool | None, str]:
+    """¿El backend rechaza a quien no lleva credencial? Ver ``doctor.backend_requires_key``."""
+    from . import doctor
+
+    return doctor.backend_requires_key()
+
+
+def NO_KEY_PROBE() -> tuple[bool | None, str]:
+    """Colaborador para los tests: no se pregunta al backend y no hay veredicto.
+
+    Existe por el mismo motivo que :func:`NO_CLIENTS`: sin doblarlo, la suite saldría a la red de
+    verdad y sería verde en CI —donde no hay backend— y otra cosa en la máquina de quien
+    desarrolla. Va en **los dos** arneses, no en uno.
+    """
+    return None, "no se prueba el backend en este comando"
 
 
 def _default_version_of(component: str, config_path: Path | None) -> tuple[str | None, str | None]:
@@ -236,6 +254,11 @@ class Context:
     # de su propia variable de entorno—, así que `doctor --home` seguirá leyendo el registro real
     # de la máquina, igual que ya hacen los checks de servicio y backend.
     clients_seen: Callable[[], tuple[list[dict], str | None]] = _default_clients_seen
+    # Quinto colaborador que habla por red, y como los otros: default real, doblado en los tests.
+    # Doblarlo NO es opcional en ninguno de los dos arneses — un colaborador de red sin doblar deja
+    # la suite saliendo a internet de verdad, verde en CI y otra cosa en la máquina de quien
+    # desarrolla. Ya pasó dos veces el 2026-07-31.
+    backend_needs_key: Callable[[], tuple[bool | None, str]] = _default_backend_needs_key
 
     @property
     def claude_dir(self) -> Path:
@@ -634,6 +657,38 @@ def _probe_memory(ctx: Context) -> Result:
     return Result(status, " · ".join(details), INSTALL_HINT if is_warning(status) else "")
 
 
+# El modo de una entrada MCP se deriva en UN solo sitio por cliente: lo miran el probe de la
+# entrada y el de la credencial, y dos definiciones de «esta entrada es stdio» son exactamente la
+# clase de verdad repartida que ya costó caro en este repo.
+def _entry_mode(entry: dict) -> str:
+    """Modo de la entrada de Claude Code. Sin ``type`` es stdio, que es el default histórico."""
+    return str(entry.get("type") or "stdio")
+
+
+def _codex_mode(section: str) -> str:
+    """Modo del bloque de Codex: el TOML no lleva ``type``, lo delata tener ``url``."""
+    return "http" if "url = " in section else "stdio"
+
+
+def _claude_mcp_entry(ctx: Context) -> dict | None:
+    """La entrada MCP de Claude Code, o ``None`` si no se pudo leer o no está."""
+    data, _ = read_json(ctx.home / ".claude.json")
+    if data is None:
+        return None
+    servers = data.get("mcpServers")
+    entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
+    return entry if isinstance(entry, dict) else None
+
+
+def _codex_mcp_section(ctx: Context) -> str | None:
+    """El bloque ``[mcp_servers.local-delegate]`` de Codex, o ``None`` si no se pudo leer."""
+    text, _ = read_text(ctx.codex_dir / "config.toml")
+    if text is None:
+        return None
+    section = install._CODEX_SECTION_RE.search(text)
+    return section.group(0) if section else None
+
+
 def _probe_mcp_claude(ctx: Context) -> Result:
     path = ctx.home / ".claude.json"
     if not ctx.claude_dir.is_dir() and not path.exists():
@@ -647,7 +702,7 @@ def _probe_mcp_claude(ctx: Context) -> Result:
     entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
     if not isinstance(entry, dict):
         return Result(MISSING, f"'{install.SERVER_NAME}' no está en {path}", INSTALL_HINT)
-    kind = str(entry.get("type") or "stdio")
+    kind = _entry_mode(entry)
     where = entry.get("url") or entry.get("command") or ""
     return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''})")
 
@@ -664,11 +719,62 @@ def _probe_mcp_codex(ctx: Context) -> Result:
     section = install._CODEX_SECTION_RE.search(text)
     if not section:
         return Result(MISSING, f"sin [mcp_servers.{install.SERVER_NAME}] en {path}", INSTALL_HINT)
-    kind = "http" if "url = " in section.group(0) else "stdio"
+    kind = _codex_mode(section.group(0))
     managed = _has_block(text, install.TOML_BEGIN, install.TOML_END)
     if not managed:
         return Result(WARN, f"entrada {kind} en {path}, pero puesta a mano (sin marcadores)")
     return Result(OK, f"bloque gestionado en {path} ({kind})")
+
+
+def _probe_mcp_credential(ctx: Context) -> Result:
+    """¿Podrá autenticarse contra el backend el proceso MCP que arranca el cliente?
+
+    Nace de una avería real que **ningún check veía** (2026-07-31): en una máquina con el backend
+    exigiendo API key, las entradas MCP estaban en modo ``stdio``, el secreto vivía solo en el
+    lanzador del daemon (DPAPI) y toda tool ``local_*`` llevaba un día devolviendo 401. `doctor`
+    daba **todo OK**, backend incluido, porque desde el PR #100 le pregunta al daemon — que sí
+    tiene credencial. El diagnóstico quedó bien y el camino real quedó roto.
+
+    De ahí que aquí no se pregunte «¿está sano el backend?» sino «¿está abierto para quien no
+    lleva la key?». La distinción es todo el check: sin ella se vuelve a mirar por el camino
+    equivocado.
+
+    El entorno de este proceso se usa como testigo del que verá el cliente: los dos salen del
+    entorno de usuario. No es exacto —alguien puede lanzar el cliente desde una consola con la
+    variable cargada— y por eso el aviso nombra el síntoma comprobable (401 en las tools) en vez
+    de afirmar que la máquina está rota.
+    """
+    exige, motivo = ctx.backend_needs_key()
+    if exige is None:
+        return Result(UNKNOWN, motivo)
+    if not exige:
+        return Result(OK, "el backend no exige credencial: cualquier entrada MCP puede usarlo")
+    if config.API_KEY:
+        return Result(OK, "el backend exige credencial y LOCAL_DELEGATE_API_KEY está en el entorno")
+
+    entradas: list[tuple[str, str]] = []
+    entry = _claude_mcp_entry(ctx)
+    if entry is not None:
+        entradas.append(("Claude Code", _entry_mode(entry)))
+    section = _codex_mcp_section(ctx)
+    if section is not None:
+        entradas.append(("Codex", _codex_mode(section)))
+    if not entradas:
+        return Result(UNKNOWN, "el backend exige credencial, pero no hay entrada MCP que mirar")
+
+    # `--api-key-env` no salva a una entrada stdio aquí: reenvía `${LOCAL_DELEGATE_API_KEY}`, que
+    # sale del mismo entorno que acabamos de ver vacío. Por eso el único arreglo que se ofrece es
+    # el daemon, que tiene el secreto por otra vía.
+    ciegas = [cliente for cliente, modo in entradas if modo != "http"]
+    if not ciegas:
+        return Result(OK, "el backend exige credencial y las entradas MCP van por el daemon (http)")
+    verbo = "habla" if len(ciegas) == 1 else "hablan"
+    return Result(
+        WARN,
+        f"el backend exige credencial y {' y '.join(ciegas)} {verbo} por stdio sin ella: "
+        "sus tools local_* responderán 401",
+        CREDENTIAL_HINT,
+    )
 
 
 # --- Probes de servicios y backend --------------------------------------------
@@ -772,7 +878,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Quince elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Dieciséis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -793,13 +899,18 @@ CHECKS: tuple[Check, ...] = (
     Check("scaffold.mcp_codex", "andamiaje", "MCP en Codex", _probe_mcp_codex),
     Check("service.daemon", "servicio", "daemon", _probe_daemon),
     Check("service.backend", "servicio", "backend", _probe_backend_models),
+    # En `servicio` y no en `andamiaje` aunque lea las entradas MCP: sale a la red, y el grupo
+    # `andamiaje` no sale a la red por contrato — es lo que permite a `install` correr su reporte
+    # sin tocar nada externo (ver `_SCAFFOLD_GROUPS` en cli.py). Además se lee junto al backend,
+    # que es de lo que habla.
+    Check("service.credential", "servicio", "credencial del backend", _probe_mcp_credential),
     Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
 )
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los quince probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los dieciséis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -813,7 +924,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros catorce
+        except Exception as exc:  # un check roto no debe impedir ver los otros quince
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

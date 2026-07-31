@@ -6,6 +6,36 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`doctor` mira si el cliente podrá autenticarse contra el backend, y no solo si el backend está
+  vivo.** Nace `service.credential`, la comprobación **nº16**. Sale de una avería real que **ningún
+  check veía**: en una máquina con el backend exigiendo API key, las entradas MCP registradas en
+  modo `stdio` y el secreto viviendo solo en el lanzador del daemon (DPAPI en Windows), **todas las
+  tools `local_*` llevaban un día devolviendo `401`** — última llamada con éxito el 2026-07-30 a
+  las 09:36— mientras `doctor` daba **todo `[ OK ]`**, backend incluido.
+
+  No es una regresión del arreglo anterior: el proceso `stdio` que lanza el cliente hereda el
+  entorno del cliente, no el del lanzador del daemon, así que son dos caminos distintos y solo uno
+  tiene credencial. Preguntar por el camino del daemon estaba bien para *diagnosticar el backend* y
+  era el camino equivocado para *saber si el cliente puede usarlo*.
+
+  De ahí el diseño: el check pregunta al backend **sin cabecera de autorización**, que es la única
+  forma de ver lo que se encontrará quien no lleva la key. Si el backend está abierto, el modo de la
+  entrada da igual y sale `ok`; si exige credencial y alguna entrada habla por `stdio` sin tenerla,
+  sale `warn` nombrando al cliente y ofreciendo `install --mcp-mode http`, que es el arreglo que
+  funciona sin escribir el secreto en ningún fichero. Vive en el grupo `servicio` y no en
+  `andamiaje` porque sale a la red, y ese grupo no lo hace por contrato — es lo que permite a
+  `install` reportar sin tocar nada externo.
+
+### Changed
+- **`--dry-run` enseña el comando literal que va a escribir, no solo cuántos escribe.** Lo pedía el
+  incidente de los hooks en Windows del 2026-07-30: el plan decía «registra 2 hook(s)» y el defecto
+  vivía en el **string generado** —un comando de shell sin comillas—, así que revisar el plan antes
+  de aplicarlo no habría avisado de nada. Ahora, debajo de cada acción que escribe algo *generado*
+  (los comandos de los hooks y la entrada MCP de Claude Code y de Codex), el plan imprime el texto
+  exacto. Solo en `--dry-run`: al aplicar de verdad, la salida ya la escribe la acción con lo que
+  pasó.
+
 ## [0.18.1] - 2026-07-31
 
 ### Fixed

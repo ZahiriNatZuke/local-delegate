@@ -202,9 +202,27 @@ def test_dry_run_writes_nothing(tmp_path):
     lines: list[str] = []
     actions = inst.plan_install(_opts(tmp_path))
     assert inst.apply(actions, dry_run=True, out=lines.append) == 0
-    assert lines and all(line.startswith("[dry-run]") for line in lines)
+    # Una acción puede ocupar varias líneas: la suya, y debajo indentado el literal que va a
+    # escribir. Lo que este test defiende es que NINGUNA línea anuncia una escritura de verdad.
+    assert lines and all(line.startswith(("[dry-run]", "          ")) for line in lines)
     assert not (tmp_path / ".claude").exists()
     assert not (tmp_path / ".codex").exists()
+
+
+def test_dry_run_enseña_el_comando_literal_de_cada_hook(tmp_path):
+    """No basta con «registra 2 hook(s)»: el defecto puede vivir en el string generado.
+
+    Es exactamente lo que pasó el 2026-07-30 en Windows — un comando de shell sin comillas dejó
+    los hooks registrados y muertos, y el plan del `--dry-run` decía que todo iba bien porque solo
+    contaba cuántos eran. Un resumen no es revisable; el comando sí.
+    """
+    lines: list[str] = []
+    inst.apply(inst.plan_install(_opts(tmp_path)), dry_run=True, out=lines.append)
+    salida = "\n".join(lines)
+    for script, _event, _matcher in inst._HOOK_EVENTS:
+        assert script in salida, f"el plan no enseña el comando de {script}"
+    # Y la entrada MCP, por el mismo motivo: es lo otro que se escribe generado y no copiado.
+    assert '"command": "uvx"' in salida or 'command = "uvx"' in salida
 
 
 # --- Entrada MCP --------------------------------------------------------------
