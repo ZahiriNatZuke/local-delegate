@@ -17,6 +17,35 @@ tanto se revisa en un PR) y lo que solo existe en los **ajustes de GitHub**.
 | `SECURITY.md` | canal privado de reporte y superficie a tener en cuenta |
 | `.pre-commit-config.yaml` | gitleaks + ruff antes de cada commit local |
 
+### Cuando un job dice `in_progress` y no avanza
+
+Pasó **dos veces en dos días** (PRs #77 y #86): `test (windows-latest)` se quedó en `in_progress`
+y bloqueó el merge —1954 s el primero— mientras GitHub Status decía «All Systems Operational».
+
+**Antes de culpar al código, mira los *steps*, no el reloj:**
+
+```bash
+gh api repos/ZahiriNatZuke/local-delegate/actions/jobs/<job-id> \
+  --jq '{status, completed_at, pasos: [.steps[] | {name, conclusion}]}'
+```
+
+Las dos veces salió lo mismo: **todos los pasos en `success`, incluido `Complete job`**, con
+`completed_at: null`. O sea, el runner terminó en ~86 s y lo que falta es que GitHub cierre el
+job. **El reloj de la interfaz cuenta desde el encolado y no distingue «tarda» de «terminó y nadie
+lo marcó».**
+
+Se descartó por ejecución la causa que primero se sospecha en Windows —un proceso hijo huérfano
+reteniendo los handles del job—: la suite corrida en Windows no deja ni un proceso vivo.
+
+Qué hacer: `gh run cancel <run-id>` y luego `gh run rerun <run-id>`. Ojo, **el estado va con
+retraso en las dos direcciones**: la cancelación puede tardar en verse, y `gh run rerun --job`
+responde «cannot be rerun» mientras el job siga `in_progress`.
+
+Por eso `ci.yml` declara `timeout-minutes` en **todos** sus jobs: sin ellos rige el default de
+GitHub, **360 minutos**. Y declara `concurrency`, para que un push nuevo a una rama de trabajo
+cancele el run anterior — en `main` no, porque ahí el run es el registro de que ese estado pasó
+el CI.
+
 ## En los ajustes de GitHub
 
 No se pueden versionar, así que van en un script idempotente:

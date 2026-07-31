@@ -10,11 +10,19 @@ on:
 permissions:
   contents: read
 
+# Un run colgado no debe seguir ocupando sitio cuando ya se empujó el arreglo. En una rama de
+# trabajo, el push nuevo cancela el anterior; en `main` NO, porque ahí cada commit ya está
+# mergeado y su run es el registro de que ese estado pasó el CI.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   # ruff y el parser de JS dan el mismo veredicto en cualquier sistema: se corren una sola vez.
   # Lo que sí depende del SO son los tests, y por eso el job `test` va en matriz.
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
 
@@ -49,6 +57,23 @@ jobs:
   # API de Win32 (`_pid_alive` usa ctypes) se comportan distinto en cada sistema. La 0.11.0
   # arregló una fuga de handles que SOLO ocurría en Windows y que un CI de solo Ubuntu no
   # podía ver; esta matriz es lo que evita que vuelva.
+  #
+  # El `timeout-minutes` de aquí NO es decorativo, y su historia importa. Dos veces en dos días
+  # (PR #77 y PR #86) `test (windows-latest)` se quedó en `in_progress` con TODOS sus pasos
+  # terminados en `success` —incluido `Complete job`— y bloqueó el merge: 1954 s el primero, y el
+  # segundo hasta que se canceló a mano. Los pasos reales tardan ~86 s y ningún otro run reciente
+  # pasa de 125 s.
+  #
+  # El cuelgue es POSTERIOR a nuestro código: el runner terminó y lo que falta es que GitHub cierre
+  # el job. Se descartó por ejecución un proceso huérfano reteniendo handles —el fallo clásico en
+  # Windows—: la suite no deja procesos vivos. Eso no lo podemos arreglar; lo que sí es que no
+  # espere las 6 HORAS del default de GitHub. Con esto, un cuelgue es un fallo en 8 minutos que se
+  # relanza con `gh run rerun`.
+  #
+  # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj del timeout
+  # corre sobre la EJECUCIÓN del job, no sobre la espera en cola. Ajustarlo de menos convertiría
+  # un día lento en un rojo que no es del código; ajustarlo de más es tiempo perdido cada vez que
+  # se cuelga, que ya van dos en dos días.
   test:
     strategy:
       # Sin fail-fast: si un sistema falla interesa ver también qué hicieron los otros dos,
@@ -57,6 +82,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
 
@@ -85,6 +111,9 @@ jobs:
   # incapaz de fallar.
   install-smoke:
     runs-on: ubuntu-latest
+    # El más holgado de los cuatro, y por una razón concreta: es el único que depende de PyPI
+    # en vivo, donde un índice lento es una espera legítima y no un cuelgue.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -107,6 +136,7 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
