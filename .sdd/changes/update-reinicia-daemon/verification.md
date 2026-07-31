@@ -83,3 +83,45 @@
   proceso y cero invocaciones sin la flag.
 - **`install --home <simulado>` tiene el mismo agujero del punto 2** y es previo a este change.
   Queda anotado en el backlog como change propio; tocarlo aquí sería trabajo ajeno.
+
+---
+
+## Verificación fresca contra lo PUBLICADO (2026-07-31)
+
+La verificación de arriba se hizo sobre la rama, antes de publicar. Este change se cerró tarde
+—quedó en `verifying` mientras salía la 0.17.0—, así que antes de firmar sus gates se repitió
+contra **el CLI instalado desde PyPI** (`~/.local/bin/local-delegate`, 0.17.0), no contra el repo.
+
+| Requisito | Comprobación fresca | Resultado |
+| --- | --- | --- |
+| REQ-001 | `update` sale en `--help` y acepta las cinco flags | OK — `--dry-run --home --no-restart --restart-backend --version` |
+| REQ-002 | HOME simulado con pines `==0.9.0` en `.claude.json` **y** `config.toml` | OK — los dos pasan a `0.17.0`, con `.claude.json.bak` y `config.toml.bak` |
+| REQ-003 | Completa el andamiaje ausente (plan de 5 acciones sobre un HOME vacío) | OK |
+| REQ-004 | `--dry-run` describe y **no escribe** | OK — árbol con el mismo SHA-256 (`5fd695fa19a30e0a`) antes y después |
+| REQ-007 | Mecanismo detectado en esta máquina | OK — `schtasks → tarea programada LocalDelegateDaemon`, y los tres nombres canónicos intactos |
+| REQ-008 | El pid **nunca** sale de `daemon.json` | OK — las 2 menciones en `update.py` son comentarios que dicen que no se lee |
+| REQ-010 | `--no-restart` solo informa — **ejecución real, sin `--dry-run`** | OK — «`--no-restart`: no se toca el daemon», y el pid siguió en `5900` |
+| REQ-014 | Instalación editable: avisa y no ejecuta `git pull` | OK — verificado con el CLI del repo: «Instalación EDITABLE: el código se sirve de D:\Projects\local-delegate» |
+| REQ-015 | Sin pin que cambiar, `update` igual hace su trabajo | OK — «Nada que reparar: el andamiaje está completo y los pines al día» |
+| REQ-016 | La wiki tiene las recetas de macOS y Linux | OK — `Daemon.md` con LaunchAgent, `systemd` y los tres nombres canónicos, que coinciden con los del código |
+
+**El daemon real no se tocó en toda la verificación:** `0.17.0 · pid 5900` antes y después,
+incluida la ejecución real de `--no-restart`.
+
+### Lo que NO se re-verificó en fresco, y por qué
+
+- **REQ-005, REQ-006, REQ-009, REQ-011, REQ-012, REQ-013.** Todos exigen **reiniciar el daemon o
+  el backend** de esta máquina. No se hizo porque es una acción sobre el sistema del usuario que
+  no formaba parte de lo pedido, y decirlo es más honesto que firmarlo. La evidencia que los
+  sostiene es la de arriba —tests con runner doblado, y ejecución real en la rama con
+  `50952 → 47380` confirmado por `/api/daemon`— más el **estreno en producción del 2026-07-30**,
+  donde `update` reinició el daemon resolviendo solo el caso del launcher DPAPI desacoplado, sin
+  tocar la VRAM.
+
+### REQ-017 quedó superado por una decisión posterior
+
+Exigía que `scripts/update_to_latest.sh` quedara como envoltorio fino delegando en el CLI. **Ese
+fichero se retiró el 2026-07-31** (PR #81): el envoltorio existía para preservar el hábito de
+teclear la ruta, y mantener una segunda puerta de entrada al mismo comando obliga a acordarse de
+ella. No es un requisito incumplido: es un requisito que dejó de tener sentido, y se anota aquí
+para que nadie lo lea como una regresión.
