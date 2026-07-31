@@ -3,9 +3,9 @@
   "slug": "ci-gate-steps",
   "title": "Un gate que mire los steps para que el job fantasma de Windows no bloquee un merge",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-31T14:26:43.248Z",
-  "updatedAt": "2026-07-31T14:49:44.755Z",
+  "updatedAt": "2026-07-31T14:59:43.025Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T14:57:12.810Z",
+      "evidence": "503 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; los 13 checks del PR 90 en verde incluido ci-gate en su estreno (run 30640065930, 75s)",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T14:57:12.874Z",
+      "evidence": "Los 10 requisitos implementados y verificados; review.md con veredicto conforms. Los dos falsos verdes se provocaron a proposito y los tests los detectaron. Ruleset releido por API: ci-gate dentro, test (windows-latest) fuera, los otros cinco intactos.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T14:59:42.959Z",
+      "evidence": "handoff.md con las 6 decisiones no deducibles del codigo; backlog del vault actualizado (punto del job fantasma cerrado e install-smoke marcado como decidido por otro camino); MEMORY.md de Claude Code reescrito con los tres criterios que hacen el gate no enganable. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -103,6 +103,51 @@
       "to": "verifying",
       "at": "2026-07-31T14:49:44.755Z",
       "reason": "Implementacion completa; suite 503 y verificacion en vivo del run 30640065930"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T14:57:12.810Z",
+      "evidence": "503 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; los 13 checks del PR 90 en verde incluido ci-gate en su estreno (run 30640065930, 75s)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T14:57:12.874Z",
+      "evidence": "Los 10 requisitos implementados y verificados; review.md con veredicto conforms. Los dos falsos verdes se provocaron a proposito y los tests los detectaron. Ruleset releido por API: ci-gate dentro, test (windows-latest) fuera, los otros cinco intactos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T14:57:23.079Z",
+      "reason": "Quality aprobado; revision del resultado contra la spec"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T14:57:23.144Z",
+      "reason": "Conformidad aprobada, review.md con veredicto conforms"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T14:59:42.959Z",
+      "evidence": "handoff.md con las 6 decisiones no deducibles del codigo; backlog del vault actualizado (punto del job fantasma cerrado e install-smoke marcado como decidido por otro camino); MEMORY.md de Claude Code reescrito con los tres criterios que hacen el gate no enganable. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T14:59:43.025Z",
+      "reason": "Los cinco gates aprobados; PR 90 mergeado y ruleset aplicado"
     }
   ]
 }
