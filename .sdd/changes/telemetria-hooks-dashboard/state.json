@@ -3,9 +3,9 @@
   "slug": "telemetria-hooks-dashboard",
   "title": "El dashboard lee la telemetria de los hooks",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-31T22:00:22.634Z",
-  "updatedAt": "2026-07-31T22:18:36.031Z",
+  "updatedAt": "2026-07-31T23:06:56.436Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T23:06:56.132Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-31T22:18:36.031Z",
       "reason": "CI verde y mergeado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T23:06:56.132Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T23:06:56.436Z",
+      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
     }
   ]
 }

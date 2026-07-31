@@ -3,9 +3,9 @@
   "slug": "version-derivada",
   "title": "__version__ deja de ser un literal clavado y sale de la metadata del paquete",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-31T20:30:38.654Z",
-  "updatedAt": "2026-07-31T20:42:01.027Z",
+  "updatedAt": "2026-07-31T23:06:55.115Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T23:06:54.949Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-31T20:42:01.027Z",
       "reason": "Sin follow-up requerido; queda la nota del vault al cierre de sesion"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T23:06:54.949Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T23:06:55.115Z",
+      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
     }
   ]
 }
