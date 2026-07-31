@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-31
+
 ### Added
 - **`doctor` ya enseña con qué clientes MCP se ha hablado de verdad**, que era el dato que el daemon
   aprendió a registrar y que hasta ahora solo se veía por `/api/status`. Es la comprobación **nº15**
@@ -1054,7 +1056,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.14.0...v0.15.0
