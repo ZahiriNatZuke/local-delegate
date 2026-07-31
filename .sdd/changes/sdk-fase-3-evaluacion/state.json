@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "slug": "sdk-fase-3-evaluacion",
+  "title": "Evaluacion de la fase 3 del SDK mcp 2.x: que aporta cada capacidad y cual se implementa",
+  "mode": "standard",
+  "status": "researching",
+  "createdAt": "2026-07-31T15:03:22.590Z",
+  "updatedAt": "2026-07-31T15:07:28.963Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T15:03:22.590Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T15:07:28.963Z",
+      "reason": "Analisis de las cinco capacidades hecho contra el SDK instalado y server.py"
+    }
+  ]
+}
