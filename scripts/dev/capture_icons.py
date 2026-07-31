@@ -60,6 +60,19 @@ def _servir(directorio: Path) -> tuple[socketserver.TCPServer, int]:
     return servidor, servidor.server_address[1]
 
 
+def sha_del_svg(ruta: Path) -> str:
+    """sha256 del SVG **normalizado a LF**, no del fichero tal cual está en disco.
+
+    El SVG es texto, y git lo entrega con los finales de línea que tenga configurada cada máquina.
+    Hashear los bytes crudos hacía que el mismo commit diera un hash en Linux y otro en el runner
+    de Windows — el CI lo cazó a la primera, con `test (windows-latest)` en rojo y los otros dos
+    sistemas en verde. Normalizando, el hash describe el **contenido** y no la copia de trabajo.
+
+    Los PNG no necesitan esto: son binarios y git no los toca.
+    """
+    return hashlib.sha256(ruta.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _escribir_manifiesto(sha_svg: str) -> Path:
     """Deja junto a los PNG el manifiesto que dice de qué SVG salieron."""
     MANIFIESTO.write_text(
@@ -128,7 +141,7 @@ async def capturar() -> int:
         servidor.shutdown()
         servidor.server_close()
 
-    manifiesto = _escribir_manifiesto(hashlib.sha256(SVG.read_bytes()).hexdigest())
+    manifiesto = _escribir_manifiesto(sha_del_svg(SVG))
     print(f"{manifiesto.relative_to(RAIZ).as_posix()} — sha del SVG registrado")
     return 0
 

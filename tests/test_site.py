@@ -385,7 +385,11 @@ def test_los_png_se_generaron_con_el_favicon_svg_actual():
     mano**: uno actualizado a mano cumpliría el check sin que nadie regenerara nada.
     """
     svg = RAIZ / "site" / "favicon.svg"
-    actual = hashlib.sha256(svg.read_bytes()).hexdigest()
+    # Normalizado a LF, igual que lo escribe el script. Con los bytes crudos, el mismo commit daba
+    # un hash en Linux y otro en el runner de Windows: git entrega el texto con los finales de
+    # línea de cada máquina. Lo cazó el CI a la primera, y es lo que justifica la matriz de tres
+    # sistemas. Los PNG no lo necesitan: son binarios y git no los toca.
+    actual = hashlib.sha256(svg.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     registrado = _manifiesto_iconos()["source_sha256"]
 
     assert actual == registrado, (
