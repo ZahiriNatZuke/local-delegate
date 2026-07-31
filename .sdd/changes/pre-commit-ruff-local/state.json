@@ -3,9 +3,9 @@
   "slug": "pre-commit-ruff-local",
   "title": "El hook de ruff usa el del proyecto y gitleaks sube a la ultima",
   "mode": "lite",
-  "status": "implementing",
+  "status": "result-review",
   "createdAt": "2026-07-31T00:24:53.230Z",
-  "updatedAt": "2026-07-31T00:26:27.994Z",
+  "updatedAt": "2026-07-31T00:30:17.696Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:30:17.176Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped; extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (919 CRLF, 0 LF sueltos). Los tres escenarios verificados por ejecucion, que es el unico tipo de prueba que significa algo en un cambio de configuracion de herramientas: AC-1, 'pre-commit run --all-files' deja los tres hooks en Passed y git status SIN ningun fichero Python reformateado -- esa es la comprobacion de fondo, porque si el hook y el CI estuvieran desalineados se veria justo ahi; AC-2, el hook invoca literalmente 'uv run ruff', que es 0.16.0, y ya no existe un segundo ruff descargado con el que discrepar; AC-3, el commit de este mismo change paso por los tres hooks y dejo el arbol limpio, que es el camino que fallaba y el que run --all-files NO cubre (hallazgo R-3 del plan: alli se pasan todos los ficheros y en un commit solo los staged). Escaneo de secretos: gitleaks v8.30.1 corrio sobre todo el repositorio y paso; la version nueva no destapo nada que la vieja ocultara.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:30:17.451Z",
+      "evidence": "Revision fresca del diff contra los 6 requisitos y los 3 escenarios; tabla en verification.md. El cambio toca .pre-commit-config.yaml, CHANGELOG.md y la traza SDD, nada mas. REQ-002 se cumple de forma verificable: no queda NINGUN rev de ruff en el fichero, asi que uv.lock es la unica fuente y la clase de problema desaparece por construccion en vez de aplazarse. La asimetria deliberada entre los dos bloques -- gitleaks conserva su rev porque es un binario ajeno al proyecto, ruff no lo tiene porque es una dependencia suya -- queda escrita en el fichero junto con el bug que la origino, para que nadie lo 'arregle' devolviendo ruff al repo remoto. Desvio consciente respecto al pendiente del backlog, que pedia literalmente 'subir el rev': se hizo lo otro porque subirlo arregla el sintoma y no la causa, y se rompe el dia que ruff suba en el lock. Documentado en el CHANGELOG con el precedente del proyecto para tooling interno, la marca '(solo desarrollo)'.",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -96,6 +96,36 @@
       "to": "implementing",
       "at": "2026-07-31T00:26:27.994Z",
       "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T00:30:16.937Z",
+      "reason": "3 tareas implementadas; hooks verdes, commit real y CI local"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T00:30:17.176Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped; extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (919 CRLF, 0 LF sueltos). Los tres escenarios verificados por ejecucion, que es el unico tipo de prueba que significa algo en un cambio de configuracion de herramientas: AC-1, 'pre-commit run --all-files' deja los tres hooks en Passed y git status SIN ningun fichero Python reformateado -- esa es la comprobacion de fondo, porque si el hook y el CI estuvieran desalineados se veria justo ahi; AC-2, el hook invoca literalmente 'uv run ruff', que es 0.16.0, y ya no existe un segundo ruff descargado con el que discrepar; AC-3, el commit de este mismo change paso por los tres hooks y dejo el arbol limpio, que es el camino que fallaba y el que run --all-files NO cubre (hallazgo R-3 del plan: alli se pasan todos los ficheros y en un commit solo los staged). Escaneo de secretos: gitleaks v8.30.1 corrio sobre todo el repositorio y paso; la version nueva no destapo nada que la vieja ocultara.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T00:30:17.451Z",
+      "evidence": "Revision fresca del diff contra los 6 requisitos y los 3 escenarios; tabla en verification.md. El cambio toca .pre-commit-config.yaml, CHANGELOG.md y la traza SDD, nada mas. REQ-002 se cumple de forma verificable: no queda NINGUN rev de ruff en el fichero, asi que uv.lock es la unica fuente y la clase de problema desaparece por construccion en vez de aplazarse. La asimetria deliberada entre los dos bloques -- gitleaks conserva su rev porque es un binario ajeno al proyecto, ruff no lo tiene porque es una dependencia suya -- queda escrita en el fichero junto con el bug que la origino, para que nadie lo 'arregle' devolviendo ruff al repo remoto. Desvio consciente respecto al pendiente del backlog, que pedia literalmente 'subir el rev': se hizo lo otro porque subirlo arregla el sintoma y no la causa, y se rompe el dia que ruff suba en el lock. Documentado en el CHANGELOG con el precedente del proyecto para tooling interno, la marca '(solo desarrollo)'.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T00:30:17.696Z",
+      "reason": "gates quality y conformance aprobados"
     }
   ]
 }
