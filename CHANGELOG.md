@@ -7,6 +7,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **La captura del README ya no puede quedarse vieja en silencio.** Junto a la imagen vive ahora
+  `docs/assets/dashboard.json`, que declara con qué versión se generó y el hash del PNG, y un test
+  falla si esa versión no es la de `pyproject.toml` o si la imagen cambió sin su manifiesto. Hasta
+  ahora regenerarla se pedía **solo con palabras** en la wiki y no lo verificaba nadie: de **25
+  releases, solo 5** la regeneraron en su commit de tag, y la **0.16.0 se publicó con el badge del
+  header diciendo `v0.15.0`**. Dos detalles que hacen que el vigilante no se pueda engañar: el
+  manifiesto lo escribe **el script que captura**, no el que sube la versión —si lo actualizara el
+  bump, el check se cumpliría sin que nadie regenerara nada—, y la versión que registra es la que
+  **sirvió el dashboard capturado** (`/api/status`), así que capturar contra el daemon instalado en
+  vez de contra el repo deja constancia en lugar de colar un badge viejo. De paso, la wiki corrige
+  el comando que documentaba para arrancar el dashboard, que **no funciona** con el daemon
+  ocupando el 9393.
 - **`local-delegate install --agents`: mantiene tus subagentes de Claude Code al día con el
   catálogo de tools.** Añade al frontmatter `tools:` las que falten y actualiza un bloque de
   catálogo entre marcadores. Es **opt-in** —sin el flag no se toca ningún agente— y solo actúa

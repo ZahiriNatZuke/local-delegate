@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "_acerca_de": [
+    "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
+    "Lo escribe `scripts/dev/capture_dashboard.py` al capturar, NUNCA a mano y nunca el bump de",
+    "versión: si lo actualizara quien sube la versión, el check se cumpliría sin que nadie",
+    "regenerara la imagen, que es justo lo que se quiere evitar.",
+    "La versión es la que sirvió el dashboard capturado (`/api/status`), no la de pyproject.toml:",
+    "así, capturar contra el daemon instalado en vez de contra el repo deja constancia en vez de",
+    "colar un badge viejo.",
+    "Lo comprueba `tests/test_captura.py`. Procedimiento: docs/wiki/Publishing.md."
+  ],
+  "file": "dashboard.png",
+  "version": "0.17.0",
+  "sha256": "9dee3edbb46c5ad24cb0770e08d8a46f3f611160854c6889f72abbead6c423ca",
+  "bytes": 610948
+}

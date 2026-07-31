@@ -13,24 +13,100 @@ con datos de ejemplo **deterministas**, así que:
 
 El README avisa de que son «datos de ejemplo». Mantener ese pie es parte del trato.
 
+Junto al PNG se escribe un **manifiesto** (`dashboard.json`) con la versión que sirvió el
+dashboard capturado y el hash de la imagen. `tests/test_captura.py` lo compara con
+`pyproject.toml`, así que una captura que se quede vieja deja de pasar en silencio: durante 20 de
+las 25 releases del proyecto nadie la regeneró, y la 0.16.0 se publicó con el badge diciendo
+`v0.15.0`.
+
 Requiere Playwright, que **no** es dependencia del proyecto:
 
     uv pip install playwright && uv run python -m playwright install chromium
 
-Uso (con el dashboard sirviendo, por ejemplo el daemon en :9393):
+**Captura contra el repo, no contra el daemon instalado.** El daemon sirve la versión que tenga
+instalada, que tras un bump ya no es la del árbol, y `/api/status` se deja pasar sin mockear. Ojo:
+`local-delegate serve --port 9494` **no** vale para esto —es singleton y el lock lo tiene el
+daemon del 9393—, hay que montar solo la app de métricas:
 
-    uv run python scripts/dev/capture_dashboard.py
-    uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/ --out /tmp/d.png
+    uv run python -c "import uvicorn; from local_delegate.web import metrics; \
+uvicorn.run(metrics.app, host='127.0.0.1', port=9494)"
+    uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/
+
+Si se captura contra el daemon igualmente, no se cuela nada: el manifiesto registra la versión
+vieja —la que la imagen enseña de verdad— y el test sigue fallando.
+
+Códigos de salida:
+
+    0  captura y manifiesto escritos
+    1  el panel no se pobló como se esperaba
+    2  falta Playwright
+    3  el dashboard no dice qué versión sirve
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
+import json
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
+
+MANIFIESTO_ACERCA_DE = [
+    "Manifiesto de la captura del README. Es la FUENTE DE VERDAD de con qué versión se generó.",
+    "Lo escribe `scripts/dev/capture_dashboard.py` al capturar, NUNCA a mano y nunca el bump de",
+    "versión: si lo actualizara quien sube la versión, el check se cumpliría sin que nadie",
+    "regenerara la imagen, que es justo lo que se quiere evitar.",
+    "La versión es la que sirvió el dashboard capturado (`/api/status`), no la de pyproject.toml:",
+    "así, capturar contra el daemon instalado en vez de contra el repo deja constancia en vez de",
+    "colar un badge viejo.",
+    "Lo comprueba `tests/test_captura.py`. Procedimiento: docs/wiki/Publishing.md.",
+]
+
+
+def _version_del_dashboard(url: str) -> str:
+    """Versión que sirve el dashboard que se va a capturar, leída de `/api/status`.
+
+    Se lee **antes** de capturar y a propósito: si no se puede, el script falla sin haber tocado
+    ni el PNG ni el manifiesto. Un manifiesto con la versión vacía sería un manifiesto que miente,
+    que es exactamente lo que este vigilante existe para impedir.
+    """
+    endpoint = url.rstrip("/") + "/api/status"
+    with urllib.request.urlopen(endpoint, timeout=5) as resp:
+        datos = json.load(resp)
+    version = datos.get("version")
+    if not version:
+        raise RuntimeError(f"{endpoint} no declara `version`: {sorted(datos)}")
+    return str(version)
+
+
+def _escribir_manifiesto(png: Path, version: str) -> Path:
+    """Deja junto al PNG el manifiesto que lo describe. Devuelve su ruta."""
+    blob = png.read_bytes()
+    destino = png.with_suffix(".json")
+    destino.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "_acerca_de": MANIFIESTO_ACERCA_DE,
+                "file": png.name,
+                "version": version,
+                "sha256": hashlib.sha256(blob).hexdigest(),
+                "bytes": len(blob),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return destino
+
 
 # Datos de ejemplo. La semilla fija hace la captura reproducible; los nombres de archivo y el
 # host remoto son inventados a propósito para no filtrar nada de la máquina real.
@@ -163,6 +239,14 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
         )
         return 2
 
+    # Antes de abrir el navegador: si el dashboard no dice qué versión sirve, no hay captura que
+    # valga. Fallar aquí deja el PNG y el manifiesto anteriores intactos.
+    try:
+        version = _version_del_dashboard(url)
+    except (urllib.error.URLError, OSError, ValueError, RuntimeError) as exc:
+        print(f"no se pudo leer la versión de {url}: {exc}", file=sys.stderr)
+        return 3
+
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         try:
@@ -181,6 +265,8 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             out.parent.mkdir(parents=True, exist_ok=True)
             await page.screenshot(path=str(out), full_page=True)
             print(f"{out} — {total} eventos, indicador «{info['live']}», {info['canvas']} gráficos")
+            manifiesto = _escribir_manifiesto(out, version)
+            print(f"{manifiesto} — versión {version}, la que sirvió el dashboard capturado")
         finally:
             await browser.close()
     return 0

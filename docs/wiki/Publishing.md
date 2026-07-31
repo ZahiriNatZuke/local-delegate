@@ -86,13 +86,29 @@ enseña la versión vieja y parece que el release falló. Pasó en las dos direc
 índice trajo la 0.12.1 recién publicada, y con la 0.13.0 fue al revés — el índice ya servía la nueva
 mientras el JSON seguía anunciando la anterior. Espera un par de minutos y repite con `--refresh`.
 
-**Si la versión cambia algo visible del dashboard, regenera la captura del README** *después* del
-bump, porque la imagen enseña el badge de versión:
+**Regenera la captura del README después del bump**, porque la imagen enseña el badge de versión.
+Ya no depende de que te acuerdes: `docs/assets/dashboard.json` declara con qué versión se generó
+y `tests/test_captura.py` lo compara con `pyproject.toml`, así que **el PR del bump falla hasta
+que la regeneres**. Antes esto se pedía solo con palabras, y de 25 releases solo 5 la
+regeneraron — la 0.16.0 se publicó con el badge diciendo `v0.15.0`.
+
+**Captura contra el repo, no contra el daemon**, que sirve la versión que tenga instalada y tras
+el bump ya no es la del árbol. Y `local-delegate serve --port 9494` **no vale** —es singleton y
+el lock lo tiene el daemon del 9393—, igual que `python -m local_delegate.web.metrics`, que
+intenta bindear ese mismo puerto y no acepta otro. Hay que montar solo la app de métricas:
 
 ```bash
-uv run python -m local_delegate.web.metrics &            # o el daemon ya corriendo
-uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9393/
+# en una terminal
+uv run python -c "import uvicorn; from local_delegate.web import metrics; \
+uvicorn.run(metrics.app, host='127.0.0.1', port=9494)"
+
+# en otra
+uv run python scripts/dev/capture_dashboard.py --url http://127.0.0.1:9494/
 ```
+
+El script escribe el PNG **y** su manifiesto. Si aun así capturas contra el daemon, no se cuela
+nada: el manifiesto registra la versión vieja —la que la imagen enseña de verdad— y el test sigue
+fallando.
 
 Usa datos de ejemplo deterministas, así que no publica tu actividad real; el pie del README lo
 declara y ese pie es parte del trato.

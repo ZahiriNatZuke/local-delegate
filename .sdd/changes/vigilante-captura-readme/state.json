@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "vigilante-captura-readme",
+  "title": "Nada obliga a regenerar la captura del README",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-31T12:41:31.561Z",
+  "updatedAt": "2026-07-31T12:55:46.014Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:47:45.279Z",
+      "evidence": "Premisa REPRODUCIDA por ejecucion antes de especificar, y resulto peor de lo que decia el backlog: Publishing.md:88 lo pide con palabras y NADIE lo verifica (grep de dashboard.png en todo el repo: solo el README que la enseña, el script que la genera y una traza vieja; ni checks.py ni tests ni workflows ni release.py), y el agujero YA se materializo -de 25 releases solo 5 regeneraron la captura en su commit de tag, y la 0.16.0 se publico con el badge diciendo v0.15.0-. Seis requisitos observables. Ademas verificados por ejecucion los dos supuestos en que se apoya REQ-002 y REQ-006: /api/status expone el campo version (0.17.0) y 11 tools, asi que el manifiesto puede registrar lo que la imagen enseña de verdad; y el comando que Publishing.md documenta hoy NO funciona -intenta bindear el 9393 que ocupa el daemon, no acepta puerto y ademas sale con exit 0, asi que parece que arranco-. El alternativo con uvicorn sobre metrics.app en el 9494 SI responde 200, probado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:49:22.254Z",
+      "evidence": "Plan de 5 tareas con fichero, requisitos y reversion cada una. Revision adversarial hecha, con DOS hallazgos incorporados antes de implementar: (1) la comprobacion se apoya en un hash de fichero versionado, que es exactamente lo que ya reventó una vez en este repo -el .gitattributes lleva un comentario largo explicando que autocrlf en el runner de windows-latest convirtio los LF del blob vendorizado y tumbo su hash, en verde en Ubuntu y macOS-; comprobado que hoy el PNG no esta afectado, pero se declara -text explicito porque el precedente es demasiado caro para confiarlo a una heuristica, y ese fallo solo habria aparecido en el CI de Windows; (2) faltaba el borde de no-se-pudo-leer-la-version, donde el script NO debe escribir un manifiesto con valor vacio -seria un manifiesto que miente, justo lo que el cambio persigue- sino fallar sin tocar el existente. Las dos decisiones de fondo quedan justificadas: escribe el manifiesto quien captura y no quien sube la version (si no, el check se cumpliria en la letra sin regenerar nada), y la version se lee de /api/status del dashboard capturado (asi capturar contra el daemon instalado sigue fallando en vez de dar por bueno un badge viejo). Riesgo de despliegue anotado: en cuanto exista el test, el PR que suba a 0.18.0 fallara hasta regenerar la captura; es lo buscado y significa que publicar pasa a incluir ese paso.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:55:34.536Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check (All checks passed), ruff format --check (55 ficheros), pytest 481 passed 1 skipped (eran 478 en main), extract_dashboard_js.py + node --check OK. CHANGELOG.md sigue CRLF puro (948 CRLF, 0 LF sueltos) tras editarlo. Verificacion por EJECUCION REAL, no solo tests: el script capturo contra el repo en el 9494 y escribio PNG y manifiesto con la version leida de /api/status; el borde de dashboard que no responde da exit 3 con el manifiesto anterior intacto (comprobado por mtime_ns). Y los tests verificados AL REVES con cuatro defectos inyectados, los cuatro cazados y el estado restaurado: manifiesto declarando otra version (el caso real de la 0.16.0), un byte del PNG cambiado, el _acerca_de sin explicar la fuente, y el manifiesto ausente (3 fallan con el mensaje que dice como crearlo). CORRECCION registrada: la afirmacion de que python -m local_delegate.web.metrics sale con exit 0 era FALSA -sale con exit 3-, era el exit de head al otro lado de una tuberia; el motivo de REQ-006 se sostiene igual porque no arranca y no acepta puerto.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:55:45.786Z",
+      "evidence": "Revision fresca contra los 6 requisitos, detalle en verification.md: REQ-001 el manifiesto existe con version, sha256, bytes y file, generado con el mismo codigo del script y no a mano; REQ-002 ejecucion real que escribe PNG y manifiesto con la version que sirvio el dashboard capturado, mas el borde de version ilegible con exit 3 sin tocar nada; REQ-003 test de integridad que falla al alterar un solo byte, mas -text declarado en .gitattributes verificado con git check-attr; REQ-004 test de actualidad que falla si el manifiesto declara otra version; REQ-005 el mensaje de fallo trae el comando exacto y avisa de no capturar contra el daemon; REQ-006 la wiki remite al test y da el comando que SI funciona, probado antes de sustituir al que no. Ninguna desviacion sin registrar.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T12:41:31.561Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T12:47:44.801Z",
+      "reason": "reproducir la premisa antes de planificar"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T12:47:45.031Z",
+      "reason": "premisa reproducida y confirmada; spec escrita"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T12:47:45.279Z",
+      "evidence": "Premisa REPRODUCIDA por ejecucion antes de especificar, y resulto peor de lo que decia el backlog: Publishing.md:88 lo pide con palabras y NADIE lo verifica (grep de dashboard.png en todo el repo: solo el README que la enseña, el script que la genera y una traza vieja; ni checks.py ni tests ni workflows ni release.py), y el agujero YA se materializo -de 25 releases solo 5 regeneraron la captura en su commit de tag, y la 0.16.0 se publico con el badge diciendo v0.15.0-. Seis requisitos observables. Ademas verificados por ejecucion los dos supuestos en que se apoya REQ-002 y REQ-006: /api/status expone el campo version (0.17.0) y 11 tools, asi que el manifiesto puede registrar lo que la imagen enseña de verdad; y el comando que Publishing.md documenta hoy NO funciona -intenta bindear el 9393 que ocupa el daemon, no acepta puerto y ademas sale con exit 0, asi que parece que arranco-. El alternativo con uvicorn sobre metrics.app en el 9494 SI responde 200, probado.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T12:48:19.792Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T12:48:20.007Z",
+      "reason": "plan escrito, listo para revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T12:49:22.254Z",
+      "evidence": "Plan de 5 tareas con fichero, requisitos y reversion cada una. Revision adversarial hecha, con DOS hallazgos incorporados antes de implementar: (1) la comprobacion se apoya en un hash de fichero versionado, que es exactamente lo que ya reventó una vez en este repo -el .gitattributes lleva un comentario largo explicando que autocrlf en el runner de windows-latest convirtio los LF del blob vendorizado y tumbo su hash, en verde en Ubuntu y macOS-; comprobado que hoy el PNG no esta afectado, pero se declara -text explicito porque el precedente es demasiado caro para confiarlo a una heuristica, y ese fallo solo habria aparecido en el CI de Windows; (2) faltaba el borde de no-se-pudo-leer-la-version, donde el script NO debe escribir un manifiesto con valor vacio -seria un manifiesto que miente, justo lo que el cambio persigue- sino fallar sin tocar el existente. Las dos decisiones de fondo quedan justificadas: escribe el manifiesto quien captura y no quien sube la version (si no, el check se cumpliria en la letra sin regenerar nada), y la version se lee de /api/status del dashboard capturado (asi capturar contra el daemon instalado sigue fallando en vez de dar por bueno un badge viejo). Riesgo de despliegue anotado: en cuanto exista el test, el PR que suba a 0.18.0 fallara hasta regenerar la captura; es lo buscado y significa que publicar pasa a incluir ese paso.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T12:49:22.477Z",
+      "reason": "plan aprobado con los dos hallazgos de la revision ya incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T12:55:34.307Z",
+      "reason": "implementacion completa y verificada por ejecucion"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T12:55:34.536Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check (All checks passed), ruff format --check (55 ficheros), pytest 481 passed 1 skipped (eran 478 en main), extract_dashboard_js.py + node --check OK. CHANGELOG.md sigue CRLF puro (948 CRLF, 0 LF sueltos) tras editarlo. Verificacion por EJECUCION REAL, no solo tests: el script capturo contra el repo en el 9494 y escribio PNG y manifiesto con la version leida de /api/status; el borde de dashboard que no responde da exit 3 con el manifiesto anterior intacto (comprobado por mtime_ns). Y los tests verificados AL REVES con cuatro defectos inyectados, los cuatro cazados y el estado restaurado: manifiesto declarando otra version (el caso real de la 0.16.0), un byte del PNG cambiado, el _acerca_de sin explicar la fuente, y el manifiesto ausente (3 fallan con el mensaje que dice como crearlo). CORRECCION registrada: la afirmacion de que python -m local_delegate.web.metrics sale con exit 0 era FALSA -sale con exit 3-, era el exit de head al otro lado de una tuberia; el motivo de REQ-006 se sostiene igual porque no arranca y no acepta puerto.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T12:55:45.786Z",
+      "evidence": "Revision fresca contra los 6 requisitos, detalle en verification.md: REQ-001 el manifiesto existe con version, sha256, bytes y file, generado con el mismo codigo del script y no a mano; REQ-002 ejecucion real que escribe PNG y manifiesto con la version que sirvio el dashboard capturado, mas el borde de version ilegible con exit 3 sin tocar nada; REQ-003 test de integridad que falla al alterar un solo byte, mas -text declarado en .gitattributes verificado con git check-attr; REQ-004 test de actualidad que falla si el manifiesto declara otra version; REQ-005 el mensaje de fallo trae el comando exacto y avisa de no capturar contra el daemon; REQ-006 la wiki remite al test y da el comando que SI funciona, probado antes de sustituir al que no. Ninguna desviacion sin registrar.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T12:55:46.014Z",
+      "reason": "conformance aprobado con verificacion fresca por ejecucion"
+    }
+  ]
+}
