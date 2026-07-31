@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "version-derivada",
+  "title": "__version__ deja de ser un literal clavado y sale de la metadata del paquete",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-31T20:30:38.654Z",
+  "updatedAt": "2026-07-31T20:36:57.239Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T20:32:48.827Z",
+      "evidence": "spec.md: 4 requisitos observables, 3 escenarios, decision derivar-vs-borrar razonada; research.md la respalda con bump_version.py:2-19 (no toca __init__) y server.py:43-50 (contrato del fallback)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T20:32:48.892Z",
+      "evidence": "plan.md: 3 tareas con fichero, requisito, verificacion y rollback; revision adversarial hecha en la seccion Plan review; incluye verificacion al reves obligatoria (mutante del literal)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T20:36:57.239Z",
+      "evidence": "570 passed 1 skipped (569 antes); ruff check All checks passed; ruff format 61 files already formatted; extract_dashboard_js + node --check OK. Mutante del literal: cae SOLO el test nuevo, con el mensaje que apunta a __init__.py",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T20:30:38.654Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T20:32:48.827Z",
+      "evidence": "spec.md: 4 requisitos observables, 3 escenarios, decision derivar-vs-borrar razonada; research.md la respalda con bump_version.py:2-19 (no toca __init__) y server.py:43-50 (contrato del fallback)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T20:32:48.892Z",
+      "evidence": "plan.md: 3 tareas con fichero, requisito, verificacion y rollback; revision adversarial hecha en la seccion Plan review; incluye verificacion al reves obligatoria (mutante del literal)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T20:33:16.880Z",
+      "reason": "Impacto mapeado por ejecucion: bump_version.py no toca __init__.py y nadie lee __version__ dentro del repo"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T20:33:16.946Z",
+      "reason": "research.md cerrado"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T20:33:17.012Z",
+      "reason": "spec.md aprobada: derivar en vez de borrar"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T20:33:17.082Z",
+      "reason": "plan.md redactado con 3 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T20:33:17.146Z",
+      "reason": "Revision adversarial del plan sin hallazgo bloqueante"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T20:36:57.174Z",
+      "reason": "Implementacion completa: __init__.py derivado, test nuevo, CHANGELOG"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T20:36:57.239Z",
+      "evidence": "570 passed 1 skipped (569 antes); ruff check All checks passed; ruff format 61 files already formatted; extract_dashboard_js + node --check OK. Mutante del literal: cae SOLO el test nuevo, con el mensaje que apunta a __init__.py",
+      "actor": "user"
+    }
+  ]
+}
