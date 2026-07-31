@@ -1952,7 +1952,22 @@ def main() -> None:
             metrics.run_in_thread(host=config.WEB_HOST, port=config.WEB_PORT)
         except Exception:
             pass  # la web nunca debe impedir que arranque el MCP
-    mcp.run()
+
+    # Ctrl+C es la forma NORMAL de parar esto cuando se lanza a mano en una terminal, no un
+    # fallo. Sin esta captura el `KeyboardInterrupt` sube por `mcp.run()` y Python imprime el
+    # traceback — y como el SDK corre sobre anyio, lo que se ve no es una línea sino un
+    # `ExceptionGroup` anidado con el rastro de las tareas del grupo. Un servidor que al pararse
+    # a propósito escupe eso parece roto, y ya se reportó como tal.
+    #
+    # `daemon.serve` lleva esta misma captura desde hace tiempo, con su comentario y todo; el
+    # camino stdio se quedó fuera. Dos caminos hasta el mismo `Ctrl+C` y solo uno preparado.
+    try:
+        mcp.run()
+    except KeyboardInterrupt:
+        # Silencio deliberado: el usuario acaba de pedir el cierre, ya sabe que paró el proceso.
+        # Se sale por 0 porque parar a mano no es un fallo, y un gestor de servicios que mire el
+        # código de salida no debe apuntarse una caída.
+        return
 
 
 if __name__ == "__main__":

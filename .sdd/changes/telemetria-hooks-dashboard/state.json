@@ -3,9 +3,9 @@
   "slug": "telemetria-hooks-dashboard",
   "title": "El dashboard lee la telemetria de los hooks",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closing",
   "createdAt": "2026-07-31T22:00:22.634Z",
-  "updatedAt": "2026-07-31T22:14:22.139Z",
+  "updatedAt": "2026-07-31T22:18:36.031Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T22:18:35.819Z",
+      "evidence": "review.md conforms-with-notes; 10 requisitos verificados; CI del PR 110 entero en verde; mergeado",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -111,6 +111,28 @@
       "at": "2026-07-31T22:14:22.139Z",
       "evidence": "637 passed 1 skipped; ruff y format limpios; node --check OK; e2e contra el log real de 1817 eventos; 8 mutantes 8 cazados; verificado ademas en navegador real con Playwright",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T22:18:35.819Z",
+      "evidence": "review.md conforms-with-notes; 10 requisitos verificados; CI del PR 110 entero en verde; mergeado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T22:18:35.924Z",
+      "reason": "CI verde y mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T22:18:36.031Z",
+      "reason": "CI verde y mergeado"
     }
   ]
 }

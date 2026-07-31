@@ -7,6 +7,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Fixed
+- **`Ctrl+C` sobre `local-delegate` ya no escupe un traceback.** Parar el proceso a mano es la
+  forma normal de pararlo, no un fallo, y hasta ahora el camino stdio —`local-delegate` a secas,
+  que es como lo lanzan los hosts MCP y como se prueba en una terminal— dejaba subir el
+  `KeyboardInterrupt` hasta arriba. Lo que salía no era una línea: el SDK corre sobre anyio, así
+  que Python imprimía un `ExceptionGroup` anidado con el rastro de las tareas del grupo.
+
+  El defecto no fue no saber qué hacer: **`daemon.serve` capturaba esa interrupción desde hacía
+  tiempo**, con su comentario explicando por qué. Eran dos caminos hasta el mismo `Ctrl+C` y solo
+  uno estaba preparado. Medido antes de tocar nada: por stdio el `KeyboardInterrupt` salía sin
+  capturar y con traceback; por `serve`, cierre limpio y código 0.
+
+  Ahora los dos salen por 0 y en silencio —quien pulsó `Ctrl+C` ya sabe que paró el proceso—, y un
+  test los comprueba **juntos en la misma corrida**, que es lo que impide volver a arreglar uno y
+  dar el problema por cerrado.
 - **El `cancelled` del CI en `main` tenía la causa mal diagnosticada, y ahora tiene firma
   reconocible.** `ci.yml`, `ci_gate.py` y `Repo-hardening.md` sostenían que `timeout-minutes` «no
   dispara» sobre el job colgado de Windows, deducido de verlo más de 10 minutos vivo con el límite
