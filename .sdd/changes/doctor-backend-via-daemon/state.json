@@ -3,9 +3,9 @@
   "slug": "doctor-backend-via-daemon",
   "title": "doctor pregunta al daemon por el backend en vez de salir sin credencial",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-31T18:23:57.381Z",
-  "updatedAt": "2026-07-31T18:30:36.595Z",
+  "updatedAt": "2026-07-31T18:35:12.715Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:35:12.645Z",
+      "evidence": "Handoff escrito; nota del vault y MEMORY.md actualizados",
+      "actor": "user"
     }
   },
   "history": [
@@ -119,6 +119,35 @@
       "at": "2026-07-31T18:30:36.595Z",
       "evidence": "Los 7 requisitos verificados; REQ-007 comprobado sobre el diff (0 coincidencias de API_KEY/auth_headers)",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T18:34:59.323Z",
+      "reason": "Mergeado en el PR #100"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T18:34:59.402Z",
+      "reason": "Mergeado en el PR #100"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T18:35:12.645Z",
+      "evidence": "Handoff escrito; nota del vault y MEMORY.md actualizados",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T18:35:12.715Z",
+      "reason": "Mergeado en el PR #100"
     }
   ]
 }
