@@ -7,6 +7,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Los PNG de la marca quedan atados al `favicon.svg` del que salen.** `icon.src.html` ya cargaba
+  el SVG canónico en vez de redibujar la marca, pero **nada obligaba a regenerar los PNG cuando el
+  icono cambiaba**: los tests comprobaban que existen, que la cabecera es la de un PNG y que están
+  declarados en el HTML, y ninguno miraba si su contenido seguía correspondiéndose. El propio repo
+  lo llamaba «riesgo aceptado».
+
+  Se cierra **por procedencia y no rasterizando en el CI**, que era lo que el pendiente daba por
+  necesario: `scripts/dev/capture_icons.py` regenera los dos PNG con un comando y escribe
+  `site/icons.json` con el **sha256 del SVG** con el que se generaron, más el de cada PNG. Tres
+  tests lo comprueban, y entre ellos cubren los tres descuidos posibles: tocar el icono sin
+  regenerar, regenerar los PNG por fuera del script, y añadir un icono sin declararlo.
+
+  Mismo trato que el manifiesto de la captura del README: **lo escribe quien captura, nunca se
+  toca a mano**. Uno actualizado a mano cumpliría el check sin que nadie regenerara nada.
+
 - **El JavaScript del panel se prueba ejecutándolo, no leyéndolo.** De sus 674 líneas, hasta ahora
   solo una función se ejecutaba en la suite (la paridad de `acct()` con Python); el resto se
   cubría con `node --check` y *grep* sobre el HTML, que comprueba que el fichero parsea y que

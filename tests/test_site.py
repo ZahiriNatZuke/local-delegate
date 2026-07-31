@@ -8,6 +8,7 @@ tests miran el contrato de la inyección, no el diseño.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -358,6 +359,71 @@ def test_los_iconos_png_existen_y_miden_lo_que_declara_la_pagina():
         medido = _cabecera_png(fichero)
         esperado = (int(ancho), int(alto))
         assert medido == esperado, f"{href} mide {medido} y el <link> declara {esperado}"
+
+
+# --- Los PNG atados al icono del que salieron ---------------------------------
+#
+# Lo de arriba comprueba que los PNG existen, que son PNG y que miden lo declarado. Nada miraba si
+# su CONTENIDO sigue correspondiéndose con `favicon.svg`, así que tocar el icono y no regenerarlos
+# dejaba la marca desincronizada en silencio — el propio repo lo llamaba «riesgo aceptado».
+#
+# No se resuelve rasterizando en el CI (dependencia pesada por un riesgo pequeño) sino **por
+# procedencia**: `site/icons.json` registra el sha256 del SVG con el que se generaron, y aquí se
+# compara con el del SVG actual. Mismo patrón que el manifiesto de la captura del README.
+
+ICONS_JSON = RAIZ / "site" / "icons.json"
+
+
+def _manifiesto_iconos() -> dict:
+    return json.loads(ICONS_JSON.read_text(encoding="utf-8"))
+
+
+def test_los_png_se_generaron_con_el_favicon_svg_actual():
+    """Si el icono cambia y nadie regenera los PNG, esto falla — que es todo el objetivo.
+
+    El manifiesto lo escribe `scripts/dev/capture_icons.py` al capturar y **nunca se toca a
+    mano**: uno actualizado a mano cumpliría el check sin que nadie regenerara nada.
+    """
+    svg = RAIZ / "site" / "favicon.svg"
+    # Normalizado a LF, igual que lo escribe el script. Con los bytes crudos, el mismo commit daba
+    # un hash en Linux y otro en el runner de Windows: git entrega el texto con los finales de
+    # línea de cada máquina. Lo cazó el CI a la primera, y es lo que justifica la matriz de tres
+    # sistemas. Los PNG no lo necesitan: son binarios y git no los toca.
+    actual = hashlib.sha256(svg.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    registrado = _manifiesto_iconos()["source_sha256"]
+
+    assert actual == registrado, (
+        "site/favicon.svg cambió y los PNG de la marca siguen siendo los de antes. "
+        "Regenéralos con: uv run python scripts/dev/capture_icons.py"
+    )
+
+
+def test_el_manifiesto_describe_los_png_que_hay_en_disco():
+    """Un manifiesto que no corresponde con los ficheros no ata nada.
+
+    Cubre el caso de regenerar los PNG a mano —siguiendo el procedimiento de `icon.src.html`— sin
+    pasar por el script: el sha del SVG cuadraría y los PNG serían otros.
+    """
+    for icono in _manifiesto_iconos()["icons"]:
+        png = RAIZ / "site" / icono["file"]
+        assert png.is_file(), f"el manifiesto declara {icono['file']} y no está en site/"
+
+        blob = png.read_bytes()
+        assert hashlib.sha256(blob).hexdigest() == icono["sha256"], (
+            f"{icono['file']} no es el que registra site/icons.json. "
+            "Regenéralo con: uv run python scripts/dev/capture_icons.py"
+        )
+        assert len(blob) == icono["bytes"]
+        assert _cabecera_png(png) == (icono["size"], icono["size"])
+
+
+def test_el_manifiesto_cubre_todos_los_png_de_la_marca():
+    """Por conjuntos iguales: añadir un icono y olvidarlo aquí lo dejaría sin atar."""
+    declarados = {i["file"] for i in _manifiesto_iconos()["icons"]}
+    en_disco = {p.name for p in (RAIZ / "site").glob("*.png")} - {"og-image.png"}
+    assert declarados == en_disco, (
+        f"el manifiesto de iconos y los PNG de site/ no coinciden: {declarados} vs {en_disco}"
+    )
 
 
 def test_ninguna_ruta_de_la_pagina_es_absoluta():

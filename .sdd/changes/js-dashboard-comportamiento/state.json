@@ -3,9 +3,9 @@
   "slug": "js-dashboard-comportamiento",
   "title": "El JS del panel se prueba ejecutandolo",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closing",
   "createdAt": "2026-07-31T22:34:37.136Z",
-  "updatedAt": "2026-07-31T22:37:55.195Z",
+  "updatedAt": "2026-07-31T22:41:43.998Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T22:41:43.752Z",
+      "evidence": "review.md conforms-with-notes; 10 requisitos verificados; CI del PR 112 entero en verde; mergeado",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -111,6 +111,28 @@
       "at": "2026-07-31T22:37:55.195Z",
       "evidence": "652 passed 1 skipped (640 antes); ruff y format limpios; 10 mutantes, 9 cazados y 1 inaplicable por el patron del script",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T22:41:43.752Z",
+      "evidence": "review.md conforms-with-notes; 10 requisitos verificados; CI del PR 112 entero en verde; mergeado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T22:41:43.890Z",
+      "reason": "CI verde y mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T22:41:43.998Z",
+      "reason": "CI verde y mergeado"
     }
   ]
 }
