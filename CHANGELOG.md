@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El JavaScript del panel se prueba ejecutándolo, no leyéndolo.** De sus 674 líneas, hasta ahora
+  solo una función se ejecutaba en la suite (la paridad de `acct()` con Python); el resto se
+  cubría con `node --check` y *grep* sobre el HTML, que comprueba que el fichero parsea y que
+  cierto texto está ahí — no lo que hace.
+
+  Nace `tests/test_dashboard_js.py`, que corre con node las funciones donde un fallo **cambia lo
+  que ves**: `computeRange` (decide qué periodo se le pide al backend), `localDayKey` y `byDay`
+  (agrupan por tu día natural, cruzando la frontera de zona horaria), `agg` (alimenta los donuts)
+  y `fmtHace`.
+
+  **Los tests fijan `TZ` a una zona con offset negativo** en vez de confiar en la del que ejecuta:
+  con `TZ=UTC` un `localDayKey` escrito con `toISOString()` pasaría en verde, que es exactamente
+  cómo sobreviven estos fallos. Se verificó al revés con diez mutantes —día en UTC, off-by-one en
+  el preset de 7 días, el rango personalizado cortando el último día a medianoche, `agg` sin
+  filtrar los ceros, `fmtHace` pasándose una frontera— y todos caen.
+
+  Se resolvió sin meter Playwright en el CI, que era lo que el pendiente daba por necesario.
+
 ### Fixed
 - **`Ctrl+C` sobre `local-delegate` ya no escupe un traceback.** Parar el proceso a mano es la
   forma normal de pararlo, no un fallo, y hasta ahora el camino stdio —`local-delegate` a secas,
