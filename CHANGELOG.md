@@ -6,6 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El botón de idioma activo de la landing dejaba de usar el amarillo de la vía local.** En esa
+  paleta el amarillo tiene un solo significado y está escrito en el propio CSS —«la vía que se
+  toma»—, y elegir idioma no es tomar una ruta: la misma mezcla que se corrigió en el titular, en
+  una superficie que entonces no se contó. Ahora el estado activo se marca **invirtiendo**
+  (`--ink` de fondo, `--paper` de texto), que además sube el contraste a **13,90:1** en claro y
+  **15,17:1** en oscuro —medido en el navegador— frente a 9,34 y 11,92. De paso desaparece un
+  `color` declarado dos veces en la misma regla, que **no era residuo**: `--ink` es casi blanco en
+  tema oscuro, así que hacía falta un literal para que el texto no se perdiera sobre el amarillo;
+  al invertir, los dos tokens se intercambian juntos y el literal sobra. Se revisaron los **18**
+  usos del token antes de tocar uno: los otros 17 se quedan, con el porqué escrito.
+
 ### Changed
 - **Un job de CI colgado ya no puede bloquear un merge durante horas.** Dos veces en dos días
   `test (windows-latest)` se quedó en `in_progress` con **todos sus pasos terminados en

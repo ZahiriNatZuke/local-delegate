@@ -205,9 +205,13 @@ a:focus-visible, button:focus-visible {
 }
 .lang button + button { border-left: 0; }
 .lang button:hover { color: var(--ink); }
+/* El idioma activo se marca invirtiendo, NO con el amarillo. En esta paleta `--local` significa
+   «la vía que se toma» y elegir idioma no es tomar una ruta: es la misma mezcla que se corrigió
+   en el titular. La inversión además se resuelve sola en los dos temas, porque `--ink` y
+   `--paper` se intercambian juntos — antes hacía falta un `#0D1A1D` literal para que el texto no
+   saliera casi blanco sobre el amarillo en oscuro. */
 .lang button[aria-pressed="true"] {
-  color: var(--ink); border-color: var(--local); background: var(--local);
-  color: #0D1A1D;
+  color: var(--paper); border-color: var(--ink); background: var(--ink);
 }
 
 /* --- El carril del diagrama ---------------------------------------------- */
