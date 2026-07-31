@@ -96,8 +96,28 @@ def _default_daemon_status(host: str, port: int) -> dict | None:
 
 
 def _default_backend_models() -> tuple[bool, str]:
-    from . import doctor
+    """(¿el backend está sano?, motivo si no), preguntando primero al daemon.
 
+    El orden importa y no es una optimización. La clave del backend se lee **del entorno del
+    proceso**: el daemon la recibe de su lanzador, pero un `local-delegate doctor` escrito en una
+    consola cualquiera no la tiene. Probando por su cuenta, el diagnóstico se llevaba un **401** y
+    se quedaba en `unknown` —«está arriba pero rechaza la credencial»— en una máquina donde el
+    daemon estaba viendo el backend perfectamente. El dato existía, autenticado, en el mismo
+    servicio que el check de al lado ya consulta.
+
+    Si no hay daemon, o no supo responder, se prueba directo como siempre: ese camino sigue siendo
+    el correcto cuando nadie más puede mirar por nosotros.
+    """
+    from . import daemon, doctor
+
+    host, port = daemon_host_port()
+    visto = daemon.query_backend(host, port, timeout=1.0)
+    if visto is not None:
+        if visto.get("available"):
+            return True, ""
+        # El daemon SÍ tiene credencial, así que su «no disponible» es un diagnóstico de verdad y
+        # no una duda: aquí no cabe el `unknown` del 401.
+        return False, "no responde (según el daemon, que sí tiene credencial)"
     return doctor.backend_probe()
 
 

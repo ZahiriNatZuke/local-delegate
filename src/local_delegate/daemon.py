@@ -28,6 +28,7 @@ from .web import metrics
 
 MCP_PATH = "/mcp"
 DAEMON_STATUS_PATH = "/api/daemon"
+BACKEND_STATUS_PATH = "/api/backend"
 _DEVNULL_STREAMS: list[object] = []
 
 
@@ -110,6 +111,31 @@ def query_daemon(host: str, port: int, timeout: float = 1.0) -> dict | None:
         # distinguirlas no cambiaría lo que hace quien llama.
         pass
     return None
+
+
+def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
+    """Lo que el daemon ve del backend de inferencia, o ``None`` si no se le pudo preguntar.
+
+    Existe porque el diagnóstico y el daemon **no tienen las mismas credenciales**: la clave del
+    backend se lee del entorno del proceso, y el daemon la recibe de su lanzador mientras que un
+    `local-delegate doctor` escrito en una consola cualquiera no la tiene. Probando el backend por
+    su cuenta, el diagnóstico se llevaba un 401 y no podía decir si estaba sano — sobre una
+    máquina en la que el daemon lo estaba viendo perfectamente.
+
+    Misma forma que :func:`query_daemon` —dict o ``None``— y por el mismo motivo: cualquier fallo
+    significa «no se pudo preguntar», y quien llama hace lo mismo en todos esos casos (probar por
+    su cuenta).
+    """
+    try:
+        with httpx2.Client(timeout=timeout) as client:
+            response = client.get(f"http://{host}:{port}{BACKEND_STATUS_PATH}")
+            response.raise_for_status()
+            data = response.json()
+    except (httpx2.HTTPError, ValueError, TypeError):
+        return None
+    # `available` es el campo que responde la pregunta; sin él, la respuesta no sirve y es más
+    # honesto decir «no se pudo preguntar» que interpretar su ausencia como una caída.
+    return data if isinstance(data, dict) and "available" in data else None
 
 
 def build_app(host: str | None = None, port: int | None = None) -> Starlette:

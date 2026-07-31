@@ -7,6 +7,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Fixed
+- **`doctor` ya no se lleva un 401 del backend: le pregunta al daemon, que sí tiene credencial.**
+  La clave del backend se lee **del entorno del proceso**, y ahí está la asimetría: el daemon la
+  recibe de su lanzador —en Windows, descifrada con DPAPI—, pero un `local-delegate doctor` escrito
+  en una consola cualquiera no la tiene. Así que el diagnóstico probaba el backend por su cuenta,
+  cobraba un `401` y se quedaba en `[ -- ] está arriba pero rechaza la credencial`… en una máquina
+  donde el daemon estaba viendo el backend y sus cinco modelos sin ningún problema.
+
+  El dato existía, autenticado, en el **mismo servicio** que el check de al lado ya consultaba.
+  Ahora `service.backend` mira primero `/api/backend` del daemon y solo prueba por su cuenta si no
+  hay daemon al que preguntar — que es cuando ese camino sigue siendo el correcto.
+
+  Dos matices deliberados: cuando el daemon dice que el backend **no** está disponible, eso es un
+  diagnóstico y no una duda (cuenta como aviso, no como `[ -- ]`), porque él **sí** tiene con qué
+  autenticarse; y una respuesta del daemon **sin el campo `available`** se trata como «no se pudo
+  preguntar», porque leer su ausencia como una caída sería inventarse un fallo.
+
+  **No se toca la clave en ningún sitio nuevo**: sigue sin salir del proceso que la tiene.
+
 - **`doctor` decía «el daemon sirve la vieja» aunque fuera al revés, y ofrecía un arreglo que no
   arreglaba.** El check comparaba las dos versiones con `!=`, que dice que difieren pero no **cuál**
   está atrasada, y asumía siempre que la vieja era la del daemon. Con una instalación editable —el

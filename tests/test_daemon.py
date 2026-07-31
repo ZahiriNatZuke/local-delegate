@@ -10,6 +10,56 @@ from filelock import FileLock
 from local_delegate import cli, config, daemon, server
 
 
+class _RespuestaFalsa:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+def _doblar_get(monkeypatch, payload):
+    """Dobla el GET de httpx2 para que `query_backend` reciba `payload`."""
+
+    class _ClienteFalso:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+        def get(self, _url):
+            return _RespuestaFalsa(payload)
+
+    monkeypatch.setattr(daemon.httpx2, "Client", _ClienteFalso)
+
+
+def test_query_backend_devuelve_lo_que_ve_el_daemon(monkeypatch):
+    _doblar_get(monkeypatch, {"available": True, "models": []})
+    assert daemon.query_backend("127.0.0.1", 9393) == {"available": True, "models": []}
+
+
+def test_query_backend_sin_el_campo_available_es_none(monkeypatch):
+    """Sin el campo que responde la pregunta, «no se pudo preguntar» es más honesto que inventar.
+
+    Si se devolviera el dict igualmente, `available` saldría ausente y quien llama lo leería como
+    un backend caído — un diagnóstico falso a partir de una respuesta que no dice nada.
+    """
+    _doblar_get(monkeypatch, {"models": []})
+    assert daemon.query_backend("127.0.0.1", 9393) is None
+
+
+def test_query_backend_con_respuesta_que_no_es_un_objeto_es_none(monkeypatch):
+    _doblar_get(monkeypatch, [1, 2, 3])
+    assert daemon.query_backend("127.0.0.1", 9393) is None
+
+
 def test_combined_app_serves_daemon_status_dashboard_and_mcp_route():
     app = daemon.build_app("127.0.0.1", 19393)
 

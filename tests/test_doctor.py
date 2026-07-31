@@ -122,7 +122,15 @@ def test_select_relevant_issues_excludes_prs_and_noise():
     ]
 
 
-def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True, log_dir=None):
+def _stub_environment(
+    monkeypatch,
+    *,
+    swap="ok",
+    backend=True,
+    daemon_alive=True,
+    log_dir=None,
+    backend_via_daemon=None,
+):
     """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta.
 
     ``log_dir`` importa aunque casi ningún test lo pase: sin doblarlo, el check de clientes
@@ -137,6 +145,10 @@ def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True
     monkeypatch.setattr(
         checks.config, "LOG_DIR", Path(log_dir) if log_dir else Path(__file__).parent / "_sin_logs"
     )
+    # Por defecto, «no hay daemon a quien preguntar por el backend», que es lo que deja mandar al
+    # `backend_probe` doblado justo debajo. Sin esto la suite **sale a la red de verdad**: verde en
+    # CI, donde no hay daemon, y otra cosa en la máquina de quien desarrolla, donde sí lo hay.
+    monkeypatch.setattr(daemon, "query_backend", lambda host, port, timeout=1.0: backend_via_daemon)
     version = doctor.RECOMMENDED_VERSIONS["llama-swap"] if swap == "ok" else swap
     monkeypatch.setattr(doctor, "detect_llamaswap_version", lambda: version)
     monkeypatch.setattr(
@@ -237,6 +249,37 @@ def test_run_doctor_keeps_the_previous_output(tmp_path, monkeypatch, capsys):
     assert "Versiones (instalada vs probada; usa --online para comparar con GitHub):" in out
     assert f"llama-swap: {doctor.RECOMMENDED_VERSIONS['llama-swap']} (= probada)" in out
     assert f"llama-server: {doctor.RECOMMENDED_VERSIONS['llama-server']} (= probada)" in out
+
+
+def test_el_daemon_responde_por_el_backend_y_se_acabo_el_401(tmp_path, monkeypatch, capsys):
+    """El caso que motivó el cambio, encontrado en uso real.
+
+    La clave del backend se lee del entorno del proceso: el daemon la recibe de su lanzador, pero
+    un `doctor` escrito en una consola cualquiera no la tiene. Antes se llevaba un 401 y se
+    quedaba en `[ -- ]` sobre una máquina donde el daemon veía el backend sin problema.
+    """
+    _stub_environment(monkeypatch, backend=False, backend_via_daemon={"available": True})
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
+    doctor.run_doctor(args)
+    out = capsys.readouterr().out
+    assert "arriba" in out
+    assert "rechaza la credencial" not in out
+    assert "CAÍDO" not in out
+
+
+def test_si_el_daemon_dice_que_el_backend_esta_caido_eso_no_es_una_duda(tmp_path, monkeypatch):
+    """El daemon SÍ tiene credencial, así que su «no disponible» es diagnóstico, no incertidumbre."""
+    _stub_environment(monkeypatch, backend=True, backend_via_daemon={"available": False})
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
+    assert doctor.run_doctor(args) == 1  # cuenta como aviso, no como `[ -- ]`
+
+
+def test_sin_daemon_el_backend_se_prueba_directo_como_siempre(tmp_path, monkeypatch, capsys):
+    """Cuando nadie puede mirar por nosotros, el camino viejo sigue siendo el correcto."""
+    _stub_environment(monkeypatch, backend=False, daemon_alive=False, backend_via_daemon=None)
+    args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
+    doctor.run_doctor(args)
+    assert "CAÍDO" in capsys.readouterr().out
 
 
 def test_run_doctor_without_network_does_not_fail(tmp_path, monkeypatch, capsys):
