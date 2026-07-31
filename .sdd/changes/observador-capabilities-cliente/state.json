@@ -3,9 +3,9 @@
   "slug": "observador-capabilities-cliente",
   "title": "Registrar las capabilities y la revision de protocolo que declara cada cliente MCP en initialize",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T15:30:45.710Z",
-  "updatedAt": "2026-07-31T15:59:48.037Z",
+  "updatedAt": "2026-07-31T16:06:36.646Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:06:16.373Z",
+      "evidence": "handoff.md con el estado, las cuatro decisiones no deducibles del codigo, la medicion pegada y la logistica para repetirla; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -134,6 +134,28 @@
       "at": "2026-07-31T15:59:48.037Z",
       "evidence": "Los siete requisitos implementados y verificados uno a uno en review.md; tres notas de cobertura declaradas (REQ-006 solo por test, streamable_http sin medir, dedupe por identidad) y ninguna bloquea",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T16:06:16.373Z",
+      "evidence": "handoff.md con el estado, las cuatro decisiones no deducibles del codigo, la medicion pegada y la logistica para repetirla; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T16:06:27.944Z",
+      "reason": "Traza completa"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T16:06:36.646Z",
+      "reason": "Traza completa y PR 95 en verde"
     }
   ]
 }
