@@ -158,4 +158,29 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, totales): `tokens_context_saved`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Proxy best-effort de `/running` de llama-swap, modelos con status, y `origin`/`host` del endpoint (`{"available": false}` si no responde) |
+| `GET /api/hooks?from=&to=` | Lo que los hooks consultivos **sugirieron** en el rango: `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
+
+### Sugerencias de los hooks
+
+Los hooks consultivos escriben su propia telemetría —opt-in, activada con `LD_HOOK_TELEMETRY_LOG`,
+y **sin prompts, comandos ni rutas**: solo evento, categoría y tamaños—. Ese registro existía desde
+hacía tiempo y el dashboard no lo miraba.
+
+La tarjeta cuenta **cuántas veces un hook sugirió delegar**, en el mismo rango que el resto de la
+página. Y hay una frontera que conviene tener clara, porque es la única forma de que el número
+signifique algo:
+
+> **No mide cuántas sugerencias se siguieron.** El hook sugiere y tú decides. Nada une una
+> sugerencia con una delegación posterior —son dos registros sin identificador común—, así que
+> cruzarlos sería inventar una correlación y presentarla como un dato.
+
+Lo que sí responde es «¿cuánta de mi actividad pasa por delante del hook, y en qué parte cree que
+hay una oportunidad?». En la máquina de referencia, con 1817 eventos en tres días: **17,0 % de
+sugerencias**, repartidas de forma muy desigual — `bash` acumulaba 1396 eventos con **cero**
+sugerencias, mientras `lint` iba 283 de 283. Ese desglose por categoría es más informativo que el
+total.
+
+**La tarjeta se esconde si no hay telemetría activada**, en vez de enseñar ceros: un panel a cero
+se leería como «los hooks no sugieren nada», que es una conclusión falsa sacada de un fichero que
+ni siquiera existe.

@@ -3,9 +3,9 @@
   "slug": "cancelled-ci-main",
   "title": "El cancelled del CI en main tiene causa conocida y firma reconocible",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closing",
   "createdAt": "2026-07-31T21:41:26.677Z",
-  "updatedAt": "2026-07-31T21:55:34.382Z",
+  "updatedAt": "2026-07-31T21:59:32.101Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:59:31.975Z",
+      "evidence": "review.md conforms-with-notes; 5 requisitos verificados; CI del PR 109 entero en verde; mergeado",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -111,6 +111,28 @@
       "at": "2026-07-31T21:55:34.382Z",
       "evidence": "623 passed 1 skipped; ruff y format limpios; node --check OK; 4 mutantes sobre ci.yml, 3 cazados y el cuarto no cae por el mutante (el texto cita la firma dos veces), no por el test",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T21:59:31.975Z",
+      "evidence": "review.md conforms-with-notes; 5 requisitos verificados; CI del PR 109 entero en verde; mergeado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T21:59:32.038Z",
+      "reason": "CI verde y PR mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T21:59:32.101Z",
+      "reason": "CI verde y PR mergeado"
     }
   ]
 }

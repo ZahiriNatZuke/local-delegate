@@ -29,6 +29,23 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   nunca por su cuenta, y este ya estuvo equivocado una vez.
 
 ### Added
+- **El dashboard ya lee la telemetría de los hooks.** El dato se escribía desde hacía tiempo —1817
+  eventos en tres días en la máquina de referencia— y `metrics.py` no mencionaba `telemetry` ni
+  `hook` ni una vez. Nace `GET /api/hooks` y una tarjeta en el panel, con el mismo rango temporal
+  que el resto de la página.
+
+  **Lo que mide, y lo que deliberadamente no mide:** cuenta las veces que un hook **sugirió**
+  delegar. No cuenta cuántas sugerencias se siguieron, porque nada une una sugerencia con una
+  delegación posterior —son dos registros sin identificador común— y cruzarlos sería inventar una
+  correlación. La propia tarjeta lo dice, y hay un test que falla si ese aviso desaparece.
+
+  Dos decisiones más que salen de lo mismo: la tarjeta **se esconde** cuando no hay telemetría en
+  vez de enseñar ceros (un panel a cero se leería como «los hooks no sugieren nada», leyendo un
+  fichero que no existe), y el endpoint distingue `enabled: false` de «activada y sin eventos».
+
+  El desglose por categoría resultó más informativo que el total: con 17,0 % global, `bash`
+  acumulaba 1396 eventos y **cero** sugerencias mientras `lint` iba 283 de 283.
+
 - **La wiki nativa se sincroniza sola desde `docs/wiki/`.** Era el último fleco manual del release:
   `scripts/release.py` no mencionaba la wiki y ningún workflow la tocaba (`pages.yml` publica
   `site/`, no `docs/`). El resultado, medido: los **once** ficheros divergidos —`Repo-hardening.md`
