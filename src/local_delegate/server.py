@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, config
+from . import autostart, clients, config
 
 # --- Versión del paquete (cacheada) ------------------------------------------
 # Se define antes de instanciar el server porque este la declara en su constructor.
@@ -61,6 +61,9 @@ mcp = MCPServer(
     ),
     website_url="https://github.com/ZahiriNatZuke/local-delegate",
     version=_get_version(),
+    # Observa qué cliente hay al otro lado y qué protocolo negoció; ver `clients.py`. Solo lee y
+    # anota: no toca la petición ni su resultado.
+    middleware=[clients.observar_cliente],
 )
 
 

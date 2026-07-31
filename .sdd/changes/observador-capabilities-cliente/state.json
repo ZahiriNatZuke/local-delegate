@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "slug": "observador-capabilities-cliente",
+  "title": "Registrar las capabilities y la revision de protocolo que declara cada cliente MCP en initialize",
+  "mode": "standard",
+  "status": "result-review",
+  "createdAt": "2026-07-31T15:30:45.710Z",
+  "updatedAt": "2026-07-31T15:59:48.037Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T15:44:22.526Z",
+      "evidence": "Reaprobada tras la revision adversarial del plan: se anade REQ-007 (no registrar identidad vacia) con su escenario y su fila de trazabilidad",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T15:44:23.069Z",
+      "evidence": "Revision adversarial en plan-review.md: cuatro hallazgos (tres bloqueantes) resueltos en el plan y en la spec - copia desligada bajo lock en snapshot, seccion critica que cubre comprobar+escribir+anadir, test de fallo de escritura por doble del destino en vez de permisos POSIX, y guarda de identidad vacia como REQ-007",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T15:57:48.132Z",
+      "evidence": "519 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; siete defectos introducidos uno a uno rompen cada uno su test (uno de ellos revelo que el test de REQ-002 no probaba nada y se reescribio)",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T15:59:48.037Z",
+      "evidence": "Los siete requisitos implementados y verificados uno a uno en review.md; tres notas de cobertura declaradas (REQ-006 solo por test, streamable_http sin medir, dedupe por identidad) y ninguna bloquea",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T15:30:45.710Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T15:40:30.778Z",
+      "reason": "Sonda con MCPServer y ClientSession reales: medido que en initialize no hay capabilities y que lo negociado fue 2025-11-25"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T15:41:18.231Z",
+      "reason": "Spec escrita con seis requisitos y cinco escenarios, alcance acotado por decision del usuario"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T15:41:18.452Z",
+      "evidence": "Seis requisitos observables, cada uno con escenario de aceptacion y fila de trazabilidad; alcance decidido por el usuario (JSONL + /api/status, check de doctor al change siguiente); premisa reproducida con control positivo en research.md",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T15:44:22.526Z",
+      "evidence": "Reaprobada tras la revision adversarial del plan: se anade REQ-007 (no registrar identidad vacia) con su escenario y su fila de trazabilidad",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T15:44:22.791Z",
+      "reason": "Plan escrito y revisado adversarialmente"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T15:44:23.069Z",
+      "evidence": "Revision adversarial en plan-review.md: cuatro hallazgos (tres bloqueantes) resueltos en el plan y en la spec - copia desligada bajo lock en snapshot, seccion critica que cubre comprobar+escribir+anadir, test de fallo de escritura por doble del destino en vez de permisos POSIX, y guarda de identidad vacia como REQ-007",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T15:57:48.132Z",
+      "evidence": "519 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; siete defectos introducidos uno a uno rompen cada uno su test (uno de ellos revelo que el test de REQ-002 no probaba nada y se reescribio)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T15:58:54.971Z",
+      "reason": "probe"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T15:59:04.378Z",
+      "reason": "Modulo clients.py, enganche en server.py, clave clients en /api/status y 16 tests"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T15:59:12.142Z",
+      "reason": "Cuatro pasos del CI en verde y medicion en vivo con los dos clientes"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T15:59:19.874Z",
+      "reason": "Verificacion escrita con la medicion en vivo pegada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T15:59:48.037Z",
+      "evidence": "Los siete requisitos implementados y verificados uno a uno en review.md; tres notas de cobertura declaradas (REQ-006 solo por test, streamable_http sin medir, dedupe por identidad) y ninguna bloquea",
+      "actor": "user"
+    }
+  ]
+}

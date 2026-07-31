@@ -49,7 +49,7 @@ import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import config, server
+from .. import clients, config, server
 from . import sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
@@ -508,6 +508,10 @@ def status():
             },
             "catalog": catalog,
             "tools": tools,
+            # Clientes MCP observados en ESTA ejecución del daemon (el histórico está en
+            # clients.jsonl). Se reinicia con el proceso a propósito: aquí interesa con quién se
+            # está hablando ahora, no con quién se habló en marzo.
+            "clients": clients.snapshot(),
             "log_dir": str(config.LOG_DIR),
         }
     )
