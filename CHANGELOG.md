@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-07-31
+
 ### Added
 - **`doctor` mira si el cliente podrá autenticarse contra el backend, y no solo si el backend está
   vivo.** Nace `service.credential`, la comprobación **nº16**. Sale de una avería real que **ningún
@@ -1121,7 +1123,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.16.0...v0.17.0
