@@ -3,9 +3,9 @@
   "slug": "ctrl-c-limpio",
   "title": "Ctrl+C sobre el MCP stdio sale limpio en vez de con traceback",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closing",
   "createdAt": "2026-07-31T22:20:08.487Z",
-  "updatedAt": "2026-07-31T22:25:03.935Z",
+  "updatedAt": "2026-07-31T22:29:04.806Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,10 +26,10 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T22:29:04.548Z",
+      "evidence": "review.md conforms-with-notes; 5 requisitos verificados; CI del PR 111 entero en verde; mergeado",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -111,6 +111,28 @@
       "at": "2026-07-31T22:25:03.935Z",
       "evidence": "suite completa en verde; ruff y format limpios; mutante que quita la captura tumba la sesion de pytest entera",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T22:29:04.548Z",
+      "evidence": "review.md conforms-with-notes; 5 requisitos verificados; CI del PR 111 entero en verde; mergeado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T22:29:04.686Z",
+      "reason": "CI verde y mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T22:29:04.806Z",
+      "reason": "CI verde y mergeado"
     }
   ]
 }
