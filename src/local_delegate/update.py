@@ -135,9 +135,11 @@ class Repair:
     why: str = ""
 
 
-# Los checks que no aparecen aquí —`cli.path`, `client.presence`, `service.backend`,
-# `backend.llamaswap`, `backend.llamaserver`— no se reparan escribiendo en el HOME: de ellos se
-# imprime su `fix_hint` y ya. `service.daemon` tampoco está: lo atiende el control del daemon.
+# Los checks que no aparecen aquí —`cli.path`, `client.presence`, `client.observed`,
+# `service.backend`, `backend.llamaswap`, `backend.llamaserver`— no se reparan escribiendo en el
+# HOME: de ellos se imprime su `fix_hint` y ya. `service.daemon` tampoco está: lo atiende el
+# control del daemon. `client.observed` además no tiene arreglo posible: informa de con qué
+# clientes se ha hablado, y eso no se configura desde aquí.
 REPAIRS: tuple[Repair, ...] = (
     Repair("scaffold.hook_files", (checks.MISSING,), frozenset({"hooks"}), frozenset({"claude"})),
     Repair(

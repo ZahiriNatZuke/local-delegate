@@ -93,7 +93,13 @@ def _escribir_linea(destino: Path, linea: str) -> None:
         f.write(linea)
 
 
-def _ruta_registro() -> Path:
+def ruta_registro() -> Path:
+    """Dónde vive el registro. Pública porque el diagnóstico también lo lee.
+
+    `checks.py` la consume en vez de recomponer la ruta por su cuenta: el nombre del fichero y su
+    directorio se saben en UN solo sitio, que es este. Dos fuentes para el mismo dato es la clase
+    de defecto que este repo ya tuvo que arreglar tres veces.
+    """
     # `config.LOG_DIR` se lee AQUÍ, en tiempo de llamada, y no como default de módulo: un default
     # capturado en el import no se dobla con monkeypatch.
     return config.LOG_DIR / LOG_FILENAME
@@ -145,7 +151,7 @@ def registrar(caps: Any, client_info: Any, protocol: str) -> bool:
             },
             ensure_ascii=False,
         )
-        _escribir_linea(_ruta_registro(), linea + "\n")
+        _escribir_linea(ruta_registro(), linea + "\n")
         return True
 
 

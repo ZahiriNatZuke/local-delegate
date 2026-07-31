@@ -75,6 +75,20 @@ def test_unknown_no_repara_ninguno_de_los_doce_checks(tmp_path):
     assert actions == []
 
 
+def test_client_observed_no_se_repara_nunca(tmp_path):
+    """Con quién se ha hablado no se «arregla»: es una observación, no una configuración.
+
+    El check no tiene `fix_hint` ni entrada en `REPAIRS`, y este test lo ata para que nadie le
+    añada una reparación por simetría con el resto de la tabla.
+    """
+    assert [r for r in update.REPAIRS if r.check_id == "client.observed"] == []
+    home = make_home(tmp_path, complete=False)
+    for estado in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
+        results = results_from(**{"client.observed": estado})
+        actions, _notes = update.plan_repairs(results, opts_for(home))
+        assert all(getattr(a, "check_id", None) != "client.observed" for a in actions)
+
+
 def test_warn_de_mcp_codex_no_produce_ninguna_accion(tmp_path):
     """Ese `warn` dice «entrada puesta a mano»: es configuración del usuario, no basura nuestra."""
     home = make_home(tmp_path, complete=False)

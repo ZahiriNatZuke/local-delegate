@@ -7,6 +7,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`doctor` ya enseña con qué clientes MCP se ha hablado de verdad**, que era el dato que el daemon
+  aprendió a registrar y que hasta ahora solo se veía por `/api/status`. Es la comprobación **nº15**
+  del registro: nombre del cliente, versión, revisión de protocolo negociada y si declara
+  `elicitation` — o sea, si las tools pueden preguntarle en vez de fallar seco.
+
+  **Lee `clients.jsonl` y no `/api/status`, y no es un detalle de implementación:** ese endpoint
+  expone la memoria del proceso del daemon, y Claude Code y Codex hablan por *stdio*, cada uno con
+  su propio proceso. El daemon del 9393 **no los ve**. El fichero es la única fuente que los ve a
+  todos, y además no exige que el daemon esté arriba.
+
+  **Es informativo a propósito: nunca `[WARN]` ni `[FALT]`, así que jamás sube el exit code.** Un
+  cliente que no declara `elicitation` no está mal configurado —es otro producto, con menos
+  capacidades—, no hay ningún comando de local-delegate que lo cambie, y avisar sin poder decir qué
+  hacer es ruido. Cuando todavía no ha hablado nadie, sale `[ -- ]`, que es lo que verá cualquier
+  máquina hasta que esta versión se publique.
+
+  El registro es histórico y acumula **una línea por cada arranque de proceso**, así que el check
+  agrupa por cliente y enseña la observación más reciente de cada uno; si no, el mismo cliente
+  saldría repetido tantas veces como se haya lanzado.
+
 - **Una tool que se topa con un problema cuyo arreglo ya conoce ahora lo pregunta, en vez de fallar
   seco.** Tres casos, los tres con la misma forma: el servidor sabía la solución y solo enunciaba el
   error. (1) **Backend caído**: pregunta si arrancarlo, y lo arranca si dices que sí — no cambia el

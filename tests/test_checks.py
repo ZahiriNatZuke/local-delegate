@@ -35,6 +35,10 @@ def make_ctx(home, **kwargs):
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
         "latest_release": lambda: (checks._installed_version(), None),
+        # Sin doblarlo, cada `run_all` de la suite leería el `clients.jsonl` REAL de la máquina
+        # donde corra: verde en CI (donde no existe) y potencialmente otra cosa en la máquina de
+        # quien desarrolla. El default se ejercita aparte, con `config.LOG_DIR` en un tmp_path.
+        "clients_seen": checks.NO_CLIENTS,
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -315,7 +319,10 @@ def test_run_all_survives_a_broken_probe(monkeypatch, tmp_path):
 
 def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
-    ctx = make_ctx(make_home(tmp_path))
+    # `client.observed` hay que alimentarlo aparte: su registro **no vive en el HOME** —está en
+    # `LOG_DIR`—, así que un HOME completo no lo pone `ok` por sí solo. Se le da una observación en
+    # vez de excluirlo del test, para que aquí también se le exija estar `ok`.
+    ctx = make_ctx(make_home(tmp_path), clients_seen=lambda: ([CLAUDE], None))
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
 
@@ -602,6 +609,166 @@ def test_undetected_version_with_reason_keeps_the_reason(tmp_path):
     assert "config no encontrado: X" in result.detail
 
 
+# --- client.observed: los clientes MCP con los que se ha hablado --------------
+#
+# El registro que lee este check es HISTÓRICO y lo escriben varios procesos (cada cliente stdio
+# lanza el suyo), así que los tests que más valen aquí son los de acumulación y los de dato sucio:
+# el fichero viene de fuera y puede traer cualquier cosa.
+
+CLAUDE = {
+    "ts": "2026-07-31T17:15:52+00:00",
+    "client": "claude-code",
+    "version": "2.1.220",
+    "protocol": "2025-11-25",
+    "caps": ["elicitation", "roots"],
+}
+CODEX = {
+    "ts": "2026-07-31T16:00:00+00:00",
+    "client": "codex-mcp-client",
+    "version": "0.146.0",
+    "protocol": "2025-06-18",
+    "caps": ["elicitation"],
+}
+
+
+def observando(tmp_path, observaciones, motivo=None):
+    return make_ctx(make_home(tmp_path), clients_seen=lambda: (observaciones, motivo))
+
+
+def test_sin_clientes_vistos_es_unknown_y_no_suma_aviso(tmp_path):
+    """El caso de HOY: `clients.py` está sin publicar, así que no hay registro en ninguna máquina.
+
+    Tiene que ser `unknown` y no `missing`: no falta nada que instalar, simplemente todavía no ha
+    hablado nadie. Un `missing` mandaría a arreglar una máquina sana.
+    """
+    result = result_for("client.observed", observando(tmp_path, []))
+    assert result.status == checks.UNKNOWN
+    assert not checks.is_warning(result.status)
+    assert "todavía no ha hablado ningún cliente" in result.detail
+
+
+def test_registro_ilegible_es_unknown_con_el_motivo(tmp_path):
+    result = result_for("client.observed", observando(tmp_path, [], "no se pudo leer X: denegado"))
+    assert result.status == checks.UNKNOWN
+    assert "no se pudo leer X: denegado" in result.detail
+
+
+def test_un_cliente_que_sabe_preguntar_sale_ok(tmp_path):
+    result = result_for("client.observed", observando(tmp_path, [CLAUDE]))
+    assert result.status == checks.OK
+    assert "claude-code 2.1.220 [2025-11-25] elicitation" in result.detail
+
+
+def test_un_cliente_sin_elicitation_sigue_siendo_ok(tmp_path):
+    """La decisión de diseño del change, y por eso tiene test propio.
+
+    Un cliente sin `elicitation` es información, no un defecto: no hay comando del repo que lo
+    arregle y marcarlo como aviso subiría el exit code de una máquina sana.
+    """
+    mudo = {**CODEX, "client": "cliente-mudo", "caps": []}
+    result = result_for("client.observed", observando(tmp_path, [CLAUDE, mudo]))
+    assert result.status == checks.OK
+    assert not checks.is_warning(result.status)
+    assert "cliente-mudo 0.146.0 [2025-06-18] sin elicitation" in result.detail
+    assert "claude-code 2.1.220 [2025-11-25] elicitation" in result.detail
+
+
+def test_el_mismo_cliente_repetido_sale_una_vez_con_la_version_mas_reciente(tmp_path):
+    """`clients.jsonl` acumula una línea por ARRANQUE de proceso: medido, no supuesto.
+
+    La deduplicación de `clients.registrar` es intra-proceso, así que veinte lanzamientos de
+    Claude Code dejan veinte líneas idénticas. Sin agrupar, el detail sería una lista repetida.
+
+    La observación vieja va **la última** de la lista a propósito: si el check se quedara con la
+    última que ve en vez de con la más reciente por `ts`, este test pasaría igual. Con ella al
+    final, «agrupa por nombre» y «escoge la más reciente» quedan cubiertos por separado — puesta al
+    principio, la segunda mitad no se probaba (comprobado introduciendo el defecto).
+    """
+    vieja = {**CLAUDE, "ts": "2026-07-01T09:00:00+00:00", "version": "2.1.219"}
+    result = result_for("client.observed", observando(tmp_path, [CLAUDE] * 20 + [vieja]))
+    assert result.detail.count("claude-code") == 1  # agrupa
+    assert "2.1.220" in result.detail  # y se queda con la más reciente
+    assert "2.1.219" not in result.detail
+
+
+def test_una_observacion_sin_identidad_no_se_pierde(tmp_path):
+    """Desde la revisión 2026-07-28 el `client_info` es opcional: hay capabilities sin nombre."""
+    anonimo = {"ts": CODEX["ts"], "client": None, "protocol": "2026-07-28", "caps": ["elicitation"]}
+    result = result_for("client.observed", observando(tmp_path, [anonimo]))
+    assert result.status == checks.OK
+    assert "(sin identificar) [2026-07-28] elicitation" in result.detail
+
+
+def test_caps_que_no_es_lista_no_cuenta_como_elicitation(tmp_path):
+    """El falso positivo por subcadena que cazó la revisión adversarial del plan.
+
+    Con `caps` llegando como la cadena "no-elicitation", un `in` sin comprobar el tipo daría True
+    y el check afirmaría justo lo contrario de la verdad.
+    """
+    sucio = {**CLAUDE, "caps": "no-elicitation"}
+    result = result_for("client.observed", observando(tmp_path, [sucio]))
+    assert "sin elicitation" in result.detail
+
+
+def test_un_ts_ilegible_no_tumba_el_check(tmp_path):
+    """Una fecha rota debe perder la carrera de «la más reciente», no llevarse el check por delante."""
+    roto = {**CLAUDE, "ts": "ayer por la tarde", "version": "0.0.1"}
+    result = result_for("client.observed", observando(tmp_path, [roto, CLAUDE]))
+    assert result.status == checks.OK
+    assert "2.1.220" in result.detail
+
+
+def test_el_detail_es_imprimible_en_la_consola_de_windows(tmp_path):
+    """El nombre lo pone el CLIENTE: es texto ajeno y puede traer lo que sea.
+
+    Una flecha «→» ya mató este doctor una vez. Aquí el dato ni siquiera lo controla el repo.
+    """
+    exotico = {**CLAUDE, "client": "cliente-\U0001f600", "version": "1.0—beta"}
+    result = result_for("client.observed", observando(tmp_path, [exotico]))
+    result.detail.encode("cp1252")  # si no es codificable, esto lanza y el test falla
+
+
+def test_client_observed_no_ofrece_arreglo(tmp_path):
+    """Sin `fix_hint` a propósito: no existe comando de este repo que cambie con quién hablas."""
+    home = make_home(tmp_path)
+    for observaciones in ([], [CLAUDE]):
+        ctx = make_ctx(home, clients_seen=lambda obs=observaciones: (obs, None))
+        assert result_for("client.observed", ctx).fix_hint == ""
+
+
+# --- El colaborador por defecto, que sí toca el disco -------------------------
+
+
+def test_default_sin_fichero_no_es_un_error(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks.config, "LOG_DIR", tmp_path)
+    assert checks._default_clients_seen() == ([], None)
+
+
+def test_default_lee_el_registro_y_salta_lo_que_no_sirve(tmp_path, monkeypatch):
+    """Una línea a medio escribir —proceso muerto durante el write— no puede perder las buenas."""
+    monkeypatch.setattr(checks.config, "LOG_DIR", tmp_path)
+    (tmp_path / "clients.jsonl").write_text(
+        json.dumps(CLAUDE) + "\n"
+        "\n"  # línea en blanco
+        '{"ts": "2026-07-31T17:00:00+00:0'  # truncada
+        "\n"
+        "[1, 2, 3]\n"  # JSON válido, pero no un objeto
+         + json.dumps(CODEX) + "\n",
+        encoding="utf-8",
+    )
+    observaciones, motivo = checks._default_clients_seen()
+    assert motivo is None
+    assert [o["client"] for o in observaciones] == ["claude-code", "codex-mcp-client"]
+
+
+def test_default_no_crea_ni_el_directorio_ni_el_fichero(tmp_path, monkeypatch):
+    """`probe` nunca escribe, y eso incluye no materializar el sitio donde iría el registro."""
+    destino = tmp_path / "sin-crear"
+    monkeypatch.setattr(checks.config, "LOG_DIR", destino)
+    checks._default_clients_seen()
+    assert not destino.exists()
+
+
 # --- Ningún probe escribe (REQ-013 a nivel de registro) -----------------------
 
 
@@ -614,7 +781,7 @@ def test_no_probe_writes_anything(tmp_path):
 
 # --- El módulo no puede mentir sobre su propio tamaño ------------------------
 
-_NUMERO = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce"}
+_NUMERO = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce", 15: "quince"}
 
 
 def test_el_docstring_dice_cuantos_checks_hay_de_verdad():

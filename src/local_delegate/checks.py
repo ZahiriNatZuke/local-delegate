@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los catorce elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los quince elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Catorce checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Quince checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -28,10 +28,11 @@ import shutil
 import socket
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
 
-from . import config, install
+from . import clients, config, install
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -133,6 +134,56 @@ def SKIP_PYPI() -> tuple[str | None, str | None]:
     return None, "no se consulta PyPI en este comando"
 
 
+def _default_clients_seen() -> tuple[list[dict], str | None]:
+    """(clientes MCP anotados en el registro, motivo si no se pudo leer).
+
+    Lee ``clients.jsonl`` y **no** ``/api/status``, por dos razones medidas: ese endpoint expone
+    ``clients.snapshot()``, que es memoria del proceso del daemon —``doctor`` es otro proceso y
+    nunca la vería—, y sobre todo el daemon **no ve a los clientes que importan**: Claude Code y
+    Codex hablan por *stdio*, cada uno con su propio proceso, así que sus observaciones no pasan
+    por el 9393. El fichero es la única fuente que los ve a todos.
+
+    El import de ``clients`` es a nivel superior y no diferido como los de ``daemon``/``doctor``:
+    aquel arrastra uvicorn y el SDK, y ``doctor`` importaría en ciclo; ``clients`` no hace ninguna
+    de las dos cosas (solo importa ``config``).
+    """
+    texto, motivo = read_text(clients.ruta_registro())
+    if motivo is not None:
+        return [], motivo
+    if texto is None:  # no existe todavía: nadie ha hablado, que no es un error
+        return [], None
+    return _parse_jsonl(texto), None
+
+
+def _parse_jsonl(texto: str) -> list[dict]:
+    """Los objetos JSON de un JSONL, saltándose lo que no lo sea.
+
+    Una línea a medio escribir —el proceso murió durante el ``write``— no puede tumbar el
+    diagnóstico ni hacer perder las líneas buenas que hay alrededor.
+    """
+    objetos: list[dict] = []
+    for linea in texto.splitlines():
+        linea = linea.strip()
+        if not linea:
+            continue
+        try:
+            dato = json.loads(linea)
+        except ValueError:
+            continue
+        if isinstance(dato, dict):
+            objetos.append(dato)
+    return objetos
+
+
+def NO_CLIENTS() -> tuple[list[dict], str | None]:
+    """Colaborador para los tests: el registro no se toca y no hay nada anotado.
+
+    Existe para que la suite no dependa del ``clients.jsonl`` de la máquina donde corra, que haría
+    verde en CI y potencialmente otra cosa en la máquina de quien desarrolla.
+    """
+    return [], None
+
+
 def _port_taken(host: str, port: int) -> bool:
     """True si alguien escucha en el puerto (sea o no nuestro daemon)."""
     try:
@@ -161,6 +212,10 @@ class Context:
     # Al final y con default: las llamadas que no lo pasan siguen funcionando igual. Quien no
     # quiera salir a la red inyecta `SKIP_PYPI` **explícitamente**, y así se ve en su línea.
     latest_release: Callable[[], tuple[str | None, str | None]] = _default_latest_release
+    # Mismo criterio: aditivo y con default. Ojo, este NO deriva de `home` —`config.LOG_DIR` sale
+    # de su propia variable de entorno—, así que `doctor --home` seguirá leyendo el registro real
+    # de la máquina, igual que ya hacen los checks de servicio y backend.
+    clients_seen: Callable[[], tuple[list[dict], str | None]] = _default_clients_seen
 
     @property
     def claude_dir(self) -> Path:
@@ -237,6 +292,88 @@ def _probe_clients(ctx: Context) -> Result:
     if not present:
         return Result(UNKNOWN, f"no hay ~/.claude ni ~/.codex bajo {ctx.home}")
     return Result(OK, "detectados: " + ", ".join(present))
+
+
+_SIN_NOMBRE = "(sin identificar)"
+
+# Lo más antiguo que puede haber: una observación cuyo `ts` falte o no se pueda parsear pierde la
+# carrera de «la más reciente» en vez de tumbar el check por una línea mala.
+_TS_MINIMO = datetime.min.replace(tzinfo=UTC)
+
+
+def _momento(obs: dict) -> datetime:
+    """Cuándo se anotó la observación, tolerando que el sello no sirva."""
+    ts = obs.get("ts")
+    if not isinstance(ts, str):
+        return _TS_MINIMO
+    try:
+        momento = datetime.fromisoformat(ts)
+    except ValueError:
+        return _TS_MINIMO
+    # Un sello sin zona compararía como *naive* y lanzaría `TypeError` contra los que sí la traen.
+    return momento if momento.tzinfo is not None else momento.replace(tzinfo=UTC)
+
+
+def _cp1252(texto: str) -> str:
+    """Texto seguro para la consola de Windows.
+
+    El nombre y la versión del cliente son **texto ajeno**: los pone quien se conecta. Un emoji ahí
+    mataría el diagnóstico igual que lo mató una flecha «→», pero por un dato que este repo no
+    controla, así que se sanea en vez de confiar.
+    """
+    return texto.encode("cp1252", errors="replace").decode("cp1252")
+
+
+def _describir(nombre: str, obs: dict) -> str:
+    """Una observación en una línea: quién, qué versión, qué protocolo y si sabe preguntar."""
+    version = obs.get("version")
+    protocolo = obs.get("protocol")
+    caps = obs.get("caps")
+    # `caps` tiene que ser una LISTA antes de preguntar por pertenencia. Si llegara como la cadena
+    # "no-elicitation", un `in` daría True por subcadena y el check afirmaría justo lo contrario de
+    # la verdad — un falso positivo silencioso.
+    sabe_preguntar = isinstance(caps, list) and "elicitation" in caps
+
+    partes = [nombre]
+    if isinstance(version, str) and version:
+        partes.append(version)
+    util = isinstance(protocolo, str) and protocolo
+    partes.append(f"[{protocolo if util else '?'}]")
+    partes.append("elicitation" if sabe_preguntar else "sin elicitation")
+    return _cp1252(" ".join(partes))
+
+
+def _probe_clients_observed(ctx: Context) -> Result:
+    """¿Con qué clientes MCP ha hablado local-delegate, y pueden responder preguntas?
+
+    **Informativo a propósito: nunca ``warn`` ni ``missing``.** Un cliente que no declara
+    ``elicitation`` no está mal configurado —es otro producto, con menos capacidades—, no hay
+    ningún comando de este repo que lo arregle (de ahí que no tenga ``fix_hint``), y reportarlo
+    como aviso subiría el exit code de una máquina sana. Lo que sí hacía falta es que se vea.
+
+    El registro es histórico y **acumula una línea por cada arranque de proceso** —la
+    deduplicación de ``clients.registrar`` es intra-proceso—, así que aquí se agrupa por nombre y
+    se enseña la observación más reciente de cada uno. Sin eso, el mismo cliente saldría repetido
+    tantas veces como se haya lanzado.
+    """
+    observaciones, motivo = ctx.clients_seen()
+    if motivo is not None:
+        return Result(UNKNOWN, motivo)
+    if not observaciones:
+        return Result(UNKNOWN, "todavía no ha hablado ningún cliente MCP con este local-delegate")
+
+    ultimas: dict[str, dict] = {}
+    for obs in observaciones:
+        nombre = obs.get("client")
+        # El `client_info` es opcional desde la revisión 2026-07-28: puede haber capabilities sin
+        # identidad. Esas observaciones se agrupan aparte, pero no se pierden.
+        if not isinstance(nombre, str) or not nombre:
+            nombre = _SIN_NOMBRE
+        previa = ultimas.get(nombre)
+        if previa is None or _momento(obs) >= _momento(previa):
+            ultimas[nombre] = obs
+
+    return Result(OK, "; ".join(_describir(nombre, ultimas[nombre]) for nombre in sorted(ultimas)))
 
 
 def _installed_version() -> str | None:
@@ -594,17 +731,18 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Catorce elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Quince elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
-# El número se dice en cuatro sitios de este módulo y llegó a decir «once» con doce checks ya
+# El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
 # dentro: `cli.path` entró después y nadie actualizó el texto. Hay un test que compara los
-# cuatro contra `len(CHECKS)`, porque un comentario que miente sobre el propio registro es lo
+# cinco contra `len(CHECKS)`, porque un comentario que miente sobre el propio registro es lo
 # que hace que alguien planifique sobre un dato falso.
 CHECKS: tuple[Check, ...] = (
     Check("cli.path", "entorno", "CLI local-delegate", _probe_cli),
     Check("cli.published", "entorno", "versión publicada", _probe_published),
     Check("client.presence", "entorno", "clientes", _probe_clients),
+    Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -620,7 +758,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los catorce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los quince probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -634,7 +772,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros trece
+        except Exception as exc:  # un check roto no debe impedir ver los otros catorce
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results
