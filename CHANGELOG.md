@@ -6,6 +6,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`ci-gate`: un job que da el veredicto del run mirando los *steps*, para que el «job fantasma» no
+  bloquee un merge.** GitHub dejaba `test (windows-latest)` en `in_progress` **para siempre** con
+  sus ocho pasos en `success` —incluido el `Complete job` que pone el propio runner— y
+  `completed_at: null`; como el ruleset exige los checks por nombre, el merge quedaba bloqueado
+  hasta cancelar y relanzar a mano. Pasó **tres veces en dos días** (PRs #77, #86 y #88) y es un
+  [problema conocido de GitHub sin solución oficial](https://github.com/orgs/community/discussions/161434).
+  Como los pasos **sí** terminan, `scripts/ci_gate.py` consulta la API y aprueba un job cuyo runner
+  llegó al final aunque GitHub no lo haya cerrado — y **suspende** si algún paso falló.
+
+  Tres decisiones que lo sostienen: el criterio es **el nombre del último paso** (`Complete job`) y
+  no contarlos, porque la numeración salta; los **pasos malos se miran antes** que el fantasma,
+  porque cuando un paso falla el `Complete job` sale en `success` igualmente y al revés sería un
+  falso verde; y el plazo de espera cubre **cola + ejecución**, que no es lo que mide
+  `timeout-minutes`. El patrón habitual —`needs` + `always()`— **no sirve**: `needs` espera a que el
+  job termine, que es justo lo que no pasa.
+
+  El gate **solo lee** (`actions: read`): automatizar `cancel` + `rerun` habría pedido
+  `actions: write`, y se descartó por eso. **Lo que cambia para quien contribuye:**
+  `test (windows-latest)` deja de exigirse por nombre —lo cubre el gate— y, en cambio,
+  **`install-smoke` pasa a bloquear un merge**, cosa que antes no hacía; eso último depende de PyPI
+  en vivo, así que un índice degradado bloqueará PRs sin que nada esté roto.
+
 ### Fixed
 - **El botón de idioma activo de la landing dejaba de usar el amarillo de la vía local.** En esa
   paleta el amarillo tiene un solo significado y está escrito en el propio CSS —«la vía que se
