@@ -1,26 +1,37 @@
-# Brief: El job de Windows puede colgarse y bloquear un merge sin limite
+# Brief (modo lite): el job de Windows puede colgarse y bloquear un merge sin límite
 
-## Problem
+## Qué pasó
 
-Describe the current problem and supporting evidence.
+**Dos veces en dos días**, `test (windows-latest)` se quedó en `in_progress` y bloqueó el merge:
+1954 s en el PR #77 y 651 s en el #86, hasta cancelarlo a mano. Lo normal en los 22 runs recientes
+son 60–125 s, y **solo esos dos** pasan de 300 s.
 
-## Desired outcome
+El usuario lo señaló como prioridad uno con la razón exacta: *«no podemos tener esa inseguridad o
+incógnita de cuándo ese paso va a colgarse y bloquear un merge o un release»*.
 
-Describe the observable outcome that will resolve the problem.
+## Lo que se encontró
 
-## In scope
+El cuelgue **no es del código**. La API del job devuelve los ocho pasos en `success` —incluido
+`Complete job`— con `completed_at: null`: el runner terminó en ~86 s y falta que GitHub cierre el
+job.
 
-- Define the intended behavior.
+Se descartó **por ejecución** la causa clásica en Windows, un proceso hijo huérfano reteniendo los
+handles: la suite corrida aquí no deja ni un proceso nuevo.
 
-## Out of scope
+## Resultado deseado
 
-- Define explicit exclusions.
+Que un cuelgue de GitHub no se traduzca en una espera indefinida.
 
-## Constraints and risks
+## En alcance
 
-- Record known technical, security, compatibility, and delivery constraints.
+`timeout-minutes` en todos los jobs de `ci.yml`, `concurrency`, y el diagnóstico escrito.
 
-## Open questions
+## Fuera de alcance
 
-- Resolve questions that materially change the specification before implementation.
+Curar la causa raíz (no es nuestra), reintentos automáticos y tocar la matriz de sistemas.
 
+## Restricciones y riesgos
+
+- Una expresión mal puesta en `concurrency` **rompe el workflow entero**, no un job: hay que
+  validar el YAML antes de empujar.
+- Un `timeout` demasiado ajustado convertiría un día lento en un rojo que no es del código.
