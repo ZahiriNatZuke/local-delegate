@@ -3,9 +3,9 @@
   "slug": "ci-gate-steps",
   "title": "Un gate que mire los steps para que el job fantasma de Windows no bloquee un merge",
   "mode": "standard",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-07-31T14:26:43.248Z",
-  "updatedAt": "2026-07-31T14:38:34.823Z",
+  "updatedAt": "2026-07-31T14:49:44.755Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -96,6 +96,13 @@
       "to": "implementing",
       "at": "2026-07-31T14:38:34.823Z",
       "reason": "Gate plan aprobado tras revision adversarial sin hallazgos abiertos"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T14:49:44.755Z",
+      "reason": "Implementacion completa; suite 503 y verificacion en vivo del run 30640065930"
     }
   ]
 }
