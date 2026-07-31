@@ -29,10 +29,17 @@ para que nadie lo intente otra vez desde cero.
 
 | Job | Duración real | Declarado | Por qué |
 |---|---|---|---|
-| `lint` | ~20 s | 10 min | 30x de margen |
-| `test` | ~86 s de pasos | 15 min | el que se cuelga; 10x sobre lo real |
-| `install-smoke` | ~12 s | 15 min | depende de **PyPI en vivo**: un índice lento es espera legítima |
-| `secrets` | ~12 s | 10 min | 50x de margen |
+| `lint` | ~20 s | 5 min | 15x de margen |
+| `test` | 1 m 23 s en el peor caso (Windows) | 8 min | el que se cuelga; ~5,5x sobre lo peor observado |
+| `install-smoke` | ~13 s | 10 min | el más holgado: depende de **PyPI en vivo**, donde un índice lento es espera legítima |
+| `secrets` | ~12 s | 5 min | 25x de margen |
+
+**Los valores se ajustaron a la baja durante la implementación.** La primera versión ponía 15 min
+en `test`, un número elegido mirando el cuelgue y no la duración real — o sea 10x de margen sin
+motivo. Dos datos lo corrigen: el peor caso observado en Windows es **1 m 23 s**, y el reloj del
+`timeout` corre sobre la **ejecución** del job, no sobre la espera en cola, así que todo el margen
+es para ejecutar. Un timeout demasiado holgado no protege más: solo alarga la espera cada vez que
+el job se cuelga, que es justo lo que este cambio ataca.
 
 ## Estrategia de pruebas
 

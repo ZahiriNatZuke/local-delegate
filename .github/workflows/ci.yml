@@ -22,7 +22,7 @@ jobs:
   # Lo que sí depende del SO son los tests, y por eso el job `test` va en matriz.
   lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
 
@@ -67,8 +67,13 @@ jobs:
   # El cuelgue es POSTERIOR a nuestro código: el runner terminó y lo que falta es que GitHub cierre
   # el job. Se descartó por ejecución un proceso huérfano reteniendo handles —el fallo clásico en
   # Windows—: la suite no deja procesos vivos. Eso no lo podemos arreglar; lo que sí es que no
-  # espere las 6 HORAS del default de GitHub. Con esto, un cuelgue es un fallo en 15 minutos que se
+  # espere las 6 HORAS del default de GitHub. Con esto, un cuelgue es un fallo en 8 minutos que se
   # relanza con `gh run rerun`.
+  #
+  # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj del timeout
+  # corre sobre la EJECUCIÓN del job, no sobre la espera en cola. Ajustarlo de menos convertiría
+  # un día lento en un rojo que no es del código; ajustarlo de más es tiempo perdido cada vez que
+  # se cuelga, que ya van dos en dos días.
   test:
     strategy:
       # Sin fail-fast: si un sistema falla interesa ver también qué hicieron los otros dos,
@@ -77,7 +82,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
 
@@ -106,9 +111,9 @@ jobs:
   # incapaz de fallar.
   install-smoke:
     runs-on: ubuntu-latest
-    # Más holgado que `lint` porque es el único job que depende de PyPI en vivo: un índice lento
-    # es una espera legítima, no un cuelgue.
-    timeout-minutes: 15
+    # El más holgado de los cuatro, y por una razón concreta: es el único que depende de PyPI
+    # en vivo, donde un índice lento es una espera legítima y no un cuelgue.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -131,7 +136,7 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:

@@ -15,7 +15,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cierre el job) y se descartó por ejecución la causa clásica en Windows, un proceso huérfano
   reteniendo handles: la suite no deja procesos vivos. Eso no se puede arreglar desde el repo,
   pero sí que no espere las **6 horas** del default: `ci.yml` declara ahora `timeout-minutes` en
-  sus cuatro jobs, con el valor justificado en el propio fichero. Además declara `concurrency`,
+  sus cuatro jobs —8 minutos el de los tests, unas 5,5 veces el peor caso real de 1 m 23 s—, con
+  el valor justificado en el propio fichero. Además declara `concurrency`,
   así que empujar un arreglo cancela el run anterior de esa rama — en `main` no, porque ahí el run
   es el registro de que ese estado pasó el CI. El síntoma y cómo diagnosticarlo (mirar los
   *steps*, no el reloj) quedan en `docs/wiki/Repo-hardening.md`.
