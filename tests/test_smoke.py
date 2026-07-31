@@ -36,9 +36,10 @@ def test_la_tabla_de_la_skill_no_puede_mentir_sobre_las_tools():
     de inclusión: una fila sobrante sería una tool retirada del servidor que se sigue anunciando
     al usuario, y que `--agents` propagaría a todos sus agentes.
     """
-    from local_delegate import agents
+    from local_delegate import agents, install
 
-    assert {name for name, _what in agents.tool_catalog()} == EXPECTED_TOOLS
+    skill_md = install.resources_dir() / "skills" / install.SKILL_NAME / "SKILL.md"
+    assert {name for name, _what in agents.tool_catalog(skill_md)} == EXPECTED_TOOLS
 
 
 def test_config_defaults():

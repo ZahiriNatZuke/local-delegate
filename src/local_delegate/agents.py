@@ -27,8 +27,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from . import install
-
 ANCHOR = "mcp__local-delegate__local_delegate"
 TOOL_PREFIX = "mcp__local-delegate__"
 
@@ -52,19 +50,23 @@ _RULE = (
 )
 
 
-def tool_catalog() -> list[tuple[str, str]]:
+def tool_catalog(skill_md: Path) -> list[tuple[str, str]]:
     """(nombre, para qué sirve) de cada tool, leído de la tabla de la skill empaquetada.
 
     La skill es la fuente porque ya existe, viaja en el wheel y es lo que el usuario lee. La
     alternativa —preguntarle al servidor— obligaría a importar ``server``, que arrastra el SDK
     MCP y uvicorn para responder algo que es texto.
 
+    La ruta **se recibe** en vez de derivarse de ``install.resources_dir()``: importar ``install``
+    aquí cerraba un ciclo —``install`` importa este módulo para planificar la acción— que CodeQL
+    marcó en el PR. Recibirla deja este módulo sin una sola dependencia del paquete, que además
+    es lo que lo hace trivial de probar.
+
     Si la tabla no se puede leer devuelve vacío, y con el catálogo vacío no se toca ningún
     agente: la degradación segura de una escritura es no escribir.
     """
-    path = install.resources_dir() / "skills" / install.SKILL_NAME / "SKILL.md"
     try:
-        text = path.read_text(encoding="utf-8")
+        text = skill_md.read_text(encoding="utf-8")
     except OSError:
         return []
     return [
@@ -152,13 +154,13 @@ def process(text: str, catalog: list[tuple[str, str]]) -> tuple[str, list[str], 
     return text, added, action
 
 
-def pending(agents_dir: Path) -> list[tuple[Path, str, list[str], str | None]]:
+def pending(agents_dir: Path, skill_md: Path) -> list[tuple[Path, str, list[str], str | None]]:
     """Agentes que cambiarían: (ruta, texto nuevo, tools añadidas, acción del bloque).
 
     Solo lectura. Un fichero ilegible se salta en vez de tumbar el recorrido: el instalador es
     best-effort sobre ficheros que no escribió él.
     """
-    catalog = tool_catalog()
+    catalog = tool_catalog(skill_md)
     if not catalog or not agents_dir.is_dir():
         return []
     out = []

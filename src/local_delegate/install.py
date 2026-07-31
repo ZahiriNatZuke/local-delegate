@@ -526,9 +526,12 @@ def plan_install(opts: Options) -> list[Action]:
     # los subagentes los escribió el usuario, no son andamiaje nuestro. Se planifica solo si hay
     # algo que cambiar, para que el plan no anuncie trabajo inexistente.
     if "agents" in opts.components and "claude" in opts.targets:
+        # Import diferido y una ruta que se pasa, no que se descubre: `agents` no importa este
+        # módulo (cerraría un ciclo que CodeQL marcó), así que la fuente del catálogo se le da.
         from . import agents as agents_mod
 
-        cambios = agents_mod.pending(claude / "agents")
+        skill_md = res / "skills" / SKILL_NAME / "SKILL.md"
+        cambios = agents_mod.pending(claude / "agents", skill_md)
         if cambios:
             actions.append(_agents_action(claude / "agents", cambios))
 

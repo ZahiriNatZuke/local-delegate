@@ -14,6 +14,7 @@ from conftest import snapshot
 from local_delegate import agents
 from local_delegate import install as inst
 
+SKILL_MD = inst.resources_dir() / "skills" / inst.SKILL_NAME / "SKILL.md"
 ANCLA = agents.ANCHOR
 
 DELEGADOR = f"""---
@@ -81,7 +82,7 @@ def _install(home: Path, **kw) -> int:
 
 # --- El catálogo sale de la skill, no de una constante -------------------------
 def test_el_catalogo_sale_de_la_tabla_de_la_skill():
-    catalogo = agents.tool_catalog()
+    catalogo = agents.tool_catalog(SKILL_MD)
     assert len(catalogo) == 11
     nombres = [n for n, _ in catalogo]
     assert "local_describe_image" in nombres, "la tool que la receta vieja se dejaba fuera"
@@ -89,7 +90,7 @@ def test_el_catalogo_sale_de_la_tabla_de_la_skill():
 
 
 def test_el_bloque_dice_cuantas_tools_hay_de_verdad():
-    bloque = agents.catalog_block(agents.tool_catalog())
+    bloque = agents.catalog_block(agents.tool_catalog(SKILL_MD))
     assert "11 tools" in bloque
     assert bloque.startswith(agents.CATALOG_BEGIN)
     assert bloque.rstrip().endswith(agents.CATALOG_END)
@@ -97,7 +98,7 @@ def test_el_bloque_dice_cuantas_tools_hay_de_verdad():
 
 def test_el_bloque_no_se_come_los_acronimos():
     """Un `.lower()` entero convertía «lint/tests/CI» en «lint/tests/ci». Se vio ejecutándolo."""
-    assert "lint/tests/CI" in agents.catalog_block(agents.tool_catalog())
+    assert "lint/tests/CI" in agents.catalog_block(agents.tool_catalog(SKILL_MD))
 
 
 def test_el_detalle_de_la_accion_cabe_en_la_consola_de_windows(tmp_path):
@@ -115,15 +116,15 @@ def test_el_detalle_de_la_accion_cabe_en_la_consola_de_windows(tmp_path):
 def test_sin_catalogo_no_se_toca_nada(tmp_path, monkeypatch):
     """Degradación segura: si la tabla no se puede leer, no se escribe.
 
-    Se dobla `resources_dir` a un directorio vacío en vez de la función que lo lee: así se
-    ejercita el `except OSError` de verdad, no un doble que devuelve la lista vacía por su cuenta.
+    Se apunta a una ruta inexistente en vez de doblar la función que lee: así se ejercita el
+    `except OSError` de verdad, no un doble que devuelve la lista vacía por su cuenta.
     """
-    monkeypatch.setattr(inst, "resources_dir", lambda: tmp_path / "no-existe")
-    assert agents.tool_catalog() == []
+    assert agents.tool_catalog(tmp_path / "no-existe.md") == []
 
+    monkeypatch.setattr(inst, "resources_dir", lambda: tmp_path / "sin-recursos")
     d = _agents_dir(tmp_path, delegador=DELEGADOR)
     antes = snapshot(d)
-    _install(tmp_path)
+    assert [a for a in inst.plan_install(_opts(tmp_path)) if a.kind == "agents"] == []
     assert snapshot(d) == antes
 
 

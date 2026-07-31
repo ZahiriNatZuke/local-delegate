@@ -76,6 +76,37 @@ Cada una hace caer **exactamente** el test que existe para ella, y ninguno más.
 - [x] **Sin cambios ajenos:** `agents.py` (nuevo), `install.py`, `cli.py`, dos ficheros de test
       (uno nuevo), el borrado de la receta, `CHANGELOG.md`, la wiki y la traza SDD.
 
+### Hallazgo de CodeQL en el PR, y por qué se arregló en vez de silenciarse
+
+El primer push del PR **no se pudo mergear**: `required_review_thread_resolution` del ruleset y dos
+hilos abiertos por `github-advanced-security`.
+
+```
+CodeQL / Cyclic import
+  src/local_delegate/agents.py:30  — import of local_delegate.install begins an import cycle
+  src/local_delegate/install.py:529 — import of local_delegate.agents begins an import cycle
+```
+
+**Y tenía razón.** `agents.py` importaba `install` para saber dónde está la skill, mientras
+`install` importa `agents` para planificar la acción. Funcionaba porque el segundo es diferido,
+pero un ciclo que solo se sostiene por el orden de los imports es exactamente la clase de
+fragilidad que este repositorio evita.
+
+Arreglado invirtiendo la dependencia: `tool_catalog(skill_md)` y `pending(agents_dir, skill_md)`
+**reciben** la ruta, e `install` se la pasa. Comprobado con `ast` que `agents.py` no importa nada
+del paquete:
+
+```
+imports de agents.py: ['__future__', ['re'], 'pathlib']
+```
+
+Es mejor diseño del que había, no un parche: el módulo queda sin una sola dependencia del paquete,
+que además es lo que lo hace trivial de probar.
+
+**Lección para la próxima:** un merge `BLOCKED` con los 12 checks en verde no es un fallo de
+infraestructura. `gh pr view --json reviews` y los `reviewThreads` de la API GraphQL dicen quién
+bloquea; aquí era un review automático con dos comentarios sin resolver.
+
 ## Deviations and residual risk
 
 - **Defecto encontrado por la ejecución real, no por los tests:** el primer `catalog_block` hacía
