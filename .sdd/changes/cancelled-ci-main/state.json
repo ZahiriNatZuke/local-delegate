@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "slug": "cancelled-ci-main",
+  "title": "El cancelled del CI en main tiene causa conocida y firma reconocible",
+  "mode": "standard",
+  "status": "understanding",
+  "createdAt": "2026-07-31T21:41:26.677Z",
+  "updatedAt": "2026-07-31T21:41:26.677Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T21:41:26.677Z",
+      "reason": "SDD change created"
+    }
+  ]
+}

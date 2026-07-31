@@ -37,6 +37,45 @@ def _enlaces(texto: str) -> list[str]:
     return ENLACE_RE.findall(texto)
 
 
+def test_un_script_con_shebang_esta_marcado_ejecutable_en_git():
+    """`ruff` caza esto (EXE001), pero **solo en Linux**: en Windows no existe el bit de ejecución.
+
+    O sea que el lint local pasa en verde y el CI falla, que es la peor forma de enterarse. Pasó
+    con `sync_wiki.py` en este mismo change. El test lo comprueba leyendo el **modo que git tiene
+    registrado**, que sí es el mismo dato en los tres sistemas.
+    """
+    import subprocess
+
+    salida = subprocess.run(
+        ["git", "ls-files", "-s", "--", "scripts/*.py"],
+        cwd=RAIZ,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if salida.returncode != 0:
+        import pytest
+
+        pytest.skip("no hay git disponible para leer los modos")
+
+    descuadrados = []
+    for linea in salida.stdout.splitlines():
+        modo, _resto = linea.split(" ", 1)
+        ruta = RAIZ / linea.split("\t", 1)[1]
+        if not ruta.exists():
+            continue
+        tiene_shebang = ruta.read_bytes().startswith(b"#!")
+        marcado = modo == "100755"
+        if tiene_shebang != marcado:
+            que = "lleva shebang y no está marcado" if tiene_shebang else "está marcado sin shebang"
+            descuadrados.append(f"{ruta.name} ({que})")
+
+    assert not descuadrados, (
+        "scripts con shebang y bit de ejecución descuadrados; ruff lo marcaría como EXE001 "
+        f"en el CI (Linux) pero no en Windows: {descuadrados}"
+    )
+
+
 def test_hay_paginas_que_sincronizar():
     """Guarda del resto: sin esto, los tests de abajo pasarían sobre una lista vacía."""
     assert len(_paginas()) >= 5

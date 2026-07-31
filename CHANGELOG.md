@@ -23,6 +23,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   repo funcionan. `scripts/sync_wiki.py` los reescribe a URLs absolutas al publicar, y deja
   relativos los enlaces entre páginas hermanas — convertirlos también sacaría al lector de la wiki
   en cada clic.
+
+  De propina, un test que caza en Windows algo que `ruff` solo ve en Linux: **un script con
+  shebang tiene que estar marcado ejecutable en git** (`EXE001`). El bit de ejecución no existe en
+  Windows, así que el lint local pasa en verde y el CI falla — la peor forma de enterarse, y pasó
+  con este mismo script. El test lee el modo que git registra, que sí es el mismo dato en los tres
+  sistemas.
 - **El puerto del daemon puede exigir un token, y con él se cierra de una vez el endpoint MCP, el
   dashboard y `/api/*`.** Define `LOCAL_DELEGATE_WEB_TOKEN` en el entorno del daemon y todo el
   puerto lo pide; sin la variable no cambia absolutamente nada, porque exigirlo siempre rompería
