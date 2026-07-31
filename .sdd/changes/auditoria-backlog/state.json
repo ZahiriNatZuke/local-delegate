@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "auditoria-backlog",
+  "title": "Auditoría del backlog: veredicto por punto",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-31T19:01:13.406Z",
+  "updatedAt": "2026-07-31T19:38:12.849Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T19:35:30.495Z",
+      "evidence": "spec.md con 5 requisitos observables, 3 escenarios de aceptación y los bordes (unknown nunca missing); brief con las dos preguntas abiertas resueltas por el usuario",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T19:36:47.380Z",
+      "evidence": "plan revisado: 5 tareas con rollback, la decisión de diseño (preguntar sin credencial) justificada frente al camino del PR #100, y verificación al revés con dos mutantes",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T19:38:12.721Z",
+      "evidence": "568 passed 1 skipped; ruff check All checks passed; ruff format --check 61 ficheros; extract_dashboard_js + node --check exit 0; dos mutantes cazados por la razón declarada",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T19:38:12.849Z",
+      "evidence": "review.md: conforms-with-notes; 5 de 5 requisitos implementados y verificados; desviación de alcance declarada (4 confirmados quedan propuestos con tamaño)",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T19:01:13.406Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T19:35:30.495Z",
+      "evidence": "spec.md con 5 requisitos observables, 3 escenarios de aceptación y los bordes (unknown nunca missing); brief con las dos preguntas abiertas resueltas por el usuario",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T19:36:47.184Z",
+      "reason": "auditoría por ejecución de los 18 puntos"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T19:36:47.248Z",
+      "reason": "evidencia reunida"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T19:36:47.317Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T19:36:47.380Z",
+      "evidence": "plan revisado: 5 tareas con rollback, la decisión de diseño (preguntar sin credencial) justificada frente al camino del PR #100, y verificación al revés con dos mutantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T19:36:47.443Z",
+      "reason": "plan listo"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T19:36:47.503Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T19:38:12.657Z",
+      "reason": "código y auditoría completos"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T19:38:12.721Z",
+      "evidence": "568 passed 1 skipped; ruff check All checks passed; ruff format --check 61 ficheros; extract_dashboard_js + node --check exit 0; dos mutantes cazados por la razón declarada",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T19:38:12.781Z",
+      "reason": "verificación registrada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T19:38:12.849Z",
+      "evidence": "review.md: conforms-with-notes; 5 de 5 requisitos implementados y verificados; desviación de alcance declarada (4 confirmados quedan propuestos con tamaño)",
+      "actor": "user"
+    }
+  ]
+}

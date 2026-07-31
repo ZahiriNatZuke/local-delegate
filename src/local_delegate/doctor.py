@@ -284,6 +284,34 @@ def backend_probe() -> tuple[bool, str]:
     return False, f"responde HTTP {response.status_code}"
 
 
+def backend_requires_key() -> tuple[bool | None, str]:
+    """(¿el backend exige credencial?, motivo si no se pudo saber).
+
+    Se pregunta **sin** cabecera de autorización a propósito, y esa es toda la utilidad de la
+    función: es la única forma de saber qué se va a encontrar un proceso que no lleva la key. Y
+    hay uno que importa mucho, el MCP en modo ``stdio`` que lanza el cliente: hereda el entorno de
+    Claude Code, no el del lanzador del daemon, que es quien tiene el secreto en Windows (DPAPI).
+
+    Se separa de :func:`backend_probe` en vez de ampliarla porque responden a preguntas distintas
+    —«¿está sano para mí?» y «¿está abierto para quien no lleva credencial?»— y mezclarlas dejaría
+    un booleano cuyo significado depende del entorno de quien pregunte.
+    """
+    try:
+        import httpx2
+
+        with httpx2.Client(timeout=2.0) as c:
+            response = c.get(f"{config.BASE_URL}/models")
+    except Exception as exc:
+        return None, f"no se pudo preguntar al backend ({type(exc).__name__})"
+    if response.status_code in (401, 403):
+        return True, ""
+    if response.is_success:
+        return False, ""
+    # Ni 2xx ni 401/403: el backend contesta otra cosa. Eso no dice nada sobre la credencial, y
+    # decidirlo por descarte sería inventar el dato que falta.
+    return None, f"el backend responde HTTP {response.status_code}"
+
+
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
 # depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
 _GROUP_HEADINGS: dict[str, str] = {

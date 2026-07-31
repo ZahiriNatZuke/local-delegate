@@ -70,7 +70,7 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
 | `--enable-read-hook` | registra también el experimental `PreToolUse`/`Read` |
-| `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp` |
+| `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp`. **Si tu backend exige API key, `http` suele ser la única opción que funciona**: el proceso `stdio` lo lanza el cliente y hereda *su* entorno, no el del lanzador del daemon, que es quien tiene el secreto. Lo avisa el check «credencial del backend» |
 | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
 | `--api-key-env` | reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno |
 | `--pin-version X.Y.Z` | fija la versión del paquete en la entrada MCP |
@@ -130,7 +130,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las quince piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las dieciséis piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -164,6 +164,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
 | Servicios | backend | `BASE_URL/models` |
+| Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |
 
