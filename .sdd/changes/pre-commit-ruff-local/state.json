@@ -3,9 +3,9 @@
   "slug": "pre-commit-ruff-local",
   "title": "El hook de ruff usa el del proyecto y gitleaks sube a la ultima",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T00:24:53.230Z",
-  "updatedAt": "2026-07-31T00:30:17.696Z",
+  "updatedAt": "2026-07-31T00:34:26.245Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:34:25.766Z",
+      "evidence": "handoff.md con el estado (PR #80 mergeado, main en a0a061e, CI completo verde), las tres decisiones y los dos gotchas. Decision principal: NO se subio el rev, que era lo que pedia el pendiente, porque arregla el sintoma y no la causa -- la causa es tener dos fuentes de version, y ni casarlo con la ultima valdria (hoy v0.16.1 contra el 0.16.0 del lock). Segunda: gitleaks conserva su rev remoto a proposito, por ser un binario ajeno al proyecto y no una dependencia suya, con la asimetria explicada en el propio fichero. Gotchas: 'uv run' en un hook de git depende de que uv este en el PATH, que no siempre se hereda; y 'run --all-files' y un commit NO ejercitan lo mismo -- se vio en vivo al commitear solo Markdown, donde los hooks de ruff salieron '(no files to check) Skipped', que es el types_or funcionando. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-31T00:30:17.696Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T00:34:25.766Z",
+      "evidence": "handoff.md con el estado (PR #80 mergeado, main en a0a061e, CI completo verde), las tres decisiones y los dos gotchas. Decision principal: NO se subio el rev, que era lo que pedia el pendiente, porque arregla el sintoma y no la causa -- la causa es tener dos fuentes de version, y ni casarlo con la ultima valdria (hoy v0.16.1 contra el 0.16.0 del lock). Segunda: gitleaks conserva su rev remoto a proposito, por ser un binario ajeno al proyecto y no una dependencia suya, con la asimetria explicada en el propio fichero. Gotchas: 'uv run' en un hook de git depende de que uv este en el PATH, que no siempre se hereda; y 'run --all-files' y un commit NO ejercitan lo mismo -- se vio en vivo al commitear solo Markdown, donde los hooks de ruff salieron '(no files to check) Skipped', que es el types_or funcionando. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T00:34:25.993Z",
+      "reason": "gates completos, PR #80 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T00:34:26.245Z",
+      "reason": "change cerrado"
     }
   ]
 }
