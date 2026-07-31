@@ -7,6 +7,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Una tool que se topa con un problema cuyo arreglo ya conoce ahora lo pregunta, en vez de fallar
+  seco.** Tres casos, los tres con la misma forma: el servidor sabía la solución y solo enunciaba el
+  error. (1) **Backend caído**: pregunta si arrancarlo, y lo arranca si dices que sí — no cambia el
+  «backend opt-in», sigue sin arrancar nada sin permiso, solo que ahora ese permiso se puede dar en
+  caliente. (2) **Modelo fuera del catálogo**: ofrece los válidos, que ya iban en el texto del error.
+  (3) **`output_format` en blanco** en `local_delegate`: pregunta el formato en vez de dejar que el
+  modelo improvise.
+
+  Se apoya en `elicitation` del protocolo MCP, adoptada **después de medir que hace falta**: Claude
+  Code y Codex la declaran los dos, cosa que hasta ahora nadie sabía porque el daemon no miraba las
+  capabilities de nadie.
+
+  **El plazo no es una precaución, es el requisito que sostiene todo.** Está medido que un cliente
+  que declara la capability y no contesta **cuelga la tool para siempre**: el SDK no impone ningún
+  timeout. Y la forma intuitiva de ponerlo —`move_on_after` alrededor de la llamada— **ni siquiera
+  se puede escribir** desde el hilo en que corren las tools: lanza `NoEventLoopError`. Agotado el
+  plazo, la tool sigue como si no hubiera preguntado.
+
+  Preguntar nunca empeora nada: sin la capability, sin canal de vuelta, sin respuesta, con una
+  negativa o con un fallo inesperado, el comportamiento es **exactamente** el de antes. Se apaga con
+  `LOCAL_DELEGATE_ASK=0` y el plazo se ajusta con `LOCAL_DELEGATE_ASK_TIMEOUT` (30 s por defecto).
+  **Lo que sí cambia de verdad:** con respuesta, una llamada con el modelo mal escrito —que hoy
+  falla al instante y sin gastar backend— pasa a ejecutar inferencia con el modelo elegido. Sin
+  respuesta, sigue fallando igual de rápido y sin tocar el backend.
+
+  Ninguna tool cambia su schema: el contexto de la petición viaja por `ContextVar` desde un
+  middleware, no por las firmas.
+
 - **El daemon ya sabe con qué cliente habla: registra qué capabilities declara cada uno y qué
   revisión de protocolo negoció de verdad.** Hasta ahora no había ni una ocurrencia de
   `capabilities` en el paquete, así que preguntas como «¿puede este cliente responder a una

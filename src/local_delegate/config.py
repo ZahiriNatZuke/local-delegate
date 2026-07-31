@@ -212,5 +212,13 @@ CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
 # --- Auto-arranque del backend (opt-in, específico de llama-swap) -----------
 AUTOSTART = _env_flag("LOCAL_DELEGATE_AUTOSTART", False)
 
+# --- Preguntar al usuario en vez de fallar seco (elicitation del MCP) -------
+# Activado por defecto: preguntar es más seguro que fallar, porque el usuario siempre puede decir
+# que no y entonces el comportamiento es exactamente el de antes. El peor caso está medido y hay
+# que nombrarlo: un cliente que declare la capability y NO atienda las preguntas verá cada fallo
+# tardar ASK_TIMEOUT de más. Por eso el plazo es corto y la variable existe.
+ASK_ENABLED = _env_flag("LOCAL_DELEGATE_ASK", True)
+ASK_TIMEOUT = _env_int("LOCAL_DELEGATE_ASK_TIMEOUT", 30)
+
 # --- Feedback de ahorro en el propio texto de respuesta (awareness) ---------
 FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)

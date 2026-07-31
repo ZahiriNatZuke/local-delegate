@@ -61,9 +61,15 @@ re-evaluarlo desde cero. Traza en `.sdd/changes/sdk-fase-3-evaluacion/`.
 
 ### Se usa
 
-- **`ServerMiddleware`** — observa qué cliente hay al otro lado y qué protocolo negoció
-  (`clients.py`). Es la única pieza del borde MCP que aporta, porque el dato que registra **solo
-  existe en el borde**.
+- **`ServerMiddleware`** — dos usos, ambos en el borde MCP porque es donde vive lo que necesitan:
+  observar qué cliente hay al otro lado y qué protocolo negoció (`clients.py`), y dejar el contexto
+  de la petición al alcance de las capas de abajo (`preguntas.py`).
+- **`elicitation`** — preguntar al usuario en vez de fallar seco (`preguntas.py`). **Adoptada tras
+  medir que hacía falta**: estuvo bloqueada hasta saber si algún cliente la soportaba, y resultó que
+  Claude Code y Codex la declaran los dos. Tres cosas que conviene no redescubrir: el SDK **no
+  impone timeout** y un cliente mudo cuelga la tool para siempre; el plazo tiene que ir **dentro de
+  la corrutina**, porque `move_on_after` desde el hilo de una tool lanza `NoEventLoopError`; y
+  declarar la capability **no** garantiza canal de vuelta, así que hay que comprobar las dos cosas.
 
 ### Descartado: `extension` / `intercept_tool_call` (SEP-2133)
 
@@ -129,6 +135,7 @@ sería escribir código que ningún cliente negocia.
 |---|---|
 | `server.py` | Las 11 tools, `_chat`/`_post_chat`, guardrail, logging |
 | `clients.py` | Observa qué cliente MCP hay al otro lado: capabilities y protocolo negociado, a `clients.jsonl` y a `/api/status` |
+| `preguntas.py` | Preguntar al usuario vía `elicitation` cuando el servidor ya sabe el arreglo; devuelve `None` en todo camino malo, así que nunca empeora nada |
 | `config.py` | Toda la config por env + `platformdirs` (log de usuario) |
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |

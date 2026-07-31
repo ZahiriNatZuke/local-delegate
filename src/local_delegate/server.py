@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, clients, config
+from . import autostart, clients, config, preguntas
 
 # --- Versión del paquete (cacheada) ------------------------------------------
 # Se define antes de instanciar el server porque este la declara en su constructor.
@@ -61,9 +61,10 @@ mcp = MCPServer(
     ),
     website_url="https://github.com/ZahiriNatZuke/local-delegate",
     version=_get_version(),
-    # Observa qué cliente hay al otro lado y qué protocolo negoció; ver `clients.py`. Solo lee y
-    # anota: no toca la petición ni su resultado.
-    middleware=[clients.observar_cliente],
+    # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
+    # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
+    # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
+    middleware=[clients.observar_cliente, preguntas.recordar_contexto],
 )
 
 
@@ -526,6 +527,20 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             # levantarlo (opt-in, específico de llama-swap) y reintenta una vez.
             if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
                 continue
+            # Sin auto-arranque, preguntar antes de rendirse. No contradice el «backend opt-in»:
+            # sigue sin arrancar nada sin permiso, solo que ahora ese permiso se puede dar en
+            # caliente. Si no hay a quién preguntar, o dicen que no, cae al error de siempre.
+            if attempt == 1 and not config.AUTOSTART:
+                respuesta = preguntas.preguntar(
+                    f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
+                    preguntas.ArrancarBackend,
+                )
+                if (
+                    respuesta is not None
+                    and respuesta.arrancar
+                    and autostart.ensure_backend(wait=30)
+                ):
+                    continue
             return ChatResult(
                 text=(
                     f"[local-delegate error] no se pudo conectar al endpoint ({config.BASE_URL}). "
@@ -1322,9 +1337,31 @@ def local_delegate(
     """
     chosen = model or config.MODEL_MECHANICAL
     if chosen not in config.ALLOWED_MODELS:
-        return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {sorted(config.ALLOWED_MODELS)}"
+        # La lista de válidos ya iba en el error, así que el servidor siempre supo la respuesta.
+        # Se ofrece en vez de solo enunciarla. Ojo con la consecuencia, que es real: con respuesta,
+        # una llamada que hoy falla al instante y sin gastar backend pasa a ejecutar inferencia.
+        # Sin respuesta —mecanismo apagado, cliente sin soporte, plazo agotado, negativa— se
+        # devuelve el error de hoy tal cual y no se toca el backend.
+        validos = sorted(config.ALLOWED_MODELS)
+        elegido = preguntas.preguntar(
+            f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(validos)}",
+            preguntas.ElegirModelo,
+        )
+        if elegido is None or elegido.modelo not in config.ALLOWED_MODELS:
+            return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {validos}"
+        chosen = elegido.modelo
     if chunk not in {"auto", "on", "off"}:
         return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
+    if not output_format.strip():
+        # El parámetro es obligatorio, así que nunca falta — pero nadie comprobaba que trajera algo,
+        # y con la cadena vacía el guardrail se queda sin formato y el modelo improvisa. Si no hay
+        # quien responda, se sigue como hasta ahora.
+        formato = preguntas.preguntar(
+            "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",
+            preguntas.ElegirFormato,
+        )
+        if formato is not None and formato.formato.strip():
+            output_format = formato.formato.strip()
     system = _guard(output_format)
     if chunk == "on" or (chunk == "auto" and len(input) > config.CHUNK_CHARS):
         return _chat_chunked(

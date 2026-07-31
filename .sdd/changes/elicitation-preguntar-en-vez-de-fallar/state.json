@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "slug": "elicitation-preguntar-en-vez-de-fallar",
+  "title": "Que una tool pregunte al usuario en vez de adivinar o fallar seco: backend caido y delegacion sin formato",
+  "mode": "standard",
+  "status": "closed",
+  "createdAt": "2026-07-31T16:10:23.381Z",
+  "updatedAt": "2026-07-31T16:48:17.538Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:36:30.289Z",
+      "evidence": "Reaprobada tras la revision adversarial del plan: REQ-003 acotado a model (B-3) y REQ-003b nuevo por la consecuencia de B-2 (una llamada que hoy falla gratis pasaria a consumir backend)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:36:30.736Z",
+      "evidence": "Revision adversarial en plan-review.md: cinco hallazgos, cuatro bloqueantes, todos resueltos. El B-1 se valido midiendo: move_on_after alrededor de from_thread.run lanza NoEventLoopError, asi que el plazo va dentro de la corrutina",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:47:45.903Z",
+      "evidence": "539 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; ocho defectos verificados al reves, uno de los cuales revelo un hueco real (decline tratado como aceptacion) que obligo a un test nuevo",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:47:46.604Z",
+      "evidence": "Diez requisitos implementados y verificados en review.md; tres notas de cobertura declaradas",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T16:48:17.002Z",
+      "evidence": "handoff.md con las cinco decisiones no deducibles del codigo, incluido el fallo silencioso de ctx.elicit; sin secretos",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T16:10:23.381Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T16:17:17.641Z",
+      "reason": "Cinco escenarios medidos con cliente real; el que decide el diseno es que sin timeout la tool se cuelga"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T16:18:53.095Z",
+      "reason": "Ocho requisitos con escenarios; el plazo propio nace de una medicion, no de una precaucion"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T16:18:53.338Z",
+      "evidence": "Ocho requisitos observables con escenario y fila de trazabilidad; alcance de dos casos decidido por el usuario; REQ-005 (plazo) responde a la medicion de que sin el la tool se cuelga",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T16:31:58.868Z",
+      "evidence": "Reaprobada tras corregir una premisa falsa: output_format es obligatorio, asi que nunca falta; el caso real es que venga vacio. Alcance final de tres casos decidido por el usuario. Nueve requisitos con escenario y trazabilidad",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T16:36:30.289Z",
+      "evidence": "Reaprobada tras la revision adversarial del plan: REQ-003 acotado a model (B-3) y REQ-003b nuevo por la consecuencia de B-2 (una llamada que hoy falla gratis pasaria a consumir backend)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T16:36:30.519Z",
+      "reason": "Plan escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T16:36:30.736Z",
+      "evidence": "Revision adversarial en plan-review.md: cinco hallazgos, cuatro bloqueantes, todos resueltos. El B-1 se valido midiendo: move_on_after alrededor de from_thread.run lanza NoEventLoopError, asi que el plazo va dentro de la corrutina",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T16:36:30.986Z",
+      "reason": "Revisado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T16:36:31.226Z",
+      "reason": "A implementar"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T16:47:45.903Z",
+      "evidence": "539 passed 1 skipped; ruff check y format limpios; extract_dashboard_js + node --check OK; ocho defectos verificados al reves, uno de los cuales revelo un hueco real (decline tratado como aceptacion) que obligo a un test nuevo",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T16:47:46.138Z",
+      "reason": "Cuatro pasos del CI en verde y verificacion al reves completa"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T16:47:46.380Z",
+      "reason": "Revision del resultado escrita"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T16:47:46.604Z",
+      "evidence": "Diez requisitos implementados y verificados en review.md; tres notas de cobertura declaradas",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T16:48:17.002Z",
+      "evidence": "handoff.md con las cinco decisiones no deducibles del codigo, incluido el fallo silencioso de ctx.elicit; sin secretos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T16:48:17.258Z",
+      "reason": "Traza completa"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T16:48:17.538Z",
+      "reason": "Diez requisitos cumplidos y verificados"
+    }
+  ]
+}
