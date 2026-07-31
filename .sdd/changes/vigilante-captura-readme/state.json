@@ -3,9 +3,9 @@
   "slug": "vigilante-captura-readme",
   "title": "Nada obliga a regenerar la captura del README",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closing",
   "createdAt": "2026-07-31T12:41:31.561Z",
-  "updatedAt": "2026-07-31T12:55:46.014Z",
+  "updatedAt": "2026-07-31T12:57:24.825Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:57:24.585Z",
+      "evidence": "handoff.md y review.md rellenos con las cinco decisiones que no se deducen del codigo (escribe el manifiesto quien captura y nunca quien sube la version, o el check seria teatro; la version se lee del dashboard capturado y no de pyproject.toml, lo que convierte un aviso escrito en comprobacion; verificar es un test y no un script con workflow porque no necesita red, a diferencia de check_vendor.py; no se vigila el diseño a proposito porque hashear metrics.py daria falsos positivos; y -text explicito para el PNG por el precedente de autocrlf en el runner de Windows). Queda registrada la correccion propia sobre el exit code y la consecuencia operativa a EJECUTAR: el PR que suba a 0.18.0 fallara hasta regenerar la captura. Sin secretos: el manifiesto solo lleva un hash, una version y un tamaño.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,21 @@
       "to": "result-review",
       "at": "2026-07-31T12:55:46.014Z",
       "reason": "conformance aprobado con verificacion fresca por ejecucion"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T12:57:24.585Z",
+      "evidence": "handoff.md y review.md rellenos con las cinco decisiones que no se deducen del codigo (escribe el manifiesto quien captura y nunca quien sube la version, o el check seria teatro; la version se lee del dashboard capturado y no de pyproject.toml, lo que convierte un aviso escrito en comprobacion; verificar es un test y no un script con workflow porque no necesita red, a diferencia de check_vendor.py; no se vigila el diseño a proposito porque hashear metrics.py daria falsos positivos; y -text explicito para el PNG por el precedente de autocrlf en el runner de Windows). Queda registrada la correccion propia sobre el exit code y la consecuencia operativa a EJECUTAR: el PR que suba a 0.18.0 fallara hasta regenerar la captura. Sin secretos: el manifiesto solo lleva un hash, una version y un tamaño.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T12:57:24.825Z",
+      "reason": "result review con veredicto conforms y sin seguimiento requerido"
     }
   ]
 }
