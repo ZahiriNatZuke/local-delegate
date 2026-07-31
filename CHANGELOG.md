@@ -30,6 +30,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   en vivo, así que un índice degradado bloqueará PRs sin que nada esté roto.
 
 ### Fixed
+- **Dos líneas de la landing competían con la retícula del fondo.** El papel de la página es una
+  retícula de 1px de `--hair` cada **64px**, y tanto el borde superior del pie como el separador de
+  cada fila de la tabla de tools eran **exactamente eso mismo** —1px sólido de `--hair`— cayendo
+  donde la retícula no pasa: se leían como líneas del papel mal alineadas. El pie **pierde el borde**
+  y deja que la retícula lo cruce entera; el separador de la tabla pasa a **punteado**, que es el
+  recurso que ya usaba `.line .dots` del recibo para un contenido de dos columnas idéntico. La
+  textura distinta es lo que desambigua: dice «esto es una tabla», no «esto es el papel».
+  Comprobado en el navegador en los dos temas.
+
 - **El botón de idioma activo de la landing dejaba de usar el amarillo de la vía local.** En esa
   paleta el amarillo tiene un solo significado y está escrito en el propio CSS —«la vía que se
   toma»—, y elegir idioma no es tomar una ruta: la misma mezcla que se corrigió en el titular, en
