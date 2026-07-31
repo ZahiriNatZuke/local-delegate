@@ -87,9 +87,37 @@ Cómo salir:
 
 ## `doctor` dice que el backend está CAÍDO pero llama-swap está corriendo
 
-Si además responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
-entorno**. Desde la 0.14.0 el `doctor` lo distingue y lo reporta como `[ -- ] … responde 401`, que
-no cuenta como aviso. Exporta `LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
+Si responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
+entorno**. Desde la 0.18.1 `doctor` ni siquiera llega ahí — le pregunta primero al daemon, que sí
+tiene credencial, y solo prueba por su cuenta si no hay daemon. Si aun así lo ves, exporta
+`LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
+
+## Las tools `local_*` responden `401` aunque `doctor` diga que el backend está bien
+
+**Son dos caminos distintos al mismo backend, y solo uno lleva la credencial.** El daemon la recibe
+de su lanzador (en Windows, descifrada con DPAPI); el proceso MCP en modo `stdio` lo arranca el
+**cliente** y hereda el entorno del cliente, donde normalmente no está. Así que `doctor` puede
+verlo todo bien mientras cada delegación falla.
+
+Lo avisa el check **«credencial del backend»**:
+
+```
+[WARN] credencial del backend: el backend exige credencial y Claude Code habla por stdio
+       sin ella: sus tools local_* responderán 401
+       arréglalo con: local-delegate install --mcp-mode http
+```
+
+La salida es apuntar la entrada MCP al daemon, que ya tiene el secreto:
+
+```bash
+local-delegate install --clients claude --clients codex --no-hooks --no-skill --no-memory --mcp-mode http
+```
+
+Después **reinicia el cliente**, y comprueba que una tool responde de verdad — que `doctor` diga
+`[ OK ]` no lo demuestra.
+
+Ojo: `--api-key-env` **no** resuelve este caso. Reenvía `${LOCAL_DELEGATE_API_KEY}`, que sale del
+mismo entorno que está vacío. Sirve cuando la variable sí existe y solo hay que propagarla.
 
 ## `uvx` no encuentra el comando / Claude no arranca el MCP
 

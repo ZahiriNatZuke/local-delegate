@@ -89,6 +89,22 @@ def test_client_observed_no_se_repara_nunca(tmp_path):
         assert all(getattr(a, "check_id", None) != "client.observed" for a in actions)
 
 
+def test_service_credential_no_se_repara_nunca(tmp_path):
+    """El transporte de la entrada MCP lo elige el usuario; `update` no se lo cambia.
+
+    Este check **sí** se sabría reparar —reinstalar en modo `http`, que `_infer_mcp_mode` ya sabe
+    elegir—, y justo por eso hace falta atarlo: la reparación es tan fácil de añadir «por simetría»
+    con el resto de la tabla que alguien la pondría sin ver que pisa una decisión del usuario. Mismo
+    criterio que el `warn` de `scaffold.mcp_codex`.
+    """
+    assert [r for r in update.REPAIRS if r.check_id == "service.credential"] == []
+    home = make_home(tmp_path, complete=False)
+    for estado in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
+        results = results_from(**{"service.credential": estado})
+        actions, _notes = update.plan_repairs(results, opts_for(home))
+        assert all(getattr(a, "check_id", None) != "service.credential" for a in actions)
+
+
 def test_warn_de_mcp_codex_no_produce_ninguna_accion(tmp_path):
     """Ese `warn` dice «entrada puesta a mano»: es configuración del usuario, no basura nuestra."""
     home = make_home(tmp_path, complete=False)

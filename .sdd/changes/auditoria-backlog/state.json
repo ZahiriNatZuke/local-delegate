@@ -3,9 +3,9 @@
   "slug": "auditoria-backlog",
   "title": "Auditoría del backlog: veredicto por punto",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T19:01:13.406Z",
-  "updatedAt": "2026-07-31T19:38:12.849Z",
+  "updatedAt": "2026-07-31T19:46:11.272Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T19:46:11.206Z",
+      "evidence": "vault: backlog.md reescrito y jornada-2026-07-31-el-backlog-auditado.md; memoria Claude: MEMORY.md, backlog-pendientes.md, diagnostico-vale-para-su-camino.md (nueva), gotchas-tecnicos.md; sin secretos ni PII",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "at": "2026-07-31T19:38:12.849Z",
       "evidence": "review.md: conforms-with-notes; 5 de 5 requisitos implementados y verificados; desviación de alcance declarada (4 confirmados quedan propuestos con tamaño)",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T19:46:11.142Z",
+      "reason": "PR #103 mergeado en a0e4f4f; config aplicada y doctor en OK"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T19:46:11.206Z",
+      "evidence": "vault: backlog.md reescrito y jornada-2026-07-31-el-backlog-auditado.md; memoria Claude: MEMORY.md, backlog-pendientes.md, diagnostico-vale-para-su-camino.md (nueva), gotchas-tecnicos.md; sin secretos ni PII",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T19:46:11.272Z",
+      "reason": "auditoria cerrada"
     }
   ]
 }
