@@ -3,9 +3,9 @@
   "slug": "vigilante-captura-readme",
   "title": "Nada obliga a regenerar la captura del README",
   "mode": "lite",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-31T12:41:31.561Z",
-  "updatedAt": "2026-07-31T12:57:24.825Z",
+  "updatedAt": "2026-07-31T13:26:58.962Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -141,6 +141,13 @@
       "to": "closing",
       "at": "2026-07-31T12:57:24.825Z",
       "reason": "result review con veredicto conforms y sin seguimiento requerido"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T13:26:58.962Z",
+      "reason": "mergeado en main con el PR #86"
     }
   ]
 }

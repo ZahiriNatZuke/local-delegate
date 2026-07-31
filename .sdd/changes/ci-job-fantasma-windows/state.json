@@ -3,9 +3,9 @@
   "slug": "ci-job-fantasma-windows",
   "title": "El job de Windows puede colgarse y bloquear un merge sin limite",
   "mode": "lite",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-07-31T13:14:34.669Z",
-  "updatedAt": "2026-07-31T13:18:38.786Z",
+  "updatedAt": "2026-07-31T13:26:58.721Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:26:31.168Z",
+      "evidence": "YAML validado antes de cada push (una expresion mal puesta en concurrency rompe el workflow entero, no un job); 481 tests, ruff check y format limpios, CHANGELOG CRLF puro. Ejecucion real en el PR #87: los seis jobs pasan y test (windows-latest) tarda 1 m 12 s contra un limite de 8 minutos, o sea que el valor es holgado y suficiente. El concurrency tambien se observo: el segundo push genero un run nuevo sin dejar el anterior ocupando.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:26:31.381Z",
+      "evidence": "Los cinco requisitos verificados: REQ-001 los cuatro jobs declaran timeout-minutes (5/8/10/5), comprobado parseando el YAML; REQ-002 cada valor lleva su razon y su duracion observada en el propio fichero; REQ-003 y REQ-004 concurrency con cancel-in-progress condicionado a que la ref no sea main; REQ-005 la wiki recoge el sintoma, el comando de gh api para mirar los steps y el gotcha del retraso del estado. Ajuste registrado: los valores se bajaron tras la objecion del usuario de que 15 minutos eran mucho, corrigiendo con dos datos -el peor caso real es 1 m 23 s y el reloj corre sobre la ejecucion, no sobre la cola-.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:26:58.228Z",
+      "evidence": "handoff.md con el diagnostico completo para no repetirlo (los ocho pasos en success con completed_at null; hipotesis del proceso huerfano refutada por ejecucion; el comando de gh api para mirar los steps; el gotcha del retraso del estado en las dos direcciones) y las cuatro decisiones que no se deducen del codigo: se acota el daño y no se cura la causa porque no es curable desde el repo; main queda fuera de cancel-in-progress porque alli el run es el registro de que ese estado paso el CI; sin reintento automatico a proposito; y los valores salen de datos y no de intuicion. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -96,6 +96,58 @@
       "to": "implementing",
       "at": "2026-07-31T13:18:38.786Z",
       "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T13:26:30.936Z",
+      "reason": "implementado y observado en el PR #87"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T13:26:31.168Z",
+      "evidence": "YAML validado antes de cada push (una expresion mal puesta en concurrency rompe el workflow entero, no un job); 481 tests, ruff check y format limpios, CHANGELOG CRLF puro. Ejecucion real en el PR #87: los seis jobs pasan y test (windows-latest) tarda 1 m 12 s contra un limite de 8 minutos, o sea que el valor es holgado y suficiente. El concurrency tambien se observo: el segundo push genero un run nuevo sin dejar el anterior ocupando.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T13:26:31.381Z",
+      "evidence": "Los cinco requisitos verificados: REQ-001 los cuatro jobs declaran timeout-minutes (5/8/10/5), comprobado parseando el YAML; REQ-002 cada valor lleva su razon y su duracion observada en el propio fichero; REQ-003 y REQ-004 concurrency con cancel-in-progress condicionado a que la ref no sea main; REQ-005 la wiki recoge el sintoma, el comando de gh api para mirar los steps y el gotcha del retraso del estado. Ajuste registrado: los valores se bajaron tras la objecion del usuario de que 15 minutos eran mucho, corrigiendo con dos datos -el peor caso real es 1 m 23 s y el reloj corre sobre la ejecucion, no sobre la cola-.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T13:26:58.005Z",
+      "reason": "conformance aprobado y observado en el PR #87"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T13:26:58.228Z",
+      "evidence": "handoff.md con el diagnostico completo para no repetirlo (los ocho pasos en success con completed_at null; hipotesis del proceso huerfano refutada por ejecucion; el comando de gh api para mirar los steps; el gotcha del retraso del estado en las dos direcciones) y las cuatro decisiones que no se deducen del codigo: se acota el daño y no se cura la causa porque no es curable desde el repo; main queda fuera de cancel-in-progress porque alli el run es el registro de que ese estado paso el CI; sin reintento automatico a proposito; y los valores salen de datos y no de intuicion. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T13:26:58.488Z",
+      "reason": "verificado en el PR #87 con los seis jobs en verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T13:26:58.721Z",
+      "reason": "trabajo verificado; queda mergear"
     }
   ]
 }
