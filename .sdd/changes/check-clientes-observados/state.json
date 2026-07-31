@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "slug": "check-clientes-observados",
+  "title": "Check de doctor sobre los clientes MCP observados",
+  "mode": "standard",
+  "status": "closing",
+  "createdAt": "2026-07-31T17:13:22.428Z",
+  "updatedAt": "2026-07-31T17:41:07.838Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T17:20:23.102Z",
+      "evidence": "14 requisitos observables, 5 escenarios de aceptacion y bordes; fuente (clients.jsonl vs /api/status), dedup y criterio de estados decididos con dato medido por ejecucion en research.md R1-R7",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T17:23:10.453Z",
+      "evidence": "Revision adversarial con 4 hallazgos corregidos en el plan (ts no parseable, caps no lista con falso positivo por subcadena, cp1252 sobre texto de terceros, colaborador sin doblar en make_ctx); ciclo de imports descartado por lectura del fichero",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T17:38:09.934Z",
+      "evidence": "pytest 553 passed 1 skipped; ruff check All checks passed; ruff format --check 61 files already formatted; extract_dashboard_js + node --check exit 0; 9 mutantes verificados al reves, cada uno rompe su propio test",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T17:41:07.774Z",
+      "evidence": "Revision fresca de los 14 requisitos contra el diff: todos implementados y verificados. Tres hallazgos corregidos en la propia revision (test de dedup que pasaba por la guarda equivocada, checks.py convertido a CRLF por el script de mutacion, comentario que decia cuatro sitios habiendo cinco)",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T17:13:22.428Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T17:19:29.552Z",
+      "reason": "Impacto mapeado y premisas verificadas por ejecucion"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T17:19:29.617Z",
+      "reason": "Research cerrado: fuente, dedup y criterio de estados decididos con dato medido"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T17:20:23.102Z",
+      "evidence": "14 requisitos observables, 5 escenarios de aceptacion y bordes; fuente (clients.jsonl vs /api/status), dedup y criterio de estados decididos con dato medido por ejecucion en research.md R1-R7",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T17:20:23.169Z",
+      "reason": "Spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T17:23:10.387Z",
+      "reason": "Plan escrito, pendiente de revision adversarial"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T17:23:10.453Z",
+      "evidence": "Revision adversarial con 4 hallazgos corregidos en el plan (ts no parseable, caps no lista con falso positivo por subcadena, cp1252 sobre texto de terceros, colaborador sin doblar en make_ctx); ciclo de imports descartado por lectura del fichero",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T17:23:10.523Z",
+      "reason": "Plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T17:37:25.892Z",
+      "reason": "Implementacion completa; los cuatro pasos del CI en verde"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T17:38:09.934Z",
+      "evidence": "pytest 553 passed 1 skipped; ruff check All checks passed; ruff format --check 61 files already formatted; extract_dashboard_js + node --check exit 0; 9 mutantes verificados al reves, cada uno rompe su propio test",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T17:38:10.001Z",
+      "reason": "Quality aprobado, verificacion registrada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T17:41:07.774Z",
+      "evidence": "Revision fresca de los 14 requisitos contra el diff: todos implementados y verificados. Tres hallazgos corregidos en la propia revision (test de dedup que pasaba por la guarda equivocada, checks.py convertido a CRLF por el script de mutacion, comentario que decia cuatro sitios habiendo cinco)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T17:41:07.838Z",
+      "reason": "Conformance aprobado"
+    }
+  ]
+}

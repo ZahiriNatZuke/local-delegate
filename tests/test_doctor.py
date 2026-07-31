@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import UTC, datetime
+from pathlib import Path
 
 from conftest import make_home, snapshot
 
@@ -121,8 +122,21 @@ def test_select_relevant_issues_excludes_prs_and_noise():
     ]
 
 
-def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True):
-    """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta."""
+def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True, log_dir=None):
+    """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta.
+
+    ``log_dir`` importa aunque casi ningún test lo pase: sin doblarlo, el check de clientes
+    observados leería el ``clients.jsonl`` REAL de la máquina donde corra la suite —verde en CI,
+    donde no existe, y otra cosa en la máquina de quien desarrolla—. Por defecto apunta a una ruta
+    inexistente, que es el caso «todavía no ha hablado nadie».
+
+    Se dobla ``config.LOG_DIR`` y **no** ``checks._default_clients_seen``: el dataclass capturó la
+    referencia a esa función al definirse, así que monkeypatchearla no cambiaría el default del
+    ``Context``. Mismo motivo que se explica más abajo para ``latest_version``.
+    """
+    monkeypatch.setattr(
+        checks.config, "LOG_DIR", Path(log_dir) if log_dir else Path(__file__).parent / "_sin_logs"
+    )
     version = doctor.RECOMMENDED_VERSIONS["llama-swap"] if swap == "ok" else swap
     monkeypatch.setattr(doctor, "detect_llamaswap_version", lambda: version)
     monkeypatch.setattr(
@@ -167,7 +181,17 @@ def _stub_environment(monkeypatch, *, swap="ok", backend=True, daemon_alive=True
 
 
 def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, capsys):
-    _stub_environment(monkeypatch)
+    # El registro de clientes se siembra porque **no vive en el HOME**: está en `LOG_DIR`, así que
+    # un HOME completo no basta para que ese check salga `[ OK ]`. Se le da un cliente real en vez
+    # de excluirlo, para que este test también le exija estar bien.
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "clients.jsonl").write_text(
+        '{"ts": "2026-07-31T17:15:52+00:00", "client": "claude-code", "version": "2.1.220",'
+        ' "protocol": "2025-11-25", "caps": ["elicitation", "roots"]}\n',
+        encoding="utf-8",
+    )
+    _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
     args = argparse.Namespace(config=None, online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
