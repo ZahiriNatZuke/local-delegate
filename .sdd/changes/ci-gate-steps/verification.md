@@ -19,7 +19,7 @@
 | REQ-005 | job ausente → plazo agotado → salida ≠ 0 | **OK** | `test_un_job_que_nunca_aparece_agota_el_plazo_y_suspende` |
 | REQ-006 | API ilegible → salida ≠ 0 | **OK** | `test_si_la_api_no_se_puede_leer_el_gate_suspende` |
 | REQ-007 | la salida nombra los fantasmas | **OK** | `test_el_fantasma_sale_en_verde_y_queda_nombrado` |
-| REQ-008 | ruleset | **PENDIENTE**, es post-merge por diseño (T7) | ver abajo |
+| REQ-008 | ruleset | **OK** | aplicado tras el merge; lista releída por API |
 | REQ-009 | `setup_repo_security.sh` lleva la lista nueva | **OK** | `--dry-run`, JSON del ruleset con `ci-gate` y sin `test (windows-latest)` |
 | REQ-010 | wiki | **OK** | `docs/wiki/Repo-hardening.md` |
 
@@ -103,7 +103,16 @@ lo que queda probado en vivo es el camino normal y la espera. La vía del fantas
 los tests, y su premisa —los steps de un job abierto son visibles y su último no es `Complete job`
 hasta el final— quedó medida arriba.
 
-**REQ-008** sigue pendiente: es post-merge por diseño.
+### REQ-008: el ruleset, aplicado tras el merge
+
+Con `ci-gate` ya reportando, `verify_checks` pasa —«los 6 checks pedidos los reporta alguien»— y el
+script aplica. Lista releída de `gh api .../rulesets/19859628`:
+
+```
+ci-gate · lint · test (ubuntu-latest) · test (macos-latest) · secrets · Analyze (python)
+```
+
+`test (windows-latest)` ya no está; los otros cinco intactos. Exactamente lo decidido.
 
 ## Deviations and residual risk
 
