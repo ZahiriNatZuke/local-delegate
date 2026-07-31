@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "install-agents",
+  "title": "local-delegate install --agents mantiene los subagentes al dia con el catalogo real",
+  "mode": "standard",
+  "status": "result-review",
+  "createdAt": "2026-07-31T02:52:33.085Z",
+  "updatedAt": "2026-07-31T03:03:33.579Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T02:55:13.680Z",
+      "evidence": "spec.md con 17 requisitos observables y 6 escenarios, sobre un research con dos hallazgos que cambian el diseño. PRIMERO: el catalogo canonico YA EXISTE como recurso empaquetado -- resources/skills/delegacion-local/SKILL.md, lineas 36-46, tiene la tabla de las once tools con nombre y descripcion corta, viaja en el wheel y es lo que el usuario ya lee. Asi que el bloque de los agentes no hay que escribirlo sino derivarlo de ahi, lo que ademas evita importar server.py, que arrastra el SDK MCP y uvicorn (el mismo motivo por el que checks.py difiere sus imports). SEGUNDO, y es el que añade REQ-002: hay un test (test_smoke.py::test_eleven_tools_registered) que compara las tools del servidor con una lista esperada, pero NADIE compara esa lista con la tabla de SKILL.md, o sea que la fuente 'canonica' PUEDE MENTIR igual que mintio la receta -- sin ese test se estaria cambiando una fuente desincronizada por otra que puede desincronizarse. Datos medidos: 11 tools reales frente al '10 tools' del CATALOG_BODY de la receta, y 27 subagentes de esta maquina declaran tools mcp__local-delegate__*, asi que el caso de uso es real y un error se multiplica por 27. Riesgo principal identificado y acotado: se escribe en ficheros que escribio el usuario, de ahi que --agents sea opt-in, que solo se toquen los que YA declaran el ancla, que quede .bak y que el bloque vaya entre marcadores.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T02:56:42.862Z",
+      "evidence": "plan.md con 7 tareas. Modulo nuevo agents.py con la logica pura y install solo aporta la accion y la escritura, que es el mismo reparto que ya ordena checks/install; install.py lleva 700 lineas y no necesita mas. La logica de la receta se PORTA y no se reinventa: sus heuristicas llevan tiempo funcionando sobre 27 agentes reales, en particular la de 'si no reconozco la seccion, no inserto'. Revision adversarial con cinco hallazgos, dos bloqueantes, y los dos verificados por ejecucion antes de aprobar: R-1, el test de paridad tiene que comparar CONJUNTOS IGUALES y no inclusion, porque comprobar solo que cada tool del servidor este en la tabla dejaria pasar una fila sobrante -- una tool retirada que sigue anunciada y que --agents propagaria a 27 agentes; R-2, _ALL_COMPONENTS alimenta a varios consumidores, y verificado: solo lo usa cli.py:78 para construir components desde los flags, mientras que plan_uninstall filtra con 'if \"hooks\" in opts.components' explicito y update.py usa repair.components de su propia tabla, asi que añadir 'agents' no hace que uninstall intente nada. R-3, un .bak no casa con el glob *.md que lee Claude Code, comprobado por la extension. R-4, la descripcion de la tabla lleva markdown y se conserva tal cual porque el destino tambien es markdown. R-5, buscadas las referencias ANTES de borrar: la unica viva esta en docs/Investigacion-empaquetado-publicacion-MCP.md, un documento de investigacion fechado el 2026-07-06 (cuando el proyecto tenia 9 tools) que es historico y no se toca, aunque contenga la decision que este change revierte.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:03:33.128Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 54 files already formatted; pytest -> 478 passed, 1 skipped (+15); extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (936 CRLF, 0 LF) y '--help' enseñando el flag. Verificacion al reves de las DOS salvaguardas: quitada la comprobacion del ancla cae test_un_agente_ajeno_queda_byte_a_byte_igual; quitado el guard de 'seccion reconocible' cae test_sin_seccion_reconocible_no_se_inventa_donde_va_el_bloque. Cada una tumba exactamente el test que existe para ella y ninguno mas. Ejecucion real contra los 27 subagentes en --dry-run: los detecta todos, y el diff exacto de uno (calculado sin escribir) enseña el bloque pasando de 10 a 11 tools con local_describe_image incluida y NADA fuera de los marcadores. Y la ejecucion real destapo un defecto que los tests no vieron: catalog_block hacia what.lower() y convertia 'lint/tests/CI' en 'lint/tests/ci', comiendose los acronimos de la tabla -- corregido a minuscula solo en la inicial, con test que lo fija.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:03:33.365Z",
+      "evidence": "Revision fresca del diff contra los 17 requisitos y los 6 escenarios; tabla requisito-a-evidencia en verification.md. REQ-002 es el requisito de fondo y se cumple con el rigor que pedia el hallazgo R-1: el test compara CONJUNTOS IGUALES entre la tabla de SKILL.md y server.mcp.list_tools(), no inclusion, porque comprobar solo una direccion dejaria pasar una fila sobrante -- una tool retirada del servidor que se sigue anunciando y que --agents propagaria a 27 agentes. REQ-006 se verifica de la forma mas fuerte posible: el test del agente ajeno no solo compara byte a byte, ademas exige que NO exista .bak, o sea que el fichero ni se abrio para escribir. REQ-003 comprobado por lectura del modulo: agents.py solo importa install, y server aparece unicamente en el test. Dos cosas anotadas que no son defectos: la flecha del catalogo va al fichero UTF-8 y no al detalle que se imprime, garantizado por test de cp1252; y docs/Investigacion-empaquetado-publicacion-MCP.md sigue diciendo que la receta va fuera del paquete, pero es un documento fechado el 2026-07-06 y se conserva como historico.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T02:52:33.085Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T02:52:33.414Z",
+      "reason": "Mapeo de la receta, del registro de tools del servidor y de los agentes reales"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T02:54:20.681Z",
+      "reason": "Research cerrado: el catalogo canonico ya existe en SKILL.md pero nada garantiza que no mienta"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T02:55:13.680Z",
+      "evidence": "spec.md con 17 requisitos observables y 6 escenarios, sobre un research con dos hallazgos que cambian el diseño. PRIMERO: el catalogo canonico YA EXISTE como recurso empaquetado -- resources/skills/delegacion-local/SKILL.md, lineas 36-46, tiene la tabla de las once tools con nombre y descripcion corta, viaja en el wheel y es lo que el usuario ya lee. Asi que el bloque de los agentes no hay que escribirlo sino derivarlo de ahi, lo que ademas evita importar server.py, que arrastra el SDK MCP y uvicorn (el mismo motivo por el que checks.py difiere sus imports). SEGUNDO, y es el que añade REQ-002: hay un test (test_smoke.py::test_eleven_tools_registered) que compara las tools del servidor con una lista esperada, pero NADIE compara esa lista con la tabla de SKILL.md, o sea que la fuente 'canonica' PUEDE MENTIR igual que mintio la receta -- sin ese test se estaria cambiando una fuente desincronizada por otra que puede desincronizarse. Datos medidos: 11 tools reales frente al '10 tools' del CATALOG_BODY de la receta, y 27 subagentes de esta maquina declaran tools mcp__local-delegate__*, asi que el caso de uso es real y un error se multiplica por 27. Riesgo principal identificado y acotado: se escribe en ficheros que escribio el usuario, de ahi que --agents sea opt-in, que solo se toquen los que YA declaran el ancla, que quede .bak y que el bloque vaya entre marcadores.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T02:55:13.970Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T02:56:42.862Z",
+      "evidence": "plan.md con 7 tareas. Modulo nuevo agents.py con la logica pura y install solo aporta la accion y la escritura, que es el mismo reparto que ya ordena checks/install; install.py lleva 700 lineas y no necesita mas. La logica de la receta se PORTA y no se reinventa: sus heuristicas llevan tiempo funcionando sobre 27 agentes reales, en particular la de 'si no reconozco la seccion, no inserto'. Revision adversarial con cinco hallazgos, dos bloqueantes, y los dos verificados por ejecucion antes de aprobar: R-1, el test de paridad tiene que comparar CONJUNTOS IGUALES y no inclusion, porque comprobar solo que cada tool del servidor este en la tabla dejaria pasar una fila sobrante -- una tool retirada que sigue anunciada y que --agents propagaria a 27 agentes; R-2, _ALL_COMPONENTS alimenta a varios consumidores, y verificado: solo lo usa cli.py:78 para construir components desde los flags, mientras que plan_uninstall filtra con 'if \"hooks\" in opts.components' explicito y update.py usa repair.components de su propia tabla, asi que añadir 'agents' no hace que uninstall intente nada. R-3, un .bak no casa con el glob *.md que lee Claude Code, comprobado por la extension. R-4, la descripcion de la tabla lleva markdown y se conserva tal cual porque el destino tambien es markdown. R-5, buscadas las referencias ANTES de borrar: la unica viva esta en docs/Investigacion-empaquetado-publicacion-MCP.md, un documento de investigacion fechado el 2026-07-06 (cuando el proyecto tenia 9 tools) que es historico y no se toca, aunque contenga la decision que este change revierte.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T02:56:43.121Z",
+      "reason": "plan revisado adversarialmente, 5 hallazgos incorporados y los 2 bloqueantes verificados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T02:56:43.385Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T03:03:32.897Z",
+      "reason": "7 tareas implementadas; CI local verde, ejecucion real contra 27 agentes y verificacion al reves"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T03:03:33.128Z",
+      "evidence": "Los cuatro pasos del CI en verde: ruff check -> All checks passed; ruff format --check -> 54 files already formatted; pytest -> 478 passed, 1 skipped (+15); extract_dashboard_js.py + node --check -> OK. CHANGELOG con CRLF intacto (936 CRLF, 0 LF) y '--help' enseñando el flag. Verificacion al reves de las DOS salvaguardas: quitada la comprobacion del ancla cae test_un_agente_ajeno_queda_byte_a_byte_igual; quitado el guard de 'seccion reconocible' cae test_sin_seccion_reconocible_no_se_inventa_donde_va_el_bloque. Cada una tumba exactamente el test que existe para ella y ninguno mas. Ejecucion real contra los 27 subagentes en --dry-run: los detecta todos, y el diff exacto de uno (calculado sin escribir) enseña el bloque pasando de 10 a 11 tools con local_describe_image incluida y NADA fuera de los marcadores. Y la ejecucion real destapo un defecto que los tests no vieron: catalog_block hacia what.lower() y convertia 'lint/tests/CI' en 'lint/tests/ci', comiendose los acronimos de la tabla -- corregido a minuscula solo en la inicial, con test que lo fija.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T03:03:33.365Z",
+      "evidence": "Revision fresca del diff contra los 17 requisitos y los 6 escenarios; tabla requisito-a-evidencia en verification.md. REQ-002 es el requisito de fondo y se cumple con el rigor que pedia el hallazgo R-1: el test compara CONJUNTOS IGUALES entre la tabla de SKILL.md y server.mcp.list_tools(), no inclusion, porque comprobar solo una direccion dejaria pasar una fila sobrante -- una tool retirada del servidor que se sigue anunciando y que --agents propagaria a 27 agentes. REQ-006 se verifica de la forma mas fuerte posible: el test del agente ajeno no solo compara byte a byte, ademas exige que NO exista .bak, o sea que el fichero ni se abrio para escribir. REQ-003 comprobado por lectura del modulo: agents.py solo importa install, y server aparece unicamente en el test. Dos cosas anotadas que no son defectos: la flecha del catalogo va al fichero UTF-8 y no al detalle que se imprime, garantizado por test de cp1252; y docs/Investigacion-empaquetado-publicacion-MCP.md sigue diciendo que la receta va fuera del paquete, pero es un documento fechado el 2026-07-06 y se conserva como historico.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T03:03:33.579Z",
+      "reason": "gates quality y conformance aprobados"
+    }
+  ]
+}

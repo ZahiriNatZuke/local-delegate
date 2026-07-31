@@ -68,6 +68,7 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
 | `--force-mcp-codex` | reemplaza sin preguntar una entrada de Codex escrita a mano |
 | `--target claude \| codex \| all` | histórico, equivale a `--clients`; `all` fuerza los dos aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
+| `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
 | `--enable-read-hook` | registra también el experimental `PreToolUse`/`Read` |
 | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp` |
 | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
@@ -80,6 +81,30 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
 El intérprete por defecto **no** es el que ejecuta el instalador: bajo `uvx` ese vive en un
 entorno efímero que desaparece al terminar el comando y dejaría los hooks apuntando a una ruta
 inexistente.
+
+## Mantener tus subagentes al día: `--agents`
+
+Si tienes subagentes en `~/.claude/agents/` que delegan en local-delegate, cada tool nueva del MCP
+los deja desactualizados: hay que añadirla a su `tools:` y refrescar el catálogo que traen en
+prosa. `--agents` lo hace por ti.
+
+```bash
+local-delegate install --agents --dry-run   # enseña qué agentes cambiarían
+local-delegate install --agents             # aplica
+```
+
+Es **opt-in a propósito**, y es el único componente que se pide en vez de excluirse: los
+subagentes los escribiste tú, no son andamiaje nuestro.
+
+Cuatro reglas gobiernan lo que toca:
+
+1. **Solo los agentes que ya declaran nuestras tools** (los que tienen
+   `mcp__local-delegate__local_delegate` en su `tools:`). Un subagente ajeno ni se abre.
+2. **El catálogo se deriva de la tabla de la skill**, así que dice siempre las tools que hay de
+   verdad. Un test del propio paquete falla si esa tabla y el servidor MCP se separan.
+3. **Fuera de los marcadores `<!-- local-delegate:catalog:begin/end -->` no se toca nada**, y si
+   no se reconoce dónde va el bloque, no se inserta: no se adivina.
+4. **Cada fichero modificado deja su `.bak`.**
 
 ## Caso Mac → PC (backend remoto)
 

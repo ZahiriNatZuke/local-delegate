@@ -3,9 +3,9 @@
   "slug": "borrar-update-to-latest",
   "title": "Borrar scripts/update_to_latest.sh, que el CLI sustituyo",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T01:16:30.270Z",
-  "updatedAt": "2026-07-31T01:19:41.201Z",
+  "updatedAt": "2026-07-31T01:24:09.579Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T01:24:08.975Z",
+      "evidence": "handoff.md con el estado (PR #81 mergeado, main en a556f04, CI completo verde), las tres decisiones y el gotcha. Decision principal: el pendiente decia 'huerfano' y era falso -- el fichero documentaba su propia razon de existir y su fallback funcionaba, asi que se retiro por decision del usuario con ese dato delante. Segunda: las menciones en pasado se conservan a proposito, porque explican de donde salio la regla del repositorio y borrar el porque junto con la cosa es lo que permitiria que alguien vuelva a poner un instalador en scripts/. Gotcha anotado: al verificar 'no quedan referencias' hay que excluir .sdd/, porque las trazas anteriores lo mencionan y siempre lo haran, y sin excluirlas la comprobacion daria un falso positivo permanente. Y una nota para el siguiente: mirar docs/recipes/update_agents.py ANTES de asumir el pendiente, porque los dos anteriores de la misma familia resultaron distintos de como los describia el backlog. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-31T01:19:41.201Z",
       "reason": "gates aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T01:24:08.975Z",
+      "evidence": "handoff.md con el estado (PR #81 mergeado, main en a556f04, CI completo verde), las tres decisiones y el gotcha. Decision principal: el pendiente decia 'huerfano' y era falso -- el fichero documentaba su propia razon de existir y su fallback funcionaba, asi que se retiro por decision del usuario con ese dato delante. Segunda: las menciones en pasado se conservan a proposito, porque explican de donde salio la regla del repositorio y borrar el porque junto con la cosa es lo que permitiria que alguien vuelva a poner un instalador en scripts/. Gotcha anotado: al verificar 'no quedan referencias' hay que excluir .sdd/, porque las trazas anteriores lo mencionan y siempre lo haran, y sin excluirlas la comprobacion daria un falso positivo permanente. Y una nota para el siguiente: mirar docs/recipes/update_agents.py ANTES de asumir el pendiente, porque los dos anteriores de la misma familia resultaron distintos de como los describia el backlog. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T01:24:09.264Z",
+      "reason": "gates completos, PR #81 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T01:24:09.579Z",
+      "reason": "change cerrado"
     }
   ]
 }
