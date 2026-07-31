@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "_acerca_de": [
+    "Manifiesto de los PNG de la marca. Es la FUENTE DE VERDAD de con qué",
+    "favicon.svg se generaron.",
+    "Lo escribe `scripts/dev/capture_icons.py` al capturar, NUNCA a mano: un",
+    "manifiesto actualizado a mano cumpliría el check sin que nadie regenerara",
+    "los PNG, que es justo lo que se quiere evitar.",
+    "Lo comprueba `tests/test_site.py`."
+  ],
+  "source": "favicon.svg",
+  "source_sha256": "8b26059aa8c1d50599537d256e1855536fd154f4956f4733f1c34d0c52d7062a",
+  "icons": [
+    {
+      "file": "apple-touch-icon.png",
+      "size": 180,
+      "sha256": "6462c4ec416756fdea2369dffed1a1d005c8a827c1a1c6b685679224485afecd",
+      "bytes": 2116
+    },
+    {
+      "file": "favicon-32x32.png",
+      "size": 32,
+      "sha256": "4f298b6f4f9bbe4619925dc7206197ef1f85db299113556e761f87f17253b78e",
+      "bytes": 488
+    }
+  ]
+}

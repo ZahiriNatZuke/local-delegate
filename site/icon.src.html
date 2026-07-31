@@ -15,16 +15,20 @@
   `--ink` que la página ya usa en `theme-color`— es la diferencia entre un icono y un accidente.
   El fondo llega hasta el borde porque iOS aplica su propia máscara redondeada encima.
 
-  REGENERAR los PNG (sin ninguna dependencia nueva del proyecto):
+  REGENERAR los PNG — un comando:
 
-    1. python -m http.server 8765 --bind 127.0.0.1     (desde site/)
-    2. Abrir http://127.0.0.1:8765/icon.src.html y capturar el viewport —no la página entera—
-       una vez por tamaño:
-         page.set_viewport_size({"width":180,"height":180})
-         page.screenshot(path="apple-touch-icon.png", scale="css")
-         page.set_viewport_size({"width":32,"height":32})
-         page.screenshot(path="favicon-32x32.png", scale="css")
-    3. Guardar en site/.
+    uv run python scripts/dev/capture_icons.py
+
+  Hace lo que antes había que hacer a mano (servir site/, cargar esta página y capturar el
+  viewport a cada tamaño) y además escribe `site/icons.json` con el sha256 del favicon.svg del
+  que salieron. `tests/test_site.py` compara ese hash con el del SVG actual, así que tocar el
+  icono y no regenerar **rompe el PR** — antes se quedaban desincronizados en silencio.
+
+  El manifiesto lo escribe el script y NUNCA se toca a mano: uno actualizado a mano cumpliría el
+  check sin que nadie regenerara nada.
+
+  Requiere playwright, que no es dependencia del proyecto (y `uv sync` lo desinstala):
+    uv pip install playwright && uv run python -m playwright install chromium
 
   `scale="css"` importa: con `device` el PNG sale al doble en una pantalla retina y deja de medir
   lo que declaran el `sizes` del <link> y el manifest. Hay tests que leen la cabecera de cada PNG.
