@@ -19,19 +19,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   usos del token antes de tocar uno: los otros 17 se quedan, con el porqué escrito.
 
 ### Changed
-- **Un job de CI colgado ya no puede bloquear un merge durante horas.** Dos veces en dos días
-  `test (windows-latest)` se quedó en `in_progress` con **todos sus pasos terminados en
-  `success`** —incluido `Complete job`— mientras GitHub Status decía «All Systems Operational»:
-  1954 s la primera, y la segunda hasta cancelarlo a mano, cuando lo normal son 60–125 s. El
-  cuelgue es **posterior a nuestro código** (el runner acaba en ~86 s y lo que falta es que GitHub
-  cierre el job) y se descartó por ejecución la causa clásica en Windows, un proceso huérfano
-  reteniendo handles: la suite no deja procesos vivos. Eso no se puede arreglar desde el repo,
-  pero sí que no espere las **6 horas** del default: `ci.yml` declara ahora `timeout-minutes` en
-  sus cuatro jobs —8 minutos el de los tests, unas 5,5 veces el peor caso real de 1 m 23 s—, con
-  el valor justificado en el propio fichero. Además declara `concurrency`,
-  así que empujar un arreglo cancela el run anterior de esa rama — en `main` no, porque ahí el run
-  es el registro de que ese estado pasó el CI. El síntoma y cómo diagnosticarlo (mirar los
-  *steps*, no el reloj) quedan en `docs/wiki/Repo-hardening.md`.
+- **`ci.yml` declara `timeout-minutes` en sus cuatro jobs y `concurrency`.** Sin lo primero regían
+  las **6 horas** del default de GitHub para un job que se atasque **ejecutando** (un test que no
+  termina, una descarga colgada); ahora son 8 minutos el de los tests —unas 5,5 veces el peor caso
+  real de 1 m 23 s— con el valor justificado en el propio fichero. Lo segundo hace que empujar un
+  arreglo cancele el run anterior de esa rama; en `main` no, porque ahí el run es el registro de
+  que ese estado pasó el CI.
+
+  **Lo que esto NO arregla, dicho para que nadie se confíe:** el «job fantasma» que bloqueó tres
+  merges en dos días, con `test (windows-latest)` en `in_progress` y **todos sus pasos terminados
+  en `success`** —incluido `Complete job`— mientras GitHub Status decía «All Systems Operational».
+  Ahí el cuelgue es **posterior a nuestro código**: el runner acaba en ~86 s y lo que falta es que
+  GitHub cierre el job, así que `timeout-minutes` —que lo aplica el runner sobre algo que siga
+  ejecutándose— no tiene nada que matar. Medido: más de 10 minutos `in_progress` con el límite en
+  8. Se descartó por ejecución la causa clásica en Windows, un proceso huérfano reteniendo
+  handles: la suite no deja procesos vivos. Es un
+  [problema conocido de GitHub sin solución oficial](https://github.com/orgs/community/discussions/161434);
+  el remedio hoy es `gh run cancel` + `gh run rerun`. El síntoma, cómo diagnosticarlo (mirar los
+  *steps*, no el reloj) y la vía que queda por explorar quedan en `docs/wiki/Repo-hardening.md`.
 
 ### Added
 - **La captura del README ya no puede quedarse vieja en silencio.** Junto a la imagen vive ahora
