@@ -3,9 +3,9 @@
   "slug": "daemon-version-al-reves",
   "title": "El check del daemon compara versiones por desigualdad, no por cual es mas nueva",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-31T18:14:55.200Z",
-  "updatedAt": "2026-07-31T18:20:07.547Z",
+  "updatedAt": "2026-07-31T18:23:46.452Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -14,10 +14,10 @@
       "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:23:46.073Z",
+      "evidence": "Plan revisado adversarialmente: reutiliza _compare_versions y _upgrade_hint ya probados; warn en los tres sentidos para no mover el exit code; sin fix_hint cuando no se pueden ordenar",
+      "actor": "user"
     },
     "quality": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:23:29.591Z",
+      "evidence": "Handoff escrito; nota del vault y MEMORY.md al cierre",
+      "actor": "user"
     }
   },
   "history": [
@@ -69,6 +69,85 @@
       "at": "2026-07-31T18:20:07.547Z",
       "evidence": "Revision de los 6 requisitos contra el diff; 3 mutantes rompen cada uno su test; cli.published comprobada y no tiene el defecto simetrico",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T18:23:29.591Z",
+      "evidence": "Handoff escrito; nota del vault y MEMORY.md al cierre",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T18:23:36.978Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T18:23:37.048Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T18:23:37.115Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T18:23:37.186Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T18:23:46.073Z",
+      "evidence": "Plan revisado adversarialmente: reutiliza _compare_versions y _upgrade_hint ya probados; warn en los tres sentidos para no mover el exit code; sin fix_hint cuando no se pueden ordenar",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T18:23:46.151Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T18:23:46.226Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T18:23:46.303Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T18:23:46.379Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T18:23:46.452Z",
+      "reason": "Change lite completo y mergeado en el PR #99"
     }
   ]
 }

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "slug": "doctor-backend-via-daemon",
+  "title": "doctor pregunta al daemon por el backend en vez de salir sin credencial",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-07-31T18:23:57.381Z",
+  "updatedAt": "2026-07-31T18:30:36.595Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:30:27.736Z",
+      "evidence": "Causa verificada por ejecucion (401 real) y fuente alternativa medida en vivo (/api/backend del daemon)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:30:27.800Z",
+      "evidence": "Revision adversarial: la pregunta vive en daemon.py junto a query_daemon; no se toca backend_probe ni el Context; riesgo de test dependiente del entorno anticipado",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:30:36.530Z",
+      "evidence": "562 passed 1 skipped; ruff check y format verdes; 3 mutantes rompen cada uno su test; ejecucion real: [ OK ] backend y exit 0",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:30:36.595Z",
+      "evidence": "Los 7 requisitos verificados; REQ-007 comprobado sobre el diff (0 coincidencias de API_KEY/auth_headers)",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T18:23:57.381Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T18:30:27.433Z",
+      "reason": "Change lite"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T18:30:27.502Z",
+      "reason": "Change lite"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T18:30:27.736Z",
+      "evidence": "Causa verificada por ejecucion (401 real) y fuente alternativa medida en vivo (/api/backend del daemon)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T18:30:27.800Z",
+      "evidence": "Revision adversarial: la pregunta vive en daemon.py junto a query_daemon; no se toca backend_probe ni el Context; riesgo de test dependiente del entorno anticipado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T18:30:36.238Z",
+      "reason": "Change lite completo"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T18:30:36.317Z",
+      "reason": "Change lite completo"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T18:30:36.387Z",
+      "reason": "Change lite completo"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T18:30:36.460Z",
+      "reason": "Change lite completo"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T18:30:36.530Z",
+      "evidence": "562 passed 1 skipped; ruff check y format verdes; 3 mutantes rompen cada uno su test; ejecucion real: [ OK ] backend y exit 0",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T18:30:36.595Z",
+      "evidence": "Los 7 requisitos verificados; REQ-007 comprobado sobre el diff (0 coincidencias de API_KEY/auth_headers)",
+      "actor": "user"
+    }
+  ]
+}
