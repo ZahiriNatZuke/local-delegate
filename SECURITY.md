@@ -36,6 +36,12 @@ conviene tener presentes al reportar o al desplegar:
 - **Puertos de escucha.** El dashboard y el daemon escuchan en `127.0.0.1` por defecto. Cambiar
   `LOCAL_DELEGATE_WEB_HOST` a `0.0.0.0` publica en la red local un panel **sin autenticación**
   con tu actividad y las rutas de los archivos delegados. No lo hagas sin poner algo delante.
+
+  **Y `127.0.0.1` no basta como garantía:** cualquier proxy que pongas delante lo publica igual sin
+  tocar esa variable — un `tailscale serve --https=9393`, un túnel, un nginx. El puerto expone el
+  panel **y** el endpoint `/mcp`, y ese endpoint corre dentro del daemon, o sea **con la credencial
+  del backend ya cargada**: quien lo alcance puede delegar sin tener ninguna key. Si publicas el
+  9393 más allá de tu máquina, pon autenticación delante.
 - **Backend remoto.** `LOCAL_DELEGATE_BASE_URL` puede apuntar a otra máquina; el contenido
   delegado viaja hasta ahí. Usa HTTPS y una red privada (ver
   [Backend remoto](docs/wiki/Remote-backend.md)), nunca un puerto abierto a internet.

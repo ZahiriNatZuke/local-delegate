@@ -136,10 +136,17 @@ class Repair:
 
 
 # Los checks que no aparecen aquí —`cli.path`, `client.presence`, `client.observed`,
-# `service.backend`, `backend.llamaswap`, `backend.llamaserver`— no se reparan escribiendo en el
-# HOME: de ellos se imprime su `fix_hint` y ya. `service.daemon` tampoco está: lo atiende el
-# control del daemon. `client.observed` además no tiene arreglo posible: informa de con qué
-# clientes se ha hablado, y eso no se configura desde aquí.
+# `service.backend`, `service.credential`, `backend.llamaswap`, `backend.llamaserver`— no se
+# reparan escribiendo en el HOME: de ellos se imprime su `fix_hint` y ya. `service.daemon` tampoco
+# está: lo atiende el control del daemon. `client.observed` además no tiene arreglo posible:
+# informa de con qué clientes se ha hablado, y eso no se configura desde aquí.
+#
+# `service.credential` está fuera por una razón distinta y deliberada: **sí** se sabría reparar
+# —reinstalar la entrada MCP en modo `http`, que `_infer_mcp_mode` ya sabe elegir—, pero eso
+# cambiaría el **modo de transporte** que el usuario configuró, y eso es una decisión suya, no un
+# trozo de andamiaje roto que haya que reponer. Es el mismo criterio que deja fuera el `warn` de
+# `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
+# qué comando lo arregla; ejecutarlo es del usuario.
 REPAIRS: tuple[Repair, ...] = (
     Repair("scaffold.hook_files", (checks.MISSING,), frozenset({"hooks"}), frozenset({"claude"})),
     Repair(
