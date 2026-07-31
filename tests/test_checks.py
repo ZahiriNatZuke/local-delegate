@@ -194,6 +194,52 @@ def test_una_consulta_que_revienta_no_tumba_el_diagnostico(tmp_path, monkeypatch
     assert por_id["cli.published"].status == checks.UNKNOWN
 
 
+# --- Hooks huérfanos de instalaciones anteriores ------------------------------
+# Las versiones viejas dejaban los scripts sueltos en `~/.claude/hooks/`; la actual los pone en
+# `hooks/local-delegate/` y nunca limpiaba los otros. Esta máquina los tenía: cuatro.
+
+
+def _con_huerfanos(home, *nombres):
+    raiz = home / ".claude" / "hooks"
+    raiz.mkdir(parents=True, exist_ok=True)
+    for nombre in nombres:
+        (raiz / nombre).write_text("# viejo\n", encoding="utf-8")
+    return raiz
+
+
+def test_los_huerfanos_se_reportan_con_su_numero_y_su_sitio(tmp_path):
+    home = make_home(tmp_path)
+    raiz = _con_huerfanos(home, "hook_common.py", "suggest_lint_summary.py")
+    result = result_for("scaffold.hook_orphans", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "2 script(s)" in result.detail
+    assert str(raiz) in result.detail
+    assert result.fix_hint == checks.INSTALL_HINT
+
+
+def test_la_instalacion_buena_no_se_reporta_como_huerfana(tmp_path):
+    """El fallo peor posible de este check, y está a un identificador de distancia.
+
+    `ctx.hooks_dir` **ya es** `hooks/local-delegate/`. Un probe que mirara ahí reportaría como
+    huérfanos los scripts recién instalados, e `install` los borraría acto seguido: la máquina se
+    quedaría sin hooks y en bucle.
+    """
+    home = make_home(tmp_path, complete=True)
+    assert list(make_ctx(home).hooks_dir.iterdir()), "el HOME completo debe traer los hooks buenos"
+    assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.OK
+
+
+def test_un_fichero_ajeno_en_la_raiz_no_cuenta_como_huerfano(tmp_path):
+    home = make_home(tmp_path)
+    _con_huerfanos(home, "hook_de_terceros.py", "telemetry.jsonl")
+    assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.OK
+
+
+def test_sin_claude_no_se_afirma_nada_sobre_huerfanos(tmp_path):
+    home = make_home(tmp_path, claude=False, codex=True, complete=False)
+    assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.UNKNOWN
+
+
 def test_la_pista_depende_de_como_este_instalado(tmp_path, monkeypatch):
     """Los tres comandos no son intercambiables, y darle el que no toca es un consejo que falla.
 
@@ -278,11 +324,15 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
 
 
 def test_empty_home_reports_missing_with_fix_hint(tmp_path):
+    # `scaffold.memory` queda fuera porque agrega dos clientes, y `scaffold.hook_orphans` porque
+    # **nunca** puede ser `missing`: pregunta si SOBRA algo, no si falta. En un HOME vacío la
+    # respuesta correcta es `ok` — no hay huérfanos que retirar.
+    aparte = {"scaffold.memory", "scaffold.hook_orphans"}
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [
         (check, result)
         for check, result in checks.run_all(ctx)
-        if check.group == "andamiaje" and check.id != "scaffold.memory"
+        if check.group == "andamiaje" and check.id not in aparte
     ]
     assert scaffold
     for check, result in scaffold:

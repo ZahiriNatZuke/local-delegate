@@ -379,6 +379,67 @@ def _codex_dir(opts: Options) -> Path:
     return opts.home / ".codex"
 
 
+def packaged_hook_names() -> set[str]:
+    """Nombres de los scripts de hooks que **este paquete instala**.
+
+    Es la definición de «qué es nuestro» dentro de `~/.claude/hooks/`, y por tanto de qué se puede
+    retirar. Sale del directorio empaquetado y no de una constante escrita a mano, porque una
+    constante paralela se desincroniza: `_SCRIPT_NAMES` tiene tres nombres y **no** incluye
+    `hook_common.py`, que es uno de los huérfanos reales que hay que limpiar.
+
+    Si el directorio no se puede listar devuelve vacío, y con vacío no se borra nada: la
+    degradación segura de una operación destructiva es no hacer nada.
+    """
+    try:
+        return {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
+    except OSError:
+        return set()
+
+
+def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
+    """Scripts nuestros sueltos en la **raíz** de ``~/.claude/hooks/``.
+
+    Las instalaciones anteriores los dejaban ahí; la actual los pone en
+    ``hooks/local-delegate/`` y nunca limpiaba los viejos, así que se quedaban para siempre.
+
+    Mira la raíz y **nunca** el subdirectorio: los de dentro de ``local-delegate/`` son la
+    instalación buena. Confundir las dos rutas haría que se borrara justo lo que acaba de
+    instalarse.
+    """
+    root = claude_dir / "hooks"
+    names = packaged_hook_names()
+    if not names:
+        return []
+    try:
+        entries = sorted(root.iterdir())
+    except OSError:
+        return []
+    # `is_file()` y no `exists()`: un directorio que se llame como uno de nuestros scripts no es
+    # nuestro script, y aquí lo que está en juego es un borrado.
+    return [p for p in entries if p.name in names and p.is_file()]
+
+
+def _prune_orphans_action(claude_dir: Path) -> Action:
+    root = claude_dir / "hooks"
+
+    def _run() -> str:
+        removed, failed = [], []
+        for path in orphan_hook_scripts(claude_dir):
+            try:
+                path.unlink()
+                removed.append(path.name)
+            except OSError as exc:
+                # Un fichero que no se deja borrar no tumba el resto del install: se dice y se
+                # sigue. El usuario se entera y puede quitarlo a mano.
+                failed.append(f"{path.name} ({exc.strerror or exc})")
+        detail = (
+            f"retirados {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
+        )
+        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
+
+    return Action("prune", root, "retira scripts de hooks de una instalación anterior", _run)
+
+
 def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
     def _run() -> str:
         if dst.exists():
@@ -399,6 +460,10 @@ def plan_install(opts: Options) -> list[Action]:
     if "hooks" in opts.components and "claude" in opts.targets:
         hooks_dst = claude / "hooks" / HOOKS_SUBDIR
         actions.append(_copy_tree_action(res / "hooks", hooks_dst, "scripts de hooks consultivos"))
+        # Solo si hay algo que retirar: sin esto, reinstalar sobre una máquina limpia emitiría
+        # una acción que no hace nada y el plan mentiría sobre lo que va a pasar.
+        if orphan_hook_scripts(claude):
+            actions.append(_prune_orphans_action(claude))
         entries = [
             (event, matcher, hook_command(hooks_dst, script, opts.python_exe))
             for script, event, matcher in _HOOK_EVENTS

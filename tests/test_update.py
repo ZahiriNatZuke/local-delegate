@@ -98,6 +98,37 @@ def test_warn_de_skill_si_repara(tmp_path):
     assert any(a.kind == "copy" and "skills" in str(a.target) for a in actions)
 
 
+def test_warn_de_hooks_huerfanos_planifica_el_retirado(tmp_path):
+    """Aquí `warn` significa «scripts nuestros de una instalación anterior»: sobran, y se van."""
+    home = make_home(tmp_path, complete=False)
+    raiz = home / ".claude" / "hooks"
+    raiz.mkdir(parents=True, exist_ok=True)
+    (raiz / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
+
+    results = results_from(**{"scaffold.hook_orphans": checks.WARN})
+    actions, _notes = update.plan_repairs(results, opts_for(home))
+    assert any(a.kind == "prune" for a in actions)
+
+
+def test_huerfanos_y_hooks_ausentes_no_planifican_dos_veces_lo_mismo(tmp_path):
+    """Los dos checks reparan con `components={"hooks"}`, que emite la copia **y** el retirado.
+
+    Sin la deduplicación por `(kind, target)` habría dos copias del árbol —y la copia hace
+    `rmtree` del destino, así que la segunda borraría lo que escribió la primera— y dos prunes.
+    """
+    home = make_home(tmp_path, complete=False)
+    raiz = home / ".claude" / "hooks"
+    raiz.mkdir(parents=True, exist_ok=True)
+    (raiz / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
+
+    results = results_from(
+        **{"scaffold.hook_orphans": checks.WARN, "scaffold.hook_files": checks.MISSING}
+    )
+    actions, _notes = update.plan_repairs(results, opts_for(home))
+    assert len([a for a in actions if a.kind == "copy" and "hooks" in str(a.target)]) == 1
+    assert len([a for a in actions if a.kind == "prune"]) == 1
+
+
 def test_no_se_repara_un_cliente_que_no_existe(tmp_path):
     """Con Codex ausente, un `missing` suyo no crea `~/.codex` de la nada."""
     home = make_home(tmp_path, claude=True, codex=False, complete=False)
