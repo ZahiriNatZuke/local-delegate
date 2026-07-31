@@ -3,9 +3,9 @@
   "slug": "install-agents",
   "title": "local-delegate install --agents mantiene los subagentes al dia con el catalogo real",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-31T02:52:33.085Z",
-  "updatedAt": "2026-07-31T03:03:33.579Z",
+  "updatedAt": "2026-07-31T03:14:22.048Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:14:21.603Z",
+      "evidence": "handoff.md con el estado (PR #82 mergeado, main en efb28b5, CI completo verde, en Unreleased), las seis decisiones y los tres gotchas. Los gotchas son los que valen para futuras sesiones: (1) CodeQL bloqueo el merge por un ciclo de imports REAL que introdujo este change -- agents importaba install e install importa agents, funcionando solo porque el segundo era diferido--, y se arreglo invirtiendo la dependencia, no silenciandolo; (2) un merge BLOCKED con los 12 checks en verde NO es fallo de infraestructura, porque el ruleset tiene required_review_thread_resolution y se diagnostica con 'gh pr view --json reviews' y los reviewThreads de GraphQL, no con 'gh pr checks', que los daba todos en verde; (3) un defecto lo encontro la ejecucion real y no los tests -- el .lower() que se comia los acronimos. Anotado el pendiente operativo: los 27 subagentes reales siguen sin actualizar, solo se ejecuto --dry-run, y aplicarlos necesita autorizacion porque escribe en ficheros del usuario. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-31T03:03:33.579Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T03:14:21.603Z",
+      "evidence": "handoff.md con el estado (PR #82 mergeado, main en efb28b5, CI completo verde, en Unreleased), las seis decisiones y los tres gotchas. Los gotchas son los que valen para futuras sesiones: (1) CodeQL bloqueo el merge por un ciclo de imports REAL que introdujo este change -- agents importaba install e install importa agents, funcionando solo porque el segundo era diferido--, y se arreglo invirtiendo la dependencia, no silenciandolo; (2) un merge BLOCKED con los 12 checks en verde NO es fallo de infraestructura, porque el ruleset tiene required_review_thread_resolution y se diagnostica con 'gh pr view --json reviews' y los reviewThreads de GraphQL, no con 'gh pr checks', que los daba todos en verde; (3) un defecto lo encontro la ejecucion real y no los tests -- el .lower() que se comia los acronimos. Anotado el pendiente operativo: los 27 subagentes reales siguen sin actualizar, solo se ejecuto --dry-run, y aplicarlos necesita autorizacion porque escribe en ficheros del usuario. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T03:14:21.831Z",
+      "reason": "gates completos, PR #82 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T03:14:22.048Z",
+      "reason": "change cerrado"
     }
   ]
 }
