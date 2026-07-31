@@ -3,9 +3,9 @@
   "slug": "update-detecta-uv-tool",
   "title": "update detecta el CLI instalado como uv tool y dice como actualizarlo",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-07-30T23:23:03.841Z",
-  "updatedAt": "2026-07-30T23:34:30.612Z",
+  "updatedAt": "2026-07-30T23:40:04.332Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-30T23:40:03.732Z",
+      "evidence": "handoff.md con el estado (PR #78 mergeado, main en 02eb48c, CI completo verde, en Unreleased), las cinco decisiones que no se deducen del codigo y los tres gotchas que costaron tiempo: (1) el camino nuevo NO se recorre desde 'uv run', que es como se prueba todo en este repo, asi que verificarlo de verdad exige ejecutar el Python del entorno de uv tool con el repo en PYTHONPATH; (2) sys.prefix hay que leerlo en tiempo de llamada y nunca en una constante del modulo, primo del gotcha del change anterior con el default del dataclass; (3) una funcion que devuelve maquetacion rompe a quien la compara -- la linea vacia de separacion que devolvia uv_tool_lines hizo que el test de 'esto no cambia el plan' borrase TODAS las vacias de la salida, y se arreglo en el codigo, no en el test. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -126,6 +126,28 @@
       "to": "result-review",
       "at": "2026-07-30T23:34:30.612Z",
       "reason": "gates quality y conformance aprobados"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-30T23:40:03.732Z",
+      "evidence": "handoff.md con el estado (PR #78 mergeado, main en 02eb48c, CI completo verde, en Unreleased), las cinco decisiones que no se deducen del codigo y los tres gotchas que costaron tiempo: (1) el camino nuevo NO se recorre desde 'uv run', que es como se prueba todo en este repo, asi que verificarlo de verdad exige ejecutar el Python del entorno de uv tool con el repo en PYTHONPATH; (2) sys.prefix hay que leerlo en tiempo de llamada y nunca en una constante del modulo, primo del gotcha del change anterior con el default del dataclass; (3) una funcion que devuelve maquetacion rompe a quien la compara -- la linea vacia de separacion que devolvia uv_tool_lines hizo que el test de 'esto no cambia el plan' borrase TODAS las vacias de la salida, y se arreglo en el codigo, no en el test. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-30T23:40:04.053Z",
+      "reason": "gates completos, PR #78 mergeado y CI de main verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-30T23:40:04.332Z",
+      "reason": "change cerrado"
     }
   ]
 }

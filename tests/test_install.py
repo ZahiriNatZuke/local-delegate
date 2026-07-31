@@ -10,6 +10,8 @@ import shlex
 import tomllib
 from pathlib import Path, PureWindowsPath
 
+from conftest import snapshot
+
 from local_delegate import install as inst
 
 
@@ -310,3 +312,90 @@ def test_install_migrates_the_legacy_hook_entries(tmp_path):
     assert "args" not in prompt_hooks[0]
     assert prompt_hooks[0]["command"].startswith("python3 ")
     assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "~/mio.sh"
+
+
+# --- Retirar los hooks huérfanos de instalaciones anteriores -------------------
+# Es la primera operación del repo que **borra** ficheros del HOME del usuario, así que lo que
+# se comprueba no es tanto qué se borró como **qué sobrevivió**.
+
+
+def _con_huerfanos(home: Path) -> Path:
+    """Reproduce el caso real: los huérfanos conviviendo con cosas que NO son nuestras."""
+    raiz = home / ".claude" / "hooks"
+    raiz.mkdir(parents=True, exist_ok=True)
+    for nombre in inst.packaged_hook_names():
+        (raiz / nombre).write_text("# instalacion anterior\n", encoding="utf-8")
+    (raiz / "telemetry.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
+    (raiz / "hook_de_terceros.py").write_text("# ajeno\n", encoding="utf-8")
+    (raiz / "__pycache__").mkdir(exist_ok=True)
+    (raiz / "__pycache__" / "algo.pyc").write_bytes(b"\x00")
+    return raiz
+
+
+def test_los_nombres_de_hooks_salen_del_paquete_y_no_de_una_constante(tmp_path):
+    """`_SCRIPT_NAMES` no sirve: tiene tres y no incluye `hook_common.py`, que es huérfano real."""
+    nombres = inst.packaged_hook_names()
+    assert "hook_common.py" in nombres
+    assert set(inst._SCRIPT_NAMES) <= nombres
+    assert all(n.endswith(".py") for n in nombres), "__pycache__ no debe colarse"
+
+
+def test_install_retira_los_huerfanos_y_no_toca_nada_mas(tmp_path):
+    raiz = _con_huerfanos(tmp_path)
+    ajenos_antes = {
+        p.name: snapshot(p) if p.is_dir() else p.read_bytes()
+        for p in raiz.iterdir()
+        if p.name not in inst.packaged_hook_names()
+    }
+
+    assert _install(tmp_path) == 0
+
+    for nombre in inst.packaged_hook_names():
+        assert not (raiz / nombre).exists(), f"{nombre} debía retirarse de la raíz"
+    for nombre, contenido in ajenos_antes.items():
+        destino = raiz / nombre
+        assert destino.exists(), f"{nombre} NO era nuestro y se borró"
+        actual = snapshot(destino) if destino.is_dir() else destino.read_bytes()
+        assert actual == contenido, f"{nombre} se modificó"
+
+
+def test_la_instalacion_buena_sobrevive_al_retirado(tmp_path):
+    """El fallo peor posible: borrar `hooks/local-delegate/`, que es lo recién instalado."""
+    _con_huerfanos(tmp_path)
+    assert _install(tmp_path) == 0
+    buenos = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+    for nombre in inst.packaged_hook_names():
+        assert (buenos / nombre).is_file(), f"{nombre} debía seguir en {buenos}"
+
+
+def test_dry_run_no_retira_ningun_huerfano(tmp_path):
+    _con_huerfanos(tmp_path)
+    antes = snapshot(tmp_path)
+    inst.apply(inst.plan_install(_opts(tmp_path)), dry_run=True, out=lambda *_a: None)
+    assert snapshot(tmp_path) == antes
+
+
+def test_sin_huerfanos_no_se_planifica_el_retirado(tmp_path):
+    """Idempotencia: la segunda pasada no tiene nada que hacer."""
+    _con_huerfanos(tmp_path)
+    _install(tmp_path)
+    assert [a for a in inst.plan_install(_opts(tmp_path)) if a.kind == "prune"] == []
+
+
+def test_un_directorio_con_nombre_de_script_ni_se_cuenta_ni_se_toca(tmp_path):
+    """Se borran ficheros, no lo que casualmente se llame igual.
+
+    La primera versión de este test solo comprobaba que el directorio sobreviviera, y **pasaba
+    igual con el `is_file()` quitado**: `unlink` sobre un directorio lanza `OSError` y el
+    `except` del retirado se lo traga. O sea que no probaba nada. Lo caza la aserción de
+    abajo — sin `is_file()`, el directorio entra en la lista y el `doctor` avisaría de un
+    huérfano que no existe.
+    """
+    raiz = tmp_path / ".claude" / "hooks"
+    raiz.mkdir(parents=True)
+    (raiz / "hook_common.py").mkdir()
+
+    assert inst.orphan_hook_scripts(tmp_path / ".claude") == [], "un directorio no es un script"
+
+    _install(tmp_path)
+    assert (raiz / "hook_common.py").is_dir(), "un directorio homónimo no es nuestro script"

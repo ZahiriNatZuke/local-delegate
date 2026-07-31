@@ -7,6 +7,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`doctor` detecta los scripts de hooks que dejaron las instalaciones anteriores, e `install`
+  los retira.** Las versiones viejas los ponían sueltos en `~/.claude/hooks/`; la actual usa
+  `~/.claude/hooks/local-delegate/` y nunca limpiaba los otros, así que se quedaban para siempre.
+  El borrado es **quirúrgico**: solo los nombres exactos de los scripts que este paquete instala,
+  solo ficheros y solo en la raíz — `telemetry.jsonl`, `__pycache__`, los hooks de terceros y toda
+  la instalación buena quedan intactos. Nota sobre lo que **no** hacía falta arreglar: no había
+  entradas duplicadas en `settings.json`, porque `merge_hook_settings` ya desregistra las
+  versiones anteriores por el nombre del script.
 - **`update` avisa de que no actualiza el CLI instalado como `uv tool`, y dice cómo hacerlo.**
   Actualiza el pin, el andamiaje y el daemon, pero el ejecutable de `uv tool` se quedaba donde
   estaba sin que nadie lo dijera. Ahora, cuando hay una versión más nueva publicada, lo detecta

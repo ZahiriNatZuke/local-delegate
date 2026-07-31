@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los trece elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los catorce elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Trece checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Catorce checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -350,6 +350,37 @@ def _probe_hook_files(ctx: Context) -> Result:
     return Result(OK, f"{len(entries)} script(s) en {ctx.hooks_dir}")
 
 
+def _probe_hook_orphans(ctx: Context) -> Result:
+    """Scripts nuestros sueltos en la raíz de ``~/.claude/hooks/``, de instalaciones anteriores.
+
+    **Ojo con la ruta.** Se mira ``claude_dir/"hooks"`` y no ``ctx.hooks_dir``, que ya es el
+    subdirectorio ``hooks/local-delegate/`` — o sea, la instalación **buena**. Confundirlas haría
+    que este check reportase como huérfanos los scripts recién instalados y que ``install`` los
+    borrara acto seguido, dejando la máquina sin hooks y en bucle.
+
+    No se ejecutan (nadie los registra: ``merge_hook_settings`` desregistra las entradas viejas
+    por nombre), pero confunden a quien mire el directorio y a quien diagnostique.
+    """
+    if absent := _claude_absent(ctx):
+        return absent
+    root = ctx.claude_dir / "hooks"
+    entries, reason = _dir_entries(root)
+    if reason:
+        return Result(UNKNOWN, reason)
+    if entries is None:
+        # No hay directorio de hooks: de esa ausencia ya se ocupa `scaffold.hook_files`.
+        return Result(OK, f"no existe {root}: nada que limpiar")
+    orphans = install.orphan_hook_scripts(ctx.claude_dir)
+    if not orphans:
+        return Result(OK, f"ninguno suelto en {root}")
+    return Result(
+        WARN,
+        f"{len(orphans)} script(s) de una instalación anterior sueltos en {root} "
+        f"({', '.join(p.name for p in orphans)}); no se ejecutan, pero confunden",
+        INSTALL_HINT,
+    )
+
+
 def _probe_hook_settings(ctx: Context) -> Result:
     if absent := _claude_absent(ctx):
         return absent
@@ -563,7 +594,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Trece elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Catorce elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cuatro sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -575,6 +606,7 @@ CHECKS: tuple[Check, ...] = (
     Check("cli.published", "entorno", "versión publicada", _probe_published),
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
+    Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
     Check("scaffold.skill", "andamiaje", f"skill {install.SKILL_NAME}", _probe_skill),
     Check("scaffold.memory", "andamiaje", "memoria global", _probe_memory),
@@ -588,7 +620,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los trece probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los catorce probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -602,7 +634,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros doce
+        except Exception as exc:  # un check roto no debe impedir ver los otros trece
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

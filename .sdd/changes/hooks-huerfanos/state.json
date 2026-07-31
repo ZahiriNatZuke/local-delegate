@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "hooks-huerfanos",
+  "title": "Detectar y retirar los scripts de hooks huerfanos de instalaciones anteriores",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-07-31T00:03:16.794Z",
+  "updatedAt": "2026-07-31T00:12:48.775Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:05:16.845Z",
+      "evidence": "spec.md con 15 requisitos y 4 escenarios, sobre un research que CORRIGIO el pendiente ejecutando contra la maquina afectada. El backlog decia que quien corriera el instalador de macOS retirado 'los tiene por duplicado y registrados dos veces': la segunda mitad es FALSA, verificado contra el settings.json real de esta PC, que tiene el caso -- hay 2 entradas nuestras, las dos correctas apuntando a local-delegate/, CERO duplicados. El motivo esta en el codigo de los dos instaladores y coinciden: install._is_ours (install.py:215-230) reconoce el formato heredado por el NOMBRE EXACTO del script y merge_hook_settings lo usa para quitar cualquier version previa; el .sh retirado hacia lo mismo con su existing_entries(). Lo que nadie limpia son los FICHEROS: install solo hace rmtree de hooks/local-delegate (install.py:385), nunca de la raiz. Y el origen es mas general que el del pendiente: esta maquina es Windows, asi que aqui los dejo una version anterior del propio install, no el .sh de macOS. Verificados los 4 huerfanos en vivo (hook_common.py y los tres suggest_*.py) conviviendo con telemetry.jsonl, que es DATO DEL USUARIO y no se toca. Decision del usuario: avisar y que install los limpie, con borrado quirurgico por nombre exacto. REQ-004 fija que la lista sale de resources/hooks/*.py y no de _SCRIPT_NAMES, que tiene tres nombres y no incluye hook_common.py -- que tambien quedo huerfano.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:06:30.718Z",
+      "evidence": "plan.md con 8 tareas, ordenado alrededor de que este change trae la PRIMERA operacion que borra ficheros del HOME del usuario. Tres salvaguardas de diseño: la lista sale de resources/hooks/*.py (lo que el paquete instala, no una constante paralela), se borra fichero a fichero por nombre exacto solo en la raiz, y el probe no borra -- quien escribe es install/update, que es el contrato del registro. Revision adversarial con cinco hallazgos, dos bloqueantes: R-1, confundir ctx.hooks_dir (que YA es hooks/local-delegate) con la raiz haria que el probe reportase los scripts recien instalados como huerfanos e install los borrara acto seguido, dejando la maquina sin hooks y en bucle -- el peor fallo posible aqui y esta a un identificador de distancia, asi que la ruta se escribe explicita, hay un test dedicado a que local-delegate/ sobreviva y la verificacion al reves incluye justo esa permutacion; R-2, el --dry-run no se puede dar por supuesto, porque si el prune borrara al PLANIFICAR el flag no protegeria nada, asi que se prueba con snapshot() en vez de confiar en la regla de que plan_* no toca disco. Los otros tres: R-3, _SCRIPT_NAMES no vale como fuente porque no incluye hook_common.py, que es uno de los huerfanos reales; R-4, la deduplicacion por (kind,target) de plan_repairs entra en juego con hook_files en missing y se verifica con test; R-5, el borrado no deja .bak y es decision consciente, porque lo borrado son copias de recursos empaquetados y no configuracion editada por el usuario.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:12:48.243Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped (+12); extract_dashboard_js.py + node --check -> OK; CHANGELOG con CRLF intacto (912 CRLF, 0 LF sueltos). Verificacion al reves de las DOS permutaciones peligrosas que marco el plan: R-1, cambiar la raiz por el subdirectorio hace caer CINCO tests, entre ellos test_la_instalacion_buena_no_se_reporta_como_huerfana y test_complete_home_is_all_ok. R-2 dio el hallazgo mas util de la sesion: quitar el is_file() NO hacia fallar nada, o sea que mi test del directorio homonimo no probaba nada -- unlink sobre un directorio lanza OSError y el except del propio retirado se lo traga, asi que el directorio sobrevivia igual con el bug puesto. Se corrigio el test para aseverar sobre orphan_hook_scripts() y entonces SI falla. Ejecucion real en la maquina afectada: doctor enseña el [WARN] con los cuatro nombres, e 'install --dry-run' contra el HOME DE VERDAD anuncia el prune y deja el arbol de ~/.claude/hooks con el mismo SHA-256 (80a1bc3e985135be). El install real NO se ha ejecutado: borra ficheros del HOME y esa autorizacion se pide aparte.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T00:12:48.497Z",
+      "evidence": "Revision fresca del diff contra los 15 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. La comprobacion clave de REQ-008 no es que se borrara lo nuestro sino QUE SOBREVIVIO lo ajeno: el test compara telemetry.jsonl, __pycache__/ y hook_de_terceros.py contenido a contenido antes y despues. REQ-004 se verifica de forma que no puede desincronizarse: packaged_hook_names() lee resources/hooks/*.py y hay un test que exige que incluya hook_common.py -- que _SCRIPT_NAMES NO tiene, y por eso usarla habria dejado un huerfano atras en todas las maquinas. Un desvio documentado: test_empty_home_reports_missing_with_fix_hint afirmaba que TODOS los checks de andamiaje son missing en un HOME vacio, y hook_orphans nunca puede serlo porque pregunta si SOBRA algo, no si falta; se añadio a la exclusion que ya tenia scaffold.memory, con el porque escrito. Y una correccion al pendiente que queda en el CHANGELOG: no habia entradas duplicadas en settings.json, porque merge_hook_settings ya desregistra las versiones anteriores por el nombre del script.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T00:03:16.794Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T00:03:17.107Z",
+      "reason": "Verificado en la maquina afectada: 4 huerfanos en disco y CERO entradas duplicadas"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T00:04:25.494Z",
+      "reason": "Research cerrado y con correccion del pendiente: cero entradas duplicadas, el problema son ficheros huerfanos"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T00:05:16.845Z",
+      "evidence": "spec.md con 15 requisitos y 4 escenarios, sobre un research que CORRIGIO el pendiente ejecutando contra la maquina afectada. El backlog decia que quien corriera el instalador de macOS retirado 'los tiene por duplicado y registrados dos veces': la segunda mitad es FALSA, verificado contra el settings.json real de esta PC, que tiene el caso -- hay 2 entradas nuestras, las dos correctas apuntando a local-delegate/, CERO duplicados. El motivo esta en el codigo de los dos instaladores y coinciden: install._is_ours (install.py:215-230) reconoce el formato heredado por el NOMBRE EXACTO del script y merge_hook_settings lo usa para quitar cualquier version previa; el .sh retirado hacia lo mismo con su existing_entries(). Lo que nadie limpia son los FICHEROS: install solo hace rmtree de hooks/local-delegate (install.py:385), nunca de la raiz. Y el origen es mas general que el del pendiente: esta maquina es Windows, asi que aqui los dejo una version anterior del propio install, no el .sh de macOS. Verificados los 4 huerfanos en vivo (hook_common.py y los tres suggest_*.py) conviviendo con telemetry.jsonl, que es DATO DEL USUARIO y no se toca. Decision del usuario: avisar y que install los limpie, con borrado quirurgico por nombre exacto. REQ-004 fija que la lista sale de resources/hooks/*.py y no de _SCRIPT_NAMES, que tiene tres nombres y no incluye hook_common.py -- que tambien quedo huerfano.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T00:05:17.131Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T00:06:30.718Z",
+      "evidence": "plan.md con 8 tareas, ordenado alrededor de que este change trae la PRIMERA operacion que borra ficheros del HOME del usuario. Tres salvaguardas de diseño: la lista sale de resources/hooks/*.py (lo que el paquete instala, no una constante paralela), se borra fichero a fichero por nombre exacto solo en la raiz, y el probe no borra -- quien escribe es install/update, que es el contrato del registro. Revision adversarial con cinco hallazgos, dos bloqueantes: R-1, confundir ctx.hooks_dir (que YA es hooks/local-delegate) con la raiz haria que el probe reportase los scripts recien instalados como huerfanos e install los borrara acto seguido, dejando la maquina sin hooks y en bucle -- el peor fallo posible aqui y esta a un identificador de distancia, asi que la ruta se escribe explicita, hay un test dedicado a que local-delegate/ sobreviva y la verificacion al reves incluye justo esa permutacion; R-2, el --dry-run no se puede dar por supuesto, porque si el prune borrara al PLANIFICAR el flag no protegeria nada, asi que se prueba con snapshot() en vez de confiar en la regla de que plan_* no toca disco. Los otros tres: R-3, _SCRIPT_NAMES no vale como fuente porque no incluye hook_common.py, que es uno de los huerfanos reales; R-4, la deduplicacion por (kind,target) de plan_repairs entra en juego con hook_files en missing y se verifica con test; R-5, el borrado no deja .bak y es decision consciente, porque lo borrado son copias de recursos empaquetados y no configuracion editada por el usuario.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T00:06:30.996Z",
+      "reason": "plan revisado adversarialmente, 5 hallazgos incorporados"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T00:06:31.315Z",
+      "reason": "gate plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T00:12:47.991Z",
+      "reason": "8 tareas implementadas; CI local verde, ejecucion real y verificacion al reves de las dos permutaciones peligrosas"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T00:12:48.243Z",
+      "evidence": "CI local en verde: ruff check -> All checks passed; ruff format --check -> 53 files already formatted; pytest -> 463 passed, 1 skipped (+12); extract_dashboard_js.py + node --check -> OK; CHANGELOG con CRLF intacto (912 CRLF, 0 LF sueltos). Verificacion al reves de las DOS permutaciones peligrosas que marco el plan: R-1, cambiar la raiz por el subdirectorio hace caer CINCO tests, entre ellos test_la_instalacion_buena_no_se_reporta_como_huerfana y test_complete_home_is_all_ok. R-2 dio el hallazgo mas util de la sesion: quitar el is_file() NO hacia fallar nada, o sea que mi test del directorio homonimo no probaba nada -- unlink sobre un directorio lanza OSError y el except del propio retirado se lo traga, asi que el directorio sobrevivia igual con el bug puesto. Se corrigio el test para aseverar sobre orphan_hook_scripts() y entonces SI falla. Ejecucion real en la maquina afectada: doctor enseña el [WARN] con los cuatro nombres, e 'install --dry-run' contra el HOME DE VERDAD anuncia el prune y deja el arbol de ~/.claude/hooks con el mismo SHA-256 (80a1bc3e985135be). El install real NO se ha ejecutado: borra ficheros del HOME y esa autorizacion se pide aparte.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T00:12:48.497Z",
+      "evidence": "Revision fresca del diff contra los 15 requisitos y los 4 escenarios; tabla requisito-a-evidencia en verification.md. La comprobacion clave de REQ-008 no es que se borrara lo nuestro sino QUE SOBREVIVIO lo ajeno: el test compara telemetry.jsonl, __pycache__/ y hook_de_terceros.py contenido a contenido antes y despues. REQ-004 se verifica de forma que no puede desincronizarse: packaged_hook_names() lee resources/hooks/*.py y hay un test que exige que incluya hook_common.py -- que _SCRIPT_NAMES NO tiene, y por eso usarla habria dejado un huerfano atras en todas las maquinas. Un desvio documentado: test_empty_home_reports_missing_with_fix_hint afirmaba que TODOS los checks de andamiaje son missing en un HOME vacio, y hook_orphans nunca puede serlo porque pregunta si SOBRA algo, no si falta; se añadio a la exclusion que ya tenia scaffold.memory, con el porque escrito. Y una correccion al pendiente que queda en el CHANGELOG: no habia entradas duplicadas en settings.json, porque merge_hook_settings ya desregistra las versiones anteriores por el nombre del script.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T00:12:48.775Z",
+      "reason": "gates quality y conformance aprobados"
+    }
+  ]
+}

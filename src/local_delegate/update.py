@@ -150,6 +150,18 @@ REPAIRS: tuple[Repair, ...] = (
         why="hooks en formato de instalación anterior",
     ),
     Repair(
+        "scaffold.hook_orphans",
+        # `warn` aquí significa «scripts nuestros de una instalación anterior, sueltos en la raíz
+        # de ~/.claude/hooks/». Son nuestros y sobran, igual que los otros dos casos que reparan
+        # en `warn`. `plan_install` con components={"hooks"} emite la copia del árbol **y** el
+        # retirado; la deduplicación por (kind, target) evita que se dupliquen si `hook_files`
+        # también pide reparación.
+        (checks.WARN,),
+        frozenset({"hooks"}),
+        frozenset({"claude"}),
+        why="scripts de hooks de una instalación anterior",
+    ),
+    Repair(
         "scaffold.skill",
         # `warn` = el directorio existe sin SKILL.md. También es nuestro y está incompleto.
         (checks.MISSING, checks.WARN),
