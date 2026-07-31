@@ -25,7 +25,9 @@ from pathlib import Path
 from . import benchmark, doctor
 from . import llamaswap_config as lc
 
-_ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp")
+# `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
+# mientras que los otros cuatro se excluyen con `--no-*`. Ver el porqué en el parser.
+_ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp", "agents")
 _ALL_TARGETS = ("claude", "codex")
 _CLIENT_DIR = {"claude": "~/.claude", "codex": "~/.codex"}
 
@@ -767,6 +769,15 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
         dest="mcp",
         action="store_false",
         help="no registrar el servidor MCP en la config del cliente",
+    )
+    # El único componente que se pide, en vez de excluirse: los subagentes son ficheros del
+    # usuario, no andamiaje nuestro, así que tocarlos sin que lo pida sería el mismo error que
+    # el viejo `--target all` creando `~/.codex/` en máquinas sin Codex.
+    p.add_argument(
+        "--agents",
+        dest="agents",
+        action="store_true",
+        help="actualiza ~/.claude/agents que ya declaren tools local_* (opt-in)",
     )
     p.add_argument(
         "--no-client-cli",

@@ -440,6 +440,30 @@ def _prune_orphans_action(claude_dir: Path) -> Action:
     return Action("prune", root, "retira scripts de hooks de una instalación anterior", _run)
 
 
+def _agents_action(agents_dir: Path, cambios: list) -> Action:
+    """Escribe los subagentes que cambian. `cambios` viene de `agents.pending()`, que solo lee."""
+    resumen = ", ".join(
+        f"{path.name} (+{len(added)} tools{', catálogo ' + action if action else ''})"
+        for path, _text, added, action in cambios
+    )
+
+    def _run() -> str:
+        escritos, fallidos = [], []
+        for path, text, _added, _action in cambios:
+            try:
+                # `_write_text` deja `.bak` y conserva el terminador de línea del fichero: en
+                # Windows, escribir con el de la plataforma marcaría el agente entero como
+                # modificado por haberle añadido una línea.
+                _write_text(path, text)
+                escritos.append(path.name)
+            except OSError as exc:
+                fallidos.append(f"{path.name} ({exc.strerror or exc})")
+        detalle = f"actualizados {len(escritos)}: {', '.join(escritos)}"
+        return detalle + (f" · NO se pudieron escribir: {'; '.join(fallidos)}" if fallidos else "")
+
+    return Action("agents", agents_dir, f"actualiza {len(cambios)} subagente(s): {resumen}", _run)
+
+
 def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
     def _run() -> str:
         if dst.exists():
@@ -497,6 +521,19 @@ def plan_install(opts: Options) -> list[Action]:
                 f"skill {SKILL_NAME}",
             )
         )
+
+    # `agents` es el único componente que NO está en el default, y la asimetría es deliberada:
+    # los subagentes los escribió el usuario, no son andamiaje nuestro. Se planifica solo si hay
+    # algo que cambiar, para que el plan no anuncie trabajo inexistente.
+    if "agents" in opts.components and "claude" in opts.targets:
+        # Import diferido y una ruta que se pasa, no que se descubre: `agents` no importa este
+        # módulo (cerraría un ciclo que CodeQL marcó), así que la fuente del catálogo se le da.
+        from . import agents as agents_mod
+
+        skill_md = res / "skills" / SKILL_NAME / "SKILL.md"
+        cambios = agents_mod.pending(claude / "agents", skill_md)
+        if cambios:
+            actions.append(_agents_action(claude / "agents", cambios))
 
     if "memory" in opts.components:
         block = (res / "memory" / "local-delegate.md").read_text(encoding="utf-8")

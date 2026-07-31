@@ -7,6 +7,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`local-delegate install --agents`: mantiene tus subagentes de Claude Code al día con el
+  catálogo de tools.** Añade al frontmatter `tools:` las que falten y actualiza un bloque de
+  catálogo entre marcadores. Es **opt-in** —sin el flag no se toca ningún agente— y solo actúa
+  sobre los que **ya declaran** tools `mcp__local-delegate__*`: los ajenos ni se abren. Cada
+  fichero modificado deja su `.bak`, y si no se reconoce dónde va el bloque, no se inserta.
+  Sustituye a `docs/recipes/update_agents.py`, que no llegaba a ninguna máquina instalada.
+  **El catálogo ya no se escribe a mano: se deriva de la tabla de la skill**, y un test nuevo
+  falla si esa tabla y las tools que registra el servidor difieren en un solo nombre — que es lo
+  que le pasó a la receta, cuyo texto anunciaba «10 tools» habiendo once.
 - **`doctor` detecta los scripts de hooks que dejaron las instalaciones anteriores, e `install`
   los retira.** Las versiones viejas los ponían sueltos en `~/.claude/hooks/`; la actual usa
   `~/.claude/hooks/local-delegate/` y nunca limpiaba los otros, así que se quedaban para siempre.
@@ -80,6 +89,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   defecto, y la suite no podía verlo porque todas sus pruebas desactivaban ese camino.
 
 ### Removed
+- **`docs/recipes/update_agents.py`.** Su trabajo lo hace ahora `local-delegate install --agents`,
+  que sí viaja en el paquete y llega a la máquina donde están los subagentes.
 - **`scripts/update_to_latest.sh`** (solo desarrollo). Había quedado reducido a un envoltorio de
   tres líneas que delegaba en `local-delegate update`, y mantener una segunda puerta de entrada al
   mismo comando obliga a acordarse de ella. La vía es `local-delegate update`, que además es la
