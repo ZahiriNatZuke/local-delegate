@@ -3,9 +3,9 @@
   "slug": "check-clientes-observados",
   "title": "Check de doctor sobre los clientes MCP observados",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-07-31T17:13:22.428Z",
-  "updatedAt": "2026-07-31T17:41:07.838Z",
+  "updatedAt": "2026-07-31T18:06:37.438Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T18:06:37.378Z",
+      "evidence": "Handoff y decisiones en handoff.md; nota del vault y puntero en MEMORY.md al cierre de la jornada; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-07-31T17:41:07.838Z",
       "reason": "Conformance aprobado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T18:06:37.378Z",
+      "evidence": "Handoff y decisiones en handoff.md; nota del vault y puntero en MEMORY.md al cierre de la jornada; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T18:06:37.438Z",
+      "reason": "Change completo, mergeado en el PR #97 y publicado en la 0.18.0"
     }
   ]
 }

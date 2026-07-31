@@ -288,6 +288,52 @@ def test_daemon_running_an_older_version_is_warn(tmp_path, monkeypatch):
     assert result.fix_hint == checks.RESTART_HINT
 
 
+def test_daemon_mas_nuevo_que_lo_instalado_manda_actualizar_no_reiniciar(tmp_path, monkeypatch):
+    """El caso al revés, encontrado en producción tras publicar la 0.18.0.
+
+    Con el daemon corriendo del venv editable (0.18.0) y el CLI de `uv tool` en 0.17.0, el check
+    decía «el daemon sirve la vieja» y mandaba **reiniciar el daemon** — un arreglo que no arregla
+    nada, porque reiniciarlo lo deja igual. El atrasado es el CLI.
+    """
+    monkeypatch.setattr(checks, "_installed_version", lambda: "0.17.0")
+    monkeypatch.setattr(checks, "_upgrade_hint", lambda: "uv tool upgrade local-delegate-mcp")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: {"version": "0.18.0", "pid": 42, "mcp_url": "u"},
+    )
+    result = result_for("service.daemon", ctx)
+    assert result.status == checks.WARN
+    assert "la instalación está atrasada" in result.detail
+    assert "el daemon sirve la vieja" not in result.detail
+    assert result.fix_hint == "uv tool upgrade local-delegate-mcp"
+    assert result.fix_hint != checks.RESTART_HINT
+
+
+def test_las_versiones_del_daemon_se_comparan_como_numeros_no_como_texto(tmp_path, monkeypatch):
+    """Comparadas como texto, `"0.9.0" > "0.18.0"`. El daemon aquí es el VIEJO."""
+    monkeypatch.setattr(checks, "_installed_version", lambda: "0.18.0")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: {"version": "0.9.0", "pid": 42, "mcp_url": "u"},
+    )
+    result = result_for("service.daemon", ctx)
+    assert result.fix_hint == checks.RESTART_HINT
+    assert "el daemon sirve la vieja" in result.detail
+
+
+def test_versiones_del_daemon_incomparables_avisan_sin_ofrecer_arreglo(tmp_path, monkeypatch):
+    """Sin poder ordenarlas, cualquier arreglo que se sugiriera podría ser el equivocado."""
+    monkeypatch.setattr(checks, "_installed_version", lambda: "0.18.0")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: {"version": "vete-a-saber", "pid": 42, "mcp_url": "u"},
+    )
+    result = result_for("service.daemon", ctx)
+    assert result.status == checks.WARN
+    assert result.fix_hint == ""
+    assert "no se pudieron comparar" in result.detail
+
+
 def test_daemon_on_the_installed_version_is_ok(tmp_path, monkeypatch):
     monkeypatch.setattr(checks, "_installed_version", lambda: "0.14.0")
     ctx = make_ctx(
