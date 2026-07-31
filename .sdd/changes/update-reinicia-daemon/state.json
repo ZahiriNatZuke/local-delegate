@@ -3,9 +3,9 @@
   "slug": "update-reinicia-daemon",
   "title": "update_to_latest.sh reinicia el daemon MCP segun el mecanismo de cada sistema",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-30T13:13:44.494Z",
-  "updatedAt": "2026-07-30T17:40:17.872Z",
+  "updatedAt": "2026-07-31T03:39:27.043Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:38:38.536Z",
+      "evidence": "Verificacion FRESCA contra lo PUBLICADO (2026-07-31), no contra la rama: se ejecuto el CLI instalado desde PyPI (~/.local/bin/local-delegate, 0.17.0). REQ-001, el subcomando sale en --help con las cinco flags. REQ-002, el corazon del comando, probado en HOME simulado con pines ==0.9.0 en .claude.json Y config.toml: los dos pasan a 0.17.0 y quedan los dos .bak. REQ-003/004, plan de 5 acciones sobre un HOME vacio y --dry-run que deja el arbol con el mismo SHA-256 (5fd695fa19a30e0a). REQ-007, mecanismo detectado en vivo: schtasks -> tarea programada LocalDelegateDaemon, con los tres nombres canonicos intactos. REQ-008, las 2 menciones a daemon.json en update.py son comentarios que dicen que NO se lee. REQ-010 en EJECUCION REAL sin dry-run: '--no-restart: no se toca el daemon' y el pid siguio en 5900. REQ-014/015/016 tambien verificados. El daemon real no se toco en toda la verificacion: 0.17.0 pid 5900 antes y despues. Lo que NO se re-verifico en fresco queda dicho con su motivo: REQ-005, 006, 009, 011, 012 y 013 exigen reiniciar el daemon o el backend del usuario, y eso no formaba parte de lo pedido -- se apoyan en los tests con runner doblado, en la ejecucion real de la rama (50952 -> 47380 confirmado por /api/daemon) y en el estreno en produccion del 2026-07-30.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:38:51.841Z",
+      "evidence": "Revision fresca de los 17 requisitos contra el CLI publicado, con la tabla nueva en verification.md separada de la original para que se vea que son dos verificaciones distintas y no una reescritura. Once requisitos re-verificados en fresco (001, 002, 003, 004, 007, 008, 010, 014, 015, 016) y seis declarados explicitamente como NO re-verificados con su motivo, que es lo honesto: 005, 006, 009, 011, 012 y 013 exigen reiniciar el daemon o el backend del usuario. Un requisito quedo SUPERADO por una decision posterior y se anota para que nadie lo lea como regresion: REQ-017 exigia que scripts/update_to_latest.sh quedara como envoltorio fino, y ese fichero se retiro hoy mismo en el PR #81 -- no es un requisito incumplido, es uno que dejo de tener sentido cuando se decidio que mantener una segunda puerta de entrada al mismo comando obliga a acordarse de ella.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T03:39:26.539Z",
+      "evidence": "handoff.md escrito con el estado (PR #66, publicado en la 0.17.0, traza cerrada el 2026-07-31 con verificacion fresca contra PyPI), las cuatro decisiones que no se deducen del codigo y una seccion explicando POR QUE esta traza se cerro tarde y que se hizo al respecto: el change quedo en verifying mientras salia la release, asi que sus tres ultimos gates se firmaron con el codigo ya publicado, y en vez de firmarlos de memoria se repitio la verificacion contra ~/.local/bin/local-delegate 0.17.0, con el resultado en una seccion APARTE de verification.md para que se vea que son dos verificaciones y no una reescritura. Once requisitos re-verificados y seis declarados como no re-verificados con su motivo. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -103,6 +103,51 @@
       "to": "verifying",
       "at": "2026-07-30T17:40:17.872Z",
       "reason": "12 tareas implementadas; CI local verde y ejecucion real en esta PC"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T03:38:38.536Z",
+      "evidence": "Verificacion FRESCA contra lo PUBLICADO (2026-07-31), no contra la rama: se ejecuto el CLI instalado desde PyPI (~/.local/bin/local-delegate, 0.17.0). REQ-001, el subcomando sale en --help con las cinco flags. REQ-002, el corazon del comando, probado en HOME simulado con pines ==0.9.0 en .claude.json Y config.toml: los dos pasan a 0.17.0 y quedan los dos .bak. REQ-003/004, plan de 5 acciones sobre un HOME vacio y --dry-run que deja el arbol con el mismo SHA-256 (5fd695fa19a30e0a). REQ-007, mecanismo detectado en vivo: schtasks -> tarea programada LocalDelegateDaemon, con los tres nombres canonicos intactos. REQ-008, las 2 menciones a daemon.json en update.py son comentarios que dicen que NO se lee. REQ-010 en EJECUCION REAL sin dry-run: '--no-restart: no se toca el daemon' y el pid siguio en 5900. REQ-014/015/016 tambien verificados. El daemon real no se toco en toda la verificacion: 0.17.0 pid 5900 antes y despues. Lo que NO se re-verifico en fresco queda dicho con su motivo: REQ-005, 006, 009, 011, 012 y 013 exigen reiniciar el daemon o el backend del usuario, y eso no formaba parte de lo pedido -- se apoyan en los tests con runner doblado, en la ejecucion real de la rama (50952 -> 47380 confirmado por /api/daemon) y en el estreno en produccion del 2026-07-30.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T03:38:51.841Z",
+      "evidence": "Revision fresca de los 17 requisitos contra el CLI publicado, con la tabla nueva en verification.md separada de la original para que se vea que son dos verificaciones distintas y no una reescritura. Once requisitos re-verificados en fresco (001, 002, 003, 004, 007, 008, 010, 014, 015, 016) y seis declarados explicitamente como NO re-verificados con su motivo, que es lo honesto: 005, 006, 009, 011, 012 y 013 exigen reiniciar el daemon o el backend del usuario. Un requisito quedo SUPERADO por una decision posterior y se anota para que nadie lo lea como regresion: REQ-017 exigia que scripts/update_to_latest.sh quedara como envoltorio fino, y ese fichero se retiro hoy mismo en el PR #81 -- no es un requisito incumplido, es uno que dejo de tener sentido cuando se decidio que mantener una segunda puerta de entrada al mismo comando obliga a acordarse de ella.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T03:38:52.097Z",
+      "reason": "gates quality y conformance aprobados con verificacion fresca contra lo publicado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T03:39:26.539Z",
+      "evidence": "handoff.md escrito con el estado (PR #66, publicado en la 0.17.0, traza cerrada el 2026-07-31 con verificacion fresca contra PyPI), las cuatro decisiones que no se deducen del codigo y una seccion explicando POR QUE esta traza se cerro tarde y que se hizo al respecto: el change quedo en verifying mientras salia la release, asi que sus tres ultimos gates se firmaron con el codigo ya publicado, y en vez de firmarlos de memoria se repitio la verificacion contra ~/.local/bin/local-delegate 0.17.0, con el resultado en una seccion APARTE de verification.md para que se vea que son dos verificaciones y no una reescritura. Once requisitos re-verificados y seis declarados como no re-verificados con su motivo. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T03:39:26.790Z",
+      "reason": "gates completos con verificacion fresca contra lo publicado"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T03:39:27.043Z",
+      "reason": "change cerrado"
     }
   ]
 }
