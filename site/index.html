@@ -337,7 +337,11 @@ a:focus-visible, button:focus-visible {
   text-align: left; font-family: var(--cond); font-size: 0.72rem; letter-spacing: 0.18em;
   text-transform: uppercase; color: var(--muted); padding-bottom: 12px;
 }
-.tools td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--hair); vertical-align: baseline; }
+/* Separador punteado y no continuo: la retícula del fondo son líneas de 1px de `--hair` cada 64px,
+   así que un `border-bottom` sólido del mismo color y grosor se lee como una línea de esa retícula
+   que no cuadra con ninguna. El punteado dice «esto es una tabla», no «esto es el papel», y es el
+   mismo recurso que ya usa `.line .dots` del recibo para un contenido de dos columnas idéntico. */
+.tools td { padding: 7px 12px 7px 0; border-bottom: 1px dotted var(--hair); vertical-align: baseline; }
 .tools tr td:first-child { color: var(--ink); white-space: nowrap; }
 .tools tr td:last-child { color: var(--muted); }
 .tbl-scroll { overflow-x: auto; }
@@ -388,7 +392,7 @@ a:focus-visible, button:focus-visible {
 .btn.ghost { background: transparent; color: var(--ink); }
 
 footer {
-  border-top: 1px solid var(--hair); margin-top: 90px; padding: 30px 0 60px;
+  margin-top: 90px; padding: 30px 0 60px;
   font-family: var(--mono); font-size: 0.76rem; color: var(--muted);
   display: flex; flex-wrap: wrap; gap: 10px 26px; justify-content: space-between;
 }
