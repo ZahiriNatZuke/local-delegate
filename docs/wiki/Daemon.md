@@ -66,6 +66,56 @@ El daemon aplica además backpressure global con `LOCAL_DELEGATE_MAX_CONCURRENT_
 `2`). Este límite evita que una ráfaga de clientes cree solicitudes ilimitadas; `llama-swap`
 continúa siendo la única fuente de verdad para decidir qué modelos pueden convivir en VRAM.
 
+## Autenticación del puerto
+
+Por defecto el puerto **no pide nada**: el daemon escucha en loopback y exigir credenciales
+rompería toda instalación existente. Eso vale mientras el puerto sea solo tuyo.
+
+**Deja de valer en cuanto pones un proxy delante** —un túnel, un nginx, un reenvío de puerto de una
+VPN—, y `LOCAL_DELEGATE_WEB_HOST` no se entera: el proxy conecta contra `127.0.0.1` igual que tú,
+así que ni esa variable ni la IP de origen delatan que el daemon dejó de ser local. Quien alcance
+el puerto puede **delegar con la credencial del backend que tiene el daemon**, y leer el panel y
+`/api/*` sin ni siquiera eso.
+
+Para cerrarlo, define la variable en el entorno **del daemon** (donde esté su lanzador o su tarea
+programada):
+
+```powershell
+$env:LOCAL_DELEGATE_WEB_TOKEN = '<un secreto largo y aleatorio>'
+```
+
+Con ella, **todo** el puerto exige el token: el endpoint MCP, el dashboard y `/api/*`. Se acepta de
+dos formas, porque hay dos clases de cliente:
+
+| Cómo llega | Quién la usa |
+| --- | --- |
+| `Authorization: Bearer <token>` | clientes MCP, `curl`, el propio CLI |
+| `Authorization: Basic <base64(usuario:token)>` | el navegador, que pide las credenciales solo |
+
+En el navegador, el usuario da igual —solo se compara la contraseña— y basta con pegar el token
+donde pide la clave: el 401 lleva `WWW-Authenticate`, así que el diálogo sale sin más.
+
+### Que los clientes sigan funcionando
+
+El token **nunca se escribe en un fichero de configuración**. Se referencia la variable:
+
+```powershell
+local-delegate install --mcp-mode http --web-token-env
+```
+
+Eso deja a Claude Code con `"headers": {"Authorization": "Bearer ${LOCAL_DELEGATE_WEB_TOKEN}"}`
+—que expande al conectar— y a Codex con `bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"`, que es
+la clave que tiene para esto (Codex no expande `${VAR}` en TOML, y de hecho rechaza un token
+literal en este transporte).
+
+Para que funcione, **la variable tiene que existir también en el entorno del cliente**, no solo en
+el del daemon. Es el punto donde esto se rompe en silencio: si el cliente no la ve, manda un token
+vacío y se lleva un `401` sin más explicación.
+
+El CLI se autentica solo si la variable está en su entorno. Si no la encuentra, `local-delegate
+doctor` lo dice con todas las letras —«nuestro daemon escucha en … pero este entorno no tiene su
+token»— en vez de acusar al puerto de estar ocupado por otro proceso.
+
 ## Inicio de sesión y rollback
 
 El daemon se registra en el gestor de servicios del usuario de cada sistema, con estos **nombres

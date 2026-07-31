@@ -131,6 +131,7 @@ def _stub_environment(
     log_dir=None,
     backend_via_daemon=None,
     needs_key=False,
+    daemon_needs_token=False,
 ):
     """Dobla lo que sale del proceso: versiones, backend y daemon. Nada real se ejecuta.
 
@@ -180,6 +181,12 @@ def _stub_environment(
             if daemon_alive
             else None
         ),
+    )
+    # Tercer colaborador de red del check del daemon, y va aquí por el mismo motivo que los dos de
+    # arriba: sin doblarlo, cualquier test que ponga `_port_taken` en True le preguntaría al puerto
+    # REAL de la máquina si exige token.
+    monkeypatch.setattr(
+        daemon, "daemon_requires_token", lambda host, port, timeout=1.0: daemon_needs_token
     )
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
     monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")

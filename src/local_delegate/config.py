@@ -208,6 +208,31 @@ WEB_PORT = _env_int("LOCAL_DELEGATE_WEB_PORT", 9393)
 WEB_FONTS = _env_flag("LOCAL_DELEGATE_WEB_FONTS", True)
 CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
 
+# Token del puerto del daemon. Vacío = sin autenticación, que es el comportamiento histórico y
+# sigue siendo el default: exigirlo siempre rompería toda instalación existente el día que se
+# actualiza. Con un valor, TODO el puerto lo exige — el endpoint MCP, el dashboard y `/api/*`.
+#
+# Por qué hace falta, medido y no supuesto: un proxy inverso delante del daemon (`tailscale
+# serve`, nginx, ngrok, un port-forward) alcanza el puerto desde la propia máquina, así que ni la
+# IP de origen ni `WEB_HOST` delatan que el daemon dejó de estar en loopback. Y la protección
+# anti-DNS-rebinding del SDK **no** es control de acceso: rechaza un `Host` ajeno con 421, pero se
+# salta mandando `Host: 127.0.0.1:9393` a mano. Quien llegue a ese puerto puede delegar con la
+# credencial del backend que tiene el daemon, así que la única defensa real es un secreto.
+#
+# El secreto se lee del entorno y NUNCA se escribe en un fichero de configuración: los clientes lo
+# referencian por el nombre de la variable.
+WEB_TOKEN = _env("LOCAL_DELEGATE_WEB_TOKEN", "").strip()
+
+
+def web_auth_headers() -> dict[str, str]:
+    """Cabecera para hablar con el propio daemon, vacía si no hay token configurado.
+
+    La usan los clientes *internos* del daemon (el singleton al comprobar si ya hay uno vivo, y el
+    diagnóstico al preguntarle por el backend). Sin esto, poner el token dejaría al CLI incapaz de
+    hablar con su propio daemon, que es la clase de rotura que no se ve hasta que se despliega.
+    """
+    return {"Authorization": f"Bearer {WEB_TOKEN}"} if WEB_TOKEN else {}
+
 
 # --- Auto-arranque del backend (opt-in, específico de llama-swap) -----------
 AUTOSTART = _env_flag("LOCAL_DELEGATE_AUTOSTART", False)

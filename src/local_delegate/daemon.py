@@ -24,7 +24,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from . import autostart, config, server
-from .web import metrics
+from .web import auth, metrics
 
 MCP_PATH = "/mcp"
 DAEMON_STATUS_PATH = "/api/daemon"
@@ -99,7 +99,9 @@ def query_daemon(host: str, port: int, timeout: float = 1.0) -> dict | None:
     """Devuelve el estado del daemon si el puerto pertenece a local-delegate."""
     try:
         with httpx2.Client(timeout=timeout) as client:
-            response = client.get(f"http://{host}:{port}{DAEMON_STATUS_PATH}")
+            response = client.get(
+                f"http://{host}:{port}{DAEMON_STATUS_PATH}", headers=config.web_auth_headers()
+            )
             response.raise_for_status()
             data = response.json()
         if data.get("service") == "local-delegate" and data.get("mode") == "daemon":
@@ -111,6 +113,29 @@ def query_daemon(host: str, port: int, timeout: float = 1.0) -> dict | None:
         # distinguirlas no cambiaría lo que hace quien llama.
         pass
     return None
+
+
+def daemon_requires_token(host: str, port: int, timeout: float = 1.0) -> bool | None:
+    """¿Ese puerto lo sirve un daemon nuestro que exige token? ``None`` si no se pudo saber.
+
+    Función aparte de :func:`query_daemon`, y no un flag suyo, por lo mismo que el probe del
+    backend separa «¿está sano?» de «¿exige credencial?»: son dos preguntas cuya respuesta
+    depende de **quién** las hace, y un booleano cuyo significado cambiara con el entorno de quien
+    pregunta sería justo el dato que engaña. Esta pregunta se hace **sin** cabecera de
+    autorización, que es la única forma de ver lo que encuentra quien no lleva el token.
+
+    El ``realm`` es lo que evita el falso positivo: un 401 a secas podría venir de cualquier cosa
+    escuchando en ese puerto, y decir «es tu daemon, te falta el token» sobre un servicio ajeno
+    sería exactamente el diagnóstico inventado que esta comprobación existe para no dar.
+    """
+    try:
+        with httpx2.Client(timeout=timeout) as client:
+            response = client.get(f"http://{host}:{port}{DAEMON_STATUS_PATH}")
+    except httpx2.HTTPError:
+        return None
+    if response.status_code != 401:
+        return False
+    return "local-delegate" in response.headers.get("www-authenticate", "")
 
 
 def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
@@ -128,7 +153,9 @@ def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
     """
     try:
         with httpx2.Client(timeout=timeout) as client:
-            response = client.get(f"http://{host}:{port}{BACKEND_STATUS_PATH}")
+            response = client.get(
+                f"http://{host}:{port}{BACKEND_STATUS_PATH}", headers=config.web_auth_headers()
+            )
             response.raise_for_status()
             data = response.json()
     except (httpx2.HTTPError, ValueError, TypeError):
@@ -138,8 +165,13 @@ def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
     return data if isinstance(data, dict) and "available" in data else None
 
 
-def build_app(host: str | None = None, port: int | None = None) -> Starlette:
-    """Construye el ASGI combinado preservando el lifespan del server MCP."""
+def build_app(host: str | None = None, port: int | None = None) -> Starlette | auth.TokenPuerto:
+    """Construye el ASGI combinado preservando el lifespan del server MCP.
+
+    Devuelve la app envuelta cuando hay token configurado. El tipo de retorno lo dice en vez de
+    esconderlo tras un alias: quien lo lea tiene que saber que el objeto servido no siempre es la
+    Starlette del SDK.
+    """
     host = host or config.WEB_HOST
     port = port or config.WEB_PORT
 
@@ -161,7 +193,11 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette:
     # Las rutas exactas deben quedar antes del mount raíz del dashboard.
     mcp_app.routes.insert(0, Route(DAEMON_STATUS_PATH, daemon_status, methods=["GET"]))
     mcp_app.routes.append(Mount("/", app=metrics.app))
-    return mcp_app
+
+    # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
+    # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado
+    # `proteger` devuelve la misma app y aquí no cambia nada.
+    return auth.proteger(mcp_app, config.WEB_TOKEN)
 
 
 def serve(host: str | None = None, port: int | None = None, log_level: str = "warning") -> int:

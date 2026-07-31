@@ -53,6 +53,8 @@ SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
 CREDENTIAL_HINT = "local-delegate install --mcp-mode http  (el daemon sí tiene la credencial)"
+# El nombre de la variable, no su valor: el diagnóstico jamás imprime un secreto.
+TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
 # El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
 # decisión vive en `update.upgrade_command()`, que es de donde la toma `_upgrade_hint`.
 
@@ -94,6 +96,22 @@ def _default_daemon_status(host: str, port: int) -> dict | None:
     from . import daemon
 
     return daemon.query_daemon(host, port, timeout=1.0)
+
+
+def _default_daemon_needs_token(host: str, port: int) -> bool | None:
+    """¿El puerto lo sirve un daemon nuestro protegido? Ver ``daemon.daemon_requires_token``."""
+    from . import daemon
+
+    return daemon.daemon_requires_token(host, port, timeout=1.0)
+
+
+def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
+    """Colaborador para los tests: no se pregunta al puerto y no hay veredicto.
+
+    Mismo motivo que :func:`NO_KEY_PROBE`: sin doblarlo la suite saldría a la red, y va en **los
+    dos** arneses, no en uno.
+    """
+    return None
 
 
 def _default_backend_models() -> tuple[bool, str]:
@@ -245,6 +263,10 @@ class Context:
     config_path: Path | None = None
     online: bool = False
     daemon_status: Callable[[str, int], dict | None] = _default_daemon_status
+    # Solo se consulta cuando `daemon_status` no dio respuesta y el puerto está ocupado: sirve
+    # para separar «ahí hay otra cosa» de «ahí está nuestro daemon y a este entorno le falta el
+    # token», que llevan a acciones opuestas.
+    daemon_needs_token: Callable[[str, int], bool | None] = _default_daemon_needs_token
     backend_models: Callable[[], tuple[bool, str]] = _default_backend_models
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = _default_version_of
     # Al final y con default: las llamadas que no lo pasan siguen funcionando igual. Quien no
@@ -829,6 +851,16 @@ def _probe_daemon(ctx: Context) -> Result:
             )
         return Result(OK, detail)
     if _port_taken(host, port):
+        # Desde que el puerto puede exigir token hay DOS motivos para no obtener respuesta, y
+        # llevan a acciones opuestas: matar un proceso ajeno, o poner una variable de entorno.
+        # Decir «no es nuestro daemon» cuando sí lo es era el diagnóstico correcto solo hasta que
+        # existió esta segunda causa, y un mensaje que se quedó viejo miente igual que uno falso.
+        if ctx.daemon_needs_token(host, port):
+            return Result(
+                WARN,
+                f"nuestro daemon escucha en {host}:{port} pero este entorno no tiene su token",
+                f"exporta {TOKEN_VAR} con el mismo valor con el que arrancó el daemon",
+            )
         return Result(WARN, f"alguien escucha en {host}:{port} pero no es nuestro daemon")
     return Result(MISSING, f"nadie escucha en {host}:{port}", SERVE_HINT)
 

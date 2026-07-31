@@ -43,6 +43,10 @@ def make_ctx(home, **kwargs):
         # cada `run_all` de la suite pediría `/models` al backend REAL de la máquina. Devuelve
         # «no exige credencial», que es el caso en el que la entrada MCP da igual.
         "backend_needs_key": lambda: (False, ""),
+        # Sexto colaborador de red. Solo se consulta cuando el daemon no responde y el puerto
+        # está ocupado, pero doblarlo igualmente es el contrato de este arnés: un colaborador
+        # que sale a la red solo «a veces» es peor, porque falla de forma intermitente.
+        "daemon_needs_token": checks.NO_TOKEN_PROBE,
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -656,6 +660,61 @@ def test_port_taken_by_another_process_is_warn_not_missing(tmp_path, monkeypatch
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
     ctx = make_ctx(make_home(tmp_path), daemon_status=lambda host, port: None)
     result = result_for("service.daemon", ctx)
+    assert result.status == checks.WARN
+    assert "no es nuestro daemon" in result.detail
+
+
+def test_el_puerto_protegido_no_se_confunde_con_un_proceso_ajeno(tmp_path, monkeypatch):
+    """Dos causas para el mismo silencio, y arreglos opuestos.
+
+    Sin esta distinción, poner el token hacía que `doctor` acusara al propio daemon de ser «otro
+    proceso»: un mensaje que invita a matarlo cuando lo que falta es una variable de entorno. Es
+    el mismo error que ya se pagó caro aquí —diagnosticar por el camino equivocado— y esta vez
+    aparecía como efecto de un arreglo de seguridad, que es la peor forma de aparecer.
+    """
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: None,
+        daemon_needs_token=lambda host, port: True,
+    )
+    result = result_for("service.daemon", ctx)
+
+    assert result.status == checks.WARN
+    assert "no tiene su token" in result.detail
+    assert "no es nuestro daemon" not in result.detail
+    assert checks.TOKEN_VAR in (result.fix_hint or "")
+
+
+def test_el_diagnostico_del_token_no_imprime_el_secreto(tmp_path, monkeypatch):
+    """El arreglo nombra la variable; su valor no sale por pantalla ni por error."""
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
+    monkeypatch.setattr(checks.config, "WEB_TOKEN", "un-secreto-que-no-debe-salir")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: None,
+        daemon_needs_token=lambda host, port: True,
+    )
+    result = result_for("service.daemon", ctx)
+
+    assert "un-secreto-que-no-debe-salir" not in result.detail
+    assert "un-secreto-que-no-debe-salir" not in (result.fix_hint or "")
+
+
+def test_sin_saber_si_exige_token_se_mantiene_el_mensaje_de_siempre(tmp_path, monkeypatch):
+    """`None` es «no se pudo preguntar», y ahí no se inventa un diagnóstico nuevo.
+
+    Importa porque el colaborador devuelve `None` cuando el puerto no habla HTTP — justo el caso
+    en que de verdad hay otro proceso delante.
+    """
+    monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
+    ctx = make_ctx(
+        make_home(tmp_path),
+        daemon_status=lambda host, port: None,
+        daemon_needs_token=checks.NO_TOKEN_PROBE,
+    )
+    result = result_for("service.daemon", ctx)
+
     assert result.status == checks.WARN
     assert "no es nuestro daemon" in result.detail
 

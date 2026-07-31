@@ -261,6 +261,44 @@ def test_http_mode_points_to_the_shared_daemon(tmp_path):
     assert entry["url"].endswith("/mcp")
 
 
+def test_sin_pedirlo_la_entrada_http_no_lleva_cabecera():
+    """El default no cambia: quien no usa token sigue con la entrada de siempre."""
+    entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
+    assert "headers" not in entry
+    assert "bearer_token_env_var" not in inst.codex_mcp_block(entry)
+
+
+def test_el_token_del_puerto_se_referencia_y_nunca_se_escribe():
+    """Ni el JSON de Claude Code ni el TOML de Codex ven el secreto, solo el nombre de la variable.
+
+    Los dos clientes resuelven lo mismo por caminos distintos y ninguno vale para el otro:
+    Claude Code expande `${VAR}` dentro de `headers` —medido contra la 2.1.220—, y Codex **no
+    expande nada** en TOML, pero tiene `bearer_token_env_var`, que además es obligatorio ahí:
+    su validador rechaza un `bearer_token` literal en `streamable_http`.
+    """
+    entry = inst.mcp_entry("http", None, api_key_env=False, version=None, web_token_env=True)
+    assert entry["headers"] == {"Authorization": "Bearer ${LOCAL_DELEGATE_WEB_TOKEN}"}
+
+    block = inst.codex_mcp_block(entry)
+    data = tomllib.loads(block)
+    servidor = data["mcp_servers"]["local-delegate"]
+    assert servidor["bearer_token_env_var"] == "LOCAL_DELEGATE_WEB_TOKEN"
+    assert servidor["url"].endswith("/mcp")
+    # Lo que NO puede aparecer: la sintaxis que TOML no expande, y cualquier clave de secreto.
+    assert "${" not in block
+    assert "bearer_token =" not in block
+
+
+def test_el_token_del_puerto_no_se_cuela_en_una_entrada_stdio():
+    """El token protege el puerto del daemon; una entrada `stdio` no habla con ese puerto.
+
+    Escribirlo ahí sería una cabecera muerta que invita a pensar que la entrada está autenticada.
+    """
+    entry = inst.mcp_entry("stdio", None, api_key_env=False, version=None, web_token_env=True)
+    assert "headers" not in entry
+    assert "LOCAL_DELEGATE_WEB_TOKEN" not in json.dumps(entry)
+
+
 # --- Bloques gestionados ------------------------------------------------------
 def test_upsert_block_replaces_without_duplicating():
     text = "antes\n"

@@ -33,15 +33,28 @@ conviene tener presentes al reportar o al desplegar:
   es justo el mecanismo que ahorra contexto. Si el MCP queda accesible a algo que no controlas,
   eso es lectura arbitraria de archivos con los permisos del usuario. Limita las raíces
   permitidas con `LOCAL_DELEGATE_ALLOWED_DIRS`.
-- **Puertos de escucha.** El dashboard y el daemon escuchan en `127.0.0.1` por defecto. Cambiar
-  `LOCAL_DELEGATE_WEB_HOST` a `0.0.0.0` publica en la red local un panel **sin autenticación**
-  con tu actividad y las rutas de los archivos delegados. No lo hagas sin poner algo delante.
+- **Puertos de escucha.** El dashboard y el daemon escuchan en `127.0.0.1` por defecto, **sin
+  autenticación**. Cambiar `LOCAL_DELEGATE_WEB_HOST` a `0.0.0.0` publica en la red local un panel
+  con tu actividad y las rutas de los archivos delegados.
 
   **Y `127.0.0.1` no basta como garantía:** cualquier proxy que pongas delante lo publica igual sin
-  tocar esa variable — un `tailscale serve --https=9393`, un túnel, un nginx. El puerto expone el
-  panel **y** el endpoint `/mcp`, y ese endpoint corre dentro del daemon, o sea **con la credencial
-  del backend ya cargada**: quien lo alcance puede delegar sin tener ninguna key. Si publicas el
-  9393 más allá de tu máquina, pon autenticación delante.
+  tocar esa variable — un túnel, un nginx, un reenvío de puerto de una VPN. El puerto expone el
+  panel **y** el endpoint MCP, y ese endpoint corre dentro del daemon, o sea **con la credencial
+  del backend ya cargada**: quien lo alcance puede delegar sin tener ninguna key.
+
+  **La protección anti-DNS-rebinding del SDK no sirve para esto**, y conviene decirlo porque
+  induce a error: rechaza con `421` una petición cuyo `Host` no sea loopback, pero eso solo frena a
+  un navegador engañado. Se salta mandando `Host: 127.0.0.1:9393` a mano — comprobado.
+
+  **Cómo se cierra:** define `LOCAL_DELEGATE_WEB_TOKEN` en el entorno del daemon. Con esa variable,
+  todo el puerto exige el token —el endpoint MCP, el dashboard y `/api/*`— por `Authorization:
+  Bearer <token>` o por `Basic` (cualquier usuario, el token como contraseña, que es lo que permite
+  abrir el panel desde un navegador). Sin la variable no cambia nada, para no romper instalaciones
+  existentes. Ver [Daemon](docs/wiki/Daemon.md#autenticación-del-puerto).
+
+  El token **no se escribe en ningún fichero de configuración**: `local-delegate install
+  --mcp-mode http --web-token-env` deja a los clientes referenciando la variable de entorno
+  (`${LOCAL_DELEGATE_WEB_TOKEN}` en Claude Code, `bearer_token_env_var` en Codex).
 - **Backend remoto.** `LOCAL_DELEGATE_BASE_URL` puede apuntar a otra máquina; el contenido
   delegado viaja hasta ahí. Usa HTTPS y una red privada (ver
   [Backend remoto](docs/wiki/Remote-backend.md)), nunca un puerto abierto a internet.

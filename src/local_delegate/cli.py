@@ -87,6 +87,7 @@ def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp
         mcp_mode=getattr(args, "mcp_mode", "stdio"),
         base_url=getattr(args, "base_url", None),
         api_key_env=getattr(args, "api_key_env", False),
+        web_token_env=getattr(args, "web_token_env", False),
         pin_version=getattr(args, "pin_version", None),
         # El HOME simulado apaga el camino por CLI, y no es una precaución teórica: `claude mcp
         # add-json --scope user` escribe SIEMPRE en el `~/.claude.json` del usuario real,
@@ -819,6 +820,14 @@ def _add_install_parsers(sub) -> None:
         "--api-key-env",
         action="store_true",
         help="reenvía LOCAL_DELEGATE_API_KEY desde el entorno (nunca escribe el secreto)",
+    )
+    install.add_argument(
+        "--web-token-env",
+        action="store_true",
+        help=(
+            "con --mcp-mode http, autentica contra el daemon referenciando "
+            "LOCAL_DELEGATE_WEB_TOKEN del entorno (nunca escribe el secreto)"
+        ),
     )
     install.add_argument(
         "--pin-version",

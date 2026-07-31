@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "auth-puerto-daemon",
+  "title": "El puerto del daemon exige token cuando se configura uno",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-07-31T21:02:45.922Z",
+  "updatedAt": "2026-07-31T21:23:26.062Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:23:16.120Z",
+      "evidence": "spec.md con 9 requisitos observables y 4 escenarios; decisiones de diseno tomadas con el usuario y premisas medidas (Host falsificable, expansion de VAR en Claude Code 2.1.220)",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:23:16.194Z",
+      "evidence": "plan.md con 6 tareas, fichero/requisito/verificacion/rollback; revision adversarial en Plan review; dependencia de orden explicita entre tarea 3 y 5",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T21:23:16.263Z",
+      "evidence": "611 passed 1 skipped (570 al empezar); ruff check y format limpios; node --check OK; e2e contra daemon real protegido en 9494; 10 mutantes, 9 cazados y el no cazado documentado",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T21:02:45.922Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T21:23:15.702Z",
+      "reason": "avance del change"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T21:23:15.769Z",
+      "reason": "avance del change"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T21:23:16.120Z",
+      "evidence": "spec.md con 9 requisitos observables y 4 escenarios; decisiones de diseno tomadas con el usuario y premisas medidas (Host falsificable, expansion de VAR en Claude Code 2.1.220)",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T21:23:16.194Z",
+      "evidence": "plan.md con 6 tareas, fichero/requisito/verificacion/rollback; revision adversarial en Plan review; dependencia de orden explicita entre tarea 3 y 5",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T21:23:16.263Z",
+      "evidence": "611 passed 1 skipped (570 al empezar); ruff check y format limpios; node --check OK; e2e contra daemon real protegido en 9494; 10 mutantes, 9 cazados y el no cazado documentado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T21:23:25.849Z",
+      "reason": "gates aprobados; implementacion y verificacion completas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T21:23:25.922Z",
+      "reason": "gates aprobados; implementacion y verificacion completas"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T21:23:25.991Z",
+      "reason": "gates aprobados; implementacion y verificacion completas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T21:23:26.062Z",
+      "reason": "gates aprobados; implementacion y verificacion completas"
+    }
+  ]
+}

@@ -6,7 +6,45 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El puerto del daemon puede exigir un token, y con él se cierra de una vez el endpoint MCP, el
+  dashboard y `/api/*`.** Define `LOCAL_DELEGATE_WEB_TOKEN` en el entorno del daemon y todo el
+  puerto lo pide; sin la variable no cambia absolutamente nada, porque exigirlo siempre rompería
+  toda instalación existente el día que se actualiza.
+
+  El agujero que cierra, medido y no supuesto: el daemon escucha en `127.0.0.1`, pero **cualquier
+  proxy delante lo publica sin tocar `LOCAL_DELEGATE_WEB_HOST`** —un túnel, un nginx, un reenvío de
+  puerto de una VPN— y conecta contra loopback igual que el usuario, así que ni esa variable ni la
+  IP de origen delatan nada. Y quien alcance ese puerto **puede delegar con la credencial del
+  backend que el daemon ya tiene cargada**.
+
+  **La protección anti-DNS-rebinding del SDK no cubría esto**, y merece decirse porque invitaba a
+  darlo por resuelto: rechaza con `421` un `Host` que no sea loopback, pero se salta mandando
+  `Host: 127.0.0.1:9393` a mano. Es defensa contra un navegador engañado —que no puede fijar esa
+  cabecera— y nunca pretendió ser control de acceso.
+
+  El token se acepta como `Bearer` (clientes MCP, CLI) y como `Basic` (el navegador, que no manda
+  una cabecera Bearer por escribir una URL; el usuario da igual y el token va de contraseña). Una
+  sola puerta envuelve la app raíz **después** de montar el dashboard, así que una ruta nueva queda
+  protegida por existir y no por acordarse de protegerla.
+
+  El secreto no se escribe en ningún fichero de configuración: `install --mcp-mode http
+  --web-token-env` deja a Claude Code con `${LOCAL_DELEGATE_WEB_TOKEN}` en `headers` —verificado
+  contra la 2.1.220, que lo expande— y a Codex con `bearer_token_env_var`, que es su mecanismo para
+  esto y además el único posible, porque su validador rechaza un token literal en ese transporte.
+
 ### Fixed
+- **`doctor` deja de acusar al propio daemon de ser «otro proceso» cuando lo que falta es el
+  token.** Con el puerto protegido y sin credencial en el entorno, el check de servicio decía
+  «alguien escucha en 127.0.0.1:9393 pero no es nuestro daemon»: cierto hasta que existió una
+  segunda causa para el mismo silencio, y falso desde entonces. Los dos diagnósticos llevan a
+  acciones opuestas —matar un proceso ajeno, o exportar una variable—, así que ahora se separan.
+
+  La distinción se apoya en el `realm` del `401`, no en el código de estado a secas: cualquier cosa
+  escuchando en ese puerto puede responder `401`, y atribuírselo al daemon sería cambiar un
+  diagnóstico falso por otro. Y la pregunta se hace **sin** cabecera de autorización, que es la
+  única forma de ver lo que encuentra quien no lleva el token — mirar por el camino que sí tiene
+  credencial es exactamente lo que ya tapó una avería durante un día entero en este repo.
 - **El paquete deja de declarar su versión a mano.** `local_delegate.__version__` estaba clavado
   en `"0.10.0"` y llevaba **nueve releases mintiendo**: `scripts/bump_version.py` sube la versión
   en los cuatro sitios que conoce —`pyproject.toml`, las dos de `server.json` y `uv.lock`— y ese
