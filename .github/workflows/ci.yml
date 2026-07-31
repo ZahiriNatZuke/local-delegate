@@ -150,3 +150,43 @@ jobs:
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # El check que exige el ruleset, y el único de este workflow que lo exige por Windows.
+  #
+  # Por qué existe: GitHub deja a veces un job en `in_progress` PARA SIEMPRE con todos sus pasos
+  # terminados en `success` —incluido el `Complete job` que pone el propio runner— y
+  # `completed_at: null`. Le pasó tres veces en dos días a `test (windows-latest)` (PR #77, #86 y
+  # #88) y, como los checks se exigen por nombre, el merge quedaba bloqueado hasta cancelar y
+  # relanzar a mano. Es un problema conocido de GitHub sin solución oficial
+  # (community/discussions/161434). Como los STEPS sí terminan, este job los mira por la API.
+  #
+  # OJO a las dos cosas que NO sirven, las dos comprobadas a base de equivocarse:
+  #
+  #   - `needs` + `if: always()`, que es el patrón habitual: `needs` espera a que el job TERMINE,
+  #     que es exactamente lo que aquí no pasa. Este job corre en paralelo, sin `needs`.
+  #   - `timeout-minutes` sobre el job colgado: lo aplica el runner sobre algo que sigue
+  #     ejecutándose, y aquí el runner ya terminó. Medido en el PR #88: 10+ min con el límite en 8.
+  #
+  # Si el gate MISMO se colgara así, volveríamos al remedio de hoy (`gh run cancel` + `rerun`): no
+  # se empeora nada respecto a la situación anterior. Corre en Ubuntu, donde el fallo no se ha visto.
+  #
+  # `actions: read` es todo lo que pide, y solo lee: nunca cancela ni relanza nada. Concederle
+  # `actions: write` habría sido la otra vía, y se descartó por eso mismo.
+  ci-gate:
+    runs-on: ubuntu-latest
+    # Cubre cola + ejecución del job más lento, no solo su ejecución: el script espera hasta 25 min.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # Sin `setup-uv` a propósito: el script es solo stdlib, como `check_vendor.py`, así que no
+      # hace falta resolver dependencias para decidir si la rama se puede mergear.
+      - name: Veredicto por los steps de cada job
+        run: python scripts/ci_gate.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "ci-gate-steps",
+  "title": "Un gate que mire los steps para que el job fantasma de Windows no bloquee un merge",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-07-31T14:26:43.248Z",
+  "updatedAt": "2026-07-31T14:38:34.823Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T14:34:30.825Z",
+      "evidence": "Premisas reproducidas por ejecucion: GET runs/30637271414/jobs devuelve steps por job; ruleset 19859628 exige 6 contextos por nombre con strict; el ultimo step se llama 'Complete job' y la numeracion salta (1-5,9-11), asi que el criterio es el nombre. Alcance del ruleset e install-smoke decididos por el usuario. 10 requisitos verificables con trazabilidad y no-goals.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T14:38:01.317Z",
+      "evidence": "Revision adversarial sin subagente (regla del usuario) con 3 hallazgos BLOQUEANTES corregidos en el plan: B1 el plazo de espera confundia ejecucion con cola y habria producido falsos rojos; B2 faltaba filter=latest (tras un rerun el gate veria el intento viejo); B3 faltaba per_page (un job fuera de pagina nunca aparece). Mas 3 no bloqueantes anotados. Cero hallazgos abiertos.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T14:26:43.248Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T14:29:48.231Z",
+      "reason": "Premisa reproducida por API y ruleset consultado por ejecucion; toca mapear alternativas"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T14:33:38.007Z",
+      "reason": "Research cerrado con premisas verificadas por API y las dos decisiones de alcance tomadas por el usuario"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T14:34:30.825Z",
+      "evidence": "Premisas reproducidas por ejecucion: GET runs/30637271414/jobs devuelve steps por job; ruleset 19859628 exige 6 contextos por nombre con strict; el ultimo step se llama 'Complete job' y la numeracion salta (1-5,9-11), asi que el criterio es el nombre. Alcance del ruleset e install-smoke decididos por el usuario. 10 requisitos verificables con trazabilidad y no-goals.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T14:35:06.214Z",
+      "reason": "Spec aprobada; precedentes de estilo (check_vendor.py) y punto de cambio del ruleset (REQUIRED_CHECKS) localizados"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T14:38:01.252Z",
+      "reason": "Plan completo con propiedad de ficheros, estrategia de verificacion y rollback"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T14:38:01.317Z",
+      "evidence": "Revision adversarial sin subagente (regla del usuario) con 3 hallazgos BLOQUEANTES corregidos en el plan: B1 el plazo de espera confundia ejecucion con cola y habria producido falsos rojos; B2 faltaba filter=latest (tras un rerun el gate veria el intento viejo); B3 faltaba per_page (un job fuera de pagina nunca aparece). Mas 3 no bloqueantes anotados. Cero hallazgos abiertos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T14:38:34.823Z",
+      "reason": "Gate plan aprobado tras revision adversarial sin hallazgos abiertos"
+    }
+  ]
+}

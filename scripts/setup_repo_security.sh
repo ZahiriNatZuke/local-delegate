@@ -50,10 +50,18 @@ SKIP_VERIFY=0
 # Checks por defecto: los jobs de ESTE repo. Con `--checks`/`--check` se sustituyen por los del
 # repo que toque. Tienen que coincidir EXACTAMENTE con el nombre que publica cada job; los jobs
 # en matriz publican uno por combinación, con el valor entre paréntesis.
+#
+# `test (windows-latest)` NO está, y no es un olvido: GitHub lo dejaba colgado en `in_progress` con
+# todos sus pasos en `success`, y exigirlo por nombre bloqueaba el merge hasta cancelar y relanzar a
+# mano. Quien lo cubre ahora es `ci-gate`, que mira los STEPS de todos los jobs de `ci.yml` —Windows
+# incluido— en vez de su estado agregado. El porqué completo está en `docs/wiki/Repo-hardening.md`.
+#
+# Los demás siguen exigiéndose por su cuenta a propósito: si `ci-gate` tuviera un defecto, lo que se
+# desprotege es un job, no los cinco.
 REQUIRED_CHECKS=(
+  "ci-gate"
   "lint"
   "test (ubuntu-latest)"
-  "test (windows-latest)"
   "test (macos-latest)"
   "secrets"
   "Analyze (python)"

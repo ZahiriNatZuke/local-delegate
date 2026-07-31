@@ -10,6 +10,7 @@ tanto se revisa en un PR) y lo que solo existe en los **ajustes de GitHub**.
 | Archivo | Qué aporta |
 |---|---|
 | `.github/workflows/ci.yml` | tests, ruff, formato, validación del JS del dashboard y escaneo de secretos en cada PR. `permissions: contents: read` (mínimo privilegio) |
+| `scripts/ci_gate.py` | el job `ci-gate`: da el veredicto del run mirando los **steps** de cada job, para que un job que GitHub deja sin cerrar no bloquee un merge |
 | `.github/workflows/codeql.yml` | análisis estático de seguridad (semanal + en cada PR) |
 | `.github/workflows/publish.yml` | publicación por OIDC/Trusted Publishing: **sin tokens en secrets**. `permissions: {}` global, ampliado solo en el job |
 | `.github/dependabot.yml` | PRs semanales de dependencias Python y de GitHub Actions |
@@ -19,8 +20,9 @@ tanto se revisa en un PR) y lo que solo existe en los **ajustes de GitHub**.
 
 ### Cuando un job dice `in_progress` y no avanza
 
-Pasó **dos veces en dos días** (PRs #77 y #86): `test (windows-latest)` se quedó en `in_progress`
-y bloqueó el merge —1954 s el primero— mientras GitHub Status decía «All Systems Operational».
+Pasó **tres veces en dos días** (PRs #77, #86 y #88): `test (windows-latest)` se quedó en
+`in_progress` y bloqueó el merge —1954 s, 651 s y 10+ min— mientras GitHub Status decía «All
+Systems Operational».
 
 **Antes de culpar al código, mira los *steps*, no el reloj:**
 
@@ -59,11 +61,51 @@ regirían las **6 horas** del default. Pero para el job fantasma, el único reme
 exacto (job en `success`, estado que nunca llega al PR, merge bloqueado) y sin más respuesta que
 la del bot.
 
-**La vía que queda por explorar**, y no es trivial: un job *gate* requerido que consulte la API y
-mire los **steps** de los demás jobs en vez de su estado agregado — como los steps sí terminan,
-el gate pasaría aunque el job siga colgado. Ojo: el patrón habitual para esto (`needs` +
-`always()`) **no sirve aquí**, porque `needs` espera a que el job termine y es justo lo que no
-pasa.
+### El gate que lo resuelve
+
+Desde este cambio, `ci.yml` declara un job **`ci-gate`** (`scripts/ci_gate.py`) que consulta
+`GET /actions/runs/{id}/jobs` y decide por los **steps** de cada job, no por su estado agregado.
+Como los steps sí terminan, un run cuyos runners llegaron todos al final se puede mergear aunque
+GitHub deje uno sin cerrar. Y un step fallido **sigue bloqueando**.
+
+Su regla, y el orden importa:
+
+| Estado del job | Veredicto |
+|---|---|
+| `conclusion` `success` o `skipped` | OK |
+| `conclusion` cualquier otra | **falla**, sin esperar al resto |
+| sin `conclusion`, con algún step concluido en algo que no sea `success`/`skipped` | **falla** |
+| sin `conclusion`, y el **último step listado es `Complete job` en `success`** | OK — el job fantasma |
+| el resto | sigue esperando, hasta 25 min |
+
+Tres detalles que no son cosméticos:
+
+- **El criterio es el nombre del último step, nunca contar**: comprobado contra la API, la
+  numeración salta (un job de Windows lista los pasos 1-5 y luego 9-11).
+- **Los steps malos se miran ANTES que el fantasma.** Cuando un step falla, GitHub cierra el job con
+  su `Complete job` en `success` igualmente; al revés, esto sería un falso verde de manual.
+- **El plazo de 25 min cubre cola + ejecución**, que no es lo que mide `timeout-minutes`. Con el
+  plazo ajustado a la ejecución, un job que espere runner daría fallo estando todo bien.
+
+`needs` + `if: always()`, que es el patrón habitual, **no sirve**: `needs` espera a que el job
+*termine*, que es justo lo que no pasa. El gate corre en paralelo y hace polling.
+
+El gate **solo lee** (`actions: read`). La otra vía era automatizar `cancel` + `rerun`, y se
+descartó porque pedía `actions: write`, contra el mínimo privilegio del repo.
+
+**Qué deja de estar cubierto, dicho claro:**
+
+- `test (windows-latest)` **ya no se exige por nombre** en el ruleset. Lo cubre el gate. Los otros
+  cinco contextos siguen exigiéndose por su cuenta: si el gate tuviera un defecto, se desprotege un
+  job, no todos.
+- **`install-smoke` pasa a bloquear de hecho**, cosa que antes no hacía, porque está en la lista de
+  jobs que el gate espera. Fue una decisión, no un efecto colateral, y tiene su pero: ese job
+  depende de PyPI en vivo, así que **un índice degradado bloqueará PRs sin que nada esté roto**.
+- Si el **gate mismo** se colgara así, volveríamos al remedio manual. Corre en Ubuntu, donde el
+  fallo no se ha observado, pero no hay garantía.
+- `Complete job` es un nombre que pone GitHub. Si lo renombraran, el gate dejaría de reconocer al
+  fantasma y esperaría hasta agotar el plazo: degrada al comportamiento de antes, **nunca a un falso
+  verde**.
 
 `ci.yml` declara además `concurrency`, para que un push nuevo a una rama de trabajo cancele el run
 anterior — en `main` no, porque ahí el run es el registro de que ese estado pasó el CI.
