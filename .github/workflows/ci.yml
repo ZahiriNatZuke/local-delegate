@@ -68,14 +68,27 @@ jobs:
   # el job. Se descartó por ejecución un proceso huérfano reteniendo handles —el fallo clásico en
   # Windows—: la suite no deja procesos vivos.
   #
-  # OJO, y esto se comprobó a base de equivocarse: `timeout-minutes` NO rescata de ese cuelgue.
-  # Lo aplica el RUNNER sobre un job que sigue ejecutándose, y aquí el runner ya terminó — no hay
-  # nada que matar. Medido en el PR #88: el job estuvo más de 10 minutos `in_progress` con este
-  # límite en 8 y no disparó. Para el job fantasma sigue haciendo falta `gh run cancel` + `rerun`.
+  # CORRECCIÓN del 2026-07-31: aquí ponía que `timeout-minutes` «no dispara» sobre el job
+  # fantasma, deducido de ver el job más de 10 minutos vivo con el límite en 8 (PR #88). Ese
+  # diagnóstico era falso, y la medición que lo tumba son los tres runs `cancelled` de `main` de
+  # ese día (30652987094, 30654961990, 30660878897):
   #
-  # Entonces, ¿para qué está? Para el otro modo de fallo, el que sí existe y este repo no cubría:
-  # un job que de verdad se atasca EJECUTANDO (un test que no termina, una descarga que cuelga).
-  # Ahí sin esto regirían las 6 HORAS del default de GitHub.
+  #   los tres murieron a los 13:00 EXACTOS desde el inicio del job
+  #   y con estados internos distintos — dos con `Tests (pytest)` todavía `in_progress`,
+  #   uno con TODOS los pasos en `success`, `Complete job` incluido (el fantasma puro)
+  #
+  # Trece minutos clavados con tres estados distintos solo lo explica un temporizador, no una
+  # persona ni una coincidencia. Y 13 = 8 del límite + los 5 minutos de gracia que GitHub da al
+  # runner para atender la cancelación antes de matarlo a la fuerza. Los «más de 10 minutos» que
+  # se observaron eran ese periodo de gracia, no una prueba de que el límite no actuara.
+  #
+  # De ahí que la conclusión sea `cancelled` y no `timed_out`: un job que expira y cuyo runner no
+  # responde lo cierra GitHub como cancelado.
+  #
+  # Consecuencia práctica: un `cancelled` en `main` que haya durado 13:00 **no es una avería del
+  # repo** — es este cuelgue de GitHub y el límite haciendo su trabajo. No bloquea nada, porque en
+  # un push a `main` no hay merge esperando; en un PR sí lo bloquea, y ahí `ci-gate` da el
+  # veredicto por los pasos.
   #
   # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj corre sobre la
   # ejecución del job, no sobre la espera en cola.
@@ -99,7 +112,15 @@ jobs:
       - name: Sync deps
         run: uv sync --group dev
 
+      # Límite propio del paso, además del que gobierna el job entero. Cubre el caso en que quien
+      # se cuelga es **pytest** y no el runner: en dos de los tres `cancelled` medidos el paso
+      # seguía `in_progress` al morir el job. Con esto, ese cuelgue se corta a los 5 minutos y deja
+      # un fallo con log, en vez de trece minutos que además acaban sin log (`BlobNotFound`).
+      #
+      # 5 son ~2,6x el peor caso real en CI (1,9 min). Si el que se cuelga es el runner, esto no
+      # rescata —no hay proceso que matar— y manda el límite del job.
       - name: Tests (pytest)
+        timeout-minutes: 5
         run: uv run pytest -q
 
   # El único job que NO usa `uv.lock`, y esa es exactamente su razón de ser.

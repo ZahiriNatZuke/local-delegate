@@ -43,18 +43,38 @@ Qué hacer: `gh run cancel <run-id>` y luego `gh run rerun <run-id>`. Ojo, **el 
 retraso en las dos direcciones**: la cancelación puede tardar en verse, y `gh run rerun --job`
 responde «cannot be rerun» mientras el job siga `in_progress`.
 
-### `timeout-minutes` NO rescata de esto, y conviene saberlo
+### `timeout-minutes` sí actúa, y su firma son 13 minutos
 
-Se intentó y **no funciona**, comprobado en el PR #88: el job estuvo más de 10 minutos
-`in_progress` con `timeout-minutes: 8` y no disparó. La razón encaja con el diagnóstico —
-`timeout-minutes` lo aplica el **runner**, matando un job que sigue **ejecutándose**, y aquí el
-runner ya terminó: no hay nada que matar. Quien no cierra el job es el backend de GitHub, y a ese
-no lo alcanza.
+> **Corregido el 2026-07-31.** Aquí ponía que `timeout-minutes` «no dispara», deducido de ver el
+> job más de 10 minutos vivo con el límite en 8 (PR #88). Era un diagnóstico falso: lo que se
+> estaba viendo era el **periodo de gracia**.
 
-`ci.yml` lo declara igualmente porque cubre **el otro** modo de fallo, el que sí es nuestro: un
-job que de verdad se atasca ejecutando (un test que no termina, una descarga colgada). Sin él
-regirían las **6 horas** del default. Pero para el job fantasma, el único remedio hoy es
-`cancel` + `rerun` a mano.
+Lo que lo tumba son los tres runs `cancelled` de `main` de ese día (`30652987094`, `30654961990`,
+`30660878897`):
+
+- los tres murieron a los **13:00 exactos** desde el inicio del job;
+- y con **estados internos distintos** — dos con `Tests (pytest)` todavía `in_progress`, uno con
+  **todos** los pasos en `success`, `Complete job` incluido (el fantasma puro).
+
+Trece minutos clavados con tres estados distintos solo lo explica un temporizador. Y **13 = 8 del
+límite + los 5 minutos de gracia** que GitHub da al runner para atender la cancelación antes de
+matarlo a la fuerza. De ahí que la conclusión sea `cancelled` y no `timed_out`.
+
+**Cómo se lee un `cancelled` de este repo, entonces:**
+
+| Lo que ves | Qué es |
+|---|---|
+| `cancelled` en `main`, job de ~13:00, resto en `success` | El cuelgue conocido de GitHub. **No hay avería.** No bloquea nada: en un push a `main` no hay merge esperando |
+| `cancelled` en un PR | Lo mismo, pero ahí sí bloquearía. Lo resuelve `ci-gate`, que da el veredicto por los pasos en segundos |
+| `failure` en el paso `Tests (pytest)` a los ~5 min | Eso **sí** es nuestro: el límite propio del paso, que corta un pytest colgado y deja log |
+
+El límite del paso se añadió por lo segundo que enseñó la medición: en dos de los tres casos quien
+seguía corriendo era **pytest**, no el runner. Ahí un límite de paso corta pronto y con log, en vez
+de arrastrar trece minutos que además acaban sin log (`BlobNotFound`).
+
+Los números están atados en `tests/test_ci_gate.py`: si alguien cambia el límite, el test exige que
+el texto que explica la firma se actualice. Un comentario no falla nunca por su cuenta, y este ya
+estuvo equivocado una vez.
 
 **Es un problema conocido de GitHub y sin solución oficial** — ver la
 [discusión #161434](https://github.com/orgs/community/discussions/161434), con el mismo síntoma

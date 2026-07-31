@@ -18,10 +18,12 @@ al final aunque GitHub no lo haya cerrado.
 que el job *termine*, que es exactamente lo que aquí no pasa. El gate corre **en paralelo** con los
 demás y pregunta por la API.
 
-**Por qué `timeout-minutes` tampoco vale, aunque `ci.yml` lo declare:** lo aplica el runner sobre un
-job que sigue *ejecutándose*, y aquí el runner ya terminó — no hay nada que matar. Medido en el
-PR #88: 10+ minutos con el límite en 8 y no disparó. Sigue en `ci.yml` por el **otro** modo de
-fallo, un job que de verdad se atasca ejecutando.
+**Por qué `timeout-minutes` no sustituye a este gate**, aunque `ci.yml` lo declare: sí actúa —eso
+se midió y se corrigió el 2026-07-31, ver el comentario de `ci.yml`—, pero tarda **13 minutos** en
+cerrar el job (8 del límite más los 5 de gracia que GitHub da al runner) y lo cierra como
+`cancelled`, que para este gate es un **fallo**. O sea, sin el gate el merge quedaría bloqueado
+igual, solo que trece minutos más tarde y sin log. El gate da el veredicto en segundos mirando los
+pasos.
 
 Regla de decisión por job, y el orden importa:
 
