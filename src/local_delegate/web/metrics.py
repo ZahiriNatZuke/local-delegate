@@ -389,6 +389,95 @@ def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(
     return JSONResponse(_aggregate(rows))
 
 
+def _aggregate_hooks(rows: list[dict]) -> dict:
+    """Agrega la telemetría de los hooks. Función pura: todo el criterio se prueba con esto.
+
+    **Qué mide y qué NO mide**, porque confundirlo sería el peor resultado posible aquí: cuenta
+    las veces que un hook consultivo **sugirió** delegar, no las veces que se delegó. El hook
+    sugiere y el usuario decide; desde este lado no hay forma de saber si la sugerencia se siguió.
+    Cruzarlo con el log de uso sería inventar una correlación —dos registros que no comparten
+    identificador— y presentarla como un dato.
+    """
+    total = len(rows)
+    sugeridas = 0
+    por_evento: dict[str, dict[str, int]] = {}
+    por_categoria: dict[str, dict[str, int]] = {}
+    por_dia: dict[str, dict[str, int]] = {}
+
+    for row in rows:
+        # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
+        # es lo que significaba antes de que el campo existiera.
+        sugerida = bool(row.get("suggested"))
+        sugeridas += sugerida
+
+        for clave, destino in (
+            (row.get("event") or "?", por_evento),
+            (row.get("category") or "sin categoría", por_categoria),
+        ):
+            casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
+            casilla["total"] += 1
+            casilla["suggested"] += sugerida
+
+        ts = _parse_ts(row.get("ts"))
+        if ts is not None:
+            casilla = por_dia.setdefault(ts.date().isoformat(), {"total": 0, "suggested": 0})
+            casilla["total"] += 1
+            casilla["suggested"] += sugerida
+
+    def _lista(datos: dict[str, dict[str, int]], clave: str) -> list[dict]:
+        return [
+            {clave: nombre, **valores}
+            for nombre, valores in sorted(datos.items(), key=lambda kv: (-kv[1]["total"], kv[0]))
+        ]
+
+    return {
+        "total": total,
+        "suggested": sugeridas,
+        # Ratio y no porcentaje: el formato es cosa de quien pinta, no del dato.
+        "rate": (sugeridas / total) if total else 0.0,
+        "by_event": _lista(por_evento, "event"),
+        "by_category": _lista(por_categoria, "category"),
+        "by_day": sorted(
+            ({"day": dia, **valores} for dia, valores in por_dia.items()),
+            key=lambda d: d["day"],
+        ),
+    }
+
+
+@app.get("/api/hooks")
+def hooks(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+    """Lo que los hooks consultivos han sugerido, en el mismo rango que el resto del panel.
+
+    `enabled` distingue las dos formas de no tener datos: el usuario no activó la telemetría, o la
+    activó y todavía no hay eventos. Sin esa distinción, un panel vacío se lee como «los hooks no
+    sugieren nada», que es una conclusión falsa sacada de un fichero que no existe.
+    """
+    ruta = config.HOOK_TELEMETRY_LOG
+    if ruta is None:
+        return JSONResponse(
+            {
+                "enabled": False,
+                "reason": "LD_HOOK_TELEMETRY_LOG no está definida en el entorno del daemon",
+                **_aggregate_hooks([]),
+            }
+        )
+
+    range_from, range_to = _resolve_range(from_, to)
+    filas = [
+        fila
+        for fila in _read_file_cached(ruta)
+        if (ts := _parse_ts(fila.get("ts"))) is not None and range_from <= ts <= range_to
+    ]
+    return JSONResponse(
+        {
+            "enabled": True,
+            "log": str(ruta),
+            "exists": ruta.is_file(),
+            **_aggregate_hooks(filas),
+        }
+    )
+
+
 @app.get("/api/inflight")
 def inflight():
     """Delegaciones en curso de todas las sesiones + señales de actividad del dashboard.
@@ -1000,6 +1089,15 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
   </div>
 
+  <!-- Los hooks consultivos sugieren; el usuario decide. Esta tarjeta cuenta lo primero y NO
+       pretende medir lo segundo: no hay identificador que una una sugerencia con una delegación,
+       y cruzarlos sería inventar una correlación. El texto de la tarjeta lo dice. -->
+  <div class="card tablecard" id="hooksCard" style="display:none">
+    <div class="panel-h" style="--hc:var(--amber)"><h2>Sugerencias de los hooks</h2>
+      <span class="mut" id="hooksHead"></span></div>
+    <div id="hooksBody"></div>
+  </div>
+
   <footer id="foot"></footer>
 </div>
 
@@ -1141,13 +1239,17 @@ async function fetchData(){
     // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
     // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
     // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
-    const [r, rs] = await Promise.all([
+    const [r, rs, rh] = await Promise.all([
       fetch('/api/events?' + qs.toString()),
       fetch('/api/stats?' + qs.toString()),
+      // Mismo rango que el resto de la página: una tarjeta que contara otro periodo se leería
+      // como una contradicción de los KPIs de arriba.
+      fetch('/api/hooks?' + qs.toString()),
     ]);
     const j = await r.json();
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
+    try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
     const cnt = F.format(state.meta.count||0);
     const filesN = (state.meta.files_read||[]).length;
@@ -1159,6 +1261,45 @@ async function fetchData(){
     document.getElementById('live').classList.add('stale');
     document.getElementById('liveTxt').textContent='SIN DATOS';
   }
+}
+
+// --- Sugerencias de los hooks: /api/hooks ---
+//
+// La tarjeta se ESCONDE si la telemetría no está activada, en vez de enseñar ceros. Un panel a
+// cero se lee como «los hooks no sugieren nada», que es una conclusión falsa sacada de un fichero
+// que no existe — y es exactamente el error que este panel no puede permitirse.
+// La categoría sale de un fichero que escriben los hooks, no del propio panel: es el único texto
+// de esta página cuyo contenido no controla el daemon. Escaparlo cuesta una línea.
+function escHooks(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function renderHooks(h){
+  const card = document.getElementById('hooksCard');
+  if(!h || !h.enabled || !h.total){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const pct = (h.rate*100).toFixed(1).replace('.', ',');
+  document.getElementById('hooksHead').textContent =
+    F.format(h.suggested) + ' de ' + F.format(h.total) + ' (' + pct + ' %)';
+
+  const filas = (h.by_category||[]).map(c=>{
+    const p = c.total ? (c.suggested/c.total*100) : 0;
+    return `<tr><td>${escHooks(c.category)}</td>`
+      + `<td class="num">${F.format(c.suggested)}</td>`
+      + `<td class="num" style="color:var(--tx2)">${F.format(c.total)}</td>`
+      + `<td class="num" style="color:var(--amber)">${p.toFixed(1).replace('.', ',')} %</td></tr>`;
+  }).join('');
+
+  document.getElementById('hooksBody').innerHTML =
+    '<div style="overflow-x:auto"><table>'
+    + '<thead><tr><th>Categoría</th><th class="num">Sugeridas</th>'
+    + '<th class="num">Vistas</th><th class="num">Tasa</th></tr></thead>'
+    + '<tbody>' + filas + '</tbody></table></div>'
+    + '<div class="empty" style="padding:10px 12px;text-align:left">'
+    + 'Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se '
+    + 'siguieron: nada enlaza una sugerencia con la delegación que vino después.</div>';
 }
 
 // --- Backend local: /api/status (identidad, 1x/min) + /api/backend (montados, 2s) ---

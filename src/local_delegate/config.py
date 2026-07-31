@@ -133,6 +133,18 @@ _log_dir_env = os.environ.get("LOCAL_DELEGATE_LOG_DIR")
 LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 
 
+# --- Telemetría de los hooks consultivos (opt-in, la escriben los propios hooks) ---------------
+# El nombre de la variable NO lleva el prefijo `LOCAL_DELEGATE_` porque no es de este módulo: la
+# define el usuario en la configuración de su cliente y la leen los scripts de
+# `resources/hooks/`, que son stdlib pura y no importan nada de aquí. Se refleja en este módulo
+# solo para que el dashboard sepa **dónde mirar**, y por eso se lee igual que allí.
+#
+# `None` cuando no está definida, y eso significa «el usuario no activó la telemetría», que es
+# distinto de «está activada y no hay eventos». El dashboard tiene que poder decir cuál de las dos.
+_hook_log_env = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
+HOOK_TELEMETRY_LOG: Path | None = Path(_hook_log_env) if _hook_log_env else None
+
+
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
 # Vacía/ausente = sin restricción (comportamiento actual, documentado). Lista separada
 # por ';' de directorios raíz; cualquier 'path' fuera de todos ellos se rechaza.
