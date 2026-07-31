@@ -3,9 +3,9 @@
   "slug": "sync-wiki-nativa",
   "title": "La wiki nativa se sincroniza sola desde docs/wiki",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-07-31T21:29:27.814Z",
-  "updatedAt": "2026-07-31T21:37:33.143Z",
+  "updatedAt": "2026-07-31T23:07:20.634Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T23:07:20.431Z",
+      "evidence": "PR 108 mergeado; el workflow corrio y publico (commit 5ce59fa en la wiki): 11 paginas, 18 enlaces convertidos, 0 rotos, 18 internos conservados, e identicas a lo que genera el script",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T23:06:55.520Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "at": "2026-07-31T21:37:33.143Z",
       "evidence": "620 passed 1 skipped (611 antes); ruff y format limpios; node --check OK; 5 mutantes, 5 cazados tras arreglar un test que no podia ver lo que decia comprobar",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T23:06:55.520Z",
+      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T23:07:08.567Z",
+      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T23:07:20.431Z",
+      "evidence": "PR 108 mergeado; el workflow corrio y publico (commit 5ce59fa en la wiki): 11 paginas, 18 enlaces convertidos, 0 rotos, 18 internos conservados, e identicas a lo que genera el script",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T23:07:20.527Z",
+      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T23:07:20.634Z",
+      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
     }
   ]
 }
