@@ -58,15 +58,52 @@ no era una precaución teórica.
 - [x] Secretos: el cambio no añade ninguno; `gitleaks` corre en `pre-commit` y en el CI.
 - [x] Sin cambios ajenos al alcance.
 
-## Pendiente: la verificación en vivo
+## La verificación en vivo, hecha (run 30640065930, PR #90)
 
-Dos cosas **no se pueden simular** y se cierran con el run del propio PR. Se anota el resultado
-real, salga lo que salga:
+Las dos incógnitas del research se cierran con datos, no con suposiciones:
 
-- **(a)** ¿aparecen los seis jobs en la API desde el arranque, o van apareciendo?
-- **(b)** ¿muestra la API los steps ya concluidos de un job `in_progress`?
+**(a) ¿Aparecen todos los jobs desde el arranque?** **Sí.** `total_count: 7` en la primera consulta,
+con el run recién empezado: los seis esperados más el gate. Aun así la lista sigue siendo explícita,
+porque el diseño no debe depender de esto.
 
-Y **REQ-008**, que es post-merge por diseño.
+**(b) ¿Muestra la API los steps ya concluidos de un job `in_progress`?** **Sí, y el dato es mejor de
+lo que se esperaba** — valida el criterio del fantasma directamente:
+
+```
+lint                  in_progress  11 steps  último: Post Run actions/checkout@v7
+test (ubuntu-latest)  in_progress   7 steps  último: Post Run actions/checkout@v7
+test (windows-latest) in_progress   7 steps  último: Post Run actions/checkout@v7
+secrets               completed     5 steps  último: Complete job
+install-smoke         completed    10 steps  último: Complete job
+```
+
+O sea: **mientras un job va por la mitad, los steps van apareciendo conforme se ejecutan y el último
+listado NO es `Complete job`**. Solo lo es cuando el runner llegó al final. Esa es exactamente la
+diferencia entre un job a medias —que el gate espera— y un fantasma —que aprueba—, y ahora está
+medida, no supuesta.
+
+### El gate en su estreno
+
+Run `30640065930`, job `ci-gate`: **success**, tras esperar ~75 s (14:47:05 → 14:48:20).
+
+```
+Vigilando el run 30640065930 de ZahiriNatZuke/local-delegate; jobs esperados: lint,
+test (ubuntu-latest), test (windows-latest), test (macos-latest), secrets, install-smoke
+Todos los jobs esperados terminaron sus pasos:
+  [OK   ] lint: conclusion=success
+  [OK   ] test (ubuntu-latest): conclusion=success
+  [OK   ] test (windows-latest): conclusion=success
+  [OK   ] test (macos-latest): conclusion=success
+  [OK   ] secrets: conclusion=success
+  [OK   ] install-smoke: conclusion=success
+```
+
+Los seis jobs del run terminaron en `success`, así que **este run no ejerció la vía del fantasma**:
+lo que queda probado en vivo es el camino normal y la espera. La vía del fantasma está cubierta por
+los tests, y su premisa —los steps de un job abierto son visibles y su último no es `Complete job`
+hasta el final— quedó medida arriba.
+
+**REQ-008** sigue pendiente: es post-merge por diseño.
 
 ## Deviations and residual risk
 
