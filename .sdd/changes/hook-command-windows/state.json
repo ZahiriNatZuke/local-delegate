@@ -2,16 +2,40 @@
   "schemaVersion": 1,
   "slug": "hook-command-windows",
   "title": "El comando del hook se rompe en Windows y bloquea cada prompt",
-  "mode": "lightweight",
+  "mode": "lite",
   "status": "closed",
   "createdAt": "2026-07-30T14:50:00.000Z",
-  "updatedAt": "2026-07-30T15:05:00.000Z",
+  "updatedAt": "2026-07-31T12:38:04.898Z",
   "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:37:43.230Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31. Este cambio se trabajo en un modo ligero anterior que solo escribia brief.md y un state.json hecho a mano, con mode lightweight (valor inexistente) y cuatro gates ausentes, asi que personal-harness no podia leerlo. El brief.md original si es completo y es la fuente, junto con el diff mergeado y verificacion fresca. Cuatro requisitos observables: hook_command cita siempre y no solo cuando hay espacios, la ruta va en forma POSIX para que ningun backslash sea escape, el comando funciona en sh cmd y PowerShell, y doctor no da por caido un backend que responde 401/403. Respaldados por la reproduccion del bug con sh -c ANTES de tocar nada, que consta en el brief original.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:37:44.674Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31. Este cambio se trabajo en un modo ligero anterior que solo escribia brief.md y un state.json hecho a mano, con mode lightweight (valor inexistente) y cuatro gates ausentes, asi que personal-harness no podia leerlo. El brief.md original si es completo y es la fuente, junto con el diff mergeado y verificacion fresca. Dos tareas de alcance acotado -hook_command en install.py y backend_probe en checks.py-, cada una con su test y su reversion de pocas lineas. El enfoque no fue afinar la condicion que fallaba sino ELIMINARLA: citar siempre en vez de decidir cuando citar.",
+      "actor": "user"
+    },
     "quality": {
       "status": "approved",
       "updatedAt": "2026-07-30T15:05:00.000Z",
       "evidence": "312 tests, ruff check, ruff format --check y node --check verdes. Bug reproducido con `sh -c` antes de tocar nada y fix verificado por ejecucion en la maquina donde fallo: el comando citado corre y emite additionalContext con exit 0. Ademas backend_probe distingue 401/403 de caido, verificado contra el llama-swap vivo (pid 6800) que el doctor daba por muerto.",
       "actor": "assistant"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:38:03.979Z",
+      "evidence": "Verificacion fresca del 2026-07-31 contra los cuatro requisitos: los dos tests que cita el brief (test_hook_command_survives_a_windows_path y test_backend_401_is_unknown_not_down) pasan hoy; los dos hooks del settings.json REAL de esta maquina estan citados, con barras / y CERO barras invertidas; y el hook corre EN PRODUCCION -el PreToolUse de suggest_lint_summary.py inyecto su additionalContext varias veces durante esta misma sesion-. Ademas queda verificado el pendiente que dejaba el brief abierto (volver a registrar los hooks del usuario): esta hecho. Veredicto conforms-with-notes; la nota es de traza, no de producto.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:38:04.430Z",
+      "evidence": "handoff.md relleno con las tres decisiones que no se deducen del codigo (citar SIEMPRE en vez de decidir cuando citar, porque el bug no era una condicion mal afinada sino tener una condicion; as_posix() porque la forma citada con barras / funciona en sh cmd y PowerShell en los tres sistemas; y un 401 no es un servicio caido) y con la ironia que vale mas que el fix: el PR #55 corrigio la afirmacion de que el formato con args no se ejecuta, y este bug la remata desde el otro lado porque el formato heredado era el que funcionaba y el moderno con string de shell el roto. De ahi la regla del proyecto: un comentario del repo no es evidencia. La deuda de traza queda escrita en el propio handoff. Nota canonica del vault: projects/local-delegate/incidente-hooks-windows-2026-07-30.md. Sin secretos: las rutas son del HOME de desarrollo y ya constaban en el brief original.",
+      "actor": "user"
     }
   },
   "history": [
@@ -32,10 +56,91 @@
     },
     {
       "type": "transition",
+      "from": "closed",
+      "to": "implementing",
+      "at": "2026-07-31T00:00:00.000Z",
+      "reason": "reparacion de esquema: el state.json se habia escrito a mano con mode lightweight y solo el gate quality, y personal-harness no podia leerlo. Se corrige el modo, se anaden los cuatro gates que faltaban en pending (ninguno aprobado a mano) y se reabre para recorrer la maquina con el harness"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T12:37:43.230Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31. Este cambio se trabajo en un modo ligero anterior que solo escribia brief.md y un state.json hecho a mano, con mode lightweight (valor inexistente) y cuatro gates ausentes, asi que personal-harness no podia leerlo. El brief.md original si es completo y es la fuente, junto con el diff mergeado y verificacion fresca. Cuatro requisitos observables: hook_command cita siempre y no solo cuando hay espacios, la ruta va en forma POSIX para que ningun backslash sea escape, el comando funciona en sh cmd y PowerShell, y doctor no da por caido un backend que responde 401/403. Respaldados por la reproduccion del bug con sh -c ANTES de tocar nada, que consta en el brief original.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
       "from": "implementing",
+      "to": "planning",
+      "at": "2026-07-31T12:37:43.712Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en los PRs #55 y #57"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T12:37:43.942Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en los PRs #55 y #57"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T12:37:44.674Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31. Este cambio se trabajo en un modo ligero anterior que solo escribia brief.md y un state.json hecho a mano, con mode lightweight (valor inexistente) y cuatro gates ausentes, asi que personal-harness no podia leerlo. El brief.md original si es completo y es la fuente, junto con el diff mergeado y verificacion fresca. Dos tareas de alcance acotado -hook_command en install.py y backend_probe en checks.py-, cada una con su test y su reversion de pocas lineas. El enfoque no fue afinar la condicion que fallaba sino ELIMINARLA: citar siempre en vez de decidir cuando citar.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T12:38:03.524Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en los PRs #55 y #57"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T12:38:03.749Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en los PRs #55 y #57"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T12:38:03.979Z",
+      "evidence": "Verificacion fresca del 2026-07-31 contra los cuatro requisitos: los dos tests que cita el brief (test_hook_command_survives_a_windows_path y test_backend_401_is_unknown_not_down) pasan hoy; los dos hooks del settings.json REAL de esta maquina estan citados, con barras / y CERO barras invertidas; y el hook corre EN PRODUCCION -el PreToolUse de suggest_lint_summary.py inyecto su additionalContext varias veces durante esta misma sesion-. Ademas queda verificado el pendiente que dejaba el brief abierto (volver a registrar los hooks del usuario): esta hecho. Veredicto conforms-with-notes; la nota es de traza, no de producto.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T12:38:04.207Z",
+      "reason": "conformance aprobado con verificacion fresca, incluido el hook corriendo en produccion"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T12:38:04.430Z",
+      "evidence": "handoff.md relleno con las tres decisiones que no se deducen del codigo (citar SIEMPRE en vez de decidir cuando citar, porque el bug no era una condicion mal afinada sino tener una condicion; as_posix() porque la forma citada con barras / funciona en sh cmd y PowerShell en los tres sistemas; y un 401 no es un servicio caido) y con la ironia que vale mas que el fix: el PR #55 corrigio la afirmacion de que el formato con args no se ejecuta, y este bug la remata desde el otro lado porque el formato heredado era el que funcionaba y el moderno con string de shell el roto. De ahi la regla del proyecto: un comentario del repo no es evidencia. La deuda de traza queda escrita en el propio handoff. Nota canonica del vault: projects/local-delegate/incidente-hooks-windows-2026-07-30.md. Sin secretos: las rutas son del HOME de desarrollo y ya constaban en el brief original.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T12:38:04.671Z",
+      "reason": "result review conforms-with-notes y sin seguimiento requerido"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
       "to": "closed",
-      "at": "2026-07-30T15:05:00.000Z",
-      "reason": "fix verificado por ejecucion; queda registrar de nuevo los hooks del usuario"
+      "at": "2026-07-31T12:38:04.898Z",
+      "reason": "trabajo mergeado en los PRs #55 y #57 y publicado en la 0.14.0; esquema reparado y traza completa"
     }
   ]
 }

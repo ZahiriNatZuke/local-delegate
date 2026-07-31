@@ -3,39 +3,39 @@
   "slug": "landing-github-pages",
   "title": "La landing vive en el repo y se publica en GitHub Pages",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-30T16:39:25.757Z",
-  "updatedAt": "2026-07-30T16:39:25.757Z",
+  "updatedAt": "2026-07-31T12:32:40.444Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:32:12.410Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla en el propio PR #65 (comprobado con git show 19a84ee:...spec.md, ya salia vacio). Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado y el cuerpo del commit, NO como documento que guio el trabajo. Seis requisitos observables derivados del diff: pagina bilingue con las mismas claves, despliegue automatico por pages.yml, version por marcador __LD_VERSION__ y nunca a mano, --check que hace fallar el despliegue si un marcador sobrevive, cero recursos externos, y se publica site/ y no docs/.",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:32:13.136Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla en el propio PR #65 (comprobado con git show 19a84ee:...spec.md, ya salia vacio). Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado y el cuerpo del commit, NO como documento que guio el trabajo. Cuatro tareas con fichero y verificacion, derivadas del diff real: site/index.html, scripts/build_site.py, pages.yml mas .gitignore, y documentacion. La salvaguarda del plan es real y esta en el codigo: --check hace fallar el despliegue antes de publicar una pagina con marcadores. Sin dependencias nuevas (build_site.py es solo stdlib) y sin trabajo ajeno.",
+      "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:32:27.199Z",
+      "evidence": "Verificacion fresca del 2026-07-31 por ejecucion, no reproduccion del acta original (no hubo): 23 tests de tests/test_site.py verdes, incluido el de paridad de claves entre los dos idiomas; build_site.py --out sustituye __LD_VERSION__ por 0.17.0 (lo que declara pyproject.toml) y --check responde sin marcadores pendientes; el HTML publicado no tiene un solo recurso de terceros; la pagina responde 200 text/html con 38060 B. Sin dependencias nuevas: build_site.py es solo stdlib.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:32:27.455Z",
+      "evidence": "Los seis requisitos verificados contra el sitio PUBLICADO y el arbol de main: REQ-001 test de paridad de idiomas; REQ-002 las tres ultimas ejecuciones de pages.yml en success, con disparadores por paths mas workflow_dispatch; REQ-003 el JSON-LD publicado trae softwareVersion 0.17.0 y cero marcadores supervivientes; REQ-004 --check OK; REQ-005 ningun recurso externo; REQ-006 se publica site/ y docs/ no aparece en el workflow. Veredicto conforms-with-notes: la nota es de PROCESO (la traza se relleno despues del merge), no de producto.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:32:39.974Z",
+      "evidence": "handoff.md relleno con las cuatro decisiones que no se deducen del codigo (se publica site/ y no docs/ para no exponer wiki y plans sin decidirlo; la version NO se escribe en la pagina porque ya vive en cuatro sitios y el historico dice como acaba -en la 0.8.1 el lock se quedo en 0.7.0-, asi que el modo de fallo pasa de la-pagina-miente a el-despliegue-falla; sin recursos externos por la misma razon que el Chart.js vendorizado; el titulo dice lo que hace y no la metafora) y los dos gotchas pagados (.gitignore no admite comentarios al final de un patron, y ruff solo comprueba el bit de ejecucion en Unix, asi que un EXE001 pasa en Windows y falla en el CI). La deuda de proceso queda escrita sin adornos en el propio handoff. Notas canonicas del vault: jornada-2026-07-30-checks-y-el-cli-que-no-existia.md y jornada-2026-07-30-noche-socket-y-la-0-17-0.md. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -45,6 +45,109 @@
       "to": "understanding",
       "at": "2026-07-30T16:39:25.757Z",
       "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T12:32:12.161Z",
+      "reason": "traza en plantilla; se reconstruye desde el diff mergeado del PR #65 y verificacion fresca"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T12:32:12.410Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla en el propio PR #65 (comprobado con git show 19a84ee:...spec.md, ya salia vacio). Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado y el cuerpo del commit, NO como documento que guio el trabajo. Seis requisitos observables derivados del diff: pagina bilingue con las mismas claves, despliegue automatico por pages.yml, version por marcador __LD_VERSION__ y nunca a mano, --check que hace fallar el despliegue si un marcador sobrevive, cero recursos externos, y se publica site/ y no docs/.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T12:32:12.645Z",
+      "reason": "reconstruccion de traza"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T12:32:12.883Z",
+      "reason": "reconstruccion de traza"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T12:32:13.136Z",
+      "evidence": "TRAZA RECONSTRUIDA A POSTERIORI el 2026-07-31: los artefactos se commitearon en plantilla en el propio PR #65 (comprobado con git show 19a84ee:...spec.md, ya salia vacio). Se aprueba como registro fiel de lo entregado, reconstruido desde el diff mergeado y el cuerpo del commit, NO como documento que guio el trabajo. Cuatro tareas con fichero y verificacion, derivadas del diff real: site/index.html, scripts/build_site.py, pages.yml mas .gitignore, y documentacion. La salvaguarda del plan es real y esta en el codigo: --check hace fallar el despliegue antes de publicar una pagina con marcadores. Sin dependencias nuevas (build_site.py es solo stdlib) y sin trabajo ajeno.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T12:32:26.504Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #65"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T12:32:26.732Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #65"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T12:32:26.975Z",
+      "reason": "reconstruccion de traza; el trabajo ya estaba mergeado en el PR #65"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-07-31T12:32:27.199Z",
+      "evidence": "Verificacion fresca del 2026-07-31 por ejecucion, no reproduccion del acta original (no hubo): 23 tests de tests/test_site.py verdes, incluido el de paridad de claves entre los dos idiomas; build_site.py --out sustituye __LD_VERSION__ por 0.17.0 (lo que declara pyproject.toml) y --check responde sin marcadores pendientes; el HTML publicado no tiene un solo recurso de terceros; la pagina responde 200 text/html con 38060 B. Sin dependencias nuevas: build_site.py es solo stdlib.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-07-31T12:32:27.455Z",
+      "evidence": "Los seis requisitos verificados contra el sitio PUBLICADO y el arbol de main: REQ-001 test de paridad de idiomas; REQ-002 las tres ultimas ejecuciones de pages.yml en success, con disparadores por paths mas workflow_dispatch; REQ-003 el JSON-LD publicado trae softwareVersion 0.17.0 y cero marcadores supervivientes; REQ-004 --check OK; REQ-005 ningun recurso externo; REQ-006 se publica site/ y docs/ no aparece en el workflow. Veredicto conforms-with-notes: la nota es de PROCESO (la traza se relleno despues del merge), no de producto.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T12:32:39.717Z",
+      "reason": "conformance aprobado con verificacion fresca contra el sitio publicado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T12:32:39.974Z",
+      "evidence": "handoff.md relleno con las cuatro decisiones que no se deducen del codigo (se publica site/ y no docs/ para no exponer wiki y plans sin decidirlo; la version NO se escribe en la pagina porque ya vive en cuatro sitios y el historico dice como acaba -en la 0.8.1 el lock se quedo en 0.7.0-, asi que el modo de fallo pasa de la-pagina-miente a el-despliegue-falla; sin recursos externos por la misma razon que el Chart.js vendorizado; el titulo dice lo que hace y no la metafora) y los dos gotchas pagados (.gitignore no admite comentarios al final de un patron, y ruff solo comprueba el bit de ejecucion en Unix, asi que un EXE001 pasa en Windows y falla en el CI). La deuda de proceso queda escrita sin adornos en el propio handoff. Notas canonicas del vault: jornada-2026-07-30-checks-y-el-cli-que-no-existia.md y jornada-2026-07-30-noche-socket-y-la-0-17-0.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T12:32:40.209Z",
+      "reason": "result review con veredicto conforms-with-notes; la nota es de proceso y no requiere trabajo"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T12:32:40.444Z",
+      "reason": "trabajo mergeado en el PR #65 y publicado en la 0.15.0; traza reconstruida y verificada"
     }
   ]
 }

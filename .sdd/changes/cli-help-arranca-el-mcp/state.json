@@ -3,9 +3,9 @@
   "slug": "cli-help-arranca-el-mcp",
   "title": "local-delegate --help arranca el servidor MCP en vez de imprimir la ayuda",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-07-30T15:47:17.803Z",
-  "updatedAt": "2026-07-30T16:14:26.235Z",
+  "updatedAt": "2026-07-31T12:29:00.787Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-07-31T12:29:00.306Z",
+      "evidence": "handoff.md relleno con las tres decisiones que no se deducen del codigo (la condicion correcta es si-hay-argumentos y no cual-es-el-argumento, porque una lista literal se separa del parser; el aviso solo con terminal y solo por stderr, porque stdout es del protocolo MCP; el import incondicional de cli es seguro sin el extra llamaswap) y el gotcha de que en Git Bash /dev/null es NUL y hace isatty() True. Verificacion fresca del 2026-07-31 por ejecucion: --help imprime usage con los ocho subcomandos y sale 0, un subcomando inexistente sale 2, y KNOWN_COMMANDS no aparece en src/ docs/ scripts/ (su unica mencion es el test que asevera que no existe). Nota canonica del vault: projects/local-delegate/jornada-2026-07-30-checks-y-el-cli-que-no-existia.md. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -77,6 +77,77 @@
       "at": "2026-07-30T16:14:26.235Z",
       "evidence": "Revision fresca contra los 7 requisitos: REQ-001 --help imprime usage y sale 0 sin tocar la red; REQ-002 'doctro' sale 2 con invalid choice; REQ-003 el test preexistente de despacho sigue verde; REQ-004 sin argumentos arranca el MCP, verificado con tuberia real (0 bytes en stderr); REQ-005 el aviso solo con isatty y solo por stderr, con stdout limpio; REQ-006 grep sin resultados y dos asserts de que los atributos no existen; REQ-007 test que recorre build_parser y despacha los 7 subcomandos sin alta en otro sitio. Merge en main via PR #63 con 12 checks verdes; CI, CodeQL y Vendor audit verdes en main tras el merge.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T12:28:45.706Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T12:28:45.940Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T12:28:46.173Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T12:28:46.416Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T12:28:46.636Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-07-31T12:28:46.865Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-07-31T12:28:47.126Z",
+      "reason": "estado desfasado: el trabajo se completo y mergeo en el PR #63, pero la traza quedo en understanding; se recorre la maquina para dejarla coherente"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-07-31T12:29:00.306Z",
+      "evidence": "handoff.md relleno con las tres decisiones que no se deducen del codigo (la condicion correcta es si-hay-argumentos y no cual-es-el-argumento, porque una lista literal se separa del parser; el aviso solo con terminal y solo por stderr, porque stdout es del protocolo MCP; el import incondicional de cli es seguro sin el extra llamaswap) y el gotcha de que en Git Bash /dev/null es NUL y hace isatty() True. Verificacion fresca del 2026-07-31 por ejecucion: --help imprime usage con los ocho subcomandos y sale 0, un subcomando inexistente sale 2, y KNOWN_COMMANDS no aparece en src/ docs/ scripts/ (su unica mencion es el test que asevera que no existe). Nota canonica del vault: projects/local-delegate/jornada-2026-07-30-checks-y-el-cli-que-no-existia.md. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-07-31T12:29:00.553Z",
+      "reason": "conformance ya estaba aprobado con revision fresca contra los 7 requisitos y merge del PR #63; memory aprobado con handoff relleno"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-07-31T12:29:00.787Z",
+      "reason": "trabajo mergeado y publicado en la 0.15.0; traza coherente"
     }
   ]
 }
