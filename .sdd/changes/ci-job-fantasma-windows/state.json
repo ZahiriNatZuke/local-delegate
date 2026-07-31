@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "ci-job-fantasma-windows",
+  "title": "El job de Windows puede colgarse y bloquear un merge sin limite",
+  "mode": "lite",
+  "status": "implementing",
+  "createdAt": "2026-07-31T13:14:34.669Z",
+  "updatedAt": "2026-07-31T13:18:38.786Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:18:37.877Z",
+      "evidence": "Problema MEDIDO, no supuesto: de 22 runs recientes de ci.yml solo dos pasan de 300s (1954s el PR #77 y 651s el #86), frente a 60-125s normales. Diagnosticado con la API de jobs: los OCHO pasos en success -incluido Complete job- con completed_at null, o sea que el runner acabo en ~86s y falta que GitHub cierre el job; el cuelgue es posterior a nuestro codigo. Hipotesis del proceso huerfano reteniendo handles (el fallo clasico en Windows) REFUTADA POR EJECUCION: la suite corrida en esta maquina Windows no deja ni un proceso nuevo, y update._spawn_detached va doblado en los tests. Y el agujero accionable, verificado: ci.yml NO declaraba timeout-minutes en ningun job -default de GitHub 360 minutos- mientras codeql.yml (20) y vendor-audit.yml (10) SI lo declaran, o sea que el criterio ya existia en el repo y faltaba justo donde se cuelga. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-07-31T13:18:38.552Z",
+      "evidence": "Cambio acotado a ci.yml mas documentacion. Revision adversarial: (1) el riesgo de un timeout demasiado ajustado se cubre con margen 10x sobre la duracion real (86s de pasos, 15 min declarados) y el valor va JUSTIFICADO en el fichero para que nadie lo suba sin datos; (2) el riesgo de cancel-in-progress sobre main -perder el run que registra que ese estado paso el CI- se cubre excluyendo main con una expresion; (3) el YAML se valida antes de empujar, porque una expresion mal puesta en concurrency rompe el workflow entero y no solo un job. Explicitamente NO se hace: reintento automatico del job, que esconderia el problema en vez de acotarlo, ni reducir la matriz de sistemas, que existe porque cazo una fuga de handles solo de Windows.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-07-31T13:14:34.669Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-07-31T13:16:16.257Z",
+      "reason": "problema medido con el historico de runs y diagnosticado por la API de jobs"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-07-31T13:16:16.490Z",
+      "reason": "spec escrita con la evidencia"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-07-31T13:18:37.877Z",
+      "evidence": "Problema MEDIDO, no supuesto: de 22 runs recientes de ci.yml solo dos pasan de 300s (1954s el PR #77 y 651s el #86), frente a 60-125s normales. Diagnosticado con la API de jobs: los OCHO pasos en success -incluido Complete job- con completed_at null, o sea que el runner acabo en ~86s y falta que GitHub cierre el job; el cuelgue es posterior a nuestro codigo. Hipotesis del proceso huerfano reteniendo handles (el fallo clasico en Windows) REFUTADA POR EJECUCION: la suite corrida en esta maquina Windows no deja ni un proceso nuevo, y update._spawn_detached va doblado en los tests. Y el agujero accionable, verificado: ci.yml NO declaraba timeout-minutes en ningun job -default de GitHub 360 minutos- mientras codeql.yml (20) y vendor-audit.yml (10) SI lo declaran, o sea que el criterio ya existia en el repo y faltaba justo donde se cuelga. Cinco requisitos observables.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-07-31T13:18:38.104Z",
+      "reason": "spec aprobada con evidencia medida"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-07-31T13:18:38.320Z",
+      "reason": "spec aprobada con evidencia medida"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-07-31T13:18:38.552Z",
+      "evidence": "Cambio acotado a ci.yml mas documentacion. Revision adversarial: (1) el riesgo de un timeout demasiado ajustado se cubre con margen 10x sobre la duracion real (86s de pasos, 15 min declarados) y el valor va JUSTIFICADO en el fichero para que nadie lo suba sin datos; (2) el riesgo de cancel-in-progress sobre main -perder el run que registra que ese estado paso el CI- se cubre excluyendo main con una expresion; (3) el YAML se valida antes de empujar, porque una expresion mal puesta en concurrency rompe el workflow entero y no solo un job. Explicitamente NO se hace: reintento automatico del job, que esconderia el problema en vez de acotarlo, ni reducir la matriz de sistemas, que existe porque cazo una fuga de handles solo de Windows.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-07-31T13:18:38.786Z",
+      "reason": "plan aprobado"
+    }
+  ]
+}

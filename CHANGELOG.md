@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **Un job de CI colgado ya no puede bloquear un merge durante horas.** Dos veces en dos días
+  `test (windows-latest)` se quedó en `in_progress` con **todos sus pasos terminados en
+  `success`** —incluido `Complete job`— mientras GitHub Status decía «All Systems Operational»:
+  1954 s la primera, y la segunda hasta cancelarlo a mano, cuando lo normal son 60–125 s. El
+  cuelgue es **posterior a nuestro código** (el runner acaba en ~86 s y lo que falta es que GitHub
+  cierre el job) y se descartó por ejecución la causa clásica en Windows, un proceso huérfano
+  reteniendo handles: la suite no deja procesos vivos. Eso no se puede arreglar desde el repo,
+  pero sí que no espere las **6 horas** del default: `ci.yml` declara ahora `timeout-minutes` en
+  sus cuatro jobs, con el valor justificado en el propio fichero. Además declara `concurrency`,
+  así que empujar un arreglo cancela el run anterior de esa rama — en `main` no, porque ahí el run
+  es el registro de que ese estado pasó el CI. El síntoma y cómo diagnosticarlo (mirar los
+  *steps*, no el reloj) quedan en `docs/wiki/Repo-hardening.md`.
+
 ### Added
 - **La captura del README ya no puede quedarse vieja en silencio.** Junto a la imagen vive ahora
   `docs/assets/dashboard.json`, que declara con qué versión se generó y el hash del PNG, y un test
