@@ -22,7 +22,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import benchmark, doctor
+from . import benchmark, doctor, server
 from . import llamaswap_config as lc
 
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
@@ -580,6 +580,20 @@ def build_parser() -> argparse.ArgumentParser:
             "`check-llamaswap` e `init-llamaswap` piden el extra [llamaswap]."
         ),
     )
+    # `local-delegate --version` salía con código 2 y un `usage`: el parser raíz exigía subcomando
+    # y no exponía la bandera, así que la única forma de saber qué versión estaba instalada era
+    # preguntarle a `pip`/`uv`. En un proyecto donde dos checks del diagnóstico comparan la versión
+    # instalada con la publicada, que el propio binario no supiera decir la suya era el hueco raro.
+    #
+    # Sale de `server._get_version()`, la misma fuente que el handshake `initialize` del MCP y que
+    # `__version__`: tres canales públicos que no pueden discrepar porque solo hay un dato.
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"local-delegate {server._get_version()}",
+        help="imprime la versión instalada y termina",
+    )
+
     sub = parser.add_subparsers(dest="command", required=True)
 
     benchmark.add_parser(sub)

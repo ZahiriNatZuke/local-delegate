@@ -122,6 +122,28 @@ def test_help_imprime_la_ayuda_y_no_arranca_el_servidor(monkeypatch, capsys):
     assert "usage" in capsys.readouterr().out.lower()
 
 
+def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
+    """`local-delegate --version` salía con código 2 y un `usage`.
+
+    El parser raíz exigía subcomando y no exponía la bandera, así que el binario no sabía decir
+    su propia versión — en un proyecto donde dos checks del diagnóstico comparan la instalada con
+    la publicada.
+
+    Se asevera contra `__version__` y no contra una cadena escrita a mano: clavar el número aquí
+    convertiría cada release en un test rojo, y peor, un test que se «arregla» actualizando el
+    literal no comprueba que las dos fuentes sigan siendo la misma.
+    """
+    import local_delegate
+    from local_delegate import server as srv
+
+    def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
+        raise AssertionError("--version no debe arrancar el servidor MCP")
+
+    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    assert _run_main(monkeypatch, ["--version"]) == 0
+    assert local_delegate.__version__ in capsys.readouterr().out
+
+
 def test_subcomando_desconocido_falla_en_vez_de_colgarse(monkeypatch, capsys):
     from local_delegate import server as srv
 
