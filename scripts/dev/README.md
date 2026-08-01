@@ -42,9 +42,14 @@ Usa un `LOG_DIR` de usar y tirar: así el log real no se contamina con eventos d
 ## 2. Zona horaria del dashboard
 
 ```bash
-uv pip install playwright && python -m playwright install chromium
+uv sync --group dev --group ui && uv run playwright install chromium
 python scripts/dev/dashboard_timezone_check.py --url http://127.0.0.1:9494/ --check-live
 ```
+
+> **Los dos grupos, siempre.** Playwright vive en el grupo `ui` porque arrastra un navegador de
+> ~150 MB que no todo el mundo necesita; un `uv sync` a secas lo **desinstala**, y entonces esto y
+> las capturas dejan de funcionar sin que nada avise. Antes ni siquiera estaba declarado, que es
+> por lo que esa trampa se pisó más de una vez. El navegador se instala aparte y solo una vez.
 
 Abre el dashboard en Chromium con `timezone_id` forzado y compara qué instante calcula
 `computeRange('today')` en cada zona. `--check-live` fuerza además los cuatro estados del
