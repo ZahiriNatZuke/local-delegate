@@ -349,6 +349,64 @@ def test_serve_is_idempotent_when_daemon_lock_is_held(tmp_path, monkeypatch, cap
     assert "pid=4321" in output
 
 
+def test_lock_ocupado_dice_en_que_puerto_esta_el_daemon_vivo(tmp_path, monkeypatch, capsys):
+    """El lock es uno **por usuario**, así que el daemon vivo puede estar en otro puerto.
+
+    Antes el mensaje decía «no responde un daemon en 127.0.0.1:<el que pediste>»: cierto y
+    engañoso a la vez, porque el daemon existía y estaba en otro sitio. `daemon.json` tenía el
+    dato y esa rama no lo leía.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    (tmp_path / "daemon.json").write_text(
+        json.dumps({"host": "127.0.0.1", "port": 9393, "pid": 4321}), encoding="utf-8"
+    )
+
+    vivo = {
+        "service": "local-delegate",
+        "mode": "daemon",
+        "pid": 4321,
+        "host": "127.0.0.1",
+        "port": 9393,
+        "mcp_url": "http://127.0.0.1:9393/mcp",
+    }
+
+    def _solo_contesta_en_9393(_host, port, timeout=1.0):
+        return vivo if port == 9393 else None
+
+    monkeypatch.setattr(daemon, "query_daemon", _solo_contesta_en_9393)
+
+    lock = FileLock(str(tmp_path / "daemon.lock"))
+    with lock.acquire(timeout=0):
+        # Se pide OTRO puerto: lo que el usuario pidió no ocurre, así que no es un 0.
+        assert daemon.serve("127.0.0.1", 9899) == 1
+
+    output = capsys.readouterr().out
+    assert "9393" in output, f"el mensaje debe nombrar el puerto del daemon vivo: {output!r}"
+    assert "pid=4321" in output
+    assert "9899" in output, f"y también el que se pidió, para que se entienda: {output!r}"
+
+
+def test_lock_ocupado_sin_daemon_vivo_no_inventa_uno(tmp_path, monkeypatch, capsys):
+    """Un `daemon.json` huérfano no debe convertirse en «tu daemon está en …».
+
+    Es el control negativo del test de arriba: si el fichero está pero nadie contesta donde dice,
+    anunciar ese daemon sería cambiar un diagnóstico incompleto por uno falso.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    (tmp_path / "daemon.json").write_text(
+        json.dumps({"host": "127.0.0.1", "port": 9393, "pid": 999999}), encoding="utf-8"
+    )
+    monkeypatch.setattr(daemon, "query_daemon", lambda _host, _port, timeout=1.0: None)
+
+    lock = FileLock(str(tmp_path / "daemon.lock"))
+    with lock.acquire(timeout=0):
+        assert daemon.serve("127.0.0.1", 9899) == 1
+
+    output = capsys.readouterr().out
+    assert "ya hay un daemon" not in output
+    assert "no responde ningún daemon nuestro" in output
+
+
 def test_serve_treats_ctrl_c_as_clean_shutdown(tmp_path, monkeypatch):
     class InterruptingServer:
         started = True
