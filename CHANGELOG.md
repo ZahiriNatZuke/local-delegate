@@ -6,6 +6,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-08-01
+
+> La tanda del **backlog cerrado entero**: los dos puntos vivos que quedaban, los tres «no
+> auditables» resueltos o cerrados como decisión, y **cinco defectos nuevos** que destapó la
+> auditoría — entre ellos un ciclo de importación real y una opción del instalador que no hacía
+> nada. Cada arreglo verificado **al revés**: neutralizado el cambio, el test se pone rojo por lo
+> que dice.
+
 ### Added
 - **`local-delegate --version`.** Salía con código 2 y un `usage`: el parser raíz exigía subcomando
   y no exponía la bandera, así que la única forma de saber qué versión estaba instalada era
