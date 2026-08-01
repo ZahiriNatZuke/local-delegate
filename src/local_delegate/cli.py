@@ -22,7 +22,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import benchmark, doctor, server
+from . import benchmark, doctor
 from . import llamaswap_config as lc
 
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
@@ -587,6 +587,14 @@ def build_parser() -> argparse.ArgumentParser:
     #
     # Sale de `server._get_version()`, la misma fuente que el handshake `initialize` del MCP y que
     # `__version__`: tres canales públicos que no pueden discrepar porque solo hay un dato.
+    #
+    # El import va **aquí dentro** y no arriba, igual que los de `install`: `server.main()` importa
+    # `cli` en cuanto hay argumentos, así que un `from . import server` a nivel de módulo cierra un
+    # ciclo de importación. Python lo resolvería hoy, pero es la clase de acoplamiento que rompe
+    # sin aviso al reordenar un import — y el docstring de este módulo describe justo la relación
+    # contraria: `server` conoce a `cli`, no al revés.
+    from . import server
+
     parser.add_argument(
         "--version",
         action="version",

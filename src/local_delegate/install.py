@@ -780,6 +780,11 @@ def _unregister_claude_mcp(opts: Options) -> str:
             if done.returncode == 0:
                 return "quitado con `claude mcp remove`"
         except (OSError, subprocess.SubprocessError):
+            # El binario `claude` está pero no se pudo ejecutar (o se pasó del plazo). No es un
+            # fallo de la desinstalación: justo debajo está el camino que edita `.claude.json`
+            # directamente, que es el que se usa cuando no hay CLI. Degradar a él en silencio es
+            # correcto; abortar aquí dejaría la entrada MCP puesta por no haber podido usar el
+            # atajo.
             pass
     path = opts.home / ".claude.json"
     data = _read_json(path)

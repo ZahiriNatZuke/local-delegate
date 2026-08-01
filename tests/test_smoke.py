@@ -133,7 +133,7 @@ def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
     convertiría cada release en un test rojo, y peor, un test que se «arregla» actualizando el
     literal no comprueba que las dos fuentes sigan siendo la misma.
     """
-    import local_delegate
+    from local_delegate import __version__
     from local_delegate import server as srv
 
     def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
@@ -141,7 +141,7 @@ def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
 
     monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
     assert _run_main(monkeypatch, ["--version"]) == 0
-    assert local_delegate.__version__ in capsys.readouterr().out
+    assert __version__ in capsys.readouterr().out
 
 
 def test_subcomando_desconocido_falla_en_vez_de_colgarse(monkeypatch, capsys):
