@@ -2,7 +2,8 @@
 
 Ver docs/recipes/llama-swap-groups.md y docs/wiki/Daemon.md. El binario ``local-delegate`` SIN
 argumentos sigue arrancando el servidor MCP stdio exactamente igual que siempre (ver
-server.main()); este módulo se importa en cuanto hay **algún** argumento, y su parser es el
+``entrypoint.main()``, que es quien despacha: está por encima de este módulo y de ``server``, y
+por eso ``server`` ya no importa el CLI); este módulo se importa en cuanto hay **algún** argumento, y su parser es el
 único sitio donde está escrito qué subcomandos existen: ``--help`` y los nombres inválidos los
 responde él, no una lista aparte. Solo los comandos de configuración de llama-swap requieren el
 extra ``[llamaswap]`` (``pip install "local-delegate-mcp[llamaswap]"``); ``serve`` usa

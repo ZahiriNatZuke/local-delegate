@@ -6,7 +6,7 @@ LM Studio, vLLM). Ver README para configuración.
 
 from __future__ import annotations
 
-from .server import main
+from .entrypoint import main
 from .version import get_version
 
 __all__ = ["main"]

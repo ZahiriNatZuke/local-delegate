@@ -32,7 +32,7 @@ import time
 import httpx2
 import pytest
 
-from local_delegate import daemon, server
+from local_delegate import daemon, entrypoint, server
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +40,7 @@ def _sin_web_ni_arranques(monkeypatch):
     """El MCP no debe levantar la web ni tocar el backend para probar cómo se para."""
     monkeypatch.setattr(server.config, "WEB_ENABLED", False)
     monkeypatch.setattr(server.config, "AUTOSTART", False)
-    monkeypatch.setattr(server, "_aviso_de_terminal_interactiva", lambda: None)
+    monkeypatch.setattr(entrypoint, "_aviso_de_terminal_interactiva", lambda: None)
 
 
 def _interrumpir(*_a, **_kw):
@@ -49,10 +49,10 @@ def _interrumpir(*_a, **_kw):
 
 def test_ctrl_c_en_el_mcp_stdio_no_deja_escapar_la_excepcion(monkeypatch, capsys):
     """`local-delegate` a secas: lo que se lanza en una terminal y se corta con Ctrl+C."""
-    monkeypatch.setattr(server.sys, "argv", ["local-delegate"])
+    monkeypatch.setattr(entrypoint.sys, "argv", ["local-delegate"])
     monkeypatch.setattr(server.mcp, "run", _interrumpir)
 
-    server.main()  # si el KeyboardInterrupt escapara, este test fallaría aquí mismo
+    entrypoint.main()  # si el KeyboardInterrupt escapara, este test fallaría aquí mismo
 
     salida = capsys.readouterr()
     assert "Traceback" not in (salida.out + salida.err)
@@ -95,12 +95,12 @@ def test_los_dos_caminos_tratan_igual_el_ctrl_c(monkeypatch, capsys, tmp_path):
             raise KeyboardInterrupt()
 
     monkeypatch.setattr(daemon.uvicorn, "Server", lambda _cfg: _Servidor())
-    monkeypatch.setattr(server.sys, "argv", ["local-delegate"])
+    monkeypatch.setattr(entrypoint.sys, "argv", ["local-delegate"])
     monkeypatch.setattr(server.mcp, "run", _interrumpir)
 
     resultados = []
     for nombre, llamada in (
-        ("stdio", server.main),
+        ("stdio", entrypoint.main),
         ("serve", lambda: daemon.serve(host="127.0.0.1", port=9499)),
     ):
         try:

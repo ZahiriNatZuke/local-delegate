@@ -21,6 +21,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   importarlo pasaría igual con un import perezoso dentro de una función, que es justo la forma de
   volver a esconder el ciclo.
 
+- **`main()` sale de `server.py` a `entrypoint.py`, y el ciclo de importación desaparece de
+  verdad.** Sacar la versión quitó la mitad (`cli` → `server`); la otra mitad era que `server`
+  importaba `cli` para despachar los subcomandos, cerrando `cli` → `daemon` → `server` → `cli`.
+  Los imports diferidos lo hacían funcionar, pero el grafo mantenía el ciclo —**seis** alertas del
+  analizador— y contradecía lo que el propio docstring de `cli.py` afirmaba: que `server` no
+  conoce al CLI.
+
+  La forma correcta es la de siempre: quien despacha va **por encima** de los dos. Un punto de
+  entrada puede conocer al CLI y al servidor; el servidor no tiene por qué saber que existe un
+  CLI. El import de `cli` sigue siendo diferido, pero ahora por la única razón que siempre debió
+  ser: coste de arranque. Un test lo fija sobre el AST **incluyendo los imports dentro de
+  funciones**, que es donde estaba escondido.
+
 ### Changed
 - **`clients.jsonl` tiene techo, y el techo no ciega al diagnóstico.** Crecía sin límite. Es un
   crecimiento lentísimo —medido: ~144 B por arranque de proceso MCP, una línea por identidad nueva
