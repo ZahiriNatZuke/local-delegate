@@ -114,10 +114,17 @@ def panel(tmp_path, monkeypatch):
 
 
 def _navegador(pw):
+    """Lanza Chromium, o salta el test con motivo si no está instalado.
+
+    El `raise` de después del `skip` es inalcanzable —`pytest.skip` lanza `Skipped`— y está para
+    que la función no mezcle un `return` explícito con una caída implícita al final: de un vistazo
+    no se ve que el camino de excepción no continúa, y un analizador estático lo marca con razón.
+    """
     try:
         return pw.chromium.launch()
     except PlaywrightError as exc:
         pytest.skip(f"no hay navegador de Playwright instalado: {exc}")
+        raise AssertionError("inalcanzable: pytest.skip lanza Skipped") from exc
 
 
 def _filas_visibles(pagina) -> list[str]:
