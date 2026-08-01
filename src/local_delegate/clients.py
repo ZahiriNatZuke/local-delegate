@@ -112,6 +112,10 @@ def _rotar_si_toca(destino: Path) -> None:
             return
         os.replace(destino, destino.with_name(destino.name + SUFIJO_ROTADO))
     except OSError:
+        # No se pudo mirar el tamaño o no se pudo renombrar (fichero abierto por otro proceso en
+        # Windows, disco lleno, permisos). Se sigue anexando a propósito: un registro que crece de
+        # más es un inconveniente, y una excepción aquí sube por el middleware MCP y afecta a la
+        # respuesta que se le da al cliente. Observar nunca puede empeorar la conversación.
         pass
 
 
