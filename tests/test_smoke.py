@@ -257,8 +257,7 @@ def test_el_modulo_de_la_version_no_importa_nada_del_paquete():
 
 def test_los_tres_canales_de_la_version_dan_lo_mismo():
     """Un solo dato, tres puertas. Si alguien vuelve a derivarlo por su cuenta, esto lo caza."""
-    import local_delegate
-    from local_delegate import version
+    from local_delegate import __version__, version
 
-    assert local_delegate.__version__ == version.get_version()
+    assert __version__ == version.get_version()
     assert server.mcp.version == version.get_version()
