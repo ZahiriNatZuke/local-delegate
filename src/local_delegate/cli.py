@@ -825,7 +825,7 @@ def _add_install_parsers(sub) -> None:
     install.add_argument(
         "--enable-read-hook",
         action="store_true",
-        help="registra también el hook experimental PreToolUse/Read (apagado por defecto)",
+        help="registra y ENCIENDE el hook experimental PreToolUse/Read (apagado por defecto)",
     )
     install.add_argument(
         "--mcp-mode",
