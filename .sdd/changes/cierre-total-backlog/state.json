@@ -3,9 +3,9 @@
   "slug": "cierre-total-backlog",
   "title": "Cierre total del backlog: los puntos vivos, la auditoria del proyecto y la release",
   "mode": "standard",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-08-01T16:28:47.746Z",
-  "updatedAt": "2026-08-01T17:22:37.942Z",
+  "updatedAt": "2026-08-01T19:05:48.828Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,10 +20,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-01T19:05:48.156Z",
+      "evidence": "673 passed, 2 skipped; ruff check y format limpios; gitleaks verde en los cuatro PRs; CodeQL: cinco avisos sobre codigo nuevo, los cinco arreglados y ninguno silenciado; Socket depscore de playwright 1.62.0 y pyee 13.0.1 por encima del umbral.",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -96,6 +96,21 @@
       "to": "implementing",
       "at": "2026-08-01T17:22:37.942Z",
       "reason": "Sin hallazgo bloqueante; 8 tareas en PRs por tema"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-01T19:05:48.156Z",
+      "evidence": "673 passed, 2 skipped; ruff check y format limpios; gitleaks verde en los cuatro PRs; CodeQL: cinco avisos sobre codigo nuevo, los cinco arreglados y ninguno silenciado; Socket depscore de playwright 1.62.0 y pyee 13.0.1 por encima del umbral.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-01T19:05:48.828Z",
+      "reason": "Los cuatro PRs mezclados (#116, #117, #118, #119); se prepara la 0.21.0"
     }
   ]
 }
