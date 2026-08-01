@@ -271,3 +271,82 @@ def test_un_observador_que_revienta_no_rompe_la_llamada(tmp_path, monkeypatch):
     negociada = anyio.run(_conversar, "cliente-prueba", "9.9.9")
     assert negociada  # la conversación completa funcionó
     assert _lineas(tmp_path) == []
+
+
+# --- El registro tiene techo, y el techo no puede cegar al diagnóstico -----------------------
+
+
+def test_el_registro_rota_al_pasar_del_techo(tmp_path, monkeypatch):
+    """Crecía sin límite. Medido: ~144 B por arranque, o sea despacio, pero sin nada que lo pare."""
+    monkeypatch.setattr(clients.config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(clients, "MAX_BYTES", 200)  # techo diminuto para no escribir 256 KB aquí
+
+    viva = clients.ruta_registro()
+    viva.write_text("x" * 300 + "\n", encoding="utf-8")  # ya por encima del techo
+
+    clients.reset()
+    clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+
+    rotada = viva.with_name(viva.name + clients.SUFIJO_ROTADO)
+    assert rotada.is_file(), "no se apartó la generación anterior"
+    assert "claude-code" in viva.read_text(encoding="utf-8")
+    assert viva.stat().st_size < 300, "el fichero vivo debe empezar de nuevo"
+
+
+def test_rotar_NO_hace_perder_de_vista_a_un_cliente_ya_anotado(tmp_path, monkeypatch):
+    """El riesgo real de ponerle techo, y por eso tiene test propio.
+
+    Si `client.observed` leyera solo el fichero vivo, rotar borraría del diagnóstico a un cliente
+    perfectamente observado: se habría cambiado un crecimiento sin límite por un diagnóstico que
+    miente, que es peor.
+    """
+    from local_delegate import checks
+
+    monkeypatch.setattr(clients.config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(clients, "MAX_BYTES", 200)
+
+    viva = clients.ruta_registro()
+    antiguo = json.dumps(
+        {
+            "ts": "2026-01-01T00:00:00+00:00",
+            "client": "codex-mcp-client",
+            "version": "0.146.0",
+            "protocol": "2025-06-18",
+            "caps": ["elicitation"],
+        },
+        ensure_ascii=False,
+    )
+    viva.write_text(antiguo + "\n" + "x" * 300 + "\n", encoding="utf-8")
+
+    clients.reset()
+    clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+    assert viva.with_name(viva.name + clients.SUFIJO_ROTADO).is_file(), "no llegó a rotar"
+
+    vistos, motivo = checks._default_clients_seen()
+
+    assert motivo is None
+    nombres = {v.get("client") for v in vistos}
+    assert nombres == {"codex-mcp-client", "claude-code"}, (
+        f"tras rotar, el diagnóstico debe seguir viendo a los dos: {nombres}"
+    )
+
+
+def test_si_no_se_puede_rotar_se_sigue_anotando(tmp_path, monkeypatch):
+    """Observar es best-effort: un fallo al rotar no puede tumbar el middleware MCP."""
+    monkeypatch.setattr(clients.config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(clients, "MAX_BYTES", 200)
+
+    def _rotar_roto(*_args):
+        raise OSError("el sistema de ficheros dice que no")
+
+    monkeypatch.setattr(clients.os, "replace", _rotar_roto)
+
+    viva = clients.ruta_registro()
+    viva.write_text("x" * 300 + "\n", encoding="utf-8")
+
+    clients.reset()
+    assert (
+        clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+        is True
+    )
+    assert "claude-code" in viva.read_text(encoding="utf-8")
