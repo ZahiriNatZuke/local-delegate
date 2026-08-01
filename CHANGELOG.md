@@ -6,6 +6,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **`clients.jsonl` tiene techo, y el techo no ciega al diagnóstico.** Crecía sin límite. Es un
+  crecimiento lentísimo —medido: ~144 B por arranque de proceso MCP, una línea por identidad nueva
+  y no por mensaje— pero sin nada que lo pare. Ahora rota a los 256 KB conservando una generación.
+
+  **Se rota por tamaño y no por mes**, y esa decisión es la mitad del cambio: lo que este fichero
+  responde es «¿qué clientes se han visto?», y un corte mensual haría desaparecer del diagnóstico a
+  un cliente visto en enero por el simple hecho de que llegó febrero.
+
+  Y por lo mismo, `client.observed` ahora lee **todas** las generaciones: leer solo la viva habría
+  cambiado un crecimiento sin límite por un diagnóstico que miente, que es peor. Ese riesgo tiene
+  su propio test, verificado al revés — reducido el lector al fichero vivo, se pone rojo.
+
 ### Fixed
 - **Ctrl+Break ya no mata el proceso por la vía mala, en ninguno de los dos caminos.** Windows
   tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`: con

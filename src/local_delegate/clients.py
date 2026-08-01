@@ -26,6 +26,7 @@ Tres cosas medidas contra el SDK instalado, no leídas de la documentación (tra
 from __future__ import annotations
 
 import json
+import os
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -37,6 +38,17 @@ from . import config
 # Nombre del fichero dentro de LOG_DIR. Separado de usage.jsonl a propósito: aquel es contabilidad
 # por llamada y este es identidad por cliente; mezclarlos obligaría a filtrar en todo el que lea.
 LOG_FILENAME = "clients.jsonl"
+
+# Techo y sufijo del rotado. Medido: el registro crece ~144 B por arranque de proceso MCP —una
+# línea por identidad nueva, no por mensaje—, así que harían falta unos 1800 arranques para llegar
+# a este techo. Es a propósito un número que no se alcanza en uso normal: la rotación existe para
+# que el fichero no crezca **sin límite**, no para recortarlo cada semana.
+#
+# Se rota por tamaño y NO por mes, y la diferencia importa: lo que este fichero responde es «¿qué
+# clientes se han visto?», y un corte mensual haría desaparecer del diagnóstico a un cliente visto
+# en enero por el simple hecho de que llegó febrero. Eso sería peor que el problema que arregla.
+MAX_BYTES = 256 * 1024
+SUFIJO_ROTADO = ".1"
 
 # Claves EXACTAS de una línea del registro. Las fija aquí y no en el punto de escritura para que el
 # test pueda aseverar el conjunto completo: así un campo colado por descuido —una cabecera, una
@@ -81,6 +93,32 @@ def nombres_capabilities(caps: Any) -> tuple[str, ...]:
     return tuple(sorted(k for k, v in datos.items() if v is not None))
 
 
+def _rotar_si_toca(destino: Path) -> None:
+    """Aparta el registro cuando pasa del techo, conservando UNA generación.
+
+    Rotar y no truncar: quien lee el registro pregunta «¿qué clientes se han visto?», y truncar
+    respondería «ninguno» sobre una máquina donde sí se vieron. Con la generación apartada, el
+    diagnóstico sigue encontrándolos —ver :func:`rutas_para_leer`.
+
+    `os.replace` es atómico y sobreescribe la generación anterior en los tres sistemas; con
+    `Path.rename` esto fallaría en Windows en cuanto existiera un `.1`.
+
+    Best-effort como todo lo que escribe este módulo: si no se puede rotar, se sigue anexando. Un
+    fichero grande es un inconveniente; una excepción aquí sube por el middleware y afecta a la
+    respuesta que se le da al cliente MCP.
+    """
+    try:
+        if destino.stat().st_size < MAX_BYTES:
+            return
+        os.replace(destino, destino.with_name(destino.name + SUFIJO_ROTADO))
+    except OSError:
+        # No se pudo mirar el tamaño o no se pudo renombrar (fichero abierto por otro proceso en
+        # Windows, disco lleno, permisos). Se sigue anexando a propósito: un registro que crece de
+        # más es un inconveniente, y una excepción aquí sube por el middleware MCP y afecta a la
+        # respuesta que se le da al cliente. Observar nunca puede empeorar la conversación.
+        pass
+
+
 def _escribir_linea(destino: Path, linea: str) -> None:
     """Anexa una línea al registro. Punto único de E/S, para que el test pueda doblarlo.
 
@@ -89,6 +127,7 @@ def _escribir_linea(destino: Path, linea: str) -> None:
     runner.
     """
     destino.parent.mkdir(parents=True, exist_ok=True)
+    _rotar_si_toca(destino)
     with destino.open("a", encoding="utf-8") as f:
         f.write(linea)
 
@@ -103,6 +142,21 @@ def ruta_registro() -> Path:
     # `config.LOG_DIR` se lee AQUÍ, en tiempo de llamada, y no como default de módulo: un default
     # capturado en el import no se dobla con monkeypatch.
     return config.LOG_DIR / LOG_FILENAME
+
+
+def rutas_para_leer() -> list[Path]:
+    """Los ficheros del registro que hay que leer, **del más viejo al más nuevo**.
+
+    Función aparte de :func:`ruta_registro` porque son dos preguntas distintas: aquella responde
+    «¿dónde escribo?» y esta «¿dónde está todo lo anotado?». Desde que el registro rota, la
+    segunda ya no es la primera, y quien lea solo la primera perdería de vista a un cliente por
+    haber rotado — el mismo defecto que la rotación pretendía evitar, girado del revés.
+
+    Devuelve solo las que existen: la ausencia de la generación rotada es lo normal.
+    """
+    viva = ruta_registro()
+    rotada = viva.with_name(viva.name + SUFIJO_ROTADO)
+    return [p for p in (rotada, viva) if p.is_file()]
 
 
 def registrar(caps: Any, client_info: Any, protocol: str) -> bool:

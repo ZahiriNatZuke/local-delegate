@@ -203,12 +203,19 @@ def _default_clients_seen() -> tuple[list[dict], str | None]:
     aquel arrastra uvicorn y el SDK, y ``doctor`` importaría en ciclo; ``clients`` no hace ninguna
     de las dos cosas (solo importa ``config``).
     """
-    texto, motivo = read_text(clients.ruta_registro())
-    if motivo is not None:
-        return [], motivo
-    if texto is None:  # no existe todavía: nadie ha hablado, que no es un error
-        return [], None
-    return _parse_jsonl(texto), None
+    # Se leen TODAS las generaciones, de la más vieja a la más nueva. El registro rota por tamaño
+    # desde que tiene techo, y leer solo la viva haría desaparecer del diagnóstico a un cliente
+    # perfectamente observado por el mero hecho de que el fichero rotó — o sea, cambiar un
+    # crecimiento sin límite por un diagnóstico que miente. La lista vacía es lo normal cuando
+    # nadie ha hablado todavía, y eso no es un error.
+    observados: list[dict] = []
+    for ruta in clients.rutas_para_leer():
+        texto, motivo = read_text(ruta)
+        if motivo is not None:
+            return [], motivo
+        if texto is not None:
+            observados.extend(_parse_jsonl(texto))
+    return observados, None
 
 
 def _parse_jsonl(texto: str) -> list[dict]:
