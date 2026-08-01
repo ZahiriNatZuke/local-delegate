@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "cierre-total-backlog",
+  "title": "Cierre total del backlog: los puntos vivos, la auditoria del proyecto y la release",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-08-01T16:28:47.746Z",
+  "updatedAt": "2026-08-01T17:22:37.942Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-01T17:20:54.692Z",
+      "evidence": "research.md documenta 9 puntos con medicion por ejecucion; 4 defectos nuevos verificados (uno con control positivo); 3 premisas del backlog corregidas (macOS ya corre la suite; el brazo B estaba bloqueado por un no-op del instalador; el 3 del CTRL_BREAK sale de uvicorn, no del repo). spec.md fija 10 requisitos observables con escenarios.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-01T17:22:13.387Z",
+      "evidence": "Revision adversaria registrada en plan.md: 4 puntos de la lista verificados y 4 objeciones levantadas y respondidas (handler global, test que se salta siempre, rotacion que ciega el check, tamano de la tanda). Sin hallazgo bloqueante.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-01T16:28:47.746Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-01T17:20:54.692Z",
+      "evidence": "research.md documenta 9 puntos con medicion por ejecucion; 4 defectos nuevos verificados (uno con control positivo); 3 premisas del backlog corregidas (macOS ya corre la suite; el brazo B estaba bloqueado por un no-op del instalador; el 3 del CTRL_BREAK sale de uvicorn, no del repo). spec.md fija 10 requisitos observables con escenarios.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-01T17:21:20.137Z",
+      "reason": "Auditoria por ejecucion del backlog y del proyecto"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-01T17:21:21.062Z",
+      "reason": "Investigacion cerrada en research.md"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-01T17:21:21.849Z",
+      "reason": "Spec aprobada con 10 requisitos observables"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-01T17:22:13.387Z",
+      "evidence": "Revision adversaria registrada en plan.md: 4 puntos de la lista verificados y 4 objeciones levantadas y respondidas (handler global, test que se salta siempre, rotacion que ciega el check, tamano de la tanda). Sin hallazgo bloqueante.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-01T17:22:37.183Z",
+      "reason": "Revision adversaria del plan registrada en plan.md"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-01T17:22:37.942Z",
+      "reason": "Sin hallazgo bloqueante; 8 tareas en PRs por tema"
+    }
+  ]
+}

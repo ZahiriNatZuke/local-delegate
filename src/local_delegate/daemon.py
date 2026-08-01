@@ -200,8 +200,34 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     return auth.proteger(mcp_app, config.WEB_TOKEN)
 
 
+def daemon_registrado() -> dict | None:
+    """El daemon que dejó escrito su estado, mirado **donde él dijo estar**.
+
+    Existe por el ámbito del lock: es uno por usuario (`LOG_DIR/daemon.lock`), no uno por puerto.
+    Así que cuando el lock está tomado y el puerto que se pidió no contesta, la pregunta correcta
+    no es «¿hay un daemon en el puerto que pedí?» —esa ya se respondió que no— sino «¿dónde está
+    el que tiene el lock?». `daemon.json` lo dice, y hasta ahora nadie lo leía en esa rama.
+
+    Se le pregunta igualmente por HTTP en vez de fiarse del fichero: un `daemon.json` puede quedar
+    huérfano si el proceso murió de mala manera, y anunciar un daemon muerto sería sustituir un
+    diagnóstico incompleto por uno falso.
+    """
+    try:
+        datos = json.loads(_state_path().read_text(encoding="utf-8"))
+        registrado_host, registrado_port = datos["host"], int(datos["port"])
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+    return query_daemon(registrado_host, registrado_port)
+
+
 def serve(host: str | None = None, port: int | None = None, log_level: str = "warning") -> int:
-    """Sirve MCP+dashboard en primer plano; es idempotente por usuario/puerto."""
+    """Sirve MCP+dashboard en primer plano; es idempotente **por usuario**.
+
+    Por usuario y no por puerto, que es lo que decía antes esta línea: el lock es
+    `LOG_DIR/daemon.lock`, uno solo, así que un segundo `serve` en otro puerto no arranca aunque
+    ese puerto esté libre. Es la intención (un daemon por persona), pero el mensaje que se daba
+    hablaba del puerto pedido y mandaba a buscar el daemon donde no estaba.
+    """
     _ensure_standard_streams()
     host = host or config.WEB_HOST
     port = port or config.WEB_PORT
@@ -215,7 +241,19 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
             _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
             _console_print(current["mcp_url"])
             return 0
-        _console_print(f"local-delegate: lock ocupado pero no responde un daemon en {host}:{port}")
+        otro = daemon_registrado()
+        if otro:
+            _console_print(
+                f"local-delegate: ya hay un daemon de este usuario en "
+                f"{otro['host']}:{otro['port']} (pid={otro['pid']}), y el lock es uno por usuario. "
+                f"No se puede levantar otro en el puerto {port}."
+            )
+            _console_print(otro["mcp_url"])
+            return 1
+        _console_print(
+            f"local-delegate: lock ocupado y no responde ningún daemon nuestro "
+            f"(ni en {host}:{port} ni donde dice {_state_path()})"
+        )
         return 1
 
     try:
@@ -245,11 +283,17 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
             access_log=False,
         )
         uvicorn_server = uvicorn.Server(uvicorn_config)
+        # Ctrl+Break entra por `SIGBREAK`, que uvicorn también captura y también vuelve a lanzar
+        # sobre el handler original — solo que ahí el original era `SIG_DFL` y mataba el proceso
+        # con código 3 a mitad del apagado. Igualarlo a Ctrl+C hace que caiga en el `except` de
+        # abajo, que es el camino ya probado. El porqué completo, en `server.preparar_ctrl_break`.
+        server.preparar_ctrl_break()
         try:
             uvicorn_server.run()
         except KeyboardInterrupt:
             # Algunos runners (incluido uvicorn sobre asyncio en Windows) vuelven a
-            # propagar Ctrl+C después de cerrar limpiamente el lifespan.
+            # propagar Ctrl+C después de cerrar limpiamente el lifespan. Y con Ctrl+Break es
+            # exactamente lo mismo: `capture_signals` re-emite la señal capturada al salir.
             return 0
         return 0 if uvicorn_server.started else 1
     finally:

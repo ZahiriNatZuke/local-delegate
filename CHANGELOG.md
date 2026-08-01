@@ -6,6 +6,44 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **Ctrl+Break ya no mata el proceso por la vía mala, en ninguno de los dos caminos.** Windows
+  tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`: con
+  `CTRL_BREAK_EVENT`, `local-delegate serve` salía con **3** y el MCP stdio con **`0xC000013A`**
+  (`STATUS_CONTROL_C_EXIT`), sin llegar a imprimir nada. Un servicio que cierra bien pero devuelve
+  un código distinto de cero hace que un gestor de servicios se apunte una caída.
+
+  El diagnóstico del `3` **no estaba en nuestro código**, y por eso el arreglo no es un `except`
+  más. uvicorn captura `SIGINT`, `SIGTERM` y `SIGBREAK`, y al terminar restaura el handler original
+  y **vuelve a lanzar la señal** (`Server.capture_signals`). Para `SIGINT` el original es
+  `default_int_handler`, así que la re-emisión produce el `KeyboardInterrupt` que `serve` ya cazaba
+  —de ahí el comentario que llevaba ahí desde hace tiempo—; para `SIGBREAK` el original era
+  `SIG_DFL` y la re-emisión mataba el proceso **a mitad del apagado**. Medido con un envoltorio:
+  `serve()` no llegaba a retornar y `atexit` no corría, con el gestor de sesiones del SDK ya
+  cerrado.
+
+  Así que el arreglo cambia **cuál es el handler original**: `server.preparar_ctrl_break()` pone
+  `default_int_handler` en `SIGBREAK` antes de servir, y Ctrl+Break desemboca en el mismo camino
+  que Ctrl+C, que ya estaba probado. Solo pisa `SIG_DFL` —un handler ajeno manda— y fuera del hilo
+  principal no hace nada.
+
+  Los tests nuevos lanzan **procesos de verdad** y le piden el código de salida al sistema
+  operativo, que es el único sitio donde la diferencia entre los dos eventos existe: los que ya
+  había inyectan la excepción ya construida y por eso no podían ver esto. Cada uno lleva su control
+  positivo (al stdio se le habla MCP y se espera su `result`; al daemon se le pregunta por
+  `/api/daemon`) para que no puedan pasar sobre un proceso que murió por otra cosa.
+
+- **`serve` con el lock ocupado dice dónde está el daemon vivo.** El lock es **uno por usuario**
+  (`LOG_DIR/daemon.lock`), no uno por puerto, pero el mensaje hablaba del puerto que se pidió: con
+  el daemon en el 9393, `serve --port 9899` respondía «lock ocupado pero no responde un daemon en
+  127.0.0.1:9899». Cierto y engañoso a la vez — el daemon existía y estaba en otro sitio, y el
+  mensaje mandaba a buscarlo donde no estaba. `daemon.json` tenía el dato y esa rama no lo leía.
+
+  Ahora `daemon_registrado()` mira dónde el daemon dijo estar y **le pregunta por HTTP** antes de
+  anunciarlo: un `daemon.json` huérfano no puede convertirse en «tu daemon está en …», que sería
+  cambiar un diagnóstico incompleto por uno falso. El docstring de `serve` decía «idempotente por
+  usuario/puerto» y ahora dice la verdad: por usuario.
+
 ## [0.20.0] - 2026-07-31
 
 > La tanda que **vació el backlog auditado**: los siete puntos que la auditoría del 2026-07-31

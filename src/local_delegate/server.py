@@ -16,6 +16,7 @@ import base64
 import json
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -1920,6 +1921,42 @@ def _aviso_de_terminal_interactiva() -> None:
     )
 
 
+def preparar_ctrl_break() -> None:
+    """Hace que Ctrl+Break se pare como Ctrl+C. Solo hace algo en Windows.
+
+    Windows tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`:
+    `CTRL_C_EVENT` sí, `CTRL_BREAK_EVENT` (o sea `SIGBREAK`) no. Con el handler por defecto la CRT
+    mata el proceso, y eso se midió en los dos caminos del paquete: `serve` salía con **3** y el
+    MCP stdio con **0xC000013A** (`STATUS_CONTROL_C_EXIT`), este último sin llegar a imprimir nada.
+
+    En `serve` el 3 no venía de nuestro código, y esa parte importa para entender por qué el arreglo
+    es este y no un `except` más. uvicorn captura `SIGINT`, `SIGTERM` y `SIGBREAK`; al terminar
+    **restaura el handler original y vuelve a lanzar la señal** (`Server.capture_signals`). Para
+    `SIGINT` el original es `default_int_handler`, así que la re-emisión produce el
+    `KeyboardInterrupt` que `serve` ya cazaba —de ahí su comentario— y para `SIGBREAK` el original
+    era `SIG_DFL` y la re-emisión mataba el proceso a mitad del apagado: se midió que `serve()`
+    nunca retornaba y que `atexit` nunca corría, con el gestor de sesiones del SDK ya cerrado.
+
+    Por eso el arreglo no es capturar más excepciones sino **cambiar cuál es el handler original**:
+    puesto `default_int_handler` en `SIGBREAK`, Ctrl+Break desemboca en el mismo camino que Ctrl+C,
+    que ya está probado.
+
+    Dos cuidados deliberados:
+
+    - Solo se pisa `SIG_DFL`. Si alguien ya instaló un handler propio, el suyo manda.
+    - `signal.signal` solo vale en el hilo principal; fuera de él lanza `ValueError` y aquí eso
+      significa «no toca hacer nada», no un fallo.
+    """
+    sigbreak = getattr(signal, "SIGBREAK", None)
+    if sigbreak is None:  # POSIX: Ctrl+C ya es SIGINT y no hay nada que igualar
+        return
+    try:
+        if signal.getsignal(sigbreak) is signal.SIG_DFL:
+            signal.signal(sigbreak, signal.default_int_handler)
+    except (ValueError, OSError):
+        pass
+
+
 def main() -> None:
     """Punto de entrada del binario (usado por [project.scripts] local-delegate).
 
@@ -1961,6 +1998,10 @@ def main() -> None:
     #
     # `daemon.serve` lleva esta misma captura desde hace tiempo, con su comentario y todo; el
     # camino stdio se quedó fuera. Dos caminos hasta el mismo `Ctrl+C` y solo uno preparado.
+    #
+    # Y con Ctrl+Break pasaba lo mismo un nivel más abajo: son dos eventos de consola distintos y
+    # el `except` de aquí solo veía uno. `preparar_ctrl_break` los iguala antes de servir.
+    preparar_ctrl_break()
     try:
         mcp.run()
     except KeyboardInterrupt:
