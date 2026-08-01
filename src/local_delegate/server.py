@@ -1954,6 +1954,10 @@ def preparar_ctrl_break() -> None:
         if signal.getsignal(sigbreak) is signal.SIG_DFL:
             signal.signal(sigbreak, signal.default_int_handler)
     except (ValueError, OSError):
+        # `signal.signal` solo vale en el hilo principal, y fuera de él lanza `ValueError`. Eso
+        # aquí no es un fallo: significa que no toca hacer nada. Igualar Ctrl+Break a Ctrl+C es
+        # una mejora del cierre, no un requisito para servir, así que no poder hacerlo jamás debe
+        # impedir que el servidor arranque.
         pass
 
 

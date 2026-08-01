@@ -139,12 +139,15 @@ def test_preparar_ctrl_break_no_revienta_fuera_del_hilo_principal():
     """`signal.signal` solo vale en el hilo principal; ahí «no toca hacer nada» no es un fallo."""
     import threading
 
-    fallos: list[BaseException] = []
+    fallos: list[Exception] = []
 
     def _en_otro_hilo() -> None:
         try:
             server.preparar_ctrl_break()
-        except BaseException as exc:  # el test existe justo para atrapar cualquiera
+        except Exception as exc:
+            # Amplio a propósito: lo que se afirma no es «lanza tal error», es que **no lanza
+            # ninguno**. Nombrar aquí `ValueError` dejaría pasar cualquier otro, que es justo el
+            # caso que este test existe para descartar.
             fallos.append(exc)
 
     hilo = threading.Thread(target=_en_otro_hilo)
