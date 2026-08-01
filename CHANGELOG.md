@@ -13,6 +13,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   comparan la versión instalada con la publicada**. Sale de `server._get_version()`, la misma
   fuente que el handshake `initialize` y que `__version__`: tres canales públicos y un solo dato.
 
+  Ese dato se muda a **`version.py`, un módulo hoja** que no importa nada del paquete. No es
+  cosmética: lo necesitan cuatro sitios que no se conocen entre sí, vivía dentro de `server.py` —el
+  módulo más pesado, que arrastra el SDK, httpx2 y filelock— y `cli` importándolo cerraba un
+  **ciclo de importación**, porque `server.main()` importa `cli` en cuanto hay argumentos. Diferir
+  el import lo escondía sin quitarlo. Un test lo fija **sobre el AST** y no importando el módulo:
+  importarlo pasaría igual con un import perezoso dentro de una función, que es justo la forma de
+  volver a esconder el ciclo.
+
 ### Changed
 - **`clients.jsonl` tiene techo, y el techo no ciega al diagnóstico.** Crecía sin límite. Es un
   crecimiento lentísimo —medido: ~144 B por arranque de proceso MCP, una línea por identidad nueva

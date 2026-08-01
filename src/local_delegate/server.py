@@ -24,8 +24,6 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
@@ -35,20 +33,14 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import autostart, clients, config, preguntas
+from .version import get_version
 
-# --- Versión del paquete (cacheada) ------------------------------------------
-# Se define antes de instanciar el server porque este la declara en su constructor.
-_PACKAGE_VERSION: str | None = None
-
-
-def _get_version() -> str:
-    global _PACKAGE_VERSION
-    if _PACKAGE_VERSION is None:
-        try:
-            _PACKAGE_VERSION = _pkg_version("local-delegate-mcp")
-        except PackageNotFoundError:
-            _PACKAGE_VERSION = "0.0.0"
-    return _PACKAGE_VERSION
+# --- Versión del paquete ------------------------------------------------------
+# Vive en `version.py`, un módulo hoja que no importa nada del paquete, y este alias se conserva
+# porque `daemon`, `web/metrics` y los tests ya lo llaman por aquí. El porqué de sacarlo está en
+# el docstring de aquel: el `--version` del CLI necesitaba el mismo dato, y `cli` importando
+# `server` cerraba un ciclo (`server.main()` importa `cli` en cuanto hay argumentos).
+_get_version = get_version
 
 
 # `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el

@@ -230,3 +230,35 @@ def test_los_subcomandos_estan_definidos_una_sola_vez(monkeypatch):
     for nombre in sorted(registrados):
         assert _run_main(monkeypatch, [nombre]) == 0
     assert recibidos == [[nombre] for nombre in sorted(registrados)]
+
+
+def test_el_modulo_de_la_version_no_importa_nada_del_paquete():
+    """La propiedad que quita el ciclo, fijada para que no se pierda al añadir un import.
+
+    `version.py` existe porque cuatro sitios que no se conocen entre sí necesitan el mismo número:
+    el handshake `initialize`, `/api/daemon`, `__version__` y el `--version` del CLI. Vivía dentro
+    de `server.py`, y como `server.main()` importa `cli` en cuanto hay argumentos, un `cli` que
+    importara `server` cerraba un **ciclo**. Diferir el import lo escondía sin quitarlo.
+
+    Se comprueba sobre el AST y no importando el módulo: importarlo pasaría igual con un import
+    perezoso dentro de una función, que es exactamente la forma de esconder el ciclo otra vez.
+    """
+    import ast
+    from pathlib import Path
+
+    fuente = Path(server.__file__).parent / "version.py"
+    arbol = ast.parse(fuente.read_text(encoding="utf-8"))
+    relativos = [n for n in ast.walk(arbol) if isinstance(n, ast.ImportFrom) and (n.level or 0) > 0]
+    assert relativos == [], (
+        "version.py tiene que ser un módulo hoja: importar algo del paquete reabre el ciclo "
+        f"cli ↔ server (líneas {[n.lineno for n in relativos]})"
+    )
+
+
+def test_los_tres_canales_de_la_version_dan_lo_mismo():
+    """Un solo dato, tres puertas. Si alguien vuelve a derivarlo por su cuenta, esto lo caza."""
+    import local_delegate
+    from local_delegate import version
+
+    assert local_delegate.__version__ == version.get_version()
+    assert server.mcp.version == version.get_version()

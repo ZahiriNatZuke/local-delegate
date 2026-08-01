@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import benchmark, doctor
 from . import llamaswap_config as lc
+from .version import get_version
 
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
 # mientras que los otros cuatro se excluyen con `--no-*`. Ver el porqué en el parser.
@@ -585,20 +586,14 @@ def build_parser() -> argparse.ArgumentParser:
     # preguntarle a `pip`/`uv`. En un proyecto donde dos checks del diagnóstico comparan la versión
     # instalada con la publicada, que el propio binario no supiera decir la suya era el hueco raro.
     #
-    # Sale de `server._get_version()`, la misma fuente que el handshake `initialize` del MCP y que
-    # `__version__`: tres canales públicos que no pueden discrepar porque solo hay un dato.
-    #
-    # El import va **aquí dentro** y no arriba, igual que los de `install`: `server.main()` importa
-    # `cli` en cuanto hay argumentos, así que un `from . import server` a nivel de módulo cierra un
-    # ciclo de importación. Python lo resolvería hoy, pero es la clase de acoplamiento que rompe
-    # sin aviso al reordenar un import — y el docstring de este módulo describe justo la relación
-    # contraria: `server` conoce a `cli`, no al revés.
-    from . import server
-
+    # Sale de `version.get_version()`, la misma fuente que el handshake `initialize` del MCP y que
+    # `__version__`: tres canales públicos que no pueden discrepar porque solo hay un dato. Ese
+    # módulo es hoja a propósito — `cli` importando `server` cerraría un ciclo, porque
+    # `server.main()` importa `cli` en cuanto hay argumentos.
     parser.add_argument(
         "--version",
         action="version",
-        version=f"local-delegate {server._get_version()}",
+        version=f"local-delegate {get_version()}",
         help="imprime la versión instalada y termina",
     )
 
