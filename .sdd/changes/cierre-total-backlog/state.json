@@ -3,9 +3,9 @@
   "slug": "cierre-total-backlog",
   "title": "Cierre total del backlog: los puntos vivos, la auditoria del proyecto y la release",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-08-01T16:28:47.746Z",
-  "updatedAt": "2026-08-01T19:05:48.828Z",
+  "updatedAt": "2026-08-01T19:22:09.115Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-01T19:18:27.938Z",
+      "evidence": "Los 10 requisitos con evidencia en verification.md. 0.21.0 publicada en PyPI y en el registro MCP (isLatest: true); CLI y daemon de la maquina en 0.21.0 DESDE EL PAQUETE PUBLICADO; verificado con local_status y local_summarize contra el backend real, no solo con doctor. Brazo B encendido y comprobado ejecutando el hook tal cual quedo registrado en el settings.json real, con el entorno limpio.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-01T19:22:07.694Z",
+      "evidence": "Backlog del vault reescrito sin puntos abiertos; jornada-2026-08-01-el-backlog-sin-nada-abierto.md creada; memorias de Claude Code actualizadas (estado 0.21.0, backlog, MEMORY.md) y una regla nueva: control-positivo-no-es-opcional. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "to": "verifying",
       "at": "2026-08-01T19:05:48.828Z",
       "reason": "Los cuatro PRs mezclados (#116, #117, #118, #119); se prepara la 0.21.0"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-01T19:18:27.938Z",
+      "evidence": "Los 10 requisitos con evidencia en verification.md. 0.21.0 publicada en PyPI y en el registro MCP (isLatest: true); CLI y daemon de la maquina en 0.21.0 DESDE EL PAQUETE PUBLICADO; verificado con local_status y local_summarize contra el backend real, no solo con doctor. Brazo B encendido y comprobado ejecutando el hook tal cual quedo registrado en el settings.json real, con el entorno limpio.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-01T19:18:28.532Z",
+      "reason": "Release publicada y verificada en la maquina"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-01T19:22:07.694Z",
+      "evidence": "Backlog del vault reescrito sin puntos abiertos; jornada-2026-08-01-el-backlog-sin-nada-abierto.md creada; memorias de Claude Code actualizadas (estado 0.21.0, backlog, MEMORY.md) y una regla nueva: control-positivo-no-es-opcional. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-01T19:22:08.487Z",
+      "reason": "Release publicada, maquina verificada y memoria persistida"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-01T19:22:09.115Z",
+      "reason": "Backlog sin ningun punto abierto"
     }
   ]
 }
