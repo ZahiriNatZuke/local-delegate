@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from local_delegate import config, server
+from local_delegate import config, entrypoint, server
 
 EXPECTED_TOOLS = {
     "local_summarize",
@@ -86,7 +86,7 @@ def test_main_dispatches_known_cli_subcommand(monkeypatch):
     monkeypatch.setattr(cli, "run", lambda argv: calls.append(argv) or 42)
     monkeypatch.setattr(sys, "argv", ["local-delegate", "check-llamaswap", "--config", "x"])
     try:
-        server.main()
+        entrypoint.main()
     except SystemExit as e:
         assert e.code == 42
     else:  # pragma: no cover - main() debe salir con sys.exit
@@ -105,7 +105,7 @@ def _run_main(monkeypatch, argv: list[str]) -> int:
 
     monkeypatch.setattr(sys, "argv", ["local-delegate", *argv])
     try:
-        server.main()
+        entrypoint.main()
     except SystemExit as exc:
         return int(exc.code or 0)
     return 0
@@ -120,6 +120,28 @@ def test_help_imprime_la_ayuda_y_no_arranca_el_servidor(monkeypatch, capsys):
     monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
     assert _run_main(monkeypatch, ["--help"]) == 0
     assert "usage" in capsys.readouterr().out.lower()
+
+
+def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
+    """`local-delegate --version` salía con código 2 y un `usage`.
+
+    El parser raíz exigía subcomando y no exponía la bandera, así que el binario no sabía decir
+    su propia versión — en un proyecto donde dos checks del diagnóstico comparan la instalada con
+    la publicada.
+
+    Se asevera contra `__version__` y no contra una cadena escrita a mano: clavar el número aquí
+    convertiría cada release en un test rojo, y peor, un test que se «arregla» actualizando el
+    literal no comprueba que las dos fuentes sigan siendo la misma.
+    """
+    from local_delegate import __version__
+    from local_delegate import server as srv
+
+    def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
+        raise AssertionError("--version no debe arrancar el servidor MCP")
+
+    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    assert _run_main(monkeypatch, ["--version"]) == 0
+    assert __version__ in capsys.readouterr().out
 
 
 def test_subcomando_desconocido_falla_en_vez_de_colgarse(monkeypatch, capsys):
@@ -146,7 +168,7 @@ def test_sin_argumentos_sigue_arrancando_el_servidor_mcp(monkeypatch):
     monkeypatch.setattr(srv.config, "WEB_ENABLED", False)
     monkeypatch.setattr(cli, "run", lambda argv: 0)  # no debe llamarse
     monkeypatch.setattr(sys, "argv", ["local-delegate"])
-    server.main()
+    entrypoint.main()
     assert arrancado == [True]
 
 
@@ -161,11 +183,11 @@ def test_el_aviso_de_terminal_solo_sale_con_tty_y_por_stderr(monkeypatch, capsys
             return self._tty
 
     monkeypatch.setattr(sys, "stdin", _Stdin(False))
-    server._aviso_de_terminal_interactiva()
+    entrypoint._aviso_de_terminal_interactiva()
     assert capsys.readouterr().err == ""
 
     monkeypatch.setattr(sys, "stdin", _Stdin(True))
-    server._aviso_de_terminal_interactiva()
+    entrypoint._aviso_de_terminal_interactiva()
     salida = capsys.readouterr()
     assert "local-delegate --help" in salida.err
     assert salida.out == ""  # stdout es el canal del protocolo MCP: jamás se escribe ahí
@@ -180,9 +202,9 @@ def test_el_aviso_no_revienta_con_un_stdin_raro(monkeypatch, capsys):
             raise ValueError("I/O operation on closed file")
 
     monkeypatch.setattr(sys, "stdin", None)
-    server._aviso_de_terminal_interactiva()
+    entrypoint._aviso_de_terminal_interactiva()
     monkeypatch.setattr(sys, "stdin", _Cerrado())
-    server._aviso_de_terminal_interactiva()
+    entrypoint._aviso_de_terminal_interactiva()
     assert capsys.readouterr().err == ""
 
 
@@ -208,3 +230,63 @@ def test_los_subcomandos_estan_definidos_una_sola_vez(monkeypatch):
     for nombre in sorted(registrados):
         assert _run_main(monkeypatch, [nombre]) == 0
     assert recibidos == [[nombre] for nombre in sorted(registrados)]
+
+
+def test_el_modulo_de_la_version_no_importa_nada_del_paquete():
+    """La propiedad que quita el ciclo, fijada para que no se pierda al añadir un import.
+
+    `version.py` existe porque cuatro sitios que no se conocen entre sí necesitan el mismo número:
+    el handshake `initialize`, `/api/daemon`, `__version__` y el `--version` del CLI. Vivía dentro
+    de `server.py`, y como `entrypoint.main()` importa `cli` en cuanto hay argumentos, un `cli` que
+    importara `server` cerraba un **ciclo**. Diferir el import lo escondía sin quitarlo.
+
+    Se comprueba sobre el AST y no importando el módulo: importarlo pasaría igual con un import
+    perezoso dentro de una función, que es exactamente la forma de esconder el ciclo otra vez.
+    """
+    import ast
+    from pathlib import Path
+
+    fuente = Path(server.__file__).parent / "version.py"
+    arbol = ast.parse(fuente.read_text(encoding="utf-8"))
+    relativos = [n for n in ast.walk(arbol) if isinstance(n, ast.ImportFrom) and (n.level or 0) > 0]
+    assert relativos == [], (
+        "version.py tiene que ser un módulo hoja: importar algo del paquete reabre el ciclo "
+        f"cli ↔ server (líneas {[n.lineno for n in relativos]})"
+    )
+
+
+def test_los_tres_canales_de_la_version_dan_lo_mismo():
+    """Un solo dato, tres puertas. Si alguien vuelve a derivarlo por su cuenta, esto lo caza."""
+    from local_delegate import __version__, version
+
+    assert __version__ == version.get_version()
+    assert server.mcp.version == version.get_version()
+
+
+def test_el_servidor_no_conoce_al_CLI():
+    """La dirección de la dependencia, fijada. Es lo que quita el ciclo de verdad.
+
+    `server` importaba `cli` para despachar los subcomandos, y `cli` volvía a `server` y a
+    `daemon` —que importa `server`—. Funcionaba porque los imports eran diferidos, pero el grafo
+    tenía el ciclo (seis alertas del analizador) y contradecía lo que el docstring de `cli.py`
+    afirma. Ahora `main()` vive en `entrypoint`, que está **por encima** de los dos.
+
+    Se comprueba sobre el AST, incluidos los imports dentro de funciones: es justo ahí donde
+    estaba escondido antes, así que mirar solo los de nivel de módulo no probaría nada.
+    """
+    import ast
+    from pathlib import Path
+
+    fuente = Path(server.__file__)
+    arbol = ast.parse(fuente.read_text(encoding="utf-8"))
+    culpables = [
+        n.lineno
+        for n in ast.walk(arbol)
+        if isinstance(n, ast.ImportFrom)
+        and (n.level or 0) > 0
+        and any(a.name == "cli" for a in n.names)
+    ]
+    assert culpables == [], (
+        f"server.py volvió a importar cli (líneas {culpables}): eso reabre el ciclo "
+        "cli -> daemon -> server -> cli. El despacho vive en entrypoint.py"
+    )

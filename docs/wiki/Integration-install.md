@@ -22,7 +22,7 @@ local-delegate uninstall             # revierte solo lo que instaló
 | Componente | Destino | Notas |
 |---|---|---|
 | Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI) y `~/.codex/config.toml` | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
-| Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `PreToolUse`/`Bash`; el de `Read` solo con `--enable-read-hook` |
+| Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `PreToolUse`/`Bash`; el de `Read` solo con `--enable-read-hook`, que lo deja activo |
 | Skill | `~/.claude/skills/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | resumen corto de la regla, siempre cargado |
 
@@ -69,7 +69,7 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
 | `--target claude \| codex \| all` | histórico, equivale a `--clients`; `all` fuerza los dos aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
-| `--enable-read-hook` | registra también el experimental `PreToolUse`/`Read` |
+| `--enable-read-hook` | registra **y enciende** el experimental `PreToolUse`/`Read`. Antes solo lo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada |
 | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp`. **Si tu backend exige API key, `http` suele ser la única opción que funciona**: el proceso `stdio` lo lanza el cliente y hereda *su* entorno, no el del lanzador del daemon, que es quien tiene el secreto. Lo avisa el check «credencial del backend» |
 | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
 | `--api-key-env` | reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno |

@@ -233,7 +233,8 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige 
 `--clients claude|codex`. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`,
 `--no-memory`, `--no-mcp`). Los hooks recomendados tras el piloto A/B son
 `UserPromptSubmit` (intenciones mecánicas) y `PreToolUse`/`Bash` (salidas largas de lint/tests);
-el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`.
+el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`, que lo registra y lo
+enciende (`uninstall` lo apaga).
 Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y
 [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 

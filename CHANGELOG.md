@@ -6,6 +6,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`local-delegate --version`.** Salía con código 2 y un `usage`: el parser raíz exigía subcomando
+  y no exponía la bandera, así que la única forma de saber qué versión estaba instalada era
+  preguntarle a `pip`/`uv`. El hueco raro estaba en un proyecto donde **dos checks del diagnóstico
+  comparan la versión instalada con la publicada**. Sale de `server._get_version()`, la misma
+  fuente que el handshake `initialize` y que `__version__`: tres canales públicos y un solo dato.
+
+  Ese dato se muda a **`version.py`, un módulo hoja** que no importa nada del paquete. No es
+  cosmética: lo necesitan cuatro sitios que no se conocen entre sí, vivía dentro de `server.py` —el
+  módulo más pesado, que arrastra el SDK, httpx2 y filelock— y `cli` importándolo cerraba un
+  **ciclo de importación**, porque `server.main()` importa `cli` en cuanto hay argumentos. Diferir
+  el import lo escondía sin quitarlo. Un test lo fija **sobre el AST** y no importando el módulo:
+  importarlo pasaría igual con un import perezoso dentro de una función, que es justo la forma de
+  volver a esconder el ciclo.
+
+- **`main()` sale de `server.py` a `entrypoint.py`, y el ciclo de importación desaparece de
+  verdad.** Sacar la versión quitó la mitad (`cli` → `server`); la otra mitad era que `server`
+  importaba `cli` para despachar los subcomandos, cerrando `cli` → `daemon` → `server` → `cli`.
+  Los imports diferidos lo hacían funcionar, pero el grafo mantenía el ciclo —**seis** alertas del
+  analizador— y contradecía lo que el propio docstring de `cli.py` afirmaba: que `server` no
+  conoce al CLI.
+
+  La forma correcta es la de siempre: quien despacha va **por encima** de los dos. Un punto de
+  entrada puede conocer al CLI y al servidor; el servidor no tiene por qué saber que existe un
+  CLI. El import de `cli` sigue siendo diferido, pero ahora por la única razón que siempre debió
+  ser: coste de arranque. Un test lo fija sobre el AST **incluyendo los imports dentro de
+  funciones**, que es donde estaba escondido.
+
 ### Changed
 - **`clients.jsonl` tiene techo, y el techo no ciega al diagnóstico.** Crecía sin límite. Es un
   crecimiento lentísimo —medido: ~144 B por arranque de proceso MCP, una línea por identidad nueva
@@ -20,6 +48,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   su propio test, verificado al revés — reducido el lector al fichero vivo, se pone rojo.
 
 ### Fixed
+- **`install --enable-read-hook` enciende el hook de verdad.** Registraba el script y ya está: el
+  hook seguía exigiendo además `LD_HOOK_READ_ENABLED=1` en el entorno, que nadie ponía. Eran **dos
+  puertas y la bandera abría una**, así que la opción no hacía nada — y en silencio, que es lo
+  peor: quedaba escrita en `settings.json`, aparecía en el plan del instalador y no sugería jamás.
+
+  Cómo sobrevivió: `test_read_hook_is_opt_in` probaba que el instalador registra y
+  `test_read_hook_is_disabled_by_default` probaba que el script obedece la variable. Los dos en
+  verde y **ninguno cruzaba las dos piezas** — probar la pieza no es probar el uso. El test nuevo
+  coge el comando **tal cual quedó en `settings.json`**, lo ejecuta con el entorno limpio y mira si
+  sugiere; y lleva su control negativo, porque sin él pasaría igual un hook que sugiriera siempre.
+
+  Se arregla por argumento (`--enabled` en el registro) y no escribiendo la variable en el
+  `settings.json` del usuario: la variable sería global a la sesión y `uninstall` no la retiraría.
+  Así **el registro mismo es el interruptor**. La variable sigue valiendo para instalaciones a
+  mano.
+
+  Es además lo que tenía bloqueado el brazo B del piloto A/B de hooks.
+
 - **Ctrl+Break ya no mata el proceso por la vía mala, en ninguno de los dos caminos.** Windows
   tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`: con
   `CTRL_BREAK_EVENT`, `local-delegate serve` salía con **3** y el MCP stdio con **`0xC000013A`**

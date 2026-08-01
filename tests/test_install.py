@@ -6,7 +6,10 @@ Todo corre contra un HOME de prueba (`tmp_path`); ninguna prueba toca el HOME re
 from __future__ import annotations
 
 import json
+import os
 import shlex
+import subprocess
+import sys
 import tomllib
 from pathlib import Path, PureWindowsPath
 
@@ -105,6 +108,63 @@ def test_read_hook_is_opt_in(tmp_path):
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"]["PreToolUse"]}
     assert matchers == {"Bash", "Read"}
+
+
+def _comando_del_hook_de_read(home: Path) -> str | None:
+    """El comando de Read tal y como quedó escrito en settings.json, o None si no hay."""
+    settings = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    for grupo in settings.get("hooks", {}).get("PreToolUse", []):
+        if grupo.get("matcher") == "Read":
+            return grupo["hooks"][0]["command"]
+    return None
+
+
+def test_enable_read_hook_deja_el_hook_REALMENTE_encendido(tmp_path, monkeypatch):
+    """El test que faltaba: el que **cruza el instalador con el script**.
+
+    Había uno que probaba que el instalador registra (`test_read_hook_is_opt_in`) y otro que
+    probaba que el script obedece la variable de entorno (`test_read_hook_is_disabled_by_default`).
+    Los dos en verde, y entre ellos un agujero: el instalador registraba el hook **sin** poner la
+    variable, así que la opción no encendía nada y no lo decía. Probar la pieza no es probar el
+    uso.
+
+    Aquí se coge el comando **tal cual quedó en `settings.json`**, se ejecuta con el entorno
+    limpio de `LD_HOOK_READ_ENABLED` y se mira si sugiere.
+    """
+    monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
+    _install(tmp_path, enable_read_hook=True)
+
+    comando = _comando_del_hook_de_read(tmp_path)
+    assert comando is not None, "el hook de Read no quedó registrado"
+
+    grande = tmp_path / "grande.txt"
+    grande.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima de la banda «strong»
+    entrada = json.dumps({"tool_input": {"file_path": str(grande)}})
+
+    # Se respeta el comando escrito, cambiando SOLO el intérprete: el registrado es un nombre
+    # resuelto por PATH ("python"/"python3") que en el runner puede no ser el de la suite.
+    argv = shlex.split(comando)
+    argv[0] = sys.executable
+    entorno = {**os.environ, "PYTHONPATH": str(tmp_path / ".claude" / "hooks" / "local-delegate")}
+    entorno.pop("LD_HOOK_READ_ENABLED", None)
+
+    salida = subprocess.run(argv, input=entrada, capture_output=True, text=True, env=entorno).stdout
+
+    assert "additionalContext" in salida, (
+        f"instalado con --enable-read-hook y sin la variable, el hook no sugirió nada.\n"
+        f"comando registrado: {comando!r}\nsalida: {salida!r}"
+    )
+
+
+def test_sin_la_bandera_el_hook_de_read_no_se_registra_ni_sugiere(tmp_path, monkeypatch):
+    """Control negativo del test de arriba.
+
+    Sin él, el anterior pasaría igual con un hook que sugiriera **siempre**, que es el fallo
+    opuesto y peor: ruido en cada lectura de quien nunca pidió el experimento.
+    """
+    monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
+    _install(tmp_path)
+    assert _comando_del_hook_de_read(tmp_path) is None
 
 
 def test_install_is_idempotent_and_keeps_foreign_config(tmp_path):

@@ -50,6 +50,20 @@ _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
+# El argumento con el que se registra el hook de Read, y **por qué existe uno**.
+#
+# `--enable-read-hook` registraba el script y ya: el hook seguía exigiendo además
+# `LD_HOOK_READ_ENABLED=1` en el entorno, que nadie ponía. Eran dos puertas y la bandera abría
+# una, así que la opción no hacía nada — y en silencio, que es lo peor: quedaba registrada en
+# `settings.json`, se veía en el plan del instalador y no sugería jamás. Medido con control
+# positivo: mismo hook, mismo archivo grande, emite con la variable y no emite sin ella.
+#
+# Se arregla por el argumento y no escribiendo la variable en el `settings.json` del usuario por
+# dos razones: la variable sería global a la sesión (afectaría a cualquier proceso hijo, no solo
+# al hook) y `uninstall` no la retiraría. Con el argumento, **el registro mismo es el
+# interruptor**: instalar lo enciende y desinstalar lo apaga, sin estado repartido.
+READ_HOOK_FLAG = "--enabled"
+
 
 def resources_dir() -> Path:
     """Directorio de recursos empaquetados (hooks, skill, memoria)."""
@@ -188,7 +202,9 @@ def remove_block(text: str, begin: str, end: str) -> str:
 
 
 # --- Hooks de Claude Code ----------------------------------------------------
-def hook_command(hooks_dir: PurePath, script: str, python_exe: str) -> str:
+def hook_command(
+    hooks_dir: PurePath, script: str, python_exe: str, extra: tuple[str, ...] = ()
+) -> str:
     """Comando del hook: un único string que Claude Code entrega a un shell.
 
     La ruta va **siempre entre comillas y con barras `/`**, no solo cuando tiene espacios. En
@@ -198,8 +214,12 @@ def hook_command(hooks_dir: PurePath, script: str, python_exe: str) -> str:
     un hook que no sugiere, es un cliente inutilizable. Python abre rutas con `/` en Windows sin
     problema, así que la forma citada y con barras funciona en los tres shells (sh, cmd,
     PowerShell) y en los tres sistemas.
+
+    ``extra`` son argumentos para el script. Solo lo usa el hook de Read, y para que el propio
+    registro sea el interruptor: ver el comentario de ``_READ_HOOK``.
     """
-    return f'{python_exe} "{(hooks_dir / script).as_posix()}"'
+    partes = [python_exe, f'"{(hooks_dir / script).as_posix()}"', *extra]
+    return " ".join(partes)
 
 
 # Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano
@@ -523,7 +543,8 @@ def plan_install(opts: Options) -> list[Action]:
         ]
         if opts.enable_read_hook:
             script, event, matcher = _READ_HOOK
-            entries.append((event, matcher, hook_command(hooks_dst, script, opts.python_exe)))
+            comando = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
+            entries.append((event, matcher, comando))
         settings_path = claude / "settings.json"
 
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
@@ -759,6 +780,11 @@ def _unregister_claude_mcp(opts: Options) -> str:
             if done.returncode == 0:
                 return "quitado con `claude mcp remove`"
         except (OSError, subprocess.SubprocessError):
+            # El binario `claude` está pero no se pudo ejecutar (o se pasó del plazo). No es un
+            # fallo de la desinstalación: justo debajo está el camino que edita `.claude.json`
+            # directamente, que es el que se usa cuando no hay CLI. Degradar a él en silencio es
+            # correcto; abortar aquí dejaría la entrada MCP puesta por no haber podido usar el
+            # atajo.
             pass
     path = opts.home / ".claude.json"
     data = _read_json(path)

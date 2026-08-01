@@ -19,7 +19,17 @@ de riesgo. Solo añade un recordatorio corto; Claude conserva la decisión final
 
 ### `suggest_delegate_read.py` — `PreToolUse`, matcher `Read`
 
-Está apagado por defecto. Si se activa con `LD_HOOK_READ_ENABLED=1`, usa dos bandas configurables:
+Está apagado por defecto. Se enciende de **dos formas equivalentes**, y basta con una:
+
+- `local-delegate install --enable-read-hook`, que lo registra ya encendido (le pasa `--enabled`
+  al script). Es la recomendada: `uninstall` lo retira, así que el registro es la única fuente de
+  si está activo o no.
+- `LD_HOOK_READ_ENABLED=1` en el entorno, para quien lo instale a mano con esta recipe.
+
+> Antes solo valía la variable, y `--enable-read-hook` registraba el script **sin** ponerla: eran
+> dos puertas, la bandera abría una y la opción no hacía nada, en silencio. Corregido.
+
+Encendido, usa dos bandas configurables:
 
 - 8-32 KiB: sugerencia si se necesita una transformación global.
 - más de 32 KiB: recomendación fuerte de `path`.
@@ -85,7 +95,7 @@ actual porque bajo `uvx` vive en un entorno efímero que desaparece al terminar 
 | Variable | Default | Efecto |
 |---|---:|---|
 | `LD_HOOK_ENABLED` | `1` | `0` apaga sugerencias y telemetría para una sesión A/B |
-| `LD_HOOK_READ_ENABLED` | `0` | `1` activa el hook experimental de Read |
+| `LD_HOOK_READ_ENABLED` | `0` | `1` activa el hook experimental de Read (equivale a registrarlo con `--enabled`) |
 | `LD_HOOK_READ_SUGGEST_KB` | `8` | Inicio de sugerencia para Read |
 | `LD_HOOK_READ_STRONG_KB` | `32` | Inicio de recomendación fuerte |
 | `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
@@ -100,8 +110,9 @@ con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 ## Verificación manual
 
 1. Envía un prompt como “resume este archivo en cinco viñetas”: debe aparecer el recordatorio.
-2. Solo si pruebas el experimento Read, usa `LD_HOOK_READ_ENABLED=1` y pide leer un archivo de
-   10 KiB y otro de 40 KiB: deben aparecer bandas diferentes.
+2. Solo si pruebas el experimento Read (instalado con `--enable-read-hook`, o con
+   `LD_HOOK_READ_ENABLED=1`), pide leer un archivo de 10 KiB y otro de 40 KiB: deben aparecer
+   bandas diferentes.
 3. Ejecuta `pytest` o `npm test`: la sugerencia debe aparecer antes de la tool Bash.
 4. Envía “investiga y diseña la arquitectura”: no debe sugerir delegación local.
 

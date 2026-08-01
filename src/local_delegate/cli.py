@@ -2,7 +2,8 @@
 
 Ver docs/recipes/llama-swap-groups.md y docs/wiki/Daemon.md. El binario ``local-delegate`` SIN
 argumentos sigue arrancando el servidor MCP stdio exactamente igual que siempre (ver
-server.main()); este módulo se importa en cuanto hay **algún** argumento, y su parser es el
+``entrypoint.main()``, que es quien despacha: está por encima de este módulo y de ``server``, y
+por eso ``server`` ya no importa el CLI); este módulo se importa en cuanto hay **algún** argumento, y su parser es el
 único sitio donde está escrito qué subcomandos existen: ``--help`` y los nombres inválidos los
 responde él, no una lista aparte. Solo los comandos de configuración de llama-swap requieren el
 extra ``[llamaswap]`` (``pip install "local-delegate-mcp[llamaswap]"``); ``serve`` usa
@@ -24,6 +25,7 @@ from pathlib import Path
 
 from . import benchmark, doctor
 from . import llamaswap_config as lc
+from .version import get_version
 
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
 # mientras que los otros cuatro se excluyen con `--no-*`. Ver el porqué en el parser.
@@ -580,6 +582,22 @@ def build_parser() -> argparse.ArgumentParser:
             "`check-llamaswap` e `init-llamaswap` piden el extra [llamaswap]."
         ),
     )
+    # `local-delegate --version` salía con código 2 y un `usage`: el parser raíz exigía subcomando
+    # y no exponía la bandera, así que la única forma de saber qué versión estaba instalada era
+    # preguntarle a `pip`/`uv`. En un proyecto donde dos checks del diagnóstico comparan la versión
+    # instalada con la publicada, que el propio binario no supiera decir la suya era el hueco raro.
+    #
+    # Sale de `version.get_version()`, la misma fuente que el handshake `initialize` del MCP y que
+    # `__version__`: tres canales públicos que no pueden discrepar porque solo hay un dato. Ese
+    # módulo es hoja a propósito — `cli` importando `server` cerraría un ciclo, porque
+    # `server.main()` importa `cli` en cuanto hay argumentos.
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"local-delegate {get_version()}",
+        help="imprime la versión instalada y termina",
+    )
+
     sub = parser.add_subparsers(dest="command", required=True)
 
     benchmark.add_parser(sub)
@@ -803,7 +821,7 @@ def _add_install_parsers(sub) -> None:
     install.add_argument(
         "--enable-read-hook",
         action="store_true",
-        help="registra también el hook experimental PreToolUse/Read (apagado por defecto)",
+        help="registra y ENCIENDE el hook experimental PreToolUse/Read (apagado por defecto)",
     )
     install.add_argument(
         "--mcp-mode",
