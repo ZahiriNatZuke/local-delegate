@@ -101,6 +101,19 @@ dev = [
     "pyyaml>=6",
 ]
 
+# Playwright, en su propio grupo y **fuera de `dev`**. Dos motivos, los dos medidos:
+#
+# 1. Estaba sin declarar en ninguna parte, aunque `scripts/dev/capture_dashboard.py` y el flujo de
+#    la captura del README lo necesitan. Por eso `uv sync` lo desinstalaba y las capturas dejaban
+#    de funcionar sin que nada avisara — una trampa sufrida más de una vez y nunca arreglada aquí.
+# 2. Fuera de `dev` porque arrastra un navegador de ~150 MB que hay que instalar aparte
+#    (`playwright install chromium`). Meterlo en `dev` obligaría a todo el que toca el repo a
+#    pagarlo; así lo pide quien lo necesita, y el CI lo instala solo en el job que lo usa.
+#
+# `tests/test_dashboard_ui.py` se salta solo si falta, y lleva su propia guarda para que ese salto
+# no pueda pasar desapercibido en el CI.
+ui = ["playwright>=1.40"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100

@@ -34,6 +34,39 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   ser: coste de arranque. Un test lo fija sobre el AST **incluyendo los imports dentro de
   funciones**, que es donde estaba escondido.
 
+- **El panel se prueba interactuado, en un navegador de verdad** (`tests/test_dashboard_ui.py`).
+  Es la capa que faltaba: `test_metrics.py` prueba lo que sirve el backend, `test_dashboard_js.py`
+  ejecuta con node las funciones puras, y ahora se carga la página entera y **se pulsan los
+  controles** — lo único que puede ver un `onclick` que no se registró, un id renombrado a medias o
+  un botón que no se deshabilita en la última página. Verificado al revés: neutralizado el
+  manejador de «siguiente», dos de los tres tests se ponen rojos.
+
+  **Una premisa del pendiente era falsa**: hablaba de «paginación y **filtros de tool/modelo**», y
+  esos filtros **no existen** en el panel. Los controles reales son el selector de rango, el pager,
+  el tema, el auto-refresco y recargar. Se cubre lo que hay, y el módulo dice que es lo que hay.
+
+  Va dentro del job `lint`, que ya es exigido por el ruleset y ya monta Node: **no se añade ningún
+  job**, y por tanto no se toca la protección de la rama — este repo ya pagó una vez el precio de
+  un check exigido que nadie reporta. El módulo se salta solo donde no hay navegador, y lleva
+  dentro una guarda que **falla si se salta con `CI=true`**: un test que se salta en todas partes
+  es verde sobre cero comprobaciones.
+
+- **El instalador se ejercita de punta a punta en los tres sistemas**
+  (`scripts/check_install_e2e.py`). El backlog daba el camino de macOS por «no auditable sin un
+  Mac». **No hacía falta un Mac, hacía falta un runner** — y `test (macos-latest)` llevaba tiempo
+  en la matriz corriendo la suite entera. Lo que nunca se había ejecutado era el *comando*, con su
+  parser, su plan y su escritura real.
+
+  Instala dos veces contra un HOME temporal (la idempotencia es lo que más fácil se rompe en un
+  instalador y una sola pasada no la vería), comprueba que `--dry-run` no escribe, cuenta los hooks
+  registrados y verifica que `uninstall` deja el directorio como estaba — «reversible» está escrito
+  en el docstring del módulo y hasta ahora nadie lo ejercía entero.
+
+- **Playwright, por fin declarado** (`[dependency-groups] ui`). Lo necesitan
+  `scripts/dev/capture_dashboard.py` y el flujo de la captura del README, y no estaba en ninguna
+  parte: por eso `uv sync` lo desinstalaba y las capturas dejaban de funcionar sin que nada
+  avisara. Va en su propio grupo y fuera de `dev` porque arrastra un navegador de ~150 MB.
+
 ### Changed
 - **`clients.jsonl` tiene techo, y el techo no ciega al diagnóstico.** Crecía sin límite. Es un
   crecimiento lentísimo —medido: ~144 B por arranque de proceso MCP, una línea por identidad nueva

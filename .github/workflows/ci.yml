@@ -53,6 +53,26 @@ jobs:
           uv run python scripts/extract_dashboard_js.py dashboard.js
           node --check dashboard.js
 
+      # El panel **interactuado**, en un navegador de verdad: es la única capa que puede ver un
+      # fallo de cableado (un `onclick` que no se registró, un id renombrado a medias, un botón
+      # que no se deshabilita en la última página).
+      #
+      # Va DENTRO de este job y no en uno nuevo a propósito. Un job nuevo habría que declararlo
+      # como check exigido en el ruleset, y este repo ya pagó una vez el precio de un check que
+      # nadie reporta: bloquea el merge para siempre. `lint` ya es exigido, ya corre en ubuntu y
+      # ya monta Node, así que aquí el navegador sale casi gratis.
+      #
+      # El módulo se salta solo donde no hay navegador, y por eso lleva dentro una guarda que
+      # falla si se salta con CI=true: un test que se salta en todas partes es verde sobre cero
+      # comprobaciones, que es un fallo que este repo ya cometió.
+      - name: Install browser for the dashboard UI tests
+        run: |
+          uv sync --group dev --group ui
+          uv run playwright install --with-deps chromium
+
+      - name: Dashboard UI (Playwright)
+        run: uv run pytest tests/test_dashboard_ui.py -q
+
   # El paquete es multiplataforma de verdad: rutas, locks entre procesos y las llamadas a la
   # API de Win32 (`_pid_alive` usa ctypes) se comportan distinto en cada sistema. La 0.11.0
   # arregló una fuga de handles que SOLO ocurría en Windows y que un CI de solo Ubuntu no
@@ -122,6 +142,24 @@ jobs:
       - name: Tests (pytest)
         timeout-minutes: 5
         run: uv run pytest -q
+
+      # El instalador ejercido de verdad, y no solo sus funciones. Va en los tres sistemas porque
+      # el punto del paso es justo ese: `install` escribe rutas, monta comandos de shell y decide
+      # el intérprete según la plataforma, y de sus tres caminos **macOS no se había ejecutado
+      # nunca** — el backlog lo tenía como «no auditable en esta máquina» dando por hecho que hacía
+      # falta un Mac. Hacía falta un runner, y ya estaba en la matriz.
+      #
+      # Contra un HOME temporal y con `--no-client-cli`, que es el procedimiento que ya documenta
+      # `scripts/dev/README.md`: sin eso, `claude mcp add-json --scope user` escribiría en el HOME
+      # real del runner ignorando `--home`.
+      #
+      # Se instala **dos veces** a propósito: la idempotencia es la propiedad que más fácil se
+      # rompe aquí, y una sola pasada no la vería. Y se comprueba que `uninstall` deja de verdad
+      # el directorio como estaba, porque «reversible» está escrito en el docstring del módulo y
+      # hasta ahora nadie lo ejercía de punta a punta en macOS.
+      - name: Instalador end-to-end contra un HOME temporal
+        timeout-minutes: 3
+        run: uv run python scripts/check_install_e2e.py
 
   # El único job que NO usa `uv.lock`, y esa es exactamente su razón de ser.
   #
