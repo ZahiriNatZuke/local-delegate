@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "slug": "opencode-tercer-cliente",
+  "title": "opencode como tercer cliente de install",
+  "mode": "standard",
+  "status": "planning",
+  "createdAt": "2026-08-02T15:45:00.000Z",
+  "updatedAt": "2026-08-02T16:20:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": "2026-08-02T16:10:00.000Z",
+      "evidence": "34 requisitos observables y 8 escenarios de aceptacion, derivados de 11 hallazgos medidos por ejecucion contra opencode 1.18.11 (research.md R1-R11). Pendiente de aprobacion del usuario: las tres preguntas de alcance D1-D3 del plan (skill propia, memoria propia, no escribir sin CLI sobre config comentado) cambian REQ-015, REQ-018 y REQ-019",
+      "actor": "pending"
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": "2026-08-02T16:20:00.000Z",
+      "evidence": "11 tareas ordenadas con ficheros, requisitos cubiertos, verificacion y rollback; cuatro decisiones de diseno con su alternativa descartada. Pendiente de revision adversarial y de la respuesta a D1-D3",
+      "actor": "pending"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": "",
+      "actor": "pending"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": "",
+      "actor": "pending"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": "",
+      "actor": "pending"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-02T15:45:00.000Z",
+      "reason": "SDD change created: evaluar opencode como tercera integracion de install"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-02T15:50:00.000Z",
+      "reason": "Impacto mapeado: la lista de clientes esta repartida en cinco sitios y cada componente de plan_install se ramifica por cliente"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-02T16:05:00.000Z",
+      "reason": "Research cerrado y viabilidad confirmada por medicion contra el binario real de opencode 1.18.11: no hereda la config MCP de Claude Code ni Codex, tiene CLI no interactiva para anadir, sustituye {env:VAR} sin escribir el secreto, y no declara elicitation"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-02T16:10:00.000Z",
+      "reason": "Spec redactada; el plan se adelanta en la misma pasada porque el research resulto concluyente y las tres preguntas abiertas son de alcance, no de viabilidad"
+    }
+  ]
+}
