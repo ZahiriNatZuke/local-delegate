@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "verifying",
   "createdAt": "2026-08-02T15:45:00.000Z",
-  "updatedAt": "2026-08-02T17:40:00.000Z",
+  "updatedAt": "2026-08-02T18:05:00.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -22,7 +22,7 @@
     "quality": {
       "status": "pending",
       "updatedAt": "2026-08-02T17:40:00.000Z",
-      "evidence": "pytest 700 passed 4 skipped (1 failed anterior y ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK; 7 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected",
+      "evidence": "pytest 701 passed 4 skipped (1 failed anterior y ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK (ampliado para cubrir opencode); 8 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. La revision del diff encontro un defecto real (lectura tolerante que confundia vacio con ilegible) y quedo corregido con test",
       "actor": "pending"
     },
     "conformance": {
