@@ -412,7 +412,7 @@ def test_memory_missing_in_both_clients(tmp_path):
 
 
 def test_absent_client_is_unknown_not_missing(tmp_path):
-    ctx = make_ctx(make_home(tmp_path, claude=False, codex=False))
+    ctx = make_ctx(make_home(tmp_path, claude=False, codex=False, opencode=False))
     for check, result in checks.run_all(ctx):
         if check.group == "andamiaje":
             assert result.status == checks.UNKNOWN, f"{check.id}: {result.detail}"
@@ -955,6 +955,7 @@ _NUMERO = {
     14: "catorce",
     15: "quince",
     16: "dieciséis",
+    17: "diecisiete",
 }
 
 

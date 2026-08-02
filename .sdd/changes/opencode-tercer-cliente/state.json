@@ -3,26 +3,26 @@
   "slug": "opencode-tercer-cliente",
   "title": "opencode como tercer cliente de install",
   "mode": "standard",
-  "status": "planning",
+  "status": "verifying",
   "createdAt": "2026-08-02T15:45:00.000Z",
-  "updatedAt": "2026-08-02T16:20:00.000Z",
+  "updatedAt": "2026-08-02T17:40:00.000Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": "2026-08-02T16:10:00.000Z",
-      "evidence": "34 requisitos observables y 8 escenarios de aceptacion, derivados de 11 hallazgos medidos por ejecucion contra opencode 1.18.11 (research.md R1-R11). Pendiente de aprobacion del usuario: las tres preguntas de alcance D1-D3 del plan (skill propia, memoria propia, no escribir sin CLI sobre config comentado) cambian REQ-015, REQ-018 y REQ-019",
-      "actor": "pending"
+      "status": "approved",
+      "updatedAt": "2026-08-02T16:35:00.000Z",
+      "evidence": "34 requisitos observables y 8 escenarios sobre 11 hallazgos medidos por ejecucion contra opencode 1.18.11. Las tres preguntas de alcance D1-D3 resueltas por el usuario a favor de la recomendacion: skill en el directorio propio, memoria en su AGENTS.md, y no escribir la entrada MCP cuando no hay CLI y el fichero tiene comentarios",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": "2026-08-02T16:20:00.000Z",
-      "evidence": "11 tareas ordenadas con ficheros, requisitos cubiertos, verificacion y rollback; cuatro decisiones de diseno con su alternativa descartada. Pendiente de revision adversarial y de la respuesta a D1-D3",
-      "actor": "pending"
+      "status": "approved",
+      "updatedAt": "2026-08-02T16:35:00.000Z",
+      "evidence": "11 tareas ordenadas con ficheros, requisitos, verificacion y rollback; cuatro decisiones con su alternativa descartada (funcion vs ruta para el config, identidad por clave sin marcadores, CLI del cliente por defecto, no escribir antes que destruir). La trampa del detector de comentarios con http:// quedo anotada en el plan y tiene test propio",
+      "actor": "user"
     },
     "quality": {
       "status": "pending",
-      "updatedAt": null,
-      "evidence": "",
+      "updatedAt": "2026-08-02T17:40:00.000Z",
+      "evidence": "pytest 700 passed 4 skipped (1 failed anterior y ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK; 7 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected",
       "actor": "pending"
     },
     "conformance": {
@@ -66,6 +66,36 @@
       "to": "planning",
       "at": "2026-08-02T16:10:00.000Z",
       "reason": "Spec redactada; el plan se adelanta en la misma pasada porque el research resulto concluyente y las tres preguntas abiertas son de alcance, no de viabilidad"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-02T16:35:00.000Z",
+      "evidence": "D1-D3 resueltas a favor de la recomendacion",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-02T16:35:00.000Z",
+      "evidence": "Plan de 11 tareas aprobado junto con la spec",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-08-02T16:36:00.000Z",
+      "reason": "Gates de spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-02T17:40:00.000Z",
+      "reason": "Las 11 tareas implementadas; suite, estatica, mutacion dirigida y verificacion contra el cliente real en verde"
     }
   ]
 }

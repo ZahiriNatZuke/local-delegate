@@ -58,6 +58,21 @@ Claude Code:
 claude mcp add --transport http --scope user local-delegate http://127.0.0.1:9393/mcp
 ```
 
+opencode (`~/.config/opencode/opencode.json`, o su CLI):
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "local-delegate": { "type": "remote", "url": "http://127.0.0.1:9393/mcp" }
+  }
+}
+```
+
+```bash
+opencode mcp add local-delegate --url http://127.0.0.1:9393/mcp
+```
+
 Configura todos los clientes contra la misma URL. El daemon y `llama-swap` quedan como los dos
 únicos procesos persistentes relevantes: el primero posee MCP/dashboard/telemetría; el segundo
 posee el ciclo de vida y routing de modelos.
@@ -104,9 +119,12 @@ local-delegate install --mcp-mode http --web-token-env
 ```
 
 Eso deja a Claude Code con `"headers": {"Authorization": "Bearer ${LOCAL_DELEGATE_WEB_TOKEN}"}`
-—que expande al conectar— y a Codex con `bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"`, que es
+—que expande al conectar—, a Codex con `bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"`, que es
 la clave que tiene para esto (Codex no expande `${VAR}` en TOML, y de hecho rechaza un token
-literal en este transporte).
+literal en este transporte), y a opencode con
+`"Authorization": "Bearer {env:LOCAL_DELEGATE_WEB_TOKEN}"`, que es **su** sintaxis: opencode no
+sustituye `${VAR}`, así que la forma de Claude Code ahí llegaría literal y el backend devolvería
+`401`.
 
 Para que funcione, **la variable tiene que existir también en el entorno del cliente**, no solo en
 el del daemon. Es el punto donde esto se rompe en silencio: si el cliente no la ve, manda un token

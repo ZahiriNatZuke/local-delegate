@@ -53,12 +53,37 @@ def _hooks_registrados(casa: Path) -> int:
     return sum(len(g["hooks"]) for grupos in datos.get("hooks", {}).values() for g in grupos)
 
 
+def _entrada_opencode(directorio: Path) -> dict | None:
+    """La entrada `local-delegate` en la config de opencode, mirando **los dos** ficheros.
+
+    opencode lee `opencode.json` y `opencode.jsonc` y los fusiona, y `install` elige uno u otro
+    según cuál exista: comprobar solo uno daría por ausente lo que está en el otro.
+    """
+    for nombre in ("opencode.json", "opencode.jsonc"):
+        ruta = directorio / nombre
+        if not ruta.is_file():
+            continue
+        # Sin comentarios: los escribe `install` con un serializador de JSON, no una persona.
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        entrada = (datos.get("mcp") or {}).get("local-delegate")
+        if isinstance(entrada, dict):
+            return entrada
+    return None
+
+
 def main() -> int:
     casa = Path(tempfile.mkdtemp(prefix="ld-e2e-")) / "casa"
-    # Los dos directorios de cliente se crean a mano: `install` configura los que **existen**, y
+    # Los tres directorios de cliente se crean a mano: `install` configura los que **existen**, y
     # sin esto el paso probaría el camino de «no hay ningún cliente», que no es el que interesa.
+    #
+    # El de opencode se escribe como ruta literal a propósito, y no derivándolo de
+    # `install.opencode_dir`: esto es una prueba de caja negra del **comando**, y comprobarlo con
+    # la misma función que lo calcula no probaría que la ruta documentada es la que se usa. Con un
+    # HOME simulado la variable `XDG_CONFIG_HOME` se ignora, así que es determinista.
     (casa / ".claude").mkdir(parents=True)
     (casa / ".codex").mkdir(parents=True)
+    opencode = casa / ".config" / "opencode"
+    opencode.mkdir(parents=True)
     print(f"HOME temporal: {casa}", flush=True)
 
     comunes = ["--home", str(casa), "--no-client-cli"]
@@ -92,6 +117,18 @@ def main() -> int:
         "local-delegate:begin" in (casa / ".codex" / "AGENTS.md").read_text(encoding="utf-8"),
         "no se escribió el bloque de memoria de Codex",
     )
+    _exigir(
+        "local-delegate:begin" in (opencode / "AGENTS.md").read_text(encoding="utf-8"),
+        "no se escribió el bloque de memoria de opencode",
+    )
+    _exigir(
+        (opencode / "skill" / "delegacion-local" / "SKILL.md").is_file(),
+        "no se instaló la skill en el directorio de opencode",
+    )
+    _exigir(
+        _entrada_opencode(opencode) is not None,
+        "no se escribió la entrada MCP de opencode",
+    )
 
     registrados = _hooks_registrados(casa)
     _exigir(
@@ -105,6 +142,14 @@ def main() -> int:
         "`uninstall` dejó los scripts de hooks: el módulo promete ser reversible",
     )
     _exigir(not (claude / "skills" / "delegacion-local").exists(), "`uninstall` dejó la skill")
+    _exigir(
+        not (opencode / "skill" / "delegacion-local").exists(),
+        "`uninstall` dejó la skill de opencode",
+    )
+    _exigir(
+        _entrada_opencode(opencode) is None,
+        "`uninstall` dejó la entrada MCP en la configuración de opencode",
+    )
     _exigir(
         _hooks_registrados(casa) == 0,
         "`uninstall` dejó hooks nuestros registrados en settings.json",

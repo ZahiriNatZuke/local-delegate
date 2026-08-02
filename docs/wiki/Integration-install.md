@@ -21,22 +21,30 @@ local-delegate uninstall             # revierte solo lo que instaló
 
 | Componente | Destino | Notas |
 |---|---|---|
-| Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI) y `~/.codex/config.toml` | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
+| Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI), `~/.codex/config.toml` y opencode (`opencode mcp add`, o `~/.config/opencode/opencode.json[c]` si no está la CLI) | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
 | Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `PreToolUse`/`Bash`; el de `Read` solo con `--enable-read-hook`, que lo deja activo |
-| Skill | `~/.claude/skills/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
-| Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | resumen corto de la regla, siempre cargado |
+| Skill | `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
+| Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
 
 ## A quién configura
 
 Por defecto (`--clients auto`), **solo los clientes que están instalados**: se mira si existen
-`~/.claude` y `~/.codex`. En una máquina con un solo cliente ya no se crea el directorio del
-otro, que era lo que pasaba con el antiguo default `--target all`.
+`~/.claude`, `~/.codex` y el directorio de configuración de opencode. En una máquina con un solo
+cliente ya no se crea el directorio del otro, que era lo que pasaba con el antiguo default
+`--target all`.
 
 ```bash
 local-delegate install                      # los que estén instalados
 local-delegate install --clients codex      # ese, exista o no (orden explícita)
-local-delegate install --target all         # los dos, como antes
+local-delegate install --clients opencode   # idem
+local-delegate install --target all         # los tres, como antes
 ```
+
+> **Dónde está la configuración de opencode.** En `~/.config/opencode/`, **no** en `~/.opencode/`,
+> y `XDG_CONFIG_HOME` gana sobre el HOME si está puesta — medido contra opencode 1.18.11 con
+> `opencode debug paths`. El paquete deriva esa ruta en un solo sitio
+> (`install.opencode_dir`), así que `install` y `doctor` miran siempre el mismo fichero.
+> Con `--home` la variable se ignora, para que el árbol simulado siga siendo un sandbox.
 
 Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termina bien (exit 0).
 
@@ -56,17 +64,46 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
   lo que ignore el `--home`.
 - **Backups.** Cada archivo compartido que se edita deja un `.bak` al lado.
 - **Sin secretos.** `--api-key-env` reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno
-  (`${LOCAL_DELEGATE_API_KEY}` en Claude Code, `env_vars` en Codex): la key nunca se escribe.
+  (`${LOCAL_DELEGATE_API_KEY}` en Claude Code, `env_vars` en Codex, `{env:LOCAL_DELEGATE_API_KEY}`
+  en opencode — cada uno tiene su sintaxis y la del otro **no** se expande): la key nunca se escribe.
+- **Con opencode, no se pisa un fichero que lleve comentarios.** Su configuración es JSONC y
+  admite comentarios aunque el fichero se llame `.json`; reescribirla con un serializador de JSON
+  los borraría **sin que el fichero pareciera roto**. Por eso el camino normal es su propia CLI
+  (`opencode mcp add`, que los conserva), y cuando esa CLI no está y el fichero tiene comentarios
+  —o no se puede parsear— la entrada MCP **no se escribe**: se avisa con la ruta y se sigue con el
+  resto de componentes. Instalar la CLI de opencode y repetir el `install` lo resuelve.
+- **En opencode nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel
+  desconocida hace que opencode **no arranque** (`ConfigInvalidError`), así que ahí no hay
+  marcadores `local-delegate:begin/end`: la entrada se identifica por su nombre, como en Claude
+  Code. Consecuencia: en opencode no hay pregunta previa equivalente a `--force-mcp-codex`, porque
+  no hay forma de distinguir una entrada nuestra de una que escribiste tú.
 - **Reversible.** `uninstall` borra los directorios propios y quita solo sus entradas.
+
+## Comprobarlo desde el propio cliente
+
+Cada cliente sabe decir si ve el servidor, y eso comprueba el camino entero —no solo que el
+fichero esté escrito—:
+
+```bash
+claude mcp list
+codex mcp list
+opencode mcp list      # debe decir: ✓ local-delegate connected
+```
+
+> **opencode no puede responder preguntas.** Declara la capability `roots` pero **no**
+> `elicitation` (medido contra la 1.18.11), así que las tools que saben preguntar en vez de fallar
+> —backend caído, modelo inexistente, `output_format` vacío— con opencode vuelven al mensaje de
+> error de siempre. No es un fallo de la instalación y `doctor` lo enseña en la línea
+> «clientes MCP observados».
 
 ## Opciones
 
 | Flag | Efecto |
 |---|---|
 | `--dry-run` | describe los cambios sin escribir nada |
-| `--clients auto \| claude \| codex` | cliente(s) a configurar (repetible; default `auto`) |
+| `--clients auto \| claude \| codex \| opencode` | cliente(s) a configurar (repetible; default `auto`) |
 | `--force-mcp-codex` | reemplaza sin preguntar una entrada de Codex escrita a mano |
-| `--target claude \| codex \| all` | histórico, equivale a `--clients`; `all` fuerza los dos aunque no estén instalados. No se combina con `--clients` |
+| `--target claude \| codex \| opencode \| all` | histórico, equivale a `--clients`; `all` fuerza los tres aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
 | `--enable-read-hook` | registra **y enciende** el experimental `PreToolUse`/`Read`. Antes solo lo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada |
@@ -153,7 +190,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 |---|---|---|
 | Entorno | CLI local-delegate | que el comando exista en el PATH — con `uvx` **no queda instalado** |
 | Entorno | versión publicada | la instalada vs la última en PyPI, para que una instalación vieja no pase el diagnóstico en silencio |
-| Entorno | clientes | si existen `~/.claude` y `~/.codex` |
+| Entorno | clientes | si existen `~/.claude`, `~/.codex` y `~/.config/opencode` |
 | Entorno | clientes MCP observados | con qué clientes se ha **hablado** de verdad: versión, revisión de protocolo negociada y si declaran `elicitation` (o sea, si las tools pueden preguntarles en vez de fallar). Sale de `clients.jsonl`, en `LOG_DIR`, y es **informativo**: nunca sube el exit code |
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
 | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
@@ -162,6 +199,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
+| Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
 | Servicios | backend | `BASE_URL/models` |
 | Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
