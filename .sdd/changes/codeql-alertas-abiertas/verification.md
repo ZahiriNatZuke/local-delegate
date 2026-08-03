@@ -10,12 +10,32 @@
 
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
-| REQ-001 | Extraer el JS antes y después del cambio y comparar | **OK** | `cmp` → idéntico byte a byte (41 633 chars, sha256 `6e030c20…`); `node --check` pasa |
+| REQ-001 | Extraer el JS antes y después del cambio y comparar | **OK, en tres vueltas** | `cmp` → idéntico byte a byte las tres veces (41 633 chars, sha256 `6e030c20…`); `node --check` pasa; 7 combinaciones de etiqueta probadas |
 | REQ-002 | Comentario dentro de cada uno de los tres `except`; sin tocar flujo de control | **OK** | diff: solo líneas de comentario añadidas en `hook_common.py`, `daemon.py`, `server.py` |
 | REQ-003 | **Mutante**: primera lectura de `config.WEB_FONTS` forzada a `True` | **OK, distingue** | el test falla exactamente en `assert hoja not in html`, mostrando el `<link>` de Google Fonts emitido |
 | REQ-004 | **Mutante dirigido**: `with _chat_slots:` → `acquire()` sin release, con 2 hilos (sin deadlock) | **OK, distingue** | falla en `assert (estado_final, slots) == ((2,0), [True,True])` con `((2,0), [False,False])`, en 0.34 s |
 | REQ-006 | Suite completa + linters | **OK** | `722 passed, 2 skipped`; `ruff check` limpio; `ruff format --check`: 74 ficheros ya formateados |
 | REQ-005 | Descartes de #19, #13, #11, #12 | **PENDIENTE** | por diseño: van después del merge (decisión del usuario) |
+
+### El arreglo de #20 tuvo que hacerse tres veces, y lo dijo el CI, no yo
+
+La verificación local (salida idéntica byte a byte) daba REQ-001 por bueno desde la primera vuelta,
+y era verdad — pero medía **la ausencia de regresión**, no la satisfacción de la regla. Quien
+midió eso fue el job de CodeQL de la propia PR, en tres rondas: cada arreglo destapaba la siguiente
+objeción de `py/bad-tag-filter` sobre el mismo patrón.
+
+1. `re.IGNORECASE` → «no captura `</script >`» (cierre con espacio).
+2. `</script\s*>` → «no captura `</script\t\n bar>`» (cierre con atributos sueltos).
+3. `</script(?:\s[^>]*)?>` → **check en verde**.
+
+Dos cosas que dejar dichas. La primera: **el `gh run list` daba los tres workflows en verde mientras
+el check `CodeQL` de la PR estaba en rojo** — son cosas distintas, el job `Analyze (python)` pasa
+siempre que el análisis corra, y el veredicto sobre las alertas vive en un check aparte. Sin mirar
+`gh pr checks` completo esto se habría mergeado creyendo que estaba arreglado.
+
+La segunda: la escalera es el comportamiento normal de esa regla, cuyo fondo es «no parsees HTML con
+regex». El plan fijaba de antemano dónde parar —si aparecía una cuarta objeción, la alerta pasaba a
+descarte por inaplicable— y no hizo falta usarlo.
 
 ### Lo que el control positivo dejó ver, y que conviene no maquillar
 
