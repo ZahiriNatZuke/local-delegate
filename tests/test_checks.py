@@ -420,7 +420,10 @@ def test_absent_client_is_unknown_not_missing(tmp_path):
 
 
 def test_only_codex_installed_leaves_claude_checks_unknown(tmp_path):
-    ctx = make_ctx(make_home(tmp_path, claude=False))
+    # `opencode=False` explícito y no por el default: sin esto el HOME tenía **dos** clientes y el
+    # test no probaba lo que dice su nombre. Pasaba igual porque `_probe_skill` solo miraba Claude
+    # Code; en cuanto el probe empezó a mirar los dos, la skill de opencode lo puso en `ok`.
+    ctx = make_ctx(make_home(tmp_path, claude=False, opencode=False))
     assert result_for("scaffold.skill", ctx).status == checks.UNKNOWN
     assert result_for("scaffold.hook_files", ctx).status == checks.UNKNOWN
     assert result_for("scaffold.mcp_codex", ctx).status == checks.OK

@@ -180,7 +180,12 @@ REPAIRS: tuple[Repair, ...] = (
         # `warn` = el directorio existe sin SKILL.md. También es nuestro y está incompleto.
         (checks.MISSING, checks.WARN),
         frozenset({"skill"}),
-        frozenset({"claude"}),
+        # `PRESENT` y no `{"claude"}`: la skill se escribe en dos clientes, y fijar uno dejaba la
+        # de opencode sin reponer aunque el check la viera faltar. Que `PRESENT` incluya también
+        # Codex es inocuo —`plan_install` no emite acción de skill para él, porque no tiene
+        # skills—, y es el mismo marcador que ya usa `scaffold.memory` por la misma razón: no
+        # crearle a nadie el directorio de un cliente que no tiene instalado.
+        PRESENT,
         why="skill incompleta",
     ),
     Repair("scaffold.memory", (checks.MISSING,), frozenset({"memory"}), PRESENT),

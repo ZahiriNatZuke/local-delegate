@@ -655,17 +655,51 @@ def _probe_hook_settings(ctx: Context) -> Result:
 
 
 def _probe_skill(ctx: Context) -> Result:
-    if absent := _claude_absent(ctx):
-        return absent
-    skill_dir = ctx.claude_dir / "skills" / install.SKILL_NAME
-    entries, reason = _dir_entries(skill_dir)
-    if reason:
-        return Result(UNKNOWN, reason)
-    if entries is None:
-        return Result(MISSING, f"no existe {skill_dir}", INSTALL_HINT)
-    if "SKILL.md" not in entries:
-        return Result(WARN, f"{skill_dir} existe pero no tiene SKILL.md", INSTALL_HINT)
-    return Result(OK, f"instalada en {skill_dir}")
+    """La skill ``delegacion-local`` en cada cliente que sepa cargarla.
+
+    Recorre clientes por lo mismo que ``_probe_memory``, y no por simetría: ``plan_install``
+    escribe la skill **también** en el directorio de opencode, así que mirar solo la de Claude Code
+    daba un ``ok`` con la de opencode borrada —un falso OK, no un hueco de cobertura— y dejaba a
+    ``update`` sin nada que reponer.
+
+    Codex no aparece: no tiene mecanismo de skills y ``plan_install`` tampoco se la escribe.
+    Reportarlo como «falta» sería inventarle a ese cliente un componente que no soporta.
+
+    Que opencode cargue **además** la de ``~/.claude/skills/`` está medido, pero no vale como
+    respuesta aquí: es apagable (``OPENCODE_DISABLE_EXTERNAL_SKILLS``) y no existe en una máquina
+    sin Claude Code. Dar por buena la de allí sería decir ``ok`` de un fichero que este cliente
+    puede no estar viendo.
+    """
+    subruta = {
+        "Claude Code": Path("skills") / install.SKILL_NAME,
+        "opencode": Path(install.OPENCODE_SKILL_SUBDIR) / install.SKILL_NAME,
+    }
+    statuses: list[str] = []
+    details: list[str] = []
+    for label, client_dir in _clientes(ctx):
+        if label not in subruta:
+            continue
+        if not client_dir.is_dir():
+            # Igual que en `_probe_memory`: un cliente que no está en la máquina no arrastra el
+            # estado del check. Solo si no aplica ninguno el resultado es `unknown`.
+            details.append(f"{label}: cliente no instalado")
+            continue
+        skill_dir = client_dir / subruta[label]
+        entries, reason = _dir_entries(skill_dir)
+        if reason:
+            statuses.append(UNKNOWN)
+            details.append(f"{label}: {reason}")
+        elif entries is None:
+            statuses.append(MISSING)
+            details.append(f"{label}: no existe {skill_dir}")
+        elif "SKILL.md" not in entries:
+            statuses.append(WARN)
+            details.append(f"{label}: {skill_dir} existe pero no tiene SKILL.md")
+        else:
+            statuses.append(OK)
+            details.append(f"{label}: instalada en {skill_dir}")
+    status = _worst(statuses) if statuses else UNKNOWN
+    return Result(status, " · ".join(details), INSTALL_HINT if is_warning(status) else "")
 
 
 def _probe_memory(ctx: Context) -> Result:

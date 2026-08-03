@@ -48,6 +48,61 @@ fallo de lectura en vez de hacer `chmod 000`: el `chmod` no quita la lectura ni 
 root, así que un test escrito así habría pasado sin reproducir el caso — que es exactamente cómo
 este defecto llegó a existir.
 
+## Un segundo defecto, encontrado revisando el diff desde Windows (2026-08-02)
+
+**El probe de la skill miraba solo `~/.claude/skills/` mientras `plan_install` la escribía en los
+dos clientes.** Con Claude Code presente eso no era un hueco de cobertura: era un **falso OK**.
+Medido por ejecución, con la skill de opencode borrada a mano:
+
+```
+[ OK ] skill delegacion-local: instalada en <sim>\.claude\skills\delegacion-local
+Nada que reparar: el andamiaje está completo y los pines al día.
+```
+
+`doctor` daba por buena la de Claude Code y `update` no tenía a quién reponerle nada, porque
+`Repair("scaffold.skill", …)` seguía fijando `frozenset({"claude"})`. Para la **memoria** sí se
+había hecho el trabajo equivalente —`_probe_memory` pasó a recorrer `_clientes()`— y el comentario
+que se escribió en esa misma función dice que tener la lista dos veces «es como se cuela un cliente
+que se detecta pero al que nadie le comprueba la memoria». A la skill le pasó exactamente eso.
+
+Arreglado: `_probe_skill` recorre `_clientes()` con el mapa de dónde vive la skill en cada uno
+(Codex no está: no tiene skills y `plan_install` no se la escribe), y el `Repair` pasa a `PRESENT`,
+el mismo marcador que ya usaba `scaffold.memory` por la misma razón.
+
+**Un test pasaba por la guarda equivocada.** `test_only_codex_installed_leaves_claude_checks_unknown`
+se llama «solo Codex» pero usaba el default `opencode=True` de `make_home`: el HOME tenía dos
+clientes. Pasaba porque el probe no miraba opencode; en cuanto empezó a mirarlo, la skill de
+opencode lo puso en `ok` y el nombre del test quedó desmentido. Ahora pasa `opencode=False`
+explícito.
+
+Tres mutantes nuevos, cada uno cazado por su propio test:
+
+| Mutante | Resultado |
+|---|---|
+| `_probe_skill` vuelve a mirar solo Claude Code | CAZADO (2 tests) |
+| `Repair("scaffold.skill")` vuelve a fijar `{"claude"}` | CAZADO |
+| Codex entra en el mapa de skills | CAZADO |
+
+**Ruido de fin de línea.** Cuatro ficheros (`README.md`, `docs/wiki/Integration-install.md`,
+`cli.py`, `install.py`) pasaron de CRLF a LF al editarse desde un runner Linux, lo que inflaba el
+diff de 2 213 a 4 340 líneas y habría roto el `git blame` de los dos módulos más grandes del repo.
+Devueltos a CRLF. Normalizar el repo entero con `* text=auto` es una decisión aparte, no un efecto
+colateral de este change.
+
+## Verificación en Windows (2026-08-02)
+
+Lo que la sección «lo que NO se ha verificado» daba por pendiente, ejecutado:
+
+```
+uv run pytest -q            → 710 passed, 2 skipped
+uv run ruff check .         → All checks passed!
+uv run ruff format --check  → 74 files already formatted
+scripts/check_install_e2e.py → instalador OK en win32
+```
+
+Sin el `1 failed` de Linux: ese fallo era el `chmod 000` que no quita lectura al root, y en Windows
+el test está marcado `skipif`. Los 710 incluyen los tres nuevos de la skill.
+
 ## Contra el cliente real (opencode 1.18.11)
 
 Esto es lo que distingue la verificación de este change de una de papel: no se comprueba que
@@ -107,11 +162,11 @@ inspección directa del artefacto:
 
 ## Lo que NO se ha verificado, y por qué
 
-- **Windows y macOS.** El e2e de `scripts/check_install_e2e.py` ya cubre opencode y corre en los
-  tres runners del CI, pero aquí solo se ha ejecutado en Linux. Lo específico de plataforma en este
-  change es una ruta (`~/.config/opencode`) que opencode resuelve igual en los tres —usa XDG
-  también en Windows, que es un comportamiento suyo conocido y algo que ellos mismos tratan como
-  bug abierto—, así que el riesgo está acotado y el CI lo cerrará.
+- ~~**Windows y macOS.**~~ Windows queda verificado arriba (suite, estática y e2e). macOS sigue
+  cubierto solo por el runner del CI. Lo específico de plataforma en este change es una ruta
+  (`~/.config/opencode`) que opencode resuelve igual en los tres —usa XDG también en Windows, que
+  es un comportamiento suyo conocido y algo que ellos mismos tratan como bug abierto—, así que el
+  riesgo restante está acotado.
 - **El camino por CLI bajo `--home`.** Está apagado a propósito (`use_cli=False` con HOME simulado)
   para que la suite no dependa de qué binarios haya en la máquina. Se ejercitó a mano, con el
   binario real, llamando a `_register_opencode_mcp` directamente (punto 2 de arriba).
