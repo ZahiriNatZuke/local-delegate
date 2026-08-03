@@ -14,10 +14,13 @@ from pathlib import Path
 from local_delegate.web import metrics
 
 # El <script> inline es el que NO tiene atributo src= (el otro carga Chart.js del paquete).
-# IGNORECASE: hoy el HTML va todo en minúsculas, pero una etiqueta <SCRIPT> o un SRC= colado más
-# adelante haría que este script extrajera el bloque equivocado —o ninguno— en silencio.
+# Hoy el HTML va todo en minúsculas y sin espacios raros, pero las dos tolerancias de abajo son
+# gratis y evitan que un cambio futuro en el dashboard rompa este script EN SILENCIO —extrayendo
+# el bloque equivocado, o ninguno, en vez de fallar:
+#   - IGNORECASE: una etiqueta <SCRIPT> o un SRC= en mayúsculas.
+#   - `</script\s*>`: el cierre con espacio, que HTML acepta igual.
 scripts = re.findall(
-    r"<script(?![^>]*src=)[^>]*>(.*?)</script>", metrics.HTML, re.DOTALL | re.IGNORECASE
+    r"<script(?![^>]*src=)[^>]*>(.*?)</script\s*>", metrics.HTML, re.DOTALL | re.IGNORECASE
 )
 if not scripts:
     raise SystemExit("no se encontró el <script> inline del dashboard")
