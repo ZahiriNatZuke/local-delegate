@@ -100,15 +100,43 @@ $env:LOCAL_DELEGATE_WEB_TOKEN = '<un secreto largo y aleatorio>'
 ```
 
 Con ella, **todo** el puerto exige el token: el endpoint MCP, el dashboard y `/api/*`. Se acepta de
-dos formas, porque hay dos clases de cliente:
+tres formas, porque hay tres clases de cliente:
 
 | Cómo llega | Quién la usa |
 | --- | --- |
 | `Authorization: Bearer <token>` | clientes MCP, `curl`, el propio CLI |
-| `Authorization: Basic <base64(usuario:token)>` | el navegador, que pide las credenciales solo |
+| `Authorization: Basic <base64(usuario:token)>` | el navegador, la **primera** vez |
+| `Cookie: ld_sesion=…` | el navegador, a partir de la segunda |
 
 En el navegador, el usuario da igual —solo se compara la contraseña— y basta con pegar el token
 donde pide la clave: el 401 lleva `WWW-Authenticate`, así que el diálogo sale sin más.
+
+### La sesión del navegador
+
+Basic tiene un problema práctico: el navegador solo lo recuerda mientras la ventana vive, y por
+origen exacto. En la práctica el panel volvía a pedir el token al reabrir el navegador, y otra vez
+al entrar por `localhost` en lugar de por `127.0.0.1`. Un secreto largo que hay que pegar varias
+veces al día es un secreto que se acaba quitando.
+
+Por eso, cuando entras con Basic el daemon te devuelve una cookie de sesión y a partir de ahí no te
+pide nada durante **un año**, renovándola en cada visita. No hay pantalla de login, ni estado
+guardado en el servidor, ni fichero de sesiones: la cookie lleva su propia fecha de caducidad
+firmada con HMAC-SHA256 **usando el token como clave**. De ahí salen tres propiedades:
+
+- no se puede fabricar sin conocer el token;
+- no se puede alargar a mano — la fecha va *dentro* de lo firmado;
+- **rotar el token echa a todas las sesiones** por el mero hecho de rotarlo.
+
+La cookie es `HttpOnly` y `SameSite=Lax`, que es lo que hace de protección CSRF: una página ajena
+no consigue que tu navegador la adjunte a un `fetch` ni a un POST contra el puerto del daemon. No
+lleva `Secure` a propósito, porque el daemon habla HTTP plano incluso cuando el TLS lo pone un
+proxy delante (`tailscale serve`), y con `Secure` se rompería el acceso directo por `http://<ip>`.
+
+Solo la recibe el navegador: un cliente MCP o el CLI mandan Bearer en cada llamada y no tienen
+dónde guardarla.
+
+`LOCAL_DELEGATE_WEB_SESSION_DAYS` cambia la duración; `0` desactiva la sesión y deja la puerta
+pidiendo credenciales en cada petición.
 
 ### Que los clientes sigan funcionando
 

@@ -52,6 +52,14 @@ conviene tener presentes al reportar o al desplegar:
   abrir el panel desde un navegador). Sin la variable no cambia nada, para no romper instalaciones
   existentes. Ver [Daemon](docs/wiki/Daemon.md#autenticación-del-puerto).
 
+  Tras entrar una vez con Basic, el navegador recibe una **cookie de sesión** y no vuelve a pedir el
+  token durante un año. No hay estado en el servidor: la cookie lleva su caducidad firmada con
+  HMAC-SHA256 usando el token como clave, así que no se puede fabricar ni alargar sin conocerlo, y
+  **rotar el token invalida todas las sesiones vivas**. Es `HttpOnly` y `SameSite=Lax` —lo que aquí
+  sustituye a un token CSRF— y solo la recibe quien se autentica por Basic, nunca un cliente MCP.
+  Está por una razón de seguridad y no de comodidad: una protección que pide el secreto varias veces
+  al día es una protección que se termina desactivando.
+
   El token **no se escribe en ningún fichero de configuración**: `local-delegate install
   --mcp-mode http --web-token-env` deja a los clientes referenciando la variable de entorno
   (`${LOCAL_DELEGATE_WEB_TOKEN}` en Claude Code, `bearer_token_env_var` en Codex).

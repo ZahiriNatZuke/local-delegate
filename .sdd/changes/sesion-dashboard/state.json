@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "slug": "sesion-dashboard",
+  "title": "El dashboard guarda la sesion en vez de pedir el token en cada visita",
+  "mode": "lite",
+  "status": "closed",
+  "createdAt": "2026-08-03T13:40:00.000Z",
+  "updatedAt": "2026-08-03T14:05:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T13:46:00.000Z",
+      "evidence": "Causa leida en el codigo, no supuesta: web/auth.py acepta Bearer y Basic, y Basic es la unica credencial que un navegador manda sin pantalla de login. Que no persista entre sesiones ni entre origenes es comportamiento documentado de HTTP (RFC 7617), no una hipotesis sobre este repo. Lo importante del encuadre: la alternativa que planteaba el propio reporte -quitar el token- reabre el agujero cerrado el dia anterior, con /api/stats y /api/hooks sirviendo el log real de delegaciones en la tailnet, asi que la incomodidad ES el problema de seguridad. Doce requisitos observables, incluido uno (R12) que solo puede comprobar un navegador real.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T13:48:00.000Z",
+      "evidence": "Cookie firmada sin estado en el servidor: valor '<expiracion>.<HMAC-SHA256(clave=token)>'. El token como clave del HMAC es la decision central y se eligio por lo que da gratis -rotar el token invalida todas las sesiones vivas, sin lista que purgar ni secreto extra que sobreviva a los reinicios del daemon-. La expiracion va DENTRO del mensaje firmado porque si no, una cookie caducada se vuelve eterna cambiandole el numero. Sin Secure a proposito: el TLS lo pone tailscale serve delante y el daemon ve HTTP plano, asi que Secure romperia el acceso directo por http://<ip>:9393. SameSite=Lax sustituye a un token CSRF. Renovacion a media vida para no poner Set-Cookie en cada carga ni dejar caducar una sesion en uso. Riesgo residual aceptado y escrito: quien robe la cookie del disco entra hasta que se rote el token.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T14:02:00.000Z",
+      "evidence": "722 tests pasados y 2 saltados; ruff check y format limpios. Tests verificados AL REVES con siete mutantes -sin caducidad, firma que no cubre la expiracion, cookie tambien con Bearer, duracion 0 que no desactiva, cookie sin HttpOnly ni SameSite, nunca renueva, cookie ignorada del todo-: SIETE MUERTOS, ninguno superviviente. Medido ademas contra el daemon REAL en un puerto y un LOG_DIR aparte para no tocar el instalado del usuario, y contra un navegador REAL (Chromium por Playwright), que es lo unico que puede ver si los atributos de la cookie permiten persistirla: guardo 1 cookie con httpOnly=True, sameSite=Lax, secure=False, y un contexto nuevo sin credenciales entro con 200 y su fetch a /api/stats tambien. Ruido de CRLF detectado antes de commitear comparando git diff --numstat con --ignore-cr-at-eol: 261/124 frente a 147/10, corregido a LF.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T14:03:00.000Z",
+      "evidence": "Los doce requisitos verificados, tabla en review.md. Dos hallazgos propios, los dos del mismo patron que el repo ya tiene registrado -una prueba que da el veredicto correcto por la razon equivocada- y cazados por leer el resultado en vez del codigo de estado: el control negativo del test entraba por el jar de cookies del TestClient de httpx, y el control negativo contra el daemon real mandaba una cookie VACIA por un error de sintaxis de PowerShell, de modo que su 401 no venia de una firma invalida. Ambos rehechos. Nada que tocar en install.py ni checks.py: service.credential sigue preguntando sin cabecera y sin cookie.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T14:05:00.000Z",
+      "evidence": "handoff.md con lo que no se deduce del codigo: por que el token es la clave del HMAC (rotarlo echa a todos, gratis), por que la cookie NO lleva Secure (el TLS lo pone el proxy y Secure romperia el acceso directo por IP), por que esto es seguridad y no comodidad, y por que solo Basic recibe cookie. Mas tres trampas del entorno: el singleton bloquea probar el daemon del repo si hay uno instalado corriendo y su mensaje de error no lo dice asi, el TestClient de Starlette se come los controles negativos por su jar, y Write puede dejar un fichero en CRLF sobre un repo en LF. Sin secretos ni datos personales: el token usado en las pruebas es de usar y tirar y el daemon de prueba escribio en un directorio temporal.",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-03T13:40:00.000Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-03T13:43:00.000Z",
+      "reason": "puerta del puerto leida entera antes de proponer nada"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-03T13:45:00.000Z",
+      "reason": "enfoque elegido por el usuario entre cuatro opciones, con el coste de cada una"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-03T13:46:00.000Z",
+      "evidence": "Doce requisitos observables; la premisa es comportamiento documentado de HTTP Basic y no una hipotesis sobre este codigo.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-03T13:46:30.000Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-03T13:48:00.000Z",
+      "evidence": "Cookie firmada con el token como clave del HMAC; sin Secure a proposito; SameSite=Lax en lugar de token CSRF.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-08-03T13:48:30.000Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-03T13:58:00.000Z",
+      "reason": "implementado; toca medirlo contra algo que no sea la propia pieza"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-03T14:02:00.000Z",
+      "evidence": "Siete mutantes muertos, daemon real y navegador real; ruido de CRLF corregido antes de commitear.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-03T14:03:00.000Z",
+      "evidence": "Doce requisitos conformes; dos controles negativos que no probaban nada, cazados y rehechos.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-03T14:03:30.000Z",
+      "reason": "conformance aprobado"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-03T14:05:00.000Z",
+      "evidence": "handoff.md con las cuatro decisiones no deducibles del codigo y las tres trampas del entorno.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-03T14:05:10.000Z",
+      "reason": "result review conforms sin seguimiento"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-03T14:05:20.000Z",
+      "reason": "verificado; queda decidir si se publica"
+    }
+  ]
+}
