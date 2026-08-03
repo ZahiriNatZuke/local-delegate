@@ -18,9 +18,12 @@ from local_delegate.web import metrics
 # gratis y evitan que un cambio futuro en el dashboard rompa este script EN SILENCIO —extrayendo
 # el bloque equivocado, o ninguno, en vez de fallar:
 #   - IGNORECASE: una etiqueta <SCRIPT> o un SRC= en mayúsculas.
-#   - `</script\s*>`: el cierre con espacio, que HTML acepta igual.
+#   - `</script(?:\s[^>]*)?>`: el cierre con espacios o con atributos sueltos detrás
+#     (`</script >`, `</script\n foo>`), que el parser de HTML acepta como cierre igual.
 scripts = re.findall(
-    r"<script(?![^>]*src=)[^>]*>(.*?)</script\s*>", metrics.HTML, re.DOTALL | re.IGNORECASE
+    r"<script(?![^>]*src=)[^>]*>(.*?)</script(?:\s[^>]*)?>",
+    metrics.HTML,
+    re.DOTALL | re.IGNORECASE,
 )
 if not scripts:
     raise SystemExit("no se encontró el <script> inline del dashboard")
