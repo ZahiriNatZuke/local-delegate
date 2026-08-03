@@ -6,6 +6,40 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-08-03
+
+### Fixed
+- **La captura del README publicaba el log real de quien la regeneraba.** El script promete
+  interceptar `/api/*` con datos de ejemplo para no publicar actividad real, pero dos endpoints se
+  habían quedado fuera de la lista: `/api/stats`, de donde salen los **cuatro KPIs grandes** de la
+  cabecera, y `/api/hooks`, que pinta la tabla de sugerencias. Los dos llegaban al servidor real,
+  así que la imagen enseñaba las cuentas y la telemetría de quien capturó.
+
+  No saltó a la vista porque **dependía del entorno**: sin `LD_HOOK_TELEMETRY_LOG` definida la
+  tarjeta de hooks se esconde sola, así que para quien no tuviera esa variable el escape era
+  invisible. La imagen sí lo delataba, y llevaba varias releases haciéndolo: el pie decía
+  «390 eventos» —los de ejemplo— y el KPI de al lado «120 delegaciones», que eran de otro sitio.
+
+  Ahora los dos están mockeados, y el de `/api/stats` **se deriva de los mismos eventos de
+  ejemplo** en vez de llevar números a mano, así que la cabecera no puede volver a contradecir al
+  resto del panel. `tests/test_captura.py` gana un guardián que compara los `/api/*` que la página
+  pide con los que el script intercepta: un endpoint nuevo sin mock rompe el test en vez de
+  filtrarse callado.
+
+### Changed
+- **Dependencias al día.** Seis actualizaciones de Dependabot, sin cambios de código propio:
+  `fastapi` 0.140.7 → 0.141.1, `uvicorn` 0.51.0 → 0.52.0, `filelock` 3.32.0 → 3.32.2 y `ruff`
+  0.16.0 → 0.16.1 en el grupo de desarrollo. Las cuatro son bumps de minor o parche dentro de los
+  rangos ya declarados —`filelock` sigue bajo su techo `<4`— y ninguna requirió tocar
+  `pyproject.toml`.
+
+- **`actions/upload-pages-artifact` y `actions/deploy-pages`, de la v4 a la v5** en
+  `pages.yml`. Son bumps de **major**, así que se comprobó qué cambia antes de mezclarlos: el
+  `action.yml` de la v5 conserva las dos cosas de las que depende el workflow —el input `path` en
+  la primera y el output `page_url` en la segunda—, y el major solo mueve el runtime
+  (`deploy-pages` pasa a `node24`; `upload-pages-artifact` usa `upload-artifact` v7 por dentro).
+  Ninguna entrada del workflow cambia.
+
 ## [0.22.0] - 2026-08-02
 
 ### Added
@@ -1471,7 +1505,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...v0.20.0
