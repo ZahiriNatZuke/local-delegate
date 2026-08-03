@@ -6,6 +6,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-08-03
+
+### Changed
+- **Dependencias al día.** Seis actualizaciones de Dependabot, sin cambios de código propio:
+  `fastapi` 0.140.7 → 0.141.1, `uvicorn` 0.51.0 → 0.52.0, `filelock` 3.32.0 → 3.32.2 y `ruff`
+  0.16.0 → 0.16.1 en el grupo de desarrollo. Las cuatro son bumps de minor o parche dentro de los
+  rangos ya declarados —`filelock` sigue bajo su techo `<4`— y ninguna requirió tocar
+  `pyproject.toml`.
+
+- **`actions/upload-pages-artifact` y `actions/deploy-pages`, de la v4 a la v5** en
+  `pages.yml`. Son bumps de **major**, así que se comprobó qué cambia antes de mezclarlos: el
+  `action.yml` de la v5 conserva las dos cosas de las que depende el workflow —el input `path` en
+  la primera y el output `page_url` en la segunda—, y el major solo mueve el runtime
+  (`deploy-pages` pasa a `node24`; `upload-pages-artifact` usa `upload-artifact` v7 por dentro).
+  Ninguna entrada del workflow cambia.
+
 ## [0.22.0] - 2026-08-02
 
 ### Added
@@ -1471,7 +1487,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...v0.20.0
