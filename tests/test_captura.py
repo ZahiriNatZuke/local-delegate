@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -28,6 +29,16 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[1]
 CAPTURA = RAIZ / "docs" / "assets" / "dashboard.png"
 MANIFIESTO = RAIZ / "docs" / "assets" / "dashboard.json"
+SCRIPT = RAIZ / "scripts" / "dev" / "capture_dashboard.py"
+PANEL = RAIZ / "src" / "local_delegate" / "web" / "metrics.py"
+
+# Lo que el script deja pasar al servidor real, con su motivo. Es una lista corta y explícita a
+# propósito: crecer aquí es una decisión, no un descuido.
+PASAN_AL_SERVIDOR_REAL = {
+    # La versión del badge, el catálogo de modelos y el número de tools tienen que ser los de
+    # verdad — el manifiesto los usa para fechar la captura.
+    "/api/status",
+}
 
 REGENERAR = (
     "Regenera la captura y su manifiesto (necesita Playwright):\n"
@@ -71,6 +82,39 @@ def test_la_captura_ensena_la_version_actual_del_proyecto():
     assert manifiesto["version"] == version, (
         f"la captura se generó con la {manifiesto['version']} y el proyecto va por la {version}, "
         f"así que el badge del header enseña una versión que ya no es.\n{REGENERAR}"
+    )
+
+
+def test_la_captura_no_publica_datos_reales_por_un_endpoint_sin_mock():
+    """Todo `/api/*` que la página pide o está mockeado, o está en la lista de los que pasan.
+
+    Este es el fallo que motivó la comprobación: `/api/hooks` y `/api/stats` no estaban en los
+    mocks, llegaban al servidor real y la captura publicaba la telemetría y los KPIs de quien la
+    regeneraba. No saltó a la vista porque **dependía del entorno**: sin
+    `LD_HOOK_TELEMETRY_LOG` la tarjeta de hooks se esconde sola, así que el escape era invisible
+    para quien no tuviera la variable puesta.
+
+    Se comparan los endpoints que la página **pide** —no los que el servidor expone— porque solo
+    puede filtrar lo que el navegador llega a preguntar.
+    """
+    pedidos = set(re.findall(r"fetch\('(/api/[a-z/]+)", PANEL.read_text(encoding="utf-8")))
+    mockeados = set(
+        re.findall(r"^\s*'(/api/[a-z/]+)':", SCRIPT.read_text(encoding="utf-8"), re.MULTILINE)
+    )
+
+    # Control positivo: si un refactor cambia la forma de pedir o de mockear, estas dos búsquedas
+    # devolverían conjuntos vacíos y el test pasaría sin haber comprobado nada.
+    assert len(pedidos) >= 6, f"la extracción de endpoints no encontró casi nada: {pedidos}"
+    assert "/api/events" in mockeados, (
+        f"la extracción de mocks no encontró los conocidos: {mockeados}"
+    )
+
+    escapan = pedidos - mockeados - PASAN_AL_SERVIDOR_REAL
+    assert not escapan, (
+        f"la página pide {sorted(escapan)} y el script no lo intercepta, así que la captura "
+        f"publicaría la respuesta real de quien la regenere.\n"
+        f"Añádelo a MOCKS en {SCRIPT.relative_to(RAIZ).as_posix()}, o a PASAN_AL_SERVIDOR_REAL "
+        f"con su motivo si de verdad tiene que pasar."
     )
 
 

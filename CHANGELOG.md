@@ -8,6 +8,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.22.1] - 2026-08-03
 
+### Fixed
+- **La captura del README publicaba el log real de quien la regeneraba.** El script promete
+  interceptar `/api/*` con datos de ejemplo para no publicar actividad real, pero dos endpoints se
+  habían quedado fuera de la lista: `/api/stats`, de donde salen los **cuatro KPIs grandes** de la
+  cabecera, y `/api/hooks`, que pinta la tabla de sugerencias. Los dos llegaban al servidor real,
+  así que la imagen enseñaba las cuentas y la telemetría de quien capturó.
+
+  No saltó a la vista porque **dependía del entorno**: sin `LD_HOOK_TELEMETRY_LOG` definida la
+  tarjeta de hooks se esconde sola, así que para quien no tuviera esa variable el escape era
+  invisible. La imagen sí lo delataba, y llevaba varias releases haciéndolo: el pie decía
+  «390 eventos» —los de ejemplo— y el KPI de al lado «120 delegaciones», que eran de otro sitio.
+
+  Ahora los dos están mockeados, y el de `/api/stats` **se deriva de los mismos eventos de
+  ejemplo** en vez de llevar números a mano, así que la cabecera no puede volver a contradecir al
+  resto del panel. `tests/test_captura.py` gana un guardián que compara los `/api/*` que la página
+  pide con los que el script intercepta: un endpoint nuevo sin mock rompe el test en vez de
+  filtrarse callado.
+
 ### Changed
 - **Dependencias al día.** Seis actualizaciones de Dependabot, sin cambios de código propio:
   `fastapi` 0.140.7 → 0.141.1, `uvicorn` 0.51.0 → 0.52.0, `filelock` 3.32.0 → 3.32.2 y `ruff`

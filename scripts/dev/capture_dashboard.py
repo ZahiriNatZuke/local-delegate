@@ -11,6 +11,11 @@ con datos de ejemplo **deterministas**, así que:
 - `/api/status` se deja pasar sin tocar, para que la versión, el catálogo de modelos y el
   número de tools que aparecen sean los de verdad.
 
+Que la segunda promesa se cumpla **no depende de acordarse**: `tests/test_captura.py` compara los
+`/api/*` que la página pide con las claves de `MOCKS`, y un endpoint nuevo sin interceptar rompe el
+test. Se añadió después de descubrir que `/api/hooks` y `/api/stats` llevaban tiempo escapándose y
+publicando el log real de quien capturaba.
+
 El README avisa de que son «datos de ejemplo». Mantener ese pie es parte del trato.
 
 Junto al PNG se escribe un **manifiesto** (`dashboard.json`) con la versión que sirvió el
@@ -150,6 +155,28 @@ SEED_AND_MOCK = """() => {
   }
   events.sort((a, b) => a.ts.localeCompare(b.ts));
 
+  // Los cuatro KPIs grandes NO se calculan sobre `events`: el panel los pide a `/api/stats`,
+  // porque `/api/events` viene topado y sumar ahí subestimaría. Así que este mock no es opcional
+  // —sin él la cabecera del panel enseña el log real de quien captura— y tampoco puede llevar
+  // números a mano: se derivan de los mismos eventos de ejemplo, con las reglas de
+  // `_accounting()`. Cuando no cuadraban, la imagen se contradecía a sí misma: el pie decía
+  // «390 eventos» y el KPI de al lado «120 delegaciones».
+  const CPT = 4;
+  const stats = events.reduce((a, e) => {
+    const chunks = e.chunks || 1;
+    // `chars_in` de local_describe_image son BYTES, no caracteres: ahí estimar por chars no
+    // significa nada y el token real es el único orden de magnitud honesto.
+    const estimable = e.tool !== 'local_describe_image';
+    a.calls += 1;
+    a.backend_calls += chunks;
+    a.tokens_in += e.tokens_in;
+    a.tokens_out += e.tokens_out;
+    // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
+    if (e.source === 'path') a.saved += estimable ? Math.floor(e.chars_in / CPT) : e.tokens_in;
+    if (!e.ok) a.errors += 1;
+    return a;
+  }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, errors: 0});
+
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
       count: events.length, files_read: ['usage-202607.jsonl'],
@@ -178,6 +205,38 @@ SEED_AND_MOCK = """() => {
       gen_histogram: {p50: 61.4, p95: 48.2},
       prompt_histogram: {p50: 1840.5, p95: 1210.7},
       total_input_tokens: 486320, total_output_tokens: 138940, total_cache_tokens: 214880}},
+    // Los eventos de ejemplo siempre traen `tokens_in`/`tokens_out`, así que no hay ninguno
+    // estimado: `estimated_events: 0` es la consecuencia, no una simplificación.
+    '/api/stats': {total: {calls: stats.calls, backend_calls: stats.backend_calls,
+      errors: stats.errors, tokens_in: stats.tokens_in, tokens_out: stats.tokens_out,
+      saved: stats.saved, estimated_events: 0},
+      tokens_context_saved: stats.saved, tokens_generated_local: stats.tokens_out,
+      tokens_local_input: stats.tokens_in, backend_calls: stats.backend_calls,
+      estimated_events: 0, by_tool: [], by_model: [], by_backend: []},
+    // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
+    // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
+    // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
+    // la cabecera de este script promete que no pasa. Con `LD_HOOK_TELEMETRY_LOG` sin definir la
+    // tarjeta se esconde y el fallo no se veía: dependía del entorno de quien capturaba.
+    //
+    // `total`, `suggested` y `rate` se derivan de las filas en vez de escribirse a mano: si la
+    // cabecera dijera un número y la tabla sumara otro, la imagen enseñaría un panel que el
+    // dashboard real nunca puede pintar.
+    '/api/hooks': (() => {
+      const cats = [
+        {category: 'bash', suggested: 148, total: 604},
+        {category: 'lint', suggested: 96, total: 96},
+        {category: 'sin categoría', suggested: 0, total: 214},
+        {category: 'summarize', suggested: 72, total: 80},
+        {category: 'read', suggested: 41, total: 130},
+        {category: 'extract', suggested: 18, total: 22},
+      ];
+      const total = cats.reduce((a, c) => a + c.total, 0);
+      const suggested = cats.reduce((a, c) => a + c.suggested, 0);
+      return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
+        total, suggested, rate: suggested / total,
+        by_category: cats, by_event: [], by_day: []};
+    })(),
   };
 
   const real = window.fetch.bind(window);
