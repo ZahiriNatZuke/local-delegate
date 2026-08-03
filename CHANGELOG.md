@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-08-03
+
 ### Added
 - **El dashboard ya no pide el token en cada visita.** Con `LOCAL_DELEGATE_WEB_TOKEN` puesto, la
   única credencial que un navegador sabe mandar sin una pantalla de login es Basic, y Basic solo lo
@@ -1528,7 +1530,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.20.0...v0.21.0
