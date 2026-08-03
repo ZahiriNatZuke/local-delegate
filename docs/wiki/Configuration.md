@@ -56,6 +56,7 @@ En modo `stdio`, las mismas variables controlan únicamente la web embebida here
 | `LOCAL_DELEGATE_WEB_PORT` | `9393` | Puerto único de web/daemon |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts. `0` la desactiva y deja la página con **cero peticiones a terceros** (cae al stack de fuentes del sistema) |
 | `LOCAL_DELEGATE_WEB_TOKEN` | *(vacío)* | Token que exige **todo** el puerto del daemon: endpoint MCP, dashboard y `/api/*`. Vacío = sin autenticación (el comportamiento de siempre). Ponlo si el puerto está detrás de un proxy o publicado. Ver [Daemon](Daemon.md#autenticación-del-puerto) |
+| `LOCAL_DELEGATE_WEB_SESSION_DAYS` | `365` | Cuánto dura la sesión del navegador tras entrar una vez con el token, renovándose en cada visita. Solo afecta al navegador: los clientes MCP y el CLI mandan el token en cada llamada. `0` desactiva la sesión y vuelve a pedir credenciales en cada petición. Ver [Daemon](Daemon.md#la-sesión-del-navegador) |
 
 > Chart.js se sirve desde el propio paquete (`/vendor/chart.umd.min.js`), no desde un CDN: el
 > panel funciona en una máquina sin salida a internet y no anuncia a nadie que estás mirando tus

@@ -6,6 +6,29 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El dashboard ya no pide el token en cada visita.** Con `LOCAL_DELEGATE_WEB_TOKEN` puesto, la
+  única credencial que un navegador sabe mandar sin una pantalla de login es Basic, y Basic solo lo
+  recuerda mientras la ventana vive y por origen exacto: el panel volvía a pedir el secreto al
+  reabrir el navegador, y otra vez al entrar por `localhost` en lugar de por `127.0.0.1`. Eso no es
+  una molestia sin consecuencias — una protección que hay que teclear varias veces al día es una
+  protección que se acaba quitando.
+
+  Ahora, al entrar con Basic el daemon devuelve una **cookie de sesión** de un año que se renueva
+  sola en cada visita. Sin estado en el servidor y sin fichero de sesiones que mantener: la cookie
+  lleva su propia caducidad firmada con HMAC-SHA256 **usando el token como clave**, de donde salen
+  tres propiedades gratis — no se puede fabricar sin conocer el token, no se puede alargar a mano
+  porque la fecha va dentro de lo firmado, y **rotar el token invalida todas las sesiones vivas**.
+
+  Es `HttpOnly` y `SameSite=Lax`, que es lo que aquí hace de protección CSRF, y no lleva `Secure` a
+  propósito: el daemon habla HTTP plano aunque el TLS lo ponga un proxy delante (`tailscale
+  serve`), y con `Secure` se rompería el acceso directo por `http://<ip>`. Solo la recibe quien
+  entra por Basic; un cliente MCP o el CLI mandan Bearer en cada llamada y no tienen dónde
+  guardarla.
+
+  `LOCAL_DELEGATE_WEB_SESSION_DAYS` cambia la duración y `0` la desactiva, dejando la puerta como
+  estaba. Quien no tenga token configurado no nota nada: sin token no hay middleware.
+
 ## [0.22.1] - 2026-08-03
 
 ### Fixed

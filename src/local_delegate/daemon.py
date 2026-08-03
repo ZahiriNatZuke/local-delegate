@@ -197,7 +197,7 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
     # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
     # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado
     # `proteger` devuelve la misma app y aquí no cambia nada.
-    return auth.proteger(mcp_app, config.WEB_TOKEN)
+    return auth.proteger(mcp_app, config.WEB_TOKEN, config.WEB_SESSION_SECONDS)
 
 
 def daemon_registrado() -> dict | None:

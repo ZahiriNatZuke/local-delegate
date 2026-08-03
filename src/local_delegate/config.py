@@ -235,6 +235,19 @@ CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
 # referencian por el nombre de la variable.
 WEB_TOKEN = _env("LOCAL_DELEGATE_WEB_TOKEN", "").strip()
 
+# Cuánto dura la sesión del navegador, en días. Solo afecta al navegador: los clientes MCP y el CLI
+# mandan el token en cada llamada y no reciben cookie.
+#
+# Existe porque Basic —la única credencial que un navegador sabe mandar sin una pantalla de login—
+# se olvida al cerrar la ventana y no se comparte entre `127.0.0.1` y `localhost`, así que el panel
+# pedía el token varias veces al día. Un año por defecto, renovándose en cada visita: la protección
+# que se pide todo el tiempo es la que se termina quitando.
+#
+# `0` desactiva la sesión y deja la puerta exigiendo cabecera en cada petición, que es el
+# comportamiento anterior a esto.
+WEB_SESSION_DAYS = max(0, _env_int("LOCAL_DELEGATE_WEB_SESSION_DAYS", 365))
+WEB_SESSION_SECONDS = WEB_SESSION_DAYS * 24 * 3600
+
 
 def web_auth_headers() -> dict[str, str]:
     """Cabecera para hablar con el propio daemon, vacía si no hay token configurado.
