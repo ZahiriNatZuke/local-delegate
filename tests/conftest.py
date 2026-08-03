@@ -19,7 +19,7 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
 
 
 # --- HOME simulado, compartido por test_checks.py y test_doctor.py ------------
-def make_home(tmp_path: Path, *, claude=True, codex=True, complete=True) -> Path:
+def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complete=True) -> Path:
     """Arma un HOME de mentira. Con ``complete=False`` los clientes existen pero vacíos.
 
     Lo escribe con las funciones del propio ``install`` (no con literales) para que el HOME
@@ -66,6 +66,26 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, complete=True) -> Path
             block = install.codex_mcp_block({"type": "http", "url": "http://127.0.0.1:9393/mcp"})
             (codex_dir / "config.toml").write_text(
                 install.upsert_codex_mcp("", block), encoding="utf-8"
+            )
+    if opencode:
+        # `opencode_dir` y no `home / ".config" / "opencode"`: la ruta la decide `install`, y un
+        # HOME de prueba que la calculara por su cuenta dejaría de probar lo que hace el paquete.
+        oc_dir = install.opencode_dir(home)
+        oc_dir.mkdir(parents=True)
+        if complete:
+            (oc_dir / "AGENTS.md").write_text(
+                install.upsert_block("", memory_block, install.MD_BEGIN, install.MD_END),
+                encoding="utf-8",
+            )
+            oc_skill = oc_dir / install.OPENCODE_SKILL_SUBDIR / install.SKILL_NAME
+            oc_skill.mkdir(parents=True)
+            (oc_skill / "SKILL.md").write_text("# skill\n", encoding="utf-8")
+            entry = install.opencode_mcp_entry("http", None, False, None)
+            (oc_dir / "opencode.json").write_text(
+                json.dumps(
+                    {"$schema": install.OPENCODE_SCHEMA, "mcp": {install.SERVER_NAME: entry}}
+                ),
+                encoding="utf-8",
             )
     return home
 

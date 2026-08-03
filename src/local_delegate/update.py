@@ -117,6 +117,11 @@ class Options:
         return install.is_simulated_home(self.home)
 
 
+# Los checks que miran una entrada MCP. Se enumeran en dos sitios de este módulo —de qué modo
+# es la máquina, y qué avisos se silencian—, y tenerlos escritos a mano en ambos es como se
+# quedó fuera opencode del primero mientras entraba en el segundo.
+_CHECKS_MCP = ("scaffold.mcp_claude", "scaffold.mcp_codex", "scaffold.mcp_opencode")
+
 # --- La tabla de reparaciones -------------------------------------------------
 # Marcador para `scaffold.memory`, que escribe en los clientes que existan en la máquina en vez
 # de en un conjunto fijo: reinstalar el bloque de Codex en una máquina sin Codex crearía
@@ -175,7 +180,12 @@ REPAIRS: tuple[Repair, ...] = (
         # `warn` = el directorio existe sin SKILL.md. También es nuestro y está incompleto.
         (checks.MISSING, checks.WARN),
         frozenset({"skill"}),
-        frozenset({"claude"}),
+        # `PRESENT` y no `{"claude"}`: la skill se escribe en dos clientes, y fijar uno dejaba la
+        # de opencode sin reponer aunque el check la viera faltar. Que `PRESENT` incluya también
+        # Codex es inocuo —`plan_install` no emite acción de skill para él, porque no tiene
+        # skills—, y es el mismo marcador que ya usa `scaffold.memory` por la misma razón: no
+        # crearle a nadie el directorio de un cliente que no tiene instalado.
+        PRESENT,
         why="skill incompleta",
     ),
     Repair("scaffold.memory", (checks.MISSING,), frozenset({"memory"}), PRESENT),
@@ -184,6 +194,11 @@ REPAIRS: tuple[Repair, ...] = (
     # aviso dice «entrada puesta a mano, sin marcadores», o sea configuración escrita por el
     # usuario. Pisarla sería el fallo contra el que existe la regla de `unknown`.
     Repair("scaffold.mcp_codex", (checks.MISSING,), frozenset({"mcp"}), frozenset({"codex"})),
+    # opencode NO tiene un `warn` equivalente al de Codex, y no es un olvido: su entrada se
+    # identifica por la clave `mcp["local-delegate"]` y no por marcadores —una clave desconocida
+    # impide arrancar el cliente—, así que no hay forma de distinguir la nuestra de una escrita a
+    # mano. Es la misma situación que con Claude Code, y se trata igual: solo se repone si falta.
+    Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
 )
 
 
@@ -202,9 +217,10 @@ def _infer_mcp_mode(results: list[tuple[checks.Check, checks.Result]]) -> str:
     """
     for check, result in results:
         if (
-            check.id in ("scaffold.mcp_claude", "scaffold.mcp_codex")
+            check.id in _CHECKS_MCP
             and result.status == checks.OK
-            and "http" in result.detail
+            # `remote` es como opencode llama a lo que los otros dos llaman `http`.
+            and ("http" in result.detail or "remote" in result.detail)
         ):
             return "http"
     for check, result in results:
@@ -808,9 +824,9 @@ def _daemon_applies(results: list[tuple[checks.Check, checks.Result]]) -> bool:
         if check.id == "service.daemon" and result.status in (checks.OK, checks.WARN):
             return True
         if (
-            check.id in ("scaffold.mcp_claude", "scaffold.mcp_codex")
+            check.id in _CHECKS_MCP
             and result.status == checks.OK
-            and "http" in result.detail
+            and ("http" in result.detail or "remote" in result.detail)
         ):
             return True
     return False

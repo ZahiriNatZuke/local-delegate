@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los dieciséis elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los diecisiete elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Dieciséis checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Diecisiete checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -298,6 +298,16 @@ class Context:
         return self.home / ".codex"
 
     @property
+    def opencode_dir(self) -> Path:
+        """Delega en ``install``: opencode NO cuelga del HOME como los otros dos.
+
+        `XDG_CONFIG_HOME` gana sobre `HOME` (medido), así que escribir aquí
+        ``self.home / ".config" / "opencode"`` haría que el diagnóstico mirase un fichero distinto
+        del que escribe el instalador — y diría que falta la entrada recién puesta.
+        """
+        return install.opencode_dir(self.home)
+
+    @property
     def hooks_dir(self) -> Path:
         return self.claude_dir / "hooks" / install.HOOKS_SUBDIR
 
@@ -355,14 +365,21 @@ def _worst(statuses: list[str]) -> str:
 
 
 # --- Probes del andamiaje -----------------------------------------------------
+# Los tres clientes y dónde vive cada uno. Una sola tupla para los dos probes que recorren
+# clientes (`client.presence` y `scaffold.memory`): tenerla dos veces es como se cuela un cliente
+# que se detecta pero al que nadie le comprueba la memoria.
+def _clientes(ctx: Context) -> tuple[tuple[str, Path], ...]:
+    return (
+        ("Claude Code", ctx.claude_dir),
+        ("Codex", ctx.codex_dir),
+        ("opencode", ctx.opencode_dir),
+    )
+
+
 def _probe_clients(ctx: Context) -> Result:
-    present = [
-        name
-        for name, path in (("Claude Code", ctx.claude_dir), ("Codex", ctx.codex_dir))
-        if path.is_dir()
-    ]
+    present = [name for name, path in _clientes(ctx) if path.is_dir()]
     if not present:
-        return Result(UNKNOWN, f"no hay ~/.claude ni ~/.codex bajo {ctx.home}")
+        return Result(UNKNOWN, f"no hay ~/.claude, ~/.codex ni ~/.config/opencode bajo {ctx.home}")
     return Result(OK, "detectados: " + ", ".join(present))
 
 
@@ -638,17 +655,51 @@ def _probe_hook_settings(ctx: Context) -> Result:
 
 
 def _probe_skill(ctx: Context) -> Result:
-    if absent := _claude_absent(ctx):
-        return absent
-    skill_dir = ctx.claude_dir / "skills" / install.SKILL_NAME
-    entries, reason = _dir_entries(skill_dir)
-    if reason:
-        return Result(UNKNOWN, reason)
-    if entries is None:
-        return Result(MISSING, f"no existe {skill_dir}", INSTALL_HINT)
-    if "SKILL.md" not in entries:
-        return Result(WARN, f"{skill_dir} existe pero no tiene SKILL.md", INSTALL_HINT)
-    return Result(OK, f"instalada en {skill_dir}")
+    """La skill ``delegacion-local`` en cada cliente que sepa cargarla.
+
+    Recorre clientes por lo mismo que ``_probe_memory``, y no por simetría: ``plan_install``
+    escribe la skill **también** en el directorio de opencode, así que mirar solo la de Claude Code
+    daba un ``ok`` con la de opencode borrada —un falso OK, no un hueco de cobertura— y dejaba a
+    ``update`` sin nada que reponer.
+
+    Codex no aparece: no tiene mecanismo de skills y ``plan_install`` tampoco se la escribe.
+    Reportarlo como «falta» sería inventarle a ese cliente un componente que no soporta.
+
+    Que opencode cargue **además** la de ``~/.claude/skills/`` está medido, pero no vale como
+    respuesta aquí: es apagable (``OPENCODE_DISABLE_EXTERNAL_SKILLS``) y no existe en una máquina
+    sin Claude Code. Dar por buena la de allí sería decir ``ok`` de un fichero que este cliente
+    puede no estar viendo.
+    """
+    subruta = {
+        "Claude Code": Path("skills") / install.SKILL_NAME,
+        "opencode": Path(install.OPENCODE_SKILL_SUBDIR) / install.SKILL_NAME,
+    }
+    statuses: list[str] = []
+    details: list[str] = []
+    for label, client_dir in _clientes(ctx):
+        if label not in subruta:
+            continue
+        if not client_dir.is_dir():
+            # Igual que en `_probe_memory`: un cliente que no está en la máquina no arrastra el
+            # estado del check. Solo si no aplica ninguno el resultado es `unknown`.
+            details.append(f"{label}: cliente no instalado")
+            continue
+        skill_dir = client_dir / subruta[label]
+        entries, reason = _dir_entries(skill_dir)
+        if reason:
+            statuses.append(UNKNOWN)
+            details.append(f"{label}: {reason}")
+        elif entries is None:
+            statuses.append(MISSING)
+            details.append(f"{label}: no existe {skill_dir}")
+        elif "SKILL.md" not in entries:
+            statuses.append(WARN)
+            details.append(f"{label}: {skill_dir} existe pero no tiene SKILL.md")
+        else:
+            statuses.append(OK)
+            details.append(f"{label}: instalada en {skill_dir}")
+    status = _worst(statuses) if statuses else UNKNOWN
+    return Result(status, " · ".join(details), INSTALL_HINT if is_warning(status) else "")
 
 
 def _probe_memory(ctx: Context) -> Result:
@@ -657,9 +708,13 @@ def _probe_memory(ctx: Context) -> Result:
     Solo se comprueba que los marcadores estén: lo que el usuario haya editado dentro del
     bloque es asunto suyo y compararlo literalmente sería pelearse con ediciones legítimas.
     """
-    targets = (
-        ("Claude", ctx.claude_dir, ctx.claude_dir / "CLAUDE.md"),
-        ("Codex", ctx.codex_dir, ctx.codex_dir / "AGENTS.md"),
+    ficheros = {
+        "Claude Code": "CLAUDE.md",
+        "Codex": "AGENTS.md",
+        "opencode": "AGENTS.md",
+    }
+    targets = tuple(
+        (nombre, carpeta, carpeta / ficheros[nombre]) for nombre, carpeta in _clientes(ctx)
     )
     statuses: list[str] = []
     details: list[str] = []
@@ -755,6 +810,45 @@ def _probe_mcp_codex(ctx: Context) -> Result:
     return Result(OK, f"bloque gestionado en {path} ({kind})")
 
 
+def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | None]:
+    """(entrada, en qué fichero, motivo por el que no se pudo leer alguno).
+
+    Mira **los dos** ficheros porque opencode los lee y los fusiona: quedarse con el primero daría
+    por ausente una entrada puesta en el otro. Un fichero ilegible o mal formado es motivo de
+    ``unknown`` aunque el otro no tenga la entrada — lo no comprobable nunca es ``missing``.
+    """
+    motivo: str | None = None
+    for path in install.opencode_config_paths(ctx.home):
+        data, razon = install.read_opencode_config(path)
+        if razon and motivo is None:
+            motivo = razon
+        if not isinstance(data, dict):
+            continue
+        servers = data.get("mcp")
+        entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
+        if isinstance(entry, dict):
+            return entry, path, None
+    return None, None, motivo
+
+
+def _probe_mcp_opencode(ctx: Context) -> Result:
+    if not ctx.opencode_dir.is_dir():
+        return Result(UNKNOWN, f"opencode no está instalado ({ctx.opencode_dir} no existe)")
+    entry, path, motivo = _opencode_mcp_entry(ctx)
+    if entry is None:
+        if motivo:
+            return Result(UNKNOWN, motivo)
+        nombres = " ni ".join(install.OPENCODE_CONFIG_NAMES)
+        return Result(
+            MISSING,
+            f"'{install.SERVER_NAME}' no está en {nombres} de {ctx.opencode_dir}",
+            INSTALL_HINT,
+        )
+    kind = str(entry.get("type") or "?")
+    where = entry.get("url") or entry.get("command") or ""
+    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''})")
+
+
 def _probe_mcp_credential(ctx: Context) -> Result:
     """¿Podrá autenticarse contra el backend el proceso MCP que arranca el cliente?
 
@@ -788,6 +882,12 @@ def _probe_mcp_credential(ctx: Context) -> Result:
     section = _codex_mcp_section(ctx)
     if section is not None:
         entradas.append(("Codex", _codex_mode(section)))
+    oc_entry, _path, _motivo = _opencode_mcp_entry(ctx)
+    if oc_entry is not None:
+        # `remote` es el `http` de opencode y `local` su `stdio`: se normaliza aquí para que la
+        # comparación de abajo —«¿habla por el daemon?»— siga siendo una sola, en vez de tener que
+        # conocer el vocabulario de cada cliente.
+        entradas.append(("opencode", "http" if oc_entry.get("type") == "remote" else "stdio"))
     if not entradas:
         return Result(UNKNOWN, "el backend exige credencial, pero no hay entrada MCP que mirar")
 
@@ -917,7 +1017,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Dieciséis elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Diecisiete elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -936,6 +1036,7 @@ CHECKS: tuple[Check, ...] = (
     Check("scaffold.memory", "andamiaje", "memoria global", _probe_memory),
     Check("scaffold.mcp_claude", "andamiaje", "MCP en Claude Code", _probe_mcp_claude),
     Check("scaffold.mcp_codex", "andamiaje", "MCP en Codex", _probe_mcp_codex),
+    Check("scaffold.mcp_opencode", "andamiaje", "MCP en opencode", _probe_mcp_opencode),
     Check("service.daemon", "servicio", "daemon", _probe_daemon),
     Check("service.backend", "servicio", "backend", _probe_backend_models),
     # En `servicio` y no en `andamiaje` aunque lea las entradas MCP: sale a la red, y el grupo
@@ -949,7 +1050,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los dieciséis probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los diecisiete probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -963,7 +1064,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros quince
+        except Exception as exc:  # un check roto no debe impedir ver los otros dieciséis
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

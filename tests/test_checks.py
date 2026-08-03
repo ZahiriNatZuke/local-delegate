@@ -412,7 +412,7 @@ def test_memory_missing_in_both_clients(tmp_path):
 
 
 def test_absent_client_is_unknown_not_missing(tmp_path):
-    ctx = make_ctx(make_home(tmp_path, claude=False, codex=False))
+    ctx = make_ctx(make_home(tmp_path, claude=False, codex=False, opencode=False))
     for check, result in checks.run_all(ctx):
         if check.group == "andamiaje":
             assert result.status == checks.UNKNOWN, f"{check.id}: {result.detail}"
@@ -420,7 +420,10 @@ def test_absent_client_is_unknown_not_missing(tmp_path):
 
 
 def test_only_codex_installed_leaves_claude_checks_unknown(tmp_path):
-    ctx = make_ctx(make_home(tmp_path, claude=False))
+    # `opencode=False` explícito y no por el default: sin esto el HOME tenía **dos** clientes y el
+    # test no probaba lo que dice su nombre. Pasaba igual porque `_probe_skill` solo miraba Claude
+    # Code; en cuanto el probe empezó a mirar los dos, la skill de opencode lo puso en `ok`.
+    ctx = make_ctx(make_home(tmp_path, claude=False, opencode=False))
     assert result_for("scaffold.skill", ctx).status == checks.UNKNOWN
     assert result_for("scaffold.hook_files", ctx).status == checks.UNKNOWN
     assert result_for("scaffold.mcp_codex", ctx).status == checks.OK
@@ -955,6 +958,7 @@ _NUMERO = {
     14: "catorce",
     15: "quince",
     16: "dieciséis",
+    17: "diecisiete",
 }
 
 

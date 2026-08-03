@@ -91,11 +91,16 @@ def test_is_simulated_home_ante_una_ruta_irresoluble_elige_el_lado_seguro(monkey
 
 
 @pytest.mark.parametrize(
-    ("claude", "codex", "esperado"),
-    [(True, True, {"claude", "codex"}), (True, False, {"claude"}), (False, False, set())],
+    ("claude", "codex", "opencode", "esperado"),
+    [
+        (True, True, True, {"claude", "codex", "opencode"}),
+        (True, False, False, {"claude"}),
+        (False, False, True, {"opencode"}),
+        (False, False, False, set()),
+    ],
 )
-def test_present_targets_mira_los_directorios(tmp_path, claude, codex, esperado):
-    home = make_home(tmp_path, claude=claude, codex=codex, complete=False)
+def test_present_targets_mira_los_directorios(tmp_path, claude, codex, opencode, esperado):
+    home = make_home(tmp_path, claude=claude, codex=codex, opencode=opencode, complete=False)
     assert inst.present_targets(home) == esperado
 
 
@@ -103,7 +108,7 @@ def test_update_y_install_comparten_la_misma_definicion(tmp_path):
     """Si alguien vuelve a duplicar la regla, esto lo caza."""
     from local_delegate import update as upd
 
-    home = make_home(tmp_path, claude=True, codex=False, complete=False)
+    home = make_home(tmp_path, claude=True, codex=False, opencode=True, complete=False)
     assert upd._present_targets(home) == inst.present_targets(home)
     assert upd.Options(home=home).simulated_home == inst.is_simulated_home(home)
 

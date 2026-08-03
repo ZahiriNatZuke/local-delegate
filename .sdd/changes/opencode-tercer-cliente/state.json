@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "slug": "opencode-tercer-cliente",
+  "title": "opencode como tercer cliente de install",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-08-02T15:45:00.000Z",
+  "updatedAt": "2026-08-02T21:30:00.000Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-02T16:35:00.000Z",
+      "evidence": "34 requisitos observables y 8 escenarios sobre 11 hallazgos medidos por ejecucion contra opencode 1.18.11. Las tres preguntas de alcance D1-D3 resueltas por el usuario a favor de la recomendacion: skill en el directorio propio, memoria en su AGENTS.md, y no escribir la entrada MCP cuando no hay CLI y el fichero tiene comentarios",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-02T16:35:00.000Z",
+      "evidence": "11 tareas ordenadas con ficheros, requisitos, verificacion y rollback; cuatro decisiones con su alternativa descartada (funcion vs ruta para el config, identidad por clave sin marcadores, CLI del cliente por defecto, no escribir antes que destruir). La trampa del detector de comentarios con http:// quedo anotada en el plan y tiene test propio",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": "2026-08-02T17:40:00.000Z",
+      "evidence": "pytest 710 passed 2 skipped en Windows (en Linux eran 701 passed 4 skipped con 1 failed ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK en linux y en win32 (ampliado para cubrir opencode); 11 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. Dos revisiones del diff encontraron dos defectos reales, ambos corregidos con test: la lectura tolerante que confundia vacio con ilegible, y el falso OK del check de la skill (miraba solo la de Claude Code mientras install la escribia tambien en opencode, asi que doctor decia 'instalada' con la de opencode borrada y update no la reponia)",
+      "actor": "pending"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": "",
+      "actor": "pending"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": "",
+      "actor": "pending"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-02T15:45:00.000Z",
+      "reason": "SDD change created: evaluar opencode como tercera integracion de install"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-02T15:50:00.000Z",
+      "reason": "Impacto mapeado: la lista de clientes esta repartida en cinco sitios y cada componente de plan_install se ramifica por cliente"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-02T16:05:00.000Z",
+      "reason": "Research cerrado y viabilidad confirmada por medicion contra el binario real de opencode 1.18.11: no hereda la config MCP de Claude Code ni Codex, tiene CLI no interactiva para anadir, sustituye {env:VAR} sin escribir el secreto, y no declara elicitation"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-02T16:10:00.000Z",
+      "reason": "Spec redactada; el plan se adelanta en la misma pasada porque el research resulto concluyente y las tres preguntas abiertas son de alcance, no de viabilidad"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-02T16:35:00.000Z",
+      "evidence": "D1-D3 resueltas a favor de la recomendacion",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-02T16:35:00.000Z",
+      "evidence": "Plan de 11 tareas aprobado junto con la spec",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "implementing",
+      "at": "2026-08-02T16:36:00.000Z",
+      "reason": "Gates de spec y plan aprobados"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-02T17:40:00.000Z",
+      "reason": "Las 11 tareas implementadas; suite, estatica, mutacion dirigida y verificacion contra el cliente real en verde"
+    },
+    {
+      "type": "note",
+      "at": "2026-08-02T21:30:00.000Z",
+      "note": "Revision del diff desde Windows: dos correcciones. (1) Falso OK del check de la skill, que miraba solo ~/.claude/skills mientras plan_install la escribia tambien en opencode: con Claude Code presente, doctor decia 'instalada' con la de opencode borrada y update no la reponia. Corregido en _probe_skill (recorre _clientes) y en el Repair (PRESENT en vez de claude); anadido REQ-030b. Un test pasaba por la guarda equivocada (se llamaba 'solo Codex' con opencode instalado por defecto). Tres mutantes nuevos, cada uno cazado. (2) Cuatro ficheros habian pasado de CRLF a LF al editarse desde un runner Linux, inflando el diff de 2213 a 4340 lineas; devueltos a CRLF. Verificado en Windows: 710 passed 2 skipped, ruff limpio, check_install_e2e OK en win32"
+    }
+  ]
+}

@@ -30,8 +30,15 @@ from .version import get_version
 # `agents` va al final y **no** entra por defecto: su flag es `--agents` (store_true),
 # mientras que los otros cuatro se excluyen con `--no-*`. Ver el porqué en el parser.
 _ALL_COMPONENTS = ("hooks", "skill", "memory", "mcp", "agents")
-_ALL_TARGETS = ("claude", "codex")
-_CLIENT_DIR = {"claude": "~/.claude", "codex": "~/.codex"}
+_ALL_TARGETS = ("claude", "codex", "opencode")
+# Solo para el mensaje de «no se encontró ninguno». El de opencode se escribe con `~/.config`
+# aunque `install.opencode_dir` pueda resolver otra cosa con `XDG_CONFIG_HOME`: es texto de ayuda
+# y la ruta real la dice el reporte del andamiaje, que sí sale de la función.
+_CLIENT_DIR = {
+    "claude": "~/.claude",
+    "codex": "~/.codex",
+    "opencode": "~/.config/opencode",
+}
 
 # El reporte final de `install` mira SOLO estos dos grupos del registro. Los otros dos
 # —`servicio` y `backend`— salen a la red y lanzan los binarios de llama-swap, y haber
@@ -197,7 +204,7 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         print()
         print("No se encontró ningún cliente: se buscaron " + " y ".join(_CLIENT_DIR.values()))
         print(f"bajo {home}. No se escribió nada.")
-        print("Si querías configurarlo igual:  --clients claude   (o --clients codex)")
+        print("Si querías configurarlo igual:  --clients claude   (o codex, u opencode)")
         _reporte_del_andamiaje(home, dry_run=True)
         return 0
 
@@ -225,7 +232,7 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         _reporte_del_andamiaje(opts.home, dry_run=True)
         return 0
     if not uninstall and not failures:
-        print("Listo. Reinicia el cliente (Claude Code / Codex) para que tome los cambios.")
+        print("Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.")
         _avisa_si_el_cli_no_esta_en_el_path()
         _deja_el_daemon_arriba(opts)
     # El reporte va ANTES del código de salida, y también cuando algo falló: si una acción no
@@ -578,7 +585,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="local-delegate",
         description=(
             "Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario arranca "
-            "el servidor MCP stdio, que es como lo lanzan Claude Code y Codex. "
+            "el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y opencode. "
             "`check-llamaswap` e `init-llamaswap` piden el extra [llamaswap]."
         ),
     )
@@ -750,16 +757,16 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--clients",
         action="append",
-        choices=("auto", "claude", "codex"),
+        choices=("auto", "claude", "codex", "opencode"),
         default=None,
         help="cliente a configurar (repetible; default: auto = los que estén instalados)",
     )
     p.add_argument(
         "--target",
         action="append",
-        choices=("claude", "codex", "all"),
+        choices=("claude", "codex", "opencode", "all"),
         default=None,
-        help="histórico, equivale a --clients; `all` fuerza los dos aunque no estén instalados",
+        help="histórico, equivale a --clients; `all` fuerza los tres aunque no estén instalados",
     )
     p.add_argument("--home", default=None, help="HOME alternativo (para pruebas)")
     p.add_argument("--dry-run", action="store_true", help="describe los cambios sin escribir")
@@ -809,7 +816,7 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
 def _add_install_parsers(sub) -> None:
     install = sub.add_parser(
         "install",
-        help="Instala hooks, skill, bloque de memoria y la entrada MCP en Claude Code / Codex.",
+        help="Instala hooks, skill, memoria y la entrada MCP en Claude Code / Codex / opencode.",
         description=(
             "Instala la integración completa en el HOME del usuario: hooks consultivos, la "
             "skill delegacion-local, un bloque gestionado en CLAUDE.md/AGENTS.md y la entrada "

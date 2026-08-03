@@ -72,7 +72,7 @@ uvx local-delegate-mcp serve
 ```
 
 El daemon sirve MCP en `http://127.0.0.1:9393/mcp` y el dashboard en
-`http://127.0.0.1:9393/`. Codex, Claude Code y cualquier cliente compatible con Streamable HTTP
+`http://127.0.0.1:9393/`. Codex, Claude Code, opencode y cualquier cliente compatible con Streamable HTTP
 pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
 [Daemon compartido](./docs/wiki/Daemon.md).
 
@@ -224,13 +224,14 @@ a propósito:
 
 | Componente | Dónde | Qué hace |
 |---|---|---|
-| Entrada MCP | config de Claude Code / `~/.codex/config.toml` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
+| Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
 | Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar sin bloquear nunca la tool original |
-| Skill | `~/.claude/skills/delegacion-local/` | regla de oro y catálogo de tools |
-| Memoria | bloque gestionado en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md` | la regla en una nota corta siempre cargada |
+| Skill | `~/.claude/skills/delegacion-local/` y `~/.config/opencode/skill/delegacion-local/` | regla de oro y catálogo de tools |
+| Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
-`--clients claude|codex`. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`,
+`--clients claude|codex|opencode`. Los **hooks** son solo de Claude Code: opencode extiende con
+plugins en TypeScript, que es otra superficie. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`,
 `--no-memory`, `--no-mcp`). Los hooks recomendados tras el piloto A/B son
 `UserPromptSubmit` (intenciones mecánicas) y `PreToolUse`/`Bash` (salidas largas de lint/tests);
 el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`, que lo registra y lo

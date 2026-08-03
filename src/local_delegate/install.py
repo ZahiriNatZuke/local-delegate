@@ -6,9 +6,11 @@ de verdad, y los deja desinstalables:
 
 1. **hooks** consultivos de Claude Code (`resources/hooks/`) en `~/.claude/hooks/local-delegate/`
    y registrados en `~/.claude/settings.json`.
-2. **skill** `delegacion-local` en `~/.claude/skills/delegacion-local/`.
-3. **memoria global**: un bloque delimitado en `~/.claude/CLAUDE.md` y `~/.codex/AGENTS.md`.
-4. **servidor MCP** en la configuración del cliente (Claude Code y/o Codex).
+2. **skill** `delegacion-local` en `~/.claude/skills/delegacion-local/` y en
+   `~/.config/opencode/skill/delegacion-local/`.
+3. **memoria global**: un bloque delimitado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y
+   `~/.config/opencode/AGENTS.md`.
+4. **servidor MCP** en la configuración del cliente (Claude Code, Codex y/o opencode).
 
 Todo es idempotente y reversible:
 
@@ -41,6 +43,15 @@ TOML_END = "# local-delegate:end"
 SERVER_NAME = "local-delegate"
 HOOKS_SUBDIR = "local-delegate"  # ~/.claude/hooks/local-delegate/
 SKILL_NAME = "delegacion-local"
+
+# --- opencode ----------------------------------------------------------------
+# Los dos nombres de fichero que opencode lee, EN ESTE ORDEN. No es una preferencia nuestra: es
+# el orden con el que el propio cliente elige a cuál escribir (medido contra opencode 1.18.11,
+# traza en .sdd/changes/opencode-tercer-cliente/research.md R3-R4). Los lee **los dos** y los
+# fusiona, así que quien compruebe si la entrada está tiene que mirar en ambos.
+OPENCODE_CONFIG_NAMES = ("opencode.json", "opencode.jsonc")
+OPENCODE_SKILL_SUBDIR = "skill"  # ~/.config/opencode/skill/<nombre>/
+OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 
 # Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
 # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
@@ -88,6 +99,26 @@ def is_simulated_home(home: Path) -> bool:
         return True
 
 
+def opencode_dir(home: Path) -> Path:
+    """Directorio de configuración global de opencode bajo ``home``.
+
+    Existe como **función** —y no como una expresión ``home / ".config" / "opencode"`` repetida en
+    ``install``, ``checks`` y ``update``— por un motivo medido, no por estilo: opencode resuelve su
+    config con ``XDG_CONFIG_HOME`` **por encima** de ``HOME`` (`opencode debug paths`, versión
+    1.18.11). En una máquina que exporte esa variable, la ruta derivada del HOME sería falsa:
+    ``install`` escribiría un fichero que el cliente nunca lee y ``doctor`` diría que falta la
+    entrada que se acaba de escribir. Dos derivaciones de esto es exactamente la clase de verdad
+    repartida que ya costó caro tres veces en este repo.
+
+    Con un HOME simulado la variable se ignora **a propósito**: si no se ignorara, ``--home``
+    dejaría de ser un sandbox en cuanto quien ejecuta tuviera ``XDG_CONFIG_HOME`` en su entorno.
+    """
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if xdg and not is_simulated_home(home):
+        return Path(xdg).expanduser() / "opencode"
+    return home / ".config" / "opencode"
+
+
 def present_targets(home: Path) -> set[str]:
     """Clientes que existen de verdad bajo ``home``.
 
@@ -96,8 +127,13 @@ def present_targets(home: Path) -> set[str]:
     Code, Codex»), no un dato. Derivar de ahí a quién se le escribe la configuración ataría el
     instalador a un string de interfaz.
     """
-    pairs = (("claude", ".claude"), ("codex", ".codex"))
-    return {name for name, sub in pairs if (home / sub).is_dir()}
+    candidatos = {
+        "claude": home / ".claude",
+        "codex": home / ".codex",
+        # opencode NO cuelga del HOME como los otros dos: ver `opencode_dir`.
+        "opencode": opencode_dir(home),
+    }
+    return {name for name, path in candidatos.items() if path.is_dir()}
 
 
 def default_python() -> str:
@@ -318,6 +354,41 @@ def strip_hook_settings(settings: dict, hooks_dir: Path) -> tuple[dict, int]:
 WEB_TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
 
 
+def daemon_mcp_url() -> str:
+    """URL del MCP del daemon. Una sola derivación para los tres clientes.
+
+    La calculaban `mcp_entry` y (desde que existe opencode) haría falta otra vez en
+    `opencode_mcp_entry`. Dos copias de «dónde escucha el daemon» es justo el defecto que este
+    repo ya pagó con la cuenta de tokens y con el host del daemon.
+    """
+    port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "9393")
+    host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
+    return f"http://{host}:{port}/mcp"
+
+
+def uvx_command(version: str | None) -> list[str]:
+    """Cómo se lanza el servidor por stdio. También compartida por los tres clientes."""
+    package = f"local-delegate-mcp=={version}" if version else "local-delegate-mcp"
+    return ["uvx", "--from", package, "local-delegate-mcp"]
+
+
+def stdio_env(base_url: str | None, api_key_env: bool, key_ref: str) -> dict[str, str]:
+    """Variables de entorno del proceso stdio. ``key_ref`` es **cómo se referencia** la key.
+
+    El único punto en el que los clientes difieren de verdad: Claude Code expande ``${VAR}`` y
+    opencode expande ``{env:VAR}``. Escribir la sintaxis del otro deja la variable literal en el
+    entorno del hijo — un fallo silencioso que se ve como un 401 y no como una configuración mala.
+    """
+    env: dict[str, str] = {}
+    if base_url:
+        env["LOCAL_DELEGATE_BASE_URL"] = base_url
+        env["LOCAL_DELEGATE_AUTOSTART"] = "0"
+    if api_key_env:
+        # Nunca se escribe el secreto: se referencia la variable del entorno del cliente.
+        env["LOCAL_DELEGATE_API_KEY"] = key_ref
+    return env
+
+
 def mcp_entry(
     mode: str,
     base_url: str | None,
@@ -327,27 +398,19 @@ def mcp_entry(
 ) -> dict:
     """Entrada de servidor MCP para Claude Code (stdio vía uvx, o HTTP contra el daemon)."""
     if mode == "http":
-        port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "9393")
-        host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
-        entry: dict = {"type": "http", "url": f"http://{host}:{port}/mcp"}
+        entry: dict = {"type": "http", "url": daemon_mcp_url()}
         if web_token_env:
             # Se referencia la variable, nunca su valor. Medido contra Claude Code 2.1.220: la
             # expansión de `${VAR}` dentro de `headers` funciona y llega al servidor ya resuelta.
             entry["headers"] = {"Authorization": f"Bearer ${{{WEB_TOKEN_VAR}}}"}
         return entry
-    package = f"local-delegate-mcp=={version}" if version else "local-delegate-mcp"
+    comando = uvx_command(version)
     entry: dict = {
         "type": "stdio",
-        "command": "uvx",
-        "args": ["--from", package, "local-delegate-mcp"],
+        "command": comando[0],
+        "args": comando[1:],
     }
-    env: dict[str, str] = {}
-    if base_url:
-        env["LOCAL_DELEGATE_BASE_URL"] = base_url
-        env["LOCAL_DELEGATE_AUTOSTART"] = "0"
-    if api_key_env:
-        # Nunca se escribe el secreto: se referencia la variable del entorno del cliente.
-        env["LOCAL_DELEGATE_API_KEY"] = "${LOCAL_DELEGATE_API_KEY}"
+    env = stdio_env(base_url, api_key_env, "${LOCAL_DELEGATE_API_KEY}")
     if env:
         entry["env"] = env
     return entry
@@ -398,12 +461,185 @@ def remove_codex_mcp(text: str) -> str:
     return _CODEX_SECTION_RE.sub("", text).strip() + "\n"
 
 
+# --- Entrada del servidor MCP en opencode ------------------------------------
+# opencode se parece a Claude Code y NO a Codex en lo único que aquí importa: la entrada se
+# identifica por su **clave** (`mcp["local-delegate"]`) y no por marcadores. No es una preferencia:
+# está medido que una clave de primer nivel desconocida hace que opencode **no arranque**
+# (`ConfigInvalidError`), así que un `# local-delegate:begin` propio dejaría al usuario sin cliente.
+#
+# Consecuencia que conviene decir en voz alta: aquí NO se puede distinguir una entrada nuestra de
+# una que escribió el usuario a mano, así que tampoco hay pregunta previa como la de
+# `--force-mcp-codex`. Es exactamente lo que ya pasa con Claude Code, y por el mismo motivo: lo que
+# protege el `warn` de Codex es el bloque sin marcadores, y aquí no hay marcadores que mirar.
+def _escanear_jsonc(texto: str) -> tuple[str, bool]:
+    """(texto sin comentarios, había comentarios). Una sola definición de «esto es un comentario».
+
+    Detectar comentarios con ``"//" in texto`` es **falso** y de un modo que se dispara justo en
+    nuestro caso: una entrada HTTP legítima contiene ``http://127.0.0.1:9393/mcp``, así que
+    cualquier configuración con una URL quedaría marcada como comentada —y por tanto intocable—.
+    Hay que recorrer el texto sabiendo cuándo se está dentro de una cadena y cuándo hay un escape.
+
+    Los comentarios se sustituyen por espacios en vez de borrarse para que las posiciones y los
+    números de línea del texto resultante sigan siendo los del original: si ``json.loads`` falla
+    después, el error señala el sitio de verdad.
+    """
+    salida: list[str] = []
+    dentro_de_cadena = False
+    escapado = False
+    habia = False
+    i = 0
+    n = len(texto)
+    while i < n:
+        c = texto[i]
+        if dentro_de_cadena:
+            salida.append(c)
+            if escapado:
+                escapado = False
+            elif c == "\\":
+                escapado = True
+            elif c == '"':
+                dentro_de_cadena = False
+            i += 1
+            continue
+        if c == '"':
+            dentro_de_cadena = True
+            salida.append(c)
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and texto[i + 1] == "/":
+            habia = True
+            while i < n and texto[i] != "\n":
+                salida.append(" ")
+                i += 1
+            continue
+        if c == "/" and i + 1 < n and texto[i + 1] == "*":
+            habia = True
+            fin = texto.find("*/", i + 2)
+            fin = n if fin == -1 else fin + 2
+            # Los saltos de línea se conservan: si no, un comentario de bloque desplazaría todas
+            # las líneas siguientes y el error de parseo señalaría a otro sitio.
+            salida.extend("\n" if ch == "\n" else " " for ch in texto[i:fin])
+            i = fin
+            continue
+        salida.append(c)
+        i += 1
+    return "".join(salida), habia
+
+
+def tiene_comentarios(texto: str) -> bool:
+    """True si el JSONC lleva comentarios fuera de una cadena."""
+    return _escanear_jsonc(texto)[1]
+
+
+def strip_jsonc(texto: str) -> str:
+    """Texto sin comentarios. **Solo para leer**: este resultado nunca se escribe a disco."""
+    return _escanear_jsonc(texto)[0]
+
+
+def opencode_config_paths(home: Path) -> tuple[Path, ...]:
+    """Los ficheros de configuración global de opencode, en el orden en que él los resuelve.
+
+    Son dos y **los lee los dos**, fusionándolos (medido): mirar solo uno daría por ausente una
+    entrada que está puesta en el otro.
+    """
+    base = opencode_dir(home)
+    return tuple(base / name for name in OPENCODE_CONFIG_NAMES)
+
+
+def opencode_config_target(home: Path) -> Path:
+    """A cuál de los dos se escribe. Misma regla que usa el propio `opencode mcp add` (medida).
+
+    `opencode.json` si existe; si no, `opencode.jsonc`; y si no hay ninguno, `opencode.jsonc`, que
+    es el que crea el cliente en una máquina limpia. Coincidir con él importa: si eligiéramos otro,
+    una instalación por CLI y otra por fichero acabarían en sitios distintos y la segunda parecería
+    no haber hecho nada.
+    """
+    json_path, jsonc_path = opencode_config_paths(home)
+    return json_path if json_path.is_file() else jsonc_path
+
+
+def read_opencode_config(path: Path) -> tuple[dict | None, str | None]:
+    """(config, motivo por el que no se pudo leer). Tolera comentarios, que son legales aquí.
+
+    Devuelve ``(None, None)`` cuando el fichero no existe —una ausencia de verdad— y
+    ``(None, motivo)`` cuando existe y no se puede entender, que es ``unknown`` y nunca ``missing``.
+    """
+    try:
+        texto = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None, None
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, f"no se pudo leer {path}: {getattr(exc, 'strerror', None) or exc}"
+    if not texto.strip():
+        return {}, None
+    try:
+        data = json.loads(strip_jsonc(texto))
+    except ValueError as exc:
+        return None, f"{path} no es JSON(C) válido ({exc.msg})"
+    return (data, None) if isinstance(data, dict) else (None, f"{path} no contiene un objeto")
+
+
+def opencode_mcp_entry(
+    mode: str,
+    base_url: str | None,
+    api_key_env: bool,
+    version: str | None,
+    web_token_env: bool = False,
+) -> dict:
+    """Entrada de servidor MCP para opencode.
+
+    Se construye desde los mismos datos que `mcp_entry` y **no** traduciendo su salida: la
+    traducción ataría la forma de un cliente a la del otro, y el próximo cambio en una rompería la
+    otra en silencio. Lo que sí comparten —la URL del daemon, el comando de `uvx`, qué variables
+    van al proceso— sale de las tres funciones comunes de más arriba.
+
+    Forma medida contra opencode 1.18.11: `type` es obligatorio, `command` es **siempre un array**,
+    las variables van en `environment` (no `env`), y la interpolación es `{env:VAR}` — `${VAR}` no
+    se sustituye.
+
+    **No se escribe `"enabled": true`** aunque el esquema lo acepte, y no es por brevedad: la CLI
+    del propio cliente no lo escribe (medido), así que ponerlo haría que los dos caminos —CLI y
+    fichero— dejaran formas distintas, y sobre todo que el `literal` del `--dry-run` prometiera una
+    clave que luego no aparece. `enabled` sirve para **desactivar** (`false`); en `true` es el
+    default y no dice nada.
+    """
+    if mode == "http":
+        entry: dict = {"type": "remote", "url": daemon_mcp_url()}
+        if web_token_env:
+            entry["headers"] = {"Authorization": f"Bearer {{env:{WEB_TOKEN_VAR}}}"}
+        return entry
+    entry = {"type": "local", "command": uvx_command(version)}
+    env = stdio_env(base_url, api_key_env, "{env:LOCAL_DELEGATE_API_KEY}")
+    if env:
+        entry["environment"] = env
+    return entry
+
+
+def opencode_mcp_add_args(entry: dict) -> list[str]:
+    """Argumentos de `opencode mcp add` que producen ``entry``.
+
+    Existe aparte para poder probarla sin ejecutar el binario: es la traducción entre la forma que
+    escribimos nosotros y la que entiende la CLI del cliente, y es donde se colaría un `--env` mal
+    puesto sin que ningún test lo viera.
+    """
+    args = ["mcp", "add", SERVER_NAME]
+    if entry.get("type") == "remote":
+        args += ["--url", str(entry["url"])]
+        for nombre, valor in (entry.get("headers") or {}).items():
+            args += ["--header", f"{nombre}={valor}"]
+        return args
+    for nombre, valor in (entry.get("environment") or {}).items():
+        args += ["--env", f"{nombre}={valor}"]
+    # El comando va tras `--`, y no como valor de una opción: así lo pide la CLI (medido).
+    return args + ["--", *entry.get("command", [])]
+
+
 # --- Plan de instalación -----------------------------------------------------
 @dataclass
 class Options:
     home: Path
     components: set[str]  # hooks | skill | memory | mcp
-    targets: set[str]  # claude | codex
+    targets: set[str]  # claude | codex | opencode
     python_exe: str
     enable_read_hook: bool = False
     mcp_mode: str = "stdio"
@@ -529,6 +765,7 @@ def plan_install(opts: Options) -> list[Action]:
     res = resources_dir()
     claude = _claude_dir(opts)
     codex = _codex_dir(opts)
+    opencode = opencode_dir(opts.home)
 
     if "hooks" in opts.components and "claude" in opts.targets:
         hooks_dst = claude / "hooks" / HOOKS_SUBDIR
@@ -576,6 +813,21 @@ def plan_install(opts: Options) -> list[Action]:
             )
         )
 
+    # La skill se instala también en el directorio propio de opencode, y NO se confía en que la
+    # lea de `~/.claude/skills/`. Que la lee está medido; que sirva como diseño, no: esa
+    # compatibilidad es apagable (`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`) y **no existe** en una
+    # máquina sin Claude Code, donde este `plan_install` ni siquiera emite la acción de arriba.
+    # Crearle un `~/.claude/` a quien no tiene Claude Code es justo lo que se corrigió al retirar
+    # el default `--target all`.
+    if "skill" in opts.components and "opencode" in opts.targets:
+        actions.append(
+            _copy_tree_action(
+                res / "skills" / SKILL_NAME,
+                opencode / OPENCODE_SKILL_SUBDIR / SKILL_NAME,
+                f"skill {SKILL_NAME} (opencode)",
+            )
+        )
+
     # `agents` es el único componente que NO está en el default, y la asimetría es deliberada:
     # los subagentes los escribió el usuario, no son andamiaje nuestro. Se planifica solo si hay
     # algo que cambiar, para que el plan no anuncie trabajo inexistente.
@@ -596,6 +848,11 @@ def plan_install(opts: Options) -> list[Action]:
             memory_files.append(claude / "CLAUDE.md")
         if "codex" in opts.targets:
             memory_files.append(codex / "AGENTS.md")
+        if "opencode" in opts.targets:
+            # Mismo razonamiento que con la skill: está medido que opencode carga **también**
+            # `~/.claude/CLAUDE.md` —es una lista de ficheros, no un «el primero que haya»—, pero
+            # eso es apagable (`OPENCODE_DISABLE_CLAUDE_CODE_PROMPT`) y no existe sin Claude Code.
+            memory_files.append(opencode / "AGENTS.md")
         for path in memory_files:
 
             def _run_md(path=path, block=block) -> str:
@@ -636,6 +893,23 @@ def plan_install(opts: Options) -> list[Action]:
                     f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
                     _run_codex,
                     literal=codex_mcp_block(entry),
+                )
+            )
+        if "opencode" in opts.targets:
+            oc_entry = opencode_mcp_entry(
+                opts.mcp_mode,
+                opts.base_url,
+                opts.api_key_env,
+                opts.pin_version,
+                opts.web_token_env,
+            )
+            actions.append(
+                Action(
+                    "mcp",
+                    "opencode",
+                    f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
+                    lambda entry=oc_entry: _register_opencode_mcp(opts, entry),
+                    literal=json.dumps({SERVER_NAME: oc_entry}, ensure_ascii=False),
                 )
             )
     return actions
@@ -684,11 +958,166 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
     return f"escrito en {path}"
 
 
+# Lo que se dice cuando la entrada de opencode NO se escribe. Es un aviso, no un fallo: el resto de
+# componentes sí se instala y el exit code no sube (ver la regla en `apply`).
+_OPENCODE_NO_TOCADO = (
+    "no se tocó {path}: sin la CLI `opencode` y con un fichero que no se puede reescribir sin "
+    "destruir lo que hay ({motivo}). Instala opencode en el PATH y repite, o añade la entrada "
+    "'{server}' a mano"
+)
+
+
+def _leer_config_opencode(path: Path) -> tuple[str, str | None]:
+    """(contenido, motivo por el que no se pudo leer).
+
+    **No** vale ``_read_text`` aquí, y la diferencia es un defecto de verdad: aquella devuelve
+    ``""`` tanto para un fichero vacío como para uno que no se pudo abrir. Con ese ``""``, la
+    comprobación de más abajo daría vía libre y se escribiría un config nuevo **encima del que no
+    se pudo leer** — justo lo que este camino existe para no hacer. Un fichero ilegible es
+    exactamente el caso en el que hay que no tocar nada.
+    """
+    try:
+        return path.read_text(encoding="utf-8"), None
+    except FileNotFoundError:
+        return "", None
+    except (OSError, UnicodeDecodeError) as exc:
+        return "", f"no se pudo leer: {getattr(exc, 'strerror', None) or exc}"
+
+
+def _motivo_para_no_escribir(texto: str) -> str | None:
+    """Por qué NO se puede reescribir este config, o ``None`` si sí se puede.
+
+    Se comprueba antes de tocar nada y por dos condiciones distintas, porque el riesgo es distinto
+    en cada una: los comentarios se perderían **sin que el fichero pareciera roto** (JSON no los
+    tiene, así que un `json.dumps` los borra en silencio), y lo que no parsea no se puede reescribir
+    sin inventarse lo que decía. En los dos casos el lado seguro es el mismo: no escribir y avisar.
+
+    Ojo: recibe el texto **ya leído con éxito**. Que el fichero se pueda leer es condición previa y
+    la resuelve `_leer_config_opencode`, porque un fallo de lectura aquí llegaría como `""` y se
+    confundiría con un fichero vacío, que sí es escribible.
+    """
+    if not texto.strip():
+        return None
+    limpio, habia = _escanear_jsonc(texto)
+    if habia:
+        return "tiene comentarios y se perderían"
+    try:
+        data = json.loads(limpio)
+    except ValueError as exc:
+        return f"no es JSON(C) válido: {exc.msg}"
+    if not isinstance(data, dict):
+        return "no contiene un objeto JSON"
+    if not isinstance(data.get("mcp", {}), dict):
+        return "su clave 'mcp' no es un objeto"
+    return None
+
+
+def opencode_mcp_installed(home: Path) -> dict | None:
+    """La entrada de local-delegate en la config de opencode, mirando **los dos** ficheros."""
+    for path in opencode_config_paths(home):
+        data, _reason = read_opencode_config(path)
+        if not isinstance(data, dict):
+            continue
+        servers = data.get("mcp")
+        entry = servers.get(SERVER_NAME) if isinstance(servers, dict) else None
+        if isinstance(entry, dict):
+            return entry
+    return None
+
+
+def _opencode_cli_env(home: Path) -> dict[str, str]:
+    """Entorno con el que se invoca la CLI de opencode.
+
+    Se fija `XDG_CONFIG_HOME` **siempre**, y no solo con un HOME simulado: es la única forma de que
+    «dónde creemos que está el config» y «dónde escribe el cliente» sean lo mismo en los tres
+    sistemas. Con el HOME real y la variable ya puesta es un no-op; sin ella, apunta a `~/.config`,
+    que es justo donde opencode habría escrito. Con `--home`, mantiene la escritura dentro del
+    árbol simulado — que es lo que `claude mcp add-json --scope user` **no** sabe hacer.
+    """
+    entorno = dict(os.environ)
+    entorno["HOME"] = str(home)
+    entorno["XDG_CONFIG_HOME"] = str(opencode_dir(home).parent)
+    return entorno
+
+
+def _register_opencode_mcp(opts: Options, entry: dict) -> str:
+    """Registra el MCP en opencode: primero con su CLI, si no escribiendo el fichero.
+
+    Se prefiere la CLI por lo mismo que en Claude Code y con un motivo extra que aquí pesa más:
+    **conserva los comentarios y las demás claves** del usuario, y valida la forma el propio
+    cliente — cuyo castigo por una forma mala no es una entrada rota, sino no arrancar.
+
+    Con un HOME simulado, ``opts.use_cli`` ya viene en ``False`` y se escribe el fichero. Nótese
+    que aquí **no es por el motivo del binario `claude`**: `opencode` sí respeta el HOME que se le
+    pasa (medido, y por eso existe `_opencode_cli_env`). Se mantiene apagado porque ``--home`` es
+    el modo de prueba, y lanzar el cliente real desde la suite la haría depender de qué hay
+    instalado en la máquina.
+    """
+    if opts.use_cli and shutil.which("opencode"):
+        try:
+            done = subprocess.run(
+                ["opencode", *opencode_mcp_add_args(entry)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=_opencode_cli_env(opts.home),
+            )
+            # El `returncode` NO basta: está medido que el binario devuelve 0 también para
+            # subcomandos que no existen (`opencode mcp remove`). Si algún día `add` cambia de
+            # nombre, confiar en el código de salida daría por hecho un registro que no ocurrió.
+            # Lo que decide es que la entrada esté después.
+            if done.returncode == 0 and opencode_mcp_installed(opts.home) is not None:
+                return "registrado con `opencode mcp add`"
+        except (OSError, subprocess.SubprocessError):
+            pass  # cae al modo archivo
+
+    path = opencode_config_target(opts.home)
+    texto, fallo = _leer_config_opencode(path)
+    motivo = fallo or _motivo_para_no_escribir(texto)
+    if motivo:
+        return _OPENCODE_NO_TOCADO.format(path=path, motivo=motivo, server=SERVER_NAME)
+    data = json.loads(strip_jsonc(texto)) if texto.strip() else {"$schema": OPENCODE_SCHEMA}
+    servers = data.setdefault("mcp", {})
+    servers[SERVER_NAME] = entry
+    _write_json(path, data)
+    return f"escrito en {path}"
+
+
+def _unregister_opencode_mcp(opts: Options) -> str:
+    """Quita la entrada de los ficheros de opencode. **No** hay `opencode mcp remove` (medido).
+
+    Por eso este camino no tiene la rama por CLI que sí tienen sus dos hermanos: no existe el
+    comando en el que delegar, así que la edición es nuestra y con la misma regla de seguridad que
+    al instalar.
+    """
+    detalles: list[str] = []
+    for path in opencode_config_paths(opts.home):
+        if not path.is_file():
+            continue
+        texto, fallo = _leer_config_opencode(path)
+        motivo = fallo or _motivo_para_no_escribir(texto)
+        if motivo:
+            detalles.append(f"{path}: no se tocó ({motivo})")
+            continue
+        data = json.loads(strip_jsonc(texto)) if texto.strip() else {}
+        servers = data.get("mcp")
+        if not isinstance(servers, dict) or servers.pop(SERVER_NAME, None) is None:
+            continue
+        # Una clave `mcp` vacía es válida para opencode, pero dejarla es dejar basura nuestra en un
+        # fichero ajeno: si se queda sin entradas y no la había antes, se retira.
+        if not servers:
+            data.pop("mcp", None)
+        _write_json(path, data)
+        detalles.append(f"quitado de {path}")
+    return " · ".join(detalles) if detalles else "no estaba registrado"
+
+
 def plan_uninstall(opts: Options) -> list[Action]:
     """Deshace exactamente lo que instaló plan_install(); nunca borra nada ajeno."""
     actions: list[Action] = []
     claude = _claude_dir(opts)
     codex = _codex_dir(opts)
+    opencode = opencode_dir(opts.home)
     hooks_dst = claude / "hooks" / HOOKS_SUBDIR
 
     if "hooks" in opts.components and "claude" in opts.targets:
@@ -724,12 +1153,27 @@ def plan_uninstall(opts: Options) -> list[Action]:
 
         actions.append(Action("remove", skill_dst, f"borra la skill {SKILL_NAME}", _run_skill))
 
+    if "skill" in opts.components and "opencode" in opts.targets:
+        oc_skill = opencode / OPENCODE_SKILL_SUBDIR / SKILL_NAME
+
+        def _run_skill_oc(path=oc_skill) -> str:
+            if path.is_dir():
+                shutil.rmtree(path)
+                return "eliminada"
+            return "no existía"
+
+        actions.append(
+            Action("remove", oc_skill, f"borra la skill {SKILL_NAME} de opencode", _run_skill_oc)
+        )
+
     if "memory" in opts.components:
         paths = []
         if "claude" in opts.targets:
             paths.append(claude / "CLAUDE.md")
         if "codex" in opts.targets:
             paths.append(codex / "AGENTS.md")
+        if "opencode" in opts.targets:
+            paths.append(opencode / "AGENTS.md")
         for path in paths:
 
             def _run_md(path=path) -> str:
@@ -765,6 +1209,15 @@ def plan_uninstall(opts: Options) -> list[Action]:
                 return "entrada quitada"
 
             actions.append(Action("toml", config_path, f"quita '{SERVER_NAME}'", _run_codex))
+        if "opencode" in opts.targets:
+            actions.append(
+                Action(
+                    "mcp",
+                    "opencode",
+                    f"quita el servidor MCP '{SERVER_NAME}'",
+                    lambda: _unregister_opencode_mcp(opts),
+                )
+            )
     return actions
 
 
