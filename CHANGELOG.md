@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-08-02
+
 ### Added
 - **opencode como tercer cliente de `install`, `doctor` y `update`.** Hasta ahora el instalador
   conocía dos clientes y la lista estaba repartida en cinco sitios. Quien tuviera **opencode** no
@@ -1469,7 +1471,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
+[0.21.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.20.0...v0.21.0
+[0.20.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.17.0...v0.18.0
