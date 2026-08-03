@@ -16,8 +16,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   Ahora `--clients opencode` (y la detección automática) le escriben la entrada MCP —`type: "local"`
   con `uvx`, o `type: "remote"` contra el daemon—, el bloque de memoria en
   `~/.config/opencode/AGENTS.md` y la skill en `~/.config/opencode/skill/delegacion-local/`.
-  `doctor` gana la comprobación **nº17**, `scaffold.mcp_opencode`, y `update` repone la entrada
-  cuando falta. Verificado de punta a punta contra el binario real: tras instalar en un HOME
+  `doctor` gana la comprobación **nº17**, `scaffold.mcp_opencode`, y las que ya existían —memoria
+  global y skill— pasan a mirar los tres clientes en vez de uno; `update` repone lo que falte. Verificado de punta a punta contra el binario real: tras instalar en un HOME
   simulado, `opencode mcp list` responde `✓ local-delegate connected`.
 
   Todo lo que se afirma sobre opencode está medido contra la **1.18.11** ejecutándolo, no leído de

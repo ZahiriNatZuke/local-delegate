@@ -90,8 +90,14 @@ idempotente, reversible, sin escribir secretos y sin pisar lo que escribió una 
 - **REQ-028:** El `probe` **no escribe nada**, ni crea directorios ni ficheros.
 - **REQ-029:** Las **cinco** frases de tamaño de `checks.py` y el mapa `_NUMERO` de
   `tests/test_checks.py` dicen diecisiete.
-- **REQ-030:** `update.REPAIRS` repone la entrada MCP de opencode y su bloque de memoria cuando
-  estén en `missing`, y **no** repara nada en `warn` que signifique configuración del usuario.
+- **REQ-030:** `update.REPAIRS` repone la entrada MCP de opencode, su bloque de memoria y su skill
+  cuando estén en `missing`, y **no** repara nada en `warn` que signifique configuración del
+  usuario.
+- **REQ-030b:** `scaffold.skill` mira la skill **de cada cliente al que se le escribe**, no solo la
+  de Claude Code. Con las dos instaladas y la de opencode borrada, el check dice `missing` — un
+  `ok` ahí sería un falso OK, no un hueco de cobertura, porque `plan_install` la escribió y
+  `plan_uninstall` la borra. Codex queda fuera: no tiene skills y no se le escribe ninguna.
+  *(Añadido tras la revisión del diff: faltaba, y es lo que dejaba a REQ-019 sin diagnóstico.)*
 - **REQ-031:** La salida de todo lo anterior no contiene caracteres fuera de cp1252.
 
 ### Documentación

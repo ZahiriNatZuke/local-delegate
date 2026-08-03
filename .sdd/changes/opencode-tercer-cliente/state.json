@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "verifying",
   "createdAt": "2026-08-02T15:45:00.000Z",
-  "updatedAt": "2026-08-02T18:05:00.000Z",
+  "updatedAt": "2026-08-02T21:30:00.000Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -22,7 +22,7 @@
     "quality": {
       "status": "pending",
       "updatedAt": "2026-08-02T17:40:00.000Z",
-      "evidence": "pytest 701 passed 4 skipped (1 failed anterior y ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK (ampliado para cubrir opencode); 8 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. La revision del diff encontro un defecto real (lectura tolerante que confundia vacio con ilegible) y quedo corregido con test",
+      "evidence": "pytest 710 passed 2 skipped en Windows (en Linux eran 701 passed 4 skipped con 1 failed ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK en linux y en win32 (ampliado para cubrir opencode); 11 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. Dos revisiones del diff encontraron dos defectos reales, ambos corregidos con test: la lectura tolerante que confundia vacio con ilegible, y el falso OK del check de la skill (miraba solo la de Claude Code mientras install la escribia tambien en opencode, asi que doctor decia 'instalada' con la de opencode borrada y update no la reponia)",
       "actor": "pending"
     },
     "conformance": {
@@ -96,6 +96,11 @@
       "to": "verifying",
       "at": "2026-08-02T17:40:00.000Z",
       "reason": "Las 11 tareas implementadas; suite, estatica, mutacion dirigida y verificacion contra el cliente real en verde"
+    },
+    {
+      "type": "note",
+      "at": "2026-08-02T21:30:00.000Z",
+      "note": "Revision del diff desde Windows: dos correcciones. (1) Falso OK del check de la skill, que miraba solo ~/.claude/skills mientras plan_install la escribia tambien en opencode: con Claude Code presente, doctor decia 'instalada' con la de opencode borrada y update no la reponia. Corregido en _probe_skill (recorre _clientes) y en el Repair (PRESENT en vez de claude); anadido REQ-030b. Un test pasaba por la guarda equivocada (se llamaba 'solo Codex' con opencode instalado por defecto). Tres mutantes nuevos, cada uno cazado. (2) Cuatro ficheros habian pasado de CRLF a LF al editarse desde un runner Linux, inflando el diff de 2213 a 4340 lineas; devueltos a CRLF. Verificado en Windows: 710 passed 2 skipped, ruff limpio, check_install_e2e OK en win32"
     }
   ]
 }

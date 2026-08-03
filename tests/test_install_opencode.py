@@ -10,6 +10,7 @@ afirma sobre el comportamiento de opencode está medido contra la 1.18.11 y anot
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -378,3 +379,61 @@ def test_el_probe_de_opencode_no_escribe_nada(tmp_path):
     )
     assert resultado.status == checks.OK
     assert snapshot(home) == antes
+
+
+# --- La skill de opencode también se diagnostica y se repone -------------------
+# El probe miraba SOLO `~/.claude/skills/` mientras `plan_install` escribía la skill en los dos
+# clientes. Con Claude Code presente eso no era un hueco de cobertura sino un **falso OK**: la
+# skill de opencode borrada y `doctor` diciendo «instalada». Estos tres lo atan por el lado que
+# fallaba — el dato que distingue es que la de Claude Code esté BIEN.
+def _borra_la_skill_de_opencode(home: Path) -> Path:
+    ruta = inst.opencode_dir(home) / inst.OPENCODE_SKILL_SUBDIR / inst.SKILL_NAME
+    shutil.rmtree(ruta)
+    return ruta
+
+
+def _skill(home: Path):
+    from local_delegate import checks
+
+    ctx = checks.Context(home=home, latest_release=checks.SKIP_PYPI)
+    return next(
+        r for c, r in checks.run_all(ctx, groups=("andamiaje",)) if c.id == "scaffold.skill"
+    )
+
+
+def test_la_skill_de_opencode_borrada_no_la_tapa_la_de_claude_code(tmp_path):
+    from local_delegate import checks
+
+    home = make_home(tmp_path)  # los tres clientes, y la skill de Claude Code intacta
+    _borra_la_skill_de_opencode(home)
+
+    resultado = _skill(home)
+    assert resultado.status == checks.MISSING, resultado.detail
+    assert "Claude Code: instalada" in resultado.detail  # el dato que distingue: aquélla está bien
+    assert "opencode: no existe" in resultado.detail
+
+
+def test_codex_no_arrastra_el_check_de_la_skill(tmp_path):
+    """Codex no tiene skills: `plan_install` no se la escribe y el probe no puede exigírsela."""
+    from local_delegate import checks
+
+    home = make_home(tmp_path, claude=False, opencode=False)  # solo Codex, y completo
+    resultado = _skill(home)
+    assert resultado.status == checks.UNKNOWN, resultado.detail
+    assert "Codex" not in resultado.detail
+
+
+def test_update_repone_la_skill_de_opencode(tmp_path):
+    """Sin esto el check la veía faltar y la tabla de reparaciones no tenía a quién escribirle."""
+    # `opts_for` viene de `test_update` y no se copia aquí: es donde están doblados el runner, el
+    # reloj y el arranque del daemon, y una segunda copia de esos dobles se queda vieja sola.
+    from test_update import opts_for
+
+    from local_delegate import update
+
+    home = make_home(tmp_path)
+    ruta = _borra_la_skill_de_opencode(home)
+
+    update.run_update(opts_for(home), out=lambda *a: None)
+
+    assert (ruta / "SKILL.md").is_file()
