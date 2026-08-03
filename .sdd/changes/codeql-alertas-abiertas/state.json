@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "codeql-alertas-abiertas",
+  "title": "Cerrar las 10 alertas abiertas de CodeQL: 6 arreglos y 4 descartes",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-08-03T22:43:42.806Z",
+  "updatedAt": "2026-08-03T22:57:29.376Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T22:45:43.245Z",
+      "evidence": "Las 10 alertas verificadas una a una por ejecucion: gh api code-scanning/alerts (todas sobre HEAD 17df173) mas lectura del codigo en cada ubicacion. Cuatro falsos positivos confirmados leyendo el codigo (sysinfo.py:262 declara global; los dos ctypes son imports perezosos en funciones distintas). Seis requisitos observables con escenarios de aceptacion y mutantes definidos.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T22:46:34.569Z",
+      "evidence": "Revision adversarial hecha y anotada en plan.md: tres objeciones planteadas y resueltas (mutante distinguible en t4, alcance real del hash en t2, plan B si py/empty-except sigue marcando). Ocho tareas ordenadas con propiedad de ficheros exclusiva, requisito cubierto y rollback. El unico paso que escribe fuera del repo va tras el merge y es reversible.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-03T22:57:29.376Z",
+      "evidence": "722 passed / 2 skipped; ruff check y ruff format limpios; node --check ok; salida del extractor identica byte a byte (sha256 6e030c20). Control positivo real en los dos tests: el primer mutante de REQ-004 lo atrapaba un assert previo (deadlock) y se repitio con uno dirigido que solo dispara el assert nuevo. Cuatro fallos preexistentes de test_daemon.py causados por LOCAL_DELEGATE_WEB_TOKEN del entorno, confirmados con git stash y con la variable vacia: fuera de alcance.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-03T22:43:42.806Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-03T22:45:43.245Z",
+      "evidence": "Las 10 alertas verificadas una a una por ejecucion: gh api code-scanning/alerts (todas sobre HEAD 17df173) mas lectura del codigo en cada ubicacion. Cuatro falsos positivos confirmados leyendo el codigo (sysinfo.py:262 declara global; los dos ctypes son imports perezosos en funciones distintas). Seis requisitos observables con escenarios de aceptacion y mutantes definidos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-03T22:46:34.569Z",
+      "evidence": "Revision adversarial hecha y anotada en plan.md: tres objeciones planteadas y resueltas (mutante distinguible en t4, alcance real del hash en t2, plan B si py/empty-except sigue marcando). Ocho tareas ordenadas con propiedad de ficheros exclusiva, requisito cubierto y rollback. El unico paso que escribe fuera del repo va tras el merge y es reversible.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-03T22:47:31.595Z",
+      "reason": "Investigacion ya hecha por ejecucion: 10 alertas consultadas por gh api y verificadas leyendo el codigo de cada ubicacion; resultados en brief.md (modo lite, sin research.md)"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-03T22:47:31.764Z",
+      "reason": "brief.md completo con veredicto por alerta y causa del ruido identificada"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-03T22:47:31.936Z",
+      "reason": "spec.md escrita: 6 requisitos observables, 3 escenarios de aceptacion y matriz de trazabilidad"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-03T22:47:32.106Z",
+      "reason": "plan.md escrito: 8 tareas ordenadas con propiedad exclusiva de ficheros y rollback"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-03T22:47:32.269Z",
+      "reason": "Revision adversarial del plan sin hallazgos bloqueantes; tres objeciones resueltas y anotadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-03T22:57:29.163Z",
+      "reason": "Los seis arreglos aplicados; los dos tests reforzados validados contra mutante dirigido"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-03T22:57:29.376Z",
+      "evidence": "722 passed / 2 skipped; ruff check y ruff format limpios; node --check ok; salida del extractor identica byte a byte (sha256 6e030c20). Control positivo real en los dos tests: el primer mutante de REQ-004 lo atrapaba un assert previo (deadlock) y se repitio con uno dirigido que solo dispara el assert nuevo. Cuatro fallos preexistentes de test_daemon.py causados por LOCAL_DELEGATE_WEB_TOKEN del entorno, confirmados con git stash y con la variable vacia: fuera de alcance.",
+      "actor": "user"
+    }
+  ]
+}

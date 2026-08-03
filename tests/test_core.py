@@ -616,7 +616,19 @@ def test_chat_applies_process_wide_concurrency_limit(tmp_path, monkeypatch):
     for thread in threads:
         thread.join(timeout=5)
         assert not thread.is_alive()
-    assert peak == 2
+    # Con los cinco hilos ya terminados hay dos cosas distintas que comprobar, y la segunda es la
+    # que pilla una regresión de verdad: que el pico no pasó de 2 ni al desatascarse la cola de
+    # golpe, y que el semáforo quedó con sus dos slots DEVUELTOS. Hoy `_chat` usa `with
+    # _chat_slots:`, que libera pase lo que pase; si alguien lo cambiara a un acquire() manual y se
+    # le escapara un camino de error, cada delegación fallida se comería un slot y a la tercera el
+    # MCP se colgaría para siempre sin decir por qué.
+    with state_lock:
+        estado_final = (peak, active)
+    slots = [server._chat_slots.acquire(blocking=False) for _ in range(2)]
+    for adquirido in slots:
+        if adquirido:
+            server._chat_slots.release()
+    assert (estado_final, slots) == ((2, 0), [True, True])
 
 
 # --- F5: LOCAL_DELEGATE_ALLOWED_DIRS ----------------------------------------------------

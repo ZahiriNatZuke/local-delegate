@@ -84,6 +84,8 @@ def _remove_own_state() -> None:
         if data.get("pid") == os.getpid():
             path.unlink(missing_ok=True)
     except (OSError, ValueError, TypeError):
+        # Limpieza de apagado: si el archivo de estado no existe, está corrupto o lo escribió otra
+        # cosa, no hay nada nuestro que borrar. Fallar aquí solo ensuciaría la salida del daemon.
         pass
 
 
