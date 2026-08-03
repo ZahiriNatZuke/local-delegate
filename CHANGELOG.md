@@ -6,6 +6,48 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **opencode como tercer cliente de `install`, `doctor` y `update`.** Hasta ahora el instalador
+  conocía dos clientes y la lista estaba repartida en cinco sitios. Quien tuviera **opencode** no
+  tenía ningún camino soportado: ni entrada MCP, ni diagnóstico, ni reparación. Y no había herencia
+  que salvara el caso — está **medido** que opencode no lee la configuración MCP de Claude Code
+  (`~/.claude.json`) ni la de Codex (`~/.codex/config.toml`).
+
+  Ahora `--clients opencode` (y la detección automática) le escriben la entrada MCP —`type: "local"`
+  con `uvx`, o `type: "remote"` contra el daemon—, el bloque de memoria en
+  `~/.config/opencode/AGENTS.md` y la skill en `~/.config/opencode/skill/delegacion-local/`.
+  `doctor` gana la comprobación **nº17**, `scaffold.mcp_opencode`, y `update` repone la entrada
+  cuando falta. Verificado de punta a punta contra el binario real: tras instalar en un HOME
+  simulado, `opencode mcp list` responde `✓ local-delegate connected`.
+
+  Todo lo que se afirma sobre opencode está medido contra la **1.18.11** ejecutándolo, no leído de
+  su documentación (traza en `.sdd/changes/opencode-tercer-cliente/`). Las cuatro decisiones que
+  no se deducen del código:
+
+  - **Dónde vive su configuración es una función, no una ruta.** `XDG_CONFIG_HOME` gana sobre
+    `HOME`, así que un `home/.config/opencode` escrito a mano habría hecho que `install` escribiera
+    un fichero que el cliente nunca lee y que `doctor` dijera que falta la entrada recién puesta.
+    Con `--home` la variable se ignora, para que el árbol simulado siga siendo un sandbox.
+  - **Se escribe con `opencode mcp add`, y el camino propio es el de socorro.** Su config es JSONC
+    y admite comentarios aunque el fichero se llame `.json`: un `json.dumps` de ida y vuelta los
+    borraría **sin que el fichero pareciera roto**. Su CLI los conserva. Cuando no está y el fichero
+    tiene comentarios —o no parsea—, la entrada **no se escribe**, se avisa con la ruta y el resto
+    de componentes sí se instala. Es la misma regla que ya protege el Codex escrito a mano.
+  - **Nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel desconocida hace que
+    opencode **no arranque** (`ConfigInvalidError`): el castigo por una forma mala no es una entrada
+    rota, es un cliente inutilizable. Por eso ahí no hay marcadores `local-delegate:begin/end` y la
+    entrada se identifica por su nombre, como en Claude Code.
+  - **Cada cliente tiene su sintaxis para referenciar un secreto y la del otro no se expande.**
+    En opencode es `{env:VAR}`; escribir el `${VAR}` de Claude Code dejaría la variable literal, que
+    se ve como un `401` y no como una configuración mala. El secreto sigue sin escribirse nunca.
+
+  Fuera de alcance, y por un motivo medido: **los hooks no portan**. opencode no tiene el mecanismo
+  de Claude Code — extiende con plugins en TypeScript y otra superficie de eventos—, y nuestros tres
+  hooks son scripts de Python que hablan el protocolo de Claude Code. Tampoco declara
+  `elicitation` (solo `roots`), así que las tools que saben preguntar en vez de fallar siguen
+  degradando al error de siempre en ese cliente: ya funcionaba así y la documentación ahora lo dice
+  en vez de prometer lo contrario.
+
 ## [0.21.0] - 2026-08-01
 
 > La tanda del **backlog cerrado entero**: los dos puntos vivos que quedaban, los tres «no
