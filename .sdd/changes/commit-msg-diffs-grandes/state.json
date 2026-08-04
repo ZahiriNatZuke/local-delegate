@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "slug": "commit-msg-diffs-grandes",
+  "title": "local_commit_msg deja de truncar diffs grandes",
+  "mode": "lite",
+  "status": "result-review",
+  "createdAt": "2026-08-04T14:53:23.504Z",
+  "updatedAt": "2026-08-04T17:24:11.183Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T15:10:24.597Z",
+      "evidence": "Fallo reproducido por ejecucion: diff de 164585 chars y 44 archivos truncado a 20027 (7 archivos, todos .sdd/) devuelve 'chore: update GitHub Actions pages artifact version'. Control positivo: el mismo modelo con solo el diffstat (2987 chars, sin truncar) nombra el cambio real, o sea el defecto es la entrada y no el modelo. Tercera medida: 1 de 11 trozos empieza en frontera de archivo con el splitter actual, lo que hace obligatoria la pieza B. Siete requisitos observables con cuatro escenarios y trazabilidad.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T15:13:39.792Z",
+      "evidence": "Revision adversarial anotada en plan.md: siete objeciones, cuatro cambiaron el plan (respaldo del splitter que partia cada archivo dos veces e incumplia REQ-002; el inventario desbordando el presupuesto del reduce; los parciales heredando el tope de tokens del mensaje final y cortandose por length; un test de no-regresion que no podia comprobar lo que decia). Cinco tareas con propiedad exclusiva de archivos, verificacion y rollback. Riesgo residual acotado con criterio de fallo explicito en la tarea 5.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T17:23:40.060Z",
+      "evidence": "746 tests pasan y 2 skipped (eran 725 antes); ruff check y format limpios. Control positivo de todos los tests nuevos mirando que assert dispara: los 5 de comportamiento fallan sin el cambio por su propio assert, los del reintento con un mutante que anula _es_desborde_de_contexto, y los del map con un mutante que revierte los prompts. Dos tests corregidos por no medir lo que decian.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T17:24:11.183Z",
+      "evidence": "Los siete requisitos implementados y verificados contra el backend real y con tests. Veredicto conforms-with-notes: REQ-004 cumple con dos limites de calidad anotados (el tipo del commit no siempre acierta y el cuerpo es irregular), ninguno bloqueante. Cinco hallazgos anotados, incluidos dos tests propios que no median lo que decian y una hipotesis de diagnostico caida.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-04T14:53:23.504Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-04T14:57:17.733Z",
+      "reason": "cambio acotado en modo lite; evidencia por ejecucion recogida en research.md"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-04T14:57:17.789Z",
+      "reason": "fallo reproducido y control positivo medido; spec escrita"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-04T15:10:24.597Z",
+      "evidence": "Fallo reproducido por ejecucion: diff de 164585 chars y 44 archivos truncado a 20027 (7 archivos, todos .sdd/) devuelve 'chore: update GitHub Actions pages artifact version'. Control positivo: el mismo modelo con solo el diffstat (2987 chars, sin truncar) nombra el cambio real, o sea el defecto es la entrada y no el modelo. Tercera medida: 1 de 11 trozos empieza en frontera de archivo con el splitter actual, lo que hace obligatoria la pieza B. Siete requisitos observables con cuatro escenarios y trazabilidad.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-04T15:10:24.654Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-04T15:13:39.792Z",
+      "evidence": "Revision adversarial anotada en plan.md: siete objeciones, cuatro cambiaron el plan (respaldo del splitter que partia cada archivo dos veces e incumplia REQ-002; el inventario desbordando el presupuesto del reduce; los parciales heredando el tope de tokens del mensaje final y cortandose por length; un test de no-regresion que no podia comprobar lo que decia). Cinco tareas con propiedad exclusiva de archivos, verificacion y rollback. Riesgo residual acotado con criterio de fallo explicito en la tarea 5.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-04T15:14:15.506Z",
+      "reason": "revision adversarial anotada en plan.md"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-04T15:14:15.563Z",
+      "reason": "plan aprobado; cuatro objeciones incorporadas"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "planning",
+      "at": "2026-08-04T16:45:12.082Z",
+      "reason": "la medida contra el backend real invalida un supuesto: el presupuesto de trozo esta en chars y el limite del modelo en tokens; uv.lock da 1.57 chars/token contra 3.12 de la prosa y desborda el contexto"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-04T16:45:37.661Z",
+      "reason": "tarea 6 anadida y justificada con la medida"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-04T16:45:37.718Z",
+      "reason": "plan actualizado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "planning",
+      "at": "2026-08-04T17:07:43.131Z",
+      "reason": "diagnostico por espia de las llamadas: el defecto esta en el map, no en el reduce (plantilla copiada literal y trozos de continuacion sin nombre de archivo)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-04T17:07:43.188Z",
+      "reason": "tarea 7"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-04T17:07:43.243Z",
+      "reason": "arreglo del map"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-04T17:23:40.006Z",
+      "reason": "verification.md escrito con las medidas contra el backend real"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-04T17:23:40.060Z",
+      "evidence": "746 tests pasan y 2 skipped (eran 725 antes); ruff check y format limpios. Control positivo de todos los tests nuevos mirando que assert dispara: los 5 de comportamiento fallan sin el cambio por su propio assert, los del reintento con un mutante que anula _es_desborde_de_contexto, y los del map con un mutante que revierte los prompts. Dos tests corregidos por no medir lo que decian.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-04T17:24:11.125Z",
+      "reason": "review.md escrito contra los siete requisitos"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-04T17:24:11.183Z",
+      "evidence": "Los siete requisitos implementados y verificados contra el backend real y con tests. Veredicto conforms-with-notes: REQ-004 cumple con dos limites de calidad anotados (el tipo del commit no siempre acierta y el cuerpo es irregular), ninguno bloqueante. Cinco hallazgos anotados, incluidos dos tests propios que no median lo que decian y una hipotesis de diagnostico caida.",
+      "actor": "user"
+    }
+  ]
+}

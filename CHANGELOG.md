@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`local_commit_msg` deja de redactar el mensaje sobre el principio del diff.** Era la única tool
+  de reducción que seguía truncando la entrada: por encima de 20 000 caracteres, el resto se
+  descartaba con un aviso de apariencia inocua. Medido sobre un diff de 164 585 chars y 44
+  archivos, el modelo veía 20 027 —siete archivos, todos de `.sdd/`— y devolvía `chore: update
+  GitHub Actions pages artifact version`, o sea el primer archivo por orden alfabético de rutas.
+  Como `git diff` sale ordenado por ruta, lo que se perdía era justo `src/` y `tests/`.
+
+  Ahora el diff entra entero: se parte **por archivo** —un splitter nuevo, porque un diff no tiene
+  headers Markdown y caía a párrafos, cortando hunks por la mitad—, cada trozo produce sus notas y
+  el mensaje se redacta sobre ellas más el **inventario completo** del diff, que se calcula sin
+  modelo porque es un conteo y no un juicio. La salida dice sobre cuántos archivos y cuántos
+  caracteres se redactó, para que procesar de menos no vuelva a ser invisible.
+
+- **Un trozo que no cabe en el contexto del modelo ya no aborta la operación.** Los presupuestos de
+  troceado están en caracteres y el límite del modelo en tokens, y la relación entre los dos
+  depende del contenido: la prosa de un `.md` da 3,12 chars/token y `uv.lock` —hashes y URLs— da
+  1,57. El mismo presupuesto que sirve para un documento revienta con otro. Cuando el backend
+  responde `exceed_context_size`, el trozo se parte y se reintenta, así que el presupuesto en
+  caracteres pasa a ser una estimación inicial y quien manda es el límite real. Afecta también a
+  `local_summarize` y `local_lint_summary`, donde el defecto estaba latente desde su migración.
+
 ## [0.23.0] - 2026-08-03
 
 ### Added

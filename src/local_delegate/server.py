@@ -726,6 +726,32 @@ def _chat(
 #
 # Invariante: "".join(_chunk_text(t, n)) == t. Cada trozo conserva el separador original con
 # el que terminaba, así las costuras se reensamblan sin inventar ni perder saltos de línea.
+def _split_by_diff_files(text: str) -> list[str]:
+    """Corta un diff unificado justo ANTES de la cabecera de cada archivo.
+
+    Un diff no tiene headers Markdown, así que sin esto cae a párrafos y los trozos empiezan a
+    mitad de un hunk: líneas `+` huérfanas cuya cabecera —la que dice de qué archivo son— quedó
+    en el trozo anterior. Medido sobre un diff de 44 archivos: 1 de 11 trozos empezaba en
+    frontera de archivo.
+
+    Se **autoinhibe** si el texto no empieza por una cabecera de diff: así un Markdown que
+    incluya un diff dentro de un fence se sigue partiendo por headers, y este splitter no puede
+    degradar a `local_translate` ni a `local_summarize` sobre documentos normales.
+
+    El respaldo `--- `/`+++ ` (diffs sin `--git`) solo se usa cuando NO hay ningún `diff --git`:
+    en un diff `--git` cada archivo trae también su `--- a/x`, y cortar por las dos cabeceras
+    partiría cada archivo en dos, dejando piezas que empiezan en `---` sin decir de qué archivo.
+    """
+    inicio = text.lstrip()
+    if not (inicio.startswith("diff --git ") or re.match(r"--- \S", inicio)):
+        return [text]
+    if re.search(r"(?m)^diff --git ", text):
+        patron = r"(?m)(?=^diff --git )"
+    else:
+        patron = r"(?m)(?=^--- \S.*\n\+\+\+ )"
+    return [p for p in re.split(patron, text) if p]
+
+
 def _split_by_headers(text: str) -> list[str]:
     """Corta justo ANTES de cada header Markdown (`# `…`###### `)."""
     return [p for p in re.split(r"(?m)(?=^#{1,6} )", text) if p]
@@ -741,7 +767,86 @@ def _split_by_lines(text: str) -> list[str]:
     return [p for p in re.split(r"(?<=\n)", text) if p]
 
 
-_SPLITTERS = (_split_by_headers, _split_by_paragraphs, _split_by_lines)
+_SPLITTERS = (_split_by_diff_files, _split_by_headers, _split_by_paragraphs, _split_by_lines)
+
+
+# --- Inventario de un diff (local_commit_msg) --------------------------------
+# Medido: el `--stat` completo de un diff de 164 585 chars son 2 987 — cabe entero donde el diff
+# no cabe. Y con solo ese inventario el modelo ya nombra el cambio real, mientras que con los
+# primeros 20 000 chars del diff nombra el primer archivo por orden alfabético. Por eso el paso
+# que redacta el mensaje lo recibe SIEMPRE, y por eso se calcula aquí y no se le pide al modelo:
+# es un conteo, no un juicio.
+def _diff_inventory(diff: str) -> list[tuple[str, int, int]]:
+    """Devuelve `(ruta, líneas añadidas, líneas quitadas)` por archivo del diff.
+
+    El conteo distingue las cabeceras `--- `/`+++ ` de las líneas de contenido por su posición
+    —solo son cabecera antes del primer `@@` del archivo— y no por su texto. Mirando el texto,
+    borrar una línea que empiece por `--` se registraría como cabecera y no se contaría.
+    """
+    archivos: list[tuple[str, int, int]] = []
+    ruta: str | None = None
+    mas = menos = 0
+    en_hunk = False
+
+    def _cerrar() -> None:
+        if ruta is not None:
+            archivos.append((ruta, mas, menos))
+
+    for linea in diff.splitlines():
+        if linea.startswith("diff --git "):
+            _cerrar()
+            resto = linea[len("diff --git ") :]
+            pareja = re.match(r"a/(.+) b/\1$", resto)
+            ruta = pareja.group(1) if pareja else resto.split(" b/", 1)[-1].lstrip("b/")
+            mas = menos = 0
+            en_hunk = False
+        elif ruta is None:
+            continue
+        elif linea.startswith("@@"):
+            en_hunk = True
+        elif not en_hunk:
+            # Zona de cabecera: `+++ b/x` manda sobre el nombre adivinado de `diff --git`, salvo
+            # en un borrado (`+++ /dev/null`), donde el nombre bueno es el de `--- a/x`.
+            if linea.startswith("+++ ") and linea[4:] != "/dev/null":
+                ruta = linea[4:].removeprefix("b/")
+            elif linea.startswith("--- ") and linea[4:] != "/dev/null":
+                ruta = linea[4:].removeprefix("a/")
+            elif linea.startswith("rename to "):
+                ruta = linea[len("rename to ") :]
+        elif linea.startswith("+"):
+            mas += 1
+        elif linea.startswith("-"):
+            menos += 1
+    _cerrar()
+    return archivos
+
+
+def _format_inventory(archivos: list[tuple[str, int, int]], max_chars: int) -> str:
+    """Rinde el inventario como texto, colapsado por directorio si no cabe en `max_chars`.
+
+    Sin el colapso, un diff de cientos de archivos desplazaría del prompt final justo el material
+    que el modelo tiene que resumir.
+    """
+    if not archivos:
+        return ""
+    mas_total = sum(m for _, m, _ in archivos)
+    menos_total = sum(n for _, _, n in archivos)
+    cabecera = f"Archivos del cambio ({len(archivos)} en total, +{mas_total} -{menos_total}):"
+    detalle = "\n".join(f"  {ruta} | +{mas} -{menos}" for ruta, mas, menos in archivos)
+    if len(cabecera) + 1 + len(detalle) <= max_chars:
+        return f"{cabecera}\n{detalle}"
+
+    agrupado: dict[str, list[int]] = {}
+    for ruta, mas, menos in archivos:
+        raiz = ruta.split("/", 1)[0] if "/" in ruta else "(raíz)"
+        acumulado = agrupado.setdefault(raiz, [0, 0, 0])
+        acumulado[0] += 1
+        acumulado[1] += mas
+        acumulado[2] += menos
+    detalle = "\n".join(
+        f"  {raiz}/ | {n} archivos, +{mas} -{menos}" for raiz, (n, mas, menos) in agrupado.items()
+    )
+    return f"{cabecera} agrupados por directorio porque la lista completa no cabía\n{detalle}"
 
 
 def _pack(pieces: list[str], max_chars: int) -> list[str]:
@@ -907,6 +1012,27 @@ def _chat_chunked(
     return text
 
 
+_DESBORDE_DE_CONTEXTO = (
+    "exceed_context_size",
+    "exceeds the available context",
+    "context window",
+)
+
+
+def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
+    """True si el backend rechazó la llamada por no caber en el contexto del modelo.
+
+    Los presupuestos de troceado están en CARACTERES y el límite del modelo en TOKENS, y la
+    relación entre los dos depende del contenido: la prosa de un `.md` da 3,12 chars/token y
+    `uv.lock` —hashes y URLs— da 1,57, medido. Un presupuesto en chars que sirve para un
+    documento revienta con otro, así que el que manda tiene que ser el límite real, no la
+    estimación: ver `_chat_map_reduce`.
+    """
+    if result is None:
+        return False
+    return any(marca in result.text for marca in _DESBORDE_DE_CONTEXTO)
+
+
 def _chat_map_reduce(
     model: str,
     system: str,
@@ -919,6 +1045,9 @@ def _chat_map_reduce(
     temperature: float = 0.2,
     raw_len: int | None = None,
     path: str | None = None,
+    reduce_system: str | None = None,
+    build_reduce=None,
+    partial_max_words: int | None = None,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -962,41 +1091,91 @@ def _chat_map_reduce(
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
     # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
-    partial_words = max(80, max_words)
-    reduce_system = _guard(
-        "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
-        max_words,
-    )
+    #
+    # `partial_max_words` existe porque hay reduces cuyo resultado es MUCHO más corto que su
+    # material: un mensaje de commit son ~90 palabras, pero el parte de los cinco archivos de un
+    # trozo no cabe en 90 y saldría cortado por `finish_reason=length`. Perder material en el map
+    # es el mismo defecto que el truncado de la entrada, un nivel más adentro.
+    partial_words = partial_max_words if partial_max_words is not None else max(80, max_words)
+    reduce_propio = reduce_system
+    if reduce_system is None:
+        reduce_system = _guard(
+            "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
+            max_words,
+        )
+    if build_reduce is None:
+
+        def build_reduce(joined: str) -> str:
+            return (
+                "Estos son resúmenes parciales y EN ORDEN de un mismo documento. "
+                f"Redacta un único resumen global:\n\n{joined}"
+            )
+
+    # Cuando los parciales tampoco caben se reagrupan, y ese paso intermedio produce más
+    # material para el reduce —no el resultado final—. Con un reduce propio hay que reagrupar
+    # con el system del MAP: hacerlo con el del reduce emitiría mensajes de commit intermedios
+    # que luego se resumirían entre sí. Sin reduce propio se mantiene el comportamiento de hoy.
+    regroup_system = system if reduce_propio is not None else reduce_system
+
+    def _map_piece(piece: str, depth: int = 0) -> list[str] | None:
+        """Resume un trozo; si el backend dice que no cabe, lo parte y reintenta.
+
+        El presupuesto en chars es una estimación de cuántos tokens ocupará el trozo, y con
+        contenido denso se queda corta. En vez de calibrar la estimación a ojo —que no acota
+        nada: un diff de un fichero base64 baja de 0,75 chars/token— se deja que responda el
+        backend y se reintenta más pequeño. Dos niveles: un trozo que no cabe partido en cuatro
+        no es un problema de presupuesto.
+        """
+        nonlocal failed
+        out = _one(system, build_user(piece.strip()), partial_words)
+        if out is not None:
+            return [out]
+        if depth >= 2 or not _es_desborde_de_contexto(failed):
+            return None
+        partes = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+        if len(partes) < 2:
+            return None  # indivisible: el error se queda como está
+        failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
+        salidas: list[str] = []
+        for parte in partes:
+            sub = _map_piece(parte, depth + 1)
+            if sub is None:
+                return None
+            salidas.extend(sub)
+        return salidas
 
     try:
         summaries: list[str] = []
         for index, piece in enumerate(pieces, start=1):
             _inflight_progress(entry_id, index)
-            out = _one(system, build_user(piece.strip()), partial_words)
-            if out is None:
+            outs = _map_piece(piece)
+            if outs is None:
                 break
-            summaries.append(out)
+            summaries.extend(outs)
 
         text = ""
         if failed is None:
-            if len(summaries) == 1:
+            # Con un solo parcial y sin reduce propio, ese parcial YA es el resultado. Con un
+            # reduce propio no: el parcial está en el formato del map —para un commit, un parte
+            # por archivo— y saltarse el reduce devolvería eso en vez de un mensaje. Pasa con un
+            # `CHUNK_MIN_CHARS` alto, que es configurable.
+            if len(summaries) == 1 and reduce_propio is None:
                 text = summaries[0]
             else:
                 for _level in range(3):
                     joined = "\n\n".join(summaries)
-                    if len(joined) <= budget:
-                        out = _one(
-                            reduce_system,
-                            "Estos son resúmenes parciales y EN ORDEN de un mismo documento. "
-                            f"Redacta un único resumen global:\n\n{joined}",
-                            max_words,
-                        )
+                    prompt = build_reduce(joined)
+                    # Se mide el prompt ARMADO, no los parciales pelados: lo que se envía puede
+                    # llevar delante material fijo (el inventario del diff, p. ej.), y medir sin
+                    # él desbordaría el contexto justo en la llamada que produce el resultado.
+                    if len(prompt) <= budget:
+                        out = _one(reduce_system, prompt, max_words)
                         text = out or ""
                         break
                     # Ni los parciales caben: se reducen por grupos y se repite.
                     grouped: list[str] = []
                     for group in _chunk_text(joined, budget):
-                        out = _one(reduce_system, build_user(group.strip()), partial_words)
+                        out = _one(regroup_system, build_user(group.strip()), partial_words)
                         if out is None:
                             break
                         grouped.append(out)
@@ -1471,9 +1650,9 @@ def local_commit_msg(
         return (
             f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
         )
-    content, truncated_in, raw_len = _read_input(
-        diff, path, config.max_chars_for(config.MODEL_CODE)
-    )
+    content, truncated_in, raw_len = _read_input(diff, path, _NO_TRUNCATE)
+    if not content.strip():
+        return "[local-delegate error] el diff está vacío: no hay nada sobre lo que redactar."
     if style == "conventional":
         fmt = (
             "un mensaje de commit estilo Conventional Commits: primera línea "
@@ -1487,6 +1666,82 @@ def local_commit_msg(
         )
     system = _guard(fmt)
     user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
+
+    if len(content) > config.max_chars_for(config.MODEL_CODE):
+        # El diff no cabe en una llamada. Antes se truncaba: medido sobre un diff de 164 585
+        # chars y 44 archivos, el modelo veía 20 027 chars —7 archivos, todos de `.sdd/`— y
+        # devolvía `chore: update GitHub Actions pages artifact version`, o sea el primer
+        # archivo por orden alfabético de rutas. Ahora entra entero: parte por archivo, un
+        # parte por trozo, y el mensaje se redacta sobre esos partes MÁS el inventario completo.
+        archivos = _diff_inventory(content)
+        budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(config.MODEL_CODE) * 0.8))
+        inventario = _format_inventory(archivos, int(budget * 0.25))
+        # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
+        # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
+        # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
+        # conocen sin preguntarle a nadie.
+        map_system = _guard(
+            "una viñeta por archivo, empezando por su ruta literal seguida de dos puntos y de "
+            "qué cambia en él y para qué. Describe los cambios; no repitas estas instrucciones "
+            "ni redactes ningún mensaje de commit todavía"
+        )
+        # Un archivo más grande que el presupuesto se subdivide, y las piezas 2..N no llevan
+        # cabecera `diff --git`: sin decirles a qué archivo pertenecen, el modelo se inventa la
+        # ruta (medido: `archivo.py`). Las piezas llegan en orden, así que basta con arrastrar
+        # la última vista.
+        en_curso: dict[str, str | None] = {"archivo": None}
+
+        def _build_map(piece: str) -> str:
+            del_trozo = [ruta for ruta, _, _ in _diff_inventory(piece)]
+            if del_trozo:
+                en_curso["archivo"] = del_trozo[-1]
+                encabezado = (
+                    f"Archivos de este fragmento: {', '.join(del_trozo)}.\n"
+                    f"Usa esas rutas literales, una viñeta por archivo."
+                )
+            elif en_curso["archivo"]:
+                encabezado = (
+                    f"Este fragmento CONTINÚA el archivo {en_curso['archivo']} y no repite su "
+                    f"cabecera. Escribe una sola viñeta, para {en_curso['archivo']}."
+                )
+            else:
+                encabezado = "Escribe una viñeta por archivo, con su ruta literal."
+            return f"{encabezado}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
+
+        def _build_reduce(joined: str) -> str:
+            cabeza = f"{inventario}\n\n" if inventario else ""
+            return (
+                f"{cabeza}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
+                "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
+                "cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que "
+                "cambia y para qué, no el número de archivos ni los tests que lo acompañan, y "
+                "el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje "
+                "de commit del cambio completo:\n\n"
+                f"{joined}"
+            )
+
+        resultado = _chat_map_reduce(
+            config.MODEL_CODE,
+            map_system,
+            content,
+            _build_map,
+            tool="local_commit_msg",
+            source="path" if path else "inline",
+            max_words=90,
+            # Los partes son material intermedio y hay varios archivos por trozo: con el tope
+            # del mensaje final saldrían cortados por `finish_reason=length`.
+            partial_max_words=350,
+            reduce_system=system,
+            build_reduce=_build_reduce,
+            raw_len=raw_len,
+            path=path,
+        )
+        if not resultado.startswith("[local-delegate error]"):
+            resultado += (
+                f"\n\n(alcance: {len(archivos)} archivos, {len(content):,} chars leídos enteros)"
+            )
+        return resultado
+
     result = _chat(
         config.MODEL_CODE,
         system,

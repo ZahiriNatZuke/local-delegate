@@ -315,3 +315,76 @@ def test_inflight_prunes_entries_of_dead_processes(tmp_path, monkeypatch):
     )
     assert server.inflight_snapshot() == []
     assert json.loads(path.read_text(encoding="utf-8")) == {}
+
+
+# --- Partido de diffs por archivo (local_commit_msg) -------------------------
+# Un diff no tiene headers Markdown, así que sin un splitter propio caía a párrafos: medido
+# sobre un diff real de 44 archivos, 1 de 11 trozos empezaba en frontera de archivo y los otros
+# arrancaban a mitad de hunk, con líneas `+` cuya cabecera quedó en el trozo anterior.
+def _diff(archivos: int = 6, lineas: int = 40) -> str:
+    return "".join(
+        f"diff --git a/src/mod{i}.py b/src/mod{i}.py\n"
+        f"index 1111111..2222222 100644\n"
+        f"--- a/src/mod{i}.py\n"
+        f"+++ b/src/mod{i}.py\n"
+        f"@@ -1,{lineas} +1,{lineas} @@\n"
+        + "".join(f"+linea {j} del modulo {i} con relleno suficiente\n" for j in range(lineas))
+        for i in range(archivos)
+    )
+
+
+def test_diff_se_parte_solo_en_fronteras_de_archivo():
+    texto = _diff(archivos=6, lineas=10)
+    # Cada archivo cabe holgadamente en el presupuesto: si aquí se partiera dentro de uno sería
+    # por el splitter, no porque no quedara más remedio.
+    assert len(texto) // 6 < 900
+    trozos = server._chunk_text(texto, 900)
+    assert len(trozos) > 1, "el diff de prueba tiene que dar más de un trozo"
+    assert all(t.lstrip().startswith("diff --git ") for t in trozos)
+
+
+def test_el_partido_de_un_diff_no_pierde_ni_inventa_nada():
+    texto = _diff(archivos=6, lineas=10)
+    assert "".join(server._chunk_text(texto, 900)) == texto
+
+
+def test_un_archivo_mas_grande_que_el_presupuesto_se_subdivide_sin_perder_contenido():
+    """REQ-002 admite partir dentro de un archivo solo cuando él solo excede el presupuesto."""
+    texto = _diff(archivos=1, lineas=200)
+    trozos = server._chunk_text(texto, 900)
+    assert len(trozos) > 1
+    assert "".join(trozos) == texto
+
+
+def test_un_markdown_con_un_diff_embebido_se_sigue_partiendo_por_headers():
+    """El splitter de diff se autoinhibe: no puede degradar translate/summarize sobre docs."""
+
+    def seccion(i: int) -> str:
+        return f"## Seccion {i}\n\n" + ("palabra " * 60) + "\n\n"
+
+    texto = (
+        seccion(1)
+        + seccion(2)
+        + "## Con diff\n\n```\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n+una linea\n```\n\n"
+        + seccion(3)
+    )
+    trozos = server._chunk_text(texto, 600)
+    assert len(trozos) > 1
+    assert all(t.lstrip().startswith("##") for t in trozos)
+
+
+def test_en_un_diff_git_no_se_corta_por_las_cabeceras_de_archivo():
+    """Cada archivo trae también su `--- a/x`: cortar por ahí lo partiría en dos."""
+    piezas = server._split_by_diff_files(_diff(archivos=3, lineas=2))
+    assert len(piezas) == 3
+    assert all(p.startswith("diff --git ") for p in piezas)
+
+
+def test_un_diff_sin_git_se_parte_por_la_cabecera_clasica():
+    texto = (
+        "--- viejo/a.txt\n+++ nuevo/a.txt\n@@ -1 +1 @@\n-uno\n+dos\n"
+        "--- viejo/b.txt\n+++ nuevo/b.txt\n@@ -1 +1 @@\n-tres\n+cuatro\n"
+    )
+    piezas = server._split_by_diff_files(texto)
+    assert len(piezas) == 2
+    assert "".join(piezas) == texto
