@@ -2,10 +2,9 @@
 
 ## Current state
 
-- SDD status: `result-review` (modo lite), gates `spec`, `plan`, `quality` y `conformance`
-  aprobados. Falta `memory` y el cierre.
-- Rama `fix/commit-msg-diffs-grandes` @ `070d7bb`, **PR #137** con los 13 checks en verde
-  (incluidos `CodeQL` y `ci-gate`, que llegan tarde). Pendiente de merge.
+- SDD status: `closed` (modo lite). Los cinco gates aprobados.
+- **PR #137 mergeado** (squash) como `ed2db74` en `main`, con los 13 checks en verde — incluidos
+  `CodeQL` y `ci-gate`, que llegan tarde. Rama borrada.
 
 ## What changed
 
@@ -38,13 +37,13 @@ de las que **dos no estaban en el plan original** y salieron de medir contra el 
 
 ## Next action
 
-Mergear el PR #137 (squash, como el resto del repo), aprobar el gate `memory` y cerrar el cambio.
-
-Lo que quedó fuera a propósito y ahora es evaluable sobre una base medida: **filtrar el ruido del
+Nada pendiente de este cambio. Lo que quedó fuera a propósito y ahora es evaluable sobre una base medida: **filtrar el ruido del
 diff** —lockfiles, generados, líneas de contexto sin cambiar—. Reduciría el número de trozos y el
 coste; el caso grande son hoy 17 llamadas y 122 s.
 
 ## Memory
 
-- Nota canónica: pendiente de escribir en el vault tras el merge.
-- Índices actualizados: pendiente.
+- Nota canónica: `projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md`.
+- Memoria nueva del proyecto: `presupuesto-en-chars-limite-en-tokens.md`.
+- Índices actualizados: memoria de Claude Code del proyecto (jornada, gotcha nuevo, y los
+  contadores de `probar-la-pieza-no-es-probar-el-uso` y `un-pendiente-es-una-hipotesis`).

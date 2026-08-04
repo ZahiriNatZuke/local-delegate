@@ -3,9 +3,9 @@
   "slug": "commit-msg-diffs-grandes",
   "title": "local_commit_msg deja de truncar diffs grandes",
   "mode": "lite",
-  "status": "result-review",
+  "status": "closed",
   "createdAt": "2026-08-04T14:53:23.504Z",
-  "updatedAt": "2026-08-04T17:24:11.183Z",
+  "updatedAt": "2026-08-04T17:46:59.102Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-04T17:46:58.992Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md. Memoria nueva del proyecto: presupuesto-en-chars-limite-en-tokens.md. Punteros sincronizados en la memoria de Claude Code del proyecto (jornada, gotcha nuevo, y contadores actualizados de probar-la-pieza-no-es-probar-el-uso y un-pendiente-es-una-hipotesis). Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -168,6 +168,28 @@
       "at": "2026-08-04T17:24:11.183Z",
       "evidence": "Los siete requisitos implementados y verificados contra el backend real y con tests. Veredicto conforms-with-notes: REQ-004 cumple con dos limites de calidad anotados (el tipo del commit no siempre acierta y el cuerpo es irregular), ninguno bloqueante. Cinco hallazgos anotados, incluidos dos tests propios que no median lo que decian y una hipotesis de diagnostico caida.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-04T17:46:58.992Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md. Memoria nueva del proyecto: presupuesto-en-chars-limite-en-tokens.md. Punteros sincronizados en la memoria de Claude Code del proyecto (jornada, gotcha nuevo, y contadores actualizados de probar-la-pieza-no-es-probar-el-uso y un-pendiente-es-una-hipotesis). Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-04T17:46:59.050Z",
+      "reason": "PR #137 mergeado como ed2db74; memoria persistida"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-04T17:46:59.102Z",
+      "reason": "cambio cerrado"
     }
   ]
 }
