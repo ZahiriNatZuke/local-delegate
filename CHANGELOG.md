@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-08-04
+
 ### Fixed
 - **`local_commit_msg` deja de redactar el mensaje sobre el principio del diff.** Era la única tool
   de reducción que seguía truncando la entrada: por encima de 20 000 caracteres, el resto se
@@ -1552,7 +1554,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
