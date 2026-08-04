@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "slug": "aislar-entorno-en-tests",
+  "title": "La suite no puede heredar el entorno de quien la corre",
+  "mode": "lite",
+  "status": "verifying",
+  "createdAt": "2026-08-04T00:53:19.826Z",
+  "updatedAt": "2026-08-04T00:55:43.833Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T00:54:16.464Z",
+      "evidence": "Causa verificada por ejecucion con dos controles (git stash: los mismos 4 fallos sin cambios locales; variable vacia: pasan los 25). Enumeracion real del alcance: 34 variables leidas por config, 4 definidas en esta maquina. Seis requisitos observables con escenarios y trazabilidad.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T00:54:56.891Z",
+      "evidence": "Revision adversarial anotada: tres objeciones planteadas y resueltas (seguridad del reload comprobada por busqueda de imports; lo capturado en import-time declarado fuera de alcance y medido; limites del guardian AST). Cuatro tareas con propiedad exclusiva y rollback.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-04T00:55:43.833Z",
+      "evidence": "725 passed / 2 skipped con el entorno REAL del usuario y con el limpio, mismo numero. Los 25 de test_daemon.py pasan con LOCAL_DELEGATE_WEB_TOKEN puesta (antes 4 fallos). ruff check y format limpios; node --check ok. Dos mutantes, uno por guardian, ambos fallan por su propio assert; mas control positivo del inventario.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-04T00:53:19.826Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-04T00:53:19.994Z",
+      "reason": "cambio acotado en modo lite; evidencia por ejecucion ya recogida"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-04T00:53:20.159Z",
+      "reason": "cambio acotado en modo lite; evidencia por ejecucion ya recogida"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-04T00:54:16.464Z",
+      "evidence": "Causa verificada por ejecucion con dos controles (git stash: los mismos 4 fallos sin cambios locales; variable vacia: pasan los 25). Enumeracion real del alcance: 34 variables leidas por config, 4 definidas en esta maquina. Seis requisitos observables con escenarios y trazabilidad.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-04T00:54:16.624Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-04T00:54:56.891Z",
+      "evidence": "Revision adversarial anotada: tres objeciones planteadas y resueltas (seguridad del reload comprobada por busqueda de imports; lo capturado en import-time declarado fuera de alcance y medido; limites del guardian AST). Cuatro tareas con propiedad exclusiva y rollback.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-04T00:54:57.065Z",
+      "reason": "plan escrito y revisado"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-04T00:54:57.234Z",
+      "reason": "sin hallazgos bloqueantes"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-04T00:54:57.408Z",
+      "reason": "las tres piezas implementadas y validadas con mutantes"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-04T00:55:43.833Z",
+      "evidence": "725 passed / 2 skipped con el entorno REAL del usuario y con el limpio, mismo numero. Los 25 de test_daemon.py pasan con LOCAL_DELEGATE_WEB_TOKEN puesta (antes 4 fallos). ruff check y format limpios; node --check ok. Dos mutantes, uno por guardian, ambos fallan por su propio assert; mas control positivo del inventario.",
+      "actor": "user"
+    }
+  ]
+}

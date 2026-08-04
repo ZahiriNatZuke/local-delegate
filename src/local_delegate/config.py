@@ -22,19 +22,34 @@ from platformdirs import user_data_dir
 APP_NAME = "local-delegate"
 
 
+# Nombres de todas las variables de entorno que este módulo consulta. NO se escribe a mano: la
+# alimentan los cuatro helpers de abajo al ser llamados, así que no puede quedarse corta cuando se
+# añada una opción nueva. La suite la usa para aislarse del entorno de quien la corre (ver
+# `tests/conftest.py`): antes de esto, tener `LOCAL_DELEGATE_WEB_TOKEN` puesta —lo normal en una
+# máquina con el daemon instalado— hacía fallar cuatro tests del daemon con 401 en vez de 200.
+_VARIABLES_LEIDAS: set[str] = set()
+
+
+def _leer(name: str) -> str | None:
+    """Única puerta a `os.environ` de este módulo: lee y deja constancia del nombre."""
+    _VARIABLES_LEIDAS.add(name)
+    return os.environ.get(name)
+
+
 def _env(name: str, default: str) -> str:
-    return os.environ.get(name, default)
+    raw = _leer(name)
+    return default if raw is None else raw
 
 
 def _env_int(name: str, default: int) -> int:
     try:
-        return int(os.environ.get(name, str(default)))
+        return int(_env(name, str(default)))
     except ValueError:
         return default
 
 
 def _env_flag(name: str, default: bool) -> bool:
-    raw = os.environ.get(name)
+    raw = _leer(name)
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
@@ -42,7 +57,7 @@ def _env_flag(name: str, default: bool) -> bool:
 
 def _env_float(name: str, default: float) -> float:
     try:
-        return float(os.environ.get(name, str(default)))
+        return float(_env(name, str(default)))
     except ValueError:
         return default
 
@@ -125,11 +140,11 @@ def _default_log() -> Path:
     return _default_log_dir() / "usage.jsonl"
 
 
-_log_env = os.environ.get("LOCAL_DELEGATE_LOG")
+_log_env = _leer("LOCAL_DELEGATE_LOG")
 USAGE_LOG: Path = Path(_log_env) if _log_env else _default_log()  # legado (sin rotación) o default
 LOG_ROTATION_ENABLED: bool = _log_env is None
 
-_log_dir_env = os.environ.get("LOCAL_DELEGATE_LOG_DIR")
+_log_dir_env = _leer("LOCAL_DELEGATE_LOG_DIR")
 LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 
 
@@ -141,14 +156,14 @@ LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 #
 # `None` cuando no está definida, y eso significa «el usuario no activó la telemetría», que es
 # distinto de «está activada y no hay eventos». El dashboard tiene que poder decir cuál de las dos.
-_hook_log_env = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
+_hook_log_env = _env("LD_HOOK_TELEMETRY_LOG", "").strip()
 HOOK_TELEMETRY_LOG: Path | None = Path(_hook_log_env) if _hook_log_env else None
 
 
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
 # Vacía/ausente = sin restricción (comportamiento actual, documentado). Lista separada
 # por ';' de directorios raíz; cualquier 'path' fuera de todos ellos se rechaza.
-_allowed_dirs_raw = os.environ.get("LOCAL_DELEGATE_ALLOWED_DIRS", "")
+_allowed_dirs_raw = _env("LOCAL_DELEGATE_ALLOWED_DIRS", "")
 ALLOWED_DIRS: list[Path] = [
     Path(p.strip()).resolve() for p in _allowed_dirs_raw.split(";") if p.strip()
 ]
@@ -272,3 +287,10 @@ ASK_TIMEOUT = _env_int("LOCAL_DELEGATE_ASK_TIMEOUT", 30)
 
 # --- Feedback de ahorro en el propio texto de respuesta (awareness) ---------
 FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)
+
+
+# --- Inventario de variables de entorno -------------------------------------
+# Se congela AQUÍ, al final, cuando ya se han evaluado todas las constantes de arriba y por tanto
+# se ha llamado a los helpers con todos los nombres. Va después a propósito: declararla antes
+# dejaría fuera lo que se lea más abajo, que es justo el fallo que esto viene a impedir.
+VARIABLES_DE_ENTORNO: frozenset[str] = frozenset(_VARIABLES_LEIDAS)
