@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 
@@ -10,12 +11,34 @@ import pytest
 from local_delegate import config, install
 
 
+@pytest.fixture(scope="session", autouse=True)
+def entorno_sin_variables_del_paquete():
+    """Corre la suite como si NINGUNA variable del paquete estuviera definida.
+
+    La suite tiene que dar el mismo resultado en la máquina de quien la escribe, en la de quien
+    tiene el daemon instalado y en CI. Antes no lo daba: con `LOCAL_DELEGATE_WEB_TOKEN` puesta
+    —lo normal en cualquier máquina con el daemon andando— cuatro tests del daemon esperaban 200
+    y recibían 401, y el fallo parecía del cambio que estuvieras haciendo. En CI nunca se veía,
+    porque allí esa variable no existe.
+
+    Se recarga el módulo en vez de reasignar constantes una por una a propósito: los defaults
+    viven en `config.py` y copiarlos aquí crearía una segunda fuente que se desactualiza sola.
+    La lista de nombres tampoco se escribe a mano — `config.VARIABLES_DE_ENTORNO` se alimenta de
+    las lecturas reales del módulo, así que una opción nueva queda cubierta sin tocar esto.
+    """
+    with pytest.MonkeyPatch.context() as mp:
+        for nombre in config.VARIABLES_DE_ENTORNO:
+            mp.delenv(nombre, raising=False)
+        importlib.reload(config)
+        yield
+    importlib.reload(config)  # deja el proceso como estaba para lo que venga después
+
+
 @pytest.fixture(autouse=True)
 def isolate_runtime_logs(tmp_path, monkeypatch):
     """Evita que mocks de tests contaminen los logs reales del usuario."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    monkeypatch.delenv("LD_HOOK_TELEMETRY_LOG", raising=False)
 
 
 # --- HOME simulado, compartido por test_checks.py y test_doctor.py ------------
