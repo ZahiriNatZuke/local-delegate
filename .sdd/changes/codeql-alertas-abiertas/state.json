@@ -3,9 +3,9 @@
   "slug": "codeql-alertas-abiertas",
   "title": "Cerrar las 10 alertas abiertas de CodeQL: 6 arreglos y 4 descartes",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-08-03T22:43:42.806Z",
-  "updatedAt": "2026-08-03T22:57:29.376Z",
+  "updatedAt": "2026-08-04T00:38:41.321Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-04T00:33:57.256Z",
+      "evidence": "Revision fresca contra los seis requisitos en review.md: los seis implementados y verificados contra el repo real. gh api code-scanning/alerts?state=open devuelve lista vacia; las 10 quedan 6 fixed y 4 dismissed con motivo. Los seis workflows de main en verde tras el merge. Veredicto conforms-with-notes: tres hallazgos laterales, ninguno bloqueante.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-04T00:38:41.151Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-03-las-alertas-de-codeql.md. Punteros sincronizados en los tres indices (memoria del proyecto de Claude Code, indice global de Claude Code, indice de Codex). Dos memorias existentes actualizadas en vez de duplicadas: feedback-verify-full-ci-before-done y control-positivo-no-es-opcional. Handoff escrito. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "at": "2026-08-03T22:57:29.376Z",
       "evidence": "722 passed / 2 skipped; ruff check y ruff format limpios; node --check ok; salida del extractor identica byte a byte (sha256 6e030c20). Control positivo real en los dos tests: el primer mutante de REQ-004 lo atrapaba un assert previo (deadlock) y se repitio con uno dirigido que solo dispara el assert nuevo. Cuatro fallos preexistentes de test_daemon.py causados por LOCAL_DELEGATE_WEB_TOKEN del entorno, confirmados con git stash y con la variable vacia: fuera de alcance.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-04T00:33:57.055Z",
+      "reason": "Merge hecho (d087b1c), cuatro descartes aplicados y cero alertas abiertas"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-04T00:33:57.256Z",
+      "evidence": "Revision fresca contra los seis requisitos en review.md: los seis implementados y verificados contra el repo real. gh api code-scanning/alerts?state=open devuelve lista vacia; las 10 quedan 6 fixed y 4 dismissed con motivo. Los seis workflows de main en verde tras el merge. Veredicto conforms-with-notes: tres hallazgos laterales, ninguno bloqueante.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-04T00:33:57.423Z",
+      "reason": "Conformidad aprobada; queda registrar el handoff"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-04T00:38:41.151Z",
+      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-03-las-alertas-de-codeql.md. Punteros sincronizados en los tres indices (memoria del proyecto de Claude Code, indice global de Claude Code, indice de Codex). Dos memorias existentes actualizadas en vez de duplicadas: feedback-verify-full-ci-before-done y control-positivo-no-es-opcional. Handoff escrito. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-04T00:38:41.321Z",
+      "reason": "Diez alertas a cero, PR #133 mergeada, memoria persistida"
     }
   ]
 }
