@@ -3,9 +3,9 @@
   "slug": "aislar-entorno-en-tests",
   "title": "La suite no puede heredar el entorno de quien la corre",
   "mode": "lite",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-08-04T00:53:19.826Z",
-  "updatedAt": "2026-08-04T00:55:43.833Z",
+  "updatedAt": "2026-08-04T01:01:28.614Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -26,16 +26,16 @@
       "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-04T01:01:27.902Z",
+      "evidence": "Revision fresca en review.md contra los seis requisitos: los seis implementados y verificados por ejecucion. 725 passed en los dos entornos, 13/13 checks en la PR #135, mergeada en 0436aa4. Veredicto conforms, sin follow-up.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-04T01:01:28.433Z",
+      "evidence": "Nota del vault ampliada con la seccion de cierre. Punteros actualizados en los tres indices, incluido el de Codex que decia 'still open as debt' y ahora dice resuelto. Nuevo conocimiento reutilizable registrado en los dos indices globales. Sin secretos ni PII.",
+      "actor": "user"
     }
   },
   "history": [
@@ -111,6 +111,43 @@
       "at": "2026-08-04T00:55:43.833Z",
       "evidence": "725 passed / 2 skipped con el entorno REAL del usuario y con el limpio, mismo numero. Los 25 de test_daemon.py pasan con LOCAL_DELEGATE_WEB_TOKEN puesta (antes 4 fallos). ruff check y format limpios; node --check ok. Dos mutantes, uno por guardian, ambos fallan por su propio assert; mas control positivo del inventario.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-04T01:01:27.902Z",
+      "evidence": "Revision fresca en review.md contra los seis requisitos: los seis implementados y verificados por ejecucion. 725 passed en los dos entornos, 13/13 checks en la PR #135, mergeada en 0436aa4. Veredicto conforms, sin follow-up.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-04T01:01:28.064Z",
+      "reason": "PR #135 mergeada"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-04T01:01:28.245Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-04T01:01:28.433Z",
+      "evidence": "Nota del vault ampliada con la seccion de cierre. Punteros actualizados en los tres indices, incluido el de Codex que decia 'still open as debt' y ahora dice resuelto. Nuevo conocimiento reutilizable registrado en los dos indices globales. Sin secretos ni PII.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-04T01:01:28.614Z",
+      "reason": "deuda cerrada y memoria persistida"
     }
   ]
 }
