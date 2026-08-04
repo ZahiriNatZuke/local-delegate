@@ -731,3 +731,62 @@ def test_importar_el_paquete_no_arrastra_el_stack_web_propio():
         "pyproject.toml ya no se cumple. O se restaura el import perezoso, o hay que revisar la "
         "política (ver docs/wiki/Repo-hardening.md)."
     )
+
+
+# --- Inventario de un diff (local_commit_msg) --------------------------------
+# El inventario es lo que hace que el mensaje vea el cambio COMPLETO aunque el diff se procese
+# por partes: medido, el `--stat` de un diff de 164 585 chars son 2 987, o sea cabe donde el
+# diff no cabe. Se calcula aquí y no se le pide al modelo porque es un conteo, no un juicio.
+def test_el_inventario_cuenta_lineas_por_archivo():
+    diff = (
+        "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n"
+        "@@ -1,2 +1,3 @@\n contexto\n-fuera\n+dentro\n+extra\n"
+        "diff --git a/dos.py b/dos.py\n--- a/dos.py\n+++ b/dos.py\n"
+        "@@ -1 +1 @@\n-vieja\n+nueva\n"
+    )
+    assert server._diff_inventory(diff) == [("uno.py", 2, 1), ("dos.py", 1, 1)]
+
+
+def test_el_inventario_no_confunde_contenido_con_cabecera():
+    """Borrar una línea `---` da `----`, que empieza por `---` pero NO es cabecera.
+
+    Distinguirlas por el texto haría que esa línea no se contara. Se distinguen por posición:
+    solo son cabecera antes del primer `@@` del archivo.
+    """
+    diff = (
+        "diff --git a/nota.md b/nota.md\ndeleted file mode 100644\n"
+        "--- a/nota.md\n+++ /dev/null\n@@ -1,2 +0,0 @@\n----\n-titulo\n"
+    )
+    assert server._diff_inventory(diff) == [("nota.md", 0, 2)]
+
+
+def test_el_inventario_sigue_el_renombrado_y_registra_el_binario():
+    renombrado = (
+        "diff --git a/viejo.py b/nuevo.py\nsimilarity index 90%\n"
+        "rename from viejo.py\nrename to nuevo.py\n"
+        "--- a/viejo.py\n+++ b/nuevo.py\n@@ -1,2 +1,2 @@\n igual\n-quitada\n+puesta\n"
+    )
+    binario = (
+        "diff --git a/img.png b/img.png\nindex 111..222 100644\n"
+        "Binary files a/img.png and b/img.png differ\n"
+    )
+    assert server._diff_inventory(renombrado) == [("nuevo.py", 1, 1)]
+    # El binario no aporta líneas pero sí forma parte del cambio: tiene que salir en el alcance.
+    assert server._diff_inventory(binario) == [("img.png", 0, 0)]
+
+
+def test_un_texto_que_no_es_un_diff_no_rompe_el_inventario():
+    assert server._diff_inventory("texto normal\n- una lista\n+ otra cosa") == []
+    assert server._diff_inventory("") == []
+
+
+def test_el_inventario_se_colapsa_por_directorio_cuando_no_cabe():
+    """Sin tope, un diff de cientos de archivos desplazaría del prompt lo que hay que resumir."""
+    archivos = [(f"src/mod{i}.py", 3, 1) for i in range(300)]
+    completo = server._format_inventory(archivos, 40_000)
+    colapsado = server._format_inventory(archivos, 4_000)
+
+    assert "src/mod299.py" in completo
+    assert len(colapsado) <= 4_000
+    assert "300 archivos, +900 -300" in colapsado
+    assert "300 en total" in colapsado  # el conteo real sobrevive al colapso
