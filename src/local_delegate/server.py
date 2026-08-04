@@ -157,6 +157,10 @@ def _atomic_write_json(path: Path, data: dict) -> None:
         try:
             tmp.unlink(missing_ok=True)  # si replace() funcionó ya no existe
         except OSError:
+            # Estamos en el `finally`: si el temporal no se deja borrar (en Windows lo típico es un
+            # antivirus con el archivo abierto), tragarse el error es obligatorio. Lanzar aquí
+            # taparía la excepción real que venga del try y dejaría un fallo mucho más difícil de
+            # leer que un .tmp huérfano.
             pass
 
 

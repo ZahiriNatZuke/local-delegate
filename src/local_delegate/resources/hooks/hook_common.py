@@ -34,6 +34,9 @@ def record(event: str, **metadata: object) -> None:
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(payload, ensure_ascii=False) + "\n")
     except OSError:
+        # La telemetría es best-effort y corre dentro de un hook del agente: si el destino no se
+        # puede crear o escribir (permisos, disco lleno, ruta inválida en LD_HOOK_TELEMETRY_LOG),
+        # perder una línea de log es preferible a romperle la operación al usuario.
         pass
 
 

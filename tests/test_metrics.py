@@ -472,12 +472,17 @@ def test_chart_js_is_served_from_the_package_not_a_cdn():
 
 
 def test_web_fonts_can_be_disabled_for_zero_third_party_requests(monkeypatch):
+    # La hoja completa con esquema y ruta, no el host suelto: buscar solo "fonts.googleapis.com"
+    # daría por bueno un href a "https://fonts.googleapis.com.otrositio.tld/…", que es un tercero
+    # distinto. Los asserts de ausencia de más abajo sí van por subcadena, y ahí es lo correcto:
+    # cualquier aparición de "googleapis" con WEB_FONTS=False es un fallo.
+    hoja = 'href="https://fonts.googleapis.com/css2?'
     html = TestClient(metrics.app).get("/").text
-    assert "fonts.googleapis.com" in html  # por defecto sí, es solo tipografía
+    assert hoja in html  # por defecto sí, es solo tipografía
 
     monkeypatch.setattr(config, "WEB_FONTS", False)
     html = metrics.render_index()
-    assert "fonts.googleapis.com" not in html
+    assert hoja not in html
     assert "googleapis" not in html and "gstatic" not in html
     assert "/vendor/chart.umd.min.js" in html  # los gráficos siguen, son locales
 
