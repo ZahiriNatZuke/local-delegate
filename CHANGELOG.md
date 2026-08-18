@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-08-18
+
 ### Added
 - **El panel dice quién delegó.** Cada línea del log de uso lleva ahora el nombre del cliente MCP
   que pidió la llamada, y `/api/stats` trae el desglose por cliente. El KPI de ahorro es
@@ -1606,7 +1608,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
