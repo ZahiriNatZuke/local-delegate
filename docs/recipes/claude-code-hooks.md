@@ -96,12 +96,14 @@ actual porque bajo `uvx` vive en un entorno efímero que desaparece al terminar 
 |---|---:|---|
 | `LD_HOOK_ENABLED` | `1` | `0` apaga sugerencias y telemetría para una sesión A/B |
 | `LD_HOOK_READ_ENABLED` | `0` | `1` activa el hook experimental de Read (equivale a registrarlo con `--enabled`) |
-| `LD_HOOK_READ_SUGGEST_KB` | `8` | Inicio de sugerencia para Read |
-| `LD_HOOK_READ_STRONG_KB` | `32` | Inicio de recomendación fuerte |
+| `LD_HOOK_READ_SUGGEST_KB` | `32` | Inicio de sugerencia para Read |
+| `LD_HOOK_READ_STRONG_KB` | `100` | Inicio de recomendación fuerte |
 | `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
 
-La telemetría solo guarda timestamp, evento, categoría, tamaño/banda y si hubo sugerencia. Nunca
-guarda prompts, comandos o paths. Los hooks siguen siendo **opt-in**: el paquete no los activa
+La telemetría solo guarda timestamp, evento, categoría, tamaño/banda, la **extensión** del archivo,
+el motivo del descarte y si hubo sugerencia. Nunca guarda prompts, comandos o paths. La extensión
+se acota a 12 caracteres alfanuméricos y se descarta si no lo es, para que una extensión
+propietaria y larga no diga por la puerta de atrás lo que la ausencia del path calla. Los hooks siguen siendo **opt-in**: el paquete no los activa
 por su cuenta, solo `local-delegate install` los registra cuando tú lo pides.
 
 Para comparar sesiones equivalentes sin editar `settings.json`, inicia Claude desde una terminal
