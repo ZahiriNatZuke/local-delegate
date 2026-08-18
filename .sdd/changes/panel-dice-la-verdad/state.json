@@ -3,9 +3,9 @@
   "slug": "panel-dice-la-verdad",
   "title": "El panel puede decir que no hay adopcion",
   "mode": "standard",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-08-18T13:15:47.918Z",
-  "updatedAt": "2026-08-18T13:33:32.197Z",
+  "updatedAt": "2026-08-18T13:38:27.825Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-18T13:38:26.461Z",
+      "evidence": "handoff.md con las decisiones durables, lo corregido al medir y lo que queda abierto. Sin secretos ni datos personales: el campo nuevo es solo el nombre del cliente MCP, y la telemetria sigue sin guardar rutas.",
+      "actor": "user"
     }
   },
   "history": [
@@ -77,6 +77,77 @@
       "at": "2026-08-18T13:33:32.197Z",
       "evidence": "verification.md mapea los 7 REQ. End-to-end con el daemon real en el 9494: dos clientes MCP dejan dos firmas distintas en el log en disco, /api/stats las separa y el panel pinta las dos tarjetas en el navegador. Un requisito se corrigio con lo medido: el SDK del cliente rellena 'mcp' por defecto.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-18T13:38:26.461Z",
+      "evidence": "handoff.md con las decisiones durables, lo corregido al medir y lo que queda abierto. Sin secretos ni datos personales: el campo nuevo es solo el nombre del cliente MCP, y la telemetria sigue sin guardar rutas.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-18T13:38:26.612Z",
+      "reason": "telemetria, transcripts y codigo del panel"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-18T13:38:26.768Z",
+      "reason": "spec.md con 7 requisitos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-18T13:38:26.936Z",
+      "reason": "plan.md con 6 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-18T13:38:27.081Z",
+      "reason": "review.md adversarial, 5 hallazgos sin bloqueantes"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-18T13:38:27.232Z",
+      "reason": "clients, server, metrics, HTML y mocks de la captura"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-18T13:38:27.378Z",
+      "reason": "762 tests, mutante y end-to-end con el daemon real"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-18T13:38:27.529Z",
+      "reason": "verification.md mapea los 7 REQ"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-18T13:38:27.676Z",
+      "reason": "PR #149 mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-18T13:38:27.825Z",
+      "reason": "panel verificado en el navegador"
     }
   ]
 }
