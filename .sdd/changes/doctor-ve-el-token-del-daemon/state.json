@@ -3,9 +3,9 @@
   "slug": "doctor-ve-el-token-del-daemon",
   "title": "doctor ve cuando la entrada MCP no puede autenticarse contra el daemon",
   "mode": "standard",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-08-18T14:38:59.586Z",
-  "updatedAt": "2026-08-18T14:41:03.912Z",
+  "updatedAt": "2026-08-18T14:52:49.341Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-18T14:48:04.961Z",
+      "evidence": "uv run pytest: 769 passed 2 skipped (eran 762); ruff check y format limpios. Dos mutantes uno a uno: el que nunca avisa y el que avisa siempre, cada uno falla un solo test y el correcto.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-18T14:48:05.115Z",
+      "evidence": "verification.md mapea los 7 REQ. Verificado contra la maquina real: con la cabecera doctor da ok, quitandola da warn nombrando a Claude Code y el 401, y restaurando vuelve a ok. Antes de este cambio los tres estados daban 'todo a punto'.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-18T14:52:47.889Z",
+      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y la nota de operacion de los dos flags. Sin secretos: el check nombra la variable, nunca su valor.",
+      "actor": "user"
     }
   },
   "history": [
@@ -61,6 +61,93 @@
       "at": "2026-08-18T14:41:03.912Z",
       "evidence": "plan.md con 5 tareas y propiedad de ficheros; review.md adversarial con 5 hallazgos, ninguno bloqueante: H1 (el guardian del conteo obliga a tocar seis sitios) entra como tarea y H2 (comprobar que daemon_needs_token no avisa en maquinas sanas) pasa a verificacion obligatoria.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-18T14:48:04.961Z",
+      "evidence": "uv run pytest: 769 passed 2 skipped (eran 762); ruff check y format limpios. Dos mutantes uno a uno: el que nunca avisa y el que avisa siempre, cada uno falla un solo test y el correcto.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-18T14:48:05.115Z",
+      "evidence": "verification.md mapea los 7 REQ. Verificado contra la maquina real: con la cabecera doctor da ok, quitandola da warn nombrando a Claude Code y el 401, y restaurando vuelve a ok. Antes de este cambio los tres estados daban 'todo a punto'.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-18T14:52:47.889Z",
+      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y la nota de operacion de los dos flags. Sin secretos: el check nombra la variable, nunca su valor.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-18T14:52:48.057Z",
+      "reason": "la averia vivida y el hueco leido en checks.py"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-18T14:52:48.214Z",
+      "reason": "spec.md con 7 requisitos"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-18T14:52:48.381Z",
+      "reason": "plan.md con 5 tareas"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-18T14:52:48.545Z",
+      "reason": "review.md adversarial, 5 hallazgos sin bloqueantes"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-18T14:52:48.710Z",
+      "reason": "probe, registro, conteo y tests"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-18T14:52:48.869Z",
+      "reason": "769 tests, dos mutantes y la averia reproducida en la maquina real"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-18T14:52:49.023Z",
+      "reason": "verification.md mapea los 7 REQ"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-18T14:52:49.178Z",
+      "reason": "PR #152 mergeado"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-18T14:52:49.341Z",
+      "reason": "doctor verificado en los tres estados"
     }
   ]
 }
