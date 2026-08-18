@@ -3,9 +3,9 @@
   "slug": "punteria-hook-read",
   "title": "Arreglar la punteria del hook de lectura y medir la extension",
   "mode": "lite",
-  "status": "understanding",
+  "status": "closed",
   "createdAt": "2026-08-18T12:14:10.407Z",
-  "updatedAt": "2026-08-18T12:22:13.661Z",
+  "updatedAt": "2026-08-18T12:44:23.525Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-08-18T12:44:05.564Z",
+      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y el estado del entorno. Sin secretos ni datos personales: la telemetria nueva registra extension y motivo, nunca rutas ni nombres.",
+      "actor": "user"
     }
   },
   "history": [
@@ -77,6 +77,77 @@
       "at": "2026-08-18T12:22:13.661Z",
       "evidence": "verification.md mapea los 6 REQ a evidencia concreta. La regla nueva medida importando el modulo real contra 852 lecturas reales: 572 -> 29 avisos (95% menos), el objetivo de la spec. Prueba en vivo del script fuera de pytest con los tres casos.",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-08-18T12:44:05.564Z",
+      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y el estado del entorno. Sin secretos ni datos personales: la telemetria nueva registra extension y motivo, nunca rutas ni nombres.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-08-18T12:44:22.241Z",
+      "reason": "telemetria y transcripts cruzados en research.md"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-08-18T12:44:22.398Z",
+      "reason": "spec.md con 6 requisitos verificables"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-08-18T12:44:22.559Z",
+      "reason": "plan.md con 6 tareas y propiedad de ficheros"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-08-18T12:44:22.717Z",
+      "reason": "review.md adversarial, 5 hallazgos sin bloqueantes"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-08-18T12:44:22.868Z",
+      "reason": "hook, tests, CHANGELOG y docs"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-08-18T12:44:23.045Z",
+      "reason": "752 tests, ruff limpio, dos mutantes y simulacion contra 852 lecturas reales"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-08-18T12:44:23.214Z",
+      "reason": "verification.md mapea los 6 REQ a evidencia"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-08-18T12:44:23.371Z",
+      "reason": "PR #146 mergeado con 13 checks en verde"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-08-18T12:44:23.525Z",
+      "reason": "hook reinstalado y verificado en vivo en esta maquina"
     }
   ]
 }
