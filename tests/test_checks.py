@@ -43,10 +43,14 @@ def make_ctx(home, **kwargs):
         # cada `run_all` de la suite pediría `/models` al backend REAL de la máquina. Devuelve
         # «no exige credencial», que es el caso en el que la entrada MCP da igual.
         "backend_needs_key": lambda: (False, ""),
-        # Sexto colaborador de red. Solo se consulta cuando el daemon no responde y el puerto
-        # está ocupado, pero doblarlo igualmente es el contrato de este arnés: un colaborador
-        # que sale a la red solo «a veces» es peor, porque falla de forma intermitente.
-        "daemon_needs_token": checks.NO_TOKEN_PROBE,
+        # Sexto colaborador de red. Lo consultan dos checks: `service.daemon` solo cuando el
+        # daemon no responde y el puerto está ocupado, y `service.daemon_auth` siempre.
+        #
+        # Devuelve «el puerto no exige token», igual que `backend_needs_key` de arriba y por el
+        # mismo motivo: es el caso en el que la entrada MCP da igual, así que un HOME completo
+        # sale `ok` sin tener que fabricarle además una cabecera a cada cliente. Los tests que
+        # necesitan el otro veredicto —o ninguno— lo pasan explícitamente.
+        "daemon_needs_token": lambda host, port: False,
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -959,6 +963,7 @@ _NUMERO = {
     15: "quince",
     16: "dieciséis",
     17: "diecisiete",
+    18: "dieciocho",
 }
 
 
@@ -983,3 +988,130 @@ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
     )
     faltan = [texto for texto in afirmaciones if texto not in fuente]
     assert not faltan, f"el docstring de checks.py quedó desfasado: {faltan}"
+
+
+# --- El token del puerto del daemon -------------------------------------------
+#
+# Nace de una avería del 2026-08-18: `install` sin `--web-token-env` escribe la entrada HTTP sin
+# cabecera —y borra la que hubiera—, así que contra un daemon con token Claude Code cae al flujo
+# OAuth y responde 401. `doctor` decía **todo a punto**, porque el check de andamiaje sólo mira
+# que la entrada exista. Tercera vez que el mismo patrón muerde y las tres el diagnóstico miraba
+# por un camino distinto del roto.
+
+
+def _home_con_credencial(tmp_path, monkeypatch):
+    """HOME completo con los TRES clientes autenticados, como los deja `install --web-token-env`.
+
+    Los tres y no solo Claude Code: el HOME de `make_home` escribe entradas HTTP sin cabecera, así
+    que dejar a los otros dos como estaban haría que este helper nunca pudiera producir un `ok` —
+    y el control anti-vacío mediría otra cosa. Se descubrió al escribirlo: el check avisaba de
+    «Codex y opencode» y tenía razón.
+    """
+    home = make_home(tmp_path)
+    entrada = install.mcp_entry("http", None, False, None, web_token_env=True)
+    (home / ".claude.json").write_text(
+        json.dumps({"mcpServers": {install.SERVER_NAME: entrada}}), encoding="utf-8"
+    )
+    (home / ".codex" / "config.toml").write_text(
+        install.upsert_codex_mcp("", install.codex_mcp_block(entrada)), encoding="utf-8"
+    )
+    oc_dir = install.opencode_dir(home)
+    oc_entry = install.opencode_mcp_entry("http", None, False, None, web_token_env=True)
+    (oc_dir / "opencode.json").write_text(
+        json.dumps({"$schema": install.OPENCODE_SCHEMA, "mcp": {install.SERVER_NAME: oc_entry}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LOCAL_DELEGATE_WEB_TOKEN", "un-token-cualquiera")
+    return home
+
+
+def test_una_entrada_http_sin_cabecera_contra_un_daemon_con_token_avisa(tmp_path):
+    """La avería exacta que `doctor` daba por buena."""
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.WARN
+    assert "Claude Code" in result.detail
+    assert "401" in result.detail
+    assert "--web-token-env" in (result.fix_hint or "")
+
+
+def test_una_entrada_bien_autenticada_no_molesta(tmp_path, monkeypatch):
+    """Control de todos los de este bloque, y el que impide que pasen en vacío.
+
+    Sin él, un probe que avisara SIEMPRE dejaría en verde a los demás — que es el fallo opuesto y
+    el que hace que la gente aprenda a ignorar un check.
+    """
+    home = _home_con_credencial(tmp_path, monkeypatch)
+    ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.OK, result.detail
+
+
+def test_codex_se_autentica_por_su_propia_clave_y_tambien_vale(tmp_path, monkeypatch):
+    """Codex no usa `headers`: escribe `bearer_token_env_var` con el nombre pelado.
+
+    Tres clientes, tres vocabularios. Contar mal aquí daría un falso OK en el que no se contó, que
+    es exactamente el defecto que este check arregla.
+    """
+    home = _home_con_credencial(tmp_path, monkeypatch)
+    bloque = install.codex_mcp_block(
+        install.mcp_entry("http", None, False, None, web_token_env=True)
+    )
+    (home / ".codex" / "config.toml").write_text(
+        install.upsert_codex_mcp("", bloque), encoding="utf-8"
+    )
+    ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert "Codex" not in result.detail
+
+
+def test_un_daemon_abierto_no_genera_ruido(tmp_path):
+    """Sin token en el puerto, que la entrada no lleve cabecera da igual."""
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: False)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.OK
+
+
+def test_no_poder_preguntar_al_puerto_es_unknown_y_nunca_missing(tmp_path):
+    """Lo no comprobable es `unknown`. Es el contrato del registro entero."""
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=checks.NO_TOKEN_PROBE)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.UNKNOWN
+
+
+def test_la_cabecera_esta_pero_la_variable_no_se_avisa_como_sospecha(tmp_path, monkeypatch):
+    """El segundo camino al mismo 401, y de fuerza distinta.
+
+    El entorno de `doctor` es un TESTIGO del que verá el cliente, no una prueba: alguien puede
+    haber lanzado el cliente desde otra consola. Por eso el texto nombra el síntoma y no dicta que
+    la máquina esté rota.
+    """
+    home = _home_con_credencial(tmp_path, monkeypatch)
+    monkeypatch.delenv("LOCAL_DELEGATE_WEB_TOKEN", raising=False)
+    ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert result.status == checks.WARN
+    assert "LOCAL_DELEGATE_WEB_TOKEN" in result.detail
+    assert "este proceso" in result.detail
+
+
+def test_una_entrada_stdio_no_cuenta_como_ciega(tmp_path, monkeypatch):
+    """No habla con el puerto del daemon, y de su problema ya avisa `service.credential`.
+
+    Contarla aquí sería un falso positivo y además un aviso duplicado.
+    """
+    home = _home_con_credencial(tmp_path, monkeypatch)
+    (home / ".codex" / "config.toml").write_text(
+        install.upsert_codex_mcp("", install.codex_mcp_block({"type": "stdio", "command": "uvx"})),
+        encoding="utf-8",
+    )
+    ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert "Codex" not in result.detail

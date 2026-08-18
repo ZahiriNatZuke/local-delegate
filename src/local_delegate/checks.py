@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los diecisiete elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los dieciocho elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Diecisiete checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Dieciocho checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -23,6 +23,7 @@ que encontró. Ejecutarlos es trabajo de ``update`` e ``install``.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import socket
@@ -53,6 +54,14 @@ SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
 CREDENTIAL_HINT = "local-delegate install --mcp-mode http  (el daemon sí tiene la credencial)"
+DAEMON_TOKEN_HINT = "local-delegate install --mcp-mode http --web-token-env"
+
+# La variable a la que apunta una cabecera `Bearer`. Cubre las dos sintaxis que escribe `install`:
+# `${VAR}` en Claude Code y `{env:VAR}` en opencode. Codex no usa ninguna —da el nombre pelado en
+# `bearer_token_env_var`— y por eso el probe lo envuelve antes de llegar aquí, en vez de añadir un
+# tercer caso a esta expresión: el vocabulario de cada cliente se traduce una sola vez.
+_VARIABLE_REFERENCIADA = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}|\{env:([A-Z_][A-Z0-9_]*)\}")
+_CODEX_BEARER_RE = re.compile(r'bearer_token_env_var\s*=\s*"([^"]+)"')
 # El nombre de la variable, no su valor: el diagnóstico jamás imprime un secreto.
 TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
 # El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
@@ -918,6 +927,104 @@ def daemon_host_port() -> tuple[str, int]:
     return ("127.0.0.1" if host in ("0.0.0.0", "::", "") else host), config.WEB_PORT
 
 
+def _autenticacion_de_la_entrada(cliente: str, modo: str, credencial: str | None) -> tuple:
+    """Normaliza «¿esta entrada puede entrar al puerto del daemon?» para los tres clientes.
+
+    Devuelve `(cliente, estado)` donde estado es `"ok"`, `"sin_credencial"` o el nombre de la
+    variable de entorno que referencia. Se normaliza aquí y no en cada rama porque los tres
+    clientes escriben la autenticación distinta —`headers.Authorization` en Claude Code y
+    opencode, `bearer_token_env_var` en Codex— y comparar tres vocabularios en el sitio de la
+    decisión es cómo se cuela un cliente sin contar.
+    """
+    if modo != "http":
+        return (cliente, "stdio")
+    if not credencial:
+        return (cliente, "sin_credencial")
+    referencia = _VARIABLE_REFERENCIADA.search(credencial)
+    if referencia is None:
+        # Un token escrito a pelo en la config: se puede autenticar, aunque sea mala idea. El
+        # check dice si PUEDE entrar, no si el secreto está bien guardado.
+        return (cliente, "ok")
+    # La expresión tiene dos alternativas y por tanto dos grupos: el que no casa viene en None.
+    return (cliente, referencia.group(1) or referencia.group(2))
+
+
+def _probe_mcp_daemon_auth(ctx: Context) -> Result:
+    """¿Podrán los clientes ENTRAR al puerto del daemon, si ese puerto exige token?
+
+    Hermano de :func:`_probe_mcp_credential` un piso más arriba, y no un solapamiento: aquel mira
+    la puerta del **backend** (¿tiene el proceso MCP la API key?) y este la del **daemon** (¿puede
+    el cliente autenticarse en el 9393?). Son dos puertas del mismo camino y se cierran por
+    separado — el 2026-08-18 la del backend estaba bien y la del daemon no.
+
+    Nace de una avería real: `install` sin `--web-token-env` escribe la entrada HTTP **sin**
+    cabecera y, de paso, borra la que hubiera. Contra un daemon con token, Claude Code cae al flujo
+    OAuth y responde «Dynamic Client Registration rejected (HTTP 401)»; las once tools desaparecen.
+    `doctor` decía **todo a punto**, porque `_probe_mcp_claude` sólo comprueba que la entrada
+    exista. Es la tercera vez que el mismo patrón muerde, y las tres veces el diagnóstico miraba
+    por un camino distinto del roto.
+
+    En `servicio` y no en `andamiaje` por el mismo motivo que `service.credential`: pregunta al
+    puerto, y `andamiaje` no sale a la red por contrato.
+    """
+    host, port = daemon_host_port()
+    exige = ctx.daemon_needs_token(host, port)
+    if exige is None:
+        return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
+    if not exige:
+        return Result(OK, "el puerto del daemon no exige token: cualquier entrada MCP puede entrar")
+
+    entradas: list[tuple] = []
+    entry = _claude_mcp_entry(ctx)
+    if entry is not None:
+        cabecera = (entry.get("headers") or {}).get("Authorization")
+        entradas.append(_autenticacion_de_la_entrada("Claude Code", _entry_mode(entry), cabecera))
+    section = _codex_mcp_section(ctx)
+    if section is not None:
+        hallado = _CODEX_BEARER_RE.search(section)
+        # Codex referencia la variable por nombre, sin `${...}`: se envuelve para que la
+        # comprobación de «¿está en el entorno?» sea una sola para los tres clientes.
+        token = "${" + hallado.group(1) + "}" if hallado else None
+        entradas.append(_autenticacion_de_la_entrada("Codex", _codex_mode(section), token))
+    oc_entry, _path, _motivo = _opencode_mcp_entry(ctx)
+    if oc_entry is not None:
+        cabecera = (oc_entry.get("headers") or {}).get("Authorization")
+        modo = "http" if oc_entry.get("type") == "remote" else "stdio"
+        entradas.append(_autenticacion_de_la_entrada("opencode", modo, cabecera))
+
+    if not entradas:
+        return Result(UNKNOWN, "el puerto exige token, pero no hay entrada MCP que mirar")
+
+    ciegas = [cliente for cliente, estado in entradas if estado == "sin_credencial"]
+    if ciegas:
+        verbo = "entra" if len(ciegas) == 1 else "entran"
+        return Result(
+            WARN,
+            f"el puerto del daemon exige token y {' y '.join(ciegas)} {verbo} por HTTP sin "
+            "cabecera de autorización: sus tools local_* responderán 401",
+            DAEMON_TOKEN_HINT,
+        )
+
+    # Segundo camino al mismo 401, y de fuerza distinta: la cabecera está pero la variable a la
+    # que apunta puede expandir a vacío. El entorno de este proceso es un TESTIGO del que verá el
+    # cliente —los dos salen del entorno de usuario— y no una prueba: alguien puede haber lanzado
+    # el cliente desde otra consola. Por eso se nombra el síntoma y no se dicta el veredicto.
+    sospechosas = [
+        (cliente, estado)
+        for cliente, estado in entradas
+        if estado not in {"ok", "stdio", "sin_credencial"} and not os.environ.get(estado)
+    ]
+    if sospechosas:
+        detalle = ", ".join(f"{cliente} usa {var}" for cliente, var in sospechosas)
+        return Result(
+            WARN,
+            f"el puerto del daemon exige token y {detalle}, que no está en el entorno de este "
+            "proceso: si el cliente tampoco la ve, sus tools local_* responderán 401",
+            DAEMON_TOKEN_HINT,
+        )
+    return Result(OK, "el puerto del daemon exige token y las entradas MCP lo referencian")
+
+
 def _probe_daemon(ctx: Context) -> Result:
     host, port = daemon_host_port()
     status = ctx.daemon_status(host, port)
@@ -1017,7 +1124,7 @@ def _probe_llamaserver(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Diecisiete elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Dieciocho elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1044,13 +1151,17 @@ CHECKS: tuple[Check, ...] = (
     # sin tocar nada externo (ver `_SCAFFOLD_GROUPS` en cli.py). Además se lee junto al backend,
     # que es de lo que habla.
     Check("service.credential", "servicio", "credencial del backend", _probe_mcp_credential),
+    # Misma razón que el de arriba para estar en `servicio`: pregunta al puerto. Y no es el
+    # mismo check con otro nombre — aquel mira la puerta del backend y este la del daemon, que
+    # se cierran por separado.
+    Check("service.daemon_auth", "servicio", "token del puerto del daemon", _probe_mcp_daemon_auth),
     Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
 )
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los diecisiete probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los dieciocho probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1064,7 +1175,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros dieciséis
+        except Exception as exc:  # un check roto no debe impedir ver los otros diecisiete
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

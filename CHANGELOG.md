@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`doctor` ve cuando una entrada MCP no puede autenticarse contra el daemon.** Check nuevo
+  `service.daemon_auth`: si el puerto del daemon exige token, comprueba que las entradas en modo
+  HTTP de los tres clientes lleven con qué entrar.
+
+  Sale de una avería real. `install` sin `--web-token-env` escribe la entrada **sin** cabecera
+  `Authorization` —y de paso borra la que hubiera—, así que contra un daemon con token Claude Code
+  cae al flujo OAuth y responde «Dynamic Client Registration rejected (HTTP 401)»: las once tools
+  desaparecen. Y `doctor` decía **todo a punto**, porque el check de andamiaje sólo comprueba que
+  la entrada exista.
+
+  Es la tercera vez que el mismo patrón muerde —2026-07-31, 2026-08-06 y ahora— y las tres el
+  diagnóstico miraba por un camino distinto del roto. El check nuevo es hermano de
+  `service.credential` un piso más arriba: aquel mira la puerta del **backend** y este la del
+  **daemon**, que se cierran por separado.
+
+  Reconoce las tres formas en que `install` escribe la autenticación (`headers.Authorization` en
+  Claude Code y opencode, `bearer_token_env_var` en Codex), no cuenta las entradas `stdio` —de
+  esas ya avisa `service.credential`— y avisa aparte, redactado como sospecha y no como veredicto,
+  cuando la cabecera referencia una variable que este proceso no ve: el entorno de `doctor` es un
+  testigo del que verá el cliente, no una prueba.
+
 ## [0.25.0] - 2026-08-18
 
 ### Added
