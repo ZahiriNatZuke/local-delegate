@@ -25,6 +25,7 @@ Tres cosas medidas contra el SDK instalado, no leídas de la documentación (tra
 
 from __future__ import annotations
 
+import contextvars
 import json
 import os
 import threading
@@ -71,6 +72,30 @@ class _Identidad:
 # corrutinas, así que el lock no es decorativo.
 _VISTOS: dict[_Identidad, dict[str, Any]] = {}
 _LOCK = threading.Lock()
+
+# El nombre del cliente que está haciendo ESTA petición. Es un `ContextVar` y no una variable de
+# módulo porque el daemon atiende varias llamadas a la vez: una global las mezclaría y firmaría
+# cada delegación con el nombre del último que pasó por el middleware.
+#
+# Sobrevive al salto al threadpool —las tools son síncronas y el SDK las corre allí—, cosa que se
+# midió antes de diseñar esto en vez de deducirla. Lo que aquel script no podía medir es si cruza
+# el SDK real; eso lo comprueba la verificación end-to-end de `panel-dice-la-verdad`.
+_CLIENTE_ACTUAL: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_cliente_actual", default=None
+)
+
+
+def cliente_actual() -> str | None:
+    """El nombre del cliente MCP de la petición en curso, o `None` fuera de una.
+
+    Sólo el nombre. La versión, el protocolo y las capabilities siguen viviendo en
+    `clients.jsonl`, que responde otra pregunta —«¿qué clientes se han visto?»— y no debe
+    mezclarse con la contabilidad por llamada.
+
+    Devuelve `None` sin quejarse fuera de una petición (el benchmark, el arranque): quien
+    registra omite el campo en vez de inventarlo.
+    """
+    return _CLIENTE_ACTUAL.get()
 
 
 def _utcnow() -> datetime:
@@ -236,11 +261,15 @@ async def observar_cliente(ctx: Any, call_next: Any) -> Any:
     if ctx.method != "initialize":
         try:
             sesion = ctx.session
+            client_info = getattr(sesion.client_params, "client_info", None)
             registrar(
                 sesion.client_capabilities,
-                getattr(sesion.client_params, "client_info", None),
+                client_info,
                 ctx.protocol_version,
             )
+            # Se pone ANTES de `call_next` a propósito: es lo que hace que el handler de la tool
+            # —que corre dentro de ese await— lo vea. Después no firmaría nada.
+            _CLIENTE_ACTUAL.set(getattr(client_info, "name", None))
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
     return await call_next(ctx)

@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **El panel dice quién delegó.** Cada línea del log de uso lleva ahora el nombre del cliente MCP
+  que pidió la llamada, y `/api/stats` trae el desglose por cliente. El KPI de ahorro es
+  acumulativo y no distinguía un mes de smoke tests de un mes de trabajo real: en la medición del
+  3-ago las 20 líneas de una prueba sólo se separaron cruzando a mano contra los transcripts de
+  Claude Code, algo que el panel no puede hacer. Las líneas anteriores a este cambio, y las que no
+  vienen de una sesión MCP, caen en «desconocido» —casilla propia, ni repartidas ni descartadas—.
+
+  La identidad viaja en un `ContextVar` que el middleware fija antes de ceder el paso al handler.
+  Que sobreviva al salto al threadpool (las tools son síncronas y el SDK las corre allí) se midió
+  antes de diseñarlo, y que llegue con el SDK real por medio se comprueba levantando el daemon y
+  mirando la línea que queda en disco.
+
+- **La tarjeta de hooks muestra la puntería del hook de lectura**: de todas las lecturas que vio,
+  en cuántas avisó y por qué se calló en el resto (`codigo`, `acotada`, `pequeno`). Es lo que
+  faltaba para que el defecto que costó tres semanas —el hook apuntando a código— fuera visible
+  desde la interfaz y no sólo desde un script. Los eventos anteriores al PR #146, que no traen el
+  motivo, cuentan como «sin registrar» en vez de recibir una razón que nunca tuvieron.
+
+  Sigue sin mostrarse ninguna tasa de conversión: nada enlaza una sugerencia con la delegación que
+  vino después, y presentarlo como un dato sería inventar la correlación.
+
 ### Security
 - **`cryptography` sube de 49.0.0 a 50.0.0**, que cierra la alerta `high` de Dependabot: un
   oráculo de Bleichenbacher distinguible por errores y por tiempos al descifrar PKCS#7

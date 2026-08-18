@@ -230,6 +230,13 @@ def _aggregate(rows: list[dict]) -> dict:
             "tokens_out": 0,
         }
     )
+    # Quién PIDIÓ la delegación. Sin esto el KPI acumulado no puede distinguir un mes de smoke
+    # tests de un mes de trabajo real: es lo que obligó a cruzar a mano contra los transcripts en
+    # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "desconocido"
+    # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
+    by_client: dict[str, dict] = defaultdict(
+        lambda: {"calls": 0, "backend_calls": 0, "saved": 0, "tokens_in": 0, "tokens_out": 0}
+    )
     # Origen del CÓMPUTO: "local" (backend en esta máquina), "remote" (p. ej. esta Mac usando
     # la GPU de la PC) o "unknown" para eventos anteriores a que se registrara el campo.
     by_backend: dict[str, dict] = defaultdict(
@@ -299,6 +306,14 @@ def _aggregate(rows: list[dict]) -> dict:
         if isinstance(host, str) and host:
             b["hosts"].add(host)
 
+        quien = r.get("client")
+        c = by_client[quien if isinstance(quien, str) and quien else "desconocido"]
+        c["calls"] += 1
+        c["backend_calls"] += acc["backend_calls"]
+        c["saved"] += acc["saved"]
+        c["tokens_in"] += acc["tokens_in"]
+        c["tokens_out"] += acc["tokens_out"]
+
         total["calls"] += 1
         total["backend_calls"] += acc["backend_calls"]
         total["chars_in"] += ci
@@ -345,6 +360,17 @@ def _aggregate(rows: list[dict]) -> dict:
         }
         for name, v in sorted(by_backend.items(), key=lambda kv: -kv[1]["calls"])
     ]
+    clientes = [
+        {
+            "client": name,
+            "calls": v["calls"],
+            "backend_calls": v["backend_calls"],
+            "tokens_saved": v["saved"],
+            "tokens_in": v["tokens_in"],
+            "tokens_generated": v["tokens_out"],
+        }
+        for name, v in sorted(by_client.items(), key=lambda kv: -kv[1]["calls"])
+    ]
 
     return {
         "total": total,
@@ -359,6 +385,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "by_tool": tools,
         "by_model": models,
         "by_backend": backends,
+        "by_client": clientes,
     }
 
 
@@ -403,6 +430,15 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     por_evento: dict[str, dict[str, int]] = {}
     por_categoria: dict[str, dict[str, int]] = {}
     por_dia: dict[str, dict[str, int]] = {}
+    # Puntería del hook de lectura: de todo lo que vio, en qué avisó y por qué descartó el resto.
+    # Esto NO es conversión —nada enlaza una sugerencia con la delegación que vino después— sino
+    # selectividad, que vive entera dentro de este mismo fichero y no hay que cruzarla con nada.
+    #
+    # Sólo entran los eventos de lectura: `motivo` y `ext` los escribe ese hook y nadie más, así
+    # que meter los de `lint` o `summarize` daría un denominador que no es y la tarjeta diría
+    # que el hook descarta sin motivo la mitad de las veces.
+    por_motivo: dict[str, int] = {}
+    por_ext: dict[str, int] = {}
 
     for row in rows:
         # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
@@ -417,6 +453,21 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
             casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
             casilla["total"] += 1
             casilla["suggested"] += sugerida
+
+        if row.get("category") == "read":
+            # Un evento sin `motivo` es o bien un aviso, o bien uno de antes del PR #146, que no
+            # lo escribía. Se separan porque decir «descartado sin motivo» de una telemetría
+            # vieja sería inventarle una razón que nunca tuvo.
+            if sugerida:
+                clave = "avisó"
+            else:
+                clave = str(row.get("motivo") or "sin registrar")
+            por_motivo[clave] = por_motivo.get(clave, 0) + 1
+
+            ext = row.get("ext")
+            por_ext[str(ext) if ext else "sin extensión"] = (
+                por_ext.get(str(ext) if ext else "sin extensión", 0) + 1
+            )
 
         ts = _parse_ts(row.get("ts"))
         if ts is not None:
@@ -441,6 +492,16 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
             ({"day": dia, **valores} for dia, valores in por_dia.items()),
             key=lambda d: d["day"],
         ),
+        # Sólo de los eventos de lectura; su total NO es el `total` de arriba.
+        "read_total": sum(por_motivo.values()),
+        "by_motivo": [
+            {"motivo": nombre, "total": n}
+            for nombre, n in sorted(por_motivo.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
+        "by_ext": [
+            {"ext": nombre, "total": n}
+            for nombre, n in sorted(por_ext.items(), key=lambda kv: (-kv[1], kv[0]))
+        ],
     }
 
 
@@ -1089,6 +1150,15 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
   </div>
 
+  <!-- Quién pidió las delegaciones. El KPI de ahorro es acumulativo y no distingue un mes de
+       smoke tests de un mes de trabajo real; esto sí. NO se lee como conversión: dice quién llamó,
+       no cuántas sugerencias se siguieron. -->
+  <div class="card tablecard" id="clientsCard" style="display:none">
+    <div class="panel-h" style="--hc:var(--cyan)"><h2>Quién delegó</h2>
+      <span class="mut" id="clientsHead"></span></div>
+    <div id="clientsBody"></div>
+  </div>
+
   <!-- Los hooks consultivos sugieren; el usuario decide. Esta tarjeta cuenta lo primero y NO
        pretende medir lo segundo: no hay identificador que una una sugerencia con una delegación,
        y cruzarlos sería inventar una correlación. El texto de la tarjeta lo dice. -->
@@ -1249,6 +1319,7 @@ async function fetchData(){
     const j = await r.json();
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
+    renderClients(state.stats);
     try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
     const cnt = F.format(state.meta.count||0);
@@ -1261,6 +1332,38 @@ async function fetchData(){
     document.getElementById('live').classList.add('stale');
     document.getElementById('liveTxt').textContent='SIN DATOS';
   }
+}
+
+// --- Quién delegó: el desglose por cliente de /api/stats ---
+//
+// "desconocido" no es un fallo: son las llamadas anteriores a que se registrara el cliente, y las
+// que no vienen de una sesión MCP (el benchmark, un script). Se muestra tal cual porque
+// repartirlas entre los demás sería inventar de quién eran.
+function renderClients(s){
+  const card = document.getElementById('clientsCard');
+  const filas = (s && s.by_client) || [];
+  if(!filas.length){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const totalCalls = filas.reduce((a,c)=>a+c.calls,0);
+  document.getElementById('clientsHead').textContent =
+    filas.length + (filas.length===1 ? ' cliente' : ' clientes');
+
+  const cuerpo = filas.map(c=>{
+    const p = totalCalls ? (c.calls/totalCalls*100) : 0;
+    return '<tr><td>' + escHooks(c.client) + '</td>'
+      + '<td class="num">' + F.format(c.calls) + '</td>'
+      + '<td class="num" style="color:var(--tx2)">' + F.format(c.backend_calls) + '</td>'
+      + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_saved) + '</td>'
+      + '<td class="num" style="color:var(--cyan)">' + p.toFixed(1).replace('.', ',') + ' %</td></tr>';
+  }).join('');
+
+  document.getElementById('clientsBody').innerHTML =
+    '<div style="overflow-x:auto"><table>'
+    + '<thead><tr><th>Cliente</th><th class="num">Delegaciones</th>'
+    + '<th class="num">Llamadas al backend</th><th class="num">Tokens ahorrados</th>'
+    + '<th class="num">Reparto</th></tr></thead>'
+    + '<tbody>' + cuerpo + '</tbody></table></div>';
 }
 
 // --- Sugerencias de los hooks: /api/hooks ---
@@ -1292,14 +1395,33 @@ function renderHooks(h){
       + `<td class="num" style="color:var(--amber)">${p.toFixed(1).replace('.', ',')} %</td></tr>`;
   }).join('');
 
+  // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
+  // "sin registrar" son los eventos anteriores a que el hook escribiera el motivo; se muestran
+  // aparte en vez de repartirlos, porque de esos no se sabe la razón.
+  const motivos = (h.by_motivo||[]);
+  const totalRead = h.read_total || 0;
+  const punteria = !motivos.length ? '' :
+    '<div style="overflow-x:auto;margin-top:4px"><table>'
+    + '<thead><tr><th>Lecturas vistas</th><th class="num">Eventos</th>'
+    + '<th class="num">Reparto</th></tr></thead><tbody>'
+    + motivos.map(m=>{
+        const p = totalRead ? (m.total/totalRead*100) : 0;
+        return '<tr><td>' + escHooks(m.motivo) + '</td>'
+          + '<td class="num">' + F.format(m.total) + '</td>'
+          + '<td class="num" style="color:var(--amber)">' + p.toFixed(1).replace('.', ',') + ' %</td></tr>';
+      }).join('')
+    + '</tbody></table></div>';
+
   document.getElementById('hooksBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
     + '<thead><tr><th>Categoría</th><th class="num">Sugeridas</th>'
     + '<th class="num">Vistas</th><th class="num">Tasa</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>'
+    + punteria
     + '<div class="empty" style="padding:10px 12px;text-align:left">'
     + 'Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se '
-    + 'siguieron: nada enlaza una sugerencia con la delegación que vino después.</div>';
+    + 'siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué '
+    + 'avisó el hook de lectura y por qué se calló en el resto.</div>';
 }
 
 // --- Backend local: /api/status (identidad, 1x/min) + /api/backend (montados, 2s) ---

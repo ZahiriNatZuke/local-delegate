@@ -212,7 +212,18 @@ SEED_AND_MOCK = """() => {
       saved: stats.saved, estimated_events: 0},
       tokens_context_saved: stats.saved, tokens_generated_local: stats.tokens_out,
       tokens_local_input: stats.tokens_in, backend_calls: stats.backend_calls,
-      estimated_events: 0, by_tool: [], by_model: [], by_backend: []},
+      estimated_events: 0, by_tool: [], by_model: [], by_backend: [],
+      // La tarjeta «Quién delegó» lee de aquí. Los nombres son los de clientes MCP reales pero
+      // los conteos son inventados, igual que el resto del mock: lo que la imagen no puede
+      // enseñar es de quién son las delegaciones de quien regenera la captura.
+      by_client: [
+        {client: 'claude-code', calls: 74, backend_calls: 96,
+         tokens_saved: 88240, tokens_in: 101300, tokens_generated: 6120},
+        {client: 'codex-mcp-client', calls: 31, backend_calls: 38,
+         tokens_saved: 24880, tokens_in: 29010, tokens_generated: 2410},
+        {client: 'desconocido', calls: 15, backend_calls: 18,
+         tokens_saved: 7180, tokens_in: 8640, tokens_generated: 690},
+      ]},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
@@ -233,9 +244,22 @@ SEED_AND_MOCK = """() => {
       ];
       const total = cats.reduce((a, c) => a + c.total, 0);
       const suggested = cats.reduce((a, c) => a + c.suggested, 0);
+      const motivos = [
+        {motivo: 'codigo', total: 52},
+        {motivo: 'aviso', total: 41},
+        {motivo: 'acotada', total: 24},
+        {motivo: 'pequeno', total: 13},
+      ];
       return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
         total, suggested, rate: suggested / total,
-        by_category: cats, by_event: [], by_day: []};
+        by_category: cats, by_event: [], by_day: [],
+        // La puntería del hook de lectura. Su total es el de la categoría 'read' —130— y los
+        // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no
+        // cuadran es un panel que el dashboard real nunca puede pintar.
+        read_total: motivos.reduce((a, m) => a + m.total, 0),
+        by_motivo: motivos,
+        by_ext: [{ext: '.ts', total: 48}, {ext: '.md', total: 39},
+                 {ext: '.py', total: 22}, {ext: 'sin extension', total: 21}]};
     })(),
   };
 

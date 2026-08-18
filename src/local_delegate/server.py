@@ -399,6 +399,18 @@ def _log_event(
             "backend_host": config.backend_host(),
             "v": _get_version(),
         }
+        # Quién pidió la delegación. Sin esto el panel no puede distinguir un mes de smoke tests
+        # de un mes de trabajo real: es el hueco que dejó la medición de adopción del 3-ago, donde
+        # las 20 líneas de una prueba sólo se separaron cruzando a mano contra los transcripts.
+        # Se omite cuando no hay identidad (benchmark, arranque, cliente que no manda clientInfo):
+        # una firma inventada sería peor que ninguna. Y va envuelto porque el logging entero es
+        # best-effort y observar no puede romper una tool.
+        try:
+            quien = clients.cliente_actual()
+        except Exception:
+            quien = None
+        if quien:
+            rec["client"] = quien
         # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
         # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
         # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
