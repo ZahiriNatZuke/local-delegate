@@ -6,6 +6,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **El hook de lectura sólo avisa de lo que de verdad se puede delegar.** Medido sobre 14 días de
+  uso real (49 sesiones, 1 579 lecturas, 10 153 eventos de telemetría): el hook avisaba en 572 de
+  852 lecturas y **sólo 29 apuntaban a una transformación global**. Las otras eran código que hay
+  que leer literal para editarlo (562 lecturas), franjas pedidas a propósito con `offset`/`limit`
+  (542) y archivos medianos. La conversión de esas 1 409 sugerencias fue **cero**, y no por la
+  redacción del aviso: un control con `claude -p` mostró que el modelo delega solo cuando la tarea
+  es una transformación global, con hook y sin él. El problema era el ruido — un aviso que acierta
+  el 5 % enseña a ignorarlo y se lleva por delante los casos en que tenía razón.
+
+  Ahora se calla ante código, ante lecturas acotadas, y los umbrales por defecto suben de 8/32 KB
+  a **32/100 KB**. Sobre las mismas 852 lecturas reales: de 572 avisos a **29**.
+
+- **La telemetría registra la extensión del archivo (`ext`) y el motivo del descarte.** Sin ese
+  dato nadie podía ver que el hook llevaba tres semanas apuntando a código: el log guardaba
+  tamaño y banda, pero no qué se estaba leyendo. La extensión se acota a 12 caracteres
+  alfanuméricos y se descarta si no lo es; el log sigue sin guardar rutas ni nombres de archivo.
+  Los descartes se registran en vez de callarse, porque sin denominador no hay puntería que medir.
+
 ## [0.24.0] - 2026-08-04
 
 ### Fixed

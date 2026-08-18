@@ -138,7 +138,7 @@ def test_enable_read_hook_deja_el_hook_REALMENTE_encendido(tmp_path, monkeypatch
     assert comando is not None, "el hook de Read no quedó registrado"
 
     grande = tmp_path / "grande.txt"
-    grande.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima de la banda «strong»
+    grande.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima del umbral de aviso
     entrada = json.dumps({"tool_input": {"file_path": str(grande)}})
 
     # Se respeta el comando escrito, cambiando SOLO el intérprete: el registrado es un nombre

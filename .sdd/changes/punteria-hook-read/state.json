@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "slug": "punteria-hook-read",
+  "title": "Arreglar la punteria del hook de lectura y medir la extension",
+  "mode": "lite",
+  "status": "understanding",
+  "createdAt": "2026-08-18T12:14:10.407Z",
+  "updatedAt": "2026-08-18T12:22:13.661Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T12:15:52.985Z",
+      "evidence": "spec.md con 6 requisitos verificables y 5 escenarios, soportada por research.md: 1409 sugerencias con 0 conversiones medidas contra telemetria y transcripts, control positivo y negativo ejecutados, y simulacion de las reglas candidatas sobre 852 lecturas reales (572 -> 29).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T12:17:01.389Z",
+      "evidence": "plan.md con 6 tareas y propiedad de ficheros explicita; review.md adversarial con 5 hallazgos, ninguno bloqueante: H2 (acotar ext a 12 chars alfanumericos) y H3 (comentario falso en test_install.py:141) incorporados al plan.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T12:22:13.480Z",
+      "evidence": "uv run pytest: 752 passed 2 skipped; ruff check: all passed; ruff format --check: 75 files formatted. Dos mutantes verificados uno a uno, fallando solo los tests correctos.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T12:22:13.661Z",
+      "evidence": "verification.md mapea los 6 REQ a evidencia concreta. La regla nueva medida importando el modulo real contra 852 lecturas reales: 572 -> 29 avisos (95% menos), el objetivo de la spec. Prueba en vivo del script fuera de pytest con los tres casos.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-18T12:14:10.407Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-18T12:15:52.985Z",
+      "evidence": "spec.md con 6 requisitos verificables y 5 escenarios, soportada por research.md: 1409 sugerencias con 0 conversiones medidas contra telemetria y transcripts, control positivo y negativo ejecutados, y simulacion de las reglas candidatas sobre 852 lecturas reales (572 -> 29).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-18T12:17:01.389Z",
+      "evidence": "plan.md con 6 tareas y propiedad de ficheros explicita; review.md adversarial con 5 hallazgos, ninguno bloqueante: H2 (acotar ext a 12 chars alfanumericos) y H3 (comentario falso en test_install.py:141) incorporados al plan.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-18T12:22:13.480Z",
+      "evidence": "uv run pytest: 752 passed 2 skipped; ruff check: all passed; ruff format --check: 75 files formatted. Dos mutantes verificados uno a uno, fallando solo los tests correctos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-18T12:22:13.661Z",
+      "evidence": "verification.md mapea los 6 REQ a evidencia concreta. La regla nueva medida importando el modulo real contra 852 lecturas reales: 572 -> 29 avisos (95% menos), el objetivo de la spec. Prueba en vivo del script fuera de pytest con los tres casos.",
+      "actor": "user"
+    }
+  ]
+}
