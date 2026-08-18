@@ -6,7 +6,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Security
+- **`cryptography` sube de 49.0.0 a 50.0.0**, que cierra la alerta `high` de Dependabot: un
+  oráculo de Bleichenbacher distinguible por errores y por tiempos al descifrar PKCS#7
+  `EnvelopedData`. Entra como transitiva por `pyjwt[crypto]` y el paquete no descifra PKCS#7, así
+  que la vía no era explotable aquí; se actualiza igual.
+
 ### Changed
+- **Dependencias al día**: `uvicorn` 0.52.0 → 0.52.3, `platformdirs` 4.11.0 → 4.11.3, `filelock`
+  3.32.2 → 3.32.3, y en desarrollo `ruff` 0.16.1 → 0.16.3 y `pre-commit` 4.6.1 → 4.6.2. Los seis
+  bumps van en un solo cambio y no en cinco PRs encadenados, porque cada uno toca `uv.lock` y
+  mezclarlos de uno en uno hace que los demás conflicten. Auditados con Socket: todos los
+  `depscore` por encima de 93.
 - **El hook de lectura sólo avisa de lo que de verdad se puede delegar.** Medido sobre 14 días de
   uso real (49 sesiones, 1 579 lecturas, 10 153 eventos de telemetría): el hook avisaba en 572 de
   852 lecturas y **sólo 29 apuntaban a una transformación global**. Las otras eran código que hay
