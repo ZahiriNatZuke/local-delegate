@@ -83,6 +83,9 @@ def test_sin_eventos_la_tasa_es_cero_y_no_revienta():
         "by_event": [],
         "by_category": [],
         "by_day": [],
+        "read_total": 0,
+        "by_motivo": [],
+        "by_ext": [],
     }
 
 
@@ -327,3 +330,85 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
     # el HTML que produce la función de verdad.
     assert "<img src=x" not in con_datos["body"], "la categoría se pintó sin escapar"
     assert "&lt;img src=x onerror=alert(1)&gt;" in con_datos["body"]
+
+
+# --- Puntería del hook de lectura --------------------------------------------------------------
+#
+# El hook pasó tres semanas avisando sobre lecturas de código sin que se notara, porque la
+# telemetría guardaba tamaño y banda pero no qué se estaba leyendo. Estos tests fijan que el panel
+# pueda enseñar esa selectividad — y que no la invente donde no la hay.
+
+
+def _evento_de_lectura(**extra) -> dict:
+    base = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "category": "read"}
+    base.update(extra)
+    return base
+
+
+def test_agrupa_las_lecturas_por_motivo_de_descarte():
+    agregado = metrics._aggregate_hooks(
+        [
+            _evento_de_lectura(suggested=True, ext=".md", band="strong"),
+            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+            _evento_de_lectura(suggested=False, ext=".md", motivo="acotada"),
+        ]
+    )
+
+    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {
+        "codigo": 2,
+        "avisó": 1,
+        "acotada": 1,
+    }
+    assert agregado["read_total"] == 4
+
+
+def test_agrupa_las_lecturas_por_extension():
+    agregado = metrics._aggregate_hooks(
+        [
+            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+            _evento_de_lectura(suggested=True, ext=".md"),
+        ]
+    )
+
+    assert agregado["by_ext"] == [{"ext": ".ts", "total": 2}, {"ext": ".md", "total": 1}]
+
+
+def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
+    """Los eventos anteriores al PR #146 no traen `motivo` ni `ext`.
+
+    Meterlos en un motivo concreto diría que el hook descartaba por una razón que nunca registró,
+    y en este log eso son miles de líneas: la tarjeta contaría una historia falsa sobre el pasado.
+    """
+    agregado = metrics._aggregate_hooks(
+        [_evento_de_lectura(suggested=False), _evento_de_lectura(suggested=False)]
+    )
+
+    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"sin registrar": 2}
+    assert agregado["by_ext"] == [{"ext": "sin extensión", "total": 2}]
+
+
+def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
+    """Control de los tres de arriba, y el fallo más fácil de cometer aquí.
+
+    `motivo` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
+    de `lint` y `summarize` caerían en «sin registrar» y la tarjeta diría que el hook descarta sin
+    motivo la mitad de las veces — un número que se lee bien y significa otra cosa.
+    """
+    agregado = metrics._aggregate_hooks(
+        [
+            _evento_de_lectura(suggested=True, ext=".md"),
+            {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "category": "lint"},
+            {
+                "ts": datetime.now(UTC).isoformat(),
+                "event": "UserPromptSubmit",
+                "category": "summarize",
+                "suggested": True,
+            },
+        ]
+    )
+
+    assert agregado["total"] == 3
+    assert agregado["read_total"] == 1
+    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"avisó": 1}

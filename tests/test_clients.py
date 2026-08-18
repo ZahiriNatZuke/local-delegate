@@ -350,3 +350,71 @@ def test_si_no_se_puede_rotar_se_sigue_anotando(tmp_path, monkeypatch):
         is True
     )
     assert "claude-code" in viva.read_text(encoding="utf-8")
+
+
+# --- La identidad llega hasta la tool ----------------------------------------------------------
+#
+# Es lo que permite que el log de uso firme cada delegación y que el panel distinga un mes de
+# smoke tests de un mes de trabajo real.
+#
+# Estos tests son de INTEGRACIÓN a propósito. Un script suelto ya demostró que un `ContextVar`
+# sobrevive al salto al threadpool, y eso no era la pregunta: entre el middleware y el handler está
+# el SDK. La tool de abajo es **síncrona**, como las de verdad, que es lo que obliga al SDK a
+# correrla en el threadpool.
+
+
+async def _firmar(nombre: str | None) -> str | None:
+    """Conecta un cliente y devuelve lo que la tool vio en `cliente_actual()`."""
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    visto: list[str | None] = []
+
+    @servidor.tool()
+    def quien_soy() -> str:
+        """Tool SÍNCRONA: el SDK la corre en el threadpool, igual que a las reales."""
+        visto.append(clients.cliente_actual())
+        return "ok"
+
+    async with create_client_server_memory_streams() as ((cr, cw), (sr, sw)):
+        low = servidor._lowlevel_server
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(
+                lambda: low.run(sr, sw, low.create_initialization_options(), raise_exceptions=True)
+            )
+            info = Implementation(name=nombre, version="1.0.0") if nombre is not None else None
+            async with ClientSession(cr, cw, client_info=info) as cliente:
+                await cliente.initialize()
+                await cliente.call_tool("quien_soy", {})
+            tg.cancel_scope.cancel()
+    return visto[0] if visto else None
+
+
+def test_la_tool_ve_el_nombre_del_cliente_que_la_llamo():
+    assert anyio.run(_firmar, "claude-code") == "claude-code"
+
+
+def test_dos_clientes_distintos_dejan_firmas_distintas():
+    """Control del de arriba, y el que impide que pase en vacío.
+
+    Sin él, una implementación que devolviera siempre la misma constante —o el nombre del último
+    cliente visto en una global— pasaría el primer test entero.
+    """
+    assert anyio.run(_firmar, "claude-code") == "claude-code"
+    assert anyio.run(_firmar, "codex-mcp-client") == "codex-mcp-client"
+
+
+def test_un_cliente_que_no_se_presenta_sale_como_el_default_del_sdk():
+    """Medido, no supuesto: el SDK del CLIENTE rellena `mcp` cuando no se le da `client_info`.
+
+    O sea que «sin identidad» casi no existe desde este lado — y en el registro real de esta
+    máquina hay líneas con `mcp 0.1.0` que son exactamente eso. Para lo que este campo persigue
+    da igual: un script con el SDK por defecto se distingue de `claude-code`, que es la pregunta.
+
+    El camino de omitir el campo sigue vivo en `_log_event` para cuando `client_info` llegue en
+    None de verdad; lo que este test fija es que no se le puede llamar «lo normal».
+    """
+    assert anyio.run(_firmar, None) == "mcp"
+
+
+def test_cliente_actual_fuera_de_una_peticion_es_none():
+    """`_log_event` también se llama desde el benchmark y desde caminos de arranque."""
+    assert clients.cliente_actual() is None

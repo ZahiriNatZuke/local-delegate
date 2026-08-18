@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "slug": "panel-dice-la-verdad",
+  "title": "El panel puede decir que no hay adopcion",
+  "mode": "standard",
+  "status": "understanding",
+  "createdAt": "2026-08-18T13:15:47.918Z",
+  "updatedAt": "2026-08-18T13:33:32.197Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T13:17:13.958Z",
+      "evidence": "spec.md con 7 requisitos y 5 escenarios, soportada por research.md: los dos huecos salen de la medicion del 18-ago, la propagacion del ContextVar esta medida y marcada como pieza-no-uso, y el limite de la telemetria previa al PR #146 esta identificado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T13:18:12.362Z",
+      "evidence": "plan.md con 6 tareas, propiedad de ficheros y riesgos nombrados; review.md adversarial con 5 hallazgos, ninguno bloqueante: H1 (el desglose por cliente no puede leerse como conversion), H2 (acotar el motivo a category=read) y H3 (control anti-vacio con un segundo cliente) incorporados.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T13:33:32.041Z",
+      "evidence": "uv run pytest: 762 passed 2 skipped (eran 752); ruff check y format limpios. Mutante que quita la propagacion: fallan los 3 tests de identidad y solo esos.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-08-18T13:33:32.197Z",
+      "evidence": "verification.md mapea los 7 REQ. End-to-end con el daemon real en el 9494: dos clientes MCP dejan dos firmas distintas en el log en disco, /api/stats las separa y el panel pinta las dos tarjetas en el navegador. Un requisito se corrigio con lo medido: el SDK del cliente rellena 'mcp' por defecto.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-08-18T13:15:47.918Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-08-18T13:17:13.958Z",
+      "evidence": "spec.md con 7 requisitos y 5 escenarios, soportada por research.md: los dos huecos salen de la medicion del 18-ago, la propagacion del ContextVar esta medida y marcada como pieza-no-uso, y el limite de la telemetria previa al PR #146 esta identificado.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-08-18T13:18:12.362Z",
+      "evidence": "plan.md con 6 tareas, propiedad de ficheros y riesgos nombrados; review.md adversarial con 5 hallazgos, ninguno bloqueante: H1 (el desglose por cliente no puede leerse como conversion), H2 (acotar el motivo a category=read) y H3 (control anti-vacio con un segundo cliente) incorporados.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-08-18T13:33:32.041Z",
+      "evidence": "uv run pytest: 762 passed 2 skipped (eran 752); ruff check y format limpios. Mutante que quita la propagacion: fallan los 3 tests de identidad y solo esos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-08-18T13:33:32.197Z",
+      "evidence": "verification.md mapea los 7 REQ. End-to-end con el daemon real en el 9494: dos clientes MCP dejan dos firmas distintas en el log en disco, /api/stats las separa y el panel pinta las dos tarjetas en el navegador. Un requisito se corrigio con lo medido: el SDK del cliente rellena 'mcp' por defecto.",
+      "actor": "user"
+    }
+  ]
+}

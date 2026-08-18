@@ -720,3 +720,54 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
     texto = server.local_status()
     assert f"~{agregado['tokens_context_saved']} tokens" in texto
     assert f"({agregado['backend_calls']} llamadas al backend)" in texto
+
+
+# --- Quién delegó: el desglose por cliente -----------------------------------------------------
+#
+# Nace de la medición de adopción: el KPI de ahorro es acumulativo y no distingue un mes de smoke
+# tests de un mes de trabajo real. En la medición del 3-ago las 20 líneas de una prueba sólo se
+# separaron cruzando a mano contra los transcripts, que es algo que el panel no puede hacer.
+
+
+def _fila_de_uso(**extra) -> dict:
+    base = {
+        "ts": "2026-08-18T10:00:00+00:00",
+        "tool": "local_summarize",
+        "model": "gemma3-4b",
+        "source": "path",
+        "chars_in": 1000,
+        "chars_out": 50,
+        "latency_ms": 10,
+        "ok": True,
+        "tokens_in": 300,
+        "tokens_out": 12,
+        "raw_len": 1000,
+    }
+    base.update(extra)
+    return base
+
+
+def test_stats_separa_las_delegaciones_por_cliente():
+    agregado = metrics._aggregate(
+        [
+            _fila_de_uso(client="claude-code"),
+            _fila_de_uso(client="claude-code"),
+            _fila_de_uso(client="codex-mcp-client"),
+        ]
+    )
+
+    por_cliente = {c["client"]: c["calls"] for c in agregado["by_client"]}
+    assert por_cliente == {"claude-code": 2, "codex-mcp-client": 1}
+
+
+def test_stats_no_reparte_ni_descarta_las_lineas_sin_cliente():
+    """Las de antes de que el campo existiera, y las que no vienen de una sesión MCP.
+
+    Repartirlas entre los clientes conocidos inventaría de quién eran, y descartarlas haría que
+    los totales de la tarjeta no cuadraran con el KPI de arriba. Casilla propia.
+    """
+    agregado = metrics._aggregate([_fila_de_uso(client="claude-code"), _fila_de_uso()])
+
+    por_cliente = {c["client"]: c["calls"] for c in agregado["by_client"]}
+    assert por_cliente == {"claude-code": 1, "desconocido": 1}
+    assert sum(c["calls"] for c in agregado["by_client"]) == agregado["total"]["calls"]
