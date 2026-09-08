@@ -136,6 +136,10 @@ def _guardar(datos: dict[str, list[list[int]]], destino: Path) -> None:
             json.dump(payload, stream, ensure_ascii=False)
         os.replace(temporal, destino)
     except OSError:
+        # La escritura fallo (disco lleno, permisos, el destino en un volumen distinto). Se
+        # intenta no dejar el temporal tirado, y si ni eso se puede, se deja: un `.tmp` huerfano
+        # en el directorio de datos es preferible a romperle el comando al usuario por no poder
+        # limpiar. El almacen anterior sigue intacto, porque `os.replace` no llego a correr.
         try:
             os.unlink(temporal)
         except OSError:
@@ -171,6 +175,11 @@ def registrar(
     try:
         _guardar(datos, destino)
     except OSError:
+        # `_guardar` se traga sus propios fallos de escritura, pero el `mkdir` y el `mkstemp`
+        # que lo preceden pueden reventar por su cuenta (ruta invalida en la variable de
+        # entorno, directorio de solo lectura). Aqui el aprendizaje es best-effort por
+        # contrato: perder una muestra no puede costarle al usuario el comando que estaba
+        # ejecutando.
         pass
 
 
