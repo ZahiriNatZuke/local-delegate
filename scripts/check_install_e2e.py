@@ -24,12 +24,18 @@ import sys
 import tempfile
 from pathlib import Path
 
+from local_delegate import install
+
 RAIZ = Path(__file__).resolve().parents[1]
 
-# Cuántas entradas de hook debe haber tras instalar: `UserPromptSubmit` y `PreToolUse/Bash`. El de
-# `Read` no cuenta porque es opt-in (`--enable-read-hook`). Reinstalar no puede cambiar este número
-# — si sube, se están duplicando; si baja, se están perdiendo.
-HOOKS_ESPERADOS = 2
+# Cuántas entradas de hook debe haber tras instalar. Se deriva de `_HOOK_EVENTS` en vez de llevar
+# el número a mano: escrito a mano decía 2, y al retirar `suggest_lint_summary.py` este smoke se
+# puso en rojo en las tres plataformas por un cambio que era correcto. Un número duplicado a mano
+# es una segunda fuente para el mismo dato, que es el defecto recurrente de este repo.
+#
+# El de `Read` no cuenta porque es opt-in (`--enable-read-hook`). Reinstalar no puede cambiar este
+# número — si sube, se están duplicando; si baja, se están perdiendo.
+HOOKS_ESPERADOS = len(install._HOOK_EVENTS)
 
 
 def _correr(*args: str) -> None:

@@ -36,6 +36,75 @@ def test_la_suite_corre_sin_variables_del_paquete_definidas():
     )
 
 
+def _variables_que_leen_los_hooks() -> dict[str, set[str]]:
+    """Escanea `resources/hooks/*.py` y devuelve, por fichero, las variables que consulta.
+
+    Que lo cuente el programa y no una lista a mano: contar sitios a ojo ya salió mal una vez en
+    este repo —14 variables contadas, 34 reales—, y aquí el coste de que se escape una es que la
+    suite vuelva a heredar el entorno de quien la corre.
+
+    Solo cuentan las variables NUESTRAS. Un hook también consulta las del sistema operativo
+    —`LOCALAPPDATA`, `XDG_DATA_HOME`— para saber dónde vive el directorio de datos, y esas ni se
+    declaran ni se limpian: quitarlas durante la suite rompería justo lo que se quiere probar.
+    """
+    hooks = Path(config.__file__).parent / "resources" / "hooks"
+    nuestras = ("LD_HOOK_", "LOCAL_DELEGATE_")
+    encontradas: dict[str, set[str]] = {}
+    for archivo in sorted(hooks.glob("*.py")):
+        nombres: set[str] = set()
+        for nodo in ast.walk(ast.parse(archivo.read_text(encoding="utf-8"))):
+            # os.environ.get("X") / os.getenv("X")
+            if isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Attribute):
+                objetivo = nodo.func.value
+                es_environ_get = (
+                    nodo.func.attr == "get"
+                    and isinstance(objetivo, ast.Attribute)
+                    and objetivo.attr == "environ"
+                )
+                es_getenv = nodo.func.attr == "getenv"
+                if (es_environ_get or es_getenv) and nodo.args:
+                    primero = nodo.args[0]
+                    if isinstance(primero, ast.Constant) and isinstance(primero.value, str):
+                        nombres.add(primero.value)
+            # os.environ["X"]
+            if (
+                isinstance(nodo, ast.Subscript)
+                and isinstance(nodo.value, ast.Attribute)
+                and nodo.value.attr == "environ"
+                and isinstance(nodo.slice, ast.Constant)
+                and isinstance(nodo.slice.value, str)
+            ):
+                nombres.add(nodo.slice.value)
+        propias = {n for n in nombres if n.startswith(nuestras)}
+        if propias:
+            encontradas[archivo.name] = propias
+    return encontradas
+
+
+def test_toda_variable_que_lean_los_hooks_esta_declarada_en_config():
+    """REQ-022: los hooks leen con `os.environ` porque no pueden importar el paquete.
+
+    Son stdlib pura y corren fuera de él, así que la lectura tiene que ser directa — pero el
+    inventario del que se alimenta el aislamiento de la suite se construye mirando SOLO a
+    `config.py`. Una variable que exista para el hook y no esté reflejada aquí es invisible para
+    el guardián, y por esa rendija los tests vuelven a heredar lo que haya en la máquina.
+    """
+    por_archivo = _variables_que_leen_los_hooks()
+    # Control positivo: si el escáner dejara de encontrar nada, este test pasaría en vacío.
+    assert len(por_archivo) >= 3, f"el escáner no encontró casi nada: {por_archivo}"
+
+    sin_declarar = {
+        f"{archivo}:{nombre}"
+        for archivo, nombres in por_archivo.items()
+        for nombre in nombres
+        if nombre not in config.VARIABLES_DE_ENTORNO
+    }
+    assert sin_declarar == set(), (
+        f"Estas variables las leen los hooks y no constan en `config.py`: {sorted(sin_declarar)}. "
+        "Decláralas allí con los helpers `_env*`, aunque el hook siga leyéndolas por su cuenta."
+    )
+
+
 def test_config_solo_lee_el_entorno_por_la_puerta_registrada():
     """`os.environ` solo se toca dentro de `_leer`, que es quien alimenta el inventario.
 

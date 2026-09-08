@@ -1,9 +1,9 @@
 # Recipe: hooks de Claude Code para sugerir delegación
 
-Dos hooks **opt-in y consultivos** quedaron recomendados después del piloto A/B:
-`UserPromptSubmit` y `PreToolUse/Bash`. El hook `PreToolUse/Read` se conserva como experimento,
-pero está apagado por defecto porque produjo avisos ruidosos en tareas de arquitectura. Ninguno
-bloquea la acción original ni envía el prompt a otro modelo.
+Queda **un** hook consultivo recomendado, `UserPromptSubmit`. El de `PreToolUse/Read` se
+conserva como experimento y está apagado por defecto porque produjo avisos ruidosos en tareas de
+arquitectura; el de `PreToolUse/Bash` se **retiró** el 2026-09-08 por puntería (ver abajo).
+Ninguno bloquea la acción original ni envía el prompt a otro modelo.
 
 Los scripts se distribuyen **dentro del paquete**
 ([`src/local_delegate/resources/hooks/`](../../src/local_delegate/resources/hooks)): Python 3 puro,
@@ -36,11 +36,21 @@ Encendido, usa dos bandas configurables:
 
 Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
 
-### `suggest_lint_summary.py` — `PreToolUse`, matcher `Bash`
+### `suggest_lint_summary.py` — retirado el 2026-09-08
 
-Detecta comandos `lint|test|tsc|build|pytest|clippy|biome` **antes** de ejecutarlos y recomienda
-redirigir una salida previsiblemente larga a fichero. El hook anterior era `PostToolUse`; llegaba
-demasiado tarde porque la salida ya había entrado al contexto.
+Detectaba comandos `lint|test|tsc|build|pytest|clippy|biome` antes de ejecutarlos y recomendaba
+redirigir la salida a fichero. **Ya no se instala**, y `install` retira la entrada y el fichero de
+las instalaciones que lo tuvieran.
+
+Se retiró por puntería, medida sobre 21 días de uso real: **366 disparos y 1 acierto** (0,3 %),
+con la mediana de salida en 402 bytes. Decidía con una regex sobre el *comando*, antes de
+ejecutarlo, y lo que de verdad la activaba eran las palabras `test` y `build` dentro de rutas. Un
+aviso que casi nunca tiene razón enseña a ignorar todos los avisos, incluidos los que la tienen.
+
+Ampliar la lista de comandos no lo salvaba: ningún ejecutable del corpus superaba el umbral de
+tamaño en más del 9 % de sus ejecuciones, así que el techo alcanzable seguía siendo un aviso que
+se aprende a ignorar. La sustitución está en estudio y se decide con datos, no con una regex
+mejor.
 
 ## Instalación
 
@@ -50,10 +60,11 @@ local-delegate install              # hooks + skill + memoria + entrada MCP
 local-delegate install --no-skill --no-memory --no-mcp   # solo los hooks
 ```
 
-El comando copia los cuatro archivos (`hook_common.py` y los tres scripts) a
-`~/.claude/hooks/local-delegate/` y los registra en `~/.claude/settings.json`. Es idempotente
-(reinstalar no duplica entradas), no toca hooks ajenos y se revierte con
-`local-delegate uninstall`. El hook de `Read` solo se registra con `--enable-read-hook`.
+El comando copia los scripts a `~/.claude/hooks/local-delegate/` y registra en
+`~/.claude/settings.json` los que van encendidos. Es idempotente (reinstalar no duplica entradas),
+no toca hooks ajenos y se revierte con `local-delegate uninstall`. El hook de `Read` solo se
+registra con `--enable-read-hook`, así que **por defecto solo queda registrado el de
+`UserPromptSubmit`**.
 
 El resultado en `settings.json` tiene esta forma:
 
@@ -66,17 +77,6 @@ El resultado en `settings.json` tiene esta forma:
           {
             "type": "command",
             "command": "python3 /Users/tu-usuario/.claude/hooks/local-delegate/suggest_delegate_prompt.py"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/tu-usuario/.claude/hooks/local-delegate/suggest_lint_summary.py"
           }
         ]
       }
@@ -115,7 +115,9 @@ con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 2. Solo si pruebas el experimento Read (instalado con `--enable-read-hook`, o con
    `LD_HOOK_READ_ENABLED=1`), pide leer un archivo de 10 KiB y otro de 40 KiB: deben aparecer
    bandas diferentes.
-3. Ejecuta `pytest` o `npm test`: la sugerencia debe aparecer antes de la tool Bash.
+3. Ejecuta `pytest` o `npm test`: **no** debe aparecer ninguna sugerencia. El hook que la
+   emitía está retirado, y comprobar su ausencia es lo que detecta una copia vieja que siguiera
+   registrada de una instalación anterior.
 4. Envía “investiga y diseña la arquitectura”: no debe sugerir delegación local.
 
 ## Piloto A/B

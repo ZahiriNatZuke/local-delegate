@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "slug": "salida-grande-va-a-fichero",
+  "title": "La salida grande va a fichero, no al contexto",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-09-08T17:32:18.454Z",
+  "updatedAt": "2026-09-08T18:49:46.182Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-08T18:26:49.367Z",
+      "evidence": "REAPROBACION tras revision adversarial del plan (veredicto block, 6 bloqueantes, los 6 verificados contra el codigo). La spec cambio materialmente: REQ-003 reescrito porque hacia imposible REQ-005 (cualquier extracto necesita un ejecutable; el requisito real era que la transformacion no pueda meter uno arbitrario, no que no haya ninguno); REQ-003b, 004b, 019b, 019c, 021 y 022 nuevos; REQ-007 aclarado distinguiendo el comando del usuario del andamiaje; y el criterio del gate cuantitativo ahora exige un control positivo tramposo que demuestre el aislamiento del replay. research.md ampliado con la medicion de la envoltura y los payloads reales de Pre/PostToolUse, que el plan daba por verificados sin respaldo. Reaprobado por el usuario en sesion.",
+      "actor": "Yohan González Almaguer"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-09-08T18:45:05.642Z",
+      "evidence": "Plan aprobado tras TRES rondas de revision adversarial (block -> revise -> 3 bloqueantes baratos), 14 hallazgos en total, todos verificados contra el codigo y corregidos. Ronda 1: 6 bloqueantes (script retirado que se vuelve inmortal, hook_common sin dueno, update que apaga interruptores en silencio, REQ-003 que hacia imposible REQ-005, replay que podia pasar por la guarda equivocada, REQ-008 y fichero sin ubicacion). Ronda 2: 5 (REQ-022 inimplementable desde el hook, REQ-026 fuera del alcance de T10, control del replay que no detectaba la fuga real, gate aprobable sin cobertura, medicion de la pieza y no del uso). Ronda 3: 3 (correccion no propagada de spec a plan, umbrales sin momento ni sitio, REQ-002b justificado con el caso equivocado). Tres defectos reales cazados por medicion durante el proceso: la envoltura con llaves no produce el extracto (subshell obligatorio), el cwd persiste entre llamadas y las variables no, y _es_desborde_de_contexto no reconoce el mensaje de este backend. Plan con 11 tareas de propiedad exclusiva, dos puntos de control tempranos y gate cuantitativo con umbrales que se fijan antes de medir. Aprobado por el usuario en sesion.",
+      "actor": "Yohan González Almaguer"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-08T17:32:18.454Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-08T17:44:08.126Z",
+      "reason": "Brief cerrado con las dos decisiones del usuario: reescribir via updatedInput y apagar el hook por defecto. Arranca la fase de investigacion."
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-08T17:49:04.080Z",
+      "reason": "research.md completo y revisado; decisiones de mecanismo y default tomadas por el usuario."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-08T17:59:01.859Z",
+      "evidence": "Spec con 20 requisitos observables, 7 escenarios de aceptacion, comportamiento ante fallos y trazabilidad requisito->evidencia->verificacion. Respaldada por research.md (21 dias medidos, 2476 comandos, 4 proyectos del estado del arte) y por cuatro verificaciones contra el binario real 2.1.263: updatedInput funciona, elude el allowlist, los payloads de Pre/PostToolUse traen los campos que el diseno necesita, y la sintaxis de envoltura preserva el exit code. Alcance acotado con exclusiones explicitas (REQ-007 renuncia a 17 de los 42 casos). Gate cuantitativo: precision >=50% por replay cronologico ciego al futuro, frente al 0,3% actual. Aprobado por el usuario en sesion tras revisar las renuncias de alcance y el criterio de medicion.",
+      "actor": "Yohan González Almaguer"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-08T17:59:02.052Z",
+      "reason": "Gate spec aprobado; arranca la planificacion."
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-08T18:01:18.880Z",
+      "reason": "plan.md escrito con 9 tareas de propiedad exclusiva, orden con punto de control tras el replay, riesgos y estrategia de verificacion. Pasa a revision adversarial."
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "planning",
+      "at": "2026-09-08T18:06:43.815Z",
+      "reason": "Revision adversarial: veredicto block, 6 bloqueantes verificados contra el codigo."
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "specifying",
+      "at": "2026-09-08T18:06:44.008Z",
+      "reason": "El bloqueante 4 es una contradiccion de la spec, no del plan: REQ-003 prohibe introducir ejecutables y REQ-005 exige un extracto que necesita uno. Se reabre la especificacion."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-08T18:26:49.367Z",
+      "evidence": "REAPROBACION tras revision adversarial del plan (veredicto block, 6 bloqueantes, los 6 verificados contra el codigo). La spec cambio materialmente: REQ-003 reescrito porque hacia imposible REQ-005 (cualquier extracto necesita un ejecutable; el requisito real era que la transformacion no pueda meter uno arbitrario, no que no haya ninguno); REQ-003b, 004b, 019b, 019c, 021 y 022 nuevos; REQ-007 aclarado distinguiendo el comando del usuario del andamiaje; y el criterio del gate cuantitativo ahora exige un control positivo tramposo que demuestre el aislamiento del replay. research.md ampliado con la medicion de la envoltura y los payloads reales de Pre/PostToolUse, que el plan daba por verificados sin respaldo. Reaprobado por el usuario en sesion.",
+      "actor": "Yohan González Almaguer"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-08T18:29:18.360Z",
+      "reason": "Gate spec reaprobado y alcance ampliado con el bug del map-reduce (REQ-023..026, tarea T10) tras diagnosticar la causa raiz."
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-08T18:29:32.266Z",
+      "reason": "Plan revision 2: 6 bloqueantes corregidos, T0 y T10 anadidas, T4+T5 fusionadas. Segunda ronda de revision adversarial."
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-08T18:45:05.642Z",
+      "evidence": "Plan aprobado tras TRES rondas de revision adversarial (block -> revise -> 3 bloqueantes baratos), 14 hallazgos en total, todos verificados contra el codigo y corregidos. Ronda 1: 6 bloqueantes (script retirado que se vuelve inmortal, hook_common sin dueno, update que apaga interruptores en silencio, REQ-003 que hacia imposible REQ-005, replay que podia pasar por la guarda equivocada, REQ-008 y fichero sin ubicacion). Ronda 2: 5 (REQ-022 inimplementable desde el hook, REQ-026 fuera del alcance de T10, control del replay que no detectaba la fuga real, gate aprobable sin cobertura, medicion de la pieza y no del uso). Ronda 3: 3 (correccion no propagada de spec a plan, umbrales sin momento ni sitio, REQ-002b justificado con el caso equivocado). Tres defectos reales cazados por medicion durante el proceso: la envoltura con llaves no produce el extracto (subshell obligatorio), el cwd persiste entre llamadas y las variables no, y _es_desborde_de_contexto no reconoce el mensaje de este backend. Plan con 11 tareas de propiedad exclusiva, dos puntos de control tempranos y gate cuantitativo con umbrales que se fijan antes de medir. Aprobado por el usuario en sesion.",
+      "actor": "Yohan González Almaguer"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-08T18:49:46.182Z",
+      "reason": "Gates spec y plan aprobados tras tres rondas de revision adversarial. Arranca la implementacion por T10, independiente del resto y con causa raiz ya confirmada por control positivo."
+    }
+  ]
+}

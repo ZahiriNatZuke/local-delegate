@@ -300,3 +300,124 @@ def test_un_trozo_de_continuacion_dice_a_que_archivo_pertenece(monkeypatch, tmp_
     continuaciones = [m for m in mapas if "CONTINÚA" in m]
     assert continuaciones, "el diff de prueba tiene que producir algún trozo de continuación"
     assert all("paquete/enorme.py" in m for m in continuaciones)
+
+
+# --- El reintento tiene que reconocer el desborde diga lo que diga el backend --------------
+#
+# El mecanismo de reintento existe desde el principio y estaba bien pensado, pero la puerta de
+# entrada comparaba contra tres literales de un proveedor. El backend de referencia dice
+# `Context size has been exceeded.` y no casa con ninguno, así que el reintento estaba anulado y
+# `local_summarize(path="CHANGELOG.md")` —122 435 chars— se rendía. Medido y reproducido.
+
+
+def _backend_con_techo(techo: int, mensaje: str, tipo: str | None = None):
+    """Backend que rechaza cualquier envío por encima de `techo` chars con `mensaje`.
+
+    Devuelve el handler y la lista donde va anotando los tamaños que vio, para poder exigir que
+    la prueba llegó a provocar el desborde: sin eso pasaría igual sin reintento ninguno.
+    """
+    vistos: list[int] = []
+
+    def _handler(request: httpx2.Request) -> httpx2.Response:
+        contenido = json.loads(request.content)["messages"][1]["content"]
+        vistos.append(len(contenido))
+        if len(contenido) > techo:
+            error: dict = {"code": 400, "message": mensaje}
+            if tipo:
+                error["type"] = tipo
+            return httpx2.Response(400, json={"error": error})
+        return httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "PARTE"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            },
+        )
+
+    return _handler, vistos
+
+
+def test_el_mensaje_real_de_este_backend_dispara_el_reintento(monkeypatch, tmp_path):
+    """Regresión del bug: con `Context size has been exceeded` el reintento estaba ciego.
+
+    Reproduce el caso del `CHANGELOG.md`: documento muy por encima del presupuesto, trozos que
+    caben en chars y no en tokens. Contra el código anterior este test falla —la salida es el
+    error crudo del backend—, que es lo que lo hace medir algo.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    documento = _document(40, 3_000)
+    assert len(documento) > config.max_chars_for(config.MODEL_LONG)
+    # El techo se elige entre el presupuesto (38 400) y su mitad: el trozo entero no cabe y la
+    # mitad sí, o sea un solo nivel de reintento, como en el caso real.
+    handler, vistos = _backend_con_techo(25_000, "Context size has been exceeded.")
+
+    with backend_mock.mock:
+        backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=handler)
+        salida = server.local_summarize(text=documento)
+
+    assert any(largo > 25_000 for largo in vistos), "el test no llegó a provocar ningún desborde"
+    assert not salida.startswith("[local-delegate error]"), salida
+    assert _events(tmp_path)[0]["ok"] is True
+
+
+def test_la_deteccion_de_desborde_cubre_las_formas_del_catalogo():
+    """REQ-024: no puede depender de la redacción de un proveedor.
+
+    El catálogo son endpoints OpenAI-compatible distintos (llama-swap, Ollama, LM Studio, vLLM)
+    y cada uno dice lo mismo con otras palabras. El control negativo es la mitad del test: si
+    reconociera cualquier error, el reintento se dispararía siempre y no mediría nada.
+    """
+    desbordes = [
+        "Context size has been exceeded.",  # llama.cpp reciente — el de este backend
+        "request (10193 tokens) exceeds the available context size (8192 tokens)",
+        '{"type": "exceed_context_size_error"}',
+        "This model's maximum context length is 8192 tokens. However, you requested 10193.",
+        "context_length_exceeded",
+        "Model context length exceeded",
+        "the input exceeds the context window of this model",
+        "CONTEXT SIZE HAS BEEN EXCEEDED",  # insensible a mayúsculas
+    ]
+    for mensaje in desbordes:
+        assert server._es_desborde_de_contexto(server.ChatResult(text=mensaje, ok=False)), mensaje
+
+    no_desbordes = [
+        "[local-delegate error] no se pudo conectar al endpoint (http://x/v1).",
+        "[local-delegate error] modelo respondió 500: internal server error",
+        "model 'qwen' not found, try pulling it first",
+        "",
+    ]
+    for mensaje in no_desbordes:
+        assert not server._es_desborde_de_contexto(server.ChatResult(text=mensaje, ok=False)), (
+            mensaje
+        )
+    assert not server._es_desborde_de_contexto(None)
+
+
+def test_un_desborde_agotado_se_explica_en_vez_de_soltar_el_error_crudo(monkeypatch, tmp_path):
+    """REQ-026: cuando ni partiendo cabe, el usuario tiene que saber qué hacer.
+
+    Antes veía `respondió 400: {"error":{"message":"Context size has been exceeded"...}}`, que no
+    dice ni que el problema es el tamaño ni qué tocar.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
+    # Techo por debajo del mínimo de troceado: no hay reintento que lo salve.
+    handler, vistos = _backend_con_techo(10, "Context size has been exceeded.")
+
+    with backend_mock.mock:
+        backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=handler)
+        salida = server.local_summarize(text=_document(40, 3_000))
+
+    assert len(vistos) > 1, "sin reintento el mensaje nuevo no estaría probando el caso agotado"
+    assert salida.startswith("[local-delegate error]")
+    assert "no cabe" in salida
+    assert config.MODEL_LONG in salida  # qué modelo se quedó corto
+    assert "Context size has been exceeded" in salida  # el detalle del backend no se pierde
+    evento = _events(tmp_path)[0]
+    assert evento["ok"] is False
+    assert evento["error"] == "context_overflow"

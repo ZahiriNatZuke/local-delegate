@@ -1024,10 +1024,24 @@ def _chat_chunked(
     return text
 
 
-_DESBORDE_DE_CONTEXTO = (
-    "exceed_context_size",
-    "exceeds the available context",
+# Marcas inequívocas: códigos de error y frases que solo aparecen en un desborde.
+_DESBORDE_MARCAS = (
+    "exceed_context_size",  # tipo de error de llama.cpp
+    "context_length_exceeded",  # código de OpenAI/vLLM
     "context window",
+    "prompt is too long",
+)
+# Fuera de esas, se exige una palabra de «contexto» Y una de «exceso». Ninguna de las dos por
+# separado dice nada —`context shift` y `maximum tokens` son opciones normales del backend—,
+# juntas sí.
+_DESBORDE_CONTEXTO = ("context", "contexto")
+_DESBORDE_EXCESO = (
+    "exceed",  # cubre exceeds / exceeded / exceeding
+    "too long",
+    "too large",
+    "too many tokens",
+    "overflow",
+    "maximum",
 )
 
 
@@ -1039,10 +1053,24 @@ def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
     `uv.lock` —hashes y URLs— da 1,57, medido. Un presupuesto en chars que sirve para un
     documento revienta con otro, así que el que manda tiene que ser el límite real, no la
     estimación: ver `_chat_map_reduce`.
+
+    La detección **no puede ser una lista de literales de un proveedor**. Esto comparaba contra
+    tres marcas y el backend de referencia dice `Context size has been exceeded.`, que no casa
+    con ninguna: el reintento adaptativo llevaba anulado desde entonces y `local_summarize` se
+    rendía con el `CHANGELOG.md` del propio repo. El catálogo son endpoints OpenAI-compatible
+    distintos (llama-swap, Ollama, LM Studio, vLLM) y cada uno lo dice a su manera.
+
+    La asimetría manda hacia el lado generoso: un falso positivo cuesta como mucho dos
+    reintentos con trozos más pequeños, un falso negativo anula el mecanismo entero.
     """
     if result is None:
         return False
-    return any(marca in result.text for marca in _DESBORDE_DE_CONTEXTO)
+    texto = result.text.lower()
+    if any(marca in texto for marca in _DESBORDE_MARCAS):
+        return True
+    habla_de_contexto = any(c in texto for c in _DESBORDE_CONTEXTO)
+    habla_de_exceso = any(e in texto for e in _DESBORDE_EXCESO)
+    return habla_de_contexto and habla_de_exceso
 
 
 def _chat_map_reduce(
@@ -1202,6 +1230,18 @@ def _chat_map_reduce(
     ok = failed is None
     if not ok:
         text, error, finish_reason = failed.text, failed.error, failed.finish_reason
+        if _es_desborde_de_contexto(failed):
+            # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
+            # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que
+            # se antepone lo accionable y se conserva detrás la respuesta original.
+            detalle = failed.text.removeprefix("[local-delegate error] ")
+            text = (
+                f"[local-delegate error] el contenido no cabe en el contexto de {model}, ni "
+                f"partido en trozos de {config.CHUNK_MIN_CHARS} caracteres. Sube el contexto "
+                f"del backend para ese modelo, usa uno con contexto mayor, o pasa menos "
+                f"contenido de una vez. Respuesta del backend: {detalle}"
+            )
+            error = "context_overflow"
     else:
         error, finish_reason = None, "stop"
 
