@@ -117,6 +117,40 @@ encontrar nada, el test pasaría en vacío). Los falsos positivos del sistema op
 (`LOCALAPPDATA`, `XDG_DATA_HOME`) se excluyen a propósito: limpiarlas durante la suite rompería lo
 que se quiere probar.
 
+### T7 — la medición que cierra el cambio
+
+`scripts/dev/medir_salidas_bash.py`, reorientado. El plan lo pensó como gate cuantitativo de un
+criterio para **reescribir** comandos; cuando se midió que el cliente ya persiste la salida grande,
+la pregunta útil pasó a ser cuánta salida entra entera al contexto y cuánta de esa la cubre
+`bashOutputMaxChars`.
+
+Sobre **6 004 comandos Bash** de todo el histórico de transcripts:
+
+| Franja | Casos | % |
+|---|---:|---:|
+| menos de 1 KB | 4 281 | 71,3 % |
+| 1 KB – 4 KB | 1 463 | 24,4 % |
+| 4 KB – 8 KB | 185 | 3,1 % |
+| **8 KB – 30 000** (entra entera hoy) | **62** | **1,0 %** |
+| 30 000 o más (la persiste el cliente) | 13 | 0,2 % |
+
+Mediana: **411 chars**.
+
+- La franja que hoy entra entera: **59 casos, 744 745 chars ≈ 186 186 tokens**.
+- Lo que el cliente ya resuelve solo: **16 casos, 3 873 151 chars ≈ 968 287 tokens**, o sea el
+  **84 % del volumen** sin que nosotros hagamos nada.
+- Bajar el techo a 8 192 pasa esos 59 casos a preview: **~156 000 tokens de ahorro bruto,
+  acumulados en TODO el histórico** — meses, no una sesión.
+
+**Esto es lo que cierra el cambio.** El mecanismo que se iba a construir —reescribir el comando,
+asumiendo que el permiso se evaluó sobre el original— apuntaba al **1 %** de los comandos, y esa
+franja la cubre entera una variable de configuración. El coste (una superficie por la que un hook
+puede ejecutar algo que el usuario no autorizó) no se paga por ese beneficio.
+
+El corpus no se versiona: son transcripts privados con comandos y rutas, y meterlos en el repo
+contradiría la política de privacidad del propio proyecto. El script los lee de la máquina e
+imprime solo agregados; lo reproducible es el procedimiento.
+
 ## Quality checks
 
 - [x] Project-native tests pass — `uv run pytest`: **817 passed, 2 skipped** (T10 + T0/T1/T2).
