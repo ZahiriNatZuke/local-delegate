@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Lo que esta maquina ha observado del tamano de salida de cada ejecutable.
 
 Es la mitad que hace que el criterio no este calibrado al perfil de nadie: la semilla de

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Decide si la salida de un comando debe ir a fichero, y reescribe el comando para que vaya.
 
 Modulo PURO: sin E/S, sin entorno, sin estado, y sin importar el paquete —los hooks corren fuera
