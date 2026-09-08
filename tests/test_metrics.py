@@ -668,6 +668,18 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         _ev(tool="local_describe_image", input_unit="bytes", chars_in=504780),
         _ev(source="inline", tokens_in=1100, tokens_out=90),
         _ev(chunks=3, ok=False, tokens_in=900, tokens_out=10),
+        # Ahorro de SALIDA (`local_boilerplate` escribiendo a un archivo). Sin estos dos casos
+        # la paridad pasaría sin llegar a ejercitar la rama nueva en ninguna de las dos copias.
+        _ev(
+            tool="local_boilerplate",
+            source="inline",
+            chars_in=40,
+            chars_out=4000,
+            tokens_in=10,
+            tokens_out=950,
+            output_to_file=True,
+        ),
+        _ev(chars_in=8000, tokens_in=2100, tokens_out=950, output_to_file=True),
     ]
     entrada = tmp_path / "casos.json"
     entrada.write_text(json.dumps(casos), encoding="utf-8")

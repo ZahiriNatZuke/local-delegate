@@ -69,34 +69,3 @@ def emit(event: str, context: str, **metadata: object) -> None:
             ensure_ascii=False,
         )
     )
-
-
-def emit_updated_input(
-    event: str,
-    updated_input: dict,
-    *,
-    context: str | None = None,
-    **metadata: object,
-) -> None:
-    """Camino que CAMBIA lo que se va a ejecutar: reescribe `tool_input` antes de la llamada.
-
-    Va separado de `emit()` a proposito, y no por gusto de simetria. `emit` sugiere y el modelo
-    decide; esto sustituye la entrada de la tool, y el permiso del usuario **se evaluo sobre el
-    comando original** —medido: con `--allowedTools "Bash(echo:*)"`, un hook que reescribio a un
-    `python -c` lo ejecuto igual—. O sea que un fallo aqui no es un consejo malo: es un comando
-    distinto del que se autorizo. De ahi tres cosas:
-
-    - la reescritura que llegue debe ser minima y mecanica, y eso lo garantiza quien llama;
-    - siempre deja huella en la telemetria, para que sea auditable a posteriori;
-    - `context` es opcional: sirve para decirle al modelo que se reescribio y donde quedo la
-      salida, que es lo que evita que la reescritura parezca magia.
-
-    `updated_input` es el `tool_input` COMPLETO que se quiere en su lugar, no un parche.
-    """
-    if not enabled():
-        return
-    record(event, rewritten=True, **metadata)
-    salida: dict = {"hookEventName": event, "updatedInput": updated_input}
-    if context:
-        salida["additionalContext"] = context
-    print(json.dumps({"hookSpecificOutput": salida}, ensure_ascii=False))
