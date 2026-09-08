@@ -60,15 +60,28 @@ def test_escribe_el_codigo_y_devuelve_solo_el_recibo(tmp_path):
 
 
 @backend_mock.mock
-def test_el_recibo_es_mucho_mas_corto_que_el_codigo(tmp_path):
-    """Control de magnitud: si el recibo creciera con el código, no habría ahorro que contar."""
-    codigo = "".join(f"def f{i}():\n    return {i}\n" for i in range(400))
-    _responde(codigo)
+def test_el_recibo_no_crece_con_el_codigo(tmp_path):
+    """Control de magnitud: si el recibo escalara con la salida, no habría ahorro que contar.
 
-    salida = server.local_boilerplate("400 funciones", "python", str(tmp_path / "g.py"))
+    Se compara un recibo contra otro en vez de medir su largo absoluto: el recibo lleva dentro la
+    ruta del destino, y en macOS `tmp_path` cuelga de `/private/var/folders/…`, así que un umbral
+    fijo mide el sistema de ficheros del runner y no el ahorro.
+    """
+    corto = "def f():\n    return 1\n"
+    largo = "".join(f"def f{i}():\n    return {i}\n" for i in range(400))
+    assert len(largo) > 8000  # el caso que importa: una salida que sí pesa
 
-    assert len(codigo) > 8000  # el caso que importa: una salida que sí pesa
-    assert len(salida) < 200
+    destino_a = tmp_path / "a.py"
+    destino_b = tmp_path / "b.py"  # mismo largo de ruta que a.py: la diferencia es solo el código
+    _responde(corto)
+    recibo_corto = server.local_boilerplate("una función", "python", str(destino_a))
+    _responde(largo)
+    recibo_largo = server.local_boilerplate("400 funciones", "python", str(destino_b))
+
+    # 400 veces más código y el recibo solo crece por los dígitos de las cifras que reporta.
+    assert len(largo) > len(corto) * 400
+    assert len(recibo_largo) - len(recibo_corto) < 20
+    assert len(recibo_largo) < len(largo) // 20
 
 
 @backend_mock.mock
