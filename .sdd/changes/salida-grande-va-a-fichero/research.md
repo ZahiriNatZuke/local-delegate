@@ -194,6 +194,141 @@ quien reconstruya la medición: el `stdout` que llega al hook es el mismo que ve
 que **ya viene truncado** — sirve para saber que la salida fue grande, no cuánto se perdió. De
 ahí que la señal «vino truncada» valga por sí misma.
 
+### EL CLIENTE YA HACE ESTO (medido el 2026-09-08, empezando T3)
+
+Al ir a capturar un payload real de `PostToolUse` para saber cómo detectar el truncado, apareció
+en `tool_response` algo que la captura del research original no tenía: **`persistedOutputPath` y
+`persistedOutputSize`**.
+
+Claude Code **ya guarda entera la salida grande de un comando Bash en un fichero** y **le da la
+ruta al modelo**. Literal de lo que recibe el modelo, preguntado en una sesión aislada:
+
+> `<persisted-output>` — Output too large (1.2MB). Full output saved to:
+> `…	ool-resultsg0j44k0b.txt` — Preview (first 2KB) …
+
+Medido con cuatro tamaños, leyendo el payload del hook y no lo que diga nadie:
+
+| Salida real | `len(stdout)` que llega al hook | `persistedOutputSize` |
+|---|---|---|
+| 23 892 | 23 892 (completa) | ninguno |
+| 43 893 | **30 000** (cortada) | 43 893 |
+| 90 894 | **30 000** | 90 894 |
+| 228 894 | **30 000** | 228 894 |
+
+**No hay franja intermedia**: pasar de 30 000 caracteres y persistirse ocurren a la vez. O sea que
+el problema que este cambio existe para resolver —que la salida grande entre al contexto o se
+pierda— **ya está resuelto en el cliente**: al modelo le llegan 2 KB de preview y la ruta del
+fichero completo.
+
+**Por qué no se vio antes.** El research capturó los payloads con comandos de salida pequeña, y
+estos dos campos **solo aparecen cuando la salida es grande**. El caso de prueba no podía
+distinguir — el mismo defecto que ya costó una jornada entera en este proyecto. Se confirma con el
+primer payload capturado hoy, el de un `seq 1 200000 > /dev/null`: `tool_response` trae cinco
+claves y ninguna es `persistedOutputPath`.
+
+**Qué queda en pie.** No el mecanismo, pero sí el hueco: el modelo tiene la ruta y **no sabe qué
+hacer con ella**. Puede leerla con `Read` —cara— o resumirla con `local_lint_summary(path=…)`
+—barata—. Un `PostToolUse` puramente consultivo que dispare **solo cuando `persistedOutputPath`
+está presente** cubre el valor entero del cambio y se ahorra todo lo caro:
+
+- no reescribe ningún comando, así que **el bypass del allowlist desaparece**;
+- no necesita fichero propio, ni nombre por `tool_use_id`, ni limpieza por antigüedad;
+- no necesita semilla ni aprendizaje, porque la señal **no es una predicción sobre el comando
+  sino un hecho observado después**: cuando avisa, la salida grande ya existe.
+
+Ese último punto es el que importa de verdad. Las tres mediciones de adopción concluyeron que el
+problema no era la obediencia sino la **puntería** —366 disparos, 1 acierto—. Un aviso que solo
+puede dispararse cuando la salida ya se persistió tiene puntería perfecta por construcción, que es
+la condición que [[obediencia-no-viene-de-la-prosa]] señalaba como no cumplida.
+
+#### Lo que se midió después, antes de tocar la spec
+
+Cuatro preguntas más, porque el hallazgo de arriba cambia el cambio entero y conviene decidir con
+datos y no con la primera impresión.
+
+**1. El `stderr` grande también se persiste.** `seq 1 40000 >&2` da el mismo resultado: el hook ve
+`stdout` de 30 000 y `stderr` vacío —Claude Code se los entrega combinados— y `persistedOutputSize`
+de 228 894. No hay agujero por ahí.
+
+**2. `PostToolUse` NO se dispara cuando el comando falla.** Medido con control positivo y negativo
+**en la misma corrida**: `sh -c 'echo BETA; exit 0'` produce payload y `sh -c 'echo ALFA; exit 3'`
+no produce ninguno, aunque el comando se ejecutó (el modelo reportó el código 3 y la salida).
+
+Esto es serio para cualquier diseño apoyado en `PostToolUse`: **el aprendizaje no vería nunca un
+comando que falla**, y un aviso post-hoc tampoco aparecería ahí — que es justo cuando la salida
+importa, porque los logs de error y los tests rojos son los que hay que leer.
+
+**3. El umbral de 30 000 es configurable con `BASH_MAX_OUTPUT_LENGTH`.** Con la variable a 5 000,
+`seq 1 5000` —23 893 chars, que con el default llega entero y sin persistir— pasa a llegar cortado
+a 5 000 **y persistido**. Es una palanca de una línea sobre el mercado real que midió el corpus:
+42 salidas de 8 KB o más en 21 días, casi todas por debajo del umbral por defecto.
+
+**4. Alcance de lo medido.** Claude Code 2.1.263 en Windows. `opencode` no está instalado en esta
+máquina y la Mac no estaba a mano: **si el mecanismo existe en los otros clientes, sin verificar**.
+
+#### Qué hace el modelo de verdad con una salida grande (cuatro trazas)
+
+La pregunta que decide si queda hueco: cuando la salida es grande, ¿el modelo la vuelca al
+contexto? Medido con un hook que traza cada tool en una sesión aislada, con
+`BASH_MAX_OUTPUT_LENGTH=5000` para que el caso se dispare con salidas manejables.
+
+| Tarea | Qué hizo | ¿Entró la salida al contexto? |
+|---|---|---|
+| Sumar los 5 000 números que imprime | Re-ejecutó con `awk '{s+=$1}'` | No |
+| Decir la última línea (sólo está en el fichero: el preview son los primeros 2 KB) | **`tail -n 3`** sobre `persistedOutputPath` | No |
+| Contar los tipos de ERROR de una salida de 4 000 líneas | Re-ejecutó con un `awk` agregador | No |
+| Lo mismo, pero con una **suite lenta** (12 s), donde re-ejecutar sí duele | **Redirigió él solo a un fichero** (`> /tmp/suite-out.txt 2>&1`) y agregó con `grep -o … \| sort \| uniq -c` | No |
+
+**Cuatro de cuatro sin volcado.** Y en el cuarto el modelo hizo *por iniciativa propia* justo lo
+que este cambio iba a forzar reescribiendo comandos — sin hook, sin bypass de permisos y sin
+tocar nada.
+
+Ni una sola vez usó `Read` ni una tool `local_*`. El primer caso de prueba —sumar— no habría
+distinguido nada, porque tenía atajo analítico y el comando era gratis de repetir; hizo falta un
+caso cuyo dato **sólo** estuviera en el fichero, y otro donde repetir costara tiempo de verdad.
+
+**La premisa central del cambio no se sostiene con este cliente y este modelo.** Y da una lectura
+nueva a lo que ya sabíamos: tres mediciones de adopción, tres veces cero delegaciones. Se
+concluyó que era puntería. Puede que además fuera que **al modelo no le hacía falta**, porque ya
+resolvía el problema por otro camino más barato.
+
+#### Dónde queda el hueco de verdad, y cuánto cuesta cerrarlo
+
+La franja que sí entra entera al contexto hoy es **de 8 KB a 30 000 caracteres**: por encima el
+cliente persiste y manda un preview de 2 KB, por debajo no vale la pena. Y ahí es donde está el
+mercado que midió el corpus: 42 salidas de 8 KB o más, ~137 000 tokens, o sea una media de unos
+11 000 caracteres por salida — casi todas por debajo del umbral por defecto.
+
+Esa franja se cierra con **`BASH_MAX_OUTPUT_LENGTH=8000`** y ni una línea de código: el cliente
+pasa a persistirlas y a mandar preview, que es exactamente el resultado que buscaba el diseño.
+
+### El `additionalContext` viaja con la reescritura — y el modelo desconfía de él
+
+Medido el 2026-09-08, empezando T1: un hook que emite `updatedInput` **y** `additionalContext` en
+el mismo `hookSpecificOutput`, con `claude -p` en un directorio aislado.
+
+| | Resultado |
+|---|---|
+| Comando pedido | `echo SONDA` |
+| Comando ejecutado | `echo MARCA_REESCRITA` |
+| ¿Llegó el `additionalContext`? | **Sí**, etiquetado como `PreToolUse:Bash hook additional context`, con el texto literal |
+
+O sea que REQ-004 es implementable: la ruta del fichero puede viajar por ahí.
+
+**Pero el segundo resultado cambia el diseño.** Se le preguntó al modelo qué había visto, y no
+solo notó la reescritura: **se negó a seguir la pista**. Palabras suyas: *«ese texto viene
+inyectado por un hook, no por ti — con la salida ya siendo alterada, no me parece prudente
+tratarlo como una instrucción»*.
+
+Es la reacción correcta de su parte y un problema para nosotros: si la ruta del fichero solo
+viaja por el canal del que el modelo desconfía, la salida grande se guarda y **no se recupera**,
+que es exactamente el fallo que este cambio existe para evitar.
+
+**Consecuencia para T1:** la ruta va por **los dos canales**, y el que manda es el extracto.
+El extracto se imprime por el `stdout` del comando reescrito —que el modelo lee como resultado
+normal de la tool, no como una inyección— y lleva dentro la ruta y qué hacer con ella. El
+`additionalContext` queda como refuerzo, no como canal principal.
+
 ### RIESGO: `updatedInput` se salta el allowlist de permisos
 
 Segundo experimento, con `--allowedTools "Bash(echo:*)"`:

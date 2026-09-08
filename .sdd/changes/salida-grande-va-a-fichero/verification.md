@@ -40,15 +40,93 @@ contaminar la telemetría real.
 también el presupuesto** y los trozos salieron más pequeños, no más grandes. El caso solo
 discrimina si el fichero es lo bastante grande para que los trozos lleguen al presupuesto nuevo.
 
+### T0 — `hook_common` aprende a reescribir
+
+| Requisito | Comprobación | Resultado |
+| --- | --- | --- |
+| REQ-002 (soporte) | `emit_updated_input()`, camino separado de `emit()` | Emite `hookSpecificOutput.updatedInput`, con `additionalContext` opcional y sin inventar la clave cuando no lo hay |
+| Auditabilidad | Toda reescritura deja huella | `rewritten: true` en la telemetría, y el test comprueba además que ni el comando ni sus argumentos entran al log |
+| REQ-017 (coherencia) | La relación entre `LD_HOOK_ENABLED` y el registro, **por escrito** | Resuelta: la variable es el interruptor del **A/B**, y **solo puede apagar**. Encender es cosa del registro, y de ahí no se sale — cuando la única puerta era la variable, `install --enable-read-hook` registró el script sin ponerla y el hook quedó instalado e inerte, en silencio |
+
+### T1 — Módulo de decisión (`output_policy.py`)
+
+Puro, stdlib, sin E/S ni entorno, para que el replay de T7 pueda llamarlo en un bucle.
+
+| Requisito | Comprobación | Resultado |
+| --- | --- | --- |
+| REQ-002b | Subshell y no llaves; prefijo `cd` fuera | `( CMD ) > ruta`, y `cd build && ( make -j4 ) > …`. Con control: `make "a && b"` no se confunde con un prefijo |
+| REQ-003 | El andamiaje no puede construirse con nada del comando | **Dos comandos muy distintos producen andamiajes idénticos.** Es la forma que discrimina: buscar marcas concretas solo encontraría las que se me ocurrieran a mí |
+| REQ-003b | Lista cerrada de utilidades | `echo`, `wc`, `tail`, escritas en el código; el test exige que estén todas y que no aparezca ninguna otra |
+| REQ-005 | Extracto corto en éxito, largo en fallo | 15 líneas frente a 120 |
+| REQ-006/007/009 | Escapes | Ya redirige, ya acota, heredoc, comillas sin cerrar, lectores de fichero. Los lectores se prueban **con el aprendizaje al máximo** para que la guarda sea lo único que los salva, y hay un control de que esa misma estadística sí haría candidato a otro |
+| REQ-010/011/012 | Semilla y aprendizaje | 15 ecosistemas; el aprendizaje contradice a la semilla **en los dos sentidos** |
+| REQ-016 | La señal «truncada» pesa más | Dos estadísticas con las mismas muestras y los mismos «grandes», y solo cambia que llegaron truncadas: una es candidata y la otra no |
+| REQ-002c | Los escapes se evalúan sobre el original | Reescribir un comando ya reescrito devuelve `None` en vez de anidar |
+| REQ-004 (canal) | ¿Por dónde viaja la ruta? | **Por la salida del propio comando**, no solo por `additionalContext` — ver la medición de abajo |
+
+**Dos defectos propios cazados escribiendo el primer test**, los dos por probar en vez de razonar:
+`cd build && make` daba `build` como ejecutable (tratar `cd` como envoltorio tipo `sudo` estaba
+mal: son dos segmentos y `cd build` es un comando entero), y `cd x && cat f` no se reconocía como
+lectura. Después, `timeout -s KILL 30 pytest` daba `30`: contar argumentos por posición no vale
+porque `-s` lleva valor y `-v` no. Se cambió por reconocer las tres formas que de verdad aparecen
+ahí — opciones, duraciones y señales en mayúsculas.
+
+### Medición: el `additionalContext` viaja, y el modelo desconfía de él
+
+Con `claude -p` en un directorio aislado y un hook que emite las dos cosas a la vez:
+
+- El `additionalContext` **sí llega** junto al `updatedInput`, etiquetado como
+  `PreToolUse:Bash hook additional context`. REQ-004 es implementable.
+- Pero el modelo **se negó a seguir la pista**: *«ese texto viene inyectado por un hook, no por ti
+  — con la salida ya siendo alterada, no me parece prudente tratarlo como una instrucción»*.
+
+Por eso la ruta viaja por los dos canales y **el que manda es el extracto**, que sale por el
+`stdout` del comando y el modelo lee como resultado normal de la tool.
+
+### T2 — Almacén del aprendizaje (`output_stats.py`)
+
+| Requisito | Comprobación | Resultado |
+| --- | --- | --- |
+| REQ-013/015 | Qué se guarda | Tamaño y «truncada» por ejecutable; el test busca rutas, argumentos y trozos de comando en el fichero y no los encuentra |
+| REQ-021 | No depende de la telemetría | Test **con `LD_HOOK_TELEMETRY_LOG` borrada explícitamente**: el aprendizaje sigue funcionando. Sin ese `delenv` el test no significaría nada, porque la suite la enciende |
+| Inyectable | La ruta es parámetro | Y el test comprueba también el default: fichero propio en el directorio de datos |
+| Tolerancia | Ausencia, corrupción, forma rara | Cuatro clases de fichero corrupto, y se sigue pudiendo escribir encima. Escritura atómica con `os.replace` |
+| REQ-016b | Umbrales por entorno | `umbral_bytes()` y `umbrales()`, con un valor ilegible cayendo al default en vez de reventar |
+| Replay | Se guardan tamaños, no veredictos | Test: el mismo almacén da 1 «grande» con umbral 8 KB y 0 con umbral 100 KB |
+
+**Un bug propio, cazado por su test:** el tope de ejecutables no desalojaba nunca a nadie. El
+criterio era «el que menos muestras tiene», y ese es **siempre el que acaba de estrenarse**, o sea
+el actual — que estaba excluido. Se excluye ahora al actual del conjunto de candidatos, no al
+revés.
+
+### REQ-022 — y el agujero que ya existía
+
+El guardián nuevo (`test_toda_variable_que_lean_los_hooks_esta_declarada_en_config`) **escanea los
+scripts con AST** en vez de fiarse de una lista escrita a mano: contar sitios a ojo ya salió mal
+una vez en este repo (14 variables contadas, 34 reales).
+
+Al estrenarlo destapó que **el agujero de REQ-022 llevaba abierto desde que existe el hook de
+lectura**: `LD_HOOK_ENABLED`, `LD_HOOK_READ_ENABLED`, `LD_HOOK_READ_SUGGEST_KB` y
+`LD_HOOK_READ_STRONG_KB` no constaban en `config.py`, así que eran invisibles para el aislamiento
+de la suite. Declaradas las cuatro; no estaban en el alcance de T2, pero son el mismo defecto y
+cuatro líneas.
+
+Verificado al revés: quitando una sola declaración de `config.py`, el guardián la nombra
+—`output_stats.py:LD_HOOK_OUTPUT_STATS`— y falla. Con control positivo (si el escáner dejara de
+encontrar nada, el test pasaría en vacío). Los falsos positivos del sistema operativo
+(`LOCALAPPDATA`, `XDG_DATA_HOME`) se excluyen a propósito: limpiarlas durante la suite rompería lo
+que se quiere probar.
+
 ## Quality checks
 
-- [x] Project-native tests pass — `uv run pytest`: **772 passed, 2 skipped**.
+- [x] Project-native tests pass — `uv run pytest`: **817 passed, 2 skipped** (T10 + T0/T1/T2).
 - [x] Lint y formato — `uv run ruff check .` y `ruff format --check`: limpios.
-- [x] Sin ruido de CRLF — `git diff --stat` y `git diff --ignore-cr-at-eol --stat` coinciden
-      (165 inserciones en los dos). `server.py` sigue CRLF puro; `test_map_reduce.py`, LF puro.
+- [x] Sin ruido de CRLF — `git diff --stat` y `git diff --ignore-cr-at-eol --stat` coinciden en
+      todas las tandas. `server.py` sigue CRLF puro; los hooks, los tests y `config.py`, LF puro.
 - [ ] Secret scanning — pendiente al cerrar el cambio.
-- [x] Sin cambios ajenos — el diff toca solo `server.py` (detección + camino de error) y
-      `tests/test_map_reduce.py`, los dos ficheros de propiedad exclusiva de T10.
+- [x] Sin cambios ajenos — cada tanda toca solo los ficheros de propiedad exclusiva de su
+      tarea. La única salida de ese marco está declarada: las cuatro variables preexistentes que
+      el guardián de REQ-022 destapó en `config.py`.
 
 ## Deviations and residual risk
 
