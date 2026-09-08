@@ -3,9 +3,9 @@
   "slug": "salida-grande-va-a-fichero",
   "title": "La salida grande va a fichero, no al contexto",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-09-08T17:32:18.454Z",
-  "updatedAt": "2026-09-08T18:49:46.182Z",
+  "updatedAt": "2026-09-08T21:36:45.810Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "Yohan González Almaguer"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-08T21:34:49.553Z",
+      "evidence": "Suite completa en verde (818 passed, 2 skipped), ruff limpio, y el PR #161 con los 13 checks del CI en verde incluidos ci-gate y CodeQL. Lo entregado se verifico pieza a pieza: T10 de extremo a extremo contra el backend real; T0/T1/T2 con controles negativos y mutantes dirigidos que disparan cada uno SU assert; la retirada del hook con dos mutantes, uno por cada mitad del mecanismo (limpieza del fichero y desregistro de settings). Tres defectos propios cazados por sus tests y dos alertas de CodeQL arregladas por el criterio del repo (se arregla si el codigo queda mejor).",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-08T21:35:02.969Z",
+      "evidence": "CIERRE POR SUPERACION DEL ENTORNO, no por entrega completa: 4 de 11 tareas hechas (T10, T0, T1, T2) mas la retirada del hook de T5. La spec NO se cumple entera y no debe cumplirse: al capturar un payload real de PostToolUse para T3 aparecio que Claude Code ya persiste la salida grande y le da la ruta al modelo, lo que deja sin objeto REQ-002 a 012 y REQ-020. La medicion sobre 6004 comandos del historico lo cuantifica: el cliente ya cubre el 84 por ciento del volumen, y la franja que queda es el 1 por ciento de los comandos (59 casos, ~186K tokens en meses), cubierta entera por bashOutputMaxChars. El mecanismo descartado abria una superficie por la que un hook puede ejecutar algo que el usuario no autorizo, y ese coste no se paga por ese 1 por ciento. Lo entregado si cumple sus requisitos: REQ-023/024/026 (T10, con REQ-025 retirado por no discriminar) y REQ-017 (retirada del hook del 0,3 por ciento). Queda abierto y escrito en el handoff que PostToolUse no se dispara con comandos que fallan, que es el unico hueco que la variable no cubre.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-08T21:36:15.285Z",
+      "evidence": "Persistido en la memoria del proyecto: dos notas nuevas (claude-code-ya-persiste-la-salida, con el mecanismo del cliente, bashOutputMaxChars y que PostToolUse no se dispara con comandos que fallan; y sdd-salida-grande-cerrado-por-el-entorno, con lo entregado, lo descartado y el hueco abierto) mas sus punteros en MEMORY.md. Ademas se corrigio la regla de CRLF del indice: el contraste git diff --stat contra --ignore-cr-at-eol NO discrimina en ficheros nuevos, que es como se colo output_stats.py en CRLF. El handoff.md del cambio es la fuente completa.",
+      "actor": "user"
     }
   },
   "history": [
@@ -132,6 +132,58 @@
       "to": "implementing",
       "at": "2026-09-08T18:49:46.182Z",
       "reason": "Gates spec y plan aprobados tras tres rondas de revision adversarial. Arranca la implementacion por T10, independiente del resto y con causa raiz ya confirmada por control positivo."
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-09-08T21:34:40.762Z",
+      "reason": "prueba"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-08T21:34:49.553Z",
+      "evidence": "Suite completa en verde (818 passed, 2 skipped), ruff limpio, y el PR #161 con los 13 checks del CI en verde incluidos ci-gate y CodeQL. Lo entregado se verifico pieza a pieza: T10 de extremo a extremo contra el backend real; T0/T1/T2 con controles negativos y mutantes dirigidos que disparan cada uno SU assert; la retirada del hook con dos mutantes, uno por cada mitad del mecanismo (limpieza del fichero y desregistro de settings). Tres defectos propios cazados por sus tests y dos alertas de CodeQL arregladas por el criterio del repo (se arregla si el codigo queda mejor).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-09-08T21:35:02.969Z",
+      "evidence": "CIERRE POR SUPERACION DEL ENTORNO, no por entrega completa: 4 de 11 tareas hechas (T10, T0, T1, T2) mas la retirada del hook de T5. La spec NO se cumple entera y no debe cumplirse: al capturar un payload real de PostToolUse para T3 aparecio que Claude Code ya persiste la salida grande y le da la ruta al modelo, lo que deja sin objeto REQ-002 a 012 y REQ-020. La medicion sobre 6004 comandos del historico lo cuantifica: el cliente ya cubre el 84 por ciento del volumen, y la franja que queda es el 1 por ciento de los comandos (59 casos, ~186K tokens en meses), cubierta entera por bashOutputMaxChars. El mecanismo descartado abria una superficie por la que un hook puede ejecutar algo que el usuario no autorizo, y ese coste no se paga por ese 1 por ciento. Lo entregado si cumple sus requisitos: REQ-023/024/026 (T10, con REQ-025 retirado por no discriminar) y REQ-017 (retirada del hook del 0,3 por ciento). Queda abierto y escrito en el handoff que PostToolUse no se dispara con comandos que fallan, que es el unico hueco que la variable no cubre.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-09-08T21:36:15.285Z",
+      "evidence": "Persistido en la memoria del proyecto: dos notas nuevas (claude-code-ya-persiste-la-salida, con el mecanismo del cliente, bashOutputMaxChars y que PostToolUse no se dispara con comandos que fallan; y sdd-salida-grande-cerrado-por-el-entorno, con lo entregado, lo descartado y el hueco abierto) mas sus punteros en MEMORY.md. Ademas se corrigio la regla de CRLF del indice: el contraste git diff --stat contra --ignore-cr-at-eol NO discrimina en ficheros nuevos, que es como se colo output_stats.py en CRLF. El handoff.md del cambio es la fuente completa.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-09-08T21:36:23.387Z",
+      "reason": "prueba"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-09-08T21:36:37.231Z",
+      "reason": "prueba"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-09-08T21:36:45.810Z",
+      "reason": "Cerrado como superado por el entorno. Claude Code ya persiste la salida grande de Bash y le da la ruta al modelo, y bashOutputMaxChars cubre la franja restante: sobre 6004 comandos del historico, el cliente resuelve el 84 por ciento del volumen y lo que queda es el 1 por ciento de los comandos (59 casos, ~186K tokens acumulados en meses). Se entrega T10 (bug real del map-reduce, verificado contra el backend real), la retirada de suggest_lint_summary (0,3 por ciento de punteria) y las piezas T0/T1/T2 sin consumidor, declaradas como tales en sus commits. Queda abierto en el handoff que PostToolUse no se dispara con comandos que fallan, que es el unico hueco que la variable no cubre."
     }
   ]
 }
