@@ -1673,6 +1673,9 @@ function acct(e){
   if(e.source!=='path') saved = 0;
   else if(estimable) saved = tok(ci);
   else if(ti!==undefined&&ti!==null) saved = ti;
+  // La salida escrita a archivo tampoco entro al contexto: se SUMA al ahorro de entrada, porque
+  // una misma llamada puede ahorrar por los dos lados. Espejo de `_accounting` en server.py.
+  if(e.output_to_file) saved += tokensOut;
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, estimated:estimated};
 }
 

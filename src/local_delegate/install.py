@@ -72,7 +72,15 @@ _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 #: con una regex sobre el COMANDO, antes de ejecutarlo, y las palabras que lo activaban eran
 #: `test` y `build` dentro de rutas. Un aviso que casi nunca tiene razón enseña a ignorar todos
 #: los avisos, incluidos los que la tienen.
-_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py",)
+#: `output_policy.py` y `output_stats.py` se retiraron el 2026-09-08 por quedarse sin consumidor.
+#: Eran la mitad «decide si esta salida merece delegarse» del mecanismo que reescribía el comando
+#: para mandar la salida a un fichero, y ese mecanismo se descartó: el cliente ya persiste la
+#: salida grande por su cuenta, y `updatedInput` se salta el allowlist de permisos. La medición de
+#: `PostToolUseFailure` cerró la última puerta que les quedaba —el evento existe y se dispara, pero
+#: llega cuando el coste ya se pagó y sin la salida completa, así que no habilita ningún ahorro—.
+#: Nunca llegaron a registrarse como hook, pero sí se copiaron a `~/.claude/hooks/`, así que sin
+#: esta lista sus 24 KB se quedarían ahí para siempre.
+_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
 
 # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
 #

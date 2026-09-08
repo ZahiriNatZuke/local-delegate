@@ -122,7 +122,7 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 | `local_summarize` | Resume texto o archivo | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
 | `local_extract` | Extrae campos → **objeto validado**, no una cadena que haya que parsear | mecánico / largo (auto) |
-| `local_boilerplate` | Genera código desde una spec | código |
+| `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
 | `local_delegate` | Escape genérico texto→texto | mecánico (o el que pases) |
 | `local_lint_summary` | Resume logs de lint/tests/CI | mecánico / largo (auto) |
 | `local_commit_msg` | Mensaje de commit desde un diff | código |

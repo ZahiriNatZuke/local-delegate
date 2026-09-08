@@ -61,20 +61,38 @@ mcp = MCPServer(
 )
 
 
-def _anotaciones(titulo: str) -> ToolAnnotations:
-    """Anotaciones comunes a las 11 tools, que son todas de la misma naturaleza.
+def _anotaciones(titulo: str, *, escribe: bool = False) -> ToolAnnotations:
+    """Anotaciones de las tools. Casi todas son de la misma naturaleza; una no.
 
-    `read_only_hint`: ninguna tool modifica nada del entorno de quien llama. Escriben en el log de
-    uso, pero eso es contabilidad interna del propio servidor —lo que alimenta el dashboard—, no un
-    efecto sobre los datos del usuario. `destructive_hint` e `idempotent_hint` se omiten a
-    propósito: el protocolo solo les da sentido cuando `read_only_hint` es falso, y ponerlos aquí
-    sería ruido que además se contradice con lo anterior.
+    `read_only_hint`: por defecto ninguna tool modifica nada del entorno de quien llama. Escriben
+    en el log de uso, pero eso es contabilidad interna del propio servidor —lo que alimenta el
+    dashboard—, no un efecto sobre los datos del usuario.
+
+    `escribe=True` es la excepción, y existe porque `local_boilerplate` **sí** escribe un archivo
+    en el disco de quien llama. Anunciarla como read-only sería mentir en el hint que un cliente
+    MCP usa para decidir si pide permiso, así que ahí se declara lo que hace de verdad:
+
+    - `destructive_hint=False`: se niega a pisar un archivo existente salvo `overwrite=True`
+      explícito, así que la operación por defecto solo crea.
+    - `idempotent_hint=False`: repetirla no da lo mismo —el modelo genera otro texto y la segunda
+      llamada además choca con el archivo que dejó la primera—.
+
+    Para el resto, esos dos hints se omiten a propósito: el protocolo solo les da sentido cuando
+    `read_only_hint` es falso, y ponerlos ahí sería ruido que se contradice con lo anterior.
 
     `open_world_hint` en falso: el dominio es cerrado y conocido —el endpoint configurado en
     `LOCAL_DELEGATE_BASE_URL` y los archivos bajo las raíces permitidas—. Ninguna tool sale a
     buscar a un mundo abierto, y para un cliente eso es la diferencia entre delegar a tu GPU o a
     algo que puede tocar internet.
     """
+    if escribe:
+        return ToolAnnotations(
+            title=titulo,
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=False,
+            open_world_hint=False,
+        )
     return ToolAnnotations(title=titulo, read_only_hint=True, open_world_hint=False)
 
 
@@ -314,6 +332,54 @@ def _check_allowed_dir(path: str) -> None:
         raise ValueError(f"Ruta fuera de las raíces permitidas ({roots}): {path}")
 
 
+def _validar_destino(target: str, overwrite: bool) -> Path:
+    """Valida la ruta de salida ANTES de gastar backend. Devuelve el Path ya resuelto.
+
+    El orden importa: si el destino es inválido se falla sin llamar al modelo. Al revés se
+    pagaría la inferencia para tirar el resultado, que es el peor de los dos errores posibles.
+
+    Exige ruta **absoluta** porque el servidor corre con su propio directorio de trabajo —el del
+    daemon, no el de quien llama—, así que una ruta relativa aterrizaría en un sitio que nadie
+    eligió. Y se niega a pisar lo que ya está salvo permiso explícito.
+    """
+    if not target or not target.strip():
+        raise ValueError("'target' es obligatorio: la ruta absoluta del archivo a escribir.")
+    p = Path(target)
+    if not p.is_absolute():
+        raise ValueError(
+            "'target' debe ser una ruta absoluta: el servidor no comparte tu directorio de "
+            f"trabajo. Recibido: {target}"
+        )
+    _check_allowed_dir(target)
+    if p.is_dir():
+        raise ValueError(f"'target' es un directorio, no un archivo: {target}")
+    if p.exists() and not overwrite:
+        raise ValueError(
+            f"Ya existe un archivo ahí; pasa overwrite=True si quieres pisarlo: {target}"
+        )
+    return p
+
+
+def _escribir_destino(p: Path, contenido: str) -> str:
+    """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto."""
+    # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
+    # llega aquí sin él y el archivo saldría sin newline al final — cosa que la mitad de los
+    # linters marca y que ensucia el diff de la primera línea que alguien añada después.
+    if contenido and not contenido.endswith("\n"):
+        contenido += "\n"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    # newline explícito: el separador del archivo generado no debe depender de en qué sistema
+    # operativo corra el daemon.
+    with open(p, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(contenido)
+    recibo = f"[escrito] {p}\n{contenido.count(chr(10)):,} líneas, {len(contenido):,} chars"
+    if config.FEEDBACK_ENABLED:
+        recibo += (
+            f" (≈{len(contenido) // config.CHARS_PER_TOKEN:,} tokens que no entraron a tu contexto)"
+        )
+    return recibo
+
+
 # Techo simbólico para leer una entrada COMPLETA: las tools de reducción deciden después si
 # el contenido cabe en el modelo o si toca map-reduce, y para eso necesitan el texto entero.
 _NO_TRUNCATE = 2**31
@@ -380,6 +446,7 @@ def _log_event(
     json_schema: str | None = None,
     chunks: int | None = None,
     input_unit: str = "chars",
+    output_to_file: bool = False,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
     try:
@@ -439,6 +506,10 @@ def _log_event(
             rec["path"] = path
         if json_schema is not None:
             rec["json_schema"] = json_schema
+        # La SALIDA se escribió a un archivo, así que tampoco entró al contexto de quien llama.
+        # Se omite cuando es falso: es el caso de casi todos los eventos y engordaría el log.
+        if output_to_file:
+            rec["output_to_file"] = True
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
@@ -493,6 +564,12 @@ def _accounting(row: dict) -> dict:
         saved = int(raw_in)  # imagen: el token real es el único orden de magnitud honesto
     else:
         saved = 0  # ni token real ni unidad estimable: 0 antes que un número inventado
+
+    # Ahorro de SALIDA: el código generado se escribió en un archivo y quien llamó recibió solo
+    # un recibo de dos líneas. Es independiente del ahorro de entrada (`source=path`) y se suma,
+    # porque una misma llamada puede ahorrar por los dos lados.
+    if row.get("output_to_file"):
+        saved += tokens_out
 
     return {
         "backend_calls": backend_calls,
@@ -677,6 +754,8 @@ def _chat(
     feedback_char_estimate: bool = True,
     feedback: bool = True,
     input_unit: str = "chars",
+    strip_fences: bool = False,
+    write_to: Path | None = None,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -699,9 +778,16 @@ def _chat(
         _inflight_end(entry_id)
 
     text = _strip_think(result.text) if result.ok else result.text
+    # Quitar los fences aquí y no en quien llama es lo que permite escribir a disco el código ya
+    # limpio: hacerlo fuera dejaría dentro del archivo las ``` que el modelo a veces añade.
+    if strip_fences and result.ok:
+        text = _strip_fences(text)
     truncated_out = result.finish_reason == "length"
-    if truncated_out:
-        text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+    aviso_truncado = "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+    # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
+    # que generó el modelo y nada más.
+    if truncated_out and write_to is None:
+        text += aviso_truncado
     _log_event(
         tool=tool,
         model=model,
@@ -720,7 +806,13 @@ def _chat(
         path=path if source == "path" else None,
         json_schema=json_schema_status,
         input_unit=input_unit,
+        output_to_file=write_to is not None and result.ok,
     )
+    # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
+    # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
+    # tal cual, igual que en cualquier otra tool.
+    if write_to is not None and result.ok:
+        return _escribir_destino(write_to, text) + (aviso_truncado if truncated_out else "")
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
@@ -1511,29 +1603,34 @@ def local_extract(
     return datos
 
 
-@mcp.tool(annotations=_anotaciones("Generar código boilerplate"))
-def local_boilerplate(spec: str, language: str) -> str:
+@mcp.tool(annotations=_anotaciones("Generar código boilerplate", escribe=True))
+def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = False) -> str:
     """Genera código boilerplate a partir de una especificación, con un modelo local de código.
 
-    Devuelve solo el código, sin explicaciones ni fences markdown.
+    **Escribe el código en `target`** y devuelve solo un recibo de dos líneas (ruta, tamaño). El
+    código generado nunca entra a tu contexto: ahí está el ahorro, y por eso `target` no es
+    opcional. Para verlo, abre el archivo; para usarlo, ya está en su sitio.
 
     Args:
         spec: Descripción de lo que debe generar el código.
         language: Lenguaje de programación (p. ej. 'python', 'typescript').
+        target: Ruta ABSOLUTA del archivo a escribir. Los directorios que falten se crean.
+        overwrite: Pisar `target` si ya existe. Por defecto falla, y falla ANTES de generar nada.
     """
+    destino = _validar_destino(target, overwrite)
     system = _guard(f"solo código {language} válido, sin explicaciones ni ```")
     user = f"Genera {language} para: {spec}"
-    return _strip_fences(
-        _chat(
-            config.MODEL_CODE,
-            system,
-            user,
-            max_tokens=1536,
-            temperature=0.1,
-            tool="local_boilerplate",
-            chars_in=len(spec),
-            source="inline",
-        )
+    return _chat(
+        config.MODEL_CODE,
+        system,
+        user,
+        max_tokens=1536,
+        temperature=0.1,
+        tool="local_boilerplate",
+        chars_in=len(spec),
+        source="inline",
+        strip_fences=True,
+        write_to=destino,
     )
 
 

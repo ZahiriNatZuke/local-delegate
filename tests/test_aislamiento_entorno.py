@@ -90,8 +90,10 @@ def test_toda_variable_que_lean_los_hooks_esta_declarada_en_config():
     el guardián, y por esa rendija los tests vuelven a heredar lo que haya en la máquina.
     """
     por_archivo = _variables_que_leen_los_hooks()
-    # Control positivo: si el escáner dejara de encontrar nada, este test pasaría en vacío.
-    assert len(por_archivo) >= 3, f"el escáner no encontró casi nada: {por_archivo}"
+    # Control positivo: si el escáner dejara de encontrar nada, este test pasaría en vacío. El
+    # umbral baja de 3 a 2 al retirarse `output_stats.py`, que era el tercer fichero que leía
+    # variables propias; sigue cazando un escáner que devuelva vacío o casi.
+    assert len(por_archivo) >= 2, f"el escáner no encontró casi nada: {por_archivo}"
 
     sin_declarar = {
         f"{archivo}:{nombre}"

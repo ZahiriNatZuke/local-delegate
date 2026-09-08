@@ -36,7 +36,7 @@ de delegarlo.
 | `local_summarize` | Resumir texto o archivo largo | `path` **o** `text`, `max_words` | Resumen (prosa) |
 | `local_classify` | Etiquetar en categorías fijas | `text`, `labels[]` | Una etiqueta |
 | `local_extract` | Sacar campos estructurados | `fields[]`, `path` **o** `text` | JSON |
-| `local_boilerplate` | Generar código repetitivo | `spec`, `language` | Código (sin fences) |
+| `local_boilerplate` | Generar código repetitivo | `spec`, `language`, `target` (ruta absoluta), `overwrite?` | Recibo: ruta y tamaño (el código va al archivo, no a tu contexto) |
 | `local_delegate` | Escape genérico texto→texto | `task`, `input`, `output_format`, `model?`, `chunk?` | Texto |
 | `local_lint_summary` | Resumir salida de lint/tests/CI | `path` **o** `text`, `max_words` | Resumen agrupado por archivo |
 | `local_commit_msg` | Mensaje de commit desde un diff | `diff` **o** `path`, `style?` | Mensaje (revísalo siempre) |
@@ -64,7 +64,8 @@ elegir el máximo, un único resumen global) usa `local_summarize` o `chunk='off
 - Resumir un log/archivo grande para saber qué contiene → `local_summarize(path=…)`.
 - Clasificar un issue/mensaje en bug/feature/pregunta → `local_classify`.
 - Extraer `{nombre, error, endpoint}` de un texto → `local_extract`.
-- Generar el esqueleto de un CLI/argparse, un dataclass, un parser → `local_boilerplate`.
+- Generar el esqueleto de un CLI/argparse, un dataclass, un parser → `local_boilerplate(target=…)`,
+  que lo deja escrito en el archivo en vez de devolverte el código.
 - Resumir la salida de un lint/test/build largo volcada a fichero → `local_lint_summary(path=…)`.
 - Redactar el mensaje de commit a partir de un `git diff` → `local_commit_msg`.
 - Traducir un texto o archivo → `local_translate`.
