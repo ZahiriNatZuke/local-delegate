@@ -4,7 +4,7 @@ Todos los cambios notables de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Unreleased]
+## [0.27.0] - 2026-09-08
 
 ### Changed
 - **BREAKING — `local_boilerplate` escribe el código en disco y ya no lo devuelve.** La firma pasa
@@ -1708,7 +1708,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...v0.24.0
