@@ -102,12 +102,14 @@ def test_read_hook_is_opt_in(tmp_path):
     _install(tmp_path)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"].get("PreToolUse", [])}
-    assert matchers == {"Bash"}
+    # Vacío desde que se retiró `suggest_lint_summary.py`: era el único `PreToolUse` que se
+    # registraba solo. Sin opt-in no queda ninguno.
+    assert matchers == set()
 
     _install(tmp_path, enable_read_hook=True)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"]["PreToolUse"]}
-    assert matchers == {"Bash", "Read"}
+    assert matchers == {"Read"}
 
 
 def _comando_del_hook_de_read(home: Path) -> str | None:
@@ -189,7 +191,9 @@ def test_install_is_idempotent_and_keeps_foreign_config(tmp_path):
     assert settings["permissions"] == {"allow": ["Skill"]}
     assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "~/mio.sh"
     assert len(settings["hooks"]["UserPromptSubmit"]) == 1  # no se duplica al reinstalar
-    assert len(settings["hooks"]["PreToolUse"]) == 1
+    # Ya no se registra ningún `PreToolUse` por defecto: el de Read es opt-in y el de lint se
+    # retiró. Y la clave no puede quedar creada y vacía, que sería ruido en el settings ajeno.
+    assert "PreToolUse" not in settings["hooks"]
     text = memory.read_text(encoding="utf-8")
     assert text.count(inst.MD_BEGIN) == 1
     assert "No borrar." in text
@@ -480,8 +484,55 @@ def test_la_instalacion_buena_sobrevive_al_retirado(tmp_path):
     _con_huerfanos(tmp_path)
     assert _install(tmp_path) == 0
     buenos = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
-    for nombre in inst.packaged_hook_names():
+    empaquetados = inst.packaged_hook_names() - set(inst._SCRIPTS_RETIRADOS)
+    assert empaquetados, "sin scripts empaquetados este test no comprobaría nada"
+    for nombre in empaquetados:
         assert (buenos / nombre).is_file(), f"{nombre} debía seguir en {buenos}"
+    # Y la otra mitad: un retirado se reconoce como nuestro para poder limpiarlo, pero NO se
+    # instala. Sin esto, meterlo en `packaged_hook_names()` podría hacer que volviera a copiarse.
+    for nombre in inst._SCRIPTS_RETIRADOS:
+        assert not (buenos / nombre).exists(), f"{nombre} está retirado y no debe instalarse"
+
+
+def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
+    """Un script que deja de empaquetarse **no puede volverse inmortal**.
+
+    Es el defecto que la revisión adversarial del plan encontró: la limpieza de huérfanos sale de
+    `packaged_hook_names()`, que lista el directorio empaquetado, así que en cuanto el fichero
+    desaparece de ahí su copia vieja deja de ser reconocible y nadie la borra jamás. Igual con
+    `_is_ours`, que es quien quita la entrada de `settings.json`.
+
+    Se simula una instalación anterior: el script en la raíz de `hooks/` (como lo dejaba la
+    recipe vieja) y su entrada registrada en `settings.json`.
+    """
+    retirado = inst._SCRIPTS_RETIRADOS[0]
+    claude = tmp_path / ".claude"
+    (claude / "hooks").mkdir(parents=True)
+    viejo = claude / "hooks" / retirado
+    viejo.write_text("# instalado por una version anterior\n", encoding="utf-8")
+    settings_path = claude / "settings.json"
+    settings_path.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": "Bash",
+                            "hooks": [{"type": "command", "command": f"python ~/{retirado}"}],
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _install(tmp_path) == 0
+
+    settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    registrados = json.dumps(settings.get("hooks", {}))
+    assert retirado not in registrados, "la entrada del script retirado sigue en settings.json"
+    assert not viejo.exists(), "la copia vieja del script retirado sigue en el disco"
 
 
 def test_dry_run_no_retira_ningun_huerfano(tmp_path):

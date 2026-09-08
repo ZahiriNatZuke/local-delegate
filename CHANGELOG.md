@@ -6,6 +6,30 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Removed
+- **Retirado el hook `suggest_lint_summary.py`.** Decidía con una regex sobre el comando, antes de
+  ejecutarlo, y la medición de 21 días de uso real le dio **366 disparos y 1 acierto** (0,3 %), con
+  la mediana de salida en 402 bytes: lo que de verdad lo activaba eran las palabras `test` y
+  `build` dentro de rutas. Un aviso que casi nunca tiene razón enseña a ignorar todos los avisos,
+  incluidos los que la tienen. Ampliarle la lista de comandos no lo salvaba — ningún ejecutable del
+  corpus superaba el umbral de tamaño en más del 9 % de sus ejecuciones.
+
+  `install` retira la entrada de `settings.json` y borra el fichero de las instalaciones que lo
+  tuvieran. Para que eso sea posible existe una lista de **scripts retirados**: sin ella, un script
+  que deja de empaquetarse se vuelve inmortal, porque la limpieza de huérfanos se deriva de lo que
+  hay en el directorio del paquete.
+
+  Con esto, por defecto no queda registrado ningún hook `PreToolUse`.
+
+### Fixed
+- **El reintento del map-reduce reconoce el desborde de contexto venga como venga.** La detección
+  comparaba contra tres literales de un proveedor y no cubría el `500` con
+  `Context size has been exceeded.`, así que en ese caso el troceado se rendía en el primer trozo
+  sin reintentar. Ahora se compara sin distinguir mayúsculas, por códigos de error conocidos o por
+  la presencia de una palabra de «contexto» junto a una de «exceso». Y cuando el reintento se agota
+  de verdad, el mensaje dice qué modelo se quedó corto y qué se puede tocar, en vez de devolver el
+  error crudo del backend.
+
 ## [0.26.0] - 2026-08-18
 
 ### Added

@@ -57,9 +57,22 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
 _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
-    ("suggest_lint_summary.py", "PreToolUse", "Bash"),
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
+
+#: Scripts que este paquete YA NO instala, pero que sigue reconociendo como suyos.
+#:
+#: Sin esta lista, un script retirado se vuelve **inmortal**: la limpieza de huérfanos sale de
+#: `packaged_hook_names()`, que lista el directorio empaquetado, así que en cuanto el fichero
+#: desaparece de ahí su copia vieja en `~/.claude/hooks/` deja de ser reconocible y nadie la
+#: borra nunca. Lo mismo con `_is_ours`, que es quien desregistra la entrada de `settings.json`.
+#:
+#: `suggest_lint_summary.py` se retiró el 2026-09-08 por punteria: **366 disparos y 1 acierto**
+#: (0,3 %) medidos sobre 21 días de uso real, con la mediana de salida en 402 bytes. Disparaba
+#: con una regex sobre el COMANDO, antes de ejecutarlo, y las palabras que lo activaban eran
+#: `test` y `build` dentro de rutas. Un aviso que casi nunca tiene razón enseña a ignorar todos
+#: los avisos, incluidos los que la tienen.
+_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py",)
 
 # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
 #
@@ -270,7 +283,6 @@ def hook_command(
 _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
-    "suggest_lint_summary.py",
 )
 
 
@@ -289,7 +301,7 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
     normalized = " ".join(parts).replace("\\", "/")
     if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
         return True
-    return any(name in normalized for name in _SCRIPT_NAMES)
+    return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
 
 
 def merge_hook_settings(
@@ -665,20 +677,25 @@ def _codex_dir(opts: Options) -> Path:
 
 
 def packaged_hook_names() -> set[str]:
-    """Nombres de los scripts de hooks que **este paquete instala**.
+    """Nombres de los scripts de hooks que este paquete instala **o instaló alguna vez**.
 
     Es la definición de «qué es nuestro» dentro de `~/.claude/hooks/`, y por tanto de qué se puede
-    retirar. Sale del directorio empaquetado y no de una constante escrita a mano, porque una
-    constante paralela se desincroniza: `_SCRIPT_NAMES` tiene tres nombres y **no** incluye
+    retirar. Lo que se empaqueta hoy sale del directorio y no de una constante escrita a mano,
+    porque una constante paralela se desincroniza: `_SCRIPT_NAMES` **no** incluye
     `hook_common.py`, que es uno de los huérfanos reales que hay que limpiar.
+
+    Y a eso se le suman los **retirados**, que no están en el directorio precisamente por estar
+    retirados. Sin ellos, dejar de empaquetar un script haría que su copia vieja no fuera
+    reconocible por nadie y se quedara en el disco del usuario para siempre.
 
     Si el directorio no se puede listar devuelve vacío, y con vacío no se borra nada: la
     degradación segura de una operación destructiva es no hacer nada.
     """
     try:
-        return {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
+        empaquetados = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
     except OSError:
         return set()
+    return empaquetados | set(_SCRIPTS_RETIRADOS)
 
 
 def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
