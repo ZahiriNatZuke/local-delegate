@@ -2,12 +2,16 @@
 
 ## Current state
 
-- SDD status: `verifying`. Gates `spec` y `plan` aprobados; `quality`, `conformance` y `memory`
-  pendientes de la revisión del usuario, con la evidencia ya recogida en `verification.md`.
-- Rama `claude/opencode-mcb-integration-m8q9qq`, base `67e585f`.
-- Suite: **700 passed, 4 skipped, 1 failed**. El fallo es anterior y ambiental (la suite corre
-  como root y `chmod 000` no le quita permiso de lectura); baseline antes de tocar nada:
-  `667 passed, 1 failed`, el mismo.
+- SDD status: **`closed`** (2026-09-08). Los cinco gates aprobados. El código lleva en `main` desde
+  el PR #123 y salió publicado con la 0.19.0; el cambio se quedó en `verifying` un mes por los tres
+  gates finales, no por trabajo pendiente.
+- Suite en el cierre: **794 passed, 2 skipped** en Windows, con los 36 tests propios del change en
+  verde. La evidencia de agosto (`710 passed`) era de un árbol con 84 tests menos y **no** se
+  reutilizó: todo se volvió a medir. Ver la sección «Revalidación para el cierre» de
+  `verification.md`.
+- Verificado también contra el binario real de **opencode 1.18.29** en Windows (agosto fue 1.18.11
+  en Linux): `opencode mcp add` sigue registrando la entrada, conserva comentarios y claves del
+  usuario, y `opencode mcp list` dice `connected`.
 
 ## What changed
 
@@ -39,6 +43,9 @@ Las cuatro que no se deducen del código, cada una con lo que las decidió:
   estilo: una clave de primer nivel desconocida hace que opencode **no arranque**. De ahí también
   que no exista un `--force-mcp-opencode`: sin marcadores no hay forma de distinguir nuestra
   entrada de una escrita a mano, exactamente como en Claude Code.
+  *(Al cerrar, 2026-09-08: la primera mitad de ese motivo **caducó**. Medido contra los dos
+  binarios el mismo día, 1.18.11 rechaza la clave desconocida y **1.18.29 ya no**. La decisión se
+  mantiene —ahora por prudencia— y la segunda mitad, la de los marcadores, sigue intacta.)*
 - **La skill y la memoria se instalan en el sitio propio de opencode**, aunque esté medido que lee
   `~/.claude/skills/` y `~/.claude/CLAUDE.md`. Las dos compatibilidades son apagables
   (`OPENCODE_DISABLE_EXTERNAL_SKILLS`, `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT`) y **no existen** en
@@ -65,10 +72,17 @@ Dos cosas que se decidieron **midiendo, no diseñando**:
 
 ## Next steps
 
-1. Aprobar los gates `quality` y `conformance` con `verification.md` delante.
-2. Dejar que el CI corra el e2e en Windows y macOS: es lo único de este change que aquí solo se
-   ejercitó en Linux.
-3. Al publicar, la línea del `CHANGELOG` ya está redactada en `Unreleased`.
+Ninguno para este change: cerrado el 2026-09-08 con los cinco gates aprobados, el código en `main`
+y el CI en verde. Lo que salió de la revalidación y **no** pertenece aquí:
+
+1. **Tres frases de documentación desactualizadas por el cliente, no por nosotros.** `spec.md`
+   (REQ-011), el docstring de `install.py` y `docs/wiki/Integration-install.md` dicen que una clave
+   de primer nivel desconocida impide arrancar opencode. Era cierto en 1.18.11 y **ya no lo es en
+   1.18.29** (medido con los dos binarios el mismo día). El comportamiento del paquete no cambia;
+   corregir la justificación es un cambio de documentación aparte.
+2. **`update` repone en el transporte de la máquina, no en el que había.** Con el daemon levantado,
+   una entrada `stdio` borrada vuelve como `http`. Hace lo mismo con Claude Code, así que es
+   comportamiento de `update` y no de este change; queda anotado por si alguna vez sorprende.
 
 ## Cómo repetir las mediciones
 
