@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "slug": "read-obliga-a-delegar",
+  "title": "El hook de Read deja de sugerir y pasa a decidir: aviso en el momento, bloqueo con flag, y umbral del entorno",
+  "mode": "standard",
+  "status": "researching",
+  "createdAt": "2026-09-09T01:45:09.302Z",
+  "updatedAt": "2026-09-09T01:56:35.688Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-09T01:45:09.302Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-09T01:56:35.688Z",
+      "reason": "Research ejecutado: el hook de Read no se disparo (umbral 32 KB vs ficheros de 9,5 y 14,2 KB); 24 de 24 lecturas calladas por tamano son documentacion, 17 entre 8 y 16 KB."
+    }
+  ]
+}

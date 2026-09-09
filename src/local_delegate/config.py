@@ -165,7 +165,13 @@ HOOK_TELEMETRY_LOG: Path | None = Path(_hook_log_env) if _hook_log_env else None
 # El valor no se usa desde el paquete; lo que importa es que el nombre entre en el inventario.
 HOOK_ENABLED: bool = _env_flag("LD_HOOK_ENABLED", True)
 HOOK_READ_ENABLED: bool = _env_flag("LD_HOOK_READ_ENABLED", False)
-HOOK_READ_SUGGEST_KB: float = _env_float("LD_HOOK_READ_SUGGEST_KB", 32.0)
+#: Bajado de 32 a 8 el 2026-09-08 y **medido**, no estimado: sobre las 96 lecturas registradas
+#: desde que la telemetría guarda la extensión, el hook callaba por tamaño 24 veces y **las 24 eran
+#: `.md`, `.json` o `.txt`** —ni una de código—, 17 de ellas entre 8 y 16 KB. Con 32 KB la franja
+#: donde vive la documentación de este repo quedaba muda: el aviso no se ignoraba, no llegaba.
+#: El valor tiene que coincidir con el literal del hook, que no puede importar este módulo; los ata
+#: `test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores`.
+HOOK_READ_SUGGEST_KB: float = _env_float("LD_HOOK_READ_SUGGEST_KB", 8.0)
 HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
 
 
