@@ -55,9 +55,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `persistedOutputPath`—. Medido con control positivo y negativo: cinco comandos fallidos de
   18 900 bytes y ni un archivo persistido, frente al de código 0 que sí lo dejó entero.
 
-  Eran 590 líneas de módulos y 475 de tests que además viajaban dentro del wheel. Quedan
-  declarados en la lista de **scripts retirados** de `install`, para que las copias ya instaladas
-  en `~/.claude/hooks/` se limpien en vez de volverse inmortales.
+  Eran 590 líneas de módulos y 475 de tests. Nunca llegaron a PyPI —se crearon después de la
+  0.26.0, así que esta habría sido la primera release en empaquetarlos— pero sí estaban copiados
+  en `~/.claude/hooks/`, puestos ahí por una instalación desde el repo. Quedan declarados en la
+  lista de **scripts retirados** de `install`, para que esas copias se limpien en vez de volverse
+  inmortales.
 
 - **Retirado el hook `suggest_lint_summary.py`.** Decidía con una regex sobre el comando, antes de
   ejecutarlo, y la medición de 21 días de uso real le dio **366 disparos y 1 acierto** (0,3 %), con
