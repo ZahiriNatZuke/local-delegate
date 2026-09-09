@@ -6,6 +6,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **El hook de lectura empieza a avisar a los 8 KB y no a los 32, porque el aviso no se ignoraba:
+  no llegaba.** La pregunta era por qué el asistente no delega cuando toca, y la respuesta que
+  parecía obvia —se salta la sugerencia— resultó falsa al medirla: el hook `PreToolUse/Read` está
+  encendido, pero con el umbral en 32 KB **se callaba** ante los ficheros que se estaban leyendo
+  (`9,5 KB` y `14,2 KB`). Los avisos que sí aparecían eran del hook de `UserPromptSubmit`, que
+  dispara por el texto del prompt y no sabe qué fichero viene.
+
+  El número nuevo sale de la telemetría, no de una estimación: sobre las **96 lecturas** registradas
+  desde que el log guarda la extensión, el hook callaba por tamaño **24 veces y las 24 eran `.md`,
+  `.json` o `.txt`** —ni una de código—, con **17 entre 8 y 16 KB**. Con 8 KB, **20 de esas 24**
+  pasan a avisar. La banda `strong` se queda en 100 KB **a propósito**: se cambia una sola cosa,
+  para que la próxima medición sepa a qué atribuir la diferencia.
+
+  **Lo que este cambio NO hace, y por qué:** no bloquea la lectura. Que el asistente obedezca el
+  aviso *cuando llega* sigue sin estar medido —en los casos observados no llegó—, así que construir
+  el bloqueo ahora sería pagar su coste sin saber si hace falta. El criterio de decisión está
+  escrito **antes** de ver el resultado en `.sdd/changes/read-obliga-a-delegar/research.md`.
+
+- **El umbral vivía en cuatro sitios y nada los ataba** (`config.py`, el literal del hook, su
+  docstring y la tabla de la recipe). El hook no puede importar `config` —es stdlib pura porque se
+  copia al HOME—, así que la duplicación no se elimina: se ata.
+  `test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores` compara los tres valores configurables
+  y falla si alguno se separa, para que nadie configure un número creyendo otro.
+
 ### Added
 - **La wiki tiene por fin una página de catálogo de tools** (`docs/wiki/Tools.md`). Hasta ahora las
   once tools `local_*` solo estaban en la tabla resumen del README y en la skill: la wiki no las

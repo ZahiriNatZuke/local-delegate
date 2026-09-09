@@ -96,9 +96,17 @@ actual porque bajo `uvx` vive en un entorno efímero que desaparece al terminar 
 |---|---:|---|
 | `LD_HOOK_ENABLED` | `1` | `0` apaga sugerencias y telemetría para una sesión A/B |
 | `LD_HOOK_READ_ENABLED` | `0` | `1` activa el hook experimental de Read (equivale a registrarlo con `--enabled`) |
-| `LD_HOOK_READ_SUGGEST_KB` | `32` | Inicio de sugerencia para Read |
+| `LD_HOOK_READ_SUGGEST_KB` | `8` | Inicio de sugerencia para Read (era `32` hasta el 2026-09-08; ver abajo) |
 | `LD_HOOK_READ_STRONG_KB` | `100` | Inicio de recomendación fuerte |
 | `LD_HOOK_TELEMETRY_LOG` | vacío | JSONL agregado opt-in; vacío desactiva telemetría |
+
+> **Por qué el umbral bajo pasó de 32 KB a 8 KB (2026-09-08).** Salió de medir la propia
+> telemetría, no de opinar. Sobre las **96 lecturas** registradas desde que el log guarda la
+> extensión, el hook callaba por tamaño **24 veces, y las 24 eran `.md`, `.json` o `.txt`** —ni una
+> de código—, con **17 entre 8 y 16 KB**. Es decir: la franja donde vive la documentación de un
+> repo quedaba muda, y lo que parecía el modelo ignorando el aviso era un aviso que **nunca
+> llegaba**. La banda `strong` se deja en 100 KB **a propósito**: se cambia una sola cosa, para que
+> la siguiente medición sepa a qué atribuir la diferencia.
 
 La telemetría solo guarda timestamp, evento, categoría, tamaño/banda, la **extensión** del archivo,
 el motivo del descarte y si hubo sugerencia. Nunca guarda prompts, comandos o paths. La extensión
@@ -113,8 +121,9 @@ con `LD_HOOK_ENABLED=0` para baseline y `LD_HOOK_ENABLED=1` para piloto.
 
 1. Envía un prompt como “resume este archivo en cinco viñetas”: debe aparecer el recordatorio.
 2. Solo si pruebas el experimento Read (instalado con `--enable-read-hook`, o con
-   `LD_HOOK_READ_ENABLED=1`), pide leer un archivo de 10 KiB y otro de 40 KiB: deben aparecer
-   bandas diferentes.
+   `LD_HOOK_READ_ENABLED=1`), pide leer tres archivos **que no sean código**: uno de 5 KiB (no debe
+   decir nada), otro de 20 KiB (`Sugerencia`) y otro de 120 KiB (`Recomendacion fuerte`). Con el
+   umbral anterior de 32 KB los dos primeros callaban, que es justo lo que se cambió.
 3. Ejecuta `pytest` o `npm test`: **no** debe aparecer ninguna sugerencia. El hook que la
    emitía está retirado, y comprobar su ausencia es lo que detecta una copia vieja que siguiera
    registrada de una instalación anterior.

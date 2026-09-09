@@ -17,7 +17,14 @@ pedidas a propósito con offset/limit, y archivos medianos. Un aviso que acierta
 ignorarlo, y se lleva por delante los casos en que tenía razón — así que ahora se calla en los
 tres casos y sube los umbrales.
 
-Usa dos bandas: LD_HOOK_READ_SUGGEST_KB (default 32 KB) y LD_HOOK_READ_STRONG_KB (default 100 KB).
+Usa dos bandas: LD_HOOK_READ_SUGGEST_KB (default 8 KB) y LD_HOOK_READ_STRONG_KB (default 100 KB).
+
+El umbral bajo era 32 KB hasta el 2026-09-08, y bajarlo salió de medir, no de opinar: de las 96
+lecturas registradas desde que la telemetria guarda la extension, este hook callaba por tamaño 24
+veces y LAS 24 eran `.md`, `.json` o `.txt` —ni una de codigo—, con 17 entre 8 y 16 KB. O sea que
+la franja donde vive la documentacion de un repo quedaba muda, y lo que parecia desobediencia era
+un aviso que nunca llegaba. La banda `strong` se deja en 100 KB a proposito: se cambia UNA cosa,
+para que la proxima medicion sepa a que atribuir la diferencia.
 NUNCA bloquea la tool: no emite `permissionDecision`, sólo contexto. Sin dependencias (stdlib
 únicamente) y multiplataforma.
 
@@ -142,7 +149,7 @@ def main() -> None:
         return
 
     try:
-        suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "32"))
+        suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
         strong_kb = float(os.environ.get("LD_HOOK_READ_STRONG_KB", "100"))
         size_kb = os.path.getsize(file_path) / 1024
     except (OSError, ValueError):

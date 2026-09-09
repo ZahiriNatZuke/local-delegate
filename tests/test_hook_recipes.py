@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -127,12 +128,28 @@ def test_read_hook_respeta_una_franja_pedida_a_proposito(tmp_path, monkeypatch, 
     assert salida == ""
 
 
-def test_read_hook_calla_ante_un_archivo_mediano(tmp_path, monkeypatch, capsys):
-    """20 KB esta por debajo del umbral nuevo de 32 KB."""
+def test_read_hook_calla_ante_un_archivo_pequeno(tmp_path, monkeypatch, capsys):
+    """5 KB está por debajo del umbral, que desde el 2026-09-08 es de 8 KB y no de 32.
+
+    Este test se llamaba «mediano» y usaba 20 KB. Falló al bajar el umbral, que es exactamente su
+    trabajo: era el guardián del comportamiento que se cambió a propósito. La medición que lo
+    movió está en la cabecera del hook — 24 de 24 lecturas calladas por tamaño eran documentación,
+    17 de ellas entre 8 y 16 KB, o sea dentro de los 20 KB que este test daba por «mediano».
+    """
+    target = tmp_path / "notas.md"
+    target.write_text("x" * 5 * 1024, encoding="utf-8")
+
+    assert _correr_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
+
+
+def test_read_hook_avisa_en_la_franja_que_antes_quedaba_muda(tmp_path, monkeypatch, capsys):
+    """20 KB: callaba con el umbral de 32 y ahora avisa. Es el cambio, medido por su efecto."""
     target = tmp_path / "notas.md"
     target.write_text("x" * 20 * 1024, encoding="utf-8")
 
-    assert _correr_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
+    salida = _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+    assert "Sugerencia" in salida, salida
+    assert "Recomendacion fuerte" not in salida, "20 KB no es la banda fuerte"
 
 
 def test_read_hook_sigue_avisando_del_caso_que_vale_la_pena(tmp_path, monkeypatch, capsys):
@@ -199,3 +216,55 @@ def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, mo
     assert "confidencial" not in texto
     assert "secreto" not in texto
     assert read_hook.extension_de("/x/y.contrato-acme-2026") == ""
+
+
+def _default_del_hook(variable: str) -> float:
+    """El default que el hook lleva escrito, leído del fuente y no de un import.
+
+    El hook es stdlib pura y lee `os.environ` con su propio literal, así que el valor no está
+    expuesto como constante: se saca del código, que es la única fuente que el hook usa de verdad.
+    """
+    fuente = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
+    hallado = re.search(rf'os\.environ\.get\("{variable}", "([\d.]+)"\)', fuente)
+    assert hallado, f"no se encontró el default de {variable} en el hook"
+    return float(hallado.group(1))
+
+
+def test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores():
+    """El mismo número vive en tres sitios; que se separen es el defecto recurrente de este repo.
+
+    El hook **no puede importar `config`** —es stdlib pura porque se copia al HOME del usuario—,
+    así que la duplicación no se puede eliminar: solo atar. `config.py` declara estas variables
+    para que el inventario de aislamiento las vea (REQ-022), y la tabla de la recipe es lo que lee
+    quien las cambia a mano. Si los tres no dicen lo mismo, el usuario configura un valor creyendo
+    otro.
+    """
+    from local_delegate import config
+
+    recipe = (Path(__file__).parents[1] / "docs" / "recipes" / "claude-code-hooks.md").read_text(
+        encoding="utf-8"
+    )
+
+    for variable, en_config in (
+        ("LD_HOOK_READ_SUGGEST_KB", config.HOOK_READ_SUGGEST_KB),
+        ("LD_HOOK_READ_STRONG_KB", config.HOOK_READ_STRONG_KB),
+    ):
+        en_hook = _default_del_hook(variable)
+        assert en_hook == en_config, f"{variable}: el hook dice {en_hook} y config.py {en_config}"
+        fila = re.search(rf"\| `{variable}` \| `([\d.]+)` \|", recipe)
+        assert fila, f"{variable} no está en la tabla de docs/recipes/claude-code-hooks.md"
+        assert float(fila.group(1)) == en_hook, (
+            f"{variable}: la recipe dice {fila.group(1)} y el hook {en_hook}"
+        )
+
+
+def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
+    """La cabecera del hook es lo primero que lee quien lo abre; envejece sola."""
+    fuente = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
+    bajo = _default_del_hook("LD_HOOK_READ_SUGGEST_KB")
+    alto = _default_del_hook("LD_HOOK_READ_STRONG_KB")
+    esperado = (
+        f"LD_HOOK_READ_SUGGEST_KB (default {bajo:g} KB) y "
+        f"LD_HOOK_READ_STRONG_KB (default {alto:g} KB)"
+    )
+    assert esperado in fuente, f"el docstring del hook no dice «{esperado}»"
