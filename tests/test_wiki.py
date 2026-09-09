@@ -30,6 +30,8 @@ WORKFLOW = RAIZ / ".github" / "workflows" / "wiki.yml"
 from local_delegate import checks
 
 _GRUPOS_DE_LA_TABLA = {"Entorno", "Andamiaje", "Servicios", "Backend"}
+_NUMERO_DE_TOOLS = {10: "diez", 11: "once", 12: "doce", 13: "trece", 14: "catorce"}
+
 _NUMERO_DE_CHECKS = {
     15: "quince",
     16: "dieciséis",
@@ -228,3 +230,51 @@ def test_la_wiki_dice_cuantas_comprobaciones_hay_de_verdad():
     texto = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
     frase = f"las {cuantas} piezas"
     assert frase in texto, f"la wiki no dice «{frase}»; hay {len(checks.CHECKS)} comprobaciones"
+
+
+def _tools_del_servidor() -> list[str]:
+    """Los nombres que el servidor MCP expone de verdad, no los que creemos que expone."""
+    import asyncio
+
+    from local_delegate import server
+
+    return sorted(t.name for t in asyncio.run(server.mcp.list_tools()))
+
+
+def _tools_documentadas() -> list[str]:
+    """Las que `Tools.md` documenta con su propia sección `## \\`local_x\\``."""
+    texto = (WIKI / "Tools.md").read_text(encoding="utf-8")
+    return sorted(re.findall(r"^## `(local_\w+)`", texto, re.MULTILINE))
+
+
+def test_el_catalogo_documenta_todas_las_tools_y_ninguna_de_mas():
+    """La página de tools envejece con cada tool nueva, así que no puede depender de acordarse.
+
+    Es la misma medicina que la tabla del doctor: la wiki se comparó contra el registro real y
+    resultó llevar cuatro versiones desfasada. Aquí la fuente es `server.mcp.list_tools()`, o sea
+    lo que el cliente MCP ve de verdad — añadir una tool sin documentarla pone el CI en rojo en el
+    mismo PR que la introduce, y quitar una deja la sección huérfana a la vista.
+    """
+    del_servidor = _tools_del_servidor()
+    documentadas = _tools_documentadas()
+
+    faltan = [t for t in del_servidor if t not in documentadas]
+    sobran = [t for t in documentadas if t not in del_servidor]
+    assert not faltan, f"tools sin sección en Tools.md: {faltan}"
+    assert not sobran, f"secciones de Tools.md sin tool detrás: {sobran}"
+
+
+def test_el_catalogo_dice_cuantas_tools_hay_de_verdad():
+    """El número escrito con letra en la entradilla y en el índice de la wiki."""
+    cuantas = _NUMERO_DE_TOOLS[len(_tools_del_servidor())]
+    assert f"Las **{cuantas}** tools" in (WIKI / "Tools.md").read_text(encoding="utf-8")
+    assert f"las {cuantas} tools" in (WIKI / "Home.md").read_text(encoding="utf-8")
+
+
+def test_la_tabla_de_un_vistazo_lista_todas_las_tools():
+    """La tabla índice y las secciones son dos listas del mismo conjunto: se desincronizan solas."""
+    texto = (WIKI / "Tools.md").read_text(encoding="utf-8")
+    tabla = re.findall(r"^\| \[`(local_\w+)`\]", texto, re.MULTILINE)
+    assert sorted(tabla) == _tools_del_servidor(), (
+        f"la tabla «De un vistazo» no cuadra con el servidor: {sorted(tabla)}"
+    )

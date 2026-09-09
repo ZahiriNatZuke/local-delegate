@@ -6,6 +6,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **La wiki tiene por fin una página de catálogo de tools** (`docs/wiki/Tools.md`). Hasta ahora las
+  once tools `local_*` solo estaban en la tabla resumen del README y en la skill: la wiki no las
+  nombraba en ningún sitio, así que `local_boilerplate` no aparecía en toda la documentación
+  extendida. La página lleva, por tool, la firma exacta, qué devuelve, qué modelo la atiende y qué
+  pasa cuando la entrada no cabe, más la letra pequeña que solo estaba en el código:
+
+  - que **map-reduce y troceado no son lo mismo** —el primero reduce (`local_summarize`,
+    `local_lint_summary`, `local_commit_msg`) y el segundo transforma trozo a trozo
+    (`local_delegate`, `local_translate`), porque fundir una traducción perdería contenido—;
+  - que `local_extract` **trunca** y lo dice dentro del propio objeto, con la clave reservada
+    `_local_delegate`;
+  - que `local_status` no llama al backend de chat, así que **no** prueba que la credencial sirva;
+  - y que un diff que no cabe da un mensaje de commit que solo describe el principio del cambio.
+
+  El catálogo sale de `server.mcp.list_tools()`, o sea de lo que el cliente MCP ve de verdad. Tres
+  tests nuevos en `tests/test_wiki.py` lo mantienen así: uno compara las secciones con el servidor
+  en los dos sentidos, otro la tabla índice, y otro el número escrito con letra. Añadir una tool
+  sin documentarla pone el CI en rojo en el mismo PR que la introduce.
+
 ### Fixed
 - **La wiki llevaba cuatro versiones sin actualizarse, y ahora hay quien lo note.** `docs/wiki/`
   no se tocaba desde la 0.23.0: la tabla de comprobaciones de `doctor` tenía **diecisiete** filas
