@@ -199,7 +199,12 @@ def test_reinstalar_es_idempotente_y_conserva_lo_ajeno(tmp_path):
 
 
 def test_nunca_se_escribe_una_clave_de_primer_nivel_ajena_al_esquema(tmp_path):
-    """Una clave desconocida hace que opencode **no arranque** (`ConfigInvalidError`, medido)."""
+    """Escribir fuera de `mcp` puede dejar al usuario sin cliente, y cuánto depende de la versión.
+
+    Medido el 2026-09-08 con los dos binarios el mismo día: opencode 1.18.11 rechaza el config
+    entero ante una clave de primer nivel desconocida (`Unrecognized key`) y 1.18.29 ya la tolera.
+    La invariante se queda en su forma estricta porque la versión la elige el usuario.
+    """
     home = tmp_path / "home"
     d = _oc(home)
     assert _install(home) == 0

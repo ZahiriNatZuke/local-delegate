@@ -195,9 +195,11 @@ REPAIRS: tuple[Repair, ...] = (
     # usuario. Pisarla sería el fallo contra el que existe la regla de `unknown`.
     Repair("scaffold.mcp_codex", (checks.MISSING,), frozenset({"mcp"}), frozenset({"codex"})),
     # opencode NO tiene un `warn` equivalente al de Codex, y no es un olvido: su entrada se
-    # identifica por la clave `mcp["local-delegate"]` y no por marcadores —una clave desconocida
-    # impide arrancar el cliente—, así que no hay forma de distinguir la nuestra de una escrita a
-    # mano. Es la misma situación que con Claude Code, y se trata igual: solo se repone si falta.
+    # identifica por la clave `mcp["local-delegate"]` y no por marcadores —no escribimos ninguna
+    # clave de primer nivel ajena al esquema; ver el porqué, y su letra pequeña por versión, en
+    # `install._escanear_jsonc` y alrededores—, así que no hay forma de distinguir la nuestra de
+    # una escrita a mano. Es la misma situación que con Claude Code, y se trata igual: solo se
+    # repone si falta.
     Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
 )
 

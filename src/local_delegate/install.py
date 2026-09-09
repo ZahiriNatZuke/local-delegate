@@ -484,8 +484,13 @@ def remove_codex_mcp(text: str) -> str:
 # --- Entrada del servidor MCP en opencode ------------------------------------
 # opencode se parece a Claude Code y NO a Codex en lo único que aquí importa: la entrada se
 # identifica por su **clave** (`mcp["local-delegate"]`) y no por marcadores. No es una preferencia:
-# está medido que una clave de primer nivel desconocida hace que opencode **no arranque**
-# (`ConfigInvalidError`), así que un `# local-delegate:begin` propio dejaría al usuario sin cliente.
+# un `# local-delegate:begin` propio sería una clave de primer nivel ajena al esquema, y eso puede
+# dejar al usuario sin cliente. Cuidado con la fuerza de esa afirmación, porque **depende de la
+# versión**: medido el 2026-09-08 con los dos binarios a la vez, 1.18.11 rechaza una clave de
+# primer nivel desconocida (`Unrecognized key`) y 1.18.29 ya la tolera. La regla se mantiene
+# igualmente —escribir solo dentro de `mcp` es lo que no depende de qué versión tenga el usuario—
+# y lo que NO ha cambiado es el castigo por una entrada mal formada DENTRO de `mcp`: las dos
+# versiones se niegan a arrancar si le falta `type` o `command`, o si `command` no es un array.
 #
 # Consecuencia que conviene decir en voz alta: aquí NO se puede distinguir una entrada nuestra de
 # una que escribió el usuario a mano, así que tampoco hay pregunta previa como la de
