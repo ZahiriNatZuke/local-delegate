@@ -3,9 +3,9 @@
   "slug": "opencode-tercer-cliente",
   "title": "opencode como tercer cliente de install",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-08-02T15:45:00.000Z",
-  "updatedAt": "2026-08-02T21:30:00.000Z",
+  "updatedAt": "2026-09-09T01:10:07.588Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": "2026-08-02T17:40:00.000Z",
-      "evidence": "pytest 710 passed 2 skipped en Windows (en Linux eran 701 passed 4 skipped con 1 failed ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK en linux y en win32 (ampliado para cubrir opencode); 11 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. Dos revisiones del diff encontraron dos defectos reales, ambos corregidos con test: la lectura tolerante que confundia vacio con ilegible, y el falso OK del check de la skill (miraba solo la de Claude Code mientras install la escribia tambien en opencode, asi que doctor decia 'instalada' con la de opencode borrada y update no la reponia)",
-      "actor": "pending"
+      "status": "approved",
+      "updatedAt": "2026-09-09T01:03:02.365Z",
+      "evidence": "Revalidado el 2026-09-08 contra el arbol de hoy, sin reutilizar la evidencia de agosto: pytest 794 passed 2 skipped (los 36 propios del change en verde); ruff check All checks passed; ruff format 77 files already formatted; extract_dashboard_js exit 0; check_install_e2e instalador OK en win32. Ademas los 8 escenarios de aceptacion reejecutados end-to-end con el CLI real sobre HOMEs simulados: 26/26 comprobaciones en verde, con control positivo (--no-mcp --no-skill no deja fichero, asi que un OK vacio se caeria solo). REQ-030 medido y no razonado: con la entrada MCP y la skill borradas, doctor las da por FALT y update las repone.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": "",
-      "actor": "pending"
+      "status": "approved",
+      "updatedAt": "2026-09-09T01:03:13.418Z",
+      "evidence": "Revision fresca contra los 34 requisitos con el codigo de main de hoy. Verificado contra el binario REAL de opencode 1.18.29 (agosto fue 1.18.11 en Linux; esto es Windows): debug paths resuelve a <home>/.config/opencode; opencode mcp add registra la entrada conservando comentario y clave theme del usuario; reejecutar deja una sola entrada; nuestra entrada escrita a mano coincide clave por clave con la que escribe la CLI (lo que sostiene no escribir enabled: true); opencode mcp list dice local-delegate connected. REQ-034 remedido: el initialize declara solo roots, protocolo 2025-11-25, sin elicitation. Dos derivas deliberadas ya documentadas: enabled (REQ-007/008) quitado por medicion, y diecisiete->dieciocho checks (REQ-029/032) por un check posterior, con el test del docstring en verde. Un hallazgo: la justificacion de REQ-011 caduco con la version del cliente -- 1.18.11 rechaza una clave de primer nivel desconocida (exit 1, Unrecognized key) y 1.18.29 ya no. La medicion de agosto era correcta; el cliente relajo la validacion. El comportamiento del paquete no cambia (no escribir claves ajenas sigue siendo lo correcto); lo que queda desactualizado son tres frases de documentacion, que son un cambio aparte. Todo en verification.md.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": "",
-      "actor": "pending"
+      "status": "approved",
+      "updatedAt": "2026-09-09T01:05:52.076Z",
+      "evidence": "Handoff actualizado al estado de cierre (suite del cierre, verificacion contra 1.18.29 en Windows, y los dos cabos que NO pertenecen a este change). Nota durable en el vault: projects/local-delegate/jornada-2026-09-08-la-justificacion-que-caduco.md, con el metodo (instalar tambien la version vieja para distinguir 'me equivoque' de 'el mundo cambio') y las dos trampas de medicion. Puntero anadido a la memoria del proyecto en Claude Code. Sin secretos ni datos personales: el escenario del token comprueba justamente que el valor NO llega a disco.",
+      "actor": "user"
     }
   },
   "history": [
@@ -101,6 +101,51 @@
       "type": "note",
       "at": "2026-08-02T21:30:00.000Z",
       "note": "Revision del diff desde Windows: dos correcciones. (1) Falso OK del check de la skill, que miraba solo ~/.claude/skills mientras plan_install la escribia tambien en opencode: con Claude Code presente, doctor decia 'instalada' con la de opencode borrada y update no la reponia. Corregido en _probe_skill (recorre _clientes) y en el Repair (PRESENT en vez de claude); anadido REQ-030b. Un test pasaba por la guarda equivocada (se llamaba 'solo Codex' con opencode instalado por defecto). Tres mutantes nuevos, cada uno cazado. (2) Cuatro ficheros habian pasado de CRLF a LF al editarse desde un runner Linux, inflando el diff de 2213 a 4340 lineas; devueltos a CRLF. Verificado en Windows: 710 passed 2 skipped, ruff limpio, check_install_e2e OK en win32"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-09T01:03:02.365Z",
+      "evidence": "Revalidado el 2026-09-08 contra el arbol de hoy, sin reutilizar la evidencia de agosto: pytest 794 passed 2 skipped (los 36 propios del change en verde); ruff check All checks passed; ruff format 77 files already formatted; extract_dashboard_js exit 0; check_install_e2e instalador OK en win32. Ademas los 8 escenarios de aceptacion reejecutados end-to-end con el CLI real sobre HOMEs simulados: 26/26 comprobaciones en verde, con control positivo (--no-mcp --no-skill no deja fichero, asi que un OK vacio se caeria solo). REQ-030 medido y no razonado: con la entrada MCP y la skill borradas, doctor las da por FALT y update las repone.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-09-09T01:03:13.418Z",
+      "evidence": "Revision fresca contra los 34 requisitos con el codigo de main de hoy. Verificado contra el binario REAL de opencode 1.18.29 (agosto fue 1.18.11 en Linux; esto es Windows): debug paths resuelve a <home>/.config/opencode; opencode mcp add registra la entrada conservando comentario y clave theme del usuario; reejecutar deja una sola entrada; nuestra entrada escrita a mano coincide clave por clave con la que escribe la CLI (lo que sostiene no escribir enabled: true); opencode mcp list dice local-delegate connected. REQ-034 remedido: el initialize declara solo roots, protocolo 2025-11-25, sin elicitation. Dos derivas deliberadas ya documentadas: enabled (REQ-007/008) quitado por medicion, y diecisiete->dieciocho checks (REQ-029/032) por un check posterior, con el test del docstring en verde. Un hallazgo: la justificacion de REQ-011 caduco con la version del cliente -- 1.18.11 rechaza una clave de primer nivel desconocida (exit 1, Unrecognized key) y 1.18.29 ya no. La medicion de agosto era correcta; el cliente relajo la validacion. El comportamiento del paquete no cambia (no escribir claves ajenas sigue siendo lo correcto); lo que queda desactualizado son tres frases de documentacion, que son un cambio aparte. Todo en verification.md.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-09-09T01:05:52.076Z",
+      "evidence": "Handoff actualizado al estado de cierre (suite del cierre, verificacion contra 1.18.29 en Windows, y los dos cabos que NO pertenecen a este change). Nota durable en el vault: projects/local-delegate/jornada-2026-09-08-la-justificacion-que-caduco.md, con el metodo (instalar tambien la version vieja para distinguir 'me equivoque' de 'el mundo cambio') y las dos trampas de medicion. Puntero anadido a la memoria del proyecto en Claude Code. Sin secretos ni datos personales: el escenario del token comprueba justamente que el valor NO llega a disco.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-09-09T01:06:10.705Z",
+      "reason": "Evidencia revalidada el 2026-09-08 (suite, ocho escenarios e2e y binario real de opencode 1.18.29 en Windows); pasa a revision del resultado contra la spec."
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-09-09T01:10:07.345Z",
+      "reason": "Revision del resultado hecha por medicion: 26/26 escenarios e2e, 9/10 comprobaciones contra el binario real 1.18.29, y las tres desviaciones de la spec resueltas y documentadas en verification.md."
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-09-09T01:10:07.588Z",
+      "reason": "Cinco gates aprobados con evidencia revalidada el 2026-09-08 contra el arbol y el binario de hoy. El codigo lleva en main desde el PR #123."
     }
   ]
 }

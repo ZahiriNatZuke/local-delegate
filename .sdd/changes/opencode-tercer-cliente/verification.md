@@ -170,3 +170,101 @@ inspección directa del artefacto:
 - **El camino por CLI bajo `--home`.** Está apagado a propósito (`use_cli=False` con HOME simulado)
   para que la suite no dependa de qué binarios haya en la máquina. Se ejercitó a mano, con el
   binario real, llamando a `_register_opencode_mcp` directamente (punto 2 de arriba).
+
+## Revalidación para el cierre (2026-09-08)
+
+El código lleva en `main` desde el PR #123 y la evidencia de arriba es del 2 de agosto. Antes de
+cerrar los gates se **volvió a medir todo**, contra el árbol de hoy y contra el binario de hoy. No
+se reutilizó ni una línea de la evidencia anterior.
+
+### Suite y estática, hoy
+
+```
+uv run pytest -q             → 794 passed, 2 skipped
+uv run pytest tests/test_install_opencode.py -q → 36 passed
+uv run ruff check .          → All checks passed!
+uv run ruff format --check   → 77 files already formatted
+scripts/extract_dashboard_js.py → exit 0
+scripts/check_install_e2e.py    → instalador OK en win32
+```
+
+Los `710 passed` de agosto eran de un árbol con 84 tests menos. Los 36 propios de este change
+siguen todos en verde.
+
+### Los ocho escenarios de aceptación, reejecutados
+
+Corridos con el CLI de verdad sobre HOMEs simulados, comprobando el artefacto en disco:
+**26 de 26 comprobaciones en verde**. Cubren los siete escenarios de `spec.md` que no dependen del
+binario del cliente: solo-opencode (sin crear `.claude` ni `.codex`), idempotencia con `theme` y
+entrada MCP ajena, comentarios sin CLI (fichero intacto byte a byte, exit code sin subir, y el
+aviso con ruta + motivo + qué hacer), HTTP con `{env:LOCAL_DELEGATE_WEB_TOKEN}` y **sin** el valor
+del token en disco, desinstalación que deja la entrada ajena y el `theme`, config roto que no se
+toca, y `--home` con `XDG_CONFIG_HOME` puesta escribiendo dentro del árbol simulado.
+
+**Control positivo:** con `--no-mcp --no-skill` el fichero de config no llega a existir, así que
+una comprobación que diera `ok` sin haberse escrito nada se caería sola. Se verificó.
+
+**REQ-030, medido y no razonado:** con la entrada MCP y la skill borradas a mano, `doctor` las da
+las dos por `[FALT]` y `update` las repone; el `doctor` posterior las da por `[ OK ]`. De paso se
+observó que `update` repone en el transporte que corresponde a **la máquina** (aquí `http`, con el
+daemon levantado) aunque la instalación original fuera `stdio`. **No es de este change**: se
+comprobó que hace exactamente lo mismo con la entrada de Claude Code.
+
+### Contra el binario real, hoy y en Windows
+
+En agosto esto se midió en Linux contra opencode **1.18.11**. Se repitió contra **1.18.29**, que es
+lo que instala hoy `npm i opencode-ai@latest`, y en Windows, que en agosto era justo lo que faltaba:
+
+| Comprobación | Resultado |
+|---|---|
+| `debug paths` apunta a `<home>/.config/opencode` | OK |
+| `opencode mcp add` con nuestros args registra la entrada | OK |
+| el comentario y la clave `theme` del usuario sobreviven | OK |
+| reejecutar deja **una sola** entrada | OK |
+| nuestra entrada escrita a mano == la que escribe la CLI | OK (mismas claves y mismo contenido) |
+| `opencode mcp list` → `✓ local-delegate connected` | OK |
+
+La quinta fila es la que sostiene la decisión de **no escribir `"enabled": true`**: los dos caminos
+siguen dejando exactamente la misma forma en disco.
+
+**REQ-034 remedido:** el `initialize` de 1.18.29 declara `capabilities {"roots":{}}`, protocolo
+`2025-11-25`, `clientInfo {"name":"opencode","version":"1.18.29"}`. Sigue **sin** `elicitation`, así
+que la documentación no promete nada falso.
+
+### Un hallazgo: la justificación de REQ-011 caducó con la versión del cliente
+
+`spec.md` (REQ-011), el docstring de `install.py` y `docs/wiki/Integration-install.md` dicen que una
+clave de primer nivel desconocida hace que opencode **no arranque** (`ConfigInvalidError`), y que
+por eso no existe un `--force-mcp-opencode`. Medido hoy con los dos binarios, mismo config y mismos
+subcomandos:
+
+| opencode | `{"clave_que_no_existe": true}` |
+|---|---|
+| **1.18.11** (el de agosto) | `exit=1`, «Unrecognized key» en `mcp list`, `debug config` y `models` |
+| **1.18.29** (hoy) | `exit=0`, sin queja: la tolera |
+
+La medición de agosto **era correcta**; el cliente relajó la validación entre las dos versiones.
+
+Dos avisos sobre cómo se midió, porque la primera pasada no discriminaba:
+
+- **El `exit code` no sirve de señal**: con un JSON sintácticamente roto, opencode imprime
+  `Error: Config file ... is not valid JSON(C)` y aun así **devuelve 0**. Hay que mirar la salida.
+  (Es el mismo aprendizaje que ya está en el código para `_register_opencode_mcp`.)
+- **Con un control positivo que tampoco discriminaba** —`{"theme": 12345}`, tipo equivocado en una
+  clave que sí existe— **ninguna** de las dos versiones se queja. La validación que existía en
+  1.18.11 era específica de claves desconocidas, no del esquema entero.
+
+**Qué cambia y qué no.** El comportamiento del paquete **no cambia**: no escribir ninguna clave
+ajena a `mcp` sigue siendo lo correcto, ahora por prudencia en vez de por obligación, y la ausencia
+de `--force-mcp-opencode` se sostiene igual por el otro motivo, que sigue en pie: sin marcadores no
+hay forma de distinguir nuestra entrada de una escrita a mano. Lo que queda desactualizado es la
+**justificación escrita**, atada a una versión concreta del cliente. Corregir esas tres frases es un
+cambio de documentación independiente, no un defecto de este change.
+
+### Deriva respecto a la spec, ya conocida y deliberada
+
+- **`enabled`** (REQ-007/008): la spec lo pedía; se quitó al medir que la CLI del cliente tampoco lo
+  escribe. Reconfirmado hoy: las dos formas coinciden.
+- **«diecisiete»** (REQ-029/032): hoy el `doctor` tiene **dieciocho** checks porque después de este
+  change entró uno más. El requisito de fondo —que las frases de tamaño digan el número de verdad—
+  lo guarda `test_el_docstring_dice_cuantos_checks_hay_de_verdad`, que está en verde.
