@@ -25,6 +25,20 @@ _spec.loader.exec_module(sync_wiki)
 WIKI = RAIZ / "docs" / "wiki"
 WORKFLOW = RAIZ / ".github" / "workflows" / "wiki.yml"
 
+# La tabla del doctor de `Integration-install.md` se compara contra el registro real de
+# comprobaciones, así que este módulo importa `checks`. Los grupos son la primera columna.
+from local_delegate import checks
+
+_GRUPOS_DE_LA_TABLA = {"Entorno", "Andamiaje", "Servicios", "Backend"}
+_NUMERO_DE_CHECKS = {
+    15: "quince",
+    16: "dieciséis",
+    17: "diecisiete",
+    18: "dieciocho",
+    19: "diecinueve",
+    20: "veinte",
+}
+
 # `[texto](destino)`, quedándose con el destino.
 ENLACE_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
@@ -173,3 +187,44 @@ def test_los_enlaces_entre_paginas_apuntan_a_paginas_que_existen():
                 rotos.append(f"{pagina.name} -> {destino}")
 
     assert not rotos, f"enlaces a páginas que no existen: {rotos}"
+
+
+def _filas_de_la_tabla_de_checks() -> list[tuple[str, str]]:
+    """`(grupo, comprobación)` de la tabla del doctor en `Integration-install.md`."""
+    texto = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
+    filas = []
+    for linea in texto.splitlines():
+        if not linea.startswith("|"):
+            continue
+        celdas = [c.strip() for c in linea.strip("|").split("|")]
+        if len(celdas) >= 2 and celdas[0] in _GRUPOS_DE_LA_TABLA:
+            filas.append((celdas[0], celdas[1]))
+    return filas
+
+
+def test_la_tabla_del_doctor_lista_todas_las_comprobaciones():
+    """La wiki es la única superficie del doctor que no tenía guardián, y se desfasó.
+
+    `checks.py` sí lo tiene —`test_el_docstring_dice_cuantos_checks_hay_de_verdad`— y por eso sus
+    frases de tamaño estaban al día. La wiki no, así que el check `service.daemon_auth` de la
+    0.26.0 nunca llegó a la tabla y el texto siguió diciendo «dieciséis» con dieciocho checks en
+    el registro. Medido el 2026-09-08: la tabla tenía diecisiete filas.
+
+    Este test compara la tabla contra el registro **real**, que es la única fuente: añadir un
+    check y no documentarlo pone la wiki en rojo en el mismo PR que lo introduce.
+    """
+    titulos_wiki = [titulo for _grupo, titulo in _filas_de_la_tabla_de_checks()]
+    titulos_codigo = [c.title for c in checks.CHECKS]
+
+    faltan = [t for t in titulos_codigo if t not in titulos_wiki]
+    sobran = [t for t in titulos_wiki if t not in titulos_codigo]
+    assert not faltan, f"comprobaciones sin fila en la wiki: {faltan}"
+    assert not sobran, f"filas de la wiki que ya no existen en checks.py: {sobran}"
+
+
+def test_la_wiki_dice_cuantas_comprobaciones_hay_de_verdad():
+    """El número escrito con letra envejece solo; que lo cuente el programa."""
+    cuantas = _NUMERO_DE_CHECKS[len(checks.CHECKS)]
+    texto = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
+    frase = f"las {cuantas} piezas"
+    assert frase in texto, f"la wiki no dice «{frase}»; hay {len(checks.CHECKS)} comprobaciones"

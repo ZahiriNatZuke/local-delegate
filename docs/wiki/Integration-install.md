@@ -72,11 +72,16 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
   (`opencode mcp add`, que los conserva), y cuando esa CLI no está y el fichero tiene comentarios
   —o no se puede parsear— la entrada MCP **no se escribe**: se avisa con la ruta y se sigue con el
   resto de componentes. Instalar la CLI de opencode y repetir el `install` lo resuelve.
-- **En opencode nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel
-  desconocida hace que opencode **no arranque** (`ConfigInvalidError`), así que ahí no hay
-  marcadores `local-delegate:begin/end`: la entrada se identifica por su nombre, como en Claude
-  Code. Consecuencia: en opencode no hay pregunta previa equivalente a `--force-mcp-codex`, porque
-  no hay forma de distinguir una entrada nuestra de una que escribiste tú.
+- **En opencode nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel ajena al
+  esquema puede dejar el cliente sin arrancar, y **cuánto** depende de su versión: medido el
+  2026-09-08 con los dos binarios a la vez, opencode `1.18.11` rechaza el config entero
+  (`Unrecognized key`) y `1.18.29` ya tolera esa clave. Como la versión la eliges tú y no nosotros,
+  la regla se mantiene en su forma estricta; lo que **no** ha cambiado en ninguna versión es que
+  una entrada mal formada *dentro* de `mcp` —sin `type`, sin `command`, o con `command` que no sea
+  un array— sí impide arrancar. Por eso ahí no hay marcadores `local-delegate:begin/end`: la
+  entrada se identifica por su nombre, como en Claude Code. Consecuencia: en opencode no hay
+  pregunta previa equivalente a `--force-mcp-codex`, porque no hay forma de distinguir una entrada
+  nuestra de una que escribiste tú.
 - **Reversible.** `uninstall` borra los directorios propios y quita solo sus entradas.
 
 ## Comprobarlo desde el propio cliente
@@ -167,7 +172,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las dieciséis piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las dieciocho piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -195,7 +200,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
 | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
-| Andamiaje | skill | `~/.claude/skills/delegacion-local/SKILL.md` |
+| Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
 | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
@@ -203,6 +208,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
 | Servicios | backend | `BASE_URL/models` |
 | Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
+| Servicios | token del puerto del daemon | la **otra** puerta del mismo camino: si el puerto del daemon exige token, si las entradas MCP en modo `http` lo llevan. Pregunta al puerto y compara con lo que llevan las entradas de los tres clientes; sin cabecera, `warn` nombrando al cliente. Existe porque `install` sin `--web-token-env` deja la entrada sin `Authorization` y el cliente en `401` sin que nada lo dijera |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |
 

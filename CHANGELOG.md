@@ -4,6 +4,34 @@ Todos los cambios notables de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Fixed
+- **La wiki llevaba cuatro versiones sin actualizarse, y ahora hay quien lo note.** `docs/wiki/`
+  no se tocaba desde la 0.23.0: la tabla de comprobaciones de `doctor` tenía **diecisiete** filas
+  con dieciocho checks en el registro —faltaba `service.daemon_auth`, el «token del puerto del
+  daemon» que nació en la 0.26.0— y el texto seguía prometiendo «las dieciséis piezas». La fila de
+  la skill también describía solo la de Claude Code, cuando desde la 0.19.0 se escribe también en
+  opencode.
+
+  Lo que lo dejó pasar es que `checks.py` **sí** tenía guardián (sus frases de tamaño estaban al
+  día) y la wiki no. Ahora `tests/test_wiki.py` compara la tabla contra `checks.CHECKS` fila por
+  fila y comprueba el número escrito con letra: añadir un check sin documentarlo pone el CI en
+  rojo en el mismo PR que lo introduce.
+
+- **Una justificación medida también caduca, y esta caducó.** El código, la wiki y el docstring de
+  su test decían que una clave de primer nivel desconocida hace que opencode **no arranque**
+  (`ConfigInvalidError`). Medido el 2026-09-08 con los dos binarios el mismo día: `1.18.11`
+  rechaza el config entero (`Unrecognized key`, exit 1) y **`1.18.29` ya la tolera**. La medición
+  original era correcta; el cliente relajó la validación.
+
+  **No cambia el comportamiento del paquete**: se sigue escribiendo solo dentro de `mcp`, ahora
+  por prudencia —la versión la elige el usuario— y porque lo que **no** ha cambiado en ninguna de
+  las dos versiones es que una entrada mal formada *dentro* de `mcp` (sin `type`, sin `command`, o
+  con `command` que no sea un array) sí impide arrancar. Tampoco cambia la ausencia de
+  `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
+  de distinguir nuestra entrada de una escrita a mano.
+
 ## [0.27.0] - 2026-09-08
 
 ### Changed
