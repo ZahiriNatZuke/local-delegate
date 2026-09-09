@@ -1115,3 +1115,49 @@ def test_una_entrada_stdio_no_cuenta_como_ciega(tmp_path, monkeypatch):
     result = result_for("service.daemon_auth", ctx)
 
     assert "Codex" not in result.detail
+
+
+def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
+    """`__pycache__` aparece en cuanto los hooks se ejecutan una vez, y no es un script.
+
+    No es cosmético: **ese número es justo el que se mira para confirmar que un script retirado
+    desapareció** —así se verificó la retirada de `output_policy.py` y compañía en la 0.27.0—, y
+    con un directorio de más el check afirmaba lo contrario de lo que había pasado. Medido en la
+    máquina real: decía «4 script(s)» donde había 3.
+    """
+    home = make_home(tmp_path)
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    scripts = sorted(p.name for p in hooks_dir.iterdir() if p.suffix == ".py")
+
+    antes = result_for("scaffold.hook_files", make_ctx(home))
+    assert antes.status == checks.OK
+    assert f"{len(scripts)} script(s)" in antes.detail, antes.detail
+
+    # Lo que hace Python en cuanto el hook corre una vez.
+    pycache = hooks_dir / "__pycache__"
+    pycache.mkdir()
+    (pycache / "hook_common.cpython-311.pyc").write_bytes(b"\x00")
+
+    despues = result_for("scaffold.hook_files", make_ctx(home))
+    assert despues.status == checks.OK
+    assert f"{len(scripts)} script(s)" in despues.detail, (
+        f"el __pycache__ se coló en el conteo: {despues.detail}"
+    )
+
+
+def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
+    """Control del test de arriba: sin esto, un conteo clavado a mano lo dejaría en verde.
+
+    Se añade un `.py` en vez de borrar uno porque el HOME de pruebas tiene **un solo** script (el
+    de `_HOOK_EVENTS`), y quitarlo dispararía el `warn` de «faltan scripts», que es otro camino y
+    no diría nada del conteo.
+    """
+    home = make_home(tmp_path)
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    antes = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
+
+    (hooks_dir / "hook_common.py").write_text("# ayudante", encoding="utf-8")
+
+    result = result_for("scaffold.hook_files", make_ctx(home))
+    assert result.status == checks.OK
+    assert f"{antes + 1} script(s)" in result.detail, result.detail

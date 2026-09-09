@@ -6,6 +6,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El check `hooks copiados` contaba `__pycache__` como si fuera un script.** Decía «4 script(s)»
+  donde había 3, porque contaba las entradas del directorio y Python deja ahí su caché en cuanto
+  los hooks se ejecutan una vez. No es cosmético: **ese número es justo el que se mira para
+  confirmar que un script retirado desapareció** —así se verificó la retirada de `output_policy.py`
+  y compañía en la 0.27.0—, así que un directorio de más hacía que el check afirmara lo contrario
+  de lo que había pasado.
+
+  Se cuentan los `.py`. Medido antes de tocar nada sobre los **tres** probes que listan un
+  directorio: `scaffold.hook_orphans` y `scaffold.skill` no tenían el defecto —usan la lista para
+  saber si el directorio existe, no para contar—, así que el arreglo es de un solo sitio y no de
+  tres. Dos tests nuevos, uno de ellos el control que impide que el otro pase en vacío.
+
 ### Changed
 - **El hook de lectura empieza a avisar a los 8 KB y no a los 32, porque el aviso no se ignoraba:
   no llegaba.** La pregunta era por qué el asistente no delega cuando toca, y la respuesta que

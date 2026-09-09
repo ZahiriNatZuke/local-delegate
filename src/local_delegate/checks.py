@@ -582,7 +582,12 @@ def _probe_hook_files(ctx: Context) -> Result:
     faltan = [name for name in expected if name not in entries]
     if faltan:
         return Result(WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(faltan)}", INSTALL_HINT)
-    return Result(OK, f"{len(entries)} script(s) en {ctx.hooks_dir}")
+    # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
+    # Python deja ahí un `__pycache__/` y el conteo decía «4 script(s)» donde hay 3. No es cosmético
+    # —es JUSTO el número que se mira para confirmar que un script retirado desapareció—, y con un
+    # directorio de más el check afirmaba lo contrario de lo que había pasado.
+    scripts = [name for name in entries if name.endswith(".py")]
+    return Result(OK, f"{len(scripts)} script(s) en {ctx.hooks_dir}")
 
 
 def _probe_hook_orphans(ctx: Context) -> Result:
