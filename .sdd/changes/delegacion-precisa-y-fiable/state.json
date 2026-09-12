@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "slug": "delegacion-precisa-y-fiable",
+  "title": "Delegacion precisa y fiable: deteccion de fallos, enrutado por reglas, catalogo de modelos y respaldo",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-09-11T23:51:58.961Z",
+  "updatedAt": "2026-09-12T02:07:55.756Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-12T01:52:07.375Z",
+      "evidence": "Revision adversarial de la spec (2026-09-11). Seis hallazgos bloqueantes encontrados y corregidos en spec.md y brief.md: (1) REQ-F1-4 reintroducia el mecanismo de reescritura de salida retirado en la 0.27.0 con medicion en contra (CHANGELOG.md:127-141: PostToolUse llega tarde, updatedInput se salta el allowlist) -> queda SUSPENDIDO y fuera del plan hasta P-7; (2) la regla cerraba solo la tool Read dejando cat/Get-Content/rtk read/otros MCP abiertos -> nuevo REQ-F1-9 con superficie enumerada y P-6 resuelta por el usuario: se cierran Read y las lecturas completas de shell, las tools de otros MCP solo se miden, y los tres caminos se cuentan siempre; (3) contradiccion literal REQ-F0-3 vs non-goal heredado sobre retry_exhausted -> el non-goal queda tachado y anulado; (4) contradiccion F0/F3 en ReadTimeout -> REQ-F0-2 pasa a definir dos clases (durante la carga vs modelo cargado), con la atribucion por defecto a capacidad o carga mientras REQ-020 no de patron; (5) F1 no era falsable ni reversible -> REQ-F1-5 exige identificador correlacionable entre telemetry.jsonl y usage-*.jsonl, y nuevos REQ-F1-10 (el bloqueo se cae si el backend no esta vivo), REQ-F1-11 (apagado en caliente, porque la sesion hereda el entorno del lanzador) y REQ-F1-12 (criterio de la quinta medicion y de abandono escrito antes de encender); (6) los 18 requisitos propios no tenian trazabilidad -> tabla nueva con los 24 REQ-F. No bloqueantes corregidos: REQ-F1-2 se reescribe segun lo medido (.md/.txt bloquean; .json/.csv/.log/.yaml e imagenes solo avisan; .csv y .log no tenian ni un aviso en el periodo), nuevo REQ-F0-6 que acota REQ-016, REQ-F1-8 con criterio verificable, nuevo REQ-F2-6 que exige medir el catalogo vigente como linea base, y el escenario de F1 actualizado tras resolverse P-1. Verificado contra el codigo: server.py:605 (AttributeError no capturado), server.py:659-663 (retry_exhausted), suggest_delegate_read.py:145-147 (lista negra de codigo, no lista blanca). Comprobado por programa: 24 de 24 REQ-F con fila de trazabilidad, 20 heredados intactos, cero contradicciones de las detectadas. Quedan abiertas y asignadas P-2 (Claude Desktop, fuera de alcance de F1), P-4 (numeros del enfriamiento, se validan con F2), P-5 (un modelo para varios roles, sale de F2) y P-7 (mecanismo para REQ-F1-4, que sigue suspendido).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-09-12T02:06:20.380Z",
+      "evidence": "Plan aprobado por el usuario (2026-09-11) tras presentarle el alcance y las tres decisiones de diseno. Cubre F0 y F1 en 11 tareas con verificacion y rollback por tarea; F2 y F3 quedan como bloques con entrada, salida y condicion de replanificacion, y vuelven a pasar por el gate cuando les toque. Decisiones validadas: (1) el clasificador de fallos sale a un modulo puro fallos.py, sin red ni estado, que es la primera de las tres capas que F3 necesita; (2) el bloqueo consulta un fichero de salud del backend en vez de pagar un ping HTTP por lectura, y ausente/viejo/ilegible significa no bloquear; (3) en el hook de shell, falso negativo antes que falso positivo: solo formas simples e inequivocas, y con tuberia o encadenado no bloquea y cuenta. El bloqueo nace apagado y se enciende solo cuando este escrito el criterio de exito y de abandono (REQ-F1-12). Hallazgo nuevo incorporado como tarea 4: LD_HOOK_OUTPUT_STATS, LD_HOOK_OUTPUT_UMBRAL_KB, LD_HOOK_OUTPUT_MIN_MUESTRAS y LD_HOOK_OUTPUT_PROPORCION quedaron sin consumidor en la 0.27.0, comprobado por busqueda por programa. Verificado por programa: 24 de 24 REQ-F con tarea asignada en la tabla de cobertura.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-11T23:51:58.961Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-12T01:35:15.415Z",
+      "reason": "Consolidadas tres investigaciones: modelos abiertos, respaldo/OmniRoute y medicion de adopcion sobre 14323 eventos de telemetria; tres defectos verificados por ejecucion"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-12T01:35:15.679Z",
+      "reason": "brief.md y spec.md redactados: 4 fases (F0-F3), 18 requisitos propios mas los 20 heredados, 5 preguntas abiertas pendientes del usuario antes del gate spec"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-12T01:52:07.375Z",
+      "evidence": "Revision adversarial de la spec (2026-09-11). Seis hallazgos bloqueantes encontrados y corregidos en spec.md y brief.md: (1) REQ-F1-4 reintroducia el mecanismo de reescritura de salida retirado en la 0.27.0 con medicion en contra (CHANGELOG.md:127-141: PostToolUse llega tarde, updatedInput se salta el allowlist) -> queda SUSPENDIDO y fuera del plan hasta P-7; (2) la regla cerraba solo la tool Read dejando cat/Get-Content/rtk read/otros MCP abiertos -> nuevo REQ-F1-9 con superficie enumerada y P-6 resuelta por el usuario: se cierran Read y las lecturas completas de shell, las tools de otros MCP solo se miden, y los tres caminos se cuentan siempre; (3) contradiccion literal REQ-F0-3 vs non-goal heredado sobre retry_exhausted -> el non-goal queda tachado y anulado; (4) contradiccion F0/F3 en ReadTimeout -> REQ-F0-2 pasa a definir dos clases (durante la carga vs modelo cargado), con la atribucion por defecto a capacidad o carga mientras REQ-020 no de patron; (5) F1 no era falsable ni reversible -> REQ-F1-5 exige identificador correlacionable entre telemetry.jsonl y usage-*.jsonl, y nuevos REQ-F1-10 (el bloqueo se cae si el backend no esta vivo), REQ-F1-11 (apagado en caliente, porque la sesion hereda el entorno del lanzador) y REQ-F1-12 (criterio de la quinta medicion y de abandono escrito antes de encender); (6) los 18 requisitos propios no tenian trazabilidad -> tabla nueva con los 24 REQ-F. No bloqueantes corregidos: REQ-F1-2 se reescribe segun lo medido (.md/.txt bloquean; .json/.csv/.log/.yaml e imagenes solo avisan; .csv y .log no tenian ni un aviso en el periodo), nuevo REQ-F0-6 que acota REQ-016, REQ-F1-8 con criterio verificable, nuevo REQ-F2-6 que exige medir el catalogo vigente como linea base, y el escenario de F1 actualizado tras resolverse P-1. Verificado contra el codigo: server.py:605 (AttributeError no capturado), server.py:659-663 (retry_exhausted), suggest_delegate_read.py:145-147 (lista negra de codigo, no lista blanca). Comprobado por programa: 24 de 24 REQ-F con fila de trazabilidad, 20 heredados intactos, cero contradicciones de las detectadas. Quedan abiertas y asignadas P-2 (Claude Desktop, fuera de alcance de F1), P-4 (numeros del enfriamiento, se validan con F2), P-5 (un modelo para varios roles, sale de F2) y P-7 (mecanismo para REQ-F1-4, que sigue suspendido).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-12T02:00:47.631Z",
+      "reason": "Plan escrito: F0 y F1 detalladas en 11 tareas con verificacion y rollback; F2 y F3 quedan como bloques con entrada, salida y condicion de replanificacion, porque F3 se escribiria sobre un catalogo que aun no existe y F2 depende de una accion fisica del usuario. Hallazgo nuevo incorporado como tarea 4: las cuatro variables LD_HOOK_OUTPUT_* de config.py:189-195 quedaron sin consumidor cuando la 0.27.0 retiro output_policy.py y output_stats.py. Decisiones de diseno: clasificador puro en modulo propio fallos.py; fichero de salud del backend para que el hook pueda caerse sin pagar un ping HTTP por lectura; y falso negativo antes que falso positivo en el hook de shell. 24 de 24 REQ-F con tarea asignada."
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-12T02:06:20.380Z",
+      "evidence": "Plan aprobado por el usuario (2026-09-11) tras presentarle el alcance y las tres decisiones de diseno. Cubre F0 y F1 en 11 tareas con verificacion y rollback por tarea; F2 y F3 quedan como bloques con entrada, salida y condicion de replanificacion, y vuelven a pasar por el gate cuando les toque. Decisiones validadas: (1) el clasificador de fallos sale a un modulo puro fallos.py, sin red ni estado, que es la primera de las tres capas que F3 necesita; (2) el bloqueo consulta un fichero de salud del backend en vez de pagar un ping HTTP por lectura, y ausente/viejo/ilegible significa no bloquear; (3) en el hook de shell, falso negativo antes que falso positivo: solo formas simples e inequivocas, y con tuberia o encadenado no bloquea y cuenta. El bloqueo nace apagado y se enciende solo cuando este escrito el criterio de exito y de abandono (REQ-F1-12). Hallazgo nuevo incorporado como tarea 4: LD_HOOK_OUTPUT_STATS, LD_HOOK_OUTPUT_UMBRAL_KB, LD_HOOK_OUTPUT_MIN_MUESTRAS y LD_HOOK_OUTPUT_PROPORCION quedaron sin consumidor en la 0.27.0, comprobado por busqueda por programa. Verificado por programa: 24 de 24 REQ-F con tarea asignada en la tabla de cobertura.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-12T02:07:50.198Z",
+      "reason": "Plan presentado al usuario con sus tres decisiones de diseno y el alcance (F0 y F1 detalladas, F2 y F3 como bloques). Revision y visto bueno del usuario"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-12T02:07:55.756Z",
+      "reason": "Visto bueno del usuario al plan; arranca F0 tarea 1: modulo puro fallos.py con test por clase y control positivo"
+    }
+  ]
+}

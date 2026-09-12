@@ -268,3 +268,134 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
         f"LD_HOOK_READ_STRONG_KB (default {alto:g} KB)"
     )
     assert esperado in fuente, f"el docstring del hook no dice «{esperado}»"
+
+
+# --- El bloqueo de F1 -------------------------------------------------------------------------
+#
+# Cuatro mediciones seguidas con adopcion cero, la ultima ya con el aviso acertando el tipo de
+# fichero. La conclusion no fue redactar mejor el aviso, fue dejar de sugerir. Lo que sigue cubre
+# los tres tratos (bloquear, avisar, callar) y las tres formas de apagar el bloqueo.
+
+
+def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
+    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if encendido else "0")
+    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: backend)
+    return _correr_hook(monkeypatch, capsys, tool_input)
+
+
+def _decision(salida: str) -> dict:
+    return json.loads(salida)["hookSpecificOutput"]
+
+
+def test_la_prosa_grande_se_bloquea_y_el_mensaje_dice_por_donde_salir(
+    tmp_path, monkeypatch, capsys
+):
+    """El caso acotado: un `.md` de 40 KB leido entero, con el backend vivo."""
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+
+    decision = _decision(_correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}))
+
+    assert decision["permissionDecision"] == "deny"
+    motivo = decision["permissionDecisionReason"]
+    assert "local_summarize" in motivo, "el bloqueo tiene que nombrar la tool que sirve"
+    assert str(target) in motivo, "y el path, para que llamarla sea copiar y pegar"
+    assert "offset" in motivo, "y la salida de emergencia: leer por franjas"
+
+
+def test_un_json_grande_se_avisa_pero_no_se_bloquea(tmp_path, monkeypatch, capsys):
+    """Control positivo del anterior. Un `state.json` se lee para sacar un valor exacto."""
+    target = tmp_path / "state.json"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+
+    decision = _decision(_correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}))
+
+    assert "permissionDecision" not in decision
+    assert "local_extract" in decision["additionalContext"]
+
+
+def test_el_codigo_sigue_sin_decir_nada(tmp_path, monkeypatch, capsys):
+    """Ni bloqueo ni aviso: el mercado medido es documentacion, no codigo."""
+    target = tmp_path / "servicio.py"
+    target.write_text("x" * 200 * 1024, encoding="utf-8")
+
+    assert _correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}) == ""
+
+
+def test_una_franja_pedida_a_proposito_no_se_bloquea(tmp_path, monkeypatch, capsys):
+    """Es la salida de emergencia que el propio mensaje del bloqueo ofrece: tiene que funcionar."""
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 200 * 1024, encoding="utf-8")
+
+    salida = _correr_con_bloqueo(
+        monkeypatch, capsys, {"file_path": str(target), "offset": 100, "limit": 50}
+    )
+
+    assert salida == ""
+
+
+def test_sin_backend_no_se_bloquea_aunque_toque(tmp_path, monkeypatch, capsys):
+    """Bloquear sin sitio a donde delegar deja al agente sin forma de leer el fichero."""
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+
+    decision = _decision(
+        _correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}, backend=False)
+    )
+
+    assert "permissionDecision" not in decision, "sin backend, la lectura pasa"
+    assert (
+        "Sugerencia" in decision["additionalContext"]
+        or "Recomendacion" in (decision["additionalContext"])
+    )
+
+
+def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
+    """Se enciende cuando este escrito el criterio de la quinta medicion, no antes."""
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.delenv("LD_HOOK_READ_BLOQUEAR", raising=False)
+    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+
+    decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
+
+    assert "permissionDecision" not in decision
+
+
+def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsys):
+    """La variable se consulta en CADA invocacion: un freno que exige reiniciar no es un freno."""
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+
+    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+    assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+
+    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
+    assert "deny" not in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+
+
+def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatch):
+    """Sin esto una medicion no se puede leer: una sesion abierta hereda el entorno del lanzador."""
+    log = tmp_path / "telemetria.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+    target = tmp_path / "informe.md"
+    target.write_text("x" * 40 * 1024, encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO(json.dumps({"session_id": "s-42", "tool_input": {"file_path": str(target)}})),
+    )
+
+    read_hook.main()
+
+    evento = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+    assert evento["session_id"] == "s-42"
+    assert len(evento["version"]) == 8, "la huella del script que corrio"
+    assert evento["blocked"] is True
+    assert len(evento["id"]) == 12, "el identificador que permite cruzarlo con la delegacion"
+    # La telemetria sigue sin llevar rutas ni contenido.
+    assert str(target) not in json.dumps(evento)

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "slug": "fallback-entre-modelos-locales",
+  "title": "Cadena de respaldo entre modelos locales y enfriamiento temporal por modelo",
+  "mode": "standard",
+  "status": "specifying",
+  "createdAt": "2026-09-11T14:55:17.163Z",
+  "updatedAt": "2026-09-11T15:06:44.816Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-11T14:55:17.163Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-11T15:06:44.725Z",
+      "reason": "Mapa de impacto del codigo (fichero:linea) y estudio del diseno de OmniRoute; volcados en research.md"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-11T15:06:44.816Z",
+      "reason": "brief.md y spec.md redactados: 17 requisitos, 12 escenarios, 4 decisiones pendientes del usuario (D-1 a D-4) antes del gate spec"
+    }
+  ]
+}

@@ -109,7 +109,9 @@ def test_read_hook_is_opt_in(tmp_path):
     _install(tmp_path, enable_read_hook=True)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"]["PreToolUse"]}
-    assert matchers == {"Read"}
+    # Los DOS caminos de lectura, con una sola bandera: cerrar la tool `Read` y dejar abierto
+    # `cat informe.md` no cambia la conducta, la muda de sitio.
+    assert matchers == {"Read", "Bash|PowerShell"}
 
 
 def _comando_del_hook_de_read(home: Path) -> str | None:
@@ -566,3 +568,48 @@ def test_un_directorio_con_nombre_de_script_ni_se_cuenta_ni_se_toca(tmp_path):
 
     _install(tmp_path)
     assert (raiz / "hook_common.py").is_dir(), "un directorio homónimo no es nuestro script"
+
+
+def _comando_del_hook_de_shell(home: Path) -> str | None:
+    settings = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    for grupo in settings.get("hooks", {}).get("PreToolUse", []):
+        if grupo.get("matcher") == "Bash|PowerShell":
+            return grupo["hooks"][0]["command"]
+    return None
+
+
+def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monkeypatch):
+    """El mismo cruce instalador-script, para la otra mitad de la superficie de lectura.
+
+    El hook de shell importa de `suggest_delegate_read`, así que aquí se comprueba de paso algo
+    que ningún test de módulo puede ver: que la copia instalada tiene los dos ficheros y que el
+    import entre ellos funciona con el `sys.path` que tiene un hook de verdad.
+    """
+    monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
+    _install(tmp_path, enable_read_hook=True)
+
+    comando = _comando_del_hook_de_shell(tmp_path)
+    assert comando is not None, "el hook de shell no quedó registrado"
+
+    grande = tmp_path / "informe.md"
+    grande.write_text("x" * 40_000, encoding="utf-8")
+    entrada = json.dumps({"tool_input": {"command": f"cat {grande}"}})
+
+    argv = shlex.split(comando)
+    argv[0] = sys.executable
+    hooks_dir = tmp_path / ".claude" / "hooks" / "local-delegate"
+    entorno = {**os.environ, "PYTHONPATH": str(hooks_dir)}
+    entorno.pop("LD_HOOK_READ_ENABLED", None)
+    # El bloqueo nace apagado; aquí se enciende a mano para ver que el camino entero funciona.
+    entorno["LD_HOOK_READ_BLOQUEAR"] = "1"
+    # Sin backend no se bloquea, que es lo correcto, así que se apunta a uno que sí responde...
+    # salvo que no hay ninguno en CI. Se comprueba entonces el caso que no depende de él.
+    entorno["LOCAL_DELEGATE_BASE_URL"] = "http://127.0.0.1:9/v1"
+
+    proceso = subprocess.run(argv, input=entrada, capture_output=True, text=True, env=entorno)
+
+    assert proceso.returncode == 0, f"el hook de shell falló: {proceso.stderr!r}"
+    # Sin backend vivo no bloquea (REQ-F1-10). Lo que este test demuestra es que el script
+    # instalado ARRANCA, importa a su vecino y decide, que es donde estaba el agujero.
+    assert proceso.stdout.strip() == "", proceso.stdout
+    assert "Traceback" not in proceso.stderr
