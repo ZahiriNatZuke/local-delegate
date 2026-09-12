@@ -32,7 +32,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, clients, config, preguntas
+from . import autostart, clients, config, fallos, preguntas
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -426,6 +426,41 @@ def _append_log_line(log_path: Path, line: str) -> None:
             f.write(line)
 
 
+#: Cuanto vale una nota de bloqueo. Pasado ese rato, la delegacion ya no se le atribuye: el agente
+#: hizo otra cosa por el camino y contarla seria inflar la adopcion.
+VENTANA_DE_BLOQUEO_S = 600.0
+
+
+def _bloqueo_reciente(path: str) -> str | None:
+    """El identificador del bloqueo que provoco esta lectura, si lo hubo.
+
+    Las notas las deja el hook (`hook_common.anotar_bloqueo`), que es stdlib pura y no puede
+    importar este modulo: el formato vive en dos sitios y por eso hay un test de ida y vuelta que
+    escribe con el hook y lee con esto. Es la misma cautela que el espejo JS del panel.
+
+    Nunca lanza: perder la correlacion estropea una medicion, romper la tool estropea el trabajo.
+    """
+    try:
+        from .resources.hooks import hook_common
+    except ImportError:
+        return None
+    try:
+        huella = hook_common.huella_de_ruta(path)
+        lineas = hook_common.ruta_de_notas().read_text(encoding="utf-8").splitlines()
+    except (OSError, ValueError):
+        return None
+
+    ahora = _utcnow().timestamp()
+    for linea in reversed(lineas):
+        try:
+            nota = json.loads(linea)
+            if nota["sha"] == huella and ahora - float(nota["ts"]) <= VENTANA_DE_BLOQUEO_S:
+                return str(nota["id"])
+        except (ValueError, KeyError, TypeError):
+            continue
+    return None
+
+
 def _log_event(
     *,
     tool: str,
@@ -504,6 +539,12 @@ def _log_event(
             rec["raw_len"] = int(raw_len)
         if source == "path" and path is not None:
             rec["path"] = path
+            # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
+            # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
+            # comparables sin cruzar dos logs a mano.
+            bloqueo = _bloqueo_reciente(path)
+            if bloqueo:
+                rec["bloqueo_id"] = bloqueo
         if json_schema is not None:
             rec["json_schema"] = json_schema
         # La SALIDA se escribió a un archivo, así que tampoco entró al contexto de quien llama.
@@ -588,6 +629,33 @@ class ChatResult:
     finish_reason: str | None = None  # choices[0].finish_reason
     tokens_in: int | None = None  # usage.prompt_tokens si el backend lo da
     tokens_out: int | None = None  # usage.completion_tokens
+    #: La clase del fallo (`fallos.Clase`) cuando `ok=False`, y `None` cuando salió bien. Es
+    #: aditivo: quien solo mire `error` sigue viendo exactamente lo de antes.
+    clase: str | None = None
+
+
+def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
+    """El error legible de una respuesta que llegó con 200 y aun así no sirve.
+
+    Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
+    no estaba en el `except` de abajo— y se llevaba la tool por delante.
+    """
+    if clase is fallos.Clase.CONFIGURACION:
+        return ChatResult(
+            text=(
+                f"[local-delegate error] {model} agotó `max_tokens` razonando y no llegó a "
+                "responder. Súbelo, o desactiva el razonamiento de ese modelo."
+            ),
+            ok=False,
+            error="config_max_tokens",
+            clase=clase,
+        )
+    return ChatResult(
+        text=f"[local-delegate error] respuesta sin contenido utilizable de {model}.",
+        ok=False,
+        error="bad_response",
+        clase=clase,
+    )
 
 
 def _post_chat(model: str, payload: dict) -> ChatResult:
@@ -599,6 +667,17 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             r = client.post(f"{config.BASE_URL}/chat/completions", json=payload, headers=headers)
             r.raise_for_status()
             data = r.json()
+            # La respuesta pasa por el clasificador ANTES de tocarla: un 200 puede traer
+            # `content: null`, o venir de un modelo que gastó `max_tokens` razonando.
+            clase = fallos.clasificar(
+                fallos.Respuesta(
+                    status=r.status_code,
+                    datos=data if isinstance(data, dict) else None,
+                    texto=r.text[:300],
+                )
+            )
+            if clase is not None:
+                return _fallo_de_cuerpo(model, clase)
             choice = data["choices"][0]
             usage = data.get("usage") or {}
             return ChatResult(
@@ -608,59 +687,82 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 tokens_in=usage.get("prompt_tokens"),
                 tokens_out=usage.get("completion_tokens"),
             )
-        except httpx2.ConnectError:
-            # El backend no está escuchando. Si el auto-arranque está activo, intenta
-            # levantarlo (opt-in, específico de llama-swap) y reintenta una vez.
-            if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
-                continue
-            # Sin auto-arranque, preguntar antes de rendirse. No contradice el «backend opt-in»:
-            # sigue sin arrancar nada sin permiso, solo que ahora ese permiso se puede dar en
-            # caliente. Si no hay a quién preguntar, o dicen que no, cae al error de siempre.
-            if attempt == 1 and not config.AUTOSTART:
-                respuesta = preguntas.preguntar(
-                    f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
-                    preguntas.ArrancarBackend,
-                )
-                if (
-                    respuesta is not None
-                    and respuesta.arrancar
-                    and autostart.ensure_backend(wait=30)
-                ):
-                    continue
-            return ChatResult(
-                text=(
-                    f"[local-delegate error] no se pudo conectar al endpoint ({config.BASE_URL}). "
-                    "¿Está corriendo tu backend OpenAI-compatible?"
-                ),
-                ok=False,
-                error="connect_error",
-            )
-        except httpx2.HTTPStatusError as e:
-            return ChatResult(
-                text=(
-                    f"[local-delegate error] {model} respondió {e.response.status_code}: "
-                    f"{e.response.text[:300]}"
-                ),
-                ok=False,
-                error=f"http_{e.response.status_code}",
-            )
         except httpx2.HTTPError as e:
+            # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
+            # Antes había tres, y `ConnectTimeout` se colaba por el genérico: no es subclase de
+            # `ConnectError` —son ramas hermanas—, así que un plazo de conexión agotado se
+            # clasificaba como `http_error` y nadie ofrecía arrancar el backend.
+            clase = fallos.clasificar(e)
+            if fallos.es_backend_ausente(e):
+                # No hay nadie escuchando. Si el auto-arranque está activo, intenta levantarlo
+                # (opt-in, específico de llama-swap) y reintenta una vez.
+                if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
+                    continue
+                # Sin auto-arranque, preguntar antes de rendirse. No contradice el «backend
+                # opt-in»: sigue sin arrancar nada sin permiso, solo que ahora ese permiso se
+                # puede dar en caliente. Si no hay a quién preguntar, o dicen que no, cae al
+                # error de siempre.
+                if attempt == 1 and not config.AUTOSTART:
+                    respuesta = preguntas.preguntar(
+                        f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
+                        preguntas.ArrancarBackend,
+                    )
+                    if (
+                        respuesta is not None
+                        and respuesta.arrancar
+                        and autostart.ensure_backend(wait=30)
+                    ):
+                        continue
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] no se pudo conectar al endpoint "
+                        f"({config.BASE_URL}). ¿Está corriendo tu backend OpenAI-compatible?"
+                    ),
+                    ok=False,
+                    error="connect_error",
+                    clase=clase,
+                )
+            if isinstance(e, httpx2.HTTPStatusError):
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] {model} respondió {e.response.status_code}: "
+                        f"{e.response.text[:300]}"
+                    ),
+                    ok=False,
+                    error=f"http_{e.response.status_code}",
+                    clase=clase,
+                )
+            if isinstance(e, httpx2.ReadTimeout):
+                # El backend SÍ aceptó la conexión: lo más probable es que llama-swap esté
+                # montando el modelo. Arrancar otro backend no arregla nada aquí.
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] {model} no respondió en "
+                        f"{config.HTTP_TIMEOUT:.0f} s. Puede que el backend aún lo esté cargando."
+                    ),
+                    ok=False,
+                    error="read_timeout",
+                    clase=clase,
+                )
             return ChatResult(
                 text=f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}",
                 ok=False,
                 error="http_error",
+                clase=clase,
             )
         except (KeyError, IndexError, ValueError) as e:
             return ChatResult(
                 text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
                 ok=False,
                 error="bad_response",
+                clase=fallos.Clase.MODELO,
             )
-    return ChatResult(
-        text=f"[local-delegate error] no se pudo completar la petición a {model}.",
-        ok=False,
-        error="retry_exhausted",
-    )
+    # Aquí había un `retry_exhausted` que no se alcanzaba nunca: los dos intentos terminan
+    # siempre en un `return`, porque los dos `continue` viven bajo `attempt == 1`. No se
+    # dedujo leyendo, se midió: se enumeraron las 16 formas de terminar el `try` y ninguna
+    # llegó hasta aquí, y con la guarda del intento quitada el mismo experimento sí la
+    # alcanzaba —control positivo—. Lo que antes prometía esa línea lo garantiza ahora
+    # `tests/test_post_chat_caminos.py`, que sí se ejecuta.
 
 
 _THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)

@@ -173,26 +173,11 @@ HOOK_READ_ENABLED: bool = _env_flag("LD_HOOK_READ_ENABLED", False)
 #: `test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores`.
 HOOK_READ_SUGGEST_KB: float = _env_float("LD_HOOK_READ_SUGGEST_KB", 8.0)
 HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
-
-
-# --- Aprendizaje de tamaños de salida (lo escriben los hooks, igual que la telemetría) ---------
-# Mismo caso que la de arriba y por la misma razón: estas variables las leen los scripts de
-# `resources/hooks/` con `os.environ`, porque son stdlib pura y no pueden importar este módulo.
-# Se declaran AQUÍ de todas formas (REQ-022) porque el inventario `VARIABLES_DE_ENTORNO` se
-# alimenta de las lecturas de este archivo, y es lo que permite a la suite aislarse del entorno de
-# quien la corre. Una variable que solo existe para el hook es invisible para el guardián, y
-# entonces los tests heredan lo que haya puesto en la máquina.
-#
-# El almacén tiene ubicación PROPIA y no cuelga de `LD_HOOK_TELEMETRY_LOG` a propósito: la
-# telemetría es opt-in y está vacía en casi todas las máquinas, así que colgar de ella dejaría el
-# aprendizaje en un no-op invisible (REQ-021).
-_hook_stats_env = _env("LD_HOOK_OUTPUT_STATS", "").strip()
-HOOK_OUTPUT_STATS: Path | None = Path(_hook_stats_env) if _hook_stats_env else None
-#: Los valores buenos los fija la medición del replay, no este archivo (REQ-016b). Aquí solo
-#: constan los nombres, con el mismo default que usa el hook.
-HOOK_OUTPUT_UMBRAL_KB: float = _env_float("LD_HOOK_OUTPUT_UMBRAL_KB", 8.0)
-HOOK_OUTPUT_MIN_MUESTRAS: int = _env_int("LD_HOOK_OUTPUT_MIN_MUESTRAS", 5)
-HOOK_OUTPUT_PROPORCION: float = _env_float("LD_HOOK_OUTPUT_PROPORCION", 0.5)
+#: Si la regla puede RECHAZAR una lectura en vez de solo sugerir. Nace apagada: se enciende cuando
+#: este escrito el criterio de la quinta medicion, incluido el resultado que la retira. El hook la
+#: consulta en cada invocacion —no al arrancar— porque una sesion abierta hereda el entorno del
+#: lanzador, y un freno que exige reiniciar la sesion no frena nada.
+HOOK_READ_BLOQUEAR: bool = _env_flag("LD_HOOK_READ_BLOQUEAR", False)
 
 
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------

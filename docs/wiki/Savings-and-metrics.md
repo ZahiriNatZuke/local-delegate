@@ -171,9 +171,26 @@ La tarjeta cuenta **cuántas veces un hook sugirió delegar**, en el mismo rango
 página. Y hay una frontera que conviene tener clara, porque es la única forma de que el número
 signifique algo:
 
-> **No mide cuántas sugerencias se siguieron.** El hook sugiere y tú decides. Nada une una
-> sugerencia con una delegación posterior —son dos registros sin identificador común—, así que
-> cruzarlos sería inventar una correlación y presentarla como un dato.
+> **La tarjeta no mide cuántas sugerencias se siguieron.** El hook sugiere y tú decides.
+
+Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
+común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada
+aviso y cada bloqueo llevan un identificador; cuando el hook rechaza una lectura deja una nota con
+ese identificador y una **huella** de la ruta —nunca la ruta—, y la tool que recibe ese mismo
+`path` se queda con él en su evento (`bloqueo_id`). El identificador no viaja por el agente a
+propósito: pedirle que lo pase sería depender de que obedezca, que es justo lo que se quiere medir.
+
+Quien responde la pregunta es `scripts/medir_adopcion.py`, que cruza los dos registros sin trabajo
+manual:
+
+```bash
+python scripts/medir_adopcion.py --desde 2026-09-12
+```
+
+Da el denominador por motivo y por camino, los bloqueos, cuántos acabaron en una delegación
+correlacionada, y cuántas delegaciones fueron espontáneas —esas no se las puede apuntar la regla—.
+Avisa además si la ventana mezcla dos versiones de script, porque una sesión abierta hereda el
+entorno del lanzador y entonces la muestra junta dos políticas sin decirlo.
 
 Lo que sí responde es «¿cuánta de mi actividad pasa por delante del hook, y en qué parte cree que
 hay una oportunidad?». En la máquina de referencia, con 1817 eventos en tres días: **17,0 % de

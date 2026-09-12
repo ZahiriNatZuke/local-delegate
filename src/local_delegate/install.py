@@ -60,6 +60,11 @@ _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
+#: El mismo control, sobre la otra mitad de la superficie de lectura. Va con la misma bandera que
+#: `_READ_HOOK` a proposito: son una regla sola declarada sobre dos caminos, y encender uno sin el
+#: otro no cambia la conducta, la muda de sitio —`cat informe.md` hace lo que la tool `Read`—.
+_SHELL_HOOK = ("suggest_delegate_shell.py", "PreToolUse", "Bash|PowerShell")
+
 #: Scripts que este paquete YA NO instala, pero que sigue reconociendo como suyos.
 #:
 #: Sin esta lista, un script retirado se vuelve **inmortal**: la limpieza de huérfanos sale de
@@ -291,6 +296,7 @@ def hook_command(
 _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
+    "suggest_delegate_shell.py",
 )
 
 
@@ -809,9 +815,9 @@ def plan_install(opts: Options) -> list[Action]:
             for script, event, matcher in _HOOK_EVENTS
         ]
         if opts.enable_read_hook:
-            script, event, matcher = _READ_HOOK
-            comando = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
-            entries.append((event, matcher, comando))
+            for script, event, matcher in (_READ_HOOK, _SHELL_HOOK):
+                comando = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
+                entries.append((event, matcher, comando))
         settings_path = claude / "settings.json"
 
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:

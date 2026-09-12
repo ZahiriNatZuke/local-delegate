@@ -6,6 +6,101 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **La regla puede rechazar una lectura, y no solo sugerirla.** Cuatro mediciones seguidas dieron
+  adopción cero —la última ya con el aviso acertando el tipo de fichero, `.md` 49 y `.txt` 15 de
+  85 avisos—, así que el problema dejó de ser la puntería: sugerir no cambia la conducta. El hook
+  de lectura puede ahora bloquear con `permissionDecision: deny`, nombrando la tool que sirve, el
+  `path` para llamarla y la salida de emergencia (leer por franjas con `offset`/`limit`, que nunca
+  se bloquean).
+
+  **Nace apagado** (`LD_HOOK_READ_BLOQUEAR=0`) y se enciende cuando esté escrito el criterio de la
+  quinta medición, incluido el resultado que lo retira. Se apaga **sin reiniciar la sesión**: la
+  variable se consulta en cada invocación, porque está medido que una sesión abierta hereda el
+  entorno del lanzador y un freno que exige reiniciar no frena nada.
+
+  El caso es estrecho a propósito. Solo `.md` y `.txt` leídos enteros y por encima del umbral:
+  `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**, porque ahí se busca un valor
+  exacto —un `package.json`, la línea del error— y un resumen no sustituye a la lectura. De `.csv`
+  y `.log` no hubo **ni un aviso** en el periodo medido, así que bloquearlos habría sido inventar
+  el caso.
+
+- **Un hook nuevo para la otra mitad de la superficie de lectura** (`suggest_delegate_shell.py`,
+  matcher `Bash|PowerShell`). Cerrar la tool `Read` y dejar `cat informe.md` abierto no cambia la
+  conducta: la muda de sitio, y entonces la adopción medida sube sin que se ahorre un token. Se
+  registra **todo** comando, se bloquee o no, porque sin denominador no se sabe cuánta lectura se
+  va por ahí.
+
+  Reconoce solo formas simples e inequívocas —`cat`, `type`, `more`, `Get-Content`, `gc`,
+  `rtk read`, `head`— sobre una única ruta. Con una tubería, una redirección, dos comandos
+  encadenados, una sustitución o un flag que ya acota, **no bloquea**: un comando mal parseado que
+  se rechaza no es un consejo malo, es impedir algo que el usuario pidió.
+
+- **El bloqueo se cae solo cuando no hay a dónde delegar.** Si el backend local no responde, la
+  lectura pasa. El dato no sale de las delegaciones anteriores —sería un círculo cerrado: sin
+  delegaciones no hay marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay
+  delegaciones—, sino de un sondeo propio cacheado un minuto, con 300 ms de plazo. Marca ausente,
+  vieja, corrupta o ilegible significan **no bloquear**.
+
+- **«Ofrecido» y «aceptado» ya son dos números comparables.** Cada aviso y cada bloqueo llevan un
+  identificador, la sesión que lo provocó y la **huella del script que corrió** —un sha256 del
+  fichero, no una constante que alguien tenga que acordarse de subir—. El hook deja una nota con
+  ese identificador y una huella de la ruta, y la tool que recibe ese mismo `path` se queda con él
+  en su evento (`bloqueo_id`). El identificador no viaja por el agente a propósito: pedirle que lo
+  pase sería depender de que obedezca, que es justo lo que se quiere medir.
+
+### Added
+- **`scripts/medir_adopcion.py`**, que responde por fin «de los avisos dados, cuantos acabaron
+  en delegacion». Las cuatro mediciones anteriores ataron los dos logs a mano y esa pregunta se
+  quedo sin respuesta. Da el denominador por motivo y por camino, la tasa de aceptacion, y
+  cuantas delegaciones fueron espontaneas —esas no se las puede apuntar la regla—. Avisa si la
+  ventana mezcla dos versiones de script, porque una sesion abierta hereda el entorno del
+  lanzador y entonces la muestra junta dos politicas sin decirlo.
+
+- **Los eventos de lectura llevan la huella de la ruta** (nunca la ruta). Sin ella no se podia
+  agrupar por fichero, y esa es justo la pregunta pendiente de la guarda de «lectura acotada»:
+  de las 252 lecturas por franjas registradas, cuantas eran de un fichero que acabo leyendose
+  entero de todas formas.
+
+### Fixed
+- **`content: null` reventaba la tool entera.** `choice["message"]["content"].strip()` lanzaba
+  `AttributeError`, y ese tipo no estaba en el `except` que lo rodeaba: la excepción se escapaba de
+  `_post_chat`. Ahora es un fallo clasificado con mensaje legible. Y si el motivo de parada fue
+  `length` con razonamiento no vacío, el error lo dice en claro —el modelo gastó `max_tokens`
+  pensando—, que es configuración y no avería: taparlo haría que nadie lo arreglara.
+
+- **`ConnectTimeout` no ofrecía arrancar el backend.** Caía en el `except HTTPError` genérico y se
+  clasificaba como `http_error`, porque **no es subclase de `ConnectError`**: son ramas hermanas de
+  `TransportError`. Resultado: un backend apagado que agotaba el plazo de conexión no disparaba el
+  autoarranque, que era exactamente lo que lo habría arreglado.
+
+- **`ReadTimeout` se confundía con un backend caído.** Ahí el backend **sí** aceptó la conexión, así
+  que lo más probable es que llama-swap esté montando el modelo: arrancar otro no arregla nada. Pasa
+  a tener clase propia y mensaje propio.
+
+### Changed
+- **La clasificación de fallos sale de `server.py` a un módulo puro** (`fallos.py`): recibe el
+  resultado o la excepción y devuelve la clase, sin red, sin estado y sin decidir reintentos. Es la
+  primera de las tres capas que el respaldo entre modelos necesita, y las siete clases de la tabla
+  ya existen aunque algunas todavía no tengan quien las consuma.
+
+  Lo desconocido va a `sin_clasificar`, **nunca** a «del modelo»: esa es la única clase que
+  disparará el respaldo, así que leer mal una variante nueva provocaría saltos de modelo y
+  expulsiones de VRAM por un fallo que quizá era de la petición.
+
+### Removed
+- **Retirado el `retry_exhausted` del final de `_post_chat`**, que no se alcanzaba nunca. No se
+  dedujo leyendo: se enumeraron las **16 formas** de terminar el `try` y se ejecutaron todas, y
+  ninguna llegaba hasta ahí. Con control positivo, además —quitando la guarda del número de intento,
+  dos de esos caminos sí la alcanzaban—, porque un no-resultado no es evidencia si no se comprueba
+  que el experimento podía encontrar algo. Lo que esa línea prometía lo garantiza ahora
+  `tests/test_post_chat_caminos.py`, que enumera los mismos 16 caminos y **sí se ejecuta**.
+
+- **Retiradas `LD_HOOK_OUTPUT_STATS`, `LD_HOOK_OUTPUT_UMBRAL_KB`, `LD_HOOK_OUTPUT_MIN_MUESTRAS` y
+  `LD_HOOK_OUTPUT_PROPORCION`.** Se quedaron **sin un solo consumidor** cuando la 0.27.0 retiró
+  `output_policy.py` y `output_stats.py`, y su comentario seguía explicando por qué las leía un
+  hook que ya no existe. Comprobado por búsqueda antes de tocarlas, no a ojo.
+
 ### Fixed
 - **El check `hooks copiados` contaba `__pycache__` como si fuera un script.** Decía «4 script(s)»
   donde había 3, porque contaba las entradas del directorio y Python deja ahí su caché en cuanto

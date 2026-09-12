@@ -25,8 +25,22 @@ veces y LAS 24 eran `.md`, `.json` o `.txt` —ni una de codigo—, con 17 entre
 la franja donde vive la documentacion de un repo quedaba muda, y lo que parecia desobediencia era
 un aviso que nunca llegaba. La banda `strong` se deja en 100 KB a proposito: se cambia UNA cosa,
 para que la proxima medicion sepa a que atribuir la diferencia.
-NUNCA bloquea la tool: no emite `permissionDecision`, sólo contexto. Sin dependencias (stdlib
-únicamente) y multiplataforma.
+**Desde F1 sí puede bloquear, y solo en un caso muy acotado.** Cuatro mediciones seguidas dieron
+adopción cero —la última ya con el aviso acertando el tipo de fichero—, así que el problema dejó
+de ser la puntería: sugerir no cambia la conducta. La regla bloquea la lectura COMPLETA de un
+`.md` o un `.txt` grande, que es donde un resumen puede sustituir a la lectura, y para todo lo
+demás sigue avisando como hasta ahora. Un `.json` o un `.log` se leen para encontrar un valor
+exacto, y ahí el resumen no sirve.
+
+Tres cosas apagan el bloqueo, y las tres son deliberadas:
+
+- `LD_HOOK_READ_BLOQUEAR=0`, que se lee **en cada invocación**: una sesión abierta hereda el
+  entorno del lanzador, así que una variable que solo se mire al arrancar no serviría de freno.
+- Que el backend local no responda: bloquear sin sitio a donde delegar deja al agente sin forma de
+  leer el fichero.
+- El interruptor general del experimento, `LD_HOOK_ENABLED=0`.
+
+Sin dependencias (stdlib únicamente) y multiplataforma.
 
 Instalar en settings.json (ver docs/recipes/claude-code-hooks.md):
 
@@ -45,9 +59,29 @@ import json
 import os
 import sys
 
-from hook_common import emit, record
+from hook_common import (
+    anotar_bloqueo,
+    backend_disponible,
+    contexto_de,
+    deny,
+    emit,
+    huella_de_ruta,
+    nuevo_id,
+    record,
+)
 
 VERDADEROS = {"1", "true", "yes", "on"}
+FALSOS = {"0", "false", "no", "off"}
+
+#: Prosa: lo que un resumen puede sustituir. Son las dos extensiones con volumen medido —`.md` 49
+#: y `.txt` 15 de los 85 avisos del periodo— y las únicas que se bloquean.
+EXTENSIONES_DE_PROSA = frozenset({".md", ".txt", ".markdown", ".rst"})
+
+#: Se leen para encontrar un valor exacto: un `package.json`, un `state.json`, la línea del error
+#: en un log. Se avisa, pero no se bloquea, porque ahí el resumen no sustituye a la lectura. De
+#: `.csv` y `.log` no hubo **ni un aviso** en el periodo medido, así que entrar a bloquearlos
+#: habría sido inventar el caso.
+EXTENSIONES_DE_DATOS = frozenset({".json", ".csv", ".log", ".yaml", ".yml", ".xml", ".toml"})
 
 #: Extensiones que se leen para editarlas, no para transformarlas. Es una constante de módulo y no
 #: una lista dentro de la decisión para que ampliarla no obligue a tocar la lógica —y para que un
@@ -122,6 +156,17 @@ def es_lectura_acotada(tool_input: dict) -> bool:
     return tool_input.get("offset") is not None or tool_input.get("limit") is not None
 
 
+def bloqueo_encendido() -> bool:
+    """Si la regla puede rechazar una lectura. Se consulta EN CADA invocación, a propósito.
+
+    Nace apagado: se enciende cuando esté escrito el criterio de la quinta medición, incluido el
+    resultado que lo retira. Y se apaga sin cerrar la sesión, porque una sesión abierta hereda el
+    entorno del lanzador —medido: catorce lecturas se comportaron con el umbral viejo después de
+    cambiarlo— y un freno que exige reiniciar no es un freno.
+    """
+    return os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS
+
+
 def main() -> None:
     if not esta_encendido():
         return
@@ -137,15 +182,27 @@ def main() -> None:
         return
 
     ext = extension_de(file_path)
+    # La HUELLA de la ruta, nunca la ruta. Sin ella no se puede agrupar por fichero, y esa es la
+    # pregunta que la guarda de «acotada» tiene pendiente: de las 277 lecturas por franjas
+    # registradas, cuantas eran de un fichero que acabo leyendose entero de todas formas. La
+    # telemetria sigue sin poder decir QUE fichero era.
+    huella = {"path_sha": huella_de_ruta(file_path), **contexto_de(payload, __file__)}
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
     if es_lectura_acotada(tool_input):
-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="acotada")
+        record(
+            "PreToolUse",
+            suggested=False,
+            category="read",
+            ext=ext,
+            motivo="acotada",
+            **huella,
+        )
         return
 
     if ext in EXTENSIONES_DE_CODIGO:
-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo")
+        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo", **huella)
         return
 
     try:
@@ -163,20 +220,54 @@ def main() -> None:
             ext=ext,
             size_kb=round(size_kb, 1),
             motivo="pequeno",
+            **huella,
         )
         return
 
     band = "strong" if size_kb > strong_kb else "suggest"
+    comun = {
+        "category": "read",
+        "band": band,
+        "ext": ext,
+        "size_kb": round(size_kb, 1),
+        "id": nuevo_id(),
+        **huella,
+    }
+
+    # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas
+    # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato
+    # y no en la irritacion del usuario.
+    if ext in EXTENSIONES_DE_PROSA and bloqueo_encendido():
+        if backend_disponible():
+            # La nota va ANTES del bloqueo: si el agente delega acto seguido, el servidor tiene
+            # que encontrarla ya escrita.
+            anotar_bloqueo(comun["id"], file_path)
+            deny(
+                "PreToolUse",
+                f"Este archivo pesa {size_kb:.0f} KB y es prosa. Pasalo por una tool local con "
+                f'`path="{file_path}"`: `local_summarize` para el contenido, `local_extract` '
+                "para campos concretos, `local_translate` o `local_explain_code`. Asi no entra al "
+                "contexto.\n\n"
+                "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
+                "leelo por franjas con `offset` y `limit`, que no se bloquean.",
+                motivo="prosa_grande",
+                **comun,
+            )
+            return
+        record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
+
     strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
+    destino = (
+        "una tool local_* con path"
+        if ext not in EXTENSIONES_DE_DATOS
+        else "local_extract con path, si lo que buscas son campos concretos"
+    )
     emit(
         "PreToolUse",
         f"{strength}: este archivo pesa {size_kb:.0f} KB. Si necesitas una transformacion "
-        "global (resumen, campos, traduccion o explicacion), usa la tool local_* con path para "
+        f"global (resumen, campos, traduccion o explicacion), usa {destino} para "
         "que no entre al contexto. Leelo directamente si necesitas lineas exactas para razonar o editar.",
-        category="read",
-        band=band,
-        ext=ext,
-        size_kb=round(size_kb, 1),
+        **comun,
     )
 
 
