@@ -337,3 +337,21 @@ cuenta empieza ahora.
 `LD_HOOK_READ_BLOQUEAR` a `0` en `~/.claude/settings.json`, y surte efecto **en la siguiente
 invocacion del hook**, sin cerrar nada. Las sesiones ya abiertas cuando se encendio siguen con el
 valor viejo, que es la trampa de medicion conocida: la ventana solo cuenta sesiones nuevas.
+
+## F2: la mitad que depende de la maquina, hecha (2026-09-12)
+
+El usuario activo **«Prefer No Sysmem Fallback»** desde la NVIDIA App, sobre `llama-server.exe`
+(perfil por programa, no global). La maquina es una **RTX 5060 Ti de 16 GB con driver 616.92**.
+
+**Sin verificar todavia, y no es un detalle:** el panel no confirma nada y `nvidia-smi` no expone
+esa politica, asi que solo se comprueba **por su efecto** —un modelo que no quepa tiene que fallar
+con error de memoria en segundos, en vez de cargar y arrastrarse—. Ese es el control positivo del
+protocolo de F2 y va **antes** de cualquier medida.
+
+**Trampa anotada antes de tropezar con ella:** el perfil se guarda **por ruta de ejecutable**. F2
+necesita llama.cpp **b10909 en carpeta aparte**, y ese sera otro ejecutable para el driver
+(`D:\Projects\llms\llamacpp-b10909\llama-server.exe` o como se llame). Si no se le anade su propio
+perfil, la medicion vuelve a correr con el desbordamiento silencioso a RAM activado — que es
+exactamente el error que descarto `gpt-oss-20b` en julio. El ejecutable de produccion hoy es
+`D:\Projects\llms\llamacpp\llama-server.exe` (9 KB: es un lanzador, el trabajo CUDA lo hacen las
+DLL de al lado, pero es el proceso que crea el contexto y por tanto el que lleva el perfil).
