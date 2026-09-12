@@ -151,3 +151,137 @@ nada de F0 ni F1 aplicado. Quedan anotados como defecto aparte.
 - **Falta la prueba end-to-end en Windows con el hook instalado de verdad**, disparando sobre una
   lectura real. Los tests cubren el script y el instalador por separado y tambien cruzados, pero la
   regla del repo es no publicar un hook sin verlo dispararse instalado.
+
+
+## Criterio de la quinta medicion (REQ-F1-12)
+
+**Escrito el 2026-09-12, con el bloqueo todavia apagado.** Va antes de encenderlo a proposito:
+despues de cuatro mediciones con adopcion cero, un criterio decidido a posteriori no vale nada:
+siempre se encuentra la forma de leer el dato como si hubiera salido bien.
+
+### Que se mide, y con que
+
+`python scripts/medir_adopcion.py --desde <fecha en que se encendio>`. El cruce lo hace el
+programa: cada bloqueo lleva un identificador que el evento de la tool recoge por disco. Las cuatro
+mediciones anteriores ataron los dos logs a mano, y por eso la pregunta central se quedo sin
+responder.
+
+- **Ventana**: 7 dias naturales desde que se encienda `LD_HOOK_READ_BLOQUEAR=1`, y como minimo
+  **30 bloqueos**. Si en 7 dias no se llega a 30, se alarga hasta llegar, porque una tasa sobre
+  cinco casos no distingue nada.
+- **Denominador**: todas las lecturas vistas por los dos hooks, `read` y `shell`. Contar solo el
+  camino cerrado es lo que dejaria subir la adopcion sin ahorrar un token.
+- **Solo se cuentan eventos con `version` de script**, y si la ventana mezcla dos versiones, el
+  propio script lo avisa: una sesion abierta hereda el entorno del lanzador.
+
+### Numeros que se declaran de antemano
+
+| Medida | Como se lee |
+| --- | --- |
+| **Tasa de aceptacion** = bloqueos que acabaron en una llamada `local_*` correlacionada / bloqueos | El numero principal |
+| **Escapes** = lecturas por franjas del mismo fichero justo despues de un bloqueo | Lo que mide la molestia |
+| **Desvio** = volcados por shell contados frente a lecturas por la tool `Read` | Si la conducta se mudo de sitio |
+| **Delegaciones espontaneas** | Control: lo que el agente ya hacia solo, que no se puede apuntar la regla |
+
+### Que resultado retira el cambio
+
+El bloqueo se **apaga y se revierte** si se cumple cualquiera de estas tres:
+
+1. **Tasa de aceptacion por debajo del 50 %**. Si menos de la mitad de los bloqueos acaban en
+   delegacion, la regla no esta encaminando trabajo: esta estorbando.
+2. **Mas del 30 % de los bloqueos acaban en un escape** —el mismo fichero leido por franjas justo
+   despues—. Eso significa que el caso acotado esta mal elegido: se estaria bloqueando lectura que
+   hacia falta literal.
+3. **El usuario lo apaga a mano una sola vez.** No hace falta un umbral para esto: si molesta lo
+   suficiente como para apagarlo, la regla ya fallo. El apagado queda registrado en el evento.
+
+Y se considera **un exito**, con el bloqueo encendido para quedarse, si la tasa de aceptacion pasa
+del 70 % y los escapes se quedan por debajo del 10 %.
+
+### Lo que NO se va a concluir
+
+- Que la regla «funciona» porque suban las delegaciones totales: pueden subir por las espontaneas,
+  que es justo lo que el agente ya hacia. Solo cuentan las correlacionadas.
+- Que la guarda de «lectura acotada» sobra o hace falta con los datos de hoy: **no se puede**. La
+  huella de ruta que permite agrupar por fichero se anadio ahora, asi que los 277 silencios ya
+  registrados no son agrupables. La pregunta se responde en esta quinta medicion, no antes.
+
+
+## F1 - Prueba end to end con los hooks instalados (tareas 10 y 11)
+
+La regla del repo es no dar un hook por bueno sin verlo dispararse **instalado**. Se instalo en un
+HOME de prueba (`install --home ... --enable-read-hook`) y se ejecutaron los comandos **tal y como
+quedaron en `settings.json`**, contra el backend real de la maquina.
+
+Registro: `3 registrado(s): UserPromptSubmit, PreToolUse/Read, PreToolUse/Bash|PowerShell`, y
+`4 script(s)` copiados.
+
+| Caso | Resultado |
+| --- | --- |
+| `.md` de 40 KB entero, por la tool `Read` | **deny** |
+| `.json` de 40 KB entero | aviso, sin bloqueo |
+| `.md` pedido por franjas (`limit: 20`) | silencio |
+| `cat informe.md` | **deny** |
+| `cat informe.md \| head -5` | silencio |
+
+Y el circuito completo, con la nota que dejo el hook instalado:
+`server._bloqueo_reciente(...)` devolvio `4e889edd5c64`, y `None` para otra ruta.
+
+### Dos defectos que solo aparecieron al ejecutarlo de verdad
+
+**1. El 401 no significa «no hay backend».** La primera pasada no bloqueo nada, y no era el hook:
+el sondeo hacia `GET /v1/models` sin credencial y recibia **401**, que se leia como «no esta».
+Pero el hook casi nunca tiene la clave —la tiene el lanzador del daemon, y el hook hereda el
+entorno del cliente, que es el mismo motivo por el que `--mcp-mode http` existe—, asi que el
+bloqueo habria quedado apagado para siempre en cualquier maquina con el backend protegido, que es
+la configuracion recomendada. Comprobado en vivo: `GET /v1/models` sin credencial responde 401 y el
+backend estaba perfectamente.
+
+La pregunta correcta no es «me autoriza» sino «hay alguien escuchando»: quien delega es el servidor
+MCP, que si tiene la credencial. Ahora cualquier respuesta por debajo de 500 cuenta como backend
+vivo, y solo la falta de respuesta —conexion rechazada o plazo agotado— cuenta como ausente.
+
+**2. La marca de salud era global y se heredaba entre endpoints.** Lo destapo el test de cruce del
+instalador, que apunta a un puerto donde no hay nadie y aun asi recibio un bloqueo: la marca escrita
+por el backend de verdad, minutos antes, seguia fresca. Ahora el fichero lleva la huella de
+`LOCAL_DELEGATE_BASE_URL` en el nombre, con su test.
+
+Los dos son el mismo tipo de fallo —lo que funciona en la suite no funciona instalado— y ninguno de
+los dos habria aparecido sin ejecutar el hook de verdad.
+
+### Medicion: el denominador de hoy, antes de encender
+
+`python scripts/medir_adopcion.py --desde 2026-09-08T23:03`, que es cuando arranco el experimento
+del umbral:
+
+| Medida | Valor |
+| --- | --- |
+| Lecturas vistas | 460 |
+| acotada / pequeno / codigo | 252 / 76 / 47 |
+| Ofrecidos | 85 |
+| Bloqueos | 0 (el bloqueo esta apagado) |
+| Delegaciones | 5, **todas espontaneas** |
+
+Coincide con la cuarta medicion, que es lo que tenia que pasar: todavia no ha cambiado nada de
+conducta. El script avisa por su cuenta de que hay eventos sin version de script, o sea anteriores
+a que se registrara.
+
+**De los 252 silencios por «lectura acotada» no se puede decir nada todavia**, y eso es un limite
+real de REQ-F1-8: la huella de ruta que permite agrupar por fichero se anadio ahora, asi que lo ya
+registrado no es agrupable. La pregunta se responde en la quinta medicion. Verificado end to end
+que la agrupacion funciona: en la prueba instalada, la franja y la lectura completa del mismo
+fichero compartieron `path_sha`, y dos ficheros distintos dieron huellas distintas.
+
+### Documentacion (tarea 11)
+
+Una release toca **tres** sitios, y aqui fueron cuatro. Dos de ellos estaban **desfasados de
+antes**, no por este cambio:
+
+- `README.md` recomendaba `PreToolUse`/`Bash` «(salidas largas de lint/tests)», un hook
+  (`suggest_lint_summary.py`) **retirado en la 0.27.0**.
+- `docs/recipes/claude-code-hooks.md` documentaba las bandas como «8-32 KiB» y «mas de 32 KiB»,
+  cuando son 8 y 100 desde el mismo cambio que bajo el umbral.
+- `docs/wiki/Savings-and-metrics.md` afirmaba que cruzar una sugerencia con una delegacion «seria
+  inventar una correlacion», que era cierto hasta este cambio y ya no.
+- `docs/wiki/Configuration.md` no tenia seccion de hooks de lectura; ahora la tiene, con las cinco
+  variables y las tres formas de que no bloquee.

@@ -399,3 +399,41 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
     assert len(evento["id"]) == 12, "el identificador que permite cruzarlo con la delegacion"
     # La telemetria sigue sin llevar rutas ni contenido.
     assert str(target) not in json.dumps(evento)
+
+
+def test_la_huella_agrupa_por_fichero_sin_decir_cual_es(tmp_path, monkeypatch, capsys):
+    """Sin esto, «de las lecturas acotadas, cuantas eran de un fichero que acabo leyendose
+    entero» no se puede responder: la telemetria no guarda rutas, a proposito.
+
+    La huella lo permite —el mismo fichero da el mismo valor— sin que el log diga nunca que
+    fichero era.
+    """
+    log = tmp_path / "telemetria.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    documento = tmp_path / "el-informe-del-cliente.md"
+    documento.write_text("x" * 40 * 1024, encoding="utf-8")
+
+    # Primero una franja, despues el fichero entero: dos eventos del MISMO fichero.
+    _correr_hook(monkeypatch, capsys, {"file_path": str(documento), "limit": 20})
+    _correr_hook(monkeypatch, capsys, {"file_path": str(documento)})
+
+    eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert [e["motivo"] for e in eventos[:1]] == ["acotada"]
+    assert eventos[0]["path_sha"] == eventos[1]["path_sha"], "el mismo fichero, la misma huella"
+
+    crudo = log.read_text(encoding="utf-8")
+    assert "el-informe-del-cliente" not in crudo
+    assert str(tmp_path) not in crudo
+
+
+def test_dos_ficheros_distintos_no_se_confunden(tmp_path, monkeypatch, capsys):
+    """Control positivo: una huella constante agruparia todo y la medicion diria cualquier cosa."""
+    log = tmp_path / "telemetria.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    for nombre in ("uno.md", "dos.md"):
+        fichero = tmp_path / nombre
+        fichero.write_text("x" * 40 * 1024, encoding="utf-8")
+        _correr_hook(monkeypatch, capsys, {"file_path": str(fichero)})
+
+    eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert eventos[0]["path_sha"] != eventos[1]["path_sha"]

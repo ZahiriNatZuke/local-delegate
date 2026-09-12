@@ -111,7 +111,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
 | `--target claude \| codex \| opencode \| all` | histórico, equivale a `--clients`; `all` fuerza los tres aunque no estén instalados. No se combina con `--clients` |
 | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
 | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
-| `--enable-read-hook` | registra **y enciende** el experimental `PreToolUse`/`Read`. Antes solo lo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada |
+| `--enable-read-hook` | registra **y enciende** los dos hooks de lectura: `PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`. Van juntos porque son una regla sola sobre dos caminos —cerrar `Read` y dejar `cat informe.md` abierto solo muda la conducta de sitio—. Antes solo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada. El **bloqueo** viene aparte y apagado (`LD_HOOK_READ_BLOQUEAR`, ver Configuration) |
 | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp`. **Si tu backend exige API key, `http` suele ser la única opción que funciona**: el proceso `stdio` lo lanza el cliente y hereda *su* entorno, no el del lanzador del daemon, que es quien tiene el secreto. Lo avisa el check «credencial del backend» |
 | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
 | `--api-key-env` | reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno |

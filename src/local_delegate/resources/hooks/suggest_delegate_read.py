@@ -65,6 +65,7 @@ from hook_common import (
     contexto_de,
     deny,
     emit,
+    huella_de_ruta,
     nuevo_id,
     record,
 )
@@ -181,15 +182,27 @@ def main() -> None:
         return
 
     ext = extension_de(file_path)
+    # La HUELLA de la ruta, nunca la ruta. Sin ella no se puede agrupar por fichero, y esa es la
+    # pregunta que la guarda de «acotada» tiene pendiente: de las 277 lecturas por franjas
+    # registradas, cuantas eran de un fichero que acabo leyendose entero de todas formas. La
+    # telemetria sigue sin poder decir QUE fichero era.
+    huella = {"path_sha": huella_de_ruta(file_path), **contexto_de(payload, __file__)}
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
     if es_lectura_acotada(tool_input):
-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="acotada")
+        record(
+            "PreToolUse",
+            suggested=False,
+            category="read",
+            ext=ext,
+            motivo="acotada",
+            **huella,
+        )
         return
 
     if ext in EXTENSIONES_DE_CODIGO:
-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo")
+        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo", **huella)
         return
 
     try:
@@ -207,6 +220,7 @@ def main() -> None:
             ext=ext,
             size_kb=round(size_kb, 1),
             motivo="pequeno",
+            **huella,
         )
         return
 
@@ -217,7 +231,7 @@ def main() -> None:
         "ext": ext,
         "size_kb": round(size_kb, 1),
         "id": nuevo_id(),
-        **contexto_de(payload, __file__),
+        **huella,
     }
 
     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas

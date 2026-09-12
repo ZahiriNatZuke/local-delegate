@@ -16,6 +16,7 @@ import json
 import os
 import tempfile
 import time
+import urllib.error
 import urllib.request
 import uuid
 from datetime import UTC, datetime
@@ -165,11 +166,31 @@ def deny(event: str, razon: str, **metadata: object) -> None:
 
 
 def _ruta_de_salud() -> Path:
-    return Path(tempfile.gettempdir()) / "local-delegate-salud.json"
+    """Un fichero por endpoint, no uno global.
+
+    Con uno solo, la marca de un backend valdria para otro: basta cambiar
+    `LOCAL_DELEGATE_BASE_URL` —o correr un test contra un puerto muerto— para heredar el «esta
+    vivo» del anterior. Lo caza un test de instalacion que apuntaba a un puerto donde no hay nadie
+    y recibia un bloqueo, porque la marca del backend de verdad seguia fresca.
+    """
+    base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
+    huella = hashlib.sha256(base.encode("utf-8", "replace")).hexdigest()[:12]
+    return Path(tempfile.gettempdir()) / f"local-delegate-salud-{huella}.json"
 
 
 def _sondear(timeout_s: float) -> bool:
-    """Un GET a /models con un plazo muy corto. Cualquier problema significa «no esta»."""
+    """¿Contesta alguien en el endpoint? Un GET a /models con un plazo muy corto.
+
+    La pregunta es si el backend **esta escuchando**, no si nos autoriza a nosotros: quien delega
+    es el servidor MCP, que si tiene la credencial. Por eso un 401 o un 403 cuentan como «si
+    esta»: alguien contesto. El hook casi nunca tiene la clave —la tiene el lanzador del daemon,
+    y el hook hereda el entorno del cliente—, asi que tratar el 401 como «no hay backend» dejaria
+    el bloqueo permanentemente apagado en cualquier maquina con el backend protegido. Medido en
+    vivo: aqui `GET /v1/models` sin credencial responde 401, y el backend estaba perfectamente.
+
+    Solo es «no esta» lo que no llega a haber respuesta: conexion rechazada, plazo agotado, o una
+    URL que ni siquiera se puede construir.
+    """
     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
     clave = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
     try:
@@ -180,7 +201,10 @@ def _sondear(timeout_s: float) -> bool:
         if clave:
             peticion.add_header("Authorization", f"Bearer {clave}")
         with urllib.request.urlopen(peticion, timeout=timeout_s) as respuesta:
-            return 200 <= respuesta.status < 300
+            return respuesta.status < 500
+    except urllib.error.HTTPError:
+        # 401, 403, 404... da igual cual: hubo respuesta, luego hay alguien escuchando.
+        return True
     except Exception:
         # Cualquier cosa: conexion rechazada, plazo agotado, 401, una URL invalida en la variable.
         # Ninguna es motivo para romperle la lectura al usuario, y todas significan lo mismo aqui.

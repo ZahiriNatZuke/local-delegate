@@ -225,17 +225,26 @@ a propósito:
 | Componente | Dónde | Qué hace |
 |---|---|---|
 | Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
-| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar sin bloquear nunca la tool original |
+| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende |
 | Skill | `~/.claude/skills/delegacion-local/` y `~/.config/opencode/skill/delegacion-local/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con
 `--clients claude|codex|opencode`. Los **hooks** son solo de Claude Code: opencode extiende con
-plugins en TypeScript, que es otra superficie. Cada pieza se puede excluir (`--no-hooks`, `--no-skill`,
-`--no-memory`, `--no-mcp`). Los hooks recomendados tras el piloto A/B son
-`UserPromptSubmit` (intenciones mecánicas) y `PreToolUse`/`Bash` (salidas largas de lint/tests);
-el experimento `PreToolUse`/`Read` queda apagado salvo `--enable-read-hook`, que lo registra y lo
-enciende (`uninstall` lo apaga).
+plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
+pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
+
+El único hook que se instala solo es `UserPromptSubmit` (intenciones mecánicas). Los dos de
+lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
+`--enable-read-hook`, que los registra y los enciende juntos (`uninstall` los apaga). Van juntos
+porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat informe.md`
+abierto no cambia la conducta, la muda de sitio.
+
+Esos dos avisan; **rechazar** una lectura es otra cosa y viene aparte y apagada
+(`LD_HOOK_READ_BLOQUEAR`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
+el backend local respondiendo, y el mensaje del rechazo nombra la tool que sirve y la salida de
+emergencia: leer por franjas nunca se bloquea. El motivo de que exista es que está medido —cuatro
+veces— que sugerir no cambia la conducta.
 Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y
 [`docs/recipes/claude-code-hooks.md`](./docs/recipes/claude-code-hooks.md).
 

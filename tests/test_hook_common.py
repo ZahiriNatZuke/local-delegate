@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import time
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -199,3 +200,57 @@ def test_un_backend_que_no_esta_da_false_sin_lanzar(monkeypatch, tmp_path):
 def test_una_url_invalida_tampoco_lanza(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "no-es-una-url")
     assert common.backend_disponible(marca=tmp_path / "salud.json", timeout_s=0.2) is False
+
+
+def test_un_401_significa_que_el_backend_SI_esta(monkeypatch, tmp_path):
+    """El hook casi nunca tiene la credencial: la tiene el lanzador del daemon.
+
+    Se midio en vivo instalando los hooks y ejecutandolos como los ejecuta el cliente: el backend
+    de esta maquina responde 401 a `GET /v1/models` sin credencial, y estaba perfectamente. Leer
+    eso como «no hay backend» dejaria el bloqueo apagado para siempre en cualquier maquina con el
+    backend protegido, que es justo la configuracion recomendada.
+    """
+
+    class _Http401(urllib.error.HTTPError):
+        def __init__(self):
+            super().__init__("http://x/v1/models", 401, "Unauthorized", {}, None)
+
+    def _lanza_401(peticion, timeout=None):
+        raise _Http401()
+
+    monkeypatch.setattr(common.urllib.request, "urlopen", _lanza_401)
+
+    assert common.backend_disponible(marca=tmp_path / "salud.json") is True
+
+
+def test_un_500_no_cuenta_como_backend_sano(monkeypatch, tmp_path):
+    """Control positivo: contesta, pero no esta en condiciones de atender una delegacion."""
+
+    class _Respuesta:
+        status = 503
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(common.urllib.request, "urlopen", lambda *a, **k: _Respuesta())
+
+    assert common.backend_disponible(marca=tmp_path / "salud.json") is False
+
+
+def test_cada_endpoint_tiene_su_propia_marca_de_salud(monkeypatch):
+    """Con una marca global, cambiar de backend heredaba el «esta vivo» del anterior.
+
+    Lo caza un test de instalacion que apunta a un puerto donde no hay nadie: con la marca del
+    backend de verdad todavia fresca, recibia un bloqueo que no tocaba.
+    """
+    monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
+    uno = common._ruta_de_salud()
+
+    monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
+    otro = common._ruta_de_salud()
+
+    assert uno != otro
+    assert uno.parent == otro.parent

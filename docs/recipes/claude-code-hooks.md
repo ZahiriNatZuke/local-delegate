@@ -31,10 +31,45 @@ Está apagado por defecto. Se enciende de **dos formas equivalentes**, y basta c
 
 Encendido, usa dos bandas configurables:
 
-- 8-32 KiB: sugerencia si se necesita una transformación global.
-- más de 32 KiB: recomendación fuerte de `path`.
+- 8-100 KB (`LD_HOOK_READ_SUGGEST_KB`): sugerencia si se necesita una transformación global.
+- más de 100 KB (`LD_HOOK_READ_STRONG_KB`): recomendación fuerte de `path`.
+
+El umbral bajo era 32 KB hasta el 2026-09-08, y bajarlo salió de medir: de las 96 lecturas
+registradas, este hook callaba por tamaño 24 veces y **las 24 eran documentación**, 17 de ellas
+entre 8 y 16 KB. La franja donde vive la documentación de un repo quedaba muda, y lo que parecía
+desobediencia era un aviso que nunca llegaba.
 
 Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
+
+#### El bloqueo (`LD_HOOK_READ_BLOQUEAR`, apagado por defecto)
+
+Con él encendido, la lectura **completa** de un `.md` o un `.txt` por encima del umbral no se
+sugiere: se rechaza, con `permissionDecision: deny`. El motivo de que exista es que está medido
+cuatro veces seguidas que sugerir no cambia la conducta —la última medición ya con el aviso
+acertando el tipo de fichero, y aun así cero delegaciones—.
+
+El mensaje del rechazo nombra la tool que sirve, el `path` para llamarla y la salida de emergencia:
+leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay tres formas de que no bloquee:
+la variable a `0` —consultada en cada invocación, porque una sesión abierta hereda el entorno del
+lanzador—, un backend local que no responde, o `LD_HOOK_ENABLED=0`.
+
+`.json`, `.csv`, `.log` y `.yaml` se avisan pero no se bloquean: ahí se busca un valor exacto y un
+resumen no sustituye a la lectura.
+
+### `suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`
+
+La otra mitad de la superficie de lectura, y se instala con la **misma** bandera que el anterior.
+Cerrar la tool `Read` y dejar `cat informe.md` abierto no cambia la conducta: la muda de sitio, y
+entonces la adopción medida sube sin que se ahorre un token.
+
+Reconoce solo formas simples e inequívocas de volcar un fichero entero —`cat`, `type`, `more`,
+`Get-Content`, `gc`, `rtk read`, `head`— sobre una única ruta. Con una tubería, una redirección,
+comandos encadenados, una sustitución o un flag que ya acota, **no bloquea** y se limita a contar
+el caso: un comando mal parseado que se rechaza no es un consejo malo, es impedir algo que el
+usuario pidió.
+
+Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
+por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.
 
 ### `suggest_lint_summary.py` — retirado el 2026-09-08
 

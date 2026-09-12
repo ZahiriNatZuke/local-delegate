@@ -109,6 +109,45 @@ salvo dos casos que viajan bajo la clave reservada `_local_delegate` para no ens
 |---|---|---|
 | `LOCAL_DELEGATE_ALLOWED_DIRS` | *(vacío = sin restricción)* | Lista de directorios raíz separados por `;`. Cualquier `path` fuera de todos ellos se rechaza con un error que lista las raíces permitidas |
 
+## Hooks de lectura (opt-in, solo Claude Code)
+
+Los hooks son un mecanismo **exclusivo de Claude Code**: en Claude Desktop no existen, así que
+nada de esta sección le aplica. Se instalan con `install --enable-read-hook`, que registra los
+dos: el de la tool `Read` y el de `Bash|PowerShell`. Van juntos a propósito — son una regla sola
+sobre dos caminos, y cerrar `Read` dejando `cat informe.md` abierto no cambia la conducta, la
+muda de sitio.
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `LD_HOOK_READ_ENABLED` | `0` | Enciende el hook de lectura. `install --enable-read-hook` lo pasa como argumento, así que no hace falta ponerla a mano |
+| `LD_HOOK_READ_SUGGEST_KB` | `8` | A partir de aquí se avisa. Bajó de 32 a 8 tras medir: 24 de 24 lecturas calladas por tamaño eran documentación |
+| `LD_HOOK_READ_STRONG_KB` | `100` | A partir de aquí el aviso es «recomendación fuerte» |
+| `LD_HOOK_READ_BLOQUEAR` | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
+| `LD_HOOK_ENABLED` | `1` | Interruptor del experimento: `0` apaga hooks **y** telemetría, para la rama baseline de un A/B. Solo puede apagar |
+| `LD_HOOK_TELEMETRY_LOG` | *(vacío = sin telemetría)* | Fichero JSONL donde los hooks registran lo que deciden |
+
+### El bloqueo
+
+Con `LD_HOOK_READ_BLOQUEAR=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
+umbral se rechaza con un mensaje que nombra la tool que sirve, el `path` para llamarla y la salida
+de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo mismo con los
+volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
+ruta; con una tubería, una redirección, comandos encadenados o un flag que ya acota, no se bloquea.
+
+Nace apagado, y hay tres formas de que no bloquee:
+
+- `LD_HOOK_READ_BLOQUEAR=0`, que **se consulta en cada invocación**. No hace falta reiniciar la
+  sesión: está medido que una sesión abierta hereda el entorno del lanzador, así que un freno que
+  exigiera relanzar no frenaría nada.
+- Que el backend local no responda. El hook lo sondea él mismo (300 ms, cacheado un minuto) en vez
+  de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
+  marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay delegaciones.
+- `LD_HOOK_ENABLED=0`.
+
+`.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
+—un `package.json`, la línea del error— y un resumen no sustituye a la lectura. El código no dice
+nada, ni antes ni ahora.
+
 ## Auto-arranque de llama-swap (opt-in)
 
 Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.

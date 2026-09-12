@@ -29,6 +29,7 @@ from hook_common import (
     backend_disponible,
     contexto_de,
     deny,
+    huella_de_ruta,
     nuevo_id,
     record,
 )
@@ -136,7 +137,7 @@ def main() -> None:
         record("PreToolUse", suggested=False, ext=ext, motivo="sin_fichero", **comun)
         return
 
-    comun = {**comun, "ext": ext, "size_kb": round(size_kb, 1)}
+    comun = {**comun, "ext": ext, "size_kb": round(size_kb, 1), "path_sha": huella_de_ruta(ruta)}
 
     if ext not in EXTENSIONES_DE_PROSA:
         record("PreToolUse", suggested=False, motivo="no_es_prosa", **comun)

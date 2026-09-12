@@ -49,6 +49,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   en su evento (`bloqueo_id`). El identificador no viaja por el agente a propósito: pedirle que lo
   pase sería depender de que obedezca, que es justo lo que se quiere medir.
 
+### Added
+- **`scripts/medir_adopcion.py`**, que responde por fin «de los avisos dados, cuantos acabaron
+  en delegacion». Las cuatro mediciones anteriores ataron los dos logs a mano y esa pregunta se
+  quedo sin respuesta. Da el denominador por motivo y por camino, la tasa de aceptacion, y
+  cuantas delegaciones fueron espontaneas —esas no se las puede apuntar la regla—. Avisa si la
+  ventana mezcla dos versiones de script, porque una sesion abierta hereda el entorno del
+  lanzador y entonces la muestra junta dos politicas sin decirlo.
+
+- **Los eventos de lectura llevan la huella de la ruta** (nunca la ruta). Sin ella no se podia
+  agrupar por fichero, y esa es justo la pregunta pendiente de la guarda de «lectura acotada»:
+  de las 252 lecturas por franjas registradas, cuantas eran de un fichero que acabo leyendose
+  entero de todas formas.
+
 ### Fixed
 - **`content: null` reventaba la tool entera.** `choice["message"]["content"].strip()` lanzaba
   `AttributeError`, y ese tipo no estaba en el `except` que lo rodeaba: la excepción se escapaba de
