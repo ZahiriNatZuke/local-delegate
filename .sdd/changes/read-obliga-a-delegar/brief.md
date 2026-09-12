@@ -1,3 +1,14 @@
+> # ABSORBIDO — no se trabaja aqui
+>
+> **Este cambio lo absorbio `delegacion-precisa-y-fiable` (fase F1), y F1 esta IMPLEMENTADA
+> desde el 2026-09-12.** Lo que pedia esta carpeta —que la lectura que toca delegar deje de
+> depender del criterio del agente— existe ya: el hook de `Read` rechaza, hay un hook hermano
+> para `Bash|PowerShell`, y la adopcion se mide con `scripts/medir_adopcion.py`.
+>
+> El `state.json` se queda en `researching` porque el harness no tiene un estado «absorbido» y
+> recorrer sus gates seria firmar evidencia de un trabajo que se hizo en otra carpeta. **No es un
+> pendiente:** el pendiente vive en `.sdd/changes/delegacion-precisa-y-fiable/`.
+
 # Brief: que el aviso de lectura llegue, y decidir con datos si además debe obligar
 
 > **Si retomas esto en unos días, lee primero `research.md`** — sobre todo la tabla «Criterio de

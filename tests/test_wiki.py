@@ -59,11 +59,17 @@ def test_un_script_con_shebang_esta_marcado_ejecutable_en_git():
     O sea que el lint local pasa en verde y el CI falla, que es la peor forma de enterarse. Pasó
     con `sync_wiki.py` en este mismo change. El test lo comprueba leyendo el **modo que git tiene
     registrado**, que sí es el mismo dato en los tres sistemas.
+
+    Mira `scripts/` **y los hooks**: el 2026-09-12 volvió a pasar por partida doble y este test
+    solo vio uno de los dos, porque el otro estaba en `resources/hooks/`. Y hay una segunda mitad
+    de la lección: un fichero **sin añadir a git todavía no aparece en `ls-files`**, así que la
+    suite puede pasar en verde con el defecto ya escrito y delatarlo solo después del primer
+    `git add`. Corre este test otra vez después de añadir ficheros nuevos.
     """
     import subprocess
 
     salida = subprocess.run(
-        ["git", "ls-files", "-s", "--", "scripts/*.py"],
+        ["git", "ls-files", "-s", "--", "scripts/*.py", "src/local_delegate/resources/hooks/*.py"],
         cwd=RAIZ,
         capture_output=True,
         encoding="utf-8",

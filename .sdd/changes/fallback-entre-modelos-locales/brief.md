@@ -1,3 +1,16 @@
+> # ABSORBIDO — no se trabaja aqui
+>
+> **Este cambio lo absorbio `delegacion-precisa-y-fiable` como su fase F3**, que hereda sus 20
+> requisitos (`REQ-001` a `REQ-020`) y sus 16 escenarios con los mismos identificadores, para no
+> romper la trazabilidad. La spec de F3 esta en
+> `.sdd/changes/delegacion-precisa-y-fiable/spec.md`.
+>
+> **F3 sigue sin hacerse** y depende de F2 (el catalogo de modelos): sus cadenas se declaran sobre
+> los roles que salgan de alli, asi que escribirlas antes seria inventar. Lo que ya existe de su
+> parte es el clasificador de fallos, que lo entrego F0 en `src/local_delegate/fallos.py`.
+>
+> El `state.json` se queda como esta porque el harness no tiene un estado «absorbido».
+
 # Brief: cadena de respaldo entre modelos locales y enfriamiento temporal por modelo
 
 ## Problem
