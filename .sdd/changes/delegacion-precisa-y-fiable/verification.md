@@ -285,3 +285,55 @@ antes**, no por este cambio:
   inventar una correlacion», que era cierto hasta este cambio y ya no.
 - `docs/wiki/Configuration.md` no tenia seccion de hooks de lectura; ahora la tiene, con las cinco
   variables y las tres formas de que no bloquee.
+
+## Encendido del bloqueo: 2026-09-12
+
+Encendido en esta maquina a las **03:5x UTC del 2026-09-12**, con el criterio de la quinta
+medicion ya escrito mas arriba. La ventana de 7 dias y los 30 bloqueos minimos cuentan desde aqui.
+
+### Que se toco, exactamente
+
+| Sitio | Cambio |
+| --- | --- |
+| `~/.claude/settings.json`, bloque `env` | `LD_HOOK_READ_BLOQUEAR=1` |
+| Paquete de `uv tool` | reinstalado **desde el repo** (`uv tool install --force .`), rama `f0-clasificar-fallos` |
+| `~/.claude/hooks/local-delegate/` | 4 scripts, con `suggest_delegate_shell.py` nuevo |
+| `settings.json`, `hooks.PreToolUse` | 3 registrados: `Read`, `Bash\|PowerShell`, `UserPromptSubmit` |
+| Daemon | parado, actualizado y rearrancado (pid nuevo) |
+
+El interruptor va en `settings.json` y no en el entorno del shell **porque los hooks heredan el
+entorno del lanzador de Claude Code**, no el de la sesion interactiva. Es el mismo sitio donde ya
+vivia `LD_HOOK_TELEMETRY_LOG`. Se comprobo ademas que `install` no se lo lleva por delante al
+reescribir la seccion de hooks.
+
+**El daemon corre codigo sin publicar, a proposito.** El lanzador
+(`D:\Projects\llms\llama-swap\start-local-delegate-secure.ps1`) apunta al paquete de `uv tool`, que
+ahora sale del repo y no de PyPI. Cuando se publique la 0.28.0 hay que reinstalar desde PyPI para
+que la maquina vuelva a parecerse a la de cualquier usuario.
+
+### Verificacion en produccion, no en la suite
+
+Los hooks **instalados**, ejecutados con el entorno real —sin `LOCAL_DELEGATE_API_KEY`, que es lo
+que tiene el hook de verdad—:
+
+| Caso | Resultado |
+| --- | --- |
+| `README.md` entero (27 KB) por la tool `Read` | **deny** |
+| `README.md` con `limit: 40` | silencio |
+| `uv.lock` (grande, no es prosa) | aviso |
+| `cat README.md` | **deny** |
+
+Y el circuito completo contra el **daemon de verdad**: tras ese bloqueo se llamo a
+`local_summarize(path=README.md)` por MCP, y el evento quedo escrito con
+`"bloqueo_id": "461c4de109cb"`. Es la primera vez que este repo puede decir «este aviso acabo en
+esta delegacion» sin cruzar nada a mano.
+
+`scripts/medir_adopcion.py` sobre esos minutos: 2 bloqueos, 1 aceptado, tasa 0.5, y el desglose
+por camino (`read` 9, `shell` 12). Son datos de la propia prueba, no de uso real: la ventana que
+cuenta empieza ahora.
+
+### Como se apaga
+
+`LD_HOOK_READ_BLOQUEAR` a `0` en `~/.claude/settings.json`, y surte efecto **en la siguiente
+invocacion del hook**, sin cerrar nada. Las sesiones ya abiertas cuando se encendio siguen con el
+valor viejo, que es la trampa de medicion conocida: la ventana solo cuenta sesiones nuevas.
