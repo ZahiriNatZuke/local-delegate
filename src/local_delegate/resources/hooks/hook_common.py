@@ -281,4 +281,6 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> 
     try:
         archivo.write_text("\n".join([*previas, linea]) + "\n", encoding="utf-8")
     except OSError:
+        # Best-effort a proposito: perder esta nota cuesta una correlacion en la medicion;
+        # romperle la lectura al usuario por no poder escribir un fichero cuesta mucho mas.
         pass
