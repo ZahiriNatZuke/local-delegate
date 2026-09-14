@@ -223,7 +223,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--reasoning-effort off` apaga el razonamiento y el valor del caso manda sobre el del modelo,
   `--role` e `--input-control` seleccionan casos, y `thermal_state` marca fría solo la primera
   petición tras un cambio de proceso de `llama-server` —antes, la primera de cada caso—, o nada si
-  no hay sonda.
+  no hay sonda. `--load-mode` se anota en `variant` junto a `--context-size`: con los pesos
+  mapeados el contador de memoria privada no los ve, así que dos corridas con modos distintos no
+  son comparables.
 
 ## [0.27.0] - 2026-09-08
 

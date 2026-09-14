@@ -96,7 +96,8 @@ prompt de producción de su tool** sobre una fuente congelada, y el runner **fal
 fuente no cuadra. El corpus sintético de julio (`benchmarks/moe/`) ya no se carga. `--role` y
 `--case` eligen qué corre; `--input-control` sustituye la imagen de los casos de visión por la de
 control. `--reasoning-effort off` apaga el razonamiento (`enable_thinking: false`), y un valor
-propio del caso manda sobre el del modelo.
+propio del caso manda sobre el del modelo. `--context-size` y `--load-mode` quedan en el registro
+y hay que pasarlos siempre: el análisis solo compara dos modelos medidos con los mismos.
 
 Cada registro trae un `outcome`, y no todo lo que no es `ok` es mala calidad:
 

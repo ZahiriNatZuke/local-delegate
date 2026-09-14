@@ -281,6 +281,26 @@ def test_runner_puntua_con_el_corpus_real_y_sin_sonda_no_inventa_estado_termico(
     assert registro["score"]["quality"] == 1.0
     assert registro["thermal_state"] is None
     assert registro["descartada"] is False
+    # Sin declararlo, el analisis no puede comprobar §6 y declara el rol no concluyente.
+    assert registro["variant"]["load_mode"] is None
+
+
+def test_el_registro_guarda_contexto_y_load_mode_que_compara_el_analisis(tmp_path, monkeypatch):
+    _rc, (registro,) = _correr(
+        tmp_path,
+        monkeypatch,
+        lambda _r: _respuesta("bug"),
+        "--case",
+        "clasificar-53",
+        "--context-size",
+        "16384",
+        "--load-mode",
+        "none",
+    )
+    assert (registro["variant"]["context_size"], registro["variant"]["load_mode"]) == (
+        16384,
+        "none",
+    )
 
 
 def test_rechazo_por_contexto_no_es_mala_calidad_ni_descartada(tmp_path, monkeypatch):

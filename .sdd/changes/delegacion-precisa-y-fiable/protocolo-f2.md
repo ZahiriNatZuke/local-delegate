@@ -1068,6 +1068,57 @@ fracaso de la medicion. Es lo que dice REQ-F2-6 literalmente.
 agregado, y con la causa separada—, incluido `vision`, que se pilota con el control de entrada de
 §CP-3 porque ningun modelo de texto puede correr sus casos.
 
+#### Resultado de la tarea 17 (2026-09-14): la regla ya la aplica un programa
+
+`scripts/analizar_benchmark.py` tiene dos modos. **`cp3`** dice por rol que casos separan por encima
+de la banda, cuales estan en techo, si separa el agregado y si la regla podria disparar; su `--json`
+es el insumo de **`decidir`**, que aplica §6 y despues §7. `scripts/hoja_revision.py` genera la hoja
+de §4.8 barajada y con el modelo oculto, y la destapa contra una clave aparte.
+
+**Lo que el JSONL no traia.** §6 compara `--load-mode` entre vigente y candidato, y el runner no lo
+guardaba. Ahora `local-delegate benchmark --load-mode` lo anota en `variant` (toca `benchmark.py`,
+su test, la wiki y el CHANGELOG, fuera de los ficheros de la tarea). Y un `n_ctx` o un
+`--load-mode` **sin declarar** da no concluyente: con `None` en los dos lados la comparacion pasaria
+sin comprobar nada.
+
+**Lecturas que esta seccion no fijaba, y como las decide el programa:**
+
+- **Empate** es toda diferencia de calidad dentro de la banda, con cualquier signo. La regla dice
+  «sustituye solo si las tres» y a la vez da desempates «cuando la calidad cae dentro de la banda»:
+  las dos cosas solo casan si dentro de la banda la condicion 1 la sustituye la precedencia. Ganar
+  por techo o por velocidad exige igualmente las condiciones 2 y 3.
+- **Banda**: la mayor dispersion de **todos** los casos de calidad del rol, no solo de los que
+  admite CP-3.
+- **OOM**: no hay clase propia en el JSONL; **cualquier** `error` del candidato bloquea y se lista
+  con su texto. Buscar una cadena de OOM inventada daria un control ciego al resto de caidas.
+- **Corrida fria**: fuera de la latencia (lleva dentro la carga), dentro de la calidad.
+- **Techo**: la mayor `input_bytes` aceptada en todas las corridas validas de un caso del rol. Si el
+  rol tiene sondeo y falta en alguno de los dos, ni se decide por techo ni se sustituye. Y el sondeo
+  perdido **veta** tambien una victoria por calidad («entra en la decision, no solo en la hoja»).
+- **Tolerancia de 0,001** en todas las comparaciones con la banda: el runner redondea la cobertura a
+  4 decimales, y 0,3334 contra una banda de 0,3333 no es mejora. Es menor que el paso real mas fino
+  (1/24 en un agregado de cuatro casos de seis terminos).
+- **`Shared Usage`**: crece si el pico de una corrida supera la menor primera lectura del modelo en
+  el rol. El umbral por defecto es 0 y **esta sin calibrar**: lo fija la tarea 18 al ver CP-1.
+
+**El hallazgo: con la granularidad real, en `code` la regla puede no disparar nunca.** El corpus
+tiene casos de muy pocos terminos (`commit-diff-19k` tiene **uno**: calidad 0 o 1;
+`extraer-uvlock-48k`, dos). Con la banda definida como la mayor dispersion, basta que
+`commit-diff-19k` cambie **una vez en tres corridas** para que la banda de `code` valga 1,0, y
+entonces ni un candidato perfecto la supera: «no se cambia», la salida por defecto, por un artefacto
+del corpus. Y en general un candidato **un termino** mejor, con un paso de dispersion en el vigente,
+no gana nunca: la media de 1/N por caso no supera el mayor 1/N. Dos terminos si (`long`, banda 0,5).
+Los dos casos estan en `tests/test_analisis_benchmark.py`, puntuando textos con el puntuador real
+sobre los casos reales. **El programa no lo esconde**: `cp3` y `decidir` informan `puede_disparar`,
+y el informe dice «la regla no puede disparar» cuando pasa. Si pasa de verdad lo dice la salida real
+de CP-3 (tarea 19); que hacer si pasa es la P-12.
+
+**Verificacion:** 36 tests nuevos (35 del analisis y 1 del runner; la suite pasa de 1024 a 1060);
+**23 mutantes, 23 muertos**, cada uno por el test que le toca. Uno
+quedo vivo en la primera pasada —quitar la tolerancia no rompia nada— porque el test del redondeo
+promediaba cuatro casos y diluia la diferencia a 0,25, lejos de la banda: el caso de prueba no podia
+distinguir. Se reescribio con un solo caso en el agregado.
+
 ---
 
 ## 8. Scripts: que se toca y que se crea
@@ -1155,6 +1206,14 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
   CP-2b, y era innecesario —§5.1 paso 1 y la tarea 18 ya lo ponen tras CP-1 y CP-2 y antes de
   cualquier medida— y adelantarlo a CP-2 seria peor, porque CP-2 es el que valida que la sonda mide
   el proceso.
+- **P-12 — abierta (2026-09-14).** La tarea 17 mostro que, con la banda como «la mayor dispersion
+  del rol» y casos de uno o dos terminos, la regla de §7 **puede no disparar nunca** en `code`
+  (`commit-diff-19k`, un termino: si cambia en una de tres corridas, la banda vale 1,0). ¿Que se
+  hace si la salida real de CP-3 da `puede_disparar: false` en un rol? Opciones: (a) aceptarlo y
+  escribir el rol como indecidible con este corpus; (b) cambiar la banda, p. ej. por caso en vez de
+  la maxima del rol; (c) dar mas terminos a los casos de uno o dos. La (c) toca el corpus y la (b) la
+  regla: **las dos se deciden con la salida de CP-3 delante y antes de la tanda**, nunca despues de
+  ver quien gana, que es como se ajusta una regla al resultado que se queria.
 
 ---
 

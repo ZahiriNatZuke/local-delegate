@@ -1076,6 +1076,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                                 "quantization": args.quantization,
                                 "context_size": args.context_size,
                                 "n_cpu_moe": args.n_cpu_moe,
+                                # Parte de la identidad de la medida (§5.2): con mmap el contador
+                                # privado no ve los pesos, y §6 invalida un rol si difiere.
+                                "load_mode": args.load_mode,
                                 "llama_swap_version": args.llama_swap_version,
                                 "llama_server_version": args.llama_server_version,
                                 "reasoning_effort": effort,
@@ -1172,6 +1175,11 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     parser.add_argument("--quantization", default=None)
     parser.add_argument("--context-size", type=int, default=None)
     parser.add_argument("--n-cpu-moe", type=int, default=None)
+    parser.add_argument(
+        "--load-mode",
+        default=None,
+        help="--load-mode de llama-server (p. ej. none); el analisis exige el mismo en vigente y candidato",
+    )
     parser.add_argument("--llama-swap-version", default=None)
     parser.add_argument("--llama-server-version", default=None)
     parser.add_argument(
