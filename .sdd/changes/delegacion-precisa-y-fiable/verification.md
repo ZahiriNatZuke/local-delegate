@@ -355,3 +355,72 @@ perfil, la medicion vuelve a correr con el desbordamiento silencioso a RAM activ
 exactamente el error que descarto `gpt-oss-20b` en julio. El ejecutable de produccion hoy es
 `D:\Projects\llms\llamacpp\llama-server.exe` (9 KB: es un lanzador, el trabajo CUDA lo hacen las
 DLL de al lado, pero es el proceso que crea el contexto y por tanto el que lleva el perfil).
+
+## F2: tarea 13, la sonda de recursos por proceso (2026-09-14)
+
+Dentro de `src/local_delegate/benchmark.py` (`ProcessProbe`, `TypeperfStream`, `ResourceSampler`,
+`summarize_resources`), con `--probe-process` y `--gpu-luid` en el CLI y el envoltorio
+`scripts/sonda_recursos.py` para `llama-bench`. Apagada por defecto: sin el flag, cada registro
+lleva el bloque `resources` con `enabled: false` y los campos vacios, que es el rollback del plan.
+Sin dependencias nuevas.
+
+### Lo que se probo al reves, y lo que cambio por ello
+
+Ocho mutantes sobre el codigo, cada uno contra su test y mirando **que assert dispara**:
+
+| Mutante | Resultado | Assert que lo mata |
+| --- | --- | --- |
+| parseo sin filtro de LUID | muere | la cabecera trae 4 columnas en vez de 2 |
+| `-1` tratado como valor | muere | `process_gone` sale `False` |
+| no relanzar el flujo al cambiar de PID | muere | `[40160] == [40160, 31776]` |
+| cero muestras no anula | muere | `zero_vram_samples` en vez de `zero_ram_samples` |
+| sin lectura sincrona al salir | muere | 1 muestra en vez de 2 |
+| dos `llama-server` vivos no anula | **sobrevivio**, luego muere | — |
+| el runner no escribe `resources` | muere | `KeyError: 'resources'` |
+| working set devuelto como RAM privada | **sobrevivio**, luego muere | «lo mapeado NO puede subir la privada» (129 MiB contra 32) |
+
+Los dos supervivientes eran huecos de la prueba, no de la sonda:
+
+- **«Varios procesos»** solo se probaba sobre el resumen con muestras fabricadas; nadie ejercitaba
+  que `ProcessProbe` lo detectara. Test nuevo contra la sonda.
+- **El control positivo no distinguia un contador del otro.** Reservaba memoria anonima, que sube
+  la privada **y** el working set por igual, asi que devolver uno por otro pasaba. Es exactamente la
+  diferencia que decide CP-2b. Ahora son tres hijos —quieto, 128 MiB anonimos, 128 MiB mapeados
+  desde fichero y leidos— y lo mapeado tiene que subir el working set **sin** subir la privada: la
+  mitad negativa del control de la tarea 12, que el test habia perdido.
+
+### Contra procesos reales de esta maquina, sin tocarla
+
+Ni modelo cargado ni daemon parado; solo lecturas.
+
+```text
+luid resuelto: 0x00000000_0x0000F722
+llama-swap: [16916] muestras 4 ram 4 vram 0 privada MiB 56.3 ws MiB 13.4 annul zero_vram_samples
+dwm: [1556] muestras 10 ram 0 vram 5 dedicada MiB 9236.0 shared MiB 3.5 annul zero_ram_samples stream_error None
+motivos: ['no_access']
+typeperf vivos tras cerrar: []
+```
+
+- El LUID se resuelve solo y coincide con el emparejado a mano en la tarea 12.
+- `llama-swap.exe`: 56,3 MiB, el mismo numero que .NET; no usa la GPU y la corrida sale anulada por
+  `zero_vram_samples`, que es lo correcto.
+- `dwm.exe`: el `typeperf` real da 5 muestras de VRAM en 4,5 s (el resto es el arranque de ~2 s) y
+  la RAM sale `no_access`: sin elevar no se abre un proceso de otra sesion. Al cerrar no queda
+  ningun `typeperf` vivo.
+
+### Suite
+
+`uv run pytest -q`: **983 passed, 2 skipped**. 27 tests nuevos en `tests/test_sonda.py`, tres de
+ellos solo Windows con marca declarada. `ruff check .` y `ruff format --check .` limpios.
+
+### Lo que la tarea 13 deja para la 18
+
+- **Que `llama-server.exe` sea el proceso con la memoria.** El de produccion es un ejecutable de
+  9 KB que carga las DLL en el mismo proceso; si el de b10909 lanzara un hijo con otro nombre, la
+  sonda mediria el cascaron. CP-2 lo caza —dos modelos darian el mismo numero—, pero hay que
+  mirarlo con `witr --pid <pid> --tree` antes de dar CP-2 por bueno.
+- **Que `OpenProcess` abra el `llama-server.exe` que lanza llama-swap.** Deberia, porque corre como
+  el mismo usuario (comprobado con `witr` en la tarea 12), pero solo se ve con el proceso vivo.
+- **El primer run tras un cambio de modelo sale `process_changed`** si el `llama-server` anterior
+  seguia vivo al entrar: los picos mezclarian dos procesos. Es correcto anularlo, y obliga a la
+  tarea 16 a precalentar cada modelo antes de su primer run medido.

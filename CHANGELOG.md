@@ -7,6 +7,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`local-delegate benchmark` mide la memoria del proceso, y no la del sistema**
+  (`--probe-process`, `--gpu-luid`, solo Windows). El canary de julio descartó un modelo midiendo
+  la RAM de toda la máquina, que daba 27-29 GiB con el modelo entero en GPU. La sonda lee por
+  proceso la RAM privada **y** el working set —los dos siempre, porque con los pesos mapeados lo
+  mapeado no cuenta como privado y los expertos de un MoE desaparecerían de la cuenta— y la VRAM
+  dedicada y compartida del adaptador correcto. Sin dependencias nuevas: `ctypes` y `typeperf`.
+
+  Cada supuesto se comprobó ejecutándolo antes de escribir el código, y tres salieron distintos
+  de lo previsto: la instancia de GPU va por adaptador y hay que filtrarla por LUID o se suma la
+  VRAM de la gráfica integrada; `typeperf` no se cierra cuando el proceso muere, sino que emite
+  `-1` cada segundo; y un lanzador intermedio tiene otro PID que el proceso medido, así que el
+  proceso se busca por nombre. Una corrida sin muestras, con dos `llama-server` vivos o con cambio
+  de proceso a mitad lleva `annul` en el JSONL y se repite; no se publica vacía.
+
 - **La regla puede rechazar una lectura, y no solo sugerirla.** Cuatro mediciones seguidas dieron
   adopción cero —la última ya con el aviso acertando el tipo de fichero, `.md` 49 y `.txt` 15 de
   85 avisos—, así que el problema dejó de ser la puntería: sugerir no cambia la conducta. El hook

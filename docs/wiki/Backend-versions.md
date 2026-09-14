@@ -91,6 +91,16 @@ local-delegate benchmark --model <id-del-canary> --label gptoss-ncmoe12-c8k \
 Es la herramienta del paso «canary aislado» de arriba: mide antes de promover, en vez de decidir
 por impresión.
 
+En Windows, `--probe-process llama-server.exe` añade a cada corrida la memoria **del proceso**, no
+la del sistema: RAM privada y working set (por `GetProcessMemoryInfo`), y VRAM dedicada y
+compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag se empareja con
+`nvidia-smi` y, si no es inequívoco, pide el flag). El proceso se busca **por nombre** en cada
+lectura, porque llama-swap lo relanza al cambiar de modelo. Cada registro lleva un bloque
+`resources` con los picos y un campo `annul`: una corrida sin muestras, con dos `llama-server`
+vivos o con cambio de proceso a mitad **se marca para repetirla**, no se publica vacía. Sin el flag,
+el bloque va igual pero vacío. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
+en `scripts/sonda_recursos.py`.
+
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
   `config.yaml`. Funciona sin el extra `[llamaswap]`.
 - Exit code `0` si todo está al día respecto a lo probado, `1` si hay actualizaciones sugeridas.
