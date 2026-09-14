@@ -1,0 +1,418 @@
+"""metrics.py — dashboard de uso/ahorro de local-delegate.
+
+Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y sirve:
+  GET /               -> dashboard HTML (Chart.js por CDN; rango temporal server-side)
+  GET /api/events     -> eventos en [from, to] (más recientes primero) + meta
+  GET /api/stats      -> agregados JSON del mismo rango
+  GET /api/inflight   -> delegaciones en curso compartidas por usuario (inflight.json)
+  GET /api/backend    -> proxy best-effort de /running de llama-swap
+  GET /api/backend/stats -> proxy best-effort de /api/metrics/stats de llama-swap (#898, SQLite)
+  GET /api/status     -> versión del MCP, modelos del backend con status loaded/unloaded (#901),
+                         catálogo y tools
+  GET /api/system     -> RAM/VRAM de sistema + consumo por proceso (best-effort, ver sysinfo)
+  GET /favicon.svg    -> icono de marca (chip) servido inline
+
+`from`/`to` son ISO 8601 (fecha u datetime); sin parámetros, por defecto los últimos 30 días.
+Solo se abren los archivos cuyo mes interseca el rango pedido — releer un rango de un mes no
+recorre el histórico completo. Cache en memoria por archivo (mtime+size); solo el archivo del
+mes actual cambia entre refrescos.
+
+/api/inflight lee un archivo compartido (LOG_DIR/inflight.json, ver server._inflight_mutate) en
+vez de memoria local: ve las delegaciones en curso de TODAS las sesiones de Claude activas en
+esta máquina (mismo usuario del SO), no solo la del proceso que sirve esta web.
+
+Tres formas de arrancar:
+  0) Recomendada multi-cliente: ``local-delegate serve`` monta esta app junto al MCP HTTP,
+     con un único proceso persistente y un único puerto.
+  1) Automática: el MCP (server.py) llama a run_in_thread() en un hilo daemon,
+     de modo que la web vive y muere con el MCP. Si el puerto ya está ocupado
+     (otra instancia de Claude), no monta una segunda.
+  2) Manual: ``python -m local_delegate.web.metrics``  (127.0.0.1:9393 por defecto)
+
+Solo LEE los JSONL; no interfiere con el MCP ni con el backend (salvo el proxy best-effort
+de /api/backend, una lectura de estado sin efectos).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import socket
+from collections import defaultdict
+from datetime import UTC, datetime, timedelta
+from importlib.resources import files as _resource_files
+from pathlib import Path
+
+import httpx2
+import uvicorn
+from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse, JSONResponse, Response
+
+from .. import clients, config, server
+from . import sysinfo
+
+CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
+MAX_EVENTS = 5000  # tope de eventos servidos al cliente
+_MONTH_FILE_RE = re.compile(r"^usage-(\d{6})\.jsonl$")
+
+app = FastAPI(title="local-delegate metrics")
+
+# {ruta: (mtime, size, filas)} — releer un archivo solo si cambió desde la última lectura.
+_FILE_CACHE: dict[str, tuple[float, int, list[dict]]] = {}
+
+
+def _log_files() -> list[tuple]:
+    """Lista (path, ym) de archivos de log candidatos. ym=None = legado, siempre candidato."""
+    files: list[tuple] = []
+    seen = set()
+    log_dir = config.LOG_DIR
+    if log_dir.is_dir():
+        for p in sorted(log_dir.glob("usage-*.jsonl")):
+            m = _MONTH_FILE_RE.match(p.name)
+            if m:
+                files.append((p, m.group(1)))
+                seen.add(p.resolve())
+    legacy = config.USAGE_LOG
+    if legacy.is_file() and legacy.resolve() not in seen:
+        files.append((legacy, None))
+    return files
+
+
+def _read_file_cached(path) -> list[dict]:
+    """Lee un JSONL tolerando líneas corruptas; cachea por (mtime, size)."""
+    try:
+        st = path.stat()
+    except OSError:
+        return []
+    key = str(path)
+    cached = _FILE_CACHE.get(key)
+    if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
+        return cached[2]
+    rows: list[dict] = []
+    try:
+        with path.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    _FILE_CACHE[key] = (st.st_mtime, st.st_size, rows)
+    return rows
+
+
+def _month_span(ym: str) -> tuple[datetime, datetime]:
+    year, month = int(ym[:4]), int(ym[4:6])
+    start = datetime(year, month, 1, tzinfo=UTC)
+    end = datetime(year + (month == 12), (month % 12) + 1, 1, tzinfo=UTC)
+    return start, end
+
+
+def _parse_ts(ts) -> datetime | None:
+    if not ts or not isinstance(ts, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(ts)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+def _parse_range_param(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+def _resolve_range(from_: str | None, to_: str | None) -> tuple[datetime, datetime]:
+    """Sin from/to -> últimos 30 días. Con solo uno de los dos, el otro se abre hasta el límite."""
+    range_from = _parse_range_param(from_)
+    range_to = _parse_range_param(to_)
+    if range_from is None and range_to is None:
+        range_to = datetime.now(UTC)
+        range_from = range_to - timedelta(days=30)
+    elif range_to is None:
+        range_to = datetime.now(UTC)
+    elif range_from is None:
+        range_from = datetime(2000, 1, 1, tzinfo=UTC)
+    return range_from, range_to
+
+
+def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[str]]:
+    """Eventos en [range_from, range_to], abriendo solo los archivos cuyo mes toca el rango."""
+    rows: list[dict] = []
+    files_read: list[str] = []
+    for path, ym in _log_files():
+        if ym is not None:
+            m_start, m_end = _month_span(ym)
+            if m_start > range_to or m_end <= range_from:
+                continue
+        file_rows = _read_file_cached(path)
+        if not file_rows:
+            continue
+        files_read.append(str(path))
+        for r in file_rows:
+            t = _parse_ts(r.get("ts"))
+            if t is None or t < range_from or t > range_to:
+                continue
+            rows.append(r)
+    return rows, files_read
+
+
+def _last_event() -> dict | None:
+    """El evento más reciente de TODO el histórico (no del rango elegido).
+
+    El indicador EN CURSO/EN VIVO/EN REPOSO del dashboard tiene que ser independiente del
+    selector de rango: mirar solo el rango hacía que "Hoy" (o un mes pasado) apagara el
+    indicador aunque el MCP acabara de trabajar. Solo abre el archivo más nuevo y se apoya
+    en el cache por (mtime, size), así que sondearlo es barato.
+
+    Devuelve la fila entera —y no solo su `ts`— porque el panel "En curso" enseña la última
+    delegación **terminada** cuando no hay ninguna viva: las tareas mecánicas duran 2-4 s y un
+    panel que solo muestra lo que corre ahora mismo está vacío casi siempre.
+    """
+    files = _log_files()
+    if not files:
+        return None
+    # el archivo del mes más reciente primero; el legado (ym=None) al final como respaldo
+    ordered = sorted(files, key=lambda f: (f[1] is not None, f[1] or ""), reverse=True)
+    for path, _ym in ordered:
+        rows = _read_file_cached(path)
+        for row in reversed(rows):
+            ts = row.get("ts")
+            if isinstance(ts, str) and ts:
+                return row
+    return None
+
+
+def _last_event_ts() -> str | None:
+    """`ts` del evento más reciente, o `None` si el log está vacío."""
+    evento = _last_event()
+    return evento.get("ts") if evento else None
+
+
+# La contabilidad por evento vive en `server.py`, junto a `_log_event` que define el formato
+# del log: es la ÚNICA implementación, y así `local_status` y el dashboard no pueden dar
+# números distintos del mismo log.
+_accounting = server._accounting
+
+
+def _aggregate(rows: list[dict]) -> dict:
+    by_tool: dict[str, dict] = defaultdict(
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "chars_in": 0,
+            "chars_out": 0,
+            "latency_ms": 0,
+            "errors": 0,
+            "saved": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
+    )
+    by_model: dict[str, dict] = defaultdict(
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "chars_in": 0,
+            "chars_out": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
+    )
+    # Quién PIDIÓ la delegación. Sin esto el KPI acumulado no puede distinguir un mes de smoke
+    # tests de un mes de trabajo real: es lo que obligó a cruzar a mano contra los transcripts en
+    # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "desconocido"
+    # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
+    by_client: dict[str, dict] = defaultdict(
+        lambda: {"calls": 0, "backend_calls": 0, "saved": 0, "tokens_in": 0, "tokens_out": 0}
+    )
+    # Origen del CÓMPUTO: "local" (backend en esta máquina), "remote" (p. ej. esta Mac usando
+    # la GPU de la PC) o "unknown" para eventos anteriores a que se registrara el campo.
+    by_backend: dict[str, dict] = defaultdict(
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "chars_in": 0,
+            "chars_out": 0,
+            "saved": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "hosts": set(),
+        }
+    )
+    total = {
+        "calls": 0,  # eventos, o sea delegaciones que pidió Claude
+        "backend_calls": 0,  # llamadas REALES al backend: una troceada gasta N
+        "chars_in": 0,
+        "chars_out": 0,
+        "errors": 0,
+        "chars_in_path": 0,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "saved": 0,
+        "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
+    }
+
+    for r in rows:
+        tool = str(r.get("tool", "?"))
+        model = str(r.get("model", "?"))
+        backend = str(r.get("backend") or "unknown")
+        ci = int(r.get("chars_in", 0) or 0)
+        co = int(r.get("chars_out", 0) or 0)
+        lat = int(r.get("latency_ms", 0) or 0)
+        ok = bool(r.get("ok", True))
+        is_path = r.get("source") == "path"
+        acc = _accounting(r)
+
+        t = by_tool[tool]
+        t["calls"] += 1
+        t["backend_calls"] += acc["backend_calls"]
+        t["chars_in"] += ci
+        t["chars_out"] += co
+        t["latency_ms"] += lat
+        t["tokens_in"] += acc["tokens_in"]
+        t["tokens_out"] += acc["tokens_out"]
+        t["saved"] += acc["saved"]
+        if not ok:
+            t["errors"] += 1
+        m = by_model[model]
+        m["calls"] += 1
+        m["backend_calls"] += acc["backend_calls"]
+        m["chars_in"] += ci
+        m["chars_out"] += co
+        m["tokens_in"] += acc["tokens_in"]
+        m["tokens_out"] += acc["tokens_out"]
+
+        b = by_backend[backend]
+        b["calls"] += 1
+        b["backend_calls"] += acc["backend_calls"]
+        b["chars_in"] += ci
+        b["chars_out"] += co
+        b["tokens_in"] += acc["tokens_in"]
+        b["tokens_out"] += acc["tokens_out"]
+        b["saved"] += acc["saved"]
+        host = r.get("backend_host")
+        if isinstance(host, str) and host:
+            b["hosts"].add(host)
+
+        quien = r.get("client")
+        c = by_client[quien if isinstance(quien, str) and quien else "desconocido"]
+        c["calls"] += 1
+        c["backend_calls"] += acc["backend_calls"]
+        c["saved"] += acc["saved"]
+        c["tokens_in"] += acc["tokens_in"]
+        c["tokens_out"] += acc["tokens_out"]
+
+        total["calls"] += 1
+        total["backend_calls"] += acc["backend_calls"]
+        total["chars_in"] += ci
+        total["chars_out"] += co
+        total["tokens_in"] += acc["tokens_in"]
+        total["tokens_out"] += acc["tokens_out"]
+        total["saved"] += acc["saved"]
+        if acc["estimated"]:
+            total["estimated_events"] += 1
+        if not ok:
+            total["errors"] += 1
+        if is_path:
+            total["chars_in_path"] += ci
+
+    tools = [
+        {
+            "tool": name,
+            "calls": t["calls"],
+            "backend_calls": t["backend_calls"],
+            "chars_in": t["chars_in"],
+            "chars_out": t["chars_out"],
+            "errors": t["errors"],
+            "tokens_saved": t["saved"],
+            "tokens_in": t["tokens_in"],
+            "tokens_out": t["tokens_out"],
+            "avg_latency_ms": round(t["latency_ms"] / t["calls"]) if t["calls"] else 0,
+        }
+        for name, t in sorted(by_tool.items(), key=lambda kv: -kv[1]["saved"])
+    ]
+    models = [
+        {"model": n, **v} for n, v in sorted(by_model.items(), key=lambda kv: -kv[1]["calls"])
+    ]
+    backends = [
+        {
+            "backend": name,
+            "calls": v["calls"],
+            "backend_calls": v["backend_calls"],
+            "chars_in": v["chars_in"],
+            "chars_out": v["chars_out"],
+            "tokens_saved": v["saved"],
+            "tokens_in": v["tokens_in"],
+            "tokens_generated": v["tokens_out"],
+            "hosts": sorted(v["hosts"]),
+        }
+        for name, v in sorted(by_backend.items(), key=lambda kv: -kv[1]["calls"])
+    ]
+    clientes = [
+        {
+            "client": name,
+            "calls": v["calls"],
+            "backend_calls": v["backend_calls"],
+            "tokens_saved": v["saved"],
+            "tokens_in": v["tokens_in"],
+            "tokens_generated": v["tokens_out"],
+        }
+        for name, v in sorted(by_client.items(), key=lambda kv: -kv[1]["calls"])
+    ]
+
+    return {
+        "total": total,
+        # Ahorro: contenido leído server-side que no entró al contexto de Claude, contado UNA vez
+        # por delegación aunque se troceara.
+        "tokens_context_saved": total["saved"],
+        "tokens_generated_local": total["tokens_out"],
+        # Coste: lo que gastó de verdad el backend, con el prompt de sistema repetido por trozo.
+        "tokens_local_input": total["tokens_in"],
+        "backend_calls": total["backend_calls"],
+        "estimated_events": total["estimated_events"],
+        "by_tool": tools,
+        "by_model": models,
+        "by_backend": backends,
+        "by_client": clientes,
+    }
+
+
+@app.get("/api/events")
+def events(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+    range_from, range_to = _resolve_range(from_, to)
+    rows, files_read = _load(range_from, range_to)
+    rows.reverse()  # más recientes primero
+    return JSONResponse(
+        {
+            "meta": {
+                "chars_per_token": CHARS_PER_TOKEN,
+                "log_dir": str(config.LOG_DIR),
+                "count": len(rows),
+                "files_read": files_read,
+                "range_from": range_from.isoformat(),
+                "range_to": range_to.isoformat(),
+            },
+            "events": rows[:MAX_EVENTS],
+        }
+    )
+
+
+@app.get("/api/stats")
+def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+    range_from, range_to = _resolve_range(from_, to)
+    rows, _files_read = _load(range_from, range_to)
+    return JSONResponse(_aggregate(rows))
+
+

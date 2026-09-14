@@ -1,0 +1,1 @@
+Función parse_duration(texto) que convierta '1h30m', '45s' o '2m' en segundos (int) y lance ValueError si el formato no es válido. Con docstring y ejemplos.

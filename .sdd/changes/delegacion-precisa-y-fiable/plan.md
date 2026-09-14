@@ -2,11 +2,14 @@
 
 ## Approach
 
-La spec tiene cuatro fases y solo dos son planificables hoy. **F0 y F1 se detallan tarea a tarea**;
-**F2 y F3 quedan como bloques con entrada, salida y condicion de replanificacion**, porque detallar
-F3 ahora seria inventar tareas sobre un catalogo de modelos que todavia no existe, y F2 depende de
-una accion fisica del usuario (limpiar RAM y activar «Prefer No Sysmem Fallback» en el panel de
-NVIDIA). El gate `plan` se aprueba sobre F0 y F1; F2 y F3 vuelven a pasar por aqui cuando les toque.
+La spec tiene cuatro fases. **F0, F1 y F2 se detallan tarea a tarea**; **F3 sigue siendo un bloque
+con entrada, salida y condicion de replanificacion**, porque detallar sus cadenas ahora seria
+inventarlas sobre unos roles que F2 todavia no ha fijado.
+
+**Historial del gate `plan`:** se aprobo primero sobre F0 y F1 (2026-09-12), con F2 como bloque
+porque dependia de una accion fisica del usuario —limpiar RAM y activar «Prefer No Sysmem
+Fallback» en el panel de NVIDIA— que ya esta hecha. Vuelve a pasar ahora con las tareas 12 a 21 de
+F2 y su protocolo (`protocolo-f2.md`). F3 volvera cuando cierre la tarea 21.
 
 Tres decisiones de diseno gobiernan el resto:
 
@@ -180,23 +183,242 @@ mediciones anteriores.
       de la tabla del doctor en verde.
     - Rollback or recovery: `install` es idempotente y reinstalar deja exactamente lo esperado.
 
-### F2 - Catalogo de modelos (bloque, se replanifica)
+### F2 - Catalogo de modelos
 
-- **Entrada**: maquina limpia, «Prefer No Sysmem Fallback» activo (lo hace el usuario), llama.cpp
-  b10909 en carpeta aparte, versiones de llama-swap y llama.cpp anotadas.
-- **Salida**: un modelo por rol con el dato que lo sostiene, **y la medida del catalogo vigente en
-  la misma tanda** (REQ-F2-6). Sin linea base no hay comparacion.
-- **Condicion de replanificacion**: cuando el usuario confirme el entorno preparado. Requisitos
-  cubiertos aqui: REQ-F2-1 a REQ-F2-6. Memoria del proyecto: se mide `PrivateMemorySize64` del
-  proceso, nunca la RAM del sistema; asi se descarto `gpt-oss-20b` por error en julio.
+Protocolo completo en `protocolo-f2.md` (entorno, controles, corpus, contexto, puntuacion, regla de
+decision y bitacora). Aqui van solo las tareas. **Ninguna medida se toma antes de la tarea 18**, y la
+18 no empieza hasta que la sesion en curso libere la maquina (decision del usuario, 2026-09-12).
+
+Orden: instrumentacion, corpus, controles y por ultimo la medida. Las cuatro veces que este repo
+midio algo sin comprobar antes el instrumento, lo roto era la prueba.
+
+12. **Verificar por ejecucion que la sonda puede existir**
+    - Files or modules: ninguno; scratchpad y `protocolo-f2.md` §3.4
+    - Requirements covered: prepara REQ-F2-3
+    - Detalle: las cuatro hipotesis de §3.4 estan **sin comprobar**: que los contadores
+      `\GPU Process Memory(pid_*)\Dedicated Usage` y `Shared Usage` existen con ese nombre y se leen
+      sin elevar; que `PrivateMemorySize64` sale por `ctypes` (`GetProcessMemoryInfo` ->
+      `PROCESS_MEMORY_COUNTERS_EX.PrivateUsage`) sin dependencias nuevas; que `typeperf` transmite en
+      continuo a 1 Hz **y se puede relanzar cuando llama-swap cambia el PID** (un `typeperf` ya
+      arrancado enumera instancias al inicio y no ve el PID nuevo); y que `--load-mode none` es
+      practicable. En este repo un pendiente es una hipotesis: 7 de 18 cayeron en la ultima
+      auditoria, siempre con la observacion correcta y la causa inventada.
+    - Verification: las cuatro contrastadas contra procesos reales, con la salida cruda pegada en el
+      protocolo. La cuarta con el control de CP-2b: cargar un MoE con `-ncmoe 0` y con `-ncmoe 12` y
+      ver **subir** la RAM privada en el segundo. Si no sube, el contador no ve los expertos y el
+      metodo se cambia **aqui**, no despues de escribir la sonda encima.
+    - Rollback or recovery: no toca el repo; el resultado es una nota en `protocolo-f2.md`.
+
+13. **Sonda de recursos por proceso, dentro del runner**
+    - Files or modules: `src/local_delegate/benchmark.py`, `scripts/sonda_recursos.py` (nuevo),
+      `tests/test_sonda.py` (nuevo)
+    - Requirements covered: REQ-F2-3, y la regla de anulacion de REQ-F2-1
+    - Detalle: muestrea de un PID la RAM privada **y el working set** —los dos, siempre, de la misma
+      llamada a `GetProcessMemoryInfo` (P-11: H4 quedo sin verificar en la tarea 12 y CP-2b decide
+      despues cual se publica, sin tocar codigo)—, la VRAM dedicada y la **VRAM compartida**, filtrando
+      la instancia por el LUID de la NVIDIA (`pid_<pid>_luid_<luid>_phys_0`, §3.4). `typeperf` emite
+      `-1` cuando el PID muere: eso es «sin muestra» y reresolver, no un cero. Va
+      **dentro de `benchmark.py`**, no en un modulo nuevo del paquete: un modulo publicado arrastra
+      sus tres sitios de documentacion por una sonda Windows-only de un solo uso. `scripts/` lleva
+      solo el envoltorio para medir `llama-bench`, que no pasa por el runner. Lectura **sincrona
+      antes y despues de cada peticion** ademas del flujo continuo, para que una corrida de 53
+      caracteres no se quede sin ninguna muestra (§3.3). El PID se reresuelve al cambiar de modelo.
+    - Verification: test de que el parseo de `typeperf` saca los dos contadores de la instancia
+      correcta habiendo varias; test de que un PID que desaparece da «sin muestra» y no una
+      excepcion; test de que una corrida con **cero muestras** se marca para anular, no se publica
+      vacia; y **control positivo**: numeros distintos para dos procesos de tamano distinto. Marca de
+      plataforma declarada: `ctypes` y `typeperf` no existen en Ubuntu ni macOS y el CI corre en los
+      tres — este repo ya tuvo un test que fallo **solo en macOS**.
+    - Rollback or recovery: el muestreo es aditivo; sin el, el runner escribe los mismos campos vacios.
+
+14. **Congelar las fuentes y construir el corpus v2**
+    - Files or modules: `scripts/construir_corpus.py` (nuevo),
+      `benchmarks/catalogo-2026-09/{cases.json,fuentes/}` (generado), `tests/test_corpus.py` (nuevo)
+    - Requirements covered: REQ-F2-2
+    - Detalle: el constructor lee el log real (`%LOCALAPPDATA%\local-delegate\usage-*.jsonl`),
+      **emite los conteos** de §4.2 y arma los 17 casos de §4.4. Las fuentes se **copian** a
+      `fuentes/` y se hashea la copia: dos casos apuntaban a `CHANGELOG.md` y a
+      `docs/wiki/Backend-versions.md`, ficheros que la tarea 16 edita, asi que un hash contra la ruta
+      viva se invalida solo. **Descarta toda fuente fuera del repo**: el log guarda rutas del vault y
+      de otros proyectos del usuario. Congela tambien la **imagen de control** de CP-3 (`docs/assets/dashboard.png` en `bcbe39f`), que es
+      una fuente mas y no un artefacto suelto: con su hash y su `procedencia`, porque un control que
+      consume algo que ninguna tarea produce no esta cerrado — ya paso una vez con las referencias de
+      CP-4. Marca `procedencia` (`congelado`, `generado`, `reconstruido` o `inventado`): 50 de los
+      146 eventos son `inline` y de esos no hay contenido, solo tamano (decia 56: eran de los 152,
+      el mismo cruce de denominadores de §11; lo conto el constructor).
+    - Verification: test de que un `source_sha256` que no cuadra hace **fallar** la carga en vez de
+      correr otro contenido con el mismo id; test de que ninguna ruta del usuario llega al corpus
+      versionado; y **las dos comprobaciones que de verdad pueden fallar**, las dos calculadas contra
+      el codigo de produccion y no contra la tabla que uno mismo escribio: (a) el `role` de cada caso
+      coincide con el modelo que el enrutado real elegiria para ese tamano (`LONG_INPUT_CHARS`,
+      `max_chars_for`), y (b) **cada caso de calidad cabe en una sola llamada** segun la tabla de
+      troceado de §4.3 —`local_translate` trocea siempre a 3 500, `summarize`/`lint`/`commit_msg`
+      por encima del `MAX_CHARS` de su modelo—. La (b) es la que habria cazado el `traducir-14k` que
+      se colo en la version anterior. Los conteos del log los emite el programa: contar a mano mezclo
+      dos denominadores (152 contra 146) y de ahi salio una decision equivocada sobre el rol `fast`.
+    - Rollback or recovery: corpus y fuentes son ficheros generados y versionados; se regeneran.
+
+15. **Las diez respuestas de referencia de CP-4**
+    - Files or modules: `benchmarks/catalogo-2026-09/cases.json` (campos `reference_ok` /
+      `reference_bad`), `protocolo-f2.md` §CP-4
+    - Requirements covered: habilita CP-4, que valida la puntuacion de REQ-F2-2
+    - Detalle: cinco casos elegidos para cubrir cada senal del puntuador **que se pueda ejercitar con
+      texto** —cobertura, termino prohibido, formato JSON y normalizacion Unicode—, con una respuesta
+      correcta y una deliberadamente mala de la misma longitud y los hechos cambiados. Cinco y no
+      diecisiete: el control valida el puntuador, no el corpus. **`truncado` no entra**: no es una
+      propiedad del texto sino del `finish_reason` del backend, y ninguna pareja escrita a mano lo
+      dispara; se prueba inyectandolo en un test del puntuador (tarea 16). Tarea propia porque la
+      version anterior del plan las consumia en CP-4 sin que ninguna tarea las produjera.
+    - Verification: que las cuatro senales de texto queden cubiertas lo comprueba un test, no yo
+      leyendo la tabla; y que cada pareja se diferencie **solo** en la senal que quiere ejercitar, o
+      CP-4 no podra decir por que separo.
+    - Rollback or recovery: son datos del corpus; se reescriben.
+
+16. **Runner: corpus v2, puntuacion, multimodal y estado termico**
+    - Files or modules: `src/local_delegate/benchmark.py`, `tests/test_benchmark.py`,
+      `docs/wiki/Backend-versions.md`, `README.md`, `CHANGELOG.md`
+    - Requirements covered: REQ-F2-1, REQ-F2-2, REQ-F2-3
+    - Detalle: cargar `schema_version: 2` y **dejar de aceptar el 1** (ningun REQ-F2 pide repetir la
+      prueba de julio; su corpus se conserva y el cargador viejo esta en git); contenido literal
+      desde `fuentes/` en vez de `materialize_case()`; los cinco cambios de puntuacion de §4.7,
+      incluido **guardar que componente puso la calidad a 0**, sin lo cual CP-4 no se puede evaluar;
+      **payload multimodal con `image_url`**, porque hoy el mensaje es texto puro
+      (`benchmark.py:214-227`) y sin eso **el rol `vision` no se puede medir en absoluto**;
+      `reasoning_effort` con valor **«apagado»** —el CLI solo acepta `low|medium|high`— y con
+      precedencia caso > modelo; `rechazo_por_contexto` como clase propia (§3.5); y corregir
+      `thermal_state`, que hoy marca fria la primera corrida **de cada caso**
+      (`benchmark.py:269`) cuando solo lo es la primera tras cargar el modelo — mal etiquetado infla
+      la banda de ruido y vuelve la regla de decision imposible de superar por un artefacto.
+    - Verification: test de que una respuesta con acentos correctos ya **no** pierde cobertura (el
+      defecto literal de julio, reproducido en rojo antes de arreglarlo); test de que un termino
+      prohibido pone la calidad a 0 aunque la cobertura sea 1, con control positivo; test de que una
+      corrida truncada no cuenta como mala calidad; test de que un caso `media_type: imagen` produce
+      un payload con `image_url` y uno de texto no; test de que `rechazo_por_contexto` no se confunde
+      con un fallo de calidad ni con `descartada`; test de que `truncado` se ejercita **inyectando
+      `finish_reason: "length"`**, que es la senal que CP-4 no puede cubrir con texto; test de que
+      «apagado» llega de verdad al payload y de que la precedencia caso > modelo se respeta. En cada
+      uno, comprobar **que assert dispara**.
+    - Rollback or recovery: superficie publicada — la release toca **tres** sitios (CHANGELOG, README
+      y `docs/wiki/`), y `Backend-versions.md` es justo la pagina del runner. Retirar el schema v1 es
+      el unico cambio que rompe: se anota como breaking en el CHANGELOG.
+
+17. **Agregacion, regla de decision y hoja de revision a ciegas**
+    - Files or modules: `scripts/analizar_benchmark.py` (nuevo), `scripts/hoja_revision.py` (nuevo),
+      `tests/test_analisis_benchmark.py` (nuevo)
+    - Requirements covered: REQ-F2-1 (mediana), REQ-F2-4, REQ-F2-6
+    - Detalle: medianas y dispersiones por caso, banda de ruido por rol, el criterio de tanda no
+      concluyente de §6, y las tres condiciones de §7 aplicadas por el programa. La hoja de revision
+      saca las respuestas **barajadas y con el modelo oculto**: una revision que sabe de quien es la
+      respuesta puntua la expectativa. En `scripts/` y no en el CLI porque son analisis de un solo uso
+      de este SDD, y el wheel no empaqueta `scripts/`.
+    - Verification: cuatro pruebas de la regla — un candidato que gana por encima de la banda; uno que
+      gana **dentro** de la banda (no sustituye); uno que empata (decide la velocidad); y **ninguno
+      mejora**, con la salida diciendolo como resultado, no como error. Mas la **precedencia** de los
+      dos desempates: candidato que pierde el sondeo de techo pero es mas rapido — manda el techo. Mas las dos condiciones que
+      la version anterior no probaba: corrida anulada u OOM, y latencia un 50 % peor. Y la que de
+      verdad importa: que con la granularidad real de la puntuacion —cobertura sobre pocos terminos,
+      pasos de 1/N— la regla **pueda** declarar un ganador alguna vez. Un fixture con valores
+      continuos y dispersion cero no discrimina ninguna regla de ruido, asi que esa comprobacion se
+      corre **tambien sobre la salida real de CP-3** (tarea 19), que ya existe antes de la tanda: es
+      la unica forma de saber si la regla puede disparar con los numeros de verdad.
+    - Rollback or recovery: scripts sin consumidores en el producto.
+
+18. **Entorno de medicion, CP-1, CP-2 y CP-2b**
+    - Files or modules: `benchmarks/catalogo-2026-09/llama-swap-pruebas.yaml` (nuevo),
+      `protocolo-f2.md` §1, §2 y §10
+    - Requirements covered: REQ-F2-1
+    - Detalle: b10909 en `D:\Projects\llms\llamacpp-b10909` y llama-swap v255 con config y puerto
+      propios (`--cache-ram 1024 -np 1`); produccion no se toca. **El perfil «Prefer No Sysmem
+      Fallback» se anade a la ruta nueva**: se guarda por ejecutable y el de b10909 no hereda nada.
+      `%APPDATA%\llama.cpp\config.ini` lo lee b10909 **de forma global**, asi que se mira que tiene
+      hoy —esta sin comprobar—, **se respalda** y se vacia. Se para el daemon, se comprueba que hay un
+      solo `llama-server.exe` vivo y se anota la hora UTC de inicio y la duracion estimada.
+    - Verification: **CP-1 tiene veto**: un modelo que no quepa debe dar error de memoria en segundos
+      y uno que quepa debe cargar normal — sin la segunda mitad, un CP-1 «pasado» podria ser solo un
+      build roto. **CP-2**: la sonda da numeros distintos con un 2B y con un 14B y se mueven al
+      descargar; en la misma pasada se averigua **que mide** `llamaswap_memory_used_bytes`, el
+      candidato a repetir el error de julio. **CP-2b**: con un MoE, `-ncmoe 12` sube la RAM privada
+      frente a `-ncmoe 0`; si no sube, el contador privado no ve los expertos y se publica el working
+      set junto al privado diciendo cual es cual (o se cambia el `--load-mode`); la sonda ya guarda
+      los dos desde la tarea 13, asi que el resultado no reabre codigo (P-11).
+    - Rollback or recovery: al cerrar se **restaura** el `config.ini` respaldado y se **retira** el
+      perfil del driver anadido a la ruta nueva; borrar `llamacpp-b10909` y la config de pruebas
+      devuelve la maquina a como estaba. Produccion se reanuda arrancando `LocalDelegateDaemon`.
+
+19. **CP-3 y CP-4: que el corpus discrimine y el puntuador separe**
+    - Files or modules: `benchmarks/catalogo-2026-09/cases.json`, `protocolo-f2.md` §2
+    - Requirements covered: REQ-F2-2, y el escenario «el caso no discrimina»
+    - Detalle: CP-3 con `qwen35-2b` y `qwen25-coder-14b`, **3 corridas por caso** y no una: sin
+      dispersion no hay con que separar una diferencia real del ruido que el propio protocolo da por
+      existente. **`vision` no se pilota asi**: ninguno de los dos modelos es multimodal, asi que sus
+      **dos** casos usan un **control de entrada** con `qwen3-vl-8b` —la imagen correcta contra
+      `dashboard.png` del commit `bcbe39f`, el mismo dashboard con otras cifras—, que ademas ejercita
+      el payload multimodal de punta a punta. Pasa si **los dos casos bajan** por encima de su banda;
+      y que bajen **no** prueba que el caso separe dos modelos, cosa que se escribe junto al veredicto
+      del rol. CP-4 con las diez referencias de la tarea 15.
+    - Verification: CP-3 pasa si en cada rol con mas de un caso **al menos uno separa por encima de
+      su banda de ruido**, y ademas **informa por rol si separa el agregado**, que es lo que la §7
+      usa para decidir: `mechanical` tiene tres de sus cinco casos en 42-56 caracteres, donde dos
+      modelos competentes daran 1,0 los dos, y un agregado dominado por casos en techo produciria
+      «nadie mejora al vigente» por composicion del corpus, indistinguible del hallazgo legitimo. Los
+      casos en techo quedan fuera del promedio de su rol y se anota cuantos entraron. No se exige que ningun caso empate: dos modelos competentes daran
+      cobertura 1,0 en los faciles, y eso es techo, no falta de discriminacion. Si un rol no separa,
+      **hay que mirar las salidas** y decidir cual de las dos causas es —el corpus no lo recoge, o la
+      premisa de cual modelo es mejor era falsa, que en traducir o clasificar es muy posible—; solo
+      la primera justifica reescribir el caso. CP-4 pasa si separa cada pareja **y por la senal
+      correcta**: si la mala cae por `json_valid` cuando el defecto plantado era un hecho falso,
+      acierta por la razon equivocada.
+    - Rollback or recovery: solo cambia el corpus, que se regenera con la tarea 14.
+
+20. **La tanda: contexto, linea base, barrido, calidad y techo**
+    - Files or modules: `benchmarks/catalogo-2026-09/resultados/*.jsonl`, `protocolo-f2.md` §10
+    - Requirements covered: REQ-F2-1, REQ-F2-2, REQ-F2-3, REQ-F2-6
+    - Detalle: en este orden — fijar `n_ctx` y el presupuesto de KV por modelo y anotarlos en el
+      registro de §5.2; linea base del catalogo **vigente sobre b10909** y en la misma tanda
+      (REQ-F2-6: comparar sobre motores distintos no es comparar); barrido del punto de operacion
+      **hasta la profundidad del caso mayor de cada rol** y con `-ncmoe` en 0/4/8/12/16 en los MoE,
+      porque julio fijo `-ncmoe 12` sin barrer y perdio un 60 % de velocidad; tanda de calidad con
+      **cada modelo corriendo solo los casos de su rol**, 3 corridas; y los dos sondeos de techo **solo
+      con los modelos de `long` y `code`**, que son los roles cuyas tools trocean de verdad. `fast`
+      sale de la tanda: cero casos y cero carga real (§4.4). Son ~214 peticiones al backend en total,
+      y la duracion estimada se escribe en la bitacora **antes** de empezar.
+    - Verification: el criterio de tanda no concluyente de §6 se aplica **antes** de agregar nada: mas
+      de una corrida anulada de cada tres en un rol, un caso sin ninguna puntuacion valida, o
+      `n_ctx`/`--load-mode` distintos entre vigente y candidato invalidan ese rol y obligan a
+      repetirlo. Si `Shared Usage` crece, lo que se cae no es la corrida sino **CP-1 y todo el tramo
+      desde el ultimo CP-1 en verde** (§3.2). Las corridas anuladas se anotan con su motivo: un
+      descarte silencioso es indistinguible de un caso que no se corrio.
+    - Rollback or recovery: la tanda no modifica el producto; solo escribe JSONL.
+
+21. **Asignacion de roles, y que se transfiere a produccion**
+    - Files or modules: `verification.md`, `protocolo-f2.md` §9 y §10
+    - Requirements covered: REQ-F2-4, REQ-F2-5, REQ-F2-6
+    - Detalle: revision humana a ciegas, y despues la asignacion de rol con el dato que la sostiene.
+      Dos salidas ya previstas que **son resultados, no fracasos**: un rol sin candidato ganador se
+      queda como esta (REQ-F2-6), y el rol `fast` **ya esta decidido antes de medir** —2 usos reales
+      en tres meses, ninguna tool lo elige, cero casos en el corpus—: no se mide, no se cambia, y la
+      pregunta que de verdad plantea (si ese rol debe existir) va al backlog, no a un modelo.
+      `vision` se decide sobre dos casos y **una sola imagen**, uno de ellos inventado, y eso se
+      escribe junto al veredicto.
+    - Verification: las cuatro tablas de §9 pegadas en `verification.md`, incluidas las corridas
+      anuladas, las de `rechazo_por_contexto` y si la tanda fue concluyente. Y una decision explicita
+      que la version anterior del plan no tenia: **la medida es sobre b10909 y produccion corre
+      b9925**, asi que o se migra produccion antes de que F3 aplique el catalogo, o se escribe que la
+      eleccion se transfiere sin verificar. Sin escribirlo, F3 pondria en `config.py` modelos
+      elegidos sobre un motor en el que no corren.
+    - Rollback or recovery: no se toca `config.py`; el catalogo vigente sigue vivo hasta que F3
+      escriba las cadenas sobre los roles resultantes (REQ-F2-5).
 
 ### F3 - Respaldo y enfriamiento (bloque, se replanifica)
 
 - **Entrada**: el clasificador de F0 (tarea 1) y el catalogo de F2.
 - **Salida**: los 20 requisitos heredados (`REQ-001` a `REQ-020`), con las cadenas declaradas sobre
   los roles de F2 y los numeros del enfriamiento validados o parametrizados (P-4).
-- **Condicion de replanificacion**: F2 cerrada. Antes de eso, cualquier tarea de F3 se escribiria
-  sobre roles que pueden cambiar.
+- **Condicion de replanificacion**: la tarea 21 cerrada, con los roles escritos en `verification.md`,
+  decidido si produccion migra a b10909, y **escrito que hace F3 con `fast`**, que sale de F2 sin un
+  solo dato medido: o queda fuera de las cadenas de respaldo, o se encadena a `mechanical`. Sin esa
+  frase, REQ-F2-5 entregaria a F3 un rol sobre el que no hay nada que declarar. Antes de eso, cualquier tarea de F3 se escribiria sobre
+  roles que pueden cambiar, o sobre un motor en el que no se midieron.
 
 ## Test strategy
 
@@ -212,6 +434,11 @@ mediciones anteriores.
 - **Security and secret scanning**: `personal-security-check` antes de cada commit. La telemetria no
   escribe prompts, comandos ni rutas, y el fichero de salud solo lleva estado y hora: test explicito
   de que ninguno de los dos filtra contenido.
+- **F2**: los tests de la sonda son **Windows-only** (`ctypes`, `typeperf`) y el CI corre en Ubuntu,
+  Windows y macOS: llevan marca de plataforma declarada, con el antecedente del test que fallo solo
+  en macOS. El corpus se prueba contra la distribucion del log real, no contra la tabla que uno mismo
+  escribio. Y los controles CP-1 a CP-4 son verificacion **en la maquina**, no en la suite: un
+  instrumento se prueba ejecutandolo, que es la leccion de los dos hooks del 2026-09-12.
 - **Trampas conocidas del repo, que se comprueban en cada tarea**: que el test falle por la razon
   que dice y no por otra guarda; que el mutante mute de verdad; que el caso elegido pueda
   distinguir; y que lo que se cuente lo cuente el programa, no yo a ojo.
@@ -230,6 +457,10 @@ mediciones anteriores.
   `_SCRIPTS_RETIRADOS` o su copia queda inmortal en `~/.claude/hooks/`.
 - **Release**: los cambios de F0 y F1 salen con el umbral de 8 KB y el fix de `__pycache__` que ya
   esperan en `main`. La release toca CHANGELOG, README y `docs/wiki/`.
+- **Breaking de F2**: el runner deja de aceptar `schema_version: 1` en el corpus (tarea 16). El
+  corpus de julio se conserva como fichero y el cargador viejo queda en el historial de git; ningun
+  REQ-F2 pide repetir aquella prueba. Se anota como breaking en el CHANGELOG, y `benchmark` es
+  superficie publicada: la release toca tambien README y `docs/wiki/Backend-versions.md`.
 
 ## Plan review
 
@@ -260,10 +491,10 @@ mediciones anteriores.
 | REQ-F1-10 | 6, 7 |
 | REQ-F1-11 | 7 |
 | REQ-F1-12 | 10 |
-| REQ-F2-1 | bloque F2, se replanifica |
-| REQ-F2-2 | bloque F2, se replanifica |
-| REQ-F2-3 | bloque F2, se replanifica |
-| REQ-F2-4 | bloque F2, se replanifica |
-| REQ-F2-5 | bloque F2, se replanifica |
-| REQ-F2-6 | bloque F2, se replanifica |
+| REQ-F2-1 | 13, 16, 18, 20 |
+| REQ-F2-2 | 14, 15, 16, 19, 20 |
+| REQ-F2-3 | 12, 13, 16, 20 |
+| REQ-F2-4 | 17, 21 |
+| REQ-F2-5 | 21 |
+| REQ-F2-6 | 17, 20, 21 |
 | REQ-001 a REQ-020 | bloque F3, se replanifica |

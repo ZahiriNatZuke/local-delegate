@@ -1,0 +1,2437 @@
+"""local-delegate — servidor MCP stdio.
+
+Expone un endpoint LLM local OpenAI-compatible (llama-swap, Ollama, LM Studio, vLLM…)
+como herramientas texto->texto para que Claude Code delegue pasos acotados (resumir,
+clasificar, extraer, boilerplate) y conserve cuota de la suscripción. Los modelos locales
+NO usan tool-calling: el server arma el prompt + guardrails, hace POST al endpoint y
+devuelve SOLO texto.
+
+summarize/extract/… pueden leer el archivo del lado del servidor (vía 'path') para que el
+input grande NUNCA entre al contexto de Claude.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import re
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import httpx2
+from filelock import FileLock, Timeout
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
+
+from . import autostart, clients, config, fallos, preguntas
+from .version import get_version
+
+# --- Versión del paquete ------------------------------------------------------
+# Vive en `version.py`, un módulo hoja que no importa nada del paquete, y este alias se conserva
+# porque `daemon`, `web/metrics` y los tests ya lo llaman por aquí. El porqué de sacarlo está en
+# el docstring de aquel: el `--version` del CLI necesitaba el mismo dato, y `cli` importando
+# `server` cerraba un ciclo (`server.main()` importa `cli` en cuanto hay argumentos).
+_get_version = get_version
+
+
+# `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el
+# handshake `initialize`, de modo que un cliente no tenía forma de saber qué local-delegate corre.
+mcp = MCPServer(
+    "local-delegate",
+    title="Local Delegate",
+    description=(
+        "Delega tareas mecánicas de texto e imagen a un modelo local por un endpoint "
+        "compatible con OpenAI, para conservar cuota de la suscripción."
+    ),
+    website_url="https://github.com/ZahiriNatZuke/local-delegate",
+    version=_get_version(),
+    # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
+    # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
+    # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
+    middleware=[clients.observar_cliente, preguntas.recordar_contexto],
+)
+
+
+def _anotaciones(titulo: str, *, escribe: bool = False) -> ToolAnnotations:
+    """Anotaciones de las tools. Casi todas son de la misma naturaleza; una no.
+
+    `read_only_hint`: por defecto ninguna tool modifica nada del entorno de quien llama. Escriben
+    en el log de uso, pero eso es contabilidad interna del propio servidor —lo que alimenta el
+    dashboard—, no un efecto sobre los datos del usuario.
+
+    `escribe=True` es la excepción, y existe porque `local_boilerplate` **sí** escribe un archivo
+    en el disco de quien llama. Anunciarla como read-only sería mentir en el hint que un cliente
+    MCP usa para decidir si pide permiso, así que ahí se declara lo que hace de verdad:
+
+    - `destructive_hint=False`: se niega a pisar un archivo existente salvo `overwrite=True`
+      explícito, así que la operación por defecto solo crea.
+    - `idempotent_hint=False`: repetirla no da lo mismo —el modelo genera otro texto y la segunda
+      llamada además choca con el archivo que dejó la primera—.
+
+    Para el resto, esos dos hints se omiten a propósito: el protocolo solo les da sentido cuando
+    `read_only_hint` es falso, y ponerlos ahí sería ruido que se contradice con lo anterior.
+
+    `open_world_hint` en falso: el dominio es cerrado y conocido —el endpoint configurado en
+    `LOCAL_DELEGATE_BASE_URL` y los archivos bajo las raíces permitidas—. Ninguna tool sale a
+    buscar a un mundo abierto, y para un cliente eso es la diferencia entre delegar a tu GPU o a
+    algo que puede tocar internet.
+    """
+    if escribe:
+        return ToolAnnotations(
+            title=titulo,
+            read_only_hint=False,
+            destructive_hint=False,
+            idempotent_hint=False,
+            open_world_hint=False,
+        )
+    return ToolAnnotations(title=titulo, read_only_hint=True, open_world_hint=False)
+
+
+# --- Cliente httpx2 module-level (keep-alive entre delegaciones) -------------
+_client: httpx2.Client | None = None
+_client_lock = threading.Lock()
+_chat_slots = threading.BoundedSemaphore(config.MAX_CONCURRENT_REQUESTS)
+
+
+def _get_client() -> httpx2.Client:
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = httpx2.Client(timeout=config.HTTP_TIMEOUT)
+    return _client
+
+
+# --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ----------------
+# El estado vive en LOG_DIR/inflight.json (mismo directorio de datos que el log de uso), no
+# solo en memoria: así CUALQUIER proceso MCP que sirva la web (metrics.py) ve las delegaciones
+# en curso de TODAS las sesiones de Claude activas en esta máquina, no solo la suya. El
+# contador local (_inflight_lock/_inflight_next_id) solo genera ids únicos por proceso; nunca
+# toca disco.
+_inflight_lock = threading.Lock()
+_inflight_next_id = 0
+_INFLIGHT_STALE_S = 1800  # red de seguridad: entrada huérfana (proceso muerto a media escritura)
+
+
+def _inflight_file() -> Path:
+    return config.LOG_DIR / "inflight.json"
+
+
+def _pid_alive(pid: int) -> bool:
+    """Best-effort: True si el proceso con ese PID sigue vivo. Nunca lanza."""
+    if pid == os.getpid():
+        return True
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            from ctypes import wintypes
+
+            # restype/argtypes explícitos: sin ellos ctypes asume c_int y TRUNCA el HANDLE de
+            # 64 bits, con lo que CloseHandle recibe un handle inválido y el daemon acaba
+            # filtrando un handle por cada sondeo (el dashboard llama a esto cada 2 s).
+            kernel32 = ctypes.windll.kernel32
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+            if not handle:
+                return False
+            kernel32.CloseHandle(handle)
+            return True
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+def _read_inflight_data(path: Path) -> dict:
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _atomic_write_json(path: Path, data: dict) -> None:
+    # El temporal lleva el pid en el nombre: varios procesos MCP (cada sesión de Claude en
+    # stdio, más el daemon) escriben este mismo archivo, y un ".tmp" compartido hacía que
+    # dos escrituras simultáneas se pisaran el temporal y publicaran contenido mezclado o
+    # perdido — entradas fantasma / delegaciones que nunca aparecían en "En curso".
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)  # si replace() funcionó ya no existe
+        except OSError:
+            # Estamos en el `finally`: si el temporal no se deja borrar (en Windows lo típico es un
+            # antivirus con el archivo abierto), tragarse el error es obligatorio. Lanzar aquí
+            # taparía la excepción real que venga del try y dejaría un fallo mucho más difícil de
+            # leer que un .tmp huérfano.
+            pass
+
+
+def _inflight_mutate(mutate_fn, *, write_on_timeout: bool = True) -> None:
+    """Aplica mutate_fn(dict) al archivo compartido de inflight bajo lock exclusivo.
+
+    Solo escribe si mutate_fn cambió algo: el dashboard sondea cada 2 s y antes reescribía el
+    archivo en cada sondeo, generando contención inútil con las delegaciones reales.
+
+    Best-effort como el resto del logging: nunca bloquea ni rompe una delegación. Si no
+    consigue el lock a tiempo, `write_on_timeout=True` (alta/baja de una delegación) aplica
+    igual sin lock —el peor caso es una entrada duplicada que se autolimpia por TTL/pid-muerto—
+    y `write_on_timeout=False` (solo lectura/poda) se salta la escritura para no pisar con
+    datos viejos una entrada que otro proceso acaba de registrar.
+    """
+    path = _inflight_file()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lock = FileLock(str(path) + ".lock", timeout=2)
+        try:
+            with lock:
+                data = _read_inflight_data(path)
+                before = json.dumps(data, sort_keys=True)
+                mutate_fn(data)
+                if json.dumps(data, sort_keys=True) != before:
+                    _atomic_write_json(path, data)
+        except Timeout:
+            data = _read_inflight_data(path)
+            before = json.dumps(data, sort_keys=True)
+            mutate_fn(data)
+            if write_on_timeout and json.dumps(data, sort_keys=True) != before:
+                _atomic_write_json(path, data)
+    except OSError:
+        pass  # el tracking de inflight es best-effort; jamás rompe una delegación
+
+
+def _inflight_start(
+    *, tool: str, model: str, source: str, chars_in: int, chunks: int | None = None
+) -> int:
+    global _inflight_next_id
+    with _inflight_lock:
+        _inflight_next_id += 1
+        entry_id = _inflight_next_id
+    pid = os.getpid()
+    key = f"{pid}:{entry_id}"
+    entry = {
+        "tool": tool,
+        "model": model,
+        "source": source,
+        "chars_in": chars_in,
+        "started_at": time.time(),
+        "pid": pid,
+        "backend": config.backend_origin(),
+    }
+    if chunks:
+        entry["chunks"] = int(chunks)
+        entry["chunk"] = 1
+
+    def _add(data: dict) -> None:
+        data[key] = entry
+
+    _inflight_mutate(_add)
+    return entry_id
+
+
+def _inflight_progress(entry_id: int, chunk: int) -> None:
+    """Marca en qué trozo va una delegación por chunks (visible en el panel 'En curso')."""
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if isinstance(entry, dict):
+            entry["chunk"] = int(chunk)
+
+    _inflight_mutate(_update)
+
+
+def _inflight_end(entry_id: int) -> None:
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _remove(data: dict) -> None:
+        data.pop(key, None)
+
+    _inflight_mutate(_remove)
+
+
+def inflight_snapshot() -> list[dict]:
+    """Delegaciones en curso de TODOS los procesos MCP activos, con `elapsed_s`.
+
+    Lee/limpia el archivo compartido de inflight (ver _inflight_mutate). Descarta entradas
+    huérfanas (TTL vencido o proceso ya muerto) en la misma pasada, así no hace falta un hilo
+    de housekeeping aparte. Usada por /api/inflight (web de métricas).
+    """
+    now = time.time()
+    result: list[dict] = []
+
+    def _collect_and_prune(data: dict) -> None:
+        result.clear()  # el fallback sin lock puede reejecutar esta función
+        stale = []
+        for key, v in data.items():
+            if not isinstance(v, dict):
+                stale.append(key)
+                continue
+            age = now - v.get("started_at", 0)
+            pid = v.get("pid")
+            if age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid)):
+                stale.append(key)
+                continue
+            entry = {
+                "id": key,
+                "tool": v.get("tool"),
+                "model": v.get("model"),
+                "source": v.get("source"),
+                "chars_in": v.get("chars_in"),
+                "backend": v.get("backend"),
+                "elapsed_s": round(age, 1),
+            }
+            if v.get("chunks"):
+                entry["chunks"] = v.get("chunks")
+                entry["chunk"] = v.get("chunk")
+            result.append(entry)
+        for key in stale:
+            data.pop(key, None)
+
+    # write_on_timeout=False: sondear el panel jamás debe reescribir el archivo con una
+    # foto vieja; si hay contención se pospone la poda al siguiente sondeo.
+    _inflight_mutate(_collect_and_prune, write_on_timeout=False)
+    result.sort(key=lambda e: -e["elapsed_s"])
+    return result
+
+
+# --- Helpers ----------------------------------------------------------------
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def _current_log_path() -> Path:
+    """Archivo de log activo: fijo si LOCAL_DELEGATE_LOG está seteado, si no rota por mes UTC."""
+    if not config.LOG_ROTATION_ENABLED:
+        return config.USAGE_LOG
+    return config.LOG_DIR / f"usage-{_utcnow():%Y%m}.jsonl"
+
+
+def _check_allowed_dir(path: str) -> None:
+    """Si LOCAL_DELEGATE_ALLOWED_DIRS está seteado, rechaza rutas fuera de esas raíces."""
+    if not config.ALLOWED_DIRS:
+        return
+    resolved = Path(path).resolve()
+    if not any(resolved.is_relative_to(root) for root in config.ALLOWED_DIRS):
+        roots = "; ".join(str(r) for r in config.ALLOWED_DIRS)
+        raise ValueError(f"Ruta fuera de las raíces permitidas ({roots}): {path}")
+
+
+def _validar_destino(target: str, overwrite: bool) -> Path:
+    """Valida la ruta de salida ANTES de gastar backend. Devuelve el Path ya resuelto.
+
+    El orden importa: si el destino es inválido se falla sin llamar al modelo. Al revés se
+    pagaría la inferencia para tirar el resultado, que es el peor de los dos errores posibles.
+
+    Exige ruta **absoluta** porque el servidor corre con su propio directorio de trabajo —el del
+    daemon, no el de quien llama—, así que una ruta relativa aterrizaría en un sitio que nadie
+    eligió. Y se niega a pisar lo que ya está salvo permiso explícito.
+    """
+    if not target or not target.strip():
+        raise ValueError("'target' es obligatorio: la ruta absoluta del archivo a escribir.")
+    p = Path(target)
+    if not p.is_absolute():
+        raise ValueError(
+            "'target' debe ser una ruta absoluta: el servidor no comparte tu directorio de "
+            f"trabajo. Recibido: {target}"
+        )
+    _check_allowed_dir(target)
+    if p.is_dir():
+        raise ValueError(f"'target' es un directorio, no un archivo: {target}")
+    if p.exists() and not overwrite:
+        raise ValueError(
+            f"Ya existe un archivo ahí; pasa overwrite=True si quieres pisarlo: {target}"
+        )
+    return p
+
+
+def _escribir_destino(p: Path, contenido: str) -> str:
+    """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto."""
+    # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
+    # llega aquí sin él y el archivo saldría sin newline al final — cosa que la mitad de los
+    # linters marca y que ensucia el diff de la primera línea que alguien añada después.
+    if contenido and not contenido.endswith("\n"):
+        contenido += "\n"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    # newline explícito: el separador del archivo generado no debe depender de en qué sistema
+    # operativo corra el daemon.
+    with open(p, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(contenido)
+    recibo = f"[escrito] {p}\n{contenido.count(chr(10)):,} líneas, {len(contenido):,} chars"
+    if config.FEEDBACK_ENABLED:
+        recibo += (
+            f" (≈{len(contenido) // config.CHARS_PER_TOKEN:,} tokens que no entraron a tu contexto)"
+        )
+    return recibo
+
+
+# Techo simbólico para leer una entrada COMPLETA: las tools de reducción deciden después si
+# el contenido cabe en el modelo o si toca map-reduce, y para eso necesitan el texto entero.
+_NO_TRUNCATE = 2**31
+
+
+def _read_input(text: str | None, path: str | None, max_chars: int) -> tuple[str, bool, int]:
+    """Devuelve (contenido, truncado, raw_len). Si viene 'path', lo lee server-side."""
+    if path:
+        _check_allowed_dir(path)
+        p = Path(path)
+        if not p.is_file():
+            raise ValueError(f"No existe el archivo: {path}")
+        content = p.read_text(encoding="utf-8", errors="replace")
+    elif text is not None:
+        content = text
+    else:
+        raise ValueError("Debes proporcionar 'text' o 'path'.")
+    raw_len = len(content)
+    truncated = raw_len > max_chars
+    if truncated:
+        content = content[:max_chars] + "\n[...contenido truncado...]"
+    return content, truncated, raw_len
+
+
+def _truncation_prefix(content: str, truncated: bool, raw_len: int) -> str:
+    """Aviso visible cuando _read_input truncó la entrada (antes era un truncado silencioso)."""
+    if not truncated:
+        return ""
+    return f"[local-delegate: entrada truncada — procesados {len(content)} de {raw_len} chars]\n"
+
+
+def _append_log_line(log_path: Path, line: str) -> None:
+    """Escribe una línea al log con lock de archivo (Desktop + Code escribiendo a la vez).
+
+    Si no se consigue el lock en 1s, escribe igual sin él (best-effort: nunca bloquea ni
+    rompe la tool por contención).
+    """
+    lock = FileLock(str(log_path) + ".lock", timeout=1)
+    try:
+        with lock, log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
+    except Timeout:
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
+
+
+#: Cuanto vale una nota de bloqueo. Pasado ese rato, la delegacion ya no se le atribuye: el agente
+#: hizo otra cosa por el camino y contarla seria inflar la adopcion.
+VENTANA_DE_BLOQUEO_S = 600.0
+
+
+def _bloqueo_reciente(path: str) -> str | None:
+    """El identificador del bloqueo que provoco esta lectura, si lo hubo.
+
+    Las notas las deja el hook (`hook_common.anotar_bloqueo`), que es stdlib pura y no puede
+    importar este modulo: el formato vive en dos sitios y por eso hay un test de ida y vuelta que
+    escribe con el hook y lee con esto. Es la misma cautela que el espejo JS del panel.
+
+    Nunca lanza: perder la correlacion estropea una medicion, romper la tool estropea el trabajo.
+    """
+    try:
+        from .resources.hooks import hook_common
+    except ImportError:
+        return None
+    try:
+        huella = hook_common.huella_de_ruta(path)
+        lineas = hook_common.ruta_de_notas().read_text(encoding="utf-8").splitlines()
+    except (OSError, ValueError):
+        return None
+
+    ahora = _utcnow().timestamp()
+    for linea in reversed(lineas):
+        try:
+            nota = json.loads(linea)
+            if nota["sha"] == huella and ahora - float(nota["ts"]) <= VENTANA_DE_BLOQUEO_S:
+                return str(nota["id"])
+        except (ValueError, KeyError, TypeError):
+            continue
+    return None
+
+
+def _log_event(
+    *,
+    tool: str,
+    model: str,
+    source: str,
+    chars_in: int,
+    chars_out: int,
+    latency_ms: int,
+    ok: bool,
+    error: str | None = None,
+    finish_reason: str | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    truncated_in: bool = False,
+    truncated_out: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
+    json_schema: str | None = None,
+    chunks: int | None = None,
+    input_unit: str = "chars",
+    output_to_file: bool = False,
+) -> None:
+    """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
+    try:
+        rec: dict = {
+            "ts": _utcnow().isoformat(timespec="seconds"),
+            "tool": tool,
+            "model": model,
+            "source": source,  # "path" = leído server-side (no entró al contexto de Claude)
+            "chars_in": int(chars_in),
+            "chars_out": int(chars_out),
+            "latency_ms": int(latency_ms),
+            "ok": bool(ok),
+            # dónde corrió la INFERENCIA: "local" (backend en esta máquina) o "remote"
+            # (p. ej. esta Mac usando el llama-swap de la PC). El MCP y la lectura de 'path'
+            # son siempre locales; esto separa el cómputo, no el origen del archivo.
+            "backend": config.backend_origin(),
+            "backend_host": config.backend_host(),
+            "v": _get_version(),
+        }
+        # Quién pidió la delegación. Sin esto el panel no puede distinguir un mes de smoke tests
+        # de un mes de trabajo real: es el hueco que dejó la medición de adopción del 3-ago, donde
+        # las 20 líneas de una prueba sólo se separaron cruzando a mano contra los transcripts.
+        # Se omite cuando no hay identidad (benchmark, arranque, cliente que no manda clientInfo):
+        # una firma inventada sería peor que ninguna. Y va envuelto porque el logging entero es
+        # best-effort y observar no puede romper una tool.
+        try:
+            quien = clients.cliente_actual()
+        except Exception:
+            quien = None
+        if quien:
+            rec["client"] = quien
+        # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
+        # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
+        # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
+        if chunks is not None and chunks > 1:
+            rec["chunks"] = int(chunks)
+        # `chars_in` no siempre son caracteres de texto: en local_describe_image son BYTES de un
+        # binario, y estimar tokens dividiéndolos entre 4 da un número disparatado (×46 medido).
+        # Solo se escribe cuando NO es texto, para no engordar cada línea del log.
+        if input_unit != "chars":
+            rec["input_unit"] = input_unit
+        if error is not None:
+            rec["error"] = error
+        if finish_reason is not None:
+            rec["finish_reason"] = finish_reason
+        if tokens_in is not None:
+            rec["tokens_in"] = int(tokens_in)
+        if tokens_out is not None:
+            rec["tokens_out"] = int(tokens_out)
+        if truncated_in:
+            rec["truncated_in"] = True
+        if truncated_out:
+            rec["truncated_out"] = True
+        if raw_len is not None:
+            rec["raw_len"] = int(raw_len)
+        if source == "path" and path is not None:
+            rec["path"] = path
+            # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
+            # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
+            # comparables sin cruzar dos logs a mano.
+            bloqueo = _bloqueo_reciente(path)
+            if bloqueo:
+                rec["bloqueo_id"] = bloqueo
+        if json_schema is not None:
+            rec["json_schema"] = json_schema
+        # La SALIDA se escribió a un archivo, así que tampoco entró al contexto de quien llama.
+        # Se omite cuando es falso: es el caso de casi todos los eventos y engordaría el log.
+        if output_to_file:
+            rec["output_to_file"] = True
+        log_path = _current_log_path()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
+    except OSError:
+        pass  # el logging es best-effort; jamás propaga
+
+
+def _accounting(row: dict) -> dict:
+    """Contabilidad normalizada de UN evento. Única fuente de las cuentas del panel.
+
+    Separa dos magnitudes que el dashboard confundía en una sola estimación por caracteres:
+
+    - **ahorro** (`saved`): lo que NO entró al contexto de Claude. Es el contenido leído
+      server-side contado **una vez**, aunque se troceara: el trabajo extra de trocear lo pagó
+      la GPU local, no el contexto.
+    - **coste** (`tokens_in`/`tokens_out`, `backend_calls`): lo que gastó de verdad el backend,
+      con el prompt de sistema repetido en cada trozo.
+
+    Se prefiere SIEMPRE el token real que reportó el backend (`usage`); la estimación
+    `chars ÷ 4` es solo el respaldo cuando falta, y entonces el evento se marca `estimated`.
+    """
+    chars_in = int(row.get("chars_in", 0) or 0)
+    chars_out = int(row.get("chars_out", 0) or 0)
+    # `chunks` es el número REAL de llamadas al backend y se omite cuando vale 1 (ver
+    # `_log_event`). Lo ha sido desde el commit que introdujo el chunking, así que esto
+    # contabiliza bien también el histórico ya grabado.
+    backend_calls = int(row.get("chunks") or 1)
+
+    raw_in = row.get("tokens_in")
+    raw_out = row.get("tokens_out")
+    estimated = raw_in is None or raw_out is None
+
+    # `chars_in` no siempre son caracteres: en local_describe_image son BYTES de la imagen.
+    # Los eventos anteriores al campo `input_unit` se reconocen por el nombre de la tool.
+    unit = row.get("input_unit") or (
+        "bytes" if row.get("tool") == "local_describe_image" else "chars"
+    )
+    estimable = unit == "chars"
+
+    tokens_in = (
+        int(raw_in)
+        if raw_in is not None
+        else (chars_in // config.CHARS_PER_TOKEN if estimable else 0)
+    )
+    tokens_out = int(raw_out) if raw_out is not None else chars_out // config.CHARS_PER_TOKEN
+
+    if row.get("source") != "path":
+        saved = 0  # el input ya viajó por el contexto de Claude: no hay ahorro que apuntar
+    elif estimable:
+        saved = chars_in // config.CHARS_PER_TOKEN
+    elif raw_in is not None:
+        saved = int(raw_in)  # imagen: el token real es el único orden de magnitud honesto
+    else:
+        saved = 0  # ni token real ni unidad estimable: 0 antes que un número inventado
+
+    # Ahorro de SALIDA: el código generado se escribió en un archivo y quien llamó recibió solo
+    # un recibo de dos líneas. Es independiente del ahorro de entrada (`source=path`) y se suma,
+    # porque una misma llamada puede ahorrar por los dos lados.
+    if row.get("output_to_file"):
+        saved += tokens_out
+
+    return {
+        "backend_calls": backend_calls,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "saved": saved,
+        "estimated": estimated,
+    }
+
+
+@dataclass
+class ChatResult:
+    text: str
+    ok: bool
+    error: str | None = None  # mensaje corto cuando ok=False
+    finish_reason: str | None = None  # choices[0].finish_reason
+    tokens_in: int | None = None  # usage.prompt_tokens si el backend lo da
+    tokens_out: int | None = None  # usage.completion_tokens
+    #: La clase del fallo (`fallos.Clase`) cuando `ok=False`, y `None` cuando salió bien. Es
+    #: aditivo: quien solo mire `error` sigue viendo exactamente lo de antes.
+    clase: str | None = None
+
+
+def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
+    """El error legible de una respuesta que llegó con 200 y aun así no sirve.
+
+    Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
+    no estaba en el `except` de abajo— y se llevaba la tool por delante.
+    """
+    if clase is fallos.Clase.CONFIGURACION:
+        return ChatResult(
+            text=(
+                f"[local-delegate error] {model} agotó `max_tokens` razonando y no llegó a "
+                "responder. Súbelo, o desactiva el razonamiento de ese modelo."
+            ),
+            ok=False,
+            error="config_max_tokens",
+            clase=clase,
+        )
+    return ChatResult(
+        text=f"[local-delegate error] respuesta sin contenido utilizable de {model}.",
+        ok=False,
+        error="bad_response",
+        clase=clase,
+    )
+
+
+def _post_chat(model: str, payload: dict) -> ChatResult:
+    """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
+    headers = config.auth_headers()
+    client = _get_client()
+    for attempt in (1, 2):
+        try:
+            r = client.post(f"{config.BASE_URL}/chat/completions", json=payload, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+            # La respuesta pasa por el clasificador ANTES de tocarla: un 200 puede traer
+            # `content: null`, o venir de un modelo que gastó `max_tokens` razonando.
+            clase = fallos.clasificar(
+                fallos.Respuesta(
+                    status=r.status_code,
+                    datos=data if isinstance(data, dict) else None,
+                    texto=r.text[:300],
+                )
+            )
+            if clase is not None:
+                return _fallo_de_cuerpo(model, clase)
+            choice = data["choices"][0]
+            usage = data.get("usage") or {}
+            return ChatResult(
+                text=choice["message"]["content"].strip(),
+                ok=True,
+                finish_reason=choice.get("finish_reason"),
+                tokens_in=usage.get("prompt_tokens"),
+                tokens_out=usage.get("completion_tokens"),
+            )
+        except httpx2.HTTPError as e:
+            # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
+            # Antes había tres, y `ConnectTimeout` se colaba por el genérico: no es subclase de
+            # `ConnectError` —son ramas hermanas—, así que un plazo de conexión agotado se
+            # clasificaba como `http_error` y nadie ofrecía arrancar el backend.
+            clase = fallos.clasificar(e)
+            if fallos.es_backend_ausente(e):
+                # No hay nadie escuchando. Si el auto-arranque está activo, intenta levantarlo
+                # (opt-in, específico de llama-swap) y reintenta una vez.
+                if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
+                    continue
+                # Sin auto-arranque, preguntar antes de rendirse. No contradice el «backend
+                # opt-in»: sigue sin arrancar nada sin permiso, solo que ahora ese permiso se
+                # puede dar en caliente. Si no hay a quién preguntar, o dicen que no, cae al
+                # error de siempre.
+                if attempt == 1 and not config.AUTOSTART:
+                    respuesta = preguntas.preguntar(
+                        f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
+                        preguntas.ArrancarBackend,
+                    )
+                    if (
+                        respuesta is not None
+                        and respuesta.arrancar
+                        and autostart.ensure_backend(wait=30)
+                    ):
+                        continue
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] no se pudo conectar al endpoint "
+                        f"({config.BASE_URL}). ¿Está corriendo tu backend OpenAI-compatible?"
+                    ),
+                    ok=False,
+                    error="connect_error",
+                    clase=clase,
+                )
+            if isinstance(e, httpx2.HTTPStatusError):
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] {model} respondió {e.response.status_code}: "
+                        f"{e.response.text[:300]}"
+                    ),
+                    ok=False,
+                    error=f"http_{e.response.status_code}",
+                    clase=clase,
+                )
+            if isinstance(e, httpx2.ReadTimeout):
+                # El backend SÍ aceptó la conexión: lo más probable es que llama-swap esté
+                # montando el modelo. Arrancar otro backend no arregla nada aquí.
+                return ChatResult(
+                    text=(
+                        f"[local-delegate error] {model} no respondió en "
+                        f"{config.HTTP_TIMEOUT:.0f} s. Puede que el backend aún lo esté cargando."
+                    ),
+                    ok=False,
+                    error="read_timeout",
+                    clase=clase,
+                )
+            return ChatResult(
+                text=f"[local-delegate error] fallo de conexión al endpoint ({config.BASE_URL}): {e}",
+                ok=False,
+                error="http_error",
+                clase=clase,
+            )
+        except (KeyError, IndexError, ValueError) as e:
+            return ChatResult(
+                text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
+                ok=False,
+                error="bad_response",
+                clase=fallos.Clase.MODELO,
+            )
+    # Aquí había un `retry_exhausted` que no se alcanzaba nunca: los dos intentos terminan
+    # siempre en un `return`, porque los dos `continue` viven bajo `attempt == 1`. No se
+    # dedujo leyendo, se midió: se enumeraron las 16 formas de terminar el `try` y ninguna
+    # llegó hasta aquí, y con la guarda del intento quitada el mismo experimento sí la
+    # alcanzaba —control positivo—. Lo que antes prometía esa línea lo garantiza ahora
+    # `tests/test_post_chat_caminos.py`, que sí se ejecuta.
+
+
+_THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)
+_THINK_UNCLOSED_RE = re.compile(r"^\s*<think(?:ing)?>.*", re.IGNORECASE | re.DOTALL)
+
+
+def _strip_think(s: str) -> str:
+    """Quita bloques <think>/<thinking> (modelos razonadores tipo Qwen3, R1-distill).
+
+    Cubre también el bloque sin cerrar al inicio (p. ej. truncado por max_tokens a mitad
+    del razonamiento): en ese caso no queda contenido útil que rescatar.
+    """
+    s = _THINK_RE.sub("", s)
+    s = _THINK_UNCLOSED_RE.sub("", s)
+    return s.strip()
+
+
+def _run_chat(
+    model: str,
+    system: str,
+    user: str | list[dict],
+    max_tokens: int,
+    temperature: float,
+    *,
+    response_format: dict | None = None,
+    json_schema_fallback: bool = False,
+) -> tuple[ChatResult, int, str | None]:
+    """UNA llamada al endpoint bajo el semáforo de concurrencia.
+
+    Devuelve (resultado, latencia_ms, estado_json_schema). No registra nada en el log ni
+    toca el inflight: de eso se encargan _chat (una llamada = un evento) y _chat_chunked
+    (N llamadas = un evento con `chunks`).
+    """
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": False,
+    }
+    if response_format is not None:
+        payload["response_format"] = response_format
+
+    t0 = time.monotonic()
+    with _chat_slots:
+        result = _post_chat(model, payload)
+        json_schema_status = "used" if response_format is not None else None
+        if response_format is not None and not result.ok and result.error == "http_400":
+            if json_schema_fallback:
+                # El backend no soporta response_format con schema: reintenta en modo libre.
+                payload.pop("response_format", None)
+                result = _post_chat(model, payload)
+                json_schema_status = "fallback"
+            else:
+                json_schema_status = "error"
+    return result, int((time.monotonic() - t0) * 1000), json_schema_status
+
+
+def _savings_feedback(chars_in: int, tokens_in: int | None, label: str, char_estimate: bool) -> str:
+    """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side."""
+    tokens = tokens_in
+    if tokens is None and char_estimate:
+        tokens = chars_in // config.CHARS_PER_TOKEN
+    if tokens is None:
+        return ""
+    return (
+        f"\n\n(leído server-side: {chars_in:,} {label} ≈ {tokens:,} tokens "
+        "que no entraron a tu contexto)"
+    )
+
+
+def _chat(
+    model: str,
+    system: str,
+    user: str | list[dict],
+    max_tokens: int,
+    temperature: float = 0.2,
+    *,
+    tool: str = "local_delegate",
+    chars_in: int = 0,
+    source: str = "inline",
+    truncated_in: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
+    response_format: dict | None = None,
+    json_schema_fallback: bool = False,
+    feedback_label: str = "chars",
+    feedback_char_estimate: bool = True,
+    feedback: bool = True,
+    input_unit: str = "chars",
+    strip_fences: bool = False,
+    write_to: Path | None = None,
+) -> str:
+    """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
+
+    `user` acepta un `str` (texto->texto) o una lista de bloques de contenido
+    OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
+    local_describe_image).
+    """
+    entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
+    try:
+        result, latency_ms, json_schema_status = _run_chat(
+            model,
+            system,
+            user,
+            max_tokens,
+            temperature,
+            response_format=response_format,
+            json_schema_fallback=json_schema_fallback,
+        )
+    finally:
+        _inflight_end(entry_id)
+
+    text = _strip_think(result.text) if result.ok else result.text
+    # Quitar los fences aquí y no en quien llama es lo que permite escribir a disco el código ya
+    # limpio: hacerlo fuera dejaría dentro del archivo las ``` que el modelo a veces añade.
+    if strip_fences and result.ok:
+        text = _strip_fences(text)
+    truncated_out = result.finish_reason == "length"
+    aviso_truncado = "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+    # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
+    # que generó el modelo y nada más.
+    if truncated_out and write_to is None:
+        text += aviso_truncado
+    _log_event(
+        tool=tool,
+        model=model,
+        source=source,
+        chars_in=chars_in,
+        chars_out=len(text),
+        latency_ms=latency_ms,
+        ok=result.ok,
+        error=result.error,
+        finish_reason=result.finish_reason,
+        tokens_in=result.tokens_in,
+        tokens_out=result.tokens_out,
+        truncated_in=truncated_in,
+        truncated_out=truncated_out,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
+        json_schema=json_schema_status,
+        input_unit=input_unit,
+        output_to_file=write_to is not None and result.ok,
+    )
+    # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
+    # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
+    # tal cual, igual que en cualquier otra tool.
+    if write_to is not None and result.ok:
+        return _escribir_destino(write_to, text) + (aviso_truncado if truncated_out else "")
+    # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
+    # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
+    if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
+        text += _savings_feedback(
+            chars_in, result.tokens_in, feedback_label, feedback_char_estimate
+        )
+    return text
+
+
+# --- Chunking por límites naturales (local_translate / local_delegate) --------
+# Las tools que transforman el texto ENTERO producen tanta salida como entrada, así que una
+# sola llamada choca contra max_tokens y devuelve el documento cortado. Partimos la entrada
+# por el límite natural más grueso que sirva (headers Markdown -> párrafos -> líneas -> corte
+# duro) y traducimos/transformamos cada trozo por separado.
+#
+# Invariante: "".join(_chunk_text(t, n)) == t. Cada trozo conserva el separador original con
+# el que terminaba, así las costuras se reensamblan sin inventar ni perder saltos de línea.
+def _split_by_diff_files(text: str) -> list[str]:
+    """Corta un diff unificado justo ANTES de la cabecera de cada archivo.
+
+    Un diff no tiene headers Markdown, así que sin esto cae a párrafos y los trozos empiezan a
+    mitad de un hunk: líneas `+` huérfanas cuya cabecera —la que dice de qué archivo son— quedó
+    en el trozo anterior. Medido sobre un diff de 44 archivos: 1 de 11 trozos empezaba en
+    frontera de archivo.
+
+    Se **autoinhibe** si el texto no empieza por una cabecera de diff: así un Markdown que
+    incluya un diff dentro de un fence se sigue partiendo por headers, y este splitter no puede
+    degradar a `local_translate` ni a `local_summarize` sobre documentos normales.
+
+    El respaldo `--- `/`+++ ` (diffs sin `--git`) solo se usa cuando NO hay ningún `diff --git`:
+    en un diff `--git` cada archivo trae también su `--- a/x`, y cortar por las dos cabeceras
+    partiría cada archivo en dos, dejando piezas que empiezan en `---` sin decir de qué archivo.
+    """
+    inicio = text.lstrip()
+    if not (inicio.startswith("diff --git ") or re.match(r"--- \S", inicio)):
+        return [text]
+    if re.search(r"(?m)^diff --git ", text):
+        patron = r"(?m)(?=^diff --git )"
+    else:
+        patron = r"(?m)(?=^--- \S.*\n\+\+\+ )"
+    return [p for p in re.split(patron, text) if p]
+
+
+def _split_by_headers(text: str) -> list[str]:
+    """Corta justo ANTES de cada header Markdown (`# `…`###### `)."""
+    return [p for p in re.split(r"(?m)(?=^#{1,6} )", text) if p]
+
+
+def _split_by_paragraphs(text: str) -> list[str]:
+    """Corta DESPUÉS de cada línea en blanco (cada trozo conserva su `\\n\\n`)."""
+    return [p for p in re.split(r"(?<=\n\n)", text) if p]
+
+
+def _split_by_lines(text: str) -> list[str]:
+    """Corta después de cada `\\n` (cada trozo conserva su salto)."""
+    return [p for p in re.split(r"(?<=\n)", text) if p]
+
+
+_SPLITTERS = (_split_by_diff_files, _split_by_headers, _split_by_paragraphs, _split_by_lines)
+
+
+# --- Inventario de un diff (local_commit_msg) --------------------------------
+# Medido: el `--stat` completo de un diff de 164 585 chars son 2 987 — cabe entero donde el diff
+# no cabe. Y con solo ese inventario el modelo ya nombra el cambio real, mientras que con los
+# primeros 20 000 chars del diff nombra el primer archivo por orden alfabético. Por eso el paso
+# que redacta el mensaje lo recibe SIEMPRE, y por eso se calcula aquí y no se le pide al modelo:
+# es un conteo, no un juicio.
+def _diff_inventory(diff: str) -> list[tuple[str, int, int]]:
+    """Devuelve `(ruta, líneas añadidas, líneas quitadas)` por archivo del diff.
+
+    El conteo distingue las cabeceras `--- `/`+++ ` de las líneas de contenido por su posición
+    —solo son cabecera antes del primer `@@` del archivo— y no por su texto. Mirando el texto,
+    borrar una línea que empiece por `--` se registraría como cabecera y no se contaría.
+    """
+    archivos: list[tuple[str, int, int]] = []
+    ruta: str | None = None
+    mas = menos = 0
+    en_hunk = False
+
+    def _cerrar() -> None:
+        if ruta is not None:
+            archivos.append((ruta, mas, menos))
+
+    for linea in diff.splitlines():
+        if linea.startswith("diff --git "):
+            _cerrar()
+            resto = linea[len("diff --git ") :]
+            pareja = re.match(r"a/(.+) b/\1$", resto)
+            ruta = pareja.group(1) if pareja else resto.split(" b/", 1)[-1].lstrip("b/")
+            mas = menos = 0
+            en_hunk = False
+        elif ruta is None:
+            continue
+        elif linea.startswith("@@"):
+            en_hunk = True
+        elif not en_hunk:
+            # Zona de cabecera: `+++ b/x` manda sobre el nombre adivinado de `diff --git`, salvo
+            # en un borrado (`+++ /dev/null`), donde el nombre bueno es el de `--- a/x`.
+            if linea.startswith("+++ ") and linea[4:] != "/dev/null":
+                ruta = linea[4:].removeprefix("b/")
+            elif linea.startswith("--- ") and linea[4:] != "/dev/null":
+                ruta = linea[4:].removeprefix("a/")
+            elif linea.startswith("rename to "):
+                ruta = linea[len("rename to ") :]
+        elif linea.startswith("+"):
+            mas += 1
+        elif linea.startswith("-"):
+            menos += 1
+    _cerrar()
+    return archivos
+
+
+def _format_inventory(archivos: list[tuple[str, int, int]], max_chars: int) -> str:
+    """Rinde el inventario como texto, colapsado por directorio si no cabe en `max_chars`.
+
+    Sin el colapso, un diff de cientos de archivos desplazaría del prompt final justo el material
+    que el modelo tiene que resumir.
+    """
+    if not archivos:
+        return ""
+    mas_total = sum(m for _, m, _ in archivos)
+    menos_total = sum(n for _, _, n in archivos)
+    cabecera = f"Archivos del cambio ({len(archivos)} en total, +{mas_total} -{menos_total}):"
+    detalle = "\n".join(f"  {ruta} | +{mas} -{menos}" for ruta, mas, menos in archivos)
+    if len(cabecera) + 1 + len(detalle) <= max_chars:
+        return f"{cabecera}\n{detalle}"
+
+    agrupado: dict[str, list[int]] = {}
+    for ruta, mas, menos in archivos:
+        raiz = ruta.split("/", 1)[0] if "/" in ruta else "(raíz)"
+        acumulado = agrupado.setdefault(raiz, [0, 0, 0])
+        acumulado[0] += 1
+        acumulado[1] += mas
+        acumulado[2] += menos
+    detalle = "\n".join(
+        f"  {raiz}/ | {n} archivos, +{mas} -{menos}" for raiz, (n, mas, menos) in agrupado.items()
+    )
+    return f"{cabecera} agrupados por directorio porque la lista completa no cabía\n{detalle}"
+
+
+def _pack(pieces: list[str], max_chars: int) -> list[str]:
+    """Agrupa piezas consecutivas en trozos de <= max_chars (sin partir ninguna pieza)."""
+    packed: list[str] = []
+    current = ""
+    for piece in pieces:
+        if current and len(current) + len(piece) > max_chars:
+            packed.append(current)
+            current = piece
+        else:
+            current += piece
+    if current:
+        packed.append(current)
+    return packed
+
+
+def _chunk_text(text: str, max_chars: int, _level: int = 0) -> list[str]:
+    """Parte `text` en trozos de <= max_chars por el límite natural más grueso posible."""
+    if len(text) <= max_chars:
+        return [text]
+    if _level >= len(_SPLITTERS):
+        # Sin ningún límite natural utilizable (p. ej. un solo párrafo gigantesco): corte duro.
+        return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+    pieces = _SPLITTERS[_level](text)
+    if len(pieces) <= 1:
+        return _chunk_text(text, max_chars, _level + 1)
+    chunks: list[str] = []
+    for chunk in _pack(pieces, max_chars):
+        if len(chunk) > max_chars:
+            chunks.extend(_chunk_text(chunk, max_chars, _level + 1))
+        else:
+            chunks.append(chunk)
+    return chunks
+
+
+def _reattach_separator(chunk: str, output: str) -> str:
+    """Devuelve la salida del trozo con el separador original del final del trozo.
+
+    Conserva el formato en la costura: si el trozo terminaba en línea en blanco, la salida
+    también; si terminaba en un simple `\\n` (mitad de una lista o de un bloque de código),
+    no se inyecta un párrafo que no estaba en el original.
+    """
+    trailing = chunk[len(chunk.rstrip()) :]
+    return output.strip() + trailing
+
+
+def _chat_chunked(
+    model: str,
+    system: str,
+    content: str,
+    build_user,
+    *,
+    tool: str,
+    source: str,
+    temperature: float = 0.2,
+    truncated_in: bool = False,
+    raw_len: int | None = None,
+    path: str | None = None,
+    chunk_chars: int | None = None,
+) -> str:
+    """Procesa `content` por trozos y concatena las salidas EN ORDEN.
+
+    Una llamada al backend por trozo (cada una con su propio `max_tokens <= CHUNK_MAX_TOKENS`),
+    un único evento en el log con `chunks: N`, y una sola entrada en "En curso" que va marcando
+    el trozo en proceso. Si un trozo aun así sale truncado, se vuelve a partir y se reintenta:
+    el resultado final llega completo en vez de con el aviso `[salida truncada]`.
+    """
+    chunk_chars = chunk_chars or config.CHUNK_CHARS
+    chunks = _chunk_text(content, chunk_chars)
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(chunks)
+    )
+    outputs: list[str] = []
+    calls = 0
+    latency_ms = 0
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    failed: ChatResult | None = None
+    truncated_out = False
+
+    def _accumulate(result: ChatResult, ms: int) -> None:
+        nonlocal calls, latency_ms, tokens_in, tokens_out
+        calls += 1
+        latency_ms += ms
+        if result.tokens_in is not None:
+            tokens_in = (tokens_in or 0) + result.tokens_in
+        if result.tokens_out is not None:
+            tokens_out = (tokens_out or 0) + result.tokens_out
+
+    def _process(piece: str, depth: int = 0) -> str | None:
+        """Devuelve el texto del trozo, o None si el backend falló (aborta la operación)."""
+        nonlocal failed, truncated_out
+        max_tokens = min(len(piece) // 2 + 128, config.CHUNK_MAX_TOKENS)
+        result, ms, _schema = _run_chat(
+            model, system, build_user(piece.strip()), max_tokens, temperature
+        )
+        _accumulate(result, ms)
+        if not result.ok:
+            failed = result
+            return None
+        if result.finish_reason == "length" and depth < 2 and len(piece) > config.CHUNK_MIN_CHARS:
+            # El trozo seguía siendo demasiado grande para el techo de tokens: pártelo y
+            # reintenta en vez de devolver la salida cortada.
+            halves = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+            if len(halves) > 1:
+                parts: list[str] = []
+                for half in halves:
+                    out = _process(half, depth + 1)
+                    if out is None:
+                        return None
+                    parts.append(_reattach_separator(half, out))
+                return "".join(parts).strip()
+        if result.finish_reason == "length":
+            truncated_out = True
+        return _strip_think(result.text)
+
+    try:
+        for index, piece in enumerate(chunks, start=1):
+            _inflight_progress(entry_id, index)
+            output = _process(piece)
+            if output is None:
+                break
+            outputs.append(_reattach_separator(piece, output))
+    finally:
+        _inflight_end(entry_id)
+
+    if failed is not None:
+        text = failed.text
+        ok = False
+        error = failed.error
+        finish_reason = failed.finish_reason
+    else:
+        text = "".join(outputs).strip()
+        ok = True
+        error = None
+        finish_reason = "length" if truncated_out else "stop"
+        if truncated_out:
+            text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+
+    _log_event(
+        tool=tool,
+        model=model,
+        source=source,
+        chars_in=len(content),
+        chars_out=len(text),
+        latency_ms=latency_ms,
+        ok=ok,
+        error=error,
+        finish_reason=finish_reason,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        truncated_in=truncated_in,
+        truncated_out=truncated_out,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
+        chunks=calls,
+    )
+    if source == "path" and ok and config.FEEDBACK_ENABLED:
+        text += _savings_feedback(len(content), tokens_in, "chars", True)
+    if ok and calls > 1 and config.FEEDBACK_ENABLED:
+        text += f"\n\n(procesado en {calls} trozos por local-delegate)"
+    return text
+
+
+# Marcas inequívocas: códigos de error y frases que solo aparecen en un desborde.
+_DESBORDE_MARCAS = (
+    "exceed_context_size",  # tipo de error de llama.cpp
+    "context_length_exceeded",  # código de OpenAI/vLLM
+    "context window",
+    "prompt is too long",
+)
+# Fuera de esas, se exige una palabra de «contexto» Y una de «exceso». Ninguna de las dos por
+# separado dice nada —`context shift` y `maximum tokens` son opciones normales del backend—,
+# juntas sí.
+_DESBORDE_CONTEXTO = ("context", "contexto")
+_DESBORDE_EXCESO = (
+    "exceed",  # cubre exceeds / exceeded / exceeding
+    "too long",
+    "too large",
+    "too many tokens",
+    "overflow",
+    "maximum",
+)
+
+
+def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
+    """True si el backend rechazó la llamada por no caber en el contexto del modelo.
+
+    Los presupuestos de troceado están en CARACTERES y el límite del modelo en TOKENS, y la
+    relación entre los dos depende del contenido: la prosa de un `.md` da 3,12 chars/token y
+    `uv.lock` —hashes y URLs— da 1,57, medido. Un presupuesto en chars que sirve para un
+    documento revienta con otro, así que el que manda tiene que ser el límite real, no la
+    estimación: ver `_chat_map_reduce`.
+
+    La detección **no puede ser una lista de literales de un proveedor**. Esto comparaba contra
+    tres marcas y el backend de referencia dice `Context size has been exceeded.`, que no casa
+    con ninguna: el reintento adaptativo llevaba anulado desde entonces y `local_summarize` se
+    rendía con el `CHANGELOG.md` del propio repo. El catálogo son endpoints OpenAI-compatible
+    distintos (llama-swap, Ollama, LM Studio, vLLM) y cada uno lo dice a su manera.
+
+    La asimetría manda hacia el lado generoso: un falso positivo cuesta como mucho dos
+    reintentos con trozos más pequeños, un falso negativo anula el mecanismo entero.
+    """
+    if result is None:
+        return False
+    texto = result.text.lower()
+    if any(marca in texto for marca in _DESBORDE_MARCAS):
+        return True
+    habla_de_contexto = any(c in texto for c in _DESBORDE_CONTEXTO)
+    habla_de_exceso = any(e in texto for e in _DESBORDE_EXCESO)
+    return habla_de_contexto and habla_de_exceso
+
+
+def _chat_map_reduce(
+    model: str,
+    system: str,
+    content: str,
+    build_user,
+    *,
+    tool: str,
+    source: str,
+    max_words: int,
+    temperature: float = 0.2,
+    raw_len: int | None = None,
+    path: str | None = None,
+    reduce_system: str | None = None,
+    build_reduce=None,
+    partial_max_words: int | None = None,
+) -> str:
+    """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
+
+    El chunking de `_chat_chunked` sirve para *transformar* (traducir, reescribir): concatenar
+    las salidas es correcto porque cada trozo se corresponde con su parte del resultado. Para
+    **reducir** —un único resumen de todo— concatenar no vale: haría falta un resumen por trozo
+    pegado con otro, no un resumen global. De ahí el map-reduce.
+
+    Hasta ahora estas tools simplemente *truncaban* la entrada y avisaban, que en un documento
+    grande significa resumir el principio e ignorar el resto en silencio útil. Ahora se lee
+    entero.
+
+    El reduce es jerárquico: si los resúmenes parciales tampoco caben, se vuelven a resumir por
+    niveles (tope de 3, suficiente para cualquier archivo realista y con final garantizado).
+    Como en `_chat_chunked`: N llamadas, **un** evento de log con `chunks: N`.
+    """
+    budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(model) * 0.8))
+    pieces = _chunk_text(content, budget)
+    entry_id = _inflight_start(
+        tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
+    )
+    calls = 0
+    latency_ms = 0
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    failed: ChatResult | None = None
+
+    def _one(sys_prompt: str, user: str, words: int) -> str | None:
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed
+        result, ms, _schema = _run_chat(model, sys_prompt, user, int(words * 2) + 64, temperature)
+        calls += 1
+        latency_ms += ms
+        if result.tokens_in is not None:
+            tokens_in = (tokens_in or 0) + result.tokens_in
+        if result.tokens_out is not None:
+            tokens_out = (tokens_out or 0) + result.tokens_out
+        if not result.ok:
+            failed = result
+            return None
+        return _strip_think(result.text)
+
+    # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
+    # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
+    #
+    # `partial_max_words` existe porque hay reduces cuyo resultado es MUCHO más corto que su
+    # material: un mensaje de commit son ~90 palabras, pero el parte de los cinco archivos de un
+    # trozo no cabe en 90 y saldría cortado por `finish_reason=length`. Perder material en el map
+    # es el mismo defecto que el truncado de la entrada, un nivel más adentro.
+    partial_words = partial_max_words if partial_max_words is not None else max(80, max_words)
+    reduce_propio = reduce_system
+    if reduce_system is None:
+        reduce_system = _guard(
+            "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
+            max_words,
+        )
+    if build_reduce is None:
+
+        def build_reduce(joined: str) -> str:
+            return (
+                "Estos son resúmenes parciales y EN ORDEN de un mismo documento. "
+                f"Redacta un único resumen global:\n\n{joined}"
+            )
+
+    # Cuando los parciales tampoco caben se reagrupan, y ese paso intermedio produce más
+    # material para el reduce —no el resultado final—. Con un reduce propio hay que reagrupar
+    # con el system del MAP: hacerlo con el del reduce emitiría mensajes de commit intermedios
+    # que luego se resumirían entre sí. Sin reduce propio se mantiene el comportamiento de hoy.
+    regroup_system = system if reduce_propio is not None else reduce_system
+
+    def _map_piece(piece: str, depth: int = 0) -> list[str] | None:
+        """Resume un trozo; si el backend dice que no cabe, lo parte y reintenta.
+
+        El presupuesto en chars es una estimación de cuántos tokens ocupará el trozo, y con
+        contenido denso se queda corta. En vez de calibrar la estimación a ojo —que no acota
+        nada: un diff de un fichero base64 baja de 0,75 chars/token— se deja que responda el
+        backend y se reintenta más pequeño. Dos niveles: un trozo que no cabe partido en cuatro
+        no es un problema de presupuesto.
+        """
+        nonlocal failed
+        out = _one(system, build_user(piece.strip()), partial_words)
+        if out is not None:
+            return [out]
+        if depth >= 2 or not _es_desborde_de_contexto(failed):
+            return None
+        partes = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+        if len(partes) < 2:
+            return None  # indivisible: el error se queda como está
+        failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
+        salidas: list[str] = []
+        for parte in partes:
+            sub = _map_piece(parte, depth + 1)
+            if sub is None:
+                return None
+            salidas.extend(sub)
+        return salidas
+
+    try:
+        summaries: list[str] = []
+        for index, piece in enumerate(pieces, start=1):
+            _inflight_progress(entry_id, index)
+            outs = _map_piece(piece)
+            if outs is None:
+                break
+            summaries.extend(outs)
+
+        text = ""
+        if failed is None:
+            # Con un solo parcial y sin reduce propio, ese parcial YA es el resultado. Con un
+            # reduce propio no: el parcial está en el formato del map —para un commit, un parte
+            # por archivo— y saltarse el reduce devolvería eso en vez de un mensaje. Pasa con un
+            # `CHUNK_MIN_CHARS` alto, que es configurable.
+            if len(summaries) == 1 and reduce_propio is None:
+                text = summaries[0]
+            else:
+                for _level in range(3):
+                    joined = "\n\n".join(summaries)
+                    prompt = build_reduce(joined)
+                    # Se mide el prompt ARMADO, no los parciales pelados: lo que se envía puede
+                    # llevar delante material fijo (el inventario del diff, p. ej.), y medir sin
+                    # él desbordaría el contexto justo en la llamada que produce el resultado.
+                    if len(prompt) <= budget:
+                        out = _one(reduce_system, prompt, max_words)
+                        text = out or ""
+                        break
+                    # Ni los parciales caben: se reducen por grupos y se repite.
+                    grouped: list[str] = []
+                    for group in _chunk_text(joined, budget):
+                        out = _one(regroup_system, build_user(group.strip()), partial_words)
+                        if out is None:
+                            break
+                        grouped.append(out)
+                    if failed is not None:
+                        break
+                    summaries = grouped
+                else:
+                    text = "\n\n".join(summaries)
+    finally:
+        _inflight_end(entry_id)
+
+    ok = failed is None
+    if not ok:
+        text, error, finish_reason = failed.text, failed.error, failed.finish_reason
+        if _es_desborde_de_contexto(failed):
+            # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
+            # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que
+            # se antepone lo accionable y se conserva detrás la respuesta original.
+            detalle = failed.text.removeprefix("[local-delegate error] ")
+            text = (
+                f"[local-delegate error] el contenido no cabe en el contexto de {model}, ni "
+                f"partido en trozos de {config.CHUNK_MIN_CHARS} caracteres. Sube el contexto "
+                f"del backend para ese modelo, usa uno con contexto mayor, o pasa menos "
+                f"contenido de una vez. Respuesta del backend: {detalle}"
+            )
+            error = "context_overflow"
+    else:
+        error, finish_reason = None, "stop"
+
+    _log_event(
+        tool=tool,
+        model=model,
+        source=source,
+        chars_in=len(content),
+        chars_out=len(text),
+        latency_ms=latency_ms,
+        ok=ok,
+        error=error,
+        finish_reason=finish_reason,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        truncated_in=False,  # el sentido de todo esto es que ya no se trunca
+        truncated_out=False,
+        raw_len=raw_len,
+        path=path if source == "path" else None,
+        chunks=calls,
+    )
+    if source == "path" and ok and config.FEEDBACK_ENABLED:
+        text += _savings_feedback(len(content), tokens_in, "chars", True)
+    if ok and calls > 1 and config.FEEDBACK_ENABLED:
+        text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
+    return text
+
+
+def _strip_fences(s: str) -> str:
+    """Quita fences markdown (```json / ```python / ```) que a veces envuelven la salida."""
+    s = s.strip()
+    if s.startswith("```"):
+        lines = s.splitlines()
+        lines = lines[1:]  # descarta la línea de apertura del fence
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        s = "\n".join(lines).strip()
+    return s
+
+
+def _json_schema_payload(fields: list[str]) -> dict:
+    """response_format json_object+schema para local_extract (ver doc de llama-server).
+
+    Cada propiedad se restringe a tipos primitivos (string/number/boolean/null): un
+    sub-schema vacío ({}) permite objetos/arrays anidados y algunos modelos (p. ej.
+    gemma3-4b) anidan el valor en vez de devolverlo plano — {"campo": {"valor": "x"}}
+    en lugar de {"campo": "x"}.
+    """
+    primitive = {"type": ["string", "number", "boolean", "null"]}
+    return {
+        "type": "json_object",
+        "schema": {
+            "type": "object",
+            "properties": {f: primitive for f in fields},
+            "required": list(fields),
+        },
+    }
+
+
+def _guard(formato: str, max_words: int | None = None) -> str:
+    limite = f" Máximo {max_words} palabras." if max_words else ""
+    return (
+        "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
+        f"Output EXACTO: {formato}.{limite} Nada fuera del formato."
+    )
+
+
+# --- Validación de imagen (local_describe_image, F6) -------------------------
+_IMAGE_MIME: dict[str, str] = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+def _validate_image_path(path: str) -> str:
+    """Valida la ruta de una imagen para local_describe_image. Devuelve su mime type.
+
+    Orden: raíces permitidas -> extensión soportada (sin tocar disco) -> el archivo existe
+    -> tamaño <= MAX_IMAGE_MB (con stat(), sin leer el archivo completo solo para rechazarlo).
+    """
+    _check_allowed_dir(path)
+    p = Path(path)
+    suffix = p.suffix.lower()
+    if suffix not in _IMAGE_MIME:
+        raise ValueError(
+            f"Extensión de imagen no soportada: '{suffix}'. Válidas: {sorted(_IMAGE_MIME)}"
+        )
+    if not p.is_file():
+        raise ValueError(f"No existe el archivo: {path}")
+    size = p.stat().st_size
+    max_bytes = config.MAX_IMAGE_MB * 1024 * 1024
+    if size > max_bytes:
+        raise ValueError(
+            f"Imagen demasiado grande: {size / 1024 / 1024:.1f} MB "
+            f"(máximo {config.MAX_IMAGE_MB} MB)"
+        )
+    return _IMAGE_MIME[suffix]
+
+
+# --- Tools ------------------------------------------------------------------
+@mcp.tool(annotations=_anotaciones("Resumir texto o archivo"))
+def local_summarize(
+    text: str | None = None,
+    path: str | None = None,
+    max_words: int = 150,
+) -> str:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un resumen, no el contenido literal.
+
+    Resume texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+
+    Usa esto para resumir archivos/documentos grandes: pasa 'path' y el archivo se lee del lado
+    del servidor, de modo que el contenido completo NO entra al contexto de Claude (solo vuelve el
+    resumen corto). Alternativamente pasa 'text'. Enruta al modelo mecánico (entradas cortas) o al
+    modelo de contexto largo (documentos grandes) automáticamente.
+
+    Args:
+        text: Texto a resumir (usa esto o 'path').
+        path: Ruta a un archivo cuyo contenido se resume (leído server-side).
+        max_words: Longitud máxima del resumen en palabras.
+    """
+    probe = path and Path(path).is_file()
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    system = _guard("un resumen en prosa clara", max_words)
+
+    def _build(piece: str) -> str:
+        return f"Resume el siguiente contenido:\n\n{piece}"
+
+    if len(content) > config.max_chars_for(model):
+        # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
+        # truncaba, o sea que se resumía el principio y el resto se ignoraba.
+        return _chat_map_reduce(
+            model,
+            system,
+            content,
+            _build,
+            tool="local_summarize",
+            source="path" if path else "inline",
+            max_words=max_words,
+            raw_len=raw_len,
+            path=path,
+        )
+
+    user = _build(content)
+    result = _chat(
+        model,
+        system,
+        user,
+        max_tokens=int(max_words * 2) + 64,
+        tool="local_summarize",
+        chars_in=len(content),
+        source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
+    )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+@mcp.tool(annotations=_anotaciones("Clasificar en una etiqueta"))
+def local_classify(text: str, labels: list[str]) -> str:
+    """Clasifica un texto en UNA de las etiquetas dadas, con un modelo local.
+
+    Devuelve exactamente una etiqueta de la lista, sin texto adicional.
+
+    Args:
+        text: Texto a clasificar.
+        labels: Lista de etiquetas candidatas.
+    """
+    etiquetas = ", ".join(labels)
+    system = _guard(f"exactamente una de estas etiquetas: [{etiquetas}]", max_words=5)
+    user = f"Clasifica este texto:\n\n{text}"
+    return _chat(
+        config.MODEL_MECHANICAL,
+        system,
+        user,
+        max_tokens=16,
+        temperature=0.0,
+        tool="local_classify",
+        chars_in=len(text),
+        source="inline",
+    )
+
+
+@mcp.tool(annotations=_anotaciones("Extraer campos como JSON"))
+def local_extract(
+    fields: list[str],
+    text: str | None = None,
+    path: str | None = None,
+) -> dict[str, Any]:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas campos estructurados, no el contenido literal.
+
+    Extrae campos estructurados de un texto/archivo como JSON, con un modelo local.
+
+    Pasa 'path' para leer el archivo server-side (no gasta contexto de Claude) o 'text'.
+    Devuelve un objeto con exactamente las claves pedidas, ya validado: quien llama no tiene que
+    parsear una cadena. Si la entrada hubo que truncarla, se añade además la clave reservada
+    `_local_delegate` con el aviso — antes ese aviso iba como texto delante del JSON, donde
+    obligaba a limpiar la cadena antes de poder parsearla. Enruta al modelo mecánico
+    (entradas cortas) o al de contexto largo (documentos grandes) automáticamente: el sondeo
+    de tamaño usa bytes del archivo para 'path' y caracteres para 'text' (~5-10% de diferencia
+    en UTF-8, aceptable). Por defecto pide al backend un JSON restringido por schema
+    (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend no lo soporta, reintenta en modo libre.
+
+    Args:
+        fields: Nombres de los campos a extraer (claves del JSON).
+        text: Texto fuente (usa esto o 'path').
+        path: Ruta a un archivo fuente (leído server-side).
+    """
+    probe = path and Path(path).is_file()
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    claves = ", ".join(f'"{f}"' for f in fields)
+    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
+    user = f"Extrae los campos del siguiente contenido:\n\n{content}"
+    use_schema = config.JSON_SCHEMA_MODE != "off"
+    result = _strip_fences(
+        _chat(
+            model,
+            system,
+            user,
+            max_tokens=512,
+            temperature=0.0,
+            tool="local_extract",
+            chars_in=len(content),
+            source="path" if path else "inline",
+            truncated_in=truncated_in,
+            raw_len=raw_len,
+            path=path,
+            response_format=_json_schema_payload(fields) if use_schema else None,
+            json_schema_fallback=config.JSON_SCHEMA_MODE == "auto",
+            # SIN la línea de ahorro pegada al texto: esta tool parsea el resultado, y ese sufijo
+            # convertía un JSON perfecto en uno imparseable. El dato no se pierde, baja unas
+            # líneas más abajo a `_local_delegate`, que es donde va lo que no son datos.
+            feedback=False,
+        )
+    )
+
+    try:
+        datos = json.loads(result)
+    except json.JSONDecodeError:
+        # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
+        # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
+        # de recibir una excepción de protocolo.
+        return {"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": result}}
+    if not isinstance(datos, dict):
+        return {"_local_delegate": {"error": "la respuesta no es un objeto JSON", "crudo": result}}
+
+    meta: dict = {}
+    if truncated_in:
+        meta["truncado"] = True
+        meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
+    if path and config.FEEDBACK_ENABLED:
+        meta["leido_server_side"] = {
+            "chars": len(content),
+            "tokens_aprox": len(content) // config.CHARS_PER_TOKEN,
+        }
+    if meta:
+        datos["_local_delegate"] = meta
+    return datos
+
+
+@mcp.tool(annotations=_anotaciones("Generar código boilerplate", escribe=True))
+def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = False) -> str:
+    """Genera código boilerplate a partir de una especificación, con un modelo local de código.
+
+    **Escribe el código en `target`** y devuelve solo un recibo de dos líneas (ruta, tamaño). El
+    código generado nunca entra a tu contexto: ahí está el ahorro, y por eso `target` no es
+    opcional. Para verlo, abre el archivo; para usarlo, ya está en su sitio.
+
+    Args:
+        spec: Descripción de lo que debe generar el código.
+        language: Lenguaje de programación (p. ej. 'python', 'typescript').
+        target: Ruta ABSOLUTA del archivo a escribir. Los directorios que falten se crean.
+        overwrite: Pisar `target` si ya existe. Por defecto falla, y falla ANTES de generar nada.
+    """
+    destino = _validar_destino(target, overwrite)
+    system = _guard(f"solo código {language} válido, sin explicaciones ni ```")
+    user = f"Genera {language} para: {spec}"
+    return _chat(
+        config.MODEL_CODE,
+        system,
+        user,
+        max_tokens=1536,
+        temperature=0.1,
+        tool="local_boilerplate",
+        chars_in=len(spec),
+        source="inline",
+        strip_fences=True,
+        write_to=destino,
+    )
+
+
+@mcp.tool(annotations=_anotaciones("Delegar una tarea genérica"))
+def local_delegate(
+    task: str,
+    input: str,
+    output_format: str,
+    model: str | None = None,
+    chunk: str = "auto",
+) -> str:
+    """Tool genérica de escape: delega una tarea texto->texto a un modelo local.
+
+    Úsala cuando ninguna tool específica encaje. Arma el prompt con guardrails y devuelve texto.
+
+    Con entradas largas parte el input por límites naturales (headers Markdown, párrafos),
+    aplica la MISMA tarea a cada trozo y concatena las salidas en orden. Eso es lo correcto
+    para transformar todo el texto (traducir, reescribir, reformatear) pero NO para tareas de
+    reducción sobre el conjunto (contar, elegir el máximo, un único resumen global): para esas
+    pasa `chunk='off'` o usa `local_summarize`.
+
+    Args:
+        task: Instrucción de la tarea (una frase con formato de salida explícito).
+        input: Contenido sobre el que operar.
+        output_format: Formato exacto de salida esperado.
+        model: Modelo a usar; uno de los ids configurados en el catálogo. Por defecto el mecánico.
+        chunk: 'auto' (parte solo si el input es largo), 'on' (parte siempre que se pueda),
+            'off' (una sola llamada; el input largo puede volver truncado).
+    """
+    chosen = model or config.MODEL_MECHANICAL
+    if chosen not in config.ALLOWED_MODELS:
+        # La lista de válidos ya iba en el error, así que el servidor siempre supo la respuesta.
+        # Se ofrece en vez de solo enunciarla. Ojo con la consecuencia, que es real: con respuesta,
+        # una llamada que hoy falla al instante y sin gastar backend pasa a ejecutar inferencia.
+        # Sin respuesta —mecanismo apagado, cliente sin soporte, plazo agotado, negativa— se
+        # devuelve el error de hoy tal cual y no se toca el backend.
+        validos = sorted(config.ALLOWED_MODELS)
+        elegido = preguntas.preguntar(
+            f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(validos)}",
+            preguntas.ElegirModelo,
+        )
+        if elegido is None or elegido.modelo not in config.ALLOWED_MODELS:
+            return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {validos}"
+        chosen = elegido.modelo
+    if chunk not in {"auto", "on", "off"}:
+        return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
+    if not output_format.strip():
+        # El parámetro es obligatorio, así que nunca falta — pero nadie comprobaba que trajera algo,
+        # y con la cadena vacía el guardrail se queda sin formato y el modelo improvisa. Si no hay
+        # quien responda, se sigue como hasta ahora.
+        formato = preguntas.preguntar(
+            "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",
+            preguntas.ElegirFormato,
+        )
+        if formato is not None and formato.formato.strip():
+            output_format = formato.formato.strip()
+    system = _guard(output_format)
+    if chunk == "on" or (chunk == "auto" and len(input) > config.CHUNK_CHARS):
+        return _chat_chunked(
+            chosen,
+            system,
+            input,
+            lambda piece: f"{task}\n\nInput:\n{piece}",
+            tool="local_delegate",
+            source="inline",
+        )
+    return _chat(
+        chosen,
+        system,
+        f"{task}\n\nInput:\n{input}",
+        max_tokens=config.CHUNK_MAX_TOKENS,
+        tool="local_delegate",
+        chars_in=len(input),
+        source="inline",
+    )
+
+
+@mcp.tool(annotations=_anotaciones("Resumir salida de lint o tests"))
+def local_lint_summary(
+    path: str | None = None,
+    text: str | None = None,
+    max_words: int = 200,
+) -> str:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un resumen agrupado, no el contenido literal. Si
+    ejecutaste un comando cuya salida es larga, vuélcala a un archivo y pasa 'path'.
+
+    Resume salida de linters/tests/CI con un modelo local, sin gastar contexto de Claude.
+
+    Pensada para logs largos y ruidosos (ESLint, clippy, pytest, tsc, CI). Pasa 'path' y el
+    archivo se lee del lado del servidor, de modo que el log completo NO entra al contexto de
+    Claude: solo vuelve un resumen agrupado por archivo con el conteo por tipo de error/regla y
+    lo más importante primero. Alternativamente pasa 'text'. Enruta al modelo mecánico (corto) o
+    al de contexto largo (largo) automáticamente.
+
+    Args:
+        path: Ruta al archivo de salida de lint/tests (leído server-side). Usa esto o 'text'.
+        text: Salida de lint/tests como texto.
+        max_words: Longitud máxima del resumen en palabras.
+    """
+    probe = path and Path(path).is_file()
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
+    system = _guard(
+        "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
+        "error/regla y los más relevantes primero",
+        max_words,
+    )
+
+    def _build(piece: str) -> str:
+        return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
+
+    if len(content) > config.max_chars_for(model):
+        # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
+        # estar al final, y era exactamente lo que se descartaba.
+        return _chat_map_reduce(
+            model,
+            system,
+            content,
+            _build,
+            tool="local_lint_summary",
+            source="path" if path else "inline",
+            max_words=max_words,
+            raw_len=raw_len,
+            path=path,
+        )
+
+    user = _build(content)
+    result = _chat(
+        model,
+        system,
+        user,
+        max_tokens=int(max_words * 2) + 96,
+        tool="local_lint_summary",
+        chars_in=len(content),
+        source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
+    )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+@mcp.tool(annotations=_anotaciones("Redactar mensaje de commit"))
+def local_commit_msg(
+    diff: str | None = None,
+    path: str | None = None,
+    style: str = "conventional",
+) -> str:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas un mensaje de commit, no el contenido literal.
+
+    Redacta un mensaje de commit a partir de un diff, con un modelo local de código.
+
+    Pasa 'path' a un archivo de diff (p. ej. la salida de `git diff` volcada a fichero) y se lee
+    server-side, de modo que el diff completo NO entra al contexto de Claude. Alternativamente
+    pasa 'diff' como texto. Revisa SIEMPRE el mensaje antes de usarlo.
+
+    Args:
+        diff: El diff como texto (usa esto o 'path').
+        path: Ruta a un archivo con el diff (leído server-side).
+        style: 'conventional' (Conventional Commits) o 'plain'.
+    """
+    if style not in {"conventional", "plain"}:
+        return (
+            f"[local-delegate error] style inválido: '{style}'. Válidos: 'conventional', 'plain'."
+        )
+    content, truncated_in, raw_len = _read_input(diff, path, _NO_TRUNCATE)
+    if not content.strip():
+        return "[local-delegate error] el diff está vacío: no hay nada sobre lo que redactar."
+    if style == "conventional":
+        fmt = (
+            "un mensaje de commit estilo Conventional Commits: primera línea "
+            "'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con "
+            "viñetas '- '"
+        )
+    else:
+        fmt = (
+            "un mensaje de commit: primera línea imperativa <=72 caracteres y cuerpo "
+            "opcional con viñetas"
+        )
+    system = _guard(fmt)
+    user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
+
+    if len(content) > config.max_chars_for(config.MODEL_CODE):
+        # El diff no cabe en una llamada. Antes se truncaba: medido sobre un diff de 164 585
+        # chars y 44 archivos, el modelo veía 20 027 chars —7 archivos, todos de `.sdd/`— y
+        # devolvía `chore: update GitHub Actions pages artifact version`, o sea el primer
+        # archivo por orden alfabético de rutas. Ahora entra entero: parte por archivo, un
+        # parte por trozo, y el mensaje se redacta sobre esos partes MÁS el inventario completo.
+        archivos = _diff_inventory(content)
+        budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(config.MODEL_CODE) * 0.8))
+        inventario = _format_inventory(archivos, int(budget * 0.25))
+        # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
+        # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
+        # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
+        # conocen sin preguntarle a nadie.
+        map_system = _guard(
+            "una viñeta por archivo, empezando por su ruta literal seguida de dos puntos y de "
+            "qué cambia en él y para qué. Describe los cambios; no repitas estas instrucciones "
+            "ni redactes ningún mensaje de commit todavía"
+        )
+        # Un archivo más grande que el presupuesto se subdivide, y las piezas 2..N no llevan
+        # cabecera `diff --git`: sin decirles a qué archivo pertenecen, el modelo se inventa la
+        # ruta (medido: `archivo.py`). Las piezas llegan en orden, así que basta con arrastrar
+        # la última vista.
+        en_curso: dict[str, str | None] = {"archivo": None}
+
+        def _build_map(piece: str) -> str:
+            del_trozo = [ruta for ruta, _, _ in _diff_inventory(piece)]
+            if del_trozo:
+                en_curso["archivo"] = del_trozo[-1]
+                encabezado = (
+                    f"Archivos de este fragmento: {', '.join(del_trozo)}.\n"
+                    f"Usa esas rutas literales, una viñeta por archivo."
+                )
+            elif en_curso["archivo"]:
+                encabezado = (
+                    f"Este fragmento CONTINÚA el archivo {en_curso['archivo']} y no repite su "
+                    f"cabecera. Escribe una sola viñeta, para {en_curso['archivo']}."
+                )
+            else:
+                encabezado = "Escribe una viñeta por archivo, con su ruta literal."
+            return f"{encabezado}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
+
+        def _build_reduce(joined: str) -> str:
+            cabeza = f"{inventario}\n\n" if inventario else ""
+            return (
+                f"{cabeza}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
+                "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
+                "cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que "
+                "cambia y para qué, no el número de archivos ni los tests que lo acompañan, y "
+                "el scope es un ámbito lógico, nunca un nombre de fichero. Escribe el mensaje "
+                "de commit del cambio completo:\n\n"
+                f"{joined}"
+            )
+
+        resultado = _chat_map_reduce(
+            config.MODEL_CODE,
+            map_system,
+            content,
+            _build_map,
+            tool="local_commit_msg",
+            source="path" if path else "inline",
+            max_words=90,
+            # Los partes son material intermedio y hay varios archivos por trozo: con el tope
+            # del mensaje final saldrían cortados por `finish_reason=length`.
+            partial_max_words=350,
+            reduce_system=system,
+            build_reduce=_build_reduce,
+            raw_len=raw_len,
+            path=path,
+        )
+        if not resultado.startswith("[local-delegate error]"):
+            resultado += (
+                f"\n\n(alcance: {len(archivos)} archivos, {len(content):,} chars leídos enteros)"
+            )
+        return resultado
+
+    result = _chat(
+        config.MODEL_CODE,
+        system,
+        user,
+        max_tokens=256,
+        temperature=0.2,
+        tool="local_commit_msg",
+        chars_in=len(content),
+        source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
+    )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+@mcp.tool(annotations=_anotaciones("Traducir texto o archivo"))
+def local_translate(
+    target_lang: str,
+    text: str | None = None,
+    path: str | None = None,
+) -> str:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas la traducción, no el contenido literal.
+
+    Traduce texto o el contenido de un archivo con un modelo local, sin gastar contexto de Claude.
+
+    Pasa 'path' para leer el archivo server-side (el original no entra al contexto de Claude) o
+    'text'. Conserva el formato del original y devuelve SOLO la traducción. Enruta al modelo
+    mecánico (corto) o al de contexto largo (largo) automáticamente.
+
+    Los documentos largos se parten por límites naturales (headers Markdown, párrafos) y cada
+    trozo se traduce en su propia llamada; el resultado vuelve completo y en orden, sin el
+    aviso de salida truncada.
+
+    Args:
+        target_lang: Idioma destino (p. ej. 'español', 'inglés', 'francés').
+        text: Texto a traducir (usa esto o 'path').
+        path: Ruta a un archivo cuyo contenido se traduce (leído server-side).
+    """
+    probe = path and Path(path).is_file()
+    probe_len = Path(path).stat().st_size if probe else len(text or "")
+    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    system = _guard(
+        f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios"
+    )
+    result = _chat_chunked(
+        model,
+        system,
+        content,
+        lambda piece: f"Traduce al {target_lang} el siguiente texto:\n\n{piece}",
+        tool="local_translate",
+        source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
+    )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+@mcp.tool(annotations=_anotaciones("Explicar código"))
+def local_explain_code(
+    code: str | None = None,
+    path: str | None = None,
+    question: str | None = None,
+) -> str:
+    """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
+    (>200 líneas / >10 KB) y solo necesitas una explicación, no el contenido literal.
+
+    Explica en prosa qué hace un fragmento/archivo de código, con un modelo local de código.
+
+    Pasa 'path' para leer el archivo server-side (el código completo NO entra al contexto de
+    Claude; solo vuelve la explicación) o 'code'. Opcionalmente enfoca la explicación con
+    'question'. Revisa la explicación: la genera un modelo local.
+
+    Args:
+        code: Código a explicar (usa esto o 'path').
+        path: Ruta a un archivo de código (leído server-side).
+        question: Pregunta o foco concreto (opcional).
+    """
+    content, truncated_in, raw_len = _read_input(
+        code, path, config.max_chars_for(config.MODEL_CODE)
+    )
+    extra = f" Enfócate en: {question}." if question else ""
+    system = _guard(
+        f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
+    )
+    user = f"Explica el siguiente código:\n\n{content}"
+    result = _chat(
+        config.MODEL_CODE,
+        system,
+        user,
+        max_tokens=700,
+        tool="local_explain_code",
+        chars_in=len(content),
+        source="path" if path else "inline",
+        truncated_in=truncated_in,
+        raw_len=raw_len,
+        path=path,
+    )
+    return _truncation_prefix(content, truncated_in, raw_len) + result
+
+
+@mcp.tool(annotations=_anotaciones("Describir una imagen"))
+def local_describe_image(
+    path: str,
+    question: str | None = None,
+    max_words: int = 200,
+) -> str:
+    """PREFIERE esta tool en vez de adjuntar o leer la imagen tú mismo cuando solo necesitas
+    una descripción, lectura de texto visible (OCR simple) o una respuesta puntual sobre una
+    imagen, no la imagen en sí en tu contexto.
+
+    Describe una imagen (o responde una pregunta sobre ella) con un modelo local de visión.
+    La imagen se lee del lado del servidor: NUNCA entra al contexto de Claude, solo vuelve la
+    respuesta en texto.
+
+    Guardrail de alcance: SOLO imagen->texto (describir, leer texto visible, responder una
+    pregunta puntual sobre la imagen). Esta tool NUNCA genera ni edita imágenes.
+
+    Args:
+        path: Ruta a la imagen (png/jpg/jpeg/webp/gif), leída server-side.
+        question: Pregunta o foco concreto sobre la imagen (opcional; por defecto la describe).
+        max_words: Longitud máxima de la respuesta en palabras.
+    """
+    try:
+        mime = _validate_image_path(path)
+    except ValueError as e:
+        return f"[local-delegate error] {e}"
+    raw_bytes = Path(path).read_bytes()
+    raw_len = len(raw_bytes)
+    b64 = base64.b64encode(raw_bytes).decode("ascii")
+    prompt = question or "Describe esta imagen con detalle."
+    system = _guard("una respuesta en prosa clara sobre la imagen", max_words)
+    content = [
+        {"type": "text", "text": prompt},
+        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+    ]
+    return _chat(
+        config.MODEL_VISION,
+        system,
+        content,
+        max_tokens=int(max_words * 2) + 64,
+        tool="local_describe_image",
+        chars_in=raw_len,
+        source="path",
+        raw_len=raw_len,
+        path=path,
+        feedback_label="bytes imagen",
+        feedback_char_estimate=False,
+        input_unit="bytes",
+    )
+
+
+def _port_listening(host: str, port: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            return s.connect_ex((host, port)) == 0
+    except OSError:
+        return False
+
+
+def _vram_info() -> str | None:
+    """Libre/total de VRAM vía nvidia-smi (best-effort; None si el binario no está)."""
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0 or not out.stdout.strip():
+        return None
+    line = out.stdout.strip().splitlines()[0]
+    parts = [p.strip() for p in line.split(",")]
+    if len(parts) != 2:
+        return line
+    used, total = parts
+    try:
+        free_mb = float(total.replace("MiB", "").strip()) - float(used.replace("MiB", "").strip())
+        warn = "  ADVERTENCIA: <2 GB libres" if free_mb < 2048 else ""
+    except ValueError:
+        warn = ""
+    return f"{used} / {total} usados{warn}"
+
+
+def _ram_info() -> str | None:
+    """Usado/total de RAM DE SISTEMA (best-effort, F7.9; None si no se pudo leer).
+
+    Portable sin dependencias nuevas: Windows vía ctypes (GlobalMemoryStatusEx, sin lanzar
+    procesos), Linux vía /proc/meminfo. macOS no está implementado (devuelve None; nunca
+    rompe local_status). Motivo: llama-server mapea el GGUF también en RAM (mmap) aunque el
+    cómputo sea 100% GPU, así que un catálogo que cabe en VRAM puede igual agotar la RAM.
+    """
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            class _MemoryStatusEx(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            stat = _MemoryStatusEx()
+            stat.dwLength = ctypes.sizeof(_MemoryStatusEx)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                return None
+            total_gb = stat.ullTotalPhys / 1024**3
+            free_gb = stat.ullAvailPhys / 1024**3
+        elif sys.platform.startswith("linux"):
+            info: dict[str, str] = {}
+            with open("/proc/meminfo", encoding="utf-8") as f:
+                for line in f:
+                    key, _, rest = line.partition(":")
+                    info[key] = rest.strip()
+            total_gb = float(info["MemTotal"].split()[0]) / 1024**2
+            avail_raw = info.get("MemAvailable", info.get("MemFree", "0"))
+            free_gb = float(avail_raw.split()[0]) / 1024**2
+        else:
+            return None
+    except Exception:
+        return None
+    used_gb = total_gb - free_gb
+    warn = "  ADVERTENCIA: <2 GB libres" if free_gb < 2 else ""
+    return f"{used_gb:.1f} / {total_gb:.1f} GiB usados{warn}"
+
+
+def _llamaswap_groups() -> str | None:
+    """Nombres de los groups activos en LLAMASWAP_CONFIG (best-effort, F7).
+
+    Requiere el extra opcional [llamaswap] (pyyaml) y que LLAMASWAP_CONFIG apunte a un
+    config.yaml con 'groups:'. Nunca rompe local_status: cualquier fallo (extra ausente,
+    archivo inexistente, YAML inválido) devuelve None y la línea simplemente no aparece.
+    """
+    cfg_path = os.environ.get("LLAMASWAP_CONFIG")
+    if not cfg_path:
+        return None
+    try:
+        from . import llamaswap_config as lc
+
+        data = lc.load_config(Path(cfg_path))
+    except Exception:
+        return None
+    groups = data.get("groups")
+    if not groups:
+        return None
+    return ", ".join(sorted(groups))
+
+
+def _model_status_value(m: dict) -> str | None:
+    """Estado de un modelo del campo `status` de /v1/models (#901 de llama-swap).
+
+    llama-swap lo expone como objeto anidado ``{"value": "loaded"|"unloaded"}`` (verificado en
+    vivo). Se tolera también un string plano; otros backends (Ollama, llama-swap < v236) no lo
+    traen y devuelven None, en cuyo caso simplemente no se muestra el estado.
+    """
+    st = m.get("status")
+    if isinstance(st, dict):
+        val = st.get("value")
+        return val if isinstance(val, str) else None
+    return st if isinstance(st, str) else None
+
+
+def _models_with_status() -> tuple[bool, list[dict]]:
+    """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da."""
+    try:
+        with httpx2.Client(timeout=2.0) as c:
+            r = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
+            r.raise_for_status()
+            data = r.json().get("data", [])
+    except (httpx2.HTTPError, ValueError):
+        return False, []
+    models = [
+        {"id": m.get("id", "?"), "status": _model_status_value(m)}
+        for m in data
+        if isinstance(m, dict)
+    ]
+    models.sort(key=lambda x: x["id"])
+    return True, models
+
+
+def _llamaswap_running() -> str | None:
+    """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
+    base = config.BASE_URL.removesuffix("/v1")
+    try:
+        with httpx2.Client(timeout=1.0) as c:
+            r = c.get(f"{base}/running", headers=config.auth_headers())
+            if not r.is_success:
+                return None
+            data = r.json()
+    except (httpx2.HTTPError, ValueError):
+        return None
+    entries = data.get("running") if isinstance(data, dict) else None
+    if not entries:
+        return "ningún modelo montado"
+    parts = [
+        f"{e.get('model', '?')} ({e.get('state', '?')})" for e in entries if isinstance(e, dict)
+    ]
+    return ", ".join(parts) if parts else "ningún modelo montado"
+
+
+@mcp.tool(annotations=_anotaciones("Diagnóstico del backend local"))
+def local_status() -> str:
+    """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
+
+    Úsala para saber qué modelos locales hay disponibles y verificar que el backend está vivo
+    antes de delegar en masa, o para diagnosticar por qué una tool local_* falló.
+    """
+    lines: list[str] = [f"local-delegate v{_get_version()}", ""]
+
+    backend_up, models = _models_with_status()
+    origin = "local (esta máquina)" if config.backend_origin() == "local" else "REMOTO"
+    lines.append(f"Backend: {config.BASE_URL} — {'arriba' if backend_up else 'CAÍDO'}")
+    lines.append(f"  cómputo: {origin} — {config.backend_host()}")
+    if backend_up:
+        if models:
+            shown = ", ".join(
+                f"{m['id']} ({m['status']})" if m["status"] else m["id"] for m in models
+            )
+        else:
+            shown = "(ninguno)"
+        lines.append(f"  modelos expuestos: {shown}")
+
+    lines.append("")
+    lines.append("Catálogo de roles:")
+    for role, model in (
+        ("mechanical", config.MODEL_MECHANICAL),
+        ("long", config.MODEL_LONG),
+        ("code", config.MODEL_CODE),
+        ("fast", config.MODEL_FAST),
+    ):
+        lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
+    lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
+    lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
+
+    current_log = _current_log_path()
+    n_events = 0
+    backend_calls = 0
+    saved_tokens = 0
+    if current_log.is_file():
+        with current_log.open(encoding="utf-8") as f:
+            for raw_line in f:
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    rec = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+                n_events += 1
+                # Misma contabilidad que el dashboard: si aquí se sumara `chars_in // 4` a mano,
+                # esta tool y el panel darían números distintos del MISMO log.
+                acc = _accounting(rec)
+                backend_calls += acc["backend_calls"]
+                saved_tokens += acc["saved"]
+    lines.append("")
+    lines.append(f"Log (mes actual): {current_log}")
+    lines.append(
+        f"  eventos: {n_events} ({backend_calls} llamadas al backend) — "
+        f"contexto ahorrado acumulado: ~{saved_tokens} tokens"
+    )
+
+    lines.append("")
+    if config.WEB_ENABLED:
+        web_up = _port_listening(config.WEB_HOST, config.WEB_PORT)
+        lines.append(
+            f"Web de métricas: {'activa' if web_up else 'inactiva'} "
+            f"(http://{config.WEB_HOST}:{config.WEB_PORT})"
+        )
+    else:
+        lines.append("Web de métricas: deshabilitada (LOCAL_DELEGATE_WEB=0)")
+
+    vram = _vram_info()
+    if vram:
+        lines.append("")
+        lines.append(f"VRAM (nvidia-smi): {vram}")
+
+    ram = _ram_info()
+    if ram:
+        lines.append(f"RAM de sistema: {ram}")
+
+    running = _llamaswap_running()
+    if running:
+        lines.append(f"llama-swap /running: {running}")
+
+    groups = _llamaswap_groups()
+    if groups:
+        lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
+
+    return "\n".join(lines)
+
+
+def preparar_ctrl_break() -> None:
+    """Hace que Ctrl+Break se pare como Ctrl+C. Solo hace algo en Windows.
+
+    Windows tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`:
+    `CTRL_C_EVENT` sí, `CTRL_BREAK_EVENT` (o sea `SIGBREAK`) no. Con el handler por defecto la CRT
+    mata el proceso, y eso se midió en los dos caminos del paquete: `serve` salía con **3** y el
+    MCP stdio con **0xC000013A** (`STATUS_CONTROL_C_EXIT`), este último sin llegar a imprimir nada.
+
+    En `serve` el 3 no venía de nuestro código, y esa parte importa para entender por qué el arreglo
+    es este y no un `except` más. uvicorn captura `SIGINT`, `SIGTERM` y `SIGBREAK`; al terminar
+    **restaura el handler original y vuelve a lanzar la señal** (`Server.capture_signals`). Para
+    `SIGINT` el original es `default_int_handler`, así que la re-emisión produce el
+    `KeyboardInterrupt` que `serve` ya cazaba —de ahí su comentario— y para `SIGBREAK` el original
+    era `SIG_DFL` y la re-emisión mataba el proceso a mitad del apagado: se midió que `serve()`
+    nunca retornaba y que `atexit` nunca corría, con el gestor de sesiones del SDK ya cerrado.
+
+    Por eso el arreglo no es capturar más excepciones sino **cambiar cuál es el handler original**:
+    puesto `default_int_handler` en `SIGBREAK`, Ctrl+Break desemboca en el mismo camino que Ctrl+C,
+    que ya está probado.
+
+    Dos cuidados deliberados:
+
+    - Solo se pisa `SIG_DFL`. Si alguien ya instaló un handler propio, el suyo manda.
+    - `signal.signal` solo vale en el hilo principal; fuera de él lanza `ValueError` y aquí eso
+      significa «no toca hacer nada», no un fallo.
+    """
+    sigbreak = getattr(signal, "SIGBREAK", None)
+    if sigbreak is None:  # POSIX: Ctrl+C ya es SIGINT y no hay nada que igualar
+        return
+    try:
+        if signal.getsignal(sigbreak) is signal.SIG_DFL:
+            signal.signal(sigbreak, signal.default_int_handler)
+    except (ValueError, OSError):
+        # `signal.signal` solo vale en el hilo principal, y fuera de él lanza `ValueError`. Eso
+        # aquí no es un fallo: significa que no toca hacer nada. Igualar Ctrl+Break a Ctrl+C es
+        # una mejora del cierre, no un requisito para servir, así que no poder hacerlo jamás debe
+        # impedir que el servidor arranque.
+        pass

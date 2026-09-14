@@ -13,3 +13,8 @@ src/local_delegate/resources/vendor/** -text
 # detecta los PNG como binarios por heurística y hoy no los toca —comprobado—, pero el precedente
 # de arriba costó demasiado como para dejarlo en manos de una heurística: se declara explícito.
 docs/assets/*.png -text
+
+# Las fuentes congeladas del corpus de F2 se verifican por SHA-256 al cargarlas, y el runner
+# FALLA si no cuadran. Varias son texto (diffs, Markdown, un `uv.lock` recortado): sin esto, el
+# checkout de Windows les cambiaria los fines de linea y el corpus dejaria de cargar solo ahi.
+benchmarks/catalogo-2026-09/fuentes/** -text

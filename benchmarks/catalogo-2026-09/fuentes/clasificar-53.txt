@@ -1,0 +1,1 @@
+El dashboard dejó de cargar tras actualizar a 0.27.0.

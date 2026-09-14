@@ -7,6 +7,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`local-delegate benchmark` mide la memoria del proceso, y no la del sistema**
+  (`--probe-process`, `--gpu-luid`, solo Windows). El canary de julio descartó un modelo midiendo
+  la RAM de toda la máquina, que daba 27-29 GiB con el modelo entero en GPU. La sonda lee por
+  proceso la RAM privada **y** el working set —los dos siempre, porque con los pesos mapeados lo
+  mapeado no cuenta como privado y los expertos de un MoE desaparecerían de la cuenta— y la VRAM
+  dedicada y compartida del adaptador correcto. Sin dependencias nuevas: `ctypes` y `typeperf`.
+
+  Cada supuesto se comprobó ejecutándolo antes de escribir el código, y tres salieron distintos
+  de lo previsto: la instancia de GPU va por adaptador y hay que filtrarla por LUID o se suma la
+  VRAM de la gráfica integrada; `typeperf` no se cierra cuando el proceso muere, sino que emite
+  `-1` cada segundo; y un lanzador intermedio tiene otro PID que el proceso medido, así que el
+  proceso se busca por nombre. Una corrida sin muestras, con dos `llama-server` vivos o con cambio
+  de proceso a mitad lleva `annul` en el JSONL y se repite; no se publica vacía.
+
 - **La regla puede rechazar una lectura, y no solo sugerirla.** Cuatro mediciones seguidas dieron
   adopción cero —la última ya con el aviso acertando el tipo de fichero, `.md` 49 y `.txt` 15 de
   85 avisos—, así que el problema dejó de ser la puntería: sugerir no cambia la conducta. El hook
@@ -184,6 +198,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   con `command` que no sea un array) sí impide arrancar. Tampoco cambia la ausencia de
   `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
   de distinguir nuestra entrada de una escrita a mano.
+
+### Changed
+- **BREAKING — `local-delegate benchmark` corre el corpus v2 de tareas reales y deja de aceptar el
+  de julio.** `--cases` apunta ahora a `benchmarks/catalogo-2026-09/cases.json` (`schema_version:
+  2`); un corpus v1 falla al cargar. El de julio (`benchmarks/moe/cases.json`) se conserva como
+  archivo: ningún requisito pide repetir aquella prueba y mantener dos esquemas vivos era
+  superficie sin uso. Cada caso manda **el prompt real de su tool**, capturado de producción, con
+  la fuente congelada y verificada por hash, en vez de un relleno repetido hasta un tamaño.
+
+  El puntuador cambia en las cinco cosas que hundieron el canary de julio:
+
+  - **Normaliza antes de comparar** (NFKD, sin marcas combinantes y `casefold`): un resumen en
+    español correcto perdía la mitad de la cobertura por escribir «cómputo» con tilde.
+  - **Un término prohibido pone la calidad a 0** aunque acierte lo demás, y el registro dice qué
+    componente la hundió (`zero_by`).
+  - **Una respuesta truncada no cuenta como mala**: se marca `truncado` y se repite una vez con el
+    doble de `max_tokens`. Las dos corridas quedan en el JSONL.
+  - **Gastar el presupuesto pensando sin contestar es `configuracion`**, no mala calidad.
+  - **Un prompt que no cabe en el contexto es `rechazo_por_contexto`**, una clase propia: en julio
+    se contaron como fallos del modelo.
+
+  Y además: los casos de imagen mandan `image_url` (el rol de visión no se podía medir),
+  `--reasoning-effort off` apaga el razonamiento y el valor del caso manda sobre el del modelo,
+  `--role` e `--input-control` seleccionan casos, y `thermal_state` marca fría solo la primera
+  petición tras un cambio de proceso de `llama-server` —antes, la primera de cada caso—, o nada si
+  no hay sonda. `--load-mode` se anota en `variant` junto a `--context-size`: con los pesos
+  mapeados el contador de memoria privada no los ve, así que dos corridas con modos distintos no
+  son comparables.
 
 ## [0.27.0] - 2026-09-08
 

@@ -1,5 +1,11 @@
 # Benchmark MoE canary
 
+> **Archivo.** Este corpus es `schema_version: 1` y **el runner ya no lo carga**: desde la tarea 16
+> del SDD `delegacion-precisa-y-fiable`, `local-delegate benchmark` solo acepta el corpus v2 de
+> `benchmarks/catalogo-2026-09/`. Se conserva igual a propósito —es la única forma de saber qué se
+> midió en julio—, y el cargador viejo está en el historial de git. Los comandos de abajo
+> describen cómo se corrió entonces, no cómo se corre hoy.
+
 Este corpus es sintetico y no contiene datos privados. El runner no descarga ni arranca modelos:
 apunta a un endpoint canary ya aislado y produce JSONL reproducible. La plantilla
 `llama-swap-canary.yaml` publica las 15 combinaciones en `127.0.0.1:9294`; exige un token efimero

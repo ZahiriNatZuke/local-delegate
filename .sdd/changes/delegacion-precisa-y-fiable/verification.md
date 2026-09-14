@@ -355,3 +355,249 @@ perfil, la medicion vuelve a correr con el desbordamiento silencioso a RAM activ
 exactamente el error que descarto `gpt-oss-20b` en julio. El ejecutable de produccion hoy es
 `D:\Projects\llms\llamacpp\llama-server.exe` (9 KB: es un lanzador, el trabajo CUDA lo hacen las
 DLL de al lado, pero es el proceso que crea el contexto y por tanto el que lleva el perfil).
+
+## F2: tarea 13, la sonda de recursos por proceso (2026-09-14)
+
+Dentro de `src/local_delegate/benchmark.py` (`ProcessProbe`, `TypeperfStream`, `ResourceSampler`,
+`summarize_resources`), con `--probe-process` y `--gpu-luid` en el CLI y el envoltorio
+`scripts/sonda_recursos.py` para `llama-bench`. Apagada por defecto: sin el flag, cada registro
+lleva el bloque `resources` con `enabled: false` y los campos vacios, que es el rollback del plan.
+Sin dependencias nuevas.
+
+### Lo que se probo al reves, y lo que cambio por ello
+
+Ocho mutantes sobre el codigo, cada uno contra su test y mirando **que assert dispara**:
+
+| Mutante | Resultado | Assert que lo mata |
+| --- | --- | --- |
+| parseo sin filtro de LUID | muere | la cabecera trae 4 columnas en vez de 2 |
+| `-1` tratado como valor | muere | `process_gone` sale `False` |
+| no relanzar el flujo al cambiar de PID | muere | `[40160] == [40160, 31776]` |
+| cero muestras no anula | muere | `zero_vram_samples` en vez de `zero_ram_samples` |
+| sin lectura sincrona al salir | muere | 1 muestra en vez de 2 |
+| dos `llama-server` vivos no anula | **sobrevivio**, luego muere | — |
+| el runner no escribe `resources` | muere | `KeyError: 'resources'` |
+| working set devuelto como RAM privada | **sobrevivio**, luego muere | «lo mapeado NO puede subir la privada» (129 MiB contra 32) |
+
+Los dos supervivientes eran huecos de la prueba, no de la sonda:
+
+- **«Varios procesos»** solo se probaba sobre el resumen con muestras fabricadas; nadie ejercitaba
+  que `ProcessProbe` lo detectara. Test nuevo contra la sonda.
+- **El control positivo no distinguia un contador del otro.** Reservaba memoria anonima, que sube
+  la privada **y** el working set por igual, asi que devolver uno por otro pasaba. Es exactamente la
+  diferencia que decide CP-2b. Ahora son tres hijos —quieto, 128 MiB anonimos, 128 MiB mapeados
+  desde fichero y leidos— y lo mapeado tiene que subir el working set **sin** subir la privada: la
+  mitad negativa del control de la tarea 12, que el test habia perdido.
+
+### Contra procesos reales de esta maquina, sin tocarla
+
+Ni modelo cargado ni daemon parado; solo lecturas.
+
+```text
+luid resuelto: 0x00000000_0x0000F722
+llama-swap: [16916] muestras 4 ram 4 vram 0 privada MiB 56.3 ws MiB 13.4 annul zero_vram_samples
+dwm: [1556] muestras 10 ram 0 vram 5 dedicada MiB 9236.0 shared MiB 3.5 annul zero_ram_samples stream_error None
+motivos: ['no_access']
+typeperf vivos tras cerrar: []
+```
+
+- El LUID se resuelve solo y coincide con el emparejado a mano en la tarea 12.
+- `llama-swap.exe`: 56,3 MiB, el mismo numero que .NET; no usa la GPU y la corrida sale anulada por
+  `zero_vram_samples`, que es lo correcto.
+- `dwm.exe`: el `typeperf` real da 5 muestras de VRAM en 4,5 s (el resto es el arranque de ~2 s) y
+  la RAM sale `no_access`: sin elevar no se abre un proceso de otra sesion. Al cerrar no queda
+  ningun `typeperf` vivo.
+
+### Suite
+
+`uv run pytest -q`: **983 passed, 2 skipped**. 27 tests nuevos en `tests/test_sonda.py`, tres de
+ellos solo Windows con marca declarada. `ruff check .` y `ruff format --check .` limpios.
+
+### Lo que la tarea 13 deja para la 18
+
+- **Que `llama-server.exe` sea el proceso con la memoria.** El de produccion es un ejecutable de
+  9 KB que carga las DLL en el mismo proceso; si el de b10909 lanzara un hijo con otro nombre, la
+  sonda mediria el cascaron. CP-2 lo caza —dos modelos darian el mismo numero—, pero hay que
+  mirarlo con `witr --pid <pid> --tree` antes de dar CP-2 por bueno.
+- **Que `OpenProcess` abra el `llama-server.exe` que lanza llama-swap.** Deberia, porque corre como
+  el mismo usuario (comprobado con `witr` en la tarea 12), pero solo se ve con el proceso vivo.
+- **El primer run tras un cambio de modelo sale `process_changed`** si el `llama-server` anterior
+  seguia vivo al entrar: los picos mezclarian dos procesos. Es correcto anularlo, y obliga a la
+  tarea 16 a precalentar cada modelo antes de su primer run medido.
+
+## F2: tarea 14, el corpus v2 congelado (2026-09-14)
+
+`scripts/construir_corpus.py` congela las fuentes en `benchmarks/catalogo-2026-09/fuentes/`, emite
+`cases.json` (schema 2) y `conteos-log.json`, y `benchmark.load_corpus` las carga verificando el
+hash de cada fuente y de la imagen de control. La tarea 16 conecta ese cargador al runner.
+
+### Las reglas se comprobaron contra produccion, no contra la tabla
+
+El constructor llama a **la tool real** con `_run_chat` interceptado (sin backend, sin log de uso,
+sin las variables `LOCAL_DELEGATE_*`) y registra el modelo que elige y las llamadas que hace:
+
+```text
+ok: 15 casos de calidad, 2 sondeos, 1 control
+  resumen-md-2k            mechanical llamadas=1   chars=2010 bytes=2036
+  extraer-toml-2k          mechanical llamadas=1   chars=2056 bytes=2075
+  clasificar-53            mechanical llamadas=1   chars=53 bytes=54
+  traducir-42              mechanical llamadas=1   chars=42 bytes=43
+  delegar-56               mechanical llamadas=1   chars=56 bytes=56
+  resumen-md-10k           long       llamadas=1   chars=10331 bytes=10480
+  resumen-changelog-43k    long       llamadas=1   chars=43293 bytes=44120
+  extraer-uvlock-48k       long       llamadas=1   chars=48000 bytes=48000
+  lint-33k                 long       llamadas=1   chars=33343 bytes=33347
+  commit-diff-19k          code       llamadas=1   chars=19041 bytes=19089
+  explicar-metrics-15k     code       llamadas=1   chars=15400 bytes=15468
+  explicar-install-20k     code       llamadas=1   chars=20000 bytes=20171
+  boilerplate-156          code       llamadas=1   chars=156 bytes=158
+  describir-dashboard      vision     llamadas=1   chars=None bytes=718456
+  leer-cifras-dashboard    vision     llamadas=1   chars=None bytes=718456
+  techo-resumen-103k       long       llamadas=5   chars=102987 bytes=106092
+  techo-commit-156k        code       llamadas=13  chars=155713 bytes=157873
+```
+
+La primera pasada **no escribio el corpus**: seis ids prometian un tamano que la fuente no tenia,
+y `pyproject.toml` entero habria ido a `long`. Correcciones y razones en `protocolo-f2.md` §4.4,
+«Resultado de la tarea 14», junto con el hallazgo de que las seis cifras grandes del dashboard son
+identicas en las dos imagenes del control de CP-3.
+
+### Conteos del log, emitidos por el programa
+
+152 eventos, 146 de tools `local_*`, 18 troceados; por modelo 54/50/36/4/2. Coinciden con §4.2. Y
+uno que **no** coincidia: los `inline` son **50 de 146**, no «56 de 146» —56 es sobre los 152—, el
+mismo cruce de denominadores que §11 daba por corregido. Corregido en el protocolo y en el plan.
+59 eventos con ruta de fuera del repo se cuentan y no se nombran.
+
+### Lo que se probo al reves
+
+Once mutantes, todos muertos por su assert: sin regla de rol, de una llamada, de entrada entera,
+de techo que cabe, de terminos en la fuente; rutas de fuera del repo contadas; log de uso sin
+interceptar; eventos no locales contados; hash sin verificar; control sin verificar; y ruta viva
+aceptada en `source_file`.
+
+Este ultimo **moria por la razon equivocada** en la primera version del test: sin la regla, la
+carga fallaba porque la ruta viva no existia en la copia temporal, y el test pasaba por un mensaje
+que no casaba. Ahora el test pone un fichero real con su hash correcto en esa ruta, y solo la regla
+del nombre puede pararlo.
+
+Revisando los datos derivados salieron dos defectos que ningun test habia visto: `extraer-uvlock`
+tenia como termino esperado `'1'` (sale de `version = 1` y aparece en cualquier respuesta), y los
+nombres de fuente salian en minusculas porque `normcase` se aplicaba al nombre y no solo a la
+comparacion. Los dos corregidos.
+
+### Suite
+
+`uv run pytest -q`: **1000 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.
+Fuentes con `-text` en `.gitattributes`, comprobado con `git check-attr`. Y un fallo de la tarea 13
+que salio aqui: `scripts/sonda_recursos.py` se commiteo **sin el bit de ejecucion** y
+`test_un_script_con_shebang_esta_marcado_ejecutable_en_git` solo lo ve una vez el fichero esta en
+git —la segunda mitad de la leccion que ese test documenta—. Corregido con `git add --chmod=+x`.
+
+## F2: tarea 15, las parejas de referencia de CP-4 (2026-09-14)
+
+Cinco parejas `reference_ok` / `reference_bad`, una por senal que se puede ejercitar con texto. No
+se escriben en `cases.json`: las define y las emite `scripts/construir_corpus.py`, que no escribe
+el corpus si una pareja no cumple. Detalle y razones en `protocolo-f2.md`, CP-4, «Resultado de la
+tarea 15».
+
+```text
+resumen-md-2k         cobertura    154 154
+extraer-toml-2k       json_valido   98  98
+extraer-uvlock-48k    json_campos   78  78
+describir-dashboard   unicode       86  86
+leer-cifras-dashboard prohibido     62  62
+```
+
+### Que cada pareja difiera solo en su senal lo decide un oraculo, no el puntuador
+
+`senales()` calcula por su cuenta cobertura (normalizada y literal), termino prohibido, JSON valido
+y campos. Es independiente del puntuador de la tarea 16 **a proposito**: CP-4 valida ese puntuador,
+y si compartieran codigo compartirian el error. Una pareja pasa si tiene la misma longitud, la buena
+es buena en todas las senales, y el conjunto de senales en que difieren es exactamente el esperado.
+
+### Lo que se probo al reves
+
+Seis mutantes, todos muertos por su assert: sin comprobar longitud; aceptar una diferencia de mas;
+normalizar sin quitar acentos (cae la pareja de Unicode versionada, porque la buena deja de cubrir
+`computo`); aceptar una buena que no es buena; referencias fuera de los campos vigilados; y una
+referencia retocada a mano en el JSON.
+
+**El de los campos vigilados sobrevivio a la primera.** Quitar `reference_ok` y `reference_bad` de
+lo que `--comprobar` compara contra el constructor no rompia nada, porque con el JSON intacto no hay
+diferencia que ver. El mutante del dato retocado si moria, pero lo cazaba el oraculo, no la
+vigilancia. Test nuevo: retoca una referencia en una copia **sin romper la pareja** («Guía» por
+«Guia», misma longitud, sigue difiriendo solo en cobertura), de modo que solo la vigilancia puede
+verlo.
+
+### Dos precisiones que heredan la tarea 16 y CP-4
+
+- La normalizacion de §4.7 es **NFKD, quitar marcas combinantes y `casefold`**. NFKD solo deja el
+  acento como marca suelta; hay un test que lo demuestra.
+- En la pareja de Unicode la cobertura **literal** no cambia: las dos respuestas fallan sin
+  normalizar. Por eso `describir-dashboard` gana el termino `computo`, sin acento, frente a un panel
+  que dice «cómputo».
+
+### Suite
+
+`uv run pytest -q`: **1007 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.
+
+## F2: tarea 16, el runner del corpus v2 (2026-09-14)
+
+`local-delegate benchmark` carga solo el corpus v2 (**breaking**: el de julio ya no carga y se
+conserva como archivo), manda el prompt de produccion de cada caso sobre su fuente congelada, y
+puntua segun §4.7. Detalle de las decisiones que el protocolo no fijaba en `protocolo-f2.md` §4.7,
+«Resultado de la tarea 16». Documentado en el CHANGELOG (entrada BREAKING), en
+`docs/wiki/Backend-versions.md` y en `benchmarks/moe/README.md`. El README del proyecto no menciona
+`benchmark` en ningun sitio, asi que no tenia nada que cambiar.
+
+### En rojo antes de arreglarlo
+
+El defecto literal de julio, con el puntuador de antes y la respuesta correcta en espanol:
+
+```text
+puntuador de hoy, respuesta correcta en espanol: {'expected_terms': 2, 'matched_terms': 1, 'term_coverage': 0.5}
+```
+
+### Lo que se verifico contra el motor, y lo que queda para la tarea 19
+
+Buscado en los binarios de b9925: `llama-server-impl.dll` contiene `exceed_context_size_error`,
+`chat_template_kwargs`, `enable_thinking` y `reasoning_content`. **No** esta comprobado que b10909
+conteste asi un desborde real ni que un razonador respete `enable_thinking: false`; el runner guarda
+`error_body` y `reasoning_chars` para poder reclasificar sin repetir la tanda.
+
+### CP-4 ya corre
+
+`test_cp4_el_puntuador_separa_cada_pareja_por_su_senal` puntua las cinco parejas del corpus y exige
+que cada una se separe **por su componente**; otro test comprueba que un puntuador literal no
+separaria la pareja de Unicode. Estan en verde en cada commit.
+
+### Lo que se probo al reves
+
+Catorce mutantes sobre el runner y el puntuador, todos muertos por su assert: sin normalizar;
+prohibido que no hunde; truncado que puntua; JSON invalido que no hunde; `zero_by` sin anotar;
+truncado que no se repite; rechazo por contexto leido como error, y **cualquier** 400 leido como
+rechazo (los dos sentidos); configuracion leida como truncado; sin `image_url`; `off` enviado como
+`reasoning_effort`; el modelo mandando sobre el caso; frio en cada caso como en julio; y el control
+de CP-3 ignorado. Dos caen por consecuencia y no por un assert directo, y valen: «configuracion como
+truncado» cae al desempaquetar porque la corrida se repitio, y «sin `image_url`» por un `TypeError`
+al indexar un texto donde tenia que haber bloques.
+
+Y un decimoquinto, el que importa del constructor, **murio por la razon equivocada a la primera**:
+«recongelar siempre» hacia caer el test en `construir(...) == 0` —la construccion fallaba por otra
+regla, porque el CHANGELOG vivo ya traia la entrada nueva—, no en la marca de la fuente congelada.
+Tras una release que no moviera ese tamano habria sobrevivido. Se reordenaron los asserts y ahora
+cae en la comparacion de la marca (`test_corpus.py:352`).
+
+### Un defecto que salio al hacerlo
+
+Regenerar el corpus para anadir el prompt de los sondeos de techo **recongelo dos fuentes desde los
+ficheros vivos**: `resumen-changelog-43k` (el CHANGELOG ya traia la entrada de esta tarea) y
+`lint-33k` (ruff sobre un `src/` modificado). Lo delato la regla del tamano del id, que hizo que el
+corpus no se escribiera; `git status` confirmo las dos. Restauradas desde git; la copia congelada
+se reutiliza y recongelar exige `--refrescar-fuentes`. Tras el arreglo, reconstruir cambio solo los
+cuatro campos de prompt de los dos sondeos (8 lineas de `cases.json`), y ninguna fuente.
+
+### Suite
+
+`uv run pytest -q`: **1024 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.

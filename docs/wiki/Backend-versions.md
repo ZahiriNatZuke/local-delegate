@@ -79,17 +79,50 @@ versión probada de la tabla superior.
 ## Medir un canary: `local-delegate benchmark`
 
 Lo que `doctor` no puede decirte es si una versión nueva del backend **rinde** igual. Para eso está
-`benchmark`, que corre un corpus versionado contra un backend candidato y escribe los resultados en
-JSONL, con las condiciones anotadas (cuantización, contexto, `--n-cpu-moe`, versiones de
-llama-server/llama-swap), para que dos corridas sean comparables:
+`benchmark`, que corre un corpus de **tareas reales** contra un backend candidato y escribe los
+resultados en JSONL, con las condiciones anotadas (cuantización, contexto, `--n-cpu-moe`, versiones
+de llama-server/llama-swap), para que dos corridas sean comparables:
 
 ```bash
-local-delegate benchmark --model <id-del-canary> --label gptoss-ncmoe12-c8k \
-  --cases benchmarks/moe/cases.json --runs 3
+local-delegate benchmark --model <id-del-canary> --label gemma4-e4b-c16k \
+  --cases benchmarks/catalogo-2026-09/cases.json --role mechanical --runs 3 --save-responses
 ```
 
 Es la herramienta del paso «canary aislado» de arriba: mide antes de promover, en vez de decidir
 por impresión.
+
+El corpus (`schema_version: 2`) sale de delegaciones reales del log de uso: cada caso manda **el
+prompt de producción de su tool** sobre una fuente congelada, y el runner **falla** si el hash de la
+fuente no cuadra. El corpus sintético de julio (`benchmarks/moe/`) ya no se carga. `--role` y
+`--case` eligen qué corre; `--input-control` sustituye la imagen de los casos de visión por la de
+control. `--reasoning-effort off` apaga el razonamiento (`enable_thinking: false`), y un valor
+propio del caso manda sobre el del modelo. `--context-size` y `--load-mode` quedan en el registro
+y hay que pasarlos siempre: el análisis solo compara dos modelos medidos con los mismos.
+
+Cada registro trae un `outcome`, y no todo lo que no es `ok` es mala calidad:
+
+| `outcome` | Qué significa | ¿Puntúa? |
+| --- | --- | --- |
+| `ok` | respuesta completa | sí |
+| `truncado` | se cortó por `max_tokens`; se repite **una vez** con el doble | no |
+| `rechazo_por_contexto` | el prompt no cabe en el contexto del modelo (`exceed_context_size_error`) | no |
+| `configuracion` | gastó el presupuesto pensando y no contestó | no |
+| `error` | cualquier otro fallo; el exit code pasa a `1` | no |
+
+La puntuación normaliza antes de comparar (una tilde no resta cobertura), pone la calidad a 0 si
+aparece un término prohibido y guarda en `zero_by` **qué componente** la hundió. Aparte va
+`descartada`: la sonda anuló la corrida y hay que repetirla. `thermal_state` es `cold` solo en la
+primera petición tras cambiar el proceso de `llama-server`, y `null` sin sonda.
+
+En Windows, `--probe-process llama-server.exe` añade a cada corrida la memoria **del proceso**, no
+la del sistema: RAM privada y working set (por `GetProcessMemoryInfo`), y VRAM dedicada y
+compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag se empareja con
+`nvidia-smi` y, si no es inequívoco, pide el flag). El proceso se busca **por nombre** en cada
+lectura, porque llama-swap lo relanza al cambiar de modelo. Cada registro lleva un bloque
+`resources` con los picos y un campo `annul`: una corrida sin muestras, con dos `llama-server`
+vivos o con cambio de proceso a mitad **se marca para repetirla**, no se publica vacía. Sin el flag,
+el bloque va igual pero vacío. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
+en `scripts/sonda_recursos.py`.
 
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
   `config.yaml`. Funciona sin el extra `[llamaswap]`.
