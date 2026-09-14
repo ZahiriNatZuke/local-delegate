@@ -424,3 +424,72 @@ ellos solo Windows con marca declarada. `ruff check .` y `ruff format --check .`
 - **El primer run tras un cambio de modelo sale `process_changed`** si el `llama-server` anterior
   seguia vivo al entrar: los picos mezclarian dos procesos. Es correcto anularlo, y obliga a la
   tarea 16 a precalentar cada modelo antes de su primer run medido.
+
+## F2: tarea 14, el corpus v2 congelado (2026-09-14)
+
+`scripts/construir_corpus.py` congela las fuentes en `benchmarks/catalogo-2026-09/fuentes/`, emite
+`cases.json` (schema 2) y `conteos-log.json`, y `benchmark.load_corpus` las carga verificando el
+hash de cada fuente y de la imagen de control. La tarea 16 conecta ese cargador al runner.
+
+### Las reglas se comprobaron contra produccion, no contra la tabla
+
+El constructor llama a **la tool real** con `_run_chat` interceptado (sin backend, sin log de uso,
+sin las variables `LOCAL_DELEGATE_*`) y registra el modelo que elige y las llamadas que hace:
+
+```text
+ok: 15 casos de calidad, 2 sondeos, 1 control
+  resumen-md-2k            mechanical llamadas=1   chars=2010 bytes=2036
+  extraer-toml-2k          mechanical llamadas=1   chars=2056 bytes=2075
+  clasificar-53            mechanical llamadas=1   chars=53 bytes=54
+  traducir-42              mechanical llamadas=1   chars=42 bytes=43
+  delegar-56               mechanical llamadas=1   chars=56 bytes=56
+  resumen-md-10k           long       llamadas=1   chars=10331 bytes=10480
+  resumen-changelog-43k    long       llamadas=1   chars=43293 bytes=44120
+  extraer-uvlock-48k       long       llamadas=1   chars=48000 bytes=48000
+  lint-33k                 long       llamadas=1   chars=33343 bytes=33347
+  commit-diff-19k          code       llamadas=1   chars=19041 bytes=19089
+  explicar-metrics-15k     code       llamadas=1   chars=15400 bytes=15468
+  explicar-install-20k     code       llamadas=1   chars=20000 bytes=20171
+  boilerplate-156          code       llamadas=1   chars=156 bytes=158
+  describir-dashboard      vision     llamadas=1   chars=None bytes=718456
+  leer-cifras-dashboard    vision     llamadas=1   chars=None bytes=718456
+  techo-resumen-103k       long       llamadas=5   chars=102987 bytes=106092
+  techo-commit-156k        code       llamadas=13  chars=155713 bytes=157873
+```
+
+La primera pasada **no escribio el corpus**: seis ids prometian un tamano que la fuente no tenia,
+y `pyproject.toml` entero habria ido a `long`. Correcciones y razones en `protocolo-f2.md` §4.4,
+«Resultado de la tarea 14», junto con el hallazgo de que las seis cifras grandes del dashboard son
+identicas en las dos imagenes del control de CP-3.
+
+### Conteos del log, emitidos por el programa
+
+152 eventos, 146 de tools `local_*`, 18 troceados; por modelo 54/50/36/4/2. Coinciden con §4.2. Y
+uno que **no** coincidia: los `inline` son **50 de 146**, no «56 de 146» —56 es sobre los 152—, el
+mismo cruce de denominadores que §11 daba por corregido. Corregido en el protocolo y en el plan.
+59 eventos con ruta de fuera del repo se cuentan y no se nombran.
+
+### Lo que se probo al reves
+
+Once mutantes, todos muertos por su assert: sin regla de rol, de una llamada, de entrada entera,
+de techo que cabe, de terminos en la fuente; rutas de fuera del repo contadas; log de uso sin
+interceptar; eventos no locales contados; hash sin verificar; control sin verificar; y ruta viva
+aceptada en `source_file`.
+
+Este ultimo **moria por la razon equivocada** en la primera version del test: sin la regla, la
+carga fallaba porque la ruta viva no existia en la copia temporal, y el test pasaba por un mensaje
+que no casaba. Ahora el test pone un fichero real con su hash correcto en esa ruta, y solo la regla
+del nombre puede pararlo.
+
+Revisando los datos derivados salieron dos defectos que ningun test habia visto: `extraer-uvlock`
+tenia como termino esperado `'1'` (sale de `version = 1` y aparece en cualquier respuesta), y los
+nombres de fuente salian en minusculas porque `normcase` se aplicaba al nombre y no solo a la
+comparacion. Los dos corregidos.
+
+### Suite
+
+`uv run pytest -q`: **1000 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.
+Fuentes con `-text` en `.gitattributes`, comprobado con `git check-attr`. Y un fallo de la tarea 13
+que salio aqui: `scripts/sonda_recursos.py` se commiteo **sin el bit de ejecucion** y
+`test_un_script_con_shebang_esta_marcado_ejecutable_en_git` solo lo ve una vez el fichero esta en
+git —la segunda mitad de la leccion que ese test documenta—. Corregido con `git add --chmod=+x`.

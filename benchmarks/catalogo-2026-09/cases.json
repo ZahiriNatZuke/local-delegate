@@ -1,0 +1,636 @@
+{
+  "schema_version": 2,
+  "production_config": {
+    "long_input_chars": 6000,
+    "chunk_chars": 3500,
+    "models": {
+      "mechanical": "gemma3-4b",
+      "long": "llama31-8b",
+      "code": "qwen25-coder-14b",
+      "fast": "qwen35-2b",
+      "vision": "qwen3-vl-8b"
+    },
+    "max_chars": {
+      "mechanical": 20000,
+      "long": 48000,
+      "code": 20000,
+      "fast": 12000,
+      "vision": 20000
+    }
+  },
+  "controls": [
+    {
+      "id": "dashboard-bcbe39f",
+      "para": [
+        "describir-dashboard",
+        "leer-cifras-dashboard"
+      ],
+      "procedencia": "congelado",
+      "origen": "git show bcbe39f:docs/assets/dashboard.png (0.24.0)",
+      "source_file": "dashboard-bcbe39f.png",
+      "source_sha256": "1f421a75c6d889edf44ac593fcdad315aa8ce2fb1098da50488860ca0049bd13",
+      "source_bytes": 670197
+    }
+  ],
+  "cases": [
+    {
+      "id": "resumen-md-2k",
+      "tool": "local_summarize",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "CONTRIBUTING.md",
+      "media_type": "texto",
+      "source_file": "resumen-md-2k.md",
+      "source_sha256": "6e0e124fa1237ef05d8db1671b9b69a8b54c3d7eeafef50c3ecc7bddd04cf679",
+      "source_bytes": 2036,
+      "source_chars": 2010,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "pre-commit",
+        "pull request"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "extraer-toml-2k",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "pyproject.toml, recortado en linea entera a 2 100 chars (entero pesa mas de 6 000 y produccion lo mandaria a long)",
+      "media_type": "texto",
+      "source_file": "extraer-toml-2k.toml",
+      "source_sha256": "9bd96453c0ecb3ca9b0d3551161e82e0aaca67793e3a1484ba6ded1d051e2442",
+      "source_bytes": 2075,
+      "source_chars": 2056,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"name\", \"version\", \"requires-python\", \"license\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "requires-python": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "license": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "requires-python",
+            "license"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [
+        "local-delegate-mcp",
+        "0.27.0",
+        ">=3.11",
+        "MIT"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": [
+        "name",
+        "version",
+        "requires-python",
+        "license"
+      ]
+    },
+    {
+      "id": "clasificar-53",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 53 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "clasificar-53.txt",
+      "source_sha256": "aafe9112094d8d82ac5db659f017be784247bb435df7dc96ed620ff1d89f15a0",
+      "source_bytes": 54,
+      "source_chars": 53,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [bug, feature, docs, pregunta]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "bug"
+      ],
+      "forbidden_terms": [
+        "feature",
+        "docs",
+        "pregunta"
+      ],
+      "expected_json_fields": []
+    },
+    {
+      "id": "traducir-42",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 42 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "traducir-42.txt",
+      "source_sha256": "a4a14e37a4e282cd62cd1cea03d25172ef45e6defb2ecf6efc01f22577d21c24",
+      "source_bytes": 43,
+      "source_chars": 42,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al inglés, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al inglés el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 149,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "restart",
+        "daemon",
+        "updat"
+      ],
+      "forbidden_terms": [
+        "reinicia"
+      ],
+      "expected_json_fields": []
+    },
+    {
+      "id": "delegar-56",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 56 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "delegar-56.txt",
+      "source_sha256": "9897166090598d2fbe4383a733efbde152e1720c05788ed7a73b88e43e3d39c4",
+      "source_bytes": 56,
+      "source_chars": 56,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: lista Markdown con una viñeta '- ' por elemento. Nada fuera del formato.",
+      "user_template": "Convierte esta enumeración en una lista con una viñeta por elemento.\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "tokens",
+        "latencia",
+        "modelo",
+        "errores",
+        "reintentos",
+        "coste"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "resumen-md-10k",
+      "tool": "local_summarize",
+      "role": "long",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "docs/recipes/claude-code-hooks.md",
+      "media_type": "texto",
+      "source_file": "resumen-md-10k.md",
+      "source_sha256": "c60af055250a8023ba36b6cf130756798d7d23e0ad1ade0cae31d412dbda8a33",
+      "source_bytes": 10480,
+      "source_chars": 10331,
+      "production": {
+        "model": "llama31-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "UserPromptSubmit",
+        "PreToolUse",
+        "LD_HOOK_READ_BLOQUEAR"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "resumen-changelog-43k",
+      "tool": "local_summarize",
+      "role": "long",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "CHANGELOG.md, recortado antes de una seccion de version",
+      "media_type": "texto",
+      "source_file": "resumen-changelog-43k.md",
+      "source_sha256": "4999480e08333ae7e15b2a56af73e2a7831366c438705bbe0d60849a2cacd8e0",
+      "source_bytes": 44120,
+      "source_chars": 43293,
+      "production": {
+        "model": "llama31-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "0.27.0",
+        "0.26.0",
+        "0.25.0"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "extraer-uvlock-48k",
+      "tool": "local_extract",
+      "role": "long",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "uv.lock, recortado a los 48 000 chars que `_read_input` deja ver al rol long",
+      "media_type": "texto",
+      "source_file": "extraer-uvlock-48k.lock",
+      "source_sha256": "682eab8fbb15be099f160f85f0c82f7ba5b887ea6f54b194ed1deff4206584ce",
+      "source_bytes": 48000,
+      "source_chars": 48000,
+      "production": {
+        "model": "llama31-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"version\", \"requires-python\", \"primer_paquete\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "requires-python": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "primer_paquete": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "version",
+            "requires-python",
+            "primer_paquete"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [
+        ">=3.11",
+        "annotated-doc"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": [
+        "version",
+        "requires-python",
+        "primer_paquete"
+      ]
+    },
+    {
+      "id": "lint-33k",
+      "tool": "local_lint_summary",
+      "role": "long",
+      "kind": "calidad",
+      "procedencia": "generado",
+      "origen": "ruff check --select ALL --output-format concise --no-cache src/local_delegate, recortado en linea entera a 33 423 chars",
+      "media_type": "texto",
+      "source_file": "lint-33k.txt",
+      "source_sha256": "7875952c546b99518b4a28a83730225aba8511b09f6d1a4e3708a5f2c328351f",
+      "source_bytes": 33347,
+      "source_chars": 33343,
+      "production": {
+        "model": "llama31-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Resume la siguiente salida de linter/tests:\n\n{CONTENIDO}",
+      "max_tokens": 496,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "T201",
+        "COM812",
+        "PLC0415"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "commit-diff-19k",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4d644ae (fix(web): inflight multi-proceso)",
+      "media_type": "texto",
+      "source_file": "commit-diff-19k.diff",
+      "source_sha256": "9916c57dcb085e174d83bae6029274fef4c5112aef6afed903d14414121eaeae",
+      "source_bytes": 19089,
+      "source_chars": 19041,
+      "production": {
+        "model": "qwen25-coder-14b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "inflight"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "explicar-metrics-15k",
+      "tool": "local_explain_code",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "src/local_delegate/web/metrics.py, recortado antes de un bloque de nivel superior",
+      "media_type": "texto",
+      "source_file": "explicar-metrics-15k.py.txt",
+      "source_sha256": "83649a2ce16590ca5da3ade08dc9ed49f8e425b63185b65c75c7854d8fa7396a",
+      "source_bytes": 15468,
+      "source_chars": 15400,
+      "production": {
+        "model": "qwen25-coder-14b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una explicación clara en prosa de qué hace el código y cómo.. Máximo 250 palabras. Nada fuera del formato.",
+      "user_template": "Explica el siguiente código:\n\n{CONTENIDO}",
+      "max_tokens": 700,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "_log_files",
+        "_read_file_cached",
+        "_month_span"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "explicar-install-20k",
+      "tool": "local_explain_code",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "src/local_delegate/install.py, recortado a los 20 000 chars que ve el rol code",
+      "media_type": "texto",
+      "source_file": "explicar-install-20k.py.txt",
+      "source_sha256": "6149d74a2096d17f4d637b0c8961a94eb4cb0209053c3091e8cfefcd2cec12c1",
+      "source_bytes": 20171,
+      "source_chars": 20000,
+      "production": {
+        "model": "qwen25-coder-14b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una explicación clara en prosa de qué hace el código y cómo.. Máximo 250 palabras. Nada fuera del formato.",
+      "user_template": "Explica el siguiente código:\n\n{CONTENIDO}",
+      "max_tokens": 700,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "resources_dir",
+        "is_simulated_home",
+        "opencode_dir"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "boilerplate-156",
+      "tool": "local_boilerplate",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 156 chars; especificacion recreada con esa forma",
+      "media_type": "texto",
+      "source_file": "boilerplate-156.txt",
+      "source_sha256": "934f4071c5872db313a8f873c5f25a20b4fb56353aa6d1b51d0a8074bf686a43",
+      "source_bytes": 158,
+      "source_chars": 156,
+      "production": {
+        "model": "qwen25-coder-14b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: solo código python válido, sin explicaciones ni ```. Nada fuera del formato.",
+      "user_template": "Genera python para: {CONTENIDO}",
+      "max_tokens": 1536,
+      "temperature": 0.1,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "parse_duration",
+        "ValueError"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "describir-dashboard",
+      "tool": "local_describe_image",
+      "role": "vision",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "docs/assets/dashboard.png",
+      "media_type": "imagen",
+      "source_file": "describir-dashboard.png",
+      "source_sha256": "fa6f9f4ce80dd90d52889c915ee6fc02f0a05a41435e7f58d68b9d548d37758a",
+      "source_bytes": 718456,
+      "source_chars": null,
+      "production": {
+        "model": "qwen3-vl-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una respuesta en prosa clara sobre la imagen. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Describe esta imagen con detalle.",
+      "max_tokens": 464,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "delegaciones",
+        "backend",
+        "ahorro"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "leer-cifras-dashboard",
+      "tool": "local_describe_image",
+      "role": "vision",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "docs/assets/dashboard.png con una pregunta que no corresponde a ningun evento real",
+      "media_type": "imagen",
+      "source_file": "leer-cifras-dashboard.png",
+      "source_sha256": "fa6f9f4ce80dd90d52889c915ee6fc02f0a05a41435e7f58d68b9d548d37758a",
+      "source_bytes": 718456,
+      "source_chars": null,
+      "production": {
+        "model": "qwen3-vl-8b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una respuesta en prosa clara sobre la imagen. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "¿Qué versión muestra la insignia junto al logo, y qué fecha y hora tiene la primera fila de «Actividad reciente»? Responde solo con esos tres datos.",
+      "max_tokens": 464,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "0.27.0",
+        "29/8",
+        "05:01"
+      ],
+      "forbidden_terms": [
+        "0.24.0",
+        "24/7",
+        "23:12"
+      ],
+      "expected_json_fields": []
+    },
+    {
+      "id": "techo-resumen-103k",
+      "tool": "local_summarize",
+      "role": "long",
+      "kind": "techo",
+      "procedencia": "congelado",
+      "origen": "src/local_delegate/server.py entero",
+      "media_type": "texto",
+      "source_file": "techo-resumen-103k.py.txt",
+      "source_sha256": "377c7c1b7d7f1f97bbd2e53537e0c17fddd51338c01687bd4157e1a9d96584eb",
+      "source_bytes": 106092,
+      "source_chars": 102987,
+      "production": {
+        "model": "llama31-8b",
+        "calls": 5
+      },
+      "system": null,
+      "user_template": null,
+      "max_tokens": null,
+      "temperature": null,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    },
+    {
+      "id": "techo-commit-156k",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "techo",
+      "procedencia": "reconstruido",
+      "origen": "git show d7c3dcc: el diff de 164 585 chars del log ya no existe; este es el mayor del historial de ese orden",
+      "media_type": "texto",
+      "source_file": "techo-commit-156k.diff",
+      "source_sha256": "86095bb3f4fcdaa8af0de973623b215874d8f6f9c855a1d8a14e9db85dfb31fd",
+      "source_bytes": 157873,
+      "source_chars": 155713,
+      "production": {
+        "model": "qwen25-coder-14b",
+        "calls": 13
+      },
+      "system": null,
+      "user_template": null,
+      "max_tokens": null,
+      "temperature": null,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": []
+    }
+  ]
+}

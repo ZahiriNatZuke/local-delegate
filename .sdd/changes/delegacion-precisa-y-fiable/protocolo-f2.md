@@ -697,6 +697,51 @@ la §7 no finja un agregado donde no lo hay.
 si es de `long` o de `code`. Ni el candidato de `mechanical` gasta corridas en un diff enorme, ni el
 de `code` en clasificar 53 caracteres.
 
+#### Resultado de la tarea 14 (2026-09-14): lo que cambio al construirlo
+
+El corpus lo construye `scripts/construir_corpus.py` llamando a **la tool real** de `server.py` con
+el backend interceptado, y guarda el modelo que eligio produccion, cuantas llamadas hizo y el prompt
+exacto. Las reglas de arriba se comprobaron asi, no leyendo esta tabla, y **cuatro cosas de esta
+seccion no aguantaron**:
+
+1. **Seis ids prometian un tamano que la fuente no tiene.** Es el mismo defecto del
+   `techo-resumen-120k` —`server.py` tiene 102 987 chars, no 120 000—, repetido en cinco casos mas.
+   Se renombran al tamano real y el constructor comprueba desde ahora que el numero del id cuadra
+   con la fuente:
+
+   | Antes | Ahora | Por que |
+   | --- | --- | --- |
+   | `extraer-json-2k` | `extraer-toml-2k` | `pyproject.toml` entero son 7 073 bytes: produccion lo manda a `long`, no a `mechanical`. Se recorta a 2 100 chars en linea entera |
+   | `resumen-md-13k` | `resumen-md-10k` | la fuente tiene 10 331 chars |
+   | `resumen-changelog-45k` | `resumen-changelog-43k` | recortado antes de una seccion de version: 43 293 |
+   | `explicar-metrics-17k` | `explicar-metrics-15k` | recortado antes de un bloque de nivel superior: 15 400 |
+   | `techo-resumen-120k` | `techo-resumen-103k` | `server.py` entero; en produccion, 5 llamadas |
+   | `techo-commit-160k` | `techo-commit-156k` | `git show d7c3dcc`; en produccion, 13 llamadas |
+
+2. **La imagen de control no tenia «otras cifras».** Las seis cifras grandes del panel
+   (1.847.125, 390, 123.478, 1.898.456, 5048 ms, 2,3 %) son **identicas** en `dashboard.png` actual
+   y en la de `bcbe39f`: son datos de demostracion fijos. Un `leer-cifras-dashboard` que preguntara
+   por ellas daria lo mismo con la imagen correcta que con la equivocada, o sea un control de CP-3
+   que no puede fallar. Lo que si cambia es la version (0.27.0 frente a 0.24.0) y la primera fila de
+   «Actividad reciente» (29/8 05:01 frente a 24/7 23:12): el caso pregunta por eso, y lo de la
+   imagen vieja va como `forbidden_terms`. `describir-dashboard` tiene terminos estructurales, asi
+   que su desenlace esperado con la imagen equivocada es el tercero de CP-3.
+
+3. **`instruction` no existe: son `system` y `user_template`**, capturados de la tool con el
+   contenido sustituido por `{CONTENIDO}`, mas `max_tokens`, `temperature` y `response_format` de
+   produccion. «El prompt real de esa tool» (§4.6) solo es real si sale de la tool. Por la misma
+   razon, `max_tokens` es **el de produccion** y no «2x la salida esperada»: si trunca, §4.7 punto 3
+   ya lo marca `truncado` y lo repite con mas.
+
+4. **`lint-33k` sale de `ruff check --select ALL`, no de `pytest`.** Una suite en verde da una
+   salida corta y con tiempos que cambian en cada corrida; ruff da hallazgos deterministas para un
+   commit. Sigue siendo `generado`, con el comando registrado en `origen`.
+
+Y dos decisiones de sitio: el cargador del corpus v2 (`load_corpus`, que falla si un hash no cuadra)
+va **ya** en `benchmark.py` y la tarea 16 lo conecta al runner, en vez de escribir otro en el
+script; y los fragmentos de codigo se congelan como `.py.txt`, porque estan cortados a mitad y ruff
+los rechazaria.
+
 ### 4.5 Fuentes congeladas, y lo que no se pudo recuperar
 
 Cada fuente se copia a `benchmarks/catalogo-2026-09/fuentes/` y se hashea **la copia**. Dos razones:
@@ -708,8 +753,10 @@ Cada fuente se copia a `benchmarks/catalogo-2026-09/fuentes/` y se hashea **la c
    el recorte de pantalla de vision. Se reconstruyen equivalentes desde el historial del repo y se
    marcan como reconstruidas.
 
-**Lo que no se puede recuperar, y se dice:** 56 de los 146 eventos son `source=inline`, y de esos el
-log guarda el tamano pero **no el contenido**.
+**Lo que no se puede recuperar, y se dice:** 50 de los 146 eventos son `source=inline`, y de esos el
+log guarda el tamano pero **no el contenido**. (Esta linea decia 56: es la cifra sobre los 152, con
+las 6 pruebas de concurrencia dentro. El mismo cruce de denominadores que §11 da por corregido,
+repetido aqui; lo conto el constructor de la tarea 14, no una relectura.)
 
 El campo `procedencia` distingue cuatro cosas, porque meterlas todas en «reconstruido» seria
 esconder la diferencia que importa:

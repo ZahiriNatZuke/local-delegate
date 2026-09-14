@@ -1,0 +1,141 @@
+{
+  "eventos": 152,
+  "eventos_local": 146,
+  "descartados_no_local": {
+    "concurrency_test_resident": 1,
+    "concurrency_test_swap-light": 1,
+    "concurrency_test_repeat_resident": 1,
+    "concurrency_test_repeat_swap_light": 1,
+    "concurrency_test_same_swap_first_hot": 1,
+    "concurrency_test_same_swap_second_cold": 1
+  },
+  "por_tool": {
+    "local_boilerplate": {
+      "n": 8,
+      "chars_in_mediana": 156.5,
+      "chars_in_min": 32,
+      "chars_in_max": 1024,
+      "modelos": {
+        "qwen25-coder-14b": 8
+      }
+    },
+    "local_classify": {
+      "n": 7,
+      "chars_in_mediana": 53,
+      "chars_in_min": 24,
+      "chars_in_max": 243,
+      "modelos": {
+        "gemma3-4b": 7
+      }
+    },
+    "local_commit_msg": {
+      "n": 20,
+      "chars_in_mediana": 19390,
+      "chars_in_min": 143,
+      "chars_in_max": 164585,
+      "modelos": {
+        "qwen25-coder-14b": 20
+      }
+    },
+    "local_delegate": {
+      "n": 7,
+      "chars_in_mediana": 56,
+      "chars_in_min": 4,
+      "chars_in_max": 2000,
+      "modelos": {
+        "gemma3-4b": 5,
+        "qwen35-2b": 2
+      }
+    },
+    "local_describe_image": {
+      "n": 4,
+      "chars_in_mediana": 546280,
+      "chars_in_min": 53569,
+      "chars_in_max": 587780,
+      "modelos": {
+        "qwen3-vl-8b": 4
+      }
+    },
+    "local_explain_code": {
+      "n": 8,
+      "chars_in_mediana": 16724.5,
+      "chars_in_min": 33,
+      "chars_in_max": 20027,
+      "modelos": {
+        "qwen25-coder-14b": 8
+      }
+    },
+    "local_extract": {
+      "n": 19,
+      "chars_in_mediana": 2132,
+      "chars_in_min": 4,
+      "chars_in_max": 48027,
+      "modelos": {
+        "gemma3-4b": 14,
+        "llama31-8b": 5
+      }
+    },
+    "local_lint_summary": {
+      "n": 4,
+      "chars_in_mediana": 406.5,
+      "chars_in_min": 81,
+      "chars_in_max": 33423,
+      "modelos": {
+        "gemma3-4b": 3,
+        "llama31-8b": 1
+      }
+    },
+    "local_summarize": {
+      "n": 62,
+      "chars_in_mediana": 12884.5,
+      "chars_in_min": 10,
+      "chars_in_max": 197949,
+      "modelos": {
+        "llama31-8b": 42,
+        "gemma3-4b": 20
+      }
+    },
+    "local_translate": {
+      "n": 7,
+      "chars_in_mediana": 42,
+      "chars_in_min": 22,
+      "chars_in_max": 14222,
+      "modelos": {
+        "gemma3-4b": 5,
+        "llama31-8b": 2
+      }
+    }
+  },
+  "por_modelo": {
+    "gemma3-4b": 54,
+    "llama31-8b": 50,
+    "qwen25-coder-14b": 36,
+    "qwen3-vl-8b": 4,
+    "qwen35-2b": 2
+  },
+  "por_source": {
+    "path": 96,
+    "inline": 50
+  },
+  "troceados": 18,
+  "fuentes_del_repo": {
+    "CHANGELOG.md": 5,
+    "src/local_delegate/web/metrics.py": 3,
+    "docs/assets/dashboard.png": 3,
+    "README.md": 3,
+    "pyproject.toml": 3,
+    "CONTRIBUTING.md": 3,
+    "src/local_delegate/server.py": 2,
+    "docs/recipes/claude-code-hooks.md": 2,
+    "docs/recipes/claude-code-integration.md": 2,
+    "docs/recipes/update_agents.py": 2,
+    "uv.lock": 2,
+    "src/local_delegate/cli.py": 1,
+    "docs/wiki/Architecture.md": 1,
+    "docs/wiki/Daemon.md": 1,
+    "docs/wiki/Repo-hardening.md": 1,
+    "docs/assets/dashboard.json": 1,
+    ".sdd/changes/fallback-entre-modelos-locales/research.md": 1
+  },
+  "fuentes_fuera_del_repo": 59
+}

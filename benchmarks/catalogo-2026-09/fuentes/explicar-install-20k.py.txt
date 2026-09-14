@@ -1,0 +1,430 @@
+"""install.py — instalación de la integración con los clientes (hooks, skill, memoria, MCP).
+
+El paquete ya no se queda en "aquí tienes las tools MCP, el resto cópialo a mano": este
+módulo instala en el HOME del usuario los cuatro pedazos que hacen que la delegación se use
+de verdad, y los deja desinstalables:
+
+1. **hooks** consultivos de Claude Code (`resources/hooks/`) en `~/.claude/hooks/local-delegate/`
+   y registrados en `~/.claude/settings.json`.
+2. **skill** `delegacion-local` en `~/.claude/skills/delegacion-local/` y en
+   `~/.config/opencode/skill/delegacion-local/`.
+3. **memoria global**: un bloque delimitado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y
+   `~/.config/opencode/AGENTS.md`.
+4. **servidor MCP** en la configuración del cliente (Claude Code, Codex y/o opencode).
+
+Todo es idempotente y reversible:
+
+- Los archivos copiados viven bajo directorios propios (`hooks/local-delegate/`,
+  `skills/delegacion-local/`), así que desinstalar no toca nada ajeno.
+- Los bloques en archivos compartidos van entre marcadores `local-delegate:begin/end`; al
+  reinstalar se reemplaza el bloque, nunca se duplica.
+- Antes de sobreescribir un archivo del usuario se deja una copia `.bak`.
+- `plan()` describe cada acción sin tocar disco (`--dry-run`); `apply()` la ejecuta.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from importlib.resources import files as _resource_files
+from pathlib import Path, PurePath
+
+# Marcadores de los bloques gestionados en archivos que también edita el usuario.
+MD_BEGIN = "<!-- local-delegate:begin -->"
+MD_END = "<!-- local-delegate:end -->"
+TOML_BEGIN = "# local-delegate:begin"
+TOML_END = "# local-delegate:end"
+
+SERVER_NAME = "local-delegate"
+HOOKS_SUBDIR = "local-delegate"  # ~/.claude/hooks/local-delegate/
+SKILL_NAME = "delegacion-local"
+
+# --- opencode ----------------------------------------------------------------
+# Los dos nombres de fichero que opencode lee, EN ESTE ORDEN. No es una preferencia nuestra: es
+# el orden con el que el propio cliente elige a cuál escribir (medido contra opencode 1.18.11,
+# traza en .sdd/changes/opencode-tercer-cliente/research.md R3-R4). Los lee **los dos** y los
+# fusiona, así que quien compruebe si la entrada está tiene que mirar en ambos.
+OPENCODE_CONFIG_NAMES = ("opencode.json", "opencode.jsonc")
+OPENCODE_SKILL_SUBDIR = "skill"  # ~/.config/opencode/skill/<nombre>/
+OPENCODE_SCHEMA = "https://opencode.ai/config.json"
+
+# Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
+# quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
+_HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
+    ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
+)
+_READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
+
+#: El mismo control, sobre la otra mitad de la superficie de lectura. Va con la misma bandera que
+#: `_READ_HOOK` a proposito: son una regla sola declarada sobre dos caminos, y encender uno sin el
+#: otro no cambia la conducta, la muda de sitio —`cat informe.md` hace lo que la tool `Read`—.
+_SHELL_HOOK = ("suggest_delegate_shell.py", "PreToolUse", "Bash|PowerShell")
+
+#: Scripts que este paquete YA NO instala, pero que sigue reconociendo como suyos.
+#:
+#: Sin esta lista, un script retirado se vuelve **inmortal**: la limpieza de huérfanos sale de
+#: `packaged_hook_names()`, que lista el directorio empaquetado, así que en cuanto el fichero
+#: desaparece de ahí su copia vieja en `~/.claude/hooks/` deja de ser reconocible y nadie la
+#: borra nunca. Lo mismo con `_is_ours`, que es quien desregistra la entrada de `settings.json`.
+#:
+#: `suggest_lint_summary.py` se retiró el 2026-09-08 por punteria: **366 disparos y 1 acierto**
+#: (0,3 %) medidos sobre 21 días de uso real, con la mediana de salida en 402 bytes. Disparaba
+#: con una regex sobre el COMANDO, antes de ejecutarlo, y las palabras que lo activaban eran
+#: `test` y `build` dentro de rutas. Un aviso que casi nunca tiene razón enseña a ignorar todos
+#: los avisos, incluidos los que la tienen.
+#: `output_policy.py` y `output_stats.py` se retiraron el 2026-09-08 por quedarse sin consumidor.
+#: Eran la mitad «decide si esta salida merece delegarse» del mecanismo que reescribía el comando
+#: para mandar la salida a un fichero, y ese mecanismo se descartó: el cliente ya persiste la
+#: salida grande por su cuenta, y `updatedInput` se salta el allowlist de permisos. La medición de
+#: `PostToolUseFailure` cerró la última puerta que les quedaba —el evento existe y se dispara, pero
+#: llega cuando el coste ya se pagó y sin la salida completa, así que no habilita ningún ahorro—.
+#: Nunca llegaron a registrarse como hook, pero sí se copiaron a `~/.claude/hooks/`, así que sin
+#: esta lista sus 24 KB se quedarían ahí para siempre.
+_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
+
+# El argumento con el que se registra el hook de Read, y **por qué existe uno**.
+#
+# `--enable-read-hook` registraba el script y ya: el hook seguía exigiendo además
+# `LD_HOOK_READ_ENABLED=1` en el entorno, que nadie ponía. Eran dos puertas y la bandera abría
+# una, así que la opción no hacía nada — y en silencio, que es lo peor: quedaba registrada en
+# `settings.json`, se veía en el plan del instalador y no sugería jamás. Medido con control
+# positivo: mismo hook, mismo archivo grande, emite con la variable y no emite sin ella.
+#
+# Se arregla por el argumento y no escribiendo la variable en el `settings.json` del usuario por
+# dos razones: la variable sería global a la sesión (afectaría a cualquier proceso hijo, no solo
+# al hook) y `uninstall` no la retiraría. Con el argumento, **el registro mismo es el
+# interruptor**: instalar lo enciende y desinstalar lo apaga, sin estado repartido.
+READ_HOOK_FLAG = "--enabled"
+
+
+def resources_dir() -> Path:
+    """Directorio de recursos empaquetados (hooks, skill, memoria)."""
+    return Path(str(_resource_files("local_delegate"))) / "resources"
+
+
+# --- Dos preguntas sobre el HOME, con una sola respuesta cada una -------------
+# Las dos las necesitan `install`, `update` y el CLI. Viven aquí —el módulo más bajo de los
+# tres— porque tenerlas duplicadas es exactamente la clase de verdad repartida que ya costó
+# caro en este repo (tres copias de la cuenta de tokens, dos derivaciones del host del daemon).
+def is_simulated_home(home: Path) -> bool:
+    """True si ``home`` apunta fuera del HOME real: entonces no se toca nada global.
+
+    «Global» son dos cosas distintas y las dos importan: los servicios de la máquina (lo que ya
+    cuidaba ``update``) y el binario ``claude``, que con ``mcp add-json --scope user`` escribe
+    **siempre** en el ``~/.claude.json`` del usuario que ejecuta, ignorando cualquier ``--home``.
+    """
+    try:
+        return home.resolve() != Path.home().resolve()
+    except OSError:
+        # Una ruta irresoluble se trata como simulada: el lado seguro es no tocar lo global.
+        return True
+
+
+def opencode_dir(home: Path) -> Path:
+    """Directorio de configuración global de opencode bajo ``home``.
+
+    Existe como **función** —y no como una expresión ``home / ".config" / "opencode"`` repetida en
+    ``install``, ``checks`` y ``update``— por un motivo medido, no por estilo: opencode resuelve su
+    config con ``XDG_CONFIG_HOME`` **por encima** de ``HOME`` (`opencode debug paths`, versión
+    1.18.11). En una máquina que exporte esa variable, la ruta derivada del HOME sería falsa:
+    ``install`` escribiría un fichero que el cliente nunca lee y ``doctor`` diría que falta la
+    entrada que se acaba de escribir. Dos derivaciones de esto es exactamente la clase de verdad
+    repartida que ya costó caro tres veces en este repo.
+
+    Con un HOME simulado la variable se ignora **a propósito**: si no se ignorara, ``--home``
+    dejaría de ser un sandbox en cuanto quien ejecuta tuviera ``XDG_CONFIG_HOME`` en su entorno.
+    """
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if xdg and not is_simulated_home(home):
+        return Path(xdg).expanduser() / "opencode"
+    return home / ".config" / "opencode"
+
+
+def present_targets(home: Path) -> set[str]:
+    """Clientes que existen de verdad bajo ``home``.
+
+    Mismo criterio que el check ``client.presence``, y a propósito una función y no una lectura
+    de su ``Result``: el ``detail`` de un check es texto de presentación («detectados: Claude
+    Code, Codex»), no un dato. Derivar de ahí a quién se le escribe la configuración ataría el
+    instalador a un string de interfaz.
+    """
+    candidatos = {
+        "claude": home / ".claude",
+        "codex": home / ".codex",
+        # opencode NO cuelga del HOME como los otros dos: ver `opencode_dir`.
+        "opencode": opencode_dir(home),
+    }
+    return {name for name, path in candidatos.items() if path.is_dir()}
+
+
+def default_python() -> str:
+    """Intérprete con el que se ejecutarán los hooks.
+
+    NO se usa ``sys.executable``: cuando el instalador corre bajo ``uvx`` ese intérprete
+    vive en un entorno efímero que desaparece al terminar el comando, y el hook quedaría
+    apuntando a una ruta inexistente. Un nombre resuelto por PATH sobrevive.
+    """
+    return "python" if sys.platform == "win32" else "python3"
+
+
+def _quote(path: str) -> str:
+    return f'"{path}"' if " " in path else path
+
+
+@dataclass
+class Action:
+    """Un cambio concreto sobre el sistema de archivos o la config de un cliente."""
+
+    kind: str  # copy | settings | markdown | toml | mcp | remove
+    target: Path | str
+    detail: str
+    run: object = field(repr=False, default=None)  # callable() -> str | None
+    # Lo que se va a escribir, **textual**. Solo lo imprime `--dry-run`, y existe por un caso
+    # concreto: el incidente de los hooks en Windows del 2026-07-30. El plan decía «registra 2
+    # hook(s)» y el defecto vivía en el *string generado* —un comando de shell sin comillas—, así
+    # que revisar el plan antes de aplicarlo no habría avisado de nada. Un resumen dice cuántas
+    # cosas se escriben; esto dice **qué** se escribe, que es lo único revisable.
+    literal: str = ""
+
+    def describe(self) -> str:
+        return f"[{self.kind}] {self.target} — {self.detail}"
+
+
+# --- Utilidades de escritura -------------------------------------------------
+def _backup(path: Path) -> None:
+    if path.is_file():
+        shutil.copy2(path, path.with_suffix(path.suffix + ".bak"))
+
+
+def _detect_newline(path: Path) -> str:
+    """Terminador de línea dominante del archivo; LF para uno que aún no existe.
+
+    Hace falta porque `write_text` escribe con el terminador de la *plataforma*: en Windows
+    convertiría a CRLF un `CLAUDE.md` guardado en LF, y el usuario vería su archivo entero
+    como modificado —conflictos en git, diff ilegible— por haberle añadido un bloque. Se
+    escribe con el que ya tenía: tocar un archivo ajeno debe notarse solo en lo que cambia.
+    """
+    try:
+        return "\r\n" if b"\r\n" in path.read_bytes() else "\n"
+    except OSError:
+        return "\n"
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    newline = _detect_newline(path)
+    _backup(path)
+    normalized = text.replace("\r\n", "\n").replace("\n", newline)
+    path.write_bytes(normalized.encode("utf-8"))
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _read_json(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_json(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    newline = _detect_newline(path)
+    _backup(path)
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    path.write_bytes(text.replace("\n", newline).encode("utf-8"))
+
+
+def upsert_block(text: str, block: str, begin: str, end: str) -> str:
+    """Inserta o reemplaza el bloque delimitado, conservando el resto del archivo."""
+    managed = f"{begin}\n{block.strip()}\n{end}"
+    pattern = re.compile(re.escape(begin) + r".*?" + re.escape(end), re.DOTALL)
+    if pattern.search(text):
+        return pattern.sub(managed, text, count=1)
+    prefix = text.rstrip()
+    return (prefix + "\n\n" if prefix else "") + managed + "\n"
+
+
+def remove_block(text: str, begin: str, end: str) -> str:
+    """Quita el bloque gestionado (y los blancos que deja) sin tocar lo demás."""
+    pattern = re.compile(r"\n*" + re.escape(begin) + r".*?" + re.escape(end) + r"\n*", re.DOTALL)
+    cleaned = pattern.sub("\n\n", text)
+    return cleaned.strip() + "\n" if cleaned.strip() else ""
+
+
+# --- Hooks de Claude Code ----------------------------------------------------
+def hook_command(
+    hooks_dir: PurePath, script: str, python_exe: str, extra: tuple[str, ...] = ()
+) -> str:
+    """Comando del hook: un único string que Claude Code entrega a un shell.
+
+    La ruta va **siempre entre comillas y con barras `/`**, no solo cuando tiene espacios. En
+    Windows, pasar `C:\\Users\\...` desnudo llega al shell como `C:UsersYohan.claudehooks...`
+    —el shell interpreta cada `\\` como escape y lo borra— y el hook muere con «can't open
+    file». Cuando eso le pasa a `UserPromptSubmit`, **bloquea cada prompt del usuario**: no es
+    un hook que no sugiere, es un cliente inutilizable. Python abre rutas con `/` en Windows sin
+    problema, así que la forma citada y con barras funciona en los tres shells (sh, cmd,
+    PowerShell) y en los tres sistemas.
+
+    ``extra`` son argumentos para el script. Solo lo usa el hook de Read, y para que el propio
+    registro sea el interruptor: ver el comentario de ``_READ_HOOK``.
+    """
+    partes = [python_exe, f'"{(hooks_dir / script).as_posix()}"', *extra]
+    return " ".join(partes)
+
+
+# Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano
+# siguiendo la recipe vieja, que quedaban en `~/.claude/hooks/` (sin subdirectorio) y con el
+# formato `{"command": "python", "args": [...]}`.
+#
+# Aquí decía que ese formato «Claude Code no lo ejecuta, así que esas entradas están muertas»:
+# es **falso**, y conviene no volver a escribirlo. `args` es el *exec form* del schema y se
+# ejecuta sin shell; se verificó en vivo viendo disparar `suggest_lint_summary.py`. Se limpian
+# al instalar porque cambió la ruta y el formato que ponemos, no porque no funcionen: dejarlas
+# produciría hooks duplicados que sugieren dos veces lo mismo.
+_SCRIPT_NAMES = (
+    "suggest_delegate_prompt.py",
+    "suggest_delegate_read.py",
+    "suggest_delegate_shell.py",
+)
+
+
+def _is_ours(hook: dict, hooks_dir: Path) -> bool:
+    """True si esta entrada de hook la puso local-delegate (ahora o en una versión previa).
+
+    Reconoce el comando actual (ruta a nuestro directorio) y también el formato heredado con
+    `args`. No basta con que el comando mencione «local-delegate»: un hook propio del usuario
+    en otra ruta nunca debe ser desregistrado ni borrado por nosotros — de ahí que se exija la
+    ruta de nuestro directorio o el nombre exacto de uno de nuestros scripts.
+    """
+    parts = [str(hook.get("command", ""))]
+    args = hook.get("args")
+    if isinstance(args, list):
+        parts.extend(str(a) for a in args)
+    normalized = " ".join(parts).replace("\\", "/")
+    if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
+        return True
+    return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
+
+
+def merge_hook_settings(
+    settings: dict, entries: list[tuple[str, str | None, str]], hooks_dir: Path
+) -> tuple[dict, int]:
+    """Registra nuestros hooks en settings.json quitando primero cualquier versión previa.
+
+    `entries` = [(evento, matcher|None, comando)]. Idempotente: reinstalar deja exactamente
+    un registro por hook, y los hooks de terceros no se tocan. Devuelve (settings, entradas
+    previas retiradas) para poder avisar de una migración desde el formato heredado.
+    """
+    settings, removed = strip_hook_settings(settings, hooks_dir)
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        hooks = {}
+        settings["hooks"] = hooks
+
+    for event, matcher, command in entries:
+        group = {"hooks": [{"type": "command", "command": command}]}
+        if matcher:
+            group["matcher"] = matcher
+        hooks.setdefault(event, []).append(group)
+    return settings, removed
+
+
+def strip_hook_settings(settings: dict, hooks_dir: Path) -> tuple[dict, int]:
+    """Quita del settings.json solo los hooks de local-delegate (incluidos los heredados).
+
+    Devuelve (settings, cuántas entradas se quitaron).
+    """
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return settings, 0
+    removed = 0
+    for event, groups in list(hooks.items()):
+        if not isinstance(groups, list):
+            continue
+        pruned = []
+        for group in groups:
+            if not isinstance(group, dict):
+                pruned.append(group)
+                continue
+            inner = []
+            for h in group.get("hooks", []):
+                if isinstance(h, dict) and _is_ours(h, hooks_dir):
+                    removed += 1
+                    continue
+                inner.append(h)
+            if inner:
+                group["hooks"] = inner
+                pruned.append(group)
+        if pruned:
+            hooks[event] = pruned
+        else:
+            hooks.pop(event, None)
+    if not hooks:
+        settings.pop("hooks", None)
+    return settings, removed
+
+
+# --- Entrada del servidor MCP ------------------------------------------------
+WEB_TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
+
+
+def daemon_mcp_url() -> str:
+    """URL del MCP del daemon. Una sola derivación para los tres clientes.
+
+    La calculaban `mcp_entry` y (desde que existe opencode) haría falta otra vez en
+    `opencode_mcp_entry`. Dos copias de «dónde escucha el daemon» es justo el defecto que este
+    repo ya pagó con la cuenta de tokens y con el host del daemon.
+    """
+    port = os.environ.get("LOCAL_DELEGATE_WEB_PORT", "9393")
+    host = os.environ.get("LOCAL_DELEGATE_WEB_HOST", "127.0.0.1")
+    return f"http://{host}:{port}/mcp"
+
+
+def uvx_command(version: str | None) -> list[str]:
+    """Cómo se lanza el servidor por stdio. También compartida por los tres clientes."""
+    package = f"local-delegate-mcp=={version}" if version else "local-delegate-mcp"
+    return ["uvx", "--from", package, "local-delegate-mcp"]
+
+
+def stdio_env(base_url: str | None, api_key_env: bool, key_ref: str) -> dict[str, str]:
+    """Variables de entorno del proceso stdio. ``key_ref`` es **cómo se referencia** la key.
+
+    El único punto en el que los clientes difieren de verdad: Claude Code expande ``${VAR}`` y
+    opencode expande ``{env:VAR}``. Escribir la sintaxis del otro deja la variable literal en el
+    entorno del hijo — un fallo silencioso que se ve como un 401 y no como una configuración mala.
+    """
+    env: dict[str, str] = {}
+    if base_url:
+        env["LOCAL_DELEGATE_BASE_URL"] = base_url
+        env["LOCAL_DELEGATE_AUTOSTART"] = "0"
+    if api_key_env:
+        # Nunca se escribe el secreto: se referencia la variable del entorno del cliente.
+        env["LOCAL_DELEGATE_API_KEY"] = key_ref
+    return env
+
+
+def mcp_entry(
+    mode: str,
+    base_url: str | None,
+    api_key_env: bool,
+    version: str | None,
+    web_token_env: bool = False,
+) -> dict:
+    """Entrada de servidor MCP para Claude Code (stdio vía uvx, o HTTP contra el daemon)."""
+    if mode == "http":
+        entry: dict = {"type": "http", "url": daemon_mcp_url()}
+        if web_token_env:
+            # Se referencia la variable, nunca su valor. Medido contra Claude Code 2.1.220: la
+            # expansión de `${VAR}` dentro de `headers` fun

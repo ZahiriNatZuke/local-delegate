@@ -243,8 +243,9 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       de otros proyectos del usuario. Congela tambien la **imagen de control** de CP-3 (`docs/assets/dashboard.png` en `bcbe39f`), que es
       una fuente mas y no un artefacto suelto: con su hash y su `procedencia`, porque un control que
       consume algo que ninguna tarea produce no esta cerrado — ya paso una vez con las referencias de
-      CP-4. Marca `procedencia` (`congelado`, `generado`, `reconstruido` o `inventado`): 56 de los
-      146 eventos son `inline` y de esos no hay contenido, solo tamano.
+      CP-4. Marca `procedencia` (`congelado`, `generado`, `reconstruido` o `inventado`): 50 de los
+      146 eventos son `inline` y de esos no hay contenido, solo tamano (decia 56: eran de los 152,
+      el mismo cruce de denominadores de §11; lo conto el constructor).
     - Verification: test de que un `source_sha256` que no cuadra hace **fallar** la carga en vez de
       correr otro contenido con el mismo id; test de que ninguna ruta del usuario llega al corpus
       versionado; y **las dos comprobaciones que de verdad pueden fallar**, las dos calculadas contra

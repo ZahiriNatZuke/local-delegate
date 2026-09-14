@@ -82,6 +82,89 @@ def load_cases(path: Path) -> list[BenchmarkCase]:
     return result
 
 
+# --- Corpus v2: tareas reales con fuentes congeladas (protocolo-f2.md §4.6) ----------------------
+
+_CORPUS_KINDS = {"calidad", "techo"}
+_CORPUS_ROLES = {"fast", "mechanical", "long", "code", "vision"}
+_CORPUS_PROCEDENCIAS = {"congelado", "generado", "reconstruido", "inventado"}
+_CORPUS_MEDIA = {"texto", "imagen"}
+
+
+@dataclass(frozen=True)
+class CorpusCase:
+    id: str
+    tool: str
+    role: str
+    kind: str
+    procedencia: str
+    media_type: str
+    source_file: str
+    source: bytes
+    raw: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class Corpus:
+    cases: list[CorpusCase]
+    controls: list[dict[str, Any]]
+    production_config: dict[str, Any]
+
+
+def _frozen_source(corpus_dir: Path, entry: dict[str, Any]) -> bytes:
+    name = str(entry.get("source_file", ""))
+    # Nunca una ruta viva: dos casos apuntaban a ficheros que el propio plan edita, y un hash
+    # contra una ruta que cambia se invalida solo.
+    if not name or Path(name).name != name:
+        raise ValueError(f"{entry.get('id')}: source_file tiene que ser un nombre en fuentes/")
+    path = corpus_dir / "fuentes" / name
+    if not path.is_file():
+        raise ValueError(f"{entry.get('id')}: falta fuentes/{name}")
+    data = path.read_bytes()
+    if hashlib.sha256(data).hexdigest() != entry.get("source_sha256"):
+        # Correr otro contenido con el mismo id daria numeros de un caso que no es el del JSONL.
+        raise ValueError(f"{entry.get('id')}: source_sha256 no cuadra con fuentes/{name}")
+    return data
+
+
+def load_corpus(path: Path) -> Corpus:
+    """Carga el corpus v2 y verifica el hash de cada fuente y de cada control antes de nada."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
+        raise ValueError("corpus invalido: se esperaba schema_version=2 y cases[]")
+    cases: list[CorpusCase] = []
+    seen: set[str] = set()
+    for raw in data["cases"]:
+        case_id = str(raw.get("id", "")).strip()
+        if not case_id or case_id in seen:
+            raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
+        seen.add(case_id)
+        for field_name, allowed in (
+            ("kind", _CORPUS_KINDS),
+            ("role", _CORPUS_ROLES),
+            ("procedencia", _CORPUS_PROCEDENCIAS),
+            ("media_type", _CORPUS_MEDIA),
+        ):
+            if raw.get(field_name) not in allowed:
+                raise ValueError(f"{case_id}: {field_name}={raw.get(field_name)!r} no es valido")
+        cases.append(
+            CorpusCase(
+                id=case_id,
+                tool=str(raw["tool"]),
+                role=raw["role"],
+                kind=raw["kind"],
+                procedencia=raw["procedencia"],
+                media_type=raw["media_type"],
+                source_file=raw["source_file"],
+                source=_frozen_source(path.parent, raw),
+                raw=raw,
+            )
+        )
+    controls = list(data.get("controls") or [])
+    for control in controls:
+        _frozen_source(path.parent, control)
+    return Corpus(cases, controls, dict(data.get("production_config") or {}))
+
+
 def materialize_case(case: BenchmarkCase) -> str:
     """Genera entrada determinista hasta el tamaño objetivo sin datos externos."""
     core = "\n".join(case.facts)
