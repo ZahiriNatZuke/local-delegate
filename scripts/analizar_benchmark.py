@@ -118,25 +118,31 @@ class Corrida:
     def outcome(self) -> str:
         return str(self.final.get("outcome"))
 
+    # Todo se juzga por el ULTIMO intento: desde la tarea 19 el runner repite la anulada, y un
+    # intento anulado que se repitio bien no puede seguir descartando ni bloqueando la corrida.
     @property
     def descartada(self) -> bool:
-        return any(i.get("descartada") for i in self.intentos)
+        return bool(self.final.get("descartada"))
 
     @property
     def motivo_descarte(self) -> str | None:
-        return next(
-            (i.get("descartada_motivo") for i in self.intentos if i.get("descartada")), None
-        )
+        return self.final.get("descartada_motivo") if self.descartada else None
 
     @property
     def fria(self) -> bool:
-        return any(i.get("thermal_state") == "cold" for i in self.intentos)
+        return self.final.get("thermal_state") == "cold"
 
     @property
     def calidad(self) -> float | None:
-        if self.descartada or self.outcome != "ok":
+        if self.descartada:
             return None
-        return (self.final.get("score") or {}).get("quality")
+        score = self.final.get("score") or {}
+        # Truncada otra vez tras doblar los tokens: puntua 0 (§4.7 punto 3), no «sin puntuacion».
+        if self.outcome == "ok" or (
+            self.outcome == "truncado" and score.get("zero_by") == "truncado_repetido"
+        ):
+            return score.get("quality")
+        return None
 
     @property
     def latencia(self) -> float | None:
@@ -459,7 +465,15 @@ def decidir_rol(
     }
     resultado["casos_admitidos"] = admitidos
     resultado["casos_descartados"] = descartes
-    if not admitidos:
+    # Si CP-3 dejo TODOS los casos fuera por techo, los modelos del piloto empataban en 1,0: no hay
+    # nada que separe por calidad, y eso no es un rol indecidible sino un empate. Decision del
+    # usuario (tarea 19): «al mismo resultado, nos quedamos con el mas rapido». La calidad se
+    # compara igual con todos los casos de ESTA tanda —un candidato que ya no da 1,0 pierde por
+    # calidad—, y dentro de la banda deciden los desempates de siempre: techo, luego velocidad.
+    todos_en_techo = bool(ids) and not admitidos and all(m == "techo" for m in descartes.values())
+    resultado["todos_en_techo"] = todos_en_techo
+    casos_calidad = admitidos or (ids if todos_en_techo else [])
+    if not casos_calidad:
         return {
             **resultado,
             "veredicto": "indecidible",
@@ -467,8 +481,8 @@ def decidir_rol(
         }
 
     banda = banda_de_ruido([vigente, candidato], ids, corpus) or 0.0
-    q_v = _media([_caso(vigente, cid, corpus).mediana for cid in admitidos])
-    q_c = _media([_caso(candidato, cid, corpus).mediana for cid in admitidos])
+    q_v = _media([_caso(vigente, cid, corpus).mediana for cid in casos_calidad])
+    q_c = _media([_caso(candidato, cid, corpus).mediana for cid in casos_calidad])
     assert q_v is not None and q_c is not None  # §6 ya exige puntuacion valida en cada caso
     diferencia = q_c - q_v
     (lat_v, lat_c), banda_lat = _latencia_del_rol([vigente, candidato], ids, corpus)
@@ -476,7 +490,7 @@ def decidir_rol(
     techo_v, techo_c = techo_aceptado(vigente, rol, corpus), techo_aceptado(candidato, rol, corpus)
     resultado.update(
         {
-            "debilmente_decidible": len(admitidos) < MIN_CASOS_DECIDIBLE,
+            "debilmente_decidible": len(casos_calidad) < MIN_CASOS_DECIDIBLE,
             "calidad": {"vigente": q_v, "candidato": q_c, "diferencia": round(diferencia, 4)},
             "banda": banda,
             "puede_disparar": puede_disparar(banda, q_v),

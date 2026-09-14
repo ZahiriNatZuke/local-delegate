@@ -227,6 +227,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   mapeados el contador de memoria privada no los ve, así que dos corridas con modos distintos no
   son comparables.
 
+- **`local-delegate benchmark` repite de verdad la corrida anulada, puntúa el truncado que no
+  termina y ejecuta el código generado.** Tres cosas que salieron del primer piloto contra la
+  máquina real, y las tres escondían un resultado:
+
+  - **La corrida anulada por la sonda se repite**, con los mismos `max_tokens` y hasta dos veces.
+    Esta misma entrada decía ya que «se repite», y el código no lo hacía: la primera corrida de
+    cada modelo, la que carga el proceso, quedaba descartada y el caso se medía con dos corridas
+    en vez de tres. Cada intento lleva ahora `retry_reason` (`anulada` o `truncado`).
+  - **Un truncado que vuelve a cortarse con el doble de `max_tokens` puntúa 0**
+    (`zero_by: truncado_repetido`). Antes salía «sin puntuación» y caía del agregado, así que un
+    modelo atrapado en un bucle —medido: la misma línea repetida decenas de veces— no pagaba nada
+    por el peor fallo posible.
+  - **Los casos con `execution_checks` ejecutan el código generado** y puntúan la proporción de
+    comprobaciones que pasa. Dos funciones rotas sacaban 1,0 porque nombraban los términos
+    esperados. El código pasa por el mismo quitado de vallas que `local_boilerplate` y corre en
+    otro proceso con `python -I`, carpeta temporal, entorno vacío, sin stdin y 10 s de tope; no es
+    un sandbox del sistema.
+
+  `scripts/analizar_benchmark.py` juzga cada corrida por su **último** intento, y un rol cuyos
+  casos quedaron todos en techo en el piloto ya no es indecidible: con la misma calidad se queda el
+  modelo más rápido.
+
 ## [0.27.0] - 2026-09-08
 
 ### Changed

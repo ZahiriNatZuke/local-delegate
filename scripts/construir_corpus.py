@@ -254,11 +254,29 @@ class Caso:
     # Los terminos esperados tienen que estar en la fuente, salvo donde la salida no la copia:
     # una traduccion, una etiqueta elegida o lo que se ve en una imagen.
     terminos_en_fuente: bool = True
-    # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en cinco casos.
+    # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en seis casos.
     referencia: tuple[str, str, str] | None = None
+    # Comprobaciones que el puntuador EJECUTA sobre el codigo generado: {"expr", "expected"} o
+    # {"expr", "raises"}. Salen de la especificacion del caso, no de lo que devolvio un modelo.
+    comprobaciones: tuple[dict[str, Any], ...] = ()
 
 
 _TOP_LEVEL_PY = r"^(?:def |class |async def |@)"
+
+# Referencia de CP-4 para la senal de ejecucion: la buena y la mala solo difieren en el factor de
+# los minutos, asi que tienen la misma longitud, los mismos terminos y las dos cargan sin error.
+_PARSE_DURATION = (
+    "import re\n"
+    "\n"
+    "\n"
+    "def parse_duration(texto):\n"
+    "    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n"
+    '    m = re.fullmatch(r"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?", texto)\n'
+    "    if not texto or m is None:\n"
+    '        raise ValueError(f"formato no valido: {texto!r}")\n'
+    "    h, mi, s = (int(g) if g else 0 for g in m.groups())\n"
+    "    return h * 3600 + mi * {MINUTO} + s\n"
+)
 
 CASOS: tuple[Caso, ...] = (
     # --- mechanical ---
@@ -453,6 +471,21 @@ CASOS: tuple[Caso, ...] = (
         ),
         argumentos={"language": "python"},
         expected_terms=("parse_duration", "ValueError"),
+        # CP-3 (tarea 19) dio 1,0 por terminos a dos funciones rotas. Una por ejemplo de la
+        # especificacion (y `expected` exige el tipo: pide un int) y dos formatos invalidos, que
+        # la especificacion dice que lanzan ValueError.
+        comprobaciones=(
+            {"expr": "parse_duration('1h30m')", "expected": 5400},
+            {"expr": "parse_duration('45s')", "expected": 45},
+            {"expr": "parse_duration('2m')", "expected": 120},
+            {"expr": "parse_duration('abc')", "raises": "ValueError"},
+            {"expr": "parse_duration('5x')", "raises": "ValueError"},
+        ),
+        referencia=(
+            "ejecucion",
+            _PARSE_DURATION.replace("{MINUTO}", "60"),
+            _PARSE_DURATION.replace("{MINUTO}", "61"),
+        ),
     ),
     # --- vision ---
     Caso(
@@ -675,7 +708,29 @@ DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
     "json_valido": {"json_valido", "json_campos"},
     "json_campos": {"json_campos"},
     "unicode": {"cobertura"},
+    "ejecucion": {"ejecucion"},
 }
+
+
+def _ejecuta_bien(codigo: str, comprobaciones: Sequence[dict[str, Any]]) -> bool:
+    """El oraculo de la senal de ejecucion, en proceso y sin el arnes del puntuador: si los dos
+    compartieran codigo compartirian tambien el error. Solo corre referencias escritas a mano."""
+    espacio: dict[str, Any] = {"__name__": "referencia"}
+    try:
+        exec(compile(codigo, "referencia", "exec"), espacio)  # noqa: S102 - referencia propia
+    except Exception:
+        return False
+    for comprobacion in comprobaciones:
+        try:
+            valor = eval(comprobacion["expr"], espacio)
+        except Exception as exc:
+            if type(exc).__name__ != comprobacion.get("raises"):
+                return False
+            continue
+        esperado = comprobacion.get("expected")
+        if "raises" in comprobacion or type(valor) is not type(esperado) or valor != esperado:
+            return False
+    return True
 
 
 def plano(texto: str) -> str:
@@ -688,7 +743,11 @@ def plano(texto: str) -> str:
 
 
 def senales(
-    texto: str, esperados: Sequence[str], prohibidos: Sequence[str], campos: Sequence[str]
+    texto: str,
+    esperados: Sequence[str],
+    prohibidos: Sequence[str],
+    campos: Sequence[str],
+    comprobaciones: Sequence[dict[str, Any]] = (),
 ) -> dict[str, bool | None]:
     """Oraculo de CP-4. Independiente del puntuador de la tarea 16 a proposito: es contra lo que
     ese puntuador se valida, y si compartieran codigo compartirian tambien el error."""
@@ -703,6 +762,7 @@ def senales(
         "prohibido": any(plano(t) in plano(texto) for t in prohibidos),
         "json_valido": valido,
         "json_campos": (set(campos) <= set(objeto)) if valido else None,
+        "ejecucion": _ejecuta_bien(texto, comprobaciones) if comprobaciones else None,
     }
 
 
@@ -717,9 +777,19 @@ def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
         errores.append(
             f"{caso.id}: la pareja no tiene la misma longitud ({len(buena)} y {len(mala)})"
         )
-    ok = senales(buena, esperados, caso.forbidden_terms, caso.expected_json_fields)
-    malo = senales(mala, esperados, caso.forbidden_terms, caso.expected_json_fields)
-    if not ok["cobertura"] or ok["prohibido"] or False in (ok["json_valido"], ok["json_campos"]):
+    argumentos = (caso.forbidden_terms, caso.expected_json_fields, caso.comprobaciones)
+    ok = senales(buena, esperados, *argumentos)
+    malo = senales(mala, esperados, *argumentos)
+    if (
+        not ok["cobertura"]
+        or ok["prohibido"]
+        or False
+        in (
+            ok["json_valido"],
+            ok["json_campos"],
+            ok["ejecucion"],
+        )
+    ):
         errores.append(f"{caso.id}: la respuesta buena no es buena: {ok}")
     difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
     if difieren != DIFERENCIAS_ESPERADAS[senal]:
@@ -821,6 +891,7 @@ def entrada_de_corpus(
         "expected_terms": list(terminos(caso, texto)) if calidad else [],
         "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
         "expected_json_fields": list(caso.expected_json_fields) if calidad else [],
+        "execution_checks": list(caso.comprobaciones) if calidad else [],
         **(
             {
                 "reference_signal": caso.referencia[0],
@@ -1015,6 +1086,7 @@ _CAMPOS_VIGILADOS = (
     "expected_terms",
     "forbidden_terms",
     "expected_json_fields",
+    "execution_checks",
     "reference_signal",
     "reference_ok",
     "reference_bad",

@@ -270,7 +270,12 @@ def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():
     # Lee el JSON versionado, no el constructor: una referencia retocada a mano tambien cae aqui.
     for caso in _parejas():
         raw = caso.raw
-        argumentos = (raw["expected_terms"], raw["forbidden_terms"], raw["expected_json_fields"])
+        argumentos = (
+            raw["expected_terms"],
+            raw["forbidden_terms"],
+            raw["expected_json_fields"],
+            raw["execution_checks"],
+        )
         ok = construir.senales(raw["reference_ok"], *argumentos)
         malo = construir.senales(raw["reference_bad"], *argumentos)
         difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}

@@ -369,19 +369,35 @@ tienen control positivo en `tests/test_corpus.py`.
 **Lo que NO se toca, y por que:**
 
 - **`mechanical`**: las salidas son equivalentes de verdad. Es la segunda causa de CP-3 (la premisa),
-  que dice «no se toca el caso». Que el rol quede indecidible por techo es una consecuencia de §7
-  (los casos en techo salen del agregado), no del corpus: si hay que decidir `mechanical` por
-  velocidad cuando todo empata en 1,0, eso se cambia en la regla, y se decide aparte.
-- **`lint-33k`**: su fallo es del runner (el truncado repetido no puntua).
-- **`boilerplate-156`**: puntuar ejecutando exige correr en local codigo generado por un modelo;
-  queda pendiente de decision del usuario.
+  que dice «no se toca el caso». Que quedara indecidible por techo era de §7, no del corpus, y se
+  arregla en §7 (abajo).
+- **`lint-33k`**: su fallo era del runner (el truncado repetido no puntuaba); arreglado abajo.
+
+#### Runner, `boilerplate` y §7 tras CP-3 (tarea 19, 2026-09-14): decisiones del usuario
+
+1. **Truncado repetido puntua 0.** Si tras doblar `max_tokens` sigue en `finish_reason: length`, la
+   corrida puntua `quality: 0` con `zero_by: truncado_repetido`, y el analisis la cuenta. La primera
+   truncada sigue sin puntuar (§4.7 punto 3). Antes salia «sin puntuacion» y caia del agregado: el
+   bucle del 2B en `lint-33k` no le costaba nada.
+2. **La corrida anulada se repite de verdad**, con los mismos `max_tokens`, hasta
+   `MAX_ANNUL_RETRIES` = 2 veces. Cada intento lleva `retry_reason` (`anulada` o `truncado`), y el
+   analisis juzga la corrida por su **ultimo intento**: descarte, estado termico y calidad. Un
+   intento anulado que se repitio bien ya no descarta ni bloquea al candidato (§7 condicion 2).
+3. **`boilerplate-156` se puntua ejecutando el codigo generado** (§4.7 punto 6). Cinco
+   comprobaciones sacadas de la especificacion: los tres ejemplos (con tipo `int`) y dos formatos
+   invalidos que deben lanzar `ValueError`. Calidad = minimo de cobertura y proporcion que pasa.
+   CP-4 gana una **sexta pareja**, senal `ejecucion`: la misma funcion con `* 60` y con `* 61` en
+   los minutos, validada por un oraculo que ejecuta en proceso sin compartir codigo con el arnes.
+4. **§7, rol con todos los casos en techo: gana el mas rapido.** Si CP-3 dejo fuera por techo
+   **todos** los casos del rol, no es indecidible sino un empate. La calidad se compara con todos
+   los casos de la tanda —un candidato que ya no da 1,0 pierde por calidad— y dentro de la banda
+   deciden los desempates: techo, luego velocidad. Si algun caso no separo por otra razon, el rol
+   sigue indecidible. Con condiciones 2 y 3 igual que siempre.
 - **`resumen-md-10k`, `describir-dashboard`, `leer-cifras-dashboard`**: sus terminos ya piden lo que
   la tarea pide; `describir` queda sin control de entrada, como se escribio.
 
-**Sigue pendiente, antes de repetir el piloto:** los dos defectos del runner (truncado repetido que
-no puntua; corrida anulada que no se repite) y `boilerplate`. P-9 (repetir el piloto entero o solo
-lo tocado): la propuesta es **entero**, porque cambian cuatro de los trece casos de texto y el 14B
-mostro dispersion en uno que no se toco; sigue abierta hasta que el usuario la apruebe.
+**Siguiente: repetir el piloto de CP-3 entero** (P-9 resuelta), con el corpus y el runner nuevos,
+antes de la tanda. Toca otra vez la maquina: mover el perfil del driver a b10909 y medirlo.
 
 ### CP-4 — El puntuador separa
 
@@ -1013,12 +1029,18 @@ F2 no necesita. Si algun dia hiciera falta, el cargador viejo esta en el histori
 2. **Terminos prohibidos**: si aparece uno, la calidad de esa corrida es 0 aunque acierte lo demas.
    Es el unico detector barato de alucinacion, y hace falta.
 3. **`finish_reason == "length"` marca `truncado`** y la corrida **no puntua como mala**: se repite
-   con `max_tokens` mayor.
+   con `max_tokens` mayor. **Tarea 19:** si vuelve a truncar con el doble, puntua 0
+   (`truncado_repetido`); ver «Runner, `boilerplate` y §7 tras CP-3» en §2.
 4. **Razonamiento aparte**: los tokens de `reasoning_content` se cuentan por separado. Un modelo que
    gaste el presupuesto pensando y devuelva `content` vacio es un fallo de **configuracion** — la
    clase ya existe en `fallos.py` desde F0.
 5. **El JSONL guarda que componente puso la calidad a 0.** Sin eso CP-4 no se puede evaluar: no habria
    forma de saber si el puntuador acerto por la razon correcta.
+6. **Tarea 19: el codigo generado se ejecuta** en los casos con `execution_checks`. Pasa por el
+   mismo `_strip_fences` que `local_boilerplate` antes de escribir a disco, y corre en otro proceso
+   con `python -I`, carpeta temporal, entorno vacio, sin stdin y `EXEC_TIMEOUT_S` = 10 s. No es un
+   sandbox del sistema: correr codigo de un modelo en local lo aprobo el usuario. El JSONL guarda
+   `execution_ratio` y `execution_passed`; si la proporcion es 0, `zero_by: execution`.
 
 **`reasoning_effort` se fija por modelo y se puede sobreescribir por caso.** Hace falta lo segundo:
 Qwen3.8-27B es muy verboso y para resumir hay que apagarle el razonamiento, pero el mismo modelo
@@ -1394,7 +1416,9 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
 - **P-8 — resuelta (2026-09-12).** Choque con la ventana de F1: se espera a que la sesion en curso
   libere la maquina y entonces F2 toma la GPU y la RAM enteras. La bitacora de §10 queda como
   mitigacion del sesgo.
-- **P-9 — abierta.** Si CP-3 obliga a reescribir algun caso, ¿se repite el piloto entero o solo el
+- **P-9 — resuelta (2026-09-14, aprobada por el usuario): se repite el piloto entero**, porque la
+  tarea 19 cambio cuatro de los trece casos de texto, el puntuador de `boilerplate` y el runner, y
+  el 14B mostro dispersion en un caso que no se toco. Pregunta original: si CP-3 obliga a reescribir algun caso, ¿se repite el piloto entero o solo el
   caso tocado? Propuesta: solo el tocado, mas una corrida de los demas para comprobar que el corpus
   nuevo no movio la linea base. Se decide con el dato delante, no antes — pero **no se decide sobre
   la marcha sin escribirlo**, que es como se cuela un corpus ajustado al resultado que se queria.

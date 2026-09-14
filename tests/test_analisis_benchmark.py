@@ -260,6 +260,94 @@ def test_la_corrida_fria_no_entra_en_la_latencia():
     assert len(caso.calidades) == 3  # la calidad de la fria si cuenta
 
 
+def test_anulada_y_repetida_bien_cuenta_su_calidad_y_no_bloquea_al_candidato():
+    candidato = [
+        r
+        for r in _tanda("candidato", "long", (1.0, 1.0, 1.0))
+        if not (r["case"] == "lint-33k" and r["run"] == 1)
+    ]
+    candidato += [
+        _registro("candidato", "lint-33k", 1, 1.0, descartada=True),
+        _registro("candidato", "lint-33k", 1, 1.0, attempt=2),
+    ]
+    config = analizar.cargar_config(candidato, analizar.Selector.parse("candidato"))
+    # Por numero de corrida, no por posicion: el analisis ordena por `ts`, y las corridas 2 y 3 de
+    # `_tanda` se crearon antes. Con `corridas[0]` este assert miraba otra corrida y no probaba nada.
+    (corrida,) = [c for c in config.casos["lint-33k"].corridas if c.intentos[0]["run"] == 1]
+    assert len(corrida.intentos) == 2
+    assert (corrida.descartada, corrida.calidad) == (False, 1.0)
+    d = _decidir(_tanda("vigente", "long", TERCIO) + candidato)
+    assert d["veredicto"] == "sustituye"
+
+
+def test_anulada_en_todos_sus_intentos_sigue_descartada():
+    registros = [
+        _registro("vigente", "lint-33k", 1, 1.0, descartada=True),
+        _registro("vigente", "lint-33k", 1, 1.0, attempt=2, descartada=True),
+    ]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-33k"]
+    assert caso.corridas[0].descartada and caso.calidades == []
+
+
+def test_truncada_dos_veces_entra_con_calidad_cero_y_no_sale_del_agregado():
+    primera = _registro("vigente", "lint-33k", 1, outcome="truncado")
+    repetida = _registro("vigente", "lint-33k", 1, outcome="truncado", attempt=2)
+    repetida["score"] = {"quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+    registros = [primera, repetida]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-33k"]
+    assert caso.calidades == [0.0]
+    # Control: la primera truncada, sola, sigue sin puntuar.
+    sola = analizar.cargar_config(registros[:1], analizar.Selector.parse("vigente"))
+    assert sola.casos["lint-33k"].calidades == []
+
+
+def _cp3_en_techo(rol, motivo_de_uno="techo"):
+    ids = analizar._casos_del_rol(CORPUS, rol, "calidad")
+    casos = {cid: {"motivo": "techo"} for cid in ids}
+    casos[ids[0]] = {"motivo": motivo_de_uno}
+    return {"casos_admitidos": [], "casos": casos}
+
+
+def test_todo_en_techo_con_la_misma_calidad_gana_el_mas_rapido():
+    lento, rapido = (2000, 2000, 2100), (1000, 1000, 1100)
+    d = _decidir(
+        _tanda("vigente", "mechanical", (1.0, 1.0, 1.0), latencias=lento)
+        + _tanda("candidato", "mechanical", (1.0, 1.0, 1.0), latencias=rapido),
+        rol="mechanical",
+        cp3=_cp3_en_techo("mechanical"),
+    )
+    assert d["todos_en_techo"] is True
+    assert (d["veredicto"], d["criterio"]) == ("sustituye", "velocidad")
+    # Al reves, el vigente es el rapido y se queda.
+    d = _decidir(
+        _tanda("vigente", "mechanical", (1.0, 1.0, 1.0), latencias=rapido)
+        + _tanda("candidato", "mechanical", (1.0, 1.0, 1.0), latencias=lento),
+        rol="mechanical",
+        cp3=_cp3_en_techo("mechanical"),
+    )
+    assert (d["veredicto"], d["criterio"]) == ("no_sustituye", "velocidad")
+
+
+def test_todo_en_techo_no_salva_a_un_candidato_que_en_la_tanda_ya_no_da_uno():
+    d = _decidir(
+        _tanda("vigente", "mechanical", (1.0, 1.0, 1.0), latencias=(2000, 2000, 2100))
+        + _tanda("candidato", "mechanical", (0.5, 0.5, 0.5)),
+        rol="mechanical",
+        cp3=_cp3_en_techo("mechanical"),
+    )
+    assert (d["veredicto"], d["criterio"]) == ("no_sustituye", "calidad")
+
+
+def test_si_un_caso_no_separa_por_otra_razon_el_rol_sigue_indecidible():
+    d = _decidir(
+        _tanda("vigente", "mechanical", (1.0, 1.0, 1.0))
+        + _tanda("candidato", "mechanical", (1.0, 1.0, 1.0), latencias=(10, 10, 11)),
+        rol="mechanical",
+        cp3=_cp3_en_techo("mechanical", motivo_de_uno="no separa"),
+    )
+    assert d["veredicto"] == "indecidible"
+
+
 def test_truncada_y_repetida_es_una_sola_corrida_con_la_calidad_del_segundo_intento():
     registros = [
         _registro("vigente", "lint-33k", 1, outcome="truncado"),
@@ -373,7 +461,9 @@ def _texto_con(meta, aciertos):
 
 
 def _calidad_real(cid, aciertos):
-    meta = CORPUS[cid]
+    # Sin las comprobaciones de ejecucion: estos tests miden la granularidad de los TERMINOS, y un
+    # texto hecho de terminos no es codigo que pase las de `boilerplate-156` (tarea 19).
+    meta = {**CORPUS[cid], "execution_checks": []}
     calidad = benchmark.score_output(meta, _texto_con(meta, aciertos), "stop")["quality"]
     esperado = round(aciertos / len(meta["expected_terms"]), 4)
     assert calidad == esperado, f"{cid}: el texto no acierta {aciertos} terminos"
