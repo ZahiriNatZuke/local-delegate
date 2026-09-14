@@ -855,6 +855,54 @@ los dos. Precedencia: caso > modelo. **El CLI de hoy solo acepta `low|medium|hig
 anade «apagado»**, porque «apagado» es justo lo que el registro de §5.2 necesita y no existe. El
 fallo 4 de julio fue exactamente medir con `low` creyendo que era neutro.
 
+#### Resultado de la tarea 16 (2026-09-14): el runner, y lo que esta seccion no fijaba
+
+**La calidad.** `score_output` normaliza (NFKD, sin marcas combinantes, `casefold`); un termino
+prohibido la pone a 0 (`zero_by: forbidden_terms`); un JSON invalido tambien (`zero_by:
+json_valid`); si no, es el **minimo** entre la cobertura y la proporcion de campos JSON presentes,
+y si ese minimo es 0 se anota que componente fue. El minimo y no la media: un extractor que acierta
+los terminos y se deja la mitad de las claves no hizo la mitad del trabajo bien.
+
+**Los desenlaces de una corrida**, cada uno en su columna:
+
+| `outcome` | Cuando | Puntua |
+| --- | --- | --- |
+| `ok` | respuesta completa | si |
+| `truncado` | `finish_reason: length`; se repite **una vez** con el doble de `max_tokens`, y las dos quedan en el JSONL | no |
+| `rechazo_por_contexto` | 400 con `exceed_context_size_error` en el cuerpo | no |
+| `configuracion` | `length`, `content` vacio y `reasoning_content` con texto: la clase de `fallos.py` | no |
+| `error` | todo lo demas | no |
+
+`descartada` va aparte: la pone la sonda (§3.2), no el backend.
+
+**Lo que se verifico y lo que no:** la cadena `exceed_context_size_error` y las de `enable_thinking`
+y `chat_template_kwargs` estan en `llama-server-impl.dll` de **b9925**, buscadas en el binario. Que
+b10909 conteste asi un desborde real, y que un modelo razonador respete `enable_thinking: false`,
+**no** esta comprobado: lo confirman los sondeos de techo y la primera corrida con Qwen3.8 (tarea
+19). Para poder reclasificar sin repetir, el runner guarda `error_body` y `reasoning_chars`.
+
+**«Apagado» es `--reasoning-effort off`**, y viaja como `chat_template_kwargs: {enable_thinking:
+false}`; `low|medium|high` siguen yendo como `reasoning_effort`, que es variable de la plantilla de
+gpt-oss. Precedencia caso > modelo, con `reasoning_effort_source` en el registro.
+
+**La temperatura es 0**, no la de produccion (0,2 en varias tools): §5.3 la fija para medir. El
+corpus guarda la de produccion como dato.
+
+**CP-4 ya es un test** (`tests/test_benchmark.py`): puntua las cinco parejas del corpus y exige que
+cada una se separe **por su componente**. Corre en cada commit; la tarea 19 no tiene que ejecutarlo,
+solo leer que esta en verde. Y otro test comprueba que un puntuador literal **no** separaria la
+pareja de Unicode, que es la que delataria perder la normalizacion.
+
+**Los sondeos de techo no tenian prompt.** En produccion son 5 y 13 llamadas, asi que el constructor
+no guardaba ninguno. Ahora captura aparte la ruta de **una** llamada de la misma tool (forzando
+`max_chars_for`), y `production.calls` sigue diciendo las llamadas reales.
+
+**Y un defecto del constructor que salio aqui:** regenerar el corpus **recongelaba las fuentes desde
+los ficheros vivos**. Al anadir el prompt de los sondeos leyo un `CHANGELOG.md` que ya traia la
+entrada nueva y paso ruff por un `src/` modificado, y sobrescribio `resumen-changelog-43k` y
+`lint-33k` —la invalidacion que §4.5 queria evitar al congelar—. Se restauraron desde git, y ahora
+una fuente ya congelada se reutiliza; recongelar exige `--refrescar-fuentes`.
+
 ### 4.8 Revision humana, a ciegas
 
 La puntuacion automatica no decide sola (REQ-F2-2). Al cerrar la tanda, un script genera una hoja

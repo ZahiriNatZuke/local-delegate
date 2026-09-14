@@ -199,6 +199,32 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
   de distinguir nuestra entrada de una escrita a mano.
 
+### Changed
+- **BREAKING — `local-delegate benchmark` corre el corpus v2 de tareas reales y deja de aceptar el
+  de julio.** `--cases` apunta ahora a `benchmarks/catalogo-2026-09/cases.json` (`schema_version:
+  2`); un corpus v1 falla al cargar. El de julio (`benchmarks/moe/cases.json`) se conserva como
+  archivo: ningún requisito pide repetir aquella prueba y mantener dos esquemas vivos era
+  superficie sin uso. Cada caso manda **el prompt real de su tool**, capturado de producción, con
+  la fuente congelada y verificada por hash, en vez de un relleno repetido hasta un tamaño.
+
+  El puntuador cambia en las cinco cosas que hundieron el canary de julio:
+
+  - **Normaliza antes de comparar** (NFKD, sin marcas combinantes y `casefold`): un resumen en
+    español correcto perdía la mitad de la cobertura por escribir «cómputo» con tilde.
+  - **Un término prohibido pone la calidad a 0** aunque acierte lo demás, y el registro dice qué
+    componente la hundió (`zero_by`).
+  - **Una respuesta truncada no cuenta como mala**: se marca `truncado` y se repite una vez con el
+    doble de `max_tokens`. Las dos corridas quedan en el JSONL.
+  - **Gastar el presupuesto pensando sin contestar es `configuracion`**, no mala calidad.
+  - **Un prompt que no cabe en el contexto es `rechazo_por_contexto`**, una clase propia: en julio
+    se contaron como fallos del modelo.
+
+  Y además: los casos de imagen mandan `image_url` (el rol de visión no se podía medir),
+  `--reasoning-effort off` apaga el razonamiento y el valor del caso manda sobre el del modelo,
+  `--role` e `--input-control` seleccionan casos, y `thermal_state` marca fría solo la primera
+  petición tras un cambio de proceso de `llama-server` —antes, la primera de cada caso—, o nada si
+  no hay sonda.
+
 ## [0.27.0] - 2026-09-08
 
 ### Changed

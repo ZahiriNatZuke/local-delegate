@@ -302,13 +302,7 @@ class _NullMetrics:
 
 
 def _args(tmp_path, *extra):
-    cases = tmp_path / "cases.json"
-    cases.write_text(
-        json.dumps(
-            {"schema_version": 1, "cases": [{"id": "uno", "instruction": "x", "target_chars": 5}]}
-        ),
-        encoding="utf-8",
-    )
+    cases = RAIZ / "benchmarks" / "catalogo-2026-09" / "cases.json"
     parser = argparse.ArgumentParser()
     benchmark.add_parser(parser.add_subparsers())
     return parser.parse_args(
@@ -320,6 +314,8 @@ def _args(tmp_path, *extra):
             "l",
             "--cases",
             str(cases),
+            "--case",
+            "clasificar-53",
             "--runs",
             "1",
             "--endpoint",

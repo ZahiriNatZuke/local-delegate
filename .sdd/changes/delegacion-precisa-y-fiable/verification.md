@@ -541,3 +541,63 @@ verlo.
 ### Suite
 
 `uv run pytest -q`: **1007 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.
+
+## F2: tarea 16, el runner del corpus v2 (2026-09-14)
+
+`local-delegate benchmark` carga solo el corpus v2 (**breaking**: el de julio ya no carga y se
+conserva como archivo), manda el prompt de produccion de cada caso sobre su fuente congelada, y
+puntua segun §4.7. Detalle de las decisiones que el protocolo no fijaba en `protocolo-f2.md` §4.7,
+«Resultado de la tarea 16». Documentado en el CHANGELOG (entrada BREAKING), en
+`docs/wiki/Backend-versions.md` y en `benchmarks/moe/README.md`. El README del proyecto no menciona
+`benchmark` en ningun sitio, asi que no tenia nada que cambiar.
+
+### En rojo antes de arreglarlo
+
+El defecto literal de julio, con el puntuador de antes y la respuesta correcta en espanol:
+
+```text
+puntuador de hoy, respuesta correcta en espanol: {'expected_terms': 2, 'matched_terms': 1, 'term_coverage': 0.5}
+```
+
+### Lo que se verifico contra el motor, y lo que queda para la tarea 19
+
+Buscado en los binarios de b9925: `llama-server-impl.dll` contiene `exceed_context_size_error`,
+`chat_template_kwargs`, `enable_thinking` y `reasoning_content`. **No** esta comprobado que b10909
+conteste asi un desborde real ni que un razonador respete `enable_thinking: false`; el runner guarda
+`error_body` y `reasoning_chars` para poder reclasificar sin repetir la tanda.
+
+### CP-4 ya corre
+
+`test_cp4_el_puntuador_separa_cada_pareja_por_su_senal` puntua las cinco parejas del corpus y exige
+que cada una se separe **por su componente**; otro test comprueba que un puntuador literal no
+separaria la pareja de Unicode. Estan en verde en cada commit.
+
+### Lo que se probo al reves
+
+Catorce mutantes sobre el runner y el puntuador, todos muertos por su assert: sin normalizar;
+prohibido que no hunde; truncado que puntua; JSON invalido que no hunde; `zero_by` sin anotar;
+truncado que no se repite; rechazo por contexto leido como error, y **cualquier** 400 leido como
+rechazo (los dos sentidos); configuracion leida como truncado; sin `image_url`; `off` enviado como
+`reasoning_effort`; el modelo mandando sobre el caso; frio en cada caso como en julio; y el control
+de CP-3 ignorado. Dos caen por consecuencia y no por un assert directo, y valen: «configuracion como
+truncado» cae al desempaquetar porque la corrida se repitio, y «sin `image_url`» por un `TypeError`
+al indexar un texto donde tenia que haber bloques.
+
+Y un decimoquinto, el que importa del constructor, **murio por la razon equivocada a la primera**:
+«recongelar siempre» hacia caer el test en `construir(...) == 0` —la construccion fallaba por otra
+regla, porque el CHANGELOG vivo ya traia la entrada nueva—, no en la marca de la fuente congelada.
+Tras una release que no moviera ese tamano habria sobrevivido. Se reordenaron los asserts y ahora
+cae en la comparacion de la marca (`test_corpus.py:352`).
+
+### Un defecto que salio al hacerlo
+
+Regenerar el corpus para anadir el prompt de los sondeos de techo **recongelo dos fuentes desde los
+ficheros vivos**: `resumen-changelog-43k` (el CHANGELOG ya traia la entrada de esta tarea) y
+`lint-33k` (ruff sobre un `src/` modificado). Lo delato la regla del tamano del id, que hizo que el
+corpus no se escribiera; `git status` confirmo las dos. Restauradas desde git; la copia congelada
+se reutiliza y recongelar exige `--refrescar-fuentes`. Tras el arreglo, reconstruir cambio solo los
+cuatro campos de prompt de los dos sondeos (8 lineas de `cases.json`), y ninguna fuente.
+
+### Suite
+
+`uv run pytest -q`: **1024 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.

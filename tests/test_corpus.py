@@ -137,7 +137,10 @@ def _caso(**cambios):
 def _errores(caso, tmp_path, datos: bytes, nombre="fuente.txt"):
     ruta = tmp_path / nombre
     ruta.write_bytes(datos)
-    return construir.comprobar(caso, construir.capturar(caso, ruta, datos), datos)
+    unica = None
+    if caso.kind == "techo":
+        unica = construir.capturar(caso, ruta, datos, sin_troceo=True)
+    return construir.comprobar(caso, construir.capturar(caso, ruta, datos), datos, unica)
 
 
 def test_caso_bien_formado_no_da_errores(tmp_path):
@@ -329,3 +332,26 @@ def test_referencia_retocada_que_sigue_siendo_valida_la_caza_la_vigilancia(tmp_p
     assert construir.comprobar_versionado(copia) == [
         "resumen-md-2k: reference_ok ya no coincide con el constructor"
     ]
+
+
+def test_reconstruir_no_recongela_una_fuente_desde_el_fichero_vivo(tmp_path):
+    # Paso en la tarea 16: regenerar para anadir un campo volvio a leer CHANGELOG.md y la salida de
+    # ruff, y sobrescribio dos fuentes congeladas. La marca solo esta en la copia congelada: si el
+    # constructor vuelve a leer CONTRIBUTING.md, desaparece.
+    copia = tmp_path / "corpus"
+    shutil.copytree(DESTINO, copia)
+    fuente = copia / "fuentes" / "resumen-md-2k.md"
+    marcada = fuente.read_bytes() + b"<!-- congelado -->\n"
+    fuente.write_bytes(marcada)
+
+    rc = construir.construir(RAIZ, copia, None)
+
+    # La marca ANTES que el exit code: recongelando, la construccion puede fallar por otra regla
+    # (el CHANGELOG vivo crece y cambia el tamano de su recorte), y el test caeria por eso en vez
+    # de por lo que prueba. Tras una release que no cambiara el tamano, sobreviviria el defecto.
+    assert fuente.read_bytes() == marcada
+    assert rc == 0
+    (caso,) = [
+        c for c in benchmark.load_corpus(copia / "cases.json").cases if c.id == "resumen-md-2k"
+    ]
+    assert caso.raw["source_sha256"] == hashlib.sha256(marcada).hexdigest()

@@ -1,12 +1,14 @@
 """Benchmark reproducible para backends locales densos y Mixture of Experts.
 
-El runner no arranca, descarga ni reconfigura modelos. Ejecuta un corpus sintetico contra un
-endpoint OpenAI-compatible ya aislado por el operador y escribe JSONL sin prompts ni secretos.
+El runner no arranca, descarga ni reconfigura modelos. Ejecuta el corpus v2 de tareas reales
+(fuentes congeladas y verificadas por hash) contra un endpoint OpenAI-compatible ya aislado por
+el operador, y escribe JSONL sin prompts ni secretos.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import ctypes
 import functools
@@ -18,8 +20,9 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,7 +30,7 @@ from typing import Any, Self
 
 import httpx2
 
-from . import config
+from . import config, fallos
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
 logging.getLogger("httpx2").setLevel(logging.WARNING)
@@ -39,47 +42,6 @@ _TRACKED_METRICS = {
     "llamaswap_gpu_util_percent",
     "llamaswap_gpu_power_draw_watts",
 }
-
-
-@dataclass(frozen=True)
-class BenchmarkCase:
-    id: str
-    instruction: str
-    facts: tuple[str, ...]
-    filler: str
-    target_chars: int
-    max_tokens: int
-    expected_terms: tuple[str, ...]
-    expected_json_fields: tuple[str, ...] = ()
-
-
-def load_cases(path: Path) -> list[BenchmarkCase]:
-    """Carga el schema versionado del corpus y valida lo imprescindible."""
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema_version") != 1 or not isinstance(data.get("cases"), list):
-        raise ValueError("corpus invalido: se esperaba schema_version=1 y cases[]")
-    result: list[BenchmarkCase] = []
-    seen: set[str] = set()
-    for raw in data["cases"]:
-        case_id = str(raw.get("id", "")).strip()
-        if not case_id or case_id in seen:
-            raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
-        seen.add(case_id)
-        result.append(
-            BenchmarkCase(
-                id=case_id,
-                instruction=str(raw["instruction"]),
-                facts=tuple(str(item) for item in raw.get("facts", [])),
-                filler=str(raw.get("filler", "")),
-                target_chars=max(1, int(raw.get("target_chars", 1))),
-                max_tokens=max(1, int(raw.get("max_tokens", 512))),
-                expected_terms=tuple(str(item) for item in raw.get("expected_terms", [])),
-                expected_json_fields=tuple(
-                    str(item) for item in raw.get("expected_json_fields", [])
-                ),
-            )
-        )
-    return result
 
 
 # --- Corpus v2: tareas reales con fuentes congeladas (protocolo-f2.md §4.6) ----------------------
@@ -165,18 +127,6 @@ def load_corpus(path: Path) -> Corpus:
     return Corpus(cases, controls, dict(data.get("production_config") or {}))
 
 
-def materialize_case(case: BenchmarkCase) -> str:
-    """Genera entrada determinista hasta el tamaño objetivo sin datos externos."""
-    core = "\n".join(case.facts)
-    filler = case.filler.strip() or "Contexto neutro para medir procesamiento de prompt."
-    chunks = [core] if core else []
-    index = 1
-    while len("\n".join(chunks)) < case.target_chars:
-        chunks.append(f"Nota contextual {index}: {filler}")
-        index += 1
-    return "\n".join(chunks)[: case.target_chars]
-
-
 def parse_prometheus_metrics(text: str) -> dict[str, float]:
     """Extrae solo gauges operativos agregando series repetidas por suma."""
     values: dict[str, float] = {}
@@ -193,32 +143,74 @@ def parse_prometheus_metrics(text: str) -> dict[str, float]:
     return values
 
 
-def score_response(case: BenchmarkCase, response: str) -> dict[str, Any]:
-    """Calcula señales simples; la revisión semántica sigue siendo humana."""
-    lower = response.casefold()
-    matched = [term for term in case.expected_terms if term.casefold() in lower]
-    score: dict[str, Any] = {
-        "expected_terms": len(case.expected_terms),
-        "matched_terms": len(matched),
-        "term_coverage": round(len(matched) / len(case.expected_terms), 4)
-        if case.expected_terms
-        else None,
+# --- Puntuacion (protocolo-f2.md §4.7) -----------------------------------------------------------
+
+
+def normalize_for_match(text: str) -> str:
+    """NFKD, sin marcas combinantes y casefold.
+
+    NFKD solo no basta: descompone la «ó» en «o» mas un acento suelto, y el acento sigue ahi. Es
+    el defecto de julio: un resumen en espanol correcto perdia cobertura por escribir bien.
+    """
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+
+
+def _json_object(text: str) -> dict[str, Any] | None:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
+    try:
+        payload = json.loads(cleaned)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def score_output(case: dict[str, Any], text: str, finish_reason: str | None) -> dict[str, Any]:
+    """Puntua una respuesta de calidad y dice QUE componente la hundio (`zero_by`).
+
+    Sin `zero_by`, CP-4 no podria saber si el puntuador acerto por la senal correcta: si la mala
+    cae por `json_valid` cuando el defecto plantado era un hecho falso, acierta por la razon
+    equivocada y no vale.
+    """
+    expected = list(case.get("expected_terms") or [])
+    forbidden = list(case.get("forbidden_terms") or [])
+    fields = list(case.get("expected_json_fields") or [])
+    plain = normalize_for_match(text)
+    matched = [term for term in expected if normalize_for_match(term) in plain]
+    hits = [term for term in forbidden if normalize_for_match(term) in plain]
+    components: dict[str, Any] = {
+        "coverage": round(len(matched) / len(expected), 4) if expected else None,
+        "matched_terms": matched,
+        "forbidden_hits": hits,
+        "json_valid": None,
+        "json_fields_ratio": None,
     }
-    if case.expected_json_fields:
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
-        try:
-            payload = json.loads(cleaned)
-        except (json.JSONDecodeError, TypeError):
-            payload = None
-        score["json_valid"] = isinstance(payload, dict)
-        score["json_fields_present"] = (
-            sorted(field for field in case.expected_json_fields if field in payload)
-            if isinstance(payload, dict)
-            else []
-        )
-    return score
+    if fields:
+        obj = _json_object(text)
+        components["json_valid"] = obj is not None
+        if obj is not None:
+            present = sum(1 for name in fields if name in obj)
+            components["json_fields_ratio"] = round(present / len(fields), 4)
+    if finish_reason == "length":
+        # Truncado no es mala calidad: la respuesta no termino. El runner la repite con mas
+        # max_tokens (§4.7 punto 3), y puntuarla aqui hundiria a un modelo por un limite nuestro.
+        return {**components, "quality": None, "zero_by": None, "truncated": True}
+    quality: float | None
+    zero_by: str | None = None
+    if hits:
+        # El unico detector barato de alucinacion: acertar lo demas no lo compensa.
+        quality, zero_by = 0.0, "forbidden_terms"
+    elif fields and not components["json_valid"]:
+        quality, zero_by = 0.0, "json_valid"
+    else:
+        parts = {"coverage": components["coverage"], "json_fields": components["json_fields_ratio"]}
+        present_parts = {name: value for name, value in parts.items() if value is not None}
+        quality = min(present_parts.values()) if present_parts else None
+        if quality == 0:
+            zero_by = next(name for name, value in present_parts.items() if value == 0)
+    return {**components, "quality": quality, "zero_by": zero_by, "truncated": False}
 
 
 class MetricsSampler:
@@ -712,6 +704,10 @@ def summarize_resources(
     return {
         "enabled": enabled,
         "pids": pids,
+        # El primero y el ultimo, en orden: `pids` va ordenado y pierde cual vino antes, que es
+        # justo lo que necesita el estado termico (§5.3).
+        "pid_first": samples[0].pid if samples else None,
+        "pid_last": next((s.pid for s in reversed(samples) if s.pid is not None), None),
         "samples": len(samples),
         "ram_samples": len(ram),
         "vram_samples": len(vram),
@@ -803,14 +799,225 @@ def _build_probe(args: argparse.Namespace) -> ProcessProbe | None | int:
     return ProcessProbe(args.probe_process, luid)
 
 
-def run_benchmark(args: argparse.Namespace) -> int:
-    cases = load_cases(Path(args.cases))
-    selected = set(args.case or [])
-    if selected:
-        unknown = selected - {case.id for case in cases}
+CONTENT_MARKER = "{CONTENIDO}"
+REASONING_EFFORTS = ("off", "low", "medium", "high")
+_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+_ROLES = ("fast", "mechanical", "long", "code", "vision")
+
+
+def reasoning_kwargs(effort: str | None) -> dict[str, Any] | None:
+    """`chat_template_kwargs` para el nivel de razonamiento pedido.
+
+    `off` es `enable_thinking: false`, la variable que leen las plantillas de Qwen3 y afines: la
+    cadena esta en `llama-server-impl.dll` de b9925. El resto va como `reasoning_effort`, que es una
+    variable de la plantilla de gpt-oss y el servidor la pasa sin interpretarla. El fallo 4 de julio
+    fue medir con `low` creyendo que era neutro: `off` es lo que faltaba.
+    """
+    if effort is None:
+        return None
+    if effort == "off":
+        return {"enable_thinking": False}
+    return {"reasoning_effort": effort}
+
+
+def effective_reasoning(
+    case: CorpusCase, model_effort: str | None
+) -> tuple[str | None, str | None]:
+    """Precedencia caso > modelo (§4.7): el mismo modelo corre casos de resumir, donde hay que
+    apagarle el razonamiento, y de codigo, donde no. Con un solo valor se mediria mal uno de los dos."""
+    if case.raw.get("reasoning_effort"):
+        return case.raw["reasoning_effort"], "case"
+    if model_effort:
+        return model_effort, "model"
+    return None, None
+
+
+def build_payload(
+    case: CorpusCase,
+    model: str,
+    seed: int,
+    reasoning_effort: str | None,
+    *,
+    max_tokens: int | None = None,
+    source: bytes | None = None,
+) -> dict[str, Any]:
+    """La peticion de produccion para ese caso, con temperatura 0 y seed fijo.
+
+    `system` y `user_template` son los que capturo el constructor de la tool real. En imagen, el
+    payload lleva `image_url` igual que `local_describe_image`: sin eso el rol `vision` no se podia
+    medir en absoluto. `source` sustituye la entrada (la imagen de control de CP-3).
+    """
+    raw = case.raw
+    data = case.source if source is None else source
+    user: Any
+    if case.media_type == "imagen":
+        mime = _IMAGE_MIME[Path(case.source_file).suffix.lower()]
+        encoded = base64.b64encode(data).decode("ascii")
+        user = [
+            {"type": "text", "text": raw["user_template"]},
+            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{encoded}"}},
+        ]
+    else:
+        # Lo que ve el modelo en produccion: `_read_input` lee con read_text, que normaliza \r\n.
+        content = data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+        user = raw["user_template"].replace(CONTENT_MARKER, content, 1)
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": raw["system"]},
+            {"role": "user", "content": user},
+        ],
+        "max_tokens": max_tokens or raw["max_tokens"],
+        "temperature": 0.0,
+        "seed": seed,
+        "stream": False,
+    }
+    if raw.get("response_format"):
+        payload["response_format"] = raw["response_format"]
+    kwargs = reasoning_kwargs(reasoning_effort)
+    if kwargs:
+        payload["chat_template_kwargs"] = kwargs
+    return payload
+
+
+def is_context_rejection(status: int, body: str) -> bool:
+    """El prompt no cabe en el contexto del modelo: una clase propia, ni mala calidad ni descartada.
+
+    En julio estos se contaron como fallos del modelo y descartaron uno bueno (§3.5). El tipo
+    `exceed_context_size_error` esta en `llama-server-impl.dll` de b9925; que la respuesta real lo
+    traiga se confirma con los sondeos de techo, y el cuerpo del error se guarda por si hay que
+    reclasificar.
+    """
+    return status == 400 and "exceed_context_size_error" in body
+
+
+@dataclass
+class Attempt:
+    outcome: str
+    text: str = ""
+    finish_reason: str | None = None
+    usage: dict[str, Any] = field(default_factory=dict)
+    timings: dict[str, Any] = field(default_factory=dict)
+    reasoning_chars: int = 0
+    error: str | None = None
+    error_body: str | None = None
+
+
+def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> Attempt:
+    try:
+        response = client.post(url, json=payload)
+    except httpx2.HTTPError as exc:
+        return Attempt("error", error=f"{type(exc).__name__}: {exc}")
+    body = response.text
+    if response.status_code >= 400:
+        outcome = (
+            "rechazo_por_contexto" if is_context_rejection(response.status_code, body) else "error"
+        )
+        return Attempt(outcome, error=f"http_{response.status_code}", error_body=body.strip()[:500])
+    try:
+        data = response.json()
+        choice = data["choices"][0]
+        message = choice["message"]
+        if not isinstance(message, dict):
+            raise TypeError("message no es un objeto")
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        return Attempt(
+            "error", error=f"respuesta inesperada: {type(exc).__name__}", error_body=body[:500]
+        )
+    content = message.get("content")
+    reasoning = str(message.get("reasoning_content") or "")
+    finish = choice.get("finish_reason")
+    text = content if isinstance(content, str) else ""
+    error = None
+    if finish == "length" and not text.strip() and reasoning.strip():
+        # Se gasto max_tokens pensando y no contesto: es configuracion, no calidad (§4.7 punto 4),
+        # la misma clase que ya da `fallos.py`. Repetirlo con mas tokens taparia el problema.
+        outcome = fallos.Clase.CONFIGURACION.value
+    elif finish == "length":
+        outcome = "truncado"
+    elif not isinstance(content, str):
+        outcome, error = "error", "content nulo"
+    else:
+        outcome = "ok"
+    return Attempt(
+        outcome,
+        text=text,
+        finish_reason=finish,
+        usage=data.get("usage") or {},
+        timings=data.get("timings") or {},
+        reasoning_chars=len(reasoning),
+        error=error,
+    )
+
+
+class ThermalTracker:
+    """Fria solo la primera peticion tras cargar el modelo (protocolo §5.3).
+
+    La senal de carga es el cambio de PID de `llama-server.exe` que ya sigue la sonda. Sin sonda
+    no hay senal y el estado queda en `None`, en vez de inventarse: el runner de julio marcaba fria
+    la primera corrida DE CADA CASO, e inflaba la banda de ruido con valores mal etiquetados.
+    """
+
+    def __init__(self) -> None:
+        self._last_pid: int | None = None
+        self._started = False
+
+    def classify(self, resources: dict[str, Any]) -> str | None:
+        pids = resources.get("pids") or []
+        if not resources.get("enabled") or not pids:
+            return None
+        if not self._started:
+            # Primera peticion de la invocacion: fria si el proceso aparecio durante ella.
+            cold = resources.get("pid_first") is None
+        else:
+            cold = any(pid != self._last_pid for pid in pids)
+        self._started = True
+        self._last_pid = resources.get("pid_last") or self._last_pid
+        return "cold" if cold else "hot"
+
+
+def _select_cases(corpus: Corpus, args: argparse.Namespace) -> list[CorpusCase]:
+    cases = corpus.cases
+    if args.case:
+        unknown = set(args.case) - {case.id for case in cases}
         if unknown:
             raise ValueError(f"casos desconocidos: {', '.join(sorted(unknown))}")
-        cases = [case for case in cases if case.id in selected]
+        cases = [case for case in cases if case.id in set(args.case)]
+    if args.role:
+        cases = [case for case in cases if case.role in set(args.role)]
+    return cases
+
+
+def run_benchmark(args: argparse.Namespace) -> int:
+    corpus_path = Path(args.cases)
+    corpus = load_corpus(corpus_path)
+    cases = _select_cases(corpus, args)
+    control_source: bytes | None = None
+    if args.input_control:
+        control = next((c for c in corpus.controls if c["id"] == args.input_control), None)
+        if control is None:
+            print(f"error: no hay control {args.input_control!r} en el corpus")
+            return 2
+        # Ya verificado por hash en load_corpus. Solo aplica a los casos que el control declara.
+        control_source = (corpus_path.parent / "fuentes" / control["source_file"]).read_bytes()
+        cases = [case for case in cases if case.id in control["para"]]
+    if not cases:
+        print("error: ningun caso seleccionado")
+        return 2
+    without_prompt = [
+        c.id for c in cases if not c.raw.get("system") or not c.raw.get("user_template")
+    ]
+    if without_prompt:
+        print(
+            f"error: casos sin prompt de una llamada ({', '.join(without_prompt)}): regenera el corpus"
+        )
+        return 2
 
     output = Path(args.output)
     if output.exists() and not args.append:
@@ -830,112 +1037,107 @@ def run_benchmark(args: argparse.Namespace) -> int:
         headers["Authorization"] = f"Bearer {api_key}"
 
     failures = 0
+    thermal = ThermalTracker()
     try:
         with (
             httpx2.Client(timeout=args.timeout, headers=headers) as client,
             output.open("a", encoding="utf-8") as sink,
         ):
             for case in cases:
-                content = materialize_case(case)
-                prompt_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+                source = control_source if control_source is not None else case.source
+                effort, effort_source = effective_reasoning(case, args.reasoning_effort)
                 for run in range(1, args.runs + 1):
-                    payload = {
-                        "model": args.model,
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "Cumple el formato pedido y no inventes datos.",
+                    max_tokens = int(case.raw["max_tokens"])
+                    attempt = 1
+                    while True:
+                        payload = build_payload(
+                            case,
+                            args.model,
+                            args.seed,
+                            effort,
+                            max_tokens=max_tokens,
+                            source=source,
+                        )
+                        started = time.perf_counter()
+                        with (
+                            MetricsSampler(metrics_url, args.sample_interval, headers) as sampler,
+                            ResourceSampler(probe, args.sample_interval) as resources,
+                        ):
+                            result = post_attempt(client, f"{base_url}/chat/completions", payload)
+                        elapsed_ms = round((time.perf_counter() - started) * 1000)
+                        resource_summary = resources.summary()
+                        scored = case.kind == "calidad" and result.outcome in ("ok", "truncado")
+                        record: dict[str, Any] = {
+                            "schema_version": 2,
+                            "ts": datetime.now(UTC).isoformat(),
+                            "label": args.label,
+                            "model": args.model,
+                            "variant": {
+                                "quantization": args.quantization,
+                                "context_size": args.context_size,
+                                "n_cpu_moe": args.n_cpu_moe,
+                                "llama_swap_version": args.llama_swap_version,
+                                "llama_server_version": args.llama_server_version,
+                                "reasoning_effort": effort,
+                                "reasoning_effort_source": effort_source,
+                                "probe_process": args.probe_process,
+                                "gpu_luid": probe.gpu_luid if probe else None,
                             },
-                            {
-                                "role": "user",
-                                "content": f"{case.instruction}\n\nCONTENIDO:\n{content}",
-                            },
-                        ],
-                        "temperature": 0.0,
-                        "seed": args.seed,
-                        "max_tokens": case.max_tokens,
-                    }
-                    if args.reasoning_effort:
-                        payload["chat_template_kwargs"] = {
-                            "reasoning_effort": args.reasoning_effort
+                            "case": case.id,
+                            "role": case.role,
+                            "kind": case.kind,
+                            "procedencia": case.procedencia,
+                            "input_variant": args.input_control,
+                            "run": run,
+                            "attempt": attempt,
+                            "max_tokens": max_tokens,
+                            "thermal_state": thermal.classify(resource_summary),
+                            "seed": args.seed,
+                            "input_bytes": len(source),
+                            "input_sha256": hashlib.sha256(source).hexdigest(),
+                            "latency_ms": elapsed_ms,
+                            "outcome": result.outcome,
+                            "ok": result.outcome == "ok",
+                            "error": result.error,
+                            "error_body": result.error_body,
+                            "finish_reason": result.finish_reason,
+                            "usage": result.usage,
+                            "timings": result.timings,
+                            "reasoning_chars": result.reasoning_chars,
+                            "metrics_peak": sampler.peaks(),
+                            "resources": resource_summary,
+                            # Anulada por la sonda: se repite. Distinto de rechazo y de mala calidad.
+                            "descartada": resource_summary["annul"] is not None,
+                            "descartada_motivo": resource_summary["annul"],
+                            "score": score_output(case.raw, result.text, result.finish_reason)
+                            if scored
+                            else None,
+                            "response_chars": len(result.text),
+                            "response_sha256": hashlib.sha256(
+                                result.text.encode("utf-8")
+                            ).hexdigest(),
                         }
-                    started = time.perf_counter()
-                    response_text = ""
-                    error: str | None = None
-                    usage: dict[str, Any] = {}
-                    timings: dict[str, Any] = {}
-                    finish_reason: str | None = None
-                    with (
-                        MetricsSampler(metrics_url, args.sample_interval, headers) as sampler,
-                        ResourceSampler(probe, args.sample_interval) as resources,
-                    ):
-                        try:
-                            response = client.post(f"{base_url}/chat/completions", json=payload)
-                            response.raise_for_status()
-                            data = response.json()
-                            choice = data["choices"][0]
-                            response_text = str(choice["message"]["content"])
-                            finish_reason = choice.get("finish_reason")
-                            usage = data.get("usage") or {}
-                            timings = data.get("timings") or {}
-                        except (
-                            httpx2.HTTPError,
-                            KeyError,
-                            IndexError,
-                            TypeError,
-                            ValueError,
-                        ) as exc:
-                            error = f"{type(exc).__name__}: {exc}"
-                            if isinstance(exc, httpx2.HTTPStatusError):
-                                detail = exc.response.text.strip().replace("\n", " ")[:500]
-                                if detail:
-                                    error = f"{error} · backend={detail}"
+                        if args.save_responses:
+                            record["response"] = result.text
+                        sink.write(json.dumps(record, ensure_ascii=False) + "\n")
+                        sink.flush()
+                        if result.outcome == "error":
                             failures += 1
-                    elapsed_ms = round((time.perf_counter() - started) * 1000)
-                    resource_summary = resources.summary()
-                    record: dict[str, Any] = {
-                        "schema_version": 1,
-                        "ts": datetime.now(UTC).isoformat(),
-                        "label": args.label,
-                        "model": args.model,
-                        "variant": {
-                            "quantization": args.quantization,
-                            "context_size": args.context_size,
-                            "n_cpu_moe": args.n_cpu_moe,
-                            "llama_swap_version": args.llama_swap_version,
-                            "llama_server_version": args.llama_server_version,
-                            "reasoning_effort": args.reasoning_effort,
-                            "probe_process": args.probe_process,
-                            "gpu_luid": probe.gpu_luid if probe else None,
-                        },
-                        "case": case.id,
-                        "run": run,
-                        "thermal_state": "cold" if run == 1 else "hot",
-                        "seed": args.seed,
-                        "input_chars": len(content),
-                        "input_sha256": prompt_hash,
-                        "latency_ms": elapsed_ms,
-                        "ok": error is None,
-                        "error": error,
-                        "finish_reason": finish_reason,
-                        "usage": usage,
-                        "timings": timings,
-                        "metrics_peak": sampler.peaks(),
-                        "resources": resource_summary,
-                        "score": score_response(case, response_text) if not error else None,
-                        "response_chars": len(response_text),
-                        "response_sha256": hashlib.sha256(
-                            response_text.encode("utf-8")
-                        ).hexdigest(),
-                    }
-                    if args.save_responses:
-                        record["response"] = response_text
-                    sink.write(json.dumps(record, ensure_ascii=False) + "\n")
-                    sink.flush()
-                    state = "OK" if error is None else "ERROR"
-                    annul = resource_summary["annul"]
-                    suffix = f" annul={annul}" if annul else ""
-                    print(f"[{state}] {case.id} run={run} latency={elapsed_ms}ms{suffix}")
+                        quality = (record["score"] or {}).get("quality")
+                        annul = resource_summary["annul"]
+                        print(
+                            f"[{result.outcome}] {case.id} run={run} attempt={attempt} "
+                            f"latency={elapsed_ms}ms quality={quality}"
+                            + (f" annul={annul}" if annul else "")
+                        )
+                        # Truncado se repite UNA vez con el doble de max_tokens (§4.7 punto 3), y
+                        # las dos corridas quedan en el JSONL: un descarte silencioso seria
+                        # indistinguible de un caso que no se corrio.
+                        if result.outcome == "truncado" and case.kind == "calidad" and attempt == 1:
+                            attempt += 1
+                            max_tokens *= 2
+                            continue
+                        break
     finally:
         if probe is not None:
             probe.close()
@@ -945,14 +1147,26 @@ def run_benchmark(args: argparse.Namespace) -> int:
 def add_parser(sub: argparse._SubParsersAction) -> None:
     parser = sub.add_parser(
         "benchmark",
-        help="Ejecuta un corpus sintetico contra un backend canary y escribe resultados JSONL.",
+        help="Ejecuta el corpus v2 de tareas reales contra un backend canary y escribe JSONL.",
     )
     parser.add_argument("--model", required=True, help="id expuesto por el backend canary")
     parser.add_argument(
         "--label", required=True, help="etiqueta de config, p. ej. gptoss-ncmoe12-c8k"
     )
-    parser.add_argument("--cases", required=True, help="archivo JSON del corpus versionado")
+    parser.add_argument(
+        "--cases",
+        required=True,
+        help="cases.json del corpus v2, p. ej. benchmarks/catalogo-2026-09/cases.json",
+    )
     parser.add_argument("--case", action="append", help="id de caso a ejecutar (repetible)")
+    parser.add_argument(
+        "--role", action="append", choices=_ROLES, help="solo los casos de este rol (repetible)"
+    )
+    parser.add_argument(
+        "--input-control",
+        default=None,
+        help="sustituye la entrada por este control del corpus (CP-3), solo en sus casos",
+    )
     parser.add_argument("--runs", type=int, default=3, help="corridas por caso (default 3)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--quantization", default=None)
@@ -962,9 +1176,9 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     parser.add_argument("--llama-server-version", default=None)
     parser.add_argument(
         "--reasoning-effort",
-        choices=("low", "medium", "high"),
+        choices=REASONING_EFFORTS,
         default=None,
-        help="chat_template_kwargs para modelos razonadores como gpt-oss",
+        help="razonamiento del modelo; off apaga el pensamiento. El valor del caso manda",
     )
     parser.add_argument(
         "--endpoint", default=None, help="BASE_URL /v1; default LOCAL_DELEGATE_BASE_URL"
@@ -988,6 +1202,6 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--save-responses",
         action="store_true",
-        help="guarda respuestas completas; el corpus incluido es sintetico",
+        help="guarda las respuestas completas; hacen falta para la revision a ciegas",
     )
     parser.set_defaults(func=run_benchmark)

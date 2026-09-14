@@ -557,10 +557,15 @@ class Captura:
     user_template: str | None
 
 
-def capturar(caso: Caso, ruta: Path, datos: bytes) -> Captura:
+def capturar(caso: Caso, ruta: Path, datos: bytes, *, sin_troceo: bool = False) -> Captura:
+    """Con `sin_troceo`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
+    prompt que necesita un sondeo de techo, que mide justo la mayor llamada unica que acepta el
+    modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
     texto = normalizado(datos) if caso.media_type == "texto" else ""
     with produccion_interceptada() as llamadas, tempfile.TemporaryDirectory() as tmp:
-        invocar(caso, ruta, texto, Path(tmp))
+        sin_limite = mock.patch.object(config, "max_chars_for", lambda _modelo: 2**31)
+        with sin_limite if sin_troceo else contextlib.nullcontext():
+            invocar(caso, ruta, texto, Path(tmp))
         roles = roles_de_produccion()
     modelos = {llamada.model for llamada in llamadas}
     role = roles.get(llamadas[0].model) if llamadas else None
@@ -650,7 +655,9 @@ def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
     return errores
 
 
-def comprobar(caso: Caso, captura: Captura, datos: bytes) -> list[str]:
+def comprobar(
+    caso: Caso, captura: Captura, datos: bytes, unica: Captura | None = None
+) -> list[str]:
     """Las reglas de §4.4, contra lo que hizo produccion. Cada una puede fallar."""
     errores: list[str] = []
     n = len(captura.llamadas)
@@ -668,8 +675,13 @@ def comprobar(caso: Caso, captura: Captura, datos: bytes) -> list[str]:
             errores.append(f"{caso.id}: no cabe en una llamada, produccion hace {n}")
         elif not captura.entrada_entera:
             errores.append(f"{caso.id}: el modelo no ve la entrada entera (truncada)")
-    elif caso.kind == "techo" and n == 1:
-        errores.append(f"{caso.id}: cabe en una llamada, asi que no sondea ningun techo")
+    elif caso.kind == "techo":
+        if n == 1:
+            errores.append(f"{caso.id}: cabe en una llamada, asi que no sondea ningun techo")
+        if unica is None or len(unica.llamadas) != 1 or not unica.entrada_entera:
+            errores.append(
+                f"{caso.id}: el sondeo no tiene un prompt de una llamada con la entrada entera"
+            )
     if caso.media_type == "texto":
         texto = normalizado(datos)
         esperados = terminos(caso, texto)
@@ -702,10 +714,16 @@ def _comprobar_tamano_del_id(case_id: str, chars: int) -> list[str]:
     )
 
 
-def entrada_de_corpus(caso: Caso, nombre: str, datos: bytes, captura: Captura) -> dict[str, Any]:
-    llamada = captura.llamadas[0]
+def entrada_de_corpus(
+    caso: Caso, nombre: str, datos: bytes, captura: Captura, unica: Captura | None = None
+) -> dict[str, Any]:
+    # El prompt: el de produccion en los casos de calidad; en un sondeo de techo, el de la ruta
+    # de una llamada. `production` sigue contando las llamadas que produccion hizo de verdad.
+    prompt = unica if unica is not None else captura
+    llamada = prompt.llamadas[0]
     texto = normalizado(datos) if caso.media_type == "texto" else ""
     calidad = caso.kind == "calidad"
+    con_prompt = calidad or unica is not None
     return {
         "id": caso.id,
         "tool": caso.tool,
@@ -718,12 +736,12 @@ def entrada_de_corpus(caso: Caso, nombre: str, datos: bytes, captura: Captura) -
         "source_sha256": hashlib.sha256(datos).hexdigest(),
         "source_bytes": len(datos),
         "source_chars": len(texto) if texto else None,
-        "production": {"model": llamada.model, "calls": len(captura.llamadas)},
-        "system": llamada.system if calidad else None,
-        "user_template": captura.user_template if calidad else None,
-        "max_tokens": llamada.max_tokens if calidad else None,
-        "temperature": llamada.temperature if calidad else None,
-        "response_format": llamada.response_format if calidad else None,
+        "production": {"model": captura.llamadas[0].model, "calls": len(captura.llamadas)},
+        "system": llamada.system if con_prompt else None,
+        "user_template": prompt.user_template if con_prompt else None,
+        "max_tokens": llamada.max_tokens if con_prompt else None,
+        "temperature": llamada.temperature if con_prompt else None,
+        "response_format": llamada.response_format if con_prompt else None,
         "reasoning_effort": None,
         "expected_terms": list(terminos(caso, texto)) if calidad else [],
         "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
@@ -804,24 +822,54 @@ def _escribir_json(ruta: Path, datos: Any) -> None:
     ruta.write_bytes((json.dumps(datos, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 
 
-def construir(raiz: Path, destino: Path, log_dir: Path | None) -> int:
+def _fuente_congelada(
+    fuentes: Path, nombre: str, generar: Fuente, raiz: Path, refrescar: bool
+) -> bytes:
+    """La copia congelada si ya existe; el fichero vivo solo si falta o se pide refrescar.
+
+    Congelar sirve para que el corpus no cambie cuando cambia el repo: `CHANGELOG.md` crece en
+    cada release y `lint-33k` sale de pasar ruff por `src/`. Regenerar para anadir un campo no
+    puede recongelar de paso, o el contenido medido cambia sin que nadie lo decida.
+    """
+    ruta = fuentes / nombre
+    if ruta.is_file() and not refrescar:
+        return ruta.read_bytes()
+    return generar(raiz)
+
+
+def construir(
+    raiz: Path, destino: Path, log_dir: Path | None, *, refrescar_fuentes: bool = False
+) -> int:
     fuentes = destino / "fuentes"
     fuentes.mkdir(parents=True, exist_ok=True)
     errores: list[str] = []
     casos: list[dict[str, Any]] = []
     esperados: set[str] = set()
     for caso in CASOS:
-        datos = caso.fuente(raiz)
+        datos = _fuente_congelada(
+            fuentes, f"{caso.id}.{caso.extension}", caso.fuente, raiz, refrescar_fuentes
+        )
         nombre = f"{caso.id}.{caso.extension}"
         esperados.add(nombre)
         (fuentes / nombre).write_bytes(datos)
         captura = capturar(caso, fuentes / nombre, datos)
-        errores.extend(comprobar(caso, captura, datos))
+        unica = (
+            capturar(caso, fuentes / nombre, datos, sin_troceo=True)
+            if caso.kind == "techo"
+            else None
+        )
+        errores.extend(comprobar(caso, captura, datos, unica))
         if captura.llamadas:
-            casos.append(entrada_de_corpus(caso, nombre, datos, captura))
+            casos.append(entrada_de_corpus(caso, nombre, datos, captura, unica))
     controles = []
     for control in CONTROLES:
-        datos = control["fuente"](raiz)
+        datos = _fuente_congelada(
+            fuentes,
+            f"{control['id']}.{control['extension']}",
+            control["fuente"],
+            raiz,
+            refrescar_fuentes,
+        )
         nombre = f"{control['id']}.{control['extension']}"
         esperados.add(nombre)
         (fuentes / nombre).write_bytes(datos)
@@ -913,8 +961,9 @@ def comprobar_versionado(destino: Path) -> list[str]:
         ruta = destino / "fuentes" / versionado.source_file
         datos = ruta.read_bytes()
         captura = capturar(caso, ruta, datos)
-        errores.extend(comprobar(caso, captura, datos))
-        actual = entrada_de_corpus(caso, versionado.source_file, datos, captura)
+        unica = capturar(caso, ruta, datos, sin_troceo=True) if caso.kind == "techo" else None
+        errores.extend(comprobar(caso, captura, datos, unica))
+        actual = entrada_de_corpus(caso, versionado.source_file, datos, captura, unica)
         for campo in _CAMPOS_VIGILADOS:
             if actual.get(campo) != versionado.raw.get(campo):
                 # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
@@ -935,6 +984,11 @@ def main(argv: list[str] | None = None) -> int:
         help="carpeta con usage-*.jsonl; si no existe, no se regeneran los conteos",
     )
     parser.add_argument("--comprobar", action="store_true", help="solo recaptura lo versionado")
+    parser.add_argument(
+        "--refrescar-fuentes",
+        action="store_true",
+        help="vuelve a congelar las fuentes desde los ficheros vivos (cambia el corpus medido)",
+    )
     args = parser.parse_args(argv)
     if args.comprobar:
         errores = comprobar_versionado(args.destino)
@@ -942,7 +996,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - {error}")
         print("ok" if not errores else f"{len(errores)} diferencias")
         return 1 if errores else 0
-    return construir(RAIZ, args.destino, args.log_dir)
+    return construir(RAIZ, args.destino, args.log_dir, refrescar_fuentes=args.refrescar_fuentes)
 
 
 if __name__ == "__main__":
