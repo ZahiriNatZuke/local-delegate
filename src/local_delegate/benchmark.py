@@ -421,7 +421,11 @@ def resolve_gpu_luid(run: Callable[..., Any] = subprocess.run) -> str | None:
 
 @functools.cache
 def _win32_api() -> SimpleNamespace:
-    from ctypes import wintypes
+    # Solo `import`: CodeQL marca mezclar `import ctypes` con `from ctypes import`, y ruff (PLR0402)
+    # marca el alias. El submodulo se importa aqui porque solo existe para Windows.
+    import ctypes.wintypes
+
+    wintypes = ctypes.wintypes
 
     class ProcessEntry32W(ctypes.Structure):
         _fields_ = [
@@ -607,6 +611,7 @@ class TypeperfStream:
         except subprocess.TimeoutExpired:
             self._process.kill()
         except OSError:
+            # typeperf ya habia salido por su cuenta: no queda proceso que parar.
             pass
         self._thread.join(timeout=2.0)
 

@@ -286,7 +286,7 @@ def test_runner_puntua_con_el_corpus_real_y_sin_sonda_no_inventa_estado_termico(
 
 
 def test_el_registro_guarda_contexto_y_load_mode_que_compara_el_analisis(tmp_path, monkeypatch):
-    _rc, (registro,) = _correr(
+    rc, (registro,) = _correr(
         tmp_path,
         monkeypatch,
         lambda _r: _respuesta("bug"),
@@ -297,6 +297,7 @@ def test_el_registro_guarda_contexto_y_load_mode_que_compara_el_analisis(tmp_pat
         "--load-mode",
         "none",
     )
+    assert rc == 0
     assert (registro["variant"]["context_size"], registro["variant"]["load_mode"]) == (
         16384,
         "none",
