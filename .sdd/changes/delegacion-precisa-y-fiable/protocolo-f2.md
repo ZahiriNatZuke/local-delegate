@@ -130,6 +130,30 @@ Ninguno es opcional. Dos veces en este proyecto lo roto era la prueba, no el cod
 
 **Falla CP-1 => no hay tanda.** Es el unico control con veto absoluto.
 
+#### Resultado de CP-1 (tarea 18, 2026-09-14): pasa, despues de un veto real
+
+- **El 122B no esta en disco.** Sustituto aprobado por el usuario: `qwen25-coder-14b` con KV f16 y
+  contexto grande. **El primer sustituto no discriminaba**: a `-c 131072` la KV pide 24 576 MiB de
+  una vez, y eso no cabe ni con desbordamiento (quedan ~7 GB de VRAM + ~15,5 GB compartidos). El que
+  vale es **`-c 65536`: ~12 GiB de KV + 8,4 GB de pesos ~= 21 GB**, que no cabe en VRAM y si cabe
+  con memoria compartida. Solo con ese la politica decide el resultado.
+- **b10909 trae `--fit on` y `-ngl auto` por defecto**, que reducen capas hasta que quepa: sin
+  `--fit off -ngl 99` CP-1 «pasaria» cargando a medias. Fijado en `llama-swap-pruebas.yaml`.
+- **Control del control: la misma carga contra los dos ejecutables.** Medido con
+  `\GPU Adapter Memory(luid_..._0x0000F722_phys_0)\Shared Usage` (reposo: ~140 MiB).
+
+| Hora UTC | Perfil en la NVIDIA App | b10909 | b9925 (produccion) |
+| --- | --- | --- | --- |
+| 19:37 | entrada «nueva» que quedo apuntando a produccion | **cargo en 6,6 s, 6 071 MiB compartidos** | OOM a los 4,1 s |
+| 19:42 | usuario borra la entrada y la anade de nuevo sobre b10909 | **OOM a los 3,9 s** (`cudaMalloc` 12 288 MiB) | cargo en 7,1 s, 6 124 MiB compartidos |
+
+- **La NVIDIA App muestra los programas solo por nombre de fichero.** Anadir un segundo
+  `llama-server.exe` no crea otra entrada: se queda la primera, y nada en el panel dice a que ruta
+  apunta. Solo la medida lo delata. Consecuencia: **produccion queda sin perfil mientras dure la
+  medicion**, y el rollback de la tarea 18 incluye volver a anadirlo y **medirlo** con esta misma
+  prueba (b9925 debe dar OOM).
+- De paso, la primera verificacion por efecto del perfil de produccion del 2026-09-12: **si actuaba**.
+
 ### CP-2 — El medidor mide el proceso
 
 Cargar `qwen35-2b` y `qwen25-coder-14b` y leer la sonda con cada uno. **Esperado: numeros
@@ -139,6 +163,34 @@ sonda mide otra cosa.
 En la misma pasada se averigua **que es `llamaswap_memory_used_bytes`** (el gauge que usa hoy
 `MetricsSampler`): si resulta ser memoria del sistema, se degrada a dato de contexto y no entra en
 ninguna decision. Es el candidato a repetir el error de julio.
+
+#### Resultado de CP-1 negativo y CP-2 (tarea 18, 2026-09-14): pasan
+
+Por el llama-swap de pruebas (puerto 9595), leyendo con `ProcessProbe` del repo y, en la misma
+muestra, la RAM del sistema, `nvidia-smi` y los gauges de llama-swap. «Reposo» es tras `GET /unload`.
+
+| Estado (UTC) | VRAM ded. proceso | VRAM compart. proceso | Privada proceso | Working set | RAM sistema | `nvidia-smi` | `llamaswap_memory_used` | `llamaswap_gpu_memory_used` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| reposo | — (`no_process`) | — | — | — | 13 038 | 852 | 13 035 | 852 |
+| `gemma3-4b` (19:43) | 2 918 | 98 | 3 554 | 2 834 | 15 950 | 3 769 | 15 948 | 3 769 |
+| `qwen35-2b` (19:44) | 3 092 | 96 | 4 269 | 3 331 | 16 471 | 3 943 | 16 454 | 3 943 |
+| `qwen25-coder-14b` (19:44) | 8 838 | 108 | 9 555 | 8 641 | 21 791 | 9 689 | 21 805 | 9 689 |
+| reposo | — (`no_process`) | — | — | — | 13 123 | 852 | 13 124 | 852 |
+
+(MiB.)
+
+- **CP-1 negativo pasa**: `gemma3-4b` carga (HTTP 200) sin desbordar (98 MiB compartidos, igual que
+  cualquier proceso en reposo). Con la mitad positiva, **CP-1 pasa**.
+- **CP-2 pasa**: la sonda da numeros distintos por modelo, del orden del GGUF, y vuelve a
+  `no_process` al descargar.
+- **`llamaswap_memory_used_bytes` es la RAM usada de TODO el sistema** (13 035 vs 13 038, 21 805 vs
+  21 791), y `llamaswap_gpu_memory_used_bytes` es `nvidia-smi` del adaptador entero. Los dos quedan
+  **degradados a dato de contexto**: ninguno entra en una decision. Confirma la pista de §3.4 (el
+  `nvidia-smi.exe` hijo de llama-swap).
+- **Hallazgo que CP-2b hereda: la RAM privada del proceso INCLUYE la VRAM reservada.** Con el 14B,
+  9 555 MiB privados para 8 838 de VRAM: en WDDM la memoria de GPU cuenta en el commit del proceso.
+  Asi que `PrivateUsage` no es «RAM del host» a secas, y lo que mide los expertos en RAM es la
+  **diferencia** entre configuraciones, o `privada - VRAM dedicada`.
 
 ### CP-2b — El contador ve los expertos que viven en RAM
 
@@ -151,6 +203,34 @@ Cargar un MoE con `-ncmoe 0` y luego con `-ncmoe 12`. **Esperado: la RAM del pro
 segundo caso en un orden parecido al tamano de los expertos descargados** (~0,38 GiB por capa,
 calibrado en julio). Si no sube, el `--load-mode` elegido no sirve para medir y se cambia — o se
 publican los dos contadores, el privado y el working set, diciendo cual es cual.
+
+#### Resultado de CP-2b (tarea 18, 2026-09-14): el contador ve los expertos solo con `none`, y en diferencia
+
+`gpt-oss-20b` MXFP4 (11,3 GB), mismo llama-swap de pruebas. MiB, lectura ~3 s tras cargar.
+
+| Variante (UTC) | VRAM ded. | VRAM compart. | Privada | Working set | Privada − VRAM ded. | WS − VRAM ded. | RAM sistema |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| reposo (19:45) | — | — | — | — | — | — | 13 133 |
+| `mmap`, `-ncmoe 0` (19:45) | 11 484 | 100 | 12 424 | 11 665 | 940 | 181 | 23 932 |
+| `mmap`, `-ncmoe 12` (19:46) | 6 742 | 100 | 7 671 | 10 830 | **929** | **4 088** | 23 135 |
+| `none`, `-ncmoe 0` (19:46) | 11 485 | 688 | 12 989 | 1 298 | 1 504 | — | 13 542 |
+| `none`, `-ncmoe 12` (19:46) | 6 752 | **5 542** | 13 103 | 6 153 | **6 351** | — | 18 359 |
+
+- `-ncmoe 12` saca **4 742 MiB** de la VRAM: ~395 MiB por capa, en linea con los ~0,38 GiB de julio.
+- **H4 confirmada, y con la forma exacta del riesgo**: con `mmap`, la privada no ve los expertos
+  (`privada − VRAM` se queda en ~930); solo el working set los recoge, y parcialmente (+3 907).
+- **Con `none` si los ve**: `privada − VRAM` sube **+4 847**, lo mismo que la RAM del sistema
+  (+4 817). `none` carga en ~4 s tras la primera lectura del GGUF: practicable.
+- **El esperado de este control estaba mal escrito**: «la RAM del proceso sube». La privada
+  **absoluta** apenas se mueve en ningun modo (+114 con `none`, −4 753 con `mmap`), porque en WDDM la
+  privada incluye la VRAM reservada (resultado de CP-2) y lo que sale de la VRAM compensa lo que entra
+  en RAM. La magnitud que decide es **`privada − VRAM dedicada`**. Leido al pie de la letra, el
+  control habria fallado en los dos modos, o pasado con el que no sirve si se hubiera mirado el WS.
+- **Trampa nueva**: con `none`, los expertos en RAM aparecen **tambien como VRAM compartida** del
+  proceso (5 542): son buffers anclados de CUDA. Con `none`, «VRAM compartida > 0» **no** significa
+  desbordamiento. Lo que impide el desbordamiento en la tanda es el perfil del driver (CP-1), no
+  este contador.
+- **Pendiente de decision (P-13, §10.1)**: `--load-mode` de la tanda y que magnitud se publica.
 
 ### CP-3 — El corpus discrimina
 
@@ -1180,7 +1260,28 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 
 | # | Inicio UTC | Fin UTC | Duracion estimada / real | Que se midio | llama.cpp | llama-swap | `--load-mode` | CP-1..CP-4 | Anuladas |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | *(sin ejecutar)* | — | — | — | — | — |
+| 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
+
+Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
+
+- **RAM libre 17,9 GB, no >= 24**: la maquina tiene **32 GB**, no ~62 como dice §1.1
+  (`Win32_PhysicalMemory`: 2 x 16 GB). El presupuesto de pesos de §1.1 esta mal y hay que rehacerlo.
+- **`nvidia-smi --query-compute-apps` nunca sale vacio en WDDM**: lista explorer, WebView2,
+  PowerToys... El punto 2 se reescribe como «ningun proceso de computo ajeno» (sin `llama-server`
+  ni otro cargador vivo).
+- **Produccion sin perfil del driver entre ~19:40 y 19:50 UTC** (con el daemon parado, sin uso). Al
+  cerrar se devolvio a `D:\Projects\llms\llamacpp\llama-server.exe` y **se midio**: b10909 carga
+  desbordando 6 056 MiB, y b9925 **no carga** (tres intentos, 19:50-19:52, sale a los 5-6 s con
+  `0xC0000005` al crear el contexto). Esta vez el log **no** trae la linea `cudaMalloc failed`
+  —el proceso muere antes de escribirla—, asi que la prueba es por contraste: a las 19:42, sin
+  perfil, **el mismo binario con los mismos argumentos cargo**, y lo unico que cambio despues fue el
+  perfil. Daemon arrancado a las 19:51; `local_status` lo da arriba, sin modelos cargados.
+- `%APPDATA%\llama.cpp\config.ini` **no existe** (comprobado al empezar y al cerrar): nada que
+  respaldar ni restaurar.
+- b10909 (`D:\Projects\llms\llamacpp-b10909`), llama-swap v255 (`D:\Projects\llms\llama-swap-v255`) y
+  `llama-swap-pruebas.yaml` **se quedan en disco** para la tarea 19; el perfil **no**: la tarea 19
+  tiene que moverlo a b10909 y volver a medirlo, porque la NVIDIA App solo admite una entrada por
+  nombre de fichero.
 
 ---
 
@@ -1214,6 +1315,14 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
   la maxima del rol; (c) dar mas terminos a los casos de uno o dos. La (c) toca el corpus y la (b) la
   regla: **las dos se deciden con la salida de CP-3 delante y antes de la tanda**, nunca despues de
   ver quien gana, que es como se ajusta una regla al resultado que se queria.
+- **P-13 — abierta (2026-09-14).** CP-2b (tarea 18) mostro que con `--load-mode mmap` ningun
+  contador privado ve los expertos en RAM, y que con `none` los ve solo como **`privada − VRAM
+  dedicada`**, porque en WDDM la privada incluye la VRAM reservada. Hay que decidir, antes de la
+  tanda: (a) `--load-mode` de la tanda — la evidencia apunta a `none`; (b) que magnitud se publica
+  como «RAM del proceso» — `privada − VRAM dedicada`, con privada y working set al lado; (c) si esa
+  resta la hace `analizar_benchmark.py` (codigo nuevo, con su test) o solo la hoja de resultados.
+  Y un aviso para §3.2: con `none` la **VRAM compartida** del proceso sube por los buffers anclados
+  de CUDA, asi que no sirve como senal de desbordamiento; esa senal es el OOM que da el perfil.
 
 ---
 
