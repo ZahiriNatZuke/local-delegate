@@ -60,7 +60,10 @@
         "pull request"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "reference_signal": "cobertura",
+      "reference_ok": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un pull request y el uso de pre-commit.",
+      "reference_bad": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un merge commit y el uso de pre-commit."
     },
     {
       "id": "extraer-toml-2k",
@@ -141,7 +144,10 @@
         "version",
         "requires-python",
         "license"
-      ]
+      ],
+      "reference_signal": "json_valido",
+      "reference_ok": "{\"name\": \"local-delegate-mcp\", \"version\": \"0.27.0\", \"requires-python\": \">=3.11\", \"license\": \"MIT\"}",
+      "reference_bad": "{'name': 'local-delegate-mcp', 'version': '0.27.0', 'requires-python': '>=3.11', 'license': 'MIT'}"
     },
     {
       "id": "clasificar-53",
@@ -367,7 +373,10 @@
         "version",
         "requires-python",
         "primer_paquete"
-      ]
+      ],
+      "reference_signal": "json_campos",
+      "reference_ok": "{\"version\": 1, \"requires-python\": \">=3.11\", \"primer_paquete\": \"annotated-doc\"}",
+      "reference_bad": "{\"version\": 1, \"requires-python\": \">=3.11\", \"paquete_primer\": \"annotated-doc\"}"
     },
     {
       "id": "lint-33k",
@@ -541,10 +550,14 @@
       "expected_terms": [
         "delegaciones",
         "backend",
-        "ahorro"
+        "ahorro",
+        "computo"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "reference_signal": "unicode",
+      "reference_ok": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cómputo.",
+      "reference_bad": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cálculo."
     },
     {
       "id": "leer-cifras-dashboard",
@@ -578,7 +591,10 @@
         "24/7",
         "23:12"
       ],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "reference_signal": "prohibido",
+      "reference_ok": "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
+      "reference_bad": "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01."
     },
     {
       "id": "techo-resumen-103k",

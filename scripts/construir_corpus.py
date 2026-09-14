@@ -33,8 +33,9 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -180,6 +181,8 @@ class Caso:
     # Los terminos esperados tienen que estar en la fuente, salvo donde la salida no la copia:
     # una traduccion, una etiqueta elegida o lo que se ve en una imagen.
     terminos_en_fuente: bool = True
+    # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en cinco casos.
+    referencia: tuple[str, str, str] | None = None
 
 
 _TOP_LEVEL_PY = r"^(?:def |class |async def |@)"
@@ -197,6 +200,17 @@ CASOS: tuple[Caso, ...] = (
         fichero("CONTRIBUTING.md"),
         extension="md",
         expected_terms=("pre-commit", "pull request"),
+        referencia=(
+            "cobertura",
+            (
+                "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las "
+                "reglas del proyecto, cómo abrir un pull request y el uso de pre-commit."
+            ),
+            (
+                "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las "
+                "reglas del proyecto, cómo abrir un merge commit y el uso de pre-commit."
+            ),
+        ),
     ),
     Caso(
         "extraer-toml-2k",
@@ -210,6 +224,17 @@ CASOS: tuple[Caso, ...] = (
         extension="toml",
         expected_json_fields=("name", "version", "requires-python", "license"),
         expected_terms=_valores_toml("name", "version", "requires-python", "license"),
+        referencia=(
+            "json_valido",
+            (
+                '{"name": "local-delegate-mcp", "version": "0.27.0", "requires-python": ">=3.11", '
+                '"license": "MIT"}'
+            ),
+            (
+                "{'name': 'local-delegate-mcp', 'version': '0.27.0', 'requires-python': '>=3.11', "
+                "'license': 'MIT'}"
+            ),
+        ),
     ),
     Caso(
         "clasificar-53",
@@ -289,6 +314,11 @@ CASOS: tuple[Caso, ...] = (
             _valores_toml("requires-python")(texto)
             + _primeros(r'^\[\[package\]\]\nname = "([^"]+)"', n=1)(texto)
         ),
+        referencia=(
+            "json_campos",
+            '{"version": 1, "requires-python": ">=3.11", "primer_paquete": "annotated-doc"}',
+            '{"version": 1, "requires-python": ">=3.11", "paquete_primer": "annotated-doc"}',
+        ),
     ),
     Caso(
         "lint-33k",
@@ -360,7 +390,14 @@ CASOS: tuple[Caso, ...] = (
         fichero("docs/assets/dashboard.png"),
         extension="png",
         media_type="imagen",
-        expected_terms=("delegaciones", "backend", "ahorro"),
+        # `computo` va SIN acento a proposito, y el panel dice «cómputo»: es el termino que solo
+        # casa si el puntuador normaliza. Sin el, la pareja de Unicode de CP-4 no tendria donde caer.
+        expected_terms=("delegaciones", "backend", "ahorro", "computo"),
+        referencia=(
+            "unicode",
+            "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cómputo.",
+            "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cálculo.",
+        ),
         terminos_en_fuente=False,
     ),
     Caso(
@@ -383,6 +420,11 @@ CASOS: tuple[Caso, ...] = (
             )
         },
         expected_terms=("0.27.0", "29/8", "05:01"),
+        referencia=(
+            "prohibido",
+            "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
+            "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01.",
+        ),
         forbidden_terms=("0.24.0", "24/7", "23:12"),
         terminos_en_fuente=False,
     ),
@@ -540,6 +582,74 @@ def terminos(caso: Caso, texto: str) -> tuple[str, ...]:
     return caso.expected_terms(texto) if callable(caso.expected_terms) else caso.expected_terms
 
 
+# --- Parejas de referencia de CP-4 (tarea 15) ---------------------------------------------------
+
+# Las senales en que TIENE que diferir cada pareja, y ninguna mas. Si difiere en otra, CP-4 no podra
+# decir por que separo el puntuador. `cobertura_literal` es la cobertura sin normalizar: la pareja de
+# Unicode es la unica donde NO cambia, porque su buena solo acierta quitando acentos, y un puntuador
+# literal puntuaria igual de mal las dos. `json_campos` acompana a `json_valido` por construccion:
+# sin JSON no hay campos que mirar.
+DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
+    "cobertura": {"cobertura", "cobertura_literal"},
+    "prohibido": {"prohibido"},
+    "json_valido": {"json_valido", "json_campos"},
+    "json_campos": {"json_campos"},
+    "unicode": {"cobertura"},
+}
+
+
+def plano(texto: str) -> str:
+    """NFKD, sin marcas combinantes y casefold.
+
+    NFKD solo NO basta: descompone la «ó» en «o» mas un acento suelto, y el acento sigue ahi.
+    """
+    descompuesto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in descompuesto if not unicodedata.combining(c)).casefold()
+
+
+def senales(
+    texto: str, esperados: Sequence[str], prohibidos: Sequence[str], campos: Sequence[str]
+) -> dict[str, bool | None]:
+    """Oraculo de CP-4. Independiente del puntuador de la tarea 16 a proposito: es contra lo que
+    ese puntuador se valida, y si compartieran codigo compartirian tambien el error."""
+    try:
+        objeto = json.loads(texto.strip())
+    except ValueError:
+        objeto = None
+    valido = isinstance(objeto, dict) if campos else None
+    return {
+        "cobertura": all(plano(t) in plano(texto) for t in esperados),
+        "cobertura_literal": all(t.casefold() in texto.casefold() for t in esperados),
+        "prohibido": any(plano(t) in plano(texto) for t in prohibidos),
+        "json_valido": valido,
+        "json_campos": (set(campos) <= set(objeto)) if valido else None,
+    }
+
+
+def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
+    if caso.referencia is None:
+        return []
+    senal, buena, mala = caso.referencia
+    if senal not in DIFERENCIAS_ESPERADAS:
+        return [f"{caso.id}: senal de referencia desconocida {senal!r}"]
+    errores: list[str] = []
+    if len(buena) != len(mala):
+        errores.append(
+            f"{caso.id}: la pareja no tiene la misma longitud ({len(buena)} y {len(mala)})"
+        )
+    ok = senales(buena, esperados, caso.forbidden_terms, caso.expected_json_fields)
+    malo = senales(mala, esperados, caso.forbidden_terms, caso.expected_json_fields)
+    if not ok["cobertura"] or ok["prohibido"] or False in (ok["json_valido"], ok["json_campos"]):
+        errores.append(f"{caso.id}: la respuesta buena no es buena: {ok}")
+    difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
+    if difieren != DIFERENCIAS_ESPERADAS[senal]:
+        errores.append(
+            f"{caso.id}: la pareja de {senal} difiere en {sorted(difieren)}, "
+            f"no en {sorted(DIFERENCIAS_ESPERADAS[senal])}"
+        )
+    return errores
+
+
 def comprobar(caso: Caso, captura: Captura, datos: bytes) -> list[str]:
     """Las reglas de §4.4, contra lo que hizo produccion. Cada una puede fallar."""
     errores: list[str] = []
@@ -570,6 +680,9 @@ def comprobar(caso: Caso, captura: Captura, datos: bytes) -> list[str]:
                 if termino.casefold() not in texto.casefold():
                     errores.append(f"{caso.id}: el termino {termino!r} no esta en la fuente")
         errores.extend(_comprobar_tamano_del_id(caso.id, len(texto)))
+    if caso.referencia is not None:
+        fuente = normalizado(datos) if caso.media_type == "texto" else ""
+        errores.extend(comprobar_referencia(caso, terminos(caso, fuente)))
     return errores
 
 
@@ -615,6 +728,15 @@ def entrada_de_corpus(caso: Caso, nombre: str, datos: bytes, captura: Captura) -
         "expected_terms": list(terminos(caso, texto)) if calidad else [],
         "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
         "expected_json_fields": list(caso.expected_json_fields) if calidad else [],
+        **(
+            {
+                "reference_signal": caso.referencia[0],
+                "reference_ok": caso.referencia[1],
+                "reference_bad": caso.referencia[2],
+            }
+            if caso.referencia
+            else {}
+        ),
     }
 
 
@@ -761,6 +883,21 @@ def configuracion_de_produccion() -> dict[str, Any]:
         }
 
 
+_CAMPOS_VIGILADOS = (
+    "production",
+    "system",
+    "user_template",
+    "max_tokens",
+    "response_format",
+    "expected_terms",
+    "forbidden_terms",
+    "expected_json_fields",
+    "reference_signal",
+    "reference_ok",
+    "reference_bad",
+)
+
+
 def comprobar_versionado(destino: Path) -> list[str]:
     """Recaptura cada caso versionado contra el codigo de hoy. Si produccion cambio de rol, de
     troceado o de prompt, el corpus ya no mide lo que dice y hay que regenerarlo."""
@@ -778,9 +915,11 @@ def comprobar_versionado(destino: Path) -> list[str]:
         captura = capturar(caso, ruta, datos)
         errores.extend(comprobar(caso, captura, datos))
         actual = entrada_de_corpus(caso, versionado.source_file, datos, captura)
-        for campo in ("production", "system", "user_template", "max_tokens", "response_format"):
-            if actual[campo] != versionado.raw[campo]:
-                errores.append(f"{versionado.id}: {campo} ya no coincide con produccion")
+        for campo in _CAMPOS_VIGILADOS:
+            if actual.get(campo) != versionado.raw.get(campo):
+                # Tambien lo que no sale de produccion: el corpus no se edita a mano, y una
+                # referencia retocada en el JSON dejaria de ser la que el constructor comprobo.
+                errores.append(f"{versionado.id}: {campo} ya no coincide con el constructor")
     if corpus.production_config != configuracion_de_produccion():
         errores.append("production_config ya no coincide con config.py")
     return errores

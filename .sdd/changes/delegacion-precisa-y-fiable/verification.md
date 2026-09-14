@@ -493,3 +493,51 @@ Fuentes con `-text` en `.gitattributes`, comprobado con `git check-attr`. Y un f
 que salio aqui: `scripts/sonda_recursos.py` se commiteo **sin el bit de ejecucion** y
 `test_un_script_con_shebang_esta_marcado_ejecutable_en_git` solo lo ve una vez el fichero esta en
 git —la segunda mitad de la leccion que ese test documenta—. Corregido con `git add --chmod=+x`.
+
+## F2: tarea 15, las parejas de referencia de CP-4 (2026-09-14)
+
+Cinco parejas `reference_ok` / `reference_bad`, una por senal que se puede ejercitar con texto. No
+se escriben en `cases.json`: las define y las emite `scripts/construir_corpus.py`, que no escribe
+el corpus si una pareja no cumple. Detalle y razones en `protocolo-f2.md`, CP-4, «Resultado de la
+tarea 15».
+
+```text
+resumen-md-2k         cobertura    154 154
+extraer-toml-2k       json_valido   98  98
+extraer-uvlock-48k    json_campos   78  78
+describir-dashboard   unicode       86  86
+leer-cifras-dashboard prohibido     62  62
+```
+
+### Que cada pareja difiera solo en su senal lo decide un oraculo, no el puntuador
+
+`senales()` calcula por su cuenta cobertura (normalizada y literal), termino prohibido, JSON valido
+y campos. Es independiente del puntuador de la tarea 16 **a proposito**: CP-4 valida ese puntuador,
+y si compartieran codigo compartirian el error. Una pareja pasa si tiene la misma longitud, la buena
+es buena en todas las senales, y el conjunto de senales en que difieren es exactamente el esperado.
+
+### Lo que se probo al reves
+
+Seis mutantes, todos muertos por su assert: sin comprobar longitud; aceptar una diferencia de mas;
+normalizar sin quitar acentos (cae la pareja de Unicode versionada, porque la buena deja de cubrir
+`computo`); aceptar una buena que no es buena; referencias fuera de los campos vigilados; y una
+referencia retocada a mano en el JSON.
+
+**El de los campos vigilados sobrevivio a la primera.** Quitar `reference_ok` y `reference_bad` de
+lo que `--comprobar` compara contra el constructor no rompia nada, porque con el JSON intacto no hay
+diferencia que ver. El mutante del dato retocado si moria, pero lo cazaba el oraculo, no la
+vigilancia. Test nuevo: retoca una referencia en una copia **sin romper la pareja** («Guía» por
+«Guia», misma longitud, sigue difiriendo solo en cobertura), de modo que solo la vigilancia puede
+verlo.
+
+### Dos precisiones que heredan la tarea 16 y CP-4
+
+- La normalizacion de §4.7 es **NFKD, quitar marcas combinantes y `casefold`**. NFKD solo deja el
+  acento como marca suelta; hay un test que lo demuestra.
+- En la pareja de Unicode la cobertura **literal** no cambia: las dos respuestas fallan sin
+  normalizar. Por eso `describir-dashboard` gana el termino `computo`, sin acento, frente a un panel
+  que dice «cómputo».
+
+### Suite
+
+`uv run pytest -q`: **1007 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.

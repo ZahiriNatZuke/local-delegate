@@ -227,6 +227,37 @@ Pasa si el puntuador separa cada pareja **y lo hace por la senal correcta**: si 
 `json_valid` cuando el defecto plantado era un hecho falso, acierta por la razon equivocada y no
 vale. Para poder comprobarlo, el JSONL guarda **que componente puso la calidad a 0**.
 
+#### Resultado de la tarea 15 (2026-09-14): las cinco parejas
+
+«Formato JSON» son **dos** senales separables —que el texto sea JSON y que traiga los campos—, y
+separarlas es lo que hace que cinco casos cubran cinco senales en vez de cuatro con una repetida:
+
+| Senal | Caso | Defecto plantado en la respuesta mala | La pareja difiere en |
+| --- | --- | --- | --- |
+| cobertura | `resumen-md-2k` | «pull request» cambiado por «merge commit» | cobertura (y la literal) |
+| termino prohibido | `leer-cifras-dashboard` | anade la version vieja, 0.24.0 | prohibido |
+| JSON valido | `extraer-toml-2k` | comillas simples: los mismos datos, JSON invalido | JSON valido (y campos, que sin JSON no existen) |
+| campos JSON | `extraer-uvlock-48k` | la clave `primer_paquete` renombrada, mismo valor | campos |
+| Unicode | `describir-dashboard` | «cómputo» cambiado por «cálculo» | cobertura normalizada, **no** la literal |
+
+Cada pareja tiene **exactamente la misma longitud**. Las dos de imagen llevan respuestas de texto:
+CP-4 valida el puntuador, que solo ve texto, no el modelo de vision.
+
+Que cada pareja difiera **solo** en su senal no lo decide el puntuador de la tarea 16 —que es lo
+que CP-4 va a validar—, sino un oraculo aparte en el constructor (`senales`). Si una pareja difiere
+en una senal de mas, o la buena no es buena, o las longitudes no cuadran, **el corpus no se
+escribe**; y `tests/test_corpus.py` repite la comprobacion sobre el JSON versionado, asi que una
+referencia retocada a mano tambien cae.
+
+Dos precisiones para la tarea 16, que esta seccion dejaba implicitas:
+
+- **La normalizacion de §4.7 es NFKD, quitar las marcas combinantes, y `casefold`.** NFKD solo no
+  basta: descompone la «ó» en «o» mas un acento suelto, y «cómputo» sigue sin casar con «computo».
+- **La pareja de Unicode es la unica donde la cobertura literal NO cambia**: la buena solo acierta
+  si se normaliza. Un puntuador literal puntuaria las dos igual de mal, y CP-4 lo cazaria. Para
+  eso `describir-dashboard` gana el termino esperado `computo`, escrito sin acento a proposito
+  frente a un panel que dice «cómputo».
+
 ---
 
 ## 3. Que se mide, y con que contador

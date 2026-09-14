@@ -245,3 +245,87 @@ def test_contar_log_descarta_rutas_de_fuera_del_repo_y_eventos_no_locales(tmp_pa
     assert conteos["fuentes_fuera_del_repo"] == 1
     volcado = json.dumps(conteos)
     assert "nota-personal" not in volcado and "vault" not in volcado
+
+
+# --- Parejas de referencia de CP-4 (tarea 15) -----------------------------------------------------
+
+
+def _parejas():
+    corpus = benchmark.load_corpus(DESTINO / "cases.json")
+    return [c for c in corpus.cases if "reference_signal" in c.raw]
+
+
+def test_las_senales_de_texto_tienen_cada_una_su_pareja():
+    parejas = _parejas()
+    assert sorted(c.raw["reference_signal"] for c in parejas) == sorted(
+        construir.DIFERENCIAS_ESPERADAS
+    )
+    assert all(c.kind == "calidad" for c in parejas)
+
+
+def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():
+    # Lee el JSON versionado, no el constructor: una referencia retocada a mano tambien cae aqui.
+    for caso in _parejas():
+        raw = caso.raw
+        argumentos = (raw["expected_terms"], raw["forbidden_terms"], raw["expected_json_fields"])
+        ok = construir.senales(raw["reference_ok"], *argumentos)
+        malo = construir.senales(raw["reference_bad"], *argumentos)
+        difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
+        assert difieren == construir.DIFERENCIAS_ESPERADAS[raw["reference_signal"]], caso.id
+        assert len(raw["reference_ok"]) == len(raw["reference_bad"]), caso.id
+        assert ok["cobertura"] and not ok["prohibido"], caso.id
+
+
+def test_pareja_que_difiere_en_dos_senales_se_rechaza():
+    # La mala mete el termino prohibido Y pierde el esperado: separaria por cobertura, y CP-4 no
+    # sabria si el puntuador acerto por la senal que se queria ejercitar.
+    caso = _caso(
+        expected_terms=("0.27.0",),
+        forbidden_terms=("0.24.0",),
+        referencia=("prohibido", "Version 0.27.0 hoy", "Version 0.24.0 hoy"),
+    )
+    assert construir.comprobar_referencia(caso, ("0.27.0",)) == [
+        (
+            "prueba: la pareja de prohibido difiere en ['cobertura', 'cobertura_literal', "
+            "'prohibido'], no en ['prohibido']"
+        )
+    ]
+
+
+def test_pareja_de_distinta_longitud_se_rechaza():
+    caso = _caso(expected_terms=("bug",), referencia=("cobertura", "bug", "nada"))
+    assert construir.comprobar_referencia(caso, ("bug",)) == [
+        "prueba: la pareja no tiene la misma longitud (3 y 4)"
+    ]
+
+
+def test_respuesta_buena_que_no_es_buena_se_rechaza():
+    caso = _caso(expected_terms=("bug",), referencia=("cobertura", "nada", "bug."))
+    errores = construir.comprobar_referencia(caso, ("bug",))
+    assert len(errores) == 1 and "la respuesta buena no es buena" in errores[0]
+
+
+def test_nfkd_solo_no_quita_el_acento_y_la_normalizacion_si():
+    import unicodedata
+
+    assert "computo" not in unicodedata.normalize("NFKD", "cómputo").casefold()
+    assert construir.plano("CÓMPUTO") == "computo"
+
+
+def test_referencia_retocada_que_sigue_siendo_valida_la_caza_la_vigilancia(tmp_path):
+    # El retoque deja una pareja VALIDA —misma longitud, difiere solo en cobertura—, asi que el
+    # oraculo no lo ve: solo la comparacion contra el constructor puede. Un mutante que quitaba las
+    # referencias de los campos vigilados sobrevivia a todo lo demas.
+    copia = tmp_path / "corpus"
+    shutil.copytree(DESTINO, copia)
+    ruta = copia / "cases.json"
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    (caso,) = [c for c in datos["cases"] if c["id"] == "resumen-md-2k"]
+    caso["reference_ok"] = caso["reference_ok"].replace("Guía", "Guia", 1)
+    ruta.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+    raw = caso
+    ok = construir.senales(raw["reference_ok"], raw["expected_terms"], raw["forbidden_terms"], [])
+    assert ok["cobertura"], "el retoque tiene que dejar la pareja valida"
+    assert construir.comprobar_versionado(copia) == [
+        "resumen-md-2k: reference_ok ya no coincide con el constructor"
+    ]
