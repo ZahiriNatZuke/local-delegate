@@ -270,7 +270,12 @@ def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():
     # Lee el JSON versionado, no el constructor: una referencia retocada a mano tambien cae aqui.
     for caso in _parejas():
         raw = caso.raw
-        argumentos = (raw["expected_terms"], raw["forbidden_terms"], raw["expected_json_fields"])
+        argumentos = (
+            raw["expected_terms"],
+            raw["forbidden_terms"],
+            raw["expected_json_fields"],
+            raw["execution_checks"],
+        )
         ok = construir.senales(raw["reference_ok"], *argumentos)
         malo = construir.senales(raw["reference_bad"], *argumentos)
         difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
@@ -355,3 +360,47 @@ def test_reconstruir_no_recongela_una_fuente_desde_el_fichero_vivo(tmp_path):
         c for c in benchmark.load_corpus(copia / "cases.json").cases if c.id == "resumen-md-2k"
     ]
     assert caso.raw["source_sha256"] == hashlib.sha256(marcada).hexdigest()
+
+
+# --- Terminos derivados tras CP-3 (tarea 19) ------------------------------------------------------
+
+
+def test_terminos_del_commit_salen_solo_de_su_primera_entrada_fixed():
+    diff = (
+        " ## [Unreleased]\n"
+        "+## [1.0.0]\n"
+        "+\n"
+        "+### Fixed\n"
+        "+- Arreglo de `inflight`: `_privado` y `python -m x` no entran; `LOG_DIR/estado.json`,\n"
+        "+  `/api/estado` y `snap()` si.\n"
+        "+- Segunda entrada con `no_entra`.\n"
+        "+### Added\n"
+        "+- `tampoco`\n"
+        "diff --git a/x b/x\n"
+    )
+    assert construir._identificadores_del_primer_arreglo(diff) == (
+        "inflight",
+        "estado.json",
+        "/api/estado",
+        "snap",
+    )
+    assert construir._identificadores_del_primer_arreglo("+### Added\n+- `x`\n") == ()
+
+
+def test_terminos_del_changelog_salen_solo_de_los_titulares_en_negrita():
+    texto = (
+        "## [1.0.0]\n\n### Changed\n"
+        "- **Retirados `viejo.py` y `f()`.** El cuerpo nombra `no_entra`.\n"
+        "- Entrada sin titular en negrita: `tampoco`.\n"
+    )
+    assert construir._identificadores_de_los_titulares(texto) == ("viejo.py", "f")
+
+
+def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion():
+    fuente = (
+        '"""m.py\n\n  GET /           -> html\n  GET /api/a     -> x\n  GET /api/b     -> y\n'
+        'Toca `~/.x/settings.json`, `dir/` y `--dry-run`.\n"""\n\n'
+        'def f():\n    """GET /api/fuera y `otro.md`."""\n'
+    )
+    assert construir._rutas_del_docstring(fuente) == ("/api/a", "/api/b")
+    assert construir._ficheros_y_flags_del_docstring(fuente) == ("settings.json", "--dry-run")

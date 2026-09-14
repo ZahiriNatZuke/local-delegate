@@ -15,9 +15,11 @@ import functools
 import hashlib
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unicodedata
@@ -167,7 +169,77 @@ def _json_object(text: str) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-def score_output(case: dict[str, Any], text: str, finish_reason: str | None) -> dict[str, Any]:
+# --- Ejecucion del codigo generado (protocolo-f2.md §4.7 punto 6) ---------------------------------
+
+EXEC_TIMEOUT_S = 10.0
+# Una comprobacion es {"expr", "expected"} o {"expr", "raises"}. `expected` exige tambien el TIPO:
+# la especificacion pide un int, y 45.0 no lo es. Lo escribe el arnes y no el codigo del modelo, asi
+# que un `print` del codigo generado no puede fingir un resultado: se lee solo la ULTIMA linea.
+_ARNES = r"""
+import json
+comprobaciones = json.load(open("comprobaciones.json", encoding="utf-8"))
+espacio = {"__name__": "generado"}
+try:
+    exec(compile(open("generado.py", encoding="utf-8").read(), "generado.py", "exec"), espacio)
+    cargado = True
+except BaseException:
+    cargado = False
+resultados = []
+for c in comprobaciones:
+    ok = False
+    if cargado:
+        try:
+            valor = eval(c["expr"], espacio)
+            ok = "raises" not in c and type(valor) is type(c["expected"]) and valor == c["expected"]
+        except BaseException as exc:
+            ok = type(exc).__name__ == c.get("raises")
+    resultados.append(ok)
+print("\n" + json.dumps(resultados))
+"""
+
+
+def run_execution_checks(code: str, checks: Sequence[dict[str, Any]]) -> list[bool]:
+    """Ejecuta el codigo que produccion escribiria a disco y devuelve que comprobaciones pasan.
+
+    Es codigo escrito por un modelo, asi que corre aparte y acotado: otro proceso con `-I` (sin
+    variables PYTHON* ni site de usuario), una carpeta temporal como directorio, entorno vacio (ni
+    una credencial del operador), sin stdin y con tiempo maximo. No es un sandbox del sistema: el
+    operador lo acepta al correr el caso (decision del usuario, tarea 19).
+    """
+    from .server import _strip_fences  # lo mismo que `local_boilerplate` deja en el fichero
+
+    fallidas = [False] * len(checks)
+    env = {"SYSTEMROOT": os.environ["SYSTEMROOT"]} if "SYSTEMROOT" in os.environ else {}
+    with tempfile.TemporaryDirectory(prefix="ld-exec-") as carpeta:
+        Path(carpeta, "generado.py").write_text(_strip_fences(code), encoding="utf-8")
+        Path(carpeta, "comprobaciones.json").write_text(json.dumps(list(checks)), encoding="utf-8")
+        try:
+            proceso = subprocess.run(
+                [sys.executable, "-I", "-c", _ARNES],
+                cwd=carpeta,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=EXEC_TIMEOUT_S,
+            )
+        except subprocess.TimeoutExpired:
+            return fallidas
+    lineas = proceso.stdout.strip().splitlines()
+    try:
+        resultados = json.loads(lineas[-1]) if lineas else None
+    except json.JSONDecodeError:
+        return fallidas
+    if not isinstance(resultados, list) or len(resultados) != len(checks):
+        return fallidas
+    return [r is True for r in resultados]
+
+
+def score_output(
+    case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False
+) -> dict[str, Any]:
     """Puntua una respuesta de calidad y dice QUE componente la hundio (`zero_by`).
 
     Sin `zero_by`, CP-4 no podria saber si el puntuador acerto por la senal correcta: si la mala
@@ -186,6 +258,8 @@ def score_output(case: dict[str, Any], text: str, finish_reason: str | None) -> 
         "forbidden_hits": hits,
         "json_valid": None,
         "json_fields_ratio": None,
+        "execution_ratio": None,
+        "execution_passed": None,
     }
     if fields:
         obj = _json_object(text)
@@ -194,9 +268,19 @@ def score_output(case: dict[str, Any], text: str, finish_reason: str | None) -> 
             present = sum(1 for name in fields if name in obj)
             components["json_fields_ratio"] = round(present / len(fields), 4)
     if finish_reason == "length":
-        # Truncado no es mala calidad: la respuesta no termino. El runner la repite con mas
+        if repeated:
+            # Ya se repitio con el doble de max_tokens y sigue sin terminar: no es un limite
+            # nuestro, es el modelo. CP-3 (tarea 19) vio un bucle de «D102 (Docstrings)» salir
+            # «sin puntuacion» y caer del agregado, que premia justo al que peor lo hizo.
+            return {**components, "quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+        # La primera vez no es mala calidad: la respuesta no termino. El runner la repite con mas
         # max_tokens (§4.7 punto 3), y puntuarla aqui hundiria a un modelo por un limite nuestro.
         return {**components, "quality": None, "zero_by": None, "truncated": True}
+    checks = list(case.get("execution_checks") or [])
+    if checks:
+        passed = run_execution_checks(text, checks)
+        components["execution_passed"] = passed
+        components["execution_ratio"] = round(sum(passed) / len(passed), 4)
     quality: float | None
     zero_by: str | None = None
     if hits:
@@ -205,7 +289,11 @@ def score_output(case: dict[str, Any], text: str, finish_reason: str | None) -> 
     elif fields and not components["json_valid"]:
         quality, zero_by = 0.0, "json_valid"
     else:
-        parts = {"coverage": components["coverage"], "json_fields": components["json_fields_ratio"]}
+        parts = {
+            "coverage": components["coverage"],
+            "json_fields": components["json_fields_ratio"],
+            "execution": components["execution_ratio"],
+        }
         present_parts = {name: value for name, value in parts.items() if value is not None}
         quality = min(present_parts.values()) if present_parts else None
         if quality == 0:
@@ -987,6 +1075,9 @@ class ThermalTracker:
         return "cold" if cold else "hot"
 
 
+MAX_ANNUL_RETRIES = 2
+
+
 def _select_cases(corpus: Corpus, args: argparse.Namespace) -> list[CorpusCase]:
     cases = corpus.cases
     if args.case:
@@ -1054,6 +1145,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                 for run in range(1, args.runs + 1):
                     max_tokens = int(case.raw["max_tokens"])
                     attempt = 1
+                    doubled = False
+                    annul_retries = 0
+                    retry_reason: str | None = None
                     while True:
                         payload = build_payload(
                             case,
@@ -1098,6 +1192,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "input_variant": args.input_control,
                             "run": run,
                             "attempt": attempt,
+                            # Por que existe este intento: None el primero, y si no «anulada»
+                            # o «truncado». El analisis juzga la corrida por su ultimo intento.
+                            "retry_reason": retry_reason,
                             "max_tokens": max_tokens,
                             "thermal_state": thermal.classify(resource_summary),
                             "seed": args.seed,
@@ -1114,10 +1211,13 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "reasoning_chars": result.reasoning_chars,
                             "metrics_peak": sampler.peaks(),
                             "resources": resource_summary,
-                            # Anulada por la sonda: se repite. Distinto de rechazo y de mala calidad.
+                            # Anulada por la sonda: se repite hasta MAX_ANNUL_RETRIES veces.
+                            # Distinto de rechazo y de mala calidad.
                             "descartada": resource_summary["annul"] is not None,
                             "descartada_motivo": resource_summary["annul"],
-                            "score": score_output(case.raw, result.text, result.finish_reason)
+                            "score": score_output(
+                                case.raw, result.text, result.finish_reason, repeated=doubled
+                            )
                             if scored
                             else None,
                             "response_chars": len(result.text),
@@ -1138,12 +1238,23 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             f"latency={elapsed_ms}ms quality={quality}"
                             + (f" annul={annul}" if annul else "")
                         )
-                        # Truncado se repite UNA vez con el doble de max_tokens (§4.7 punto 3), y
-                        # las dos corridas quedan en el JSONL: un descarte silencioso seria
+                        # Todos los intentos quedan en el JSONL: un descarte silencioso seria
                         # indistinguible de un caso que no se corrio.
-                        if result.outcome == "truncado" and case.kind == "calidad" and attempt == 1:
+                        # Anulada: la medida no vale, asi que se repite con los mismos tokens. El
+                        # comentario de antes decia que se repetia y no lo hacia: CP-3 dejo la
+                        # primera corrida de cada modelo con 2 validas en vez de 3.
+                        if annul is not None and annul_retries < MAX_ANNUL_RETRIES:
+                            annul_retries += 1
+                            attempt += 1
+                            retry_reason = "anulada"
+                            continue
+                        # Truncado se repite UNA vez con el doble de max_tokens (§4.7 punto 3); si
+                        # vuelve a truncar, ya puntuo 0 arriba.
+                        if result.outcome == "truncado" and case.kind == "calidad" and not doubled:
+                            doubled = True
                             attempt += 1
                             max_tokens *= 2
+                            retry_reason = "truncado"
                             continue
                         break
     finally:

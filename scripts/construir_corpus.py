@@ -122,6 +122,18 @@ def salida_de_ruff(limite: int) -> Fuente:
     return generar
 
 
+def secciones_de_version(rel: str, desde: str, hasta: str) -> Fuente:
+    """Del `## [desde]` hasta antes de `## [hasta]`. Las secciones publicadas no cambian: el
+    CHANGELOG solo crece por arriba, asi que el recorte es reproducible aunque el fichero no."""
+
+    def generar(raiz: Path) -> bytes:
+        texto = normalizado((raiz / rel).read_bytes())
+        inicio = texto.index(f"## [{desde}]")
+        return texto[inicio : texto.index(f"## [{hasta}]", inicio)].encode("utf-8")
+
+    return generar
+
+
 def texto_literal(contenido: str) -> Fuente:
     return lambda _raiz: contenido.encode("utf-8")
 
@@ -146,6 +158,67 @@ def _primeros(patron: str, n: int = 3, grupo: int = 1) -> Callable[[str], tuple[
 def _reglas_mas_frecuentes(texto: str) -> tuple[str, ...]:
     conteo = Counter(re.findall(r": ([A-Z]+[0-9]+) ", texto))
     return tuple(regla for regla, _ in conteo.most_common(3))
+
+
+def _docstring_del_modulo(texto: str) -> str:
+    partes = texto.split('"""')
+    return partes[1] if len(partes) > 2 else ""
+
+
+# «Explica que hace el codigo y como» no pide nombrar helpers privados, y CP-3 (tarea 19) lo
+# demostro: con los tres primeros `def` del fichero, dos explicaciones correctas sacaban 0. Lo que la
+# explicacion SI tiene que cubrir es lo que el modulo declara de si mismo en su docstring: sus rutas
+# o los ficheros y opciones que toca. Mas terminos, ademas, dan granularidad a la banda (P-12).
+def _rutas_del_docstring(texto: str) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(re.findall(r"GET (/api/\S+)", _docstring_del_modulo(texto))))
+
+
+def _ficheros_y_flags_del_docstring(texto: str) -> tuple[str, ...]:
+    entre_comillas = re.findall(r"`([^`]+)`", _docstring_del_modulo(texto))
+    ficheros = [re.sub(r".*/", "", t) for t in entre_comillas if re.search(r"\.(json|md|bak)$", t)]
+    flags = [t for t in entre_comillas if t.startswith("--")]
+    return tuple(dict.fromkeys(ficheros + flags))
+
+
+# Un mensaje de commit tiene que nombrar el cambio, y el diff trae como lo nombro su autor: la
+# primera entrada «Fixed» que anade al CHANGELOG. Con un unico termino (`inflight`), CP-3 dio 0 al
+# mensaje que nombraba el arreglo y al que solo nombraba el bump de version. Se quitan los privados
+# (`_x`) y los comandos con espacios; de una ruta a fichero se queda el nombre.
+def _identificadores_del_primer_arreglo(texto: str) -> tuple[str, ...]:
+    lineas = texto.splitlines()
+    inicio = next((n for n, linea in enumerate(lineas) if linea == "+### Fixed"), None)
+    if inicio is None:
+        return ()
+    entrada: list[str] = []
+    for linea in lineas[inicio + 1 :]:
+        if not linea.startswith("+"):
+            break
+        cuerpo = linea[1:]
+        if cuerpo.startswith("#") or (cuerpo.startswith("- ") and entrada):
+            break
+        if cuerpo.startswith("- ") or entrada:
+            entrada.append(cuerpo)
+    limpios = []
+    for termino in re.findall(r"`([^`]+)`", " ".join(entrada)):
+        if " " in termino or termino.startswith("_"):
+            continue
+        ultimo = termino.rsplit("/", 1)[-1]
+        limpios.append((ultimo if "." in ultimo else termino).removesuffix("()"))
+    return tuple(dict.fromkeys(limpios))
+
+
+# Un resumen de un changelog tiene que decir que cambio, y cada entrada lo resume en su titular en
+# negrita. Antes eran los numeros de version, que el prompt («resumen en prosa») no pide: CP-3 los
+# dio a 0 en los dos modelos, un suelo.
+def _identificadores_de_los_titulares(texto: str) -> tuple[str, ...]:
+    titulares = re.findall(r"^- \*\*(.+?)\*\*", texto, flags=re.MULTILINE | re.DOTALL)
+    return tuple(
+        dict.fromkeys(
+            termino.removesuffix("()")
+            for titular in titulares
+            for termino in re.findall(r"`([^`]+)`", titular)
+        )
+    )
 
 
 def _valores_toml(*claves: str) -> Callable[[str], tuple[str, ...]]:
@@ -181,12 +254,29 @@ class Caso:
     # Los terminos esperados tienen que estar en la fuente, salvo donde la salida no la copia:
     # una traduccion, una etiqueta elegida o lo que se ve en una imagen.
     terminos_en_fuente: bool = True
-    # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en cinco casos.
+    # Pareja de referencia de CP-4: (senal, respuesta buena, respuesta mala). Solo en seis casos.
     referencia: tuple[str, str, str] | None = None
+    # Comprobaciones que el puntuador EJECUTA sobre el codigo generado: {"expr", "expected"} o
+    # {"expr", "raises"}. Salen de la especificacion del caso, no de lo que devolvio un modelo.
+    comprobaciones: tuple[dict[str, Any], ...] = ()
 
 
 _TOP_LEVEL_PY = r"^(?:def |class |async def |@)"
-_DEFS_PY = r"^(?:async def|def|class) ([A-Za-z_][A-Za-z0-9_]*)"
+
+# Referencia de CP-4 para la senal de ejecucion: la buena y la mala solo difieren en el factor de
+# los minutos, asi que tienen la misma longitud, los mismos terminos y las dos cargan sin error.
+_PARSE_DURATION = (
+    "import re\n"
+    "\n"
+    "\n"
+    "def parse_duration(texto):\n"
+    "    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n"
+    '    m = re.fullmatch(r"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?", texto)\n'
+    "    if not texto or m is None:\n"
+    '        raise ValueError(f"formato no valido: {texto!r}")\n'
+    "    h, mi, s = (int(g) if g else 0 for g in m.groups())\n"
+    "    return h * 3600 + mi * {MINUTO} + s\n"
+)
 
 CASOS: tuple[Caso, ...] = (
     # --- mechanical ---
@@ -289,15 +379,18 @@ CASOS: tuple[Caso, ...] = (
         expected_terms=("UserPromptSubmit", "PreToolUse", "LD_HOOK_READ_BLOQUEAR"),
     ),
     Caso(
-        "resumen-changelog-43k",
+        # Tarea 19: sustituye a `resumen-changelog-43k`, cuyos terminos eran un suelo. Dos secciones
+        # y no una: la 0.27.0 sola pesa 5 507 chars, bajo LONG_INPUT_CHARS, y produccion la
+        # mandaria a mechanical. Son las mismas que abrian la fuente congelada anterior.
+        "resumen-changelog-7k",
         "local_summarize",
         "long",
         "calidad",
         "congelado",
-        "CHANGELOG.md, recortado antes de una seccion de version",
-        recorte_por_lineas("CHANGELOG.md", 45000, r"^## \["),
+        "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
+        secciones_de_version("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
-        expected_terms=_primeros(r"^## \[(\d+\.\d+\.\d+)\]"),
+        expected_terms=_identificadores_de_los_titulares,
     ),
     Caso(
         "extraer-uvlock-48k",
@@ -341,7 +434,7 @@ CASOS: tuple[Caso, ...] = (
         "git show 4d644ae (fix(web): inflight multi-proceso)",
         diff_de_commit("4d644ae"),
         extension="diff",
-        expected_terms=("inflight",),
+        expected_terms=_identificadores_del_primer_arreglo,
     ),
     Caso(
         "explicar-metrics-15k",
@@ -352,7 +445,7 @@ CASOS: tuple[Caso, ...] = (
         "src/local_delegate/web/metrics.py, recortado antes de un bloque de nivel superior",
         recorte_por_lineas("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
-        expected_terms=_primeros(_DEFS_PY),
+        expected_terms=_rutas_del_docstring,
     ),
     Caso(
         "explicar-install-20k",
@@ -363,7 +456,7 @@ CASOS: tuple[Caso, ...] = (
         "src/local_delegate/install.py, recortado a los 20 000 chars que ve el rol code",
         recorte_exacto("src/local_delegate/install.py", 20000),
         extension="py.txt",
-        expected_terms=_primeros(_DEFS_PY),
+        expected_terms=_ficheros_y_flags_del_docstring,
     ),
     Caso(
         "boilerplate-156",
@@ -378,6 +471,21 @@ CASOS: tuple[Caso, ...] = (
         ),
         argumentos={"language": "python"},
         expected_terms=("parse_duration", "ValueError"),
+        # CP-3 (tarea 19) dio 1,0 por terminos a dos funciones rotas. Una por ejemplo de la
+        # especificacion (y `expected` exige el tipo: pide un int) y dos formatos invalidos, que
+        # la especificacion dice que lanzan ValueError.
+        comprobaciones=(
+            {"expr": "parse_duration('1h30m')", "expected": 5400},
+            {"expr": "parse_duration('45s')", "expected": 45},
+            {"expr": "parse_duration('2m')", "expected": 120},
+            {"expr": "parse_duration('abc')", "raises": "ValueError"},
+            {"expr": "parse_duration('5x')", "raises": "ValueError"},
+        ),
+        referencia=(
+            "ejecucion",
+            _PARSE_DURATION.replace("{MINUTO}", "60"),
+            _PARSE_DURATION.replace("{MINUTO}", "61"),
+        ),
     ),
     # --- vision ---
     Caso(
@@ -600,7 +708,29 @@ DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
     "json_valido": {"json_valido", "json_campos"},
     "json_campos": {"json_campos"},
     "unicode": {"cobertura"},
+    "ejecucion": {"ejecucion"},
 }
+
+
+def _ejecuta_bien(codigo: str, comprobaciones: Sequence[dict[str, Any]]) -> bool:
+    """El oraculo de la senal de ejecucion, en proceso y sin el arnes del puntuador: si los dos
+    compartieran codigo compartirian tambien el error. Solo corre referencias escritas a mano."""
+    espacio: dict[str, Any] = {"__name__": "referencia"}
+    try:
+        exec(compile(codigo, "referencia", "exec"), espacio)  # noqa: S102 - referencia propia
+    except Exception:
+        return False
+    for comprobacion in comprobaciones:
+        try:
+            valor = eval(comprobacion["expr"], espacio)
+        except Exception as exc:
+            if type(exc).__name__ != comprobacion.get("raises"):
+                return False
+            continue
+        esperado = comprobacion.get("expected")
+        if "raises" in comprobacion or type(valor) is not type(esperado) or valor != esperado:
+            return False
+    return True
 
 
 def plano(texto: str) -> str:
@@ -613,7 +743,11 @@ def plano(texto: str) -> str:
 
 
 def senales(
-    texto: str, esperados: Sequence[str], prohibidos: Sequence[str], campos: Sequence[str]
+    texto: str,
+    esperados: Sequence[str],
+    prohibidos: Sequence[str],
+    campos: Sequence[str],
+    comprobaciones: Sequence[dict[str, Any]] = (),
 ) -> dict[str, bool | None]:
     """Oraculo de CP-4. Independiente del puntuador de la tarea 16 a proposito: es contra lo que
     ese puntuador se valida, y si compartieran codigo compartirian tambien el error."""
@@ -628,6 +762,7 @@ def senales(
         "prohibido": any(plano(t) in plano(texto) for t in prohibidos),
         "json_valido": valido,
         "json_campos": (set(campos) <= set(objeto)) if valido else None,
+        "ejecucion": _ejecuta_bien(texto, comprobaciones) if comprobaciones else None,
     }
 
 
@@ -642,9 +777,19 @@ def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
         errores.append(
             f"{caso.id}: la pareja no tiene la misma longitud ({len(buena)} y {len(mala)})"
         )
-    ok = senales(buena, esperados, caso.forbidden_terms, caso.expected_json_fields)
-    malo = senales(mala, esperados, caso.forbidden_terms, caso.expected_json_fields)
-    if not ok["cobertura"] or ok["prohibido"] or False in (ok["json_valido"], ok["json_campos"]):
+    argumentos = (caso.forbidden_terms, caso.expected_json_fields, caso.comprobaciones)
+    ok = senales(buena, esperados, *argumentos)
+    malo = senales(mala, esperados, *argumentos)
+    if (
+        not ok["cobertura"]
+        or ok["prohibido"]
+        or False
+        in (
+            ok["json_valido"],
+            ok["json_campos"],
+            ok["ejecucion"],
+        )
+    ):
         errores.append(f"{caso.id}: la respuesta buena no es buena: {ok}")
     difieren = {nombre for nombre in ok if ok[nombre] != malo[nombre]}
     if difieren != DIFERENCIAS_ESPERADAS[senal]:
@@ -746,6 +891,7 @@ def entrada_de_corpus(
         "expected_terms": list(terminos(caso, texto)) if calidad else [],
         "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
         "expected_json_fields": list(caso.expected_json_fields) if calidad else [],
+        "execution_checks": list(caso.comprobaciones) if calidad else [],
         **(
             {
                 "reference_signal": caso.referencia[0],
@@ -940,6 +1086,7 @@ _CAMPOS_VIGILADOS = (
     "expected_terms",
     "forbidden_terms",
     "expected_json_fields",
+    "execution_checks",
     "reference_signal",
     "reference_ok",
     "reference_bad",

@@ -12,6 +12,7 @@ import base64
 import dataclasses
 import json
 from pathlib import Path
+from typing import ClassVar
 
 import httpx2
 import pytest
@@ -119,12 +120,13 @@ _COMPONENTES_POR_SENAL = {
     "json_valido": {"json_valid", "json_fields_ratio"},
     "json_campos": {"json_fields_ratio"},
     "unicode": {"coverage", "matched_terms"},
+    "ejecucion": {"execution_ratio", "execution_passed"},
 }
 
 
 def test_cp4_el_puntuador_separa_cada_pareja_por_su_senal():
     parejas = [c for c in _corpus().cases if "reference_signal" in c.raw]
-    assert len(parejas) == 5
+    assert len(parejas) == 6
     for caso in parejas:
         raw = caso.raw
         ok = benchmark.score_output(raw, raw["reference_ok"], "stop")
@@ -147,6 +149,100 @@ def test_cp4_un_puntuador_literal_no_separaria_la_pareja_de_unicode():
         return sum(t.casefold() in texto.casefold() for t in raw["expected_terms"])
 
     assert literal(raw["reference_ok"]) == literal(raw["reference_bad"])
+
+
+# --- Ejecucion del codigo generado (tarea 19) -----------------------------------------------------
+
+
+def _boilerplate():
+    return _case("boilerplate-156").raw
+
+
+def test_codigo_correcto_entre_vallas_se_ejecuta_como_lo_escribiria_produccion():
+    raw = _boilerplate()
+    score = benchmark.score_output(raw, f"```python\n{raw['reference_ok']}```", "stop")
+    assert score["execution_passed"] == [True] * 5
+    assert (score["execution_ratio"], score["quality"], score["zero_by"]) == (1.0, 1.0, None)
+
+
+def test_codigo_que_no_carga_puntua_cero_por_ejecucion_aunque_nombre_los_terminos():
+    # La salida del 2B en CP-3: usa `re` sin importarlo y 1,0 por terminos.
+    codigo = (
+        "def parse_duration(texto):\n"
+        '    """Lanza ValueError si no vale."""\n'
+        "    m = re.match(r'^(\\d+)h$', texto)\n"
+        "    return int(m.group(1)) * 3600\n"
+    )
+    score = benchmark.score_output(_boilerplate(), codigo, "stop")
+    assert score["coverage"] == 1.0
+    assert (score["execution_ratio"], score["quality"], score["zero_by"]) == (0.0, 0.0, "execution")
+
+
+def test_codigo_a_medias_puntua_la_proporcion_de_comprobaciones():
+    # La salida del 14B en CP-3: parte por espacios y no parsea '1h30m'; lo demas lo hace bien.
+    codigo = (
+        "def parse_duration(texto):\n"
+        "    total = 0\n"
+        "    for parte in texto.split():\n"
+        "        if parte.endswith('h'):\n"
+        "            total += int(parte[:-1]) * 3600\n"
+        "        elif parte.endswith('m'):\n"
+        "            total += int(parte[:-1]) * 60\n"
+        "        elif parte.endswith('s'):\n"
+        "            total += int(parte[:-1])\n"
+        "        else:\n"
+        "            raise ValueError('formato')\n"
+        "    return total\n"
+    )
+    score = benchmark.score_output(_boilerplate(), codigo, "stop")
+    assert score["execution_passed"] == [False, True, True, True, True]
+    assert score["quality"] == 0.8
+
+
+def test_un_bucle_infinito_no_cuelga_el_runner(monkeypatch):
+    monkeypatch.setattr(benchmark, "EXEC_TIMEOUT_S", 2.0)
+    score = benchmark.score_output(_boilerplate(), "while True:\n    pass\n", "stop")
+    assert score["execution_passed"] == [False] * 5
+
+
+def test_el_codigo_generado_no_ve_el_entorno_ni_el_directorio_del_operador(monkeypatch):
+    monkeypatch.setenv("LD_SECRETO_DE_PRUEBA", "no-deberia-verse")
+    monkeypatch.chdir(RAIZ)
+    raw = _raw(
+        execution_checks=[
+            {"expr": "__import__('os').environ.get('LD_SECRETO_DE_PRUEBA')", "expected": None},
+            {"expr": "__import__('os').path.exists('pyproject.toml')", "expected": False},
+            # Control positivo: el arnes si evalua, o las dos de arriba pasarian por no correr.
+            {"expr": "1 + 1", "expected": 2},
+        ]
+    )
+    assert benchmark.run_execution_checks("x = 1\n", raw["execution_checks"]) == [True] * 3
+    assert (RAIZ / "pyproject.toml").exists()
+
+
+def test_el_valor_correcto_con_otro_tipo_no_pasa():
+    # La especificacion pide segundos en int: 45.0 es igual a 45 para `==`, y no vale.
+    checks = [{"expr": "f()", "expected": 45}]
+    assert benchmark.run_execution_checks("def f():\n    return 45.0\n", checks) == [False]
+    assert benchmark.run_execution_checks("def f():\n    return 45\n", checks) == [True]
+
+
+def test_un_print_del_codigo_generado_no_finge_el_resultado():
+    checks = [{"expr": "1", "expected": 2}]
+    codigo = "print('[true]')\n"
+    assert benchmark.run_execution_checks(codigo, checks) == [False]
+
+
+def test_truncada_otra_vez_tras_doblar_puntua_cero():
+    raw = _raw(expected_terms=["uno"])
+    primera = benchmark.score_output(raw, "uno", "length")
+    repetida = benchmark.score_output(raw, "uno", "length", repeated=True)
+    assert (primera["quality"], primera["zero_by"]) == (None, None)
+    assert (repetida["quality"], repetida["zero_by"], repetida["truncated"]) == (
+        0.0,
+        "truncado_repetido",
+        True,
+    )
 
 
 # --- Payload --------------------------------------------------------------------------------------
@@ -343,6 +439,65 @@ def test_truncada_se_repite_una_vez_con_el_doble_de_max_tokens(tmp_path, monkeyp
     assert vistos == [16, 32]
     assert registros[0]["score"]["quality"] is None
     assert registros[1]["score"]["quality"] == 1.0
+    assert [r["retry_reason"] for r in registros] == [None, "truncado"]
+
+
+def test_truncada_dos_veces_no_se_repite_mas_y_puntua_cero(tmp_path, monkeypatch):
+    vistos = []
+
+    def handler(request):
+        vistos.append(json.loads(request.content)["max_tokens"])
+        return _respuesta("bug", "length")
+
+    _, registros = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert vistos == [16, 32]
+    assert registros[1]["score"]["quality"] == 0.0
+    assert registros[1]["score"]["zero_by"] == "truncado_repetido"
+
+
+class _SondaQueAnula:
+    """Sustituye al muestreador: cada peticion consume el siguiente motivo de anulacion."""
+
+    motivos: ClassVar[list[str | None]] = []
+
+    def __init__(self, *_args):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        return None
+
+    def summary(self):
+        motivo = type(self).motivos.pop(0) if type(self).motivos else None
+        return {"enabled": False, "pids": [], "annul": motivo}
+
+
+def test_corrida_anulada_se_repite_con_los_mismos_tokens(tmp_path, monkeypatch):
+    vistos = []
+
+    def handler(request):
+        vistos.append(json.loads(request.content)["max_tokens"])
+        return _respuesta("bug")
+
+    monkeypatch.setattr(_SondaQueAnula, "motivos", ["process_changed", None])
+    monkeypatch.setattr(benchmark, "ResourceSampler", _SondaQueAnula)
+    _, registros = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert vistos == [16, 16]
+    assert [(r["run"], r["attempt"]) for r in registros] == [(1, 1), (1, 2)]
+    assert [r["descartada"] for r in registros] == [True, False]
+    assert [r["retry_reason"] for r in registros] == [None, "anulada"]
+
+
+def test_la_anulada_se_repite_como_mucho_dos_veces(tmp_path, monkeypatch):
+    monkeypatch.setattr(_SondaQueAnula, "motivos", ["process_changed"] * 10)
+    monkeypatch.setattr(benchmark, "ResourceSampler", _SondaQueAnula)
+    _, registros = _correr(
+        tmp_path, monkeypatch, lambda _r: _respuesta("bug"), "--case", "clasificar-53"
+    )
+    assert len(registros) == 1 + benchmark.MAX_ANNUL_RETRIES
+    assert all(r["descartada"] for r in registros)
 
 
 def test_contenido_vacio_por_razonar_es_configuracion_y_no_se_repite(tmp_path, monkeypatch):

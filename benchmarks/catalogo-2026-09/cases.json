@@ -61,6 +61,7 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
+      "execution_checks": [],
       "reference_signal": "cobertura",
       "reference_ok": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un pull request y el uso de pre-commit.",
       "reference_bad": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un merge commit y el uso de pre-commit."
@@ -145,6 +146,7 @@
         "requires-python",
         "license"
       ],
+      "execution_checks": [],
       "reference_signal": "json_valido",
       "reference_ok": "{\"name\": \"local-delegate-mcp\", \"version\": \"0.27.0\", \"requires-python\": \">=3.11\", \"license\": \"MIT\"}",
       "reference_bad": "{'name': 'local-delegate-mcp', 'version': '0.27.0', 'requires-python': '>=3.11', 'license': 'MIT'}"
@@ -179,7 +181,8 @@
         "docs",
         "pregunta"
       ],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "traducir-42",
@@ -211,7 +214,8 @@
       "forbidden_terms": [
         "reinicia"
       ],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "delegar-56",
@@ -244,7 +248,8 @@
         "coste"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "resumen-md-10k",
@@ -274,20 +279,21 @@
         "LD_HOOK_READ_BLOQUEAR"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
-      "id": "resumen-changelog-43k",
+      "id": "resumen-changelog-7k",
       "tool": "local_summarize",
       "role": "long",
       "kind": "calidad",
       "procedencia": "congelado",
-      "origen": "CHANGELOG.md, recortado antes de una seccion de version",
+      "origen": "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
       "media_type": "texto",
-      "source_file": "resumen-changelog-43k.md",
-      "source_sha256": "4999480e08333ae7e15b2a56af73e2a7831366c438705bbe0d60849a2cacd8e0",
-      "source_bytes": 44120,
-      "source_chars": 43293,
+      "source_file": "resumen-changelog-7k.md",
+      "source_sha256": "d69c63ae3e84110dfc14db097b53692a0ac8861c935293092090289c254ec697",
+      "source_bytes": 7069,
+      "source_chars": 6952,
       "production": {
         "model": "llama31-8b",
         "calls": 1
@@ -299,12 +305,16 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "0.27.0",
-        "0.26.0",
-        "0.25.0"
+        "local_boilerplate",
+        "output_policy.py",
+        "output_stats.py",
+        "emit_updated_input",
+        "suggest_lint_summary.py",
+        "doctor"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "extraer-uvlock-48k",
@@ -374,6 +384,7 @@
         "requires-python",
         "primer_paquete"
       ],
+      "execution_checks": [],
       "reference_signal": "json_campos",
       "reference_ok": "{\"version\": 1, \"requires-python\": \">=3.11\", \"primer_paquete\": \"annotated-doc\"}",
       "reference_bad": "{\"version\": 1, \"requires-python\": \">=3.11\", \"paquete_primer\": \"annotated-doc\"}"
@@ -406,7 +417,8 @@
         "PLC0415"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "commit-diff-19k",
@@ -431,10 +443,15 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "inflight"
+        "inflight",
+        "inflight_snapshot",
+        "inflight.json",
+        "FileLock",
+        "/api/inflight"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "explicar-metrics-15k",
@@ -459,12 +476,17 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "_log_files",
-        "_read_file_cached",
-        "_month_span"
+        "/api/events",
+        "/api/stats",
+        "/api/inflight",
+        "/api/backend",
+        "/api/backend/stats",
+        "/api/status",
+        "/api/system"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "explicar-install-20k",
@@ -489,12 +511,15 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "resources_dir",
-        "is_simulated_home",
-        "opencode_dir"
+        "settings.json",
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".bak",
+        "--dry-run"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "boilerplate-156",
@@ -523,7 +548,32 @@
         "ValueError"
       ],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": [
+        {
+          "expr": "parse_duration('1h30m')",
+          "expected": 5400
+        },
+        {
+          "expr": "parse_duration('45s')",
+          "expected": 45
+        },
+        {
+          "expr": "parse_duration('2m')",
+          "expected": 120
+        },
+        {
+          "expr": "parse_duration('abc')",
+          "raises": "ValueError"
+        },
+        {
+          "expr": "parse_duration('5x')",
+          "raises": "ValueError"
+        }
+      ],
+      "reference_signal": "ejecucion",
+      "reference_ok": "import re\n\n\ndef parse_duration(texto):\n    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n    m = re.fullmatch(r\"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?\", texto)\n    if not texto or m is None:\n        raise ValueError(f\"formato no valido: {texto!r}\")\n    h, mi, s = (int(g) if g else 0 for g in m.groups())\n    return h * 3600 + mi * 60 + s\n",
+      "reference_bad": "import re\n\n\ndef parse_duration(texto):\n    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n    m = re.fullmatch(r\"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?\", texto)\n    if not texto or m is None:\n        raise ValueError(f\"formato no valido: {texto!r}\")\n    h, mi, s = (int(g) if g else 0 for g in m.groups())\n    return h * 3600 + mi * 61 + s\n"
     },
     {
       "id": "describir-dashboard",
@@ -555,6 +605,7 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
+      "execution_checks": [],
       "reference_signal": "unicode",
       "reference_ok": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cómputo.",
       "reference_bad": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cálculo."
@@ -592,6 +643,7 @@
         "23:12"
       ],
       "expected_json_fields": [],
+      "execution_checks": [],
       "reference_signal": "prohibido",
       "reference_ok": "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
       "reference_bad": "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01."
@@ -620,7 +672,8 @@
       "reasoning_effort": null,
       "expected_terms": [],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     },
     {
       "id": "techo-commit-156k",
@@ -646,7 +699,8 @@
       "reasoning_effort": null,
       "expected_terms": [],
       "forbidden_terms": [],
-      "expected_json_fields": []
+      "expected_json_fields": [],
+      "execution_checks": []
     }
   ]
 }

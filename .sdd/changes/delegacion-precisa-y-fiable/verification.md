@@ -601,3 +601,51 @@ cuatro campos de prompt de los dos sondeos (8 lineas de `cases.json`), y ninguna
 ### Suite
 
 `uv run pytest -q`: **1024 passed, 2 skipped**. `ruff check .` y `ruff format --check .` limpios.
+
+## F2: tarea 19, CP-3 y CP-4 contra la maquina, y lo que el piloto obligo a cambiar (2026-09-14)
+
+Sesion 2 de §10 (20:09-20:58 UTC). Perfil del driver movido a b10909 y medido antes (b10909 OOM,
+b9925 carga desbordando 6 053 MiB) y devuelto a produccion y medido al cerrar (b9925 no carga,
+b10909 desborda 5 958 MiB). Daemon arriba y `local_status` verde al terminar. Resultados y lectura
+caso a caso en `protocolo-f2.md` §2 «Resultado de CP-3».
+
+### CP-4 pasa; CP-3 no
+
+CP-4 es un test desde la tarea 16 y pasa. CP-3 no pasa en `code` ni `mechanical`, y leyendo las
+salidas casi siempre por el corpus: terminos unicos o privados que la respuesta buena no nombra, un
+suelo en el changelog, `boilerplate` en techo con codigo roto, y dos defectos del runner (truncado
+repetido «sin puntuacion»; corrida anulada que no se repetia pese al comentario).
+
+### Lo que se cambio, con decision del usuario
+
+Commit `27e2020`: terminos derivados por regla escrita en `commit-diff-19k`, `explicar-*` y el
+changelog (ahora `resumen-changelog-7k`). Despues: truncado repetido puntua 0, la anulada se repite
+hasta 2 veces y el analisis juzga por el ultimo intento, `boilerplate-156` se puntua ejecutando el
+codigo generado (sexta pareja de CP-4, senal `ejecucion`), y §7 decide por velocidad un rol con
+todos los casos en techo. P-9 resuelta: el piloto se repite entero.
+
+### Lo que se probo al reves
+
+Cinco mutantes sobre las reglas de terminos, todos muertos en su assert. Doce sobre el runner, el
+arnes de ejecucion, el analisis y el oraculo (script `mutantes.py` que muta el fichero real, corre
+solo sus tests y restaura; `git diff --stat` identico antes y despues), todos muertos: sin repetir
+la anulada, sin tope, `repeated` ignorado, entorno heredado, primera linea en vez de la ultima (un
+`print` del codigo fingiria el resultado), sin comprobar el tipo, sin quitar vallas, descartada por
+cualquier intento, truncado repetido sin calidad, nunca todos en techo, basta un caso en techo y
+oraculo que siempre ejecuta bien.
+
+**Dos controles que no controlaban, encontrados mirando QUE assert caia:**
+
+- El mutante «sin comprobar el tipo» **habria sobrevivido**: ningun test pedia `int` frente a
+  `45.0`. Se anadio `test_el_valor_correcto_con_otro_tipo_no_pasa` antes de correrlo.
+- «Descartada por cualquier intento» moria en el veredicto y no en el assert de la corrida: el test
+  cogia `corridas[0]`, que por el orden de `ts` era la corrida 2. Ese assert no probaba nada. Ahora
+  elige la corrida por numero y exige sus dos intentos, y el mutante cae ahi.
+
+Y un error de lectura propio, corregido en el protocolo y en el vault: el informe llamo «inventado»
+al `chore: update version to 0.7.0` del 14B sin mirar el diff, que si sube a 0.7.0.
+
+### Suite
+
+`uv run pytest -q`: **1081 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios en
+`src`, `scripts` y `tests`. `construir_corpus.py --comprobar`: ok.

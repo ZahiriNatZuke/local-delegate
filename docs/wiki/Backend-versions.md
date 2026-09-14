@@ -104,15 +104,24 @@ Cada registro trae un `outcome`, y no todo lo que no es `ok` es mala calidad:
 | `outcome` | Qué significa | ¿Puntúa? |
 | --- | --- | --- |
 | `ok` | respuesta completa | sí |
-| `truncado` | se cortó por `max_tokens`; se repite **una vez** con el doble | no |
+| `truncado` | se cortó por `max_tokens`; se repite **una vez** con el doble, y si vuelve a cortarse puntúa **0** (`zero_by: truncado_repetido`) | la primera vez no; la repetida, 0 |
 | `rechazo_por_contexto` | el prompt no cabe en el contexto del modelo (`exceed_context_size_error`) | no |
 | `configuracion` | gastó el presupuesto pensando y no contestó | no |
 | `error` | cualquier otro fallo; el exit code pasa a `1` | no |
 
 La puntuación normaliza antes de comparar (una tilde no resta cobertura), pone la calidad a 0 si
 aparece un término prohibido y guarda en `zero_by` **qué componente** la hundió. Aparte va
-`descartada`: la sonda anuló la corrida y hay que repetirla. `thermal_state` es `cold` solo en la
-primera petición tras cambiar el proceso de `llama-server`, y `null` sin sonda.
+`descartada`: la sonda anuló la corrida, y el runner **la repite** con los mismos `max_tokens`
+hasta dos veces. Cada intento lleva `retry_reason` (`anulada` o `truncado`) y el análisis juzga la
+corrida por el último. `thermal_state` es `cold` solo en la primera petición tras cambiar el proceso
+de `llama-server`, y `null` sin sonda.
+
+Los casos con `execution_checks` (hoy `boilerplate-156`) **ejecutan el código generado**: pasa por
+el mismo quitado de vallas que `local_boilerplate` antes de escribir a disco, corre en otro proceso
+con `python -I`, en una carpeta temporal, con entorno vacío, sin stdin y con 10 s de tope, y la
+calidad es el mínimo entre la cobertura y la proporción de comprobaciones que pasan
+(`execution_ratio`, y cuáles en `execution_passed`). No es un sandbox del sistema: es código de un
+modelo corriendo en tu máquina, y correr el caso es aceptarlo.
 
 En Windows, `--probe-process llama-server.exe` añade a cada corrida la memoria **del proceso**, no
 la del sistema: RAM privada y working set (por `GetProcessMemoryInfo`), y VRAM dedicada y
@@ -120,7 +129,7 @@ compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag 
 `nvidia-smi` y, si no es inequívoco, pide el flag). El proceso se busca **por nombre** en cada
 lectura, porque llama-swap lo relanza al cambiar de modelo. Cada registro lleva un bloque
 `resources` con los picos y un campo `annul`: una corrida sin muestras, con dos `llama-server`
-vivos o con cambio de proceso a mitad **se marca para repetirla**, no se publica vacía. Sin el flag,
+vivos o con cambio de proceso a mitad **se repite** (hasta dos veces), no se publica vacía. Sin el flag,
 el bloque va igual pero vacío. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
 en `scripts/sonda_recursos.py`.
 
