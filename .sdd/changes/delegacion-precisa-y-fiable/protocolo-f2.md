@@ -291,6 +291,98 @@ antes de la tanda, no despues.
 Concluir lo primero sin mirar las salidas es exactamente el patron de este repo: observacion
 correcta, causa inventada.
 
+#### Resultado de CP-3 (tarea 19, 2026-09-14): no pasa, y casi siempre por el corpus
+
+Sesion 2 de §10. `qwen35-2b` y `qwen25-coder-14b` con `-c 32768` (con 8192 los casos de 33-48k
+darian `rechazo_por_contexto`), 3 corridas, respuestas guardadas en
+`benchmarks/catalogo-2026-09/resultados/cp3-*.jsonl`. Veredicto de `analizar_benchmark.py cp3` y,
+al lado, **lo que dicen las salidas**, que es lo que el control exige mirar antes de culpar al corpus.
+
+| Rol | Programa | Lectura de las salidas |
+| --- | --- | --- |
+| `mechanical` | no pasa: 5 de 5 en techo | Salidas equivalentes de verdad. **Indecidible con este corpus**: ningun caso entra al agregado. |
+| `code` | no pasa: banda 1,0, 0 de 4 admitidos | **El corpus no puede** en 3 de 4 (abajo). P-12 se materializo tal cual. |
+| `long` | pasa: 1 de 4 admitido | Pasa por un solo caso y **en la direccion contraria** (2B 0,667, 14B 0). Un suelo y un caso sin puntuacion. |
+| `vision` | pasa: los dos bajan | Solo `leer-cifras-dashboard` baja por la entrada; `describir-dashboard` es el tercer desenlace. |
+
+Caso a caso, donde el programa y las salidas no dicen lo mismo:
+
+- **`commit-diff-19k`, 0 los dos, con salidas muy distintas.** 2B: `feat(server): migrar estado de
+  delegaciones a archivo compartido para visibilidad multi-proceso` (el arreglo, que es el cambio).
+  14B: `chore: update version to 0.7.0` — **cierto** (el diff sube `pyproject.toml` a 0.7.0), pero
+  se queda con lo accesorio y omite el arreglo. (La primera redaccion de este punto lo llamaba
+  «inventado» sin mirar el diff: la misma causa inventada que este control pide evitar.) El unico
+  termino, `inflight`, no lo nombra ninguno: la respuesta mejor puntua igual que la peor. *El
+  corpus no puede*, y la premisa de direccion tampoco se cumple aqui.
+- **`explicar-metrics-15k` y `explicar-install-20k`**: las dos explicaciones son razonables y los
+  terminos son funciones privadas (`_log_files`, `is_simulated_home`...) que una explicacion en
+  prosa rara vez nombra. El 14B da 0 / 1 / 1 en `explicar-metrics` segun si llega a listar
+  helpers (el 1 viene del reintento con 1 400 tokens): esa dispersion es la que pone la banda del
+  rol en 1,0. *El corpus no puede.*
+- **`boilerplate-156`, techo con codigo roto en los dos**: el 2B usa `re` sin importarlo y lee
+  `group(5)` de un patron con cuatro grupos; el 14B parte por espacios y no parsea `1h30m`. La
+  cobertura de terminos no ve si el codigo funciona.
+- **`resumen-md-10k`**: el 2B nombra `UserPromptSubmit` y `PreToolUse`; el 14B describe los ficheros
+  de hooks sin nombrar los eventos. Separa, pero a favor del pequeno, y la lectura lo sostiene.
+- **`resumen-changelog-43k`, 0 los dos: un suelo.** Los terminos son numeros de version y el prompt
+  («resumen en prosa, 150 palabras») no los pide; ninguno los da. Simetrico al techo, y este
+  protocolo no lo preveia: mide un requisito que el caso no plantea.
+- **`lint-33k`, las 36 respuestas truncadas, tambien el reintento con 992 tokens.** El 2B **entra
+  en bucle** (`**D102 (Docstrings):** 1 archivo.` decenas de veces); el 14B lista regla a regla y
+  se queda sin tokens. Por §4.7 punto 3 truncado no puntua, asi que el caso sale «sin
+  puntuacion»: **el peor fallo posible, un bucle que no termina nunca, no cuenta como 0**. Defecto
+  del runner/§4.7, no del corpus.
+- **`describir-dashboard`, tercer desenlace.** Con la imagen de `bcbe39f` da 0,75 (falta `computo`:
+  escribe «calculo»); con la correcta, 1,0 en las validas **pero 0,75 en la corrida anulada**. La
+  bajada es eleccion de palabra, no reaccion a la entrada: el caso queda **sin control de entrada**.
+- **`leer-cifras-dashboard` pasa limpio**: con la imagen vieja lee `v0.24.8, 24/7 23:12` y cae por
+  `forbidden_terms`; con la correcta, `29/8 05:01`.
+
+**Defecto del runner encontrado de paso**: el comentario de `benchmark.py` dice que una corrida
+anulada por la sonda «se repite», y no se repite. La primera corrida de cada modelo (arranque,
+`process_changed`) se quedo con 2 corridas validas, no 3.
+
+#### Correccion del corpus tras CP-3 (tarea 19, 2026-09-14)
+
+Criterio, fijado **antes** de mirar que daria cada modelo: un termino esperado es algo que **la
+tarea pide nombrar**, y sale de la fuente **por una regla escrita**, nunca de las salidas del
+piloto. Opciones aprobadas por el usuario para `commit-diff-19k` y el changelog. Todas las reglas
+tienen control positivo en `tests/test_corpus.py`.
+
+| Caso | Antes | Ahora | Regla |
+| --- | --- | --- | --- |
+| `commit-diff-19k` | `inflight` | `inflight`, `inflight_snapshot`, `inflight.json`, `FileLock`, `/api/inflight` | identificadores entre backticks de la **primera entrada «Fixed» que el propio diff anade al CHANGELOG**: el cambio nombrado por su autor; fuera privados (`_x`) y comandos con espacios; de una ruta a fichero, el nombre |
+| `explicar-metrics-15k` | 3 primeros `def` (privados) | las 7 rutas `GET /api/...` | lo que el **docstring del modulo** declara de si mismo: sus rutas |
+| `explicar-install-20k` | 3 primeros `def` (privados) | `settings.json`, `CLAUDE.md`, `AGENTS.md`, `.bak`, `--dry-run` | idem: los ficheros y opciones que el docstring dice que toca |
+| `resumen-changelog-43k` -> **`resumen-changelog-7k`** | `0.27.0`, `0.26.0`, `0.25.0` | `local_boilerplate`, `output_policy.py`, `output_stats.py`, `emit_updated_input`, `suggest_lint_summary.py`, `doctor` | **fuente nueva**: solo las secciones 0.27.0 y 0.26.0 (6 952 chars); terminos, los identificadores de los **titulares en negrita** |
+
+- **Por que dos secciones y no una:** la 0.27.0 sola pesa 5 507 chars, bajo `LONG_INPUT_CHARS`
+  (6 000), y produccion la mandaria a `mechanical`: la regla 1 de §4.4 la sacaria de `long`. Con
+  tres se colaria un termino sin sentido (`ext`). Las dos secciones son byte a byte las que abrian
+  la fuente congelada anterior, y `long` conserva `extraer-uvlock-48k` y `lint-33k` como casos
+  grandes. Se pierde un caso de 43k de resumen: un resumen de 150 palabras de 43k no tiene un
+  conjunto de terminos objetivo, y eso fue lo que el suelo mostro.
+- **Mas terminos por caso** (5-7 frente a 1-3) dan granularidad a la banda: es la opcion (c) de
+  P-12, aplicada a los casos que la tenian en 1. **P-12 no se da por resuelta**: se decide con la
+  salida del piloto repetido.
+
+**Lo que NO se toca, y por que:**
+
+- **`mechanical`**: las salidas son equivalentes de verdad. Es la segunda causa de CP-3 (la premisa),
+  que dice «no se toca el caso». Que el rol quede indecidible por techo es una consecuencia de §7
+  (los casos en techo salen del agregado), no del corpus: si hay que decidir `mechanical` por
+  velocidad cuando todo empata en 1,0, eso se cambia en la regla, y se decide aparte.
+- **`lint-33k`**: su fallo es del runner (el truncado repetido no puntua).
+- **`boilerplate-156`**: puntuar ejecutando exige correr en local codigo generado por un modelo;
+  queda pendiente de decision del usuario.
+- **`resumen-md-10k`, `describir-dashboard`, `leer-cifras-dashboard`**: sus terminos ya piden lo que
+  la tarea pide; `describir` queda sin control de entrada, como se escribio.
+
+**Sigue pendiente, antes de repetir el piloto:** los dos defectos del runner (truncado repetido que
+no puntua; corrida anulada que no se repite) y `boilerplate`. P-9 (repetir el piloto entero o solo
+lo tocado): la propuesta es **entero**, porque cambian cuatro de los trece casos de texto y el 14B
+mostro dispersion en uno que no se toco; sigue abierta hasta que el usuario la apruebe.
+
 ### CP-4 — El puntuador separa
 
 Por cada senal de puntuacion que **se pueda ejercitar con texto** existe un caso con dos respuestas
@@ -1261,6 +1353,7 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | # | Inicio UTC | Fin UTC | Duracion estimada / real | Que se midio | llama.cpp | llama-swap | `--load-mode` | CP-1..CP-4 | Anuladas |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
+| 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
 
 Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
 
@@ -1276,6 +1369,17 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   —el proceso muere antes de escribirla—, asi que la prueba es por contraste: a las 19:42, sin
   perfil, **el mismo binario con los mismos argumentos cargo**, y lo unico que cambio despues fue el
   perfil. Daemon arrancado a las 19:51; `local_status` lo da arriba, sin modelos cargados.
+- **Sesion 2, perfil movido a b10909 y medido antes de medir** (misma prueba que CP-1: 14B, `-c 65536`,
+  KV f16, `--fit off -ngl 99`; `Shared Usage` en reposo 129 MiB). Daemon parado a las 20:09 UTC.
+
+  | Hora UTC | b10909 (con perfil) | b9925 (produccion, sin perfil) |
+  | --- | --- | --- |
+  | 20:14 | **OOM a los 6,1 s** (`cudaMalloc` 12 288 MiB, sale con 1) | **cargo en 10,6 s, 6 053 MiB compartidos** |
+
+  Produccion queda sin perfil mientras dure la sesion 2, con el daemon parado. **Al cerrar** el
+  usuario lo devolvio a `D:\Projects\llms\llamacpp\llama-server.exe` y se midio: a las 20:57 b9925
+  **no carga** (sale a los 4,6 s con `0xC0000005`, sin linea `cudaMalloc`, igual que al cerrar la
+  sesion 1) y b10909 carga en 12,1 s desbordando 5 958 MiB. El perfil vuelve a actuar sobre produccion.
 - `%APPDATA%\llama.cpp\config.ini` **no existe** (comprobado al empezar y al cerrar): nada que
   respaldar ni restaurar.
 - b10909 (`D:\Projects\llms\llamacpp-b10909`), llama-swap v255 (`D:\Projects\llms\llama-swap-v255`) y

@@ -403,10 +403,15 @@ def test_con_pasos_de_1_n_un_termino_mas_no_gana_y_dos_si():
     assert (dos["veredicto"], dos["criterio"]) == ("sustituye", "calidad")
 
 
-def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador():
-    # commit-diff-19k tiene UN termino: 0 o 1. Si cambia en una de tres corridas, la banda de code
-    # vale 1,0 y ni un candidato perfecto la supera. Es lo que la regla tiene que DECIR.
-    assert len(CORPUS["commit-diff-19k"]["expected_terms"]) == 1
+def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador(monkeypatch):
+    # Un caso de UN termino da 0 o 1. Si cambia en una de tres corridas, la banda del rol vale 1,0 y
+    # ni un candidato perfecto la supera. Es lo que la regla tiene que DECIR. commit-diff-19k tenia
+    # un termino hasta la tarea 19 (CP-3 lo vio pasar); aqui se le devuelve uno para probar la regla
+    # sin depender de como este el corpus.
+    meta = CORPUS["commit-diff-19k"]
+    monkeypatch.setitem(
+        CORPUS, "commit-diff-19k", {**meta, "expected_terms": meta["expected_terms"][:1]}
+    )
     vigente = _tanda_real("vigente", "code", (0, 0, 0))
     commit = [r for r in vigente if r["case"] == "commit-diff-19k"]
     commit[0]["score"]["quality"] = _calidad_real("commit-diff-19k", 0)
@@ -414,6 +419,20 @@ def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador(
     assert d["banda"] == 1.0
     assert d["puede_disparar"] is False
     assert d["veredicto"] == "no_sustituye"
+
+
+def test_con_los_terminos_de_la_tarea_19_el_mismo_tropiezo_deja_disparar_la_regla():
+    # El corpus corregido: commit-diff-19k con cinco terminos. Un termino de menos en una corrida
+    # mueve la banda 0,2 y no 1,0, y un candidato claramente mejor ya puede ganar.
+    n = len(CORPUS["commit-diff-19k"]["expected_terms"])
+    assert n >= 4, "este test mide la granularidad de un caso con varios terminos"
+    vigente = _tanda_real("vigente", "code", (-2, -2, -2))
+    commit = [r for r in vigente if r["case"] == "commit-diff-19k"]
+    commit[0]["score"]["quality"] = _calidad_real("commit-diff-19k", n - 3)
+    d = _decidir(vigente + _tanda_real("candidato", "code", (0, 0, 0)), rol="code")
+    assert d["banda"] == pytest.approx(1 / n, abs=1e-3)
+    assert d["puede_disparar"] is True
+    assert (d["veredicto"], d["criterio"]) == ("sustituye", "calidad")
 
 
 # --- CP-3 -----------------------------------------------------------------------------------------

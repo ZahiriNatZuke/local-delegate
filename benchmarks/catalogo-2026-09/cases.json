@@ -277,17 +277,17 @@
       "expected_json_fields": []
     },
     {
-      "id": "resumen-changelog-43k",
+      "id": "resumen-changelog-7k",
       "tool": "local_summarize",
       "role": "long",
       "kind": "calidad",
       "procedencia": "congelado",
-      "origen": "CHANGELOG.md, recortado antes de una seccion de version",
+      "origen": "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
       "media_type": "texto",
-      "source_file": "resumen-changelog-43k.md",
-      "source_sha256": "4999480e08333ae7e15b2a56af73e2a7831366c438705bbe0d60849a2cacd8e0",
-      "source_bytes": 44120,
-      "source_chars": 43293,
+      "source_file": "resumen-changelog-7k.md",
+      "source_sha256": "d69c63ae3e84110dfc14db097b53692a0ac8861c935293092090289c254ec697",
+      "source_bytes": 7069,
+      "source_chars": 6952,
       "production": {
         "model": "llama31-8b",
         "calls": 1
@@ -299,9 +299,12 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "0.27.0",
-        "0.26.0",
-        "0.25.0"
+        "local_boilerplate",
+        "output_policy.py",
+        "output_stats.py",
+        "emit_updated_input",
+        "suggest_lint_summary.py",
+        "doctor"
       ],
       "forbidden_terms": [],
       "expected_json_fields": []
@@ -431,7 +434,11 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "inflight"
+        "inflight",
+        "inflight_snapshot",
+        "inflight.json",
+        "FileLock",
+        "/api/inflight"
       ],
       "forbidden_terms": [],
       "expected_json_fields": []
@@ -459,9 +466,13 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "_log_files",
-        "_read_file_cached",
-        "_month_span"
+        "/api/events",
+        "/api/stats",
+        "/api/inflight",
+        "/api/backend",
+        "/api/backend/stats",
+        "/api/status",
+        "/api/system"
       ],
       "forbidden_terms": [],
       "expected_json_fields": []
@@ -489,9 +500,11 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "resources_dir",
-        "is_simulated_home",
-        "opencode_dir"
+        "settings.json",
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".bak",
+        "--dry-run"
       ],
       "forbidden_terms": [],
       "expected_json_fields": []
