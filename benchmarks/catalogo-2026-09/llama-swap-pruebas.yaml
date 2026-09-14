@@ -1,0 +1,63 @@
+# llama-swap de PRUEBAS para F2 (protocolo-f2.md §1.2, tarea 18). Produccion no se toca:
+# ejecutable, puerto y config propios. Se lanza con:
+#   D:\Projects\llms\llama-swap-v255\llama-swap.exe --config <este fichero> --listen 127.0.0.1:9595
+#
+# Flags comunes, y por que:
+# - `--fit off -ngl 99`: b10909 trae `--fit on` y `-ngl auto` por defecto, que reducen capas hasta
+#   que el modelo quepa. Con eso CP-1 «pasaria» cargando a medias y ninguna medida seria del modelo
+#   entero. Fijarlo es la condicion para que el perfil del driver sea lo unico que decide.
+# - `--cache-ram 1024 -np 1`: §1.2.
+# - `--load-mode` explicito: decide si el contador de RAM privada ve los pesos (§3.1, CP-2b).
+# Sin `groups`: llama-swap descarga el anterior al cambiar, y asi hay un solo llama-server vivo (§1.4).
+
+macros:
+  server: >-
+    D:\Projects\llms\llamacpp-b10909\llama-server.exe --port ${PORT} --host 127.0.0.1
+    --fit off -ngl 99 --cache-ram 1024 -np 1
+
+models:
+  # CP-1 negativo: cabe y debe cargar normal.
+  gemma3-4b:
+    cmd: >-
+      ${server} --load-mode mmap
+      --model D:\Projects\llms\models\gemma3-4b\gemma-3-4b-it-Q4_K_M.gguf
+      --ctx-size 8192 --reasoning off
+  # CP-1 positivo: 8,4 GB de pesos + ~24 GiB de KV f16 a 131072 tokens. No cabe en 16 GB.
+  # Sustituye al Qwen3.5-122B del protocolo, que no esta en disco (decision del usuario, 2026-09-14).
+  cp1-no-cabe:
+    cmd: >-
+      ${server} --load-mode mmap
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 131072 --cache-type-k f16 --cache-type-v f16
+  # CP-2: dos densos de tamano muy distinto.
+  qwen35-2b:
+    cmd: >-
+      ${server} --load-mode mmap
+      --model D:\Projects\llms\models\Qwen3.5-2B\Qwen3.5-2B-UD-Q8_K_XL.gguf
+      --ctx-size 8192 --reasoning off
+  qwen25-coder-14b:
+    cmd: >-
+      ${server} --load-mode mmap
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 8192 --cache-type-k q4_0 --cache-type-v q4_0
+  # CP-2b: el MoE con expertos en GPU (ncmoe 0) y con 12 capas de expertos en RAM, en los dos modos.
+  gptoss-ncmoe0-mmap:
+    cmd: >-
+      ${server} --load-mode mmap -ncmoe 0
+      --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
+      --ctx-size 8192
+  gptoss-ncmoe12-mmap:
+    cmd: >-
+      ${server} --load-mode mmap -ncmoe 12
+      --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
+      --ctx-size 8192
+  gptoss-ncmoe0-none:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 0
+      --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
+      --ctx-size 8192
+  gptoss-ncmoe12-none:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 12
+      --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
+      --ctx-size 8192
