@@ -235,7 +235,7 @@ REQ-F2-3 es explicito: **memoria del proceso, no del sistema**.
 
 | Magnitud | Fuente | Por que esa y no otra |
 | --- | --- | --- |
-| RAM del proceso | `PrivateMemorySize64` de `llama-server.exe` | el *working set* sale inflado por el GGUF mapeado; la RAM del sistema fue el error 1 de julio |
+| RAM del proceso | `PrivateMemorySize64` de `llama-server.exe`, **y siempre tambien el working set** (P-11) | el *working set* sale inflado por el GGUF mapeado; la RAM del sistema fue el error 1 de julio. Los dos salen de la misma llamada; CP-2b decide cual se publica |
 | VRAM dedicada | `\GPU Process Memory(pid_<pid>_*)\Dedicated Usage` | es por proceso; `nvidia-smi` en WDDM suele dar «Not Supported» por proceso |
 | **VRAM compartida** | `\GPU Process Memory(pid_<pid>_*)\Shared Usage` | si crece, hay desbordamiento a RAM: ver §3.2 |
 | Velocidad | `timings` de la respuesta + latencia del cliente | discrepan cuando llama-swap esta cargando, y esa diferencia importa |
@@ -290,7 +290,9 @@ La tarea 12 comprueba que eso funciona antes de que nadie escriba codigo encima.
 
 ### 3.4 Hipotesis a verificar por ejecucion
 
-Sin comprobar en esta maquina. La tarea 12 las verifica **antes** de escribir la sonda. En este repo
+Sin comprobar en esta maquina cuando se escribieron. La tarea 12 las verifico **antes** de escribir
+la sonda: **1 a 3 confirmadas con correcciones, 4 sin verificar** (resultado al final de esta
+seccion; lo pendiente es P-11). En este repo
 un pendiente es una hipotesis: 7 de 18 cayeron en la ultima auditoria, siempre con la observacion
 correcta y la causa inventada.
 
@@ -303,6 +305,210 @@ correcta y la causa inventada.
 **Sin dependencias nuevas a proposito:** `ctypes` y `typeperf` son stdlib y sistema. Meter `psutil`
 obligaria a una auditoria de Socket por una sonda de un solo uso.
 
+#### Resultado de la tarea 12 (2026-09-13)
+
+Ejecutado sin elevar (`elevado=False`, usuario `DESKTOP-LRNOJ3V\Yohan`), sin `llama-server.exe` vivo
+(llama-swap en reposo), sin parar el daemon y **sin cargar nada en la GPU**: el unico uso de GPU fue
+un proceso de prueba que abre un dispositivo D3D11 **sin reservar recursos** (11 MiB de
+`Dedicated Usage`) durante 8-12 s. Scripts en el scratchpad de la sesion, fuera del repo.
+
+| # | Hipotesis | Resultado |
+| --- | --- | --- |
+| 1 | Contadores `GPU Process Memory` con ese nombre, sin elevar | **Confirmada, con dos correcciones** |
+| 2 | `PrivateUsage` por `ctypes`, sin dependencias | **Confirmada**, con control positivo y negativo |
+| 3 | `typeperf` a 1 Hz por tuberia y relanzable al cambiar el PID | **Confirmada, con tres detalles de parseo** |
+| 4 | `--load-mode none` practicable y que el contador vea los expertos | **NO verificada**: exige b10909 y cargar un MoE |
+
+**H1 — confirmada, con dos correcciones.**
+
+- **La instancia no es `pid_<pid>`: es `pid_<pid>_luid_<luid>_phys_0`**, y un mismo PID tiene una
+  instancia **por adaptador** (hasta tres). Hay tres LUID en la maquina; la NVIDIA es
+  `0x00000000_0x0000F722`, identificada porque su `GPU Adapter Memory\Dedicated Usage` da
+  997 896 192 B = 951,7 MiB con `nvidia-smi` diciendo 942 MiB. La sonda **filtra por LUID**, o
+  mezcla la VRAM de la iGPU. La ruta con comodin parcial `pid_<pid>_*` si funciona.
+- **El contador por proceso no es sumable ni equivale a residencia en VRAM**: `dwm` (pid 1556)
+  declara **8,79 GiB** de `Dedicated Usage` en la NVIDIA mientras el adaptador entero usa 941 MiB.
+  No invalida medir `llama-server.exe` —un proceso de computo, no el compositor—, pero hace que CP-2
+  **no sea opcional**: el nombre del contador no garantiza lo que mide.
+- Confirmado de paso: `nvidia-smi` da `[N/A]` por proceso en WDDM, como decia la tabla de §3.
+
+```text
+> typeperf -qx "GPU Process Memory"   (169 lineas, sin elevar)
+   32 Dedicated Usage | 32 Local Usage | 32 Non Local Usage | 32 Shared Usage | 32 Total Committed
+  110 luid_0x00000000_0x0000F722 | 35 luid_0x00000000_0x00014FF6 | 15 luid_0x00000000_0x0001506D
+
+> typeperf "\GPU Adapter Memory(*)\Dedicated Usage" -sc 1
+"(PDH-CSV 4.0)","...(luid_0x00000000_0x0000F722_phys_0)\Dedicated Usage","...(luid_0x00000000_0x00014FF6_phys_0)\Dedicated Usage","...(luid_0x00000000_0x0001506D_phys_0)\Dedicated Usage"
+"09/13/2026 21:37:04.706","997896192.000000","0.000000","202113024.000000"
+
+> nvidia-smi --query-gpu=name,memory.total,memory.used,driver_version --format=csv
+NVIDIA GeForce RTX 5060 Ti, 16311 MiB, 942 MiB, 616.92
+> nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
+9268, ...\CrossDeviceResume.exe, [N/A]
+9080, C:\Windows\explorer.exe, [N/A]
+(14 procesos, todos [N/A])
+
+> typeperf "\GPU Process Memory(pid_1556_*)\Dedicated Usage" ... "\GPU Adapter Memory(luid_..._0x0000F722_phys_0)\Dedicated Usage" -sc 2
+   (pid 1556 = dwm)   Dedicated F722   Dedicated 14FF6   Shared F722   Shared 14FF6   TotalCommitted F722   TotalCommitted 14FF6   Adapter F722 Dedicated
+"09/13/2026 21:38:45.488","9433419776.000000","0.000000","14647296.000000","0.000000","631513088.000000","520192.000000","986722304.000000"
+```
+
+**H2 — confirmada.** `GetProcessMemoryInfo` con `PROCESS_QUERY_LIMITED_INFORMATION` da **el mismo
+numero que .NET** (`PrivateMemorySize64`) para procesos ajenos del mismo usuario, sin elevar.
+`sizeof(PROCESS_MEMORY_COUNTERS_EX)` = 80. Contra `dwm` y `System` da `OpenProcess err=5` (acceso
+denegado): la sonda lo trata como «sin muestra».
+
+**Bajo que usuario corre lo que se mide, contrastado con `witr` v0.3.3** (sugerencia del usuario):
+el daemon es `DESKTOP-LRNOJ3V\Yohan`, sale de la tarea programada y **pasa tambien por un
+lanzador** —`pythonw.exe` 15564 -> `pythonw.exe` 15584, la misma trampa del venv de H3—, y llama-swap
+es hijo suyo. El `llama-server.exe` que lance llama-swap hereda ese usuario, asi que `OpenProcess` no
+deberia dar `err=5`; la tarea 18 lo confirma con el proceso vivo. Pista para CP-2, **no conclusion**:
+en el momento de la consulta llama-swap tenia **un `nvidia-smi.exe` como hijo**, lo que apunta a que
+`llamaswap_memory_used_bytes` sale de `nvidia-smi` y es memoria del adaptador, no del proceso.
+
+```text
+> witr --pid 16916 --tree --no-color
+wininit.exe (pid 1564)
+  └─ services.exe (pid 1644)
+    └─ svchost.exe (pid 1092)
+      └─ conhost.exe (pid 8524)
+        └─ powershell.exe (pid 10052)
+          └─ pythonw.exe (pid 15564)
+            └─ pythonw.exe (pid 15584)
+              └─ llama-swap.exe (pid 16916)
+                ├─ conhost.exe (pid 18068)
+                └─ nvidia-smi.exe (pid 18288)
+> witr --pid 15584 --no-color
+Process     : pythonw.exe (pid 15584)
+User        : DESKTOP-LRNOJ3V\Yohan
+Command     : "C:\Users\Yohan\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\pythonw.exe" -m local_delegate serve --log-level warning
+Sockets     : 127.0.0.1:9393 (TCP | LISTENING)
+> witr --port 9292 --no-color
+[2] llama-swap.exe (pid 16916)
+    D:\Projects\llms\llama-swap\llama-swap.exe --config D:\Projects\llms\llama-swap\config.yaml -watch-config --listen 127.0.0.1:9292
+> witr --pid 1556 --no-color
+Process     : dwm.exe (pid 1556)
+Why It Exists :
+  winlogon.exe (pid 1672) → dwm.exe (pid 1556)
+Source      : unknown        (sin campo User: tampoco witr puede abrirlo)
+```
+
+El control es el mecanismo del que depende H4, y **se cumple**: 256 MiB anonimos suben
+`PrivateUsage` +256,5 MiB; 256 MiB mapeados desde fichero y leidos lo dejan en **+0,5** mientras el
+working set sube +256,0. O sea, el riesgo de §3.1 es real: con los pesos mapeados, `PrivateUsage`
+**no ve** los expertos.
+
+```text
+sizeof(PROCESS_MEMORY_COUNTERS_EX)=80 python=3.11.15
+pid 16916 (ajeno, sin elevar)      PrivateUsage=     56.3 MiB  WorkingSet=     14.6 MiB  PagefileUsage=     56.3 MiB
+pid 15584 (ajeno, sin elevar)      PrivateUsage=     92.8 MiB  WorkingSet=     50.0 MiB  PagefileUsage=     92.8 MiB
+pid 1556: OpenProcess err=5
+pid 4: OpenProcess err=5
+propio, base                       PrivateUsage=      6.3 MiB  WorkingSet=     13.1 MiB  PagefileUsage=      6.3 MiB
+propio, +256 MiB anonimos          PrivateUsage=    262.8 MiB  WorkingSet=    269.1 MiB  PagefileUsage=    262.8 MiB
+propio, anonimos liberados         PrivateUsage=      6.3 MiB  WorkingSet=     13.1 MiB  PagefileUsage=      6.3 MiB
+propio, antes de mapear            PrivateUsage=      7.3 MiB  WorkingSet=     14.2 MiB  PagefileUsage=      7.3 MiB
+propio, 256 MiB mapeados y leidos  PrivateUsage=      7.8 MiB  WorkingSet=    270.2 MiB  PagefileUsage=      7.8 MiB
+delta PrivateUsage anonimo = +256.5 MiB (esperado ~+256)
+delta PrivateUsage mapeado = +0.5 MiB (esperado ~0)
+delta WorkingSet  mapeado = +256.0 MiB (esperado ~+256)
+--- referencia .NET (Get-Process) ---
+ 1556 dwm                          418.90           141.10
+16916 llama-swap                    56.30            14.60
+15584 pythonw                       92.80            50.00
+```
+
+**H3 — confirmada, con tres detalles que la sonda tiene que conocer.** Por tuberia llega **una
+linea por segundo** (hora de llegada, no la marca del CSV), y relanzar con el PID nuevo lee a los
+~1,4 s. Lo que no se sabia:
+
+1. **Cuando el proceso muere, `typeperf` no se cierra ni deja el campo vacio: emite `"-1"`** cada
+   segundo hasta agotar `-sc`, y entonces sale con rc `3221228486` (`0xC0000BC6`, «Los datos no son
+   validos»). `-1` es la senal de «el PID ya no existe» -> «sin muestra» y reresolver.
+2. **Una ruta con un PID sin instancia sale al instante** con rc `4026531842` y un mensaje
+   **enganoso** que culpa a los permisos («debe pertenecer al grupo Usuarios del registro de
+   rendimiento...»). No es un problema de permisos: la sonda no debe leer ese texto, sino el rc.
+3. **Arrancar `typeperf` cuesta ~1,4-2,8 s hasta la cabecera.** La «lectura sincrona antes y
+   despues de cada peticion» de §3.3 **no puede salir de un `typeperf` nuevo**: sale de la ultima
+   muestra del flujo continuo (VRAM) y de `ctypes` (RAM, instantaneo). Si eso no basta para las
+   corridas de menos de un segundo, la alternativa sin dependencias es PDH por `ctypes`
+   (`pdh.dll`); lo decide la tarea 13.
+
+Y un comodin `(*)` arrancado **antes** de que exista el proceso no lo ve nunca (cabecera fija), como
+decia §3.3. Detalles menores: los mensajes salen en la pagina de codigos de consola (`Se est�
+saliendo`), asi que se parsean solo las lineas que empiezan por `"`.
+
+Trampa de la propia prueba, que la tarea 13 hereda: **el `python.exe` de un venv en Windows es un
+lanzador**, y `Popen.pid` es el suyo, no el del interprete. La primera pasada midio el PID
+equivocado y dio exactamente el error de permisos del punto 2. La sonda resuelve el PID por nombre
+de proceso (`llama-server.exe`), nunca por el `Popen` de quien lo lanzo.
+
+```text
+=== A: ruta con PID concreto, el proceso muere a mitad ===
+[  0.30s] gpuproc: pid=40160 hr=0x00000000 nivel=0xB000 (Popen.pid=33504)
+[  3.14s] A "(PDH-CSV 4.0)","\\DESKTOP-LRNOJ3V\GPU Process Memory(pid_40160_luid_0x00000000_0x0000F722_phys_0)\Dedicated Usage","\\DESKTOP-LRNOJ3V\GPU Process Memory(pid_40160_luid_0x00000000_0x0000F722_phys_0)\Shared Usage"
+[  4.14s] A "09/13/2026 21:40:07.729","11403264.000000","757760.000000"
+[  5.14s] A "09/13/2026 21:40:08.731","11403264.000000","757760.000000"
+[  6.14s] A "09/13/2026 21:40:09.731","11403264.000000","757760.000000"
+[  7.14s] A "09/13/2026 21:40:10.732","11403264.000000","757760.000000"
+[  8.14s] A "09/13/2026 21:40:11.733","11403264.000000","757760.000000"
+[  9.16s] A "09/13/2026 21:40:12.733","11403264.000000","757760.000000"
+[ 10.16s] A "09/13/2026 21:40:13.735","-1","-1"
+[ 11.17s] A "09/13/2026 21:40:14.747","-1","-1"
+(... "-1" cada segundo ...)
+[ 16.19s] A "09/13/2026 21:40:20.779","-1","-1"
+[ 16.19s] A Error:
+[ 16.19s] A Los datos no son v�lidos.
+[ 16.19s] A fin, rc=3221228486
+=== B: comodin arrancado ANTES de que exista el proceso ===
+[ 18.48s] gpuproc: pid=31776 hr=0x00000000 nivel=0xB000 (Popen.pid=4280)
+[ 18.48s] B cabecera: 30 columnas, contiene pid_31776_ = False
+[ 18.56s] B muestra (30 comas)
+[ 19.56s] B muestra (30 comas)
+[ 20.56s] B muestra (30 comas)
+[ 21.58s] B muestra (30 comas)
+[ 22.59s] B muestra (30 comas)
+[ 22.59s] B fin, rc=0
+=== C: relanzado con el PID nuevo ===
+[ 23.95s] C "(PDH-CSV 4.0)","\\DESKTOP-LRNOJ3V\GPU Process Memory(pid_31776_luid_0x00000000_0x0000F722_phys_0)\Dedicated Usage"
+[ 24.95s] C "09/13/2026 21:40:28.533","11403264.000000"
+[ 25.97s] C "09/13/2026 21:40:29.536","11403264.000000"
+[ 25.97s] C fin, rc=0
+
+--- primera pasada, con Popen.pid (el del lanzador del venv) ---
+[  2.16s] A Error: contadores no v lidos.
+[  2.16s] A   Para usar typeperf, debe pertenecer al grupo Usuarios del
+[  2.16s] A   registro de rendimiento local o el comando debe ejecutarse desde una
+[  2.16s] A   ventana de comandos con permisos elevados.
+[  2.16s] A fin, rc=4026531842
+```
+
+**H4 — NO verificada, y no se puede sin tocar la maquina.** Lo que si quedo establecido:
+
+- **b10909 no esta en disco** (`Test-Path D:\Projects\llms\llamacpp-b10909` -> `False`).
+- **b9925 no tiene `--load-mode`**: su ayuda (650 lineas) trae `--mlock`, `--mmap, --no-mmap`
+  («default: enabled») y `-dio, --direct-io`, coherente con que el PR #28334 los sustituya.
+- **El mecanismo esta confirmado por H2** a escala pequena: lo mapeado no es privado.
+
+Lo que falta es exactamente lo que decide: que `--load-mode none` **exista y se comporte asi** en
+b10909, que sea **practicable** (tiempo de carga y RAM con ~26 GB libres), y CP-2b: un MoE con
+`-ncmoe 0` contra `-ncmoe 12` **subiendo** `PrivateUsage`. Las tres cosas exigen montar b10909 y
+cargar un MoE en la GPU, que es la tarea 18 y su aviso previo. Queda como P-11 (§10.1).
+
+```text
+> Test-Path D:\Projects\llms\llamacpp-b10909
+False
+> D:\Projects\llms\llamacpp\llama-server.exe --version
+version: 9925 (ed8c26150)
+built with Clang 20.1.8 for Windows x86_64
+> llama-server.exe --help | Select-String mmap,mlock,load-mode,cpu-moe,direct-io   (650 lineas)
+--mlock                                 force system to keep model in RAM rather than swapping or compressing
+--mmap, --no-mmap                       whether to memory-map model. (if mmap disabled, slower load but may
+                                        reduce pageouts if not using mlock) (default: enabled)
+-dio,  --direct-io, -ndio, --no-direct-io
+-cmoe, --cpu-moe                        keep all Mixture of Experts (MoE) weights in the CPU
+-ncmoe, --n-cpu-moe N                   keep the Mixture of Experts (MoE) weights of the first N layers in the
+```
 ### 3.5 Contexto: `n_ctx`, presupuesto de KV y `rechazo_por_contexto`
 
 Este es el fallo 5 de julio, que la primera version de este protocolo no cerraba.
@@ -813,6 +1019,16 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 - **P-10 — resuelta, y dejo de ser una pregunta.** «¿Alcanza la evidencia para decidir el rol
   `fast`?» se contesto sola al corregir la aritmetica: 2 usos reales, ninguna tool lo elige, cero
   casos en el corpus. Ya no es una incognita de la medicion sino un resultado de F2 (§4.4).
+- **P-11 — resuelta (2026-09-13), aprobada por el usuario.** H4 de §3.4 no se pudo verificar en la
+  tarea 12: exige b10909 y cargar un MoE, y la tarea 12 no toca la maquina. El plan pedia que, si el
+  contador no ve los expertos, «el metodo se cambia aqui, no despues de escribir la sonda encima».
+  Resolucion: **la sonda de la tarea 13 guarda siempre los dos contadores**, `PrivateUsage` y
+  `WorkingSetSize`, que salen de la **misma** llamada a `GetProcessMemoryInfo` sin coste extra. Asi
+  el resultado de CP-2b solo decide **cual se publica** (§3.1 ya preve publicar los dos si `none` no
+  sirve), no el codigo. **El orden no cambia**: la primera redaccion de esta pregunta proponia mover
+  CP-2b, y era innecesario —§5.1 paso 1 y la tarea 18 ya lo ponen tras CP-1 y CP-2 y antes de
+  cualquier medida— y adelantarlo a CP-2 seria peor, porque CP-2 es el que valida que la sonda mide
+  el proceso.
 
 ---
 

@@ -213,7 +213,11 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
     - Files or modules: `src/local_delegate/benchmark.py`, `scripts/sonda_recursos.py` (nuevo),
       `tests/test_sonda.py` (nuevo)
     - Requirements covered: REQ-F2-3, y la regla de anulacion de REQ-F2-1
-    - Detalle: muestrea de un PID la RAM privada, la VRAM dedicada y la **VRAM compartida**. Va
+    - Detalle: muestrea de un PID la RAM privada **y el working set** —los dos, siempre, de la misma
+      llamada a `GetProcessMemoryInfo` (P-11: H4 quedo sin verificar en la tarea 12 y CP-2b decide
+      despues cual se publica, sin tocar codigo)—, la VRAM dedicada y la **VRAM compartida**, filtrando
+      la instancia por el LUID de la NVIDIA (`pid_<pid>_luid_<luid>_phys_0`, §3.4). `typeperf` emite
+      `-1` cuando el PID muere: eso es «sin muestra» y reresolver, no un cero. Va
       **dentro de `benchmark.py`**, no en un modulo nuevo del paquete: un modulo publicado arrastra
       sus tres sitios de documentacion por una sonda Windows-only de un solo uso. `scripts/` lleva
       solo el envoltorio para medir `llama-bench`, que no pasa por el runner. Lectura **sincrona
@@ -333,8 +337,9 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       build roto. **CP-2**: la sonda da numeros distintos con un 2B y con un 14B y se mueven al
       descargar; en la misma pasada se averigua **que mide** `llamaswap_memory_used_bytes`, el
       candidato a repetir el error de julio. **CP-2b**: con un MoE, `-ncmoe 12` sube la RAM privada
-      frente a `-ncmoe 0`; si no sube, el contador no ve los expertos y se cambia el `--load-mode` o
-      se publican los dos contadores diciendo cual es cual.
+      frente a `-ncmoe 0`; si no sube, el contador privado no ve los expertos y se publica el working
+      set junto al privado diciendo cual es cual (o se cambia el `--load-mode`); la sonda ya guarda
+      los dos desde la tarea 13, asi que el resultado no reabre codigo (P-11).
     - Rollback or recovery: al cerrar se **restaura** el `config.ini` respaldado y se **retira** el
       perfil del driver anadido a la ruta nueva; borrar `llamacpp-b10909` y la config de pruebas
       devuelve la maquina a como estaba. Produccion se reanuda arrancando `LocalDelegateDaemon`.
