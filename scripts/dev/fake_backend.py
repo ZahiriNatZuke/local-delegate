@@ -41,7 +41,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 class FakeBackend(BaseHTTPRequestHandler):
     delay: float = 1.5
-    model: str = "llama31-8b"
+    model: str = "gemma4-26b-a4b"
     truncate_first: bool = False
     _served = 0
 
@@ -99,7 +99,7 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=9595)
     parser.add_argument("--delay", type=float, default=1.5, help="segundos por respuesta")
-    parser.add_argument("--model", default="llama31-8b", help="id que se anuncia en /v1/models")
+    parser.add_argument("--model", default="gemma4-26b-a4b", help="id que se anuncia en /v1/models")
     parser.add_argument(
         "--truncate-first",
         action="store_true",

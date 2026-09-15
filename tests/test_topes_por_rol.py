@@ -18,7 +18,7 @@ import httpx2
 from local_delegate import config, server
 
 URL_CHAT = "http://test-backend/v1/chat/completions"
-MODELO_LARGO = "llama31-8b"  # el defecto de MODEL_LONG
+MODELO_LARGO = "gemma4-26b-a4b"  # el defecto de MODEL_LONG
 
 # El fixture `recargar_config` vive en `conftest.py`: lo comparten estos tests y los de las cadenas.
 

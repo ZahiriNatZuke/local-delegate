@@ -5,10 +5,10 @@
     "chunk_chars": 3500,
     "models": {
       "mechanical": "gemma3-4b",
-      "long": "llama31-8b",
-      "code": "qwen25-coder-14b",
+      "long": "gemma4-26b-a4b",
+      "code": "qwen36-35b-a3b",
       "fast": "qwen35-2b",
-      "vision": "qwen3-vl-8b"
+      "vision": "gemma4-12b"
     },
     "max_chars": {
       "mechanical": 20000,
@@ -284,7 +284,7 @@
       "source_bytes": 10480,
       "source_chars": 10331,
       "production": {
-        "model": "llama31-8b",
+        "model": "gemma4-26b-a4b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
@@ -321,7 +321,7 @@
       "source_bytes": 7069,
       "source_chars": 6952,
       "production": {
-        "model": "llama31-8b",
+        "model": "gemma4-26b-a4b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
@@ -361,7 +361,7 @@
       "source_bytes": 48000,
       "source_chars": 48000,
       "production": {
-        "model": "llama31-8b",
+        "model": "gemma4-26b-a4b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"version\", \"requires-python\", \"primer_paquete\"}. Nada fuera del formato.",
@@ -437,7 +437,7 @@
       "source_bytes": 8590,
       "source_chars": 8589,
       "production": {
-        "model": "llama31-8b",
+        "model": "gemma4-26b-a4b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
@@ -491,7 +491,7 @@
       "source_bytes": 19089,
       "source_chars": 19041,
       "production": {
-        "model": "qwen25-coder-14b",
+        "model": "qwen36-35b-a3b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
@@ -527,7 +527,7 @@
       "source_bytes": 15468,
       "source_chars": 15400,
       "production": {
-        "model": "qwen25-coder-14b",
+        "model": "qwen36-35b-a3b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una explicación clara en prosa de qué hace el código y cómo.. Máximo 250 palabras. Nada fuera del formato.",
@@ -568,7 +568,7 @@
       "source_bytes": 20171,
       "source_chars": 20000,
       "production": {
-        "model": "qwen25-coder-14b",
+        "model": "qwen36-35b-a3b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una explicación clara en prosa de qué hace el código y cómo.. Máximo 250 palabras. Nada fuera del formato.",
@@ -607,7 +607,7 @@
       "source_bytes": 158,
       "source_chars": 156,
       "production": {
-        "model": "qwen25-coder-14b",
+        "model": "qwen36-35b-a3b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: solo código python válido, sin explicaciones ni ```. Nada fuera del formato.",
@@ -664,7 +664,7 @@
       "source_bytes": 718456,
       "source_chars": null,
       "production": {
-        "model": "qwen3-vl-8b",
+        "model": "gemma4-12b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una respuesta en prosa clara sobre la imagen. Máximo 200 palabras. Nada fuera del formato.",
@@ -705,7 +705,7 @@
       "source_bytes": 718456,
       "source_chars": null,
       "production": {
-        "model": "qwen3-vl-8b",
+        "model": "gemma4-12b",
         "calls": 1
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: una respuesta en prosa clara sobre la imagen. Máximo 200 palabras. Nada fuera del formato.",
@@ -749,7 +749,7 @@
       "source_bytes": 106092,
       "source_chars": 102987,
       "production": {
-        "model": "llama31-8b",
+        "model": "gemma4-26b-a4b",
         "calls": 5
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
@@ -779,7 +779,7 @@
       "source_bytes": 157873,
       "source_chars": 155713,
       "production": {
-        "model": "qwen25-coder-14b",
+        "model": "qwen36-35b-a3b",
         "calls": 13
       },
       "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",

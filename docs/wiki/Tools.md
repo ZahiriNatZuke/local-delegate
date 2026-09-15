@@ -211,9 +211,9 @@ Cuatro perfiles, todos cambiables por entorno (ver [Configuration](Configuration
 | Perfil | Variable | Por defecto | Lo usan |
 |---|---|---|---|
 | mecánico | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | resumir, clasificar, extraer, traducir, delegar |
-| contexto largo | `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | los mismos, cuando la entrada es grande |
-| código | `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | boilerplate, commit-msg, explicar código |
-| visión | `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | describir imágenes |
+| contexto largo | `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | los mismos, cuando la entrada es grande |
+| código | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | boilerplate, commit-msg, explicar código |
+| visión | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | describir imágenes |
 
 El salto de mecánico a largo es **automático** y se decide sondeando el tamaño: bytes del archivo
 para `path`, caracteres para `text`.

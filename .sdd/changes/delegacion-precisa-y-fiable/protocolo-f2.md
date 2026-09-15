@@ -1972,6 +1972,80 @@ la carga en llama-swap: reintentar tras un `ReadTimeout` durante la carga vuelve
 Primera pasada del script sin sanear las muestras de `/running` (llevaban la linea de comando con
 rutas): corregido antes de versionar nada.
 
+**Sesion 9, F3 tarea 24: ¿cabe el residente al lado del catalogo nuevo? (2026-09-15, inicio 16:44:00
+UTC, duracion estimada ~60 min, escrita antes de medir).** Daemon y llama-swap de produccion parados a
+las 16:44:00 (decision del usuario); ningun `llama-server`, `llama-swap` ni `pythonw` del daemon vivo;
+VRAM 677 MiB, RAM libre 21,7 GB. Produccion y la Mac sin servicio durante la ventana: descontarla de
+la quinta medicion de adopcion (§1.5). Config `benchmarks/catalogo-2026-09/llama-swap-coexistencia.yaml`
+en el puerto 9595, sin `apiKeys`: el residente exactamente como en produccion y los candidatos con
+los flags de la tanda. Tres decisiones tomadas antes de medir:
+
+- **`--load-mode mmap` en los candidatos** (usuario): con `none` y `-ncmoe` > 0 los expertos en RAM
+  cuentan como `Shared Usage` (§3.2) y la condicion 3 de «cabe» fallaria por construccion; con
+  `mmap` ese contador no los ve y el umbral de 1 024 MiB se lee en valor absoluto. La velocidad de la
+  tanda se midio con `none`: se anota tok/s para compararla.
+- **`n_ctx` en tokens medidos para el `MAX_CHARS` de produccion** (`llama-tokenize` de b10909, entrada
+  mas densa del corpus, `uv.lock`), + la mayor `max_tokens` de las tools del rol, + 10 %, a multiplo
+  de 512: `long` 32 822 + 2 048 -> **38 400**; `code` 20 000 chars de `uv.lock` = 13 062 tokens con
+  Qwen3.6 (el diff del corpus da 5 921: la tanda dimensiono por el caso, no por el tope) + 1 536 ->
+  **16 384**; `vision` 8 192.
+- **Escritorio en uso**: navegador y video abiertos por el usuario antes de la primera prueba.
+
+Metodo por prueba (`resultados/medir_coexistencia.py`, copia del script): llama-swap de medida
+limpio -> residente con un prompt corto (dos veces) -> candidato con la entrada mayor de su rol
+(`extraer-uvlock-48k`, `commit-diff-19k`, la imagen de control `dashboard-bcbe39f` con el prompt de
+`describir-dashboard`) -> residente dos veces -> llama-swap parado. `typeperf` del adaptador a 1 Hz y,
+en paralelo, VRAM dedicada **de cada `llama-server`**. Pasada de prueba del script a las 16:47:28
+(Gemma 4 12B), fuera de la tabla; la primera no midio nada: `\Memory\Available MBytes` esta
+traducido en este Windows y `typeperf` **descarta la columna sin avisar**, asi que ninguna linea
+tenia las columnas esperadas (la RAM pasa a `GlobalMemoryStatusEx`).
+
+**Hallazgo: las cuatro condiciones del plan no pueden ver el fallo que importa.** Primera tanda
+(16:48-16:50, solo contador del adaptador): los tres «caben» segun el plan, pero la suma no cuadraba
+—escritorio + residente 4 942 MiB mas los ~14,1 GB del 26B no entran en 16 311— y el residente
+tardaba 1,6-1,9 s en 8 tokens tras los MoE contra 0,09 s tras el 12B. Con la VRAM por proceso
+(segunda tanda) se ve la causa: **WDDM desaloja la VRAM del residente** (3 270 -> 806 MiB) para meter
+la del candidato y se la devuelve cuando se le pide algo. Esa memoria no pasa a `Shared Usage`, asi
+que la condicion 3 sale en verde con el residente fuera de la GPU. Se anade una **quinta condicion**:
+la VRAM dedicada del residente no baja mas de 256 MiB mientras trabaja el candidato. Control
+negativo: con el 12B no baja ni un MiB.
+
+Segunda tanda, todas con el residente `gemma3-4b` (3 270 MiB dedicados), `--load-mode mmap`, video
+de fondo y las aplicaciones habituales del usuario salvo Docker. Los candidatos respondieron bien en
+todas (JSON correcto, mensaje de commit, descripcion de la imagen), sin OOM y con `Shared Usage` del
+adaptador subiendo 211-300 MiB. tok/s de la respuesta (salidas cortas: orientativo).
+
+| Hora UTC | Candidato | `-ncmoe` | Escritorio en reposo | VRAM candidato pico | Adaptador pico | Residente min durante | Residente 1.a llamada despues | RAM libre min | tok/s | Cabe (5 condiciones) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 16:52:13 | Gemma 4 12B | — | 715 | 9 060 | 13 047 | 3 270 | 0,06 s | 10 687 | 45,1 | **si** |
+| 16:52:45 | Gemma 4 26B-A4B | 0 | 721 | 14 368 | 15 928 | **806** | 1,80 s | 1 215 | 62,4 | no: desaloja |
+| 16:55:12 | Gemma 4 26B-A4B | 4 | 708 | 13 062 | 15 892 | **2 118** | 0,88 s | 3 742 | 54,3 | no: desaloja |
+| 16:56:08 | Gemma 4 26B-A4B | 8 | 711 | 11 910 | 15 889 | 3 270 | 0,08 s | 6 308 | 45,3 | **si** |
+| 16:56:59 | Gemma 4 26B-A4B | 12 | 710 | 10 534 | 14 516 | 3 270 | 0,07 s | 6 467 | 37,1 | **si** |
+| 16:57:55 | Gemma 4 26B-A4B | 16 | 712 | 9 160 | 13 144 | 3 270 | 0,09 s | 7 223 | 26,9 | **si** |
+| 16:53:33 | Qwen3.6-35B-A3B | 8 | 693 | 14 328 | 15 900 | **838** | 1,72 s | 357 | 60,0 | no: desaloja |
+| 17:04:10 | Qwen3.6-35B-A3B | 12 | 1 006 | 12 904 | 15 895 | **2 054** | 0,90 s | 160 | 50,4 | no: desaloja |
+| 17:04:51 | Qwen3.6-35B-A3B | 16 | 828 | 11 546 | 15 652 | 3 270 | 0,09 s | 1 815 | 39,8 | **si** |
+| 17:05:29 | Qwen3.6-35B-A3B | 20 | 836 | 10 120 | 14 228 | 3 270 | 0,06 s | 1 927 | 39,8 | **si** |
+
+Tres lecturas:
+
+- **Resultado del plan: «cabe solo con un `-ncmoe` mayor»** en los dos MoE; el 12B cabe tal cual.
+  El punto minimo que no desaloja (26B con 8, Qwen3.6 con 16) deja el adaptador a 420-660 MiB del
+  techo **con el escritorio en ~710-830 MiB**; con el video en primer plano el reposo llego a 1 996
+  MiB (16:48), y ahi volveria a desalojar. Con la reserva de P-14 (2 GB para el resto de la PC) el
+  candidato tiene 16 311 − 2 048 − 3 270 = **10 993 MiB**: caben el 26B con 12 y el Qwen3.6 con 20.
+- **La RAM es el limite que el plan no mide**: con `mmap` el Qwen3.6 (fichero de ~17,7 GB) deja la
+  RAM libre en 1,8-1,9 GB en su punto de carga, y el usuario suele tener Docker abierto, que no
+  estaba. No da OOM (la memoria mapeada se puede recuperar), pero es presion real en una PC de 32 GB.
+- La primera tanda (`resultados/coexistencia-v1-adaptador.jsonl`) se conserva como **dato que no
+  distingue**: los tres «cabian» con el residente desalojado.
+
+**Decision del usuario (17:07 UTC), con esta tabla delante:** Gemma 4 26B-A4B con **`-ncmoe 12`** y
+Qwen3.6-35B-A3B con **`-ncmoe 20`**, los dos dentro de la reserva de P-14; Gemma 4 12B sin cambios; y
+la quinta condicion entra en el plan como enmienda de la tarea 24. Daemon arrancado a las 17:06:53
+UTC con la config de produccion sin tocar: **22 min 53 s sin servicio** (16:44:00-17:06:53).
+
 **Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
 pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
 el daemon de produccion** (y su llama-swap en 9292, con b9925), sin intervencion de la sesion que
