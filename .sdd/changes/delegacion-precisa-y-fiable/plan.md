@@ -539,6 +539,15 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       Y la Mac delega con su configuracion de siempre.
     - Rollback or recovery: restaurar el `config.yaml` respaldado y devolver el perfil a la ruta de
       b9925, medido; b9925 sigue en disco. El cambio de `RECOMMENDED_VERSIONS` se revierte con el PR.
+    - Estado (2026-09-15): **hecha en la maquina** (`protocolo-f2.md` §10 sesion 7). Produccion corre
+      b10909 + v255 con el catalogo vigente desde las 15:04:55 UTC. Falta comprobar la Mac. Lo que
+      obligo a cambiar respecto a este texto: el ejecutable de llama-swap lo decide la variable de
+      usuario `LLAMASWAP_EXE` (no el `config.yaml`), asi que migrar y deshacer es cambiar esa variable;
+      y **`doctor` leia `b0` con el `--version` semver de b10909** —defecto silencioso que habria
+      marcado como desactualizado un build mas nuevo—, arreglado con test rojo y mutante en el mismo
+      PR. Rollback concreto: `LLAMASWAP_EXE` -> `D:\Projects\llms\llama-swap\llama-swap.exe`, copiar
+      `config.yaml.pre-b10909-20260915.bak` sobre `config.yaml`, perfil a `llamacpp\llama-server.exe`
+      (medido) y reiniciar el daemon.
 
 23. **Capturas reales para REQ-020 y la senal de modelo cargandose**
     - Files or modules: `tests/fixtures/backend/` (nuevo, respuestas crudas con version anotada),

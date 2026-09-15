@@ -97,7 +97,22 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   que lo más probable es que llama-swap esté montando el modelo: arrancar otro no arregla nada. Pasa
   a tener clase propia y mensaje propio.
 
+- **`doctor` leía como `b0` las versiones nuevas de llama.cpp.** Desde que llama.cpp numera en
+  semver, `--version` imprime `version: 0.4.0-dev (build 10909, commit ...)`, y la expresión que
+  buscaba el primer número tras `version:` se quedaba con el `0` **sin avisar**: el doctor daba por
+  desactualizado un build más nuevo que el recomendado. Ahora lee primero `build N` y solo acepta el
+  formato viejo (`version: 9925 (...)`) con el paréntesis detrás, así que un semver sin número de
+  build da «salida inesperada» en vez de una versión inventada. Salió al migrar esta máquina a b10909.
+
 ### Changed
+- **Versiones recomendadas del backend: llama.cpp b10909 y llama-swap v255** (antes b9925 y
+  v238). Son las de la medición del catálogo de modelos, y la producción del autor ya corre sobre
+  ellas con el catálogo de siempre: los cinco modelos cargan y responden por el daemon, el residente
+  sigue cargado al entrar otro modelo y `apiKeys` responde 200 con la clave y 401 sin ella. Dos cosas
+  que conviene saber al actualizar: b10909 trae `--fit on`, que recorta capas en silencio para que
+  el modelo quepa (fija `--fit off -ngl 99` si prefieres un OOM claro), y v255 **no arranca** si
+  falta la variable que referencia `apiKeys`. `doctor` compara contra estos valores.
+
 - **La clasificación de fallos sale de `server.py` a un módulo puro** (`fallos.py`): recibe el
   resultado o la excepción y devuelve la clase, sin red, sin estado y sin decidir reintentos. Es la
   primera de las tres capas que el respaldo entre modelos necesita, y las siete clases de la tabla

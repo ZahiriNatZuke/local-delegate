@@ -1921,6 +1921,26 @@ Lo que esto **no** prueba: calidad ni velocidad en b9925 —un solo prompt corto
 cargue con escritorio ocupando VRAM. Para la quinta medicion de adopcion (§1.5): el intervalo toco la
 GPU con produccion arriba; si llego alguna delegacion en esos dos minutos, pudo competir por VRAM.
 
+**Sesion 7, F3 tarea 22: migrar produccion a b10909 y llama-swap v255 con el catalogo vigente
+(2026-09-15, inicio 14:32:47 UTC, duracion estimada ~45 min, escrita antes de tocar nada).** Daemon
+parado a las 14:32:47 (`schtasks /End` y fin de su `pythonw` y su llama-swap v238); ningun
+`llama-server`, `llama-swap` ni `pythonw` del daemon vivo; VRAM 673 MiB. Produccion sin servicio
+durante toda la ventana: descontarla de la quinta medicion de adopcion (§1.5).
+
+Resultado (cierre 15:04:55 UTC, 32 min reales):
+
+| Hora UTC | Paso | Resultado |
+| --- | --- | --- |
+| 14:40-14:50 | v255 con la config de produccion, clave falsa solo en ese proceso, sin cargar modelos | acepta `groups`; con clave 200, sin clave 401, clave incorrecta 401; **sin la variable no arranca** (`environment variable 'LOCAL_DELEGATE_REMOTE_API_KEY' is not set`) |
+| — | el usuario mueve el perfil a `llamacpp-b10909\llama-server.exe` | — |
+| 15:03:01 / 15:03:12 | perfil medido (`medir-perfil-cp1.ps1`, LUID `F336`) | **b10909 OOM a los 6,1 s** (`cudaMalloc failed`, 12 288 MiB); b9925 carga desbordando 5 885 MiB |
+| 15:03:37-15:04:18 | catalogo vigente sobre b10909 + v255 en 9595 con la clave real | clave 200/401/401; los cinco cargan y responden (2,6 a 11,3 s); `gemma3-4b` sigue `ready` al entrar cada modelo del grupo `swap`; todos los `llama-server` desde `llamacpp-b10909`; VRAM pico 12 786 MiB (residente + 14B), `Shared Usage` <= 326 MiB; log sin errores |
+| 15:04:41 | produccion | `LLAMASWAP_EXE` de usuario -> `llama-swap-v255\llama-swap.exe`; `config.yaml` = `config.b10909.yaml` (sha256 `7858E9AB...`); respaldo `config.yaml.pre-b10909-20260915.bak` (`37BA542E...`) |
+| 15:04:55 | daemon arrancado (`schtasks /Run`) | `local_status` arriba; `local_classify` y `local_describe_image` responden por el daemon; llama-swap desde `llama-swap-v255`, `llama-server` desde `llamacpp-b10909`; `doctor` del repo: v255 y b10909 |
+
+Sin `--gpu-luid` fijo en ningun paso. Queda por comprobar, desde la Mac, que sigue delegando contra
+este backend.
+
 **Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
 pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
 el daemon de produccion** (y su llama-swap en 9292, con b9925), sin intervencion de la sesion que

@@ -10,8 +10,8 @@ carpetas con las que el autor verifica cada release. Ni requisito ni obligación
 | Componente | Versión probada | Verificado | Notas |
 |---|---|---|---|
 | `local-delegate` | 0.14.0 | 2026-07-30 | esta release |
-| `llama-server` (llama.cpp) | **b9925** | 2026-07-11 | RTX 5060 (Blackwell/sm_120), runtime **CUDA 13.3** |
-| `llama-swap` | **v238** | 2026-07-11 | trae `status` en `/v1/models` (#901) y métricas SQLite (#898) |
+| `llama-server` (llama.cpp) | **b10909** | 2026-09-15 | RTX 5060 (Blackwell/sm_120), runtime **CUDA 13.3**; `--version` pasa a semver (`0.4.0-dev (build 10909, ...)`) y trae `--fit on` por defecto: fija `--fit off -ngl 99` si quieres un OOM claro en vez de capas recortadas en silencio |
+| `llama-swap` | **v255** | 2026-09-15 | acepta la misma config que v238 (`groups`, `apiKeys` con `${env...}`); sin la variable de la clave **no arranca**, en vez de quedar abierto |
 
 > Fuente de verdad: `RECOMMENDED_VERSIONS` en
 > [`src/local_delegate/doctor.py`](../../src/local_delegate/doctor.py). El comando
@@ -28,10 +28,11 @@ Todo vive autocontenido bajo un único raíz (aquí `D:\Projects\llms\`):
 ```
 D:\Projects\llms\              ← raíz único, autocontenido
   ├─ llama-swap\
-  │   ├─ llama-swap.exe        (v238)
   │   └─ config.yaml           (modelos + groups; ver recipes)
-  ├─ llamacpp\
-  │   ├─ llama-server.exe      (b9925)
+  ├─ llama-swap-v255\
+  │   └─ llama-swap.exe        (v255)
+  ├─ llamacpp-b10909\
+  │   ├─ llama-server.exe      (b10909)
   │   └─ *.dll                 (ggml-*, cudart64_13, cublas64_13, cublasLt64_13)
   └─ models\                   (una subcarpeta por modelo)
       ├─ gemma3-4b\*.gguf
@@ -46,7 +47,7 @@ Variables de entorno que enlazan las piezas (en el config del host MCP — Claud
 | Variable | Valor de referencia |
 |---|---|
 | `LOCAL_DELEGATE_BASE_URL` | `http://127.0.0.1:9292/v1` |
-| `LLAMASWAP_EXE` | `D:\Projects\llms\llama-swap\llama-swap.exe` |
+| `LLAMASWAP_EXE` | `D:\Projects\llms\llama-swap-v255\llama-swap.exe` |
 | `LLAMASWAP_CONFIG` | `D:\Projects\llms\llama-swap\config.yaml` |
 
 El detalle de GPU (build CUDA para Blackwell, `-ngl`, flash-attn) está en el
