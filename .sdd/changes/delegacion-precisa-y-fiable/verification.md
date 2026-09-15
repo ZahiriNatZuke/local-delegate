@@ -1109,3 +1109,53 @@ intento: la guarda del corpus fue la que lo detecto (10 tests en rojo por la fir
 `src`, `tests` y `scripts`. **Sin verificar contra el backend real**: es de la tarea 30. El daemon
 sigue corriendo el codigo de la 24; instalar esta rama activa el respaldo, que viene encendido por
 defecto.
+
+## F3: tarea 29, observabilidad del salto (2026-09-15)
+
+Rama `sdd/f3-t29-observabilidad`. Campos aditivos: un evento sin salto se escribe igual que antes
+(test), y `model` sigue siendo el que respondio.
+
+### Lo comprobado
+
+- **Log** (`tests/test_observabilidad_respaldo.py`): pedido, respondido, motivo y clase del salto en
+  `_chat`, en trozos y en map-reduce; `chunks` con las llamadas del respaldo (2 en una llamada, 5 en
+  la traduccion de cuatro trozos); el salto por enfriamiento con `fallback_class: enfriamiento` y sin
+  `chunks`; el razonamiento agotado con `error_class: configuracion` (REQ-019).
+- **Cuenta y panel** (`tests/test_metrics.py`): `fallback` y `cause` en `_accounting`, un evento
+  historico que se lee igual, las estadisticas con saltos, causas y tokens del salto atribuidos al
+  modelo que respondio, y **la paridad Python–JS con un evento con salto, uno de configuracion y uno
+  con los dos campos**, mas la guarda de que la lista tiene casos de cada.
+- **`local_status`** (REQ-013): el modelo enfriado con los segundos que le quedan (100-120 tras tres
+  fallos) y «1 vez seguida»; tras vencer y volver a fallar, «2 veces seguidas» y la espera doblada;
+  «ningun modelo enfriado»; y «apagado» con `LOCAL_DELEGATE_COOLDOWN=0` aunque el fichero enfrie.
+- **Panel en el navegador** (app de metricas en el 9494 con un log de ejemplo de cuatro filas):
+  dos filas con la marca `↪` y su titulo («Respondio gemma3-4b en lugar de gemma4-26b-a4b
+  (http_500)» y el de enfriamiento), el punto de error con «causa: configuracion» y la tarjeta
+  «5 al backend (+1 por trocear) · 2 con salto». De ahi salio un texto que ya no era cierto: la
+  llamada de mas la hizo el respaldo, no un troceo; ahora dice «por trocear o saltar».
+
+Rojo antes de implementar: 16 fallaron; paso solo «sin salto el evento se escribe como antes», que
+es el comportamiento de hoy. Un defecto propio al implementar, visto por la suite y no por los
+tests nuevos: la funcion de `local_status` se inserto **debajo del decorador `@mcp.tool`** y
+`local_status` dejo de ser una tool (cayeron el smoke de las once tools, dos de la wiki y uno de
+catalogo).
+
+### Mutantes
+
+| Mutante | Cae en |
+| --- | --- |
+| `_accounting` sin `fallback` | paridad, la cuenta con salto y las estadisticas |
+| `_accounting` sin causa de configuracion | paridad, la cuenta de configuracion y las estadisticas |
+| el JS sin `fallback` | paridad |
+| **el JS con la causa en otro orden** | **sobrevivio**; con el caso de los dos campos, cae en la paridad |
+| el log sin `model_requested` | los cuatro tests de salto del log |
+| `chunks` de `_chat` sin el respaldo | el log con salto |
+| el log sin `error_class` | el razonamiento agotado |
+| `local_status` ignora las reentradas | reentradas seguidas |
+| `local_status` ignora el interruptor | enfriamiento apagado |
+| el panel no cuenta causas | las estadisticas |
+| los tokens del salto van al modelo pedido | las estadisticas |
+| en trozos el log no marca el salto | trozos y map-reduce |
+
+El superviviente no era equivalente: una operacion por trozos que salta y despues falla escribe
+`fallback_class` **y** `error_class`, y en ese caso el orden decide la causa que ve el panel.

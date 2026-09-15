@@ -29,6 +29,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   trozos, el modelo cambia como mucho una vez. `local_delegate` con `model` no salta nunca.
   `LOCAL_DELEGATE_FALLBACK=0` lo apaga.
 
+- **El salto se ve: en el log, en el panel y en `local_status`.** Cada evento con salto guarda qué
+  modelo se pidió (`model_requested`), por qué respondió otro (`fallback_reason`, `fallback_class`)
+  y, si falló, la clase del fallo (`error_class`), así que un razonamiento que agotó `max_tokens`
+  queda como causa de configuración y no como un error más. `model` sigue siendo el que respondió
+  y `chunks` cuenta también las llamadas del respaldo, de modo que el histórico se lee igual. El
+  panel marca las filas con salto, cuenta cuántas operaciones lo tuvieron y sus causas, y atribuye
+  tokens al modelo que respondió. `local_status` lista los modelos enfriados, con lo que les queda y
+  cuántas veces seguidas han vuelto a entrar.
+
 - **Enfriamiento por modelo, compartido entre procesos.** Un modelo que falla tres veces seguidas
   por su culpa deja de recibir peticiones durante 120 s; al vencer, un éxito lo deja limpio y un
   solo fallo lo vuelve a enfriar con la espera doblada, hasta 900 s. El estado lo comparten el daemon

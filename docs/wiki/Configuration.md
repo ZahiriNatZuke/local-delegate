@@ -105,6 +105,8 @@ Un modelo que falla varias veces seguidas deja de recibir peticiones durante un 
 cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
 (`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
 se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
+`local_status` lista los modelos enfriados, con los segundos que les quedan y cuántas veces seguidas
+han vuelto a entrar sin un éxito de por medio.
 
 | Variable | Default | Qué hace |
 |---|---|---|

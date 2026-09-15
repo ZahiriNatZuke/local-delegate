@@ -524,6 +524,8 @@ def test_accounting_una_llamada_sin_trocear():
         "tokens_out": 90,
         "saved": 1000,  # chars_in ÷ 4: el contenido que no entró al contexto
         "estimated": False,
+        "fallback": False,
+        "cause": None,
     }
 
 
@@ -680,6 +682,29 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             output_to_file=True,
         ),
         _ev(chars_in=8000, tokens_in=2100, tokens_out=950, output_to_file=True),
+        # F3, tarea 29: un evento con salto y uno con causa de configuración (REQ-013, REQ-019).
+        # Sin ellos la paridad pasaría sin ejercitar las ramas nuevas en ninguna de las dos copias.
+        _ev(
+            model="gemma3-4b",
+            model_requested="gemma4-26b-a4b",
+            fallback_reason="http_500",
+            fallback_class="modelo",
+            chunks=2,
+            tokens_in=1200,
+            tokens_out=90,
+        ),
+        _ev(ok=False, error="config_max_tokens", error_class="configuracion", tokens_in=50),
+        # Los dos campos a la vez: una operación por trozos que saltó y luego falló. Sin este caso
+        # un mutante que invertía el orden de la causa en el JS sobrevivía a la paridad.
+        _ev(
+            ok=False,
+            model_requested="gemma4-26b-a4b",
+            fallback_reason="http_500",
+            fallback_class="modelo",
+            error="http_503",
+            error_class="sin_clasificar",
+            chunks=3,
+        ),
     ]
     entrada = tmp_path / "casos.json"
     entrada.write_text(json.dumps(casos), encoding="utf-8")
@@ -705,6 +730,12 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         assert js["tokensOut"] == py["tokens_out"], caso
         assert js["saved"] == py["saved"], caso
         assert js["estimated"] == py["estimated"], caso
+        assert js["fallback"] == py["fallback"], caso
+        assert js["cause"] == py["cause"], caso
+    # Guarda de «esto llegó a comprobar algo»: sin un caso de cada, la paridad de las ramas nuevas
+    # saldría verde con las dos copias rotas.
+    assert any(metrics._accounting(c)["fallback"] for c in casos)
+    assert any(metrics._accounting(c)["cause"] == "configuracion" for c in casos)
 
 
 def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
@@ -732,6 +763,98 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
     texto = server.local_status()
     assert f"~{agregado['tokens_context_saved']} tokens" in texto
     assert f"({agregado['backend_calls']} llamadas al backend)" in texto
+
+
+# --- F3, tarea 29: el salto y su causa, en la cuenta y en el panel -----------------------------
+
+
+def test_accounting_marca_el_salto_y_su_causa():
+    a = metrics._accounting(
+        _ev(
+            model="gemma3-4b",
+            model_requested="gemma4-26b-a4b",
+            fallback_reason="http_500",
+            fallback_class="modelo",
+            chunks=2,
+            tokens_in=1200,
+            tokens_out=90,
+        )
+    )
+    assert a["fallback"] is True
+    assert a["cause"] == "modelo"
+    assert a["backend_calls"] == 2, "la llamada del respaldo también gastó backend"
+
+
+def test_accounting_causa_de_configuracion_en_un_fallo():
+    a = metrics._accounting(_ev(ok=False, error="config_max_tokens", error_class="configuracion"))
+    assert a["fallback"] is False
+    assert a["cause"] == "configuracion"
+
+
+def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
+    a = metrics._accounting(
+        _ev(
+            ok=False,
+            model_requested="gemma4-26b-a4b",
+            fallback_class="modelo",
+            error_class="sin_clasificar",
+        )
+    )
+    assert a["cause"] == "sin_clasificar", "manda cómo acabó la operación, no por qué saltó"
+    assert a["fallback"] is True
+
+
+def test_accounting_el_historico_sin_campos_nuevos_se_lee_igual():
+    a = metrics._accounting(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    assert a["fallback"] is False and a["cause"] is None
+    assert (a["backend_calls"], a["tokens_in"], a["saved"]) == (4, 26131, 21044)
+
+
+def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(
+        tmp_path / "usage-202607.jsonl",
+        [
+            _ev(model="gemma3-4b", tokens_in=100, tokens_out=10),
+            _ev(
+                model="gemma3-4b",
+                model_requested="gemma4-26b-a4b",
+                fallback_reason="http_500",
+                fallback_class="modelo",
+                chunks=2,
+                tokens_in=500,
+                tokens_out=20,
+            ),
+            _ev(
+                model="gemma4-26b-a4b",
+                ok=False,
+                error="config_max_tokens",
+                error_class="configuracion",
+                tokens_in=50,
+                tokens_out=0,
+            ),
+        ],
+    )
+    metrics._FILE_CACHE.clear()
+
+    j = (
+        TestClient(metrics.app)
+        .get("/api/stats?from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00")
+        .json()
+    )
+    assert j["fallback_events"] == 1
+    assert j["causes"] == {"modelo": 1, "configuracion": 1}
+    por_modelo = {m["model"]: m for m in j["by_model"]}
+    assert por_modelo["gemma3-4b"]["tokens_in"] == 600, "los tokens del salto van al que respondió"
+    assert por_modelo["gemma3-4b"]["backend_calls"] == 3
+    assert por_modelo["gemma3-4b"]["fallback_calls"] == 1
+
+
+def test_el_panel_marca_las_operaciones_con_salto():
+    html = metrics.HTML
+    assert "e.model_requested" in html and "fbchip" in html
+    assert "e.error_class" in html
 
 
 # --- Quién delegó: el desglose por cliente -----------------------------------------------------
