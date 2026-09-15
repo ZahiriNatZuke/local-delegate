@@ -1442,6 +1442,34 @@ MiB.
 Las configs de los densos estan en `llama-swap-pruebas.yaml` (`t-*`). Las de los dos MoE esperan al
 barrido de `-ncmoe` (§5.1 paso 5).
 
+#### Los candidatos piensan por defecto (tarea 20, 2026-09-15)
+
+**Ningun caso del corpus fija `reasoning_effort`**, asi que lo decide la plantilla del modelo. Medido
+con `llama-server` de b10909 y la config de calidad de cada MoE, la misma pregunta corta con
+`max_tokens` 256:
+
+| Modelo | Sin `chat_template_kwargs` | Con `enable_thinking: false` |
+| --- | --- | --- |
+| Qwen3.6-35B-A3B `-ncmoe 8` | `finish_reason: length`, 256 tokens **todos de razonamiento**, contenido **vacio** (4,0 s) | `stop`, 27 tokens, responde (0,5 s) |
+| Gemma 4 26B-A4B `-ncmoe 0` | `length`, 256 tokens de razonamiento, contenido **vacio** (3,2 s) | `stop`, 11 tokens, responde (0,2 s) |
+| Gemma 4 E4B | `stop` con **226 de 256** tokens, casi todo razonamiento; responde al limite (6,3 s) | `stop`, 12 tokens (0,2 s) |
+| Gemma 4 12B (con `mmproj`) | `stop` con **228 de 256** tokens, casi todo razonamiento (4,6 s) | `stop`, 15 tokens (0,4 s) |
+
+Los cuatro candidatos piensan por defecto. E4B y 12B llegan a contestar con esta pregunta, pero por
+~30 tokens: con un caso de `max_tokens` 16 (`clasificar-53`) o una entrada que haga pensar mas, darian
+vacio igual.
+
+Con los `max_tokens` de produccion (16-2 048), la tanda sin fijar el razonamiento mediria a los
+candidatos por respuestas vacias, no por calidad: el fallo 4 de julio. Los vigentes de texto
+(`llama31-8b`, `qwen25-coder-14b`, `gemma3-4b`) no son modelos de razonamiento.
+
+**Decision del usuario (2026-09-15): todos los candidatos corren con `--reasoning-effort off`**
+(`enable_thinking: false`), que queda en `variant.reasoning_effort` de cada registro. Es como tendria
+que configurarlos produccion con estos `max_tokens`, y compara igual con igual contra vigentes que no
+razonan. Si un candidato gana, F3 lo sube con el razonamiento apagado; medirlo encendido exigiria
+otros `max_tokens`, o sea otro corpus y repetir CP-3. La columna `reasoning_effort` por defecto del
+registro de arriba queda en `off` para todos los candidatos.
+
 Descarga: los **~85 GB** de la lista corta del vault menos los ~5 GB de los candidatos de `fast`, que salen de la tanda, mas los **36,6 GB** del modelo que no cabe de CP-1: **~117 GB** en total, dentro de los 400 GB libres. La cifra se contrasta al descargar; no se deriva de nada mas. `gpt-oss-20b` ya esta. **Qwen3.5-122B-A10B UD-IQ2_XXS
 (36,6 GB) no es candidato**: entra solo como el modelo que no cabe de CP-1.
 
@@ -1617,6 +1645,14 @@ sin comprobar nada.
   (1/24 en un agregado de cuatro casos de seis terminos).
 - **`Shared Usage`**: crece si el pico de una corrida supera la menor primera lectura del modelo en
   el rol. El umbral por defecto es 0 y **esta sin calibrar**: lo fija la tarea 18 al ver CP-1.
+  **Calibrado en la tarea 20 (decision del usuario, 2026-09-15): 1 024 MiB** (`--umbral-shared-mib
+  1024`). Se decidio despues de que el umbral 0 diera «no concluyente» en los tres roles, y por eso
+  quedan escritos los datos que lo sostienen, todos de magnitud y ninguno de quien gana: ruido en la
+  tanda de 0 a 82 MiB por modelo (casi siempre en la primera corrida); ruido en CP-1, antes de la
+  tanda, de +74 MiB en una carga que acabo en OOM; desbordamiento real de 5 666 a 6 114 MiB (CP-1,
+  b9925 sin perfil). Con `--load-mode none` el contador se mueve siempre algo, y con 0 ninguna tanda
+  podria ser concluyente: era un control que no puede dar un resultado distinto. Coste aceptado: un
+  desbordamiento parcial por debajo de 1 GB no se ve aqui; lo sigue impidiendo el perfil (CP-1).
 
 **El hallazgo: con la granularidad real, en `code` la regla puede no disparar nunca.** El corpus
 tiene casos de muy pocos terminos (`commit-diff-19k` tiene **uno**: calidad 0 o 1;
@@ -1778,6 +1814,55 @@ caber en el barrido y no en la config real; las cuatro cargan:
 
 Las configs de techo caben con el mismo `-ncmoe` que las de calidad: no hace falta subirlo. Todas
 estan en `llama-swap-pruebas.yaml` (`t-*`).
+| 5 | 2026-09-15 04:06:37 (§1.4 a las 04:06:36: RAM libre 20,2 GB, VRAM del adaptador 329 MiB, ningun `llama-server`/`llama-swap`/`pythonw`, daemon `Ready`, una sesion de Claude Code; prueba del script a las 04:05:50 con `gemma3-4b` y 1 corrida, fuera de la tanda) | 2026-09-15 04:21:01 (tanda principal, **14,4 min** contra ~45 estimados); `vision` de Gemma 4 12B repetido dos veces por causas distintas —`--ubatch-size` (10:56-10:57) y LUID reasignado tras reiniciar (valida: 11:01:25-11:02:08)— | **~45 min, escrita antes de empezar** (vigentes ~1-4 min por rol con 5 corridas segun los pilotos, sondeos de techo ~3-5 min cada uno, candidatos parecidos, 12 cargas) / pendiente | Tarea 20, la tanda: linea base de los 4 vigentes, calidad de los 4 candidatos (`--reasoning-effort off`) y sondeos de techo de `long` y `code` en su config de 65 536; 5 corridas, `--save-responses`, sonda por proceso | b10909 (`a2878d30d`, CUDA 13.3) | v255, puerto 9595, `llama-swap-pruebas.yaml` (`t-*`) | `none` | pendiente | pendiente |
+
+**Sesion 5, `vision`: Gemma 4 12B se caia con cada imagen, y la causa no era la sospechada.** En la
+tanda dio `http_502` en las 12 corridas. Diagnostico fuera de la tanda (llama-server directo, la
+misma config, la imagen del corpus): carga bien y **aborta al procesar la imagen** con `GGML_ASSERT
+... non-causal attention requires n_ubatch >= n_tokens` (0xC0000409). El codificador de imagen de
+Gemma 4 usa atencion no causal y la imagen son **1 114 tokens**, mas que el `--ubatch-size` por
+defecto (512). No era el `mmproj` ni `--load-mode none`. Con `--batch-size 2048 --ubatch-size 2048`
+responde en 2 s. **No es ajustar la config al resultado**: sin ese flag el modelo no procesa ninguna
+imagen, y produccion necesitaria el mismo; `qwen3-vl-8b` no tiene esa restriccion. El JSONL de los
+12 errores se conserva como `resultados/invalida-ubatch-gemma4-12b.jsonl` y el bloque se repite.
+Para repetirlo se paro otra vez el daemon de produccion (10:51:55 UTC, decision del usuario).
+Repetido de 10:56:04 a 10:57:57 UTC. **Desviacion de §1.4 al arrancarlo: VRAM del adaptador 1 089
+MiB, por encima de los 1 024** (RAM libre 17,8 GB, sin procesos de inferencia). Se anota y no se
+repite: el punto 5 busca algo pintando en la GPU que robe VRAM al modelo, y 65 MiB de mas no cambian
+lo que cabe en un modelo de 6,8 GB de pesos.
+
+**Y esa repeticion tampoco vale: 0 muestras de VRAM en las 30 corridas, todas anuladas
+(`zero_vram_samples`)**, con las respuestas bien. La causa se busco por reproduccion y no por
+suposicion (la primera hipotesis, un `-1` de `typeperf`, era falsa): **el LUID de la NVIDIA cambio de
+`0x00000000_0x0000F722` a `0x00000000_0x0000F336`**. Windows reasigna los LUID al reiniciar, y el
+script de la tanda pasaba `--gpu-luid` fijo con el viejo, asi que la cabecera de `typeperf` nunca
+traia la instancia pedida. Con el LUID nuevo, `typeperf` da valores normales para `gemma3-4b`
+(control) y para Gemma 4 12B con y sin `--ubatch-size 2048`. **Los 7 modelos de la tanda principal
+(04:06-04:20 UTC) se midieron con el LUID correcto** (tienen muestras de VRAM); solo cae esta
+repeticion. Arreglo: el script ya no fija el LUID y el runner lo resuelve contra `nvidia-smi` en cada
+invocacion. El JSONL sin VRAM se conserva como `resultados/invalida-luid-gemma4-12b.jsonl`.
+**Trampa que hereda el cierre:** `~/.claude/relevos/medir-perfil-cp1.ps1` tambien lleva el LUID
+`F722` fijo en su contador de `Shared Usage`; hay que corregirlo antes de medir el perfil al devolverlo
+a produccion, o la prueba leera un contador inexistente.
+
+**Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
+pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
+el daemon de produccion** (y su llama-swap en 9292, con b9925), sin intervencion de la sesion que
+mide. No afecta a la tanda, que ya habia cerrado; si a lo que venga despues, porque produccion corre
+**sin perfil del driver** (sigue en b10909). Para la quinta medicion de adopcion de F1 (§1.5), el
+intervalo a descontar de la sesion 3-5 va de 2026-09-14 22:58:35 a 2026-09-15 04:31:35 UTC.
+
+**Sesion 5, escrito durante la tanda y antes de ver al candidato de `code` en el techo:** el sondeo
+`techo-commit-156k` de `qwen25-coder-14b` da `rechazo_por_contexto` en las 5 corridas en ~55 ms, con
+el cuerpo del error `request (47213 tokens) exceeds the available context size (32768 tokens)`.
+**llama-server recorta el `n_ctx` al contexto nativo de entrenamiento del modelo** (32 768 en
+Qwen2.5-Coder, sin YaRN) aunque la config pida 65 536. Es un techo real del modelo tal como corre en
+produccion, no un fallo de la config: el sondeo mide lo que tiene que medir. Dos consecuencias
+escritas ahora, no despues: (1) el `n_ctx` que §6 compara es el **declarado** (65 536 en los dos
+modelos de `code`), y el efectivo del vigente fue 32 768; la comparacion por techo es la del modelo,
+no la de la ventana; (2) el KV medido para `qwen25-coder-14b@65536` (3 456 MiB) reserva 65 536
+celdas aunque la ventana util sea 32 768. `llama31-8b` acepta su sondeo (26 454 tokens de prompt;
+las 5 corridas se cortan por `max_tokens`, que cuenta como aceptada).
 
 Estado de §1.4 al empezar la sesion 4 (§1.4 ya rehecho): RAM libre 20,6 GB; VRAM del adaptador 856
 MiB; ningun `llama-server`, `llama-swap` ni `pythonw`; `LocalDelegateDaemon` en `Ready` (parado); una
