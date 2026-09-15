@@ -16,6 +16,14 @@ fuente adicional.
  "v":"0.13.0","finish_reason":"stop","tokens_in":7163,"tokens_out":230}
 ```
 
+Cuando responde un **modelo de respaldo**, el evento suma `model_requested` (el que se pidió),
+`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`modelo`, `capacidad_o_carga`,
+`enfriamiento`); un evento fallido lleva `error_class` (`configuracion`, `modelo`…). `model` sigue
+siendo el que **respondió** y `chunks` cuenta también las llamadas del respaldo, así que los tokens se
+atribuyen a quien los gastó y un evento sin salto es idéntico a los de antes. El panel marca esas
+filas con **↪** y la tarjeta de delegaciones dice cuántas tuvieron salto: una medición que coincida
+con saltos pudo contaminarla un swap.
+
 - `source`: **`path`** = el input se leyó *server-side* (no entró al contexto de Claude) ·
   **`inline`** = el texto ya viajó por tu contexto.
 - `chars_in` / `chars_out`: tamaño de entrada procesada / salida generada.

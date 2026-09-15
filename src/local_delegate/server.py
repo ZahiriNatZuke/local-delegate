@@ -461,8 +461,16 @@ def _log_event(
     chunks: int | None = None,
     input_unit: str = "chars",
     output_to_file: bool = False,
+    model_requested: str | None = None,
+    fallback_reason: str | None = None,
+    fallback_class: str | None = None,
+    error_class: str | None = None,
 ) -> None:
-    """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool."""
+    """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
+
+    Los campos del respaldo (F3, REQ-013) son aditivos: `model` sigue siendo el modelo que
+    RESPONDIÓ, así que un evento sin salto se escribe igual que antes y el histórico se lee igual.
+    """
     try:
         rec: dict = {
             "ts": _utcnow().isoformat(timespec="seconds"),
@@ -530,6 +538,18 @@ def _log_event(
         # Se omite cuando es falso: es el caso de casi todos los eventos y engordaría el log.
         if output_to_file:
             rec["output_to_file"] = True
+        # Hubo salto: qué modelo se pidió y por qué respondió otro. Es lo que deja a una medición
+        # saber si la contaminó un swap ajeno (REQ-013).
+        if model_requested is not None:
+            rec["model_requested"] = model_requested
+        if fallback_reason is not None:
+            rec["fallback_reason"] = fallback_reason
+        if fallback_class is not None:
+            rec["fallback_class"] = fallback_class
+        # La clase del fallo como causa propia: una de configuración tiene que verse para que
+        # alguien la arregle (REQ-019).
+        if error_class is not None:
+            rec["error_class"] = error_class
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
@@ -597,6 +617,10 @@ def _accounting(row: dict) -> dict:
         "tokens_out": tokens_out,
         "saved": saved,
         "estimated": estimated,
+        # F3, tarea 29: si respondió un respaldo, y la causa (la del fallo, o la del salto). Un
+        # evento anterior a esos campos da `False` y `None`: se lee igual que siempre.
+        "fallback": bool(row.get("model_requested")),
+        "cause": row.get("error_class") or row.get("fallback_class") or None,
     }
 
 
@@ -651,8 +675,21 @@ def _respaldo_de(model: str, result: ChatResult, intentos: list[Intento]) -> dic
     if not (result.ok and intentos and intentos[-1].modelo != model):
         return None
     primero = intentos[0]
-    motivo = primero.error if primero.modelo == model else "en enfriamiento"
-    return {"respondio": intentos[-1].modelo, "en_lugar_de": model, "motivo": motivo}
+    if primero.modelo == model:
+        motivo, clase = primero.error, _valor_clase(primero.clase)
+    else:
+        motivo, clase = "en enfriamiento", "enfriamiento"
+    return {
+        "respondio": intentos[-1].modelo,
+        "en_lugar_de": model,
+        "motivo": motivo,
+        "clase": clase,
+    }
+
+
+def _valor_clase(clase: str | None) -> str | None:
+    """La clase como texto plano para el log (`modelo`, `configuracion`…), o None."""
+    return fallos.Clase(clase).value if clase else None
 
 
 def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
@@ -1107,6 +1144,15 @@ class _ModeloVigente:
             self.rol = None
         return result, ms, intentos
 
+    def campos_de_log(self, failed: ChatResult | None) -> dict:
+        """Los campos del respaldo para el evento de la operación entera (REQ-013)."""
+        campos: dict = {"error_class": _valor_clase(failed.clase) if failed else None}
+        if self.salto is not None:
+            campos["model_requested"] = self.pedido
+            campos["fallback_reason"] = self.salto["motivo"]
+            campos["fallback_class"] = self.salto["clase"]
+        return campos
+
     def aviso(self, varios: bool) -> str:
         if self.salto is None:
             return ""
@@ -1221,6 +1267,11 @@ def _chat(
         json_schema=json_schema_status,
         input_unit=input_unit,
         output_to_file=write_to is not None and result.ok,
+        chunks=len(intentos),
+        model_requested=model if info_respaldo else None,
+        fallback_reason=info_respaldo["motivo"] if info_respaldo else None,
+        fallback_class=info_respaldo["clase"] if info_respaldo else None,
+        error_class=None if result.ok else _valor_clase(result.clase),
     )
     # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
@@ -1531,6 +1582,7 @@ def _chat_chunked(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
         text += _savings_feedback(len(content), tokens_in, "chars", True)
@@ -1796,6 +1848,7 @@ def _chat_map_reduce(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
         text += _savings_feedback(len(content), tokens_in, "chars", True)
@@ -2671,6 +2724,27 @@ def _llamaswap_running() -> str | None:
     return ", ".join(parts) if parts else "ningún modelo montado"
 
 
+def _describir_enfriamiento() -> list[str]:
+    """REQ-013: los modelos enfriados, lo que les queda y cuántas veces seguidas han entrado."""
+    if not config.COOLDOWN:
+        return ["Enfriamiento: apagado (LOCAL_DELEGATE_COOLDOWN=0)"]
+    lineas = [
+        (
+            f"Enfriamiento: encendido ({config.COOLDOWN_FAILURES} fallos seguidos, "
+            f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
+        )
+    ]
+    activos = enfriamiento.desde_config().activos()
+    if not activos:
+        lineas.append("  ningún modelo enfriado")
+    for modelo, enfriado in sorted(activos.items()):
+        veces = (
+            "1 vez seguida" if enfriado.reentradas == 1 else f"{enfriado.reentradas} veces seguidas"
+        )
+        lineas.append(f"  {modelo}: quedan {enfriado.restante_s:.0f} s, ha entrado {veces}")
+    return lineas
+
+
 @mcp.tool(annotations=_anotaciones("Diagnóstico del backend local"))
 def local_status() -> str:
     """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
@@ -2705,6 +2779,7 @@ def local_status() -> str:
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
     lines.extend(cadenas.describir())
     lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
+    lines.extend(_describir_enfriamiento())
 
     current_log = _current_log_path()
     n_events = 0

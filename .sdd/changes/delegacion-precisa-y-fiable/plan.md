@@ -813,6 +813,18 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       enfriamiento, su tiempo restante **y cuantas veces seguidas ha vuelto a entrar** (REQ-013);
       panel comprobado en navegador.
     - Rollback or recovery: campos aditivos; un lector viejo los ignora.
+    - Estado (2026-09-15): **hecha** (`verification.md`). Campos del log: `model_requested`,
+      `fallback_reason`, `fallback_class` (incluida `enfriamiento` cuando el pedido no se llamo) y
+      `error_class`. `_accounting` y `acct` devuelven `fallback` y `cause` (la del fallo si lo hubo, si
+      no la del salto), atados por la paridad; el panel cuenta `fallback_events`, `causes` y
+      `fallback_calls` por modelo, marca las filas con salto y pone la causa en el punto de error.
+      `local_status` lista los enfriados con lo que les queda y sus reentradas, o dice que el
+      enfriamiento esta apagado. Lo que obligo a cambiar: (1) los tests del log van en
+      `tests/test_observabilidad_respaldo.py` y no en `test_core.py`, porque reutilizan el backend por
+      modelo de `test_respaldo.py`; (2) **un mutante sobrevivio** —la causa en otro orden en el JS— y
+      destapo un caso real sin cubrir: una operacion por trozos que salta y luego falla lleva los dos
+      campos; (3) la tarjeta decia «por trocear» de las llamadas de mas, que ahora tambien salen del
+      respaldo.
 
 30. **Activacion, criterio de P-4 y release**
     - Files or modules: `verification.md`, `CHANGELOG.md`, `README.md`, `docs/wiki/`

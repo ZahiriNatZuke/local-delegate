@@ -228,6 +228,8 @@ def _aggregate(rows: list[dict]) -> dict:
             "chars_out": 0,
             "tokens_in": 0,
             "tokens_out": 0,
+            # Operaciones que respondió este modelo en lugar de otro (F3, REQ-013).
+            "fallback_calls": 0,
         }
     )
     # Quién PIDIÓ la delegación. Sin esto el KPI acumulado no puede distinguir un mes de smoke
@@ -262,7 +264,11 @@ def _aggregate(rows: list[dict]) -> dict:
         "tokens_out": 0,
         "saved": 0,
         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
+        "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
     }
+    # Causa de cada fallo o salto (`configuracion`, `modelo`, `enfriamiento`…): una de configuración
+    # tiene que verse en el panel para que alguien la arregle (REQ-019).
+    causes: dict[str, int] = defaultdict(int)
 
     for r in rows:
         tool = str(r.get("tool", "?"))
@@ -293,6 +299,8 @@ def _aggregate(rows: list[dict]) -> dict:
         m["chars_out"] += co
         m["tokens_in"] += acc["tokens_in"]
         m["tokens_out"] += acc["tokens_out"]
+        if acc["fallback"]:
+            m["fallback_calls"] += 1
 
         b = by_backend[backend]
         b["calls"] += 1
@@ -323,6 +331,10 @@ def _aggregate(rows: list[dict]) -> dict:
         total["saved"] += acc["saved"]
         if acc["estimated"]:
             total["estimated_events"] += 1
+        if acc["fallback"]:
+            total["fallback_events"] += 1
+        if acc["cause"]:
+            causes[acc["cause"]] += 1
         if not ok:
             total["errors"] += 1
         if is_path:
@@ -382,6 +394,8 @@ def _aggregate(rows: list[dict]) -> dict:
         "tokens_local_input": total["tokens_in"],
         "backend_calls": total["backend_calls"],
         "estimated_events": total["estimated_events"],
+        "fallback_events": total["fallback_events"],
+        "causes": dict(causes),
         "by_tool": tools,
         "by_model": models,
         "by_backend": backends,
@@ -948,6 +962,7 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .pill.org.remote{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 32%,transparent)}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
   background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
+.fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
 .flow{color:var(--faint)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .dot.ok{background:var(--acc);box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
@@ -1676,7 +1691,11 @@ function acct(e){
   // La salida escrita a archivo tampoco entro al contexto: se SUMA al ahorro de entrada, porque
   // una misma llamada puede ahorrar por los dos lados. Espejo de `_accounting` en server.py.
   if(e.output_to_file) saved += tokensOut;
-  return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, estimated:estimated};
+  // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
+  const fallback = !!e.model_requested;
+  const cause = e.error_class || e.fallback_class || null;
+  return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, estimated:estimated,
+    fallback:fallback, cause:cause};
 }
 
 function render(){
@@ -1692,15 +1711,18 @@ function render(){
   const costIn = s.tokens_local_input||0;
   const bCalls = s.backend_calls||nEv;
   const estN = s.estimated_events||0;
-  const extra = bCalls>nEv ? ' (+'+F.format(bCalls-nEv)+' por trocear)' : '';
+  // Las llamadas de más salen de trocear o de un respaldo que respondió: las dos gastan backend.
+  const extra = bCalls>nEv ? ' (+'+F.format(bCalls-nEv)+' por trocear o saltar)' : '';
   const estTxt = estN ? ' · '+F.format(estN)+' estimado(s)' : '';
+  const fbN = s.fallback_events||0;
+  const fbTxt = fbN ? ' · '+F.format(fbN)+' con salto' : '';
 
   document.getElementById('kpis').innerHTML =
     kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(saved),unit:'tok',
        lbl:'Contexto conservado',hint:'lo que el MCP leyó y nunca entró a tu contexto',
        tip:'Contenido leído server-side (source=path) que no viajó al contexto de Claude. Se cuenta UNA vez por delegación aunque se trocee: el trabajo extra de trocear lo pagó tu GPU, no el contexto.'})
     + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
-       hint:'<span class="num">'+F.format(bCalls)+'</span> al backend'+extra,
+       hint:'<span class="num">'+F.format(bCalls)+'</span> al backend'+extra+fbTxt,
        tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'})
     + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:'Generado en local',
        hint:'salida de los modelos'+estTxt,tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'})
@@ -1860,13 +1882,16 @@ function drawActivity(ev){
     const orgTxt=org==='remote'?'remoto':org==='local'?'local':'n/d';
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
     const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
+    // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
+    const fb=e.model_requested?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
+    const causa=(!e.ok&&e.error_class)?` title="causa: ${e.error_class}"`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
-      <td><span class="badge model">${e.model}</span></td>
+      <td><span class="badge model">${e.model}</span>${fb}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
       <td class="mono">${F.format(e.latency_ms||0)} ms</td>
-      <td><span class="dot ${e.ok?'ok':'err'}"></span></td></tr>`; });
+      <td><span class="dot ${e.ok?'ok':'err'}"${causa}></span></td></tr>`; });
   document.getElementById('activity').innerHTML=h+'</tbody>';
   pager.style.display = pages>1?'':'none';
   document.getElementById('pgInfo').innerHTML='<b>'+(state.page+1)+'</b> / '+pages;
