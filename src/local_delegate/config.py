@@ -242,6 +242,15 @@ def max_chars_for(model: str) -> int:
     return min(topes) if topes else _MAX_CHARS_DEFAULT
 
 
+# --- Enfriamiento por modelo (F3: REQ-009 a REQ-014) --------------------------
+# Encendido por defecto (D-1). Los números vienen de bajar de escala los de OmniRoute y no están
+# medidos (P-4): son configurables, y la tarea 30 escribe el criterio para validarlos.
+COOLDOWN = _env_flag("LOCAL_DELEGATE_COOLDOWN", True)
+COOLDOWN_FAILURES = max(1, _env_int("LOCAL_DELEGATE_COOLDOWN_FAILURES", 3))
+COOLDOWN_S = max(1.0, _env_float("LOCAL_DELEGATE_COOLDOWN_S", 120.0))
+COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900.0))
+
+
 # --- Chunking de salida (local_translate / local_delegate) -------------------
 # Las tools que TRANSFORMAN el texto completo (traducir, reescribir) producen una salida tan
 # larga como la entrada, así que una sola llamada choca contra max_tokens y devuelve el

@@ -29,7 +29,7 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | ultrarrápido / trivial |
 | `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
-| `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada por modelo |
+| `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
@@ -42,7 +42,30 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 
 > `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids
 > de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.
-> Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema.
+> Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema, y **cada rol conserva su
+> tope de entrada**: con `LONG` y `CODE` en el mismo modelo, un resumen largo sigue usando los 48 000
+> chars del rol largo. Antes el tope se guardaba por nombre de modelo y el último rol pisaba al otro.
+
+## Enfriamiento por modelo
+
+Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo
+cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
+(`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
+se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_COOLDOWN` | `1` | `0` lo apaga |
+| `LOCAL_DELEGATE_COOLDOWN_FAILURES` | `3` | fallos seguidos que enfrían el modelo |
+| `LOCAL_DELEGATE_COOLDOWN_S` | `120` | espera de la primera vez, en segundos |
+| `LOCAL_DELEGATE_COOLDOWN_MAX_S` | `900` | tope de la espera: tras vencer, cada fallo la dobla hasta aquí |
+
+> **Qué cuenta:** solo los fallos del modelo (un 5xx que no es de carga, una respuesta rota) y un
+> timeout con el modelo **ya cargado**. No cuentan los errores de conexión, los 4xx, un modelo que no
+> se pudo cargar ni un razonamiento que agotó `max_tokens`; tampoco ponen el contador a cero. Un éxito
+> sí. Los números no están medidos todavía: son configurables a propósito.
+>
+> El daemon lee estas variables al arrancar: para cambiarlas hay que reiniciarlo.
 
 ## Daemon y web de métricas
 

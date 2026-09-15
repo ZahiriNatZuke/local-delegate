@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, clients, config, fallos, preguntas
+from . import autostart, clients, config, estado_json, fallos, preguntas
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -154,33 +154,11 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-def _read_inflight_data(path: Path) -> dict:
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def _atomic_write_json(path: Path, data: dict) -> None:
-    # El temporal lleva el pid en el nombre: varios procesos MCP (cada sesión de Claude en
-    # stdio, más el daemon) escriben este mismo archivo, y un ".tmp" compartido hacía que
-    # dos escrituras simultáneas se pisaran el temporal y publicaran contenido mezclado o
-    # perdido — entradas fantasma / delegaciones que nunca aparecían en "En curso".
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(path)
-    finally:
-        try:
-            tmp.unlink(missing_ok=True)  # si replace() funcionó ya no existe
-        except OSError:
-            # Estamos en el `finally`: si el temporal no se deja borrar (en Windows lo típico es un
-            # antivirus con el archivo abierto), tragarse el error es obligatorio. Lanzar aquí
-            # taparía la excepción real que venga del try y dejaría un fallo mucho más difícil de
-            # leer que un .tmp huérfano.
-            pass
+# La lectura y la escritura atómica viven en `estado_json`, compartidas con el estado de
+# enfriamiento (F3, tarea 26). Se conservan estos nombres porque el resto del módulo y los tests
+# los usan.
+_read_inflight_data = estado_json.leer_json
+_atomic_write_json = estado_json.escribir_json_atomico
 
 
 def _inflight_mutate(mutate_fn, *, write_on_timeout: bool = True) -> None:
