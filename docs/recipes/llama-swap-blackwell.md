@@ -21,11 +21,16 @@ VRAM real medida (ctx 8k, incluye ~1,5 GB de Windows): `gemma3-4b` ~4,8 GB · `l
 | Rol (env) | id en llama-swap | GGUF sugerido |
 |---|---|---|
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Gemma 3 4B Q4_K_M |
-| `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Llama 3.1 8B Q4_K_M (ctx amplio) |
-| `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | Qwen2.5-Coder 14B Q4_K_M |
+| `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | Gemma 4 26B-A4B (MoE, con `-ncmoe`) |
+| `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | Qwen3.6 35B-A3B (MoE, con `-ncmoe`) |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | Qwen ~2B Q4_K_M |
+| `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | Gemma 4 12B |
 
-Son los defaults del paquete: con estos ids no necesitas configurar nada.
+Son los defaults del paquete desde la 0.28.0: con estos ids no necesitas configurar nada.
+`local-delegate init-llamaswap` genera ese catálogo con sus flags. **El `config.yaml` de abajo y las
+medidas de VRAM de arriba son del catálogo anterior** (`llama31-8b`, `qwen25-coder-14b`): sirven
+como esquema, no como configuración actual. Si tu `config.yaml` sigue con esos ids, renómbralos o
+fija `LOCAL_DELEGATE_MODEL_LONG`/`_CODE`/`_VISION` a los que tengas.
 
 ## `config.yaml` de llama-swap (esquema)
 

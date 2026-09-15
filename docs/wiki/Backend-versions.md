@@ -146,7 +146,11 @@ compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag 
 lectura, porque llama-swap lo relanza al cambiar de modelo. Cada registro lleva un bloque
 `resources` con los picos y un campo `annul`: una corrida sin muestras, con dos `llama-server`
 vivos o con cambio de proceso a mitad **se repite** (hasta dos veces), no se publica vacía. Sin el flag,
-el bloque va igual pero vacío. Si `typeperf` arranca antes de que `llama-server` cree su contexto de
+el bloque va igual pero vacío. **La RAM que se publica es `host_private_bytes_peak`**: la privada
+menos la VRAM dedicada, restada muestra a muestra, porque en Windows (WDDM) la privada incluye la
+VRAM reservada y solo la diferencia sigue a los expertos de un MoE que viven en RAM. Solo es
+comparable entre corridas con el mismo `--load-mode`: con los pesos mapeados (`mmap`) el contador
+privado no los ve, por eso las mediciones del catálogo usan `--load-mode none`. Si `typeperf` arranca antes de que `llama-server` cree su contexto de
 GPU, su cabecera no trae el proceso: la sonda lo relanza con el mismo PID, como mucho cada 3 s. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
 en `scripts/sonda_recursos.py`.
 

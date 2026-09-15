@@ -97,9 +97,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   se bloquean).
 
   **Nace apagado** (`LD_HOOK_READ_BLOQUEAR=0`) y se enciende cuando esté escrito el criterio de la
-  quinta medición, incluido el resultado que lo retira. Se apaga **sin reiniciar la sesión**: la
-  variable se consulta en cada invocación, porque está medido que una sesión abierta hereda el
-  entorno del lanzador y un freno que exige reiniciar no frena nada.
+  quinta medición, incluido el resultado que lo retira. Para apagarlo **sin reiniciar la sesión**
+  está el fichero interruptor (ver arriba): la variable sola no basta, porque está medido que una
+  sesión abierta hereda el entorno del lanzador y un freno que exige reiniciar no frena nada.
 
   El caso es estrecho a propósito. Solo `.md` y `.txt` leídos enteros y por encima del umbral:
   `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**, porque ahí se busca un valor

@@ -91,6 +91,8 @@ Dos cosas que conviene saber y solo estaban en el código:
   cadena antes de poder parsearla.
 - Pide al backend un JSON restringido por schema (`LOCAL_DELEGATE_JSON_SCHEMA=auto`); si el backend
   no lo soporta, reintenta en modo libre.
+- **Si respondió un modelo de respaldo**, lo dice en `_local_delegate.respaldo` (qué modelo
+  respondió, en lugar de cuál y por qué), nunca dentro de los campos pedidos.
 
 ## `local_boilerplate`
 
@@ -99,7 +101,8 @@ local_boilerplate(spec, language, target, overwrite=False) -> str
 ```
 
 Genera código desde una especificación. **Escribe el resultado en `target` y devuelve solo un
-recibo** de dos líneas (ruta, tamaño y los tokens que no entraron al contexto).
+recibo** de dos líneas (ruta, tamaño y los tokens que no entraron al contexto). Si respondió un
+modelo de respaldo, el aviso va en el recibo, detrás; el fichero solo lleva lo que generó el modelo.
 
 | Parámetro | | |
 |---|---|---|
@@ -196,7 +199,9 @@ Es **imagen→texto** y nada más: no genera ni edita imágenes. El tope de tama
 local_status() -> str
 ```
 
-Diagnóstico de solo lectura: backend, catálogo de modelos, ruta del log, VRAM y RAM del sistema.
+Diagnóstico de solo lectura: backend, catálogo de modelos, ruta del log, VRAM y RAM del sistema,
+las cadenas de respaldo resueltas (con el residente) y los modelos enfriados, con el tiempo que les
+queda y cuántas veces seguidas han vuelto a entrar.
 **No llama al backend de chat**, así que sirve para saber si el backend responde, pero **no**
 prueba que la credencial funcione — para eso hace falta una tool que ejerza el modelo de verdad.
 Para el diagnóstico completo de la instalación, `local-delegate doctor` (ver
