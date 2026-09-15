@@ -101,3 +101,18 @@ Cuatro fases, en este orden (decision del usuario, 2026-09-11):
   `updatedInput` se salta el allowlist de permisos. Mientras no haya respuesta, el requisito esta
   suspendido y **no entra al plan**; lo que si da ahorro y ya funciona es leer del lado del
   servidor con `path`.
+- **P-17 — abierta (2026-09-15, propuesta aceptada por el usuario para F1): que el bloqueo entregue
+  el resultado en vez de pedir que se delegue.** Dato que la motiva, de `scripts/medir_adopcion.py
+  --desde 2026-09-12` a las 18:02 UTC del 2026-09-15 (ventana sin cerrar y con dos versiones de
+  script mezcladas): 60 ofrecidos, 42 de ellos bloqueos, **1 aceptado (2,4 %)**; 7 delegaciones, 6
+  espontaneas. El criterio de retirada de REQ-F1-12 (aceptacion bajo el 50 % con 30 bloqueos o mas)
+  apunta a retirar el bloqueo. Lectura con `obediencia-no-viene-de-la-prosa`: el camino alternativo
+  existe, el aviso no siempre acierta y esperar al modelo local cuesta. La propuesta es que la
+  delegacion sea el camino **mas corto** y no uno que el agente tenga que elegir: el hook que ya
+  bloquea la lectura ejecuta la delegacion y devuelve el resumen **en su propio mensaje de rechazo**,
+  que es texto que entra al contexto. **No es P-7**: P-7 descarto reescribir la salida despues de la
+  herramienta (`PostToolUse`), y esto actua antes, en `PreToolUse`. Por decidir antes de planificar:
+  que tool y que formato de salida se ejecutan sin saber que buscaba el agente; el plazo que el hook
+  puede esperar sin romper la sesion; que pasa si el backend no esta; y como se mide contra la quinta
+  medicion con un criterio escrito de antemano. **Se decide al cerrar la ventana de F1 y antes de
+  la release.**
