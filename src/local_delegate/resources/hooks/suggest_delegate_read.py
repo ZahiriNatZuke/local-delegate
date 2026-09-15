@@ -65,7 +65,10 @@ from hook_common import (
     contexto_de,
     deny,
     emit,
+    estado_del_bloqueo,
     huella_de_ruta,
+    modelo_del_resumen,
+    modelo_enfriado,
     nuevo_id,
     record,
 )
@@ -159,12 +162,45 @@ def es_lectura_acotada(tool_input: dict) -> bool:
 def bloqueo_encendido() -> bool:
     """Si la regla puede rechazar una lectura. Se consulta EN CADA invocación, a propósito.
 
-    Nace apagado: se enciende cuando esté escrito el criterio de la quinta medición, incluido el
-    resultado que lo retira. Y se apaga sin cerrar la sesión, porque una sesión abierta hereda el
-    entorno del lanzador —medido: catorce lecturas se comportaron con el umbral viejo después de
-    cambiarlo— y un freno que exige reiniciar no es un freno.
+    Nace apagado: se enciende con `LD_HOOK_READ_BLOQUEAR=1`, y se apaga en caliente con el fichero
+    de `hook_common.ruta_del_interruptor()`, que gana a la variable. La variable sola no servía de
+    freno: una sesión abierta hereda el entorno del lanzador —medido: catorce lecturas con el umbral
+    viejo después de cambiarlo— (REQ-F1-11).
     """
-    return os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS
+    return estado_del_bloqueo() == "encendido"
+
+
+#: Máximo del nombre de tool que va a la telemetría.
+MAX_TOOL = 80
+
+
+def registrar_lectura_mcp(tool_name: str, tool_input: dict, payload: dict) -> None:
+    """Una lectura por la tool de OTRO MCP: se cuenta y nunca se bloquea ni se sugiere (P-6).
+
+    Sin este registro el denominador de la medición no incluye el camino de al lado, y una subida
+    de la adopción no distinguiría «se delegó» de «se leyó por otro sitio» (REQ-F1-9).
+    """
+    rutas = tool_input.get("paths")
+    if not isinstance(rutas, list):
+        rutas = [tool_input.get("path") or tool_input.get("file_path")]
+    rutas = [ruta for ruta in rutas if isinstance(ruta, str) and ruta]
+    evento: dict = {
+        "category": "read",
+        "camino": "mcp",
+        "motivo": "mcp_ajeno",
+        "tool": tool_name[:MAX_TOOL],
+        "rutas": len(rutas),
+        "bloqueo": estado_del_bloqueo(),
+        **contexto_de(payload, __file__),
+    }
+    if rutas:
+        evento["path_sha"] = huella_de_ruta(rutas[0])
+        evento["ext"] = extension_de(rutas[0])
+        try:
+            evento["size_kb"] = round(os.path.getsize(rutas[0]) / 1024, 1)
+        except OSError:
+            pass
+    record("PreToolUse", suggested=False, **evento)
 
 
 def main() -> None:
@@ -177,6 +213,11 @@ def main() -> None:
         return
 
     tool_input = payload.get("tool_input") or {}
+    tool_name = str(payload.get("tool_name") or "")
+    if tool_name.startswith("mcp__"):
+        registrar_lectura_mcp(tool_name, tool_input, payload)
+        return
+
     file_path = tool_input.get("file_path")
     if not file_path:
         return
@@ -186,7 +227,11 @@ def main() -> None:
     # pregunta que la guarda de «acotada» tiene pendiente: de las 277 lecturas por franjas
     # registradas, cuantas eran de un fichero que acabo leyendose entero de todas formas. La
     # telemetria sigue sin poder decir QUE fichero era.
-    huella = {"path_sha": huella_de_ruta(file_path), **contexto_de(payload, __file__)}
+    huella = {
+        "path_sha": huella_de_ruta(file_path),
+        "bloqueo": estado_del_bloqueo(),
+        **contexto_de(payload, __file__),
+    }
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
@@ -238,7 +283,13 @@ def main() -> None:
     # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato
     # y no en la irritacion del usuario.
     if ext in EXTENSIONES_DE_PROSA and bloqueo_encendido():
-        if backend_disponible():
+        if not backend_disponible():
+            record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
+        elif modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
+            # El servidor no llamaria a ese modelo: bloquear mandaria al agente a un destino que
+            # no esta vivo (REQ-F1-10).
+            record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
+        else:
             # La nota va ANTES del bloqueo: si el agente delega acto seguido, el servidor tiene
             # que encontrarla ya escrita.
             anotar_bloqueo(comun["id"], file_path)
@@ -254,7 +305,6 @@ def main() -> None:
                 **comun,
             )
             return
-        record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
 
     strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
     destino = (
