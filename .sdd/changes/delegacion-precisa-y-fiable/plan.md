@@ -876,6 +876,13 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       otra version en la medicion.
     - Rollback or recovery: revertir el PR; sin cambios de schema, los campos nuevos del evento son
       aditivos.
+    - Estado (2026-09-15): **hecha** (#195, `d7ffa37`).
+
+**Decision del usuario (2026-09-15): la 0.28.0 se publica ya, sin esperar a cerrar la ventana de F1.**
+Anula el «no se publica hasta cerrar la ventana de F1» de la tarea 30. Consecuencias que se aceptan:
+P-17 se decide despues de publicar, y la instalacion en esta maquina mete los hooks de la tarea 31
+en la ventana de F1 antes del 2026-09-19. La medicion de F1 tiene que acotarse por version de
+script, con la hora de instalacion anotada en `verification.md`.
 
 **P-16, resuelta por el usuario (2026-09-15): los defectos del paquete pasan a los ganadores de F2.**
 Contexto de la pregunta: los defectos de `config.py`
