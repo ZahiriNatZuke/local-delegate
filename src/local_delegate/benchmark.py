@@ -1355,7 +1355,14 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         default=None,
         help="sustituye la entrada por este control del corpus (CP-3), solo en sus casos",
     )
-    parser.add_argument("--runs", type=int, default=3, help="corridas por caso (default 3)")
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=5,
+        # 5 y no 3 desde el tercer piloto de CP-3: con temperatura de produccion, una corrida mala
+        # movia la mediana de 3 y ponia la dispersion en su maximo.
+        help="corridas por caso (default 5)",
+    )
     parser.add_argument(
         "--seed",
         type=int,

@@ -20,8 +20,9 @@ Lecturas del protocolo que el texto no fijaba del todo, y que este programa deci
 - **Empate** es toda diferencia de calidad dentro de la banda, con cualquier signo: dentro de la
   banda la diferencia es ruido. Lo resuelve la precedencia (techo, luego velocidad, luego no se
   cambia). Ganar por un desempate exige igualmente las condiciones 2 y 3 de §7.
-- **Banda de ruido**: la mayor dispersion de todos los casos de calidad del rol en los dos modelos,
-  no solo de los admitidos por CP-3 («observada en ese rol», y conservadora a proposito).
+- **Banda de ruido**: por caso, la mayor dispersion de ese caso en los dos modelos; la del
+  agregado, la media de las bandas de sus casos. Hasta el tercer piloto de CP-3 era la mayor
+  dispersion de todo el rol, y con ruido real un solo caso inestable impedia separar a los demas.
 - **OOM**: el JSONL no tiene una clase propia; cualquier `error` del candidato bloquea la
   sustitucion y se lista con su texto. Inventar una cadena de OOM daria un control que no ve el
   resto de caidas.
@@ -248,14 +249,33 @@ def _caso(config: Config, case_id: str, corpus: dict[str, dict[str, Any]]) -> Ca
     return config.casos.get(case_id) or Caso(case_id, meta["role"], meta["kind"])
 
 
-def banda_de_ruido(configs: list[Config], casos: list[str], corpus: dict[str, dict[str, Any]]):
+def banda_del_caso(
+    configs: list[Config], case_id: str, corpus: dict[str, dict[str, Any]]
+) -> float | None:
+    """La mayor dispersion de ESE caso entre las configuraciones que se comparan.
+
+    Tercer piloto de CP-3 (decision del usuario): con la temperatura de produccion, la banda del ROL
+    —la mayor dispersion de todos sus casos— la fijaba el caso mas inestable y ningun otro podia
+    separar. `boilerplate-156` daba 0/0/0 contra 1/1/0,8 y quedaba dentro de una banda de 1,0 que
+    ponia `explicar-metrics-15k`. Cada caso se mide contra su propio ruido.
+    """
     dispersiones = [
-        d
-        for cfg in configs
-        for cid in casos
-        if (d := _caso(cfg, cid, corpus).dispersion) is not None
+        d for cfg in configs if (d := _caso(cfg, case_id, corpus).dispersion) is not None
     ]
     return max(dispersiones) if dispersiones else None
+
+
+def banda_del_agregado(
+    configs: list[Config], casos: list[str], corpus: dict[str, dict[str, Any]]
+) -> float | None:
+    """La media de las bandas de los casos que forman el agregado.
+
+    El agregado es la media de sus medianas, y su ruido es del orden del ruido medio de sus casos.
+    La media y no la maxima, para que un caso inestable no vete al resto; y no la media dividida
+    por la raiz de N, que supondria independencia entre casos corridos por el mismo modelo.
+    CP-3 y §7 usan la misma: si no, el control validaria una magnitud y la regla decidiria con otra.
+    """
+    return _media([banda_del_caso(configs, cid, corpus) for cid in casos]) if casos else None
 
 
 def _media(valores: list[float | None]) -> float | None:
@@ -297,14 +317,15 @@ def analizar_cp3(
     }
     for rol in roles:
         ids = _casos_del_rol(corpus, rol, "calidad")
-        banda = banda_de_ruido([cfg_p, cfg_g], ids, corpus)
         casos: dict[str, Any] = {}
         for cid in ids:
             m_p, m_g = _caso(cfg_p, cid, corpus).mediana, _caso(cfg_g, cid, corpus).mediana
+            banda_caso = banda_del_caso([cfg_p, cfg_g], cid, corpus)
             if m_p is None or m_g is None:
                 casos[cid] = {
                     "pequeno": m_p,
                     "grande": m_g,
+                    "banda": banda_caso,
                     "separa": False,
                     "motivo": "sin puntuacion",
                 }
@@ -312,7 +333,7 @@ def analizar_cp3(
             diferencia = m_g - m_p
             # En el control de entrada la direccion importa: la imagen correcta tiene que ganar.
             separa = (diferencia if control_de_entrada else abs(diferencia)) > (
-                banda or 0.0
+                banda_caso or 0.0
             ) + TOLERANCIA
             en_techo = m_p == 1.0 and m_g == 1.0
             motivo = None if separa else ("techo" if en_techo else "no separa")
@@ -320,6 +341,7 @@ def analizar_cp3(
                 "pequeno": m_p,
                 "grande": m_g,
                 "diferencia": round(diferencia, 4),
+                "banda": banda_caso,
                 "separa": separa,
                 "direccion": "grande" if diferencia > 0 else "pequeno" if diferencia < 0 else None,
                 "motivo": motivo,
@@ -338,6 +360,7 @@ def analizar_cp3(
             pasa = bool(ids) and len(admitidos) == len(ids)
         else:
             pasa = len(ids) <= 1 or bool(admitidos) or empate_en_techo
+        banda = banda_del_agregado([cfg_p, cfg_g], admitidos, corpus)
         agregado_p = _media([casos[c]["pequeno"] for c in admitidos]) if admitidos else None
         agregado_g = _media([casos[c]["grande"] for c in admitidos]) if admitidos else None
         agregado_separa = (
@@ -505,7 +528,7 @@ def decidir_rol(
             "motivos": ["ningun caso de CP-3 separa: el rol es indecidible con este corpus"],
         }
 
-    banda = banda_de_ruido([vigente, candidato], ids, corpus) or 0.0
+    banda = banda_del_agregado([vigente, candidato], casos_calidad, corpus) or 0.0
     q_v = _media([_caso(vigente, cid, corpus).mediana for cid in casos_calidad])
     q_c = _media([_caso(candidato, cid, corpus).mediana for cid in casos_calidad])
     assert q_v is not None and q_c is not None  # §6 ya exige puntuacion valida en cada caso
@@ -735,7 +758,7 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
         lineas += [
             f"## {rol}: {estado}",
             "",
-            f"- banda de ruido: {_fmt(datos['banda'])}",
+            f"- banda del agregado (media de las bandas por caso): {_fmt(datos['banda'])}",
             f"- casos en el agregado: {len(datos['casos_admitidos'])} de {len(datos['casos'])}",
             (
                 f"- el agregado separa: {'si' if agregado['separa'] else 'no'} "
@@ -751,12 +774,13 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
             )
         lineas += [
             "",
-            "| Caso | Pequeno | Grande | Diferencia | Separa | Motivo |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Caso | Pequeno | Grande | Diferencia | Banda | Separa | Motivo |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
         for cid, caso in datos["casos"].items():
             lineas.append(
-                f"| {cid} | {_fmt(caso['pequeno'])} | {_fmt(caso['grande'])} | {_fmt(caso.get('diferencia'))} | "
+                f"| {cid} | {_fmt(caso['pequeno'])} | {_fmt(caso['grande'])} | "
+                f"{_fmt(caso.get('diferencia'))} | {_fmt(caso.get('banda'))} | "
                 f"{'si' if caso['separa'] else 'no'} | {caso['motivo'] or '—'} |"
             )
         lineas.append("")

@@ -468,6 +468,10 @@ CASOS: tuple[Caso, ...] = (
         salida_de_ruff_por_archivos(9000),
         expected_terms=_reglas_mas_frecuentes,
         conteos=_conteos_de_las_reglas,
+        # Tercer piloto de CP-3: 0 en los dos modelos otra vez. El 2B se inventa los conteos y el 14B
+        # los da bien pero lista TODO y trunca: el prompt de la tool no cabe con esta entrada, y eso
+        # se arregla en la tool (F3). Lo juzga la revision a ciegas (decision del usuario).
+        puntuacion_automatica=False,
         # Pareja de CP-4 de conteos: las dos nombran las tres reglas; la mala cambia un 7 por un 9,
         # que no es ni el total, ni los archivos, ni lo de ningun archivo.
         referencia=(

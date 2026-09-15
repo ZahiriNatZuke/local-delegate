@@ -1156,7 +1156,7 @@ F2 no necesita. Si algun dia hiciera falta, el cargador viejo esta en el histori
    otra linea no se ve. CP-4 gana una **septima pareja**, senal
    `conteos`, con un oraculo que recorre los digitos a mano, sin las expresiones del puntuador.
 8. **Segundo piloto de CP-3: un caso puede quedar sin puntuacion automatica**
-   (`automatic_scoring: false`, hoy solo `commit-diff-19k`). El runner lo sigue puntuando y guardando
+   (`automatic_scoring: false`: `commit-diff-19k` desde el segundo piloto, `lint-9k` desde el tercero). El runner lo sigue puntuando y guardando
    —el dato no se pierde—, pero `analizar_benchmark.py` lo saca de la banda, del agregado y de §6 y
    §7, y el informe de CP-3 lo lista como «solo revision a ciegas». Lo juzga §4.8.
 
@@ -1275,12 +1275,12 @@ candidato cae por CP-1, por OOM o por `rechazo_por_contexto` en su propio rol.
 
 | Bloque | Cuenta | Corridas |
 | --- | --- | --- |
-| CP-3, texto | 13 casos x 2 modelos x 3 | 78 |
-| CP-3, `vision` | 2 casos x 2 entradas x 3, con un solo modelo | 12 |
+| CP-3, texto | 13 casos x 2 modelos x 5 | 130 |
+| CP-3, `vision` | 2 casos x 2 entradas x 5, con un solo modelo | 20 |
 | CP-1, CP-2, CP-2b | cargas y descargas, sin corpus | ~10 |
-| Tanda de calidad | (5+4+4+2) casos x 2 modelos cada rol x 3 | 90 |
-| Sondeos de techo | 2 casos x 4 modelos (`long` y `code`) x 3 | 24 |
-| **Total de peticiones al backend** | | **~214** |
+| Tanda de calidad | (5+4+4+2) casos x 2 modelos cada rol x 5 | 150 |
+| Sondeos de techo | 2 casos x 4 modelos (`long` y `code`) x 5 | 40 |
+| **Total de peticiones al backend** | | **~350** (era ~214 con 3 corridas) |
 
 Aparte van los barridos de `llama-bench`, que no pasan por el runner, y las descargas (~117 GB,
 desglosadas arriba). CP-4 no gasta corridas: es un test del puntuador.
@@ -1291,8 +1291,9 @@ paralelo (§1.5), asi que el coste de equivocarse en la estimacion lo paga otra 
 
 ### 5.3 Repeticiones y estado termico
 
-3 corridas por (modelo, caso), con **la temperatura de produccion del caso y una semilla distinta por
-corrida** (`seed + run - 1`, la misma en los reintentos de esa corrida; las dos van al registro). Asi
+**5 corridas** por (modelo, caso) —3 hasta el tercer piloto de CP-3: con ruido real, una corrida mala
+movia la mediana de 3 y ponia la dispersion en su maximo—, con **la temperatura de produccion del caso
+y una semilla distinta por corrida** (`seed + run - 1`, la misma en los reintentos de esa corrida; las dos van al registro). Asi
 la banda de ruido mide la variacion que produccion tiene de verdad y la medida sigue siendo
 reproducible.
 
@@ -1355,12 +1356,20 @@ es la salida conservadora, pero no es gratis: `long` y `code` tienen 4 casos, y 
 tres casos y catastrofico en uno. `vision` tiene 2 casos y `fast` esta fuera de la tanda: en ninguno
 de los dos se presenta un agregado.
 
-**Banda de ruido de un rol** = la mayor dispersion por caso observada en ese rol, en cualquiera de
-los dos modelos comparados. Conservadora a proposito.
+**Banda de ruido de un caso** = la mayor dispersion de ese caso en los dos modelos comparados.
+**Banda del agregado** = la media de las bandas de los casos que lo forman. CP-3 separa cada caso
+contra su propia banda, y §7 compara el agregado contra la del agregado: la misma magnitud en el
+control y en la regla.
+
+*Primera version, cambiada tras el tercer piloto de CP-3 (decision del usuario, 2026-09-15):* «la
+mayor dispersion por caso observada en ese rol». Con la temperatura de produccion, esa banda la
+ponia el caso mas inestable del rol (1,0 en `code`, por `explicar-metrics-15k`), y ningun otro podia
+separar: `boilerplate-156` daba 0/0/0 contra 1/1/0,8 y quedaba dentro. Una banda que un solo caso
+fija para todos no es conservadora, es un veto.
 
 **Regla (REQ-F2-6):** un candidato sustituye al vigente **solo si** las tres:
 
-1. `calidad(candidato) - calidad(vigente) > banda de ruido`;
+1. `calidad(candidato) - calidad(vigente) > banda del agregado`;
 2. ninguna corrida suya quedo anulada, ni dio OOM, ni `rechazo_por_contexto` en un caso de calidad;
 3. su latencia mediana no empeora mas de un 50 % respecto al vigente: un modelo mejor que tarde el
    triple no sirve para lo que se delega.
@@ -1408,8 +1417,8 @@ sin comprobar nada.
   «sustituye solo si las tres» y a la vez da desempates «cuando la calidad cae dentro de la banda»:
   las dos cosas solo casan si dentro de la banda la condicion 1 la sustituye la precedencia. Ganar
   por techo o por velocidad exige igualmente las condiciones 2 y 3.
-- **Banda**: la mayor dispersion de **todos** los casos de calidad del rol, no solo de los que
-  admite CP-3.
+- **Banda**: ~~la mayor dispersion de **todos** los casos de calidad del rol, no solo de los que
+  admite CP-3~~. Desde el tercer piloto de CP-3, por caso y media en el agregado (arriba).
 - **OOM**: no hay clase propia en el JSONL; **cualquier** `error` del candidato bloquea y se lista
   con su texto. Buscar una cadena de OOM inventada daria un control ciego al resto de caidas.
 - **Corrida fria**: fuera de la latencia (lleva dentro la carga), dentro de la calidad.
@@ -1503,7 +1512,7 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
 | 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
-| 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / piloto 23:00:36-23:10:30 | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
+| 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / segundo piloto 23:00:36-23:10:30; tercer piloto (las cuatro decisiones, commit `a3bd148`) en la misma sesion, sin tocar el setup | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
 
 Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
 

@@ -392,6 +392,16 @@ def _respuesta(content="bug", finish="stop", **mensaje):
     )
 
 
+def test_por_defecto_son_cinco_corridas_por_caso():
+    # Tercer piloto de CP-3: con temperatura de produccion, una corrida mala movia la mediana de 3.
+    parser = argparse.ArgumentParser()
+    benchmark.add_parser(parser.add_subparsers())
+    args = parser.parse_args(
+        ["benchmark", "--model", "m", "--label", "l", "--cases", "c.json", "--output", "o.jsonl"]
+    )
+    assert args.runs == 5
+
+
 def test_cada_corrida_lleva_su_semilla_y_la_temperatura_del_caso(tmp_path, monkeypatch):
     enviados = []
 

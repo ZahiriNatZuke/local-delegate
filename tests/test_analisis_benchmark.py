@@ -97,7 +97,7 @@ def _decidir(registros, rol="long", cp3=None, umbral=0):
     )
 
 
-TERCIO = (0.3333, 0.3333, 0.6667)  # mediana 1/3, dispersion 1/3: la banda del rol
+TERCIO = (0.3333, 0.3333, 0.6667)  # mediana 1/3, dispersion 1/3: la banda de cada caso
 
 
 # --- §7: las cuatro salidas de la regla -----------------------------------------------------------
@@ -120,17 +120,18 @@ def test_gana_dentro_de_la_banda_no_sustituye():
 
 def test_el_redondeo_a_cuatro_decimales_no_da_una_victoria():
     # Un solo caso en el agregado, para que la diferencia llegue entera: 0,3333 -> 0,6667 es 0,3334,
-    # y la banda sale de otro caso, 0,6667 -> 1,0, que es 0,3333. Sin tolerancia ganaria por redondeo.
-    # (La primera version promediaba cuatro casos, diluia la diferencia a 0,25 y no discriminaba.)
+    # y la banda es la de ese mismo caso, 0,3333 -> 0,6666 en el vigente: 0,3333. Sin tolerancia
+    # ganaria por redondeo. (La primera version promediaba cuatro casos, diluia la diferencia a 0,25 y
+    # no discriminaba; la segunda sacaba la banda de otro caso, y la banda ya no es del rol.)
     def vigente(cid):
-        return (0.6667, 1.0, 1.0) if cid == "resumen-md-10k" else (0.3333, 0.3333, 0.3333)
+        return (0.3333, 0.3333, 0.6666) if cid == "resumen-changelog-7k" else (0.3333,) * 3
 
     def candidato(cid):
-        return (0.6667, 0.6667, 0.6667) if cid == "lint-9k" else vigente(cid)
+        return (0.6667, 0.6667, 0.6667) if cid == "resumen-changelog-7k" else vigente(cid)
 
     d = _decidir(
         _tanda("vigente", "long", vigente) + _tanda("candidato", "long", candidato),
-        cp3={"casos_admitidos": ["lint-9k"], "casos": {}},
+        cp3={"casos_admitidos": ["resumen-changelog-7k"], "casos": {}},
     )
     assert d["banda"] == pytest.approx(0.3333)
     assert d["calidad"]["diferencia"] == pytest.approx(0.3334)
@@ -379,11 +380,12 @@ def test_una_de_cada_tres_descartadas_aun_es_concluyente_y_una_mas_no():
 
 
 def test_un_caso_sin_ninguna_puntuacion_valida_no_es_concluyente():
-    vigente = [r for r in _tanda("vigente", "long", TERCIO) if r["case"] != "lint-9k"]
-    vigente += [_registro("vigente", "lint-9k", run, outcome="configuracion") for run in (1, 2, 3)]
+    caso = "resumen-changelog-7k"  # lint-9k ya no puntua solo: no cuenta en §6
+    vigente = [r for r in _tanda("vigente", "long", TERCIO) if r["case"] != caso]
+    vigente += [_registro("vigente", caso, run, outcome="configuracion") for run in (1, 2, 3)]
     d = _decidir(vigente + _tanda("candidato", "long", (1.0, 1.0, 1.0)))
     assert d["veredicto"] == "no_concluyente"
-    assert d["motivos"] == ["vigente: lint-9k sin ninguna puntuacion valida"]
+    assert d["motivos"] == [f"vigente: {caso} sin ninguna puntuacion valida"]
 
 
 @pytest.mark.parametrize(
@@ -434,16 +436,16 @@ def test_vision_no_presenta_agregado():
 def test_sin_casos_admitidos_el_rol_es_indecidible():
     d = _decidir(
         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0)),
-        cp3={"casos_admitidos": [], "casos": {"lint-9k": {"motivo": "techo"}}},
+        cp3={"casos_admitidos": [], "casos": {"resumen-changelog-7k": {"motivo": "techo"}}},
     )
     assert d["veredicto"] == "indecidible"
-    assert d["casos_descartados"]["lint-9k"] == "techo"
+    assert d["casos_descartados"]["resumen-changelog-7k"] == "techo"
 
 
 def test_con_un_solo_caso_admitido_es_debilmente_decidible():
     d = _decidir(
         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0)),
-        cp3={"casos_admitidos": ["lint-9k"], "casos": {}},
+        cp3={"casos_admitidos": ["resumen-changelog-7k"], "casos": {}},
     )
     assert d["debilmente_decidible"] is True
     assert d["veredicto"] == "sustituye"
@@ -485,31 +487,32 @@ def test_con_pasos_de_1_n_un_termino_mas_no_gana_y_dos_si():
         _tanda_real("vigente", "long", (-1, -1, 0)) + _tanda_real("candidato", "long", (0, 0, 0))
     )
     assert uno["criterio"] != "calidad"
-    # Dos terminos mejor, con la banda que da el caso de dos terminos (0,5): la regla SI dispara.
+    # Dos terminos mejor: la banda del agregado es la media de los pasos 1/N de sus casos, y la
+    # diferencia es la media de 2/N. La regla SI dispara.
     dos = _decidir(
         _tanda_real("vigente", "long", (-2, -2, -1)) + _tanda_real("candidato", "long", (0, 0, 0))
     )
-    assert dos["banda"] == pytest.approx(0.5)
+    ids = analizar._casos_del_rol(CORPUS, "long", "calidad")
+    pasos = [1 / len(CORPUS[cid]["expected_terms"]) for cid in ids]
+    assert dos["banda"] == pytest.approx(sum(pasos) / len(pasos), abs=1e-3)
     assert dos["puede_disparar"] is True
     assert (dos["veredicto"], dos["criterio"]) == ("sustituye", "calidad")
 
 
-def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador(monkeypatch):
-    # Un caso de UN termino da 0 o 1. Si cambia en una de tres corridas, la banda del rol vale 1,0 y
-    # ni un candidato perfecto la supera. Es lo que la regla tiene que DECIR. commit-diff-19k tenia
-    # un termino hasta la tarea 19 (CP-3 lo vio pasar) y ya no puntua solo; aqui un caso de code con
-    # puntuacion automatica se queda con un termino, para probar la regla sin depender del corpus.
-    meta = CORPUS["explicar-install-20k"]
-    monkeypatch.setitem(
-        CORPUS, "explicar-install-20k", {**meta, "expected_terms": meta["expected_terms"][:1]}
+def test_un_caso_inestable_ya_no_veta_a_los_demas_del_rol():
+    # Tercer piloto de CP-3: con la banda del ROL, un caso que salta de 0 a 1 entre corridas la ponia
+    # en 1,0 y ni un candidato claramente mejor en los otros casos podia ganar (antes este test
+    # afirmaba ese veto). Con la banda por caso, su ruido entra en la media y no fija la de todos.
+    def vigente(cid):
+        return (0.0, 1.0, 1.0) if cid == "explicar-install-20k" else (0.25, 0.25, 0.25)
+
+    d = _decidir(
+        _tanda("vigente", "code", vigente) + _tanda("candidato", "code", (1.0, 1.0, 1.0)),
+        rol="code",
     )
-    vigente = _tanda_real("vigente", "code", (0, 0, 0))
-    commit = [r for r in vigente if r["case"] == "explicar-install-20k"]
-    commit[0]["score"]["quality"] = _calidad_real("explicar-install-20k", 0)
-    d = _decidir(vigente + _tanda_real("candidato", "code", (0, 0, 0)), rol="code")
-    assert d["banda"] == 1.0
-    assert d["puede_disparar"] is False
-    assert d["veredicto"] == "no_sustituye"
+    assert d["banda"] == pytest.approx(1 / 3, abs=1e-3)
+    assert d["puede_disparar"] is True
+    assert (d["veredicto"], d["criterio"]) == ("sustituye", "calidad")
 
 
 def test_con_los_terminos_de_la_tarea_19_el_mismo_tropiezo_deja_disparar_la_regla():
@@ -521,7 +524,9 @@ def test_con_los_terminos_de_la_tarea_19_el_mismo_tropiezo_deja_disparar_la_regl
     commit = [r for r in vigente if r["case"] == "explicar-install-20k"]
     commit[0]["score"]["quality"] = _calidad_real("explicar-install-20k", n - 3)
     d = _decidir(vigente + _tanda_real("candidato", "code", (0, 0, 0)), rol="code")
-    assert d["banda"] == pytest.approx(1 / n, abs=1e-3)
+    # Solo explicar-install-20k varia (un paso de 1/N); la banda del agregado es la media por caso.
+    casos_code = analizar._casos_del_rol(CORPUS, "code", "calidad")
+    assert d["banda"] == pytest.approx((1 / n) / len(casos_code), abs=1e-3)
     assert d["puede_disparar"] is True
     assert (d["veredicto"], d["criterio"]) == ("sustituye", "calidad")
 
@@ -544,7 +549,8 @@ def test_cp3_separa_marca_techo_y_agrega_solo_lo_admitido():
     )["roles"]["long"]
     assert r["casos"]["resumen-md-10k"]["motivo"] == "techo"
     assert "resumen-md-10k" not in r["casos_admitidos"]
-    assert len(r["casos_admitidos"]) == 3
+    # long tiene 3 casos con puntuacion automatica desde el tercer piloto (lint-9k va a revision).
+    assert len(r["casos_admitidos"]) == 2
     assert r["pasa"] is True
     assert r["agregado"] == {"pequeno": pytest.approx(0.3333), "grande": 1.0, "separa": True}
 
@@ -568,10 +574,30 @@ def test_caso_sin_puntuacion_automatica_no_entra_en_la_regla_y_el_informe_lo_dic
     )["roles"]["code"]
     assert "commit-diff-19k" not in r["casos"]
     assert r["solo_revision"] == ["commit-diff-19k"]
-    assert r["banda"] == 0.0
+    assert all(c["banda"] == 0.0 for c in r["casos"].values())
     assert "solo revision a ciegas: commit-diff-19k" in analizar.informe_cp3(
         {"pequeno": "v", "grande": "c", "control_de_entrada": False, "roles": {"code": r}}
     )
+
+
+def test_cp3_cada_caso_separa_contra_su_propia_banda():
+    # Los numeros del tercer piloto: boilerplate-156 daba 0/0/0 contra 1/1/0,8 y explicar-metrics-15k
+    # 1/0/0,86 contra 1/1/1. Con la banda del rol (1,0, la de explicar-metrics) no separaba ninguno.
+    reales = {
+        "boilerplate-156": ((0.0, 0.0, 0.0), (1.0, 1.0, 0.8)),
+        "explicar-metrics-15k": ((1.0, 0.0, 0.8571), (1.0, 1.0, 1.0)),
+    }
+    registros = _tanda("p", "code", lambda cid: reales.get(cid, ((0.6,) * 3,) * 2)[0]) + _tanda(
+        "g", "code", lambda cid: reales.get(cid, ((0.6,) * 3,) * 2)[1]
+    )
+    r = analizar.analizar_cp3(
+        registros, CORPUS, analizar.Selector.parse("p"), analizar.Selector.parse("g")
+    )["roles"]["code"]
+    boiler, metrics = r["casos"]["boilerplate-156"], r["casos"]["explicar-metrics-15k"]
+    assert (boiler["banda"], boiler["separa"]) == (pytest.approx(0.2), True)
+    assert (metrics["banda"], metrics["separa"]) == (1.0, False)
+    assert r["casos_admitidos"] == ["boilerplate-156"] and r["pasa"] is True
+    assert r["banda"] == pytest.approx(0.2)
 
 
 def test_cp3_todo_en_techo_pasa_como_empate_y_uno_que_no_separa_lo_impide():

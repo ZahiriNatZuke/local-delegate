@@ -451,7 +451,7 @@
           7
         ]
       },
-      "automatic_scoring": true,
+      "automatic_scoring": false,
       "reference_signal": "conteos",
       "reference_ok": "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 7.",
       "reference_bad": "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 9."
