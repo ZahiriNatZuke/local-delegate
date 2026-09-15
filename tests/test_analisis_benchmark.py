@@ -33,7 +33,13 @@ def _cargar(nombre: str):
 
 analizar = _cargar("analizar_benchmark")
 hoja_revision = _cargar("hoja_revision")
-CORPUS = analizar.leer_corpus(CASES)
+REAL = analizar.leer_corpus(CASES)
+# La mecanica de §6 y §7 se prueba con todos los casos de calidad puntuables: que casos decide la
+# formula y cuales la comparacion por pares es del corpus (P-15), y lo prueban los tests que usan REAL.
+CORPUS = {
+    cid: {**c, "automatic_scoring": True} if c["kind"] == "calidad" else c
+    for cid, c in REAL.items()
+}
 _RELOJ = itertools.count()
 
 
@@ -510,7 +516,9 @@ def test_un_caso_inestable_ya_no_veta_a_los_demas_del_rol():
         _tanda("vigente", "code", vigente) + _tanda("candidato", "code", (1.0, 1.0, 1.0)),
         rol="code",
     )
-    assert d["banda"] == pytest.approx(1 / 3, abs=1e-3)
+    # Solo explicar-install-20k varia (dispersion 1): la banda del agregado es 1/N, no 1.
+    n_casos = len(analizar._casos_del_rol(CORPUS, "code", "calidad"))
+    assert d["banda"] == pytest.approx(1 / n_casos, abs=1e-3)
     assert d["puede_disparar"] is True
     assert (d["veredicto"], d["criterio"]) == ("sustituye", "calidad")
 
@@ -549,16 +557,22 @@ def test_cp3_separa_marca_techo_y_agrega_solo_lo_admitido():
     )["roles"]["long"]
     assert r["casos"]["resumen-md-10k"]["motivo"] == "techo"
     assert "resumen-md-10k" not in r["casos_admitidos"]
-    # long tiene 3 casos con puntuacion automatica desde el tercer piloto (lint-9k va a revision).
-    assert len(r["casos_admitidos"]) == 2
+    # CORPUS es la copia con todo puntuable: long tiene 4 casos y resumen-md-10k esta en techo.
+    assert len(r["casos_admitidos"]) == 3
     assert r["pasa"] is True
     assert r["agregado"] == {"pequeno": pytest.approx(0.3333), "grande": 1.0, "separa": True}
 
 
 def test_caso_sin_puntuacion_automatica_no_entra_en_la_regla_y_el_informe_lo_dice():
-    assert CORPUS["commit-diff-19k"]["automatic_scoring"] is False
-    assert "commit-diff-19k" not in analizar._casos_del_rol(CORPUS, "code", "calidad")
-    assert len(analizar._casos_del_rol(CORPUS, "code", "calidad")) == 3
+    # El corpus real: tras P-15, en code solo boilerplate-156 (se ejecuta) puntua solo.
+    assert REAL["commit-diff-19k"]["automatic_scoring"] is False
+    assert analizar._casos_del_rol(REAL, "code", "calidad") == ["boilerplate-156"]
+    assert set(analizar._solo_revision(REAL, "code")) == {
+        "commit-diff-19k",
+        "explicar-metrics-15k",
+        "explicar-install-20k",
+    }
+    assert analizar._casos_del_rol(REAL, "long", "calidad") == ["extraer-uvlock-48k"]
     # Un 0 en todas sus corridas no hunde la banda ni el agregado del candidato.
     registros = [
         r
@@ -570,14 +584,86 @@ def test_caso_sin_puntuacion_automatica_no_entra_en_la_regla_y_el_informe_lo_dic
         )
     ]
     r = analizar.analizar_cp3(
-        registros, CORPUS, analizar.Selector.parse("vigente"), analizar.Selector.parse("candidato")
+        registros, REAL, analizar.Selector.parse("vigente"), analizar.Selector.parse("candidato")
     )["roles"]["code"]
     assert "commit-diff-19k" not in r["casos"]
-    assert r["solo_revision"] == ["commit-diff-19k"]
+    assert "commit-diff-19k" in r["solo_revision"]
     assert all(c["banda"] == 0.0 for c in r["casos"].values())
-    assert "solo revision a ciegas: commit-diff-19k" in analizar.informe_cp3(
+    assert "lo decide la comparacion por pares a ciegas: commit-diff-19k" in analizar.informe_cp3(
         {"pequeno": "v", "grande": "c", "control_de_entrada": False, "roles": {"code": r}}
     )
+
+
+@pytest.mark.parametrize(
+    ("candidato", "vigente", "empates", "esperado"),
+    [
+        (15, 5, 0, "mejor"),  # P(X >= 15 | 20) = 0,021
+        (14, 6, 0, "empate"),  # 0,058: por encima de 0,05
+        (5, 15, 0, "peor"),
+        (9, 1, 10, "mejor"),  # los empates no cuentan: 9 de 10, 0,011
+        (0, 0, 20, "empate"),  # todo empate es un juicio, no falta de datos
+        (0, 0, 0, None),
+    ],
+)
+def test_prueba_de_signos_de_la_comparacion_por_pares(candidato, vigente, empates, esperado):
+    assert analizar.veredicto_pares(candidato, vigente, empates) == esperado
+
+
+def _long_en_techo(label, latencias=(1000, 1000, 1100)):
+    return _tanda(label, "long", (1.0, 1.0, 1.0), latencias=latencias)
+
+
+_CP3_LONG_REAL = {"casos_admitidos": [], "casos": {"extraer-uvlock-48k": {"motivo": "techo"}}}
+
+
+def _pares(candidato, vigente, empates=0):
+    return {
+        "resumen-md-10k": {
+            "humano": {"candidato": candidato, "vigente": vigente, "empate": empates}
+        }
+    }
+
+
+def test_los_pares_deciden_la_calidad_de_un_rol_de_texto_abierto():
+    # long real: extraer-uvlock-48k en techo (empate de la formula) y el texto abierto por pares.
+    registros = _long_en_techo("vigente") + _long_en_techo("candidato")
+    v = analizar.cargar_config(registros, analizar.Selector.parse("vigente"))
+    c = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
+
+    def decidir(pares):
+        return analizar.decidir_rol("long", v, c, REAL, _CP3_LONG_REAL, pares=pares)
+
+    gana = decidir(_pares(15, 5))
+    assert (gana["veredicto"], gana["criterio"]) == ("sustituye", "calidad")
+    assert gana["pares"]["veredicto"] == "mejor"
+    pierde = decidir(_pares(5, 15))
+    assert (pierde["veredicto"], pierde["criterio"]) == ("no_sustituye", "calidad")
+    # Empate por pares y por formula: deciden los desempates (aqui, empate tambien en latencia).
+    assert decidir(_pares(12, 8))["criterio"] == "empate"
+
+
+def test_la_formula_no_puede_cambiar_un_rol_sin_su_comparacion_por_pares():
+    registros = _long_en_techo("vigente") + _long_en_techo("candidato", latencias=(500, 500, 550))
+    v = analizar.cargar_config(registros, analizar.Selector.parse("vigente"))
+    c = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
+    d = analizar.decidir_rol("long", v, c, REAL, _CP3_LONG_REAL)
+    assert d["criterio"] == "velocidad"
+    assert d["veredicto"] == "no_sustituye"
+    assert any("falta la comparacion por pares" in m for m in d["motivos"])
+
+
+def test_una_fuente_que_dice_peor_veta_a_la_otra_que_dice_mejor():
+    # code real: boilerplate-156 por formula (el candidato mejor) y los pares en contra.
+    registros = _tanda("vigente", "code", (0.0, 0.0, 0.0)) + _tanda(
+        "candidato", "code", (1.0, 1.0, 1.0)
+    )
+    v = analizar.cargar_config(registros, analizar.Selector.parse("vigente"))
+    c = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
+    cp3 = {"casos_admitidos": ["boilerplate-156"], "casos": {}}
+    pares = {"explicar-install-20k": {"humano": {"candidato": 2, "vigente": 18}}}
+    d = analizar.decidir_rol("code", v, c, REAL, cp3, pares=pares)
+    assert d["pares"]["veredicto"] == "peor"
+    assert (d["veredicto"], d["criterio"]) == ("no_sustituye", "calidad")
 
 
 def test_cp3_cada_caso_separa_contra_su_propia_banda():

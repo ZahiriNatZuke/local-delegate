@@ -163,6 +163,31 @@ def test_eleccion_invalida_se_rechaza_y_lo_que_falta_se_lista(tmp_path, capsys):
     assert "faltan por elegir 1" in capsys.readouterr().err
 
 
+def test_destapar_escribe_el_json_para_decidir_solo_con_la_hoja_entera(tmp_path):
+    hoja, clave = _generar(_tanda([0.5, 0.5], [1.0, 1.0]))
+    (tmp_path / "c.json").write_text(json.dumps(clave), encoding="utf-8")
+    salida = tmp_path / "pares.json"
+
+    def destapar(texto):
+        (tmp_path / "h.md").write_text(texto, encoding="utf-8")
+        return hoja_pares.main(
+            [
+                "destapar",
+                "--hoja",
+                str(tmp_path / "h.md"),
+                "--clave",
+                str(tmp_path / "c.json"),
+                "--json",
+                str(salida),
+            ]
+        )
+
+    assert destapar(hoja.replace("Mejor (A/B/=): ", "Mejor (A/B/=): A", 1)) == 1
+    assert not salida.exists()
+    assert destapar(_rellenar(hoja, clave, lambda _m: "=")) == 0
+    assert json.loads(salida.read_text(encoding="utf-8"))["caso-a"]["humano"] == {"empate": 2}
+
+
 def test_generar_no_pisa_una_hoja_existente(tmp_path):
     (tmp_path / "c.json").write_text("{}", encoding="utf-8")
     cases = tmp_path / "cases.json"

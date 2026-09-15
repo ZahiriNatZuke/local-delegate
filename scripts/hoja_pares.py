@@ -214,6 +214,12 @@ def main(argv: list[str] | None = None) -> int:
     des = sub.add_parser("destapar")
     des.add_argument("--hoja", type=Path, required=True)
     des.add_argument("--clave", type=Path, required=True)
+    des.add_argument(
+        "--json",
+        type=Path,
+        default=None,
+        help="escribe el resultado por caso; es el --pares de `analizar_benchmark.py decidir`",
+    )
     args = parser.parse_args(argv)
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -241,6 +247,11 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if args.json and not faltan:
+        # Solo con la hoja entera: una decision sobre elecciones a medias parece una medida.
+        args.json.write_text(
+            json.dumps(resultado, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
     print(
         "| Caso | Pares | Metrica prefiere | Acuerdos | Acuerdo | Veredicto | Elegido por la persona |"
     )

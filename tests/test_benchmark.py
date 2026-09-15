@@ -133,6 +133,18 @@ def test_conteo_inventado_hunde_la_calidad_aunque_nombre_todas_las_reglas():
     assert (score["counts_wrong"], score["quality"]) == ([], 1.0)
 
 
+def test_formato_de_la_tool_se_guarda_y_no_toca_la_calidad():
+    # P-15: el usuario descarto respuestas por lista o por pasarse de palabras.
+    raw = _raw(expected_terms=["hooks"], expected_format={"max_words": 5, "prose": True})
+    prosa = benchmark.score_output(raw, "Los hooks sugieren delegar.", "stop")
+    assert (prosa["format_ok"], prosa["format_words"], prosa["format_list_lines"]) == (True, 4, 0)
+    lista = benchmark.score_output(raw, "Los hooks:\n- uno\n2. dos", "stop")
+    assert (lista["format_ok"], lista["format_list_lines"], lista["quality"]) == (False, 2, 1.0)
+    larga = benchmark.score_output(raw, "Los hooks sugieren delegar casi siempre.", "stop")
+    assert (larga["format_ok"], larga["quality"]) == (False, 1.0)
+    assert benchmark.score_output(_raw(expected_terms=["x"]), "x", "stop")["format_ok"] is None
+
+
 def test_cobertura_cero_se_atribuye_a_coverage():
     score = benchmark.score_output(_raw(expected_terms=["bug"]), "feature", "stop")
     assert (score["quality"], score["zero_by"]) == (0.0, "coverage")
@@ -162,7 +174,11 @@ def test_cp4_el_puntuador_separa_cada_pareja_por_su_senal():
         distintos = {
             nombre
             for nombre in ok
-            if nombre not in {"quality", "zero_by", "truncated"} and ok[nombre] != malo[nombre]
+            # El formato (P-15) se guarda pero no es una senal de calidad: dos respuestas de distinto
+            # largo difieren en palabras sin que eso separe nada.
+            if nombre not in {"quality", "zero_by", "truncated"}
+            and not nombre.startswith("format_")
+            and ok[nombre] != malo[nombre]
         }
         assert distintos == _COMPONENTES_POR_SENAL[raw["reference_signal"]], caso.id
 

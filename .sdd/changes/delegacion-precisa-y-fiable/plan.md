@@ -369,6 +369,11 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       correcta**: si la mala cae por `json_valid` cuando el defecto plantado era un hecho falso,
       acierta por la razon equivocada.
     - Rollback or recovery: solo cambia el corpus, que se regenera con la tarea 14.
+    - Estado (2026-09-15): **hecha**, tras cuatro pilotos y P-15 (`protocolo-f2.md` §2 y §10.1). Lo
+      que obligo a cambiar respecto a este texto: 5 corridas y no 3, banda por caso, temperatura de
+      produccion, sonda que relanza `typeperf`, y **cada caso con su juez**: metricas objetivas donde
+      las hay y comparacion por pares a ciegas en el texto abierto, porque la cobertura de terminos
+      no coincidio con el juicio humano (6 de 13).
 
 20. **La tanda: contexto, linea base, barrido, calidad y techo**
     - Files or modules: `benchmarks/catalogo-2026-09/resultados/*.jsonl`, `protocolo-f2.md` §10

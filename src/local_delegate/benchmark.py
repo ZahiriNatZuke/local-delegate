@@ -294,7 +294,23 @@ def score_output(
         "execution_passed": None,
         "counts_ratio": None,
         "counts_wrong": None,
+        "format_ok": None,
+        "format_words": None,
+        "format_list_lines": None,
     }
+    fmt = dict(case.get("expected_format") or {})
+    if fmt:
+        # P-15: comprobar la instruccion de la tool (limite de palabras, prosa). Se GUARDA pero no
+        # entra en la calidad: con 6 pares coincidio con el juicio humano en 5, poco para decidir.
+        words = len(re.findall(r"\w+", text))
+        list_lines = sum(
+            1 for line in text.splitlines() if re.match(r"\s*(?:[-*+]|\d+[.)])\s", line)
+        )
+        components["format_words"] = words
+        components["format_list_lines"] = list_lines
+        components["format_ok"] = (words <= fmt["max_words"] if "max_words" in fmt else True) and (
+            list_lines == 0 if fmt.get("prose") else True
+        )
     counts = dict(case.get("expected_counts") or {})
     if counts:
         wrong = check_counts(text, counts)

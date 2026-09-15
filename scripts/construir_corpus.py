@@ -197,6 +197,22 @@ def _conteos_de_las_reglas(texto: str) -> dict[str, list[int]]:
     }
 
 
+def formato_pedido(system: str | None) -> dict[str, Any]:
+    """Lo que la instruccion de la tool pide de forma comprobable: limite de palabras y prosa.
+
+    P-15: el usuario descarto respuestas por salirse de las dos cosas, y la cobertura de terminos no
+    lo miraba. Sale del prompt capturado de la tool real, no de lo que devolvio un modelo.
+    """
+    if not system:
+        return {}
+    formato: dict[str, Any] = {}
+    if limite := re.search(r"M[aá]ximo (\d+) palabras", system):
+        formato["max_words"] = int(limite.group(1))
+    if re.search(r"\bprosa\b", system):
+        formato["prose"] = True
+    return formato
+
+
 def _docstring_del_modulo(texto: str) -> str:
     partes = texto.split('"""')
     return partes[1] if len(partes) > 2 else ""
@@ -418,6 +434,9 @@ CASOS: tuple[Caso, ...] = (
         fichero("docs/recipes/claude-code-hooks.md"),
         extension="md",
         expected_terms=("UserPromptSubmit", "PreToolUse", "LD_HOOK_READ_BLOQUEAR"),
+        # P-15: la cobertura de terminos no coincidio con el juicio humano (0 de 3, invertida). Lo
+        # decide la comparacion por pares a ciegas; los terminos se quedan como dato.
+        puntuacion_automatica=False,
     ),
     Caso(
         # Tarea 19: sustituye a `resumen-changelog-43k`, cuyos terminos eran un suelo. Dos secciones
@@ -432,6 +451,7 @@ CASOS: tuple[Caso, ...] = (
         secciones_de_version("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
         expected_terms=_identificadores_de_los_titulares,
+        puntuacion_automatica=False,  # P-15: 3 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "extraer-uvlock-48k",
@@ -506,6 +526,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_por_lineas("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
         expected_terms=_rutas_del_docstring,
+        puntuacion_automatica=False,  # P-15: sin base contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "explicar-install-20k",
@@ -517,6 +538,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_exacto("src/local_delegate/install.py", 20000),
         extension="py.txt",
         expected_terms=_ficheros_y_flags_del_docstring,
+        puntuacion_automatica=False,  # P-15: 2 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "boilerplate-156",
@@ -1024,6 +1046,7 @@ def entrada_de_corpus(
         "execution_checks": list(caso.comprobaciones) if calidad else [],
         "expected_counts": caso.conteos(texto) if calidad and caso.conteos else {},
         "automatic_scoring": caso.puntuacion_automatica if calidad else None,
+        "expected_format": formato_pedido(llamada.system) if calidad else {},
         **(
             {
                 "reference_signal": caso.referencia[0],
@@ -1221,6 +1244,7 @@ _CAMPOS_VIGILADOS = (
     "execution_checks",
     "expected_counts",
     "automatic_scoring",
+    "expected_format",
     "reference_signal",
     "reference_ok",
     "reference_bad",

@@ -1208,6 +1208,18 @@ F2 no necesita. Si algun dia hiciera falta, el cargador viejo esta en el histori
    (`automatic_scoring: false`: `commit-diff-19k` desde el segundo piloto, `lint-9k` desde el tercero). El runner lo sigue puntuando y guardando
    —el dato no se pierde—, pero `analizar_benchmark.py` lo saca de la banda, del agregado y de §6 y
    §7, y el informe de CP-3 lo lista como «solo revision a ciegas». Lo juzga §4.8.
+9. **P-15 (2026-09-15, decision del usuario): cada caso tiene su juez.** Deciden **las metricas
+   objetivas** donde las hay —ejecucion (`boilerplate-156`), JSON y campos (`extraer-*`), cifras y
+   terminos prohibidos de la imagen (`leer-cifras-dashboard`), etiqueta y terminos de `mechanical`—, y
+   **la comparacion por pares a ciegas** en el texto abierto: `resumen-md-10k`,
+   `resumen-changelog-7k`, `explicar-metrics-15k`, `explicar-install-20k`, `commit-diff-19k` y
+   `lint-9k` (`automatic_scoring: false`). La cobertura de terminos queda como dato. **Formato de la
+   tool** (`expected_format`, sacado del prompt capturado: limite de palabras y prosa): el puntuador
+   guarda `format_ok`, `format_words` y `format_list_lines`, pero **no entra en la calidad** —con 6
+   pares coincidio con el juicio humano en 5, poco para decidir—; se confirma o descarta con los pares
+   de la tanda. Los 20 votos de P-15 (`resultados/pares-p15-motivos.json` y la hoja destapada) quedan
+   como **conjunto de referencia**: un juez automatico futuro tendria que coincidir con ellos antes de
+   sustituir a la persona.
 
 **`reasoning_effort` se fija por modelo y se puede sobreescribir por caso.** Hace falta lo segundo:
 Qwen3.8-27B es muy verboso y para resumir hay que apagarle el razonamiento, pero el mismo modelo
@@ -1439,6 +1451,17 @@ en este orden y sin ambiguedad, porque una regla que no se puede ejecutar no es 
    por defecto (REQ-F2-6).
 
 **Empate dentro de la banda:** lo resuelve la precedencia de arriba —techo, luego velocidad—, no la velocidad sola, y queda escrito cual de los dos criterios decidio.
+
+**Comparacion por pares (P-15), la segunda fuente de calidad.** En los roles con casos de texto
+abierto, `hoja_pares.py` empareja la corrida i del vigente y del candidato, a ciegas; la persona elige
+A, B o empate, y `destapar --json` alimenta `analizar_benchmark.py decidir --pares`. **Regla, escrita
+antes de la tanda:** prueba de signos de una cola sobre los pares con eleccion (los empates no
+cuentan): «mejor» si la probabilidad de tantas elecciones del candidato por azar es <= 0,05, «peor» si
+le pasa al vigente, «empate» si no (con 20 pares sin empates, 15 a 5). **Combinacion con la formula:**
+si alguna de las dos fuentes dice «peor», el candidato pierde por calidad; si ninguna lo dice y alguna
+dice «mejor», gana; si no, deciden los desempates (techo, velocidad). **Un rol con casos por pares no se
+cambia sin su comparacion**: la sustitucion queda bloqueada si falta. La latencia se mide sobre todos
+los casos de calidad del rol, los de pares incluidos.
 
 **Nadie mejora al vigente:** el rol **no se cambia**, y eso se escribe como resultado, no como
 fracaso de la medicion. Es lo que dice REQ-F2-6 literalmente.
@@ -1681,7 +1704,15 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   inventados) y **cumplimiento de la instruccion** (prosa y no lista, dentro del limite de palabras).
   **Exploratorio, n = 6:** comprobar el formato de la tool (prosa, <= 150 o 250 palabras) separa solo
   6 pares y coincide en 5; el unico desacuerdo es una respuesta en formato con errores de hecho, y
-  cuando las dos cumplen, el usuario decidio por correccion.
+  cuando las dos cumplen, el usuario decidio por correccion. **Resuelta (2026-09-15, decision del
+  usuario):** cada caso tiene su juez (§4.7 punto 9), la comparacion por pares decide el texto abierto
+  con la regla de §7, y el formato se guarda sin decidir. La banda (rango o MAD) deja de importar en el
+  texto abierto; en los casos objetivos casi no hay ruido y se queda por caso. Queda para la tanda el
+  punto (3), sensibilidad a una entrada alterada, en los casos objetivos que lo admitan.
+  **CP-3 queda asi, con los datos del cuarto piloto y de P-15:** `code` validado por
+  `boilerplate-156` (objetivo) y por pares (el usuario distinguio a los dos modelos); `long` por pares
+  (`extraer-uvlock-48k` en techo); `mechanical` empate en techo (decide la velocidad); `vision` por
+  `leer-cifras-dashboard`, con `describir-dashboard` sin control de entrada.
 - **P-14 — abierta (2026-09-14, planteada por el usuario).** En el uso real el MCP **no tendra la
   maquina entera**: convive con el navegador, video, IDE y lo que el usuario este haciendo. El estado
   limpio de §1.4 sigue valiendo para **comparar** modelos entre si (quita ruido), pero **no** para

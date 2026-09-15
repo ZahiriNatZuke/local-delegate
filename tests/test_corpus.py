@@ -441,6 +441,31 @@ def test_oraculo_de_conteos_caza_el_conteo_inventado_del_segundo_piloto():
     assert not construir._conteos_cuadran("Python 3.12: T201 3.5", conteos)
 
 
+def test_formato_pedido_sale_del_prompt_de_la_tool():
+    resumen = (
+        "Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato."
+    )
+    assert construir.formato_pedido(resumen) == {"max_words": 150, "prose": True}
+    lint = "Output EXACTO: un resumen agrupado por archivo. Maximo 200 palabras."
+    assert construir.formato_pedido(lint) == {"max_words": 200}
+    assert construir.formato_pedido("Clasifica en una etiqueta.") == {}
+    assert construir.formato_pedido(None) == {}
+
+
+def test_los_casos_de_texto_abierto_los_deciden_los_pares():
+    corpus = {c.id: c.raw for c in benchmark.load_corpus(DESTINO / "cases.json").cases}
+    abiertos = {
+        "resumen-md-10k",
+        "resumen-changelog-7k",
+        "explicar-metrics-15k",
+        "explicar-install-20k",
+        "commit-diff-19k",
+        "lint-9k",
+    }
+    assert {cid for cid, c in corpus.items() if c.get("automatic_scoring") is False} == abiertos
+    assert corpus["resumen-md-10k"]["expected_format"] == {"max_words": 150, "prose": True}
+
+
 def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion():
     fuente = (
         '"""m.py\n\n  GET /           -> html\n  GET /api/a     -> x\n  GET /api/b     -> y\n'
