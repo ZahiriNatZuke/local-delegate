@@ -860,6 +860,14 @@ def summarize_resources(
     ram = [s for s in samples if s.private_bytes is not None]
     vram = [s for s in samples if s.vram_dedicated_bytes is not None]
     shared = [s.vram_shared_bytes for s in samples if s.vram_shared_bytes is not None]
+    # En WDDM la privada incluye la VRAM reservada: solo la diferencia sigue a los expertos que viven
+    # en RAM (protocolo CP-2b, P-13). Por muestra y solo con los dos datos: restar picos seria restar
+    # lecturas de momentos distintos, y una VRAM ausente no es cero.
+    host = [
+        s.private_bytes - s.vram_dedicated_bytes
+        for s in samples
+        if s.private_bytes is not None and s.vram_dedicated_bytes is not None
+    ]
     pids = sorted({s.pid for s in samples if s.pid is not None})
     annul: str | None = None
     if enabled:
@@ -891,6 +899,7 @@ def summarize_resources(
         "vram_dedicated_bytes_peak": max((s.vram_dedicated_bytes or 0) for s in vram)
         if vram
         else None,
+        "host_private_bytes_peak": max(host) if host else None,
         # Primera y pico por separado: `Shared Usage` que CRECE invalida CP-1 y todo el tramo
         # desde el ultimo CP-1 en verde, no solo esta corrida (§3.2). Lo decide el analisis.
         "vram_shared_bytes_first": shared[0] if shared else None,

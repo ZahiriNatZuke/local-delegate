@@ -825,3 +825,14 @@ def test_generar_no_pisa_una_hoja_existente(tmp_path):
         ]
     )
     assert rc == 2
+
+
+def test_cabe_uso_diario_es_informativo_y_mira_los_dos_limites():
+    # P-14: 14 GB de VRAM y 24 GB de RAM para el modelo. En el limite cabe; un byte mas en
+    # cualquiera de los dos, no; y sin uno de los dos datos no se afirma nada.
+    gib = 1024**3
+    assert analizar._cabe_uso_diario(14 * gib, 24 * gib) == "si"
+    assert analizar._cabe_uso_diario(14 * gib + 1, 24 * gib) == "no"
+    assert analizar._cabe_uso_diario(14 * gib, 24 * gib + 1) == "no"
+    assert analizar._cabe_uso_diario(None, 1) == "—"
+    assert analizar._cabe_uso_diario(1, None) == "—"

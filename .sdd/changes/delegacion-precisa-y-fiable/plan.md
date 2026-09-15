@@ -394,6 +394,12 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       desde el ultimo CP-1 en verde** (§3.2). Las corridas anuladas se anotan con su motivo: un
       descarte silencioso es indistinguible de un caso que no se corrio.
     - Rollback or recovery: la tanda no modifica el producto; solo escribe JSONL.
+    - Preparacion (2026-09-14): P-13 y P-14 resueltas por el usuario y §1.1 y §1.4 del protocolo
+      rehechos con lo medido (32 GB de RAM, no 62; RAM libre >= 17 GB; VRAM del adaptador en reposo
+      <= 1 024 MiB). La tanda corre con `--load-mode none` y el runner guarda el pico de
+      `privada − VRAM dedicada` por muestra; el presupuesto de uso diario (2 GB de VRAM y 8 GB de RAM
+      de reserva) es solo informativo. Tras CP-3 son **5 corridas y ~350 peticiones**, no 3 y ~214
+      (§5.2 del protocolo manda).
 
 21. **Asignacion de roles, y que se transfiere a produccion**
     - Files or modules: `verification.md`, `protocolo-f2.md` §9 y §10
