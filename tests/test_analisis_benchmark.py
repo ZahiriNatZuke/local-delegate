@@ -877,3 +877,17 @@ def test_cabe_uso_diario_es_informativo_y_mira_los_dos_limites():
     assert analizar._cabe_uso_diario(14 * gib, 24 * gib + 1) == "no"
     assert analizar._cabe_uso_diario(None, 1) == "—"
     assert analizar._cabe_uso_diario(1, None) == "—"
+
+
+def test_la_latencia_se_compara_solo_en_los_casos_que_los_dos_terminan():
+    # Tarea 20: llama31-8b se corto por max_tokens en las 5 corridas de lint-9k. Sin latencia en ese
+    # caso, la media del rol salia vacia y la condicion 3 vetaba al candidato por un fallo del vigente.
+    registros = _tanda("vigente", "long", TERCIO)
+    for r in registros:
+        if r["case"] == "lint-9k":
+            r["outcome"] = "truncado"
+            r["score"] = {"quality": 0.0, "zero_by": "truncado_repetido"}
+    d = _decidir(registros + _tanda("candidato", "long", (1.0, 1.0, 1.0)))
+    assert d["latencia_ms"]["fuera"] == ["lint-9k"]
+    assert d["latencia_ms"]["vigente"] is not None
+    assert (d["veredicto"], d["motivos"]) == ("sustituye", [])

@@ -597,13 +597,27 @@ def decidir_rol(
         }
 
     # Latencia de TODOS los casos de calidad: los de pares tambien corren y tardan.
-    (lat_v, lat_c), banda_lat = _latencia_del_rol([vigente, candidato], ids + casos_pares, corpus)
+    # Condicion 3 sobre los casos con latencia medida en LOS DOS (decision del usuario, tarea 20): el
+    # vigente de long se corto en todas las corridas de lint-9k y la media del rol salia vacia, asi que
+    # su fallo vetaba al candidato. Que un modelo no termine un caso ya lo castigan calidad y pares.
+    casos_lat = ids + casos_pares
+    con_latencia = [
+        cid
+        for cid in casos_lat
+        if all(_caso(cfg, cid, corpus).latencia_mediana is not None for cfg in (vigente, candidato))
+    ]
+    (lat_v, lat_c), banda_lat = _latencia_del_rol([vigente, candidato], con_latencia, corpus)
     hay_techo = bool(_casos_del_rol(corpus, rol, "techo"))
     techo_v, techo_c = techo_aceptado(vigente, rol, corpus), techo_aceptado(candidato, rol, corpus)
     resultado.update(
         {
             "debilmente_decidible": len(casos_calidad) < MIN_CASOS_DECIDIBLE and pares_rol is None,
-            "latencia_ms": {"vigente": lat_v, "candidato": lat_c, "banda": banda_lat},
+            "latencia_ms": {
+                "vigente": lat_v,
+                "candidato": lat_c,
+                "banda": banda_lat,
+                "fuera": [cid for cid in casos_lat if cid not in con_latencia],
+            },
             "techo_bytes": {"vigente": techo_v, "candidato": techo_c} if hay_techo else None,
         }
     )
