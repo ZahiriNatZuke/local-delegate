@@ -20,8 +20,9 @@ Lecturas del protocolo que el texto no fijaba del todo, y que este programa deci
 - **Empate** es toda diferencia de calidad dentro de la banda, con cualquier signo: dentro de la
   banda la diferencia es ruido. Lo resuelve la precedencia (techo, luego velocidad, luego no se
   cambia). Ganar por un desempate exige igualmente las condiciones 2 y 3 de §7.
-- **Banda de ruido**: la mayor dispersion de todos los casos de calidad del rol en los dos modelos,
-  no solo de los admitidos por CP-3 («observada en ese rol», y conservadora a proposito).
+- **Banda de ruido**: por caso, la mayor dispersion de ese caso en los dos modelos; la del
+  agregado, la media de las bandas de sus casos. Hasta el tercer piloto de CP-3 era la mayor
+  dispersion de todo el rol, y con ruido real un solo caso inestable impedia separar a los demas.
 - **OOM**: el JSONL no tiene una clase propia; cualquier `error` del candidato bloquea la
   sustitucion y se lista con su texto. Inventar una cadena de OOM daria un control que no ve el
   resto de caidas.
@@ -41,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -54,6 +56,8 @@ LATENCIA_MAXIMA = 1.5
 # El runner redondea la cobertura a 4 decimales: 0,3334 contra una banda de 0,3333 no es mejora, es
 # redondeo. Menor que el paso real mas fino del corpus (1/6 por caso, 1/24 en un agregado de 4).
 TOLERANCIA = 1e-3
+# Comparacion por pares (P-15): prueba de signos de una cola sobre los pares con eleccion.
+ALFA_PARES = 0.05
 # Aceptadas: el backend recibio la entrada entera, aunque luego no puntue.
 _ACEPTADAS = frozenset({"ok", "truncado", "configuracion"})
 
@@ -225,7 +229,21 @@ def cargar_config(registros: list[dict[str, Any]], selector: Selector) -> Config
 
 
 def _casos_del_rol(corpus: dict[str, dict[str, Any]], rol: str, kind: str) -> list[str]:
-    return [cid for cid, c in corpus.items() if c["role"] == rol and c["kind"] == kind]
+    # Un caso con `automatic_scoring: false` no entra en ninguna cuenta de la regla: lo juzga solo la
+    # revision a ciegas (§4.8). Es `commit-diff-19k` desde el segundo piloto de CP-3.
+    return [
+        cid
+        for cid, c in corpus.items()
+        if c["role"] == rol and c["kind"] == kind and c.get("automatic_scoring") is not False
+    ]
+
+
+def _solo_revision(corpus: dict[str, dict[str, Any]], rol: str) -> list[str]:
+    return [
+        cid
+        for cid, c in corpus.items()
+        if c["role"] == rol and c["kind"] == "calidad" and c.get("automatic_scoring") is False
+    ]
 
 
 def _caso(config: Config, case_id: str, corpus: dict[str, dict[str, Any]]) -> Caso:
@@ -234,14 +252,33 @@ def _caso(config: Config, case_id: str, corpus: dict[str, dict[str, Any]]) -> Ca
     return config.casos.get(case_id) or Caso(case_id, meta["role"], meta["kind"])
 
 
-def banda_de_ruido(configs: list[Config], casos: list[str], corpus: dict[str, dict[str, Any]]):
+def banda_del_caso(
+    configs: list[Config], case_id: str, corpus: dict[str, dict[str, Any]]
+) -> float | None:
+    """La mayor dispersion de ESE caso entre las configuraciones que se comparan.
+
+    Tercer piloto de CP-3 (decision del usuario): con la temperatura de produccion, la banda del ROL
+    —la mayor dispersion de todos sus casos— la fijaba el caso mas inestable y ningun otro podia
+    separar. `boilerplate-156` daba 0/0/0 contra 1/1/0,8 y quedaba dentro de una banda de 1,0 que
+    ponia `explicar-metrics-15k`. Cada caso se mide contra su propio ruido.
+    """
     dispersiones = [
-        d
-        for cfg in configs
-        for cid in casos
-        if (d := _caso(cfg, cid, corpus).dispersion) is not None
+        d for cfg in configs if (d := _caso(cfg, case_id, corpus).dispersion) is not None
     ]
     return max(dispersiones) if dispersiones else None
+
+
+def banda_del_agregado(
+    configs: list[Config], casos: list[str], corpus: dict[str, dict[str, Any]]
+) -> float | None:
+    """La media de las bandas de los casos que forman el agregado.
+
+    El agregado es la media de sus medianas, y su ruido es del orden del ruido medio de sus casos.
+    La media y no la maxima, para que un caso inestable no vete al resto; y no la media dividida
+    por la raiz de N, que supondria independencia entre casos corridos por el mismo modelo.
+    CP-3 y §7 usan la misma: si no, el control validaria una magnitud y la regla decidiria con otra.
+    """
+    return _media([banda_del_caso(configs, cid, corpus) for cid in casos]) if casos else None
 
 
 def _media(valores: list[float | None]) -> float | None:
@@ -261,6 +298,59 @@ def puede_disparar(banda: float | None, calidad_vigente: float | None) -> bool |
     if banda is None or calidad_vigente is None:
         return None
     return 1.0 - calidad_vigente > banda + TOLERANCIA
+
+
+# --- Comparacion por pares (P-15) -------------------------------------------------------------
+
+
+def _cola_binomial(exitos: int, n: int) -> float:
+    """P(X >= exitos) con X ~ Binomial(n, 1/2): la probabilidad de tantas elecciones por azar."""
+    return sum(math.comb(n, i) for i in range(exitos, n + 1)) / 2**n
+
+
+def veredicto_pares(candidato: int, vigente: int, empates: int = 0) -> str | None:
+    """Prueba de signos sobre los pares con eleccion; los empates no cuentan.
+
+    «mejor» si el candidato fue elegido tantas veces que por azar pasaria con probabilidad
+    <= ALFA_PARES; «peor» si eso le pasa al vigente; si no, «empate». Con 20 pares sin empates hace
+    falta 15 a 5. Sin ningun par juzgado no hay veredicto.
+    """
+    n = candidato + vigente
+    if n == 0:
+        return "empate" if empates else None
+    if _cola_binomial(candidato, n) <= ALFA_PARES:
+        return "mejor"
+    if _cola_binomial(vigente, n) <= ALFA_PARES:
+        return "peor"
+    return "empate"
+
+
+def pares_del_rol(
+    pares: dict[str, Any] | None,
+    corpus: dict[str, dict[str, Any]],
+    rol: str,
+    vigente: str,
+    candidato: str,
+) -> dict[str, Any] | None:
+    """Suma las elecciones de `hoja_pares.py destapar --json` en los casos por pares del rol."""
+    if pares is None:
+        return None
+    casos = [cid for cid in _solo_revision(corpus, rol) if cid in pares]
+    if not casos:
+        return None
+    cuenta = {
+        quien: sum(int(pares[cid]["humano"].get(etiqueta, 0)) for cid in casos)
+        for quien, etiqueta in (
+            ("candidato", candidato),
+            ("vigente", vigente),
+            ("empates", "empate"),
+        )
+    }
+    return {
+        "casos": casos,
+        **cuenta,
+        "veredicto": veredicto_pares(cuenta["candidato"], cuenta["vigente"], cuenta["empates"]),
+    }
 
 
 # --- CP-3 ---------------------------------------------------------------------------------------
@@ -283,14 +373,15 @@ def analizar_cp3(
     }
     for rol in roles:
         ids = _casos_del_rol(corpus, rol, "calidad")
-        banda = banda_de_ruido([cfg_p, cfg_g], ids, corpus)
         casos: dict[str, Any] = {}
         for cid in ids:
             m_p, m_g = _caso(cfg_p, cid, corpus).mediana, _caso(cfg_g, cid, corpus).mediana
+            banda_caso = banda_del_caso([cfg_p, cfg_g], cid, corpus)
             if m_p is None or m_g is None:
                 casos[cid] = {
                     "pequeno": m_p,
                     "grande": m_g,
+                    "banda": banda_caso,
                     "separa": False,
                     "motivo": "sin puntuacion",
                 }
@@ -298,7 +389,7 @@ def analizar_cp3(
             diferencia = m_g - m_p
             # En el control de entrada la direccion importa: la imagen correcta tiene que ganar.
             separa = (diferencia if control_de_entrada else abs(diferencia)) > (
-                banda or 0.0
+                banda_caso or 0.0
             ) + TOLERANCIA
             en_techo = m_p == 1.0 and m_g == 1.0
             motivo = None if separa else ("techo" if en_techo else "no separa")
@@ -306,15 +397,26 @@ def analizar_cp3(
                 "pequeno": m_p,
                 "grande": m_g,
                 "diferencia": round(diferencia, 4),
+                "banda": banda_caso,
                 "separa": separa,
                 "direccion": "grande" if diferencia > 0 else "pequeno" if diferencia < 0 else None,
                 "motivo": motivo,
             }
         admitidos = [cid for cid, c in casos.items() if c["separa"]]
+        # §7 punto 4: si TODOS los casos del rol estan en techo, los dos modelos empatan en 1,0 y el
+        # rol se decide por velocidad; no es un corpus que no discrimina. En el control de entrada
+        # no aplica: que la imagen equivocada tambien de 1,0 es justo que el caso no reacciona.
+        empate_en_techo = (
+            not control_de_entrada
+            and bool(ids)
+            and not admitidos
+            and all(c["motivo"] == "techo" for c in casos.values())
+        )
         if control_de_entrada:
             pasa = bool(ids) and len(admitidos) == len(ids)
         else:
-            pasa = len(ids) <= 1 or bool(admitidos)
+            pasa = len(ids) <= 1 or bool(admitidos) or empate_en_techo
+        banda = banda_del_agregado([cfg_p, cfg_g], admitidos, corpus)
         agregado_p = _media([casos[c]["pequeno"] for c in admitidos]) if admitidos else None
         agregado_g = _media([casos[c]["grande"] for c in admitidos]) if admitidos else None
         agregado_separa = (
@@ -332,9 +434,11 @@ def analizar_cp3(
             "casos": casos,
             "casos_admitidos": admitidos,
             "pasa": pasa,
+            "empate_en_techo": empate_en_techo,
             "agregado": {"pequeno": agregado_p, "grande": agregado_g, "separa": agregado_separa},
             "puede_disparar": puede_disparar(banda, peor),
             "sin_agregado": rol in ROLES_SIN_AGREGADO,
+            "solo_revision": _solo_revision(corpus, rol),
         }
     return salida
 
@@ -434,6 +538,7 @@ def decidir_rol(
     corpus: dict[str, dict[str, Any]],
     cp3: dict[str, Any] | None,
     umbral_shared_bytes: int = 0,
+    pares: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ids = _casos_del_rol(corpus, rol, "calidad")
     resultado: dict[str, Any] = {
@@ -473,38 +578,57 @@ def decidir_rol(
     todos_en_techo = bool(ids) and not admitidos and all(m == "techo" for m in descartes.values())
     resultado["todos_en_techo"] = todos_en_techo
     casos_calidad = admitidos or (ids if todos_en_techo else [])
-    if not casos_calidad:
+    # P-15: los casos de texto abierto los decide la comparacion por pares a ciegas, no la formula.
+    casos_pares = _solo_revision(corpus, rol)
+    pares_rol = pares_del_rol(pares, corpus, rol, str(vigente.selector), str(candidato.selector))
+    resultado["pares"] = pares_rol
+    if not casos_calidad and (pares_rol is None or pares_rol["veredicto"] is None):
         return {
             **resultado,
             "veredicto": "indecidible",
             "motivos": ["ningun caso de CP-3 separa: el rol es indecidible con este corpus"],
         }
 
-    banda = banda_de_ruido([vigente, candidato], ids, corpus) or 0.0
-    q_v = _media([_caso(vigente, cid, corpus).mediana for cid in casos_calidad])
-    q_c = _media([_caso(candidato, cid, corpus).mediana for cid in casos_calidad])
-    assert q_v is not None and q_c is not None  # §6 ya exige puntuacion valida en cada caso
-    diferencia = q_c - q_v
-    (lat_v, lat_c), banda_lat = _latencia_del_rol([vigente, candidato], ids, corpus)
+    # Latencia de TODOS los casos de calidad: los de pares tambien corren y tardan.
+    (lat_v, lat_c), banda_lat = _latencia_del_rol([vigente, candidato], ids + casos_pares, corpus)
     hay_techo = bool(_casos_del_rol(corpus, rol, "techo"))
     techo_v, techo_c = techo_aceptado(vigente, rol, corpus), techo_aceptado(candidato, rol, corpus)
     resultado.update(
         {
-            "debilmente_decidible": len(casos_calidad) < MIN_CASOS_DECIDIBLE,
-            "calidad": {"vigente": q_v, "candidato": q_c, "diferencia": round(diferencia, 4)},
-            "banda": banda,
-            "puede_disparar": puede_disparar(banda, q_v),
+            "debilmente_decidible": len(casos_calidad) < MIN_CASOS_DECIDIBLE and pares_rol is None,
             "latencia_ms": {"vigente": lat_v, "candidato": lat_c, "banda": banda_lat},
             "techo_bytes": {"vigente": techo_v, "candidato": techo_c} if hay_techo else None,
         }
     )
+    automatico: str | None = None
+    if casos_calidad:
+        banda = banda_del_agregado([vigente, candidato], casos_calidad, corpus) or 0.0
+        q_v = _media([_caso(vigente, cid, corpus).mediana for cid in casos_calidad])
+        q_c = _media([_caso(candidato, cid, corpus).mediana for cid in casos_calidad])
+        assert q_v is not None and q_c is not None  # §6 ya exige puntuacion valida en cada caso
+        diferencia = q_c - q_v
+        resultado.update(
+            {
+                "calidad": {"vigente": q_v, "candidato": q_c, "diferencia": round(diferencia, 4)},
+                "banda": banda,
+                "puede_disparar": puede_disparar(banda, q_v),
+            }
+        )
+        if diferencia > banda + TOLERANCIA:
+            automatico = "mejor"
+        elif diferencia < -banda - TOLERANCIA:
+            automatico = "peor"
+        else:
+            automatico = "empate"
 
-    # Quien gana: por calidad fuera de la banda, o por la precedencia de desempates dentro.
+    # Quien gana por calidad: si alguna fuente dice «peor», pierde; si ninguna lo dice y alguna dice
+    # «mejor», gana. Si no, la precedencia de desempates de siempre.
+    fuentes = [f for f in (automatico, pares_rol and pares_rol["veredicto"]) if f]
     gana: bool
-    if diferencia > banda + TOLERANCIA:
-        gana, criterio = True, "calidad"
-    elif diferencia < -banda - TOLERANCIA:
+    if "peor" in fuentes:
         gana, criterio = False, "calidad"
+    elif "mejor" in fuentes:
+        gana, criterio = True, "calidad"
     elif hay_techo and (techo_v is None or techo_c is None):
         gana, criterio = False, "techo sin medir"
     elif hay_techo and techo_c != techo_v:
@@ -534,6 +658,11 @@ def decidir_rol(
         elif lat_c > LATENCIA_MAXIMA * lat_v:
             bloqueos.append(
                 f"latencia {lat_c / lat_v:.2f}x la del vigente (maximo {LATENCIA_MAXIMA}x)"
+            )
+        # Un rol con casos por pares no se cambia sin su comparacion: la formula no los ve.
+        if casos_pares and pares_rol is None:
+            bloqueos.append(
+                "falta la comparacion por pares de " + ", ".join(casos_pares) + " (P-15)"
             )
         # El sondeo de techo entra en la decision, no solo en la hoja.
         if hay_techo and (techo_v is None or techo_c is None):
@@ -619,6 +748,12 @@ def informe_decision(
             )
             for cid, motivo in (d.get("casos_descartados") or {}).items():
                 lineas.append(f"- fuera del agregado: {cid} ({motivo})")
+        if pares_rol := d.get("pares"):
+            lineas.append(
+                f"- comparacion por pares ({', '.join(pares_rol['casos'])}): candidato "
+                f"{pares_rol['candidato']}, vigente {pares_rol['vigente']}, empates "
+                f"{pares_rol['empates']} -> **{pares_rol['veredicto']}**"
+            )
         if d.get("debilmente_decidible"):
             lineas.append("- **debilmente decidible**: menos de dos casos en el agregado")
         if d.get("puede_disparar") is False:
@@ -704,10 +839,13 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
         ]
     for rol, datos in resultado["roles"].items():
         agregado = datos["agregado"]
+        estado = "pasa" if datos["pasa"] else "NO pasa"
+        if datos.get("empate_en_techo"):
+            estado = "pasa por empate en techo (decide la velocidad, §7 punto 4)"
         lineas += [
-            f"## {rol}: {'pasa' if datos['pasa'] else 'NO pasa'}",
+            f"## {rol}: {estado}",
             "",
-            f"- banda de ruido: {_fmt(datos['banda'])}",
+            f"- banda del agregado (media de las bandas por caso): {_fmt(datos['banda'])}",
             f"- casos en el agregado: {len(datos['casos_admitidos'])} de {len(datos['casos'])}",
             (
                 f"- el agregado separa: {'si' if agregado['separa'] else 'no'} "
@@ -716,14 +854,20 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
         ]
         if datos["puede_disparar"] is False:
             lineas.append("- **la regla de §7 no puede disparar con esta banda**")
+        if datos.get("solo_revision"):
+            lineas.append(
+                "- sin puntuacion automatica, lo decide la comparacion por pares a ciegas: "
+                + ", ".join(datos["solo_revision"])
+            )
         lineas += [
             "",
-            "| Caso | Pequeno | Grande | Diferencia | Separa | Motivo |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Caso | Pequeno | Grande | Diferencia | Banda | Separa | Motivo |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
         for cid, caso in datos["casos"].items():
             lineas.append(
-                f"| {cid} | {_fmt(caso['pequeno'])} | {_fmt(caso['grande'])} | {_fmt(caso.get('diferencia'))} | "
+                f"| {cid} | {_fmt(caso['pequeno'])} | {_fmt(caso['grande'])} | "
+                f"{_fmt(caso.get('diferencia'))} | {_fmt(caso.get('banda'))} | "
                 f"{'si' if caso['separa'] else 'no'} | {caso['motivo'] or '—'} |"
             )
         lineas.append("")
@@ -757,6 +901,13 @@ def main(argv: list[str] | None = None) -> int:
         "--par", nargs=3, action="append", required=True, metavar=("ROL", "VIGENTE", "CANDIDATO")
     )
     decidir.add_argument(
+        "--pares",
+        type=Path,
+        action="append",
+        default=[],
+        help="JSON de `hoja_pares.py destapar --json` (repetible, uno por comparacion)",
+    )
+    decidir.add_argument(
         "--umbral-shared-mib",
         type=float,
         default=0.0,
@@ -776,6 +927,13 @@ def main(argv: list[str] | None = None) -> int:
             cp3_por_rol: dict[str, Any] = {}
             for ruta in args.cp3:
                 cp3_por_rol.update(json.loads(ruta.read_text(encoding="utf-8"))["roles"])
+            pares: dict[str, Any] | None = None
+            for ruta in args.pares:
+                pares = pares or {}
+                for cid, fila in json.loads(ruta.read_text(encoding="utf-8")).items():
+                    previo = pares.setdefault(cid, {"humano": {}})["humano"]
+                    for quien, n in fila["humano"].items():
+                        previo[quien] = previo.get(quien, 0) + int(n)
             configs: dict[str, Config] = {}
             decisiones = []
             for rol, vigente, candidato in args.par:
@@ -792,6 +950,7 @@ def main(argv: list[str] | None = None) -> int:
                         corpus,
                         cp3_por_rol.get(rol),
                         round(args.umbral_shared_mib * 1024 * 1024),
+                        pares,
                     )
                 )
             resultado = {"decisiones": decisiones}

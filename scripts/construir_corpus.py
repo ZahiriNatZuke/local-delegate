@@ -35,7 +35,7 @@ import sys
 import tempfile
 import unicodedata
 from collections import Counter
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -104,7 +104,27 @@ def blob(commit: str, rel: str) -> Fuente:
     return lambda raiz: _git(raiz, "show", f"{commit}:{rel}")
 
 
-def salida_de_ruff(limite: int) -> Fuente:
+def archivos_enteros(salida: str, limite: int) -> str:
+    """Los avisos de ruff de los primeros archivos, ENTEROS, mientras quepan en `limite` chars.
+
+    Un archivo cortado a medias daria conteos que la fuente no respalda. Lo que no es un aviso
+    (`Found N errors.`) queda en su propio bloque, al final, y no se alcanza.
+    """
+    bloques: dict[str, list[str]] = {}
+    for linea in salida.splitlines(keepends=True):
+        bloques.setdefault(linea.split(":", 1)[0], []).append(linea)
+    elegidas: list[str] = []
+    acumulado = 0
+    for lineas in bloques.values():
+        tamano = sum(len(linea) for linea in lineas)
+        if acumulado + tamano > limite:
+            break
+        elegidas += lineas
+        acumulado += tamano
+    return "".join(elegidas)
+
+
+def salida_de_ruff_por_archivos(limite: int) -> Fuente:
     def generar(raiz: Path) -> bytes:
         proceso = subprocess.run(
             [sys.executable, "-m", "ruff", "check", "--select", "ALL"]
@@ -117,7 +137,7 @@ def salida_de_ruff(limite: int) -> Fuente:
         )
         # ruff sale con 1 cuando encuentra algo, que es justo lo que se quiere. Las barras se
         # normalizan para que la salida no dependa del sistema en que se genero.
-        return cortar_lineas(proceso.stdout.replace("\\", "/"), limite).encode("utf-8")
+        return archivos_enteros(proceso.stdout.replace("\\", "/"), limite).encode("utf-8")
 
     return generar
 
@@ -158,6 +178,39 @@ def _primeros(patron: str, n: int = 3, grupo: int = 1) -> Callable[[str], tuple[
 def _reglas_mas_frecuentes(texto: str) -> tuple[str, ...]:
     conteo = Counter(re.findall(r": ([A-Z]+[0-9]+) ", texto))
     return tuple(regla for regla, _ in conteo.most_common(3))
+
+
+# Segundo piloto de CP-3: el 2B se invento los conteos de lint y la cobertura no lo veia. Para cada
+# regla que el caso pide nombrar, los numeros que la fuente respalda: el total, cuantos archivos la
+# tienen y lo que suma en cada archivo. Salen de las lineas de ruff, no de lo que dijo un modelo.
+def _conteos_de_las_reglas(texto: str) -> dict[str, list[int]]:
+    por_regla: dict[str, Counter[str]] = {}
+    for archivo, regla in re.findall(
+        r"^(\S+?):\d+:\d+: ([A-Z]+[0-9]+) ", texto, flags=re.MULTILINE
+    ):
+        por_regla.setdefault(regla, Counter())[archivo] += 1
+    return {
+        regla: sorted(
+            {sum(por_regla[regla].values()), len(por_regla[regla]), *por_regla[regla].values()}
+        )
+        for regla in _reglas_mas_frecuentes(texto)
+    }
+
+
+def formato_pedido(system: str | None) -> dict[str, Any]:
+    """Lo que la instruccion de la tool pide de forma comprobable: limite de palabras y prosa.
+
+    P-15: el usuario descarto respuestas por salirse de las dos cosas, y la cobertura de terminos no
+    lo miraba. Sale del prompt capturado de la tool real, no de lo que devolvio un modelo.
+    """
+    if not system:
+        return {}
+    formato: dict[str, Any] = {}
+    if limite := re.search(r"M[aá]ximo (\d+) palabras", system):
+        formato["max_words"] = int(limite.group(1))
+    if re.search(r"\bprosa\b", system):
+        formato["prose"] = True
+    return formato
 
 
 def _docstring_del_modulo(texto: str) -> str:
@@ -259,6 +312,10 @@ class Caso:
     # Comprobaciones que el puntuador EJECUTA sobre el codigo generado: {"expr", "expected"} o
     # {"expr", "raises"}. Salen de la especificacion del caso, no de lo que devolvio un modelo.
     comprobaciones: tuple[dict[str, Any], ...] = ()
+    # Conteos que el puntuador comprueba contra la fuente, derivados de ella: {regla: validos}.
+    conteos: Callable[[str], dict[str, list[int]]] | None = None
+    # False: la regla de §7 no lo cuenta y lo juzga solo la revision a ciegas (§4.8).
+    puntuacion_automatica: bool = True
 
 
 _TOP_LEVEL_PY = r"^(?:def |class |async def |@)"
@@ -377,6 +434,9 @@ CASOS: tuple[Caso, ...] = (
         fichero("docs/recipes/claude-code-hooks.md"),
         extension="md",
         expected_terms=("UserPromptSubmit", "PreToolUse", "LD_HOOK_READ_BLOQUEAR"),
+        # P-15: la cobertura de terminos no coincidio con el juicio humano (0 de 3, invertida). Lo
+        # decide la comparacion por pares a ciegas; los terminos se quedan como dato.
+        puntuacion_automatica=False,
     ),
     Caso(
         # Tarea 19: sustituye a `resumen-changelog-43k`, cuyos terminos eran un suelo. Dos secciones
@@ -391,6 +451,7 @@ CASOS: tuple[Caso, ...] = (
         secciones_de_version("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
         expected_terms=_identificadores_de_los_titulares,
+        puntuacion_automatica=False,  # P-15: 3 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "extraer-uvlock-48k",
@@ -414,15 +475,30 @@ CASOS: tuple[Caso, ...] = (
         ),
     ),
     Caso(
-        "lint-33k",
+        # Segundo piloto de CP-3: `lint-33k` (14 archivos, 48 reglas) no cabia «agrupado por archivo»
+        # en 200 palabras, y los dos modelos truncaban siempre. Archivos enteros hasta 9 000 chars:
+        # sigue por encima de LONG_INPUT_CHARS, asi que produccion la manda a long.
+        "lint-9k",
         "local_lint_summary",
         "long",
         "calidad",
         "generado",
         "ruff check --select ALL --output-format concise --no-cache src/local_delegate, "
-        "recortado en linea entera a 33 423 chars",
-        salida_de_ruff(33423),
+        "archivos enteros hasta 9 000 chars",
+        salida_de_ruff_por_archivos(9000),
         expected_terms=_reglas_mas_frecuentes,
+        conteos=_conteos_de_las_reglas,
+        # Tercer piloto de CP-3: 0 en los dos modelos otra vez. El 2B se inventa los conteos y el 14B
+        # los da bien pero lista TODO y trunca: el prompt de la tool no cabe con esta entrada, y eso
+        # se arregla en la tool (F3). Lo juzga la revision a ciegas (decision del usuario).
+        puntuacion_automatica=False,
+        # Pareja de CP-4 de conteos: las dos nombran las tres reglas; la mala cambia un 7 por un 9,
+        # que no es ni el total, ni los archivos, ni lo de ningun archivo.
+        referencia=(
+            "conteos",
+            "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 7.",
+            "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 9.",
+        ),
     ),
     # --- code ---
     Caso(
@@ -435,6 +511,10 @@ CASOS: tuple[Caso, ...] = (
         diff_de_commit("4d644ae"),
         extension="diff",
         expected_terms=_identificadores_del_primer_arreglo,
+        # Dos pilotos de CP-3 con 0 en los dos modelos: un asunto de <=72 chars rara vez lleva
+        # identificadores y el cuerpo es opcional. Lo juzga la revision a ciegas (decision del
+        # usuario, 2026-09-14); los terminos se quedan como dato.
+        puntuacion_automatica=False,
     ),
     Caso(
         "explicar-metrics-15k",
@@ -446,6 +526,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_por_lineas("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
         expected_terms=_rutas_del_docstring,
+        puntuacion_automatica=False,  # P-15: sin base contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "explicar-install-20k",
@@ -457,6 +538,7 @@ CASOS: tuple[Caso, ...] = (
         recorte_exacto("src/local_delegate/install.py", 20000),
         extension="py.txt",
         expected_terms=_ficheros_y_flags_del_docstring,
+        puntuacion_automatica=False,  # P-15: 2 de 4 contra el juicio humano; lo deciden los pares
     ),
     Caso(
         "boilerplate-156",
@@ -709,7 +791,71 @@ DIFERENCIAS_ESPERADAS: dict[str, set[str]] = {
     "json_campos": {"json_campos"},
     "unicode": {"cobertura"},
     "ejecucion": {"ejecucion"},
+    "conteos": {"conteos"},
 }
+
+
+def _enteros_sueltos(tramo: str) -> list[int]:
+    """Tiradas de digitos que no pegan a una letra, un digito o `_`, ni forman un decimal. Un punto
+    de final de frase no las anula. Recorrido a mano, sin las expresiones del puntuador: es su
+    oraculo."""
+    enteros: list[int] = []
+    i = 0
+    while i < len(tramo):
+        if not tramo[i].isdigit():
+            i += 1
+            continue
+        j = i
+        while j < len(tramo) and tramo[j].isdigit():
+            j += 1
+        antes = tramo[i - 1] if i else " "
+        despues = tramo[j] if j < len(tramo) else " "
+        decimal = despues == "." and j + 1 < len(tramo) and tramo[j + 1].isdigit()
+        if not (antes.isalnum() or antes in "._") and not (
+            despues.isalnum() or despues == "_" or decimal
+        ):
+            enteros.append(int(tramo[i:j]))
+        i = j
+    return enteros
+
+
+def _tramos_por_regla(linea: str) -> list[tuple[str, str]]:
+    """(codigo, lo que le sigue hasta el siguiente codigo) de cada codigo de regla de la linea."""
+    tramos: list[tuple[str, str]] = []
+    actual: str | None = None
+    trozo: list[str] = []
+    i = 0
+    while i < len(linea):
+        if linea[i].isupper() and (i == 0 or not linea[i - 1].isalnum()):
+            letras = i
+            while letras < len(linea) and linea[letras].isupper():
+                letras += 1
+            fin = letras
+            while fin < len(linea) and linea[fin].isdigit():
+                fin += 1
+            if fin > letras and (fin == len(linea) or not linea[fin].isalnum()):
+                if actual is not None:
+                    tramos.append((actual, "".join(trozo)))
+                actual, trozo = linea[i:fin], []
+                i = fin
+                continue
+        if actual is not None:
+            trozo.append(linea[i])
+        i += 1
+    if actual is not None:
+        tramos.append((actual, "".join(trozo)))
+    return tramos
+
+
+def _conteos_cuadran(texto: str, conteos: Mapping[str, Sequence[int]]) -> bool:
+    numeros: dict[str, list[int]] = {regla: [] for regla in conteos}
+    for linea in texto.split("\n"):
+        for regla, tramo in _tramos_por_regla(linea):
+            if regla in numeros:
+                numeros[regla] += _enteros_sueltos(tramo)
+    return all(
+        numeros[regla] and set(numeros[regla]) <= set(validos) for regla, validos in conteos.items()
+    )
 
 
 def _ejecuta_bien(codigo: str, comprobaciones: Sequence[dict[str, Any]]) -> bool:
@@ -748,6 +894,7 @@ def senales(
     prohibidos: Sequence[str],
     campos: Sequence[str],
     comprobaciones: Sequence[dict[str, Any]] = (),
+    conteos: Mapping[str, Sequence[int]] | None = None,
 ) -> dict[str, bool | None]:
     """Oraculo de CP-4. Independiente del puntuador de la tarea 16 a proposito: es contra lo que
     ese puntuador se valida, y si compartieran codigo compartirian tambien el error."""
@@ -763,10 +910,13 @@ def senales(
         "json_valido": valido,
         "json_campos": (set(campos) <= set(objeto)) if valido else None,
         "ejecucion": _ejecuta_bien(texto, comprobaciones) if comprobaciones else None,
+        "conteos": _conteos_cuadran(texto, conteos) if conteos else None,
     }
 
 
-def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
+def comprobar_referencia(
+    caso: Caso, esperados: Sequence[str], conteos: Mapping[str, Sequence[int]] | None = None
+) -> list[str]:
     if caso.referencia is None:
         return []
     senal, buena, mala = caso.referencia
@@ -777,7 +927,7 @@ def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
         errores.append(
             f"{caso.id}: la pareja no tiene la misma longitud ({len(buena)} y {len(mala)})"
         )
-    argumentos = (caso.forbidden_terms, caso.expected_json_fields, caso.comprobaciones)
+    argumentos = (caso.forbidden_terms, caso.expected_json_fields, caso.comprobaciones, conteos)
     ok = senales(buena, esperados, *argumentos)
     malo = senales(mala, esperados, *argumentos)
     if (
@@ -788,6 +938,7 @@ def comprobar_referencia(caso: Caso, esperados: Sequence[str]) -> list[str]:
             ok["json_valido"],
             ok["json_campos"],
             ok["ejecucion"],
+            ok["conteos"],
         )
     ):
         errores.append(f"{caso.id}: la respuesta buena no es buena: {ok}")
@@ -839,7 +990,8 @@ def comprobar(
         errores.extend(_comprobar_tamano_del_id(caso.id, len(texto)))
     if caso.referencia is not None:
         fuente = normalizado(datos) if caso.media_type == "texto" else ""
-        errores.extend(comprobar_referencia(caso, terminos(caso, fuente)))
+        conteos = caso.conteos(fuente) if caso.conteos else None
+        errores.extend(comprobar_referencia(caso, terminos(caso, fuente), conteos))
     return errores
 
 
@@ -892,6 +1044,9 @@ def entrada_de_corpus(
         "forbidden_terms": list(caso.forbidden_terms) if calidad else [],
         "expected_json_fields": list(caso.expected_json_fields) if calidad else [],
         "execution_checks": list(caso.comprobaciones) if calidad else [],
+        "expected_counts": caso.conteos(texto) if calidad and caso.conteos else {},
+        "automatic_scoring": caso.puntuacion_automatica if calidad else None,
+        "expected_format": formato_pedido(llamada.system) if calidad else {},
         **(
             {
                 "reference_signal": caso.referencia[0],
@@ -1087,6 +1242,9 @@ _CAMPOS_VIGILADOS = (
     "forbidden_terms",
     "expected_json_fields",
     "execution_checks",
+    "expected_counts",
+    "automatic_scoring",
+    "expected_format",
     "reference_signal",
     "reference_ok",
     "reference_bad",

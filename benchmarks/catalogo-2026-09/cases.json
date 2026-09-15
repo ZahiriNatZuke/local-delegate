@@ -62,6 +62,12 @@
       "forbidden_terms": [],
       "expected_json_fields": [],
       "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 150,
+        "prose": true
+      },
       "reference_signal": "cobertura",
       "reference_ok": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un pull request y el uso de pre-commit.",
       "reference_bad": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un merge commit y el uso de pre-commit."
@@ -147,6 +153,9 @@
         "license"
       ],
       "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
       "reference_signal": "json_valido",
       "reference_ok": "{\"name\": \"local-delegate-mcp\", \"version\": \"0.27.0\", \"requires-python\": \">=3.11\", \"license\": \"MIT\"}",
       "reference_bad": "{'name': 'local-delegate-mcp', 'version': '0.27.0', 'requires-python': '>=3.11', 'license': 'MIT'}"
@@ -182,7 +191,12 @@
         "pregunta"
       ],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 5
+      }
     },
     {
       "id": "traducir-42",
@@ -215,7 +229,10 @@
         "reinicia"
       ],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {}
     },
     {
       "id": "delegar-56",
@@ -249,7 +266,10 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {}
     },
     {
       "id": "resumen-md-10k",
@@ -280,7 +300,13 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 150,
+        "prose": true
+      }
     },
     {
       "id": "resumen-changelog-7k",
@@ -314,7 +340,13 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 150,
+        "prose": true
+      }
     },
     {
       "id": "extraer-uvlock-48k",
@@ -385,22 +417,25 @@
         "primer_paquete"
       ],
       "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
       "reference_signal": "json_campos",
       "reference_ok": "{\"version\": 1, \"requires-python\": \">=3.11\", \"primer_paquete\": \"annotated-doc\"}",
       "reference_bad": "{\"version\": 1, \"requires-python\": \">=3.11\", \"paquete_primer\": \"annotated-doc\"}"
     },
     {
-      "id": "lint-33k",
+      "id": "lint-9k",
       "tool": "local_lint_summary",
       "role": "long",
       "kind": "calidad",
       "procedencia": "generado",
-      "origen": "ruff check --select ALL --output-format concise --no-cache src/local_delegate, recortado en linea entera a 33 423 chars",
+      "origen": "ruff check --select ALL --output-format concise --no-cache src/local_delegate, archivos enteros hasta 9 000 chars",
       "media_type": "texto",
-      "source_file": "lint-33k.txt",
-      "source_sha256": "7875952c546b99518b4a28a83730225aba8511b09f6d1a4e3708a5f2c328351f",
-      "source_bytes": 33347,
-      "source_chars": 33343,
+      "source_file": "lint-9k.txt",
+      "source_sha256": "9c7295b2b49627aff832ce808789be7993522cd72c8f947fb06f19664723801f",
+      "source_bytes": 8590,
+      "source_chars": 8589,
       "production": {
         "model": "llama31-8b",
         "calls": 1
@@ -412,13 +447,36 @@
       "response_format": null,
       "reasoning_effort": null,
       "expected_terms": [
-        "T201",
         "COM812",
-        "PLC0415"
+        "TRY003",
+        "D102"
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {
+        "COM812": [
+          1,
+          2,
+          15,
+          16
+        ],
+        "TRY003": [
+          1,
+          8
+        ],
+        "D102": [
+          1,
+          7
+        ]
+      },
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 200
+      },
+      "reference_signal": "conteos",
+      "reference_ok": "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 7.",
+      "reference_bad": "COM812: 16 avisos en 2 archivos. TRY003: 8. D102: 9."
     },
     {
       "id": "commit-diff-19k",
@@ -451,7 +509,10 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {}
     },
     {
       "id": "explicar-metrics-15k",
@@ -486,7 +547,13 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 250,
+        "prose": true
+      }
     },
     {
       "id": "explicar-install-20k",
@@ -519,7 +586,13 @@
       ],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 250,
+        "prose": true
+      }
     },
     {
       "id": "boilerplate-156",
@@ -571,6 +644,9 @@
           "raises": "ValueError"
         }
       ],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
       "reference_signal": "ejecucion",
       "reference_ok": "import re\n\n\ndef parse_duration(texto):\n    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n    m = re.fullmatch(r\"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?\", texto)\n    if not texto or m is None:\n        raise ValueError(f\"formato no valido: {texto!r}\")\n    h, mi, s = (int(g) if g else 0 for g in m.groups())\n    return h * 3600 + mi * 60 + s\n",
       "reference_bad": "import re\n\n\ndef parse_duration(texto):\n    \"\"\"Convierte '1h30m', '45s' o '2m' en segundos.\"\"\"\n    m = re.fullmatch(r\"(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?\", texto)\n    if not texto or m is None:\n        raise ValueError(f\"formato no valido: {texto!r}\")\n    h, mi, s = (int(g) if g else 0 for g in m.groups())\n    return h * 3600 + mi * 61 + s\n"
@@ -606,6 +682,12 @@
       "forbidden_terms": [],
       "expected_json_fields": [],
       "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 200,
+        "prose": true
+      },
       "reference_signal": "unicode",
       "reference_ok": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cómputo.",
       "reference_bad": "Panel de ahorro con el estado del backend, las delegaciones y dónde corrió el cálculo."
@@ -644,6 +726,12 @@
       ],
       "expected_json_fields": [],
       "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 200,
+        "prose": true
+      },
       "reference_signal": "prohibido",
       "reference_ok": "Versión 0.27.0 (la publicada); primera fila: 29/8 a las 05:01.",
       "reference_bad": "Versión 0.27.0 (antes 0.24.0); primera fila: 29/8 a las 05:01."
@@ -673,7 +761,10 @@
       "expected_terms": [],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": null,
+      "expected_format": {}
     },
     {
       "id": "techo-commit-156k",
@@ -700,7 +791,10 @@
       "expected_terms": [],
       "forbidden_terms": [],
       "expected_json_fields": [],
-      "execution_checks": []
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": null,
+      "expected_format": {}
     }
   ]
 }

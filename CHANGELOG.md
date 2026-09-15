@@ -249,6 +249,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   casos quedaron todos en techo en el piloto ya no es indecidible: con la misma calidad se queda el
   modelo más rápido.
 
+- **`local-delegate benchmark` mide con la temperatura de producción, 5 corridas por defecto y una
+  semilla por corrida; y el texto abierto ya no lo juzga la cobertura de términos.** Salió de tres
+  pilotos más contra la máquina real:
+
+  - **Temperatura de producción y `seed + run - 1`.** El runner forzaba temperatura 0 y, con
+    `-np 1`, las tres corridas salían idénticas byte a byte: la banda de ruido no medía nada. Cada
+    petición lleva ahora la temperatura que el corpus capturó de la tool, y el registro guarda
+    `temperature` y la semilla de la corrida. **`--runs` pasa de 3 a 5**: con ruido real, una corrida
+    mala movía la mediana de tres.
+  - **La sonda relanza `typeperf` aunque el PID no cambie** si la cabecera llegó sin la instancia
+    del proceso: pasa cuando `typeperf` arranca antes de que `llama-server` cree su contexto CUDA,
+    y un bloque entero de corridas se anulaba con `zero_vram_samples`.
+  - **Conteos de lint contra la fuente** (`expected_counts`, `counts_ratio`): un modelo se inventaba
+    «10 archivos» donde había 5 y la cobertura le daba 1,0.
+  - **Formato de la tool** (`format_ok`, `format_words`, `format_list_lines`): límite de palabras y
+    prosa, sacados del prompt. Se guardan pero no entran en la calidad.
+
+  `scripts/analizar_benchmark.py` compara cada caso contra **su propia** banda de ruido (y el
+  agregado contra la media de las de sus casos): la del rol la fijaba el caso más inestable y vetaba
+  a todos. Y **cada caso tiene su juez**: una hoja por pares a ciegas (`scripts/hoja_pares.py`) mostró
+  que la cobertura de términos coincidía con el juicio humano en 6 de 13 pares, así que los seis
+  casos de texto abierto (`automatic_scoring: false`) los decide la comparación por pares, con una
+  prueba de signos en `decidir --pares`; las métricas objetivas (ejecución, JSON, cifras) siguen
+  decidiendo donde las hay.
+
 ## [0.27.0] - 2026-09-08
 
 ### Changed

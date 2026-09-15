@@ -23,7 +23,7 @@ import tempfile
 import threading
 import time
 import unicodedata
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -237,6 +237,38 @@ def run_execution_checks(code: str, checks: Sequence[dict[str, Any]]) -> list[bo
     return [r is True for r in resultados]
 
 
+# --- Conteos contra la fuente (protocolo-f2.md §4.7 punto 7) --------------------------------------
+
+_RULE_CODE = re.compile(r"(?<![A-Za-z0-9])[A-Z]+[0-9]+(?![A-Za-z0-9])")
+# Un entero suelto: ni pegado a letras o `_` (`v0`), ni parte de un decimal (`3.12`). Un punto de
+# final de frase («D102: 7.») no lo anula.
+_LOOSE_INT = re.compile(r"(?<![\w.])\d+(?!\w|\.\d)")
+
+
+def check_counts(text: str, counts: Mapping[str, Sequence[int]]) -> list[str]:
+    """Las reglas cuyo conteo NO cuadra con la fuente.
+
+    Cada entero pertenece a la regla que tiene DELANTE en su linea, hasta la siguiente regla: asi
+    «T201 (2), COM812 (1)» da 2 a T201 y 1 a COM812. Cuadra si la regla tiene al menos uno y todos
+    estan entre los validos: el total, cuantos archivos la tienen o lo que suma en alguno. Una regla
+    nombrada sin conteo no cuadra: la tarea lo pide. CP-3 vio al 2B escribir «T201: 10 archivos (3
+    por archivo)» con 5 archivos y 101 avisos, y la cobertura de terminos le daba 1,0.
+    """
+    numbers: dict[str, list[int]] = {rule: [] for rule in counts}
+    for line in text.splitlines():
+        codes = list(_RULE_CODE.finditer(line))
+        for index, code in enumerate(codes):
+            if code.group() not in numbers:
+                continue
+            end = codes[index + 1].start() if index + 1 < len(codes) else len(line)
+            numbers[code.group()] += [int(n) for n in _LOOSE_INT.findall(line[code.end() : end])]
+    return [
+        rule
+        for rule, allowed in counts.items()
+        if not numbers[rule] or not set(numbers[rule]) <= set(allowed)
+    ]
+
+
 def score_output(
     case: dict[str, Any], text: str, finish_reason: str | None, *, repeated: bool = False
 ) -> dict[str, Any]:
@@ -260,7 +292,30 @@ def score_output(
         "json_fields_ratio": None,
         "execution_ratio": None,
         "execution_passed": None,
+        "counts_ratio": None,
+        "counts_wrong": None,
+        "format_ok": None,
+        "format_words": None,
+        "format_list_lines": None,
     }
+    fmt = dict(case.get("expected_format") or {})
+    if fmt:
+        # P-15: comprobar la instruccion de la tool (limite de palabras, prosa). Se GUARDA pero no
+        # entra en la calidad: con 6 pares coincidio con el juicio humano en 5, poco para decidir.
+        words = len(re.findall(r"\w+", text))
+        list_lines = sum(
+            1 for line in text.splitlines() if re.match(r"\s*(?:[-*+]|\d+[.)])\s", line)
+        )
+        components["format_words"] = words
+        components["format_list_lines"] = list_lines
+        components["format_ok"] = (words <= fmt["max_words"] if "max_words" in fmt else True) and (
+            list_lines == 0 if fmt.get("prose") else True
+        )
+    counts = dict(case.get("expected_counts") or {})
+    if counts:
+        wrong = check_counts(text, counts)
+        components["counts_wrong"] = wrong
+        components["counts_ratio"] = round((len(counts) - len(wrong)) / len(counts), 4)
     if fields:
         obj = _json_object(text)
         components["json_valid"] = obj is not None
@@ -293,6 +348,7 @@ def score_output(
             "coverage": components["coverage"],
             "json_fields": components["json_fields_ratio"],
             "execution": components["execution_ratio"],
+            "counts": components["counts_ratio"],
         }
         present_parts = {name: value for name, value in parts.items() if value is not None}
         quality = min(present_parts.values()) if present_parts else None
@@ -623,7 +679,8 @@ class TypeperfStream:
     Vive mientras el PID no cambie: arrancar `typeperf` cuesta 1,4-2,8 s hasta la cabecera, asi
     que la lectura «sincrona» de VRAM es la ultima muestra del flujo, no un typeperf nuevo. Y un
     typeperf ya arrancado no ve instancias creadas despues (cabecera fija): al cambiar el PID hay
-    que relanzarlo.
+    que relanzarlo. Y tambien con el MISMO PID si la cabecera llego sin su instancia
+    (`missing_instance`): pasa si typeperf arranca antes de que el proceso cree su contexto CUDA.
     """
 
     def __init__(
@@ -638,6 +695,7 @@ class TypeperfStream:
         self.pid = pid
         self.luid = luid
         self.process_gone = False
+        self.missing_instance = False
         self._clock = clock
         self._lock = threading.Lock()
         self._latest: VramReading | None = None
@@ -672,6 +730,9 @@ class TypeperfStream:
         for line in stdout:
             if columns is None:
                 columns = parse_typeperf_header(line, self.pid, self.luid)
+                if columns == {}:
+                    # Cabecera sin la instancia del PID: este flujo ya no dara ninguna muestra.
+                    self.missing_instance = True
                 continue
             reading = parse_typeperf_sample(line, columns)
             if reading is None:
@@ -721,6 +782,8 @@ class ProcessProbe:
         read_memory: Callable[[int], tuple[int, int] | None] = read_process_memory,
         stream_factory: Callable[[int, str], Any] = TypeperfStream,
         vram_max_age: float = 2.5,
+        clock: Callable[[], float] = time.monotonic,
+        relaunch_after: float = 3.0,
     ) -> None:
         self.process_name = process_name
         self.gpu_luid = gpu_luid
@@ -729,6 +792,10 @@ class ProcessProbe:
         self._read_memory = read_memory
         self._stream_factory = stream_factory
         self._vram_max_age = vram_max_age
+        self._clock = clock
+        # typeperf tarda 1,4-2,8 s en dar la cabecera: relanzarlo en cada muestra no la veria nunca.
+        self._relaunch_after = relaunch_after
+        self._stream_started_at = 0.0
         self._pid: int | None = None
         self._stream: Any = None
 
@@ -740,6 +807,7 @@ class ProcessProbe:
         if pid is not None and self.gpu_luid:
             try:
                 self._stream = self._stream_factory(pid, self.gpu_luid)
+                self._stream_started_at = self._clock()
             except OSError as exc:
                 # Sin typeperf no hay VRAM, y la corrida acaba con cero muestras de VRAM y anulada:
                 # visible en el JSONL, en vez de un traceback a mitad de tanda.
@@ -756,6 +824,15 @@ class ProcessProbe:
             return ResourceSample(None, reason="no_process")
         pid = pids[0]
         if pid != self._pid:
+            self._switch(pid)
+        elif (
+            self._stream is not None
+            and getattr(self._stream, "missing_instance", False)
+            and self._clock() - self._stream_started_at >= self._relaunch_after
+        ):
+            # Tercer piloto de CP-3: el flujo del 2B arranco antes de que llama-server creara su
+            # contexto CUDA, y como el PID no cambio en todo el bloque, 120 intentos se anularon
+            # con cero muestras de VRAM. Con el mismo PID, se relanza.
             self._switch(pid)
         memory = self._read_memory(pid)
         vram = self._stream.latest(self._vram_max_age) if self._stream is not None else None
@@ -940,7 +1017,11 @@ def build_payload(
     max_tokens: int | None = None,
     source: bytes | None = None,
 ) -> dict[str, Any]:
-    """La peticion de produccion para ese caso, con temperatura 0 y seed fijo.
+    """La peticion de produccion para ese caso, con SU temperatura y la semilla de la corrida.
+
+    La temperatura es la que capturo el constructor de la tool real (P-12, 2026-09-14): con
+    temperatura 0 y `-np 1` las tres corridas salian identicas byte a byte y la banda de ruido no
+    medía nada. La semilla la varia el llamador por corrida, asi que sigue siendo reproducible.
 
     `system` y `user_template` son los que capturo el constructor de la tool real. En imagen, el
     payload lleva `image_url` igual que `local_describe_image`: sin eso el rol `vision` no se podia
@@ -967,7 +1048,7 @@ def build_payload(
             {"role": "user", "content": user},
         ],
         "max_tokens": max_tokens or raw["max_tokens"],
-        "temperature": 0.0,
+        "temperature": float(raw["temperature"]),
         "seed": seed,
         "stream": False,
     }
@@ -1143,6 +1224,9 @@ def run_benchmark(args: argparse.Namespace) -> int:
                 source = control_source if control_source is not None else case.source
                 effort, effort_source = effective_reasoning(case, args.reasoning_effort)
                 for run in range(1, args.runs + 1):
+                    # Semilla distinta por corrida y la misma en sus reintentos (P-12): con la
+                    # temperatura de produccion, las corridas miden la variacion real del modelo.
+                    run_seed = args.seed + run - 1
                     max_tokens = int(case.raw["max_tokens"])
                     attempt = 1
                     doubled = False
@@ -1152,7 +1236,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                         payload = build_payload(
                             case,
                             args.model,
-                            args.seed,
+                            run_seed,
                             effort,
                             max_tokens=max_tokens,
                             source=source,
@@ -1197,7 +1281,8 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "retry_reason": retry_reason,
                             "max_tokens": max_tokens,
                             "thermal_state": thermal.classify(resource_summary),
-                            "seed": args.seed,
+                            "seed": run_seed,
+                            "temperature": payload["temperature"],
                             "input_bytes": len(source),
                             "input_sha256": hashlib.sha256(source).hexdigest(),
                             "latency_ms": elapsed_ms,
@@ -1286,8 +1371,20 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         default=None,
         help="sustituye la entrada por este control del corpus (CP-3), solo en sus casos",
     )
-    parser.add_argument("--runs", type=int, default=3, help="corridas por caso (default 3)")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=5,
+        # 5 y no 3 desde el tercer piloto de CP-3: con temperatura de produccion, una corrida mala
+        # movia la mediana de 3 y ponia la dispersion en su maximo.
+        help="corridas por caso (default 5)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="semilla base: la corrida n usa seed + n - 1 (y la misma en sus reintentos)",
+    )
     parser.add_argument("--quantization", default=None)
     parser.add_argument("--context-size", type=int, default=None)
     parser.add_argument("--n-cpu-moe", type=int, default=None)

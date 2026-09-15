@@ -85,7 +85,7 @@ de llama-server/llama-swap), para que dos corridas sean comparables:
 
 ```bash
 local-delegate benchmark --model <id-del-canary> --label gemma4-e4b-c16k \
-  --cases benchmarks/catalogo-2026-09/cases.json --role mechanical --runs 3 --save-responses
+  --cases benchmarks/catalogo-2026-09/cases.json --role mechanical --runs 5 --save-responses
 ```
 
 Es la herramienta del paso «canary aislado» de arriba: mide antes de promover, en vez de decidir
@@ -123,6 +123,21 @@ calidad es el mínimo entre la cobertura y la proporción de comprobaciones que 
 (`execution_ratio`, y cuáles en `execution_passed`). No es un sandbox del sistema: es código de un
 modelo corriendo en tu máquina, y correr el caso es aceptarlo.
 
+Cada petición usa **la temperatura de producción** de su tool y la semilla `--seed + corrida - 1`
+(la misma en los reintentos), y por defecto son **5 corridas**: con temperatura 0 las corridas
+salían idénticas y no había ruido que medir. Además del puntuador, cada registro guarda si la
+respuesta respeta el **formato** que pide la tool (`format_ok`: límite de palabras y prosa), como
+dato: no entra en la calidad. En `lint-9k` los conteos se comprueban contra la salida de ruff
+(`counts_ratio`).
+
+**No todos los casos los juzga la fórmula.** Los de texto abierto —resúmenes, explicaciones, el
+mensaje de commit y el resumen de lint— llevan `automatic_scoring: false`: una comparación por
+pares a ciegas mostró que la cobertura de términos coincidía con el juicio humano en 6 de 13 pares.
+Esos casos se deciden con `scripts/hoja_pares.py` (empareja la corrida *i* de dos modelos, sortea el
+lado y guarda la clave aparte) y `scripts/analizar_benchmark.py decidir --pares`, que aplica una
+prueba de signos. Las métricas objetivas —ejecución, JSON y campos, cifras de una imagen— siguen
+decidiendo donde las hay.
+
 En Windows, `--probe-process llama-server.exe` añade a cada corrida la memoria **del proceso**, no
 la del sistema: RAM privada y working set (por `GetProcessMemoryInfo`), y VRAM dedicada y
 compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag se empareja con
@@ -130,7 +145,8 @@ compartida del adaptador indicado con `--gpu-luid` (por `typeperf`; sin el flag 
 lectura, porque llama-swap lo relanza al cambiar de modelo. Cada registro lleva un bloque
 `resources` con los picos y un campo `annul`: una corrida sin muestras, con dos `llama-server`
 vivos o con cambio de proceso a mitad **se repite** (hasta dos veces), no se publica vacía. Sin el flag,
-el bloque va igual pero vacío. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
+el bloque va igual pero vacío. Si `typeperf` arranca antes de que `llama-server` cree su contexto de
+GPU, su cabecera no trae el proceso: la sonda lo relanza con el mismo PID, como mucho cada 3 s. Para `llama-bench`, que no pasa por el runner, el mismo muestreo está
 en `scripts/sonda_recursos.py`.
 
 - Localiza `llama-swap` vía `LLAMASWAP_EXE` (o el PATH) y `llama-server` desde el `cmd` del
