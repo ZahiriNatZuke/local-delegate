@@ -154,6 +154,11 @@ literal en este transporte), y a opencode con
 sustituye `${VAR}`, así que la forma de Claude Code ahí llegaría literal y el backend devolvería
 `401`.
 
+Al **reinstalar** no hace falta repetir el flag: si no pasas `--web-token-env` ni
+`--no-web-token-env`, cada cliente conserva la cabecera que ya tenía, tal cual. Antes de la
+corrección se borraba, y el cliente pasaba a `401` sin que nada lo dijera. Para quitarla a
+propósito, `--no-web-token-env`.
+
 Para que funcione, **la variable tiene que existir también en el entorno del cliente**, no solo en
 el del daemon. Es el punto donde esto se rompe en silencio: si el cliente no la ve, manda un token
 vacío y se lleva un `401` sin más explicación.

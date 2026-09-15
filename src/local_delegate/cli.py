@@ -96,7 +96,7 @@ def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp
         mcp_mode=getattr(args, "mcp_mode", "stdio"),
         base_url=getattr(args, "base_url", None),
         api_key_env=getattr(args, "api_key_env", False),
-        web_token_env=getattr(args, "web_token_env", False),
+        web_token_env=getattr(args, "web_token_env", None),
         pin_version=getattr(args, "pin_version", None),
         # El HOME simulado apaga el camino por CLI, y no es una precaución teórica: `claude mcp
         # add-json --scope user` escribe SIEMPRE en el `~/.claude.json` del usuario real,
@@ -846,13 +846,27 @@ def _add_install_parsers(sub) -> None:
         action="store_true",
         help="reenvía LOCAL_DELEGATE_API_KEY desde el entorno (nunca escribe el secreto)",
     )
-    install.add_argument(
+    # Tres estados, y el de no pasar ninguno conserva la cabecera que ya tuviera cada cliente:
+    # reinstalar sin el flag la borraba y dejaba al cliente en 401 contra un daemon con token.
+    token = install.add_mutually_exclusive_group()
+    token.add_argument(
         "--web-token-env",
-        action="store_true",
+        dest="web_token_env",
+        action="store_const",
+        const=True,
+        default=None,
         help=(
             "con --mcp-mode http, autentica contra el daemon referenciando "
-            "LOCAL_DELEGATE_WEB_TOKEN del entorno (nunca escribe el secreto)"
+            "LOCAL_DELEGATE_WEB_TOKEN del entorno (nunca escribe el secreto). Sin este flag ni "
+            "--no-web-token-env, se conserva la cabecera que ya tuviera la entrada"
         ),
+    )
+    token.add_argument(
+        "--no-web-token-env",
+        dest="web_token_env",
+        action="store_const",
+        const=False,
+        help="quita la cabecera de autorización de la entrada MCP aunque ya la tuviera",
     )
     install.add_argument(
         "--pin-version",

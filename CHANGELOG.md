@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **Reinstalar ya no borra la cabecera del token.** `install --mcp-mode http` sin
+  `--web-token-env` reescribía la entrada MCP sin `Authorization` aunque la de antes la llevara, y
+  contra un daemon con token el cliente pasaba a `401` al instante (Claude Code: «Dynamic Client
+  Registration rejected»). Ahora, si no pasas ningún flag, se conserva tal cual la cabecera que ya
+  tuviera cada cliente —Claude Code, Codex y opencode—, también si referencia otra variable, y el
+  plan lo dice («conserva la cabecera de autorización que ya tenía»). Para quitarla a propósito
+  existe `--no-web-token-env`; los dos flags juntos se rechazan. Un token escrito a pelo se
+  conserva en disco, pero `--dry-run` no lo imprime.
+
 ## [0.28.0] - 2026-09-15
 
 ### Added

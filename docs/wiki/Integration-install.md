@@ -115,6 +115,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
 | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp`. **Si tu backend exige API key, `http` suele ser la única opción que funciona**: el proceso `stdio` lo lanza el cliente y hereda *su* entorno, no el del lanzador del daemon, que es quien tiene el secreto. Lo avisa el check «credencial del backend» |
 | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
 | `--api-key-env` | reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno |
+| `--web-token-env` / `--no-web-token-env` | con `--mcp-mode http`, pone o quita la cabecera `Authorization` que referencia `LOCAL_DELEGATE_WEB_TOKEN`. **Sin ninguno de los dos, se conserva la cabecera que ya tuviera cada cliente**, así que reinstalar no deja a nadie en `401` |
 | `--pin-version X.Y.Z` | fija la versión del paquete en la entrada MCP |
 | `--python RUTA` | intérprete con el que corren los hooks (default `python3`, `python` en Windows) |
 | `--home RUTA` | HOME alternativo (útil para probar la instalación en un sandbox) |
