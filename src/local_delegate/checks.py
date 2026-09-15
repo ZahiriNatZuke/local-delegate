@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los dieciocho elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los diecinueve elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Dieciocho checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Diecinueve checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -1128,8 +1128,35 @@ def _probe_llamaserver(ctx: Context) -> Result:
     return _version_result(ctx, "llama-server")
 
 
+def _probe_fallback(ctx: Context) -> Result:
+    """Las cadenas de respaldo solo pueden nombrar roles o modelos del catálogo de texto.
+
+    Lo que no, se ignora al delegar (REQ-014), y un error de tecleo en la variable dejaría a un rol
+    sin el respaldo que su dueño cree haber configurado. Import diferido: `cadenas` importa `config`
+    y no hace falta cargarlo para el resto del diagnóstico.
+    """
+    from . import cadenas
+    from . import config as configuracion
+
+    avisos = [
+        f"LOCAL_DELEGATE_FALLBACK_{rol.upper()} nombra {', '.join(cadena.ignorados)}"
+        for rol in cadenas.ROLES_DE_TEXTO
+        if (cadena := cadenas.resolver(rol)).ignorados
+    ]
+    if avisos:
+        return Result(
+            WARN,
+            "; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran",
+            "usa roles (mechanical, long, code, fast, residente) o ids del catálogo de texto",
+        )
+    if not configuracion.FALLBACK:
+        return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
+    modelo, origen = cadenas.residente()
+    return Result(OK, f"cadenas válidas; residente {modelo} ({origen})")
+
+
 # --- El registro --------------------------------------------------------------
-# Dieciocho elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Diecinueve elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1141,6 +1168,7 @@ CHECKS: tuple[Check, ...] = (
     Check("cli.published", "entorno", "versión publicada", _probe_published),
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
+    Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -1166,7 +1194,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los dieciocho probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los diecinueve probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1180,7 +1208,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros diecisiete
+        except Exception as exc:  # un check roto no debe impedir ver los otros dieciocho
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

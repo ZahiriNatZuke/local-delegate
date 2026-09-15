@@ -753,7 +753,10 @@ def capturar(caso: Caso, ruta: Path, datos: bytes, *, sin_troceo: bool = False) 
     modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
     texto = normalizado(datos) if caso.media_type == "texto" else ""
     with produccion_interceptada() as llamadas, tempfile.TemporaryDirectory() as tmp:
-        sin_limite = mock.patch.object(config, "max_chars_for", lambda _modelo: 2**31)
+        # Los dos topes: el del rol (modelo principal de cada tool) y el del modelo (respaldos).
+        sin_limite = mock.patch.multiple(
+            config, max_chars_for=lambda _modelo: 2**31, max_chars_for_role=lambda _rol: 2**31
+        )
         with sin_limite if sin_troceo else contextlib.nullcontext():
             invocar(caso, ruta, texto, Path(tmp))
         roles = roles_de_produccion()
@@ -1227,7 +1230,7 @@ def configuracion_de_produccion() -> dict[str, Any]:
             "chunk_chars": config.CHUNK_CHARS,
             "models": {rol: modelo for modelo, rol in roles_de_produccion().items()},
             "max_chars": {
-                rol: config.max_chars_for(modelo) for modelo, rol in roles_de_produccion().items()
+                rol: config.max_chars_for_role(rol) for rol in roles_de_produccion().values()
             },
         }
 

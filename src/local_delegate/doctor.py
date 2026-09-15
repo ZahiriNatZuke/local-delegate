@@ -18,7 +18,6 @@ red degrada a un aviso y nunca lanza. No requiere el extra ``[llamaswap]``: la r
 from __future__ import annotations
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -347,8 +346,8 @@ def run_doctor(args: argparse.Namespace) -> int:
     config_path: Path | None = None
     if getattr(args, "config", None):
         config_path = Path(args.config)
-    elif os.environ.get("LLAMASWAP_CONFIG"):
-        config_path = Path(os.environ["LLAMASWAP_CONFIG"])
+    elif config.llamaswap_config_path():
+        config_path = Path(config.llamaswap_config_path())
 
     home_arg = getattr(args, "home", None)
     home = Path(home_arg).expanduser() if home_arg else Path.home()
@@ -365,7 +364,7 @@ def run_doctor(args: argparse.Namespace) -> int:
     print()
 
     # Entorno
-    exe = os.environ.get("LLAMASWAP_EXE", "")
+    exe = config.llamaswap_exe()
     backend_status = by_id["service.backend"].status
     # `unknown` aquí es el 401/403: el backend está arriba y falta la credencial. Llamarlo
     # CAÍDO manda a arrancar algo que ya corre.

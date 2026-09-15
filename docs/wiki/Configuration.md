@@ -29,7 +29,7 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | ultrarrápido / trivial |
 | `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
-| `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada por modelo |
+| `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
@@ -42,7 +42,56 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 
 > `local_delegate` (tool genérica) valida su parámetro `model` contra el conjunto de estos 4 ids
 > de texto. `MODEL_VISION` queda fuera a propósito: ese rol no arma payload texto→texto.
-> Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema.
+> Si dos roles apuntan al mismo id, el catálogo se deduplica sin problema, y **cada rol conserva su
+> tope de entrada**: con `LONG` y `CODE` en el mismo modelo, un resumen largo sigue usando los 48 000
+> chars del rol largo. Antes el tope se guardaba por nombre de modelo y el último rol pisaba al otro.
+
+## Respaldo entre modelos
+
+Cuando el modelo de un rol falla por culpa del propio modelo, la delegación puede saltar a otro. Las
+cadenas se declaran **por rol**, no por nombre de modelo, así que siguen valiendo si cambias los
+modelos por defecto. `local_status` muestra cómo quedan resueltas y `local-delegate doctor` avisa si
+una variable nombra algo que no existe.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_FALLBACK` | `1` | `0` lo apaga |
+| `LOCAL_DELEGATE_FALLBACK_MAX_HOPS` | `2` | saltos máximos por llamada |
+| `LOCAL_DELEGATE_FALLBACK_CODE` | `residente,long` | cadena del rol de código |
+| `LOCAL_DELEGATE_FALLBACK_LONG` | `residente,code` | cadena del rol largo |
+| `LOCAL_DELEGATE_FALLBACK_MECHANICAL` | `long` | cadena del rol mecánico |
+| `LOCAL_DELEGATE_FALLBACK_FAST` | `residente,long` | cadena del rol rápido (hoy ninguna tool enruta a él) |
+
+> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`, `fast`, `residente`) o ids del
+> catálogo, separados por comas y en orden. Lo repetido y el propio modelo del rol se quitan solos;
+> lo que no sea ni rol ni modelo del catálogo se ignora. **`none` desactiva** el respaldo de ese rol:
+> una variable vacía también, pero en Windows fijarla a vacío la borra y el rol volvería a su cadena
+> por defecto. Visión no tiene respaldo.
+>
+> **El residente** es el modelo del grupo `persistent` de tu `config.yaml` de llama-swap
+> (`LLAMASWAP_CONFIG`, necesita el extra `pyyaml`), que ya está en memoria y no obliga a cargar nada.
+> Si no se puede leer, es el del rol mecánico.
+
+## Enfriamiento por modelo
+
+Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo
+cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
+(`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
+se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_COOLDOWN` | `1` | `0` lo apaga |
+| `LOCAL_DELEGATE_COOLDOWN_FAILURES` | `3` | fallos seguidos que enfrían el modelo |
+| `LOCAL_DELEGATE_COOLDOWN_S` | `120` | espera de la primera vez, en segundos |
+| `LOCAL_DELEGATE_COOLDOWN_MAX_S` | `900` | tope de la espera: tras vencer, cada fallo la dobla hasta aquí |
+
+> **Qué cuenta:** solo los fallos del modelo (un 5xx que no es de carga, una respuesta rota) y un
+> timeout con el modelo **ya cargado**. No cuentan los errores de conexión, los 4xx, un modelo que no
+> se pudo cargar ni un razonamiento que agotó `max_tokens`; tampoco ponen el contador a cero. Un éxito
+> sí. Los números no están medidos todavía: son configurables a propósito.
+>
+> El daemon lee estas variables al arrancar: para cambiarlas hay que reiniciarlo.
 
 ## Daemon y web de métricas
 

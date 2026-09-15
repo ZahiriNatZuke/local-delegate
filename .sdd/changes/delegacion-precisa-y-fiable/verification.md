@@ -918,3 +918,56 @@ recorre las seis fixtures buscando rutas y credenciales.
 
 `uv run pytest -q`: **1150 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.
 `server.py` sigue entero en CRLF (0 LF sueltos).
+
+## F3: tareas 25, 26 y 27, sin tocar la maquina (2026-09-15)
+
+Tres commits en la rama `sdd/f3-t25-27-topes-enfriamiento-cadenas`: `39c63cd` (25), `e998cf4` (26) y
+el de la 27. Ninguno tiene consumidores en las tools todavia: los usa la tarea 28.
+
+### Tarea 25: el tope de entrada es del rol
+
+| Test, con colision real (recargando `config`) | Rojo antes del arreglo, por su assert |
+| --- | --- |
+| largo = codigo, resumen de 30 000 chars | `3 == 1` llamadas |
+| largo = rapido, resumen de 30 000 chars | `5 == 1` llamadas |
+| largo = codigo, log de 30 000 chars | `3 == 1` llamadas |
+| largo = codigo, traduccion | el final del texto no llego al backend |
+| largo = codigo, extraccion | `procesados 20027 de 30000 chars` |
+
+Mutante que hace usar al modelo principal el tope por modelo (el minimo): caen seis tests. Parchear
+`config.MODEL_CODE` en caliente **no** reproducia la colision —el dict se construye al importar—, y
+por eso el fixture `recargar_config` recarga el modulo con las variables puestas.
+
+### Tarea 26: el estado de enfriamiento
+
+Seis mutantes, cada uno en su test: sin doblar la espera, sin tope, una clase neutra que pone a cero,
+N fallos tras vencer, el recorte sin guardar y sin recorte.
+
+**Un mutante sobrevivio en la primera pasada y destapo un defecto propio.** «Sin tope» paso los 20
+tests: el de Tmax miraba `restante_s`, que la lectura recortaba, y el recorte se hacia contra
+«ahora» **en cada lectura**. Consecuencia real, no solo un test flojo: un vencimiento en el futuro
+lejano dejaba siempre 900 s por delante y **el modelo no vencia nunca**. El test del vencimiento
+lejano solo pedia `restante_s <= 900`. Arreglo: el recorte se guarda. Dos tests nuevos miran que el
+modelo quede libre pasado Tmax y que la espera guardada no pase de Tmax; los dos se vieron caer.
+
+### Tarea 27: cadenas por rol
+
+Seis mutantes sobre `cadenas.py`, cada uno en su test: no quitar el modelo principal, no quitar
+repetidos, ignorar `persistent`, coger un miembro fuera del catalogo, `none` que no desactiva, y un
+desconocido que entra en la cadena (cae tambien el check del doctor). Y los dos controles que
+nunca se habian visto fallar —el primer rojo fue un `ImportError` que no dejo ni colectarlos—:
+volver a leer `LLAMASWAP_LISTEN` con `os.environ` hace caer el guardian (`autostart.py:54`), y quitar
+la lectura al importar saca `LLAMASWAP_CONFIG` del inventario.
+
+Dos cosas que los tests no habrian destapado solos:
+
+- **En Windows una variable vacia no existe**: fijarla a `""` la borra. `monkeypatch.setenv` si guarda
+  la cadena vacia, asi que el test de «lista vacia desactiva» pasaba y en el daemon real no se podia
+  expresar. `none` tambien desactiva, con su test.
+- **`fast` es inalcanzable desde las tools**, comprobado recorriendo las nueve tools de texto con un
+  espia sobre `_run_chat`, con control de que el espia veia los otros tres modelos.
+
+### Suite
+
+`uv run pytest -q`: **1198 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios. Los
+recuentos del doctor (diecinueve checks) cuadran en `checks.py`, `test_checks.py` y la wiki.

@@ -172,7 +172,7 @@ def test_regla_de_una_llamada_caza_el_traducir_14k(tmp_path):
 
 def test_regla_de_entrada_entera_caza_un_truncado(tmp_path):
     # explain_code nunca trocea: trunca a MAX_CHARS del rol code y el modelo ve solo el principio.
-    datos = b"x = 1  # prueba\n" * (config.max_chars_for(config.MODEL_CODE) // 16 + 200)
+    datos = b"x = 1  # prueba\n" * (config.max_chars_for_role("code") // 16 + 200)
     caso = _caso(tool="local_explain_code", role="code")
     errores = _errores(caso, tmp_path, datos, "grande.py")
     assert errores == ["prueba: el modelo no ve la entrada entera (truncada)"]

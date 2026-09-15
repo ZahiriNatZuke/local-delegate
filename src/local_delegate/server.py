@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, clients, config, fallos, preguntas
+from . import autostart, cadenas, clients, config, estado_json, fallos, preguntas
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -154,33 +154,11 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-def _read_inflight_data(path: Path) -> dict:
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def _atomic_write_json(path: Path, data: dict) -> None:
-    # El temporal lleva el pid en el nombre: varios procesos MCP (cada sesión de Claude en
-    # stdio, más el daemon) escriben este mismo archivo, y un ".tmp" compartido hacía que
-    # dos escrituras simultáneas se pisaran el temporal y publicaran contenido mezclado o
-    # perdido — entradas fantasma / delegaciones que nunca aparecían en "En curso".
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(path)
-    finally:
-        try:
-            tmp.unlink(missing_ok=True)  # si replace() funcionó ya no existe
-        except OSError:
-            # Estamos en el `finally`: si el temporal no se deja borrar (en Windows lo típico es un
-            # antivirus con el archivo abierto), tragarse el error es obligatorio. Lanzar aquí
-            # taparía la excepción real que venga del try y dejaría un fallo mucho más difícil de
-            # leer que un .tmp huérfano.
-            pass
+# La lectura y la escritura atómica viven en `estado_json`, compartidas con el estado de
+# enfriamiento (F3, tarea 26). Se conservan estos nombres porque el resto del módulo y los tests
+# los usan.
+_read_inflight_data = estado_json.leer_json
+_atomic_write_json = estado_json.escribir_json_atomico
 
 
 def _inflight_mutate(mutate_fn, *, write_on_timeout: bool = True) -> None:
@@ -1366,12 +1344,23 @@ def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
     return habla_de_contexto and habla_de_exceso
 
 
+def _rol_por_tamano(probe_len: int) -> tuple[str, str]:
+    """(rol, modelo) de las tools que enrutan por tamaño: largo por encima del umbral, si no mecánico.
+
+    Devuelve el ROL además del modelo porque el tope de entrada es del rol: con dos roles sobre el
+    mismo modelo, preguntar el tope por el nombre del modelo daría el de otro rol.
+    """
+    rol = "long" if probe_len > config.LONG_INPUT_CHARS else "mechanical"
+    return rol, config.modelos_por_rol()[rol]
+
+
 def _chat_map_reduce(
     model: str,
     system: str,
     content: str,
     build_user,
     *,
+    max_chars: int,
     tool: str,
     source: str,
     max_words: int,
@@ -1397,7 +1386,7 @@ def _chat_map_reduce(
     niveles (tope de 3, suficiente para cualquier archivo realista y con final garantizado).
     Como en `_chat_chunked`: N llamadas, **un** evento de log con `chunks: N`.
     """
-    budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(model) * 0.8))
+    budget = max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
     pieces = _chunk_text(content, budget)
     entry_id = _inflight_start(
         tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
@@ -1661,14 +1650,14 @@ def local_summarize(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     system = _guard("un resumen en prosa clara", max_words)
 
     def _build(piece: str) -> str:
         return f"Resume el siguiente contenido:\n\n{piece}"
 
-    if len(content) > config.max_chars_for(model):
+    if len(content) > config.max_chars_for_role(rol):
         # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
         # truncaba, o sea que se resumía el principio y el resto se ignoraba.
         return _chat_map_reduce(
@@ -1676,6 +1665,7 @@ def local_summarize(
             system,
             content,
             _build,
+            max_chars=config.max_chars_for_role(rol),
             tool="local_summarize",
             source="path" if path else "inline",
             max_words=max_words,
@@ -1752,8 +1742,8 @@ def local_extract(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    rol, model = _rol_por_tamano(probe_len)
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(rol))
     claves = ", ".join(f'"{f}"' for f in fields)
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
     user = f"Extrae los campos del siguiente contenido:\n\n{content}"
@@ -1934,7 +1924,7 @@ def local_lint_summary(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
+    rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     system = _guard(
         "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
@@ -1945,7 +1935,7 @@ def local_lint_summary(
     def _build(piece: str) -> str:
         return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
 
-    if len(content) > config.max_chars_for(model):
+    if len(content) > config.max_chars_for_role(rol):
         # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
         # estar al final, y era exactamente lo que se descartaba.
         return _chat_map_reduce(
@@ -1953,6 +1943,7 @@ def local_lint_summary(
             system,
             content,
             _build,
+            max_chars=config.max_chars_for_role(rol),
             tool="local_lint_summary",
             source="path" if path else "inline",
             max_words=max_words,
@@ -2017,14 +2008,14 @@ def local_commit_msg(
     system = _guard(fmt)
     user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
 
-    if len(content) > config.max_chars_for(config.MODEL_CODE):
+    if len(content) > config.max_chars_for_role("code"):
         # El diff no cabe en una llamada. Antes se truncaba: medido sobre un diff de 164 585
         # chars y 44 archivos, el modelo veía 20 027 chars —7 archivos, todos de `.sdd/`— y
         # devolvía `chore: update GitHub Actions pages artifact version`, o sea el primer
         # archivo por orden alfabético de rutas. Ahora entra entero: parte por archivo, un
         # parte por trozo, y el mensaje se redacta sobre esos partes MÁS el inventario completo.
         archivos = _diff_inventory(content)
-        budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for(config.MODEL_CODE) * 0.8))
+        budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for_role("code") * 0.8))
         inventario = _format_inventory(archivos, int(budget * 0.25))
         # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
         # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
@@ -2075,6 +2066,7 @@ def local_commit_msg(
             map_system,
             content,
             _build_map,
+            max_chars=config.max_chars_for_role("code"),
             tool="local_commit_msg",
             source="path" if path else "inline",
             max_words=90,
@@ -2134,8 +2126,8 @@ def local_translate(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    model = config.MODEL_LONG if probe_len > config.LONG_INPUT_CHARS else config.MODEL_MECHANICAL
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for(model))
+    rol, model = _rol_por_tamano(probe_len)
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(rol))
     system = _guard(
         f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios"
     )
@@ -2173,9 +2165,7 @@ def local_explain_code(
         path: Ruta a un archivo de código (leído server-side).
         question: Pregunta o foco concreto (opcional).
     """
-    content, truncated_in, raw_len = _read_input(
-        code, path, config.max_chars_for(config.MODEL_CODE)
-    )
+    content, truncated_in, raw_len = _read_input(code, path, config.max_chars_for_role("code"))
     extra = f" Enfócate en: {question}." if question else ""
     system = _guard(
         f"una explicación clara en prosa de qué hace el código y cómo.{extra}", max_words=250
@@ -2338,7 +2328,7 @@ def _llamaswap_groups() -> str | None:
     config.yaml con 'groups:'. Nunca rompe local_status: cualquier fallo (extra ausente,
     archivo inexistente, YAML inválido) devuelve None y la línea simplemente no aparece.
     """
-    cfg_path = os.environ.get("LLAMASWAP_CONFIG")
+    cfg_path = config.llamaswap_config_path()
     if not cfg_path:
         return None
     try:
@@ -2435,8 +2425,9 @@ def local_status() -> str:
         ("code", config.MODEL_CODE),
         ("fast", config.MODEL_FAST),
     ):
-        lines.append(f"  {role}: {model} (max_chars={config.max_chars_for(model)})")
+        lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
+    lines.extend(cadenas.describir())
     lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
 
     current_log = _current_log_path()
