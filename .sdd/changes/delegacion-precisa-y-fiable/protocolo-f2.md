@@ -502,6 +502,55 @@ modelo gana: cambian lo que se mide, no a quien favorece.
 **Siguiente:** repetir el piloto de CP-3 una vez con las cuatro aplicadas (la banda cambia con la
 temperatura, y `lint-9k` es un caso nuevo), con el setup de medicion que sigue montado.
 
+#### Tercer piloto (sesion 3, 2026-09-15 00:06-00:20 UTC): la temperatura trae ruido, y la banda del rol lo convierte en veto
+
+Con las cuatro decisiones (commit `a3bd148`), 3 corridas. **Defecto de la sonda encontrado:** los 120
+intentos del 2B se anularon con `zero_vram_samples`: `typeperf` arranco antes de que `llama-server`
+creara su contexto CUDA, la cabecera salio sin su instancia y la sonda solo lo relanzaba si cambiaba
+el PID. Arreglado (commit `0e8a88b`, 3 mutantes) y **repetido solo el bloque del 2B** con la etiqueta
+`cp3-qwen35-2b-r` (00:19-00:20); los datos del 14B y de `vision` eran validos y se quedaron.
+
+- **La temperatura de produccion si da variacion**: el 2B dio respuestas distintas en 10 de 13 casos,
+  y los saltos son reales (el mismo modelo nombra las 7 rutas de `explicar-metrics-15k` en una
+  corrida y las describe sin nombrarlas en otra: 1,0 y 0).
+- **CP-3 no pasa en `code` ni en `long` por la banda del rol**, no por el corpus: 1,0 en `code` (la
+  pone `explicar-metrics-15k`) y 0,667 en `long`. `boilerplate-156` (0/0/0 contra 1/1/0,8) quedaba
+  dentro.
+- **`lint-9k`, 0 en los dos otra vez.** El 2B se inventa los conteos («COM812: 30 archivos», son 2) y
+  en una corrida entra en bucle; el 14B los da casi bien («D102 (6)», son 7) pero lista todas las
+  reglas de los 5 archivos y trunca. El supuesto de que con 5 archivos «cabria» era falso: el modelo
+  no resume lo relevante, lo lista todo.
+- **Decisiones del usuario** (commit `29c5e61`): banda por caso y del agregado como media, en CP-3 y
+  §7; 5 corridas; `lint-9k` a revision a ciegas.
+
+#### Cuarto piloto (sesion 3, 2026-09-15 00:36-00:50 UTC): pasa `code` por un solo caso
+
+Banda por caso, 5 corridas. Sonda sana (un solo intento anulado al arrancar, repetido).
+
+| Rol | Programa | Lectura |
+| --- | --- | --- |
+| `code` | pasa: 1 de 3 admitidos (`boilerplate-156`, 0,0 contra 0,8) | **debilmente decidible**. `explicar-metrics-15k` en techo por mediana; `explicar-install-20k` a favor del 2B dentro de su banda |
+| `long` | no pasa: 0 de 3 | `resumen-changelog-7k` 0,667 contra 1,0 con banda 0,667 (el 14B da 0,33/1/1/1/0,33); `resumen-md-10k` a favor del 2B por **tercera vez**; `extraer-uvlock-48k` en techo |
+| `mechanical` | pasa por empate en techo | los 5 en techo por mediana |
+| `vision` | `leer-cifras-dashboard` separa (0 contra 0,667); `describir-dashboard` es el tercer desenlace | igual que los pilotos anteriores |
+| revision | `commit-diff-19k`: 2B mediana 0,4 (nombra `inflight.json` en 3 de 5), 14B 0 en las 5 | `lint-9k`: 0 los dos |
+
+**Lo que el cuarto piloto dice del METODO, no de los modelos** (planteado por el usuario: «si no es el
+indio es la flecha»):
+
+1. **La banda como rango crece con las corridas.** El rango (max - min) lo fija un solo valor extremo
+   y aumenta con N: pasar de 3 a 5 corridas lo empeoro. Una medida que acompane a la mediana seria la
+   desviacion absoluta mediana (MAD).
+2. **La cobertura de terminos mide vocabulario, no correccion.** Las tools piden «resume» o
+   «explica», no «nombra»; el mismo modelo salta de 1 a 0 segun nombre o describa; el 2B contradijo la
+   fuente en el changelog y aun asi puntuo. Donde la comprobacion es objetiva (ejecucion, cifras de la
+   imagen, conteos) separa sin ambiguedad; donde cuenta palabras, no.
+3. **La premisa «el 14B es mejor» no esta demostrada en cada rol**: es un modelo de codigo, y en
+   resumen en espanol el 2B gano `resumen-md-10k` tres veces.
+4. **Faltan tres parametros escritos**: suelo (hoy solo el techo tiene regla), validez contra juicio
+   humano **antes** de la tanda (§4.8 esta despues) y sensibilidad a una entrada alterada en los roles
+   de texto. Pendiente de decision del usuario: P-15.
+
 ### CP-4 — El puntuador separa
 
 Por cada senal de puntuacion que **se pueda ejercitar con texto** existe un caso con dos respuestas
@@ -1512,7 +1561,7 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
 | 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
-| 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / segundo piloto 23:00:36-23:10:30; tercer piloto (las cuatro decisiones, commit `a3bd148`) en la misma sesion, sin tocar el setup | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
+| 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / segundo piloto 23:00:36-23:10:30; tercer piloto (commit `a3bd148`) 00:06-00:17 y bloque del 2B repetido 00:19-00:20; cuarto piloto (commit `29c5e61`, 5 corridas) 00:36-00:50; llama-swap de pruebas parado al acabar | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
 
 Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
 
@@ -1601,6 +1650,19 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   resta la hace `analizar_benchmark.py` (codigo nuevo, con su test) o solo la hoja de resultados.
   Y un aviso para §3.2: con `none` la **VRAM compartida** del proceso sube por los buffers anclados
   de CUDA, asi que no sirve como senal de desbordamiento; esa senal es el OOM que da el perfil.
+- **P-15 — abierta (2026-09-15, planteada por el usuario tras el cuarto piloto: «si no es el indio es
+  la flecha»).** ¿Mide el instrumento la calidad que importa, en un rango donde estos modelos puedan
+  diferir? Faltan tres parametros escritos antes de la tanda: (1) **rango util**: techo si los dos
+  modelos dan mediana >= 0,95 y **suelo** si <= 0,05, los dos fuera del agregado (hoy solo el techo
+  tiene regla); (2) **validez contra juicio humano**: hoja por pares a ciegas con las salidas ya
+  guardadas; un caso conserva su puntuacion automatica si la persona coincide en >= 80 % de los pares
+  donde la metrica prefiere a uno, con al menos 3 (si no, «sin base»); (3) **sensibilidad** a una
+  entrada alterada en los roles de texto, sin suponer que modelo es mejor. Y la banda —rango o MAD—
+  se decide **despues** de (2), no antes: elegirla viendo que casos separa con cada una es ajustar la
+  regla al resultado. **Aprobado y hecho (2026-09-15):** la hoja de (2), `scripts/hoja_pares.py` (8
+  tests, 5 mutantes muertos), generada sobre el cuarto piloto para `resumen-changelog-7k`,
+  `resumen-md-10k`, `explicar-install-20k` y `explicar-metrics-15k`: 20 pares en
+  `resultados/pares-p15.md`, clave aparte. Pendiente: que el usuario elija y destapar.
 - **P-14 — abierta (2026-09-14, planteada por el usuario).** En el uso real el MCP **no tendra la
   maquina entera**: convive con el navegador, video, IDE y lo que el usuario este haciendo. El estado
   limpio de §1.4 sigue valiendo para **comparar** modelos entre si (quita ruido), pero **no** para
