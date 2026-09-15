@@ -870,6 +870,51 @@ rojo por su propio assert (`'b0' == 'b10909'` y `'b0' is None`) antes del arregl
 quita el parentesis obligatorio del formato viejo cae solo en el test del semver sin build; y se
 comprobo despues contra el binario real.
 
-### Pendiente
+### La Mac
 
-- Comprobar desde la Mac que sigue delegando contra este backend.
+Comprobada por el usuario (2026-09-15, tras la mezcla del #187): una delegacion de prueba con
+`local_summarize` desde la Mac contra este backend devolvio el resumen hecho por `gemma3-4b`, el
+residente, con los otros cuatro modelos sin cargar. El camino de la tailnet y la clave que manda la
+Mac funcionan con v255: la tarea 22 queda verificada entera.
+
+## F3: tarea 23, capturas reales para REQ-020 y la senal de carga (2026-09-15)
+
+Sesion 8 de `protocolo-f2.md` §10 (15:20:58-15:24:09 UTC), con la tabla de capturas y horas.
+
+### Las capturas, contra su clase esperada escrita antes
+
+| Caso | Lo que devolvio el backend | Clase esperada | Clase obtenida |
+| --- | --- | --- | --- |
+| OOM con perfil | 500 `upstream command exited prematurely` en 4,7 s | capacidad | **capacidad** (con el patron nuevo; antes `modelo`) |
+| error de carga (modelo inexistente) | el mismo 500, byte a byte, en 0,25 s | capacidad | **capacidad** |
+| timeout del cliente durante la carga | `ReadTimeout`; `/running` en `starting` al vencer | capacidad | **capacidad** |
+| peticion durante la carga | 200 en 7,0 s tras `starting` -> `ready` | no es fallo | **no es fallo** |
+| razonamiento que agota `max_tokens` | 200, `length`, razonamiento lleno, `content: ""` | configuracion | **configuracion** (con la opcion A; antes exito vacio) |
+| OOM sin perfil | 200 en 8,2 s: desborda y responde | timeout de lectura | **no capturado**: no hubo timeout |
+
+La copia sin perfil se comprobo por su efecto antes de capturar: la carga de CP-1 da OOM a los 6,1 s
+en `llamacpp-b10909` y desborda 5 887 MiB en la copia.
+
+### Lo que se probo al reves
+
+| Cambio | Test rojo antes del arreglo, por su assert | Mutante y donde cae |
+| --- | --- | --- |
+| patron de capacidad | los dos casos de capacidad daban `MODELO is CAPACIDAD` | quitar el patron: caen exactamente esos dos |
+| sonda de carga | faltaban las piezas (rojo debil, por eso los mutantes) | volver a consultar tras el timeout: cae el test de la carrera (`True is False`) y el de la consulta lenta; quitar `cancelar()`: cae el camino feliz (`1 == 0`) |
+| contenido vacio | unitario, captura real e integracion: `None is CONFIGURACION` y `True is False` | sin `length`: cae el control del razonamiento terminado en `stop`; sin razonamiento: cae el control sin razonamiento |
+
+Dos controles que no controlaban, corregidos antes de fiarse de ellos:
+
+- **El test del camino feliz usaba un retraso de 30 s**: con el `cancelar()` quitado tampoco habria
+  disparado durante el test. Ahora el retraso es de 0,2 s y se espera despues.
+- **El primer mutante de `cancelar()` no muto** (`server.py` es CRLF y el texto buscado llevaba LF):
+  su «15 passed» no demostraba nada. Repetido con un reemplazo de una sola linea, muto y cayo.
+
+Y un defecto propio de privacidad: la primera pasada del script de captura no saneaba las muestras
+de `/running`, que llevan la linea de comando con rutas. Se corrigio antes de versionar; un test
+recorre las seis fixtures buscando rutas y credenciales.
+
+### Suite
+
+`uv run pytest -q`: **1150 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.
+`server.py` sigue entero en CRLF (0 LF sueltos).

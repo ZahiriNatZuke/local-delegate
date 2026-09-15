@@ -540,7 +540,8 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
     - Rollback or recovery: restaurar el `config.yaml` respaldado y devolver el perfil a la ruta de
       b9925, medido; b9925 sigue en disco. El cambio de `RECOMMENDED_VERSIONS` se revierte con el PR.
     - Estado (2026-09-15): **hecha en la maquina** (`protocolo-f2.md` §10 sesion 7). Produccion corre
-      b10909 + v255 con el catalogo vigente desde las 15:04:55 UTC. Falta comprobar la Mac. Lo que
+      b10909 + v255 con el catalogo vigente desde las 15:04:55 UTC. La Mac, comprobada por el usuario:
+      delega contra este backend (`local_summarize` respondio con el residente). Lo que
       obligo a cambiar respecto a este texto: el ejecutable de llama-swap lo decide la variable de
       usuario `LLAMASWAP_EXE` (no el `config.yaml`), asi que migrar y deshacer es cambiar esa variable;
       y **`doctor` leia `b0` con el `--version` semver de b10909** —defecto silencioso que habria
@@ -604,6 +605,18 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       de F0. Maquina: parar el llama-swap de capturas, devolver el perfil a la ruta de b10909 **y
       medirlo** (OOM con la carga de CP-1), y arrancar el daemon, que levanta el llama-swap de
       produccion; comprobar con `local_status` que el residente vuelve a estar cargado.
+    - Estado (2026-09-15): **hecha** (`protocolo-f2.md` §10 sesion 8; produccion 3 min 11 s sin
+      servicio). Lo que obligo a cambiar respecto a este texto: (1) **el perfil no se movio**: actua
+      por ruta, asi que el caso sin perfil uso una copia de la carpeta de b10909
+      (`llamacpp-b10909-sin-perfil`, mismo binario por hash), comprobada por su efecto antes de
+      capturar; la copia se queda en disco para recapturar. (2) **OOM sin perfil: no capturado** —el
+      modelo desbordo y respondio 200 en 8 s—, y un test lo fija para que nadie lo cite como probado.
+      (3) **El razonamiento agotado llega con `content: ""`**, no nulo: la clase `CONFIGURACION` era
+      inalcanzable con el backend real; el usuario eligio la opcion A (vacio + `length` +
+      razonamiento es configuracion) y la spec lo recoge en sus casos limite. (4) **Un timeout del
+      cliente aborta la carga en llama-swap**, anotado en la tarea 28. Patron unico:
+      `upstream command exited prematurely` (el mismo 500 para OOM con perfil y modelo inexistente).
+      La senal de carga es la sonda con temporizador por intento; sin llama-swap, `None`.
 
 24. **Catalogo nuevo en produccion, y si el residente cabe al lado**
     - Files or modules: fuera del repo `config.yaml` de produccion, **las variables `LOCAL_DELEGATE_MODEL_*`
@@ -717,7 +730,11 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       (REQ-003); se escribe asi en la docs y un test lo fija, en vez de descubrirlo en produccion. El
       escenario «la entrada no cabe en el respaldo» (30 000 contra 48 000) es el camino de `_chat`
       sin trocear, no map-reduce. El aviso va en metadatos en `local_extract` y en la respuesta, nunca
-      en el fichero, en `local_boilerplate`. El autoarranque y la pregunta de **arrancar el backend**
+      en el fichero, en `local_boilerplate`. **Hallazgo de las capturas de la tarea 23:** cuando el cliente
+      corta por timeout, **llama-swap aborta la carga en curso** (`starting ... failed: aborted`), asi
+      que tras un `ReadTimeout` de carga el modelo no queda a medio montar: el primer salto al
+      residente es lo que toca (REQ-018), y volver a pedir el mismo modelo empieza la carga de cero.
+      El autoarranque y la pregunta de **arrancar el backend**
       (`server.py:706`) ya retienen la plaza hoy: no cambia, y se escribe. La pregunta de **elegir
       modelo** (`server.py:1773`) corre en la tool, antes de `_chat` y fuera de la plaza, y tampoco
       cambia. **Freno de mezcla:** este PR no se mezcla sin la 23 cerrada

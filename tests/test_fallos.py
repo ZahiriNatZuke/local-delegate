@@ -77,9 +77,13 @@ def test_un_5xx_con_patron_de_capacidad_no_es_del_modelo(monkeypatch):
     )
 
 
-def test_sin_patrones_un_5xx_es_del_modelo():
-    """Control positivo del anterior: con la tupla vacía de hoy, el mismo cuerpo va a MODELO."""
-    assert fallos.PATRONES_DE_CAPACIDAD == ()
+def test_sin_patrones_un_5xx_es_del_modelo(monkeypatch):
+    """Control positivo del anterior: sin patrones, el mismo cuerpo va a MODELO.
+
+    La tupla ya no está vacía (los patrones reales llegaron con las capturas de F3), así que el test
+    la vacía él mismo: lo que prueba es el punto de extensión, no el contenido de la tupla.
+    """
+    monkeypatch.setattr(fallos, "PATRONES_DE_CAPACIDAD", ())
     assert clasificar(Respuesta(status=503, texto="Failed to load model: out of memory")) is (
         Clase.MODELO
     )
@@ -127,6 +131,28 @@ def test_length_sin_razonamiento_no_es_de_configuracion():
 def test_length_con_razonamiento_en_blanco_tampoco_cuenta():
     cuerpo = _cuerpo(None, finish_reason="length", reasoning="   ")
     assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.SIN_CLASIFICAR
+
+
+def test_contenido_vacio_con_length_y_razonamiento_es_de_configuracion():
+    """Lo que devuelve de verdad llama-server b10909 (captura del 2026-09-15): `content: ""`, no nulo.
+
+    Con solo el nulo, la clase de configuración no saltaba nunca contra el backend real y el usuario
+    recibía una respuesta vacía como si todo hubiera ido bien (decisión del usuario, opción A).
+    """
+    cuerpo = _cuerpo("", finish_reason="length", reasoning="pensando muy fuerte")
+    assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.CONFIGURACION
+
+
+def test_contenido_vacio_con_length_sin_razonamiento_no_es_un_fallo():
+    """Control positivo: sin rastro de razonamiento, la cadena vacía sigue tratándose como hoy."""
+    cuerpo = _cuerpo("", finish_reason="length")
+    assert clasificar(Respuesta(status=200, datos=cuerpo)) is None
+
+
+def test_contenido_vacio_con_razonamiento_que_termino_bien_no_es_un_fallo():
+    """Control positivo: si no se agotó `max_tokens`, un razonamiento no convierte el vacío en fallo."""
+    cuerpo = _cuerpo("", finish_reason="stop", reasoning="pensé y no hacía falta decir nada")
+    assert clasificar(Respuesta(status=200, datos=cuerpo)) is None
 
 
 # --- Modelo ---------------------------------------------------------------------------------

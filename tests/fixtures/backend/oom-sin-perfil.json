@@ -1,0 +1,206 @@
+{
+  "caso": "oom-sin-perfil",
+  "capturado_utc": "2026-09-15T15:22:35Z",
+  "versiones": {
+    "llama-swap": "v255 (7761aa1)",
+    "llama-server": "b10909 (a2878d30d)"
+  },
+  "via": "llama-swap",
+  "clase_esperada": "timeout_lectura",
+  "vram_reposo_mib": "673",
+  "peticion": {
+    "model": "cap-oom-sin-perfil",
+    "max_tokens": 16,
+    "timeout_s": 300
+  },
+  "respuesta": {
+    "status": 200,
+    "texto": "{\"choices\":[{\"finish_reason\":\"length\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Un fichero de lock es un archivo utilizado para indicar que un recurso\"}}],\"created\":1789485763,\"model\":\"<LLMS>\\\\models\\\\qwen25-coder-14b\\\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf\",\"system_fingerprint\":\"b10909-a2878d30d\",\"object\":\"chat.completion\",\"usage\":{\"completion_tokens\":16,\"prompt_tokens\":43,\"total_tokens\":59,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"id\":\"chatcmpl-M3TlHDBq8eDIzVXMI7m7I4gyW4OKbyqZ\",\"timings\":{\"cache_n\":0,\"prompt_n\":43,\"prompt_ms\":222.977,\"prompt_per_token_ms\":5.185511627906977,\"prompt_per_second\":192.84500195087384,\"predicted_n\":16,\"predicted_ms\":685.266,\"predicted_per_token_ms\":45.6844,\"predicted_per_second\":21.88931013650174}}",
+    "json": {
+      "choices": [
+        {
+          "finish_reason": "length",
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Un fichero de lock es un archivo utilizado para indicar que un recurso"
+          }
+        }
+      ],
+      "created": 1789485763,
+      "model": "<LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
+      "system_fingerprint": "b10909-a2878d30d",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 16,
+        "prompt_tokens": 43,
+        "total_tokens": 59,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "id": "chatcmpl-M3TlHDBq8eDIzVXMI7m7I4gyW4OKbyqZ",
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 43,
+        "prompt_ms": 222.977,
+        "prompt_per_token_ms": 5.185511627906977,
+        "prompt_per_second": 192.84500195087384,
+        "predicted_n": 16,
+        "predicted_ms": 685.266,
+        "predicted_per_token_ms": 45.6844,
+        "predicted_per_second": 21.88931013650174
+      }
+    }
+  },
+  "elapsed_s": 8.22,
+  "running_al_terminar": {
+    "running": [
+      {
+        "model": "cap-oom-sin-perfil",
+        "state": "ready",
+        "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+        "proxy": "http://localhost:5803",
+        "ttl": 0,
+        "name": "",
+        "description": ""
+      }
+    ]
+  },
+  "muestras_running": [
+    {
+      "t_s": 0.0,
+      "running": {
+        "running": []
+      }
+    },
+    {
+      "t_s": 1.0,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 2.0,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 3.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 4.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 5.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 6.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 7.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 8.1,
+      "running": {
+        "running": [
+          {
+            "model": "cap-oom-sin-perfil",
+            "state": "ready",
+            "cmd": "<LLMS>\\llamacpp-b10909-sin-perfil\\llama-server.exe --port 5803 --host 127.0.0.1 --fit off -ngl 99 -np 1 --model <LLMS>\\models\\qwen25-coder-14b\\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf --ctx-size 65536 --cache-type-k f16 --cache-type-v f16",
+            "proxy": "http://localhost:5803",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    }
+  ]
+}

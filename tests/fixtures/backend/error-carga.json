@@ -1,0 +1,41 @@
+{
+  "caso": "error-carga",
+  "capturado_utc": "2026-09-15T15:22:48Z",
+  "versiones": {
+    "llama-swap": "v255 (7761aa1)",
+    "llama-server": "b10909 (a2878d30d)"
+  },
+  "via": "llama-swap",
+  "clase_esperada": "capacidad_o_carga",
+  "vram_reposo_mib": "673",
+  "peticion": {
+    "model": "cap-error-carga",
+    "max_tokens": 16,
+    "timeout_s": 120
+  },
+  "respuesta": {
+    "status": 500,
+    "texto": "{\"src\":\"llama-swap\",\"error\":{\"message\":\"unspecific error: upstream command exited prematurely\",\"type\":\"server_error\",\"param\":null,\"code\":\"internal_error\"}}",
+    "json": {
+      "src": "llama-swap",
+      "error": {
+        "message": "unspecific error: upstream command exited prematurely",
+        "type": "server_error",
+        "param": null,
+        "code": "internal_error"
+      }
+    }
+  },
+  "elapsed_s": 0.25,
+  "running_al_terminar": {
+    "running": []
+  },
+  "muestras_running": [
+    {
+      "t_s": 0.0,
+      "running": {
+        "running": []
+      }
+    }
+  ]
+}

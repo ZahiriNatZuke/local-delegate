@@ -87,6 +87,28 @@ def test_razonamiento_que_se_come_max_tokens_se_dice_en_claro(backend):
     assert "max_tokens" in resultado.text
 
 
+@backend_mock.mock
+def test_razonamiento_con_contenido_vacio_tambien_se_dice_en_claro(backend):
+    """La forma real de b10909: `content: ""` en vez de nulo. Antes salía como éxito vacío."""
+    backend(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {"content": "", "reasoning_content": "pensando"},
+                        "finish_reason": "length",
+                    }
+                ]
+            },
+        )
+    )
+    resultado = server._post_chat("modelo", {"model": "modelo"})
+    assert resultado.ok is False
+    assert resultado.clase == fallos.Clase.CONFIGURACION
+    assert resultado.error == "config_max_tokens"
+
+
 # --- REQ-F0-2 y REQ-F0-6: los timeouts dejan de ser todos `http_error` ----------------------
 
 

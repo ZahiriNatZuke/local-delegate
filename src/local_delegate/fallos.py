@@ -50,14 +50,18 @@ class Clase(str, Enum):
     SIN_CLASIFICAR = "sin_clasificar"
 
 
-#: Patrones que delatan un fallo de capacidad o de carga dentro de un 5xx.
+#: Patrones que delatan un fallo de capacidad o de carga dentro de un 5xx, en minúsculas.
 #:
-#: **Vacío a propósito.** REQ-020 exige que salgan de respuestas reales de llama-swap y
-#: llama-server, capturadas con su versión anotada, y esa captura es trabajo de F3. Inventarlos
-#: aquí sería justo el error que la spec prohíbe: un patrón adivinado que lee un OOM como fallo del
-#: modelo haría saltar el respaldo a otro modelo grande y encadenaría swaps y OOM. Mientras la
-#: tupla esté vacía, todo 5xx se clasifica como `MODELO`, que es el comportamiento de la tabla.
-PATRONES_DE_CAPACIDAD: tuple[str, ...] = ()
+#: Salen de respuestas **reales**, nunca adivinadas (REQ-020): un patrón inventado que leyera un OOM
+#: como fallo del modelo haría saltar el respaldo a otro modelo grande y encadenaría swaps y OOM.
+#: Cada uno lleva la versión de la que salió; si el backend cambia, se recapturan
+#: (`tests/fixtures/backend/`, `tests/test_fallos_capturas.py`).
+PATRONES_DE_CAPACIDAD: tuple[str, ...] = (
+    # llama-swap v255 + llama-server b10909, capturado el 2026-09-15. Es el 500 que da llama-swap
+    # cuando el `llama-server` que arranca muere antes de estar listo, y es el MISMO cuerpo, byte a
+    # byte, para un OOM con la política «Prefer No Sysmem Fallback» y para un modelo que no existe.
+    "upstream command exited prematurely",
+)
 
 
 @dataclass(frozen=True)
@@ -161,12 +165,18 @@ def _clasificar_cuerpo(datos: dict) -> Clase | None:
         return Clase.MODELO
 
     contenido = mensaje.get("content")
-    if isinstance(contenido, str):
-        # Un contenido vacío ("") NO es un fallo: se trata como hoy. Solo cuenta el nulo o ausente.
-        return None
-
     motivo = primera.get("finish_reason")
     razonamiento = mensaje.get("reasoning_content") or ""
+    if isinstance(contenido, str):
+        # Un contenido vacío ("") NO es un fallo: se trata como hoy. Con UNA excepción, decidida por
+        # el usuario el 2026-09-15: vacío + `length` + razonamiento es la forma REAL en que
+        # llama-server b10909 devuelve un razonamiento que agotó `max_tokens` (capturado; no llega
+        # como `null`). Sin esta rama la clase de configuración no saltaba nunca contra el backend
+        # real y la respuesta vacía llegaba como éxito.
+        if not contenido.strip() and motivo == "length" and razonamiento.strip():
+            return Clase.CONFIGURACION
+        return None
+
     if motivo == "length":
         # El modelo se gastó `max_tokens` pensando y no llegó a contestar. Es configuración, no
         # avería: taparlo con un respaldo haría que nadie lo arreglara nunca.

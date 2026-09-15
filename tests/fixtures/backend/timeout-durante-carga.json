@@ -1,0 +1,84 @@
+{
+  "caso": "timeout-durante-carga",
+  "capturado_utc": "2026-09-15T15:22:51Z",
+  "versiones": {
+    "llama-swap": "v255 (7761aa1)",
+    "llama-server": "b10909 (a2878d30d)"
+  },
+  "via": "llama-swap",
+  "clase_esperada": "capacidad_o_carga",
+  "vram_reposo_mib": "673",
+  "peticion": {
+    "model": "cap-carga-lenta",
+    "max_tokens": 16,
+    "timeout_s": 3
+  },
+  "excepcion": {
+    "tipo": "ReadTimeout",
+    "mensaje": "timed out"
+  },
+  "elapsed_s": 3.02,
+  "running_al_terminar": {
+    "running": [
+      {
+        "model": "cap-carga-lenta",
+        "state": "starting",
+        "cmd": "<LLMS>\\llamacpp-b10909\\llama-server.exe --port 5800 --host 127.0.0.1 --fit off -ngl 99 -np 1 --load-mode none -ncmoe 8 --model <LLMS>\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf --ctx-size 7168 --reasoning off",
+        "proxy": "http://localhost:5800",
+        "ttl": 0,
+        "name": "",
+        "description": ""
+      }
+    ]
+  },
+  "muestras_running": [
+    {
+      "t_s": 0.0,
+      "running": {
+        "running": [
+          {
+            "model": "cap-carga-lenta",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909\\llama-server.exe --port 5800 --host 127.0.0.1 --fit off -ngl 99 -np 1 --load-mode none -ncmoe 8 --model <LLMS>\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf --ctx-size 7168 --reasoning off",
+            "proxy": "http://localhost:5800",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 1.0,
+      "running": {
+        "running": [
+          {
+            "model": "cap-carga-lenta",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909\\llama-server.exe --port 5800 --host 127.0.0.1 --fit off -ngl 99 -np 1 --load-mode none -ncmoe 8 --model <LLMS>\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf --ctx-size 7168 --reasoning off",
+            "proxy": "http://localhost:5800",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "t_s": 2.0,
+      "running": {
+        "running": [
+          {
+            "model": "cap-carga-lenta",
+            "state": "starting",
+            "cmd": "<LLMS>\\llamacpp-b10909\\llama-server.exe --port 5800 --host 127.0.0.1 --fit off -ngl 99 -np 1 --load-mode none -ncmoe 8 --model <LLMS>\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf --ctx-size 7168 --reasoning off",
+            "proxy": "http://localhost:5800",
+            "ttl": 0,
+            "name": "",
+            "description": ""
+          }
+        ]
+      }
+    }
+  ]
+}

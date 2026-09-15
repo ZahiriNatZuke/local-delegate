@@ -1,0 +1,56 @@
+# llama-swap de CAPTURAS para F3 tarea 23 (REQ-020). Produccion no se toca: puerto y config propios.
+# Se lanza con el daemon y el llama-swap de produccion PARADOS (su residente ocuparia VRAM):
+#   D:\Projects\llms\llama-swap-v255\llama-swap.exe --config <este fichero> --listen 127.0.0.1:9595
+#
+# Mismas versiones que produccion tras la tarea 22 (b10909, v255). Sin `apiKeys`: escucha solo en
+# loopback y las capturas no deben llevar ninguna cabecera de autorizacion.
+#
+# Dos ejecutables del MISMO build: el perfil «Prefer No Sysmem Fallback» actua por RUTA, no por nombre
+# (medido el 2026-09-15: con el perfil en llamacpp-b10909, el llama-server.exe de llamacpp desbordaba),
+# asi que la copia en llamacpp-b10909-sin-perfil es b10909 sin la politica. Se comprueba por su efecto
+# antes de capturar.
+# Sin `groups`: un solo llama-server vivo cada vez.
+
+macros:
+  con-perfil: >-
+    D:\Projects\llms\llamacpp-b10909\llama-server.exe --port ${PORT} --host 127.0.0.1
+    --fit off -ngl 99 -np 1
+  sin-perfil: >-
+    D:\Projects\llms\llamacpp-b10909-sin-perfil\llama-server.exe --port ${PORT} --host 127.0.0.1
+    --fit off -ngl 99 -np 1
+
+models:
+  # OOM con la politica: la carga de CP-1 (14B, 65 536 con KV f16, ~21 GB). Clase esperada: CAPACIDAD.
+  cap-oom-con-perfil:
+    cmd: >-
+      ${con-perfil}
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 65536 --cache-type-k f16 --cache-type-v f16
+  # La misma carga sin la politica: desborda a RAM. Clase esperada: TIMEOUT_LECTURA con el modelo ya
+  # cargado, si el timeout del cliente cae despues de la carga; si no se consigue, «no capturado».
+  cap-oom-sin-perfil:
+    cmd: >-
+      ${sin-perfil}
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 65536 --cache-type-k f16 --cache-type-v f16
+  # Error de carga: el modelo no existe. Clase esperada: CAPACIDAD.
+  cap-error-carga:
+    cmd: >-
+      ${con-perfil}
+      --model D:\Projects\llms\models\no-existe\no-existe.gguf
+      --ctx-size 4096
+  # Carga lenta: el MoE que mas tarda en montarse, con `--load-mode none` (lee el fichero entero).
+  # Sirve para la peticion durante la carga y para el timeout durante la carga. Clase esperada:
+  # CAPACIDAD.
+  cap-carga-lenta:
+    cmd: >-
+      ${con-perfil} --load-mode none -ncmoe 8
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 7168 --reasoning off
+  # Razonamiento que agota max_tokens: el candidato de long CON razonamiento (su defecto).
+  # Clase esperada: CONFIGURACION.
+  cap-razonamiento:
+    cmd: >-
+      ${con-perfil} -ncmoe 0
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 8192
