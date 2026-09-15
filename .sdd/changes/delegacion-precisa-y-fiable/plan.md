@@ -849,6 +849,12 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       `ruff` y CI entero (incluidos los checks que no son workflows); `personal-security-check`.
     - Rollback or recovery: `LOCAL_DELEGATE_*` de apagado en el bloque `env` del lanzador del daemon,
       sin reinstalar.
+    - Desvio (2026-09-15, confirmado por el usuario): al escribir el criterio de P-4 salio que
+      **ninguna tarea produce los episodios** —entradas, reentradas y como sale la primera llamada
+      tras vencer—: `enfriamiento.json` solo guarda el presente y el log tiene un evento por
+      operacion. La tarea suma `enfriamiento.py` (lineas en `LOG_DIR/enfriamiento-eventos.jsonl` en
+      cada transicion), `tests/test_enfriamiento.py` y `scripts/medir_enfriamiento.py`, antes de
+      instalar `main` en el daemon. Criterio en `verification.md`, «Criterio de P-4».
 
 **P-16, resuelta por el usuario (2026-09-15): los defectos del paquete pasan a los ganadores de F2.**
 Contexto de la pregunta: los defectos de `config.py`

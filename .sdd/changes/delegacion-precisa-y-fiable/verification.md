@@ -1159,3 +1159,158 @@ catalogo).
 
 El superviviente no era equivalente: una operacion por trozos que salta y despues falla escribe
 `fallback_class` **y** `error_class`, y en ese caso el orden decide la causa que ve el panel.
+
+## Criterio de P-4: los numeros del enfriamiento (tarea 30)
+
+**Escrito el 2026-09-15, con el daemon todavia en el codigo de la tarea 24**, es decir, sin respaldo
+ni enfriamiento en produccion. Va antes de instalar `main` por la misma razon que el criterio de
+REQ-F1-12: un criterio decidido despues siempre encuentra la forma de leer el dato como un exito.
+Los numeros que se juzgan son los defectos de `config.py`: **N = 3** fallos seguidos, **T = 120 s**,
+la espera **se duplica** en cada reentrada y el **tope es Tmax = 900 s**.
+
+### Lo que el log ya dice, antes de encender
+
+Todo el historico de `usage-*.jsonl` de esta PC (julio a septiembre de 2026): **158 eventos y 10 con
+error**: 5 `http_401`, 3 `http_400` y 2 `http_500`. Con la tabla de F3, los 401 y 400 son de la
+peticion y no cuentan; solo los dos 500 habrian sumado, y ningun timeout. **Con esa tasa no se
+espera ni una entrada en enfriamiento en una semana**, porque entrar exige tres fallos seguidos del
+mismo modelo. Se escribe aqui para que el resultado mas probable, «no concluyente», no se lea
+despues como «los defectos funcionan». Matiz: esos fallos son de modelos que F2 retiro
+(`llama31-8b`, `gemma3-4b`, `qwen25-coder-14b`), asi que la tasa del catalogo nuevo es otra y esta
+sin medir.
+
+### Que se cuenta, y que tarea lo produce
+
+Un control que consume un dato que nadie produce no es un control. Cada fila nombra su productor.
+
+| Medida | De donde sale | Quien lo produce |
+| --- | --- | --- |
+| **Delegaciones** (denominador) | eventos `local_*` del log con `ts` dentro de la ventana | ya existe |
+| **Fallos que cuentan** | eventos con `error_class` `modelo` o `timeout_lectura`, y saltos con `fallback_class` `modelo` (fallo el pedido) | tarea 29 |
+| **Saltos por clase** | `fallback_class`: `modelo`, `capacidad_o_carga`, `enfriamiento` | tarea 29 |
+| **Fallos al momento** | eventos con `error: "cooldown"` (no quedaba candidato, REQ-009) | tarea 28 |
+| **Operaciones desviadas por un episodio** | saltos `enfriamiento` + fallos `cooldown` del modelo mientras estaba enfriado | tareas 28 y 29 |
+| **Episodios**: entradas, reentradas, y si la primera llamada tras vencer salio bien o reentro | **nadie hoy** | **tarea 30, parte nueva** (ver abajo) |
+
+**El hueco de la ultima fila.** `enfriamiento.json` solo guarda el presente y el primer exito borra
+la entrada, asi que al cerrar la ventana no queda rastro de cuantas veces entro un modelo ni de como
+salio. Y el log de uso no lo puede reconstruir: guarda **un evento por operacion**, de modo que no
+ve el fallo del segundo salto ni los de los trozos despues del primero; los «fallos que cuentan» de
+la tabla son un **minimo**, no el total. Productor propuesto: `Estado` anade una linea a
+`LOG_DIR/enfriamiento-eventos.jsonl` en cada transicion (`entra`, `reentra`, `limpia` cuando el
+exito llega a un modelo que estuvo enfriado), con modelo, hora, reentradas y espera, bajo el mismo
+bloqueo y con la misma regla de privacidad del fichero de estado. Con su test, un control positivo
+que provoque las tres transiciones y el test de privacidad. **Confirmado por el usuario
+(2026-09-15): amplia el alcance de la tarea 30**, que en el plan solo tocaba documentacion, y va
+antes de instalar `main` en el daemon. Sin ese productor, este criterio no se podria calcular y la
+ventana solo podria dar «no concluyente».
+
+El conteo lo hace un programa (`scripts/medir_enfriamiento.py --desde <fecha>`), no un recuento a
+mano: es lo que dejo sin responder las cuatro primeras mediciones de adopcion.
+
+### Ventana
+
+- **Empieza** el dia en que `local_status` del daemon muestre `main` con respaldo y enfriamiento
+  encendidos. La fecha se anota aqui al instalar. Solo cuenta esta PC: la Mac comparte el backend
+  pero no el estado (REQ-012 es por maquina) y sigue con la 0.27.0 hasta la release.
+- **Dura 14 dias naturales.** Si al cerrarlos no se llega al minimo, el resultado es «no
+  concluyente» y la medicion se repite, acumulada desde el mismo inicio, a los **30 y a los 90
+  dias**. Si a los 90 sigue sin minimo, **P-4 se cierra como no concluyente por falta de fallos**:
+  los defectos se quedan y la documentacion dice que no estan medidos. No se alarga sin fin: con la
+  tasa de arriba, «hasta llegar» podria no llegar nunca.
+- **Se excluyen**: el tramo de la verificacion con fallo provocado de esta misma tarea (se anota su
+  hora de inicio y de fin), cualquier tramo de benchmark, y los eventos de procesos que no lleven los
+  campos de la tarea 29. Las llamadas con `model` explicito (REQ-005) **no se pueden separar en el
+  log de uso**, que no las marca; si en el de episodios, que es donde importan: un fallo durante el
+  enfriamiento no abre ni alarga un episodio, y un exito antes de vencer se escribe con
+  `tras_vencer: false` y no cuenta como recuperacion.
+
+### Minimo para concluir
+
+**5 episodios** (entradas en enfriamiento) **y 10 fallos que cuentan** dentro de la ventana
+acumulada. Con menos de 5 episodios, una sola tarde con un modelo roto decide el resultado.
+
+### Que numero obliga a cambiar los defectos
+
+Por episodio se mira como termino: **se recupero** (la primera llamada tras vencer salio bien) o
+**reentro** (la primera llamada que cuenta tras vencer volvio a fallar). **R** es la fraccion de
+episodios que reentraron al menos una vez, **sobre los de desenlace conocido**: los que reentraron
+o se recuperaron tras vencer. Un episodio abierto al cerrar la ventana, o limpiado por un exito con
+`model` explicito antes de vencer, no dice si el modelo se habria recuperado y no entra en R (si
+cuenta para el minimo de episodios).
+
+| Orden | Regla | Que dice | Que se cambia |
+| --- | --- | --- | --- |
+| 1 | **R > 60 %** | el modelo seguia roto al vencer: T es corto | T pasa a 240 s |
+| 2 | **Al menos la mitad de los episodios la abren fallos `timeout_lectura`** | cada uno ya costo `LOCAL_DELEGATE_TIMEOUT` antes de entrar (D-2): N es alto para los timeouts | N pasa a 2 |
+| 3 | **R < 20 % y 3 o mas operaciones desviadas de media por episodio** | el modelo ya estaba bien y se pago desviando trabajo: enfria de mas | T pasa a 60 s |
+| 4 | **Algun episodio llega a Tmax y vuelve a reentrar** | el tope se queda corto para un modelo que no se arregla solo | Tmax pasa a 1800 s |
+
+**Precedencia**: se aplica **solo la primera regla que se cumpla**, en ese orden, y las demas se
+anotan para la ventana siguiente. Se toca un numero por ventana porque dos cambios a la vez no
+dejan saber cual movio el resultado. Las reglas 1 y 3 no pueden cumplirse juntas (R no puede ser a
+la vez mayor del 60 % y menor del 20 %), y cada una cambia un numero distinto, asi que el orden
+basta para que el criterio sea ejecutable. Un cambio de defecto es una release aparte con su
+CHANGELOG y abre una ventana nueva con este mismo criterio.
+
+### Los tres resultados
+
+- **Cambiar**: minimo alcanzado y se cumple una regla. Se cambia ese numero y nada mas.
+- **Se quedan**: minimo alcanzado y no se cumple ninguna. Los defectos quedan **validados para esta
+  maquina y este catalogo**, y asi se escribe.
+- **No concluyente**: no se llega al minimo. No valida ni retira nada: los defectos siguen como
+  defecto configurable y sin medir.
+
+### Lo que NO se va a concluir
+
+- Que los numeros estan bien porque la ventana no tuvo problemas. Una ventana sin enfriamientos no
+  mide nada: es «no concluyente», no «se quedan».
+- Que los numeros estan bien porque la verificacion con fallo provocado paso. Esa prueba demuestra
+  que el mecanismo salta, avisa y registra; los numeros los decide un fallo que nadie provoco.
+- Nada sobre otras maquinas ni sobre otro backend: sin llama-swap no hay senal de carga (D-2) y los
+  timeouts se clasifican de otra forma.
+- **Fuera de P-4**: si los fallos al momento superan el 5 % de las delegaciones, el problema no son
+  los numeros sino que falta candidato (vision no tiene cadena). Eso abre una pregunta sobre las
+  cadenas, no cambia N, T ni Tmax.
+
+### El productor de los episodios, y el script que aplica el criterio (2026-09-15)
+
+Rama `sdd/f3-t30-activacion`, sin instalar todavia en el daemon.
+
+- **`enfriamiento.py`**: `entra` y `reentra` con la clase del fallo que los dispara; `limpia` con
+  `tras_vencer` cuando el exito llega a un modelo que llego a enfriarse; nada por los fallos por
+  debajo de N, ni por los que llegan en pleno enfriamiento, ni por el exito de un modelo con fallos
+  sueltos. Las lineas se escriben **bajo el mismo bloqueo** que el estado, para que su orden sea el
+  del estado, y un error de disco en el registro no deshace el estado ya escrito.
+- **`scripts/medir_enfriamiento.py`**: importa `CLASES_QUE_CUENTAN` y `FICHERO_EVENTOS` del paquete
+  y `directorio_de_logs()` de `medir_adopcion.py`, que se saco a funcion para no tener dos copias de
+  la ruta. Test de ida y vuelta: los eventos que escribe `Estado` son los que el script agrupa.
+
+Rojo antes de implementar: los 10 tests nuevos de `test_enfriamiento.py` fallaron, y los 20 de
+antes pasaron. Pero fallaron por `AttributeError` (el nombre no existia), que no dice nada del
+comportamiento; eso lo dicen los mutantes.
+
+| Mutante | Cae en |
+| --- | --- |
+| sin evento `limpia` | recuperado, exito antes de vencer, dos procesos, privacidad |
+| `tras_vencer` siempre verdadero | exito antes de vencer |
+| sin evento `reentra` | reentrar, privacidad, ida y vuelta |
+| clase fija `modelo` | entrar con su clase, ida y vuelta |
+| `_mutar` sin eventos | los ocho tests de eventos |
+| regla 1 con `>=` | el borde de R en 60 % |
+| **regla 2 con `>`** | **sobrevivio**; con seis episodios y tres por timeout, cae en el borde de la mitad exacta |
+| regla 3 con `>` | enfria de mas (15 desviadas en 5 episodios, el borde) |
+| regla 4 con un solo Tmax | llega a Tmax y se recupera |
+| R sobre todos los episodios | R sin desenlace conocido |
+| precedencia invertida | primera regla y anotadas |
+| minimo con `and` | cuatro episodios, nueve fallos, tramo excluido |
+| exito explicito como recuperado | R sin desenlace conocido |
+| sin saltos `modelo` en los fallos | fallos de la tabla |
+| la exclusion no quita episodios | tramo excluido |
+
+Los 15 comprobados como mutantes de verdad: el runner cuenta las sustituciones antes de correr. El
+superviviente no era equivalente: con cinco episodios, «la mitad» no es un numero entero, asi que
+`>=` y `>` no se distinguian.
+
+Suite: 1278 passed, 2 skipped. `ruff check` y `ruff format --check` limpios en lo versionado; los
+tres avisos de ruff son de `benchmarks/catalogo-2026-09/resultados/`, que no se versiona.
