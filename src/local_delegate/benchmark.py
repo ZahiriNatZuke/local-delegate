@@ -663,7 +663,8 @@ class TypeperfStream:
     Vive mientras el PID no cambie: arrancar `typeperf` cuesta 1,4-2,8 s hasta la cabecera, asi
     que la lectura «sincrona» de VRAM es la ultima muestra del flujo, no un typeperf nuevo. Y un
     typeperf ya arrancado no ve instancias creadas despues (cabecera fija): al cambiar el PID hay
-    que relanzarlo.
+    que relanzarlo. Y tambien con el MISMO PID si la cabecera llego sin su instancia
+    (`missing_instance`): pasa si typeperf arranca antes de que el proceso cree su contexto CUDA.
     """
 
     def __init__(
@@ -678,6 +679,7 @@ class TypeperfStream:
         self.pid = pid
         self.luid = luid
         self.process_gone = False
+        self.missing_instance = False
         self._clock = clock
         self._lock = threading.Lock()
         self._latest: VramReading | None = None
@@ -712,6 +714,9 @@ class TypeperfStream:
         for line in stdout:
             if columns is None:
                 columns = parse_typeperf_header(line, self.pid, self.luid)
+                if columns == {}:
+                    # Cabecera sin la instancia del PID: este flujo ya no dara ninguna muestra.
+                    self.missing_instance = True
                 continue
             reading = parse_typeperf_sample(line, columns)
             if reading is None:
@@ -761,6 +766,8 @@ class ProcessProbe:
         read_memory: Callable[[int], tuple[int, int] | None] = read_process_memory,
         stream_factory: Callable[[int, str], Any] = TypeperfStream,
         vram_max_age: float = 2.5,
+        clock: Callable[[], float] = time.monotonic,
+        relaunch_after: float = 3.0,
     ) -> None:
         self.process_name = process_name
         self.gpu_luid = gpu_luid
@@ -769,6 +776,10 @@ class ProcessProbe:
         self._read_memory = read_memory
         self._stream_factory = stream_factory
         self._vram_max_age = vram_max_age
+        self._clock = clock
+        # typeperf tarda 1,4-2,8 s en dar la cabecera: relanzarlo en cada muestra no la veria nunca.
+        self._relaunch_after = relaunch_after
+        self._stream_started_at = 0.0
         self._pid: int | None = None
         self._stream: Any = None
 
@@ -780,6 +791,7 @@ class ProcessProbe:
         if pid is not None and self.gpu_luid:
             try:
                 self._stream = self._stream_factory(pid, self.gpu_luid)
+                self._stream_started_at = self._clock()
             except OSError as exc:
                 # Sin typeperf no hay VRAM, y la corrida acaba con cero muestras de VRAM y anulada:
                 # visible en el JSONL, en vez de un traceback a mitad de tanda.
@@ -796,6 +808,15 @@ class ProcessProbe:
             return ResourceSample(None, reason="no_process")
         pid = pids[0]
         if pid != self._pid:
+            self._switch(pid)
+        elif (
+            self._stream is not None
+            and getattr(self._stream, "missing_instance", False)
+            and self._clock() - self._stream_started_at >= self._relaunch_after
+        ):
+            # Tercer piloto de CP-3: el flujo del 2B arranco antes de que llama-server creara su
+            # contexto CUDA, y como el PID no cambio en todo el bloque, 120 intentos se anularon
+            # con cero muestras de VRAM. Con el mismo PID, se relanza.
             self._switch(pid)
         memory = self._read_memory(pid)
         vram = self._stream.latest(self._vram_max_age) if self._stream is not None else None

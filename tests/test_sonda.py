@@ -149,6 +149,7 @@ class _FakeStream:
         self.luid = luid
         self.reading = benchmark.VramReading(4 * MIB, 1 * MIB)
         self.closed = False
+        self.missing_instance = False
 
     def latest(self, max_age):
         return self.reading
@@ -198,6 +199,47 @@ def test_cambio_de_pid_relanza_el_flujo_con_el_pid_nuevo():
     probe.sample()
     assert [s.pid for s in streams] == [40160, 31776]
     assert streams[0].closed and not streams[1].closed
+
+
+def test_cabecera_sin_la_instancia_del_pid_marca_el_flujo():
+    sin_instancia, _ = _stream([HEADER, ROW], pid=9999)
+    assert sin_instancia.missing_instance is True
+    assert sin_instancia.latest(max_age=2.5) is None
+    con_instancia, _ = _stream([HEADER, ROW])
+    assert con_instancia.missing_instance is False
+
+
+def test_flujo_sin_la_instancia_se_relanza_con_el_mismo_pid_pero_no_en_bucle():
+    # Tercer piloto de CP-3: typeperf arranco antes de que llama-server creara su contexto CUDA, la
+    # cabecera salio sin su instancia y, como el PID no cambio, el 2B anulo 120 intentos.
+    reloj = [0.0]
+    flujos = []
+
+    def factory(pid, luid):
+        flujo = _FakeStream(pid, luid)
+        flujo.missing_instance = not flujos  # solo el primero nace sin la instancia
+        if flujo.missing_instance:
+            flujo.reading = None
+        flujos.append(flujo)
+        return flujo
+
+    probe = benchmark.ProcessProbe(
+        "llama-server.exe",
+        NVIDIA,
+        find=lambda _name: [40160],
+        read_memory=lambda _pid: (1, 2),
+        stream_factory=factory,
+        clock=lambda: reloj[0],
+    )
+    assert probe.sample().vram_dedicated_bytes is None
+    reloj[0] = 1.0
+    probe.sample()
+    assert len(flujos) == 1  # antes de 3 s no: typeperf aun no habria dado la cabecera
+    reloj[0] = 5.0
+    sample = probe.sample()
+    assert [f.pid for f in flujos] == [40160, 40160]
+    assert flujos[0].closed and not flujos[1].closed
+    assert sample.vram_dedicated_bytes == 4 * MIB
 
 
 def test_sin_acceso_al_proceso_da_sin_muestra_de_ram():
