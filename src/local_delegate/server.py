@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, clients, config, estado_json, fallos, preguntas
+from . import autostart, cadenas, clients, config, estado_json, fallos, preguntas
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -2328,7 +2328,7 @@ def _llamaswap_groups() -> str | None:
     config.yaml con 'groups:'. Nunca rompe local_status: cualquier fallo (extra ausente,
     archivo inexistente, YAML inválido) devuelve None y la línea simplemente no aparece.
     """
-    cfg_path = os.environ.get("LLAMASWAP_CONFIG")
+    cfg_path = config.llamaswap_config_path()
     if not cfg_path:
         return None
     try:
@@ -2427,6 +2427,7 @@ def local_status() -> str:
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
+    lines.extend(cadenas.describir())
     lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
 
     current_log = _current_log_path()

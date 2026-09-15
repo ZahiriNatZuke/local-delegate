@@ -251,6 +251,44 @@ COOLDOWN_S = max(1.0, _env_float("LOCAL_DELEGATE_COOLDOWN_S", 120.0))
 COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900.0))
 
 
+# --- Respaldo entre modelos (F3: REQ-002, REQ-004, REQ-014) ------------------
+# Encendido por defecto (D-1), hasta 2 saltos (D-3). La cadena de cada rol la resuelve `cadenas.py`
+# con la configuración vigente.
+FALLBACK = _env_flag("LOCAL_DELEGATE_FALLBACK", True)
+FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
+#: Cadena sobrescrita por rol: `None` es la de la spec; `""` o `none` desactivan el respaldo de ese
+#: rol; si no, roles (`mechanical`, `long`, `code`, `fast`, `residente`) o ids separados por comas.
+FALLBACK_CHAINS: dict[str, str | None] = {
+    rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}")
+    for rol in ("mechanical", "long", "code", "fast")
+}
+
+
+# --- llama-swap: autoarranque, doctor y residente -----------------------------
+# Se leen al LLAMAR y no al importar, como siempre se leyeron: el autoarranque y los tests las fijan
+# en caliente. Antes las leían `autostart.py`, `doctor.py` y `server.py` con `os.environ` directo,
+# fuera del inventario de abajo, y por esa rendija la suite heredaba el entorno de la máquina.
+def llamaswap_config_path() -> str:
+    return (_leer("LLAMASWAP_CONFIG") or "").strip()
+
+
+def llamaswap_exe() -> str:
+    return (_leer("LLAMASWAP_EXE") or "").strip()
+
+
+def llamaswap_listen() -> str:
+    return _env("LLAMASWAP_LISTEN", "127.0.0.1:9292")
+
+
+def llamaswap_watch_config() -> bool:
+    return _env_flag("LLAMASWAP_WATCH_CONFIG", False)
+
+
+# Una lectura al importar, solo para que los cuatro nombres entren en `VARIABLES_DE_ENTORNO`.
+for _lectura in (llamaswap_config_path, llamaswap_exe, llamaswap_listen, llamaswap_watch_config):
+    _lectura()
+
+
 # --- Chunking de salida (local_translate / local_delegate) -------------------
 # Las tools que TRANSFORMAN el texto completo (traducir, reescribir) producen una salida tan
 # larga como la entrada, así que una sola llamada choca contra max_tokens y devuelve el

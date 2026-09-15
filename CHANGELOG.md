@@ -7,6 +7,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Cadenas de respaldo por rol, visibles antes de que el salto exista.** Cada rol tiene una lista
+  ordenada de modelos a los que saltar cuando el suyo falla, declarada **por rol** y resuelta con la
+  configuración vigente: código → residente → largo, largo → residente → código, mecánico → largo,
+  visión sin respaldo. El residente es el modelo del grupo `persistent` de llama-swap, que ya está en
+  memoria; si esa configuración no se puede leer, el del rol mecánico. Se sobrescriben con
+  `LOCAL_DELEGATE_FALLBACK_<ROL>` (roles o ids separados por comas; `none` desactiva, porque en
+  Windows una variable vacía no existe). `local_status` muestra cómo quedan, y `local-delegate
+  doctor` suma una comprobación que avisa si una cadena nombra algo que no está en el catálogo.
+  **Todavía no hay salto**: llega en una versión posterior.
+
+- **Enfriamiento por modelo, compartido entre procesos.** Un modelo que falla tres veces seguidas
+  por su culpa deja de recibir peticiones durante 120 s; al vencer, un éxito lo deja limpio y un
+  solo fallo lo vuelve a enfriar con la espera doblada, hasta 900 s. El estado lo comparten el daemon
+  y los procesos stdio (`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio; si no se
+  puede leer, se sigue sin enfriamiento. Configurable con `LOCAL_DELEGATE_COOLDOWN`, `_FAILURES`, `_S`
+  y `_MAX_S`. Como las cadenas, todavía no lo consulta ninguna tool.
+
+- **`LLAMASWAP_CONFIG`, `LLAMASWAP_EXE`, `LLAMASWAP_LISTEN` y `LLAMASWAP_WATCH_CONFIG` pasan por el
+  inventario de variables.** Tres módulos las leían del entorno por su cuenta, y por ahí la suite
+  heredaba la configuración de la máquina que la corría.
+
 - **`local-delegate benchmark` mide la memoria del proceso, y no la del sistema**
   (`--probe-process`, `--gpu-luid`, solo Windows). El canary de julio descartó un modelo midiendo
   la RAM de toda la máquina, que daba 27-29 GiB con el modelo entero en GPU. La sonda lee por
@@ -109,6 +130,12 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   llama-server b10909 no lo devuelve así: capturado contra el backend real, llega `content: ""` con
   `finish_reason: length` y el razonamiento lleno. Ahora un contenido vacío con esas dos señales es
   un fallo de configuración con su mensaje; cualquier otro `""` se sigue tratando como antes.
+
+- **Dos roles sobre el mismo modelo se rebajaban el tope de entrada el uno al otro.** El tope se
+  guardaba por nombre de modelo, y el último rol del literal pisaba al resto sin avisar: con
+  `LOCAL_DELEGATE_MODEL_CODE` igual al modelo largo, un resumen de 30 000 caracteres se hacía en tres
+  llamadas en vez de una y `local_translate` recortaba el texto a 20 000. Ahora el tope es **del
+  rol**, y cada tool usa el de su rol. Las variables `LOCAL_DELEGATE_MAX_CHARS_*` no cambian.
 
 ### Changed
 - **La clasificación de fallos reconoce las cargas fallidas de verdad, y sabe si el modelo se estaba

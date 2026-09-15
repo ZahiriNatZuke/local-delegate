@@ -41,6 +41,36 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
 
 
+@pytest.fixture
+def recargar_config(tmp_path):
+    """Recarga `config` con variables de entorno REALES, y lo deja todo como estaba al terminar.
+
+    Hace falta cuando lo que se prueba depende de lo que `config` calcula al importar: parchear una
+    constante en caliente no recalcula lo que se derivó de ella, y el test saldría verde con el
+    defecto vivo (F3, tarea 25). Apunta el backend a `http://test-backend/v1`.
+
+    La recarga deshace el aislamiento de logs de `isolate_runtime_logs` (`LOG_DIR` y `USAGE_LOG`
+    volverían a las rutas reales del usuario), así que se vuelve a aplicar después de cada recarga.
+    """
+    mp = pytest.MonkeyPatch()
+
+    def aislar_logs() -> None:
+        config.LOG_DIR = tmp_path
+        config.USAGE_LOG = tmp_path / "usage.jsonl"
+
+    def aplicar(**variables: str) -> None:
+        mp.setenv("LOCAL_DELEGATE_BASE_URL", "http://test-backend/v1")
+        for nombre, valor in variables.items():
+            mp.setenv(nombre, valor)
+        importlib.reload(config)
+        aislar_logs()
+
+    yield aplicar
+    mp.undo()
+    importlib.reload(config)
+    aislar_logs()
+
+
 # --- HOME simulado, compartido por test_checks.py y test_doctor.py ------------
 def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complete=True) -> Path:
     """Arma un HOME de mentira. Con ``complete=False`` los clientes existen pero vacíos.

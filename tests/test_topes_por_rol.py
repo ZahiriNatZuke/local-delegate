@@ -12,42 +12,15 @@ Por eso el fixture recarga el módulo con las variables de verdad.
 
 from __future__ import annotations
 
-import importlib
-
 import backend_mock
 import httpx2
-import pytest
 
 from local_delegate import config, server
 
 URL_CHAT = "http://test-backend/v1/chat/completions"
 MODELO_LARGO = "llama31-8b"  # el defecto de MODEL_LONG
 
-
-@pytest.fixture
-def recargar_config(tmp_path):
-    """Recarga `config` con variables reales, y lo deja todo como estaba al terminar.
-
-    La recarga deshace el aislamiento de logs de `conftest` (`LOG_DIR` y `USAGE_LOG` volverían a
-    las rutas reales del usuario), así que se vuelve a aplicar después de cada recarga.
-    """
-    mp = pytest.MonkeyPatch()
-
-    def aislar_logs() -> None:
-        config.LOG_DIR = tmp_path
-        config.USAGE_LOG = tmp_path / "usage.jsonl"
-
-    def aplicar(**variables: str) -> None:
-        mp.setenv("LOCAL_DELEGATE_BASE_URL", "http://test-backend/v1")
-        for nombre, valor in variables.items():
-            mp.setenv(nombre, valor)
-        importlib.reload(config)
-        aislar_logs()
-
-    yield aplicar
-    mp.undo()
-    importlib.reload(config)
-    aislar_logs()
+# El fixture `recargar_config` vive en `conftest.py`: lo comparten estos tests y los de las cadenas.
 
 
 def _respuesta(contenido: str) -> httpx2.Response:

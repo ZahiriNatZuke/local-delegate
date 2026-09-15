@@ -46,6 +46,32 @@ Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los
 > tope de entrada**: con `LONG` y `CODE` en el mismo modelo, un resumen largo sigue usando los 48 000
 > chars del rol largo. Antes el tope se guardaba por nombre de modelo y el último rol pisaba al otro.
 
+## Respaldo entre modelos
+
+Cuando el modelo de un rol falla por culpa del propio modelo, la delegación puede saltar a otro. Las
+cadenas se declaran **por rol**, no por nombre de modelo, así que siguen valiendo si cambias los
+modelos por defecto. `local_status` muestra cómo quedan resueltas y `local-delegate doctor` avisa si
+una variable nombra algo que no existe.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_FALLBACK` | `1` | `0` lo apaga |
+| `LOCAL_DELEGATE_FALLBACK_MAX_HOPS` | `2` | saltos máximos por llamada |
+| `LOCAL_DELEGATE_FALLBACK_CODE` | `residente,long` | cadena del rol de código |
+| `LOCAL_DELEGATE_FALLBACK_LONG` | `residente,code` | cadena del rol largo |
+| `LOCAL_DELEGATE_FALLBACK_MECHANICAL` | `long` | cadena del rol mecánico |
+| `LOCAL_DELEGATE_FALLBACK_FAST` | `residente,long` | cadena del rol rápido (hoy ninguna tool enruta a él) |
+
+> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`, `fast`, `residente`) o ids del
+> catálogo, separados por comas y en orden. Lo repetido y el propio modelo del rol se quitan solos;
+> lo que no sea ni rol ni modelo del catálogo se ignora. **`none` desactiva** el respaldo de ese rol:
+> una variable vacía también, pero en Windows fijarla a vacío la borra y el rol volvería a su cadena
+> por defecto. Visión no tiene respaldo.
+>
+> **El residente** es el modelo del grupo `persistent` de tu `config.yaml` de llama-swap
+> (`LLAMASWAP_CONFIG`, necesita el extra `pyyaml`), que ya está en memoria y no obliga a cargar nada.
+> Si no se puede leer, es el del rol mecánico.
+
 ## Enfriamiento por modelo
 
 Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo

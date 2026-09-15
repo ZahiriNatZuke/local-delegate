@@ -665,6 +665,13 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       candidato de respaldo se valida contra el minimo. Mutante: el principal usando el minimo, que
       tiene que caer en el test de `local_summarize` por el numero de trozos.
     - Rollback or recovery: cambio interno sin superficie publicada.
+    - Estado (2026-09-15): **hecha** (commit `39c63cd`). Lo que obligo a cambiar: la colision solo
+      existe si las variables estan puestas **al importar** `config` —parchear `MODEL_CODE` en
+      caliente no reconstruia el dict y el test salia verde con el defecto vivo—, asi que los tests
+      recargan `config` con variables reales (fixture `recargar_config`, en `conftest.py`). Rojo de
+      comportamiento: 3 y 5 llamadas en vez de 1, la traduccion sin su final, la extraccion avisando
+      de 20 027 de 30 000. `_chat_map_reduce` recibe el tope explicito; el parche sin limite del
+      corpus cubre los dos topes.
 
 26. **Estado de enfriamiento compartido**
     - Files or modules: `src/local_delegate/enfriamiento.py` (nuevo, puro salvo el fichero),
@@ -685,6 +692,13 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       `CONFIGURACION` se tratan como las clases neutras de REQ-011 —ni suman ni ponen a cero—, porque
       no dicen nada de si el modelo responde bien; con su test.
     - Rollback or recovery: modulo sin consumidores hasta la 28; borrar el fichero es seguro.
+    - Estado (2026-09-15): **hecha** (commit `e998cf4`). Nombres de las variables:
+      `LOCAL_DELEGATE_COOLDOWN`, `_FAILURES`, `_S` y `_MAX_S`. La lectura y la escritura atomica
+      pasan a `estado_json.py`, compartidas con `inflight.json` (con alias en `server.py`). Decision
+      que la spec no fijaba: un fallo con el enfriamiento aun activo —solo llega con `model`
+      explicito— no dobla la espera. **Un mutante sobrevivio y destapo un defecto propio**: el
+      recorte de un vencimiento lejano se hacia contra «ahora» en cada lectura y el modelo no vencia
+      nunca; ahora el recorte se guarda, con dos tests que miran que el modelo quede libre.
 
 27. **Cadenas por rol**
     - Files or modules: `config.py` (variables de cadena, saltos maximos, apagado; `LLAMASWAP_CONFIG`
@@ -712,6 +726,14 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       resuelve a `MODEL_FAST` sin `model` explicito); el guardian de `test_aislamiento_entorno.py` ve
       las variables nuevas y ningun `os.environ` directo sobre `LLAMASWAP_CONFIG` queda fuera.
     - Rollback or recovery: sin consumidores hasta la 28.
+    - Estado (2026-09-15): **hecha**. Modulo `cadenas.py` (`resolver`, `residente`, `describir`);
+      variables `LOCAL_DELEGATE_FALLBACK`, `_MAX_HOPS` y `_FALLBACK_<ROL>`; check del doctor
+      «cadenas de respaldo» (el decimonoveno). Lo que obligo a cambiar: (1) las cuatro
+      `LLAMASWAP_*` se leian con `os.environ` en tres modulos y **al llamar** —el autoarranque y los
+      tests las fijan en caliente—, asi que pasan a funciones de `config` que leen con `_leer` y se
+      invocan una vez al importar para entrar en el inventario; (2) **en Windows una variable vacia
+      no existe**, asi que «lista vacia desactiva» no se podia expresar en el daemon real: `none`
+      tambien desactiva. `local_status` muestra el residente, su origen y las cadenas.
 
 28. **El salto, dentro de la plaza de concurrencia**
     - Files or modules: `server.py` (`_run_chat`, `_chat`, `_chat_chunked`, `_chat_map_reduce`, las

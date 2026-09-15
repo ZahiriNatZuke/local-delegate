@@ -964,6 +964,7 @@ _NUMERO = {
     16: "dieciséis",
     17: "diecisiete",
     18: "dieciocho",
+    19: "diecinueve",
 }
 
 

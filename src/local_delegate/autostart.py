@@ -14,7 +14,6 @@ Config por entorno:
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 import time
@@ -35,7 +34,7 @@ def _backend_up() -> bool:
 
 
 def _find_exe() -> str | None:
-    for cand in (os.environ.get("LLAMASWAP_EXE", ""), "llama-swap"):
+    for cand in (config.llamaswap_exe(), "llama-swap"):
         if cand and (cand == "llama-swap" or Path(cand).is_file()):
             return cand
     return None
@@ -52,13 +51,12 @@ def ensure_backend(wait: float = 0.0) -> bool:
         return True
     exe = _find_exe()
     if exe:
-        listen = os.environ.get("LLAMASWAP_LISTEN", "127.0.0.1:9292")
-        cfg = os.environ.get("LLAMASWAP_CONFIG", "")
+        listen = config.llamaswap_listen()
+        cfg = config.llamaswap_config_path()
         args = [exe]
         if cfg:
             args += ["--config", cfg]
-            watch = os.environ.get("LLAMASWAP_WATCH_CONFIG", "0").strip().lower()
-            if watch not in {"0", "false", "no", "off", ""}:
+            if config.llamaswap_watch_config():
                 args += ["-watch-config"]
         args += ["--listen", listen]
         flags = 0
