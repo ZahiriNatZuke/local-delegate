@@ -426,6 +426,49 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       elegidos sobre un motor en el que no corren.
     - Rollback or recovery: no se toca `config.py`; el catalogo vigente sigue vivo hasta que F3
       escriba las cadenas sobre los roles resultantes (REQ-F2-5).
+    - Decisiones del usuario tras la tarea 20 (2026-09-15), que sustituyen dos puntos de este texto:
+      (1) **la revision humana a ciegas de §4.8 queda cubierta por los 30 pares de P-15** (15 en
+      `long`, 15 en `code`, comprobados letra a letra); no se genera la hoja 0/1/2. (2) **Produccion
+      migra a b10909 antes de que F3 toque el catalogo**: la eleccion no se transfiere sin verificar.
+    - Dato previo, medido por ejecucion (2026-09-15 13:20-13:22 UTC, `protocolo-f2.md` §10 sesion 6):
+      **los tres candidatos cargan y generan en b9925** (`D:\Projects\llms\llamacpp`, `9925
+      ed8c26150`) con el perfil del driver de produccion activo y las configs de la tanda (`--fit off
+      -ngl 99`; b9925 no tiene `--load-mode`, asi que carga con `mmap`). Gemma 4 26B-A4B `-ncmoe 0`
+      `-c 36736`: sano en 7,7 s, VRAM 14 917 MiB, 72 tok/s. Qwen3.6-35B-A3B `-ncmoe 8` `-c 7168`: 8,1
+      s, 14 847 MiB, 58 tok/s. Gemma 4 12B con `mmproj` y `ubatch 2048`: 4,6 s, 9 549 MiB, describe la
+      imagen de control. `Shared Usage` del adaptador sube como mucho 174 MiB, bajo el umbral de 1 024.
+      Consecuencia: **la migracion no la fuerza una incompatibilidad**, la fuerza REQ-F2-6 —la calidad y
+      la velocidad se midieron sobre b10909, y en b9925 solo esta comprobado que cargan—. Por eso la
+      decision (2) se mantiene, y la tarea de migrar es de F3, antes de su primera tarea de catalogo.
+    - Asignacion de roles que escribe esta tarea en `verification.md`, con el dato de cada una:
+
+      | Rol | Modelo | Criterio | Dato |
+      | --- | --- | --- | --- |
+      | `mechanical` | `gemma3-4b` (no cambia) | empate en techo, decide la velocidad | 5 casos en 1,0 los dos; 516 contra 561 ms, dentro de la banda |
+      | `long` | **Gemma 4 26B-A4B** | calidad por pares | 15 a 0; 1,8 s contra 3,0 s; techo igual |
+      | `code` | **Qwen3.6-35B-A3B** | calidad por pares | 15 a 0; techo 157 873 contra 20 171 bytes; 4,6 s contra 9,3 s |
+      | `vision` | **Gemma 4 12B** (decision del usuario, 2026-09-15) | sin agregado; caso a caso | separa en `leer-cifras-dashboard` (1,0 contra 0,67); ver abajo |
+      | `fast` | `qwen35-2b` (no cambia, no se mide) | decidido antes de medir | 2 usos en tres meses, ninguna tool lo enruta |
+
+      `vision` no la decide la regla: §7 no da agregado con dos casos. Caso a caso, Gemma 4 12B separa
+      **solo en `leer-cifras-dashboard`** (1,0 contra 0,67, banda 0); en `describir-dashboard` la
+      diferencia (1,0 contra 0,75) **es igual a la banda (0,25), no la supera**. Va mas lenta (6,1 s y
+      1,2 s contra 4,4 s y 0,5 s) y todo sale de **una sola imagen**, con un caso inventado. **El
+      usuario eligio Gemma 4 12B con este dato delante (2026-09-15)**; queda escrito como decision
+      suya sobre un caso que separa, no como resultado de la regla.
+    - **P-5 (un modelo para varios roles): no aplica con lo medido.** Cada rol sale con un modelo
+      distinto y ninguno se midio fuera de su rol. Que Gemma 4 26B-A4B pudiera cubrir tambien `vision`
+      es una hipotesis sin un solo dato, y se escribe asi en `verification.md`, no como descartada.
+    - **Lo que hereda F3, escrito aqui para que la condicion de replanificacion sea comprobable:**
+      migrar produccion a b10909 (con el perfil del driver movido y medido, porque es por ejecutable) y
+      repetir en b10909 la prueba de carga de estos tres; decidir `-ncmoe 0` o `4` para Gemma 4
+      26B-A4B (15,1 GB pico contra 14 GB de presupuesto diario; §7, salvedades); subir los candidatos
+      con el razonamiento apagado; fijar el `n_ctx` de produccion; y **`fast` queda fuera de las
+      cadenas de respaldo** —no hay dato con que declarar nada sobre el—, con la pregunta de si el rol
+      debe existir en el backlog del vault.
+    - Verification (ademas de la de arriba): las cuatro tablas de §9 pegadas desde
+      `resultados/decidir-final.md`, generadas y no copiadas a mano; la tabla de roles; y la condicion de replanificacion de F3
+      comprobada frase a frase contra este bloque.
 
 ### F3 - Respaldo y enfriamiento (bloque, se replanifica)
 
