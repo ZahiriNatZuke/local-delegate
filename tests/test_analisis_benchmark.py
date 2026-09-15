@@ -397,16 +397,57 @@ def test_un_caso_sin_ninguna_puntuacion_valida_no_es_concluyente():
 @pytest.mark.parametrize(
     ("kw", "motivo"),
     [
-        ({"ctx": 8192}, "n_ctx distinto entre corridas: ['16384', '8192']"),
-        ({"load": "mmap"}, "--load-mode distinto entre corridas: ['mmap', 'none']"),
-        ({"load": None}, "--load-mode sin declarar en alguna corrida"),
+        ({"ctx": 8192}, "n_ctx distinto entre corridas de {}: ['16384', '8192']"),
+        ({"load": "mmap"}, "--load-mode distinto entre corridas de {}: ['mmap', 'none']"),
+        ({"load": None}, "--load-mode sin declarar en alguna corrida de {}"),
     ],
 )
 def test_contexto_o_load_mode_distintos_o_sin_declarar_no_son_concluyentes(kw, motivo):
+    # `_tanda` aplica el cambio a los casos de calidad y al sondeo: sale un motivo por tipo.
     d = _decidir(
         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0), **kw)
     )
-    assert (d["veredicto"], d["motivos"]) == ("no_concluyente", [motivo])
+    assert (d["veredicto"], d["motivos"]) == (
+        "no_concluyente",
+        [motivo.format("calidad"), motivo.format("techo")],
+    )
+
+
+def _techo_con_ctx(registros, ctx):
+    for r in registros:
+        if r["kind"] == "techo":
+            r["variant"]["context_size"] = ctx
+    return registros
+
+
+def test_el_sondeo_de_techo_corre_con_su_propio_n_ctx_sin_tumbar_la_tanda():
+    # §3.5, dos configs por modelo: calidad a 16 384 y techo a 65 536 en los dos es concluyente.
+    d = _decidir(
+        _techo_con_ctx(_tanda("vigente", "long", TERCIO), 65536)
+        + _techo_con_ctx(_tanda("candidato", "long", (1.0, 1.0, 1.0)), 65536)
+    )
+    assert d["veredicto"] == "sustituye"
+
+
+def test_el_n_ctx_del_techo_tiene_que_coincidir_entre_vigente_y_candidato():
+    d = _decidir(
+        _techo_con_ctx(_tanda("vigente", "long", TERCIO), 65536)
+        + _tanda("candidato", "long", (1.0, 1.0, 1.0))
+    )
+    assert (d["veredicto"], d["motivos"]) == (
+        "no_concluyente",
+        ["n_ctx distinto entre corridas de techo: ['16384', '65536']"],
+    )
+
+
+def test_la_memoria_publicada_sale_solo_de_los_casos_de_calidad():
+    # El KV de la config de techo (65 536) no puede inflar la memoria de la config que se decide.
+    gib = 1024**3
+    registros = _tanda("candidato", "long", (1.0, 1.0, 1.0))
+    for r in registros:
+        r["resources"]["vram_dedicated_bytes_peak"] = (9 if r["kind"] == "techo" else 1) * gib
+    cfg = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
+    assert analizar._pico(cfg, "long", ("resources", "vram_dedicated_bytes_peak")) == gib
 
 
 def test_shared_usage_que_crece_tira_cp1_y_no_solo_la_corrida():
