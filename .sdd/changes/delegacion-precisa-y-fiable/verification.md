@@ -1315,6 +1315,12 @@ superviviente no era equivalente: con cinco episodios, «la mitad» no es un num
 Suite: 1278 passed, 2 skipped. `ruff check` y `ruff format --check` limpios en lo versionado; los
 tres avisos de ruff son de `benchmarks/catalogo-2026-09/resultados/`, que no se versiona.
 
+**Un defecto que la suite local no podia ver y el CI si**: `medir_enfriamiento.py` lleva shebang y
+entro en git sin el bit de ejecucion (`test_un_script_con_shebang_esta_marcado_ejecutable_en_git`
+cayo en los tres sistemas). Localmente paso porque ese test mira `git ls-files`, y cuando corrio la
+suite el script aun no estaba en el indice: un no-resultado sobre un fichero que la busqueda no
+podia encontrar. Corregido con `git add --chmod=+x`, igual que en la tarea 14.
+
 ### Activacion en el daemon y fallo provocado (2026-09-15)
 
 **Inicio de la ventana de P-4: 2026-09-15T19:26:41Z.** Rama `sdd/f3-t30-activacion` (commit
