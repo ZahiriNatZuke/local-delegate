@@ -86,7 +86,28 @@ models:
   # Todo con --load-mode none (P-13). n_ctx de calidad = max por caso de (tokens de prompt medidos +
   # max_tokens) en el mayor de los dos modelos del rol, +10 %, a multiplo de 512; techo a 65 536 en
   # long y code (protocolo §3.5). Flags de cada vigente como en produccion; KV f16 salvo el coder.
-  # Pendientes del barrido de -ncmoe: Gemma 4 26B-A4B y Qwen3.6-35B-A3B.
+  # MoE: -ncmoe del barrido v2 (el punto mas rapido que cabe con el perfil activo, protocolo §10
+  # sesion 4), confirmado cargando cada config con llama-server y su contexto completo.
+  t-gemma4-26b-a4b:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 0
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 36736
+  t-gemma4-26b-a4b-techo:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 0
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 65536
+  t-qwen36-35b-a3b:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 8
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 7168
+  t-qwen36-35b-a3b-techo:
+    cmd: >-
+      ${server} --load-mode none -ncmoe 8
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 65536
   t-qwen25-coder-14b:
     cmd: >-
       ${server} --load-mode none
