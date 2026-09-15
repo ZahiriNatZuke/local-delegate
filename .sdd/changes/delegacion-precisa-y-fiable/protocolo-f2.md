@@ -1900,6 +1900,27 @@ s** (`cudaMalloc` 12 288 MiB, sale con 0xC0000005, esta vez con la linea de OOM 
 daemon se arranco despues. La votacion por pares no necesita la maquina. La entrada de
 `llama-bench.exe` en la NVIDIA App queda a criterio del usuario.
 
+**Sesion 6, ¿cargan los candidatos en b9925? (2026-09-15, 13:20:28-13:22:15 UTC, tarea 21).** Con el
+daemon de produccion arriba y su llama-swap **sin ningun `llama-server` cargado** (VRAM 674 MiB), se
+lanzo `D:\Projects\llms\llamacpp\llama-server.exe` (`version: 9925 (ed8c26150)`) a mano en el puerto
+9696, uno cada vez, con el perfil del driver de produccion activo (medido a las 12:10: b9925 OOM).
+Flags comunes `--fit off -ngl 99 --cache-ram 1024 -np 1 --jinja --reasoning off`, y los del modelo
+como en `llama-swap-pruebas.yaml` (`t-*`); b9925 **no tiene `--load-mode`**, asi que carga con `mmap`,
+su defecto. Criterio: `/health` en `ok` y una peticion real que devuelva texto.
+
+| Modelo | Config | Sano en | VRAM usada | `Shared Usage` adaptador (reposo -> cargado) | Peticion |
+| --- | --- | --- | --- | --- | --- |
+| Gemma 4 26B-A4B | `-ncmoe 0 -c 36736` | 7,7 s | 14 917 MiB | 165 -> 221 MiB | codigo Python correcto, `stop`, 19 tok, 72,3 tok/s |
+| Qwen3.6-35B-A3B | `-ncmoe 8 -c 7168` | 8,1 s | 14 847 MiB | 165 -> 188 MiB | codigo Python correcto, `stop`, 19 tok, 58,0 tok/s |
+| Gemma 4 12B | `--mmproj` `-c 8192 --batch-size 2048 --ubatch-size 2048` | 4,6 s | 9 549 MiB | 165 -> 339 MiB | con `dashboard-bcbe39f.png`: «un panel de estadisticas de un servidor [...]», `stop`, 19 tok, 48,1 tok/s |
+
+Los dos de texto se corrieron **dos veces** (13:20 y 13:21): la primera cargaron igual (7,3 s y 8,1 s,
+VRAM 14 920 y 14 847 MiB) y el fallo fue del script, que recortaba la respuesta con la longitud
+equivocada; la tabla es la segunda. Ninguna linea de `error`, `fail`, `unsupported` ni OOM en los logs.
+Lo que esto **no** prueba: calidad ni velocidad en b9925 —un solo prompt corto, sin corpus—, ni que
+cargue con escritorio ocupando VRAM. Para la quinta medicion de adopcion (§1.5): el intervalo toco la
+GPU con produccion arriba; si llego alguna delegacion en esos dos minutos, pudo competir por VRAM.
+
 **Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
 pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
 el daemon de produccion** (y su llama-swap en 9292, con b9925), sin intervencion de la sesion que

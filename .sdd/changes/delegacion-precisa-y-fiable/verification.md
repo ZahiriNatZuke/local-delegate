@@ -696,3 +696,152 @@ Resultado y salvedades en `protocolo-f2.md` §7 «Resultado de la tarea 20»; in
 ### Suite
 
 `uv run pytest -q`: **1119 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.
+
+## F2: tarea 21, asignacion de roles y que pasa a produccion (2026-09-15)
+
+Detalle y lo que hereda F3 en `plan.md`, tarea 21. Prueba de carga en b9925 en `protocolo-f2.md` §10,
+sesion 6.
+
+### Roles (REQ-F2-4)
+
+| Rol | Modelo | Criterio | Dato que lo sostiene |
+| --- | --- | --- | --- |
+| `mechanical` | `gemma3-4b`, **no cambia** (REQ-F2-6) | empate en techo, decide la velocidad | los 5 casos en 1,0 con los dos; 516 contra 561 ms, dentro de la banda. La regla no puede disparar en este rol: «no cambia» no distingue nada |
+| `long` | **Gemma 4 26B-A4B** `-ncmoe 0` | calidad por pares | 15 a 0; `extraer-uvlock-48k` 1,0 contra 0,5; 1,8 s contra 3,0 s; techo igual (106 092 bytes) |
+| `code` | **Qwen3.6-35B-A3B** `-ncmoe 8` | calidad por pares | 15 a 0; `boilerplate-156` 1,0 contra 0,8; 4,6 s contra 9,3 s; techo 157 873 contra 20 171 bytes |
+| `vision` | **Gemma 4 12B** | **decision del usuario**, no de la regla | §7 sin agregado. Separa en `leer-cifras-dashboard` (1,0 contra 0,67, banda 0); en `describir-dashboard` la diferencia (0,25) iguala la banda. Mas lenta (6,1 s y 1,2 s contra 4,4 s y 0,5 s). Una sola imagen, un caso inventado |
+| `fast` | `qwen35-2b`, **no cambia y no se mide** | decidido antes de medir (desviacion aprobada en el gate de plan) | 2 usos reales en tres meses; ninguna tool lo enruta; cero casos en el corpus |
+
+**Un modelo para varios roles (P-5): no se da.** Cada rol sale con un modelo distinto, y ninguno se
+midio fuera de su rol; que Gemma 4 26B-A4B cubra `vision` es una hipotesis sin dato, no un descarte.
+
+**Revision humana (REQ-F2-2):** la cubren los 30 pares a ciegas (15 en `long`, 15 en `code`),
+comprobados letra a letra contra la hoja; no se genera la hoja 0/1/2 de §4.8 (decision del usuario).
+
+### Que pasa a produccion
+
+**La medida es sobre b10909 y produccion corre b9925.** Se comprobo por ejecucion que los tres modelos
+nuevos **cargan y generan en b9925** con el perfil del driver activo (Gemma 4 26B-A4B 14 917 MiB, Qwen3.6
+14 847 MiB, Gemma 4 12B 9 549 MiB con imagen), asi que la migracion no la fuerza una incompatibilidad.
+La fuerza REQ-F2-6: calidad y velocidad solo estan medidas sobre b10909. **Decision del usuario:
+produccion migra a b10909 antes de que F3 toque el catalogo.** `config.py` no se toca en F2.
+
+Salvedades que hereda F3: Gemma 4 26B-A4B `-ncmoe 0` **no cabe en el presupuesto de uso diario**
+(15,1 GB de VRAM pico contra 14; la alternativa medida es `-ncmoe 4`); los candidatos van con el
+razonamiento apagado; Gemma 4 12B necesita `--ubatch-size 2048`; el `n_ctx` de produccion esta por
+fijar; y `fast` queda fuera de las cadenas de respaldo.
+
+### Las cuatro tablas de §9
+
+Pegadas por programa desde `benchmarks/catalogo-2026-09/resultados/decidir-final.md` (salida de
+`analizar_benchmark.py decidir`), sin editar. El veredicto `sin_agregado` de `vision` es el de la regla;
+la asignacion es la de la tabla de roles de arriba. Las anuladas son todas primeras corridas por
+`process_changed` y una `zero_vram_samples`, repetidas por el runner; los `rechazo_por_contexto` son las
+5 corridas de `techo-commit-156k` con `qwen25-coder-14b` (contexto nativo de 32 768 tokens, §10 sesion 5).
+
+#### Tabla 1: por rol
+
+| Rol | Vigente | Candidato | Calidad v / c | Banda | Latencia ms v / c | RAM host pico c | RAM privada pico c | Working set pico c | VRAM dedicada pico c | Shared pico c | Cabe uso diario c | Descartadas | Rechazos | Veredicto | Criterio |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| mechanical | gemma3-4b | gemma4-e4b | 1.000 / 1.000 | 0.100 | 516 / 561 | 3835772928 | 10081951744 | 3419594752 | 3477020672 | 2434793472 | si | 0 | 0 | **no_sustituye** | empate |
+| long | llama31-8b | gemma4-26b-a4b | 0.500 / 1.000 | 0.000 | 3013 / 1849 | 3716284416 | 18551582720 | 3419594752 | 15100747776 | 918552576 | no | 0 | 0 | **sustituye** | calidad |
+| code | qwen25-coder-14b | qwen36-35b-a3b | 0.800 / 1.000 | 0.600 | 9348 / 4619 | 6123499520 | 21017739264 | 5472796672 | 14894239744 | 3625975808 | si | 0 | 0 | **sustituye** | calidad |
+| vision | qwen3-vl-8b | gemma4-12b | — / — | — | — / — | 4960354304 | 13616750592 | 3321196544 | 9496805376 | 759169024 | si | 0 | 0 | **sin_agregado** | — |
+
+##### mechanical: no_sustituye
+
+- nadie mejora al vigente: el rol no se cambia (REQ-F2-6)
+- casos en el agregado: 0 (ninguno)
+- fuera del agregado: resumen-md-2k (techo)
+- fuera del agregado: extraer-toml-2k (techo)
+- fuera del agregado: clasificar-53 (techo)
+- fuera del agregado: traducir-42 (techo)
+- fuera del agregado: delegar-56 (techo)
+- **la regla no puede disparar**: ni un candidato con calidad 1,0 superaria la banda; «no se cambia» aqui no distingue nada
+
+##### long: sustituye
+
+- casos en el agregado: 0 (ninguno)
+- fuera del agregado: extraer-uvlock-48k (techo)
+- comparacion por pares (resumen-md-10k, resumen-changelog-7k, lint-9k): candidato 15, vigente 0, empates 0 -> **mejor**
+
+##### code: sustituye
+
+- casos en el agregado: 1 (boilerplate-156)
+- comparacion por pares (commit-diff-19k, explicar-metrics-15k, explicar-install-20k): candidato 15, vigente 0, empates 0 -> **mejor**
+- **la regla no puede disparar**: ni un candidato con calidad 1,0 superaria la banda; «no se cambia» aqui no distingue nada
+
+##### vision: sin_agregado
+
+- vision no presenta agregado (§7): decide la tabla caso a caso y la revision
+
+#### Tabla 2: caso a caso
+
+| Rol | Caso | Modelo | Corridas (calidad, outcome) | Mediana | Dispersion | Latencia mediana |
+| --- | --- | --- | --- | --- | --- | --- |
+| mechanical | resumen-md-2k | gemma3-4b | 1.00 ok fria, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 1697 |
+| mechanical | extraer-toml-2k | gemma3-4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 467 |
+| mechanical | clasificar-53 | gemma3-4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 71 |
+| mechanical | traducir-42 | gemma3-4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 113 |
+| mechanical | delegar-56 | gemma3-4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 233 |
+| mechanical | resumen-md-2k | gemma4-e4b | 1.00 ok, 1.00 ok, 0.50 ok, 1.00 ok, 1.00 ok | 1.000 | 0.500 | 1731 |
+| mechanical | extraer-toml-2k | gemma4-e4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 605 |
+| mechanical | clasificar-53 | gemma4-e4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 85 |
+| mechanical | traducir-42 | gemma4-e4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 116 |
+| mechanical | delegar-56 | gemma4-e4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 267 |
+| long | resumen-md-10k | llama31-8b | 0.33 ok, 0.00 ok, 0.00 ok, 0.00 ok, 0.67 ok | 0.000 | 0.667 | 4645 |
+| long | resumen-changelog-7k | llama31-8b | 1.00 ok, 0.33 ok, 0.83 ok, 0.83 ok, 0.50 ok | 0.833 | 0.667 | 3837 |
+| long | extraer-uvlock-48k | llama31-8b | 0.50 ok, 0.50 ok, 0.50 ok, 0.50 ok, 0.50 ok | 0.500 | 0.000 | 558 |
+| long | lint-9k | llama31-8b | 0.00 truncado, 0.00 truncado, 0.00 truncado, 0.00 truncado, 0.00 truncado | 0.000 | 0.000 | — |
+| long | techo-resumen-103k | llama31-8b | — truncado, — truncado, — truncado, — truncado, — truncado | — | — | — |
+| long | resumen-md-10k | gemma4-26b-a4b | 0.67 ok, 0.67 ok, 0.67 ok, 0.67 ok, 0.67 ok | 0.667 | 0.000 | 2519 |
+| long | resumen-changelog-7k | gemma4-26b-a4b | 0.83 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.167 | 2486 |
+| long | extraer-uvlock-48k | gemma4-26b-a4b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 543 |
+| long | lint-9k | gemma4-26b-a4b | 0.33 ok, 0.33 ok, 0.33 ok, 0.33 ok, 0.33 ok | 0.333 | 0.000 | 5794 |
+| long | techo-resumen-103k | gemma4-26b-a4b | — ok, — ok, — ok, — ok, — ok | — | — | 3290 |
+| code | commit-diff-19k | qwen25-coder-14b | 0.00 ok, 0.00 ok, 0.00 ok, 0.00 ok, 0.00 ok | 0.000 | 0.000 | 684 |
+| code | explicar-metrics-15k | qwen25-coder-14b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 16359 |
+| code | explicar-install-20k | qwen25-coder-14b | 0.60 ok, 0.80 ok, 0.20 ok, 0.60 ok, 0.80 ok | 0.600 | 0.600 | 11719 |
+| code | boilerplate-156 | qwen25-coder-14b | 1.00 ok, 1.00 ok, 0.80 ok, 0.80 ok, 0.60 ok | 0.800 | 0.400 | 8628 |
+| code | techo-commit-156k | qwen25-coder-14b | — rechazo_por_contexto, — rechazo_por_contexto, — rechazo_por_contexto, — rechazo_por_contexto, — rechazo_por_contexto | — | — | — |
+| code | commit-diff-19k | qwen36-35b-a3b | 0.20 ok, 0.20 ok, 0.20 ok, 0.20 ok, 0.20 ok | 0.200 | 0.000 | 270 |
+| code | explicar-metrics-15k | qwen36-35b-a3b | 0.29 ok, 0.57 ok, 0.29 ok, 0.29 ok, 0.29 ok | 0.286 | 0.286 | 4277 |
+| code | explicar-install-20k | qwen36-35b-a3b | 0.40 ok, 0.80 ok, 0.60 ok, 0.40 ok, 0.40 ok | 0.400 | 0.400 | 4373 |
+| code | boilerplate-156 | qwen36-35b-a3b | 1.00 ok, 1.00 ok, 1.00 ok, 0.40 ok, 1.00 ok | 1.000 | 0.600 | 9555 |
+| code | techo-commit-156k | qwen36-35b-a3b | — ok, — ok, — ok, — ok, — ok | — | — | 375 |
+| vision | describir-dashboard | qwen3-vl-8b | 1.00 ok, 0.75 ok, 0.75 ok, 1.00 ok, 0.75 ok | 0.750 | 0.250 | 4431 |
+| vision | leer-cifras-dashboard | qwen3-vl-8b | 0.67 ok, 0.67 ok, 0.67 ok, 0.67 ok, 0.67 ok | 0.667 | 0.000 | 524 |
+| vision | describir-dashboard | gemma4-12b | 1.00 ok fria, 1.00 ok, 0.75 ok, 0.75 ok, 1.00 ok | 1.000 | 0.250 | 6080 |
+| vision | leer-cifras-dashboard | gemma4-12b | 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok, 1.00 ok | 1.000 | 0.000 | 1213 |
+
+#### Tabla 3: entorno
+
+| Modelo | n_ctx | --load-mode | -ncmoe | llama-server | llama-swap | Anuladas (motivo) |
+| --- | --- | --- | --- | --- | --- | --- |
+| gemma3-4b | 2560 | none | — | b10909 | v255 | — |
+| gemma4-e4b | 2560 | none | — | b10909 | v255 | resumen-md-2k run=1 (process_changed) |
+| llama31-8b | 36736 | none | — | b10909 | v255 | resumen-md-10k run=1 (process_changed); techo-resumen-103k run=1 (process_changed) |
+| llama31-8b | 65536 | none | — | b10909 | v255 | resumen-md-10k run=1 (process_changed); techo-resumen-103k run=1 (process_changed) |
+| gemma4-26b-a4b | 36736 | none | 0 | b10909 | v255 | resumen-md-10k run=1 (process_changed); techo-resumen-103k run=1 (process_changed) |
+| gemma4-26b-a4b | 65536 | none | 0 | b10909 | v255 | resumen-md-10k run=1 (process_changed); techo-resumen-103k run=1 (process_changed) |
+| qwen25-coder-14b | 65536 | none | — | b10909 | v255 | commit-diff-19k run=1 (process_changed); techo-commit-156k run=1 (process_changed); techo-commit-156k run=1 (zero_vram_samples) |
+| qwen25-coder-14b | 7168 | none | — | b10909 | v255 | commit-diff-19k run=1 (process_changed); techo-commit-156k run=1 (process_changed); techo-commit-156k run=1 (zero_vram_samples) |
+| qwen36-35b-a3b | 65536 | none | 8 | b10909 | v255 | commit-diff-19k run=1 (process_changed); techo-commit-156k run=1 (process_changed) |
+| qwen36-35b-a3b | 7168 | none | 8 | b10909 | v255 | commit-diff-19k run=1 (process_changed); techo-commit-156k run=1 (process_changed) |
+| qwen3-vl-8b | 8192 | none | — | b10909 | v255 | describir-dashboard run=1 (process_changed) |
+| gemma4-12b | 8192 | none | — | b10909 | v255 | — |
+
+Tanda concluyente segun §6: **si**.
+
+#### Tabla 4: techo
+
+| Rol | Modelo | Mayor entrada aceptada (bytes) |
+| --- | --- | --- |
+| mechanical | gemma3-4b | 2075 |
+| mechanical | gemma4-e4b | 2075 |
+| long | llama31-8b | 106092 |
+| long | gemma4-26b-a4b | 106092 |
+| code | qwen25-coder-14b | 20171 |
+| code | qwen36-35b-a3b | 157873 |
+| vision | qwen3-vl-8b | 718456 |
+| vision | gemma4-12b | 718456 |
