@@ -786,6 +786,18 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       mismo con el interruptor roto. Mutantes: interruptor ignorado, salto por clase que no toca,
       tercer salto, respaldo fuera del semaforo, aviso dentro del contenido.
     - Rollback or recovery: las variables de apagado; el PR se revierte entero.
+    - Estado (2026-09-15): **hecha** en código (`verification.md`); el freno se cumple (23 cerrada,
+      24 en «cabe»). 35 tests en `tests/test_respaldo.py` y 13 mutantes muertos, cada uno en su
+      test. Lo que obligo a cambiar respecto a este texto: (1) **`_run_chat` no recibe la cadena
+      resuelta, recibe el rol** y la resuelve solo si el principal falla o esta enfriado: resolverla
+      antes leeria la config de llama-swap en cada delegacion, tambien en el camino feliz; (2) el
+      log registra como `model` **el que respondio** y `chunks` suma los intentos, pero los campos
+      de pedido y clase del salto siguen siendo de la 29; (3) **un exito sin entrada no escribe
+      `enfriamiento.json`** (cambio en `enfriamiento.py`), porque reescribirlo en cada delegacion era
+      el coste que la spec no admite; (4) `test_post_chat_caminos.py` no cambia: `_post_chat` no se
+      toco. **No se ha verificado contra el backend real** —es de la 30— y el daemon sigue con el
+      codigo de la 24: como el respaldo viene encendido por defecto (D-1), instalar esta rama lo
+      activaria.
 
 29. **Observabilidad: log, panel y `local_status`**
     - Files or modules: `server.py` (`_log_event`, `local_status`), `web/metrics.py` (`by_model` y el

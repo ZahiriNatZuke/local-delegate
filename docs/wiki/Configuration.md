@@ -79,6 +79,26 @@ una variable nombra algo que no existe.
 > (`LLAMASWAP_CONFIG`, necesita el extra `pyyaml`), que ya está en memoria y no obliga a cargar nada.
 > Si no se puede leer, es el del rol mecánico.
 
+**Cuándo salta, y cuándo no.** Solo los fallos **del modelo** (un 5xx, una respuesta rota) pasan al
+siguiente de la cadena, y cada salto exige que el anterior fallara también por el modelo. Un modelo
+que **no se pudo cargar** (falta de memoria, error de carga) salta **solo al residente** y sin
+segundo salto: saltar a otro modelo grande encadenaría swaps y OOM. No saltan un 4xx (incluido el
+desborde de contexto), un backend caído, un timeout de lectura con el modelo ya cargado ni un
+razonamiento que agotó `max_tokens`: vuelve el error de siempre. El salto ocupa la misma plaza de
+concurrencia que la llamada original, y `local_delegate` con `model` explícito no salta nunca.
+
+**Un candidato que no admite la entrada se salta sin llamarlo**: su tope (`LOCAL_DELEGATE_MAX_CHARS_*`
+del rol que lo usa) tiene que cubrir lo que se va a enviar. Por eso, con los topes por defecto, **en un
+resumen por partes de un documento largo el respaldo no entra nunca**: los trozos miden
+0,8 × 48 000 = 38 400 caracteres y ningún otro rol admite más de 20 000. Un documento que cabe en
+una sola llamada sí puede saltar, si mide 20 000 caracteres o menos.
+
+La respuesta dice qué modelo respondió, en lugar de cuál y por qué, detrás del contenido; en
+`local_extract` va en `_local_delegate.respaldo` y en `local_boilerplate` en el recibo, nunca en el
+fichero. En un documento por trozos, el modelo cambia como mucho una vez: desde el trozo que saltó,
+el resto va directo al respaldo. Si fallan también los respaldos, vuelve el error del modelo pedido
+con una línea que lista lo que se probó.
+
 ## Enfriamiento por modelo
 
 Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo

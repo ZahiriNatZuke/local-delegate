@@ -1037,3 +1037,75 @@ viejos: sus roles largo, codigo y vision fallan hasta que instale la version con
 
 `uv run pytest -q`: **1198 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios sobre
 `src`, `tests` y `scripts`.
+
+## F3: tarea 28, el salto dentro de la plaza de concurrencia (2026-09-15)
+
+Rama `sdd/f3-t28-salto`. Freno de mezcla cumplido: tarea 23 cerrada y coexistencia de la 24 en
+«cabe» (PR #190 mezclado, `810f315`).
+
+### Los escenarios, sobre un backend que responde segun el modelo
+
+`tests/test_respaldo.py` monta el POST de chat con una respuesta **por modelo pedido** y anota la
+secuencia de modelos: es lo unico que distingue un salto de un reintento. Cubre los 16 escenarios de
+la spec y lo que el plan añade: tope de saltos (2 y configurable), un fallo de otra clase que corta
+la cadena, REQ-008 con los dos respaldos fallando, el aviso de REQ-007 en `local_extract` y en
+`local_boilerplate`, vision enfriada y sin respaldo, `local_commit_msg` en map-reduce saltando y
+siguiendo con el respaldo, el map-reduce de `long` con el respaldo **muerto por construccion**
+(trozos de 38 400 contra candidatos de 20 000), el modelo elegido en la pregunta como explicito,
+REQ-017 con el semaforo a 1 y el camino feliz sin escribir el estado.
+
+**El interruptor, con el caso que distingue**: con `LOCAL_DELEGATE_FALLBACK=0` y
+`LOCAL_DELEGATE_COOLDOWN=0`, un 500 del principal con un fichero que ya lo enfria da el error de hoy
+literal, una sola llamada y el fichero igual byte a byte; el mismo caso encendido salta sin llamar al
+principal.
+
+Rojo antes de implementar: **20 fallaron y 15 pasaron**; los 15 son los casos en que hoy tampoco se
+salta, y quedan como guarda de regresion. Dos defectos del propio test salieron al leer ese rojo, no
+del codigo: `backend_mock` atiende con la **primera** ruta que casa (un segundo `_backend` en el mismo
+test no recibia nada), y `recargar_config` **solo añade** variables (la pasada «encendida» seguia
+apagada y el test no podia distinguir). Los dos corregidos, y el test de la entrada que no cabe
+asevera ahora que el mecanismo esta encendido antes de comparar.
+
+### Mutantes
+
+Reemplazos de una linea sobre bytes (`server.py` es CRLF), con comprobacion de que muto y
+restauracion siempre; sin restos en `src` al acabar.
+
+| Mutante | Cae en |
+| --- | --- |
+| respaldo ignora `LOCAL_DELEGATE_FALLBACK` | `test_con_el_respaldo_apagado_ningun_fallo_salta`, `test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy` |
+| enfriamiento ignora `LOCAL_DELEGATE_COOLDOWN` | `test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy` |
+| salta con cualquier clase | 400, backend caido, razonamiento agotado, `length` sin razonamiento, timeout con el modelo cargado |
+| tercer salto | `test_como_mucho_dos_saltos`, `test_el_tope_de_saltos_es_configurable` |
+| respaldo fuera del semaforo | `test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo` |
+| aviso dentro del JSON de `local_extract` | `test_en_extract_el_aviso_va_en_los_metadatos` |
+| aviso dentro del fichero de `local_boilerplate` | `test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero` |
+| capacidad salta a cualquiera | `test_capacidad_del_residente_no_salta_a_un_modelo_grande` |
+| `model` explicito con respaldo | los dos tests de explicito (el pedido y el elegido en la pregunta) |
+| no valida el tope del candidato | la entrada que no cabe y el map-reduce de `long` |
+| los trozos siguientes vuelven al modelo que fallo | traduccion en cuatro trozos y commit en map-reduce |
+| el principal enfriado se llama igual | cuarta llamada tras tres fallos, enfriado sin alternativa, mecanismo encendido, vision enfriada |
+| un exito sin entrada vuelve a escribir el fichero | solo `test_el_camino_feliz_no_crea_el_fichero_de_estado` |
+
+El ultimo se hizo fino a proposito: la primera version (`if False:` en la escritura) tumbaba 24 tests
+y no decia que guardaba el del camino feliz, que ya pasaba antes de implementar.
+
+**Una guarda redundante, anotada y no quitada**: tras un fallo de capacidad, el `break` por
+`residente is not None` no cambia nada, porque el filtro ya salta cualquier candidato que no sea el
+residente y este aparece una sola vez en la cadena. Se deja como defensa explicita de «sin segundo
+salto»; un mutante sobre ella sobreviviria, y por eso el mutante de REQ-018 va sobre el filtro.
+
+### Lo que no cambia, y se escribe
+
+El autoarranque y la pregunta de **arrancar el backend** siguen dentro de `_post_chat`, que ya
+retenia la plaza. La pregunta de **elegir modelo** sigue en `local_delegate`, antes de `_chat` y
+fuera de la plaza. `_post_chat` no se toco, asi que `test_post_chat_caminos.py` sigue igual.
+`scripts/construir_corpus.py` intercepta `_run_chat` y pasa a devolver la tupla de cuatro con un
+intento: la guarda del corpus fue la que lo detecto (10 tests en rojo por la firma).
+
+### Suite
+
+`uv run pytest -q`: **1233 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios sobre
+`src`, `tests` y `scripts`. **Sin verificar contra el backend real**: es de la tarea 30. El daemon
+sigue corriendo el codigo de la 24; instalar esta rama activa el respaldo, que viene encendido por
+defecto.

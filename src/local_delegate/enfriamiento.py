@@ -114,8 +114,12 @@ class Estado:
         self._mutar(aplicar)
 
     def registrar_exito(self, modelo: str) -> None:
-        """Cualquier éxito deja el modelo limpio: sin contador y con la espera base (REQ-010/011)."""
-        self._mutar(lambda datos: datos.pop(modelo, None))
+        """Cualquier éxito deja el modelo limpio: sin contador y con la espera base (REQ-010/011).
+
+        Sin entrada no hay nada que limpiar y no se escribe: el éxito es el camino de casi todas
+        las delegaciones, y reescribir el fichero en cada una sería el coste que la spec no admite.
+        """
+        self._mutar(lambda datos: datos.pop(modelo, None) is not None)
 
     # --- Leer ----------------------------------------------------------------------------------
 
@@ -189,7 +193,8 @@ class Estado:
             self._ruta.parent.mkdir(parents=True, exist_ok=True)
             with self._bloqueo():
                 datos = leer_json(self._ruta)
-                aplicar(datos)
+                if aplicar(datos) is False:
+                    return  # nada cambió: no se reescribe el fichero
                 escribir_json_atomico(self._ruta, datos)
         except (Timeout, OSError):
             return  # REQ-012: nunca bloquea ni hace fallar una delegación

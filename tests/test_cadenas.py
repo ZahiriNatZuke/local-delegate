@@ -223,7 +223,7 @@ def test_ninguna_tool_enruta_al_rol_rapido_sin_model_explicito(
 
     def run_chat(model, _system, _user, _max_tokens, _temperature, **_kwargs):
         usados.append(model)
-        return server.ChatResult(text='{"a": 1}', ok=True, finish_reason="stop"), 0, None
+        return server.ChatResult(text='{"a": 1}', ok=True, finish_reason="stop"), 0, None, []
 
     monkeypatch.setattr(server, "_run_chat", run_chat)
     corto, largo = "texto corto", "x " * (config.LONG_INPUT_CHARS + 100)
