@@ -81,3 +81,51 @@ models:
       ${server} --load-mode none -ncmoe 12
       --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
       --ctx-size 8192
+
+  # --- Tanda (tarea 20) ---------------------------------------------------------------------------
+  # Todo con --load-mode none (P-13). n_ctx de calidad = max por caso de (tokens de prompt medidos +
+  # max_tokens) en el mayor de los dos modelos del rol, +10 %, a multiplo de 512; techo a 65 536 en
+  # long y code (protocolo §3.5). Flags de cada vigente como en produccion; KV f16 salvo el coder.
+  # Pendientes del barrido de -ncmoe: Gemma 4 26B-A4B y Qwen3.6-35B-A3B.
+  t-qwen25-coder-14b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 7168 --cache-type-k q4_0 --cache-type-v q4_0
+  t-gemma3-4b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\gemma3-4b\gemma-3-4b-it-Q4_K_M.gguf
+      --ctx-size 2560 --reasoning off
+  t-gemma4-e4b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\gemma4-e4b\gemma-4-E4B-it-Q4_K_M.gguf
+      --ctx-size 2560 --reasoning off
+  t-llama31-8b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\llama31-8b\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+      --ctx-size 36736
+  t-llama31-8b-techo:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\llama31-8b\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+      --ctx-size 65536
+  t-qwen25-coder-14b-techo:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      --ctx-size 65536 --cache-type-k q4_0 --cache-type-v q4_0
+  t-qwen3-vl-8b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\qwen3-vl-8b\Qwen3VL-8B-Instruct-Q4_K_M.gguf
+      --mmproj D:\Projects\llms\models\qwen3-vl-8b\mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
+      --ctx-size 8192
+  t-gemma4-12b:
+    cmd: >-
+      ${server} --load-mode none
+      --model D:\Projects\llms\models\gemma4-12b\gemma-4-12b-it-Q4_K_M.gguf
+      --mmproj D:\Projects\llms\models\gemma4-12b\mmproj-F16.gguf
+      --ctx-size 8192

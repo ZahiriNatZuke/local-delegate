@@ -945,22 +945,40 @@ Este es el fallo 5 de julio, que la primera version de este protocolo no cerraba
   calidad mayor, los sondeos de techo (26 353 y 47 181 tokens) darian `rechazo_por_contexto` en los
   dos modelos siempre: medirian la ventana configurada, no el modelo, y el primer desempate de §7
   seria un control que no puede dar un resultado distinto. Asi que cada modelo de `long` y `code`
-  tiene **una config de calidad** —`n_ctx` = tokens del caso mayor (el mayor de los dos modelos) +
-  su `max_tokens` + 10 %— y **una config de techo con `n_ctx` 65 536**, igual para vigente y
+  tiene **una config de calidad** —`n_ctx` = el **maximo por caso de tokens de prompt + su
+  `max_tokens`**, en el mayor de los dos modelos, + 10 %, redondeado hacia arriba a multiplo de 512—
+  y **una config de techo con `n_ctx` 65 536**, igual para vigente y
   candidato. Las dos corren con la **misma `--label`** (el runner la separa del `--model` de
   llama-swap y del `--context-size`); §6 compara `n_ctx` y `--load-mode` **dentro de cada tipo de
   caso**, y la memoria publicada sale solo de los casos de calidad (`analizar_benchmark.py`). Cada
   config tiene su propio presupuesto de KV y su barrido.
-- **Tokens medidos con el vocabulario de los vigentes** (`llama-tokenize` de b10909, `system` +
+- **Tokens medidos con el vocabulario de cada modelo** (`llama-tokenize` de b10909, `system` +
   `user` renderizados como los manda el runner; la plantilla de chat suma unas decenas, que cubre el
-  10 %). **El caso mayor en chars no es el mayor en tokens**: en `code`, `commit-diff-19k` (19 041
-  chars) da mas que `explicar-install-20k` (20 000).
+  10 %). Tres trampas que la medida destapo, y que una estimacion en chars no habria visto:
+  - **El caso mayor en chars no es el mayor en tokens**: en `code`, `commit-diff-19k` (19 041 chars)
+    da mas tokens de prompt que `explicar-install-20k` (20 000).
+  - **El caso con mas prompt no es el que mas contexto pide**: `delegar-56` tiene 75 tokens y
+    `max_tokens` 2 048, el triple de lo que pide `extraer-toml-2k`. La primera redaccion de esta
+    regla («tokens del caso mayor + su `max_tokens`») lo habria dejado fuera.
+  - **El vocabulario del candidato cambia el rol entero**: con Gemma 4, `extraer-uvlock-48k` son
+    **32 822** tokens, un 45 % mas que con `llama31-8b`, y el sondeo de `long` (29 241) queda **por
+    debajo** del caso de calidad. Con ese vocabulario el sondeo no sondea nada que la calidad no
+    pida ya; se escribe junto al veredicto de techo de `long`.
 
-  | Rol | Vigente | Caso mayor (tokens de prompt) | `max_tokens` | Sondeo de techo |
-  | --- | --- | --- | --- | --- |
-  | `mechanical` | `gemma3-4b` | `extraer-toml-2k`: 698 | 512 | — |
-  | `long` | `llama31-8b` | `extraer-uvlock-48k`: 22 607 | 512 | `techo-resumen-103k`: 26 353 |
-  | `code` | `qwen25-coder-14b` | `commit-diff-19k`: 5 757 (`explicar-install-20k`: 5 484, `max_tokens` 700) | 256 | `techo-commit-156k`: 47 181 |
+  Control de la medida: Gemma 3 4B, Gemma 4 E4B y Gemma 4 26B-A4B dan conteos identicos (698 y 646
+  en los dos casos mayores de `mechanical`: comparten vocabulario) y `llama31-8b` da otros (685 y
+  649), asi que la herramienta distingue vocabularios y no devuelve siempre lo mismo.
+
+  | Rol | Modelo | Caso que mas contexto pide (prompt + `max_tokens`) | Caso mayor en prompt | Sondeo de techo | `n_ctx` de calidad |
+  | --- | --- | --- | --- | --- | --- |
+  | `mechanical` | `gemma3-4b` y Gemma 4 E4B (mismo vocabulario) | `delegar-56`: 75 + 2 048 = 2 123 | `extraer-toml-2k`: 698 | — | **2 560** |
+  | `long` | `llama31-8b` | `extraer-uvlock-48k`: 22 607 + 512 = 23 119 | el mismo | `techo-resumen-103k`: 26 353 | |
+  | `long` | Gemma 4 26B-A4B | `extraer-uvlock-48k`: 32 822 + 512 = 33 334 | el mismo | `techo-resumen-103k`: 29 241 | **36 736** |
+  | `code` | `qwen25-coder-14b` | `explicar-install-20k`: 5 484 + 700 = 6 184 | `commit-diff-19k`: 5 757 | `techo-commit-156k`: 47 181 | |
+  | `code` | Qwen3.6-35B-A3B | `commit-diff-19k`: 5 996 + 256 = 6 252 | el mismo | `techo-commit-156k`: 47 393 | **7 168** |
+
+  Config de techo: **65 536** en `long` y `code`, que cubre los sondeos medidos. `vision` no entra en
+  esta cuenta: sus tokens de imagen los pone el `mmproj`, no el texto.
 
   **Hallazgo de produccion, anotado para F3 (decision del usuario):** `llama31-8b` corre en
   produccion con `--ctx-size 16384`, asi que `extraer-uvlock-48k` —la entrada real mayor que
@@ -1396,6 +1414,33 @@ anotan aqui porque son parte de la identidad de la medida, no del arranque.
 
 Columnas que se rellenan al fijar el entorno: `n_ctx`, VRAM de pesos, VRAM de KV, `-ncmoe` elegido,
 `--load-mode`.
+
+#### Presupuesto de KV medido (tarea 20, 2026-09-14)
+
+Medido cargando cada config en b10909 con `-v --load-mode none --fit off -ngl 99 -np 1`, sumando las
+lineas `llama_kv_cache: size =` (con SWA salen dos) y matando el proceso; un solo `llama-server` vivo
+cada vez. En los MoE se carga con `-ncmoe 99`: el KV no depende de donde vivan los expertos, y asi la
+medida no depende de si los pesos caben. KV `f16` salvo `qwen25-coder-14b`, que va `q4_0/q4_0` como en
+produccion. Candidatos descargados de unsloth y verificados contra el sha256 que publica Hugging Face.
+MiB.
+
+| Rol | Config | `n_ctx` | KV | Pesos en GPU | Pesos en RAM | Computo GPU | Nota |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `mechanical` | `gemma3-4b` | 2 560 | 224 | 2 368 | 525 | 78 | SWA: 50 + 174 |
+| `mechanical` | Gemma 4 E4B Q4_K_M | 2 560 | 80 | 2 884 | **2 208** | 105 | la familia E deja embeddings por capa en RAM aun con `-ngl 99` |
+| `long` | `llama31-8b` calidad | 36 736 | **4 608** | 4 403 | 282 | 144 | denso sin SWA: el contexto le cuesta mas que los pesos |
+| `long` | `llama31-8b` techo | 65 536 | **8 192** | 4 403 | 282 | 172 | cabe: ~12,8 GiB |
+| `long` | Gemma 4 26B-A4B UD-IQ4_XS calidad | 36 736 | 1 020 | (MoE) 2 459 | 11 241 | 412 | entero en GPU serian ~13,4 GiB de pesos + KV + computo: al limite, lo decide el barrido |
+| `long` | Gemma 4 26B-A4B techo | 65 536 | 1 580 | (MoE) 2 459 | 11 241 | 440 | |
+| `code` | `qwen25-coder-14b` calidad | 7 168 | 378 | 8 148 | 418 | 118 | `q4_0/q4_0` |
+| `code` | `qwen25-coder-14b` techo | 65 536 | 3 456 | 8 148 | 418 | 360 | cabe: ~11,7 GiB |
+| `code` | Qwen3.6-35B-A3B UD-IQ4_XS calidad | 7 168 | 140 | (MoE) 1 921 | **14 977** | 286 | atencion lineal en la mayoria de capas: el KV casi no cuenta. ~16,9 GiB de pesos: **no cabe entero en GPU**, el barrido decide cuantos expertos suben; con `none` los ~15 GiB en RAM caben justos en los ~19 GB libres |
+| `code` | Qwen3.6-35B-A3B techo | 65 536 | 1 280 | (MoE) 1 921 | 14 977 | 450 | |
+| `vision` | `qwen3-vl-8b` | 8 192 | 1 152 | 4 455 | 334 | 500 | con `mmproj` |
+| `vision` | Gemma 4 12B Q4_K_M | 8 192 | 608 | 6 777 | 540 | 203 | con `mmproj-F16`; `n_ctx` de vision = el de produccion |
+
+Las configs de los densos estan en `llama-swap-pruebas.yaml` (`t-*`). Las de los dos MoE esperan al
+barrido de `-ncmoe` (§5.1 paso 5).
 
 Descarga: los **~85 GB** de la lista corta del vault menos los ~5 GB de los candidatos de `fast`, que salen de la tanda, mas los **36,6 GB** del modelo que no cabe de CP-1: **~117 GB** en total, dentro de los 400 GB libres. La cifra se contrasta al descargar; no se deriva de nada mas. `gpt-oss-20b` ya esta. **Qwen3.5-122B-A10B UD-IQ2_XXS
 (36,6 GB) no es candidato**: entra solo como el modelo que no cabe de CP-1.
