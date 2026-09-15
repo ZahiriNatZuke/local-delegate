@@ -649,3 +649,50 @@ al `chore: update version to 0.7.0` del 14B sin mirar el diff, que si sube a 0.7
 
 `uv run pytest -q`: **1081 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios en
 `src`, `scripts` y `tests`. `construir_corpus.py --comprobar`: ok.
+
+## F2: tarea 20, la tanda y el veredicto por rol (2026-09-14 a 2026-09-15)
+
+Sesiones 4 y 5 de §10. PRs #180 (P-13 y P-14), #181 (`n_ctx` y KV medidos), #182 (barrido de
+`-ncmoe`) y #183 (la tanda y las reglas que corrigio), todos mezclados con el CI entero en verde.
+Resultado y salvedades en `protocolo-f2.md` §7 «Resultado de la tarea 20»; informe del programa en
+`resultados/decidir-final.md`.
+
+### El veredicto
+
+| Rol | Veredicto | Lo decide |
+| --- | --- | --- |
+| `mechanical` | no se cambia `gemma3-4b` | todo en techo, empate de latencia |
+| `long` | **Gemma 4 26B-A4B** sustituye a `llama31-8b` | pares 15 a 0; ademas 1,8 s contra 3,0 s |
+| `code` | **Qwen3.6-35B-A3B** sustituye a `qwen25-coder-14b` | pares 15 a 0; techo 157 873 contra 20 171 bytes; mitad de latencia |
+| `vision` | sin agregado; Gemma 4 12B mejor caso a caso | 1,0 y 1,0 contra 0,75 y 0,67 |
+
+### Lo que la maquina obligo a cambiar, con decision del usuario
+
+- **El perfil del driver es por ejecutable**: `llama-bench.exe` desbordaba sin avisar y el primer
+  barrido no valia (Qwen3.6 con `-ncmoe 4` corria a 91 tok/s y no cabe). Entrada propia, medida por su
+  efecto con `-v` y un control negativo.
+- **Los cuatro candidatos piensan por defecto** y devolvian vacio: corren con `--reasoning-effort off`.
+- **Techo en config aparte con la misma `--label`**: con el `n_ctx` de calidad los sondeos median la
+  ventana. §6 compara `n_ctx` por tipo de caso.
+- **Umbral de `Shared Usage` 1 024 MiB** (estaba en 0 sin calibrar y nada era concluyente).
+- **Latencia sobre casos comunes**: el vigente de `long` no termino nunca `lint-9k` y vetaba al
+  candidato.
+- **Gemma 4 12B necesita `--ubatch-size 2048`**, y **un reinicio de Windows reasigna el LUID de la
+  GPU**: el script ya no lo fija, y el del perfil lo resuelve solo.
+
+### Lo que se probo al reves
+
+- Mutantes muertos, cada uno por su assert: resta de picos y VRAM ausente como cero en la RAM del host;
+  los dos limites del presupuesto de uso diario; §6 sin agrupar por tipo, `_pico` contando el techo y
+  §6 solo con calidad; y la latencia sobre todos los casos.
+- **Cada fallo se diagnostico por reproduccion y no por suposicion.** Dos hipotesis propias cayeron: que
+  el 502 de `vision` fuera el `mmproj` o `--load-mode none` (era el `ubatch`), y que la falta de VRAM
+  fuera un `-1` de `typeperf` (era el LUID).
+- **Los 30 votos se compararon letra a letra** con los que el usuario dio en el chat: 0 diferencias, y
+  las letras no son todas iguales (9/6 y 8/7), asi que no es un sesgo de posicion.
+- El perfil del driver se midio al montar y al desmontar: al cerrar, b9925 da OOM y b10909 desborda
+  5 985 MiB, y el daemon volvio a arrancar.
+
+### Suite
+
+`uv run pytest -q`: **1119 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.

@@ -400,6 +400,13 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       `privada − VRAM dedicada` por muestra; el presupuesto de uso diario (2 GB de VRAM y 8 GB de RAM
       de reserva) es solo informativo. Tras CP-3 son **5 corridas y ~350 peticiones**, no 3 y ~214
       (§5.2 del protocolo manda).
+    - Estado (2026-09-15): **hecha** (`protocolo-f2.md` §7, «Resultado de la tarea 20»). `long` y
+      `code` sustituyen (pares 15 a 0 cada uno, y los candidatos van al doble de velocidad),
+      `mechanical` no cambia (todo en techo), `vision` caso a caso a favor de Gemma 4 12B. Lo que la
+      tanda obligo a cambiar respecto a este texto: 5 corridas; techo en config aparte con la misma
+      `--label`; razonamiento apagado en los candidatos; umbral de `Shared Usage` 1 024 MiB; latencia
+      sobre casos comunes; perfil del driver tambien para `llama-bench.exe`; y el LUID de la GPU
+      resuelto en cada invocacion porque un reinicio lo reasigna.
 
 21. **Asignacion de roles, y que se transfiere a produccion**
     - Files or modules: `verification.md`, `protocolo-f2.md` §9 y §10
