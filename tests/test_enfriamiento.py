@@ -248,3 +248,114 @@ def test_apagado_no_registra_ni_enfria(ruta, reloj):
     _fallar(estado, "m", 10)
     assert estado.consultar("m") is None
     assert not ruta.exists(), "apagado no debe ni tocar el fichero"
+    assert not (ruta.parent / enfriamiento.FICHERO_EVENTOS).exists(), "ni el de episodios"
+
+
+# --- Tarea 30: los episodios, que el criterio de P-4 cuenta y el fichero de estado no guarda -----
+
+
+def _eventos(ruta) -> list[dict]:
+    destino = ruta.parent / enfriamiento.FICHERO_EVENTOS
+    if not destino.exists():
+        return []
+    return [json.loads(linea) for linea in destino.read_text(encoding="utf-8").splitlines()]
+
+
+def test_entrar_deja_un_evento_con_la_clase_que_lo_disparo(ruta, reloj):
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 2)
+    assert _eventos(ruta) == [], "un fallo por debajo de N no es un episodio"
+    _fallar(estado, "m", 1, clase=Clase.TIMEOUT_LECTURA)
+    (evento,) = _eventos(ruta)
+    assert evento["evento"] == "entra"
+    assert evento["modelo"] == "m"
+    assert evento["clase"] == "timeout_lectura"
+    assert evento["reentradas"] == 1
+    assert evento["espera_s"] == pytest.approx(120.0)
+    assert evento["ts"].startswith("2027-01-15T08:00:00")
+
+
+def test_reentrar_tras_vencer_deja_su_evento_con_la_espera_doblada(ruta, reloj):
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)
+    reloj.avanzar(121)
+    _fallar(estado, "m", 1)
+    assert [e["evento"] for e in _eventos(ruta)] == ["entra", "reentra"]
+    reentra = _eventos(ruta)[1]
+    assert reentra["reentradas"] == 2
+    assert reentra["espera_s"] == pytest.approx(240.0)
+
+
+def test_los_fallos_durante_el_enfriamiento_no_dejan_evento(ruta, reloj):
+    """Solo le llegan llamadas con `model` explicito (REQ-005): no abren ni alargan un episodio."""
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)
+    _fallar(estado, "m", 4)
+    assert [e["evento"] for e in _eventos(ruta)] == ["entra"]
+
+
+def test_el_exito_tras_vencer_cierra_el_episodio_como_recuperado(ruta, reloj):
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)
+    reloj.avanzar(121)
+    estado.registrar_exito("m")
+    limpia = _eventos(ruta)[-1]
+    assert limpia["evento"] == "limpia"
+    assert limpia["tras_vencer"] is True
+    assert limpia["reentradas"] == 1
+
+
+def test_el_exito_antes_de_vencer_se_distingue(ruta, reloj):
+    """Un exito durante el enfriamiento solo puede venir de `model` explicito: no es una prueba
+    tras vencer, y el criterio no debe contarlo como recuperacion."""
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)
+    reloj.avanzar(10)
+    estado.registrar_exito("m")
+    assert _eventos(ruta)[-1]["tras_vencer"] is False
+
+
+def test_el_exito_de_un_modelo_con_fallos_sueltos_no_es_un_episodio(ruta, reloj):
+    """Control positivo de los dos anteriores: limpiar un contador no es cerrar un enfriamiento."""
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 2)
+    estado.registrar_exito("m")
+    estado.registrar_exito("otro")
+    assert _eventos(ruta) == []
+
+
+def test_los_eventos_de_dos_procesos_van_al_mismo_fichero(ruta, reloj):
+    daemon = _estado(ruta, reloj)
+    stdio = _estado(ruta, reloj)
+    _fallar(daemon, "m", 2)
+    _fallar(stdio, "m", 1)
+    reloj.avanzar(121)
+    daemon.registrar_exito("m")
+    assert [e["evento"] for e in _eventos(ruta)] == ["entra", "limpia"]
+
+
+def test_el_fichero_de_episodios_solo_guarda_nombres_contadores_y_fechas(ruta, reloj):
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)
+    reloj.avanzar(121)
+    _fallar(estado, "m", 1)
+    reloj.avanzar(241)
+    estado.registrar_exito("m")
+    permitidas = {"ts", "modelo", "evento", "clase", "reentradas", "espera_s", "tras_vencer"}
+    eventos = _eventos(ruta)
+    assert len(eventos) == 3
+    for evento in eventos:
+        assert set(evento) <= permitidas
+        assert evento["evento"] in {"entra", "reentra", "limpia"}
+
+
+def test_sin_disco_para_los_episodios_el_enfriamiento_sigue(ruta, reloj, monkeypatch):
+    """REQ-012 tambien para el registro: que no se pueda escribir no hace fallar ni deshace nada."""
+
+    def sin_disco(*_args, **_kwargs):
+        raise OSError("disco lleno")
+
+    monkeypatch.setattr(enfriamiento, "_anadir_lineas", sin_disco)
+    estado = _estado(ruta, reloj)
+    _fallar(estado, "m", 3)  # no lanza
+    assert estado.consultar("m") is not None

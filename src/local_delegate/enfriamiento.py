@@ -11,15 +11,22 @@ como si no hubiera enfriamiento**: este módulo nunca bloquea ni hace fallar una
 
 Solo guarda nombres de modelo, contadores y fechas. Nunca prompts, rutas ni contenido.
 
+Además del estado, cada transición deja una línea en `enfriamiento-eventos.jsonl`: `entra`,
+`reentra` y `limpia`. El estado solo guarda el presente y el primer éxito lo borra, así que sin ese
+registro nadie podría contar después cuántos episodios hubo ni cómo acabaron, que es lo que decide
+el criterio de P-4 (tarea 30).
+
 Este módulo decide el estado; quién lo consulta y qué hace con él (saltar al respaldo, fallar al
 momento) es de la tarea 28.
 """
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from filelock import FileLock, Timeout
@@ -35,6 +42,26 @@ CLASES_QUE_CUENTAN = frozenset({Clase.MODELO, Clase.TIMEOUT_LECTURA})
 
 #: Cuánto se espera al bloqueo del fichero antes de seguir sin enfriamiento, como `inflight.json`.
 ESPERA_BLOQUEO_S = 2.0
+
+#: El registro de episodios, junto al fichero de estado. Lo lee `scripts/medir_enfriamiento.py`.
+FICHERO_EVENTOS = "enfriamiento-eventos.jsonl"
+
+
+def _anadir_lineas(ruta: Path, eventos: list[dict]) -> None:
+    with ruta.open("a", encoding="utf-8") as f:
+        f.writelines(json.dumps(evento, ensure_ascii=False) + "\n" for evento in eventos)
+
+
+def _evento(ahora: float, modelo: str, tipo: str, entrada: dict, **extra: object) -> dict:
+    """Una línea del registro: nombre de modelo, contadores y fechas, como el estado."""
+    return {
+        "ts": datetime.fromtimestamp(ahora, UTC).isoformat(timespec="seconds"),
+        "modelo": modelo,
+        "evento": tipo,
+        "reentradas": entrada["reentradas"],
+        "espera_s": entrada["espera_s"],
+        **extra,
+    }
 
 
 @dataclass(frozen=True)
@@ -75,6 +102,7 @@ class Estado:
         reloj: Callable[[], float] = time.time,
     ) -> None:
         self._ruta = Path(ruta)
+        self._ruta_eventos = self._ruta.with_name(FICHERO_EVENTOS)
         self._fallos = max(1, int(fallos))
         self._espera_max_s = float(espera_max_s)
         self._espera_s = min(float(espera_s), self._espera_max_s)
@@ -88,6 +116,7 @@ class Estado:
         if Clase(clase) not in CLASES_QUE_CUENTAN:
             return
         ahora = self._reloj()
+        eventos: list[dict] = []
 
         def aplicar(datos: dict) -> None:
             entrada = _entrada(datos.get(modelo))
@@ -102,6 +131,7 @@ class Estado:
                 entrada["hasta"] = ahora + entrada["espera_s"]
                 entrada["reentradas"] += 1
                 entrada["fallos"] = 0
+                eventos.append(_evento(ahora, modelo, "reentra", entrada, clase=Clase(clase).value))
             else:
                 entrada["fallos"] += 1
                 if entrada["fallos"] >= self._fallos:
@@ -109,17 +139,35 @@ class Estado:
                     entrada["hasta"] = ahora + self._espera_s
                     entrada["reentradas"] = 1
                     entrada["fallos"] = 0
+                    eventos.append(
+                        _evento(ahora, modelo, "entra", entrada, clase=Clase(clase).value)
+                    )
             datos[modelo] = entrada
 
-        self._mutar(aplicar)
+        self._mutar(aplicar, eventos)
 
     def registrar_exito(self, modelo: str) -> None:
         """Cualquier éxito deja el modelo limpio: sin contador y con la espera base (REQ-010/011).
 
         Sin entrada no hay nada que limpiar y no se escribe: el éxito es el camino de casi todas
         las delegaciones, y reescribir el fichero en cada una sería el coste que la spec no admite.
+        Si el modelo llegó a enfriarse, el éxito cierra el episodio. `tras_vencer` distingue la
+        recuperación de verdad de un éxito con `model` explícito en pleno enfriamiento (REQ-005).
         """
-        self._mutar(lambda datos: datos.pop(modelo, None) is not None)
+        ahora = self._reloj()
+        eventos: list[dict] = []
+
+        def aplicar(datos: dict) -> bool:
+            bruta = datos.pop(modelo, None)
+            if bruta is None:
+                return False
+            entrada = _entrada(bruta)
+            if entrada["hasta"] is not None:
+                tras_vencer = ahora >= entrada["hasta"]
+                eventos.append(_evento(ahora, modelo, "limpia", entrada, tras_vencer=tras_vencer))
+            return True
+
+        self._mutar(aplicar, eventos)
 
     # --- Leer ----------------------------------------------------------------------------------
 
@@ -186,7 +234,9 @@ class Estado:
         except (Timeout, OSError):
             return {}  # REQ-012: sin bloqueo o sin disco, como si no hubiera enfriamiento
 
-    def _mutar(self, aplicar: Callable[[dict], object]) -> None:
+    def _mutar(self, aplicar: Callable[[dict], object], eventos: list[dict] | None = None) -> None:
+        """Aplica un cambio bajo el bloqueo. `aplicar` llena `eventos` si hubo transición: se
+        escriben bajo el mismo bloqueo para que el orden del registro sea el del estado."""
         if not self._activo:
             return
         try:
@@ -196,6 +246,11 @@ class Estado:
                 if aplicar(datos) is False:
                     return  # nada cambió: no se reescribe el fichero
                 escribir_json_atomico(self._ruta, datos)
+                if eventos:
+                    try:
+                        _anadir_lineas(self._ruta_eventos, eventos)
+                    except OSError:
+                        pass  # el registro es para medir: perderlo no deshace el estado ya escrito
         except (Timeout, OSError):
             return  # REQ-012: nunca bloquea ni hace fallar una delegación
 

@@ -32,12 +32,16 @@ def telemetria_de_hooks() -> Path:
     return Path(destino) if destino else Path.home() / ".claude" / "hooks" / "telemetry.jsonl"
 
 
-def logs_de_uso() -> list[Path]:
+def directorio_de_logs() -> Path:
+    """`LOG_DIR` de esta maquina. Lo usa tambien `medir_enfriamiento.py`: una sola copia."""
     directorio = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
     if directorio:
-        return sorted(Path(directorio).glob("usage-*.jsonl"))
-    base = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "local-delegate"
-    return sorted(base.glob("usage-*.jsonl"))
+        return Path(directorio)
+    return Path(os.environ.get("LOCALAPPDATA", Path.home())) / "local-delegate"
+
+
+def logs_de_uso() -> list[Path]:
+    return sorted(directorio_de_logs().glob("usage-*.jsonl"))
 
 
 def leer(ruta: Path, desde: str | None) -> list[dict]:
