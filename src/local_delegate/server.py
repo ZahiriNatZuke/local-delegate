@@ -33,7 +33,7 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, cadenas, clients, config, estado_json, fallos, preguntas
+from . import autostart, cadenas, clients, config, enfriamiento, estado_json, fallos, preguntas
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -613,6 +613,57 @@ class ChatResult:
     clase: str | None = None
 
 
+@dataclass(frozen=True)
+class Intento:
+    """Una llamada REAL al backend dentro de una llamada lógica: la del modelo pedido o un respaldo.
+
+    `_run_chat` devuelve la lista entera y no solo el último resultado: sin ella, quien cuenta
+    llamadas (`chunks` en el log) seguiría viendo una aunque el respaldo hiciera dos.
+    """
+
+    modelo: str
+    ok: bool
+    error: str | None
+    clase: str | None
+    ms: int
+
+
+#: Las clases que permiten saltar (tabla de F3). Capacidad solo al residente (REQ-018).
+_CLASES_QUE_SALTAN = frozenset({fallos.Clase.MODELO, fallos.Clase.CAPACIDAD})
+
+
+def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
+    """REQ-009: el modelo está enfriándose y no queda candidato. Falla al momento, sin timeout."""
+    hasta = datetime.fromtimestamp(enfriado.hasta, UTC).strftime("%H:%M:%S UTC")
+    return ChatResult(
+        text=(
+            f"[local-delegate error] {model} está en enfriamiento hasta las {hasta} (quedan "
+            f"{enfriado.restante_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
+            "disponible."
+        ),
+        ok=False,
+        error="cooldown",
+    )
+
+
+def _respaldo_de(model: str, result: ChatResult, intentos: list[Intento]) -> dict | None:
+    """Si respondió un modelo distinto del pedido: cuál, en lugar de cuál y por qué (REQ-007)."""
+    if not (result.ok and intentos and intentos[-1].modelo != model):
+        return None
+    primero = intentos[0]
+    motivo = primero.error if primero.modelo == model else "en enfriamiento"
+    return {"respondio": intentos[-1].modelo, "en_lugar_de": model, "motivo": motivo}
+
+
+def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
+    """La línea de aviso, siempre DETRÁS del contenido y separada de él."""
+    extra = f", {desde}" if desde else ""
+    return (
+        f"\n\n[local-delegate aviso: respondió {info['respondio']} en lugar de "
+        f"{info['en_lugar_de']} ({info['motivo']}){extra}]"
+    )
+
+
 def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
     """El error legible de una respuesta que llegó con 200 y aun así no sirve.
 
@@ -857,6 +908,118 @@ def _strip_think(s: str) -> str:
     return s.strip()
 
 
+def _llamar_modelo(
+    model: str, payload: dict, json_schema_fallback: bool
+) -> tuple[ChatResult, str | None, int]:
+    """Una llamada a UN modelo, con el reintento sin schema de siempre si el backend dio 400."""
+    t0 = time.monotonic()
+    envio = {"model": model, **payload}
+    result = _post_chat(model, envio)
+    json_schema_status = "used" if "response_format" in envio else None
+    if json_schema_status and not result.ok and result.error == "http_400":
+        if json_schema_fallback:
+            # El backend no soporta response_format con schema: reintenta en modo libre.
+            envio.pop("response_format", None)
+            result = _post_chat(model, envio)
+            json_schema_status = "fallback"
+        else:
+            json_schema_status = "error"
+    return result, json_schema_status, int((time.monotonic() - t0) * 1000)
+
+
+def _con_respaldo(
+    model: str,
+    payload: dict,
+    *,
+    rol: str | None,
+    explicito: bool,
+    tamano: int,
+    json_schema_fallback: bool,
+) -> tuple[ChatResult, str | None, list[Intento]]:
+    """El modelo pedido y, si su fallo lo permite, los candidatos de la cadena de su rol.
+
+    Reglas, en el orden en que se aplican:
+    - un modelo explícito se envía aunque esté enfriado, y sin respaldo (REQ-005);
+    - el modelo pedido en enfriamiento no se llama: se va directo a la cadena (REQ-009);
+    - solo saltan los fallos del modelo y los de capacidad, y estos solo al residente y sin
+      segundo salto (REQ-002, REQ-018);
+    - un candidato fuera del catálogo, enfriado o cuyo tope no admite la entrada se salta sin
+      llamarlo (REQ-003), y no gasta salto;
+    - tras un salto, un fallo que no sea del modelo corta la cadena; nunca más de
+      `FALLBACK_MAX_HOPS` saltos.
+
+    La cadena se resuelve aquí, y solo si hace falta: resolverla antes leería la config de
+    llama-swap en cada delegación, también en el camino feliz.
+    """
+    estado = enfriamiento.desde_config()
+    intentos: list[Intento] = []
+    schema: str | None = None
+
+    def llamar(modelo: str) -> ChatResult:
+        nonlocal schema
+        result, schema, ms = _llamar_modelo(modelo, payload, json_schema_fallback)
+        intentos.append(Intento(modelo, result.ok, result.error, result.clase, ms))
+        if result.ok:
+            estado.registrar_exito(modelo)
+        elif result.clase is not None:
+            estado.registrar_fallo(modelo, result.clase)
+        return result
+
+    if explicito:
+        return llamar(model), schema, intentos
+
+    enfriado = estado.consultar(model)
+    original: ChatResult | None = None
+    clase: str | None = None
+    if enfriado is None:
+        original = llamar(model)
+        if original.ok or original.clase not in _CLASES_QUE_SALTAN:
+            return original, schema, intentos
+        clase = original.clase
+
+    cadena = cadenas.resolver(rol).modelos if rol and config.FALLBACK else ()
+    residente = cadenas.residente()[0] if clase == fallos.Clase.CAPACIDAD else None
+    saltos = 0
+    for candidato in cadena:
+        if saltos >= config.FALLBACK_MAX_HOPS:
+            break
+        if residente is not None and candidato != residente:
+            continue
+        if (
+            candidato == model
+            or candidato not in config.ALLOWED_MODELS
+            or tamano > config.max_chars_for(candidato)
+            or estado.consultar(candidato) is not None
+        ):
+            continue
+        saltos += 1
+        respuesta = llamar(candidato)
+        if respuesta.ok:
+            return respuesta, schema, intentos
+        if residente is not None or respuesta.clase != fallos.Clase.MODELO:
+            break
+
+    base = original if original is not None else _error_enfriado(model, enfriado)
+    probados = [i for i in intentos if i.modelo != model]
+    if not probados:
+        return base, schema, intentos
+    # REQ-008: el error del modelo pedido, igual que hoy, y una línea con lo que se probó.
+    lista = ", ".join(f"{i.modelo} ({i.error})" for i in probados)
+    return (
+        ChatResult(
+            text=f"{base.text}\n[local-delegate respaldo: también fallaron {lista}]",
+            ok=False,
+            error=base.error,
+            finish_reason=base.finish_reason,
+            tokens_in=base.tokens_in,
+            tokens_out=base.tokens_out,
+            clase=base.clase,
+        ),
+        schema,
+        intentos,
+    )
+
+
 def _run_chat(
     model: str,
     system: str,
@@ -866,15 +1029,21 @@ def _run_chat(
     *,
     response_format: dict | None = None,
     json_schema_fallback: bool = False,
-) -> tuple[ChatResult, int, str | None]:
-    """UNA llamada al endpoint bajo el semáforo de concurrencia.
+    rol: str | None = None,
+    explicito: bool = False,
+    tamano: int | None = None,
+) -> tuple[ChatResult, int, str | None, list[Intento]]:
+    """UNA llamada lógica al endpoint bajo el semáforo de concurrencia, con su respaldo.
 
-    Devuelve (resultado, latencia_ms, estado_json_schema). No registra nada en el log ni
-    toca el inflight: de eso se encargan _chat (una llamada = un evento) y _chat_chunked
-    (N llamadas = un evento con `chunks`).
+    Devuelve (resultado, latencia_ms, estado_json_schema, intentos): `intentos` son las llamadas
+    reales al backend, en orden. No registra nada en el log ni toca el inflight: de eso se
+    encargan _chat (una llamada = un evento) y _chat_chunked (N llamadas = un evento con `chunks`).
+
+    El salto va DENTRO de la plaza (REQ-017), así que el mecanismo nunca supera
+    `MAX_CONCURRENT_REQUESTS`, y DESPUÉS del reintento sin schema (REQ-002). `tamano` es la
+    entrada que se valida contra el tope de cada candidato; sin él, el largo de `user`.
     """
-    payload = {
-        "model": model,
+    payload: dict[str, Any] = {
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -885,20 +1054,67 @@ def _run_chat(
     }
     if response_format is not None:
         payload["response_format"] = response_format
+    if tamano is None:
+        tamano = len(user) if isinstance(user, str) else 0
 
     t0 = time.monotonic()
     with _chat_slots:
-        result = _post_chat(model, payload)
-        json_schema_status = "used" if response_format is not None else None
-        if response_format is not None and not result.ok and result.error == "http_400":
-            if json_schema_fallback:
-                # El backend no soporta response_format con schema: reintenta en modo libre.
-                payload.pop("response_format", None)
-                result = _post_chat(model, payload)
-                json_schema_status = "fallback"
-            else:
-                json_schema_status = "error"
-    return result, int((time.monotonic() - t0) * 1000), json_schema_status
+        result, json_schema_status, intentos = _con_respaldo(
+            model,
+            payload,
+            rol=rol,
+            explicito=explicito,
+            tamano=tamano,
+            json_schema_fallback=json_schema_fallback,
+        )
+    return result, int((time.monotonic() - t0) * 1000), json_schema_status, intentos
+
+
+class _ModeloVigente:
+    """El modelo de una operación de varios trozos, que cambia como mucho una vez (REQ-006).
+
+    En cuanto un trozo lo responde un respaldo, los siguientes van directos a ese respaldo y sin
+    otra cadena: la salida no alterna modelos y no se vuelve a llamar al que acaba de fallar.
+    """
+
+    def __init__(self, model: str, rol: str | None, explicito: bool) -> None:
+        self.pedido = model
+        self.modelo = model
+        self.rol = None if explicito else rol
+        self.explicito = explicito
+        #: El trozo en curso; `None` fuera de los trozos (la reducción de map-reduce).
+        self.trozo: int | None = None
+        self.salto: dict | None = None
+
+    def llamar(
+        self, system: str, user: str, max_tokens: int, temperature: float, *, tamano: int
+    ) -> tuple[ChatResult, int, list[Intento]]:
+        result, ms, _schema, intentos = _run_chat(
+            self.modelo,
+            system,
+            user,
+            max_tokens,
+            temperature,
+            rol=self.rol,
+            explicito=self.explicito,
+            tamano=tamano,
+        )
+        info = _respaldo_de(self.modelo, result, intentos)
+        if info is not None:
+            if self.salto is None:
+                self.salto = {**info, "en_lugar_de": self.pedido, "trozo": self.trozo}
+            self.modelo = info["respondio"]
+            self.rol = None
+        return result, ms, intentos
+
+    def aviso(self, varios: bool) -> str:
+        if self.salto is None:
+            return ""
+        desde = None
+        if varios:
+            trozo = self.salto["trozo"]
+            desde = f"desde el trozo {trozo}" if trozo is not None else "en la reducción"
+        return _aviso_respaldo(self.salto, desde)
 
 
 def _savings_feedback(chars_in: int, tokens_in: int | None, label: str, char_estimate: bool) -> str:
@@ -935,8 +1151,15 @@ def _chat(
     input_unit: str = "chars",
     strip_fences: bool = False,
     write_to: Path | None = None,
+    rol: str | None = None,
+    explicito: bool = False,
+    respaldo: dict | None = None,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
+
+    `rol` habilita el respaldo de ese rol; `explicito` lo apaga para un modelo elegido por quien
+    llama (REQ-005). Con `respaldo`, el aviso de que respondió otro modelo se deja en ese dict en
+    vez de pegarlo al texto: lo usa quien parsea el resultado (REQ-007).
 
     `user` acepta un `str` (texto->texto) o una lista de bloques de contenido
     OpenAI-compatible (p. ej. `[{"type":"text",...},{"type":"image_url",...}]` para
@@ -944,7 +1167,7 @@ def _chat(
     """
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     try:
-        result, latency_ms, json_schema_status = _run_chat(
+        result, latency_ms, json_schema_status, intentos = _run_chat(
             model,
             system,
             user,
@@ -952,6 +1175,9 @@ def _chat(
             temperature,
             response_format=response_format,
             json_schema_fallback=json_schema_fallback,
+            rol=rol,
+            explicito=explicito,
+            tamano=chars_in or None,
         )
     finally:
         _inflight_end(entry_id)
@@ -967,9 +1193,18 @@ def _chat(
     # que generó el modelo y nada más.
     if truncated_out and write_to is None:
         text += aviso_truncado
+    info_respaldo = _respaldo_de(model, result, intentos)
+    aviso_respaldo = ""
+    if info_respaldo is not None:
+        if respaldo is not None:
+            respaldo.update(info_respaldo)
+        else:
+            aviso_respaldo = _aviso_respaldo(info_respaldo)
+    if write_to is None:
+        text += aviso_respaldo
     _log_event(
         tool=tool,
-        model=model,
+        model=info_respaldo["respondio"] if info_respaldo else model,
         source=source,
         chars_in=chars_in,
         chars_out=len(text),
@@ -991,7 +1226,11 @@ def _chat(
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
     # tal cual, igual que en cualquier otra tool.
     if write_to is not None and result.ok:
-        return _escribir_destino(write_to, text) + (aviso_truncado if truncated_out else "")
+        return (
+            _escribir_destino(write_to, text)
+            + (aviso_truncado if truncated_out else "")
+            + aviso_respaldo
+        )
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
@@ -1190,6 +1429,8 @@ def _chat_chunked(
     raw_len: int | None = None,
     path: str | None = None,
     chunk_chars: int | None = None,
+    rol: str | None = None,
+    explicito: bool = False,
 ) -> str:
     """Procesa `content` por trozos y concatena las salidas EN ORDEN.
 
@@ -1210,10 +1451,11 @@ def _chat_chunked(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     truncated_out = False
+    vigente = _ModeloVigente(model, rol, explicito)
 
-    def _accumulate(result: ChatResult, ms: int) -> None:
+    def _accumulate(result: ChatResult, ms: int, llamadas: int) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
-        calls += 1
+        calls += llamadas
         latency_ms += ms
         if result.tokens_in is not None:
             tokens_in = (tokens_in or 0) + result.tokens_in
@@ -1224,10 +1466,10 @@ def _chat_chunked(
         """Devuelve el texto del trozo, o None si el backend falló (aborta la operación)."""
         nonlocal failed, truncated_out
         max_tokens = min(len(piece) // 2 + 128, config.CHUNK_MAX_TOKENS)
-        result, ms, _schema = _run_chat(
-            model, system, build_user(piece.strip()), max_tokens, temperature
+        result, ms, intentos = vigente.llamar(
+            system, build_user(piece.strip()), max_tokens, temperature, tamano=len(piece)
         )
-        _accumulate(result, ms)
+        _accumulate(result, ms, len(intentos))
         if not result.ok:
             failed = result
             return None
@@ -1250,6 +1492,7 @@ def _chat_chunked(
     try:
         for index, piece in enumerate(chunks, start=1):
             _inflight_progress(entry_id, index)
+            vigente.trozo = index
             output = _process(piece)
             if output is None:
                 break
@@ -1269,10 +1512,11 @@ def _chat_chunked(
         finish_reason = "length" if truncated_out else "stop"
         if truncated_out:
             text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
+        text += vigente.aviso(len(chunks) > 1)
 
     _log_event(
         tool=tool,
-        model=model,
+        model=vigente.modelo if ok else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -1370,6 +1614,8 @@ def _chat_map_reduce(
     reduce_system: str | None = None,
     build_reduce=None,
     partial_max_words: int | None = None,
+    rol: str | None = None,
+    explicito: bool = False,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -1396,11 +1642,14 @@ def _chat_map_reduce(
     tokens_in: int | None = None
     tokens_out: int | None = None
     failed: ChatResult | None = None
+    vigente = _ModeloVigente(model, rol, explicito)
 
     def _one(sys_prompt: str, user: str, words: int) -> str | None:
         nonlocal calls, latency_ms, tokens_in, tokens_out, failed
-        result, ms, _schema = _run_chat(model, sys_prompt, user, int(words * 2) + 64, temperature)
-        calls += 1
+        result, ms, intentos = vigente.llamar(
+            sys_prompt, user, int(words * 2) + 64, temperature, tamano=len(user)
+        )
+        calls += len(intentos)
         latency_ms += ms
         if result.tokens_in is not None:
             tokens_in = (tokens_in or 0) + result.tokens_in
@@ -1470,11 +1719,13 @@ def _chat_map_reduce(
         summaries: list[str] = []
         for index, piece in enumerate(pieces, start=1):
             _inflight_progress(entry_id, index)
+            vigente.trozo = index
             outs = _map_piece(piece)
             if outs is None:
                 break
             summaries.extend(outs)
 
+        vigente.trozo = None
         text = ""
         if failed is None:
             # Con un solo parcial y sin reduce propio, ese parcial YA es el resultado. Con un
@@ -1526,10 +1777,11 @@ def _chat_map_reduce(
             error = "context_overflow"
     else:
         error, finish_reason = None, "stop"
+        text += vigente.aviso(len(pieces) > 1)
 
     _log_event(
         tool=tool,
-        model=model,
+        model=vigente.modelo if ok else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -1667,6 +1919,7 @@ def local_summarize(
             _build,
             max_chars=config.max_chars_for_role(rol),
             tool="local_summarize",
+            rol=rol,
             source="path" if path else "inline",
             max_words=max_words,
             raw_len=raw_len,
@@ -1680,6 +1933,7 @@ def local_summarize(
         user,
         max_tokens=int(max_words * 2) + 64,
         tool="local_summarize",
+        rol=rol,
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
@@ -1709,6 +1963,7 @@ def local_classify(text: str, labels: list[str]) -> str:
         max_tokens=16,
         temperature=0.0,
         tool="local_classify",
+        rol="mechanical",
         chars_in=len(text),
         source="inline",
     )
@@ -1748,6 +2003,7 @@ def local_extract(
     system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
     user = f"Extrae los campos del siguiente contenido:\n\n{content}"
     use_schema = config.JSON_SCHEMA_MODE != "off"
+    info_respaldo: dict = {}
     result = _strip_fences(
         _chat(
             model,
@@ -1756,6 +2012,8 @@ def local_extract(
             max_tokens=512,
             temperature=0.0,
             tool="local_extract",
+            rol=rol,
+            respaldo=info_respaldo,
             chars_in=len(content),
             source="path" if path else "inline",
             truncated_in=truncated_in,
@@ -1789,6 +2047,9 @@ def local_extract(
             "chars": len(content),
             "tokens_aprox": len(content) // config.CHARS_PER_TOKEN,
         }
+    if info_respaldo:
+        # Con el resto de metadatos, nunca dentro de los campos que el agente usa tal cual.
+        meta["respaldo"] = info_respaldo
     if meta:
         datos["_local_delegate"] = meta
     return datos
@@ -1818,6 +2079,7 @@ def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = F
         max_tokens=1536,
         temperature=0.1,
         tool="local_boilerplate",
+        rol="code",
         chars_in=len(spec),
         source="inline",
         strip_fences=True,
@@ -1852,6 +2114,9 @@ def local_delegate(
             'off' (una sola llamada; el input largo puede volver truncado).
     """
     chosen = model or config.MODEL_MECHANICAL
+    # Un modelo pedido por quien llama —o elegido por una persona en la pregunta de abajo— no
+    # usa respaldo (REQ-005): lo eligió alguien, y cambiarlo en silencio sería desobedecer.
+    explicito = model is not None
     if chosen not in config.ALLOWED_MODELS:
         # La lista de válidos ya iba en el error, así que el servidor siempre supo la respuesta.
         # Se ofrece en vez de solo enunciarla. Ojo con la consecuencia, que es real: con respuesta,
@@ -1886,6 +2151,8 @@ def local_delegate(
             input,
             lambda piece: f"{task}\n\nInput:\n{piece}",
             tool="local_delegate",
+            rol="mechanical",
+            explicito=explicito,
             source="inline",
         )
     return _chat(
@@ -1894,6 +2161,8 @@ def local_delegate(
         f"{task}\n\nInput:\n{input}",
         max_tokens=config.CHUNK_MAX_TOKENS,
         tool="local_delegate",
+        rol="mechanical",
+        explicito=explicito,
         chars_in=len(input),
         source="inline",
     )
@@ -1945,6 +2214,7 @@ def local_lint_summary(
             _build,
             max_chars=config.max_chars_for_role(rol),
             tool="local_lint_summary",
+            rol=rol,
             source="path" if path else "inline",
             max_words=max_words,
             raw_len=raw_len,
@@ -1958,6 +2228,7 @@ def local_lint_summary(
         user,
         max_tokens=int(max_words * 2) + 96,
         tool="local_lint_summary",
+        rol=rol,
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
@@ -2068,6 +2339,7 @@ def local_commit_msg(
             _build_map,
             max_chars=config.max_chars_for_role("code"),
             tool="local_commit_msg",
+            rol="code",
             source="path" if path else "inline",
             max_words=90,
             # Los partes son material intermedio y hay varios archivos por trozo: con el tope
@@ -2091,6 +2363,7 @@ def local_commit_msg(
         max_tokens=256,
         temperature=0.2,
         tool="local_commit_msg",
+        rol="code",
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
@@ -2137,6 +2410,7 @@ def local_translate(
         content,
         lambda piece: f"Traduce al {target_lang} el siguiente texto:\n\n{piece}",
         tool="local_translate",
+        rol=rol,
         source="path" if path else "inline",
         truncated_in=truncated_in,
         raw_len=raw_len,
@@ -2177,6 +2451,7 @@ def local_explain_code(
         user,
         max_tokens=700,
         tool="local_explain_code",
+        rol="code",
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
@@ -2227,6 +2502,7 @@ def local_describe_image(
         content,
         max_tokens=int(max_words * 2) + 64,
         tool="local_describe_image",
+        rol="vision",
         chars_in=raw_len,
         source="path",
         raw_len=raw_len,

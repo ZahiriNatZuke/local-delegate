@@ -15,14 +15,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `LOCAL_DELEGATE_FALLBACK_<ROL>` (roles o ids separados por comas; `none` desactiva, porque en
   Windows una variable vacía no existe). `local_status` muestra cómo quedan, y `local-delegate
   doctor` suma una comprobación que avisa si una cadena nombra algo que no está en el catálogo.
-  **Todavía no hay salto**: llega en una versión posterior.
+
+- **El salto: cuando el modelo de un rol falla por su culpa, responde el siguiente de su cadena.**
+  Solo saltan los fallos del modelo (un 5xx, una respuesta rota); un 4xx, un backend caído, un
+  timeout de lectura o un razonamiento que agotó `max_tokens` devuelven el error de siempre. Un
+  modelo que no se pudo cargar (falta de memoria) salta **solo al residente**, que ya está en
+  memoria, y sin segundo salto. Como mucho dos saltos por llamada (`LOCAL_DELEGATE_FALLBACK_MAX_HOPS`),
+  dentro de la misma plaza de concurrencia, y un candidato cuyo tope de entrada no admite la
+  petición se salta sin llamarlo: en un resumen por partes de un documento largo, el respaldo
+  nunca entra, porque ningún otro rol admite trozos de ese tamaño. La respuesta avisa de qué modelo
+  respondió en lugar de cuál y por qué, **siempre fuera del contenido**: en los metadatos de
+  `local_extract` y en el recibo de `local_boilerplate`, nunca en el fichero. En un documento por
+  trozos, el modelo cambia como mucho una vez. `local_delegate` con `model` no salta nunca.
+  `LOCAL_DELEGATE_FALLBACK=0` lo apaga.
 
 - **Enfriamiento por modelo, compartido entre procesos.** Un modelo que falla tres veces seguidas
   por su culpa deja de recibir peticiones durante 120 s; al vencer, un éxito lo deja limpio y un
   solo fallo lo vuelve a enfriar con la espera doblada, hasta 900 s. El estado lo comparten el daemon
   y los procesos stdio (`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio; si no se
   puede leer, se sigue sin enfriamiento. Configurable con `LOCAL_DELEGATE_COOLDOWN`, `_FAILURES`, `_S`
-  y `_MAX_S`. Como las cadenas, todavía no lo consulta ninguna tool.
+  y `_MAX_S`. Un modelo enfriado no recibe peticiones: se va directo a su cadena, y si no queda
+  candidato la tool falla al momento diciendo hasta cuándo, sin esperar ningún timeout. Un `model`
+  explícito se envía igual. Un éxito sin fallos previos no escribe el fichero.
 
 - **`LLAMASWAP_CONFIG`, `LLAMASWAP_EXE`, `LLAMASWAP_LISTEN` y `LLAMASWAP_WATCH_CONFIG` pasan por el
   inventario de variables.** Tres módulos las leían del entorno por su cuenta, y por ahí la suite
