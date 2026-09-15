@@ -399,6 +399,109 @@ tienen control positivo en `tests/test_corpus.py`.
 **Siguiente: repetir el piloto de CP-3 entero** (P-9 resuelta), con el corpus y el runner nuevos,
 antes de la tanda. Toca otra vez la maquina: mover el perfil del driver a b10909 y medirlo.
 
+#### Segundo piloto de CP-3 (sesion 3, 2026-09-14): pasa en tres roles, y dos casos siguen sin poder
+
+Sesion 3 de §10, perfil medido antes. Mismos modelos, `-c 32768`, 3 corridas, corpus y runner de la
+correccion de arriba; respuestas en `resultados/cp3b-*.jsonl`, veredicto en `cp3b-texto.json` y
+`cp3b-vision.json`. Piloto 23:00:36-23:10:30 UTC. Las anuladas por arranque **se repitieron** (el
+arreglo funciona); `lint-33k` trunco dos veces en todas las corridas de los dos modelos.
+
+| Rol | Programa | Lectura de las salidas |
+| --- | --- | --- |
+| `code` | pasa: banda 0,143, 3 de 4 admitidos, agregado 0,362 contra 0,800 | Separa de verdad en `explicar-metrics-15k` y `boilerplate-156`. `commit-diff-19k` sigue en 0 los dos. |
+| `long` | pasa: banda 0, 2 de 4 admitidos, agregado 0,417 contra 0,500 | Uno separa a favor del grande (changelog) y otro a favor del pequeno (`resumen-md-10k`); `extraer-uvlock-48k` en techo, `lint-33k` en suelo. |
+| `mechanical` | **no pasa**: 5 de 5 en techo | Igual que el primer piloto. Ver la contradiccion con §7 punto 4, abajo. |
+| `vision` | pasa: los dos bajan | Solo `leer-cifras-dashboard` baja por la entrada; `describir-dashboard` vuelve a ser el tercer desenlace. |
+
+Caso a caso, mirado contra la fuente:
+
+- **`explicar-metrics-15k` separa bien (0,286 contra 1,0).** El 2B dice «tres endpoints principales» y
+  nombra dos; el 14B lista las siete rutas. La correccion del corpus hizo lo que tenia que hacer.
+- **`boilerplate-156` separa bien (0 contra 0,8), y ahora por ejecucion.** El 2B usa `re` sin
+  importarlo y lee `group(5)` de un patron de cuatro grupos: 0 de 5. El 14B parte por espacios y
+  falla solo `1h30m`: 4 de 5. La cobertura de terminos daba 1,0 a los dos.
+- **`resumen-changelog-7k` separa bien (0,167 contra 1,0), y la cobertura coincide con la exactitud.**
+  El 2B escribe que `local_boilerplate` «elimina la dependencia de rutas absolutas», y la fuente
+  dice lo contrario (exige ruta **absoluta**, linea 6); el 14B lo da bien y nombra los modulos
+  retirados.
+- **`explicar-install-20k` separa a favor del pequeno (0,8 contra 0,6).** Las dos explicaciones son
+  correctas; el 14B nombra `.bak` y `--dry-run` en la corrida truncada y los pierde al reintentar.
+  Premisa de direccion no cumplida: **no se toca** (segunda causa de CP-3).
+- **`resumen-md-10k` otra vez a favor del pequeno (0,667 contra 0).** El 2B nombra los eventos
+  `UserPromptSubmit` y `PreToolUse`; el 14B nombra los ficheros `suggest_delegate_*.py`. Ninguno
+  nombra `LD_HOOK_READ_BLOQUEAR` (seccion propia en la linea 44 de la fuente). Misma lectura que en el
+  primer piloto: premisa falsa, **no se toca**.
+- **`commit-diff-19k`: 0 los dos, con los terminos nuevos.** Salidas identicas al primer piloto: 2B
+  `feat(server): migrar estado de delegaciones a archivo compartido...` (el cambio de verdad, sin
+  identificadores), 14B `chore: update version to 0.7.0 in CHANGELOG, pyproject.toml, and uv.lock`
+  (cierto y accesorio). **La correccion no alcanzo**: un asunto de <=72 caracteres rara vez lleva
+  identificadores, y el cuerpo es opcional; ninguno lo escribe. *El corpus no puede*, y la direccion
+  vuelve a favorecer al pequeno. **Pendiente del usuario** (abajo).
+- **`lint-33k`: 0 los dos por `truncado_repetido`, con salidas muy distintas.** El 14B cumple
+  «agrupados por archivo» literalmente, con conteos que cuadran con la fuente, y no le caben 14
+  archivos y 48 reglas en 992 tokens. El 2B agrupa por regla y **se inventa los conteos**: «T201: 10
+  archivos (3 por archivo)», y la fuente tiene 5 archivos y 101 ocurrencias; «CPY001: 10 archivos»,
+  y son 14. Ya no entra en bucle. El puntuador no ve conteos inventados y el formato pedido (por
+  archivo, 200 palabras) no cabe con esta entrada: *el corpus no puede*. **Pendiente del usuario.**
+- **`leer-cifras-dashboard` pasa limpio (0,667 contra 0).** Con la imagen correcta lee `v0.27.8 /
+  29/8 05:01`; con la de `bcbe39f`, `v0.24.8, 24/7 23:12` y cae por `forbidden_terms`. **Los terminos
+  son correctos**: las dos imagenes dicen `v0.27.0` y `v0.24.0` en el badge (comprobado a ojo); el
+  modelo lee el ultimo 0 como 8 en las dos. El 0,667 es un error real de lectura, no del corpus.
+- **`describir-dashboard`, tercer desenlace otra vez.** Correcta 1,0 (la corrida 1 se anulo con 0,75 y
+  al repetirse dio 1,0); control 0,75 porque escribe «calculo» donde las dos imagenes rotulan
+  «computo». Eleccion de palabra: sigue **sin control de entrada**.
+
+**Tres hallazgos que no son de un caso:**
+
+1. **`mechanical` contradice §7 punto 4.** CP-3 exige que al menos un caso separe por rol, y el
+   programa lo marca «no pasa»; §7 punto 4 (aprobado tras el primer piloto) dice que un rol todo en
+   techo **no** es indecidible sino un empate que se decide por velocidad. Dos lecturas para el mismo
+   dato: el criterio de CP-3 no se actualizo con la decision. Se resuelve escribiendolo, no
+   repitiendo.
+2. **La banda de ruido casi no mide ruido (P-12).** Con `seed` 42 y **temperatura 0** (§5.3; el runner
+   la fuerza en `benchmark.py`, aunque el caso guarde la de produccion, 0,2 en casi todas) las tres corridas
+   dan **la misma respuesta byte a byte** (`response_sha256` del ultimo intento): el 2B en los 13 casos
+   de texto, el 14B en 8 de 13 (los otros 5 tienen dos variantes, y solo en `explicar-metrics-15k`
+   cambia la puntuacion, por un truncado). `long` y `mechanical` tienen banda 0
+   y la de `code` (0,143) sale de un reintento por truncado, no de variacion del modelo. Con banda 0
+   cualquier diferencia «separa». **La premisa de §5.3 no se cumple**: el no determinismo de llama.cpp
+   «cuando agrupa peticiones» no aparece con `-np 1`, que no agrupa. `puede_disparar` da `true` en `code` y `long`, pero por esta razon,
+   no porque la granularidad del corpus alcance. P-12 cambia de forma: la pregunta ya no es solo la
+   granularidad, es si las 3 corridas miden algo con semilla fija.
+3. **Los dos casos que no pueden son del mismo tipo:** la puntuacion por terminos no ve si un conteo
+   es verdad (`lint`) ni premia describir el cambio sin sus identificadores (`commit`). El protocolo
+   ya tiene la senal que si lo veria en `boilerplate`: comprobar contra la fuente.
+
+#### Decisiones del usuario tras el segundo piloto (2026-09-14), en el orden en que se aplicaron
+
+Recomendadas con las salidas delante y **antes** de la tanda; aprobadas las cuatro. Ninguna mira que
+modelo gana: cambian lo que se mide, no a quien favorece.
+
+1. **(Hallazgo 1) `mechanical`: CP-3 dice lo mismo que §7 punto 4.** Un rol cuyos casos estan
+   **todos** en techo pasa CP-3 como **empate en techo** (`empate_en_techo: true` en el JSON; el informe
+   dice «pasa por empate en techo»), y §7 lo decide por velocidad. Si un solo caso no separa por otra
+   razon, sigue sin pasar. No aplica al control de entrada: ahi 1,0 con la imagen equivocada es que
+   el caso no reacciona. Test y mutante muerto en su assert.
+2. **(Hallazgo 2, P-12) Temperatura de produccion y semilla por corrida.** La causa no era la
+   semilla sino la **temperatura 0 forzada** por el runner (§5.3 corregida, con su premisa refutada
+   escrita). Ahora cada peticion lleva la `temperature` que el corpus capturo de la tool real y
+   `seed + run - 1`, la misma en los reintentos de la corrida; las dos van al registro. Dos tests y
+   dos mutantes muertos en su assert.
+3. **(`lint-33k`) Conteos contra la fuente y una entrada donde el formato cabe.** Senal nueva (§4.7
+   punto 7) con su pareja de CP-4, y la fuente pasa a **`lint-9k`**: los 5 primeros archivos enteros
+   de ruff (8 589 chars; sigue en `long` y en una llamada). Regla del recorte escrita: archivos
+   enteros hasta 9 000 chars, nunca uno a medias. **Para el backlog de F3:** el prompt de
+   `local_lint_summary` («agrupados por archivo, 200 palabras») no cabe con entradas grandes en
+   produccion; eso se arregla en la tool, no en el benchmark.
+4. **(`commit-diff-19k`) Fuera de la puntuacion automatica, a la revision a ciegas** (§4.7 punto 8).
+   No se toca el prompt: el corpus copia la tool real, y exigir cuerpo mediria algo que produccion no
+   hace. **Resultado de F2 ya escrito:** `qwen25-coder-14b`, el modelo de produccion de
+   `local_commit_msg`, se quedo con el bump de version y omitio el arreglo en las 6 corridas de los
+   dos pilotos.
+
+**Siguiente:** repetir el piloto de CP-3 una vez con las cuatro aplicadas (la banda cambia con la
+temperatura, y `lint-9k` es un caso nuevo), con el setup de medicion que sigue montado.
+
 ### CP-4 — El puntuador separa
 
 Por cada senal de puntuacion que **se pueda ejercitar con texto** existe un caso con dos respuestas
@@ -848,7 +951,7 @@ ficheros vivos del repo (§4.5).
 | `resumen-md-13k` | summarize | `docs/recipes/claude-code-hooks.md` | ~13 000 | la mediana real de summarize |
 | `resumen-changelog-45k` | summarize | copia de `CHANGELOG.md`, recortada | ~45 000 | cerca del tope de una llamada |
 | `extraer-uvlock-48k` | extract | `uv.lock` **recortado a lo que el modelo ve** | 48 000 | el maximo real fue 48 027 y `_read_input` lo trunca en `max_chars_for(long)` = 48 000: se congela lo truncado |
-| `lint-33k` | lint_summary | salida de `pytest` congelada | 33 423 | el maximo real de lint_summary, y cabe en una llamada |
+| `lint-33k` (**`lint-9k`** desde el segundo piloto de CP-3, §2) | lint_summary | salida de `pytest` congelada (ruff: punto 4 abajo) | 33 423 (8 589) | el maximo real de lint_summary, y cabe en una llamada. **Sustituido**: con 14 archivos el formato pedido no cabia; ahora 5 archivos enteros y conteos comprobados contra la fuente |
 
 **Rol `code`** (qwen25-coder-14b hoy; una llamada hasta 20 000 chars)
 
@@ -983,7 +1086,7 @@ esconder la diferencia que importa:
 | Valor | Que significa | Casos |
 | --- | --- | --- |
 | `congelado` | copia literal del fichero que se delego de verdad | los 8 que salen de ficheros del repo |
-| `generado` | salida de una herramienta, regenerada con el mismo comando | `lint-33k` (pytest) |
+| `generado` | salida de una herramienta, regenerada con el mismo comando | `lint-9k` (ruff; era `lint-33k`) |
 | `reconstruido` | evento real cuyo contenido era `inline`: se recrea con su forma y tamano | `clasificar-53`, `traducir-42`, `delegar-56`, `boilerplate-156`, `techo-commit-160k` |
 | `inventado` | **no corresponde a ningun evento real** | `leer-cifras-dashboard` |
 
@@ -1041,6 +1144,21 @@ F2 no necesita. Si algun dia hiciera falta, el cargador viejo esta en el histori
    con `python -I`, carpeta temporal, entorno vacio, sin stdin y `EXEC_TIMEOUT_S` = 10 s. No es un
    sandbox del sistema: correr codigo de un modelo en local lo aprobo el usuario. El JSONL guarda
    `execution_ratio` y `execution_passed`; si la proporcion es 0, `zero_by: execution`.
+7. **Segundo piloto de CP-3: los conteos de lint se comprueban contra la fuente** en los casos con
+   `expected_counts` (hoy `lint-9k`). Regla escrita, en el constructor: para cada regla que el caso
+   pide nombrar (las tres mas frecuentes), los numeros validos son **el total, cuantos archivos la
+   tienen y lo que suma en cada archivo**, sacados de las lineas de ruff. El puntuador asigna cada
+   entero suelto (ni pegado a letras ni parte de un decimal) a **la regla que tiene delante en su
+   linea, hasta la siguiente regla**; la regla cuadra si tiene al menos uno y todos son validos.
+   Calidad = minimo con la cobertura; `zero_by: counts`. **Limite escrito:** los numeros pequenos
+   (1, 2) suelen ser validos para cualquier regla, asi que la senal caza el conteo grande inventado
+   («T201: 10 archivos», con 5) y no el pequeno; y un conteo escrito **delante** de la regla o en
+   otra linea no se ve. CP-4 gana una **septima pareja**, senal
+   `conteos`, con un oraculo que recorre los digitos a mano, sin las expresiones del puntuador.
+8. **Segundo piloto de CP-3: un caso puede quedar sin puntuacion automatica**
+   (`automatic_scoring: false`, hoy solo `commit-diff-19k`). El runner lo sigue puntuando y guardando
+   —el dato no se pierde—, pero `analizar_benchmark.py` lo saca de la banda, del agregado y de §6 y
+   §7, y el informe de CP-3 lo lista como «solo revision a ciegas». Lo juzga §4.8.
 
 **`reasoning_effort` se fija por modelo y se puede sobreescribir por caso.** Hace falta lo segundo:
 Qwen3.8-27B es muy verboso y para resumir hay que apagarle el razonamiento, pero el mismo modelo
@@ -1079,8 +1197,10 @@ b10909 conteste asi un desborde real, y que un modelo razonador respete `enable_
 false}`; `low|medium|high` siguen yendo como `reasoning_effort`, que es variable de la plantilla de
 gpt-oss. Precedencia caso > modelo, con `reasoning_effort_source` en el registro.
 
-**La temperatura es 0**, no la de produccion (0,2 en varias tools): §5.3 la fija para medir. El
-corpus guarda la de produccion como dato.
+**La temperatura es la de produccion** (0,2 en 13 casos, 0,1 en `boilerplate-156`, 0 en
+`extraer-toml-2k`, `clasificar-53` y `extraer-uvlock-48k`), que el corpus guarda de la tool real.
+**Cambiado tras el segundo piloto de CP-3 (P-12, decision del usuario, 2026-09-14)**: la primera
+version fijaba 0 «para medir», y con `-np 1` eso daba corridas identicas byte a byte (§5.3).
 
 **CP-4 ya es un test** (`tests/test_benchmark.py`): puntua las cinco parejas del corpus y exige que
 cada una se separe **por su componente**. Corre en cada commit; la tarea 19 no tiene que ejecutarlo,
@@ -1171,8 +1291,15 @@ paralelo (§1.5), asi que el coste de equivocarse en la estimacion lo paga otra 
 
 ### 5.3 Repeticiones y estado termico
 
-3 corridas por (modelo, caso). `temperature 0` y `seed` fijo no bastan: llama.cpp no es determinista
-bit a bit cuando agrupa peticiones, y ese es el ruido que la §7 necesita medir.
+3 corridas por (modelo, caso), con **la temperatura de produccion del caso y una semilla distinta por
+corrida** (`seed + run - 1`, la misma en los reintentos de esa corrida; las dos van al registro). Asi
+la banda de ruido mide la variacion que produccion tiene de verdad y la medida sigue siendo
+reproducible.
+
+*Primera version, refutada por el segundo piloto de CP-3:* «`temperature 0` y `seed` fijo no bastan:
+llama.cpp no es determinista bit a bit cuando agrupa peticiones». Con `-np 1` no agrupa, y las tres
+corridas salieron identicas byte a byte (§2, segundo piloto). Los tres casos con temperatura 0 en
+produccion siguen dando banda 0, y eso es fiel a produccion, no un defecto.
 
 **`thermal_state` esta mal calculado hoy** y alimenta la banda de ruido: `benchmark.py:269` lo pone
 como `"cold" if run == 1 else "hot"`, asi que marca como fria la primera corrida **de cada caso**
@@ -1376,6 +1503,7 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
 | 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
+| 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / piloto 23:00:36-23:10:30 | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
 
 Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
 
@@ -1402,6 +1530,15 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   usuario lo devolvio a `D:\Projects\llms\llamacpp\llama-server.exe` y se midio: a las 20:57 b9925
   **no carga** (sale a los 4,6 s con `0xC0000005`, sin linea `cudaMalloc`, igual que al cerrar la
   sesion 1) y b10909 carga en 12,1 s desbordando 5 958 MiB. El perfil vuelve a actuar sobre produccion.
+- **Sesion 3, perfil medido antes de medir.** El usuario lo movio a b10909 al cerrar la sesion 2
+  (~22:56 UTC) **con el daemon de produccion arriba**: produccion corrio sin perfil hasta que se paro
+  el daemon (`LocalDelegateDaemon`, sus dos `pythonw` y su llama-swap) a las 22:58:35. Misma prueba
+  que en la sesion 2 (`Shared Usage` en reposo 81 MiB):
+
+  | Hora UTC | b10909 (con perfil) | b9925 (produccion, sin perfil) |
+  | --- | --- | --- |
+  | 22:58 | **OOM a los 6,1 s** (`cudaMalloc` 12 288 MiB, sale con 1) | **cargo en 13,6 s, 6 114 MiB compartidos** |
+
 - `%APPDATA%\llama.cpp\config.ini` **no existe** (comprobado al empezar y al cerrar): nada que
   respaldar ni restaurar.
 - b10909 (`D:\Projects\llms\llamacpp-b10909`), llama-swap v255 (`D:\Projects\llms\llama-swap-v255`) y
@@ -1435,7 +1572,11 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   CP-2b, y era innecesario —§5.1 paso 1 y la tarea 18 ya lo ponen tras CP-1 y CP-2 y antes de
   cualquier medida— y adelantarlo a CP-2 seria peor, porque CP-2 es el que valida que la sonda mide
   el proceso.
-- **P-12 — abierta (2026-09-14).** La tarea 17 mostro que, con la banda como «la mayor dispersion
+- **P-12 — resuelta (2026-09-14, decision del usuario tras el segundo piloto de CP-3).** La banda no
+  medía ruido porque el runner forzaba temperatura 0 y con `-np 1` las corridas salian identicas.
+  Ahora van la temperatura de produccion y una semilla por corrida (§5.3), y las opciones (b) y (c)
+  quedan descartadas: con ruido real la banda deja de ser 0, y el tercer piloto dira si
+  `puede_disparar` sigue en `true`. Texto original: La tarea 17 mostro que, con la banda como «la mayor dispersion
   del rol» y casos de uno o dos terminos, la regla de §7 **puede no disparar nunca** en `code`
   (`commit-diff-19k`, un termino: si cambia en una de tres corridas, la banda vale 1,0). ¿Que se
   hace si la salida real de CP-3 da `puede_disparar: false` en un rol? Opciones: (a) aceptarlo y
@@ -1451,6 +1592,17 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   resta la hace `analizar_benchmark.py` (codigo nuevo, con su test) o solo la hoja de resultados.
   Y un aviso para §3.2: con `none` la **VRAM compartida** del proceso sube por los buffers anclados
   de CUDA, asi que no sirve como senal de desbordamiento; esa senal es el OOM que da el perfil.
+- **P-14 — abierta (2026-09-14, planteada por el usuario).** En el uso real el MCP **no tendra la
+  maquina entera**: convive con el navegador, video, IDE y lo que el usuario este haciendo. El estado
+  limpio de §1.4 sigue valiendo para **comparar** modelos entre si (quita ruido), pero **no** para
+  **dimensionar** la configuracion que se elige: una config que cabe justa con la GPU vacia, con el
+  perfil «Prefer No Sysmem Fallback» activo, **da OOM al cargar** cuando el escritorio ocupa VRAM, en
+  vez de ir mas lenta. Hay que decidir antes de la tanda: (a) cuanta VRAM y RAM se reservan para el
+  resto de la maquina — medirlo con una muestra de uso normal (VRAM dedicada ocupada fuera de
+  `llama-server` durante sesiones de trabajo reales), no suponerlo; (b) si la regla de §7 descarta
+  las configs que no caben dentro de ese presupuesto, aunque ganen con la maquina libre; (c) si los
+  finalistas se repiten una vez con carga de escritorio tipica (p. ej. video en el navegador) para
+  ver que cargan y cuanto pierden. CP-3 no depende de esto: mide si el corpus separa, no cuanto cabe.
 
 ---
 

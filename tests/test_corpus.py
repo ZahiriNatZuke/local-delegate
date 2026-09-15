@@ -275,6 +275,7 @@ def test_cada_pareja_versionada_difiere_solo_en_su_senal_y_mide_lo_mismo():
             raw["forbidden_terms"],
             raw["expected_json_fields"],
             raw["execution_checks"],
+            raw["expected_counts"],
         )
         ok = construir.senales(raw["reference_ok"], *argumentos)
         malo = construir.senales(raw["reference_bad"], *argumentos)
@@ -394,6 +395,50 @@ def test_terminos_del_changelog_salen_solo_de_los_titulares_en_negrita():
         "- Entrada sin titular en negrita: `tampoco`.\n"
     )
     assert construir._identificadores_de_los_titulares(texto) == ("viejo.py", "f")
+
+
+_RUFF = (
+    "src/a.py:1:1: CPY001 Missing copyright\n"
+    "src/a.py:3:5: T201 `print` found\n"
+    "src/a.py:9:5: T201 `print` found\n"
+    "src/b.py:2:1: T201 `print` found\n"
+    "src/b.py:4:1: COM812 Trailing comma missing\n"
+    "src/c.py:1:1: CPY001 Missing copyright\n"
+    "Found 6 errors.\n"
+)
+
+
+def test_lint_se_recorta_en_archivos_enteros_y_nunca_a_medias():
+    # a.py (3 lineas) cabe; b.py no cabe entero en el limite: no entra ni su primera linea.
+    limite = len("".join(_RUFF.splitlines(keepends=True)[:4]))
+    assert construir.archivos_enteros(_RUFF, limite) == "".join(_RUFF.splitlines(keepends=True)[:3])
+    # Con sitio para todo, el resumen de ruff no se cuela: va en su propio bloque, al final.
+    todo = construir.archivos_enteros(_RUFF, len(_RUFF) - len("Found 6 errors.\n"))
+    assert "Found" not in todo and todo.count("\n") == 6
+
+
+def test_conteos_validos_de_lint_son_total_archivos_y_cada_archivo():
+    # T201: 3 en total, 2 archivos, 2 en a.py y 1 en b.py. CPY001: 2 en total, 2 archivos, 1 y 1.
+    assert construir._conteos_de_las_reglas(_RUFF) == {
+        "T201": [1, 2, 3],
+        "CPY001": [1, 2],
+        "COM812": [1],
+    }
+
+
+def test_oraculo_de_conteos_caza_el_conteo_inventado_del_segundo_piloto():
+    conteos = {"T201": [1, 2, 3]}
+    assert construir._conteos_cuadran("- src/a.py: T201 (2)\n- src/b.py: T201 (1)", conteos)
+    assert not construir._conteos_cuadran("**T201 (Print):** 10 archivos (3 por archivo)", conteos)
+    # Nombrarla sin conteo no cuadra, y el «1.» de una lista o el 201 del codigo no cuentan.
+    assert not construir._conteos_cuadran("T201 aparece mucho", conteos)
+    assert construir._conteos_cuadran("1. T201: 3", conteos)
+    # Cada numero es de la regla que tiene delante, y el punto de final de frase no lo anula: los
+    # dos defectos de la primera version, que rompieron la pareja de referencia.
+    dos = {"T201": [1, 2, 3], "COM812": [1]}
+    assert construir._conteos_cuadran("a.py: T201 (2), COM812 (1). b.py: T201 3.", dos)
+    assert not construir._conteos_cuadran("a.py: T201 (2), COM812 (2).", dos)
+    assert not construir._conteos_cuadran("Python 3.12: T201 3.5", conteos)
 
 
 def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion():

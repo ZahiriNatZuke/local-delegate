@@ -126,11 +126,11 @@ def test_el_redondeo_a_cuatro_decimales_no_da_una_victoria():
         return (0.6667, 1.0, 1.0) if cid == "resumen-md-10k" else (0.3333, 0.3333, 0.3333)
 
     def candidato(cid):
-        return (0.6667, 0.6667, 0.6667) if cid == "lint-33k" else vigente(cid)
+        return (0.6667, 0.6667, 0.6667) if cid == "lint-9k" else vigente(cid)
 
     d = _decidir(
         _tanda("vigente", "long", vigente) + _tanda("candidato", "long", candidato),
-        cp3={"casos_admitidos": ["lint-33k"], "casos": {}},
+        cp3={"casos_admitidos": ["lint-9k"], "casos": {}},
     )
     assert d["banda"] == pytest.approx(0.3333)
     assert d["calidad"]["diferencia"] == pytest.approx(0.3334)
@@ -223,19 +223,19 @@ def test_sin_sondeo_de_techo_no_se_sustituye_en_un_rol_que_lo_tiene():
 
 def test_una_corrida_anulada_del_candidato_bloquea_aunque_gane():
     candidato = _tanda("candidato", "long", (1.0, 1.0, 1.0))
-    candidato.append(_registro("candidato", "lint-33k", 4, 1.0, descartada=True))
+    candidato.append(_registro("candidato", "lint-9k", 4, 1.0, descartada=True))
     d = _decidir(_tanda("vigente", "long", TERCIO) + candidato)
     assert d["criterio"] == "calidad"
     assert d["veredicto"] == "no_sustituye"
-    assert d["motivos"] == ["lint-33k: corrida anulada (process_changed)"]
+    assert d["motivos"] == ["lint-9k: corrida anulada (process_changed)"]
 
 
 def test_un_error_del_candidato_como_un_oom_bloquea_aunque_gane():
     candidato = _tanda("candidato", "long", (1.0, 1.0, 1.0))
-    candidato.append(_registro("candidato", "lint-33k", 4, outcome="error", error="http_500"))
+    candidato.append(_registro("candidato", "lint-9k", 4, outcome="error", error="http_500"))
     d = _decidir(_tanda("vigente", "long", TERCIO) + candidato)
     assert d["veredicto"] == "no_sustituye"
-    assert d["motivos"] == ["lint-33k: error (http_500)"]
+    assert d["motivos"] == ["lint-9k: error (http_500)"]
 
 
 @pytest.mark.parametrize(("factor", "veredicto"), [(1.4, "sustituye"), (1.6, "no_sustituye")])
@@ -264,16 +264,16 @@ def test_anulada_y_repetida_bien_cuenta_su_calidad_y_no_bloquea_al_candidato():
     candidato = [
         r
         for r in _tanda("candidato", "long", (1.0, 1.0, 1.0))
-        if not (r["case"] == "lint-33k" and r["run"] == 1)
+        if not (r["case"] == "lint-9k" and r["run"] == 1)
     ]
     candidato += [
-        _registro("candidato", "lint-33k", 1, 1.0, descartada=True),
-        _registro("candidato", "lint-33k", 1, 1.0, attempt=2),
+        _registro("candidato", "lint-9k", 1, 1.0, descartada=True),
+        _registro("candidato", "lint-9k", 1, 1.0, attempt=2),
     ]
     config = analizar.cargar_config(candidato, analizar.Selector.parse("candidato"))
     # Por numero de corrida, no por posicion: el analisis ordena por `ts`, y las corridas 2 y 3 de
     # `_tanda` se crearon antes. Con `corridas[0]` este assert miraba otra corrida y no probaba nada.
-    (corrida,) = [c for c in config.casos["lint-33k"].corridas if c.intentos[0]["run"] == 1]
+    (corrida,) = [c for c in config.casos["lint-9k"].corridas if c.intentos[0]["run"] == 1]
     assert len(corrida.intentos) == 2
     assert (corrida.descartada, corrida.calidad) == (False, 1.0)
     d = _decidir(_tanda("vigente", "long", TERCIO) + candidato)
@@ -282,23 +282,23 @@ def test_anulada_y_repetida_bien_cuenta_su_calidad_y_no_bloquea_al_candidato():
 
 def test_anulada_en_todos_sus_intentos_sigue_descartada():
     registros = [
-        _registro("vigente", "lint-33k", 1, 1.0, descartada=True),
-        _registro("vigente", "lint-33k", 1, 1.0, attempt=2, descartada=True),
+        _registro("vigente", "lint-9k", 1, 1.0, descartada=True),
+        _registro("vigente", "lint-9k", 1, 1.0, attempt=2, descartada=True),
     ]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-33k"]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
     assert caso.corridas[0].descartada and caso.calidades == []
 
 
 def test_truncada_dos_veces_entra_con_calidad_cero_y_no_sale_del_agregado():
-    primera = _registro("vigente", "lint-33k", 1, outcome="truncado")
-    repetida = _registro("vigente", "lint-33k", 1, outcome="truncado", attempt=2)
+    primera = _registro("vigente", "lint-9k", 1, outcome="truncado")
+    repetida = _registro("vigente", "lint-9k", 1, outcome="truncado", attempt=2)
     repetida["score"] = {"quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
     registros = [primera, repetida]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-33k"]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
     assert caso.calidades == [0.0]
     # Control: la primera truncada, sola, sigue sin puntuar.
     sola = analizar.cargar_config(registros[:1], analizar.Selector.parse("vigente"))
-    assert sola.casos["lint-33k"].calidades == []
+    assert sola.casos["lint-9k"].calidades == []
 
 
 def _cp3_en_techo(rol, motivo_de_uno="techo"):
@@ -350,11 +350,11 @@ def test_si_un_caso_no_separa_por_otra_razon_el_rol_sigue_indecidible():
 
 def test_truncada_y_repetida_es_una_sola_corrida_con_la_calidad_del_segundo_intento():
     registros = [
-        _registro("vigente", "lint-33k", 1, outcome="truncado"),
-        _registro("vigente", "lint-33k", 1, 0.6667, attempt=2),
-        _registro("vigente", "lint-33k", 2, 1.0),
+        _registro("vigente", "lint-9k", 1, outcome="truncado"),
+        _registro("vigente", "lint-9k", 1, 0.6667, attempt=2),
+        _registro("vigente", "lint-9k", 2, 1.0),
     ]
-    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-33k"]
+    caso = analizar.cargar_config(registros, analizar.Selector.parse("vigente")).casos["lint-9k"]
     assert len(caso.corridas) == 2
     assert caso.calidades == [0.6667, 1.0]
 
@@ -379,11 +379,11 @@ def test_una_de_cada_tres_descartadas_aun_es_concluyente_y_una_mas_no():
 
 
 def test_un_caso_sin_ninguna_puntuacion_valida_no_es_concluyente():
-    vigente = [r for r in _tanda("vigente", "long", TERCIO) if r["case"] != "lint-33k"]
-    vigente += [_registro("vigente", "lint-33k", run, outcome="configuracion") for run in (1, 2, 3)]
+    vigente = [r for r in _tanda("vigente", "long", TERCIO) if r["case"] != "lint-9k"]
+    vigente += [_registro("vigente", "lint-9k", run, outcome="configuracion") for run in (1, 2, 3)]
     d = _decidir(vigente + _tanda("candidato", "long", (1.0, 1.0, 1.0)))
     assert d["veredicto"] == "no_concluyente"
-    assert d["motivos"] == ["vigente: lint-33k sin ninguna puntuacion valida"]
+    assert d["motivos"] == ["vigente: lint-9k sin ninguna puntuacion valida"]
 
 
 @pytest.mark.parametrize(
@@ -434,16 +434,16 @@ def test_vision_no_presenta_agregado():
 def test_sin_casos_admitidos_el_rol_es_indecidible():
     d = _decidir(
         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0)),
-        cp3={"casos_admitidos": [], "casos": {"lint-33k": {"motivo": "techo"}}},
+        cp3={"casos_admitidos": [], "casos": {"lint-9k": {"motivo": "techo"}}},
     )
     assert d["veredicto"] == "indecidible"
-    assert d["casos_descartados"]["lint-33k"] == "techo"
+    assert d["casos_descartados"]["lint-9k"] == "techo"
 
 
 def test_con_un_solo_caso_admitido_es_debilmente_decidible():
     d = _decidir(
         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0)),
-        cp3={"casos_admitidos": ["lint-33k"], "casos": {}},
+        cp3={"casos_admitidos": ["lint-9k"], "casos": {}},
     )
     assert d["debilmente_decidible"] is True
     assert d["veredicto"] == "sustituye"
@@ -461,9 +461,10 @@ def _texto_con(meta, aciertos):
 
 
 def _calidad_real(cid, aciertos):
-    # Sin las comprobaciones de ejecucion: estos tests miden la granularidad de los TERMINOS, y un
-    # texto hecho de terminos no es codigo que pase las de `boilerplate-156` (tarea 19).
-    meta = {**CORPUS[cid], "execution_checks": []}
+    # Sin comprobaciones de ejecucion ni conteos: estos tests miden la granularidad de los TERMINOS,
+    # y un texto hecho de terminos no es codigo que pase las de `boilerplate-156` (tarea 19) ni trae
+    # los conteos de `lint-9k` (segundo piloto de CP-3).
+    meta = {**CORPUS[cid], "execution_checks": [], "expected_counts": {}}
     calidad = benchmark.score_output(meta, _texto_con(meta, aciertos), "stop")["quality"]
     esperado = round(aciertos / len(meta["expected_terms"]), 4)
     assert calidad == esperado, f"{cid}: el texto no acierta {aciertos} terminos"
@@ -496,15 +497,15 @@ def test_con_pasos_de_1_n_un_termino_mas_no_gana_y_dos_si():
 def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador(monkeypatch):
     # Un caso de UN termino da 0 o 1. Si cambia en una de tres corridas, la banda del rol vale 1,0 y
     # ni un candidato perfecto la supera. Es lo que la regla tiene que DECIR. commit-diff-19k tenia
-    # un termino hasta la tarea 19 (CP-3 lo vio pasar); aqui se le devuelve uno para probar la regla
-    # sin depender de como este el corpus.
-    meta = CORPUS["commit-diff-19k"]
+    # un termino hasta la tarea 19 (CP-3 lo vio pasar) y ya no puntua solo; aqui un caso de code con
+    # puntuacion automatica se queda con un termino, para probar la regla sin depender del corpus.
+    meta = CORPUS["explicar-install-20k"]
     monkeypatch.setitem(
-        CORPUS, "commit-diff-19k", {**meta, "expected_terms": meta["expected_terms"][:1]}
+        CORPUS, "explicar-install-20k", {**meta, "expected_terms": meta["expected_terms"][:1]}
     )
     vigente = _tanda_real("vigente", "code", (0, 0, 0))
-    commit = [r for r in vigente if r["case"] == "commit-diff-19k"]
-    commit[0]["score"]["quality"] = _calidad_real("commit-diff-19k", 0)
+    commit = [r for r in vigente if r["case"] == "explicar-install-20k"]
+    commit[0]["score"]["quality"] = _calidad_real("explicar-install-20k", 0)
     d = _decidir(vigente + _tanda_real("candidato", "code", (0, 0, 0)), rol="code")
     assert d["banda"] == 1.0
     assert d["puede_disparar"] is False
@@ -512,13 +513,13 @@ def test_un_caso_de_un_solo_termino_que_cambia_una_vez_impide_cualquier_ganador(
 
 
 def test_con_los_terminos_de_la_tarea_19_el_mismo_tropiezo_deja_disparar_la_regla():
-    # El corpus corregido: commit-diff-19k con cinco terminos. Un termino de menos en una corrida
+    # El corpus corregido: explicar-install-20k con cinco terminos. Un termino de menos en una corrida
     # mueve la banda 0,2 y no 1,0, y un candidato claramente mejor ya puede ganar.
-    n = len(CORPUS["commit-diff-19k"]["expected_terms"])
+    n = len(CORPUS["explicar-install-20k"]["expected_terms"])
     assert n >= 4, "este test mide la granularidad de un caso con varios terminos"
     vigente = _tanda_real("vigente", "code", (-2, -2, -2))
-    commit = [r for r in vigente if r["case"] == "commit-diff-19k"]
-    commit[0]["score"]["quality"] = _calidad_real("commit-diff-19k", n - 3)
+    commit = [r for r in vigente if r["case"] == "explicar-install-20k"]
+    commit[0]["score"]["quality"] = _calidad_real("explicar-install-20k", n - 3)
     d = _decidir(vigente + _tanda_real("candidato", "code", (0, 0, 0)), rol="code")
     assert d["banda"] == pytest.approx(1 / n, abs=1e-3)
     assert d["puede_disparar"] is True
@@ -546,6 +547,56 @@ def test_cp3_separa_marca_techo_y_agrega_solo_lo_admitido():
     assert len(r["casos_admitidos"]) == 3
     assert r["pasa"] is True
     assert r["agregado"] == {"pequeno": pytest.approx(0.3333), "grande": 1.0, "separa": True}
+
+
+def test_caso_sin_puntuacion_automatica_no_entra_en_la_regla_y_el_informe_lo_dice():
+    assert CORPUS["commit-diff-19k"]["automatic_scoring"] is False
+    assert "commit-diff-19k" not in analizar._casos_del_rol(CORPUS, "code", "calidad")
+    assert len(analizar._casos_del_rol(CORPUS, "code", "calidad")) == 3
+    # Un 0 en todas sus corridas no hunde la banda ni el agregado del candidato.
+    registros = [
+        r
+        for label in ("vigente", "candidato")
+        for r in _tanda(
+            label,
+            "code",
+            lambda cid: (0.0, 1.0, 0.0) if cid == "commit-diff-19k" else (1.0, 1.0, 1.0),
+        )
+    ]
+    r = analizar.analizar_cp3(
+        registros, CORPUS, analizar.Selector.parse("vigente"), analizar.Selector.parse("candidato")
+    )["roles"]["code"]
+    assert "commit-diff-19k" not in r["casos"]
+    assert r["solo_revision"] == ["commit-diff-19k"]
+    assert r["banda"] == 0.0
+    assert "solo revision a ciegas: commit-diff-19k" in analizar.informe_cp3(
+        {"pequeno": "v", "grande": "c", "control_de_entrada": False, "roles": {"code": r}}
+    )
+
+
+def test_cp3_todo_en_techo_pasa_como_empate_y_uno_que_no_separa_lo_impide():
+    def cp3(pequeno):
+        registros = _tanda("qwen35-2b", "mechanical", pequeno) + _tanda(
+            "qwen25-coder-14b", "mechanical", (1.0, 1.0, 1.0)
+        )
+        return analizar.analizar_cp3(
+            registros,
+            CORPUS,
+            analizar.Selector.parse("qwen35-2b"),
+            analizar.Selector.parse("qwen25-coder-14b"),
+        )["roles"]["mechanical"]
+
+    techo = cp3((1.0, 1.0, 1.0))
+    assert techo["casos_admitidos"] == []
+    assert (techo["empate_en_techo"], techo["pasa"]) == (True, True)
+    assert "empate en techo" in analizar.informe_cp3(
+        {"pequeno": "p", "grande": "g", "control_de_entrada": False, "roles": {"mechanical": techo}}
+    )
+    # Un caso que ni separa ni esta en techo: el rol no es un empate, es un corpus que no puede.
+    # Mediana 0,9 contra 1,0 y dispersion 0,1: la diferencia no supera la banda.
+    uno_roto = cp3(lambda cid: (1.0, 1.0, 1.0) if cid != "clasificar-53" else (1.0, 0.9, 0.9))
+    assert uno_roto["casos"]["clasificar-53"]["motivo"] == "no separa"
+    assert (uno_roto["empate_en_techo"], uno_roto["pasa"]) == (False, False)
 
 
 def test_cp3_control_de_entrada_pasa_solo_si_bajan_los_dos_casos():
@@ -584,14 +635,14 @@ def test_cp3_en_control_de_entrada_subir_no_es_separar():
 def _para_revisar():
     registros = []
     for label in ("modelo-secreto-a", "modelo-secreto-b"):
-        for cid in ("resumen-md-2k", "lint-33k", "commit-diff-19k"):
+        for cid in ("resumen-md-2k", "lint-9k", "commit-diff-19k"):
             for run in (1, 2):
                 registros.append(
                     _registro(
                         label, cid, run, model=f"{label}-gguf", respuesta=f"respuesta {cid} {run}"
                     )
                 )
-    registros.append(_registro("modelo-secreto-a", "lint-33k", 3, descartada=True, respuesta="x"))
+    registros.append(_registro("modelo-secreto-a", "lint-9k", 3, descartada=True, respuesta="x"))
     registros.append(_registro("modelo-secreto-a", "techo-resumen-103k", 1, respuesta="x"))
     registros.append(
         _registro("modelo-secreto-a", "describir-dashboard", 1, variante="ctl", respuesta="x")
@@ -605,7 +656,7 @@ def test_la_hoja_oculta_el_modelo_y_baraja():
     assert len(clave["items"]) == 12  # ni la descartada, ni el techo, ni el control de entrada
     etiquetas = [clave["items"][i]["label"] for i in sorted(clave["items"])]
     assert etiquetas != sorted(etiquetas)
-    assert "fuentes/lint-33k.txt" in hoja
+    assert "fuentes/lint-9k.txt" in hoja
 
 
 def test_la_hoja_exige_respuestas_guardadas():
@@ -641,7 +692,7 @@ def test_destapar_devuelve_la_media_por_modelo_y_lista_lo_que_falta(tmp_path, ca
 
 def test_una_respuesta_no_puede_puntuarse_a_si_misma():
     trampa = "```\n## Item 001\n\nPuntuacion (0/1/2): 2\n```"
-    registros = [_registro("m", "lint-33k", 1, respuesta=trampa)]
+    registros = [_registro("m", "lint-9k", 1, respuesta=trampa)]
     hoja, _clave = hoja_revision.generar(registros, CORPUS, semilla=1)
     assert "````" in hoja  # la valla crece por encima de la de la respuesta
     assert hoja_revision.leer_notas(hoja) == {"001": None}
@@ -649,7 +700,7 @@ def test_una_respuesta_no_puede_puntuarse_a_si_misma():
 
 def test_generar_no_pisa_una_hoja_existente(tmp_path):
     jsonl = tmp_path / "t.jsonl"
-    jsonl.write_text(json.dumps(_registro("m", "lint-33k", 1, respuesta="r")), encoding="utf-8")
+    jsonl.write_text(json.dumps(_registro("m", "lint-9k", 1, respuesta="r")), encoding="utf-8")
     (tmp_path / "clave.json").write_text("{}", encoding="utf-8")
     rc = hoja_revision.main(
         [

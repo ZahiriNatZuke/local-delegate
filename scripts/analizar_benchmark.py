@@ -225,7 +225,21 @@ def cargar_config(registros: list[dict[str, Any]], selector: Selector) -> Config
 
 
 def _casos_del_rol(corpus: dict[str, dict[str, Any]], rol: str, kind: str) -> list[str]:
-    return [cid for cid, c in corpus.items() if c["role"] == rol and c["kind"] == kind]
+    # Un caso con `automatic_scoring: false` no entra en ninguna cuenta de la regla: lo juzga solo la
+    # revision a ciegas (§4.8). Es `commit-diff-19k` desde el segundo piloto de CP-3.
+    return [
+        cid
+        for cid, c in corpus.items()
+        if c["role"] == rol and c["kind"] == kind and c.get("automatic_scoring") is not False
+    ]
+
+
+def _solo_revision(corpus: dict[str, dict[str, Any]], rol: str) -> list[str]:
+    return [
+        cid
+        for cid, c in corpus.items()
+        if c["role"] == rol and c["kind"] == "calidad" and c.get("automatic_scoring") is False
+    ]
 
 
 def _caso(config: Config, case_id: str, corpus: dict[str, dict[str, Any]]) -> Caso:
@@ -311,10 +325,19 @@ def analizar_cp3(
                 "motivo": motivo,
             }
         admitidos = [cid for cid, c in casos.items() if c["separa"]]
+        # §7 punto 4: si TODOS los casos del rol estan en techo, los dos modelos empatan en 1,0 y el
+        # rol se decide por velocidad; no es un corpus que no discrimina. En el control de entrada
+        # no aplica: que la imagen equivocada tambien de 1,0 es justo que el caso no reacciona.
+        empate_en_techo = (
+            not control_de_entrada
+            and bool(ids)
+            and not admitidos
+            and all(c["motivo"] == "techo" for c in casos.values())
+        )
         if control_de_entrada:
             pasa = bool(ids) and len(admitidos) == len(ids)
         else:
-            pasa = len(ids) <= 1 or bool(admitidos)
+            pasa = len(ids) <= 1 or bool(admitidos) or empate_en_techo
         agregado_p = _media([casos[c]["pequeno"] for c in admitidos]) if admitidos else None
         agregado_g = _media([casos[c]["grande"] for c in admitidos]) if admitidos else None
         agregado_separa = (
@@ -332,9 +355,11 @@ def analizar_cp3(
             "casos": casos,
             "casos_admitidos": admitidos,
             "pasa": pasa,
+            "empate_en_techo": empate_en_techo,
             "agregado": {"pequeno": agregado_p, "grande": agregado_g, "separa": agregado_separa},
             "puede_disparar": puede_disparar(banda, peor),
             "sin_agregado": rol in ROLES_SIN_AGREGADO,
+            "solo_revision": _solo_revision(corpus, rol),
         }
     return salida
 
@@ -704,8 +729,11 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
         ]
     for rol, datos in resultado["roles"].items():
         agregado = datos["agregado"]
+        estado = "pasa" if datos["pasa"] else "NO pasa"
+        if datos.get("empate_en_techo"):
+            estado = "pasa por empate en techo (decide la velocidad, §7 punto 4)"
         lineas += [
-            f"## {rol}: {'pasa' if datos['pasa'] else 'NO pasa'}",
+            f"## {rol}: {estado}",
             "",
             f"- banda de ruido: {_fmt(datos['banda'])}",
             f"- casos en el agregado: {len(datos['casos_admitidos'])} de {len(datos['casos'])}",
@@ -716,6 +744,11 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
         ]
         if datos["puede_disparar"] is False:
             lineas.append("- **la regla de §7 no puede disparar con esta banda**")
+        if datos.get("solo_revision"):
+            lineas.append(
+                "- sin puntuacion automatica, solo revision a ciegas: "
+                + ", ".join(datos["solo_revision"])
+            )
         lineas += [
             "",
             "| Caso | Pequeno | Grande | Diferencia | Separa | Motivo |",

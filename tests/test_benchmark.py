@@ -107,6 +107,32 @@ def test_json_invalido_hunde_por_json_valid_y_campos_que_faltan_por_proporcion()
     )
 
 
+def test_conteo_inventado_hunde_la_calidad_aunque_nombre_todas_las_reglas():
+    raw = _raw(
+        expected_terms=["T201", "COM812"], expected_counts={"T201": [1, 2, 3], "COM812": [1]}
+    )
+    bien = benchmark.score_output(raw, "- a.py: T201 (2), COM812 (1)\n- b.py: T201 (1)", "stop")
+    assert (bien["counts_ratio"], bien["counts_wrong"], bien["quality"]) == (1.0, [], 1.0)
+    # La salida del 2B: nombra las dos reglas (cobertura 1,0) con numeros que la fuente no tiene.
+    inventado = benchmark.score_output(
+        raw, "**T201 (Print):** 10 archivos (3 por archivo)\n**COM812:** 1 archivo", "stop"
+    )
+    assert (inventado["coverage"], inventado["counts_wrong"], inventado["quality"]) == (
+        1.0,
+        ["T201"],
+        0.5,
+    )
+    sin_numeros = benchmark.score_output(raw, "Sobre todo T201 y COM812.", "stop")
+    assert (sin_numeros["quality"], sin_numeros["zero_by"]) == (0.0, "counts")
+    # Cada numero es de la regla que tiene delante (no de toda la linea), y el punto de final de
+    # frase no lo anula. Con la regla por lineas, TRY003 se llevaria tambien el 7 y fallaria.
+    una_linea = _raw(
+        expected_terms=["TRY003", "D102"], expected_counts={"TRY003": [8], "D102": [7]}
+    )
+    score = benchmark.score_output(una_linea, "TRY003: 8. D102: 7.", "stop")
+    assert (score["counts_wrong"], score["quality"]) == ([], 1.0)
+
+
 def test_cobertura_cero_se_atribuye_a_coverage():
     score = benchmark.score_output(_raw(expected_terms=["bug"]), "feature", "stop")
     assert (score["quality"], score["zero_by"]) == (0.0, "coverage")
@@ -121,12 +147,13 @@ _COMPONENTES_POR_SENAL = {
     "json_campos": {"json_fields_ratio"},
     "unicode": {"coverage", "matched_terms"},
     "ejecucion": {"execution_ratio", "execution_passed"},
+    "conteos": {"counts_ratio", "counts_wrong"},
 }
 
 
 def test_cp4_el_puntuador_separa_cada_pareja_por_su_senal():
     parejas = [c for c in _corpus().cases if "reference_signal" in c.raw]
-    assert len(parejas) == 6
+    assert len(parejas) == 7
     for caso in parejas:
         raw = caso.raw
         ok = benchmark.score_output(raw, raw["reference_ok"], "stop")
@@ -259,7 +286,10 @@ def test_caso_de_imagen_lleva_image_url_y_uno_de_texto_no():
     texto = benchmark.build_payload(_case("clasificar-53"), "m", 42, None)
     assert isinstance(texto["messages"][1]["content"], str)
     assert "image_url" not in json.dumps(texto)
+    # La temperatura de produccion que capturo el constructor, no 0 (P-12).
     assert (texto["temperature"], texto["seed"]) == (0.0, 42)
+    resumen = benchmark.build_payload(_case("resumen-md-2k"), "m", 7, None)
+    assert (resumen["temperature"], resumen["seed"]) == (0.2, 7)
 
 
 def test_cada_caso_de_texto_lleva_su_contenido_entero_y_sin_marcador():
@@ -360,6 +390,26 @@ def _respuesta(content="bug", finish="stop", **mensaje):
         200,
         json={"choices": [{"message": {"content": content, **mensaje}, "finish_reason": finish}]},
     )
+
+
+def test_cada_corrida_lleva_su_semilla_y_la_temperatura_del_caso(tmp_path, monkeypatch):
+    enviados = []
+
+    def handler(request):
+        enviados.append(json.loads(request.content))
+        return _respuesta("# Titulo\n\nresumen")
+
+    rc, registros = _correr(
+        tmp_path, monkeypatch, handler, "--case", "resumen-md-2k", "--runs", "3", "--seed", "10"
+    )
+    assert rc == 0
+    assert [p["seed"] for p in enviados] == [10, 11, 12]
+    assert {p["temperature"] for p in enviados} == {0.2}
+    assert [(r["run"], r["seed"], r["temperature"]) for r in registros] == [
+        (1, 10, 0.2),
+        (2, 11, 0.2),
+        (3, 12, 0.2),
+    ]
 
 
 def test_runner_puntua_con_el_corpus_real_y_sin_sonda_no_inventa_estado_termico(

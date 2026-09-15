@@ -1,0 +1,96 @@
+src/local_delegate/__init__.py:1:1: CPY001 Missing copyright notice at top of file
+src/local_delegate/__main__.py:1:1: CPY001 Missing copyright notice at top of file
+src/local_delegate/agents.py:1:1: CPY001 Missing copyright notice at top of file
+src/local_delegate/agents.py:28:21: TC003 Move standard library import `pathlib.Path` into a type-checking block
+src/local_delegate/agents.py:39:74: COM812 [*] Trailing comma missing
+src/local_delegate/agents.py:92:5: D401 First line of docstring should be in imperative mood: "True si el agente ya declara nuestras tools. El frontmatter está al principio."
+src/local_delegate/agents.py:140:26: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src/local_delegate/autostart.py:1:1: CPY001 Missing copyright notice at top of file
+src/local_delegate/autostart.py:29:5: D401 First line of docstring should be in imperative mood: "True si el endpoint OpenAI-compatible responde a /models."
+src/local_delegate/autostart.py:72:13: S603 `subprocess` call: check for execution of untrusted input
+src/local_delegate/benchmark.py:1:1: CPY001 Missing copyright notice at top of file
+src/local_delegate/benchmark.py:26:29: TC003 Move standard library import `collections.abc.Callable` into a type-checking block
+src/local_delegate/benchmark.py:26:39: TC003 Move standard library import `collections.abc.Sequence` into a type-checking block
+src/local_delegate/benchmark.py:58:7: D101 Missing docstring in public class
+src/local_delegate/benchmark.py:71:7: D101 Missing docstring in public class
+src/local_delegate/benchmark.py:82:15: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:82:26: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:85:15: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:85:26: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:89:15: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:89:26: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:96:38: PLR2004 Magic value used in comparison, consider replacing `2` with a constant variable
+src/local_delegate/benchmark.py:97:15: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:97:26: EM101 Exception must not use a string literal, assign to variable first
+src/local_delegate/benchmark.py:103:19: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:103:30: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:112:23: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:112:34: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:124:14: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:209:5: PLC0415 `import` should be at the top-level of a file
+src/local_delegate/benchmark.py:217:23: S603 `subprocess` call: check for execution of untrusted input
+src/local_delegate/benchmark.py:217:23: PLW1510 `subprocess.run` without explicit `check` argument
+src/local_delegate/benchmark.py:272:90: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:346:9: D107 Missing docstring in `__init__`
+src/local_delegate/benchmark.py:347:86: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:356:9: D105 Missing docstring in magic method
+src/local_delegate/benchmark.py:375:9: D105 Missing docstring in magic method
+src/local_delegate/benchmark.py:380:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:429:7: D101 Missing docstring in public class
+src/local_delegate/benchmark.py:484:5: D301 Use `r"""` if any backslashes in a docstring
+src/local_delegate/benchmark.py:508:92: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:553:5: PLC0415 `import` should be at the top-level of a file
+src/local_delegate/benchmark.py:631:5: D103 Missing docstring in public function
+src/local_delegate/benchmark.py:646:75: FBT003 Boolean positional value in function call
+src/local_delegate/benchmark.py:668:9: D107 Missing docstring in `__init__`
+src/local_delegate/benchmark.py:726:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:734:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:754:9: PLR0913 Too many arguments in function definition (6 > 5)
+src/local_delegate/benchmark.py:754:9: D107 Missing docstring in `__init__`
+src/local_delegate/benchmark.py:787:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:810:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:815:77: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:870:9: D107 Missing docstring in `__init__`
+src/local_delegate/benchmark.py:885:9: D105 Missing docstring in magic method
+src/local_delegate/benchmark.py:898:9: D105 Missing docstring in magic method
+src/local_delegate/benchmark.py:904:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:917:47: RUF036 [*] `None` not at the end of the type union.
+src/local_delegate/benchmark.py:922:9: T201 `print` found
+src/local_delegate/benchmark.py:926:9: T201 `print` found
+src/local_delegate/benchmark.py:928:72: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:962:47: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:964:5: D205 1 blank line required between summary line and description
+src/local_delegate/benchmark.py:964:5: D209 [*] Multi-line docstring closing quotes should be on a separate line
+src/local_delegate/benchmark.py:965:101: E501 Line too long (104 > 100)
+src/local_delegate/benchmark.py:973:5: PLR0913 Too many arguments in function definition (6 > 5)
+src/local_delegate/benchmark.py:1033:22: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src/local_delegate/benchmark.py:1037:7: D101 Missing docstring in public class
+src/local_delegate/benchmark.py:1048:5: D103 Missing docstring in public function
+src/local_delegate/benchmark.py:1054:32: PLR2004 Magic value used in comparison, consider replacing `400` with a constant variable
+src/local_delegate/benchmark.py:1064:13: TRY301 Abstract `raise` to an inner function
+src/local_delegate/benchmark.py:1064:19: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:1064:29: EM101 Exception must not use a string literal, assign to variable first
+src/local_delegate/benchmark.py:1067:96: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1103:9: D107 Missing docstring in `__init__`
+src/local_delegate/benchmark.py:1107:9: D102 Missing docstring in public method
+src/local_delegate/benchmark.py:1129:19: TRY003 Avoid specifying long messages outside the exception class
+src/local_delegate/benchmark.py:1129:30: EM102 Exception must not use an f-string literal, assign to variable first
+src/local_delegate/benchmark.py:1136:5: C901 `run_benchmark` is too complex (16 > 10)
+src/local_delegate/benchmark.py:1136:5: PLR0912 Too many branches (16 > 12)
+src/local_delegate/benchmark.py:1136:5: PLR0915 Too many statements (73 > 50)
+src/local_delegate/benchmark.py:1136:5: D103 Missing docstring in public function
+src/local_delegate/benchmark.py:1144:13: T201 `print` found
+src/local_delegate/benchmark.py:1150:9: T201 `print` found
+src/local_delegate/benchmark.py:1156:9: T201 `print` found
+src/local_delegate/benchmark.py:1157:101: E501 Line too long (103 > 100)
+src/local_delegate/benchmark.py:1157:104: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1163:9: T201 `print` found
+src/local_delegate/benchmark.py:1266:94: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1272:60: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1283:25: T201 `print` found
+src/local_delegate/benchmark.py:1286:67: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1313:5: D103 Missing docstring in public function
+src/local_delegate/benchmark.py:1320:87: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1329:97: COM812 [*] Trailing comma missing
+src/local_delegate/benchmark.py:1349:101: E501 Line too long (108 > 100)
+src/local_delegate/benchmark.py:1360:89: COM812 [*] Trailing comma missing
