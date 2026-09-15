@@ -21,13 +21,20 @@ Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fij
 
 Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los ids de tu backend.
 
+Largo, código y visión son los modelos que ganaron la medición de septiembre de 2026 (antes
+`llama31-8b`, `qwen25-coder-14b` y `qwen3-vl-8b`). En una GPU de 16 GB, con `gemma3-4b` residente al
+lado, la configuración de referencia es: Gemma 4 26B-A4B con `-ncmoe 12 --ctx-size 38400`, Qwen3.6-35B-A3B
+con `-ncmoe 20 --ctx-size 16384`, los dos con `--reasoning off`, y Gemma 4 12B con su `--mmproj`,
+`--batch-size 2048 --ubatch-size 2048` (sin eso aborta al procesar una imagen). Con menos expertos en
+RAM van más rápidos, pero Windows desaloja al residente de la VRAM para hacerles sitio.
+
 | Variable | Default | Rol |
 |---|---|---|
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | clasificar, extraer, resumen corto |
-| `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | documentos largos |
-| `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | código |
+| `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | documentos largos |
+| `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | ultrarrápido / trivial |
-| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | visión (imagen→texto, `local_describe_image`) |
+| `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |

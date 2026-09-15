@@ -36,9 +36,9 @@ D:\Projects\llms\              ← raíz único, autocontenido
   │   └─ *.dll                 (ggml-*, cudart64_13, cublas64_13, cublasLt64_13)
   └─ models\                   (una subcarpeta por modelo)
       ├─ gemma3-4b\*.gguf
-      ├─ llama31-8b\*.gguf
-      ├─ qwen25-coder-14b\*.gguf
-      ├─ qwen3-vl-8b\*.gguf    (+ mmproj-*.gguf para visión)
+      ├─ gemma4-26b-a4b\*.gguf
+      ├─ qwen36-35b-a3b\*.gguf
+      ├─ gemma4-12b\*.gguf     (+ mmproj-*.gguf para visión)
       └─ Qwen3.5-2B\*.gguf
 ```
 
@@ -163,7 +163,7 @@ añade `store.path` al `config.yaml` de llama-swap — `init-llamaswap` puede es
 
 ```bash
 local-delegate init-llamaswap --config config.yaml --vram-gb 16 \
-  --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b \
+  --resident gemma3-4b --swap gemma4-26b-a4b,qwen36-35b-a3b \
   --store-path D:\Projects\llms\llama-swap\metrics.db
 ```
 

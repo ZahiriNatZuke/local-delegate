@@ -193,12 +193,13 @@ ALLOWED_DIRS: list[Path] = [
 MODEL_MECHANICAL = _env(
     "LOCAL_DELEGATE_MODEL_MECHANICAL", "gemma3-4b"
 )  # clasificar, extraer, resumen corto
-MODEL_LONG = _env("LOCAL_DELEGATE_MODEL_LONG", "llama31-8b")  # documentos largos (ctx amplio)
-MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen25-coder-14b")  # código / boilerplate
+# Defectos de largo, código y visión: los ganadores de la medición de F2 (P-16, 2026-09-15).
+MODEL_LONG = _env("LOCAL_DELEGATE_MODEL_LONG", "gemma4-26b-a4b")  # documentos largos (ctx amplio)
+MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen36-35b-a3b")  # código / boilerplate
 MODEL_FAST = _env("LOCAL_DELEGATE_MODEL_FAST", "qwen35-2b")  # ultrarrápido / trivial
 # Rol de visión (imagen->texto). Fuera de ALLOWED_MODELS a propósito: ese set es para el
 # escape genérico local_delegate (texto->texto puro), que no arma payload multimodal.
-MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "qwen3-vl-8b")
+MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "gemma4-12b")
 ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE, MODEL_FAST}
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.

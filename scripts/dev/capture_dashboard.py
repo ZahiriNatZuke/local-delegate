@@ -119,10 +119,10 @@ SEED_AND_MOCK = """() => {
   const TOOLS = ['local_summarize','local_translate','local_extract','local_classify',
     'local_lint_summary','local_boilerplate','local_commit_msg','local_explain_code',
     'local_describe_image','local_delegate'];
-  const MODELS = {local_summarize:'llama31-8b',local_translate:'llama31-8b',
+  const MODELS = {local_summarize:'gemma4-26b-a4b',local_translate:'gemma4-26b-a4b',
     local_extract:'gemma3-4b',local_classify:'qwen35-2b',local_lint_summary:'gemma3-4b',
-    local_boilerplate:'qwen25-coder-14b',local_commit_msg:'qwen25-coder-14b',
-    local_explain_code:'qwen25-coder-14b',local_describe_image:'qwen3-vl-8b',
+    local_boilerplate:'qwen36-35b-a3b',local_commit_msg:'qwen36-35b-a3b',
+    local_explain_code:'qwen36-35b-a3b',local_describe_image:'gemma4-12b',
     local_delegate:'gemma3-4b'};
   let seed = 20260728;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
@@ -182,13 +182,13 @@ SEED_AND_MOCK = """() => {
       count: events.length, files_read: ['usage-202607.jsonl'],
       range_from: events[0].ts, range_to: events[events.length - 1].ts}, events},
     // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío.
-    '/api/backend': {available: true, running: [{model: 'llama31-8b'}, {model: 'qwen25-coder-14b'}],
+    '/api/backend': {available: true, running: [{model: 'gemma4-26b-a4b'}, {model: 'qwen36-35b-a3b'}],
       origin: 'local', host: '127.0.0.1:9292',
-      models: [{id:'gemma3-4b',status:'unloaded'},{id:'llama31-8b',status:'loaded'},
-        {id:'qwen25-coder-14b',status:'loaded'},{id:'qwen35-2b',status:'unloaded'},
-        {id:'qwen3-vl-8b',status:'unloaded'}]},
+      models: [{id:'gemma3-4b',status:'unloaded'},{id:'gemma4-26b-a4b',status:'loaded'},
+        {id:'qwen36-35b-a3b',status:'loaded'},{id:'qwen35-2b',status:'unloaded'},
+        {id:'gemma4-12b',status:'unloaded'}]},
     // Una traducción por chunks a media faena: es lo que enseña el progreso `trozo 9/14`.
-    '/api/inflight': {inflight: [{id: '4242:7', tool: 'local_translate', model: 'llama31-8b',
+    '/api/inflight': {inflight: [{id: '4242:7', tool: 'local_translate', model: 'gemma4-26b-a4b',
       source: 'path', chars_in: 39110, backend: 'local', elapsed_s: 13.4, chunks: 14, chunk: 9}],
       count: 1, last_event_ts: new Date(now.getTime() - 4000).toISOString(),
       now: now.toISOString()},

@@ -164,10 +164,10 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio de los `usage-YYYYMM.jsonl` rotados por mes y del `clients.jsonl` |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar (compatibilidad) |
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | Modelo para clasificar/extraer/resumen corto |
-| `LOCAL_DELEGATE_MODEL_LONG` | `llama31-8b` | Modelo para documentos largos |
-| `LOCAL_DELEGATE_MODEL_CODE` | `qwen25-coder-14b` | Modelo para código |
+| `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | Modelo para documentos largos |
+| `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | Modelo para código |
 | `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | Modelo ultrarrápido / trivial |
-| `LOCAL_DELEGATE_MODEL_VISION` | `qwen3-vl-8b` | Modelo de visión para `local_describe_image` |
+| `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | Modelo de visión para `local_describe_image` |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | Tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | Umbral mecánico↔largo |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | Tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
@@ -258,7 +258,7 @@ VRAM puede igual agotar la RAM en máquinas con menos de 32 GB):
 
 ```bash
 local-delegate check-llamaswap --config config.yaml --vram-gb 16 --ram-gb 32
-local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap llama31-8b,qwen25-coder-14b --vram-gb 16 --ram-gb 32
+local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap gemma4-26b-a4b,qwen36-35b-a3b --vram-gb 16 --ram-gb 32
 ```
 
 El paquete **nunca** toca tu `config.yaml` por su cuenta — estos comandos solo corren si vos

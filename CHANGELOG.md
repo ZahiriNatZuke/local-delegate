@@ -138,6 +138,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   rol**, y cada tool usa el de su rol. Las variables `LOCAL_DELEGATE_MAX_CHARS_*` no cambian.
 
 ### Changed
+- **BREAKING: los modelos por defecto de largo, código y visión son los que ganaron la medición.**
+  `LOCAL_DELEGATE_MODEL_LONG` pasa de `llama31-8b` a `gemma4-26b-a4b`, `LOCAL_DELEGATE_MODEL_CODE`
+  de `qwen25-coder-14b` a `qwen36-35b-a3b` y `LOCAL_DELEGATE_MODEL_VISION` de `qwen3-vl-8b` a
+  `gemma4-12b`. Se decidió con un corpus sacado de delegaciones reales y comparación por pares a
+  ciegas: 15 a 0 en largo y en código. El mecánico (`gemma3-4b`) y el rápido (`qwen35-2b`) no
+  cambian. **Si tu llama-swap tiene los nombres viejos, las tools de esos roles fallarán al
+  actualizar.** Dos salidas: renombrar (o cargar) los modelos en tu `config.yaml`, o fijar los
+  nombres viejos con `LOCAL_DELEGATE_MODEL_LONG`, `_CODE` y `_VISION` en el entorno del cliente o
+  del daemon. La configuración de referencia para 16 GB de VRAM está en la wiki (Configuration).
+
 - **La clasificación de fallos reconoce las cargas fallidas de verdad, y sabe si el modelo se estaba
   montando.** Dos piezas, las dos sacadas de respuestas **capturadas** de llama-swap v255 y
   llama-server b10909, no escritas a mano (`tests/fixtures/backend/`):

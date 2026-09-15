@@ -1,0 +1,104 @@
+# llama-swap de MEDIDA para F3 tarea 24: el residente de produccion y, a su lado, el catalogo que
+# iria a produccion (plan.md, tarea 24; protocolo-f2.md §10, sesion 9). Produccion no se toca:
+#   D:\Projects\llms\llama-swap-v255\llama-swap.exe --config <este fichero> --listen 127.0.0.1:9595
+#
+# - El residente va EXACTAMENTE como en produccion (config.yaml de la tarea 22): no cambia.
+# - Los candidatos llevan los flags de la tanda (`llama-swap-pruebas.yaml`, `t-*`) salvo
+#   `--load-mode`: produccion va con `mmap` (decision del usuario, 2026-09-15), donde `Shared Usage`
+#   no cuenta los expertos en RAM y la condicion 3 de «cabe» se lee en valor absoluto.
+# - `n_ctx` en tokens medidos (`llama-tokenize` de b10909) para el MAX_CHARS de produccion del rol,
+#   con la entrada mas densa del corpus (`uv.lock`) y la mayor `max_tokens` de las tools del rol,
+#   + 10 %, a multiplo de 512:
+#     long:  48 000 chars -> 32 822 tokens (Gemma 4, con plantilla) + 2 048 = 34 870 -> 38 400
+#     code:  20 000 chars -> 13 062 tokens (Qwen3.6, sin plantilla; +75 con ella) + 1 536 -> 16 384
+#     vision: 8 192, como en la tanda (los tokens de imagen los pone el mmproj).
+# - Variantes `-ncmoeN`: los puntos del barrido v2 por si el de la tanda no cabe con el residente.
+
+macros:
+  cand: >-
+    D:\Projects\llms\llamacpp-b10909\llama-server.exe --port ${PORT} --host 127.0.0.1
+    --fit off -ngl 99 --jinja --load-mode mmap --cache-ram 1024 -np 1 --reasoning off
+
+models:
+  gemma3-4b:
+    cmd: >-
+      D:\Projects\llms\llamacpp-b10909\llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model D:\Projects\llms\models\gemma3-4b\gemma-3-4b-it-Q4_K_M.gguf --fit off -ngl 99
+      --ctx-size 8192 --jinja --reasoning off
+    ttl: 600
+
+  gemma4-26b-a4b:
+    cmd: >-
+      ${cand} -ncmoe 0
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 38400
+  gemma4-26b-a4b-ncmoe4:
+    cmd: >-
+      ${cand} -ncmoe 4
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 38400
+  gemma4-26b-a4b-ncmoe8:
+    cmd: >-
+      ${cand} -ncmoe 8
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 38400
+  gemma4-26b-a4b-ncmoe12:
+    cmd: >-
+      ${cand} -ncmoe 12
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 38400
+  gemma4-26b-a4b-ncmoe16:
+    cmd: >-
+      ${cand} -ncmoe 16
+      --model D:\Projects\llms\models\gemma4-26b-a4b\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --ctx-size 38400
+
+  qwen36-35b-a3b:
+    cmd: >-
+      ${cand} -ncmoe 8
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 16384
+  qwen36-35b-a3b-ncmoe12:
+    cmd: >-
+      ${cand} -ncmoe 12
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 16384
+  qwen36-35b-a3b-ncmoe16:
+    cmd: >-
+      ${cand} -ncmoe 16
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 16384
+  qwen36-35b-a3b-ncmoe20:
+    cmd: >-
+      ${cand} -ncmoe 20
+      --model D:\Projects\llms\models\qwen36-35b-a3b\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --ctx-size 16384
+
+  gemma4-12b:
+    cmd: >-
+      ${cand}
+      --model D:\Projects\llms\models\gemma4-12b\gemma-4-12b-it-Q4_K_M.gguf
+      --mmproj D:\Projects\llms\models\gemma4-12b\mmproj-F16.gguf
+      --ctx-size 8192 --batch-size 2048 --ubatch-size 2048
+
+groups:
+  resident:
+    persistent: true
+    swap: false
+    exclusive: false
+    members:
+    - gemma3-4b
+  swap:
+    swap: true
+    exclusive: false
+    members:
+    - gemma4-26b-a4b
+    - gemma4-26b-a4b-ncmoe4
+    - gemma4-26b-a4b-ncmoe8
+    - gemma4-26b-a4b-ncmoe12
+    - gemma4-26b-a4b-ncmoe16
+    - qwen36-35b-a3b
+    - qwen36-35b-a3b-ncmoe12
+    - qwen36-35b-a3b-ncmoe16
+    - qwen36-35b-a3b-ncmoe20
+    - gemma4-12b

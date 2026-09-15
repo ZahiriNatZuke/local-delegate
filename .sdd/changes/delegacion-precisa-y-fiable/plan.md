@@ -638,12 +638,28 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       cabe con ninguno. En el tercero **no se escribe ninguna cadena** hasta que el usuario elija entre
       residente no persistente o saltos que asumen swap, porque D-3/D-4 se aprobaron con la premisa
       contraria. Los modelos viejos se quedan en disco.
+    - **Enmienda (2026-09-15, usuario, tras medir): quinta condicion de «cabe»** —la VRAM dedicada
+      **del proceso del residente** no baja mas de 256 MiB mientras trabaja el candidato—. Con las
+      cuatro de arriba en verde, WDDM desalojaba al residente (3 270 -> 806 MiB) y se lo devolvia al
+      pedirle algo: esa memoria no pasa a `Shared Usage`, asi que la condicion 3 no podia fallar.
     - Verification: tabla de coexistencia (residente + cada modelo, VRAM, `Shared Usage`, OOM si/no)
       en `verification.md`; cada rol responde por el daemon con una delegacion real; la entrada mayor
       de `long` (`extraer-uvlock-48k`) ya **no** da rechazo por contexto.
     - Rollback or recovery: el respaldo de `config.yaml` de la tarea 22 (catalogo vigente sobre
       b10909), **y** devolver las variables del lanzador y la config de la Mac a los nombres viejos, con
       el daemon reiniciado (los hooks y el daemon heredan el entorno del lanzador).
+    - Estado (2026-09-15): **hecha** (`protocolo-f2.md` §10 sesion 9; `verification.md`). Resultado:
+      **cabe solo con un `-ncmoe` mayor** en los dos MoE; el usuario eligio el menor que no desaloja
+      dentro de la reserva de P-14 (Gemma 4 26B-A4B `-ncmoe 12`, Qwen3.6-35B-A3B `-ncmoe 20`), y el
+      12B cabe tal cual. **El freno de la 28 queda en «cabe».** Lo que obligo a cambiar respecto a
+      este texto: (1) la quinta condicion de «cabe», arriba; (2) `--load-mode mmap` en produccion
+      (usuario), porque con `none` los expertos en RAM cuentan como `Shared Usage`; (3) `n_ctx` por el
+      `MAX_CHARS` del rol con la entrada mas densa: `long` 38 400 y `code` **16 384**, no los 7 168 de
+      la tanda, que se dimensiono por el caso del corpus; (4) **`init-llamaswap` no genera ningun
+      catalogo** —solo agrupa los modelos que ya estan en el `config.yaml`—, asi que no se toco; los
+      flags de referencia van a la wiki (Configuration); (5) el corpus de F2 se regenero porque su
+      guarda compara `production.model` con los defectos (solo cambian los nombres); (6) las
+      variables del lanzador no hicieron falta, y la Mac queda rota hasta la release (usuario).
 
 25. **Topes por rol y no por modelo**
     - Files or modules: `src/local_delegate/config.py` (`MAX_CHARS`, `max_chars_for`), `server.py`

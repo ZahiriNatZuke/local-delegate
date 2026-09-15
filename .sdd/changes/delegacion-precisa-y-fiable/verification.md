@@ -971,3 +971,69 @@ Dos cosas que los tests no habrian destapado solos:
 
 `uv run pytest -q`: **1198 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios. Los
 recuentos del doctor (diecinueve checks) cuadran en `checks.py`, `test_checks.py` y la wiki.
+
+## F3: tarea 24, catalogo nuevo en produccion y coexistencia con el residente (2026-09-15)
+
+Rama `sdd/f3-t24-catalogo`. Bitacora de maquina en `protocolo-f2.md` §10, sesion 9.
+
+### Tabla de coexistencia (REQ-F2-5)
+
+Residente `gemma3-4b` (3 270 MiB dedicados) cargado y, a su lado, cada modelo nuevo con la entrada
+mayor de su rol; perfil del driver activo, `--load-mode mmap`, video de fondo y las aplicaciones
+habituales del usuario (sin Docker). «Cabe» son **cinco** condiciones: las cuatro del plan y la
+enmienda (la VRAM del residente no baja mas de 256 MiB).
+
+| Modelo | `-ncmoe` | VRAM candidato | Adaptador pico | Residente min | OOM | Responde | `Shared Usage` sube | Residente despues | Cabe |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Gemma 4 12B | — | 9 060 | 13 047 | 3 270 | no | si | +289 | 0,06 s | **si** |
+| Gemma 4 26B-A4B | 0 (tanda) | 14 368 | 15 928 | 806 | no | si | +300 | 1,80 s | no |
+| Gemma 4 26B-A4B | 4 | 13 062 | 15 892 | 2 118 | no | si | +300 | 0,88 s | no |
+| Gemma 4 26B-A4B | 8 | 11 910 | 15 889 | 3 270 | no | si | +232 | 0,08 s | si |
+| Gemma 4 26B-A4B | **12** | 10 534 | 14 516 | 3 270 | no | si | +239 | 0,07 s | **si, elegido** |
+| Qwen3.6-35B-A3B | 8 (tanda) | 14 328 | 15 900 | 838 | no | si | +300 | 1,72 s | no |
+| Qwen3.6-35B-A3B | 12 | 12 904 | 15 895 | 2 054 | no | si | +275 | 0,90 s | no |
+| Qwen3.6-35B-A3B | 16 | 11 546 | 15 652 | 3 270 | no | si | +211 | 0,09 s | si |
+| Qwen3.6-35B-A3B | **20** | 10 120 | 14 228 | 3 270 | no | si | +216 | 0,06 s | **si, elegido** |
+
+Resultado del plan: **«cabe solo con un `-ncmoe` mayor»** en los dos MoE, y el 12B cabe tal cual.
+Eleccion del usuario: el menor `-ncmoe` que no desaloja **dentro de la reserva de P-14** (candidato
+<= 10 993 MiB), para que un video en primer plano (1 996 MiB medidos) no vuelva a sacar al residente.
+Velocidad que se pierde, en la misma prueba: 26B de 62,4 a 37,1 tok/s; Qwen3.6 de 60,0 a 39,8.
+
+### Lo que se probo al reves
+
+- **Las cuatro condiciones del plan no distinguian.** En la primera tanda, solo con el contador del
+  adaptador, los tres «cabian»; la suma de VRAM no cuadraba y el residente tardaba 1,6-1,9 s en 8
+  tokens. Con la VRAM por proceso se vio el desalojo, que no pasa por `Shared Usage`. Control
+  negativo de la quinta condicion: con el 12B la VRAM del residente no se mueve.
+- **La primera pasada del script no media nada**: `\Memory\Available MBytes` esta traducido en este
+  Windows y `typeperf` descarta la columna sin avisar.
+- **Defectos del paquete (P-16)**: con `config.py` cambiado y los tests sin tocar, `test_cadenas`
+  cayo por sus asserts de defectos; tras actualizar las constantes, verde. La guarda del corpus
+  (`test_corpus_versionado_sigue_reflejando_a_produccion`) cayo tambien, porque el corpus anotaba los
+  modelos viejos como produccion: se regenero con `construir_corpus.py` y el diff de `cases.json` son
+  solo los 12 `production.model` y los 3 de `production_config`. El constructor reescribio ademas
+  `conteos-log.json` desde el log vivo, y **se restauro**: esos conteos son de F2.
+
+### Produccion, por el daemon
+
+| Hora UTC | Paso | Resultado |
+| --- | --- | --- |
+| 17:20:45-17:20:58 | `config.yaml` = `config.catalogo-f3.yaml` (sha256 `B1A4CDCA...`); respaldo `config.yaml.pre-catalogo-f3-20260915.bak` (`7858E9AB...`, el de la tarea 22) | daemon arriba |
+| 17:21 | `local_status` | **catalogo viejo en el daemon**: `uv tool install --force .` reutilizo la rueda en cache (misma version 0.27.0). Largo, codigo y vision rotos hasta 17:22:21 |
+| 17:22:14-17:22:21 | `uv tool install --force --reinstall --refresh --no-cache .` | `config.py` instalado con los defectos nuevos y `cadenas.py` presente |
+| 17:22-17:24 | una delegacion real por rol | `local_classify` -> `bug`; `local_extract` de `extraer-uvlock-48k` (48 000 chars) -> los tres campos correctos, **sin rechazo por contexto**; `local_commit_msg` de `commit-diff-19k` -> mensaje correcto (6 011 tokens); `local_describe_image` de la imagen de control -> descripcion correcta (1 172 tokens) |
+| 17:25 | residente de las cadenas | el daemon lo daba como «defecto del mecanico»: al paquete de `uv tool` le faltaba pyyaml. Reinstalado con `[llamaswap]` (17:25:08-17:25:15): `local_status` da «residente: gemma3-4b (grupo persistent «resident» de llama-swap)» y los grupos `resident` y `swap` activos |
+
+Pendiente para la release (tarea 30): recapturar la imagen del README contra la app de metricas en el
+9494; los datos de captura ya llevan los nombres nuevos.
+
+`local-delegate doctor` desde el repo: llama-swap v255, llama-server b10909, cadenas validas con el
+residente del grupo `persistent`, «todo a punto». **La Mac** sigue en 0.27.0 y pide los nombres
+viejos: sus roles largo, codigo y vision fallan hasta que instale la version con los defectos nuevos
+(decision del usuario: sin alias). Los modelos viejos se quedan en disco.
+
+### Suite
+
+`uv run pytest -q`: **1198 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios sobre
+`src`, `tests` y `scripts`.

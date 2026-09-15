@@ -23,8 +23,8 @@ from local_delegate import cadenas, checks, config, server
 from local_delegate import llamaswap_config as lc
 
 MECANICO = "gemma3-4b"
-LARGO = "llama31-8b"
-CODIGO = "qwen25-coder-14b"
+LARGO = "gemma4-26b-a4b"
+CODIGO = "qwen36-35b-a3b"
 RAPIDO = "qwen35-2b"
 
 
