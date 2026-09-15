@@ -1672,6 +1672,53 @@ quedo vivo en la primera pasada —quitar la tolerancia no rompia nada— porque
 promediaba cuatro casos y diluia la diferencia a 0,25, lejos de la banda: el caso de prueba no podia
 distinguir. Se reescribio con un solo caso en el agregado.
 
+#### Resultado de la tarea 20 (2026-09-15): la regla aplicada a la tanda
+
+`analizar_benchmark.py decidir` con el CP-3 del cuarto piloto (`cp3d-*.json`), todos los
+`resultados/tanda-*.jsonl`, `--umbral-shared-mib 1024` y los dos JSON de pares destapados. Informe
+completo en `resultados/decidir-final.md`; la regla la aplica el programa, esto es su lectura.
+
+| Rol | Vigente | Candidato | Veredicto | Criterio | Datos que lo sostienen |
+| --- | --- | --- | --- | --- | --- |
+| `mechanical` | `gemma3-4b` | Gemma 4 E4B | **no se cambia** | empate | los 5 casos en techo (1,0 y 1,0); latencia 516 contra 561 ms, dentro de su banda (387) |
+| `long` | `llama31-8b` | Gemma 4 26B-A4B `-ncmoe 0` | **sustituye** | calidad | pares **15 a 0** (prueba de signos «mejor»); formula 0,5 contra 1,0 en `extraer-uvlock-48k`; latencia 3,0 s contra **1,8 s** (sin `lint-9k`, que el vigente no termino nunca); techo igual (106 092 bytes los dos) |
+| `code` | `qwen25-coder-14b` | Qwen3.6-35B-A3B `-ncmoe 8` | **sustituye** | calidad | pares **15 a 0**; `boilerplate-156` 0,8 contra 1,0; latencia 9,3 s contra **4,6 s**; techo 20 171 contra **157 873 bytes** (el vigente esta limitado a sus 32 768 tokens nativos) |
+| `vision` | `qwen3-vl-8b` | Gemma 4 12B | sin agregado (§7) | caso a caso | `describir-dashboard` mediana 0,75 contra **1,0**; `leer-cifras-dashboard` 0,67 contra **1,0**; latencia peor (4,4 s y 0,5 s contra 6,1 s y 1,2 s) |
+
+**Los votos se comprobaron letra a letra.** El usuario los dio tambien en el chat (15 + 15) y se
+compararon con lo que leyo `destapar`: **0 diferencias**. Y no es un sesgo de posicion: el lado de cada
+modelo esta sorteado, y las letras van 9 A / 6 B en `long` y 8 A / 7 B en `code`, todas al candidato.
+
+**P-15 con datos nuevos: la cobertura de terminos acierta al reves en las explicaciones de codigo.**
+
+| Caso | La metrica prefiere | Acuerdo con la persona | Veredicto |
+| --- | --- | --- | --- |
+| `resumen-md-10k` | 4 | 4 (100 %) | valida |
+| `lint-9k` | 5 | 5 (100 %) | valida |
+| `resumen-changelog-7k` | 5 | 4 (80 %) | valida |
+| `commit-diff-19k` | 5 | 5 (100 %) | valida |
+| `explicar-install-20k` | 4 | **1 (25 %)** | no valida |
+| `explicar-metrics-15k` | 5 | **0 (0 %)** | no valida |
+
+Con esta pareja la metrica coincide en los resumenes y el commit, y en las dos explicaciones de codigo
+prefiere al vigente casi siempre que la persona elige al candidato: la misma forma de fallo que
+`resumen-md-10k` tuvo en P-15 (premiar que se nombren terminos, no que se explique bien). No cambia
+nada de esta decision —esos casos ya los decidian los pares— pero confirma que la cobertura no puede
+volver a decidir texto abierto.
+
+**Salvedades que acompanan al veredicto, no lo cambian:**
+
+- **Gemma 4 26B-A4B no cabe en el presupuesto de uso diario** (§1.1, informativo): 15,1 GB de VRAM
+  pico con `-ncmoe 0`, frente a 14 GB. Con escritorio ocupando VRAM y el perfil activo, esa config puede
+  dar OOM al cargar. El barrido tiene la alternativa medida: `-ncmoe 4` (60,9 tok/s a 33 k, contra 76,9).
+  Decidirlo es de F3, que es donde se sube el catalogo.
+- **Todos los candidatos corren con el razonamiento apagado**, y asi hay que subirlos: piensan por
+  defecto y con los `max_tokens` de produccion devuelven vacio.
+- **Gemma 4 12B necesita `--batch-size 2048 --ubatch-size 2048`** para procesar imagenes.
+- **`vision` se decide sobre dos casos y una sola imagen**, uno inventado (§4.4).
+- **La tanda midio con `n_ctx` de 36 736 en `long`**; produccion corre `llama31-8b` a 16 384, que ya
+  rechaza la entrada real mayor (backlog 1.3). El `n_ctx` de produccion lo fija F3.
+
 ---
 
 ## 8. Scripts: que se toca y que se crea
@@ -1844,6 +1891,14 @@ invocacion. El JSONL sin VRAM se conserva como `resultados/invalida-luid-gemma4-
 **Trampa que hereda el cierre:** `~/.claude/relevos/medir-perfil-cp1.ps1` tambien lleva el LUID
 `F722` fijo en su contador de `Shared Usage`; hay que corregirlo antes de medir el perfil al devolverlo
 a produccion, o la prueba leera un contador inexistente.
+
+**Sesion 5, setup de medicion desmontado (2026-09-15).** Con la tanda y `vision` medidos, el usuario
+devolvio el perfil del driver a `D:\Projects\llms\llamacpp\llama-server.exe` y se midio por su efecto
+con `medir-perfil-cp1.ps1` (ya resuelve el LUID solo: `F336`): 12:10:02 UTC **b9925 da OOM a los 6,1
+s** (`cudaMalloc` 12 288 MiB, sale con 0xC0000005, esta vez con la linea de OOM en el log); 12:10:12
+**b10909 carga en 13,6 s desbordando 5 985 MiB**. El perfil vuelve a actuar sobre produccion y el
+daemon se arranco despues. La votacion por pares no necesita la maquina. La entrada de
+`llama-bench.exe` en la NVIDIA App queda a criterio del usuario.
 
 **Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
 pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
