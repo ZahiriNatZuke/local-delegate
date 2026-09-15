@@ -49,9 +49,20 @@ cuatro veces seguidas que sugerir no cambia la conducta —la última medición 
 acertando el tipo de fichero, y aun así cero delegaciones—.
 
 El mensaje del rechazo nombra la tool que sirve, el `path` para llamarla y la salida de emergencia:
-leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay tres formas de que no bloquee:
-la variable a `0` —consultada en cada invocación, porque una sesión abierta hereda el entorno del
-lanzador—, un backend local que no responde, o `LD_HOOK_ENABLED=0`.
+leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias formas de que no
+bloquee:
+
+- **el fichero `~/.claude/local-delegate-bloqueo-apagado`** (o la ruta de
+  `LD_HOOK_READ_INTERRUPTOR`): gana a la variable y se mira en cada lectura, así que apaga al
+  momento sin cerrar la sesión; bórralo para volver a encender;
+- la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
+- un backend local que no responde;
+- el modelo que haría el resumen en enfriamiento;
+- o `LD_HOOK_ENABLED=0`.
+
+Con la misma bandera se registra el hook para las tools de lectura de otros MCP
+(`mcp__*__read_*`, `mcp__*__get_file_contents`): por ahí solo registra el evento (`camino: mcp`) y
+nunca bloquea.
 
 `.json`, `.csv`, `.log` y `.yaml` se avisan pero no se bloquean: ahí se busca un valor exacto y un
 resumen no sustituye a la lectura.

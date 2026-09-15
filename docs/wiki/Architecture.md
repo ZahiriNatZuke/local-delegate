@@ -140,6 +140,9 @@ sería escribir código que ningún cliente negocia.
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
 | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
+| `fallos.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `sin_clasificar` |
+| `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, y el residente de llama-swap |
+| `enfriamiento.py` | Enfriamiento por modelo compartido entre procesos (`enfriamiento.json`) y registro de episodios (`enfriamiento-eventos.jsonl`) |
 | `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
 
 **Una sola librería HTTP: `httpx2`.** Es la que usa el SDK `mcp` 2.x, y el cliente propio del

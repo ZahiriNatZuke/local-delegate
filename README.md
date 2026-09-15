@@ -182,6 +182,8 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
 | `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1` |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
+| `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
+| `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
 
 ## La métrica de ahorro
 

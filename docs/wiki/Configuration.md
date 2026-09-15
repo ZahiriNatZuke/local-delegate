@@ -108,6 +108,14 @@ se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una deleg
 `local_status` lista los modelos enfriados, con los segundos que les quedan y cuántas veces seguidas
 han vuelto a entrar sin un éxito de por medio.
 
+Cada vez que un modelo **entra** en enfriamiento, **vuelve a entrar** o **se recupera**, se añade
+una línea a `enfriamiento-eventos.jsonl`, junto al log de uso: modelo, hora, clase del fallo,
+espera y reentradas, nunca prompts ni rutas. `enfriamiento.json` solo guarda el presente; este
+registro es lo que permite contar después cuántos episodios hubo y cómo acabaron. Para saber si los
+números de abajo convienen, `uv run python scripts/medir_enfriamiento.py --desde AAAA-MM-DD` lo
+cruza con el log de uso y responde «cambiar», «se quedan» o «no concluyente» (con menos de 5
+episodios y 10 fallos que cuenten no hay datos para decidir).
+
 | Variable | Default | Qué hace |
 |---|---|---|
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | `0` lo apaga |

@@ -97,9 +97,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   se bloquean).
 
   **Nace apagado** (`LD_HOOK_READ_BLOQUEAR=0`) y se enciende cuando esté escrito el criterio de la
-  quinta medición, incluido el resultado que lo retira. Se apaga **sin reiniciar la sesión**: la
-  variable se consulta en cada invocación, porque está medido que una sesión abierta hereda el
-  entorno del lanzador y un freno que exige reiniciar no frena nada.
+  quinta medición, incluido el resultado que lo retira. Para apagarlo **sin reiniciar la sesión**
+  está el fichero interruptor (ver arriba): la variable sola no basta, porque está medido que una
+  sesión abierta hereda el entorno del lanzador y un freno que exige reiniciar no frena nada.
 
   El caso es estrecho a propósito. Solo `.md` y `.txt` leídos enteros y por encima del umbral:
   `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**, porque ahí se busca un valor
@@ -131,7 +131,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   en su evento (`bloqueo_id`). El identificador no viaja por el agente a propósito: pedirle que lo
   pase sería depender de que obedezca, que es justo lo que se quiere medir.
 
-### Added
 - **`scripts/medir_adopcion.py`**, que responde por fin «de los avisos dados, cuantos acabaron
   en delegacion». Las cuatro mediciones anteriores ataron los dos logs a mano y esa pregunta se
   quedo sin respuesta. Da el denominador por motivo y por camino, la tasa de aceptacion, y
@@ -144,40 +143,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   de las 252 lecturas por franjas registradas, cuantas eran de un fichero que acabo leyendose
   entero de todas formas.
 
-### Fixed
-- **`content: null` reventaba la tool entera.** `choice["message"]["content"].strip()` lanzaba
-  `AttributeError`, y ese tipo no estaba en el `except` que lo rodeaba: la excepción se escapaba de
-  `_post_chat`. Ahora es un fallo clasificado con mensaje legible. Y si el motivo de parada fue
-  `length` con razonamiento no vacío, el error lo dice en claro —el modelo gastó `max_tokens`
-  pensando—, que es configuración y no avería: taparlo haría que nadie lo arreglara.
+- **La wiki tiene por fin una página de catálogo de tools** (`docs/wiki/Tools.md`). Hasta ahora las
+  once tools `local_*` solo estaban en la tabla resumen del README y en la skill: la wiki no las
+  nombraba en ningún sitio, así que `local_boilerplate` no aparecía en toda la documentación
+  extendida. La página lleva, por tool, la firma exacta, qué devuelve, qué modelo la atiende y qué
+  pasa cuando la entrada no cabe, más la letra pequeña que solo estaba en el código:
 
-- **`ConnectTimeout` no ofrecía arrancar el backend.** Caía en el `except HTTPError` genérico y se
-  clasificaba como `http_error`, porque **no es subclase de `ConnectError`**: son ramas hermanas de
-  `TransportError`. Resultado: un backend apagado que agotaba el plazo de conexión no disparaba el
-  autoarranque, que era exactamente lo que lo habría arreglado.
+  - que **map-reduce y troceado no son lo mismo** —el primero reduce (`local_summarize`,
+    `local_lint_summary`, `local_commit_msg`) y el segundo transforma trozo a trozo
+    (`local_delegate`, `local_translate`), porque fundir una traducción perdería contenido—;
+  - que `local_extract` **trunca** y lo dice dentro del propio objeto, con la clave reservada
+    `_local_delegate`;
+  - que `local_status` no llama al backend de chat, así que **no** prueba que la credencial sirva;
+  - y que un diff que no cabe da un mensaje de commit que solo describe el principio del cambio.
 
-- **`ReadTimeout` se confundía con un backend caído.** Ahí el backend **sí** aceptó la conexión, así
-  que lo más probable es que llama-swap esté montando el modelo: arrancar otro no arregla nada. Pasa
-  a tener clase propia y mensaje propio.
-
-- **`doctor` leía como `b0` las versiones nuevas de llama.cpp.** Desde que llama.cpp numera en
-  semver, `--version` imprime `version: 0.4.0-dev (build 10909, commit ...)`, y la expresión que
-  buscaba el primer número tras `version:` se quedaba con el `0` **sin avisar**: el doctor daba por
-  desactualizado un build más nuevo que el recomendado. Ahora lee primero `build N` y solo acepta el
-  formato viejo (`version: 9925 (...)`) con el paréntesis detrás, así que un semver sin número de
-  build da «salida inesperada» en vez de una versión inventada. Salió al migrar esta máquina a b10909.
-
-- **Un razonamiento que agotaba `max_tokens` llegaba como respuesta vacía y correcta.** El error
-  que lo explica («súbelo, o desactiva el razonamiento») solo saltaba con `content: null`, y
-  llama-server b10909 no lo devuelve así: capturado contra el backend real, llega `content: ""` con
-  `finish_reason: length` y el razonamiento lleno. Ahora un contenido vacío con esas dos señales es
-  un fallo de configuración con su mensaje; cualquier otro `""` se sigue tratando como antes.
-
-- **Dos roles sobre el mismo modelo se rebajaban el tope de entrada el uno al otro.** El tope se
-  guardaba por nombre de modelo, y el último rol del literal pisaba al resto sin avisar: con
-  `LOCAL_DELEGATE_MODEL_CODE` igual al modelo largo, un resumen de 30 000 caracteres se hacía en tres
-  llamadas en vez de una y `local_translate` recortaba el texto a 20 000. Ahora el tope es **del
-  rol**, y cada tool usa el de su rol. Las variables `LOCAL_DELEGATE_MAX_CHARS_*` no cambian.
+  El catálogo sale de `server.mcp.list_tools()`, o sea de lo que el cliente MCP ve de verdad. Tres
+  tests nuevos en `tests/test_wiki.py` lo mantienen así: uno compara las secciones con el servidor
+  en los dos sentidos, otro la tabla índice, y otro el número escrito con letra. Añadir una tool
+  sin documentarla pone el CI en rojo en el mismo PR que la introduce.
 
 ### Changed
 - **BREAKING: los modelos por defecto de largo, código y visión son los que ganaron la medición.**
@@ -222,33 +205,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   disparará el respaldo, así que leer mal una variante nueva provocaría saltos de modelo y
   expulsiones de VRAM por un fallo que quizá era de la petición.
 
-### Removed
-- **Retirado el `retry_exhausted` del final de `_post_chat`**, que no se alcanzaba nunca. No se
-  dedujo leyendo: se enumeraron las **16 formas** de terminar el `try` y se ejecutaron todas, y
-  ninguna llegaba hasta ahí. Con control positivo, además —quitando la guarda del número de intento,
-  dos de esos caminos sí la alcanzaban—, porque un no-resultado no es evidencia si no se comprueba
-  que el experimento podía encontrar algo. Lo que esa línea prometía lo garantiza ahora
-  `tests/test_post_chat_caminos.py`, que enumera los mismos 16 caminos y **sí se ejecuta**.
-
-- **Retiradas `LD_HOOK_OUTPUT_STATS`, `LD_HOOK_OUTPUT_UMBRAL_KB`, `LD_HOOK_OUTPUT_MIN_MUESTRAS` y
-  `LD_HOOK_OUTPUT_PROPORCION`.** Se quedaron **sin un solo consumidor** cuando la 0.27.0 retiró
-  `output_policy.py` y `output_stats.py`, y su comentario seguía explicando por qué las leía un
-  hook que ya no existe. Comprobado por búsqueda antes de tocarlas, no a ojo.
-
-### Fixed
-- **El check `hooks copiados` contaba `__pycache__` como si fuera un script.** Decía «4 script(s)»
-  donde había 3, porque contaba las entradas del directorio y Python deja ahí su caché en cuanto
-  los hooks se ejecutan una vez. No es cosmético: **ese número es justo el que se mira para
-  confirmar que un script retirado desapareció** —así se verificó la retirada de `output_policy.py`
-  y compañía en la 0.27.0—, así que un directorio de más hacía que el check afirmara lo contrario
-  de lo que había pasado.
-
-  Se cuentan los `.py`. Medido antes de tocar nada sobre los **tres** probes que listan un
-  directorio: `scaffold.hook_orphans` y `scaffold.skill` no tenían el defecto —usan la lista para
-  saber si el directorio existe, no para contar—, así que el arreglo es de un solo sitio y no de
-  tres. Dos tests nuevos, uno de ellos el control que impide que el otro pase en vacío.
-
-### Changed
 - **El hook de lectura empieza a avisar a los 8 KB y no a los 32, porque el aviso no se ignoraba:
   no llegaba.** La pregunta era por qué el asistente no delega cuando toca, y la respuesta que
   parecía obvia —se salta la sugerencia— resultó falsa al medirla: el hook `PreToolUse/Read` está
@@ -273,53 +229,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores` compara los tres valores configurables
   y falla si alguno se separa, para que nadie configure un número creyendo otro.
 
-### Added
-- **La wiki tiene por fin una página de catálogo de tools** (`docs/wiki/Tools.md`). Hasta ahora las
-  once tools `local_*` solo estaban en la tabla resumen del README y en la skill: la wiki no las
-  nombraba en ningún sitio, así que `local_boilerplate` no aparecía en toda la documentación
-  extendida. La página lleva, por tool, la firma exacta, qué devuelve, qué modelo la atiende y qué
-  pasa cuando la entrada no cabe, más la letra pequeña que solo estaba en el código:
-
-  - que **map-reduce y troceado no son lo mismo** —el primero reduce (`local_summarize`,
-    `local_lint_summary`, `local_commit_msg`) y el segundo transforma trozo a trozo
-    (`local_delegate`, `local_translate`), porque fundir una traducción perdería contenido—;
-  - que `local_extract` **trunca** y lo dice dentro del propio objeto, con la clave reservada
-    `_local_delegate`;
-  - que `local_status` no llama al backend de chat, así que **no** prueba que la credencial sirva;
-  - y que un diff que no cabe da un mensaje de commit que solo describe el principio del cambio.
-
-  El catálogo sale de `server.mcp.list_tools()`, o sea de lo que el cliente MCP ve de verdad. Tres
-  tests nuevos en `tests/test_wiki.py` lo mantienen así: uno compara las secciones con el servidor
-  en los dos sentidos, otro la tabla índice, y otro el número escrito con letra. Añadir una tool
-  sin documentarla pone el CI en rojo en el mismo PR que la introduce.
-
-### Fixed
-- **La wiki llevaba cuatro versiones sin actualizarse, y ahora hay quien lo note.** `docs/wiki/`
-  no se tocaba desde la 0.23.0: la tabla de comprobaciones de `doctor` tenía **diecisiete** filas
-  con dieciocho checks en el registro —faltaba `service.daemon_auth`, el «token del puerto del
-  daemon» que nació en la 0.26.0— y el texto seguía prometiendo «las dieciséis piezas». La fila de
-  la skill también describía solo la de Claude Code, cuando desde la 0.19.0 se escribe también en
-  opencode.
-
-  Lo que lo dejó pasar es que `checks.py` **sí** tenía guardián (sus frases de tamaño estaban al
-  día) y la wiki no. Ahora `tests/test_wiki.py` compara la tabla contra `checks.CHECKS` fila por
-  fila y comprueba el número escrito con letra: añadir un check sin documentarlo pone el CI en
-  rojo en el mismo PR que lo introduce.
-
-- **Una justificación medida también caduca, y esta caducó.** El código, la wiki y el docstring de
-  su test decían que una clave de primer nivel desconocida hace que opencode **no arranque**
-  (`ConfigInvalidError`). Medido el 2026-09-08 con los dos binarios el mismo día: `1.18.11`
-  rechaza el config entero (`Unrecognized key`, exit 1) y **`1.18.29` ya la tolera**. La medición
-  original era correcta; el cliente relajó la validación.
-
-  **No cambia el comportamiento del paquete**: se sigue escribiendo solo dentro de `mcp`, ahora
-  por prudencia —la versión la elige el usuario— y porque lo que **no** ha cambiado en ninguna de
-  las dos versiones es que una entrada mal formada *dentro* de `mcp` (sin `type`, sin `command`, o
-  con `command` que no sea un array) sí impide arrancar. Tampoco cambia la ausencia de
-  `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
-  de distinguir nuestra entrada de una escrita a mano.
-
-### Changed
 - **BREAKING — `local-delegate benchmark` corre el corpus v2 de tareas reales y deja de aceptar el
   de julio.** `--cases` apunta ahora a `benchmarks/catalogo-2026-09/cases.json` (`schema_version:
   2`); un corpus v1 falla al cargar. El de julio (`benchmarks/moe/cases.json`) se conserva como
@@ -393,6 +302,91 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   casos de texto abierto (`automatic_scoring: false`) los decide la comparación por pares, con una
   prueba de signos en `decidir --pares`; las métricas objetivas (ejecución, JSON, cifras) siguen
   decidiendo donde las hay.
+
+### Removed
+- **Retirado el `retry_exhausted` del final de `_post_chat`**, que no se alcanzaba nunca. No se
+  dedujo leyendo: se enumeraron las **16 formas** de terminar el `try` y se ejecutaron todas, y
+  ninguna llegaba hasta ahí. Con control positivo, además —quitando la guarda del número de intento,
+  dos de esos caminos sí la alcanzaban—, porque un no-resultado no es evidencia si no se comprueba
+  que el experimento podía encontrar algo. Lo que esa línea prometía lo garantiza ahora
+  `tests/test_post_chat_caminos.py`, que enumera los mismos 16 caminos y **sí se ejecuta**.
+
+- **Retiradas `LD_HOOK_OUTPUT_STATS`, `LD_HOOK_OUTPUT_UMBRAL_KB`, `LD_HOOK_OUTPUT_MIN_MUESTRAS` y
+  `LD_HOOK_OUTPUT_PROPORCION`.** Se quedaron **sin un solo consumidor** cuando la 0.27.0 retiró
+  `output_policy.py` y `output_stats.py`, y su comentario seguía explicando por qué las leía un
+  hook que ya no existe. Comprobado por búsqueda antes de tocarlas, no a ojo.
+
+### Fixed
+- **`content: null` reventaba la tool entera.** `choice["message"]["content"].strip()` lanzaba
+  `AttributeError`, y ese tipo no estaba en el `except` que lo rodeaba: la excepción se escapaba de
+  `_post_chat`. Ahora es un fallo clasificado con mensaje legible. Y si el motivo de parada fue
+  `length` con razonamiento no vacío, el error lo dice en claro —el modelo gastó `max_tokens`
+  pensando—, que es configuración y no avería: taparlo haría que nadie lo arreglara.
+
+- **`ConnectTimeout` no ofrecía arrancar el backend.** Caía en el `except HTTPError` genérico y se
+  clasificaba como `http_error`, porque **no es subclase de `ConnectError`**: son ramas hermanas de
+  `TransportError`. Resultado: un backend apagado que agotaba el plazo de conexión no disparaba el
+  autoarranque, que era exactamente lo que lo habría arreglado.
+
+- **`ReadTimeout` se confundía con un backend caído.** Ahí el backend **sí** aceptó la conexión, así
+  que lo más probable es que llama-swap esté montando el modelo: arrancar otro no arregla nada. Pasa
+  a tener clase propia y mensaje propio.
+
+- **`doctor` leía como `b0` las versiones nuevas de llama.cpp.** Desde que llama.cpp numera en
+  semver, `--version` imprime `version: 0.4.0-dev (build 10909, commit ...)`, y la expresión que
+  buscaba el primer número tras `version:` se quedaba con el `0` **sin avisar**: el doctor daba por
+  desactualizado un build más nuevo que el recomendado. Ahora lee primero `build N` y solo acepta el
+  formato viejo (`version: 9925 (...)`) con el paréntesis detrás, así que un semver sin número de
+  build da «salida inesperada» en vez de una versión inventada. Salió al migrar esta máquina a b10909.
+
+- **Un razonamiento que agotaba `max_tokens` llegaba como respuesta vacía y correcta.** El error
+  que lo explica («súbelo, o desactiva el razonamiento») solo saltaba con `content: null`, y
+  llama-server b10909 no lo devuelve así: capturado contra el backend real, llega `content: ""` con
+  `finish_reason: length` y el razonamiento lleno. Ahora un contenido vacío con esas dos señales es
+  un fallo de configuración con su mensaje; cualquier otro `""` se sigue tratando como antes.
+
+- **Dos roles sobre el mismo modelo se rebajaban el tope de entrada el uno al otro.** El tope se
+  guardaba por nombre de modelo, y el último rol del literal pisaba al resto sin avisar: con
+  `LOCAL_DELEGATE_MODEL_CODE` igual al modelo largo, un resumen de 30 000 caracteres se hacía en tres
+  llamadas en vez de una y `local_translate` recortaba el texto a 20 000. Ahora el tope es **del
+  rol**, y cada tool usa el de su rol. Las variables `LOCAL_DELEGATE_MAX_CHARS_*` no cambian.
+
+- **El check `hooks copiados` contaba `__pycache__` como si fuera un script.** Decía «4 script(s)»
+  donde había 3, porque contaba las entradas del directorio y Python deja ahí su caché en cuanto
+  los hooks se ejecutan una vez. No es cosmético: **ese número es justo el que se mira para
+  confirmar que un script retirado desapareció** —así se verificó la retirada de `output_policy.py`
+  y compañía en la 0.27.0—, así que un directorio de más hacía que el check afirmara lo contrario
+  de lo que había pasado.
+
+  Se cuentan los `.py`. Medido antes de tocar nada sobre los **tres** probes que listan un
+  directorio: `scaffold.hook_orphans` y `scaffold.skill` no tenían el defecto —usan la lista para
+  saber si el directorio existe, no para contar—, así que el arreglo es de un solo sitio y no de
+  tres. Dos tests nuevos, uno de ellos el control que impide que el otro pase en vacío.
+
+- **La wiki llevaba cuatro versiones sin actualizarse, y ahora hay quien lo note.** `docs/wiki/`
+  no se tocaba desde la 0.23.0: la tabla de comprobaciones de `doctor` tenía **diecisiete** filas
+  con dieciocho checks en el registro —faltaba `service.daemon_auth`, el «token del puerto del
+  daemon» que nació en la 0.26.0— y el texto seguía prometiendo «las dieciséis piezas». La fila de
+  la skill también describía solo la de Claude Code, cuando desde la 0.19.0 se escribe también en
+  opencode.
+
+  Lo que lo dejó pasar es que `checks.py` **sí** tenía guardián (sus frases de tamaño estaban al
+  día) y la wiki no. Ahora `tests/test_wiki.py` compara la tabla contra `checks.CHECKS` fila por
+  fila y comprueba el número escrito con letra: añadir un check sin documentarlo pone el CI en
+  rojo en el mismo PR que lo introduce.
+
+- **Una justificación medida también caduca, y esta caducó.** El código, la wiki y el docstring de
+  su test decían que una clave de primer nivel desconocida hace que opencode **no arranque**
+  (`ConfigInvalidError`). Medido el 2026-09-08 con los dos binarios el mismo día: `1.18.11`
+  rechaza el config entero (`Unrecognized key`, exit 1) y **`1.18.29` ya la tolera**. La medición
+  original era correcta; el cliente relajó la validación.
+
+  **No cambia el comportamiento del paquete**: se sigue escribiendo solo dentro de `mcp`, ahora
+  por prudencia —la versión la elige el usuario— y porque lo que **no** ha cambiado en ninguna de
+  las dos versiones es que una entrada mal formada *dentro* de `mcp` (sin `type`, sin `command`, o
+  con `command` que no sea un array) sí impide arrancar. Tampoco cambia la ausencia de
+  `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
+  de distinguir nuestra entrada de una escrita a mano.
 
 ## [0.27.0] - 2026-09-08
 
