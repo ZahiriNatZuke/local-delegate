@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import tempfile
 import time
 import urllib.error
@@ -234,6 +235,87 @@ def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Pa
         # Sin cache se sondea mas a menudo; es lento, no incorrecto.
         pass
     return disponible
+
+
+# --- Estado del bloqueo (REQ-F1-11) ---------------------------------------------------------------
+#
+# El apagado en caliente no puede ser una variable de entorno: una sesion abierta hereda el entorno
+# del lanzador (medido: catorce lecturas con el umbral viejo), asi que el unico freno que funciona
+# sin cerrar nada es algo que el hook lea en cada invocacion y que el usuario pueda tocar a mano.
+# Un fichero cumple las dos cosas. La variable sigue siendo la que ENCIENDE; el fichero gana y apaga.
+
+VERDADEROS = {"1", "true", "yes", "on"}
+
+
+def ruta_del_interruptor() -> Path:
+    """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
+    el instalador reescribe y poda."""
+    destino = os.environ.get("LD_HOOK_READ_INTERRUPTOR", "").strip()
+    return Path(destino) if destino else Path.home() / ".claude" / "local-delegate-bloqueo-apagado"
+
+
+def estado_del_bloqueo() -> str:
+    """`encendido`, `apagado_fichero` o `apagado_variable`. Va en cada evento, para que una
+    medicion sepa en que estado estaba la regla cuando decidio."""
+    if ruta_del_interruptor().exists():
+        return "apagado_fichero"
+    if os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
+        return "encendido"
+    return "apagado_variable"
+
+
+# --- El modelo del resumen en enfriamiento (REQ-F1-10) -------------------------------------------
+#
+# Bloquear hacia un modelo que el servidor no va a llamar deja al agente peor que antes. El estado lo
+# escribe el servidor en `LOG_DIR/enfriamiento.json`; el hook es stdlib y no puede importar `config`,
+# asi que lleva su copia de los defectos, y `tests/test_conformidad_f1.py` la ata a `config.py`. Con
+# un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
+# defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
+
+MODELOS_POR_DEFECTO = {"long": "gemma4-26b-a4b", "mechanical": "gemma3-4b"}
+UMBRAL_LARGO_CHARS = 6000
+
+
+def directorio_de_logs() -> Path:
+    """`LOG_DIR` como lo resuelve `config.py` (`platformdirs.user_data_dir`, sin autor)."""
+    destino = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
+    if destino:
+        return Path(destino)
+    if sys.platform == "win32":
+        return (
+            Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+            / "local-delegate"
+        )
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "local-delegate"
+    base = os.environ.get("XDG_DATA_HOME", "").strip()
+    return (Path(base) if base else Path.home() / ".local" / "share") / "local-delegate"
+
+
+def modelo_del_resumen(tamano: int) -> str:
+    """El modelo al que iria `local_summarize` con un fichero de `tamano` bytes (`_rol_por_tamano`)."""
+    try:
+        umbral = int(
+            os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or UMBRAL_LARGO_CHARS
+        )
+    except ValueError:
+        umbral = UMBRAL_LARGO_CHARS
+    rol = "long" if tamano > umbral else "mechanical"
+    return (
+        os.environ.get(f"LOCAL_DELEGATE_MODEL_{rol.upper()}", "").strip()
+        or MODELOS_POR_DEFECTO[rol]
+    )
+
+
+def modelo_enfriado(modelo: str) -> bool:
+    """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
+    un bloqueo con un dato legible y vigente, nunca por un fichero roto."""
+    try:
+        datos = json.loads((directorio_de_logs() / "enfriamiento.json").read_text(encoding="utf-8"))
+        hasta = datos[modelo]["hasta"]
+        return isinstance(hasta, (int, float)) and float(hasta) > time.time()
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
 
 
 # --- Cruce entre el bloqueo y la delegacion que venga despues -----------------------------------

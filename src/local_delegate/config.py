@@ -178,6 +178,10 @@ HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
 #: consulta en cada invocacion —no al arrancar— porque una sesion abierta hereda el entorno del
 #: lanzador, y un freno que exige reiniciar la sesion no frena nada.
 HOOK_READ_BLOQUEAR: bool = _env_flag("LD_HOOK_READ_BLOQUEAR", False)
+#: Donde vive el fichero que APAGA el bloqueo en caliente (REQ-F1-11): si existe, no se bloquea
+#: aunque `LD_HOOK_READ_BLOQUEAR` diga 1. La variable no sirve de freno porque una sesion abierta
+#: hereda el entorno del lanzador; un fichero se lee en cada invocacion. Vacia = el defecto del hook.
+HOOK_READ_INTERRUPTOR: str = _env("LD_HOOK_READ_INTERRUPTOR", "")
 
 
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------

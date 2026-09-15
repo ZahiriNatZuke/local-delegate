@@ -856,6 +856,27 @@ de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion d
       cada transicion), `tests/test_enfriamiento.py` y `scripts/medir_enfriamiento.py`, antes de
       instalar `main` en el daemon. Criterio en `verification.md`, «Criterio de P-4».
 
+31. **Conformidad de F1: los tres huecos de la revision de resultado**
+    - Origen: revision de conformidad del 2026-09-15 (`does-not-conform`), hallazgos B2 y B3,
+      comprobados contra el codigo. Decision del usuario: arreglarlos en codigo antes de la release.
+    - Files or modules: `resources/hooks/hook_common.py`, `suggest_delegate_read.py`,
+      `suggest_delegate_shell.py`, `install.py`, `tests/test_conformidad_f1.py` (nuevo),
+      `tests/test_install.py`, `docs/wiki/Configuration.md`, `CHANGELOG.md`
+    - Requirements covered: REQ-F1-9 (medir las lecturas de otros MCP), REQ-F1-10 (el bloqueo se cae
+      con el modelo del resumen en enfriamiento) y REQ-F1-11 (apagado en caliente fuera del entorno,
+      y el estado anotado en cada evento)
+    - Detalle: el hook de lectura se registra tambien con un matcher de tools MCP de lectura y, por
+      ese camino, solo registra (`camino: mcp`). El hook lee `enfriamiento.json` de `LOG_DIR` con el
+      modelo que elegiria `local_summarize` por tamano; como es stdlib, lleva su copia de los
+      defectos, atada a `config.py` por test. El apagado es un fichero
+      (`~/.claude/local-delegate-bloqueo-apagado`) que gana a `LD_HOOK_READ_BLOQUEAR`.
+    - Verification: tests en rojo antes de implementar, cada uno con su control positivo; el apagado
+      probado con dos procesos del hook y un backend de prueba; mutantes; suite, ruff y CI.
+      **No se instala en esta maquina hasta cerrar la ventana de F1**: un script de hook nuevo mete
+      otra version en la medicion.
+    - Rollback or recovery: revertir el PR; sin cambios de schema, los campos nuevos del evento son
+      aditivos.
+
 **P-16, resuelta por el usuario (2026-09-15): los defectos del paquete pasan a los ganadores de F2.**
 Contexto de la pregunta: los defectos de `config.py`
 (`MODEL_LONG`, `MODEL_CODE`, `MODEL_VISION`) son **nombres** que tienen que existir en la config de

@@ -29,7 +29,10 @@ from hook_common import (
     backend_disponible,
     contexto_de,
     deny,
+    estado_del_bloqueo,
     huella_de_ruta,
+    modelo_del_resumen,
+    modelo_enfriado,
     nuevo_id,
     record,
 )
@@ -120,7 +123,12 @@ def main() -> None:
     if not isinstance(comando, str) or not comando.strip():
         return
 
-    comun = {"category": "shell", "camino": "shell", **contexto_de(payload, __file__)}
+    comun = {
+        "category": "shell",
+        "camino": "shell",
+        "bloqueo": estado_del_bloqueo(),
+        **contexto_de(payload, __file__),
+    }
 
     ruta = fichero_volcado_entero(comando)
     if ruta is None:
@@ -150,6 +158,9 @@ def main() -> None:
         return
     if not backend_disponible():
         record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
+        return
+    if modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
+        record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
         return
 
     identificador = nuevo_id()

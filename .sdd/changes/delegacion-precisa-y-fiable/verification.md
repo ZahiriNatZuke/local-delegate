@@ -1353,3 +1353,60 @@ Lo que la prueba **no** cubre, y se escribe para que no se lea de mas: el fallo 
 verificados en la suite de las tareas 28 y 29. Y al final de la prueba quedaron montados a la vez el
 residente y `gemma4-26b-a4b`, con `local_status` avisando de menos de 2 GB libres de VRAM: es la
 coexistencia que la tarea 24 midio como «cabe», no un desbordamiento.
+
+### CI y seguridad de la tarea 30 (PR #194)
+
+- `personal-security-check` antes del primer commit: sin dependencias nuevas (imports de stdlib o
+  ya presentes), Gitleaks sobre lo staged sin fugas, ni rutas de usuario, correos, tokens o IPs.
+- `gh pr checks 194` sobre `114f433`: **13 de 13 en verde** —`test` en Ubuntu, Windows y macOS,
+  `lint`, `secrets`, `install-smoke`, `ci-gate`, `audit`, Socket (dos), GitGuardian, CodeQL y
+  `Analyze (python)`—; `mergeStateStatus: CLEAN` y ningun hilo de revision sin resolver. Mezclada
+  como `19c663d`; en `main`, CI, CodeQL y Vendor audit en verde.
+
+## F1: tarea 31, conformidad (2026-09-15)
+
+La revision de resultado dio `does-not-conform` por tres huecos de F1, comprobados contra el codigo
+antes de tocar nada: ningun hook nombraba el enfriamiento, el instalador solo registraba `Read` y
+`Bash|PowerShell`, y el evento no llevaba el estado del bloqueo. Decision del usuario: arreglarlos en
+codigo. Rama `sdd/f1-conformidad`.
+
+| Requisito | Que se hizo | Test |
+| --- | --- | --- |
+| REQ-F1-9 | el hook de lectura se registra tambien con el matcher `mcp__.+__(read_[a-z_]*\|get_file_contents)`; por ese camino solo registra (`camino: mcp`, `category: read`, huella de la ruta), nunca bloquea ni sugiere | lectura simple y multiple por MCP, con su control por `Read` que si bloquea; el patron contra cinco lecturas y cuatro tools que no lo son |
+| REQ-F1-10 | el hook lee `LOG_DIR/enfriamiento.json` con el modelo que elegiria `local_summarize` por tamano; si esta enfriado, `motivo: modelo_enfriado` y no bloquea (en `Read` y en shell) | enfriado, vencido, otro modelo, fichero corrupto, variable de modelo; defectos y `LOG_DIR` del hook atados a `config.py` |
+| REQ-F1-11 | fichero `~/.claude/local-delegate-bloqueo-apagado` que gana a `LD_HOOK_READ_BLOQUEAR`; cada evento lleva `bloqueo` (`encendido`, `apagado_fichero`, `apagado_variable`) | **dos procesos del hook** con el mismo entorno y un backend HTTP de prueba: bloquea, se crea el fichero y no bloquea, se borra y vuelve a bloquear; el campo en `Read` y en shell |
+
+Rojo antes de implementar: 11 fallaron y 4 pasaron, y los 4 eran los controles (lo que ya debia
+bloquear). Cada fallo por su causa: el de dos procesos cayo en la linea posterior al fichero
+interruptor, no en el control, asi que el backend de prueba funcionaba.
+
+| Mutante | Cae en |
+| --- | --- |
+| el camino MCP se trata como `Read` | lectura simple y multiple por MCP |
+| el camino MCP sin evento | las dos |
+| matcher sin `get_file_contents` | el del instalador |
+| matcher `mcp__.+` | el del instalador |
+| `Read` ignora el enfriamiento | enfriado, variable de modelo |
+| shell ignora el enfriamiento | el volcado por shell |
+| enfriado sin mirar `hasta` | enfriamiento vencido |
+| rol siempre mecanico | enfriado, variable de modelo, shell |
+| ignora `LOCAL_DELEGATE_MODEL_*` | variable de modelo |
+| interruptor ignorado | fichero interruptor, estado en cada evento, dos procesos |
+| `Read` sin campo `bloqueo` | estado en cada evento |
+| shell sin campo `bloqueo` | estado en cada evento |
+| defecto largo distinto del de `config` | enfriado, shell, defectos atados |
+
+Dos mutantes no mutaban en la primera pasada (M9 y M11: `ruff format` habia partido las lineas) y se
+rehicieron contra el texto formateado. **Defecto propio al correrlos**: el runner restauraba con
+`newline="\n"` y dejo `install.py`, que es CRLF, con las 1 317 lineas cambiadas; se detecto por el
+`diff --stat` y se restauro a CRLF (diff de 11 lineas). La segunda pasada lee y escribe en binario.
+
+El guardian `test_toda_variable_que_lean_los_hooks_esta_declarada_en_config` cazo
+`LD_HOOK_READ_INTERRUPTOR` sin declarar; declarada en `config.py`.
+
+Suite: **1293 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.
+
+**Lo que no se hizo, a proposito:** instalar los hooks nuevos en esta maquina. Un script de hook
+nuevo mete otra version en la ventana de F1, que cierra el 2026-09-19; se instala al cerrarla. Y un
+cliente con `LOCAL_DELEGATE_MODEL_*` distinto del lanzador del daemon hace que el hook mire el
+defecto: ante la duda no ve el enfriamiento y sigue bloqueando, que es el comportamiento anterior.

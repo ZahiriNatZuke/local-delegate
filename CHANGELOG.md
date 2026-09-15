@@ -7,6 +7,25 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **El bloqueo de lectura se apaga al momento con un fichero.** Si existe
+  `~/.claude/local-delegate-bloqueo-apagado`, el hook no bloquea aunque `LD_HOOK_READ_BLOQUEAR`
+  diga 1, y lo comprueba en cada lectura: no hace falta cerrar la sesión. La variable sola no
+  servía de freno, porque una sesión abierta sigue con el entorno con el que arrancó. Cada evento
+  de la telemetría anota el estado (`bloqueo`). Ruta configurable con `LD_HOOK_READ_INTERRUPTOR`.
+
+- **El bloqueo no manda a un modelo parado.** Si el modelo que haría el resumen está en
+  enfriamiento, la lectura pasa y el evento lo dice (`motivo: modelo_enfriado`).
+
+- **Las lecturas por otros MCP se cuentan.** `--enable-read-hook` registra también el hook para las
+  tools de lectura de otros servidores MCP (`mcp__*__read_*`, `mcp__*__get_file_contents`). Nunca
+  las bloquea: solo deja el evento (`camino: mcp`), para que la medición tenga el denominador
+  completo. Reinstala con `install --enable-read-hook` para que se registre.
+
+- **Registro de episodios de enfriamiento y `scripts/medir_enfriamiento.py`.** Cada vez que un
+  modelo entra en enfriamiento, vuelve a entrar o se recupera, se añade una línea a
+  `enfriamiento-eventos.jsonl`, junto al log de uso: modelo, hora, clase del fallo, espera y
+  reentradas; nunca prompts ni rutas. El script lo cruza con el log de uso y dice si los números
+  del enfriamiento (3 fallos, 120 s, tope 900 s) deben cambiar, quedarse o si aún no hay datos.
 - **Cadenas de respaldo por rol, visibles antes de que el salto exista.** Cada rol tiene una lista
   ordenada de modelos a los que saltar cuando el suyo falla, declarada **por rol** y resuelta con la
   configuración vigente: código → residente → largo, largo → residente → código, mecánico → largo,

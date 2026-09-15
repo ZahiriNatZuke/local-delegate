@@ -65,6 +65,15 @@ _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 #: otro no cambia la conducta, la muda de sitio —`cat informe.md` hace lo que la tool `Read`—.
 _SHELL_HOOK = ("suggest_delegate_shell.py", "PreToolUse", "Bash|PowerShell")
 
+#: La tercera fila de la superficie de lectura (REQ-F1-9, P-6): las tools de lectura de OTROS MCP
+#: se miden y nunca se cierran. Es el mismo script que `Read`, que por este camino solo registra;
+#: sin contarlas, una subida de la adopcion no distingue «se delego» de «se leyo por otro sitio».
+_MCP_READ_HOOK = (
+    "suggest_delegate_read.py",
+    "PreToolUse",
+    "mcp__.+__(read_[a-z_]*|get_file_contents)",
+)
+
 #: Scripts que este paquete YA NO instala, pero que sigue reconociendo como suyos.
 #:
 #: Sin esta lista, un script retirado se vuelve **inmortal**: la limpieza de huérfanos sale de
@@ -815,7 +824,7 @@ def plan_install(opts: Options) -> list[Action]:
             for script, event, matcher in _HOOK_EVENTS
         ]
         if opts.enable_read_hook:
-            for script, event, matcher in (_READ_HOOK, _SHELL_HOOK):
+            for script, event, matcher in (_READ_HOOK, _MCP_READ_HOOK, _SHELL_HOOK):
                 comando = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
                 entries.append((event, matcher, comando))
         settings_path = claude / "settings.json"

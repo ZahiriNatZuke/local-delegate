@@ -109,9 +109,10 @@ def test_read_hook_is_opt_in(tmp_path):
     _install(tmp_path, enable_read_hook=True)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"]["PreToolUse"]}
-    # Los DOS caminos de lectura, con una sola bandera: cerrar la tool `Read` y dejar abierto
-    # `cat informe.md` no cambia la conducta, la muda de sitio.
-    assert matchers == {"Read", "Bash|PowerShell"}
+    # Los TRES caminos de lectura, con una sola bandera: cerrar la tool `Read` y dejar abierto
+    # `cat informe.md` no cambia la conducta, la muda de sitio; y las lecturas por otros MCP se
+    # cuentan aunque no se cierren (REQ-F1-9).
+    assert matchers == {"Read", "Bash|PowerShell", inst._MCP_READ_HOOK[2]}
 
 
 def _comando_del_hook_de_read(home: Path) -> str | None:

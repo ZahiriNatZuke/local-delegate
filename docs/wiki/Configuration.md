@@ -212,15 +212,30 @@ de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo 
 volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
 ruta; con una tubería, una redirección, comandos encadenados o un flag que ya acota, no se bloquea.
 
-Nace apagado, y hay tres formas de que no bloquee:
+Nace apagado. Estas son las formas de que no bloquee:
 
-- `LD_HOOK_READ_BLOQUEAR=0`, que **se consulta en cada invocación**. No hace falta reiniciar la
-  sesión: está medido que una sesión abierta hereda el entorno del lanzador, así que un freno que
-  exigiera relanzar no frenaría nada.
+- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-bloqueo-apagado`** (vacío
+  vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
+  reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
+  `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
+  `LD_HOOK_READ_INTERRUPTOR` se puede poner en otra ruta.
+- `LD_HOOK_READ_BLOQUEAR=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
+  porque hereda el entorno del lanzador. Por eso existe el fichero.
 - Que el backend local no responda. El hook lo sondea él mismo (300 ms, cacheado un minuto) en vez
   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
   marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay delegaciones.
+- Que el modelo que haría el resumen esté **en enfriamiento**: el hook lee el mismo
+  `enfriamiento.json` que el servidor y, si ese modelo está parado, deja pasar la lectura. Mira el
+  modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
 - `LD_HOOK_ENABLED=0`.
+
+Cada evento de la telemetría lleva `bloqueo` (`encendido`, `apagado_fichero` o
+`apagado_variable`), para que una medición sepa en qué estado estaba la regla.
+
+**Las lecturas por otros MCP se cuentan, no se bloquean.** `--enable-read-hook` registra el mismo
+hook para las tools de lectura de otros servidores MCP (`mcp__*__read_*` y
+`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `camino: mcp`: sin contarlas,
+una subida de las delegaciones no distinguiría «se delegó» de «se leyó por otro sitio».
 
 `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
 —un `package.json`, la línea del error— y un resumen no sustituye a la lectura. El código no dice
