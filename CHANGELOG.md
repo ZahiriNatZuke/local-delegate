@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-15
+
 ### Fixed
 - **Reinstalar ya no borra la cabecera del token.** `install --mcp-mode http` sin
   `--web-token-env` reescribía la entrada MCP sin `Authorization` aunque la de antes la llevara, y
@@ -2106,7 +2108,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.25.0...v0.26.0
