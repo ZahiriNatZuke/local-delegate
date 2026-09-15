@@ -1410,3 +1410,25 @@ Suite: **1293 passed, 2 skipped**. `ruff check` y `ruff format --check` limpios.
 nuevo mete otra version en la ventana de F1, que cierra el 2026-09-19; se instala al cerrarla. Y un
 cliente con `LOCAL_DELEGATE_MODEL_*` distinto del lanzador del daemon hace que el hook mire el
 defecto: ante la duda no ve el enfriamiento y sigue bloqueando, que es el comportamiento anterior.
+
+## Release 0.28.0 (2026-09-15)
+
+Publicada antes de cerrar la ventana de F1 por decision del usuario (`plan.md`, tras la tarea 31).
+
+| Paso | Resultado |
+| --- | --- |
+| #195 (tarea 31), #196 (docs de la release), #197 (bump) | 13 de 13 checks en verde cada una; mezcladas como `d7ffa37`, `cf527b7` y `bd49264`. En la #195, CodeQL abrio un hilo (`py/empty-except`): arreglado con comentario y hilo resuelto |
+| Auditoria de docs contra el CHANGELOG | receta de llama-swap con los defaults viejos, receta de hooks y una entrada del CHANGELOG con el apagado por variable, y huecos en Configuration, Architecture, Tools, Backend-versions, Troubleshooting, README y `.env.example`; cada uno comprobado antes de corregir |
+| Captura del README | contra la app de metricas del repo en el 9494; manifiesto en 0.28.0. `uv sync` habia retirado Playwright, que no es dependencia: reinstalado a la misma version (1.62.0) |
+| `release.py 0.28.0 --dry-run` y `release.py 0.28.0` | Release `v0.28.0` con rueda y sdist |
+| `publish.yml` | `check-version`, `pypi` y `mcp-registry` en verde; PyPI y el registro MCP sirven 0.28.0 |
+| Daemon desde PyPI | `uv tool install --force --reinstall --refresh "local-delegate-mcp[llamaswap]==0.28.0"`, 21:03:19Z; `local_status` v0.28.0, respaldo y enfriamiento encendidos |
+| `install --mcp-mode http --web-token-env --enable-read-hook --agents` | 21:03:55Z; 4 hooks registrados, incluido `PreToolUse/mcp__.+__(read_[a-z_]*\|get_file_contents)`; entradas MCP con la cabecera del token |
+| `doctor` | «todo a punto». El aviso previo de llama-swap v238 era el entorno heredado de la sesion: el de usuario ya apuntaba a v255 y el proceso vivo es v255 |
+| Hook instalado, ejecutado tal cual | lectura por `mcp__filesystem__read_text_file`: sin salida, evento `camino: mcp`, `bloqueo: encendido`; control por `Read` sobre el mismo fichero: `deny`. Version de script `a1485d36` |
+
+**La ventana de F1 cambia de version de hook a las 2026-09-15T21:03:55Z**: la medicion se lee por
+tramos de version, que `medir_adopcion.py` ya distingue.
+
+Pendiente: el depscore de Socket del paquete publicado (el MCP de Socket respondio «No valid
+session» en tres intentos) y actualizar la Mac, que sigue en 0.27.0.
