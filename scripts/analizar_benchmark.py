@@ -473,13 +473,20 @@ def validar_tanda(
             if not _caso(cfg, cid, corpus).calidades:
                 motivos.append(f"{cfg.selector}: {cid} sin ninguna puntuacion valida")
     registros = [r for cfg in configs for r in cfg.registros if r.get("role") == rol]
-    for clave, nombre in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
-        valores = {(r.get("variant") or {}).get(clave) for r in registros}
-        if None in valores:
-            # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
-            motivos.append(f"{nombre} sin declarar en alguna corrida")
-        elif len(valores) > 1:
-            motivos.append(f"{nombre} distinto entre corridas: {sorted(map(str, valores))}")
+    # Por tipo de caso (§3.5, decision del usuario 2026-09-14): la calidad corre con el n_ctx del caso
+    # mayor y los sondeos de techo en otra config con mas contexto, o medirian la ventana y no el
+    # modelo. Lo que no vale es que vigente y candidato difieran DENTRO de un mismo tipo.
+    for kind in sorted({r.get("kind") for r in registros}, key=str):
+        del_tipo = [r for r in registros if r.get("kind") == kind]
+        for clave, nombre in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
+            valores = {(r.get("variant") or {}).get(clave) for r in del_tipo}
+            if None in valores:
+                # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
+                motivos.append(f"{nombre} sin declarar en alguna corrida de {kind}")
+            elif len(valores) > 1:
+                motivos.append(
+                    f"{nombre} distinto entre corridas de {kind}: {sorted(map(str, valores))}"
+                )
     for cfg in configs:
         propios = [r for r in cfg.registros if r.get("role") == rol]
         primeras = [
@@ -693,7 +700,9 @@ def _fmt(valor: Any, decimales: int = 3) -> str:
 def _pico(config: Config, rol: str, ruta: tuple[str, ...]) -> Any:
     valores = []
     for r in config.registros:
-        if r.get("role") != rol:
+        # Solo calidad: el sondeo de techo corre con mas contexto y su KV inflaria la memoria de la
+        # config que se decide (§3.5).
+        if r.get("role") != rol or r.get("kind") != "calidad":
             continue
         valor: Any = r
         for clave in ruta:

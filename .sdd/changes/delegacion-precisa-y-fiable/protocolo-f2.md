@@ -941,6 +941,31 @@ Este es el fallo 5 de julio, que la primera version de este protocolo no cerraba
   densidad varia mas del doble segun el contenido: 48 000 chars de `uv.lock` no son los mismos tokens
   que 48 000 de Markdown, y este repo ya tiene documentada esa trampa. Un `n_ctx` estimado en chars
   convierte el caso mayor en `rechazo_por_contexto` y §6 tumba el rol entero por un error de unidades.
+- **Dos configs por modelo, decision del usuario (2026-09-14).** Con `n_ctx` fijado por el caso de
+  calidad mayor, los sondeos de techo (26 353 y 47 181 tokens) darian `rechazo_por_contexto` en los
+  dos modelos siempre: medirian la ventana configurada, no el modelo, y el primer desempate de §7
+  seria un control que no puede dar un resultado distinto. Asi que cada modelo de `long` y `code`
+  tiene **una config de calidad** —`n_ctx` = tokens del caso mayor (el mayor de los dos modelos) +
+  su `max_tokens` + 10 %— y **una config de techo con `n_ctx` 65 536**, igual para vigente y
+  candidato. Las dos corren con la **misma `--label`** (el runner la separa del `--model` de
+  llama-swap y del `--context-size`); §6 compara `n_ctx` y `--load-mode` **dentro de cada tipo de
+  caso**, y la memoria publicada sale solo de los casos de calidad (`analizar_benchmark.py`). Cada
+  config tiene su propio presupuesto de KV y su barrido.
+- **Tokens medidos con el vocabulario de los vigentes** (`llama-tokenize` de b10909, `system` +
+  `user` renderizados como los manda el runner; la plantilla de chat suma unas decenas, que cubre el
+  10 %). **El caso mayor en chars no es el mayor en tokens**: en `code`, `commit-diff-19k` (19 041
+  chars) da mas que `explicar-install-20k` (20 000).
+
+  | Rol | Vigente | Caso mayor (tokens de prompt) | `max_tokens` | Sondeo de techo |
+  | --- | --- | --- | --- | --- |
+  | `mechanical` | `gemma3-4b` | `extraer-toml-2k`: 698 | 512 | — |
+  | `long` | `llama31-8b` | `extraer-uvlock-48k`: 22 607 | 512 | `techo-resumen-103k`: 26 353 |
+  | `code` | `qwen25-coder-14b` | `commit-diff-19k`: 5 757 (`explicar-install-20k`: 5 484, `max_tokens` 700) | 256 | `techo-commit-156k`: 47 181 |
+
+  **Hallazgo de produccion, anotado para F3 (decision del usuario):** `llama31-8b` corre en
+  produccion con `--ctx-size 16384`, asi que `extraer-uvlock-48k` —la entrada real mayor que
+  `MAX_CHARS` de `long` deja pasar— **da rechazo por contexto hoy**. El tope esta en chars y la
+  ventana en tokens. No se corrige en plena ventana de F1 (backlog, punto 1.3).
 - **Si vigente y candidato no pueden compartir `n_ctx`** —el candidato tiene un techo menor—, se mide
   a los dos con el menor de los dos y se escribe. Lo que no vale es compararlos a contextos distintos.
 - **`rechazo_por_contexto` es una clase de resultado propia**, distinta de `descartada` y distinta de
