@@ -451,6 +451,63 @@ def mcp_entry(
     return entry
 
 
+# --- La cabecera que ya tenía la entrada --------------------------------------
+# Reinstalar con `--mcp-mode http` sin `--web-token-env` borraba la cabecera de una entrada que
+# funcionaba, y contra un daemon con token el cliente pasaba a 401 al instante (2026-08-18). Por eso
+# el flag tiene tres estados y el de «no dijiste nada» conserva lo que hubiera. Se lee del disco y
+# no se deduce preguntando al daemon: `install` no sale a la red por contrato.
+_CODEX_BEARER_RE = re.compile(r'bearer_token_env_var\s*=\s*"([^"]+)"')
+# `Bearer ${VAR}` (Claude Code) o `Bearer {env:VAR}` (opencode). Lo que no casa es un token literal.
+_REFERENCIA_RE = re.compile(r"^Bearer (?:\$\{([^}]+)\}|\{env:([^}]+)\})$")
+
+
+def cabecera_existente(home: Path, target: str) -> str | None:
+    """El valor de `Authorization` de la entrada HTTP ya instalada en ``target``, o ``None``.
+
+    Se devuelve **en la sintaxis de ese cliente** y tal cual, incluido un nombre de variable que no
+    sea el nuestro: conservar es no cambiar lo que funcionaba. Codex no guarda una cabecera sino el
+    nombre de la variable, así que se le da forma de cabecera para que `codex_mcp_block` lo
+    reconstruya igual.
+
+    Una entrada `stdio` no tiene nada que conservar: el token protege el puerto del daemon.
+    """
+    if target == "claude":
+        servers = _read_json(home / ".claude.json").get("mcpServers")
+        entry = servers.get(SERVER_NAME) if isinstance(servers, dict) else None
+        tipo = "http"
+    elif target == "opencode":
+        entry = opencode_mcp_installed(home)
+        tipo = "remote"
+    elif target == "codex":
+        section = _CODEX_SECTION_RE.search(_read_text(home / ".codex" / "config.toml"))
+        hallado = _CODEX_BEARER_RE.search(section.group(0)) if section else None
+        return f"Bearer ${{{hallado.group(1)}}}" if hallado else None
+    else:
+        return None
+    if not isinstance(entry, dict) or entry.get("type") != tipo:
+        return None
+    valor = (entry.get("headers") or {}).get("Authorization")
+    return valor if isinstance(valor, str) and valor else None
+
+
+def _con_cabecera(entry: dict, cabecera: str | None) -> dict:
+    """``entry`` con la cabecera conservada. Una entrada que no es HTTP se devuelve intacta."""
+    if not cabecera or entry.get("type") not in ("http", "remote"):
+        return entry
+    return {**entry, "headers": {"Authorization": cabecera}}
+
+
+def _sin_secretos(entry: dict) -> dict:
+    """Copia para ENSEÑAR (el `literal` del `--dry-run`): un token escrito a pelo no se imprime.
+
+    Se escribe tal cual en disco —ya estaba ahí—, pero la pantalla no es sitio para un secreto.
+    """
+    valor = (entry.get("headers") or {}).get("Authorization")
+    if not valor or _REFERENCIA_RE.match(valor):
+        return entry
+    return {**entry, "headers": {"Authorization": "Bearer <token conservado, no se muestra>"}}
+
+
 def codex_mcp_block(entry: dict) -> str:
     """Bloque TOML equivalente para `~/.codex/config.toml` (sin dependencia de un writer)."""
     lines = [f"[mcp_servers.{SERVER_NAME}]"]
@@ -462,7 +519,11 @@ def codex_mcp_block(entry: dict) -> str:
             # variable y la lee él. No es una preferencia de estilo — su validador rechaza de plano
             # el `bearer_token` literal en este transporte, así que escribir el secreto aquí ni
             # siquiera sería posible.
-            lines.append(f"bearer_token_env_var = {json.dumps(WEB_TOKEN_VAR)}")
+            # El nombre sale de la cabecera y no de la constante: una entrada conservada puede
+            # referenciar otra variable, y reescribirla con la nuestra sería cambiar lo que iba.
+            ref = _REFERENCIA_RE.match(entry["headers"].get("Authorization", ""))
+            var = (ref.group(1) or ref.group(2)) if ref else WEB_TOKEN_VAR
+            lines.append(f"bearer_token_env_var = {json.dumps(var)}")
         return "\n".join(lines)
     lines.append(f"command = {json.dumps(entry['command'])}")
     lines.append("args = [" + ", ".join(json.dumps(a) for a in entry.get("args", [])) + "]")
@@ -686,7 +747,8 @@ class Options:
     base_url: str | None = None
     api_key_env: bool = False
     # Solo tiene efecto con `mcp_mode="http"`: es el puerto del daemon el que puede exigir token.
-    web_token_env: bool = False
+    # Tres estados: True la escribe, False la quita y None conserva la que ya tuviera cada cliente.
+    web_token_env: bool | None = None
     pin_version: str | None = None
     use_cli: bool = True
     # Suprime SOLO la escritura de la entrada MCP de Codex. Lo decide quien llama (el CLI, tras
@@ -907,27 +969,46 @@ def plan_install(opts: Options) -> list[Action]:
             actions.append(Action("markdown", path, "bloque de regla de delegación", _run_md))
 
     if "mcp" in opts.components:
+        pedida = opts.web_token_env is True
         entry = mcp_entry(
             opts.mcp_mode,
             opts.base_url,
             opts.api_key_env,
             opts.pin_version,
-            opts.web_token_env,
+            pedida,
         )
+        detalle = f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})"
+
+        def _conservada(target: str) -> str | None:
+            # Solo cuando nadie dijo nada: un flag explícito, en cualquiera de sus dos sentidos,
+            # es una orden y manda sobre lo que hubiera.
+            if opts.web_token_env is not None:
+                return None
+            return cabecera_existente(opts.home, target)
+
+        def _detalle(cabecera: str | None) -> str:
+            return detalle + (
+                " — conserva la cabecera de autorización que ya tenía" if cabecera else ""
+            )
+
         if "claude" in opts.targets:
+            conservada = _conservada("claude")
+            claude_entry = _con_cabecera(entry, conservada)
             actions.append(
                 Action(
                     "mcp",
                     "claude",
-                    f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
-                    lambda entry=entry: _register_claude_mcp(opts, entry),
-                    literal=json.dumps(entry, ensure_ascii=False),
+                    _detalle(conservada),
+                    lambda entry=claude_entry: _register_claude_mcp(opts, entry),
+                    literal=json.dumps(_sin_secretos(claude_entry), ensure_ascii=False),
                 )
             )
         if "codex" in opts.targets and not opts.skip_codex_mcp:
             config_path = codex / "config.toml"
+            conservada = _conservada("codex")
+            codex_entry = _con_cabecera(entry, conservada)
 
-            def _run_codex(path=config_path, entry=entry) -> str:
+            def _run_codex(path=config_path, entry=codex_entry) -> str:
                 _write_text(path, upsert_codex_mcp(_read_text(path), codex_mcp_block(entry)))
                 return "entrada [mcp_servers.local-delegate] actualizada"
 
@@ -935,26 +1016,30 @@ def plan_install(opts: Options) -> list[Action]:
                 Action(
                     "toml",
                     config_path,
-                    f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
+                    _detalle(conservada),
                     _run_codex,
-                    literal=codex_mcp_block(entry),
+                    literal=codex_mcp_block(codex_entry),
                 )
             )
         if "opencode" in opts.targets:
-            oc_entry = opencode_mcp_entry(
-                opts.mcp_mode,
-                opts.base_url,
-                opts.api_key_env,
-                opts.pin_version,
-                opts.web_token_env,
+            conservada = _conservada("opencode")
+            oc_entry = _con_cabecera(
+                opencode_mcp_entry(
+                    opts.mcp_mode,
+                    opts.base_url,
+                    opts.api_key_env,
+                    opts.pin_version,
+                    pedida,
+                ),
+                conservada,
             )
             actions.append(
                 Action(
                     "mcp",
                     "opencode",
-                    f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})",
+                    _detalle(conservada),
                     lambda entry=oc_entry: _register_opencode_mcp(opts, entry),
-                    literal=json.dumps({SERVER_NAME: oc_entry}, ensure_ascii=False),
+                    literal=json.dumps({SERVER_NAME: _sin_secretos(oc_entry)}, ensure_ascii=False),
                 )
             )
     return actions

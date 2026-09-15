@@ -61,7 +61,8 @@ DAEMON_TOKEN_HINT = "local-delegate install --mcp-mode http --web-token-env"
 # `bearer_token_env_var`— y por eso el probe lo envuelve antes de llegar aquí, en vez de añadir un
 # tercer caso a esta expresión: el vocabulario de cada cliente se traduce una sola vez.
 _VARIABLE_REFERENCIADA = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}|\{env:([A-Z_][A-Z0-9_]*)\}")
-_CODEX_BEARER_RE = re.compile(r'bearer_token_env_var\s*=\s*"([^"]+)"')
+# Una sola definición: `install` la usa para conservar la cabecera al reinstalar.
+_CODEX_BEARER_RE = install._CODEX_BEARER_RE
 # El nombre de la variable, no su valor: el diagnóstico jamás imprime un secreto.
 TOKEN_VAR = "LOCAL_DELEGATE_WEB_TOKEN"
 # El comando que actualiza el paquete NO se escribe aquí: depende de cómo esté instalado, y esa
