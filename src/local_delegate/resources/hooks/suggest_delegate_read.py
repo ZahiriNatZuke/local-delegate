@@ -199,6 +199,9 @@ def registrar_lectura_mcp(tool_name: str, tool_input: dict, payload: dict) -> No
         try:
             evento["size_kb"] = round(os.path.getsize(rutas[0]) / 1024, 1)
         except OSError:
+            # El tamaño es un dato extra: si la ruta no existe o no se puede leer (otro MCP puede
+            # leer rutas remotas o relativas a su propia raíz), el evento se registra sin él. Perder
+            # la lectura del usuario por un `getsize` sería mucho peor que un evento incompleto.
             pass
     record("PreToolUse", suggested=False, **evento)
 
