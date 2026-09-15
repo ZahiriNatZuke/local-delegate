@@ -1314,3 +1314,36 @@ superviviente no era equivalente: con cinco episodios, «la mitad» no es un num
 
 Suite: 1278 passed, 2 skipped. `ruff check` y `ruff format --check` limpios en lo versionado; los
 tres avisos de ruff son de `benchmarks/catalogo-2026-09/resultados/`, que no se versiona.
+
+### Activacion en el daemon y fallo provocado (2026-09-15)
+
+**Inicio de la ventana de P-4: 2026-09-15T19:26:41Z.** Rama `sdd/f3-t30-activacion` (commit
+`da92b48`, PR #194) instalada con `uv tool install --force --reinstall --no-cache ".[llamaswap]"`;
+`local_status` del daemon: «Respaldo entre modelos: encendido (hasta 2 saltos)», residente
+`gemma3-4b` del grupo `persistent`, «Enfriamiento: encendido (3 fallos seguidos, 120 s, tope 900 s)».
+
+**Tramo excluido: `--excluir 2026-09-15T19:31:14,2026-09-15T19:35:14`.** Como el fallo tenia que ser
+reproducible y contra el backend real, el daemon paso por un proxy local (puerto 9299) que devolvia
+500 para los modelos listados en un fichero y reenviaba todo lo demas a llama-swap; el lanzador del
+daemon (fuera del repo) llevo `LOCAL_DELEGATE_BASE_URL` apuntando al proxy, con permiso del usuario,
+copia `.pre-t30-20260915.bak` y restauracion verificada por hash. Un 500 sin el patron de capacidad
+es de clase `modelo`, que es la que salta y enfria.
+
+| Hora UTC | Paso | Resultado |
+| --- | --- | --- |
+| 19:31:26 | daemon relanzado contra el proxy | `local_status`: backend `127.0.0.1:9299` arriba |
+| 19:31:58 | 500 inyectado para `gemma3-4b` | |
+| 19:32:03-19:32:31 | tres `local_classify` (rol mecanico) | las tres responde `gemma4-26b-a4b`, aviso «respondio gemma4-26b-a4b en lugar de gemma3-4b (http_500)» fuera de la etiqueta; log con `model_requested`, `fallback_class: modelo`, `chunks: 2` |
+| 19:32:31 | tercer fallo | `enfriamiento-eventos.jsonl`: `entra`, clase `modelo`, 120 s; `local_status`: «gemma3-4b: quedan 110 s, ha entrado 1 vez seguida» |
+| 19:32:41 | cuarta `local_classify` | aviso «(en enfriamiento)»; el proxy **no recibio** peticion a `gemma3-4b`; log con `fallback_class: enfriamiento` y sin `chunks` |
+| 19:32:59 | inyeccion quitada | |
+| 19:33 | panel (app de metricas en el 9494) | cuatro filas con la marca de salto a `gemma3-4b`; tarjeta «13 al backend (+3 por trocear o saltar) · 4 con salto»; `/api/stats`: `fallback_events` 4, `causes` `{modelo: 3, enfriamiento: 1}`, las 4 llamadas del respaldo atribuidas a `gemma4-26b-a4b` |
+| 19:34:43 | `local_classify` tras vencer | responde `gemma3-4b` sin aviso; registro: `limpia` con `tras_vencer: true`; `enfriamiento.json` vacio |
+| 19:35 | `scripts/medir_enfriamiento.py --desde 2026-09-15T19:31:14` | 1 episodio con desenlace, R 0, saltos `{modelo: 3, enfriamiento: 1}`, **no concluyente** (el minimo es 5 episodios y 10 fallos) |
+| 19:35:14 | lanzador restaurado (hash igual a la copia, sin la linea temporal) y daemon relanzado | `local_status`: backend `127.0.0.1:9292` arriba, «ningun modelo enfriado» |
+
+Lo que la prueba **no** cubre, y se escribe para que no se lea de mas: el fallo por
+`timeout_lectura` (D-2) ni el de capacidad al residente (REQ-018) contra la maquina; esos siguen
+verificados en la suite de las tareas 28 y 29. Y al final de la prueba quedaron montados a la vez el
+residente y `gemma4-26b-a4b`, con `local_status` avisando de menos de 2 GB libres de VRAM: es la
+coexistencia que la tarea 24 midio como «cabe», no un desbordamiento.
