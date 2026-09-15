@@ -21,6 +21,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   proceso se busca por nombre. Una corrida sin muestras, con dos `llama-server` vivos o con cambio
   de proceso a mitad lleva `annul` en el JSONL y se repite; no se publica vacía.
 
+  La RAM que se publica es **`host_private_bytes_peak`**: el pico de privada menos VRAM dedicada,
+  restado muestra a muestra. Medido en esta máquina, en Windows la RAM privada **incluye la VRAM
+  reservada**, así que al pasar expertos de un MoE a RAM la privada casi no se mueve (lo que sale de
+  la VRAM compensa lo que entra); solo la diferencia los sigue, y solo con `--load-mode none`.
+
 - **La regla puede rechazar una lectura, y no solo sugerirla.** Cuatro mediciones seguidas dieron
   adopción cero —la última ya con el aviso acertando el tipo de fichero, `.md` 49 y `.txt` 15 de
   85 avisos—, así que el problema dejó de ser la puntería: sugerir no cambia la conducta. El hook

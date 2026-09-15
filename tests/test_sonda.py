@@ -326,6 +326,22 @@ def test_resumen_separa_shared_inicial_del_pico():
     )
 
 
+def test_resumen_ram_del_host_es_el_pico_de_la_resta_por_muestra():
+    # Forma de CP-2b: al descargar expertos la privada casi no se mueve y la VRAM baja. El pico de la
+    # resta (7 GiB) no es la resta de los picos (13 - 11 = 2), y la muestra sin VRAM no cuenta como
+    # VRAM cero (daria 9 GiB).
+    gib = 1024 * MIB
+    samples = [
+        benchmark.ResourceSample(1, 12 * gib, 11 * gib, 11 * gib, 0),
+        benchmark.ResourceSample(1, 13 * gib, 6 * gib, 6 * gib, 5 * gib),
+        benchmark.ResourceSample(1, 9 * gib, 9 * gib),
+    ]
+    summary = benchmark.summarize_resources(samples, enabled=True, vram_expected=True)
+    assert summary["host_private_bytes_peak"] == 7 * gib
+    solo_ram = benchmark.summarize_resources(samples[2:], enabled=True, vram_expected=False)
+    assert solo_ram["host_private_bytes_peak"] is None
+
+
 # --- El uso: el runner escribe lo que la sonda midio ----------------------------------------------
 
 

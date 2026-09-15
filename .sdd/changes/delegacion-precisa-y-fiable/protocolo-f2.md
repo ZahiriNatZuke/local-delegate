@@ -49,11 +49,27 @@ medida, no despues.
 | GPU | RTX 5060 Ti, 16 GB | `nvidia-smi --query-gpu=name,memory.total --format=csv` |
 | Driver | 616.92 | `nvidia-smi --query-gpu=driver_version --format=csv` |
 | Bus | PCIe 4.0 x8 (~16 GB/s) | `nvidia-smi -q` -> `Host Max: 4`, ancho `8x` |
-| RAM | ~62 GB; ~26 GB libres tras limpiar | contador del sistema, anotado al empezar |
-| Disco | 400 GB libres en `D:` (medido 2026-09-12) | los ~117 GB de la tanda caben (§5.2) |
+| RAM | **32 GB** (2 x 16 GB; 31,1 GiB visibles). En reposo, con el daemon parado y sin `llama-server`, el resto de la maquina usa ~13 GB | `Win32_PhysicalMemory` y `Win32_ComputerSystem`; RAM libre anotada al empezar |
+| Disco | 345 GB libres en `D:` (medido 2026-09-14; 400 el 2026-09-12) | los ~117 GB de la tanda caben (§5.2) |
 
-Presupuesto de pesos: **16 GB VRAM + ~26 GB RAM ~= 40 GB**. En uso normal quedan ~2 GB de RAM
-libres (99 procesos `node` y 22 `claude` de sesiones MCP abiertas): limpiar no es opcional.
+*Primera version, refutada en la sesion 1 (§10):* «RAM ~62 GB; ~26 GB libres tras limpiar» y un
+presupuesto de «16 GB VRAM + ~26 GB RAM ~= 40 GB». La maquina tiene 32 GB.
+
+**Presupuesto para medir** (maquina limpia, §1.4): **16 GB de VRAM + ~18 GB de RAM libre ~= 34 GB**.
+La RAM libre se midio dos veces con el daemon parado y sin `llama-server`: **17,9 GB** en la sesion 1
+(RAM del sistema en reposo 13 038 MiB, §CP-2) y **18,9 GB** el 2026-09-14 con una sesion de Claude
+Code abierta. Con `--load-mode none` (P-13) los pesos que viven en RAM son memoria anonima del proceso,
+asi que el techo de un MoE con expertos en RAM lo pone esa RAM libre, no la cache del disco. El
+2026-09-12, en uso normal, quedaban ~2 GB libres (99 procesos `node` y 22 `claude` de sesiones MCP
+abiertas): limpiar no es opcional.
+
+**Presupuesto de uso diario (P-14), informativo:** reserva fija para el resto de la PC de **2 GB de
+VRAM y 8 GB de RAM**, decidida por el usuario sin medir uso real. Deja para el modelo **14 GB de VRAM
++ 24 GB de RAM**. La hoja (§9) marca si cada config cabe; **la regla de §7 no descarta nada por
+esto**. Escrito junto a la decision, con el dato delante: la reserva de VRAM queda por encima de lo
+medido en reposo (847-852 MiB), pero **la de RAM queda por debajo** de lo que el resto de la maquina
+ya usa en reposo (~13 GB), asi que la columna puede dar «cabe» a una config que en el uso diario no
+cabe en RAM.
 
 ### 1.2 Instalacion aparte, sin tocar lo estable
 
@@ -95,14 +111,24 @@ se comprueba por su efecto**, y eso es CP-1.
 Se anota el resultado de cada punto en la bitacora (§10). Una tanda que empiece con alguno en rojo
 no cuenta.
 
-1. Sesiones MCP cerradas; RAM libre >= 24 GB.
-2. `nvidia-smi --query-compute-apps=pid,process_name --format=csv` **vacio**.
-3. Daemon de produccion parado (tarea `LocalDelegateDaemon` detenida y el `pythonw` muerto).
+1. Sesiones MCP cerradas; **RAM libre >= 17 GB**. El umbral anterior, 24 GB, era inalcanzable con
+   32 GB: las dos lecturas limpias dieron 17,9 y 18,9 GB (§1.1). 17 queda por debajo de las dos y
+   deja fuera una maquina con un navegador pesado abierto.
+2. **Ningun proceso de computo ajeno**: ni otro `llama-server` ni otro cargador (Ollama, LM Studio,
+   Python con CUDA). No se puede exigir `nvidia-smi --query-compute-apps` vacio: en WDDM lista
+   siempre explorer, WebView2, PowerToys... (11 procesos el 2026-09-14, sin ninguno de computo).
+3. Daemon de produccion parado: tarea `LocalDelegateDaemon` detenida, **sus dos `pythonw` y su
+   llama-swap** muertos (sesion 3: parar la tarea no bastaba).
 4. **Un solo `llama-server.exe` vivo** durante la medida. Si aparece un segundo, la corrida se
    anula: no hay forma fiable de saber cual es el del modelo bajo prueba.
-5. Sin navegador con aceleracion por hardware ni nada que pinte en la GPU.
-6. Versiones anotadas: `llama-server --version`, version de llama-swap, `--load-mode` en uso.
-7. Hora UTC de inicio anotada (§10, por la ventana de F1).
+5. Sin navegador con aceleracion por hardware ni nada que pinte en la GPU, comprobado por su
+   efecto: **`memory.used` del adaptador <= 1 024 MiB antes de cargar nada** (medido en reposo: 852
+   MiB en la sesion 1 y 847 MiB el 2026-09-14).
+6. Versiones anotadas: `llama-server --version`, version de llama-swap y **`--load-mode none`** (P-13).
+7. **Perfil del driver medido por su efecto** antes de medir: la prueba de CP-1 contra los dos
+   ejecutables (b10909 da OOM, b9925 carga desbordando), porque la NVIDIA App solo admite una entrada
+   por nombre de fichero y nada en el panel dice a que ruta apunta (§10, sesiones 2 y 3).
+8. Hora UTC de inicio anotada (§10, por la ventana de F1).
 
 ### 1.5 Convivencia con la ventana de medicion de F1
 
@@ -230,7 +256,8 @@ publican los dos contadores, el privado y el working set, diciendo cual es cual.
   proceso (5 542): son buffers anclados de CUDA. Con `none`, «VRAM compartida > 0» **no** significa
   desbordamiento. Lo que impide el desbordamiento en la tanda es el perfil del driver (CP-1), no
   este contador.
-- **Pendiente de decision (P-13, §10.1)**: `--load-mode` de la tanda y que magnitud se publica.
+- **Decidido (P-13, §10.1, 2026-09-14)**: la tanda corre con `--load-mode none` y la RAM del proceso
+  se publica como `privada − VRAM dedicada`, calculada por muestra en el runner (§3.1).
 
 ### CP-3 — El corpus discrimina
 
@@ -606,7 +633,7 @@ REQ-F2-3 es explicito: **memoria del proceso, no del sistema**.
 
 | Magnitud | Fuente | Por que esa y no otra |
 | --- | --- | --- |
-| RAM del proceso | `PrivateMemorySize64` de `llama-server.exe`, **y siempre tambien el working set** (P-11) | el *working set* sale inflado por el GGUF mapeado; la RAM del sistema fue el error 1 de julio. Los dos salen de la misma llamada; CP-2b decide cual se publica |
+| RAM del proceso | **`privada − VRAM dedicada`** de `llama-server.exe`, por muestra, con `PrivateMemorySize64` y el working set al lado (P-11, P-13) | en WDDM la privada incluye la VRAM reservada (CP-2), y solo la diferencia sigue a los expertos en RAM (CP-2b). La RAM del sistema fue el error 1 de julio |
 | VRAM dedicada | `\GPU Process Memory(pid_<pid>_*)\Dedicated Usage` | es por proceso; `nvidia-smi` en WDDM suele dar «Not Supported» por proceso |
 | **VRAM compartida** | `\GPU Process Memory(pid_<pid>_*)\Shared Usage` | si crece, hay desbordamiento a RAM: ver §3.2 |
 | Velocidad | `timings` de la respuesta + latencia del cliente | discrepan cuando llama-swap esta cargando, y esa diferencia importa |
@@ -633,6 +660,18 @@ arranque no se esta midiendo.
 los **dos** contadores —privado y working set— con una frase que diga cual es cual y por que
 difieren. Lo que no se hace es publicar uno solo sabiendo que subestima.
 
+**Resultado (CP-2b) y decision (P-13, usuario, 2026-09-14).** `none` es practicable (~4 s de carga
+tras la primera lectura del GGUF) y es el unico modo en que un contador privado ve los expertos, pero
+no la privada absoluta: en WDDM la privada incluye la VRAM reservada, y lo que sale de la VRAM
+compensa lo que entra en RAM. Por eso:
+
+- la tanda corre con **`--load-mode none`**, vigentes y candidatos por igual (§6 lo exige);
+- la magnitud publicada como «RAM del proceso» es **`privada − VRAM dedicada`**, con la privada y el
+  working set al lado;
+- la resta la hace **el runner, muestra a muestra** (`benchmark.py`, con su test), sobre las muestras
+  que traen los dos datos, y guarda su pico en el JSONL. Restar los picos que ya se guardan seria
+  restar lecturas de momentos distintos, y a mano en la hoja seria contar a ojo.
+
 ### 3.2 Anulacion de corridas, y el caso que anula mas que una corrida
 
 Una corrida se descarta y se repite si durante ella otro proceso aparece en
@@ -644,6 +683,12 @@ ser imposible: el driver tendria que dar OOM. Que crezca significa que **CP-1 ha
 y entonces no se cae una corrida: se cae **todo lo medido desde el ultimo CP-1 en verde**. Se
 re-verifica CP-1 y se repite ese tramo. Repetir solo la corrida produciria un numero igual de
 invalido.
+
+**Con `--load-mode none` (P-13), `Shared Usage` no parte de cero**: los expertos en RAM aparecen
+tambien como VRAM compartida, porque son buffers anclados de CUDA (5 542 MiB con `gpt-oss-20b` y
+`-ncmoe 12`, CP-2b). Lo que cuenta es que **crezca** respecto a la primera lectura del mismo modelo y
+la misma config tras cargar, nunca su valor absoluto; y la senal de desbordamiento de verdad sigue
+siendo el OOM que da el perfil (CP-1).
 
 Las corridas descartadas **se anotan igual** en el JSONL, con `descartada` y el motivo. Un descarte
 silencioso es indistinguible de un caso que no se corrio.
@@ -1562,8 +1607,10 @@ El JSONL crudo se conserva entero (`benchmarks/catalogo-2026-09/resultados/*.jso
 una hoja generada, nunca escrita a mano:
 
 - **Tabla 1, por rol:** vigente y candidato, con calidad mediana, dispersion, banda de ruido,
-  latencia mediana, tok/s, RAM del proceso pico, VRAM dedicada pico, `Shared Usage` pico, corridas
-  `descartada` y `rechazo_por_contexto`, y el veredicto de la regla de §7.
+  latencia mediana, tok/s, RAM del proceso pico (`privada − VRAM dedicada`, con privada y working
+  set al lado, §3.1), VRAM dedicada pico, `Shared Usage` pico, corridas `descartada` y
+  `rechazo_por_contexto`, **si la config cabe en el presupuesto de uso diario de §1.1** (14 GB de
+  VRAM + 24 GB de RAM; informativo, no entra en §7, P-14), y el veredicto de la regla de §7.
 - **Tabla 2, caso a caso:** las tres corridas a la vista.
 - **Tabla 3, entorno:** versiones, `n_ctx`, `--load-mode`, `-ncmoe` elegido, fecha, estado de CP-1 a
   CP-4, corridas anuladas con su motivo, y si la tanda fue concluyente segun §6.
@@ -1586,7 +1633,8 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
 | 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / segundo piloto 23:00:36-23:10:30; tercer piloto (commit `a3bd148`) 00:06-00:17 y bloque del 2B repetido 00:19-00:20; cuarto piloto (commit `29c5e61`, 5 corridas) 00:36-00:50; llama-swap de pruebas parado al acabar | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
 
-Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar:
+Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar (**resueltas
+el 2026-09-14**: §1.1 y §1.4 rehechos con estos datos):
 
 - **RAM libre 17,9 GB, no >= 24**: la maquina tiene **32 GB**, no ~62 como dice §1.1
   (`Win32_PhysicalMemory`: 2 x 16 GB). El presupuesto de pesos de §1.1 esta mal y hay que rehacerlo.
@@ -1665,7 +1713,10 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   la maxima del rol; (c) dar mas terminos a los casos de uno o dos. La (c) toca el corpus y la (b) la
   regla: **las dos se deciden con la salida de CP-3 delante y antes de la tanda**, nunca despues de
   ver quien gana, que es como se ajusta una regla al resultado que se queria.
-- **P-13 — abierta (2026-09-14).** CP-2b (tarea 18) mostro que con `--load-mode mmap` ningun
+- **P-13 — resuelta (2026-09-14, decision del usuario):** (a) `--load-mode none`; (b) se publica
+  `privada − VRAM dedicada`, con privada y working set al lado; (c) la resta la hace el runner por
+  muestra, con su test, no `analizar_benchmark.py` sobre picos ni la hoja a mano. Aplicado en §3,
+  §3.1, §3.2 y §9. Texto original: CP-2b (tarea 18) mostro que con `--load-mode mmap` ningun
   contador privado ve los expertos en RAM, y que con `none` los ve solo como **`privada − VRAM
   dedicada`**, porque en WDDM la privada incluye la VRAM reservada. Hay que decidir, antes de la
   tanda: (a) `--load-mode` de la tanda — la evidencia apunta a `none`; (b) que magnitud se publica
@@ -1713,7 +1764,14 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   `boilerplate-156` (objetivo) y por pares (el usuario distinguio a los dos modelos); `long` por pares
   (`extraer-uvlock-48k` en techo); `mechanical` empate en techo (decide la velocidad); `vision` por
   `leer-cifras-dashboard`, con `describir-dashboard` sin control de entrada.
-- **P-14 — abierta (2026-09-14, planteada por el usuario).** En el uso real el MCP **no tendra la
+- **P-14 — resuelta (2026-09-14, decision del usuario):** (a) **reserva fija supuesta**, sin medir
+  uso real: 2 GB de VRAM y 8 GB de RAM (queda para el modelo 14 + 24 GB); (b) y (c) **solo
+  informativo**: la hoja marca si cada config cabe, la regla de §7 no descarta nada y los finalistas
+  no se repiten con carga de escritorio. Se le presento al usuario el muestreo de uso real y el
+  descarte por presupuesto, y que 8 GB de RAM queda por debajo de los ~13 GB que el resto de la
+  maquina usa en reposo; eligio con ese dato delante. Aplicado en §1.1 y §9. **Consecuencia que
+  hereda F3**: el catalogo que salga de la tanda esta elegido para la maquina libre; si una config
+  da OOM en el uso diario, el sitio para corregirlo es F3, no esta tanda. Texto original: En el uso real el MCP **no tendra la
   maquina entera**: convive con el navegador, video, IDE y lo que el usuario este haciendo. El estado
   limpio de §1.4 sigue valiendo para **comparar** modelos entre si (quita ruido), pero **no** para
   **dimensionar** la configuracion que se elige: una config que cabe justa con la GPU vacia, con el

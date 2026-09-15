@@ -703,6 +703,20 @@ def _pico(config: Config, rol: str, ruta: tuple[str, ...]) -> Any:
     return max(valores, default=None)
 
 
+# Presupuesto de uso diario (protocolo §1.1, P-14): 16 GB de VRAM y 32 GB de RAM menos una reserva
+# fija de 2 y 8 GB para el resto de la PC. Solo informativo: la regla de §7 no descarta por esto.
+USO_DIARIO_VRAM_BYTES = 14 * 1024**3
+USO_DIARIO_RAM_BYTES = 24 * 1024**3
+
+
+def _cabe_uso_diario(vram_bytes: float | None, host_bytes: float | None) -> str:
+    if vram_bytes is None or host_bytes is None:
+        return "—"
+    return (
+        "si" if vram_bytes <= USO_DIARIO_VRAM_BYTES and host_bytes <= USO_DIARIO_RAM_BYTES else "no"
+    )
+
+
 def informe_decision(
     decisiones: list[dict[str, Any]], configs: dict[str, Config], corpus: dict[str, dict[str, Any]]
 ) -> str:
@@ -712,10 +726,10 @@ def informe_decision(
         "",
         (
             "| Rol | Vigente | Candidato | Calidad v / c | Banda | Latencia ms v / c | "
-            "RAM privada pico c | Working set pico c | VRAM dedicada pico c | Shared pico c | "
-            "Descartadas | Rechazos | Veredicto | Criterio |"
+            "RAM host pico c | RAM privada pico c | Working set pico c | VRAM dedicada pico c | "
+            "Shared pico c | Cabe uso diario c | Descartadas | Rechazos | Veredicto | Criterio |"
         ),
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for d in decisiones:
         cand = configs[d["candidato"]]
@@ -724,14 +738,18 @@ def informe_decision(
         ]
         calidad = d.get("calidad") or {}
         latencia = d.get("latencia_ms") or {}
+        host = _pico(cand, d["rol"], ("resources", "host_private_bytes_peak"))
+        vram = _pico(cand, d["rol"], ("resources", "vram_dedicated_bytes_peak"))
         lineas.append(
             f"| {d['rol']} | {d['vigente']} | {d['candidato']} | "
             f"{_fmt(calidad.get('vigente'))} / {_fmt(calidad.get('candidato'))} | {_fmt(d.get('banda'))} | "
             f"{_fmt(latencia.get('vigente'), 0)} / {_fmt(latencia.get('candidato'), 0)} | "
+            f"{_fmt(host)} | "
             f"{_fmt(_pico(cand, d['rol'], ('resources', 'private_bytes_peak')))} | "
             f"{_fmt(_pico(cand, d['rol'], ('resources', 'working_set_bytes_peak')))} | "
-            f"{_fmt(_pico(cand, d['rol'], ('resources', 'vram_dedicated_bytes_peak')))} | "
+            f"{_fmt(vram)} | "
             f"{_fmt(_pico(cand, d['rol'], ('resources', 'vram_shared_bytes_peak')))} | "
+            f"{_cabe_uso_diario(vram, host)} | "
             f"{sum(c.descartada for c in corridas)} | "
             f"{sum(c.outcome == 'rechazo_por_contexto' for c in corridas)} | "
             f"**{d['veredicto']}** | {d.get('criterio', '—')} |"
