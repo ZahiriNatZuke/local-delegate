@@ -1662,7 +1662,26 @@ Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de e
   regla al resultado. **Aprobado y hecho (2026-09-15):** la hoja de (2), `scripts/hoja_pares.py` (8
   tests, 5 mutantes muertos), generada sobre el cuarto piloto para `resumen-changelog-7k`,
   `resumen-md-10k`, `explicar-install-20k` y `explicar-metrics-15k`: 20 pares en
-  `resultados/pares-p15.md`, clave aparte. Pendiente: que el usuario elija y destapar.
+  `resultados/pares-p15.md`, clave aparte. **Destapada (2026-09-15)** con los 20 votos del usuario
+  (motivos en `resultados/pares-p15-motivos.json`):
+
+  | Caso | La metrica prefiere | Acuerdo | Veredicto | Elegido por el usuario |
+  | --- | --- | --- | --- | --- |
+  | `resumen-changelog-7k` | 4 | 3 (75 %) | no valida | 14B 4, 2B 1 |
+  | `resumen-md-10k` | 3 | **0 (0 %)** | no valida | 14B 4, 2B 1 |
+  | `explicar-install-20k` | 4 | 2 (50 %) | no valida | 14B 3, 2B 2 |
+  | `explicar-metrics-15k` | 2 | 1 | sin base | 14B 3, 2B 2 |
+
+  **La cobertura de terminos no es valida en ningun caso de texto abierto: 6 acuerdos de 13, cara o
+  cruz.** En `resumen-md-10k` estaba invertida las tres veces (premiaba al 2B por nombrar los eventos;
+  el usuario vio que confunde hooks retirados y apagados). **La premisa de CP-3 si se cumple a juicio
+  humano**: el 14B gano 14 de 20. O sea: CP-3 fallaba por la metrica, no por el corpus ni por la pareja.
+  Los motivos del usuario caen en dos grupos que la metrica no mira: **correccion contra la fuente**
+  («valida que el archivo exista», que es lo contrario; hook apagado dado por retirado; detalles
+  inventados) y **cumplimiento de la instruccion** (prosa y no lista, dentro del limite de palabras).
+  **Exploratorio, n = 6:** comprobar el formato de la tool (prosa, <= 150 o 250 palabras) separa solo
+  6 pares y coincide en 5; el unico desacuerdo es una respuesta en formato con errores de hecho, y
+  cuando las dos cumplen, el usuario decidio por correccion.
 - **P-14 — abierta (2026-09-14, planteada por el usuario).** En el uso real el MCP **no tendra la
   maquina entera**: convive con el navegador, video, IDE y lo que el usuario este haciendo. El estado
   limpio de §1.4 sigue valiendo para **comparar** modelos entre si (quita ruido), pero **no** para
