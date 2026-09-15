@@ -845,3 +845,31 @@ Tanda concluyente segun §6: **si**.
 | code | qwen36-35b-a3b | 157873 |
 | vision | qwen3-vl-8b | 718456 |
 | vision | gemma4-12b | 718456 |
+
+## F3: tarea 22, produccion migrada a b10909 y llama-swap v255 (2026-09-15)
+
+Sesion 7 de `protocolo-f2.md` §10 (14:32:47-15:04:55 UTC), con la tabla de pasos y horas.
+
+### Lo que se comprobo, y con que prueba
+
+| Comprobacion | Prueba | Resultado |
+| --- | --- | --- |
+| Perfil del driver en la ruta nueva | carga de CP-1 contra los dos ejecutables | b10909 **OOM** a los 6,1 s; b9925 carga desbordando 5 885 MiB |
+| v255 lee la config de produccion | arrancarlo con ella, sin cargar modelos | acepta `groups` y lista los cinco modelos |
+| `apiKeys`, las dos mitades | con clave, sin clave y con clave incorrecta | 200, 401 y 401 (con clave falsa y con la real) |
+| `apiKeys` con la variable ausente | arrancar v255 sin ella | **no arranca**: falla cerrado, no queda abierto |
+| Catalogo vigente sobre b10909 | peticion real a cada modelo, vision con imagen | los cinco responden; el residente sigue `ready` al entrar cada modelo de `swap`; todos los `llama-server` desde `llamacpp-b10909` |
+| Por el daemon, no por `curl` | `local_status`, `local_classify`, `local_describe_image` | arriba y responden; llama-swap desde `llama-swap-v255` |
+| `doctor` contra la instalacion real | `uv run local-delegate doctor --config ...` | `v255` y `b10909` |
+
+### Defecto encontrado al migrar
+
+`doctor.detect_llamaserver_version` buscaba el primer numero tras `version:`, y b10909 imprime
+`version: 0.4.0-dev (build 10909, ...)`: devolvia **`b0` sin avisar**. Dos tests nuevos, vistos en
+rojo por su propio assert (`'b0' == 'b10909'` y `'b0' is None`) antes del arreglo; un mutante que
+quita el parentesis obligatorio del formato viejo cae solo en el test del semver sin build; y se
+comprobo despues contra el binario real.
+
+### Pendiente
+
+- Comprobar desde la Mac que sigue delegando contra este backend.

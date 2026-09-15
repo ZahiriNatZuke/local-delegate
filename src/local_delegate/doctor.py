@@ -31,9 +31,10 @@ from . import autostart, checks, config
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
 # (docs/wiki/Backend-versions.md) las referencia desde aquí para no divergir.
 RECOMMENDED_VERSIONS: dict[str, str] = {
-    # llama.cpp, probado 2026-07-11 en RTX 5060 (Blackwell/sm_120) con runtime CUDA 13.3.
-    "llama-server": "b9925",
-    "llama-swap": "v238",
+    # llama.cpp y llama-swap probados 2026-09-15 en RTX 5060 (Blackwell/sm_120) con runtime CUDA
+    # 13.3: medidos en la tanda de F2 y migrada la produccion del autor (F3, tarea 22).
+    "llama-server": "b10909",
+    "llama-swap": "v255",
 }
 
 # Repos de GitHub para el chequeo opcional --online.
@@ -118,7 +119,10 @@ def detect_llamaserver_version(config_path: Path | None) -> tuple[str | None, st
     text = _run_version(exe)
     if not text:
         return None, f"no se pudo ejecutar {exe} --version"
-    m = re.search(r"version:\s*(\d+)", text)
+    # Dos formatos: el viejo `version: 9925 (ed8c26150)` y, desde que llama.cpp numera en semver,
+    # `version: 0.4.0-dev (build 10909, commit ...)`. Con el primero solo, el segundo daba "b0" sin
+    # avisar. El viejo exige el paréntesis tras el número para que un semver no cuele.
+    m = re.search(r"\bbuild\s+(\d+)", text) or re.search(r"version:\s*(\d+)\s*\(", text)
     if not m:
         return None, f"salida de --version inesperada de {exe}"
     return f"b{m.group(1)}", None

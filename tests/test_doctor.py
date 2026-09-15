@@ -51,6 +51,30 @@ def test_detect_llamaserver_version_parses_build(tmp_path, monkeypatch):
     assert reason is None
 
 
+def test_detect_llamaserver_version_parses_semver_build(tmp_path, monkeypatch):
+    # Formato de b10909: la version es semver y el numero de build va entre parentesis. Leido con la
+    # regex vieja daba "b0" sin avisar, y el doctor lo marcaba como desactualizado frente a b9925.
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("models:\n  m:\n    cmd: '/usr/bin/llama-server --port 1'\n", encoding="utf-8")
+    monkeypatch.setattr(
+        doctor,
+        "_run_version",
+        lambda exe: "version: 0.4.0-dev (build 10909, commit a2878d30d)\nbuilt with Clang 20.1.8",
+    )
+    version, reason = doctor.detect_llamaserver_version(cfg)
+    assert version == "b10909"
+    assert reason is None
+
+
+def test_detect_llamaserver_version_semver_without_build_is_not_b0(tmp_path, monkeypatch):
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("models:\n  m:\n    cmd: '/usr/bin/llama-server --port 1'\n", encoding="utf-8")
+    monkeypatch.setattr(doctor, "_run_version", lambda exe: "version: 0.4.0-dev\nbuilt with Clang")
+    version, reason = doctor.detect_llamaserver_version(cfg)
+    assert version is None
+    assert reason and "inesperada" in reason
+
+
 def test_detect_llamaserver_version_reports_reason_without_config():
     version, reason = doctor.detect_llamaserver_version(None)
     assert version is None
