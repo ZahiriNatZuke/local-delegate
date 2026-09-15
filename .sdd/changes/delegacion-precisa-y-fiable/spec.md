@@ -233,6 +233,12 @@ separado**. Se conservan sus identificadores `REQ-001` a `REQ-020` para no rompe
 - Las cadenas se declaran sobre los roles que salgan de **F2**, no sobre el catalogo actual.
 - **Confirmado por el usuario (2026-09-11, P-3 resuelta)**: hasta **2 saltos**, y **el primero va
   siempre al residente**, que ya esta en memoria; solo el segundo puede forzar un cambio de modelo.
+- **Aprobado por el usuario en la replanificacion de F3 (2026-09-15):** la
+  senal «el modelo se estaba montando» de REQ-018 sale de `/running` de **llama-swap**, muestreada al
+  vencer el plazo. Con otro backend (Ollama, LM Studio) o si `/running` no responde, no hay senal y
+  el `ReadTimeout` se clasifica como capacidad o carga, que no enfria: **D-2 solo se cumple con
+  llama-swap**, y fuera de el un modelo colgado no se enfria por timeouts. Se elige el lado que no
+  castiga a un modelo lento de montar, igual que F0.
 - **Sigue sin medir**: los numeros del enfriamiento (3 fallos, 120 s, duplicar, tope 900 s), que
   vienen de bajar de escala los de OmniRoute. Se parametrizan y se validan con datos de F2. Ver P-4
   del brief.

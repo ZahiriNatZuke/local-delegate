@@ -82,6 +82,12 @@ Cuatro fases, en este orden (decision del usuario, 2026-09-11):
 - **P-4**: los numeros del enfriamiento (3 fallos, 120 s, x2, tope 900 s) no estan medidos. Se
   parametrizan o se validan con datos de F2.
 - **P-5**: si un solo modelo grande puede cubrir varios roles, lo que cambiaria las cadenas de F3.
+  **Cerrada por la tarea 21 (2026-09-15):** no se da con lo medido; cada rol sale con un modelo
+  distinto y ninguno se midio fuera de su rol.
+- **P-16** — **RESUELTA (2026-09-15, decision del usuario): los defectos pasan a los ganadores de
+  F2**, como breaking, en la tarea 24 de `plan.md`. Pregunta original: si los modelos por
+  defecto de `config.py` pasan a los ganadores de F2 (breaking para quien tenga los nombres viejos en
+  su llama-swap) o se quedan y esta maquina fija los nuevos por variable.
 - ~~**P-6**~~ **RESUELTA (2026-09-11): se cierran `Read` y las lecturas completas de shell; las tools de lectura de otros MCP solo se miden.** Pregunta original: de la superficie de lectura de REQ-F1-9, **que caminos se
   cierran** ademas de la tool `Read`. Opciones, de menos a mas: (a) solo `Read`, y los demas
   caminos se **miden** para saber cuanto se desvia; (b) `Read` mas las lecturas completas por

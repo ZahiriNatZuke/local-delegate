@@ -8,8 +8,9 @@ inventarlas sobre unos roles que F2 todavia no ha fijado.
 
 **Historial del gate `plan`:** se aprobo primero sobre F0 y F1 (2026-09-12), con F2 como bloque
 porque dependia de una accion fisica del usuario —limpiar RAM y activar «Prefer No Sysmem
-Fallback» en el panel de NVIDIA— que ya esta hecha. Vuelve a pasar ahora con las tareas 12 a 21 de
-F2 y su protocolo (`protocolo-f2.md`). F3 volvera cuando cierre la tarea 21.
+Fallback» en el panel de NVIDIA— que ya esta hecha. Paso despues con las tareas 12 a 21 de F2 y su
+protocolo (`protocolo-f2.md`). **Vuelve ahora (2026-09-15) con F3 detallado en las tareas 22 a 30**,
+cerrada la tarea 21.
 
 Tres decisiones de diseno gobiernan el resto:
 
@@ -470,16 +471,317 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
       `resultados/decidir-final.md`, generadas y no copiadas a mano; la tabla de roles; y la condicion de replanificacion de F3
       comprobada frase a frase contra este bloque.
 
-### F3 - Respaldo y enfriamiento (bloque, se replanifica)
+### F3 - Respaldo y enfriamiento
 
-- **Entrada**: el clasificador de F0 (tarea 1) y el catalogo de F2.
-- **Salida**: los 20 requisitos heredados (`REQ-001` a `REQ-020`), con las cadenas declaradas sobre
-  los roles de F2 y los numeros del enfriamiento validados o parametrizados (P-4).
-- **Condicion de replanificacion**: la tarea 21 cerrada, con los roles escritos en `verification.md`,
-  decidido si produccion migra a b10909, y **escrito que hace F3 con `fast`**, que sale de F2 sin un
-  solo dato medido: o queda fuera de las cadenas de respaldo, o se encadena a `mechanical`. Sin esa
-  frase, REQ-F2-5 entregaria a F3 un rol sobre el que no hay nada que declarar. Antes de eso, cualquier tarea de F3 se escribiria sobre
-  roles que pueden cambiar, o sobre un motor en el que no se midieron.
+**Condicion de replanificacion, comprobada frase a frase (2026-09-15):** tarea 21 cerrada (PR #185)
+con los roles en `verification.md`; migracion a b10909 decidida (antes de tocar el catalogo); y
+`fast` fuera de las cadenas. Esa ultima **no exige enmendar REQ-004**: a `fast` solo se llega con
+`model` explicito, y REQ-005 le quita el respaldo, asi que la fila «rapido -> residente -> largo» es
+inalcanzable hoy. Se deja escrita y un test asevera que no se ejecuta.
+
+**Mapa de impacto** (investigacion del 2026-09-15, con fichero:linea): el salto va en `_run_chat`
+(`server.py:813-823`, tras el reintento de schema y dentro de `with _chat_slots`); `_chat_chunked` y
+`_chat_map_reduce` fijan `model` por cierre (1150, 1314) y map-reduce calcula el `budget` una vez
+(1301); `fallos.PATRONES_DE_CAPACIDAD` esta vacio (60) y `_post_chat` llama a `clasificar` **sin**
+`modelo_cargado` (695), asi que hoy todo 5xx es `MODELO` y todo `ReadTimeout` es `CAPACIDAD`;
+`config.MAX_CHARS` se indexa por **nombre de modelo** (209-214); el patron de estado entre procesos
+es `inflight.json` (`server.py:114-266`: `FileLock` de 2 s, escritura atomica, degradacion); y
+`_llamaswap_groups` lee `LLAMASWAP_CONFIG` con `os.environ.get` directo (2242), fuera de
+`VARIABLES_DE_ENTORNO`.
+
+**Tres hallazgos que ordenan el bloque:**
+
+1. **El residente y los modelos nuevos pueden no caber juntos.** Produccion tiene `gemma3-4b` en un
+   grupo `persistent`, siempre cargado, y la tanda midio cada modelo **solo** (llama-swap de pruebas
+   sin grupos, §1.4). Gemma 4 26B-A4B y Qwen3.6 ocupan ~14 GB por encima del reposo en b9925
+   (§10 sesion 6); con el residente al lado se pasa de 16 GB, y con el perfil del driver eso es OOM
+   al cargar, no lentitud. REQ-004 y D-3/D-4 **presuponen** que el primer salto al residente no
+   fuerza swap. Se mide en la tarea 24 antes de escribir una sola cadena.
+2. **Encender el salto antes de REQ-020 es peligroso, no solo incompleto.** Con los patrones vacios
+   un OOM real se lee como fallo del modelo y salta al siguiente modelo grande: la cascada de swaps
+   que la clase de capacidad existe para evitar. La tarea 23 va antes que la 28 sin excepcion.
+3. **`MAX_CHARS` por modelo es incompatible con REQ-004**, que preve dos roles con el mismo modelo:
+   el literal del dict hace que el ultimo pise al primero. Se arregla antes de las cadenas (tarea 25).
+
+Orden: primero la maquina (22-24), porque las capturas de REQ-020 se toman sobre la version que
+correra en produccion y el catalogo decide que cadenas tienen sentido; despues el codigo (25-29).
+**Las tareas 25 a 27 no dependen de la maquina** y pueden avanzar mientras 22-24 esperan una ventana
+libre: la 27 implementa las cadenas **por defecto de REQ-004** y el mecanismo para sobrescribirlas,
+no una cadena elegida para esta maquina. **Dos frenos con dueno, no con prosa:** la 28 (el salto)
+no se mezcla sin la 23 cerrada; y ni la 28 se mezcla ni la 30 activa nada sin la tabla de
+coexistencia de la 24 con resultado «cabe» (1 o 2), **o** una decision escrita del usuario si dio
+«no cabe». D-1 trae el mecanismo encendido por defecto, asi que el freno tiene que estar antes de
+mezclar, no antes de encender. La 30 activa y publica.
+
+**Sobre el non-goal «tocar la configuracion de llama-swap»:** se refiere al paquete —ningun codigo
+de F3 escribe esa config—. Las tareas 22 y 24 editan la config de produccion de **esta maquina**
+(`D:\Projects\llms\llama-swap\config.yaml`), fuera del repo, como operacion con respaldo y rollback.
+
+22. **Migrar produccion a b10909 y llama-swap v255, con el catalogo vigente**
+    - Files or modules: fuera del repo `D:\Projects\llms\llama-swap\config.yaml` (respaldo con fecha);
+      en el repo `src/local_delegate/doctor.py` (`RECOMMENDED_VERSIONS`, 33-37),
+      `docs/wiki/Backend-versions.md`, `README.md`, `CHANGELOG.md`, `verification.md`
+    - Requirements covered: prepara REQ-020 (version de produccion) y la decision de la tarea 21
+    - Detalle: **motor y catalogo no cambian a la vez**: aqui solo el motor, con los cinco modelos de
+      hoy y sus flags, para que una regresion tenga un unico sospechoso. El perfil «Prefer No Sysmem
+      Fallback» lo mueve el usuario a `llamacpp-b10909\llama-server.exe` (es por nombre de fichero y
+      la NVIDIA App admite una entrada por nombre). Anadir `--fit off -ngl 99`, que b10909 trae con
+      `--fit on` por defecto y reduciria capas en silencio. Comprobar que v255 sigue expandiendo
+      `${env.LOCAL_DELEGATE_REMOTE_API_KEY}` en `apiKeys`: la Mac delega contra este backend.
+      `--load-mode` queda en el defecto (`mmap`): `none` se eligio para que la sonda viera la RAM
+      (P-13), no por rendimiento. Ventana escrita en §10 antes de empezar, con el daemon parado.
+    - Verification: perfil medido por su efecto (b10909 da OOM con la carga de CP-1, b9925 desborda);
+      los cinco modelos cargan y responden por el **daemon**, no por `curl` a mano; `local_status` en
+      verde; `doctor` no avisa de version; suite en verde. Sin `LUID` fijo en ningun script. **La
+      clave de `apiKeys`, con las dos mitades**: una peticion al llama-swap de produccion **con** la
+      clave da 200 y **sin** clave da 401. Solo el 401 no discrimina (es lo que se veria si v255 dejara
+      de expandir `${env...}`), y solo el 200 tampoco (una expansion a vacio podria dejarlo abierto).
+      Y la Mac delega con su configuracion de siempre.
+    - Rollback or recovery: restaurar el `config.yaml` respaldado y devolver el perfil a la ruta de
+      b9925, medido; b9925 sigue en disco. El cambio de `RECOMMENDED_VERSIONS` se revierte con el PR.
+
+23. **Capturas reales para REQ-020 y la senal de modelo cargandose**
+    - Files or modules: `tests/fixtures/backend/` (nuevo, respuestas crudas con version anotada),
+      `benchmarks/catalogo-2026-09/llama-swap-capturas.yaml` (nuevo; como `llama-swap-pruebas.yaml`,
+      con rutas de modelos de esta maquina y **ninguna clave**),
+      `src/local_delegate/fallos.py`, `src/local_delegate/server.py` (`_post_chat`),
+      `tests/test_fallos.py`, `tests/test_fallos_integracion.py`
+    - Requirements covered: REQ-001, REQ-015, REQ-016, REQ-018, REQ-019, REQ-020
+    - Detalle: con las **mismas versiones que produccion tras la 22** (b10909, v255) pero con una
+      **config de captura aparte** (`benchmarks/catalogo-2026-09/llama-swap-capturas.yaml`, puerto
+      propio, **daemon y llama-swap de produccion parados** —su residente persistente ocuparia VRAM y
+      falsearia el OOM y los tiempos de carga—, y un solo `llama-server` vivo), porque varias capturas necesitan configs que produccion no debe tener:
+      OOM con perfil (`cp1-no-cabe`: 14B a 65 536 con KV f16, ya medido), OOM sin perfil (la misma
+      carga), error de carga (ruta de modelo inexistente), peticion durante la carga y timeout durante
+      la carga (Qwen3.6-35B-A3B, el que mas tarda en montarse, con timeout corto del cliente), y
+      `length` con razonamiento (Gemma 4 26B-A4B **con** razonamiento y `max_tokens` bajo). Todos
+      estan en disco desde la tanda; **ninguno depende de la 24**. Se captura por llama-swap (lo que ve
+      el cliente) y directo a llama-server. El tramo sin perfil exige que el usuario lo retire de la
+      ruta de b10909, que tras la 22 es la de produccion: por eso va con el daemon parado y se mide al
+      devolverlo. **Clase esperada de cada captura, escrita antes de capturar**: OOM con perfil y
+      error de carga -> `CAPACIDAD`; OOM sin perfil -> **`TIMEOUT_LECTURA`**, capturado con el timeout
+      del cliente **por encima del tiempo de carga medido** para esa config (asi la muestra al vencer
+      ve el modelo ya cargado) y por debajo de lo que tarda en generar desbordado. Si no se consigue ese
+      hueco, se anota **«no capturado»** y no cuenta como verificado: un modelo que desborda en cada
+      llamada debe dejar de recibirlas, y eso queda sin prueba real hasta que se capture; carga en curso y
+      timeout durante la carga -> `CAPACIDAD`; `length` con razonamiento -> `CONFIGURACION`.
+      **Senal de carga (REQ-018), tomada AL vencer y no despues:** un temporizador arranca con la
+      peticion y, si sigue viva a `HTTP_TIMEOUT` menos un margen, consulta `/running` y guarda si el
+      modelo estaba `ready` o cargando; al llegar el `ReadTimeout` se usa esa muestra. Reglas del temporizador: **un temporizador por
+      intento** (`_post_chat` hace dos, `server.py:665`), cancelado en todos los caminos de salida; el
+      plazo cuenta **desde que se envia la peticion**, como el de lectura de httpx; el **margen es mayor
+      que el tope de la consulta mas holgura** (tope 1 s, margen 3 s), para que la muestra este lista
+      al vencer; y si al llegar el `ReadTimeout` la consulta sigue en curso se espera como mucho hasta
+      su tope, y si no llega, `None`. Probado con reloj controlado. Consultar tras
+      el timeout veria el estado de despues, y si la carga termina en ese hueco el fallo se contaria
+      como de lectura, justo lo que D-2 prohibe. El camino feliz no consulta nada (se cancela el
+      temporizador). **Si `/running` no responde, no existe (Ollama, LM Studio) o tarda mas de 1 s,
+      `modelo_cargado` queda en `None` y la clase es `CAPACIDAD`**: no enfria. Consecuencia que se
+      escribe en la spec y aprueba el usuario en el gate: **fuera de llama-swap, D-2 no se cumple** y
+      un modelo colgado no se enfria por timeouts; se elige el lado que no castiga a un modelo lento de
+      montar, igual que F0. `ConnectTimeout` (REQ-016) no se captura: es un error del cliente sin
+      respuesta del backend, y ya lo cubre F0 (tarea 2).
+      **Privacidad de las capturas:** se guarda solo el cuerpo y el estado de la **respuesta**, nunca
+      las cabeceras de la peticion (`Authorization`); las rutas de la maquina se sanean. Un test lo
+      asevera sobre todas las fixtures, porque `personal-security-check` busca datos personales, no
+      cabeceras.
+    - Verification: cada patron con su fixture, su version y su clase esperada; test de que una
+      variante desconocida va a «sin clasificar» y **no** a `MODELO`; control positivo por patron
+      (quitar el patron hace caer su test, y por el assert de la clase); test de que el camino feliz no
+      llama a `/running`; **test de la carrera**: la muestra dice «cargando» y `/running` ya diria
+      `ready` cuando llega el timeout -> `CAPACIDAD` (con un mutante que consulte despues, que tiene que
+      caer); test de `/running` caido o lento -> `CAPACIDAD` sin esperar mas de 1 s.
+    - Rollback or recovery: patrones y fixtures son datos; vaciar la tupla devuelve el comportamiento
+      de F0. Maquina: parar el llama-swap de capturas, devolver el perfil a la ruta de b10909 **y
+      medirlo** (OOM con la carga de CP-1), y arrancar el daemon, que levanta el llama-swap de
+      produccion; comprobar con `local_status` que el residente vuelve a estar cargado.
+
+24. **Catalogo nuevo en produccion, y si el residente cabe al lado**
+    - Files or modules: fuera del repo `config.yaml` de produccion, **las variables `LOCAL_DELEGATE_MODEL_*`
+      del lanzador del daemon** (si P-16 deja los defectos del paquete) y **la configuracion de la
+      Mac**, que delega contra este backend y pediria los nombres viejos; en el repo `verification.md`
+      y `protocolo-f2.md` §10
+    - Requirements covered: REQ-F2-5; prepara REQ-004 (residente) y el `n_ctx` de backlog 1.3
+    - Detalle: sustituir `llama31-8b`, `qwen25-coder-14b` y `qwen3-vl-8b` por los ganadores con sus
+      flags de la tanda (`-ncmoe`, `--reasoning off`, `--ubatch-size 2048` en el 12B) y `n_ctx`
+      fijado en **tokens medidos** para el `MAX_CHARS` de produccion de cada rol (§3.5), que cierra
+      backlog 1.3. **La medida que falta:** cargar el residente y, con el cargado, cada modelo del
+      grupo `swap`, con el perfil activo y con escritorio en uso tipico (navegador y video). **«Cabe»
+      se define asi, las cuatro a la vez:** carga sin OOM; responde a la **entrada mayor de su rol**
+      (`extraer-uvlock-48k` en `long`, `commit-diff-19k` en `code`, la imagen de control en `vision`),
+      no a un prompt corto, porque el KV crece con la entrada; `Shared Usage` del adaptador no sube mas
+      de 1 024 MiB (el umbral de §6); y el residente sigue respondiendo despues. Salen
+      tres resultados posibles y los tres se escriben: cabe con el `-ncmoe` de la tanda; cabe solo con
+      un `-ncmoe` mayor (el barrido tiene 4/8/12 medidos: se anota la velocidad que se pierde); o no
+      cabe con ninguno. En el tercero **no se escribe ninguna cadena** hasta que el usuario elija entre
+      residente no persistente o saltos que asumen swap, porque D-3/D-4 se aprobaron con la premisa
+      contraria. Los modelos viejos se quedan en disco.
+    - Verification: tabla de coexistencia (residente + cada modelo, VRAM, `Shared Usage`, OOM si/no)
+      en `verification.md`; cada rol responde por el daemon con una delegacion real; la entrada mayor
+      de `long` (`extraer-uvlock-48k`) ya **no** da rechazo por contexto.
+    - Rollback or recovery: el respaldo de `config.yaml` de la tarea 22 (catalogo vigente sobre
+      b10909), **y** devolver las variables del lanzador y la config de la Mac a los nombres viejos, con
+      el daemon reiniciado (los hooks y el daemon heredan el entorno del lanzador).
+
+25. **Topes por rol y no por modelo**
+    - Files or modules: `src/local_delegate/config.py` (`MAX_CHARS`, `max_chars_for`), `server.py`
+      (llamadas a `max_chars_for` y `_read_input`), `tests/test_core.py`, `tests/test_chunking.py`,
+      `tests/test_map_reduce.py`
+    - Requirements covered: REQ-003 (condicion de tamano), REQ-004 (roles que comparten modelo)
+    - Detalle: el tope se declara **por rol** (`max_chars_for_role`) y **el modelo principal de una
+      llamada usa siempre el de su rol**, asi que el enrutado, el troceado, el truncado de
+      `local_translate` y lo que enseña `local_status` no cambian aunque dos roles compartan modelo. El
+      tope **por modelo** —el minimo de los roles que resuelven a el— se usa **solo para validar
+      candidatos de respaldo** (REQ-003), donde prometer de mas es el fallo. Las variables
+      `LOCAL_DELEGATE_MAX_CHARS_*` ya son por rol, asi que no cambia ninguna.
+    - Verification: tests con las colisiones que **si** cambian el tope de `long` hoy —largo = codigo
+      (el literal lo baja a 20 000) y largo = rapido (a 12 000)— que aseveran que `local_summarize`,
+      `local_lint_summary` y `local_translate` trocean y truncan **igual que con modelos distintos**,
+      con el rojo visto antes de arreglar en cada una. Mecanico = largo **no sirve de control**: el
+      literal ya da 48 000 y el mecanico solo se elige con entradas de 6 000 o menos
+      (`server.py:1565`), asi que saldria verde con el defecto vivo. Y que un
+      candidato de respaldo se valida contra el minimo. Mutante: el principal usando el minimo, que
+      tiene que caer en el test de `local_summarize` por el numero de trozos.
+    - Rollback or recovery: cambio interno sin superficie publicada.
+
+26. **Estado de enfriamiento compartido**
+    - Files or modules: `src/local_delegate/enfriamiento.py` (nuevo, puro salvo el fichero),
+      `config.py`, `tests/test_enfriamiento.py` (nuevo)
+    - Requirements covered: REQ-009, REQ-010, REQ-011, REQ-012, REQ-014 (N, T, Tmax, apagado)
+    - Detalle: fichero en `LOG_DIR` con el patron de `inflight.json` (bloqueo de 2 s, escritura
+      atomica, degradacion a «sin enfriamiento»). Reloj inyectable; vencimientos en hora real y
+      recortados a Tmax al leer. Solo nombres de modelo, contadores y fechas. **P-4 se resuelve
+      parametrizando**: F2 no midio tasas de fallo —en la Tabla 2 de la tanda todas las corridas acaban
+      en `ok`, `truncado` o `rechazo_por_contexto`, ninguna en error del backend—, asi que 3/120 s/x2/
+      900 s quedan como defecto configurable y su validacion va a la tarea 30, con criterio escrito
+      antes de encender.
+    - Verification: tests con reloj controlado de los escenarios de enfriamiento; dos «procesos»
+      (dos instancias sobre el mismo fichero) sumando fallos; fichero corrupto y bloqueo ocupado que
+      no bloquean ni fallan; test de privacidad (el fichero no contiene nada fuera del esquema).
+      Mutantes: sin duplicar, sin tope, reset por clase neutra, y «tras vencer hacen falta N fallos»
+      (REQ-010 pide que baste **uno**). **Regla que la spec no fijaba, decidida aqui:** `CAPACIDAD` y
+      `CONFIGURACION` se tratan como las clases neutras de REQ-011 —ni suman ni ponen a cero—, porque
+      no dicen nada de si el modelo responde bien; con su test.
+    - Rollback or recovery: modulo sin consumidores hasta la 28; borrar el fichero es seguro.
+
+27. **Cadenas por rol**
+    - Files or modules: `config.py` (variables de cadena, saltos maximos, apagado; `LLAMASWAP_CONFIG`
+      pasa por `_leer`), `server.py` (`_llamaswap_groups`, 2242), **`autostart.py:56` y
+      `doctor.py:346`**, que hoy leen `LLAMASWAP_CONFIG` con `os.environ` directo —los tres sitios pasan
+      a `config`, o seria otra vez dos fuentes para el mismo dato y el guardian de
+      `test_aislamiento_entorno.py` solo mira `config.py`—, `src/local_delegate/checks.py` (check de
+      cadena con modelo fuera de catalogo), `docs/wiki/` (tabla del doctor), `tests/test_cadenas.py`
+      (nuevo), `tests/test_wiki.py`, `tests/test_checks.py`
+    - Requirements covered: REQ-003, REQ-004, REQ-014
+    - Detalle: resolucion al vuelo con la config vigente; residente = modelo del grupo `persistent`
+      si la config se lee (pyyaml es opcional), si no `MODEL_MECHANICAL`; **con varios miembros, el
+      primero que este en `ALLOWED_MODELS`, en el orden del YAML**; repetidos fuera; `vision` sin
+      cadena **antes** de filtrar por `ALLOWED_MODELS`, que lo excluye a proposito
+      (`test_vision.py:177`); lista vacia desactiva. `local_status` dice el residente **y de donde
+      salio** (grupo `persistent` o defecto del mecanico): en esta maquina los dos son `gemma3-4b`, y
+      sin eso la tarea 30 no distingue que camino se uso. Implementa las cadenas por defecto de
+      REQ-004; si la 24 da «no cabe», las salidas son dos y **no son equivalentes**: cambiar la
+      **config de esta maquina** (un `-ncmoe` mayor que haga caber) no toca este codigo; pero un
+      residente no persistente hace que el primer salto fuerce swap, lo que contradice el requisito de
+      VRAM de la spec y la premisa de D-3/D-4, y eso **reabre la spec y su gate**, no es un retoque.
+    - Verification: tests de cadena por defecto, sobrescrita, vacia, con repetidos, con un modelo
+      desconocido (que se ignora y `doctor` avisa), con varios miembros en `persistent` y sin pyyaml
+      (cae al mecanico y lo dice); `fast` inalcanzable **recorriendo las tools por rol** (ninguna tool
+      resuelve a `MODEL_FAST` sin `model` explicito); el guardian de `test_aislamiento_entorno.py` ve
+      las variables nuevas y ningun `os.environ` directo sobre `LLAMASWAP_CONFIG` queda fuera.
+    - Rollback or recovery: sin consumidores hasta la 28.
+
+28. **El salto, dentro de la plaza de concurrencia**
+    - Files or modules: `server.py` (`_run_chat`, `_chat`, `_chat_chunked`, `_chat_map_reduce`, las
+      tools que pasan el rol y si el `model` es explicito), `tests/test_respaldo.py` (nuevo),
+      `tests/test_post_chat_caminos.py`
+    - Requirements covered: REQ-002, REQ-005, REQ-006, REQ-007, REQ-008, REQ-017, REQ-018, REQ-019
+    - Detalle: `_run_chat` recibe la cadena resuelta; tras el reintento de schema y dentro del `with`
+      decide segun `result.clase`, y **devuelve la lista de intentos** (modelo, clase, ms), no solo el
+      ultimo resultado: sin eso `_accumulate` (1137-1144) sigue contando una llamada y la tarea 29 no
+      tiene de donde sacar `chunks`. `local_delegate` distingue «explicito» de «por defecto» y lo baja
+      hasta `_chat`; **un modelo elegido por el usuario en la pregunta de elicitation
+      (`server.py:1773`) cuenta como explicito**: lo eligio una persona. En varios trozos
+      (`_chat_chunked`), el modelo que respondio pasa a los siguientes. **En map-reduce el respaldo de
+      `long` esta muerto por construccion con los topes de hoy**: los trozos miden
+      `0,8 × 48 000 = 38 400` caracteres (`server.py:1301`) y ningun candidato de 20 000 los admite
+      (REQ-003); se escribe asi en la docs y un test lo fija, en vez de descubrirlo en produccion. El
+      escenario «la entrada no cabe en el respaldo» (30 000 contra 48 000) es el camino de `_chat`
+      sin trocear, no map-reduce. El aviso va en metadatos en `local_extract` y en la respuesta, nunca
+      en el fichero, en `local_boilerplate`. El autoarranque y la pregunta de **arrancar el backend**
+      (`server.py:706`) ya retienen la plaza hoy: no cambia, y se escribe. La pregunta de **elegir
+      modelo** (`server.py:1773`) corre en la tool, antes de `_chat` y fuera de la plaza, y tampoco
+      cambia. **Freno de mezcla:** este PR no se mezcla sin la 23 cerrada
+      y sin la tabla de coexistencia de la 24 en «cabe» o la decision del usuario.
+    - Verification: los 16 escenarios de la spec como tests sobre `backend_mock` con un doble que
+      responde segun `model` (`side_effect` funcion); concurrencia con el semaforo a 1; `vision` con
+      enfriamiento y sin respaldo (spec, casos limite). **El interruptor, con un caso que distingue**:
+      con las dos variables apagadas, un 500 del principal y un fichero de estado que ya lo tiene en
+      enfriamiento dan **el error de hoy, una sola llamada al backend y ningun cambio en el fichero**;
+      con ellas encendidas, el mismo caso salta. La bateria de tools en camino feliz no sirve: da lo
+      mismo con el interruptor roto. Mutantes: interruptor ignorado, salto por clase que no toca,
+      tercer salto, respaldo fuera del semaforo, aviso dentro del contenido.
+    - Rollback or recovery: las variables de apagado; el PR se revierte entero.
+
+29. **Observabilidad: log, panel y `local_status`**
+    - Files or modules: `server.py` (`_log_event`, `local_status`), `web/metrics.py` (`by_model` y el
+      espejo JS `acct`), `tests/test_metrics.py`, `tests/test_core.py`
+    - Requirements covered: REQ-013, y la parte de REQ-019 que va al panel
+    - Detalle: campos aditivos (pedido, respondido, clase del salto); `model` sigue siendo el que
+      respondio para que el historico sin campos nuevos se lea igual; `chunks` cuenta tambien las
+      llamadas del respaldo. Dos fuentes para el mismo dato es el defecto recurrente del repo: el
+      cambio va a Python y al JS a la vez, y el test de paridad lo ata.
+    - Verification: test de paridad en verde con un evento con salto **y con uno de causa
+      `CONFIGURACION`** (REQ-019 va al panel); test de historico sin campos; `chunks` contando las
+      llamadas del respaldo a partir de la lista de intentos de la 28; `local_status` con un modelo en
+      enfriamiento, su tiempo restante **y cuantas veces seguidas ha vuelto a entrar** (REQ-013);
+      panel comprobado en navegador.
+    - Rollback or recovery: campos aditivos; un lector viejo los ignora.
+
+30. **Activacion, criterio de P-4 y release**
+    - Files or modules: `verification.md`, `CHANGELOG.md`, `README.md`, `docs/wiki/`
+    - Requirements covered: D-1, P-4, y la verificacion de extremo a extremo de REQ-001 a REQ-020
+    - Detalle: **no se activa sin el freno de la 28** (23 cerrada; coexistencia en «cabe» o decision
+      del usuario). Antes de encender en esta maquina se escribe el criterio de P-4, igual que
+      REQ-F1-12: ventana, que se cuenta (entradas en enfriamiento, saltos por clase, llamadas que
+      fallaron al momento) y que numero obliga a cambiar los defectos, **con un tercer resultado
+      explicito, «no concluyente»**, para una ventana con menos de un minimo de fallos que cuentan: la
+      tanda no tuvo ni un error del backend, y una ventana sin enfriamientos no valida los defectos,
+      no mide nada. **La ventana de P-4 no bloquea publicar** —los numeros son configurables y no
+      cambian ningun schema—; la de F1 si. Mientras corra un benchmark se para **todo lo que puede
+      delegar contra este backend**: el daemon, los procesos stdio de cualquier cliente (llevan el
+      mecanismo dentro) y **la Mac**, que delega contra el backend de la PC con su propio
+      local-delegate. El runner va directo al backend (`benchmark.py:1258`) y el swap que lo
+      ensuciaria vendria de cualquiera de ellos, que las variables de apagado de un proceso no tocan. Apagar o encender por
+      variable exige **reiniciar el daemon**: `config` se lee al importar. Verificacion contra el backend real **por
+      el daemon** (`uv tool install --force .` y `schtasks /Run`), provocando un fallo de modelo
+      reproducible y comprobando salto, aviso, log y panel. **No se publica hasta cerrar la ventana
+      de F1**; la release toca CHANGELOG, README y wiki.
+    - Verification: los 16 escenarios comprobados en `verification.md` con su evidencia; suite,
+      `ruff` y CI entero (incluidos los checks que no son workflows); `personal-security-check`.
+    - Rollback or recovery: `LOCAL_DELEGATE_*` de apagado en el bloque `env` del lanzador del daemon,
+      sin reinstalar.
+
+**P-16, resuelta por el usuario (2026-09-15): los defectos del paquete pasan a los ganadores de F2.**
+Contexto de la pregunta: los defectos de `config.py`
+(`MODEL_LONG`, `MODEL_CODE`, `MODEL_VISION`) son **nombres** que tienen que existir en la config de
+llama-swap de quien instale el paquete. Cambiarlos a los ganadores de F2 hace que el README, el
+`.env.example` y `init-llamaswap` recomienden el catalogo medido, pero rompe al actualizar a quien
+tenga los nombres viejos (breaking). Dejarlos y fijar los nuevos por variable en esta maquina no
+rompe a nadie, pero el paquete seguiria recomendando un catalogo que la medicion desaconseja. Lo
+decidio el usuario con este dato delante. **Consecuencias para la tarea 24**, que suma una parte en
+el repo en el mismo PR que la config de la maquina, para que paquete y produccion no se separen:
+`MODEL_LONG`, `MODEL_CODE` y `MODEL_VISION` pasan a `gemma4-26b-a4b`, `qwen36-35b-a3b` y
+`gemma4-12b` (las etiquetas de la tanda sin el prefijo `t-`, que son tambien los nombres del
+`config.yaml` de produccion); `init-llamaswap` (`cli.py:467-522`) genera ese catalogo con sus flags
+(`-ncmoe`, `--reasoning off`, `--ubatch-size 2048`); y cambian `README.md`, `examples/.env.example`,
+`docs/wiki/Configuration.md`, `Tools.md`, `Backend-versions.md`, `Savings-and-metrics.md` y los datos
+de captura del README (`scripts/dev/capture_dashboard.py`, `fake_backend.py`). **Breaking** en el
+CHANGELOG, con la receta para quien tenga los nombres viejos: renombrar en su llama-swap o fijar
+`LOCAL_DELEGATE_MODEL_*`. Con esta decision **las variables del lanzador del daemon ya no hacen
+falta**; la config de la Mac si se revisa. `gemma3-4b` y `qwen35-2b` no cambian. La verificacion
+suma: suite en verde tras el cambio de defectos, `doctor` sin avisos y el README capturado contra la
+app de metricas (9494), como en cada release.
 
 ## Test strategy
 
@@ -500,6 +802,13 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
   en macOS. El corpus se prueba contra la distribucion del log real, no contra la tabla que uno mismo
   escribio. Y los controles CP-1 a CP-4 son verificacion **en la maquina**, no en la suite: un
   instrumento se prueba ejecutandolo, que es la leccion de los dos hooks del 2026-09-12.
+- **F3**: los patrones de fallo se prueban contra **fixtures capturadas** del backend real con su
+  version, nunca contra respuestas escritas a mano; los escenarios de la spec, con un doble de
+  `backend_mock` que responde segun `model`; el estado con reloj inyectable y dos instancias sobre el
+  mismo fichero; «mecanismo apagado» con un caso que distingue (un 500 y un modelo ya enfriado), no
+  con la bateria de tools en camino feliz, que da lo mismo con el interruptor roto. La prueba
+  de uso es por el **daemon** contra el backend real (tarea 30): una suite verde no vio un breaking
+  change en este repo porque la tool no tenia test.
 - **Trampas conocidas del repo, que se comprueban en cada tarea**: que el test falle por la razon
   que dice y no por otra guarda; que el mutante mute de verdad; que el caso elegido pueda
   distinguir; y que lo que se cuente lo cuente el programa, no yo a ojo.
@@ -522,6 +831,12 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
   corpus de julio se conserva como fichero y el cargador viejo queda en el historial de git; ningun
   REQ-F2 pide repetir aquella prueba. Se anota como breaking en el CHANGELOG, y `benchmark` es
   superficie publicada: la release toca tambien README y `docs/wiki/Backend-versions.md`.
+- **F3, maquina**: motor y catalogo se cambian en tareas distintas (22 y 24), cada una con el
+  `config.yaml` anterior respaldado; el perfil del driver se mide por su efecto cada vez que se mueve.
+- **F3, paquete**: ninguna tool cambia su schema; los campos del log son aditivos y `model` conserva
+  su significado para el historico; respaldo y enfriamiento se apagan por variable sin reinstalar
+  (D-1). `doctor` pasa a recomendar b10909/v255. P-16 cambia los modelos por defecto (decision del
+  usuario): es breaking y va asi en el CHANGELOG, con la receta de migracion. **No se publica hasta cerrar la ventana de F1.**
 
 ## Plan review
 
@@ -558,4 +873,24 @@ midio algo sin comprobar antes el instrumento, lo roto era la prueba.
 | REQ-F2-4 | 17, 21 |
 | REQ-F2-5 | 21 |
 | REQ-F2-6 | 17, 20, 21 |
-| REQ-001 a REQ-020 | bloque F3, se replanifica |
+| REQ-001 | 23 |
+| REQ-002 | 28 |
+| REQ-003 | 25, 27, 28 |
+| REQ-004 | 24 (residente), 25, 27 |
+| REQ-005 | 28 |
+| REQ-006 | 28 |
+| REQ-007 | 28 |
+| REQ-008 | 28 |
+| REQ-009 | 26 |
+| REQ-010 | 26 |
+| REQ-011 | 26 |
+| REQ-012 | 26 |
+| REQ-013 | 29 |
+| REQ-014 | 26, 27 |
+| REQ-015 | 23 (F0 ya lo cubre; se reverifica con capturas) |
+| REQ-016 | F0, tarea 2 (sin captura posible: es un error del cliente sin respuesta del backend) |
+| REQ-017 | 28 |
+| REQ-018 | 23, 28 |
+| REQ-019 | 23, 28, 29 |
+| REQ-020 | 22 (version), 23 |
+| P-4 | 26 (parametro), 30 (criterio y validacion) |
