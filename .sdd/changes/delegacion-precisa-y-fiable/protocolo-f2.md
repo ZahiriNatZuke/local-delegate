@@ -1702,6 +1702,87 @@ Sirve para reproducir la tanda y para descontar estos intervalos de la quinta me
 | 1 | 2026-09-14 19:24 | 2026-09-14 19:51 | ~60 min / 27 min | Tarea 18: entorno, CP-1, CP-2, CP-2b (sin tanda) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` y `none` (CP-2b los compara) | CP-1 pasa (tras un veto: perfil en la ruta equivocada), CP-2 pasa, CP-2b ve expertos solo con `none` y en diferencia (P-13) | ninguna |
 | 2 | 2026-09-14 20:09 | 2026-09-14 20:58 | ~75 min / 49 min (CP-3 en si: 20:14-20:24) | Tarea 19: perfil del driver movido a b10909 y medido, CP-3 (`qwen35-2b` vs `qwen25-coder-14b`, 3 corridas, `-c 32768`) y control de entrada de `vision` (`qwen3-vl-8b`) | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` (CP-3 no decide RAM; P-13 sigue abierta) | CP-3 **no pasa** (`code` y `mechanical`; `long` y `vision` pasan solo en el programa, ver resultado de CP-3); CP-4 pasa (test) | 2 por `process_changed` (primera corrida de cada modelo), **no repetidas** |
 | 3 | 2026-09-14 22:58 | **abierta**: el setup de medicion (perfil en b10909, daemon parado) se mantiene hasta la tanda por decision del usuario; descontar todo el intervalo de la quinta medicion de adopcion (§1.5) | ~90 min / segundo piloto 23:00:36-23:10:30; tercer piloto (commit `a3bd148`) 00:06-00:17 y bloque del 2B repetido 00:19-00:20; cuarto piloto (commit `29c5e61`, 5 corridas) 00:36-00:50; llama-swap de pruebas parado al acabar | Tarea 19, segundo piloto de CP-3 entero (P-9) con el corpus y el runner corregidos: perfil del driver medido en b10909, texto con `qwen35-2b` y `qwen25-coder-14b` (3 corridas), control de entrada de `vision` con `qwen3-vl-8b` | b10909 (`a2878d30d`, CUDA 13.3) | v255 (`7761aa1`), puerto 9595 | `mmap` | — | — |
+| 4 | 2026-09-15 02:40 (perfil) / 02:41:02 (barrido) | 2026-09-15 03:04 | ~25-30 min, escrita antes de empezar / barrido invalido 02:41-02:48 (cortado); arreglo del perfil y controles 02:54-02:56; barrido v2 02:56:28-03:01:43 (5 min 15 s); causa de `-ncmoe 4` y cargas con `llama-server` 03:02-03:04 | Tarea 20: tokens y KV por carga (§3.5, §5.2), perfil del driver medido, barrido de `-ncmoe` (0/4/8/12/16) con `llama-bench -lm none -ngl 99 -p 512 -n 128 -r 3` en Gemma 4 26B-A4B (profundidad 0 y 33 334) y Qwen3.6-35B-A3B (0 y 6 252) | b10909 (`a2878d30d`, CUDA 13.3) | no se usa (`llama-bench` directo) | `none` | perfil: b10909 OOM a los 6,1 s, b9925 cargo desbordando 5 855 MiB (pasa). **El barrido NO vale**: el perfil no cubre `llama-bench.exe` (ver abajo) | barrido cortado por el sistema por falta de memoria en Qwen3.6 `-ncmoe 12` (02:48 UTC) |
+
+**Hallazgo de la sesion 4: el perfil del driver no cubre `llama-bench.exe`, y el barrido desbordo sin
+avisar.** El Qwen3.6-35B-A3B con `-ncmoe 0` (~16,9 GiB de pesos en 16 GB) **corrio** en `llama-bench`
+a 16 tok/s, cuando con el perfil activo tendria que dar OOM. Control a las 02:49 UTC, la misma carga
+con `-p 64 -n 8 -r 1`: **sale con 0 en 6,9 s y `Shared Usage` del adaptador sube de 47 a 1 409 MiB**,
+sin linea de OOM. El perfil es por nombre de ejecutable (§1.3) y solo lo tiene `llama-server.exe`.
+Consecuencia: ningun punto del barrido separa «cabe» de «desborda», y un `-ncmoe` rapido puede estar
+desbordando en parte; es el error 1 de julio en otro ejecutable. Lo medido se conserva en
+`resultados/barrido-*.jsonl` (26B-A4B completo; Qwen3.6 con 0, 4 y 8) como dato **invalido para
+decidir**. Ademas, el sistema corto el barrido por falta de memoria con Qwen3.6 `-ncmoe 12` y
+`--load-mode none`: con 32 GB, la RAM es un limite real para ese modelo.
+
+**Arreglo, medido por su efecto (decision del usuario, 2026-09-15).** El usuario anadio en la NVIDIA
+App una entrada «Prefer No Sysmem Fallback» para `llama-bench.exe` de b10909: es otro nombre de
+fichero y convive con la de `llama-server.exe`. Controles, en este orden:
+
+| Hora UTC | Prueba | Resultado |
+| --- | --- | --- |
+| 02:54:51 | `llama-bench` Qwen3.6 `-ncmoe 0` | sale con 1 en 1,7 s, `Shared Usage` plano (125 MiB); sin causa en el log |
+| 02:54:57 | CP-1, `llama-server` b10909 | OOM a los 6,1 s (`cudaMalloc` 12 288 MiB): la entrada original sigue en su sitio |
+| 02:55:07 | CP-1, `llama-server` b9925 | carga en 12,1 s desbordando 5 666 MiB |
+| 02:55:54 | `llama-bench` Qwen3.6 `-ncmoe 0` **con `-v`** | **`cudaMalloc failed: out of memory`** al pedir 16 383 MiB: el fallo de 02:54:51 era OOM y no otra cosa |
+| 02:56:00 | control negativo, `llama-bench` Qwen3.6 `-ncmoe 8` | carga y mide (tg 61 tok/s): `llama-bench` no falla con todo |
+
+«Failed to load model» sin `-v` no distingue un OOM de un fichero roto: por eso hizo falta el `-v` y
+el negativo. En el negativo `Shared Usage` sube a 3 494 MiB, y **no es desbordamiento**: con
+`--load-mode none` los expertos en RAM cuentan como compartida (buffers anclados, CP-2b). En el
+barrido «no cabe» lo decide el OOM, nunca `Shared Usage`. El barrido se repite entero (`-v2`), con
+vigilancia de RAM: si la libre baja de 1,5 GB se detiene esa carga, se anota «no cabe en RAM» y no se
+intentan los `-ncmoe` mayores de ese modelo.
+
+**Barrido v2 (02:56:28-03:01:43 UTC, 5 min 15 s; estimado 25-30 min).** `llama-bench -lm none -ngl 99
+-p 512 -n 128 -r 3`, perfil activo en `llama-bench.exe`. tok/s (media de 3); `d` = profundidad del caso
+de calidad que mas contexto pide del rol. Datos crudos en `resultados/barrido-*-v2.jsonl`. Ningun valor
+se quedo sin RAM (minimo libre: 12,6 GB).
+
+| Modelo | `-ncmoe` | pp512 d=0 | tg128 d=0 | pp512 d | tg128 d | RAM libre min (GB) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gemma 4 26B-A4B (d = 33 334) | **0** | 3 397 | 94,5 | 2 151 | **76,9** | 17,7 |
+| | 4 | 2 113 | 67,3 | 1 575 | 60,9 | 16,4 |
+| | 8 | 1 596 | 57,0 | 1 294 | 49,9 | 15,1 |
+| | 12 | 1 267 | 44,7 | 1 065 | 41,4 | 13,9 |
+| | 16 | 1 099 | 44,8 | 948 | 35,5 | 12,6 |
+| Qwen3.6-35B-A3B (d = 6 252) | 0 | no cabe en GPU: `cudaMalloc` de 16 383 MiB (control con `-v` de 02:55:54) | | | | |
+| | 4 | no cabe en GPU: carga 14 959 MiB de pesos + 497 de computo y falla al crear el handle de cuBLAS (`CUDA error: the resource allocation failed`, 0xC0000409; control con `-v` a las 03:02:59) | | | | |
+| | **8** | 1 417 | 77,1 | 1 343 | **76,0** | 15,9 |
+| | 12 | 1 189 | 69,0 | 1 126 | 67,8 | 14,5 |
+| | 16 | 1 043 | 61,1 | 976 | 61,3 | 13,4 |
+
+**Elegidos, el punto mas rapido que cabe: Gemma 4 26B-A4B `-ncmoe 0` y Qwen3.6-35B-A3B `-ncmoe 8`.**
+Tres lecturas que el barrido invalido habria cambiado:
+
+- El 26B-A4B da las mismas cifras con y sin perfil (76,9 contra 79,0 a 33 k): no desbordaba, cabe entero.
+- **El Qwen3.6 con `-ncmoe 4` corrio a 91 tok/s en el barrido invalido y no cabe**: desbordaba y era
+  *mas rapido* que el elegido. Sin el perfil, el barrido habria elegido una config que en la tanda da
+  error al cargar. Es exactamente la trampa que CP-1 existe para evitar.
+- El fallo de `-ncmoe 4` no es un OOM limpio sino un `CUDA error` al crear cuBLAS: un script que solo
+  busque «out of memory» lo clasifica como «error» (el v2 lo hizo). Queda en la tabla con su causa.
+
+En los dos MoE, bajar expertos a RAM cuesta velocidad en todos los pasos medidos: no hay un punto
+intermedio que gane.
+
+**Confirmado con `llama-server` y el contexto completo** (03:04 UTC, `medir_kv`: `-v --load-mode none
+--fit off -ngl 99`). `llama-bench` solo reserva el contexto del test, asi que el `-ncmoe` elegido podia
+caber en el barrido y no en la config real; las cuatro cargan:
+
+| Config | `n_ctx` | KV | Pesos en GPU | Pesos en RAM | Computo GPU |
+| --- | --- | --- | --- | --- | --- |
+| Gemma 4 26B-A4B `-ncmoe 0`, calidad | 36 736 | 1 020 | 12 952 | 748 | 178 |
+| Gemma 4 26B-A4B `-ncmoe 0`, techo | 65 536 | 1 580 | 12 952 | 748 | 206 |
+| Qwen3.6-35B-A3B `-ncmoe 8`, calidad | 7 168 | 140 | 13 535 | 3 363 | 212 |
+| Qwen3.6-35B-A3B `-ncmoe 8`, techo | 65 536 | 1 280 | 13 535 | 3 363 | 376 |
+
+Las configs de techo caben con el mismo `-ncmoe` que las de calidad: no hace falta subirlo. Todas
+estan en `llama-swap-pruebas.yaml` (`t-*`).
+
+Estado de §1.4 al empezar la sesion 4 (§1.4 ya rehecho): RAM libre 20,6 GB; VRAM del adaptador 856
+MiB; ningun `llama-server`, `llama-swap` ni `pythonw`; `LocalDelegateDaemon` en `Ready` (parado); una
+sola sesion de Claude Code, la que mide. El barrido no pasa por el runner: mide velocidad, no memoria
+por proceso, y «cabe» es cargar sin OOM con el perfil activo.
 
 Desviaciones de §1.4 en la sesion 1, que la tanda tiene que resolver antes de empezar (**resueltas
 el 2026-09-14**: §1.1 y §1.4 rehechos con estos datos):
