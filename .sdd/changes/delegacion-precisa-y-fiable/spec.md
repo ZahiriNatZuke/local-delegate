@@ -486,7 +486,11 @@ igual con otros modelos: lo que se comprueba es el rol.
 - **Respaldo en `local_boilerplate`:** el fichero se escribe solo si el respaldo tuvo éxito, como hoy
   con el modelo original.
 - **Un `content` vacío (`""`) no es un fallo:** se trata como hoy. Solo cuenta el nulo o ausente
-  (REQ-015).
+  (REQ-015). **Excepción, decidida por el usuario el 2026-09-15 (opción A):** un `""` con
+  `finish_reason: length` **y** `reasoning_content` no vacío es de **configuración** (REQ-019), igual
+  que el nulo. Es la forma real en que llama-server b10909 devuelve un razonamiento que agotó
+  `max_tokens` (captura de la tarea 23); con solo el nulo, la clase no saltaba nunca contra el
+  backend real y la respuesta vacía llegaba como éxito.
 
 ### Non-functional requirements
 

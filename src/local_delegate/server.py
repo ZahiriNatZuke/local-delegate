@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -658,11 +659,103 @@ def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
     )
 
 
+#: Cuánto antes de vencer el plazo de lectura se muestrea `/running` (REQ-018). Tiene que ser mayor
+#: que el tope de la consulta más holgura, para que la muestra esté lista cuando llegue el timeout.
+_MARGEN_SONDA_S = 3.0
+_TOPE_CONSULTA_SONDA_S = 1.0
+
+
+def _retraso_sonda() -> float:
+    """Segundos desde que se envía la petición hasta que se muestrea, como el plazo de httpx."""
+    return max(0.0, config.HTTP_TIMEOUT - _MARGEN_SONDA_S)
+
+
+def _estado_en_llamaswap(modelo: str) -> str | None:
+    """Estado de `modelo` en `/running` de llama-swap (`starting`, `ready`…), o None si no se sabe.
+
+    None cubre todo lo que no es llama-swap o no responde a tiempo —Ollama, LM Studio, un 404, un
+    llama-swap caído—, y el clasificador lo lee como carga, que no enfría: fuera de llama-swap, D-2
+    no se cumple (enmienda de spec aprobada el 2026-09-15).
+    """
+    base = config.BASE_URL.removesuffix("/v1")
+    try:
+        with httpx2.Client(timeout=_TOPE_CONSULTA_SONDA_S) as c:
+            r = c.get(f"{base}/running", headers=config.auth_headers())
+            if not r.is_success:
+                return None
+            data = r.json()
+    except (httpx2.HTTPError, ValueError):
+        return None
+    entradas = data.get("running") if isinstance(data, dict) else None
+    for entrada in entradas or []:
+        if isinstance(entrada, dict) and entrada.get("model") == modelo:
+            estado = entrada.get("state")
+            return estado if isinstance(estado, str) else None
+    return None
+
+
+class _SondaDeCarga:
+    """Muestrea si el modelo estaba cargado justo ANTES de que venza el plazo de lectura.
+
+    Consultar después del `ReadTimeout` vería el estado de después: una carga que termina en ese
+    hueco saldría `ready` y el fallo se contaría contra un modelo que solo tardaba en montarse. Un
+    temporizador por intento muestrea a `HTTP_TIMEOUT - margen` y el timeout usa esa muestra. En el
+    camino feliz la petición acaba antes y el temporizador se cancela sin consultar nada.
+    """
+
+    def __init__(
+        self,
+        modelo: str,
+        *,
+        retraso_s: float,
+        consultar: Callable[[str], str | None] = _estado_en_llamaswap,
+    ) -> None:
+        self._modelo = modelo
+        self._consultar = consultar
+        self._estado: str | None = None
+        self._disparada = threading.Event()
+        self._lista = threading.Event()
+        self._timer = threading.Timer(retraso_s, self._muestrear)
+        self._timer.daemon = True
+
+    def iniciar(self) -> None:
+        self._timer.start()
+
+    def cancelar(self) -> None:
+        self._timer.cancel()
+
+    def _muestrear(self) -> None:
+        self._disparada.set()
+        try:
+            self._estado = self._consultar(self._modelo)
+        except Exception:  # la sonda nunca puede tumbar la llamada que acompaña
+            self._estado = None
+        finally:
+            self._lista.set()
+
+    def modelo_cargado(self, *, espera_s: float = _TOPE_CONSULTA_SONDA_S) -> bool | None:
+        """True si estaba `ready`, False si `starting`; None si no hubo muestra a tiempo."""
+        self._timer.cancel()
+        if self._timer.is_alive():
+            # Si la consulta está en curso, se espera como mucho su tope; si no llega, no se sabe.
+            self._timer.join(espera_s)
+        if not (self._disparada.is_set() and self._lista.is_set()):
+            return None
+        if self._estado == "ready":
+            return True
+        if self._estado == "starting":
+            return False
+        return None
+
+
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
     headers = config.auth_headers()
     client = _get_client()
     for attempt in (1, 2):
+        # Una sonda por intento: el plazo de lectura vuelve a contar en cada envío.
+        sonda = _SondaDeCarga(model, retraso_s=_retraso_sonda())
+        sonda.iniciar()
         try:
             r = client.post(f"{config.BASE_URL}/chat/completions", json=payload, headers=headers)
             r.raise_for_status()
@@ -692,7 +785,11 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             # Antes había tres, y `ConnectTimeout` se colaba por el genérico: no es subclase de
             # `ConnectError` —son ramas hermanas—, así que un plazo de conexión agotado se
             # clasificaba como `http_error` y nadie ofrecía arrancar el backend.
-            clase = fallos.clasificar(e)
+            if isinstance(e, httpx2.ReadTimeout):
+                # La señal de REQ-018 es la muestra tomada al vencer, no una consulta ahora.
+                clase = fallos.clasificar(e, modelo_cargado=sonda.modelo_cargado())
+            else:
+                clase = fallos.clasificar(e)
             if fallos.es_backend_ausente(e):
                 # No hay nadie escuchando. Si el auto-arranque está activo, intenta levantarlo
                 # (opt-in, específico de llama-swap) y reintenta una vez.
@@ -757,6 +854,8 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 error="bad_response",
                 clase=fallos.Clase.MODELO,
             )
+        finally:
+            sonda.cancelar()
     # Aquí había un `retry_exhausted` que no se alcanzaba nunca: los dos intentos terminan
     # siempre en un `return`, porque los dos `continue` viven bajo `attempt == 1`. No se
     # dedujo leyendo, se midió: se enumeraron las 16 formas de terminar el `try` y ninguna

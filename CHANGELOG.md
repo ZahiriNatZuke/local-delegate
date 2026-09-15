@@ -104,7 +104,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   formato viejo (`version: 9925 (...)`) con el paréntesis detrás, así que un semver sin número de
   build da «salida inesperada» en vez de una versión inventada. Salió al migrar esta máquina a b10909.
 
+- **Un razonamiento que agotaba `max_tokens` llegaba como respuesta vacía y correcta.** El error
+  que lo explica («súbelo, o desactiva el razonamiento») solo saltaba con `content: null`, y
+  llama-server b10909 no lo devuelve así: capturado contra el backend real, llega `content: ""` con
+  `finish_reason: length` y el razonamiento lleno. Ahora un contenido vacío con esas dos señales es
+  un fallo de configuración con su mensaje; cualquier otro `""` se sigue tratando como antes.
+
 ### Changed
+- **La clasificación de fallos reconoce las cargas fallidas de verdad, y sabe si el modelo se estaba
+  montando.** Dos piezas, las dos sacadas de respuestas **capturadas** de llama-swap v255 y
+  llama-server b10909, no escritas a mano (`tests/fixtures/backend/`):
+
+  - Un modelo que no se puede montar —un OOM con la política «Prefer No Sysmem Fallback», o un
+    modelo que no existe— da en llama-swap el mismo `500` con `upstream command exited prematurely`.
+    Antes se leía como fallo del modelo; ahora es de capacidad o carga, que no enfría ni debe saltar a
+    otro modelo grande.
+  - Un `ReadTimeout` se clasifica con el estado que tenía el modelo **al vencer el plazo**: un
+    temporizador por intento consulta `/running` justo antes de que venza y la clasificación usa esa
+    muestra. Consultar después vería el estado de después, y una carga que termina en ese hueco se
+    contaría contra un modelo que solo tardaba en montarse. En el camino feliz el temporizador se
+    cancela sin consultar nada. Sin llama-swap (Ollama, LM Studio) no hay señal y el timeout se trata
+    como carga.
+
 - **Versiones recomendadas del backend: llama.cpp b10909 y llama-swap v255** (antes b9925 y
   v238). Son las de la medición del catálogo de modelos, y la producción del autor ya corre sobre
   ellas con el catálogo de siempre: los cinco modelos cargan y responden por el daemon, el residente

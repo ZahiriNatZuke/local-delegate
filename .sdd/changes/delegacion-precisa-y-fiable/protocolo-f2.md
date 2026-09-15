@@ -1938,8 +1938,39 @@ Resultado (cierre 15:04:55 UTC, 32 min reales):
 | 15:04:41 | produccion | `LLAMASWAP_EXE` de usuario -> `llama-swap-v255\llama-swap.exe`; `config.yaml` = `config.b10909.yaml` (sha256 `7858E9AB...`); respaldo `config.yaml.pre-b10909-20260915.bak` (`37BA542E...`) |
 | 15:04:55 | daemon arrancado (`schtasks /Run`) | `local_status` arriba; `local_classify` y `local_describe_image` responden por el daemon; llama-swap desde `llama-swap-v255`, `llama-server` desde `llamacpp-b10909`; `doctor` del repo: v255 y b10909 |
 
-Sin `--gpu-luid` fijo en ningun paso. Queda por comprobar, desde la Mac, que sigue delegando contra
-este backend.
+Sin `--gpu-luid` fijo en ningun paso. **La Mac, comprobada por el usuario despues:** `local_summarize`
+desde alli contra este backend respondio con `gemma3-4b` (residente), con la clave de la Mac y por
+la tailnet.
+
+**Sesion 8, F3 tarea 23: capturas reales para REQ-020 (2026-09-15, inicio 15:20:58 UTC, duracion
+estimada ~40 min, escrita antes de capturar).** Daemon y llama-swap de produccion parados a las
+15:20:58 (su residente ocuparia VRAM); ningun `llama-server`, `llama-swap` ni `pythonw` del daemon
+vivo; VRAM 671 MiB. Produccion sin servicio durante la ventana. Config
+`benchmarks/catalogo-2026-09/llama-swap-capturas.yaml` en el puerto 9595, sin `apiKeys`. **El caso
+sin perfil no mueve el perfil**: usa una copia de la carpeta de b10909 en
+`llamacpp-b10909-sin-perfil` (mismo `llama-server.exe` por hash), porque el perfil actua por ruta y
+no por nombre —medido en la sesion 7: con el perfil en `llamacpp-b10909`, el `llama-server.exe` de
+`llamacpp` desbordaba—. Se comprueba por su efecto antes de capturar.
+
+Resultado (produccion de vuelta a las 15:24:09 UTC: 3 min 11 s sin servicio):
+
+| Hora UTC | Paso | Resultado |
+| --- | --- | --- |
+| 15:21:37 / 15:21:47 | perfil por su efecto, carga de CP-1 | original `llamacpp-b10909`: **OOM a los 6,1 s**; copia `llamacpp-b10909-sin-perfil`: **carga desbordando 5 887 MiB**. El perfil actua por ruta: confirmado |
+| 15:22:27 | OOM con perfil, via llama-swap | **500** `{"src":"llama-swap","error":{"message":"unspecific error: upstream command exited prematurely",...}}` en 4,7 s; `/running` en `starting` hasta el fallo |
+| 15:22:35 | OOM sin perfil | **200 en 8,2 s** (21,9 tok/s a 16 tokens): desborda y responde, **sin `ReadTimeout`**. Clase esperada `TIMEOUT_LECTURA`: **no capturado** |
+| 15:22:48 | error de carga (modelo inexistente) | **el mismo 500 byte a byte** que el OOM con perfil, en 0,25 s |
+| 15:22:51 | timeout del cliente (3 s) durante la carga del MoE | `ReadTimeout`; `/running` en `starting` al vencer. **llama-swap aborta la carga** al cortar el cliente (`starting cap-carga-lenta failed: aborted`) |
+| 15:22:58 | peticion durante la carga | 200 en 7,0 s; `/running` pasa de `starting` a `ready` |
+| 15:23:08 | razonamiento que agota `max_tokens` (Gemma 4 26B-A4B, 24 tokens) | **200, `finish_reason: length`, `reasoning_content` con texto y `content: ""` (cadena vacia, no `null`)** |
+
+**Dos hallazgos que el plan no preveia.** (1) Con b10909 el razonamiento agotado llega con
+`content: ""`, y `fallos._clasificar_cuerpo` solo mira el nulo o ausente: **la clase `CONFIGURACION`
+es inalcanzable con el backend real**. La spec se contradice (la tabla de F3 dice «`content` vacio»;
+los casos limite, que `""` no es fallo): lo decide el usuario. (2) Un timeout del cliente **aborta**
+la carga en llama-swap: reintentar tras un `ReadTimeout` durante la carga vuelve a empezar de cero.
+Primera pasada del script sin sanear las muestras de `/running` (llevaban la linea de comando con
+rutas): corregido antes de versionar nada.
 
 **Sesion 5, cierre del setup de medicion.** La tanda termino a las 04:21:01 UTC con llama-swap de
 pruebas y `llama-server` parados. **A las 04:31:35 la tarea `LocalDelegateDaemon` volvio a arrancar
