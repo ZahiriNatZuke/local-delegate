@@ -63,7 +63,7 @@ def test_documento_corto_sigue_haciendo_una_sola_llamada(monkeypatch, tmp_path):
 
 
 def test_documento_que_no_cabe_se_resume_por_partes_sin_truncar(monkeypatch, tmp_path):
-    limite = config.max_chars_for(config.MODEL_LONG)
+    limite = config.max_chars_for_role("long")
     texto = _document(60, 2000)
     assert len(texto) > limite, "el documento de prueba tiene que exceder el techo del modelo"
 
@@ -130,7 +130,7 @@ def _diff_grande(archivos: int = 30, lineas: int = 60) -> str:
 
 
 def test_un_diff_que_no_cabe_entra_entero_y_sin_truncar(monkeypatch, tmp_path):
-    limite = config.max_chars_for(config.MODEL_CODE)
+    limite = config.max_chars_for_role("code")
     diff = _diff_grande()
     assert len(diff) > limite, "el diff de prueba tiene que exceder el techo del modelo"
 
@@ -292,7 +292,7 @@ def test_un_trozo_de_continuacion_dice_a_que_archivo_pertenece(monkeypatch, tmp_
         "diff --git a/paquete/enorme.py b/paquete/enorme.py\n"
         "--- a/paquete/enorme.py\n+++ b/paquete/enorme.py\n@@ -1,900 +1,900 @@\n"
     ) + "".join(f"+linea {j} con relleno de sobra para ocupar espacio\n" for j in range(900))
-    assert len(grande) > config.max_chars_for(config.MODEL_CODE)
+    assert len(grande) > config.max_chars_for_role("code")
 
     _salida, seen = _run(monkeypatch, tmp_path, server.local_commit_msg, diff=grande)
 
@@ -349,7 +349,7 @@ def test_el_mensaje_real_de_este_backend_dispara_el_reintento(monkeypatch, tmp_p
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", False)
     documento = _document(40, 3_000)
-    assert len(documento) > config.max_chars_for(config.MODEL_LONG)
+    assert len(documento) > config.max_chars_for_role("long")
     # El techo se elige entre el presupuesto (38 400) y su mitad: el trozo entero no cabe y la
     # mitad sí, o sea un solo nivel de reintento, como en el caso real.
     handler, vistos = _backend_con_techo(25_000, "Context size has been exceeded.")

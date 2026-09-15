@@ -295,8 +295,8 @@ def test_local_extract_devuelve_objeto_con_las_claves_pedidas(monkeypatch):
 def test_local_extract_avisa_del_truncamiento_sin_romper_las_claves(monkeypatch):
     """El aviso iba delante del JSON como texto; ahora va aparte y no estorba al parseo."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    monkeypatch.setattr(config, "MAX_CHARS", {config.MODEL_MECHANICAL: 10}, raising=False)
-    monkeypatch.setattr(config, "max_chars_for", lambda _model: 10)
+    # El tope que usa el modelo principal es el del ROL (F3, tarea 25), no el del modelo.
+    monkeypatch.setattr(config, "max_chars_for_role", lambda _rol: 10)
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
             200,

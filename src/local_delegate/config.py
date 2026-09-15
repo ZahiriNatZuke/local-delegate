@@ -204,19 +204,42 @@ ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE, MODEL_FAST
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
 LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 
-# Tope de entrada por modelo (evita desbordar el ctx del backend).
+# Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
+# pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
+# último rol del literal pisara el tope de los demás sin avisar (F3, tarea 25).
 _MAX_CHARS_DEFAULT = 20000
-MAX_CHARS: dict[str, int] = {
-    MODEL_MECHANICAL: _env_int("LOCAL_DELEGATE_MAX_CHARS_MECHANICAL", 20000),
-    MODEL_LONG: _env_int("LOCAL_DELEGATE_MAX_CHARS_LONG", 48000),
-    MODEL_CODE: _env_int("LOCAL_DELEGATE_MAX_CHARS_CODE", 20000),
-    MODEL_FAST: _env_int("LOCAL_DELEGATE_MAX_CHARS_FAST", 12000),
+MAX_CHARS_POR_ROL: dict[str, int] = {
+    "mechanical": _env_int("LOCAL_DELEGATE_MAX_CHARS_MECHANICAL", 20000),
+    "long": _env_int("LOCAL_DELEGATE_MAX_CHARS_LONG", 48000),
+    "code": _env_int("LOCAL_DELEGATE_MAX_CHARS_CODE", 20000),
+    "fast": _env_int("LOCAL_DELEGATE_MAX_CHARS_FAST", 12000),
 }
 
 
+def modelos_por_rol() -> dict[str, str]:
+    """Rol -> modelo con la configuración vigente (roles de texto; visión va aparte)."""
+    return {
+        "mechanical": MODEL_MECHANICAL,
+        "long": MODEL_LONG,
+        "code": MODEL_CODE,
+        "fast": MODEL_FAST,
+    }
+
+
+def max_chars_for_role(role: str) -> int:
+    """Tope de entrada de un rol: el que usa el modelo principal de una llamada."""
+    return MAX_CHARS_POR_ROL.get(role, _MAX_CHARS_DEFAULT)
+
+
 def max_chars_for(model: str) -> int:
-    """Tope de caracteres de entrada para un modelo (default si no está en el catálogo)."""
-    return MAX_CHARS.get(model, _MAX_CHARS_DEFAULT)
+    """Tope de un MODELO: el mínimo de los roles que resuelven a él (default si ninguno).
+
+    Es para lo que no tiene rol —validar un candidato de respaldo (REQ-003)—, donde prometer más de
+    lo que aguanta el modelo es justo el fallo. El modelo principal de una tool usa
+    `max_chars_for_role`, para que dos roles sobre el mismo modelo no se rebajen el uno al otro.
+    """
+    topes = [MAX_CHARS_POR_ROL[rol] for rol, modelo in modelos_por_rol().items() if modelo == model]
+    return min(topes) if topes else _MAX_CHARS_DEFAULT
 
 
 # --- Chunking de salida (local_translate / local_delegate) -------------------
