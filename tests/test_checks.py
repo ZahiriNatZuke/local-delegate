@@ -116,6 +116,22 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     assert len(results) < len(checks.CHECKS)
 
 
+def test_los_colaboradores_del_context_no_son_funciones_de_la_clase():
+    """Un colaborador con default no puede quedar como función en la CLASE `Context`.
+
+    Con `campo: Callable = _default_x`, el dataclass deja `_default_x` como atributo de clase y lo
+    copia en cada instancia. Funciona mientras la instancia lo tenga; leído desde la clase, Python
+    lo enlaza como método y le mete `self` delante. CodeQL lo marcó en el PR #204
+    (`py/call/wrong-arguments`) y la salida no era descartar la alerta sino quitar el patrón.
+    """
+    from dataclasses import fields
+
+    en_la_clase = [
+        f.name for f in fields(checks.Context) if callable(checks.Context.__dict__.get(f.name))
+    ]
+    assert not en_la_clase, f"colaboradores guardados como función de clase: {en_la_clase}"
+
+
 def test_sin_filtro_run_all_se_comporta_igual_que_siempre(tmp_path):
     ctx = make_ctx(make_home(tmp_path, complete=False))
     assert len(checks.run_all(ctx)) == len(checks.CHECKS)

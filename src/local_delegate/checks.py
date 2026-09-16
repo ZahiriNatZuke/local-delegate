@@ -29,7 +29,7 @@ import shutil
 import socket
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from importlib import metadata
 from itertools import pairwise
@@ -289,28 +289,48 @@ class Context:
     home: Path
     config_path: Path | None = None
     online: bool = False
-    daemon_status: Callable[[str, int], dict | None] = _default_daemon_status
+    # Los colaboradores van con `default_factory` y no con `= _default_x`: así el dataclass no deja
+    # la función como atributo de la CLASE, donde Python la enlazaría como método y le metería
+    # `self` delante (CodeQL, `py/call/wrong-arguments`, PR #204). El `f=` fija la función al
+    # definirse la clase, como antes: doblar `_default_x` después no cambia el default.
+    daemon_status: Callable[[str, int], dict | None] = field(
+        default_factory=lambda f=_default_daemon_status: f
+    )
     # Solo se consulta cuando `daemon_status` no dio respuesta y el puerto está ocupado: sirve
     # para separar «ahí hay otra cosa» de «ahí está nuestro daemon y a este entorno le falta el
     # token», que llevan a acciones opuestas.
-    daemon_needs_token: Callable[[str, int], bool | None] = _default_daemon_needs_token
-    backend_models: Callable[[], tuple[bool, str]] = _default_backend_models
-    version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = _default_version_of
+    daemon_needs_token: Callable[[str, int], bool | None] = field(
+        default_factory=lambda f=_default_daemon_needs_token: f
+    )
+    backend_models: Callable[[], tuple[bool, str]] = field(
+        default_factory=lambda f=_default_backend_models: f
+    )
+    version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = field(
+        default_factory=lambda f=_default_version_of: f
+    )
     # Al final y con default: las llamadas que no lo pasan siguen funcionando igual. Quien no
     # quiera salir a la red inyecta `SKIP_PYPI` **explícitamente**, y así se ve en su línea.
-    latest_release: Callable[[], tuple[str | None, str | None]] = _default_latest_release
+    latest_release: Callable[[], tuple[str | None, str | None]] = field(
+        default_factory=lambda f=_default_latest_release: f
+    )
     # Mismo criterio: aditivo y con default. Ojo, este NO deriva de `home` —`config.LOG_DIR` sale
     # de su propia variable de entorno—, así que `doctor --home` seguirá leyendo el registro real
     # de la máquina, igual que ya hacen los checks de servicio y backend.
-    clients_seen: Callable[[], tuple[list[dict], str | None]] = _default_clients_seen
+    clients_seen: Callable[[], tuple[list[dict], str | None]] = field(
+        default_factory=lambda f=_default_clients_seen: f
+    )
     # Quinto colaborador que habla por red, y como los otros: default real, doblado en los tests.
     # Doblarlo NO es opcional en ninguno de los dos arneses — un colaborador de red sin doblar deja
     # la suite saliendo a internet de verdad, verde en CI y otra cosa en la máquina de quien
     # desarrolla. Ya pasó dos veces el 2026-07-31.
-    backend_needs_key: Callable[[], tuple[bool | None, str]] = _default_backend_needs_key
+    backend_needs_key: Callable[[], tuple[bool | None, str]] = field(
+        default_factory=lambda f=_default_backend_needs_key: f
+    )
     # Séptimo, y el único que recibe un secreto: prueba el token que lleva Claude Desktop. Solo se
     # llama si ese fichero existe, así que un HOME simulado sin él no sale a la red por aquí.
-    daemon_accepts_token: Callable[[str, int, str], bool | None] = _default_daemon_accepts_token
+    daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
+        default_factory=lambda f=_default_daemon_accepts_token: f
+    )
 
     @property
     def claude_dir(self) -> Path:
