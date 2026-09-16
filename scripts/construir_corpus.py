@@ -705,7 +705,6 @@ def roles_de_produccion() -> dict[str, str]:
         config.MODEL_MECHANICAL: "mechanical",
         config.MODEL_LONG: "long",
         config.MODEL_CODE: "code",
-        config.MODEL_FAST: "fast",
         config.MODEL_VISION: "vision",
     }
 

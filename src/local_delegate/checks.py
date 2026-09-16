@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los diecinueve elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veinte elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Diecinueve checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veinte checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -1148,7 +1148,7 @@ def _probe_fallback(ctx: Context) -> Result:
         return Result(
             WARN,
             "; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran",
-            "usa roles (mechanical, long, code, fast, residente) o ids del catálogo de texto",
+            "usa roles (mechanical, long, code, residente) o ids del catálogo de texto",
         )
     if not configuracion.FALLBACK:
         return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
@@ -1156,8 +1156,31 @@ def _probe_fallback(ctx: Context) -> Result:
     return Result(OK, f"cadenas válidas; residente {modelo} ({origen})")
 
 
+def _probe_rol_retirado(ctx: Context) -> Result:
+    """Variables del rol `fast`, retirado en la 0.30.0, que siguen puestas y ya no hacen nada.
+
+    Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
+    quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
+    que ya no existe. Pedir ese modelo por `model=` da un error claro solo — sale de
+    `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
+
+    Mira el entorno y nada más, así que vive en `entorno`: no sale a la red ni toca ficheros.
+    """
+    from . import config as configuracion
+
+    puestas = [n for n, valor in configuracion.VARIABLES_ROL_RETIRADO.items() if valor is not None]
+    if not puestas:
+        return Result(OK, "sin variables del rol rápido, retirado en la 0.30.0")
+    return Result(
+        WARN,
+        f"{', '.join(puestas)}: el rol rápido se retiró en la 0.30.0 y estas variables ya no "
+        "tienen efecto",
+        "quítalas del entorno; los roles vigentes son mechanical, long, code y vision",
+    )
+
+
 # --- El registro --------------------------------------------------------------
-# Diecinueve elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veinte elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1170,6 +1193,7 @@ CHECKS: tuple[Check, ...] = (
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
+    Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -1195,7 +1219,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los diecinueve probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veinte probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1209,7 +1233,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros dieciocho
+        except Exception as exc:  # un check roto no debe impedir ver los otros diecinueve
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

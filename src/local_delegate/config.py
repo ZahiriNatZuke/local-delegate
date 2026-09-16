@@ -200,11 +200,26 @@ MODEL_MECHANICAL = _env(
 # Defectos de largo, código y visión: los ganadores de la medición de F2 (P-16, 2026-09-15).
 MODEL_LONG = _env("LOCAL_DELEGATE_MODEL_LONG", "gemma4-26b-a4b")  # documentos largos (ctx amplio)
 MODEL_CODE = _env("LOCAL_DELEGATE_MODEL_CODE", "qwen36-35b-a3b")  # código / boilerplate
-MODEL_FAST = _env("LOCAL_DELEGATE_MODEL_FAST", "qwen35-2b")  # ultrarrápido / trivial
 # Rol de visión (imagen->texto). Fuera de ALLOWED_MODELS a propósito: ese set es para el
 # escape genérico local_delegate (texto->texto puro), que no arma payload multimodal.
 MODEL_VISION = _env("LOCAL_DELEGATE_MODEL_VISION", "gemma4-12b")
-ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE, MODEL_FAST}
+ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
+
+# --- El rol `fast`, RETIRADO en la 0.30.0 ------------------------------------
+# No tenía carga: 5 registros en 164 del log de uso, 3 de ellos de un test de concurrencia, y
+# ninguna tool lo enrutaba. Sus tres variables se siguen **leyendo** —por la puerta registrada, así
+# que constan en el inventario y la suite las sigue aislando— pero ya no tienen efecto. Se leen para
+# poder AVISAR: borrarlas sin más las habría vuelto mudas, que es justo el fallo que este repo
+# persigue. El aviso lo da `doctor` (`config.rol_retirado`) y no una excepción al arrancar: romper
+# el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
+VARIABLES_ROL_RETIRADO: dict[str, str | None] = {
+    nombre: _leer(nombre)
+    for nombre in (
+        "LOCAL_DELEGATE_MODEL_FAST",
+        "LOCAL_DELEGATE_MAX_CHARS_FAST",
+        "LOCAL_DELEGATE_FALLBACK_FAST",
+    )
+}
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
 LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
@@ -217,7 +232,6 @@ MAX_CHARS_POR_ROL: dict[str, int] = {
     "mechanical": _env_int("LOCAL_DELEGATE_MAX_CHARS_MECHANICAL", 20000),
     "long": _env_int("LOCAL_DELEGATE_MAX_CHARS_LONG", 48000),
     "code": _env_int("LOCAL_DELEGATE_MAX_CHARS_CODE", 20000),
-    "fast": _env_int("LOCAL_DELEGATE_MAX_CHARS_FAST", 12000),
 }
 
 
@@ -227,7 +241,6 @@ def modelos_por_rol() -> dict[str, str]:
         "mechanical": MODEL_MECHANICAL,
         "long": MODEL_LONG,
         "code": MODEL_CODE,
-        "fast": MODEL_FAST,
     }
 
 
@@ -262,10 +275,9 @@ COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900
 FALLBACK = _env_flag("LOCAL_DELEGATE_FALLBACK", True)
 FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
 #: Cadena sobrescrita por rol: `None` es la de la spec; `""` o `none` desactivan el respaldo de ese
-#: rol; si no, roles (`mechanical`, `long`, `code`, `fast`, `residente`) o ids separados por comas.
+#: rol; si no, roles (`mechanical`, `long`, `code`, `residente`) o ids separados por comas.
 FALLBACK_CHAINS: dict[str, str | None] = {
-    rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}")
-    for rol in ("mechanical", "long", "code", "fast")
+    rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}") for rol in ("mechanical", "long", "code")
 }
 
 

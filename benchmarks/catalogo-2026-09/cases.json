@@ -7,14 +7,12 @@
       "mechanical": "gemma3-4b",
       "long": "gemma4-26b-a4b",
       "code": "qwen36-35b-a3b",
-      "fast": "qwen35-2b",
       "vision": "gemma4-12b"
     },
     "max_chars": {
       "mechanical": 20000,
       "long": 48000,
       "code": 20000,
-      "fast": 12000,
       "vision": 20000
     }
   },

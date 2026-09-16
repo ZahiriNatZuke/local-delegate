@@ -2773,7 +2773,6 @@ def local_status() -> str:
         ("mechanical", config.MODEL_MECHANICAL),
         ("long", config.MODEL_LONG),
         ("code", config.MODEL_CODE),
-        ("fast", config.MODEL_FAST),
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")

@@ -219,7 +219,7 @@ def test_api_status_reports_version_models_catalog_tools(monkeypatch):
         {"id": "m-b", "status": "unloaded"},
     ]
     roles = {c["role"] for c in data["catalog"]}
-    assert roles == {"mechanical", "long", "code", "fast", "vision"}
+    assert roles == {"mechanical", "long", "code", "vision"}
     tool_names = {t["name"] for t in data["tools"]}
     assert "local_summarize" in tool_names and "local_status" in tool_names
 

@@ -25,8 +25,7 @@ Apunta el endpoint a Ollama y mapea los roles a los nombres de modelo de Ollama:
         "LOCAL_DELEGATE_BASE_URL": "http://127.0.0.1:11434/v1",
         "LOCAL_DELEGATE_MODEL_MECHANICAL": "gemma3:4b",
         "LOCAL_DELEGATE_MODEL_LONG": "llama3.1",
-        "LOCAL_DELEGATE_MODEL_CODE": "qwen2.5-coder:14b",
-        "LOCAL_DELEGATE_MODEL_FAST": "gemma3:4b"
+        "LOCAL_DELEGATE_MODEL_CODE": "qwen2.5-coder:14b"
       }
     }
   }

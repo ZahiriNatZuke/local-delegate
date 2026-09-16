@@ -6,6 +6,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Removed
+- **El rol `fast` se retira (breaking).** No tenía carga real: sobre 164 registros del log de uso
+  —que cubre también las llamadas de otras máquinas que delegan en este backend— solo **5** eran de
+  su modelo, y **3 de esos 5 venían de un test de concurrencia**; los otros 2 fueron `local_delegate`
+  con `model` explícito, ambos de hace casi dos meses. Ninguna tool lo enrutaba: solo aparecía en la
+  lista de `local_status`, en la fila del panel y en una cadena de respaldo inalcanzable. Se va de
+  `ALLOWED_MODELS`, del catálogo de roles, de los topes por rol, de las cadenas y del panel.
+
+  **Qué notas si lo usabas.** Una llamada con `model="qwen35-2b"` (o el que tuvieras en
+  `LOCAL_DELEGATE_MODEL_FAST`) ahora responde `[local-delegate error] modelo inválido …` con la
+  lista de válidos, **sin gastar backend**; si tu cliente admite `elicitation`, se te pregunta antes
+  cuál usar. Los roles vigentes son `mechanical`, `long`, `code` y `vision`.
+
+### Added
+- **`doctor` avisa de las variables del rol retirado.** `LOCAL_DELEGATE_MODEL_FAST`,
+  `LOCAL_DELEGATE_MAX_CHARS_FAST` y `LOCAL_DELEGATE_FALLBACK_FAST` dejan de tener efecto, y una
+  variable que deja de hacer algo en silencio es justo el fallo mudo que este proyecto persigue: el
+  check `config.rol_retirado` las nombra una por una y dice qué quitar. No se rompe el arranque a
+  propósito — eso castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
+
 ## [0.29.0] - 2026-09-15
 
 ### Fixed
