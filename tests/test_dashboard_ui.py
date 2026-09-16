@@ -50,14 +50,24 @@ def _tam_pagina() -> int:
 
 
 def _eventos(cuantos: int) -> str:
-    """Un JSONL de uso con `cuantos` eventos recientes y distinguibles entre sí."""
+    """Un JSONL de uso con `cuantos` eventos recientes y distinguibles entre sí.
+
+    **Todos tienen que caer en TU día local**, porque el panel agrupa por día local y el rango que
+    trae puesto es «hoy». Separarlos un minuto a ciegas hacía que el test dependiera de la hora a la
+    que corriera: el CI lo cazó a las 00:06 UTC, con solo 7 de las 13 filas dentro del día, una sola
+    página y el pager oculto — un test midiendo el entorno en vez del producto. El paso se acota al
+    hueco que de verdad hay desde la medianoche, así que a las 00:00:05 se aprietan en esos cinco
+    segundos y siguen siendo `cuantos` filas, que es lo que el test mide.
+    """
     ahora = datetime.now(UTC)
+    medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+    paso = min(timedelta(minutes=1), (ahora - medianoche_local) / max(cuantos, 1))
     lineas = []
     for n in range(cuantos):
         lineas.append(
             json.dumps(
                 {
-                    "ts": (ahora - timedelta(minutes=n)).isoformat(timespec="seconds"),
+                    "ts": (ahora - paso * n).isoformat(timespec="seconds"),
                     # El índice va en el nombre de la tool: así una fila de la página 2 es
                     # distinguible de una de la página 1 **por su texto**, que es lo que se compara.
                     "tool": f"local_tool_{n:03d}",
