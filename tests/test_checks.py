@@ -12,7 +12,7 @@ import json
 import sys
 
 import pytest
-from conftest import make_home, snapshot
+from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
 from local_delegate import checks, doctor, install
 
@@ -51,6 +51,9 @@ def make_ctx(home, **kwargs):
         # sale `ok` sin tener que fabricarle además una cabecera a cada cliente. Los tests que
         # necesitan el otro veredicto —o ninguno— lo pasan explícitamente.
         "daemon_needs_token": lambda host, port: False,
+        # Séptimo colaborador de red: prueba un token concreto contra el puerto. Solo lo consulta
+        # `service.desktop_auth`, y solo si hay fichero de Claude Desktop, que `make_home` no crea.
+        "daemon_accepts_token": lambda host, port, token: True,
     }
     defaults.update(kwargs)
     return checks.Context(home=home, **defaults)
@@ -111,6 +114,22 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     esperados = [c.id for c in checks.CHECKS if c.group in ("entorno", "andamiaje")]
     assert [check.id for check, _r in results] == esperados
     assert len(results) < len(checks.CHECKS)
+
+
+def test_los_colaboradores_del_context_no_son_funciones_de_la_clase():
+    """Un colaborador con default no puede quedar como función en la CLASE `Context`.
+
+    Con `campo: Callable = _default_x`, el dataclass deja `_default_x` como atributo de clase y lo
+    copia en cada instancia. Funciona mientras la instancia lo tenga; leído desde la clase, Python
+    lo enlaza como método y le mete `self` delante. CodeQL lo marcó en el PR #204
+    (`py/call/wrong-arguments`) y la salida no era descartar la alerta sino quitar el patrón.
+    """
+    from dataclasses import fields
+
+    en_la_clase = [
+        f.name for f in fields(checks.Context) if callable(checks.Context.__dict__.get(f.name))
+    ]
+    assert not en_la_clase, f"colaboradores guardados como función de clase: {en_la_clase}"
 
 
 def test_sin_filtro_run_all_se_comporta_igual_que_siempre(tmp_path):
@@ -380,7 +399,10 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     # `client.observed` hay que alimentarlo aparte: su registro **no vive en el HOME** —está en
     # `LOG_DIR`—, así que un HOME completo no lo pone `ok` por sí solo. Se le da una observación en
     # vez de excluirlo del test, para que aquí también se le exija estar `ok`.
-    ctx = make_ctx(make_home(tmp_path), clients_seen=lambda: ([CLAUDE], None))
+    # Claude Desktop tampoco lo escribe `install`: se le pone su entrada para exigirle `ok` también.
+    home = make_home(tmp_path)
+    write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
+    ctx = make_ctx(home, clients_seen=lambda: ([CLAUDE], None))
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
 
@@ -966,6 +988,8 @@ _NUMERO = {
     18: "dieciocho",
     19: "diecinueve",
     20: "veinte",
+    # Apocopado: todas las frases lo ponen delante de un sustantivo masculino.
+    21: "veintiún",
 }
 
 
@@ -1117,6 +1141,179 @@ def test_una_entrada_stdio_no_cuenta_como_ciega(tmp_path, monkeypatch):
     result = result_for("service.daemon_auth", ctx)
 
     assert "Codex" not in result.detail
+
+
+# --- Claude Desktop: el cliente que el instalador no toca ---------------------
+#
+# Su entrada está puesta a mano, va por `mcp-remote` y lleva el token LITERAL en un `--header`. El
+# día que se rote el token del puerto, `install` arregla los tres clientes registrados y este se
+# queda en 401 sin que nada lo diga: `service.daemon_auth` es ciego para él. Este check no escribe
+# (eso sería la fase B), solo convierte el fallo mudo en un aviso.
+
+_TOKEN_DESKTOP = "token-literal-de-desktop-que-no-debe-salir-nunca"
+
+
+def _desktop_entry(header: str | None = f"Authorization: Bearer {_TOKEN_DESKTOP}"):
+    return desktop_mcp_remote_entry(header)
+
+
+def _con_desktop(home, entry=None, *, crudo=None):
+    """Claude Desktop con un servidor ajeno al lado, que es como está el fichero real."""
+    servers = {"otro-servidor": {"command": "uvx", "args": ["algo"]}}
+    if entry is not None:
+        servers[install.SERVER_NAME] = entry
+    write_claude_desktop(home, servers, crudo=crudo)
+    return home
+
+
+def _desktop_ctx(home, *, exige=True, acepta: bool | None = True, llamadas=None):
+    def _acepta(host, port, token):
+        if llamadas is not None:
+            llamadas.append(token)
+        return acepta
+
+    return make_ctx(
+        home,
+        daemon_needs_token=lambda host, port: exige,
+        daemon_accepts_token=_acepta,
+    )
+
+
+def _sin_token(result):
+    assert _TOKEN_DESKTOP not in result.detail
+    assert _TOKEN_DESKTOP not in (result.fix_hint or "")
+
+
+def test_desktop_con_token_que_el_daemon_acepta_es_ok_y_no_escribe(tmp_path):
+    """Control positivo del bloque: sin él, un probe que avisara siempre dejaría verdes a los demás."""
+    home = _con_desktop(make_home(tmp_path), _desktop_entry())
+    before = snapshot(home)
+    llamadas: list[str] = []
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.OK, result.detail
+    assert llamadas == [_TOKEN_DESKTOP]  # el token que se prueba es el del fichero, no otro
+    _sin_token(result)
+    assert snapshot(home) == before
+
+
+def test_desktop_con_token_rotado_avisa_sin_imprimir_el_token(tmp_path):
+    """La avería que motiva el check: la entrada lleva cabecera, pero el daemon ya no la acepta."""
+    home = _con_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, acepta=False))
+
+    assert result.status == checks.WARN
+    assert "Claude Desktop" in result.detail
+    assert "401" in result.detail
+    assert result.fix_hint
+    _sin_token(result)
+
+
+def test_desktop_sin_cabecera_contra_daemon_con_token_avisa(tmp_path):
+    llamadas: list[str] = []
+    home = _con_desktop(make_home(tmp_path), _desktop_entry(header=None))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.WARN
+    assert "401" in result.detail
+    assert llamadas == []
+
+
+def test_desktop_contra_daemon_abierto_no_prueba_el_token(tmp_path):
+    llamadas: list[str] = []
+    home = _con_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, exige=False, llamadas=llamadas))
+
+    assert result.status == checks.OK
+    assert llamadas == []
+
+
+def test_desktop_sin_fichero_es_unknown_y_no_sale_a_la_red(tmp_path):
+    """Una PC sin Claude Desktop no tiene nada roto. Y no hay por qué preguntarle al puerto."""
+    preguntas: list[str] = []
+
+    def _anota(*_args):
+        preguntas.append("red")
+        return True
+
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=_anota, daemon_accepts_token=_anota)
+    # El probe a solas: `run_all` corre también `service.daemon_auth`, que sí pregunta al puerto.
+    result = checks._probe_desktop_auth(ctx)
+
+    assert result.status == checks.UNKNOWN
+    assert preguntas == []
+
+
+def test_desktop_sin_entrada_nuestra_es_unknown(tmp_path):
+    home = _con_desktop(make_home(tmp_path), None)
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.UNKNOWN
+    assert "local-delegate" in result.detail
+
+
+def test_desktop_con_json_roto_es_unknown_y_nunca_missing(tmp_path):
+    home = _con_desktop(make_home(tmp_path), crudo="{ esto no es json")
+    result = result_for("service.desktop_auth", _desktop_ctx(home))
+
+    assert result.status == checks.UNKNOWN
+
+
+def test_desktop_por_stdio_no_pasa_por_el_puerto(tmp_path):
+    entry = {"command": "uvx", "args": ["--from", "local-delegate-mcp", "local-delegate"]}
+    llamadas: list[str] = []
+    home = _con_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.UNKNOWN
+    assert "stdio" in result.detail
+    assert llamadas == []
+
+
+def test_desktop_que_apunta_a_otro_host_no_se_prueba_contra_el_daemon_local(tmp_path):
+    """Probar su token contra NUESTRO puerto diría algo de un servidor al que no habla."""
+    entry = _desktop_entry()
+    entry["args"][2] = "http://100.64.0.7:9393/mcp"
+    llamadas: list[str] = []
+    home = _con_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.UNKNOWN
+    assert llamadas == []
+
+
+def test_desktop_con_variable_referenciada_prueba_su_valor(tmp_path, monkeypatch):
+    """`mcp-remote` expande `${VAR}` en las cabeceras: el valor sale de `env` de la entrada o del entorno."""
+    monkeypatch.setenv("TOKEN_DESKTOP_PRUEBA", "valor-del-entorno")
+    llamadas: list[str] = []
+    home = _con_desktop(
+        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
+    )
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.OK, result.detail
+    assert llamadas == ["valor-del-entorno"]
+
+
+def test_desktop_con_variable_que_no_esta_avisa_como_sospecha(tmp_path, monkeypatch):
+    monkeypatch.delenv("TOKEN_DESKTOP_PRUEBA", raising=False)
+    llamadas: list[str] = []
+    home = _con_desktop(
+        make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
+    )
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert result.status == checks.WARN
+    assert "TOKEN_DESKTOP_PRUEBA" in result.detail
+    assert llamadas == []
+
+
+def test_desktop_sin_poder_probar_el_token_es_unknown(tmp_path):
+    home = _con_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, acepta=None))
+
+    assert result.status == checks.UNKNOWN
+    _sin_token(result)
 
 
 def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):

@@ -8,9 +8,9 @@ import argparse
 from datetime import UTC, datetime
 from pathlib import Path
 
-from conftest import make_home, snapshot
+from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, daemon, doctor, update
+from local_delegate import checks, daemon, doctor, install, update
 
 
 def test_vnum_extracts_number():
@@ -212,6 +212,9 @@ def _stub_environment(
     monkeypatch.setattr(
         daemon, "daemon_requires_token", lambda host, port, timeout=1.0: daemon_needs_token
     )
+    # Y el que prueba el token de Claude Desktop: solo se llama si hay fichero de ese cliente en
+    # el HOME, pero un colaborador de red sin doblar es cómo la suite acaba saliendo a la red.
+    monkeypatch.setattr(daemon, "daemon_accepts_token", lambda host, port, token, timeout=1.0: True)
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: False)
     monkeypatch.setattr(checks.shutil, "which", lambda name: "/usr/local/bin/local-delegate")
     # `run_doctor` arma el `Context` por dentro, así que aquí no hay kwarg que doblar. Y doblar
@@ -241,6 +244,8 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     )
     _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
+    # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.
+    write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     args = argparse.Namespace(config=None, online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
     # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.

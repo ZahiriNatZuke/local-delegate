@@ -143,6 +143,32 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complet
     return home
 
 
+def write_claude_desktop(
+    home: Path, servers: dict | None = None, *, crudo: str | None = None
+) -> Path:
+    """Escribe el `claude_desktop_config.json` del HOME, con la forma real: MCP y preferencias.
+
+    Aparte de `make_home` a propósito: `install` no escribe ese fichero, así que un HOME «como lo
+    deja el instalador» no lo lleva. La ruta la decide `checks.Context`, no este helper.
+    """
+    from local_delegate import checks
+
+    path = checks.Context(home=home).claude_desktop_config
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if crudo is None:
+        crudo = json.dumps({"mcpServers": servers or {}, "preferences": {"sidebarMode": "chat"}})
+    path.write_text(crudo, encoding="utf-8")
+    return path
+
+
+def desktop_mcp_remote_entry(header: str | None = None, url: str = "http://127.0.0.1:9393/mcp"):
+    """La entrada de Claude Desktop tal como está en uso: `npx mcp-remote` con `--header`."""
+    args = ["-y", "mcp-remote@latest", url]
+    if header is not None:
+        args += ["--header", header]
+    return {"command": "npx", "args": args}
+
+
 def snapshot(root: Path) -> dict[str, bytes | None]:
     """Árbol completo con el contenido de cada fichero: la prueba de que nadie escribió."""
     return {
