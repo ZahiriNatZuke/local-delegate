@@ -199,6 +199,34 @@ def test_un_puerto_que_responde_sin_pedir_nada_no_exige_token(monkeypatch):
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is False
 
 
+# --- ¿Entra ESTE token? (para Claude Desktop, que lo lleva literal) -----------
+
+
+def test_probar_un_token_lo_manda_a_el_y_no_el_del_entorno(monkeypatch):
+    """El token que se prueba es el del cliente. Mandar el de `config` diría «entra» siempre aquí."""
+    monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-entorno")
+    enviadas: list = []
+    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(200, {}), registro=enviadas)
+
+    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "el-del-cliente") is True
+    assert enviadas == [{"Authorization": "Bearer el-del-cliente"}]
+
+
+def test_un_401_con_el_token_es_que_no_entra(monkeypatch):
+    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(401, {}))
+    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "viejo") is False
+
+
+def test_probar_un_token_sin_poder_preguntar_no_da_veredicto(monkeypatch):
+    _doblar_get_crudo(monkeypatch, daemon.httpx2.ConnectError("nadie escucha"))
+    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "x") is None
+
+
+def test_una_respuesta_rara_no_se_lee_como_que_entra(monkeypatch):
+    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(500, {}))
+    assert daemon.daemon_accepts_token("127.0.0.1", 9393, "x") is None
+
+
 def test_con_token_el_puerto_entero_pide_credencial(monkeypatch):
     """Las tres superficies del puerto tras una sola puerta, montada sobre la app real.
 

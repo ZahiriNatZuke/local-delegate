@@ -173,7 +173,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las veinte piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las veintiuna piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -212,6 +212,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Servicios | backend | `BASE_URL/models` |
 | Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
 | Servicios | token del puerto del daemon | la **otra** puerta del mismo camino: si el puerto del daemon exige token, si las entradas MCP en modo `http` lo llevan. Pregunta al puerto y compara con lo que llevan las entradas de los tres clientes; sin cabecera, `warn` nombrando al cliente. Existe porque `install` sin `--web-token-env` deja la entrada sin `Authorization` y el cliente en `401` sin que nada lo dijera |
+| Servicios | token de Claude Desktop | si la entrada `local-delegate` de Claude Desktop —que `install` **no** escribe— puede entrar al puerto del daemon. Lee `claude_desktop_config.json` (en Windows, `%APPDATA%\Claude\`), saca la cabecera `Authorization` del `--header` de `mcp-remote` y **prueba ese token** contra el puerto, porque va escrito literal y un token viejo tiene la misma forma que uno bueno. Nunca lo imprime. Sin fichero, sin entrada nuestra, por stdio o apuntando a otra máquina, `unknown`. Existe porque al rotar el token `install` arregla los otros tres clientes y este se quedaba en `401` en silencio |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |
 

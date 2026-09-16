@@ -140,6 +140,27 @@ def daemon_requires_token(host: str, port: int, timeout: float = 1.0) -> bool | 
     return "local-delegate" in response.headers.get("www-authenticate", "")
 
 
+def daemon_accepts_token(host: str, port: int, token: str, timeout: float = 1.0) -> bool | None:
+    """¿Entra ESTE token al puerto del daemon? ``None`` si la respuesta no permite decirlo.
+
+    Hermana de :func:`daemon_requires_token`, y aparte por lo mismo: aquella pregunta sin cabecera
+    y esta con un token que no sale del entorno de quien pregunta, sino de la configuración de un
+    cliente. Existe para Claude Desktop, que lleva el token escrito literal y no se reescribe al
+    rotarlo: saber que el puerto exige token no dice si el que lleva ese fichero sigue valiendo.
+    """
+    try:
+        with httpx2.Client(timeout=timeout) as client:
+            response = client.get(
+                f"http://{host}:{port}{DAEMON_STATUS_PATH}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+    except httpx2.HTTPError:
+        return None
+    if response.status_code == 401:
+        return False
+    return True if 200 <= response.status_code < 300 else None
+
+
 def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
     """Lo que el daemon ve del backend de inferencia, o ``None`` si no se le pudo preguntar.
 

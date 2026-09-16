@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veinte elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veintiún elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veinte checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veintiún checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -27,11 +27,14 @@ import os
 import re
 import shutil
 import socket
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib import metadata
+from itertools import pairwise
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from . import clients, config, install
 
@@ -113,6 +116,13 @@ def _default_daemon_needs_token(host: str, port: int) -> bool | None:
     from . import daemon
 
     return daemon.daemon_requires_token(host, port, timeout=1.0)
+
+
+def _default_daemon_accepts_token(host: str, port: int, token: str) -> bool | None:
+    """¿Entra ese token al puerto? Ver ``daemon.daemon_accepts_token``."""
+    from . import daemon
+
+    return daemon.daemon_accepts_token(host, port, token, timeout=1.0)
 
 
 def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
@@ -298,10 +308,28 @@ class Context:
     # la suite saliendo a internet de verdad, verde en CI y otra cosa en la máquina de quien
     # desarrolla. Ya pasó dos veces el 2026-07-31.
     backend_needs_key: Callable[[], tuple[bool | None, str]] = _default_backend_needs_key
+    # Séptimo, y el único que recibe un secreto: prueba el token que lleva Claude Desktop. Solo se
+    # llama si ese fichero existe, así que un HOME simulado sin él no sale a la red por aquí.
+    daemon_accepts_token: Callable[[str, int, str], bool | None] = _default_daemon_accepts_token
 
     @property
     def claude_dir(self) -> Path:
         return self.home / ".claude"
+
+    @property
+    def claude_desktop_config(self) -> Path:
+        """Dónde guarda Claude Desktop su configuración, derivado del HOME como los demás.
+
+        Derivado y no leído de `%APPDATA%`: así `doctor --home` mira el HOME simulado entero y la
+        suite no toca el fichero real. En Windows `%APPDATA%` es `<HOME>\\AppData\\Roaming`.
+        """
+        if sys.platform == "win32":
+            base = self.home / "AppData" / "Roaming"
+        elif sys.platform == "darwin":
+            base = self.home / "Library" / "Application Support"
+        else:
+            base = self.home / ".config"
+        return base / "Claude" / "claude_desktop_config.json"
 
     @property
     def codex_dir(self) -> Path:
@@ -1031,6 +1059,115 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
     return Result(OK, "el puerto del daemon exige token y las entradas MCP lo referencian")
 
 
+# `${VAR}` es la única sintaxis que expande `mcp-remote` en sus cabeceras (medido en su fuente).
+_VARIABLE_DE_MCP_REMOTE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+_HOSTS_LOCALES = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
+
+
+def _desktop_conexion(entry: dict) -> tuple[str | None, str | None]:
+    """(URL, valor de `Authorization`) de la entrada, en cualquiera de sus dos formas.
+
+    La de hoy va por `mcp-remote` como proceso stdio y lleva URL y cabecera dentro de `args`; la
+    forma `{url, headers}` se acepta también para no dar por stdio una entrada que habla HTTP.
+    """
+    if isinstance(entry.get("url"), str):
+        return entry["url"], (entry.get("headers") or {}).get("Authorization")
+    args = [a for a in entry.get("args") or [] if isinstance(a, str)]
+    url = next((a for a in args if a.startswith(("http://", "https://"))), None)
+    cabecera = None
+    for anterior, valor in pairwise(args):
+        nombre, sep, resto = valor.partition(":")
+        if anterior == "--header" and sep and nombre.strip().lower() == "authorization":
+            cabecera = resto.strip()
+    return url, cabecera
+
+
+def _probe_desktop_auth(ctx: Context) -> Result:
+    """¿Puede la entrada de Claude Desktop entrar al puerto del daemon con el token que lleva?
+
+    Claude Desktop es el cliente que `install` no toca: su entrada está puesta a mano, va por
+    `mcp-remote` y lleva el token **literal**. Si se rota el token del puerto, `install` arregla
+    los tres clientes registrados y este se queda en 401 sin que nada lo diga — pasó en la 0.22.1
+    con `doctor` diciendo que todo estaba bien. `service.daemon_auth` no lo ve porque solo mira los
+    tres registrados; este check no escribe nada, solo convierte ese fallo mudo en un aviso.
+
+    Por eso no le basta con ver la cabecera, como a su hermano: un token literal viejo tiene la
+    misma forma que uno bueno. Lo prueba contra el puerto, y el secreto no sale nunca en el texto.
+    """
+    path = ctx.claude_desktop_config
+    data, motivo = read_json(path)
+    if data is None:
+        return Result(UNKNOWN, motivo or "Claude Desktop no está configurado en esta máquina")
+    servers = data.get("mcpServers")
+    entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
+    if not isinstance(entry, dict):
+        return Result(UNKNOWN, f"Claude Desktop no tiene entrada {install.SERVER_NAME}")
+
+    url, cabecera = _desktop_conexion(entry)
+    if url is None:
+        return Result(UNKNOWN, "Claude Desktop habla por stdio: no pasa por el puerto del daemon")
+    host, port = daemon_host_port()
+    try:
+        destino = urlsplit(url)
+        destino_puerto = destino.port
+    except ValueError:
+        return Result(UNKNOWN, "la URL de la entrada de Claude Desktop no se puede leer")
+    if destino.hostname not in _HOSTS_LOCALES | {host} or destino_puerto != port:
+        # Probar su token contra NUESTRO puerto diría algo de un servidor al que no habla.
+        return Result(
+            UNKNOWN,
+            f"Claude Desktop apunta a {destino.hostname}:{destino_puerto}, no al daemon de "
+            f"{host}:{port}",
+        )
+
+    exige = ctx.daemon_needs_token(host, port)
+    if exige is None:
+        return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
+    if not exige:
+        return Result(OK, "el puerto del daemon no exige token: Claude Desktop puede entrar")
+
+    arreglo = (
+        f"pon en el --header de su entrada en {path} el valor de {TOKEN_VAR} con el que arranca "
+        "el daemon, y reinicia Claude Desktop"
+    )
+    if not cabecera:
+        return Result(
+            WARN,
+            "el puerto del daemon exige token y Claude Desktop entra sin cabecera de autorización: "
+            "sus tools local_* responderán 401",
+            arreglo,
+        )
+    token = cabecera.removeprefix("Bearer ").strip()
+    referencia = _VARIABLE_DE_MCP_REMOTE.search(token)
+    literal = referencia is None
+    if referencia is not None:
+        variable = referencia.group(1)
+        # `mcp-remote` la toma de su propio entorno: el `env` de la entrada o el que herede. El de
+        # este proceso es un testigo del segundo, no una prueba — como en `service.daemon_auth`.
+        valor = (entry.get("env") or {}).get(variable) or os.environ.get(variable)
+        if not valor:
+            return Result(
+                WARN,
+                f"el puerto del daemon exige token y Claude Desktop usa {variable}, que no está en "
+                "el entorno de este proceso: si Claude Desktop tampoco la ve, responderá 401",
+                arreglo,
+            )
+        token = _VARIABLE_DE_MCP_REMOTE.sub(valor, token)
+
+    acepta = ctx.daemon_accepts_token(host, port, token)
+    if acepta is None:
+        return Result(UNKNOWN, f"no se pudo probar el token de Claude Desktop contra {host}:{port}")
+    if not acepta:
+        return Result(
+            WARN,
+            "el daemon rechaza el token que lleva Claude Desktop (401): se rotó el token del puerto "
+            "y su entrada, que install no toca, se quedó con el viejo",
+            arreglo,
+        )
+    forma = "escrito literal en su configuración" if literal else "referenciado por variable"
+    return Result(OK, f"el daemon acepta el token de Claude Desktop ({forma})")
+
+
 def _probe_daemon(ctx: Context) -> Result:
     host, port = daemon_host_port()
     status = ctx.daemon_status(host, port)
@@ -1180,7 +1317,7 @@ def _probe_rol_retirado(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Veinte elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veintiún elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1213,13 +1350,16 @@ CHECKS: tuple[Check, ...] = (
     # mismo check con otro nombre — aquel mira la puerta del backend y este la del daemon, que
     # se cierran por separado.
     Check("service.daemon_auth", "servicio", "token del puerto del daemon", _probe_mcp_daemon_auth),
+    # Claude Desktop no está en el registro de clientes y aquel check es ciego para él. Aparte y
+    # no dentro de aquel porque este sí prueba el token contra el puerto: el suyo va literal.
+    Check("service.desktop_auth", "servicio", "token de Claude Desktop", _probe_desktop_auth),
     Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
 )
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veinte probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veintiún probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1233,7 +1373,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros diecinueve
+        except Exception as exc:  # un check roto no debe impedir ver los otros veinte
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

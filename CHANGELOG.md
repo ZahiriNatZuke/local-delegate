@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **`doctor` vigila la entrada de Claude Desktop** (check `service.desktop_auth`). Claude Desktop no
+  está en el registro de clientes: su entrada `local-delegate` se pone a mano, va por `mcp-remote` y
+  lleva el token del puerto escrito literal. Al rotar ese token, `install` arreglaba los otros tres
+  clientes y este se quedaba en `401` sin que nada lo dijera. Ahora `doctor` lee
+  `claude_desktop_config.json`, saca el token del `--header` y **lo prueba contra el daemon**, porque
+  un token viejo tiene la misma forma que uno bueno. Solo lee: no escribe el fichero ni imprime el
+  token. Sin Claude Desktop, sin entrada nuestra, por stdio o apuntando a otra máquina, sale
+  `[ -- ]` y no cuenta como aviso. Que `install` escriba esa entrada queda para más adelante.
+
 ## [0.30.0] - 2026-09-15
 
 ### Removed
