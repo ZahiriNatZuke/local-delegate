@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-16
+
 ### Added
 - **`doctor` vigila la entrada de Claude Desktop** (check `service.desktop_auth`). Claude Desktop no
   está en el registro de clientes: su entrada `local-delegate` se pone a mano, va por `mcp-remote` y
@@ -2140,7 +2142,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.27.0...v0.28.0
