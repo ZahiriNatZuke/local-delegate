@@ -33,7 +33,6 @@ RAM van más rápidos, pero Windows desaloja al residente de la VRAM para hacerl
 | `LOCAL_DELEGATE_MODEL_MECHANICAL` | `gemma3-4b` | clasificar, extraer, resumen corto |
 | `LOCAL_DELEGATE_MODEL_LONG` | `gemma4-26b-a4b` | documentos largos |
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
-| `LOCAL_DELEGATE_MODEL_FAST` | `qwen35-2b` | ultrarrápido / trivial |
 | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
@@ -67,9 +66,8 @@ una variable nombra algo que no existe.
 | `LOCAL_DELEGATE_FALLBACK_CODE` | `residente,long` | cadena del rol de código |
 | `LOCAL_DELEGATE_FALLBACK_LONG` | `residente,code` | cadena del rol largo |
 | `LOCAL_DELEGATE_FALLBACK_MECHANICAL` | `long` | cadena del rol mecánico |
-| `LOCAL_DELEGATE_FALLBACK_FAST` | `residente,long` | cadena del rol rápido (hoy ninguna tool enruta a él) |
 
-> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`, `fast`, `residente`) o ids del
+> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`, `residente`) o ids del
 > catálogo, separados por comas y en orden. Lo repetido y el propio modelo del rol se quitan solos;
 > lo que no sea ni rol ni modelo del catálogo se ignora. **`none` desactiva** el respaldo de ese rol:
 > una variable vacía también, pero en Windows fijarla a vacío la borra y el rol volvería a su cadena

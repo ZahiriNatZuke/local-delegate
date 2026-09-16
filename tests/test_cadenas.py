@@ -9,7 +9,6 @@ es la configuración de esa máquina o la spec, no este código.
 Defectos (REQ-004), con «residente» = el modelo del grupo `persistent` de llama-swap, o el mecánico:
 - código  -> residente -> largo
 - largo   -> residente -> código
-- rápido  -> residente -> largo   (inalcanzable: ninguna tool enruta a `fast`; ver el último bloque)
 - mecánico -> largo
 - visión  -> ninguna
 """
@@ -19,13 +18,15 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from local_delegate import cadenas, checks, config, server
+from local_delegate import cadenas, checks, config
 from local_delegate import llamaswap_config as lc
 
 MECANICO = "gemma3-4b"
 LARGO = "gemma4-26b-a4b"
 CODIGO = "qwen36-35b-a3b"
-RAPIDO = "qwen35-2b"
+#: El modelo del rol `fast`, retirado en la 0.30.0. Se conserva como caso de «esto ya NO está en el
+#: catálogo», que es exactamente lo que pasó a ser.
+RETIRADO = "qwen35-2b"
 
 
 def _config_llamaswap(tmp_path: Path, grupos: dict) -> Path:
@@ -41,7 +42,6 @@ def test_las_cadenas_por_defecto_son_las_de_la_spec(recargar_config):
     recargar_config()
     assert cadenas.resolver("code").modelos == (MECANICO, LARGO)
     assert cadenas.resolver("long").modelos == (MECANICO, CODIGO)
-    assert cadenas.resolver("fast").modelos == (MECANICO, LARGO)
     assert cadenas.resolver("mechanical").modelos == (LARGO,)
 
 
@@ -67,30 +67,34 @@ def test_el_residente_sale_del_grupo_persistent(recargar_config, monkeypatch, tm
     ruta = _config_llamaswap(
         tmp_path,
         {
-            "swap": {"swap": True, "members": [LARGO, CODIGO]},
-            "residente": {"persistent": True, "members": [RAPIDO]},
+            "swap": {"swap": True, "members": [MECANICO, CODIGO]},
+            "residente": {"persistent": True, "members": [LARGO]},
         },
     )
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(ruta))
     modelo, origen = cadenas.residente()
-    assert modelo == RAPIDO
+    assert modelo == LARGO
     assert "persistent" in origen and "residente" in origen
-    assert cadenas.resolver("code").modelos == (RAPIDO, LARGO), "el primer salto va al residente"
+    # Discrimina de verdad: por defecto la cadena de `code` es (MECANICO, LARGO). Con el residente
+    # en LARGO, el primer salto va a él y el segundo paso («long») repite, así que se queda en uno.
+    assert cadenas.resolver("code").modelos == (LARGO,), "el primer salto va al residente"
 
 
 def test_con_varios_miembros_gana_el_primero_del_catalogo(recargar_config, monkeypatch, tmp_path):
     recargar_config()
     ruta = _config_llamaswap(
-        tmp_path, {"resident": {"persistent": True, "members": ["no-esta", RAPIDO, MECANICO]}}
+        tmp_path, {"resident": {"persistent": True, "members": ["no-esta", RETIRADO, MECANICO]}}
     )
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(ruta))
-    assert cadenas.residente()[0] == RAPIDO
+    # Dos miembros que no están en el catálogo —uno inventado y el del rol retirado en la 0.30.0—
+    # y gana el primero que sí está: el residente nunca puede ser un modelo que no se puede pedir.
+    assert cadenas.residente()[0] == MECANICO
 
 
 def test_sin_pyyaml_cae_al_mecanico_y_lo_dice(recargar_config, monkeypatch, tmp_path):
     """En esta máquina residente y mecánico son el mismo modelo: sin el origen no se distingue."""
     recargar_config()
-    ruta = _config_llamaswap(tmp_path, {"resident": {"persistent": True, "members": [RAPIDO]}})
+    ruta = _config_llamaswap(tmp_path, {"resident": {"persistent": True, "members": [LARGO]}})
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(ruta))
     monkeypatch.setattr(lc, "yaml", None)
     modelo, origen = cadenas.residente()
@@ -143,8 +147,12 @@ def test_los_repetidos_y_el_propio_modelo_se_quitan(recargar_config):
     recargar_config(LOCAL_DELEGATE_MODEL_CODE=LARGO)
     assert cadenas.resolver("long").modelos == (MECANICO,)
     assert cadenas.resolver("code").modelos == (MECANICO,)
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=LARGO, LOCAL_DELEGATE_FALLBACK_FAST="long,code,long")
-    assert cadenas.resolver("fast").modelos == (LARGO,)
+    # Y los repetidos dentro de una misma cadena se quitan: «long,code,long» con los dos roles
+    # consolidados en un modelo es tres veces el mismo candidato.
+    recargar_config(
+        LOCAL_DELEGATE_MODEL_CODE=LARGO, LOCAL_DELEGATE_FALLBACK_MECHANICAL="long,code,long"
+    )
+    assert cadenas.resolver("mechanical").modelos == (LARGO,)
 
 
 # --- Variables (REQ-014) ----------------------------------------------------------------------
@@ -208,35 +216,6 @@ def test_doctor_no_avisa_con_las_cadenas_por_defecto(recargar_config, tmp_path):
     assert resultado.status == checks.OK
 
 
-# --- `fast` es inalcanzable desde las tools ---------------------------------------------------
-
-
-def test_ninguna_tool_enruta_al_rol_rapido_sin_model_explicito(
-    recargar_config, monkeypatch, tmp_path
-):
-    """Por eso la fila «rápido -> residente -> largo» de REQ-004 nunca se ejecuta (tarea 21).
-
-    Se recorren las tools de texto de verdad, cortas y largas, y se anota a qué modelo llaman.
-    """
-    recargar_config()
-    usados: list[str] = []
-
-    def run_chat(model, _system, _user, _max_tokens, _temperature, **_kwargs):
-        usados.append(model)
-        return server.ChatResult(text='{"a": 1}', ok=True, finish_reason="stop"), 0, None, []
-
-    monkeypatch.setattr(server, "_run_chat", run_chat)
-    corto, largo = "texto corto", "x " * (config.LONG_INPUT_CHARS + 100)
-    for texto in (corto, largo):
-        server.local_summarize(text=texto)
-        server.local_extract(fields=["a"], text=texto)
-        server.local_lint_summary(text=texto)
-        server.local_translate(target_lang="inglés", text=texto)
-    server.local_classify(text=corto, labels=["a", "b"])
-    server.local_delegate(task="t", input=corto, output_format="texto")
-    server.local_commit_msg(diff="diff --git a/x b/x\n+1\n")
-    server.local_explain_code(code="x = 1")
-    server.local_boilerplate(spec="una funcion", language="python", target=str(tmp_path / "x.py"))
-
-    assert {MECANICO, LARGO, CODIGO} <= set(usados), "el espía no vio las tools: no prueba nada"
-    assert RAPIDO not in usados
+# El bloque «`fast` es inalcanzable desde las tools» se retiró con el rol (0.30.0): comprobaba que
+# ninguna tool enrutaba a él, que era el argumento para quitarlo. Lo que queda por proteger —que su
+# modelo ya no se pueda pedir a mano— vive en `test_rol_fast_retirado.py`.

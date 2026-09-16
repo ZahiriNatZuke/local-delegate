@@ -474,11 +474,13 @@ def test_con_el_estado_corrupto_se_sigue_sin_enfriamiento(recargar_config, tmp_p
 
 
 @backend_mock.mock
-def test_como_mucho_dos_saltos(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,long,fast")
-    pedidos = _backend(
-        {CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500), "qwen35-2b": _ok()}
-    )
+def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
+    """Con el rol `fast` retirado (0.30.0) quedan tres modelos de texto, así que una cadena no
+    puede tener más de dos candidatos distintos del principal: este test pasa a comprobar que los
+    **recorre los dos** y que ahí se acaba. Que el tope CORTA lo prueba el de abajo, bajándolo a 1.
+    """
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,long")
+    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500)})
 
     server.local_explain_code(code="x = 1")
 

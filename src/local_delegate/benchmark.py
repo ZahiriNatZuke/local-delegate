@@ -49,7 +49,7 @@ _TRACKED_METRICS = {
 # --- Corpus v2: tareas reales con fuentes congeladas (protocolo-f2.md §4.6) ----------------------
 
 _CORPUS_KINDS = {"calidad", "techo"}
-_CORPUS_ROLES = {"fast", "mechanical", "long", "code", "vision"}
+_CORPUS_ROLES = {"mechanical", "long", "code", "vision"}
 _CORPUS_PROCEDENCIAS = {"congelado", "generado", "reconstruido", "inventado"}
 _CORPUS_MEDIA = {"texto", "imagen"}
 
@@ -987,7 +987,7 @@ _IMAGE_MIME = {
     ".webp": "image/webp",
     ".gif": "image/gif",
 }
-_ROLES = ("fast", "mechanical", "long", "code", "vision")
+_ROLES = ("mechanical", "long", "code", "vision")
 
 
 def reasoning_kwargs(effort: str | None) -> dict[str, Any] | None:

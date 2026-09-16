@@ -42,7 +42,6 @@ def test_con_la_config_por_defecto_los_topes_son_los_de_siempre(recargar_config)
     assert config.max_chars_for_role("mechanical") == 20000
     assert config.max_chars_for_role("long") == 48000
     assert config.max_chars_for_role("code") == 20000
-    assert config.max_chars_for_role("fast") == 12000
     assert config.max_chars_for(config.MODEL_LONG) == 48000
     assert config.max_chars_for(config.MODEL_MECHANICAL) == 20000
 
@@ -94,21 +93,10 @@ def test_largo_igual_a_codigo_valida_candidatos_contra_el_minimo(recargar_config
     assert config.max_chars_for(MODELO_LARGO) == 20000
 
 
-# --- Largo = rápido ---------------------------------------------------------------------------
-
-
-@backend_mock.mock
-def test_largo_igual_a_rapido_no_trocea_un_resumen_que_cabe(recargar_config):
-    """Con rápido encima, el literal del dict dejaba el rol largo en 12 000."""
-    recargar_config(LOCAL_DELEGATE_MODEL_FAST=MODELO_LARGO)
-    ruta = backend_mock.post(URL_CHAT).mock(return_value=_respuesta("resumen"))
-    server.local_summarize(text=_texto(30000))
-    assert ruta.call_count == 1
-
-
-def test_largo_igual_a_rapido_valida_candidatos_contra_el_minimo(recargar_config):
-    recargar_config(LOCAL_DELEGATE_MODEL_FAST=MODELO_LARGO)
-    assert config.max_chars_for(MODELO_LARGO) == 12000
+# El bloque «Largo = rápido» se retiró con el rol `fast` (0.30.0). Cubría lo mismo que el de
+# «Largo = código» de arriba —dos roles sobre un modelo, y el tope menor mandando en
+# `max_chars_for`— con el agravante de que su tope era el más bajo del dict. La colisión sigue
+# probada; lo que desapareció es el tercer rol con el que provocarla.
 
 
 # --- Control positivo: lo que no cabe se sigue troceando --------------------------------------

@@ -9,9 +9,11 @@ en memoria y no obliga a cargar nada:
 
 - código   -> residente -> largo
 - largo    -> residente -> código
-- rápido   -> residente -> largo   (inalcanzable hoy: ninguna tool enruta a `fast`)
 - mecánico -> largo
 - visión   -> ninguna
+
+El rol `rápido` tenía su fila —`rápido -> residente -> largo`— y era **inalcanzable**, porque
+ninguna tool enrutaba a él. Se retiró entero en la 0.30.0; ver `config.VARIABLES_ROL_RETIRADO`.
 
 Al resolver se quitan los repetidos y el propio modelo principal, y lo que no sea un rol ni un modelo
 del catálogo de texto se ignora (y `doctor` lo avisa). Este módulo solo resuelve: qué candidato es
@@ -25,7 +27,7 @@ from pathlib import Path
 
 from . import config
 
-ROLES_DE_TEXTO = ("mechanical", "long", "code", "fast")
+ROLES_DE_TEXTO = ("mechanical", "long", "code")
 RESIDENTE = "residente"
 _NOMBRES_DEL_RESIDENTE = {"residente", "resident"}
 #: Valores de una variable que desactivan el respaldo del rol. `none` existe porque en Windows fijar
@@ -35,7 +37,6 @@ _SIN_RESPALDO = {"", "none"}
 CADENAS_POR_DEFECTO: dict[str, tuple[str, ...]] = {
     "code": (RESIDENTE, "long"),
     "long": (RESIDENTE, "code"),
-    "fast": (RESIDENTE, "long"),
     "mechanical": ("long",),
 }
 

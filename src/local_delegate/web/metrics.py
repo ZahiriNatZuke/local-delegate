@@ -648,7 +648,6 @@ def status():
         {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
         {"role": "long", "label": "largo", "model": config.MODEL_LONG},
         {"role": "code", "label": "código", "model": config.MODEL_CODE},
-        {"role": "fast", "label": "rápido", "model": config.MODEL_FAST},
         {"role": "vision", "label": "visión", "model": config.MODEL_VISION},
     ]
     tools: list[dict] = []
