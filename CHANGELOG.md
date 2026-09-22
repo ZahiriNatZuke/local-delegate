@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Security
+- **Suelo `anyio>=4.14.2,<5`.** `anyio` es transitiva (llega a través de `mcp`, `httpx2` y `starlette`), y
+  por debajo de 4.14.2 arrastra tres avisos: GHSA-82r6-8w77-94w6 (**crítico**: la codificación IDNA
+  2003 del nombre de host en `TLSStream` permite suplantar un certificado TLS), GHSA-3w57-8xmc-8v26
+  (alto: `run_process` ignora `extra_groups`) y GHSA-5p39-cfhj-2xmp (medio: los procesos del pool se
+  bloquean si nadie vacía su stderr). Ninguno está en código nuestro, pero bajaban la nota del
+  paquete. Subir el lock no bastaba, porque el wheel publica rangos y no el lock: el suelo tiene que
+  viajar en `pyproject.toml`.
+
+### Changed
+- Dependencias al día en `uv.lock` (se absorben los PRs #206–#210 de Dependabot): `anyio` 4.14.2,
+  `httpx2` y `httpcore2` 2.13.0, `uvicorn` 0.53.0, `platformdirs` 4.11.10, y en desarrollo `ruff`
+  0.16.8 y `playwright` 1.63.0.
+
 ## [0.31.0] - 2026-09-16
 
 ### Added
