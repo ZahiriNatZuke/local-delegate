@@ -1211,6 +1211,11 @@ def _probe_desktop_auth(ctx: Context) -> Result:
                 arreglo,
             )
         token = _VARIABLE_DE_MCP_REMOTE.sub(valor, token)
+        # Y otra vez aquí, después de expandir: la forma que recomienda `mcp-remote` —y la de la
+        # Mac— es `Authorization:${AUTH_HEADER}` con el `Bearer` DENTRO de la variable. Quitarlo
+        # solo antes de expandir dejaba `Bearer xxx` como token, la prueba mandaba
+        # `Bearer Bearer xxx`, el daemon respondía 401 y el check culpaba a un token que era bueno.
+        token = token.removeprefix("Bearer ").strip()
 
     acepta = ctx.daemon_accepts_token(host, port, token)
     if acepta is None:

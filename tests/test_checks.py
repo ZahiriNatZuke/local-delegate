@@ -1295,6 +1295,23 @@ def test_desktop_con_variable_referenciada_prueba_su_valor(tmp_path, monkeypatch
     assert llamadas == ["valor-del-entorno"]
 
 
+def test_desktop_con_bearer_dentro_de_la_variable_prueba_solo_el_token(tmp_path, monkeypatch):
+    """La forma de la Mac: `Authorization:${AUTH_HEADER}` y `env.AUTH_HEADER = "Bearer xxx"`.
+
+    Con el prefijo quitado solo antes de expandir, lo que se probaba era `Bearer xxx`, la
+    petición salía con `Bearer Bearer xxx` y el check daba 401 con el token bueno.
+    """
+    monkeypatch.delenv("AUTH_HEADER", raising=False)
+    entry = _desktop_entry(header="Authorization:${AUTH_HEADER}")
+    entry["env"] = {"AUTH_HEADER": "Bearer token-bueno"}
+    llamadas: list[str] = []
+    home = _con_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+
+    assert llamadas == ["token-bueno"]
+    assert result.status == checks.OK, result.detail
+
+
 def test_desktop_con_variable_que_no_esta_avisa_como_sospecha(tmp_path, monkeypatch):
     monkeypatch.delenv("TOKEN_DESKTOP_PRUEBA", raising=False)
     llamadas: list[str] = []
