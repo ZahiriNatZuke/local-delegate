@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.31.2] - 2026-09-22
+
 ### Fixed
 - **`update` no reponía los hooks de una versión anterior.** El chequeo `scaffold.hook_files` solo
   miraba que los scripts existieran con su nombre, así que unos hooks viejos daban `[ OK ]`, y la
@@ -2172,7 +2174,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.1...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.2...HEAD
+[0.31.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.29.0...v0.30.0
