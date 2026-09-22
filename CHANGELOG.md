@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.31.4] - 2026-09-22
+
 ### Fixed
 - **Una `~/.codex/config.toml` reescrita por otro programa rompía Codex al reinstalar.** El plugin
   de JetBrains, al añadir su servidor, indenta el fichero entero y se come los comentarios, marcador
@@ -2194,7 +2196,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.3...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...HEAD
+[0.31.4]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.3...v0.31.4
 [0.31.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.2...v0.31.3
 [0.31.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.0...v0.31.1
