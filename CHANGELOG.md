@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **Una `~/.codex/config.toml` reescrita por otro programa rompía Codex al reinstalar.** El plugin
+  de JetBrains, al añadir su servidor, indenta el fichero entero y se come los comentarios, marcador
+  de cierre incluido. La búsqueda de `[mcp_servers.local-delegate]` exigía la cabecera al principio
+  de la línea: `doctor` daba la entrada por ausente con Codex funcionando, e `install`/`update`
+  añadían una segunda tabla con el mismo nombre —TOML inválido, y Codex sin cargar ningún MCP—.
+  Ahora se acepta la sangría. Y la entrada ya no se quita emparejando marcadores: un `begin`
+  huérfano se habría emparejado con el `end` del bloque nuevo y la siguiente reinstalación habría
+  borrado todo lo de en medio. Se quita la tabla por su nombre y las líneas de marcador sueltas.
+  `doctor` da `[ OK ]` con el marcador de apertura, y dice cuándo falta el de cierre.
+
 ## [0.31.3] - 2026-09-22
 
 ### Fixed

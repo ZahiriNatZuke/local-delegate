@@ -1404,3 +1404,30 @@ def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
     result = result_for("scaffold.hook_files", make_ctx(home))
     assert result.status == checks.WARN
     assert "hook_common.py" in result.detail
+
+
+def test_codex_reescrito_por_otro_programa_no_es_missing(tmp_path):
+    """Indentado y sin marcador de cierre, como lo dejó el plugin de JetBrains: Codex lo carga.
+
+    Darlo por ausente no era solo un aviso falso: `update` lo «reparaba» añadiendo otra entrada.
+    """
+    home = make_home(tmp_path)
+    (home / ".codex" / "config.toml").write_text(
+        '  # local-delegate:begin\n  [mcp_servers.local-delegate]\n    url = "http://127.0.0.1:9393/mcp"\n\n'
+        '  [mcp_servers.pycharm]\n    url = "http://127.0.0.1:64342/sse"\n',
+        encoding="utf-8",
+    )
+    result = result_for("scaffold.mcp_codex", make_ctx(home))
+    assert result.status == checks.OK, result.detail
+    assert "http" in result.detail
+    assert "cierre" in result.detail
+
+
+def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
+    """Sin el de apertura no es nuestra, con sangría o sin ella: `warn`, y `update` no la pisa."""
+    home = make_home(tmp_path)
+    (home / ".codex" / "config.toml").write_text(
+        '  [mcp_servers.local-delegate]\n    command = "uvx"\n', encoding="utf-8"
+    )
+    result = result_for("scaffold.mcp_codex", make_ctx(home))
+    assert result.status == checks.WARN
