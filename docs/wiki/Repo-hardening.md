@@ -236,7 +236,7 @@ durante semanas. Ningún techo de este `pyproject.toml` lo habría evitado. Lo m
 `sse_starlette` está **en el camino de arranque**.
 
 **La excepción es de seguridad, no de compatibilidad.** Una transitiva se declara cuando hace falta
-un **suelo** que el wheel lleve consigo: desde la 0.32.0, `anyio>=4.14.2,<5`, porque por debajo
+un **suelo** que el wheel lleve consigo: desde la 0.31.1, `anyio>=4.14.2,<5`, porque por debajo
 arrastra GHSA-82r6-8w77-94w6 (crítica: suplantación de certificado TLS por la codificación IDNA 2003
 del nombre de host), GHSA-3w57-8xmc-8v26 y GHSA-5p39-cfhj-2xmp. Subir `uv.lock` arregla el CI, pero no
 a quien instala desde PyPI. El techo acompaña por el criterio de arriba: `anyio` está en el camino de
