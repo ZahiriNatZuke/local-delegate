@@ -35,6 +35,71 @@ def test_prompt_hook_keeps_architecture_and_research_in_host():
     assert prompt.classify("Resume el research multi-fuente y decide la migración") is None
 
 
+# Prompts reales capturados el 2026-09-22 (Claude Code 2.1.280). Los tres contienen «summary» o
+# «resumen», que el clasificador toma por intención de resumir: sin el filtro, los tres avisaban.
+_EVENTOS_SISTEMA = (
+    (
+        '<agent-message from="a77f5562467da25a7">\n[Subagent hand-back] The text below is the '
+        "final report... Summary: resumen ok"
+    ),
+    (
+        'Another Claude session sent a message:\n<agent-message from="ae9f2401d225a89d1">\n'
+        "[Subagent hand-back] ... summary of findings"
+    ),
+    "<task-notification>\n<task-id>a77f5562467da25a7</task-id>\n<summary>Agent finished</summary>",
+)
+
+
+def test_prompt_hook_ignores_system_events(tmp_path, monkeypatch, capsys):
+    log = tmp_path / "hooks.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    for texto in _EVENTOS_SISTEMA:
+        # Control positivo: sin el prefijo de sistema, el mismo texto SÍ se clasifica. Si no,
+        # el test pasaría aunque el filtro no existiera.
+        cuerpo = texto.split(">", 1)[1]
+        assert prompt.classify(cuerpo) == "summarize"
+
+        assert prompt.es_evento_sistema(texto)
+        assert prompt.classify(texto) is None
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": texto})))
+        prompt.main()
+
+    assert capsys.readouterr().out == ""
+    assert not log.exists()  # tampoco cuentan como prompts en la telemetría
+
+
+def test_prompt_hook_matches_every_system_prefix():
+    for texto in (
+        '<cross-session-message from="x">\nresume esto',
+        "<system-reminder>\nresume esto",
+        "  \n<task-notification>\nresume esto",  # espacios y saltos delante
+    ):
+        assert prompt.es_evento_sistema(texto), texto
+
+
+def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch, capsys):
+    # Sin esto, un filtro que silenciara TODO (p. ej. `if ... or True: return`) pasaría la suite.
+    log = tmp_path / "hooks.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO(json.dumps({"prompt": "Resume este archivo en cinco viñetas"}))
+    )
+
+    prompt.main()
+
+    salida = json.loads(capsys.readouterr().out)
+    assert "local_*" in salida["hookSpecificOutput"]["additionalContext"]
+    evento = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+    assert evento["suggested"] is True
+    assert evento["category"] == "summarize"
+
+
+def test_prompt_hook_still_classifies_user_prompts_mentioning_tags():
+    # Un usuario que cita la etiqueta a mitad de su mensaje sigue siendo un prompt.
+    assert not prompt.es_evento_sistema("Resume qué hace <task-notification> en este log")
+    assert prompt.classify("Resume qué hace <task-notification> en este log") == "summarize"
+
+
 def test_hook_telemetry_contains_no_prompt_command_or_path(tmp_path, monkeypatch):
     common = _load("hook_common")
     log = tmp_path / "hooks.jsonl"
