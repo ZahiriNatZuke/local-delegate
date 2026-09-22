@@ -905,9 +905,17 @@ def _probe_mcp_codex(ctx: Context) -> Result:
     if not section:
         return Result(MISSING, f"sin [mcp_servers.{install.SERVER_NAME}] en {path}", INSTALL_HINT)
     kind = _codex_mode(section.group(0))
-    managed = _has_block(text, install.TOML_BEGIN, install.TOML_END)
-    if not managed:
+    if install.TOML_BEGIN not in text:
         return Result(WARN, f"entrada {kind} en {path}, pero puesta a mano (sin marcadores)")
+    # El de apertura basta para saber que es nuestra. Si falta el de cierre es que otro programa
+    # reescribió el fichero —así lo dejó el plugin de JetBrains—: Codex la carga igual, e `install`
+    # la reescribe entera sin emparejar marcadores, así que no hay nada roto que avisar.
+    if not _has_block(text, install.TOML_BEGIN, install.TOML_END):
+        return Result(
+            OK,
+            f"bloque gestionado en {path} ({kind}); otro programa reescribió el fichero y se "
+            "llevó el marcador de cierre",
+        )
     return Result(OK, f"bloque gestionado en {path} ({kind})")
 
 

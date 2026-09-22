@@ -564,22 +564,45 @@ def codex_mcp_block(entry: dict) -> str:
     return "\n".join(lines)
 
 
+# Con sangría opcional delante de cada cabecera, y no es cosmético: otros programas reescriben este
+# fichero a su manera. El 2026-09-22 el plugin de JetBrains añadió su servidor, indentó TODO el
+# fichero dos espacios y se comió los comentarios. Con `^\[` a secas la entrada dejaba de verse:
+# `doctor` la daba por ausente con Codex funcionando, e `install`/`update` añadían una segunda
+# `[mcp_servers.local-delegate]` —TOML inválido, y Codex, sin poder cargar su config, se quedaba
+# sin NINGÚN MCP—.
 _CODEX_SECTION_RE = re.compile(
-    r"(?ms)^\[mcp_servers\." + re.escape(SERVER_NAME) + r"(?:\.[^\]]+)?\]\n.*?(?=^\[|\Z)"
+    r"(?ms)^[ \t]*\[mcp_servers\."
+    + re.escape(SERVER_NAME)
+    + r"(?:\.[^\]]+)?\][ \t]*\n.*?(?=^[ \t]*\[|\Z)"
 )
+# Las líneas de marcador, estén donde estén y con la sangría que tengan.
+_CODEX_MARKER_RE = re.compile(
+    r"(?m)^[ \t]*(?:" + re.escape(TOML_BEGIN) + "|" + re.escape(TOML_END) + r")[ \t]*(?:\n|\Z)"
+)
+
+
+def _strip_codex_mcp(text: str) -> str:
+    """Quita nuestra entrada y nuestros marcadores, sin emparejar marcadores.
+
+    Emparejar (`remove_block`) es peligroso aquí: si otro programa se come el marcador de cierre,
+    el `begin` huérfano se emparejaría con el `end` del bloque que escribiéramos después, y la
+    siguiente reinstalación borraría todo lo que hubiera entre los dos —las entradas de otros
+    servidores, los proyectos—. El bloque gestionado es solo nuestra tabla, así que basta con
+    quitarla por su nombre y borrar las líneas de marcador que queden sueltas.
+    """
+    text = _CODEX_SECTION_RE.sub("", text)
+    return _CODEX_MARKER_RE.sub("", text)
 
 
 def upsert_codex_mcp(text: str, block: str) -> str:
     """Reemplaza cualquier entrada previa de local-delegate (gestionada o a mano)."""
-    text = remove_block(text, TOML_BEGIN, TOML_END)
-    text = _CODEX_SECTION_RE.sub("", text).rstrip()
+    text = _strip_codex_mcp(text).rstrip()
     managed = f"{TOML_BEGIN}\n{block}\n{TOML_END}"
     return (text + "\n\n" if text else "") + managed + "\n"
 
 
 def remove_codex_mcp(text: str) -> str:
-    text = remove_block(text, TOML_BEGIN, TOML_END)
-    return _CODEX_SECTION_RE.sub("", text).strip() + "\n"
+    return _strip_codex_mcp(text).strip() + "\n"
 
 
 # --- Entrada del servidor MCP en opencode ------------------------------------

@@ -614,3 +614,71 @@ def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monk
     # instalado ARRANCA, importa a su vecino y decide, que es donde estaba el agujero.
     assert proceso.stdout.strip() == "", proceso.stdout
     assert "Traceback" not in proceso.stderr
+
+
+# Tal como dejó `~/.codex/config.toml` el plugin de JetBrains el 2026-09-22: todo indentado dos
+# espacios, sin comentarios salvo nuestro marcador de apertura, y SIN el de cierre. Con una
+# entrada ajena justo después y más tablas detrás, que es lo que un emparejamiento de marcadores
+# mal hecho se llevaría por delante.
+_CODEX_REESCRITO_POR_OTRO = """model = "x"
+
+  [mcp_servers.git]
+    command = "uvx"
+    args = ["mcp-server-git"]
+
+  # local-delegate:begin
+  [mcp_servers.local-delegate]
+    url = "http://127.0.0.1:9393/mcp"
+    bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"
+
+  [mcp_servers.pycharm]
+    url = "http://127.0.0.1:64342/sse"
+
+  [projects.proyecto]
+    trust_level = "trusted"
+"""
+
+
+def test_codex_reescrito_por_otro_programa_se_reemplaza_sin_duplicar(tmp_path):
+    """La entrada indentada se reconoce, se reemplaza y no se duplica.
+
+    Antes, la búsqueda exigía la cabecera al principio de la línea y no la veía: `install` añadía una segunda `[mcp_servers.local-delegate]`, el TOML
+    quedaba inválido y Codex se quedaba sin ningún MCP.
+    """
+    assert tomllib.loads(_CODEX_REESCRITO_POR_OTRO)  # el de partida es TOML válido
+    entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
+    result = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, inst.codex_mcp_block(entry))
+
+    data = tomllib.loads(result)
+    assert result.count("mcp_servers.local-delegate]") == 1
+    assert data["mcp_servers"]["pycharm"]["url"].endswith("/sse")
+    assert data["mcp_servers"]["git"]["command"] == "uvx"
+    assert data["projects"]["proyecto"]["trust_level"] == "trusted"
+    assert result.count(inst.TOML_BEGIN) == 1
+    assert result.count(inst.TOML_END) == 1
+
+
+def test_un_marcador_huerfano_no_se_lleva_lo_que_hay_detras(tmp_path):
+    """Dos reinstalaciones seguidas sobre el fichero sin marcador de cierre.
+
+    Emparejando marcadores, la segunda casaría el `begin` huérfano con el `end` escrito por la
+    primera y borraría lo de en medio: `pycharm` y los proyectos. El huérfano tiene que desaparecer
+    en la primera pasada, y la segunda tiene que dejar el fichero igual.
+    """
+    entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
+    block = inst.codex_mcp_block(entry)
+    primera = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, block)
+    segunda = inst.upsert_codex_mcp(primera, block)
+
+    assert segunda == primera
+    data = tomllib.loads(segunda)
+    assert "pycharm" in data["mcp_servers"]
+    assert "proyecto" in data["projects"]
+
+
+def test_quitar_la_entrada_de_un_codex_reescrito_deja_lo_demas(tmp_path):
+    result = inst.remove_codex_mcp(_CODEX_REESCRITO_POR_OTRO)
+    data = tomllib.loads(result)
+    assert "local-delegate" not in data["mcp_servers"]
+    assert set(data["mcp_servers"]) == {"git", "pycharm"}
+    assert inst.TOML_BEGIN not in result
