@@ -6,6 +6,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`doctor` daba 401 falso con el token de Claude Desktop cuando el `Bearer` va dentro de la
+  variable.** Con `--header "Authorization:${AUTH_HEADER}"` y `env.AUTH_HEADER = "Bearer xxx"` —la
+  forma que recomienda `mcp-remote`—, el chequeo quitaba el prefijo `Bearer ` antes de expandir la
+  variable, probaba `Bearer Bearer xxx` contra el daemon y culpaba a un token que era bueno. Ahora lo
+  quita también después de expandir.
+
 ## [0.31.2] - 2026-09-22
 
 ### Fixed
