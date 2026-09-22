@@ -51,6 +51,13 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "filelock>=3,<4",
+    # `anyio` es transitiva (la traen `mcp`, `httpx2` y `starlette`) y se declara **solo por el
+    # suelo**: por debajo de 4.14.2 arrastra GHSA-82r6-8w77-94w6 (crítica, suplantación de
+    # certificado TLS por codificación IDNA 2003), GHSA-3w57-8xmc-8v26 y GHSA-5p39-cfhj-2xmp. El
+    # lock no protege a quien instala el wheel —este publica rangos—, así que el suelo tiene que
+    # ir aquí. Techo de major por el mismo criterio que `platformdirs`: está en el camino de
+    # arranque (el SDK la importa) y su versionado tiene major real.
+    "anyio>=4.14.2,<5",
 ]
 
 [project.optional-dependencies]
