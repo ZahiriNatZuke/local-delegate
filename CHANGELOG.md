@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-09-22
+
 ### Security
 - **Suelo `anyio>=4.14.2,<5`.** `anyio` es transitiva (llega a través de `mcp`, `httpx2` y `starlette`), y
   por debajo de 4.14.2 arrastra tres avisos: GHSA-82r6-8w77-94w6 (**crítico**: la codificación IDNA
@@ -2156,7 +2158,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.1...HEAD
+[0.31.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.28.0...v0.29.0
