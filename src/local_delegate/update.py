@@ -153,7 +153,16 @@ class Repair:
 # `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
 # qué comando lo arregla; ejecutarlo es del usuario.
 REPAIRS: tuple[Repair, ...] = (
-    Repair("scaffold.hook_files", (checks.MISSING,), frozenset({"hooks"}), frozenset({"claude"})),
+    Repair(
+        "scaffold.hook_files",
+        # `warn` aquí significa «faltan scripts» o «son de otra versión»: los dos son nuestros y
+        # están viejos. Sin repararlo en `warn`, actualizar el paquete dejaba los hooks de la
+        # versión anterior para siempre, porque nada más en `update` los reescribe.
+        (checks.MISSING, checks.WARN),
+        frozenset({"hooks"}),
+        frozenset({"claude"}),
+        why="scripts de hooks de otra versión",
+    ),
     Repair(
         "scaffold.hook_settings",
         # `warn` aquí significa «hooks de una instalación anterior»: son nuestros y están
@@ -263,6 +272,10 @@ def plan_repairs(
                         targets={target},
                         python_exe=install.default_python(),
                         mcp_mode=mcp_mode,
+                        # Reponer los hooks reescribe su registro, y `merge_hook_settings` retira
+                        # antes todas nuestras entradas: sin esto, el hook de lectura desaparecía
+                        # al actualizar y el bloqueo se apagaba sin que nadie lo pidiera.
+                        enable_read_hook=install.read_hook_registered(opts.home / ".claude"),
                         # Con un HOME simulado hay que escribir el fichero a mano: el camino
                         # por CLI (`claude mcp add-json --scope user`) escribe SIEMPRE en el
                         # `~/.claude.json` del usuario real, ignorando `home`. Se descubrió

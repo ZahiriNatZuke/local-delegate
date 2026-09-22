@@ -749,3 +749,57 @@ def test_los_nombres_del_servicio_coinciden_con_la_wiki():
     texto = wiki.read_text(encoding="utf-8")
     for nombre in (update.TASK_NAME, update.LAUNCH_LABEL, update.SYSTEMD_UNIT):
         assert nombre in texto, f"{nombre} no aparece en docs/wiki/Daemon.md"
+
+
+# --- Hooks de otra versión: el caso de la Mac ---------------------------------
+
+
+def test_hooks_de_otra_version_se_reponen_sin_apagar_el_de_lectura(tmp_path):
+    """Paquete nuevo, hooks viejos y el de lectura encendido: `update` los repone y lo respeta.
+
+    Tres cosas, y cada una falló o habría fallado: el check daba `ok` con hooks de otra versión,
+    la reparación solo actuaba si faltaba el directorio entero, y al reponer los hooks se
+    reescribía su registro sin el de lectura —con el arreglo de los dos primeros, eso habría
+    apagado el bloqueo en cada actualización—.
+    """
+    home = make_home(tmp_path, complete=False)
+    install.apply(
+        install.plan_install(
+            install.Options(
+                home=home,
+                components={"hooks"},
+                targets={"claude"},
+                python_exe="python",
+                enable_read_hook=True,
+            )
+        ),
+        dry_run=False,
+        out=lambda *a: None,
+    )
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    viejo = hooks_dir / install._READ_HOOK[0]
+    viejo.write_text("# versión anterior\n", encoding="utf-8")
+    assert install.read_hook_registered(home / ".claude")
+
+    actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    assert any(a.kind == "copy" and a.target == hooks_dir for a in actions), actions
+    install.apply(actions, dry_run=False, out=lambda *a: None)
+
+    empaquetado = install.resources_dir() / "hooks" / install._READ_HOOK[0]
+    assert viejo.read_bytes() == empaquetado.read_bytes()
+    assert install.read_hook_registered(home / ".claude"), "update apagó el hook de lectura"
+    segunda, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    assert [a for a in segunda if "hooks" in str(a.target)] == []
+
+
+def test_sin_hook_de_lectura_registrado_update_no_lo_enciende(tmp_path):
+    """El otro lado: respetar la elección es también no activarlo si no estaba."""
+    home = make_home(tmp_path)
+    assert not install.read_hook_registered(home / ".claude")
+    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+    (hooks_dir / install._HOOK_EVENTS[0][0]).write_text("# versión anterior\n", encoding="utf-8")
+
+    actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    assert actions
+    install.apply(actions, dry_run=False, out=lambda *a: None)
+    assert not install.read_hook_registered(home / ".claude")

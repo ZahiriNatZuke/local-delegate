@@ -1347,16 +1347,43 @@ def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
 def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
     """Control del test de arriba: sin esto, un conteo clavado a mano lo dejaría en verde.
 
-    Se añade un `.py` en vez de borrar uno porque el HOME de pruebas tiene **un solo** script (el
-    de `_HOOK_EVENTS`), y quitarlo dispararía el `warn` de «faltan scripts», que es otro camino y
-    no diría nada del conteo.
+    Se añade un `.py` en vez de borrar uno porque quitarlo dispararía el `warn` de «faltan
+    scripts», que es otro camino y no diría nada del conteo. Y se añade uno que **no** es del
+    paquete: reescribir uno de los nuestros ahora es «script de otra versión», también otro camino.
     """
     home = make_home(tmp_path)
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
     antes = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
 
-    (hooks_dir / "hook_common.py").write_text("# ayudante", encoding="utf-8")
+    (hooks_dir / "mi_hook_propio.py").write_text("# del usuario", encoding="utf-8")
 
     result = result_for("scaffold.hook_files", make_ctx(home))
     assert result.status == checks.OK
     assert f"{antes + 1} script(s)" in result.detail, result.detail
+
+
+def test_hooks_de_otra_version_son_warn(tmp_path):
+    """Los nombres están todos, pero el contenido no es el del paquete instalado.
+
+    Es lo que tuvo la Mac una semana: paquete en 0.31.1 y hooks de la 0.27, y el check en `ok`
+    porque solo miraba nombres. `update` no los reponía y la telemetría de F1 nunca llegó a correr.
+    """
+    home = make_home(tmp_path)
+    script = install._READ_HOOK[0]
+    (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / script).write_text(
+        "# versión anterior\n", encoding="utf-8"
+    )
+    result = result_for("scaffold.hook_files", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "otra versión" in result.detail
+    assert script in result.detail
+    assert result.fix_hint == checks.UPDATE_HOOKS_HINT
+
+
+def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
+    """`hook_common.py` no está en `_HOOK_EVENTS`, pero sin él ningún hook arranca."""
+    home = make_home(tmp_path)
+    (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / "hook_common.py").unlink()
+    result = result_for("scaffold.hook_files", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "hook_common.py" in result.detail
