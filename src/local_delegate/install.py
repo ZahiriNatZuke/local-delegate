@@ -327,6 +327,31 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
     return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
 
 
+def read_hook_registered(claude_dir: Path) -> bool:
+    """True si el ``settings.json`` de Claude Code registra ya nuestro hook de lectura.
+
+    Lo necesita ``update``: al reponer los hooks reescribe el registro con ``merge_hook_settings``,
+    que **retira** todas nuestras entradas previas antes de poner las nuevas. Si no sabe que el de
+    lectura estaba puesto, lo quita, y el bloqueo se apaga en silencio justo al actualizar.
+    Se mira el nombre del script y no ``READ_HOOK_FLAG``: una entrada vieja sin la bandera también
+    es una decisión del usuario de tenerlo, y respetarla es no quitarlo.
+    """
+    hooks = _read_json(claude_dir / "settings.json").get("hooks")
+    if not isinstance(hooks, dict):
+        return False
+    hooks_dir = claude_dir / "hooks" / HOOKS_SUBDIR
+    for groups in hooks.values():
+        for group in groups if isinstance(groups, list) else []:
+            for hook in group.get("hooks", []) if isinstance(group, dict) else []:
+                if not isinstance(hook, dict) or not _is_ours(hook, hooks_dir):
+                    continue
+                args = hook.get("args")
+                texto = " ".join([str(hook.get("command", ""))] + [str(a) for a in args or []])
+                if _READ_HOOK[0] in texto:
+                    return True
+    return False
+
+
 def merge_hook_settings(
     settings: dict, entries: list[tuple[str, str | None, str]], hooks_dir: Path
 ) -> tuple[dict, int]:

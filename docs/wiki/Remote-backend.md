@@ -77,7 +77,12 @@ local-delegate update             # aplica y deja el daemon arriba
 
 Revisa el estado real de la máquina con las mismas comprobaciones que `doctor`, actualiza el pin
 donde exista, completa la configuración que falte y termina dejando el daemon arriba: lo reinicia si
-corría, lo levanta si no. Es idempotente. El backend de inferencia **no se toca** salvo que lo pidas
+corría, lo levanta si no. Es idempotente.
+
+Eso incluye **los hooks de Claude Code**: si los de `~/.claude/hooks/local-delegate/` no son los del
+paquete instalado, los repone, y deja el hook de lectura como estaba —registrado si lo estaba, fuera
+si no—. Hasta la 0.31.1 no lo hacía: miraba solo que los ficheros existieran, así que tras actualizar
+el paquete seguían corriendo los hooks de la versión con la que se hizo el último `install`. El backend de inferencia **no se toca** salvo que lo pidas
 con `--restart-backend`, porque reiniciar llama-swap descargaría los modelos de la VRAM.
 
 **Lo que `update` NO hace: actualizar el propio CLI si lo instalaste con `uv tool`.** Te lo dice al

@@ -53,6 +53,7 @@ STATUS_LABEL: dict[str, str] = {
 }
 
 INSTALL_HINT = "local-delegate install"
+UPDATE_HOOKS_HINT = "local-delegate update  (repone los hooks sin tocar el resto)"
 SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
 CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
 RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
@@ -408,6 +409,31 @@ def _dir_entries(path: Path) -> tuple[list[str] | None, str | None]:
         return None, f"no se pudo listar {path}: {exc.strerror or exc}"
 
 
+def _packaged_hooks() -> dict[str, Path]:
+    """Los ``.py`` de hooks que trae el paquete instalado, por nombre. Vacío si no se pueden leer.
+
+    Vacío degrada a mirar solo los nombres de ``_HOOK_EVENTS``, como antes: sin la referencia no
+    hay con qué comparar, y un ``warn`` inventado haría que ``update`` reescribiera los hooks en
+    cada pasada.
+    """
+    try:
+        return {
+            p.name: p for p in (install.resources_dir() / "hooks").iterdir() if p.suffix == ".py"
+        }
+    except OSError:
+        return {}
+
+
+def _differs(instalado: Path, empaquetado: Path | None) -> bool:
+    """True si el script instalado no es byte a byte el del paquete. Sin referencia, no se afirma."""
+    if empaquetado is None:
+        return False
+    try:
+        return instalado.read_bytes() != empaquetado.read_bytes()
+    except OSError:
+        return False
+
+
 def _has_block(text: str, begin: str, end: str) -> bool:
     """True si el bloque gestionado está delimitado y en orden."""
     start = text.find(begin)
@@ -627,10 +653,22 @@ def _probe_hook_files(ctx: Context) -> Result:
         return Result(UNKNOWN, reason)
     if entries is None:
         return Result(MISSING, f"no existe {ctx.hooks_dir}", INSTALL_HINT)
-    expected = [script for script, _event, _matcher in install._HOOK_EVENTS]
+    empaquetados = _packaged_hooks()
+    expected = sorted(empaquetados) or [script for script, _event, _matcher in install._HOOK_EVENTS]
     faltan = [name for name in expected if name not in entries]
     if faltan:
         return Result(WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(faltan)}", INSTALL_HINT)
+    # Que estén no basta: hay que mirar que sean LOS DE ESTA VERSIÓN. Actualizar el paquete no
+    # toca `~/.claude/hooks/`, y mirando solo los nombres unos hooks de la 0.27 pasaban por buenos
+    # con la 0.31.1 instalada —así estuvo la Mac del 2026-09-15 al 2026-09-22, sin el bloqueo ni
+    # la telemetría de F1, y `update` respondiendo que no había nada que reparar—.
+    viejos = [name for name in expected if _differs(ctx.hooks_dir / name, empaquetados.get(name))]
+    if viejos:
+        return Result(
+            WARN,
+            f"scripts de otra versión en {ctx.hooks_dir}: {', '.join(viejos)}",
+            UPDATE_HOOKS_HINT,
+        )
     # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
     # Python deja ahí un `__pycache__/` y el conteo decía «4 script(s)» donde hay 3. No es cosmético
     # —es JUSTO el número que se mira para confirmar que un script retirado desapareció—, y con un

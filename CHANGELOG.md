@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`update` no reponía los hooks de una versión anterior.** El chequeo `scaffold.hook_files` solo
+  miraba que los scripts existieran con su nombre, así que unos hooks viejos daban `[ OK ]`, y la
+  reparación solo actuaba si faltaba la carpeta entera. Actualizar el paquete no toca
+  `~/.claude/hooks/`, de modo que `uv tool install … && local-delegate update` dejaba corriendo los
+  hooks del último `install`: la Mac pasó una semana en la 0.31.1 con los hooks de la 0.27, sin la
+  telemetría de F1 ni el bloqueo. Ahora el chequeo compara cada script con el del paquete, byte a
+  byte, y avisa también si falta uno que no se registra (`hook_common.py`); `update` los repone en
+  los dos casos.
+- **Al reponer los hooks, `update` quitaba el de lectura.** Reescribía su registro en
+  `settings.json` sin la bandera del hook de lectura, y `merge_hook_settings` retira antes todas
+  nuestras entradas. Hasta ahora solo pasaba si faltaba la carpeta de hooks; con el arreglo anterior
+  habría pasado en cada actualización. Ahora `update` deja el de lectura como estaba.
+
 ## [0.31.1] - 2026-09-22
 
 ### Security

@@ -87,8 +87,10 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complet
         if complete:
             hooks_dir = claude_dir / "hooks" / install.HOOKS_SUBDIR
             hooks_dir.mkdir(parents=True)
-            for script, _event, _matcher in install._HOOK_EVENTS:
-                (hooks_dir / script).write_text("# hook\n", encoding="utf-8")
+            # Los scripts de verdad, byte a byte: `scaffold.hook_files` compara contra los del
+            # paquete, y un «# hook» de relleno contaría como hooks de otra versión.
+            for script in (install.resources_dir() / "hooks").glob("*.py"):
+                (hooks_dir / script.name).write_bytes(script.read_bytes())
             entries = [
                 (event, matcher, install.hook_command(hooks_dir, script, "python"))
                 for script, event, matcher in install._HOOK_EVENTS
