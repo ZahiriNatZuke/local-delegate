@@ -3,9 +3,9 @@
   "slug": "subagente-lector-local",
   "title": "Subagente que solo reenvía a las tools local_* (idea 1 de backlog §4.1)",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-09-22T18:45:55.641Z",
-  "updatedAt": "2026-09-23T13:06:04.018Z",
+  "updatedAt": "2026-09-23T13:06:28.860Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -212,6 +212,34 @@
       "at": "2026-09-23T13:06:04.018Z",
       "evidence": "handoff.md actualizado; vault projects/local-delegate/jornada-2026-09-23-la-oferta-que-ya-se-aceptaba.md y backlog §4.1 (enfoque/secciones de local_summarize); punteros en la memoria del proyecto (MEMORY.md, tramos de hooks 01:14Z y 12:56Z; jornadas-local-delegate.md). Sin secretos ni PII: búsqueda de secretos limpia y rutas con el usuario sustituidas.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-09-23T13:06:28.294Z",
+      "reason": "Piloto de T5 y retirada de V1/V2 verificados: suite 1382 passed, hooks instalados probados"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-09-23T13:06:28.483Z",
+      "reason": "Revisión de conformidad con dos condiciones, cumplidas en 86ba539"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-09-23T13:06:28.671Z",
+      "reason": "Gates quality, conformance y memory aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-09-23T13:06:28.860Z",
+      "reason": "REQ-102 cerrado por 'nadie gana'; V1/V2 retiradas; se conservan la ruta absoluta del Shell y la telemetría del prompt (4840d7f, 86ba539)"
     }
   ]
 }
