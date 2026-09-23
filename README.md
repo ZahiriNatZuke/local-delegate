@@ -119,7 +119,7 @@ Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → a
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
-| `local_summarize` | Resume texto o archivo | mecánico / largo (auto) |
+| `local_summarize` | Resume texto o archivo; `focus` opcional para decir qué conservar (p. ej. «cifras de configuración») | mecánico / largo (auto) |
 | `local_classify` | Devuelve UNA etiqueta de una lista | mecánico |
 | `local_extract` | Extrae campos → **objeto validado**, no una cadena que haya que parsear | mecánico / largo (auto) |
 | `local_boilerplate` | Genera código desde una spec y lo **escribe en `target`**; devuelve solo un recibo | código |
@@ -143,7 +143,9 @@ registra `chunks: N` y el dashboard muestra el progreso (`trozo 3/7`) mientras c
 **Resúmenes de documentos enormes.** `local_summarize` y `local_lint_summary` hacen **map-reduce**
 cuando la entrada no cabe en el modelo: resumen cada parte y luego resumen los resúmenes, por
 niveles si hace falta. Antes truncaban —de un log de CI enorme se resumía el principio y el resto
-se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero.
+se descartaba en silencio, que es justo donde suelen estar los errores— y ahora se lee entero. Si
+algún trozo se corta por `max_tokens`, el resultado lo avisa y el log registra `finish_reason:
+length`.
 `local_extract` sigue truncando a propósito: fusionar el JSON de varios trozos no tiene una
 respuesta única y adivinarla sería peor que avisar.
 

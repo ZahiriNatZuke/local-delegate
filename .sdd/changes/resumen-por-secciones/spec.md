@@ -103,7 +103,12 @@ formato»).
 - Títulos duplicados: se listan en su orden, las dos veces.
 - Títulos setext: cuentan (REQ-201). Una línea `---` bajo un párrafo vacío es una regla horizontal,
   no un título; y el bloque de metadatos YAML inicial (`---` … `---`) no cuenta.
-- El backend falla o corta: el comportamiento de error, respaldo y aviso de truncado no cambia.
+- El backend falla o corta: el comportamiento de error y respaldo no cambia. **Enmienda (plan v2,
+  B6):** en map-reduce, un trozo cortado por `length` ya no se acepta en silencio: el texto
+  devuelto lleva un aviso y el evento `finish_reason: length` y `truncated_out`. Vale para todas
+  las tools que usan map-reduce (`local_summarize` también con el modo apagado,
+  `local_lint_summary`, `local_commit_msg`); es la única excepción a REQ-204, y solo cuando hay
+  corte.
 - `focus` muy largo: se recorta a 200 caracteres antes de inyectarlo.
 
 ## Non-functional requirements

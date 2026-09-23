@@ -16,6 +16,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import backend_mock
@@ -221,7 +224,13 @@ def test_focus_se_sanea():
 
 @backend_mock.mock
 def _llamar(
-    monkeypatch, tmp_path, responder, *, rol_largo: bool = True, estructurado: bool = True, **kwargs
+    monkeypatch,
+    tmp_path,
+    responder,
+    *,
+    rol_largo: bool = True,
+    estructurado: bool | None = True,
+    **kwargs,
 ):
     # El modo estructurado es solo del rol `long` (criterio del 4B, etapa 1 de la v3): los textos
     # de prueba son cortos, así que por defecto se fuerza ese rol.
@@ -229,7 +238,8 @@ def _llamar(
         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
     # Apagado por defecto desde la retirada (etapa 2 de la v3): aquí se prueba encendido salvo
     # que el test diga lo contrario.
-    monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", estructurado)
+    if estructurado is not None:  # None: el valor por defecto real, sin tocar
+        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", estructurado)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -291,8 +301,10 @@ def test_sin_titulos_el_payload_es_el_de_main(monkeypatch, tmp_path):
 def test_con_el_interruptor_apagado_el_payload_es_el_de_main(monkeypatch, tmp_path):
     texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
     _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, estructurado=False, text=texto)
-    assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
-    assert "Secciones, en orden" not in vistos[0]["messages"][1]["content"]
+    (payload,) = vistos
+    assert payload["messages"][0]["content"] == SISTEMA_MAIN
+    assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"
+    assert payload["max_tokens"] == 364
 
 
 def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatch, tmp_path):
@@ -646,9 +658,44 @@ def test_subtitulos_repetidos_son_categorias_y_no_se_listan():
     assert [s.subtitulos for s in plan] == [("Uno", "Dos"), ("Tres",)]
 
 
-def test_el_modo_estructurado_esta_apagado_por_defecto(monkeypatch):
-    """Retirada (etapa 2 de la v3, 1/9): criterio escrito antes de medir."""
-    monkeypatch.delenv("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", raising=False)
-    assert config._env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False) is False
-    fuente = (RAIZ / "src" / "local_delegate" / "config.py").read_text(encoding="utf-8")
-    assert '_env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False)' in fuente
+def test_el_modo_estructurado_esta_apagado_por_defecto():
+    """Retirada (etapa 2 de la v3, 1/9): criterio escrito antes de medir.
+
+    En un proceso limpio y sin la variable: recargar `config` aquí desharía el aislamiento de la
+    suite, y comparar el texto fuente no prueba el valor cargado.
+    """
+    entorno = {k: v for k, v in os.environ.items() if k != "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
+    salida = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
+        ],
+        capture_output=True,
+        text=True,
+        env=entorno,
+        check=True,
+    )
+    assert salida.stdout.strip() == "False"
+    con_variable = {**entorno, "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1"}
+    salida = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
+        ],
+        capture_output=True,
+        text=True,
+        env=con_variable,
+        check=True,
+    )
+    assert salida.stdout.strip() == "True"  # control positivo: la variable sí lo enciende
+
+
+def test_con_el_valor_por_defecto_la_tool_resume_en_prosa(monkeypatch, tmp_path):
+    """Sin tocar el interruptor: lo que ve cualquier usuario tras la retirada."""
+    texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
+    _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, estructurado=None, text=texto)
+    assert config.RESUMEN_ESTRUCTURADO is False
+    assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
+    assert vistos[0]["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"

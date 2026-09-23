@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-09-23T13:54:24.707Z",
-  "updatedAt": "2026-09-23T14:22:56.381Z",
+  "updatedAt": "2026-09-23T20:13:21.758Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,10 +20,10 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-23T20:13:21.758Z",
+      "evidence": "ff5a544/6bcb4c2: uv run pytest -q 1451 passed, 2 skipped; ruff check/format limpios en lo versionado; 20 mutantes (v2 + v3) todos muertos; server.py conserva CRLF; sin caracteres de control; corpus igual a main; daemon reinstalado y doctor sin avisos.",
+      "actor": "user"
     },
     "conformance": {
       "status": "pending",
@@ -96,6 +96,14 @@
       "to": "implementing",
       "at": "2026-09-23T14:22:56.381Z",
       "reason": "Plan v2.1 aprobado por el usuario"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-23T20:13:21.758Z",
+      "evidence": "ff5a544/6bcb4c2: uv run pytest -q 1451 passed, 2 skipped; ruff check/format limpios en lo versionado; 20 mutantes (v2 + v3) todos muertos; server.py conserva CRLF; sin caracteres de control; corpus igual a main; daemon reinstalado y doctor sin avisos.",
+      "actor": "user"
     }
   ]
 }

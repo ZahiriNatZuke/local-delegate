@@ -2,8 +2,9 @@
 
 ## Environment
 
-- Revisión: rama `feat/resumen-por-secciones`, commits `eb5cb84` (T0-T6) y `7b6c34d` (arreglo de
-  la etapa 1).
+- Revisión: rama `feat/resumen-por-secciones`: `eb5cb84` (T0-T6), `7b6c34d` (v2.2), `93d31ca`
+  (v3), `3c134dd` (categorías y 4B en prosa), `13f2537` (colchón de tokens), `ff5a544` (retirada y
+  docs), `6bcb4c2` (métricas y ventanas) y el commit de la revisión de conformidad.
 - Windows 11, Python del proyecto con `uv`; daemon `local-delegate` 0.31.4 reinstalado desde la
   rama (`uv tool install --force --reinstall --no-cache ".[llamaswap]"`), comprobado que el
   paquete instalado lleva `secciones.py` y `_palabras_por_seccion`.
@@ -20,7 +21,7 @@
 | REQ-204 | payload sin títulos e interruptor apagado iguales al de `main` | pasa | `test_sin_titulos_el_payload_es_el_de_main`, `test_con_el_interruptor_apagado_…` |
 | REQ-205 | `focus` saneado, en los dos modos y en el reduce en prosa; fuera del log | pasa | tests de T3; etapa 1 `daemon-focus` 5/5 y `focus: true` en el evento |
 | REQ-206 | un evento con `chunks`, `secciones` y `focus`; rol por documento entero | pasa | tests de T4/T5; `tests/test_conformidad_f1.py` en verde |
-| REQ-207 | descripción y docs | pasa | CHANGELOG `[Unreleased]` (Added `focus` y el modo experimental; Fixed `length`), `docs/wiki/Tools.md`, `docs/wiki/Configuration.md`, skill `delegacion-local` |
+| REQ-207 | descripción y docs | pasa | CHANGELOG `[Unreleased]` (Added `focus` y el modo experimental; Fixed `length`), `README.md` (tabla de tools y map-reduce), `docs/wiki/Tools.md`, `docs/wiki/Configuration.md`, skill `delegacion-local` |
 | REQ-208 | etapa 1 (sin cuota) y etapa 2 (con cuota) | **se retira**: etapa 2 v2 3/9, v3 1/9 | secciones siguientes; interruptor apagado por defecto |
 
 ## Quality checks
@@ -83,9 +84,13 @@ superada.
 - **Corpus del catálogo `catalogo-2026-09`**: se regeneró mientras el modo estructurado estuvo
   encendido por defecto; con la retirada vuelve a ser idéntico al de `main` (`cases.json` y
   `tests/test_corpus.py` sin diff), así que los resultados de F2 siguen siendo comparables.
-- **El `length` de map-reduce** (B6) cambia el log de `local_lint_summary` y `local_commit_msg`;
-  ni el panel ni `metrics.py` leen `truncated_out` ni `finish_reason`, así que no hay corte de
-  serie en el panel, solo en el log crudo. En `local_commit_msg` el aviso queda dentro del texto.
+- **El `length` de map-reduce** (B6) cambia **la salida y el log** de todas las tools con
+  map-reduce (`local_summarize` también con el modo apagado, `local_lint_summary`,
+  `local_commit_msg`) cuando un trozo se corta: el texto lleva un aviso y el evento
+  `finish_reason: length` y `truncated_out`. Es la única excepción a REQ-204 y solo con corte; la
+  spec lo recoge como enmienda en su caso límite. Ni el panel ni `metrics.py` leen esos campos: no
+  hay corte de serie en el panel, solo en el log crudo. En `local_commit_msg` el aviso queda dentro
+  del texto.
 - **Línea base incompleta** por la interrupción de memoria (ver etapa 1).
 
 ## Etapa 2 (con cuota) de la v2 — 2026-09-23 — NO PASA
@@ -188,3 +193,22 @@ v3). **Hallazgo que se lleva el backlog:** tras el piloto de T5 y las dos etapas
 relectura se queda en 6–7 de 9 haga lo que haga la tool; la palanca que queda no es el formato
 del resumen sino la confianza de Claude en él (p. ej. que la tool devuelva citas literales con su
 línea, que es lo que Claude va a comprobar).
+
+## Revisión de conformidad — 2026-09-23
+
+`personal-sdd-result-reviewer`: **conforms-with-notes**, nada bloqueante. Atendido:
+
+- REQ-207: faltaba el README → `focus` en la tabla de tools y el aviso de `length` en el párrafo
+  de map-reduce.
+- La spec decía que el aviso de truncado no cambiaba → enmienda en su caso límite y desviación B6
+  ampliada (cambia también la salida, no solo el log).
+- Corpus: `git diff main -- benchmarks/catalogo-2026-09/cases.json tests/test_corpus.py` sale
+  vacío.
+- Tests reforzados: el valor por defecto se comprueba en un proceso limpio (con control positivo:
+  la variable lo enciende) y con la tool sin tocar el interruptor; el test del interruptor apagado
+  compara el payload entero (sistema, usuario y `max_tokens`). Mutante «por defecto encendido»:
+  lo cazan los dos tests nuevos. Suite: 1452 passed, 2 skipped.
+- Cabecera de commits al día.
+- Notas que quedan como están: el juicio humano de la etapa 1 fue global (v2) o implícito (v3), y
+  la etapa 1 de la v3 no cumplió en el CHANGELOG (aceptado por el usuario); con la retirada no
+  cambian la decisión.
