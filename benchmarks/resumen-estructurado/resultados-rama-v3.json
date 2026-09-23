@@ -1,6 +1,6 @@
 {
   "etiqueta": "rama-v3",
-  "fecha": "2026-09-23T19:33:44+00:00",
+  "fecha": "2026-09-23T19:46:21+00:00",
   "resultados": {
     "readme": {
       "esperados": 12,
@@ -9,7 +9,7 @@
       "con_contenido": 12,
       "fuera_de_orden": 0,
       "cobertura": 1.0,
-      "palabras": 419,
+      "palabras": 426,
       "max_words": 500,
       "pasa_estructura": true,
       "subsecciones": {
@@ -18,7 +18,7 @@
       },
       "introduccion": true,
       "error": false,
-      "segundos": 31.4,
+      "segundos": 24.8,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 1,
@@ -33,7 +33,7 @@
       "con_contenido": 10,
       "fuera_de_orden": 0,
       "cobertura": 1.0,
-      "palabras": 407,
+      "palabras": 401,
       "max_words": 500,
       "pasa_estructura": true,
       "subsecciones": {
@@ -42,7 +42,7 @@
       },
       "introduccion": true,
       "error": false,
-      "segundos": 23.7,
+      "segundos": 22.5,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 1,
@@ -57,7 +57,7 @@
       "con_contenido": 5,
       "fuera_de_orden": 0,
       "cobertura": 1.0,
-      "palabras": 357,
+      "palabras": 310,
       "max_words": 500,
       "pasa_estructura": true,
       "subsecciones": {
@@ -66,7 +66,7 @@
       },
       "introduccion": false,
       "error": false,
-      "segundos": 18.4,
+      "segundos": 16.0,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 1,
@@ -81,16 +81,16 @@
       "con_contenido": 46,
       "fuera_de_orden": 0,
       "cobertura": 1.0,
-      "palabras": 1124,
+      "palabras": 998,
       "max_words": 500,
       "pasa_estructura": false,
       "subsecciones": {
-        "total": 103,
-        "nombradas": 103
+        "total": 0,
+        "nombradas": 0
       },
       "introduccion": true,
       "error": false,
-      "segundos": 116.1,
+      "segundos": 109.1,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 5,
@@ -100,12 +100,12 @@
     },
     "corto-4b": {
       "esperados": 7,
-      "emparejados": 6,
-      "completadas_por_el_servidor": 1,
-      "con_contenido": 6,
+      "emparejados": 0,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 0,
       "fuera_de_orden": 0,
-      "cobertura": 0.857,
-      "palabras": 603,
+      "cobertura": 0.0,
+      "palabras": 358,
       "max_words": 500,
       "pasa_estructura": false,
       "subsecciones": {
@@ -114,12 +114,12 @@
       },
       "introduccion": true,
       "error": false,
-      "segundos": 13.4,
+      "segundos": 4.8,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 1,
       "modelo": "gemma3-4b",
-      "secciones_log": 7,
+      "secciones_log": null,
       "focus_log": false
     },
     "daemon-focus": {
@@ -129,7 +129,7 @@
       "con_contenido": 5,
       "fuera_de_orden": 0,
       "cobertura": 1.0,
-      "palabras": 387,
+      "palabras": 390,
       "max_words": 500,
       "pasa_estructura": true,
       "subsecciones": {
@@ -138,7 +138,7 @@
       },
       "introduccion": false,
       "error": false,
-      "segundos": 22.4,
+      "segundos": 21.9,
       "finish_reason": "stop",
       "truncated_out": false,
       "chunks": 1,
@@ -150,7 +150,7 @@
   "veredicto": {
     "tres_documentos": true,
     "changelog": false,
-    "corto_4b": false,
+    "corto_4b_en_prosa": true,
     "pendiente": "juicio del usuario sobre readme, instalacion y daemon"
   }
 }
