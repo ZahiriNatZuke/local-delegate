@@ -7,7 +7,7 @@ import json
 import re
 import sys
 
-from hook_common import emit, record
+from hook_common import contexto_de, emit, estado_del_bloqueo, record
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
@@ -61,16 +61,20 @@ def main() -> None:
     if es_evento_sistema(prompt):
         # Ni aviso ni telemetria: no es un prompt, y contarlo inflaria el total del panel.
         return
+    # Sesión, versión y estado del bloqueo en TODO evento, como los hooks de lectura: sin sesión
+    # no se puede atribuir un evento a su corrida, y el banco de `scripts/` valida cada corrida por
+    # aquí.
+    comun = {**contexto_de(payload, __file__), "bloqueo": estado_del_bloqueo()}
     category = classify(prompt)
     if category is None:
-        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt))
+        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **comun)
         return
     context = (
         f"Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
         "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que exija "
         "criterio, varias fuentes, tools externas o acciones de riesgo."
     )
-    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt))
+    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **comun)
 
 
 if __name__ == "__main__":

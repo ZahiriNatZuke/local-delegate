@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "slug": "subagente-lector-local",
+  "title": "Subagente que solo reenvía a las tools local_* (idea 1 de backlog §4.1)",
+  "mode": "standard",
+  "status": "implementing",
+  "createdAt": "2026-09-22T18:45:55.641Z",
+  "updatedAt": "2026-09-23T11:06:56.822Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T00:49:08.808Z",
+      "evidence": "Spec v2 (sin subagente, oferta a la tool directa: V0/V1 receta lista/V2 permiso) aprobada por el usuario el 2026-09-22 tras T3 y la opción 2 fallidas",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T00:54:40.548Z",
+      "evidence": "Plan v4.1 sobre spec v2: rondas 5 y 6 de revisión adversarial y verificación final; último cambio aplicado literal según la condición de aprobación del revisor (review.md). Usuario aprobó spec v2.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-22T18:45:55.641Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-22T18:46:34.602Z",
+      "reason": "Brief escrito; investigación del repo y de subagentes de Claude Code en curso"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-22T18:51:35.423Z",
+      "reason": "research.md completo con spike verificado"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-22T20:30:26.517Z",
+      "evidence": "Usuario aprobó la spec el 2026-09-22 tras revisar research (spike, coste de arranque, ecosistema) y la etapa 2 reescrita como experimento de variantes",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-22T20:30:26.696Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-22T20:31:18.690Z",
+      "reason": "plan.md escrito"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "planning",
+      "at": "2026-09-22T21:49:03.425Z",
+      "reason": "Dos revisiones bloquearon el plan: el brazo A medido es inviable (Read corta ~25k tokens, choca con el bloqueo)"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "specifying",
+      "at": "2026-09-22T21:49:03.667Z",
+      "reason": "Enmienda de spec aprobada por el usuario: REQ-005 (A por modelo de coste) y REQ-007b (definición de correcta/supera)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-22T21:49:26.325Z",
+      "evidence": "Enmienda REQ-005 (A por modelo de coste + control; B medido) y REQ-007b (correcta/supera definidos, franjas excluidas, variantes retiradas si nadie gana), aprobada por el usuario el 2026-09-22 tras dos revisiones BLOQUEAR del plan",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-22T21:49:26.546Z",
+      "reason": "spec enmendada y aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-22T21:50:57.039Z",
+      "reason": "plan v3 sobre spec enmendada"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-22T21:56:10.855Z",
+      "evidence": "Plan v3.2: 4 rondas de revisión adversarial (v1, v2 BLOQUEAR; v3 BLOQUEAR puntual; v3.2 APROBAR sin bloqueantes), ver review.md; usuario aprobó spec enmendada y plan el 2026-09-22",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-22T21:56:11.058Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "planning",
+      "at": "2026-09-23T00:24:47.823Z",
+      "reason": "T3 invalidó REQ-001(b): ninguna vía fuerza la literalidad del subagente"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "specifying",
+      "at": "2026-09-23T00:24:48.037Z",
+      "reason": "Usuario eligió opción 3: replantear sin subagente, oferta a la tool directa"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-23T00:49:08.808Z",
+      "evidence": "Spec v2 (sin subagente, oferta a la tool directa: V0/V1 receta lista/V2 permiso) aprobada por el usuario el 2026-09-22 tras T3 y la opción 2 fallidas",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-23T00:49:09.031Z",
+      "reason": "spec v2 aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-23T00:49:50.540Z",
+      "reason": "plan v4 sobre spec v2"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-23T00:54:40.548Z",
+      "evidence": "Plan v4.1 sobre spec v2: rondas 5 y 6 de revisión adversarial y verificación final; último cambio aplicado literal según la condición de aprobación del revisor (review.md). Usuario aprobó spec v2.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-23T00:54:40.743Z",
+      "reason": "plan v4.1 aprobado"
+    },
+    {
+      "type": "note",
+      "at": "2026-09-23T11:06:56.822Z",
+      "reason": "T5 piloto (9 corridas): las variantes no se distinguen (V0 0/3, V1 1/3, V2 1/3; 9/9 delegaron, 7 releyeron). REQ-102 cerrado por el escenario «nadie gana»; V1/V2 retiradas por decisión del usuario; se conservan la ruta absoluta del Shell, la telemetría del prompt y los scripts. REQ-104/105 no aplican."
+    }
+  ]
+}

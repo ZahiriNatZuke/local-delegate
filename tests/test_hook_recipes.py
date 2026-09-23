@@ -502,3 +502,34 @@ def test_dos_ficheros_distintos_no_se_confunden(tmp_path, monkeypatch, capsys):
 
     eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
     assert eventos[0]["path_sha"] != eventos[1]["path_sha"]
+
+
+# --- Sesión, versión y bloqueo en la telemetría del prompt (SDD subagente-lector-local) ----------
+
+
+def _evento_de_prompt(tmp_path, monkeypatch, texto: str, **env: str) -> dict:
+    log = tmp_path / "hooks.jsonl"
+    monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+    for clave, valor in env.items():
+        monkeypatch.setenv(clave, valor)
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO(json.dumps({"prompt": texto, "session_id": "s-123"}))
+    )
+    prompt.main()
+    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+
+
+def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeypatch):
+    # Los dos caminos: el que sugiere y el que no. El banco de `scripts/` valida CADA corrida por
+    # este evento, así que tiene que existir aunque el hook calle.
+    for texto in ("Resume este archivo en cinco viñetas", "Hola, ¿qué tal?"):
+        evento = _evento_de_prompt(
+            tmp_path,
+            monkeypatch,
+            texto,
+            LD_HOOK_READ_BLOQUEAR="1",
+            LD_HOOK_READ_INTERRUPTOR=str(tmp_path / "no-existe"),
+        )
+        assert evento["session_id"] == "s-123", texto
+        assert evento["version"]  # huella del script que corrió
+        assert evento["bloqueo"] == "encendido"

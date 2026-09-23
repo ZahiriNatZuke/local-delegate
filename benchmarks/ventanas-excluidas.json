@@ -1,0 +1,213 @@
+{
+  "sesiones": [
+    {
+      "session_id": "86133b7f-dfe8-4ce7-96e0-1012de4e4e7c",
+      "inicio": "2026-09-22T18:50:12.968Z",
+      "fin": "2026-09-22T18:50:50.558Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "c7c5624b-38ef-4e36-aa81-1daa8b2a75a5",
+      "inicio": "2026-09-22T18:58:51.155Z",
+      "fin": "2026-09-22T18:59:08.955Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "6beb7975-b7eb-447c-a1ce-2b3ac67ff733",
+      "inicio": "2026-09-22T18:59:12.829Z",
+      "fin": "2026-09-22T18:59:37.459Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "670991b5-4d93-4404-bf4e-58f2350d71ba",
+      "inicio": "2026-09-22T19:00:14.626Z",
+      "fin": "2026-09-22T19:00:52.290Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "2ebd7e09-c00f-4e50-8776-846d9bf8a87f",
+      "inicio": "2026-09-22T19:01:49.366Z",
+      "fin": "2026-09-22T19:02:04.091Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "3923a26b-496f-496f-9e6e-49192625b5fe",
+      "inicio": "2026-09-22T19:42:30.410Z",
+      "fin": "2026-09-22T19:42:44.361Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "7366d1be-b1dc-4ef8-82ad-83f199e9d4ff",
+      "inicio": "2026-09-22T19:42:56.792Z",
+      "fin": "2026-09-22T19:43:10.231Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "59c8b731-f3ee-4517-975a-a9971deb8553",
+      "inicio": "2026-09-22T22:05:37.338Z",
+      "fin": "2026-09-22T22:06:59.881Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "a4500601-26d7-4e7a-b0ae-281ef81d1a1e",
+      "inicio": "2026-09-22T22:08:33.238Z",
+      "fin": "2026-09-22T22:09:12.879Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "583a920a-7345-4d30-9725-4c50e75e97b5",
+      "inicio": "2026-09-22T22:09:35.483Z",
+      "fin": "2026-09-22T22:10:13.295Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "b46f3a11-506f-4a82-a228-9dddcee43999",
+      "inicio": "2026-09-22T22:10:42.243Z",
+      "fin": "2026-09-22T22:11:07.132Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "d38518e3-3f4d-446c-b935-62bcae6c024a",
+      "inicio": "2026-09-22T22:11:37.471Z",
+      "fin": "2026-09-22T22:12:10.474Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "7ad9c4dc-9713-47e0-a97b-7b7e3090c6ec",
+      "inicio": "2026-09-22T22:13:13.909Z",
+      "fin": "2026-09-22T22:13:53.052Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "d9414f9d-ea56-4122-83af-c9e52475bfb5",
+      "inicio": "2026-09-22T22:14:24.445Z",
+      "fin": "2026-09-22T22:14:57.940Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "d1a30686-4261-42fa-94bb-135630c84524",
+      "inicio": "2026-09-22T22:15:17.956Z",
+      "fin": "2026-09-22T22:15:58.496Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "4bc31158-7c03-41a6-afae-963ec0987ec2",
+      "inicio": "2026-09-22T22:16:23.272Z",
+      "fin": "2026-09-22T22:17:17.084Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "43d20183-cd2a-4bf6-b8cd-165397b5ff1b",
+      "inicio": "2026-09-22T22:17:41.945Z",
+      "fin": "2026-09-22T22:18:27.555Z",
+      "motivo": "prueba con claude -p en el entorno global"
+    },
+    {
+      "session_id": "77f2ad25-7751-48a1-b642-1aac33a2c8eb",
+      "inicio": "2026-09-23T01:14:59+00:00",
+      "fin": "2026-09-23T01:15:07+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "dde1575e-bc3f-4dec-b930-02d2353fb0c9",
+      "inicio": "2026-09-23T01:15:07+00:00",
+      "fin": "2026-09-23T01:15:14+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "a91c9d9e-4c10-4d45-8379-783dba0fdae4",
+      "inicio": "2026-09-23T01:15:14+00:00",
+      "fin": "2026-09-23T01:15:22+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "124b23d7-ee8f-472c-8fb0-102d6d9c8f86",
+      "inicio": "2026-09-23T01:17:25+00:00",
+      "fin": "2026-09-23T01:18:31+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "5a0ac730-c653-4463-9c54-be6bd9b3baca",
+      "inicio": "2026-09-23T01:18:31+00:00",
+      "fin": "2026-09-23T01:19:13+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "e29d7e6f-9fad-49b4-a6ab-4277a428cf97",
+      "inicio": "2026-09-23T01:19:13+00:00",
+      "fin": "2026-09-23T01:19:58+00:00",
+      "motivo": "control-t4"
+    },
+    {
+      "session_id": "779b9d8d-58df-4e7b-a657-c17d1ebaa98e",
+      "inicio": "2026-09-23T10:30:10+00:00",
+      "fin": "2026-09-23T10:31:58+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "516f3a01-273e-4a75-b65a-b40a52a8ff8a",
+      "inicio": "2026-09-23T10:31:58+00:00",
+      "fin": "2026-09-23T10:32:56+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "e7fdf956-0368-419c-a87c-bb3a80e6a1f5",
+      "inicio": "2026-09-23T10:32:56+00:00",
+      "fin": "2026-09-23T10:33:57+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "ec808922-f5c8-4fd5-b548-55a1e83aa8ab",
+      "inicio": "2026-09-23T10:33:57+00:00",
+      "fin": "2026-09-23T10:35:19+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "5f5fb350-050e-4c3d-b738-56f4e892a92d",
+      "inicio": "2026-09-23T10:35:19+00:00",
+      "fin": "2026-09-23T10:36:37+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "5dc216da-2b87-42c6-b44f-efdc83026c99",
+      "inicio": "2026-09-23T10:36:37+00:00",
+      "fin": "2026-09-23T10:37:45+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "0fcd39ca-0f9e-4e96-9dad-8c31b8e9cfab",
+      "inicio": "2026-09-23T10:37:45+00:00",
+      "fin": "2026-09-23T10:38:49+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "50a1d186-71c3-4ee5-a9e8-2906b1d4149f",
+      "inicio": "2026-09-23T10:38:49+00:00",
+      "fin": "2026-09-23T10:40:20+00:00",
+      "motivo": "experimento-adopcion"
+    },
+    {
+      "session_id": "d80b2bd8-5eb8-464e-b1bf-1c24ca0439e8",
+      "inicio": "2026-09-23T10:40:20+00:00",
+      "fin": "2026-09-23T10:41:15+00:00",
+      "motivo": "experimento-adopcion"
+    }
+  ],
+  "ventanas": [
+    {
+      "tanda": "control-t4",
+      "inicio": "2026-09-23T01:14:59+00:00",
+      "fin": "2026-09-23T01:25:22+00:00"
+    },
+    {
+      "tanda": "control-t4",
+      "inicio": "2026-09-23T01:17:25+00:00",
+      "fin": "2026-09-23T01:29:58+00:00"
+    },
+    {
+      "tanda": "experimento-adopcion",
+      "inicio": "2026-09-23T10:30:10+00:00",
+      "fin": "2026-09-23T10:51:15+00:00"
+    }
+  ]
+}
