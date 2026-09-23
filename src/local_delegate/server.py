@@ -2038,6 +2038,7 @@ def _validate_image_path(path: str) -> str:
 # modelo escribió el doble y se cortó (etapa 1); la v2 repartía a partes iguales y las secciones
 # con subsecciones se quedaban cortas: Claude las releía (etapa 2, 3/9).
 _PALABRAS_MINIMAS_POR_SECCION = 8
+_HOLGURA_TOKENS_POR_SECCION = 24
 _FORMATO_ESTRUCTURADO = (
     "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
     "orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que "
@@ -2099,7 +2100,11 @@ def _max_tokens_estructurado(words: int, secciones_) -> int:
     que un resumen algo más largo (etapa 1: 3 de 5 trozos del CHANGELOG cortados con 2).
     """
     titulos = [s.titulo for s in secciones_] + [t for s in secciones_ for t in s.subtitulos]
-    return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in titulos)
+    # Y un colchón por sección: con el reparto por tamaño a una sección pequeña le tocan 8
+    # palabras y el modelo escribe al menos una frase entera; sin colchón, el CHANGELOG (47
+    # secciones) volvía a cortarse por `max_tokens` (etapa 1 de la v3).
+    colchon = _HOLGURA_TOKENS_POR_SECCION * len(secciones_)
+    return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in titulos) + colchon
 
 
 def _resumen_estructurado(

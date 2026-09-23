@@ -310,7 +310,7 @@ def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatc
     assert [titulo for titulo, _p, _s in lista] == ["Instalación", "Configuración", "Uso"]
     assert sum(p for _t, p, _s in lista) <= 200
     titulos = ["Instalación", "Configuración", "Uso"]
-    assert payload["max_tokens"] == 3 * 200 + 64 + sum(len(t) // 2 + 8 for t in titulos)
+    assert payload["max_tokens"] == 3 * 200 + 64 + sum(len(t) // 2 + 8 + 24 for t in titulos)
     # Completada en su sitio, y la coletilla de ahorro sigue siendo lo último.
     assert salida.index("## Configuración") < salida.index("## Uso")
     assert salida.rstrip().endswith("que no entraron a tu contexto)")
@@ -435,7 +435,9 @@ def test_documento_largo_se_resume_por_secciones_y_se_concatena(monkeypatch, tmp
         sistema = payload["messages"][0]["content"]
         pedidas = int(sistema.split("Máximo ", 1)[1].split(" ", 1)[0])
         palabras += pedidas
-        assert payload["max_tokens"] == 3 * pedidas + 64 + sum(len(t) // 2 + 8 for t in titulos)
+        assert payload["max_tokens"] == 3 * pedidas + 64 + sum(
+            len(t) // 2 + 8 + 24 for t in titulos
+        )
     assert listas == [f"Sección {i}" for i in range(30)]  # todas, una vez, en orden
     assert palabras <= 600
     orden = [salida.index(f"## Sección {i}\n") for i in range(30)]
