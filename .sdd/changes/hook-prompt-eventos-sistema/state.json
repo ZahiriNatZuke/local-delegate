@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "slug": "hook-prompt-eventos-sistema",
+  "title": "El hook de prompt se dispara con eventos del sistema",
+  "mode": "standard",
+  "status": "closed",
+  "createdAt": "2026-09-22T19:43:22.117Z",
+  "updatedAt": "2026-09-22T19:52:23.013Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-22T19:48:32.740Z",
+      "evidence": "spec.md: 3 REQ con payload real capturado",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-09-22T19:48:59.513Z",
+      "evidence": "plan.md: 2 tareas; desviación declarada (implementado antes del plan por petición del usuario)",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-09-22T19:49:00.124Z",
+      "evidence": "1349 passed/2 skipped; ruff limpio; dos mutantes caen en su assert; hook instalado probado con payloads reales",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-09-22T19:52:03.166Z",
+      "evidence": "Revisor independiente: APROBAR, 3/3 REQ PASS; hallazgos medio y bajos atendidos con tests; mutante 'or True' ahora cae",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-09-22T19:52:22.798Z",
+      "evidence": "gotchas-tecnicos.md §Claude Code: hooks y subagentes; handoff.md escrito; sin secretos",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-22T19:43:22.117Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-22T19:48:32.301Z",
+      "reason": "modo ligero: bug observado en vivo y payload capturado"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-22T19:48:32.518Z",
+      "reason": "modo ligero: bug observado en vivo y payload capturado"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-22T19:48:32.740Z",
+      "evidence": "spec.md: 3 REQ con payload real capturado",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-22T19:48:59.075Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-22T19:48:59.298Z",
+      "reason": "plan ligero escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-22T19:48:59.513Z",
+      "evidence": "plan.md: 2 tareas; desviación declarada (implementado antes del plan por petición del usuario)",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-22T19:48:59.716Z",
+      "reason": "plan aprobado"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-09-22T19:48:59.916Z",
+      "reason": "implementado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-22T19:49:00.124Z",
+      "evidence": "1349 passed/2 skipped; ruff limpio; dos mutantes caen en su assert; hook instalado probado con payloads reales",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-09-22T19:49:00.345Z",
+      "reason": "calidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-09-22T19:52:03.166Z",
+      "evidence": "Revisor independiente: APROBAR, 3/3 REQ PASS; hallazgos medio y bajos atendidos con tests; mutante 'or True' ahora cae",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-09-22T19:52:03.355Z",
+      "reason": "conformidad aprobada"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-09-22T19:52:22.798Z",
+      "evidence": "gotchas-tecnicos.md §Claude Code: hooks y subagentes; handoff.md escrito; sin secretos",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-09-22T19:52:23.013Z",
+      "reason": "memoria registrada"
+    }
+  ]
+}

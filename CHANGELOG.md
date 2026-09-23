@@ -6,6 +6,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **El aviso de delegar saltaba con mensajes que no escribió el usuario.** Claude Code dispara
+  `UserPromptSubmit` también con el informe de un subagente, el aviso de fin de una tarea en segundo
+  plano y los mensajes entre sesiones; como suelen decir «summary», recibían el aviso y contaban como
+  un prompt más. El payload no trae campo de origen, así que el hook los reconoce por cómo empieza el
+  texto (`<task-notification>`, `<agent-message`, `<cross-session-message`, `<system-reminder>`) y
+  no avisa ni los registra. **Discontinuidad en el panel:** la telemetría anterior incluye esos
+  eventos sin marca, así que el total de prompts y su tasa de aviso bajan a partir de esta versión.
+
 ## [0.31.4] - 2026-09-22
 
 ### Fixed

@@ -17,6 +17,10 @@ Detecta intenciones mecánicas explícitas como resumir, extraer, clasificar, tr
 lint. Omite tareas con señales de arquitectura, investigación, seguridad, migración o acciones
 de riesgo. Solo añade un recordatorio corto; Claude conserva la decisión final.
 
+No se dispara con los mensajes que Claude Code inyecta como si fueran un prompt —informes de
+subagentes, avisos de tareas en segundo plano, mensajes entre sesiones—: los reconoce por cómo
+empieza el texto, porque el payload no trae otro dato que diga de dónde vienen.
+
 ### `suggest_delegate_read.py` — `PreToolUse`, matcher `Read`
 
 Está apagado por defecto. Se enciende de **dos formas equivalentes**, y basta con una:

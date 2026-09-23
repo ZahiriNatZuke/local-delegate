@@ -27,8 +27,24 @@ _HOST_ONLY = re.compile(
 )
 
 
+# Claude Code tambien dispara UserPromptSubmit con mensajes que NO escribio el usuario: el informe
+# de un subagente, el aviso de que termino una tarea en segundo plano, un mensaje de otra sesion.
+# El payload no trae ningun campo de origen (capturado el 2026-09-22 con Claude Code 2.1.280:
+# solo cwd, hook_event_name, permission_mode, prompt_id, session_id y transcript_path); lo unico
+# que los distingue es como empieza `prompt`. Sin este filtro, un informe que dice «summary»
+# recibia el aviso de delegar, y cada uno contaba como un prompt mas en la telemetria.
+_EVENTO_SISTEMA = re.compile(
+    r"\A\s*(?:Another Claude session sent a message:\s*)?"
+    r"<(?:task-notification|agent-message|cross-session-message|system-reminder)\b"
+)
+
+
+def es_evento_sistema(prompt: str) -> bool:
+    return bool(_EVENTO_SISTEMA.match(prompt))
+
+
 def classify(prompt: str) -> str | None:
-    if not prompt.strip() or _HOST_ONLY.search(prompt):
+    if not prompt.strip() or es_evento_sistema(prompt) or _HOST_ONLY.search(prompt):
         return None
     for category, pattern in _CATEGORIES:
         if pattern.search(prompt):
@@ -42,6 +58,9 @@ def main() -> None:
     except (json.JSONDecodeError, ValueError):
         return
     prompt = str(payload.get("prompt") or "")
+    if es_evento_sistema(prompt):
+        # Ni aviso ni telemetria: no es un prompt, y contarlo inflaria el total del panel.
+        return
     category = classify(prompt)
     if category is None:
         record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt))
