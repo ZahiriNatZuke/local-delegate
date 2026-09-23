@@ -2032,10 +2032,11 @@ def _validate_image_path(path: str) -> str:
 # 450-600 palabras: el prompt pedía «prosa clara» y el modelo aplanaba el documento. Aquí el
 # servidor detecta las secciones (`secciones.detectar`), se las da al modelo en orden y después
 # completa las que falten (`secciones.completar`).
-_FORMATO_ESTRUCTURADO = (
-    "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
-    "orden, una línea '## ' con el título tal cual y debajo 1 a 3 frases con lo que dice"
-)
+#
+# El presupuesto por sección va EXPLÍCITO en el prompt. La primera versión pedía «1 a 3 frases» y
+# con el CHANGELOG (46 secciones, 500 palabras: unas 10 por sección) el modelo escribió el doble:
+# 3 de 5 trozos se cortaron por `max_tokens` y 6 secciones quedaron sin resumir (etapa 1).
+_PALABRAS_MINIMAS_POR_SECCION = 8
 _NOTA_ESTRUCTURADO = (
     " Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el "
     "título en las últimas."
@@ -2052,8 +2053,17 @@ def _texto_focus(focus: str | None) -> str:
     )
 
 
-def _system_estructurado(max_words: int, extra: str) -> str:
-    return _guard(_FORMATO_ESTRUCTURADO, max_words) + _NOTA_ESTRUCTURADO + extra
+def _palabras_por_seccion(max_words: int, secciones_: int) -> int:
+    return max(_PALABRAS_MINIMAS_POR_SECCION, max_words // max(1, secciones_))
+
+
+def _system_estructurado(max_words: int, extra: str, secciones_: int) -> str:
+    formato = (
+        "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
+        "orden, una línea '## ' con el título tal cual y debajo unas "
+        f"{_palabras_por_seccion(max_words, secciones_)} palabras con lo que dice"
+    )
+    return _guard(formato, max_words) + _NOTA_ESTRUCTURADO + extra
 
 
 def _user_estructurado(titulos, contenido: str, continua_de: str | None = None) -> str:
@@ -2070,8 +2080,13 @@ def _user_estructurado(titulos, contenido: str, continua_de: str | None = None) 
 
 
 def _max_tokens_estructurado(words: int, titulos) -> int:
-    """El tope de siempre más sitio para los títulos, que no cuentan en `max_words` (REQ-202)."""
-    return int(words * 2) + 64 + sum(len(t) // 2 + 8 for t in titulos)
+    """Sitio para los títulos, que no cuentan en `max_words` (REQ-202), y margen de sobra.
+
+    3 tokens por palabra pedida y no 2: con muchas secciones el modelo se pasa del presupuesto, y
+    un corte por `max_tokens` a mitad de un trozo deja secciones enteras sin resumir, que es peor
+    que un resumen algo más largo (etapa 1: 3 de 5 trozos del CHANGELOG cortados con 2).
+    """
+    return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in titulos)
 
 
 def _resumen_estructurado(
@@ -2097,7 +2112,7 @@ def _resumen_estructurado(
     if len(content) <= max_chars:
         return _chat(
             model,
-            _system_estructurado(max_words, extra),
+            _system_estructurado(max_words, extra, len(titulos)),
             _user_estructurado(titulos, content),
             max_tokens=_max_tokens_estructurado(max_words, titulos),
             tool="local_summarize",
@@ -2124,7 +2139,7 @@ def _resumen_estructurado(
 
     def _system_trozo(trozo) -> str:
         if trozo.titulos:
-            return _system_estructurado(trozo.palabras, extra)
+            return _system_estructurado(trozo.palabras, extra, len(trozo.titulos))
         return _guard("un resumen en prosa clara", trozo.palabras) + extra
 
     def _user_trozo(trozo) -> str:
@@ -2140,7 +2155,7 @@ def _resumen_estructurado(
 
     return _chat_map_reduce(
         model,
-        _system_estructurado(max_words, extra),
+        _system_estructurado(max_words, extra, len(titulos)),
         content,
         lambda piece: f"Resume el siguiente contenido:\n\n{piece}",
         max_chars=max_chars,

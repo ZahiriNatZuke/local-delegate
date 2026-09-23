@@ -301,9 +301,10 @@ def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatc
     sistema, usuario = payload["messages"][0]["content"], payload["messages"][1]["content"]
     assert "una línea '## ' con el título tal cual" in sistema
     assert "Máximo 200 palabras" in sistema
+    assert "debajo unas 66 palabras con lo que dice" in sistema  # 200 // 3 secciones
     assert usuario.startswith("Secciones, en orden:\n- Instalación\n- Configuración\n- Uso\n\n")
     titulos = ["Instalación", "Configuración", "Uso"]
-    assert payload["max_tokens"] == 2 * 200 + 64 + sum(len(t) // 2 + 8 for t in titulos)
+    assert payload["max_tokens"] == 3 * 200 + 64 + sum(len(t) // 2 + 8 for t in titulos)
     # Completada en su sitio, y la coletilla de ahorro sigue siendo lo último.
     assert salida.index("## Configuración") < salida.index("## Uso")
     assert salida.rstrip().endswith("que no entraron a tu contexto)")
@@ -414,7 +415,7 @@ def test_documento_largo_se_resume_por_secciones_y_se_concatena(monkeypatch, tmp
         sistema = payload["messages"][0]["content"]
         pedidas = int(sistema.split("Máximo ", 1)[1].split(" ", 1)[0])
         palabras += pedidas
-        assert payload["max_tokens"] == 2 * pedidas + 64 + sum(len(t) // 2 + 8 for t in titulos)
+        assert payload["max_tokens"] == 3 * pedidas + 64 + sum(len(t) // 2 + 8 for t in titulos)
     assert listas == [f"Sección {i}" for i in range(30)]  # todas, una vez, en orden
     assert palabras <= 600
     orden = [salida.index(f"## Sección {i}\n") for i in range(30)]
@@ -531,3 +532,10 @@ def test_reparto_de_palabras_no_pasa_del_tope():
         assert sum(t.palabras for t in repartidos) <= tope
     con_minimo = secciones.repartir_palabras(trozos, 600)
     assert min(t.palabras for t in con_minimo) >= 40
+
+
+def test_el_presupuesto_por_seccion_va_en_el_prompt_con_un_minimo():
+    """Etapa 1: con «1 a 3 frases» y 46 secciones el modelo escribía el doble y se cortaba."""
+    assert "unas 10 palabras" in server._system_estructurado(500, "", 46)
+    assert "unas 8 palabras" in server._system_estructurado(150, "", 46)  # mínimo
+    assert "1 a 3 frases" not in server._system_estructurado(500, "", 5)
