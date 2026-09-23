@@ -20,8 +20,8 @@
 | REQ-204 | payload sin títulos e interruptor apagado iguales al de `main` | pasa | `test_sin_titulos_el_payload_es_el_de_main`, `test_con_el_interruptor_apagado_…` |
 | REQ-205 | `focus` saneado, en los dos modos y en el reduce en prosa; fuera del log | pasa | tests de T3; etapa 1 `daemon-focus` 5/5 y `focus: true` en el evento |
 | REQ-206 | un evento con `chunks`, `secciones` y `focus`; rol por documento entero | pasa | tests de T4/T5; `tests/test_conformidad_f1.py` en verde |
-| REQ-207 | descripción y docs | pendiente (T9) | — |
-| REQ-208 | etapa 1 (sin cuota) y etapa 2 (con cuota) | etapa 1 pasa; etapa 2 en curso | secciones siguientes |
+| REQ-207 | descripción y docs | pasa | CHANGELOG `[Unreleased]` (Added `focus` y el modo experimental; Fixed `length`), `docs/wiki/Tools.md`, `docs/wiki/Configuration.md`, skill `delegacion-local` |
+| REQ-208 | etapa 1 (sin cuota) y etapa 2 (con cuota) | **se retira**: etapa 2 v2 3/9, v3 1/9 | secciones siguientes; interruptor apagado por defecto |
 
 ## Quality checks
 
@@ -80,10 +80,9 @@ superada.
 - **`max_words` no es un tope duro**: el modelo se pasa hasta un 20 % (4B) o un 7 % (CHANGELOG).
   Se prefirió el margen de `max_tokens` a los cortes, que dejaban secciones sin resumir. REQ-202
   dice que `max_words` es el tope del texto: queda como riesgo residual aceptado, medido.
-- **Corpus del catálogo `catalogo-2026-09` regenerado dos veces** (`cases.json`): sus cuatro
-  casos de resumen son Markdown con títulos y su prompt de producción cambió; `test_corpus` lo
-  exige. Los resultados de F2 existentes se midieron con el prompt en prosa. `conteos-log.json` se
-  restauró (se recalcula con los logs de hoy y no tiene que ver con este cambio).
+- **Corpus del catálogo `catalogo-2026-09`**: se regeneró mientras el modo estructurado estuvo
+  encendido por defecto; con la retirada vuelve a ser idéntico al de `main` (`cases.json` y
+  `tests/test_corpus.py` sin diff), así que los resultados de F2 siguen siendo comparables.
 - **El `length` de map-reduce** (B6) cambia el log de `local_lint_summary` y `local_commit_msg`;
   ni el panel ni `metrics.py` leen `truncated_out` ni `finish_reason`, así que no hay corte de
   serie en el panel, solo en el log crudo. En `local_commit_msg` el aviso queda dentro del texto.
@@ -119,3 +118,73 @@ Por qué releyeron (transcripts):
 
 Decisión del usuario (2026-09-23): registrar la v2 como fallida e intentar una **v3** con los dos
 mecanismos observados, medida de nuevo con el mismo criterio escrito antes de medir.
+
+## Etapa 1 de la v3 — 2026-09-23
+
+Commits `93d31ca` (v3), `3c134dd` (subtítulos repetidos = categorías; 4B en prosa) y `13f2537`
+(colchón de 24 tokens por sección). Tres corridas de la etapa 1, iterando sobre lo que falló, sin
+cambiar el criterio:
+
+1. `93d31ca`: tres documentos 100 %; daemon 6/6 subsecciones. **Corto (4B) 0,86** (se saltó la
+   Introducción) → según el criterio escrito, modo estructurado solo con el rol `long`.
+   **CHANGELOG** 47/47 pero 46 con contenido y 1124/500 palabras: listaba sus 103 subtítulos,
+   que son 5 etiquetas (`Added`, `Fixed`…) → subtítulos repetidos (menos de la mitad distintos)
+   no se listan.
+2. `3c134dd`: CHANGELOG 44/47 con `length` (reparto por tamaño: 8 palabras a las versiones
+   pequeñas y el modelo escribe una frase entera) → colchón de 24 tokens por sección.
+3. `13f2537` — `benchmarks/resumen-estructurado/resultados-rama-v3.json`:
+
+| Documento | Títulos | Con contenido | Palabras / tope | Fin | Nota |
+| --- | --- | --- | --- | --- | --- |
+| README | 12/12 | 12 | 426 / 500 | stop | con Introducción |
+| Instalación | 10/10 | 10 | 401 / 500 | stop | con Introducción |
+| Daemon | 5/5 | 5 | 310 / 500 | stop | 6/6 subsecciones nombradas |
+| Daemon + `focus` | 5/5 | 5 | 390 / 500 | stop | 6/6 subsecciones |
+| Corto (4B) | prosa (sin `secciones` en el log) | – | 358 / 500 | stop | criterio del 4B aplicado |
+| CHANGELOG | 47/47 | **46/47** | **998 / 500** | stop | ver desviación |
+
+**Desviación aceptada por el usuario (opción A, 2026-09-23):** el CHANGELOG no cumple «cada
+versión emparejada con contenido»: la `[0.2.1]` (una sola viñeta en el original, 451 caracteres)
+quedó en 4 palabras («**Fixed** esquema de `local_extract`») y el umbral escrito antes de medir es
+5. No se bajó el umbral. Y usa el doble del tope de palabras: con muchas secciones el modelo no
+baja de una frase por sección (riesgo residual de REQ-202, más marcado aquí). La etapa 2 no incluye
+el CHANGELOG. **Juicio humano de los tres resúmenes de la v3:** el usuario eligió seguir a la
+etapa 2 sin un juicio explícito por documento.
+
+## Etapa 2 de la v3 — 2026-09-23 — NO PASA, SE RETIRA
+
+Mismo banco, mismo criterio y mismas copias fijas, en `%TEMP%\banco-resumen-v3`, daemon con
+`13f2537`, hooks de `main`. Proceso independiente con Steam, Discord, Telegram y WhatsApp cerrados
+(RAM libre mínima 4,7 GB). 9 corridas válidas, unos 3,4 USD.
+
+| Tarea | Correctas | Contenido en el contexto | v2 (correctas / en contexto) |
+| --- | --- | --- | --- |
+| README | 1/3 | 2 | 3/3 / 0 |
+| Daemon | 0/3 | 3 | 0/3 / 3 |
+| Instalación | 0/3 | 1 | 0/3 / 3 |
+| **Total** | **1/9** | **6/9** | 3/9 / 6/9 |
+
+**1/9: según el criterio escrito antes de medir, se retira.**
+
+Lectura de los transcripts:
+
+- Las **relecturas no bajaron** (6/9 en la v2 y en la v3) aunque la tool ya entregaba lo que
+  faltaba (etapa 1: 100 % de títulos, introducción, 6/6 subsecciones del daemon). El motivo
+  cambió: Claude relee **para comprobar** («las secciones de Windows y rollback las leí yo
+  directamente para confirmarlas»; «después comprobé contra el texto original los tramos que más
+  importan»). Es confianza en un resumen ajeno, no cobertura: ningún prompt de la tool lo arregla.
+- Dos corridas de instalación **no releyeron nada** y cuentan como incorrectas porque Claude
+  reescribió los títulos en su respuesta (tabla, números de línea) y la métrica del banco dio
+  0,67 y 0,78 con umbral 0,8. Es la métrica de siempre (la línea base se midió con ella) y no se
+  cambió; queda anotado que exagera la caída de 3/9 a 1/9.
+- Las 9 corridas usaron `focus`.
+
+**Retirada aplicada (decisión del usuario, 2026-09-23):** `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`
+apagado por defecto, con test que lo fija; el código se conserva. Se quedan `focus`, los campos del
+log y el aviso de `length` en map-reduce. Suite tras la retirada: 1451 passed, 2 skipped.
+
+**Coste total de las mediciones con cuota de este SDD:** unos 7,2 USD (etapa 2 de la v2 y de la
+v3). **Hallazgo que se lleva el backlog:** tras el piloto de T5 y las dos etapas 2, la tasa de
+relectura se queda en 6–7 de 9 haga lo que haga la tool; la palanca que queda no es el formato
+del resumen sino la confianza de Claude en él (p. ej. que la tool devuelva citas literales con su
+línea, que es lo que Claude va a comprobar).

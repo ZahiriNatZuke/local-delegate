@@ -46,7 +46,7 @@ El presupuesto de cada trozo se mide en **caracteres** y sale del modelo destino
 ## `local_summarize`
 
 ```python
-local_summarize(text=None, path=None, max_words=150) -> str
+local_summarize(text=None, path=None, max_words=150, focus=None) -> str
 ```
 
 Resume un texto o archivo. Prefiérela a leer el archivo con `Read` cuando pasa de ~200 líneas o
@@ -57,9 +57,21 @@ Resume un texto o archivo. Prefiérela a leer el archivo con `Read` cuando pasa 
 | `text` | opcional | El texto a resumir. Usa esto **o** `path`. |
 | `path` | opcional | Ruta al archivo, leído por el servidor. **Preferible.** |
 | `max_words` | `150` | Tope de palabras del resumen. |
+| `focus` | opcional | Qué te interesa (p. ej. `"cifras de configuración"`): el resumen lo prioriza y conserva literales sus datos concretos. Va saneado a una línea de 200 caracteres. |
 
 Enruta sola al modelo de contexto largo cuando la entrada es grande. Si aun así no cabe, hace
-map-reduce: el log del panel guarda **una** entrada con `chunks: N`, no N entradas.
+map-reduce: el log del panel guarda **una** entrada con `chunks: N`, no N entradas. Si algún
+trozo se corta por `max_tokens`, el resultado lo avisa y el log lo registra (`finish_reason:
+length`, `truncated_out`).
+
+### Resumen por secciones (experimental, apagado)
+
+Con `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO=1` y un documento Markdown que va al modelo largo, el
+resumen sigue la estructura: una línea `## <título>` por sección, en orden, con la introducción y
+las subsecciones, y el servidor completa las que el modelo se salte. Está **apagado por defecto**:
+mejora mucho la salida (100 % de títulos en los documentos de prueba, frente a 0–11 % en prosa),
+pero en la medición con `claude -p` no redujo las veces que Claude vuelve a leer el fichero, que
+lo hace para comprobar datos. Detalle en `.sdd/changes/resumen-por-secciones/verification.md`.
 
 ## `local_classify`
 

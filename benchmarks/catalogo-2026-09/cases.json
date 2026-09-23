@@ -285,9 +285,9 @@
         "model": "gemma4-26b-a4b",
         "calls": 1
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen que sigue la estructura del documento: por cada sección de la lista, en ese orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la frase que la resume. Máximo 150 palabras. Nada fuera del formato. Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el título en las últimas.",
-      "user_template": "Secciones, en orden:\n- Introducción (el texto antes de la primera sección) (unas 14 palabras)\n- Hooks (unas 51 palabras)\n  - `suggest_delegate_prompt.py` — `UserPromptSubmit`\n  - `suggest_delegate_read.py` — `PreToolUse`, matcher `Read`\n  - `suggest_delegate_shell.py` — `PreToolUse`, matcher `Bash|PowerShell`\n  - `suggest_lint_summary.py` — retirado el 2026-09-08\n- Instalación (unas 21 palabras)\n- Configuración (unas 26 palabras)\n- Verificación manual (unas 15 palabras)\n- Piloto A/B (unas 20 palabras)\n  - Resultado del piloto de 2026-07-23\n\nResume el siguiente contenido:\n\n{CONTENIDO}",
-      "max_tokens": 907,
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
       "temperature": 0.2,
       "response_format": null,
       "reasoning_effort": null,
@@ -302,7 +302,8 @@
       "expected_counts": {},
       "automatic_scoring": false,
       "expected_format": {
-        "max_words": 150
+        "max_words": 150,
+        "prose": true
       }
     },
     {
@@ -321,9 +322,9 @@
         "model": "gemma4-26b-a4b",
         "calls": 1
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen que sigue la estructura del documento: por cada sección de la lista, en ese orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la frase que la resume. Máximo 150 palabras. Nada fuera del formato. Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el título en las últimas.",
-      "user_template": "Secciones, en orden:\n- [0.27.0] - 2026-09-08 (unas 114 palabras)\n  - Changed\n  - Removed\n  - Fixed\n- [0.26.0] - 2026-08-18 (unas 35 palabras)\n  - Added\n\nResume el siguiente contenido:\n\n{CONTENIDO}",
-      "max_tokens": 640,
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
       "temperature": 0.2,
       "response_format": null,
       "reasoning_effort": null,
@@ -341,7 +342,8 @@
       "expected_counts": {},
       "automatic_scoring": false,
       "expected_format": {
-        "max_words": 150
+        "max_words": 150,
+        "prose": true
       }
     },
     {
@@ -746,11 +748,11 @@
       "source_chars": 102987,
       "production": {
         "model": "gemma4-26b-a4b",
-        "calls": 4
+        "calls": 5
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen que sigue la estructura del documento: por cada sección de la lista, en ese orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la frase que la resume. Máximo 150 palabras. Nada fuera del formato. Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el título en las últimas.",
-      "user_template": "Secciones, en orden:\n- Introducción (el texto antes de la primera sección) (unas 1 palabras)\n- --- Versión del paquete ------------------------------------------------------ (unas 1 palabras)\n- Vive en `version.py`, un módulo hoja que no importa nada del paquete, y este alias se conserva (unas 1 palabras)\n- porque `daemon`, `web/metrics` y los tests ya lo llaman por aquí. El porqué de sacarlo está en (unas 1 palabras)\n- el docstring de aquel: el `--version` del CLI necesitaba el mismo dato, y `cli` importando (unas 1 palabras)\n- `server` cerraba un ciclo (`server.main()` importa `cli` en cuanto hay argumentos). (unas 1 palabras)\n- `version=` declara la versión **del paquete**. Sin ella el SDK reporta la suya propia en el (unas 1 palabras)\n- handshake `initialize`, de modo que un cliente no tenía forma de saber qué local-delegate corre. (unas 3 palabras)\n- --- Cliente httpx2 module-level (keep-alive entre delegaciones) ------------- (unas 1 palabras)\n- --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ---------------- (unas 1 palabras)\n- El estado vive en LOG_DIR/inflight.json (mismo directorio de datos que el log de uso), no (unas 1 palabras)\n- solo en memoria: así CUALQUIER proceso MCP que sirva la web (metrics.py) ve las delegaciones (unas 1 palabras)\n- en curso de TODAS las sesiones de Claude activas en esta máquina, no solo la suya. El (unas 1 palabras)\n- contador local (_inflight_lock/_inflight_next_id) solo genera ids únicos por proceso; nunca (unas 1 palabras)\n- toca disco. (unas 10 palabras)\n- --- Helpers ---------------------------------------------------------------- (unas 4 palabras)\n- Techo simbólico para leer una entrada COMPLETA: las tools de reducción deciden después si (unas 1 palabras)\n- el contenido cabe en el modelo o si toca map-reduce, y para eso necesitan el texto entero. (unas 33 palabras)\n- --- Chunking por límites naturales (local_translate / local_delegate) -------- (unas 1 palabras)\n- Las tools que transforman el texto ENTERO producen tanta salida como entrada, así que una (unas 1 palabras)\n- sola llamada choca contra max_tokens y devuelve el documento cortado. Partimos la entrada (unas 1 palabras)\n- por el límite natural más grueso que sirva (headers Markdown -> párrafos -> líneas -> corte (unas 1 palabras)\n- duro) y traducimos/transformamos cada trozo por separado. (unas 1 palabras)\n- Invariante: \"\".join(_chunk_text(t, n)) == t. Cada trozo conserva el separador original con (unas 1 palabras)\n- el que terminaba, así las costuras se reensamblan sin inventar ni perder saltos de línea. (unas 3 palabras)\n- --- Inventario de un diff (local_commit_msg) -------------------------------- (unas 1 palabras)\n- Medido: el `--stat` completo de un diff de 164 585 chars son 2 987 — cabe entero donde el diff (unas 1 palabras)\n- no cabe. Y con solo ese inventario el modelo ya nombra el cambio real, mientras que con los (unas 1 palabras)\n- primeros 20 000 chars del diff nombra el primer archivo por orden alfabético. Por eso el paso (unas 1 palabras)\n- que redacta el mensaje lo recibe SIEMPRE, y por eso se calcula aquí y no se le pide al modelo: (unas 1 palabras)\n- es un conteo, no un juicio. (unas 13 palabras)\n- Marcas inequívocas: códigos de error y frases que solo aparecen en un desborde. (unas 1 palabras)\n- Fuera de esas, se exige una palabra de «contexto» Y una de «exceso». Ninguna de las dos por (unas 1 palabras)\n- separado dice nada —`context shift` y `maximum tokens` son opciones normales del backend—, (unas 1 palabras)\n- juntas sí. (unas 17 palabras)\n- --- Validación de imagen (local_describe_image, F6) ------------------------- (unas 1 palabras)\n- --- Tools ------------------------------------------------------------------ (unas 55 palabras)\n\nResume el siguiente contenido:\n\n{CONTENIDO}",
-      "max_tokens": 3144,
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
       "temperature": 0.2,
       "response_format": null,
       "reasoning_effort": null,

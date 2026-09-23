@@ -220,11 +220,16 @@ def test_focus_se_sanea():
 
 
 @backend_mock.mock
-def _llamar(monkeypatch, tmp_path, responder, *, rol_largo: bool = True, **kwargs):
+def _llamar(
+    monkeypatch, tmp_path, responder, *, rol_largo: bool = True, estructurado: bool = True, **kwargs
+):
     # El modo estructurado es solo del rol `long` (criterio del 4B, etapa 1 de la v3): los textos
     # de prueba son cortos, así que por defecto se fuerza ese rol.
     if rol_largo:
         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
+    # Apagado por defecto desde la retirada (etapa 2 de la v3): aquí se prueba encendido salvo
+    # que el test diga lo contrario.
+    monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", estructurado)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -284,9 +289,8 @@ def test_sin_titulos_el_payload_es_el_de_main(monkeypatch, tmp_path):
 
 
 def test_con_el_interruptor_apagado_el_payload_es_el_de_main(monkeypatch, tmp_path):
-    monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", False)
     texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
-    _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, text=texto)
+    _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, estructurado=False, text=texto)
     assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
     assert "Secciones, en orden" not in vistos[0]["messages"][1]["content"]
 
@@ -336,6 +340,8 @@ def test_salida_cortada_se_completa_y_conserva_el_aviso(monkeypatch, tmp_path):
 def test_un_error_del_backend_no_se_completa(monkeypatch, tmp_path):
     @backend_mock.mock
     def _falla():
+        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
+        monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
         monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -477,6 +483,8 @@ def test_desborde_en_un_trozo_se_reparte_por_secciones(monkeypatch, tmp_path):
     # El primer trozo desborda: el backend responde 400 con el texto de contexto excedido.
     @backend_mock.mock
     def _con_desborde():
+        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
+        monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
         monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -636,3 +644,11 @@ def test_subtitulos_repetidos_son_categorias_y_no_se_listan():
     temas = "## A\n\n### Uno\n\nx\n\n### Dos\n\ny\n\n## B\n\n### Tres\n\nz\n"
     plan = secciones.secciones_para_resumen(temas, secciones.detectar(temas))
     assert [s.subtitulos for s in plan] == [("Uno", "Dos"), ("Tres",)]
+
+
+def test_el_modo_estructurado_esta_apagado_por_defecto(monkeypatch):
+    """Retirada (etapa 2 de la v3, 1/9): criterio escrito antes de medir."""
+    monkeypatch.delenv("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", raising=False)
+    assert config._env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False) is False
+    fuente = (RAIZ / "src" / "local_delegate" / "config.py").read_text(encoding="utf-8")
+    assert '_env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False)' in fuente
