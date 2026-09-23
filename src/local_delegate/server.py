@@ -2221,7 +2221,10 @@ def local_summarize(
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     enfoque = secciones.sanear_focus(focus)
     extra = _texto_focus(enfoque)
-    estructura = secciones.detectar(content) if config.RESUMEN_ESTRUCTURADO else None
+    # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
+    # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
+    estructurado = config.RESUMEN_ESTRUCTURADO and rol == "long"
+    estructura = secciones.detectar(content) if estructurado else None
     if estructura is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
             model=model,

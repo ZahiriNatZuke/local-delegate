@@ -124,3 +124,10 @@ def test_la_cobertura_de_subsecciones_es_informativa_y_por_palabras():
     subs = ["La sesión del navegador", "Linux", "sesión"]
     assert cobertura(salida, subs) == {"total": 3, "nombradas": 2}
     assert cobertura("Linuxero", ["Linux"])["nombradas"] == 0
+
+
+def test_el_corto_tiene_que_ir_en_prosa():
+    assert veredicto({"corto-4b": {"cobertura": 0.0, "secciones_log": None}})["corto_4b_en_prosa"]
+    estructurado = {"corto-4b": {"cobertura": 1.0, "secciones_log": 7}}
+    assert veredicto(estructurado)["corto_4b_en_prosa"] is False
+    assert veredicto({})["corto_4b_en_prosa"] is False

@@ -47,9 +47,9 @@
         "model": "gemma3-4b",
         "calls": 1
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen que sigue la estructura del documento: por cada sección de la lista, en ese orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la frase que la resume. Máximo 150 palabras. Nada fuera del formato. Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el título en las últimas.",
-      "user_template": "Secciones, en orden:\n- Introducción (el texto antes de la primera sección) (unas 15 palabras)\n- Entorno de desarrollo (unas 22 palabras)\n- Ejecutar el MCP localmente (unas 19 palabras)\n- Reglas del proyecto (unas 29 palabras)\n- Pull requests (unas 47 palabras)\n- pre-commit (unas 15 palabras)\n\nResume el siguiente contenido:\n\n{CONTENIDO}",
-      "max_tokens": 611,
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
       "temperature": 0.2,
       "response_format": null,
       "reasoning_effort": null,
@@ -63,7 +63,8 @@
       "expected_counts": {},
       "automatic_scoring": true,
       "expected_format": {
-        "max_words": 150
+        "max_words": 150,
+        "prose": true
       },
       "reference_signal": "cobertura",
       "reference_ok": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un pull request y el uso de pre-commit.",

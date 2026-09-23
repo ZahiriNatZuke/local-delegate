@@ -220,7 +220,11 @@ def test_focus_se_sanea():
 
 
 @backend_mock.mock
-def _llamar(monkeypatch, tmp_path, responder, **kwargs):
+def _llamar(monkeypatch, tmp_path, responder, *, rol_largo: bool = True, **kwargs):
+    # El modo estructurado es solo del rol `long` (criterio del 4B, etapa 1 de la v3): los textos
+    # de prueba son cortos, así que por defecto se fuerza ese rol.
+    if rol_largo:
+        monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -612,3 +616,21 @@ def test_la_introduccion_se_pide_y_se_completa(monkeypatch, tmp_path):
     assert [t for t, _p, _s in lista] == ["Introducción", "Uno", "Dos"]
     assert salida.startswith("## Introducción\n(sin resumir)")
     assert _eventos(tmp_path)[0]["secciones"] == 3
+
+
+def test_con_el_modelo_mecanico_va_en_prosa_aunque_haya_titulos(monkeypatch, tmp_path):
+    """Etapa 1 de la v3: el 4B se saltó la introducción (0,86) y el criterio escrito era limitar el
+    modo estructurado al rol `long`."""
+    texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
+    _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, rol_largo=False, text=texto)
+    assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
+    assert vistos[0]["model"] == config.MODEL_MECHANICAL
+
+
+def test_subtitulos_repetidos_son_categorias_y_no_se_listan():
+    texto = (FUENTES / "changelog.md").read_text(encoding="utf-8")
+    plan = secciones.secciones_para_resumen(texto, secciones.detectar(texto))
+    assert all(not s.subtitulos for s in plan)  # 103 subtítulos, 5 etiquetas distintas
+    temas = "## A\n\n### Uno\n\nx\n\n### Dos\n\ny\n\n## B\n\n### Tres\n\nz\n"
+    plan = secciones.secciones_para_resumen(temas, secciones.detectar(temas))
+    assert [s.subtitulos for s in plan] == [("Uno", "Dos"), ("Tres",)]

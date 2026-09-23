@@ -310,6 +310,11 @@ def secciones_para_resumen(text: str, estructura: Estructura) -> list[Seccion]:
     """
     todos = titulos_markdown(text)
     principales = list(estructura.titulos)
+    del_nivel_siguiente = [t.texto for t in todos if t.nivel == estructura.nivel + 1]
+    # Si los subtítulos se repiten (menos de la mitad distintos) son categorías, no temas: el
+    # CHANGELOG tiene 103 que son 5 etiquetas (`Added`, `Fixed`…). Listarlas duplicaba el
+    # resumen (1124 palabras para un tope de 500) sin decir nada de cada versión.
+    son_temas = len(set(del_nivel_siguiente)) * 2 >= len(del_nivel_siguiente)
     secciones_: list[Seccion] = []
     primero = principales[0].inicio
     if _palabras_fuera_de_titulos(text[:primero]) >= PALABRAS_MINIMAS_INTRO:
@@ -319,7 +324,7 @@ def secciones_para_resumen(text: str, estructura: Estructura) -> list[Seccion]:
         subs = tuple(
             t.texto
             for t in todos
-            if t.nivel == estructura.nivel + 1 and titulo.inicio < t.inicio < fin
+            if son_temas and t.nivel == estructura.nivel + 1 and titulo.inicio < t.inicio < fin
         )
         secciones_.append(Seccion(titulo.texto, titulo.inicio, fin, subs))
     return secciones_

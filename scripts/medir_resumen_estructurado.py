@@ -131,7 +131,9 @@ def veredicto(resultados: dict[str, dict]) -> dict:
         "tres_documentos": all(r.get("pasa_estructura") for r in principales),
         "changelog": bool(changelog.get("pasa_estructura"))
         and changelog.get("finish_reason") != "length",
-        "corto_4b": corto.get("cobertura", 0) >= UMBRAL,
+        # Desde la v3 el modelo mecánico resume en prosa (criterio del 4B): lo que se comprueba es
+        # que el documento corto NO fue por el modo estructurado.
+        "corto_4b_en_prosa": bool(corto) and corto.get("secciones_log") is None,
         "pendiente": "juicio del usuario sobre readme, instalacion y daemon",
     }
 

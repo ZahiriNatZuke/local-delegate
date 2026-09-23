@@ -1,0 +1,156 @@
+{
+  "etiqueta": "rama-v3",
+  "fecha": "2026-09-23T19:33:44+00:00",
+  "resultados": {
+    "readme": {
+      "esperados": 12,
+      "emparejados": 12,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 12,
+      "fuera_de_orden": 0,
+      "cobertura": 1.0,
+      "palabras": 419,
+      "max_words": 500,
+      "pasa_estructura": true,
+      "subsecciones": {
+        "total": 0,
+        "nombradas": 0
+      },
+      "introduccion": true,
+      "error": false,
+      "segundos": 31.4,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 1,
+      "modelo": "gemma4-26b-a4b",
+      "secciones_log": 12,
+      "focus_log": false
+    },
+    "instalacion": {
+      "esperados": 10,
+      "emparejados": 10,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 10,
+      "fuera_de_orden": 0,
+      "cobertura": 1.0,
+      "palabras": 407,
+      "max_words": 500,
+      "pasa_estructura": true,
+      "subsecciones": {
+        "total": 0,
+        "nombradas": 0
+      },
+      "introduccion": true,
+      "error": false,
+      "segundos": 23.7,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 1,
+      "modelo": "gemma4-26b-a4b",
+      "secciones_log": 10,
+      "focus_log": false
+    },
+    "daemon": {
+      "esperados": 5,
+      "emparejados": 5,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 5,
+      "fuera_de_orden": 0,
+      "cobertura": 1.0,
+      "palabras": 357,
+      "max_words": 500,
+      "pasa_estructura": true,
+      "subsecciones": {
+        "total": 6,
+        "nombradas": 6
+      },
+      "introduccion": false,
+      "error": false,
+      "segundos": 18.4,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 1,
+      "modelo": "gemma4-26b-a4b",
+      "secciones_log": 5,
+      "focus_log": false
+    },
+    "changelog": {
+      "esperados": 47,
+      "emparejados": 47,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 46,
+      "fuera_de_orden": 0,
+      "cobertura": 1.0,
+      "palabras": 1124,
+      "max_words": 500,
+      "pasa_estructura": false,
+      "subsecciones": {
+        "total": 103,
+        "nombradas": 103
+      },
+      "introduccion": true,
+      "error": false,
+      "segundos": 116.1,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 5,
+      "modelo": "gemma4-26b-a4b",
+      "secciones_log": 47,
+      "focus_log": false
+    },
+    "corto-4b": {
+      "esperados": 7,
+      "emparejados": 6,
+      "completadas_por_el_servidor": 1,
+      "con_contenido": 6,
+      "fuera_de_orden": 0,
+      "cobertura": 0.857,
+      "palabras": 603,
+      "max_words": 500,
+      "pasa_estructura": false,
+      "subsecciones": {
+        "total": 0,
+        "nombradas": 0
+      },
+      "introduccion": true,
+      "error": false,
+      "segundos": 13.4,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 1,
+      "modelo": "gemma3-4b",
+      "secciones_log": 7,
+      "focus_log": false
+    },
+    "daemon-focus": {
+      "esperados": 5,
+      "emparejados": 5,
+      "completadas_por_el_servidor": 0,
+      "con_contenido": 5,
+      "fuera_de_orden": 0,
+      "cobertura": 1.0,
+      "palabras": 387,
+      "max_words": 500,
+      "pasa_estructura": true,
+      "subsecciones": {
+        "total": 6,
+        "nombradas": 6
+      },
+      "introduccion": false,
+      "error": false,
+      "segundos": 22.4,
+      "finish_reason": "stop",
+      "truncated_out": false,
+      "chunks": 1,
+      "modelo": "gemma4-26b-a4b",
+      "secciones_log": 5,
+      "focus_log": true
+    }
+  },
+  "veredicto": {
+    "tres_documentos": true,
+    "changelog": false,
+    "corto_4b": false,
+    "pendiente": "juicio del usuario sobre readme, instalacion y daemon"
+  }
+}
