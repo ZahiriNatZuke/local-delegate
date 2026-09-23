@@ -5,7 +5,7 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-09-22T18:45:55.641Z",
-  "updatedAt": "2026-09-23T11:06:56.822Z",
+  "updatedAt": "2026-09-23T13:06:04.018Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,22 +20,22 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-23T13:00:04.536Z",
+      "evidence": "Commit 4840d7f: uv run pytest -q 1382 passed, 2 skipped; ruff check . y ruff format --check . limpios en lo versionado (solo falla benchmarks/catalogo-2026-09/resultados/medir_coexistencia.py, sin seguimiento y ajeno al cambio). Mutantes: ruta absoluta del Shell y telemetría del prompt hacen fallar sus tests. Hooks instalados idénticos al repo, ejecutados instalados con cat relativo; local_summarize real por /mcp del daemon OK; doctor sin avisos.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-23T13:06:03.806Z",
+      "evidence": "Revisión fresca (personal-sdd-result-reviewer): aprobable con condiciones, ambas cumplidas en 86ba539. C1: CHANGELOG [Unreleased] con la ruta absoluta del Shell y la discontinuidad de medición. C2: git diff main...HEAD vacío sobre hook_common.py, suggest_delegate_read.py y config.py; firma SSH válida. REQ-102 cerrado por el escenario 'nadie gana' (verification.md, T5 y retirada); REQ-101/104/105 no aplican; REQ-103 queda en sesión, versión y bloqueo; REQ-107 revisado a mano. Desviaciones y riesgos residuales en verification.md 'Revisión de conformidad'.",
+      "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-09-23T13:06:04.018Z",
+      "evidence": "handoff.md actualizado; vault projects/local-delegate/jornada-2026-09-23-la-oferta-que-ya-se-aceptaba.md y backlog §4.1 (enfoque/secciones de local_summarize); punteros en la memoria del proyecto (MEMORY.md, tramos de hooks 01:14Z y 12:56Z; jornadas-local-delegate.md). Sin secretos ni PII: búsqueda de secretos limpia y rutas con el usuario sustituidas.",
+      "actor": "user"
     }
   },
   "history": [
@@ -188,6 +188,30 @@
       "type": "note",
       "at": "2026-09-23T11:06:56.822Z",
       "reason": "T5 piloto (9 corridas): las variantes no se distinguen (V0 0/3, V1 1/3, V2 1/3; 9/9 delegaron, 7 releyeron). REQ-102 cerrado por el escenario «nadie gana»; V1/V2 retiradas por decisión del usuario; se conservan la ruta absoluta del Shell, la telemetría del prompt y los scripts. REQ-104/105 no aplican."
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-23T13:00:04.536Z",
+      "evidence": "Commit 4840d7f: uv run pytest -q 1382 passed, 2 skipped; ruff check . y ruff format --check . limpios en lo versionado (solo falla benchmarks/catalogo-2026-09/resultados/medir_coexistencia.py, sin seguimiento y ajeno al cambio). Mutantes: ruta absoluta del Shell y telemetría del prompt hacen fallar sus tests. Hooks instalados idénticos al repo, ejecutados instalados con cat relativo; local_summarize real por /mcp del daemon OK; doctor sin avisos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-09-23T13:06:03.806Z",
+      "evidence": "Revisión fresca (personal-sdd-result-reviewer): aprobable con condiciones, ambas cumplidas en 86ba539. C1: CHANGELOG [Unreleased] con la ruta absoluta del Shell y la discontinuidad de medición. C2: git diff main...HEAD vacío sobre hook_common.py, suggest_delegate_read.py y config.py; firma SSH válida. REQ-102 cerrado por el escenario 'nadie gana' (verification.md, T5 y retirada); REQ-101/104/105 no aplican; REQ-103 queda en sesión, versión y bloqueo; REQ-107 revisado a mano. Desviaciones y riesgos residuales en verification.md 'Revisión de conformidad'.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-09-23T13:06:04.018Z",
+      "evidence": "handoff.md actualizado; vault projects/local-delegate/jornada-2026-09-23-la-oferta-que-ya-se-aceptaba.md y backlog §4.1 (enfoque/secciones de local_summarize); punteros en la memoria del proyecto (MEMORY.md, tramos de hooks 01:14Z y 12:56Z; jornadas-local-delegate.md). Sin secretos ni PII: búsqueda de secretos limpia y rutas con el usuario sustituidas.",
+      "actor": "user"
     }
   ]
 }
