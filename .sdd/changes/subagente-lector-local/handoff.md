@@ -4,9 +4,11 @@ Estado 2026-09-23 (tarde): **T5 cerrada con el piloto**. Las variantes no se dis
 V1 1/3, V2 1/3; las 9 delegaron y 7 releyeron porque el resumen local no sigue la estructura).
 REQ-102 se cierra por «nadie gana»; V1/V2 retiradas (decisión del usuario), y se conservan la ruta
 absoluta del hook de Shell, la telemetría del prompt y los scripts. Detalle en `verification.md`.
-Pendiente: reinstalar los hooks en la PC (siguen los de T4), commit firmado, gates
-quality/conformance/memory y la palanca real: que `local_summarize` respete la estructura
-(backlog §4.1).
+Hecho: hooks reinstalados en la PC (tramo nuevo desde 2026-09-23T12:56Z), commit firmado
+`4840d7f` más el de la revisión de conformidad, y las gates. Nota del vault:
+`jornada-2026-09-23-la-oferta-que-ya-se-aceptaba.md`. Lo siguiente, fuera de este SDD: que
+`local_summarize` respete la estructura (backlog §4.1), medido con `experimento_adopcion.py
+--piloto`. El PR, solo cuando el usuario lo pida.
 
 ## Estado anterior (antes del piloto)
 

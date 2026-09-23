@@ -14,8 +14,8 @@ El prompt NUNCA menciona delegar: lo que se mide es si la oferta de los hooks ba
 
 Reglas escritas antes de correr (plan v4.1, T5):
 
-- **Válida**: la telemetría de la corrida trae el evento del hook de prompt con su `session_id`,
-  la oferta esperada y el bloqueo encendido. Si no, se repite (2 veces como mucho; a la tercera la
+- **Válida**: la telemetría de la corrida trae el evento del hook de prompt con su `session_id`
+  y el bloqueo encendido (hasta la retirada de V1/V2 exigía además la oferta esperada). Si no, se repite (2 veces como mucho; a la tercera la
   tanda aborta).
 - **Correcta**: el hecho plantado está en la respuesta y el contenido del fichero no entró al
   contexto principal (ni `Read` completo, ni por franjas, ni volcado por Bash).

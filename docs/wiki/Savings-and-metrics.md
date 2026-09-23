@@ -172,7 +172,8 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 ### Sugerencias de los hooks
 
 Los hooks consultivos escriben su propia telemetría —opt-in, activada con `LD_HOOK_TELEMETRY_LOG`,
-y **sin prompts, comandos ni rutas**: solo evento, categoría y tamaños—. Ese registro existía desde
+y **sin prompts, comandos ni rutas**: evento, categoría, tamaños, la sesión, la versión del script,
+el estado del bloqueo y, en las lecturas, una huella de la ruta en vez de la ruta—. Ese registro existía desde
 hacía tiempo y el dashboard no lo miraba.
 
 La tarjeta cuenta **cuántas veces un hook sugirió delegar**, en el mismo rango que el resto de la

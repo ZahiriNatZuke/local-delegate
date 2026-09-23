@@ -192,5 +192,27 @@ Alcance elegido por el usuario: se retiran las variantes y se conserva lo demás
   prompt hace fallar el de telemetría.
 - `uv run pytest -q -p no:randomly`: 1382 passed, 2 skipped. `ruff check` y `ruff format --check`
   limpios.
-- **Los hooks instalados en la PC siguen siendo los de T4** (con variantes, en V0 por defecto).
-  Hasta reinstalar, el Shell enseña la ruta relativa en el texto del bloqueo.
+- **Reinstalado en la PC el 2026-09-23T12:56Z** (tramo nuevo de versión de hooks): `uv tool install
+  --force --reinstall --no-cache ".[llamaswap]"` e `install` con los cuatro flags. Los 4 hooks
+  instalados son idénticos byte a byte a los del repo; el de Shell, ejecutado instalado con
+  `cat docs/wiki/Daemon.md` y un `cwd` de Windows, bloquea y ofrece la ruta absoluta.
+  `local_summarize` real por el `/mcp` del daemon responde; `doctor` sin avisos.
+
+### Revisión de conformidad — 2026-09-23
+
+Revisor de resultados (sin git): aprobable con condiciones.
+- **C1** (CHANGELOG `[Unreleased]` con la discontinuidad de medición: `medir_adopcion.py` suma
+  Read y Shell en la tasa de aceptación y ahora los bloqueos de Shell pueden cruzar): hecho.
+- **C2** (identidad con `main`): `git diff --stat main...HEAD` sobre `hook_common.py`,
+  `suggest_delegate_read.py` y `config.py` sale vacío; commit `4840d7f` con firma SSH válida.
+- Arreglados también: textos desfasados en `experimento_adopcion.py`, `_banco_claude.py`,
+  `tareas.json`, y la descripción de la telemetría en `docs/wiki/Savings-and-metrics.md`.
+- **Desviación registrada:** la corrida del control de precedencia (hooks apagados, sin delegar)
+  no se anota en `ventanas-excluidas.json`, ni en T4 ni en T5; impacto mínimo porque no genera
+  eventos de hooks ni delegaciones.
+- **Riesgo residual aceptado:** ningún test asegura que `resultados.jsonl` no guarde rutas (se
+  revisó a mano: solo ids, etiquetas, booleanos, contadores y nombres de tools). El directorio
+  del banco en `%TEMP%` sí conserva copias de los ficheros de las tareas. Volver a correr el
+  experimento hoy repite tres «variantes» idénticas: usar `--piloto` y leerlo como una sola.
+- Fuera de alcance, ya existía antes: `docs/recipes/claude-code-hooks.md:3-5` dice que el hook de
+  Bash se retiró, y eso contradice su propia sección de más abajo.

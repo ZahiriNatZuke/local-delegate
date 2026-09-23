@@ -14,6 +14,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   texto (`<task-notification>`, `<agent-message`, `<cross-session-message`, `<system-reminder>`) y
   no avisa ni los registra. **Discontinuidad en el panel:** la telemetría anterior incluye esos
   eventos sin marca, así que el total de prompts y su tasa de aviso bajan a partir de esta versión.
+- **El bloqueo del hook de Shell ofrecía una ruta que el servidor no encontraba.** Con
+  `cat docs/x.md` el aviso decía `path="docs/x.md"`, y el daemon, que corre en otro directorio,
+  resolvía esa ruta contra el suyo. Además, la nota del bloqueo se anotaba con la relativa, así que
+  nunca casaba con la delegación y el bloqueo no contaba como aceptado. Ahora el hook resuelve la
+  ruta con el `cwd` de la sesión y ofrece y anota la absoluta. **Discontinuidad en la medición:**
+  `scripts/medir_adopcion.py` suma Read y Shell en la tasa de aceptación; a partir de esta versión
+  los bloqueos de Shell empiezan a poder contar como aceptados, así que la tasa puede subir sin que
+  cambie la conducta. Compárala por tramos de versión de hook.
+
+### Changed
+- **El hook de prompt registra la sesión, la versión del script y el estado del bloqueo** en cada
+  evento, como ya hacían los de lectura. Sin la sesión no se podía atribuir un evento a su corrida.
 
 ## [0.31.4] - 2026-09-22
 

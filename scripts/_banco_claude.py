@@ -33,7 +33,7 @@ TOOL_PRINCIPAL = "mcp__local-delegate__local_summarize"
 PREFIJO_LOCAL = "mcp__local-delegate__local_"
 #: Resultado de Bash por encima del cual contar como «volcado» si el comando nombra el fichero.
 UMBRAL_VOLCADO = 2048
-#: Marcas del texto de los bloqueos de nuestros hooks (V0 y V1 las comparten).
+#: Marcas del texto de los bloqueos de nuestros hooks (Read y Shell).
 MARCAS_DE_BLOQUEO = ("y es prosa", "de prosa al contexto")
 
 
