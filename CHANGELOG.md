@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-09-23
+
 ### Added
 - **`local_summarize(focus=...)`**: parámetro opcional para decir qué interesa del documento
   (p. ej. `"cifras de configuración"`); el resumen lo prioriza y conserva literales sus datos. Se
@@ -2234,7 +2236,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...v0.32.0
 [0.31.4]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.3...v0.31.4
 [0.31.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.2...v0.31.3
 [0.31.2]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.1...v0.31.2
