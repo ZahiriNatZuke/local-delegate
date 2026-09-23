@@ -1,9 +1,11 @@
 # Recipe: hooks de Claude Code para sugerir delegación
 
-Queda **un** hook consultivo recomendado, `UserPromptSubmit`. El de `PreToolUse/Read` se
-conserva como experimento y está apagado por defecto porque produjo avisos ruidosos en tareas de
-arquitectura; el de `PreToolUse/Bash` se **retiró** el 2026-09-08 por puntería (ver abajo).
-Ninguno bloquea la acción original ni envía el prompt a otro modelo.
+El hook recomendado es `UserPromptSubmit`, que solo sugiere. Los de lectura —`PreToolUse/Read`
+y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enable-read-hook` y
+están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
+bloquean si además se enciende `LD_HOOK_READ_BLOQUEAR` (ver «El bloqueo»). El que se **retiró** el
+2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Ninguno envía
+el prompt a otro modelo.
 
 Los scripts se distribuyen **dentro del paquete**
 ([`src/local_delegate/resources/hooks/`](../../src/local_delegate/resources/hooks)): Python 3 puro,
@@ -82,6 +84,10 @@ Reconoce solo formas simples e inequívocas de volcar un fichero entero —`cat`
 comandos encadenados, una sustitución o un flag que ya acota, **no bloquea** y se limita a contar
 el caso: un comando mal parseado que se rechaza no es un consejo malo, es impedir algo que el
 usuario pidió.
+
+Una ruta relativa (`cat docs/x.md`) se resuelve con el `cwd` de la sesión antes de ofrecerla: el
+daemon corre en otro directorio y, con la relativa, no encontraría el fichero ni cruzaría la
+delegación con el bloqueo.
 
 Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
 por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.

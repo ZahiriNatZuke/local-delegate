@@ -137,6 +137,13 @@ def main() -> None:
         record("PreToolUse", suggested=False, motivo="no_es_volcado", **comun)
         return
 
+    # Absoluta con el `cwd` de la sesión (revisión del plan, B2): `cat docs/x.md` trae una ruta
+    # relativa, y el daemon —otro proceso, otro directorio— la resolvería contra el suyo. Con la
+    # relativa, la huella de la nota no casaba con la de la delegación y el bloqueo no se contaba
+    # como aceptado.
+    if not os.path.isabs(ruta):
+        ruta = os.path.normpath(os.path.join(str(payload.get("cwd") or os.getcwd()), ruta))
+
     ext = extension_de(ruta)
     try:
         suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
@@ -165,6 +172,8 @@ def main() -> None:
 
     identificador = nuevo_id()
     anotar_bloqueo(identificador, ruta)
+    # La ruta que se ofrece es la absoluta: con la relativa, el daemon la resolvería contra su
+    # propio directorio y no encontraría el fichero.
     deny(
         "PreToolUse",
         f"Este comando vuelca {size_kb:.0f} KB de prosa al contexto. Pasalo por una tool local "

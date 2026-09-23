@@ -1,0 +1,13 @@
+{
+  "descripcion": "Tareas del experimento de adopción (SDD subagente-lector-local, spec v2, REQ-102). Cada fuente se copia al banco y se le planta un hecho con valores aleatorios por corrida, que la corrección busca en la respuesta. En el piloto (--piloto: readme, wiki-instalacion y wiki-daemon) no se planta nada y se corrige por los títulos de sección. No se versionan copias: solo esta lista y el generador.",
+  "tareas": [
+    {"id": "readme", "tipo": "docs", "fuente": {"repo": "README.md"}, "nombre": "readme-proyecto.md", "estilo": "md"},
+    {"id": "wiki-instalacion", "tipo": "docs", "fuente": {"repo": "docs/wiki/Integration-install.md"}, "nombre": "guia-instalacion.md", "estilo": "md"},
+    {"id": "wiki-daemon", "tipo": "docs", "fuente": {"repo": "docs/wiki/Daemon.md"}, "nombre": "manual-daemon.md", "estilo": "md"},
+    {"id": "changelog", "tipo": "changelog", "fuente": {"repo": "CHANGELOG.md"}, "nombre": "CHANGELOG.md", "estilo": "md"},
+    {"id": "log-ci", "tipo": "log", "fuente": {"comando": ["gh", "run", "view", "35804441587", "--log"]}, "nombre": "log-ci.txt", "estilo": "log", "max_bytes": 60000},
+    {"id": "log-tests", "tipo": "log", "fuente": {"comando": ["uv", "run", "pytest", "-v", "-p", "no:randomly", "tests/test_hook_recipes.py", "tests/test_checks.py", "tests/test_install.py"]}, "nombre": "salida-tests.txt", "estilo": "log", "max_bytes": 60000},
+    {"id": "diff", "tipo": "diff", "fuente": {"comando": ["git", "diff", "026aeb3", "dd2110f"]}, "nombre": "cambios.diff.txt", "estilo": "log", "max_bytes": 60000},
+    {"id": "lint", "tipo": "lint", "fuente": {"comando": ["uv", "run", "ruff", "check", "--select", "ALL", "--output-format", "concise", "--exit-zero", "src"]}, "nombre": "salida-lint.txt", "estilo": "log", "max_bytes": 60000}
+  ]
+}

@@ -1,0 +1,710 @@
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index d2ee1f7..4f4dbc5 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -173,7 +173,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no
+ 
+ Reinicia el cliente. Verifica con:
+ 
+-- `local-delegate doctor` → comprueba de una vez las veintiuna piezas (ver abajo), incluidos el
++- `local-delegate doctor` → comprueba de una vez las veintidós piezas (ver abajo), incluidos el
+   daemon y el backend, que el reporte de `install` no mira a propósito.
+ - `local_status` → backend, catálogo y si el cómputo es local o remoto.
+ - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
+@@ -204,6 +204,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
+ | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
+ | Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
++| Andamiaje | subagente lector | `~/.claude/agents/local-delegate-lector.md` si se instaló con `--agents`: falta es `[ OK ]` (es opcional), de otra versión es `[WARN]` y `update` lo repone; uno con ese nombre sin nuestro marcador es tuyo y no se toca |
+ | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
+ | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
+ | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
+@@ -229,7 +230,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
+ como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
+ exit code es **0** sin avisos y **1** con al menos uno.
+ 
+-De las trece comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
++De las veintidós comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+ de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
+ reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
+ porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión
+diff --git a/src/local_delegate/agents.py b/src/local_delegate/agents.py
+index 92b1a53..3a0a6bb 100644
+--- a/src/local_delegate/agents.py
++++ b/src/local_delegate/agents.py
+@@ -154,6 +154,49 @@ def process(text: str, catalog: list[tuple[str, str]]) -> tuple[str, list[str],
+     return text, added, action
+ 
+ 
++# --- El agente PROPIO ------------------------------------------------------------------------
++#
++# Todo lo de arriba actualiza agentes del usuario. Esto es lo contrario: un agente que escribimos
++# nosotros (`resources/agents/local-delegate-lector.md`), que solo tiene tools `local_*` y ningún
++# camino para leer un fichero él mismo. No lleva `local_delegate` en `tools` —solo acepta texto,
++# que ya habría pasado por el contexto principal—, así que no tiene el ancla y `pending()` no lo
++# toca: los dos flujos no se pisan.
++#
++# Qué fichero es nuestro lo decide el marcador, no el nombre: un `local-delegate-lector.md` sin él
++# lo escribió el usuario y no se toca, ni para actualizarlo ni para borrarlo.
++
++OWN_AGENT_NAME = "local-delegate-lector"
++OWN_MARKER = "<!-- local-delegate:agente-propio"
++
++# Las tools que aceptan `path` y no escriben. Fuera: `local_classify` y `local_delegate` (solo
++# texto), `local_boilerplate` (escribe ficheros) y `local_status` (diagnóstico).
++OWN_AGENT_TOOLS = (
++    "local_summarize",
++    "local_extract",
++    "local_translate",
++    "local_explain_code",
++    "local_lint_summary",
++    "local_commit_msg",
++    "local_describe_image",
++)
++
++
++def own_agent_text(resource: Path) -> str | None:
++    """El texto del agente propio tal como va empaquetado; None si no se puede leer.
++
++    La ruta se recibe por la misma razón que en `tool_catalog`: sin importar `install`.
++    """
++    try:
++        return resource.read_text(encoding="utf-8")
++    except OSError:
++        return None
++
++
++def is_own_agent(text: str) -> bool:
++    """True si el fichero lleva nuestro marcador: solo entonces se actualiza o se borra."""
++    return OWN_MARKER in text
++
++
+ def pending(agents_dir: Path, skill_md: Path) -> list[tuple[Path, str, list[str], str | None]]:
+     """Agentes que cambiarían: (ruta, texto nuevo, tools añadidas, acción del bloque).
+ 
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index 402076d..6b2c410 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -2,7 +2,7 @@
+ 
+ Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
+ backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
+-definición de «estar a punto»**: los veintiún elementos del andamiaje, cada uno con un ``probe``
++definición de «estar a punto»**: los veintidós elementos del andamiaje, cada uno con un ``probe``
+ que responde en qué estado está.
+ 
+ Tres reglas ordenan el módulo:
+@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
+ 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
+    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
+    un ``fix`` posterior sobrescribiría configuración ajena.
+-3. **Es una lista, no un framework.** Veintiún checks son una tupla de objetos con una función;
++3. **Es una lista, no un framework.** Veintidós checks son una tupla de objetos con una función;
+    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
+    diseño se revisa antes de seguir.
+ 
+@@ -755,6 +755,30 @@ def _probe_hook_settings(ctx: Context) -> Result:
+     return Result(OK, f"{len(registered)} registrado(s): {', '.join(registered)}")
+ 
+ 
++def _probe_own_agent(ctx: Context) -> Result:
++    """El subagente propio ``local-delegate-lector``, si se instaló con ``--agents``.
++
++    Que falte es ``ok``: es opt-in, y ``update`` no debe instalarle a nadie un agente que no
++    pidió. Lo que sí es ``warn`` es que esté y sea de otra versión, porque es nuestro y viejo:
++    sin este check, actualizar el paquete lo dejaba congelado —la trampa de la Mac con los hooks
++    de la 0.27, que ``update`` no reponía—. Un fichero con ese nombre sin nuestro marcador es del
++    usuario: se dice y no se toca.
++    """
++    if absent := _claude_absent(ctx):
++        return absent
++    estado, _texto = install.own_agent_state(ctx.claude_dir)
++    _src, dst = install.own_agent_paths(ctx.claude_dir)
++    if estado == "falta":
++        return Result(OK, "no instalado (es opcional: local-delegate install --agents)")
++    if estado == "al-dia":
++        return Result(OK, f"al día en {dst}")
++    if estado == "ajeno":
++        return Result(OK, f"{dst} existe sin el marcador de local-delegate: es tuyo y no se toca")
++    if estado == "desactualizado":
++        return Result(WARN, f"{dst} es de otra versión", "arréglalo con: local-delegate update")
++    return Result(UNKNOWN, "el paquete no trae el recurso del agente")
++
++
+ def _probe_skill(ctx: Context) -> Result:
+     """La skill ``delegacion-local`` en cada cliente que sepa cargarla.
+ 
+@@ -1388,7 +1412,7 @@ def _probe_rol_retirado(ctx: Context) -> Result:
+ 
+ 
+ # --- El registro --------------------------------------------------------------
+-# Veintiún elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
++# Veintidós elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+ # el problema no sería el registro sino el diseño.
+ #
+ # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
+@@ -1406,6 +1430,7 @@ CHECKS: tuple[Check, ...] = (
+     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
+     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
+     Check("scaffold.skill", "andamiaje", f"skill {install.SKILL_NAME}", _probe_skill),
++    Check("scaffold.own_agent", "andamiaje", "subagente lector", _probe_own_agent),
+     Check("scaffold.memory", "andamiaje", "memoria global", _probe_memory),
+     Check("scaffold.mcp_claude", "andamiaje", "MCP en Claude Code", _probe_mcp_claude),
+     Check("scaffold.mcp_codex", "andamiaje", "MCP en Codex", _probe_mcp_codex),
+@@ -1430,7 +1455,7 @@ CHECKS: tuple[Check, ...] = (
+ 
+ 
+ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
+-    """Corre los veintiún probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
++    """Corre los veintidós probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+ 
+     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
+     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
+@@ -1444,7 +1469,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
+             continue
+         try:
+             result = check.probe(ctx)
+-        except Exception as exc:  # un check roto no debe impedir ver los otros veinte
++        except Exception as exc:  # un check roto no debe impedir ver los otros veintiuno
+             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
+         results.append((check, result))
+     return results
+diff --git a/src/local_delegate/cli.py b/src/local_delegate/cli.py
+index fcf1248..9b60f8b 100644
+--- a/src/local_delegate/cli.py
++++ b/src/local_delegate/cli.py
+@@ -803,7 +803,10 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
+         "--agents",
+         dest="agents",
+         action="store_true",
+-        help="actualiza ~/.claude/agents que ya declaren tools local_* (opt-in)",
++        help=(
++            "instala el subagente local-delegate-lector y actualiza los ~/.claude/agents que ya "
++            "declaren tools local_* (opt-in)"
++        ),
+     )
+     p.add_argument(
+         "--no-client-cli",
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index ccf385e..c44e063 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -904,6 +904,86 @@ def _agents_action(agents_dir: Path, cambios: list) -> Action:
+     return Action("agents", agents_dir, f"actualiza {len(cambios)} subagente(s): {resumen}", _run)
+ 
+ 
++def own_agent_paths(claude: Path) -> tuple[Path, Path]:
++    """(recurso empaquetado, destino en ~/.claude/agents/) del subagente propio."""
++    from . import agents as agents_mod
++
++    nombre = f"{agents_mod.OWN_AGENT_NAME}.md"
++    return resources_dir() / "agents" / nombre, claude / "agents" / nombre
++
++
++def own_agent_state(claude: Path) -> tuple[str, str | None]:
++    """Estado del subagente propio: (estado, texto empaquetado).
++
++    Estados: ``falta``, ``al-dia``, ``desactualizado``, ``ajeno`` (un fichero con ese nombre sin
++    nuestro marcador: lo escribió el usuario y no se toca) y ``sin-recurso`` (el paquete no trae
++    el fichero; no debería pasar, y si pasa no se escribe nada).
++    """
++    from . import agents as agents_mod
++
++    src, dst = own_agent_paths(claude)
++    nuevo = agents_mod.own_agent_text(src)
++    if nuevo is None:
++        return "sin-recurso", None
++    if not dst.is_file():
++        return "falta", nuevo
++    actual = _read_text(dst)
++    # Ilegible cuenta como ajeno: si no se puede leer, no se puede saber si es nuestro, y la
++    # degradación segura de una escritura es no escribir.
++    if not agents_mod.is_own_agent(actual):
++        return "ajeno", nuevo
++    if actual.replace("\r\n", "\n") == nuevo.replace("\r\n", "\n"):
++        return "al-dia", nuevo
++    return "desactualizado", nuevo
++
++
++def _own_agent_install_actions(claude: Path) -> list[Action]:
++    estado, nuevo = own_agent_state(claude)
++    _src, dst = own_agent_paths(claude)
++    if estado in ("al-dia", "sin-recurso") or nuevo is None:
++        return []
++    if estado == "ajeno":
++        # Se dice en el plan en vez de callarlo: quien pidió `--agents` espera ver el agente, y
++        # tiene que saber por qué no aparece.
++        return [
++            Action(
++                "agents",
++                dst,
++                "NO se toca: existe un fichero con ese nombre sin el marcador de local-delegate",
++                lambda: "sin cambios (fichero del usuario)",
++            )
++        ]
++
++    def _run(path=dst, text=nuevo) -> str:
++        _write_text(path, text)  # `.bak` si ya existía y conserva su terminador de línea
++        return "escrito"
++
++    detalle = "crea" if estado == "falta" else "actualiza"
++    return [Action("agents", dst, f"{detalle} el subagente propio", _run, literal=nuevo)]
++
++
++def _own_agent_uninstall_actions(claude: Path) -> list[Action]:
++    estado, _nuevo = own_agent_state(claude)
++    _src, dst = own_agent_paths(claude)
++    if estado == "ajeno":
++        return [
++            Action(
++                "remove",
++                dst,
++                "NO se borra: no lleva el marcador de local-delegate",
++                lambda: "sin cambios (fichero del usuario)",
++            )
++        ]
++    if estado not in ("al-dia", "desactualizado"):
++        return []
++
++    def _run(path=dst) -> str:
++        path.unlink(missing_ok=True)
++        return "eliminado"
++
++    return [Action("remove", dst, "borra el subagente propio", _run)]
++
++
+ def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
+     def _run() -> str:
+         if dst.exists():
+@@ -996,6 +1076,12 @@ def plan_install(opts: Options) -> list[Action]:
+         if cambios:
+             actions.append(_agents_action(claude / "agents", cambios))
+ 
++    # El subagente propio va aparte de los agentes del usuario: `--agents` pide los dos, pero
++    # `update` solo repone este (componente interno `agente`), porque reparar lo nuestro no debe
++    # arrastrar escrituras en ficheros que escribió el usuario.
++    if opts.components & {"agents", "agente"} and "claude" in opts.targets:
++        actions.extend(_own_agent_install_actions(claude))
++
+     if "memory" in opts.components:
+         block = (res / "memory" / "local-delegate.md").read_text(encoding="utf-8")
+         memory_files = []
+@@ -1362,6 +1448,11 @@ def plan_uninstall(opts: Options) -> list[Action]:
+ 
+             actions.append(Action("markdown", path, "quita el bloque de delegación", _run_md))
+ 
++    # También con `mcp`, sin `--agents`: sin el servidor el agente se queda sin tools, y seguiría
++    # en la lista de subagentes que Claude Code carga en cada sesión apuntando a algo que no está.
++    if opts.components & {"agents", "agente", "mcp"} and "claude" in opts.targets:
++        actions.extend(_own_agent_uninstall_actions(claude))
++
+     if "mcp" in opts.components:
+         if "claude" in opts.targets:
+             actions.append(
+diff --git a/src/local_delegate/resources/agents/local-delegate-lector.md b/src/local_delegate/resources/agents/local-delegate-lector.md
+new file mode 100644
+index 0000000..96992d7
+--- /dev/null
++++ b/src/local_delegate/resources/agents/local-delegate-lector.md
+@@ -0,0 +1,18 @@
++---
++name: local-delegate-lector
++description: Lee por ti un fichero grande (docs, logs, salida de tests o lint, un diff, una imagen) con modelos locales y te devuelve solo lo que preguntas, sin que el fichero entre en tu contexto. Úsalo cuando necesites resumir, extraer datos, traducir o entender un fichero de más de ~8 KB y tengas su ruta absoluta. Pásale la ruta y la pregunta.
++tools: mcp__local-delegate__local_summarize, mcp__local-delegate__local_extract, mcp__local-delegate__local_translate, mcp__local-delegate__local_explain_code, mcp__local-delegate__local_lint_summary, mcp__local-delegate__local_commit_msg, mcp__local-delegate__local_describe_image
++model: haiku
++omitClaudeMd: true
++maxTurns: 4
++---
++
++<!-- local-delegate:agente-propio — lo instala y lo actualiza `local-delegate install --agents`; los cambios a mano se pierden -->
++
++Reenvías una petición a UNA tool local y devuelves su salida. No lees ficheros: no tienes con qué.
++
++1. Si no ves ninguna tool `local_*`, responde exactamente «local-delegate no está disponible» y para.
++2. Elige una sola tool: resumir → `local_summarize`; datos concretos → `local_extract`; traducir → `local_translate`; entender código → `local_explain_code`; salida de tests, lint o CI → `local_lint_summary`; mensaje de commit desde un diff → `local_commit_msg`; imagen → `local_describe_image`.
++3. Pásale la ruta en `path`, tal cual te la dieron. Si no es absoluta, responde «necesito la ruta absoluta» y para.
++4. Devuelve la salida de la tool literal, completa y sin comentarla, incluida su última línea. Si te piden un formato que la tool no admite (viñetas, un número de puntos, otro tono), NO la adaptes: la adapta quien te llamó. Si la tool falla, devuelve el error literal.
++5. Nunca afirmes haber hecho algo que no hiciste.
+diff --git a/src/local_delegate/update.py b/src/local_delegate/update.py
+index 56e4255..2200a9d 100644
+--- a/src/local_delegate/update.py
++++ b/src/local_delegate/update.py
+@@ -197,6 +197,16 @@ REPAIRS: tuple[Repair, ...] = (
+         PRESENT,
+         why="skill incompleta",
+     ),
++    Repair(
++        "scaffold.own_agent",
++        # Solo `warn` (nuestro y de otra versión): que falte es `ok` porque es opt-in. El
++        # componente es el interno `agente` y no `agents`, que además reescribiría los agentes
++        # del usuario: reparar lo nuestro no autoriza a tocar lo suyo.
++        (checks.WARN,),
++        frozenset({"agente"}),
++        frozenset({"claude"}),
++        why="subagente lector de otra versión",
++    ),
+     Repair("scaffold.memory", (checks.MISSING,), frozenset({"memory"}), PRESENT),
+     Repair("scaffold.mcp_claude", (checks.MISSING,), frozenset({"mcp"}), frozenset({"claude"})),
+     # `scaffold.mcp_codex` NO repara en `warn`, y es la excepción que ordena toda la tabla: ese
+diff --git a/tests/test_agents.py b/tests/test_agents.py
+index 1f1a505..a94c518 100644
+--- a/tests/test_agents.py
++++ b/tests/test_agents.py
+@@ -56,6 +56,12 @@ Nada que permita adivinar dónde va el bloque.
+ """
+ 
+ 
++def _sin_propio(foto: dict) -> dict:
++    """La foto sin el subagente propio, que `--agents` crea a propósito (tarea 2 del SDD
++    subagente-lector-local): lo que estos tests vigilan son los ficheros DEL USUARIO."""
++    return {k: v for k, v in foto.items() if not k.startswith(agents.OWN_AGENT_NAME)}
++
++
+ def _agents_dir(tmp_path: Path, **ficheros: str) -> Path:
+     d = tmp_path / ".claude" / "agents"
+     d.mkdir(parents=True)
+@@ -145,7 +151,7 @@ def test_un_agente_ajeno_queda_byte_a_byte_igual(tmp_path):
+     d = _agents_dir(tmp_path, ajeno=AJENO)
+     antes = snapshot(d)
+     assert _install(tmp_path) == 0
+-    assert snapshot(d) == antes
++    assert _sin_propio(snapshot(d)) == antes
+     assert not (d / "ajeno.md.bak").exists(), "ni siquiera se hizo copia: no se abrió para escribir"
+ 
+ 
+@@ -192,7 +198,12 @@ def test_segunda_pasada_no_planifica_nada(tmp_path):
+ 
+ def test_sin_directorio_de_agentes_no_hay_accion(tmp_path):
+     (tmp_path / ".claude").mkdir(parents=True)
+-    assert [a for a in inst.plan_install(_opts(tmp_path)) if a.kind == "agents"] == []
++    ajenas = [
++        a
++        for a in inst.plan_install(_opts(tmp_path))
++        if a.kind == "agents" and Path(a.target).stem != agents.OWN_AGENT_NAME
++    ]
++    assert ajenas == []  # la del agente propio sí está, y es a propósito
+ 
+ 
+ def test_el_bloque_se_reemplaza_y_no_se_duplica(tmp_path):
+@@ -205,3 +216,235 @@ def test_el_bloque_se_reemplaza_y_no_se_duplica(tmp_path):
+     texto = (d / "delegador.md").read_text(encoding="utf-8")
+     assert texto.count(agents.CATALOG_BEGIN) == 1
+     assert "11 tools" in texto
++
++
++# --- El agente propio (SDD subagente-lector-local, tarea 1) ------------------------------------
++
++AGENTE_PROPIO = inst.resources_dir() / "agents" / f"{agents.OWN_AGENT_NAME}.md"
++
++
++def _frontmatter(texto: str) -> dict[str, str]:
++    cabecera = texto.split("---", 2)[1]
++    return {
++        clave.strip(): valor.strip()
++        for clave, _, valor in (linea.partition(":") for linea in cabecera.strip().splitlines())
++    }
++
++
++def test_el_agente_propio_solo_tiene_las_tools_de_lectura_por_ruta():
++    fm = _frontmatter(agents.own_agent_text(AGENTE_PROPIO) or "")
++    tools = [t.strip() for t in fm["tools"].split(",")]
++    assert tools == [f"{agents.TOOL_PREFIX}{t}" for t in agents.OWN_AGENT_TOOLS]
++    # Ni tools para leer por su cuenta ni las que solo aceptan texto o escriben ficheros.
++    for fuera in ("Read", "Bash", "Grep", "local_classify", "local_delegate", "local_boilerplate"):
++        assert not any(t.endswith(fuera) for t in tools), fuera
++
++
++def test_el_agente_propio_arranca_ligero_y_acotado():
++    fm = _frontmatter(agents.own_agent_text(AGENTE_PROPIO) or "")
++    assert fm["name"] == agents.OWN_AGENT_NAME
++    assert fm["model"] == "haiku"
++    assert fm["omitClaudeMd"] == "true"  # sin esto carga CLAUDE.md y MEMORY.md: 14 k tokens
++    assert int(fm["maxTurns"]) <= 4
++
++
++def test_el_prompt_del_agente_lleva_sus_reglas():
++    texto = agents.own_agent_text(AGENTE_PROPIO) or ""
++    assert "local-delegate no está disponible" in texto  # REQ-007c: arranque sin tools
++    assert "literal" in texto
++    # Medido en la tarea 3: pidieron «5 viñetas», `local_summarize` no admite formato y Haiku
++    # reescribió la salida (parecido 0,24 con la de la tool) y se comió la línea de ahorro.
++    assert "NO la adaptes" in texto
++    assert "incluida su última línea" in texto
++    assert "Nunca afirmes haber hecho algo que no hiciste" in texto
++    assert "absoluta" in texto
++
++
++def test_el_agente_propio_no_entra_en_el_flujo_de_agentes_ajenos():
++    texto = agents.own_agent_text(AGENTE_PROPIO) or ""
++    assert agents.is_own_agent(texto)
++    # Sin el ancla, `pending()` no lo toca: los dos flujos no se pisan (REQ-004).
++    assert not agents.is_delegator(texto)
++    assert agents.process(texto, agents.tool_catalog(SKILL_MD)) == (texto, [], None)
++
++
++def test_sin_el_marcador_un_fichero_con_el_mismo_nombre_no_es_nuestro():
++    assert not agents.is_own_agent(DELEGADOR)
++    assert not agents.is_own_agent(AJENO)
++
++
++def test_las_tools_del_agente_existen_en_el_servidor():
++    nombres = {nombre for nombre, _ in agents.tool_catalog(SKILL_MD)}
++    assert set(agents.OWN_AGENT_TOOLS) <= nombres
++
++
++# Presupuesto de arranque (REQ-001b). Constantes MEDIDAS el 2026-09-22 en transcripts reales
++# (research.md, «De dónde sale el coste fijo»): primer turno del subagente con `omitClaudeMd` y una
++# sola tool (`local_summarize`, 1 235 caracteres de esquema) = 2 274 tokens; añadir los otros 10
++# esquemas (11 651 caracteres) sumó 4 210 tokens. De ahí la proporción de tokens por carácter de
++# esquema. El prompt del probador medía ~70 caracteres; lo que el nuestro pase de eso también cuenta.
++_BASE_UNA_TOOL = 2274
++_CHARS_ESQUEMA_BASE = 1235
++_TOKENS_POR_CHAR_ESQUEMA = 4210 / 11651
++_CHARS_PROMPT_PROBADOR = 70
++_PRESUPUESTO = 6000
++
++
++def _chars_esquemas() -> dict[str, int]:
++    import asyncio
++    import json
++
++    from local_delegate import server
++
++    tools = asyncio.run(server.mcp.list_tools())
++    return {
++        t.name: len(
++            json.dumps(
++                {"name": t.name, "description": t.description, "input_schema": t.input_schema},
++                ensure_ascii=False,
++            )
++        )
++        for t in tools
++    }
++
++
++def _estimar_arranque(tools: list[str], chars_prompt: int, esquemas: dict[str, int]) -> float:
++    chars = sum(esquemas[t] for t in tools)
++    return (
++        _BASE_UNA_TOOL
++        + (chars - _CHARS_ESQUEMA_BASE) * _TOKENS_POR_CHAR_ESQUEMA
++        + max(0, chars_prompt - _CHARS_PROMPT_PROBADOR) * _TOKENS_POR_CHAR_ESQUEMA
++    )
++
++
++def test_el_arranque_del_agente_cabe_en_el_presupuesto():
++    esquemas = _chars_esquemas()
++    cuerpo = (agents.own_agent_text(AGENTE_PROPIO) or "").split("---", 2)[2]
++    estimado = _estimar_arranque(list(agents.OWN_AGENT_TOOLS), len(cuerpo), esquemas)
++    assert estimado <= _PRESUPUESTO, f"arranque estimado {estimado:.0f} tokens"
++
++    # Control positivo: con las 11 tools el mismo cálculo se pasa. Si no, el test no discrimina.
++    todas = _estimar_arranque(list(esquemas), len(cuerpo), esquemas)
++    assert todas > _PRESUPUESTO, f"con todas: {todas:.0f}"
++
++
++# --- Instalación, retirada y reparación del agente propio (tarea 2) ----------------------------
++
++
++def _destino(home: Path) -> Path:
++    return home / ".claude" / "agents" / f"{agents.OWN_AGENT_NAME}.md"
++
++
++def _uninstall(home: Path, **kw) -> int:
++    return inst.apply(inst.plan_uninstall(_opts(home, **kw)), dry_run=False, out=lambda *_a: None)
++
++
++def test_install_crea_el_agente_y_una_segunda_pasada_no_cambia_nada(tmp_path):
++    (tmp_path / ".claude").mkdir()
++    assert _install(tmp_path) == 0
++    destino = _destino(tmp_path)
++    assert destino.read_text(encoding="utf-8") == agents.own_agent_text(AGENTE_PROPIO)
++    foto = snapshot(tmp_path / ".claude")
++    assert [a for a in inst.plan_install(_opts(tmp_path)) if a.target == destino] == []
++    assert _install(tmp_path) == 0
++    assert snapshot(tmp_path / ".claude") == foto
++
++
++def test_sin_el_flag_no_se_instala_el_agente(tmp_path):
++    (tmp_path / ".claude").mkdir()
++    inst.apply(
++        inst.plan_install(_opts(tmp_path, components={"skill"})), dry_run=False, out=lambda *_: None
++    )
++    assert not _destino(tmp_path).exists()
++
++
++def test_un_fichero_del_usuario_con_ese_nombre_no_se_toca_nunca(tmp_path):
++    d = _agents_dir(tmp_path)
++    suyo = "---\nname: local-delegate-lector\ntools: Read\n---\n\nMío.\r\n"
++    _destino(tmp_path).write_bytes(suyo.encode("utf-8"))
++    foto = snapshot(d)
++
++    plan = inst.plan_install(_opts(tmp_path))
++    aviso = [a for a in plan if a.target == _destino(tmp_path)]
++    assert aviso and "NO se toca" in aviso[0].detail  # el plan dice por qué no aparece
++    assert _install(tmp_path) == 0
++    assert _uninstall(tmp_path, components={"agents", "mcp"}) == 0
++    assert snapshot(d) == foto  # byte a byte, y sin `.bak`
++
++
++def test_uno_desactualizado_se_reescribe_con_copia_y_conserva_crlf(tmp_path):
++    d = _agents_dir(tmp_path)
++    viejo = (agents.own_agent_text(AGENTE_PROPIO) or "").replace("maxTurns: 4", "maxTurns: 9")
++    _destino(tmp_path).write_bytes(viejo.replace("\n", "\r\n").encode("utf-8"))
++
++    plan = [a for a in inst.plan_install(_opts(tmp_path)) if a.target == _destino(tmp_path)]
++    assert plan and plan[0].detail.startswith("actualiza")
++    assert plan[0].literal == agents.own_agent_text(AGENTE_PROPIO)  # `--dry-run` enseña el texto
++    assert _install(tmp_path) == 0
++
++    escrito = _destino(tmp_path).read_bytes()
++    assert b"maxTurns: 4\r\n" in escrito  # el terminador del fichero, no el de la plataforma
++    assert (d / f"{agents.OWN_AGENT_NAME}.md.bak").read_bytes() == viejo.replace(
++        "\n", "\r\n"
++    ).encode("utf-8")
++
++
++def test_uninstall_retira_el_agente_propio_tambien_sin_el_flag(tmp_path):
++    (tmp_path / ".claude").mkdir()
++    _install(tmp_path)
++    assert _destino(tmp_path).exists()
++    # Con `mcp` y sin `--agents`: sin servidor el agente se quedaría sin tools.
++    assert _uninstall(tmp_path, components={"mcp"}) == 0
++    assert not _destino(tmp_path).exists()
++
++
++def test_uninstall_de_otro_componente_no_toca_el_agente(tmp_path):
++    (tmp_path / ".claude").mkdir()
++    _install(tmp_path)
++    assert _uninstall(tmp_path, components={"skill"}) == 0
++    assert _destino(tmp_path).exists()
++
++
++def test_el_doctor_distingue_los_cuatro_estados(tmp_path):
++    from local_delegate import checks
++
++    (tmp_path / ".claude").mkdir()
++    ctx = checks.Context(home=tmp_path)
++    probe = next(c.probe for c in checks.CHECKS if c.id == "scaffold.own_agent")
++
++    assert probe(ctx).status == checks.OK  # falta: es opcional
++    _install(tmp_path)
++    assert probe(ctx).status == checks.OK  # al día
++    destino = _destino(tmp_path)
++    destino.write_text(destino.read_text(encoding="utf-8") + "\nviejo\n", encoding="utf-8")
++    assert probe(ctx).status == checks.WARN  # nuestro y de otra versión
++    destino.write_text("---\nname: x\n---\nmío\n", encoding="utf-8")
++    ajeno = probe(ctx)
++    assert ajeno.status == checks.OK and "no se toca" in ajeno.detail
++
++
++def test_el_wheel_lleva_el_agente():
++    """Hatchling empaqueta `src/local_delegate` entero; esto comprueba que el `.md` entra de verdad.
++
++    Instalar con `uv tool` desde el árbol no lo prueba: lee del árbol, no del wheel.
++    """
++    import subprocess
++    import sys
++    import tempfile
++    import zipfile
++
++    import pytest
++
++    raiz = Path(__file__).parents[1]
++    with tempfile.TemporaryDirectory() as out:
++        r = subprocess.run(
++            ["uv", "build", "--wheel", "--out-dir", out, str(raiz)],
++            capture_output=True,
++            text=True,
++            check=False,
++        )
++        if r.returncode != 0:
++            pytest.skip(f"uv build no disponible: {r.stderr[-200:]}")
++        (whl,) = Path(out).glob("*.whl")
++        nombres = zipfile.ZipFile(whl).namelist()
++    assert f"local_delegate/resources/agents/{agents.OWN_AGENT_NAME}.md" in nombres, sys.platform
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index 81ce3f3..699fa8a 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -413,8 +413,9 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
+ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
+     # `scaffold.memory` queda fuera porque agrega dos clientes, y `scaffold.hook_orphans` porque
+     # **nunca** puede ser `missing`: pregunta si SOBRA algo, no si falta. En un HOME vacío la
+-    # respuesta correcta es `ok` — no hay huérfanos que retirar.
+-    aparte = {"scaffold.memory", "scaffold.hook_orphans"}
++    # respuesta correcta es `ok` — no hay huérfanos que retirar. `scaffold.own_agent` tampoco:
++    # el subagente es opt-in (`--agents`), así que su ausencia es `ok` y `update` no lo instala.
++    aparte = {"scaffold.memory", "scaffold.hook_orphans", "scaffold.own_agent"}
+     ctx = make_ctx(make_home(tmp_path, complete=False))
+     scaffold = [
+         (check, result)
+@@ -988,9 +989,12 @@ _NUMERO = {
+     18: "dieciocho",
+     19: "diecinueve",
+     20: "veinte",
+-    # Apocopado: todas las frases lo ponen delante de un sustantivo masculino.
++    # Apocopado: todas las frases lo ponen delante de un sustantivo masculino...
+     21: "veintiún",
++    22: "veintidós",
+ }
++# ...salvo «ver los otros N», donde el número va solo y no se apocopa.
++_NUMERO_SUELTO = {**_NUMERO, 21: "veintiuno"}
+ 
+ 
+ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
+@@ -1010,7 +1014,7 @@ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
+         f"{cuantos.capitalize()} checks son una tupla",
+         f"{cuantos.capitalize()} elementos, en orden de grupo",
+         f"Corre los {cuantos} probes",
+-        f"ver los otros {_NUMERO[len(checks.CHECKS) - 1]}",
++        f"ver los otros {_NUMERO_SUELTO[len(checks.CHECKS) - 1]}",
+     )
+     faltan = [texto for texto in afirmaciones if texto not in fuente]
+     assert not faltan, f"el docstring de checks.py quedó desfasado: {faltan}"
+diff --git a/tests/test_update.py b/tests/test_update.py
+index fec28a1..45abc00 100644
+--- a/tests/test_update.py
++++ b/tests/test_update.py
+@@ -803,3 +803,29 @@ def test_sin_hook_de_lectura_registrado_update_no_lo_enciende(tmp_path):
+     assert actions
+     install.apply(actions, dry_run=False, out=lambda *a: None)
+     assert not install.read_hook_registered(home / ".claude")
++
++
++def test_warn_del_agente_propio_lo_repone_sin_tocar_los_agentes_del_usuario(tmp_path):
++    """Reparar lo nuestro no autoriza a tocar lo suyo: el componente es `agente`, no `agents`."""
++    from local_delegate import agents
++
++    home = make_home(tmp_path, complete=False)
++    d = home / ".claude" / "agents"
++    d.mkdir(parents=True, exist_ok=True)
++    # Un agente del usuario que `--agents` SÍ actualizaría (declara nuestra tool y tiene sección).
++    suyo = d / "suyo.md"
++    suyo.write_text(
++        f"---\nname: suyo\ntools: {agents.ANCHOR}\n---\n\n## Delegación a modelos locales\n\nx\n",
++        encoding="utf-8",
++    )
++    propio = d / f"{agents.OWN_AGENT_NAME}.md"
++    propio.write_text(f"{agents.OWN_MARKER} viejo -->\n", encoding="utf-8")
++    antes = suyo.read_bytes()
++
++    results = results_from(**{"scaffold.own_agent": checks.WARN})
++    actions, _notes = update.plan_repairs(results, opts_for(home))
++    assert [a for a in actions if a.target == propio], "el agente propio no se repone"
++    install.apply(actions, dry_run=False, out=lambda *_a: None)
++    assert suyo.read_bytes() == antes
++    assert agents.is_own_agent(propio.read_text(encoding="utf-8"))
++    assert "viejo" not in propio.read_text(encoding="utf-8")
+diff --git a/tests/test_wiki.py b/tests/test_wiki.py
+index 542e867..79fee4b 100644
+--- a/tests/test_wiki.py
++++ b/tests/test_wiki.py
+@@ -41,6 +41,7 @@ _NUMERO_DE_CHECKS = {
+     20: "veinte",
+     # Femenino: la frase es «las N piezas».
+     21: "veintiuna",
++    22: "veintidós",
+ }
+ 
+ # `[texto](destino)`, quedándose con el destino.
