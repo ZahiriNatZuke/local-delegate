@@ -1,7 +1,8 @@
 """Control instalado (tarea 4): precedencia + una corrida por variante, con evidencia por transcript.
 
-Archivado tal como corrió en T4: usa la API del banco CON `oferta`, que se quitó al retirar V1/V2
-tras el piloto de T5. Para volver a correrlo hay que adaptar `env_de_tanda` y `corrida_valida`.
+Archivado. En T4 corrió con la API del banco CON `oferta`; al retirar V1/V2 tras el piloto de T5
+se adaptó a la actual, sin ella. Hoy las tres «ofertas» son solo etiquetas: los hooks son los
+mismos en las tres corridas.
 """
 
 import json
@@ -10,7 +11,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-REPO = Path(r"D:\Projects\local-delegate")
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "scripts"))
 import _banco_claude as banco
 import experimento_adopcion as exp
@@ -35,9 +36,7 @@ for oferta in ("v0", "v1", "v2"):
     fichero.write_text(texto, encoding="utf-8")
     tele = d / "telemetria.jsonl"
     tele.unlink(missing_ok=True)
-    settings = banco.escribir_settings(
-        d / "settings.json", banco.env_de_tanda(oferta, tele, interruptor)
-    )
+    settings = banco.escribir_settings(d / "settings.json", banco.env_de_tanda(tele, interruptor))
     c = banco.correr(exp.pregunta(fichero, "md"), B, settings)
     corridas.append(c)
     visto = banco.analizar(banco.leer_transcript(B, c.session_id), fichero) if c.session_id else {}
@@ -47,7 +46,7 @@ for oferta in ("v0", "v1", "v2"):
             {
                 "oferta": oferta,
                 "error": c.error,
-                "valida": banco.corrida_valida(eventos, c.session_id, oferta),
+                "valida": banco.corrida_valida(eventos, c.session_id),
                 "hecho_ok": valor in c.resultado,
                 "coste": round(c.coste_usd, 3),
                 "eventos": [
