@@ -463,7 +463,9 @@ def test_los_casos_de_texto_abierto_los_deciden_los_pares():
         "lint-9k",
     }
     assert {cid for cid, c in corpus.items() if c.get("automatic_scoring") is False} == abiertos
-    assert corpus["resumen-md-10k"]["expected_format"] == {"max_words": 150, "prose": True}
+    # Desde el SDD resumen-por-secciones un Markdown con títulos se resume por secciones: el
+    # prompt ya no pide «prosa clara», así que el formato esperado ya no lleva `prose`.
+    assert corpus["resumen-md-10k"]["expected_format"] == {"max_words": 150}
 
 
 def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion():

@@ -253,3 +253,60 @@ def test_las_diferidas_se_acumulan_delta_a_delta(tmp_path):
     assert banco.analizar([primero, ultimo], f)["tools_diferidas"]
     quita = {"attachment": {"type": "deferred_tools_delta", "removedNames": [banco.TOOL_PRINCIPAL]}}
     assert not banco.analizar([primero, ultimo, quita], f)["tools_diferidas"]
+
+
+# --- Etapa 2 del SDD resumen-por-secciones --------------------------------------------------------
+
+
+def _fila(tarea: str, correcta: bool, en_contexto: bool) -> dict:
+    return {
+        "tarea": tarea,
+        "oferta": "v0",
+        "valida": True,
+        "correcta": correcta,
+        "contenido_en_contexto": en_contexto,
+    }
+
+
+@pytest.mark.parametrize(
+    ("correctas", "decision"),
+    [
+        (6, "se queda"),
+        (9, "se queda"),
+        (5, "no concluyente"),
+        (4, "no concluyente"),
+        (3, "se retira"),
+    ],
+)
+def test_informe_resumen_decide_solo_por_correctas(correctas, decision):
+    filas = [
+        _fila(t, i * 3 + r < correctas, i * 3 + r >= correctas)
+        for i, t in enumerate(("readme", "wiki-daemon", "wiki-instalacion"))
+        for r in range(3)
+    ]
+    informe = exp.informe_resumen(filas)
+    assert informe["correctas"] == correctas
+    assert informe["contenido_en_contexto"] == 9 - correctas
+    assert informe["decision"] == decision
+    assert sum(t["corridas"] for t in informe["por_tarea"].values()) == 9
+
+
+def test_informe_resumen_no_decide_con_otro_numero_de_corridas():
+    filas = [_fila("readme", True, False)] * 8 + [{**_fila("readme", True, False), "valida": False}]
+    assert exp.informe_resumen(filas)["decision"].startswith("sin decisión")
+
+
+def test_plan_con_una_sola_variante():
+    plan = exp.plan_de_corridas(["a", "b", "c"], 3, 7, ("v0",))
+    assert len(plan) == 9 and {v for _t, v, _r in plan} == {"v0"}
+
+
+def test_las_fuentes_fijas_sustituyen_al_fichero_vivo(tmp_path):
+    fuentes = tmp_path / "fuentes"
+    fuentes.mkdir()
+    (fuentes / "readme.md").write_text("COPIA FIJA", encoding="utf-8")
+    manifiesto = {"ficheros": {"readme.md": {"origen": "README.md"}}}
+    (tmp_path / "MANIFEST.json").write_text(json.dumps(manifiesto), encoding="utf-8")
+    tarea = {"id": "readme", "fuente": {"repo": "README.md"}}
+    assert exp.texto_fuente(tarea, tmp_path / "cache", fuentes) == "COPIA FIJA"
+    assert exp.texto_fuente(tarea, tmp_path / "cache") != "COPIA FIJA"

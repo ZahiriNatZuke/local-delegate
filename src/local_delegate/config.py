@@ -224,6 +224,11 @@ VARIABLES_ROL_RETIRADO: dict[str, str | None] = {
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
 LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 
+# local_summarize sigue la estructura del documento cuando tiene títulos Markdown (SDD
+# resumen-por-secciones). Apagado, resume en prosa como antes, byte a byte. Lo lee el daemon al
+# arrancar: para cambiarlo hay que ponerlo en el entorno del lanzador y reiniciarlo.
+RESUMEN_ESTRUCTURADO = _env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", True)
+
 # Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
 # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
 # último rol del literal pisara el tope de los demás sin avisar (F3, tarea 25).

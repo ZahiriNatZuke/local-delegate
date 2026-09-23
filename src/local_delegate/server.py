@@ -33,7 +33,17 @@ from filelock import FileLock, Timeout
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from . import autostart, cadenas, clients, config, enfriamiento, estado_json, fallos, preguntas
+from . import (
+    autostart,
+    cadenas,
+    clients,
+    config,
+    enfriamiento,
+    estado_json,
+    fallos,
+    preguntas,
+    secciones,
+)
 from .version import get_version
 
 # --- Versión del paquete ------------------------------------------------------
@@ -465,6 +475,8 @@ def _log_event(
     fallback_reason: str | None = None,
     fallback_class: str | None = None,
     error_class: str | None = None,
+    num_secciones: int | None = None,
+    focus: bool = False,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -550,6 +562,13 @@ def _log_event(
         # alguien la arregle (REQ-019).
         if error_class is not None:
             rec["error_class"] = error_class
+        # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
+        # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
+        # ni los títulos: el log no guarda contenido.
+        if num_secciones is not None:
+            rec["secciones"] = int(num_secciones)
+        if focus:
+            rec["focus"] = True
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
@@ -1200,6 +1219,9 @@ def _chat(
     rol: str | None = None,
     explicito: bool = False,
     respaldo: dict | None = None,
+    postproceso: Callable[[str, bool], str] | None = None,
+    num_secciones: int | None = None,
+    focus: bool = False,
 ) -> str:
     """POST al endpoint. Devuelve solo texto y registra la llamada en USAGE_LOG.
 
@@ -1234,6 +1256,11 @@ def _chat(
     if strip_fences and result.ok:
         text = _strip_fences(text)
     truncated_out = result.finish_reason == "length"
+    # El postproceso trabaja sobre la salida PURA del modelo: antes del aviso de truncado, del de
+    # respaldo, de `chars_out` y de la coletilla de ahorro. Hacerlo después dejaría lo que inserta
+    # detrás de esos avisos (resumen-por-secciones, revisión del plan B3).
+    if postproceso is not None and result.ok:
+        text = postproceso(text, truncated_out)
     aviso_truncado = "\n\n[local-delegate aviso: salida truncada por max_tokens]"
     # Con `write_to` el aviso viaja en el RECIBO, no dentro del archivo: lo que se escribe es lo
     # que generó el modelo y nada más.
@@ -1272,6 +1299,8 @@ def _chat(
         fallback_reason=info_respaldo["motivo"] if info_respaldo else None,
         fallback_class=info_respaldo["clase"] if info_respaldo else None,
         error_class=None if result.ok else _valor_clase(result.clase),
+        num_secciones=num_secciones,
+        focus=focus,
     )
     # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
@@ -1650,6 +1679,11 @@ def _rol_por_tamano(probe_len: int) -> tuple[str, str]:
     return rol, config.modelos_por_rol()[rol]
 
 
+def _presupuesto_map(max_chars: int) -> int:
+    """Caracteres por trozo del map: el 80 % del tope, para dejar sitio al prompt y a la salida."""
+    return max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
+
+
 def _chat_map_reduce(
     model: str,
     system: str,
@@ -1668,6 +1702,17 @@ def _chat_map_reduce(
     partial_max_words: int | None = None,
     rol: str | None = None,
     explicito: bool = False,
+    pieces: list | None = None,
+    system_for: Callable[[Any], str] | None = None,
+    user_for: Callable[[Any], str] | None = None,
+    words_for: Callable[[Any], int] | None = None,
+    tokens_for: Callable[[Any, int], int] | None = None,
+    split_for: Callable[[Any], list] | None = None,
+    reduce: str = "model",
+    reduce_extra: str = "",
+    postproceso: Callable[[str, bool], str] | None = None,
+    num_secciones: int | None = None,
+    focus: bool = False,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
 
@@ -1683,9 +1728,16 @@ def _chat_map_reduce(
     El reduce es jerárquico: si los resúmenes parciales tampoco caben, se vuelven a resumir por
     niveles (tope de 3, suficiente para cualquier archivo realista y con final garantizado).
     Como en `_chat_chunked`: N llamadas, **un** evento de log con `chunks: N`.
+
+    **Modo por trozo** (resumen-por-secciones): quien llama trae los trozos hechos (`pieces`) y
+    cómo tratar cada uno —`system_for`, `user_for`, `words_for`, `tokens_for` y `split_for`, que
+    valen también para los subtrozos del reintento por desborde—. Con `reduce="concat"` no hay
+    reduce por el modelo: los parciales ya están en su formato final y se unen en orden. Sin esos
+    parámetros, el comportamiento es el de siempre, byte a byte.
     """
-    budget = max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
-    pieces = _chunk_text(content, budget)
+    budget = _presupuesto_map(max_chars)
+    if pieces is None:
+        pieces = _chunk_text(content, budget)
     entry_id = _inflight_start(
         tool=tool, model=model, source=source, chars_in=len(content), chunks=len(pieces)
     )
@@ -1694,12 +1746,13 @@ def _chat_map_reduce(
     tokens_in: int | None = None
     tokens_out: int | None = None
     failed: ChatResult | None = None
+    cortadas = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     vigente = _ModeloVigente(model, rol, explicito)
 
-    def _one(sys_prompt: str, user: str, words: int) -> str | None:
-        nonlocal calls, latency_ms, tokens_in, tokens_out, failed
+    def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, cortadas
         result, ms, intentos = vigente.llamar(
-            sys_prompt, user, int(words * 2) + 64, temperature, tamano=len(user)
+            sys_prompt, user, max_tokens, temperature, tamano=len(user)
         )
         calls += len(intentos)
         latency_ms += ms
@@ -1710,7 +1763,12 @@ def _chat_map_reduce(
         if not result.ok:
             failed = result
             return None
+        if result.finish_reason == "length":
+            cortadas += 1
         return _strip_think(result.text)
+
+    def _tokens(words: int) -> int:
+        return int(words * 2) + 64
 
     # Cada parcial se deja algo más largo que el resumen final: el reduce necesita material
     # con el que trabajar, y un parcial demasiado corto ya habría perdido lo que importa.
@@ -1722,9 +1780,14 @@ def _chat_map_reduce(
     partial_words = partial_max_words if partial_max_words is not None else max(80, max_words)
     reduce_propio = reduce_system
     if reduce_system is None:
-        reduce_system = _guard(
-            "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
-            max_words,
+        # `reduce_extra` (el enfoque de local_summarize) va sobre el reduce POR DEFECTO sin
+        # convertirlo en uno propio: así la rama «un solo parcial» y el reagrupado no cambian.
+        reduce_system = (
+            _guard(
+                "un ÚNICO resumen global en prosa clara, sin repetir ni enumerar los fragmentos",
+                max_words,
+            )
+            + reduce_extra
         )
     if build_reduce is None:
 
@@ -1740,7 +1803,22 @@ def _chat_map_reduce(
     # que luego se resumirían entre sí. Sin reduce propio se mantiene el comportamiento de hoy.
     regroup_system = system if reduce_propio is not None else reduce_system
 
-    def _map_piece(piece: str, depth: int = 0) -> list[str] | None:
+    def _map_system(piece) -> str:
+        return system_for(piece) if system_for is not None else system
+
+    def _map_user(piece) -> str:
+        return user_for(piece) if user_for is not None else build_user(piece.strip())
+
+    def _map_tokens(piece) -> int:
+        words = words_for(piece) if words_for is not None else partial_words
+        return tokens_for(piece, words) if tokens_for is not None else _tokens(words)
+
+    def _split(piece) -> list:
+        if split_for is not None:
+            return split_for(piece)
+        return _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+
+    def _map_piece(piece, depth: int = 0) -> list[str] | None:
         """Resume un trozo; si el backend dice que no cabe, lo parte y reintenta.
 
         El presupuesto en chars es una estimación de cuántos tokens ocupará el trozo, y con
@@ -1750,12 +1828,12 @@ def _chat_map_reduce(
         no es un problema de presupuesto.
         """
         nonlocal failed
-        out = _one(system, build_user(piece.strip()), partial_words)
+        out = _one(_map_system(piece), _map_user(piece), _map_tokens(piece))
         if out is not None:
             return [out]
         if depth >= 2 or not _es_desborde_de_contexto(failed):
             return None
-        partes = _chunk_text(piece, max(config.CHUNK_MIN_CHARS, len(piece) // 2))
+        partes = _split(piece)
         if len(partes) < 2:
             return None  # indivisible: el error se queda como está
         failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
@@ -1784,7 +1862,11 @@ def _chat_map_reduce(
             # reduce propio no: el parcial está en el formato del map —para un commit, un parte
             # por archivo— y saltarse el reduce devolvería eso en vez de un mensaje. Pasa con un
             # `CHUNK_MIN_CHARS` alto, que es configurable.
-            if len(summaries) == 1 and reduce_propio is None:
+            if reduce == "concat":
+                # Los parciales ya están en el formato final (una sección tras otra): unirlos en
+                # orden ES el resultado. Un reduce por el modelo los volvería a aplanar en prosa.
+                text = "\n\n".join(s.strip() for s in summaries)
+            elif len(summaries) == 1 and reduce_propio is None:
                 text = summaries[0]
             else:
                 for _level in range(3):
@@ -1794,13 +1876,15 @@ def _chat_map_reduce(
                     # llevar delante material fijo (el inventario del diff, p. ej.), y medir sin
                     # él desbordaría el contexto justo en la llamada que produce el resultado.
                     if len(prompt) <= budget:
-                        out = _one(reduce_system, prompt, max_words)
+                        out = _one(reduce_system, prompt, _tokens(max_words))
                         text = out or ""
                         break
                     # Ni los parciales caben: se reducen por grupos y se repite.
                     grouped: list[str] = []
                     for group in _chunk_text(joined, budget):
-                        out = _one(regroup_system, build_user(group.strip()), partial_words)
+                        out = _one(
+                            regroup_system, build_user(group.strip()), _tokens(partial_words)
+                        )
                         if out is None:
                             break
                         grouped.append(out)
@@ -1829,6 +1913,16 @@ def _chat_map_reduce(
             error = "context_overflow"
     else:
         error, finish_reason = None, "stop"
+        if postproceso is not None:
+            text = postproceso(text, cortadas > 0)
+        # Antes un parcial cortado por `length` se aceptaba en silencio y el evento decía `stop`:
+        # el resumen perdía parte de un trozo sin que nadie lo supiera (revisión del plan, B6).
+        if cortadas:
+            finish_reason = "length"
+            text += (
+                f"\n\n[local-delegate aviso: salida truncada por max_tokens en {cortadas} de "
+                f"{calls} llamadas; puede faltar parte del contenido]"
+            )
         text += vigente.aviso(len(pieces) > 1)
 
     _log_event(
@@ -1844,10 +1938,12 @@ def _chat_map_reduce(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         truncated_in=False,  # el sentido de todo esto es que ya no se trunca
-        truncated_out=False,
+        truncated_out=ok and cortadas > 0,
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        num_secciones=num_secciones,
+        focus=focus,
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
@@ -1931,12 +2027,149 @@ def _validate_image_path(path: str) -> str:
     return _IMAGE_MIME[suffix]
 
 
+# --- Resumen estructurado (local_summarize, SDD resumen-por-secciones) ------------------------
+# En el piloto de T5 la tool nombró entre el 0 % y el 27 % de los títulos aunque Claude pidió
+# 450-600 palabras: el prompt pedía «prosa clara» y el modelo aplanaba el documento. Aquí el
+# servidor detecta las secciones (`secciones.detectar`), se las da al modelo en orden y después
+# completa las que falten (`secciones.completar`).
+_FORMATO_ESTRUCTURADO = (
+    "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
+    "orden, una línea '## ' con el título tal cual y debajo 1 a 3 frases con lo que dice"
+)
+_NOTA_ESTRUCTURADO = (
+    " Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el "
+    "título en las últimas."
+)
+
+
+def _texto_focus(focus: str | None) -> str:
+    """El enfoque, ya saneado, delimitado como dato dentro del prompt de sistema."""
+    if not focus:
+        return ""
+    return (
+        f" Prioriza este aspecto: «{focus}». Conserva literales los datos concretos que tengan que "
+        "ver con él (cifras, nombres, decisiones)."
+    )
+
+
+def _system_estructurado(max_words: int, extra: str) -> str:
+    return _guard(_FORMATO_ESTRUCTURADO, max_words) + _NOTA_ESTRUCTURADO + extra
+
+
+def _user_estructurado(titulos, contenido: str, continua_de: str | None = None) -> str:
+    partes = []
+    if continua_de:
+        partes.append(
+            f"El fragmento empieza a mitad de la sección «{continua_de}»: resume primero ese "
+            "principio en 1 o 2 frases, sin línea de título; después, las secciones de la lista."
+        )
+    lista = "\n".join(f"- {t}" for t in titulos)
+    partes.append(f"Secciones, en orden:\n{lista}")
+    partes.append(f"Resume el siguiente contenido:\n\n{contenido}")
+    return "\n\n".join(partes)
+
+
+def _max_tokens_estructurado(words: int, titulos) -> int:
+    """El tope de siempre más sitio para los títulos, que no cuentan en `max_words` (REQ-202)."""
+    return int(words * 2) + 64 + sum(len(t) // 2 + 8 for t in titulos)
+
+
+def _resumen_estructurado(
+    *,
+    model: str,
+    rol: str,
+    content: str,
+    estructura,
+    max_words: int,
+    extra: str,
+    focus: bool,
+    source: str,
+    truncated_in: bool,
+    raw_len: int | None,
+    path: str | None,
+) -> str:
+    titulos = estructura.textos
+
+    def _completar(texto: str, cortada: bool) -> str:
+        return secciones.completar(texto, titulos, cortada=cortada).texto
+
+    max_chars = config.max_chars_for_role(rol)
+    if len(content) <= max_chars:
+        return _chat(
+            model,
+            _system_estructurado(max_words, extra),
+            _user_estructurado(titulos, content),
+            max_tokens=_max_tokens_estructurado(max_words, titulos),
+            tool="local_summarize",
+            rol=rol,
+            chars_in=len(content),
+            source=source,
+            truncated_in=truncated_in,
+            raw_len=raw_len,
+            path=path,
+            postproceso=_completar,
+            num_secciones=len(titulos),
+            focus=focus,
+        )
+
+    # Documento largo: se trocea SOLO por los títulos del nivel estructural (nunca en un `#` de
+    # una valla de código), cada trozo se resume con sus secciones y su parte de `max_words`, y
+    # los parciales se concatenan en orden: ya están en el formato final.
+    trozos = secciones.repartir_palabras(
+        secciones.trozos_por_secciones(
+            content, estructura, _presupuesto_map(max_chars), _chunk_text
+        ),
+        max_words,
+    )
+
+    def _system_trozo(trozo) -> str:
+        if trozo.titulos:
+            return _system_estructurado(trozo.palabras, extra)
+        return _guard("un resumen en prosa clara", trozo.palabras) + extra
+
+    def _user_trozo(trozo) -> str:
+        texto = trozo.texto.strip()
+        if trozo.titulos:
+            return _user_estructurado(trozo.titulos, texto, trozo.continua_de)
+        if trozo.continua_de:
+            return (
+                f"Este fragmento continúa la sección «{trozo.continua_de}». Resume solo este "
+                f"fragmento en 1 a 3 frases, sin línea de título:\n\n{texto}"
+            )
+        return f"Resume el siguiente contenido:\n\n{texto}"
+
+    return _chat_map_reduce(
+        model,
+        _system_estructurado(max_words, extra),
+        content,
+        lambda piece: f"Resume el siguiente contenido:\n\n{piece}",
+        max_chars=max_chars,
+        tool="local_summarize",
+        rol=rol,
+        source=source,
+        max_words=max_words,
+        raw_len=raw_len,
+        path=path,
+        pieces=trozos,
+        system_for=_system_trozo,
+        user_for=_user_trozo,
+        words_for=lambda trozo: trozo.palabras,
+        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.titulos),
+        split_for=lambda trozo: secciones.partir_trozo(trozo, content, estructura, _chunk_text),
+        reduce="concat",
+        postproceso=_completar,
+        num_secciones=len(titulos),
+        focus=focus,
+    )
+
+
 # --- Tools ------------------------------------------------------------------
 @mcp.tool(annotations=_anotaciones("Resumir texto o archivo"))
 def local_summarize(
     text: str | None = None,
     path: str | None = None,
     max_words: int = 150,
+    focus: str | None = None,
 ) -> str:
     """PREFIERE esta tool en vez de leer el archivo con Read cuando el archivo es grande
     (>200 líneas / >10 KB) y solo necesitas un resumen, no el contenido literal.
@@ -1952,12 +2185,34 @@ def local_summarize(
         text: Texto a resumir (usa esto o 'path').
         path: Ruta a un archivo cuyo contenido se resume (leído server-side).
         max_words: Longitud máxima del resumen en palabras.
+        focus: Opcional. Qué te interesa del documento (p. ej. "cifras de configuración",
+            "riesgos"): el resumen lo prioriza y conserva literales sus datos concretos.
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
-    system = _guard("un resumen en prosa clara", max_words)
+    enfoque = secciones.sanear_focus(focus)
+    extra = _texto_focus(enfoque)
+    estructura = secciones.detectar(content) if config.RESUMEN_ESTRUCTURADO else None
+    if estructura is not None:
+        return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
+            model=model,
+            rol=rol,
+            content=content,
+            estructura=estructura,
+            max_words=max_words,
+            extra=extra,
+            focus=enfoque is not None,
+            source="path" if path else "inline",
+            truncated_in=truncated_in,
+            raw_len=raw_len,
+            path=path,
+        )
+
+    # Sin estructura (o con el interruptor apagado): el camino de siempre. Sin enfoque, el prompt
+    # es byte a byte el de antes; los benchmarks y el corpus lo copian literal.
+    system = _guard("un resumen en prosa clara", max_words) + extra
 
     def _build(piece: str) -> str:
         return f"Resume el siguiente contenido:\n\n{piece}"
@@ -1977,6 +2232,8 @@ def local_summarize(
             max_words=max_words,
             raw_len=raw_len,
             path=path,
+            reduce_extra=extra,
+            focus=enfoque is not None,
         )
 
     user = _build(content)
@@ -1992,6 +2249,7 @@ def local_summarize(
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
+        focus=enfoque is not None,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
