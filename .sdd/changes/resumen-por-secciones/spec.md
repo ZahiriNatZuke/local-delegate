@@ -20,6 +20,9 @@ formato»).
   resumen lista las secciones del **nivel estructural** (el nivel más alto con al menos dos
   títulos) **en el orden del documento**, cada una con su título literal y un resumen breve de su contenido. No inventa
   secciones ni omite ninguna de ese nivel.
+  **Enmienda v3:** las subsecciones del nivel siguiente se nombran dentro de su sección; el texto
+  anterior a la primera sección, si tiene contenido, es una sección «Introducción»; y el presupuesto
+  se reparte según el tamaño de cada sección.
 - **REQ-202 (presupuesto):** `max_words` sigue siendo el tope del texto de los resúmenes; los
   títulos no cuentan para él. `max_tokens` deja margen para los títulos y el formato, de modo que
   una salida estructurada no se corte por `length` en los documentos del banco. Si hay más

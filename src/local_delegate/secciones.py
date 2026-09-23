@@ -274,6 +274,71 @@ def completar(salida: str, esperados: list[str], *, cortada: bool = False) -> Co
     return Completado(texto, len(emp.faltan), len(emp.vacias), len(emp.fuera_de_orden))
 
 
+# --- Secciones del resumen (v3: subsecciones, introducción y tamaño) -----------------------------
+#
+# La etapa 2 de la v2 dio 3/9: con el nivel `##` solo, un documento con subsecciones perdía justo
+# esas partes (el modelo repartía el presupuesto a partes iguales y las `###` se quedaban fuera), y
+# el texto anterior al primer título —la introducción— no estaba en la lista. Claude releía ambas.
+
+INTRODUCCION = "Introducción"
+PALABRAS_MINIMAS_INTRO = 20
+
+
+@dataclass(frozen=True)
+class Seccion:
+    titulo: str
+    inicio: int
+    fin: int
+    subtitulos: tuple[str, ...] = ()
+    sintetica: bool = False  # la «Introducción»: no es un título del documento
+
+    @property
+    def tamano(self) -> int:
+        return self.fin - self.inicio
+
+
+def _palabras_fuera_de_titulos(texto: str) -> int:
+    return sum(_palabras(linea) for _pos, linea in _lineas(texto) if not _ATX.match(linea))
+
+
+def secciones_para_resumen(text: str, estructura: Estructura) -> list[Seccion]:
+    """Las secciones que se piden al modelo, en orden, con su tramo del texto y sus subsecciones.
+
+    Las subsecciones son los títulos del nivel siguiente al estructural que caen dentro de cada
+    sección (fuera de vallas, porque salen de `titulos_markdown`). La introducción es el texto
+    anterior a la primera sección, si tiene contenido de verdad y no solo un título `#`.
+    """
+    todos = titulos_markdown(text)
+    principales = list(estructura.titulos)
+    secciones_: list[Seccion] = []
+    primero = principales[0].inicio
+    if _palabras_fuera_de_titulos(text[:primero]) >= PALABRAS_MINIMAS_INTRO:
+        secciones_.append(Seccion(INTRODUCCION, 0, primero, sintetica=True))
+    for i, titulo in enumerate(principales):
+        fin = principales[i + 1].inicio if i + 1 < len(principales) else len(text)
+        subs = tuple(
+            t.texto
+            for t in todos
+            if t.nivel == estructura.nivel + 1 and titulo.inicio < t.inicio < fin
+        )
+        secciones_.append(Seccion(titulo.texto, titulo.inicio, fin, subs))
+    return secciones_
+
+
+def repartir_por_tamano(tamanos: list[int], total: int, *, minimo: int) -> list[int]:
+    """Reparte `total` en proporción a `tamanos`, sin pasar nunca de `total`.
+
+    El mínimo solo se aplica si cabe para todos (`minimo × n ≤ total`); si no, el reparto es
+    proporcional puro (y al menos 1 a cada uno).
+    """
+    if not tamanos:
+        return []
+    suma = sum(tamanos) or 1
+    base = minimo if minimo * len(tamanos) <= total else 0
+    resto = total - base * len(tamanos)
+    return [max(1, base + (resto * t) // suma) for t in tamanos]
+
+
 # --- Troceado por secciones ----------------------------------------------------------------------
 
 
@@ -281,28 +346,32 @@ def completar(salida: str, esperados: list[str], *, cortada: bool = False) -> Co
 class Trozo:
     texto: str
     inicio: int
-    titulos: tuple[str, ...]  # títulos del nivel estructural que EMPIEZAN dentro del trozo
+    secciones: tuple[Seccion, ...]  # las que EMPIEZAN dentro del trozo
     continua_de: str | None  # si el trozo empieza a mitad de una sección, su título
     palabras: int = 0
 
+    @property
+    def titulos(self) -> tuple[str, ...]:
+        return tuple(s.titulo for s in self.secciones)
 
-def _seccion_en(estructura: Estructura, pos: int) -> str | None:
-    """El título de la sección que contiene la posición `pos` (None: antes del primer título)."""
-    dentro = [t for t in estructura.titulos if t.inicio <= pos]
-    return dentro[-1].texto if dentro else None
+
+def _seccion_en(secciones_: list[Seccion], pos: int) -> str | None:
+    """El título de la sección que contiene la posición `pos` (None: antes de la primera)."""
+    dentro = [s for s in secciones_ if s.inicio <= pos]
+    return dentro[-1].titulo if dentro else None
 
 
 def trozos_por_secciones(
     text: str,
-    estructura: Estructura,
+    secciones_: list[Seccion],
     presupuesto: int,
     partir: Callable[[str, int], list[str]],
     *,
     desde: int = 0,
     hasta: int | None = None,
 ) -> list[Trozo]:
-    """Corta `text[desde:hasta]` SOLO en los títulos del nivel estructural y empaqueta secciones
-    enteras hasta el presupuesto.
+    """Corta `text[desde:hasta]` SOLO al principio de las secciones y empaqueta secciones enteras
+    hasta el presupuesto.
 
     Cortar por las posiciones ya detectadas —y no por cualquier `#`— es lo que impide partir
     dentro de una valla de código o en un subtítulo. Una sección mayor que el presupuesto se parte
@@ -310,16 +379,16 @@ def trozos_por_secciones(
     Las palabras se reparten después, con `repartir_palabras`.
     """
     hasta = len(text) if hasta is None else hasta
-    cortes = [t.inicio for t in estructura.titulos if desde < t.inicio < hasta]
+    cortes = [s.inicio for s in secciones_ if desde < s.inicio < hasta]
     limites = [desde, *cortes, hasta]
     segmentos: list[tuple[int, str]] = [(a, text[a:b]) for a, b in pairwise(limites) if b > a]
-    inicios = {t.inicio: t.texto for t in estructura.titulos}
+    inicios = {s.inicio for s in secciones_}
 
     def _trozo(inicio: int, texto: str) -> Trozo:
         fin = inicio + len(texto)
-        titulos = tuple(t.texto for t in estructura.titulos if inicio <= t.inicio < fin)
-        continua = None if inicio in inicios else _seccion_en(estructura, inicio)
-        return Trozo(texto, inicio, titulos, continua)
+        dentro = tuple(s for s in secciones_ if inicio <= s.inicio < fin)
+        continua = None if inicio in inicios else _seccion_en(secciones_, inicio)
+        return Trozo(texto, inicio, dentro, continua)
 
     trozos: list[Trozo] = []
     actual: tuple[int, str] | None = None
@@ -346,27 +415,18 @@ def trozos_por_secciones(
 
 
 def repartir_palabras(trozos: list[Trozo], max_words: int, *, minimo: int = 40) -> list[Trozo]:
-    """Reparte `max_words` en proporción al tamaño de cada trozo, sin pasar nunca del total.
-
-    El mínimo solo se aplica si cabe para todos (`minimo × trozos ≤ max_words`); si no, el
-    reparto es proporcional puro. Así la suma de lo que se pide al modelo nunca supera el tope.
-    """
-    if not trozos:
-        return []
-    total = sum(len(t.texto) for t in trozos) or 1
-    base = minimo if minimo * len(trozos) <= max_words else 0
-    resto = max_words - base * len(trozos)
-    salida = []
-    for t in trozos:
-        palabras = base + (resto * len(t.texto)) // total
-        salida.append(Trozo(t.texto, t.inicio, t.titulos, t.continua_de, max(1, palabras)))
-    return salida
+    """Reparte `max_words` entre trozos en proporción a su tamaño, sin pasar nunca del total."""
+    reparto = repartir_por_tamano([len(t.texto) for t in trozos], max_words, minimo=minimo)
+    return [
+        Trozo(t.texto, t.inicio, t.secciones, t.continua_de, palabras)
+        for t, palabras in zip(trozos, reparto, strict=True)
+    ]
 
 
 def partir_trozo(
     trozo: Trozo,
     text: str,
-    estructura: Estructura,
+    secciones_: list[Seccion],
     partir: Callable[[str, int], list[str]],
 ) -> list[Trozo]:
     """Parte en dos (aprox.) un trozo que no cupo, con las posiciones del documento entero.
@@ -377,7 +437,7 @@ def partir_trozo(
     presupuesto = max(1, len(trozo.texto) // 2)
     partes = trozos_por_secciones(
         text,
-        estructura,
+        secciones_,
         presupuesto,
         partir,
         desde=trozo.inicio,

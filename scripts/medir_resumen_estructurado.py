@@ -111,6 +111,17 @@ def medir(salida: str, esperados: list[str], max_words: int) -> dict:
     }
 
 
+def cobertura_subsecciones(salida: str, subtitulos: list[str]) -> dict:
+    """Informativa (v3): cuántas subsecciones se nombran en algún sitio de la salida.
+
+    No decide nada: el prompt pide nombrarlas en negrita dentro de su sección, pero la métrica que
+    decide sigue siendo la del nivel estructural.
+    """
+    cuerpo = " " + secciones.normal_titulo(salida) + " "
+    nombradas = sum(f" {secciones.normal_titulo(t)} " in cuerpo for t in subtitulos)
+    return {"total": len(subtitulos), "nombradas": nombradas}
+
+
 def veredicto(resultados: dict[str, dict]) -> dict:
     """Aplica el criterio de la spec a las métricas (sin el juicio humano, que va aparte)."""
     principales = [resultados.get(k, {}) for k in ("readme", "instalacion", "daemon")]
@@ -187,7 +198,10 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
     resultados: dict[str, dict] = {}
     for llamada in LLAMADAS:
         ruta = (FUENTES / llamada["fichero"]).resolve()
-        esperados = secciones.detectar(ruta.read_text(encoding="utf-8")).textos
+        documento = ruta.read_text(encoding="utf-8")
+        plan = secciones.secciones_para_resumen(documento, secciones.detectar(documento))
+        esperados = [s.titulo for s in plan]
+        subtitulos = [t for s in plan for t in s.subtitulos]
         argumentos = {"path": str(ruta), "max_words": llamada["max_words"]}
         if "focus" in llamada:
             argumentos["focus"] = llamada["focus"]
@@ -200,6 +214,8 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
         segundos = round(time.monotonic() - inicio, 1)
         (salidas / f"{llamada['id']}.md").write_text(texto, encoding="utf-8")
         fila = medir(texto, esperados, llamada["max_words"])
+        fila["subsecciones"] = cobertura_subsecciones(texto, subtitulos)
+        fila["introduccion"] = secciones.INTRODUCCION in esperados
         evento = _evento_de_uso(ruta, desde)
         fila.update(
             {

@@ -2033,10 +2033,17 @@ def _validate_image_path(path: str) -> str:
 # servidor detecta las secciones (`secciones.detectar`), se las da al modelo en orden y después
 # completa las que falten (`secciones.completar`).
 #
-# El presupuesto por sección va EXPLÍCITO en el prompt. La primera versión pedía «1 a 3 frases» y
-# con el CHANGELOG (46 secciones, 500 palabras: unas 10 por sección) el modelo escribió el doble:
-# 3 de 5 trozos se cortaron por `max_tokens` y 6 secciones quedaron sin resumir (etapa 1).
+# El presupuesto por sección va EXPLÍCITO en la lista, y en proporción al tamaño de cada sección
+# (v3). La primera versión pedía «1 a 3 frases» y con el CHANGELOG (46 secciones, 500 palabras) el
+# modelo escribió el doble y se cortó (etapa 1); la v2 repartía a partes iguales y las secciones
+# con subsecciones se quedaban cortas: Claude las releía (etapa 2, 3/9).
 _PALABRAS_MINIMAS_POR_SECCION = 8
+_FORMATO_ESTRUCTURADO = (
+    "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
+    "orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que "
+    "indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la "
+    "frase que la resume"
+)
 _NOTA_ESTRUCTURADO = (
     " Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el "
     "título en las últimas."
@@ -2053,39 +2060,45 @@ def _texto_focus(focus: str | None) -> str:
     )
 
 
-def _palabras_por_seccion(max_words: int, secciones_: int) -> int:
-    return max(_PALABRAS_MINIMAS_POR_SECCION, max_words // max(1, secciones_))
+def _system_estructurado(max_words: int, extra: str) -> str:
+    return _guard(_FORMATO_ESTRUCTURADO, max_words) + _NOTA_ESTRUCTURADO + extra
 
 
-def _system_estructurado(max_words: int, extra: str, secciones_: int) -> str:
-    formato = (
-        "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
-        "orden, una línea '## ' con el título tal cual y debajo unas "
-        f"{_palabras_por_seccion(max_words, secciones_)} palabras con lo que dice"
+def _lista_de_secciones(secciones_, max_words: int) -> str:
+    """Una línea por sección con sus palabras, y sus subsecciones anidadas debajo."""
+    reparto = secciones.repartir_por_tamano(
+        [s.tamano for s in secciones_], max_words, minimo=_PALABRAS_MINIMAS_POR_SECCION
     )
-    return _guard(formato, max_words) + _NOTA_ESTRUCTURADO + extra
+    lineas = []
+    for seccion, palabras in zip(secciones_, reparto, strict=True):
+        aclaracion = " (el texto antes de la primera sección)" if seccion.sintetica else ""
+        lineas.append(f"- {seccion.titulo}{aclaracion} (unas {palabras} palabras)")
+        lineas.extend(f"  - {sub}" for sub in seccion.subtitulos)
+    return "\n".join(lineas)
 
 
-def _user_estructurado(titulos, contenido: str, continua_de: str | None = None) -> str:
+def _user_estructurado(
+    secciones_, max_words: int, contenido: str, continua_de: str | None = None
+) -> str:
     partes = []
     if continua_de:
         partes.append(
             f"El fragmento empieza a mitad de la sección «{continua_de}»: resume primero ese "
             "principio en 1 o 2 frases, sin línea de título; después, las secciones de la lista."
         )
-    lista = "\n".join(f"- {t}" for t in titulos)
-    partes.append(f"Secciones, en orden:\n{lista}")
+    partes.append(f"Secciones, en orden:\n{_lista_de_secciones(secciones_, max_words)}")
     partes.append(f"Resume el siguiente contenido:\n\n{contenido}")
     return "\n\n".join(partes)
 
 
-def _max_tokens_estructurado(words: int, titulos) -> int:
-    """Sitio para los títulos, que no cuentan en `max_words` (REQ-202), y margen de sobra.
+def _max_tokens_estructurado(words: int, secciones_) -> int:
+    """Sitio para los títulos y subtítulos, que no cuentan en `max_words` (REQ-202), y margen.
 
     3 tokens por palabra pedida y no 2: con muchas secciones el modelo se pasa del presupuesto, y
     un corte por `max_tokens` a mitad de un trozo deja secciones enteras sin resumir, que es peor
     que un resumen algo más largo (etapa 1: 3 de 5 trozos del CHANGELOG cortados con 2).
     """
+    titulos = [s.titulo for s in secciones_] + [t for s in secciones_ for t in s.subtitulos]
     return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in titulos)
 
 
@@ -2103,7 +2116,8 @@ def _resumen_estructurado(
     raw_len: int | None,
     path: str | None,
 ) -> str:
-    titulos = estructura.textos
+    plan = secciones.secciones_para_resumen(content, estructura)
+    titulos = [s.titulo for s in plan]
 
     def _completar(texto: str, cortada: bool) -> str:
         return secciones.completar(texto, titulos, cortada=cortada).texto
@@ -2112,9 +2126,9 @@ def _resumen_estructurado(
     if len(content) <= max_chars:
         return _chat(
             model,
-            _system_estructurado(max_words, extra, len(titulos)),
-            _user_estructurado(titulos, content),
-            max_tokens=_max_tokens_estructurado(max_words, titulos),
+            _system_estructurado(max_words, extra),
+            _user_estructurado(plan, max_words, content),
+            max_tokens=_max_tokens_estructurado(max_words, plan),
             tool="local_summarize",
             rol=rol,
             chars_in=len(content),
@@ -2123,29 +2137,27 @@ def _resumen_estructurado(
             raw_len=raw_len,
             path=path,
             postproceso=_completar,
-            num_secciones=len(titulos),
+            num_secciones=len(plan),
             focus=focus,
         )
 
-    # Documento largo: se trocea SOLO por los títulos del nivel estructural (nunca en un `#` de
-    # una valla de código), cada trozo se resume con sus secciones y su parte de `max_words`, y
-    # los parciales se concatenan en orden: ya están en el formato final.
+    # Documento largo: se trocea SOLO al principio de las secciones (nunca en un `#` de una valla
+    # de código), cada trozo se resume con sus secciones y su parte de `max_words`, y los
+    # parciales se concatenan en orden: ya están en el formato final.
     trozos = secciones.repartir_palabras(
-        secciones.trozos_por_secciones(
-            content, estructura, _presupuesto_map(max_chars), _chunk_text
-        ),
+        secciones.trozos_por_secciones(content, plan, _presupuesto_map(max_chars), _chunk_text),
         max_words,
     )
 
     def _system_trozo(trozo) -> str:
-        if trozo.titulos:
-            return _system_estructurado(trozo.palabras, extra, len(trozo.titulos))
+        if trozo.secciones:
+            return _system_estructurado(trozo.palabras, extra)
         return _guard("un resumen en prosa clara", trozo.palabras) + extra
 
     def _user_trozo(trozo) -> str:
         texto = trozo.texto.strip()
-        if trozo.titulos:
-            return _user_estructurado(trozo.titulos, texto, trozo.continua_de)
+        if trozo.secciones:
+            return _user_estructurado(trozo.secciones, trozo.palabras, texto, trozo.continua_de)
         if trozo.continua_de:
             return (
                 f"Este fragmento continúa la sección «{trozo.continua_de}». Resume solo este "
@@ -2155,7 +2167,7 @@ def _resumen_estructurado(
 
     return _chat_map_reduce(
         model,
-        _system_estructurado(max_words, extra, len(titulos)),
+        _system_estructurado(max_words, extra),
         content,
         lambda piece: f"Resume el siguiente contenido:\n\n{piece}",
         max_chars=max_chars,
@@ -2169,11 +2181,11 @@ def _resumen_estructurado(
         system_for=_system_trozo,
         user_for=_user_trozo,
         words_for=lambda trozo: trozo.palabras,
-        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.titulos),
-        split_for=lambda trozo: secciones.partir_trozo(trozo, content, estructura, _chunk_text),
+        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.secciones),
+        split_for=lambda trozo: secciones.partir_trozo(trozo, content, plan, _chunk_text),
         reduce="concat",
         postproceso=_completar,
-        num_secciones=len(titulos),
+        num_secciones=len(plan),
         focus=focus,
     )
 

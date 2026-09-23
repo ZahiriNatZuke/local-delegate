@@ -116,3 +116,11 @@ def test_el_veredicto_exige_los_tres_documentos_y_no_mira_el_juicio():
     assert veredicto(base)["tres_documentos"] is True
     assert veredicto({**base, "daemon": malo})["tres_documentos"] is False
     assert veredicto({"changelog": {**bueno, "finish_reason": "length"}})["changelog"] is False
+
+
+def test_la_cobertura_de_subsecciones_es_informativa_y_por_palabras():
+    cobertura = sys.modules["medir_resumen_estructurado"].cobertura_subsecciones
+    salida = "## Arranque\n**La sesión del navegador**: se entra con el token.\n"
+    subs = ["La sesión del navegador", "Linux", "sesión"]
+    assert cobertura(salida, subs) == {"total": 3, "nombradas": 2}
+    assert cobertura("Linuxero", ["Linux"])["nombradas"] == 0

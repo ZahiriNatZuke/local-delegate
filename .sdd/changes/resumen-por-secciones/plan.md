@@ -281,3 +281,27 @@ escriben las amenazas a la validez y se rellena la trazabilidad. Rama
 v1: `revise`, 8 bloqueantes y 13 no bloqueantes. v2: `revise`, 3 bloqueantes pequeños (V2-B1 a
 V2-B3) y 9 no bloqueantes, todos aplicados en esta versión (v2.1). Detalle y resolución en
 `review.md`.
+
+## Enmienda v3 — 2026-09-23 (tras la etapa 2 fallida de la v2)
+
+La v2 dio 3/9 en la etapa 2 (ver `verification.md`). Dos mecanismos observados en los transcripts,
+dos cambios; el resto del plan no cambia.
+
+- **V3-1 — Subsecciones.** `secciones.py` construye la lista de secciones del resumen
+  (`secciones_para_resumen`): cada sección del nivel estructural lleva sus subsecciones del
+  nivel siguiente (fuera de vallas). El prompt las lista anidadas y pide nombrarlas en negrita
+  dentro de su sección, con lo esencial de cada una. La completitud y la métrica siguen siendo del
+  nivel estructural; la presencia de las subsecciones se informa aparte en la etapa 1.
+- **V3-2 — Introducción.** El texto anterior a la primera sección, si tiene al menos 20 palabras
+  fuera de líneas de título, entra como una sección más, «Introducción», primera de la lista (y
+  por tanto en la completitud).
+- **V3-3 — Presupuesto por tamaño.** Las palabras se reparten entre secciones en proporción a su
+  tamaño en caracteres (mínimo 8 por sección cuando cabe, sin pasar de `max_words`), y cada
+  entrada de la lista lleva las suyas («- Arranque (unas 60 palabras)»). En documentos largos, cada
+  trozo reparte las suyas entre sus secciones. `max_tokens` suma también el sitio de los títulos de
+  las subsecciones.
+- **Medición:** etapa 1 y etapa 2 de nuevo, con el mismo criterio de la spec, escrito antes de
+  medir; se añade a la etapa 1 la cobertura de subsecciones (informativa) y la de la
+  introducción. La línea base de la etapa 2 es la de la v2 (3/9) y la de T5 (2/9).
+- **Tests:** detección de subsecciones e introducción; reparto proporcional; prompt con la lista
+  anidada y las palabras; mutantes de las tres piezas.

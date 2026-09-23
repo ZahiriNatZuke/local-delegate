@@ -301,8 +301,10 @@ def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatc
     sistema, usuario = payload["messages"][0]["content"], payload["messages"][1]["content"]
     assert "una línea '## ' con el título tal cual" in sistema
     assert "Máximo 200 palabras" in sistema
-    assert "debajo unas 66 palabras con lo que dice" in sistema  # 200 // 3 secciones
-    assert usuario.startswith("Secciones, en orden:\n- Instalación\n- Configuración\n- Uso\n\n")
+    assert "en las palabras que indica la lista" in sistema
+    lista = _lista_del_prompt(usuario)
+    assert [titulo for titulo, _p, _s in lista] == ["Instalación", "Configuración", "Uso"]
+    assert sum(p for _t, p, _s in lista) <= 200
     titulos = ["Instalación", "Configuración", "Uso"]
     assert payload["max_tokens"] == 3 * 200 + 64 + sum(len(t) // 2 + 8 for t in titulos)
     # Completada en su sitio, y la coletilla de ahorro sigue siendo lo último.
@@ -382,6 +384,22 @@ def test_focus_llega_al_reduce_en_prosa(monkeypatch, tmp_path):
 # --- T4: documentos largos por secciones ----------------------------------------------------------
 
 
+def _lista_del_prompt(usuario: str) -> list[tuple[str, int, list[str]]]:
+    """(título, palabras, subsecciones) de cada entrada de la lista que recibe el modelo."""
+    if "Secciones, en orden:\n" not in usuario:
+        return []
+    bloque = usuario.split("Secciones, en orden:\n", 1)[1].split("\n\n", 1)[0]
+    entradas: list[tuple[str, int, list[str]]] = []
+    for linea in bloque.split("\n"):
+        if linea.startswith("  - "):
+            entradas[-1][2].append(linea[4:])
+            continue
+        cuerpo, palabras = linea[2:].rsplit(" (unas ", 1)
+        titulo = cuerpo.removesuffix(" (el texto antes de la primera sección)")
+        entradas.append((titulo, int(palabras.split(" ", 1)[0]), []))
+    return entradas
+
+
 def _largo(secciones_: int = 30, chars: int = 2200) -> str:
     return "# Doc\n\nintro\n\n" + "".join(
         f"## Sección {i}\n\n" + ("palabra " * (chars // 8)) + "\n\n" for i in range(secciones_)
@@ -393,8 +411,7 @@ def _responde_titulos(payload, _n):
     usuario = payload["messages"][1]["content"]
     if "Secciones, en orden:" not in usuario:
         return "Continuación de la sección.", "stop"
-    lista = usuario.split("Secciones, en orden:\n", 1)[1].split("\n\n", 1)[0]
-    titulos = [linea[2:] for linea in lista.split("\n")]
+    titulos = [titulo for titulo, _p, _s in _lista_del_prompt(usuario)]
     return "\n\n".join(f"## {t}\nResumen de {t}." for t in titulos), "stop"
 
 
@@ -409,8 +426,7 @@ def test_documento_largo_se_resume_por_secciones_y_se_concatena(monkeypatch, tmp
     palabras = 0
     for payload in vistos:
         usuario = payload["messages"][1]["content"]
-        lista = usuario.split("Secciones, en orden:\n", 1)[1].split("\n\n", 1)[0].split("\n")
-        titulos = [linea[2:] for linea in lista]
+        titulos = [titulo for titulo, _p, _s in _lista_del_prompt(usuario)]
         listas.extend(titulos)
         sistema = payload["messages"][0]["content"]
         pedidas = int(sistema.split("Máximo ", 1)[1].split(" ", 1)[0])
@@ -484,11 +500,7 @@ def test_desborde_en_un_trozo_se_reparte_por_secciones(monkeypatch, tmp_path):
     salida, vistos = _con_desborde()
 
     def _lista(payload) -> list[str]:
-        usuario = payload["messages"][1]["content"]
-        if "Secciones, en orden:\n" not in usuario:
-            return []
-        bloque = usuario.split("Secciones, en orden:\n", 1)[1].split("\n\n", 1)[0]
-        return [linea[2:] for linea in bloque.split("\n")]
+        return [t for t, _p, _s in _lista_del_prompt(payload["messages"][1]["content"])]
 
     # El trozo que desbordó se reparte, por secciones, entre las llamadas siguientes: todas las
     # secciones del documento se piden una vez y en orden, sin trocear dentro de ninguna.
@@ -534,8 +546,69 @@ def test_reparto_de_palabras_no_pasa_del_tope():
     assert min(t.palabras for t in con_minimo) >= 40
 
 
-def test_el_presupuesto_por_seccion_va_en_el_prompt_con_un_minimo():
-    """Etapa 1: con «1 a 3 frases» y 46 secciones el modelo escribía el doble y se cortaba."""
-    assert "unas 10 palabras" in server._system_estructurado(500, "", 46)
-    assert "unas 8 palabras" in server._system_estructurado(150, "", 46)  # mínimo
-    assert "1 a 3 frases" not in server._system_estructurado(500, "", 5)
+def _secciones_de(*tamanos: int, subs: dict[int, tuple[str, ...]] | None = None):
+    subs = subs or {}
+    pos = 0
+    salida = []
+    for i, tam in enumerate(tamanos):
+        salida.append(secciones.Seccion(f"S{i}", pos, pos + tam, subs.get(i, ())))
+        pos += tam
+    return salida
+
+
+def test_el_presupuesto_por_seccion_va_en_la_lista_y_segun_el_tamano():
+    """v1: «1 a 3 frases» y el CHANGELOG se cortaba; v2: a partes iguales y las secciones grandes
+    (con subsecciones) se quedaban cortas y Claude las releía."""
+    lista = _lista_del_prompt(
+        "Secciones, en orden:\n" + server._lista_de_secciones(_secciones_de(100, 300, 600), 500)
+    )
+    palabras = [p for _t, p, _s in lista]
+    assert palabras[0] < palabras[1] < palabras[2]
+    assert sum(palabras) <= 500
+    muchas = server._lista_de_secciones(_secciones_de(*([100] * 46)), 150)
+    assert all(p >= 1 for _t, p, _s in _lista_del_prompt("Secciones, en orden:\n" + muchas))
+    assert "1 a 3 frases" not in server._system_estructurado(500, "")
+
+
+def test_las_subsecciones_van_anidadas_en_la_lista():
+    lista = server._lista_de_secciones(_secciones_de(100, 900, subs={1: ("A", "B")}), 300)
+    assert "\n  - A\n  - B" in lista
+    assert _lista_del_prompt("Secciones, en orden:\n" + lista)[1][2] == ["A", "B"]
+    plan = _secciones_de(100, 900, subs={1: ("Una subsección larga", "Otra")})
+    base = server._max_tokens_estructurado(300, _secciones_de(100, 900))
+    assert server._max_tokens_estructurado(300, plan) > base  # sitio para los subtítulos
+
+
+# --- v3: subsecciones e introducción ---------------------------------------------------------
+
+
+def test_secciones_del_resumen_del_daemon_llevan_sus_subsecciones():
+    texto = (FUENTES / "daemon.md").read_text(encoding="utf-8")
+    plan = secciones.secciones_para_resumen(texto, secciones.detectar(texto))
+    assert plan[0].titulo == "Por qué existe"  # sin introducción: solo el `#`
+    assert sum(len(s.subtitulos) for s in plan) == 6
+    assert all(s.fin == plan[i + 1].inicio for i, s in enumerate(plan[:-1]))
+    assert plan[-1].fin == len(texto)
+
+
+def test_la_introduccion_entra_si_tiene_contenido():
+    texto = (FUENTES / "integration-install.md").read_text(encoding="utf-8")
+    plan = secciones.secciones_para_resumen(texto, secciones.detectar(texto))
+    assert plan[0].titulo == secciones.INTRODUCCION and plan[0].sintetica
+    assert plan[0].inicio == 0 and plan[1].inicio == plan[0].fin
+    corto = "# Título\n\nUna línea.\n\n## A\n\ntexto\n\n## B\n\ntexto\n"
+    assert secciones.secciones_para_resumen(corto, secciones.detectar(corto))[0].titulo == "A"
+
+
+def test_la_introduccion_se_pide_y_se_completa(monkeypatch, tmp_path):
+    intro = "Este documento explica " + "muchas cosas importantes " * 10
+    texto = f"# Guía\n\n{intro}\n\n## Uno\n\na\n\n## Dos\n\nb\n"
+
+    def _modelo(_payload, _n):  # se salta la introducción
+        return "## Uno\nPrimera parte del texto.\n\n## Dos\nSegunda parte del texto.", "stop"
+
+    salida, vistos = _llamar(monkeypatch, tmp_path, _modelo, text=texto)
+    lista = _lista_del_prompt(vistos[0]["messages"][1]["content"])
+    assert [t for t, _p, _s in lista] == ["Introducción", "Uno", "Dos"]
+    assert salida.startswith("## Introducción\n(sin resumir)")
+    assert _eventos(tmp_path)[0]["secciones"] == 3
