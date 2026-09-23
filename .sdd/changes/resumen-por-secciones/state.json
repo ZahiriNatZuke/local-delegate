@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "slug": "resumen-por-secciones",
+  "title": "local_summarize respeta la estructura del documento (resumen por secciones)",
+  "mode": "standard",
+  "status": "planning",
+  "createdAt": "2026-09-23T13:54:24.707Z",
+  "updatedAt": "2026-09-23T14:11:52.595Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T14:10:12.701Z",
+      "evidence": "Usuario (2026-09-23): incluir focus ya (REQ-205) y resumen estructurado siempre que se pueda (REQ-201, con ATX y setext fuera de bloques de código). Spec apoyada en research.md: cobertura de títulos en la salida de la tool del 0 al 27 % en el piloto de T5, causa en el prompt.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-23T13:54:24.707Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-23T13:54:50.750Z",
+      "reason": "Brief escrito con la evidencia del piloto de T5; investigación del camino de local_summarize en curso"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-23T13:59:51.069Z",
+      "reason": "research.md completo: la estructura se pierde en el prompt (cobertura en la tool 0-27 % con 450-600 palabras pedidas)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-23T14:10:12.701Z",
+      "evidence": "Usuario (2026-09-23): incluir focus ya (REQ-205) y resumen estructurado siempre que se pueda (REQ-201, con ATX y setext fuera de bloques de código). Spec apoyada en research.md: cobertura de títulos en la salida de la tool del 0 al 27 % en el piloto de T5, causa en el prompt.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-23T14:11:52.595Z",
+      "reason": "Spec aprobada por el usuario; plan.md escrito"
+    }
+  ]
+}
