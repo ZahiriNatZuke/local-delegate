@@ -1,0 +1,30 @@
+{
+  "commit": "95a65ee",
+  "ficheros": {
+    "readme.md": {
+      "origen": "README.md",
+      "bytes": 18065,
+      "sha256": "f2758dec7232f7d9b56e6dfa1991636db4dd8425d416f25e4695a8bbe037d240"
+    },
+    "integration-install.md": {
+      "origen": "docs/wiki/Integration-install.md",
+      "bytes": 18438,
+      "sha256": "d0afc37016347350c2b2fd0c4b3aa7367aa1b4bbacbe2debecbca0afbb817c9e"
+    },
+    "daemon.md": {
+      "origen": "docs/wiki/Daemon.md",
+      "bytes": 14088,
+      "sha256": "82319da663ef6e5b5b25ea8e94fea86f0417b664bf5ffe2e1af78111a37d151e"
+    },
+    "changelog.md": {
+      "origen": "CHANGELOG.md",
+      "bytes": 166843,
+      "sha256": "a977799be627a68612fa1205e275ae99a5007b17447733a9768917ae50fcd0dc"
+    },
+    "llama-swap-blackwell.md": {
+      "origen": "docs/recipes/llama-swap-blackwell.md",
+      "bytes": 4919,
+      "sha256": "3e37ef19e9929f5f33ca295a5afd6ae36b30ad7246674c720ff88224676b760c"
+    }
+  }
+}

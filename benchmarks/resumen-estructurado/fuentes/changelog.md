@@ -6,24 +6,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-### Added
-- **`local_summarize(focus=...)`**: parámetro opcional para decir qué interesa del documento
-  (p. ej. `"cifras de configuración"`); el resumen lo prioriza y conserva literales sus datos. Se
-  sanea a una línea de 200 caracteres y va delimitado en el prompt; el log guarda `focus: true`,
-  nunca el texto. En las mediciones, Claude lo usó por su cuenta en todas las corridas.
-- **Resumen por secciones, experimental y apagado por defecto**
-  (`LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO=1`): con un Markdown que va al modelo largo, el resumen
-  sigue la estructura (una línea `## <título>` por sección, con introducción y subsecciones) y el
-  servidor completa las que el modelo se salte. Nombra el 100 % de los títulos en los documentos
-  de prueba, pero no redujo las relecturas de Claude en la medición con `claude -p` (releía para
-  comprobar datos), así que se deja apagado. Con él encendido, el log guarda `secciones: N`.
-
 ### Fixed
-- **Un trozo cortado por `max_tokens` en map-reduce se aceptaba en silencio.** `local_summarize`,
-  `local_lint_summary` y `local_commit_msg` registraban `finish_reason: stop` aunque un resumen
-  parcial se hubiera cortado y perdido material. Ahora el resultado lo avisa y el evento lleva
-  `finish_reason: length` y `truncated_out: true`. En `local_commit_msg` el aviso queda dentro del
-  texto devuelto. **Corte de serie en el log crudo** (el panel no lee esos campos).
 - **El aviso de delegar saltaba con mensajes que no escribió el usuario.** Claude Code dispara
   `UserPromptSubmit` también con el informe de un subagente, el aviso de fin de una tarea en segundo
   plano y los mensajes entre sesiones; como suelen decir «summary», recibían el aviso y contaban como

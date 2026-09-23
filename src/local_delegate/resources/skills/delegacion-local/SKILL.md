@@ -33,7 +33,7 @@ de delegarlo.
 
 | Tool | Cuándo | Args clave | Devuelve |
 |---|---|---|---|
-| `local_summarize` | Resumir texto o archivo largo | `path` **o** `text`, `max_words` | Resumen (prosa) |
+| `local_summarize` | Resumir texto o archivo largo | `path` **o** `text`, `max_words`, `focus` (qué te interesa conservar) | Resumen (prosa) |
 | `local_classify` | Etiquetar en categorías fijas | `text`, `labels[]` | Una etiqueta |
 | `local_extract` | Sacar campos estructurados | `fields[]`, `path` **o** `text` | JSON |
 | `local_boilerplate` | Generar código repetitivo | `spec`, `language`, `target` (ruta absoluta), `overwrite?` | Recibo: ruta y tamaño (el código va al archivo, no a tu contexto) |

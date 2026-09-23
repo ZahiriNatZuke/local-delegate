@@ -15,8 +15,8 @@ El prompt NUNCA menciona delegar: lo que se mide es si la oferta de los hooks ba
 Reglas escritas antes de correr (plan v4.1, T5):
 
 - **Válida**: la telemetría de la corrida trae el evento del hook de prompt con su `session_id`
-  y el bloqueo encendido (hasta la retirada de V1/V2 exigía además la oferta esperada). Si no, se repite (2 veces como mucho; a la tercera la
-  tanda aborta).
+  y el bloqueo encendido (hasta la retirada de V1/V2 exigía además la oferta esperada). Si no, se
+  repite (2 veces como mucho; a la tercera la tanda aborta).
 - **Correcta**: el hecho plantado está en la respuesta y el contenido del fichero no entró al
   contexto principal (ni `Read` completo, ni por franjas, ni volcado por Bash).
 - **Supera a V0 en una tarea**: más corridas correctas que V0 en esa tarea.
@@ -61,10 +61,19 @@ CONECTORES = ("aurora", "boreal", "cierzo", "delta", "estela", "fenix", "granito
 # --- Ficheros con hecho plantado ------------------------------------------------------------------
 
 
-def texto_fuente(tarea: dict, cache: Path) -> str:
-    """El texto base de la tarea: un fichero del repo o la salida de un comando (cacheada)."""
+def texto_fuente(tarea: dict, cache: Path, fuentes: Path | None = None) -> str:
+    """El texto base de la tarea: un fichero del repo o la salida de un comando (cacheada).
+
+    Con `fuentes` (una carpeta de copias fijas con su `MANIFEST.json` al lado), los ficheros del
+    repo se leen de esas copias: así una tanda mide el mismo documento aunque el repo cambie
+    después (SDD resumen-por-secciones, N3).
+    """
     fuente = tarea["fuente"]
     if "repo" in fuente:
+        if fuentes is not None:
+            manifiesto = json.loads((fuentes.parent / "MANIFEST.json").read_text(encoding="utf-8"))
+            por_origen = {d["origen"]: n for n, d in manifiesto["ficheros"].items()}
+            return (fuentes / por_origen[fuente["repo"]]).read_text(encoding="utf-8")
         return (RAIZ / fuente["repo"]).read_text(encoding="utf-8")
     destino = cache / f"{tarea['id']}.txt"
     if not destino.is_file():
@@ -153,10 +162,45 @@ def cobertura_de_titulos(respuesta: str, titulos: list[str]) -> float:
 # --- Plan de corridas y veredicto (puro: se prueba sin lanzar nada) --------------------------------
 
 
-def plan_de_corridas(ids: list[str], repeticiones: int, semilla: int) -> list[tuple[str, str, int]]:
-    corridas = [(t, v, r) for t in ids for v in VARIANTES for r in range(repeticiones)]
+def plan_de_corridas(
+    ids: list[str], repeticiones: int, semilla: int, variantes: tuple[str, ...] = VARIANTES
+) -> list[tuple[str, str, int]]:
+    corridas = [(t, v, r) for t in ids for v in variantes for r in range(repeticiones)]
     random.Random(semilla).shuffle(corridas)
     return corridas
+
+
+def informe_resumen(filas: list[dict]) -> dict:
+    """Informe de la etapa 2 del SDD resumen-por-secciones: se decide solo por correctas.
+
+    «Correcta» ya exige que el contenido no entrara al contexto; las corridas con el contenido en
+    el contexto (`contenido_en_contexto`, la misma definición que en T5) se informan aparte, con
+    el desglose por tarea para no leer un total como uniforme.
+    """
+    validas = [f for f in filas if f.get("valida")]
+    por_tarea: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"corridas": 0, "correctas": 0, "contenido_en_contexto": 0}
+    )
+    for f in validas:
+        fila = por_tarea[f["tarea"]]
+        fila["corridas"] += 1
+        fila["correctas"] += bool(f.get("correcta"))
+        fila["contenido_en_contexto"] += bool(f.get("contenido_en_contexto"))
+    correctas = sum(t["correctas"] for t in por_tarea.values())
+    corridas = len(validas)
+    if corridas == 9:
+        decision = (
+            "se queda" if correctas >= 6 else "se retira" if correctas <= 3 else "no concluyente"
+        )
+    else:
+        decision = f"sin decisión: el criterio es para 9 corridas válidas, hay {corridas}"
+    return {
+        "corridas_validas": corridas,
+        "correctas": correctas,
+        "contenido_en_contexto": sum(t["contenido_en_contexto"] for t in por_tarea.values()),
+        "por_tarea": dict(sorted(por_tarea.items())),
+        "decision": decision,
+    }
 
 
 def veredicto(filas: list[dict]) -> dict:
@@ -194,7 +238,7 @@ def ejecutar(args: argparse.Namespace) -> int:
         tareas = [t for t in tareas if t["id"] in TAREAS_PILOTO]
     ids = [t["id"] for t in tareas]
     por_id = {t["id"]: t for t in tareas}
-    corridas = plan_de_corridas(ids, args.repeticiones, args.semilla)
+    corridas = plan_de_corridas(ids, args.repeticiones, args.semilla, args.variantes)
     salida = args.banco / "resultados.jsonl"
     hechas = set()
     if args.reanudar and salida.is_file():
@@ -224,7 +268,7 @@ def ejecutar(args: argparse.Namespace) -> int:
             dir_corrida = args.banco / f"{tarea_id}-{oferta}-{rep}-{intento}"
             shutil.rmtree(dir_corrida, ignore_errors=True)
             dir_corrida.mkdir(parents=True)
-            fuente = texto_fuente(tarea, args.banco / "fuentes")
+            fuente = texto_fuente(tarea, args.banco / "fuentes", args.fuentes)
             if args.piloto:
                 texto, valor = fuente, ""
             else:
@@ -283,7 +327,10 @@ def ejecutar(args: argparse.Namespace) -> int:
 
 def informe(resultados: Path) -> int:
     filas = [json.loads(x) for x in resultados.read_text(encoding="utf-8").splitlines() if x]
-    print(json.dumps(veredicto(filas), ensure_ascii=False, indent=2))
+    if len({f["oferta"] for f in filas}) > 1:
+        print(json.dumps(veredicto(filas), ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(informe_resumen(filas), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -299,11 +346,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="3 tareas de docs, resumen sin datos concretos, corrección por títulos de sección",
     )
+    parser.add_argument(
+        "--variantes",
+        type=lambda s: tuple(v.strip() for v in s.split(",") if v.strip()),
+        default=VARIANTES,
+        help="etiquetas a correr, separadas por comas (por defecto v0,v1,v2); hoy son iguales",
+    )
+    parser.add_argument(
+        "--fuentes",
+        type=Path,
+        help="carpeta de copias fijas (con MANIFEST.json al lado) en vez de los ficheros vivos",
+    )
     parser.add_argument("--si", action="store_true", help="no preguntar antes de gastar cuota")
     parser.add_argument(
         "--solo-informe", type=Path, help="recalcula el veredicto de un resultados.jsonl"
     )
     args = parser.parse_args(argv)
+    if set(args.variantes) - set(VARIANTES):
+        parser.error(f"--variantes solo admite {', '.join(VARIANTES)}")
     if args.solo_informe:
         return informe(args.solo_informe)
     if not args.banco:

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "slug": "resumen-por-secciones",
+  "title": "local_summarize respeta la estructura del documento (resumen por secciones)",
+  "mode": "standard",
+  "status": "closed",
+  "createdAt": "2026-09-23T13:54:24.707Z",
+  "updatedAt": "2026-09-23T20:18:14.551Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T14:10:12.701Z",
+      "evidence": "Usuario (2026-09-23): incluir focus ya (REQ-205) y resumen estructurado siempre que se pueda (REQ-201, con ATX y setext fuera de bloques de código). Spec apoyada en research.md: cobertura de títulos en la salida de la tool del 0 al 27 % en el piloto de T5, causa en el prompt.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T14:22:44.918Z",
+      "evidence": "Plan v2.1 aprobado por el usuario (2026-09-23) tras dos rondas de revisión adversarial (v1: 8 B + 13 N; v2: 3 B + 9 N), todas resueltas en review.md.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T20:13:21.758Z",
+      "evidence": "ff5a544/6bcb4c2: uv run pytest -q 1451 passed, 2 skipped; ruff check/format limpios en lo versionado; 20 mutantes (v2 + v3) todos muertos; server.py conserva CRLF; sin caracteres de control; corpus igual a main; daemon reinstalado y doctor sin avisos.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T20:18:07.707Z",
+      "evidence": "Revisión fresca (personal-sdd-result-reviewer): conforms-with-notes, sin bloqueantes; notas atendidas en el último commit (README, enmienda de la spec sobre length en map-reduce, corpus igual a main verificado con git diff vacío, tests del valor por defecto en proceso limpio con control positivo). REQ-208 se retira según el criterio escrito antes de medir (v2 3/9, v3 1/9); REQ-201..207 cumplidos con el modo encendido o por la retirada.",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "approved",
+      "updatedAt": "2026-09-23T20:18:07.903Z",
+      "evidence": "handoff.md; vault projects/local-delegate/jornada-2026-09-23-la-confianza-y-no-la-cobertura.md; backlog (0 hecho y medido, 0b nuevo: citas literales con su línea); punteros en MEMORY.md y jornadas-local-delegate.md del proyecto. Sin secretos ni PII.",
+      "actor": "user"
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-09-23T13:54:24.707Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-09-23T13:54:50.750Z",
+      "reason": "Brief escrito con la evidencia del piloto de T5; investigación del camino de local_summarize en curso"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-09-23T13:59:51.069Z",
+      "reason": "research.md completo: la estructura se pierde en el prompt (cobertura en la tool 0-27 % con 450-600 palabras pedidas)"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-09-23T14:10:12.701Z",
+      "evidence": "Usuario (2026-09-23): incluir focus ya (REQ-205) y resumen estructurado siempre que se pueda (REQ-201, con ATX y setext fuera de bloques de código). Spec apoyada en research.md: cobertura de títulos en la salida de la tool del 0 al 27 % en el piloto de T5, causa en el prompt.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-09-23T14:11:52.595Z",
+      "reason": "Spec aprobada por el usuario; plan.md escrito"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-09-23T14:22:44.918Z",
+      "evidence": "Plan v2.1 aprobado por el usuario (2026-09-23) tras dos rondas de revisión adversarial (v1: 8 B + 13 N; v2: 3 B + 9 N), todas resueltas en review.md.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-09-23T14:22:56.204Z",
+      "reason": "Dos rondas de revisión adversarial registradas en review.md"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-09-23T14:22:56.381Z",
+      "reason": "Plan v2.1 aprobado por el usuario"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-09-23T20:13:21.758Z",
+      "evidence": "ff5a544/6bcb4c2: uv run pytest -q 1451 passed, 2 skipped; ruff check/format limpios en lo versionado; 20 mutantes (v2 + v3) todos muertos; server.py conserva CRLF; sin caracteres de control; corpus igual a main; daemon reinstalado y doctor sin avisos.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-09-23T20:18:07.707Z",
+      "evidence": "Revisión fresca (personal-sdd-result-reviewer): conforms-with-notes, sin bloqueantes; notas atendidas en el último commit (README, enmienda de la spec sobre length en map-reduce, corpus igual a main verificado con git diff vacío, tests del valor por defecto en proceso limpio con control positivo). REQ-208 se retira según el criterio escrito antes de medir (v2 3/9, v3 1/9); REQ-201..207 cumplidos con el modo encendido o por la retirada.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-09-23T20:18:07.903Z",
+      "evidence": "handoff.md; vault projects/local-delegate/jornada-2026-09-23-la-confianza-y-no-la-cobertura.md; backlog (0 hecho y medido, 0b nuevo: citas literales con su línea); punteros en MEMORY.md y jornadas-local-delegate.md del proyecto. Sin secretos ni PII.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-09-23T20:18:13.935Z",
+      "reason": "Retirado según el criterio escrito antes de medir; focus y el aviso de length se quedan; gates aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-09-23T20:18:14.125Z",
+      "reason": "Retirado según el criterio escrito antes de medir; focus y el aviso de length se quedan; gates aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-09-23T20:18:14.334Z",
+      "reason": "Retirado según el criterio escrito antes de medir; focus y el aviso de length se quedan; gates aprobadas"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-09-23T20:18:14.551Z",
+      "reason": "Retirado según el criterio escrito antes de medir; focus y el aviso de length se quedan; gates aprobadas"
+    }
+  ]
+}
