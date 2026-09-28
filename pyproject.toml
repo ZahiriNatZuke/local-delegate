@@ -50,7 +50,7 @@ dependencies = [
     # aparente sin cambiar nada. Verificado por ejecución, no supuesto.
     "fastapi>=0.115",
     "uvicorn>=0.30",
-    "filelock>=3,<4",
+    "filelock>=3,<5",
     # `anyio` es transitiva (la traen `mcp`, `httpx2` y `starlette`) y se declara **solo por el
     # suelo**: por debajo de 4.14.2 arrastra GHSA-82r6-8w77-94w6 (crítica, suplantación de
     # certificado TLS por codificación IDNA 2003), GHSA-3w57-8xmc-8v26 y GHSA-5p39-cfhj-2xmp. El
