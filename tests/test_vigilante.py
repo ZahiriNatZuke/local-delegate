@@ -542,7 +542,8 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "37524585928"})
     assert codigo == 0
     escrita = _tabla_escrita(falso)
-    assert "37524585928" in escrita.pop("_ensayo")
+    marca = escrita.pop("_ensayo")
+    assert "37524585928" in marca
     assert escrita == tabla  # la tabla no cambia: ni `consultado` ni ningún precio
 
 
