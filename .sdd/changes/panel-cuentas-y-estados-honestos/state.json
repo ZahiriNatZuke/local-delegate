@@ -3,9 +3,9 @@
   "slug": "panel-cuentas-y-estados-honestos",
   "title": "Panel: los fallos no suman ahorro, los estados dicen la causa real y la presentación es coherente",
   "mode": "standard",
-  "status": "closing",
+  "status": "closed",
   "createdAt": "2026-10-06T14:06:24.210Z",
-  "updatedAt": "2026-10-06T17:50:21.487Z",
+  "updatedAt": "2026-10-06T21:41:36.118Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -32,10 +32,10 @@
       "actor": "user"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-06T21:41:35.921Z",
+      "evidence": "Handoff escrito; jornada en el vault projects/local-delegate/jornada-2026-10-06-el-ahorro-que-se-contaba-a-medias.md con decisiones y lecciones; puntero en la memoria del proyecto; backlog del vault actualizado. Sin secretos ni datos personales.",
+      "actor": "user"
     }
   },
   "history": [
@@ -133,6 +133,21 @@
       "to": "closing",
       "at": "2026-10-06T17:50:21.487Z",
       "reason": "PR #231 mezclado en main (4d56a9f); falta el gate de memoria"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-06T21:41:35.921Z",
+      "evidence": "Handoff escrito; jornada en el vault projects/local-delegate/jornada-2026-10-06-el-ahorro-que-se-contaba-a-medias.md con decisiones y lecciones; puntero en la memoria del proyecto; backlog del vault actualizado. Sin secretos ni datos personales.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-06T21:41:36.118Z",
+      "reason": "Mezclado y con memoria registrada"
     }
   ]
 }
