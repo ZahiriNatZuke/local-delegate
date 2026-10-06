@@ -66,6 +66,16 @@ def _env_float(name: str, default: float) -> float:
 BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
 API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
 HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
+# Plazos de los sondeos de ESTADO (`/models`, `/running`, `/api/metrics/stats`, `doctor`), no de
+# las delegaciones. Constantes y sin variable de entorno a propósito (REQ-013): 3 s para conectar
+# porque en Windows un puerto cerrado tarda ~2,1 s en rechazarse, y con un plazo menor llega como
+# `ConnectTimeout` y parece una VPN (medido, `research.md` §2); 2 s para leer, como antes.
+TIMEOUT_SONDA_CONEXION = 3.0
+TIMEOUT_SONDA_LECTURA = 2.0
+# Plazo de CONEXIÓN de las delegaciones (REQ-019). Solo el de conexión: la espera de carga de un
+# modelo es de lectura y sigue en HTTP_TIMEOUT. Sin él, el kernel decidía (~21 s en Windows, ~75 s
+# en macOS) y cada fallo de la Mac con la VPN caída bloqueaba la tool más de un minuto.
+TIMEOUT_CONEXION_DELEGACION = 10.0
 # Backpressure del proceso MCP. En el daemon singleton este límite se comparte entre
 # todos los clientes HTTP; llama-swap sigue siendo la autoridad del routing/VRAM.
 MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", 2))

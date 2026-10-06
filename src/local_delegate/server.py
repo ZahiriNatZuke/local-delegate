@@ -118,7 +118,15 @@ def _get_client() -> httpx2.Client:
     if _client is None:
         with _client_lock:
             if _client is None:
-                _client = httpx2.Client(timeout=config.HTTP_TIMEOUT)
+                # REQ-019: solo el plazo de CONEXIÓN baja a 10 s (o al total, si es menor). La
+                # espera de carga de un modelo es de lectura y sigue en HTTP_TIMEOUT. Sin esto el
+                # kernel decidía: ~21 s en Windows y ~75 s en macOS por cada fallo de la VPN.
+                _client = httpx2.Client(
+                    timeout=httpx2.Timeout(
+                        config.HTTP_TIMEOUT,
+                        connect=min(config.TIMEOUT_CONEXION_DELEGACION, config.HTTP_TIMEOUT),
+                    )
+                )
     return _client
 
 
@@ -245,6 +253,28 @@ def _inflight_progress(entry_id: int, chunk: int) -> None:
     _inflight_mutate(_update)
 
 
+def _inflight_espera_local(entry_id: int, motivo: str | None) -> None:
+    """Publica (o, con `None`, borra) la espera DENTRO de local-delegate de una delegación.
+
+    REQ-022: mientras una llamada espera aquí —hoy, plaza en `_chat_slots`— el panel la pinta «en
+    cola local» y no «esperando turno», que es de llama-swap. El motivo entra como argumento para
+    que otra espera local futura (el turno por grupo de `daemon-reparte-el-backend`) reutilice
+    esto sin tocar el panel: un motivo que el panel no conoce se pinta tal cual.
+    """
+    key = f"{os.getpid()}:{entry_id}"
+
+    def _update(data: dict) -> None:
+        entry = data.get(key)
+        if not isinstance(entry, dict):
+            return
+        if motivo is None:
+            entry.pop("espera_local", None)
+        else:
+            entry["espera_local"] = motivo
+
+    _inflight_mutate(_update)
+
+
 def _inflight_end(entry_id: int) -> None:
     key = f"{os.getpid()}:{entry_id}"
 
@@ -288,6 +318,10 @@ def inflight_snapshot() -> list[dict]:
             if v.get("chunks"):
                 entry["chunks"] = v.get("chunks")
                 entry["chunk"] = v.get("chunk")
+            # REQ-022: la espera DENTRO de local-delegate, solo cuando la hay. Sin copiarla aquí
+            # el panel no la vería nunca, aunque esté escrita en el fichero.
+            if v.get("espera_local"):
+                entry["espera_local"] = v.get("espera_local")
             result.append(entry)
         for key in stale:
             data.pop(key, None)
@@ -477,6 +511,7 @@ def _log_event(
     error_class: str | None = None,
     num_secciones: int | None = None,
     focus: bool = False,
+    fallo_conexion: str | None = None,
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
@@ -562,6 +597,10 @@ def _log_event(
         # alguien la arregle (REQ-019).
         if error_class is not None:
             rec["error_class"] = error_class
+        # Por qué no se pudo conectar (REQ-017): `dns`, `timeout_conexion`… Solo en los
+        # `connect_error`, para no engordar cada línea; `error` sigue siendo `connect_error`.
+        if fallo_conexion is not None:
+            rec["fallo_conexion"] = fallo_conexion
         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
         # ni los títulos: el log no guarda contenido.
@@ -576,30 +615,68 @@ def _log_event(
         pass  # el logging es best-effort; jamás propaga
 
 
+_TIPOS_CLAUDE = ("text", "returned", "output", "image")
+
+
+def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
+    """Convierte lo ahorrado o lo devuelto a tokens de **Claude**. Única conversión del paquete.
+
+    `_accounting` (y su espejo JS `tokensClaude`) no dividen nunca por `CHARS_PER_TOKEN` para
+    `saved`, `returned` o `net`: pasan por aquí. El cambio `coste-api-y-cuota` sustituye el cuerpo
+    sin tocar la firma ni los nombres; `evento` es la fila cruda del log para que la sustituta
+    pueda leer la tool, la extensión de `path` o el modelo.
+
+    Regla de hoy (cifra intermedia: ninguna release la publica sola):
+
+    - `text` y `returned`: `cantidad ÷ 4` (caracteres).
+    - `output`: el `tokens_out` que reportó el backend si existe; si no, `cantidad ÷ 4`.
+    - `image`: el `tokens_in` que reportó el backend si existe; si no, 0 (`cantidad` son bytes).
+
+    Los tokens del modelo LOCAL (`tokens_in`, `tokens_out`, coste local) no pasan por aquí.
+    """
+    if tipo in ("text", "returned"):
+        return cantidad // config.CHARS_PER_TOKEN
+    if tipo == "output":
+        reportado = evento.get("tokens_out")
+        return int(reportado) if reportado is not None else cantidad // config.CHARS_PER_TOKEN
+    if tipo == "image":
+        reportado = evento.get("tokens_in")
+        return int(reportado) if reportado is not None else 0
+    raise ValueError(f"tipo de conversión desconocido: {tipo!r} (válidos: {_TIPOS_CLAUDE})")
+
+
 def _accounting(row: dict) -> dict:
     """Contabilidad normalizada de UN evento. Única fuente de las cuentas del panel.
 
-    Separa dos magnitudes que el dashboard confundía en una sola estimación por caracteres:
+    Implementa letra a letra la «Regla de contabilidad» de la spec `panel-cuentas-y-estados-
+    honestos`, que su espejo JS `acct` (en `web/metrics.py`) sigue igual; el test de paridad las
+    ata. Separa tres magnitudes:
 
-    - **ahorro** (`saved`): lo que NO entró al contexto de Claude. Es el contenido leído
-      server-side contado **una vez**, aunque se troceara: el trabajo extra de trocear lo pagó
-      la GPU local, no el contexto.
+    - **ahorro bruto** (`saved`): lo que NO entró al contexto de Claude. Es el contenido leído
+      server-side contado **una vez**, aunque se troceara (el trabajo extra de trocear lo pagó la
+      GPU local, no el contexto), más la salida escrita a un fichero.
+    - **devuelto** (`returned`) y **neto** (`net = saved − returned`): lo que la tool sí devolvió
+      al contexto en las delegaciones que reclaman ahorro de entrada. El neto puede ser negativo.
     - **coste** (`tokens_in`/`tokens_out`, `backend_calls`): lo que gastó de verdad el backend,
       con el prompt de sistema repetido en cada trozo.
 
-    Se prefiere SIEMPRE el token real que reportó el backend (`usage`); la estimación
-    `chars ÷ 4` es solo el respaldo cuando falta, y entonces el evento se marca `estimated`.
+    Un **fallo** (`ok` exactamente `False`) no ahorra, no devuelve, no se estima y no genera: solo
+    cuenta sus llamadas y los tokens que reportó el backend (la GPU los gastó). El ahorro y el
+    devuelto se convierten a tokens de Claude **solo** con `tokens_claude`; el coste local sigue
+    con `CHARS_PER_TOKEN` como respaldo cuando falta el `usage` real (y entonces `estimated`).
+    El desglose en caracteres (`chars_saved_text`, `bytes_saved_image`, `chars_saved_output`,
+    `chars_returned`) es el contrato con `coste-api-y-cuota`: no depende de la conversión.
     """
+    failed = row.get("ok") is False
     chars_in = int(row.get("chars_in", 0) or 0)
     chars_out = int(row.get("chars_out", 0) or 0)
     # `chunks` es el número REAL de llamadas al backend y se omite cuando vale 1 (ver
     # `_log_event`). Lo ha sido desde el commit que introdujo el chunking, así que esto
-    # contabiliza bien también el histórico ya grabado.
+    # contabiliza bien también el histórico ya grabado. También en los fallos: se gastaron.
     backend_calls = int(row.get("chunks") or 1)
 
     raw_in = row.get("tokens_in")
     raw_out = row.get("tokens_out")
-    estimated = raw_in is None or raw_out is None
 
     # `chars_in` no siempre son caracteres: en local_describe_image son BYTES de la imagen.
     # Los eventos anteriores al campo `input_unit` se reconocen por el nombre de la tool.
@@ -608,38 +685,78 @@ def _accounting(row: dict) -> dict:
     )
     estimable = unit == "chars"
 
-    tokens_in = (
-        int(raw_in)
-        if raw_in is not None
-        else (chars_in // config.CHARS_PER_TOKEN if estimable else 0)
-    )
-    tokens_out = int(raw_out) if raw_out is not None else chars_out // config.CHARS_PER_TOKEN
-
-    if row.get("source") != "path":
-        saved = 0  # el input ya viajó por el contexto de Claude: no hay ahorro que apuntar
-    elif estimable:
-        saved = chars_in // config.CHARS_PER_TOKEN
-    elif raw_in is not None:
-        saved = int(raw_in)  # imagen: el token real es el único orden de magnitud honesto
+    # Coste del modelo LOCAL: no pasa por `tokens_claude`.
+    if failed:
+        # Solo lo que reportó el backend: estimar sobre el texto de un error inventaría
+        # generación, y un fallo no es una estimación.
+        tokens_in = int(raw_in) if raw_in is not None else 0
+        tokens_out = int(raw_out) if raw_out is not None else 0
+        estimated = False
     else:
-        saved = 0  # ni token real ni unidad estimable: 0 antes que un número inventado
+        tokens_in = (
+            int(raw_in)
+            if raw_in is not None
+            else (chars_in // config.CHARS_PER_TOKEN if estimable else 0)
+        )
+        tokens_out = int(raw_out) if raw_out is not None else chars_out // config.CHARS_PER_TOKEN
+        estimated = raw_in is None or raw_out is None
 
-    # Ahorro de SALIDA: el código generado se escribió en un archivo y quien llamó recibió solo
-    # un recibo de dos líneas. Es independiente del ahorro de entrada (`source=path`) y se suma,
-    # porque una misma llamada puede ahorrar por los dos lados.
-    if row.get("output_to_file"):
-        saved += tokens_out
+    por_path = row.get("source") == "path"
+    a_fichero = bool(row.get("output_to_file"))
+
+    chars_saved_text = bytes_saved_image = chars_saved_output = chars_returned = 0
+    saved = returned = 0
+    if not failed:
+        # Desglose en caracteres (la imagen, en bytes: es lo que guarda el log).
+        if por_path and estimable:
+            chars_saved_text = chars_in
+        if por_path and not estimable:
+            bytes_saved_image = chars_in
+        if a_fichero:
+            # Ahorro de SALIDA: el texto se escribió en un fichero y quien llamó recibió solo un
+            # recibo de dos líneas, cuyo tamaño no se registra (se toma 0 de devuelto).
+            chars_saved_output = chars_out
+        # Reclama ahorro de entrada si leyó algo server-side: texto con caracteres, o una imagen
+        # con token real (sin él no hay bruto, así que tampoco se descuenta la descripción).
+        reclama = (
+            por_path
+            and not a_fichero
+            and ((estimable and chars_in > 0) or (not estimable and int(raw_in or 0) > 0))
+        )
+        if reclama:
+            chars_returned = chars_out
+
+        # Tokens de Claude: SOLO con `tokens_claude`.
+        if por_path and estimable:
+            saved += tokens_claude(chars_saved_text, tipo="text", evento=row)
+        if por_path and not estimable:
+            saved += tokens_claude(bytes_saved_image, tipo="image", evento=row)
+        if a_fichero:
+            saved += tokens_claude(chars_saved_output, tipo="output", evento=row)
+        returned = tokens_claude(chars_returned, tipo="returned", evento=row)
 
     return {
         "backend_calls": backend_calls,
         "tokens_in": tokens_in,
         "tokens_out": tokens_out,
         "saved": saved,
+        "returned": returned,
+        "net": saved - returned,  # puede ser negativo: no se recorta
         "estimated": estimated,
         # F3, tarea 29: si respondió un respaldo, y la causa (la del fallo, o la del salto). Un
         # evento anterior a esos campos da `False` y `None`: se lee igual que siempre.
         "fallback": bool(row.get("model_requested")),
         "cause": row.get("error_class") or row.get("fallback_class") or None,
+        # Contrato con `coste-api-y-cuota`: desglose en caracteres y campos del evento.
+        "chars_saved_text": chars_saved_text,
+        "bytes_saved_image": bytes_saved_image,
+        "chars_saved_output": chars_saved_output,
+        "chars_returned": chars_returned,
+        "failed": failed,
+        "tool": row.get("tool"),
+        "model": row.get("model"),
+        "source": row.get("source"),
+        "unit": unit,
     }
 
 
@@ -654,6 +771,9 @@ class ChatResult:
     #: La clase del fallo (`fallos.Clase`) cuando `ok=False`, y `None` cuando salió bien. Es
     #: aditivo: quien solo mire `error` sigue viendo exactamente lo de antes.
     clase: str | None = None
+    #: La causa de un `connect_error` (`fallos.CausaConexion`, como texto), y `None` en cualquier
+    #: otro caso. Va al log como `fallo_conexion` (REQ-017); `error` sigue diciendo `connect_error`.
+    fallo_conexion: str | None = None
 
 
 @dataclass(frozen=True)
@@ -833,6 +953,16 @@ class _SondaDeCarga:
         return None
 
 
+def _backend_en_loopback() -> bool:
+    """¿El host REAL de BASE_URL es de loopback? Lo que pide la regla 7 del clasificador.
+
+    El host va SIN puerto: `config.backend_host()` lo lleva, y `_is_loopback_host("127.0.0.1:9292")`
+    da `False`, así que la regla no se aplicaría nunca. Y es el host real, no el override de
+    origen: un túnel en loopback hacia una máquina remota rechaza como loopback.
+    """
+    return config._is_loopback_host(config._split_host_port(config.BASE_URL)[0])
+
+
 def _post_chat(model: str, payload: dict) -> ChatResult:
     """POST al endpoint /chat/completions con reintento opcional si el backend está caído."""
     headers = config.auth_headers()
@@ -876,15 +1006,23 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             else:
                 clase = fallos.clasificar(e)
             if fallos.es_backend_ausente(e):
+                # REQ-018: un backend REMOTO no se arranca desde aquí, así que ni se pregunta ni
+                # se intenta, valga AUTOSTART lo que valga. Con origen local, como siempre.
+                local = config.backend_origin() == "local"
                 # No hay nadie escuchando. Si el auto-arranque está activo, intenta levantarlo
                 # (opt-in, específico de llama-swap) y reintenta una vez.
-                if attempt == 1 and config.AUTOSTART and autostart.ensure_backend(wait=30):
+                if (
+                    attempt == 1
+                    and local
+                    and config.AUTOSTART
+                    and autostart.ensure_backend(wait=30)
+                ):
                     continue
                 # Sin auto-arranque, preguntar antes de rendirse. No contradice el «backend
                 # opt-in»: sigue sin arrancar nada sin permiso, solo que ahora ese permiso se
                 # puede dar en caliente. Si no hay a quién preguntar, o dicen que no, cae al
                 # error de siempre.
-                if attempt == 1 and not config.AUTOSTART:
+                if attempt == 1 and local and not config.AUTOSTART:
                     respuesta = preguntas.preguntar(
                         f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
                         preguntas.ArrancarBackend,
@@ -895,14 +1033,18 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                         and autostart.ensure_backend(wait=30)
                     ):
                         continue
+                # REQ-017: la causa, con el texto único de `fallos`, en vez de suponer que el
+                # backend no está corriendo (con una VPN caída, lo está).
+                causa = fallos.causa_conexion(e, loopback=_backend_en_loopback())
                 return ChatResult(
                     text=(
-                        f"[local-delegate error] no se pudo conectar al endpoint "
-                        f"({config.BASE_URL}). ¿Está corriendo tu backend OpenAI-compatible?"
+                        "[local-delegate error] no se pudo conectar con el backend: "
+                        + fallos.detalle(causa, host=config.backend_host(), excepcion=e)
                     ),
                     ok=False,
                     error="connect_error",
                     clase=clase,
+                    fallo_conexion=causa.value,
                 )
             if isinstance(e, httpx2.HTTPStatusError):
                 return ChatResult(
@@ -1070,6 +1212,7 @@ def _con_respaldo(
             tokens_in=base.tokens_in,
             tokens_out=base.tokens_out,
             clase=base.clase,
+            fallo_conexion=base.fallo_conexion,
         ),
         schema,
         intentos,
@@ -1088,6 +1231,7 @@ def _run_chat(
     rol: str | None = None,
     explicito: bool = False,
     tamano: int | None = None,
+    entry_id: int | None = None,
 ) -> tuple[ChatResult, int, str | None, list[Intento]]:
     """UNA llamada lógica al endpoint bajo el semáforo de concurrencia, con su respaldo.
 
@@ -1098,6 +1242,10 @@ def _run_chat(
     El salto va DENTRO de la plaza (REQ-017), así que el mecanismo nunca supera
     `MAX_CONCURRENT_REQUESTS`, y DESPUÉS del reintento sin schema (REQ-002). `tamano` es la
     entrada que se valida contra el tope de cada candidato; sin él, el largo de `user`.
+
+    `entry_id` es la entrada en vuelo de la delegación: si no hay plaza libre, la espera se publica
+    en ella como `espera_local: "plaza"` y se borra al conseguirla (REQ-022). Con plaza libre no se
+    escribe nada de más.
     """
     payload: dict[str, Any] = {
         "messages": [
@@ -1114,7 +1262,13 @@ def _run_chat(
         tamano = len(user) if isinstance(user, str) else 0
 
     t0 = time.monotonic()
-    with _chat_slots:
+    if not _chat_slots.acquire(blocking=False):
+        if entry_id is not None:
+            _inflight_espera_local(entry_id, "plaza")
+        _chat_slots.acquire()
+        if entry_id is not None:
+            _inflight_espera_local(entry_id, None)
+    try:
         result, json_schema_status, intentos = _con_respaldo(
             model,
             payload,
@@ -1123,6 +1277,8 @@ def _run_chat(
             tamano=tamano,
             json_schema_fallback=json_schema_fallback,
         )
+    finally:
+        _chat_slots.release()
     return result, int((time.monotonic() - t0) * 1000), json_schema_status, intentos
 
 
@@ -1133,7 +1289,11 @@ class _ModeloVigente:
     otra cadena: la salida no alterna modelos y no se vuelve a llamar al que acaba de fallar.
     """
 
-    def __init__(self, model: str, rol: str | None, explicito: bool) -> None:
+    def __init__(
+        self, model: str, rol: str | None, explicito: bool, entry_id: int | None = None
+    ) -> None:
+        #: La entrada en vuelo de la operación, para publicar su espera local (REQ-022).
+        self.entry_id = entry_id
         self.pedido = model
         self.modelo = model
         self.rol = None if explicito else rol
@@ -1154,6 +1314,7 @@ class _ModeloVigente:
             rol=self.rol,
             explicito=self.explicito,
             tamano=tamano,
+            entry_id=self.entry_id,
         )
         info = _respaldo_de(self.modelo, result, intentos)
         if info is not None:
@@ -1165,7 +1326,11 @@ class _ModeloVigente:
 
     def campos_de_log(self, failed: ChatResult | None) -> dict:
         """Los campos del respaldo para el evento de la operación entera (REQ-013)."""
-        campos: dict = {"error_class": _valor_clase(failed.clase) if failed else None}
+        campos: dict = {
+            "error_class": _valor_clase(failed.clase) if failed else None,
+            # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
+            "fallo_conexion": failed.fallo_conexion if failed else None,
+        }
         if self.salto is not None:
             campos["model_requested"] = self.pedido
             campos["fallback_reason"] = self.salto["motivo"]
@@ -1246,6 +1411,7 @@ def _chat(
             rol=rol,
             explicito=explicito,
             tamano=chars_in or None,
+            entry_id=entry_id,
         )
     finally:
         _inflight_end(entry_id)
@@ -1301,6 +1467,7 @@ def _chat(
         error_class=None if result.ok else _valor_clase(result.clase),
         num_secciones=num_secciones,
         focus=focus,
+        fallo_conexion=None if result.ok else result.fallo_conexion,
     )
     # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
     # dejarlo en disco con nombre de código fuente sería peor que no escribir nada. Se devuelve
@@ -1531,7 +1698,7 @@ def _chat_chunked(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     truncated_out = False
-    vigente = _ModeloVigente(model, rol, explicito)
+    vigente = _ModeloVigente(model, rol, explicito, entry_id)
 
     def _accumulate(result: ChatResult, ms: int, llamadas: int) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
@@ -1747,7 +1914,7 @@ def _chat_map_reduce(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     cortadas = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
-    vigente = _ModeloVigente(model, rol, explicito)
+    vigente = _ModeloVigente(model, rol, explicito, entry_id)
 
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
         nonlocal calls, latency_ms, tokens_in, tokens_out, failed, cortadas
@@ -2979,29 +3146,111 @@ def _model_status_value(m: dict) -> str | None:
     return st if isinstance(st, str) else None
 
 
-def _models_with_status() -> tuple[bool, list[dict]]:
-    """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da."""
+def _plazo_sonda() -> httpx2.Timeout:
+    """El plazo de TODO sondeo de estado (REQ-013): 3 s para conectar y 2 s para leer.
+
+    Para conectar no vale menos: en Windows un puerto cerrado tarda ~2,1 s en rechazarse, y con 1 s
+    llegaba como `ConnectTimeout` y se leía como una VPN (medido en el paso 0 de T3).
+    """
+    return httpx2.Timeout(config.TIMEOUT_SONDA_LECTURA, connect=config.TIMEOUT_SONDA_CONEXION)
+
+
+@dataclass(frozen=True)
+class EstadoBackend:
+    """Lo que dice un sondeo de `/v1/models` (REQ-012).
+
+    `causa` es un valor de `fallos.CausaConexion` como texto, y `detalle` su texto; los dos `None`
+    cuando el backend está disponible. Con un fallo, `models` es la última lista buena de ESTA
+    `BASE_URL` (o vacía), con `status: None` en cada modelo y `models_stale=True`.
+    """
+
+    available: bool
+    models: list[dict]
+    models_stale: bool
+    causa: str | None
+    detalle: str | None
+    status_http: int | None
+
+
+#: La última lista buena de `/v1/models`, por `BASE_URL` (REQ-021). Por URL y no en una sola ranura:
+#: si cambia el backend, la lista del anterior no es de este. En memoria: no sobrevive al proceso.
+_LISTAS_BUENAS: dict[str, list[dict]] = {}
+
+
+def sondear_backend() -> EstadoBackend:
+    """Sondea `GET /v1/models` y dice si el backend está disponible y, si no, por qué. Nunca lanza.
+
+    `available` exige un 2xx cuyo cuerpo sea un objeto con una lista `data`; cualquier otra forma
+    se trata como `ValueError` y sale `respuesta_invalida` (antes, un 2xx sin `data` daba
+    «disponible sin modelos»). Dentro de `data`, la tolerancia de siempre: una entrada que no es un
+    objeto se ignora y un `id` ausente se pinta `"?"`.
+    """
+    url = config.BASE_URL
+    endpoint = f"{url}/models"
+    # Todo dentro del `try`, también armar la lista: un `id` que no se puede ordenar, o cualquier
+    # otra sorpresa del cuerpo, sale como causa y no como excepción hacia el panel o `local_status`.
     try:
-        with httpx2.Client(timeout=2.0) as c:
-            r = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
-            r.raise_for_status()
-            data = r.json().get("data", [])
-    except (httpx2.HTTPError, ValueError):
-        return False, []
-    models = [
-        {"id": m.get("id", "?"), "status": _model_status_value(m)}
-        for m in data
-        if isinstance(m, dict)
-    ]
-    models.sort(key=lambda x: x["id"])
-    return True, models
+        with httpx2.Client(timeout=_plazo_sonda()) as c:
+            r = c.get(endpoint, headers=config.auth_headers())
+        if not r.is_success:
+            causa = fallos.causa_conexion(r.status_code, loopback=_backend_en_loopback())
+            return _sondeo_fallido(url, causa, status=r.status_code, status_http=r.status_code)
+        cuerpo = r.json()
+        data = cuerpo.get("data") if isinstance(cuerpo, dict) else None
+        if not isinstance(data, list):
+            # `ValueError` y no `TypeError` a propósito: es la regla 10 del clasificador
+            # (`respuesta_invalida`), la misma que un cuerpo que no es JSON (REQ-012).
+            raise ValueError(  # noqa: TRY004
+                "el cuerpo de /models no es un objeto con una lista `data`"
+            )
+        models = [
+            {"id": m.get("id", "?"), "status": _model_status_value(m)}
+            for m in data
+            if isinstance(m, dict)
+        ]
+        models.sort(key=lambda x: x["id"])
+    except Exception as exc:  # el sondeo nunca lanza: lo que no se espera también tiene causa
+        causa = fallos.causa_conexion(exc, loopback=_backend_en_loopback())
+        return _sondeo_fallido(url, causa, endpoint=endpoint, excepcion=exc)
+    _LISTAS_BUENAS[url] = models
+    return EstadoBackend(True, models, False, None, None, r.status_code)
+
+
+def _sondeo_fallido(
+    url: str,
+    causa: fallos.CausaConexion,
+    *,
+    status: int | None = None,
+    status_http: int | None = None,
+    endpoint: str | None = None,
+    excepcion: BaseException | None = None,
+) -> EstadoBackend:
+    guardada = [{**m, "status": None} for m in _LISTAS_BUENAS.get(url, [])]
+    texto = fallos.detalle(
+        causa,
+        host=config.backend_host(url),
+        status=status,
+        endpoint=endpoint,
+        excepcion=excepcion,
+    )
+    return EstadoBackend(False, guardada, True, causa.value, texto, status_http)
+
+
+def _models_with_status() -> tuple[bool, list[dict]]:
+    """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da.
+
+    Envoltorio de :func:`sondear_backend` para quien solo necesita esas dos cosas. Con el backend
+    caído, la lista es la última buena de esta URL, sin estado (REQ-021).
+    """
+    estado = sondear_backend()
+    return estado.available, estado.models
 
 
 def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
     base = config.BASE_URL.removesuffix("/v1")
     try:
-        with httpx2.Client(timeout=1.0) as c:
+        with httpx2.Client(timeout=_plazo_sonda()) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())
             if not r.is_success:
                 return None
@@ -3038,6 +3287,27 @@ def _describir_enfriamiento() -> list[str]:
     return lineas
 
 
+#: Las causas en las que ALGUIEN contesta: no es «caído» (el ámbar del badge, REQ-014/REQ-015).
+_CAUSAS_CON_RESPUESTA = frozenset(
+    {
+        fallos.CausaConexion.HTTP_ERROR.value,
+        fallos.CausaConexion.RESPUESTA_INVALIDA.value,
+        fallos.CausaConexion.SIN_RESPUESTA.value,
+    }
+)
+
+
+def _estado_backend_en_texto(estado: EstadoBackend) -> str:
+    """El estado de la línea `Backend:` de `local_status`, con el criterio del badge (REQ-015)."""
+    if estado.available:
+        return "arriba"
+    if estado.causa == fallos.CausaConexion.CREDENCIAL.value:
+        return f"SIN ACCESO: {estado.detalle}"
+    if estado.causa in _CAUSAS_CON_RESPUESTA:
+        return f"RESPONDE CON ERROR: {estado.detalle}"
+    return f"CAÍDO: {estado.detalle}"
+
+
 @mcp.tool(annotations=_anotaciones("Diagnóstico del backend local"))
 def local_status() -> str:
     """Diagnóstico de solo lectura del backend local y el catálogo de modelos.
@@ -3047,9 +3317,10 @@ def local_status() -> str:
     """
     lines: list[str] = [f"local-delegate v{_get_version()}", ""]
 
-    backend_up, models = _models_with_status()
+    estado = sondear_backend()
+    backend_up, models = estado.available, estado.models
     origin = "local (esta máquina)" if config.backend_origin() == "local" else "REMOTO"
-    lines.append(f"Backend: {config.BASE_URL} — {'arriba' if backend_up else 'CAÍDO'}")
+    lines.append(f"Backend: {config.BASE_URL} — {_estado_backend_en_texto(estado)}")
     lines.append(f"  cómputo: {origin} — {config.backend_host()}")
     if backend_up:
         if models:
@@ -3077,6 +3348,7 @@ def local_status() -> str:
     n_events = 0
     backend_calls = 0
     saved_tokens = 0
+    net_tokens = 0
     if current_log.is_file():
         with current_log.open(encoding="utf-8") as f:
             for raw_line in f:
@@ -3093,11 +3365,14 @@ def local_status() -> str:
                 acc = _accounting(rec)
                 backend_calls += acc["backend_calls"]
                 saved_tokens += acc["saved"]
+                net_tokens += acc["net"]
     lines.append("")
     lines.append(f"Log (mes actual): {current_log}")
     lines.append(
         f"  eventos: {n_events} ({backend_calls} llamadas al backend) — "
-        f"contexto ahorrado acumulado: ~{saved_tokens} tokens"
+        # REQ-005: el neto (lo leído server-side menos lo devuelto al contexto), como el KPI del
+        # panel, y el bruto entre paréntesis. Los fallos no suman a ninguno de los dos.
+        f"contexto conservado: ~{net_tokens} tokens netos (bruto ~{saved_tokens})"
     )
 
     lines.append("")
@@ -3119,7 +3394,9 @@ def local_status() -> str:
     if ram:
         lines.append(f"RAM de sistema: {ram}")
 
-    running = _llamaswap_running()
+    # REQ-013: `/running` solo si `/models` respondió. Con el backend inalcanzable, un plazo de
+    # conexión y no dos.
+    running = _llamaswap_running() if backend_up else None
     if running:
         lines.append(f"llama-swap /running: {running}")
 

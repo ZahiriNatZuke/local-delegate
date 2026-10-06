@@ -37,22 +37,50 @@ actualizar el paquete **el navegador sigue usando el de la caché hasta 24 h**. 
 (Ctrl+F5) y se acabó. Despista mucho al verificar una actualización: `window.Chart.version` puede
 seguir diciendo la versión vieja con el servidor sirviendo ya la nueva.
 
-## `[local-delegate error] no se pudo conectar al endpoint`
+## `[local-delegate error] no se pudo conectar con el backend: …`
 
-El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`.
+El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`. Detrás de los dos puntos va
+la **causa**, la misma que enseñan el badge del panel, `local_status` y `doctor`, y que el log de
+uso guarda en la clave `fallo_conexion` (las versiones anteriores a este cambio decían «no se pudo
+conectar al endpoint» sin más).
+
+| Causa (`fallo_conexion`) | Badge | Qué dice | Qué hacer |
+|---|---|---|---|
+| `dns` | caído · no resuelve | no se resuelve el nombre `<host>` (¿VPN o DNS?) | Revisa el nombre en `LOCAL_DELEGATE_BASE_URL`; con un backend remoto, `tailscale status` o usa la IP 100.x de la tailnet |
+| `rechazada` | caído · nadie escucha | `<host>` rechaza la conexión: no hay nada escuchando en ese puerto | Arranca llama-swap (en local) o revisa el puerto; en otra máquina, arráncalo allí |
+| `sin_ruta` | caído · sin ruta | no hay ruta de red hacia `<host>` | Revisa la red hacia ese host: VPN, cortafuegos, Tailscale |
+| `timeout_conexion` | caído · no contesta | `<host>` no contesta a la conexión (ruta, cortafuegos o VPN) | Igual que `sin_ruta`; es el caso típico de una VPN que se come el tráfico |
+| `credencial` | sin acceso (ámbar) | `<host>` responde `<N>`: está arriba pero rechaza la credencial | Falta o no vale `LOCAL_DELEGATE_API_KEY` en el entorno de quien llama (ver abajo) |
+| `http_error` | responde con error (ámbar) | `<host>` responde HTTP `<N>` | Revisa `LOCAL_DELEGATE_BASE_URL` (¿falta `/v1`?) |
+| `respuesta_invalida` | respuesta no válida (ámbar) | `<host>` responde a `<endpoint>`, pero con un cuerpo que no se entiende | Lo que escucha en ese puerto no es un backend OpenAI-compatible |
+| `sin_respuesta` | no responde a tiempo (ámbar) | `<host>` acepta la conexión pero no responde a tiempo | El backend está colgado o saturado; revísalo en ese host |
+| `url_invalida` | caído · URL no válida | la URL del backend no es válida: revisa LOCAL_DELEGATE_BASE_URL | Corrige la URL |
+| `transporte` | caído · fallo de red | fallo de red con `<host>` | Sin pista específica: revisa el backend en ese host |
+| `desconocida` | caído · fallo inesperado | fallo inesperado al sondear `<host>` | Igual; el tipo de excepción va entre paréntesis en el detalle |
+
+El badge rojo (con «caído») es para cuando no se llega al backend; el ámbar, para cuando **alguien
+contesta** pero la respuesta no sirve. En el panel hacen falta dos sondeos fallidos seguidos para
+pasar a «caído»; ver [Savings & metrics](Savings-and-metrics.md#estado-del-backend-y-de-los-modelos).
 
 - Verifica que tu backend corre: `curl http://127.0.0.1:9292/v1/models`.
-- Si usas llama-swap y quieres que el MCP lo arranque solo, activa el opt-in
+- Si usas llama-swap **en esta máquina** y quieres que el MCP lo arranque solo, activa el opt-in
   (`LOCAL_DELEGATE_AUTOSTART=1` + `LLAMASWAP_CONFIG`/`LLAMASWAP_EXE`). Ver
   [recipe de llama-swap](../recipes/llama-swap-blackwell.md).
 - Otros backends (Ollama, LM Studio, vLLM) los arrancas tú; el auto-arranque es solo llama-swap.
+- **Con un backend en otra máquina** el MCP no pregunta «¿Lo arranco?» ni intenta arrancarlo,
+  tenga `LOCAL_DELEGATE_AUTOSTART` el valor que tenga: no puede arrancar nada fuera de esta máquina.
+- **Una delegación se rinde a los 10 s si no puede conectar.** Ese plazo es solo el de
+  **conexión**; la lectura sigue en `LOCAL_DELEGATE_TIMEOUT` (180 s por defecto), así que la
+  espera mientras llama-swap carga un modelo no cambia. Antes, con una VPN que se comía el tráfico,
+  cada delegación se quedaba colgada 75–95 s hasta que el sistema operativo agotaba la conexión.
 
 Si el backend está en otra máquina:
 
-- `Could not resolve host`: MagicDNS no está resolviendo; prueba primero `tailscale status` y
-  `tailscale ping <PC>` desde la Mac.
-- `Operation timed out`: DNS resolvió, pero falta ruta/grant o Tailscale Serve no está activo.
-- `401`: la red funciona; carga la key desde Keychain y confirma el header Bearer.
+- `dns` (o `Could not resolve host` con `curl`): MagicDNS no está resolviendo; prueba primero
+  `tailscale status` y `tailscale ping <PC>` desde la Mac.
+- `timeout_conexion` o `sin_ruta` (`Operation timed out` con `curl`): DNS resolvió, pero falta
+  ruta/grant, Tailscale Serve no está activo o una VPN se come el tráfico.
+- `credencial` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
 - No cambies a MCP remoto completo para “arreglar” `path`: el MCP debe seguir local en la Mac.
 
 Guía completa: [Backend remoto Mac → PC](Remote-backend.md).
@@ -96,6 +124,25 @@ Si responde a `curl` con **401**, no está caído: está arriba y **falta la cre
 entorno**. Desde la 0.18.1 `doctor` ni siquiera llega ahí — le pregunta primero al daemon, que sí
 tiene credencial, y solo prueba por su cuenta si no hay daemon. Si aun así lo ves, exporta
 `LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
+
+Ahora `doctor` ya no lo llama «caído»: el check «backend» enseña el **detalle de la causa** (la
+tabla de la sección anterior sobre «no se pudo conectar con el backend») y una pista que
+depende de **quién** vio el fallo y de **dónde** está el backend:
+
+- Un 401 visto por `doctor` en su propio sondeo sale `[ -- ]` (no se pudo comprobar) con la pista «exporta
+  LOCAL_DELEGATE_API_KEY en este entorno»: lo que falta es la clave en **esta** consola.
+- Un 401 que ve el **daemon** sale `[WARN]` con «la clave del daemon no vale: revisa
+  LOCAL_DELEGATE_API_KEY en su lanzador».
+- Con el backend en otra máquina, ninguna pista dice «arranca llama-swap» a secas: dice dónde
+  («arranca llama-swap en `<host>` o revisa el puerto») o manda a revisar la red (VPN, cortafuegos,
+  Tailscale).
+
+`local_status` usa el mismo criterio en su línea `Backend:`: `arriba`, `SIN ACCESO: <detalle>`
+(credencial), `RESPONDE CON ERROR: <detalle>` (alguien contesta, pero con error, con un cuerpo que
+no se entiende o sin responder a tiempo) o `CAÍDO: <detalle>` (no se llega). Ni `doctor` ni
+`local_status` esperan un segundo fallo como el panel: hacen una sola consulta y dicen lo que ven.
+Los sondeos de estado se rinden a los 3 s si no pueden conectar y a los 2 s si no les llega la
+respuesta, así que con el backend inalcanzable tardan como mucho eso.
 
 ## Las tools `local_*` responden `401` aunque `doctor` diga que el backend está bien
 

@@ -6,7 +6,31 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+> **No publicar versión hasta mezclar `coste-api-y-cuota`**: las cifras en tokens de Claude de este
+> bloque usan todavía chars ÷ 4. La conversión vive ya en una sola función (`tokens_claude`), pero
+> la que la sustituye llega con ese cambio, y las dos cosas tienen que salir en la misma versión.
+
 ### Changed
+- **«Contexto conservado» pasa a ser un neto, y las cifras históricas bajan.** El KPI enseña lo
+  que no entró a tu contexto menos lo que la tool te devolvió, y su pista dice los dos números
+  («bruto X − devuelto Y»); el tooltip avisa de que no descuenta relecturas. El neto puede ser
+  negativo, y el KPI, la chispa y «Ahorro por herramienta» lo enseñan con su signo. Como las
+  cuentas se hacen al leer el log, los meses pasados se recalculan solos: agosto, en la máquina
+  de referencia, baja un 32 % solo por sacar los fallos del bruto, y septiembre queda en 800 928
+  tokens netos (873 270 de bruto menos 72 342 devueltos). `/api/stats` añade `tokens_returned`,
+  `tokens_context_net`, el desglose en caracteres (`chars_saved_text`, `bytes_saved_image`,
+  `chars_saved_output`, `chars_returned`) y `tokens_net` por herramienta, por origen y por
+  cliente; `tokens_context_saved` sigue siendo el bruto. `local_status` dice
+  `~N tokens netos (bruto ~M)`, con la misma función que el panel.
+- **Hacen falta dos sondeos fallidos seguidos para que el panel diga «caído».** Un fallo suelto
+  conserva el badge y el último estado de cada modelo, y el `title` del badge añade «último
+  sondeo: …». Al reconectar, el panel refresca el estado y las métricas del backend sin esperar
+  al ciclo de 60 s. La lista de modelos ya no cambia con la conexión: el daemon guarda la última
+  buena de cada URL y las filas salen siempre en el mismo orden (por rol y después por id).
+- **Presentación del panel.** Los miles van siempre agrupados y los decimales con coma, sin
+  depender del idioma del navegador; las latencias, en segundos con un decimal («116,9 s»); los
+  plurales, sin paréntesis («1 delegación», «4 estimados»); y cada texto en su familia: Inter para
+  etiquetas y prosa, la monoespaciada para cifras, ids y rutas.
 - **`filelock` adopta el major 4: el techo sube de `<4` a `<5`.** Lo único que rompe la 4.0.0 es
   `SoftReadWriteLock`, que cambia cómo guarda su estado en disco
   ([tox-dev/filelock#738](https://github.com/tox-dev/filelock/pull/738)); aquí solo se usa
@@ -19,6 +43,41 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   `uvicorn` 0.53.0 → 0.54.0 y, en desarrollo, `ruff` 0.16.8 → 0.16.9 y `virtualenv` 21.6.0 →
   21.14.5 (arrastra `python-discovery` 1.4.3 → 1.6.1). Socket les da 0.9 o más en todas las
   categorías.
+
+### Fixed
+- **Los fallos inflaban el ahorro.** Una delegación que no llegaba a conectar «ahorraba» el
+  documento entero, y una troceada que fallaba a mitad contaba como si hubiera terminado. Ahora un
+  fallo (`ok` exactamente `false`) no ahorra, no devuelve y no cuenta como estimado; sí cuenta los
+  tokens que el backend llegó a gastar. «Tasa de error», el punto rojo de la actividad y
+  `/api/stats` usan ese mismo criterio, así que un evento con `ok: null` ya no cuenta como error.
+- **El badge, `local_status` y `doctor` dicen la causa de un fallo de conexión.** Antes todo era
+  «caído»; ahora un clasificador único distingue el nombre que no resuelve, el puerto sin nadie
+  escuchando, la red sin ruta, la conexión que no contesta (el caso de una VPN), la credencial
+  rechazada, el error HTTP, la respuesta que no se entiende y la lectura agotada. El badge tiene
+  cuatro aspectos: «conectado» en verde, la etiqueta sola en ámbar cuando alguien contesta pero no
+  sirve («sin acceso»), «caído · no resuelve» en rojo cuando no se llega, y «comprobando…» neutro
+  al abrir el panel. La línea `Backend:` de `local_status` dice `arriba`, `SIN ACCESO`,
+  `RESPONDE CON ERROR` o `CAÍDO`, cada una con el detalle. `doctor` enseña el detalle en el check
+  «backend», distingue si el 401 lo vio él (falta la clave en esa consola) o el daemon (la clave
+  del lanzador no vale), y su pista depende de dónde esté el backend. El error de una delegación
+  dice `no se pudo conectar con el backend: <detalle>` y el log de uso guarda la causa en la clave
+  nueva `fallo_conexion`. Los sondeos de estado se rinden a los 3 s al conectar y a los 2 s al
+  leer.
+- **Ya no se ofrece arrancar un backend que está en otra máquina.** Con el backend remoto, un
+  fallo de conexión no pregunta «¿Lo arranco?» ni intenta el autoarranque, y ninguna pista de
+  `doctor` dice «arranca llama-swap» a secas.
+- **Una delegación que no puede conectar se rinde a los 10 s.** Con una VPN que se comía el
+  tráfico, cada delegación esperaba entre 75 y 95 s a que el sistema operativo agotara la conexión.
+  Solo cambia el plazo de conexión: la lectura sigue en `LOCAL_DELEGATE_TIMEOUT`, así que la
+  espera mientras llama-swap carga un modelo no cambia.
+- **Estados del panel que engañaban.** La tarjeta de métricas de llama-swap culpaba a la versión
+  («requiere llama-swap ≥ v236») con cualquier fallo; ahora solo con un 404, y con el resto dice
+  «sin datos: <causa>». Cada modelo distingue «en cola local» (espera dentro de local-delegate),
+  «cargando», «procesando», «esperando turno» y «descargando», y la chip de estado acepta
+  cualquier valor. «En curso» pasa a «Última delegación» cuando nada corre. El panel
+  Sistema explica el cómputo remoto («El backend corre en `<host>`…») y dice cuándo una
+  plataforma no tiene lista de procesos o medida de RAM y VRAM. El sondeo de «En curso» y el del
+  backend van por separado y sin solaparse, así que un backend lento ya no congela «En curso».
 
 ## [0.32.0] - 2026-09-23
 

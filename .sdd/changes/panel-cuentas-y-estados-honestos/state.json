@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "slug": "panel-cuentas-y-estados-honestos",
+  "title": "Panel: los fallos no suman ahorro, los estados dicen la causa real y la presentación es coherente",
+  "mode": "standard",
+  "status": "result-review",
+  "createdAt": "2026-10-06T14:06:24.210Z",
+  "updatedAt": "2026-10-06T17:28:25.940Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T15:15:50.009Z",
+      "evidence": "Dos revisiones adversarias (review.md: Revisión de la spec, 2 BLOQ/6 IMP) + segunda pasada; todos BLOQ/IMP resueltos en spec.md (Respuesta a la revisión y a la segunda pasada). Cifras de septiembre reproducidas con scripts de solo lectura. Decisiones del usuario 2026-10-06 en brief.md. Contrato con coste-api-y-cuota fijado.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T15:15:50.191Z",
+      "evidence": "Revisión adversaria del plan (1 BLOQ/6 IMP) + segunda pasada (1 BLOQ nuevo); resueltos en plan.md: tests sin dueño asignados a T3/T4, sin worktrees y en serie, controles corregidos y ejecutados (scratchpad/controles). Trazabilidad completa: todos los REQ en la tabla de spec.md y en rangos del plan.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T17:28:25.545Z",
+      "evidence": "Suite completa 1598 passed/2 skipped; ruff check y format limpios (131 ficheros); node --check limpio; controles positivos por assert y mutantes anotados por tarea en verification.md; cifras de septiembre verificadas a mano con el log real. Datos privados (IPs, ruta de perfil) retirados de los ficheros versionados.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T17:28:25.940Z",
+      "evidence": "Revisión del resultado (review.md): 33 REQ + Restricciones de entrega + Contrato con coste-api-y-cuota cumplen en código y tests, conforms-with-notes sin hallazgos bloqueantes ni importantes; 335 tests centrales re-ejecutados. Por decisión del usuario el daemon de esta PC queda con el código de la rama (versión anunciada 0.32.0).",
+      "actor": "user"
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-06T14:06:24.210Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-06T15:15:50.009Z",
+      "evidence": "Dos revisiones adversarias (review.md: Revisión de la spec, 2 BLOQ/6 IMP) + segunda pasada; todos BLOQ/IMP resueltos en spec.md (Respuesta a la revisión y a la segunda pasada). Cifras de septiembre reproducidas con scripts de solo lectura. Decisiones del usuario 2026-10-06 en brief.md. Contrato con coste-api-y-cuota fijado.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-06T15:15:50.191Z",
+      "evidence": "Revisión adversaria del plan (1 BLOQ/6 IMP) + segunda pasada (1 BLOQ nuevo); resueltos en plan.md: tests sin dueño asignados a T3/T4, sin worktrees y en serie, controles corregidos y ejecutados (scratchpad/controles). Trazabilidad completa: todos los REQ en la tabla de spec.md y en rangos del plan.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-06T15:16:07.321Z",
+      "reason": "research.md e insumos verificados"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-06T15:16:07.503Z",
+      "reason": "spec.md escrita y corregida tras dos revisiones"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-06T15:16:07.719Z",
+      "reason": "plan.md escrito y corregido"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-06T15:16:07.927Z",
+      "reason": "revisión adversaria del plan y segunda pasada sin bloqueantes"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-06T15:16:08.126Z",
+      "reason": "arranca la ola 1 (T2)"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-06T17:28:25.332Z",
+      "reason": "T1-T7 implementadas y confirmadas; verificación final contra el daemon reinstalado"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-06T17:28:25.545Z",
+      "evidence": "Suite completa 1598 passed/2 skipped; ruff check y format limpios (131 ficheros); node --check limpio; controles positivos por assert y mutantes anotados por tarea en verification.md; cifras de septiembre verificadas a mano con el log real. Datos privados (IPs, ruta de perfil) retirados de los ficheros versionados.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-06T17:28:25.736Z",
+      "reason": "Revisión de conformidad"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-06T17:28:25.940Z",
+      "evidence": "Revisión del resultado (review.md): 33 REQ + Restricciones de entrega + Contrato con coste-api-y-cuota cumplen en código y tests, conforms-with-notes sin hallazgos bloqueantes ni importantes; 335 tests centrales re-ejecutados. Por decisión del usuario el daemon de esta PC queda con el código de la rama (versión anunciada 0.32.0).",
+      "actor": "user"
+    }
+  ]
+}

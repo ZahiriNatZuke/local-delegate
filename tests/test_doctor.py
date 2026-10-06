@@ -11,6 +11,7 @@ from pathlib import Path
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
 from local_delegate import checks, daemon, doctor, install, update
+from local_delegate.fallos import VistaBackend
 
 
 def test_vnum_extracts_number():
@@ -185,7 +186,11 @@ def _stub_environment(
     monkeypatch.setattr(
         doctor,
         "backend_probe",
-        lambda: (True, "") if backend else (False, "no responde (ConnectError)"),
+        lambda: (
+            VistaBackend(True, "", None, "directo")
+            if backend
+            else VistaBackend(False, "no responde (ConnectError)", None, "directo")
+        ),
     )
     # Mismo caso que `query_backend`: sin doblarlo, `service.credential` pediría `/models` al
     # backend REAL de la máquina, verde en CI y otra cosa aquí. Por defecto «no exige credencial»,
@@ -351,3 +356,51 @@ def test_run_doctor_writes_nothing_in_an_empty_home(tmp_path, monkeypatch):
     before = snapshot(home)
     doctor.run_doctor(argparse.Namespace(config=None, online=False, home=str(home)))
     assert snapshot(home) == before
+
+
+# --- backend_probe: plazo de sondeo y causa (REQ-013, REQ-016) -----------------------------------
+
+
+def test_backend_probe_usa_el_plazo_de_sondeo(monkeypatch):
+    import httpx2
+
+    from local_delegate import config
+
+    plazos = []
+
+    class _Registrador:
+        def __init__(self, *args, timeout=None, **kwargs):
+            plazos.append(timeout)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def get(self, url, **kwargs):
+            raise httpx2.ConnectError("x", request=httpx2.Request("GET", url))
+
+    monkeypatch.setattr(httpx2, "Client", _Registrador)
+
+    doctor.backend_probe()
+
+    (t,) = plazos
+    plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
+    plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
+    assert plazo_conexion == config.TIMEOUT_SONDA_CONEXION
+    assert plazo_lectura == config.TIMEOUT_SONDA_LECTURA
+
+
+def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
+    """Red real: un nombre `.invalid` no resuelve nunca (RFC 6761)."""
+    from local_delegate import config
+
+    monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
+
+    vista = doctor.backend_probe()
+
+    assert "no se resuelve" in vista[1]
+    assert vista.causa == "dns"
+    assert vista.fuente == "directo"
+    assert vista.sano is False

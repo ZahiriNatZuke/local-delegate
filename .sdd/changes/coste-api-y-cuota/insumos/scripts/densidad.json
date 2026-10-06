@@ -1,0 +1,14 @@
+{
+  "_nota": "Prototipo de la tabla de densidad del paquete (REQ-030 de la spec). Caracteres del fichero por token de Claude, en CENTÉSIMAS (223 = 2,23) para que Python y JS hagan la misma división entera. Fuente: insumos/densidad-por-modelo.md, recalculable con densidad.py. Celdas ausentes = sin medir.",
+  "medido": "2026-10-06",
+  "familias": {
+    "nueva": {
+      "sin_numerar": {"prosa": 223, "codigo": 241, "log": 192, "estructurado": 188, "diff": 222},
+      "formato_read": {"prosa": 200, "codigo": 203}
+    },
+    "anterior": {
+      "sin_numerar": {"prosa": 301, "codigo": 312, "log": 241, "estructurado": 222, "diff": 290},
+      "formato_read": {}
+    }
+  }
+}

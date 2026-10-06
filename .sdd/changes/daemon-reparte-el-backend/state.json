@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "slug": "daemon-reparte-el-backend",
+  "title": "Daemon: no se pelea por el modelo, aprovecha el cargado, avisa de la lentitud y deja la residencia configurable",
+  "mode": "standard",
+  "status": "plan-review",
+  "createdAt": "2026-10-06T14:16:18.644Z",
+  "updatedAt": "2026-10-06T17:10:45.310Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T15:38:40.389Z",
+      "evidence": "Revisión adversaria (2 BLOQ/12 IMP) + corrección + segunda pasada (1 BLOQ nuevo: choque con espera_local del panel) + ronda final: todo resuelto (review.md, Respuesta a la segunda pasada). Turno/plaza sin ciclo comprobado; TTL de v255 verificado en el código Go. Decisiones del usuario 2026-10-06 en brief (incluidas las dos condiciones extra de la evaluación, confirmadas).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T17:10:45.099Z",
+      "evidence": "Revisión adversaria del plan (4 BLOQ/7 IMP) resuelta en plan rev. 2 (review.md, Respuesta a la revisión del plan); controles comprobados ejecutándolos; config real protegida con --config, fixture y sha256 por ola; enmienda F3 exige approve nuevo con evidencia del usuario; reglas.json deja parametrizadas las dos reglas pendientes del usuario.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-06T14:16:18.644Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-06T15:16:17.586Z",
+      "reason": "research.md con insumos"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-06T15:16:17.785Z",
+      "reason": "spec.md escrita, en revisión"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-06T15:38:40.389Z",
+      "evidence": "Revisión adversaria (2 BLOQ/12 IMP) + corrección + segunda pasada (1 BLOQ nuevo: choque con espera_local del panel) + ronda final: todo resuelto (review.md, Respuesta a la segunda pasada). Turno/plaza sin ciclo comprobado; TTL de v255 verificado en el código Go. Decisiones del usuario 2026-10-06 en brief (incluidas las dos condiciones extra de la evaluación, confirmadas).",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-06T15:38:40.586Z",
+      "reason": "Spec aprobada; plan en cuanto el panel avance (comparte ficheros)"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-06T17:10:45.099Z",
+      "evidence": "Revisión adversaria del plan (4 BLOQ/7 IMP) resuelta en plan rev. 2 (review.md, Respuesta a la revisión del plan); controles comprobados ejecutándolos; config real protegida con --config, fixture y sha256 por ola; enmienda F3 exige approve nuevo con evidencia del usuario; reglas.json deja parametrizadas las dos reglas pendientes del usuario.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-06T17:10:45.310Z",
+      "reason": "Plan rev. 2 tras revisión adversaria"
+    }
+  ]
+}

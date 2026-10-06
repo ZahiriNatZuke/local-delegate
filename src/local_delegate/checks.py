@@ -36,7 +36,7 @@ from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import clients, config, install
+from . import clients, config, fallos, install
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -135,8 +135,8 @@ def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
     return None
 
 
-def _default_backend_models() -> tuple[bool, str]:
-    """(¿el backend está sano?, motivo si no), preguntando primero al daemon.
+def _default_backend_models() -> fallos.VistaBackend:
+    """Lo que se sabe del backend (`fallos.VistaBackend`), preguntando primero al daemon.
 
     El orden importa y no es una optimización. La clave del backend se lee **del entorno del
     proceso**: el daemon la recibe de su lanzador, pero un `local-delegate doctor` escrito en una
@@ -148,16 +148,29 @@ def _default_backend_models() -> tuple[bool, str]:
     Si no hay daemon, o no supo responder, se prueba directo como siempre: ese camino sigue siendo
     el correcto cuando nadie más puede mirar por nosotros.
     """
+    import httpx2
+
     from . import daemon, doctor
 
     host, port = daemon_host_port()
-    visto = daemon.query_backend(host, port, timeout=1.0)
+    # 1 s para conectar con el daemon, que está en esta máquina; para leer, MÁS que el techo de un
+    # sondeo fallido del daemon (REQ-016). Con 1 s de lectura, un fallo lento del backend (VPN,
+    # puerto cerrado en Windows) agotaba la consulta y la causa que el daemon ya sabía no llegaba.
+    plazo = httpx2.Timeout(
+        config.TIMEOUT_SONDA_CONEXION + config.TIMEOUT_SONDA_LECTURA + 1, connect=1.0
+    )
+    visto = daemon.query_backend(host, port, timeout=plazo)
     if visto is not None:
         if visto.get("available"):
-            return True, ""
-        # El daemon SÍ tiene credencial, así que su «no disponible» es un diagnóstico de verdad y
-        # no una duda: aquí no cabe el `unknown` del 401.
-        return False, "no responde (según el daemon, que sí tiene credencial)"
+            return fallos.VistaBackend(True, "", None, "daemon")
+        causa, detalle = visto.get("causa"), visto.get("detalle")
+        if isinstance(causa, str) and isinstance(detalle, str) and detalle:
+            return fallos.VistaBackend(False, detalle, causa, "daemon")
+        # Daemon antiguo, sin `causa`: el texto de siempre. El daemon SÍ tiene credencial, así
+        # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
+        return fallos.VistaBackend(
+            False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
+        )
     return doctor.backend_probe()
 
 
@@ -303,7 +316,7 @@ class Context:
     daemon_needs_token: Callable[[str, int], bool | None] = field(
         default_factory=lambda f=_default_daemon_needs_token: f
     )
-    backend_models: Callable[[], tuple[bool, str]] = field(
+    backend_models: Callable[[], fallos.VistaBackend] = field(
         default_factory=lambda f=_default_backend_models: f
     )
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = field(
@@ -1294,18 +1307,23 @@ def _probe_daemon(ctx: Context) -> Result:
 
 
 def _probe_backend_models(ctx: Context) -> Result:
-    healthy, reason = ctx.backend_models()
-    if healthy:
+    vista = ctx.backend_models()
+    if vista.sano:
         return Result(OK, f"{config.BASE_URL}/models responde")
-    if reason.startswith(("responde 401", "responde 403")):
-        # El backend está vivo; lo que falta es la credencial en **este** entorno. Decir
-        # «caído» mandaría a arrancar un servicio que ya corre.
-        return Result(UNKNOWN, f"{config.BASE_URL}/models {reason}")
-    return Result(
-        WARN,
-        f"{config.BASE_URL}/models {reason or 'no responde'} (backend caído)",
-        "arranca llama-swap (o revisa LOCAL_DELEGATE_BASE_URL)",
+    # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
+    pista = fallos.pista(
+        vista.causa,
+        origen=config.backend_origin(),
+        fuente=vista.fuente,
+        host=config.backend_host(),
     )
+    detalle = f"{config.BASE_URL}/models: {vista.detalle or 'no responde'}"
+    if vista.causa == fallos.CausaConexion.CREDENCIAL.value and vista.fuente == "directo":
+        # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
+        # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
+        # su clave, es un problema de verdad: WARN, con la pista que manda a su lanzador.
+        return Result(UNKNOWN, detalle, pista)
+    return Result(WARN, detalle, pista)
 
 
 def _version_result(ctx: Context, component: str) -> Result:

@@ -24,7 +24,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import autostart, checks, config
+from . import autostart, checks, config, fallos
 
 # --- Fuente de verdad de versiones probadas ----------------------------------------------
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
@@ -262,29 +262,34 @@ def _backend_up() -> bool:
     return backend_probe()[0]
 
 
-def backend_probe() -> tuple[bool, str]:
-    """(¿está sano?, motivo si no). Distingue «no responde» de «responde 401».
+def backend_probe() -> fallos.VistaBackend:
+    """Lo que ve ESTA consola del backend, con su causa (REQ-016). Fuente: `"directo"`.
 
     Un 401 significa que el backend **está arriba** y que falta la key en este entorno, no que
     esté caído. Confundirlos manda a arrancar un servicio que ya está corriendo, y ese falso
     diagnóstico se dio de verdad: con la key sin cargar, `doctor` decía CAÍDO sobre un
-    llama-swap vivo y sirviendo.
+    llama-swap vivo y sirviendo. El texto y la causa salen de `fallos`, como en el daemon, y el
+    plazo es el de todo sondeo de estado (REQ-013).
     """
+    # El host real SIN puerto, como pide la regla 7 del clasificador (ver `server`).
+    loopback = config._is_loopback_host(config._split_host_port(config.BASE_URL)[0])
+    host = config.backend_host()
+    endpoint = f"{config.BASE_URL}/models"
     try:
         import httpx2
 
-        with httpx2.Client(timeout=2.0) as c:
-            response = c.get(f"{config.BASE_URL}/models", headers=config.auth_headers())
+        plazo = httpx2.Timeout(config.TIMEOUT_SONDA_LECTURA, connect=config.TIMEOUT_SONDA_CONEXION)
+        with httpx2.Client(timeout=plazo) as c:
+            response = c.get(endpoint, headers=config.auth_headers())
     except Exception as exc:
-        return False, f"no responde ({type(exc).__name__})"
+        causa = fallos.causa_conexion(exc, loopback=loopback)
+        texto = fallos.detalle(causa, host=host, endpoint=endpoint, excepcion=exc)
+        return fallos.VistaBackend(False, texto, causa.value, "directo")
     if response.is_success:
-        return True, ""
-    if response.status_code in (401, 403):
-        return False, (
-            f"responde {response.status_code}: está arriba pero rechaza la credencial "
-            "(¿falta LOCAL_DELEGATE_API_KEY en este entorno?)"
-        )
-    return False, f"responde HTTP {response.status_code}"
+        return fallos.VistaBackend(True, "", None, "directo")
+    causa = fallos.causa_conexion(response.status_code, loopback=loopback)
+    texto = fallos.detalle(causa, host=host, status=response.status_code)
+    return fallos.VistaBackend(False, texto, causa.value, "directo")
 
 
 def backend_requires_key() -> tuple[bool | None, str]:

@@ -208,6 +208,20 @@ Después de reiniciar el cliente:
 3. crea un archivo temporal en `/tmp` y llama `local_summarize(path=...)`;
 4. abre el dashboard con `open "https://${PC_MAGICDNS}:9393"`.
 
+Qué dice el panel cuando el cómputo es remoto (el panel del daemon de la Mac, si lo tienes):
+
+- `local_status` dice `Backend: arriba` cuando todo va bien. Si no, dice la causa: `CAÍDO: no se
+  resuelve el nombre …` (MagicDNS), `CAÍDO: … no contesta a la conexión` (ruta, cortafuegos o una
+  VPN que se come el tráfico) o `SIN ACCESO: …` (la key no llega). La tabla completa está en
+  [Troubleshooting](Troubleshooting.md).
+- El badge del backend dice lo mismo: «conectado», «sin acceso» en ámbar o «caído · no contesta»
+  en rojo. Un fallo suelto no lo cambia; hacen falta dos sondeos fallidos seguidos.
+- La sección de procesos de Sistema lleva siempre la nota «El backend corre en `<host>`: su RAM y
+  VRAM se ven en el panel de esa máquina»; sin procesos locales, es lo único que sale. En macOS la
+  RAM y la VRAM dicen «no se miden en macOS todavía».
+- Con el backend remoto, una delegación que no puede conectar no pregunta «¿Lo arranco?» y se rinde
+  a los 10 s, en vez de quedarse colgada lo que tarde macOS en agotar la conexión (~75 s).
+
 El canary completo y el rollback están en la
 [recipe técnica del backend remoto](../recipes/remote-backend.md).
 El canary autenticado pasó 20/20,

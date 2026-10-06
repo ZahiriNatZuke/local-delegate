@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -39,6 +40,25 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
     """Evita que mocks de tests contaminen los logs reales del usuario."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+
+
+@pytest.fixture(autouse=True)
+def sin_lista_de_modelos_guardada():
+    """Vacía la última lista buena de `/v1/models` que el sondeo guarda por URL (REQ-021).
+
+    Sin esto, un test que sondea con éxito dejaría su lista a los siguientes, y un «backend caído»
+    devolvería modelos de otro test. Se mira en `sys.modules` en vez de importar `server`: si nadie
+    lo ha importado todavía, no hay nada guardado.
+    """
+
+    def vaciar() -> None:
+        listas = getattr(sys.modules.get("local_delegate.server"), "_LISTAS_BUENAS", None)
+        if listas is not None:
+            listas.clear()
+
+    vaciar()
+    yield
+    vaciar()
 
 
 @pytest.fixture

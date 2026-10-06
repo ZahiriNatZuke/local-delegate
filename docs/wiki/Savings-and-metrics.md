@@ -44,6 +44,10 @@ con saltos pudo contaminarla un swap.
   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
   lo traen y se reconocen por el nombre de la tool.
+- `fallo_conexion` (solo si la delegación no pudo conectar con el backend): la **causa** del
+  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `rechazada`,
+  `timeout_conexion`, `credencial`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
+  valiendo `connect_error` y `error_class` no cambia, así que un lector viejo del log no se rompe.
 - `error` (solo si `ok=false`), `truncated_in`/`truncated_out`, `raw_len`, `path`, `v`
   (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos
   campos se sigue leyendo sin romperse.
@@ -54,11 +58,13 @@ Son **dos magnitudes distintas**, y confundirlas era el defecto que el panel arr
 ahorro y no medía nada enfrente, así que una delegación resuelta en una llamada y otra que quemó
 la GPU dieciséis veces daban el mismo número.
 
-- **Contexto conservado (ahorro)** = el contenido de entrada de las llamadas con `source=path`.
-  Lo leyó el MCP en tu máquina y **nunca entró a la ventana de contexto de Claude**: es cuota que
-  no gastaste. Se cuenta **una vez por delegación aunque se trocee** — lo que no entró a tu
-  contexto es el documento, no el trabajo de la GPU. Las llamadas `inline` **no** cuentan (ya
-  viajaron por tu contexto).
+- **Contexto conservado (ahorro)** es un **neto**: lo que no entró a tu contexto (el *bruto*)
+  menos lo que la tool te devolvió (el *devuelto*). El bruto es el contenido de entrada de las
+  delegaciones con `source=path` que **salieron bien**: lo leyó el MCP en tu máquina y **nunca
+  entró a la ventana de contexto de Claude**. Se cuenta **una vez por delegación aunque se
+  trocee** — lo que no entró a tu contexto es el documento, no el trabajo de la GPU. Las llamadas
+  `inline` **no** cuentan (ya viajaron por tu contexto). La regla completa, en
+  [La regla de contabilidad](#la-regla-de-contabilidad).
 - **Coste local** = Σ `tokens_in` de **todas** las llamadas al backend. Una delegación troceada
   repite el prompt de sistema en cada trozo, así que aquí sí paga el troceo: en un caso real de
   cuatro trozos, 26 131 tokens de coste frente a 21 044 de ahorro, un **+24 %** que antes no se
@@ -73,6 +79,57 @@ la GPU dieciséis veces daban el mismo número.
 
 > Por eso conviene pasar `path` (no `text`) siempre que la fuente sea un archivo: es lo que
 > convierte la delegación en ahorro real de cuota.
+
+### La regla de contabilidad
+
+Hasta la 0.32.0 el KPI sumaba también las delegaciones **fallidas** —una que no pudo conectar
+«ahorraba» el documento entero— y no restaba lo que la tool devolvía a tu contexto. Las dos cosas
+inflaban el número. Ahora la regla es una sola, escrita igual en Python (`_accounting`) y en el JS
+del panel (`acct`), atadas por un test de paridad:
+
+| Concepto | Cuenta | No cuenta |
+|---|---|---|
+| Bruto | Entrada leída server-side de delegaciones que salieron bien, una vez por delegación; la salida escrita a fichero (`output_to_file`) | Fallos; entrada `inline`; el trabajo extra de trocear |
+| Devuelto | Lo que la tool devolvió a Claude en las delegaciones que reclaman ahorro de entrada | El recibo de `output_to_file` (se toma 0); la coletilla de ahorro que se añade después de registrar; el mensaje de error de un fallo |
+| Neto | Bruto − devuelto, evento a evento | Las relecturas del mismo fichero (no están en el log) |
+| Coste local / Generado | Tokens reportados por el backend, **también en fallos** (la GPU los gastó); la estimación ÷ 4 solo en delegaciones que salieron bien | La estimación sobre el texto de un error |
+| Estimados | Delegaciones que salieron bien sin `usage` del backend | Fallos |
+
+- **Qué es un fallo**: el campo `ok` existe y vale exactamente `false`. Un evento con `ok: null` o
+  sin la clave **no** es un fallo. Ese mismo predicado es el que usan «Tasa de error», el punto
+  rojo de la tabla de actividad y los errores por herramienta de `/api/stats`.
+- **El neto puede ser negativo**: una delegación que devuelve más de lo que leyó resta. El KPI, la
+  chispa y «Ahorro por herramienta» lo enseñan con su signo (una barra negativa sale a la izquierda
+  del 0); no se recorta.
+- **El KPI dice los dos números**: «Contexto conservado» enseña el neto y su pista dice
+  «bruto X − devuelto Y». Su tooltip avisa de que **no descuenta relecturas**: si Claude vuelve a
+  leer el fichero para comprobar el resumen, eso no está en el log.
+- **Una imagen por `path`** cuenta como bruto el token real de entrada que reportó el modelo local
+  (`chars_in` de `local_describe_image` son **bytes**), y como devuelto la descripción. Sin
+  `tokens_in` reportado no reclama nada.
+
+**Desglose en caracteres.** Además de los tokens, cada evento y `/api/stats` llevan lo ahorrado y
+lo devuelto **en su unidad de origen**: `chars_saved_text` (texto leído por `path`),
+`bytes_saved_image` (la imagen, en bytes), `chars_saved_output` (lo escrito a fichero) y
+`chars_returned` (lo devuelto al contexto). La conversión a tokens de Claude pasa por **una sola**
+función, `tokens_claude` (en JS, `tokensClaude`). Hoy divide los caracteres entre 4, que es una
+cifra intermedia: la sustituirá una conversión que tenga en cuenta el tipo de contenido.
+
+**Un ejemplo con cifras reales** (septiembre de 2026 en la máquina de referencia: 143
+delegaciones, 7 de ellas fallidas):
+
+| Cifra | Valor |
+|---|---|
+| Bruto con la regla de antes (fallos dentro) | 983 871 tokens |
+| Bruto sin fallos | 873 270 tokens (−11 %) |
+| Devuelto | 72 342 tokens (289 554 caracteres) |
+| **Neto (lo que enseña el KPI)** | **800 928 tokens** |
+| Texto ahorrado | 3 463 739 caracteres |
+| Imagen ahorrada | 1 489 047 bytes (5 imágenes) |
+| Salida a fichero | 5 237 caracteres (3 delegaciones) |
+
+Las cuentas se hacen al **leer** el log, así que los meses pasados se recalculan solos y **bajan**:
+agosto, con 2 fallos en 18 delegaciones, pasa de 261 048 a 178 756 tokens de bruto (−32 %).
 
 ### Por qué las cuentas viven en el servidor
 
@@ -115,7 +172,66 @@ apuntando a la GPU de la PC.
 Tarjeta con polling cada 2 s (solo si la pestaña está visible; al volver a la pestaña refresca
 de inmediato) que muestra las delegaciones en vuelo ahora mismo —tool, modelo, segundos
 transcurridos, si el cómputo es local o remoto y el progreso `trozo i/N` en operaciones por
-chunks— y el modelo montado en llama-swap si el backend expone `/running`.
+chunks— y el modelo montado en llama-swap si el backend expone `/running`. Cuando nada corre, el
+título pasa a **«Última delegación»** y enseña la última terminada; vuelve a «En curso» en cuanto
+hay una llamada viva.
+
+`/api/inflight` y `/api/backend` se piden **por separado**, como mucho una petición de cada uno en
+vuelo, y el siguiente sondeo sale 2 s **después de que termine** el anterior. Así un backend lento
+(una VPN que no contesta) no congela «En curso» ni apila peticiones.
+
+### Estado del backend y de los modelos
+
+**El badge** del panel de backend dice la causa, no solo «caído». Tiene cuatro aspectos:
+
+| Aspecto | Cuándo |
+|---|---|
+| Verde, «conectado» | El sondeo respondió con la lista de modelos. El `title` es la URL base |
+| Ámbar, la etiqueta sola («sin acceso», «responde con error», «respuesta no válida», «no responde a tiempo») | Hay alguien contestando, pero no sirve: credencial rechazada, error HTTP, cuerpo que no se entiende o lectura agotada |
+| Rojo, «caído · etiqueta» («caído · no resuelve», «caído · nadie escucha»…) | No se llega al backend: DNS, conexión rechazada, sin ruta, sin respuesta a la conexión, URL no válida, fallo de red |
+| Neutro, «comprobando…» | El panel acaba de abrirse y el primer sondeo falló: todavía no hay un estado que enseñar |
+
+El `title` del badge es el detalle de la causa (la tabla completa de causas y qué hacer con cada
+una está en [Troubleshooting](Troubleshooting.md)). Las etiquetas y los detalles los redacta
+**solo** `fallos.py`, en el daemon; el panel los recibe ya escritos.
+
+**Hacen falta dos sondeos fallidos seguidos para pasar a «caído».** Un fallo suelto tras uno bueno
+**conserva** lo que se pintaba —badge en verde, filas con su último estado y sin atenuar— y el
+`title` del badge añade «último sondeo: …». El segundo fallo seguido pinta la causa y solo
+entonces las filas pasan a «desconocido», atenuadas. Un sondeo bueno lo devuelve a «conectado» al
+instante, y al reconectar el panel pide de nuevo el estado y las métricas del backend sin esperar
+al ciclo de 60 s. `local_status` y `doctor` **no** tienen esta espera: hacen una sola consulta y
+dicen lo que ven.
+
+**La lista de modelos no cambia con la conexión.** El daemon guarda la última lista buena de cada
+`BASE_URL`; si el backend deja de responder, sigue sirviendo esa lista (con `models_stale: true`),
+así que salen las mismas filas en el mismo orden: primero por el rol del catálogo que las usa
+(mecánico, largo, código, visión) y después las que no tienen rol, por id.
+
+**El texto de cada fila** sale de esta tabla, en orden (gana la primera):
+
+| Texto | Cuándo |
+|---|---|
+| esperando al backend | El backend no está disponible y hay una llamada a ese modelo en vuelo |
+| desconocido | El backend no está disponible |
+| en cola local | Todas las llamadas a ese modelo esperan **dentro de local-delegate**, antes de enviarse (hoy, plaza en el máximo de llamadas a la vez) |
+| en curso | El backend no es llama-swap (no expone `/running`) y hay una llamada en vuelo |
+| montado / frío | El backend no es llama-swap: según el `status` de `/v1/models` |
+| cargando | llama-swap lo está arrancando |
+| procesando | Montado y con una llamada en vuelo |
+| montado | Montado, sin llamadas |
+| esperando turno | Hay una llamada ya enviada a llama-swap, pero el modelo no está listo en `/running` (otro ocupa la GPU o se está descargando) |
+| descargando | llama-swap lo está parando |
+| frío | El resto |
+
+La espera local se publica en la entrada en vuelo con el campo `espera_local` (el motivo como
+texto) y se borra al terminar. Así «esperando turno» queda solo para lo que ya se envió a
+llama-swap: el panel no le atribuye una espera nuestra. Un motivo nuevo que el panel no conozca se
+enseña tal cual en el `title` de la fila.
+
+La tarjeta de **métricas de llama-swap** dice «sin datos (… requiere llama-swap ≥ v236)» **solo**
+cuando el backend responde 404 a `/api/metrics/stats`; con cualquier otro fallo dice «sin datos:
+etiqueta» (por ejemplo «sin datos: no resuelve»).
 
 El indicador de la cabecera tiene tres estados y **no** depende del rango elegido ni del
 auto-refresco: `EN CURSO` (hay delegaciones vivas), `EN VIVO` (última actividad hace menos de
@@ -163,9 +279,12 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. |
-| `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, totales): `tokens_context_saved`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
-| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks`) + `last_event_ts` y `now` para el indicador de actividad |
-| `GET /api/backend` | Proxy best-effort de `/running` de llama-swap, modelos con status, y `origin`/`host` del endpoint (`{"available": false}` si no responde) |
+| `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `espera_local` con el motivo) + `last_event_ts` y `now` para el indicador de actividad |
+| `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
+| `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
+| `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |
+| `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin` y `host` |
 | `GET /api/hooks?from=&to=` | Lo que los hooks consultivos **sugirieron** en el rango: `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
 

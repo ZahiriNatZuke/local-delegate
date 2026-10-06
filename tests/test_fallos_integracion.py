@@ -27,6 +27,10 @@ def backend(monkeypatch):
     mockeada», que no tiene nada que ver con lo que el test dice comprobar.
     """
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    # Origen fijado a local (REQ-018): la URL de mentira es REMOTA para `backend_origin()`, y con
+    # un backend remoto ya no se pregunta «¿Lo arranco?». Sin esto, los dos tests que esperan la
+    # pregunta fallarían, y los dos que esperan que NO se haga pasarían sin probar nada.
+    monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", "local")
     monkeypatch.setattr(config, "AUTOSTART", False)
     return lambda **kwargs: backend_mock.post(URL).mock(**kwargs)
 

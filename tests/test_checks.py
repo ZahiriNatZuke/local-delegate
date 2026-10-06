@@ -11,10 +11,12 @@ from __future__ import annotations
 import json
 import sys
 
+import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
 from local_delegate import checks, doctor, install
+from local_delegate.fallos import VistaBackend
 
 
 def make_ctx(home, **kwargs):
@@ -30,7 +32,7 @@ def make_ctx(home, **kwargs):
             "pid": 42,
             "mcp_url": f"http://{host}:{port}/mcp",
         },
-        "backend_models": lambda: (True, ""),
+        "backend_models": lambda: VistaBackend(True, "", None, "directo"),
         "version_of": lambda component, cfg: (doctor.RECOMMENDED_VERSIONS[component], None),
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
@@ -750,7 +752,8 @@ def test_sin_saber_si_exige_token_se_mantiene_el_mensaje_de_siempre(tmp_path, mo
 
 def test_backend_down_is_warn(tmp_path):
     ctx = make_ctx(
-        make_home(tmp_path), backend_models=lambda: (False, "no responde (ConnectError)")
+        make_home(tmp_path),
+        backend_models=lambda: VistaBackend(False, "no responde (ConnectError)", None, "directo"),
     )
     result = result_for("service.backend", ctx)
     assert result.status == checks.WARN
@@ -765,12 +768,123 @@ def test_backend_401_is_unknown_not_down(tmp_path):
     """
     ctx = make_ctx(
         make_home(tmp_path),
-        backend_models=lambda: (False, "responde 401: está arriba pero rechaza la credencial"),
+        backend_models=lambda: VistaBackend(
+            False,
+            "responde 401: está arriba pero rechaza la credencial",
+            "credencial",
+            "directo",
+        ),
     )
     result = result_for("service.backend", ctx)
     assert result.status == checks.UNKNOWN
     assert not checks.is_warning(result.status)
     assert "401" in result.detail
+
+
+# --- service.backend con causa (REQ-016) ---------------------------------------------------------
+
+
+def test_doctor_remoto_no_manda_a_arrancar_llama_swap(tmp_path, monkeypatch):
+    """La Mac con la VPN caída: el backend vive en otra máquina, arrancar nada aquí no lo arregla."""
+    monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.tailnet.ts.net:9292/v1")
+    ctx = make_ctx(
+        make_home(tmp_path),
+        backend_models=lambda: VistaBackend(
+            False,
+            "pc.tailnet.ts.net:9292 no contesta a la conexión (ruta, cortafuegos o VPN)",
+            "timeout_conexion",
+            "directo",
+        ),
+    )
+
+    r = result_for("service.backend", ctx)
+
+    assert "arranca llama-swap" not in (r.fix_hint or "")
+    assert r.status == checks.WARN
+    assert r.fix_hint == "revisa la red hacia pc.tailnet.ts.net:9292 (VPN, cortafuegos, Tailscale)"
+    assert "no contesta a la conexión" in r.detail
+
+
+def _ctx_con_daemon(tmp_path, monkeypatch, visto):
+    """`service.backend` con el colaborador REAL, y el daemon contestando `visto`."""
+    from local_delegate import daemon
+
+    monkeypatch.setattr(daemon, "query_backend", lambda host, port, timeout=1.0: visto)
+    return make_ctx(make_home(tmp_path), backend_models=checks._default_backend_models)
+
+
+def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
+    monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.lan:9292/v1")
+    ctx = _ctx_con_daemon(
+        tmp_path,
+        monkeypatch,
+        {
+            "available": False,
+            "causa": "dns",
+            "detalle": "no se resuelve el nombre pc.lan (¿VPN o DNS?)",
+        },
+    )
+
+    r = result_for("service.backend", ctx)
+
+    assert "no se resuelve el nombre pc.lan" in r.detail
+    assert r.status == checks.WARN
+    assert r.fix_hint == (
+        "revisa el nombre en LOCAL_DELEGATE_BASE_URL o usa la IP (p. ej. la 100.x de la tailnet)"
+    )
+
+
+def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
+    """El daemon SÍ tiene la clave de su lanzador: si da 401, la que no vale es la suya."""
+    ctx = _ctx_con_daemon(
+        tmp_path,
+        monkeypatch,
+        {
+            "available": False,
+            "causa": "credencial",
+            "detalle": "127.0.0.1:9292 responde 401: está arriba pero rechaza la credencial",
+        },
+    )
+
+    r = result_for("service.backend", ctx)
+
+    assert "lanzador" in (r.fix_hint or "")
+    assert r.status == checks.WARN
+
+
+def test_doctor_con_daemon_antiguo_usa_el_texto_de_hoy(tmp_path, monkeypatch):
+    """Un daemon sin `causa` en `/api/backend`: el texto de siempre y la pista genérica."""
+    ctx = _ctx_con_daemon(tmp_path, monkeypatch, {"available": False})
+
+    r = result_for("service.backend", ctx)
+
+    assert "según el daemon" in r.detail
+    assert r.status == checks.WARN
+    assert r.fix_hint.startswith("revisa el backend en ")
+
+
+def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
+    """La causa que ve el daemon tiene que llegar también en sus fallos lentos (VPN, Windows)."""
+    from local_delegate import daemon
+
+    plazos = []
+
+    def _registra(host, port, timeout=1.0):
+        plazos.append(timeout)
+
+    monkeypatch.setattr(daemon, "query_backend", _registra)
+    monkeypatch.setattr(doctor, "backend_probe", lambda: VistaBackend(True, "", None, "directo"))
+
+    checks._default_backend_models()
+
+    (t,) = plazos
+    plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
+    plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
+    assert (
+        plazo_lectura > checks.config.TIMEOUT_SONDA_CONEXION + checks.config.TIMEOUT_SONDA_LECTURA
+    )
+    # Conectar con el daemon, que está en esta máquina, no necesita más que antes.
+    assert plazo_conexion == 1.0
 
 
 # --- Versiones: se envuelve el doctor, no se reescribe -------------------------

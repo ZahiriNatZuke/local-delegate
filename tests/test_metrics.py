@@ -187,7 +187,12 @@ def test_api_backend_unavailable(monkeypatch):
     assert client.get("/api/backend").json() == {
         "available": False,
         "running": [],
+        "running_ok": False,  # /running ni se pide con /models caído (REQ-013)
         "models": [],
+        "models_stale": True,
+        "causa": "transporte",
+        "etiqueta": "fallo de red",
+        "detalle": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",  # host no-loopback => la inferencia correría fuera de esta máquina
         "host": "test-backend",
     }
@@ -273,7 +278,13 @@ def test_api_backend_stats_unavailable_on_404(monkeypatch):
         return_value=httpx2.Response(404)
     )
     client = TestClient(metrics.app)
-    assert client.get("/api/backend/stats").json() == {"available": False}
+    assert client.get("/api/backend/stats").json() == {
+        "available": False,
+        "causa": "http_error",
+        "etiqueta": "responde con error",
+        "detalle": "test-backend responde HTTP 404",
+        "status_http": 404,
+    }
 
 
 @backend_mock.mock
@@ -285,10 +296,200 @@ def test_api_status_backend_down(monkeypatch):
     assert data["backend"] == {
         "available": False,
         "models": [],
+        "models_stale": True,
+        "causa": "transporte",
+        "etiqueta": "fallo de red",
+        "detalle": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",
         "host": "test-backend",
     }
     assert data["catalog"]  # el catálogo local no depende del backend
+
+
+# --- T4 de `panel-cuentas-y-estados-honestos`: causa, lista guardada, `/running` y plazos --------
+# Los campos nuevos se leen con `.get(...)`: el control (a) de cada test tiene que fallar en el
+# assert, no por un `KeyError` contra el código de antes.
+MODELS = "http://test-backend/v1/models"
+RUNNING = "http://test-backend/running"
+STATS = "http://test-backend/api/metrics/stats"
+
+
+@backend_mock.mock
+def test_api_backend_dice_la_causa_de_un_401(monkeypatch):
+    """REQ-012/REQ-014: un 401 es un backend vivo que rechaza la credencial, no uno caído."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(MODELS).mock(return_value=httpx2.Response(401))
+    backend_mock.get(RUNNING).mock(return_value=httpx2.Response(401))
+
+    j = TestClient(metrics.app).get("/api/backend").json()
+
+    assert j.get("causa") == "credencial"
+    assert j["available"] is False
+    assert "401" in (j.get("detalle") or "")
+
+
+@backend_mock.mock
+def test_api_backend_conserva_la_lista_y_la_marca_vieja(monkeypatch):
+    """REQ-021: tras un sondeo bueno, uno con `ConnectError` devuelve la misma lista, sin estado."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    ruta = backend_mock.get(MODELS).mock(
+        return_value=httpx2.Response(200, json={"data": [{"id": "m1", "status": "loaded"}]})
+    )
+    backend_mock.get(RUNNING).mock(return_value=httpx2.Response(200, json={"running": []}))
+    client = TestClient(metrics.app)
+    bueno = client.get("/api/backend").json()
+    ruta.mock(side_effect=httpx2.ConnectError("down"))
+
+    j = client.get("/api/backend").json()
+
+    assert j.get("models_stale") is True
+    assert bueno.get("models_stale") is False
+    assert [m["id"] for m in j["models"]] == ["m1"]
+    assert j["models"][0]["status"] is None
+    assert j.get("causa") == "transporte"
+
+
+@backend_mock.mock
+def test_api_backend_no_pide_running_si_models_falla(monkeypatch):
+    """REQ-013: con el backend inalcanzable se gasta un plazo de conexión, no dos."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(MODELS).mock(side_effect=httpx2.ConnectError("down"))
+    ruta_running = backend_mock.get(RUNNING).mock(
+        return_value=httpx2.Response(200, json={"running": []})
+    )
+
+    j = TestClient(metrics.app).get("/api/backend").json()
+
+    assert ruta_running.call_count == 0
+    assert j["running"] == []
+
+
+@backend_mock.mock
+def test_api_backend_dice_si_running_respondio(monkeypatch):
+    """REQ-022: `running_ok` falso con un backend que no es llama-swap (`/running` → 404)."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(MODELS).mock(
+        return_value=httpx2.Response(200, json={"data": [{"id": "m1", "status": "loaded"}]})
+    )
+    ruta_running = backend_mock.get(RUNNING).mock(return_value=httpx2.Response(404))
+    client = TestClient(metrics.app)
+
+    j = client.get("/api/backend").json()
+
+    assert j.get("running_ok") is False
+    assert j["available"] is True
+    ruta_running.mock(
+        return_value=httpx2.Response(200, json={"running": [{"model": "m1", "state": "ready"}]})
+    )
+    assert client.get("/api/backend").json().get("running_ok") is True
+
+
+@backend_mock.mock
+def test_api_status_dice_la_causa_en_el_bloque_backend(monkeypatch):
+    """REQ-012: `/api/status` usa el mismo sondeo que `/api/backend`."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(MODELS).mock(return_value=httpx2.Response(401))
+
+    data = TestClient(metrics.app).get("/api/status").json()
+
+    assert data["backend"].get("causa") == "credencial"
+    assert data["backend"].get("models_stale") is True
+    assert "401" in (data["backend"].get("detalle") or "")
+
+
+@backend_mock.mock
+def test_api_backend_stats_dice_el_codigo_con_un_404(monkeypatch):
+    """REQ-020: el panel solo culpa a la versión de llama-swap con un 404, así que lo necesita."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(STATS).mock(return_value=httpx2.Response(404))
+
+    j = TestClient(metrics.app).get("/api/backend/stats").json()
+
+    assert j.get("status_http") == 404
+    assert j.get("causa") == "http_error"
+    assert j["available"] is False
+
+
+def test_api_backend_stats_dice_la_causa_con_un_nombre_que_no_resuelve(monkeypatch):
+    """Red real: un nombre `.invalid` no resuelve nunca (RFC 6761). Sin código HTTP."""
+    monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
+
+    j = TestClient(metrics.app).get("/api/backend/stats").json()
+
+    assert j.get("causa") == "dns"
+    assert j.get("status_http") is None
+    assert "no-existe.invalid" in (j.get("detalle") or "")
+
+
+def _plazo_de_conexion(t):
+    """Lee el plazo de conexión sin reventar si llega un número (control (a) del plan)."""
+    return t.connect if isinstance(t, httpx2.Timeout) else t
+
+
+def test_api_backend_stats_usa_el_plazo_de_sondeo(monkeypatch):
+    """REQ-013: `/api/metrics/stats` es un sondeo de estado y lleva su plazo, no 1 s."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    plazos: list = []
+    real = httpx2.Client
+
+    def registrador(*args, **kwargs):
+        plazos.append(kwargs.get("timeout"))
+        transporte = httpx2.MockTransport(lambda req: httpx2.Response(404))
+        return real(transport=transporte)
+
+    monkeypatch.setattr(httpx2, "Client", registrador)
+
+    TestClient(metrics.app).get("/api/backend/stats")
+
+    assert plazos, "el endpoint no llegó a crear el cliente"
+    plazo_conexion = _plazo_de_conexion(plazos[0])
+    assert plazo_conexion == config.TIMEOUT_SONDA_CONEXION
+    assert plazos[0].read == config.TIMEOUT_SONDA_LECTURA
+
+
+def test_api_system_dice_plataforma_origen_y_host(monkeypatch):
+    """REQ-025: el panel necesita saber dónde corre el cómputo y en qué plataforma está."""
+    import sys
+
+    from local_delegate.web import sysinfo
+
+    monkeypatch.setattr(sysinfo, "ram_stats", lambda: None)
+    monkeypatch.setattr(sysinfo, "vram_stats", lambda: None)
+    monkeypatch.setattr(sysinfo, "interesting_processes", list)
+    monkeypatch.setattr(config, "BASE_URL", "http://100.64.0.2:9292/v1")
+
+    j = TestClient(metrics.app).get("/api/system").json()
+
+    assert j.get("platform") == sys.platform
+    assert j.get("origin") == "remote"
+    assert j.get("host") == "100.64.0.2:9292"
+
+
+def test_api_inflight_deja_pasar_la_espera_local(tmp_path, monkeypatch):
+    """REQ-022: la fila «en cola local» depende de que `espera_local` llegue al panel."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    pid = os.getpid()
+    server._atomic_write_json(
+        server._inflight_file(),
+        {
+            f"{pid}:1": {
+                "tool": "local_summarize",
+                "model": "m",
+                "source": "path",
+                "chars_in": 1,
+                "started_at": time.time(),
+                "pid": pid,
+                "espera_local": "plaza",
+            }
+        },
+    )
+
+    entradas = TestClient(metrics.app).get("/api/inflight").json()["inflight"]
+
+    assert len(entradas) == 1
+    e = entradas[0]
+    assert e.get("espera_local") == "plaza"
 
 
 # --- /api/system: RAM/VRAM + procesos (estructura, con sysinfo monkeypatcheado) --------
@@ -328,7 +529,11 @@ def test_api_system_never_crashes_without_platform_support(monkeypatch):
     client = TestClient(metrics.app)
     r = client.get("/api/system")
     assert r.status_code == 200
-    assert r.json() == {"ram": None, "vram": None, "processes": []}
+    assert {k: r.json()[k] for k in ("ram", "vram", "processes")} == {
+        "ram": None,
+        "vram": None,
+        "processes": [],
+    }
 
 
 def test_dashboard_identifies_shared_mcp_daemon():
@@ -523,9 +728,21 @@ def test_accounting_una_llamada_sin_trocear():
         "tokens_in": 1100,
         "tokens_out": 90,
         "saved": 1000,  # chars_in ÷ 4: el contenido que no entró al contexto
+        "returned": 100,  # chars_out ÷ 4: lo que la tool devolvió al contexto
+        "net": 900,
         "estimated": False,
         "fallback": False,
         "cause": None,
+        # Contrato con `coste-api-y-cuota`: desglose en caracteres y campos del evento.
+        "chars_saved_text": 4000,
+        "bytes_saved_image": 0,
+        "chars_saved_output": 0,
+        "chars_returned": 400,
+        "failed": False,
+        "tool": "local_summarize",
+        "model": "m",
+        "source": "path",
+        "unit": "chars",
     }
 
 
@@ -585,6 +802,133 @@ def test_accounting_fallo_a_mitad_cuenta_las_llamadas_gastadas():
     assert a["backend_calls"] == 3
 
 
+# --- Panel honesto (REQ-001 a REQ-008): fallos fuera, neto dentro, desglose en caracteres --------
+#
+# Los campos nuevos se leen con `.get(...)`: contra el código de antes el test tiene que fallar por
+# el assert que nombra el plan, no por un `KeyError`.
+
+# El evento del escenario «el neto resta lo que volvió al contexto».
+_NETO_RESTA = {
+    "source": "path",
+    "chars_in": 4000,
+    "chars_out": 400,
+    "ok": True,
+    "tokens_in": 1100,
+    "tokens_out": 90,
+}
+# El del escenario «la salida a fichero no descuenta el recibo».
+_SALIDA_A_FICHERO = {
+    "source": "inline",
+    "output_to_file": True,
+    "chars_out": 4000,
+    "tokens_out": 950,
+    "ok": True,
+    "tokens_in": 10,
+}
+# El del escenario «una imagen por `path`».
+_IMAGEN_POR_PATH = {
+    "tool": "local_describe_image",
+    "source": "path",
+    "chars_in": 250000,
+    "chars_out": 800,
+    "ok": True,
+    "tokens_in": 1200,
+    "tokens_out": 200,
+}
+# El del escenario «un fallo no infla las cuentas»: sin tokens, con el texto del error de vuelta.
+_FALLO_SIN_TOKENS = {"source": "path", "chars_in": 4000, "chars_out": 144, "ok": False}
+
+
+def test_accounting_un_fallo_no_ahorra_ni_genera():
+    a = metrics._accounting(dict(_FALLO_SIN_TOKENS))
+    assert a["saved"] == 0
+    assert (a.get("returned"), a.get("net")) == (0, 0)
+    assert (a.get("chars_saved_text"), a.get("chars_returned")) == (0, 0)
+    assert (a["tokens_in"], a["tokens_out"]) == (0, 0), "el texto del error no es generación"
+    assert a["estimated"] is False
+    assert a.get("failed") is True
+    assert a["backend_calls"] == 1
+
+
+def test_accounting_un_fallo_no_es_una_estimacion():
+    a = metrics._accounting(_ev(ok=False))
+    assert a["estimated"] is False
+    assert a.get("failed") is True
+
+
+def test_accounting_fallo_troceado_conserva_el_coste_real():
+    a = metrics._accounting(
+        {
+            "chunks": 3,
+            "ok": False,
+            "tokens_in": 900,
+            "tokens_out": 10,
+            "source": "path",
+            "chars_in": 4000,
+        }
+    )
+    assert a["saved"] == 0
+    assert a["tokens_in"] == 900, "la GPU gastó esos tokens aunque la operación fallara"
+    assert a["tokens_out"] == 10
+    assert a["backend_calls"] == 3
+    assert a.get("net") == 0
+
+
+def test_accounting_neto_resta_lo_devuelto():
+    a = metrics._accounting(dict(_NETO_RESTA))
+    assert a.get("returned") == 100
+    assert a["saved"] == 1000
+    assert a.get("net") == 900
+
+
+def test_accounting_salida_a_fichero_no_descuenta_el_recibo():
+    a = metrics._accounting(dict(_SALIDA_A_FICHERO))
+    assert a.get("net") == 950
+    assert a["saved"] == 950
+    assert a.get("returned") == 0, "el recibo de dos líneas no se registra: se toma 0"
+
+
+def test_accounting_el_neto_puede_ser_negativo():
+    a = metrics._accounting(_ev(chars_in=400, chars_out=800, tokens_in=120, tokens_out=200))
+    assert a.get("net") == -100
+    assert (a["saved"], a.get("returned")) == (100, 200)
+
+
+def test_accounting_desglosa_en_caracteres():
+    """Los cuatro campos del contrato con `coste-api-y-cuota`, más los del evento que copia."""
+    a = metrics._accounting(dict(_NETO_RESTA))
+    assert a.get("chars_saved_text") == 4000
+    assert a.get("chars_returned") == 400
+    assert (a.get("bytes_saved_image"), a.get("chars_saved_output")) == (0, 0)
+    assert (a.get("unit"), a.get("source"), a.get("failed")) == ("chars", "path", False)
+
+    s = metrics._accounting(dict(_SALIDA_A_FICHERO))
+    assert s.get("chars_saved_output") == 4000
+    assert (s.get("chars_returned"), s.get("chars_saved_text")) == (0, 0)
+
+    i = metrics._accounting(dict(_IMAGEN_POR_PATH))
+    assert i.get("bytes_saved_image") == 250000, "la imagen va en BYTES, en su propio campo"
+    assert i.get("chars_saved_text") == 0
+    assert i.get("chars_returned") == 800
+    assert (i["saved"], i.get("returned"), i.get("net")) == (1200, 200, 1000)
+    assert (i.get("unit"), i.get("tool")) == ("bytes", "local_describe_image")
+
+    f = metrics._accounting(dict(_FALLO_SIN_TOKENS, tool="local_summarize", model="m"))
+    campos = ("chars_saved_text", "bytes_saved_image", "chars_saved_output", "chars_returned")
+    assert [f.get(c) for c in campos] == [0, 0, 0, 0]
+    assert (f.get("tool"), f.get("model"), f.get("failed")) == ("local_summarize", "m", True)
+
+
+def test_tokens_claude_es_la_unica_conversion(monkeypatch):
+    """REQ-008: lo ahorrado y lo devuelto pasan SOLO por `tokens_claude`; el coste local, no."""
+    monkeypatch.setattr(server, "tokens_claude", lambda cantidad, *, tipo, evento: 7)
+    a = metrics._accounting(dict(_NETO_RESTA))
+    assert a["saved"] == 7
+    assert a.get("returned") == 7
+    assert a.get("net") == 0
+    assert a["tokens_in"] == 1100, "el coste del modelo local no pasa por la conversión"
+
+
 def test_stats_distingue_delegaciones_de_llamadas_al_backend(tmp_path, monkeypatch):
     """Escenario de aceptación: dos eventos, uno troceado -> 2 delegaciones, 5 llamadas."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
@@ -625,6 +969,82 @@ def test_stats_marca_los_eventos_que_hubo_que_estimar(tmp_path, monkeypatch):
     assert j["estimated_events"] == 1
 
 
+def _stats_de(tmp_path, monkeypatch, filas: list[dict]) -> dict:
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(tmp_path / "usage-202607.jsonl", filas)
+    metrics._FILE_CACHE.clear()
+    return (
+        TestClient(metrics.app)
+        .get("/api/stats?from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00")
+        .json()
+    )
+
+
+def test_stats_el_log_sintetico_de_la_mac_no_infla_nada(tmp_path, monkeypatch):
+    """Escenario de la Mac, sintético: 4 delegaciones buenas con `usage` y 4 `connect_error`."""
+    buenas = [_ev(tokens_in=1100, tokens_out=90) for _ in range(4)]
+    fallos = [
+        _ev(ok=False, error="connect_error", error_class="backend_ausente", chars_out=144)
+        for _ in range(4)
+    ]
+    j = _stats_de(tmp_path, monkeypatch, buenas + fallos)
+    assert j["estimated_events"] == 0
+    assert j["tokens_context_saved"] == 4 * 1000, "solo suman las 4 buenas"
+    assert j["tokens_generated_local"] == 4 * 90
+    assert j.get("tokens_returned") == 4 * 100
+    assert j.get("tokens_context_net") == j["tokens_context_saved"] - j.get("tokens_returned", 0)
+
+
+def test_stats_ok_null_no_cuenta_como_error():
+    """REQ-006: el predicado de fallo es `ok` exactamente `false`, igual que en la contabilidad."""
+    j = metrics._aggregate([_ev(ok=None), _ev()])
+    assert j["total"]["errors"] == 0
+    assert j["by_tool"][0]["errors"] == 0
+
+
+def test_stats_expone_el_desglose_en_caracteres(tmp_path, monkeypatch):
+    j = _stats_de(
+        tmp_path,
+        monkeypatch,
+        [
+            _ev(**_NETO_RESTA),
+            _ev(**_SALIDA_A_FICHERO),
+            _ev(**_IMAGEN_POR_PATH),
+            _ev(**_FALLO_SIN_TOKENS),
+        ],
+    )
+    assert j.get("chars_saved_text") == 4000
+    assert j.get("bytes_saved_image") == 250000
+    assert j.get("chars_saved_output") == 4000
+    assert j.get("chars_returned") == 400 + 800
+    assert j.get("tokens_returned") == 100 + 200
+    assert j["tokens_context_saved"] == 1000 + 950 + 1200
+    assert j.get("tokens_context_net") == 900 + 950 + 1000
+    assert j["total"]["errors"] == 1
+
+
+def test_stats_quien_delego_trae_el_neto():
+    j = metrics._aggregate(
+        [
+            _ev(client="claude-code", **_NETO_RESTA),
+            _ev(client="claude-code", **_FALLO_SIN_TOKENS),
+        ]
+    )
+    fila = j["by_client"][0]
+    assert fila.get("tokens_net") == 900, "el fallo no suma y el devuelto se resta"
+    assert j["by_tool"][0].get("tokens_net") == 900
+    assert j["by_backend"][0].get("tokens_net") == 900
+
+
+def test_el_js_usa_un_solo_predicado_de_fallo():
+    """REQ-006: `!e.ok` cuenta `ok: null` como fallo; la regla dice `ok` exactamente `false`."""
+    html = metrics.HTML
+    assert "!e.ok" not in html
+    assert "e.ok?'ok':'err'" not in html
+    assert "e.ok===false" in html
+
+
 def test_dashboard_pide_los_kpis_al_servidor():
     """Una sola implementación de las cuentas: el panel no las recalcula en el cliente."""
     html = TestClient(metrics.app).get("/").text
@@ -645,6 +1065,35 @@ def _extraer_funcion_js(fuente: str, cabecera: str) -> str:
         j += 1
 
 
+def _sin_ok(evento: dict) -> dict:
+    """`_ev` pone `ok: True` por defecto: el caso «sin clave `ok`» se construye quitándola."""
+    return {k: v for k, v in evento.items() if k != "ok"}
+
+
+# Pares (campo en Python, campo en JS) del contrato con `coste-api-y-cuota`, más los de siempre.
+# Empieza por `returned`: es el primero que no existía, así que el control lo nombra.
+_CAMPOS_PARIDAD = (
+    ("returned", "returned"),
+    ("net", "net"),
+    ("saved", "saved"),
+    ("chars_saved_text", "charsSavedText"),
+    ("bytes_saved_image", "bytesSavedImage"),
+    ("chars_saved_output", "charsSavedOutput"),
+    ("chars_returned", "charsReturned"),
+    ("failed", "failed"),
+    ("tool", "tool"),
+    ("model", "model"),
+    ("source", "source"),
+    ("unit", "unit"),
+    ("backend_calls", "calls"),
+    ("tokens_in", "tokensIn"),
+    ("tokens_out", "tokensOut"),
+    ("estimated", "estimated"),
+    ("fallback", "fallback"),
+    ("cause", "cause"),
+)
+
+
 def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     """Las series por día se agrupan en el navegador (dependen de tu zona), así que la regla de
     contabilidad vive por duplicado. Este test ata las dos copias: si divergen, el gráfico
@@ -653,25 +1102,18 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     if node is None:
         pytest.skip("node no está en el PATH")
 
+    tokens_claude_js = _extraer_funcion_js(metrics.HTML, "function tokensClaude(")
     acct_js = _extraer_funcion_js(metrics.HTML, "function acct(e){")
     casos = [
-        _ev(tokens_in=1100, tokens_out=90),
-        _ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786),
-        _ev(),  # sin tokens: estimado
-        _ev(chars_in=4002, tokens_out=7),  # impar: caza floor contra round
-        _ev(
-            tool="local_describe_image",
-            input_unit="bytes",
-            chars_in=504780,
-            tokens_in=2758,
-            tokens_out=37,
-        ),
-        _ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37),
-        _ev(tool="local_describe_image", input_unit="bytes", chars_in=504780),
-        _ev(source="inline", tokens_in=1100, tokens_out=90),
-        _ev(chunks=3, ok=False, tokens_in=900, tokens_out=10),
-        # Ahorro de SALIDA (`local_boilerplate` escribiendo a un archivo). Sin estos dos casos
-        # la paridad pasaría sin llegar a ejercitar la rama nueva en ninguna de las dos copias.
+        # --- Los 12 casos de REQ-001, en este orden ---------------------------------------
+        _ev(tokens_in=1100, tokens_out=90),  # neto positivo
+        _ev(ok=False, error="connect_error", chars_out=144),  # fallo sin tokens
+        _ev(chunks=3, ok=False, tokens_in=900, tokens_out=10),  # fallo troceado con tokens
+        _ev(ok=None),  # `ok: null`: bueno
+        _sin_ok(_ev(source="path", chars_in=4000)),  # sin clave `ok`: bueno
+        _ev(ok=0),  # `ok: 0`: bueno
+        _ev(chars_in=400, chars_out=800, tokens_in=120, tokens_out=200),  # neto negativo
+        _ev(chars_in=8000, tokens_in=2100, tokens_out=950, output_to_file=True),  # a fichero, path
         _ev(
             tool="local_boilerplate",
             source="inline",
@@ -680,8 +1122,23 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             tokens_in=10,
             tokens_out=950,
             output_to_file=True,
-        ),
-        _ev(chars_in=8000, tokens_in=2100, tokens_out=950, output_to_file=True),
+        ),  # a fichero, inline
+        _ev(
+            tool="local_describe_image",
+            input_unit="bytes",
+            chars_in=250000,
+            chars_out=800,
+            tokens_in=1200,
+            tokens_out=200,
+        ),  # imagen por `path` con tokens
+        _ev(tool="local_describe_image", input_unit="bytes", chars_in=504780),  # imagen sin tokens
+        _ev(chars_in=3),  # texto por `path` con `chars_in: 3`: bruto 0, neto negativo
+        # --- Los de antes, que siguen cubriendo otras ramas -------------------------------
+        _ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786),
+        _ev(),  # sin tokens: estimado
+        _ev(chars_in=4002, tokens_out=7),  # impar: caza floor contra round
+        _ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37),
+        _ev(source="inline", tokens_in=1100, tokens_out=90),
         # F3, tarea 29: un evento con salto y uno con causa de configuración (REQ-013, REQ-019).
         # Sin ellos la paridad pasaría sin ejercitar las ramas nuevas en ninguna de las dos copias.
         _ev(
@@ -713,6 +1170,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         "import {readFileSync} from 'node:fs';\n"
         "const CPT = 4;\n"
         "const tok = c => Math.floor(c/CPT);\n"
+        f"{tokens_claude_js}\n"
         f"{acct_js}\n"
         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
         "console.log(JSON.stringify(casos.map(acct)));\n",
@@ -723,19 +1181,20 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     )
     desde_js = json.loads(salida.stdout)
 
-    for caso, js in zip(casos, desde_js, strict=True):
-        py = metrics._accounting(caso)
-        assert js["calls"] == py["backend_calls"], caso
-        assert js["tokensIn"] == py["tokens_in"], caso
-        assert js["tokensOut"] == py["tokens_out"], caso
-        assert js["saved"] == py["saved"], caso
-        assert js["estimated"] == py["estimated"], caso
-        assert js["fallback"] == py["fallback"], caso
-        assert js["cause"] == py["cause"], caso
-    # Guarda de «esto llegó a comprobar algo»: sin un caso de cada, la paridad de las ramas nuevas
-    # saldría verde con las dos copias rotas.
-    assert any(metrics._accounting(c)["fallback"] for c in casos)
-    assert any(metrics._accounting(c)["cause"] == "configuracion" for c in casos)
+    desde_py = [metrics._accounting(c) for c in casos]
+    for caso, py, js in zip(casos, desde_py, desde_js, strict=True):
+        for campo_py, campo_js in _CAMPOS_PARIDAD:
+            # `.get`: un campo que falta en el JS falla por el assert, no por `KeyError`.
+            assert js.get(campo_js) == py[campo_py], (campo_py, caso)
+    # Guarda de «esto llegó a comprobar algo» (REQ-001): sin un caso de cada, la paridad de las
+    # ramas nuevas saldría verde con las dos copias rotas.
+    assert any(py["net"] < 0 for py in desde_py)
+    assert any(py["failed"] and py["tokens_in"] > 0 for py in desde_py)
+    assert any("ok" not in c for c in casos)
+    assert any(py["bytes_saved_image"] > 0 for py in desde_py)
+    assert any(py["chars_saved_output"] > 0 for py in desde_py)
+    assert any(py["fallback"] for py in desde_py)
+    assert any(py["cause"] == "configuracion" for py in desde_py)
 
 
 def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
@@ -761,8 +1220,32 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
 
     agregado = metrics._aggregate(filas)
     texto = server.local_status()
-    assert f"~{agregado['tokens_context_saved']} tokens" in texto
+    assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
     assert f"({agregado['backend_calls']} llamadas al backend)" in texto
+
+
+def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
+    """REQ-005: `local_status` dice el neto y el bruto con la misma función que el panel."""
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", False)
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(config, "USAGE_LOG", log)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    filas = [
+        _ev(**_NETO_RESTA),
+        _ev(**_FALLO_SIN_TOKENS),
+        _ev(chars_in=400, chars_out=800, tokens_in=120, tokens_out=200),
+    ]
+    _write_jsonl(log, filas)
+    metrics._FILE_CACHE.clear()
+
+    agregado = metrics._aggregate(filas)
+    # Si la clave falta (código de antes), el texto esperado tampoco está: falla el assert y no un
+    # `TypeError` al formatear un `None`.
+    n = agregado.get("tokens_context_net", "(falta tokens_context_net)")
+    esperado = f"~{n} tokens netos"
+    texto = server.local_status()
+    assert esperado in texto
+    assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
 
 
 # --- F3, tarea 29: el salto y su causa, en la cuenta y en el panel -----------------------------
