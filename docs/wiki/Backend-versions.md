@@ -14,7 +14,7 @@ carpetas con las que el autor verifica cada release. Ni requisito ni obligación
 | `llama-swap` | **v255** | 2026-09-15 | acepta la misma config que v238 (`groups`, `apiKeys` con `${env...}`); sin la variable de la clave **no arranca**, en vez de quedar abierto |
 
 > Fuente de verdad: `RECOMMENDED_VERSIONS` en
-> [`src/local_delegate/doctor.py`](../../src/local_delegate/doctor.py). El comando
+> [`src/local_delegate/sondas.py`](../../src/local_delegate/sondas.py). El comando
 > `local-delegate doctor` compara tu instalación contra estos valores (ver abajo).
 
 Ambos proyectos publican en *rolling release* (llama.cpp etiqueta casi cada merge; llama-swap

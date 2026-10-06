@@ -15,7 +15,7 @@ import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, doctor, install
+from local_delegate import checks, install, sondas
 from local_delegate.fallos import VistaBackend
 
 
@@ -33,7 +33,7 @@ def make_ctx(home, **kwargs):
             "mcp_url": f"http://{host}:{port}/mcp",
         },
         "backend_models": lambda: VistaBackend(True, "", None, "directo"),
-        "version_of": lambda component, cfg: (doctor.RECOMMENDED_VERSIONS[component], None),
+        "version_of": lambda component, cfg: (sondas.RECOMMENDED_VERSIONS[component], None),
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
         "latest_release": lambda: (checks._installed_version(), None),
@@ -873,7 +873,7 @@ def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
         plazos.append(timeout)
 
     monkeypatch.setattr(daemon, "query_backend", _registra)
-    monkeypatch.setattr(doctor, "backend_probe", lambda: VistaBackend(True, "", None, "directo"))
+    monkeypatch.setattr(sondas, "backend_probe", lambda: VistaBackend(True, "", None, "directo"))
 
     checks._default_backend_models()
 

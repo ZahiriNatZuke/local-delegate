@@ -36,7 +36,7 @@ from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import clients, config, fallos, install
+from . import clients, config, fallos, install, sondas
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -102,10 +102,11 @@ class Check:
 
 
 # --- Colaboradores por defecto -----------------------------------------------
-# Los imports de `daemon` y `doctor` son diferidos a propósito: `daemon` arrastra uvicorn y el
-# SDK MCP (que el diagnóstico no necesita cargar) y `doctor` importa este módulo, así que a
-# nivel superior sería un ciclo. Resolverlos en tiempo de ejecución también es lo que permite
-# a los tests doblarlos con monkeypatch sin inyectar nada.
+# El import de `daemon` es diferido a propósito: arrastra uvicorn y el SDK MCP, que el
+# diagnóstico no necesita cargar. Las sondas de versiones y del backend vienen de `sondas`, un
+# módulo hoja que no importa ni este ni `doctor`: cuando vivían en `doctor`, los dos módulos se
+# importaban entre sí. Llamarlas como atributo del módulo (`sondas.X()`) y no con `from ...
+# import` es lo que permite a los tests doblarlas con monkeypatch sin inyectar nada.
 def _default_daemon_status(host: str, port: int) -> dict | None:
     from . import daemon
 
@@ -150,7 +151,7 @@ def _default_backend_models() -> fallos.VistaBackend:
     """
     import httpx2
 
-    from . import daemon, doctor
+    from . import daemon
 
     host, port = daemon_host_port()
     # 1 s para conectar con el daemon, que está en esta máquina; para leer, MÁS que el techo de un
@@ -171,14 +172,12 @@ def _default_backend_models() -> fallos.VistaBackend:
         return fallos.VistaBackend(
             False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
         )
-    return doctor.backend_probe()
+    return sondas.backend_probe()
 
 
 def _default_backend_needs_key() -> tuple[bool | None, str]:
-    """¿El backend rechaza a quien no lleva credencial? Ver ``doctor.backend_requires_key``."""
-    from . import doctor
-
-    return doctor.backend_requires_key()
+    """¿El backend rechaza a quien no lleva credencial? Ver ``sondas.backend_requires_key``."""
+    return sondas.backend_requires_key()
 
 
 def NO_KEY_PROBE() -> tuple[bool | None, str]:
@@ -193,13 +192,11 @@ def NO_KEY_PROBE() -> tuple[bool | None, str]:
 
 def _default_version_of(component: str, config_path: Path | None) -> tuple[str | None, str | None]:
     """(versión instalada, motivo si no se pudo detectar) del componente del backend."""
-    from . import doctor
-
     if component == "llama-swap":
         # Sin motivo a propósito: el doctor tampoco lo da hoy para llama-swap, y con motivo la
         # línea perdería el sufijo de la última release en GitHub que arma `_compare_line`.
-        return doctor.detect_llamaswap_version(), None
-    return doctor.detect_llamaserver_version(config_path)
+        return sondas.detect_llamaswap_version(), None
+    return sondas.detect_llamaserver_version(config_path)
 
 
 def _default_latest_release() -> tuple[str | None, str | None]:
@@ -233,9 +230,8 @@ def _default_clients_seen() -> tuple[list[dict], str | None]:
     Codex hablan por *stdio*, cada uno con su propio proceso, así que sus observaciones no pasan
     por el 9393. El fichero es la única fuente que los ve a todos.
 
-    El import de ``clients`` es a nivel superior y no diferido como los de ``daemon``/``doctor``:
-    aquel arrastra uvicorn y el SDK, y ``doctor`` importaría en ciclo; ``clients`` no hace ninguna
-    de las dos cosas (solo importa ``config``).
+    El import de ``clients`` es a nivel superior y no diferido como el de ``daemon``: aquel
+    arrastra uvicorn y el SDK, y ``clients`` no (solo importa ``config``).
     """
     # Se leen TODAS las generaciones, de la más vieja a la más nueva. El registro rota por tamaño
     # desde que tiene techo, y leer solo la viva haría desaparecer del diagnóstico a un cliente
@@ -1329,17 +1325,15 @@ def _probe_backend_models(ctx: Context) -> Result:
 def _version_result(ctx: Context, component: str) -> Result:
     """Envuelve la comparación de versiones del doctor sin reescribirla.
 
-    El texto lo sigue armando ``doctor._compare_line`` —incluida la consulta opcional a
+    El texto lo sigue armando ``sondas._compare_line`` —incluida la consulta opcional a
     GitHub y la política de soak— y aquí solo se le quita el prefijo, que lo pone el
     renderizador con el resto de los checks.
     """
-    from . import doctor
-
     installed, reason = ctx.version_of(component, ctx.config_path)
     if installed is None and reason:
-        recommended = doctor.RECOMMENDED_VERSIONS[component]
+        recommended = sondas.RECOMMENDED_VERSIONS[component]
         return Result(UNKNOWN, f"no detectado (probada: {recommended}) — {reason}")
-    line, warn = doctor._compare_line(component, installed, ctx.online)
+    line, warn = sondas._compare_line(component, installed, ctx.online)
     _prefix, _, text = line.partition("] ")
     detail = text.split(": ", 1)[1] if ": " in text else text
     if warn:
