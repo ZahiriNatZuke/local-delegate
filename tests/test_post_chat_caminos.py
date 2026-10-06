@@ -28,7 +28,7 @@ class _RespuestaDelUsuario:
         self.arrancar = arrancar
 
 
-#: (nombre, kwargs de la ruta, autostart, arranca, responde)
+#: (nombre, kwargs de la ruta, autostart, arranca, responde, remoto)
 CAMINOS = [
     ("200 correcto", {"return_value": httpx2.Response(200, json=BUENA)}, False, False, None),
     (
@@ -65,26 +65,60 @@ CAMINOS = [
     ("dice que no", {"side_effect": httpx2.ConnectError("x")}, False, False, False),
     ("no hay a quién preguntar", {"side_effect": httpx2.ConnectError("x")}, False, False, None),
 ]
+# Todos los de arriba son de origen LOCAL. Los dos remotos no preguntan ni arrancan (REQ-018).
+CAMINOS = [(*c, False) for c in CAMINOS] + [
+    ("remoto + ConnectError", {"side_effect": httpx2.ConnectError("x")}, False, True, True, True),
+    (
+        "remoto + ConnectTimeout con autoarranque",
+        {"side_effect": httpx2.ConnectTimeout("x")},
+        True,
+        True,
+        None,
+        True,
+    ),
+]
+
+
+def _preparar_camino(monkeypatch, ruta_kwargs, autoarranque, arranca, responde, remoto):
+    """Monta un camino y devuelve los contadores de (autoarranques, preguntas).
+
+    La URL de los fixtures (`http://test-backend/v1`) es REMOTA para `config.backend_origin()`.
+    Por eso los caminos locales **fijan el origen**: sin eso, REQ-018 cerraría la pregunta y el
+    autoarranque en todos, y esta lista dejaría de ejercitarlos sin que nada fallase.
+    """
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    if not remoto:
+        monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", "local")
+    monkeypatch.setattr(config, "AUTOSTART", autoarranque)
+    arranques: list[int] = []
+    preguntas_hechas: list[str] = []
+
+    def _ensure_backend(wait=0):
+        arranques.append(wait)
+        return arranca
+
+    def _preguntar(mensaje, *_a, **_k):
+        preguntas_hechas.append(mensaje)
+        return None if responde is None else _RespuestaDelUsuario(responde)
+
+    monkeypatch.setattr(autostart, "ensure_backend", _ensure_backend)
+    monkeypatch.setattr(preguntas, "preguntar", _preguntar)
+    backend_mock.post(URL).mock(**ruta_kwargs)
+    return arranques, preguntas_hechas
 
 
 @pytest.mark.parametrize(
-    "ruta_kwargs,autoarranque,arranca,responde",
+    "ruta_kwargs,autoarranque,arranca,responde,remoto",
     [c[1:] for c in CAMINOS],
     ids=[c[0] for c in CAMINOS],
 )
 @backend_mock.mock
 def test_todos_los_caminos_devuelven_un_resultado(
-    monkeypatch, ruta_kwargs, autoarranque, arranca, responde
+    monkeypatch, ruta_kwargs, autoarranque, arranca, responde, remoto
 ):
-    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    monkeypatch.setattr(config, "AUTOSTART", autoarranque)
-    monkeypatch.setattr(autostart, "ensure_backend", lambda wait=0: arranca)
-    monkeypatch.setattr(
-        preguntas,
-        "preguntar",
-        lambda *a, **k: None if responde is None else _RespuestaDelUsuario(responde),
+    arranques, preguntas_hechas = _preparar_camino(
+        monkeypatch, ruta_kwargs, autoarranque, arranca, responde, remoto
     )
-    backend_mock.post(URL).mock(**ruta_kwargs)
 
     resultado = server._post_chat("modelo", {"model": "modelo"})
 
@@ -92,6 +126,32 @@ def test_todos_los_caminos_devuelven_un_resultado(
     assert isinstance(resultado.text, str) and resultado.text
     # Un fallo siempre trae su clase, y un éxito nunca la trae: es lo que hace utilizable el campo.
     assert (resultado.clase is None) is resultado.ok
+    if remoto:
+        assert arranques == [] and preguntas_hechas == [], "se ofreció arrancar un backend remoto"
+
+
+def test_el_autoarranque_sigue_cubierto(monkeypatch):
+    """Guarda de «esto llegó a comprobar algo» para REQ-018.
+
+    Recorre los caminos locales con el MISMO montaje que el test de arriba y exige que la pregunta
+    y el autoarranque se hayan ejercitado de verdad. Si alguien quita el origen fijado de
+    `_preparar_camino`, la lista entera pasa a ser remota y los dos contadores se quedan en cero.
+    """
+    llamadas_ensure_backend = 0
+    total_preguntas = 0
+    for _nombre, ruta_kwargs, autoarranque, arranca, responde, remoto in CAMINOS:
+        if remoto:
+            continue
+        with monkeypatch.context() as mp, backend_mock.mock:
+            arranques, preguntas_hechas = _preparar_camino(
+                mp, ruta_kwargs, autoarranque, arranca, responde, remoto
+            )
+            server._post_chat("modelo", {"model": "modelo"})
+        llamadas_ensure_backend += len(arranques)
+        total_preguntas += len(preguntas_hechas)
+
+    assert llamadas_ensure_backend >= 1
+    assert total_preguntas >= 1
 
 
 def test_la_lista_de_caminos_cubre_todas_las_ramas():

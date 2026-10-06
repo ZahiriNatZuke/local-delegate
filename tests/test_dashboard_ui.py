@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 from datetime import UTC, datetime, timedelta
@@ -44,9 +45,11 @@ from playwright.sync_api import sync_playwright
 # `PAGE` del JS del panel. Se lee del propio HTML en vez de clavarlo aquí: si alguien cambia el
 # tamaño de página, este módulo debe seguir generando dos páginas y no fallar por un número viejo.
 def _tam_pagina() -> int:
-    marca = "const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = "
-    i = metrics.HTML.index(marca) + len(marca)
-    return int(metrics.HTML[i : metrics.HTML.index(";", i)].strip())
+    # Solo se fija lo que rodea a `PAGE`: la definición de `F` cambia (REQ-030) y no es asunto de
+    # este módulo.
+    m = re.search(r"const CPT = 4, F = .*?, PAGE = (\d+);", metrics.HTML)
+    assert m, "no se encontró la sentencia `const CPT = 4, F = …, PAGE = …;`"
+    return int(m.group(1))
 
 
 def _eventos(cuantos: int) -> str:
@@ -244,6 +247,271 @@ def test_el_rango_personalizado_ensena_los_dos_campos_de_fecha(panel):
         assert pagina.locator("#rangeTo").is_visible()
 
         navegador.close()
+
+
+# --- Presentación: tipografía por rol, KPI neto y latencia (REQ-004, REQ-030 a REQ-034) --------
+#
+# Un solo arranque del panel mide todo y cada test mira una cifra: así cada arreglo tiene su
+# propio assert (y su propio control positivo) sin lanzar Chromium nueve veces. Los hooks y los
+# procesos se simulan con `page.route` porque dependen de la telemetría y de la máquina; la
+# actividad, el KPI y «Quién delegó» salen del log de verdad, por el `/api/stats` real.
+
+# Una delegación buena por `path` con salida (bruto 10.000, devuelto 1.000, neto 9.000) y un fallo
+# por `path` que, con la regla de T1, no suma nada. Con `chars_out > 0` bruto y neto difieren, que
+# es lo que deja a los mutantes «hero con el bruto» y «columna con el bruto» a la vista.
+_BRUTO, _DEVUELTO, _NETO = 10_000, 1_000, 9_000
+
+_HOOKS = {
+    "enabled": True,
+    "total": 10,
+    "suggested": 3,
+    "rate": 0.3,
+    "by_category": [{"category": "read", "total": 8, "suggested": 2}],
+    "by_motivo": [{"motivo": "pequeño", "total": 5}],
+    "read_total": 5,
+}
+
+_PROCESO = {"name": "python.exe", "pid": 4321, "ram_mb": 2048, "vram_mb": None, "self": True}
+
+_MEDIR = """() => {
+  const fam = el => el ? getComputedStyle(el).fontFamily : null;
+  const sonda = cls => {
+    const e = document.createElement('span'); e.className = cls; e.textContent = 'x';
+    document.getElementById('modelsBody').appendChild(e);
+    const f = fam(e); e.remove(); return f;
+  };
+  const nota = Array.from(document.querySelectorAll('#hooksBody div'))
+    .find(d => d.textContent.includes('decides tú') && !d.querySelector('div'));
+  const hero = document.querySelector('.card.hero');
+  const lat = Array.from(document.querySelectorAll('.card'))
+    .find(c => (c.querySelector('.k-lbl')||{}).textContent?.includes('Latencia media'));
+  const fonts = document.querySelector('link[href*="fonts.googleapis.com/css2"]');
+  return {
+    th: Array.from(document.querySelectorAll('thead th')).map(fam),
+    selfchip: fam(document.querySelector('.selfchip')),
+    mrole: sonda('mrole'),
+    empty: sonda('empty'),
+    nota: fam(nota),
+    hooksPrimera: fam(document.querySelector('#hooksBody tbody td:first-child')),
+    clientesPrimera: fam(document.querySelector('#clientsBody tbody td:first-child')),
+    refrescar: fam(document.getElementById('reload')),
+    cerrarAyuda: fam(document.getElementById('helpClose')),
+    body: fam(document.body),
+    fuentes: fonts ? fonts.href : '',
+    kpi: hero.querySelector('.k-val').firstChild.textContent.trim(),
+    pista: hero.querySelector('.k-hint').innerText,
+    tooltip: hero.querySelector('.info')?.getAttribute('data-tip') || '',
+    columnaNeto: document.querySelector('#clientsBody tbody td:nth-child(4)').innerText.trim(),
+    latencia: lat.querySelector('.k-val').innerText.trim(),
+    latenciaFilas: Array.from(document.querySelectorAll('#activity tbody td:nth-child(7)'))
+      .map(td => td.innerText.trim()),
+  };
+}"""
+
+
+def _miles(n: int) -> str:
+    """El formato que pide REQ-030: punto de miles siempre, desde cuatro cifras."""
+    return f"{n:,}".replace(",", ".")
+
+
+def _log_presentacion() -> str:
+    ahora = datetime.now(UTC)
+    medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+    paso = min(timedelta(seconds=30), (ahora - medianoche_local) / 2)
+    comun = {"model": "modelo-de-prueba", "source": "path", "backend": "local"}
+    eventos = [
+        {
+            **comun,
+            "ts": ahora.isoformat(timespec="seconds"),
+            "tool": "local_summarize",
+            "chars_in": 4 * _BRUTO,
+            "chars_out": 4 * _DEVUELTO,
+            "latency_ms": 2000,
+            "ok": True,
+            "tokens_in": 9000,
+            "tokens_out": 900,
+            "client": "claude-code",
+        },
+        {
+            **comun,
+            "ts": (ahora - paso).isoformat(timespec="seconds"),
+            "tool": "local_extract",
+            "chars_in": 80_000,
+            "chars_out": 0,
+            "latency_ms": 4000,
+            "ok": False,
+            "error_class": "connect_error",
+            "client": "claude-code",
+        },
+    ]
+    return "\n".join(json.dumps(e, ensure_ascii=False) for e in eventos) + "\n"
+
+
+@pytest.fixture(scope="module")
+def medidas(tmp_path_factory):
+    """Pinta el panel una vez con hooks, clientes, actividad y procesos, y lo mide todo."""
+    carpeta = tmp_path_factory.mktemp("presentacion")
+    hoy = datetime.now(UTC)
+    (carpeta / f"usage-{hoy:%Y%m}.jsonl").write_text(_log_presentacion(), encoding="utf-8")
+    sistema = {"ram": None, "vram": None, "processes": [_PROCESO]}
+
+    def _json(cuerpo):
+        return lambda ruta: ruta.fulfill(
+            status=200, content_type="application/json", body=json.dumps(cuerpo)
+        )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(config, "LOG_DIR", carpeta)
+        mp.setattr(config, "USAGE_LOG", carpeta / "usage.jsonl")
+        mp.setattr(config, "WEB_FONTS", True)
+        metrics._FILE_CACHE.clear()
+        with _Servidor(9497) as servidor, sync_playwright() as pw:
+            navegador = _navegador(pw)
+            pagina = navegador.new_page()
+            # Sin red: `getComputedStyle` devuelve la familia declarada aunque no llegue la cara.
+            pagina.route(
+                re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort()
+            )
+            pagina.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS))
+            pagina.route(re.compile(r"/api/system(\?|$)"), lambda r: _json(sistema)(r))
+            pagina.goto(servidor.url)
+            for selector in (
+                "#activity tbody tr",
+                "#hooksBody table",
+                "#clientsBody table",
+                "#procTable thead",
+                ".card.hero",
+            ):
+                pagina.wait_for_selector(selector)
+            m = pagina.evaluate(_MEDIR)
+
+            # La fila vacía de procesos es otro estado de la misma tarjeta: se fuerza y se repinta.
+            sistema["processes"] = []
+            pagina.evaluate("() => pollSystem()")
+            pagina.wait_for_function(
+                "() => document.getElementById('procTable').innerText.includes('Ningún proceso')"
+            )
+            m["procesosVacia"] = pagina.evaluate(
+                "() => getComputedStyle(document.querySelector('#procTable td')).fontFamily"
+            )
+            navegador.close()
+    metrics._FILE_CACHE.clear()
+    return m
+
+
+def test_todas_las_cabeceras_comparten_familia(medidas):
+    """REQ-034 (a): `.num` y `th.mono` ya no ponen mono a media fila de cabecera."""
+    familias = set(medidas["th"])
+    assert len(medidas["th"]) >= 10, "control positivo: hooks, clientes, actividad y procesos"
+    assert len(familias) == 1, familias
+    assert "Inter" in familias.pop()
+
+
+def test_la_chip_del_daemon_va_como_sus_gemelas(medidas):
+    """REQ-034 (b): «DAEMON MCP» con la familia de `.mrole`, no la mono de su celda."""
+    assert medidas["selfchip"] == medidas["mrole"]
+
+
+def test_la_fila_vacia_de_procesos_va_como_los_demas_vacios(medidas):
+    """REQ-034 (c)."""
+    assert medidas["procesosVacia"] == medidas["empty"]
+
+
+def test_la_nota_de_hooks_es_prosa_en_Inter(medidas):
+    """REQ-034 (d): la nota dejó de reutilizar `.empty`, que es mono."""
+    assert medidas["nota"] is not None, "control positivo: la nota tiene que estar pintada"
+    assert medidas["nota"].startswith("Inter")
+
+
+def test_la_primera_columna_de_hooks_y_clientes_va_en_mono(medidas):
+    """REQ-034 (e): categoría y cliente son identificadores de la telemetría."""
+    assert "JetBrains Mono" in medidas["hooksPrimera"]
+    assert "JetBrains Mono" in medidas["clientesPrimera"]
+
+
+def test_los_botones_heredan_la_familia_del_body(medidas):
+    """REQ-034 (g). «Refrescar» ya la tenía por `.btn`; el que no la tenía es el cierre de la
+    ayuda (`.help-x`), que se quedaba con la del agente de usuario."""
+    assert medidas["refrescar"] == medidas["body"]
+    assert medidas["cerrarAyuda"] == medidas["body"]
+
+
+def test_la_hoja_de_fuentes_pide_JetBrains_Mono_400(medidas):
+    """REQ-034 (f). `getComputedStyle` no ve la cara que falta: se mira la URL."""
+    assert "JetBrains+Mono:wght@400" in medidas["fuentes"]
+
+
+def test_el_KPI_hero_ensena_el_neto_y_la_pista_el_bruto_y_el_devuelto(medidas):
+    """REQ-004 en el navegador, con el formato de REQ-030."""
+    assert medidas["kpi"] == _miles(_NETO)
+    assert _miles(_BRUTO) in medidas["pista"]
+    assert _miles(_DEVUELTO) in medidas["pista"]
+    assert "relecturas" in medidas["tooltip"]
+
+
+def test_quien_delego_ensena_el_neto_del_cliente(medidas):
+    """REQ-004: la columna de ahorro de «Quién delegó» es `tokens_net`."""
+    assert medidas["columnaNeto"] == _miles(_NETO)
+
+
+def test_la_latencia_va_en_segundos(medidas):
+    """REQ-032: KPI y columna de actividad en segundos, con coma."""
+    assert medidas["latencia"].endswith(" s"), medidas["latencia"]
+    assert medidas["latencia"] == "3,0 s"
+    assert sorted(medidas["latenciaFilas"]) == ["2,0 s", "4,0 s"]
+
+
+# --- Sistema con cómputo remoto (REQ-025, REQ-034 h) -------------------------------------------
+
+
+def test_la_nota_de_computo_remoto_sale_en_Inter_y_sin_fila_vacia(tmp_path, monkeypatch):
+    """La Mac contra el backend de la PC: la nota es lo único que se ve, y es prosa (Inter).
+
+    `/api/system` se intercepta con `page.route` porque la plataforma y el origen son de la máquina.
+    """
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    metrics._FILE_CACHE.clear()
+    sistema = {
+        "ram": None,
+        "vram": None,
+        "processes": [],
+        "platform": "darwin",
+        "origin": "remote",
+        "host": "100.64.0.2:9292",
+    }
+    with _Servidor(9496) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.route(
+            re.compile(r"/api/system(\?|$)"),
+            lambda r: r.fulfill(
+                status=200, content_type="application/json", body=json.dumps(sistema)
+            ),
+        )
+        pagina.goto(servidor.url)
+        pagina.wait_for_function(
+            "() => !document.getElementById('metersBody').innerText.includes('Leyendo')"
+        )
+        m = pagina.evaluate(
+            """() => {
+              const n = document.getElementById('procNota');
+              return {
+                texto: n ? n.innerText : '',
+                familia: n ? getComputedStyle(n).fontFamily : '',
+                procesos: document.getElementById('procTable').innerText,
+                memoria: document.getElementById('metersBody').innerText,
+              };
+            }"""
+        )
+        navegador.close()
+    texto = m["texto"]
+    assert "El backend corre en" in texto
+    assert "100.64.0.2:9292" in texto
+    assert m["familia"].startswith("Inter"), m["familia"]
+    assert "Ningún proceso del backend detectado" not in m["procesos"]
+    assert "RAM y VRAM no se miden en macOS todavía" in m["memoria"]
 
 
 @pytest.mark.skipif(

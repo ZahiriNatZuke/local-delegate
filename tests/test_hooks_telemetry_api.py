@@ -284,6 +284,8 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
 
     render_js = _extraer_funcion_js(metrics.HTML, "function renderHooks(h){")
     esc_js = _extraer_funcion_js(metrics.HTML, "function escHooks(s){")
+    # Los formateadores del panel (REQ-030/031): `F` y `F1` son objetos sobre `fmtNum`.
+    fmt_js = _extraer_funcion_js(metrics.HTML, "function fmtNum(")
 
     programa = tmp_path / "render.mjs"
     programa.write_text(
@@ -291,7 +293,9 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
         "const nodos = {};\n"
         "const elem = () => ({style:{display:'?'}, textContent:'', innerHTML:''});\n"
         "globalThis.document = {getElementById: id => (nodos[id] ??= elem())};\n"
-        "globalThis.F = new Intl.NumberFormat('es');\n"
+        f"{fmt_js}\n"
+        "globalThis.F = {format: n => fmtNum(n, 0)};\n"
+        "globalThis.F1 = {format: n => fmtNum(n, 1)};\n"
         f"{esc_js}\n"
         f"{render_js}\n"
         "const salida = [];\n"

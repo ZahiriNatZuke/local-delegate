@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "slug": "coste-api-y-cuota",
+  "title": "Panel: coste equivalente a precio de API y % de cuota sin calibrar",
+  "mode": "standard",
+  "status": "plan-review",
+  "createdAt": "2026-10-06T14:06:24.439Z",
+  "updatedAt": "2026-10-06T17:00:46.260Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T15:32:27.464Z",
+      "evidence": "Revisión adversaria (3 BLOQ) + spec v2 reescrita con densidad por modelo, atribución por delegación y vigilante; segunda pasada sin bloqueantes (6 IMP) resueltos en v2.1 (58 REQ). Contrato con panel-cuentas-y-estados-honestos idéntico (verificado literalmente). Cifras reproducidas ejecutando insumos/scripts (142/142, 96,5 %, $11,50/$92,69, 0 claves repetidas). Decisiones del usuario 2026-10-06 en brief y en 'Decisiones confirmadas'.",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-06T17:00:46.058Z",
+      "evidence": "Revisión adversaria del plan (1 BLOQ/10 IMP/12 MEN) resuelta en plan v2 (review.md, Respuesta a la revisión del plan); controles corregidos ejecutados; plazo de transcripts leído de cleanupPeriodDays con enmienda mínima registrada en spec; orden panel->coste->daemon fijado; todos los REQ trazados.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-06T14:06:24.439Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-06T15:16:17.140Z",
+      "reason": "research.md con insumos"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-06T15:16:17.357Z",
+      "reason": "spec.md escrita, en revisión"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-06T15:32:27.464Z",
+      "evidence": "Revisión adversaria (3 BLOQ) + spec v2 reescrita con densidad por modelo, atribución por delegación y vigilante; segunda pasada sin bloqueantes (6 IMP) resueltos en v2.1 (58 REQ). Contrato con panel-cuentas-y-estados-honestos idéntico (verificado literalmente). Cifras reproducidas ejecutando insumos/scripts (142/142, 96,5 %, $11,50/$92,69, 0 claves repetidas). Decisiones del usuario 2026-10-06 en brief y en 'Decisiones confirmadas'.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-06T15:32:27.645Z",
+      "reason": "Spec aprobada; el plan se escribe ya, la implementación espera a que el panel se mezcle"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-06T17:00:46.058Z",
+      "evidence": "Revisión adversaria del plan (1 BLOQ/10 IMP/12 MEN) resuelta en plan v2 (review.md, Respuesta a la revisión del plan); controles corregidos ejecutados; plazo de transcripts leído de cleanupPeriodDays con enmienda mínima registrada en spec; orden panel->coste->daemon fijado; todos los REQ trazados.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-06T17:00:46.260Z",
+      "reason": "Plan v2 tras revisión adversaria"
+    }
+  ]
+}

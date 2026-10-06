@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -218,7 +219,12 @@ def test_byDay_agrupa_por_dia_local_y_sale_en_orden(tmp_path):
     ]
     resultado = _correr(
         tmp_path,
-        ["function localDayKey(d){", "function acct(e){", "function byDay(ev){"],
+        [
+            "function localDayKey(d){",
+            "function tokensClaude(",
+            "function acct(e){",
+            "function byDay(ev){",
+        ],
         f"const ev = {json.dumps(eventos)};\n"
         "console.log(JSON.stringify(byDay(ev).map(([k, v]) => [k, v.calls])));",
         preludio="const CPT = 4;\nconst tok = c => Math.floor(c/CPT);\n",
@@ -236,7 +242,12 @@ def test_byDay_ignora_un_ts_ilegible_en_vez_de_reventar(tmp_path):
     ]
     resultado = _correr(
         tmp_path,
-        ["function localDayKey(d){", "function acct(e){", "function byDay(ev){"],
+        [
+            "function localDayKey(d){",
+            "function tokensClaude(",
+            "function acct(e){",
+            "function byDay(ev){",
+        ],
         f"console.log(JSON.stringify(byDay({json.dumps(eventos)}).length));",
         preludio="const CPT = 4;\nconst tok = c => Math.floor(c/CPT);\n",
     )
@@ -261,7 +272,7 @@ def test_agg_suma_por_clave_y_ordena_de_mayor_a_menor(tmp_path):
     ]
     resultado = _correr(
         tmp_path,
-        ["function agg(ev,key,valfn){"],
+        ["function agg(ev,key,valfn"],
         f"console.log(JSON.stringify(agg({json.dumps(eventos)}, 'tool', e => e.n)));",
     )
     assert resultado == [["b", 5], ["a", 3], ["c", 3]]
@@ -272,10 +283,62 @@ def test_agg_descarta_las_categorias_a_cero(tmp_path):
     eventos = [{"tool": "a", "n": 0}, {"tool": "b", "n": 4}]
     resultado = _correr(
         tmp_path,
-        ["function agg(ev,key,valfn){"],
+        ["function agg(ev,key,valfn"],
         f"console.log(JSON.stringify(agg({json.dumps(eventos)}, 'tool', e => e.n)));",
     )
     assert resultado == [["b", 4]]
+
+
+def test_agg_con_negativos_conserva_las_herramientas_por_debajo_de_cero(tmp_path):
+    """REQ-004: en «Ahorro por herramienta» un neto negativo se enseña; un neto 0, no."""
+    eventos = [
+        {"tool": "a", "n": 300},
+        {"tool": "b", "n": -100},
+        {"tool": "a", "n": 200},
+        {"tool": "c", "n": 0},
+    ]
+    resultado = _correr(
+        tmp_path,
+        # Sin `){`: la cabecera tiene que casar con la firma de antes y con la de cuatro argumentos.
+        ["function agg(ev,key,valfn"],
+        f"console.log(JSON.stringify(agg({json.dumps(eventos)}, 'tool', e => e.n, "
+        "{conNegativos:true})));",
+    )
+    assert ["b", -100] in resultado
+    assert resultado == [["a", 500], ["b", -100]], "la herramienta con neto 0 no sale"
+
+
+def test_la_chispa_admite_negativos():
+    """REQ-004: con `min:0` en el eje, un acumulado negativo se quedaría pegado al borde."""
+    fuente = _extraer("function drawSpark(ev){")
+    assert "min:0" not in fuente
+
+
+# --- acct: la conversión a tokens de Claude pasa por una sola función -------------------------
+
+
+def test_acct_convierte_solo_con_tokensClaude(tmp_path):
+    """REQ-008 en el JS: con `tokensClaude` sustituida por un 7 fijo, ahorro y devuelto son 7."""
+    evento = {
+        "source": "path",
+        "chars_in": 4000,
+        "chars_out": 400,
+        "ok": True,
+        "tokens_in": 1100,
+        "tokens_out": 90,
+    }
+    r = _correr(
+        tmp_path,
+        ["function acct(e){"],
+        f"console.log(JSON.stringify(acct({json.dumps(evento)})));",
+        # No se extrae la `tokensClaude` real: la sustituye este doble.
+        preludio="const CPT = 4;\nconst tok = c => Math.floor(c/CPT);\n"
+        "function tokensClaude(){ return 7; }\n",
+    )
+    assert r["saved"] == 7
+    assert r.get("returned") == 7
+    assert r.get("net") == 0
+    assert r["tokensIn"] == 1100, "el coste del modelo local no pasa por la conversión"
 
 
 # --- fmtHace: el «hace X» del indicador ---------------------------------------
@@ -301,3 +364,99 @@ def test_fmtHace_cambia_de_unidad_en_las_fronteras(tmp_path):
         "1 d",
         "2 d",
     ]
+
+
+# --- Formato de números, latencias y plurales (REQ-030 a REQ-033) ------------------------------
+#
+# `F` no es una función: es la expresión de la sentencia `const CPT = 4, F = …, PAGE = 10;`. Se
+# recorta con una regex no codiciosa hasta `, PAGE` y se evalúa tal cual, así que el test mira la
+# definición que usa el panel y no una copia. `fmtNum`, `F1`, `fmtSeg` y `plural` se añaden solo si
+# existen: con el código de antes, `_extraer` lanzaría `ValueError` y el test fallaría por la
+# extracción en vez de por el assert que importa.
+
+# Un navegador sin `Intl.NumberFormat` v3 convierte `useGrouping: 'always'` en `true`, y con `true`
+# el español no agrupa los números de cuatro cifras. Envolver poniendo `useGrouping: true` NO emula
+# nada (en node 24 `true` ya agrupa): hay que BORRAR la opción.
+_SIN_INTL_V3 = """
+const _NF = Intl.NumberFormat;
+Intl.NumberFormat = function(loc, opts){
+  const o = Object.assign({}, opts || {});
+  delete o.useGrouping;
+  return new _NF(loc, o);
+};
+"""
+
+
+def _formateadores() -> str:
+    html = metrics.HTML
+    m = re.search(r"const CPT = 4, F = (.*?), PAGE = ", html, re.DOTALL)
+    assert m, "no se encontró la sentencia `const CPT = 4, F = …, PAGE = …;`"
+    partes = []
+    if "function fmtNum(" in html:
+        partes.append(_extraer("function fmtNum("))
+    partes.append(f"const F = {m.group(1)};")
+    m1 = re.search(r"const F1 = (.*?);", html)
+    if m1:
+        partes.append(f"const F1 = {m1.group(1)};")
+    for cabecera in ("function fmtSeg(", "function plural("):
+        if cabecera in html:
+            partes.append(_extraer(cabecera))
+    return "\n".join(partes)
+
+
+def test_F_agrupa_los_miles_desde_cuatro_cifras(tmp_path):
+    """REQ-030: `8.003`, no `8003`. Con `Intl.NumberFormat('es')` el español no agrupa 4 cifras."""
+    r = _correr(tmp_path, [], "console.log(JSON.stringify(F.format(8003)));", _formateadores())
+    assert r == "8.003"
+
+
+def test_F_agrupa_aunque_el_navegador_no_tenga_Intl_v3(tmp_path):
+    """REQ-030: el agrupado no puede depender de `useGrouping: 'always'`."""
+    r = _correr(
+        tmp_path,
+        [],
+        "console.log(JSON.stringify(F.format(8003)));",
+        _SIN_INTL_V3 + _formateadores(),
+    )
+    assert r == "8.003"
+
+
+def test_decimales_con_coma_y_latencia_en_segundos(tmp_path):
+    """REQ-031 y REQ-032: un decimal con coma, signo menos, y nunca «0,0 s»."""
+    r = _correr(
+        tmp_path,
+        [],
+        "console.log(JSON.stringify({seg: [fmtSeg(116948), fmtSeg(120), fmtSeg(30)],"
+        " f1: F1.format(1718.25), neg: F.format(-1234567)}));",
+        _SIN_INTL_V3 + _formateadores(),
+    )
+    assert r["seg"][0] == "116,9 s"
+    assert r["seg"][1] == "0,1 s"
+    assert r["seg"][2] == "< 0,1 s"
+    assert r["f1"] == "1.718,3"
+    assert r["neg"] == "-1.234.567"
+
+
+def test_plural_sin_parentesis(tmp_path):
+    """REQ-033: «1 estimado / 4 estimados»."""
+    r = _correr(
+        tmp_path,
+        [],
+        "console.log(JSON.stringify([plural(1,'estimado','estimados'),"
+        " plural(4,'estimado','estimados'), plural(1234,'evento','eventos')]));",
+        _formateadores(),
+    )
+    assert r[0] == "1 estimado"
+    assert r[1] == "4 estimados"
+    assert r[2] == "1.234 eventos"
+
+
+def test_no_quedan_plurales_con_parentesis_ni_toFixed():
+    """REQ-031 y REQ-033 en todo el panel. No se busca `(s)` suelto: choca con `renderClients(s)`,
+    `escHooks(s)` y `fmtHace(s)`."""
+    html = metrics.HTML
+    assert "estimado(s)" not in html
+    assert "archivo(s)" not in html
+    assert "leído(s)" not in html
+    assert "delegación(es)" not in html
+    assert "toFixed(" not in html, "los decimales pasan todos por F1 (coma y un decimal)"

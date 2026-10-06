@@ -171,18 +171,31 @@ SEED_AND_MOCK = """() => {
     a.backend_calls += chunks;
     a.tokens_in += e.tokens_in;
     a.tokens_out += e.tokens_out;
+    // Un fallo (`ok` exactamente false) no ahorra ni devuelve nada: solo cuenta como error y
+    // con los tokens que gastó el backend.
+    if (e.ok === false) { a.errors += 1; return a; }
     // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
-    if (e.source === 'path') a.saved += estimable ? Math.floor(e.chars_in / CPT) : e.tokens_in;
-    if (!e.ok) a.errors += 1;
+    if (e.source === 'path') {
+      a.saved += estimable ? Math.floor(e.chars_in / CPT) : e.tokens_in;
+      // Lo que la tool devolvió al contexto se resta: el KPI enseña el NETO.
+      const reclama = estimable ? e.chars_in > 0 : e.tokens_in > 0;
+      if (reclama) a.returned += Math.floor(e.chars_out / CPT);
+    }
     return a;
-  }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, errors: 0});
+  }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
+      errors: 0});
 
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
       count: events.length, files_read: ['usage-202607.jsonl'],
       range_from: events[0].ts, range_to: events[events.length - 1].ts}, events},
-    // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío.
-    '/api/backend': {available: true, running: [{model: 'gemma4-26b-a4b'}, {model: 'qwen36-35b-a3b'}],
+    // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío. Sin
+    // `running_ok: true` las filas caerían en «montado»/«frío» (backend que no es llama-swap) y la
+    // captura no enseñaría «procesando»; `causa`, `etiqueta` y `detalle` van a null cuando está
+    // conectado, como los devuelve el daemon.
+    '/api/backend': {available: true, running: [{model: 'gemma4-26b-a4b', state: 'ready'},
+      {model: 'qwen36-35b-a3b', state: 'ready'}], running_ok: true, models_stale: false,
+      causa: null, etiqueta: null, detalle: null,
       origin: 'local', host: '127.0.0.1:9292',
       models: [{id:'gemma3-4b',status:'unloaded'},{id:'gemma4-26b-a4b',status:'loaded'},
         {id:'qwen36-35b-a3b',status:'loaded'},{id:'qwen35-2b',status:'unloaded'},
@@ -196,7 +209,9 @@ SEED_AND_MOCK = """() => {
       vram: {used_mb: 11890, total_mb: 16311, pct: 72.9, gpu_util_pct: 68},
       processes: [{pid: 4242, name: 'llama-server.exe', ram_mb: 7640, vram_mb: 8420, self: false},
         {pid: 4310, name: 'llama-server.exe', ram_mb: 3180, vram_mb: 3470, self: false},
-        {pid: 9001, name: 'pythonw.exe', ram_mb: 44, vram_mb: null, self: true}]},
+        {pid: 9001, name: 'pythonw.exe', ram_mb: 44, vram_mb: null, self: true}],
+      // Cómputo local en Windows: sin la nota de cómputo remoto ni los textos de otra plataforma.
+      platform: 'win32', origin: 'local', host: '127.0.0.1:9292'},
     // La forma la impone renderBackendStats: histogramas con p50/p95 y totales. Con otras
     // claves el panel se pinta con guiones o cae al "sin datos", que es lo que enseñaba la
     // captura anterior aunque el mock dijera available:true.
@@ -209,20 +224,25 @@ SEED_AND_MOCK = """() => {
     // estimado: `estimated_events: 0` es la consecuencia, no una simplificación.
     '/api/stats': {total: {calls: stats.calls, backend_calls: stats.backend_calls,
       errors: stats.errors, tokens_in: stats.tokens_in, tokens_out: stats.tokens_out,
-      saved: stats.saved, estimated_events: 0},
-      tokens_context_saved: stats.saved, tokens_generated_local: stats.tokens_out,
+      saved: stats.saved, returned: stats.returned, net: stats.saved - stats.returned,
+      estimated_events: 0},
+      // El KPI «Contexto conservado» es el NETO (`tokens_context_net`) y su pista dice el bruto
+      // y el devuelto: sin estas dos claves la captura lo enseñaría a 0.
+      tokens_context_saved: stats.saved, tokens_returned: stats.returned,
+      tokens_context_net: stats.saved - stats.returned, tokens_generated_local: stats.tokens_out,
       tokens_local_input: stats.tokens_in, backend_calls: stats.backend_calls,
       estimated_events: 0, by_tool: [], by_model: [], by_backend: [],
       // La tarjeta «Quién delegó» lee de aquí. Los nombres son los de clientes MCP reales pero
       // los conteos son inventados, igual que el resto del mock: lo que la imagen no puede
-      // enseñar es de quién son las delegaciones de quien regenera la captura.
+      // enseñar es de quién son las delegaciones de quien regenera la captura. La columna de
+      // ahorro lee `tokens_net` (sin ella saldría «–»).
       by_client: [
         {client: 'claude-code', calls: 74, backend_calls: 96,
-         tokens_saved: 88240, tokens_in: 101300, tokens_generated: 6120},
+         tokens_saved: 88240, tokens_net: 81520, tokens_in: 101300, tokens_generated: 6120},
         {client: 'codex-mcp-client', calls: 31, backend_calls: 38,
-         tokens_saved: 24880, tokens_in: 29010, tokens_generated: 2410},
+         tokens_saved: 24880, tokens_net: 22950, tokens_in: 29010, tokens_generated: 2410},
         {client: 'desconocido', calls: 15, backend_calls: 18,
-         tokens_saved: 7180, tokens_in: 8640, tokens_generated: 690},
+         tokens_saved: 7180, tokens_net: 6640, tokens_in: 8640, tokens_generated: 690},
       ]},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la

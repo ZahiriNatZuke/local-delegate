@@ -39,6 +39,7 @@ import json
 import os
 import re
 import socket
+import sys
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from importlib.resources import files as _resource_files
@@ -49,7 +50,7 @@ import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import clients, config, server
+from .. import clients, config, fallos, server
 from . import sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
@@ -216,6 +217,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "latency_ms": 0,
             "errors": 0,
             "saved": 0,
+            "net": 0,
             "tokens_in": 0,
             "tokens_out": 0,
         }
@@ -237,7 +239,14 @@ def _aggregate(rows: list[dict]) -> dict:
     # la medición del 3-ago. Las líneas anteriores a que existiera el campo caen en "desconocido"
     # —una casilla propia, ni repartidas ni descartadas—, que es lo que de verdad se sabe de ellas.
     by_client: dict[str, dict] = defaultdict(
-        lambda: {"calls": 0, "backend_calls": 0, "saved": 0, "tokens_in": 0, "tokens_out": 0}
+        lambda: {
+            "calls": 0,
+            "backend_calls": 0,
+            "saved": 0,
+            "net": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
     )
     # Origen del CÓMPUTO: "local" (backend en esta máquina), "remote" (p. ej. esta Mac usando
     # la GPU de la PC) o "unknown" para eventos anteriores a que se registrara el campo.
@@ -248,6 +257,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "chars_in": 0,
             "chars_out": 0,
             "saved": 0,
+            "net": 0,
             "tokens_in": 0,
             "tokens_out": 0,
             "hosts": set(),
@@ -262,7 +272,14 @@ def _aggregate(rows: list[dict]) -> dict:
         "chars_in_path": 0,
         "tokens_in": 0,
         "tokens_out": 0,
-        "saved": 0,
+        "saved": 0,  # bruto, ya sin fallos
+        "returned": 0,  # lo que las tools devolvieron al contexto
+        "net": 0,  # bruto − devuelto; puede ser negativo
+        # Desglose en caracteres del contrato con `coste-api-y-cuota` (la imagen, en bytes).
+        "chars_saved_text": 0,
+        "bytes_saved_image": 0,
+        "chars_saved_output": 0,
+        "chars_returned": 0,
         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
         "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
     }
@@ -277,9 +294,11 @@ def _aggregate(rows: list[dict]) -> dict:
         ci = int(r.get("chars_in", 0) or 0)
         co = int(r.get("chars_out", 0) or 0)
         lat = int(r.get("latency_ms", 0) or 0)
-        ok = bool(r.get("ok", True))
         is_path = r.get("source") == "path"
         acc = _accounting(r)
+        # REQ-006: un solo predicado de fallo, el de la contabilidad (`ok` exactamente `False`).
+        # Antes `bool(r.get("ok", True))` contaba un `ok: null` como error.
+        failed = acc["failed"]
 
         t = by_tool[tool]
         t["calls"] += 1
@@ -290,7 +309,8 @@ def _aggregate(rows: list[dict]) -> dict:
         t["tokens_in"] += acc["tokens_in"]
         t["tokens_out"] += acc["tokens_out"]
         t["saved"] += acc["saved"]
-        if not ok:
+        t["net"] += acc["net"]
+        if failed:
             t["errors"] += 1
         m = by_model[model]
         m["calls"] += 1
@@ -310,6 +330,7 @@ def _aggregate(rows: list[dict]) -> dict:
         b["tokens_in"] += acc["tokens_in"]
         b["tokens_out"] += acc["tokens_out"]
         b["saved"] += acc["saved"]
+        b["net"] += acc["net"]
         host = r.get("backend_host")
         if isinstance(host, str) and host:
             b["hosts"].add(host)
@@ -319,6 +340,7 @@ def _aggregate(rows: list[dict]) -> dict:
         c["calls"] += 1
         c["backend_calls"] += acc["backend_calls"]
         c["saved"] += acc["saved"]
+        c["net"] += acc["net"]
         c["tokens_in"] += acc["tokens_in"]
         c["tokens_out"] += acc["tokens_out"]
 
@@ -329,13 +351,22 @@ def _aggregate(rows: list[dict]) -> dict:
         total["tokens_in"] += acc["tokens_in"]
         total["tokens_out"] += acc["tokens_out"]
         total["saved"] += acc["saved"]
+        for campo in (
+            "returned",
+            "net",
+            "chars_saved_text",
+            "bytes_saved_image",
+            "chars_saved_output",
+            "chars_returned",
+        ):
+            total[campo] += acc[campo]
         if acc["estimated"]:
             total["estimated_events"] += 1
         if acc["fallback"]:
             total["fallback_events"] += 1
         if acc["cause"]:
             causes[acc["cause"]] += 1
-        if not ok:
+        if failed:
             total["errors"] += 1
         if is_path:
             total["chars_in_path"] += ci
@@ -349,6 +380,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "chars_out": t["chars_out"],
             "errors": t["errors"],
             "tokens_saved": t["saved"],
+            "tokens_net": t["net"],
             "tokens_in": t["tokens_in"],
             "tokens_out": t["tokens_out"],
             "avg_latency_ms": round(t["latency_ms"] / t["calls"]) if t["calls"] else 0,
@@ -366,6 +398,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "chars_in": v["chars_in"],
             "chars_out": v["chars_out"],
             "tokens_saved": v["saved"],
+            "tokens_net": v["net"],
             "tokens_in": v["tokens_in"],
             "tokens_generated": v["tokens_out"],
             "hosts": sorted(v["hosts"]),
@@ -378,6 +411,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "calls": v["calls"],
             "backend_calls": v["backend_calls"],
             "tokens_saved": v["saved"],
+            "tokens_net": v["net"],
             "tokens_in": v["tokens_in"],
             "tokens_generated": v["tokens_out"],
         }
@@ -386,9 +420,17 @@ def _aggregate(rows: list[dict]) -> dict:
 
     return {
         "total": total,
-        # Ahorro: contenido leído server-side que no entró al contexto de Claude, contado UNA vez
-        # por delegación aunque se troceara.
+        # Ahorro BRUTO: contenido leído server-side que no entró al contexto de Claude, contado UNA
+        # vez por delegación aunque se troceara, más la salida escrita a fichero. Sin fallos.
         "tokens_context_saved": total["saved"],
+        # Lo que las tools devolvieron al contexto, y el NETO (bruto − devuelto) que enseña el KPI.
+        "tokens_returned": total["returned"],
+        "tokens_context_net": total["net"],
+        # Desglose en caracteres (contrato con `coste-api-y-cuota`; la imagen, en bytes).
+        "chars_saved_text": total["chars_saved_text"],
+        "bytes_saved_image": total["bytes_saved_image"],
+        "chars_saved_output": total["chars_saved_output"],
+        "chars_returned": total["chars_returned"],
         "tokens_generated_local": total["tokens_out"],
         # Coste: lo que gastó de verdad el backend, con el prompt de sistema repetido por trozo.
         "tokens_local_input": total["tokens_in"],
@@ -590,27 +632,54 @@ def backend():
     que refresca cada 60s):
       - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
       - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
+
+    Con un fallo, `causa`/`etiqueta`/`detalle` dicen por qué (REQ-012, textos de `fallos.py`) y
+    `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
+    solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
-    base = config.BASE_URL.removesuffix("/v1")
-    running: list = []
-    try:
-        with httpx2.Client(timeout=1.0) as c:
-            r = c.get(f"{base}/running", headers=config.auth_headers())
-            if r.is_success:
-                data = r.json()
-                running = (data.get("running") if isinstance(data, dict) else None) or []
-    except (httpx2.HTTPError, ValueError):
-        running = []
-    backend_up, models = server._models_with_status()
+    estado = server.sondear_backend()
+    running, running_ok = _running() if estado.available else ([], False)
     return JSONResponse(
         {
-            "available": backend_up,
+            "available": estado.available,
             "running": running,
-            "models": models,
+            "running_ok": running_ok,
+            "models": estado.models,
+            "models_stale": estado.models_stale,
+            **_causa_json(estado.causa, estado.detalle),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
     )
+
+
+def _causa_json(causa: str | None, detalle: str | None) -> dict:
+    """Las claves de la causa para el panel. La etiqueta corta sale de `fallos.py`, como el detalle:
+    el JS no redacta los textos de una causa (REQ-011)."""
+    return {
+        "causa": causa,
+        "etiqueta": fallos.etiqueta(causa) if causa else None,
+        "detalle": detalle,
+    }
+
+
+def _running() -> tuple[list, bool]:
+    """`GET {base sin /v1}/running` de llama-swap: (entradas, ¿respondió?). Con el plazo de sondeo."""
+    base = config.BASE_URL.removesuffix("/v1")
+    try:
+        with httpx2.Client(timeout=server._plazo_sonda()) as c:
+            r = c.get(f"{base}/running", headers=config.auth_headers())
+        if not r.is_success:
+            return [], False
+        data = r.json()
+    except (httpx2.HTTPError, ValueError):
+        return [], False
+    lista = data.get("running") if isinstance(data, dict) else None
+    if lista is None:
+        lista = []  # «ningún modelo montado»: llama-swap manda `null` o nada
+    if not isinstance(data, dict) or not isinstance(lista, list):
+        return [], False
+    return lista, True
 
 
 @app.get("/api/backend/stats")
@@ -621,17 +690,30 @@ def backend_stats():
     persiste en SQLite. Requiere llama-swap >= v236; para que sobrevivan a reinicios necesita
     `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
     degrada a {available: false} sin romper el dashboard.
+
+    Sin datos, dice por qué (REQ-020): `causa`, `etiqueta`, `detalle` y `status_http` (este último
+    solo con una respuesta HTTP). El panel solo culpa a la versión de llama-swap con un 404.
     """
     base = config.BASE_URL.removesuffix("/v1")
+    endpoint = f"{base}/api/metrics/stats"
+    loopback = server._backend_en_loopback()
     try:
-        with httpx2.Client(timeout=1.0) as c:
-            r = c.get(f"{base}/api/metrics/stats", headers=config.auth_headers())
-            if not r.is_success:
-                return JSONResponse({"available": False})
-            data = r.json()
-    except (httpx2.HTTPError, ValueError):
-        return JSONResponse({"available": False})
+        with httpx2.Client(timeout=server._plazo_sonda()) as c:
+            r = c.get(endpoint, headers=config.auth_headers())
+        if not r.is_success:
+            causa = fallos.causa_conexion(r.status_code, loopback=loopback)
+            texto = fallos.detalle(causa, host=config.backend_host(), status=r.status_code)
+            return JSONResponse(_sin_stats(causa.value, texto, r.status_code))
+        data = r.json()
+    except Exception as exc:  # como el sondeo: lo que no se espera también tiene causa
+        causa = fallos.causa_conexion(exc, loopback=loopback)
+        texto = fallos.detalle(causa, host=config.backend_host(), endpoint=endpoint, excepcion=exc)
+        return JSONResponse(_sin_stats(causa.value, texto, None))
     return JSONResponse({"available": True, "stats": data})
+
+
+def _sin_stats(causa: str, detalle: str, status_http: int | None) -> dict:
+    return {"available": False, **_causa_json(causa, detalle), "status_http": status_http}
 
 
 @app.get("/api/status")
@@ -641,9 +723,9 @@ def status():
     Los modelos salen de GET {BASE_URL}/models (lo que el backend de verdad expone), no del
     log de eventos — así el dashboard enseña también los modelos aún sin uso registrado.
     """
-    # Modelos reales del backend con su estado loaded/unloaded (#901); el helper vive en server.py
-    # y tolera backends que no exponen `status` (devuelve status None en ese caso).
-    backend_up, models = server._models_with_status()
+    # Modelos reales del backend con su estado loaded/unloaded (#901): el mismo sondeo que
+    # /api/backend, con su causa (REQ-012) y la lista guardada cuando falla (REQ-021).
+    estado = server.sondear_backend()
     catalog = [
         {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
         {"role": "long", "label": "largo", "model": config.MODEL_LONG},
@@ -663,8 +745,10 @@ def status():
             "version": server._get_version(),
             "base_url": config.BASE_URL,
             "backend": {
-                "available": backend_up,
-                "models": models,
+                "available": estado.available,
+                "models": estado.models,
+                "models_stale": estado.models_stale,
+                **_causa_json(estado.causa, estado.detalle),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),
@@ -682,12 +766,19 @@ def status():
 
 @app.get("/api/system")
 def system():
-    """RAM/VRAM de sistema y consumo por proceso del backend local (best-effort)."""
+    """RAM/VRAM de sistema y consumo por proceso del backend local (best-effort).
+
+    `platform`, `origin` y `host` (REQ-025) le dicen al panel por qué puede no haber procesos:
+    el cómputo corre en otra máquina, o esta plataforma no los lista todavía.
+    """
     return JSONResponse(
         {
             "ram": sysinfo.ram_stats(),
             "vram": sysinfo.vram_stats(),
             "processes": sysinfo.interesting_processes(),
+            "platform": sys.platform,
+            "origin": config.backend_origin(),
+            "host": config.backend_host(),
         }
     )
 
@@ -755,7 +846,7 @@ def vendor_chart_js():
 # cero peticiones a terceros.
 _WEB_FONTS_TAGS = """<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">"""
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">"""
 
 
 def render_index() -> str:
@@ -829,6 +920,8 @@ __WEB_FONTS__
   --shadow-h:0 1px 2px rgba(15,23,42,.08),0 20px 40px -12px rgba(15,23,42,.2);
 }
 *{box-sizing:border-box}
+/* Los controles no heredan la familia por defecto: sin esto, un botón sin clase sale en Arial. */
+button,input,select,textarea{font-family:inherit}
 html{scrollbar-color:var(--bd2) transparent}
 body{margin:0;color:var(--tx);font-family:var(--sans);font-size:14px;line-height:1.5;
   background:var(--bg);
@@ -945,7 +1038,9 @@ thead th{color:var(--faint);font-weight:700;font-size:10.5px;text-transform:uppe
 tbody tr{transition:background .12s}
 tbody tr:hover{background:color-mix(in srgb,var(--blue) 7%,transparent)}
 tbody td{color:var(--tx2)}
-td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* Solo celdas: las cabeceras son etiquetas y van todas en Inter (`thead th`), también las de
+   columnas numéricas. Un `th.num`/`th.mono` partía la misma fila de cabecera en dos familias. */
+td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:11.5px;font-weight:600;font-family:var(--mono);
   background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
 .badge.model{background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
@@ -974,6 +1069,9 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
   border-radius:999px;padding:3px 10px;text-transform:uppercase}
 .pill.up{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
 .pill.down{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 32%,transparent)}
+.pill.warn{color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);border:1px solid color-mix(in srgb,var(--amber) 32%,transparent)}
+.pill.neutral{color:var(--mut);background:color-mix(in srgb,var(--mut) 10%,transparent);border:1px solid color-mix(in srgb,var(--mut) 28%,transparent)}
+.mrow.atenuada{opacity:.5}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent);border-radius:8px;transition:background .2s}
 .mrow:last-child{border-bottom:0}
 .mrow.busy{background:color-mix(in srgb,var(--amber) 9%,transparent);padding-left:6px;padding-right:6px}
@@ -984,6 +1082,7 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mstatus{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-left:10px;min-width:74px;text-align:center}
 .mstatus.loaded{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
 .mstatus.unloaded{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.mstatus.neutral{background:transparent;color:var(--mut);border:1px solid color-mix(in srgb,var(--mut) 28%,transparent)}
 /* #898: métricas persistidas del backend (llama-swap) */
 .bstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px 0 2px}
 .bstat{background:color-mix(in srgb,var(--violet) 7%,transparent);border-radius:10px;padding:9px 10px}
@@ -1018,7 +1117,7 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .proc thead th{color:var(--faint);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
 .proc tbody tr:last-child td{border-bottom:0}
 .proc td{color:var(--tx2)}
-.selfchip{font-size:9.5px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;letter-spacing:.04em;
+.selfchip{font-family:var(--sans);font-size:9.5px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;letter-spacing:.04em;
   background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
 
 /* ---------- paginación ---------- */
@@ -1057,6 +1156,9 @@ dialog.help::backdrop{background:rgba(3,5,9,.6);backdrop-filter:blur(5px)}
    estados vacíos con tipografías distintas, porque el de tools usa `.tchip`, que sí es mono. */
 .empty{color:var(--mut);padding:30px;text-align:center;font-size:12.5px;
   font-family:var(--mono);letter-spacing:.01em}
+/* Prosa dentro de una tarjeta (la nota de hooks, la de cómputo remoto): Inter, como `.k-hint`.
+   Antes la nota de hooks reutilizaba `.empty`, que es mono porque es un estado vacío. */
+.nota{color:var(--mut);font-size:12.5px;padding:10px 12px;font-family:var(--sans);text-align:left}
 footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;border-top:1px solid var(--bd);
   text-align:center;font-family:var(--mono);letter-spacing:.01em}
 .tt{position:fixed;z-index:60;max-width:270px;background:var(--bg2);border:1px solid var(--bd2);
@@ -1121,6 +1223,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
       <div class="subh">Procesos del backend</div>
       <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
+      <div class="nota" id="procNota" style="display:none"></div>
     </div>
   </div>
 
@@ -1212,7 +1315,30 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 
 <div class="tt" id="tt"></div>
 <script>
-const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
+const CPT = 4, F = {format: n => fmtNum(n, 0)}, PAGE = 10;
+const F1 = {format: n => fmtNum(n, 1)};
+// Formato de números del panel: punto de miles SIEMPRE, coma decimal y signo menos. No se usa
+// `Intl.NumberFormat('es')`: el español no agrupa los números de cuatro cifras (8003), y la opción
+// que lo arregla (`useGrouping:'always'`) un navegador sin Intl v3 la convierte en `true` y vuelve
+// a pintar 8003 sin avisar. Sin `toFixed` para no mezclar dos maneras de redondear.
+function fmtNum(n, decimales){
+  if(n===null || n===undefined || !isFinite(n)) return '–';
+  const d = decimales || 0, p = Math.pow(10, d);
+  const r = Math.round(Math.abs(n) * p);
+  const ent = Math.floor(r / p), frac = r - ent * p;
+  let s = String(ent).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  if(d > 0) s += ',' + String(frac).padStart(d, '0');
+  return (n < 0 && r > 0 ? '-' : '') + s;
+}
+// Latencias y duraciones en segundos con un decimal. Por debajo de 50 ms redondearía a «0,0 s»,
+// que se lee como «no tardó nada»: se dice «< 0,1 s».
+function fmtSeg(ms){
+  if(ms===null || ms===undefined || !isFinite(ms)) return '–';
+  if(ms < 50) return '< 0,1 s';
+  return F1.format(ms / 1000) + ' s';
+}
+// «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada, sin «(s)».
+function plural(n, uno, varios){ return fmtNum(n, 0) + ' ' + (n === 1 ? uno : varios); }
 const state = {events:[], stats:null, range:'today', auto:true, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
@@ -1336,10 +1462,11 @@ async function fetchData(){
     renderClients(state.stats);
     try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
-    const cnt = F.format(state.meta.count||0);
+    const cnt = plural(state.meta.count||0, 'evento', 'eventos');
     const filesN = (state.meta.files_read||[]).length;
     document.getElementById('foot').textContent =
-      (state.meta.log_dir||'') + '   ·   ' + cnt + ' eventos   ·   ' + filesN + ' archivo(s) leído(s)   ·   ~' + CPT
+      (state.meta.log_dir||'') + '   ·   ' + cnt + '   ·   '
+      + plural(filesN, 'archivo leído', 'archivos leídos') + '   ·   ~' + CPT
       + ' chars/token   ·   horas en ' + TZ + ' (' + TZ_OFFSET_TXT + ')   ·   local·delegate';
   }catch(e){
     document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
@@ -1365,18 +1492,18 @@ function renderClients(s){
 
   const cuerpo = filas.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
-    return '<tr><td>' + escHooks(c.client) + '</td>'
+    return '<tr><td class="mono">' + escHooks(c.client) + '</td>'
       + '<td class="num">' + F.format(c.calls) + '</td>'
       + '<td class="num" style="color:var(--tx2)">' + F.format(c.backend_calls) + '</td>'
-      + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_saved) + '</td>'
-      + '<td class="num" style="color:var(--cyan)">' + p.toFixed(1).replace('.', ',') + ' %</td></tr>';
+      + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_net) + '</td>'
+      + '<td class="num" style="color:var(--cyan)">' + F1.format(p) + ' %</td></tr>';
   }).join('');
 
   document.getElementById('clientsBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
-    + '<thead><tr><th>Cliente</th><th class="num">Delegaciones</th>'
-    + '<th class="num">Llamadas al backend</th><th class="num">Tokens ahorrados</th>'
-    + '<th class="num">Reparto</th></tr></thead>'
+    + '<thead><tr><th>Cliente</th><th>Delegaciones</th>'
+    + '<th>Llamadas al backend</th><th>Tokens netos</th>'
+    + '<th>Reparto</th></tr></thead>'
     + '<tbody>' + cuerpo + '</tbody></table></div>';
 }
 
@@ -1397,16 +1524,16 @@ function renderHooks(h){
   if(!h || !h.enabled || !h.total){ card.style.display='none'; return; }
   card.style.display='';
 
-  const pct = (h.rate*100).toFixed(1).replace('.', ',');
+  const pct = F1.format(h.rate*100);
   document.getElementById('hooksHead').textContent =
     F.format(h.suggested) + ' de ' + F.format(h.total) + ' (' + pct + ' %)';
 
   const filas = (h.by_category||[]).map(c=>{
     const p = c.total ? (c.suggested/c.total*100) : 0;
-    return `<tr><td>${escHooks(c.category)}</td>`
+    return `<tr><td class="mono">${escHooks(c.category)}</td>`
       + `<td class="num">${F.format(c.suggested)}</td>`
       + `<td class="num" style="color:var(--tx2)">${F.format(c.total)}</td>`
-      + `<td class="num" style="color:var(--amber)">${p.toFixed(1).replace('.', ',')} %</td></tr>`;
+      + `<td class="num" style="color:var(--amber)">${F1.format(p)} %</td></tr>`;
   }).join('');
 
   // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
@@ -1416,36 +1543,35 @@ function renderHooks(h){
   const totalRead = h.read_total || 0;
   const punteria = !motivos.length ? '' :
     '<div style="overflow-x:auto;margin-top:4px"><table>'
-    + '<thead><tr><th>Lecturas vistas</th><th class="num">Eventos</th>'
-    + '<th class="num">Reparto</th></tr></thead><tbody>'
+    + '<thead><tr><th>Lecturas vistas</th><th>Eventos</th>'
+    + '<th>Reparto</th></tr></thead><tbody>'
     + motivos.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
-        return '<tr><td>' + escHooks(m.motivo) + '</td>'
+        return '<tr><td class="mono">' + escHooks(m.motivo) + '</td>'
           + '<td class="num">' + F.format(m.total) + '</td>'
-          + '<td class="num" style="color:var(--amber)">' + p.toFixed(1).replace('.', ',') + ' %</td></tr>';
+          + '<td class="num" style="color:var(--amber)">' + F1.format(p) + ' %</td></tr>';
       }).join('')
     + '</tbody></table></div>';
 
   document.getElementById('hooksBody').innerHTML =
     '<div style="overflow-x:auto"><table>'
-    + '<thead><tr><th>Categoría</th><th class="num">Sugeridas</th>'
-    + '<th class="num">Vistas</th><th class="num">Tasa</th></tr></thead>'
+    + '<thead><tr><th>Categoría</th><th>Sugeridas</th>'
+    + '<th>Vistas</th><th>Tasa</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>'
     + punteria
-    + '<div class="empty" style="padding:10px 12px;text-align:left">'
+    + '<div class="nota">'
     + 'Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se '
     + 'siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué '
     + 'avisó el hook de lectura y por qué se calló en el resto.</div>';
 }
 
-// --- Backend local: /api/status (identidad, 1x/min) + /api/backend (montados, 2s) ---
+// --- Backend local: /api/status (identidad, 1x/min) + /api/backend (estado y modelos, 2s) ---
+// /api/status trae el catálogo, las tools y la versión; la lista de modelos y su estado salen del
+// sondeo de 2 s de /api/backend (REQ-021), a través del estado visible (REQ-028).
 async function fetchStatus(){
   try{
     const r = await fetch('/api/status'); const j = await r.json();
     state.status = j;
-    // status inicial de modelos (#901); el poll de 2s lo mantiene fresco después
-    state.modelStatus = state.modelStatus || {};
-    (((j.backend)||{}).models||[]).forEach(m=>{ if(m && m.id && m.status) state.modelStatus[m.id]=m.status; });
     if(j.version){ const v=document.getElementById('ver'); v.textContent='v'+j.version; v.style.display=''; }
     renderBackend(); renderTools();
   }catch(e){ /* el panel de backend es opcional: si falla, la web sigue funcionando */ }
@@ -1458,13 +1584,107 @@ function roleLabels(model){
   return ((state.status||{}).catalog||[]).filter(c=>c.model===model).map(c=>c.label);
 }
 
+// Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
+// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por fallos.py.
+const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
+// Estados de /running y motivos de espera local, en palabras (REQ-022).
+const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
+const PALABRAS_ESPERA = {plaza:'esperando plaza (máximo de llamadas a la vez)'};
+
+function vistaInicial(){
+  return {estado:'comprobando', disponible:false, ref:null, bueno:null, fallos:0, ultimo:null};
+}
+
+// Estado VISIBLE del backend (REQ-028), lo que pintan el badge y las filas. Un sondeo bueno lo
+// deja disponible al instante; un fallo tras uno bueno conserva lo que se pintaba (y el sondeo
+// bueno como referencia de las filas); el SEGUNDO fallo seguido lo pasa a caído. Sin ningún
+// sondeo bueno todavía, el primer fallo es «comprobando».
+function estadoVisible(prev, bj){
+  const UMBRAL = 2;   // fallos seguidos antes de «caído»
+  const p = prev || vistaInicial();
+  if(bj && bj.available) return {estado:'conectado', disponible:true, ref:bj, bueno:bj, fallos:0, ultimo:bj};
+  const fallos = (p.fallos||0) + 1;
+  if(fallos < UMBRAL && p.bueno)
+    return {estado:'conectado', disponible:true, ref:p.bueno, bueno:p.bueno, fallos, ultimo:bj};
+  if(fallos < UMBRAL)
+    return {estado:'comprobando', disponible:false, ref:bj, bueno:null, fallos, ultimo:bj};
+  return {estado:'caido', disponible:false, ref:bj, bueno:p.bueno, fallos, ultimo:bj};
+}
+
+// Badge del backend (REQ-014) a partir del estado visible: {texto, clase, title}.
+function badgeBackend(vista, baseUrl){
+  const v = vista || vistaInicial(), u = v.ultimo || {};
+  if(v.estado==='conectado'){
+    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detalle||u.etiqueta||'sin respuesta') : '';
+    return {texto:'conectado', clase:'up', title:(baseUrl||'')+aviso};
+  }
+  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detalle||''};
+  const et = u.etiqueta || u.causa || 'sin respuesta';
+  if(CAUSAS_CONTESTA[u.causa]) return {texto:et, clase:'warn', title:u.detalle||''};
+  return {texto:'caído · '+et, clase:'down', title:u.detalle||''};
+}
+
+// Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
+function chipEstado(status){
+  if(status===null || status===undefined || status==='') return null;
+  return (status==='loaded' || status==='unloaded') ? status : 'neutral';
+}
+
+// Filas de modelos (REQ-021): lo que expone el backend más el catálogo, ordenado por el primer rol
+// que lo usa (mecánico, largo, código, visión) y después por id. Con y sin conexión, lo mismo.
+function ordenModelos(ids, catalog){
+  const cat = catalog || [], todos = [];
+  (ids||[]).forEach(id=>{ if(id && !todos.includes(id)) todos.push(id); });
+  cat.forEach(c=>{ if(c && c.model && !todos.includes(c.model)) todos.push(c.model); });
+  const pos = id => { const k = cat.findIndex(c=>c && c.model===id); return k<0 ? cat.length : k; };
+  return todos.sort((a,b)=> (pos(a)-pos(b)) || (a<b ? -1 : a>b ? 1 : 0));
+}
+
+// Texto de la fila de un modelo (tabla de REQ-022, en orden: gana la primera). «En vuelo» sale del
+// último /api/inflight; running, status y running_ok, del sondeo de REFERENCIA del estado visible.
+function estadoModelo(o){
+  const vista = o.vista || vistaInicial(), ref = vista.ref || {}, disponible = !!vista.disponible;
+  const llamadas = (o.inflight||[]).filter(it=>it && it.model===o.modelo);
+  const enVuelo = llamadas.length>0;
+  const esperaLocal = enVuelo && llamadas.every(it=>it.espera_local!==undefined && it.espera_local!==null);
+  const run = (ref.running||[]).find(r=>r && r.model===o.modelo);
+  const running = run ? (run.state||'ready') : null;
+  const mod = (ref.models||[]).find(m=>m && m.id===o.modelo);
+  const status = mod ? mod.status : null;
+  const fila = (texto, title) => ({texto, title:title||'', atenuada:!disponible});
+  if(!disponible && enVuelo) return fila('esperando al backend');
+  if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
+    +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
+  if(enVuelo && esperaLocal){
+    const motivos = [];
+    llamadas.forEach(it=>{ const m = PALABRAS_ESPERA[it.espera_local] || String(it.espera_local);
+      if(!motivos.includes(m)) motivos.push(m); });
+    return fila('en cola local', 'esperando dentro de local-delegate: '+motivos.join(', '));
+  }
+  if(!ref.running_ok && enVuelo) return fila('en curso');
+  if(!ref.running_ok) return fila(status==='loaded' ? 'montado' : 'frío');
+  if(running==='starting') return fila('cargando');
+  if(running==='ready' && enVuelo) return fila('procesando');
+  if(running==='ready') return fila('montado');
+  if(enVuelo){
+    const lista = (ref.running||[]).filter(r=>r && r.model)
+      .map(r=>r.model+' '+(PALABRAS_RUNNING[r.state||'ready'] || r.state));
+    return fila('esperando turno', lista.length
+      ? 'llama-swap aún no lo atiende; en /running: '+lista.join(', ')
+      : 'llama-swap aún no lo atiende; /running está vacío');
+  }
+  if(running==='stopping') return fila('descargando');
+  return fila('frío');
+}
+
 function renderBackend(){
-  const st = state.status; if(!st) return;
-  const up = state.backendUp!==undefined ? state.backendUp : !!(st.backend&&st.backend.available);
+  const st = state.status || {};
+  const vista = state.vista || vistaInicial();
+  const b = badgeBackend(vista, st.base_url);
   const pill = document.getElementById('backendPill');
-  pill.className = 'pill '+(up?'up':'down');
-  pill.textContent = up?'conectado':'caído';
-  pill.title = st.base_url||'';
+  pill.className = 'pill '+b.clase;
+  pill.textContent = b.texto;
+  pill.title = b.title;
   // Dónde corre la INFERENCIA: loopback = esta máquina; cualquier otro host = GPU remota
   // (p. ej. esta Mac contra el llama-swap de la PC). El MCP y la lectura de 'path' son
   // siempre locales — esta insignia habla del cómputo, no de los archivos.
@@ -1480,30 +1700,40 @@ function renderBackend(){
       oPill.style.display='';
     } else { oPill.style.display='none'; }
   }
-  // ids desde el backend + catálogo. El status loaded/unloaded (#901) sale de state.modelStatus,
-  // refrescado en el poll rápido de 2s (no del /api/status de 60s) para que "montado" no se desfase.
-  const statusById = state.modelStatus || {};
-  const ids = [];
-  (((st.backend)||{}).models||[]).forEach(m=>{
-    const id = (typeof m==='string') ? m : (m&&m.id); if(id && !ids.includes(id)) ids.push(id);
-  });
-  (st.catalog||[]).forEach(c=>{ if(!ids.includes(c.model)) ids.push(c.model); });
-  const busyModels = new Set((state.inflight||[]).map(it=>it.model));
+  // Las filas salen del sondeo de REFERENCIA (el último bueno mientras se conserva «disponible»),
+  // no del último: un fallo suelto no las toca (REQ-028).
+  const ref = vista.ref || {};
+  const ids = ordenModelos((ref.models||[]).map(m=>(typeof m==='string') ? m : (m&&m.id)), st.catalog);
+  const statusById = {};
+  (ref.models||[]).forEach(m=>{ if(m && m.id) statusById[m.id] = m.status; });
   const body = document.getElementById('modelsBody');
   if(!ids.length){
-    body.innerHTML = '<div class="empty" style="padding:16px">El backend no expone modelos ('+(st.base_url||'?')+').</div>';
+    body.innerHTML = '<div class="empty" style="padding:16px">'+(vista.disponible
+      ? 'El backend no expone modelos ('+escHooks(st.base_url||'?')+').' : 'Consultando el backend…')+'</div>';
     return;
   }
+  const PUNTO = {'montado':'ready', 'cargando':'starting', 'descargando':'starting',
+    'esperando turno':'starting', 'en cola local':'starting', 'esperando al backend':'starting',
+    'procesando':'busy', 'en curso':'busy'};
   body.innerHTML = ids.map(m=>{
-    const busy = busyModels.has(m);
-    const run = state.running[m];
-    const loaded = statusById[m]==='loaded' || run==='ready';   // #901 o /running
-    const cls = (loaded?'ready':(run&&run!=='ready'?'starting':'')) + (busy?' busy':'');
-    const stateTxt = busy?'procesando':(loaded?'montado':(run&&run!=='ready'?run:'frío'));
+    const e = estadoModelo({modelo:m, vista, inflight:state.inflight});
+    const busy = !e.atenuada && (e.texto==='procesando' || e.texto==='en curso');
+    const cls = (PUNTO[e.texto]||'') + (busy && PUNTO[e.texto]!=='busy' ? ' busy' : '');
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
-    const badge = statusById[m] ? `<span class="mstatus ${statusById[m]}">${statusById[m]}</span>` : '';
-    return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span>${badge}</div>`;
+    const chip = chipEstado(statusById[m]);
+    const badge = chip ? `<span class="mstatus ${chip}">${escHooks(statusById[m])}</span>` : '';
+    const filaCls = (busy?' busy':'') + (e.atenuada?' atenuada':'');
+    return `<div class="mrow${filaCls}"><span class="mdot ${cls}"></span><span class="mname">${escHooks(m)}</span>${roles}`
+      + `<span class="mstate" title="${escHooks(e.title)}">${e.texto}</span>${badge}</div>`;
   }).join('');
+}
+
+// Lo que dice la tarjeta de métricas de llama-swap sin datos (REQ-020): la versión solo se culpa
+// con un 404; con cualquier otra causa, su etiqueta corta.
+function textoStats(j){
+  if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
+  if(j && j.etiqueta) return 'sin datos: '+j.etiqueta;
+  return 'sin datos';
 }
 
 // #898: métricas de actividad que llama-swap persiste en SQLite (proxy /api/backend/stats).
@@ -1511,11 +1741,12 @@ function renderBackendStats(j){
   const el = document.getElementById('backendStats'); if(!el) return;
   const head = document.getElementById('bstatsHead');
   if(!j || !j.available || !j.stats){
-    el.innerHTML = '<div class="empty" style="padding:12px">sin datos (requiere llama-swap ≥ v236)</div>';
+    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detalle)||'')+'">'
+      + escHooks(textoStats(j))+'</div>';
     if(head) head.textContent=''; return;
   }
   const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
-  const f1 = x => (x==null ? '–' : (Math.round(x*10)/10));
+  const f1 = x => F1.format(x);   // sin dato, «–» (lo pone fmtNum)
   if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' req') : '';
   el.innerHTML = `<div class="bstats">
     <div class="bstat"><div class="bk">gen tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
@@ -1533,19 +1764,17 @@ function renderTools(){
     : '<span class="tchip">sin datos</span>';
 }
 
+// Sondeos de 2 s (REQ-026): /api/inflight y /api/backend van POR SEPARADO, cada uno con su guarda
+// (como mucho una petición de cada uno en vuelo) y su siguiente vuelta programada 2 s después de
+// que TERMINE la anterior. Así un /api/backend lento no congela «En curso», y una llamada manual
+// (pestaña visible, «Refrescar») con otra en vuelo no lanza una segunda.
+const SONDEO = {inflight:false, backend:false, tInflight:null, tBackend:null};
+
 async function pollInflight(){
-  if(document.visibilityState!=='visible') return;
+  if(document.visibilityState!=='visible' || SONDEO.inflight) return;
+  SONDEO.inflight = true;
   try{
-    const [ir, br] = await Promise.all([fetch('/api/inflight'), fetch('/api/backend')]);
-    const ij = await ir.json(), bj = await br.json();
-    state.backendUp = !!bj.available;
-    if(bj.origin) state.backendOrigin = bj.origin;
-    if(bj.host) state.backendHost = bj.host;
-    state.running = {};
-    if(bj.available) (bj.running||[]).forEach(m=>{ if(m.model) state.running[m.model]=m.state||'ready'; });
-    // #901 fresco cada 2s: loaded/unloaded por modelo (antes solo llegaba vía /api/status a 60s)
-    state.modelStatus = {};
-    (bj.models||[]).forEach(m=>{ if(m && m.id && m.status) state.modelStatus[m.id]=m.status; });
+    const ij = await (await fetch('/api/inflight')).json();
     state.inflight = ij.inflight||[];
     const serverNow = Date.parse(ij.now), lastMs = ij.last_event_ts ? Date.parse(ij.last_event_ts) : 0;
     state.activity = {
@@ -1558,7 +1787,36 @@ async function pollInflight(){
     state.lastEvent = ij.last_event || null;
     renderBackend(); renderTools(); updateLive(); renderInflight();
   }catch(e){ /* el panel de inflight es opcional: si falla, la web sigue funcionando */ }
+  finally{
+    SONDEO.inflight = false;
+    clearTimeout(SONDEO.tInflight); SONDEO.tInflight = setTimeout(pollInflight, 2000);
+  }
 }
+
+async function pollBackend(){
+  if(document.visibilityState!=='visible' || SONDEO.backend) return;
+  SONDEO.backend = true;
+  try{
+    aplicarBackend(await (await fetch('/api/backend')).json());
+  }catch(e){ /* si el daemon no contesta, no es un sondeo del backend: no cambia el estado */ }
+  finally{
+    SONDEO.backend = false;
+    clearTimeout(SONDEO.tBackend); SONDEO.tBackend = setTimeout(pollBackend, 2000);
+  }
+}
+
+// Un sondeo de /api/backend: deriva el estado visible y, si acaba de volver (de no disponible a
+// disponible), refresca ya /api/status y /api/backend/stats sin esperar al ciclo de 60 s (REQ-027).
+function aplicarBackend(bj){
+  const prev = state.vista;
+  state.vista = estadoVisible(prev, bj);
+  if(bj && bj.origin) state.backendOrigin = bj.origin;
+  if(bj && bj.host) state.backendHost = bj.host;
+  if(prev && !prev.disponible && state.vista.disponible) fetchStatus();
+  renderBackend();
+}
+
+function sondearAhora(){ pollInflight(); pollBackend(); }
 
 // Pinta el panel "En curso". Se llama desde pollInflight (datos frescos, 2s) y desde updateLive
 // (1s), para que el "hace Ns" de la última terminada suba suave sin pedir nada al servidor.
@@ -1573,7 +1831,7 @@ function renderInflight(){
       const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
         <span class="badge model">${it.model}</span>${chunk}${org}
-        <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`;
+        <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} ·${F.format(it.chars_in||0)} chars</span></div>`;
     }).join('');
     head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
     return;
@@ -1587,7 +1845,7 @@ function renderInflight(){
     const skew = (state.activity && state.activity.skewMs) || 0;
     const hace = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
     const org = ev.backend ? `<span class="org ${ev.backend}">${ev.backend==='remote'?'remoto':'local'}</span>` : '';
-    const dur = ev.latency_ms!=null ? (ev.latency_ms/1000).toFixed(1)+'s · ' : '';
+    const dur = ev.latency_ms!=null ? escHooks(fmtSeg(ev.latency_ms))+' · ' : '';
     const marca = ev.ok===false
       ? '<span class="num" style="color:var(--red)">✕</span>'
       : '<span class="num" style="color:var(--ok)">✓</span>';
@@ -1599,7 +1857,8 @@ function renderInflight(){
   } else {
     body.innerHTML = '<div class="ifrow" style="color:var(--faint)">Sin delegaciones todavía</div>';
   }
-  head.innerHTML = 'En curso';
+  // REQ-024: lo que se pinta es la última terminada, no algo en curso.
+  head.innerHTML = (ev && ev.ts) ? 'Última delegación' : 'En curso';
 }
 
 function fmtHace(s){
@@ -1610,7 +1869,22 @@ function fmtHace(s){
 }
 
 // --- Sistema: /api/system (RAM/VRAM + procesos, 5s) ---
-function fmtMB(mb){ return mb>=1024 ? (mb/1024).toFixed(1)+' GiB' : F.format(Math.round(mb))+' MiB'; }
+// Los textos de la tarjeta que dependen de dónde corre el cómputo y de la plataforma (REQ-025).
+function textosSistema(j){
+  const plat = (j && j.platform) || '', remoto = !!(j && j.origin==='remote');
+  const nota = remoto
+    ? 'El backend corre en '+(j.host||'otra máquina')+': su RAM y VRAM se ven en el panel de esa máquina'
+    : null;
+  let procesosVacia = null;
+  if(!remoto) procesosVacia = (plat && plat!=='win32' && plat!=='linux')
+    ? 'La lista de procesos no está disponible en '+plat+' todavía.'
+    : 'Ningún proceso del backend detectado.';
+  const memoriaVacia = plat==='darwin'
+    ? 'RAM y VRAM no se miden en macOS todavía.'
+    : 'Métricas de sistema no disponibles en esta plataforma.';
+  return {nota, procesosVacia, memoriaVacia};
+}
+function fmtMB(mb){ return mb>=1024 ? F1.format(mb/1024)+' GiB' : F.format(Math.round(mb))+' MiB'; }
 function meterHTML(lbl,valTxt,pct){
   const col = pct>=88?'var(--danger)':pct>=70?'var(--amber)':'var(--acc)';
   return `<div class="meter-lbl"><span>${lbl}</span><span class="meter-val"><b>${valTxt}</b> · ${pct}%</span></div>
@@ -1621,17 +1895,26 @@ async function pollSystem(){
   try{
     const r = await fetch('/api/system'); const j = await r.json();
     let h = '';
-    if(j.ram) h += meterHTML('RAM de sistema', j.ram.used_gb.toFixed(1)+' / '+j.ram.total_gb.toFixed(1)+' GiB', j.ram.pct);
-    if(j.vram) h += meterHTML('VRAM', (j.vram.used_mb/1024).toFixed(1)+' / '+(j.vram.total_mb/1024).toFixed(1)+' GiB', j.vram.pct);
-    document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">Métricas de sistema no disponibles en esta plataforma.</div>';
+    if(j.ram) h += meterHTML('RAM de sistema', F1.format(j.ram.used_gb)+' / '+F1.format(j.ram.total_gb)+' GiB', j.ram.pct);
+    if(j.vram) h += meterHTML('VRAM', F1.format(j.vram.used_mb/1024)+' / '+F1.format(j.vram.total_mb/1024)+' GiB', j.vram.pct);
+    const t = textosSistema(j);
+    document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">'+escHooks(t.memoriaVacia)+'</div>';
     document.getElementById('gpuUtil').textContent = j.vram ? 'GPU '+j.vram.gpu_util_pct+'%' : '';
     const procs = j.processes||[];
     const tbl = document.getElementById('procTable');
+    // REQ-025: con cómputo remoto, la nota va siempre (es prosa: `.nota`, en Inter).
+    const nota = document.getElementById('procNota');
+    nota.innerHTML = t.nota ? escHooks(t.nota) : '';
+    nota.style.display = t.nota ? '' : 'none';
     if(!procs.length){
-      tbl.innerHTML='<tbody><tr><td style="color:var(--faint);border:0">Ningún proceso del backend detectado.</td></tr></tbody>';
+      // Estado vacío: `.empty` (mono), como los demás vacíos del panel. Con cómputo remoto no hay
+      // fila vacía: la nota es lo único que se ve.
+      tbl.innerHTML = t.procesosVacia
+        ? '<tbody><tr><td class="empty" style="padding:10px 8px;color:var(--faint);border:0">'+escHooks(t.procesosVacia)+'</td></tr></tbody>'
+        : '';
     }else{
       tbl.innerHTML = '<thead><tr><th>Proceso</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
-        + procs.map(p=>`<tr><td style="font-family:var(--mono)">${p.name}${p.self?'<span class="selfchip">DAEMON MCP</span>':''}</td>
+        + procs.map(p=>`<tr><td class="mono">${p.name}${p.self?'<span class="selfchip">DAEMON MCP</span>':''}</td>
             <td class="mono">${p.pid}</td><td class="mono">${fmtMB(p.ram_mb||0)}</td>
             <td class="mono">${p.vram_mb!=null?fmtMB(p.vram_mb):'—'}</td></tr>`).join('')
         + '</tbody>';
@@ -1650,7 +1933,7 @@ function updateLive(){
     live.classList.toggle('busy',cls==='busy'); txt.textContent=label; live.title=title; };
   if(state.inflight && state.inflight.length){
     const n=state.inflight.length;
-    return set('busy','EN CURSO'+(n>1?' ('+n+')':''), n+' delegación(es) ejecutándose ahora');
+    return set('busy','EN CURSO'+(n>1?' ('+n+')':''), plural(n,'delegación','delegaciones')+' ejecutándose ahora');
   }
   if(!a || !a.lastEventMs){ return set('stale','SIN DATOS','Todavía no hay ninguna delegación registrada'); }
   // el desfase entre el reloj del navegador y el del servidor se descuenta con a.skewMs
@@ -1669,57 +1952,91 @@ function kpiCard(o){
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
 
-// Contabilidad de UN evento. Espejo exacto de `_accounting` en metrics.py: las series por día se
+// Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `tokens_claude` en
+// server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
+// `coste-api-y-cuota` sustituye el cuerpo sin tocar la firma. Regla de hoy: text y returned,
+// cantidad÷4; output, el tokens_out reportado o cantidad÷4; image, el tokens_in reportado o 0.
+function tokensClaude(cantidad,tipo,e){
+  if(tipo==='text'||tipo==='returned') return tok(cantidad);
+  if(tipo==='output') return (e.tokens_out!==undefined&&e.tokens_out!==null) ? e.tokens_out : tok(cantidad);
+  if(tipo==='image') return (e.tokens_in!==undefined&&e.tokens_in!==null) ? e.tokens_in : 0;
+  throw new Error('tipo de conversión desconocido: '+tipo);
+}
+
+// Contabilidad de UN evento. Espejo exacto de `_accounting` en server.py: las series por día se
 // agrupan en el navegador (dependen de tu zona horaria) y no pueden venir del servidor, así que la
 // regla vive aquí también. `test_metrics.py` corre esta función con node y la compara con la de
 // Python: si divergen, el gráfico contradiría a la tarjeta que tiene encima.
+// Regla de contabilidad de la spec `panel-cuentas-y-estados-honestos`, letra a letra: un fallo
+// (`ok` exactamente false) no ahorra, no devuelve, no se estima y no genera; el neto es bruto menos
+// devuelto y puede ser negativo; lo ahorrado y lo devuelto pasan SOLO por `tokensClaude`.
 function acct(e){
+  const failed = e.ok===false;
   const ci = e.chars_in||0, co = e.chars_out||0;
   const calls = e.chunks || 1;            // `chunks` son LLAMADAS al backend; se omite cuando es 1
   const ti = e.tokens_in, to = e.tokens_out;
-  const estimated = (ti===undefined||ti===null) || (to===undefined||to===null);
+  const tiRep = ti!==undefined&&ti!==null, toRep = to!==undefined&&to!==null;
   // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen
   const unit = e.input_unit || (e.tool==='local_describe_image' ? 'bytes' : 'chars');
   const estimable = unit==='chars';
-  const tokensIn  = (ti!==undefined&&ti!==null) ? ti : (estimable ? tok(ci) : 0);
-  const tokensOut = (to!==undefined&&to!==null) ? to : tok(co);
-  let saved = 0;
-  if(e.source!=='path') saved = 0;
-  else if(estimable) saved = tok(ci);
-  else if(ti!==undefined&&ti!==null) saved = ti;
-  // La salida escrita a archivo tampoco entro al contexto: se SUMA al ahorro de entrada, porque
-  // una misma llamada puede ahorrar por los dos lados. Espejo de `_accounting` en server.py.
-  if(e.output_to_file) saved += tokensOut;
+  // Coste del modelo LOCAL (no pasa por tokensClaude). En un fallo, solo lo que reportó el backend.
+  const tokensIn  = tiRep ? ti : (failed ? 0 : (estimable ? tok(ci) : 0));
+  const tokensOut = toRep ? to : (failed ? 0 : tok(co));
+  const estimated = failed ? false : (!tiRep || !toRep);
+  const porPath = e.source==='path', aFichero = !!e.output_to_file;
+  let charsSavedText = 0, bytesSavedImage = 0, charsSavedOutput = 0, charsReturned = 0;
+  let saved = 0, returned = 0;
+  if(!failed){
+    if(porPath && estimable) charsSavedText = ci;
+    if(porPath && !estimable) bytesSavedImage = ci;   // la imagen, en BYTES
+    // La salida escrita a archivo no entró al contexto; el recibo no se registra (devuelto 0).
+    if(aFichero) charsSavedOutput = co;
+    const reclama = porPath && !aFichero && ((estimable && ci>0) || (!estimable && (ti||0)>0));
+    if(reclama) charsReturned = co;
+    if(porPath && estimable) saved += tokensClaude(charsSavedText,'text',e);
+    if(porPath && !estimable) saved += tokensClaude(bytesSavedImage,'image',e);
+    if(aFichero) saved += tokensClaude(charsSavedOutput,'output',e);
+    returned = tokensClaude(charsReturned,'returned',e);
+  }
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
   const fallback = !!e.model_requested;
   const cause = e.error_class || e.fallback_class || null;
-  return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, estimated:estimated,
-    fallback:fallback, cause:cause};
+  const copia = v => (v===undefined ? null : v);
+  return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
+    net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,
+    charsSavedText:charsSavedText, bytesSavedImage:bytesSavedImage,
+    charsSavedOutput:charsSavedOutput, charsReturned:charsReturned, failed:failed,
+    tool:copia(e.tool), model:copia(e.model), source:copia(e.source), unit:unit};
 }
 
 function render(){
   // el rango temporal ya lo aplicó el servidor (/api/events?from=&to=)
   const ev = state.events;
   const s = state.stats||{}; const tt = s.total||{};
-  const errs = tt.errors!==undefined ? tt.errors : ev.filter(e=>!e.ok).length;
+  const errs = tt.errors!==undefined ? tt.errors : ev.filter(e=>e.ok===false).length;
   const nEv  = tt.calls!==undefined ? tt.calls : ev.length;
-  const lat = ev.length? Math.round(ev.reduce((a,e)=>a+(e.latency_ms||0),0)/ev.length):0;
-  const errPct = nEv? (100*errs/nEv).toFixed(1):'0.0';
+  // Sin eventos no hay latencia media: «–», no «< 0,1 s».
+  const lat = ev.length? ev.reduce((a,e)=>a+(e.latency_ms||0),0)/ev.length : null;
+  const errPct = F1.format(nEv? 100*errs/nEv : 0);
+  // REQ-004: el KPI es el NETO (bruto − devuelto), que puede ser negativo; la pista dice los dos.
   const saved = s.tokens_context_saved||0;
+  const devuelto = s.tokens_returned||0;
+  const neto = s.tokens_context_net||0;
   const gen = s.tokens_generated_local||0;
   const costIn = s.tokens_local_input||0;
   const bCalls = s.backend_calls||nEv;
   const estN = s.estimated_events||0;
   // Las llamadas de más salen de trocear o de un respaldo que respondió: las dos gastan backend.
   const extra = bCalls>nEv ? ' (+'+F.format(bCalls-nEv)+' por trocear o saltar)' : '';
-  const estTxt = estN ? ' · '+F.format(estN)+' estimado(s)' : '';
+  const estTxt = estN ? ' · '+plural(estN,'estimado','estimados') : '';
   const fbN = s.fallback_events||0;
   const fbTxt = fbN ? ' · '+F.format(fbN)+' con salto' : '';
 
   document.getElementById('kpis').innerHTML =
-    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(saved),unit:'tok',
-       lbl:'Contexto conservado',hint:'lo que el MCP leyó y nunca entró a tu contexto',
-       tip:'Contenido leído server-side (source=path) que no viajó al contexto de Claude. Se cuenta UNA vez por delegación aunque se trocee: el trabajo extra de trocear lo pagó tu GPU, no el contexto.'})
+    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(neto),unit:'tok',
+       lbl:'Contexto conservado',
+       hint:'bruto <span class="num">'+F.format(saved)+'</span> − devuelto <span class="num">'+F.format(devuelto)+'</span>',
+       tip:'Neto: lo que el MCP leyó server-side (source=path) o escribió a un fichero y no viajó al contexto de Claude, menos lo que la tool devolvió a tu contexto. Se cuenta UNA vez por delegación aunque se trocee, y los fallos no suman. No descuenta relecturas: si luego lees tú el mismo fichero, eso no se resta.'})
     + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
        hint:'<span class="num">'+F.format(bCalls)+'</span> al backend'+extra+fbTxt,
        tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'})
@@ -1728,10 +2045,11 @@ function render(){
     + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
        hint:'entrada consumida por la GPU',
        tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso supera al contexto conservado en las delegaciones troceadas.'})
-    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:F.format(lat),unit:'ms',lbl:'Latencia media',
+    // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSeg` decide la forma entera.
+    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSeg(lat)),lbl:'Latencia media',
        hint:'incluye carga de modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Tasa de error',
-       hint:'<span class="num">'+F.format(errs)+'</span> fallos',tip:'Porcentaje de llamadas con ok=false.'});
+       hint:'<span class="num">'+F.format(errs)+'</span> '+(errs===1?'fallo':'fallos'),tip:'Porcentaje de llamadas con ok=false.'});
 
   if(HAS_CHART){
     drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
@@ -1752,8 +2070,8 @@ function byDay(ev){
   ev.forEach(e=>{ const d=new Date(e.ts); if(!isFinite(d)) return;
     const k=localDayKey(d);
     const a=acct(e);
-    const cur=m.get(k)||{saved:0,calls:0,backendCalls:0};
-    cur.saved+=a.saved; cur.calls++; cur.backendCalls+=a.calls; m.set(k,cur); });
+    const cur=m.get(k)||{net:0,calls:0,backendCalls:0};
+    cur.net+=a.net; cur.calls++; cur.backendCalls+=a.calls; m.set(k,cur); });
   return [...m.entries()].sort((a,b)=>a[0]<b[0]?-1:1);
 }
 
@@ -1762,16 +2080,18 @@ function fresh(id){ if(state.charts[id]) state.charts[id].destroy(); return docu
 function drawSpark(ev){
   const el=document.getElementById('spark'); if(!el) return;
   if(state.charts.spark) state.charts.spark.destroy();
-  // byDay ya devuelve `saved` EN TOKENS (via acct): no se vuelve a dividir entre 4
-  const days=byDay(ev); let acc=0; const data=days.map(([,v])=>{acc+=v.saved;return acc;});
-  const dmax=Math.max(1,...data);  // ancla el 0 al borde inferior: sin ahorro la linea no cruza el texto
+  // byDay ya devuelve el neto EN TOKENS (via acct): no se vuelve a dividir entre 4
+  const days=byDay(ev); let acc=0; const data=days.map(([,v])=>{acc+=v.net;return acc;});
+  // suggestedMin y no un mínimo fijo: el 0 sigue en el borde inferior mientras el acumulado sea
+  // positivo, y un neto negativo se ve por debajo en vez de quedarse pegado al borde (REQ-004).
+  const dmax=Math.max(1,...data);
   state.charts.spark = new Chart(el,{type:'line',
     data:{labels:days.map(d=>d[0]).length?days.map(d=>d[0]):[''],datasets:[{data:data.length?data:[0],
       borderColor:cssv('--acc'),borderWidth:2,pointRadius:0,tension:.4,fill:true,
       backgroundColor:c=>vGrad(c.chart,hexA(cssv('--acc'),0),hexA(cssv('--acc'),.32))}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:800},
       plugins:{legend:{display:false},tooltip:{enabled:false},centerText:false},
-      scales:{x:{display:false},y:{display:false,min:0,suggestedMax:dmax}}}});
+      scales:{x:{display:false},y:{display:false,suggestedMin:0,suggestedMax:dmax}}}});
 }
 
 function drawTs(ev){
@@ -1779,7 +2099,7 @@ function drawTs(ev){
   const acc=cssv('--acc'), blue=cssv('--blue'), grid=hexA(cssv('--bd'),.6), mut=cssv('--mut');
   state.charts.tsChart = new Chart(fresh('tsChart'),{
     data:{labels:days.map(d=>d[0]),datasets:[
-      {type:'bar',label:'tokens ahorrados',data:days.map(d=>d[1].saved),order:2,
+      {type:'bar',label:'tokens netos',data:days.map(d=>d[1].net),order:2,
         backgroundColor:c=>vGrad(c.chart,hexA(acc,.35),acc),hoverBackgroundColor:cssv('--acc2'),
         borderRadius:6,maxBarThickness:46},
       {type:'line',label:'delegaciones',data:days.map(d=>d[1].calls),order:1,yAxisID:'y1',
@@ -1794,9 +2114,12 @@ function drawTs(ev){
           ticks:{color:hexA(blue,.85),font:{family:MONO,size:10}}}}}});
 }
 
-function agg(ev,key,valfn){
+// `opts.conNegativos`: conserva las categorías con total negativo (solo descarta las de 0). Sin la
+// opción, como siempre: fuera las de 0 o menos (un donut no pinta porciones negativas).
+function agg(ev,key,valfn,opts){
+  const conNegativos = !!(opts && opts.conNegativos);
   const m=new Map(); ev.forEach(e=>m.set(e[key],(m.get(e[key])||0)+valfn(e)));
-  return [...m.entries()].filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  return [...m.entries()].filter(x=>conNegativos ? x[1]!==0 : x[1]>0).sort((a,b)=>b[1]-a[1]);
 }
 
 // barras horizontales (mejor que un donut para comparar magnitudes)
@@ -1819,7 +2142,9 @@ function barH(id,pairs,unit,color){
         y:{ticks:{color:cssv('--tx2'),font:{family:MONO,size:11}},grid:{display:false},border:{display:false}}}}});
 }
 
-function drawToolDonut(ev){ barH('toolDonut',agg(ev.filter(e=>e.source==='path'),'tool',e=>acct(e).saved),'tok',cssv('--acc')); }
+// Neto por herramienta, de TODAS las fuentes (la salida a fichero también ahorra) y con signo:
+// una herramienta que devuelve más de lo que ahorra sale a la izquierda del 0 (REQ-004).
+function drawToolDonut(ev){ barH('toolDonut',agg(ev,'tool',e=>acct(e).net,{conNegativos:true}),'tok',cssv('--acc')); }
 function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv('--violet')); }
 
 // Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
@@ -1866,7 +2191,7 @@ function drawSrcDonut(ev){
 }
 
 function drawActivity(ev){
-  document.getElementById('actCount').textContent=F.format(ev.length)+' llamadas';
+  document.getElementById('actCount').textContent=plural(ev.length,'llamada','llamadas');
   const pager=document.getElementById('pager');
   if(!ev.length){
     document.getElementById('activity').innerHTML='<tbody><tr><td class="empty">Sin actividad en el rango seleccionado.</td></tr></tbody>';
@@ -1875,7 +2200,7 @@ function drawActivity(ev){
   const pages=Math.max(1,Math.ceil(ev.length/PAGE));
   state.page=Math.min(Math.max(state.page,0),pages-1);
   const rows=ev.slice(state.page*PAGE,state.page*PAGE+PAGE);
-  let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Input</th><th>Cómputo</th><th class="mono">Chars in→out</th><th class="mono">Latencia</th><th>OK</th></tr></thead><tbody>';
+  let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Input</th><th>Cómputo</th><th>Chars in→out</th><th>Latencia</th><th>OK</th></tr></thead><tbody>';
   rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
     const orgTxt=org==='remote'?'remoto':org==='local'?'local':'n/d';
@@ -1883,14 +2208,14 @@ function drawActivity(ev){
     const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     const fb=e.model_requested?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
-    const causa=(!e.ok&&e.error_class)?` title="causa: ${e.error_class}"`:'';
+    const causa=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span>${fb}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
-      <td class="mono">${F.format(e.latency_ms||0)} ms</td>
-      <td><span class="dot ${e.ok?'ok':'err'}"${causa}></span></td></tr>`; });
+      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}</td>
+      <td><span class="dot ${e.ok===false?'err':'ok'}"${causa}></span></td></tr>`; });
   document.getElementById('activity').innerHTML=h+'</tbody>';
   pager.style.display = pages>1?'':'none';
   document.getElementById('pgInfo').innerHTML='<b>'+(state.page+1)+'</b> / '+pages;
@@ -1918,7 +2243,7 @@ document.getElementById('range').onchange=e=>{
 };
 document.getElementById('rangeFrom').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
 document.getElementById('rangeTo').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
-document.getElementById('reload').onclick=()=>{ fetchData(); pollInflight(); pollSystem(); fetchStatus(); };
+document.getElementById('reload').onclick=()=>{ fetchData(); sondearAhora(); pollSystem(); fetchStatus(); };
 document.getElementById('theme').onclick=()=>{
   const cur=document.documentElement.getAttribute('data-theme');
   const nx=cur==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',nx);
@@ -1934,7 +2259,6 @@ helpDlg.addEventListener('click',e=>{ if(e.target===helpDlg) helpDlg.close(); })
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);
-setInterval(pollInflight,2000);
 setInterval(pollSystem,5000);
 setInterval(fetchStatus,60000);
 // El indicador de actividad y el "hace Ns" del panel se repintan cada segundo aunque el
@@ -1944,11 +2268,12 @@ setInterval(()=>{ updateLive(); renderInflight(); },1000);
 // Los sondeos se pausan con la pestaña oculta; al volver, refresca ya en vez de esperar al
 // siguiente tick (antes se veía el estado congelado de hace horas).
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'){ pollInflight(); pollSystem(); if(state.auto) fetchData(); }
+  if(document.visibilityState==='visible'){ sondearAhora(); pollSystem(); if(state.auto) fetchData(); }
 });
 fetchData();
 fetchStatus();
-pollInflight();
+// Los sondeos de 2 s se encadenan solos (REQ-026): aquí solo se lanza la primera vuelta.
+sondearAhora();
 pollSystem();
 </script>
 </body>

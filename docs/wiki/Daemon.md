@@ -328,6 +328,11 @@ detectados. La insignia `DAEMON MCP` marca el proceso servidor compartido; debe 
 fila con esa insignia. No cuenta sesiones de Codex/Claude ni conexiones HTTP. Una sesión nueva no
 debe crear otra fila: solo abre otra conexión al mismo daemon.
 
+Con el backend en otra máquina, debajo de la tabla sale siempre la nota «El backend corre en
+`<host>`: su RAM y VRAM se ven en el panel de esa máquina», y sin procesos locales es lo único que
+sale. En una plataforma sin lista de procesos (hoy, macOS) la tabla vacía lo dice en vez de
+«Ningún proceso del backend detectado».
+
 Rollback: detén el servicio/tarea y restaura en cada cliente el bloque `command`/`args` de `stdio`:
 
 ```json

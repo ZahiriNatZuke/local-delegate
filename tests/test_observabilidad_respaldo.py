@@ -133,8 +133,14 @@ def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_pat
 @pytest.fixture
 def status_sin_red(monkeypatch):
     """`local_status` consulta backend, GPU y llama-swap: aquí solo interesa lo que dice del estado."""
-    monkeypatch.setattr(server, "_models_with_status", lambda: (False, []))
-    for nombre in ("_vram_info", "_ram_info", "_llamaswap_running", "_llamaswap_groups"):
+    # `local_status` sondea con `sondear_backend` y solo pide `/running` si el backend respondió
+    # (REQ-013), así que con este doble no hace falta doblar `_llamaswap_running`.
+    monkeypatch.setattr(
+        server,
+        "sondear_backend",
+        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
+    )
+    for nombre in ("_vram_info", "_ram_info", "_llamaswap_groups"):
         monkeypatch.setattr(server, nombre, lambda: None)
     monkeypatch.setattr(server, "_port_listening", lambda *_: False)
 
