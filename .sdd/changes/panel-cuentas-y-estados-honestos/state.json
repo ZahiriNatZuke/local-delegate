@@ -3,9 +3,9 @@
   "slug": "panel-cuentas-y-estados-honestos",
   "title": "Panel: los fallos no suman ahorro, los estados dicen la causa real y la presentación es coherente",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closing",
   "createdAt": "2026-10-06T14:06:24.210Z",
-  "updatedAt": "2026-10-06T17:28:25.940Z",
+  "updatedAt": "2026-10-06T17:50:21.487Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -126,6 +126,13 @@
       "at": "2026-10-06T17:28:25.940Z",
       "evidence": "Revisión del resultado (review.md): 33 REQ + Restricciones de entrega + Contrato con coste-api-y-cuota cumplen en código y tests, conforms-with-notes sin hallazgos bloqueantes ni importantes; 335 tests centrales re-ejecutados. Por decisión del usuario el daemon de esta PC queda con el código de la rama (versión anunciada 0.32.0).",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-06T17:50:21.487Z",
+      "reason": "PR #231 mezclado en main (4d56a9f); falta el gate de memoria"
     }
   ]
 }

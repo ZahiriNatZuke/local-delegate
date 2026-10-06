@@ -4,8 +4,9 @@ El hook recomendado es `UserPromptSubmit`, que solo sugiere. Los de lectura —`
 y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enable-read-hook` y
 están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
 bloquean si además se enciende `LD_HOOK_READ_BLOQUEAR` (ver «El bloqueo»). El que se **retiró** el
-2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Ninguno envía
-el prompt a otro modelo.
+2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Aparte va
+`anotar_llamada.py`, que no sugiere nada: anota quién pide cada delegación y se instala siempre.
+Ninguno envía el prompt a otro modelo.
 
 Los scripts se distribuyen **dentro del paquete**
 ([`src/local_delegate/resources/hooks/`](../../src/local_delegate/resources/hooks)): Python 3 puro,
@@ -92,6 +93,25 @@ delegación con el bloqueo.
 Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
 por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.
 
+### `anotar_llamada.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
+
+No sugiere, no avisa y no bloquea: no imprime nada y sale siempre con 0, también con una entrada
+rota. Su único trabajo es dejar una nota corta por cada llamada a una tool de local-delegate, con
+el `tool_use_id`, el agente (`agent_id`, `agent_type`), el esfuerzo (`effort.level` de la entrada
+del hook, nunca la variable `CLAUDE_EFFORT`, que se hereda del proceso padre) y la ruta del
+transcript. El servidor busca esa nota por `tool_use_id` al escribir la línea del log de uso y
+guarda quién pidió la delegación: `caller_kind` (`main` o `subagent`), `caller_agent_type`,
+`caller_effort` y `caller_model`, que saca de la cola del transcript que señala la nota. El log no
+guarda el id de sesión ni nada más del transcript.
+
+Con eso el panel puede valorar cada delegación con el precio del modelo que la pidió (ver
+[Savings & metrics](../wiki/Savings-and-metrics.md#coste-equivalente-a-precio-de-api)). Si la
+nota se pierde, la delegación no se rompe: queda para `local-delegate recalcular-coste`, que la
+atribuye después cruzando el log con los transcripts.
+
+Se registra **siempre** con `install`, no detrás de `--enable-read-hook`, porque no cambia nada
+de lo que ve Claude.
+
 ### `suggest_lint_summary.py` — retirado el 2026-09-08
 
 Detectaba comandos `lint|test|tsc|build|pytest|clippy|biome` antes de ejecutarlos y recomendaba
@@ -118,9 +138,9 @@ local-delegate install --no-skill --no-memory --no-mcp   # solo los hooks
 
 El comando copia los scripts a `~/.claude/hooks/local-delegate/` y registra en
 `~/.claude/settings.json` los que van encendidos. Es idempotente (reinstalar no duplica entradas),
-no toca hooks ajenos y se revierte con `local-delegate uninstall`. El hook de `Read` solo se
-registra con `--enable-read-hook`, así que **por defecto solo queda registrado el de
-`UserPromptSubmit`**.
+no toca hooks ajenos y se revierte con `local-delegate uninstall`. Los de lectura solo se
+registran con `--enable-read-hook`, así que **por defecto quedan registrados el de
+`UserPromptSubmit` y `anotar_llamada.py`**.
 
 El resultado en `settings.json` tiene esta forma:
 

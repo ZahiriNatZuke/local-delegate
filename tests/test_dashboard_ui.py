@@ -256,10 +256,14 @@ def test_el_rango_personalizado_ensena_los_dos_campos_de_fecha(panel):
 # procesos se simulan con `page.route` porque dependen de la telemetría y de la máquina; la
 # actividad, el KPI y «Quién delegó» salen del log de verdad, por el `/api/stats` real.
 
-# Una delegación buena por `path` con salida (bruto 10.000, devuelto 1.000, neto 9.000) y un fallo
-# por `path` que, con la regla de T1, no suma nada. Con `chars_out > 0` bruto y neto difieren, que
-# es lo que deja a los mutantes «hero con el bruto» y «columna con el bruto» a la vista.
-_BRUTO, _DEVUELTO, _NETO = 10_000, 1_000, 9_000
+# Una delegación buena por `path` con salida (bruto 16.597, devuelto 1.793, neto 14.804) y un
+# fallo por `path` que, con la regla de T1, no suma nada. Con `chars_out > 0` bruto y neto difieren,
+# que es lo que deja a los mutantes «hero con el bruto» y «columna con el bruto» a la vista.
+# coste-api-y-cuota: en tokens de Claude, con la fila fundida por el respaldo (Opus 5.5): 40.000
+# chars por `path` sin extensión (clase `otro`, respaldo (3), c = 2,41) → 40000 × 100 // 241 =
+# 16.597; 4.000 chars devueltos en prosa sin numerar (c = 2,23) → 4000 × 100 // 223 = 1.793.
+_CHARS_LEIDOS, _CHARS_DEVUELTOS = 40_000, 4_000
+_BRUTO, _DEVUELTO, _NETO = 16_597, 1_793, 14_804
 
 _HOOKS = {
     "enabled": True,
@@ -324,8 +328,8 @@ def _log_presentacion() -> str:
             **comun,
             "ts": ahora.isoformat(timespec="seconds"),
             "tool": "local_summarize",
-            "chars_in": 4 * _BRUTO,
-            "chars_out": 4 * _DEVUELTO,
+            "chars_in": _CHARS_LEIDOS,
+            "chars_out": _CHARS_DEVUELTOS,
             "latency_ms": 2000,
             "ok": True,
             "tokens_in": 9000,
@@ -512,6 +516,81 @@ def test_la_nota_de_computo_remoto_sale_en_Inter_y_sin_fila_vacia(tmp_path, monk
     assert m["familia"].startswith("Inter"), m["familia"]
     assert "Ningún proceso del backend detectado" not in m["procesos"]
     assert "RAM y VRAM no se miden en macOS todavía" in m["memoria"]
+
+
+# --- Coste equivalente, cuota e imágenes (coste-api-y-cuota, T6) -------------------------------
+
+
+def test_los_bloques_de_coste_cuota_e_imagenes(tmp_path, monkeypatch):
+    """El panel pinta lo que trae `/api/stats`: el rótulo del coste con su nota de tarifa plana, la
+    cuota «sin calibrar» (sin `coste-agregados.json` en esta carpeta) y el número de imágenes. Las
+    líneas son prosa (`.nota`, en Inter)."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    ahora = datetime.now(UTC)
+    medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+    paso = min(timedelta(seconds=30), (ahora - medianoche_local) / 2)
+    comun = {"ok": True, "client": "claude-code", "backend": "local", "model": "modelo-de-prueba"}
+    eventos = [
+        {
+            **comun,
+            "ts": ahora.isoformat(timespec="seconds"),
+            "tool": "local_summarize",
+            "source": "path",
+            "path": "C:/docs/notas.md",
+            "chars_in": 1_000_000,
+            "chars_out": 0,
+            "tokens_in": 9000,
+            "tokens_out": 100,
+        },
+        {
+            **comun,
+            "ts": (ahora - paso).isoformat(timespec="seconds"),
+            "tool": "local_describe_image",
+            "source": "path",
+            "chars_in": 250000,
+            "chars_out": 800,
+            "tokens_in": 1200,
+            "tokens_out": 200,
+        },
+    ]
+    (tmp_path / f"usage-{ahora:%Y%m}.jsonl").write_text(
+        "\n".join(json.dumps(e, ensure_ascii=False) for e in eventos) + "\n", encoding="utf-8"
+    )
+    metrics._FILE_CACHE.clear()
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(servidor.url)
+        pagina.wait_for_selector("#costeBody .nota")
+        pagina.wait_for_selector("#cuotaBody .nota")
+        pagina.wait_for_selector("#imagenesBody .nota")
+        m = pagina.evaluate(
+            """() => ({
+              coste: document.getElementById('costeBody').innerText,
+              cuota: document.getElementById('cuotaBody').innerText,
+              cuotaHead: document.getElementById('cuotaHead').innerText,
+              imagenes: document.getElementById('imagenesBody').innerText,
+              familia: getComputedStyle(document.querySelector('#costeBody .nota')).fontFamily,
+              desglose: document.querySelectorAll('#costeBody tbody tr').length,
+            })"""
+        )
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert "Equivalente estimado a precio de API: entre $" in m["coste"]
+    # Sin relleno: Opus 5.5 en subagente con N = 40 → $2,50 y ~$6,50 (escenario de la spec).
+    assert "entre $2,50 y ~$6,50" in m["coste"]
+    assert "No es dinero que hayas ahorrado: tu suscripción es de tarifa plana." in m["coste"]
+    assert "1 de 1 con modelo supuesto: Opus 5.5 en subagente" in m["coste"]
+    assert m["desglose"] == 1
+    assert "sin calibrar" in m["cuota"]
+    assert "%" not in m["cuota"].replace("dispersión", "")  # ningún % de cuota sin calibrar
+    assert m["cuotaHead"] == "sin calibrar"
+    assert "1 imagen" in m["imagenes"]
+    assert "250.000 bytes" in m["imagenes"]
+    assert m["familia"].startswith("Inter"), m["familia"]
 
 
 @pytest.mark.skipif(

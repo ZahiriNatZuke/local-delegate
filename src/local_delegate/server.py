@@ -38,6 +38,7 @@ from . import (
     cadenas,
     clients,
     config,
+    coste,
     enfriamiento,
     estado_json,
     fallos,
@@ -383,8 +384,12 @@ def _validar_destino(target: str, overwrite: bool) -> Path:
     return p
 
 
-def _escribir_destino(p: Path, contenido: str) -> str:
-    """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto."""
+def _escribir_destino(p: Path, contenido: str, *, evento: dict) -> str:
+    """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto.
+
+    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): el recibo dice los caracteres
+    y los tokens de **Claude** que no entraron (REQ-035).
+    """
     # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
     # llega aquí sin él y el archivo saldría sin newline al final — cosa que la mitad de los
     # linters marca y que ensucia el diff de la primera línea que alguien añada después.
@@ -397,9 +402,8 @@ def _escribir_destino(p: Path, contenido: str) -> str:
         fh.write(contenido)
     recibo = f"[escrito] {p}\n{contenido.count(chr(10)):,} líneas, {len(contenido):,} chars"
     if config.FEEDBACK_ENABLED:
-        recibo += (
-            f" (≈{len(contenido) // config.CHARS_PER_TOKEN:,} tokens que no entraron a tu contexto)"
-        )
+        tokens = tokens_claude(len(contenido), tipo="output", evento=evento)
+        recibo += f" (≈{tokens:,} tokens de Claude que no entraron a tu contexto)"
     return recibo
 
 
@@ -547,6 +551,23 @@ def _log_event(
             quien = None
         if quien:
             rec["client"] = quien
+        # Quién pidió la delegación por dentro: el `tool_use_id` que manda Claude Code y, con la
+        # nota del hook y la cola del transcript, el modelo, el hilo y el esfuerzo de quien llama
+        # (coste-api-y-cuota, REQ-001 y REQ-003). Su propio `try ... except Exception`: el general
+        # de abajo solo atrapa `OSError`, y un fallo de la resolución no puede llevarse la línea
+        # ni salir de esta función. Nunca se escribe el id de sesión.
+        try:
+            tool_use_id = clients.tool_use_id_actual()
+            if tool_use_id:
+                rec["tool_use_id"] = tool_use_id
+                from . import atribucion
+
+                rec.update(atribucion.llamada_actual())
+        except Exception:
+            # Silencio intencionado: la atribución es observación. Si falla, la línea se escribe
+            # igual sin esos campos; registrar aquí podría fallar otra vez, y observar nunca
+            # puede romper la tool que se está anotando.
+            pass
         # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
         # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite
         # cuando vale 1, así que quien agregue debe leerlo como `chunks or 1`.
@@ -621,28 +642,26 @@ _TIPOS_CLAUDE = ("text", "returned", "output", "image")
 def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
     """Convierte lo ahorrado o lo devuelto a tokens de **Claude**. Única conversión del paquete.
 
-    `_accounting` (y su espejo JS `tokensClaude`) no dividen nunca por `CHARS_PER_TOKEN` para
-    `saved`, `returned` o `net`: pasan por aquí. El cambio `coste-api-y-cuota` sustituye el cuerpo
-    sin tocar la firma ni los nombres; `evento` es la fila cruda del log para que la sustituta
-    pueda leer la tool, la extensión de `path` o el modelo.
+    `_accounting` (y su espejo JS `tokensClaude`) pasan por aquí para `saved`, `returned` y `net`.
+    `evento` es la fila **fundida** del log (`coste.fundir`, coste-api-y-cuota REQ-006): trae en
+    `densidad[tipo]` el `[c100, origen]` ya resuelto por `coste.resolver_densidad`. Esta función
+    no resuelve nada, solo divide (REQ-033):
 
-    Regla de hoy (cifra intermedia: ninguna release la publica sola):
-
-    - `text` y `returned`: `cantidad ÷ 4` (caracteres).
-    - `output`: el `tokens_out` que reportó el backend si existe; si no, `cantidad ÷ 4`.
-    - `image`: el `tokens_in` que reportó el backend si existe; si no, 0 (`cantidad` son bytes).
+    - `image`, o una fila sin `densidad[tipo]` (una imagen, o una fila sin fundir): 0. Una fusión
+      olvidada da un 0 visible, nunca una cifra con una densidad inventada.
+    - si no, `cantidad × 100 // c100` (`c100` = caracteres por token de Claude, en centésimas).
 
     Los tokens del modelo LOCAL (`tokens_in`, `tokens_out`, coste local) no pasan por aquí.
     """
-    if tipo in ("text", "returned"):
-        return cantidad // config.CHARS_PER_TOKEN
-    if tipo == "output":
-        reportado = evento.get("tokens_out")
-        return int(reportado) if reportado is not None else cantidad // config.CHARS_PER_TOKEN
+    if tipo not in _TIPOS_CLAUDE:
+        raise ValueError(f"tipo de conversión desconocido: {tipo!r} (válidos: {_TIPOS_CLAUDE})")
     if tipo == "image":
-        reportado = evento.get("tokens_in")
-        return int(reportado) if reportado is not None else 0
-    raise ValueError(f"tipo de conversión desconocido: {tipo!r} (válidos: {_TIPOS_CLAUDE})")
+        return 0
+    densidad = evento.get("densidad")
+    celda = densidad.get(tipo) if isinstance(densidad, dict) else None
+    if not celda:
+        return 0
+    return cantidad * 100 // int(celda[0])
 
 
 def _accounting(row: dict) -> dict:
@@ -1347,15 +1366,18 @@ class _ModeloVigente:
         return _aviso_respaldo(self.salto, desde)
 
 
-def _savings_feedback(chars_in: int, tokens_in: int | None, label: str, char_estimate: bool) -> str:
-    """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side."""
-    tokens = tokens_in
-    if tokens is None and char_estimate:
-        tokens = chars_in // config.CHARS_PER_TOKEN
-    if tokens is None:
-        return ""
+def _savings_feedback(chars_in: int, label: str, *, evento: dict) -> str:
+    """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side.
+
+    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): los tokens son de **Claude**
+    (`tokens_claude`, REQ-035), nunca el `tokens_in` del modelo local. Una imagen dice solo los
+    bytes: sin dimensiones no hay forma de saber sus tokens de Claude (REQ-038).
+    """
+    if coste.es_imagen(evento):
+        return f"\n\n(leído server-side: {chars_in:,} {label} que no entraron a tu contexto)"
+    tokens = tokens_claude(chars_in, tipo="text", evento=evento)
     return (
-        f"\n\n(leído server-side: {chars_in:,} {label} ≈ {tokens:,} tokens "
+        f"\n\n(leído server-side: {chars_in:,} {label} ≈ {tokens:,} tokens de Claude "
         "que no entraron a tu contexto)"
     )
 
@@ -1376,7 +1398,6 @@ def _chat(
     response_format: dict | None = None,
     json_schema_fallback: bool = False,
     feedback_label: str = "chars",
-    feedback_char_estimate: bool = True,
     feedback: bool = True,
     input_unit: str = "chars",
     strip_fences: bool = False,
@@ -1474,16 +1495,19 @@ def _chat(
     # tal cual, igual que en cualquier otra tool.
     if write_to is not None and result.ok:
         return (
-            _escribir_destino(write_to, text)
+            _escribir_destino(
+                write_to,
+                text,
+                evento=coste.fila_en_vuelo(tool=tool, source=source, path=path),
+            )
             + (aviso_truncado if truncated_out else "")
             + aviso_respaldo
         )
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        text += _savings_feedback(
-            chars_in, result.tokens_in, feedback_label, feedback_char_estimate
-        )
+        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path, input_unit=input_unit)
+        text += _savings_feedback(chars_in, feedback_label, evento=evento)
     return text
 
 
@@ -1781,7 +1805,8 @@ def _chat_chunked(
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        text += _savings_feedback(len(content), tokens_in, "chars", True)
+        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(procesado en {calls} trozos por local-delegate)"
     return text
@@ -2114,7 +2139,8 @@ def _chat_map_reduce(
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        text += _savings_feedback(len(content), tokens_in, "chars", True)
+        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
     return text
@@ -2556,9 +2582,11 @@ def local_extract(
         meta["truncado"] = True
         meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
     if path and config.FEEDBACK_ENABLED:
+        # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
+        evento = coste.fila_en_vuelo(tool="local_extract", source="path", path=path)
         meta["leido_server_side"] = {
             "chars": len(content),
-            "tokens_aprox": len(content) // config.CHARS_PER_TOKEN,
+            "tokens_aprox": tokens_claude(len(content), tipo="text", evento=evento),
         }
     if info_respaldo:
         # Con el resto de metadatos, nunca dentro de los campos que el agente usa tal cual.
@@ -3021,7 +3049,6 @@ def local_describe_image(
         raw_len=raw_len,
         path=path,
         feedback_label="bytes imagen",
-        feedback_char_estimate=False,
         input_unit="bytes",
     )
 
@@ -3350,22 +3377,24 @@ def local_status() -> str:
     saved_tokens = 0
     net_tokens = 0
     if current_log.is_file():
+        registros: list[dict] = []
         with current_log.open(encoding="utf-8") as f:
             for raw_line in f:
                 raw_line = raw_line.strip()
                 if not raw_line:
                     continue
                 try:
-                    rec = json.loads(raw_line)
+                    registros.append(json.loads(raw_line))
                 except json.JSONDecodeError:
                     continue
-                n_events += 1
-                # Misma contabilidad que el dashboard: si aquí se sumara `chars_in // 4` a mano,
-                # esta tool y el panel darían números distintos del MISMO log.
-                acc = _accounting(rec)
-                backend_calls += acc["backend_calls"]
-                saved_tokens += acc["saved"]
-                net_tokens += acc["net"]
+        # Misma fusión y misma contabilidad que el dashboard (coste-api-y-cuota, REQ-006): sin
+        # fundir, la fila no trae su densidad y esta tool daría 0 donde el panel da la cifra.
+        for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
+            n_events += 1
+            acc = _accounting(rec)
+            backend_calls += acc["backend_calls"]
+            saved_tokens += acc["saved"]
+            net_tokens += acc["net"]
     lines.append("")
     lines.append(f"Log (mes actual): {current_log}")
     lines.append(

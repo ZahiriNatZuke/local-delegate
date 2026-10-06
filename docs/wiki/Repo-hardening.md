@@ -13,6 +13,7 @@ tanto se revisa en un PR) y lo que solo existe en los **ajustes de GitHub**.
 | `scripts/ci_gate.py` | el job `ci-gate`: da el veredicto del run mirando los **steps** de cada job, para que un job que GitHub deja sin cerrar no bloquee un merge |
 | `.github/workflows/codeql.yml` | análisis estático de seguridad (semanal + en cada PR) |
 | `.github/workflows/publish.yml` | publicación por OIDC/Trusted Publishing: **sin tokens en secrets**. `permissions: {}` global, ampliado solo en el job |
+| `.github/workflows/vigilante-precios.yml` | cada lunes compara la tabla oficial de precios y el artículo de límites de uso con los del repo, y abre un PR si cambian. **Único workflow con permisos de escritura** (ver [Vigilante de precios y límites](#vigilante-de-precios-y-límites)) |
 | `.github/dependabot.yml` | PRs semanales de dependencias Python y de GitHub Actions |
 | `.github/CODEOWNERS` | asignación automática de revisión |
 | `SECURITY.md` | canal privado de reporte y superficie a tener en cuenta |
@@ -362,6 +363,52 @@ conviene saberlo antes de salir a buscar un bug que no existe.
 La comprobación diaria compara contra el **manifiesto**, no contra la red — si no, dependería de un
 servicio ajeno y dejaría de ser determinista. La *procedencia* se verifica cuando cambia, es decir
 al actualizar la versión, que es lo que documenta el procedimiento de arriba.
+
+## Vigilante de precios y límites
+
+El equivalente a precio de API del panel (ver
+[Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) sale de una tabla
+de precios que viaja **en el paquete** (`src/local_delegate/resources/datos/precios.json`): el
+panel no usa la red para calcular. Una tabla así se queda vieja en silencio, y por eso hay un
+vigilante. Sigue el patrón de `vendor-audit.yml`: workflow propio con cron y un script de **solo
+stdlib** (`scripts/vigilante_precios.py`), sin instalar nada. Es el **único** sitio del proyecto
+que usa la red para esto.
+
+| Job | Qué mira | Qué hace si cambia |
+|---|---|---|
+| `precios` | la tabla «Model pricing» de la página oficial, contra `precios.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consultado` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
+| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recalcular-coste --reiniciar-calibracion …`) |
+
+**Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
+cabecera de la tabla, si extrae menos de 5 filas o si un precio no se lee como número; en el de
+límites, si el texto extraído tiene menos de 500 caracteres o no aparece el título. Un parseo vacío
+que pasara por «sin cambios» sería el peor resultado posible: el vigilante callado y la tabla
+vieja. Los controles del parseo corren en la suite normal, sin red, con copias guardadas de las dos
+páginas en `tests/` y la tabla esperada congelada en el propio test (así el PR del vigilante, que
+cambia la del paquete, no los rompe).
+
+**Permisos, y por qué cada uno:**
+
+- `contents: write`. Los commits del PR se crean por la **API de contenidos**, que GitHub firma
+  en nombre del bot. Un `git commit` + `push` desde el runner saldría sin firma, y el ruleset de
+  `main` lo dejaría `BLOCKED` con el CI entero en verde.
+- `pull-requests: write`, para abrir o actualizar el PR y comentar en él.
+- `actions: write`. Un PR abierto con `GITHUB_TOKEN` **no** dispara los workflows de
+  `pull_request`, así que el ruleset nunca vería sus checks requeridos. El propio vigilante lanza
+  por `workflow_dispatch` `ci.yml` y `codeql.yml` sobre la rama del PR (los dos tienen ese
+  disparador para esto) y espera a que terminen. Si `main` avanzó, antes actualiza la rama por la
+  API («update branch») y vuelve a lanzarlos.
+
+**La salida si se queda bloqueado.** Puede que el análisis de CodeQL lanzado así no cumpla la regla
+`code_scanning` del PR, o que los commits del bot choquen con
+`require_extra_approval_for_unattributed_changes`. En ese caso el vigilante lo dice en un
+comentario del PR, y la salida es **cerrarlo y reabrirlo a mano**: la reapertura por una persona
+dispara los workflows de `pull_request` con normalidad. Socket y GitGuardian no son checks
+requeridos y no bloquean.
+
+Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo (`consultado` = hoy) en la
+rama `vigilante/ensayo`, con «[ensayo]» en el título: sirve para probar el circuito entero en
+GitHub, y ese PR se cierra sin mezclar.
 
 ## Qué se publica y qué no
 

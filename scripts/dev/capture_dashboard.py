@@ -115,7 +115,7 @@ def _escribir_manifiesto(png: Path, version: str) -> Path:
 
 # Datos de ejemplo. La semilla fija hace la captura reproducible; los nombres de archivo y el
 # host remoto son inventados a propósito para no filtrar nada de la máquina real.
-SEED_AND_MOCK = """() => {
+SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   const TOOLS = ['local_summarize','local_translate','local_extract','local_classify',
     'local_lint_summary','local_boilerplate','local_commit_msg','local_explain_code',
     'local_describe_image','local_delegate'];
@@ -126,6 +126,30 @@ SEED_AND_MOCK = """() => {
     local_delegate:'gemma3-4b'};
   let seed = 20260728;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+
+  // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolver_densidad`
+  // en Python); el JS del panel solo divide. Sin `densidad`, `tokensClaude` da 0 y las series por
+  // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
+  // `nueva`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
+  const DENS = DENSIDAD.familias.nueva;
+  const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
+    local_explain_code: 'codigo'};
+  const celda = (columna, clase) => {
+    if (DENS[columna][clase]) return [DENS[columna][clase], 'medida'];
+    return [DENS.sin_numerar[clase], 'sin_numerar'];
+  };
+  const densidadDe = (tool, porPath) => {
+    if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
+    const clase = CLASE_TOOL[tool] || 'prosa';
+    const devuelta = tool === 'local_extract' ? 'estructurado'
+      : (tool === 'local_boilerplate' ? 'codigo' : 'prosa');
+    return {
+      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'medida'],
+      returned: [DENS.sin_numerar[devuelta], 'medida'],
+      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'medida'],
+    };
+  };
+  const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
 
   const now = new Date();
   const events = [];
@@ -150,6 +174,7 @@ SEED_AND_MOCK = """() => {
         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
+        familia: 'nueva', densidad: densidadDe(tool, path),
       });
     }
   }
@@ -161,12 +186,11 @@ SEED_AND_MOCK = """() => {
   // números a mano: se derivan de los mismos eventos de ejemplo, con las reglas de
   // `_accounting()`. Cuando no cuadraban, la imagen se contradecía a sí misma: el pie decía
   // «390 eventos» y el KPI de al lado «120 delegaciones».
-  const CPT = 4;
   const stats = events.reduce((a, e) => {
     const chunks = e.chunks || 1;
-    // `chars_in` de local_describe_image son BYTES, no caracteres: ahí estimar por chars no
-    // significa nada y el token real es el único orden de magnitud honesto.
-    const estimable = e.tool !== 'local_describe_image';
+    // `chars_in` de local_describe_image son BYTES, no caracteres. Una imagen sale entera del
+    // neto (no hay forma de saber sus tokens de Claude) y se cuenta aparte, en «Imágenes».
+    const imagen = e.tool === 'local_describe_image';
     a.calls += 1;
     a.backend_calls += chunks;
     a.tokens_in += e.tokens_in;
@@ -174,16 +198,61 @@ SEED_AND_MOCK = """() => {
     // Un fallo (`ok` exactamente false) no ahorra ni devuelve nada: solo cuenta como error y
     // con los tokens que gastó el backend.
     if (e.ok === false) { a.errors += 1; return a; }
+    if (imagen) {
+      if (e.source === 'path') {
+        a.img_n += 1; a.img_bytes += e.chars_in;
+        if (e.tokens_in > 0) a.img_devueltos += e.chars_out;
+      }
+      return a;
+    }
     // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
     if (e.source === 'path') {
-      a.saved += estimable ? Math.floor(e.chars_in / CPT) : e.tokens_in;
+      a.saved += aTokens(e.chars_in, e.densidad.text);
       // Lo que la tool devolvió al contexto se resta: el KPI enseña el NETO.
-      const reclama = estimable ? e.chars_in > 0 : e.tokens_in > 0;
-      if (reclama) a.returned += Math.floor(e.chars_out / CPT);
+      if (e.chars_in > 0) a.returned += aTokens(e.chars_out, e.densidad.returned);
     }
     return a;
   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
-      errors: 0});
+      errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
+
+  // Coste equivalente y cuota de ejemplo. Salen de correr `valoracion.bloque_coste` y
+  // `cuota.estado` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
+  // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
+  // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
+  // que verá casi todo el mundo: nunca se enseña un % sin calibración.
+  const COSTE = {cifra: {cota_baja: 6.87, estimacion: 27.4}, motivo: null, eventos: 98,
+    T: 1241362,
+    barra: {excluido: 22, al_momento: 94, por_relleno: 0, pendiente: 4, supuesto: 0,
+      valoradas: 98, con_modelo_supuesto: 4,
+      excluidas_por_motivo: {'no es Claude': 15, pruebas: 7}, plazo_dias: 30},
+    respaldo: {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent',
+      invalido: false, variable: 'LOCAL_DELEGATE_COSTE_RESPALDO'},
+    n_origen: {relleno: 0, agregado: 0, declarado: 98}, n_declarado: {main: 127, subagent: 40},
+    densidad: {origen: {medida: 74, sin_numerar: 24, conservadora: 0}, familias: {nueva: 98},
+      familia_supuesta: 0, densidad_de_la_familia: 0},
+    sin_precio: {n: 0, ids: []},
+    fuera_de_la_base: {imagenes: stats.img_n, salida_a_fichero: 0},
+    desglose: [
+      {modelo: 'claude-opus-5', nombre: 'Opus 5', hilo: 'main', esfuerzo: 'high', casos: 17,
+       T: 191044, cota_baja: 1.91, estimacion: 14.04},
+      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'high',
+       casos: 69, T: 880897, cota_baja: 4.4, estimacion: 11.45},
+      {modelo: 'claude-sonnet-5-5', nombre: 'Sonnet 5.5', hilo: 'subagent', esfuerzo: 'medium',
+       casos: 8, T: 117678, cota_baja: 0.29, estimacion: 1.24},
+      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'sin dato',
+       casos: 4, T: 51743, cota_baja: 0.26, estimacion: 0.67},
+    ],
+    tabla: {consultado: PRECIOS_CONSULTADO,
+      fuente: 'https://platform.claude.com/docs/en/about-claude/pricing'},
+    comando: 'local-delegate recalcular-coste'};
+  const CUOTA = {
+    five_hour: {deriva: false, puntos: 1, estado: 'sin calibrar',
+      motivo: 'faltan 2 puntos del statusline', puntos_rechazo: 1,
+      descartes: {contaminado: 1, delta_pequeno: 2}, reinicio: null},
+    seven_day: {deriva: false, puntos: 0, estado: 'sin calibrar',
+      motivo: 'faltan 3 puntos del statusline', puntos_rechazo: 0,
+      descartes: {delta_pequeno: 3}, reinicio: null},
+    hay_agregados: true, comando: 'local-delegate recalcular-coste'};
 
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
@@ -243,7 +312,12 @@ SEED_AND_MOCK = """() => {
          tokens_saved: 24880, tokens_net: 22950, tokens_in: 29010, tokens_generated: 2410},
         {client: 'desconocido', calls: 15, backend_calls: 18,
          tokens_saved: 7180, tokens_net: 6640, tokens_in: 8640, tokens_generated: 690},
-      ]},
+      ],
+      // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
+      // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
+      coste: COSTE, cuota: CUOTA,
+      imagenes: {n: stats.img_n, bytes: stats.img_bytes, chars_devueltos: stats.img_devueltos},
+      densidad_tabla: DENSIDAD},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
@@ -331,6 +405,21 @@ REFRESH = """async () => {
 }"""
 
 
+def _tablas_del_paquete() -> dict:
+    """La tabla de densidad y la fecha de la de precios, leídas del paquete (no son datos de nadie).
+
+    Se leen del fichero en vez de copiarlas al mock para que la captura no se quede con unos
+    valores que el vigilante de precios o una medida nueva ya cambiaron.
+    """
+    datos = ROOT / "src" / "local_delegate" / "resources" / "datos"
+    densidad = json.loads((datos / "densidad.json").read_text(encoding="utf-8"))
+    precios = json.loads((datos / "precios.json").read_text(encoding="utf-8"))
+    return {
+        "DENSIDAD": {k: v for k, v in densidad.items() if not k.startswith("_")},
+        "PRECIOS_CONSULTADO": precios.get("consultado"),
+    }
+
+
 async def run(url: str, out: Path, width: int, timezone: str) -> int:
     try:
         from playwright.async_api import async_playwright
@@ -360,7 +449,7 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             )
             page = await context.new_page()
             await page.goto(url, wait_until="networkidle")
-            total = await page.evaluate(SEED_AND_MOCK)
+            total = await page.evaluate(SEED_AND_MOCK, _tablas_del_paquete())
             info = await page.evaluate(REFRESH)
             if info["canvas"] < 6 or not info["filas"]:
                 print(f"el panel no se pobló como se esperaba: {info}", file=sys.stderr)

@@ -143,12 +143,38 @@ def test_describe_image_feedback_uses_real_tokens(monkeypatch, tmp_path):
         )
     )
     text = server.local_describe_image(path)
-    assert "leído server-side: 68 bytes imagen ≈ 300 tokens" in text
+    # coste-api-y-cuota, REQ-035/038: la coletilla de una imagen dice solo los bytes leídos. Los
+    # 300 `prompt_tokens` son del modelo LOCAL, no tokens de Claude.
+    assert "(leído server-side: 68 bytes imagen que no entraron a tu contexto)" in text
+
+
+@backend_mock.mock
+def test_la_coletilla_de_imagen_no_tiene_tokens(monkeypatch, tmp_path):
+    """REQ-035: ninguna cifra de tokens en la coletilla de `local_describe_image`."""
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
+    path = _write_png(tmp_path)
+    backend_mock.post("http://test-backend/v1/chat/completions").mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "descripción"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 300, "completion_tokens": 5},
+            },
+        )
+    )
+    text = server.local_describe_image(path)
+    assert "(leído server-side" in text  # guarda: hay coletilla que mirar
+    coletilla = text.split("(leído server-side", 1)[1]
+    assert "tokens" not in coletilla
+    assert "300" not in coletilla
 
 
 @backend_mock.mock
 def test_describe_image_omits_feedback_when_no_usage(monkeypatch, tmp_path):
-    """Sin usage.prompt_tokens no se estima con chars/4: esa heurística no aplica a bytes de imagen."""
+    """Sin usage.prompt_tokens no se estima con chars/4: esa heurística no aplica a bytes de imagen.
+    Desde coste-api-y-cuota (REQ-035) la coletilla ya no lleva tokens, así que sale siempre, con
+    los bytes y nada más."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
     path = _write_png(tmp_path)
@@ -159,7 +185,8 @@ def test_describe_image_omits_feedback_when_no_usage(monkeypatch, tmp_path):
         )
     )
     text = server.local_describe_image(path)
-    assert "leído server-side" not in text
+    assert "(leído server-side: 68 bytes imagen que no entraron a tu contexto)" in text
+    assert "≈" not in text
 
 
 def test_validate_image_path_accepts_all_supported_extensions(tmp_path):

@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lo lanza el vigilante de precios sobre la rama de su PR (REQ-025): un PR abierto con
+  # GITHUB_TOKEN no dispara `pull_request`.
+  workflow_dispatch:
 
 # Least privilege: CI solo lee el repo. Cualquier job que necesite más permisos los declara
 # explícitamente (ver publish.yml, que pide `id-token: write` para OIDC).

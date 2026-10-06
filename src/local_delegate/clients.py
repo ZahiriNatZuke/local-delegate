@@ -98,6 +98,46 @@ def cliente_actual() -> str | None:
     return _CLIENTE_ACTUAL.get()
 
 
+# El `tool_use_id` que Claude Code manda en `_meta["claudecode/toolUseId"]` de cada `tools/call`
+# (coste-api-y-cuota, REQ-001). Es el mismo id que reciben los hooks y que queda en el transcript,
+# así que es lo que deja cruzar una línea del log con quien la pidió. Otros clientes (Codex,
+# scripts) no lo mandan: entonces vale `None` y la línea no lleva el campo.
+CLAVE_TOOL_USE_ID = "claudecode/toolUseId"
+
+_TOOL_USE_ID_ACTUAL: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_tool_use_id_actual", default=None
+)
+
+# Memoria de ESTA petición: un dict nuevo por petición, puesto por el middleware. Es un dict y no
+# un valor porque el handler de la tool corre en el threadpool con una COPIA del contexto: un
+# `set()` hecho allí no volvería, pero mutar el mismo dict sí se ve desde todos los que lo leen.
+# Nada vive en un dict del módulo, que en el daemon crecería sin límite.
+_MEMORIA_PETICION: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
+    "local_delegate_memoria_peticion", default=None
+)
+
+
+def tool_use_id_actual() -> str | None:
+    """El `tool_use_id` de la petición en curso, o `None` si el cliente no lo mandó o no hay una."""
+    return _TOOL_USE_ID_ACTUAL.get()
+
+
+def memoria_de_peticion() -> dict | None:
+    """El dict de la petición en curso (para memorizar lo que se calcula una vez), o `None`."""
+    return _MEMORIA_PETICION.get()
+
+
+def _tool_use_id_de(ctx: Any) -> str | None:
+    """Lee `claudecode/toolUseId` del `_meta` de la petición. Medido con el SDK instalado: llega
+    como dict en `ctx.meta` (y también en `ctx.params["_meta"]`)."""
+    meta = getattr(ctx, "meta", None)
+    if not isinstance(meta, dict):
+        params = getattr(ctx, "params", None)
+        meta = params.get("_meta") if isinstance(params, dict) else None
+    valor = meta.get(CLAVE_TOOL_USE_ID) if isinstance(meta, dict) else None
+    return valor if isinstance(valor, str) and valor else None
+
+
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
@@ -270,6 +310,13 @@ async def observar_cliente(ctx: Any, call_next: Any) -> Any:
             # Se pone ANTES de `call_next` a propósito: es lo que hace que el handler de la tool
             # —que corre dentro de ese await— lo vea. Después no firmaría nada.
             _CLIENTE_ACTUAL.set(getattr(client_info, "name", None))
+        except Exception:
+            pass  # observar es best-effort; jamás propaga a la respuesta del cliente
+        try:
+            # Va en su propio `try`: un fallo leyendo la identidad no puede llevarse el
+            # `tool_use_id`, ni al revés. Y también ANTES de `call_next`, por lo mismo de arriba.
+            _TOOL_USE_ID_ACTUAL.set(_tool_use_id_de(ctx))
+            _MEMORIA_PETICION.set({})
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
     return await call_next(ctx)

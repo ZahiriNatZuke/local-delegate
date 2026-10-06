@@ -17,7 +17,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, server
+from local_delegate import config, coste, server
 from local_delegate.web import metrics
 
 
@@ -623,8 +623,8 @@ def test_stats_separates_local_and_remote_compute(tmp_path, monkeypatch):
         .json()
     )
     by_backend = {b["backend"]: b for b in data["by_backend"]}
-    assert by_backend["local"]["tokens_saved"] == 1000
-    assert by_backend["remote"]["tokens_saved"] == 2000
+    assert by_backend["local"]["tokens_saved"] == 1659  # 4000 × 100 // 241
+    assert by_backend["remote"]["tokens_saved"] == 3319  # 8000 × 100 // 241
     assert by_backend["remote"]["hosts"] == ["pc.ts.net:9292"]
     # los eventos previos al campo no se cuentan como locales: quedan como "unknown"
     assert by_backend["unknown"]["calls"] == 1
@@ -721,15 +721,24 @@ def _ev(**kw) -> dict:
     return base
 
 
+def _resuelta(fila: dict) -> dict:
+    """La fila como la entrega `_load` en producción: fundida y con su densidad resuelta
+    (coste-api-y-cuota, REQ-006). Sin relleno ni `caller_model`, toma el respaldo declarado (Opus
+    5.5, familia nueva). `_ev` no trae `path`: clase `otro`, que en `formato_read` cae en el
+    respaldo (3), la mayor `c` sin numerar de la familia, 2,41; lo devuelto es prosa sin numerar,
+    2,23; la salida, prosa sin numerar, 2,23."""
+    return coste.fundir_fila(fila)
+
+
 def test_accounting_una_llamada_sin_trocear():
-    a = metrics._accounting(_ev(tokens_in=1100, tokens_out=90))
+    a = metrics._accounting(_resuelta(_ev(tokens_in=1100, tokens_out=90)))
     assert a == {
         "backend_calls": 1,
         "tokens_in": 1100,
         "tokens_out": 90,
-        "saved": 1000,  # chars_in ÷ 4: el contenido que no entró al contexto
-        "returned": 100,  # chars_out ÷ 4: lo que la tool devolvió al contexto
-        "net": 900,
+        "saved": 1659,  # 4000 chars × 100 // 241: el contenido que no entró al contexto
+        "returned": 179,  # 400 chars × 100 // 223: lo que la tool devolvió al contexto
+        "net": 1480,
         "estimated": False,
         "fallback": False,
         "cause": None,
@@ -748,11 +757,16 @@ def test_accounting_una_llamada_sin_trocear():
 
 def test_accounting_troceado_separa_ahorro_de_coste():
     """El caso que da nombre al change, con los números del evento REAL del log."""
-    a = metrics._accounting(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    a = metrics._accounting(
+        _resuelta(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    )
     assert a["backend_calls"] == 4  # cuatro llamadas al backend, no una
     assert a["tokens_in"] == 26131  # coste real, con el prompt de sistema repetido 4 veces
-    assert a["saved"] == 21044  # ahorro: el documento UNA vez, no cuatro
-    assert a["tokens_in"] > a["saved"]  # el troceo lo paga la GPU, no el contexto
+    assert a["saved"] == 34928  # ahorro: el documento UNA vez (84178 × 100 // 241), no cuatro
+    # El troceo lo paga la GPU, no el contexto: el coste local supera una pasada del documento en
+    # tokens LOCALES (84178 ÷ 4 = 21044). Antes se comparaba con `saved`, que ya no está en la
+    # misma unidad (tokens de Claude).
+    assert a["tokens_in"] > 21044
 
 
 def test_accounting_sin_tokens_estima_y_lo_declara():
@@ -764,24 +778,30 @@ def test_accounting_sin_tokens_estima_y_lo_declara():
 def test_accounting_imagen_usa_el_token_real_y_no_los_bytes():
     """chars_in son BYTES del PNG: dividirlos entre 4 inventaba un ahorro ×48."""
     a = metrics._accounting(
-        _ev(
-            tool="local_describe_image",
-            input_unit="bytes",
-            chars_in=504780,
-            tokens_in=2758,
-            tokens_out=37,
+        _resuelta(
+            _ev(
+                tool="local_describe_image",
+                input_unit="bytes",
+                chars_in=504780,
+                tokens_in=2758,
+                tokens_out=37,
+            )
         )
     )
-    assert a["saved"] == 2758
+    # coste-api-y-cuota, REQ-038: la imagen sale entera del neto (0 tokens de Claude); el token
+    # real del backend se queda en el coste local, y los bytes en su campo del contrato.
+    assert a["saved"] == 0
     assert a["tokens_in"] == 2758
+    assert a["bytes_saved_image"] == 504780
 
 
 def test_accounting_imagen_historica_sin_marca_se_reconoce_por_la_tool():
     """Los eventos anteriores al campo `input_unit` no se pueden reescribir: hay 4 en el log."""
     a = metrics._accounting(
-        _ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37)
+        _resuelta(_ev(tool="local_describe_image", chars_in=504780, tokens_in=2758, tokens_out=37))
     )
-    assert a["saved"] == 2758
+    assert a["saved"] == 0  # REQ-038: la imagen no suma tokens de Claude
+    assert (a["unit"], a["bytes_saved_image"]) == ("bytes", 504780)  # se reconoció por la tool
 
 
 def test_accounting_imagen_sin_token_real_no_inventa_numero():
@@ -875,23 +895,25 @@ def test_accounting_fallo_troceado_conserva_el_coste_real():
 
 
 def test_accounting_neto_resta_lo_devuelto():
-    a = metrics._accounting(dict(_NETO_RESTA))
-    assert a.get("returned") == 100
-    assert a["saved"] == 1000
-    assert a.get("net") == 900
+    a = metrics._accounting(_resuelta(dict(_NETO_RESTA)))
+    assert a.get("returned") == 179  # 400 × 100 // 223
+    assert a["saved"] == 1659  # 4000 × 100 // 241
+    assert a.get("net") == 1480
 
 
 def test_accounting_salida_a_fichero_no_descuenta_el_recibo():
-    a = metrics._accounting(dict(_SALIDA_A_FICHERO))
-    assert a.get("net") == 950
-    assert a["saved"] == 950
+    a = metrics._accounting(_resuelta(dict(_SALIDA_A_FICHERO)))
+    assert a.get("net") == 1793  # 4000 chars de salida × 100 // 223 (prosa sin numerar)
+    assert a["saved"] == 1793
     assert a.get("returned") == 0, "el recibo de dos líneas no se registra: se toma 0"
 
 
 def test_accounting_el_neto_puede_ser_negativo():
-    a = metrics._accounting(_ev(chars_in=400, chars_out=800, tokens_in=120, tokens_out=200))
-    assert a.get("net") == -100
-    assert (a["saved"], a.get("returned")) == (100, 200)
+    a = metrics._accounting(
+        _resuelta(_ev(chars_in=400, chars_out=800, tokens_in=120, tokens_out=200))
+    )
+    assert a.get("net") == -193
+    assert (a["saved"], a.get("returned")) == (165, 358)  # 400 × 100 // 241 y 800 × 100 // 223
 
 
 def test_accounting_desglosa_en_caracteres():
@@ -906,11 +928,13 @@ def test_accounting_desglosa_en_caracteres():
     assert s.get("chars_saved_output") == 4000
     assert (s.get("chars_returned"), s.get("chars_saved_text")) == (0, 0)
 
-    i = metrics._accounting(dict(_IMAGEN_POR_PATH))
+    i = metrics._accounting(_resuelta(dict(_IMAGEN_POR_PATH)))
     assert i.get("bytes_saved_image") == 250000, "la imagen va en BYTES, en su propio campo"
     assert i.get("chars_saved_text") == 0
     assert i.get("chars_returned") == 800
-    assert (i["saved"], i.get("returned"), i.get("net")) == (1200, 200, 1000)
+    # coste-api-y-cuota, REQ-038: los campos del contrato no cambian, pero la imagen sale entera
+    # del neto (ni lo leído ni lo devuelto).
+    assert (i["saved"], i.get("returned"), i.get("net")) == (0, 0, 0)
     assert (i.get("unit"), i.get("tool")) == ("bytes", "local_describe_image")
 
     f = metrics._accounting(dict(_FALLO_SIN_TOKENS, tool="local_summarize", model="m"))
@@ -949,7 +973,7 @@ def test_stats_distingue_delegaciones_de_llamadas_al_backend(tmp_path, monkeypat
     assert j["total"]["calls"] == 2
     assert j["backend_calls"] == 5
     assert j["tokens_local_input"] == 27231
-    assert j["tokens_context_saved"] == 22044
+    assert j["tokens_context_saved"] == 36587  # 4000 × 100 // 241 + 84178 × 100 // 241
     assert j["estimated_events"] == 0
     tool = j["by_tool"][0]
     assert tool["backend_calls"] == 5 and tool["tokens_in"] == 27231
@@ -990,15 +1014,15 @@ def test_stats_el_log_sintetico_de_la_mac_no_infla_nada(tmp_path, monkeypatch):
     ]
     j = _stats_de(tmp_path, monkeypatch, buenas + fallos)
     assert j["estimated_events"] == 0
-    assert j["tokens_context_saved"] == 4 * 1000, "solo suman las 4 buenas"
+    assert j["tokens_context_saved"] == 4 * 1659, "solo suman las 4 buenas"  # 4000 × 100 // 241
     assert j["tokens_generated_local"] == 4 * 90
-    assert j.get("tokens_returned") == 4 * 100
+    assert j.get("tokens_returned") == 4 * 179  # 400 × 100 // 223
     assert j.get("tokens_context_net") == j["tokens_context_saved"] - j.get("tokens_returned", 0)
 
 
 def test_stats_ok_null_no_cuenta_como_error():
     """REQ-006: el predicado de fallo es `ok` exactamente `false`, igual que en la contabilidad."""
-    j = metrics._aggregate([_ev(ok=None), _ev()])
+    j = metrics._aggregate([_resuelta(_ev(ok=None)), _resuelta(_ev())])
     assert j["total"]["errors"] == 0
     assert j["by_tool"][0]["errors"] == 0
 
@@ -1018,23 +1042,24 @@ def test_stats_expone_el_desglose_en_caracteres(tmp_path, monkeypatch):
     assert j.get("bytes_saved_image") == 250000
     assert j.get("chars_saved_output") == 4000
     assert j.get("chars_returned") == 400 + 800
-    assert j.get("tokens_returned") == 100 + 200
-    assert j["tokens_context_saved"] == 1000 + 950 + 1200
-    assert j.get("tokens_context_net") == 900 + 950 + 1000
+    # Neto de texto 1659 − 179, salida a fichero 4000 × 100 // 223 = 1793, imagen 0 (REQ-038).
+    assert j.get("tokens_returned") == 179 + 0
+    assert j["tokens_context_saved"] == 1659 + 1793 + 0
+    assert j.get("tokens_context_net") == 1480 + 1793 + 0
     assert j["total"]["errors"] == 1
 
 
 def test_stats_quien_delego_trae_el_neto():
     j = metrics._aggregate(
         [
-            _ev(client="claude-code", **_NETO_RESTA),
-            _ev(client="claude-code", **_FALLO_SIN_TOKENS),
+            _resuelta(_ev(client="claude-code", **_NETO_RESTA)),
+            _resuelta(_ev(client="claude-code", **_FALLO_SIN_TOKENS)),
         ]
     )
     fila = j["by_client"][0]
-    assert fila.get("tokens_net") == 900, "el fallo no suma y el devuelto se resta"
-    assert j["by_tool"][0].get("tokens_net") == 900
-    assert j["by_backend"][0].get("tokens_net") == 900
+    assert fila.get("tokens_net") == 1480, "el fallo no suma y el devuelto se resta"  # 1659 − 179
+    assert j["by_tool"][0].get("tokens_net") == 1480
+    assert j["by_backend"][0].get("tokens_net") == 1480
 
 
 def test_el_js_usa_un_solo_predicado_de_fallo():
@@ -1102,9 +1127,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     if node is None:
         pytest.skip("node no está en el PATH")
 
-    tokens_claude_js = _extraer_funcion_js(metrics.HTML, "function tokensClaude(")
-    acct_js = _extraer_funcion_js(metrics.HTML, "function acct(e){")
-    casos = [
+    crudos = [
         # --- Los 12 casos de REQ-001, en este orden ---------------------------------------
         _ev(tokens_in=1100, tokens_out=90),  # neto positivo
         _ev(ok=False, error="connect_error", chars_out=144),  # fallo sin tokens
@@ -1162,7 +1185,74 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             error_class="sin_clasificar",
             chunks=3,
         ),
+        # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
+        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `medida`.
+        _ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", tokens_in=1100, tokens_out=90),
+        # La misma prosa inline, escrita a fichero: columna `sin_numerar` (la de lo que la tool
+        # escribe). Inline no reclama ahorro de entrada, así que es la salida la que cambia.
+        _ev(
+            source="inline",
+            caller_model="claude-opus-5-5",
+            chars_out=4000,
+            tokens_in=10,
+            tokens_out=950,
+            output_to_file=True,
+        ),
+        # `.md` por `path` de Haiku 4.5: familia anterior, su `formato_read` sin medir → respaldo (2).
+        _ev(
+            path="C:/docs/notas.md", caller_model="claude-haiku-4-5", tokens_in=1100, tokens_out=90
+        ),
+        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservadora`.
+        _ev(path="C:/datos/volcado.bin", caller_model="claude-opus-5-5", tokens_in=900),
+        # Imagen con `chars_returned > 0`: todo 0 (REQ-038).
+        _ev(
+            tool="local_describe_image",
+            input_unit="bytes",
+            path="C:/img/captura.png",
+            caller_model="claude-haiku-4-5",
+            chars_in=250000,
+            chars_out=800,
+            tokens_in=1200,
+            tokens_out=200,
+        ),
+        # Modelo fuera de la tabla: familia nueva supuesta.
+        _ev(path="C:/src/app.py", caller_model="claude-desconocido-9", tokens_in=1100),
     ]
+    # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
+    # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
+    casos = coste.fundir(crudos, log_dir=tmp_path)
+    desde_js = _acct_en_js(node, tmp_path, casos)
+
+    desde_py = [metrics._accounting(c) for c in casos]
+    for caso, py, js in zip(casos, desde_py, desde_js, strict=True):
+        for campo_py, campo_js in _CAMPOS_PARIDAD:
+            # `.get`: un campo que falta en el JS falla por el assert, no por `KeyError`.
+            assert js.get(campo_js) == py[campo_py], (campo_py, caso)
+    # Guarda de «esto llegó a comprobar algo» (REQ-001): sin un caso de cada, la paridad de las
+    # ramas nuevas saldría verde con las dos copias rotas.
+    assert any(py["net"] < 0 for py in desde_py)
+    assert any(py["failed"] and py["tokens_in"] > 0 for py in desde_py)
+    assert any("ok" not in c for c in casos)
+    assert any(py["bytes_saved_image"] > 0 for py in desde_py)
+    assert any(py["chars_saved_output"] > 0 for py in desde_py)
+    assert any(py["fallback"] for py in desde_py)
+    assert any(py["cause"] == "configuracion" for py in desde_py)
+    # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
+    # devuelto que da 0 en las dos copias.
+    origenes = {c["densidad"]["text"][1] for c in casos if c["densidad"]["text"]}
+    assert origenes >= {"medida", "sin_numerar", "conservadora"}
+    assert {c["familia"] for c in casos} >= {"nueva", "anterior"}
+    assert any(
+        c["densidad"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
+        for c, py in zip(casos, desde_py, strict=True)
+    )
+    assert any("familia supuesta" in c["marcas"] for c in casos)
+
+
+def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
+    """`acct` del panel, con su `tokensClaude` de verdad, corrido con node sobre `casos`."""
+    tokens_claude_js = _extraer_funcion_js(metrics.HTML, "function tokensClaude(")
+    acct_js = _extraer_funcion_js(metrics.HTML, "function acct(e){")
     entrada = tmp_path / "casos.json"
     entrada.write_text(json.dumps(casos), encoding="utf-8")
     programa = tmp_path / "paridad.mjs"
@@ -1179,22 +1269,27 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     salida = subprocess.run(
         [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
     )
-    desde_js = json.loads(salida.stdout)
+    return json.loads(salida.stdout)
 
-    desde_py = [metrics._accounting(c) for c in casos]
-    for caso, py, js in zip(casos, desde_py, desde_js, strict=True):
-        for campo_py, campo_js in _CAMPOS_PARIDAD:
-            # `.get`: un campo que falta en el JS falla por el assert, no por `KeyError`.
-            assert js.get(campo_js) == py[campo_py], (campo_py, caso)
-    # Guarda de «esto llegó a comprobar algo» (REQ-001): sin un caso de cada, la paridad de las
-    # ramas nuevas saldría verde con las dos copias rotas.
-    assert any(py["net"] < 0 for py in desde_py)
-    assert any(py["failed"] and py["tokens_in"] > 0 for py in desde_py)
-    assert any("ok" not in c for c in casos)
-    assert any(py["bytes_saved_image"] > 0 for py in desde_py)
-    assert any(py["chars_saved_output"] > 0 for py in desde_py)
-    assert any(py["fallback"] for py in desde_py)
-    assert any(py["cause"] == "configuracion" for py in desde_py)
+
+def test_el_js_sigue_a_python(tmp_path):
+    """Escenario de la spec «el JS sigue a Python» (REQ-037): con el `c100` de una fila resuelta
+    cambiado a mano, las dos copias siguen el valor nuevo. Si el JS resolviera la densidad por su
+    cuenta, seguiría dividiendo por 200."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node no está en el PATH")
+    (fila,) = coste.fundir(
+        [_ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", chars_out=0)],
+        log_dir=tmp_path,
+    )
+    assert fila["densidad"]["text"] == [200, "medida"]  # guarda: el punto de partida
+    fila["densidad"]["text"] = [250, "medida"]
+    chars = fila["chars_in"]
+    (js,) = _acct_en_js(node, tmp_path, [fila])
+    py = metrics._accounting(fila)
+    assert py["saved"] == chars * 100 // 250  # 4000 × 100 // 250 = 1600
+    assert js["saved"] == chars * 100 // 250
 
 
 def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
@@ -1218,7 +1313,9 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
     _write_jsonl(log, filas)
     metrics._FILE_CACHE.clear()
 
-    agregado = metrics._aggregate(filas)
+    # El panel agrega las filas que le da `_load`, ya fundidas (coste-api-y-cuota, REQ-006).
+    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    assert agregado["tokens_context_saved"] == 34928  # guarda: 84178 × 100 // 241 + imagen 0
     texto = server.local_status()
     assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
     assert f"({agregado['backend_calls']} llamadas al backend)" in texto
@@ -1238,7 +1335,8 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
     _write_jsonl(log, filas)
     metrics._FILE_CACHE.clear()
 
-    agregado = metrics._aggregate(filas)
+    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    assert agregado.get("tokens_context_net") == 1480 - 193  # guarda: ninguna cifra a 0
     # Si la clave falta (código de antes), el texto esperado tampoco está: falla el assert y no un
     # `TypeError` al formatear un `None`.
     n = agregado.get("tokens_context_net", "(falta tokens_context_net)")
@@ -1246,6 +1344,53 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
     texto = server.local_status()
     assert esperado in texto
     assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
+
+
+def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
+    """coste-api-y-cuota, REQ-006: `local_status` funde el relleno como el panel. Una línea sin
+    `caller_model` cuyo relleno dice Haiku: sin fusión no trae `densidad` y da 0."""
+    from local_delegate import atribucion
+
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
+    fila = _ev(ts="2026-10-06T10:00:00+00:00", path="C:/docs/notas.md", tool_use_id="toolu_h")
+    _write_jsonl(tmp_path / "usage-202610.jsonl", [fila])
+    atribucion.escribir_relleno(
+        tmp_path, "202610", {"toolu_h": {"caller_model": "claude-haiku-4-5", "cruce": "exacto"}}
+    )
+    metrics._FILE_CACHE.clear()
+
+    j = (
+        TestClient(metrics.app)
+        .get("/api/stats?from=2026-10-01T00:00:00%2B00:00&to=2026-11-01T00:00:00%2B00:00")
+        .json()
+    )
+    # Haiku, `.md` por `path`: prosa sin numerar de la familia anterior (respaldo (2)), 3,01;
+    # devuelto en prosa sin numerar, 3,01. 4000 × 100 // 301 − 400 × 100 // 301 = 1328 − 132.
+    assert j["tokens_context_net"] == 1196
+    texto = server.local_status()
+    m = re.search(r"~(-?\d+) tokens netos", texto)
+    neto_status = int(m.group(1)) if m else None
+    assert neto_status == j["tokens_context_net"]
+
+
+def test_las_filas_de_api_events_vienen_resueltas(tmp_path, monkeypatch):
+    """REQ-006: `/api/events` entrega las filas fundidas y resueltas; el JS no resuelve nada."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    _write_jsonl(
+        tmp_path / "usage-202607.jsonl",
+        [_ev(), _ev(tool="local_describe_image", input_unit="bytes", chars_in=900)],
+    )
+    metrics._FILE_CACHE.clear()
+    eventos = (
+        TestClient(metrics.app)
+        .get("/api/events?from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00")
+        .json()["events"]
+    )
+    assert len(eventos) == 2  # guarda: hay filas que mirar
+    assert all("densidad" in e for e in eventos)
+    assert all(e.get("caller_model") and e.get("familia") for e in eventos)
 
 
 # --- F3, tarea 29: el salto y su causa, en la cuenta y en el panel -----------------------------
@@ -1288,9 +1433,12 @@ def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
 
 
 def test_accounting_el_historico_sin_campos_nuevos_se_lee_igual():
-    a = metrics._accounting(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    a = metrics._accounting(
+        _resuelta(_ev(chars_in=84178, chunks=4, tokens_in=26131, tokens_out=786))
+    )
     assert a["fallback"] is False and a["cause"] is None
-    assert (a["backend_calls"], a["tokens_in"], a["saved"]) == (4, 26131, 21044)
+    # 84178 × 100 // 241 = 34928
+    assert (a["backend_calls"], a["tokens_in"], a["saved"]) == (4, 26131, 34928)
 
 
 def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_path, monkeypatch):

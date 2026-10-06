@@ -1,0 +1,68 @@
+name: Vigilante de precios
+
+# Mira cada semana dos páginas oficiales y abre un PR cuando cambian (REQ-020 a REQ-025 de
+# `coste-api-y-cuota`):
+#
+#   - `precios`: la tabla «Model pricing», contra `src/local_delegate/resources/datos/precios.json`;
+#   - `limites`: el artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt`.
+#
+# Es el ÚNICO workflow con permisos de escritura, y por eso va aparte (patrón de vendor-audit.yml):
+#
+#   - `contents: write`: los commits van por la API de contenidos, que GitHub firma en nombre del
+#     bot. Un `git push` desde el runner saldría sin firma y el ruleset de `main` lo bloquearía.
+#   - `pull-requests: write`: abrir o actualizar el PR, y comentar si se queda bloqueado.
+#   - `actions: write`: un PR abierto con GITHUB_TOKEN no dispara los workflows de `pull_request`,
+#     así que el script lanza por `workflow_dispatch` `ci.yml` y `codeql.yml` sobre la rama.
+#
+# Entrada `ensayo`: fuerza un diff inocuo (`consultado` = hoy) en la rama `vigilante/ensayo`, con
+# «[ensayo]» en el título. Sirve para probar el circuito entero en GitHub (T11); ese PR se cierra
+# sin mezclar.
+on:
+  schedule:
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      ensayo:
+        description: "Forzar un PR de prueba con un diff inocuo (no se mezcla)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+# Dos ejecuciones a la vez editarían la misma rama fija y se pisarían.
+concurrency:
+  group: vigilante-precios
+  cancel-in-progress: false
+
+jobs:
+  precios:
+    runs-on: ubuntu-latest
+    # Cubre la espera a los checks del PR, que el script corta a los 45 min.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Solo stdlib por diseño: ni uv, ni dependencias, ni `setup-python`.
+      - name: Comparar la tabla de precios
+        run: python3 scripts/vigilante_precios.py precios
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VIGILANTE_ENSAYO: ${{ inputs.ensayo }}
+
+  limites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Comparar el artículo de límites de uso
+        run: python3 scripts/vigilante_precios.py limites
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

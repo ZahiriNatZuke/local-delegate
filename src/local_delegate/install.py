@@ -55,8 +55,13 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 
 # Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
 # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
+#
+# `anotar_llamada.py` (coste-api-y-cuota, REQ-002) va siempre, no detrás de `--enable-read-hook`:
+# no avisa ni bloquea, solo anota quién pide cada delegación. Va AL FINAL para que
+# `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los tests.
 _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
+    ("anotar_llamada.py", "PreToolUse", "mcp__local-delegate__.*"),
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
@@ -306,6 +311,7 @@ _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
     "suggest_delegate_shell.py",
+    "anotar_llamada.py",
 )
 
 

@@ -885,3 +885,174 @@ controles corregidos se **ejecutaron** contra `feat/panel-honesto` con
 
 0 en esta pasada: había que citar líneas literales de la revisión y de la spec y comprobar
 controles ejecutándolos; un resumen no servía para eso.
+
+## Revisión del resultado
+
+Fecha: 2026-10-06. Revisor: agente de conformidad, en solo lectura, sobre `a6bced7`
+(`git diff main...HEAD`). Método `personal-sdd-review`: cada REQ se comprobó en el código y en el
+test que lo ataría, no solo en la evidencia. MCP `local-delegate` desconectado: 0 llamadas `local_*`.
+
+Ejecutado: los 12 ficheros de tests del cambio (235 passed) y la suite completa con
+`pesado.sh uv run --group ui pytest -q`: **1 failed, 1741 passed, 2 skipped**. Grep de frases
+prohibidas, rutas, UUID, `toolu_` e IPs sobre las líneas añadidas del diff.
+
+### Veredicto
+
+**`does-not-conform` por ahora**, con dos bloqueantes de arreglo corto (ninguno toca la lógica).
+Los 58 REQ están implementados y atados por tests; arreglados los dos bloqueantes, el cambio queda
+`conforms-with-notes`. T11 (ensayo del vigilante en GitHub) queda pendiente por diseño: solo se
+puede hacer tras mezclar y no cuenta como incumplimiento.
+
+### Comparación con la spec
+
+| REQ | Veredicto | Evidencia (código · test) |
+|---|---|---|
+| 001 | cumple | `clients._tool_use_id_de` + `observar_cliente` en su propio `try`; `_log_event` escribe `tool_use_id` · `test_log_event_escribe_la_atribucion…`, `test_sin_tool_use_id…`, humo real en I2 |
+| 002 | cumple con desviación aceptable | `anotar_llamada.py` + `hook_common.anotar_llamada` (una nota por fichero, `os.replace`, `effort.level`, nunca `CLAUDE_EFFORT`, sale 0) · `test_ida_y_vuelta_hook_servidor`, `test_el_hook_calla…`, `test_ocho_hooks_a_la_vez`. Se instala siempre, no tras `--enable-read-hook` (razonado) |
+| 003 | cumple | `atribucion.resolver_llamada`: 10 min, cola 256 KB, 50 ms, `n/a` en Haiku, `caller_src` · `test_no_lee_mas_de_256_kb` (50 MB + espía), `test_el_presupuesto_de_50_ms_corta`, `test_la_carrera…`, `test_una_ruta_fuera_de_projects…`; en vivo 3/3 `hook+transcript` (T10.3) |
+| 004 | cumple | `transcripts.casar` (exacto; ventana −1 s/+2 s/+15 min; único desempate `path`), ventana `H` · `test_cruce_exacto_ventana_y_path`, `test_el_relleno_usa_el_plazo_leido` |
+| 005 | cumple | `claves_del_fichero` (`tool_use_id` o `ts|tool|ordinal`), `escribir_relleno` solo mejora · `test_dos_lineas_del_mismo_segundo…`, `test_el_relleno_solo_mejora`; 0 repetidas en real (T8.7) |
+| 006 | cumple | `coste.fundir` por fichero entero, orden línea > relleno > respaldo, copia · `test_la_fusion_respeta_el_orden`, `…no_toca_la_cache`, `test_las_filas_de_api_events_vienen_resueltas`, `test_local_status_funde_como_el_panel` |
+| 007 | cumple | `coste.tramo` en el orden de la spec; barra en `bloque_coste` · `test_tramos`, `test_los_excluidos_van_a_la_barra…`; T10.6 |
+| 008 | cumple | `coste.respaldo`, `LOCAL_DELEGATE_COSTE_RESPALDO` por `_env`; inválido → declarado y aviso · `test_respaldo_por_variable`, `test_el_respaldo_se_nombra_en_la_barra` |
+| 009 | cumple | esfuerzo en el log y en la clave del desglose, fuera de la fórmula · `test_desglose_por_esfuerzo` |
+| 010 | cumple | `resources/datos/precios.json`, 13 ids, `familia`, `admite_esfuerzo` · `test_la_tabla_cubre_los_13_ids` |
+| 011 | cumple | `precios.normalizar_id` + búsqueda exacta · `test_normaliza_fecha_y_1m`, `test_busqueda_exacta_en_los_pares`, `test_un_id_sin_entrada…` |
+| 012 | cumple | `importlib.resources`, sin red · `test_cargar_las_tablas_no_abre_sockets`, `test_api_stats_no_abre_sockets` (deja pasar el loopback de asyncio: aceptable) |
+| 013 | cumple | `precios.cotejar`/`veredicto` · `test_cotejo_con_filas_literales` (3 mutantes + guarda), `test_el_cotejo_cuenta_la_busqueda_web` |
+| 014 | cumple | `transcripts.cost_state` (última por posición) · `test_cost_state_toma_la_ultima_por_posicion`; real 144/144 (T8.3) |
+| 015 | cumple | `checks._probe_coste`: relleno > cotejo malo > bueno > `unknown`, nunca `missing` · `test_coste_doctor.py` (6 tests, 7 mutantes) |
+| 016 | cumple | `sin_precio` aparte; sin cifra si todas · `test_un_modelo_sin_precio_no_da_cero` |
+| 020 | cumple | `vigilante-precios.yml`: cron + `workflow_dispatch`, `contents`/`pull-requests`/`actions: write`, solo stdlib · `test_el_workflow_tiene_lo_justo`, `test_el_script_es_solo_stdlib` |
+| 021 | cumple con desviación aceptable | regla nombre → id; ignora retired, limited e **invite only**; rama fija; commits por `PUT /contents` · `test_un_precio_cambiado…`, `test_un_modelo_nuevo…`, `test_un_modelo_que_desaparece…`, `test_el_pr_se_hace_por_la_api…`. Que un modelo que solo desaparece no abra PR encaja con la lista de disparadores de la spec |
+| 022 | cumple | sin respuesta, sin cabecera, < 5 filas o celda no numérica → error · `test_sin_cabecera_falla`, `test_menos_de_5_filas…`, `test_una_celda…`, `test_una_pagina_rota…` |
+| 023 | cumple | texto normalizado; < 500 chars o sin título falla; el PR dice cómo reiniciar · `test_limites_*`, `test_el_pr_de_limites_dice_como_reiniciar` |
+| 024 | cumple | tabla esperada congelada en el test; fixtures en `tests/` · `test_la_pagina_intacta_da_la_tabla_congelada`, `test_limites_intacta…` |
+| 025 | cumple (código); ejecución real pendiente: T11 | `workflow_dispatch` en `ci.yml` y `codeql.yml`, `update-branch`, espera por `head_sha`, comentario si `blocked` · `test_ci_y_codeql_aceptan_workflow_dispatch`, `test_si_main_avanzo…`, `test_si_queda_blocked…`. La incógnita [I] de `code_scanning` sigue abierta hasta T11 |
+| 030 | cumple | `densidad.json` en centésimas con `medido_con` · `test_la_tabla_de_densidad_dice_con_que_modelos_se_midio`, `test_marcas_de_familia` |
+| 031 | cumple | `coste.resolver`/`_celda` (familia, columna por `source`, respaldo (1)(2)(3) con origen); `tokens_claude` solo divide · `test_el_mismo_py_con_haiku…`, `test_las_columnas_de_devuelto_y_salida` |
+| 032 | cumple | `clase_de_contenido` (tool primero, luego extensión) · `test_la_tool_manda_sobre_la_extension` |
+| 033 | cumple | reglas solo en `coste.py`; `tokens_claude` y `tokensClaude` dividen por `densidad[tipo]` · `test_el_js_sigue_a_python` (c100 200 → 250), `test_sin_densidad_las_dos_dan_cero` |
+| 034 | cumple | `CHARS_PER_TOKEN` queda solo para el local; recibo, coletilla y `tokens_aprox` por `tokens_claude` · `test_ningun_chars_per_token_en_la_conversion` |
+| 035 | cumple | `_savings_feedback`, `_escribir_destino` y `local_extract` con `coste.fila_en_vuelo`; imagen solo bytes · `test_la_coletilla_usa_tokens_de_claude`, `…usa_el_modelo_de_la_nota…`; T10.4 |
+| 036 | cumple | septiembre recalculado: caracteres idénticos, neto 1 589 552 (T8.4) |
+| 037 | cumple | paridad ampliada en `test_metrics.py` con guarda de orígenes, familias e imagen, sobre filas fundidas |
+| 038 | cumple | imagen: densidad `null`, `saved = returned = net = 0`; bloque «Imágenes» · `test_una_imagen_no_resta_del_neto` (Py y JS), `test_imagenes_y_salida_a_fichero_fuera_de_la_base` |
+| 040 | cumple | `valoracion._en_la_base`; imágenes y salida a fichero contadas aparte · `test_imagenes_y_salida_a_fichero…` |
+| 041 | cumple | `coste_evento` (cota = T·P_w; estimación con caducidades) · `test_un_millon_de_caracteres` ($2,50/$6,50), `test_cada_caducidad…`, `test_un_T_negativo_resta` |
+| 042 | cumple | `n_de`: relleno > mediana del grupo (≥ 10) > declarado 127/40; agregados sin excluidas · `test_origen_de_N`, `test_los_agregados_de_n_no_cuentan_excluidas` |
+| 043 | cumple | `transcripts.n_y_caducidades` y `percentil` · `test_n_y_caducidades_conocidos` (`<synthetic>`, id repetido, compactación), `test_el_ttl…`, `test_percentil_par` |
+| 044 | cumple | `textoCoste` pinta barra, respaldo, N, densidad, neto, contrafactual, relecturas y fecha · `test_texto_del_coste_con_la_barra_y_el_respaldo` |
+| 045 | cumple | rótulo y nota exactos; grep del diff: las seis frases solo aparecen en la lista del test y en una negación de docstring · `test_frases_prohibidas` (HTML, `/api/stats`, textos, coletillas, recibo, `tokens_aprox`) |
+| 046 | cumple | motivo en vez de $0 (sin tabla, sin delegaciones, todas sin precio) · `test_sin_tabla_y_sin_delegaciones` |
+| 047 | cumple con desviación aceptable | desglose por (modelo, hilo, esfuerzo); una fila con `T` ≤ 0 dice «sin ahorro» (decisión de la sesión principal tras T10) · `test_una_fila_sin_ahorro_no_pinta_dolares`, `test_un_negativo_diminuto_no_es_un_cero_con_signo` |
+| 048 | cumple | panel = `atribucion_n.py` al céntimo en dos ventanas; $11,50/$92,69 reproducidos (T8.5) |
+| 050 | cumple | estado por tipo, ningún % mixto (`cuota.estado`) |
+| 051 | cumple | `puntos_de_rechazo`: uno por `(tipo, resetsAt)`, «cota baja», «solo comprobación», fuera del criterio · `test_rechazos_duplicados_son_un_punto` |
+| 052 | cumple | `puntos_del_statusline`: un punto por reset, par de una sesión, `delta_pequeno`, Δ$ por incrementos, `reinicio`, `sin_uso_local`, `contaminado` · `test_cinco_filas_son_un_punto`, `test_sesiones_en_paralelo`, `test_descartes` |
+| 053 | cumple | `quitar_solapados` · `test_descartes` (solapado) |
+| 054 | cumple | `vigentes` (60 días) aplicado al leer; saneado en `sanear` · `test_un_punto_de_61_dias…`, `test_un_punto_viejo_caduca_sin_regenerar`, `test_sanear_y_lineas_corruptas` |
+| 055 | cumple | `criterio`: ≥ 3 puntos del statusline y dispersión < 25 % · `test_criterio_de_la_spec` (los seis escenarios) |
+| 056 | cumple | `deriva` (3 antes de j−1; los dos > 25 % en el mismo sentido) · mismo test |
+| 057 | cumple | `--reiniciar-calibracion` guarda la fecha; `vigentes(…, reinicio)` · `test_reinicio_a_mano` |
+| 058 | cumple | aviso si `mediana(C)` < C de un rechazo vigente · `test_aviso_contra_un_rechazo` |
+| 059 | cumple | estado, puntos, rechazos, dispersión, descartes, deriva, reinicio y «faltan k», sin % · `textoCuota`; T10.6 |
+| 060 | cumple con desviación aceptable | `_bloque_cuota` con ventana móvil propia · `test_la_cuota_no_depende_del_rango`. El rótulo pone «, dispersión X %» en vez de «(dispersión X %)»: cosmético |
+| 061 | cumple | `SIN_DATOS`/`SIN_STATUSLINE`; líneas corruptas como descarte · `test_home_vacio`, `test_sin_fuentes_lo_dice` (ver menor 5) |
+| 070 | cumple | subcomando `recalcular-coste`, escribe solo en `LOG_DIR` · `test_el_cli_lo_lanza`; real 3,3 s (techo del plan: 30 s) |
+| 071 | cumple | fusión de puntos por `(fuente, tipo, inicio, fin)`; un mes cerrado hace más de 30 días no se recalcula · `test_un_punto_sobrevive…`, `test_un_mes_viejo_no_se_recalcula` |
+| 072 | cumple | solo números, fechas, ids de modelo y claves · `test_la_privacidad` (marcadora en prompt, `tool_result` y ruta); real 0 coincidencias (T8.2) |
+| 073 | cumple | el panel solo lee `LOG_DIR`; `transcripts.py` no lo usa el daemon · `test_el_panel_no_lee_claude` |
+| 074 | cumple | escrituras atómicas, `sort_keys` · `test_idempotente_y_solo_lectura` (hash de `~/.claude` antes y después) |
+| 075 | cumple | `_pendiente_mas_vieja` a `H` − 10 días, también con el comando nunca lanzado · `test_comando_nunca_lanzado…`, `test_el_aviso_sigue_al_plazo` (ver menor 4) |
+
+Contrato con el panel: `tokens_claude(cantidad, *, tipo, evento)` y `tokensClaude(cantidad,tipo,e)`
+conservan firma y llamadores; solo cambia el cuerpo. Correcto.
+
+### Hallazgos
+
+#### Bloqueantes
+
+1. **La suite y el CI fallan en la cabeza de la rama.** `scripts/limpiar_fixtures_vigilante.py`
+   (añadido en «Arreglos tras T10») empieza con `#!/usr/bin/env python3` y está en git con modo
+   `100644`. Falla `tests/test_wiki.py::test_un_script_con_shebang_esta_marcado_ejecutable_en_git`
+   y, en Linux, ruff lo marcaría EXE001 (`lint` y `test (ubuntu-latest)` son checks requeridos).
+   «Arreglos tras T10» dice «1742 passed»; en `a6bced7` salen 1741 passed y 1 failed. La regla ya
+   estaba en el plan (respuesta a la revisión del plan, punto 16). **Arreglo:** quitar el shebang
+   o `git update-index --chmod=+x scripts/limpiar_fixtures_vigilante.py`, y repetir la suite.
+2. **Datos de la visita que siguen en ficheros versionados del diff.** La limpieza de las copias
+   del vigilante se quedó corta por tres lados:
+   - `tests/fixtures/vigilante/precios.html` conserva `\"ipCountry\":\"UY\"` (el país deducido de
+     la IP de quien bajó la página). El script de limpieza solo cubre `data-consent-ip-country`, y
+     el guardián `test_las_copias_no_guardan_datos_de_la_visita` no prueba esa forma.
+   - El propio guardián, `tests/test_vigilante.py:617-619`, usa como control positivo **los valores
+     reales** de la descarga: el `anonymousId`/`stableId` (id omitido), el `_setSessionId`
+     (id omitido) y el país `UY` (los tres estaban en el fixture del commit `8ad8309`). El arreglo
+     los quitó del fixture y los volvió a meter en el test.
+   - El commit `8ad8309` de la rama guarda el fixture original con esos datos. La rama no está
+     publicada y `main` solo admite *squash*, así que no llegarían a `main`, pero sí a GitHub con
+     el push de la rama (el PR expone sus commits).
+
+   **Arreglo:** valores sintéticos en el control positivo del test (otro UUID inventado, `XX`);
+   añadir `ipCountry` al script de limpieza y al guardián, y volver a correrlo; reescribir los
+   commits de la rama (o aplastarlos en uno) antes del primer push.
+
+#### Importantes
+
+Ninguno más.
+
+#### Menores
+
+3. **Rótulo de REQ-060**: «…; estimación calibrada con n puntos, dispersión X %; …» frente a
+   «(dispersión X %)» de la spec. Cosmético; hoy no se ve porque nada está calibrado.
+4. **El aviso de `doctor` (REQ-075) cuenta filas que no son de la base**: `_pendiente_mas_vieja`
+   no descarta las delegaciones fallidas ni las imágenes, que `tramo` también da como `pendiente`.
+   Puede adelantar un aviso con solo fallos sin rellenar. Bajo impacto (el relleno también las casa).
+5. **Un `coste-agregados.json` con un punto mal formado tumba el cálculo**: `cuota.estado` hace
+   `float(p["C"])` y `quitar_solapados` lee `p["delta_pct"]` sin guarda, así que un punto sin esas
+   claves daría un 500 en `/api/stats` o un error en `recalcular-coste`. Solo pasa si alguien edita
+   el JSON a mano (lo escribe solo el comando), pero REQ-061 pide que una línea corrupta se salte.
+6. Comentario de `checks.run_all`: «los otros veintiún» debería ser «veintiuno». Trivial.
+
+### Desviaciones declaradas: veredicto
+
+- **T1** (`claude-sonnet-4-5` con `admite_esfuerzo: false` según su página): aceptable y
+  documentado en la tabla.
+- **T2** (`try` propio para el id, `proyectos=` inyectable, la nota sin `session_id`, el hook ignora
+  `LD_HOOK_ENABLED`, import perezoso): aceptables; mejoran la privacidad o el aislamiento.
+- **T3** (también se ignora «invite only», dos jobs, precio de la búsqueda web leído de la frase,
+  modelo nuevo con `familia`/`admite_esfuerzo` provisionales y aviso en el PR, desaparecido sin PR,
+  actions por etiqueta como el resto del repo): aceptables.
+- **T6** (sin cambios en `test_metrics.py` por `/api/stats`, firma de `coste_evento`, loopback
+  permitido en el test de sockets, mutante que dispara otro assert, JSON corrupto = ausente):
+  aceptables.
+- **T7** (se siembra un cotejo en dos tests de «todo OK», privadas reutilizadas): aceptables.
+- **T10** (daemon con la rama, panel leído en el 9494, sin revisión completa): aceptables; esta
+  revisión cubre lo que faltaba.
+- **Arreglos tras T10**: el 1 («sin ahorro» y sin `-0.0`) es aceptable y tiene test con mutante;
+  el 3 (`toolu_` recortados) está hecho (no queda ningún `toolu_` completo); el 2 está **incompleto**
+  (bloqueante 2) y además dejó el bloqueante 1.
+
+### Privacidad del diff (comprobado)
+
+Sin rutas de usuario (solo el sintético `C--Users-x-…` en tests), sin `toolu_` completos, sin ids de
+sesión de Claude Code, sin nombres de carpetas de proyectos. IPs: `127.0.0.1`, `192.0.2.1`
+(documentación) y coordenadas de SVG. Los UUID del fixture de precios son configuración pública del
+sitio, salvo lo del bloqueante 2.
+
+### Pendiente antes de cerrar
+
+1. Bloqueantes 1 y 2, con la suite completa en verde (`pesado.sh`) y el grep de `ipCountry`,
+   y de los dos ids de la descarga en vacío sobre el árbol y sobre `git log -p main..HEAD`.
+2. T11 tras mezclar: ensayo del vigilante y confirmación de la incógnita de `code_scanning`.
+3. Casillas de «Quality checks» de `verification.md`, que siguen sin marcar.
+
+### Evidencia recomendada para la puerta, una vez arreglado
+
+«Revisión de conformidad: 58/58 REQ implementados y atados por tests (54 cumplen, 4 con desviación
+aceptable); suite completa verde tras corregir el modo del script y los datos de visita del
+vigilante; T11 pendiente por diseño.»
+
+### Llamadas a `local-delegate`
+
+0: el MCP estaba desconectado en esta sesión.

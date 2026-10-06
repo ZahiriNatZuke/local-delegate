@@ -306,6 +306,22 @@ def cmd_install(args: argparse.Namespace) -> int:
     return _run_install(args, uninstall=False)
 
 
+def cmd_recalcular_coste(args: argparse.Namespace) -> int:
+    """`recalcular-coste` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
+    from . import config, recalcular
+
+    claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
+    try:
+        resumen = recalcular.ejecutar(
+            claude_dir, config.LOG_DIR, reiniciar=args.reiniciar_calibracion
+        )
+    except OSError as e:
+        print(f"recalcular-coste: no se pudo escribir en el directorio de logs ({e.strerror}).")
+        return 1
+    print(recalcular.texto_del_resumen(resumen))
+    return 0
+
+
 def cmd_uninstall(args: argparse.Namespace) -> int:
     return _run_install(args, uninstall=True)
 
@@ -748,6 +764,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="nivel de log de uvicorn (default: warning)",
     )
     serve.set_defaults(func=cmd_serve)
+
+    recalc = sub.add_parser(
+        "recalcular-coste",
+        help=(
+            "Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de "
+            "atribución, los agregados de N, el cotejo de precios y los puntos de cuota."
+        ),
+    )
+    recalc.add_argument(
+        "--reiniciar-calibracion",
+        choices=("five_hour", "seven_day"),
+        default=None,
+        help="los puntos de cuota de ese tipo anteriores a hoy dejan de contar",
+    )
+    recalc.add_argument(
+        "--claude-dir",
+        default=None,
+        help="directorio de Claude Code (default: ~/.claude); solo se lee",
+    )
+    recalc.set_defaults(func=cmd_recalcular_coste)
 
     _add_install_parsers(sub)
     return parser

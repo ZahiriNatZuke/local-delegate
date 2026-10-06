@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veintiún elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veintidós elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veintiún checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veintidós checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -30,13 +30,13 @@ import socket
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib import metadata
 from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import clients, config, fallos, install, sondas
+from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -341,6 +341,10 @@ class Context:
     daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
         default_factory=lambda f=_default_daemon_accepts_token: f
     )
+    # Dónde están el log de uso, los `atribucion-*.json` y `coste-agregados.json`. Un campo simple
+    # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
+    # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
+    log_dir: Path | None = None
 
     @property
     def claude_dir(self) -> Path:
@@ -1399,8 +1403,93 @@ def _probe_rol_retirado(ctx: Context) -> Result:
     )
 
 
+RECALCULAR_HINT = "local-delegate recalcular-coste"
+# Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
+_MARGEN_DEL_RELLENO = timedelta(days=10)
+
+
+def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> tuple[int, int]:
+    """(cuántas delegaciones `pendiente` pasan de `H` − 10 días, días de la más vieja).
+
+    Solo los ficheros del log que pueden tener filas dentro del plazo, y cada uno ENTERO: la clave
+    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`coste.fundir`).
+    """
+    primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
+    umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
+    cuantas, mas_vieja = 0, timedelta(0)
+    for path, mes in recalcular._ficheros_del_log(log_dir):
+        if mes < primer_mes:
+            continue
+        for fila in coste.fundir(recalcular._leer_log(path), log_dir=log_dir):
+            if coste.tramo(fila, ahora=ahora, plazo_dias=plazo_dias) != "pendiente":
+                continue
+            edad = ahora - coste._instante(fila.get("ts"))
+            if edad > umbral:
+                cuantas += 1
+                mas_vieja = max(mas_vieja, edad)
+    return cuantas, mas_vieja.days
+
+
+def _probe_coste(ctx: Context) -> Result:
+    """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
+
+    Lee **solo** `coste-agregados.json`, el log de uso y los `atribucion-*.json` (más
+    `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son cosa del comando que
+    lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
+    cotejo fallido, cotejo bueno, sin cotejo. Si se cumplen las dos primeras, dice las dos.
+
+    El aviso del relleno mira la pendiente más antigua, no la fecha del último relleno: así salta
+    también con el comando nunca lanzado, que es justo cuando más histórico se pierde (REQ-075).
+    Sin `~/.claude/projects` no hay transcripts que rellenar y no aplica.
+    """
+    log_dir = ctx.log_dir if ctx.log_dir is not None else config.LOG_DIR
+    ahora = datetime.now(UTC)
+    avisos: list[str] = []
+
+    if (ctx.claude_dir / "projects").is_dir():
+        plazo = atribucion.plazo_de_borrado(ctx.claude_dir)
+        cuantas, dias = _pendiente_mas_vieja(log_dir, ahora=ahora, plazo_dias=plazo)
+        if cuantas:
+            avisos.append(
+                f"{cuantas} delegación(es) pendiente(s) de relleno, la más antigua de hace {dias} "
+                f"días (Claude Code borra los transcripts a los {plazo}): lanza "
+                f"`{RECALCULAR_HINT}` antes de que Claude Code borre sus transcripts"
+            )
+
+    agregados = recalcular.leer_agregados(log_dir) or {}
+    cotejo = agregados.get("cotejo")
+    if not isinstance(cotejo, dict):
+        cotejo = None
+    fecha = str((cotejo or {}).get("fecha") or "?")
+    if cotejo is not None and cotejo.get("veredicto") == "falla":
+        sin_precio = [str(m) for m in cotejo.get("sin_precio") or []]
+        partes = []
+        if sin_precio:
+            partes.append("modelos sin precio en la tabla: " + ", ".join(sin_precio))
+        if cotejo.get("fuera"):
+            partes.append(f"{cotejo['fuera']} fila(s) fuera de la banda")
+        avisos.append(
+            f"el último cotejo ({fecha}) no cuadra con lo que cobra Claude Code: "
+            + ("; ".join(partes) or "sin detalle")
+        )
+
+    if avisos:
+        return Result(WARN, "; y ".join(avisos), RECALCULAR_HINT)
+    if cotejo is not None and cotejo.get("veredicto") == "pasa":
+        return Result(
+            OK,
+            f"el último cotejo ({fecha}) cuadra: {cotejo.get('juzgadas', '?')} fila(s) juzgadas "
+            f"con la tabla de precios del {cotejo.get('version_tabla') or '?'}",
+        )
+    return Result(
+        UNKNOWN,
+        f"no hay cotejo guardado en {log_dir}: sin transcripts en esta máquina o "
+        f"`{RECALCULAR_HINT}` nunca lanzado",
+    )
+
+
 # --- El registro --------------------------------------------------------------
-# Veintiún elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veintidós elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1414,6 +1503,8 @@ CHECKS: tuple[Check, ...] = (
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
     Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
+    # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
+    Check("config.coste", "entorno", "coste y relleno", _probe_coste),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -1442,7 +1533,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veintiún probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veintidós probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1456,7 +1547,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veinte
+        except Exception as exc:  # un check roto no debe impedir ver los otros veintiuno
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

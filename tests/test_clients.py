@@ -418,3 +418,50 @@ def test_un_cliente_que_no_se_presenta_sale_como_el_default_del_sdk():
 def test_cliente_actual_fuera_de_una_peticion_es_none():
     """`_log_event` también se llama desde el benchmark y desde caminos de arranque."""
     assert clients.cliente_actual() is None
+
+
+# --- El `tool_use_id` llega hasta la tool (coste-api-y-cuota, REQ-001) --------------------------
+#
+# Claude Code manda `_meta = {"claudecode/toolUseId": "toolu_…"}` en cada `tools/call`. Medido con
+# el SDK instalado antes de escribir esto: el middleware lo ve como dict en `ctx.meta`, y
+# `ClientSession.call_tool` acepta `meta=`.
+
+
+async def _tool_use_id_visto(meta: dict | None) -> str | None:
+    """Conecta un cliente, llama con ese `_meta` y devuelve lo que la tool vio."""
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    visto: list[str | None] = []
+
+    @servidor.tool()
+    def quien_llama() -> str:
+        """Tool SÍNCRONA, como las de verdad: corre en el threadpool."""
+        visto.append(clients.tool_use_id_actual())
+        return "ok"
+
+    async with create_client_server_memory_streams() as ((cr, cw), (sr, sw)):
+        low = servidor._lowlevel_server
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(
+                lambda: low.run(sr, sw, low.create_initialization_options(), raise_exceptions=True)
+            )
+            info = Implementation(name="claude-code", version="1.0.0")
+            async with ClientSession(cr, cw, client_info=info) as cliente:
+                await cliente.initialize()
+                await cliente.call_tool("quien_llama", {}, meta=meta)
+            tg.cancel_scope.cancel()
+    return visto[0] if visto else "la tool no llegó a correr"
+
+
+def test_la_tool_ve_el_tool_use_id():
+    """Control (c): en el corte de interfaz `tool_use_id_actual()` devolvía `None`."""
+    visto = anyio.run(_tool_use_id_visto, {"claudecode/toolUseId": "toolu_prueba"})
+    assert visto == "toolu_prueba"
+
+
+def test_sin_meta_no_hay_tool_use_id():
+    """Guarda: un cliente que no lo manda (Codex, scripts) no hereda el de nadie."""
+    assert anyio.run(_tool_use_id_visto, {"claudecode/toolUseId": "toolu_prueba"}) == (
+        "toolu_prueba"
+    )
+    visto = anyio.run(_tool_use_id_visto, None)
+    assert visto is None
