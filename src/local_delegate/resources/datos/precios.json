@@ -1,4 +1,5 @@
 {
+  "_ensayo": "PR de prueba del vigilante (run 37529183674): no mezclar",
   "_nota": "Tabla de precios del paquete (REQ-010). USD por millón de tokens; busqueda_web_por_1000 en USD por cada 1000 búsquedas. Claves = id normalizado (sin [1m] ni sufijo de fecha -AAAAMMDD), búsqueda exacta (REQ-011). familia = tokenizador: 'nueva' = Claude Opus 4.7 y posteriores; 'anterior' = Opus 4.6, Sonnet 4.6 y anteriores, Haiku 4.5. Ids de las páginas «Models overview» y «Model IDs and versioning». admite_esfuerzo comprobado el 2026-10-06 en la página de cada modelo (fila «Default effort»: «Not supported» en Haiku 4.5 y Sonnet 4.5) y en la lista supportedModels de build-with-claude/effort. consultado = fecha del último cambio de la tabla.",
   "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
   "consultado": "2026-10-06",
