@@ -17,7 +17,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import config, server
+from local_delegate import config, coste, server
 
 URL = "http://test-backend/v1/chat/completions"
 
@@ -261,9 +261,11 @@ def test_accounting_suma_la_salida_escrita_al_ahorro():
         "tokens_out": 950,
         "output_to_file": True,
     }
-    acc = server._accounting(fila)
+    acc = server._accounting(coste.fundir_fila(fila))
     # `source=inline`: la entrada sí viajó por el contexto, así que el ahorro es solo la salida.
-    assert acc["saved"] == 950
+    # coste-api-y-cuota: en tokens de Claude (código sin numerar, c = 2,41), no los 950 que
+    # reportó el modelo local: 4000 × 100 // 241 = 1659.
+    assert acc["saved"] == 1659
     assert acc["tokens_out"] == 950
     assert acc["estimated"] is False
 
@@ -292,4 +294,7 @@ def test_accounting_suma_los_dos_ahorros_cuando_los_hay():
         "tokens_out": 950,
         "output_to_file": True,
     }
-    assert server._accounting(fila)["saved"] == 8000 // config.CHARS_PER_TOKEN + 950
+    # coste-api-y-cuota: entrada por `path` sin extensión (clase `otro`, formato `Read`, respaldo
+    # (3), c = 2,41) más la salida en código sin numerar (c = 2,41):
+    # 8000 × 100 // 241 + 4000 × 100 // 241 = 3319 + 1659.
+    assert server._accounting(coste.fundir_fila(fila))["saved"] == 3319 + 1659

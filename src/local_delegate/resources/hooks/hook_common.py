@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -366,3 +367,93 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> 
         # Best-effort a proposito: perder esta nota cuesta una correlacion en la medicion;
         # romperle la lectura al usuario por no poder escribir un fichero cuesta mucho mas.
         pass
+
+
+# --- Notas de atribucion: quien pidio cada delegacion (coste-api-y-cuota, REQ-002) ---------------
+#
+# El hook `anotar_llamada.py` deja, por cada `tools/call` de local-delegate, una nota con lo que
+# solo trae la entrada del hook (`agent_id`, `agent_type`, `effort`) y el `transcript_path`, que es
+# donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
+# (`atribucion.leer_nota`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
+#
+# UNA nota por fichero, y no un fichero con todas como el de los bloqueos: los subagentes llaman en
+# paralelo, y dos hooks que reescriben el mismo fichero se pisan. Cada nota se escribe en un
+# temporal del mismo directorio y se mueve con `os.replace`, que es atomico: el servidor nunca lee
+# una a medias.
+#
+# Guarda `transcript_path` aunque la telemetria de hooks nunca escribe rutas: esto no es
+# telemetria, vive en el temporal y caduca a los diez minutos.
+
+#: Pasado este rato una nota ya no cuenta (REQ-003) y el hook la borra.
+VIGENCIA_DE_NOTA_S = 600.0
+
+#: Forma de un `tool_use_id`. Se valida ANTES de construir la ruta: el id acaba en un nombre de
+#: fichero, y uno con `..` o separadores escribiria fuera del directorio.
+PATRON_TOOL_USE_ID = re.compile(r"^toolu_[A-Za-z0-9_-]{1,64}$")
+
+
+def directorio_de_notas_de_llamadas() -> Path:
+    """Junto a `ruta_de_notas()`: el temporal del usuario, que comparten el hook y el daemon."""
+    return Path(tempfile.gettempdir()) / "local-delegate-llamadas"
+
+
+def _esfuerzo_de(entrada: dict) -> str | None:
+    """`effort.level` de la entrada del hook. NUNCA `CLAUDE_EFFORT`: esa variable se hereda del
+    proceso padre y no dice el esfuerzo de esta llamada (medido: `--effort low` y el hook vio
+    `high`)."""
+    esfuerzo = entrada.get("effort")
+    nivel = esfuerzo.get("level") if isinstance(esfuerzo, dict) else None
+    return nivel if isinstance(nivel, str) and nivel else None
+
+
+def _texto(valor: object) -> str | None:
+    return valor if isinstance(valor, str) and valor else None
+
+
+def _podar_notas(directorio: Path, ahora: float) -> None:
+    """Borra, best-effort, las notas que ya no cuentan. Sin esto el directorio solo creceria."""
+    try:
+        viejas = [p for p in directorio.iterdir() if ahora - p.stat().st_mtime > VIGENCIA_DE_NOTA_S]
+    except OSError:
+        return
+    for vieja in viejas:
+        try:
+            vieja.unlink()
+        except OSError:
+            pass  # otro hook la borro antes, o esta abierta: se intentara la proxima vez
+
+
+def anotar_llamada(entrada: dict, directorio: Path | None = None) -> bool:
+    """Escribe la nota de esta llamada. Devuelve si la escribio. Nunca lanza."""
+    try:
+        tool_use_id = entrada.get("tool_use_id")
+        if not isinstance(tool_use_id, str) or not PATRON_TOOL_USE_ID.match(tool_use_id):
+            return False
+        destino = directorio or directorio_de_notas_de_llamadas()
+        ahora = time.time()
+        nota = {
+            "tool_use_id": tool_use_id,
+            "ts": ahora,
+            "agent_id": _texto(entrada.get("agent_id")),
+            "agent_type": _texto(entrada.get("agent_type")),
+            "effort": _esfuerzo_de(entrada),
+            "transcript_path": _texto(entrada.get("transcript_path")),
+        }
+        destino.mkdir(parents=True, exist_ok=True)
+        descriptor, temporal = tempfile.mkstemp(dir=destino, prefix=".", suffix=".tmp")
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as flujo:
+                json.dump(nota, flujo, ensure_ascii=False)
+            os.replace(temporal, destino / f"{tool_use_id}.json")
+        except OSError:
+            try:
+                os.unlink(temporal)
+            except OSError:
+                pass
+            return False
+        _podar_notas(destino, ahora)
+        return True
+    except Exception:
+        # Best-effort a proposito: perder la nota deja la delegacion para el relleno; romperle la
+        # llamada al usuario por un fichero temporal costaria mucho mas.
+        return False

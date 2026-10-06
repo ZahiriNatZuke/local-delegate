@@ -1,0 +1,16 @@
+{
+  "_nota": "Tabla de densidad del paquete (REQ-030). Caracteres del fichero por token de Claude, en CENTÉSIMAS (223 = 2,23) para que Python y JS hagan la misma división entera. Por familia de tokenizador (la de la tabla de precios), columna (sin_numerar | formato_read, lo que devuelve Read con las líneas numeradas) y clase de contenido. Celdas ausentes = sin medir. medido_con = modelos con los que se midió cada familia: un evento de un modelo de la familia que no está ahí lleva la marca «densidad de la familia». Fuente: .sdd/changes/coste-api-y-cuota/insumos/densidad-por-modelo.md, recalculable con insumos/scripts/densidad.py.",
+  "medido": "2026-10-06",
+  "familias": {
+    "nueva": {
+      "medido_con": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-1"],
+      "sin_numerar": {"prosa": 223, "codigo": 241, "log": 192, "estructurado": 188, "diff": 222},
+      "formato_read": {"prosa": 200, "codigo": 203}
+    },
+    "anterior": {
+      "medido_con": ["claude-haiku-4-5"],
+      "sin_numerar": {"prosa": 301, "codigo": 312, "log": 241, "estructurado": 222, "diff": 290},
+      "formato_read": {}
+    }
+  }
+}

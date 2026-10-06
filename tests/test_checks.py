@@ -15,7 +15,7 @@ import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, install, sondas
+from local_delegate import checks, install, recalcular, sondas
 from local_delegate.fallos import VistaBackend
 
 
@@ -404,7 +404,10 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     # Claude Desktop tampoco lo escribe `install`: se le pone su entrada para exigirle `ok` también.
     home = make_home(tmp_path)
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
-    ctx = make_ctx(home, clients_seen=lambda: ([CLAUDE], None))
+    # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
+    logs = tmp_path / "logs"
+    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
+    ctx = make_ctx(home, clients_seen=lambda: ([CLAUDE], None), log_dir=logs)
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
 
@@ -1102,9 +1105,12 @@ _NUMERO = {
     18: "dieciocho",
     19: "diecinueve",
     20: "veinte",
-    # Apocopado: todas las frases lo ponen delante de un sustantivo masculino.
+    # Apocopado delante de un sustantivo masculino («los veintiún elementos»); sin sustantivo
+    # detrás («los otros veintiuno») va entero: ver `_NUMERO_SIN_SUSTANTIVO`.
     21: "veintiún",
+    22: "veintidós",
 }
+_NUMERO_SIN_SUSTANTIVO = {**_NUMERO, 21: "veintiuno"}
 
 
 def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
@@ -1124,7 +1130,7 @@ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
         f"{cuantos.capitalize()} checks son una tupla",
         f"{cuantos.capitalize()} elementos, en orden de grupo",
         f"Corre los {cuantos} probes",
-        f"ver los otros {_NUMERO[len(checks.CHECKS) - 1]}",
+        f"ver los otros {_NUMERO_SIN_SUSTANTIVO[len(checks.CHECKS) - 1]}",
     )
     faltan = [texto for texto in afirmaciones if texto not in fuente]
     assert not faltan, f"el docstring de checks.py quedó desfasado: {faltan}"

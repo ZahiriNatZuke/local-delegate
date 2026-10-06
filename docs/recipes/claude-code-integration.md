@@ -67,4 +67,4 @@ Esquema de la regla:
 | `local_explain_code` | Explica código en prosa | código |
 
 Pasar `path` (en vez de `text`) hace que el MCP lea el archivo **server-side**: el contenido
-grande nunca entra al contexto de Claude → ahí está el ahorro real de cuota.
+grande nunca entra al contexto de Claude, y de ahí sale el ahorro.

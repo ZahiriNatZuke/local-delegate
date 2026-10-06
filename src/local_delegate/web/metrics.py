@@ -50,7 +50,7 @@ import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import clients, config, fallos, server
+from .. import clients, config, coste, cuota, fallos, precios, recalcular, server, valoracion
 from . import sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
@@ -161,7 +161,10 @@ def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[st
         if not file_rows:
             continue
         files_read.append(str(path))
-        for r in file_rows:
+        # Fusión del relleno y densidad resuelta (coste-api-y-cuota, REQ-006): por fichero y ANTES
+        # de filtrar por rango, porque la clave de una línea sin `tool_use_id` lleva su ordinal en
+        # el fichero entero. `fundir` copia cada fila: la caché de `_read_file_cached` no cambia.
+        for r in coste.fundir(file_rows, log_dir=config.LOG_DIR):
             t = _parse_ts(r.get("ts"))
             if t is None or t < range_from or t > range_to:
                 continue
@@ -469,7 +472,47 @@ def events(from_: str | None = Query(None, alias="from"), to: str | None = Query
 def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
-    return JSONResponse(_aggregate(rows))
+    datos = _aggregate(rows)
+    # Coste equivalente, imágenes y cuota (coste-api-y-cuota). Solo se lee lo que dejó el comando
+    # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
+    ahora = _ahora()
+    agregados = recalcular.leer_agregados(config.LOG_DIR)
+    datos["coste"] = valoracion.bloque_coste(rows, agregados, ahora=ahora)
+    datos["imagenes"] = valoracion.bloque_imagenes(rows)
+    datos["densidad_tabla"] = {
+        k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
+    }
+    datos["cuota"] = _bloque_cuota(agregados, ahora)
+    return JSONResponse(datos)
+
+
+def _ahora() -> datetime:
+    """El reloj de `/api/stats`, aparte para que un test pueda fijarlo."""
+    return datetime.now(UTC)
+
+
+def _bloque_cuota(agregados: dict | None, ahora: datetime) -> dict:
+    """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `cuota.estado`).
+
+    Un tipo `calibrado` lleva el % sobre SU ventana móvil, que termina ahora y no depende del
+    rango que elija el panel (REQ-060): A = cota baja de lo delegado en las últimas 5 h (o 7 días)
+    ÷ mediana(C) × 100, y B = la estimación de esos mismos eventos ÷ mediana(C) × 100.
+    """
+    estado = cuota.estado(agregados, ahora)
+    for tipo, e in estado.items():
+        if e.get("estado") != "calibrado":
+            continue
+        filas, _ = _load(ahora - cuota.DURACION[tipo], ahora)
+        bloque = valoracion.bloque_coste(filas, agregados, ahora=ahora)
+        capacidad = e.get("mediana_C")
+        cifra = bloque["cifra"]
+        if cifra and capacidad:
+            e["a_pct"] = round(cifra["cota_baja"] / capacidad * 100, 1)
+            e["b_pct"] = round(cifra["estimacion"] / capacidad * 100, 1)
+        else:
+            e["a_pct"] = e["b_pct"] = None
+            e["motivo_pct"] = bloque["motivo"]
+    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMANDO}
 
 
 def _aggregate_hooks(rows: list[dict]) -> dict:
@@ -893,7 +936,7 @@ HTML = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>local·delegate — panel de ahorro</title>
-<meta name="description" content="Uso y ahorro de cuota de las delegaciones a modelos locales de local-delegate.">
+<meta name="description" content="Delegaciones a modelos locales de local-delegate: contexto conservado, equivalente a precio de API y estado de la cuota.">
 <meta name="theme-color" content="#0a0c11">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 __WEB_FONTS__
@@ -1229,6 +1272,26 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 
   <div class="grid kpis" id="kpis"></div>
 
+  <!-- Coste equivalente a precio de API, cuota e imágenes (coste-api-y-cuota). Todo lo calcula
+       Python en /api/stats; aquí solo se pinta. Sin el bloque de supuestos no hay cifra (REQ-044),
+       así que los dos salen siempre juntos. -->
+  <div class="card tablecard" id="costeCard" style="display:none">
+    <div class="panel-h" style="--hc:var(--amber)"><h2>Equivalente a precio de API</h2>
+      <span class="mut" id="costeHead"></span></div>
+    <div id="costeBody"></div>
+  </div>
+
+  <div class="grid duo">
+    <div class="card" id="cuotaCard" style="--hc:var(--violet);display:none">
+      <div class="panel-h"><h2>Cuota de la suscripción</h2><span class="mut" id="cuotaHead"></span></div>
+      <div id="cuotaBody"></div>
+    </div>
+    <div class="card" id="imagenesCard" style="--hc:var(--cyan);display:none">
+      <div class="panel-h"><h2>Imágenes</h2><span class="mut">fuera del neto</span></div>
+      <div id="imagenesBody"></div>
+    </div>
+  </div>
+
   <div class="grid cols">
     <div class="card chartcard" style="--hc:var(--acc)">
       <div class="panel-h"><h2>Ahorro de contexto en el tiempo</h2><span class="mut" id="tsMode">tokens · día</span></div>
@@ -1299,7 +1362,8 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
     <p><b>Contexto conservado</b> = el contenido de entrada que el MCP leyó <i>server-side</i>
     (llamadas con <span class="src path">path</span>) y que <b>nunca entró a la ventana de contexto de
-    Claude</b>: es cuota que no gastaste. Las llamadas <span class="src inline">inline</span> ya
+    Claude</b>. Son tokens que no ocuparon tu contexto, no un trozo de cuota medido: Anthropic no
+    publica la cuota en tokens, y la cuota tiene su propio bloque. Las llamadas <span class="src inline">inline</span> ya
     viajaron por tu contexto, así que no cuentan como ahorro. Se cuenta <b>una vez</b> por delegación
     aunque el MCP la trocee: lo que no entró a tu contexto es el documento, no el trabajo de la GPU.</p>
     <p><b>Coste local</b> = los tokens de entrada que consumió de verdad el backend, sumando
@@ -1308,8 +1372,9 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     quemó la GPU varias veces.</p>
     <p><b>Generado en local</b> = tokens de salida: trabajo de generación que hicieron los modelos
     locales en vez de Claude.</p>
-    <div class="frm">se usa el token <b>real</b> que reporta el backend &nbsp;·&nbsp; caracteres ÷ 4 solo
-    cuando falta &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
+    <div class="frm">coste local: el token <b>real</b> que reporta el backend, caracteres ÷ 4 solo
+    cuando falta &nbsp;·&nbsp; contexto conservado: tokens de Claude por familia y tipo de contenido
+    &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
   </div>
 </dialog>
 
@@ -1460,13 +1525,15 @@ async function fetchData(){
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
     renderClients(state.stats);
+    renderCoste(state.stats);
     try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
     const cnt = plural(state.meta.count||0, 'evento', 'eventos');
     const filesN = (state.meta.files_read||[]).length;
     document.getElementById('foot').textContent =
       (state.meta.log_dir||'') + '   ·   ' + cnt + '   ·   '
-      + plural(filesN, 'archivo leído', 'archivos leídos') + '   ·   ~' + CPT
+      + plural(filesN, 'archivo leído', 'archivos leídos')
+      + '   ·   tokens de Claude por familia y tipo de contenido; modelo local ~' + CPT
       + ' chars/token   ·   horas en ' + TZ + ' (' + TZ_OFFSET_TXT + ')   ·   local·delegate';
   }catch(e){
     document.getElementById('kpis').innerHTML='<div class="card empty">No se pudo leer <b>/api/events</b>. ¿El MCP está corriendo?</div>';
@@ -1505,6 +1572,144 @@ function renderClients(s){
     + '<th>Llamadas al backend</th><th>Tokens netos</th>'
     + '<th>Reparto</th></tr></thead>'
     + '<tbody>' + cuerpo + '</tbody></table></div>';
+}
+
+// --- Coste equivalente, cuota e imágenes: /api/stats (coste-api-y-cuota) ---
+//
+// El coste solo lo calcula Python; estas funciones son puras (las prueba node en
+// `test_panel_coste.py`) y devuelven LÍNEAS de texto, la primera es el titular. Ninguna frase lo
+// presenta como dinero en el bolsillo ni como un trozo de cuota medido (REQ-045), y sin calibrar no
+// hay % (REQ-059).
+const HILO_TXT = {main:'hilo principal', subagent:'subagente'};
+function dolares(x){ return '$' + fmtNum(x, 2); }
+
+// Las dos celdas en dólares de una fila del desglose. Con T ≤ 0 la tool devolvió tanto o más de lo
+// que leyó: la fila no tiene ahorro y no se pinta una cifra (sería «$0,00» o un negativo sin signo).
+function celdasCoste(g){
+  if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">sin ahorro</td>';
+  return '<td class="num">' + dolares(g.cota_baja) + '</td>'
+    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimacion) + '</td>';
+}
+
+function textoCoste(j){
+  const c = j && j.coste;
+  if(!c) return [];
+  const L = [];
+  L.push(c.cifra
+    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.cifra.cota_baja)
+      + ' y ~' + dolares(c.cifra.estimacion)
+    : 'Equivalente estimado a precio de API: sin cifra (' + c.motivo + ')');
+  L.push('No es dinero que hayas ahorrado: tu suscripción es de tarifa plana.');
+  if(c.cifra) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
+    + 'el segundo suma las relecturas de caché posteriores y las caducidades.');
+  const b = c.barra || {}, r = c.respaldo || {};
+  L.push('Cobertura: ' + plural(b.al_momento||0, 'atribuida al momento', 'atribuidas al momento')
+    + ' · ' + F.format(b.por_relleno||0) + ' por relleno · ' + F.format(b.pendiente||0)
+    + ' pendientes · ' + F.format(b.supuesto||0) + ' supuestas · ' + F.format(b.excluido||0)
+    + ' excluidas (pruebas (scripts y bancos) y clientes que no son Claude).');
+  L.push(F.format(b.con_modelo_supuesto||0) + ' de ' + F.format(b.valoradas||0)
+    + ' con modelo supuesto: ' + (r.nombre||'') + ' en ' + (HILO_TXT[r.hilo]||r.hilo||'')
+    + (r.invalido ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
+  const n = c.n_origen || {}, nd = c.n_declarado || {};
+  L.push('Relecturas (N): ' + F.format(n.relleno||0) + ' del relleno, ' + F.format(n.agregado||0)
+    + ' de la mediana de su grupo, ' + F.format(n.declarado||0) + ' con el valor declarado (principal '
+    + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
+  const d = c.densidad || {}, o = d.origen || {};
+  const fams = Object.entries(d.familias||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
+  L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
+    + F.format(o.medida||0) + ', sin numerar ' + F.format(o.sin_numerar||0) + ', conservadora '
+    + F.format(o.conservadora||0) + '; ' + F.format(d.densidad_de_la_familia||0)
+    + ' con densidad de la familia y ' + F.format(d.familia_supuesta||0) + ' con familia supuesta.');
+  const sp = c.sin_precio || {};
+  if(sp.n) L.push(plural(sp.n, 'delegación de un modelo sin precio', 'delegaciones de modelos sin precio')
+    + ', fuera de la suma: ' + (sp.ids||[]).join(', ') + '.');
+  const fb = c.fuera_de_la_base || {};
+  L.push('Fuera de la cifra: ' + plural(fb.imagenes||0, 'imagen', 'imágenes') + ' y '
+    + plural(fb.salida_a_fichero||0, 'salida a fichero', 'salidas a fichero') + '.');
+  L.push('Neto de la respuesta de la tool. Contrafactual: si Claude hubiera leído el fichero entero '
+    + 'una vez con Read. No descuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).');
+  L.push('Precios de la tabla del paquete del ' + ((c.tabla||{}).consultado || 'sin fecha') + '.');
+  return L;
+}
+
+function textoCuota(j){
+  const q = j && j.cuota;
+  if(!q) return [];
+  const L = [];
+  [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([tipo, nombre])=>{
+    const e = q[tipo];
+    if(!e) return;
+    const disp = (e.dispersion!==undefined && e.dispersion!==null)
+      ? ', dispersión ' + F1.format(e.dispersion*100) + ' %' : '';
+    if(e.estado==='calibrado'){
+      const v = tipo==='five_hour'
+        ? 'de una ventana de 5 h (lo delegado en las últimas 5 h'
+        : 'de una ventana semanal (lo delegado en los últimos 7 días';
+      L.push(e.a_pct!==null && e.a_pct!==undefined
+        ? nombre + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
+          + '; la estimación incluye relecturas que pueden caer después de la ventana); estimación '
+          + 'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos') + disp
+          + '; supone que la cuota sigue al precio de lista.'
+        : nombre + ': calibrada, sin cifra (' + (e.motivo_pct||'') + ').');
+      if(e.aviso) L.push(nombre + ': ' + e.aviso + '.');
+      return;
+    }
+    let t = nombre + ': sin calibrar (' + (e.motivo||'') + ')';
+    if(!q.hay_agregados) t += '; los genera ' + q.comando;
+    L.push(t + '.');
+    const desc = Object.entries(e.descartes||{}).filter(([,k])=>k).map(([m,k]) => m + ' ' + F.format(k));
+    L.push(nombre + ': ' + plural(e.puntos||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
+      + ', ' + plural(e.puntos_rechazo||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
+      + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
+      + (e.deriva ? '; hubo deriva' : '') + (e.reinicio ? '; reiniciada a mano el ' + e.reinicio : '') + '.');
+  });
+  return L;
+}
+
+function textoImagenes(j){
+  const i = j && j.imagenes;
+  if(!i) return [];
+  return [plural(i.n||0, 'imagen', 'imágenes') + ' · ' + F.format(i.bytes||0) + ' bytes leídos server-side · '
+      + F.format(i.chars_devueltos||0) + ' caracteres devueltos a Claude',
+    'Sin cifra de tokens de Claude: el log guarda bytes, no dimensiones. No entran en el contexto '
+      + 'conservado ni en el equivalente a precio de API.'];
+}
+
+function lineasHtml(L, desde){
+  return L.slice(desde||0).map(x => '<div class="nota">' + escHooks(x) + '</div>').join('');
+}
+
+function renderCoste(s){
+  const cc = document.getElementById('costeCard'), qc = document.getElementById('cuotaCard');
+  const ic = document.getElementById('imagenesCard');
+  const c = s && s.coste;
+  cc.style.display = c ? '' : 'none';
+  if(c){
+    const L = textoCoste(s);
+    document.getElementById('costeHead').textContent = c.cifra ? plural(c.eventos||0, 'delegación', 'delegaciones') : '';
+    const filas = (c.desglose||[]).map(g => '<tr><td class="mono">' + escHooks(g.nombre) + '</td>'
+      + '<td class="mono">' + escHooks(HILO_TXT[g.hilo]||g.hilo) + '</td>'
+      + '<td class="mono">' + escHooks(g.esfuerzo) + '</td>'
+      + '<td class="num">' + F.format(g.casos) + '</td>'
+      + '<td class="num">' + F.format(g.T) + '</td>'
+      + celdasCoste(g) + '</tr>').join('');
+    document.getElementById('costeBody').innerHTML =
+      '<div class="nota" style="color:var(--tx);font-size:15px;font-weight:700">' + escHooks(L[0]) + '</div>'
+      + lineasHtml(L, 1)
+      + (filas ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
+        + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
+        + '</tr></thead><tbody>' + filas + '</tbody></table></div>' : '');
+  }
+  const q = s && s.cuota;
+  qc.style.display = q ? '' : 'none';
+  if(q){
+    const cal = ['five_hour','seven_day'].filter(t => q[t] && q[t].estado==='calibrado').length;
+    document.getElementById('cuotaHead').textContent = cal ? plural(cal, 'ventana calibrada', 'ventanas calibradas') : 'sin calibrar';
+    document.getElementById('cuotaBody').innerHTML = lineasHtml(textoCuota(s));
+  }
+  const im = s && s.imagenes;
+  ic.style.display = im ? '' : 'none';
+  if(im) document.getElementById('imagenesBody').innerHTML = lineasHtml(textoImagenes(s));
 }
 
 // --- Sugerencias de los hooks: /api/hooks ---
@@ -1954,13 +2159,15 @@ function kpiCard(o){
 
 // Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `tokens_claude` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
-// `coste-api-y-cuota` sustituye el cuerpo sin tocar la firma. Regla de hoy: text y returned,
-// cantidad÷4; output, el tokens_out reportado o cantidad÷4; image, el tokens_in reportado o 0.
+// Aquí no se resuelve nada (coste-api-y-cuota, REQ-033): /api/events entrega cada fila ya
+// fundida por Python, con `densidad[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
+// cantidad×100/c100 redondeado hacia abajo, como la división entera de Python.
 function tokensClaude(cantidad,tipo,e){
-  if(tipo==='text'||tipo==='returned') return tok(cantidad);
-  if(tipo==='output') return (e.tokens_out!==undefined&&e.tokens_out!==null) ? e.tokens_out : tok(cantidad);
-  if(tipo==='image') return (e.tokens_in!==undefined&&e.tokens_in!==null) ? e.tokens_in : 0;
-  throw new Error('tipo de conversión desconocido: '+tipo);
+  if(tipo!=='text'&&tipo!=='returned'&&tipo!=='output'&&tipo!=='image') throw new Error('tipo de conversión desconocido: '+tipo);
+  if(tipo==='image') return 0;
+  const celda = e && e.densidad ? e.densidad[tipo] : null;
+  if(!celda) return 0;
+  return Math.floor(cantidad*100/celda[0]);
 }
 
 // Contabilidad de UN evento. Espejo exacto de `_accounting` en server.py: las series por día se
@@ -2044,7 +2251,7 @@ function render(){
        hint:'salida de los modelos'+estTxt,tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'})
     + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
        hint:'entrada consumida por la GPU',
-       tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso supera al contexto conservado en las delegaciones troceadas.'})
+       tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso crece con el troceo y el contexto conservado no. Son tokens del modelo local, no de Claude.'})
     // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSeg` decide la forma entera.
     + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSeg(lat)),lbl:'Latencia media',
        hint:'incluye carga de modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})

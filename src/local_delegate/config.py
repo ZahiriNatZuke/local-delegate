@@ -358,7 +358,12 @@ WEB_PORT = _env_int("LOCAL_DELEGATE_WEB_PORT", 9393)
 # cosmético (sin red cae al stack del sistema). `0` la desactiva y deja la página con cero
 # peticiones a terceros. Chart.js se sirve siempre desde el propio paquete.
 WEB_FONTS = _env_flag("LOCAL_DELEGATE_WEB_FONTS", True)
-CHARS_PER_TOKEN = 4  # aproximación: tokens ~ chars / 4
+CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca tokens de Claude)
+
+# Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
+# `modelo` o `modelo:main|subagent`. Vacío = el declarado en `coste.py` (Opus 5.5 en subagente).
+# Un valor inválido no rompe nada: se usa el declarado y la fila lo dice (`respaldo_invalido`).
+COSTE_RESPALDO = _env("LOCAL_DELEGATE_COSTE_RESPALDO", "")
 
 # Token del puerto del daemon. Vacío = sin autenticación, que es el comportamiento histórico y
 # sigue siendo el default: exigirlo siempre rompería toda instalación existente el día que se

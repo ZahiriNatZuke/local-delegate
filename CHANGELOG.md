@@ -6,18 +6,77 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-> **No publicar versión hasta mezclar `coste-api-y-cuota`**: las cifras en tokens de Claude de este
-> bloque usan todavía chars ÷ 4. La conversión vive ya en una sola función (`tokens_claude`), pero
-> la que la sustituye llega con ese cambio, y las dos cosas tienen que salir en la misma versión.
+### Added
+- **Equivalente estimado a precio de API, con sus supuestos a la vista.** El panel dice
+  «Equivalente estimado a precio de API: entre $X y ~$Y», con la nota «no es dinero que hayas
+  ahorrado: tu suscripción es de tarifa plana». Es una **estimación**, no una medida: valora el
+  contexto que no entró a Claude como si Claude lo hubiera leído entero una vez con `Read`, al
+  precio de lista del modelo que pidió cada delegación. La cota baja cuenta una sola escritura en
+  la caché; la estimación suma las peticiones siguientes en las que ese contenido se habría vuelto
+  a leer (`N`, medido en los transcripts) y las veces que la caché habría caducado. Junto a la
+  cifra se ven siempre la barra de cobertura (cuántas delegaciones tienen modelo atribuido, cuántas
+  se valoran con el modelo de respaldo y cuántas quedan fuera por ser de pruebas o de clientes que
+  no son Claude), de dónde sale cada `N`, la densidad usada, la fecha de la tabla de precios y un
+  desglose por modelo, hilo y esfuerzo. No descuenta las relecturas del mismo fichero (medidas
+  entre ~3 % y ~30 %). Sin tabla de precios o sin delegaciones valorables, el panel dice el motivo
+  en vez de enseñar $0. En la máquina de referencia, del 6 de septiembre al 6 de octubre de 2026:
+  1,84 millones de tokens netos, cota baja $11,50 y estimación $92,69; la cifra se reproduce al
+  céntimo con el script de la investigación. La tabla de precios viaja en el paquete y el panel no
+  usa la red para calcularla.
+- **Bloque de cuota, «sin calibrar» hasta que haya datos.** Cuánto de una ventana de 5 h o de la
+  semanal supone lo delegado solo se puede saber calibrando contra las medidas que da el
+  statusline de Claude Code. El bloque dice qué falta («faltan 3 puntos del statusline»), cuántas
+  medidas se descartaron y por qué, y los rechazos de cuota observados, que sirven solo de
+  comprobación. Un tipo pasa a calibrado con al menos tres medidas de ventanas distintas y una
+  dispersión menor del 25 %; hasta entonces **no enseña ningún porcentaje**. En la máquina de
+  referencia sigue sin calibrar en los dos tipos.
+- **Bloque «Imágenes».** Las delegaciones de `local_describe_image` se enseñan aparte, con su
+  número, los bytes leídos en local y los caracteres devueltos a Claude, sin ninguna cifra de
+  tokens de Claude: sin las dimensiones de la imagen no hay forma honesta de calcularla.
+- **`local-delegate recalcular-coste`.** Lee en local tus transcripts de `~/.claude/projects`, el
+  registro del statusline y el log de uso, y escribe junto al log solo agregados: a qué modelo,
+  hilo y esfuerzo corresponde cada delegación pasada, los `N` por grupo, los puntos de
+  calibración de la cuota y el cotejo de la tabla de precios contra lo que calcula Claude Code. Ni
+  texto, ni rutas, ni ids de sesión. Es idempotente y no escribe nada en `~/.claude`. Hay que
+  lanzarlo antes de que Claude Code borre los transcripts (`cleanupPeriodDays`, 30 días por
+  defecto); en la máquina de referencia tarda 3,3 s sobre 456 transcripts. Con
+  `--reiniciar-calibracion five_hour|seven_day` se descarta la calibración de un tipo cuando
+  cambian los límites.
+- **Check `config.coste` en `doctor`, que ya tiene 22.** Avisa si hay delegaciones sin atribuir
+  que están a menos de 10 días de quedarse sin transcript, o si el último cotejo de precios no
+  cuadró (nombrando los modelos); da `ok` si cuadró y `unknown` si el comando nunca se lanzó.
+- **Hook `anotar_llamada.py`.** Un `PreToolUse` sobre las tools de local-delegate que se instala
+  siempre con los demás. No avisa ni bloquea: deja una nota con el agente, su tipo, el esfuerzo y
+  el transcript, y el servidor la recoge al escribir la línea del log para guardar quién pidió la
+  delegación (`caller_model`, `caller_kind`, `caller_effort`). El log guarda también el
+  `tool_use_id` que manda Claude Code.
+- **Vigilante semanal de precios y límites.** Un workflow propio mira cada lunes la tabla oficial
+  de precios y el artículo de límites de uso, y abre un PR cuando cambian: con la tabla nueva, o
+  con el texto nuevo del artículo y cómo reiniciar la calibración. Falla en voz alta si la página
+  no responde o no se puede leer, en vez de darlo por «sin cambios». Es el único workflow con
+  permisos de escritura; sus commits los firma GitHub y él mismo lanza los checks del PR.
 
 ### Changed
+- **«Contexto conservado» se cuenta en tokens de Claude de verdad, y la cifra sube.** La
+  conversión de caracteres a tokens deja de ser `÷ 4` y usa una tabla de densidad medida por
+  familia de tokenizador (la de Opus 5.5, Sonnet 5.5, Opus 5 y Fable 5.1, y la anterior, de Haiku
+  4.5) y por tipo de contenido (prosa, código, log, estructurado, diff), con la numeración de líneas
+  de `Read` cuando la entrada fue por `path`. Python resuelve la densidad de cada fila y el JS del
+  panel solo divide, así que las dos cuentas no pueden separarse. En la máquina de referencia,
+  septiembre pasa de 800 928 a **1 589 552** tokens netos; las cifras en caracteres no cambian.
+  Las imágenes salen enteras del neto y van a su bloque. La coletilla de ahorro, el recibo de la
+  salida a fichero y `tokens_aprox` de `local_extract` dicen «≈ N tokens de Claude» con la misma
+  conversión, y la coletilla de `local_describe_image` dice solo los bytes. `÷ 4` queda solo para el
+  modelo local. La descripción de la página del panel pasa a «contexto conservado, equivalente a
+  precio de API y estado de la cuota».
 - **«Contexto conservado» pasa a ser un neto, y las cifras históricas bajan.** El KPI enseña lo
   que no entró a tu contexto menos lo que la tool te devolvió, y su pista dice los dos números
   («bruto X − devuelto Y»); el tooltip avisa de que no descuenta relecturas. El neto puede ser
   negativo, y el KPI, la chispa y «Ahorro por herramienta» lo enseñan con su signo. Como las
   cuentas se hacen al leer el log, los meses pasados se recalculan solos: agosto, en la máquina
-  de referencia, baja un 32 % solo por sacar los fallos del bruto, y septiembre queda en 800 928
-  tokens netos (873 270 de bruto menos 72 342 devueltos). `/api/stats` añade `tokens_returned`,
+  de referencia, baja un 32 % solo por sacar los fallos del bruto, y septiembre, todavía con
+  `÷ 4`, quedaba en 800 928 tokens netos (873 270 de bruto menos 72 342 devueltos); con la
+  conversión por densidad de la entrada anterior son 1 589 552. `/api/stats` añade `tokens_returned`,
   `tokens_context_net`, el desglose en caracteres (`chars_saved_text`, `bytes_saved_image`,
   `chars_saved_output`, `chars_returned`) y `tokens_net` por herramienta, por origen y por
   cliente; `tokens_context_saved` sigue siendo el bruto. `local_status` dice

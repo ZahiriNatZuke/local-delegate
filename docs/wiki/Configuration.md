@@ -157,7 +157,24 @@ fijas `LOCAL_DELEGATE_LOG`, ese archivo se usa tal cual y la rotación se desact
 |---|---|---|
 | `LOCAL_DELEGATE_LOG_DIR` | *(dir de datos de usuario)* | Directorio donde se escriben los `usage-YYYYMM.jsonl` rotados. Por defecto `platformdirs.user_data_dir("local-delegate")` (p. ej. `%LOCALAPPDATA%\local-delegate` en Windows) |
 | `LOCAL_DELEGATE_LOG` | *(vacío = rotación activa)* | Si se fija, ruta de un `usage.jsonl` explícito sin rotar. El dashboard igual lo lee como fuente adicional aunque uses `LOG_DIR` para el resto |
-| `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens" que se anexa al resultado cuando `source=path`. En `local_extract` no se anexa al texto sino que viaja dentro de `_local_delegate` (ver abajo): pegarla rompería el JSON |
+| `LOCAL_DELEGATE_FEEDBACK` | `1` | `0` apaga la línea "leído server-side: N chars ≈ M tokens de Claude" que se anexa al resultado cuando `source=path`. En `local_extract` no se anexa al texto sino que viaja dentro de `_local_delegate` (ver abajo): pegarla rompería el JSON. En `local_describe_image` dice solo los bytes |
+
+## Coste equivalente
+
+El equivalente a precio de API y el bloque de cuota (ver
+[Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) tienen una sola
+variable:
+
+| Variable | Default | Descripción |
+|---|---|---|
+| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
+
+El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
+local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
+borra los transcripts (30 días si no está puesto). `local-delegate recalcular-coste` lo lee y lo
+guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
+abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
+valor declarado de su hilo, en ese orden.
 
 ## `local_extract` — JSON con schema
 

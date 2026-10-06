@@ -102,9 +102,9 @@ def test_read_hook_is_opt_in(tmp_path):
     _install(tmp_path)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
     matchers = {g.get("matcher") for g in settings["hooks"].get("PreToolUse", [])}
-    # Vacío desde que se retiró `suggest_lint_summary.py`: era el único `PreToolUse` que se
-    # registraba solo. Sin opt-in no queda ninguno.
-    assert matchers == set()
+    # Sin opt-in solo queda el de atribución (coste-api-y-cuota, REQ-002), que no avisa ni
+    # bloquea: ninguno de los de lectura.
+    assert matchers == {"mcp__local-delegate__.*"}
 
     _install(tmp_path, enable_read_hook=True)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
@@ -112,7 +112,38 @@ def test_read_hook_is_opt_in(tmp_path):
     # Los TRES caminos de lectura, con una sola bandera: cerrar la tool `Read` y dejar abierto
     # `cat informe.md` no cambia la conducta, la muda de sitio; y las lecturas por otros MCP se
     # cuentan aunque no se cierren (REQ-F1-9).
-    assert matchers == {"Read", "Bash|PowerShell", inst._MCP_READ_HOOK[2]}
+    assert matchers == {
+        "Read",
+        "Bash|PowerShell",
+        inst._MCP_READ_HOOK[2],
+        "mcp__local-delegate__.*",
+    }
+
+
+def test_el_hook_de_atribucion_se_registra(tmp_path):
+    """coste-api-y-cuota, REQ-002: el hook que anota quién pide cada delegación va siempre.
+
+    Control (a): contra el código de antes no hay ningún `PreToolUse` registrado por defecto.
+    """
+    _install(tmp_path)
+    settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    registrados = {
+        (evento, grupo.get("matcher"))
+        for evento, grupos in settings["hooks"].items()
+        for grupo in grupos
+    }
+    assert ("PreToolUse", "mcp__local-delegate__.*") in registrados
+    comandos = [
+        h["command"]
+        for g in settings["hooks"]["PreToolUse"]
+        if g.get("matcher") == "mcp__local-delegate__.*"
+        for h in g["hooks"]
+    ]
+    assert len(comandos) == 1 and "anotar_llamada.py" in comandos[0]
+    hooks_dir = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+    assert (hooks_dir / "anotar_llamada.py").is_file(), (
+        "el script registrado tiene que estar copiado"
+    )
 
 
 def _comando_del_hook_de_read(home: Path) -> str | None:
@@ -194,9 +225,11 @@ def test_install_is_idempotent_and_keeps_foreign_config(tmp_path):
     assert settings["permissions"] == {"allow": ["Skill"]}
     assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "~/mio.sh"
     assert len(settings["hooks"]["UserPromptSubmit"]) == 1  # no se duplica al reinstalar
-    # Ya no se registra ningún `PreToolUse` por defecto: el de Read es opt-in y el de lint se
-    # retiró. Y la clave no puede quedar creada y vacía, que sería ruido en el settings ajeno.
-    assert "PreToolUse" not in settings["hooks"]
+    # Por defecto el único `PreToolUse` es el de atribución, y una sola vez aunque se reinstale:
+    # el de Read es opt-in y el de lint se retiró.
+    assert [g.get("matcher") for g in settings["hooks"]["PreToolUse"]] == [
+        "mcp__local-delegate__.*"
+    ]
     text = memory.read_text(encoding="utf-8")
     assert text.count(inst.MD_BEGIN) == 1
     assert "No borrar." in text

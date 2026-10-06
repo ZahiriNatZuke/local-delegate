@@ -10,7 +10,7 @@ from pathlib import Path
 
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, daemon, doctor, install, sondas, update
+from local_delegate import checks, daemon, doctor, install, recalcular, sondas, update
 from local_delegate.fallos import VistaBackend
 
 
@@ -247,6 +247,8 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
         ' "protocol": "2025-11-25", "caps": ["elicitation", "roots"]}\n',
         encoding="utf-8",
     )
+    # Igual con el cotejo de `config.coste`: vive en `LOG_DIR`, y sin él el check es `unknown`.
+    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
     _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
     # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.

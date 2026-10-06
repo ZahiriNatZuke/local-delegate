@@ -3,9 +3,9 @@
   "slug": "coste-api-y-cuota",
   "title": "Panel: coste equivalente a precio de API y % de cuota sin calibrar",
   "mode": "standard",
-  "status": "plan-review",
+  "status": "result-review",
   "createdAt": "2026-10-06T14:06:24.439Z",
-  "updatedAt": "2026-10-06T17:00:46.260Z",
+  "updatedAt": "2026-10-06T19:58:57.602Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -20,16 +20,16 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-06T19:58:57.228Z",
+      "evidence": "Suite completa 1746 passed/2 skipped, corrida por la sesión principal; ruff check y format limpios; controles positivos y mutantes por tarea en verification.md y evidencias/; T8 reproduce todas las cifras de la spec con datos reales; T10 contra el daemon reinstalado (doctor 22/22, atribución real, panel en vivo). Datos de visita y ids de sesión retirados.",
+      "actor": "user"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-06T19:58:57.602Z",
+      "evidence": "Revisión del resultado (review.md): 58 REQ comprobados en código y tests, 54 cumplen y 4 con desviación aceptable; los 2 bloqueantes (shebang sin modo ejecutable y datos de visita en el fixture) arreglados y verificados por la sesión principal. T11 (ensayo del vigilante en GitHub) queda para después de mezclar, por diseño.",
+      "actor": "user"
     },
     "memory": {
       "status": "pending",
@@ -89,6 +89,43 @@
       "to": "plan-review",
       "at": "2026-10-06T17:00:46.260Z",
       "reason": "Plan v2 tras revisión adversaria"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-06T17:50:21.699Z",
+      "reason": "Panel mezclado (#231); arranca T0"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-06T19:58:57.016Z",
+      "reason": "T0-T10 y arreglos implementados"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-06T19:58:57.228Z",
+      "evidence": "Suite completa 1746 passed/2 skipped, corrida por la sesión principal; ruff check y format limpios; controles positivos y mutantes por tarea en verification.md y evidencias/; T8 reproduce todas las cifras de la spec con datos reales; T10 contra el daemon reinstalado (doctor 22/22, atribución real, panel en vivo). Datos de visita y ids de sesión retirados.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-06T19:58:57.415Z",
+      "reason": "Revisión de conformidad"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-06T19:58:57.602Z",
+      "evidence": "Revisión del resultado (review.md): 58 REQ comprobados en código y tests, 54 cumplen y 4 con desviación aceptable; los 2 bloqueantes (shebang sin modo ejecutable y datos de visita en el fixture) arreglados y verificados por la sesión principal. T11 (ensayo del vigilante en GitHub) queda para después de mezclar, por diseño.",
+      "actor": "user"
     }
   ]
 }

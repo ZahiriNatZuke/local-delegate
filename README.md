@@ -27,7 +27,7 @@ Cuando Claude tiene que resumir un log enorme, clasificar, extraer campos o gene
 gasta cuota de tu suscripción en trabajo **mecánico**. `local-delegate` expone esas tareas como
 tools MCP que corren en un LLM **local**: pasas `path` en vez de `text` y el archivo se lee
 **del lado del servidor**, así el contenido grande **nunca entra al contexto de Claude**. Solo
-vuelve el resultado corto — cuota que no gastaste.
+vuelve el resultado corto: el documento no ocupa tu ventana de contexto ni lo procesa Claude.
 
 ## Instalación rápida
 
@@ -115,7 +115,8 @@ escribir nada ([qué mira cada check](./docs/wiki/Integration-install.md#comprob
 
 ## Tools
 
-Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side → ahorro real de cuota.
+Pasar `path` (en vez de `text`) hace que el MCP lea el archivo server-side: el contenido no entra
+al contexto de Claude, y de ahí sale el ahorro.
 
 | Tool | Qué hace | Rol de modelo (default) |
 |---|---|---|
@@ -185,17 +186,33 @@ cámbialos por los de tu backend.
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
 | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
+| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
 
 ## La métrica de ahorro
 
 El MCP registra cada llamada en un log rotado por mes y sirve un **dashboard** en
 `http://127.0.0.1:9393`, con selector de rango y visibilidad de delegaciones en curso.
-El *ahorro de contexto* = la entrada leída server-side (llamadas con `source=path`) ≈ tokens que
-nunca entraron al contexto de Claude, contados **una vez por delegación** aunque el MCP la trocee.
-Enfrente, el *coste local* = los tokens que consumió de verdad tu GPU **sumando todas** las
-llamadas: una delegación troceada repite el prompt de sistema en cada trozo, y esa diferencia es
-lo que costó trocear. Se usa siempre el token real que reporta el backend; `chars ÷ 4` es solo el
-respaldo cuando no lo da. Detalle en la [wiki](./docs/wiki/Home.md).
+El *contexto conservado* = la entrada leída server-side (llamadas con `source=path` que salieron
+bien) menos lo que la tool te devolvió, contada **una vez por delegación** aunque el MCP la trocee.
+Se mide en caracteres y se pasa a **tokens de Claude** con una tabla de densidad medida por familia
+de tokenizador y tipo de contenido (prosa, código, log, datos estructurados, diff): un `.md` no
+cuenta lo mismo que un `.json`, y Haiku 4.5 no cuenta como Opus 5.5. Las imágenes salen de esa
+cifra —sin sus dimensiones no hay forma de saber cuántos tokens le costarían a Claude— y se enseñan
+aparte. Enfrente, el *coste local* = los tokens que consumió de verdad tu GPU **sumando todas** las
+llamadas: una delegación troceada repite el prompt de sistema en cada trozo, y esa diferencia es lo
+que costó trocear. Ahí se usa el token real que reporta el backend; `chars ÷ 4` es solo el respaldo
+del modelo **local** cuando no lo da. Detalle en la [wiki](./docs/wiki/Savings-and-metrics.md).
+
+El panel enseña además un **equivalente estimado a precio de API**: lo que costaría ese mismo
+contexto leído por Claude a precio de lista, entre una cota baja y una estimación que cuenta las
+peticiones en las que ese contenido se habría vuelto a leer de la caché. **No es dinero que hayas
+ahorrado**: tu suscripción es de tarifa plana. Es una estimación con supuestos a la vista (con qué
+modelo se atribuye cada delegación, cuántas peticiones siguieron, qué densidad se usó) y no
+descuenta las relecturas del mismo fichero. Junto a ella, un bloque de **cuota** que sale «sin
+calibrar» hasta que hay al menos tres medidas del statusline de ventanas distintas, y nunca enseña
+un porcentaje sin esa calibración. Para atribuir el histórico y alimentar esos dos bloques, lanza
+de vez en cuando `local-delegate recalcular-coste` (lee tus transcripts en local y escribe solo
+agregados); `doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
 
 Los rangos, los días del gráfico y las horas de la tabla usan **tu zona horaria** (el log se
 escribe en UTC, que es un instante sin ambigüedad; la conversión es de presentación). El
@@ -228,7 +245,7 @@ a propósito:
 | Componente | Dónde | Qué hace |
 |---|---|---|
 | Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
-| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende |
+| Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende; uno anota qué agente pidió cada delegación |
 | Skill | `~/.claude/skills/delegacion-local/` y `~/.config/opencode/skill/delegacion-local/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
@@ -237,7 +254,9 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige 
 plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
 pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
 
-El único hook que se instala solo es `UserPromptSubmit` (intenciones mecánicas). Los dos de
+Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `anotar_llamada.py`
+(`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
+cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
 `--enable-read-hook`, que los registra y los enciende juntos (`uninstall` los apaga). Van juntos
 porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat informe.md`
