@@ -14,8 +14,8 @@ name: Vigilante de precios
 #   - `actions: write`: un PR abierto con GITHUB_TOKEN no dispara los workflows de `pull_request`,
 #     así que el script lanza por `workflow_dispatch` `ci.yml` y `codeql.yml` sobre la rama.
 #
-# Entrada `ensayo`: fuerza un diff inocuo (`consultado` = hoy) en la rama `vigilante/ensayo`, con
-# «[ensayo]» en el título. Sirve para probar el circuito entero en GitHub (T11); ese PR se cierra
+# Entrada `ensayo`: fuerza un diff inocuo (una marca `_ensayo` con el id del run, que no depende
+# de la fecha) en la rama `vigilante/ensayo`, con «[ensayo]» en el título. Sirve para probar el circuito entero en GitHub (T11); ese PR se cierra
 # sin mezclar.
 on:
   schedule:
