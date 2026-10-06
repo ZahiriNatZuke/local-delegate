@@ -23,8 +23,15 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from . import autostart, checks, config, fallos
+from . import autostart, config, fallos
+
+# `checks` se importa dentro de las funciones que lo usan: `checks` llama a este módulo (sus
+# colaboradores por defecto piden `backend_probe` y las versiones), así que importarlo arriba
+# cerraba un ciclo entre los dos módulos. Aquí solo hace falta para las anotaciones.
+if TYPE_CHECKING:
+    from .checks import Check, Result
 
 # --- Fuente de verdad de versiones probadas ----------------------------------------------
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
@@ -335,7 +342,9 @@ def _versions_heading(online: bool) -> str:
     return "Versiones (instalada vs probada; usa --online para comparar con GitHub):"
 
 
-def _print_group(group: str, results: list[tuple[checks.Check, checks.Result]]) -> None:
+def _print_group(group: str, results: list[tuple[Check, Result]]) -> None:
+    from . import checks
+
     for check, result in results:
         if check.group != group:
             continue
@@ -348,6 +357,8 @@ def _print_group(group: str, results: list[tuple[checks.Check, checks.Result]]) 
 
 def run_doctor(args: argparse.Namespace) -> int:
     """Imprime el diagnóstico completo y devuelve exit code (0 sin avisos, 1 con al menos uno)."""
+    from . import checks
+
     config_path: Path | None = None
     if getattr(args, "config", None):
         config_path = Path(args.config)

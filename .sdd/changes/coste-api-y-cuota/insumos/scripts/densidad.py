@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115  (script de evidencia desechable del SDD, no es producto)
 """Recalcula la tabla de densidad (caracteres por token de Claude) de `insumos/densidad-por-modelo.md`.
 
 Entrada: `insumos/datos/densidad-resultados.jsonl` (45 llamadas `claude -p` del 2026-10-06, con
@@ -17,7 +16,8 @@ import os
 aqui = os.path.dirname(os.path.abspath(__file__))
 F = os.path.join(aqui, "..", "datos", "densidad-resultados.jsonl")
 CHARS_ORIGINAL = {"prosa_read": 9543, "python_read": 9958}
-filas = [json.loads(l) for l in open(F, encoding="utf-8")]
+with open(F, encoding="utf-8") as fh:
+    filas = [json.loads(l) for l in fh]
 control = {}
 for r in filas:
     if r["contenido"] == "control":

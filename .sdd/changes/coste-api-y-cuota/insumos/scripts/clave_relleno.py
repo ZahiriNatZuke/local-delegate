@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115  (script de evidencia desechable del SDD, no es producto)
 """Unicidad de la clave del relleno (REQ-005) sobre los logs de uso de esta máquina.
 
 Solo lectura; devuelve solo conteos. Compara tres claves candidatas para las líneas SIN
@@ -22,15 +21,16 @@ L = os.path.join(
 )
 lineas, con_id = [], collections.Counter()
 for f in sorted(glob.glob(os.path.join(L, "usage-*.jsonl"))):
-    for line in open(f, encoding="utf-8"):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if r.get("tool_use_id"):
-            con_id[r["tool_use_id"]] += 1
-            continue
-        lineas.append(r)
+    with open(f, encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if r.get("tool_use_id"):
+                con_id[r["tool_use_id"]] += 1
+                continue
+            lineas.append(r)
 
 
 def repetidas(claves):

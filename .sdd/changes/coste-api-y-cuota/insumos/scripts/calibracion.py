@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115, FURB162, RUF007  (script de evidencia desechable del SDD, no es producto)
 """Puntos de calibración de la cuota (REQ-051 a REQ-054) y estado según el criterio (REQ-055 y REQ-056).
 
 Solo lectura. Lee los rechazos de cuota de ~/.claude/projects y el registro del statusline
@@ -12,20 +11,23 @@ import argparse
 import collections
 import datetime as dt
 import glob
+import io
+import itertools
 import json
 import os
 import re
 import sys
+from pathlib import Path
 
 aqui = os.path.dirname(os.path.abspath(__file__))
 sys.dont_write_bytecode = True
 sys.path.insert(0, aqui)
 import criterio
 
-try:
+# Solo un TextIOWrapper sabe reconfigurarse; si la salida es otra cosa (un pytest que la
+# captura, un StringIO) se deja como está.
+if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding="utf-8")
-except AttributeError:
-    pass
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--hoy", default=None)
@@ -35,7 +37,7 @@ ap.add_argument(
 a = ap.parse_args()
 HOY = dt.datetime.fromisoformat(a.hoy) if a.hoy else dt.datetime.now(dt.UTC)
 HASTA = dt.datetime.fromisoformat(a.hasta) if a.hasta else None
-PRECIOS = json.load(open(os.path.join(aqui, "precios.json"), encoding="utf-8"))["modelos"]
+PRECIOS = json.loads(Path(aqui, "precios.json").read_text(encoding="utf-8"))["modelos"]
 DUR = {"five_hour": dt.timedelta(hours=5), "seven_day": dt.timedelta(days=7)}
 VIGENCIA = dt.timedelta(days=60)
 DELTA_MIN = 10
@@ -43,7 +45,7 @@ DELTA_MIN = 10
 
 def p_ts(s):
     try:
-        return dt.datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
+        return dt.datetime.fromisoformat(s) if s else None
     except ValueError:
         return None
 
@@ -57,52 +59,53 @@ RAIZ = os.path.expanduser("~/.claude/projects")
 peticiones = {}  # message.id -> (ts, sesion, coste o None)
 rechazos = {}  # (tipo, resetsAt) -> primer ts de rechazo
 for f in glob.glob(os.path.join(RAIZ, "**", "*.jsonl"), recursive=True):
-    for line in open(f, encoding="utf-8", errors="replace"):
-        if '"assistant"' not in line:
-            continue
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if r.get("type") != "assistant":
-            continue
-        msg = r.get("message") or {}
-        t = p_ts(r.get("timestamp"))
-        if msg.get("model") == "<synthetic>":
-            for q in (
-                (r.get("quotaLimits") or [])
-                if isinstance(r.get("quotaLimits"), list)
-                else [r.get("quotaLimits") or {}]
-            ):
-                if (
-                    isinstance(q, dict)
-                    and q.get("status") == "rejected"
-                    and q.get("rateLimitType") in DUR
-                    and t
+    with open(f, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if '"assistant"' not in line:
+                continue
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if r.get("type") != "assistant":
+                continue
+            msg = r.get("message") or {}
+            t = p_ts(r.get("timestamp"))
+            if msg.get("model") == "<synthetic>":
+                for q in (
+                    (r.get("quotaLimits") or [])
+                    if isinstance(r.get("quotaLimits"), list)
+                    else [r.get("quotaLimits") or {}]
                 ):
-                    k = (q["rateLimitType"], q.get("resetsAt"))
-                    rechazos[k] = min(t, rechazos.get(k, t))
-            continue
-        mid = msg.get("id") or r.get("requestId")
-        if not mid or mid in peticiones or not t or (HASTA and t > HASTA):
-            continue
-        u = msg.get("usage") or {}
-        p = PRECIOS.get(normaliza(msg.get("model")))
-        coste = None
-        if p:
-            cc = u.get("cache_creation") or {}
-            w5 = cc.get("ephemeral_5m_input_tokens")
-            w1 = cc.get("ephemeral_1h_input_tokens")
-            if w5 is None and w1 is None:
-                w5, w1 = u.get("cache_creation_input_tokens") or 0, 0
-            coste = (
-                (u.get("input_tokens") or 0) * p["entrada"]
-                + (w5 or 0) * p["w5m"]
-                + (w1 or 0) * p["w1h"]
-                + (u.get("cache_read_input_tokens") or 0) * p["lectura"]
-                + (u.get("output_tokens") or 0) * p["salida"]
-            ) / 1e6
-        peticiones[mid] = (t, r.get("sessionId"), coste)
+                    if (
+                        isinstance(q, dict)
+                        and q.get("status") == "rejected"
+                        and q.get("rateLimitType") in DUR
+                        and t
+                    ):
+                        k = (q["rateLimitType"], q.get("resetsAt"))
+                        rechazos[k] = min(t, rechazos.get(k, t))
+                continue
+            mid = msg.get("id") or r.get("requestId")
+            if not mid or mid in peticiones or not t or (HASTA and t > HASTA):
+                continue
+            u = msg.get("usage") or {}
+            p = PRECIOS.get(normaliza(msg.get("model")))
+            coste = None
+            if p:
+                cc = u.get("cache_creation") or {}
+                w5 = cc.get("ephemeral_5m_input_tokens")
+                w1 = cc.get("ephemeral_1h_input_tokens")
+                if w5 is None and w1 is None:
+                    w5, w1 = u.get("cache_creation_input_tokens") or 0, 0
+                coste = (
+                    (u.get("input_tokens") or 0) * p["entrada"]
+                    + (w5 or 0) * p["w5m"]
+                    + (w1 or 0) * p["w1h"]
+                    + (u.get("cache_read_input_tokens") or 0) * p["lectura"]
+                    + (u.get("output_tokens") or 0) * p["salida"]
+                ) / 1e6
+            peticiones[mid] = (t, r.get("sessionId"), coste)
 
 puntos, descartes = [], collections.Counter()
 
@@ -132,19 +135,20 @@ for (tipo, reset), primero in sorted(rechazos.items(), key=lambda x: str(x[0])):
 F = os.path.expanduser("~/.claude/cuota-statusline.jsonl")
 filas = []
 if os.path.exists(F):
-    for line in open(F, encoding="utf-8"):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            descartes["linea_corrupta"] += 1
-            continue
-        t = p_ts(r.get("ts"))
-        if t is None:
-            descartes["sin_ts"] += 1
-            continue
-        if HASTA and t > HASTA:
-            continue
-        filas.append((t, r))
+    with open(F, encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                descartes["linea_corrupta"] += 1
+                continue
+            t = p_ts(r.get("ts"))
+            if t is None:
+                descartes["sin_ts"] += 1
+                continue
+            if HASTA and t > HASTA:
+                continue
+            filas.append((t, r))
 filas.sort(key=lambda x: x[0])
 sesiones_registro = {r.get("session_id") for _, r in filas}
 effort = collections.Counter(
@@ -172,7 +176,7 @@ for tipo, campo_reset in (("five_hour", "five_reset"), ("seven_day", "seven_rese
         ta, tb = xs[0][0], xs[-1][0]
         dolar, reinicios = 0.0, 0
         for ys in por_sesion.values():
-            for (t0, _, c0), (t1, _, c1) in zip(ys, ys[1:]):
+            for (t0, _, c0), (t1, _, c1) in itertools.pairwise(ys):
                 if (
                     not (ta < t1 <= tb)
                     or not isinstance(c1, (int, float))

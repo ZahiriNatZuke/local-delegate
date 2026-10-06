@@ -302,7 +302,7 @@ def test_pista_sin_causa_es_la_generica():
 
 
 def test_todos_los_detalles_dicen_el_host():
-    for causa in CausaConexion:
+    for causa in list(CausaConexion):
         texto = detalle(
             causa,
             host=HOST,
@@ -320,7 +320,7 @@ def test_todos_los_detalles_dicen_el_host():
 
 
 def test_un_detalle_sin_datos_opcionales_no_escribe_none():
-    for causa in CausaConexion:
+    for causa in list(CausaConexion):
         assert "None" not in detalle(causa, host=HOST), causa
 
 

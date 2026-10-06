@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115, FURB162  (script de evidencia desechable del SDD, no es producto)
 """Atribución por delegación, N y coste equivalente (REQ-001 a REQ-008, REQ-031 y REQ-040 a REQ-048 de la spec).
 
 Solo lectura. Lee el log de uso de local-delegate y los transcripts de ~/.claude/projects y
@@ -23,15 +22,17 @@ import argparse
 import collections
 import datetime as dt
 import glob
+import io
 import json
 import os
 import re
 import sys
+from pathlib import Path
 
-try:
+# Solo un TextIOWrapper sabe reconfigurarse; si la salida es otra cosa (un pytest que la
+# captura, un StringIO) se deja como está.
+if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding="utf-8")
-except AttributeError:
-    pass
 
 aqui = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
@@ -39,8 +40,8 @@ ap.add_argument("--desde", default="2026-09-06T00:00:00+00:00")
 ap.add_argument("--hasta", default="2026-10-06T14:30:00+00:00")
 a = ap.parse_args()
 DESDE, HASTA = dt.datetime.fromisoformat(a.desde), dt.datetime.fromisoformat(a.hasta)
-PRECIOS = json.load(open(os.path.join(aqui, "precios.json"), encoding="utf-8"))["modelos"]
-DENS = json.load(open(os.path.join(aqui, "densidad.json"), encoding="utf-8"))["familias"]
+PRECIOS = json.loads(Path(aqui, "precios.json").read_text(encoding="utf-8"))["modelos"]
+DENS = json.loads(Path(aqui, "densidad.json").read_text(encoding="utf-8"))["familias"]
 PREF = "mcp__local-delegate__"
 CLIENTES_EXCLUIDOS = {"codex-mcp-client": "no_es_claude", "mcp": "pruebas"}
 RESPALDO = ("claude-opus-5-5", "subagente")
@@ -48,7 +49,7 @@ RESPALDO = ("claude-opus-5-5", "subagente")
 
 def p_ts(s):
     try:
-        return dt.datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
+        return dt.datetime.fromisoformat(s) if s else None
     except ValueError:
         return None
 
@@ -105,27 +106,28 @@ L = os.path.join(
 )
 usos = []
 for f in sorted(glob.glob(os.path.join(L, "usage-*.jsonl"))):
-    for line in open(f, encoding="utf-8"):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        t = p_ts(r.get("ts"))
-        if t is None or not (DESDE <= t < HASTA):
-            continue
-        usos.append(
-            {
-                "ts": t,
-                "tool": r.get("tool"),
-                "client": r.get("client") or "<sin client>",
-                "path": r.get("path"),
-                "source": r.get("source"),
-                "chars_in": r.get("chars_in") or 0,
-                "chars_out": r.get("chars_out") or 0,
-                "ok": r.get("ok"),
-                "output_to_file": bool(r.get("output_to_file")),
-            }
-        )
+    with open(f, encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            t = p_ts(r.get("ts"))
+            if t is None or not (DESDE <= t < HASTA):
+                continue
+            usos.append(
+                {
+                    "ts": t,
+                    "tool": r.get("tool"),
+                    "client": r.get("client") or "<sin client>",
+                    "path": r.get("path"),
+                    "source": r.get("source"),
+                    "chars_in": r.get("chars_in") or 0,
+                    "chars_out": r.get("chars_out") or 0,
+                    "ok": r.get("ok"),
+                    "output_to_file": bool(r.get("output_to_file")),
+                }
+            )
 
 # ---------- 2. transcripts ----------
 RAIZ = os.path.expanduser("~/.claude/projects")
@@ -136,55 +138,56 @@ for f in ficheros:
     kind = "subagente" if "/subagents/" in fn else "principal"
     banco = "Temp" in fn.split("/projects/")[1].split("/")[0]
     reqs, compact = {}, []
-    for line in open(f, encoding="utf-8", errors="replace"):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        ty = r.get("type")
-        if ty == "system" and r.get("subtype") == "compact_boundary":
-            t = p_ts(r.get("timestamp"))
-            if t:
-                compact.append(t)
-        elif ty == "assistant":
-            msg = r.get("message") or {}
-            if msg.get("model") == "<synthetic>":
+    with open(f, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            try:
+                r = json.loads(line)
+            except ValueError:
                 continue
-            t = p_ts(r.get("timestamp"))
-            mid = msg.get("id") or r.get("requestId")
-            if mid and mid not in reqs and t:
-                reqs[mid] = t
-            for c in msg.get("content") or []:
-                if (
-                    isinstance(c, dict)
-                    and c.get("type") == "tool_use"
-                    and str(c.get("name", "")).startswith(PREF)
-                ):
-                    inp = c.get("input") if isinstance(c.get("input"), dict) else {}
-                    deleg[c.get("id")] = {
-                        "tool": c["name"][len(PREF) :],
-                        "ts_use": t,
-                        "ts_res": None,
-                        "file": f,
-                        "kind": kind,
-                        "model": msg.get("model"),
-                        "effort": r.get("effort"),
-                        "path": inp.get("path"),
-                        "banco": banco,
-                        "mid": mid,
-                    }
-        elif ty == "user":
-            cont = (r.get("message") or {}).get("content")
-            if isinstance(cont, list):
-                for c in cont:
+            ty = r.get("type")
+            if ty == "system" and r.get("subtype") == "compact_boundary":
+                t = p_ts(r.get("timestamp"))
+                if t:
+                    compact.append(t)
+            elif ty == "assistant":
+                msg = r.get("message") or {}
+                if msg.get("model") == "<synthetic>":
+                    continue
+                t = p_ts(r.get("timestamp"))
+                mid = msg.get("id") or r.get("requestId")
+                if mid and mid not in reqs and t:
+                    reqs[mid] = t
+                for c in msg.get("content") or []:
                     if (
                         isinstance(c, dict)
-                        and c.get("type") == "tool_result"
-                        and c.get("tool_use_id") in deleg
+                        and c.get("type") == "tool_use"
+                        and str(c.get("name", "")).startswith(PREF)
                     ):
-                        d = deleg[c["tool_use_id"]]
-                        if d["ts_res"] is None:
-                            d["ts_res"] = p_ts(r.get("timestamp"))
+                        inp = c.get("input") if isinstance(c.get("input"), dict) else {}
+                        deleg[c.get("id")] = {
+                            "tool": c["name"][len(PREF) :],
+                            "ts_use": t,
+                            "ts_res": None,
+                            "file": f,
+                            "kind": kind,
+                            "model": msg.get("model"),
+                            "effort": r.get("effort"),
+                            "path": inp.get("path"),
+                            "banco": banco,
+                            "mid": mid,
+                        }
+            elif ty == "user":
+                cont = (r.get("message") or {}).get("content")
+                if isinstance(cont, list):
+                    for c in cont:
+                        if (
+                            isinstance(c, dict)
+                            and c.get("type") == "tool_result"
+                            and c.get("tool_use_id") in deleg
+                        ):
+                            d = deleg[c["tool_use_id"]]
+                            if d["ts_res"] is None:
+                                d["ts_res"] = p_ts(r.get("timestamp"))
     hilos[f] = {"reqs": sorted(reqs.items(), key=lambda x: x[1]), "compact": sorted(compact)}
 
 

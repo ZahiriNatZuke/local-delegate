@@ -1,4 +1,3 @@
-# ruff: noqa: SIM115  (script de evidencia desechable del SDD, no es producto)
 """Cotejo de la tabla de precios contra el coste que calcula Claude Code (REQ-013/REQ-014).
 
 Solo lectura. Lee las líneas `cost-state` de ~/.claude/projects y devuelve SOLO conteos: ni ids de
@@ -18,21 +17,23 @@ Uso: python -I cotejo.py [--precios precios.json]
 import argparse
 import copy
 import glob
+import io
 import json
 import os
 import re
 import sys
+from pathlib import Path
 
-try:
+# Solo un TextIOWrapper sabe reconfigurarse; si la salida es otra cosa (un pytest que la
+# captura, un StringIO) se deja como está.
+if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding="utf-8")
-except AttributeError:
-    pass
 
 aqui = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("--precios", default=os.path.join(aqui, "precios.json"))
 a = ap.parse_args()
-TABLA = json.load(open(a.precios, encoding="utf-8"))
+TABLA = json.loads(Path(a.precios).read_text(encoding="utf-8"))
 
 
 def normaliza(mid):
@@ -45,17 +46,18 @@ R = os.path.expanduser("~/.claude/projects")
 ultimas = {}  # (sesion, startTime) -> (orden, modelUsage)
 orden = 0
 for f in sorted(glob.glob(os.path.join(R, "**", "*.jsonl"), recursive=True)):
-    for line in open(f, encoding="utf-8", errors="replace"):
-        if '"cost-state"' not in line:
-            continue
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if r.get("type") != "cost-state":
-            continue
-        orden += 1
-        ultimas[(r.get("sessionId"), r.get("startTime"))] = (orden, r.get("modelUsage") or {})
+    with open(f, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if '"cost-state"' not in line:
+                continue
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if r.get("type") != "cost-state":
+                continue
+            orden += 1
+            ultimas[(r.get("sessionId"), r.get("startTime"))] = (orden, r.get("modelUsage") or {})
 
 filas = []
 for _, mu in ultimas.values():

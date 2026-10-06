@@ -6,13 +6,14 @@ funciones para aplicarlas a los puntos reales.
 Uso: python -I criterio.py
 """
 
+import io
 import statistics
 import sys
 
-try:
+# Solo un TextIOWrapper sabe reconfigurarse; si la salida es otra cosa (un pytest que la
+# captura, un StringIO) se deja como está.
+if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding="utf-8")
-except AttributeError:
-    pass
 
 UMBRAL = 0.25
 MIN_PUNTOS = 3
