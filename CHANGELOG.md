@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **`filelock` adopta el major 4: el techo sube de `<4` a `<5`.** Lo único que rompe la 4.0.0 es
+  `SoftReadWriteLock`, que cambia cómo guarda su estado en disco
+  ([tox-dev/filelock#738](https://github.com/tox-dev/filelock/pull/738)); aquí solo se usa
+  `FileLock`, en `daemon.py`, `enfriamiento.py` y `server.py`. El suelo sube a `>=4` porque es
+  la versión que prueba la suite. El techo se sube, no se quita, como pide la política de
+  `techos-major-dependencias`. Para resolverlo hace falta `virtualenv` 21.13 o posterior: las
+  anteriores, que trae `pre-commit` en el entorno de desarrollo, piden `filelock<4`.
+- **Dependencias al día.** Siete actualizaciones de Dependabot en un solo cambio: `filelock` 3.32.6
+  → 4.0.3, `anyio` 4.14.2 → 4.15.1, `platformdirs` 4.11.10 → 4.11.13, `pyjwt` 2.13.0 → 2.15.0,
+  `uvicorn` 0.53.0 → 0.54.0 y, en desarrollo, `ruff` 0.16.8 → 0.16.9 y `virtualenv` 21.6.0 →
+  21.14.5 (arrastra `python-discovery` 1.4.3 → 1.6.1). Socket les da 0.9 o más en todas las
+  categorías.
+
 ## [0.32.0] - 2026-09-23
 
 ### Added
