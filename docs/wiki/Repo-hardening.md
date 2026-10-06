@@ -399,16 +399,23 @@ cambia la del paquete, no los rompe).
   disparador para esto) y espera a que terminen. Si `main` avanzó, antes actualiza la rama por la
   API («update branch») y vuelve a lanzarlos.
 
-**La salida si se queda bloqueado.** Puede que el análisis de CodeQL lanzado así no cumpla la regla
-`code_scanning` del PR, o que los commits del bot choquen con
-`require_extra_approval_for_unattributed_changes`. En ese caso el vigilante lo dice en un
-comentario del PR, y la salida es **cerrarlo y reabrirlo a mano**: la reapertura por una persona
-dispara los workflows de `pull_request` con normalidad. Socket y GitGuardian no son checks
-requeridos y no bloquean.
+**Queda bloqueado, y la salida es cerrarlo y reabrirlo a mano** (comprobado en GitHub el
+2026-10-06, PR de ensayo #236 y #237). Aunque los checks lanzados por `workflow_dispatch` salen en
+verde y van ligados al commit, **no entran en el resumen de checks que usa la mezcla**
+(`statusCheckRollup`), así que el ruleset no ve sus checks requeridos y el PR queda `BLOCKED` con
+todo en verde. El vigilante lo dice en un comentario del PR. Con `gh pr close <n>` y
+`gh pr reopen <n>` desde la cuenta del dueño del repo, los workflows de `pull_request` (CI, CodeQL,
+auditoría del vendorizado) arrancan solos, sin aprobación manual, y el PR queda `CLEAN`. No era
+`require_extra_approval_for_unattributed_changes`: sigue activa y no impidió el `CLEAN`. Si CodeQL
+abriera hilos de revisión, `required_review_thread_resolution` obligaría además a resolverlos.
+Socket y GitGuardian no son checks requeridos y no bloquean. Se descartó una GitHub App o un token
+personal guardados como secreto: para un PR que sale pocas veces al año, no compensan la superficie
+de seguridad que añaden.
 
-Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo (`consultado` = hoy) en la
-rama `vigilante/ensayo`, con «[ensayo]» en el título: sirve para probar el circuito entero en
-GitHub, y ese PR se cierra sin mezclar.
+Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo en la rama
+`vigilante/ensayo`: una marca `_ensayo` con el id del run, que la carga de la tabla ignora (no se
+toca `consultado`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
+sirve para probar el circuito entero en GitHub, y se cierra sin mezclar.
 
 ## Qué se publica y qué no
 
