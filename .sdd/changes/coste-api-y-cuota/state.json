@@ -3,9 +3,9 @@
   "slug": "coste-api-y-cuota",
   "title": "Panel: coste equivalente a precio de API y % de cuota sin calibrar",
   "mode": "standard",
-  "status": "result-review",
+  "status": "closing",
   "createdAt": "2026-10-06T14:06:24.439Z",
-  "updatedAt": "2026-10-06T19:58:57.602Z",
+  "updatedAt": "2026-10-06T20:11:06.723Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -126,6 +126,13 @@
       "at": "2026-10-06T19:58:57.602Z",
       "evidence": "Revisión del resultado (review.md): 58 REQ comprobados en código y tests, 54 cumplen y 4 con desviación aceptable; los 2 bloqueantes (shebang sin modo ejecutable y datos de visita en el fixture) arreglados y verificados por la sesión principal. T11 (ensayo del vigilante en GitHub) queda para después de mezclar, por diseño.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-06T20:11:06.723Z",
+      "reason": "PR #232 mezclado; quedan T11 y el gate de memoria"
     }
   ]
 }

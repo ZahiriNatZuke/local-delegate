@@ -745,7 +745,10 @@ def trabajo_precios(
         # `consultado` (REQ-010: fecha del último cambio real), que el día en que se mezcló la
         # tabla ya vale hoy y no daría diff: añade una marca `_ensayo` con el id del run, que
         # cambia en cada ejecución y que la carga de la tabla ignora como ignora `_nota`.
-        tabla = {CLAVE_ENSAYO: marca_de_ensayo(id_run), **copy.deepcopy(paquete)}
+        # La marca va primera y la del paquete, si la trae (una rama de ensayo anterior), se
+        # descarta: la nueva tiene que ganar siempre o no habría diff.
+        resto = {k: v for k, v in copy.deepcopy(paquete).items() if k != CLAVE_ENSAYO}
+        tabla = {CLAVE_ENSAYO: marca_de_ensayo(id_run), **resto}
         rama, titulo = RAMA_ENSAYO, "[ensayo] Vigilante de precios: prueba del circuito"
     elif not cambios.hay_cambios:
         print("Precios: sin cambios.")

@@ -85,6 +85,21 @@ PAQUETE = {
 }
 
 HOY = dt.date(2026, 10, 12)
+
+
+def _tabla_real_limpia() -> tuple[str, dict]:
+    """El `precios.json` del checkout, con su formato, sin marcas de ensayo (`_ensayo...`).
+
+    En la rama de un PR de ensayo el fichero ya trae `_ensayo`, y un test que lo lea tal cual da
+    otro resultado que en `main` (run 37526624930). Se quita aquí, sobre una copia, para que los
+    tests den lo mismo en las dos ramas. `_nota` no es de ensayo y se queda.
+    """
+    v = _v()
+    real = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
+    tabla = {k: x for k, x in json.loads(real).items() if not k.startswith(v.CLAVE_ENSAYO)}
+    return v.serializar_precios(tabla, real), tabla
+
+
 NUEVO = 0.30
 
 
@@ -242,8 +257,7 @@ def test_una_celda_que_no_es_numero_falla():
 def test_serializar_conserva_el_formato_del_paquete():
     """El PR solo debe enseñar lo que cambia: el `0.20` del fichero no se reescribe como `0.2`."""
     v = _v()
-    original = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
-    tabla = json.loads(original)
+    original, tabla = _tabla_real_limpia()
     assert v.serializar_precios(tabla, original) == original
     primero = next(iter(tabla["modelos"]))
     tabla["modelos"][primero]["salida"] = 999
@@ -534,8 +548,7 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
     v = _v()
     # La tabla real del paquete, con su formato: la de `raiz` (indent=2) siempre daría diff al
     # reserializarla y el test no vería el fallo del run 37524585928.
-    real = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
-    tabla = json.loads(real)
+    real, tabla = _tabla_real_limpia()
     assert v.serializar_precios(tabla, real) == real, "guarda: sin cambios no hay diff"
     (raiz / v.RUTA_PRECIOS).write_text(real, encoding="utf-8")
     hoy = dt.date.fromisoformat(tabla["consultado"])
@@ -545,6 +558,27 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
     marca = escrita.pop("_ensayo")
     assert "37524585928" in marca
     assert escrita == tabla  # la tabla no cambia: ni `consultado` ni ningún precio
+
+
+def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
+    """Run 37526624930: en la rama de ensayo `precios.json` ya trae `_ensayo` de un run anterior.
+
+    Mutante «la marca del paquete pisa a la nueva» (`{CLAVE_ENSAYO: marca, **paquete}`, el código
+    de #233) → `codigo == 1`: la tabla propuesta es idéntica y no hay diff.
+    """
+    v = _v()
+    real, tabla = _tabla_real_limpia()
+    vieja = {v.CLAVE_ENSAYO: v.marca_de_ensayo("111"), **tabla}
+    sembrada = v.serializar_precios(vieja, real)
+    assert '"_ensayo"' in sembrada and "111" in sembrada, "guarda: la marca vieja está sembrada"
+    (raiz / v.RUTA_PRECIOS).write_text(sembrada, encoding="utf-8")
+    hoy = dt.date.fromisoformat(tabla["consultado"])
+    codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "222"})
+    assert codigo == 0, "con la marca vieja en la tabla el ensayo no tuvo diff"
+    escrita = _tabla_escrita(falso)
+    marca = escrita.pop(v.CLAVE_ENSAYO)
+    assert marca == v.marca_de_ensayo("222")
+    assert escrita == tabla
 
 
 def test_el_ensayo_fuerza_un_diff_inocuo_en_su_rama(raiz):

@@ -1123,6 +1123,63 @@ marca `_ensayo` con el id del run (`GITHUB_RUN_ID`), que cambia en cada ejecuci�
 `hoy == consultado`: falla con el código de `main` (`assert 1 == 0`) y con los mutantes «vuelve a
 forzar `consultado`» y «la marca sin id del run». T11 se repite tras mezclar ese PR.
 
+### Segundo intento (2026-10-06, ~20:28 UTC, `main` en `de3aa56`, tras mezclar #233)
+
+- Run del vigilante
+  [37526624930](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37526624930):
+  `limites` verde («sin cambios»); `precios` abrió el PR
+  [#234](https://github.com/ZahiriNatZuke/local-delegate/pull/234) «[ensayo]» (rama
+  `vigilante/ensayo`, solo `precios.json` con `"_ensayo": "PR de prueba del vigilante (run
+  37526624930): no mezclar"`), esperó a los checks y salió en rojo con
+  `FALLO: checks del PR sin éxito: {'ci.yml': 'failure'}`.
+- **Firma: cumple.** El único commit (`59bc397`, autor `github-actions[bot]`, committer `GitHub`)
+  sale `verified: true`, `reason: valid`.
+- **Lanzamiento por `workflow_dispatch`: cumple.** `ci.yml`
+  ([37526655426](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37526655426)) y
+  `codeql.yml` ([37526658419](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37526658419))
+  corrieron sobre `vigilante/ensayo` con evento `workflow_dispatch`, y sus check-runs quedaron en
+  el `head_sha`. Los runs `pull_request` del bot quedaron en `action_required` (0 s): GitHub los
+  retiene, como se esperaba; por eso existe el relanzamiento.
+- **CodeQL y code scanning: verdes.** `Analyze (python)` success; el check `CodeQL`
+  (`github-advanced-security`, el resultado de code scanning) success y visible en
+  `gh pr checks 234`.
+- **CI: rojo por un defecto nuevo de #233, no del entorno.** `lint`, `secrets` e `install-smoke`
+  verdes; los tres `test` y por tanto `ci-gate` en rojo, con un solo fallo:
+  `test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy` (`assert 1 == 0`, «la tabla propuesta
+  es idéntica a la del paquete»). Causa: el test lee el `precios.json` **del checkout**, y en la
+  rama de ensayo ese fichero ya trae `_ensayo`; en `scripts/vigilante_precios.py:748`,
+  `{CLAVE_ENSAYO: marca_de_ensayo(id_run), **copy.deepcopy(paquete)}` deja que la marca vieja del
+  paquete pise a la nueva, así que no hay diff. Consecuencia: **un PR de ensayo nunca puede tener
+  el CI en verde**. Arreglo pequeño (por PR, no hecho aquí): que la marca nueva gane
+  (`{**paquete, CLAVE_ENSAYO: marca}` o quitar `_ensayo` del paquete antes) y que el test no
+  dependa de que la tabla real esté limpia (o que la limpie él). La ejecución programada no se ve
+  afectada: sin `ensayo` no toca `_ensayo`.
+- **`gh pr checks` y `statusCheckRollup` NO enseñan los checks del `workflow_dispatch`**: solo
+  `CodeQL`, GitGuardian y los dos de Socket. Los seis checks del ruleset existen en el commit
+  (`gh api .../commits/<sha>/check-runs`), pero no se ven asociados al PR. Si el ruleset los cuenta
+  o no, no se pudo distinguir en este ensayo porque tres de ellos estaban en rojo.
+- **`mergeStateStatus`: `BLOCKED`** (`mergeable: MERGEABLE`, `reviewDecision` vacío). Explicado de
+  sobra por el CI rojo; **no es el caso «todo verde y bloqueado»** que prevé la spec, así que la
+  regla `code_scanning` no se puede dar por cumplida ni por incumplida con esta evidencia (el
+  indicio es favorable: su check está presente y en verde).
+- **Comentario de REQ-025: no se ejercitó.** El vigilante abortó por el CI rojo antes de la rama
+  «checks verdes y PR bloqueado»; el PR no tiene comentarios del bot.
+- **Limpieza:** PR #234 cerrado sin mezclar y rama `vigilante/ensayo` borrada (`.../branches/
+  vigilante%2Fensayo` → 404).
+
+Estado de T11: **no concluyente otra vez**. Firma y relanzamiento por `workflow_dispatch`
+comprobados en real; la incógnita [I] (`code_scanning` y si el ruleset acepta los checks del
+`workflow_dispatch`) y el comentario de bloqueo siguen abiertos. Se repite tras arreglar la marca
+de ensayo.
+
+Arreglo (rama `fix/vigilante-marca-ensayo`): la marca nueva gana siempre (se descarta la `_ensayo`
+que ya traiga el paquete) y los tests de `test_vigilante.py` que leen la tabla real trabajan
+sobre una copia sin marcas de ensayo, así que dan lo mismo en `main` que en `vigilante/ensayo`.
+Test nuevo `test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla`: falla con el código de #233
+(mutante «la marca del paquete pisa a la nueva» → `assert 1 == 0` en `codigo == 0`).
+`test_precios.py` gana `test_una_marca_de_ensayo_en_la_tabla_no_cambia_nada`. Comprobado en
+local con `_ensayo` sembrado en `precios.json`: `test_vigilante.py` y `test_precios.py` en verde.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |
