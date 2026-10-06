@@ -56,6 +56,8 @@ RAMA_BASE = "main"
 RAMA_PRECIOS = "vigilante/precios"
 RAMA_LIMITES = "vigilante/limites"
 RAMA_ENSAYO = "vigilante/ensayo"
+# Clave que añade el ensayo a `precios.json`; con `_` delante, como `_nota`, no es un dato.
+CLAVE_ENSAYO = "_ensayo"
 
 # Los dos workflows que contienen los checks que exige el ruleset `protect-main` (REQ-025).
 WORKFLOWS_DE_CHECKS = ("ci.yml", "codeql.yml")
@@ -384,7 +386,8 @@ def cuerpo_pr_precios(cambios: Cambios, *, ensayo: bool = False) -> str:
         lineas += [
             (
                 "> **[ensayo]** PR de prueba del vigilante (T11 de `coste-api-y-cuota`): solo "
-                "cambia `consultado`. **No mezclar**: se cierra sin mezclar y se borra la rama."
+                "añade la marca `_ensayo` a la tabla. **No mezclar**: se cierra sin mezclar y se "
+                "borra la rama."
             ),
             "",
         ]
@@ -717,8 +720,19 @@ def proponer(
 # --- Trabajos ---------------------------------------------------------------------------------
 
 
+def marca_de_ensayo(id_run: str) -> str:
+    """El valor de `_ensayo`: distinto en cada run, para que el ensayo siempre tenga diff."""
+    return f"PR de prueba del vigilante (run {id_run or 'local'}): no mezclar"
+
+
 def trabajo_precios(
-    ctx: Contexto, html: str, raiz: Path, hoy: dt.date, *, ensayo: bool = False
+    ctx: Contexto,
+    html: str,
+    raiz: Path,
+    hoy: dt.date,
+    *,
+    ensayo: bool = False,
+    id_run: str = "",
 ) -> int | None:
     nueva = extraer_tabla_precios(html)
     original = (raiz / RUTA_PRECIOS).read_text(encoding="utf-8")
@@ -727,9 +741,11 @@ def trabajo_precios(
     for mid in cambios.desaparecidos:
         print(f"AVISO: {mid} ya no sale en la página; se queda en la tabla.")
     if ensayo:
-        # Un diff inocuo y forzado para probar el circuito entero en GitHub (T11).
-        tabla = copy.deepcopy(paquete)
-        tabla["consultado"] = hoy.isoformat()
+        # Un diff inocuo y forzado para probar el circuito entero en GitHub (T11). No toca
+        # `consultado` (REQ-010: fecha del último cambio real), que el día en que se mezcló la
+        # tabla ya vale hoy y no daría diff: añade una marca `_ensayo` con el id del run, que
+        # cambia en cada ejecución y que la carga de la tabla ignora como ignora `_nota`.
+        tabla = {CLAVE_ENSAYO: marca_de_ensayo(id_run), **copy.deepcopy(paquete)}
         rama, titulo = RAMA_ENSAYO, "[ensayo] Vigilante de precios: prueba del circuito"
     elif not cambios.hay_cambios:
         print("Precios: sin cambios.")
@@ -739,7 +755,7 @@ def trabajo_precios(
         rama, titulo = RAMA_PRECIOS, "Vigilante de precios: la página oficial ha cambiado"
     contenido = serializar_precios(tabla, original)
     if contenido == original:
-        raise ErrorDelVigilante("el ensayo no produce diff: `consultado` ya es hoy")
+        raise ErrorDelVigilante("la tabla propuesta es idéntica a la del paquete: no hay diff")
     return proponer(
         ctx,
         rama,
@@ -795,7 +811,14 @@ def main(
             api = cliente_github(token)
         ctx = Contexto(api=api, repo=repo, dormir=dormir, reloj=reloj)
         if args.trabajo == "precios":
-            trabajo_precios(ctx, bajar(URL_PRECIOS), raiz, hoy, ensayo=ensayo)
+            trabajo_precios(
+                ctx,
+                bajar(URL_PRECIOS),
+                raiz,
+                hoy,
+                ensayo=ensayo,
+                id_run=entorno.get("GITHUB_RUN_ID", "").strip(),
+            )
         else:
             trabajo_limites(ctx, bajar(URL_LIMITES), raiz)
     except ErrorDelVigilante as exc:

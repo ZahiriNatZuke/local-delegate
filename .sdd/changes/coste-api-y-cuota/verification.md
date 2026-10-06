@@ -1074,6 +1074,55 @@ Verificación: `ruff check` y `ruff format --check` limpios; `gitleaks dir` solo
 `.venv` (ninguno del repo) y `gitleaks git` sobre `main..HEAD`, sin fugas; suite completa con el
 cerrojo `pesado.sh`: **1746 passed, 2 skipped**.
 
+## T11 — Ensayo real del vigilante en GitHub (tras mezclar #232)
+
+Fecha: 2026-10-06, ~20:11 UTC. `main` en `8c2ff9b`. Prerrequisito cumplido: el usuario activó
+«Allow GitHub Actions to create and approve pull requests»; permisos por defecto de los workflows
+en `read`. 0 llamadas `local_*`: el MCP `local-delegate` estaba desconectado.
+
+### Primer intento: el ensayo no puede correr el mismo día en que se tocó la tabla
+
+- Lanzado con `gh workflow run vigilante-precios.yml -f ensayo=true` →
+  run [37524585928](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37524585928)
+  (primera ejecución del workflow en el repo).
+- **Job `limites`: verde**, `Límites: sin cambios.` Descargó y extrajo el artículo desde el runner
+  de GitHub sin error: el `User-Agent` también funciona desde fuera de esta PC. No abrió PR ni issue
+  (con cambios abriría un PR, `cuerpo_pr_limites`; no hay rama de aviso por issue).
+- **Job `precios`: rojo** en 1 s, con `FALLO: el ensayo no produce diff: \`consultado\` ya es hoy`
+  (`scripts/vigilante_precios.py:742`). La descarga y la extracción de la tabla pasaron (el fallo
+  es posterior a `comparar`, y no hubo ningún `AVISO` de modelos desaparecidos).
+- **Causa:** el diff forzado del ensayo es `consultado = hoy` (UTC), y `precios.json` del paquete
+  ya tiene `"consultado": "2026-10-06"`, la fecha de hoy, porque la tabla se midió y se mezcló hoy.
+  El guardia que evita un PR vacío funciona como se diseñó; lo que falla es la elección del diff
+  inocuo: **el ensayo no sirve el día en que se actualizó la tabla**. Defecto menor de diseño de
+  T3 (ningún test lo cubría: los tests del ensayo usan un `hoy` distinto de `consultado`).
+- **Sin restos:** no se creó la rama `vigilante/ensayo` (`gh api .../branches/vigilante%2Fensayo`
+  → 404) ni ningún PR.
+
+### Lo que queda sin comprobar
+
+Nada de REQ-025 llegó a ejercitarse: ni el PR «[ensayo]», ni la firma de los commits del bot, ni
+el lanzamiento de `ci.yml`/`codeql.yml` por `workflow_dispatch`, ni los seis checks del ruleset, ni
+la regla `code_scanning`, ni el comentario de PR bloqueado. **La incógnita [I] sigue abierta.**
+
+### Cómo seguir (sin tocar `main`, el ruleset ni los permisos)
+
+- **Opción A (sin código):** relanzar el mismo comando a partir de las 00:00 UTC del 2026-10-07
+  (20:00 en Cuba). Entonces `consultado` ≠ hoy y el diff existe.
+- **Opción B (arreglo pequeño, por PR):** que el ensayo fuerce un diff que no dependa de la fecha
+  (por ejemplo, otro valor de marca si `consultado` ya es hoy), con un test donde `hoy ==
+  consultado`. Evita que el ensayo vuelva a quedar inútil tras cada actualización de la tabla.
+
+Estado de T11: **no concluyente, bloqueada por el defecto del ensayo**; se repite con la opción A
+o tras la B. La ejecución programada (lunes 07:17 UTC) no se ve afectada: sin `ensayo`, solo abre
+PR si la página cambia.
+
+**Opción B aplicada** (rama `fix/vigilante-ensayo`): el ensayo ya no toca `consultado`; añade una
+marca `_ensayo` con el id del run (`GITHUB_RUN_ID`), que cambia en cada ejecución. Test
+`test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy` con la tabla real del paquete y
+`hoy == consultado`: falla con el código de `main` (`assert 1 == 0`) y con los mutantes «vuelve a
+forzar `consultado`» y «la marca sin id del run». T11 se repite tras mezclar ese PR.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

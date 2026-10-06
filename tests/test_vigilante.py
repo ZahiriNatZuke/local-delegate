@@ -502,7 +502,7 @@ def test_una_pagina_rota_termina_en_error_y_no_en_sin_cambios(raiz):
     assert falso.llamadas == []
 
 
-def test_el_ensayo_fuerza_un_diff_inocuo_en_su_rama(raiz):
+def _correr_ensayo(raiz, hoy, entorno_extra=None):
     v = _v()
     t = [1_790_000_000.0]
     falso = FalsoGitHub(lambda: t[0])
@@ -511,18 +511,50 @@ def test_el_ensayo_fuerza_un_diff_inocuo_en_su_rama(raiz):
         ["precios"],
         api=falso,
         bajar=lambda _url: _pagina_precios(),
-        hoy=HOY,
+        hoy=hoy,
         dormir=lambda s: t.__setitem__(0, t[0] + s),
         reloj=lambda: t[0],
         raiz=raiz,
-        entorno={"GITHUB_REPOSITORY": REPO, "VIGILANTE_ENSAYO": "true"},
+        entorno={"GITHUB_REPOSITORY": REPO, "VIGILANTE_ENSAYO": "true", **(entorno_extra or {})},
     )
+    return codigo, falso
+
+
+def _tabla_escrita(falso):
+    cuerpo = falso.cuerpos[falso.llamadas.index(("PUT", RUTA_CONTENIDOS_PRECIOS))]
+    return json.loads(base64.b64decode(cuerpo["content"]))
+
+
+def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
+    """T11: el día en que se mezcla la tabla, `consultado` ya es hoy y el ensayo abortaba.
+
+    Mutante «el ensayo vuelve a forzar `consultado` = hoy» → `codigo == 1` (sin diff).
+    Mutante «la marca no lleva el id del run» → falla el assert de la marca.
+    """
+    v = _v()
+    # La tabla real del paquete, con su formato: la de `raiz` (indent=2) siempre daría diff al
+    # reserializarla y el test no vería el fallo del run 37524585928.
+    real = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
+    tabla = json.loads(real)
+    assert v.serializar_precios(tabla, real) == real, "guarda: sin cambios no hay diff"
+    (raiz / v.RUTA_PRECIOS).write_text(real, encoding="utf-8")
+    hoy = dt.date.fromisoformat(tabla["consultado"])
+    codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "37524585928"})
+    assert codigo == 0
+    escrita = _tabla_escrita(falso)
+    marca = escrita.pop("_ensayo")
+    assert "37524585928" in marca
+    assert escrita == tabla  # la tabla no cambia: ni `consultado` ni ningún precio
+
+
+def test_el_ensayo_fuerza_un_diff_inocuo_en_su_rama(raiz):
+    v = _v()
+    codigo, falso = _correr_ensayo(raiz, HOY)
     assert codigo == 0
     pr = falso.cuerpos[falso.llamadas.index(("POST", f"/repos/{REPO}/pulls"))]
     assert pr["head"] == "vigilante/ensayo" and pr["title"].startswith("[ensayo]")
-    cuerpo = falso.cuerpos[falso.llamadas.index(("PUT", RUTA_CONTENIDOS_PRECIOS))]
-    escrita = json.loads(base64.b64decode(cuerpo["content"]))
-    assert escrita == {**PAQUETE, "consultado": HOY.isoformat()}
+    assert "No mezclar" in pr["body"]
+    assert _tabla_escrita(falso) == {"_ensayo": v.marca_de_ensayo(""), **PAQUETE}
 
 
 def test_limites_cambiados_abren_su_pr(raiz):
