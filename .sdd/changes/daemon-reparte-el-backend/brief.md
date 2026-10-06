@@ -92,6 +92,11 @@ el YAML a mano, con «ningún residente» como valor recomendado.
 - **Dos condiciones más, confirmadas por el usuario** (2026-10-06): el 26B también se descarta si
   falla en alguna de las 3 peticiones del mensaje de un cambio enorme (~156 000 caracteres), o si
   da error o no termina en alguno de los 30 commits en los que el modelo de código sí terminó bien.
+- **Dos ajustes confirmados por el usuario** (2026-10-06), que fijan los valores de
+  `benchmarks/afinidad-2026-10/reglas.json`: (1) el 26B se descarta si inventa algo en **más de 1**
+  de sus 30 mensajes (sustituye a «menos de 1 de cada 10»); (2) por mensaje solo son obligatorios
+  «inventa» y la preferencia del par: «lo principal» y «específico» son **opcionales**, y «formato»
+  lo calcula el programa.
 - `local_summarize` queda **fuera** de la tabla «usar el modelo cargado» (confirmado por el
   usuario): siempre usa su propio modelo.
 - **Confirmado: fuera de alcance** las llamadas que no pasan por el daemon, es decir, la Mac
