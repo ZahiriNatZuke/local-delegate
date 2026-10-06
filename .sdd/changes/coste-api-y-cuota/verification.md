@@ -1180,6 +1180,105 @@ Test nuevo `test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla`: falla con el có
 `test_precios.py` gana `test_una_marca_de_ensayo_en_la_tabla_no_cambia_nada`. Comprobado en
 local con `_ensayo` sembrado en `precios.json`: `test_vigilante.py` y `test_precios.py` en verde.
 
+### Tercer intento (2026-10-06, ~20:48 UTC, `main` en `250be89`, tras mezclar #235)
+
+0 llamadas `local_*`: el MCP `local-delegate` estaba desconectado.
+
+- Run del vigilante
+  [37529183674](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37529183674): los dos
+  jobs en verde. `limites` («sin cambios»); `precios` abrió el PR
+  [#236](https://github.com/ZahiriNatZuke/local-delegate/pull/236) «[ensayo]» (rama
+  `vigilante/ensayo`, head `4f15075`), esperó a los checks y escribió
+  `Checks en verde; estado del PR: blocked`.
+- **Firma: cumple.** Único commit `4f15075`, autor `github-actions[bot]`, committer `GitHub`,
+  `verified: true`, `reason: valid`.
+- **`workflow_dispatch`: cumple, y todo en verde.** `CI`
+  ([37529208728](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37529208728)) y
+  `CodeQL` ([37529210917](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37529210917))
+  con evento `workflow_dispatch`, `success`. En el `head_sha`: `test` ×3, `ci-gate`, `lint`,
+  `secrets`, `install-smoke` y `Analyze (python)` en `success`; también `CodeQL` (code scanning),
+  GitGuardian y los dos de Socket. Los tres runs `pull_request` del bot (`CI`, `CodeQL`,
+  `Vendor audit`) quedaron en `action_required`, como en el segundo intento.
+- **`mergeStateStatus`: `BLOCKED`** con todo en verde (`mergeable: MERGEABLE`, `reviewDecision`
+  vacío, `viewerCanMergeAsAdmin: false`). Es el caso «todo verde y bloqueado» que prevé la spec.
+- **Qué ve GitHub de los checks del `workflow_dispatch`:**
+  - Por REST, sus check-runs están en el `head_sha` y llevan `pull_requests: [236]`; sus check
+    suites también.
+  - Por GraphQL, `isRequired(pullRequestNumber: 236)` da `true` para los seis del ruleset
+    (`ci-gate`, `lint`, `test (ubuntu-latest)`, `test (macos-latest)`, `secrets`,
+    `Analyze (python)`): el nombre casa y las reglas no fijan app (`required_status_checks` sin
+    `integration_id`).
+  - Pero **`statusCheckRollup` los excluye**, tanto el del PR como el del commit: solo trae
+    `CodeQL`, GitGuardian y Socket. `gh pr checks 236` igual. El rollup es lo que usa la caja de
+    mezcla, así que lo más probable es que **el ruleset no cuente los checks lanzados por
+    `workflow_dispatch`** y espere los de los runs `pull_request` retenidos.
+  - No se pudo aislar del todo la causa sin intentar mezclar (prohibido en el encargo): además de los
+    checks requeridos, puede pesar `require_extra_approval_for_unattributed_changes` (regla
+    `pull_request` activa; el commit es del bot). `code_scanning`, en cambio, tiene su check
+    `CodeQL` presente y en verde: no parece ser la causa. La API de mezcla no da el motivo
+    (`mergeRequirements` no existe en el esquema GraphQL).
+- **Comentario de REQ-025: cumple.** `github-actions[bot]` comentó en #236: «El vigilante no puede
+  dejar este PR listo para mezclar… cierra el PR y reábrelo». La rama «checks verdes y PR
+  bloqueado» del código queda probada en real.
+- **Limpieza:** PR #236 cerrado sin mezclar y rama `vigilante/ensayo` borrada
+  (`.../branches/vigilante%2Fensayo` → 404). Nada tocado del ruleset, permisos ni secretos.
+
+Estado de T11: **concluyente por la rama de «Fallo» del plan**: firma, relanzamiento, checks en
+verde y comentario comprobados en real; el PR queda `BLOCKED`. Según el plan, REQ-025 se anota en
+`conformance` como «salida alternativa en uso» hasta que el usuario decida (la release no espera).
+
+**Decisión del usuario pendiente** (la que deja abierta la spec):
+
+1. *Cerrar y reabrir a mano cada PR del vigilante.* Pro: cero configuración y cero secretos; el PR
+   es raro (solo cuando cambian precios). Contra: trabajo manual cada vez; y si lo que bloquea es
+   `require_extra_approval_for_unattributed_changes`, la reapertura dispara el CI normal pero
+   puede seguir haciendo falta una aprobación o un commit atribuido a una persona — no está
+   comprobado que baste.
+2. *Token de una GitHub App guardado como secreto.* Pro: los PR y commits salen a nombre de la App,
+   los workflows de `pull_request` corren solos y el circuito queda automático. Contra: crear e
+   instalar la App, guardar su clave privada como secreto (superficie nueva que vigilar), y cambiar
+   el workflow; tampoco garantiza por sí sola que la regla de «cambios no atribuidos» quede
+   satisfecha.
+3. *Tercera vía razonable:* un token personal de grano fino del usuario (solo `contents` y
+   `pull_requests` sobre este repo) como secreto. Más simple que la App y los commits salen
+   atribuidos a una persona, pero caduca, depende de su cuenta y actúa con su identidad. Otra,
+   descartada aquí porque toca el ruleset: añadir a GitHub Actions a la lista de bypass.
+
+### Cerrar y reabrir (2026-10-06, ~21:25 UTC, `main` en `250be89`): prueba de la salida 1
+
+El usuario eligió la salida 1. 0 llamadas `local_*`: el MCP `local-delegate` estaba desconectado.
+
+- Run del vigilante
+  [37533813652](https://github.com/ZahiriNatZuke/local-delegate/actions/runs/37533813652) en
+  modo ensayo: `limites` y `precios` en verde; abrió el PR
+  [#237](https://github.com/ZahiriNatZuke/local-delegate/pull/237) (rama `vigilante/ensayo`, head
+  `c079b2b`). Igual que en el tercer intento: `CI` y `CodeQL` por `workflow_dispatch` en
+  `success`, los tres runs `pull_request` del bot en `action_required`, el PR `BLOCKED` y el
+  comentario de REQ-025 publicado.
+- **Paso manual único:** `gh pr close 237` y `gh pr reopen 237` con la cuenta del usuario.
+- **(a) Los workflows de `pull_request` se lanzan solos, sin aprobación.** El reopen creó `CI`
+  (37534363325), `CodeQL` (37534363233) y `Vendor audit` (37534363282) con `actor` y
+  `triggering_actor` = `ZahiriNatZuke`; arrancaron en `in_progress`, no en `action_required`. **No
+  hizo falta aprobar runs por API.** Los tres runs retenidos del bot pasaron a `failure` en la API
+  REST (los deja de lado GitHub; no afectan al rollup).
+- **(b) Resultado: `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`.** `statusCheckRollup` ya
+  trae los checks de los runs `pull_request`: `lint`, `test` ×3, `install-smoke`, `secrets`,
+  `ci-gate`, `Analyze (python)`, `audit`, más `CodeQL`, GitGuardian y los dos de Socket, todos
+  `SUCCESS`. `gh pr checks 237`: todo `pass`. GraphQL: `CLEAN`, `reviewDecision: null`,
+  `viewerCanMergeAsAdmin: false` (o sea, no es un bypass de administrador).
+- **(c) La causa del `BLOCKED` anterior queda aislada:** eran los checks requeridos ausentes del
+  rollup, no `require_extra_approval_for_unattributed_changes`. La regla sigue activa en el
+  ruleset (`required_approving_review_count: 0`, `required_review_thread_resolution: true`) y,
+  tras el reopen, no impide el `CLEAN`: el commit del bot firmado y verificado no la dispara, o la
+  satisface el reopen del usuario. No se intentó mezclar (prohibido), así que la prueba llega hasta
+  `CLEAN`, no hasta el botón.
+- **Limpieza:** PR #237 cerrado sin mezclar y rama `vigilante/ensayo` borrada (`Branch not
+  found`). Nada tocado del ruleset, permisos ni secretos.
+
+Estado: **la salida 1 basta.** El paso manual por cada PR del vigilante es cerrar y reabrir; los
+checks normales corren solos y el PR queda `CLEAN`. Si hubiera hilos de revisión abiertos (p. ej.
+de CodeQL), `required_review_thread_resolution` exigiría resolverlos aparte; en el ensayo no hubo.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |
