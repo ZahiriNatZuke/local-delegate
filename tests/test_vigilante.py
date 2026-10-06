@@ -576,7 +576,8 @@ def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "222"})
     assert codigo == 0, "con la marca vieja en la tabla el ensayo no tuvo diff"
     escrita = _tabla_escrita(falso)
-    assert escrita.pop(v.CLAVE_ENSAYO) == v.marca_de_ensayo("222")
+    marca = escrita.pop(v.CLAVE_ENSAYO)
+    assert marca == v.marca_de_ensayo("222")
     assert escrita == tabla
 
 
