@@ -206,3 +206,34 @@ def test_cargar_las_tablas_no_abre_sockets(monkeypatch):
     finally:
         precios.cargar_precios.cache_clear()
         precios.cargar_densidad.cache_clear()
+
+
+def test_una_marca_de_ensayo_en_la_tabla_no_cambia_nada(monkeypatch):
+    """La tabla de un PR de ensayo del vigilante trae `_ensayo` (y siempre `_nota`): no son datos.
+
+    Se carga por el camino real (`cargar_precios`) una copia con marcas `_` añadidas y todo lo que
+    lee la tabla tiene que dar lo mismo que con la limpia.
+    """
+    limpia = copy.deepcopy(cargar_precios())
+    leer = precios._leer_tabla
+
+    def con_marcas(nombre):
+        tabla = leer(nombre)
+        if nombre != "precios.json":
+            return tabla
+        return {"_ensayo": "PR de prueba del vigilante (run 1): no mezclar", **tabla, "_otra": 0}
+
+    monkeypatch.setattr(precios, "_leer_tabla", con_marcas)
+    precios.cargar_precios.cache_clear()
+    try:
+        marcada = cargar_precios()
+        assert "_ensayo" in marcada, "guarda: la carga pasó por la tabla con marcas"
+        assert {k: x for k, x in marcada.items() if not k.startswith("_")} == {
+            k: x for k, x in limpia.items() if not k.startswith("_")
+        }
+        for mid in IDS_DE_LA_SPEC:
+            assert entrada(mid) == limpia["modelos"][mid], mid
+            assert precios.familia(mid) == limpia["modelos"][mid]["familia"], mid
+        assert cotejar(FILAS, marcada) == cotejar(FILAS, limpia)
+    finally:
+        precios.cargar_precios.cache_clear()
