@@ -449,6 +449,8 @@ def anotar_llamada(entrada: dict, directorio: Path | None = None) -> bool:
             try:
                 os.unlink(temporal)
             except OSError:
+                # Limpieza de mejor esfuerzo: un hook nunca lanza, y el fallo ya se comunica
+                # devolviendo False justo debajo.
                 pass
             return False
         _podar_notas(destino, ahora)

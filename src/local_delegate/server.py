@@ -564,6 +564,9 @@ def _log_event(
 
                 rec.update(atribucion.llamada_actual())
         except Exception:
+            # Silencio intencionado: la atribución es observación. Si falla, la línea se escribe
+            # igual sin esos campos; registrar aquí podría fallar otra vez, y observar nunca
+            # puede romper la tool que se está anotando.
             pass
         # `chunks` es el número REAL de llamadas al backend, no el de trozos: una operación
         # troceada gasta la GPU N veces y esta es la única huella que queda de ello. Se omite

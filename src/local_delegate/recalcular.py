@@ -63,6 +63,8 @@ def escribir_agregados(log_dir: Path, agregados: dict) -> None:
         try:
             os.unlink(temporal)
         except OSError:
+            # Limpieza de mejor esfuerzo: si el temporal ya no está o no se puede borrar, se
+            # ignora para que el `raise` de abajo propague el error original y no este.
             pass
         raise
 

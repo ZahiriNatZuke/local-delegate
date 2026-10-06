@@ -199,6 +199,8 @@ def test_cargar_las_tablas_no_abre_sockets(monkeypatch):
             precios.cargar_precios()
             precios.cargar_densidad()
         except OSError:
+            # Se ignora a propósito: este test solo comprueba que la carga no intente salir a
+            # la red; si la lectura falla por otra causa, lo que importa es el assert de abajo.
             pass
         assert intentos == []
     finally:

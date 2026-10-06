@@ -456,6 +456,8 @@ def test_api_stats_no_abre_sockets(entorno, monkeypatch):
     try:
         socket.create_connection(("192.0.2.1", 80), timeout=0.01)
     except OSError:
+        # Esperado: 192.0.2.1 es TEST-NET y no responde. Aquí solo cuenta que el registrador
+        # haya visto el intento, que es lo que comprueba el assert siguiente.
         pass
     assert intentos == ["create_connection"]
     intentos.clear()

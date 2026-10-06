@@ -31,5 +31,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
+        # Silencio intencionado: este hook solo anota y nunca puede bloquear ni romper la
+        # llamada de Claude Code; cualquier fallo se traga y el proceso sale con 0.
         pass
     sys.exit(0)

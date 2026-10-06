@@ -22,11 +22,10 @@ from mcp.server.mcpserver import MCPServer
 from mcp.shared.memory import create_client_server_memory_streams
 from mcp.types import Implementation
 
-import local_delegate
 from local_delegate import atribucion, clients, server
 from local_delegate.resources.hooks import hook_common
 
-HOOK = Path(local_delegate.__file__).parent / "resources" / "hooks" / "anotar_llamada.py"
+HOOK = Path(hook_common.__file__).parent / "anotar_llamada.py"
 AGENTE = "general-purpose"
 OPUS = "claude-opus-5-5"
 
