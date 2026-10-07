@@ -262,6 +262,73 @@ Cerrado el 2026-10-07, salvo el último punto:
 - **Pendiente para T5: el idioma de las trampas.** Están en español. Si los mensajes reales de los
   modelos salen en inglés, las trampas se notarían y habría que reescribirlas antes de generar la hoja.
 
+## Ola 2 — T5
+
+Evidencia completa en [T5](evidencias/T5.md). **T5 queda parada antes de la hoja** (pasos 6 y 7) por el idioma
+de los mensajes de commit (abajo).
+
+### Ventana de la tanda: excluida de P-4 y F1
+
+- **2026-10-07T12:17:21.935591Z → 2026-10-07T12:32:06.828457Z** (UTC), un solo lanzamiento y ninguna
+  repetición (`benchmarks/afinidad-2026-10/ventanas-tanda.json`).
+- **Queda excluida** de la medición de P-4 (enfriamiento, `scripts/medir_enfriamiento.py --excluir`) y de la de
+  F1 (adopción, `scripts/medir_adopcion.py`): todas las peticiones de esa ventana son de la evaluación.
+
+### Delegaciones ajenas
+
+En la copia de `metrics.db` hay 300 filas en la ventana. 261 casan una a una con las peticiones de benchmark y
+de calentamiento, y 39 con las 3 corridas del techo (13 pasadas cada una). **Ajenas: 0.** El log de uso del
+daemon no tiene entradas en la ventana. **Casos repetidos: 0.**
+
+### Celdas mecánicas (`veredicto-afinidad --solo-mecanicas`)
+
+Comparadas con `gemma3-4b` (rol `mechanical`), con una carga en frío de 3,27 s según la copia de `metrics.db`:
+
+| Tool | Alternativo | Estado | Criterios que no se cumplen |
+| --- | --- | --- | --- |
+| local_classify | gemma4-26b-a4b | rechazada | calidad, formato |
+| local_classify | qwen36-35b-a3b | rechazada | calidad, formato |
+| local_extract | gemma4-26b-a4b | rechazada | calidad |
+| local_extract | qwen36-35b-a3b | rechazada | calidad |
+| local_translate | gemma4-26b-a4b | aprobada | — |
+| local_translate | qwen36-35b-a3b | aprobada | — |
+| local_lint_summary | gemma4-26b-a4b | aprobada | — |
+| local_lint_summary | qwen36-35b-a3b | rechazada | calidad, latencia |
+| local_delegate | gemma4-26b-a4b | aprobada | — |
+| local_delegate | qwen36-35b-a3b | rechazada | calidad |
+
+El criterio 1 (el corpus discrimina) se cumple en las diez. Los casos de cada criterio están en
+`evidencias/T5.md` y en `benchmarks/afinidad-2026-10/veredicto-mecanicas.json`.
+
+### Idioma de los mensajes de commit: parada antes de la hoja
+
+En los 30 casos reales, `gemma4-26b-a4b` contesta en inglés 17 y en español 13. `qwen36-35b-a3b`, en español 23,
+en inglés 6, y hay 1 ambiguo. Las trampas están en español, así que contra el 26B el idioma delataría la trampa.
+**No se generó la hoja 1** (ni `hoja/` ni `clave/`). Hay que decidir con el usuario cómo se reescriben las
+trampas, y eso cambia el sha256 de `trampas.json` que congeló T4.
+
+### Desviaciones
+
+1. **Descartes por sonda que solo afectan a los recursos.** 8 casos de `local_classify` de cada modelo pequeño
+   y 2 de cada modelo grande quedaron `descartada` con `zero_vram_samples`: respondieron en menos de un segundo
+   y la sonda no llegó a muestrear. Ahora `veredicto-afinidad`, **y solo él**, cuenta las filas descartadas por
+   `zero_vram_samples` o `zero_ram_samples`. `multiple_processes`, `process_changed` y un motivo vacío se siguen
+   descartando, y el análisis de CP-3/F2 no cambia. La reanudación de `tanda_afinidad.py` tampoco repite esas
+   filas. Hay tests y mutantes para los dos cambios; el del veredicto falla con `SinDatos` en la llamada, antes
+   del assert de la celda (detalle en `evidencias/T5.md`).
+2. **Ruta de perfil en las filas del techo.** `entorno_fijado.LOCAL_DELEGATE_LOG_DIR` llevaba la carpeta del
+   usuario (3 filas, ninguna en `response`). Quedó como `~/…`, el resto de cada fila sigue igual, y
+   `fila_del_techo` ya la escribe así (con test y mutante).
+
+### Comprobaciones
+
+- `pesado.sh uv run pytest tests/test_tanda_afinidad.py tests/test_analisis_benchmark.py tests/test_hoja_pares.py tests/test_corpus.py -q -p no:cacheprovider`
+  → `185 passed in 16.76s`.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `162 files already formatted`.
+- sha256 de `config.yaml` de llama-swap: `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`,
+  igual que en T0.
+- sha256 de `cases.json`, `trampas.json` y `reglas.json`: sin cambios desde T4.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

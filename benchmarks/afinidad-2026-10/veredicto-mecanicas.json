@@ -1,0 +1,751 @@
+{
+  "schema_version": 1,
+  "solo_mecanicas": true,
+  "reglas": {
+    "version": 1,
+    "max_inventa_26b": 1,
+    "preguntas_opcionales": [
+      "principal",
+      "especifico"
+    ],
+    "formato": {
+      "primera_linea_max": 72,
+      "prefijo": "^(feat|fix|docs|refactor|perf|test|build|ci|chore|style|revert)(\\([^)]+\\))?!?: ",
+      "sin_adornos": {
+        "vallas_de_codigo": true,
+        "comillas_envolventes": true,
+        "encabezados_markdown": true,
+        "frases_de_presentacion": [
+          "^(aquí|aqui)\\b",
+          "^(here is|here's|here are)\\b",
+          "^(claro|por supuesto|desde luego|sure|certainly|of course)\\b",
+          "^(mensaje de commit|commit message)\\s*:",
+          "^(este|el siguiente) (mensaje|commit)\\b"
+        ]
+      }
+    },
+    "parada_anticipada": true
+  },
+  "celdas": [
+    {
+      "tool": "local_classify",
+      "alternativo": "gemma4-26b-a4b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-idioma-aleman",
+            "clasifica-ironia",
+            "clasifica-economia",
+            "clasifica-negacion-reenvio",
+            "clasifica-lenguaje-de-programacion"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-idioma-aleman",
+            "clasifica-lenguaje-de-programacion"
+          ]
+        },
+        "formato": {
+          "ok": false,
+          "casos_sin_formato": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-idioma-aleman",
+            "clasifica-lenguaje-de-programacion"
+          ]
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 1.0,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 611.0,
+          "mediana_rol_ms": 84.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 9,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 38400,
+          "mmproj": null,
+          "n_cpu_moe": 12,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "tamano_bytes": 13597177568
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_classify",
+      "alternativo": "qwen36-35b-a3b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-idioma-aleman",
+            "clasifica-ironia",
+            "clasifica-economia",
+            "clasifica-negacion-reenvio",
+            "clasifica-lenguaje-de-programacion"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-economia"
+          ]
+        },
+        "formato": {
+          "ok": false,
+          "casos_sin_formato": [
+            "clasifica-bug-con-etiquetas-en-ingles",
+            "clasifica-economia"
+          ]
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 0.8888888888888888,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 1109.0,
+          "mediana_rol_ms": 84.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 9,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 16384,
+          "mmproj": null,
+          "n_cpu_moe": 20,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "tamano_bytes": 17730509792
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_extract",
+      "alternativo": "gemma4-26b-a4b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "extrae-factura",
+            "extrae-linea-de-log-con-numeros",
+            "extrae-correo-sin-telefono",
+            "extrae-toml-sin-licencia",
+            "extrae-acta-con-cifras",
+            "extrae-linea-de-acceso-web",
+            "extrae-reunion-sin-organizador"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "extrae-linea-de-log-con-numeros",
+            "extrae-producto-sin-existencias"
+          ]
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 0.983739837398374,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 1683.0,
+          "mediana_rol_ms": 505.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 9,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 38400,
+          "mmproj": null,
+          "n_cpu_moe": 12,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "tamano_bytes": 13597177568
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_extract",
+      "alternativo": "qwen36-35b-a3b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "extrae-factura",
+            "extrae-linea-de-log-con-numeros",
+            "extrae-correo-sin-telefono",
+            "extrae-toml-sin-licencia",
+            "extrae-acta-con-cifras",
+            "extrae-linea-de-acceso-web",
+            "extrae-reunion-sin-organizador"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "extrae-correo-sin-telefono"
+          ]
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 1.0806451612903225,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 1928.0,
+          "mediana_rol_ms": 505.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 9,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 16384,
+          "mmproj": null,
+          "n_cpu_moe": 20,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "tamano_bytes": 17730509792
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_translate",
+      "alternativo": "gemma4-26b-a4b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "aprobada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "traduce-guia-de-inicio",
+            "traduce-solucion-de-problemas",
+            "traduce-registro-de-cambios",
+            "traduce-lista-de-version"
+          ]
+        },
+        "calidad": {
+          "ok": true,
+          "casos_peores": []
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 1.0173697270471465,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 2322.0,
+          "mediana_rol_ms": 726.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 5,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 38400,
+          "mmproj": null,
+          "n_cpu_moe": 12,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "tamano_bytes": 13597177568
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_translate",
+      "alternativo": "qwen36-35b-a3b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "aprobada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "traduce-guia-de-inicio",
+            "traduce-solucion-de-problemas",
+            "traduce-registro-de-cambios",
+            "traduce-lista-de-version"
+          ]
+        },
+        "calidad": {
+          "ok": true,
+          "casos_peores": []
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 1.034739454094293,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 2257.0,
+          "mediana_rol_ms": 726.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 5,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 16384,
+          "mmproj": null,
+          "n_cpu_moe": 20,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "tamano_bytes": 17730509792
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_lint_summary",
+      "alternativo": "gemma4-26b-a4b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "aprobada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "resume-ruff-tres-reglas",
+            "resume-ruff-docstrings",
+            "resume-ruff-un-solo-archivo",
+            "resume-ruff-cinco-reglas"
+          ]
+        },
+        "calidad": {
+          "ok": true,
+          "casos_peores": []
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 0.7470190138575572,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 4311.0,
+          "mediana_rol_ms": 1597.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 4,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 38400,
+          "mmproj": null,
+          "n_cpu_moe": 12,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "tamano_bytes": 13597177568
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_lint_summary",
+      "alternativo": "qwen36-35b-a3b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "resume-ruff-tres-reglas",
+            "resume-ruff-docstrings",
+            "resume-ruff-un-solo-archivo",
+            "resume-ruff-cinco-reglas"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "resume-ruff-tres-reglas",
+            "resume-ruff-un-solo-archivo"
+          ]
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 1.0064252336448598,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": false,
+          "mediana_alternativo_ms": 6272.5,
+          "mediana_rol_ms": 1597.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 4,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 16384,
+          "mmproj": null,
+          "n_cpu_moe": 20,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "tamano_bytes": 17730509792
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_delegate",
+      "alternativo": "gemma4-26b-a4b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "aprobada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "delega-contar-palabras"
+          ]
+        },
+        "calidad": {
+          "ok": true,
+          "casos_peores": []
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 0.9629629629629629,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 755.0,
+          "mediana_rol_ms": 154.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 5,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 38400,
+          "mmproj": null,
+          "n_cpu_moe": 12,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+        "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+        "tamano_bytes": 13597177568
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    },
+    {
+      "tool": "local_delegate",
+      "alternativo": "qwen36-35b-a3b",
+      "rol_comparado": "gemma3-4b",
+      "estado": "rechazada",
+      "criterios": {
+        "discrimina": {
+          "ok": true,
+          "referencias_malas": [],
+          "casos_donde_el_rol_o_el_debil_fallan": [
+            "delega-contar-palabras"
+          ]
+        },
+        "calidad": {
+          "ok": false,
+          "casos_peores": [
+            "delega-contar-palabras"
+          ]
+        },
+        "formato": {
+          "ok": true,
+          "casos_sin_formato": []
+        },
+        "verbosidad": {
+          "ok": true,
+          "mediana": 0.9629629629629629,
+          "maximo": 1.5
+        },
+        "fiabilidad": {
+          "ok": true,
+          "casos_que_fallan_solo_en_el_alternativo": []
+        },
+        "latencia": {
+          "ok": true,
+          "mediana_alternativo_ms": 963.0,
+          "mediana_rol_ms": 154.0,
+          "carga_en_frio_rol_s": 3.268613570167286,
+          "nota": null
+        }
+      },
+      "casos": 5,
+      "huella": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 16384,
+          "mmproj": null,
+          "n_cpu_moe": 20,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+        "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+        "tamano_bytes": 17730509792
+      },
+      "huella_rol": {
+        "flags": {
+          "cache_type_k": null,
+          "cache_type_v": null,
+          "ctx_size": 8192,
+          "mmproj": null,
+          "n_cpu_moe": null,
+          "reasoning": "off"
+        },
+        "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+        "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+        "tamano_bytes": 2489894016
+      }
+    }
+  ],
+  "reglas_sha256": "3aac45aa83c16be7b006bc73b941252f4fee6727cce64727fd8eb5a304e968bf",
+  "cases_sha256": "1bde663ba516b1588f2f8d9fde71ec1b653db2a348c2308c56898e12190cdfbb"
+}

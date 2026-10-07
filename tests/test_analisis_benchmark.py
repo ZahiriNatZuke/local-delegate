@@ -1169,6 +1169,26 @@ def test_faltan_datos_no_se_inventa_un_veredicto():
         _veredicto(corpus, corridas)
 
 
+@pytest.mark.parametrize("motivo", ["zero_vram_samples", "zero_ram_samples"])
+def test_una_fila_anulada_solo_por_falta_de_muestras_cuenta_en_la_celda(motivo):
+    """La sonda no llegó a muestrear (respuesta de menos de 100 ms): la respuesta vale y la celda
+    se evalúa con ella. Este veredicto no juzga recursos."""
+    corpus, corridas = _mecanico()
+    for etiqueta in (ALT, ROL):
+        corridas[(etiqueta, "c1", 1)][-1].update(descartada=True, descartada_motivo=motivo)
+    celda = _celda(_veredicto(corpus, corridas))
+    assert celda["estado"] == "aprobada", celda["criterios"]
+    assert celda["criterios"]["fiabilidad"]["casos_que_fallan_solo_en_el_alternativo"] == []
+
+
+@pytest.mark.parametrize("motivo", ["multiple_processes", "process_changed", None])
+def test_una_fila_anulada_por_el_proceso_sigue_sin_contar(motivo):
+    corpus, corridas = _mecanico()
+    corridas[(ALT, "c1", 1)][-1].update(descartada=True, descartada_motivo=motivo)
+    with pytest.raises(analizar.SinDatos, match="anulada"):
+        _veredicto(corpus, corridas)
+
+
 def test_veredicto_json_copia_la_huella_de_huellas_json():
     corpus, corridas = _mecanico()
     v = _veredicto(corpus, corridas)

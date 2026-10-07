@@ -1193,8 +1193,22 @@ def agrupar_corridas(registros: list[dict[str, Any]]) -> Corridas:
     return corridas
 
 
+# Motivos de anulación de la sonda que solo dejan la fila sin medida de recursos (RAM o VRAM): la
+# respuesta es válida y este veredicto no juzga recursos, así que la fila cuenta. Pasa con peticiones
+# de menos de 100 ms, que terminan antes de que la sonda muestree. Un proceso que cambió o varios
+# procesos sí invalidan la corrida y se siguen descartando. Solo afecta al veredicto de afinidad.
+MOTIVOS_SOLO_DE_RECURSOS = frozenset({"zero_vram_samples", "zero_ram_samples"})
+
+
+def _anulada(intento: dict[str, Any]) -> bool:
+    """La fila no vale para el veredicto de afinidad (ver `MOTIVOS_SOLO_DE_RECURSOS`)."""
+    return bool(intento.get("descartada")) and (
+        intento.get("descartada_motivo") not in MOTIVOS_SOLO_DE_RECURSOS
+    )
+
+
 def _falla(intento: dict[str, Any]) -> bool:
-    return not intento.get("descartada") and intento.get("outcome") != "ok"
+    return not _anulada(intento) and intento.get("outcome") != "ok"
 
 
 def resultado_de(
@@ -1204,7 +1218,7 @@ def resultado_de(
     if not intentos:
         raise SinDatos(f"falta la corrida {run} de {label} en {caso['id']}")
     final = intentos[-1]
-    if final.get("descartada"):
+    if _anulada(final):
         raise SinDatos(f"{label}:{caso['id']} corrida {run}: anulada y sin repetir")
     ok = final.get("outcome") == "ok"
     texto = str(final.get("response") or "")
