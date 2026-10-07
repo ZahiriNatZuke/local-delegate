@@ -237,6 +237,11 @@ CUERPO_TRAMPA = [
 ]
 
 
+def _frases_de_trampa(j):
+    """Cinco frases enteras, como las de `trampas.json`: empiezan en mayuscula y acaban en punto."""
+    return [f"Frase {n} de la trampa {j}." for n in range(1, 6)]
+
+
 def _diff(clave):
     return (
         f"diff --git a/f{clave} b/f{clave}\n--- a/f{clave}\n+++ b/f{clave}\n@@ -0,0 +1 @@\n"
@@ -267,11 +272,13 @@ def _registro(label, caso, texto):
     }
 
 
-def _escenario(tmp_path, *, opcionales=("principal", "especifico"), mensaje_extra=None):
-    """Un corpus pequeno: N_REALES casos reales y 3 trampa, con sus mensajes de los dos modelos."""
+def _escenario(
+    tmp_path, *, opcionales=("principal", "especifico"), mensaje_extra=None, n_reales=N_REALES
+):
+    """Un corpus pequeno: `n_reales` casos reales y 3 trampa, con sus mensajes de los dos modelos."""
     casos, registros = {}, []
     (tmp_path / "fuentes").mkdir(exist_ok=True)
-    for i in range(N_REALES):
+    for i in range(n_reales):
         casos[f"k{i}"] = {"id": f"k{i}", "source_file": f"k{i}.diff", "rol_en_hoja": "real"}
         (tmp_path / "fuentes" / f"k{i}.diff").write_text(_diff(f"k{i}"), encoding="utf-8")
         for modelo in (L26, LQW):
@@ -283,16 +290,28 @@ def _escenario(tmp_path, *, opcionales=("principal", "especifico"), mensaje_extr
     for j in range(3):
         casos[f"t{j}"] = {"id": f"t{j}", "source_file": f"t{j}.diff", "rol_en_hoja": "trampa"}
         (tmp_path / "fuentes" / f"t{j}.diff").write_text(_diff(f"t{j}"), encoding="utf-8")
+        # El 26B cierra con punto y Qwen3.6 sin el, como en la tanda real.
         registros.append(
-            _registro(L26, f"t{j}", f"feat(trampa-{j}): alfa {j}\n\n- a {j}\n- b {j}\n- c {j}")
+            _registro(
+                L26,
+                f"t{j}",
+                f"feat(trampa-{j}): alfa {j}\n\n- Detalle a de la trampa {j}.\n"
+                f"- Detalle b de la trampa {j}.\n- Detalle c de la trampa {j}.",
+            )
         )
-        registros.append(_registro(LQW, f"t{j}", f"fix(trampa-{j}): beta {j}\n\n- x {j}\n- y {j}"))
+        registros.append(
+            _registro(
+                LQW,
+                f"t{j}",
+                f"fix(trampa-{j}): beta {j}\n\n- Detalle x de la trampa {j}\n- Detalle y de la trampa {j}",
+            )
+        )
         entradas.append(
             {
                 "caso": f"t{j}",
                 "tipo": ("misma-zona", "secundario", "generico")[j],
                 "asunto": f"docs: asunto de la trampa {j}",
-                "cuerpo": [f"{linea} {j}" for linea in CUERPO_TRAMPA],
+                "cuerpo": _frases_de_trampa(j),
             }
         )
     trampas = {"juegos": [{"juego": 1, "trampas": entradas}]}
@@ -390,6 +409,10 @@ def test_la_hoja_no_delata_a_nadie(tmp_path):
         lado_otro = "B" if lado_trampa == "A" else "A"
         trampa, pareja = por_num[num][lado_trampa], por_num[num][lado_otro]
         assert hoja_pares.forma(trampa) == hoja_pares.forma(pareja)
+        # Y la trampa no se reconoce por mal escrita: ni viñetas que empiezan en minuscula tras
+        # partir una frase, ni una viñeta cortada.
+        assert hoja_pares.defectos_de_cuerpo(trampa, pareja) == [], (num, trampa)
+        assert hoja_pares.usa_puntuacion_final(trampa) == hoja_pares.usa_puntuacion_final(pareja)
     # Y entre los 3 pares hay mensajes con cuerpo: el control no es de una linea contra una linea.
     assert any(hoja_pares.forma(por_num[n][_lado(clave, n, L26)])[0] for n, _ in trampas)
 
@@ -463,6 +486,299 @@ def test_un_mensaje_repetido_en_la_hoja_para_el_generador(tmp_path):
             label_26b=L26,
             label_qwen=LQW,
         )
+
+
+# --- El reparto de lados y la forma de las trampas --------------------------------------------------
+
+# 1781 es una semilla que, con un sorteo independiente por par, deja al 26B en A 23 veces de 30.
+SEMILLAS = (1781, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1115541376)
+JUEGOS_REALES = json.loads(
+    (RAIZ / "benchmarks" / "afinidad-2026-10" / "trampas.json").read_text(encoding="utf-8")
+)["juegos"]
+
+
+def test_el_lado_se_reparte_con_una_permutacion_equilibrada(tmp_path):
+    # Con 30 pares reales, cada modelo queda en A exactamente 15 veces, sea cual sea la semilla. Con un
+    # sorteo independiente por par, el 26B quedo en A 23 veces de 30 (p = 0,005) y la hoja salia
+    # «A largo, B corto» casi siempre.
+    for semilla in SEMILLAS:
+        _, clave, _reglas, _ = _hoja(tmp_path, semilla=semilla, n_reales=30)
+        reales = [p for p in clave["pares"].values() if p["tipo"] == "real"]
+        assert len(reales) == 30
+        de_26b_en_a = sum(p["lados"]["A"] == L26 for p in reales)
+        assert de_26b_en_a == 15, f"semilla {semilla}: el 26B esta en A {de_26b_en_a} veces de 30"
+        assert sum(p["lados"]["A"] == LQW for p in reales) == 15
+    # Con un numero impar de pares, la diferencia es como mucho 1.
+    for semilla in SEMILLAS:
+        _, clave, _reglas, _ = _hoja(tmp_path, semilla=semilla, n_reales=11)
+        reales = [p for p in clave["pares"].values() if p["tipo"] == "real"]
+        de_26b_en_a = sum(p["lados"]["A"] == L26 for p in reales)
+        assert abs(de_26b_en_a - (len(reales) - de_26b_en_a)) <= 1, semilla
+
+
+def test_la_trampa_y_su_pareja_tambien_se_reparten_sin_sesgo(tmp_path):
+    # Tres trampas no se pueden partir por la mitad: el lado de la trampa y el modelo con el que se
+    # empareja salen 1-2 o 2-1, nunca 0-3 ni 3-0.
+    vistos = set()
+    for semilla in SEMILLAS:
+        _, clave, _reglas, _ = _hoja(tmp_path, semilla=semilla)
+        trampas = [p for p in clave["pares"].values() if p["tipo"] == "trampa"]
+        assert len(trampas) == 3
+        en_a = sum(p["lados"]["A"] == "trampa" for p in trampas)
+        assert en_a in (1, 2), f"semilla {semilla}: la trampa esta en A {en_a} veces de 3"
+        parejas = [next(m for m in p["lados"].values() if m != "trampa") for p in trampas]
+        assert parejas.count(L26) in (1, 2), f"semilla {semilla}: parejas {parejas}"
+        vistos.add(en_a)
+    assert vistos == {1, 2}  # el lado de la trampa no esta fijo: ninguna de las dos opciones falta
+
+
+# Lo que escribia la regla de forma antes: cada LINEA FISICA del cuerpo pasaba a ser una viñeta. El
+# cuerpo es el de la trampa del par 21 de la primera hoja: un parrafo real partido a 80 columnas.
+CUERPO_PARRAFO_PARTIDO = [
+    "Era el ultimo fleco manual del release: release.py no la mencionaba y ningun",
+    "workflow la tocaba (pages.yml publica site/, no docs/). Medido clonandola:",
+    "los ONCE ficheros divergidos -Repo-hardening 291 lineas, Daemon 154,",
+    "Integration-install 142- y congelada desde el 28 de julio, con 0.18.0, 0.18.1",
+    "y 0.19.0 publicadas encima.",
+]
+PAREJA_CON_VINETAS = (
+    "chore(sdd): cerrar cambios pendientes\n\n- Cambia el estado de varios cambios a `closed`.\n"
+    "- Aprueba el gate de `memory` en todos los estados.\n- Registra la evidencia de vaciado.\n"
+    "- Anade las transiciones finales al historial."
+)
+
+
+def _trampa_con_forma_vieja(trampa, mensaje_pareja):
+    """La regla de forma de antes de esta correccion, tal cual: corta por lineas fisicas."""
+    _asunto, cuerpo_modelo, separado = hoja_pares.partir_mensaje(mensaje_pareja)
+    n = min(len(cuerpo_modelo), hoja_pares.LINEAS_DE_CUERPO_MAX)
+    lineas = [str(x) for x in trampa["cuerpo"]][:n]
+    if sum(x.lstrip().startswith(("- ", "* ")) for x in cuerpo_modelo) * 2 >= len(cuerpo_modelo):
+        lineas = [x if x.lstrip().startswith(("- ", "* ")) else f"- {x}" for x in lineas]
+    return "\n".join([str(trampa["asunto"]), *([""] if separado else []), *lineas])
+
+
+def test_la_regla_vieja_deja_vinetas_partidas_y_la_guarda_las_ve():
+    trampa = {"asunto": "feat(wiki): algo", "cuerpo": CUERPO_PARRAFO_PARTIDO}
+    vieja = _trampa_con_forma_vieja(trampa, PAREJA_CON_VINETAS)
+    defectos = hoja_pares.defectos_de_cuerpo(vieja)
+    # Mutante: la regla vieja. Dispara los dos defectos, uno por cada viñeta partida.
+    assert any("empieza en minuscula" in d and "workflow la tocaba" in d for d in defectos), (
+        defectos
+    )
+    assert any("termina cortada" in d and "0.18.1" in d for d in defectos), defectos
+    assert len(defectos) >= 6, defectos
+    # La regla nueva, con el mismo cuerpo: viñetas que son frases enteras y ningun defecto.
+    nueva = hoja_pares.trampa_con_forma(trampa, PAREJA_CON_VINETAS)
+    assert hoja_pares.defectos_de_cuerpo(nueva) == [], nueva
+    cuerpo = hoja_pares.partir_mensaje(nueva)[1]
+    assert len(cuerpo) == 2 and all(x.startswith("- ") for x in cuerpo)
+    assert cuerpo[0] == (
+        "- Era el ultimo fleco manual del release: release.py no la mencionaba y ningun workflow "
+        "la tocaba (pages.yml publica site/, no docs/)."
+    )
+
+
+def test_la_guarda_de_cuerpo_distingue_lo_bien_escrito_de_lo_cortado():
+    bien = (
+        "docs: x\n\n- Una frase entera.\n- `ruta/al/fichero.py` queda como estaba.\n- Dice «algo»."
+    )
+    assert hoja_pares.defectos_de_cuerpo(bien) == []
+    assert hoja_pares.defectos_de_cuerpo("docs: x\n\n- empieza abajo.") == [
+        "empieza en minuscula: '- empieza abajo.'"
+    ]
+    assert hoja_pares.defectos_de_cuerpo("docs: x\n\n- Termina en la") == [
+        "termina cortada: '- Termina en la'"
+    ]
+    # Sin viñetas tambien: cada linea de cuerpo es una unidad.
+    assert len(hoja_pares.defectos_de_cuerpo("docs: x\nuna\nDos.")) == 2
+    # Sin cuerpo no hay nada que revisar.
+    assert hoja_pares.defectos_de_cuerpo("docs: solo asunto") == []
+
+
+def test_las_unidades_del_cuerpo_son_frases_o_vinetas_enteras_nunca_lineas_fisicas():
+    unidades = hoja_pares.unidades_de_cuerpo(
+        [
+            "Primera frase que se parte en",
+            "dos lineas. Segunda frase. Tercera: con (pages.yml), release.py y 0.18.0.",
+            "- Una viñeta que sigue en",
+            "  otra linea.",
+            "- Otra viñeta.",
+            "",
+            "Cola de texto.",
+        ]
+    )
+    assert unidades == [
+        "Primera frase que se parte en dos lineas.",
+        "Segunda frase.",
+        "Tercera: con (pages.yml), release.py y 0.18.0.",
+        "- Una viñeta que sigue en otra linea.",
+        "- Otra viñeta.",
+        "Cola de texto.",
+    ]
+    # Al recortar se quitan unidades enteras: con 2 lineas de pareja salen las dos primeras.
+    trampa = {"asunto": "docs: algo", "cuerpo": CUERPO_PARRAFO_PARTIDO}
+    dos = hoja_pares.trampa_con_forma(trampa, "feat: x\n\n- Uno.\n- Dos.")
+    assert hoja_pares.partir_mensaje(dos)[1] == [
+        (
+            "- Era el ultimo fleco manual del release: release.py no la mencionaba y ningun workflow "
+            "la tocaba (pages.yml publica site/, no docs/)."
+        ),
+        (
+            "- Medido clonandola: los ONCE ficheros divergidos -Repo-hardening 291 lineas, Daemon "
+            "154, Integration-install 142- y congelada desde el 28 de julio, con 0.18.0, 0.18.1 y "
+            "0.19.0 publicadas encima."
+        ),
+    ]
+
+
+def test_el_generador_para_si_una_trampa_se_reconoce_por_mal_escrita(tmp_path):
+    casos, registros, trampas, reglas = _escenario(tmp_path)
+    trampas["juegos"][0]["trampas"][1]["cuerpo"] = ["corta y sin final", "Otra frase."]
+    with pytest.raises(SystemExit, match="mal escrita"):
+        hoja_pares.construir_hoja_commit(
+            casos=casos,
+            fuentes=tmp_path / "fuentes",
+            registros=registros,
+            trampas=trampas,
+            reglas=reglas,
+            juego=1,
+            numero=1,
+            semilla=3,
+            label_26b=L26,
+            label_qwen=LQW,
+        )
+
+
+PAREJA_SIN_PUNTOS = (
+    "chore(sdd): cerrar cambios pendientes\n\n- Actualizar estado de cambios a 'closed'\n"
+    "- Aprobar puertas de memoria y conformidad\n- Registrar evidencia de cierre"
+)
+TRAMPA_CON_PUNTOS = {
+    "asunto": "docs: algo",
+    "cuerpo": ["Primera frase entera.", "Segunda frase entera.", "Tercera frase entera."],
+}
+
+
+def test_la_trampa_copia_la_puntuacion_final_de_su_pareja():
+    # Pareja sin puntos: la trampa tampoco los lleva.
+    sin = hoja_pares.trampa_con_forma(TRAMPA_CON_PUNTOS, PAREJA_SIN_PUNTOS)
+    assert hoja_pares.partir_mensaje(sin)[1] == [
+        "- Primera frase entera",
+        "- Segunda frase entera",
+        "- Tercera frase entera",
+    ]
+    assert not hoja_pares.usa_puntuacion_final(sin)
+    assert hoja_pares.defectos_de_cuerpo(sin, PAREJA_SIN_PUNTOS) == []
+    # Pareja con puntos: los conserva.
+    con = hoja_pares.trampa_con_forma(TRAMPA_CON_PUNTOS, PAREJA_CON_VINETAS)
+    assert all(x.endswith(".") for x in hoja_pares.partir_mensaje(con)[1])
+    assert hoja_pares.usa_puntuacion_final(con)
+    # Mutante: la trampa que NO copia la puntuacion (lleva los puntos con una pareja sin ellos).
+    sin_copiar = (
+        "docs: algo\n\n- Primera frase entera.\n- Segunda frase entera.\n- Tercera frase entera."
+    )
+    assert hoja_pares.usa_puntuacion_final(sin_copiar) != hoja_pares.usa_puntuacion_final(
+        PAREJA_SIN_PUNTOS
+    )
+    defectos = hoja_pares.defectos_de_cuerpo(sin_copiar, PAREJA_SIN_PUNTOS)
+    assert any("puntuacion final no es la de la pareja" in d for d in defectos), defectos
+
+
+def test_sin_signo_final_solo_si_la_pareja_tampoco_lo_usa_y_con_palabra_completa():
+    ok = "docs: x\n\n- Cierra el estado de la tarea\n- Aprueba la puerta"
+    assert hoja_pares.defectos_de_cuerpo(ok, PAREJA_SIN_PUNTOS) == []
+    # Con una pareja que si cierra con punto, la misma trampa sin punto esta cortada.
+    defectos = hoja_pares.defectos_de_cuerpo(ok, PAREJA_CON_VINETAS)
+    assert [d.split(":")[0] for d in defectos[:2]] == ["termina cortada"] * 2, defectos
+    # Aunque la pareja no use punto, la ultima palabra no puede ser de corte ni la linea acabar en coma.
+    for corte in ("con", "de", "y", "a", "el", "la", "en", "que", "por", "para", "o", "del", "al"):
+        malo = f"docs: x\n\n- Cierra el estado {corte}\n- Aprueba la puerta"
+        assert hoja_pares.defectos_de_cuerpo(malo, PAREJA_SIN_PUNTOS) == [
+            f"termina cortada: '- Cierra el estado {corte}'"
+        ], corte
+    coma = "docs: x\n\n- Cierra el estado,\n- Aprueba la puerta"
+    assert hoja_pares.defectos_de_cuerpo(coma, PAREJA_SIN_PUNTOS) == [
+        "termina cortada: '- Cierra el estado,'"
+    ]
+
+
+def test_la_vineta_media_de_la_trampa_no_pasa_de_1_5_veces_la_de_su_pareja():
+    larga = {
+        "asunto": "docs: algo",
+        "cuerpo": [
+            "Una frase corta pero entera.",
+            "Otra frase corta igual de entera.",
+            "Esta es una frase bastante mas larga que las otras dos de este cuerpo de prueba.",
+            "Y esta tambien es una frase muy larga, escrita para pasarse del limite de largo.",
+            "La ultima es corta.",
+        ],
+    }
+    pareja = (
+        "feat: x\n\n- Cierra el estado de la tarea\n- Aprueba la puerta de memoria\n"
+        "- Registra la evidencia"
+    )
+    limite = hoja_pares.FACTOR_DE_LARGO_MAX * hoja_pares.largo_medio_de_vineta(pareja)
+    mensaje = hoja_pares.trampa_con_forma(larga, pareja)
+    # Las tres primeras pasan del limite; se eligen las tres MAS CORTAS, enteras y en su orden.
+    assert hoja_pares.partir_mensaje(mensaje)[1] == [
+        "- Una frase corta pero entera",
+        "- Otra frase corta igual de entera",
+        "- La ultima es corta",
+    ]
+    assert hoja_pares.largo_medio_de_vineta(mensaje) <= limite
+    assert hoja_pares.defectos_de_cuerpo(mensaje, pareja) == []
+    # Mutante: la trampa con frases largas (sin elegir las cortas) se pasa del limite.
+    largas = "docs: algo\n\n" + "\n".join(f"- {x[:-1]}" for x in larga["cuerpo"][1:4])
+    defectos = hoja_pares.defectos_de_cuerpo(largas, pareja)
+    assert any("viñeta media" in d for d in defectos), defectos
+    # Si con frases enteras no se puede (solo hay frases largas), la guarda lo dice y no se fuerza.
+    solo_largas = {"asunto": "docs: algo", "cuerpo": larga["cuerpo"][2:4]}
+    forzada = hoja_pares.trampa_con_forma(solo_largas, pareja)
+    assert any("viñeta media" in d for d in hoja_pares.defectos_de_cuerpo(forzada, pareja))
+
+
+PAREJAS_REALISTAS = {
+    "sin cuerpo": "feat: x",
+    "26B, viñetas con punto": (
+        "feat: x\n\n- Actualiza la versión en pyproject.toml, server.json y uv.lock.\n"
+        "- Registra los cambios de la versión en el CHANGELOG.\n"
+        "- Cierra el estado de la tarea en el state.json."
+    ),
+    "Qwen3.6, viñetas sin punto": (
+        "feat: x\n\n- Actualizar estado de cambios a 'closed'\n"
+        "- Aprobar puertas de memoria y conformidad\n- Registrar evidencia de cierre"
+    ),
+    "Qwen3.6, ocho viñetas sin punto": (
+        "feat: x\n\n"
+        + "\n".join(
+            f"- Registrar el cambio numero {i} del diff en el repositorio" for i in range(8)
+        )
+    ),
+    "dos viñetas sin punto": "feat: x\n\n- Cierra el estado de la tarea en el state.json\n- Aprueba la puerta de memoria y conformidad",
+    "prosa sin punto": "feat: x\nActualizar el estado de la tarea en el state.json\nRegistrar la evidencia de cierre del cambio",
+}
+
+
+@pytest.mark.parametrize("juego", JUEGOS_REALES, ids=lambda j: f"juego-{j['juego']}")
+def test_las_nueve_trampas_versionadas_son_frases_enteras_con_cualquier_pareja(juego):
+    assert len(juego["trampas"]) == 3
+    for entrada in juego["trampas"]:
+        # Cada elemento del cuerpo es una unidad entera: ni trozos ni dos frases juntas.
+        assert hoja_pares.unidades_de_cuerpo(entrada["cuerpo"]) == entrada["cuerpo"], entrada[
+            "caso"
+        ]
+        assert 1 <= len(entrada["cuerpo"]) <= 5
+        for nombre, pareja in PAREJAS_REALISTAS.items():
+            mensaje = hoja_pares.trampa_con_forma(entrada, pareja)
+            defectos = hoja_pares.defectos_de_cuerpo(mensaje, pareja)
+            assert defectos == [], (entrada["caso"], nombre, mensaje, defectos)
+            assert hoja_pares.forma(mensaje) == hoja_pares.forma(pareja), entrada["caso"]
+            assert hoja_pares.usa_puntuacion_final(mensaje) == hoja_pares.usa_puntuacion_final(
+                pareja
+            ), (entrada["caso"], nombre)
+    misma_zona = next(t for t in juego["trampas"] if t["tipo"] == "misma-zona")
+    assert misma_zona["cuerpo_origen"] == "real-reescrito"
 
 
 # --- Leer las respuestas ---------------------------------------------------------------------------

@@ -2168,15 +2168,21 @@ REGLAS_DE_TRAMPA = {
     "regla_de_forma": (
         "Si el mensaje del modelo emparejado tiene cuerpo, la trampa lleva el asunto mas tantas "
         "lineas de su cuerpo como lineas de cuerpo tenga ese mensaje (como mucho 5); si no lo tiene, "
-        "solo el asunto. La aplica `hoja_pares.py generar-commit` al armar el par. Idioma: español, "
-        "el de la tool (su prompt esta en español) y el del historial del repo."
+        "solo el asunto. La aplica `hoja_pares.py generar-commit` al armar el par. El cuerpo se "
+        "parte por unidades enteras (una viñeta o una frase), nunca por lineas fisicas, y al recortar "
+        "se quitan unidades enteras. La trampa copia la puntuacion final de su pareja (sin punto si "
+        "la mayoria de sus lineas no lo llevan) y su viñeta media no pasa de 1,5 veces la de la "
+        "pareja. Idioma: español, el de la tool (su prompt esta en español) y el del historial del "
+        "repo."
     ),
     "misma-zona": (
         "El asunto REAL de otro commit, fuera de los 30 y de los 9, que toca el fichero mas cambiado "
         "del caso trampa; elegido por codigo entre los asuntos de 72 caracteres como mucho y con "
         "prefijo convencional (el mas reciente); si ese fichero no da ninguno, el siguiente fichero "
-        "mas cambiado. Cuerpo: el cuerpo real de ese commit (hasta 5 lineas, sin firmas ni enlaces); "
-        "si tiene menos de 5, se completa con lineas redactadas sobre lo secundario del diff."
+        "mas cambiado. Cuerpo: el cuerpo real de ese commit (sin firmas ni enlaces), condensado en "
+        "hasta 5 frases completas y cortas, con tildes y una afirmacion por frase, cada una comprobada contra "
+        "el cuerpo de ese commit; si no hay cuerpo redactado a mano, las 5 primeras lineas reales y, "
+        "si tiene menos de 5, lineas redactadas sobre lo secundario del diff."
     ),
     "secundario": (
         "Redactado a mano: un mensaje con buen formato que solo nombra un cambio SECUNDARIO del diff "
@@ -2256,6 +2262,39 @@ TRAMPAS_REDACTADAS: dict[str, dict[str, Any]] = {
         ],
     },
 }
+# El cuerpo REAL del commit del que sale el asunto de cada trampa de la misma zona, condensado en frases
+# completas y cortas (una afirmacion por frase, con tildes, de unos 60 caracteres: la viñeta media de la
+# trampa no puede pasar de 1,5 veces la de su pareja), por el prefijo de 7 caracteres del commit del
+# CASO TRAMPA. Las lineas reales estan partidas a 80 columnas: pasadas a viñetas por la regla de forma
+# daban viñetas que empiezan a mitad de frase, la ultima cortada y sin tildes, y la trampa se
+# reconocia sin leer el diff. Cada frase se comprueba contra el cuerpo del commit de `asunto_de`
+# (no contra el diff del caso trampa: la trampa es mala justo porque describe OTRO cambio).
+CUERPOS_MISMA_ZONA: dict[str, list[str]] = {
+    # asunto_de 821d1dc: «feat(wiki): la wiki nativa se sincroniza sola desde docs/wiki»
+    "1314b0b": [
+        "Era el último fleco manual del release.",
+        "La wiki estaba congelada desde el 28 de julio.",
+        "El workflow se dispara en el push a main, no en el tag.",
+        "Arregla 18 enlaces rotos en 6 páginas de la wiki.",
+        "La wiki pasa a ser un artefacto generado.",
+    ],
+    # asunto_de cf527b7: «docs: preparación de la release 0.28.0»
+    "6d442e7": [
+        "Diez títulos del CHANGELOG pasan a cuatro, uno por tipo.",
+        "Quedan las mismas 37 entradas y las mismas 321 líneas.",
+        "Los defaults del paquete son los ganadores de F2.",
+        "El apagado en caliente es el fichero, no la variable.",
+        "El README documenta las variables de respaldo y enfriamiento.",
+    ],
+    # asunto_de d0934c5: «feat(docs): la captura del README no puede quedarse vieja en silencio»
+    "9d2c242": [
+        "Publishing.md pedía regenerar la captura y nadie lo verificaba.",
+        "Solo 5 de 25 releases regeneraron la captura en su commit.",
+        "La 0.16.0 salió con el badge diciendo v0.15.0.",
+        "Un test compara la versión de dashboard.json con pyproject.toml.",
+        "El manifiesto lo escribe solo el script que captura.",
+    ],
+}
 # Lo secundario de cada diff «de la misma zona», dicho sin inventar, por si el commit elegido no tiene
 # cuerpo (o lo tiene corto): completa hasta 5 lineas.
 RESERVAS_MISMA_ZONA: dict[str, list[str]] = {
@@ -2306,7 +2345,10 @@ def armar_trampas(
                     raise ValueError(f"{commit.corto}: ningun asunto de la misma zona")
                 cuerpo = list(real["cuerpo_real"])
                 origen = "real"
-                if len(cuerpo) < 5:
+                if commit.corto in CUERPOS_MISMA_ZONA:
+                    cuerpo = list(CUERPOS_MISMA_ZONA[commit.corto])
+                    origen = "real-reescrito"
+                elif len(cuerpo) < 5:
                     reserva = RESERVAS_MISMA_ZONA.get(commit.corto)
                     if reserva is None:
                         raise ValueError(f"{commit.corto}: falta el cuerpo de reserva")

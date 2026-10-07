@@ -262,23 +262,180 @@ def forma(mensaje: str) -> tuple[bool, int]:
     return bool(cuerpo), min(len(cuerpo), LINEAS_DE_CUERPO_MAX)
 
 
+_VINETAS = ("- ", "* ")
+# Un punto (o ! o ?) seguido de espacio y de una mayuscula es el limite entre dos frases; un
+# «release.py» o un «0.18.0» no lo son porque no llevan espacio detras del punto.
+_LIMITE_DE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[¿¡A-ZÁÉÍÓÚÑ])")
+_FIN_DE_FRASE = re.compile(r"[.!?…][\"')\]»`*]*$")
+
+
+def unidades_de_cuerpo(lineas: list[str]) -> list[str]:
+    """Las unidades COMPLETAS de un cuerpo: cada viñeta entera y cada frase entera de un parrafo.
+
+    Una linea fisica no es una unidad: un cuerpo escrito a 80 columnas parte las frases por la mitad,
+    y convertir cada trozo en una viñeta deja una trampa que se reconoce sin leer el diff. Las viñetas
+    conservan su marca; las lineas indentadas que siguen a una viñeta son su continuacion; el resto
+    se junta en texto corrido y se parte por frases.
+    """
+    unidades: list[str] = []
+    parrafo: list[str] = []
+    en_vineta = False
+
+    def cerrar_parrafo() -> None:
+        if parrafo:
+            texto = " ".join(x.strip() for x in parrafo)
+            unidades.extend(f.strip() for f in _LIMITE_DE_FRASE.split(texto) if f.strip())
+            parrafo.clear()
+
+    for linea in lineas:
+        if not linea.strip():
+            continue
+        if linea.lstrip().startswith(_VINETAS):
+            cerrar_parrafo()
+            unidades.append(linea.strip())
+            en_vineta = True
+        elif en_vineta and linea[:1].isspace():
+            unidades[-1] += " " + linea.strip()
+        else:
+            en_vineta = False
+            parrafo.append(linea)
+    cerrar_parrafo()
+    return unidades
+
+
+# Palabras que no pueden cerrar una frase: si la ultima palabra es una de ellas, la linea esta cortada.
+_PALABRAS_DE_CORTE = frozenset(
+    [
+        "con",
+        "de",
+        "y",
+        "a",
+        "el",
+        "la",
+        "en",
+        "que",
+        "por",
+        "para",
+        "o",
+        "del",
+        "al",
+        "los",
+        "las",
+        "un",
+        "una",
+        "e",
+        "u",
+        "se",
+        "sin",
+        "sobre",
+        "como",
+    ]
+)
+FACTOR_DE_LARGO_MAX = 1.5  # la viñeta media de la trampa no pasa de 1,5 veces la de su pareja
+
+
+def _texto_de_linea(linea: str) -> str:
+    texto = linea.strip()
+    return texto[2:].strip() if texto.startswith(_VINETAS) else texto
+
+
+def usa_puntuacion_final(mensaje: str) -> bool:
+    """Si la mayoria de las lineas de cuerpo (la mitad o mas) acaban en signo final. Sin cuerpo, no."""
+    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
+    con_signo = sum(bool(_FIN_DE_FRASE.search(_texto_de_linea(x))) for x in cuerpo)
+    return bool(cuerpo) and con_signo * 2 >= len(cuerpo)
+
+
+def largo_medio_de_vineta(mensaje: str) -> float:
+    """Caracteres medios por linea de cuerpo, sin la marca de viñeta. 0 si no hay cuerpo."""
+    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
+    return sum(len(_texto_de_linea(x)) for x in cuerpo) / len(cuerpo) if cuerpo else 0.0
+
+
+def defectos_de_cuerpo(mensaje: str, pareja: str | None = None) -> list[str]:
+    """Lo que delata a una trampa por mal escrita, no por falsa: cada linea del cuerpo (viñeta o
+    frase) tiene que ser una unidad entera, y con la pareja a la vista, escrita como ella.
+
+    - No empieza en minuscula: una viñeta que arranca a mitad de frase es un trozo de parrafo partido.
+      Un acento grave, una cifra o una comilla delante no cuentan como minuscula.
+    - No termina cortada. Sin `pareja` (o si la pareja cierra con signo final) exige signo final
+      (`.`, `!`, `?` o `…`, con un cierre opcional de comillas, parentesis o acento grave detras).
+      Si la pareja NO cierra con signo final, acepta una linea sin el, pero exige palabra completa:
+      la ultima no puede ser una de corte (`con`, `de`, `y`, `a`, `el`...) ni la linea acabar en coma,
+      punto y coma, dos puntos o guion. Lo incumple el trozo que termina en «ningun» o en «0.18.1,».
+    - Con `pareja`: la puntuacion final es la de la pareja (si ella cierra con punto, la trampa
+      tambien; si no, tampoco) y la viñeta media de la trampa no pasa de `FACTOR_DE_LARGO_MAX` veces la
+      de la pareja.
+
+    Solo se aplica a las trampas; los mensajes de los modelos no se tocan.
+    """
+    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
+    con_signo = True if pareja is None else usa_puntuacion_final(pareja)
+    defectos = []
+    for linea in cuerpo:
+        texto = _texto_de_linea(linea)
+        if texto[:1].islower():
+            defectos.append(f"empieza en minuscula: {linea.strip()!r}")
+        if _FIN_DE_FRASE.search(texto):
+            continue
+        palabras = re.findall(r"\w+", texto)
+        if (
+            con_signo
+            or texto.endswith((",", ";", ":", "-"))
+            or (palabras and palabras[-1].lower() in _PALABRAS_DE_CORTE)
+        ):
+            defectos.append(f"termina cortada: {linea.strip()!r}")
+    if pareja is not None and cuerpo:
+        if usa_puntuacion_final(mensaje) != con_signo:
+            defectos.append(
+                "la puntuacion final no es la de la pareja "
+                f"(la pareja {'cierra' if con_signo else 'no cierra'} con signo final)"
+            )
+        largo, largo_pareja = largo_medio_de_vineta(mensaje), largo_medio_de_vineta(pareja)
+        if largo_pareja and largo > FACTOR_DE_LARGO_MAX * largo_pareja:
+            defectos.append(
+                f"viñeta media de {largo:.0f} caracteres, mas de {FACTOR_DE_LARGO_MAX} veces "
+                f"los {largo_pareja:.0f} de la pareja"
+            )
+    return defectos
+
+
 def trampa_con_forma(trampa: dict[str, Any], mensaje_pareja: str) -> str:
     """El mensaje de la trampa con la forma del mensaje con el que se empareja.
 
     Regla de forma, escrita antes de la tanda: si el mensaje del modelo tiene cuerpo, la trampa lleva
-    el asunto mas tantas lineas de su cuerpo como lineas de cuerpo tenga ese mensaje (como mucho 5);
-    si no lo tiene, solo el asunto. Si la trampa no tiene tantas lineas, lleva las que tiene.
+    el asunto mas tantas unidades de su cuerpo como lineas de cuerpo tenga ese mensaje (como mucho 5);
+    si no lo tiene, solo el asunto. Una unidad es una viñeta entera o una frase entera (nunca una linea
+    fisica del cuerpo) y, al recortar, se quitan unidades enteras. Si la trampa no tiene tantas
+    unidades, lleva las que tiene.
+
+    Ademas copia la puntuacion final de la pareja (si la mayoria de sus lineas no cierran con punto,
+    la trampa tampoco) y, si sus n primeras unidades pasan de `FACTOR_DE_LARGO_MAX` veces la viñeta
+    media de la pareja, lleva las n unidades MAS CORTAS, en su orden. Nunca acorta una frase.
     """
     _asunto, cuerpo_modelo, separado = partir_mensaje(mensaje_pareja)
     n = min(len(cuerpo_modelo), LINEAS_DE_CUERPO_MAX)
     if n == 0:
         return str(trampa["asunto"])
-    lineas = [str(x) for x in trampa["cuerpo"]][:n]
-    con_vinetas = sum(x.lstrip().startswith(("- ", "* ")) for x in cuerpo_modelo) * 2 >= len(
+    unidades = unidades_de_cuerpo([str(x) for x in trampa["cuerpo"]])
+    lineas = unidades[:n]
+    largo_pareja = largo_medio_de_vineta(mensaje_pareja)
+
+    def largo(unidades_: list[str]) -> float:
+        return sum(len(_texto_de_linea(x)) for x in unidades_) / len(unidades_)
+
+    if len(unidades) > n and largo(lineas) > FACTOR_DE_LARGO_MAX * largo_pareja:
+        elegidas = sorted(sorted(range(len(unidades)), key=lambda i: (len(unidades[i]), i))[:n])
+        lineas = [unidades[i] for i in elegidas]
+    if not usa_puntuacion_final(mensaje_pareja):
+        lineas = [
+            x[:-1].rstrip() if x.endswith(".") and not x.endswith("..") else x for x in lineas
+        ]
+    con_vinetas = sum(x.lstrip().startswith(_VINETAS) for x in cuerpo_modelo) * 2 >= len(
         cuerpo_modelo
     )
     if con_vinetas:
-        lineas = [x if x.lstrip().startswith(("- ", "* ")) else f"- {x}" for x in lineas]
+        lineas = [x if x.startswith(_VINETAS) else f"- {x}" for x in lineas]
     return "\n".join([str(trampa["asunto"]), *([""] if separado else []), *lineas])
 
 
@@ -310,6 +467,15 @@ def _mensaje_de(registros: list[dict[str, Any]], label: str, caso: str) -> str |
     if not isinstance(texto, str) or not texto.strip():
         return None
     return texto
+
+
+def _reparto_equilibrado(azar: random.Random, n: int, a: str, b: str) -> list[str]:
+    """`n` etiquetas barajadas, la mitad `a` y la mitad `b`; si `n` es impar, quien se lleva la
+    sobrante lo sortea `azar`. Asi la diferencia entre las dos es 0 o 1, nunca la del azar."""
+    de_a = n // 2 + (azar.randint(0, 1) if n % 2 else 0)
+    etiquetas = [a] * de_a + [b] * (n - de_a)
+    azar.shuffle(etiquetas)
+    return etiquetas
 
 
 def id_de_hoja(numero: int, pares: list[dict[str, Any]]) -> str:
@@ -346,7 +512,7 @@ def construir_hoja_commit(
             (fuentes / nombre).read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n")
         )
 
-    pendientes: list[dict[str, Any]] = []
+    reales: list[tuple[str, str, str]] = []
     omitidos: list[str] = []
     for caso_id, caso in casos.items():
         if caso.get("rol_en_hoja") != "real":
@@ -356,19 +522,37 @@ def construir_hoja_commit(
         if a is None or b is None:
             omitidos.append(caso_id)
             continue
+        reales.append((caso_id, a, b))
+    # El lado NO se sortea par a par: con 30 pares, un sorteo independiente deja a un modelo en A en 23
+    # (p = 0,005) y, como uno escribe cuerpo largo y el otro corto, la hoja queda casi siempre como
+    # «A largo, B corto». Una permutacion equilibrada: la mitad exacta (o con diferencia 1) por lado.
+    en_a = _reparto_equilibrado(azar, len(reales), label_26b, label_qwen)
+    pendientes: list[dict[str, Any]] = []
+    for (caso_id, a, b), primero in zip(reales, en_a, strict=True):
         lados = [(label_26b, a), (label_qwen, b)]
-        azar.shuffle(lados)
+        if primero != label_26b:
+            lados.reverse()
         pendientes.append(
             {"tipo": "real", "caso": caso_id, "lados": lados, "diff": diff_de(caso_id)}
         )
-    for entrada in juegos[juego - 1]["trampas"]:
+    entradas = juegos[juego - 1]["trampas"]
+    # De las trampas tambien se equilibra el lado de la trampa y el modelo con el que se empareja.
+    trampa_en_a = _reparto_equilibrado(azar, len(entradas), "A", "B")
+    parejas = _reparto_equilibrado(azar, len(entradas), label_26b, label_qwen)
+    for entrada, lado_trampa, modelo in zip(entradas, trampa_en_a, parejas, strict=True):
         caso_id = entrada["caso"]
-        modelo = azar.choice([label_26b, label_qwen])
         mensaje = _mensaje_de(registros, modelo, caso_id)
         if mensaje is None:
             raise SystemExit(f"la trampa de {caso_id} no tiene mensaje del modelo elegido")
-        lados = [(TRAMPA, trampa_con_forma(entrada, mensaje)), (modelo, mensaje)]
-        azar.shuffle(lados)
+        texto_trampa = trampa_con_forma(entrada, mensaje)
+        defectos = defectos_de_cuerpo(texto_trampa, mensaje)
+        if defectos:
+            raise SystemExit(
+                f"la trampa de {caso_id} se reconoce por mal escrita: {'; '.join(defectos)}"
+            )
+        lados = [(TRAMPA, texto_trampa), (modelo, mensaje)]
+        if lado_trampa == "B":
+            lados.reverse()
         pendientes.append(
             {
                 "tipo": TRAMPA,

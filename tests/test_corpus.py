@@ -746,6 +746,14 @@ def test_armar_trampas_da_tres_por_juego_con_los_tres_tipos(tmp_path, monkeypatc
     primera = trampas["juegos"][0]["trampas"][0]
     assert primera["asunto"].startswith("docs: zona ")
     assert primera["asunto_de"]["hash"] not in {c.hash for c in sel.reales + sel.trampas}
+    assert primera["cuerpo_origen"] != "real-reescrito"
+    # Con el cuerpo reescrito a mano, ese cuerpo manda sobre las lineas reales (partidas a 80 columnas).
+    monkeypatch.setattr(
+        construir, "CUERPOS_MISMA_ZONA", {sel.trampas[0].corto: ["Una frase entera."]}
+    )
+    reescrita = construir.armar_trampas(repo, sel, antes=CORTE)["juegos"][0]["trampas"][0]
+    assert reescrita["cuerpo"] == ["Una frase entera."]
+    assert reescrita["cuerpo_origen"] == "real-reescrito"
     # Si falta la trampa redactada de un caso, no se inventa: se para.
     monkeypatch.setattr(construir, "TRAMPAS_REDACTADAS", {})
     with pytest.raises(ValueError, match="falta la trampa redactada"):

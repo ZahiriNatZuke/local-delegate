@@ -403,6 +403,35 @@ repetir»).
 - `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `163 files already formatted`; suite
   completa → `1908 passed, 2 skipped, 1 warning in 129.72s`.
 
+## Ola 2 — T5: hoja 1 regenerada (desviación)
+
+Evidencia completa en `evidencias/T5.md`, «Hoja 1 regenerada». Las hojas 1 de las pasadas anteriores nunca se contestaron
+y se borraron.
+
+- **Desviación: trampas reescritas.** Los cuerpos de las tres trampas de misma zona eran líneas físicas de un commit
+  real, partidas a 80 columnas y sin tildes, y la regla de forma las volvía viñetas que empiezan a mitad de frase y la
+  última cortada. Se reescribieron como cinco frases completas y cortas cada una (`CUERPOS_MISMA_ZONA`,
+  `cuerpo_origen: real-reescrito`), con asunto y tipo sin cambios. El `sha256` de `trampas.json` que congeló T4 cambia
+  de `a9295180…` a `23f15524032f77d6a1ef2532d2c99cff29985af9f5cb304516c05c2dc53473a4`. `cases.json` no cambia
+  (`6dc7d7a1…`), y `afinidad --comprobar` da `ok` con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`.
+- **Desviación: regla de forma más estricta.** La trampa copia la forma de su pareja por unidades enteras (viñeta o
+  frase), nunca por líneas físicas. Una guarda (`defectos_de_cuerpo`) rechaza una trampa con viñetas en minúscula tras
+  partir una frase o cortadas, y `generar-commit` se para si la incumple.
+- **Desviación: estilo de la trampa igual al de su pareja.** La trampa copia la puntuación final de la pareja (sin punto
+  si la mayoría de las líneas de la pareja no lo llevan; la guarda acepta una línea sin signo final solo en ese caso y
+  con palabra completa) y su viñeta media no pasa de 1,5 veces la de la pareja (si pasa, lleva las unidades más cortas
+  enteras; si no se puede, el generador se para y hay que regenerar con otra semilla). Motivo: el 26B cierra con punto
+  el 79 % de sus viñetas y Qwen3.6 el 16 %, y las trampas llevaban siempre punto y eran más largas.
+- **Desviación: reparto de lados equilibrado.** El sorteo par a par dejó al 26B en A en 23 de 30 pares reales; ahora el
+  lado sale de una permutación equilibrada (15 y 15 con 30 pares).
+- **Hoja vigente:** semilla `1058076688`, id `cbbb971e…`, `hoja-1.html` `03f115fb…`, `hoja-1.md` `26475bc1…`,
+  `clave-1.json` `5be58d8f…`. Revisada a mano y regenerable byte a byte con la semilla de la clave. Las trampas están
+  en las posiciones 12, 22 y 33; puntuación igual a la de la pareja y viñeta media de 0,68× y 0,55× en las dos con
+  cuerpo.
+- **Riesgo residual:** en esta hoja ninguna trampa con cuerpo tiene una pareja de Qwen3.6 (la que más difiere en
+  puntuación), así que el recorte del punto solo se ejerció en un par; lo demás lo cubren los tests. Las trampas de
+  misma zona siguen siendo frases más pulidas que las de Qwen3.6.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |
