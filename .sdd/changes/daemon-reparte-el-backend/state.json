@@ -3,9 +3,9 @@
   "slug": "daemon-reparte-el-backend",
   "title": "Daemon: no se pelea por el modelo, aprovecha el cargado, avisa de la lentitud y deja la residencia configurable",
   "mode": "standard",
-  "status": "plan-review",
+  "status": "implementing",
   "createdAt": "2026-10-06T14:16:18.644Z",
-  "updatedAt": "2026-10-06T17:10:45.310Z",
+  "updatedAt": "2026-10-07T10:29:37.694Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -89,6 +89,13 @@
       "to": "plan-review",
       "at": "2026-10-06T17:10:45.310Z",
       "reason": "Plan rev. 2 tras revisión adversaria"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-07T10:29:37.694Z",
+      "reason": "Spec y plan aprobados tras revisión adversaria; decisiones del usuario cerradas en brief.md (2026-10-06). Arranca la ola 0: T0 y T1."
     }
   ]
 }
