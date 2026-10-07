@@ -2,7 +2,10 @@
 
 Plan sobre `spec.md` (aprobada el 2026-10-06, REQ-001 a REQ-043, con la aclaración de REQ-042 del
 mismo día al final de la spec). **Revisión 2**, tras la revisión adversaria del plan (`review.md`,
-«Revisión del plan» y «Respuesta a la revisión del plan»). Se implementa **después** de
+«Revisión del plan» y «Respuesta a la revisión del plan»). **Aclaraciones del 2026-10-07**, tras la
+revisión del código de la ola 3: T7, T8, T10, T11 y T14 llevan la marca «aclarado el 2026-10-07»,
+que recoge las aclaraciones de REQ-002, REQ-003, REQ-005 y REQ-007 del final de la spec y las
+firmas que fijó el código. Se implementa **después** de
 `panel-cuentas-y-estados-honestos` y de `coste-api-y-cuota`, y parte del estado que dejan los dos
 mezclados en `main`. Nada de este plan da por hecho el código actual de `server.py`,
 `web/metrics.py`, `checks.py`, `cli.py` ni `config.py`: las zonas se nombran **por función**, y el
@@ -722,15 +725,19 @@ cierra.**
   grupos con los valores por defecto de v255, `(default)`, alias → id, `choca(a, b)` según
   `EvictionFor` en los dos sentidos, `ttl_efectivo(m)`, `mmproj(m)` (vía `huella.flags_del_cmd`),
   `precargados()`, `residentes()` y `version`. `validar_como_load_go(datos)` con las reglas de
-  REQ-033. `foto()` lee `config.LLAMASWAP_CONFIG` en caliente y cachea por `(ruta, mtime, tamaño)`.
-  Un modelo que no está en la config: `choca` responde «compatible con todos» (REQ-002).
+  REQ-033. `foto()` lee `config.llamaswap_config_path()` en caliente y cachea por `(ruta, mtime,
+  tamaño)`. Un modelo que no está en la config: `choca` responde «compatible con todos» (REQ-002).
+  *(Aclarado el 2026-10-07, tras la revisión de la ola 3: la fuente de `EvictionFor` es
+  `internal/router/group.go:70-104` de llama-swap v255, commit `7761aa1`, no `src_group.go`; la ruta
+  sale de `config.llamaswap_config_path()`, no de `config.LLAMASWAP_CONFIG`; y los motivos son los
+  seis de la aclaración de REQ-002 en la spec, con «no cumple load.go» y forma inesperada incluidos.)*
 - **Tests:**
 
   | Test | Control | Debe fallar con el mutante en |
   |---|---|---|
-  | Tabla de casos contra `EvictionFor` (copiada de `src_group.go:70-104` en el docstring): mismo grupo con `swap` y sin él; grupos distintos con `exclusive` en el de A y `persistent` en el de B; los dos sentidos; un modelo consigo mismo | (b) | Mutante 1: ignorar el defecto `exclusive: true` (grupo sin la clave) → falla el caso «grupo sin claves desaloja a otro grupo» (`assert choca(a, b)`). Mutante 2: solo un sentido → falla el caso con `exclusive` solo en B |
+  | Tabla de casos contra `EvictionFor` (copiada de `internal/router/group.go:70-104` de v255, commit `7761aa1`, en el docstring): mismo grupo con `swap` y sin él; grupos distintos con `exclusive` en el de A y `persistent` en el de B; los dos sentidos; un modelo consigo mismo | (b) | Mutante 1: ignorar el defecto `exclusive: true` (grupo sin la clave) → falla el caso «grupo sin claves desaloja a otro grupo» (`assert choca(a, b)`). Mutante 2: solo un sentido → falla el caso con `exclusive` solo en B |
   | Modelos sin grupo en `(default)` chocan con todo lo no persistente | (b) | Mutante: sin `(default)` → falla `assert foto.choca("suelto", "gemma4-26b-a4b")` |
-  | Las dos sintaxis: `groups` arriba y `routing.router.settings.groups`; las dos a la vez → `SinTopologia("dos sintaxis")`; `use: matrix` → `SinTopologia("matrix")` | (b) | Mutante: solo `groups` arriba → falla `assert foto.choca(...)` con la sintaxis `routing` |
+  | Las dos sintaxis: `groups` arriba y `routing.router.settings.groups`; las dos a la vez → `SinTopologia("dos sintaxis")`; `use: matrix` → `SinTopologia("matrix")` | (b) | Mutante (el 4 de `evidencias/T7.md`): solo `groups` arriba → falla **`assert not f.choca(...)`** con la sintaxis `routing` (`a` en un grupo `persistent` no exclusivo; `b` y `c` en otro). *Aclarado el 2026-10-07:* la forma original, `assert foto.choca(...)`, no tiene datos que la hagan mutar: si se ignora `routing.router.settings.groups`, todo cae en `(default)` y todos los pares chocan, igual que con la lectura correcta de un grupo exclusivo |
   | Alias: `choca("alias-del-26b", "qwen36-35b-a3b")` igual que con el id real | (b) | Mutante: sin resolver alias → falla el assert (un id desconocido es compatible) |
   | TTL efectivo: `-1` y ausencia → `globalTTL`; `residentes()` con la config de hoy está vacío y con la del 2026-09-15 también (TTL 600), y con `ttl: 0` contiene el modelo | (b) | Mutante: `-1` como infinito → falla `assert ttl_efectivo == 120` |
   | Relectura por `mtime`/tamaño: cambiar el fichero sube `version`; no tocarlo no relee (contador de lecturas) | (b) | Mutante: caché solo por ruta → falla `assert f2.version > f1.version` |
@@ -744,19 +751,36 @@ cierra.**
 - **Ficheros:** `src/local_delegate/turno.py`, `tests/test_turno.py` (nuevos).
 - **Requisitos:** REQ-003 a REQ-007 en su parte pura y de hilos, sin `server.py`.
 - **Qué se hace:**
-  1. **Núcleo puro**: `Estado(activos, cola)`, `Peticion(id, A, rol, orden_cadena)`,
+  1. **Núcleo puro**: `Estado(activos, cola)`, `Peticion(id, A, rol, orden_cadena,
+     directos=frozenset())`,
      `evaluar(estado, choca, ahora, sin_progreso_desde, turno_max_s) -> Decision`: concesión de la
      cabeza con `A'` (REQ-003), E-1 (REQ-005), forzada (REQ-007, modelo del rol si está en `A`; si
      no, el primero de `A` en el orden de la cadena; nunca con alternativos), y «vuelve a la cabeza»
-     cuando la elección no cabe (REQ-003, «Elección»).
+     cuando la elección no cabe (REQ-003, «Elección»). `directos` son los modelos de `A` que entran
+     en `A'` por ser compatibles, como el rol (el destino de un salto); el rol, si está en `A`,
+     siempre lo es. Elección atómica:
+     `elegir(estado, op_id, candidatos, choca) -> tuple[Estado, str | None]` reduce la reserva al
+     primer candidato, en orden, que esté en ella y no choque con los demás de `activos`; `None`
+     quiere decir que volvió a la cabeza; `ValueError` si ningún candidato está en la reserva.
+     `compatibles`, `reducir` y `volver` siguen existiendo como piezas, pero el daemon no las usa
+     sueltas.
   2. **Envoltura**: `Turno` con `threading.Condition`; `pedir(peticion, al_esperar, al_conceder)`
      bloquea con `wait(timeout=1.0)` y reevalúa al despertar; `reducir(op, modelo)`, `soltar(op)`
      y la salida de la cola por abandono hacen `notify_all` (puntos 2 a 4 de REQ-003);
-     `cambio_topologia()` también (punto 5); `en_vuelo()` es un gestor de contexto que mueve el
+     `elegir(op_id, candidatos, al_esperar=None, al_conceder=None) -> str` hace la elección
+     atómica bajo **un solo** cerrojo: reduce al primer candidato que cabe o, si ninguno cabe, vuelve
+     a la cabeza, espera otra concesión y repite; puede lanzar `EsperaAbandonada`. Es la entrada que
+     usa T10, no `reducir` suelto;
+     `cambio_topologia(choca)` también notifica (punto 5); `en_vuelo()` es un gestor de contexto que mueve el
      contador y pone a cero el reloj de falta de progreso. Los ganchos `al_esperar` (posición, modelos
      en uso) y `al_conceder` los pone T10; aquí son funciones de prueba. El reloj es inyectable.
   3. Aserto de orden de adquisición: `pedir` lanza `AssertionError` si el hilo tiene plaza (marca en
      `threading.local` que pondrá `_run_chat`; aquí la ponen los tests).
+  4. *(Aclarado el 2026-10-07, tras la revisión de la ola 3, con la spec, «Aclaraciones posteriores a
+     la aprobación»):* `A'` incluye el destino de un salto vía `directos`, y los demás de `A` solo si
+     ya están elegidos en `activos` y son compatibles con ellos; E-1 se mira al llegar y en cada
+     evaluación posterior; una forzada pone a cero el reloj de falta de progreso y hay como mucho una
+     por evaluación.
 - **Tests (`tests/test_turno.py`):** los del núcleo con reloj simulado, sin dormir; los de la
   envoltura con hilos y latencias de milisegundos y un tope propio de 2 s.
 
@@ -819,7 +843,8 @@ cierra.**
      escenario equivalente; ninguno se borra sin sustituto. La lista va a `verification.md`.
   2. `config.TURNO_MAX_S = _env_float("LOCAL_DELEGATE_TURNO_MAX_S", 600.0)`.
   3. `_turno` global de `turno.Turno` y un `_topologia()` que devuelve la foto o el motivo (sin
-     `LLAMASWAP_CONFIG`, sin extra, ilegible, `matrix`, backend no loopback → sin turno, REQ-002).
+     `LLAMASWAP_CONFIG`, sin extra, ilegible, `matrix`, dos sintaxis, no cumple load.go, backend no
+     loopback → sin turno, REQ-002 con su aclaración del 2026-10-07).
   4. **Turno por operación** en `_chat`, `_chat_chunked` y `_chat_map_reduce` (y en la de imagen,
      que pasa por `_chat`): `A = {rol}` (sin bloque B), o `{model}` si es explícito; espera con
      `_inflight_espera_local(entry_id, "turno")` y el ayudante nuevo `_inflight_turno(entry_id,
@@ -831,6 +856,13 @@ cierra.**
      reintento sin schema, dentro de la plaza) y `_siguiente_salto` (la decisión, fuera); la
      operación suelta plaza y turno, pide turno con `A = {destino}` al final de la cola, y pide plaza.
      El tope de `MAX_CONCURRENT_REQUESTS` se mantiene porque la plaza es el mismo semáforo.
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* el salto pide turno con
+     `Peticion(A={destino}, directos={destino}, rol=<rol original>)`, y el paso `cargado` con
+     `directos` vacío (su conjunto de REQ-019 solo entra si ya está elegido en `activos`). Con varios
+     modelos en `A'`, la elección usa `Turno.elegir(op_id, candidatos, al_esperar, al_conceder)`, no
+     `reducir` suelto. Cuando sube `topologia.foto().version`, el daemon llama a
+     `Turno.cambio_topologia(foto.choca)` (REQ-009). Cualquier `SinTopologia`, sea cual sea su
+     motivo, se trata como «sin turno» (REQ-002).
   7. `_log_event`: `espera_turno_ms` si es mayor que 0 y `turno: "forzado"` si lo fue.
   8. `local_status`: «Turno: sí (choques: …; en uso: …; esperan: N)» o «Turno: no (<motivo>)».
   9. `web/metrics.py`: en `estadoModelo`, el `title` con motivo `"turno"` dice «esperando turno del
@@ -899,6 +931,14 @@ cierra.**
      `topologia.validar_como_load_go`), copia `<config>.<AAAAMMDD-HHMMSS>.bak` sin pisar (sufijo si
      existe), reemplazo atómico con temporal en la misma carpeta y `os.replace` con 5 reintentos a
      200 ms ante violación de compartición; `ninguno`, `fijar`, `ttl` y `restaurar`.
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* el grupo que escribe `fijar` lleva
+     `exclusive: false` **explícito**: el defecto de v255 es `exclusive: true`, y un grupo residente
+     sin la clave desalojaría a los demás grupos al cargar. Y, para `residencia` y `--ninguno`, se
+     documenta (en la ayuda y en la wiki de T16) que **sin `globalTTL` ni `ttl` todos los modelos
+     tienen TTL efectivo 0** (`load.go`: `ttl` ausente o `-1` vale `globalTTL`, que por defecto es 0)
+     y por eso salen como residentes (REQ-029); `--ninguno` exige entonces `--ttl` para todos
+     (REQ-030) y, como no queda ningún TTL distinto de 0 que sugerir, el mensaje lo dice en vez de
+     proponer uno (decisión del usuario, 2026-10-07).
   3. **Estimador** (`llamaswap_config.estimate_model_vram`): con `-ncmoe N`, resta los bytes de los
      tensores `blk.<i>.ffn_*_exps.*` de las capas `i < N` (diferencia entre offsets consecutivos de
      la tabla de tensores del GGUF) y suma el `--mmproj`. **Control con los GGUF reales** (solo la
@@ -928,6 +968,8 @@ cierra.**
   | `--ttl 0` → remite a `--fijar`; `-1` solo con `globalTTL > 0` | (b) | Mutante: aceptar 0 → falla `pytest.raises(...)` |
   | Escenario «fijar un residente que no cabe» (`--vram-modelo` del escenario) | (b) | Mutante: sin la reserva → falla `assert "faltan 6,17 GiB" in salida` (sin reserva faltarían 4,17) |
   | Escenario «fijar el 4B con la config de hoy se acepta», y con el estimador si `ESTIMADOR_NCMOE_VALIDADO` | (b) | Mutante: `max` por la suma de los demás → falla `assert aceptado` |
+  | `--fijar` escribe `exclusive: false` **explícito** en el grupo residente: el YAML resultante, leído con `safe_load`, tiene la clave en ese grupo con valor `False`, y `topologia` lo da como no exclusivo *(aclarado el 2026-10-07)* | (b) | Mutante: no escribir la clave (dejar el defecto de v255, `true`) → falla `assert grupo.get("exclusive") is False` y, con la foto, `assert not foto.choca(residente, "gemma4-26b-a4b")` |
+  | `residencia` con una config sin `globalTTL` ni `ttl`: todos los modelos con TTL efectivo 0 y como residentes, y el texto lo explica *(aclarado el 2026-10-07)* | guarda | `assert set(vista.residentes) == set(modelos)` |
   | Escenario «ver la residencia»: «sin residente (recomendado)», 5 modelos con TTL 120 (el 12B, 30), sin claves ni `cmd` (busca `clave-falsa`, `--port` y `llama-server` en la salida) | (b) | Mutante: imprimir el `cmd` → falla `assert "llama-server" not in salida` |
   | Copia con fecha sin pisar: dos escrituras en el mismo segundo dan dos `.bak` | (b) | Mutante: sin sufijo → falla `assert len(baks) == 2` |
   | Reemplazo atómico: `os.replace` falla con `PermissionError(winerror=32)` dos veces y luego funciona → escrito; cinco veces → original intacto y sin temporal | (b) | Mutante: sin reintentos → falla `assert escrito` |
@@ -1055,7 +1097,11 @@ cierra.**
      Todo dentro de un `try` que, si falla, registra el evento sin esos campos (REQ-028). Sin
      `timings`, los campos se omiten, nunca 0.
   4. `ritmo.Referencias` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
-     con cada evento propio.
+     con cada evento propio. *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* se crea con
+     `Referencias()`, sin `por_tramos` (T3 decidió una sola referencia), y se siembra con
+     `ritmo.sembrar_desde_log(referencias, directorio, ahora)`, que nunca lanza, no con `sembrar`
+     suelto. En cada evento propio se **mide antes de registrar**: `medir(...)` con la ventana sin
+     ese evento y después `registrar(evento)`, para que una llamada no se compare consigo misma.
   5. `local_status`: «Ritmo de referencia: gemma4-26b-a4b 40,5 tok/s (50 muestras)…».
   6. Panel: en la tabla de actividad, espera e inferencia por separado y la marca «lento ×0,37» con
      una función pura `marcaLento(e)` (devuelve `""` sin `lento`); formato con los ayudantes del

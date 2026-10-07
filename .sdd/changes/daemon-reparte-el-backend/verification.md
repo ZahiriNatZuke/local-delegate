@@ -432,6 +432,55 @@ y se borraron.
   puntuación), así que el recorte del punto solo se ejerció en un par; lo demás lo cubren los tests. Las trampas de
   misma zona siguen siendo frases más pulidas que las de Qwen3.6.
 
+## Ola 3 — integración I3 (2026-10-07)
+
+Evidencias de las tres tareas (no se reescriben aquí, solo se enlazan):
+[T7](evidencias/T7.md) (topología de llama-swap), [T8](evidencias/T8.md) (núcleo del turno) y
+[T9](evidencias/T9.md) (referencia de velocidad y `scripts/medir_lentitud.py` sobre `ritmo.py`).
+
+### Pasos de la integración
+
+1. **Suite completa** (`pesado.sh uv run pytest -q -p no:cacheprovider`), última línea literal:
+   `2007 passed, 2 skipped, 1 warning in 132.50s (0:02:12)`. Línea base al cerrar T6: `1920 passed, 2
+   skipped`. Diferencia: **+87 pasan**, lo esperado (T7 36, T8 19, T9 32). Los 2 saltados son los de
+   siempre (`chmod` en Windows y el de solo CI de `test_dashboard_ui.py:596`); el aviso es el
+   `DeprecationWarning` de `starlette.testclient`, anterior a la rama.
+   **Playwright:** `pesado.sh uv run --group ui pytest -q -p no:cacheprovider -rs tests/test_dashboard_ui.py`
+   → `15 passed, 1 skipped in 6.90s`. La ola no tocó `web/metrics.py`: no hace falta `node --check`.
+2. **Ruff:** `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `169 files
+   already formatted`.
+3. **Nada en rojo:** la integración no tocó ningún fichero fuera de las listas de T7, T8 y T9.
+4. **Config real de llama-swap (comprobación de cierre de ola):** `sha256` de `config.yaml` =
+   `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, **igual** que el de T0. No se
+   imprimió su contenido ni se tocó.
+5. **Datos privados:** revisados `git diff` (`scripts/medir_lentitud.py`), los módulos y tests nuevos,
+   `evidencias/T7.md`–`T9.md` y las fixtures `tests/fixtures/topologia/` (`hoy.yaml` y
+   `pre-sin-residente-20261006.yaml`). Las fixtures llevan la clave sustituida por `CLAVE-SUSTITUIDA`, las
+   rutas reducidas a `MODELOS/<fichero>` y solo `127.0.0.1`. Sin rutas de perfil de Windows, sin IPs de
+   tailnet, sin ids de sesión ni UUID. Nada que quitar.
+6. **`state.json`:** sin cambios; las olas previas no lo tocaron al cerrar.
+
+### Corrección tras la revisión de la ola 3 (2026-10-07)
+
+Una revisión del código contra la spec encontró tres defectos y un desvío; cada tarea lo corrigió en sus
+propios ficheros y lo anotó al final de su evidencia (sección «Corrección tras la revisión»):
+
+- [T7](evidencias/T7.md): `leer` lanzaba con YAML válido de forma rara (ahora `SinTopologia("no cumple
+  load.go")`) y `foto()` guardaba en caché un `OSError` pasajero (ya no).
+- [T8](evidencias/T8.md): la elección tras una forzada era comprobar-y-actuar en dos tomas del cerrojo;
+  ahora es `Turno.elegir`, atómica. Tipado de `_esperar` y `_e1` corregido.
+- [T9](evidencias/T9.md): el test por tramos no repetía el de T3 (25 tok/s con umbral 0,7); vuelve a
+  18 tok/s con el umbral por defecto.
+
+Aclaraciones de spec y plan (REQ-002, REQ-003, REQ-005, REQ-007; `spec.md`, sección «REQ-002, REQ-003,
+REQ-005 y REQ-007: aclaraciones tras la revisión de la ola 3») escritas a las 2026-10-07T15:04:08Z
+(`mtime` de `spec.md`). El usuario las aprobó después, a pregunta explícita de la sesión principal, y
+decidió que `--ninguno`, con todos los modelos en TTL 0, lo diga sin proponer un TTL (`plan.md`, T11).
+
+Tras las correcciones: suite completa `2030 passed, 2 skipped, 1 warning in 129.44s`; `ruff check .` →
+`All checks passed!`; `ruff format --check .` → `169 files already formatted`; `sha256` de la config
+real = `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual que el de T0.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

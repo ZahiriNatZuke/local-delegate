@@ -5,18 +5,18 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-10-06T14:16:18.644Z",
-  "updatedAt": "2026-10-07T10:29:37.694Z",
+  "updatedAt": "2026-10-07T15:07:40.141Z",
   "gates": {
     "spec": {
       "status": "approved",
-      "updatedAt": "2026-10-06T15:38:40.389Z",
-      "evidence": "Revisión adversaria (2 BLOQ/12 IMP) + corrección + segunda pasada (1 BLOQ nuevo: choque con espera_local del panel) + ronda final: todo resuelto (review.md, Respuesta a la segunda pasada). Turno/plaza sin ciclo comprobado; TTL de v255 verificado en el código Go. Decisiones del usuario 2026-10-06 en brief (incluidas las dos condiciones extra de la evaluación, confirmadas).",
+      "updatedAt": "2026-10-07T15:07:39.924Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
       "actor": "user"
     },
     "plan": {
       "status": "approved",
-      "updatedAt": "2026-10-06T17:10:45.099Z",
-      "evidence": "Revisión adversaria del plan (4 BLOQ/7 IMP) resuelta en plan rev. 2 (review.md, Respuesta a la revisión del plan); controles comprobados ejecutándolos; config real protegida con --config, fixture y sha256 por ola; enmienda F3 exige approve nuevo con evidencia del usuario; reglas.json deja parametrizadas las dos reglas pendientes del usuario.",
+      "updatedAt": "2026-10-07T15:07:40.141Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
       "actor": "user"
     },
     "quality": {
@@ -96,6 +96,22 @@
       "to": "implementing",
       "at": "2026-10-07T10:29:37.694Z",
       "reason": "Spec y plan aprobados tras revisión adversaria; decisiones del usuario cerradas en brief.md (2026-10-06). Arranca la ola 0: T0 y T1."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-07T15:07:39.924Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-07T15:07:40.141Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
+      "actor": "user"
     }
   ]
 }

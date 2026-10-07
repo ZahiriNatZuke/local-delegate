@@ -39,6 +39,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
   no aparece en la config— o si el backend **no es local** (cualquier host que no sea loopback: la Mac,
   que está fuera de alcance). Un modelo sin turno se trata como compatible con todos. `doctor` y
   `local_status` dicen por qué no hay turno.
+  *(Aclarado el 2026-10-07: dos motivos más y sus textos, en «Aclaraciones posteriores a la
+  aprobación».)*
 - **REQ-003: Operación, conjunto aceptable y concesión.** Una **operación** es una llamada a una tool
   (simple, troceada o map-reduce, con sus saltos de respaldo).
   - Al empezar, **sin consultar la red**, la operación calcula su **conjunto aceptable** `A`: el modelo
@@ -75,6 +77,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
     modelo de `A'` es compatible con `modelos(activos)` sin contar la propia operación (solo puede
     pasar tras una concesión forzada), la operación suelta la plaza y su reserva y vuelve a la
     **cabeza** de la cola, sin perder su puesto.
+    *(Aclarado el 2026-10-07: `A'` con el destino de un salto y la elección atómica, en
+    «Aclaraciones posteriores a la aprobación».)*
   - La operación conserva el turno de principio a fin; cada trozo toma y suelta su plaza como hoy. Las
     operaciones con el mismo modelo comparten el turno, y su concurrencia la sigue limitando
     `MAX_CONCURRENT_REQUESTS`.
@@ -95,6 +99,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
   *Cota:* una espera solo puede ser adelantada por peticiones de E-1, que no chocan con ella. Por
   tanto, se concede como muy tarde cuando terminan las operaciones que estaban en `activos` al llegar
   ella y las que esperaban delante.
+  *(Aclarado el 2026-10-07: E-1 también en evaluaciones posteriores, en «Aclaraciones posteriores a
+  la aprobación».)*
 - **REQ-006: Saltos de respaldo.** Si una operación necesita otro modelo a mitad (un salto de respaldo,
   REQ-006 de F3), primero **suelta su plaza** y **sale de `activos`**. Después pide turno con
   `A = {destino}` (o, para el paso `cargado`, el conjunto de REQ-019), **al final de la cola**, y por
@@ -113,6 +119,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
     conservan. Las demás siguen la regla normal: un `activos` con modelos que chocan entre sí no deja
     pasar a nadie que choque con alguno de ellos. Quien comprueba la condición es la propia espera,
     que se despierta al menos una vez por segundo (REQ-003, punto 6).
+    *(Aclarado el 2026-10-07: la forzada pone el reloj a cero y hay una como mucho por evaluación,
+    en «Aclaraciones posteriores a la aprobación».)*
     *Por qué así, sin suponer ningún plazo HTTP:* una llamada en vuelo es una operación viva. Termina
     cuando la corta su propio plazo, `HTTP_TIMEOUT` (`LOCAL_DELEGATE_TIMEOUT`, 180 s por defecto), sea
     cual sea su valor. Por eso el tiempo en vuelo no cuenta como falta de progreso. **Con
@@ -1027,3 +1035,36 @@ de producción, se reconstruye el corpus con él y se repiten solo las celdas de
 aprobación del usuario no cambia**; las filas mecánicas ya medidas se conservan, y las de commit sin
 idioma se apartan, sin borrarse, a `resultados-sin-idioma/`. Las trampas no se reescriben: siguen siendo
 las preregistradas en T4, y con el idioma fijado ya no las delata el idioma.
+
+### REQ-002, REQ-003, REQ-005 y REQ-007: aclaraciones tras la revisión de la ola 3 (2026-10-07)
+
+Las propuso la revisión del código de la ola 3 (T7 lector de topología, T8 núcleo del turno, T9
+referencia de velocidad) para alinear el texto con lo implementado. El texto de arriba no se
+reescribe; cada requisito afectado lleva una línea que remite aquí y, **donde contradiga esta tabla,
+manda la tabla**. Como la enmienda de F3 (REQ-037), necesita una aprobación **nueva** del gate `spec`
+de este cambio, del usuario, posterior a esta escritura y con evidencia que cite esta tabla. Las
+tareas del plan que la recogen (T7, T8, T10, T11 y T14) llevan la marca «aclarado el 2026-10-07».
+
+| Requisito | Texto vigente | Queda así |
+| --- | --- | --- |
+| REQ-003, conjunto concedible (`:66-69`) | «si no, `A'_W` contiene el modelo del rol si es compatible con `modelos(activos)`, y los alternativos de `A_W` que **ya están** en `modelos(activos)` con un modelo elegido» | «si no, `A'_W` contiene el modelo del rol —o, en una espera de salto, el destino (campo `directos` de la petición)— si es compatible con `modelos(activos)`; los demás de `A_W` solo si ya están elegidos en `activos` y son compatibles con ellos». La última frase («un alternativo que no está en uso…») sigue igual |
+| REQ-003, «Elección» (`:74-79`) | La operación reduce su reserva al modelo elegido o, si ninguno cabe, suelta plaza y reserva y vuelve a la cabeza | Igual, y además **la elección es atómica**: reducir la reserva al primer candidato compatible o volver a la cabeza de la cola se hace en un solo paso, bajo el mismo cerrojo que la concesión, sin que otra evaluación vea un estado intermedio |
+| REQ-005, E-1 (`:91-93`) | «se concede **en el acto** una petición `R` con algún modelo `m`…» | «se concede, **al llegar o en cualquier evaluación posterior, con la misma condición**, una petición `R` con algún modelo `m`…». La justificación y la cota no cambian |
+| REQ-007, red de seguridad (`:112-121`) | El reloj de falta de progreso se pone a cero cuando una llamada empieza o termina | Además, **una concesión forzada también pone a cero el reloj** de falta de progreso, y **como mucho se concede una forzada por evaluación** |
+| REQ-002, motivos de «sin topología» (`:37-41`) | «sin `LLAMASWAP_CONFIG`, sin el extra `[llamaswap]`, YAML ilegible, router `matrix`, o un modelo que no aparece en la config» | Se añaden **«dos sintaxis»** (`groups`/`matrix` arriba y `routing.router` a la vez) y **«no cumple load.go»** (la config que `load.go` de v255 rechazaría, con las reglas de REQ-033). Una config con **forma inesperada** nunca rompe la lectura: cuenta como sin topología: «ilegible» si el YAML no se puede leer o su raíz no es un mapa, y «no cumple load.go» si una clave tiene un tipo que `load.go` no puede deserializar (un mapa escrito como lista o al revés). `doctor` y `local_status` dicen el motivo con estas palabras: «sin LLAMASWAP_CONFIG», «sin PyYAML» (el extra `[llamaswap]`), «ilegible», «matrix», «dos sintaxis», «no cumple load.go»; en `local_status`, «Turno: no (<motivo>)» (plan, T10 punto 8). El backend no local y el modelo que no aparece en la config siguen como estaban |
+
+*Por qué cada una:*
+
+- **REQ-003.** Con el texto vigente, una espera de salto (`A = {destino}`, REQ-006) no tiene «modelo
+  del rol» dentro de `A` y su destino solo entraría en `A'` si ya estuviera en uso: con alguien en
+  `activos`, el salto no se concedería nunca por la regla normal. El destino cuenta como el rol. Y
+  «compatibles con ellos» solo restringe tras una concesión forzada, cuando `activos` puede tener
+  modelos que chocan entre sí (REQ-007, «las demás siguen la regla normal»). La elección atómica
+  evita que dos evaluaciones vean la reserva a medio reducir.
+- **REQ-005.** Una petición que llega cuando aún no cumple E-1 y la cumple después (por ejemplo, al
+  salir alguien de `activos`) se concede entonces, en vez de quedar detrás de la cabeza. Sigue sin
+  chocar con nada de lo que usan ni piden los de delante, así que la cota se mantiene.
+- **REQ-007.** Sin poner el reloj a cero, tras una forzada la siguiente cabeza encontraría el reloj ya
+  pasado de `LOCAL_DELEGATE_TURNO_MAX_S` y se forzaría también, en cascada, en la misma evaluación.
+- **REQ-002.** Son los motivos que ya devuelve el lector (`topologia.py`) y que `doctor` y
+  `local_status` deben poder nombrar.

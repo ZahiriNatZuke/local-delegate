@@ -12,7 +12,7 @@ las tres preguntas que bloquean la implementacion de D:
 (c) Mediana de generacion por tramos de entrada (`< 2k`, `2k-10k`, `> 10k` tokens): si el tramo de
     mas de 10k queda por debajo de 0,75 x el de menos de 2k, la referencia va por tramos.
 
-La regla (REQ-025), por modelo y en orden temporal: la referencia de un evento es la mediana de
+La regla (REQ-025, en `local_delegate.ritmo`), por modelo y en orden temporal: la referencia de un evento es la mediana de
 `tok_s` de los **50 ultimos eventos correctos con `tokens_out >= 8` anteriores a el**, con un minimo
 de 10; el evento lleva `ritmo_rel = tok_s / referencia` y es `lento` si `ritmo_rel < umbral`.
 
@@ -48,16 +48,36 @@ import sqlite3
 import statistics
 import sys
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-#: Eventos que forman la velocidad normal (REQ-025).
-VENTANA = 50
-MINIMO = 10
-SALIDA_MINIMA = 8
-UMBRAL = 0.5
+# La regla vive en el paquete (una sola fuente para este control y para el daemon); se reexporta
+# aqui para que el control y su test la usen con los mismos nombres de siempre.
+from local_delegate.ritmo import (
+    LIMITES_TRAMO,
+    MINIMO,
+    SALIDA_MINIMA,
+    TRAMOS,
+    UMBRAL,
+    VENTANA,
+    Evento,
+    calcular_lentitud,
+    tramo_de,
+)
+
+__all__ = [
+    "LIMITES_TRAMO",
+    "MINIMO",
+    "SALIDA_MINIMA",
+    "TRAMOS",
+    "UMBRAL",
+    "VENTANA",
+    "calcular_lentitud",
+    "tramo_de",
+]
+
 #: Decision de REQ-025: si el tramo largo baja de esto respecto al corto, la referencia va por tramos.
 RATIO_TRAMOS = 0.75
 #: Tope de eventos marcados sobre los de la PC antes de parar y revisar el umbral con el usuario.
@@ -67,69 +87,13 @@ FILAS_ESPERADAS = (570, 571, 573)
 MODELO_CONTROL = "qwen36-35b-a3b"
 #: Holgura al cruzar una fila de `metrics.db` con una llamada del log (s).
 HOLGURA_S = 2.0
-TRAMOS = ("<2k", "2k-10k", ">10k")
-LIMITES_TRAMO = (2_000, 10_000)
 #: Desde cuando rige el catalogo actual (ventana de P-4); antes los modelos eran otros.
 DESDE_CATALOGO = "2026-09-15T19:26:41"
-
-Evento = dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
 # La regla
 # ---------------------------------------------------------------------------
-
-
-def tramo_de(tokens_entrada: float | None) -> str | None:
-    """`<2k`, `2k-10k` o `>10k` segun los tokens de entrada; `None` si no se conocen."""
-    if tokens_entrada is None:
-        return None
-    if tokens_entrada < LIMITES_TRAMO[0]:
-        return TRAMOS[0]
-    if tokens_entrada <= LIMITES_TRAMO[1]:
-        return TRAMOS[1]
-    return TRAMOS[2]
-
-
-def calcular_lentitud(
-    eventos: Iterable[Evento],
-    *,
-    ventana: int = VENTANA,
-    minimo: int = MINIMO,
-    umbral: float = UMBRAL,
-    por_tramos: bool = False,
-) -> list[Evento]:
-    """Aplica la regla de REQ-025 y devuelve los eventos ordenados con su referencia.
-
-    Cada evento de entrada es un dict con `ts` (numero; orden temporal), `modelo`, `tok_s`,
-    `tokens_out`, `ok` (opcional, por defecto cierto) y, si `por_tramos`, `tokens_in`. La salida
-    son copias en orden temporal con `ref`, `ritmo_rel` y `lento` **solo** cuando hay referencia
-    (con menos de `minimo` muestras se omiten, nunca valen 0).
-
-    La referencia de un evento mira solo hacia atras: por modelo (y por tramo, si se pide), la
-    mediana de `tok_s` de los `ventana` ultimos eventos correctos con `tokens_out >= 8`. El propio
-    evento no entra en su referencia; despues de evaluarlo, si es elegible, entra en la ventana.
-    """
-    ordenados = sorted((dict(e) for e in eventos), key=lambda e: e["ts"])
-    ventanas: dict[tuple[str, str | None], list[float]] = defaultdict(list)
-    for evento in ordenados:
-        elegible = (
-            evento.get("ok", True)
-            and (evento.get("tokens_out") or 0) >= SALIDA_MINIMA
-            and (evento.get("tok_s") or 0) > 0
-        )
-        clave = (evento["modelo"], tramo_de(evento.get("tokens_in")) if por_tramos else None)
-        muestras = ventanas[clave]
-        evento["elegible"] = bool(elegible)
-        if elegible and len(muestras) >= minimo:
-            ref = statistics.median(muestras[-ventana:])
-            ritmo = round(evento["tok_s"] / ref, 2)
-            evento["ref"] = ref
-            evento["ritmo_rel"] = ritmo
-            evento["lento"] = ritmo < umbral
-        if elegible:
-            muestras.append(float(evento["tok_s"]))
-    return ordenados
 
 
 def decidir_referencia(medianas: dict[str, float | None]) -> str:
