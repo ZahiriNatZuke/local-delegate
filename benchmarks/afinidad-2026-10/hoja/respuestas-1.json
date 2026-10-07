@@ -1,0 +1,502 @@
+{
+ "hoja": 1,
+ "sha256": "cbbb971e5dbe694cc5c999460972e2c42aff9a42afd6e7eaa52d5523d8b19893",
+ "parcial": false,
+ "respuestas": {
+  "01": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "02": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "03": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "04": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "="
+  },
+  "05": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "06": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "07": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "08": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "09": {
+   "inventa": {
+    "A": "s",
+    "B": "n"
+   },
+   "principal": {
+    "A": "p",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "10": {
+   "inventa": {
+    "A": "s",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "n",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "11": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "12": {
+   "inventa": {
+    "A": "n",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "n"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "13": {
+   "inventa": {
+    "A": "s",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "14": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "15": {
+   "inventa": {
+    "A": "n",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "p"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "16": {
+   "inventa": {
+    "A": "s",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "17": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "18": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "19": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "n",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "20": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "21": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "22": {
+   "inventa": {
+    "A": "s",
+    "B": "n"
+   },
+   "principal": {
+    "A": "n",
+    "B": "p"
+   },
+   "especifico": {
+    "A": "n",
+    "B": "n"
+   },
+   "preferencia": "B"
+  },
+  "23": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "24": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "25": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "26": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "="
+  },
+  "27": {
+   "inventa": {
+    "A": "s",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "p"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "B"
+  },
+  "28": {
+   "inventa": {
+    "A": "n",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "p"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "n"
+   },
+   "preferencia": "A"
+  },
+  "29": {
+   "inventa": {
+    "A": "n",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "30": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "p",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "n",
+    "B": "s"
+   },
+   "preferencia": "B"
+  },
+  "31": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "32": {
+   "inventa": {
+    "A": "n",
+    "B": "s"
+   },
+   "principal": {
+    "A": "s",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "s",
+    "B": "s"
+   },
+   "preferencia": "A"
+  },
+  "33": {
+   "inventa": {
+    "A": "n",
+    "B": "n"
+   },
+   "principal": {
+    "A": "n",
+    "B": "s"
+   },
+   "especifico": {
+    "A": "n",
+    "B": "s"
+   },
+   "preferencia": "B"
+  }
+ }
+}
