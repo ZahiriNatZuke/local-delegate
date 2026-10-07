@@ -626,6 +626,39 @@ mismo guion sin turno da varios cambios de modelo) antes del assert principal.
   escrito.
 - **Rollback:** los resultados se conservan; nada del producto cambia.
 
+### T5b — Idioma del mensaje de commit (entre T5 y T6)
+
+Insertada el 2026-10-07 tras la parada de T5 antes de la hoja (decisión del usuario: «Fijar el idioma y
+repetir»). No sustituye nada de T5: las celdas mecánicas siguen como están.
+
+- **Ficheros:** `src/local_delegate/config.py` (`commit_idioma()`), `src/local_delegate/server.py`
+  (`_orden_de_idioma_de_commit`, usada en `local_commit_msg`), `scripts/construir_corpus.py` (la captura
+  conserva la variable), `tests/test_commit_idioma.py`, `tests/test_corpus.py`,
+  `benchmarks/afinidad-2026-10/cases.json`, `benchmarks/catalogo-2026-09/cases.json` (solo el `system` de
+  sus 2 casos de commit), `benchmarks/afinidad-2026-10/resultados/` y `resultados-sin-idioma/`,
+  `README.md`, `docs/wiki/Configuration.md`, `docs/wiki/Tools.md`, `examples/.env.example`,
+  `CHANGELOG.md`; `evidencias/T5b.md`.
+- **Requisitos:** REQ-044. No cambia REQ-040 a REQ-043 (el corpus conserva sus 30 reales, sus 9 trampas
+  y el techo; solo cambia su `system`).
+- **Qué se hace:**
+  1. Variable por `_env*` y orden en el prompt de la llamada que redacta el mensaje (única o reduce).
+  2. Tests y mutantes: con `es`, la orden de español (mutante: no leer la variable); sin variable, la
+     del idioma del diff (mutante: quitar la rama); el reduce del map-reduce la lleva y el map no
+     (mutantes: reduce sin la orden; map con ella); traducción del código (mutante: sin traducir).
+  3. Corpus reconstruido **con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`**; `afinidad --comprobar` con la misma
+     variable da `ok`, y sin ella da diferencia (control). Solo cambia el `system` de los 40 casos de
+     commit; `trampas.json` y `reglas.json` no cambian. El corpus de F2 (`catalogo-2026-09`), que
+     recaptura los mismos dos casos de commit sin la variable, se regenera con el entorno limpio.
+  4. Las filas de commit de `resultados/` (30 reales, 9 trampas y el techo) se mueven, sin borrar, a
+     `resultados-sin-idioma/`. `tanda_afinidad.py --seco` tiene que dar 39 + 39 + 3 pendientes y 0 en
+     las mecánicas.
+- **Repetición de las celdas de commit:** la hace la sesión principal con el lanzador de la tanda, que
+  debe llevar `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y `--rehacer-huellas` (cambia solo `prompt_sha256` de
+  `local_commit_msg` en los dos modelos). El techo hereda el entorno. Después siguen los pasos 3 a 7 de T5
+  (delegaciones ajenas, ventana, hoja y su comprobación).
+- **Rollback:** quitar la variable devuelve el prompt de «idioma del diff»; los resultados sin idioma se
+  conservan donde están.
+
 ### T6 — Juicio del usuario y veredicto de commit (asíncrona, en paralelo con las olas 3 a 8)
 
 No toca código ni `verification.md`: escribe en `benchmarks/afinidad-2026-10/` y en
@@ -1352,6 +1385,7 @@ esperada.
 | REQ-036 | T13, T15 | Dos checks y guardianes de tamaño; aviso de huella |
 | REQ-037 | T1, T12, T17.2 | Punto en la spec de F3, evento del harness, gate reaprobado; tests de F3 reescritos |
 | REQ-040 a REQ-043 | T4, T5, T6 | Corpus, puntuadores, trampas preregistradas, tanda, hoja válida, `veredicto.json` y tabla |
+| REQ-044 | T5b | Orden de idioma con mutantes; corpus reconstruido con `es` y `--comprobar`; `--seco` con solo las celdas de commit pendientes |
 | Caso límite «Plazos de los clientes MCP» | T0, T16 | Plazos con su fuente, en la wiki |
 
 ## Llamadas `local_*` al escribir este plan

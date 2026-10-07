@@ -894,3 +894,37 @@ def test_nada_privado_en_lo_que_va_al_repo(afinidad):
             continue
         texto = fichero.read_text(encoding="utf-8", errors="replace")
         assert construir.datos_privados(texto) == [], fichero.name
+
+
+# --- El idioma del mensaje de commit entra en el prompt capturado (REQ-044) -----------------------
+# Los casos de commit del corpus de afinidad llevan el prompt de produccion. Con
+# `LOCAL_DELEGATE_COMMIT_IDIOMA=es`, que es lo que tendra la PC, ese prompt tiene que pedir espanol.
+# La captura quita las variables del paquete del entorno, y esta es la excepcion.
+_DIFF_CHICO = "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n@@ -1 +1 @@\n-a\n+b\n"
+
+
+def _system_de_commit_capturado(tmp_path) -> str:
+    from local_delegate import server
+
+    ruta = tmp_path / "chico.diff"
+    ruta.write_text(_DIFF_CHICO, encoding="utf-8")
+    with construir.produccion_interceptada() as llamadas:
+        server.local_commit_msg(path=str(ruta))
+    assert len(llamadas) == 1
+    return llamadas[0].system
+
+
+def test_la_captura_conserva_el_idioma_del_commit_de_la_maquina(tmp_path, monkeypatch):
+    """Mutante: vaciar `VARIABLES_QUE_SE_CONSERVAN`. La captura borra la variable y el assert de
+    `en español.` falla: el corpus se habria construido con el prompt de un entorno limpio."""
+    monkeypatch.setenv("LOCAL_DELEGATE_COMMIT_IDIOMA", "es")
+    system = _system_de_commit_capturado(tmp_path)
+    assert "(primera línea y cuerpo) en español." in system
+    assert os.environ["LOCAL_DELEGATE_COMMIT_IDIOMA"] == "es"  # y la deja como estaba
+
+
+def test_la_captura_sin_la_variable_pide_el_idioma_del_diff(tmp_path):
+    """Control del anterior: sin la variable, la captura sale con la otra orden."""
+    assert "LOCAL_DELEGATE_COMMIT_IDIOMA" not in os.environ
+    system = _system_de_commit_capturado(tmp_path)
+    assert "en el idioma predominante de los textos del diff" in system

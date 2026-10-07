@@ -7,6 +7,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **`local_commit_msg` ya pide idioma.** Antes el prompt no decía en cuál escribir y el modelo
+  elegía: sobre 30 commits de un repo documentado en español, `gemma4-26b-a4b` escribió 17 mensajes
+  en inglés y `qwen36-35b-a3b`, 6. La variable nueva `LOCAL_DELEGATE_COMMIT_IDIOMA` (`es`, `en`,
+  `fr`, `pt`, `de`, `it`, o un nombre libre) fija el idioma del mensaje entero, primera línea y
+  cuerpo. Sin ella, el prompt pide el idioma predominante de los textos del diff (comentarios,
+  documentación y mensajes). Vale para `conventional` y `plain`, y también para la redacción final
+  de un diff que no cabe y se procesa por partes; las notas intermedias no llevan la orden.
 - **Equivalente estimado a precio de API, con sus supuestos a la vista.** El panel dice
   «Equivalente estimado a precio de API: entre $X y ~$Y», con la nota «no es dinero que hayas
   ahorrado: tu suscripción es de tarifa plana». Es una **estimación**, no una medida: valora el

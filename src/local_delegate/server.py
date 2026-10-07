@@ -2177,6 +2177,39 @@ def _json_schema_payload(fields: list[str]) -> dict:
     }
 
 
+# Códigos de idioma que se traducen a un nombre legible en la orden de `local_commit_msg`. Un mapa
+# corto a propósito: lo que no esté aquí se usa tal cual lo escribió quien configuró la variable
+# (`LOCAL_DELEGATE_COMMIT_IDIOMA=catalán` ya funciona sin tocar nada).
+_NOMBRES_DE_IDIOMA: dict[str, str] = {
+    "es": "español",
+    "en": "inglés",
+    "fr": "francés",
+    "pt": "portugués",
+    "de": "alemán",
+    "it": "italiano",
+}
+
+
+def _orden_de_idioma_de_commit() -> str:
+    """La orden de idioma del prompt de sistema de `local_commit_msg` (REQ-044).
+
+    Medido en la tanda de afinidad (2026-10-07): con el prompt de antes, que no pedía idioma, el
+    26B escribió 17 de 30 mensajes en inglés y Qwen3.6 6 de 30, sobre un repo documentado en
+    español. Con `LOCAL_DELEGATE_COMMIT_IDIOMA` puesta, el idioma es el que dice la variable;
+    sin ella, el predominante de los textos del diff, en vez de lo que el modelo prefiera.
+    """
+    codigo = config.commit_idioma()
+    if not codigo:
+        return (
+            "Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma "
+            "predominante de los textos del diff (comentarios, documentación y mensajes)."
+        )
+    # `es-CU` y `es_ES` se reconocen por su primera parte; si no se conoce, se usa tal cual.
+    primera_parte = codigo.lower().replace("_", "-").split("-")[0]
+    nombre = _NOMBRES_DE_IDIOMA.get(primera_parte, codigo)
+    return f"Escribe el mensaje de commit entero (primera línea y cuerpo) en {nombre}."
+
+
 def _guard(formato: str, max_words: int | None = None) -> str:
     limite = f" Máximo {max_words} palabras." if max_words else ""
     return (
@@ -2817,7 +2850,10 @@ def local_commit_msg(
             "un mensaje de commit: primera línea imperativa <=72 caracteres y cuerpo "
             "opcional con viñetas"
         )
-    system = _guard(fmt)
+    # El idioma va solo donde se REDACTA el mensaje: este `system` es el de la llamada única y el
+    # del reduce del map-reduce (`reduce_system=system`). El map y el reagrupado de partes usan
+    # `map_system`, que produce notas intermedias que nadie lee y no lleva la orden.
+    system = f"{_guard(fmt)} {_orden_de_idioma_de_commit()}"
     user = f"Escribe el mensaje de commit para este diff:\n\n{content}"
 
     if len(content) > config.max_chars_for_role("code"):

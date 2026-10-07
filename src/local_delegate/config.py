@@ -319,8 +319,23 @@ def llamaswap_watch_config() -> bool:
     return _env_flag("LLAMASWAP_WATCH_CONFIG", False)
 
 
-# Una lectura al importar, solo para que los cuatro nombres entren en `VARIABLES_DE_ENTORNO`.
-for _lectura in (llamaswap_config_path, llamaswap_exe, llamaswap_listen, llamaswap_watch_config):
+# --- Idioma del mensaje de `local_commit_msg` (daemon-reparte-el-backend, REQ-044) --------------
+# Texto libre y corto: `es`, `en`, `fr`… o un nombre (`español`). Vacío = el idioma predominante de
+# los textos del diff. Se lee al LLAMAR, como las de llama-swap: así un test lo fija con
+# `monkeypatch.setenv` sin recargar el módulo, y el constructor del corpus de afinidad puede
+# capturar el prompt con el idioma que tendrá la máquina en producción.
+def commit_idioma() -> str:
+    return _env("LOCAL_DELEGATE_COMMIT_IDIOMA", "").strip()
+
+
+# Una lectura al importar, solo para que estos nombres entren en `VARIABLES_DE_ENTORNO`.
+for _lectura in (
+    llamaswap_config_path,
+    llamaswap_exe,
+    llamaswap_listen,
+    llamaswap_watch_config,
+    commit_idioma,
+):
     _lectura()
 
 

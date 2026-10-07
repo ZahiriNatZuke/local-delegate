@@ -102,7 +102,7 @@
         "n_cpu_moe": 12,
         "reasoning": "off"
       },
-      "prompt_sha256": "6e99040cfaaf772e248bdb94c94389c5406c1f03ef23b2b3a6b7dbfc1aee4d76",
+      "prompt_sha256": "6c7420eed06eb52bce3dcfee8c3431becfb544574507d89f46bd0d224a56dbae",
       "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
       "tamano_bytes": 13597177568
     },
@@ -275,7 +275,7 @@
         "n_cpu_moe": 20,
         "reasoning": "off"
       },
-      "prompt_sha256": "6e99040cfaaf772e248bdb94c94389c5406c1f03ef23b2b3a6b7dbfc1aee4d76",
+      "prompt_sha256": "6c7420eed06eb52bce3dcfee8c3431becfb544574507d89f46bd0d224a56dbae",
       "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
       "tamano_bytes": 17730509792
     },

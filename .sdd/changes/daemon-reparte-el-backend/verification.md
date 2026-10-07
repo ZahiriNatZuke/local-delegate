@@ -329,6 +329,80 @@ trampas, y eso cambia el sha256 de `trampas.json` que congeló T4.
   igual que en T0.
 - sha256 de `cases.json`, `trampas.json` y `reglas.json`: sin cambios desde T4.
 
+### Segunda tanda (T5b)
+
+Repetición de las celdas de commit con `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y `--rehacer-huellas`, y pasos 3 a 7 de T5.
+El detalle está en `evidencias/T5.md`, «Segunda tanda (T5b)».
+
+- **Ventana excluida de P-4 y F1:** **2026-10-07T12:59:56.262065Z → 2026-10-07T13:12:19.964457Z** (UTC). Es la
+  segunda entrada de `ventanas-tanda.json`, sin reanudaciones. Se suma a la de la primera tanda y queda fuera de
+  `medir_enfriamiento.py` y de `medir_adopcion.py`.
+- **Peticiones de la tanda:** 39 del 26B, 39 de Qwen3.6 y 3 corridas del techo (13 pasadas cada una), todas `ok`.
+  Hubo 4 reintentos y en todos salió bien el segundo intento.
+- **`huellas.json`:** cambian solo los 2 `prompt_sha256` de `local_commit_msg`. Las filas mecánicas son idénticas
+  a las de `HEAD`.
+- **Delegaciones ajenas:** con una copia nueva de `metrics.db` hay 124 filas en la ventana.
+  - 85 casan una a una con las peticiones de benchmark y calentamiento.
+  - 39 caen dentro de las 3 corridas del techo.
+  - **Ajenas: 0.** El log del daemon no tiene entradas en la ventana. **Casos repetidos: 0.**
+- **Idioma:** todo en español.
+
+  | Modelo | En español | Una línea |
+  |---|---|---|
+  | `gemma4-26b-a4b` | 39/39 | 0 |
+  | `qwen36-35b-a3b` | 39/39 | 22 |
+  | Techo | 3/3 | — |
+
+- **Celdas mecánicas:** `veredicto-afinidad --solo-mecanicas` da las mismas diez celdas con los mismos estados.
+  Solo cambia `cases_sha256`.
+- **Hoja 1:** generada con el juego de trampas 1. Ningún caso omitido. El test de que no delata pasa sobre la hoja
+  real, regenerada byte a byte.
+
+  | Fichero | sha256 |
+  |---|---|
+  | `hoja/hoja-1.html` | `7ee9857b…c349d` |
+  | `clave/clave-1.json` (en `clave/`) | `96dffb6d…aebe5` |
+
+- **Pendiente de decidir antes de darla al usuario** (revisión a mano):
+  - **La trampa del par 21 se reconoce por la forma.** La regla de T4.4 convierte en viñetas un párrafo partido en
+    líneas: salen viñetas que empiezan a mitad de frase, una frase cortada al final y ninguna tilde.
+  - **El 26B queda en el lado A en 23 de 30 pares.** Con una moneda justa, la probabilidad es 0,005. Además, el 26B
+    siempre pone cuerpo y Qwen3.6 solo en 14 de 30.
+- **Privacidad:** no hay rutas de perfil ni ids de sesión. Las IPs son de loopback o de documentación. El apellido
+  del usuario solo sale en el caso inventado `extrae-factura` del corpus.
+- **Comprobaciones finales:**
+  - `config.yaml` de llama-swap sigue igual (`7F763F85…68F0`).
+  - Los cuatro ficheros de tests de la tanda dan `187 passed`.
+  - `ruff check` y `ruff format --check` salen limpios.
+
+## Ola 2 — T5b: idioma del mensaje de commit
+
+Evidencia completa en [T5b](evidencias/T5b.md). Cubre REQ-044 (decisión del usuario del 2026-10-07: «Fijar el idioma y
+repetir»).
+
+- **La orden.** Con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`: «Escribe el mensaje de commit entero (primera línea y cuerpo) en
+  español.» Sin la variable: «Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma predominante de los
+  textos del diff (comentarios, documentación y mensajes).» Va en la llamada que redacta el mensaje (la única o el reduce del
+  map-reduce), para `conventional` y `plain`; el map no la lleva.
+- **Corpus de afinidad rehecho con `es`.** Cambian solo el `system` de los 40 casos de commit (30 reales, 9 trampas y el
+  techo); `trampas.json`, `reglas.json` y las fuentes no cambian. `afinidad --comprobar` da `ok` con la variable y una
+  diferencia sin ella.
+  - `cases.json`: `6dc7d7a1723fdfff02e110b1197f085618f63e3a0af0b4f08d92ebbebaa6739c` (antes `1bde663b…`)
+  - `trampas.json`: `a9295180be8c597028b50ddae927501dca50f302d35a6bc11ae20ef1a76d9121` (igual)
+  - `reglas.json`: `3aac45aa83c16be7b006bc73b941252f4fee6727cce64727fd8eb5a304e968bf` (igual)
+  - `catalogo-2026-09/cases.json` (F2, regenerado con el entorno limpio; solo el `system` de sus 2 casos de commit):
+    `caadda48fdbc99e3a9466a9bc2e101331978ee11531171bce3c6ae0754307921`
+- **Resultados sin idioma, apartados sin borrar** a `benchmarks/afinidad-2026-10/resultados-sin-idioma/`: 39 + 39 filas de
+  commit de los dos modelos y las 3 del techo. `tanda_afinidad.py --seco`: `26B 39 pendientes, Qwen3.6 39, techo 3 y 0 en
+  las mecánicas` (213 peticiones en total, 81 pendientes).
+- **Pendiente para repetir la tanda de commit** (lo hace la sesión principal): el lanzador debe llevar
+  `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y `--rehacer-huellas` (cambian solo los `prompt_sha256` de `local_commit_msg` de los dos
+  modelos); y los `.jsonl` nuevos están ignorados por `.gitignore`, así que se añaden con `git add -f`.
+- **Mutantes** (seis en el código y uno en el constructor del corpus): cada uno falla en el assert que dice la tabla de
+  `T5b.md`.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `163 files already formatted`; suite
+  completa → `1908 passed, 2 skipped, 1 warning in 129.72s`.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

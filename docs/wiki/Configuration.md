@@ -41,6 +41,7 @@ RAM van más rápidos, pero Windows desaloja al residente de la VRAM para hacerl
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
 | `LOCAL_DELEGATE_CHUNK_MAX_TOKENS` | `2048` | techo de `max_tokens` por trozo |
 | `LOCAL_DELEGATE_CHUNK_MIN_CHARS` | `400` | trozo mínimo: por debajo ya no se vuelve a partir aunque el modelo trunque |
+| `LOCAL_DELEGATE_COMMIT_IDIOMA` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`, entero (primera línea y cuerpo): un código (`es`, `en`, `fr`, `pt`, `de`, `it`, también `es-CU`) o un nombre (`catalán`); lo que no reconoce se usa tal cual. Vacío: el idioma predominante de los textos del diff. La orden va solo en la llamada que redacta el mensaje, no en las notas intermedias del map-reduce |
 
 > El chunking existe porque traducir/reescribir produce tanta salida como entrada: con una sola
 > llamada un documento de 20 000+ chars choca contra `max_tokens` y vuelve cortado. `CHUNK_CHARS`

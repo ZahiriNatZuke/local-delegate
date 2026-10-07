@@ -664,6 +664,15 @@ CONTROLES = (
 # --- Captura contra el codigo de produccion -----------------------------------------------------
 
 
+# Lo que la captura NO quita del entorno: el idioma del mensaje de commit (REQ-044) es parte del prompt
+# de produccion de `local_commit_msg`, y los casos de commit del corpus de afinidad tienen que llevar
+# el prompt con el idioma que tendra la maquina (`LOCAL_DELEGATE_COMMIT_IDIOMA=es`), no el de un
+# entorno limpio. `config.commit_idioma()` lee al llamar, asi que no hace falta recargar `config`.
+# Con la variable puesta, el corpus que sale cambia: `main_afinidad` imprime el idioma usado y
+# `afinidad --comprobar` tiene que correr con el mismo.
+VARIABLES_QUE_SE_CONSERVAN = frozenset({"LOCAL_DELEGATE_COMMIT_IDIOMA"})
+
+
 @dataclass
 class Llamada:
     model: str
@@ -678,7 +687,11 @@ class Llamada:
 def produccion_interceptada() -> Iterator[list[Llamada]]:
     """Las tools reales, sin backend, sin log de uso y sin las variables del paquete."""
     llamadas: list[Llamada] = []
-    guardado = {n: os.environ[n] for n in config.VARIABLES_DE_ENTORNO if n in os.environ}
+    guardado = {
+        n: os.environ[n]
+        for n in config.VARIABLES_DE_ENTORNO
+        if n in os.environ and n not in VARIABLES_QUE_SE_CONSERVAN
+    }
 
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
         llamadas.append(Llamada(model, system, user, max_tokens, temperature, response_format))
@@ -2630,6 +2643,9 @@ def main_afinidad(argv: list[str]) -> int:
     parser.add_argument("--en-seco", action="store_true", help="no escribe nada, solo informa")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    # El idioma de los prompts de commit sale del entorno (REQ-044): se dice, para que un corpus
+    # construido o comprobado sin la variable no pase por el de produccion sin que se note.
+    print(f"idioma del mensaje de commit: {config.commit_idioma() or '(el del diff)'}")
     if args.comprobar:
         diferencias = comprobar_afinidad_versionado(args.destino)
         for d in diferencias:

@@ -495,6 +495,26 @@ vez no bloquean».
 - **REQ-043:** **Veredicto por programa**: un subcomando de `analizar_benchmark.py` aplica los criterios
   de abajo y escribe `benchmarks/afinidad-2026-10/veredicto.json` (estado, criterios y **huella** de
   REQ-010 por celda) y la tabla que se pega en `verification.md`. Ninguna celda se aprueba a mano.
+- **REQ-044:** **Idioma del mensaje de `local_commit_msg`** (decisión del usuario, 2026-10-07: «Fijar el
+  idioma y repetir»). La tanda de T5 midió que, con un prompt que no pedía idioma, el 26B escribió 17
+  de los 30 mensajes en inglés y Qwen3.6, 6; las trampas de REQ-042 están en español, así que el
+  idioma las habría delatado y la hoja no se podía generar.
+  - Variable nueva **`LOCAL_DELEGATE_COMMIT_IDIOMA`** (texto libre y corto, `es`, `en`…; se lee con
+    `config.commit_idioma()` por los helpers `_env*`, al llamar).
+  - Con ella puesta, el prompt de sistema de `local_commit_msg` termina con la orden «Escribe el mensaje
+    de commit entero (primera línea y cuerpo) en *idioma*.» `es` → «español», `en` → «inglés», y también
+    `fr`, `pt`, `de` e `it`; un código con región (`es-CU`) se reconoce por su primera parte, y lo que
+    no está en el mapa se usa tal cual.
+  - Sin ella, la orden es «Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma
+    predominante de los textos del diff (comentarios, documentación y mensajes).»
+  - Vale para los dos estilos (`conventional` y `plain`) y va **solo donde se redacta el mensaje**: la
+    llamada única y el reduce del map-reduce. El map y el reagrupado de partes producen notas
+    intermedias que nadie lee y no la llevan (lo que decide el idioma del resultado es el reduce).
+  - **Efecto en la evaluación:** los casos de commit de `benchmarks/afinidad-2026-10/cases.json` se
+    reconstruyen con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`, que es lo que tendrá esta PC en producción, y
+    sus resultados sin idioma se apartan a `resultados-sin-idioma/`. Solo cambian los prompts (`system`)
+    de los 30 casos reales, las 9 trampas y el techo; los casos, las trampas y las reglas no
+    cambian.
 
 #### Criterio de aceptación de las celdas (escrito antes de medir)
 
@@ -782,6 +802,14 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 - **Then** el fichero queda byte a byte como la copia, el actual queda guardado en otra copia y se
   informa de la recarga.
 
+### Scenario: el mensaje de commit sale en el idioma pedido
+
+- **Given** `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y un diff con comentarios en inglés
+- **When** se llama a `local_commit_msg` (`conventional` o `plain`)
+- **Then** el prompt de sistema lleva la orden de escribir el mensaje entero en español; sin la variable,
+  lleva la de escribir en el idioma predominante del diff. En un diff que se procesa por partes, la
+  lleva la llamada que redacta el mensaje y no las que describen cada trozo.
+
 ## Edge cases and failure behavior
 
 - **Alias:** si un rol apunta a un alias, el turno, la matriz, la foto y la consulta de actividad usan
@@ -919,6 +947,7 @@ Cada control nombra la tarea del plan que produce lo que consume y puede dar un 
 | REQ-024 a REQ-028 | `timings`, ventana de referencia, log y panel | Tests del log con y sin `timings`; paridad JS; controles de lentitud |
 | REQ-029 a REQ-036, REQ-038, REQ-039 | CLI `llamaswap residencia`, endpoints del daemon, `init-llamaswap`, checks de `doctor` | Tests sobre copias; tabla de edición; estimador contra lo medido; prueba de recarga y restauración |
 | REQ-040 a REQ-043 | Corpus, tanda, hoja y veredicto | `veredicto.json` y tabla en `verification.md` |
+| REQ-044 | Orden de idioma en `local_commit_msg` y corpus reconstruido con `es` (T5b) | Tests con mutantes; `afinidad --comprobar`; `--seco` con solo las celdas de commit pendientes |
 
 ## Decisiones confirmadas
 
@@ -987,3 +1016,14 @@ cambia.** Se aclara:
    primera hoja.
 6. **Si la hoja no se termina**, la celda de commit queda no aprobada y `local_commit_msg` sigue como
    hoy (REQ-018 para esa celda).
+
+### REQ-044: idioma del mensaje de commit (2026-10-07, durante T5)
+
+La tanda de T5 se paró antes de la hoja porque los modelos escribían los commits en idiomas distintos
+(26B: 17 en inglés, 13 en español; Qwen3.6: 23 en español, 6 en inglés, 1 ambiguo), y las trampas, en
+español, se habrían notado. La sesión principal preguntó al usuario cómo seguir y **decidió: «Fijar el
+idioma y repetir»**. Se añade REQ-044 (y la tarea T5b del plan): el idioma pasa a ser parte del prompt
+de producción, se reconstruye el corpus con él y se repiten solo las celdas de commit. **La regla de
+aprobación del usuario no cambia**; las filas mecánicas ya medidas se conservan, y las de commit sin
+idioma se apartan, sin borrarse, a `resultados-sin-idioma/`. Las trampas no se reescriben: siguen siendo
+las preregistradas en T4, y con el idioma fijado ya no las delata el idioma.
