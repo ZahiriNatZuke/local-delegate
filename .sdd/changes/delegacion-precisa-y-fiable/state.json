@@ -5,12 +5,12 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-09-11T23:51:58.961Z",
-  "updatedAt": "2026-09-15T14:27:04.946Z",
+  "updatedAt": "2026-10-07T11:02:25.506Z",
   "gates": {
     "spec": {
       "status": "approved",
-      "updatedAt": "2026-09-15T14:27:04.884Z",
-      "evidence": "Enmienda de F3 aprobada por el usuario (2026-09-15) en la replanificacion: la senal de modelo cargandose de REQ-018 sale del endpoint de estado de llama-swap, muestreado al vencer el plazo; con otro backend o si ese endpoint no responde, el ReadTimeout se clasifica como capacidad o carga (no enfria), asi que D-2 solo se cumple con llama-swap. Propuesta tras el hallazgo bloqueante 2 de la revision adversarial del plan (consultar despues del timeout ve el estado de despues y castigaria a un modelo lento de montar). Texto en spec.md, F3, lista de cambios respecto al original.",
+      "updatedAt": "2026-10-07T11:02:25.506Z",
+      "evidence": "Enmienda del 2026-10-06 (daemon-reparte-el-backend): sin residente; cargado en lugar de residente; código y largo nunca al mecánico; capacidad solo a cargado; el salto suelta la plaza. Aprobada por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «esta aprobada, continua»",
       "actor": "user"
     },
     "plan": {
@@ -119,6 +119,14 @@
       "status": "approved",
       "at": "2026-09-15T14:27:04.946Z",
       "evidence": "Replanificacion de F3 aprobada por el usuario (2026-09-15): tareas 22 a 30 con verificacion y rollback, cobertura REQ-001 a REQ-020 y P-4. Condicion de replanificacion comprobada: tarea 21 cerrada (PR 185), migracion a b10909 decidida, fast fuera de cadenas (la fila rapido de REQ-004 es inalcanzable: a fast solo se llega con model explicito y REQ-005 quita el respaldo; verificado en server.py). Mapa de impacto con fichero y linea por investigador. Dos rondas adversariales: 6 bloqueantes y 10 no bloqueantes en la primera (capturas que dependian de la tarea 24; senal de carga tomada tras el timeout; freno de coexistencia sin dueno; prueba de apiKeys que no discriminaba; minimo de topes que cambiaba el troceado; interruptor probado en camino feliz), todos corregidos; 0 bloqueantes y 7 no bloqueantes en la segunda, corregidos. Hallazgos que ordenan el bloque: residente persistente y modelos de unos 14 GB pueden no caber juntos (medido en tarea 24 antes de escribir cadenas, con freno en 28 y 30); PATRONES_DE_CAPACIDAD vacio (capturas de la 23 antes del salto); MAX_CHARS indexado por modelo (tarea 25). P-16 resuelta por el usuario: los defectos del paquete pasan a los ganadores de F2, como breaking, en la tarea 24. P-5 cerrada por la tarea 21.",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-07T11:02:25.506Z",
+      "evidence": "Enmienda del 2026-10-06 (daemon-reparte-el-backend): sin residente; cargado en lugar de residente; código y largo nunca al mecánico; capacidad solo a cargado; el salto suelta la plaza. Aprobada por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «esta aprobada, continua»",
       "actor": "user"
     }
   ]
