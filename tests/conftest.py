@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import json
 import socket
+import struct
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -87,25 +90,69 @@ def turno_y_topologia_a_cero():
 
 # --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------
 PUERTO_MUERTO = pytest.StashKey[int]()
+CUT_DAEMON = pytest.StashKey["RejectingServer"]()
+
+
+class RejectingServer:
+    """Acepta cada conexión y la cierra en el acto con un RST (`SO_LINGER` a 0).
+
+    Es el «daemon apagado» de la suite, y rápido: en Windows conectar a un puerto cerrado tarda
+    ~2,1 s en dar `ConnectError` (el sistema reintenta el SYN), y esto da un `ReadError` en ~0,02 s.
+    Cuenta las conexiones, para que un test compruebe que la consulta llegó aquí y no a otro sitio.
+    """
+
+    def __init__(self) -> None:
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(64)
+        self.port = self.sock.getsockname()[1]
+        self.accepted = 0
+        self._thread = threading.Thread(target=self._serve, daemon=True, name="daemon-cortado")
+        self._thread.start()
+
+    def _serve(self) -> None:
+        while True:
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                return  # cerrado al terminar la sesión
+            self.accepted += 1
+            with contextlib.suppress(OSError):
+                conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            conn.close()
+
+    def close(self) -> None:
+        self.sock.close()
+        self._thread.join(timeout=5)
+
+
+@pytest.fixture(scope="session")
+def _rejecting_server():
+    server = RejectingServer()
+    yield server
+    server.close()
 
 
 @pytest.fixture(autouse=True)
-def daemon_real_cortado(request, monkeypatch):
-    """El CLI pregunta al daemon (puerto y token web, los de `doctor`) por la config y el estado de
-    llama-swap. En la suite esa consulta va a un puerto local recién liberado, sin nadie escuchando:
-    sin esto, un test de `llamaswap residency` sin `--config` leería la ruta del daemon de verdad y
-    podría acabar escribiendo en la config real de llama-swap.
+def daemon_real_cortado(request, monkeypatch, _rejecting_server):
+    """El CLI y `doctor` preguntan al daemon (puerto y token web, los de `doctor`) por la config y
+    el estado de llama-swap. En la suite esa consulta va a un servidor local que corta cada conexión
+    (`RejectingServer`): sin esto, un test de `llamaswap residency` sin `--config` leería la ruta
+    del daemon de verdad y podría acabar escribiendo en la config real de llama-swap.
 
-    Se parchea `cli._destino_del_daemon` y no `config.WEB_PORT`: este último lo comparan con las
-    entradas de los clientes otros tests (`test_checks.py`), y cambiarlo para todos los rompería.
-    El puerto queda en `request.node.stash[PUERTO_MUERTO]` para que un test compruebe que la
-    fixture se aplicó sin pedirla (si dejara de ser autouse, no habría puerto guardado).
+    Se parchean `cli._destino_del_daemon` y `checks._llamaswap_daemon_destination`, y no
+    `config.WEB_PORT`: este último lo comparan con las entradas de los clientes otros tests
+    (`test_checks.py`), y cambiarlo para todos los rompería. El puerto queda en
+    `request.node.stash[PUERTO_MUERTO]` para que un test compruebe que la fixture se aplicó sin
+    pedirla (si dejara de ser autouse, no habría puerto guardado).
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        puerto = s.getsockname()[1]
+    puerto = _rejecting_server.port
     request.node.stash[PUERTO_MUERTO] = puerto
+    request.node.stash[CUT_DAEMON] = _rejecting_server
     monkeypatch.setattr("local_delegate.cli._destino_del_daemon", lambda: ("127.0.0.1", puerto, {}))
+    monkeypatch.setattr(
+        "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", puerto, {})
+    )
 
 
 @pytest.fixture

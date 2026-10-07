@@ -13,7 +13,6 @@ import difflib
 import hashlib
 import os
 import re
-import socket
 import struct
 import sys
 import threading
@@ -24,9 +23,9 @@ from urllib.parse import urlsplit
 
 import pytest
 import yaml
-from conftest import PUERTO_MUERTO
+from conftest import CUT_DAEMON, PUERTO_MUERTO
 
-from local_delegate import cli, residencia, topologia
+from local_delegate import checks, cli, residencia, topologia
 from local_delegate import llamaswap_config as lc
 from local_delegate.residencia import (
     AnadirMiembro,
@@ -481,12 +480,21 @@ def test_la_autocomprobacion_para_un_resultado_que_no_cuadra(monkeypatch):
 
 
 def test_la_fixture_corta_el_daemon_real(request):
+    """La consulta del CLI va al servidor que corta (`conftest.RejectingServer`), no al daemon:
+    falla en el acto (no los ~2,1 s de un puerto cerrado en Windows) y el corte la recibió."""
+    import httpx2
+
     puerto_muerto = request.node.stash.get(PUERTO_MUERTO, None)
     puerto = urlsplit(cli._url_del_daemon()).port
     assert puerto == puerto_muerto
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(1)
-        assert s.connect_ex(("127.0.0.1", puerto)) != 0, "alguien escucha en el puerto muerto"
+    assert puerto != checks.daemon_host_port()[1], "la consulta iría al puerto del daemon real"
+    cortado = request.node.stash[CUT_DAEMON]
+    antes = cortado.accepted
+    inicio = time.monotonic()
+    with pytest.raises(httpx2.HTTPError):
+        httpx2.get(f"{cli._url_del_daemon()}/api/llamaswap/status", timeout=5)
+    assert time.monotonic() - inicio < 0.5
+    assert cortado.accepted > antes, "la conexión no llegó al servidor que corta"
 
 
 def _espia_de_ficheros(monkeypatch) -> list[tuple[str, object]]:

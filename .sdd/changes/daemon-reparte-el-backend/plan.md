@@ -94,10 +94,10 @@ escribe.
   subcomando `residency`), con `--config`, `--none`, `--group`, `--pin`, `--ttl`,
   `--restore`, `--vram-gb`, `--reserve-gb`, `--vram-model`, `--dry-run` y `--now`.
   `check-llamaswap` e `init-llamaswap` siguen donde están.
-- **Endpoints nuevos del daemon**, tras el token web: `GET /api/llamaswap/estado`,
-  `POST /api/llamaswap/vigia` y `GET /api/llamaswap/vigia/<id>`. El panel no los pide, así que
+- **Endpoints nuevos del daemon**, tras el token web: `GET /api/llamaswap/status`,
+  `POST /api/llamaswap/watch` y `GET /api/llamaswap/watch/<id>`. El panel no los pide, así que
   `tests/test_captura.py` no cambia de lista (solo mira lo que la página hace `fetch`).
-- **Checks nuevos de `doctor`:** `backend.residencia` y `backend.topologia`, en el grupo «Backend»,
+- **Checks nuevos de `doctor`:** `backend.residency` y `backend.topology`, en el grupo «Backend»,
   detrás de `backend.llamaserver`. Pasan de veintidós a veinticuatro, con sus guardianes de tamaño.
 
 ### Olas
@@ -885,7 +885,7 @@ cierra.**
       que no está en la spec) **solo si** el N con turno es **menor** que el de la línea base, **o**
       menor que 3 veces el pico de operaciones simultáneas que midió T0.6. Si no, se anotan los dos N
       y el pico. Además se deja escrito, y lo prueba T13: con el limitador agotado,
-      `/api/llamaswap/estado` (también síncrono) no contesta a tiempo y el CLI responde «no se sabe»,
+      `/api/llamaswap/status` (también síncrono) no contesta a tiempo y el CLI responde «no se sabe»,
       que es la negativa segura.
 - **Tests (`tests/test_turno_daemon.py` salvo que se diga otra cosa):** el `backend_mock` en modo
   «cuenta cambios» procesa una petición a la vez (como `-np 1` y el FIFO de llama-swap) y cuenta un
@@ -1042,9 +1042,9 @@ cierra.**
      consume la carga inicial y clasifica las líneas siguientes en las cuatro salidas de REQ-034,
      con 10 s para «no vigila» y 45 s en total). Con la key del daemon o, en el CLI sin daemon, la del
      shell; sin key, «no se sabe».
-  2. Endpoints del daemon tras el token web: `GET /api/llamaswap/estado` (estado, TTL, en vuelo por
+  2. Endpoints del daemon tras el token web: `GET /api/llamaswap/status` (estado, TTL, en vuelo por
      modelo, delegaciones propias vivas, ruta de la config que usa el daemon),
-     `POST /api/llamaswap/vigia` y `GET /api/llamaswap/vigia/<id>`.
+     `POST /api/llamaswap/watch` y `GET /api/llamaswap/watch/<id>`.
   3. `cli.py`: la comprobación previa de verdad (daemon con `web_auth_headers()` → directo con la
      key del shell → «no se sabe») y las negativas de REQ-034 (delegaciones propias, peticiones de
      cualquier cliente o modelos en `/running`), salvo `--now`; la vigía abierta **antes** de
@@ -1056,8 +1056,8 @@ cierra.**
   4. `checks.py`, **en este orden**: primero `_NUMERO[23] = "veintitrés"`,
      `_NUMERO[24] = "veinticuatro"`, `_NUMERO_DE_CHECKS[23] = "veintitrés"` y
      `_NUMERO_DE_CHECKS[24] = "veinticuatro"` (si se registran antes los checks, los guardianes caen
-     por `KeyError`, que no vale como control); después `Check("backend.residencia", …)` y
-     `Check("backend.topologia", …)` tras `backend.llamaserver`, los textos de REQ-036, las frases de
+     por `KeyError`, que no vale como control); después `Check("backend.residency", …)` y
+     `Check("backend.topology", …)` tras `backend.llamaserver`, los textos de REQ-036, las frases de
      tamaño del docstring con «veinticuatro»/«veintitrés», y las dos filas de la tabla del doctor y
      «las veinticuatro piezas» en `Integration-install.md` (CRLF).
   5. Los tests que usan el llama-swap de prueba reutilizan la fixture de T2, con su control de
@@ -1066,9 +1066,9 @@ cierra.**
 
   | Test | Control | Debe fallar con el mutante en |
   |---|---|---|
-  | `GET /api/llamaswap/estado` con `/running` simulado que trae `cmd` con `--api-key clave-falsa-1` y `/api/events` con cabeceras: ninguna de las dos cosas sale | (b) | Mutante: devolver la fila de `/running` entera → falla `assert "clave-falsa-1" not in r.text` |
+  | `GET /api/llamaswap/status` con `/running` simulado que trae `cmd` con `--api-key clave-falsa-1` y `/api/events` con cabeceras: ninguna de las dos cosas sale | (b) | Mutante: devolver la fila de `/running` entera → falla `assert "clave-falsa-1" not in r.text` |
   | Los endpoints exigen el token web | (b) | Mutante: sin la dependencia del token → falla `assert r.status_code == 401` |
-  | Con el limitador de hilos agotado, la consulta previa del CLI no espera: `/api/llamaswap/estado` simulado que no contesta en su plazo → el CLI dice «no se sabe» y no escribe | (b) | Mutante: consulta sin plazo → falla `assert transcurrido < 5` (con tope propio del test) |
+  | Con el limitador de hilos agotado, la consulta previa del CLI no espera: `/api/llamaswap/status` simulado que no contesta en su plazo → el CLI dice «no se sabe» y no escribe | (b) | Mutante: consulta sin plazo → falla `assert transcurrido < 5` (con tope propio del test) |
   | `en_vuelo()` con una carga inicial de 100 KB de log antes del `inflight` (contra el llama-swap de prueba de T2) | guarda | `assert foto["gemma4-26b-a4b"] == 1` en menos de 1 s |
   | Escenario «no escribir con delegaciones en curso» (entrada viva en `inflight.json`; y, aparte, una petición de otro cliente en la foto) | (c) tras T11 | `assert "descargaría" in salida` y fichero intacto (en el corte de T11 sale «no se sabe»); con `--now`, escribe |
   | Escenario «sin credencial no se escribe a ciegas» (daemon simulado apagado, shell sin key) | (b) | Mutante: pedir la key → falla `assert "LOCAL_DELEGATE_API_KEY" not in salida`; y `assert "no se sabe si hay delegaciones en curso" in salida` |
@@ -1076,19 +1076,28 @@ cierra.**
   | Escenario «llama-swap no vigila el fichero» | (b) | Mutante: tope de «no vigila» de 60 s → falla `assert transcurrido < 15` |
   | Recarga válida → «recargó»; llama-swap apagado → «caído» | (b) | Mutante: confundir «caído» con «no vigila» (sin la comprobación de conexión) → falla `assert salida == "caído"` |
   | Escenario «restaurar una copia» completo: byte a byte, copia del actual y la recarga informada | (a) contra el corte de T11 | `assert "recargó" in salida` (en el corte no hay vigía) |
-  | `doctor`: `backend.residencia` OK con «sin residente» en la config de hoy; aviso informativo con un residente; aviso con `persistent` y TTL > 0 (la config del 2026-09-15) | (c) | Corte: los dos checks ya registrados (con sus guardianes de tamaño en verde) y sus probes devolviendo `UNKNOWN`. Falla `assert r.status == WARN` con la config del 2026-09-15. Un test que buscara el check por id fallaría por `None`, que no vale como control |
-  | `doctor`: `backend.topologia` dice «turno activo» o el motivo (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto) | (c) | Mismo corte: falla `assert "matrix" in r.message` |
+  | `doctor`: `backend.residency` OK con «sin residente» en la config de hoy; aviso informativo con un residente; aviso con `persistent` y TTL > 0 (la config del 2026-09-15) | (c) | Corte: los dos checks ya registrados (con sus guardianes de tamaño en verde) y sus probes devolviendo `UNKNOWN`. Falla `assert r.status == WARN` con la config del 2026-09-15. Un test que buscara el check por id fallaría por `None`, que no vale como control |
+  | `doctor`: `backend.topology` dice «turno activo» o el motivo (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto) | (c) | Mismo corte: falla `assert "matrix" in r.message` |
   | Guardianes de tamaño: `test_el_docstring_dice_cuantos_checks_hay_de_verdad` y el de `test_wiki.py` con 24 | guarda existente | Fallan si falta una frase o una fila: es lo que tienen que hacer |
 - **Verificación:**
   `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_llamaswap_api.py tests/test_residencia_cli.py tests/test_residencia.py tests/test_llamaswap_de_prueba.py tests/test_metrics.py tests/test_checks.py tests/test_doctor.py tests/test_wiki.py -rs -q`
   (sin saltos en los ficheros del llama-swap de prueba), `node --check` del JS y la suite completa.
 - **Rollback:** revertir; los endpoints y checks son nuevos.
-- *(Aclarado tras la revisión de la ola 5)* el campo de `GET /api/llamaswap/estado` con la ruta
+- *(Aclarado tras la revisión de la ola 5)* el campo de `GET /api/llamaswap/status` con la ruta
   de la config se llama `ruta_config` (constante `residencia.CAMPO_RUTA_CONFIG`, que ya lee
   `cli._ruta_del_daemon`); toda consulta nueva del CLI al daemon pasa por
   `cli._destino_del_daemon`, con una guarda que lo compruebe (la de T11,
   `test_toda_consulta_del_cli_al_daemon_pasa_por_su_destino`, recorre las llamadas a `httpx2` de
   `cli.py`).
+- *(Aclarado el 2026-10-07, decisión del usuario: lo que es código o interfaz va en inglés)* los
+  endpoints son `GET /api/llamaswap/status`, `POST /api/llamaswap/watch` y
+  `GET /api/llamaswap/watch/<id>`; los checks, `backend.residency` y `backend.topology`. El campo
+  con la ruta de la config se llama `config_path` (el **valor** de `residencia.CAMPO_RUTA_CONFIG`;
+  el nombre de la constante lo cambia la ola de renombrado). El módulo nuevo usa nombres en inglés
+  (`running()`, `in_flight()`, `activity()`, `Watcher`, `WatchRegistry`, `Status`); los campos del
+  JSON nuevos y las salidas de la vigía como valor de máquina, también (`reloaded`, `rejected`,
+  `not_watching`, `down`); lo que se imprime sigue en español («recargó», «rechazó», «no vigila
+  el fichero», «caído»). Equivalencias en la tabla de aclaraciones de `spec.md`.
 
 ### T14 — Espera frente a lentitud (ola 8)
 
@@ -1274,7 +1283,7 @@ esperada.
    y `schtasks /Run` de la tarea del daemon. Después:
    - `local_status` por MCP: «Turno: sí», «sin residente» y ninguna mención a «residente
      gemma3-4b». **Falla** si no.
-   - `uv run local-delegate doctor`: `backend.topologia` OK con turno y `backend.residencia` OK con
+   - `uv run local-delegate doctor`: `backend.topology` OK con turno y `backend.residency` OK con
      «sin residente». **Falla** con `UNKNOWN` o `WARN`.
 5. **Dos tools en paralelo contra el backend real** (carga modelos: bajo `pesado.sh`, el usuario
    avisado, ventana anotada como excluida de P-4 y F1, nadie más usando `local_*`): desde un
@@ -1296,7 +1305,7 @@ esperada.
    2. `local-delegate llamaswap residency --config D:\Projects\llms\llama-swap\config.yaml`
       (solo lectura): «sin residente (recomendado)»;
    3. **sin modelos cargados**: el paso 5 deja modelos (TTL 120, el 12B 30). Se sondea `/running`
-      (por `doctor` o `/api/llamaswap/estado` del daemon) cada 10 s hasta que quede vacío, con un
+      (por `doctor` o `/api/llamaswap/status` del daemon) cada 10 s hasta que quede vacío, con un
       tope de 3 minutos, sin delegar nada mientras. Si en 3 minutos no queda vacío, se mira quién lo
       usa (`/api/inflight`, la foto de llama-swap) y se espera otro TTL; si tampoco, se para y se
       anota. **Nunca** con `--now` aquí: el paso tiene que probar también la negativa y la
@@ -1448,7 +1457,7 @@ esperada.
 | Requisito | Tarea | Evidencia |
 |---|---|---|
 | REQ-001, REQ-009 | T7, T10 | Tabla contra `EvictionFor`, alias, dos sintaxis, relectura; topología nueva en la siguiente concesión |
-| REQ-002 | T7, T10, T13 | Motivos de «sin topología»; sin turno con backend remoto; `local_status` y `backend.topologia` |
+| REQ-002 | T7, T10, T13 | Motivos de «sin topología»; sin turno con backend remoto; `local_status` y `backend.topology` |
 | REQ-003, REQ-004, REQ-005 | T8, T10 | Orden, E-1, reserva que se reduce, abandono, cambio de topología, aserto de orden de adquisición |
 | REQ-006 | T10 | Dos saltos a la vez no bloquean; el salto suelta la plaza antes de pedir turno |
 | REQ-007 | T8, T10 | Forzada por falta de progreso, comprobación periódica, plazo HTTP de 900; liberación con excepción; hilos de anyio |

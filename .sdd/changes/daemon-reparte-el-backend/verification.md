@@ -623,6 +623,61 @@ sustituto, controles con el assert que disparó y decisiones propias):
 - Config real de llama-swap: `sha256` =
   `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, sin tocar.
 
+## Ola 7 — T13, llama-swap desde el daemon: estado, vigía, negativas y `doctor` (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. Nombres de interfaz en inglés
+(decisión del usuario del 2026-10-07): `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`,
+`GET /api/llamaswap/watch/<id>`, checks `backend.residency` y `backend.topology`, campo
+`config_path`; equivalencias en la tabla de aclaraciones de `spec.md`. Evidencia completa (lo medido
+contra el llama-swap de prueba, controles con el assert que disparó, decisiones propias y riesgos):
+[evidencias/T13.md](evidencias/T13.md).
+
+### Comprobaciones
+
+- Línea de verificación de T13 (con `-rs`):
+  `341 passed, 1 skipped, 1 warning in 166.76s (0:02:46)`. El salto es
+  `tests\test_checks.py:473: chmod no quita permisos de lectura en Windows`, de antes; ninguno en los
+  ficheros del llama-swap de prueba.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2171 passed, 2 skipped, 1 warning in 251.75s (0:04:11)` (ola 6: 2132; +39). Tarda ~108 s más:
+  los tests contra el llama-swap de prueba y la consulta al daemon cortado de cada escritura de
+  `test_residencia.py` (ver riesgos en `evidencias/T13.md`).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `176 files already formatted`.
+- `node --check` del `<script>` del panel extraído de `metrics.render_index()`: sin errores (el JS
+  no cambió).
+- Controles: 8 mutantes (b) y una guarda, más dos cortes (c) (`cli.py` de `e548557` y `checks.py`
+  con los checks registrados y probes `UNKNOWN`); todos mutan y caen en su assert. El
+  `assert "descargaría" in salida` del plan no discriminaba contra el corte de T11 (su mensaje ya lo
+  decía): se le añadió el assert del motivo, que sí cae.
+- Hallazgo: `_ruta_del_daemon` (T11) perdía la ruta con llama-swap caído (plazo de 2 s frente a los
+  ~2,1 s que tarda el daemon en saberlo). Corregido con el plazo del estado; test y mutante.
+- Config real de llama-swap: `sha256` =
+  `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, sin tocar; el único
+  `llama-swap.exe` vivo al terminar es el real (`127.0.0.1:9292`).
+
+### Corrección tras la revisión de la ola 7 (2026-10-07)
+
+Doce hallazgos de la revisión de solo lectura, con su arreglo, su mutante y el assert que disparó, en
+`evidencias/T13.md` («Corrección tras la revisión de la ola 7»). Lo principal: la vigía se abre antes
+de comparar el fichero; sin vigía no se escribe salvo `--now`; `doctor` toma la config y el turno del
+daemon; un historial rotado ya no permite concluir por cuentas; se vigila la segunda recarga tras un
+rechazo; el tope de vigías reserva plaza; una sola consulta del estado; nombres nuevos en inglés; y la
+fixture `daemon_real_cortado` corta con un RST en vez de un puerto cerrado.
+
+- Línea de verificación de T13 (con `-rs`): `350 passed, 1 skipped, 1 warning in 125.63s (0:02:05)`;
+  el salto es el de `test_checks.py:476`, de antes; ninguno del llama-swap de prueba.
+- Suite completa: `2180 passed, 2 skipped, 1 warning in 209.02s (0:03:29)` (antes de la fixture
+  nueva, 251,75 s).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `176 files already formatted`; `node --check` del JS del panel: sin errores.
+- Controles: 9 mutantes nuevos (R1, R2a, R2b, R3, R4, R5, R6, R10, R12) y los 9 de la primera pasada
+  repetidos (M1, M2, M3, M6, M7, M8, M9, M13, M14), todos con su assert; el corte de la ola 5 (C5),
+  repetido con `cli.py` y `residencia.py` de `e548557`.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`); ningún llama-swap de prueba
+  vivo al terminar.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

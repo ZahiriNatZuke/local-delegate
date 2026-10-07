@@ -1537,3 +1537,139 @@ def test_stats_no_reparte_ni_descarta_las_lineas_sin_cliente():
     por_cliente = {c["client"]: c["calls"] for c in agregado["by_client"]}
     assert por_cliente == {"claude-code": 1, "desconocido": 1}
     assert sum(c["calls"] for c in agregado["by_client"]) == agregado["total"]["calls"]
+
+
+# --- T13 de daemon-reparte-el-backend: llama-swap para el CLI de residencia (REQ-039) ----------
+LS_RUNNING = "http://test-backend/running"
+LS_EVENTS = "http://test-backend/api/events"
+
+
+def _sse(*mensajes: tuple[str, object]) -> bytes:
+    return "".join(
+        f"event: message\ndata: {json.dumps({'type': t, 'data': json.dumps(d)})}\n\n"
+        for t, d in mensajes
+    ).encode()
+
+
+def _llamaswap_with_secrets() -> None:
+    """`/running` con el `cmd` (y su `--api-key`) y una foto `inflight` con cabeceras."""
+    backend_mock.get(LS_RUNNING).mock(
+        return_value=httpx2.Response(
+            200,
+            json={
+                "running": [
+                    {
+                        "model": "m",
+                        "state": "ready",
+                        "ttl": 120,
+                        "cmd": "llama-server -m MODELOS/m.gguf --api-key clave-falsa-1",
+                        "proxy": "http://localhost:5800",
+                    }
+                ]
+            },
+        )
+    )
+    backend_mock.get(LS_EVENTS).mock(
+        return_value=httpx2.Response(
+            200,
+            content=_sse(
+                ("logData", {"source": "proxy", "data": "[INFO] arranque\n"}),
+                (
+                    "inflight",
+                    {
+                        "operation": "snapshot",
+                        "requests": [
+                            {
+                                "model": "m",
+                                "req_headers": {"Authorization": "Bearer clave-falsa-2"},
+                            }
+                        ],
+                    },
+                ),
+            ),
+        )
+    )
+
+
+@backend_mock.mock
+def test_llamaswap_status_never_returns_cmd_headers_or_keys(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    monkeypatch.setenv("LLAMASWAP_CONFIG", "D:/configs/llama-swap.yaml")
+    _llamaswap_with_secrets()
+
+    r = TestClient(metrics.app).get("/api/llamaswap/status")
+
+    assert r.status_code == 200
+    assert "clave-falsa-1" not in r.text
+    assert "clave-falsa-2" not in r.text
+    datos = r.json()
+    assert datos["llamaswap"] == "ok"
+    assert datos["models"] == [{"id": "m", "state": "ready", "ttl": 120}]
+    assert datos["in_flight"] == {"m": 1}
+    assert datos["own_delegations"] == 0
+    assert datos["config_path"] == "D:/configs/llama-swap.yaml"
+    # Lo que el daemon dice de su turno (para `doctor`): `test-backend` no es loopback, no hay.
+    assert datos["turn_active"] is False
+    assert datos["turn_reason"] == "backend remoto"
+
+
+@backend_mock.mock
+def test_llamaswap_status_counts_own_delegations(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    _llamaswap_with_secrets()
+    entrada = server._inflight_start(tool="t", model="m", source="path", chars_in=5)
+    try:
+        datos = TestClient(metrics.app).get("/api/llamaswap/status").json()
+    finally:
+        server._inflight_end(entrada)
+    assert datos["own_delegations"] == 1
+
+
+@pytest.mark.parametrize(
+    ("metodo", "ruta"),
+    [
+        ("GET", "/api/llamaswap/status"),
+        ("POST", "/api/llamaswap/watch"),
+        ("GET", "/api/llamaswap/watch/abc"),
+    ],
+)
+def test_llamaswap_endpoints_require_the_web_token(monkeypatch, metodo, ruta):
+    """La app sola, sin la puerta del daemon (`auth.proteger`): la dependencia de cada ruta basta.
+
+    `BASE_URL` va a un puerto sin nadie: si la dependencia faltara, el endpoint no saldría a la red
+    de verdad (ni al llama-swap real del 9292).
+    """
+    monkeypatch.setattr(config, "WEB_TOKEN", "token-falso-1")
+    monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
+    cliente = TestClient(metrics.app)
+
+    r = cliente.request(metodo, ruta)
+
+    assert r.status_code == 401
+    con_token = cliente.request(metodo, ruta, headers={"Authorization": "Bearer token-falso-1"})
+    assert con_token.status_code != 401
+
+
+@backend_mock.mock
+def test_llamaswap_watch_with_llamaswap_down_says_down(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(LS_EVENTS).mock(side_effect=httpx2.ConnectError("rechazada"))
+    cliente = TestClient(metrics.app)
+
+    abierta = cliente.post("/api/llamaswap/watch")
+    assert abierta.status_code == 200
+    resultado = cliente.get(f"/api/llamaswap/watch/{abierta.json()['id']}").json()
+
+    assert resultado["outcome"] == "down"
+    assert cliente.get("/api/llamaswap/watch/no-existe").status_code == 404
+
+
+@backend_mock.mock
+def test_llamaswap_watch_that_cannot_open_is_502(monkeypatch):
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get(LS_EVENTS).mock(return_value=httpx2.Response(401))
+
+    r = TestClient(metrics.app).post("/api/llamaswap/watch")
+
+    assert r.status_code == 502
+    assert "401" in r.json()["error"]

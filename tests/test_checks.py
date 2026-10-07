@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, install, recalcular, sondas
+from local_delegate import checks, install, llamaswap_api, recalcular, sondas
 from local_delegate.fallos import VistaBackend
 
 
@@ -45,6 +46,9 @@ def make_ctx(home, **kwargs):
         # cada `run_all` de la suite pediría `/models` al backend REAL de la máquina. Devuelve
         # «no exige credencial», que es el caso en el que la entrada MCP da igual.
         "backend_needs_key": lambda: (False, ""),
+        # Octavo colaborador de red (T13): sin doblarlo, `backend.residency` y `backend.topology`
+        # preguntarían al daemon (la fixture autouse lo corta, pero aquí se dice explícito).
+        "llamaswap_daemon": checks.NO_LLAMASWAP_DAEMON,
         # Sexto colaborador de red. Lo consultan dos checks: `service.daemon` solo cuando el
         # daemon no responde y el puerto está ocupado, y `service.daemon_auth` siempre.
         #
@@ -407,7 +411,14 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
     logs = tmp_path / "logs"
     recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
-    ctx = make_ctx(home, clients_seen=lambda: ([CLAUDE], None), log_dir=logs)
+    # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
+    # se les da la de hoy, sin residente y con turno.
+    ctx = make_ctx(
+        home,
+        clients_seen=lambda: ([CLAUDE], None),
+        log_dir=logs,
+        config_path=RESIDENCY_FIXTURES / "hoy.yaml",
+    )
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
 
@@ -1109,6 +1120,8 @@ _NUMERO = {
     # detrás («los otros veintiuno») va entero: ver `_NUMERO_SIN_SUSTANTIVO`.
     21: "veintiún",
     22: "veintidós",
+    23: "veintitrés",
+    24: "veinticuatro",
 }
 _NUMERO_SIN_SUSTANTIVO = {**_NUMERO, 21: "veintiuno"}
 
@@ -1595,3 +1608,159 @@ def test_fallback_con_un_nombre_obsoleto_y_otro_desconocido_avisa_de_los_dos(
     assert "foo" in r.detail and "residente" in r.detail
     assert "renombra" in r.fix_hint
     assert "usa roles (mechanical, long, code, loaded)" in r.fix_hint
+
+
+# --- T13: backend.residency y backend.topology (REQ-036, REQ-002) -------------------------------
+RESIDENCY_FIXTURES = Path(__file__).parent / "fixtures" / "residencia"
+WITH_RESIDENT = b"""models:
+  a:
+    cmd: llama-server -m MODELOS/a.gguf --port ${PORT}
+    ttl: 0
+  b:
+    cmd: llama-server -m MODELOS/b.gguf --port ${PORT}
+    ttl: 120
+groups:
+  fijo:
+    persistent: true
+    swap: false
+    exclusive: false
+    members:
+    - a
+  swap:
+    swap: true
+    exclusive: true
+    members:
+    - b
+"""
+
+
+def _check(id_: str) -> checks.Check:
+    (check,) = [c for c in checks.CHECKS if c.id == id_]
+    return check
+
+
+def test_residency_and_topology_are_registered_after_llamaserver():
+    ids = [c.id for c in checks.CHECKS]
+    assert ids[-3:] == ["backend.llamaserver", "backend.residency", "backend.topology"]
+    assert _check("backend.residency").group == _check("backend.topology").group == "backend"
+
+
+def test_residency_ok_without_resident_with_todays_config(tmp_path):
+    r = checks._probe_residency(
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+    )
+    assert r.status == checks.OK
+    assert "sin residente" in r.detail
+
+
+def test_residency_with_a_resident_is_informative_and_says_the_vram(tmp_path):
+    path = tmp_path / "config.yaml"
+    path.write_bytes(WITH_RESIDENT)
+    r = checks._probe_residency(checks.Context(home=tmp_path, config_path=path))
+    assert r.status == checks.OK
+    assert "residente: a" in r.detail
+    assert "VRAM" in r.detail
+
+
+def test_residency_warns_with_persistent_and_ttl_above_zero(tmp_path):
+    """La config del 2026-09-15: grupo `resident` persistent con el 4B a TTL 600."""
+    cfg = RESIDENCY_FIXTURES / "pre-b10909-20260915.yaml"
+    r = checks._probe_residency(checks.Context(home=tmp_path, config_path=cfg))
+    assert r.status == checks.WARN
+    assert "gemma3-4b" in r.detail
+    assert "persistent" in r.detail
+    assert "--none" in (r.fix_hint or "")
+
+
+def test_residency_without_config_is_unknown(tmp_path):
+    r = checks._probe_residency(checks.Context(home=tmp_path))
+    assert r.status == checks.UNKNOWN
+    assert "sin LLAMASWAP_CONFIG" in r.detail
+
+
+def test_topology_says_active_turn_with_todays_config(tmp_path):
+    r = checks._probe_topology(
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+    )
+    assert r.status == checks.OK
+    assert "turno activo" in r.detail
+
+
+@pytest.mark.parametrize(
+    ("content", "reason", "state"),
+    [
+        (None, "sin LLAMASWAP_CONFIG", checks.UNKNOWN),
+        (
+            b"models:\n  a:\n    cmd: x --port ${PORT}\nmatrix:\n  sets: {}\n",
+            "matrix",
+            checks.UNKNOWN,
+        ),
+        (b"models: [\n  a: : :\n", "ilegible", checks.WARN),
+    ],
+)
+def test_topology_says_why_there_is_no_turn(tmp_path, content, reason, state):
+    path = None
+    if content is not None:
+        path = tmp_path / "config.yaml"
+        path.write_bytes(content)
+    r = checks._probe_topology(checks.Context(home=tmp_path, config_path=path))
+    assert reason in r.detail
+    assert r.status == state
+
+
+def test_topology_with_a_remote_backend_has_no_turn(tmp_path, monkeypatch):
+    from local_delegate import config
+
+    monkeypatch.setattr(config, "BASE_URL", "http://otra-maquina:9292/v1")
+    r = checks._probe_topology(
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+    )
+    assert r.status == checks.UNKNOWN
+    assert "backend remoto" in r.detail
+
+
+def _daemon_with_turn(config_path: Path):
+    """Un daemon simulado: su llama-swap con la config de hoy y su turno activo."""
+    return lambda: (
+        llamaswap_api.Status(
+            llamaswap_api.STATE_OK,
+            config_path=str(config_path),
+            turn_active=True,
+            turn_detail="swap [swap, no exclusivo]: gemma3-4b, gemma4-26b-a4b",
+        ),
+        "",
+    )
+
+
+def test_topology_and_residency_follow_the_daemon_when_the_shell_has_no_config(tmp_path):
+    ctx = checks.Context(
+        home=tmp_path,
+        config_path=None,
+        llamaswap_daemon=_daemon_with_turn(RESIDENCY_FIXTURES / "hoy.yaml"),
+    )
+    topology = checks._probe_topology(ctx)
+    residency = checks._probe_residency(ctx)
+    assert topology.status == checks.OK
+    assert "turno activo según el daemon" in topology.detail
+    assert residency.status == checks.OK
+    assert "la config del daemon" in residency.detail
+
+
+def test_without_daemon_the_detail_says_it_is_the_shell_config(tmp_path):
+    ctx = checks.Context(
+        home=tmp_path,
+        config_path=RESIDENCY_FIXTURES / "hoy.yaml",
+        llamaswap_daemon=checks.NO_LLAMASWAP_DAEMON,
+    )
+    assert "según la config de este shell" in checks._probe_topology(ctx).detail
+    assert "la config de este shell" in checks._probe_residency(ctx).detail
+
+
+def test_topology_without_turn_according_to_the_daemon_says_why(tmp_path):
+    status = llamaswap_api.Status(
+        llamaswap_api.STATE_OK, turn_active=False, turn_reason="dos sintaxis"
+    )
+    ctx = checks.Context(home=tmp_path, llamaswap_daemon=lambda: (status, ""))
+    r = checks._probe_topology(ctx)
+    assert r.status == checks.WARN
+    assert "sin turno según el daemon: dos sintaxis" in r.detail

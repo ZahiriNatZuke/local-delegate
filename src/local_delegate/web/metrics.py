@@ -10,6 +10,9 @@ Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y
   GET /api/status     -> versión del MCP, modelos del backend con status loaded/unloaded (#901),
                          catálogo y tools
   GET /api/system     -> RAM/VRAM de sistema + consumo por proceso (best-effort, ver sysinfo)
+  GET /api/llamaswap/status, POST /api/llamaswap/watch, GET /api/llamaswap/watch/<id>
+                      -> estado de llama-swap y vigía de recarga para `llamaswap residency`
+                         (siempre tras el token web)
   GET /favicon.svg    -> icono de marca (chip) servido inline
 
 `from`/`to` son ISO 8601 (fecha u datetime); sin parámetros, por defecto los últimos 30 días.
@@ -47,11 +50,23 @@ from pathlib import Path
 
 import httpx2
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import clients, config, coste, cuota, fallos, precios, recalcular, server, valoracion
-from . import sysinfo
+from .. import (
+    clients,
+    config,
+    coste,
+    cuota,
+    fallos,
+    llamaswap_api,
+    precios,
+    recalcular,
+    server,
+    topologia,
+    valoracion,
+)
+from . import auth, sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
 MAX_EVENTS = 5000  # tope de eventos servidos al cliente
@@ -824,6 +839,69 @@ def system():
             "host": config.backend_host(),
         }
     )
+
+
+# --- llama-swap para el CLI de residencia (T13: REQ-034, REQ-039) ---------------------------
+#
+# El CLI no tiene la key de llama-swap (vive en el lanzador del daemon), así que pregunta aquí.
+# Tras el token web dos veces: la puerta del puerto (`auth.proteger`, en `daemon.build_app`) y una
+# dependencia propia de cada ruta, porque esta app también se sirve sola (`run_in_thread`, el
+# modo manual) y ahí no hay puerta. Sin token configurado, como el resto del panel: abiertas.
+
+
+def _require_web_token(request: Request) -> None:
+    token = config.WEB_TOKEN
+    if not token:
+        return
+    if auth.peticion_autorizada(request.headers.get("authorization"), token):
+        return
+    if auth.sesion_valida(request.cookies.get(auth.COOKIE), token) is not None:
+        return
+    raise HTTPException(status_code=401, detail="falta el token del puerto o no es correcto")
+
+
+_WITH_WEB_TOKEN = [Depends(_require_web_token)]
+
+
+@app.get("/api/llamaswap/status", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_status():
+    """Estado de llama-swap para la comprobación previa: modelos con su estado y TTL, peticiones
+    en vuelo por modelo (de cualquier cliente), delegaciones propias vivas y la config que usa
+    el daemon, y si tiene turno (para `doctor`, REQ-036). Nunca devuelve `cmd`, cabeceras ni
+    claves. El campo de la ruta es `residencia.CAMPO_RUTA_CONFIG` (lo pone `Status.to_json`)."""
+    status = llamaswap_api.query_status(
+        llamaswap_api.local_backend(), own_delegations=len(server.inflight_snapshot())
+    )
+    status.config_path = config.llamaswap_config_path() or None
+    status.watch_config = config.llamaswap_watch_config()
+    status.autostart = config.AUTOSTART
+    photo = server._topologia()
+    status.turn_active = not isinstance(photo, topologia.SinTopologia)
+    if isinstance(photo, topologia.SinTopologia):
+        status.turn_reason, status.turn_detail = photo.motivo, photo.detalle or ""
+    else:
+        status.turn_detail = server._choques_por_grupos(photo)
+    return JSONResponse(status.to_json())
+
+
+@app.post("/api/llamaswap/watch", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_watch_open():
+    """Abre una vigía de recarga con la key del daemon. Responde con su id cuando ya se tragó la
+    carga inicial de `/api/events`: lo que se escriba después, la vigía lo ve."""
+    try:
+        wid = llamaswap_api.watches.open(llamaswap_api.local_backend())
+    except (llamaswap_api.QueryError, httpx2.HTTPError) as e:
+        return JSONResponse({"error": str(e) or type(e).__name__}, status_code=502)
+    return JSONResponse({"id": wid})
+
+
+@app.get("/api/llamaswap/watch/{wid}", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_watch_result(wid: str):
+    """La salida de la vigía (`outcome`, `null` mientras no se sabe) y la línea que la decidió."""
+    result = llamaswap_api.watches.result(wid)
+    if result is None:
+        return JSONResponse({"error": "no hay ninguna vigía con ese id"}, status_code=404)
+    return JSONResponse(result)
 
 
 # Icono de marca: un corchete de terminal abrazando el chevrón de delegación — «lo que entra

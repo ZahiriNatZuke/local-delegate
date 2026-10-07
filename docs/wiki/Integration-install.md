@@ -173,7 +173,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las veintidós piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las veinticuatro piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -216,6 +216,8 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Servicios | token de Claude Desktop | si la entrada `local-delegate` de Claude Desktop —que `install` **no** escribe— puede entrar al puerto del daemon. Lee `claude_desktop_config.json` (en Windows, `%APPDATA%\Claude\`), saca la cabecera `Authorization` del `--header` de `mcp-remote` y **prueba ese token** contra el puerto, porque va escrito literal y un token viejo tiene la misma forma que uno bueno. Nunca lo imprime. Sin fichero, sin entrada nuestra, por stdio o apuntando a otra máquina, `unknown`. Existe porque al rotar el token `install` arregla los otros tres clientes y este se quedaba en `401` en silencio |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |
+| Backend | residencia de llama-swap | la config que usa llama-swap (`--config`, si no `LLAMASWAP_CONFIG` de este shell, si no la que dice el daemon): `[ OK ]` con «sin residente» (lo recomendado); con un residente elegido con `--pin`, también `[ OK ]`, e informa de la VRAM que retiene; `warn` si hay un grupo `persistent` con TTL mayor que 0, porque `persistent` no lo mantiene cargado |
+| Backend | turno del daemon | si el daemon reparte el backend por turno entre los modelos que chocan y, si no, por qué (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto…). Lo pregunta al daemon; si no contesta, lee la config de este shell y lo dice |
 
 Cuatro estados, y la diferencia entre los dos últimos importa:
 

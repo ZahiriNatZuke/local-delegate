@@ -26,8 +26,9 @@ original queda intacto.
 **sin `globalTTL` ni `ttl` todos los modelos tienen TTL efectivo 0**: no se descargan nunca por TTL y
 cuentan como residentes. `--none` exige entonces `--ttl` para todos.
 
-**Antes de escribir (REQ-034).** Saber si hay delegaciones en curso es de T13. Hasta entonces
-`comprobar_antes_de_escribir()` contesta siempre «no se sabe» y toda escritura exige `--now`.
+**Antes y después de escribir (REQ-034, REQ-039).** Las negativas (delegaciones en curso, peticiones
+en vuelo, modelos cargados) y la vigía de la recarga no viven aquí: las hace el CLI (`cli.py`) con
+`llamaswap_api.py`. Este módulo no sabe nada de HTTP.
 """
 
 from __future__ import annotations
@@ -57,9 +58,9 @@ except ImportError:  # pragma: no cover - depende del entorno de instalación
 
 BOM = b"\xef\xbb\xbf"
 NO_SE_SABE = "no se sabe si hay delegaciones en curso"
-# Campo de `GET /api/llamaswap/estado` (T13) con la ruta de la config que usa el daemon. Lo lee
-# `cli._ruta_del_daemon`; el endpoint de T13 tiene que escribirlo con esta misma constante.
-CAMPO_RUTA_CONFIG = "ruta_config"
+# Campo de `GET /api/llamaswap/status` (T13) con la ruta de la config que usa el daemon. Lo
+# escribe y lo lee `llamaswap_api.Status` (`to_json`/`from_json`), con esta misma constante.
+CAMPO_RUTA_CONFIG = "config_path"
 CAMBIO_DURANTE_LA_EDICION = "la config cambió mientras se editaba; vuelve a intentarlo"
 RESERVA_GB_POR_DEFECTO = 2.0
 GRUPO_RESIDENTE = "residente"
@@ -1004,14 +1005,6 @@ def plan_fijar(
         f"persistent y ttl 0); {aviso_margen}"
     )
     return cambios, aviso
-
-
-# --- Comprobación previa (REQ-034, de T13) ----------------------------------------------------
-
-
-def comprobar_antes_de_escribir() -> str | None:
-    """`None` si se puede escribir; si no, el motivo. Hasta T13, siempre «no se sabe»."""
-    return NO_SE_SABE
 
 
 # --- Escritura -------------------------------------------------------------------------------

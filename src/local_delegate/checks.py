@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veintidós elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veinticuatro elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veintidós checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veinticuatro checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -125,6 +125,28 @@ def _default_daemon_accepts_token(host: str, port: int, token: str) -> bool | No
     from . import daemon
 
     return daemon.daemon_accepts_token(host, port, token, timeout=1.0)
+
+
+def _llamaswap_daemon_destination() -> tuple[str, int, dict[str, str]]:
+    """Host, puerto y cabecera con que `doctor` pregunta al daemon por llama-swap (T13).
+
+    Función aparte, como `cli._destino_del_daemon`, para que la suite la apunte a un puerto sin
+    daemon (`conftest.daemon_real_cortado`) sin tocar `config.WEB_PORT`.
+    """
+    host, port = daemon_host_port()
+    return host, port, config.web_auth_headers()
+
+
+def _default_llamaswap_daemon():
+    """`(estado, por qué no)` del `GET /api/llamaswap/status` del daemon (ver `llamaswap_api`)."""
+    from . import llamaswap_api
+
+    return llamaswap_api.daemon_status(*_llamaswap_daemon_destination())
+
+
+def NO_LLAMASWAP_DAEMON():
+    """Colaborador para los tests: el daemon no contesta por llama-swap y no se sale a la red."""
+    return None, "sin daemon (test)"
 
 
 def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
@@ -345,6 +367,11 @@ class Context:
     # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
     # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
     log_dir: Path | None = None
+    # Octavo colaborador de red (T13): lo que el daemon dice de su llama-swap (`config_path` y su
+    # turno), para `backend.residency` y `backend.topology`. Default real, doblado en los tests.
+    llamaswap_daemon: Callable[[], tuple] = field(
+        default_factory=lambda f=_default_llamaswap_daemon: f
+    )
 
     @property
     def claude_dir(self) -> Path:
@@ -1353,6 +1380,113 @@ def _probe_llamaserver(ctx: Context) -> Result:
     return _version_result(ctx, "llama-server")
 
 
+RESIDENCY_HINT = "local-delegate llamaswap residency --none  (deja la config sin residente)"
+
+
+def _probe_residency(ctx: Context) -> Result:
+    """REQ-036: la residencia de la config de llama-swap.
+
+    La config sale como en el CLI: `--config` de `doctor`, si no `LLAMASWAP_CONFIG` de este shell,
+    si no la que usa el daemon (`config_path` de `/api/llamaswap/status`). El detalle dice de dónde.
+
+    OK con «sin residente». Un residente (TTL efectivo 0) es una elección, la de `--pin`: también
+    OK, con la VRAM que retiene en el detalle (aclaración de REQ-036 del 2026-10-07: no hay estado
+    informativo y un aviso subiría el exit code de una máquina configurada así a propósito). WARN
+    con un grupo `persistent` con TTL mayor que 0: `persistent` no lo mantiene cargado y el dueño
+    de la config cree que sí (la config del 2026-09-15). Import diferido: `residencia` trae PyYAML.
+    """
+    from . import residencia, topologia
+
+    path, source = ctx.config_path, "la config de este shell"
+    if path is None:
+        status, why = ctx.llamaswap_daemon()
+        if status is None or not status.config_path:
+            reason = why or "no la dice"
+            return Result(
+                UNKNOWN,
+                f"{topologia.SIN_CONFIG} en este shell y el daemon no la da ({reason}): pasa "
+                "--config a doctor para revisarla",
+            )
+        path, source = Path(status.config_path), "la config del daemon"
+    try:
+        loaded = residencia.cargar(path)
+    except (residencia.ErrorResidencia, OSError) as e:
+        return Result(UNKNOWN, f"no se puede leer {path} ({source}): {e}")
+    photo = loaded.foto
+    if isinstance(photo, topologia.SinTopologia):
+        detail = f": {photo.detalle}" if photo.detalle else ""
+        return Result(UNKNOWN, f"no se puede leer la residencia ({photo.motivo}{detail}; {source})")
+    view = residencia.vista(photo, loaded.datos)
+    persistent = [
+        f"`{f.modelo}` (grupo `{f.grupo}`, TTL {f.ttl})"
+        for f in view.filas
+        if f.persistent and f.ttl > 0
+    ]
+    if persistent:
+        return Result(
+            WARN,
+            f"{view.veredicto}; grupo persistent con TTL mayor que 0: {', '.join(persistent)}: "
+            f"`persistent` no lo mantiene cargado ({source})",
+            RESIDENCY_HINT,
+        )
+    if not view.residentes:
+        return Result(OK, f"{view.veredicto} ({source})")
+    try:
+        figures = residencia.cifras_de_vram(loaded.datos, view.residentes, {})
+        vram = "; ".join(
+            f"`{m}` retiene {residencia._gib(figures[m])} GiB de VRAM" for m in view.residentes
+        )
+    except residencia.ErrorResidencia:
+        vram = "sin cifra fiable de la VRAM que retiene"
+    return Result(
+        OK,
+        f"{view.veredicto} (residencia opt-in: {vram} de forma permanente; {source})",
+        RESIDENCY_HINT,
+    )
+
+
+def _no_turn_is_fine(reason: str) -> bool:
+    """Motivos de «sin turno» que no son una avería: el daemon va sin turno, como antes."""
+    from . import server, topologia
+
+    return reason in (topologia.SIN_CONFIG, topologia.MATRIX, server.SIN_TURNO_BACKEND_REMOTO)
+
+
+def _probe_topology(ctx: Context) -> Result:
+    """REQ-036 y REQ-002: si el daemon reparte el backend por turno y, si no, por qué.
+
+    Si el daemon contesta, manda lo que dice de su propio turno (es él quien lo usa, con su
+    `LLAMASWAP_CONFIG` y su backend). Si no, se lee la config de este shell (`--config` o
+    `LLAMASWAP_CONFIG`) con el lector de topología, y el detalle lo dice. Sin config, con backend
+    remoto o con `matrix` no hay nada roto y es `unknown`; una config que no se puede leer o que
+    `load.go` rechazaría es `warn`. Import diferido de `server`: el resto del diagnóstico no lo
+    necesita.
+    """
+    from . import server, topologia
+
+    status, why = ctx.llamaswap_daemon()
+    if status is not None and status.turn_active is not None:
+        if status.turn_active:
+            return Result(OK, f"turno activo según el daemon (choques: {status.turn_detail})")
+        detail = f": {status.turn_detail}" if status.turn_detail else ""
+        text = f"sin turno según el daemon: {status.turn_reason}{detail}"
+        return Result(UNKNOWN if _no_turn_is_fine(status.turn_reason) else WARN, text)
+    source = f"según la config de este shell; el daemon: {why or 'no lo dice'}"
+    if not server._backend_en_loopback():
+        return Result(
+            UNKNOWN,
+            f"sin turno: {server.SIN_TURNO_BACKEND_REMOTO} ({config.backend_host()}; {source})",
+        )
+    if ctx.config_path is None:
+        return Result(UNKNOWN, f"sin turno: {topologia.SIN_CONFIG} ({source})")
+    photo = topologia.leer(ctx.config_path)
+    if isinstance(photo, topologia.SinTopologia):
+        detail = f": {photo.detalle}" if photo.detalle else ""
+        text = f"sin turno: {photo.motivo}{detail} ({source})"
+        return Result(UNKNOWN if _no_turn_is_fine(photo.motivo) else WARN, text)
+    return Result(OK, f"turno activo (choques: {server._choques_por_grupos(photo)}; {source})")
+
+
 def _probe_fallback(ctx: Context) -> Result:
     """Las cadenas de respaldo solo pueden nombrar roles o modelos del catálogo de texto.
 
@@ -1505,7 +1639,7 @@ def _probe_coste(ctx: Context) -> Result:
 
 
 # --- El registro --------------------------------------------------------------
-# Veintidós elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veinticuatro elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1545,11 +1679,15 @@ CHECKS: tuple[Check, ...] = (
     Check("service.desktop_auth", "servicio", "token de Claude Desktop", _probe_desktop_auth),
     Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
+    # REQ-036: leen la config de llama-swap (`--config` de `doctor` o `LLAMASWAP_CONFIG`) y no
+    # salen a la red.
+    Check("backend.residency", "backend", "residencia de llama-swap", _probe_residency),
+    Check("backend.topology", "backend", "turno del daemon", _probe_topology),
 )
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veintidós probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veinticuatro probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1563,7 +1701,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veintiuno
+        except Exception as exc:  # un check roto no debe impedir ver los otros veintitrés
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results
