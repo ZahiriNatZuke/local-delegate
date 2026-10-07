@@ -22,3 +22,6 @@ benchmarks/catalogo-2026-09/fuentes/** -text
 # Copias fijas de los documentos que mide el SDD resumen-por-secciones: su sha256 va en
 # MANIFEST.json y la línea base depende de que no cambie ni un byte.
 benchmarks/resumen-estructurado/fuentes/** -text
+
+# Copias de las configs de llama-swap para T11: el fin de línea (LF, CRLF o mezclado) es lo que se prueba.
+tests/fixtures/residencia/** -text

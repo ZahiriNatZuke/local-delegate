@@ -475,7 +475,7 @@ propios ficheros y lo anotó al final de su evidencia (sección «Corrección tr
 Aclaraciones de spec y plan (REQ-002, REQ-003, REQ-005, REQ-007; `spec.md`, sección «REQ-002, REQ-003,
 REQ-005 y REQ-007: aclaraciones tras la revisión de la ola 3») escritas a las 2026-10-07T15:04:08Z
 (`mtime` de `spec.md`). El usuario las aprobó después, a pregunta explícita de la sesión principal, y
-decidió que `--ninguno`, con todos los modelos en TTL 0, lo diga sin proponer un TTL (`plan.md`, T11).
+decidió que `--none`, con todos los modelos en TTL 0, lo diga sin proponer un TTL (`plan.md`, T11).
 
 Tras las correcciones: suite completa `2030 passed, 2 skipped, 1 warning in 129.44s`; `ruff check .` →
 `All checks passed!`; `ruff format --check .` → `169 files already formatted`; `sha256` de la config
@@ -532,6 +532,56 @@ Cifras tras la corrección:
 - `ruff check .` → `All checks passed!`; `ruff format --check .` → `171 files already formatted`.
 - Hilos de anyio, medidos otra vez con el script del repo: N línea base = 38, N con turno = 38, pico
   8 (umbral 24); sin parada.
+- `sha256` de la config real: `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual
+  que el de T0.
+
+## Ola 5 — T11, editor y CLI de residencia sobre copias (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. Evidencia completa (fixtures,
+estimador, 15 mutantes distintos en 17 corridas con el assert que disparó y decisiones propias):
+[evidencias/T11.md](evidencias/T11.md).
+
+### Estimador con los GGUF reales (solo cabecera, `-ncmoe` medido)
+
+| Modelo | Estimado | Medido (F2) | Desviación | ¿Pasa (−3 % a +10 %)? |
+|---|---|---|---|---|
+| `gemma3-4b` | 3 581 MiB | 3 270 MiB | +9,5 % | sí |
+| `gemma4-12b` + mmproj | 19 587 MiB | 9 060 MiB | +116,2 % | no |
+| `gemma4-26b-a4b` `-ncmoe 12` | 45 280 MiB | 10 534 MiB | +329,8 % | no |
+| `qwen36-35b-a3b` `-ncmoe 20` | 11 559 MiB | 10 120 MiB | +14,2 % | no |
+
+`ESTIMADOR_NCMOE_VALIDADO = False`: `--pin` exige `--vram-model` para todos los modelos implicados.
+El exceso sale del KV cache (calculado como atención completa en todas las capas), no de la resta de
+expertos.
+
+### Comprobaciones
+
+- Línea de verificación de T11 (`test_residencia.py`, `test_llamaswap_config.py`, `test_topologia.py`):
+  `157 passed in 4.46s`.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2106 passed, 2 skipped, 1 warning in 143.36s (0:02:23)` (ola 4: 2048; +53 de
+  `test_residencia.py` y +5 de `test_llamaswap_config.py`).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `173 files already formatted`.
+- Fixtures de las configs reales con las claves sustituidas por `clave-falsa-N`: guarda en verde y su
+  control positivo detecta las nueve claves plantadas.
+- Config real de llama-swap: `sha256` =
+  `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual que el de T0; ningún `.bak`
+  nuevo en su carpeta.
+
+### Corrección tras la revisión de la ola 5 (2026-10-07)
+
+Once hallazgos de la revisión de solo lectura, más dos decisiones del usuario: los nombres del CLI en
+inglés (`llamaswap residency`, `--none`, `--pin`, `--restore`, `--now`, `--vram-model`, `--group`,
+`--reserve-gb`) y la fórmula nueva de `--pin` (VRAM del modelo + residentes que ya hay + peor caso del
+resto por grupos), las dos con su fila en la tabla de aclaraciones de `spec.md`. Detalle (hallazgo →
+arreglo → mutante → assert) en [evidencias/T11.md](evidencias/T11.md), «Corrección tras la revisión».
+Las cifras de los escenarios del plan no cambiaron (faltan 6,17 GiB; el 4B se acepta).
+
+- Línea de verificación de T11: `168 passed in 4.56s`.
+- Suite completa: `2117 passed, 2 skipped, 1 warning in 139.59s (0:02:19)`.
+- `ruff check .` → `All checks passed!`; `ruff format --check .` → `173 files already formatted`.
+- Mutantes: 24 distintos, 26 corridas; todos mutan y caen en su assert.
 - `sha256` de la config real: `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual
   que el de T0.
 

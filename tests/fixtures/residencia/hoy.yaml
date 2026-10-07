@@ -1,0 +1,66 @@
+store:
+  path: 'MODELOS/metrics.db'
+
+apiKeys:
+  - "clave-falsa-1"
+
+# F3 tarea 24 (2026-09-15): catalogo de F2 en produccion, dimensionado para convivir con el residente
+# (protocolo-f2.md §10, sesion 9). Sobre b10909 + v255, como la tarea 22. Respaldo del catalogo
+# anterior: config.yaml.pre-catalogo-f3-20260915.bak.
+# - Residente y rapido: sin cambios.
+# - Candidatos: `--load-mode mmap` (decision del usuario), `--cache-ram 1024 -np 1` y
+#   `--reasoning off` como en la tanda; `n_ctx` en tokens medidos para el MAX_CHARS del rol.
+# - `-ncmoe` elegido con la tabla de coexistencia: el menor que no desaloja al residente dentro de la
+#   reserva de P-14 (2 GB de VRAM para el resto de la PC). Con menos, Windows saca al residente.
+# - Gemma 4 12B necesita `--batch-size 2048 --ubatch-size 2048`: la imagen son 1 114 tokens y su
+#   codificador no causal aborta con el ubatch por defecto.
+models:
+  gemma3-4b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/gemma-3-4b-it-Q4_K_M.gguf --fit off -ngl 99
+      --ctx-size 8192 --jinja --reasoning off
+
+      '
+    ttl: 120
+  qwen35-2b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Qwen3.5-2B-UD-Q8_K_XL.gguf --fit off -ngl 99
+      --ctx-size 8192 --jinja --reasoning off
+
+      '
+    ttl: 120
+  gemma4-26b-a4b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+      --fit off -ngl 99 -ncmoe 12 --ctx-size 38400 --jinja --reasoning off
+      --load-mode mmap --cache-ram 1024 -np 1
+
+      '
+    ttl: 120
+  qwen36-35b-a3b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+      --fit off -ngl 99 -ncmoe 20 --ctx-size 16384 --jinja --reasoning off
+      --load-mode mmap --cache-ram 1024 -np 1
+
+      '
+    ttl: 120
+  gemma4-12b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/gemma-4-12b-it-Q4_K_M.gguf
+      --mmproj MODELOS/mmproj-F16.gguf
+      --fit off -ngl 99 --ctx-size 8192 --batch-size 2048 --ubatch-size 2048 --jinja --reasoning off
+      --load-mode mmap --cache-ram 1024 -np 1
+
+      '
+    ttl: 30
+groups:
+  swap:
+    swap: true
+    exclusive: false
+    members:
+    - gemma3-4b
+    - gemma4-26b-a4b
+    - qwen36-35b-a3b
+    - qwen35-2b
+    - gemma4-12b

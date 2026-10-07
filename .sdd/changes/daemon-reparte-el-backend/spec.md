@@ -94,7 +94,7 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
   *Justificación:* un `m` así no desaloja nada de lo que usan ni de lo que piden los que esperan, así
   que no retrasa ningún cambio de modelo, y no impide que la cabeza se conceda, porque la concesión
   solo mira la compatibilidad. Con la config de hoy (un solo grupo `swap`) no se da nunca; solo sirve
-  con un residente opcional (`--fijar`). La afinidad **no** se aprovecha de E-1: un alternativo que
+  con un residente opcional (`--pin`). La afinidad **no** se aprovecha de E-1: un alternativo que
   choca con lo que pide la cabeza no la cumple.
   *Cota:* una espera solo puede ser adelantada por peticiones de E-1, que no chocan con ella. Por
   tanto, se concede como muy tarde cuando terminan las operaciones que estaban en `activos` al llegar
@@ -346,7 +346,7 @@ vez no bloquean».
 
 ### E. CLI de residencia y TTL
 
-- **REQ-029:** `local-delegate llamaswap residencia` (sin opciones) **muestra**, para la config
+- **REQ-029:** `local-delegate llamaswap residency` (sin opciones) **muestra**, para la config
   resuelta (`--config`; si no, `LLAMASWAP_CONFIG` del shell; si no, la ruta que usa el daemon, que la da
   su endpoint de REQ-039): cada modelo con su grupo, `swap`/`exclusive`/`persistent`, el **TTL
   efectivo** (resolviendo `-1` y la ausencia a `globalTTL`), si tiene `--mmproj` y si está en
@@ -355,17 +355,17 @@ vez no bloquean».
   `persistent` con TTL efectivo mayor que 0 («`persistent` no lo mantiene cargado») y de los modelos
   con TTL efectivo 0 fuera de un grupo persistente («se queda cargado hasta que otro lo desaloje»).
   Nunca imprime claves de API ni los `cmd`.
-- **REQ-030:** `--ninguno` deja la config **sin residente**. Mueve los miembros de los grupos
-  `persistent` al único grupo con `swap: true` (si no hay exactamente uno, pide `--grupo`), borra los
+- **REQ-030:** `--none` deja la config **sin residente**. Mueve los miembros de los grupos
+  `persistent` al único grupo con `swap: true` (si no hay exactamente uno, pide `--group`), borra los
   grupos `persistent` vacíos y pone `--ttl` a los modelos con TTL efectivo 0. Si hay alguno y no se
   pasa `--ttl`, falla y sugiere el TTL más frecuente entre los demás modelos sin `--mmproj` (hoy, 120).
   Si la config ya cumple, dice «nada que cambiar» y **no escribe**.
-- **REQ-031:** `--fijar MODELO` es la residencia **opt-in**: pone el modelo en un grupo
+- **REQ-031:** `--pin MODEL` es la residencia **opt-in**: pone el modelo en un grupo
   `persistent: true, swap: false, exclusive: false` con `ttl: 0`. Siempre avisa de que ese modelo
   ocupará VRAM de forma permanente. Solo lo hace si
-  `vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserva-gb` (2 por
+  `vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserve-gb` (2 por
   defecto); si no cabe, se niega y dice cuánto falta. La VRAM de cada modelo sale, en este orden, de:
-  1. `--vram-modelo ID=GiB` (repetible): cifras medidas, por ejemplo las de la tabla de coexistencia de
+  1. `--vram-model ID=GiB` (repetible): cifras medidas, por ejemplo las de la tabla de coexistencia de
      F2 (`insumos/llamaswap-grupos.md` §2);
   2. el estimador de `llamaswap_config.py`, **ampliado para `-ncmoe`/`--n-cpu-moe N`**: a los pesos se
      les restan los bytes de los tensores de expertos (`blk.<i>.ffn_*_exps.*`) de las capas `i < N`. El
@@ -373,10 +373,10 @@ vez no bloquean».
      consecutivos, sin tabla de tipos) y se suma el fichero de `--mmproj` si lo hay. Solo se usa si
      pasó su control en los cuatro modelos medidos (ver «Controles»); si falla en alguno, no se usa
      para ninguno;
-  3. si no hay cifra fiable para algún modelo implicado, se niega y pide `--vram-modelo` para ese
+  3. si no hay cifra fiable para algún modelo implicado, se niega y pide `--vram-model` para ese
      modelo.
-- **REQ-032:** `--ttl MODELO=SEGUNDOS` (repetible) cambia el TTL. `SEGUNDOS` es un entero ≥ 1. El 0 se
-  rechaza y remite a `--fijar`, porque es residencia. El `-1` solo se acepta si `globalTTL` es mayor
+- **REQ-032:** `--ttl MODEL=SECONDS` (repetible) cambia el TTL. `SECONDS` es un entero ≥ 1. El 0 se
+  rechaza y remite a `--pin`, porque es residencia. El `-1` solo se acepta si `globalTTL` es mayor
   que 0.
 - **REQ-033:** **Escritura:**
   - edición **quirúrgica**: las líneas que no cambian quedan **byte a byte** iguales (comentarios,
@@ -395,7 +395,7 @@ vez no bloquean».
     línea que contenga `key`.
 - **REQ-034:** **`-watch-config`, antes y después de escribir.**
   - *Antes:* el CLI avisa de que llama-swap recargará en unos 2 s y **descargará todos los modelos**. Se
-    niega, salvo con `--ahora`, si hay delegaciones propias en curso (`inflight.json` con pids vivos),
+    niega, salvo con `--now`, si hay delegaciones propias en curso (`inflight.json` con pids vivos),
     peticiones en vuelo en llama-swap de **cualquier** cliente (la foto de REQ-013) o modelos en
     `/running`.
   - *Después:* confirma qué pasó con la vigía de REQ-039, que se abre **antes** de escribir y espera
@@ -419,7 +419,7 @@ vez no bloquean».
   informativo con un residente configurado (cuánta VRAM retiene); aviso si hay un grupo `persistent`
   con TTL mayor que 0 o una celda de la matriz con la huella cambiada. **Topología**: dice si hay
   turno y, si no, por qué (REQ-002).
-- **REQ-038:** `residencia --restaurar <bak>` vuelve a una copia. Valida que la copia parsea y cumple
+- **REQ-038:** `residency --restore <bak>` vuelve a una copia. Valida que la copia parsea y cumple
   lo de `load.go`, hace a su vez una copia del fichero actual, reemplaza de forma atómica (REQ-033) y
   pasa por las mismas negativas y la misma confirmación de REQ-034. Restaura los bytes tal cual, sin
   edición quirúrgica.
@@ -437,8 +437,8 @@ vez no bloquean».
   2. si el daemon no responde, directamente contra llama-swap con `LOCAL_DELEGATE_API_KEY` del shell,
      haciendo lo mismo;
   3. si ninguna de las dos funciona (sin daemon, 401 o sin key), el estado es **«no se sabe»**: el CLI
-     se niega a escribir salvo con `--ahora`, dice qué no pudo comprobar y no pide la key. Con
-     `--ahora` escribe y avisa de que no puede confirmar la recarga.
+     se niega a escribir salvo con `--now`, dice qué no pudo comprobar y no pide la key. Con
+     `--now` escribe y avisa de que no puede confirmar la recarga.
 
 ### F. Evaluación que aprueba las celdas (va antes de implementar B)
 
@@ -746,7 +746,7 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 ### Scenario: ver la residencia
 
 - **Given** la config de hoy
-- **When** se ejecuta `local-delegate llamaswap residencia`
+- **When** se ejecuta `local-delegate llamaswap residency`
 - **Then** dice «sin residente (recomendado)», lista los 5 modelos con TTL 120 (el 12B, 30) y no
   imprime claves ni `cmd`.
 
@@ -754,39 +754,39 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 
 - **Given** una copia de `config.yaml.pre-sin-residente-20261006.bak` (grupo `resident` persistente con
   `gemma3-4b`, TTL 600)
-- **When** se ejecuta `residencia --ninguno --config <copia>`
+- **When** se ejecuta `residency --none --config <copia>`
 - **Then** el `diff` contra la copia son exactamente las líneas del grupo `resident` borradas y
   `- gemma3-4b` añadida a `swap` (el TTL 600 no se toca, porque no es 0); queda una copia
   `.<fecha>.bak` y el YAML parsea a lo esperado.
 
 ### Scenario: fijar un residente que no cabe
 
-- **Given** `--vram-gb 16 --reserva-gb 2` y `--vram-modelo` con las cifras medidas (26B 10,29 GiB,
+- **Given** `--vram-gb 16 --reserve-gb 2` y `--vram-model` con las cifras medidas (26B 10,29 GiB,
   Qwen3.6 9,88 GiB)
-- **When** se ejecuta `residencia --fijar gemma4-26b-a4b`
+- **When** se ejecuta `residency --pin gemma4-26b-a4b`
 - **Then** se niega: 10,29 + 9,88 = 20,17 GiB no caben en 14; dice que faltan 6,17 GiB y no escribe.
 
 ### Scenario: fijar el 4B con la config de hoy se acepta
 
-- **Given** la config de hoy, `--vram-gb 16 --reserva-gb 2` y `--vram-modelo` para los cinco: las
+- **Given** la config de hoy, `--vram-gb 16 --reserve-gb 2` y `--vram-model` para los cinco: las
   cifras medidas (4B 3,19; 12B 8,85; Qwen3.6 9,88; 26B 10,29 GiB) y, para `qwen35-2b`, que no se midió,
   3,5 GiB (el extremo alto de la estimación del insumo)
-- **When** se ejecuta `residencia --fijar gemma3-4b --config <copia>`
+- **When** se ejecuta `residency --pin gemma3-4b --config <copia>`
 - **Then** se acepta (3,19 + 10,29 = 13,48 ≤ 14 GiB): el 4B pasa a un grupo `persistent` con `ttl: 0` y el CLI avisa
-  de que retendrá VRAM. Si el estimador pasa su control, lo mismo sin `--vram-modelo`.
+  de que retendrá VRAM. Si el estimador pasa su control, lo mismo sin `--vram-model`.
 
 ### Scenario: no escribir con delegaciones en curso
 
 - **Given** una delegación viva en `inflight.json`, o una petición en vuelo de otro cliente en la foto
   de llama-swap
-- **When** se ejecuta `residencia --ttl gemma4-12b=60`
-- **Then** se niega y explica que la recarga descargaría el modelo; con `--ahora`, escribe.
+- **When** se ejecuta `residency --ttl gemma4-12b=60`
+- **Then** se niega y explica que la recarga descargaría el modelo; con `--now`, escribe.
 
 ### Scenario: sin credencial no se escribe a ciegas
 
 - **Given** el daemon apagado y el shell sin `LOCAL_DELEGATE_API_KEY`
-- **When** se ejecuta `residencia --ttl gemma4-12b=60`
-- **Then** se niega con «no se sabe si hay delegaciones en curso», sin pedir la key; con `--ahora`,
+- **When** se ejecuta `residency --ttl gemma4-12b=60`
+- **Then** se niega con «no se sabe si hay delegaciones en curso», sin pedir la key; con `--now`,
   escribe y avisa de que no puede confirmar la recarga.
 
 ### Scenario: llama-swap rechaza la config
@@ -806,7 +806,7 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 ### Scenario: restaurar una copia
 
 - **Given** una config cambiada con `--ttl` y su copia `.bak`
-- **When** se ejecuta `residencia --restaurar <bak>`
+- **When** se ejecuta `residency --restore <bak>`
 - **Then** el fichero queda byte a byte como la copia, el actual queda guardado en otra copia y se
   informa de la recarga.
 
@@ -848,7 +848,7 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 - **Las dos sintaxis de grupos a la vez:** el CLI se niega (llama-swap tampoco arranca).
 - **Un `.bak` con el mismo segundo ya existe:** se añade un sufijo; nunca se pisa.
 - **El disco falla a mitad del reemplazo:** el original queda intacto (renombrado atómico).
-- **`--ninguno` sin ningún grupo `swap: true`:** error, con `--grupo`.
+- **`--none` sin ningún grupo `swap: true`:** error, con `--group`.
 - **Procesos fuera del daemon** (una instancia stdio de Claude Desktop, `benchmark.py`, la Mac): no
   pasan por el turno, pero sus peticiones en vuelo **sí** aparecen en la foto de REQ-013 y cuentan para
   las condiciones b y c.
@@ -940,9 +940,9 @@ Cada control nombra la tarea del plan que produce lo que consume y puede dar un 
 | Umbral de lentitud: la regla exacta | (a) Sobre las filas **de la PC** de la copia de `metrics.db`, cruzadas con `usage-*.jsonl` como en el insumo y agrupadas por evento, en orden temporal y con la ventana de 50, el mínimo de 10 y `tokens_out ≥ 8`: marca como mucho el 5 % de los eventos. Si marca más, el umbral se revisa con el usuario antes de implementar D. (b) **Control positivo de la regla** (no de la población del daemon): la misma regla sobre las filas de Qwen3.6 de todos los orígenes marca las 570, 571 y 573. Si no las marca, la regla está mal, no el umbral | Copia de `metrics.db`, `usage-*.jsonl` y un script nuevo que sustituye a `umbral_lento.py` | Tarea de la referencia de velocidad |
 | Lentitud y tamaño de la entrada | Mediana de generación por tramos de entrada en las filas de la PC: si el tramo de más de 10k es menor que 0,75 × el de menos de 2k, la referencia va por tramos (REQ-025); si no, una sola. Además cuenta los falsos positivos con entradas de más de 10k tokens con la regla elegida | Lo mismo | Tarea de la referencia de velocidad |
 | Edición quirúrgica | Sobre copias de la config vigente y de la del 2026-09-15, y sobre una tabla de casos: secuencias sangradas y sin sangrar (la de hoy es sin sangrar); comentarios en la misma línea y entre miembros; un modelo sin `ttl` cuyo `ttl` se inserta después de un `cmd` entre comillas en varias líneas y después de un escalar `\|` o `>`; un grupo al final del fichero sin salto de línea final; fin de línea mixto (el real `config.yaml.pre-b10909-20260915.bak`); BOM; claves entre comillas; la sintaxis `routing.router.settings.groups`; y, para rechazar, anclas, alias, `<<:` y claves duplicadas. En cada caso, o el `diff` son solo las líneas pedidas, o hay una negativa con mensaje: nunca un fichero roto. Un mutante que reescriba con `safe_dump` falla porque pierde los comentarios de la cabecera y cambia las comillas de `apiKeys` (el número de líneas lo da el test) | Copias de los `config.yaml`, con las claves sustituidas por valores falsos | Tarea del CLI |
-| Estimador de VRAM con `-ncmoe` | Contra lo medido en F2 (`insumos/llamaswap-grupos.md` §2: 4B 3 270, 12B con mmproj 9 060, 26B `-ncmoe 12` 10 534 y Qwen3.6 `-ncmoe 20` 10 120 MiB): pasa si las cuatro estimaciones quedan entre −3 % y +10 % de lo medido (quedarse corto es lo peligroso: da OOM). Si alguna no pasa, `--fijar` exige `--vram-modelo` para todos los modelos implicados (REQ-031) | GGUF reales (solo lectura de cabecera) | Tarea del CLI |
+| Estimador de VRAM con `-ncmoe` | Contra lo medido en F2 (`insumos/llamaswap-grupos.md` §2: 4B 3 270, 12B con mmproj 9 060, 26B `-ncmoe 12` 10 534 y Qwen3.6 `-ncmoe 20` 10 120 MiB): pasa si las cuatro estimaciones quedan entre −3 % y +10 % de lo medido (quedarse corto es lo peligroso: da OOM). Si alguna no pasa, `--pin` exige `--vram-model` para todos los modelos implicados (REQ-031) | GGUF reales (solo lectura de cabecera) | Tarea del CLI |
 | Recarga con `-watch-config` | Salen las cuatro salidas de REQ-034 con el llama-swap de prueba (recarga válida, rechazo escrito sin autocomprobación, sin `-watch-config`, apagado). Además se mide si las peticiones en curso **se cortan** al recargar: si no se cortan, el aviso de REQ-034 se suaviza; si se cortan, se mantiene la negativa | llama-swap v255 de prueba con su propio `store` | Tarea de prueba de llama-swap |
-| Restaurar | `--restaurar` deja el fichero byte a byte como la copia. Un lector que relee el fichero en bucle durante una restauración lenta nunca ve un YAML a medias; con un mutante que copia en dos pasos, sí lo ve | Copias de prueba | Tarea del CLI |
+| Restaurar | `--restore` deja el fichero byte a byte como la copia. Un lector que relee el fichero en bucle durante una restauración lenta nunca ve un YAML a medias; con un mutante que copia en dos pasos, sí lo ve | Copias de prueba | Tarea del CLI |
 
 ## Traceability
 
@@ -953,7 +953,7 @@ Cada control nombra la tarea del plan que produce lo que consume y puede dar un 
 | REQ-010 a REQ-018 | Matriz con huella, elección pura y foto de llama-swap | Tests con endpoints simulados; test matriz = veredicto; prueba de la carrera |
 | REQ-019 a REQ-023, REQ-037 | `cadenas.py`, `checks.py`, `local_status`, wiki; enmienda registrada en F3 | Tests de cadenas con y sin `cargado` (matriz vacía); textos de `doctor` y `local_status`; punto en la spec de F3 y gate de F3 aprobado |
 | REQ-024 a REQ-028 | `timings`, ventana de referencia, log y panel | Tests del log con y sin `timings`; paridad JS; controles de lentitud |
-| REQ-029 a REQ-036, REQ-038, REQ-039 | CLI `llamaswap residencia`, endpoints del daemon, `init-llamaswap`, checks de `doctor` | Tests sobre copias; tabla de edición; estimador contra lo medido; prueba de recarga y restauración |
+| REQ-029 a REQ-036, REQ-038, REQ-039 | CLI `llamaswap residency`, endpoints del daemon, `init-llamaswap`, checks de `doctor` | Tests sobre copias; tabla de edición; estimador contra lo medido; prueba de recarga y restauración |
 | REQ-040 a REQ-043 | Corpus, tanda, hoja y veredicto | `veredicto.json` y tabla en `verification.md` |
 | REQ-044 | Orden de idioma en `local_commit_msg` y corpus reconstruido con `es` (T5b) | Tests con mutantes; `afinidad --comprobar`; `--seco` con solo las celdas de commit pendientes |
 
@@ -992,8 +992,8 @@ gane en la hoja:
    pedir la key. Recomendado: sí.
 5. **Orden de llegada estricto**, sin ventana para unirse al turno (hallazgo menor 27): cuesta un
    cambio de modelo de más en el escenario de la inanición. Recomendado: estricto.
-6. **Nombre del comando:** `local-delegate llamaswap residencia` con `--ninguno`, `--fijar`, `--ttl`,
-   `--restaurar` y `--vram-modelo`.
+6. **Nombre del comando:** `local-delegate llamaswap residency` con `--none`, `--pin`, `--ttl`,
+   `--restore` y `--vram-model`.
 
 ## Aclaraciones posteriores a la aprobación
 
@@ -1052,7 +1052,9 @@ tareas del plan que la recogen (T7, T8, T10, T11 y T14) llevan la marca «aclara
 | REQ-005, E-1 (`:91-93`) | «se concede **en el acto** una petición `R` con algún modelo `m`…» | «se concede, **al llegar o en cualquier evaluación posterior, con la misma condición**, una petición `R` con algún modelo `m`…». La justificación y la cota no cambian |
 | REQ-007, red de seguridad (`:112-121`) | El reloj de falta de progreso se pone a cero cuando una llamada empieza o termina | Además, **una concesión forzada también pone a cero el reloj** de falta de progreso, y **como mucho se concede una forzada por evaluación** |
 | REQ-002, motivos de «sin topología» (`:37-41`) | «sin `LLAMASWAP_CONFIG`, sin el extra `[llamaswap]`, YAML ilegible, router `matrix`, o un modelo que no aparece en la config» | Se añaden **«dos sintaxis»** (`groups`/`matrix` arriba y `routing.router` a la vez) y **«no cumple load.go»** (la config que `load.go` de v255 rechazaría, con las reglas de REQ-033). Una config con **forma inesperada** nunca rompe la lectura: cuenta como sin topología: «ilegible» si el YAML no se puede leer o su raíz no es un mapa, y «no cumple load.go» si una clave tiene un tipo que `load.go` no puede deserializar (un mapa escrito como lista o al revés). `doctor` y `local_status` dicen el motivo con estas palabras: «sin LLAMASWAP_CONFIG», «sin PyYAML» (el extra `[llamaswap]`), «ilegible», «matrix», «dos sintaxis», «no cumple load.go»; en `local_status`, «Turno: no (<motivo>)» (plan, T10 punto 8). El backend no local y el modelo que no aparece en la config siguen como estaban |
-| REQ-002 y REQ-006, el salto sin turno (`:37-41`, `:104-109`) — **pendiente de aceptación del usuario** (propuesta de la revisión de la ola 4) | «se comporta como hoy» sin topología; REQ-006 describe el salto con turno | **Sin turno, el salto también suelta la plaza** y la vuelve a pedir: REQ-037 enmienda REQ-017 de F3 de forma incondicional, y el daemon tiene un solo camino de código para el salto. Por eso, también sin topología, puede verse una espera de plaza (`espera_local: "plaza"`) a mitad de una operación, entre el intento fallido y el respaldo. El tope de `MAX_CONCURRENT_REQUESTS` no cambia |
+| REQ-002 y REQ-006, el salto sin turno (`:37-41`, `:104-109`) — **aceptada por el usuario el 2026-10-07** (propuesta de la revisión de la ola 4) | «se comporta como hoy» sin topología; REQ-006 describe el salto con turno | **Sin turno, el salto también suelta la plaza** y la vuelve a pedir: REQ-037 enmienda REQ-017 de F3 de forma incondicional, y el daemon tiene un solo camino de código para el salto. Por eso, también sin topología, puede verse una espera de plaza (`espera_local: "plaza"`) a mitad de una operación, entre el intento fallido y el respaldo. El tope de `MAX_CONCURRENT_REQUESTS` no cambia |
+| REQ-031, la comprobación de «cabe» de `--pin` (`:363-377`) — **aceptada por el usuario el 2026-10-07** (propuesta de la revisión de la ola 5) | «`vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserve-gb`» | «`vram(MODELO)` + la suma de los residentes que ya hay (TTL efectivo 0) + el peor caso del resto por grupos `≤ --vram-gb − --reserve-gb`», con el peor caso de `llamaswap_config.worst_case_gb` (por grupo, el mayor si `swap: true` y la suma si `swap: false`; suma entre grupos). Solo puede negar más: con el texto vigente, un residente que ya existe o un grupo `swap: false` quedaban fuera de la cuenta. Los dos escenarios de la spec dan lo mismo (20,17 GiB frente a 14, faltan 6,17; 13,48 frente a 14, se acepta) |
+| REQ-029 a REQ-034 y REQ-038, nombres del CLI — **nombres del CLI en inglés, decisión del usuario 2026-10-07** | Subcomando y opciones en español: `llamaswap residencia`, `--ninguno`, `--fijar MODELO`, `--restaurar`, `--ahora`, `--vram-modelo ID=GiB`, `--grupo`, `--reserva-gb`, `--ttl MODELO=SEGUNDOS` | En inglés, como el resto del CLI, sin alias en español (el comando es nuevo): `llamaswap residency`, `--none`, `--pin MODEL`, `--restore`, `--now`, `--vram-model ID=GiB`, `--group`, `--reserve-gb`, `--ttl MODEL=SECONDS`; `--config`, `--dry-run`, `--vram-gb` y `--ttl` no cambian. Las referencias de esta spec ya usan los nombres nuevos; la ayuda y los mensajes siguen en español, como los de `init-llamaswap` |
 
 *Por qué cada una:*
 

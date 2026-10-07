@@ -511,3 +511,12 @@ def _olvidar() -> None:
     global _cache
     with _cerrojo:
         _cache = None
+
+
+# Nombres públicos de las mismas funciones, para `residencia` (T11), que edita la config con las
+# mismas reglas que este lector: así no hay una segunda copia que se desincronice. Sin cambio de
+# comportamiento.
+errores_de_forma = _errores_de_forma
+sintaxis = _sintaxis
+usa_matrix = _usa_matrix
+interpretar = _interpretar

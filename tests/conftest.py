@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import socket
 import sys
 from pathlib import Path
 
@@ -82,6 +83,29 @@ def turno_y_topologia_a_cero():
     vaciar()
     yield
     vaciar()
+
+
+# --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------
+PUERTO_MUERTO = pytest.StashKey[int]()
+
+
+@pytest.fixture(autouse=True)
+def daemon_real_cortado(request, monkeypatch):
+    """El CLI pregunta al daemon (puerto y token web, los de `doctor`) por la config y el estado de
+    llama-swap. En la suite esa consulta va a un puerto local recién liberado, sin nadie escuchando:
+    sin esto, un test de `llamaswap residency` sin `--config` leería la ruta del daemon de verdad y
+    podría acabar escribiendo en la config real de llama-swap.
+
+    Se parchea `cli._destino_del_daemon` y no `config.WEB_PORT`: este último lo comparan con las
+    entradas de los clientes otros tests (`test_checks.py`), y cambiarlo para todos los rompería.
+    El puerto queda en `request.node.stash[PUERTO_MUERTO]` para que un test compruebe que la
+    fixture se aplicó sin pedirla (si dejara de ser autouse, no habría puerto guardado).
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        puerto = s.getsockname()[1]
+    request.node.stash[PUERTO_MUERTO] = puerto
+    monkeypatch.setattr("local_delegate.cli._destino_del_daemon", lambda: ("127.0.0.1", puerto, {}))
 
 
 @pytest.fixture
