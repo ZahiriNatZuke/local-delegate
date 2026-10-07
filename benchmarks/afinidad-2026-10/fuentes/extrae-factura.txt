@@ -1,0 +1,5 @@
+Factura: F-2026-0457
+Fecha: 14/03/2026
+Cliente: Talleres Almaguer S.L.
+Concepto: mantenimiento mensual
+Total: 1234.50 EUR

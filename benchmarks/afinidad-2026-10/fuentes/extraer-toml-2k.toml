@@ -1,0 +1,37 @@
+[project]
+name = "local-delegate-mcp"
+version = "0.27.0"
+description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Yohan González Almaguer" }]
+keywords = ["mcp", "llm", "local", "openai-compatible", "claude", "llama-swap", "ollama", "quota"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+]
+dependencies = [
+    # Techo de major deliberado, ahora sobre el major 2. Se sube, no se quita: la lección que dejó
+    # la 0.12.1 es que un rango sin techo es una bomba de tiempo (el 2.0.0 eliminó
+    # `mcp.server.fastmcp` y `uvx` resolvió al major nuevo, matando el proceso en el import antes de
+    # hablar MCP), no que este techo concreto sobrara.
+    "mcp>=2,<3",
+    # `httpx2` y no `httpx`: es lo que usa el SDK 2.x, y tener las dos librerías HTTP instaladas a
+    # la vez para siempre es peor que migrar una vez. Starlette 1.3 ya la prefiere para su
+    # `TestClient` y deprecó `httpx`. **Con techo**, y no por simetría: cumple las dos condiciones
+    # del criterio —está en el camino de import de arranque (`server.py` la usa para hablar con el
+    # backend) y su versionado tiene major real—, al revés que `httpx`, que estaba en `0.x` y por
+    # eso no lo llevaba.
+    "httpx2>=2.5,<3",
+    # Techo de major: `platformdirs` y `filelock` están en el **camino de import de arranque**
+    # (`server.py` las carga al importarse, `platformdirs` vía `config.py`), así que si un major
+    # nuevo rompe, el proceso muere antes de poder hablar MCP y el cliente solo ve
+    # `MCP error -32000: Connection closed` — el mismo fallo mudo de la 0.12.1. Las dos usan major

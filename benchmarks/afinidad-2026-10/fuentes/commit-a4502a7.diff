@@ -1,0 +1,96 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 5fd32c4..d3f0f47 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,19 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++### Fixed
++- **El check `hooks copiados` contaba `__pycache__` como si fuera un script.** Decía «4 script(s)»
++  donde había 3, porque contaba las entradas del directorio y Python deja ahí su caché en cuanto
++  los hooks se ejecutan una vez. No es cosmético: **ese número es justo el que se mira para
++  confirmar que un script retirado desapareció** —así se verificó la retirada de `output_policy.py`
++  y compañía en la 0.27.0—, así que un directorio de más hacía que el check afirmara lo contrario
++  de lo que había pasado.
++
++  Se cuentan los `.py`. Medido antes de tocar nada sobre los **tres** probes que listan un
++  directorio: `scaffold.hook_orphans` y `scaffold.skill` no tenían el defecto —usan la lista para
++  saber si el directorio existe, no para contar—, así que el arreglo es de un solo sitio y no de
++  tres. Dos tests nuevos, uno de ellos el control que impide que el otro pase en vacío.
++
+ ### Changed
+ - **El hook de lectura empieza a avisar a los 8 KB y no a los 32, porque el aviso no se ignoraba:
+   no llegaba.** La pregunta era por qué el asistente no delega cuando toca, y la respuesta que
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index 8a2fe36..076342a 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -582,7 +582,12 @@ def _probe_hook_files(ctx: Context) -> Result:
+     faltan = [name for name in expected if name not in entries]
+     if faltan:
+         return Result(WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(faltan)}", INSTALL_HINT)
+-    return Result(OK, f"{len(entries)} script(s) en {ctx.hooks_dir}")
++    # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
++    # Python deja ahí un `__pycache__/` y el conteo decía «4 script(s)» donde hay 3. No es cosmético
++    # —es JUSTO el número que se mira para confirmar que un script retirado desapareció—, y con un
++    # directorio de más el check afirmaba lo contrario de lo que había pasado.
++    scripts = [name for name in entries if name.endswith(".py")]
++    return Result(OK, f"{len(scripts)} script(s) en {ctx.hooks_dir}")
+ 
+ 
+ def _probe_hook_orphans(ctx: Context) -> Result:
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index ab8a092..015eef2 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -1115,3 +1115,49 @@ def test_una_entrada_stdio_no_cuenta_como_ciega(tmp_path, monkeypatch):
+     result = result_for("service.daemon_auth", ctx)
+ 
+     assert "Codex" not in result.detail
++
++
++def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
++    """`__pycache__` aparece en cuanto los hooks se ejecutan una vez, y no es un script.
++
++    No es cosmético: **ese número es justo el que se mira para confirmar que un script retirado
++    desapareció** —así se verificó la retirada de `output_policy.py` y compañía en la 0.27.0—, y
++    con un directorio de más el check afirmaba lo contrario de lo que había pasado. Medido en la
++    máquina real: decía «4 script(s)» donde había 3.
++    """
++    home = make_home(tmp_path)
++    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
++    scripts = sorted(p.name for p in hooks_dir.iterdir() if p.suffix == ".py")
++
++    antes = result_for("scaffold.hook_files", make_ctx(home))
++    assert antes.status == checks.OK
++    assert f"{len(scripts)} script(s)" in antes.detail, antes.detail
++
++    # Lo que hace Python en cuanto el hook corre una vez.
++    pycache = hooks_dir / "__pycache__"
++    pycache.mkdir()
++    (pycache / "hook_common.cpython-311.pyc").write_bytes(b"\x00")
++
++    despues = result_for("scaffold.hook_files", make_ctx(home))
++    assert despues.status == checks.OK
++    assert f"{len(scripts)} script(s)" in despues.detail, (
++        f"el __pycache__ se coló en el conteo: {despues.detail}"
++    )
++
++
++def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
++    """Control del test de arriba: sin esto, un conteo clavado a mano lo dejaría en verde.
++
++    Se añade un `.py` en vez de borrar uno porque el HOME de pruebas tiene **un solo** script (el
++    de `_HOOK_EVENTS`), y quitarlo dispararía el `warn` de «faltan scripts», que es otro camino y
++    no diría nada del conteo.
++    """
++    home = make_home(tmp_path)
++    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
++    antes = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
++
++    (hooks_dir / "hook_common.py").write_text("# ayudante", encoding="utf-8")
++
++    result = result_for("scaffold.hook_files", make_ctx(home))
++    assert result.status == checks.OK
++    assert f"{antes + 1} script(s)" in result.detail, result.detail

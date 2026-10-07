@@ -1,0 +1,428 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 67a3d5e..4e264e6 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,28 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++## [0.7.0] - 2026-07-10
++
++### Fixed
++- Dashboard: el panel «En curso» nunca mostraba delegaciones activas si el navegador
++  consultaba un proceso MCP distinto del que las ejecutaba (varias sesiones de Claude Code
++  abiertas a la vez, o la web arrancada manualmente con
++  `python -m local_delegate.web.metrics`) — el estado `inflight` vivía solo en memoria del
++  proceso que ganaba el puerto 9393. Ahora `_inflight_start`/`_inflight_end`/
++  `inflight_snapshot()` leen y escriben `LOG_DIR/inflight.json` bajo `FileLock`, así
++  `/api/inflight` ve las delegaciones de **todas** las sesiones activas en la máquina, no
++  solo la del proceso que sirve la web. Autolimpieza de entradas huérfanas (proceso muerto o
++  con más de 30 min sin cerrarse) en cada lectura, sin hilo de fondo dedicado.
++- Dashboard: el mensaje vacío «Sin delegaciones en curso» heredaba `Inter` en vez de
++  `JetBrains Mono` como el resto del panel «Backend local» (badges, nombres de modelo,
++  contador de tiempo).
++
++### Added
++- Dashboard: el modelo que está procesando una delegación ahora se marca en el panel
++  «Backend local» (punto ámbar con pulso, estado «procesando») y la tool en uso se resalta
++  en los chips de «Tools MCP disponibles», cruzando el modelo/tool de cada entrada de
++  `/api/inflight` contra las filas ya renderizadas.
++
+ ## [0.6.0] - 2026-07-10
+ 
+ ### Added
+diff --git a/pyproject.toml b/pyproject.toml
+index b5b0b5b..a910c72 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "local-delegate-mcp"
+-version = "0.6.0"
++version = "0.7.0"
+ description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+ readme = "README.md"
+ requires-python = ">=3.11"
+diff --git a/src/local_delegate/server.py b/src/local_delegate/server.py
+index 325aade..655ab7b 100644
+--- a/src/local_delegate/server.py
++++ b/src/local_delegate/server.py
+@@ -64,10 +64,77 @@ def _get_client() -> httpx.Client:
+     return _client
+ 
+ 
+-# --- Delegaciones en curso (visibilidad; solo dentro de este proceso) -------
++# --- Delegaciones en curso (visibilidad multi-proceso vía archivo compartido) ----------------
++# El estado vive en LOG_DIR/inflight.json (mismo directorio de datos que el log de uso), no
++# solo en memoria: así CUALQUIER proceso MCP que sirva la web (metrics.py) ve las delegaciones
++# en curso de TODAS las sesiones de Claude activas en esta máquina, no solo la suya. El
++# contador local (_inflight_lock/_inflight_next_id) solo genera ids únicos por proceso; nunca
++# toca disco.
+ _inflight_lock = threading.Lock()
+-_inflight: dict[int, dict] = {}
+ _inflight_next_id = 0
++_INFLIGHT_STALE_S = 1800  # red de seguridad: entrada huérfana (proceso muerto a media escritura)
++
++
++def _inflight_file() -> Path:
++    return config.LOG_DIR / "inflight.json"
++
++
++def _pid_alive(pid: int) -> bool:
++    """Best-effort: True si el proceso con ese PID sigue vivo. Nunca lanza."""
++    if pid == os.getpid():
++        return True
++    try:
++        if sys.platform == "win32":
++            import ctypes
++
++            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFO
++            if not handle:
++                return False
++            ctypes.windll.kernel32.CloseHandle(handle)
++            return True
++        os.kill(pid, 0)
++        return True
++    except Exception:
++        return False
++
++
++def _read_inflight_data(path: Path) -> dict:
++    try:
++        with path.open(encoding="utf-8") as f:
++            data = json.load(f)
++        return data if isinstance(data, dict) else {}
++    except (OSError, ValueError):
++        return {}
++
++
++def _atomic_write_json(path: Path, data: dict) -> None:
++    tmp = path.with_name(path.name + ".tmp")
++    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
++    tmp.replace(path)
++
++
++def _inflight_mutate(mutate_fn) -> None:
++    """Aplica mutate_fn(dict) al archivo compartido de inflight bajo lock exclusivo.
++
++    Best-effort como el resto del logging: si no consigue el lock en 1s, aplica igual sin
++    lock (nunca bloquea ni rompe una delegación). El peor caso es una entrada perdida o
++    duplicada, que se autolimpia por TTL/pid-muerto en inflight_snapshot().
++    """
++    path = _inflight_file()
++    try:
++        path.parent.mkdir(parents=True, exist_ok=True)
++        lock = FileLock(str(path) + ".lock", timeout=1)
++        try:
++            with lock:
++                data = _read_inflight_data(path)
++                mutate_fn(data)
++                _atomic_write_json(path, data)
++        except Timeout:
++            data = _read_inflight_data(path)
++            mutate_fn(data)
++            _atomic_write_json(path, data)
++    except OSError:
++        pass  # el tracking de inflight es best-effort; jamás rompe una delegación
+ 
+ 
+ def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int:
+@@ -75,36 +142,67 @@ def _inflight_start(*, tool: str, model: str, source: str, chars_in: int) -> int
+     with _inflight_lock:
+         _inflight_next_id += 1
+         entry_id = _inflight_next_id
+-        _inflight[entry_id] = {
+-            "tool": tool,
+-            "model": model,
+-            "source": source,
+-            "chars_in": chars_in,
+-            "started_at": time.time(),
+-        }
++    pid = os.getpid()
++    key = f"{pid}:{entry_id}"
++    entry = {
++        "tool": tool,
++        "model": model,
++        "source": source,
++        "chars_in": chars_in,
++        "started_at": time.time(),
++        "pid": pid,
++    }
++
++    def _add(data: dict) -> None:
++        data[key] = entry
++
++    _inflight_mutate(_add)
+     return entry_id
+ 
+ 
+ def _inflight_end(entry_id: int) -> None:
+-    with _inflight_lock:
+-        _inflight.pop(entry_id, None)
++    key = f"{os.getpid()}:{entry_id}"
++
++    def _remove(data: dict) -> None:
++        data.pop(key, None)
++
++    _inflight_mutate(_remove)
+ 
+ 
+ def inflight_snapshot() -> list[dict]:
+-    """Copia de las delegaciones en curso, con `elapsed_s`. Usada por la web de métricas."""
++    """Delegaciones en curso de TODOS los procesos MCP activos, con `elapsed_s`.
++
++    Lee/limpia el archivo compartido de inflight (ver _inflight_mutate). Descarta entradas
++    huérfanas (TTL vencido o proceso ya muerto) en la misma pasada, así no hace falta un hilo
++    de housekeeping aparte. Usada por /api/inflight (web de métricas).
++    """
+     now = time.time()
+-    with _inflight_lock:
+-        return [
+-            {
+-                "id": entry_id,
+-                "tool": v["tool"],
+-                "model": v["model"],
+-                "source": v["source"],
+-                "chars_in": v["chars_in"],
+-                "elapsed_s": round(now - v["started_at"], 1),
+-            }
+-            for entry_id, v in _inflight.items()
+-        ]
++    result: list[dict] = []
++
++    def _collect_and_prune(data: dict) -> None:
++        stale = []
++        for key, v in data.items():
++            age = now - v.get("started_at", 0)
++            pid = v.get("pid")
++            if age > _INFLIGHT_STALE_S or (pid is not None and not _pid_alive(pid)):
++                stale.append(key)
++                continue
++            result.append(
++                {
++                    "id": key,
++                    "tool": v.get("tool"),
++                    "model": v.get("model"),
++                    "source": v.get("source"),
++                    "chars_in": v.get("chars_in"),
++                    "elapsed_s": round(age, 1),
++                }
++            )
++        for key in stale:
++            data.pop(key, None)
++
++    _inflight_mutate(_collect_and_prune)
++    result.sort(key=lambda e: -e["elapsed_s"])
++    return result
+ 
+ 
+ # --- Helpers ----------------------------------------------------------------
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index fa1156b..c31ced6 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -15,9 +15,9 @@ Solo se abren los archivos cuyo mes interseca el rango pedido — releer un rang
+ recorre el histórico completo. Cache en memoria por archivo (mtime+size); solo el archivo del
+ mes actual cambia entre refrescos.
+ 
+-Limitación de /api/inflight: solo ve las llamadas en vuelo del PROCESO que sirve esta web (el
+-MCP que la arrancó). Si tienes varias instancias de Claude con su propio MCP, cada una sirve su
+-propia web y su propio /api/inflight — no hay estado compartido entre procesos.
++/api/inflight lee un archivo compartido (LOG_DIR/inflight.json, ver server._inflight_mutate) en
++vez de memoria local: ve las delegaciones en curso de TODAS las sesiones de Claude activas en
++esta máquina (mismo usuario del SO), no solo la del proceso que sirve esta web.
+ 
+ Dos formas de arrancar:
+   1) Automática: el MCP (server.py) llama a run_in_thread() en un hilo daemon,
+@@ -550,20 +550,24 @@ td.mono,th.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+   border-radius:999px;padding:3px 10px;text-transform:uppercase}
+ .pill.up{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent)}
+ .pill.down{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 32%,transparent)}
+-.mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent)}
++.mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent);border-radius:8px;transition:background .2s}
+ .mrow:last-child{border-bottom:0}
++.mrow.busy{background:color-mix(in srgb,var(--amber) 9%,transparent);padding-left:6px;padding-right:6px}
+ .mdot{width:8px;height:8px;border-radius:50%;background:var(--faint);opacity:.55;flex:0 0 auto;transition:.2s}
+ .mdot.ready{background:var(--acc);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
+ .mdot.starting{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent)}
++.mdot.busy{background:var(--amber);opacity:1;box-shadow:0 0 8px color-mix(in srgb,var(--amber) 60%,transparent);animation:pulse 1.4s infinite}
+ .mname{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--tx)}
+ .mrole{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
+   background:color-mix(in srgb,var(--violet) 13%,transparent);color:var(--violet)}
+ .mstate{margin-left:auto;font-size:11px;color:var(--mut);font-family:var(--mono)}
++.mrow.busy .mstate{color:var(--amber);font-weight:600}
+ .subh{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
+ .toolchips{display:flex;flex-wrap:wrap;gap:6px}
+ .tchip{font-family:var(--mono);font-size:10.5px;color:var(--mut);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;cursor:default;transition:.13s}
+ .tchip:hover{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+-.ifrow{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2)}
++.tchip.busy{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:color-mix(in srgb,var(--amber) 12%,transparent)}
++.ifrow{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:12.5px;color:var(--tx2);font-family:var(--mono)}
+ .spin{width:12px;height:12px;border-radius:50%;flex:0 0 auto;
+   border:2px solid color-mix(in srgb,var(--amber) 28%,transparent);border-top-color:var(--amber);animation:rot .8s linear infinite}
+ @keyframes rot{to{transform:rotate(360deg)}}
+@@ -749,7 +753,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
+ <script>
+ const CPT = 4, F = new Intl.NumberFormat('es'), PAGE = 10;
+ const state = {events:[], range:'today', auto:true, charts:{},
+-  page:0, status:null, running:{}, backendUp:undefined};
++  page:0, status:null, running:{}, backendUp:undefined, inflight:[]};
+ const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+ const tok = c => Math.round(c/CPT);
+ const MONO = "'JetBrains Mono',ui-monospace,monospace";
+@@ -867,25 +871,28 @@ function renderBackend(){
+   pill.title = st.base_url||'';
+   const models = [...(((st.backend)||{}).models||[])];
+   (st.catalog||[]).forEach(c=>{ if(!models.includes(c.model)) models.push(c.model); });
++  const busyModels = new Set((state.inflight||[]).map(it=>it.model));
+   const body = document.getElementById('modelsBody');
+   if(!models.length){
+     body.innerHTML = '<div class="empty" style="padding:16px">El backend no expone modelos ('+(st.base_url||'?')+').</div>';
+     return;
+   }
+   body.innerHTML = models.map(m=>{
++    const busy = busyModels.has(m);
+     const run = state.running[m];
+-    const cls = run==='ready'?'ready':(run?'starting':'');
+-    const stateTxt = run==='ready'?'montado':(run||'frío');
++    const cls = (run==='ready'?'ready':(run?'starting':'')) + (busy?' busy':'');
++    const stateTxt = busy?'procesando':(run==='ready'?'montado':(run||'frío'));
+     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
+-    return `<div class="mrow"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span></div>`;
++    return `<div class="mrow${busy?' busy':''}"><span class="mdot ${cls}"></span><span class="mname">${m}</span>${roles}<span class="mstate">${stateTxt}</span></div>`;
+   }).join('');
+ }
+ 
+ function renderTools(){
+   const tools = ((state.status||{}).tools)||[];
++  const busyTools = new Set((state.inflight||[]).map(it=>it.tool));
+   document.getElementById('toolsCount').textContent = tools.length?('('+tools.length+')'):'';
+   document.getElementById('toolsBody').innerHTML = tools.length
+-    ? tools.map(t=>`<span class="tchip" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
++    ? tools.map(t=>`<span class="tchip${busyTools.has(t.name)?' busy':''}" title="${(t.summary||'').replace(/"/g,'&quot;')}">${t.name}</span>`).join('')
+     : '<span class="tchip">sin datos</span>';
+ }
+ 
+@@ -897,10 +904,10 @@ async function pollInflight(){
+     state.backendUp = !!bj.available;
+     state.running = {};
+     if(bj.available) (bj.running||[]).forEach(m=>{ if(m.model) state.running[m.model]=m.state||'ready'; });
+-    renderBackend();
+-    const items = ij.inflight||[];
+-    document.getElementById('inflightBody').innerHTML = items.length
+-      ? items.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
++    state.inflight = ij.inflight||[];
++    renderBackend(); renderTools();
++    document.getElementById('inflightBody').innerHTML = state.inflight.length
++      ? state.inflight.map(it=>`<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
+           <span class="badge model">${it.model}</span>
+           <span class="num" style="color:var(--mut)">${it.elapsed_s}s · ${F.format(it.chars_in||0)} chars</span></div>`).join('')
+       : '<div class="ifrow" style="color:var(--faint)">Sin delegaciones en curso</div>';
+diff --git a/tests/test_core.py b/tests/test_core.py
+index f737ff8..a1b90cf 100644
+--- a/tests/test_core.py
++++ b/tests/test_core.py
+@@ -459,7 +459,9 @@ def test_log_event_writes_to_rotated_file(monkeypatch, tmp_path):
+ 
+ 
+ # --- F4: delegaciones en curso (inflight) -----------------------------------------------
+-def test_inflight_snapshot_during_and_after_chat(monkeypatch):
++def test_inflight_snapshot_during_and_after_chat(tmp_path, monkeypatch):
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++
+     def slow_post_chat(model, payload):
+         _time.sleep(0.3)
+         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index ce590d4..8f86478 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -4,6 +4,7 @@
+ from __future__ import annotations
+ 
+ import json
++import os
+ import time
+ from datetime import datetime, timezone
+ 
+@@ -108,26 +109,49 @@ def test_api_events_default_range_last_30_days(tmp_path, monkeypatch):
+     assert len(data["meta"]["files_read"]) == 1
+ 
+ 
+-def test_api_inflight_reflects_server_state(monkeypatch):
+-    monkeypatch.setattr(
+-        server,
+-        "_inflight",
+-        {
+-            1: {
+-                "tool": "t",
+-                "model": "m",
+-                "source": "path",
+-                "chars_in": 5,
+-                "started_at": time.time(),
+-            }
++def test_api_inflight_reflects_server_state(tmp_path, monkeypatch):
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++    entry_id = server._inflight_start(tool="t", model="m", source="path", chars_in=5)
++    try:
++        client = TestClient(metrics.app)
++        r = client.get("/api/inflight")
++        assert r.status_code == 200
++        data = r.json()
++        assert len(data["inflight"]) == 1
++        assert data["inflight"][0]["tool"] == "t"
++    finally:
++        server._inflight_end(entry_id)
++
++
++def test_api_inflight_sees_other_process_and_drops_dead_pid(tmp_path, monkeypatch):
++    """/api/inflight lee el archivo compartido: ve entradas de OTROS pids vivos y descarta
++    las de pids muertos, sin que este proceso haya llamado a _inflight_start para ellas."""
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++    other_pid = os.getppid()  # un pid real y vivo, distinto del nuestro
++    path = server._inflight_file()
++    data = {
++        f"{other_pid}:1": {
++            "tool": "local_classify",
++            "model": "m",
++            "source": "inline",
++            "chars_in": 1,
++            "started_at": time.time(),
++            "pid": other_pid,
+         },
+-    )
++        "999999:1": {
++            "tool": "local_extract",
++            "model": "m",
++            "source": "inline",
++            "chars_in": 1,
++            "started_at": time.time(),
++            "pid": 999999,
++        },
++    }
++    server._atomic_write_json(path, data)
++
+     client = TestClient(metrics.app)
+-    r = client.get("/api/inflight")
+-    assert r.status_code == 200
+-    data = r.json()
+-    assert len(data["inflight"]) == 1
+-    assert data["inflight"][0]["tool"] == "t"
++    tools = {e["tool"] for e in client.get("/api/inflight").json()["inflight"]}
++    assert tools == {"local_classify"}
+ 
+ 
+ @respx.mock
+diff --git a/uv.lock b/uv.lock
+index 7916c34..d5a7663 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -377,7 +377,7 @@ wheels = [
+ 
+ [[package]]
+ name = "local-delegate-mcp"
+-version = "0.6.0"
++version = "0.7.0"
+ source = { editable = "." }
+ dependencies = [
+     { name = "fastapi" },

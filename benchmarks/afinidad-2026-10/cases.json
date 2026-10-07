@@ -1,0 +1,3744 @@
+{
+  "schema_version": 2,
+  "production_config": {
+    "long_input_chars": 6000,
+    "chunk_chars": 3500,
+    "models": {
+      "mechanical": "gemma3-4b",
+      "long": "gemma4-26b-a4b",
+      "code": "qwen36-35b-a3b",
+      "vision": "gemma4-12b"
+    },
+    "max_chars": {
+      "mechanical": 20000,
+      "long": 48000,
+      "code": 20000,
+      "vision": 20000
+    }
+  },
+  "controls": [],
+  "seleccion": {
+    "regla": "Commits de `main` con fecha anterior a 2026-10-06, de mas reciente a mas antiguo, sin merges, sin autor Dependabot, sin asunto `chore(deps...)`, sin asunto `chore: release`, con un diff (`git show --format=`) de 2 000 a 20 000 chars. Los 29 primeros (sin contar el de `commit-diff-19k`) son los casos reales; los 9 siguientes, las trampas. Si no salen 38, se amplia la ventana de 400 commits a todo el historial y, despues, el rango a 1 000-30 000 chars.",
+    "ref": "main",
+    "fecha_limite": "2026-10-06",
+    "paso": 0,
+    "privacidad": "excluir",
+    "caso_de_f2": {
+      "id": "commit-diff-19k",
+      "commit": "d7c3dcc"
+    },
+    "reales": [
+      {
+        "hash": "9eb197bdd2c51dd867da9e0c391997913508713c",
+        "fecha": "2026-09-22",
+        "chars": 11495
+      },
+      {
+        "hash": "c2312cdc5d7ada49a824d72f948cd500dd1e97d8",
+        "fecha": "2026-09-22",
+        "chars": 2873
+      },
+      {
+        "hash": "64311f56e1e76761da069baef91668f8ec9793fe",
+        "fecha": "2026-09-22",
+        "chars": 18547
+      },
+      {
+        "hash": "2c602eb2bb7a0fa90dc765ca4559f15083e32699",
+        "fecha": "2026-09-15",
+        "chars": 2924
+      },
+      {
+        "hash": "e34c102f284ab2e11ef11c2c54d8a77901f5e415",
+        "fecha": "2026-09-15",
+        "chars": 14389
+      },
+      {
+        "hash": "4ef1ba0b50dab9d1772a80f0846cd6feaf615a94",
+        "fecha": "2026-09-15",
+        "chars": 19614
+      },
+      {
+        "hash": "ad79697067841ac86b02149a3d4be1f44192c208",
+        "fecha": "2026-09-15",
+        "chars": 10249
+      },
+      {
+        "hash": "8b061ec957bfe0ccc74c5c94a1353c1a119586a9",
+        "fecha": "2026-09-15",
+        "chars": 13373
+      },
+      {
+        "hash": "71f2a41fee63443434063a31932d6ce95de4439d",
+        "fecha": "2026-09-15",
+        "chars": 10589
+      },
+      {
+        "hash": "e428c078bdefca6922c327e6a51b737ef9a5265f",
+        "fecha": "2026-09-14",
+        "chars": 15861
+      },
+      {
+        "hash": "b2545e9333d6cbfb99b89409d2bda98e212ee609",
+        "fecha": "2026-09-14",
+        "chars": 14067
+      },
+      {
+        "hash": "a4502a72f95a17e5c182adc7bdf794293dbc5223",
+        "fecha": "2026-09-08",
+        "chars": 4866
+      },
+      {
+        "hash": "8610c74b2f421ce76d69c7158ae1312e82f4bd41",
+        "fecha": "2026-09-08",
+        "chars": 15688
+      },
+      {
+        "hash": "eb353632a948a6f169a3f10686d7317661211b81",
+        "fecha": "2026-09-08",
+        "chars": 14012
+      },
+      {
+        "hash": "daddf391d16aed948c06996da99e2d6519ec8e7d",
+        "fecha": "2026-09-08",
+        "chars": 19729
+      },
+      {
+        "hash": "f7c8d6ed29515135b19ab148b19ed3960d642a2e",
+        "fecha": "2026-09-08",
+        "chars": 3129
+      },
+      {
+        "hash": "11c65b5eb0a19fee1216beea5ea755a71ff930bf",
+        "fecha": "2026-08-18",
+        "chars": 3078
+      },
+      {
+        "hash": "67eb74ac4d723fe541406f02300123112f52d868",
+        "fecha": "2026-08-18",
+        "chars": 8392
+      },
+      {
+        "hash": "4e9035ac7d62558a2f9c6ac18c1e7c4897acdc01",
+        "fecha": "2026-08-18",
+        "chars": 3075
+      },
+      {
+        "hash": "1dd97a3c932071a9e24416072378d9a737fdba48",
+        "fecha": "2026-08-18",
+        "chars": 6862
+      },
+      {
+        "hash": "56f588d949eb2e6c7866b4337325849dedea6bad",
+        "fecha": "2026-08-18",
+        "chars": 7007
+      },
+      {
+        "hash": "bcbe39f1e4c090c15d66f57de4095bc91590efa5",
+        "fecha": "2026-08-04",
+        "chars": 3081
+      },
+      {
+        "hash": "53c9dcbad3c0ed20af8f3d7abc6bc028ca52fd65",
+        "fecha": "2026-08-04",
+        "chars": 8534
+      },
+      {
+        "hash": "e7deb0d108d0c9389572e02a70272646aa69fc03",
+        "fecha": "2026-08-03",
+        "chars": 8533
+      },
+      {
+        "hash": "ccddeea367db2bfbb4d926b3be2940e1c1211211",
+        "fecha": "2026-08-03",
+        "chars": 10938
+      },
+      {
+        "hash": "2fbfe93847a4ff5869bc1c90db8ba56c8adfb98f",
+        "fecha": "2026-08-03",
+        "chars": 13079
+      },
+      {
+        "hash": "6a7959e971a7c51966f171858cd51ff04dffa5d4",
+        "fecha": "2026-08-02",
+        "chars": 3253
+      },
+      {
+        "hash": "67e585f034f44e3d6ae0857aa7fb5fe509fac073",
+        "fecha": "2026-08-01",
+        "chars": 6467
+      },
+      {
+        "hash": "4aa21411b09c74faa76a031d8b8821b2da9c7790",
+        "fecha": "2026-08-01",
+        "chars": 13283
+      }
+    ],
+    "trampas": [
+      {
+        "hash": "1314b0bd3321c9f59a47daf6b9a0f59fe5d9164a",
+        "fecha": "2026-07-31",
+        "chars": 15764
+      },
+      {
+        "hash": "4f41311ae3a0c440ab8d28d1de28ca8af9fbf9e2",
+        "fecha": "2026-07-31",
+        "chars": 4494
+      },
+      {
+        "hash": "3b20fb384192ec44f1d1d2dd5f512cd9f6cc05cd",
+        "fecha": "2026-07-31",
+        "chars": 3087
+      },
+      {
+        "hash": "6d442e78c9a0f18c717f0272ba0e1c75ac9799f6",
+        "fecha": "2026-07-31",
+        "chars": 8729
+      },
+      {
+        "hash": "b04a5e267ef95522f37875265ff26f4085c07d02",
+        "fecha": "2026-07-31",
+        "chars": 3083
+      },
+      {
+        "hash": "7d0f4ac80ba7272996f0043f5861ff60ba4ba745",
+        "fecha": "2026-07-31",
+        "chars": 2040
+      },
+      {
+        "hash": "9d2c242c08bd6270c3a7458fce636f8972f37812",
+        "fecha": "2026-07-31",
+        "chars": 3090
+      },
+      {
+        "hash": "fa08d64fa69afc1b3647f5ade133806987419816",
+        "fecha": "2026-07-31",
+        "chars": 5022
+      },
+      {
+        "hash": "6710a6b80f88f4f496dfdd511c3b9123a0ac6126",
+        "fecha": "2026-07-31",
+        "chars": 10148
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "clasifica-bug-con-etiquetas-en-ingles",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-bug-con-etiquetas-en-ingles.txt",
+      "source_sha256": "2495b2b10dd4d9c0aeaaa2244f2536b4dbe63d2f82c0cca7944a35172a54245c",
+      "source_bytes": 76,
+      "source_chars": 72,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [bug, feature, docs, question]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "bug",
+          "feature",
+          "docs",
+          "question"
+        ],
+        "aceptables": [
+          "bug"
+        ]
+      },
+      "reference_ok": "bug",
+      "reference_bad": "feature"
+    },
+    {
+      "id": "clasifica-peticion-de-funcion",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-peticion-de-funcion.txt",
+      "source_sha256": "a3e7bb00bdaf41df0b7b921476a8715855803acda3180db6c2d904356d471099",
+      "source_bytes": 63,
+      "source_chars": 62,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [bug, feature, docs, question]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "bug",
+          "feature",
+          "docs",
+          "question"
+        ],
+        "aceptables": [
+          "feature"
+        ]
+      },
+      "reference_ok": "feature",
+      "reference_bad": "bug"
+    },
+    {
+      "id": "clasifica-idioma-aleman",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-idioma-aleman.txt",
+      "source_sha256": "70ac56a89716fdbab8289382ee1722b1c3850ff419d6b5a92ed71e9b72829b0f",
+      "source_bytes": 58,
+      "source_chars": 57,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [inglés, alemán, francés, español]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "inglés",
+          "alemán",
+          "francés",
+          "español"
+        ],
+        "aceptables": [
+          "alemán"
+        ]
+      },
+      "reference_ok": "alemán",
+      "reference_bad": "inglés"
+    },
+    {
+      "id": "clasifica-ironia",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-ironia.txt",
+      "source_sha256": "931d98357b3ebd00fae311946d0b47eb226c466464718fa2f50313376b412b3f",
+      "source_bytes": 69,
+      "source_chars": 67,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [positivo, negativo, neutro, mixto]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "positivo",
+          "negativo",
+          "neutro",
+          "mixto"
+        ],
+        "aceptables": [
+          "negativo"
+        ]
+      },
+      "reference_ok": "negativo",
+      "reference_bad": "positivo"
+    },
+    {
+      "id": "clasifica-deportes",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-deportes.txt",
+      "source_sha256": "4191c5aa7fd512b488e89d5a47689fc61900ab4bdf9aa7133b5f405a6cb9a84e",
+      "source_bytes": 61,
+      "source_chars": 60,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [deportes, política, economía, tecnología]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "deportes",
+          "política",
+          "economía",
+          "tecnología"
+        ],
+        "aceptables": [
+          "deportes"
+        ]
+      },
+      "reference_ok": "deportes",
+      "reference_bad": "política"
+    },
+    {
+      "id": "clasifica-economia",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-economia.txt",
+      "source_sha256": "fb950ec4829ab51d18cf87e0c3bb241271004f88f0ab14ca5fc76f0b7532cf24",
+      "source_bytes": 64,
+      "source_chars": 61,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [deportes, política, economía, tecnología]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "deportes",
+          "política",
+          "economía",
+          "tecnología"
+        ],
+        "aceptables": [
+          "economía"
+        ]
+      },
+      "reference_ok": "economía",
+      "reference_bad": "tecnología"
+    },
+    {
+      "id": "clasifica-negacion-reenvio",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-negacion-reenvio.txt",
+      "source_sha256": "f15f18b7afd910a4c113c550ae745943e714226f30727347d1492c4767644b7c",
+      "source_bytes": 79,
+      "source_chars": 78,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [reembolso, reenvío, cancelación, consulta]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "reembolso",
+          "reenvío",
+          "cancelación",
+          "consulta"
+        ],
+        "aceptables": [
+          "reenvío"
+        ]
+      },
+      "reference_ok": "reenvío",
+      "reference_bad": "reembolso"
+    },
+    {
+      "id": "clasifica-lenguaje-de-programacion",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "clasifica-lenguaje-de-programacion.txt",
+      "source_sha256": "41511ac1fba5f0d7bbae1301756de246a14d4f8b2f58a14767de52d05b9b3f1e",
+      "source_bytes": 32,
+      "source_chars": 32,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [python, javascript, rust, sql]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "classify",
+        "etiquetas": [
+          "python",
+          "javascript",
+          "rust",
+          "sql"
+        ],
+        "aceptables": [
+          "python"
+        ]
+      },
+      "reference_ok": "python",
+      "reference_bad": "javascript"
+    },
+    {
+      "id": "extrae-factura",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-factura.txt",
+      "source_sha256": "47c79287683ff2ab9801e6e3daac6bcbff83fd06d5eb5dc5c73e1732805b848d",
+      "source_bytes": 122,
+      "source_chars": 122,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"factura\", \"fecha\", \"cliente\", \"total\", \"moneda\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "factura": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "fecha": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "cliente": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "total": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "moneda": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "factura",
+            "fecha",
+            "cliente",
+            "total",
+            "moneda"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "factura",
+          "fecha",
+          "cliente",
+          "total",
+          "moneda"
+        ],
+        "esperado": {
+          "factura": "F-2026-0457",
+          "fecha": "14/03/2026",
+          "cliente": "Talleres Almaguer S.L.",
+          "total": 1234.5,
+          "moneda": "EUR"
+        }
+      },
+      "reference_ok": "{\"factura\": \"F-2026-0457\", \"fecha\": \"14/03/2026\", \"cliente\": \"Talleres Almaguer S.L.\", \"total\": 1234.5, \"moneda\": \"EUR\"}",
+      "reference_bad": "{\"factura\": \"F-2026-0457\", \"fecha\": \"14/03/2026\", \"cliente\": \"Talleres Almaguer S.L.\", \"total\": \"1234.50\", \"moneda\": \"EUR\"}"
+    },
+    {
+      "id": "extrae-linea-de-log-con-numeros",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-linea-de-log-con-numeros.log",
+      "source_sha256": "e5b562d22093c649d90b64784e7194c257e9c9f0e63f9b9b327a3717ae9917a5",
+      "source_bytes": 81,
+      "source_chars": 81,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"timestamp\", \"nivel\", \"servicio\", \"status\", \"latencia_ms\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "nivel": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "servicio": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "status": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "latencia_ms": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "timestamp",
+            "nivel",
+            "servicio",
+            "status",
+            "latencia_ms"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "timestamp",
+          "nivel",
+          "servicio",
+          "status",
+          "latencia_ms"
+        ],
+        "esperado": {
+          "timestamp": "2026-03-14T09:21:07Z",
+          "nivel": "ERROR",
+          "servicio": "payment-service",
+          "status": 502,
+          "latencia_ms": 1840
+        }
+      },
+      "reference_ok": "{\"timestamp\": \"2026-03-14T09:21:07Z\", \"nivel\": \"ERROR\", \"servicio\": \"payment-service\", \"status\": 502, \"latencia_ms\": 1840}",
+      "reference_bad": "{\"timestamp\": \"2026-03-14T09:21:07Z\", \"nivel\": \"ERROR\", \"servicio\": \"payment-service\", \"status\": \"502\", \"latencia_ms\": 1840}"
+    },
+    {
+      "id": "extrae-correo-sin-telefono",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-correo-sin-telefono.txt",
+      "source_sha256": "3bfe3fb5b52ff770fd26cfce2938e6170f9ee83694f683beb7e8310580218392",
+      "source_bytes": 134,
+      "source_chars": 131,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"nombre\", \"correo\", \"asunto\", \"telefono\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "nombre": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "correo": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "asunto": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "telefono": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "nombre",
+            "correo",
+            "asunto",
+            "telefono"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "nombre",
+          "correo",
+          "asunto",
+          "telefono"
+        ],
+        "esperado": {
+          "nombre": "Marta Ruiz",
+          "correo": "marta.ruiz@example.org",
+          "asunto": "Cambio de fecha de la reunión",
+          "telefono": null
+        }
+      },
+      "reference_ok": "{\"nombre\": \"Marta Ruiz\", \"correo\": \"marta.ruiz@example.org\", \"asunto\": \"Cambio de fecha de la reunión\", \"telefono\": null}",
+      "reference_bad": "{\"nombre\": \"Marta Ruiz\", \"correo\": \"marta.ruiz@example.org\", \"asunto\": \"Cambio de fecha de la reunión\", \"telefono\": \"\"}"
+    },
+    {
+      "id": "extrae-producto-sin-existencias",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-producto-sin-existencias.txt",
+      "source_sha256": "2350f5dfcf0082cc98bc7c2366cc5fc9fdf1085ced577aec7f7e8794c7a5b46e",
+      "source_bytes": 77,
+      "source_chars": 69,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"nombre\", \"talla\", \"precio\", \"stock\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "nombre": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "talla": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "precio": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "stock": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "nombre",
+            "talla",
+            "precio",
+            "stock"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "nombre",
+          "talla",
+          "precio",
+          "stock"
+        ],
+        "esperado": {
+          "nombre": "Camiseta Azul Marino",
+          "talla": "M",
+          "precio": 19.99,
+          "stock": 0
+        }
+      },
+      "reference_ok": "{\"nombre\": \"Camiseta Azul Marino\", \"talla\": \"M\", \"precio\": 19.99, \"stock\": 0}",
+      "reference_bad": "{\"nombre\": \"Camiseta Azul Marino\", \"talla\": \"M\", \"precio\": 19.99, \"stock\": null}"
+    },
+    {
+      "id": "extrae-toml-sin-licencia",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-toml-sin-licencia.toml",
+      "source_sha256": "a7e0b84dd88598c1d3b9d150cc0ceb74f314ba2d5ca2e8a9a5727f6ffef4159f",
+      "source_bytes": 74,
+      "source_chars": 74,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"name\", \"version\", \"requires-python\", \"license\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "requires-python": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "license": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "requires-python",
+            "license"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "name",
+          "version",
+          "requires-python",
+          "license"
+        ],
+        "esperado": {
+          "name": "demo-tool",
+          "version": "1.4.2",
+          "requires-python": ">=3.11",
+          "license": null
+        }
+      },
+      "reference_ok": "{\"name\": \"demo-tool\", \"version\": \"1.4.2\", \"requires-python\": \">=3.11\", \"license\": null}",
+      "reference_bad": "{\"name\": \"demo-tool\", \"version\": \"1.4.2\", \"requires-python\": \">=3.11\"}"
+    },
+    {
+      "id": "extrae-acta-con-cifras",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-acta-con-cifras.txt",
+      "source_sha256": "fd3d844beac73ff14a71fb0b9f51f20d1e1cb9cc25a6c576e3ccda91c4255a87",
+      "source_bytes": 106,
+      "source_chars": 104,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"asistentes\", \"socios\", \"a_favor\", \"en_contra\", \"abstenciones\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "asistentes": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "socios": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "a_favor": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "en_contra": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "abstenciones": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "asistentes",
+            "socios",
+            "a_favor",
+            "en_contra",
+            "abstenciones"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "asistentes",
+          "socios",
+          "a_favor",
+          "en_contra",
+          "abstenciones"
+        ],
+        "esperado": {
+          "asistentes": 12,
+          "socios": 20,
+          "a_favor": 9,
+          "en_contra": 2,
+          "abstenciones": 1
+        }
+      },
+      "reference_ok": "{\"asistentes\": 12, \"socios\": 20, \"a_favor\": 9, \"en_contra\": 2, \"abstenciones\": 1}",
+      "reference_bad": "{\"asistentes\": 12, \"socios\": 20, \"a_favor\": 9, \"en_contra\": 1, \"abstenciones\": 2}"
+    },
+    {
+      "id": "extrae-linea-de-acceso-web",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-linea-de-acceso-web.log",
+      "source_sha256": "ca6d545a95843de4a280f4c6559dc9770f58a5f237722b7c40c906718bc296dd",
+      "source_bytes": 88,
+      "source_chars": 88,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"ip\", \"metodo\", \"ruta\", \"codigo\", \"bytes\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ip": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "metodo": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "ruta": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "codigo": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "bytes": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "ip",
+            "metodo",
+            "ruta",
+            "codigo",
+            "bytes"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "ip",
+          "metodo",
+          "ruta",
+          "codigo",
+          "bytes"
+        ],
+        "esperado": {
+          "ip": "203.0.113.7",
+          "metodo": "GET",
+          "ruta": "/api/v2/users?id=42",
+          "codigo": 404,
+          "bytes": 512
+        }
+      },
+      "reference_ok": "{\"ip\": \"203.0.113.7\", \"metodo\": \"GET\", \"ruta\": \"/api/v2/users?id=42\", \"codigo\": 404, \"bytes\": 512}",
+      "reference_bad": "{\"ip\": \"203.0.113.7\", \"metodo\": \"GET\", \"ruta\": \"/api/v2/users\", \"codigo\": 404, \"bytes\": 512}"
+    },
+    {
+      "id": "extrae-reunion-sin-organizador",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "extrae-reunion-sin-organizador.txt",
+      "source_sha256": "a8ab5b772d6f2fd71f561b2fe187806fd95e553157441fb977dc3b7923ae9fe7",
+      "source_bytes": 64,
+      "source_chars": 63,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"fecha\", \"hora\", \"lugar\", \"organizador\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "fecha": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "hora": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "lugar": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "organizador": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "fecha",
+            "hora",
+            "lugar",
+            "organizador"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "extract",
+        "claves": [
+          "fecha",
+          "hora",
+          "lugar",
+          "organizador"
+        ],
+        "esperado": {
+          "fecha": "5 de abril",
+          "hora": "16:30",
+          "lugar": "sala B",
+          "organizador": null
+        }
+      },
+      "reference_ok": "{\"fecha\": \"5 de abril\", \"hora\": \"16:30\", \"lugar\": \"sala B\", \"organizador\": null}",
+      "reference_bad": "{\"fecha\": \"5 de abril\", \"hora\": \"16:30\", \"lugar\": \"sala B\", \"organizador\": \"ninguno\"}"
+    },
+    {
+      "id": "traduce-guia-de-inicio",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "Markdown escrito para el caso, en ingles; se traduce al español",
+      "media_type": "texto",
+      "source_file": "traduce-guia-de-inicio.md",
+      "source_sha256": "0687db363df7822fee72460c2e7bb42492970cc98bba72d64b5e0b33b6b905f6",
+      "source_bytes": 292,
+      "source_chars": 292,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al español, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al español el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 274,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "translate",
+        "titulos": 2,
+        "listas": 3,
+        "bloques": 2,
+        "codigo": [
+          "pip install demo-tool  # installs the CLI\ndemo-tool check --strict",
+          "[demo]\ntimeout = 30  # seconds"
+        ]
+      },
+      "reference_ok": "# Inicio rápido\n\nInstala el paquete y ejecuta la comprobación:\n\n- Instálalo con pip.\n- Ejecuta el comando de comprobación.\n- Lee el informe.\n\n```bash\npip install demo-tool  # installs the CLI\ndemo-tool check --strict\n```\n\n## Configuración\n\nDefine el tiempo de espera en segundos:\n\n```toml\n[demo]\ntimeout = 30  # seconds\n```\n",
+      "reference_bad": "# Inicio rápido\n\nInstala el paquete y ejecuta la comprobación:\n\n- Instálalo con pip.\n- Ejecuta el comando de comprobación.\n- Lee el informe.\n\n```bash\npip install demo-tool  # instala la CLI\ndemo-tool check --strict\n```\n\n## Configuración\n\nDefine el tiempo de espera en segundos:\n\n```toml\n[demo]\ntimeout = 30  # seconds\n```\n"
+    },
+    {
+      "id": "traduce-solucion-de-problemas",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "Markdown escrito para el caso, en ingles; se traduce al español",
+      "media_type": "texto",
+      "source_file": "traduce-solucion-de-problemas.md",
+      "source_sha256": "6fa89edacf74324612fe9514e98c13a4aa9c798e16f084751c92cd005c7b47cd",
+      "source_bytes": 367,
+      "source_chars": 367,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al español, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al español el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 311,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "translate",
+        "titulos": 2,
+        "listas": 3,
+        "bloques": 1,
+        "codigo": [
+          "def is_free(port):\n    \"\"\"Return True when nothing listens on the port.\"\"\"\n    # try to bind and close at once\n    return True"
+        ]
+      },
+      "reference_ok": "# Solución de problemas\n\nSi el servicio no arranca, sigue estos pasos en orden:\n\n1. Comprueba que el puerto está libre.\n2. Borra el archivo de bloqueo obsoleto.\n3. Arranca el servicio otra vez.\n\n```python\ndef is_free(port):\n    \"\"\"Return True when nothing listens on the port.\"\"\"\n    # try to bind and close at once\n    return True\n```\n\n### ¿Sigue fallando?\n\nAbre una incidencia y adjunta el registro.\n",
+      "reference_bad": "# Solución de problemas\n\nSi el servicio no arranca, sigue estos pasos en orden:\n\n1. Comprueba que el puerto está libre.\n2. Borra el archivo de bloqueo obsoleto.\n\n```python\ndef is_free(port):\n    \"\"\"Return True when nothing listens on the port.\"\"\"\n    # try to bind and close at once\n    return True\n```\n\n### ¿Sigue fallando?\n\nAbre una incidencia y adjunta el registro.\n"
+    },
+    {
+      "id": "traduce-registro-de-cambios",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "Markdown escrito para el caso, en ingles; se traduce al español",
+      "media_type": "texto",
+      "source_file": "traduce-registro-de-cambios.md",
+      "source_sha256": "3840ca64d126958769f6014130ea7ca03ab42da87fbb9d85e13ee05da9403916",
+      "source_bytes": 217,
+      "source_chars": 217,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al español, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al español el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 236,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "translate",
+        "titulos": 3,
+        "listas": 3,
+        "bloques": 1,
+        "codigo": [
+          "$ demo run --dry-run\n# nothing was written"
+        ]
+      },
+      "reference_ok": "## Registro de cambios\n\n### Añadido\n\n- Nuevo indicador `--dry-run`.\n- Soporte para plantillas personalizadas.\n\n### Corregido\n\n- El analizador ya no falla con archivos vacíos.\n\nEjemplo del nuevo indicador:\n\n```\n$ demo run --dry-run\n# nothing was written\n```\n",
+      "reference_bad": "## Registro de cambios\n\n### Añadido\n\n- Nuevo indicador `--dry-run`.\n- Soporte para plantillas personalizadas.\n\n### Corregido\n\n- El analizador ya no falla con archivos vacíos.\n\nEjemplo del nuevo indicador:\n\n```\n$ demo run --dry-run\n# no se escribió nada\n```\n"
+    },
+    {
+      "id": "traduce-lista-de-version",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "Markdown escrito para el caso, en ingles; se traduce al español",
+      "media_type": "texto",
+      "source_file": "traduce-lista-de-version.md",
+      "source_sha256": "ba1096c61888dc29dfbf5b9c22975adc332143c1671e9b5a23d754611a860287",
+      "source_bytes": 224,
+      "source_chars": 224,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al español, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al español el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 240,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "translate",
+        "titulos": 1,
+        "listas": 4,
+        "bloques": 1,
+        "codigo": [
+          "# bump the version everywhere\nVERSION = '1.2.0'"
+        ]
+      },
+      "reference_ok": "# Lista de comprobación de la versión\n\nAntes de etiquetar una versión:\n\n- Actualiza la versión:\n  - en `pyproject.toml`\n  - en el registro de cambios\n- Ejecuta toda la batería de pruebas.\n\n```python\n# bump the version everywhere\nVERSION = '1.2.0'\n```\n\nDespués, sube la etiqueta.\n",
+      "reference_bad": "Lista de comprobación de la versión\n\nAntes de etiquetar una versión:\n\n- Actualiza la versión:\n  - en `pyproject.toml`\n  - en el registro de cambios\n- Ejecuta toda la batería de pruebas.\n\n```python\n# bump the version everywhere\nVERSION = '1.2.0'\n```\n\nDespués, sube la etiqueta.\n"
+    },
+    {
+      "id": "resume-ruff-tres-reglas",
+      "tool": "local_lint_summary",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "generado",
+      "origen": "salida de ruff escrita para el caso (sin rutas reales)",
+      "media_type": "texto",
+      "source_file": "resume-ruff-tres-reglas.txt",
+      "source_sha256": "ec0b6183c8ca06cac255bdf11c914291473771ddd2df55b2ecbda2767bd49270",
+      "source_bytes": 340,
+      "source_chars": 340,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Resume la siguiente salida de linter/tests:\n\n{CONTENIDO}",
+      "max_tokens": 496,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 200
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "lint",
+        "conteos": {
+          "E501": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "F401": [
+            1,
+            2,
+            3
+          ],
+          "W291": [
+            1
+          ]
+        },
+        "max_words": 200
+      },
+      "reference_ok": "Resumen de ruff: 8 avisos en 3 archivos.\n- E501: 4 avisos en 3 archivos (línea demasiado larga).\n- F401: 3 avisos en 2 archivos (importaciones sin usar).\n- W291: 1 aviso en 1 archivo (espacios al final de línea).",
+      "reference_bad": "Resumen de ruff: 8 avisos en 3 archivos.\n- E501: 6 avisos en 3 archivos (línea demasiado larga).\n- F401: 3 avisos en 2 archivos (importaciones sin usar).\n- W291: 1 aviso en 1 archivo (espacios al final de línea)."
+    },
+    {
+      "id": "resume-ruff-docstrings",
+      "tool": "local_lint_summary",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "generado",
+      "origen": "salida de ruff escrita para el caso (sin rutas reales)",
+      "media_type": "texto",
+      "source_file": "resume-ruff-docstrings.txt",
+      "source_sha256": "b110b57cb1159eec9243dcedb0ecdbc2e38f79d44b3891bc64fbd192659c3538",
+      "source_bytes": 626,
+      "source_chars": 626,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Resume la siguiente salida de linter/tests:\n\n{CONTENIDO}",
+      "max_tokens": 496,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 200
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "lint",
+        "conteos": {
+          "D100": [
+            1,
+            3
+          ],
+          "D103": [
+            2,
+            3,
+            5
+          ],
+          "T201": [
+            1,
+            3
+          ],
+          "B006": [
+            1
+          ]
+        },
+        "max_words": 200
+      },
+      "reference_ok": "Resumen de ruff: 12 avisos en 3 archivos.\n- D100: 3 avisos en 3 archivos (módulo sin docstring).\n- D103: 5 avisos en 2 archivos (función pública sin docstring).\n- T201: 3 avisos en 1 archivo (uso de print).\n- B006: 1 aviso en 1 archivo (argumento mutable por defecto).",
+      "reference_bad": "Resumen de ruff: 12 avisos en 3 archivos.\n- D100: 3 avisos en 3 archivos (módulo sin docstring).\n- D103: 4 avisos en 2 archivos (función pública sin docstring).\n- T201: 3 avisos en 1 archivo (uso de print).\n- B006: 1 aviso en 1 archivo (argumento mutable por defecto)."
+    },
+    {
+      "id": "resume-ruff-un-solo-archivo",
+      "tool": "local_lint_summary",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "generado",
+      "origen": "salida de ruff escrita para el caso (sin rutas reales)",
+      "media_type": "texto",
+      "source_file": "resume-ruff-un-solo-archivo.txt",
+      "source_sha256": "7666debfbc2ca5df842cb29520580e7711e8c44dfcda60b9d8188d9715d1db3e",
+      "source_bytes": 438,
+      "source_chars": 438,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Resume la siguiente salida de linter/tests:\n\n{CONTENIDO}",
+      "max_tokens": 496,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 200
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "lint",
+        "conteos": {
+          "E402": [
+            1,
+            4
+          ],
+          "E501": [
+            1,
+            3
+          ],
+          "E711": [
+            1
+          ]
+        },
+        "max_words": 200
+      },
+      "reference_ok": "Resumen de ruff: 8 avisos, todos en tools/gen.py.\n- E402: 4 avisos (importación fuera de la cabecera).\n- E501: 3 avisos (línea demasiado larga).\n- E711: 1 aviso (comparación con None).",
+      "reference_bad": "Resumen de ruff: 8 avisos, todos en tools/gen.py.\n- E402: 4 avisos (importación fuera de la cabecera).\n- E501: 2 avisos (línea demasiado larga).\n- E711: 2 avisos (comparación con None)."
+    },
+    {
+      "id": "resume-ruff-cinco-reglas",
+      "tool": "local_lint_summary",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "generado",
+      "origen": "salida de ruff escrita para el caso (sin rutas reales)",
+      "media_type": "texto",
+      "source_file": "resume-ruff-cinco-reglas.txt",
+      "source_sha256": "0809f67c265b1bed3ef6bcec7b6beba41fc4cd61a328cfe9f90986ce870c889c",
+      "source_bytes": 784,
+      "source_chars": 784,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen de los problemas agrupados por archivo, con el conteo por tipo de error/regla y los más relevantes primero. Máximo 200 palabras. Nada fuera del formato.",
+      "user_template": "Resume la siguiente salida de linter/tests:\n\n{CONTENIDO}",
+      "max_tokens": 496,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {
+        "max_words": 200
+      },
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "lint",
+        "conteos": {
+          "I001": [
+            1,
+            2,
+            3
+          ],
+          "SIM102": [
+            2,
+            3,
+            5
+          ],
+          "UP006": [
+            1,
+            2,
+            3
+          ],
+          "RET504": [
+            1,
+            2
+          ]
+        },
+        "max_words": 200
+      },
+      "reference_ok": "Resumen de ruff: 13 avisos en 3 archivos.\n- I001: 3 avisos en 2 archivos (importaciones sin ordenar).\n- SIM102: 5 avisos en 2 archivos (if anidados).\n- UP006: 3 avisos en 2 archivos (anotaciones antiguas).\n- RET504: 2 avisos en 2 archivos (asignación innecesaria antes de return).",
+      "reference_bad": "Resumen de ruff: 13 avisos en 3 archivos.\n- I001: 3 avisos en 2 archivos (importaciones sin ordenar).\n- SIM102: 4 avisos en 2 archivos (if anidados).\n- UP006: 3 avisos en 2 archivos (anotaciones antiguas).\n- RET504: 2 avisos en 2 archivos (asignación innecesaria antes de return)."
+    },
+    {
+      "id": "delega-contar-palabras",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "delega-contar-palabras.txt",
+      "source_sha256": "a82005bf2f44f4c59879e5b9801588974d310939f3b08e75ef2cfdd716d962d2",
+      "source_bytes": 54,
+      "source_chars": 52,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: Solo un número entero, sin texto adicional. Nada fuera del formato.",
+      "user_template": "Cuenta cuántas palabras tiene el texto\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "delegate",
+        "esperado": "9",
+        "formato": "\\d+"
+      },
+      "reference_ok": "9",
+      "reference_bad": "El texto tiene 9 palabras."
+    },
+    {
+      "id": "delega-lista-a-csv",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "delega-lista-a-csv.txt",
+      "source_sha256": "c3fd656fdf999b6c553ea7669ecab796c17e2372e5bec4e5a93e798c22e533f5",
+      "source_bytes": 21,
+      "source_chars": 21,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: Una sola línea con los valores separados por comas, sin espacios. Nada fuera del formato.",
+      "user_template": "Convierte la lista en una sola línea CSV\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "delegate",
+        "esperado": "manzana,pera,uva,kiwi",
+        "formato": "[^,\\s]+(?:,[^,\\s]+)*"
+      },
+      "reference_ok": "manzana,pera,uva,kiwi",
+      "reference_bad": "manzana, pera, uva, kiwi"
+    },
+    {
+      "id": "delega-fecha-iso",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "delega-fecha-iso.txt",
+      "source_sha256": "ec9e8c1fc52369750cb1ec8a7390b90ccebe36ad3ba9990df9708c7b5543f1b6",
+      "source_bytes": 19,
+      "source_chars": 19,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: Solo la fecha con el formato AAAA-MM-DD. Nada fuera del formato.",
+      "user_template": "Convierte la fecha a formato ISO 8601\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "delegate",
+        "esperado": "2026-03-14",
+        "formato": "\\d{4}-\\d{2}-\\d{2}"
+      },
+      "reference_ok": "2026-03-14",
+      "reference_bad": "14-03-2026"
+    },
+    {
+      "id": "delega-mayusculas",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "inventado",
+      "origen": "texto escrito para el caso",
+      "media_type": "texto",
+      "source_file": "delega-mayusculas.txt",
+      "source_sha256": "41520fa863024ecfe50cc8ce2ac5c0d31cc7d7adc064377dc9fdeda52892a26c",
+      "source_bytes": 26,
+      "source_chars": 26,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: Solo el texto en mayúsculas, en una línea. Nada fuera del formato.",
+      "user_template": "Pasa el texto a mayúsculas\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "delegate",
+        "esperado": "ENTREGA POSPUESTA AL LUNES",
+        "formato": "[^a-záéíóúñ\\n]+"
+      },
+      "reference_ok": "ENTREGA POSPUESTA AL LUNES",
+      "reference_bad": "Entrega pospuesta al lunes"
+    },
+    {
+      "id": "commit-diff-19k",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4d644ae (fix(web): inflight multi-proceso)",
+      "media_type": "texto",
+      "source_file": "commit-diff-19k.diff",
+      "source_sha256": "9916c57dcb085e174d83bae6029274fef4c5112aef6afed903d14414121eaeae",
+      "source_bytes": 19089,
+      "source_chars": 19041,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "feat(install): opencode es el tercer cliente, y su config no se rompe al escribirla (#123)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "d7c3dcc"
+    },
+    {
+      "id": "commit-9eb197b",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 9eb197b (main, 2026-09-22)",
+      "media_type": "texto",
+      "source_file": "commit-9eb197b.diff",
+      "source_sha256": "137df31c91ad5655044de1a2cd76a34d6c1efd5daf9f25393ba8cd76d442c94d",
+      "source_bytes": 11663,
+      "source_chars": 11495,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "fix(codex): reconocer la entrada indentada y no emparejar marcadores (#217)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "9eb197bdd2c51dd867da9e0c391997913508713c"
+    },
+    {
+      "id": "commit-c2312cd",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show c2312cd (main, 2026-09-22)",
+      "media_type": "texto",
+      "source_file": "commit-c2312cd.diff",
+      "source_sha256": "d386148580a7bdd2edbb81eac59c5161e3b867948205f6efd7532f3aaa6ab93a",
+      "source_bytes": 2902,
+      "source_chars": 2873,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "fix(doctor): quitar el Bearer también después de expandir la variable de Claude Desktop (#215)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "c2312cdc5d7ada49a824d72f948cd500dd1e97d8"
+    },
+    {
+      "id": "commit-64311f5",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 64311f5 (main, 2026-09-22)",
+      "media_type": "texto",
+      "source_file": "commit-64311f5.diff",
+      "source_sha256": "cc795b51a15adaece2fc019bf5f2ad2962120548015983eaee92cc7fc660dc34",
+      "source_bytes": 18751,
+      "source_chars": 18547,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "fix(update): reponer los hooks de otra versión sin apagar el de lectura (#213)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "64311f56e1e76761da069baef91668f8ec9793fe"
+    },
+    {
+      "id": "commit-2c602eb",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 2c602eb (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-2c602eb.diff",
+      "source_sha256": "bab3d350bc5d5c717b478cf023f57312d5533f6213287ef4193af64978b536b0",
+      "source_bytes": 2928,
+      "source_chars": 2924,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): verificación de la release 0.28.0 (#198)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "2c602eb2bb7a0fa90dc765ca4559f15083e32699"
+    },
+    {
+      "id": "commit-e34c102",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show e34c102 (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-e34c102.diff",
+      "source_sha256": "b5e8f1d353a99c4bc11b3030dd65344bb27865071741785afa0efb73caa0b3ed",
+      "source_bytes": 14527,
+      "source_chars": 14389,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "fix(doctor): F3 tarea 22, produccion en b10909 y v255, y doctor ya no lee b0 (#187)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "e34c102f284ab2e11ef11c2c54d8a77901f5e415"
+    },
+    {
+      "id": "commit-4ef1ba0",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4ef1ba0 (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-4ef1ba0.diff",
+      "source_sha256": "67fcfe2f5d01d20de11820204bed4c9ea47f984f738bde2774634392ca83a709",
+      "source_bytes": 19745,
+      "source_chars": 19614,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): F2 tarea 21, roles asignados y que pasa a produccion (#185)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "4ef1ba0b50dab9d1772a80f0846cd6feaf615a94"
+    },
+    {
+      "id": "commit-ad79697",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show ad79697 (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-ad79697.diff",
+      "source_sha256": "edf0acc01586742ec9700b0d53f9a957ca33af3bdf7a55e8c975d162030587d2",
+      "source_bytes": 10277,
+      "source_chars": 10249,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): F2 tarea 20 cerrada, long y code cambian de modelo (#184)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "ad79697067841ac86b02149a3d4be1f44192c208"
+    },
+    {
+      "id": "commit-8b061ec",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 8b061ec (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-8b061ec.diff",
+      "source_sha256": "0f21f5051e6a2af537c5c9a2218f652ae4ba6129e4ee14c5223d4049d8467920",
+      "source_bytes": 13390,
+      "source_chars": 13373,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "feat(benchmark): F2 tarea 20, la tanda y las tres reglas que tuvo que corregir (#183)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "8b061ec957bfe0ccc74c5c94a1353c1a119586a9"
+    },
+    {
+      "id": "commit-71f2a41",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 71f2a41 (main, 2026-09-15)",
+      "media_type": "texto",
+      "source_file": "commit-71f2a41.diff",
+      "source_sha256": "d43e5be7772d2bb752708ff15eba86a1fb0b2ce6ca43708dc2f652a412d43a6e",
+      "source_bytes": 10622,
+      "source_chars": 10589,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): F2 tarea 20, el barrido de -ncmoe y el perfil que no cubría llama-bench (#182)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "71f2a41fee63443434063a31932d6ce95de4439d"
+    },
+    {
+      "id": "commit-e428c07",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show e428c07 (main, 2026-09-14)",
+      "media_type": "texto",
+      "source_file": "commit-e428c07.diff",
+      "source_sha256": "07585b41ec30b859c43ab347cd774e5478964a7ad24ae5fae6c1c393872ad25f",
+      "source_bytes": 15885,
+      "source_chars": 15861,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "feat(benchmark): F2 tarea 20, n_ctx y KV medidos, y el sondeo de techo con su propia config (#181)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "e428c078bdefca6922c327e6a51b737ef9a5265f"
+    },
+    {
+      "id": "commit-b2545e9",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show b2545e9 (main, 2026-09-14)",
+      "media_type": "texto",
+      "source_file": "commit-b2545e9.diff",
+      "source_sha256": "08454bf6c02f5303f308253dc47d970f7a0ddd38d5f78247dae45e3571221b12",
+      "source_bytes": 14179,
+      "source_chars": 14067,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): F2 tarea 18, el entorno de medición y sus tres controles contra la máquina real (#177)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "b2545e9333d6cbfb99b89409d2bda98e212ee609"
+    },
+    {
+      "id": "commit-a4502a7",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show a4502a7 (main, 2026-09-08)",
+      "media_type": "texto",
+      "source_file": "commit-a4502a7.diff",
+      "source_sha256": "13065d41baec4d1fa42366bb68433c4e7b22bf3c4d77754ae329d0487532ac26",
+      "source_bytes": 4953,
+      "source_chars": 4866,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "fix(doctor): el conteo de hooks deja de contar __pycache__ como un script (#170)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "a4502a72f95a17e5c182adc7bdf794293dbc5223"
+    },
+    {
+      "id": "commit-8610c74",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 8610c74 (main, 2026-09-08)",
+      "media_type": "texto",
+      "source_file": "commit-8610c74.diff",
+      "source_sha256": "4df5a5f251aeb13353fd2fe60899b4fd7662d7528cfb3ef1946d0043d2147776",
+      "source_bytes": 15921,
+      "source_chars": 15688,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(wiki): la pagina de catalogo de tools que faltaba (#168)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "8610c74b2f421ce76d69c7158ae1312e82f4bd41"
+    },
+    {
+      "id": "commit-eb35363",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show eb35363 (main, 2026-09-08)",
+      "media_type": "texto",
+      "source_file": "commit-eb35363.diff",
+      "source_sha256": "2744739f9daae77911bf1bfa64d797fec9b377d3b7009675a28908dd2eecb190",
+      "source_bytes": 14262,
+      "source_chars": 14012,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(wiki): poner al dia la tabla del doctor, y ponerle un guardian (#167)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "eb353632a948a6f169a3f10686d7317661211b81"
+    },
+    {
+      "id": "commit-daddf39",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show daddf39 (main, 2026-09-08)",
+      "media_type": "texto",
+      "source_file": "commit-daddf39.diff",
+      "source_sha256": "de6e18739c47f9033b8df959043db7662154ae1001c2109247125ea62a4292b8",
+      "source_bytes": 19863,
+      "source_chars": 19729,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar opencode-tercer-cliente revalidando, no copiando (#166)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "daddf391d16aed948c06996da99e2d6519ec8e7d"
+    },
+    {
+      "id": "commit-f7c8d6e",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show f7c8d6e (main, 2026-09-08)",
+      "media_type": "texto",
+      "source_file": "commit-f7c8d6e.diff",
+      "source_sha256": "49e9e4e6117b70c7e0ce6ab4181d16faf5c77075ea5774badc5a1854186920b3",
+      "source_bytes": 3159,
+      "source_chars": 3129,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.27.0 (#164)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "f7c8d6ed29515135b19ab148b19ed3960d642a2e"
+    },
+    {
+      "id": "commit-11c65b5",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 11c65b5 (main, 2026-08-18)",
+      "media_type": "texto",
+      "source_file": "commit-11c65b5.diff",
+      "source_sha256": "52230ef3210d3bf38f449d3440823c3ce66d08a6e721c1cd7e17ca201c45eda3",
+      "source_bytes": 3104,
+      "source_chars": 3078,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.26.0 (#154)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "11c65b5eb0a19fee1216beea5ea755a71ff930bf"
+    },
+    {
+      "id": "commit-67eb74a",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 67eb74a (main, 2026-08-18)",
+      "media_type": "texto",
+      "source_file": "commit-67eb74a.diff",
+      "source_sha256": "bcbfbe065fb4a85dd50546c94d95c3c21589c2f2ff797a78b7d76b3c48809dec",
+      "source_bytes": 8429,
+      "source_chars": 8392,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio doctor-ve-el-token-del-daemon (#153)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "67eb74ac4d723fe541406f02300123112f52d868"
+    },
+    {
+      "id": "commit-4e9035a",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4e9035a (main, 2026-08-18)",
+      "media_type": "texto",
+      "source_file": "commit-4e9035a.diff",
+      "source_sha256": "a3c1a0b565b27b4f8b7a664601579a4f2f21abffbb3b19d869b76d9a485cd6d6",
+      "source_bytes": 3105,
+      "source_chars": 3075,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.25.0 (#151)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "4e9035ac7d62558a2f9c6ac18c1e7c4897acdc01"
+    },
+    {
+      "id": "commit-1dd97a3",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 1dd97a3 (main, 2026-08-18)",
+      "media_type": "texto",
+      "source_file": "commit-1dd97a3.diff",
+      "source_sha256": "be252a77c9d4a4a92d8c5902646758311d89a707fc78c704f601421cfcfc4f0c",
+      "source_bytes": 6916,
+      "source_chars": 6862,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio panel-dice-la-verdad (#150)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "1dd97a3c932071a9e24416072378d9a737fdba48"
+    },
+    {
+      "id": "commit-56f588d",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 56f588d (main, 2026-08-18)",
+      "media_type": "texto",
+      "source_file": "commit-56f588d.diff",
+      "source_sha256": "f1b435bc8075e3cb5d7636b023c31fe2b55aba968946a8ee3e80e224b006313b",
+      "source_bytes": 7045,
+      "source_chars": 7007,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio punteria-hook-read (#147)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "56f588d949eb2e6c7866b4337325849dedea6bad"
+    },
+    {
+      "id": "commit-bcbe39f",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show bcbe39f (main, 2026-08-04)",
+      "media_type": "texto",
+      "source_file": "commit-bcbe39f.diff",
+      "source_sha256": "6b3abec996e3135f2d224b6532e6b29c8195106497f37a5e816b2678bcbb8ca6",
+      "source_bytes": 3110,
+      "source_chars": 3081,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.24.0 (#139)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "bcbe39f1e4c090c15d66f57de4095bc91590efa5"
+    },
+    {
+      "id": "commit-53c9dcb",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 53c9dcb (main, 2026-08-04)",
+      "media_type": "texto",
+      "source_file": "commit-53c9dcb.diff",
+      "source_sha256": "ed187b9b410fdfbf21d59190583fe45ddd912a9dbfd6074ce35914ac9fb1899d",
+      "source_bytes": 8637,
+      "source_chars": 8534,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio commit-msg-diffs-grandes (#138)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "53c9dcbad3c0ed20af8f3d7abc6bc028ca52fd65"
+    },
+    {
+      "id": "commit-e7deb0d",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show e7deb0d (main, 2026-08-03)",
+      "media_type": "texto",
+      "source_file": "commit-e7deb0d.diff",
+      "source_sha256": "bc9e8ad0f0db249af20415a238f46bbd3d76b0cca2e0252e27f32c312f0f24e2",
+      "source_bytes": 8610,
+      "source_chars": 8533,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio aislar-entorno-en-tests (#136)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "e7deb0d108d0c9389572e02a70272646aa69fc03"
+    },
+    {
+      "id": "commit-ccddeea",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show ccddeea (main, 2026-08-03)",
+      "media_type": "texto",
+      "source_file": "commit-ccddeea.diff",
+      "source_sha256": "c8091b2cef886c517c7580555dd1de54a4d1e614e5a978852b5c3a8a484a5f8a",
+      "source_bytes": 11013,
+      "source_chars": 10938,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar el cambio codeql-alertas-abiertas (#134)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "ccddeea367db2bfbb4d926b3be2940e1c1211211"
+    },
+    {
+      "id": "commit-2fbfe93",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 2fbfe93 (main, 2026-08-03)",
+      "media_type": "texto",
+      "source_file": "commit-2fbfe93.diff",
+      "source_sha256": "a07599dca33a42cdc7294bab6ff82c8fa7608c8aeba4b19e1332a6a812bf376e",
+      "source_bytes": 13274,
+      "source_chars": 13079,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.22.1 (#131)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "2fbfe93847a4ff5869bc1c90db8ba56c8adfb98f"
+    },
+    {
+      "id": "commit-6a7959e",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 6a7959e (main, 2026-08-02)",
+      "media_type": "texto",
+      "source_file": "commit-6a7959e.diff",
+      "source_sha256": "098bbc24c544fca4fbd54bc908bcb6e56a101a4fe28df7dc46de94a9b473d49b",
+      "source_bytes": 3282,
+      "source_chars": 3253,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.22.0 (#124)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "6a7959e971a7c51966f171858cd51ff04dffa5d4"
+    },
+    {
+      "id": "commit-67e585f",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 67e585f (main, 2026-08-01)",
+      "media_type": "texto",
+      "source_file": "commit-67e585f.diff",
+      "source_sha256": "c4e0f9fff4ea3860a0e731176f19f344cbc2c3f3bccbeffc8ef55308e6255e32",
+      "source_bytes": 6499,
+      "source_chars": 6467,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(sdd): cierra la traza del cierre total del backlog (#121)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "67e585f034f44e3d6ae0857aa7fb5fe509fac073"
+    },
+    {
+      "id": "commit-4aa2141",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4aa2141 (main, 2026-08-01)",
+      "media_type": "texto",
+      "source_file": "commit-4aa2141.diff",
+      "source_sha256": "61be980a1e7c7dea43d8b7962e4981ea74c3f86b227e9f9f1e3cc27a4d8648ba",
+      "source_bytes": 13420,
+      "source_chars": 13283,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": true,
+      "rol_en_hoja": "real",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.21.0 (#120)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "4aa21411b09c74faa76a031d8b8821b2da9c7790"
+    },
+    {
+      "id": "commit-trampa-1314b0b",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 1314b0b (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-1314b0b.diff",
+      "source_sha256": "2022d3a5f32984c1ca96eae7f5f0d0a92c7e6306c961c42423bb1f54e302db52",
+      "source_bytes": 15764,
+      "source_chars": 15764,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(sdd): cierra las ocho trazas de la tanda (#115)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "1314b0bd3321c9f59a47daf6b9a0f59fe5d9164a"
+    },
+    {
+      "id": "commit-trampa-4f41311",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 4f41311 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-4f41311.diff",
+      "source_sha256": "79be412219a6b89df61ed83c7fb2bed521b9b6ead75df5de53c9ac0f27661b23",
+      "source_bytes": 4519,
+      "source_chars": 4494,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.20.0 (#114)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "4f41311ae3a0c440ab8d28d1de28ca8af9fbf9e2"
+    },
+    {
+      "id": "commit-trampa-3b20fb3",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 3b20fb3 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-3b20fb3.diff",
+      "source_sha256": "3f4b43abad330e4102f17ec24bd64fd0d0c7a9fc63b5c8edc7aff02f476091a2",
+      "source_bytes": 3119,
+      "source_chars": 3087,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.19.0 (#105)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "3b20fb384192ec44f1d1d2dd5f512cd9f6cc05cd"
+    },
+    {
+      "id": "commit-trampa-6d442e7",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 6d442e7 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-6d442e7.diff",
+      "source_sha256": "f270eeefc2ed8434a5b738fdda6eb0154adad4c0d4c7753915fa2c093b2c97da",
+      "source_bytes": 8822,
+      "source_chars": 8729,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs+test: cerrar las tres colas que dejó el check de credencial (#104)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "6d442e78c9a0f18c717f0272ba0e1c75ac9799f6"
+    },
+    {
+      "id": "commit-trampa-b04a5e2",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show b04a5e2 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-b04a5e2.diff",
+      "source_sha256": "09cf59bd4f0947fea14411bcb445f460200bf3d781360b5b6768690a93676e3e",
+      "source_bytes": 3113,
+      "source_chars": 3083,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.18.1 (#102)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "b04a5e267ef95522f37875265ff26f4085c07d02"
+    },
+    {
+      "id": "commit-trampa-7d0f4ac",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 7d0f4ac (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-7d0f4ac.diff",
+      "source_sha256": "4fcaf510233241aa8e66750662f6c18c0ac8f2f9dcec4952a9df79534346d290",
+      "source_bytes": 2040,
+      "source_chars": 2040,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): cerrar la traza de los dos fixes del doctor (#101)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "7d0f4ac80ba7272996f0043f5861ff60ba4ba745"
+    },
+    {
+      "id": "commit-trampa-9d2c242",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 9d2c242 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-9d2c242.diff",
+      "source_sha256": "426ecfe07255454e7d21746dd6964b87a969890c7e7d3a03cabce84320ca530a",
+      "source_bytes": 3122,
+      "source_chars": 3090,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "chore(release): 0.18.0 (#98)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "9d2c242c08bd6270c3a7458fce636f8972f37812"
+    },
+    {
+      "id": "commit-trampa-fa08d64",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show fa08d64 (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-fa08d64.diff",
+      "source_sha256": "fb953e92d54943a3ec51c12a66f5fb07b01e4b76d2b611fba256f9c6b4e271b4",
+      "source_bytes": 5120,
+      "source_chars": 5022,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): precisar los descartes de `auth` y `subscriptions` (#94)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "fa08d64fa69afc1b3647f5ade133806987419816"
+    },
+    {
+      "id": "commit-trampa-6710a6b",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "git show 6710a6b (main, 2026-07-31)",
+      "media_type": "texto",
+      "source_file": "commit-trampa-6710a6b.diff",
+      "source_sha256": "5bc61ade8a28e97055defed0c278fd2773a1c041b601bddc8cf84892bba15ac8",
+      "source_bytes": 10327,
+      "source_chars": 10148,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": false,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": "trampa",
+      "puntuador": {
+        "tipo": "hoja"
+      },
+      "reference_ok": "docs(sdd): evaluar la fase 3 del SDK, con cuatro descartes y un experimento (#93)",
+      "reference_bad": "chore: actualiza archivos del proyecto",
+      "commit": "6710a6b80f88f4f496dfdd511c3b9123a0ac6126"
+    },
+    {
+      "id": "techo-commit-156k",
+      "tool": "local_commit_msg",
+      "role": "code",
+      "kind": "techo",
+      "procedencia": "reconstruido",
+      "origen": "git show d7c3dcc: el diff de 164 585 chars del log ya no existe; este es el mayor del historial de ese orden",
+      "media_type": "texto",
+      "source_file": "techo-commit-156k.diff",
+      "source_sha256": "86095bb3f4fcdaa8af0de973623b215874d8f6f9c855a1d8a14e9db85dfb31fd",
+      "source_bytes": 157873,
+      "source_chars": 155713,
+      "production": {
+        "model": "qwen36-35b-a3b",
+        "calls": 13
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
+      "max_tokens": 256,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": null,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "techo"
+      }
+    },
+    {
+      "id": "resumen-md-2k",
+      "tool": "local_summarize",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "CONTRIBUTING.md",
+      "media_type": "texto",
+      "source_file": "resumen-md-2k.md",
+      "source_sha256": "6e0e124fa1237ef05d8db1671b9b69a8b54c3d7eeafef50c3ecc7bddd04cf679",
+      "source_bytes": 2036,
+      "source_chars": 2010,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un resumen en prosa clara. Máximo 150 palabras. Nada fuera del formato.",
+      "user_template": "Resume el siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 364,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "pre-commit",
+        "pull request"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 150,
+        "prose": true
+      },
+      "reference_signal": "cobertura",
+      "reference_ok": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un pull request y el uso de pre-commit.",
+      "reference_bad": "Guía para contribuir: el entorno de desarrollo, cómo ejecutar el MCP en local, las reglas del proyecto, cómo abrir un merge commit y el uso de pre-commit.",
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "f2"
+      }
+    },
+    {
+      "id": "extraer-toml-2k",
+      "tool": "local_extract",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "congelado",
+      "origen": "pyproject.toml, recortado en linea entera a 2 100 chars (entero pesa mas de 6 000 y produccion lo mandaria a long)",
+      "media_type": "texto",
+      "source_file": "extraer-toml-2k.toml",
+      "source_sha256": "9bd96453c0ecb3ca9b0d3551161e82e0aaca67793e3a1484ba6ded1d051e2442",
+      "source_bytes": 2075,
+      "source_chars": 2056,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un objeto JSON válido con exactamente estas claves: {\"name\", \"version\", \"requires-python\", \"license\"}. Nada fuera del formato.",
+      "user_template": "Extrae los campos del siguiente contenido:\n\n{CONTENIDO}",
+      "max_tokens": 512,
+      "temperature": 0.0,
+      "response_format": {
+        "type": "json_object",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "version": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "requires-python": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            },
+            "license": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "version",
+            "requires-python",
+            "license"
+          ]
+        }
+      },
+      "reasoning_effort": null,
+      "expected_terms": [
+        "local-delegate-mcp",
+        "0.27.0",
+        ">=3.11",
+        "MIT"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": [
+        "name",
+        "version",
+        "requires-python",
+        "license"
+      ],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
+      "reference_signal": "json_valido",
+      "reference_ok": "{\"name\": \"local-delegate-mcp\", \"version\": \"0.27.0\", \"requires-python\": \">=3.11\", \"license\": \"MIT\"}",
+      "reference_bad": "{'name': 'local-delegate-mcp', 'version': '0.27.0', 'requires-python': '>=3.11', 'license': 'MIT'}",
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "f2"
+      }
+    },
+    {
+      "id": "clasificar-53",
+      "tool": "local_classify",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 53 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "clasificar-53.txt",
+      "source_sha256": "aafe9112094d8d82ac5db659f017be784247bb435df7dc96ed620ff1d89f15a0",
+      "source_bytes": 54,
+      "source_chars": 53,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: exactamente una de estas etiquetas: [bug, feature, docs, pregunta]. Máximo 5 palabras. Nada fuera del formato.",
+      "user_template": "Clasifica este texto:\n\n{CONTENIDO}",
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "bug"
+      ],
+      "forbidden_terms": [
+        "feature",
+        "docs",
+        "pregunta"
+      ],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {
+        "max_words": 5
+      },
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "f2"
+      }
+    },
+    {
+      "id": "traducir-42",
+      "tool": "local_translate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 42 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "traducir-42.txt",
+      "source_sha256": "a4a14e37a4e282cd62cd1cea03d25172ef45e6defb2ecf6efc01f22577d21c24",
+      "source_bytes": 43,
+      "source_chars": 42,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: la traducción fiel al inglés, conservando el formato y sin comentarios. Nada fuera del formato.",
+      "user_template": "Traduce al inglés el siguiente texto:\n\n{CONTENIDO}",
+      "max_tokens": 149,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "restart",
+        "daemon",
+        "updat"
+      ],
+      "forbidden_terms": [
+        "reinicia"
+      ],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "f2"
+      }
+    },
+    {
+      "id": "delegar-56",
+      "tool": "local_delegate",
+      "role": "mechanical",
+      "kind": "calidad",
+      "procedencia": "reconstruido",
+      "origen": "evento inline real de 56 chars; texto recreado con esa forma",
+      "media_type": "texto",
+      "source_file": "delegar-56.txt",
+      "source_sha256": "9897166090598d2fbe4383a733efbde152e1720c05788ed7a73b88e43e3d39c4",
+      "source_bytes": 56,
+      "source_chars": 56,
+      "production": {
+        "model": "gemma3-4b",
+        "calls": 1
+      },
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: lista Markdown con una viñeta '- ' por elemento. Nada fuera del formato.",
+      "user_template": "Convierte esta enumeración en una lista con una viñeta por elemento.\n\nInput:\n{CONTENIDO}",
+      "max_tokens": 2048,
+      "temperature": 0.2,
+      "response_format": null,
+      "reasoning_effort": null,
+      "expected_terms": [
+        "tokens",
+        "latencia",
+        "modelo",
+        "errores",
+        "reintentos",
+        "coste"
+      ],
+      "forbidden_terms": [],
+      "expected_json_fields": [],
+      "execution_checks": [],
+      "expected_counts": {},
+      "automatic_scoring": true,
+      "expected_format": {},
+      "discriminante": false,
+      "rol_en_hoja": null,
+      "puntuador": {
+        "tipo": "f2"
+      }
+    }
+  ]
+}

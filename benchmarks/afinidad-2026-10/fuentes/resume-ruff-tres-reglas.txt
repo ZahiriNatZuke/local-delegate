@@ -1,0 +1,8 @@
+app/main.py:12:101: E501 Line too long
+app/main.py:40:105: E501 Line too long
+app/main.py:7:8: F401 `os` imported but unused
+app/util.py:3:8: F401 `sys` imported but unused
+app/util.py:9:8: F401 `re` imported but unused
+app/util.py:55:120: E501 Line too long
+app/util.py:70:5: W291 Trailing whitespace
+app/cli.py:21:110: E501 Line too long

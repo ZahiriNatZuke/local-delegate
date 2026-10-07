@@ -1,0 +1,218 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index c8c1c7c..5aea716 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -4,6 +4,34 @@ Todos los cambios notables de este proyecto se documentan aquí.
+ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
+ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
++## [Unreleased]
++
++### Fixed
++- **La wiki llevaba cuatro versiones sin actualizarse, y ahora hay quien lo note.** `docs/wiki/`
++  no se tocaba desde la 0.23.0: la tabla de comprobaciones de `doctor` tenía **diecisiete** filas
++  con dieciocho checks en el registro —faltaba `service.daemon_auth`, el «token del puerto del
++  daemon» que nació en la 0.26.0— y el texto seguía prometiendo «las dieciséis piezas». La fila de
++  la skill también describía solo la de Claude Code, cuando desde la 0.19.0 se escribe también en
++  opencode.
++
++  Lo que lo dejó pasar es que `checks.py` **sí** tenía guardián (sus frases de tamaño estaban al
++  día) y la wiki no. Ahora `tests/test_wiki.py` compara la tabla contra `checks.CHECKS` fila por
++  fila y comprueba el número escrito con letra: añadir un check sin documentarlo pone el CI en
++  rojo en el mismo PR que lo introduce.
++
++- **Una justificación medida también caduca, y esta caducó.** El código, la wiki y el docstring de
++  su test decían que una clave de primer nivel desconocida hace que opencode **no arranque**
++  (`ConfigInvalidError`). Medido el 2026-09-08 con los dos binarios el mismo día: `1.18.11`
++  rechaza el config entero (`Unrecognized key`, exit 1) y **`1.18.29` ya la tolera**. La medición
++  original era correcta; el cliente relajó la validación.
++
++  **No cambia el comportamiento del paquete**: se sigue escribiendo solo dentro de `mcp`, ahora
++  por prudencia —la versión la elige el usuario— y porque lo que **no** ha cambiado en ninguna de
++  las dos versiones es que una entrada mal formada *dentro* de `mcp` (sin `type`, sin `command`, o
++  con `command` que no sea un array) sí impide arrancar. Tampoco cambia la ausencia de
++  `--force-mcp-opencode`, que se sostiene por el otro motivo, intacto: sin marcadores no hay forma
++  de distinguir nuestra entrada de una escrita a mano.
++
+ ## [0.27.0] - 2026-09-08
+ 
+ ### Changed
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index ec447ed..2373ec0 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -72,11 +72,16 @@ Si no hay ninguno, no se escribe nada, se dice qué se buscó y el comando termi
+   (`opencode mcp add`, que los conserva), y cuando esa CLI no está y el fichero tiene comentarios
+   —o no se puede parsear— la entrada MCP **no se escribe**: se avisa con la ruta y se sigue con el
+   resto de componentes. Instalar la CLI de opencode y repetir el `install` lo resuelve.
+-- **En opencode nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel
+-  desconocida hace que opencode **no arranque** (`ConfigInvalidError`), así que ahí no hay
+-  marcadores `local-delegate:begin/end`: la entrada se identifica por su nombre, como en Claude
+-  Code. Consecuencia: en opencode no hay pregunta previa equivalente a `--force-mcp-codex`, porque
+-  no hay forma de distinguir una entrada nuestra de una que escribiste tú.
++- **En opencode nunca se escribe una clave que no sea `mcp`.** Una clave de primer nivel ajena al
++  esquema puede dejar el cliente sin arrancar, y **cuánto** depende de su versión: medido el
++  2026-09-08 con los dos binarios a la vez, opencode `1.18.11` rechaza el config entero
++  (`Unrecognized key`) y `1.18.29` ya tolera esa clave. Como la versión la eliges tú y no nosotros,
++  la regla se mantiene en su forma estricta; lo que **no** ha cambiado en ninguna versión es que
++  una entrada mal formada *dentro* de `mcp` —sin `type`, sin `command`, o con `command` que no sea
++  un array— sí impide arrancar. Por eso ahí no hay marcadores `local-delegate:begin/end`: la
++  entrada se identifica por su nombre, como en Claude Code. Consecuencia: en opencode no hay
++  pregunta previa equivalente a `--force-mcp-codex`, porque no hay forma de distinguir una entrada
++  nuestra de una que escribiste tú.
+ - **Reversible.** `uninstall` borra los directorios propios y quita solo sus entradas.
+ 
+ ## Comprobarlo desde el propio cliente
+@@ -167,7 +172,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no
+ 
+ Reinicia el cliente. Verifica con:
+ 
+-- `local-delegate doctor` → comprueba de una vez las dieciséis piezas (ver abajo), incluidos el
++- `local-delegate doctor` → comprueba de una vez las dieciocho piezas (ver abajo), incluidos el
+   daemon y el backend, que el reporte de `install` no mira a propósito.
+ - `local_status` → backend, catálogo y si el cómputo es local o remoto.
+ - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
+@@ -195,7 +200,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
+ | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
+ | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
+-| Andamiaje | skill | `~/.claude/skills/delegacion-local/SKILL.md` |
++| Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
+ | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
+ | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
+ | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
+@@ -203,6 +208,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
+ | Servicios | backend | `BASE_URL/models` |
+ | Servicios | credencial del backend | si el proceso MCP que arranca **tu cliente** podrá autenticarse. Pregunta al backend **sin** credencial: si lo rechaza y alguna entrada MCP está en modo `stdio`, ese proceso no la tendrá y sus tools `local_*` responderán `401` — aunque el daemon vea el backend perfectamente |
++| Servicios | token del puerto del daemon | la **otra** puerta del mismo camino: si el puerto del daemon exige token, si las entradas MCP en modo `http` lo llevan. Pregunta al puerto y compara con lo que llevan las entradas de los tres clientes; sin cabecera, `warn` nombrando al cliente. Existe porque `install` sin `--web-token-env` deja la entrada sin `Authorization` y el cliente en `401` sin que nada lo dijera |
+ | Backend | llama-swap | versión instalada vs probada |
+ | Backend | llama-server | versión instalada vs probada |
+ 
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index 1f801a5..bdffd9c 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -484,8 +484,13 @@ def remove_codex_mcp(text: str) -> str:
+ # --- Entrada del servidor MCP en opencode ------------------------------------
+ # opencode se parece a Claude Code y NO a Codex en lo único que aquí importa: la entrada se
+ # identifica por su **clave** (`mcp["local-delegate"]`) y no por marcadores. No es una preferencia:
+-# está medido que una clave de primer nivel desconocida hace que opencode **no arranque**
+-# (`ConfigInvalidError`), así que un `# local-delegate:begin` propio dejaría al usuario sin cliente.
++# un `# local-delegate:begin` propio sería una clave de primer nivel ajena al esquema, y eso puede
++# dejar al usuario sin cliente. Cuidado con la fuerza de esa afirmación, porque **depende de la
++# versión**: medido el 2026-09-08 con los dos binarios a la vez, 1.18.11 rechaza una clave de
++# primer nivel desconocida (`Unrecognized key`) y 1.18.29 ya la tolera. La regla se mantiene
++# igualmente —escribir solo dentro de `mcp` es lo que no depende de qué versión tenga el usuario—
++# y lo que NO ha cambiado es el castigo por una entrada mal formada DENTRO de `mcp`: las dos
++# versiones se niegan a arrancar si le falta `type` o `command`, o si `command` no es un array.
+ #
+ # Consecuencia que conviene decir en voz alta: aquí NO se puede distinguir una entrada nuestra de
+ # una que escribió el usuario a mano, así que tampoco hay pregunta previa como la de
+diff --git a/src/local_delegate/update.py b/src/local_delegate/update.py
+index 54ede03..2872cfe 100644
+--- a/src/local_delegate/update.py
++++ b/src/local_delegate/update.py
+@@ -195,9 +195,11 @@ REPAIRS: tuple[Repair, ...] = (
+     # usuario. Pisarla sería el fallo contra el que existe la regla de `unknown`.
+     Repair("scaffold.mcp_codex", (checks.MISSING,), frozenset({"mcp"}), frozenset({"codex"})),
+     # opencode NO tiene un `warn` equivalente al de Codex, y no es un olvido: su entrada se
+-    # identifica por la clave `mcp["local-delegate"]` y no por marcadores —una clave desconocida
+-    # impide arrancar el cliente—, así que no hay forma de distinguir la nuestra de una escrita a
+-    # mano. Es la misma situación que con Claude Code, y se trata igual: solo se repone si falta.
++    # identifica por la clave `mcp["local-delegate"]` y no por marcadores —no escribimos ninguna
++    # clave de primer nivel ajena al esquema; ver el porqué, y su letra pequeña por versión, en
++    # `install._escanear_jsonc` y alrededores—, así que no hay forma de distinguir la nuestra de
++    # una escrita a mano. Es la misma situación que con Claude Code, y se trata igual: solo se
++    # repone si falta.
+     Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
+ )
+ 
+diff --git a/tests/test_install_opencode.py b/tests/test_install_opencode.py
+index d44d116..cd6ec9a 100644
+--- a/tests/test_install_opencode.py
++++ b/tests/test_install_opencode.py
+@@ -199,7 +199,12 @@ def test_reinstalar_es_idempotente_y_conserva_lo_ajeno(tmp_path):
+ 
+ 
+ def test_nunca_se_escribe_una_clave_de_primer_nivel_ajena_al_esquema(tmp_path):
+-    """Una clave desconocida hace que opencode **no arranque** (`ConfigInvalidError`, medido)."""
++    """Escribir fuera de `mcp` puede dejar al usuario sin cliente, y cuánto depende de la versión.
++
++    Medido el 2026-09-08 con los dos binarios el mismo día: opencode 1.18.11 rechaza el config
++    entero ante una clave de primer nivel desconocida (`Unrecognized key`) y 1.18.29 ya la tolera.
++    La invariante se queda en su forma estricta porque la versión la elige el usuario.
++    """
+     home = tmp_path / "home"
+     d = _oc(home)
+     assert _install(home) == 0
+diff --git a/tests/test_wiki.py b/tests/test_wiki.py
+index 1c9b978..78c7ead 100644
+--- a/tests/test_wiki.py
++++ b/tests/test_wiki.py
+@@ -25,6 +25,20 @@ _spec.loader.exec_module(sync_wiki)
+ WIKI = RAIZ / "docs" / "wiki"
+ WORKFLOW = RAIZ / ".github" / "workflows" / "wiki.yml"
+ 
++# La tabla del doctor de `Integration-install.md` se compara contra el registro real de
++# comprobaciones, así que este módulo importa `checks`. Los grupos son la primera columna.
++from local_delegate import checks
++
++_GRUPOS_DE_LA_TABLA = {"Entorno", "Andamiaje", "Servicios", "Backend"}
++_NUMERO_DE_CHECKS = {
++    15: "quince",
++    16: "dieciséis",
++    17: "diecisiete",
++    18: "dieciocho",
++    19: "diecinueve",
++    20: "veinte",
++}
++
+ # `[texto](destino)`, quedándose con el destino.
+ ENLACE_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+ 
+@@ -173,3 +187,44 @@ def test_los_enlaces_entre_paginas_apuntan_a_paginas_que_existen():
+                 rotos.append(f"{pagina.name} -> {destino}")
+ 
+     assert not rotos, f"enlaces a páginas que no existen: {rotos}"
++
++
++def _filas_de_la_tabla_de_checks() -> list[tuple[str, str]]:
++    """`(grupo, comprobación)` de la tabla del doctor en `Integration-install.md`."""
++    texto = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
++    filas = []
++    for linea in texto.splitlines():
++        if not linea.startswith("|"):
++            continue
++        celdas = [c.strip() for c in linea.strip("|").split("|")]
++        if len(celdas) >= 2 and celdas[0] in _GRUPOS_DE_LA_TABLA:
++            filas.append((celdas[0], celdas[1]))
++    return filas
++
++
++def test_la_tabla_del_doctor_lista_todas_las_comprobaciones():
++    """La wiki es la única superficie del doctor que no tenía guardián, y se desfasó.
++
++    `checks.py` sí lo tiene —`test_el_docstring_dice_cuantos_checks_hay_de_verdad`— y por eso sus
++    frases de tamaño estaban al día. La wiki no, así que el check `service.daemon_auth` de la
++    0.26.0 nunca llegó a la tabla y el texto siguió diciendo «dieciséis» con dieciocho checks en
++    el registro. Medido el 2026-09-08: la tabla tenía diecisiete filas.
++
++    Este test compara la tabla contra el registro **real**, que es la única fuente: añadir un
++    check y no documentarlo pone la wiki en rojo en el mismo PR que lo introduce.
++    """
++    titulos_wiki = [titulo for _grupo, titulo in _filas_de_la_tabla_de_checks()]
++    titulos_codigo = [c.title for c in checks.CHECKS]
++
++    faltan = [t for t in titulos_codigo if t not in titulos_wiki]
++    sobran = [t for t in titulos_wiki if t not in titulos_codigo]
++    assert not faltan, f"comprobaciones sin fila en la wiki: {faltan}"
++    assert not sobran, f"filas de la wiki que ya no existen en checks.py: {sobran}"
++
++
++def test_la_wiki_dice_cuantas_comprobaciones_hay_de_verdad():
++    """El número escrito con letra envejece solo; que lo cuente el programa."""
++    cuantas = _NUMERO_DE_CHECKS[len(checks.CHECKS)]
++    texto = (WIKI / "Integration-install.md").read_text(encoding="utf-8")
++    frase = f"las {cuantas} piezas"
++    assert frase in texto, f"la wiki no dice «{frase}»; hay {len(checks.CHECKS)} comprobaciones"

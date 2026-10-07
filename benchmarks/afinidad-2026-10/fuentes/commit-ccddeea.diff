@@ -1,0 +1,199 @@
+diff --git a/.sdd/changes/codeql-alertas-abiertas/handoff.md b/.sdd/changes/codeql-alertas-abiertas/handoff.md
+index 582e946..c3e8245 100644
+--- a/.sdd/changes/codeql-alertas-abiertas/handoff.md
++++ b/.sdd/changes/codeql-alertas-abiertas/handoff.md
+@@ -2,24 +2,50 @@
+ 
+ ## Current state
+ 
+-- SDD status:
+-- Last completed gate:
+-- Current revision:
++- SDD status: `closed` (modo lite).
++- Last completed gate: `memory`.
++- Current revision: `main` @ `d087b1c` (squash de la PR #133).
+ 
+ ## What changed
+ 
+-- Summarize completed work without reproducing the full Git history.
++Las diez alertas abiertas de code scanning quedaron a cero: seis cerradas como `fixed` por el
++código y cuatro como `dismissed` con motivo y comentario en GitHub.
++
++- **Arreglos:** patrón del extractor del JS del dashboard (`py/bad-tag-filter`); comentario
++  explicativo en los tres `except` vacíos; test de tipografías web buscando la hoja completa con
++  esquema y ruta; test de concurrencia comprobando que el semáforo devuelve sus dos slots.
++- **Descartes:** `#19` (falso positivo intraprocedural en `sysinfo.py`), `#13` (el `BaseException`
++  del canario de macOS es deliberado), `#11` y `#12` (imports perezosos de `ctypes` bajo guarda
++  `win32`, que no se pueden unificar porque `ctypes.wintypes` hay que importarlo aparte).
+ 
+ ## Decisions
+ 
+-- Record decisions that a future session cannot reliably derive from code alone.
++- **El criterio de reparto fue: se arregla si el código queda mejor; se descarta si el único
++  beneficio sería que la herramienta calle.** Por eso `#11`/`#12` y `#13` se descartan aunque sean
++  técnicamente "arreglables": tocar código Windows-only o el manejo de un hilo lector por una regla
++  de estilo mete más riesgo que beneficio.
++- **`codeql.yml` se queda con la suite `security-and-quality`**, aunque sea la fuente del ruido de
++  reglas de estilo: de ahí salieron también las 15 alertas legítimas ya cerradas.
++- **La escalera de `py/bad-tag-filter` se acepta hasta tres vueltas**, con el límite fijado de
++  antemano: a la cuarta objeción la alerta pasaba a descarte por inaplicable (el fondo de esa regla
++  es «no parsees HTML con regex»). No hizo falta.
+ 
+ ## Next action
+ 
+-- State the single best next step and any prerequisite context.
++Nada pendiente de este cambio. Lo único que dejó abierto, para tratar aparte y sin urgencia:
++**`tests/test_daemon.py` no aísla `LOCAL_DELEGATE_WEB_TOKEN`**, así que da cuatro `401 == 200` en
++cualquier máquina que la tenga definida (esta, desde la 0.22.1). En CI no se ve porque allí no
++existe. Se arregla con un `monkeypatch.delenv` o una fixture de entorno limpio.
+ 
+ ## Memory
+ 
+-- Canonical note:
+-- Indexes updated:
+-
++- Canonical note: `obsidian-vault/projects/local-delegate/jornada-2026-08-03-las-alertas-de-codeql.md`.
++- Indexes updated: los tres.
++  - Memoria del proyecto (Claude Code): jornada nueva, gancho del gotcha de `LOCAL_DELEGATE_WEB_TOKEN`,
++    y **actualización de dos memorias existentes en vez de duplicarlas** —
++    `feedback-verify-full-ci-before-done` (ahora dice que `gh run list` no ve todos los checks) y
++    `control-positivo-no-es-opcional` (ahora exige mirar *qué* assert dispara el mutante).
++  - Índice global de Claude Code: dos punteros transversales (`gh run list` ≠ CI en verde; el mutante
++    que no prueba nada).
++  - Índice de Codex: bloque `Task Group` con nota canónica, conocimiento reutilizable y fallos.
++- Sin secretos ni datos personales en ninguno de los artefactos.
+diff --git a/.sdd/changes/codeql-alertas-abiertas/review.md b/.sdd/changes/codeql-alertas-abiertas/review.md
+index e791d74..a964f00 100644
+--- a/.sdd/changes/codeql-alertas-abiertas/review.md
++++ b/.sdd/changes/codeql-alertas-abiertas/review.md
+@@ -2,19 +2,41 @@
+ 
+ ## Verdict
+ 
+-Choose one: `conforms`, `conforms-with-notes`, or `does-not-conform`.
++`conforms-with-notes` — los seis requisitos se cumplen y están verificados contra el repo real, no
++contra una suposición. Las notas son dos hallazgos laterales, ninguno bloqueante.
+ 
+ ## Specification comparison
+ 
+ | Requirement | Implemented | Verified | Notes |
+ | --- | --- | --- | --- |
+-| REQ-001 | | | |
++| REQ-001 | sí | sí | Hizo falta tres vueltas, y las tres las dictó el check de CodeQL de la PR, no la comprobación local. Salida del extractor idéntica byte a byte en las tres |
++| REQ-002 | sí | sí | Tres comentarios; ningún `except` cambió de tipo ni de cuerpo |
++| REQ-003 | sí | sí | Mutante: `config.WEB_FONTS` forzado a `True` → falla en `assert hoja not in html` |
++| REQ-004 | sí | sí | Mutante dirigido (2 hilos, sin deadlock) → falla solo en la comprobación nueva |
++| REQ-005 | sí | sí | Los cuatro descartados tras el merge; `?state=open` devuelve `[]` |
++| REQ-006 | sí | sí | 13 checks verdes en la PR; los seis workflows de `main` en verde tras el merge |
+ 
+ ## Findings
+ 
+-- List correctness, security, maintainability, or scope findings in severity order.
++1. **El `gh run list` verde no significa CI verde.** El check `CodeQL` de la PR (el que juzga las
++   alertas) es distinto del job `Analyze (python)` (el que corre el análisis), y solo se ve con
++   `gh pr checks`. Estuvo en rojo dos rondas seguidas mientras los tres workflows salían `success`.
++   Es la lección del job fantasma por una puerta nueva, y merece quedar escrita.
++2. **Un control positivo puede no probar nada y parecer que sí.** El primer mutante de REQ-004 hacía
++   fallar el test, pero por un assert que ya existía. Sin mirar *qué* assert disparaba, habría
++   contado como cubierto un cambio que no lo estaba.
++3. **Cuatro tests fallan en máquinas con `LOCAL_DELEGATE_WEB_TOKEN` definida** (`tests/test_daemon.py`,
++   `401 == 200`), desde antes de este cambio. No aíslan la variable de entorno; en CI no se ve
++   porque allí no existe. **Fuera del alcance de este cambio**, pero es deuda real: cualquiera con
++   el token puesto ve su suite en rojo sin motivo.
++4. **La escalera de `py/bad-tag-filter` tiene fondo conocido**: la regla existe para decir «no
++   parsees HTML con regex». Se cerró en tres vueltas porque cada tolerancia era barata y la salida
++   no cambiaba; el plan fijaba de antemano que a la cuarta objeción se pasaba a descarte.
+ 
+ ## Required follow-up
+ 
+-- Identify work that must be completed before closure.
++Nada bloqueante para el cierre. Pendiente de decidir aparte, sin urgencia:
+ 
++- Aislar `LOCAL_DELEGATE_WEB_TOKEN` en `tests/test_daemon.py` (hallazgo 3), con un `monkeypatch.delenv`
++  o una fixture de entorno limpio.
++- Ninguna acción sobre `codeql.yml`: la suite `security-and-quality` se mantiene tal cual.
+diff --git a/.sdd/changes/codeql-alertas-abiertas/state.json b/.sdd/changes/codeql-alertas-abiertas/state.json
+index d36426a..1fba0d3 100644
+--- a/.sdd/changes/codeql-alertas-abiertas/state.json
++++ b/.sdd/changes/codeql-alertas-abiertas/state.json
+@@ -3,9 +3,9 @@
+   "slug": "codeql-alertas-abiertas",
+   "title": "Cerrar las 10 alertas abiertas de CodeQL: 6 arreglos y 4 descartes",
+   "mode": "lite",
+-  "status": "verifying",
++  "status": "closed",
+   "createdAt": "2026-08-03T22:43:42.806Z",
+-  "updatedAt": "2026-08-03T22:57:29.376Z",
++  "updatedAt": "2026-08-04T00:38:41.321Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -26,16 +26,16 @@
+       "actor": "user"
+     },
+     "conformance": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-08-04T00:33:57.256Z",
++      "evidence": "Revision fresca contra los seis requisitos en review.md: los seis implementados y verificados contra el repo real. gh api code-scanning/alerts?state=open devuelve lista vacia; las 10 quedan 6 fixed y 4 dismissed con motivo. Los seis workflows de main en verde tras el merge. Veredicto conforms-with-notes: tres hallazgos laterales, ninguno bloqueante.",
++      "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-08-04T00:38:41.151Z",
++      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-03-las-alertas-de-codeql.md. Punteros sincronizados en los tres indices (memoria del proyecto de Claude Code, indice global de Claude Code, indice de Codex). Dos memorias existentes actualizadas en vez de duplicadas: feedback-verify-full-ci-before-done y control-positivo-no-es-opcional. Handoff escrito. Sin secretos ni datos personales.",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -111,6 +111,43 @@
+       "at": "2026-08-03T22:57:29.376Z",
+       "evidence": "722 passed / 2 skipped; ruff check y ruff format limpios; node --check ok; salida del extractor identica byte a byte (sha256 6e030c20). Control positivo real en los dos tests: el primer mutante de REQ-004 lo atrapaba un assert previo (deadlock) y se repitio con uno dirigido que solo dispara el assert nuevo. Cuatro fallos preexistentes de test_daemon.py causados por LOCAL_DELEGATE_WEB_TOKEN del entorno, confirmados con git stash y con la variable vacia: fuera de alcance.",
+       "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "verifying",
++      "to": "result-review",
++      "at": "2026-08-04T00:33:57.055Z",
++      "reason": "Merge hecho (d087b1c), cuatro descartes aplicados y cero alertas abiertas"
++    },
++    {
++      "type": "gate",
++      "gate": "conformance",
++      "status": "approved",
++      "at": "2026-08-04T00:33:57.256Z",
++      "evidence": "Revision fresca contra los seis requisitos en review.md: los seis implementados y verificados contra el repo real. gh api code-scanning/alerts?state=open devuelve lista vacia; las 10 quedan 6 fixed y 4 dismissed con motivo. Los seis workflows de main en verde tras el merge. Veredicto conforms-with-notes: tres hallazgos laterales, ninguno bloqueante.",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-08-04T00:33:57.423Z",
++      "reason": "Conformidad aprobada; queda registrar el handoff"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-08-04T00:38:41.151Z",
++      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-03-las-alertas-de-codeql.md. Punteros sincronizados en los tres indices (memoria del proyecto de Claude Code, indice global de Claude Code, indice de Codex). Dos memorias existentes actualizadas en vez de duplicadas: feedback-verify-full-ci-before-done y control-positivo-no-es-opcional. Handoff escrito. Sin secretos ni datos personales.",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-08-04T00:38:41.321Z",
++      "reason": "Diez alertas a cero, PR #133 mergeada, memoria persistida"
+     }
+   ]
+ }

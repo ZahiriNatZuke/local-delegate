@@ -1,0 +1,225 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 888fbaf..2a0f3a0 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,17 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++### Fixed
++- **Una `~/.codex/config.toml` reescrita por otro programa rompía Codex al reinstalar.** El plugin
++  de JetBrains, al añadir su servidor, indenta el fichero entero y se come los comentarios, marcador
++  de cierre incluido. La búsqueda de `[mcp_servers.local-delegate]` exigía la cabecera al principio
++  de la línea: `doctor` daba la entrada por ausente con Codex funcionando, e `install`/`update`
++  añadían una segunda tabla con el mismo nombre —TOML inválido, y Codex sin cargar ningún MCP—.
++  Ahora se acepta la sangría. Y la entrada ya no se quita emparejando marcadores: un `begin`
++  huérfano se habría emparejado con el `end` del bloque nuevo y la siguiente reinstalación habría
++  borrado todo lo de en medio. Se quita la tabla por su nombre y las líneas de marcador sueltas.
++  `doctor` da `[ OK ]` con el marcador de apertura, y dice cuándo falta el de cierre.
++
+ ## [0.31.3] - 2026-09-22
+ 
+ ### Fixed
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index cf8093c..d2ee1f7 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -206,7 +206,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
+ | Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
+ | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
+-| Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
++| Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
+ | Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |
+ | Servicios | daemon | `http://127.0.0.1:9393/api/daemon` (versión y pid), y si sirve una versión **distinta de la instalada** |
+ | Servicios | backend | `BASE_URL/models` |
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index d713404..402076d 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -905,9 +905,17 @@ def _probe_mcp_codex(ctx: Context) -> Result:
+     if not section:
+         return Result(MISSING, f"sin [mcp_servers.{install.SERVER_NAME}] en {path}", INSTALL_HINT)
+     kind = _codex_mode(section.group(0))
+-    managed = _has_block(text, install.TOML_BEGIN, install.TOML_END)
+-    if not managed:
++    if install.TOML_BEGIN not in text:
+         return Result(WARN, f"entrada {kind} en {path}, pero puesta a mano (sin marcadores)")
++    # El de apertura basta para saber que es nuestra. Si falta el de cierre es que otro programa
++    # reescribió el fichero —así lo dejó el plugin de JetBrains—: Codex la carga igual, e `install`
++    # la reescribe entera sin emparejar marcadores, así que no hay nada roto que avisar.
++    if not _has_block(text, install.TOML_BEGIN, install.TOML_END):
++        return Result(
++            OK,
++            f"bloque gestionado en {path} ({kind}); otro programa reescribió el fichero y se "
++            "llevó el marcador de cierre",
++        )
+     return Result(OK, f"bloque gestionado en {path} ({kind})")
+ 
+ 
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index e7266ac..ccf385e 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -564,22 +564,45 @@ def codex_mcp_block(entry: dict) -> str:
+     return "\n".join(lines)
+ 
+ 
++# Con sangría opcional delante de cada cabecera, y no es cosmético: otros programas reescriben este
++# fichero a su manera. El 2026-09-22 el plugin de JetBrains añadió su servidor, indentó TODO el
++# fichero dos espacios y se comió los comentarios. Con `^\[` a secas la entrada dejaba de verse:
++# `doctor` la daba por ausente con Codex funcionando, e `install`/`update` añadían una segunda
++# `[mcp_servers.local-delegate]` —TOML inválido, y Codex, sin poder cargar su config, se quedaba
++# sin NINGÚN MCP—.
+ _CODEX_SECTION_RE = re.compile(
+-    r"(?ms)^\[mcp_servers\." + re.escape(SERVER_NAME) + r"(?:\.[^\]]+)?\]\n.*?(?=^\[|\Z)"
++    r"(?ms)^[ \t]*\[mcp_servers\."
++    + re.escape(SERVER_NAME)
++    + r"(?:\.[^\]]+)?\][ \t]*\n.*?(?=^[ \t]*\[|\Z)"
+ )
++# Las líneas de marcador, estén donde estén y con la sangría que tengan.
++_CODEX_MARKER_RE = re.compile(
++    r"(?m)^[ \t]*(?:" + re.escape(TOML_BEGIN) + "|" + re.escape(TOML_END) + r")[ \t]*(?:\n|\Z)"
++)
++
++
++def _strip_codex_mcp(text: str) -> str:
++    """Quita nuestra entrada y nuestros marcadores, sin emparejar marcadores.
++
++    Emparejar (`remove_block`) es peligroso aquí: si otro programa se come el marcador de cierre,
++    el `begin` huérfano se emparejaría con el `end` del bloque que escribiéramos después, y la
++    siguiente reinstalación borraría todo lo que hubiera entre los dos —las entradas de otros
++    servidores, los proyectos—. El bloque gestionado es solo nuestra tabla, así que basta con
++    quitarla por su nombre y borrar las líneas de marcador que queden sueltas.
++    """
++    text = _CODEX_SECTION_RE.sub("", text)
++    return _CODEX_MARKER_RE.sub("", text)
+ 
+ 
+ def upsert_codex_mcp(text: str, block: str) -> str:
+     """Reemplaza cualquier entrada previa de local-delegate (gestionada o a mano)."""
+-    text = remove_block(text, TOML_BEGIN, TOML_END)
+-    text = _CODEX_SECTION_RE.sub("", text).rstrip()
++    text = _strip_codex_mcp(text).rstrip()
+     managed = f"{TOML_BEGIN}\n{block}\n{TOML_END}"
+     return (text + "\n\n" if text else "") + managed + "\n"
+ 
+ 
+ def remove_codex_mcp(text: str) -> str:
+-    text = remove_block(text, TOML_BEGIN, TOML_END)
+-    return _CODEX_SECTION_RE.sub("", text).strip() + "\n"
++    return _strip_codex_mcp(text).strip() + "\n"
+ 
+ 
+ # --- Entrada del servidor MCP en opencode ------------------------------------
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index d8fa076..81ce3f3 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -1404,3 +1404,30 @@ def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
+     result = result_for("scaffold.hook_files", make_ctx(home))
+     assert result.status == checks.WARN
+     assert "hook_common.py" in result.detail
++
++
++def test_codex_reescrito_por_otro_programa_no_es_missing(tmp_path):
++    """Indentado y sin marcador de cierre, como lo dejó el plugin de JetBrains: Codex lo carga.
++
++    Darlo por ausente no era solo un aviso falso: `update` lo «reparaba» añadiendo otra entrada.
++    """
++    home = make_home(tmp_path)
++    (home / ".codex" / "config.toml").write_text(
++        '  # local-delegate:begin\n  [mcp_servers.local-delegate]\n    url = "http://127.0.0.1:9393/mcp"\n\n'
++        '  [mcp_servers.pycharm]\n    url = "http://127.0.0.1:64342/sse"\n',
++        encoding="utf-8",
++    )
++    result = result_for("scaffold.mcp_codex", make_ctx(home))
++    assert result.status == checks.OK, result.detail
++    assert "http" in result.detail
++    assert "cierre" in result.detail
++
++
++def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
++    """Sin el de apertura no es nuestra, con sangría o sin ella: `warn`, y `update` no la pisa."""
++    home = make_home(tmp_path)
++    (home / ".codex" / "config.toml").write_text(
++        '  [mcp_servers.local-delegate]\n    command = "uvx"\n', encoding="utf-8"
++    )
++    result = result_for("scaffold.mcp_codex", make_ctx(home))
++    assert result.status == checks.WARN
+diff --git a/tests/test_install.py b/tests/test_install.py
+index 6204e06..710602d 100644
+--- a/tests/test_install.py
++++ b/tests/test_install.py
+@@ -614,3 +614,71 @@ def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monk
+     # instalado ARRANCA, importa a su vecino y decide, que es donde estaba el agujero.
+     assert proceso.stdout.strip() == "", proceso.stdout
+     assert "Traceback" not in proceso.stderr
++
++
++# Tal como dejó `~/.codex/config.toml` el plugin de JetBrains el 2026-09-22: todo indentado dos
++# espacios, sin comentarios salvo nuestro marcador de apertura, y SIN el de cierre. Con una
++# entrada ajena justo después y más tablas detrás, que es lo que un emparejamiento de marcadores
++# mal hecho se llevaría por delante.
++_CODEX_REESCRITO_POR_OTRO = """model = "x"
++
++  [mcp_servers.git]
++    command = "uvx"
++    args = ["mcp-server-git"]
++
++  # local-delegate:begin
++  [mcp_servers.local-delegate]
++    url = "http://127.0.0.1:9393/mcp"
++    bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"
++
++  [mcp_servers.pycharm]
++    url = "http://127.0.0.1:64342/sse"
++
++  [projects.proyecto]
++    trust_level = "trusted"
++"""
++
++
++def test_codex_reescrito_por_otro_programa_se_reemplaza_sin_duplicar(tmp_path):
++    """La entrada indentada se reconoce, se reemplaza y no se duplica.
++
++    Antes, la búsqueda exigía la cabecera al principio de la línea y no la veía: `install` añadía una segunda `[mcp_servers.local-delegate]`, el TOML
++    quedaba inválido y Codex se quedaba sin ningún MCP.
++    """
++    assert tomllib.loads(_CODEX_REESCRITO_POR_OTRO)  # el de partida es TOML válido
++    entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
++    result = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, inst.codex_mcp_block(entry))
++
++    data = tomllib.loads(result)
++    assert result.count("mcp_servers.local-delegate]") == 1
++    assert data["mcp_servers"]["pycharm"]["url"].endswith("/sse")
++    assert data["mcp_servers"]["git"]["command"] == "uvx"
++    assert data["projects"]["proyecto"]["trust_level"] == "trusted"
++    assert result.count(inst.TOML_BEGIN) == 1
++    assert result.count(inst.TOML_END) == 1
++
++
++def test_un_marcador_huerfano_no_se_lleva_lo_que_hay_detras(tmp_path):
++    """Dos reinstalaciones seguidas sobre el fichero sin marcador de cierre.
++
++    Emparejando marcadores, la segunda casaría el `begin` huérfano con el `end` escrito por la
++    primera y borraría lo de en medio: `pycharm` y los proyectos. El huérfano tiene que desaparecer
++    en la primera pasada, y la segunda tiene que dejar el fichero igual.
++    """
++    entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
++    block = inst.codex_mcp_block(entry)
++    primera = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, block)
++    segunda = inst.upsert_codex_mcp(primera, block)
++
++    assert segunda == primera
++    data = tomllib.loads(segunda)
++    assert "pycharm" in data["mcp_servers"]
++    assert "proyecto" in data["projects"]
++
++
++def test_quitar_la_entrada_de_un_codex_reescrito_deja_lo_demas(tmp_path):
++    result = inst.remove_codex_mcp(_CODEX_REESCRITO_POR_OTRO)
++    data = tomllib.loads(result)
++    assert "local-delegate" not in data["mcp_servers"]
++    assert set(data["mcp_servers"]) == {"git", "pycharm"}
++    assert inst.TOML_BEGIN not in result

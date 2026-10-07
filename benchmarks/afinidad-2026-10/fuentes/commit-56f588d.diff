@@ -1,0 +1,182 @@
+diff --git a/.sdd/changes/punteria-hook-read/handoff.md b/.sdd/changes/punteria-hook-read/handoff.md
+index 099f070..4660f5d 100644
+--- a/.sdd/changes/punteria-hook-read/handoff.md
++++ b/.sdd/changes/punteria-hook-read/handoff.md
+@@ -1,25 +1,43 @@
+-# Handoff: Arreglar la punteria del hook de lectura y medir la extension
+-
+-## Current state
+-
+-- SDD status:
+-- Last completed gate:
+-- Current revision:
+-
+-## What changed
+-
+-- Summarize completed work without reproducing the full Git history.
+-
+-## Decisions
+-
+-- Record decisions that a future session cannot reliably derive from code alone.
+-
+-## Next action
+-
+-- State the single best next step and any prerequisite context.
+-
+-## Memory
+-
+-- Canonical note:
+-- Indexes updated:
+-
++# Handoff
++
++## Qué se cerró
++
++El hook `suggest_delegate_read` avisaba en 572 de 852 lecturas y sólo 29 apuntaban a algo
++delegable. Ahora se calla ante código y ante lecturas acotadas, y los umbrales suben de 8/32 KB a
++32/100 KB. La telemetría registra `ext` y el motivo del descarte.
++
++Mergeado en **PR #146** (`9453893`), con los 13 checks en verde —CodeQL incluido, que es el que no
++sale en `gh run list`.
++
++## Decisiones que sobreviven a este cambio
++
++- **La conversión cero no era un problema de redacción.** Un control con `claude -p` sobre un
++  archivo de 114 KB mostró que el modelo delega solo cuando la tarea es una transformación global,
++  con hook y sin él. Lo que fallaba era la puntería. Antes de reescribir un aviso que se ignora,
++  mide si el aviso hacía falta.
++- **`markitdown` se obedece siempre con una línea de descripción y sin skill.** No es la prosa: es
++  que si le das un PDF, `Read` no sirve. `delegacion-local`, mucho mejor escrita, se invocó 0 veces
++  en 49 sesiones porque compite contra `Read`, que siempre funciona. La obediencia viene de que la
++  alternativa no exista.
++- **Se descartó el hook que bloquea** (`permissionDecision: deny`). El prototipo funciona y está
++  medido, pero el control negativo dice que el modelo ya delega solo en esos casos.
++- **Excluir todo el código deja sin aviso a `local_explain_code`.** Aceptado a conciencia: 562
++  lecturas de código en 14 días contra 8 llamadas históricas a esa tool. Si hace falta recuperarlo,
++  el sitio es `suggest_delegate_prompt`, que ve la intención y no el tamaño en disco.
++
++## Qué queda abierto
++
++- **Las tools del MCP llegan diferidas en 43 de 49 sesiones.** Es la causa con más peso real de la
++  no-adopción: 601 tools compitiendo, 208 de ellas sin un solo uso en 14 días (MCP_DOCKER 50,
++  Postman 41, Figma 33, Canva 32, Cloudflare 23, Drive 11). No se arregla en este paquete: la
++  mayoría son conectores de la cuenta de claude.ai y se desactivan en su panel de conectores, no en
++  disco.
++- **Esta máquina corre una 0.24.0 instalada desde el repo**, con el hook nuevo dentro. La versión
++  dice 0.24.0 y el código es el de `main`. Se normaliza en la próxima release.
++- El panel no muestra todavía la puntería, aunque el dato (`ext`, `motivo`) ya se registra.
++
++## Estado del entorno tras el cierre
++
++`local-delegate doctor`: todo a punto. Daemon pid 20152, backend arriba, credencial correcta, hook
++instalado idéntico al del repo y verificado en vivo (un `.py` grande no dispara; `CHANGELOG.md` de
++116 KB sí).
+diff --git a/.sdd/changes/punteria-hook-read/state.json b/.sdd/changes/punteria-hook-read/state.json
+index eeb800e..25427f5 100644
+--- a/.sdd/changes/punteria-hook-read/state.json
++++ b/.sdd/changes/punteria-hook-read/state.json
+@@ -3,9 +3,9 @@
+   "slug": "punteria-hook-read",
+   "title": "Arreglar la punteria del hook de lectura y medir la extension",
+   "mode": "lite",
+-  "status": "understanding",
++  "status": "closed",
+   "createdAt": "2026-08-18T12:14:10.407Z",
+-  "updatedAt": "2026-08-18T12:22:13.661Z",
++  "updatedAt": "2026-08-18T12:44:23.525Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-08-18T12:44:05.564Z",
++      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y el estado del entorno. Sin secretos ni datos personales: la telemetria nueva registra extension y motivo, nunca rutas ni nombres.",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -77,6 +77,77 @@
+       "at": "2026-08-18T12:22:13.661Z",
+       "evidence": "verification.md mapea los 6 REQ a evidencia concreta. La regla nueva medida importando el modulo real contra 852 lecturas reales: 572 -> 29 avisos (95% menos), el objetivo de la spec. Prueba en vivo del script fuera de pytest con los tres casos.",
+       "actor": "user"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-08-18T12:44:05.564Z",
++      "evidence": "handoff.md con las decisiones durables, lo que queda abierto y el estado del entorno. Sin secretos ni datos personales: la telemetria nueva registra extension y motivo, nunca rutas ni nombres.",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "understanding",
++      "to": "researching",
++      "at": "2026-08-18T12:44:22.241Z",
++      "reason": "telemetria y transcripts cruzados en research.md"
++    },
++    {
++      "type": "transition",
++      "from": "researching",
++      "to": "specifying",
++      "at": "2026-08-18T12:44:22.398Z",
++      "reason": "spec.md con 6 requisitos verificables"
++    },
++    {
++      "type": "transition",
++      "from": "specifying",
++      "to": "planning",
++      "at": "2026-08-18T12:44:22.559Z",
++      "reason": "plan.md con 6 tareas y propiedad de ficheros"
++    },
++    {
++      "type": "transition",
++      "from": "planning",
++      "to": "plan-review",
++      "at": "2026-08-18T12:44:22.717Z",
++      "reason": "review.md adversarial, 5 hallazgos sin bloqueantes"
++    },
++    {
++      "type": "transition",
++      "from": "plan-review",
++      "to": "implementing",
++      "at": "2026-08-18T12:44:22.868Z",
++      "reason": "hook, tests, CHANGELOG y docs"
++    },
++    {
++      "type": "transition",
++      "from": "implementing",
++      "to": "verifying",
++      "at": "2026-08-18T12:44:23.045Z",
++      "reason": "752 tests, ruff limpio, dos mutantes y simulacion contra 852 lecturas reales"
++    },
++    {
++      "type": "transition",
++      "from": "verifying",
++      "to": "result-review",
++      "at": "2026-08-18T12:44:23.214Z",
++      "reason": "verification.md mapea los 6 REQ a evidencia"
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-08-18T12:44:23.371Z",
++      "reason": "PR #146 mergeado con 13 checks en verde"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-08-18T12:44:23.525Z",
++      "reason": "hook reinstalado y verificado en vivo en esta maquina"
+     }
+   ]
+ }

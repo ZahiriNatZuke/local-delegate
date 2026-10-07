@@ -1,0 +1,253 @@
+diff --git a/.sdd/changes/delegacion-precisa-y-fiable/protocolo-f2.md b/.sdd/changes/delegacion-precisa-y-fiable/protocolo-f2.md
+index fb94483..23a28d5 100644
+--- a/.sdd/changes/delegacion-precisa-y-fiable/protocolo-f2.md
++++ b/.sdd/changes/delegacion-precisa-y-fiable/protocolo-f2.md
+@@ -941,6 +941,49 @@ Este es el fallo 5 de julio, que la primera version de este protocolo no cerraba
+   densidad varia mas del doble segun el contenido: 48 000 chars de `uv.lock` no son los mismos tokens
+   que 48 000 de Markdown, y este repo ya tiene documentada esa trampa. Un `n_ctx` estimado en chars
+   convierte el caso mayor en `rechazo_por_contexto` y §6 tumba el rol entero por un error de unidades.
++- **Dos configs por modelo, decision del usuario (2026-09-14).** Con `n_ctx` fijado por el caso de
++  calidad mayor, los sondeos de techo (26 353 y 47 181 tokens) darian `rechazo_por_contexto` en los
++  dos modelos siempre: medirian la ventana configurada, no el modelo, y el primer desempate de §7
++  seria un control que no puede dar un resultado distinto. Asi que cada modelo de `long` y `code`
++  tiene **una config de calidad** —`n_ctx` = el **maximo por caso de tokens de prompt + su
++  `max_tokens`**, en el mayor de los dos modelos, + 10 %, redondeado hacia arriba a multiplo de 512—
++  y **una config de techo con `n_ctx` 65 536**, igual para vigente y
++  candidato. Las dos corren con la **misma `--label`** (el runner la separa del `--model` de
++  llama-swap y del `--context-size`); §6 compara `n_ctx` y `--load-mode` **dentro de cada tipo de
++  caso**, y la memoria publicada sale solo de los casos de calidad (`analizar_benchmark.py`). Cada
++  config tiene su propio presupuesto de KV y su barrido.
++- **Tokens medidos con el vocabulario de cada modelo** (`llama-tokenize` de b10909, `system` +
++  `user` renderizados como los manda el runner; la plantilla de chat suma unas decenas, que cubre el
++  10 %). Tres trampas que la medida destapo, y que una estimacion en chars no habria visto:
++  - **El caso mayor en chars no es el mayor en tokens**: en `code`, `commit-diff-19k` (19 041 chars)
++    da mas tokens de prompt que `explicar-install-20k` (20 000).
++  - **El caso con mas prompt no es el que mas contexto pide**: `delegar-56` tiene 75 tokens y
++    `max_tokens` 2 048, el triple de lo que pide `extraer-toml-2k`. La primera redaccion de esta
++    regla («tokens del caso mayor + su `max_tokens`») lo habria dejado fuera.
++  - **El vocabulario del candidato cambia el rol entero**: con Gemma 4, `extraer-uvlock-48k` son
++    **32 822** tokens, un 45 % mas que con `llama31-8b`, y el sondeo de `long` (29 241) queda **por
++    debajo** del caso de calidad. Con ese vocabulario el sondeo no sondea nada que la calidad no
++    pida ya; se escribe junto al veredicto de techo de `long`.
++
++  Control de la medida: Gemma 3 4B, Gemma 4 E4B y Gemma 4 26B-A4B dan conteos identicos (698 y 646
++  en los dos casos mayores de `mechanical`: comparten vocabulario) y `llama31-8b` da otros (685 y
++  649), asi que la herramienta distingue vocabularios y no devuelve siempre lo mismo.
++
++  | Rol | Modelo | Caso que mas contexto pide (prompt + `max_tokens`) | Caso mayor en prompt | Sondeo de techo | `n_ctx` de calidad |
++  | --- | --- | --- | --- | --- | --- |
++  | `mechanical` | `gemma3-4b` y Gemma 4 E4B (mismo vocabulario) | `delegar-56`: 75 + 2 048 = 2 123 | `extraer-toml-2k`: 698 | — | **2 560** |
++  | `long` | `llama31-8b` | `extraer-uvlock-48k`: 22 607 + 512 = 23 119 | el mismo | `techo-resumen-103k`: 26 353 | |
++  | `long` | Gemma 4 26B-A4B | `extraer-uvlock-48k`: 32 822 + 512 = 33 334 | el mismo | `techo-resumen-103k`: 29 241 | **36 736** |
++  | `code` | `qwen25-coder-14b` | `explicar-install-20k`: 5 484 + 700 = 6 184 | `commit-diff-19k`: 5 757 | `techo-commit-156k`: 47 181 | |
++  | `code` | Qwen3.6-35B-A3B | `commit-diff-19k`: 5 996 + 256 = 6 252 | el mismo | `techo-commit-156k`: 47 393 | **7 168** |
++
++  Config de techo: **65 536** en `long` y `code`, que cubre los sondeos medidos. `vision` no entra en
++  esta cuenta: sus tokens de imagen los pone el `mmproj`, no el texto.
++
++  **Hallazgo de produccion, anotado para F3 (decision del usuario):** `llama31-8b` corre en
++  produccion con `--ctx-size 16384`, asi que `extraer-uvlock-48k` —la entrada real mayor que
++  `MAX_CHARS` de `long` deja pasar— **da rechazo por contexto hoy**. El tope esta en chars y la
++  ventana en tokens. No se corrige en plena ventana de F1 (backlog, punto 1.3).
+ - **Si vigente y candidato no pueden compartir `n_ctx`** —el candidato tiene un techo menor—, se mide
+   a los dos con el menor de los dos y se escribe. Lo que no vale es compararlos a contextos distintos.
+ - **`rechazo_por_contexto` es una clase de resultado propia**, distinta de `descartada` y distinta de
+@@ -1372,6 +1415,33 @@ anotan aqui porque son parte de la identidad de la medida, no del arranque.
+ Columnas que se rellenan al fijar el entorno: `n_ctx`, VRAM de pesos, VRAM de KV, `-ncmoe` elegido,
+ `--load-mode`.
+ 
++#### Presupuesto de KV medido (tarea 20, 2026-09-14)
++
++Medido cargando cada config en b10909 con `-v --load-mode none --fit off -ngl 99 -np 1`, sumando las
++lineas `llama_kv_cache: size =` (con SWA salen dos) y matando el proceso; un solo `llama-server` vivo
++cada vez. En los MoE se carga con `-ncmoe 99`: el KV no depende de donde vivan los expertos, y asi la
++medida no depende de si los pesos caben. KV `f16` salvo `qwen25-coder-14b`, que va `q4_0/q4_0` como en
++produccion. Candidatos descargados de unsloth y verificados contra el sha256 que publica Hugging Face.
++MiB.
++
++| Rol | Config | `n_ctx` | KV | Pesos en GPU | Pesos en RAM | Computo GPU | Nota |
++| --- | --- | --- | --- | --- | --- | --- | --- |
++| `mechanical` | `gemma3-4b` | 2 560 | 224 | 2 368 | 525 | 78 | SWA: 50 + 174 |
++| `mechanical` | Gemma 4 E4B Q4_K_M | 2 560 | 80 | 2 884 | **2 208** | 105 | la familia E deja embeddings por capa en RAM aun con `-ngl 99` |
++| `long` | `llama31-8b` calidad | 36 736 | **4 608** | 4 403 | 282 | 144 | denso sin SWA: el contexto le cuesta mas que los pesos |
++| `long` | `llama31-8b` techo | 65 536 | **8 192** | 4 403 | 282 | 172 | cabe: ~12,8 GiB |
++| `long` | Gemma 4 26B-A4B UD-IQ4_XS calidad | 36 736 | 1 020 | (MoE) 2 459 | 11 241 | 412 | entero en GPU serian ~13,4 GiB de pesos + KV + computo: al limite, lo decide el barrido |
++| `long` | Gemma 4 26B-A4B techo | 65 536 | 1 580 | (MoE) 2 459 | 11 241 | 440 | |
++| `code` | `qwen25-coder-14b` calidad | 7 168 | 378 | 8 148 | 418 | 118 | `q4_0/q4_0` |
++| `code` | `qwen25-coder-14b` techo | 65 536 | 3 456 | 8 148 | 418 | 360 | cabe: ~11,7 GiB |
++| `code` | Qwen3.6-35B-A3B UD-IQ4_XS calidad | 7 168 | 140 | (MoE) 1 921 | **14 977** | 286 | atencion lineal en la mayoria de capas: el KV casi no cuenta. ~16,9 GiB de pesos: **no cabe entero en GPU**, el barrido decide cuantos expertos suben; con `none` los ~15 GiB en RAM caben justos en los ~19 GB libres |
++| `code` | Qwen3.6-35B-A3B techo | 65 536 | 1 280 | (MoE) 1 921 | 14 977 | 450 | |
++| `vision` | `qwen3-vl-8b` | 8 192 | 1 152 | 4 455 | 334 | 500 | con `mmproj` |
++| `vision` | Gemma 4 12B Q4_K_M | 8 192 | 608 | 6 777 | 540 | 203 | con `mmproj-F16`; `n_ctx` de vision = el de produccion |
++
++Las configs de los densos estan en `llama-swap-pruebas.yaml` (`t-*`). Las de los dos MoE esperan al
++barrido de `-ncmoe` (§5.1 paso 5).
++
+ Descarga: los **~85 GB** de la lista corta del vault menos los ~5 GB de los candidatos de `fast`, que salen de la tanda, mas los **36,6 GB** del modelo que no cabe de CP-1: **~117 GB** en total, dentro de los 400 GB libres. La cifra se contrasta al descargar; no se deriva de nada mas. `gpt-oss-20b` ya esta. **Qwen3.5-122B-A10B UD-IQ2_XXS
+ (36,6 GB) no es candidato**: entra solo como el modelo que no cabe de CP-1.
+ 
+diff --git a/benchmarks/catalogo-2026-09/llama-swap-pruebas.yaml b/benchmarks/catalogo-2026-09/llama-swap-pruebas.yaml
+index 6bd3320..70ef401 100644
+--- a/benchmarks/catalogo-2026-09/llama-swap-pruebas.yaml
++++ b/benchmarks/catalogo-2026-09/llama-swap-pruebas.yaml
+@@ -81,3 +81,51 @@ models:
+       ${server} --load-mode none -ncmoe 12
+       --model D:\Projects\llms\models\gpt-oss-20b-canary\gpt-oss-20b-MXFP4.gguf
+       --ctx-size 8192
++
++  # --- Tanda (tarea 20) ---------------------------------------------------------------------------
++  # Todo con --load-mode none (P-13). n_ctx de calidad = max por caso de (tokens de prompt medidos +
++  # max_tokens) en el mayor de los dos modelos del rol, +10 %, a multiplo de 512; techo a 65 536 en
++  # long y code (protocolo §3.5). Flags de cada vigente como en produccion; KV f16 salvo el coder.
++  # Pendientes del barrido de -ncmoe: Gemma 4 26B-A4B y Qwen3.6-35B-A3B.
++  t-qwen25-coder-14b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
++      --ctx-size 7168 --cache-type-k q4_0 --cache-type-v q4_0
++  t-gemma3-4b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\gemma3-4b\gemma-3-4b-it-Q4_K_M.gguf
++      --ctx-size 2560 --reasoning off
++  t-gemma4-e4b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\gemma4-e4b\gemma-4-E4B-it-Q4_K_M.gguf
++      --ctx-size 2560 --reasoning off
++  t-llama31-8b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\llama31-8b\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
++      --ctx-size 36736
++  t-llama31-8b-techo:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\llama31-8b\Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
++      --ctx-size 65536
++  t-qwen25-coder-14b-techo:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\qwen25-coder-14b\Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
++      --ctx-size 65536 --cache-type-k q4_0 --cache-type-v q4_0
++  t-qwen3-vl-8b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\qwen3-vl-8b\Qwen3VL-8B-Instruct-Q4_K_M.gguf
++      --mmproj D:\Projects\llms\models\qwen3-vl-8b\mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
++      --ctx-size 8192
++  t-gemma4-12b:
++    cmd: >-
++      ${server} --load-mode none
++      --model D:\Projects\llms\models\gemma4-12b\gemma-4-12b-it-Q4_K_M.gguf
++      --mmproj D:\Projects\llms\models\gemma4-12b\mmproj-F16.gguf
++      --ctx-size 8192
+diff --git a/scripts/analizar_benchmark.py b/scripts/analizar_benchmark.py
+index 311ae7b..f8a613a 100755
+--- a/scripts/analizar_benchmark.py
++++ b/scripts/analizar_benchmark.py
+@@ -473,13 +473,20 @@ def validar_tanda(
+             if not _caso(cfg, cid, corpus).calidades:
+                 motivos.append(f"{cfg.selector}: {cid} sin ninguna puntuacion valida")
+     registros = [r for cfg in configs for r in cfg.registros if r.get("role") == rol]
+-    for clave, nombre in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
+-        valores = {(r.get("variant") or {}).get(clave) for r in registros}
+-        if None in valores:
+-            # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
+-            motivos.append(f"{nombre} sin declarar en alguna corrida")
+-        elif len(valores) > 1:
+-            motivos.append(f"{nombre} distinto entre corridas: {sorted(map(str, valores))}")
++    # Por tipo de caso (§3.5, decision del usuario 2026-09-14): la calidad corre con el n_ctx del caso
++    # mayor y los sondeos de techo en otra config con mas contexto, o medirian la ventana y no el
++    # modelo. Lo que no vale es que vigente y candidato difieran DENTRO de un mismo tipo.
++    for kind in sorted({r.get("kind") for r in registros}, key=str):
++        del_tipo = [r for r in registros if r.get("kind") == kind]
++        for clave, nombre in (("context_size", "n_ctx"), ("load_mode", "--load-mode")):
++            valores = {(r.get("variant") or {}).get(clave) for r in del_tipo}
++            if None in valores:
++                # Sin declararlo no se puede comprobar, y un control que no puede fallar no es control.
++                motivos.append(f"{nombre} sin declarar en alguna corrida de {kind}")
++            elif len(valores) > 1:
++                motivos.append(
++                    f"{nombre} distinto entre corridas de {kind}: {sorted(map(str, valores))}"
++                )
+     for cfg in configs:
+         propios = [r for r in cfg.registros if r.get("role") == rol]
+         primeras = [
+@@ -693,7 +700,9 @@ def _fmt(valor: Any, decimales: int = 3) -> str:
+ def _pico(config: Config, rol: str, ruta: tuple[str, ...]) -> Any:
+     valores = []
+     for r in config.registros:
+-        if r.get("role") != rol:
++        # Solo calidad: el sondeo de techo corre con mas contexto y su KV inflaria la memoria de la
++        # config que se decide (§3.5).
++        if r.get("role") != rol or r.get("kind") != "calidad":
+             continue
+         valor: Any = r
+         for clave in ruta:
+diff --git a/tests/test_analisis_benchmark.py b/tests/test_analisis_benchmark.py
+index af8d58e..a225a65 100644
+--- a/tests/test_analisis_benchmark.py
++++ b/tests/test_analisis_benchmark.py
+@@ -397,16 +397,57 @@ def test_un_caso_sin_ninguna_puntuacion_valida_no_es_concluyente():
+ @pytest.mark.parametrize(
+     ("kw", "motivo"),
+     [
+-        ({"ctx": 8192}, "n_ctx distinto entre corridas: ['16384', '8192']"),
+-        ({"load": "mmap"}, "--load-mode distinto entre corridas: ['mmap', 'none']"),
+-        ({"load": None}, "--load-mode sin declarar en alguna corrida"),
++        ({"ctx": 8192}, "n_ctx distinto entre corridas de {}: ['16384', '8192']"),
++        ({"load": "mmap"}, "--load-mode distinto entre corridas de {}: ['mmap', 'none']"),
++        ({"load": None}, "--load-mode sin declarar en alguna corrida de {}"),
+     ],
+ )
+ def test_contexto_o_load_mode_distintos_o_sin_declarar_no_son_concluyentes(kw, motivo):
++    # `_tanda` aplica el cambio a los casos de calidad y al sondeo: sale un motivo por tipo.
+     d = _decidir(
+         _tanda("vigente", "long", TERCIO) + _tanda("candidato", "long", (1.0, 1.0, 1.0), **kw)
+     )
+-    assert (d["veredicto"], d["motivos"]) == ("no_concluyente", [motivo])
++    assert (d["veredicto"], d["motivos"]) == (
++        "no_concluyente",
++        [motivo.format("calidad"), motivo.format("techo")],
++    )
++
++
++def _techo_con_ctx(registros, ctx):
++    for r in registros:
++        if r["kind"] == "techo":
++            r["variant"]["context_size"] = ctx
++    return registros
++
++
++def test_el_sondeo_de_techo_corre_con_su_propio_n_ctx_sin_tumbar_la_tanda():
++    # §3.5, dos configs por modelo: calidad a 16 384 y techo a 65 536 en los dos es concluyente.
++    d = _decidir(
++        _techo_con_ctx(_tanda("vigente", "long", TERCIO), 65536)
++        + _techo_con_ctx(_tanda("candidato", "long", (1.0, 1.0, 1.0)), 65536)
++    )
++    assert d["veredicto"] == "sustituye"
++
++
++def test_el_n_ctx_del_techo_tiene_que_coincidir_entre_vigente_y_candidato():
++    d = _decidir(
++        _techo_con_ctx(_tanda("vigente", "long", TERCIO), 65536)
++        + _tanda("candidato", "long", (1.0, 1.0, 1.0))
++    )
++    assert (d["veredicto"], d["motivos"]) == (
++        "no_concluyente",
++        ["n_ctx distinto entre corridas de techo: ['16384', '65536']"],
++    )
++
++
++def test_la_memoria_publicada_sale_solo_de_los_casos_de_calidad():
++    # El KV de la config de techo (65 536) no puede inflar la memoria de la config que se decide.
++    gib = 1024**3
++    registros = _tanda("candidato", "long", (1.0, 1.0, 1.0))
++    for r in registros:
++        r["resources"]["vram_dedicated_bytes_peak"] = (9 if r["kind"] == "techo" else 1) * gib
++    cfg = analizar.cargar_config(registros, analizar.Selector.parse("candidato"))
++    assert analizar._pico(cfg, "long", ("resources", "vram_dedicated_bytes_peak")) == gib
+ 
+ 
+ def test_shared_usage_que_crece_tira_cp1_y_no_solo_la_corrida():

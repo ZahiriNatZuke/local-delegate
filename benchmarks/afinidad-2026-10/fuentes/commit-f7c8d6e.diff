@@ -1,0 +1,85 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 35d1493..5331580 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -4,7 +4,7 @@ Todos los cambios notables de este proyecto se documentan aquí.
+ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
+ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+-## [Unreleased]
++## [0.27.0] - 2026-09-08
+ 
+ ### Changed
+ - **BREAKING — `local_boilerplate` escribe el código en disco y ya no lo devuelve.** La firma pasa
+@@ -1708,7 +1708,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
+   registro oficial de MCP.
+ 
+-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.26.0...HEAD
++[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.27.0...HEAD
++[0.27.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.26.0...v0.27.0
+ [0.26.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.25.0...v0.26.0
+ [0.25.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.24.0...v0.25.0
+ [0.24.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.23.0...v0.24.0
+diff --git a/docs/assets/dashboard.json b/docs/assets/dashboard.json
+index 0c7e09c..adc5b3f 100644
+--- a/docs/assets/dashboard.json
++++ b/docs/assets/dashboard.json
+@@ -11,7 +11,7 @@
+     "Lo comprueba `tests/test_captura.py`. Procedimiento: docs/wiki/Publishing.md."
+   ],
+   "file": "dashboard.png",
+-  "version": "0.26.0",
+-  "sha256": "cd9e0127566d67e71b5e7335b3694a2c30825558fbdfe2a4f029c49ed0c81827",
+-  "bytes": 721419
++  "version": "0.27.0",
++  "sha256": "fa6f9f4ce80dd90d52889c915ee6fc02f0a05a41435e7f58d68b9d548d37758a",
++  "bytes": 718456
+ }
+diff --git a/docs/assets/dashboard.png b/docs/assets/dashboard.png
+index eec2443..5f1f848 100644
+Binary files a/docs/assets/dashboard.png and b/docs/assets/dashboard.png differ
+diff --git a/pyproject.toml b/pyproject.toml
+index 50d51c0..8947ba7 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "local-delegate-mcp"
+-version = "0.26.0"
++version = "0.27.0"
+ description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+ readme = "README.md"
+ requires-python = ">=3.11"
+diff --git a/server.json b/server.json
+index d61e60c..dac12a7 100644
+--- a/server.json
++++ b/server.json
+@@ -6,12 +6,12 @@
+     "url": "https://github.com/ZahiriNatZuke/local-delegate",
+     "source": "github"
+   },
+-  "version": "0.26.0",
++  "version": "0.27.0",
+   "packages": [
+     {
+       "registryType": "pypi",
+       "identifier": "local-delegate-mcp",
+-      "version": "0.26.0",
++      "version": "0.27.0",
+       "transport": { "type": "stdio" },
+       "environmentVariables": [
+         {
+diff --git a/uv.lock b/uv.lock
+index 2bbf194..1479111 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -448,7 +448,7 @@ wheels = [
+ 
+ [[package]]
+ name = "local-delegate-mcp"
+-version = "0.26.0"
++version = "0.27.0"
+ source = { editable = "." }
+ dependencies = [
+     { name = "fastapi" },

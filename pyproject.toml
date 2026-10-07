@@ -151,3 +151,8 @@ exclude = ["*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    # Tests de la fixture del llama-swap de prueba que comprueban que el llama-swap real (el de
+    # 127.0.0.1:9292) no se toca. Se registra para que pytest no avise de un marcador desconocido.
+    "llamaswap_real: comprueban que el llama-swap real no se toca",
+]

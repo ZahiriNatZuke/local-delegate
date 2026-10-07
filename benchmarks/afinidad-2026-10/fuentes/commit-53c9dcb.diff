@@ -1,0 +1,164 @@
+diff --git a/.sdd/changes/commit-msg-diffs-grandes/handoff.md b/.sdd/changes/commit-msg-diffs-grandes/handoff.md
+index a8faf79..540fd99 100644
+--- a/.sdd/changes/commit-msg-diffs-grandes/handoff.md
++++ b/.sdd/changes/commit-msg-diffs-grandes/handoff.md
+@@ -1,50 +1,49 @@
+-# Handoff: local_commit_msg deja de truncar diffs grandes
+-
+-## Current state
+-
+-- SDD status: `result-review` (modo lite), gates `spec`, `plan`, `quality` y `conformance`
+-  aprobados. Falta `memory` y el cierre.
+-- Rama `fix/commit-msg-diffs-grandes` @ `070d7bb`, **PR #137** con los 13 checks en verde
+-  (incluidos `CodeQL` y `ci-gate`, que llegan tarde). Pendiente de merge.
+-
+-## What changed
+-
+-`local_commit_msg` procesa el diff entero en vez de sus primeros 20 000 caracteres. Siete tareas,
+-de las que **dos no estaban en el plan original** y salieron de medir contra el backend real:
+-
+-1-3. Splitter de diff por archivo, inventario calculado sin modelo, y `_chat_map_reduce`
+-     parametrizable con un reduce propio.
+-4. Nota de alcance en la salida y error explícito para el diff vacío.
+-5. La medida contra el backend real.
+-6. **Reintento cuando un trozo no cabe en el contexto** — el presupuesto está en chars y el límite
+-   en tokens.
+-7. **Prompts del map que dan las rutas reales** y declaran qué trozo continúa un archivo.
+-
+-## Decisions
+-
+-- **El splitter de diff es global pero se autoinhibe.** Va como nivel 0 de `_SPLITTERS`, y
+-  devuelve el texto entero si no empieza por una cabecera de diff. Así un Markdown con un diff
+-  dentro de un fence se sigue partiendo por headers y no puede degradar `local_translate`.
+-- **El respaldo `--- `/`+++ ` solo se usa si no hay ningún `diff --git`.** En un diff `--git` cada
+-  archivo trae también su `--- a/x`: cortar por ambas cabeceras partiría cada archivo en dos.
+-- **El inventario se calcula sin modelo** porque es un conteo, no un juicio, y así no cuesta una
+-  llamada. Se colapsa por directorio si pasa del 25 % del presupuesto.
+-- **La nota de alcance va siempre, no bajo `FEEDBACK_ENABLED`**: no es contabilidad de ahorro, es
+-  lo que impide que procesar de menos vuelva a ser invisible.
+-- **El reintento por desborde cubre el map y no el reduce**, y eso está anotado como límite
+-  conocido en `verification.md`, no como cubierto.
+-- **La calidad se juzga con un diff coherente, no con el grande.** Un rango de seis PRs mezclados
+-  no tiene un buen mensaje de commit posible; sirve para medir que entra entero, no calidad.
+-
+-## Next action
+-
+-Mergear el PR #137 (squash, como el resto del repo), aprobar el gate `memory` y cerrar el cambio.
+-
+-Lo que quedó fuera a propósito y ahora es evaluable sobre una base medida: **filtrar el ruido del
+-diff** —lockfiles, generados, líneas de contexto sin cambiar—. Reduciría el número de trozos y el
+-coste; el caso grande son hoy 17 llamadas y 122 s.
+-
+-## Memory
+-
+-- Nota canónica: pendiente de escribir en el vault tras el merge.
+-- Índices actualizados: pendiente.
++# Handoff: local_commit_msg deja de truncar diffs grandes
++
++## Current state
++
++- SDD status: `closed` (modo lite). Los cinco gates aprobados.
++- **PR #137 mergeado** (squash) como `ed2db74` en `main`, con los 13 checks en verde — incluidos
++  `CodeQL` y `ci-gate`, que llegan tarde. Rama borrada.
++
++## What changed
++
++`local_commit_msg` procesa el diff entero en vez de sus primeros 20 000 caracteres. Siete tareas,
++de las que **dos no estaban en el plan original** y salieron de medir contra el backend real:
++
++1-3. Splitter de diff por archivo, inventario calculado sin modelo, y `_chat_map_reduce`
++     parametrizable con un reduce propio.
++4. Nota de alcance en la salida y error explícito para el diff vacío.
++5. La medida contra el backend real.
++6. **Reintento cuando un trozo no cabe en el contexto** — el presupuesto está en chars y el límite
++   en tokens.
++7. **Prompts del map que dan las rutas reales** y declaran qué trozo continúa un archivo.
++
++## Decisions
++
++- **El splitter de diff es global pero se autoinhibe.** Va como nivel 0 de `_SPLITTERS`, y
++  devuelve el texto entero si no empieza por una cabecera de diff. Así un Markdown con un diff
++  dentro de un fence se sigue partiendo por headers y no puede degradar `local_translate`.
++- **El respaldo `--- `/`+++ ` solo se usa si no hay ningún `diff --git`.** En un diff `--git` cada
++  archivo trae también su `--- a/x`: cortar por ambas cabeceras partiría cada archivo en dos.
++- **El inventario se calcula sin modelo** porque es un conteo, no un juicio, y así no cuesta una
++  llamada. Se colapsa por directorio si pasa del 25 % del presupuesto.
++- **La nota de alcance va siempre, no bajo `FEEDBACK_ENABLED`**: no es contabilidad de ahorro, es
++  lo que impide que procesar de menos vuelva a ser invisible.
++- **El reintento por desborde cubre el map y no el reduce**, y eso está anotado como límite
++  conocido en `verification.md`, no como cubierto.
++- **La calidad se juzga con un diff coherente, no con el grande.** Un rango de seis PRs mezclados
++  no tiene un buen mensaje de commit posible; sirve para medir que entra entero, no calidad.
++
++## Next action
++
++Nada pendiente de este cambio. Lo que quedó fuera a propósito y ahora es evaluable sobre una base medida: **filtrar el ruido del
++diff** —lockfiles, generados, líneas de contexto sin cambiar—. Reduciría el número de trozos y el
++coste; el caso grande son hoy 17 llamadas y 122 s.
++
++## Memory
++
++- Nota canónica: `projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md`.
++- Memoria nueva del proyecto: `presupuesto-en-chars-limite-en-tokens.md`.
++- Índices actualizados: memoria de Claude Code del proyecto (jornada, gotcha nuevo, y los
++  contadores de `probar-la-pieza-no-es-probar-el-uso` y `un-pendiente-es-una-hipotesis`).
+diff --git a/.sdd/changes/commit-msg-diffs-grandes/state.json b/.sdd/changes/commit-msg-diffs-grandes/state.json
+index b0d2662..584866c 100644
+--- a/.sdd/changes/commit-msg-diffs-grandes/state.json
++++ b/.sdd/changes/commit-msg-diffs-grandes/state.json
+@@ -3,9 +3,9 @@
+   "slug": "commit-msg-diffs-grandes",
+   "title": "local_commit_msg deja de truncar diffs grandes",
+   "mode": "lite",
+-  "status": "result-review",
++  "status": "closed",
+   "createdAt": "2026-08-04T14:53:23.504Z",
+-  "updatedAt": "2026-08-04T17:24:11.183Z",
++  "updatedAt": "2026-08-04T17:46:59.102Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-08-04T17:46:58.992Z",
++      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md. Memoria nueva del proyecto: presupuesto-en-chars-limite-en-tokens.md. Punteros sincronizados en la memoria de Claude Code del proyecto (jornada, gotcha nuevo, y contadores actualizados de probar-la-pieza-no-es-probar-el-uso y un-pendiente-es-una-hipotesis). Sin secretos ni datos personales.",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -168,6 +168,28 @@
+       "at": "2026-08-04T17:24:11.183Z",
+       "evidence": "Los siete requisitos implementados y verificados contra el backend real y con tests. Veredicto conforms-with-notes: REQ-004 cumple con dos limites de calidad anotados (el tipo del commit no siempre acierta y el cuerpo es irregular), ninguno bloqueante. Cinco hallazgos anotados, incluidos dos tests propios que no median lo que decian y una hipotesis de diagnostico caida.",
+       "actor": "user"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-08-04T17:46:58.992Z",
++      "evidence": "Nota canonica en el vault: projects/local-delegate/jornada-2026-08-04-el-diff-que-no-cabia.md. Memoria nueva del proyecto: presupuesto-en-chars-limite-en-tokens.md. Punteros sincronizados en la memoria de Claude Code del proyecto (jornada, gotcha nuevo, y contadores actualizados de probar-la-pieza-no-es-probar-el-uso y un-pendiente-es-una-hipotesis). Sin secretos ni datos personales.",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-08-04T17:46:59.050Z",
++      "reason": "PR #137 mergeado como ed2db74; memoria persistida"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-08-04T17:46:59.102Z",
++      "reason": "cambio cerrado"
+     }
+   ]
+ }

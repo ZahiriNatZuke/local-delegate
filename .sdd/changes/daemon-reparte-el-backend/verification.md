@@ -175,6 +175,93 @@ No se cambió ninguna configuración.
   el control de T1 (lo ejecuta T17.2) hoy **no pasa**, como debe. La reaprobación la pide la sesión
   principal al usuario (T1.4).
 
+## Ola 1 — integración I1 (2026-10-07)
+
+Evidencias de las tres tareas (no se reescriben aquí, solo se enlazan):
+[T2](evidencias/T2.md) (llama-swap v255 de prueba), [T3](evidencias/T3.md) (control de lentitud) y
+[T4](evidencias/T4.md) (corpus, puntuadores, trampas, reglas, hoja y veredicto). La imagen de la hoja de
+prueba es [T4-hoja-sintetica.png](evidencias/T4-hoja-sintetica.png).
+
+### Cifras que consumen otras tareas
+
+- **T2, TTL:** el modelo se descarga entre 3,03 y 3,10 s después del fin de una petición de 3 s con `ttl: 2`
+  (entre `ttl` y `ttl` + ~1 s): REQ-013 no se reescribe. Hora en `/api/metrics/activity`: campo
+  `timestamp` (no `ts_created`), fin de la petición, truncado al segundo.
+- **T2, carrera:** p99 de la ventana decisión-llegada de 1,0 ms con 1 cliente y 3,1 ms con 8; con 1 s de
+  tope de las consultas quedan en ~1,003 s, muy por debajo de 5 s: **el margen de 5 s no se sube**.
+- **T2, recarga:** `/api/events` se cierra en una recarga válida (la vigía de REQ-039 debe reabrir la
+  conexión) y una recarga corta las peticiones en curso aunque el modelo no cambie; la foto `inflight`
+  llega en 0,016 a 0,031 s; con alias, la actividad lleva el id real (T15 no necesita el caso «Alias»).
+- **T3, lentitud:** 2,13 % de los eventos de la PC marcados como lentos (5 de 235 con referencia; tope 5 %);
+  el control positivo marca las tres filas (570, 571 y 573). Mediana normalizada por tramos
+  `<2k` 0,967 / `2k–10k` 1,004 / `>10k` 0,949, razón `>10k` / `<2k` = 0,98 (> 0,75): **una sola
+  referencia, sin tramos, para el daemon.**
+- **T4, corpus:** `benchmarks/afinidad-2026-10/reglas.json` escrito (el usuario aún debe confirmarlo, ver
+  «Pendiente antes de T5»); corrida de prueba de
+  73 casos (30 `commit_msg` reales, 9 trampa, 28 mecánicos nuevos, 5 de regresión, 1 de techo). El corpus
+  real **no está escrito** en el repo (parada por un dato privado dentro de un diff candidato).
+
+### Pasos de la integración
+
+1. **Marcador `llamaswap_real`** registrado en `[tool.pytest.ini_options]` de `pyproject.toml` (clave
+   `markers`, descripción en español; el fichero conserva su fin de línea CRLF). El
+   `PytestUnknownMarkWarning` de T2 ya no sale: el único aviso que queda de la suite es el
+   `DeprecationWarning` de `starlette.testclient` (anyio), anterior a esta ola.
+2. **Test de T3 corregido (tocado por la integración).** `test_por_tramos_un_evento_de_12k_a_18_tok_s_no_es_lento`
+   (antes `..._a_25_tok_s_...`, con `umbral=0.7`) usa ahora el **umbral por defecto (0,5)** y un evento
+   largo a **18 tok/s**; las medianas siguen siendo 40 (20 cortos) y 26 (12 largos). Por tramos: 18/26 =
+   0,69, no es lento; con una sola referencia: 18/40 = 0,45, es lento. Pasa (36 tests del fichero).
+   **Mutante «una sola referencia»** (la clave de la ventana ignora el tramo aunque `por_tramos=True`):
+   el test falla en `assert not lento` (`tests/test_medir_lentitud.py:140`, `assert not True`); también
+   falla `test_por_tramos_cada_tramo_pide_su_propio_minimo`. Mutante revertido (el script quedó byte a byte
+   igual que el original) y los 36 tests vuelven a pasar. Nota: `evidencias/T3.md` sigue describiendo el
+   umbral 0,7 («Dos guiones del plan no mutaban y se cambiaron»); **vale esta corrección**, la evidencia
+   no se reescribe.
+3. **Suite completa** (`pesado.sh uv run pytest -q -p no:cacheprovider`), última línea literal:
+   `1865 passed, 7 skipped, 1 warning in 131.13s (0:02:11)`. Línea base de la ola 0: `1749 passed, 2
+   skipped`. Diferencia: **+116 pasan y +5 saltados**. Los nuevos son los de T2 (13), T3 (36), T4
+   (`test_huella.py` 9 y los añadidos a `test_analisis_benchmark.py`, `test_hoja_pares.py` y
+   `test_corpus.py`). Saltados: los 2 de la base (`chmod` en Windows en `test_checks.py:465` y el de solo
+   CI en `test_dashboard_ui.py:596`) más 5 de `tests/test_corpus.py` (`:783`, `:811`, `:827`, `:857`,
+   `:880`), esperables porque el corpus real aún no está construido.
+   **Playwright:** los tests de `test_dashboard_ui.py` corren dentro de la suite completa (el navegador
+   está instalado aquí); además `pesado.sh uv run --group ui pytest -q -p no:cacheprovider -rs
+   tests/test_dashboard_ui.py` da `15 passed, 1 skipped in 7.57s` (el repo no tiene un marcador `ui`; el
+   grupo `ui` es el de dependencias).
+4. **Ruff:** `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` → `160 files
+   already formatted`.
+5. **Config real de llama-swap (comprobación de cierre de ola):** `sha256` de `config.yaml` =
+   `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, **igual** que el de T0. No se
+   imprimió su contenido ni se tocó.
+6. **Datos privados:** revisados `git diff`, los ficheros nuevos (`??`) y `evidencias/*.md`. Sin IPs que no
+   sean `127.0.0.1` (la `203.0.113.7` del constructor del corpus es una IP de documentación, RFC 5737),
+   sin ids de sesión reales (los de `test_corpus.py` y `construir_corpus.py` son datos falsos o el patrón
+   que se filtra), sin PIDs con contexto personal. **Encontrado y quitado (tocado por la integración):**
+   `evidencias/T4.md` citaba tres veces la ruta de perfil de Windows con el nombre de usuario real; se
+   sustituyó por `<usuario>` con la edición mínima (la lógica de la parada no cambia). La imagen de la hoja
+   sintética solo enseña mensajes de commit sintéticos y uno público del repo: nada privado.
+
+### Pendiente antes de T5
+
+Cerrado el 2026-10-07, salvo el último punto:
+
+- **Decisiones del usuario**, en respuesta a la pregunta explícita de la sesión principal:
+  - **Privacidad: «Excluir»**. Un diff con datos privados deja de ser candidato.
+  - **`chore(release):`: «Lectura literal»**. Solo se excluye el texto exacto `chore: release`, como
+    dicen la spec y el plan. Salen 104 candidatos, la cifra de la spec. Entre los 30 casos reales
+    entran siete commits de versión.
+  - **`reglas.json`: «Confirmado»**, tal cual.
+- **Corpus real escrito** en `benchmarks/afinidad-2026-10/` con `--privacidad excluir`;
+  `afinidad --comprobar` da `ok`. Los sha256:
+  - `trampas.json`: `a9295180be8c597028b50ddae927501dca50f302d35a6bc11ae20ef1a76d9121`
+  - `cases.json`: `1bde663ba516b1588f2f8d9fde71ec1b653db2a348c2308c56898e12190cdfbb`
+  - `reglas.json`: `3aac45aa83c16be7b006bc73b941252f4fee6727cce64727fd8eb5a304e968bf`
+
+  El detalle está en `evidencias/T4.md`, sección «Estado final tras las decisiones del 2026-10-07».
+- Los 5 tests de `tests/test_corpus.py` que antes se saltaban ya pasan.
+- **Pendiente para T5: el idioma de las trampas.** Están en español. Si los mensajes reales de los
+  modelos salen en inglés, las trampas se notarían y habría que reescribirlas antes de generar la hoja.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |
