@@ -9,7 +9,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Added
 - **`local_commit_msg` ya pide idioma.** Antes el prompt no decía en cuál escribir y el modelo
   elegía: sobre 30 commits de un repo documentado en español, `gemma4-26b-a4b` escribió 17 mensajes
-  en inglés y `qwen36-35b-a3b`, 6. La variable nueva `LOCAL_DELEGATE_COMMIT_IDIOMA` (`es`, `en`,
+  en inglés y `qwen36-35b-a3b`, 6. La variable nueva `LOCAL_DELEGATE_COMMIT_LANGUAGE` (`es`, `en`,
   `fr`, `pt`, `de`, `it`, o un nombre libre) fija el idioma del mensaje entero, primera línea y
   cuerpo. Sin ella, el prompt pide el idioma predominante de los textos del diff (comentarios,
   documentación y mensajes). Vale para `conventional` y `plain`, y también para la redacción final

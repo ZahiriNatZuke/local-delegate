@@ -12,7 +12,7 @@ y cuatro. Dos modos, en el orden en que se usan:
   despues las condiciones y los desempates de §7. «No se cambia» es un resultado, no un error: el
   exit code es 0.
 
-- `veredicto-afinidad`: la evaluacion que aprueba las celdas de afinidad (REQ-040 a REQ-043 del SDD
+- `affinity-verdict`: la evaluacion que aprueba las celdas de afinidad (REQ-040 a REQ-043 del SDD
   `daemon-reparte-el-backend`). Aplica los criterios escritos en el SDD sobre los resultados de la
   tanda, la huella de cada celda (`huellas.json`), `reglas.json` y el juicio del usuario, y escribe
   `veredicto.json` y la tabla de `verification.md`. No importa `local_delegate`.
@@ -933,7 +933,7 @@ def informe_cp3(resultado: dict[str, Any]) -> str:
 
 # Las cinco tools con celda mecanica. `local_summarize` esta fuera (REQ-011): sus casos de regresion
 # se publican pero no deciden ninguna celda.
-TOOLS_CON_CELDA = (
+TOOLS_WITH_CELL = (
     "local_classify",
     "local_extract",
     "local_translate",
@@ -941,17 +941,17 @@ TOOLS_CON_CELDA = (
     "local_delegate",
 )
 TOOL_COMMIT = "local_commit_msg"
-CONTROL_DEBIL = "qwen35-2b"  # control debil de la tanda (REQ-041), solo en las mecanicas
-CASO_TECHO = "techo-commit-156k"
-CORRIDAS_DEL_TECHO = 3
-VERBOSIDAD_MAXIMA = 1.5  # criterio 4
-TRAMPAS_POR_HOJA = 3
-TRAMPAS_MINIMAS = 2  # criterio 0: la hoja vale si el usuario marca peor la trampa en 2 de las 3
-HUECO_FRIO_S = 300  # una fila es «en frio» si el modelo llevaba >= 300 s sin peticiones (TTL max.)
+WEAK_CONTROL = "qwen35-2b"  # control debil de la tanda (REQ-041), solo en las mecanicas
+CEILING_CASE_ID = "techo-commit-156k"
+CEILING_RUNS = 3
+MAX_VERBOSITY = 1.5  # criterio 4
+TRAPS_PER_SHEET = 3
+MIN_TRAPS = 2  # criterio 0: la hoja vale si el usuario marca peor la trampa en 2 de las 3
+COLD_GAP_S = 300  # una fila es «en frio» si el modelo llevaba >= 300 s sin peticiones (TTL max.)
 _EPS = 1e-9
 
 
-class SinDatos(ValueError):
+class NoData(ValueError):
     """Falta un dato que el criterio necesita. Nunca se sustituye por un valor: sin dato no hay
     veredicto, porque una celda aprobada con un hueco seria una celda aprobada a ciegas."""
 
@@ -959,18 +959,18 @@ class SinDatos(ValueError):
 # --- Puntuadores de las tools mecanicas -----------------------------------------------------------
 
 
-def _quitar_vallas(texto: str) -> str:
+def _strip_fences(text: str) -> str:
     """Lo mismo que `_strip_fences` de la tool: la salida que ve quien llama ya va sin vallas."""
-    s = texto.strip()
+    s = text.strip()
     if s.startswith("```"):
-        lineas = s.splitlines()[1:]
-        if lineas and lineas[-1].strip().startswith("```"):
-            lineas = lineas[:-1]
-        s = "\n".join(lineas).strip()
+        lines = s.splitlines()[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        s = "\n".join(lines).strip()
     return s
 
 
-def _igual_json(a: Any, b: Any) -> bool:
+def _json_equal(a: Any, b: Any) -> bool:
     """Igualdad estricta de valores JSON: `True` no es 1, `"502"` no es 502, `0` no es `null`."""
     if isinstance(a, bool) or isinstance(b, bool):
         return isinstance(a, bool) and isinstance(b, bool) and a == b
@@ -979,45 +979,45 @@ def _igual_json(a: Any, b: Any) -> bool:
     return type(a) is type(b) and a == b
 
 
-_TITULO = re.compile(r"^#{1,6}\s+\S")
+_TITLE = re.compile(r"^#{1,6}\s+\S")
 _ITEM = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+\S")
-_VALLA_ABRE = re.compile(r"^\s*(`{3,}|~{3,})")
+_FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})")
 
 
-def estructura_markdown(texto: str) -> dict[str, Any]:
+def markdown_structure(text: str) -> dict[str, Any]:
     """Titulos, elementos de lista y bloques de codigo de un Markdown, y el codigo de cada bloque.
 
     Lo de dentro de una valla no cuenta como titulo ni como lista: un `# comentario` de Python no es
     un encabezado.
     """
-    titulos = listas = 0
-    bloques: list[str] = []
-    valla: str | None = None
+    titles = item_lists = 0
+    blocks: list[str] = []
+    fence: str | None = None
     actual: list[str] = []
-    for linea in texto.replace("\r\n", "\n").split("\n"):
-        if valla is not None:
-            cierre = linea.strip()
-            if cierre and set(cierre) == {valla[0]} and len(cierre) >= len(valla):
-                bloques.append("\n".join(actual))
-                valla, actual = None, []
+    for line in text.replace("\r\n", "\n").split("\n"):
+        if fence is not None:
+            closing = line.strip()
+            if closing and set(closing) == {fence[0]} and len(closing) >= len(fence):
+                blocks.append("\n".join(actual))
+                fence, actual = None, []
             else:
-                actual.append(linea)
+                actual.append(line)
             continue
-        if m := _VALLA_ABRE.match(linea):
-            valla = m.group(1)
+        if m := _FENCE_OPEN.match(line):
+            fence = m.group(1)
             continue
-        titulos += bool(_TITULO.match(linea))
-        listas += bool(_ITEM.match(linea))
-    if valla is not None:  # valla sin cerrar: cuenta como bloque (el modelo se quedo a medias)
-        bloques.append("\n".join(actual))
-    return {"titulos": titulos, "listas": listas, "bloques": len(bloques), "codigo": bloques}
+        titles += bool(_TITLE.match(line))
+        item_lists += bool(_ITEM.match(line))
+    if fence is not None:  # valla sin cerrar: cuenta como bloque (el modelo se quedo a medias)
+        blocks.append("\n".join(actual))
+    return {"titulos": titles, "listas": item_lists, "bloques": len(blocks), "codigo": blocks}
 
 
-_CODIGO_DE_REGLA = re.compile(r"(?<![A-Za-z0-9])[A-Z]+[0-9]+(?![A-Za-z0-9])")
-_ENTERO_SUELTO = re.compile(r"(?<![\w.])\d+(?!\w|\.\d)")
+_RULE_CODE = re.compile(r"(?<![A-Za-z0-9])[A-Z]+[0-9]+(?![A-Za-z0-9])")
+_BARE_INTEGER = re.compile(r"(?<![\w.])\d+(?!\w|\.\d)")
 
 
-def reglas_con_conteo_incorrecto(texto: str, conteos: dict[str, list[int]]) -> list[str]:
+def rules_with_wrong_count(text: str, counts: dict[str, list[int]]) -> list[str]:
     """Las reglas de `conteos` cuyo numero NO cuadra con la fuente.
 
     Cada entero pertenece a la regla que tiene delante en su linea, hasta la siguiente regla. Cuadra
@@ -1025,25 +1025,23 @@ def reglas_con_conteo_incorrecto(texto: str, conteos: dict[str, list[int]]) -> l
     la tienen o lo que suma en alguno). Una regla nombrada sin conteo no cuadra. Es la misma
     lectura que `check_counts` de `benchmark.py`, copiada porque este modulo no importa el paquete.
     """
-    numeros: dict[str, list[int]] = {regla: [] for regla in conteos}
-    for linea in texto.splitlines():
-        codigos = list(_CODIGO_DE_REGLA.finditer(linea))
-        for i, codigo in enumerate(codigos):
-            if codigo.group() not in numeros:
+    numbers: dict[str, list[int]] = {rule: [] for rule in counts}
+    for line in text.splitlines():
+        codes = list(_RULE_CODE.finditer(line))
+        for i, code in enumerate(codes):
+            if code.group() not in numbers:
                 continue
-            fin = codigos[i + 1].start() if i + 1 < len(codigos) else len(linea)
-            numeros[codigo.group()] += [
-                int(n) for n in _ENTERO_SUELTO.findall(linea[codigo.end() : fin])
-            ]
+            end = codes[i + 1].start() if i + 1 < len(codes) else len(line)
+            numbers[code.group()] += [int(n) for n in _BARE_INTEGER.findall(line[code.end() : end])]
     return [
-        regla
-        for regla, validos in conteos.items()
-        if not numeros[regla] or not set(numeros[regla]) <= set(validos)
+        rule
+        for rule, valid in counts.items()
+        if not numbers[rule] or not set(numbers[rule]) <= set(valid)
     ]
 
 
-def puntuar_afinidad(
-    caso: dict[str, Any], texto: str, registro: dict[str, Any] | None = None
+def score_affinity(
+    case: dict[str, Any], text: str, record: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """`{"calidad": 0..1, "formato": bool}` de una respuesta, con el puntuador DEL caso.
 
@@ -1052,247 +1050,247 @@ def puntuar_afinidad(
     prometio (una etiqueta, un objeto JSON con esas claves, la estructura Markdown, un limite de
     palabras, un formato exacto); `calidad` es si ademas es correcto.
     """
-    spec = caso.get("puntuador") or {}
-    tipo = spec.get("tipo")
-    if tipo == "classify":
-        respuesta = texto.strip()
+    spec = case.get("puntuador") or {}
+    kind = spec.get("tipo")
+    if kind == "classify":
+        response = text.strip()
         return {
-            "calidad": 1.0 if respuesta in spec["aceptables"] else 0.0,
-            "formato": respuesta in spec["etiquetas"],
+            "calidad": 1.0 if response in spec["aceptables"] else 0.0,
+            "formato": response in spec["etiquetas"],
         }
-    if tipo == "extract":
+    if kind == "extract":
         try:
-            objeto = json.loads(_quitar_vallas(texto))
+            obj = json.loads(_strip_fences(text))
         except ValueError:
-            objeto = None
-        if not isinstance(objeto, dict) or set(objeto) != set(spec["claves"]):
+            obj = None
+        if not isinstance(obj, dict) or set(obj) != set(spec["claves"]):
             return {"calidad": 0.0, "formato": False}
-        bien = sum(_igual_json(objeto[c], spec["esperado"][c]) for c in spec["claves"])
-        return {"calidad": bien / len(spec["claves"]), "formato": True}
-    if tipo == "translate":
-        est = estructura_markdown(texto)
-        estructura = [
+        good = sum(_json_equal(obj[c], spec["esperado"][c]) for c in spec["claves"])
+        return {"calidad": good / len(spec["claves"]), "formato": True}
+    if kind == "translate":
+        est = markdown_structure(text)
+        structure = [
             est["titulos"] == spec["titulos"],
             est["listas"] == spec["listas"],
             est["bloques"] == spec["bloques"],
         ]
-        dentro = set(est["codigo"])
-        pruebas = estructura + [bloque in dentro for bloque in spec["codigo"]]
-        return {"calidad": sum(pruebas) / len(pruebas), "formato": all(estructura)}
-    if tipo == "lint":
-        malas = reglas_con_conteo_incorrecto(texto, spec["conteos"])
-        palabras = len(re.findall(r"\w+", texto))
+        inside = set(est["codigo"])
+        tests_run = structure + [block in inside for block in spec["codigo"]]
+        return {"calidad": sum(tests_run) / len(tests_run), "formato": all(structure)}
+    if kind == "lint":
+        bad_ones = rules_with_wrong_count(text, spec["conteos"])
+        words = len(re.findall(r"\w+", text))
         return {
-            "calidad": (len(spec["conteos"]) - len(malas)) / len(spec["conteos"]),
-            "formato": bool(texto.strip()) and palabras <= spec["max_words"],
+            "calidad": (len(spec["conteos"]) - len(bad_ones)) / len(spec["conteos"]),
+            "formato": bool(text.strip()) and words <= spec["max_words"],
         }
-    if tipo == "delegate":
-        respuesta = texto.strip()
+    if kind == "delegate":
+        response = text.strip()
         return {
-            "calidad": 1.0 if respuesta == spec["esperado"] else 0.0,
-            "formato": re.fullmatch(spec["formato"], respuesta) is not None,
+            "calidad": 1.0 if response == spec["esperado"] else 0.0,
+            "formato": re.fullmatch(spec["formato"], response) is not None,
         }
-    if tipo == "f2":
+    if kind == "f2":
         # Los cinco casos de regresion de F2 conservan su puntuacion de entonces, la del runner.
-        puntuacion = (registro or {}).get("score") or {}
-        calidad = puntuacion.get("quality")
-        formato = puntuacion.get("format_ok")
+        scoring = (record or {}).get("score") or {}
+        quality = scoring.get("quality")
+        fmt = scoring.get("format_ok")
         return {
-            "calidad": float(calidad) if calidad is not None else 0.0,
-            "formato": True if formato is None else bool(formato),
+            "calidad": float(quality) if quality is not None else 0.0,
+            "formato": True if fmt is None else bool(fmt),
         }
-    raise ValueError(f"{caso.get('id')}: puntuador {tipo!r} desconocido")
+    raise ValueError(f"{case.get('id')}: puntuador {kind!r} desconocido")
 
 
 # --- Reglas, huellas y resultados -----------------------------------------------------------------
 
-PREGUNTAS_OPCIONALES_POSIBLES = frozenset({"principal", "especifico"})
+POSSIBLE_OPTIONAL_QUESTIONS = frozenset({"principal", "especifico"})
 
 
-def leer_reglas_afinidad(ruta: Path) -> dict[str, Any]:
+def read_affinity_rules(path: Path) -> dict[str, Any]:
     """`reglas.json`, validado. Una regla invalida lo rechaza entero: no hay valores por defecto."""
-    reglas = json.loads(ruta.read_text(encoding="utf-8"))
-    maximo = reglas.get("max_inventa_26b")
-    if not isinstance(maximo, int) or isinstance(maximo, bool) or maximo < 0:
+    rules = json.loads(path.read_text(encoding="utf-8"))
+    maximum = rules.get("max_inventa_26b")
+    if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0:
         raise SystemExit("reglas.json: max_inventa_26b tiene que ser un entero >= 0")
-    opcionales = reglas.get("preguntas_opcionales")
-    if not isinstance(opcionales, list) or not set(opcionales) <= PREGUNTAS_OPCIONALES_POSIBLES:
+    optional_ones = rules.get("preguntas_opcionales")
+    if not isinstance(optional_ones, list) or not set(optional_ones) <= POSSIBLE_OPTIONAL_QUESTIONS:
         raise SystemExit(
             "reglas.json: preguntas_opcionales solo admite 'principal' y 'especifico'; "
             "'inventa' y la preferencia no pueden ser opcionales"
         )
-    if not isinstance(reglas.get("formato"), dict):
+    if not isinstance(rules.get("formato"), dict):
         raise SystemExit("reglas.json: falta la regla de formato")
-    if not isinstance(reglas.get("parada_anticipada"), bool):
+    if not isinstance(rules.get("parada_anticipada"), bool):
         raise SystemExit("reglas.json: parada_anticipada tiene que ser true o false")
-    return reglas
+    return rules
 
 
-def formato_de_mensaje(mensaje: str, regla: dict[str, Any]) -> bool:
+def message_format(message: str, rule: dict[str, Any]) -> bool:
     """«Formato» de un mensaje de commit, calculado por el programa con la regla de `reglas.json`.
 
     Primera linea de 72 caracteres como maximo, prefijo convencional y sin adornos: ni vallas de
     codigo, ni comillas que envuelvan el mensaje, ni encabezados Markdown, ni frases de
     presentacion. Se publica; no decide ninguna celda.
     """
-    texto = mensaje.strip("\n")
-    if not texto.strip():
+    text = message.strip("\n")
+    if not text.strip():
         return False
-    primera = texto.split("\n", 1)[0]
-    if len(primera) > int(regla["primera_linea_max"]):
+    first_one = text.split("\n", 1)[0]
+    if len(first_one) > int(rule["primera_linea_max"]):
         return False
-    if re.match(regla["prefijo"], primera) is None:
+    if re.match(rule["prefijo"], first_one) is None:
         return False
-    adornos = regla["sin_adornos"]
-    lineas = texto.split("\n")
-    if adornos.get("vallas_de_codigo") and any(
-        linea.strip().startswith(("```", "~~~")) for linea in lineas
+    decorations = rule["sin_adornos"]
+    lines = text.split("\n")
+    if decorations.get("vallas_de_codigo") and any(
+        line.strip().startswith(("```", "~~~")) for line in lines
     ):
         return False
-    pelado = texto.strip()
+    bare = text.strip()
     if (
-        adornos.get("comillas_envolventes")
-        and len(pelado) > 1
-        and pelado[0] in "\"'`“«‘"
-        and pelado[-1] in "\"'`”»’"
+        decorations.get("comillas_envolventes")
+        and len(bare) > 1
+        and bare[0] in "\"'`“«‘"
+        and bare[-1] in "\"'`”»’"
     ):
         return False
-    if adornos.get("encabezados_markdown") and any(re.match(r"^#{1,6}\s", x) for x in lineas):
+    if decorations.get("encabezados_markdown") and any(re.match(r"^#{1,6}\s", x) for x in lines):
         return False
     return not any(
-        re.match(patron, primera, re.IGNORECASE)
-        for patron in adornos.get("frases_de_presentacion", [])
+        re.match(patron, first_one, re.IGNORECASE)
+        for patron in decorations.get("frases_de_presentacion", [])
     )
 
 
 @dataclass
-class Resultado:
+class Result:
     """Lo que un modelo hizo en un caso, ya reducido a lo que miran los criterios."""
 
     label: str
-    caso: str
+    case: str
     ok: bool  # la corrida termino bien (ultimo intento)
-    falla: bool  # algun intento no anulado dio error, timeout, rechazo o `length`
-    calidad: float
-    formato: bool
+    fails: bool  # algun intento no anulado dio error, timeout, rechazo o `length`
+    quality: float
+    fmt: bool
     chars: int
-    latencia_ms: float | None
-    texto: str
+    latency_ms: float | None
+    text: str
 
 
-Corridas = dict[tuple[str, str, int], list[dict[str, Any]]]
+Runs = dict[tuple[str, str, int], list[dict[str, Any]]]
 
 
-def agrupar_corridas(registros: list[dict[str, Any]]) -> Corridas:
+def group_runs(records: list[dict[str, Any]]) -> Runs:
     """`(label, caso, corrida) -> intentos` en el orden del fichero: el ultimo intento manda."""
-    corridas: Corridas = {}
-    for r in registros:
+    runs: Runs = {}
+    for r in records:
         if r.get("input_variant") is not None:
             continue
-        corridas.setdefault((str(r["label"]), str(r["case"]), int(r["run"])), []).append(r)
-    return corridas
+        runs.setdefault((str(r["label"]), str(r["case"]), int(r["run"])), []).append(r)
+    return runs
 
 
 # Motivos de anulación de la sonda que solo dejan la fila sin medida de recursos (RAM o VRAM): la
 # respuesta es válida y este veredicto no juzga recursos, así que la fila cuenta. Pasa con peticiones
 # de menos de 100 ms, que terminan antes de que la sonda muestree. Un proceso que cambió o varios
 # procesos sí invalidan la corrida y se siguen descartando. Solo afecta al veredicto de afinidad.
-MOTIVOS_SOLO_DE_RECURSOS = frozenset({"zero_vram_samples", "zero_ram_samples"})
+RESOURCE_ONLY_REASONS = frozenset({"zero_vram_samples", "zero_ram_samples"})
 
 
-def _anulada(intento: dict[str, Any]) -> bool:
-    """La fila no vale para el veredicto de afinidad (ver `MOTIVOS_SOLO_DE_RECURSOS`)."""
-    return bool(intento.get("descartada")) and (
-        intento.get("descartada_motivo") not in MOTIVOS_SOLO_DE_RECURSOS
+def _cancelled(attempt: dict[str, Any]) -> bool:
+    """La fila no vale para el veredicto de afinidad (ver `RESOURCE_ONLY_REASONS`)."""
+    return bool(attempt.get("descartada")) and (
+        attempt.get("descartada_motivo") not in RESOURCE_ONLY_REASONS
     )
 
 
-def _falla(intento: dict[str, Any]) -> bool:
-    return not _anulada(intento) and intento.get("outcome") != "ok"
+def _falla(attempt: dict[str, Any]) -> bool:
+    return not _cancelled(attempt) and attempt.get("outcome") != "ok"
 
 
-def resultado_de(
-    corridas: Corridas, label: str, caso: dict[str, Any], run: int = 1, *, puntuar: bool = True
-) -> Resultado:
-    intentos = corridas.get((label, caso["id"], run))
-    if not intentos:
-        raise SinDatos(f"falta la corrida {run} de {label} en {caso['id']}")
-    final = intentos[-1]
-    if _anulada(final):
-        raise SinDatos(f"{label}:{caso['id']} corrida {run}: anulada y sin repetir")
+def result_of(
+    runs: Runs, label: str, case: dict[str, Any], run: int = 1, *, score_fn: bool = True
+) -> Result:
+    attempts = runs.get((label, case["id"], run))
+    if not attempts:
+        raise NoData(f"falta la corrida {run} de {label} en {case['id']}")
+    final = attempts[-1]
+    if _cancelled(final):
+        raise NoData(f"{label}:{case['id']} corrida {run}: anulada y sin repetir")
     ok = final.get("outcome") == "ok"
-    texto = str(final.get("response") or "")
+    text = str(final.get("response") or "")
     if ok and "response" not in final:
-        raise SinDatos(f"{label}:{caso['id']}: sin respuesta guardada (falta --save-responses)")
-    if ok and puntuar:
-        punto = puntuar_afinidad(caso, texto, final)
+        raise NoData(f"{label}:{case['id']}: sin respuesta guardada (falta --save-responses)")
+    if ok and score_fn:
+        point = score_affinity(case, text, final)
     else:
         # Un caso que no termino puntua 0: una respuesta que no existe no puede ser mejor que otra.
-        punto = {"calidad": 0.0, "formato": False}
-    caliente = ok and final.get("thermal_state") != "cold"
-    return Resultado(
+        point = {"calidad": 0.0, "formato": False}
+    hot = ok and final.get("thermal_state") != "cold"
+    return Result(
         label=label,
-        caso=caso["id"],
+        case=case["id"],
         ok=ok,
-        falla=any(_falla(i) for i in intentos),
-        calidad=float(punto["calidad"]),
-        formato=bool(punto["formato"]),
-        chars=int(final.get("response_chars") or len(texto)),
-        latencia_ms=float(final["latency_ms"]) if caliente and "latency_ms" in final else None,
-        texto=texto,
+        fails=any(_falla(i) for i in attempts),
+        quality=float(point["calidad"]),
+        fmt=bool(point["formato"]),
+        chars=int(final.get("response_chars") or len(text)),
+        latency_ms=float(final["latency_ms"]) if hot and "latency_ms" in final else None,
+        text=text,
     )
 
 
-def carga_en_frio_mediana(db: Path, modelo: str, hueco_s: int = HUECO_FRIO_S) -> float | None:
+def median_cold_load(db: Path, model: str, gap_s: int = COLD_GAP_S) -> float | None:
     """Mediana (s) de lo que tarda una peticion en frio en `modelo`, de una COPIA de `metrics.db`.
 
-    Una fila es «en frio» si el modelo llevaba al menos `hueco_s` sin peticiones (venció su TTL) y
+    Una fila es «en frio» si el modelo llevaba al menos `gap_s` sin peticiones (venció su TTL) y
     termino bien. Su carga es lo que sobra de la duracion al quitarle la inferencia: `duration_ms`
     incluye la cola y la carga del modelo (`ts_created` es el momento en que termina).
     """
-    conexion = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    connection = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
     try:
-        filas = conexion.execute(
+        rows = connection.execute(
             "SELECT ts_created, model_id, input_tokens, output_tokens, prompt_per_second, "
             "tokens_per_second, duration_ms, resp_status_code, error_msg "
             "FROM activity ORDER BY ts_created, id"
         ).fetchall()
     finally:
-        conexion.close()
-    ultimo: dict[str, float] = {}
-    esperas: list[float] = []
-    for ts, modelo_id, entra, sale, pps, tps, duracion, estado, error in filas:
-        inicio = ts - duracion / 1000
-        previo = ultimo.get(modelo_id)
+        connection.close()
+    last: dict[str, float] = {}
+    waits: list[float] = []
+    for ts, model_id, enters, sale, pps, tps, duration, state, error in rows:
+        start_ts = ts - duration / 1000
+        prior = last.get(model_id)
         if (
-            modelo_id == modelo
-            and previo is not None
-            and inicio - previo >= hueco_s
-            and estado == 200
+            model_id == model
+            and prior is not None
+            and start_ts - prior >= gap_s
+            and state == 200
             and not error
             and sale > 0
         ):
-            inferencia = (entra / pps if pps else 0.0) + (sale / tps if tps else 0.0)
-            esperas.append(max(0.0, duracion / 1000 - inferencia))
-        ultimo[modelo_id] = ts
-    return statistics.median(esperas) if esperas else None
+            inference = (enters / pps if pps else 0.0) + (sale / tps if tps else 0.0)
+            waits.append(max(0.0, duration / 1000 - inference))
+        last[model_id] = ts
+    return statistics.median(waits) if waits else None
 
 
 # --- Celda mecanica (REQ-043, criterios 1 a 6) ------------------------------------------------------
 
 
-def _mediana(valores: list[float]) -> float | None:
-    return statistics.median(valores) if valores else None
+def _median(values: list[float]) -> float | None:
+    return statistics.median(values) if values else None
 
 
-def evaluar_celda_mecanica(
+def evaluate_mechanical_cell(
     tool: str,
-    alternativo: str,
-    rol: str,
-    casos: list[dict[str, Any]],
-    corridas: Corridas,
-    frio_rol_s: float | None,
-    debil: str = CONTROL_DEBIL,
+    alternative: str,
+    role: str,
+    cases: list[dict[str, Any]],
+    runs: Runs,
+    role_cold_s: float | None,
+    weak: str = WEAK_CONTROL,
 ) -> dict[str, Any]:
     """Estado y criterios de una celda mecanica `tool -> alternativo`, comparada con `rol`.
 
@@ -1300,136 +1298,134 @@ def evaluar_celda_mecanica(
     que falle ademas; si el 1 se cumple y falla cualquier otro, `rechazada`; si todos, `aprobada`.
     Los casos de regresion (no discriminantes) cuentan en los criterios 2 a 6 pero no en el 1.
     """
-    discriminantes = [c for c in casos if c.get("discriminante")]
-    if not discriminantes:
-        raise SinDatos(f"{tool}: el corpus no trae casos discriminantes")
+    discriminating = [c for c in cases if c.get("discriminante")]
+    if not discriminating:
+        raise NoData(f"{tool}: el corpus no trae casos discriminantes")
     res = {
-        (label, c["id"]): resultado_de(corridas, label, c)
-        for label in (alternativo, rol, debil)
-        for c in casos
+        (label, c["id"]): result_of(runs, label, c)
+        for label in (alternative, role, weak)
+        for c in cases
     }
 
     # 1. El corpus discrimina: las referencias separan y alguien saca menos de 1.
-    malas_referencias = []
-    for c in discriminantes:
-        ok = puntuar_afinidad(c, c["reference_ok"])
-        malo = puntuar_afinidad(c, c["reference_bad"])
-        if ok["calidad"] != 1.0 or not ok["formato"] or malo["calidad"] >= 1.0:
-            malas_referencias.append(c["id"])
-    saca_menos_de_uno = [
+    bad_references = []
+    for c in discriminating:
+        ok = score_affinity(c, c["reference_ok"])
+        bad = score_affinity(c, c["reference_bad"])
+        if ok["calidad"] != 1.0 or not ok["formato"] or bad["calidad"] >= 1.0:
+            bad_references.append(c["id"])
+    scores_below_one = [
         c["id"]
-        for c in discriminantes
-        if res[(rol, c["id"])].calidad < 1.0 or res[(debil, c["id"])].calidad < 1.0
+        for c in discriminating
+        if res[(role, c["id"])].quality < 1.0 or res[(weak, c["id"])].quality < 1.0
     ]
-    discrimina = {
-        "ok": not malas_referencias and bool(saca_menos_de_uno),
-        "referencias_malas": malas_referencias,
-        "casos_donde_el_rol_o_el_debil_fallan": saca_menos_de_uno,
+    discriminates = {
+        "ok": not bad_references and bool(scores_below_one),
+        "referencias_malas": bad_references,
+        "casos_donde_el_rol_o_el_debil_fallan": scores_below_one,
     }
 
     # 2. Calidad: en cada caso, M >= el rol.
-    peores = [
+    worst = [
         c["id"]
-        for c in casos
-        if res[(alternativo, c["id"])].calidad < res[(rol, c["id"])].calidad - _EPS
+        for c in cases
+        if res[(alternative, c["id"])].quality < res[(role, c["id"])].quality - _EPS
     ]
-    calidad = {"ok": not peores, "casos_peores": peores}
+    quality = {"ok": not worst, "casos_peores": worst}
 
     # 3. Formato: donde el rol da formato correcto, M tambien.
-    sin_formato = [
-        c["id"]
-        for c in casos
-        if res[(rol, c["id"])].formato and not res[(alternativo, c["id"])].formato
+    unformatted = [
+        c["id"] for c in cases if res[(role, c["id"])].fmt and not res[(alternative, c["id"])].fmt
     ]
-    formato = {"ok": not sin_formato, "casos_sin_formato": sin_formato}
+    fmt = {"ok": not unformatted, "casos_sin_formato": unformatted}
 
     # 4. Verbosidad: la mediana de chars(M)/chars(rol) <= 1,5.
-    razones = [
-        res[(alternativo, c["id"])].chars / res[(rol, c["id"])].chars
-        for c in casos
-        if res[(rol, c["id"])].chars > 0
+    ratios = [
+        res[(alternative, c["id"])].chars / res[(role, c["id"])].chars
+        for c in cases
+        if res[(role, c["id"])].chars > 0
     ]
-    mediana_razon = _mediana(razones)
-    verbosidad = {
-        "ok": mediana_razon is not None and mediana_razon <= VERBOSIDAD_MAXIMA,
-        "mediana": mediana_razon,
-        "maximo": VERBOSIDAD_MAXIMA,
+    ratio_median = _median(ratios)
+    verbosity = {
+        "ok": ratio_median is not None and ratio_median <= MAX_VERBOSITY,
+        "mediana": ratio_median,
+        "maximo": MAX_VERBOSITY,
     }
 
     # 5. Fiabilidad: ningun caso donde M falla y el rol no.
-    fallos = [
+    failures = [
         c["id"]
-        for c in casos
-        if res[(alternativo, c["id"])].falla and not res[(rol, c["id"])].falla
+        for c in cases
+        if res[(alternative, c["id"])].fails and not res[(role, c["id"])].fails
     ]
-    fiabilidad = {"ok": not fallos, "casos_que_fallan_solo_en_el_alternativo": fallos}
+    reliability = {"ok": not failures, "casos_que_fallan_solo_en_el_alternativo": failures}
 
     # 6. Latencia: mediana en caliente de M <= la del rol mas su carga en frio mediana.
-    lat_m = _mediana(
+    lat_m = _median(
         [
-            r.latencia_ms
+            r.latency_ms
             for (lab, _), r in res.items()
-            if lab == alternativo and r.latencia_ms is not None
+            if lab == alternative and r.latency_ms is not None
         ]
     )
-    lat_r = _mediana(
-        [r.latencia_ms for (lab, _), r in res.items() if lab == rol and r.latencia_ms is not None]
+    lat_r = _median(
+        [r.latency_ms for (lab, _), r in res.items() if lab == role and r.latency_ms is not None]
     )
-    frio = frio_rol_s if frio_rol_s is not None else 0.0
-    latencia = {
-        "ok": lat_m is not None and lat_r is not None and lat_m <= lat_r + frio * 1000,
+    cold = role_cold_s if role_cold_s is not None else 0.0
+    latency = {
+        "ok": lat_m is not None and lat_r is not None and lat_m <= lat_r + cold * 1000,
         "mediana_alternativo_ms": lat_m,
         "mediana_rol_ms": lat_r,
-        "carga_en_frio_rol_s": frio_rol_s,
-        "nota": None if frio_rol_s is not None else "sin filas en frio en metrics.db: se usa 0 s",
+        "carga_en_frio_rol_s": role_cold_s,
+        "nota": None if role_cold_s is not None else "sin filas en frio en metrics.db: se usa 0 s",
     }
 
-    criterios = {
-        "discrimina": discrimina,
-        "calidad": calidad,
-        "formato": formato,
-        "verbosidad": verbosidad,
-        "fiabilidad": fiabilidad,
-        "latencia": latencia,
+    criteria = {
+        "discrimina": discriminates,
+        "calidad": quality,
+        "formato": fmt,
+        "verbosidad": verbosity,
+        "fiabilidad": reliability,
+        "latencia": latency,
     }
-    if not discrimina["ok"]:
-        estado = "sin base"
-    elif all(v["ok"] for v in criterios.values()):
-        estado = "aprobada"
+    if not discriminates["ok"]:
+        state = "sin base"
+    elif all(v["ok"] for v in criteria.values()):
+        state = "aprobada"
     else:
-        estado = "rechazada"
+        state = "rechazada"
     return {
         "tool": tool,
-        "alternativo": alternativo,
-        "rol_comparado": rol,
-        "estado": estado,
-        "criterios": criterios,
-        "casos": len(casos),
+        "alternativo": alternative,
+        "rol_comparado": role,
+        "estado": state,
+        "criterios": criteria,
+        "casos": len(cases),
     }
 
 
 # --- Celda de commit (REQ-043, criterios 0 a 3) -----------------------------------------------------
 
 
-_FILA_PUBLICADA = {"mensajes": 0, "inventa": 0, "formato": 0, "principal_si": 0, "especifico_si": 0}
+_PUBLISHED_ROW = {"mensajes": 0, "inventa": 0, "formato": 0, "principal_si": 0, "especifico_si": 0}
 
 
-def _preferido(par: dict[str, Any]) -> str:
+def _preferred(pair: dict[str, Any]) -> str:
     """Quien gano el par: el nombre del lado elegido, o `empate`."""
-    eleccion = par.get("preferencia")
-    if eleccion is None:
-        raise SinDatos(f"el par {par.get('caso')} no tiene preferencia")
-    return "empate" if eleccion == "=" else str(par["lados"][eleccion])
+    choice = pair.get("preferencia")
+    if choice is None:
+        raise NoData(f"el par {pair.get('caso')} no tiene preferencia")
+    return "empate" if choice == "=" else str(pair["lados"][choice])
 
 
-def evaluar_celda_commit(
-    alternativo: str,
-    rol: str,
-    juicio: dict[str, Any],
-    reglas: dict[str, Any],
-    casos_reales: list[dict[str, Any]],
-    corridas: Corridas,
-    techo: list[dict[str, Any]] | None = None,
+def evaluate_commit_cell(
+    alternative: str,
+    role: str,
+    judgement: dict[str, Any],
+    rules: dict[str, Any],
+    real_cases: list[dict[str, Any]],
+    runs: Runs,
+    ceiling: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """`local_commit_msg -> alternativo` con la regla del usuario, fijada antes de ver datos.
 
@@ -1438,255 +1434,251 @@ def evaluar_celda_commit(
     caso falla en el 26B si no falla en el modelo de codigo. Si falla el 0, `sin base`; si el 0 se
     cumple y falla el 1, el 2 o el 3, `rechazada`.
     """
-    if juicio.get("parcial"):
-        raise SinDatos("el juicio es parcial: el veredicto necesita la hoja entera")
-    pares = juicio["pares"]
-    trampas = [p for p in pares.values() if p["tipo"] == "trampa"]
-    reales = [p for p in pares.values() if p["tipo"] == "real"]
-    if len(trampas) != TRAMPAS_POR_HOJA:
-        raise SinDatos(
-            f"la hoja tiene {len(trampas)} pares trampa y se esperaban {TRAMPAS_POR_HOJA}"
-        )
-    peores = 0
-    for p in trampas:
-        ganador = _preferido(p)
-        peores += ganador not in ("empate", "trampa")
-    hoja = {
-        "ok": peores >= TRAMPAS_MINIMAS,
-        "trampas_marcadas_como_peores": peores,
-        "de": len(trampas),
+    if judgement.get("parcial"):
+        raise NoData("el juicio es parcial: el veredicto necesita la hoja entera")
+    pair_items = judgement["pares"]
+    traps = [p for p in pair_items.values() if p["tipo"] == "trampa"]
+    real = [p for p in pair_items.values() if p["tipo"] == "real"]
+    if len(traps) != TRAPS_PER_SHEET:
+        raise NoData(f"la hoja tiene {len(traps)} pares trampa y se esperaban {TRAPS_PER_SHEET}")
+    worst = 0
+    for p in traps:
+        winner = _preferred(p)
+        worst += winner not in ("empate", "trampa")
+    sheet = {
+        "ok": worst >= MIN_TRAPS,
+        "trampas_marcadas_como_peores": worst,
+        "de": len(traps),
     }
 
-    inventa_si = 0
+    invents_if = 0
     n = 0
-    publicados: dict[str, dict[str, int]] = {}
-    for p in reales:
-        for lado, modelo in p["lados"].items():
-            fila = publicados.setdefault(modelo, dict(_FILA_PUBLICADA))
-            fila["mensajes"] += 1
-            fila["inventa"] += p["inventa"][lado] == "s"
-            fila["principal_si"] += (p.get("principal") or {}).get(lado) == "s"
-            fila["especifico_si"] += (p.get("especifico") or {}).get(lado) == "s"
-        if p["lados"]["A"] == alternativo or p["lados"]["B"] == alternativo:
-            lado = "A" if p["lados"]["A"] == alternativo else "B"
+    published: dict[str, dict[str, int]] = {}
+    for p in real:
+        for side, model in p["lados"].items():
+            row = published.setdefault(model, dict(_PUBLISHED_ROW))
+            row["mensajes"] += 1
+            row["inventa"] += p["inventa"][side] == "s"
+            row["principal_si"] += (p.get("principal") or {}).get(side) == "s"
+            row["especifico_si"] += (p.get("especifico") or {}).get(side) == "s"
+        if p["lados"]["A"] == alternative or p["lados"]["B"] == alternative:
+            side = "A" if p["lados"]["A"] == alternative else "B"
             n += 1
-            inventa_si += p["inventa"][lado] == "s"
-    inventa = {
-        "ok": inventa_si <= int(reglas["max_inventa_26b"]),
+            invents_if += p["inventa"][side] == "s"
+    invents = {
+        "ok": invents_if <= int(rules["max_inventa_26b"]),
         "n": n,
-        "si": inventa_si,
-        "max": int(reglas["max_inventa_26b"]),
+        "si": invents_if,
+        "max": int(rules["max_inventa_26b"]),
     }
 
-    c = sum(_preferido(p) == alternativo for p in reales)
-    v = sum(_preferido(p) == rol for p in reales)
-    preferencia = {"ok": c >= v, "c": c, "v": v, "empates": len(reales) - c - v}
+    c = sum(_preferred(p) == alternative for p in real)
+    v = sum(_preferred(p) == role for p in real)
+    preference = {"ok": c >= v, "c": c, "v": v, "empates": len(real) - c - v}
 
     # 3a: el techo por el camino de produccion, 3 de 3 sin error con el 26B.
-    corridas_techo = []
-    for run in range(1, CORRIDAS_DEL_TECHO + 1):
-        if techo:
-            corridas_techo.append(resultado_de(corridas, alternativo, techo[0], run, puntuar=False))
-    techo_ok = (
-        bool(techo)
-        and len(corridas_techo) == CORRIDAS_DEL_TECHO
-        and not any(r.falla for r in corridas_techo)
+    ceiling_runs = []
+    for run in range(1, CEILING_RUNS + 1):
+        if ceiling:
+            ceiling_runs.append(result_of(runs, alternative, ceiling[0], run, score_fn=False))
+    ceiling_ok = (
+        bool(ceiling)
+        and len(ceiling_runs) == CEILING_RUNS
+        and not any(r.fails for r in ceiling_runs)
     )
     # 3b: ningun caso falla en el alternativo si no falla en el modelo de codigo.
-    solo_en_el_alternativo = []
-    for caso in casos_reales:
-        a = resultado_de(corridas, alternativo, caso, puntuar=False)
-        r = resultado_de(corridas, rol, caso, puntuar=False)
-        if a.falla and not r.falla:
-            solo_en_el_alternativo.append(caso["id"])
+    only_in_alternative = []
+    for case in real_cases:
+        a = result_of(runs, alternative, case, score_fn=False)
+        r = result_of(runs, role, case, score_fn=False)
+        if a.fails and not r.fails:
+            only_in_alternative.append(case["id"])
         # «Formato» lo calcula el programa sobre el mensaje tal como lo devolvio la tool.
-        for resultado in (a, r):
-            fila = publicados.setdefault(resultado.label, dict(_FILA_PUBLICADA))
-            fila["formato"] += resultado.ok and formato_de_mensaje(
-                resultado.texto, reglas["formato"]
-            )
-    funcionamiento = {
-        "ok": techo_ok and not solo_en_el_alternativo,
-        "techo_3_de_3": techo_ok,
-        "casos_que_fallan_solo_en_el_alternativo": solo_en_el_alternativo,
+        for result in (a, r):
+            row = published.setdefault(result.label, dict(_PUBLISHED_ROW))
+            row["formato"] += result.ok and message_format(result.text, rules["formato"])
+    behaviour = {
+        "ok": ceiling_ok and not only_in_alternative,
+        "techo_3_de_3": ceiling_ok,
+        "casos_que_fallan_solo_en_el_alternativo": only_in_alternative,
     }
 
-    criterios = {
-        "hoja_valida": hoja,
-        "inventa": inventa,
-        "preferencia": preferencia,
-        "funcionamiento": funcionamiento,
+    criteria = {
+        "hoja_valida": sheet,
+        "inventa": invents,
+        "preferencia": preference,
+        "funcionamiento": behaviour,
     }
-    informe = None
-    if not hoja["ok"]:
-        estado = "sin base"
-        informe = (
+    report = None
+    if not sheet["ok"]:
+        state = "sin base"
+        report = (
             "repetir hoja"
-            if int(juicio.get("juego") or 1) < 3
+            if int(judgement.get("juego") or 1) < 3
             else "la tercera hoja tampoco vale: sin base"
         )
-    elif inventa["ok"] and preferencia["ok"] and funcionamiento["ok"]:
-        estado = "aprobada"
+    elif invents["ok"] and preference["ok"] and behaviour["ok"]:
+        state = "aprobada"
     else:
-        estado = "rechazada"
+        state = "rechazada"
     return {
         "tool": TOOL_COMMIT,
-        "alternativo": alternativo,
-        "rol_comparado": rol,
-        "estado": estado,
-        "criterios": criterios,
-        "informe": informe,
-        "publicados": publicados,
-        "casos": len(reales),
+        "alternativo": alternative,
+        "rol_comparado": role,
+        "estado": state,
+        "criterios": criteria,
+        "informe": report,
+        "publicados": published,
+        "casos": len(real),
     }
 
 
 # --- Veredicto -------------------------------------------------------------------------------------
 
 
-def _huella(huellas: dict[str, Any], modelo: str, tool: str) -> dict[str, Any]:
+def _footprint(footprints: dict[str, Any], model: str, tool: str) -> dict[str, Any]:
     try:
-        return dict(huellas[modelo][tool])
+        return dict(footprints[model][tool])
     except (KeyError, TypeError) as exc:
-        raise SinDatos(f"huellas.json no trae la huella de {modelo} para {tool}") from exc
+        raise NoData(f"huellas.json no trae la huella de {model} para {tool}") from exc
 
 
-def calcular_veredicto(
+def compute_verdict(
     corpus: dict[str, dict[str, Any]],
     production_config: dict[str, Any],
-    corridas: Corridas,
-    huellas: dict[str, Any],
-    frio_rol_s: float | None,
-    reglas: dict[str, Any],
-    juicio: dict[str, Any] | None,
+    runs: Runs,
+    footprints: dict[str, Any],
+    role_cold_s: float | None,
+    rules: dict[str, Any],
+    judgement: dict[str, Any] | None,
     *,
-    solo_mecanicas: bool = False,
+    mechanical_only: bool = False,
 ) -> dict[str, Any]:
     """Aplica los criterios literalmente y devuelve el contenido de `veredicto.json`.
 
     No hay ningun parametro que fuerce un estado: la unica forma de cambiar un estado es cambiar los
     datos.
     """
-    modelos = production_config["models"]
-    rol_mecanico, largo, codigo = modelos["mechanical"], modelos["long"], modelos["code"]
-    casos = [
+    models = production_config["models"]
+    mechanical_role, long, code = models["mechanical"], models["long"], models["code"]
+    cases = [
         c
         for c in corpus.values()
         if c.get("kind") == "calidad" and c.get("rol_en_hoja") != "trampa"
     ]
-    celdas: list[dict[str, Any]] = []
-    for tool in TOOLS_CON_CELDA:
-        del_tool = [c for c in casos if c["tool"] == tool]
-        if not del_tool:
+    cells: list[dict[str, Any]] = []
+    for tool in TOOLS_WITH_CELL:
+        tool_name = [c for c in cases if c["tool"] == tool]
+        if not tool_name:
             continue
-        for alternativo in (largo, codigo):
-            celda = evaluar_celda_mecanica(
-                tool, alternativo, rol_mecanico, del_tool, corridas, frio_rol_s
+        for alternative in (long, code):
+            cell = evaluate_mechanical_cell(
+                tool, alternative, mechanical_role, tool_name, runs, role_cold_s
             )
-            celda["huella"] = _huella(huellas, alternativo, tool)
-            celda["huella_rol"] = _huella(huellas, rol_mecanico, tool)
-            celdas.append(celda)
-    if not solo_mecanicas:
-        if juicio is None:
-            raise SinDatos(
+            cell["huella"] = _footprint(footprints, alternative, tool)
+            cell["huella_rol"] = _footprint(footprints, mechanical_role, tool)
+            cells.append(cell)
+    if not mechanical_only:
+        if judgement is None:
+            raise NoData(
                 "falta el juicio del usuario (`leer-commit --salida`) para la celda de commit"
             )
-        reales = [c for c in casos if c["tool"] == TOOL_COMMIT and c.get("rol_en_hoja") == "real"]
-        techo = [c for c in corpus.values() if c["id"] == CASO_TECHO]
-        celda = evaluar_celda_commit(largo, codigo, juicio, reglas, reales, corridas, techo)
-        celda["huella"] = _huella(huellas, largo, TOOL_COMMIT)
-        celda["huella_rol"] = _huella(huellas, codigo, TOOL_COMMIT)
-        celdas.append(celda)
+        real = [c for c in cases if c["tool"] == TOOL_COMMIT and c.get("rol_en_hoja") == "real"]
+        ceiling = [c for c in corpus.values() if c["id"] == CEILING_CASE_ID]
+        cell = evaluate_commit_cell(long, code, judgement, rules, real, runs, ceiling)
+        cell["huella"] = _footprint(footprints, long, TOOL_COMMIT)
+        cell["huella_rol"] = _footprint(footprints, code, TOOL_COMMIT)
+        cells.append(cell)
     return {
         "schema_version": 1,
-        "solo_mecanicas": solo_mecanicas,
-        "reglas": reglas,
-        "celdas": celdas,
+        "solo_mecanicas": mechanical_only,
+        "reglas": rules,
+        "celdas": cells,
     }
 
 
-def tabla_del_veredicto(veredicto: dict[str, Any]) -> str:
+def verdict_table(verdict: dict[str, Any]) -> str:
     """La tabla Markdown que se pega en `verification.md`."""
-    lineas = [
+    lines = [
         "| Tool | Alternativo | Comparado con | Estado | Criterios que no se cumplen |",
         "| --- | --- | --- | --- | --- |",
     ]
-    for celda in veredicto["celdas"]:
-        falla = [nombre for nombre, c in celda["criterios"].items() if not c["ok"]]
-        extra = f" ({celda['informe']})" if celda.get("informe") else ""
-        lineas.append(
-            f"| {celda['tool']} | {celda['alternativo']} | {celda['rol_comparado']} | "
-            f"{celda['estado']}{extra} | {', '.join(falla) or '—'} |"
+    for cell in verdict["celdas"]:
+        fails = [name for name, c in cell["criterios"].items() if not c["ok"]]
+        extra = f" ({cell['informe']})" if cell.get("informe") else ""
+        lines.append(
+            f"| {cell['tool']} | {cell['alternativo']} | {cell['rol_comparado']} | "
+            f"{cell['estado']}{extra} | {', '.join(fails) or '—'} |"
         )
-    commit = next((c for c in veredicto["celdas"] if c["tool"] == TOOL_COMMIT), None)
+    commit = next((c for c in verdict["celdas"] if c["tool"] == TOOL_COMMIT), None)
     if commit:
-        lineas += ["", "Celda de commit, lo que se publica y no decide:", ""]
-        lineas += [
+        lines += ["", "Celda de commit, lo que se publica y no decide:", ""]
+        lines += [
             "| Modelo | Mensajes | inventa = si | Formato (calculado) | Lo principal = si | Especifico = si |",
             "| --- | --- | --- | --- | --- | --- |",
         ]
-        for modelo, fila in sorted(commit["publicados"].items()):
-            lineas.append(
-                f"| {modelo} | {fila['mensajes']} | {fila['inventa']} | {fila['formato']} | "
-                f"{fila['principal_si']} | {fila['especifico_si']} |"
+        for model, row in sorted(commit["publicados"].items()):
+            lines.append(
+                f"| {model} | {row['mensajes']} | {row['inventa']} | {row['formato']} | "
+                f"{row['principal_si']} | {row['especifico_si']} |"
             )
-    return "\n".join(lineas) + "\n"
+    return "\n".join(lines) + "\n"
 
 
-def ejecutar_veredicto(args: argparse.Namespace) -> int:
-    ruta_cases: Path = args.cases
-    datos = json.loads(ruta_cases.read_text(encoding="utf-8"))
-    if datos.get("schema_version") != 2:
-        raise ValueError(f"{ruta_cases}: se esperaba un corpus schema_version 2")
-    corpus = {c["id"]: c for c in datos["cases"]}
-    reglas = leer_reglas_afinidad(args.reglas)
-    huellas = json.loads(args.huellas.read_text(encoding="utf-8"))
-    corridas = agrupar_corridas(leer_jsonl(args.jsonl))
-    juicio = json.loads(args.juicio.read_text(encoding="utf-8")) if args.juicio else None
-    rol_mecanico = datos["production_config"]["models"]["mechanical"]
+def run_verdict(args: argparse.Namespace) -> int:
+    cases_path: Path = args.cases
+    data = json.loads(cases_path.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 2:
+        raise ValueError(f"{cases_path}: se esperaba un corpus schema_version 2")
+    corpus = {c["id"]: c for c in data["cases"]}
+    rules = read_affinity_rules(args.rules)
+    footprints = json.loads(args.footprints.read_text(encoding="utf-8"))
+    runs = group_runs(leer_jsonl(args.jsonl))
+    judgement = json.loads(args.judgement.read_text(encoding="utf-8")) if args.judgement else None
+    mechanical_role = data["production_config"]["models"]["mechanical"]
     if args.metrics_db is None:
-        raise SinDatos("falta --metrics-db (una COPIA de metrics.db) para el criterio 6")
-    frio = carga_en_frio_mediana(args.metrics_db, rol_mecanico)
-    veredicto = calcular_veredicto(
+        raise NoData("falta --metrics-db (una COPIA de metrics.db) para el criterio 6")
+    cold = median_cold_load(args.metrics_db, mechanical_role)
+    verdict = compute_verdict(
         corpus,
-        datos["production_config"],
-        corridas,
-        huellas,
-        frio,
-        reglas,
-        juicio,
-        solo_mecanicas=args.solo_mecanicas,
+        data["production_config"],
+        runs,
+        footprints,
+        cold,
+        rules,
+        judgement,
+        mechanical_only=args.mechanical_only,
     )
-    veredicto["reglas_sha256"] = hashlib.sha256(args.reglas.read_bytes()).hexdigest()
-    veredicto["cases_sha256"] = hashlib.sha256(ruta_cases.read_bytes()).hexdigest()
-    salida = args.salida or ruta_cases.parent / (
-        "veredicto-mecanicas.json" if args.solo_mecanicas else "veredicto.json"
+    verdict["reglas_sha256"] = hashlib.sha256(args.rules.read_bytes()).hexdigest()
+    verdict["cases_sha256"] = hashlib.sha256(cases_path.read_bytes()).hexdigest()
+    output = args.salida or cases_path.parent / (
+        "veredicto-mecanicas.json" if args.mechanical_only else "veredicto.json"
     )
-    salida.write_text(json.dumps(veredicto, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tabla = tabla_del_veredicto(veredicto)
-    if args.tabla:
-        args.tabla.write_text(tabla, encoding="utf-8")
+    output.write_text(json.dumps(verdict, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    table = verdict_table(verdict)
+    if args.table:
+        args.table.write_text(table, encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-    print(tabla)
+    print(table)
     return 0
 
 
-def _parser_veredicto(sub: argparse._SubParsersAction) -> None:
+def _verdict_parser(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser(
-        "veredicto-afinidad",
+        "affinity-verdict",
         help="aplica los criterios de aceptacion de las celdas (REQ-043) y escribe veredicto.json",
     )
     base = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2026-10"
     p.add_argument("--cases", type=Path, default=base / "cases.json")
-    p.add_argument("--reglas", type=Path, default=base / "reglas.json")
-    p.add_argument("--huellas", type=Path, default=base / "huellas.json")
+    p.add_argument("--rules", type=Path, default=base / "reglas.json")
+    p.add_argument("--footprints", type=Path, default=base / "huellas.json")
     p.add_argument(
-        "--juicio", type=Path, default=None, help="salida de `hoja_pares.py leer-commit`"
+        "--judgement", type=Path, default=None, help="salida de `hoja_pares.py leer-commit`"
     )
     p.add_argument("--metrics-db", type=Path, default=None, help="una COPIA de metrics.db")
-    p.add_argument("--solo-mecanicas", action="store_true", help="sin la celda de commit")
+    p.add_argument("--mechanical-only", action="store_true", help="sin la celda de commit")
     p.add_argument("--salida", type=Path, default=None, help="veredicto.json")
-    p.add_argument("--tabla", type=Path, default=None, help="tabla Markdown para verification.md")
+    p.add_argument("--table", type=Path, default=None, help="tabla Markdown para verification.md")
     p.add_argument("jsonl", nargs="+", type=Path, help="resultados de la tanda")
 
 
@@ -1696,7 +1688,7 @@ def _parser_veredicto(sub: argparse._SubParsersAction) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
     sub = parser.add_subparsers(dest="modo", required=True)
-    _parser_veredicto(sub)
+    _verdict_parser(sub)
     for nombre in ("cp3", "decidir"):
         p = sub.add_parser(nombre)
         p.add_argument("--cases", type=Path, required=True, help="cases.json del corpus v2")
@@ -1732,10 +1724,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.modo == "veredicto-afinidad":
+    if args.modo == "affinity-verdict":
         try:
-            return ejecutar_veredicto(args)
-        except (OSError, ValueError, KeyError) as exc:  # `SinDatos` es un `ValueError`
+            return run_verdict(args)
+        except (OSError, ValueError, KeyError) as exc:  # `NoData` es un `ValueError`
             print(f"error: {exc}", file=sys.stderr)
             return 2
 

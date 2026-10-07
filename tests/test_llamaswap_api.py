@@ -1,7 +1,7 @@
 """T13: llama-swap visto desde el daemon y el CLI (REQ-034, REQ-039): `llamaswap_api.py`.
 
 Dos clases de test: con `backend_mock` (forma de los datos, qué se descarta, cómo se clasifica un
-fallo) y contra el llama-swap v255 de prueba de T2 (`llamaswap_de_prueba.py`), en su propio puerto
+fallo) y contra el llama-swap v255 de prueba de T2 (`fake_llamaswap.py`), en su propio puerto
 y con su control de PID. Nada aquí habla con el llama-swap real ni mata procesos por nombre.
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 import backend_mock
 import httpx2
 import pytest
-from llamaswap_de_prueba import ModeloPrueba, binario_disponible, llamaswap_de_prueba
+from fake_llamaswap import FakeModel, binary_available, fake_llamaswap
 
 from local_delegate import llamaswap_api
 from local_delegate.llamaswap_api import Backend, Status
@@ -24,7 +24,7 @@ RUNNING = f"{BASE}/running"
 EVENTS = f"{BASE}/api/events"
 
 needs_llamaswap = pytest.mark.skipif(
-    not binario_disponible(), reason="falta llama-swap-v255 de prueba"
+    not binary_available(), reason="falta llama-swap-v255 de prueba"
 )
 
 
@@ -257,16 +257,16 @@ def test_watcher_with_rotated_history_never_concludes_from_counts():
 @pytest.mark.llamaswap_real
 def test_in_flight_reads_past_100_kb_of_log_in_under_a_second(tmp_path: Path):
     model = "gemma4-26b-a4b"
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba(model, ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel(model, ttl=60)]) as ls:
         for _ in range(12):  # ~120 KB de log antes de la photo: el historial llega lleno
             assert ls.chat(model, log_kb=10).status_code == 200
-        other_client = ls.lanzar_cliente(model, retraso_s=4)
+        other_client = ls.launch_client(model, delay_s=4)
         time.sleep(1.0)
         start = time.monotonic()
         photo = llamaswap_api.in_flight(Backend(ls.url))
         elapsed = time.monotonic() - start
         # Guarda: la carga inicial de verdad traía el historial lleno (el tope ronda los 100 KB).
-        log_chars = ls.foto_inflight().caracteres_de_log
+        log_chars = ls.inflight_snapshot().log_chars
         other_client.wait(timeout=30)
     assert log_chars >= 90_000
     assert photo[model] == 1
@@ -276,14 +276,14 @@ def test_in_flight_reads_past_100_kb_of_log_in_under_a_second(tmp_path: Path):
 @needs_llamaswap
 @pytest.mark.llamaswap_real
 def test_watcher_reloaded_and_then_down(tmp_path: Path):
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=2)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=2)]) as ls:
         watcher = llamaswap_api.Watcher(Backend(ls.url))
         watcher.open()
-        ls.escribir_config(ls.texto_config([ModeloPrueba("m", ttl=3)]))
+        ls.write_config(ls.config_text([FakeModel("m", ttl=3)]))
         assert llamaswap_api.OUTCOME_TEXT[watcher.wait()] == "recargó"
         assert "configuration reloaded" in watcher.line
 
-        ls.detener()
+        ls.stop()
         start = time.monotonic()
         down_watcher = llamaswap_api.Watcher(Backend(ls.url))
         down_watcher.open()

@@ -176,7 +176,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="salida cruda")
     args = parser.parse_args()
 
-    m = medir(args.desde, args.hasta, args.excluir, args.tmax)
+    m = medir(args.desde, args.hasta, args.exclude, args.tmax)
     if args.json:
         print(json.dumps(m, ensure_ascii=False, indent=2))
         return 0

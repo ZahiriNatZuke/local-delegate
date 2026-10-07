@@ -302,7 +302,7 @@ FALLBACK_CHAINS: dict[str, str | None] = {
 # --- Turno por conjunto de modelos compatibles (daemon-reparte-el-backend, REQ-007) -----------
 # Red de seguridad del turno: la cabeza de la cola se concede forzada si lleva este tiempo
 # esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
-TURNO_MAX_S = _env_float("LOCAL_DELEGATE_TURNO_MAX_S", 600.0)
+TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
 
 
 # --- llama-swap: autoarranque, doctor y residente -----------------------------
@@ -330,8 +330,8 @@ def llamaswap_watch_config() -> bool:
 # los textos del diff. Se lee al LLAMAR, como las de llama-swap: así un test lo fija con
 # `monkeypatch.setenv` sin recargar el módulo, y el constructor del corpus de afinidad puede
 # capturar el prompt con el idioma que tendrá la máquina en producción.
-def commit_idioma() -> str:
-    return _env("LOCAL_DELEGATE_COMMIT_IDIOMA", "").strip()
+def commit_language() -> str:
+    return _env("LOCAL_DELEGATE_COMMIT_LANGUAGE", "").strip()
 
 
 # Una lectura al importar, solo para que estos nombres entren en `VARIABLES_DE_ENTORNO`.
@@ -340,7 +340,7 @@ for _lectura in (
     llamaswap_exe,
     llamaswap_listen,
     llamaswap_watch_config,
-    commit_idioma,
+    commit_language,
 ):
     _lectura()
 

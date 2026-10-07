@@ -43,7 +43,7 @@ const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
 def _globales() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
     partes = [_SALIDA, _formateadores(), _extraer("function escHooks(")]
-    for funcion in ("vistaInicial", "palabrasTurno"):
+    for funcion in ("vistaInicial", "turnWords"):
         if f"function {funcion}(" in metrics.HTML:
             partes.append(_extraer(f"function {funcion}("))
     for nombre in ("CAUSAS_CONTESTA", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
@@ -252,7 +252,7 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
         # 2. no disponible
         {"secuencia": [FALLIDO, FALLIDO], "inflight": []},
         # 3. en vuelo y en espera local (gana a running `ready`)
-        {"secuencia": [_con(QWEN_READY)], "inflight": [{**VUELO[0], "espera_local": "plaza"}]},
+        {"secuencia": [_con(QWEN_READY)], "inflight": [{**VUELO[0], "local_wait": "slot"}]},
         # 4. running_ok falso y en vuelo
         {"secuencia": [_con([], running_ok=False)], "inflight": VUELO},
         # 5. running_ok falso: montado si loaded, si no frío
@@ -297,14 +297,14 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
 def test_la_espera_local_es_un_punto_de_extension(tmp_path):
     """Un motivo que el panel no conoce también es «en cola local», y se pinta tal cual.
 
-    Control (b). Mutante: la regla 3 exige `espera_local === 'plaza'` → da «procesando».
+    Control (b). Mutante: la regla 3 exige `local_wait === 'slot'` → da «procesando».
     """
     fila = _fila(
         tmp_path,
         [
             {
                 "secuencia": [_con(QWEN_READY)],
-                "inflight": [{**VUELO[0], "espera_local": "turno_grupo"}],
+                "inflight": [{**VUELO[0], "local_wait": "turno_grupo"}],
             }
         ],
     )[0]
@@ -315,7 +315,7 @@ def test_la_espera_local_es_un_punto_de_extension(tmp_path):
 
 def test_la_espera_local_exige_todas_las_llamadas(tmp_path):
     """«En espera local» = TODAS las llamadas a ese modelo esperan dentro de local-delegate."""
-    vuelo = [{**VUELO[0], "espera_local": "plaza"}, VUELO[0]]
+    vuelo = [{**VUELO[0], "local_wait": "slot"}, VUELO[0]]
     fila = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": vuelo}])[0]
     assert fila["texto"] == "procesando"
 
@@ -626,71 +626,71 @@ def test_el_js_no_redacta_las_etiquetas_de_las_causas():
 # --- T10 de daemon-reparte-el-backend: la espera de turno del daemon (REQ-008, REQ-027) --------
 
 
-def test_la_espera_de_turno_se_ve_en_el_panel_como_espera_local(tmp_path, monkeypatch):
+def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
     """Escenario «la espera de turno se ve en el panel como espera local», de punta a punta.
 
     Una operación del 26B tiene el turno (atascada en el backend) y una de Qwen3.6 lo espera; se lee
     `/api/inflight` con `TestClient` y su entrada pasa a `estadoModelo` con node, con Qwen3.6
     `ready` en `/running`. Control (b). Mutante 1: una clave propia (`esperando_turno: true`) en
-    vez de `espera_local` → la fila sale «procesando». Mutante 2: `inflight_snapshot` sin copiar
-    `turno_en_uso` → el `title` dice «en uso: nada».
+    vez de `local_wait` → la fila sale «procesando». Mutante 2: `inflight_snapshot` sin copiar
+    `turn_in_use` → el `title` dice «en uso: nada».
     """
-    hoy = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
-    copia = tmp_path / "llamaswap.yaml"
-    copia.write_bytes(hoy.read_bytes())
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copia))
+    today = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
+    copy = tmp_path / "llamaswap.yaml"
+    copy.write_bytes(today.read_bytes())
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9292/v1")
     monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(2))
-    x_dentro, seguir_x = threading.Event(), threading.Event()
+    x_inside, continue_x = threading.Event(), threading.Event()
 
     def post_chat(model, _payload):
         if model == "gemma4-26b-a4b":
-            x_dentro.set()
-            seguir_x.wait(5)
+            x_inside.set()
+            continue_x.wait(5)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
 
-    def operacion(modelo: str, tool: str) -> None:
-        server._chat(modelo, "s", "u", 8, tool=tool, rol="long")
+    def operation(model: str, tool: str) -> None:
+        server._chat(model, "s", "u", 8, tool=tool, rol="long")
 
-    hilos = [
-        threading.Thread(target=operacion, args=("gemma4-26b-a4b", "op_x"), daemon=True),
-        threading.Thread(target=operacion, args=("qwen36-35b-a3b", "op_y"), daemon=True),
+    threads = [
+        threading.Thread(target=operation, args=("gemma4-26b-a4b", "op_x"), daemon=True),
+        threading.Thread(target=operation, args=("qwen36-35b-a3b", "op_y"), daemon=True),
     ]
-    cliente = TestClient(metrics.app)
+    client = TestClient(metrics.app)
 
-    def entrada_y() -> dict | None:
-        filas = cliente.get("/api/inflight").json()["inflight"]
-        return next((e for e in filas if e.get("tool") == "op_y"), None)
+    def input_and() -> dict | None:
+        rows = client.get("/api/inflight").json()["inflight"]
+        return next((e for e in rows if e.get("tool") == "op_y"), None)
 
     try:
-        hilos[0].start()
-        assert x_dentro.wait(2), "la operación del 26B no llegó al backend"
-        hilos[1].start()
-        entrada = None
-        fin = time.monotonic() + 2
-        while time.monotonic() < fin:
-            e = entrada_y()
-            en_cola = bool(server._turno.foto().cola)
-            if en_cola and e and (e.get("espera_local") or e.get("turno_en_uso")):
-                entrada = e
+        threads[0].start()
+        assert x_inside.wait(2), "la operación del 26B no llegó al backend"
+        threads[1].start()
+        entry = None
+        end = time.monotonic() + 2
+        while time.monotonic() < end:
+            e = input_and()
+            queued = bool(server._turn.snapshot().queue)
+            if queued and e and (e.get("local_wait") or e.get("turn_in_use")):
+                entry = e
                 break
             time.sleep(0.01)
-        assert entrada, f"la operación de Qwen3.6 no llegó a esperar turno: {entrada_y()}"
+        assert entry, f"la operación de Qwen3.6 no llegó a esperar turno: {input_and()}"
     finally:
-        seguir_x.set()
-        for hilo in hilos:
-            hilo.join(5)
+        continue_x.set()
+        for thread in threads:
+            thread.join(5)
 
-    fila = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": [entrada]}])[0]
-    assert fila["texto"] == "en cola local"
-    assert "esperando turno del daemon" in fila["title"]
-    assert "en uso: gemma4-26b-a4b" in fila["title"]
-    assert fila["title"].count("esperando") == 1, fila["title"]  # sin «esperando … esperando»
+    row = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": [entry]}])[0]
+    assert row["texto"] == "en cola local"
+    assert "esperando turno del daemon" in row["title"]
+    assert "en uso: gemma4-26b-a4b" in row["title"]
+    assert row["title"].count("esperando") == 1, row["title"]  # sin «esperando … esperando»
 
 
-def test_en_curso_dice_la_espera_de_turno(tmp_path):
+def test_in_progress_shows_turn_wait(tmp_path):
     """«En curso» pinta la espera de turno con las mismas palabras que el `title` de la fila.
 
     Control (a): hoy «En curso» no dice nada de la espera.
@@ -700,8 +700,8 @@ def test_en_curso_dice_la_espera_de_turno(tmp_path):
         [_f("renderInflight")],
         """
         const state = {inflight: [{tool: 't', model: 'qwen36-35b-a3b', elapsed_s: 1, chars_in: 1,
-                                   espera_local: 'turno', turno_en_uso: ['gemma4-26b-a4b'],
-                                   turno_posicion: 1}],
+                                   local_wait: 'turn', turn_in_use: ['gemma4-26b-a4b'],
+                                   turn_position: 1}],
                        activity: {skewMs: 0}, lastEvent: null};
         renderInflight();
         salida(_els.inflightBody.innerHTML);

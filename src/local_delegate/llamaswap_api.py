@@ -1,7 +1,7 @@
 """llama-swap visto desde el daemon y desde el CLI: estado, peticiones en vuelo y vigía de recarga.
 
 Es la mitad «de red» de `llamaswap residency` (REQ-034, REQ-039). La otra mitad, la que edita el
-fichero, vive en `residencia.py` y no sabe nada de HTTP.
+fichero, vive en `residency.py` y no sabe nada de HTTP.
 
 Qué se le pregunta a llama-swap (v255) y qué se descarta:
 
@@ -36,7 +36,7 @@ from typing import Any
 import httpx2
 
 from . import config
-from .residencia import CAMPO_RUTA_CONFIG
+from .residency import CONFIG_PATH_FIELD
 
 # --- Salidas de la vigía (REQ-034) -----------------------------------------------------------
 RELOADED = "reloaded"
@@ -287,7 +287,7 @@ class Status:
             "models": [dict(m) for m in self.models],
             "in_flight": dict(self.in_flight),
             "own_delegations": self.own_delegations,
-            CAMPO_RUTA_CONFIG: self.config_path,
+            CONFIG_PATH_FIELD: self.config_path,
             "watch_config": self.watch_config,
             "autostart": self.autostart,
             "turn_active": self.turn_active,
@@ -325,7 +325,7 @@ class Status:
             models=models,
             in_flight=flights,
             own_delegations=own if isinstance(own, int) and not isinstance(own, bool) else 0,
-            config_path=text(CAMPO_RUTA_CONFIG) or None,
+            config_path=text(CONFIG_PATH_FIELD) or None,
             watch_config=flag("watch_config"),
             autostart=flag("autostart"),
             turn_active=flag("turn_active"),
@@ -338,7 +338,7 @@ def daemon_status(host: str, port: int, headers: Mapping[str, str]) -> tuple[Sta
     """`(estado, por qué no)` preguntando al daemon por `GET /api/llamaswap/status`.
 
     Para `doctor` (`checks`). El CLI hace la misma consulta en `cli._daemon_status`, por
-    `cli._url_del_daemon()`, que es lo que vigila la guarda de T11 sobre las llamadas de `cli.py`.
+    `cli._daemon_url()`, que es lo que vigila la guarda de T11 sobre las llamadas de `cli.py`.
     """
     try:
         r = httpx2.get(

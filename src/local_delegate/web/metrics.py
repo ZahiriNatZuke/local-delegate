@@ -63,7 +63,7 @@ from .. import (
     precios,
     recalcular,
     server,
-    topologia,
+    topology,
     valoracion,
 )
 from . import auth, sysinfo
@@ -868,19 +868,19 @@ def llamaswap_status():
     """Estado de llama-swap para la comprobación previa: modelos con su estado y TTL, peticiones
     en vuelo por modelo (de cualquier cliente), delegaciones propias vivas y la config que usa
     el daemon, y si tiene turno (para `doctor`, REQ-036). Nunca devuelve `cmd`, cabeceras ni
-    claves. El campo de la ruta es `residencia.CAMPO_RUTA_CONFIG` (lo pone `Status.to_json`)."""
+    claves. El campo de la ruta es `residency.CONFIG_PATH_FIELD` (lo pone `Status.to_json`)."""
     status = llamaswap_api.query_status(
         llamaswap_api.local_backend(), own_delegations=len(server.inflight_snapshot())
     )
     status.config_path = config.llamaswap_config_path() or None
     status.watch_config = config.llamaswap_watch_config()
     status.autostart = config.AUTOSTART
-    photo = server._topologia()
-    status.turn_active = not isinstance(photo, topologia.SinTopologia)
-    if isinstance(photo, topologia.SinTopologia):
-        status.turn_reason, status.turn_detail = photo.motivo, photo.detalle or ""
+    photo = server._topology()
+    status.turn_active = not isinstance(photo, topology.NoTopology)
+    if isinstance(photo, topology.NoTopology):
+        status.turn_reason, status.turn_detail = photo.reason, photo.detail or ""
     else:
-        status.turn_detail = server._choques_por_grupos(photo)
+        status.turn_detail = server._clashes_by_groups(photo)
     return JSONResponse(status.to_json())
 
 
@@ -1872,12 +1872,12 @@ function roleLabels(model){
 const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
 // Estados de /running y motivos de espera local, en palabras (REQ-022).
 const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
-const PALABRAS_ESPERA = {plaza:'esperando plaza (máximo de llamadas a la vez)'};
+const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
 
 // La espera de turno del daemon en palabras (REQ-008): una sola fuente para el title de la fila
 // del modelo y para «En curso».
-function palabrasTurno(it){
-  return 'esperando turno del daemon (en uso: '+((it.turno_en_uso||[]).join(', ')||'nada')+')';
+function turnWords(it){
+  return 'esperando turno del daemon (en uso: '+((it.turn_in_use||[]).join(', ')||'nada')+')';
 }
 
 function vistaInicial(){
@@ -1935,7 +1935,7 @@ function estadoModelo(o){
   const vista = o.vista || vistaInicial(), ref = vista.ref || {}, disponible = !!vista.disponible;
   const llamadas = (o.inflight||[]).filter(it=>it && it.model===o.modelo);
   const enVuelo = llamadas.length>0;
-  const esperaLocal = enVuelo && llamadas.every(it=>it.espera_local!==undefined && it.espera_local!==null);
+  const esperaLocal = enVuelo && llamadas.every(it=>it.local_wait!==undefined && it.local_wait!==null);
   const run = (ref.running||[]).find(r=>r && r.model===o.modelo);
   const running = run ? (run.state||'ready') : null;
   const mod = (ref.models||[]).find(m=>m && m.id===o.modelo);
@@ -1948,14 +1948,14 @@ function estadoModelo(o){
     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
     // Solo cambia el title: la fila sigue siendo la 3, como cualquier espera local.
-    const motivos = [], turnos = [];
+    const motivos = [], turnParts = [];
     llamadas.forEach(it=>{
-      const lista = it.espera_local==='turno' ? turnos : motivos;
-      const m = it.espera_local==='turno' ? palabrasTurno(it)
-        : (PALABRAS_ESPERA[it.espera_local] || String(it.espera_local));
-      if(!lista.includes(m)) lista.push(m); });
-    const partes = motivos.length ? ['esperando dentro de local-delegate: '+motivos.join(', ')] : [];
-    return fila('en cola local', partes.concat(turnos).join('; '));
+      const bucket = it.local_wait==='turn' ? turnParts : motivos;
+      const m = it.local_wait==='turn' ? turnWords(it)
+        : (PALABRAS_ESPERA[it.local_wait] || String(it.local_wait));
+      if(!bucket.includes(m)) bucket.push(m); });
+    const parts = motivos.length ? ['esperando dentro de local-delegate: '+motivos.join(', ')] : [];
+    return fila('en cola local', parts.concat(turnParts).join('; '));
   }
   if(!ref.running_ok && enVuelo) return fila('en curso');
   if(!ref.running_ok) return fila(status==='loaded' ? 'montado' : 'frío');
@@ -2126,10 +2126,10 @@ function renderInflight(){
       const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
       const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
       // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
-      const turnoTxt = it.espera_local==='turno' ? palabrasTurno(it) : '';
-      const turno = turnoTxt ? `<span class="chunkchip" title="${escHooks(turnoTxt)}">${escHooks(turnoTxt)}</span>` : '';
+      const turnText = it.local_wait==='turn' ? turnWords(it) : '';
+      const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-        <span class="badge model">${it.model}</span>${chunk}${turno}${org}
+        <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} ·${F.format(it.chars_in||0)} chars</span></div>`;
     }).join('');
     head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';

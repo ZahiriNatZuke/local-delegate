@@ -66,30 +66,30 @@ def sin_lista_de_modelos_guardada():
 
 
 @pytest.fixture(autouse=True)
-def turno_y_topologia_a_cero():
+def turn_and_topology_zeroed():
     """Cada test empieza sin nadie en el turno del daemon y sin foto de topología en caché.
 
-    El turno es un estado único del proceso (`server._turno`): sin esto, una operación que un test
-    dejara en `activos` o en la cola haría esperar a las del siguiente. Y la caché de `topologia`
+    El turno es un estado único del proceso (`server._turn`): sin esto, una operación que un test
+    dejara en `activos` o en la cola haría esperar a las del siguiente. Y la caché de `topology`
     va por (ruta, mtime, tamaño): dos `tmp_path` distintos pueden coincidir en las tres. Como en
     `sin_lista_de_modelos_guardada`, se mira `sys.modules` para no importar nada que nadie usa.
     """
 
-    def vaciar() -> None:
-        topo = sys.modules.get("local_delegate.topologia")
+    def clear() -> None:
+        topo = sys.modules.get("local_delegate.topology")
         if topo is not None:
-            topo._olvidar()
-        reiniciar = getattr(sys.modules.get("local_delegate.server"), "_reiniciar_turno", None)
-        if reiniciar is not None:
-            reiniciar()
+            topo._forget()
+        reset = getattr(sys.modules.get("local_delegate.server"), "_reset_turn", None)
+        if reset is not None:
+            reset()
 
-    vaciar()
+    clear()
     yield
-    vaciar()
+    clear()
 
 
 # --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------
-PUERTO_MUERTO = pytest.StashKey[int]()
+DEAD_PORT = pytest.StashKey[int]()
 CUT_DAEMON = pytest.StashKey["RejectingServer"]()
 
 
@@ -134,24 +134,24 @@ def _rejecting_server():
 
 
 @pytest.fixture(autouse=True)
-def daemon_real_cortado(request, monkeypatch, _rejecting_server):
+def real_daemon_down(request, monkeypatch, _rejecting_server):
     """El CLI y `doctor` preguntan al daemon (puerto y token web, los de `doctor`) por la config y
     el estado de llama-swap. En la suite esa consulta va a un servidor local que corta cada conexión
     (`RejectingServer`): sin esto, un test de `llamaswap residency` sin `--config` leería la ruta
     del daemon de verdad y podría acabar escribiendo en la config real de llama-swap.
 
-    Se parchean `cli._destino_del_daemon` y `checks._llamaswap_daemon_destination`, y no
+    Se parchean `cli._daemon_target` y `checks._llamaswap_daemon_destination`, y no
     `config.WEB_PORT`: este último lo comparan con las entradas de los clientes otros tests
     (`test_checks.py`), y cambiarlo para todos los rompería. El puerto queda en
-    `request.node.stash[PUERTO_MUERTO]` para que un test compruebe que la fixture se aplicó sin
+    `request.node.stash[DEAD_PORT]` para que un test compruebe que la fixture se aplicó sin
     pedirla (si dejara de ser autouse, no habría puerto guardado).
     """
-    puerto = _rejecting_server.port
-    request.node.stash[PUERTO_MUERTO] = puerto
+    port = _rejecting_server.port
+    request.node.stash[DEAD_PORT] = port
     request.node.stash[CUT_DAEMON] = _rejecting_server
-    monkeypatch.setattr("local_delegate.cli._destino_del_daemon", lambda: ("127.0.0.1", puerto, {}))
+    monkeypatch.setattr("local_delegate.cli._daemon_target", lambda: ("127.0.0.1", port, {}))
     monkeypatch.setattr(
-        "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", puerto, {})
+        "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", port, {})
     )
 
 

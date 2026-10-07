@@ -130,8 +130,8 @@ def _default_daemon_accepts_token(host: str, port: int, token: str) -> bool | No
 def _llamaswap_daemon_destination() -> tuple[str, int, dict[str, str]]:
     """Host, puerto y cabecera con que `doctor` pregunta al daemon por llama-swap (T13).
 
-    Función aparte, como `cli._destino_del_daemon`, para que la suite la apunte a un puerto sin
-    daemon (`conftest.daemon_real_cortado`) sin tocar `config.WEB_PORT`.
+    Función aparte, como `cli._daemon_target`, para que la suite la apunte a un puerto sin
+    daemon (`conftest.real_daemon_down`) sin tocar `config.WEB_PORT`.
     """
     host, port = daemon_host_port()
     return host, port, config.web_auth_headers()
@@ -1393,9 +1393,9 @@ def _probe_residency(ctx: Context) -> Result:
     OK, con la VRAM que retiene en el detalle (aclaración de REQ-036 del 2026-10-07: no hay estado
     informativo y un aviso subiría el exit code de una máquina configurada así a propósito). WARN
     con un grupo `persistent` con TTL mayor que 0: `persistent` no lo mantiene cargado y el dueño
-    de la config cree que sí (la config del 2026-09-15). Import diferido: `residencia` trae PyYAML.
+    de la config cree que sí (la config del 2026-09-15). Import diferido: `residency` trae PyYAML.
     """
-    from . import residencia, topologia
+    from . import residency, topology
 
     path, source = ctx.config_path, "la config de este shell"
     if path is None:
@@ -1404,52 +1404,52 @@ def _probe_residency(ctx: Context) -> Result:
             reason = why or "no la dice"
             return Result(
                 UNKNOWN,
-                f"{topologia.SIN_CONFIG} en este shell y el daemon no la da ({reason}): pasa "
+                f"{topology.NO_CONFIG} en este shell y el daemon no la da ({reason}): pasa "
                 "--config a doctor para revisarla",
             )
         path, source = Path(status.config_path), "la config del daemon"
     try:
-        loaded = residencia.cargar(path)
-    except (residencia.ErrorResidencia, OSError) as e:
+        loaded = residency.load(path)
+    except (residency.ResidencyError, OSError) as e:
         return Result(UNKNOWN, f"no se puede leer {path} ({source}): {e}")
-    photo = loaded.foto
-    if isinstance(photo, topologia.SinTopologia):
-        detail = f": {photo.detalle}" if photo.detalle else ""
-        return Result(UNKNOWN, f"no se puede leer la residencia ({photo.motivo}{detail}; {source})")
-    view = residencia.vista(photo, loaded.datos)
+    photo = loaded.snapshot
+    if isinstance(photo, topology.NoTopology):
+        detail = f": {photo.detail}" if photo.detail else ""
+        return Result(UNKNOWN, f"no se puede leer la residencia ({photo.reason}{detail}; {source})")
+    view = residency.view(photo, loaded.data)
     persistent = [
-        f"`{f.modelo}` (grupo `{f.grupo}`, TTL {f.ttl})"
-        for f in view.filas
+        f"`{f.model}` (grupo `{f.group}`, TTL {f.ttl})"
+        for f in view.rows
         if f.persistent and f.ttl > 0
     ]
     if persistent:
         return Result(
             WARN,
-            f"{view.veredicto}; grupo persistent con TTL mayor que 0: {', '.join(persistent)}: "
+            f"{view.verdict}; grupo persistent con TTL mayor que 0: {', '.join(persistent)}: "
             f"`persistent` no lo mantiene cargado ({source})",
             RESIDENCY_HINT,
         )
-    if not view.residentes:
-        return Result(OK, f"{view.veredicto} ({source})")
+    if not view.residents:
+        return Result(OK, f"{view.verdict} ({source})")
     try:
-        figures = residencia.cifras_de_vram(loaded.datos, view.residentes, {})
+        figures = residency.vram_figures(loaded.data, view.residents, {})
         vram = "; ".join(
-            f"`{m}` retiene {residencia._gib(figures[m])} GiB de VRAM" for m in view.residentes
+            f"`{m}` retiene {residency._gib(figures[m])} GiB de VRAM" for m in view.residents
         )
-    except residencia.ErrorResidencia:
+    except residency.ResidencyError:
         vram = "sin cifra fiable de la VRAM que retiene"
     return Result(
         OK,
-        f"{view.veredicto} (residencia opt-in: {vram} de forma permanente; {source})",
+        f"{view.verdict} (residencia opt-in: {vram} de forma permanente; {source})",
         RESIDENCY_HINT,
     )
 
 
 def _no_turn_is_fine(reason: str) -> bool:
     """Motivos de «sin turno» que no son una avería: el daemon va sin turno, como antes."""
-    from . import server, topologia
+    from . import server, topology
 
-    return reason in (topologia.SIN_CONFIG, topologia.MATRIX, server.SIN_TURNO_BACKEND_REMOTO)
+    return reason in (topology.NO_CONFIG, topology.MATRIX, server.NO_TURN_REMOTE_BACKEND)
 
 
 def _probe_topology(ctx: Context) -> Result:
@@ -1462,7 +1462,7 @@ def _probe_topology(ctx: Context) -> Result:
     `load.go` rechazaría es `warn`. Import diferido de `server`: el resto del diagnóstico no lo
     necesita.
     """
-    from . import server, topologia
+    from . import server, topology
 
     status, why = ctx.llamaswap_daemon()
     if status is not None and status.turn_active is not None:
@@ -1475,16 +1475,16 @@ def _probe_topology(ctx: Context) -> Result:
     if not server._backend_en_loopback():
         return Result(
             UNKNOWN,
-            f"sin turno: {server.SIN_TURNO_BACKEND_REMOTO} ({config.backend_host()}; {source})",
+            f"sin turno: {server.NO_TURN_REMOTE_BACKEND} ({config.backend_host()}; {source})",
         )
     if ctx.config_path is None:
-        return Result(UNKNOWN, f"sin turno: {topologia.SIN_CONFIG} ({source})")
-    photo = topologia.leer(ctx.config_path)
-    if isinstance(photo, topologia.SinTopologia):
-        detail = f": {photo.detalle}" if photo.detalle else ""
-        text = f"sin turno: {photo.motivo}{detail} ({source})"
-        return Result(UNKNOWN if _no_turn_is_fine(photo.motivo) else WARN, text)
-    return Result(OK, f"turno activo (choques: {server._choques_por_grupos(photo)}; {source})")
+        return Result(UNKNOWN, f"sin turno: {topology.NO_CONFIG} ({source})")
+    photo = topology.read(ctx.config_path)
+    if isinstance(photo, topology.NoTopology):
+        detail = f": {photo.detail}" if photo.detail else ""
+        text = f"sin turno: {photo.reason}{detail} ({source})"
+        return Result(UNKNOWN if _no_turn_is_fine(photo.reason) else WARN, text)
+    return Result(OK, f"turno activo (choques: {server._clashes_by_groups(photo)}; {source})")
 
 
 def _probe_fallback(ctx: Context) -> Result:
@@ -1492,42 +1492,41 @@ def _probe_fallback(ctx: Context) -> Result:
 
     Lo que no, se ignora al delegar (REQ-014), y un error de tecleo en la variable dejaría a un rol
     sin el respaldo que su dueño cree haber configurado. Import diferido: `cadenas` importa `config`
-    y `topologia`, y no hace falta cargarlos para el resto del diagnóstico.
+    y `topology`, y no hace falta cargarlos para el resto del diagnóstico.
     """
     from . import cadenas
     from . import config as configuracion
 
-    resueltas = [cadenas.resolver(rol) for rol in cadenas.ROLES_DE_TEXTO]
+    resolved = [cadenas.resolver(rol) for rol in cadenas.ROLES_DE_TEXTO]
     # Los dos avisos van en el mismo resultado: `residente,foo` tiene un nombre que se ignora y otro
     # obsoleto (REQ-022), y arreglar uno no debe esconder el otro.
     detalles: list[str] = []
-    arreglos: list[str] = []
+    fixes: list[str] = []
     avisos = [
         f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} nombra {', '.join(cadena.ignorados)}"
-        for cadena in resueltas
+        for cadena in resolved
         if cadena.ignorados
     ]
     if avisos:
         detalles.append("; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran")
-        arreglos.append(
+        fixes.append(
             f"usa roles (mechanical, long, code, {cadenas.LOADED}) o ids del catálogo de texto"
         )
-    obsoletos = [
-        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} usa {', '.join(cadena.obsoletos)}"
-        for cadena in resueltas
-        if cadena.obsoletos
+    obsolete = [
+        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} usa {', '.join(cadena.obsolete)}"
+        for cadena in resolved
+        if cadena.obsolete
     ]
-    if obsoletos:
+    if obsolete:
         detalles.append(
-            "; ".join(obsoletos)
-            + f": nombre obsoleto del paso {cadenas.LOADED}, que sigue valiendo"
+            "; ".join(obsolete) + f": nombre obsoleto del paso {cadenas.LOADED}, que sigue valiendo"
         )
-        arreglos.append(f"renombra residente/resident a {cadenas.LOADED} en esas variables")
+        fixes.append(f"renombra residente/resident a {cadenas.LOADED} en esas variables")
     if detalles:
-        return Result(WARN, " | ".join(detalles), "; ".join(arreglos))
+        return Result(WARN, " | ".join(detalles), "; ".join(fixes))
     if not configuracion.FALLBACK:
         return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
-    return Result(OK, f"cadenas válidas; {cadenas.texto_residentes()}")
+    return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
 
 
 def _probe_rol_retirado(ctx: Context) -> Result:

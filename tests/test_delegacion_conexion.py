@@ -1,6 +1,6 @@
 """Una delegación que no puede conectar: cuánto tarda en rendirse, qué dice y qué no ofrece.
 
-REQ-017, REQ-018, REQ-019 y REQ-022 (`espera_local`) de
+REQ-017, REQ-018, REQ-019 y REQ-022 (`local_wait`) de
 `.sdd/changes/panel-cuentas-y-estados-honestos/`. El escenario de origen es la Mac con la VPN
 caída: cada fallo bloqueaba la tool ~75–95 s, preguntaba «¿Lo arranco?» por un backend que vive en
 otra máquina y el log no decía por qué había fallado.
@@ -277,9 +277,9 @@ def test_inflight_marca_la_espera_local(tmp_path, monkeypatch):
         hilo.start()
         assert _esperar(lambda: _entrada_inflight(tmp_path)), "la delegación no apareció en curso"
         entrada = _esperar(
-            lambda: (e := _entrada_inflight(tmp_path)) and e.get("espera_local") and e
+            lambda: (e := _entrada_inflight(tmp_path)) and e.get("local_wait") and e
         ) or _entrada_inflight(tmp_path)
-        assert entrada.get("espera_local") == "plaza"
+        assert entrada.get("local_wait") == "slot"
     finally:
         for _ in range(tomadas):
             server._chat_slots.release()
@@ -288,7 +288,7 @@ def test_inflight_marca_la_espera_local(tmp_path, monkeypatch):
         assert llego_al_backend.wait(5), "la delegación no llegó al backend al liberar la plaza"
         entrada = _entrada_inflight(tmp_path)
         assert entrada is not None
-        assert entrada.get("espera_local") is None
+        assert entrada.get("local_wait") is None
     finally:
         seguir.set()
         hilo.join(10)
@@ -312,7 +312,7 @@ def test_sin_espera_no_se_escribe_nada_de_mas(tmp_path, monkeypatch):
         )
         server.local_summarize(text="hola")
 
-    assert vistas and "espera_local" not in vistas[0]
+    assert vistas and "local_wait" not in vistas[0]
 
 
 def test_el_snapshot_de_en_curso_lleva_la_espera_local(tmp_path):
@@ -329,7 +329,7 @@ def test_el_snapshot_de_en_curso_lleva_la_espera_local(tmp_path):
                     "started_at": time.time(),
                     "pid": os.getpid(),
                     "backend": "local",
-                    "espera_local": "plaza",
+                    "local_wait": "slot",
                 },
                 f"{os.getpid()}:2": {
                     "tool": "local_summarize",
@@ -347,5 +347,5 @@ def test_el_snapshot_de_en_curso_lleva_la_espera_local(tmp_path):
 
     por_id = {e["id"]: e for e in server.inflight_snapshot()}
 
-    assert por_id[f"{os.getpid()}:1"].get("espera_local") == "plaza"
-    assert "espera_local" not in por_id[f"{os.getpid()}:2"]
+    assert por_id[f"{os.getpid()}:1"].get("local_wait") == "slot"
+    assert "local_wait" not in por_id[f"{os.getpid()}:2"]

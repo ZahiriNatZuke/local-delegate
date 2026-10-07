@@ -586,10 +586,10 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
         )
         return 2
     if out_path.exists() and args.force:
-        # REQ-035: la copia lleva fecha y no pisa ninguna anterior, como la de `residencia`.
-        from . import residencia
+        # REQ-035: la copia lleva fecha y no pisa ninguna anterior, como la de `residency`.
+        from . import residency
 
-        backup = residencia.copia_con_fecha(out_path)
+        backup = residency.dated_copy(out_path)
         print()
         print(f"backup: {backup}")
 
@@ -605,7 +605,7 @@ def cmd_init_llamaswap(args: argparse.Namespace) -> int:
 # directo con la key del shell; si tampoco, «no se sabe». Con `--now` se escribe igual. La vigía de
 # la recarga se abre ANTES de escribir y dice cuál de las cuatro salidas hubo.
 
-_AYUDA_RESIDENCIA = """\
+_RESIDENCY_HELP = """\
 Sin opciones, muestra la residencia de la config de llama-swap: cada modelo con su grupo, el TTL
 efectivo y el veredicto («sin residente (recomendado)» o «residente: X»). No imprime claves ni
 `cmd`.
@@ -629,23 +629,23 @@ coincida con lo que corre); no vigila el fichero (se aplicará en el próximo ar
 """
 
 
-def _destino_del_daemon() -> tuple[str, int, dict[str, str]]:
+def _daemon_target() -> tuple[str, int, dict[str, str]]:
     """Host, puerto y cabecera con que el CLI pregunta al daemon: los mismos que usa `doctor`.
 
-    Función aparte para que la suite la apunte a un puerto muerto (`conftest.daemon_real_cortado`).
+    Función aparte para que la suite la apunte a un puerto muerto (`conftest.real_daemon_down`).
     """
     from . import checks, config
 
-    host, puerto = checks.daemon_host_port()
-    return host, puerto, config.web_auth_headers()
+    host, port = checks.daemon_host_port()
+    return host, port, config.web_auth_headers()
 
 
-def _url_del_daemon() -> str:
-    host, puerto, _cabecera = _destino_del_daemon()
-    return f"http://{host}:{puerto}"
+def _daemon_url() -> str:
+    host, port, _header = _daemon_target()
+    return f"http://{host}:{port}"
 
 
-def _ruta_del_daemon(answer=None) -> Path | None:
+def _daemon_path(answer=None) -> Path | None:
     """La config que usa el daemon, por su endpoint de REQ-039. `None` si no contesta.
 
     Con `answer` (lo que ya devolvió `_daemon_status`) no se vuelve a preguntar: una escritura sin
@@ -657,7 +657,7 @@ def _ruta_del_daemon(answer=None) -> Path | None:
     return Path(status.config_path)
 
 
-def _ruta_de_la_config(args: argparse.Namespace):
+def _config_path(args: argparse.Namespace):
     """`(ruta, respuesta del daemon)`: `--config`, si no `LLAMASWAP_CONFIG`, si no la del daemon.
 
     La respuesta del daemon solo viene si hubo que preguntarle; la reutiliza la escritura.
@@ -666,24 +666,24 @@ def _ruta_de_la_config(args: argparse.Namespace):
 
     if args.config:
         return Path(args.config), None
-    desde_el_entorno = config.llamaswap_config_path()
-    if desde_el_entorno:
-        return Path(desde_el_entorno).expanduser(), None
+    from_env = config.llamaswap_config_path()
+    if from_env:
+        return Path(from_env).expanduser(), None
     answer = _daemon_status()
-    return _ruta_del_daemon(answer), answer
+    return _daemon_path(answer), answer
 
 
-def _pares(valores: list[str], opcion: str, tipo) -> dict[str, float]:
-    pares = {}
-    for valor in valores:
-        modelo, igual, cifra = valor.partition("=")
+def _pares(values: list[str], option: str, kind) -> dict[str, float]:
+    pair_items = {}
+    for value in values:
+        model, same, figure = value.partition("=")
         try:
-            if not igual or not modelo:
+            if not same or not model:
                 raise ValueError
-            pares[modelo.strip()] = tipo(cifra.strip().replace(",", "."))
+            pair_items[model.strip()] = kind(figure.strip().replace(",", "."))
         except ValueError:
-            raise ValueError(f"{opcion} {valor!r}: el formato es MODEL=VALUE") from None
-    return pares
+            raise ValueError(f"{option} {value!r}: el formato es MODEL=VALUE") from None
+    return pair_items
 
 
 def _daemon_status():
@@ -697,10 +697,10 @@ def _daemon_status():
 
     from . import llamaswap_api
 
-    _host, _port, headers = _destino_del_daemon()
+    _host, _port, headers = _daemon_target()
     try:
         response = httpx2.get(
-            f"{_url_del_daemon()}/api/llamaswap/status",
+            f"{_daemon_url()}/api/llamaswap/status",
             headers=headers,
             timeout=llamaswap_api.CLI_TO_DAEMON,
         )
@@ -742,12 +742,12 @@ def _daemon_watch(watch_id: str):
 
     from . import llamaswap_api
 
-    _host, _port, headers = _destino_del_daemon()
+    _host, _port, headers = _daemon_target()
     deadline = time.monotonic() + llamaswap_api.WATCH_TOTAL_S + 5
     while time.monotonic() < deadline:
         try:
             response = httpx2.get(
-                f"{_url_del_daemon()}/api/llamaswap/watch/{watch_id}",
+                f"{_daemon_url()}/api/llamaswap/watch/{watch_id}",
                 headers=headers,
                 timeout=llamaswap_api.CLI_TO_DAEMON,
             )
@@ -772,10 +772,10 @@ def _open_watch(origin: str, why: str):
     from . import llamaswap_api
 
     if origin == "daemon":
-        _host, _port, headers = _destino_del_daemon()
+        _host, _port, headers = _daemon_target()
         try:
             response = httpx2.post(
-                f"{_url_del_daemon()}/api/llamaswap/watch",
+                f"{_daemon_url()}/api/llamaswap/watch",
                 headers=headers,
                 timeout=llamaswap_api.CLI_TO_DAEMON_WATCH,
             )
@@ -802,17 +802,17 @@ def _restore_after_rejection(path: Path, previous: bytes) -> Path:
     """REQ-034, «rechazó»: vuelve a la config que sigue corriendo, por el camino de REQ-038 (valida
     la copia, copia el fichero actual y reemplaza de forma atómica). Devuelve la copia del
     rechazado, para que no se pierda."""
-    from . import residencia
+    from . import residency
 
-    residencia.validar_copia(previous)
-    rejected_copy = residencia.copia_con_fecha(path)
-    residencia.reemplazar_atomico(path, previous)
+    residency.validate_copy(previous)
+    rejected_copy = residency.dated_copy(path)
+    residency.atomic_replace(path, previous)
     return rejected_copy
 
 
 def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status, origin) -> int:
     """El mensaje de cada una de las cuatro salidas de REQ-034 (y de «sin resolver»)."""
-    from . import llamaswap_api, residencia
+    from . import llamaswap_api, residency
 
     text = llamaswap_api.OUTCOME_TEXT[outcome]
     if outcome == llamaswap_api.RELOADED:
@@ -832,7 +832,7 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
         wait_again, abandon_again, why_not = _open_watch(origin, "")
         try:
             rejected_copy = _restore_after_rejection(path, previous)
-        except (residencia.ErrorResidencia, OSError) as e:
+        except (residency.ResidencyError, OSError) as e:
             if abandon_again is not None:
                 abandon_again()
             print(f"error: no se pudo restaurar la copia: {e}", file=sys.stderr)
@@ -873,8 +873,8 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
     return 0
 
 
-def _escribir_residencia(
-    args: argparse.Namespace, ruta: Path, nuevo: bytes, original: bytes, daemon_answer=None
+def _write_residency(
+    args: argparse.Namespace, path: Path, new: bytes, original: bytes, daemon_answer=None
 ) -> int:
     """Escribe `nuevo` si el fichero sigue siendo `original` (los bytes sobre los que se decidió).
 
@@ -884,11 +884,11 @@ def _escribir_residencia(
     T2 (d) midió que una recarga de v255 corta las peticiones en curso aunque su modelo no cambie
     (502 a los ~1,8 s): el aviso no se suaviza y la negativa se queda.
     """
-    from . import llamaswap_api, residencia
+    from . import llamaswap_api, residency
 
     origin, status, why = _llamaswap_status(daemon_answer)
     if status is None:
-        reasons = [f"{residencia.NO_SE_SABE} ({why})"]
+        reasons = [f"{residency.UNKNOWN} ({why})"]
     else:
         reasons = llamaswap_api.refusals(status)
     if reasons and not args.now:
@@ -909,20 +909,20 @@ def _escribir_residencia(
         return 2
     # Actualización perdida: si alguien cambió el fichero desde que se leyó, escribir pisaría su
     # cambio con una edición calculada sobre los bytes viejos. Se compara tras abrir la vigía.
-    current = ruta.read_bytes()
+    current = path.read_bytes()
     if current != original:
         if abandon is not None:
             abandon()
-        print(f"error: {residencia.CAMBIO_DURANTE_LA_EDICION}", file=sys.stderr)
+        print(f"error: {residency.CHANGE_DURING_EDIT}", file=sys.stderr)
         return 2
     print(
         "aviso: llama-swap recargará la config en unos 2 s, descargará todos los modelos y cortará "
         "las peticiones en curso"
     )
-    copy = residencia.copia_con_fecha(ruta, current)
-    residencia.reemplazar_atomico(ruta, nuevo)
+    copy = residency.dated_copy(path, current)
+    residency.atomic_replace(path, new)
     print(f"copia: {copy}")
-    print(f"escrito: {ruta}")
+    print(f"escrito: {path}")
     if reasons:
         print(f"aviso: escrito con --now: {'; '.join(reasons)}")
     if wait is None:
@@ -930,14 +930,14 @@ def _escribir_residencia(
         return 0
     print(f"esperando a llama-swap (hasta {llamaswap_api.WATCH_TOTAL_S:g} s)...", flush=True)
     outcome, line = wait()
-    return _report_outcome(outcome, line, ruta, current, status, origin)
+    return _report_outcome(outcome, line, path, current, status, origin)
 
 
-def cmd_llamaswap_residencia(args: argparse.Namespace) -> int:
-    from . import residencia, topologia
+def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
+    from . import residency, topology
 
-    ruta, daemon_answer = _ruta_de_la_config(args)
-    if ruta is None:
+    path, daemon_answer = _config_path(args)
+    if path is None:
         print(
             "no se sabe qué config usa llama-swap: no hay --config, LLAMASWAP_CONFIG está vacía y "
             "el daemon no responde. Pasa --config PATH.",
@@ -946,7 +946,7 @@ def cmd_llamaswap_residencia(args: argparse.Namespace) -> int:
         return 2
     try:
         ttls = {m: int(s) for m, s in _pares(args.ttl, "--ttl", int).items()}
-        vram_modelo = _pares(args.vram_model, "--vram-model", float)
+        model_vram = _pares(args.vram_model, "--vram-model", float)
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -955,58 +955,59 @@ def cmd_llamaswap_residencia(args: argparse.Namespace) -> int:
         return 2
     try:
         if args.restore:
-            copia = Path(args.restore).read_bytes()
-            residencia.validar_copia(copia)
-            original = ruta.read_bytes()
+            copy = Path(args.restore).read_bytes()
+            residency.validate_copy(copy)
+            original = path.read_bytes()
             if args.dry_run:
                 print(
                     f"--dry-run: no se escribe nada. Líneas que cambiarían al restaurar {args.restore}:"
                 )
-                print("\n".join(residencia.diff_oculto(original, copia)))
+                print("\n".join(residency.hidden_diff(original, copy)))
                 return 0
-            return _escribir_residencia(args, ruta, copia, original, daemon_answer)
-        cargada = residencia.cargar(ruta)
-        foto = cargada.foto
-        if isinstance(foto, topologia.SinTopologia):
-            detalle = f": {foto.detalle}" if foto.detalle else ""
+            return _write_residency(args, path, copy, original, daemon_answer)
+        loaded_one = residency.load(path)
+        snapshot = loaded_one.snapshot
+        if isinstance(snapshot, topology.NoTopology):
+            detail = f": {snapshot.detail}" if snapshot.detail else ""
             print(
-                f"error: no se puede leer la residencia ({foto.motivo}{detalle})", file=sys.stderr
+                f"error: no se puede leer la residencia ({snapshot.reason}{detail})",
+                file=sys.stderr,
             )
             return 2
-        aviso = ""
+        warning = ""
         if args.none:
-            cambios = residencia.plan_ninguno(cargada.datos, foto, ttls, args.group)
+            changes = residency.plan_none(loaded_one.data, snapshot, ttls, args.group)
         elif args.pin:
             if args.vram_gb is None:
                 print("error: --pin necesita --vram-gb (la VRAM de la GPU)", file=sys.stderr)
                 return 2
-            cambios, aviso = residencia.plan_fijar(
-                cargada.datos, foto, args.pin, args.vram_gb, args.reserve_gb, vram_modelo
+            changes, warning = residency.plan_pin(
+                loaded_one.data, snapshot, args.pin, args.vram_gb, args.reserve_gb, model_vram
             )
         elif ttls:
-            cambios = residencia.plan_ttl(ttls, cargada.datos, foto)
+            changes = residency.plan_ttl(ttls, loaded_one.data, snapshot)
         else:
-            print(residencia.vista(foto, cargada.datos).texto())
+            print(residency.view(snapshot, loaded_one.data).text())
             return 0
-        if not cambios:
+        if not changes:
             print("nada que cambiar")
             return 0
-        nuevo, diff = residencia.editar_con_diff(cargada.original, cambios)
-    except residencia.ErrorResidencia as e:
+        new, diff = residency.edit_with_diff(loaded_one.original, changes)
+    except residency.ResidencyError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     except OSError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    if aviso:
-        print(f"aviso: {aviso}")
+    if warning:
+        print(f"aviso: {warning}")
     if args.dry_run:
         print("--dry-run: no se escribe nada. Líneas que cambiarían:")
         print("\n".join(diff))
         return 0
     try:
-        return _escribir_residencia(args, ruta, nuevo, cargada.original, daemon_answer)
-    except (residencia.ErrorResidencia, OSError) as e:
+        return _write_residency(args, path, new, loaded_one.original, daemon_answer)
+    except (residency.ResidencyError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 
@@ -1020,25 +1021,25 @@ def _add_llamaswap_parser(sub) -> None:
     res = lsub.add_parser(
         "residency",
         help="Muestra o cambia qué modelo se queda cargado y los TTL.",
-        description=_AYUDA_RESIDENCIA,
+        description=_RESIDENCY_HELP,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     res.add_argument("--config", default=None, help="config.yaml de llama-swap")
-    accion = res.add_mutually_exclusive_group()
-    accion.add_argument(
+    action = res.add_mutually_exclusive_group()
+    action.add_argument(
         "--none",
         action="store_true",
         help="deja la config sin residente: mueve los grupos persistent al grupo swap y pone --ttl "
         "a los modelos con TTL efectivo 0",
     )
-    accion.add_argument(
+    action.add_argument(
         "--pin",
         metavar="MODEL",
         default=None,
         help="residencia OPT-IN: el modelo pasa a un grupo persistent (swap y exclusive false) con "
         "ttl 0 y retiene VRAM de forma permanente; se niega si no cabe",
     )
-    accion.add_argument(
+    action.add_argument(
         "--restore", metavar="BAK", default=None, help="vuelve a una copia .bak, byte a byte"
     )
     res.add_argument(
@@ -1071,7 +1072,7 @@ def _add_llamaswap_parser(sub) -> None:
         action="store_true",
         help="escribe aunque no se sepa si hay delegaciones en curso",
     )
-    res.set_defaults(func=cmd_llamaswap_residencia)
+    res.set_defaults(func=cmd_llamaswap_residency)
 
 
 def build_parser() -> argparse.ArgumentParser:

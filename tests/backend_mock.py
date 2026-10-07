@@ -164,14 +164,14 @@ mock = _Mock()
 # --- Modo «cuenta cambios» (T10 de daemon-reparte-el-backend) ----------------------------------
 
 
-def _respuesta_ok(modelo: str) -> httpx2.Response:
+def _ok_response(model: str) -> httpx2.Response:
     return httpx2.Response(
         200,
-        json={"choices": [{"message": {"content": f"ok de {modelo}"}, "finish_reason": "stop"}]},
+        json={"choices": [{"message": {"content": f"ok de {model}"}, "finish_reason": "stop"}]},
     )
 
 
-class CuentaCambios:
+class ChangeCount:
     """Un backend de chat que atiende UNA petición a la vez, en orden de llegada, y cuenta cambios.
 
     Hace lo que hace llama-swap con `-np 1` y su cola FIFO: la segunda petición espera a que acabe
@@ -179,9 +179,9 @@ class CuentaCambios:
     no cuenta: cargar el primer modelo no quita a nadie). Es lo que mide si dos operaciones se
     quitan el modelo una a otra.
 
-    - `latencia_s`: lo que tarda en contestar cada petición, ya con el turno de servicio.
+    - `latency_s`: lo que tarda en contestar cada petición, ya con el turno de servicio.
     - `barrera`: si es N > 0, ninguna petición se atiende hasta que hayan **llegado** N, con un tope
-      de `tope_barrera_s`. Si el tope vence, `no_se_solaparon` queda en `True`: las N no estuvieron
+      de `barrier_cap_s`. Si el tope vence, `did_not_overlap` queda en `True`: las N no estuvieron
       a la vez dentro del daemon (cada una con su plaza).
     - `responder(modelo, request)`: la respuesta; por defecto, un 200 con `ok de <modelo>`.
     """
@@ -189,54 +189,54 @@ class CuentaCambios:
     def __init__(
         self,
         *,
-        latencia_s: float = 0.01,
-        barrera: int = 0,
-        tope_barrera_s: float = 2.0,
-        responder: Callable[[str, httpx2.Request], httpx2.Response] | None = None,
+        latency_s: float = 0.01,
+        barrier: int = 0,
+        barrier_cap_s: float = 2.0,
+        respond: Callable[[str, httpx2.Request], httpx2.Response] | None = None,
     ) -> None:
-        self.latencia_s = latencia_s
-        self.barrera = barrera
-        self.tope_barrera_s = tope_barrera_s
-        self.responder = responder or (lambda modelo, _request: _respuesta_ok(modelo))
-        self.llegadas: list[str] = []
-        self.servidos: list[str] = []
-        self.cambios = 0
-        self.no_se_solaparon = False
+        self.latency_s = latency_s
+        self.barrier = barrier
+        self.barrier_cap_s = barrier_cap_s
+        self.respond = respond or (lambda model, _request: _ok_response(model))
+        self.arrivals: list[str] = []
+        self.served: list[str] = []
+        self.changes = 0
+        self.did_not_overlap = False
         self._cond = threading.Condition()
-        self._siguiente = 0
-        self._atendiendo = 0
+        self._next = 0
+        self._serving = 0
 
     def __call__(self, request: httpx2.Request) -> httpx2.Response:
-        modelo = json.loads(request.content)["model"]
+        model = json.loads(request.content)["model"]
         with self._cond:
-            self.llegadas.append(modelo)
+            self.arrivals.append(model)
             self._cond.notify_all()
-            if self.barrera:
-                fin = time.monotonic() + self.tope_barrera_s
-                while len(self.llegadas) < self.barrera:
-                    restante = fin - time.monotonic()
-                    if restante <= 0:
-                        self.no_se_solaparon = True
+            if self.barrier:
+                end = time.monotonic() + self.barrier_cap_s
+                while len(self.arrivals) < self.barrier:
+                    remaining = end - time.monotonic()
+                    if remaining <= 0:
+                        self.did_not_overlap = True
                         break
-                    self._cond.wait(restante)
-            ticket = self._siguiente
-            self._siguiente += 1
-            while ticket != self._atendiendo:
+                    self._cond.wait(remaining)
+            ticket = self._next
+            self._next += 1
+            while ticket != self._serving:
                 self._cond.wait()
-            if self.servidos and self.servidos[-1] != modelo:
-                self.cambios += 1
-            self.servidos.append(modelo)
+            if self.served and self.served[-1] != model:
+                self.changes += 1
+            self.served.append(model)
         try:
-            time.sleep(self.latencia_s)
-            return self.responder(modelo, request)
+            time.sleep(self.latency_s)
+            return self.respond(model, request)
         finally:
             with self._cond:
-                self._atendiendo += 1
+                self._serving += 1
                 self._cond.notify_all()
 
 
-def cuenta_cambios(url: str, **opciones) -> CuentaCambios:
+def count_changes(url: str, **options) -> ChangeCount:
     """Registra el POST de chat en modo «cuenta cambios» y devuelve el contador."""
-    servidor = CuentaCambios(**opciones)
-    post(url).mock(side_effect=servidor)
-    return servidor
+    server = ChangeCount(**options)
+    post(url).mock(side_effect=server)
+    return server

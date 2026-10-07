@@ -176,7 +176,7 @@ Hace map-reduce sobre el diff, y eso importa más de lo que parece: un diff que 
 **trunca** produce un mensaje que solo describe el principio del cambio.
 
 **Idioma.** El prompt pide el mensaje entero (primera línea y cuerpo) en el idioma que fija
-`LOCAL_DELEGATE_COMMIT_IDIOMA` (`es`, `en`…; ver [Configuration](Configuration.md)). Sin la variable,
+`LOCAL_DELEGATE_COMMIT_LANGUAGE` (`es`, `en`…; ver [Configuration](Configuration.md)). Sin la variable,
 pide el idioma predominante de los textos del diff. Antes no pedía ninguno y el modelo elegía:
 medido sobre 30 commits de un repo documentado en español, uno de los modelos escribió 17 en inglés.
 

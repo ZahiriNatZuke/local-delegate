@@ -678,6 +678,30 @@ fixture `daemon_real_cortado` corta con un RST en vez de un puerto cerrado.
   (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`); ningún llama-swap de prueba
   vivo al terminar.
 
+## Ola de renombrado — código de esta rama en inglés (2026-10-07)
+
+Fuera del plan, por decisión del usuario: lo que es código o término de máquina y lo definió esta
+rama pasa a inglés, sin alias; los textos para personas y la prosa siguen en español. Lo publicado
+antes queda para el SDD siguiente, salvo la excepción acordada de `espera_local` (→ `local_wait`,
+comprobado que no se guarda en ningún log). Un solo agente, sin commit. Equivalencias en la tabla de
+aclaraciones de `spec.md` («Renombrado a inglés del código de esta rama»); método, controles, lo que
+quedó fuera y por qué, en [evidencias/renombrado.md](evidencias/renombrado.md). `plan.md` usa los
+nombres nuevos en T14 a T17 y en sus filas de propiedad de ficheros.
+
+### Comprobaciones
+
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2180 passed, 2 skipped, 1 warning in 211.20s (0:03:31)`, el mismo número que tras la ola 7.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `176 files already formatted`; `node --check` del JS del panel: sin errores.
+- Control «no queda español en el grupo A» (scratchpad, usa la lista de `wordfreq`): `exit=0` con 0
+  nombres; con nombres plantados en un fichero nuevo y en una función nueva de un fichero
+  modificado, `exit=1` y los nombra; restaurado, `exit=0`.
+- EOL igual que en `HEAD` en los 52 ficheros tocados (el `sed -i` de Git Bash había pasado
+  `server.py` a LF; restaurado).
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

@@ -466,7 +466,7 @@ def test_api_system_dice_plataforma_origen_y_host(monkeypatch):
 
 
 def test_api_inflight_deja_pasar_la_espera_local(tmp_path, monkeypatch):
-    """REQ-022: la fila «en cola local» depende de que `espera_local` llegue al panel."""
+    """REQ-022: la fila «en cola local» depende de que `local_wait` llegue al panel."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     pid = os.getpid()
@@ -480,7 +480,7 @@ def test_api_inflight_deja_pasar_la_espera_local(tmp_path, monkeypatch):
                 "chars_in": 1,
                 "started_at": time.time(),
                 "pid": pid,
-                "espera_local": "plaza",
+                "local_wait": "slot",
             }
         },
     )
@@ -489,7 +489,7 @@ def test_api_inflight_deja_pasar_la_espera_local(tmp_path, monkeypatch):
 
     assert len(entradas) == 1
     e = entradas[0]
-    assert e.get("espera_local") == "plaza"
+    assert e.get("local_wait") == "slot"
 
 
 # --- /api/system: RAM/VRAM + procesos (estructura, con sysinfo monkeypatcheado) --------
@@ -1544,10 +1544,10 @@ LS_RUNNING = "http://test-backend/running"
 LS_EVENTS = "http://test-backend/api/events"
 
 
-def _sse(*mensajes: tuple[str, object]) -> bytes:
+def _sse(*messages: tuple[str, object]) -> bytes:
     return "".join(
         f"event: message\ndata: {json.dumps({'type': t, 'data': json.dumps(d)})}\n\n"
-        for t, d in mensajes
+        for t, d in messages
     ).encode()
 
 
@@ -1602,38 +1602,38 @@ def test_llamaswap_status_never_returns_cmd_headers_or_keys(monkeypatch):
     assert r.status_code == 200
     assert "clave-falsa-1" not in r.text
     assert "clave-falsa-2" not in r.text
-    datos = r.json()
-    assert datos["llamaswap"] == "ok"
-    assert datos["models"] == [{"id": "m", "state": "ready", "ttl": 120}]
-    assert datos["in_flight"] == {"m": 1}
-    assert datos["own_delegations"] == 0
-    assert datos["config_path"] == "D:/configs/llama-swap.yaml"
+    data = r.json()
+    assert data["llamaswap"] == "ok"
+    assert data["models"] == [{"id": "m", "state": "ready", "ttl": 120}]
+    assert data["in_flight"] == {"m": 1}
+    assert data["own_delegations"] == 0
+    assert data["config_path"] == "D:/configs/llama-swap.yaml"
     # Lo que el daemon dice de su turno (para `doctor`): `test-backend` no es loopback, no hay.
-    assert datos["turn_active"] is False
-    assert datos["turn_reason"] == "backend remoto"
+    assert data["turn_active"] is False
+    assert data["turn_reason"] == "backend remoto"
 
 
 @backend_mock.mock
 def test_llamaswap_status_counts_own_delegations(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     _llamaswap_with_secrets()
-    entrada = server._inflight_start(tool="t", model="m", source="path", chars_in=5)
+    entry = server._inflight_start(tool="t", model="m", source="path", chars_in=5)
     try:
-        datos = TestClient(metrics.app).get("/api/llamaswap/status").json()
+        data = TestClient(metrics.app).get("/api/llamaswap/status").json()
     finally:
-        server._inflight_end(entrada)
-    assert datos["own_delegations"] == 1
+        server._inflight_end(entry)
+    assert data["own_delegations"] == 1
 
 
 @pytest.mark.parametrize(
-    ("metodo", "ruta"),
+    ("method", "path"),
     [
         ("GET", "/api/llamaswap/status"),
         ("POST", "/api/llamaswap/watch"),
         ("GET", "/api/llamaswap/watch/abc"),
     ],
 )
-def test_llamaswap_endpoints_require_the_web_token(monkeypatch, metodo, ruta):
+def test_llamaswap_endpoints_require_the_web_token(monkeypatch, method, path):
     """La app sola, sin la puerta del daemon (`auth.proteger`): la dependencia de cada ruta basta.
 
     `BASE_URL` va a un puerto sin nadie: si la dependencia faltara, el endpoint no saldría a la red
@@ -1641,27 +1641,27 @@ def test_llamaswap_endpoints_require_the_web_token(monkeypatch, metodo, ruta):
     """
     monkeypatch.setattr(config, "WEB_TOKEN", "token-falso-1")
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
-    cliente = TestClient(metrics.app)
+    client = TestClient(metrics.app)
 
-    r = cliente.request(metodo, ruta)
+    r = client.request(method, path)
 
     assert r.status_code == 401
-    con_token = cliente.request(metodo, ruta, headers={"Authorization": "Bearer token-falso-1"})
-    assert con_token.status_code != 401
+    with_token = client.request(method, path, headers={"Authorization": "Bearer token-falso-1"})
+    assert with_token.status_code != 401
 
 
 @backend_mock.mock
 def test_llamaswap_watch_with_llamaswap_down_says_down(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.get(LS_EVENTS).mock(side_effect=httpx2.ConnectError("rechazada"))
-    cliente = TestClient(metrics.app)
+    client = TestClient(metrics.app)
 
-    abierta = cliente.post("/api/llamaswap/watch")
-    assert abierta.status_code == 200
-    resultado = cliente.get(f"/api/llamaswap/watch/{abierta.json()['id']}").json()
+    opened = client.post("/api/llamaswap/watch")
+    assert opened.status_code == 200
+    result = client.get(f"/api/llamaswap/watch/{opened.json()['id']}").json()
 
-    assert resultado["outcome"] == "down"
-    assert cliente.get("/api/llamaswap/watch/no-existe").status_code == 404
+    assert result["outcome"] == "down"
+    assert client.get("/api/llamaswap/watch/no-existe").status_code == 404
 
 
 @backend_mock.mock

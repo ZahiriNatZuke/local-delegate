@@ -196,11 +196,11 @@ tarea lo vuelve a medir antes de editar.
 | `src/local_delegate/topologia.py`, `tests/test_topologia.py`, `tests/fixtures/topologia/` (nuevos) | LF | T7 | |
 | `src/local_delegate/turno.py`, `tests/test_turno.py` (nuevos) | LF | T8 → T10 → T15 | T8: núcleo y envoltura. T10: solo si la integración pide un cambio de interfaz, anotado. T15: nada (las reservas con alternativos ya están en T8) |
 | `src/local_delegate/ritmo.py`, `tests/test_ritmo.py` (nuevos) | LF | T9 | |
-| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `loaded`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `ritmo` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
+| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `loaded`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `pace` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
 | `src/local_delegate/config.py` | LF | T10 → T14 → T15 | una variable cada una |
 | `tests/conftest.py` | LF | T10 → T11 | T10: fixture autouse que vacía el estado del turno y la caché de topología. T11: fixture autouse que apunta la consulta al daemon a un puerto muerto |
-| `src/local_delegate/web/metrics.py` | CRLF | T10 → T13 → T14 | T10: palabras del motivo `"turno"` en el `title` de `estadoModelo` y en «En curso» (`renderInflight`), con `turno_en_uso`; **no** toca la tabla de estados ni la condición de la fila 3. T13: los tres endpoints de `/api/llamaswap/`. T14: columnas de espera, inferencia y marca «lento» en la tabla de actividad (función JS pura nueva `marcaLento`) |
-| `tests/test_panel_estados.py` | LF | T10 → T14 | T10: motivo `"turno"`. T14: `marcaLento` |
+| `src/local_delegate/web/metrics.py` | CRLF | T10 → T13 → T14 | T10: palabras del motivo `"turno"` en el `title` de `estadoModelo` y en «En curso» (`renderInflight`), con `turno_en_uso`; **no** toca la tabla de estados ni la condición de la fila 3. T13: los tres endpoints de `/api/llamaswap/`. T14: columnas de espera, inferencia y marca «lento» en la tabla de actividad (función JS pura nueva `slowMark`) |
+| `tests/test_panel_estados.py` | LF | T10 → T14 | T10: motivo `"turno"`. T14: `slowMark` |
 | `tests/test_metrics.py` | LF | T10 → T13 → T14 | T10: `/api/inflight` con las claves nuevas. T13: endpoints nuevos. T14: `/api/events` con los campos nuevos |
 | `tests/test_dashboard_js.py`, `tests/test_dashboard_ui.py` | LF / CRLF | T14 | solo lo que salga del inventario de T14 |
 | `tests/backend_mock.py` | LF | T10 → T14 | T10: modo que cuenta cambios de modelo y serializa como `-np 1`. T14: `timings` en las respuestas |
@@ -210,13 +210,13 @@ tarea lo vuelve a medir antes de editar.
 | `src/local_delegate/llamaswap_config.py`, `tests/test_llamaswap_config.py` | LF | T11 | estimador con `-ncmoe`; `.bak` con fecha de `init-llamaswap`; `--ttl-resident` a 0 |
 | `src/local_delegate/cli.py` | CRLF | T11 → T13 | T11: subparser `llamaswap residency` y su comando con la comprobación previa como interfaz que devuelve «no se sabe»; ayuda de `init-llamaswap`. T13: comprobación previa y vigía de verdad |
 | `src/local_delegate/cadenas.py`, `tests/test_cadenas.py` | LF | T12 → T15 | T12: paso `loaded`, cadenas por defecto, sinónimo `residente`, `describir()`. T15: el proveedor de miembros de `loaded` |
-| `src/local_delegate/checks.py` | LF | T12 → T13 → T15 | T12: `_probe_fallback` (textos y aviso del sinónimo). T13: `_probe_residencia`, `_probe_topologia`, dos entradas de `CHECKS`, las frases de tamaño del docstring. T15: aviso de huella en `_probe_residencia` |
+| `src/local_delegate/checks.py` | LF | T12 → T13 → T15 | T12: `_probe_fallback` (textos y aviso del sinónimo). T13: `_probe_residencia`, `_probe_topologia`, dos entradas de `CHECKS`, las frases de tamaño del docstring. T15: aviso de huella en `_probe_residency` |
 | `tests/test_checks.py`, `tests/test_wiki.py` | LF | T12 → T13 | T12: textos de `_probe_fallback`. T13: `_NUMERO[23]`, `_NUMERO[24]`, `_NUMERO_DE_CHECKS[23]`, `_NUMERO_DE_CHECKS[24]` y tests de los dos checks |
 | `docs/wiki/Integration-install.md` | CRLF | T13 → T16 | T13: las dos filas de la tabla del doctor y «las veinticuatro piezas». T16: el resto |
 | tests de respaldo que nombran al residente (`test_respaldo.py`, `test_observabilidad_respaldo.py`, `test_rol_fast_retirado.py`, los que salgan) | LF | T12 | inventario ejecutado; se reescriben, no se borran sin sustituto |
 | `src/local_delegate/llamaswap_api.py`, `tests/test_llamaswap_api.py`, `tests/test_residencia_cli.py` (nuevos) | LF | T13 | |
 | `src/local_delegate/web/sysinfo.py` | comprobar | T14 | solo si `ram_stats()` necesita una variante que no reviente |
-| `src/local_delegate/matriz.py`, `tests/test_afinidad.py` (nuevos) | LF | T15 | |
+| `src/local_delegate/matrix.py`, `tests/test_affinity.py` (nuevos) | LF | T15 | |
 | `tests/test_aislamiento_entorno.py` | LF | T10 → T14 → T15 | solo si alguna aserción de tamaño lo pide |
 | `CHANGELOG.md`, `README.md` | CRLF | T16 | |
 | `docs/wiki/Configuration.md`, `Tools.md`, `Architecture.md`, `Backend-versions.md`, `Savings-and-metrics.md`, `Troubleshooting.md`, `Daemon.md`, `docs/recipes/llama-swap-groups.md` | LF | T16 | |
@@ -1101,28 +1101,28 @@ cierra.**
 
 ### T14 — Espera frente a lentitud (ola 8)
 
-- **Ficheros:** zona T14 de `server.py`, `config.py` (`UMBRAL_LENTO`), zona T14 de
+- **Ficheros:** zona T14 de `server.py`, `config.py` (`SLOW_THRESHOLD`), zona T14 de
   `web/metrics.py`, `tests/backend_mock.py` (`timings`), `tests/test_panel_estados.py` (zona T14),
   `tests/test_metrics.py` (zona T14), `scripts/dev/capture_dashboard.py`, `web/sysinfo.py` si hace
-  falta, tests nuevos en `tests/test_lentitud.py`, y lo que salga del inventario.
+  falta, tests nuevos en `tests/test_slowness.py`, y lo que salga del inventario.
 - **Requisitos:** REQ-024 a REQ-028.
 - **Qué se hace:**
-  1. `config.UMBRAL_LENTO = _env_float("LOCAL_DELEGATE_UMBRAL_LENTO", 0.5)`.
+  1. `config.SLOW_THRESHOLD = _env_float("LOCAL_DELEGATE_SLOW_THRESHOLD", 0.5)`.
   2. `ChatResult` gana `timings: dict | None`; `_post_chat` copia `timings` de la respuesta si viene.
-  3. `_log_event` suma sobre las llamadas **reales** de la operación (los `intentos`): `inferencia_ms`,
-     `espera_ms` (`latency_ms − inferencia_ms`, mínimo 0), `tok_s`, `prefill_tok_s`; con referencia,
-     `ritmo_rel` y `lento`; con `lento` y backend local, `ram_libre_mb` (`sysinfo.ram_stats()`).
+  3. `_log_event` suma sobre las llamadas **reales** de la operación (los `intentos`): `inference_ms`,
+     `wait_ms` (`latency_ms − inference_ms`, mínimo 0), `tok_s`, `prefill_tok_s`; con referencia,
+     `pace_rel` y `slow`; con `slow` y backend local, `free_ram_mb` (`sysinfo.ram_stats()`).
      Todo dentro de un `try` que, si falla, registra el evento sin esos campos (REQ-028). Sin
      `timings`, los campos se omiten, nunca 0.
-  4. `ritmo.Referencias` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
+  4. `pace.References` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
      con cada evento propio. *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* se crea con
-     `Referencias()`, sin `por_tramos` (T3 decidió una sola referencia), y se siembra con
-     `ritmo.sembrar_desde_log(referencias, directorio, ahora)`, que nunca lanza, no con `sembrar`
-     suelto. En cada evento propio se **mide antes de registrar**: `medir(...)` con la ventana sin
-     ese evento y después `registrar(evento)`, para que una llamada no se compare consigo misma.
+     `References()`, sin `by_spans` (T3 decidió una sola referencia), y se siembra con
+     `pace.seed_from_log(references, directory, now)`, que nunca lanza, no con `seed`
+     suelto. En cada evento propio se **mide antes de registrar**: `measure(...)` con la ventana sin
+     ese evento y después `record(event)`, para que una llamada no se compare consigo misma.
   5. `local_status`: «Ritmo de referencia: gemma4-26b-a4b 40,5 tok/s (50 muestras)…».
   6. Panel: en la tabla de actividad, espera e inferencia por separado y la marca «lento ×0,37» con
-     una función pura `marcaLento(e)` (devuelve `""` sin `lento`); formato con los ayudantes del
+     una función pura `slowMark(e)` (devuelve `""` sin `slow`); formato con los ayudantes del
      panel (`fmtNum`).
   7. `backend_mock` devuelve `timings` cuando el test lo pide; `capture_dashboard.py` añade los
      campos nuevos a unos eventos del mock.
@@ -1130,16 +1130,16 @@ cierra.**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
   |---|---|---|
-  | Escenario «una llamada lenta se distingue de una espera» de punta a punta (`backend_mock` con `timings` y 47 s simulados de espera vía reloj inyectado; 20 eventos previos en el log de `tmp_path`) | (a) | `assert linea.get("ritmo_rel") == 0.37` (hoy `None`); después `espera_ms ≈ 47000`, `lento is True` y `ram_libre_mb` con backend local |
-  | Sin `timings`, ningún campo de D en el evento | (b) | Mutante: poner 0 → falla `assert "tok_s" not in linea` |
-  | Con backend remoto, `lento` sin `ram_libre_mb` | (b) | Mutante: sin mirar el origen → falla `assert "ram_libre_mb" not in linea` |
-  | Operación troceada: `inferencia_ms` es la suma de las llamadas reales, incluido un salto | (b) | Mutante: solo la última llamada → falla `assert linea["inferencia_ms"] == 300` |
-  | REQ-028: `ritmo.medir` sustituida por una que lanza → el evento se registra igual, sin `ritmo_rel` | (b) | Mutante: sin el `try` → falla `assert linea.get("ok") is True` (el test captura la excepción del `_chat` y la convierte en fallo de assert) |
-  | `marcaLento` con node: `{lento:true, ritmo_rel:0.37}` → «lento ×0,37»; sin `lento` → `""` | (b) | Mutante: punto decimal → falla `assert txt == "lento ×0,37"` |
-  | `local_status` muestra la referencia y las muestras | (a) | `assert "Ritmo de referencia" in texto` |
+  | Escenario «una llamada lenta se distingue de una espera» de punta a punta (`backend_mock` con `timings` y 47 s simulados de espera vía reloj inyectado; 20 eventos previos en el log de `tmp_path`) | (a) | `assert line.get("pace_rel") == 0.37` (hoy `None`); después `wait_ms ≈ 47000`, `slow is True` y `free_ram_mb` con backend local |
+  | Sin `timings`, ningún campo de D en el evento | (b) | Mutante: poner 0 → falla `assert "tok_s" not in line` |
+  | Con backend remoto, `slow` sin `free_ram_mb` | (b) | Mutante: sin mirar el origen → falla `assert "free_ram_mb" not in line` |
+  | Operación troceada: `inference_ms` es la suma de las llamadas reales, incluido un salto | (b) | Mutante: solo la última llamada → falla `assert line["inference_ms"] == 300` |
+  | REQ-028: `pace.References.measure` sustituida por una que lanza → el evento se registra igual, sin `pace_rel` | (b) | Mutante: sin el `try` → falla `assert line.get("ok") is True` (el test captura la excepción del `_chat` y la convierte en fallo de assert) |
+  | `slowMark` con node: `{slow:true, pace_rel:0.37}` → «lento ×0,37»; sin `slow` → `""` | (b) | Mutante: punto decimal → falla `assert txt == "lento ×0,37"` |
+  | `local_status` muestra la referencia y las muestras | (a) | `assert "Ritmo de referencia" in text` |
   | `test_captura.py` sigue en verde con el mock ampliado | guarda existente | |
 - **Verificación:**
-  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_lentitud.py tests/test_ritmo.py tests/test_panel_estados.py tests/test_metrics.py tests/test_dashboard_js.py tests/test_captura.py -q`,
+  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_slowness.py tests/test_pace.py tests/test_panel_estados.py tests/test_metrics.py tests/test_dashboard_js.py tests/test_captura.py -q`,
   `node --check` y la suite completa.
 - **Rollback:** revertir; los campos son aditivos y los lectores los ignoran.
 
@@ -1155,60 +1155,60 @@ cierra.**
   escrito así en `verification.md`; el PR se cierra igual.
 - **Todas:** igual.
 
-- **Ficheros (si hay celdas):** `src/local_delegate/matriz.py`, `tests/test_afinidad.py` (nuevos),
-  zona T15 de `server.py`, `config.py` (`AFINIDAD_MARGEN_S`), zona T15 de `cadenas.py` (proveedor) y
+- **Ficheros (si hay celdas):** `src/local_delegate/matrix.py`, `tests/test_affinity.py` (nuevos),
+  zona T15 de `server.py`, `config.py` (`AFFINITY_MARGIN_S`), zona T15 de `cadenas.py` (proveedor) y
   de `checks.py` (aviso de huella).
 - **Requisitos:** REQ-010 a REQ-017 para las celdas aprobadas; los miembros de `loaded` de REQ-019.
 - **Qué se hace:**
-  1. `matriz.py`: las celdas aprobadas **escritas en el código** (una tupla de
-     `Celda(tool, alternativo, rol_comparado, huella)`; `veredicto.json` no viaja en el paquete), y
-     un test que las compara con `veredicto.json` (REQ-043). `vigente(celda)` compara la huella con la
-     config y el prompt actuales vía `huella.huella`; una celda con huella distinta cuenta como
+  1. `matrix.py`: las celdas aprobadas **escritas en el código** (una tupla de
+     `Cell(tool, alternative, compared_role, footprint)`; `veredicto.json` no viaja en el paquete), y
+     un test que las compara con `veredicto.json` (REQ-043). `is_current(cell)` compara la huella con la
+     config y el prompt actuales vía `footprint.footprint`; una celda con huella distinta cuenta como
      `sin base`. Direcciones de REQ-011 como guarda (una celda fuera de ellas no se acepta).
-  2. `elegir(A', rol, observado, propios)` pura, con el desempate de REQ-012.
+  2. `choose(A', role, observed, own)` pura, con el desempate de REQ-012.
   3. Foto de REQ-013 con `llamaswap_api` (la consulta de actividad, la última), solo cuando hace
-     falta; `ahora = time.time()`; margen `config.AFINIDAD_MARGEN_S` (5, o lo que subió T2 (b)); si
+     falta; `ahora = time.time()`; margen `config.AFFINITY_MARGIN_S` (`LOCAL_DELEGATE_AFFINITY_MARGIN_S`) (5, o lo que subió T2 (b)); si
      T2 (c) vio alias en la actividad, la consulta pide el id real y sus alias.
   4. En la operación: `A` con los alternativos aprobados y vigentes (y que admiten el tamaño,
-     REQ-014: `max_chars_for(alternativo)`, conservando el tope y los prompts del rol); la elección
-     después de la primera plaza y la reserva reducida con `turno.reducir`; sin afinidad con backend
+     REQ-014: `max_chars_for(alternative)`, conservando el tope y los prompts del rol); la elección
+     después de la primera plaza y la reserva reducida con `turn.reduce`; sin afinidad con backend
      remoto o modelo explícito; REQ-015 (primero el rol y luego su cadena).
-     *(Aclarado el 2026-10-07, tras la revisión de la ola 4):* `Turno.elegir` no sirve tal cual
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 4):* `Turn.choose` no sirve tal cual
      para REQ-003, porque comprueba que no hay plaza (el aserto de REQ-004) y, si nada cabe, espera
      dentro la nueva concesión. Antes de conectar la afinidad hay que partirlo en
-     `elegir_sin_esperar(op_id, candidatos) -> str | None` (atómica y válida con plaza; si nada
+     `choose_without_waiting(op_id, candidates) -> str | None` (atómica y válida con plaza; si nada
      cabe deja la operación en la cabeza de la cola y devuelve `None`) y
-     `esperar_concesion(op_id, …)` (pública, con el aserto de REQ-004). El daemon elige con la
+     `wait_for_grant(op_id, …)` (pública, con el aserto de REQ-004). El daemon elige con la
      plaza de su primera llamada en la mano y, si sale `None`, suelta la plaza antes de
-     `esperar_concesion`. En T10 no se conectó: allí `A` tiene siempre un solo modelo.
-  5. `_log_event`: `routing: "afinidad"`, `model_requested`, `afinidad_vuelo_ajeno` y, sin vuelo
-     ajeno y con espera de backend ≥ 3 000 ms, `afinidad_fallida: true`. El panel **no** la cuenta
+     `wait_for_grant`. En T10 no se conectó: allí `A` tiene siempre un solo modelo.
+  5. `_log_event`: `routing: "affinity"`, `model_requested`, `affinity_foreign_flight` y, sin vuelo
+     ajeno y con espera de backend ≥ 3 000 ms, `affinity_failed: true`. El panel **no** la cuenta
      como respaldo y la respuesta no lleva aviso.
-  6. Proveedor de `miembros_loaded` registrado en `cadenas` (REQ-019).
+  6. Proveedor de `loaded_members` registrado en `cadenas` (REQ-019).
      *(Aclarado tras la revisión de la ola 6):* al conectar el proveedor, el salto a `loaded` pide
-     turno con `directos` vacío y elige con el `Turno.elegir` partido (ver la nota de la ola 4), y
+     turno con `direct` vacío y elige con el `Turn.choose` partido (ver la nota de la ola 4), y
      si al conceder ya no queda ningún miembro que cumpla REQ-012 se salta sin gastar salto
-     (REQ-019). Hoy (T12) `server._miembros_loaded` va al primer miembro que vale, con
-     `directos={destino}`, como a un destino suelto (`registrar_proveedor_loaded` es el enganche).
-  7. `_probe_residencia`: aviso de una celda con la huella cambiada.
+     (REQ-019). Hoy (T12) `server._loaded_members` va al primer miembro que vale, con
+     `direct={target}`, como a un destino suelto (`register_loaded_provider` es el enganche).
+  7. `_probe_residency`: aviso de una celda con la huella cambiada.
 - **Tests (solo con celdas aprobadas; los escenarios de la celda de la spec usan `local_classify`;
   si esa celda no se aprobó, se usa una que sí, y se anota):**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
   |---|---|---|
-  | Escenario «la tarea mecánica usa el 26B cargado» (`/running`, `/api/events` y actividad simulados) | (a) | `assert linea.get("routing") == "afinidad"` (hoy no existe); después `model_requested == "gemma3-4b"` y la respuesta sin aviso |
-  | Escenarios «al cargado le quedan 3 s» (→ 4B) y «le quedan 40 s» (→ 26B) | (b) | Mutante: sin margen → falla `assert modelo == "gemma3-4b"` con 3 s |
-  | Escenario «el cargado está trabajando para otro cliente» | (b) | Mutante: ignorar el vuelo → falla `assert modelo == "gemma4-26b-a4b"` |
-  | Escenario «otro cliente tiene un cambio de modelo pendiente» | (b) | Mutante: ignorar el cambio pendiente → falla `assert modelo == "gemma3-4b"` |
-  | Escenario «una celda no aprobada no se usa» (`local_explain_code`) | (b) | Mutante: celdas en cualquier dirección → falla `assert modelo == "qwen36-35b-a3b"` |
-  | Escenario «la huella cambió»: celda aprobada con la huella de `-ncmoe 12` (el valor real de hoy) y una config **sintética** en `tmp_path` con `-ncmoe 16` | (b) | Mutante: `vigente` sin comparar flags → falla `assert modelo == "gemma3-4b"`; y `doctor` avisa |
+  | Escenario «la tarea mecánica usa el 26B cargado» (`/running`, `/api/events` y actividad simulados) | (a) | `assert line.get("routing") == "affinity"` (hoy no existe); después `model_requested == "gemma3-4b"` y la respuesta sin aviso |
+  | Escenarios «al cargado le quedan 3 s» (→ 4B) y «le quedan 40 s» (→ 26B) | (b) | Mutante: sin margen → falla `assert model == "gemma3-4b"` con 3 s |
+  | Escenario «el cargado está trabajando para otro cliente» | (b) | Mutante: ignorar el vuelo → falla `assert model == "gemma4-26b-a4b"` |
+  | Escenario «otro cliente tiene un cambio de modelo pendiente» | (b) | Mutante: ignorar el cambio pendiente → falla `assert model == "gemma3-4b"` |
+  | Escenario «una celda no aprobada no se usa» (`local_explain_code`) | (b) | Mutante: celdas en cualquier dirección → falla `assert model == "qwen36-35b-a3b"` |
+  | Escenario «la huella cambió»: celda aprobada con la huella de `-ncmoe 12` (el valor real de hoy) y una config **sintética** en `tmp_path` con `-ncmoe 16` | (b) | Mutante: `vigente` sin comparar flags → falla `assert model == "gemma3-4b"`; y `doctor` avisa |
   | Escenarios «la afinidad no se cuela» y «se une si nadie espera» de punta a punta, y el de «la reserva se reduce» con dos celdas | (b) | Los mutantes de T8 aplicados en la integración, con los mismos asserts |
-  | `matriz` = `veredicto.json` | (b) | Mutante: añadir a mano una celda `rechazada` como aprobada → falla `assert celdas_codigo == celdas_aprobadas_veredicto` |
-  | Camino feliz sin red: con el rol en `propios`, ninguna consulta (rutas sin registrar) | (b) | Mutante: pedir la foto siempre → falla `assert rutas_pedidas == []` |
-  | Backend remoto o `model` explícito: sin afinidad | (b) | Mutante: sin mirar el origen → falla `assert linea.get("routing") is None` |
+  | `matrix` = `veredicto.json` | (b) | Mutante: añadir a mano una celda `rechazada` como aprobada → falla `assert code_cells == verdict_approved_cells` |
+  | Camino feliz sin red: con el rol en `propios`, ninguna consulta (rutas sin registrar) | (b) | Mutante: pedir la foto siempre → falla `assert requested_paths == []` |
+  | Backend remoto o `model` explícito: sin afinidad | (b) | Mutante: sin mirar el origen → falla `assert line.get("routing") is None` |
   | Fallo del alternativo: el primer candidato es el rol | (b) | Mutante: seguir la cadena del alternativo → falla `assert intentos[1].modelo == "gemma3-4b"` |
 - **Verificación:**
-  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_afinidad.py tests/test_turno.py tests/test_turno_daemon.py tests/test_cadenas.py tests/test_checks.py -q`
+  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_affinity.py tests/test_turn.py tests/test_turn_daemon.py tests/test_cadenas.py tests/test_checks.py -q`
   y la suite completa.
 - **Rollback:** vaciar la tupla de celdas: el código queda inerte y el comportamiento es el de T14.
 
@@ -1219,8 +1219,8 @@ cierra.**
   `Daemon.md`, `Integration-install.md` (zona T16, CRLF), `docs/recipes/llama-swap-groups.md`.
 - **Requisitos:** «Release» y «Variables nuevas» de los no funcionales, REQ-023 (la wiki solo habla
   de «residente» con TTL 0), REQ-035 (README), el caso límite «Plazos de los clientes MCP».
-- **Comentarios viejos que dejó T12** *(anotado tras la revisión de la ola 6)*: `turno.py:38`
-  (docstring de `Peticion`: «el conjunto de `cargado`») y `config.py:296` (comentario de
+- **Comentarios viejos que dejó T12** *(anotado tras la revisión de la ola 6)*: `turn.py:38`
+  (docstring de `PendingRequest`: «el conjunto de `cargado`»; tras el renombrado ya dice `loaded`, se comprueba) y `config.py:296` (comentario de
   `FALLBACK_CHAINS`: «roles (`mechanical`, `long`, `code`, `residente`)») deben decir `loaded`.
 - **Qué se hace:**
   - CHANGELOG `[Unreleased]` (editando el bloque propio, nunca reescribiendo la sección): `Added`
@@ -1293,10 +1293,10 @@ esperada.
    `/api/metrics/activity` de la ventana.
    - **Falla** si en la secuencia de modelos que sirvió llama-swap hay más de **un** cambio entre
      los dos modelos (alternancia).
-   - **Falla** si ninguna de las dos líneas del log lleva `espera_turno_ms > 0`.
+   - **Falla** si ninguna de las dos líneas del log lleva `turn_wait_ms > 0`.
    - **Falla** si ninguna lectura del panel dice «en cola local» con un `title` que contiene
      «esperando turno del daemon».
-   - **Falla** si alguna línea con `timings` no trae `inferencia_ms` y `espera_ms`; `ritmo_rel` se
+   - **Falla** si alguna línea con `timings` no trae `inference_ms` y `wait_ms`; `pace_rel` se
      anota si hay referencia (con menos de 10 muestras no sale, y no es fallo).
 6. **Config real, solo ida y vuelta** (lo lanza la sesión principal **con el permiso explícito del
    usuario**, avisándole de que la recarga descarga los modelos):
@@ -1322,7 +1322,7 @@ esperada.
       vuelta atrás. Se anotan sus nombres en `verification.md`.
 7. **Afinidad en vivo** (solo si T15 implementó alguna celda): con el 26B cargado por un
    `local_summarize`, una llamada a la tool de una celda aprobada dentro del margen. **Falla** si la
-   línea no lleva `routing: "afinidad"` o si `/running` muestra que se cargó el modelo del rol.
+   línea no lleva `routing: "affinity"` o si `/running` muestra que se cargó el modelo del rol.
 8. **Devolver el daemon a la versión publicada** (sesión principal), salvo que el usuario diga
    otra cosa: el panel de uso diario no enseña código sin publicar.
 9. `personal-sdd-review` del resultado contra la spec y `personal-security-check` sobre el diff

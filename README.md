@@ -187,7 +187,7 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
 | `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
-| `LOCAL_DELEGATE_COMMIT_IDIOMA` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`: `es`, `en`, `fr`, `pt`, `de`, `it` o un nombre libre. Vacío: el idioma predominante de los textos del diff |
+| `LOCAL_DELEGATE_COMMIT_LANGUAGE` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`: `es`, `en`, `fr`, `pt`, `de`, `it` o un nombre libre. Vacío: el idioma predominante de los textos del diff |
 
 ## La métrica de ahorro
 

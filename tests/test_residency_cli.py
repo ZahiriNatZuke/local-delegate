@@ -2,10 +2,10 @@
 
 Las negativas (delegaciones propias, peticiones de cualquier cliente, modelos cargados, «no se
 sabe»), la vigía abierta antes de escribir y sus cuatro salidas. Lo que necesita un llama-swap de
-verdad usa el de prueba de T2 (`llamaswap_de_prueba.py`): su propio puerto, su propia config en
+verdad usa el de prueba de T2 (`fake_llamaswap.py`): su propio puerto, su propia config en
 `tmp_path` y su control de PID. Toda orden del CLI lleva `--config` y apunta a esa config; el
 llama-swap real (127.0.0.1:9292) no recibe nada: la consulta al daemon la corta la fixture autouse
-`conftest.daemon_real_cortado` y, cuando un test pone una key falsa para el camino directo, también
+`conftest.real_daemon_down` y, cuando un test pone una key falsa para el camino directo, también
 mueve `BASE_URL` al llama-swap de prueba (`_direct_to`).
 """
 
@@ -22,8 +22,8 @@ from pathlib import Path
 
 import pytest
 import uvicorn
-from conftest import PUERTO_MUERTO
-from llamaswap_de_prueba import ModeloPrueba, binario_disponible, llamaswap_de_prueba
+from conftest import DEAD_PORT
+from fake_llamaswap import FakeModel, binary_available, fake_llamaswap
 
 from local_delegate import checks, cli, config, llamaswap_api, server
 from local_delegate.web import metrics
@@ -32,7 +32,7 @@ FIXTURES = Path(__file__).parent / "fixtures" / "residencia"
 TODAY = FIXTURES / "hoy.yaml"
 
 needs_llamaswap = pytest.mark.skipif(
-    not binario_disponible(), reason="falta llama-swap-v255 de prueba"
+    not binary_available(), reason="falta llama-swap-v255 de prueba"
 )
 
 
@@ -46,7 +46,7 @@ def _residency(*argv: str) -> int:
 
 def _direct_to(ls, monkeypatch) -> None:
     """El camino directo de REQ-039 contra el llama-swap de prueba, con una key falsa."""
-    assert ls.puerto != 9292
+    assert ls.port != 9292
     monkeypatch.setattr(config, "BASE_URL", f"{ls.url}/v1")
     monkeypatch.setattr(config, "API_KEY", "clave-falsa-1")
 
@@ -119,7 +119,7 @@ def test_status_query_does_not_wait_for_a_daemon_that_never_answers(tmp_path, mo
     threading.Thread(target=accept_loop, daemon=True).start()
     cap = threading.Timer(12.0, close_all)
     cap.start()
-    monkeypatch.setattr(cli, "_destino_del_daemon", lambda: ("127.0.0.1", port, {}))
+    monkeypatch.setattr(cli, "_daemon_target", lambda: ("127.0.0.1", port, {}))
     path = tmp_path / "config.yaml"
     path.write_bytes(TODAY.read_bytes())
     before = _sha(path)
@@ -145,7 +145,7 @@ def test_status_query_does_not_wait_for_a_daemon_that_never_answers(tmp_path, mo
 @pytest.mark.llamaswap_real
 @needs_llamaswap
 def test_no_write_with_own_delegations_in_flight(tmp_path, monkeypatch, capsys):
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
         _direct_to(ls, monkeypatch)
         _live_delegation()
         before = _sha(ls.config)
@@ -167,11 +167,11 @@ def test_no_write_with_own_delegations_in_flight(tmp_path, monkeypatch, capsys):
 @pytest.mark.llamaswap_real
 @needs_llamaswap
 def test_no_write_with_a_request_from_another_client(tmp_path, monkeypatch, capsys):
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
         _direct_to(ls, monkeypatch)
-        other = ls.lanzar_cliente("m", retraso_s=6)
+        other = ls.launch_client("m", delay_s=6)
         deadline = time.monotonic() + 10
-        while not ls.foto_inflight().peticiones and time.monotonic() < deadline:
+        while not ls.inflight_snapshot().requests and time.monotonic() < deadline:
             time.sleep(0.2)
         before = _sha(ls.config)
 
@@ -191,15 +191,13 @@ def test_no_write_with_a_request_from_another_client(tmp_path, monkeypatch, caps
 @needs_llamaswap
 def test_llamaswap_rejects_the_config_and_the_copy_is_restored(tmp_path, monkeypatch, capsys):
     """El fichero se escribe por la función interna, sin la autocomprobación del editor."""
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
         _direct_to(ls, monkeypatch)
         original = ls.config.read_bytes()
         rejectable = original.replace(b"cmd:", b"cmdx:")
         assert rejectable != original
 
-        rc = cli._escribir_residencia(
-            argparse.Namespace(now=False), ls.config, rejectable, original
-        )
+        rc = cli._write_residency(argparse.Namespace(now=False), ls.config, rejectable, original)
         output = _output(capsys)
         # La segunda recarga (la de la config restaurada) ya terminó: la vigiló el CLI.
         serves = ls.chat("m").status_code
@@ -217,7 +215,7 @@ def test_llamaswap_rejects_the_config_and_the_copy_is_restored(tmp_path, monkeyp
 @pytest.mark.llamaswap_real
 @needs_llamaswap
 def test_llamaswap_that_does_not_watch_the_file(tmp_path, monkeypatch, capsys):
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)], watch_config=False) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)], watch_config=False) as ls:
         _direct_to(ls, monkeypatch)
         start = time.monotonic()
         rc = _residency("--config", str(ls.config), "--ttl", "m=61")
@@ -233,7 +231,7 @@ def test_llamaswap_that_does_not_watch_the_file(tmp_path, monkeypatch, capsys):
 @needs_llamaswap
 def test_restoring_a_copy_end_to_end(tmp_path, monkeypatch, capsys):
     """REQ-038: byte a byte, copia del actual, y la recarga informada (en T11 no había vigía)."""
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
         _direct_to(ls, monkeypatch)
         original = ls.config.read_bytes()
         # Con --now las dos órdenes: lo que se mira aquí es la restauración y lo que se informa
@@ -273,7 +271,7 @@ def _test_daemon(monkeypatch):
     while not srv.started and time.monotonic() < deadline:
         time.sleep(0.05)
     assert srv.started, "el daemon de prueba no arrancó"
-    monkeypatch.setattr(cli, "_destino_del_daemon", lambda: ("127.0.0.1", port, {}))
+    monkeypatch.setattr(cli, "_daemon_target", lambda: ("127.0.0.1", port, {}))
     monkeypatch.setattr(checks, "_llamaswap_daemon_destination", lambda: ("127.0.0.1", port, {}))
     try:
         yield
@@ -286,7 +284,7 @@ def _test_daemon(monkeypatch):
 @needs_llamaswap
 def test_through_the_daemon_without_a_key_in_the_shell(tmp_path, monkeypatch, capsys):
     """El shell no tiene key (la suite la borra): el estado y la vigía los da el daemon."""
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)]) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
         monkeypatch.setattr(config, "BASE_URL", f"{ls.url}/v1")  # lo que ve el daemon
         assert config.API_KEY == ""
         with _test_daemon(monkeypatch):
@@ -301,7 +299,7 @@ def test_through_the_daemon_without_a_key_in_the_shell(tmp_path, monkeypatch, ca
 def test_daemon_that_starts_llamaswap_without_watch_config_says_what_is_missing(
     tmp_path, monkeypatch, capsys
 ):
-    with llamaswap_de_prueba(tmp_path, [ModeloPrueba("m", ttl=60)], watch_config=False) as ls:
+    with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)], watch_config=False) as ls:
         monkeypatch.setattr(config, "BASE_URL", f"{ls.url}/v1")
         monkeypatch.setattr(config, "AUTOSTART", True)
         monkeypatch.delenv("LLAMASWAP_WATCH_CONFIG", raising=False)
@@ -314,7 +312,7 @@ def test_daemon_that_starts_llamaswap_without_watch_config_says_what_is_missing(
 
 
 def test_the_daemon_tells_the_cli_which_config_it_uses(monkeypatch):
-    """`cli._ruta_del_daemon` lee `config_path` del estado del daemon (la constante de T11).
+    """`cli._daemon_path` lee `config_path` del estado del daemon (la constante de T11).
 
     Con llama-swap caído para el daemon (un puerto sin nadie): en Windows tarda ~2,1 s en saberlo,
     y el CLI tiene que esperar a esa respuesta, que trae la ruta igual.
@@ -322,7 +320,7 @@ def test_the_daemon_tells_the_cli_which_config_it_uses(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
     monkeypatch.setenv("LLAMASWAP_CONFIG", "D:/configs/llama-swap.yaml")
     with _test_daemon(monkeypatch):
-        assert cli._ruta_del_daemon() == Path("D:/configs/llama-swap.yaml")
+        assert cli._daemon_path() == Path("D:/configs/llama-swap.yaml")
 
 
 # --- Corrección tras la revisión de la ola 7 ----------------------------------------------------
@@ -411,9 +409,7 @@ def test_doctor_reads_the_daemon_config_and_turn_when_the_shell_has_none(
 ):
     """`doctor` desde un shell sin `LLAMASWAP_CONFIG`: la config y el turno los dice el daemon."""
     # Loopback y sin nadie: el servidor que corta de `conftest` (un RST en el acto).
-    monkeypatch.setattr(
-        config, "BASE_URL", f"http://127.0.0.1:{request.node.stash[PUERTO_MUERTO]}/v1"
-    )
+    monkeypatch.setattr(config, "BASE_URL", f"http://127.0.0.1:{request.node.stash[DEAD_PORT]}/v1")
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(TODAY))  # el entorno del daemon
     with _test_daemon(monkeypatch):
         ctx = checks.Context(home=tmp_path, config_path=None)  # el shell, sin config

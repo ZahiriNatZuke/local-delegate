@@ -98,18 +98,18 @@ def _texto(caracteres: int) -> str:
 
 
 @backend_mock.mock
-def test_el_largo_falla_y_responde_el_de_codigo(recargar_config, tmp_path):
+def test_long_fails_and_code_answers(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend(
+    requested = _backend(
         {LARGO: _fallo(500), CODIGO: _ok("resumen del respaldo"), MECANICO: _ok("del 4B")}
     )
 
-    salida = server.local_summarize(text=_texto(10_000))
+    output = server.local_summarize(text=_texto(10_000))
 
-    assert pedidos == [LARGO, CODIGO], "`loaded` vacío se salta y el 4B no es candidato"
-    assert "resumen del respaldo" in salida
-    aviso = salida.split("resumen del respaldo", 1)[1]
-    assert CODIGO in aviso and LARGO in aviso and "http_500" in aviso
+    assert requested == [LARGO, CODIGO], "`loaded` vacío se salta y el 4B no es candidato"
+    assert "resumen del respaldo" in output
+    warning = output.split("resumen del respaldo", 1)[1]
+    assert CODIGO in warning and LARGO in warning and "http_500" in warning
     assert _ultimo_evento(tmp_path)["model"] == CODIGO
 
 
@@ -287,20 +287,20 @@ def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(recarga
 
 
 @backend_mock.mock
-def test_capacidad_solo_salta_a_loaded_y_sin_segundo_salto(recargar_config, tmp_path):
+def test_capacity_only_hops_to_loaded_without_second_hop(recargar_config, tmp_path):
     """Con un miembro en `loaded` (el proveedor lo pone T15; aquí, a mano), capacidad salta a él y
-    a nada más. Sin miembros no salta: `test_cadenas.py::test_fallo_de_capacidad_sin_nada_cargado`.
+    a nada más. Sin miembros no salta: `test_cadenas.py::test_capacity_failure_with_nothing_loaded`.
     """
     recargar_config()
-    cadenas.registrar_proveedor_loaded(lambda *_: (MECANICO,))
+    cadenas.register_loaded_provider(lambda *_: (MECANICO,))
     try:
-        pedidos = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
-        salida = server.local_explain_code(code="x = 1")
+        requested = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
+        output = server.local_explain_code(code="x = 1")
     finally:
-        cadenas.registrar_proveedor_loaded(None)
+        cadenas.register_loaded_provider(None)
 
-    assert pedidos == [CODIGO, MECANICO], "tras capacidad, `loaded` y nada más"
-    assert salida.startswith("[local-delegate error]")
+    assert requested == [CODIGO, MECANICO], "tras capacidad, `loaded` y nada más"
+    assert output.startswith("[local-delegate error]")
     assert CODIGO not in _entradas(tmp_path), "capacidad no enfría"
 
 
@@ -612,9 +612,7 @@ def test_vision_que_falla_no_salta(recargar_config, tmp_path):
 # --- REQ-006 (enmienda REQ-017 de F3): el salto suelta la plaza y el tope se sigue cumpliendo ----
 
 
-def test_el_salto_suelta_la_plaza_entre_el_principal_y_el_respaldo(
-    recargar_config, tmp_path, monkeypatch
-):
+def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_path, monkeypatch):
     """Sustituye al test de REQ-017 de F3 («el salto no suelta la plaza»), con el mismo escenario.
 
     Una sola plaza; A falla en su principal mientras B ya espera la plaza. Con REQ-006 el salto de
@@ -625,56 +623,56 @@ def test_el_salto_suelta_la_plaza_entre_el_principal_y_el_respaldo(
     entrar, la espera agota su tope y el orden sale A, A, B, B.
     """
     recargar_config()
-    orden: list[tuple[str, str]] = []
-    dentro = 0
-    pico = 0
-    cerrojo = threading.Lock()
-    principal_de_a = threading.Event()
-    b_entro = threading.Event()
+    order: list[tuple[str, str]] = []
+    inside = 0
+    peak = 0
+    lock = threading.Lock()
+    primary_of_a = threading.Event()
+    b_entered = threading.Event()
 
     def post_chat(model, _payload):
-        nonlocal dentro, pico
-        with cerrojo:
-            dentro += 1
-            pico = max(pico, dentro)
-            orden.append((threading.current_thread().name, model))
+        nonlocal inside, peak
+        with lock:
+            inside += 1
+            peak = max(peak, inside)
+            order.append((threading.current_thread().name, model))
         if threading.current_thread().name == "A" and model == CODIGO:
-            principal_de_a.set()
+            primary_of_a.set()
         if threading.current_thread().name == "B":
-            b_entro.set()
+            b_entered.set()
         time.sleep(0.1)
-        with cerrojo:
-            dentro -= 1
+        with lock:
+            inside -= 1
         if model == CODIGO:
             return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
-    decidir = server._siguiente_salto
+    decide = server._next_hop
 
-    def siguiente_salto(*args, **kwargs):
+    def next_hop(*args, **kwargs):
         if threading.current_thread().name == "A" and kwargs.get("ultimo") is None:
-            b_entro.wait(timeout=2)
-        return decidir(*args, **kwargs)
+            b_entered.wait(timeout=2)
+        return decide(*args, **kwargs)
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
-    monkeypatch.setattr(server, "_siguiente_salto", siguiente_salto)
+    monkeypatch.setattr(server, "_next_hop", next_hop)
     monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(1))
 
-    def llamar() -> None:
+    def call_fn() -> None:
         server._chat(CODIGO, "s", "u", 8, rol="code")
 
-    a = threading.Thread(target=llamar, name="A")
-    b = threading.Thread(target=llamar, name="B")
+    a = threading.Thread(target=call_fn, name="A")
+    b = threading.Thread(target=call_fn, name="B")
     a.start()
-    assert principal_de_a.wait(timeout=5)
+    assert primary_of_a.wait(timeout=5)
     b.start()  # B ya espera la plaza cuando A falla: como A la suelta para saltar, B entra
     a.join(timeout=10)
     b.join(timeout=10)
 
     assert not a.is_alive() and not b.is_alive()
-    assert pico == 1
-    assert [hilo for hilo, _ in orden[:2]] == ["A", "B"], orden
-    assert sorted(orden) == sorted([("A", CODIGO), ("A", LARGO), ("B", CODIGO), ("B", LARGO)])
+    assert peak == 1
+    assert [thread for thread, _ in order[:2]] == ["A", "B"], order
+    assert sorted(order) == sorted([("A", CODIGO), ("A", LARGO), ("B", CODIGO), ("B", LARGO)])
 
 
 # --- El camino feliz no escribe el estado -----------------------------------------------------

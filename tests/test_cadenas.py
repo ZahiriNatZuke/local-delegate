@@ -23,7 +23,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import cadenas, checks, config, server, topologia
+from local_delegate import cadenas, checks, config, server, topology
 
 MECANICO = "gemma3-4b"
 LARGO = "gemma4-26b-a4b"
@@ -32,7 +32,7 @@ CODIGO = "qwen36-35b-a3b"
 #: catálogo», que es exactamente lo que pasó a ser.
 RETIRADO = "qwen35-2b"
 
-FIXTURES_TOPOLOGIA = Path(__file__).parent / "fixtures" / "topologia"
+TOPOLOGY_FIXTURES = Path(__file__).parent / "fixtures" / "topologia"
 
 
 def _config_llamaswap(tmp_path: Path, texto: str) -> Path:
@@ -42,7 +42,7 @@ def _config_llamaswap(tmp_path: Path, texto: str) -> Path:
 
 
 #: Dos modelos con TTL efectivo 0 (uno por `ttl: 0`, otro por `globalTTL` 0) y uno con TTL 120.
-DOS_RESIDENTES = """\
+TWO_RESIDENTS = """\
 globalTTL: 0
 models:
   gemma3-4b: {}
@@ -85,56 +85,56 @@ def test_vision_no_tiene_cadena(recargar_config):
 # --- El residente (REQ-023): solo si la config tiene un modelo con TTL efectivo 0 -----------------
 
 
-def test_sin_config_de_llamaswap_no_hay_residente_ni_cae_al_mecanico(recargar_config, monkeypatch):
+def test_without_llamaswap_config_no_resident_nor_mechanical_fallback(recargar_config, monkeypatch):
     """Sustituye a «sin config, el residente es el mecánico»: el residente fantasma desaparece."""
     recargar_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
-    assert cadenas.residentes() is None
-    lineas = "\n".join(cadenas.describir())
-    assert "sin residente" in lineas
-    assert MECANICO not in lineas.split("code:")[0], "ni el mecánico como residente"
+    assert cadenas.residents() is None
+    lines = "\n".join(cadenas.describir())
+    assert "sin residente" in lines
+    assert MECANICO not in lines.split("code:")[0], "ni el mecánico como residente"
 
 
-def test_un_grupo_persistent_con_ttl_no_es_residente(recargar_config, monkeypatch, tmp_path):
+def test_persistent_group_with_ttl_not_resident(recargar_config, monkeypatch, tmp_path):
     """Sustituye a «el residente sale del grupo persistent»: con la config del 2026-09-15 (4B en un
     grupo `persistent` con TTL 600) llama-swap lo descarga, así que no es residente."""
     recargar_config()
-    ruta = tmp_path / "config.yaml"
-    ruta.write_bytes((FIXTURES_TOPOLOGIA / "pre-sin-residente-20261006.yaml").read_bytes())
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(ruta))
-    assert cadenas.residentes() == ()
-    assert cadenas.texto_residentes() == "sin residente"
+    path = tmp_path / "config.yaml"
+    path.write_bytes((TOPOLOGY_FIXTURES / "pre-sin-residente-20261006.yaml").read_bytes())
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(path))
+    assert cadenas.residents() == ()
+    assert cadenas.residents_text() == "sin residente"
     # Y la cadena no cambia por haber un grupo persistent: `loaded` no es «el del grupo».
     assert cadenas.resolver("code").pasos == (cadenas.LOADED, LARGO)
 
 
-def test_con_varios_residentes_se_dicen_todos(recargar_config, monkeypatch, tmp_path):
+def test_with_several_residents_all_named(recargar_config, monkeypatch, tmp_path):
     """Sustituye a «con varios miembros gana el primero»: ya no se elige uno, se dicen los que hay,
     también los que no están en el catálogo (el del rol retirado): es lo que llama-swap retiene."""
     recargar_config()
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, DOS_RESIDENTES)))
-    assert cadenas.residentes() == (MECANICO, RETIRADO)
-    assert cadenas.texto_residentes() == f"residente: {MECANICO}, {RETIRADO}"
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
+    assert cadenas.residents() == (MECANICO, RETIRADO)
+    assert cadenas.residents_text() == f"residente: {MECANICO}, {RETIRADO}"
 
 
-def test_sin_pyyaml_no_se_sabe_y_no_cae_al_mecanico(recargar_config, monkeypatch, tmp_path):
+def test_without_pyyaml_unknown_and_no_mechanical_fallback(recargar_config, monkeypatch, tmp_path):
     """Sustituye a «sin pyyaml cae al mecánico y lo dice»: sin PyYAML no se sabe, y se dice."""
     recargar_config()
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, DOS_RESIDENTES)))
-    monkeypatch.setattr(topologia, "yaml", None)
-    assert cadenas.residentes() is None
-    assert cadenas.texto_residentes().startswith("sin residente")
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
+    monkeypatch.setattr(topology, "yaml", None)
+    assert cadenas.residents() is None
+    assert cadenas.residents_text().startswith("sin residente")
 
 
-def test_local_status_dice_las_cadenas_con_loaded(recargar_config, monkeypatch):
+def test_local_status_shows_chains_with_loaded(recargar_config, monkeypatch):
     """Sustituye a «local_status dice el residente y su origen»: dice las cadenas con su paso."""
     recargar_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
-    lineas = cadenas.describir()
-    assert f"  code: loaded -> {LARGO}" in lineas
-    assert f"  long: loaded -> {CODIGO}" in lineas
-    assert f"  mechanical: loaded -> {LARGO}" in lineas
-    assert not any("defecto: el modelo del rol" in linea for linea in lineas)
+    lines = cadenas.describir()
+    assert f"  code: loaded -> {LARGO}" in lines
+    assert f"  long: loaded -> {CODIGO}" in lines
+    assert f"  mechanical: loaded -> {LARGO}" in lines
+    assert not any("defecto: el modelo del rol" in line for line in lines)
 
 
 # --- Sobrescribir -----------------------------------------------------------------------------
@@ -261,96 +261,96 @@ HOY = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
 DIFF = "diff --git a/x b/x\n+hola\n"
 
 
-def _ok(contenido: str = "hecho") -> httpx2.Response:
+def _ok(content: str = "hecho") -> httpx2.Response:
     return httpx2.Response(
-        200, json={"choices": [{"message": {"content": contenido}, "finish_reason": "stop"}]}
+        200, json={"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}
     )
 
 
-def _fallo(status: int = 500, texto: str = "boom") -> httpx2.Response:
-    return httpx2.Response(status, text=texto)
+def _fallo(status: int = 500, text: str = "boom") -> httpx2.Response:
+    return httpx2.Response(status, text=text)
 
 
-def _backend(respuestas: dict) -> list[str]:
+def _backend(responses: dict) -> list[str]:
     """El POST de chat con una respuesta por modelo; devuelve los modelos pedidos, en orden.
 
     Un modelo sin respuesta hace fallar el test.
     """
     backend_mock._rutas.clear()
-    pedidos: list[str] = []
+    requested: list[str] = []
 
-    def efecto(request: httpx2.Request):
-        modelo = json.loads(request.content)["model"]
-        pedidos.append(modelo)
-        if modelo not in respuestas:
-            raise AssertionError(f"se llamó a un modelo sin respuesta: {modelo}")
-        return respuestas[modelo]
+    def effect(request: httpx2.Request):
+        model = json.loads(request.content)["model"]
+        requested.append(model)
+        if model not in responses:
+            raise AssertionError(f"se llamó a un modelo sin respuesta: {model}")
+        return responses[model]
 
-    backend_mock.post(URL).mock(side_effect=efecto)
-    return pedidos
+    backend_mock.post(URL).mock(side_effect=effect)
+    return requested
 
 
 @pytest.fixture
-def intentos(monkeypatch) -> list:
+def attempts(monkeypatch) -> list:
     """Los `Intento` de cada `_con_respaldo`, en orden: las llamadas reales al backend."""
-    vistos: list = []
+    seen_set: list = []
     original = server._con_respaldo
 
-    def espia(*args, **kwargs):
-        resultado = original(*args, **kwargs)
-        vistos.extend(resultado[2])
-        return resultado
+    def spy(*args, **kwargs):
+        result = original(*args, **kwargs)
+        seen_set.extend(result[2])
+        return result
 
-    monkeypatch.setattr(server, "_con_respaldo", espia)
-    return vistos
+    monkeypatch.setattr(server, "_con_respaldo", spy)
+    return seen_set
 
 
-def _texto(caracteres: int) -> str:
-    parrafo = ("palabra " * 375).strip() + "\n\n"
-    return (parrafo * (caracteres // len(parrafo) + 1))[:caracteres]
+def _texto(chars: int) -> str:
+    paragraph = ("palabra " * 375).strip() + "\n\n"
+    return (paragraph * (chars // len(paragraph) + 1))[:chars]
 
 
 @backend_mock.mock
-def test_codigo_nunca_cae_al_mecanico(recargar_config, intentos):
+def test_code_never_falls_to_mechanical(recargar_config, attempts):
     """Escenario «código nunca cae al mecánico»: el 4B no es candidato, no hay celdas aprobadas."""
     recargar_config()
     _backend({CODIGO: _fallo(500), LARGO: _ok("mensaje"), MECANICO: _ok("del 4B")})
 
     server.local_commit_msg(diff=DIFF)
 
-    assert intentos[0].modelo == CODIGO
-    assert intentos[1].modelo == "gemma4-26b-a4b"
-    assert MECANICO not in [i.modelo for i in intentos]
+    assert attempts[0].modelo == CODIGO
+    assert attempts[1].modelo == "gemma4-26b-a4b"
+    assert MECANICO not in [i.modelo for i in attempts]
 
 
 @backend_mock.mock
-def test_largo_salta_a_codigo_y_mecanico_a_largo(recargar_config, intentos):
+def test_long_hops_to_code_and_mechanical_to_long(recargar_config, attempts):
     recargar_config()
     _backend({LARGO: _fallo(500), CODIGO: _ok("resumen"), MECANICO: _ok("del 4B")})
     server.local_summarize(text=_texto(10_000))
-    assert "gemma3-4b" not in [i.modelo for i in intentos]
-    assert [i.modelo for i in intentos] == [LARGO, CODIGO]
+    assert "gemma3-4b" not in [i.modelo for i in attempts]
+    assert [i.modelo for i in attempts] == [LARGO, CODIGO]
 
-    intentos.clear()
+    attempts.clear()
     _backend({MECANICO: _fallo(500), LARGO: _ok("a")})
     server.local_classify(text="hola", labels=["a", "b"])
-    assert [i.modelo for i in intentos] == [MECANICO, LARGO]
+    assert [i.modelo for i in attempts] == [MECANICO, LARGO]
 
 
 @backend_mock.mock
-def test_fallo_de_capacidad_sin_nada_cargado(recargar_config, intentos):
+def test_capacity_failure_with_nothing_loaded(recargar_config, attempts):
     """Escenario: sin `loaded` un fallo de capacidad no salta y vuelve el error de siempre."""
     recargar_config()
     _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _ok(), LARGO: _ok()})
 
-    salida = server.local_explain_code(code="x = 1")
+    output = server.local_explain_code(code="x = 1")
 
-    assert [i.modelo for i in intentos] == ["qwen36-35b-a3b"]
-    assert salida.startswith("[local-delegate error]")
+    assert [i.modelo for i in attempts] == ["qwen36-35b-a3b"]
+    assert output.startswith("[local-delegate error]")
 
 
 @backend_mock.mock
-def test_loaded_vacio_no_gasta_salto(recargar_config, intentos):
+def test_empty_loaded_spends_no_hop(recargar_config, attempts):
     """Con un solo salto, `code → loaded → long` llega a `long`: el paso vacío no lo gasta."""
     recargar_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
     assert config.FALLBACK_MAX_HOPS == 1
@@ -359,88 +359,88 @@ def test_loaded_vacio_no_gasta_salto(recargar_config, intentos):
 
     server.local_commit_msg(diff=DIFF)
 
-    assert intentos[-1].modelo == "gemma4-26b-a4b"
-    assert [i.modelo for i in intentos] == [CODIGO, LARGO]
+    assert attempts[-1].modelo == "gemma4-26b-a4b"
+    assert [i.modelo for i in attempts] == [CODIGO, LARGO]
 
 
-def test_miembros_loaded_sin_proveedor_no_consulta_la_red(recargar_config, monkeypatch):
+def test_loaded_members_without_provider_does_not_query_network(recargar_config, monkeypatch):
     """Sin bloque B no hay proveedor: `loaded` se resuelve vacío y sin tocar la red (REQ-019)."""
     recargar_config()
-    rutas_pedidas: list[str] = []
+    requested_paths: list[str] = []
     original = backend_mock._handler
 
-    def espia(request):
-        rutas_pedidas.append(f"{request.method} {request.url}")
+    def spy(request):
+        requested_paths.append(f"{request.method} {request.url}")
         return original(request)
 
-    monkeypatch.setattr(backend_mock, "_handler", espia)
+    monkeypatch.setattr(backend_mock, "_handler", spy)
     with backend_mock.mock:
-        miembros = cadenas.miembros_loaded(
-            "local_commit_msg", CODIGO, propios=frozenset(), nadie_mas=True
+        members = cadenas.loaded_members(
+            "local_commit_msg", CODIGO, own_items=frozenset(), nobody_else=True
         )
 
-    assert miembros == ()
-    assert rutas_pedidas == []
+    assert members == ()
+    assert requested_paths == []
 
 
 @backend_mock.mock
-def test_con_proveedor_el_salto_va_al_miembro_de_loaded(recargar_config, intentos):
+def test_with_provider_hop_goes_to_loaded_member(recargar_config, attempts):
     """El camino con miembros ya existe (el proveedor lo registra T15): recibe tool y fallido."""
     recargar_config()
-    vistos: list[tuple] = []
+    seen_set: list[tuple] = []
 
-    def proveedor(tool, fallido, propios, nadie_mas):
-        vistos.append((tool, fallido))
+    def provider(tool, has_failed, own_items, nobody_else):
+        seen_set.append((tool, has_failed))
         return (MECANICO,)
 
-    cadenas.registrar_proveedor_loaded(proveedor)
+    cadenas.register_loaded_provider(provider)
     try:
         _backend({CODIGO: _fallo(500), MECANICO: _ok("del 4B"), LARGO: _ok()})
         server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.registrar_proveedor_loaded(None)
+        cadenas.register_loaded_provider(None)
 
-    assert vistos == [("local_commit_msg", CODIGO)]
-    assert [i.modelo for i in intentos] == [CODIGO, MECANICO]
+    assert seen_set == [("local_commit_msg", CODIGO)]
+    assert [i.modelo for i in attempts] == [CODIGO, MECANICO]
 
 
 @pytest.fixture
-def status_sin_red(monkeypatch):
+def offline_status(monkeypatch):
     """`local_status` sin backend, GPU ni llama-swap: solo interesa lo que dice de las cadenas."""
     monkeypatch.setattr(
         server,
         "sondear_backend",
         lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
     )
-    for nombre in ("_vram_info", "_ram_info", "_llamaswap_groups"):
-        monkeypatch.setattr(server, nombre, lambda: None)
+    for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
+        monkeypatch.setattr(server, name, lambda: None)
     monkeypatch.setattr(server, "_port_listening", lambda *_: False)
 
 
-def test_el_estado_ya_no_habla_de_un_residente_fantasma(
-    recargar_config, monkeypatch, tmp_path, status_sin_red
+def test_status_no_longer_mentions_ghost_resident(
+    recargar_config, monkeypatch, tmp_path, offline_status
 ):
     """Escenario: con la config de hoy (un solo grupo `swap`, TTL 120) no hay residente."""
     recargar_config()
-    copia = tmp_path / "llamaswap.yaml"
-    copia.write_bytes(HOY.read_bytes())
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copia))
+    copy = tmp_path / "llamaswap.yaml"
+    copy.write_bytes(HOY.read_bytes())
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))
     doctor = checks._probe_fallback(checks.Context(home=tmp_path))
-    texto = server.local_status() + "\n" + doctor.detail
+    text = server.local_status() + "\n" + doctor.detail
 
-    assert "residente gemma3-4b" not in texto
-    assert "defecto: el modelo del rol" not in texto
-    assert "sin residente" in texto
+    assert "residente gemma3-4b" not in text
+    assert "defecto: el modelo del rol" not in text
+    assert "sin residente" in text
     assert "sin residente" in doctor.detail
     assert doctor.detail == "cadenas válidas; sin residente"
 
 
-def test_con_ttl_0_en_un_grupo_persistent_describir_dice_el_residente(
+def test_with_ttl_0_in_persistent_group_describe_names_resident(
     recargar_config, monkeypatch, tmp_path
 ):
     recargar_config()
-    ruta = tmp_path / "llamaswap.yaml"
-    ruta.write_text(
+    path = tmp_path / "llamaswap.yaml"
+    path.write_text(
         "globalTTL: 120\n"
         "models:\n"
         "  gemma3-4b:\n    ttl: 0\n"
@@ -451,35 +451,35 @@ def test_con_ttl_0_en_un_grupo_persistent_describir_dice_el_residente(
         "  resident:\n    persistent: true\n    exclusive: false\n    members: [gemma3-4b]\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("LLAMASWAP_CONFIG", str(ruta))
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(path))
 
-    lineas = "\n".join(cadenas.describir())
+    lines = "\n".join(cadenas.describir())
 
-    assert "residente: gemma3-4b" in lineas
-    assert "sin residente" not in lineas
+    assert "residente: gemma3-4b" in lines
+    assert "sin residente" not in lines
 
 
 # --- Corrección tras la revisión de la ola 6 ---------------------------------------------------
 
 
 @backend_mock.mock
-def test_un_miembro_de_loaded_que_repite_un_paso_posterior_no_se_llama_dos_veces(recargar_config):
+def test_loaded_member_repeating_later_step_not_called_twice(recargar_config):
     """`code -> loaded -> long` con `loaded` = el 26B: si el 26B falla, el paso `long` no lo repite."""
     recargar_config()
-    cadenas.registrar_proveedor_loaded(lambda *_: (LARGO,))
+    cadenas.register_loaded_provider(lambda *_: (LARGO,))
     try:
-        pedidos = _backend({CODIGO: _fallo(500, "original"), LARGO: _fallo(500, "otro")})
-        salida = server.local_commit_msg(diff=DIFF)
+        requested = _backend({CODIGO: _fallo(500, "original"), LARGO: _fallo(500, "otro")})
+        output = server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.registrar_proveedor_loaded(None)
+        cadenas.register_loaded_provider(None)
 
-    assert pedidos == [CODIGO, LARGO]
+    assert requested == [CODIGO, LARGO]
     # REQ-008: la línea de «también fallaron» no repite modelo.
-    linea = next(linea for linea in salida.splitlines() if "también fallaron" in linea)
-    assert linea.count(LARGO) == 1, linea
+    line = next(line for line in output.splitlines() if "también fallaron" in line)
+    assert line.count(LARGO) == 1, line
 
 
-def test_sin_topologia_el_residente_dice_el_motivo(recargar_config, monkeypatch, tmp_path):
+def test_without_topology_resident_states_reason(recargar_config, monkeypatch, tmp_path):
     """Con una config legible pero `matrix`, «no se sabe: matrix», como «Turno: no (matrix)»."""
     recargar_config()
     matrix = (
@@ -487,10 +487,10 @@ def test_sin_topologia_el_residente_dice_el_motivo(recargar_config, monkeypatch,
         "routing:\n  router:\n    use: matrix\n    settings:\n      matrix: {}\n"
     )
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, matrix)))
-    foto = topologia.foto()
-    assert isinstance(foto, topologia.SinTopologia) and foto.motivo == topologia.MATRIX
+    snapshot = topology.snapshot()
+    assert isinstance(snapshot, topology.NoTopology) and snapshot.reason == topology.MATRIX
 
-    assert cadenas.texto_residentes() == "sin residente (no se sabe: matrix)"
+    assert cadenas.residents_text() == "sin residente (no se sabe: matrix)"
     assert "  sin residente (no se sabe: matrix)" in cadenas.describir()
     monkeypatch.delenv("LLAMASWAP_CONFIG")
-    assert cadenas.texto_residentes() == "sin residente (no se sabe: sin LLAMASWAP_CONFIG)"
+    assert cadenas.residents_text() == "sin residente (no se sabe: sin LLAMASWAP_CONFIG)"

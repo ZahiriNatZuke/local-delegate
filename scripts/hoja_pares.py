@@ -9,7 +9,7 @@ fuente. Antes de fiarse de ella en la tanda, se contrasta con la pregunta que §
 - `generar` empareja, por caso, la corrida i de dos configuraciones (solo si las dos son validas y
   puntuadas), sortea que respuesta va como A y cual como B, baraja los pares y numera DESPUES. La
   clave, con los modelos y las puntuaciones automaticas, va a un fichero aparte.
-- `generar-commit` y `leer-commit`: la hoja a ciegas de `local_commit_msg` del SDD
+- `generate-commit` y `read-commit`: la hoja a ciegas de `local_commit_msg` del SDD
   `daemon-reparte-el-backend` (REQ-042), al final de este modulo.
 - `destapar` lee las elecciones (A, B o =) y dice, por caso, en cuantos pares la metrica prefiere a
   uno y en cuantos de esos coincide la persona. Un empate humano donde la metrica ve diferencia NO es
@@ -210,66 +210,66 @@ def destapar(hoja: str, clave: dict[str, Any]) -> tuple[dict[str, Any], list[str
 # Todo lo que decide algo vive en `reglas.json`; la clave (que mensaje es de quien) va en otra
 # carpeta y solo la leen estos programas.
 
-BASE_AFINIDAD = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2026-10"
-MODELO_26B = "gemma4-26b-a4b"
-MODELO_QWEN = "qwen36-35b-a3b"
-TRAMPA = "trampa"
-LINEAS_DE_CUERPO_MAX = 5
-PREGUNTAS_OPCIONALES_POSIBLES = ("principal", "especifico")
-_VALORES = {
+AFFINITY_BASE = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2026-10"
+MODEL_26B = "gemma4-26b-a4b"
+QWEN_MODEL = "qwen36-35b-a3b"
+TRAP = "trampa"
+MAX_BODY_LINES = 5
+POSSIBLE_OPTIONAL_QUESTIONS = ("principal", "especifico")
+_VALUES = {
     "inventa": ("s", "n"),
     "principal": ("s", "p", "n"),
     "especifico": ("s", "n"),
     "preferencia": ("A", "B", "="),
 }
-_RESPUESTA_SINONIMOS = {"si": "s", "sí": "s", "no": "n", "parcial": "p", "empate": "=", "": ""}
+_SYNONYMS_RESPONSE = {"si": "s", "sí": "s", "no": "n", "parcial": "p", "empate": "=", "": ""}
 
 
-def leer_reglas(ruta: Path) -> dict[str, Any]:
+def read_rules(path: Path) -> dict[str, Any]:
     """`reglas.json`, validado. «Inventa» y la preferencia no pueden ser opcionales: son lo que
     decide la celda, y una hoja que no los pidiera no decidiria nada."""
-    reglas = json.loads(ruta.read_text(encoding="utf-8"))
-    maximo = reglas.get("max_inventa_26b")
-    if not isinstance(maximo, int) or isinstance(maximo, bool) or maximo < 0:
+    rules = json.loads(path.read_text(encoding="utf-8"))
+    maximum = rules.get("max_inventa_26b")
+    if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0:
         raise SystemExit("reglas.json: max_inventa_26b tiene que ser un entero >= 0")
-    opcionales = reglas.get("preguntas_opcionales")
-    if not isinstance(opcionales, list) or not set(opcionales) <= set(
-        PREGUNTAS_OPCIONALES_POSIBLES
+    optional_ones = rules.get("preguntas_opcionales")
+    if not isinstance(optional_ones, list) or not set(optional_ones) <= set(
+        POSSIBLE_OPTIONAL_QUESTIONS
     ):
         raise SystemExit(
             "reglas.json: preguntas_opcionales solo admite 'principal' y 'especifico'; "
             "'inventa' y la preferencia no pueden ser opcionales"
         )
-    if not isinstance(reglas.get("parada_anticipada"), bool):
+    if not isinstance(rules.get("parada_anticipada"), bool):
         raise SystemExit("reglas.json: parada_anticipada tiene que ser true o false")
-    return reglas
+    return rules
 
 
 # --- La forma del mensaje ---------------------------------------------------------------------------
 
 
-def partir_mensaje(mensaje: str) -> tuple[str, list[str], bool]:
+def split_message(message: str) -> tuple[str, list[str], bool]:
     """`(asunto, lineas de cuerpo no vacias, hay linea en blanco entre los dos)`."""
-    lineas = mensaje.strip("\n").split("\n")
-    asunto, resto = lineas[0], lineas[1:]
-    separado = bool(resto) and not resto[0].strip()
-    return asunto, [x for x in resto if x.strip()], separado
+    lines = message.strip("\n").split("\n")
+    subject, rest = lines[0], lines[1:]
+    separate = bool(rest) and not rest[0].strip()
+    return subject, [x for x in rest if x.strip()], separate
 
 
-def forma(mensaje: str) -> tuple[bool, int]:
+def forma(message: str) -> tuple[bool, int]:
     """Lo que tiene que copiar la trampa: si lleva cuerpo y cuantas lineas (como mucho 5)."""
-    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
-    return bool(cuerpo), min(len(cuerpo), LINEAS_DE_CUERPO_MAX)
+    _subject, body, _sep = split_message(message)
+    return bool(body), min(len(body), MAX_BODY_LINES)
 
 
-_VINETAS = ("- ", "* ")
+_BULLETS = ("- ", "* ")
 # Un punto (o ! o ?) seguido de espacio y de una mayuscula es el limite entre dos frases; un
 # «release.py» o un «0.18.0» no lo son porque no llevan espacio detras del punto.
-_LIMITE_DE_FRASE = re.compile(r"(?<=[.!?])\s+(?=[¿¡A-ZÁÉÍÓÚÑ])")
-_FIN_DE_FRASE = re.compile(r"[.!?…][\"')\]»`*]*$")
+_SENTENCE_LIMIT = re.compile(r"(?<=[.!?])\s+(?=[¿¡A-ZÁÉÍÓÚÑ])")
+_SENTENCE_END = re.compile(r"[.!?…][\"')\]»`*]*$")
 
 
-def unidades_de_cuerpo(lineas: list[str]) -> list[str]:
+def body_units(lines: list[str]) -> list[str]:
     """Las unidades COMPLETAS de un cuerpo: cada viñeta entera y cada frase entera de un parrafo.
 
     Una linea fisica no es una unidad: un cuerpo escrito a 80 columnas parte las frases por la mitad,
@@ -277,34 +277,34 @@ def unidades_de_cuerpo(lineas: list[str]) -> list[str]:
     conservan su marca; las lineas indentadas que siguen a una viñeta son su continuacion; el resto
     se junta en texto corrido y se parte por frases.
     """
-    unidades: list[str] = []
-    parrafo: list[str] = []
-    en_vineta = False
+    units_list: list[str] = []
+    paragraph: list[str] = []
+    in_bullet = False
 
-    def cerrar_parrafo() -> None:
-        if parrafo:
-            texto = " ".join(x.strip() for x in parrafo)
-            unidades.extend(f.strip() for f in _LIMITE_DE_FRASE.split(texto) if f.strip())
-            parrafo.clear()
+    def close_paragraph() -> None:
+        if paragraph:
+            text = " ".join(x.strip() for x in paragraph)
+            units_list.extend(f.strip() for f in _SENTENCE_LIMIT.split(text) if f.strip())
+            paragraph.clear()
 
-    for linea in lineas:
-        if not linea.strip():
+    for line in lines:
+        if not line.strip():
             continue
-        if linea.lstrip().startswith(_VINETAS):
-            cerrar_parrafo()
-            unidades.append(linea.strip())
-            en_vineta = True
-        elif en_vineta and linea[:1].isspace():
-            unidades[-1] += " " + linea.strip()
+        if line.lstrip().startswith(_BULLETS):
+            close_paragraph()
+            units_list.append(line.strip())
+            in_bullet = True
+        elif in_bullet and line[:1].isspace():
+            units_list[-1] += " " + line.strip()
         else:
-            en_vineta = False
-            parrafo.append(linea)
-    cerrar_parrafo()
-    return unidades
+            in_bullet = False
+            paragraph.append(line)
+    close_paragraph()
+    return units_list
 
 
 # Palabras que no pueden cerrar una frase: si la ultima palabra es una de ellas, la linea esta cortada.
-_PALABRAS_DE_CORTE = frozenset(
+_CUTOFF_WORDS = frozenset(
     [
         "con",
         "de",
@@ -331,28 +331,28 @@ _PALABRAS_DE_CORTE = frozenset(
         "como",
     ]
 )
-FACTOR_DE_LARGO_MAX = 1.5  # la viñeta media de la trampa no pasa de 1,5 veces la de su pareja
+MAX_LENGTH_FACTOR = 1.5  # la viñeta media de la trampa no pasa de 1,5 veces la de su pareja
 
 
-def _texto_de_linea(linea: str) -> str:
-    texto = linea.strip()
-    return texto[2:].strip() if texto.startswith(_VINETAS) else texto
+def _line_text(line: str) -> str:
+    text = line.strip()
+    return text[2:].strip() if text.startswith(_BULLETS) else text
 
 
-def usa_puntuacion_final(mensaje: str) -> bool:
+def uses_final_scoring(message: str) -> bool:
     """Si la mayoria de las lineas de cuerpo (la mitad o mas) acaban en signo final. Sin cuerpo, no."""
-    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
-    con_signo = sum(bool(_FIN_DE_FRASE.search(_texto_de_linea(x))) for x in cuerpo)
-    return bool(cuerpo) and con_signo * 2 >= len(cuerpo)
+    _subject, body, _sep = split_message(message)
+    signed = sum(bool(_SENTENCE_END.search(_line_text(x))) for x in body)
+    return bool(body) and signed * 2 >= len(body)
 
 
-def largo_medio_de_vineta(mensaje: str) -> float:
+def mean_bullet_length(message: str) -> float:
     """Caracteres medios por linea de cuerpo, sin la marca de viñeta. 0 si no hay cuerpo."""
-    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
-    return sum(len(_texto_de_linea(x)) for x in cuerpo) / len(cuerpo) if cuerpo else 0.0
+    _subject, body, _sep = split_message(message)
+    return sum(len(_line_text(x)) for x in body) / len(body) if body else 0.0
 
 
-def defectos_de_cuerpo(mensaje: str, pareja: str | None = None) -> list[str]:
+def body_defects(message: str, pair: str | None = None) -> list[str]:
     """Lo que delata a una trampa por mal escrita, no por falsa: cada linea del cuerpo (viñeta o
     frase) tiene que ser una unidad entera, y con la pareja a la vista, escrita como ella.
 
@@ -364,43 +364,43 @@ def defectos_de_cuerpo(mensaje: str, pareja: str | None = None) -> list[str]:
       la ultima no puede ser una de corte (`con`, `de`, `y`, `a`, `el`...) ni la linea acabar en coma,
       punto y coma, dos puntos o guion. Lo incumple el trozo que termina en «ningun» o en «0.18.1,».
     - Con `pareja`: la puntuacion final es la de la pareja (si ella cierra con punto, la trampa
-      tambien; si no, tampoco) y la viñeta media de la trampa no pasa de `FACTOR_DE_LARGO_MAX` veces la
+      tambien; si no, tampoco) y la viñeta media de la trampa no pasa de `MAX_LENGTH_FACTOR` veces la
       de la pareja.
 
     Solo se aplica a las trampas; los mensajes de los modelos no se tocan.
     """
-    _asunto, cuerpo, _sep = partir_mensaje(mensaje)
-    con_signo = True if pareja is None else usa_puntuacion_final(pareja)
-    defectos = []
-    for linea in cuerpo:
-        texto = _texto_de_linea(linea)
-        if texto[:1].islower():
-            defectos.append(f"empieza en minuscula: {linea.strip()!r}")
-        if _FIN_DE_FRASE.search(texto):
+    _subject, body, _sep = split_message(message)
+    signed = True if pair is None else uses_final_scoring(pair)
+    defects = []
+    for line in body:
+        text = _line_text(line)
+        if text[:1].islower():
+            defects.append(f"empieza en minuscula: {line.strip()!r}")
+        if _SENTENCE_END.search(text):
             continue
-        palabras = re.findall(r"\w+", texto)
+        words = re.findall(r"\w+", text)
         if (
-            con_signo
-            or texto.endswith((",", ";", ":", "-"))
-            or (palabras and palabras[-1].lower() in _PALABRAS_DE_CORTE)
+            signed
+            or text.endswith((",", ";", ":", "-"))
+            or (words and words[-1].lower() in _CUTOFF_WORDS)
         ):
-            defectos.append(f"termina cortada: {linea.strip()!r}")
-    if pareja is not None and cuerpo:
-        if usa_puntuacion_final(mensaje) != con_signo:
-            defectos.append(
+            defects.append(f"termina cortada: {line.strip()!r}")
+    if pair is not None and body:
+        if uses_final_scoring(message) != signed:
+            defects.append(
                 "la puntuacion final no es la de la pareja "
-                f"(la pareja {'cierra' if con_signo else 'no cierra'} con signo final)"
+                f"(la pareja {'cierra' if signed else 'no cierra'} con signo final)"
             )
-        largo, largo_pareja = largo_medio_de_vineta(mensaje), largo_medio_de_vineta(pareja)
-        if largo_pareja and largo > FACTOR_DE_LARGO_MAX * largo_pareja:
-            defectos.append(
-                f"viñeta media de {largo:.0f} caracteres, mas de {FACTOR_DE_LARGO_MAX} veces "
-                f"los {largo_pareja:.0f} de la pareja"
+        long, pair_length = mean_bullet_length(message), mean_bullet_length(pair)
+        if pair_length and long > MAX_LENGTH_FACTOR * pair_length:
+            defects.append(
+                f"viñeta media de {long:.0f} caracteres, mas de {MAX_LENGTH_FACTOR} veces "
+                f"los {pair_length:.0f} de la pareja"
             )
-    return defectos
+    return defects
 
 
-def trampa_con_forma(trampa: dict[str, Any], mensaje_pareja: str) -> str:
+def shaped_trap(trap: dict[str, Any], pair_message: str) -> str:
     """El mensaje de la trampa con la forma del mensaje con el que se empareja.
 
     Regla de forma, escrita antes de la tanda: si el mensaje del modelo tiene cuerpo, la trampa lleva
@@ -410,213 +410,209 @@ def trampa_con_forma(trampa: dict[str, Any], mensaje_pareja: str) -> str:
     unidades, lleva las que tiene.
 
     Ademas copia la puntuacion final de la pareja (si la mayoria de sus lineas no cierran con punto,
-    la trampa tampoco) y, si sus n primeras unidades pasan de `FACTOR_DE_LARGO_MAX` veces la viñeta
+    la trampa tampoco) y, si sus n primeras unidades pasan de `MAX_LENGTH_FACTOR` veces la viñeta
     media de la pareja, lleva las n unidades MAS CORTAS, en su orden. Nunca acorta una frase.
     """
-    _asunto, cuerpo_modelo, separado = partir_mensaje(mensaje_pareja)
-    n = min(len(cuerpo_modelo), LINEAS_DE_CUERPO_MAX)
+    _subject, model_body, separate = split_message(pair_message)
+    n = min(len(model_body), MAX_BODY_LINES)
     if n == 0:
-        return str(trampa["asunto"])
-    unidades = unidades_de_cuerpo([str(x) for x in trampa["cuerpo"]])
-    lineas = unidades[:n]
-    largo_pareja = largo_medio_de_vineta(mensaje_pareja)
+        return str(trap["asunto"])
+    units_list = body_units([str(x) for x in trap["cuerpo"]])
+    lines = units_list[:n]
+    pair_length = mean_bullet_length(pair_message)
 
-    def largo(unidades_: list[str]) -> float:
-        return sum(len(_texto_de_linea(x)) for x in unidades_) / len(unidades_)
+    def long(units: list[str]) -> float:
+        return sum(len(_line_text(x)) for x in units) / len(units)
 
-    if len(unidades) > n and largo(lineas) > FACTOR_DE_LARGO_MAX * largo_pareja:
-        elegidas = sorted(sorted(range(len(unidades)), key=lambda i: (len(unidades[i]), i))[:n])
-        lineas = [unidades[i] for i in elegidas]
-    if not usa_puntuacion_final(mensaje_pareja):
-        lineas = [
-            x[:-1].rstrip() if x.endswith(".") and not x.endswith("..") else x for x in lineas
-        ]
-    con_vinetas = sum(x.lstrip().startswith(_VINETAS) for x in cuerpo_modelo) * 2 >= len(
-        cuerpo_modelo
-    )
-    if con_vinetas:
-        lineas = [x if x.startswith(_VINETAS) else f"- {x}" for x in lineas]
-    return "\n".join([str(trampa["asunto"]), *([""] if separado else []), *lineas])
+    if len(units_list) > n and long(lines) > MAX_LENGTH_FACTOR * pair_length:
+        chosen_ones = sorted(
+            sorted(range(len(units_list)), key=lambda i: (len(units_list[i]), i))[:n]
+        )
+        lines = [units_list[i] for i in chosen_ones]
+    if not uses_final_scoring(pair_message):
+        lines = [x[:-1].rstrip() if x.endswith(".") and not x.endswith("..") else x for x in lines]
+    with_bullets = sum(x.lstrip().startswith(_BULLETS) for x in model_body) * 2 >= len(model_body)
+    if with_bullets:
+        lines = [x if x.startswith(_BULLETS) else f"- {x}" for x in lines]
+    return "\n".join([str(trap["asunto"]), *([""] if separate else []), *lines])
 
 
-def resumen_del_diff(diff: str) -> tuple[int, int, int]:
+def diff_summary(diff: str) -> tuple[int, int, int]:
     """`(ficheros, lineas anadidas, lineas quitadas)` de un diff unificado."""
-    ficheros = mas = menos = 0
-    for linea in diff.replace("\r\n", "\n").split("\n"):
-        if linea.startswith("diff --git "):
-            ficheros += 1
-        elif linea.startswith("+") and not linea.startswith("+++"):
-            mas += 1
-        elif linea.startswith("-") and not linea.startswith("---"):
-            menos += 1
-    return ficheros, mas, menos
+    files_list = more = less = 0
+    for line in diff.replace("\r\n", "\n").split("\n"):
+        if line.startswith("diff --git "):
+            files_list += 1
+        elif line.startswith("+") and not line.startswith("+++"):
+            more += 1
+        elif line.startswith("-") and not line.startswith("---"):
+            less += 1
+    return files_list, more, less
 
 
 # --- Construir la hoja ------------------------------------------------------------------------------
 
 
-def _mensaje_de(registros: list[dict[str, Any]], label: str, caso: str) -> str | None:
+def _message_of(records: list[dict[str, Any]], label: str, case: str) -> str | None:
     """La respuesta del ULTIMO intento de la corrida 1, si termino bien."""
-    ultimo = None
-    for r in registros:
-        if r.get("label") == label and r.get("case") == caso and int(r.get("run", 1)) == 1:
-            ultimo = r
-    if ultimo is None or ultimo.get("descartada") or ultimo.get("outcome") != "ok":
+    last = None
+    for r in records:
+        if r.get("label") == label and r.get("case") == case and int(r.get("run", 1)) == 1:
+            last = r
+    if last is None or last.get("descartada") or last.get("outcome") != "ok":
         return None
-    texto = ultimo.get("response")
-    if not isinstance(texto, str) or not texto.strip():
+    text = last.get("response")
+    if not isinstance(text, str) or not text.strip():
         return None
-    return texto
+    return text
 
 
-def _reparto_equilibrado(azar: random.Random, n: int, a: str, b: str) -> list[str]:
+def _balanced_split(rng: random.Random, n: int, a: str, b: str) -> list[str]:
     """`n` etiquetas barajadas, la mitad `a` y la mitad `b`; si `n` es impar, quien se lleva la
     sobrante lo sortea `azar`. Asi la diferencia entre las dos es 0 o 1, nunca la del azar."""
-    de_a = n // 2 + (azar.randint(0, 1) if n % 2 else 0)
-    etiquetas = [a] * de_a + [b] * (n - de_a)
-    azar.shuffle(etiquetas)
-    return etiquetas
+    of_a = n // 2 + (rng.randint(0, 1) if n % 2 else 0)
+    tags = [a] * of_a + [b] * (n - of_a)
+    rng.shuffle(tags)
+    return tags
 
 
-def id_de_hoja(numero: int, pares: list[dict[str, Any]]) -> str:
-    contenido = json.dumps({"n": numero, "pares": pares}, sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(contenido.encode("utf-8")).hexdigest()
+def sheet_id(number: int, pair_items: list[dict[str, Any]]) -> str:
+    content = json.dumps({"n": number, "pares": pair_items}, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def construir_hoja_commit(
+def build_commit_sheet(
     *,
-    casos: dict[str, dict[str, Any]],
-    fuentes: Path,
-    registros: list[dict[str, Any]],
-    trampas: dict[str, Any],
-    reglas: dict[str, Any],
-    juego: int,
-    numero: int,
-    semilla: int,
-    label_26b: str = MODELO_26B,
-    label_qwen: str = MODELO_QWEN,
+    cases: dict[str, dict[str, Any]],
+    sources: Path,
+    records: list[dict[str, Any]],
+    traps: dict[str, Any],
+    rules: dict[str, Any],
+    case_set_item: int,
+    number: int,
+    seed: int,
+    label_26b: str = MODEL_26B,
+    label_qwen: str = QWEN_MODEL,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """`(hoja, clave)`: 30 pares reales y 3 trampa, barajados, numerados DESPUES de barajar.
 
     La hoja lleva los diffs y los mensajes tal como los devolvio la tool y nada mas: ni ids de
     modelo, ni etiquetas, ni latencias. La clave dice quien es cada lado y cual es la trampa.
     """
-    azar = random.Random(semilla)
-    juegos = trampas["juegos"]
-    if not 1 <= juego <= len(juegos):
-        raise SystemExit(f"trampas.json no tiene el juego {juego}")
+    rng = random.Random(seed)
+    sets = traps["juegos"]
+    if not 1 <= case_set_item <= len(sets):
+        raise SystemExit(f"trampas.json no tiene el juego {case_set_item}")
 
-    def diff_de(caso_id: str) -> str:
-        nombre = casos[caso_id]["source_file"]
-        return (
-            (fuentes / nombre).read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n")
-        )
+    def diff_of(case_id: str) -> str:
+        name = cases[case_id]["source_file"]
+        return (sources / name).read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n")
 
-    reales: list[tuple[str, str, str]] = []
-    omitidos: list[str] = []
-    for caso_id, caso in casos.items():
-        if caso.get("rol_en_hoja") != "real":
+    real: list[tuple[str, str, str]] = []
+    skipped: list[str] = []
+    for case_id, case in cases.items():
+        if case.get("rol_en_hoja") != "real":
             continue
-        a = _mensaje_de(registros, label_26b, caso_id)
-        b = _mensaje_de(registros, label_qwen, caso_id)
+        a = _message_of(records, label_26b, case_id)
+        b = _message_of(records, label_qwen, case_id)
         if a is None or b is None:
-            omitidos.append(caso_id)
+            skipped.append(case_id)
             continue
-        reales.append((caso_id, a, b))
+        real.append((case_id, a, b))
     # El lado NO se sortea par a par: con 30 pares, un sorteo independiente deja a un modelo en A en 23
     # (p = 0,005) y, como uno escribe cuerpo largo y el otro corto, la hoja queda casi siempre como
     # «A largo, B corto». Una permutacion equilibrada: la mitad exacta (o con diferencia 1) por lado.
-    en_a = _reparto_equilibrado(azar, len(reales), label_26b, label_qwen)
-    pendientes: list[dict[str, Any]] = []
-    for (caso_id, a, b), primero in zip(reales, en_a, strict=True):
-        lados = [(label_26b, a), (label_qwen, b)]
-        if primero != label_26b:
-            lados.reverse()
-        pendientes.append(
-            {"tipo": "real", "caso": caso_id, "lados": lados, "diff": diff_de(caso_id)}
+    in_a = _balanced_split(rng, len(real), label_26b, label_qwen)
+    pending_items: list[dict[str, Any]] = []
+    for (case_id, a, b), first in zip(real, in_a, strict=True):
+        sides = [(label_26b, a), (label_qwen, b)]
+        if first != label_26b:
+            sides.reverse()
+        pending_items.append(
+            {"tipo": "real", "caso": case_id, "lados": sides, "diff": diff_of(case_id)}
         )
-    entradas = juegos[juego - 1]["trampas"]
+    entries = sets[case_set_item - 1]["trampas"]
     # De las trampas tambien se equilibra el lado de la trampa y el modelo con el que se empareja.
-    trampa_en_a = _reparto_equilibrado(azar, len(entradas), "A", "B")
-    parejas = _reparto_equilibrado(azar, len(entradas), label_26b, label_qwen)
-    for entrada, lado_trampa, modelo in zip(entradas, trampa_en_a, parejas, strict=True):
-        caso_id = entrada["caso"]
-        mensaje = _mensaje_de(registros, modelo, caso_id)
-        if mensaje is None:
-            raise SystemExit(f"la trampa de {caso_id} no tiene mensaje del modelo elegido")
-        texto_trampa = trampa_con_forma(entrada, mensaje)
-        defectos = defectos_de_cuerpo(texto_trampa, mensaje)
-        if defectos:
+    trap_in_a = _balanced_split(rng, len(entries), "A", "B")
+    pairs = _balanced_split(rng, len(entries), label_26b, label_qwen)
+    for entry, trap_side, model in zip(entries, trap_in_a, pairs, strict=True):
+        case_id = entry["caso"]
+        message = _message_of(records, model, case_id)
+        if message is None:
+            raise SystemExit(f"la trampa de {case_id} no tiene mensaje del modelo elegido")
+        trap_text = shaped_trap(entry, message)
+        defects = body_defects(trap_text, message)
+        if defects:
             raise SystemExit(
-                f"la trampa de {caso_id} se reconoce por mal escrita: {'; '.join(defectos)}"
+                f"la trampa de {case_id} se reconoce por mal escrita: {'; '.join(defects)}"
             )
-        lados = [(TRAMPA, texto_trampa), (modelo, mensaje)]
-        if lado_trampa == "B":
-            lados.reverse()
-        pendientes.append(
+        sides = [(TRAP, trap_text), (model, message)]
+        if trap_side == "B":
+            sides.reverse()
+        pending_items.append(
             {
-                "tipo": TRAMPA,
-                "caso": caso_id,
-                "trampa_tipo": entrada["tipo"],
-                "lados": lados,
-                "diff": diff_de(caso_id),
+                "tipo": TRAP,
+                "caso": case_id,
+                "trampa_tipo": entry["tipo"],
+                "lados": sides,
+                "diff": diff_of(case_id),
             }
         )
-    azar.shuffle(pendientes)
+    rng.shuffle(pending_items)
 
-    pares: list[dict[str, Any]] = []
-    clave_pares: dict[str, Any] = {}
-    for posicion, p in enumerate(pendientes, 1):
-        num = f"{posicion:02d}"
-        ficheros, mas, menos = resumen_del_diff(p["diff"])
-        pares.append(
+    pair_items: list[dict[str, Any]] = []
+    pairs_key: dict[str, Any] = {}
+    for position, p in enumerate(pending_items, 1):
+        num = f"{position:02d}"
+        files_list, more, less = diff_summary(p["diff"])
+        pair_items.append(
             {
                 "num": num,
-                "ficheros": ficheros,
-                "mas": mas,
-                "menos": menos,
+                "ficheros": files_list,
+                "mas": more,
+                "menos": less,
                 "diff": p["diff"],
                 "A": p["lados"][0][1],
                 "B": p["lados"][1][1],
             }
         )
-        clave_pares[num] = {
+        pairs_key[num] = {
             "tipo": p["tipo"],
             "caso": p["caso"],
             "lados": {"A": p["lados"][0][0], "B": p["lados"][1][0]},
-            **({"trampa_tipo": p["trampa_tipo"]} if p["tipo"] == TRAMPA else {}),
+            **({"trampa_tipo": p["trampa_tipo"]} if p["tipo"] == TRAP else {}),
         }
-    vistos: set[str] = set()
-    for par in pares:
-        for texto in (par["diff"], par["A"], par["B"]):
-            if texto in vistos:
+    seen_set: set[str] = set()
+    for pair in pair_items:
+        for text in (pair["diff"], pair["A"], pair["B"]):
+            if text in seen_set:
                 raise SystemExit(
-                    f"par {par['num']}: un diff o un mensaje aparece dos veces en la hoja"
+                    f"par {pair['num']}: un diff o un mensaje aparece dos veces en la hoja"
                 )
-            vistos.add(texto)
-    hoja = {
-        "id": id_de_hoja(numero, pares),
-        "n": numero,
-        "opcionales": list(reglas["preguntas_opcionales"]),
-        "pares": pares,
+            seen_set.add(text)
+    sheet = {
+        "id": sheet_id(number, pair_items),
+        "n": number,
+        "opcionales": list(rules["preguntas_opcionales"]),
+        "pares": pair_items,
     }
-    clave = {
+    key = {
         "schema_version": 1,
-        "hoja": numero,
-        "juego": juego,
-        "sha256": hoja["id"],
-        "semilla": semilla,
+        "hoja": number,
+        "juego": case_set_item,
+        "sha256": sheet["id"],
+        "semilla": seed,
         "label_26b": label_26b,
         "label_qwen": label_qwen,
-        "pares": clave_pares,
-        "omitidos": omitidos,
+        "pares": pairs_key,
+        "omitidos": skipped,
     }
-    return hoja, clave
+    return sheet, key
 
 
 # --- Renderizado ------------------------------------------------------------------------------------
 
-_INSTRUCCIONES = [
+_INSTRUCTIONS = [
     (
         "Inventa (si/no)",
         "¿El mensaje dice algo que el diff no hace? Lo que el mensaje se deja fuera no se marca aquí, sino en «lo principal».",
@@ -627,55 +623,55 @@ _INSTRUCCIONES = [
 ]
 
 
-def tiempo_estimado(reglas: dict[str, Any]) -> str:
-    opcionales = set(reglas["preguntas_opcionales"])
-    if {"principal", "especifico"} <= opcionales:
+def estimated_time(rules: dict[str, Any]) -> str:
+    optional_ones = set(rules["preguntas_opcionales"])
+    if {"principal", "especifico"} <= optional_ones:
         return "unos 45–60 minutos (solo «inventa» y la preferencia son obligatorias)"
     return "entre 60 y 90 minutos"
 
 
-def _valla_para(texto: str) -> str:
-    rachas = [len(m) for m in re.findall(r"`+", texto)]
-    return "`" * max(3, max(rachas, default=0) + 1)
+def _fence_for(text: str) -> str:
+    streaks = [len(m) for m in re.findall(r"`+", text)]
+    return "`" * max(3, max(streaks, default=0) + 1)
 
 
-def renderizar_md(hoja: dict[str, Any], reglas: dict[str, Any]) -> str:
-    opcionales = set(reglas["preguntas_opcionales"])
-    lineas = [
-        f"# Hoja {hoja['n']}: mensajes de commit, a ciegas",
+def render_md(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
+    optional_ones = set(rules["preguntas_opcionales"])
+    lines = [
+        f"# Hoja {sheet['n']}: mensajes de commit, a ciegas",
         "",
-        f"Hoja: {hoja['id']}",
+        f"Hoja: {sheet['id']}",
         "",
-        f"En cada par hay dos mensajes de commit para el mismo cambio. Tiempo estimado: {tiempo_estimado(reglas)}.",
+        f"En cada par hay dos mensajes de commit para el mismo cambio. Tiempo estimado: {estimated_time(rules)}.",
         "Puedes hacerlo en varias sentadas. Escribe la respuesta detrás de los dos puntos de cada línea.",
         "",
     ]
-    for nombre, texto in _INSTRUCCIONES:
-        lineas.append(f"- **{nombre}**: {texto}")
-    lineas.append("")
-    for par in hoja["pares"]:
-        lineas += [f"## Par {par['num']}", ""]
-        lineas.append(f"Diff: {par['ficheros']} ficheros, +{par['mas']} −{par['menos']}")
-        lineas.append("")
-        valla = _valla_para(par["diff"])
-        lineas += [valla + "diff", par["diff"].rstrip("\n"), valla, ""]
-        for lado in "AB":
-            texto = par[lado]
-            valla = _valla_para(texto)
-            lineas += [f"### Mensaje {lado}", "", valla, texto.strip("\n"), valla, ""]
-        for lado in "AB":
-            lineas.append(f"Inventa {lado} (s/n): ")
-        for lado in "AB":
-            marca = " [opcional]" if "principal" in opcionales else ""
-            lineas.append(f"Lo principal {lado} (s/p/n):{marca} ")
-        for lado in "AB":
-            marca = " [opcional]" if "especifico" in opcionales else ""
-            lineas.append(f"Específico {lado} (s/n):{marca} ")
-        lineas += ["Mejor (A/B/=): ", ""]
-    return "\n".join(lineas)
+    for name, text in _INSTRUCTIONS:
+        lines.append(f"- **{name}**: {text}")
+    lines.append("")
+    for pair in sheet["pares"]:
+        lines += [f"## Par {pair['num']}", ""]
+        lines.append(f"Diff: {pair['ficheros']} ficheros, +{pair['mas']} −{pair['menos']}")
+        lines.append("")
+        fence = _fence_for(pair["diff"])
+        lines += [fence + "diff", pair["diff"].rstrip("\n"), fence, ""]
+        for side in "AB":
+            text = pair[side]
+            fence = _fence_for(text)
+            lines += [f"### Mensaje {side}", "", fence, text.strip("\n"), fence, ""]
+        for side in "AB":
+            lines.append(f"Inventa {side} (s/n): ")
+        for side in "AB":
+            mark = " [opcional]" if "principal" in optional_ones else ""
+            lines.append(f"Lo principal {side} (s/p/n):{mark} ")
+        for side in "AB":
+            mark = " [opcional]" if "especifico" in optional_ones else ""
+            lines.append(f"Específico {side} (s/n):{mark} ")
+        lines += ["Mejor (A/B/=): ", ""]
+    return "\n".join(lines)
 
 
-_PLANTILLA_HTML = r"""<!DOCTYPE html>
+_HTML_TEMPLATE = r"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -852,120 +848,119 @@ function exportar(estado, datos, parcial) {
 """
 
 
-def renderizar_html(hoja: dict[str, Any], reglas: dict[str, Any]) -> str:
-    datos = json.dumps(hoja, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
-    instrucciones = "".join(
-        f"<dt>{html.escape(nombre)}</dt><dd>{html.escape(texto)}</dd>"
-        for nombre, texto in _INSTRUCCIONES
+def render_html(sheet: dict[str, Any], rules: dict[str, Any]) -> str:
+    data = json.dumps(sheet, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
+    instructions = "".join(
+        f"<dt>{html.escape(name)}</dt><dd>{html.escape(text)}</dd>" for name, text in _INSTRUCTIONS
     )
     return (
-        _PLANTILLA_HTML.replace("__N__", str(hoja["n"]))
-        .replace("__TIEMPO__", html.escape(tiempo_estimado(reglas)))
-        .replace("__INSTRUCCIONES__", instrucciones)
-        .replace("__DATOS__", datos)
+        _HTML_TEMPLATE.replace("__N__", str(sheet["n"]))
+        .replace("__TIEMPO__", html.escape(estimated_time(rules)))
+        .replace("__INSTRUCCIONES__", instructions)
+        .replace("__DATOS__", data)
     )
 
 
-def escribir_hoja(
-    hoja: dict[str, Any],
-    clave: dict[str, Any],
-    reglas: dict[str, Any],
-    dir_hoja: Path,
-    dir_clave: Path,
+def write_sheet(
+    sheet: dict[str, Any],
+    key: dict[str, Any],
+    rules: dict[str, Any],
+    sheet_dir: Path,
+    key_dir: Path,
 ) -> dict[str, Path]:
     """Escribe `hoja-<n>.html`, `hoja-<n>.md` y `clave-<n>.json`; la clave en OTRA carpeta."""
-    if dir_hoja.resolve() == dir_clave.resolve():
+    if sheet_dir.resolve() == key_dir.resolve():
         raise SystemExit("la clave no puede ir en la carpeta de la hoja")
-    n = hoja["n"]
-    rutas = {
-        "html": dir_hoja / f"hoja-{n}.html",
-        "md": dir_hoja / f"hoja-{n}.md",
-        "clave": dir_clave / f"clave-{n}.json",
+    n = sheet["n"]
+    paths = {
+        "html": sheet_dir / f"hoja-{n}.html",
+        "md": sheet_dir / f"hoja-{n}.md",
+        "clave": key_dir / f"clave-{n}.json",
     }
-    existentes = [str(r) for r in rutas.values() if r.exists()]
-    if existentes:
+    existing = [str(r) for r in paths.values() if r.exists()]
+    if existing:
         # Regenerar sortea otra vez: una hoja ya contestada quedaria emparejada con otra clave.
-        raise SystemExit(f"ya existen {', '.join(existentes)}; elige otro numero de hoja")
-    dir_hoja.mkdir(parents=True, exist_ok=True)
-    dir_clave.mkdir(parents=True, exist_ok=True)
-    rutas["html"].write_text(renderizar_html(hoja, reglas), encoding="utf-8", newline="\n")
-    rutas["md"].write_text(renderizar_md(hoja, reglas), encoding="utf-8", newline="\n")
-    rutas["clave"].write_text(
-        json.dumps(clave, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+        raise SystemExit(f"ya existen {', '.join(existing)}; elige otro numero de hoja")
+    sheet_dir.mkdir(parents=True, exist_ok=True)
+    key_dir.mkdir(parents=True, exist_ok=True)
+    paths["html"].write_text(render_html(sheet, rules), encoding="utf-8", newline="\n")
+    paths["md"].write_text(render_md(sheet, rules), encoding="utf-8", newline="\n")
+    paths["clave"].write_text(
+        json.dumps(key, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
-    return rutas
+    return paths
 
 
 # --- Lectura de las respuestas ----------------------------------------------------------------------
 
-_MD_HOJA = re.compile(r"^Hoja:\s*([0-9a-f]{64})\s*$")
-_MD_INVENTA = re.compile(r"^Inventa ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
+_MD_SHEET = re.compile(r"^Hoja:\s*([0-9a-f]{64})\s*$")
+_MD_INVENTS = re.compile(r"^Inventa ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
 _MD_PRINCIPAL = re.compile(r"^Lo principal ([AB]) \(s/p/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
-_MD_ESPECIFICO = re.compile(r"^Espec[ií]fico ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
-_MD_MEJOR = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
+_MD_SPECIFIC = re.compile(r"^Espec[ií]fico ([AB]) \(s/n\):(?: \[opcional\])?[ \t]*(\S*)[ \t]*$")
+_MD_BETTER = re.compile(r"^Mejor \(A/B/=\):[ \t]*(\S*)[ \t]*$")
 
 
-def respuestas_de_md(hoja_md: str) -> dict[str, Any]:
+def md_answers(sheet_md: str) -> dict[str, Any]:
     """Las respuestas escritas a mano en la hoja `.md`, como el JSON de la pagina.
 
     Se salta lo que va dentro de una valla: el mensaje lo escribio un modelo, y una linea
     «Mejor (A/B/=): A» dentro de el no puede votar por nadie.
     """
     sha: str | None = None
-    respuestas: dict[str, Any] = {}
-    par: str | None = None
-    valla: str | None = None
-    for linea in hoja_md.splitlines():
-        if valla is not None:
-            if linea == valla:
-                valla = None
+    responses: dict[str, Any] = {}
+    pair: str | None = None
+    fence: str | None = None
+    for line in sheet_md.splitlines():
+        if fence is not None:
+            if line == fence:
+                fence = None
             continue
-        if re.fullmatch(r"`{3,}(?:diff)?", linea) or linea.startswith("```"):
-            valla = re.match(r"`+", linea).group(0)  # type: ignore[union-attr]
+        if re.fullmatch(r"`{3,}(?:diff)?", line) or line.startswith("```"):
+            fence = re.match(r"`+", line).group(0)  # type: ignore[union-attr]
             continue
-        if m := _MD_HOJA.match(linea):
+        if m := _MD_SHEET.match(line):
             sha = m.group(1)
-        elif m := re.match(r"^## Par (\d+)\s*$", linea):
-            par = m.group(1)
-        elif par is not None:
-            actual = respuestas.setdefault(par, {})
-            if m := _MD_INVENTA.match(linea):
+        elif m := re.match(r"^## Par (\d+)\s*$", line):
+            pair = m.group(1)
+        elif pair is not None:
+            actual = responses.setdefault(pair, {})
+            if m := _MD_INVENTS.match(line):
                 actual.setdefault("inventa", {})[m.group(1)] = m.group(2)
-            elif m := _MD_PRINCIPAL.match(linea):
+            elif m := _MD_PRINCIPAL.match(line):
                 actual.setdefault("principal", {})[m.group(1)] = m.group(2)
-            elif m := _MD_ESPECIFICO.match(linea):
+            elif m := _MD_SPECIFIC.match(line):
                 actual.setdefault("especifico", {})[m.group(1)] = m.group(2)
-            elif m := _MD_MEJOR.match(linea):
+            elif m := _MD_BETTER.match(line):
                 actual["preferencia"] = m.group(1)
-    return {"sha256": sha, "respuestas": respuestas}
+    return {"sha256": sha, "respuestas": responses}
 
 
-def _normal(valor: Any, pregunta: str, par: str) -> str | None:
+def _normal(value: Any, question: str, pair: str) -> str | None:
     """El valor ya validado, o `None` si esta vacio."""
-    if valor is None:
+    if value is None:
         return None
-    texto = str(valor).strip()
-    if pregunta == "preferencia":
-        texto = texto.upper() if texto.lower() not in ("empate", "=") else "="
-        texto = {"EMPATE": "="}.get(texto, texto)
+    text = str(value).strip()
+    if question == "preferencia":
+        text = text.upper() if text.lower() not in ("empate", "=") else "="
+        text = {"EMPATE": "="}.get(text, text)
     else:
-        texto = _RESPUESTA_SINONIMOS.get(texto.lower(), texto.lower())
-    if texto == "":
+        text = _SYNONYMS_RESPONSE.get(text.lower(), text.lower())
+    if text == "":
         return None
-    if texto not in _VALORES[pregunta]:
+    if text not in _VALUES[question]:
         raise SystemExit(
-            f"par {par}: el valor {valor!r} no es valido para {pregunta} "
-            f"(admite {', '.join(_VALORES[pregunta])})"
+            f"par {pair}: el valor {value!r} no es valido para {question} "
+            f"(admite {', '.join(_VALUES[question])})"
         )
-    return texto
+    return text
 
 
-def leer_commit(
-    respuestas: dict[str, Any],
-    clave: dict[str, Any],
-    reglas: dict[str, Any],
+def read_commit(
+    responses: dict[str, Any],
+    key: dict[str, Any],
+    rules: dict[str, Any],
     *,
-    parcial: bool = False,
+    partial: bool = False,
 ) -> tuple[dict[str, Any], list[str]]:
     """`(juicio, faltan)`: las respuestas ya validadas y destapadas con la clave.
 
@@ -973,130 +968,132 @@ def leer_commit(
     lista lo obligatorio segun `reglas.json` que no esta contestado; con `parcial`, solo se valida lo
     que hay y `faltan` va vacio (la parada solo necesita lo contestado).
     """
-    if respuestas.get("sha256") != clave["sha256"]:
+    if responses.get("sha256") != key["sha256"]:
         raise SystemExit(
             "las respuestas no son de esta hoja: el sha256 no coincide con el de la clave"
         )
-    pares_clave = clave["pares"]
-    desconocidos = sorted(set(respuestas.get("respuestas", {})) - set(pares_clave))
-    if desconocidos:
+    key_pairs = key["pares"]
+    unknown_ones = sorted(set(responses.get("respuestas", {})) - set(key_pairs))
+    if unknown_ones:
         raise SystemExit(
-            f"las respuestas traen pares que la hoja no tiene: {', '.join(desconocidos)}"
+            f"las respuestas traen pares que la hoja no tiene: {', '.join(unknown_ones)}"
         )
-    opcionales = set(reglas["preguntas_opcionales"])
-    juicio_pares: dict[str, Any] = {}
-    faltan: list[str] = []
-    for num, meta in sorted(pares_clave.items()):
-        dadas = respuestas.get("respuestas", {}).get(num, {})
-        par: dict[str, Any] = {"tipo": meta["tipo"], "caso": meta["caso"], "lados": meta["lados"]}
-        for pregunta in ("inventa", "principal", "especifico"):
-            por_lado = {
-                lado: _normal((dadas.get(pregunta) or {}).get(lado), pregunta, num) for lado in "AB"
+    optional_ones = set(rules["preguntas_opcionales"])
+    pairs_judgement: dict[str, Any] = {}
+    missing: list[str] = []
+    for num, meta in sorted(key_pairs.items()):
+        given = responses.get("respuestas", {}).get(num, {})
+        pair: dict[str, Any] = {"tipo": meta["tipo"], "caso": meta["caso"], "lados": meta["lados"]}
+        for question in ("inventa", "principal", "especifico"):
+            by_side = {
+                side: _normal((given.get(question) or {}).get(side), question, num) for side in "AB"
             }
-            par[pregunta] = por_lado
-            if pregunta not in opcionales and not parcial:
-                faltan += [
-                    f"par {num}: {pregunta} {lado}" for lado in "AB" if por_lado[lado] is None
+            pair[question] = by_side
+            if question not in optional_ones and not partial:
+                missing += [
+                    f"par {num}: {question} {side}" for side in "AB" if by_side[side] is None
                 ]
-        par["preferencia"] = _normal(dadas.get("preferencia"), "preferencia", num)
-        if par["preferencia"] is None and not parcial:
-            faltan.append(f"par {num}: preferencia")
-        juicio_pares[num] = par
-    juicio = {
+        pair["preferencia"] = _normal(given.get("preferencia"), "preferencia", num)
+        if pair["preferencia"] is None and not partial:
+            missing.append(f"par {num}: preferencia")
+        pairs_judgement[num] = pair
+    judgement = {
         "schema_version": 1,
-        "hoja": clave["sha256"],
-        "juego": clave.get("juego"),
-        "parcial": parcial,
-        "label_26b": clave["label_26b"],
-        "label_qwen": clave["label_qwen"],
-        "pares": juicio_pares,
+        "hoja": key["sha256"],
+        "juego": key.get("juego"),
+        "parcial": partial,
+        "label_26b": key["label_26b"],
+        "label_qwen": key["label_qwen"],
+        "pares": pairs_judgement,
     }
-    return juicio, faltan
+    return judgement, missing
 
 
-def _ganador(par: dict[str, Any]) -> str:
-    eleccion = par["preferencia"]
-    return "empate" if eleccion == "=" else str(par["lados"][eleccion])
+def _winner(pair: dict[str, Any]) -> str:
+    choice = pair["preferencia"]
+    return "empate" if choice == "=" else str(pair["lados"][choice])
 
 
-def puedes_parar(juicio: dict[str, Any], reglas: dict[str, Any]) -> str:
+def can_stop(judgement: dict[str, Any], rules: dict[str, Any]) -> str:
     """«puedes parar» o «sigue», y nada mas: ni hacia donde va el resultado ni quien va ganando.
 
     Solo contesta «puedes parar» si las 3 trampas estan contestadas y la hoja vale (criterio 0) Y el
     desenlace ya no puede cambiar con los pares que faltan: el 26B ya pasa de `max_inventa_26b`, o
     `v - c` es mayor que los pares reales sin contestar.
     """
-    if not reglas["parada_anticipada"]:
+    if not rules["parada_anticipada"]:
         return "sigue"
-    pares = juicio["pares"].values()
-    trampas = [p for p in pares if p["tipo"] == TRAMPA]
-    if len(trampas) < 3 or any(p["preferencia"] is None for p in trampas):
+    pair_items = judgement["pares"].values()
+    traps = [p for p in pair_items if p["tipo"] == TRAP]
+    if len(traps) < 3 or any(p["preferencia"] is None for p in traps):
         return "sigue"
-    if sum(_ganador(p) not in ("empate", TRAMPA) for p in trampas) < 2:
+    if sum(_winner(p) not in ("empate", TRAP) for p in traps) < 2:
         return "sigue"
-    reales = [p for p in pares if p["tipo"] == "real"]
-    modelo = juicio["label_26b"]
-    inventa = 0
-    for p in reales:
-        lado = "A" if p["lados"]["A"] == modelo else "B"
-        inventa += p["inventa"][lado] == "s"
-    if inventa > int(reglas["max_inventa_26b"]):
+    real = [p for p in pair_items if p["tipo"] == "real"]
+    model = judgement["label_26b"]
+    invents = 0
+    for p in real:
+        side = "A" if p["lados"]["A"] == model else "B"
+        invents += p["inventa"][side] == "s"
+    if invents > int(rules["max_inventa_26b"]):
         return "puedes parar"
-    contestados = [p for p in reales if p["preferencia"] is not None]
-    c = sum(_ganador(p) == modelo for p in contestados)
-    v = sum(_ganador(p) == juicio["label_qwen"] for p in contestados)
-    sin_contestar = len(reales) - len(contestados)
-    return "puedes parar" if v - c > sin_contestar else "sigue"
+    answered = [p for p in real if p["preferencia"] is not None]
+    c = sum(_winner(p) == model for p in answered)
+    v = sum(_winner(p) == judgement["label_qwen"] for p in answered)
+    unanswered = len(real) - len(answered)
+    return "puedes parar" if v - c > unanswered else "sigue"
 
 
-def _cargar_respuestas(args: argparse.Namespace) -> dict[str, Any]:
+def _load_responses(args: argparse.Namespace) -> dict[str, Any]:
     if args.md is not None:
-        return respuestas_de_md(args.md.read_text(encoding="utf-8"))
-    return json.loads(args.respuestas.read_text(encoding="utf-8"))
+        return md_answers(args.md.read_text(encoding="utf-8"))
+    return json.loads(args.answers.read_text(encoding="utf-8"))
 
 
-def ejecutar_generar_commit(args: argparse.Namespace) -> int:
-    datos = json.loads(args.cases.read_text(encoding="utf-8"))
-    casos = {c["id"]: c for c in datos["cases"]}
-    reglas = leer_reglas(args.reglas)
-    trampas = json.loads(args.trampas.read_text(encoding="utf-8"))
-    semilla = args.semilla if args.semilla is not None else secrets.randbits(32)
-    hoja, clave = construir_hoja_commit(
-        casos=casos,
-        fuentes=args.cases.parent / "fuentes",
-        registros=_registros(args.jsonl),
-        trampas=trampas,
-        reglas=reglas,
-        juego=args.juego,
-        numero=args.numero,
-        semilla=semilla,
+def run_generate_commit(args: argparse.Namespace) -> int:
+    data = json.loads(args.cases.read_text(encoding="utf-8"))
+    cases = {c["id"]: c for c in data["cases"]}
+    rules = read_rules(args.rules)
+    traps = json.loads(args.traps.read_text(encoding="utf-8"))
+    seed = args.semilla if args.semilla is not None else secrets.randbits(32)
+    sheet, key = build_commit_sheet(
+        cases=cases,
+        sources=args.cases.parent / "fuentes",
+        records=_registros(args.jsonl),
+        traps=traps,
+        rules=rules,
+        case_set_item=args.trap_set,
+        number=args.number,
+        seed=seed,
         label_26b=args.label_26b,
         label_qwen=args.label_qwen,
     )
-    rutas = escribir_hoja(hoja, clave, reglas, args.hoja_dir, args.clave_dir)
+    paths = write_sheet(sheet, key, rules, args.sheet_dir, args.key_dir)
     print(
-        f"{len(hoja['pares'])} pares en {rutas['html']}; la clave ({rutas['clave'].parent}) no se abre"
+        f"{len(sheet['pares'])} pares en {paths['html']}; la clave ({paths['clave'].parent}) no se abre"
     )
-    if clave["omitidos"]:
-        print(f"omitidos por falta de mensaje: {', '.join(clave['omitidos'])}", file=sys.stderr)
+    if key["omitidos"]:
+        print(f"omitidos por falta de mensaje: {', '.join(key['omitidos'])}", file=sys.stderr)
     return 0
 
 
-def ejecutar_leer_commit(args: argparse.Namespace) -> int:
-    reglas = leer_reglas(args.reglas)
-    clave = json.loads(args.clave.read_text(encoding="utf-8"))
-    juicio, faltan = leer_commit(_cargar_respuestas(args), clave, reglas, parcial=args.parcial)
-    if args.parcial:
-        print(puedes_parar(juicio, reglas))
+def run_read_commit(args: argparse.Namespace) -> int:
+    rules = read_rules(args.rules)
+    key = json.loads(args.clave.read_text(encoding="utf-8"))
+    judgement, missing = read_commit(_load_responses(args), key, rules, partial=args.partial)
+    if args.partial:
+        print(can_stop(judgement, rules))
         return 0
-    if faltan:
+    if missing:
         print("Falta por contestar, y no se produce nada hasta completarlo:", file=sys.stderr)
-        for linea in faltan:
-            print(f"  - {linea}", file=sys.stderr)
+        for line in missing:
+            print(f"  - {line}", file=sys.stderr)
         return 1
     if args.salida:
         args.salida.write_text(
-            json.dumps(juicio, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+            json.dumps(judgement, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
         )
     print("ok: hoja completa")
     return 0
@@ -1114,27 +1111,27 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("--caso", action="append", required=True)
     gen.add_argument("--semilla", type=int, default=None, help="solo para pruebas")
     gen.add_argument("jsonl", nargs="+", type=Path)
-    gc = sub.add_parser("generar-commit", help="hoja a ciegas de local_commit_msg (REQ-042)")
-    gc.add_argument("--cases", type=Path, default=BASE_AFINIDAD / "cases.json")
-    gc.add_argument("--trampas", type=Path, default=BASE_AFINIDAD / "trampas.json")
-    gc.add_argument("--reglas", type=Path, default=BASE_AFINIDAD / "reglas.json")
-    gc.add_argument("--juego", type=int, default=1, help="juego de trampas (1 a 3)")
-    gc.add_argument("--numero", type=int, default=1, help="numero de hoja")
+    gc = sub.add_parser("generate-commit", help="hoja a ciegas de local_commit_msg (REQ-042)")
+    gc.add_argument("--cases", type=Path, default=AFFINITY_BASE / "cases.json")
+    gc.add_argument("--traps", type=Path, default=AFFINITY_BASE / "trampas.json")
+    gc.add_argument("--rules", type=Path, default=AFFINITY_BASE / "reglas.json")
+    gc.add_argument("--trap-set", type=int, default=1, help="juego de trampas (1 a 3)")
+    gc.add_argument("--number", type=int, default=1, help="numero de hoja")
     gc.add_argument("--semilla", type=int, default=None, help="solo para pruebas")
-    gc.add_argument("--label-26b", default=MODELO_26B)
-    gc.add_argument("--label-qwen", default=MODELO_QWEN)
-    gc.add_argument("--hoja-dir", type=Path, default=BASE_AFINIDAD / "hoja")
-    gc.add_argument("--clave-dir", type=Path, default=BASE_AFINIDAD / "clave")
+    gc.add_argument("--label-26b", default=MODEL_26B)
+    gc.add_argument("--label-qwen", default=QWEN_MODEL)
+    gc.add_argument("--sheet-dir", type=Path, default=AFFINITY_BASE / "hoja")
+    gc.add_argument("--key-dir", type=Path, default=AFFINITY_BASE / "clave")
     gc.add_argument(
         "jsonl", nargs="+", type=Path, help="resultados de la tanda con --save-responses"
     )
-    lc = sub.add_parser("leer-commit", help="valida las respuestas de la hoja de commit")
+    lc = sub.add_parser("read-commit", help="valida las respuestas de la hoja de commit")
     lc.add_argument("--clave", type=Path, required=True)
-    lc.add_argument("--reglas", type=Path, default=BASE_AFINIDAD / "reglas.json")
+    lc.add_argument("--rules", type=Path, default=AFFINITY_BASE / "reglas.json")
     origen = lc.add_mutually_exclusive_group(required=True)
-    origen.add_argument("--respuestas", type=Path, help="respuestas-<n>.json de la pagina")
+    origen.add_argument("--answers", type=Path, help="respuestas-<n>.json de la pagina")
     origen.add_argument("--md", type=Path, help="la hoja .md contestada a mano")
-    lc.add_argument("--parcial", action="store_true", help="solo contesta «puedes parar» o «sigue»")
+    lc.add_argument("--partial", action="store_true", help="solo contesta «puedes parar» o «sigue»")
     lc.add_argument(
         "--salida", type=Path, default=None, help="juicio ya destapado, para el veredicto"
     )
@@ -1150,10 +1147,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
-    if args.modo == "generar-commit":
-        return ejecutar_generar_commit(args)
-    if args.modo == "leer-commit":
-        return ejecutar_leer_commit(args)
+    if args.modo == "generate-commit":
+        return run_generate_commit(args)
+    if args.modo == "read-commit":
+        return run_read_commit(args)
     try:
         if args.modo == "generar":
             if args.clave.exists() or args.hoja.exists():

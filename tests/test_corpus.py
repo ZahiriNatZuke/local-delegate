@@ -484,455 +484,463 @@ def test_terminos_de_explicar_salen_del_docstring_del_modulo_y_no_de_una_funcion
 # fallaria en un checkout superficial del CI.
 # =====================================================================================================
 
-CORTE = "2026-10-06"
-PASOS_SINTETICOS = ((None, 300, 1200),)
+CUTOFF = "2026-10-06"
+SYNTHETIC_STEPS = ((None, 300, 1200),)
 
 
 def _git_repo(
-    repo: Path, *args: str, fecha: str | None = None, autor: str = "Ana <ana@example.org>"
+    repo: Path, *args: str, date: str | None = None, author: str = "Ana <ana@example.org>"
 ):
-    entorno = {
+    env = {
         **os.environ,
         "GIT_COMMITTER_NAME": "Ana",
         "GIT_COMMITTER_EMAIL": "ana@example.org",
-        "GIT_AUTHOR_NAME": autor.split(" <")[0],
-        "GIT_AUTHOR_EMAIL": autor.split("<")[1].rstrip(">"),
+        "GIT_AUTHOR_NAME": author.split(" <")[0],
+        "GIT_AUTHOR_EMAIL": author.split("<")[1].rstrip(">"),
     }
-    if fecha:
-        entorno["GIT_COMMITTER_DATE"] = entorno["GIT_AUTHOR_DATE"] = f"{fecha}T12:00:00+00:00"
+    if date:
+        env["GIT_COMMITTER_DATE"] = env["GIT_AUTHOR_DATE"] = f"{date}T12:00:00+00:00"
     subprocess.run(
         ["git", "-c", "commit.gpgsign=false", "-c", "core.autocrlf=false", *args],
         cwd=repo,
         check=True,
         capture_output=True,
-        env=entorno,
+        env=env,
     )
 
 
-def _repo_nuevo(tmp_path: Path) -> Path:
+def _new_repo(tmp_path: Path) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_repo(repo, "init", "-q", "-b", "main")
     return repo
 
 
-def _confirmar(
-    repo, asunto, fichero, tamano=400, fecha="2026-09-01", autor="Ana <ana@example.org>", cuerpo=""
+def _confirm(
+    repo, subject, file, size=400, date="2026-09-01", author="Ana <ana@example.org>", body=""
 ):
-    """Un commit que deja en `fichero` una linea de `tamano` caracteres, propia de este commit."""
-    linea = (asunto + " " + "x" * tamano)[:tamano]
-    (repo / fichero).write_text(linea + "\n", encoding="utf-8", newline="\n")
+    """Un commit que deja en `file` una linea de `size` caracteres, propia de este commit."""
+    line = (subject + " " + "x" * size)[:size]
+    (repo / file).write_text(line + "\n", encoding="utf-8", newline="\n")
     _git_repo(repo, "add", "-A")
-    mensaje = asunto + (f"\n\n{cuerpo}" if cuerpo else "")
-    _git_repo(repo, "commit", "-q", "-m", mensaje, fecha=fecha, autor=autor)
+    message = subject + (f"\n\n{body}" if body else "")
+    _git_repo(repo, "commit", "-q", "-m", message, date=date, author=author)
     return subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True
     ).stdout.strip()
 
 
-def _repo_de_la_regla(tmp_path):
+def _rule_repo(tmp_path):
     """Los elegibles `ok-NN`, mezclados con todo lo que la regla excluye entre los mas recientes."""
-    repo = _repo_nuevo(tmp_path)
-    dia = iter(range(1, 28))
+    repo = _new_repo(tmp_path)
+    day = iter(range(1, 28))
 
-    def fecha():
-        return f"2026-09-{next(dia):02d}"
+    def date():
+        return f"2026-09-{next(day):02d}"
 
     for i in range(1, 11):
-        _confirmar(repo, f"feat: ok-{i:02d}", f"f{i}.txt", fecha=fecha())
-    excluidos = [
+        _confirm(repo, f"feat: ok-{i:02d}", f"f{i}.txt", date=date())
+    excluded = [
         ("ok-11", {}),
         ("chore(release): 1.1", {}),
         ("ok-12", {}),
         ("chore(deps): sube una libreria", {}),
         ("chore: release v1.0", {}),
         ("ok-13", {}),
-        ("fix: subir otra libreria", {"autor": "dependabot[bot] <bot@example.org>"}),
-        ("fix: diff chico", {"tamano": 20}),
+        ("fix: subir otra libreria", {"author": "dependabot[bot] <bot@example.org>"}),
+        ("fix: diff chico", {"size": 20}),
         ("ok-14", {}),
-        ("fix: diff enorme", {"tamano": 3000}),
+        ("fix: diff enorme", {"size": 3000}),
     ]
-    for n, (asunto, kw) in enumerate(excluidos):
-        if asunto.startswith("ok-"):
-            asunto = f"feat: {asunto}"
-        _confirmar(repo, asunto, f"g{n}.txt", fecha=fecha(), **kw)
+    for n, (subject, kw) in enumerate(excluded):
+        if subject.startswith("ok-"):
+            subject = f"feat: {subject}"
+        _confirm(repo, subject, f"g{n}.txt", date=date(), **kw)
     # Un merge sin conflicto y un commit posterior a la fecha de corte.
     _git_repo(repo, "checkout", "-q", "-b", "rama")
-    _confirmar(repo, "fix: diff chico de la rama", "rama.txt", tamano=20, fecha=fecha())
+    _confirm(repo, "fix: diff chico de la rama", "rama.txt", size=20, date=date())
     _git_repo(repo, "checkout", "-q", "main")
-    _git_repo(repo, "merge", "-q", "--no-ff", "rama", "-m", "Merge rama", fecha=fecha())
-    _confirmar(repo, "feat: tardio", "tardio.txt", fecha="2026-10-07")
+    _git_repo(repo, "merge", "-q", "--no-ff", "rama", "-m", "Merge rama", date=date())
+    _confirm(repo, "feat: tardio", "tardio.txt", date="2026-10-07")
     return repo
 
 
-def _asuntos(commits):
-    return [c.asunto for c in commits]
+def _subjects(commits):
+    return [c.subject for c in commits]
 
 
-def test_la_regla_elige_exactamente_los_esperados_en_orden_y_los_siguientes_como_trampa(tmp_path):
-    repo = _repo_de_la_regla(tmp_path)
-    sel = construir.seleccionar_commits(
-        repo, antes=CORTE, excluir=(), n_reales=3, n_trampas=2, pasos=PASOS_SINTETICOS
+def test_rule_picks_expected_in_order_and_next_as_trap(tmp_path):
+    repo = _rule_repo(tmp_path)
+    sel = construir.select_commits(
+        repo, before=CUTOFF, exclude=(), n_real=3, n_traps=2, steps=SYNTHETIC_STEPS
     )
-    elegidos = _asuntos(sel.reales) + _asuntos(sel.trampas)
+    chosen_set = _subjects(sel.real) + _subjects(sel.traps)
     # `chore(release): 1.1` SI es candidato: la regla excluye el texto exacto `chore: release`.
-    assert elegidos == [
+    assert chosen_set == [
         "feat: ok-14",
         "feat: ok-13",
         "feat: ok-12",
         "chore(release): 1.1",
         "feat: ok-11",
     ]
-    assert _asuntos(sel.reales) == ["feat: ok-14", "feat: ok-13", "feat: ok-12"]
-    assert _asuntos(sel.trampas) == ["chore(release): 1.1", "feat: ok-11"]
+    assert _subjects(sel.real) == ["feat: ok-14", "feat: ok-13", "feat: ok-12"]
+    assert _subjects(sel.traps) == ["chore(release): 1.1", "feat: ok-11"]
     # Todo lo que la regla excluye, de verdad estaba en el historial (control positivo).
-    todos = _asuntos(construir._commits_de(repo, "main", None))
-    for excluido in (
+    all_items = _subjects(construir._commits_of(repo, "main", None))
+    for excluded in (
         "chore: release v1.0",
         "fix: subir otra libreria",
         "feat: tardio",
     ):
-        assert excluido in todos
+        assert excluded in all_items
 
 
-def test_ninguna_trampa_coincide_con_un_caso_real(tmp_path):
-    repo = _repo_de_la_regla(tmp_path)
-    sel = construir.seleccionar_commits(
-        repo, antes=CORTE, excluir=(), n_reales=3, n_trampas=2, pasos=PASOS_SINTETICOS
+def test_no_trap_matches_real_case(tmp_path):
+    repo = _rule_repo(tmp_path)
+    sel = construir.select_commits(
+        repo, before=CUTOFF, exclude=(), n_real=3, n_traps=2, steps=SYNTHETIC_STEPS
     )
-    reales = {c.hash for c in sel.reales}
-    trampas = {c.hash for c in sel.trampas}
-    assert len(trampas) == 2
-    assert not reales & trampas
-    diffs_reales = {construir._diff_normalizado(repo, h) for h in reales}
-    assert not diffs_reales & {construir._diff_normalizado(repo, h) for h in trampas}
+    real = {c.hash for c in sel.real}
+    traps = {c.hash for c in sel.traps}
+    assert len(traps) == 2
+    assert not real & traps
+    real_diffs = {construir._normalized_diff(repo, h) for h in real}
+    assert not real_diffs & {construir._normalized_diff(repo, h) for h in traps}
 
 
-def test_la_regla_se_amplia_si_la_ventana_no_da_los_commits(tmp_path):
-    repo = _repo_de_la_regla(tmp_path)
+def test_rule_widens_if_window_lacks_commits(tmp_path):
+    repo = _rule_repo(tmp_path)
     # Una ventana de 3 commits no da 5: el segundo paso mira todo el historial.
-    pasos = ((3, 300, 700), (None, 300, 700))
-    sel = construir.seleccionar_commits(
-        repo, antes=CORTE, excluir=(), n_reales=3, n_trampas=2, pasos=pasos
+    steps = ((3, 300, 700), (None, 300, 700))
+    sel = construir.select_commits(
+        repo, before=CUTOFF, exclude=(), n_real=3, n_traps=2, steps=steps
     )
-    assert sel.paso == 1
-    assert len(sel.reales) == 3 and len(sel.trampas) == 2
+    assert sel.step == 1
+    assert len(sel.real) == 3 and len(sel.traps) == 2
     with pytest.raises(ValueError, match="no da 40 commits"):
-        construir.seleccionar_commits(
-            repo, antes=CORTE, excluir=(), n_reales=30, n_trampas=10, pasos=pasos
+        construir.select_commits(
+            repo, before=CUTOFF, exclude=(), n_real=30, n_traps=10, steps=steps
         )
 
 
-def test_el_caso_que_ya_esta_en_f2_y_los_diffs_con_datos_privados_no_se_eligen(tmp_path):
-    repo = _repo_nuevo(tmp_path)
+def test_case_already_in_f2_and_private_diffs_not_chosen(tmp_path):
+    repo = _new_repo(tmp_path)
     for i in range(1, 6):
-        _confirmar(repo, f"feat: ok-{i}", f"f{i}.txt", fecha=f"2026-09-{i:02d}")
-    privado = repo / "p.txt"
-    privado.write_text("ruta C:\\Users\\Persona\\secreto " + "x" * 400 + "\n", encoding="utf-8")
+        _confirm(repo, f"feat: ok-{i}", f"f{i}.txt", date=f"2026-09-{i:02d}")
+    private_item = repo / "p.txt"
+    private_item.write_text(
+        "ruta C:\\Users\\Persona\\secreto " + "x" * 400 + "\n", encoding="utf-8"
+    )
     _git_repo(repo, "add", "-A")
-    _git_repo(repo, "commit", "-q", "-m", "feat: con ruta privada", fecha="2026-09-10")
-    sel = construir.seleccionar_commits(
-        repo, antes=CORTE, n_reales=2, n_trampas=1, pasos=PASOS_SINTETICOS, excluir=()
+    _git_repo(repo, "commit", "-q", "-m", "feat: con ruta privada", date="2026-09-10")
+    sel = construir.select_commits(
+        repo, before=CUTOFF, n_real=2, n_traps=1, steps=SYNTHETIC_STEPS, exclude=()
     )
-    assert _asuntos(sel.reales)[0] == "feat: con ruta privada"
-    sel = construir.seleccionar_commits(
+    assert _subjects(sel.real)[0] == "feat: con ruta privada"
+    sel = construir.select_commits(
         repo,
-        antes=CORTE,
-        n_reales=2,
-        n_trampas=1,
-        pasos=PASOS_SINTETICOS,
-        excluir=(),
-        descartar_si=lambda texto: bool(construir.datos_privados(texto)),
+        before=CUTOFF,
+        n_real=2,
+        n_traps=1,
+        steps=SYNTHETIC_STEPS,
+        exclude=(),
+        discard_if=lambda text: bool(construir.private_data(text)),
     )
-    assert "feat: con ruta privada" not in _asuntos(sel.reales + sel.trampas)
-    primero = sel.reales[0]
-    sel = construir.seleccionar_commits(
+    assert "feat: con ruta privada" not in _subjects(sel.real + sel.traps)
+    first = sel.real[0]
+    sel = construir.select_commits(
         repo,
-        antes=CORTE,
-        n_reales=2,
-        n_trampas=1,
-        pasos=PASOS_SINTETICOS,
-        excluir=(primero.hash[:7],),
-        descartar_si=lambda texto: bool(construir.datos_privados(texto)),
+        before=CUTOFF,
+        n_real=2,
+        n_traps=1,
+        steps=SYNTHETIC_STEPS,
+        exclude=(first.hash[:7],),
+        discard_if=lambda text: bool(construir.private_data(text)),
     )
-    assert primero.hash not in {c.hash for c in sel.reales + sel.trampas}
+    assert first.hash not in {c.hash for c in sel.real + sel.traps}
 
 
 # --- La trampa «de la misma zona» --------------------------------------------------------------------
 
 
-def _repo_de_la_zona(tmp_path):
-    repo = _repo_nuevo(tmp_path)
-    largo = "docs: " + "un asunto demasiado largo para una linea de commit " * 2  # > 72
-    assert len(largo) > 72
-    _confirmar(repo, largo.strip(), "grande.txt", tamano=80, fecha="2026-08-01")
-    _confirmar(
+def _zone_repo(tmp_path):
+    repo = _new_repo(tmp_path)
+    long = "docs: " + "un asunto demasiado largo para una linea de commit " * 2  # > 72
+    assert len(long) > 72
+    _confirm(repo, long.strip(), "grande.txt", size=80, date="2026-08-01")
+    _confirm(
         repo,
         "fix: asunto del segundo fichero (#12)",
         "chico.txt",
-        tamano=80,
-        fecha="2026-08-02",
-        cuerpo="Primera linea del cuerpo.\n* feat: el asunto repetido por el squash\nSegunda linea.\n\n"
+        size=80,
+        date="2026-08-02",
+        body="Primera linea del cuerpo.\n* feat: el asunto repetido por el squash\nSegunda linea.\n\n"
         "Co-Authored-By: Alguien <a@example.org>\nClaude-Session: https://claude.ai/code/session_ABCDEFGHIJ",
     )
     # El commit del caso trampa: toca `grande.txt` mucho y `chico.txt` poco.
-    ruta = repo / "grande.txt"
-    ruta.write_text(
-        ruta.read_text(encoding="utf-8") + "linea nueva\n" * 40, encoding="utf-8", newline="\n"
+    path = repo / "grande.txt"
+    path.write_text(
+        path.read_text(encoding="utf-8") + "linea nueva\n" * 40, encoding="utf-8", newline="\n"
     )
     (repo / "chico.txt").write_text("otro\n", encoding="utf-8", newline="\n")
     _git_repo(repo, "add", "-A")
-    _git_repo(repo, "commit", "-q", "-m", "feat: el cambio del caso", fecha="2026-09-01")
+    _git_repo(repo, "commit", "-q", "-m", "feat: el cambio del caso", date="2026-09-01")
     return repo
 
 
-def test_la_trampa_de_la_misma_zona_tiene_un_asunto_de_72_caracteres_como_mucho(tmp_path):
-    repo = _repo_de_la_zona(tmp_path)
-    caso = next(
+def test_same_zone_trap_subject_at_most_72_chars(tmp_path):
+    repo = _zone_repo(tmp_path)
+    case = next(
         c
-        for c in construir._commits_de(repo, "main", None)
-        if c.asunto == "feat: el cambio del caso"
+        for c in construir._commits_of(repo, "main", None)
+        if c.subject == "feat: el cambio del caso"
     )
     # `grande.txt` es el fichero mas cambiado: su unico otro commit tiene un asunto de mas de 72.
-    assert construir._numstat(repo, caso.hash)[0][1] == "grande.txt"
-    zona = construir.asunto_misma_zona(repo, caso, {caso.hash}, antes=CORTE)
-    assert zona is not None
-    assert len(zona["asunto"]) <= 72
+    assert construir._numstat(repo, case.hash)[0][1] == "grande.txt"
+    zone = construir.same_zone_subject(repo, case, {case.hash}, before=CUTOFF)
+    assert zone is not None
+    assert len(zone["asunto"]) <= 72
     # Pasa al siguiente fichero mas cambiado, y le quita el « (#12)» del squash.
-    assert (zona["fichero"], zona["asunto"]) == ("chico.txt", "fix: asunto del segundo fichero")
+    assert (zone["fichero"], zone["asunto"]) == ("chico.txt", "fix: asunto del segundo fichero")
     # El cuerpo real, sin firmas, sin enlaces de sesion y sin el asunto repetido.
-    assert zona["cuerpo_real"] == ["Primera linea del cuerpo.", "Segunda linea."]
+    assert zone["cuerpo_real"] == ["Primera linea del cuerpo.", "Segunda linea."]
     # Sin ningun candidato, no inventa ninguno.
     assert (
-        construir.asunto_misma_zona(repo, caso, {caso.hash}, antes=CORTE, maximo_asunto=5) is None
+        construir.same_zone_subject(repo, case, {case.hash}, before=CUTOFF, max_subject=5) is None
     )
 
 
-def test_armar_trampas_da_tres_por_juego_con_los_tres_tipos(tmp_path, monkeypatch):
-    repo = _repo_nuevo(tmp_path)
+def test_build_traps_gives_three_per_set_with_three_kinds(tmp_path, monkeypatch):
+    repo = _new_repo(tmp_path)
     for z in range(3):  # el commit de cada zona, de asunto corto y fuera de la seleccion
-        _confirmar(repo, f"docs: zona {z}", f"z{z}.txt", tamano=30, fecha="2026-08-01")
+        _confirm(repo, f"docs: zona {z}", f"z{z}.txt", size=30, date="2026-08-01")
     for i in range(1, 12):
-        fichero = f"z{(i - 1) % 3}.txt"
-        _confirmar(repo, f"feat: ok-{i:02d}", fichero, tamano=400, fecha=f"2026-09-{i:02d}")
-    sel = construir.seleccionar_commits(
-        repo, antes=CORTE, excluir=(), n_reales=2, n_trampas=9, pasos=PASOS_SINTETICOS
+        file = f"z{(i - 1) % 3}.txt"
+        _confirm(repo, f"feat: ok-{i:02d}", file, size=400, date=f"2026-09-{i:02d}")
+    sel = construir.select_commits(
+        repo, before=CUTOFF, exclude=(), n_real=2, n_traps=9, steps=SYNTHETIC_STEPS
     )
-    assert len(sel.trampas) == 9
-    redactadas = {
-        c.corto: {
-            "asunto": f"chore: redactada {c.corto}",
+    assert len(sel.traps) == 9
+    written = {
+        c.short: {
+            "asunto": f"chore: redactada {c.short}",
             "cuerpo": [f"linea {n}" for n in range(5)],
         }
-        for k, c in enumerate(sel.trampas)
+        for k, c in enumerate(sel.traps)
         if k % 3 != 0
     }
-    reservas = {
-        c.corto: [f"reserva {n}" for n in range(5)] for k, c in enumerate(sel.trampas) if k % 3 == 0
+    reserves = {
+        c.short: [f"reserva {n}" for n in range(5)] for k, c in enumerate(sel.traps) if k % 3 == 0
     }
-    monkeypatch.setattr(construir, "TRAMPAS_REDACTADAS", redactadas)
-    monkeypatch.setattr(construir, "RESERVAS_MISMA_ZONA", reservas)
-    trampas = construir.armar_trampas(repo, sel, antes=CORTE)
-    assert [j["juego"] for j in trampas["juegos"]] == [1, 2, 3]
-    todos = []
-    for juego in trampas["juegos"]:
-        assert [t["tipo"] for t in juego["trampas"]] == ["misma-zona", "secundario", "generico"]
-        for t in juego["trampas"]:
+    monkeypatch.setattr(construir, "WRITTEN_TRAPS", written)
+    monkeypatch.setattr(construir, "SAME_ZONE_RESERVES", reserves)
+    traps = construir.build_traps(repo, sel, before=CUTOFF)
+    assert [j["juego"] for j in traps["juegos"]] == [1, 2, 3]
+    all_items = []
+    for case_set_item in traps["juegos"]:
+        assert [t["tipo"] for t in case_set_item["trampas"]] == [
+            "misma-zona",
+            "secundario",
+            "generico",
+        ]
+        for t in case_set_item["trampas"]:
             assert len(t["asunto"]) <= 72 and 1 <= len(t["cuerpo"]) <= 5
-            todos.append(t["caso"])
-    assert len(set(todos)) == 9
-    assert set(todos) == {f"commit-trampa-{c.corto}" for c in sel.trampas}
+            all_items.append(t["caso"])
+    assert len(set(all_items)) == 9
+    assert set(all_items) == {f"commit-trampa-{c.short}" for c in sel.traps}
     # La de la misma zona es el asunto REAL de otro commit del mismo fichero, fuera de la seleccion.
-    primera = trampas["juegos"][0]["trampas"][0]
-    assert primera["asunto"].startswith("docs: zona ")
-    assert primera["asunto_de"]["hash"] not in {c.hash for c in sel.reales + sel.trampas}
-    assert primera["cuerpo_origen"] != "real-reescrito"
+    first_one = traps["juegos"][0]["trampas"][0]
+    assert first_one["asunto"].startswith("docs: zona ")
+    assert first_one["asunto_de"]["hash"] not in {c.hash for c in sel.real + sel.traps}
+    assert first_one["cuerpo_origen"] != "real-reescrito"
     # Con el cuerpo reescrito a mano, ese cuerpo manda sobre las lineas reales (partidas a 80 columnas).
-    monkeypatch.setattr(
-        construir, "CUERPOS_MISMA_ZONA", {sel.trampas[0].corto: ["Una frase entera."]}
-    )
-    reescrita = construir.armar_trampas(repo, sel, antes=CORTE)["juegos"][0]["trampas"][0]
-    assert reescrita["cuerpo"] == ["Una frase entera."]
-    assert reescrita["cuerpo_origen"] == "real-reescrito"
+    monkeypatch.setattr(construir, "SAME_ZONE_BODIES", {sel.traps[0].short: ["Una frase entera."]})
+    rewritten = construir.build_traps(repo, sel, before=CUTOFF)["juegos"][0]["trampas"][0]
+    assert rewritten["cuerpo"] == ["Una frase entera."]
+    assert rewritten["cuerpo_origen"] == "real-reescrito"
     # Si falta la trampa redactada de un caso, no se inventa: se para.
-    monkeypatch.setattr(construir, "TRAMPAS_REDACTADAS", {})
+    monkeypatch.setattr(construir, "WRITTEN_TRAPS", {})
     with pytest.raises(ValueError, match="falta la trampa redactada"):
-        construir.armar_trampas(repo, sel, antes=CORTE)
+        construir.build_traps(repo, sel, before=CUTOFF)
 
 
 # --- Datos privados -----------------------------------------------------------------------------------
 
 
-def test_datos_privados_detecta_lo_privado_y_deja_pasar_lo_inocuo():
-    privados = construir.datos_privados(
+def test_private_data_detects_private_and_lets_harmless_pass():
+    private_items = construir.private_data(
         "ruta C:\\Users\\Persona\\x.py y /home/persona/y, ip 100.64.1.2, sesion session_ABCDEFGH12, "
         "correo persona@gmail.com"
     )
-    assert len(privados) == 5, privados
-    inocuo = (
+    assert len(private_items) == 5, private_items
+    harmless = (
         "C:\\Users\\...\\hook.py, /Users/<usuario>/x, 127.0.0.1, 0.0.0.0, 203.0.113.7, version 0.28.0, "
         "marta@example.org, +@pytest.fixture y opencode-ai@1.18.11"
     )
-    assert construir.datos_privados(inocuo) == []
+    assert construir.private_data(harmless) == []
 
 
 # --- El corpus construido -----------------------------------------------------------------------------
 
 
-def _corpus_construido():
-    ruta = os.environ.get("LD_AFINIDAD_CORPUS") or str(RAIZ / "benchmarks" / "afinidad-2026-10")
-    cases = Path(ruta) / "cases.json"
+def _built_corpus():
+    path = os.environ.get("LD_AFFINITY_CORPUS") or str(RAIZ / "benchmarks" / "afinidad-2026-10")
+    cases = Path(path) / "cases.json"
     if not cases.is_file():
-        pytest.skip(f"el corpus de afinidad aun no esta construido en {ruta}")
-    return Path(ruta), cases
+        pytest.skip(f"el corpus de afinidad aun no esta construido en {path}")
+    return Path(path), cases
 
 
 @pytest.fixture
-def afinidad():
-    carpeta, cases = _corpus_construido()
+def affinity():
+    folder, cases = _built_corpus()
     corpus = benchmark.load_corpus(cases)  # verifica el sha256 de cada fuente
-    return carpeta, json.loads(cases.read_text(encoding="utf-8")), corpus
+    return folder, json.loads(cases.read_text(encoding="utf-8")), corpus
 
 
-def test_el_corpus_de_afinidad_tiene_el_tamano_de_la_spec(afinidad):
-    _, datos, corpus = afinidad
-    casos = datos["cases"]
+def test_affinity_corpus_has_spec_size(affinity):
+    _, data, corpus = affinity
+    cases = data["cases"]
 
-    def contar(tool, **filtro):
+    def tally(tool, **filter_fn):
         return sum(
-            1 for c in casos if c["tool"] == tool and all(c.get(k) == v for k, v in filtro.items())
+            1
+            for c in cases
+            if c["tool"] == tool and all(c.get(k) == v for k, v in filter_fn.items())
         )
 
-    nuevos = {"discriminante": True, "rol_en_hoja": None}
-    assert contar("local_classify", **nuevos) == 8
-    assert contar("local_extract", **nuevos) == 8
-    assert contar("local_translate", **nuevos) == 4
-    assert contar("local_lint_summary", **nuevos) == 4
-    assert contar("local_delegate", **nuevos) == 4
-    assert contar("local_commit_msg", rol_en_hoja="real") == 30
-    assert contar("local_commit_msg", rol_en_hoja="trampa") == 9
-    regresion = [
+    new_items = {"discriminante": True, "rol_en_hoja": None}
+    assert tally("local_classify", **new_items) == 8
+    assert tally("local_extract", **new_items) == 8
+    assert tally("local_translate", **new_items) == 4
+    assert tally("local_lint_summary", **new_items) == 4
+    assert tally("local_delegate", **new_items) == 4
+    assert tally("local_commit_msg", rol_en_hoja="real") == 30
+    assert tally("local_commit_msg", rol_en_hoja="trampa") == 9
+    regression = [
         c["id"]
-        for c in casos
+        for c in cases
         if c["discriminante"] is False and c["kind"] == "calidad" and c["rol_en_hoja"] is None
     ]
-    assert sorted(regresion) == sorted(construir.REGRESION_DE_F2)
-    assert [c["id"] for c in casos if c["kind"] == "techo"] == [construir.CASO_TECHO_DE_F2]
-    assert len(corpus.cases) == len(casos) == 73
-    assert construir.CASO_REAL_DE_F2 in {c["id"] for c in casos if c.get("rol_en_hoja") == "real"}
+    assert sorted(regression) == sorted(construir.F2_REGRESSION)
+    assert [c["id"] for c in cases if c["kind"] == "techo"] == [construir.F2_CEILING_CASE]
+    assert len(corpus.cases) == len(cases) == 73
+    assert construir.F2_REAL_CASE in {c["id"] for c in cases if c.get("rol_en_hoja") == "real"}
 
 
-def test_cada_caso_mecanico_discrimina_con_su_puntuador(afinidad):
+def test_each_mechanical_case_discriminates_with_its_scorer(affinity):
     # El criterio 1, en su parte del corpus: la referencia buena puntua 1 y la mala, menos de 1. Si
     # falla, el caso esta mal construido: se corrige el caso, no el puntuador.
-    _, datos, _ = afinidad
-    analizar = construir.analizador()
-    mecanicos = [
-        c for c in datos["cases"] if c["discriminante"] and c["tool"] != "local_commit_msg"
+    _, data, _ = affinity
+    analyze = construir.analyzer()
+    mechanical_ones = [
+        c for c in data["cases"] if c["discriminante"] and c["tool"] != "local_commit_msg"
     ]
-    assert len(mecanicos) == 28
-    for caso in mecanicos:
-        ok = analizar.puntuar_afinidad(caso, caso["reference_ok"])
-        malo = analizar.puntuar_afinidad(caso, caso["reference_bad"])
-        assert ok == {"calidad": 1.0, "formato": True}, caso["id"]
-        assert malo["calidad"] < 1.0, caso["id"]
+    assert len(mechanical_ones) == 28
+    for case in mechanical_ones:
+        ok = analyze.score_affinity(case, case["reference_ok"])
+        bad = analyze.score_affinity(case, case["reference_bad"])
+        assert ok == {"calidad": 1.0, "formato": True}, case["id"]
+        assert bad["calidad"] < 1.0, case["id"]
 
 
-def test_el_corpus_declara_lo_que_exige_la_spec(afinidad):
-    _, datos, _ = afinidad
-    por_id = {c["id"]: c for c in datos["cases"]}
-    clasificar = [c for c in datos["cases"] if c["tool"] == "local_classify" and c["discriminante"]]
-    assert all(len(c["puntuador"]["etiquetas"]) >= 4 for c in clasificar)
+def test_corpus_declares_what_spec_requires(affinity):
+    _, data, _ = affinity
+    by_id = {c["id"]: c for c in data["cases"]}
+    classify_fn = [c for c in data["cases"] if c["tool"] == "local_classify" and c["discriminante"]]
+    assert all(len(c["puntuador"]["etiquetas"]) >= 4 for c in classify_fn)
     assert all(
-        set(c["puntuador"]["aceptables"]) <= set(c["puntuador"]["etiquetas"]) for c in clasificar
+        set(c["puntuador"]["aceptables"]) <= set(c["puntuador"]["etiquetas"]) for c in classify_fn
     )
-    assert (
-        "clasifica-bug-con-etiquetas-en-ingles" in por_id
-    )  # etiquetas en ingles, texto en español
-    extraer = [
+    assert "clasifica-bug-con-etiquetas-en-ingles" in by_id  # etiquetas en ingles, texto en español
+    extract_fn = [
         c["puntuador"]["esperado"]
-        for c in por_id.values()
+        for c in by_id.values()
         if c["tool"] == "local_extract" and c["discriminante"]
     ]
-    assert any(None in e.values() for e in extraer)  # un campo ausente que sale null
-    assert any(isinstance(v, (int, float)) for e in extraer for v in e.values())  # numeros
-    for caso in datos["cases"]:
-        assert caso["procedencia"] and caso["origen"]
-        if caso["kind"] == "calidad":
-            assert caso["system"] and caso["user_template"] and caso["max_tokens"]
-            assert caso["production"]["calls"] == 1, caso["id"]
-        if caso["discriminante"]:
-            assert caso["reference_ok"] and caso["reference_bad"], caso["id"]
+    assert any(None in e.values() for e in extract_fn)  # un campo ausente que sale null
+    assert any(isinstance(v, (int, float)) for e in extract_fn for v in e.values())  # numeros
+    for case in data["cases"]:
+        assert case["procedencia"] and case["origen"]
+        if case["kind"] == "calidad":
+            assert case["system"] and case["user_template"] and case["max_tokens"]
+            assert case["production"]["calls"] == 1, case["id"]
+        if case["discriminante"]:
+            assert case["reference_ok"] and case["reference_bad"], case["id"]
     # Cada caso pide lo que la tool de produccion pide: el rol sale de la captura, no de una tabla.
-    assert {c["role"] for c in datos["cases"] if c["tool"] == "local_commit_msg"} == {"code"}
-    assert {c["role"] for c in datos["cases"] if c["tool"] == "local_classify"} == {"mechanical"}
+    assert {c["role"] for c in data["cases"] if c["tool"] == "local_commit_msg"} == {"code"}
+    assert {c["role"] for c in data["cases"] if c["tool"] == "local_classify"} == {"mechanical"}
 
 
-def test_las_trampas_no_coinciden_con_ningun_caso_real_ni_se_repiten(afinidad):
-    carpeta, datos, _ = afinidad
-    reales = [c for c in datos["cases"] if c.get("rol_en_hoja") == "real"]
-    trampas = [c for c in datos["cases"] if c.get("rol_en_hoja") == "trampa"]
-    assert not {c["commit"] for c in reales} & {c["commit"] for c in trampas}
-    assert not {c["source_sha256"] for c in reales} & {c["source_sha256"] for c in trampas}
-    assert len({c["source_sha256"] for c in reales + trampas}) == 39
-    trampas_json = json.loads((carpeta / "trampas.json").read_text(encoding="utf-8"))
+def test_traps_match_no_real_case_and_do_not_repeat(affinity):
+    folder, data, _ = affinity
+    real = [c for c in data["cases"] if c.get("rol_en_hoja") == "real"]
+    traps = [c for c in data["cases"] if c.get("rol_en_hoja") == "trampa"]
+    assert not {c["commit"] for c in real} & {c["commit"] for c in traps}
+    assert not {c["source_sha256"] for c in real} & {c["source_sha256"] for c in traps}
+    assert len({c["source_sha256"] for c in real + traps}) == 39
+    traps_json = json.loads((folder / "trampas.json").read_text(encoding="utf-8"))
     ids = []
-    for juego in trampas_json["juegos"]:
-        assert [t["tipo"] for t in juego["trampas"]] == ["misma-zona", "secundario", "generico"]
-        for t in juego["trampas"]:
+    for case_set_item in traps_json["juegos"]:
+        assert [t["tipo"] for t in case_set_item["trampas"]] == [
+            "misma-zona",
+            "secundario",
+            "generico",
+        ]
+        for t in case_set_item["trampas"]:
             assert len(t["asunto"]) <= 72 and 1 <= len(t["cuerpo"]) <= 5
-            assert construir._PREFIJO_CONVENCIONAL.match(t["asunto"]), t["asunto"]
+            assert construir._CONVENTIONAL_PREFIX.match(t["asunto"]), t["asunto"]
             ids.append(t["caso"])
-    assert sorted(ids) == sorted(c["id"] for c in trampas)
+    assert sorted(ids) == sorted(c["id"] for c in traps)
     # Cada commit sale de la regla; la lista esta en cases.json.
-    sel = datos["seleccion"]
+    sel = data["seleccion"]
     assert [x["hash"] for x in sel["reales"]] == [
-        c["commit"] for c in reales if c["id"] != construir.CASO_REAL_DE_F2
+        c["commit"] for c in real if c["id"] != construir.F2_REAL_CASE
     ]
 
 
-def test_nada_privado_en_lo_que_va_al_repo(afinidad):
-    carpeta, _, _ = afinidad
-    for fichero in [
-        carpeta / "cases.json",
-        carpeta / "trampas.json",
-        *sorted((carpeta / "fuentes").iterdir()),
+def test_nothing_private_goes_to_repo(affinity):
+    folder, _, _ = affinity
+    for file in [
+        folder / "cases.json",
+        folder / "trampas.json",
+        *sorted((folder / "fuentes").iterdir()),
     ]:
-        if fichero.suffix in (".png",):
+        if file.suffix in (".png",):
             continue
-        texto = fichero.read_text(encoding="utf-8", errors="replace")
-        assert construir.datos_privados(texto) == [], fichero.name
+        text = file.read_text(encoding="utf-8", errors="replace")
+        assert construir.private_data(text) == [], file.name
 
 
 # --- El idioma del mensaje de commit entra en el prompt capturado (REQ-044) -----------------------
 # Los casos de commit del corpus de afinidad llevan el prompt de produccion. Con
-# `LOCAL_DELEGATE_COMMIT_IDIOMA=es`, que es lo que tendra la PC, ese prompt tiene que pedir espanol.
+# `LOCAL_DELEGATE_COMMIT_LANGUAGE=es`, que es lo que tendra la PC, ese prompt tiene que pedir espanol.
 # La captura quita las variables del paquete del entorno, y esta es la excepcion.
-_DIFF_CHICO = "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n@@ -1 +1 @@\n-a\n+b\n"
+_SMALL_DIFF = "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n@@ -1 +1 @@\n-a\n+b\n"
 
 
-def _system_de_commit_capturado(tmp_path) -> str:
+def _captured_commit_system(tmp_path) -> str:
     from local_delegate import server
 
-    ruta = tmp_path / "chico.diff"
-    ruta.write_text(_DIFF_CHICO, encoding="utf-8")
-    with construir.produccion_interceptada() as llamadas:
-        server.local_commit_msg(path=str(ruta))
-    assert len(llamadas) == 1
-    return llamadas[0].system
+    path = tmp_path / "chico.diff"
+    path.write_text(_SMALL_DIFF, encoding="utf-8")
+    with construir.produccion_interceptada() as calls:
+        server.local_commit_msg(path=str(path))
+    assert len(calls) == 1
+    return calls[0].system
 
 
-def test_la_captura_conserva_el_idioma_del_commit_de_la_maquina(tmp_path, monkeypatch):
-    """Mutante: vaciar `VARIABLES_QUE_SE_CONSERVAN`. La captura borra la variable y el assert de
+def test_capture_keeps_machine_commit_language(tmp_path, monkeypatch):
+    """Mutante: vaciar `PRESERVED_VARIABLES`. La captura borra la variable y el assert de
     `en español.` falla: el corpus se habria construido con el prompt de un entorno limpio."""
-    monkeypatch.setenv("LOCAL_DELEGATE_COMMIT_IDIOMA", "es")
-    system = _system_de_commit_capturado(tmp_path)
+    monkeypatch.setenv("LOCAL_DELEGATE_COMMIT_LANGUAGE", "es")
+    system = _captured_commit_system(tmp_path)
     assert "(primera línea y cuerpo) en español." in system
-    assert os.environ["LOCAL_DELEGATE_COMMIT_IDIOMA"] == "es"  # y la deja como estaba
+    assert os.environ["LOCAL_DELEGATE_COMMIT_LANGUAGE"] == "es"  # y la deja como estaba
 
 
-def test_la_captura_sin_la_variable_pide_el_idioma_del_diff(tmp_path):
+def test_capture_without_variable_asks_diff_language(tmp_path):
     """Control del anterior: sin la variable, la captura sale con la otra orden."""
-    assert "LOCAL_DELEGATE_COMMIT_IDIOMA" not in os.environ
-    system = _system_de_commit_capturado(tmp_path)
+    assert "LOCAL_DELEGATE_COMMIT_LANGUAGE" not in os.environ
+    system = _captured_commit_system(tmp_path)
     assert "en el idioma predominante de los textos del diff" in system

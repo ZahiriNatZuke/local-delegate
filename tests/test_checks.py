@@ -1569,12 +1569,14 @@ def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
 # --- T12: config.fallback con `loaded` y el sinónimo obsoleto (REQ-022, REQ-023) ---------------
 
 
-@pytest.mark.parametrize("obsoleto", ["residente", "resident", "Residente"])
-def test_fallback_con_residente_funciona_como_loaded_y_avisa(recargar_config, tmp_path, obsoleto):
+@pytest.mark.parametrize("obsolete_value", ["residente", "resident", "Residente"])
+def test_fallback_with_resident_works_like_loaded_and_warns(
+    recargar_config, tmp_path, obsolete_value
+):
     """`residente,long` sigue valiendo como `loaded,long`, y `doctor` pide renombrarlo."""
     from local_delegate import cadenas
 
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsoleto},long")
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsolete_value},long")
     r = checks._probe_fallback(checks.Context(home=tmp_path))
 
     assert "renombra" in (r.fix_hint or "")
@@ -1586,7 +1588,7 @@ def test_fallback_con_residente_funciona_como_loaded_y_avisa(recargar_config, tm
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.OK
 
 
-def test_fallback_cargado_no_es_un_nombre_valido(recargar_config, tmp_path):
+def test_fallback_cargado_is_not_valid_name(recargar_config, tmp_path):
     """El paso se llama `loaded` (nombres que se teclean, en inglés); `cargado` no se acepta."""
     from local_delegate import cadenas
 
@@ -1597,9 +1599,7 @@ def test_fallback_cargado_no_es_un_nombre_valido(recargar_config, tmp_path):
     assert r.fix_hint == "usa roles (mechanical, long, code, loaded) o ids del catálogo de texto"
 
 
-def test_fallback_con_un_nombre_obsoleto_y_otro_desconocido_avisa_de_los_dos(
-    recargar_config, tmp_path
-):
+def test_fallback_with_obsolete_and_unknown_name_warns_both(recargar_config, tmp_path):
     """`residente,foo`: los dos avisos en el mismo resultado; arreglar uno no esconde el otro."""
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,foo")
     r = checks._probe_fallback(checks.Context(home=tmp_path))
