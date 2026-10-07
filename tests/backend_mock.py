@@ -161,6 +161,48 @@ class _Mock:
 mock = _Mock()
 
 
+# --- Respuesta de chat con `timings` (T14 de daemon-reparte-el-backend) ------------------------
+
+
+def llama_timings(
+    *,
+    prompt_n: int = 1000,
+    prompt_ms: float = 500.0,
+    predicted_n: int = 150,
+    predicted_ms: float = 10_000.0,
+) -> dict:
+    """Un bloque `timings` como el de llama-server, con sus derivados (`*_per_second`)."""
+    return {
+        "prompt_n": prompt_n,
+        "prompt_ms": prompt_ms,
+        "prompt_per_second": prompt_n * 1000 / prompt_ms if prompt_ms else 0.0,
+        "predicted_n": predicted_n,
+        "predicted_ms": predicted_ms,
+        "predicted_per_second": predicted_n * 1000 / predicted_ms if predicted_ms else 0.0,
+    }
+
+
+def chat_response(
+    content: str = "hecho",
+    *,
+    timings: dict | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+) -> httpx2.Response:
+    """Un 200 de `/chat/completions`. Con `timings`, los lleva como llama-server; sin él, no."""
+    body: dict = {"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}
+    usage = {
+        key: value
+        for key, value in (("prompt_tokens", tokens_in), ("completion_tokens", tokens_out))
+        if value is not None
+    }
+    if usage:
+        body["usage"] = usage
+    if timings is not None:
+        body["timings"] = timings
+    return httpx2.Response(200, json=body)
+
+
 # --- Modo «cuenta cambios» (T10 de daemon-reparte-el-backend) ----------------------------------
 
 

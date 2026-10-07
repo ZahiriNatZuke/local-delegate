@@ -24,7 +24,7 @@ import threading
 import time
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,7 @@ from . import (
     enfriamiento,
     estado_json,
     fallos,
+    pace,
     preguntas,
     secciones,
     topology,
@@ -519,6 +520,143 @@ def _bloqueo_reciente(path: str) -> str | None:
     return None
 
 
+# --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-024 a REQ-028) -----------------
+
+
+def _timings_of(data: Any) -> dict | None:
+    """Los `timings` de una respuesta de llama-server, o `None` si no vienen (REQ-024)."""
+    timings = data.get("timings") if isinstance(data, dict) else None
+    return dict(timings) if isinstance(timings, dict) else None
+
+
+def _timing_sum(timed: Sequence[dict], key: str) -> float | None:
+    """La suma de `key` sobre las llamadas con `timings`; `None` si a alguna le falta el dato.
+
+    Un `timings` incompleto omite los campos que dependen de él, nunca los da a medias.
+    """
+    total = 0.0
+    for timings in timed:
+        value = timings.get(key)
+        if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
+            return None
+        total += float(value)
+    return total
+
+
+#: La velocidad normal por modelo (REQ-025): una sola referencia, sin tramos (T3). Se siembra una
+#: vez por origen de la siembra (el mes en curso y el anterior, o el log fijo entero) y se alimenta
+#: con cada evento.
+_pace_lock = threading.Lock()
+_pace_state: tuple[tuple[str, Path], pace.References] | None = None
+
+
+def _pace_source() -> tuple[str, Path]:
+    """De dónde se siembra: el directorio de logs rotados, o el fichero del log fijo."""
+    if config.LOG_ROTATION_ENABLED:
+        return ("rotated", Path(config.LOG_DIR))
+    return ("fixed", Path(config.USAGE_LOG))
+
+
+def _pace_references() -> pace.References:
+    """Las referencias del proceso, sembradas la primera vez que hacen falta (aclaración T14).
+
+    Van atadas a lo que se siembra: si cambia (otro `LOCAL_DELEGATE_LOG_DIR`, otro
+    `LOCAL_DELEGATE_LOG`, o un test con su `tmp_path`), se siembran de nuevo desde ahí.
+    """
+    global _pace_state
+    source = _pace_source()
+    with _pace_lock:
+        if _pace_state is not None and _pace_state[0] == source:
+            return _pace_state[1]
+        references = pace.References()
+        kind, location = source
+        if kind == "rotated":
+            pace.seed_from_log(references, location, _utcnow())
+        else:
+            # Log fijo: no hay meses que leer, se siembra con el fichero entero.
+            try:
+                references.seed(location.read_text(encoding="utf-8", errors="replace").splitlines())
+            except Exception:
+                pass  # sembrar es una mejora: sin siembra, la ventana se llena con los eventos
+        _pace_state = (source, references)
+        return references
+
+
+def _slowness_fields(
+    attempts: Sequence[Intento],
+    *,
+    model: str,
+    latency_ms: int,
+    ok: bool,
+    tokens_in: int | None,
+    tokens_out: int | None,
+    local_backend: bool,
+) -> dict[str, Any]:
+    """Los campos de espera y ritmo de un evento (REQ-024 a REQ-026). Puede lanzar: lo envuelve
+    `_log_event` (REQ-028).
+
+    `inference_ms` y `wait_ms` suman **todas** las llamadas reales de la operación, saltos
+    incluidos; una llamada sin `timings` (un timeout, un 500) cuenta entera como espera. Los ritmos
+    (`tok_s`, `prefill_tok_s`) salen solo de las llamadas del modelo **del evento**, el que
+    respondió: con un salto, mezclar la velocidad de dos modelos daría un `slow` falso y
+    contaminaría la ventana del respaldo (aclaración T14). Sin `timings` en ninguna llamada, `{}`:
+    los campos se omiten, nunca valen 0. La referencia se mide **antes** de registrar el evento,
+    para que una llamada no se compare consigo misma.
+    """
+    timed = [a.timings for a in attempts if isinstance(a.timings, dict)]
+    if not timed:
+        return {}
+    fields: dict[str, Any] = {}
+    prompt_ms = _timing_sum(timed, "prompt_ms")
+    predicted_ms = _timing_sum(timed, "predicted_ms")
+    if prompt_ms is not None and predicted_ms is not None:
+        inference_ms = round(prompt_ms + predicted_ms)
+        fields["inference_ms"] = inference_ms
+        fields["wait_ms"] = max(0, int(latency_ms) - inference_ms)
+    own = [a.timings for a in attempts if a.modelo == model and isinstance(a.timings, dict)]
+    if own:
+        own_predicted_ms = _timing_sum(own, "predicted_ms")
+        own_predicted_n = _timing_sum(own, "predicted_n")
+        if own_predicted_n is not None and own_predicted_ms:
+            fields["tok_s"] = round(own_predicted_n * 1000 / own_predicted_ms, 2)
+        own_prompt_ms = _timing_sum(own, "prompt_ms")
+        own_prompt_n = _timing_sum(own, "prompt_n")
+        if own_prompt_n is not None and own_prompt_ms:
+            fields["prefill_tok_s"] = round(own_prompt_n * 1000 / own_prompt_ms, 2)
+    if ok and "tok_s" in fields and tokens_out is not None:
+        fields.update(
+            _pace_references().measure(
+                model,
+                fields["tok_s"],
+                tokens_in,
+                threshold=config.SLOW_THRESHOLD,
+                tokens_out=tokens_out,
+            )
+        )
+    if fields.get("slow") and local_backend:
+        from .web import sysinfo
+
+        ram = sysinfo.ram_stats()
+        if ram and ram.get("free_gb") is not None:
+            fields["free_ram_mb"] = round(float(ram["free_gb"]) * 1024)
+    return fields
+
+
+def _describe_pace() -> str:
+    """REQ-027: la velocidad de referencia de cada modelo y cuántas muestras la forman."""
+    rows = _pace_references().summary()
+    if not rows:
+        return "Ritmo de referencia: sin muestras todavía"
+    parts = []
+    for row in rows:
+        median = row["median"]
+        speed = (
+            f"{median:.1f}".replace(".", ",") + " tok/s" if median is not None else "sin referencia"
+        )
+        parts.append(f"{row['model']} {speed} ({row['samples']} muestras)")
+    return "Ritmo de referencia: " + "; ".join(parts)
+
+
 def _log_event(
     *,
     tool: str,
@@ -549,11 +687,15 @@ def _log_event(
     fallo_conexion: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
+    attempts: Sequence[Intento] = (),
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
 
     Los campos del respaldo (F3, REQ-013) son aditivos: `model` sigue siendo el modelo que
     RESPONDIÓ, así que un evento sin salto se escribe igual que antes y el histórico se lee igual.
+
+    `attempts` son las llamadas reales de la operación: de sus `timings` salen la espera, la
+    inferencia y el ritmo (REQ-024 a REQ-026).
     """
     try:
         rec: dict = {
@@ -668,9 +810,32 @@ def _log_event(
             rec["turn_wait_ms"] = int(turn_wait_ms)
         if turn is not None:
             rec["turn"] = turn
+        # Espera frente a lentitud (REQ-024 a REQ-026). Su propio `try`: el general de abajo solo
+        # atrapa `OSError`, y observar no puede romper una tool (REQ-028). Si algo falla, el
+        # evento se escribe sin ninguno de estos campos.
+        try:
+            rec.update(
+                _slowness_fields(
+                    attempts,
+                    model=model,
+                    latency_ms=latency_ms,
+                    ok=ok,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                    local_backend=rec["backend"] == "local",
+                )
+            )
+        except Exception:
+            pass
         log_path = _current_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         _append_log_line(log_path, json.dumps(rec, ensure_ascii=False) + "\n")
+        # Después de medir: el evento entra en la ventana de su modelo (REQ-025).
+        if "tok_s" in rec:
+            try:
+                _pace_references().record(rec)
+            except Exception:
+                pass
     except OSError:
         pass  # el logging es best-effort; jamás propaga
 
@@ -832,6 +997,9 @@ class ChatResult:
     #: La causa de un `connect_error` (`fallos.CausaConexion`, como texto), y `None` en cualquier
     #: otro caso. Va al log como `fallo_conexion` (REQ-017); `error` sigue diciendo `connect_error`.
     fallo_conexion: str | None = None
+    #: Los `timings` de llama-server tal como llegan (`prompt_n`, `prompt_ms`, `predicted_n`,
+    #: `predicted_ms`…), o `None` si el backend no los manda (REQ-024).
+    timings: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -847,6 +1015,9 @@ class Intento:
     error: str | None
     clase: str | None
     ms: int
+    #: Los `timings` de la respuesta (REQ-024): de aquí salen la inferencia y el ritmo del evento.
+    #: Fuera de la comparación y del hash: un dict no es hashable.
+    timings: dict | None = field(default=None, compare=False)
 
 
 #: Las clases que permiten saltar (tabla de F3). Capacidad solo al residente (REQ-018).
@@ -898,7 +1069,7 @@ def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
     )
 
 
-def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
+def _fallo_de_cuerpo(model: str, clase: fallos.Clase, timings: dict | None = None) -> ChatResult:
     """El error legible de una respuesta que llegó con 200 y aun así no sirve.
 
     Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
@@ -913,12 +1084,14 @@ def _fallo_de_cuerpo(model: str, clase: fallos.Clase) -> ChatResult:
             ok=False,
             error="config_max_tokens",
             clase=clase,
+            timings=timings,
         )
     return ChatResult(
         text=f"[local-delegate error] respuesta sin contenido utilizable de {model}.",
         ok=False,
         error="bad_response",
         clase=clase,
+        timings=timings,
     )
 
 
@@ -1043,7 +1216,8 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 )
             )
             if clase is not None:
-                return _fallo_de_cuerpo(model, clase)
+                # Un 200 inservible también ocupó la GPU: su inferencia cuenta en el evento.
+                return _fallo_de_cuerpo(model, clase, _timings_of(data))
             choice = data["choices"][0]
             usage = data.get("usage") or {}
             return ChatResult(
@@ -1052,6 +1226,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 finish_reason=choice.get("finish_reason"),
                 tokens_in=usage.get("prompt_tokens"),
                 tokens_out=usage.get("completion_tokens"),
+                timings=_timings_of(data),
             )
         except httpx2.HTTPError as e:
             # Un solo `except` para toda la familia, y la diferencia la marca el clasificador.
@@ -1373,7 +1548,7 @@ def _attempt(
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
     result, schema, ms = _llamar_modelo(model, payload, json_schema_fallback)
-    attempts.append(Intento(model, result.ok, result.error, result.clase, ms))
+    attempts.append(Intento(model, result.ok, result.error, result.clase, ms, result.timings))
     if result.ok:
         state.registrar_exito(model)
     elif result.clase is not None:
@@ -1814,6 +1989,7 @@ def _chat(
         num_secciones=num_secciones,
         focus=focus,
         fallo_conexion=None if result.ok else result.fallo_conexion,
+        attempts=intentos,
         **op.log_fields(),
     )
     # Un fallo del backend NO se escribe al archivo: `result.text` trae el mensaje de error, y
@@ -2048,13 +2224,16 @@ def _chat_chunked(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     truncated_out = False
+    # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
+    all_attempts: list[Intento] = []
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
 
-    def _accumulate(result: ChatResult, ms: int, llamadas: int) -> None:
+    def _accumulate(result: ChatResult, ms: int, attempts: list[Intento]) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
-        calls += llamadas
+        all_attempts.extend(attempts)
+        calls += len(attempts)
         latency_ms += ms
         if result.tokens_in is not None:
             tokens_in = (tokens_in or 0) + result.tokens_in
@@ -2068,7 +2247,7 @@ def _chat_chunked(
         result, ms, intentos = vigente.llamar(
             system, build_user(piece.strip()), max_tokens, temperature, tamano=len(piece)
         )
-        _accumulate(result, ms, len(intentos))
+        _accumulate(result, ms, intentos)
         if not result.ok:
             failed = result
             return None
@@ -2131,6 +2310,7 @@ def _chat_chunked(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
+        attempts=all_attempts,
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
@@ -2268,6 +2448,8 @@ def _chat_map_reduce(
     tokens_out: int | None = None
     failed: ChatResult | None = None
     cortadas = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
+    # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
+    all_attempts: list[Intento] = []
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
     op = _OperationTurn(entry_id, model, tool)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
@@ -2277,6 +2459,7 @@ def _chat_map_reduce(
         result, ms, intentos = vigente.llamar(
             sys_prompt, user, max_tokens, temperature, tamano=len(user)
         )
+        all_attempts.extend(intentos)
         calls += len(intentos)
         latency_ms += ms
         if result.tokens_in is not None:
@@ -2468,6 +2651,7 @@ def _chat_map_reduce(
         chunks=calls,
         num_secciones=num_secciones,
         focus=focus,
+        attempts=all_attempts,
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
@@ -3805,6 +3989,11 @@ def local_status() -> str:
         # panel, y el bruto entre paréntesis. Los fallos no suman a ninguno de los dos.
         f"contexto conservado: ~{net_tokens} tokens netos (bruto ~{saved_tokens})"
     )
+    # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028).
+    try:
+        lines.append(f"  {_describe_pace()}")
+    except Exception:
+        pass
 
     lines.append("")
     if config.WEB_ENABLED:

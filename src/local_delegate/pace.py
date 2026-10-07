@@ -39,7 +39,7 @@ from typing import Any
 WINDOW = 50
 MINIMUM = 10
 MINIMAL_OUTPUT = 8
-#: Umbral por defecto de `slow` (decision del usuario); el daemon pasa `config.UMBRAL_LENTO`.
+#: Umbral por defecto de `slow` (decision del usuario); el daemon pasa `config.SLOW_THRESHOLD`.
 THRESHOLD = 0.5
 SPANS = ("<2k", "2k-10k", ">10k")
 SPAN_LIMITS = (2_000, 10_000)

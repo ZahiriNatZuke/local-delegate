@@ -702,6 +702,50 @@ nombres nuevos en T14 a T17 y en sus filas de propiedad de ficheros.
 - Config real de llama-swap: `sha256` sin cambios
   (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
 
+## Ola 8 — T14, espera frente a lentitud (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. Cada evento del log separa la
+espera de la inferencia (`inference_ms`, `wait_ms`, `tok_s`, `prefill_tok_s`) a partir de los
+`timings` de llama-server, y con referencia lleva `pace_rel`, `slow` y, con backend local,
+`free_ram_mb`; `local_status` da el ritmo de referencia y el panel, la marca «lento ×0,37».
+Evidencia completa (qué se hizo, controles con el assert que disparó, decisiones propias y
+riesgos): [evidencias/T14.md](evidencias/T14.md).
+
+### Comprobaciones
+
+- Línea de verificación de T14: `170 passed, 1 warning in 8.72s`.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2192 passed, 2 skipped, 1 warning in 221.70s (0:03:41)` (antes, 2180; +12).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `177 files already formatted`.
+- `node --check` del `<script>` del panel extraído de `metrics.render_index()`: sin errores.
+- Controles: tres (a) vistos fallar contra el código de hoy y seis mutantes (b) (M1 a M6), todos
+  mutan, caen en el assert del plan y se restauran con sha256 comprobado.
+- Tocado por la integración: nada fuera de la lista de T14 salvo un comentario de `pace.py`
+  (declarado en la evidencia). La guarda `test_post_chat_caminos.py` cazó en la primera pasada una
+  forma de `return` que mi cambio había roto; se arregló el código, no el test.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
+### Corrección tras la revisión de la ola 8 (2026-10-07)
+
+Un hallazgo importante y siete menores, con su arreglo y su mutante, en `evidencias/T14.md`
+(«Corrección tras la revisión de la ola 8»). Lo principal: con salto, el ritmo del evento (`tok_s`,
+`prefill_tok_s`, y con él `pace_rel`, `slow`, `free_ram_mb` y la ventana) es solo el del modelo que
+respondió, mientras `inference_ms` y `wait_ms` siguen sumando todas las llamadas. Aclaración nueva en
+la tabla del 2026-10-07 de `spec.md` y fila de nombres de T14 en la de renombrado; `plan.md` T14
+puntos 3 y 4 marcados. Además: control de verdad de «medir antes de registrar», caché atada a lo que
+se siembra, nombres en inglés y clase propia `slowchip`.
+
+- Línea de verificación de T14: `175 passed, 1 warning in 9.51s`.
+- Suite completa: `2197 passed, 2 skipped, 1 warning in 226.18s (0:03:46)`.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `177 files already formatted`; `node --check` del JS del panel: sin errores.
+- Controles: tres mutantes nuevos (M7 con tres tests, M8, M9) y M1 a M6 repetidos, todos mutan y
+  caen en su assert.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

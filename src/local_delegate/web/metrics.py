@@ -1178,6 +1178,7 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
   background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
 .fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
+.slowchip{background:color-mix(in srgb,var(--red,#dc2626) 14%,transparent);color:var(--red,#dc2626)}
 .flow{color:var(--faint)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .dot.ok{background:var(--acc);box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
@@ -2491,6 +2492,19 @@ function drawSrcDonut(ev){
         tooltip:{callbacks:{label:c=>' '+c.label+': '+F.format(c.parsed)+' llamadas'}}}}});
 }
 
+// Espera frente a lentitud (REQ-027). `slowMark` marca una llamada que generó por debajo de la
+// velocidad normal de su modelo: «lento ×0,37». Sin `slow`, nada. Funciones puras: las corre node.
+function slowMark(e){
+  if(!e || e.slow!==true || e.pace_rel===null || e.pace_rel===undefined) return '';
+  return 'lento ×' + fmtNum(e.pace_rel, 2);
+}
+// La espera (turno, plaza, cola de llama-swap, carga) y la inferencia, por separado. Sin
+// `inference_ms` (backend sin `timings`), nada: no se inventa un reparto.
+function waitInferenceText(e){
+  if(!e || e.inference_ms===null || e.inference_ms===undefined) return '';
+  return 'espera ' + fmtSeg(e.wait_ms) + ' · inferencia ' + fmtSeg(e.inference_ms);
+}
+
 function drawActivity(ev){
   document.getElementById('actCount').textContent=plural(ev.length,'llamada','llamadas');
   const pager=document.getElementById('pager');
@@ -2510,12 +2524,15 @@ function drawActivity(ev){
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     const fb=e.model_requested?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
     const causa=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
+    const split=waitInferenceText(e), slow=slowMark(e);
+    const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
+    const slowChip=slow?`<span class="chunkchip slowchip" title="Generó a ${escHooks(fmtNum(e.tok_s,1))} tok/s, por debajo de la velocidad normal de ${e.model}">${escHooks(slow)}</span>`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span>${fb}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
-      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}</td>
+      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}${slowChip}${timings}</td>
       <td><span class="dot ${e.ok===false?'err':'ok'}"${causa}></span></td></tr>`; });
   document.getElementById('activity').innerHTML=h+'</tbody>';
   pager.style.display = pages>1?'':'none';

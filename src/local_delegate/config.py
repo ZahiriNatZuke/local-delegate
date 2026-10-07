@@ -304,6 +304,11 @@ FALLBACK_CHAINS: dict[str, str | None] = {
 # esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
 TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
 
+# --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-025) ----------------------------
+# Una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo
+# (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.
+SLOW_THRESHOLD = _env_float("LOCAL_DELEGATE_SLOW_THRESHOLD", 0.5)
+
 
 # --- llama-swap: autoarranque, doctor y residente -----------------------------
 # Se leen al LLAMAR y no al importar, como siempre se leyeron: el autoarranque y los tests las fijan

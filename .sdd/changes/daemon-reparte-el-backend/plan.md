@@ -1113,13 +1113,19 @@ cierra.**
      `wait_ms` (`latency_ms − inference_ms`, mínimo 0), `tok_s`, `prefill_tok_s`; con referencia,
      `pace_rel` y `slow`; con `slow` y backend local, `free_ram_mb` (`sysinfo.ram_stats()`).
      Todo dentro de un `try` que, si falla, registra el evento sin esos campos (REQ-028). Sin
-     `timings`, los campos se omiten, nunca 0.
+     `timings`, los campos se omiten, nunca 0. *(Aclarado el 2026-10-07, tras la revisión de la
+     ola 8):* `inference_ms` y `wait_ms` suman todas las llamadas (una sin `timings` cuenta como
+     espera); `tok_s` y `prefill_tok_s`, y por tanto `pace_rel`, `slow`, `free_ram_mb` y lo que
+     entra en la ventana, salen solo de las llamadas del modelo que respondió (tabla de
+     aclaraciones de `spec.md`).
   4. `pace.References` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
      con cada evento propio. *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* se crea con
      `References()`, sin `by_spans` (T3 decidió una sola referencia), y se siembra con
      `pace.seed_from_log(references, directory, now)`, que nunca lanza, no con `seed`
      suelto. En cada evento propio se **mide antes de registrar**: `measure(...)` con la ventana sin
      ese evento y después `record(event)`, para que una llamada no se compare consigo misma.
+     *(Aclarado tras la revisión de la ola 8):* la siembra ocurre la primera vez que hace falta,
+     no en los arranques; con log fijo se siembra el fichero entero y la caché va atada a él.
   5. `local_status`: «Ritmo de referencia: gemma4-26b-a4b 40,5 tok/s (50 muestras)…».
   6. Panel: en la tabla de actividad, espera e inferencia por separado y la marca «lento ×0,37» con
      una función pura `slowMark(e)` (devuelve `""` sin `slow`); formato con los ayudantes del
