@@ -362,6 +362,31 @@ def test_cambio_de_topologia_concede_a_una_espera_que_ahora_cabe():
     assert concedida_a_tiempo
 
 
+def test_el_gancho_por_tic_deja_ver_una_topologia_nueva_a_quien_ya_espera():
+    """T10 (revisión): nadie llega ni sale y nadie llama a `cambio_topologia` desde fuera.
+
+    El gancho `al_tic` (fuera del cerrojo) es el único que trae la topología nueva, y la
+    reevaluación de ese mismo tic la usa. Mutante: `_esperar` no llama al gancho → la espera sigue
+    con el `choca` viejo y falla `assert concedida_a_tiempo`.
+    """
+    llamadas: list[bool] = []
+    t: Turno
+
+    def al_tic() -> None:
+        llamadas.append(t._cond._is_owned())  # type: ignore[attr-defined]
+        t.cambio_topologia(nunca_choca)
+
+    t = Turno(choca_hoy, tic=0.02, al_tic=al_tic)
+    t.pedir(pet("larga", M26B))
+    w = Pedido(t, pet("qwen", QWEN))
+    esperar_en_cola(t, "qwen")
+
+    concedida_a_tiempo = w.listo.wait(TOPE_S) and w.concesion is not None
+
+    assert concedida_a_tiempo
+    assert llamadas and not any(llamadas)  # siempre fuera del cerrojo
+
+
 def test_orden_de_adquisicion_pedir_con_plaza_lanza():
     t = Turno(choca_hoy)
     with turno.plaza_tomada(), pytest.raises(AssertionError):

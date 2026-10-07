@@ -348,7 +348,8 @@ class Turno:
     """Estado único del turno del daemon, seguro entre hilos.
 
     `reloj` es inyectable (por defecto `time.monotonic`); `tic` es el tope de cada `wait`
-    (REQ-003, punto 6: 1 s por defecto).
+    (REQ-003, punto 6: 1 s por defecto). `al_tic`, opcional, se llama fuera del cerrojo antes de
+    cada reevaluación por tic (añadido en T10 para releer la topología, REQ-009).
     """
 
     def __init__(
@@ -358,8 +359,12 @@ class Turno:
         turno_max_s: float = 600.0,
         tic: float = 1.0,
         reloj: Callable[[], float] = time.monotonic,
+        al_tic: Callable[[], None] | None = None,
     ) -> None:
         self._choca = choca
+        #: Se llama FUERA del cerrojo antes de cada reevaluación por tic de una espera. El daemon
+        #: lo usa para releer la topología: una espera ya en cola ve la config nueva (REQ-009).
+        self._al_tic = al_tic
         self._turno_max_s = turno_max_s
         self._tic = tic
         self._reloj = reloj
@@ -456,10 +461,17 @@ class Turno:
                         self._vuelo.abandonadas.discard(op_id)
                         raise EsperaAbandonada(op_id)
                     aviso = self._aviso(op_id)
-                    if aviso == ultimo_aviso:
+                    tic = aviso == ultimo_aviso
+                    if tic:
                         self._cond.wait(timeout=self._tic)
+                if tic:
+                    # Fuera del cerrojo: el gancho puede traer una topología nueva
+                    # (`cambio_topologia`), y la reevaluación de abajo ya la usa (REQ-009).
+                    if self._al_tic is not None:
+                        self._al_tic()
+                    with self._cond:
                         self._aplicar()
-                        continue
+                    continue
                 ultimo_aviso = aviso
                 if al_esperar is not None:
                     al_esperar(*aviso)

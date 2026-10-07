@@ -61,6 +61,29 @@ def sin_lista_de_modelos_guardada():
     vaciar()
 
 
+@pytest.fixture(autouse=True)
+def turno_y_topologia_a_cero():
+    """Cada test empieza sin nadie en el turno del daemon y sin foto de topología en caché.
+
+    El turno es un estado único del proceso (`server._turno`): sin esto, una operación que un test
+    dejara en `activos` o en la cola haría esperar a las del siguiente. Y la caché de `topologia`
+    va por (ruta, mtime, tamaño): dos `tmp_path` distintos pueden coincidir en las tres. Como en
+    `sin_lista_de_modelos_guardada`, se mira `sys.modules` para no importar nada que nadie usa.
+    """
+
+    def vaciar() -> None:
+        topo = sys.modules.get("local_delegate.topologia")
+        if topo is not None:
+            topo._olvidar()
+        reiniciar = getattr(sys.modules.get("local_delegate.server"), "_reiniciar_turno", None)
+        if reiniciar is not None:
+            reiniciar()
+
+    vaciar()
+    yield
+    vaciar()
+
+
 @pytest.fixture
 def recargar_config(tmp_path):
     """Recarga `config` con variables de entorno REALES, y lo deja todo como estaba al terminar.

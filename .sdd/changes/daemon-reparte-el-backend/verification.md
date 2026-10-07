@@ -481,6 +481,60 @@ Tras las correcciones: suite completa `2030 passed, 2 skipped, 1 warning in 129.
 `All checks passed!`; `ruff format --check .` → `169 files already formatted`; `sha256` de la config
 real = `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual que el de T0.
 
+## Ola 4 — T10, turno en el daemon (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. Evidencia completa (inventario,
+controles con el assert que disparó, medición de hilos y decisiones propias):
+[evidencias/T10.md](evidencias/T10.md).
+
+### Inventario del punto 1 (por ejecución, antes de editar producción)
+
+- **Pasada A** (corte que envuelve cada operación en un turno donde todo choca, sin tocar
+  `server.py`): `2030 passed, 2 skipped`. No cae ningún test.
+- **Pasada B** (la implementación, con `_topologia()` forzada a una foto donde todo choca, en todas
+  las operaciones): cae **uno**.
+
+| Test que cae | Por qué | Sustituto |
+|---|---|---|
+| `tests/test_respaldo.py::test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo` | probaba REQ-017 de F3 (el salto ocupa la misma plaza), enmendado por REQ-006 | `tests/test_respaldo.py::test_el_salto_suelta_la_plaza_entre_el_principal_y_el_respaldo`: mismo escenario; ahora B entra entre el principal y el respaldo de A, y el pico de llamadas a la vez sigue en 1 |
+
+Ningún test se borró sin sustituto.
+
+### Comprobaciones
+
+- Tests de la línea de verificación de T10: `250 passed, 1 warning in 10.48s`. `node --check` del
+  JS del panel: sin errores.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2044 passed, 2 skipped, 1 warning in 137.09s (0:02:17)` (ola 3: 2030; +12 de
+  `test_turno_daemon.py` y +2 de `test_panel_estados.py`).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `170 files already formatted`.
+- Hilos de anyio (punto 10): N línea base = 38, N con turno = 38, pico de T0.6 = 8 (umbral 24). No
+  se cumple la condición de parada.
+- Config real de llama-swap: `sha256` =
+  `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual que el de T0.
+
+### Corrección tras la revisión de la ola 4 (2026-10-07)
+
+La revisión de solo lectura encontró ocho puntos; el detalle (arreglo, mutante y assert de cada uno)
+está en [evidencias/T10.md](evidencias/T10.md), sección «Corrección tras la revisión». En resumen: una
+espera en cola ya relee la topología en cada tic (gancho `al_tic` añadido a `turno.py`); una foto vieja
+no pisa a la nueva; «choques» de `local_status` va por grupos; un `pedir` fallido no deja la operación
+creyéndose con turno; el JS usa un solo `palabrasTurno`; el script de la medición está en
+[evidencias/T10-medir-hilos.py](evidencias/T10-medir-hilos.py); nota para T15 en `plan.md`; y una
+aclaración de spec **pendiente de aceptación del usuario** (sin turno, el salto también suelta la plaza).
+
+Cifras tras la corrección:
+
+- Línea de verificación de T10 (incluye `test_turno.py`): `254 passed, 1 warning in 11.52s`.
+  `node --check`: sin errores.
+- Suite completa: `2048 passed, 2 skipped, 1 warning in 138.11s (0:02:18)`.
+- `ruff check .` → `All checks passed!`; `ruff format --check .` → `171 files already formatted`.
+- Hilos de anyio, medidos otra vez con el script del repo: N línea base = 38, N con turno = 38, pico
+  8 (umbral 24); sin parada.
+- `sha256` de la config real: `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual
+  que el de T0.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

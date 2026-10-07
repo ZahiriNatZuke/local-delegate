@@ -299,6 +299,12 @@ FALLBACK_CHAINS: dict[str, str | None] = {
 }
 
 
+# --- Turno por conjunto de modelos compatibles (daemon-reparte-el-backend, REQ-007) -----------
+# Red de seguridad del turno: la cabeza de la cola se concede forzada si lleva este tiempo
+# esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
+TURNO_MAX_S = _env_float("LOCAL_DELEGATE_TURNO_MAX_S", 600.0)
+
+
 # --- llama-swap: autoarranque, doctor y residente -----------------------------
 # Se leen al LLAMAR y no al importar, como siempre se leyeron: el autoarranque y los tests las fijan
 # en caliente. Antes las leían `autostart.py`, `doctor.py` y `server.py` con `os.environ` directo,

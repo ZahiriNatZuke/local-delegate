@@ -1796,6 +1796,12 @@ const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_r
 const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
 const PALABRAS_ESPERA = {plaza:'esperando plaza (máximo de llamadas a la vez)'};
 
+// La espera de turno del daemon en palabras (REQ-008): una sola fuente para el title de la fila
+// del modelo y para «En curso».
+function palabrasTurno(it){
+  return 'esperando turno del daemon (en uso: '+((it.turno_en_uso||[]).join(', ')||'nada')+')';
+}
+
 function vistaInicial(){
   return {estado:'comprobando', disponible:false, ref:null, bueno:null, fallos:0, ultimo:null};
 }
@@ -1861,10 +1867,17 @@ function estadoModelo(o){
   if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
     +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
   if(enVuelo && esperaLocal){
-    const motivos = [];
-    llamadas.forEach(it=>{ const m = PALABRAS_ESPERA[it.espera_local] || String(it.espera_local);
-      if(!motivos.includes(m)) motivos.push(m); });
-    return fila('en cola local', 'esperando dentro de local-delegate: '+motivos.join(', '));
+    // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
+    // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
+    // Solo cambia el title: la fila sigue siendo la 3, como cualquier espera local.
+    const motivos = [], turnos = [];
+    llamadas.forEach(it=>{
+      const lista = it.espera_local==='turno' ? turnos : motivos;
+      const m = it.espera_local==='turno' ? palabrasTurno(it)
+        : (PALABRAS_ESPERA[it.espera_local] || String(it.espera_local));
+      if(!lista.includes(m)) lista.push(m); });
+    const partes = motivos.length ? ['esperando dentro de local-delegate: '+motivos.join(', ')] : [];
+    return fila('en cola local', partes.concat(turnos).join('; '));
   }
   if(!ref.running_ok && enVuelo) return fila('en curso');
   if(!ref.running_ok) return fila(status==='loaded' ? 'montado' : 'frío');
@@ -2034,8 +2047,11 @@ function renderInflight(){
     body.innerHTML = state.inflight.map(it=>{
       const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
       const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
+      // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
+      const turnoTxt = it.espera_local==='turno' ? palabrasTurno(it) : '';
+      const turno = turnoTxt ? `<span class="chunkchip" title="${escHooks(turnoTxt)}">${escHooks(turnoTxt)}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-        <span class="badge model">${it.model}</span>${chunk}${org}
+        <span class="badge model">${it.model}</span>${chunk}${turno}${org}
         <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} ·${F.format(it.chars_in||0)} chars</span></div>`;
     }).join('');
     head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';

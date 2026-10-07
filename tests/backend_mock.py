@@ -18,6 +18,10 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import json
+import threading
+import time
+from collections.abc import Callable
 
 import httpx2
 
@@ -155,3 +159,84 @@ class _Mock:
 
 
 mock = _Mock()
+
+
+# --- Modo «cuenta cambios» (T10 de daemon-reparte-el-backend) ----------------------------------
+
+
+def _respuesta_ok(modelo: str) -> httpx2.Response:
+    return httpx2.Response(
+        200,
+        json={"choices": [{"message": {"content": f"ok de {modelo}"}, "finish_reason": "stop"}]},
+    )
+
+
+class CuentaCambios:
+    """Un backend de chat que atiende UNA petición a la vez, en orden de llegada, y cuenta cambios.
+
+    Hace lo que hace llama-swap con `-np 1` y su cola FIFO: la segunda petición espera a que acabe
+    la primera. Cada vez que el modelo servido difiere del anterior cuenta un **cambio** (el primero
+    no cuenta: cargar el primer modelo no quita a nadie). Es lo que mide si dos operaciones se
+    quitan el modelo una a otra.
+
+    - `latencia_s`: lo que tarda en contestar cada petición, ya con el turno de servicio.
+    - `barrera`: si es N > 0, ninguna petición se atiende hasta que hayan **llegado** N, con un tope
+      de `tope_barrera_s`. Si el tope vence, `no_se_solaparon` queda en `True`: las N no estuvieron
+      a la vez dentro del daemon (cada una con su plaza).
+    - `responder(modelo, request)`: la respuesta; por defecto, un 200 con `ok de <modelo>`.
+    """
+
+    def __init__(
+        self,
+        *,
+        latencia_s: float = 0.01,
+        barrera: int = 0,
+        tope_barrera_s: float = 2.0,
+        responder: Callable[[str, httpx2.Request], httpx2.Response] | None = None,
+    ) -> None:
+        self.latencia_s = latencia_s
+        self.barrera = barrera
+        self.tope_barrera_s = tope_barrera_s
+        self.responder = responder or (lambda modelo, _request: _respuesta_ok(modelo))
+        self.llegadas: list[str] = []
+        self.servidos: list[str] = []
+        self.cambios = 0
+        self.no_se_solaparon = False
+        self._cond = threading.Condition()
+        self._siguiente = 0
+        self._atendiendo = 0
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        modelo = json.loads(request.content)["model"]
+        with self._cond:
+            self.llegadas.append(modelo)
+            self._cond.notify_all()
+            if self.barrera:
+                fin = time.monotonic() + self.tope_barrera_s
+                while len(self.llegadas) < self.barrera:
+                    restante = fin - time.monotonic()
+                    if restante <= 0:
+                        self.no_se_solaparon = True
+                        break
+                    self._cond.wait(restante)
+            ticket = self._siguiente
+            self._siguiente += 1
+            while ticket != self._atendiendo:
+                self._cond.wait()
+            if self.servidos and self.servidos[-1] != modelo:
+                self.cambios += 1
+            self.servidos.append(modelo)
+        try:
+            time.sleep(self.latencia_s)
+            return self.responder(modelo, request)
+        finally:
+            with self._cond:
+                self._atendiendo += 1
+                self._cond.notify_all()
+
+
+def cuenta_cambios(url: str, **opciones) -> CuentaCambios:
+    """Registra el POST de chat en modo «cuenta cambios» y devuelve el contador."""
+    servidor = CuentaCambios(**opciones)
+    post(url).mock(side_effect=servidor)
+    return servidor

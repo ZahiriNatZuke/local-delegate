@@ -1155,6 +1155,14 @@ cierra.**
      REQ-014: `max_chars_for(alternativo)`, conservando el tope y los prompts del rol); la elección
      después de la primera plaza y la reserva reducida con `turno.reducir`; sin afinidad con backend
      remoto o modelo explícito; REQ-015 (primero el rol y luego su cadena).
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 4):* `Turno.elegir` no sirve tal cual
+     para REQ-003, porque comprueba que no hay plaza (el aserto de REQ-004) y, si nada cabe, espera
+     dentro la nueva concesión. Antes de conectar la afinidad hay que partirlo en
+     `elegir_sin_esperar(op_id, candidatos) -> str | None` (atómica y válida con plaza; si nada
+     cabe deja la operación en la cabeza de la cola y devuelve `None`) y
+     `esperar_concesion(op_id, …)` (pública, con el aserto de REQ-004). El daemon elige con la
+     plaza de su primera llamada en la mano y, si sale `None`, suelta la plaza antes de
+     `esperar_concesion`. En T10 no se conectó: allí `A` tiene siempre un solo modelo.
   5. `_log_event`: `routing: "afinidad"`, `model_requested`, `afinidad_vuelo_ajeno` y, sin vuelo
      ajeno y con espera de backend ≥ 3 000 ms, `afinidad_fallida: true`. El panel **no** la cuenta
      como respaldo y la respuesta no lleva aviso.

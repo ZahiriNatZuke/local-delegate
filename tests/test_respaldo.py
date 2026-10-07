@@ -594,18 +594,28 @@ def test_vision_que_falla_no_salta(recargar_config, tmp_path):
     assert pedidos == [VISION]
 
 
-# --- REQ-017: el salto ocupa la misma plaza ---------------------------------------------------
+# --- REQ-006 (enmienda REQ-017 de F3): el salto suelta la plaza y el tope se sigue cumpliendo ----
 
 
-def test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo(
+def test_el_salto_suelta_la_plaza_entre_el_principal_y_el_respaldo(
     recargar_config, tmp_path, monkeypatch
 ):
+    """Sustituye al test de REQ-017 de F3 («el salto no suelta la plaza»), con el mismo escenario.
+
+    Una sola plaza; A falla en su principal mientras B ya espera la plaza. Con REQ-006 el salto de
+    A suelta la plaza ANTES de decidir y volver a pedirla, así que B entra entre el principal y el
+    respaldo de A; y aun así nunca hay dos llamadas a la vez (el tope de `MAX_CONCURRENT_REQUESTS`).
+    La decisión del salto de A espera (con tope) a que B haya entrado: sin eso, que A recupere la
+    plaza antes que B dependería del planificador. Con el salto DENTRO de la plaza, B no puede
+    entrar, la espera agota su tope y el orden sale A, A, B, B.
+    """
     recargar_config()
     orden: list[tuple[str, str]] = []
     dentro = 0
     pico = 0
     cerrojo = threading.Lock()
     principal_de_a = threading.Event()
+    b_entro = threading.Event()
 
     def post_chat(model, _payload):
         nonlocal dentro, pico
@@ -615,6 +625,8 @@ def test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo(
             orden.append((threading.current_thread().name, model))
         if threading.current_thread().name == "A" and model == CODIGO:
             principal_de_a.set()
+        if threading.current_thread().name == "B":
+            b_entro.set()
         time.sleep(0.1)
         with cerrojo:
             dentro -= 1
@@ -622,7 +634,15 @@ def test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo(
             return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
+    decidir = server._siguiente_salto
+
+    def siguiente_salto(*args, **kwargs):
+        if threading.current_thread().name == "A" and kwargs.get("ultimo") is None:
+            b_entro.wait(timeout=2)
+        return decidir(*args, **kwargs)
+
     monkeypatch.setattr(server, "_post_chat", post_chat)
+    monkeypatch.setattr(server, "_siguiente_salto", siguiente_salto)
     monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(1))
 
     def llamar() -> None:
@@ -632,12 +652,14 @@ def test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo(
     b = threading.Thread(target=llamar, name="B")
     a.start()
     assert principal_de_a.wait(timeout=5)
-    b.start()  # B ya espera la plaza cuando A falla: si A la soltara, B se colaría
-    a.join(timeout=5)
-    b.join(timeout=5)
+    b.start()  # B ya espera la plaza cuando A falla: como A la suelta para saltar, B entra
+    a.join(timeout=10)
+    b.join(timeout=10)
 
+    assert not a.is_alive() and not b.is_alive()
     assert pico == 1
-    assert [hilo for hilo, _ in orden] == ["A", "A", "B", "B"], orden
+    assert [hilo for hilo, _ in orden[:2]] == ["A", "B"], orden
+    assert sorted(orden) == sorted([("A", CODIGO), ("A", MECANICO), ("B", CODIGO), ("B", MECANICO)])
 
 
 # --- El camino feliz no escribe el estado -----------------------------------------------------
