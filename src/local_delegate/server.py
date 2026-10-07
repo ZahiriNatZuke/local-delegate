@@ -22,7 +22,7 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Callable, Generator, Iterable, Sequence
+from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -1245,8 +1245,10 @@ class _TurnoDeOperacion:
     backend remoto o con un modelo que la config no conoce, no pide nada (REQ-002).
     """
 
-    def __init__(self, entry_id: int, modelo_del_rol: str) -> None:
+    def __init__(self, entry_id: int, modelo_del_rol: str, tool: str | None = None) -> None:
         self.entry_id = entry_id
+        #: La tool de la operación: los miembros de `loaded` dependen de ella (REQ-019).
+        self.tool = tool
         self.op_id = f"{os.getpid()}:{entry_id}"
         #: El modelo del rol de la operación: decide el de una concesión forzada (REQ-007).
         self.rol = modelo_del_rol
@@ -1382,41 +1384,68 @@ def _intentar(
 
 
 def _siguiente_salto(
-    cadena: Sequence[str],
+    pasos: Sequence[str],
     desde: int,
     *,
     model: str,
     tamano: int,
-    residente: str | None,
+    capacidad: bool,
     estado: enfriamiento.Estado,
     saltos: int,
     ultimo: ChatResult | None,
-) -> int | None:
-    """La decisión de saltar, FUERA de la plaza: el índice del siguiente candidato, o `None`.
+    miembros_loaded: Callable[[], Sequence[str]],
+    intentados: Collection[str] = (),
+) -> tuple[int, str] | None:
+    """La decisión de saltar, FUERA de la plaza: (índice del paso, modelo destino), o `None`.
 
     - tras un salto fallido, solo sigue un fallo del modelo, y nunca tras uno de capacidad;
     - nunca más de `FALLBACK_MAX_HOPS` saltos;
-    - con un fallo de capacidad solo vale el residente (REQ-018);
+    - con un fallo de capacidad solo vale el paso `loaded` (REQ-021);
+    - el paso `loaded` se resuelve aquí, en el momento del salto (`miembros_loaded`, REQ-019); sin
+      miembros que valgan se salta **sin gastar salto**;
     - un candidato fuera del catálogo, enfriado o cuyo tope no admite la entrada se salta sin
-      llamarlo (REQ-003), y no gasta salto.
+      llamarlo (REQ-003), y no gasta salto;
+    - un candidato ya intentado en esta llamada (`intentados`: el pedido y cada destino) tampoco se
+      vuelve a llamar: un miembro de `loaded` que repite un paso posterior no se llama dos veces.
     """
-    if ultimo is not None and (residente is not None or ultimo.clase != fallos.Clase.MODELO):
+    if ultimo is not None and (capacidad or ultimo.clase != fallos.Clase.MODELO):
         return None
     if saltos >= config.FALLBACK_MAX_HOPS:
         return None
-    for i in range(desde, len(cadena)):
-        candidato = cadena[i]
-        if residente is not None and candidato != residente:
+    for i in range(desde, len(pasos)):
+        paso = pasos[i]
+        if paso == cadenas.LOADED:
+            candidatos: Sequence[str] = miembros_loaded()
+        elif capacidad:
             continue
-        if (
-            candidato == model
-            or candidato not in config.ALLOWED_MODELS
-            or tamano > config.max_chars_for(candidato)
-            or estado.consultar(candidato) is not None
-        ):
-            continue
-        return i
+        else:
+            candidatos = (paso,)
+        for candidato in candidatos:
+            if (
+                candidato == model
+                or candidato in intentados
+                or candidato not in config.ALLOWED_MODELS
+                or tamano > config.max_chars_for(candidato)
+                or estado.consultar(candidato) is not None
+            ):
+                continue
+            return i, candidato
     return None
+
+
+def _miembros_loaded(op: _TurnoDeOperacion | None, fallido: str) -> tuple[str, ...]:
+    """Los miembros del paso `loaded` para este salto (REQ-019), con lo que el daemon sabe de sí.
+
+    `propios` son los modelos elegidos por las demás operaciones de este daemon en `activos`, y
+    `nadie_mas` si no hay ninguna otra. Sin proveedor registrado (sin bloque B) `cadenas` devuelve
+    `()` sin consultar nada. El turno con el conjunto (`directos` vacío, `Turno.elegir`) llega
+    con T15; hasta entonces, si hay miembros, el salto va al primero que vale, como a un destino.
+    """
+    op_id = op.op_id if op is not None else None
+    otros = [a for a in _turno.foto().activos if a.id != op_id]
+    propios = frozenset(a.elegido for a in otros if a.elegido is not None)
+    tool = op.tool if op is not None else None
+    return cadenas.miembros_loaded(tool, fallido, propios, not otros)
 
 
 def _con_respaldo(
@@ -1435,8 +1464,8 @@ def _con_respaldo(
     Reglas, en el orden en que se aplican:
     - un modelo explícito se envía aunque esté enfriado, y sin respaldo (REQ-005);
     - el modelo pedido en enfriamiento no se llama: se va directo a la cadena (REQ-009);
-    - solo saltan los fallos del modelo y los de capacidad, y estos solo al residente y sin
-      segundo salto (REQ-002, REQ-018);
+    - solo saltan los fallos del modelo y los de capacidad, y estos solo a `loaded` y sin
+      segundo salto (REQ-002, REQ-018 de F3 enmendado por REQ-021);
     - el resto de la decisión, en `_siguiente_salto`.
 
     Cada llamada toma y suelta su propia plaza (`_intentar` va dentro, la decisión fuera). Un salto
@@ -1471,27 +1500,35 @@ def _con_respaldo(
             return original, schema, intentos
         clase = original.clase
 
-    cadena = cadenas.resolver(rol).modelos if rol and config.FALLBACK else ()
-    residente = cadenas.residente()[0] if clase == fallos.Clase.CAPACIDAD else None
+    pasos = cadenas.resolver(rol).pasos if rol and config.FALLBACK else ()
+    # El orden de la cadena para una concesión forzada (REQ-007): solo modelos concretos.
+    cadena = tuple(paso for paso in pasos if paso != cadenas.LOADED)
     saltos = 0
     desde = 0
     ultimo: ChatResult | None = None
+    fallido = model
+    intentados = {model}
     while True:
-        indice = _siguiente_salto(
-            cadena,
+        salto = _siguiente_salto(
+            pasos,
             desde,
             model=model,
             tamano=tamano,
-            residente=residente,
+            capacidad=clase == fallos.Clase.CAPACIDAD,
             estado=estado,
             saltos=saltos,
             ultimo=ultimo,
+            miembros_loaded=lambda f=fallido: _miembros_loaded(op, f),
+            intentados=intentados,
         )
-        if indice is None:
+        if salto is None:
             break
+        indice, destino = salto
         saltos += 1
         desde = indice + 1
-        ultimo = llamar(cadena[indice], cadena)
+        fallido = destino
+        intentados.add(destino)
+        ultimo = llamar(destino, cadena)
         if ultimo.ok:
             return ultimo, schema, intentos
 
@@ -1707,7 +1744,7 @@ def _chat(
     """
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     # Turno por operación (REQ-003): una llamada simple (también la de imagen) es una operación.
-    op = _TurnoDeOperacion(entry_id, model)
+    op = _TurnoDeOperacion(entry_id, model, tool)
     try:
         result, latency_ms, json_schema_status, intentos = _run_chat(
             model,
@@ -2014,7 +2051,7 @@ def _chat_chunked(
     failed: ChatResult | None = None
     truncated_out = False
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
-    op = _TurnoDeOperacion(entry_id, model)
+    op = _TurnoDeOperacion(entry_id, model, tool)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
 
     def _accumulate(result: ChatResult, ms: int, llamadas: int) -> None:
@@ -2234,7 +2271,7 @@ def _chat_map_reduce(
     failed: ChatResult | None = None
     cortadas = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
-    op = _TurnoDeOperacion(entry_id, model)
+    op = _TurnoDeOperacion(entry_id, model, tool)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
 
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:

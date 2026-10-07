@@ -585,6 +585,44 @@ Las cifras de los escenarios del plan no cambiaron (faltan 6,17 GiB; el 4B se ac
 - `sha256` de la config real: `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, igual
   que el de T0.
 
+## Ola 6 — T12, cadenas sin residente (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. El paso de las cadenas se llama
+`loaded` (decisión del usuario del 2026-10-07: lo que se teclea va en inglés); `residente` y
+`resident` siguen como sinónimos obsoletos con aviso. Evidencia completa (inventario con cada
+sustituto, controles con el assert que disparó y decisiones propias):
+[evidencias/T12.md](evidencias/T12.md).
+
+### Inventario del punto 1 (por ejecución, antes de editar producción)
+
+- `rg -n "residente|resident|cadenas\.residente|defecto: el modelo del rol" tests/ src/`: en
+  producción, `cadenas.residente()` (`cadenas.py`, `checks.py`, `server.py`) y el texto «defecto: el
+  modelo del rol mecánico»; lo demás es la residencia de T11 y no depende de las cadenas.
+- Tras el cambio, la línea de verificación de T12 dio `24 failed, 183 passed, 1 skipped`: 8 de
+  `test_cadenas.py`, 12 de `test_respaldo.py` y 4 de `test_observabilidad_respaldo.py`. Los 24 se
+  reescribieron a su escenario de C («el modelo largo falla y responde el de código», «el modelo no
+  cabe en la VRAM» con `loaded`, «sin residente»), o con la cadena de dos fijada por variable los
+  que medían la mecánica de varios saltos. La tabla, test a test, está en `evidencias/T12.md`.
+  Ningún test se borró sin sustituto.
+
+### Comprobaciones
+
+- Línea de verificación de T12: `206 passed, 1 skipped, 1 warning in 9.49s`.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2129 passed, 2 skipped, 1 warning in 143.61s (0:02:23)` (ola 5: 2117; +8 en `test_cadenas.py` y
+  +4 en `test_checks.py`).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `173 files already formatted`.
+- Controles: 5 (a) contra HEAD `e0d827e` y 4 mutantes (b), todos con el assert previsto.
+- **Corrección tras la revisión de la ola 6** (detalle en `evidencias/T12.md`): miembro de `loaded`
+  repetido, motivo de «no se sabe», dos avisos en `doctor`, test más estricto y notas en T15, T16 y
+  la spec de F3. Tres mutantes más (M5 a M7), todos con su assert. Cifras nuevas: línea de
+  verificación `209 passed, 1 skipped, 1 warning in 9.38s`; suite completa
+  `2132 passed, 2 skipped, 1 warning in 143.58s (0:02:23)`; `ruff check .` → `All checks passed!`;
+  `ruff format --check .` → `173 files already formatted`; `sha256` de la config real sin cambios.
+- Config real de llama-swap: `sha256` =
+  `7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`, sin tocar.
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

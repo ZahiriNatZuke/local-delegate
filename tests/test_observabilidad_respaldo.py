@@ -38,12 +38,12 @@ CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_
 @backend_mock.mock
 def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config, tmp_path):
     recargar_config()
-    _backend({LARGO: _fallo(500), MECANICO: _ok("resumen")})
+    _backend({LARGO: _fallo(500), CODIGO: _ok("resumen")})
 
     server.local_summarize(text=_texto(10_000))
 
     evento = _ultimo_evento(tmp_path)
-    assert evento["model"] == MECANICO, "`model` es el que respondió"
+    assert evento["model"] == CODIGO, "`model` es el que respondió"
     assert evento["model_requested"] == LARGO
     assert evento["fallback_reason"] == "http_500"
     assert evento["fallback_class"] == "modelo"
@@ -54,13 +54,13 @@ def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config,
 @backend_mock.mock
 def test_en_trozos_chunks_cuenta_tambien_las_llamadas_del_respaldo(recargar_config, tmp_path):
     recargar_config()
-    _backend({LARGO: [_ok("uno"), _fallo(500)], MECANICO: _ok("otro")})
+    _backend({LARGO: [_ok("uno"), _fallo(500)], CODIGO: _ok("otro")})
 
     server.local_translate(target_lang="inglés", text=_texto(12_000))
 
     evento = _ultimo_evento(tmp_path)
-    assert evento["chunks"] == 5  # largo, largo que falla, y tres del residente
-    assert evento["model"] == MECANICO
+    assert evento["chunks"] == 5  # largo, largo que falla, y tres del respaldo (el de código)
+    assert evento["model"] == CODIGO
     assert evento["model_requested"] == LARGO
 
 
@@ -101,12 +101,12 @@ def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(recargar_conf
 def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp_path):
     recargar_config()
     _enfriar(tmp_path, CODIGO)
-    _backend({MECANICO: _ok("explicado")})
+    _backend({LARGO: _ok("explicado")})
 
     server.local_explain_code(code="x = 1")
 
     evento = _ultimo_evento(tmp_path)
-    assert evento["model"] == MECANICO
+    assert evento["model"] == LARGO
     assert evento["model_requested"] == CODIGO
     assert evento["fallback_class"] == "enfriamiento"
     assert "chunks" not in evento, "el modelo enfriado no se llamó: una sola llamada"
@@ -115,7 +115,7 @@ def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp
 @backend_mock.mock
 def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_path):
     recargar_config()
-    _backend({CODIGO: _fallo(500), MECANICO: _ok("- a: cambia")})
+    _backend({CODIGO: _fallo(500), LARGO: _ok("- a: cambia")})
     diff = "".join(
         f"diff --git a/f{i}.py b/f{i}.py\n" + "+linea de codigo nueva\n" * 200 for i in range(6)
     )
@@ -123,7 +123,7 @@ def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_pat
     server.local_commit_msg(diff=diff)
 
     evento = _ultimo_evento(tmp_path)
-    assert evento["model"] == MECANICO and evento["model_requested"] == CODIGO
+    assert evento["model"] == LARGO and evento["model_requested"] == CODIGO
     assert evento["fallback_class"] == "modelo"
 
 

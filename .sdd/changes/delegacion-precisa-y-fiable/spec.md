@@ -249,6 +249,9 @@ separado**. Se conservan sus identificadores `REQ-001` a `REQ-020` para no rompe
   [`../daemon-reparte-el-backend/spec.md`](../daemon-reparte-el-backend/spec.md). El texto heredado
   de F3 no se reescribe; donde contradiga esta tabla, manda la tabla.
 
+  Nota (2026-10-07): el paso que aquí se llama `cargado` se llama `loaded` en el código; ver la
+  aclaración en `.sdd/changes/daemon-reparte-el-backend/spec.md`.
+
   | Punto de F3 | Texto vigente | Queda así |
   | --- | --- | --- |
   | REQ-004 (`:304-317`) | «La regla es "primero el residente, después el resto": residente = el modelo de un grupo persistente de llama-swap, si su configuración se puede leer; si no, el del rol mecánico; código → residente → largo; largo → residente → código; rápido → residente → largo; mecánico → largo» | REQ-019 y REQ-020: `cargado` en lugar de `residente`, sin caída al mecánico, y `mecánico → cargado → largo`. Lo demás de REQ-004 (por rol, repetidos fuera, sobrescribible por variable) sigue igual |

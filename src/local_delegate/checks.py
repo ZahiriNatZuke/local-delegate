@@ -1358,26 +1358,42 @@ def _probe_fallback(ctx: Context) -> Result:
 
     Lo que no, se ignora al delegar (REQ-014), y un error de tecleo en la variable dejaría a un rol
     sin el respaldo que su dueño cree haber configurado. Import diferido: `cadenas` importa `config`
-    y no hace falta cargarlo para el resto del diagnóstico.
+    y `topologia`, y no hace falta cargarlos para el resto del diagnóstico.
     """
     from . import cadenas
     from . import config as configuracion
 
+    resueltas = [cadenas.resolver(rol) for rol in cadenas.ROLES_DE_TEXTO]
+    # Los dos avisos van en el mismo resultado: `residente,foo` tiene un nombre que se ignora y otro
+    # obsoleto (REQ-022), y arreglar uno no debe esconder el otro.
+    detalles: list[str] = []
+    arreglos: list[str] = []
     avisos = [
-        f"LOCAL_DELEGATE_FALLBACK_{rol.upper()} nombra {', '.join(cadena.ignorados)}"
-        for rol in cadenas.ROLES_DE_TEXTO
-        if (cadena := cadenas.resolver(rol)).ignorados
+        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} nombra {', '.join(cadena.ignorados)}"
+        for cadena in resueltas
+        if cadena.ignorados
     ]
     if avisos:
-        return Result(
-            WARN,
-            "; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran",
-            "usa roles (mechanical, long, code, residente) o ids del catálogo de texto",
+        detalles.append("; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran")
+        arreglos.append(
+            f"usa roles (mechanical, long, code, {cadenas.LOADED}) o ids del catálogo de texto"
         )
+    obsoletos = [
+        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} usa {', '.join(cadena.obsoletos)}"
+        for cadena in resueltas
+        if cadena.obsoletos
+    ]
+    if obsoletos:
+        detalles.append(
+            "; ".join(obsoletos)
+            + f": nombre obsoleto del paso {cadenas.LOADED}, que sigue valiendo"
+        )
+        arreglos.append(f"renombra residente/resident a {cadenas.LOADED} en esas variables")
+    if detalles:
+        return Result(WARN, " | ".join(detalles), "; ".join(arreglos))
     if not configuracion.FALLBACK:
         return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
-    modelo, origen = cadenas.residente()
-    return Result(OK, f"cadenas válidas; residente {modelo} ({origen})")
+    return Result(OK, f"cadenas válidas; {cadenas.texto_residentes()}")
 
 
 def _probe_rol_retirado(ctx: Context) -> Result:

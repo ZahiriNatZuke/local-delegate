@@ -2,8 +2,11 @@
 
 Los escenarios de la spec (REQ-002 a REQ-019) sobre `backend_mock`, con un backend que responde
 **según el modelo pedido**: así cada test ve a qué modelos se llamó y en qué orden, que es lo único
-que distingue un salto de un reintento. Los nombres son los defectos del paquete; el residente, sin
-`LLAMASWAP_CONFIG`, es el del rol mecánico.
+que distingue un salto de un reintento. Los nombres son los defectos del paquete. Desde T12 de
+`daemon-reparte-el-backend` (REQ-019 a REQ-021) no hay residente: las cadenas por defecto son
+`code -> loaded -> long`, `long -> loaded -> code` y `mechanical -> loaded -> long`, y sin bloque B
+`loaded` no tiene miembros, así que código y largo nunca caen al mecánico. Los tests que miden la
+mecánica de varios saltos fijan la cadena a mano con la variable del rol.
 
 La batería de tools en camino feliz no sirve aquí: da lo mismo con el interruptor roto. Cada test
 fija un fallo concreto y mira las llamadas.
@@ -19,7 +22,7 @@ from pathlib import Path
 import backend_mock
 import httpx2
 
-from local_delegate import config, enfriamiento, preguntas, server
+from local_delegate import cadenas, config, enfriamiento, preguntas, server
 from local_delegate.fallos import Clase
 
 URL = "http://test-backend/v1/chat/completions"
@@ -91,21 +94,23 @@ def _texto(caracteres: int) -> str:
     return (parrafo * (caracteres // len(parrafo) + 1))[:caracteres]
 
 
-# --- Escenario: el modelo largo falla y responde el residente ---------------------------------
+# --- Escenario: el modelo largo falla y responde el de código (T12: ya no el residente) --------
 
 
 @backend_mock.mock
-def test_el_largo_falla_y_responde_el_residente(recargar_config, tmp_path):
+def test_el_largo_falla_y_responde_el_de_codigo(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({LARGO: _fallo(500), MECANICO: _ok("resumen del residente")})
+    pedidos = _backend(
+        {LARGO: _fallo(500), CODIGO: _ok("resumen del respaldo"), MECANICO: _ok("del 4B")}
+    )
 
     salida = server.local_summarize(text=_texto(10_000))
 
-    assert pedidos == [LARGO, MECANICO]
-    assert "resumen del residente" in salida
-    aviso = salida.split("resumen del residente", 1)[1]
-    assert MECANICO in aviso and LARGO in aviso and "http_500" in aviso
-    assert _ultimo_evento(tmp_path)["model"] == MECANICO
+    assert pedidos == [LARGO, CODIGO], "`loaded` vacío se salta y el 4B no es candidato"
+    assert "resumen del respaldo" in salida
+    aviso = salida.split("resumen del respaldo", 1)[1]
+    assert CODIGO in aviso and LARGO in aviso and "http_500" in aviso
+    assert _ultimo_evento(tmp_path)["model"] == CODIGO
 
 
 # --- Escenario: la entrada no cabe en el respaldo ---------------------------------------------
@@ -168,7 +173,7 @@ def test_el_backend_caido_no_salta_ni_enfria(recargar_config, tmp_path, monkeypa
 @backend_mock.mock
 def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("explicado")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
     server.local_explain_code(code="x = 1")
     server.local_explain_code(code="x = 2")
@@ -179,7 +184,7 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
     pedidos.clear()
     salida = server.local_explain_code(code="x = 3")
 
-    assert pedidos == [MECANICO], "el modelo enfriado no recibe la cuarta llamada"
+    assert pedidos == [LARGO], "el modelo enfriado no recibe la cuarta llamada"
     assert "explicado" in salida and "enfriamiento" in salida
 
 
@@ -239,19 +244,19 @@ def test_vence_el_enfriamiento_y_la_prueba_falla_dobla_la_espera(recargar_config
 @backend_mock.mock
 def test_traduccion_en_cuatro_trozos_cambia_de_modelo_una_sola_vez(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({LARGO: [_ok("uno"), _fallo(500), _ok("NO")], MECANICO: _ok("otro")})
+    pedidos = _backend({LARGO: [_ok("uno"), _fallo(500), _ok("NO")], CODIGO: _ok("otro")})
 
     salida = server.local_translate(target_lang="inglés", text=_texto(12_000))
 
-    assert pedidos == [LARGO, LARGO, MECANICO, MECANICO, MECANICO]
+    assert pedidos == [LARGO, LARGO, CODIGO, CODIGO, CODIGO]
     assert "NO" not in salida
-    assert "trozo 2" in salida and MECANICO in salida
+    assert "trozo 2" in salida and CODIGO in salida
 
 
 @backend_mock.mock
 def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("- a: cambia")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("- a: cambia")})
     diff = "".join(
         f"diff --git a/f{i}.py b/f{i}.py\n" + "+linea de codigo nueva\n" * 200 for i in range(6)
     )
@@ -260,7 +265,7 @@ def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp
     salida = server.local_commit_msg(diff=diff)
 
     assert pedidos.count(CODIGO) == 1, "tras el salto, los trozos siguientes van al respaldo"
-    assert set(pedidos) == {CODIGO, MECANICO}
+    assert set(pedidos) == {CODIGO, LARGO}
     assert not salida.startswith("[local-delegate error]")
 
 
@@ -278,17 +283,23 @@ def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(recarga
     assert salida.startswith("[local-delegate error]")
 
 
-# --- Escenario: el modelo no cabe en la VRAM (REQ-018) ----------------------------------------
+# --- Escenario: el modelo no cabe en la VRAM (REQ-018 de F3, enmendado por REQ-021) -----------
 
 
 @backend_mock.mock
-def test_capacidad_solo_salta_al_residente_y_sin_segundo_salto(recargar_config, tmp_path):
+def test_capacidad_solo_salta_a_loaded_y_sin_segundo_salto(recargar_config, tmp_path):
+    """Con un miembro en `loaded` (el proveedor lo pone T15; aquí, a mano), capacidad salta a él y
+    a nada más. Sin miembros no salta: `test_cadenas.py::test_fallo_de_capacidad_sin_nada_cargado`.
+    """
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
+    cadenas.registrar_proveedor_loaded(lambda *_: (MECANICO,))
+    try:
+        pedidos = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
+        salida = server.local_explain_code(code="x = 1")
+    finally:
+        cadenas.registrar_proveedor_loaded(None)
 
-    salida = server.local_explain_code(code="x = 1")
-
-    assert pedidos == [CODIGO, MECANICO], "tras capacidad, residente y nada más"
+    assert pedidos == [CODIGO, MECANICO], "tras capacidad, `loaded` y nada más"
     assert salida.startswith("[local-delegate error]")
     assert CODIGO not in _entradas(tmp_path), "capacidad no enfría"
 
@@ -447,11 +458,11 @@ def test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy(recargar_con
 def test_el_mismo_caso_con_el_mecanismo_encendido_salta(recargar_config, tmp_path):
     recargar_config()
     _enfriar(tmp_path, CODIGO)
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("explicado")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
     salida = server.local_explain_code(code="x = 1")
 
-    assert pedidos == [MECANICO]
+    assert pedidos == [LARGO]
     assert "explicado" in salida
 
 
@@ -478,8 +489,10 @@ def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
     """Con el rol `fast` retirado (0.30.0) quedan tres modelos de texto, así que una cadena no
     puede tener más de dos candidatos distintos del principal: este test pasa a comprobar que los
     **recorre los dos** y que ahí se acaba. Que el tope CORTA lo prueba el de abajo, bajándolo a 1.
+    Desde T12 las cadenas por defecto solo tienen un modelo concreto (`loaded` sale vacío sin bloque
+    B), así que la cadena de dos se fija a mano: el mecánico, por variable, sí se puede pedir.
     """
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,long")
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500)})
 
     server.local_explain_code(code="x = 1")
@@ -489,7 +502,9 @@ def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
+    recargar_config(
+        LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1", LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long"
+    )
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -499,7 +514,7 @@ def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, tmp_path):
-    recargar_config()
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(400, "malo"), LARGO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -512,7 +527,7 @@ def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, 
 
 @backend_mock.mock
 def test_si_fallan_los_respaldos_vuelve_el_error_original_y_la_lista(recargar_config, tmp_path):
-    recargar_config()
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     _backend({CODIGO: _fallo(500, "original"), MECANICO: _fallo(502), LARGO: _fallo(503)})
 
     salida = server.local_explain_code(code="x = 1")
@@ -544,14 +559,14 @@ def test_en_extract_el_aviso_va_en_los_metadatos(recargar_config, tmp_path):
 @backend_mock.mock
 def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(recargar_config, tmp_path):
     recargar_config()
-    _backend({CODIGO: _fallo(500), MECANICO: _ok("def f():\n    return 1")})
+    _backend({CODIGO: _fallo(500), LARGO: _ok("def f():\n    return 1")})
     destino = tmp_path / "gen.py"
 
     recibo = server.local_boilerplate(spec="f", language="python", target=str(destino))
 
     # `_escribir_destino` termina el fichero en salto de línea; lo que importa es que no hay aviso.
     assert destino.read_text(encoding="utf-8") == "def f():\n    return 1\n"
-    assert MECANICO in recibo and CODIGO in recibo
+    assert LARGO in recibo and CODIGO in recibo
 
 
 @backend_mock.mock
@@ -659,7 +674,7 @@ def test_el_salto_suelta_la_plaza_entre_el_principal_y_el_respaldo(
     assert not a.is_alive() and not b.is_alive()
     assert pico == 1
     assert [hilo for hilo, _ in orden[:2]] == ["A", "B"], orden
-    assert sorted(orden) == sorted([("A", CODIGO), ("A", MECANICO), ("B", CODIGO), ("B", MECANICO)])
+    assert sorted(orden) == sorted([("A", CODIGO), ("A", LARGO), ("B", CODIGO), ("B", LARGO)])
 
 
 # --- El camino feliz no escribe el estado -----------------------------------------------------

@@ -196,7 +196,7 @@ tarea lo vuelve a medir antes de editar.
 | `src/local_delegate/topologia.py`, `tests/test_topologia.py`, `tests/fixtures/topologia/` (nuevos) | LF | T7 | |
 | `src/local_delegate/turno.py`, `tests/test_turno.py` (nuevos) | LF | T8 → T10 → T15 | T8: núcleo y envoltura. T10: solo si la integración pide un cambio de interfaz, anotado. T15: nada (las reservas con alternativos ya están en T8) |
 | `src/local_delegate/ritmo.py`, `tests/test_ritmo.py` (nuevos) | LF | T9 | |
-| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `cargado`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `ritmo` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
+| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `loaded`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `ritmo` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
 | `src/local_delegate/config.py` | LF | T10 → T14 → T15 | una variable cada una |
 | `tests/conftest.py` | LF | T10 → T11 | T10: fixture autouse que vacía el estado del turno y la caché de topología. T11: fixture autouse que apunta la consulta al daemon a un puerto muerto |
 | `src/local_delegate/web/metrics.py` | CRLF | T10 → T13 → T14 | T10: palabras del motivo `"turno"` en el `title` de `estadoModelo` y en «En curso» (`renderInflight`), con `turno_en_uso`; **no** toca la tabla de estados ni la condición de la fila 3. T13: los tres endpoints de `/api/llamaswap/`. T14: columnas de espera, inferencia y marca «lento» en la tabla de actividad (función JS pura nueva `marcaLento`) |
@@ -209,7 +209,7 @@ tarea lo vuelve a medir antes de editar.
 | `src/local_delegate/residencia.py`, `tests/test_residencia.py`, `tests/fixtures/residencia/` (nuevos) | LF | T11 → T13 | T11: transformaciones y escritura. T13: nada en el módulo; las negativas y la vigía van en `cli.py` |
 | `src/local_delegate/llamaswap_config.py`, `tests/test_llamaswap_config.py` | LF | T11 | estimador con `-ncmoe`; `.bak` con fecha de `init-llamaswap`; `--ttl-resident` a 0 |
 | `src/local_delegate/cli.py` | CRLF | T11 → T13 | T11: subparser `llamaswap residency` y su comando con la comprobación previa como interfaz que devuelve «no se sabe»; ayuda de `init-llamaswap`. T13: comprobación previa y vigía de verdad |
-| `src/local_delegate/cadenas.py`, `tests/test_cadenas.py` | LF | T12 → T15 | T12: paso `cargado`, cadenas por defecto, sinónimo `residente`, `describir()`. T15: el proveedor de miembros de `cargado` |
+| `src/local_delegate/cadenas.py`, `tests/test_cadenas.py` | LF | T12 → T15 | T12: paso `loaded`, cadenas por defecto, sinónimo `residente`, `describir()`. T15: el proveedor de miembros de `loaded` |
 | `src/local_delegate/checks.py` | LF | T12 → T13 → T15 | T12: `_probe_fallback` (textos y aviso del sinónimo). T13: `_probe_residencia`, `_probe_topologia`, dos entradas de `CHECKS`, las frases de tamaño del docstring. T15: aviso de huella en `_probe_residencia` |
 | `tests/test_checks.py`, `tests/test_wiki.py` | LF | T12 → T13 | T12: textos de `_probe_fallback`. T13: `_NUMERO[23]`, `_NUMERO[24]`, `_NUMERO_DE_CHECKS[23]`, `_NUMERO_DE_CHECKS[24]` y tests de los dos checks |
 | `docs/wiki/Integration-install.md` | CRLF | T13 → T16 | T13: las dos filas de la tabla del doctor y «las veinticuatro piezas». T16: el resto |
@@ -793,7 +793,7 @@ cierra.**
   | E-1 no se aplica si choca con lo que pide alguien de la cola | (b) | Mutante: E-1 mira solo `activos` → falla `assert concedida is None` |
   | Escenario «sin progreso»: forzada a los 600 s sin nadie que llegue ni salga | (b) | Mutante 1 (sin la comprobación periódica: `wait()` sin tope) → con la envoltura y reloj inyectado, falla `assert decision.forzada` tras 600 s simulados (se avanza el reloj y se deja despertar). Mutante 2 (mide la espera total, no la falta de progreso): con una llamada que termina en el 599, falla `assert not decision.forzada` a los 600 |
   | Escenario «llamada larga con plazo HTTP mayor que 600 s»: una llamada en vuelo de 700 s | (b) | Mutante: el reloj corre también con llamadas en vuelo → falla `assert not decision.forzada` a los 650 |
-  | Forzada de un salto con `A = {destino}` → el destino; con el conjunto de `cargado` → el primero en el orden de la cadena | (b) | Mutante: siempre el rol → falla `assert decision.modelo == "gemma4-26b-a4b"` |
+  | Forzada de un salto con `A = {destino}` → el destino; con el conjunto de `loaded` → el primero en el orden de la cadena | (b) | Mutante: siempre el rol → falla `assert decision.modelo == "gemma4-26b-a4b"` |
   | Escenario «cuando una reserva se reduce, la cola se vuelve a mirar» (W1 con {4B, 26B, Qwen3.6}, W2 del 26B) | (b) | Mutante: `reducir` sin `notify_all` → falla `assert w2_empezo < w1_termino` (con hilos; W1 hace 3 trozos de 50 ms) |
   | Una espera que sale de la cola por abandono deja pasar a la siguiente compatible | (b) | Mutante: el abandono sin `notify_all` → falla `assert concedida_a_tiempo` (la siguiente se concede en menos de 0,2 s; sin la notificación espera al tic, así que el test construye el `Turno` con `tic=5.0` —parámetro del constructor, 1 s por defecto— para que el mutante mute) |
   | `cambio_topologia()` concede a una espera que la topología nueva permite | (b) | Mutante: sin `notify_all` en el cambio → falla igual que el anterior |
@@ -857,7 +857,7 @@ cierra.**
      operación suelta plaza y turno, pide turno con `A = {destino}` al final de la cola, y pide plaza.
      El tope de `MAX_CONCURRENT_REQUESTS` se mantiene porque la plaza es el mismo semáforo.
      *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* el salto pide turno con
-     `Peticion(A={destino}, directos={destino}, rol=<rol original>)`, y el paso `cargado` con
+     `Peticion(A={destino}, directos={destino}, rol=<rol original>)`, y el paso `loaded` con
      `directos` vacío (su conjunto de REQ-019 solo entra si ya está elegido en `activos`). Con varios
      modelos en `A'`, la elección usa `Turno.elegir(op_id, candidatos, al_esperar, al_conceder)`, no
      `reducir` suelto. Cuando sube `topologia.foto().version`, el daemon llama a
@@ -989,6 +989,9 @@ cierra.**
 - **Ficheros:** `cadenas.py`, zona T12 de `server.py`, zona T12 de `checks.py`,
   `tests/test_cadenas.py`, `tests/test_checks.py` (zona T12) y los tests del inventario.
 - **Requisitos:** REQ-019 a REQ-023, y lo de REQ-037 que vive en el código.
+- **Nombre del paso** *(decisión del usuario del 2026-10-07: lo que se teclea va en inglés)*: el
+  paso se llama `loaded`, no `cargado`; `residente`/`resident` siguen como sinónimos obsoletos con
+  aviso, y `cargado` no se acepta. Ver la aclaración en `spec.md`.
 - **Precondición:** T1 hecha (la enmienda está escrita). El gate de F3 puede estar pendiente; la
   mezcla espera (T17).
 - **Qué se hace:**
@@ -996,17 +999,17 @@ cierra.**
      y, tras el cambio, la suite; cada test que caiga se reescribe al escenario de C que lo
      sustituye (tabla de REQ-037: «el modelo largo falla y responde el mecánico», «la entrada no cabe
      en el respaldo», «el modelo no cabe en la VRAM»). Lista en `verification.md`.
-  2. `cadenas.py`: paso `CARGADO = "cargado"`; `residente`/`resident` en las variables como
-     sinónimo, con la marca para el aviso; cadenas por defecto `code → cargado → long`,
-     `long → cargado → code`, `mechanical → cargado → long`; `miembros_cargado(tool, fallido,
+  2. `cadenas.py`: paso `LOADED = "loaded"`; `residente`/`resident` en las variables como
+     sinónimo, con la marca para el aviso; cadenas por defecto `code → loaded → long`,
+     `long → loaded → code`, `mechanical → loaded → long`; `miembros_loaded(tool, fallido,
      propios, nadie_mas)` que **sin proveedor registrado devuelve `()`** sin tocar la red (el
      proveedor lo pone T15, si hay afinidad); `describir()` con «sin residente» o «residente: X»
      según `topologia.residentes()`.
-  3. `server.py` (decisión de salto de T10): el paso `cargado` se resuelve en el momento del salto;
-     vacío → se salta **sin gastar salto**; un fallo de capacidad solo salta a `cargado` y sin segundo
-     salto; sin `cargado`, devuelve el error de siempre.
+  3. `server.py` (decisión de salto de T10): el paso `loaded` se resuelve en el momento del salto;
+     vacío → se salta **sin gastar salto**; un fallo de capacidad solo salta a `loaded` y sin segundo
+     salto; sin `loaded`, devuelve el error de siempre.
   4. `checks._probe_fallback`: «cadenas válidas; sin residente» (o «residente: X» con TTL 0), aviso
-     si una variable usa `residente`, y el texto «usa roles (mechanical, long, code, cargado)».
+     si una variable usa `residente`, y el texto «usa roles (mechanical, long, code, loaded)».
 - **Tests:**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
@@ -1014,9 +1017,9 @@ cierra.**
   | Escenario «código nunca cae al mecánico» (`backend_mock`: Qwen3.6 da error del modelo; el 4B «cargado» no importa porque no hay celdas) | (a) | `assert intentos[1].modelo == "gemma4-26b-a4b"` (hoy `gemma3-4b`, el residente) |
   | `long` que falla salta a `code`, nunca al mecánico; `mechanical` que falla salta a `long` | (a) | `assert "gemma3-4b" not in [i.modelo for i in intentos]` en el de `long` |
   | Escenario «fallo de capacidad sin nada cargado» (`local_explain_code`) | (a) | `assert [i.modelo for i in intentos] == ["qwen36-35b-a3b"]` (hoy salta al 4B) |
-  | `cargado` vacío no gasta salto: con `FALLBACK_MAX_HOPS = 1`, `code → cargado → long` llega a `long` | (b) | Mutante: contar el salto vacío → falla `assert intentos[-1].modelo == "gemma4-26b-a4b"` |
-  | `miembros_cargado` sin proveedor no consulta la red (un `backend_mock` sin rutas registradas haría fallar el test si la consultara) | (b) | Mutante: llamar a `/running` → falla por ruta no registrada; el test lo comprueba con `assert rutas_pedidas == []` |
-  | `LOCAL_DELEGATE_FALLBACK_CODE=residente,long` funciona como `cargado,long` y `doctor` avisa del nombre | (a) | `assert "renombra" in (r.hint or "")` |
+  | `loaded` vacío no gasta salto: con `FALLBACK_MAX_HOPS = 1`, `code → loaded → long` llega a `long` | (b) | Mutante: contar el salto vacío → falla `assert intentos[-1].modelo == "gemma4-26b-a4b"` |
+  | `miembros_loaded` sin proveedor no consulta la red (un `backend_mock` sin rutas registradas haría fallar el test si la consultara) | (b) | Mutante: llamar a `/running` → falla por ruta no registrada; el test lo comprueba con `assert rutas_pedidas == []` |
+  | `LOCAL_DELEGATE_FALLBACK_CODE=residente,long` funciona como `loaded,long` y `doctor` avisa del nombre | (a) | `assert "renombra" in (r.fix_hint or "")` |
   | Escenario «el estado ya no habla de un residente fantasma» (`local_status` y `doctor` con la config de hoy) | (a) | `assert "residente gemma3-4b" not in texto` (hoy sale «cadenas válidas; residente gemma3-4b (defecto: el modelo del rol mecánico)») y `assert "sin residente" in texto` |
   | Con una config con `ttl: 0` en el 4B dentro de un grupo `persistent`, `describir()` dice «residente: gemma3-4b» | (b) | Mutante: decir siempre «sin residente» → falla el assert |
 - **Verificación:**
@@ -1136,7 +1139,7 @@ cierra.**
 **Puerta:** `veredicto.json` de T6. Tres salidas:
 
 - **Ninguna celda aprobada:** REQ-010 a REQ-017 **no se implementan** (REQ-018). T15 se reduce a
-  dejarlo escrito en `verification.md` con la tabla del veredicto, comprobar que `cargado` sigue sin
+  dejarlo escrito en `verification.md` con la tabla del veredicto, comprobar que `loaded` sigue sin
   miembros y que ningún texto (wiki, `doctor`, `local_status`) promete afinidad. No hay código.
 - **Algunas aprobadas:** se implementa con **esas** celdas y solo esas. Si la hoja de commit no se
   terminó (T6, «Si la hoja no se termina»), la celda de commit cuenta como no aprobada y se deja
@@ -1146,7 +1149,7 @@ cierra.**
 - **Ficheros (si hay celdas):** `src/local_delegate/matriz.py`, `tests/test_afinidad.py` (nuevos),
   zona T15 de `server.py`, `config.py` (`AFINIDAD_MARGEN_S`), zona T15 de `cadenas.py` (proveedor) y
   de `checks.py` (aviso de huella).
-- **Requisitos:** REQ-010 a REQ-017 para las celdas aprobadas; los miembros de `cargado` de REQ-019.
+- **Requisitos:** REQ-010 a REQ-017 para las celdas aprobadas; los miembros de `loaded` de REQ-019.
 - **Qué se hace:**
   1. `matriz.py`: las celdas aprobadas **escritas en el código** (una tupla de
      `Celda(tool, alternativo, rol_comparado, huella)`; `veredicto.json` no viaja en el paquete), y
@@ -1172,7 +1175,12 @@ cierra.**
   5. `_log_event`: `routing: "afinidad"`, `model_requested`, `afinidad_vuelo_ajeno` y, sin vuelo
      ajeno y con espera de backend ≥ 3 000 ms, `afinidad_fallida: true`. El panel **no** la cuenta
      como respaldo y la respuesta no lleva aviso.
-  6. Proveedor de `miembros_cargado` registrado en `cadenas` (REQ-019).
+  6. Proveedor de `miembros_loaded` registrado en `cadenas` (REQ-019).
+     *(Aclarado tras la revisión de la ola 6):* al conectar el proveedor, el salto a `loaded` pide
+     turno con `directos` vacío y elige con el `Turno.elegir` partido (ver la nota de la ola 4), y
+     si al conceder ya no queda ningún miembro que cumpla REQ-012 se salta sin gastar salto
+     (REQ-019). Hoy (T12) `server._miembros_loaded` va al primer miembro que vale, con
+     `directos={destino}`, como a un destino suelto (`registrar_proveedor_loaded` es el enganche).
   7. `_probe_residencia`: aviso de una celda con la huella cambiada.
 - **Tests (solo con celdas aprobadas; los escenarios de la celda de la spec usan `local_classify`;
   si esa celda no se aprobó, se usa una que sí, y se anota):**
@@ -1202,17 +1210,20 @@ cierra.**
   `Daemon.md`, `Integration-install.md` (zona T16, CRLF), `docs/recipes/llama-swap-groups.md`.
 - **Requisitos:** «Release» y «Variables nuevas» de los no funcionales, REQ-023 (la wiki solo habla
   de «residente» con TTL 0), REQ-035 (README), el caso límite «Plazos de los clientes MCP».
+- **Comentarios viejos que dejó T12** *(anotado tras la revisión de la ola 6)*: `turno.py:38`
+  (docstring de `Peticion`: «el conjunto de `cargado`») y `config.py:296` (comentario de
+  `FALLBACK_CHAINS`: «roles (`mechanical`, `long`, `code`, `residente`)») deben decir `loaded`.
 - **Qué se hace:**
   - CHANGELOG `[Unreleased]` (editando el bloque propio, nunca reescribiendo la sección): `Added`
     turno por modelos que chocan, espera de turno en el panel, espera e inferencia por separado y
     «lento», `llamaswap residency`, dos checks; `Changed` cadenas sin residente y código/largo
-    nunca al mecánico, un fallo de capacidad sin `cargado` ya no tiene respaldo (consecuencia
+    nunca al mecánico, un fallo de capacidad sin `loaded` ya no tiene respaldo (consecuencia
     aceptada en REQ-021), `init-llamaswap` sin residente por defecto; y, si hubo celdas, la
     afinidad con la tabla del veredicto. Sin versión ni fecha.
   - README (`:257-264` y la mención de `init-llamaswap`) y la receta de grupos: «ningún residente»
     como recomendado; la residencia como opt-in con su coste de VRAM.
   - Wiki: `Configuration.md` con las variables nuevas; `Tools.md` y `Architecture.md` con el turno,
-    `cargado` y, si la hay, la matriz; `Savings-and-metrics.md` con los campos nuevos del log y del
+    `loaded` y, si la hay, la matriz; `Savings-and-metrics.md` con los campos nuevos del log y del
     panel; `Troubleshooting.md` con «una delegación espera turno» y los cuatro mensajes de la
     recarga; `Daemon.md` con los endpoints; `Backend-versions.md` con lo que se usa de v255;
     `Integration-install.md` con el comando; y los plazos de Claude Code y Codex medidos en T0.5
@@ -1346,14 +1357,14 @@ esperada.
 - **Variables:** `residente` en `LOCAL_DELEGATE_FALLBACK_<ROL>` sigue valiendo (con aviso). Tres
   variables nuevas con valores por defecto.
 - **Comportamiento visible:** dos operaciones que chocan ya no se intercalan (una espera); un fallo
-  de capacidad sin `cargado` ya no tiene respaldo; código y largo nunca caen al mecánico. Sin
+  de capacidad sin `loaded` ya no tiene respaldo; código y largo nunca caen al mecánico. Sin
   topología o con backend remoto, todo sigue como hoy (salida de emergencia: `LLAMASWAP_CONFIG`
   vacío en el lanzador).
 - **`init-llamaswap`:** `--ttl-resident` pasa a 0 y su copia lleva fecha.
 - **Otras máquinas:** la Mac (backend remoto) no tiene turno ni afinidad; Claude Desktop en stdio y
   `benchmark.py` no pasan por el turno, pero sus peticiones se ven en la foto.
 - **Interfaces internas:** `_con_respaldo` se parte en dos; `ChatResult` gana `timings`;
-  `cadenas.residente()` desaparece en favor de `miembros_cargado` y de `topologia.residentes()`
+  `cadenas.residente()` desaparece en favor de `miembros_loaded` y de `topologia.residentes()`
   (T12 busca y actualiza a todos sus llamadores).
 - **Release:** fuera de este plan; T16 deja listos CHANGELOG, README y `docs/wiki/`.
 
@@ -1444,7 +1455,7 @@ esperada.
 | REQ-008 | T10 | `espera_local: "turno"`, `turno_en_uso`, `turno_posicion`, fila 3 y `title` con node; `espera_turno_ms`, `turno: "forzado"` |
 | REQ-010 a REQ-017 | T15 (si hay celdas), T2 (margen y alias) | Escenarios de afinidad, matriz = veredicto, huella, camino feliz sin red; T17.7 en vivo |
 | REQ-018 | T6, T15 | `veredicto.json`; sin celdas, nada implementado y anotado |
-| REQ-019 a REQ-023 | T12, T15 (proveedor) | Código nunca al mecánico; capacidad sin `cargado`; salto vacío sin gastar; sinónimo; «sin residente» |
+| REQ-019 a REQ-023 | T12, T15 (proveedor) | Código nunca al mecánico; capacidad sin `loaded`; salto vacío sin gastar; sinónimo; «sin residente» |
 | REQ-024 a REQ-028 | T3, T9, T14 | Control de lentitud con datos reales; ventana; evento lento de punta a punta; sin `timings`; robustez; `marcaLento` |
 | REQ-029 a REQ-033, REQ-035, REQ-038 | T11, T13 | Tabla de edición; escenarios de `--none`, `--pin`, `--ttl`, restaurar; estimador contra F2 |
 | REQ-034, REQ-039 | T2, T13 | Cuatro salidas con el llama-swap de prueba; negativas; sin credencial; endpoints sin secretos |

@@ -1551,3 +1551,47 @@ def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
     )
     result = result_for("scaffold.mcp_codex", make_ctx(home))
     assert result.status == checks.WARN
+
+
+# --- T12: config.fallback con `loaded` y el sinónimo obsoleto (REQ-022, REQ-023) ---------------
+
+
+@pytest.mark.parametrize("obsoleto", ["residente", "resident", "Residente"])
+def test_fallback_con_residente_funciona_como_loaded_y_avisa(recargar_config, tmp_path, obsoleto):
+    """`residente,long` sigue valiendo como `loaded,long`, y `doctor` pide renombrarlo."""
+    from local_delegate import cadenas
+
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsoleto},long")
+    r = checks._probe_fallback(checks.Context(home=tmp_path))
+
+    assert "renombra" in (r.fix_hint or "")
+    assert r.status == checks.WARN
+    assert "LOCAL_DELEGATE_FALLBACK_CODE" in r.detail
+    assert cadenas.resolver("code").pasos == (cadenas.LOADED, "gemma4-26b-a4b")
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="loaded,long")
+    assert cadenas.resolver("code").pasos == (cadenas.LOADED, "gemma4-26b-a4b")
+    assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.OK
+
+
+def test_fallback_cargado_no_es_un_nombre_valido(recargar_config, tmp_path):
+    """El paso se llama `loaded` (nombres que se teclean, en inglés); `cargado` no se acepta."""
+    from local_delegate import cadenas
+
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="cargado,long")
+    assert cadenas.resolver("code").ignorados == ("cargado",)
+    r = checks._probe_fallback(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert r.fix_hint == "usa roles (mechanical, long, code, loaded) o ids del catálogo de texto"
+
+
+def test_fallback_con_un_nombre_obsoleto_y_otro_desconocido_avisa_de_los_dos(
+    recargar_config, tmp_path
+):
+    """`residente,foo`: los dos avisos en el mismo resultado; arreglar uno no esconde el otro."""
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,foo")
+    r = checks._probe_fallback(checks.Context(home=tmp_path))
+
+    assert r.status == checks.WARN
+    assert "foo" in r.detail and "residente" in r.detail
+    assert "renombra" in r.fix_hint
+    assert "usa roles (mechanical, long, code, loaded)" in r.fix_hint
