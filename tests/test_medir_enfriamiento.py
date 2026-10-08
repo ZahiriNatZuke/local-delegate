@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from local_delegate import config
+
 RAIZ = Path(__file__).parents[1]
 
 
@@ -109,7 +111,7 @@ class Logs:
 
 @pytest.fixture
 def logs(tmp_path, monkeypatch) -> Logs:
-    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "logs")
     return Logs(tmp_path / "logs")
 
 
@@ -342,3 +344,71 @@ def test_lee_el_registro_que_escribe_el_modulo(logs):
     assert medida["episodios"] == 1
     assert medida["episodios_que_reentraron"] == 1
     assert medida["episodios_por_timeout"] == 1
+
+
+# --- Arranque y ventanas de prueba (test-windows-out-of-metrics, REQ-020) ------------------------
+
+
+def _sin_metadatos(medida: dict) -> dict:
+    """Lo que decide P-4, sin lo que solo describe como se filtro."""
+    fuera = {"excluidos", "include_tests", "excluded_manual", "excluded_tests", "test_windows"}
+    return {k: v for k, v in medida.items() if k not in fuera}
+
+
+def test_main_de_verdad_sale_con_cero(tmp_path, monkeypatch, capsys):
+    """El `main()` reventaba siempre con `AttributeError: ... 'exclude'` (evidencias/T0.md).
+    Control: volver a poner `args.exclude` → este test falla."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["medir_enfriamiento.py", "--desde", "2030-01-01"])
+    assert medir_enfriamiento.main() == 0
+    assert "RESULTADO: no concluyente" in capsys.readouterr().out
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["medir_enfriamiento.py", "--json", "--excluir", "2026-09-15T19:31:14,2026-09-15T19:35:14"],
+    )
+    assert medir_enfriamiento.main() == 0
+    datos = json.loads(capsys.readouterr().out)
+    assert set(datos["excluded_tests"]) == {"usage_rows", "episodes"}
+    assert datos["test_windows"] == []
+
+
+def test_p4_se_puede_volver_a_medir_con_la_ventana_del_fichero(logs):
+    """El escenario del spec. Control: mutante «se ignora el fichero» → las dos medidas difieren."""
+    from local_delegate import test_windows
+
+    logs.fallos(10, dia=21)
+    logs.fallos(10, dia=25)
+    _cinco_episodios(logs)
+    tramo = ("2026-09-21T00:00:00Z", "2026-09-21T23:59:59Z")
+    completa = logs.medir()
+    a_mano = logs.medir(excluidos=[tramo], include_tests=True)
+    assert _sin_metadatos(completa) != _sin_metadatos(a_mano), "guarda: el tramo quita algo"
+    test_windows.add(logs.directorio, *tramo, "P-4 fallo provocado")
+    con_fichero = logs.medir()
+    assert _sin_metadatos(con_fichero) == _sin_metadatos(a_mano)
+    assert con_fichero["excluded_tests"] == {"usage_rows": 10, "episodes": 1}
+    assert [w["removed"] for w in con_fichero["test_windows"]] == [11]
+
+
+def test_include_tests_no_quita_los_tramos_de_excluir(logs):
+    from local_delegate import test_windows
+
+    logs.fallos(3, dia=21)
+    logs.fallos(4, dia=22)
+    test_windows.add(logs.directorio, "2026-09-22T00:00:00Z", "2026-09-22T23:59:59Z")
+    m = logs.medir(excluidos=[("2026-09-21T00:00:00Z", "2026-09-21T23:59:59Z")], include_tests=True)
+    assert m["excluded_manual"]["usage_rows"] == 3
+    assert m["excluded_tests"]["usage_rows"] == 0
+    assert m["fallos_que_cuentan"] == 4
+
+
+def test_excluir_compara_instantes_y_no_cadenas(logs):
+    """Con cadenas, `...01:20:05+00:00` < `...01:20:05.255Z` (el `+` ordena antes que el `.`) y la
+    fila se colaba. Control: mutante que compara cadenas → este test falla."""
+    logs.usos.append(
+        {"ts": "2026-09-20T01:20:05+00:00", "tool": "local_summarize", "error_class": "modelo"}
+    )
+    m = logs.medir(excluidos=[("2026-09-20T01:20:05.255Z", "2026-09-20T01:22:31.544Z")])
+    assert m["excluded_manual"]["usage_rows"] == 1
+    assert m["fallos_que_cuentan"] == 0

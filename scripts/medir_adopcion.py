@@ -10,10 +10,15 @@ cruce lo hace el programa.
 Cuando la pregunta es «cuantos sitios hay», que la conteste el programa: contar a ojo ya salio
 mal una vez en este repo, catorce contra treinta y cuatro.
 
+Las pruebas no cuentan: los eventos de hooks dentro de una ventana de prueba
+(`LOG_DIR/test-windows.json`) y las filas del log de uso que la regla comun
+(`atribucion.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
+cuantas. `--include-tests` las deja.
+
 Uso:
-    python scripts/medir_adopcion.py                      # desde que arranco el experimento
-    python scripts/medir_adopcion.py --desde 2026-09-12   # una ventana concreta
-    python scripts/medir_adopcion.py --json               # para pegarlo en una nota
+    uv run python scripts/medir_adopcion.py                      # desde que arranco el experimento
+    uv run python scripts/medir_adopcion.py --desde 2026-09-12   # una ventana concreta
+    uv run python scripts/medir_adopcion.py --json               # para pegarlo en una nota
 """
 
 from __future__ import annotations
@@ -26,6 +31,8 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+from local_delegate import atribucion, config, test_windows
+
 
 def telemetria_de_hooks() -> Path:
     destino = os.environ.get("LD_HOOK_TELEMETRY_LOG", "").strip()
@@ -33,11 +40,10 @@ def telemetria_de_hooks() -> Path:
 
 
 def directorio_de_logs() -> Path:
-    """`LOG_DIR` de esta maquina. Lo usa tambien `medir_enfriamiento.py`: una sola copia."""
-    directorio = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
-    if directorio:
-        return Path(directorio)
-    return Path(os.environ.get("LOCALAPPDATA", Path.home())) / "local-delegate"
+    """`config.LOG_DIR`: el mismo directorio que leen el panel y el daemon, y por tanto el mismo
+    `test-windows.json` (test-windows-out-of-metrics, REQ-022). Lo usa tambien
+    `medir_enfriamiento.py`."""
+    return config.LOG_DIR
 
 
 def logs_de_uso() -> list[Path]:
@@ -61,9 +67,24 @@ def leer(ruta: Path, desde: str | None) -> list[dict]:
     return eventos
 
 
-def medir(desde: str | None) -> dict:
+def medir(desde: str | None, include_tests: bool = False) -> dict:
     hooks = leer(telemetria_de_hooks(), desde)
     usos = [e for ruta in logs_de_uso() for e in leer(ruta, desde)]
+    fuera = {"hooks": 0, "usage": 0}
+    aplicadas: list[dict] = []
+    if not include_tests:
+        ventanas = test_windows.load(directorio_de_logs())
+        aplicadas = [w.to_json() for w in ventanas.windows]
+        antes = len(hooks)
+        hooks = [e for e in hooks if ventanas.find(e.get("ts")) is None]
+        fuera["hooks"] = antes - len(hooks)
+        antes = len(usos)
+        usos = [
+            e
+            for e in usos
+            if not atribucion.test_reason({**e, "test_window": ventanas.find(e.get("ts"))})
+        ]
+        fuera["usage"] = antes - len(usos)
 
     lecturas = [e for e in hooks if e.get("category") in {"read", "shell"}]
     ofrecidos = [e for e in lecturas if e.get("suggested")]
@@ -112,6 +133,8 @@ def medir(desde: str | None) -> dict:
         ),
         "acotadas_con_huella": len(acotadas),
         "acotadas_que_convenia_delegar": len(convenia),
+        "excluded_tests": fuera,
+        "test_windows": aplicadas,
     }
 
 
@@ -119,9 +142,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--desde", help="fecha ISO; se compara contra el `ts` del evento")
     parser.add_argument("--json", action="store_true", help="salida cruda")
+    parser.add_argument(
+        "--include-tests",
+        action="store_true",
+        help="no quitar las pruebas (ventanas y regla comun)",
+    )
     args = parser.parse_args()
 
-    resultado = medir(args.desde)
+    resultado = medir(args.desde, include_tests=args.include_tests)
     if args.json:
         print(json.dumps(resultado, ensure_ascii=False, indent=2))
         return 0
@@ -130,6 +158,14 @@ def main() -> int:
     print(
         f"Sesiones: {resultado['sesiones']} | versiones de script: {resultado['versiones_de_script']}"
     )
+    fuera = resultado["excluded_tests"]
+    if args.include_tests:
+        print("Pruebas: incluidas (--include-tests)")
+    else:
+        print(
+            f"Pruebas fuera: {fuera['hooks']} eventos de hooks y {fuera['usage']} filas del log de "
+            f"uso ({len(resultado['test_windows'])} ventanas de prueba en el fichero)"
+        )
     print()
     print(f"Lecturas vistas:        {resultado['lecturas']}")
     for motivo, cuantas in sorted(resultado["por_motivo"].items(), key=lambda x: -x[1]):

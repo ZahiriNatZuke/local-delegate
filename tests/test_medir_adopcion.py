@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from local_delegate import config
+
 RAIZ = Path(__file__).parents[1]
 
 
@@ -141,7 +143,7 @@ def escenario(tmp_path, monkeypatch):
         ],
     )
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(hooks))
-    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(usos))
+    monkeypatch.setattr(config, "LOG_DIR", usos)
     return hooks
 
 
@@ -193,7 +195,7 @@ def test_se_ve_si_la_muestra_mezcla_dos_versiones_de_script(escenario):
 
 def test_sin_logs_no_revienta(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(tmp_path / "no-existe.jsonl"))
-    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "tampoco"))
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "tampoco")
 
     resultado = medir_adopcion.medir(None)
 
@@ -208,6 +210,50 @@ def test_una_linea_corrupta_no_tumba_la_medicion(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(hooks))
-    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "vacio"))
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "vacio")
 
     assert medir_adopcion.medir(None)["ofrecidos"] == 1
+
+
+# --- Ventanas de prueba (test-windows-out-of-metrics, REQ-021 y REQ-022) -------------------------
+
+
+def test_el_directorio_es_el_de_config(tmp_path, monkeypatch):
+    """REQ-022: el panel y los scripts leen el MISMO `test-windows.json`."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "uno")
+    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "otro"))
+    assert medir_adopcion.directorio_de_logs() == tmp_path / "uno"
+    monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR")
+    assert medir_adopcion.directorio_de_logs() == config.LOG_DIR
+
+
+def test_un_bloqueo_y_su_delegacion_en_ventana_no_cuentan(escenario):
+    """Control: mutante «se ignora el fichero de ventanas» → los bloqueos siguen en 2."""
+    from local_delegate import test_windows
+
+    test_windows.add(config.LOG_DIR, "2026-09-12T09:59:00Z", "2026-09-12T10:00:30Z", "prueba")
+    sin = medir_adopcion.medir("2026-09-10")
+    con = medir_adopcion.medir("2026-09-10", include_tests=True)
+    assert (con["bloqueos"], con["aceptados"]) == (2, 1), "guarda: sin quitar nada, lo de siempre"
+    assert (sin["bloqueos"], sin["aceptados"]) == (1, 0)
+    assert sin["excluded_tests"] == {"hooks": 1, "usage": 1}
+    assert con["excluded_tests"] == {"hooks": 0, "usage": 0}
+
+
+def test_las_filas_del_cliente_mcp_no_cuentan_como_delegacion(escenario):
+    _escribir(
+        config.LOG_DIR / "usage-202610.jsonl",
+        [{"ts": "2026-10-01T10:00:00Z", "tool": "local_summarize", "client": "mcp"}],
+    )
+    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
+    assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3
+
+
+def test_main_de_verdad_sale_con_cero(escenario, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["medir_adopcion.py", "--desde", "2026-09-10", "--json"])
+    assert medir_adopcion.main() == 0
+    datos = json.loads(capsys.readouterr().out)
+    assert "excluded_tests" in datos and "test_windows" in datos
+    monkeypatch.setattr(sys, "argv", ["medir_adopcion.py", "--desde", "2026-09-10"])
+    assert medir_adopcion.main() == 0
+    assert "Pruebas fuera:" in capsys.readouterr().out
