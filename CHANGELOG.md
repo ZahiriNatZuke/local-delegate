@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-08
+
 ### Added
 - **Las pruebas ya no ensucian las métricas: ventanas de prueba y una sola regla.** Antes de una
   prueba en vivo contra el MCP o el daemon, `local-delegate test-window start --label "…"` abre una
@@ -2503,7 +2505,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...v0.32.0
 [0.31.4]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.3...v0.31.4
