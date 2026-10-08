@@ -528,6 +528,53 @@ def _con_cabecera(entry: dict, cabecera: str | None) -> dict:
     return {**entry, "headers": {"Authorization": cabecera}}
 
 
+# --- Los plazos que ya tenía la entrada ---------------------------------------
+# `install` no escribe nunca un plazo, pero el usuario sí: con el turno del daemon una espera puede
+# pasar de los 60 s con los que Codex corta, y la wiki manda subirlo en la propia entrada. Hasta la
+# 0.33.0 el siguiente `install` (o `update`, que repara llamándolo) reescribía la entrada y se lo
+# llevaba. Se conservan **tal cual**, con el nombre de clave de cada cliente; si no había ninguno,
+# no se añade nada: ningún cliente necesita uno nuestro para funcionar.
+TIMEOUT_KEYS: dict[str, tuple[str, ...]] = {
+    # Claude Code: `timeout` (ms) en la entrada del servidor, que gana a `MCP_TOOL_TIMEOUT`.
+    "claude": ("timeout",),
+    # opencode: `timeout` (ms) en la entrada de `mcp`, para `local` y `remote`.
+    "opencode": ("timeout",),
+    # Codex: los dos plazos de la tabla, y la variante en ms del de arranque que también acepta.
+    "codex": ("tool_timeout_sec", "startup_timeout_sec", "startup_timeout_ms"),
+}
+# El valor se guarda como TEXTO, sin interpretarlo: así se reescribe byte a byte lo que había
+# (`900`, `1_800`, `90.5`) y no hace falta un escritor de TOML para devolverlo.
+_CODEX_TIMEOUT_RE = re.compile(
+    r"(?m)^[ \t]*(" + "|".join(TIMEOUT_KEYS["codex"]) + r")[ \t]*=[ \t]*([^\s#]+)"
+)
+
+
+def existing_timeouts(home: Path, target: str) -> dict:
+    """Los plazos puestos en la entrada ya instalada en ``target``, o ``{}``.
+
+    Para Claude Code y opencode, ``{clave: valor JSON}``; para Codex, ``{clave: texto TOML}``.
+    Mira la entrada sea del modo que sea: un plazo vale igual en `stdio` que en `http`.
+    """
+    if target == "codex":
+        section = _CODEX_SECTION_RE.search(_read_text(home / ".codex" / "config.toml"))
+        return dict(_CODEX_TIMEOUT_RE.findall(section.group(0))) if section else {}
+    if target == "claude":
+        servers = _read_json(home / ".claude.json").get("mcpServers")
+        entry = servers.get(SERVER_NAME) if isinstance(servers, dict) else None
+    elif target == "opencode":
+        entry = opencode_mcp_installed(home)
+    else:
+        return {}
+    if not isinstance(entry, dict):
+        return {}
+    return {k: entry[k] for k in TIMEOUT_KEYS[target] if entry.get(k) is not None}
+
+
+def _describe_timeouts(timeouts: dict) -> str:
+    """``tool_timeout_sec = 900, …`` para el detalle del plan y de `doctor`."""
+    return ", ".join(f"{k} = {v}" for k, v in timeouts.items())
+
+
 def _sin_secretos(entry: dict) -> dict:
     """Copia para ENSEÑAR (el `literal` del `--dry-run`): un token escrito a pelo no se imprime.
 
@@ -539,8 +586,18 @@ def _sin_secretos(entry: dict) -> dict:
     return {**entry, "headers": {"Authorization": "Bearer <token conservado, no se muestra>"}}
 
 
-def codex_mcp_block(entry: dict) -> str:
-    """Bloque TOML equivalente para `~/.codex/config.toml` (sin dependencia de un writer)."""
+def codex_mcp_block(entry: dict, timeouts: dict | None = None) -> str:
+    """Bloque TOML equivalente para `~/.codex/config.toml` (sin dependencia de un writer).
+
+    ``timeouts`` son los plazos conservados de la entrada anterior (ver `existing_timeouts`), como
+    texto TOML; van al final de la tabla, tras el `env` en línea, que es un valor y no la cierra.
+    """
+    lines = _codex_mcp_lines(entry)
+    lines += [f"{k} = {v}" for k, v in (timeouts or {}).items()]
+    return "\n".join(lines)
+
+
+def _codex_mcp_lines(entry: dict) -> list[str]:
     lines = [f"[mcp_servers.{SERVER_NAME}]"]
     if entry.get("type") == "http":
         lines.append(f"url = {json.dumps(entry['url'])}")
@@ -555,7 +612,7 @@ def codex_mcp_block(entry: dict) -> str:
             ref = _REFERENCIA_RE.match(entry["headers"].get("Authorization", ""))
             var = (ref.group(1) or ref.group(2)) if ref else WEB_TOKEN_VAR
             lines.append(f"bearer_token_env_var = {json.dumps(var)}")
-        return "\n".join(lines)
+        return lines
     lines.append(f"command = {json.dumps(entry['command'])}")
     lines.append("args = [" + ", ".join(json.dumps(a) for a in entry.get("args", [])) + "]")
     # `${VAR}` no se expande en TOML: la key se reenvía por `env_vars`, nunca se escribe.
@@ -567,7 +624,7 @@ def codex_mcp_block(entry: dict) -> str:
         # el usuario escriba después del marcador de cierre no queda absorbido por `.env`.
         inline = ", ".join(f"{k} = {json.dumps(v)}" for k, v in env.items())
         lines.append("env = { " + inline + " }")
-    return "\n".join(lines)
+    return lines
 
 
 # Con sangría opcional delante de cada cabecera, y no es cosmético: otros programas reescriben este
@@ -1040,19 +1097,23 @@ def plan_install(opts: Options) -> list[Action]:
                 return None
             return cabecera_existente(opts.home, target)
 
-        def _detalle(cabecera: str | None) -> str:
-            return detalle + (
-                " — conserva la cabecera de autorización que ya tenía" if cabecera else ""
-            )
+        def _detalle(cabecera: str | None, plazos: dict) -> str:
+            texto = detalle
+            if cabecera:
+                texto += " — conserva la cabecera de autorización que ya tenía"
+            if plazos:
+                texto += f" — conserva el plazo que ya tenía ({_describe_timeouts(plazos)})"
+            return texto
 
         if "claude" in opts.targets:
             conservada = _conservada("claude")
-            claude_entry = _con_cabecera(entry, conservada)
+            plazos = existing_timeouts(opts.home, "claude")
+            claude_entry = {**_con_cabecera(entry, conservada), **plazos}
             actions.append(
                 Action(
                     "mcp",
                     "claude",
-                    _detalle(conservada),
+                    _detalle(conservada, plazos),
                     lambda entry=claude_entry: _register_claude_mcp(opts, entry),
                     literal=json.dumps(_sin_secretos(claude_entry), ensure_ascii=False),
                 )
@@ -1060,38 +1121,43 @@ def plan_install(opts: Options) -> list[Action]:
         if "codex" in opts.targets and not opts.skip_codex_mcp:
             config_path = codex / "config.toml"
             conservada = _conservada("codex")
-            codex_entry = _con_cabecera(entry, conservada)
+            plazos = existing_timeouts(opts.home, "codex")
+            codex_block = codex_mcp_block(_con_cabecera(entry, conservada), plazos)
 
-            def _run_codex(path=config_path, entry=codex_entry) -> str:
-                _write_text(path, upsert_codex_mcp(_read_text(path), codex_mcp_block(entry)))
+            def _run_codex(path=config_path, block=codex_block) -> str:
+                _write_text(path, upsert_codex_mcp(_read_text(path), block))
                 return "entrada [mcp_servers.local-delegate] actualizada"
 
             actions.append(
                 Action(
                     "toml",
                     config_path,
-                    _detalle(conservada),
+                    _detalle(conservada, plazos),
                     _run_codex,
-                    literal=codex_mcp_block(codex_entry),
+                    literal=codex_block,
                 )
             )
         if "opencode" in opts.targets:
             conservada = _conservada("opencode")
-            oc_entry = _con_cabecera(
-                opencode_mcp_entry(
-                    opts.mcp_mode,
-                    opts.base_url,
-                    opts.api_key_env,
-                    opts.pin_version,
-                    pedida,
+            plazos = existing_timeouts(opts.home, "opencode")
+            oc_entry = {
+                **_con_cabecera(
+                    opencode_mcp_entry(
+                        opts.mcp_mode,
+                        opts.base_url,
+                        opts.api_key_env,
+                        opts.pin_version,
+                        pedida,
+                    ),
+                    conservada,
                 ),
-                conservada,
-            )
+                **plazos,
+            }
             actions.append(
                 Action(
                     "mcp",
                     "opencode",
-                    _detalle(conservada),
+                    _detalle(conservada, plazos),
                     lambda entry=oc_entry: _register_opencode_mcp(opts, entry),
                     literal=json.dumps({SERVER_NAME: _sin_secretos(oc_entry)}, ensure_ascii=False),
                 )
@@ -1127,7 +1193,12 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
                 text=True,
                 timeout=30,
             )
-            if done.returncode == 0:
+            # Con un plazo conservado se comprueba que la CLI lo dejó escrito: si lo descartara,
+            # el usuario lo perdería igual que antes del arreglo. Si no está, se escribe el fichero.
+            plazos = {k: entry[k] for k in TIMEOUT_KEYS["claude"] if k in entry}
+            if done.returncode == 0 and (
+                not plazos or existing_timeouts(opts.home, "claude") == plazos
+            ):
                 return "registrado con `claude mcp add-json --scope user`"
         except (OSError, subprocess.SubprocessError):
             pass  # cae al modo archivo
@@ -1236,8 +1307,13 @@ def _register_opencode_mcp(opts: Options, entry: dict) -> str:
     pasa (medido, y por eso existe `_opencode_cli_env`). Se mantiene apagado porque ``--home`` es
     el modo de prueba, y lanzar el cliente real desde la suite la haría depender de qué hay
     instalado en la máquina.
+
+    Con un plazo conservado (``timeout``) **no** se usa la CLI: sus opciones medidas (`--url`,
+    `--header`, `--env`) no lo expresan, y registrar por ahí lo perdería. Se va al fichero, y si
+    el fichero no se puede reescribir se avisa y la entrada anterior, con su plazo, queda intacta.
     """
-    if opts.use_cli and shutil.which("opencode"):
+    lleva_plazo = any(k in entry for k in TIMEOUT_KEYS["opencode"])
+    if opts.use_cli and not lleva_plazo and shutil.which("opencode"):
         try:
             done = subprocess.run(
                 ["opencode", *opencode_mcp_add_args(entry)],

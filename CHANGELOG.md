@@ -6,6 +6,16 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Fixed
+- **`install` y `update` ya no borran el plazo que subiste a mano.** Al reescribir la entrada
+  `local-delegate` de cada cliente se perdía el `tool_timeout_sec` de Codex (que corta a los 60 s,
+  menos de lo que puede durar una espera de turno), el `timeout` de Claude Code y el de opencode.
+  Ahora se leen de la entrada que ya hay y se vuelven a escribir tal cual, en `stdio` y en `http`;
+  en Codex también `startup_timeout_sec` y `startup_timeout_ms`. Sin plazo previo no se añade
+  ninguno. Con un plazo, opencode se registra escribiendo el fichero y no con `opencode mcp add`,
+  que no lo expresa, y si `claude mcp add-json` no lo deja escrito se escribe `~/.claude.json`.
+  `doctor` enseña el plazo puesto en la línea de cada entrada.
+
 ## [0.33.0] - 2026-10-08
 
 ### Added
