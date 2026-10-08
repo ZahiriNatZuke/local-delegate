@@ -18,6 +18,19 @@ from local_delegate import checks, install, update
 from local_delegate.fallos import VistaBackend
 
 
+@pytest.fixture(autouse=True)
+def _sin_senales_reales(monkeypatch):
+    """Ningún test de este fichero manda una señal de verdad.
+
+    Varios dan un pid inventado a `restart_daemon` (999, 7) sin doblar `os.kill`, y la señal
+    salía de verdad contra lo que tuviera ese pid en la máquina. En el PR #242 el runner de macOS
+    recibió dos veces seguidas «The runner has received a shutdown signal» justo al llegar a estos
+    tests, con la suite entera en verde. Los tests que miran qué se mata lo vuelven a
+    doblar con su propia lista, y ese doble gana porque se pone después.
+    """
+    monkeypatch.setattr(update.os, "kill", lambda pid, sig: None)
+
+
 def fake_run(returncode=0, stdout="", stderr=""):
     """Runner doble que registra lo que se le pidió ejecutar."""
     calls: list[list[str]] = []
