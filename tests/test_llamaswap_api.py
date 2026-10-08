@@ -63,7 +63,7 @@ def inflight_request(model: str, key: str) -> dict:
 @backend_mock.mock
 def test_running_keeps_only_id_state_and_ttl():
     backend_mock.get(RUNNING).mock(
-        return_value=httpx2.Response(200, json={"running": [running_row("m", "key-falsa-1")]})
+        return_value=httpx2.Response(200, json={"running": [running_row("m", "clave-falsa-1")]})
     )
     assert llamaswap_api.running(Backend(BASE)) == [{"id": "m", "state": "ready", "ttl": 120}]
 
@@ -87,9 +87,9 @@ def test_in_flight_counts_by_model_and_drops_everything_else():
                     {
                         "operation": "snapshot",
                         "requests": [
-                            inflight_request("a", "key-falsa-2"),
-                            inflight_request("a", "key-falsa-2"),
-                            inflight_request("b", "key-falsa-2"),
+                            inflight_request("a", "clave-falsa-2"),
+                            inflight_request("a", "clave-falsa-2"),
+                            inflight_request("b", "clave-falsa-2"),
                         ],
                     },
                 ),
@@ -117,7 +117,7 @@ def test_activity_returns_the_last_row_without_request_data():
         "duration_ms": 1200,
         "resp_status_code": 200,
         "req_path": "/v1/chat/completions",
-        "metadata": {"x": "key-falsa-3"},
+        "metadata": {"x": "clave-falsa-3"},
     }
     backend_mock.get(f"{BASE}/api/metrics/activity?model=m&limit=1").mock(
         return_value=httpx2.Response(200, json={"data": [row]})

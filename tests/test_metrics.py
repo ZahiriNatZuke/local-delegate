@@ -1660,14 +1660,14 @@ def test_llamaswap_endpoints_require_the_web_token(monkeypatch, method, path):
     `BASE_URL` va a un puerto sin nadie: si la dependencia faltara, el endpoint no saldría a la red
     de verdad (ni al llama-swap real del 9292).
     """
-    monkeypatch.setattr(config, "WEB_TOKEN", "token-falso-1")
+    monkeypatch.setattr(config, "WEB_TOKEN", "clave-falsa-3")
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9/v1")
     client = TestClient(metrics.app)
 
     r = client.request(method, path)
 
     assert r.status_code == 401
-    with_token = client.request(method, path, headers={"Authorization": "Bearer token-falso-1"})
+    with_token = client.request(method, path, headers={"Authorization": "Bearer clave-falsa-3"})
     assert with_token.status_code != 401
 
 

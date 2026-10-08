@@ -5,13 +5,14 @@
   "mode": "standard",
   "status": "implementing",
   "createdAt": "2026-10-06T14:16:18.644Z",
-  "updatedAt": "2026-10-07T15:07:40.141Z",
+  "updatedAt": "2026-10-08T01:51:08.564Z",
   "gates": {
     "spec": {
       "status": "approved",
       "updatedAt": "2026-10-07T15:07:39.924Z",
       "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
-      "actor": "user"
+      "actor": "user",
+      "at": "2026-10-08T01:44:25.593Z"
     },
     "plan": {
       "status": "approved",
@@ -20,16 +21,18 @@
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 paso 1: suite completa con Playwright `2245 passed, 2 skipped, 1 warning in 219.75s`, `ruff check .` y `ruff format --check .` limpios, `node --check` del panel y de la captura con exit 0; tras cambiar las claves falsas del paso 9, `tests/test_llamaswap_api.py` y `tests/test_metrics.py` con `96 passed`; gitleaks sobre main..HEAD sin fugas. Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Quality checks», y evidencias/T17.md.",
+      "actor": "orchestrator",
+      "at": "2026-10-08T01:51:08.564Z"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 pasos 1 a 8 pasan con dato literal y la revisión del resultado del paso 9 cubre REQ-001 a REQ-044; sus dos bloqueantes (evidencia del paso 4, reaprobación del gate spec del 2026-10-08T01:44:25Z) y los dos importantes (ola 11 y plantillas de verification.md, handoff.md) quedan resueltos, y el menor de las claves falsas corregido. Desviaciones y riesgos aceptados en «Deviations and residual risk». Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Evidence», y evidencias/T17.md.",
+      "actor": "orchestrator",
+      "at": "2026-10-08T01:51:08.564Z"
     },
     "memory": {
       "status": "pending",
@@ -112,6 +115,30 @@
       "at": "2026-10-07T15:07:40.141Z",
       "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
       "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-08T01:44:25.593Z",
+      "evidence": "Reaprobación tras T17 paso 9: el usuario aprueba la spec con todas las filas de la tabla de aclaraciones del 2026-10-07 (spec.md desde la l. 1039) añadidas después de 2026-10-07T15:07:39Z: salto sin turno (REQ-002/006), «cabe» de --pin (REQ-031), nombres del CLI, paso `loaded`, nombres de interfaz y renombrado a inglés, aviso informativo con residente (REQ-036), ritmo con salto/espera/siembra (REQ-024 a REQ-026), huella del alternativo, huella del prompt, rutas de esta PC y rol en enfriamiento (REQ-010/012/015), capacidad del alternativo vuelve al rol (REQ-015/021) y la tabla de nombres viejos → nuevos. Respuesta literal: «si esta aprobada, cada una de las filas tiene mi OK».",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 paso 1: suite completa con Playwright `2245 passed, 2 skipped, 1 warning in 219.75s`, `ruff check .` y `ruff format --check .` limpios, `node --check` del panel y de la captura con exit 0; tras cambiar las claves falsas del paso 9, `tests/test_llamaswap_api.py` y `tests/test_metrics.py` con `96 passed`; gitleaks sobre main..HEAD sin fugas. Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Quality checks», y evidencias/T17.md.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 pasos 1 a 8 pasan con dato literal y la revisión del resultado del paso 9 cubre REQ-001 a REQ-044; sus dos bloqueantes (evidencia del paso 4, reaprobación del gate spec del 2026-10-08T01:44:25Z) y los dos importantes (ola 11 y plantillas de verification.md, handoff.md) quedan resueltos, y el menor de las claves falsas corregido. Desviaciones y riesgos aceptados en «Deviations and residual risk». Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Evidence», y evidencias/T17.md.",
+      "actor": "orchestrator"
     }
   ]
 }

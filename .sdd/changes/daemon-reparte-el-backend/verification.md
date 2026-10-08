@@ -905,19 +905,163 @@ Pendiente para el backlog: que `install` conserve el plazo. Detalle en
 - Config real de llama-swap: `sha256` sin cambios
   (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
 
+## Ola 11 — T17, verificación final (2026-10-08)
+
+Nueve pasos del plan, sobre el commit `1aa7c7a`. Los pasos 4, 6 y 8 los lanzó la sesión principal,
+con el permiso del usuario; el paso 7 se adelantó al 6 porque necesita el 26B cargado y el 6
+necesita el backend sin modelos. Salidas literales y criterios uno a uno en
+[evidencias/T17.md](evidencias/T17.md).
+
+| Paso | Resultado | Dato clave |
+| --- | --- | --- |
+| 1. Lint, formato, suite con Playwright y `-rs`, `node --check` | **Pasa** | `2245 passed, 2 skipped, 1 warning in 219.75s (0:03:39)`; los dos saltos son `test_checks.py:476` (chmod en Windows) y la guarda de CI de `test_dashboard_ui.py:596`, ninguno del llama-swap de prueba. `ruff check .` limpio, `ruff format --check .` con `179 files already formatted`, `node --check` del panel y del JS de captura con `exit=0`. |
+| 2. Gate de F3 (control de T1) | **Pasa** | Enmienda de T1 a las `2026-10-07T10:32:59Z`; en `delegacion-precisa-y-fiable/state.json` hay un `gate: spec` `approved` posterior, del `2026-10-07T11:02:25.506Z`, con `actor: user`. |
+| 3. CLI sobre una copia de la config real | **Pasa** | Las seis órdenes dan lo esperado; cada escritura cambia solo la línea 56 (`ttl: 30` → `ttl: 60`), `--restore` devuelve la copia a su `sha256`, `--none` no cambia nada y `--pin` se niega con código 2. La config real no cambia (`7F763F85…68F0`). |
+| 4. Daemon real con la versión del repo | **Pasa** | `doctor`: residencia «sin residente (recomendado)» y turno activo, los dos `[ OK ]`. `local_status`: «Turno: sí», «sin residente», ninguna mención a «residente gemma3-4b». |
+| 5. Dos tools en paralelo contra el backend real | **Pasa** (los cuatro criterios) | Un solo cambio de modelo (`qwen36-35b-a3b` → `gemma4-26b-a4b`); `local_lint_summary` con `turn_wait_ms 55811`; 108 de 304 lecturas del panel en «en cola local» con title «esperando turno del daemon (en uso: qwen36-35b-a3b)»; las dos líneas traen `inference_ms`, `wait_ms` y `timings`. |
+| 6. Config real, solo ida y vuelta | **Pasa** | `--ttl gemma4-12b=31` sin `--now` y `--restore`, los dos con `configuration reloaded`; `sha256` final igual al inicial (`7F763F85…68F0`). Copias que quedan junto a la config y se conservan (paso 6.7): `config.yaml.pre-daemon-reparte-t17-20261007-223042.bak` (manual), `config.yaml.20261007-223142.bak` (del 6.4) y `config.yaml.20261007-223153.bak` (del 6.5). |
+| 7. Afinidad en vivo | **Pasa** | Con el 26B cargado, `local_delegate` sale con `routing: "affinity"`, `model gemma4-26b-a4b` y `model_requested gemma3-4b`; `/running` solo muestra el 26B. |
+| 8. Daemon devuelto a la versión publicada | **Pasa** | `local-delegate-mcp v0.32.0` desde PyPI; `GET /api/status` → 200 y `GET /api/llamaswap/status` → 404 (corre el código publicado, no el de la rama). |
+| 9. Revisión del resultado y control de seguridad | **Pasa tras correcciones** | Seguridad aprobada con tres menores; la revisión del resultado pidió cambios (dos bloqueantes y dos importantes), resueltos abajo. |
+
+### Ventanas excluidas de P-4 y F1
+
+- Paso 5: `2026-10-08T01:20:05.255Z` → `2026-10-08T01:22:31.544Z`.
+- Paso 7: `2026-10-08T01:24:10.521Z` → `2026-10-08T01:24:39.452Z`.
+
+Cualquier medición de P-4 o de F1 que cubra el 2026-10-08 tiene que excluir las dos.
+
+### Lo que pidió el paso 9 y cómo quedó
+
+1. **Bloqueante: faltaba el paso 4 en la evidencia.** Ya está en `evidencias/T17.md`, con las
+   líneas literales de `doctor` y `local_status`.
+2. **Bloqueante: el gate `spec` era anterior a la mitad de la tabla de aclaraciones.** El usuario
+   lo reaprobó: evento `gate: spec`, `approved`, `actor: user`, del `2026-10-08T01:44:25.593Z` en
+   `state.json`, que cita todas las filas añadidas después del `2026-10-07T15:07:39Z`.
+3. **Importante: faltaban la ola 11 y las plantillas de este fichero.** Esta sección, y
+   «Evidence», «Quality checks» y «Deviations and residual risk» de abajo.
+4. **Importante: `handoff.md` era la plantilla.** Reescrito con el relevo real.
+5. **Menor de seguridad 1: claves falsas fuera del patrón.** `tests/test_llamaswap_api.py` pasa de
+   `key-falsa-N` a `clave-falsa-N` y `tests/test_metrics.py` de `token-falso-1` a
+   `clave-falsa-3`, así que los guardianes que buscan `clave-falsa` las cubren. Los dos ficheros
+   siguen en LF.
+   `pesado.sh uv run pytest tests/test_llamaswap_api.py tests/test_metrics.py -q -p no:cacheprovider`
+   → `96 passed, 1 warning in 20.06s`; `ruff check` y `ruff format --check` de los dos, limpios.
+
+Los menores 2 y 3 de seguridad y los dos menores de la revisión quedan como riesgo o desviación
+aceptada (abajo).
+
 ## Evidence
+
+Tarea y prueba de cada requisito, según el plan y las evidencias. Los nombres de los tests son los
+de después del renombrado a inglés ([evidencias/renombrado.md](evidencias/renombrado.md)). La
+revisión del paso 9 comprobó que de REQ-001 a REQ-044 todos tienen tarea, código y evidencia.
 
 | Requirement | Check performed | Result | Evidence |
 | --- | --- | --- | --- |
-| REQ-001 | | | |
+| REQ-001 | Choques con la regla de v255: lector de topología (T7) contra el llama-swap de prueba (T2); `tests/test_topology.py`, `tests/test_fake_llamaswap.py` | Pasa | [T7](evidencias/T7.md), [T2](evidencias/T2.md) |
+| REQ-002 | Sin topología no hay turno, con sus motivos: T7 (lectura), T10 (daemon), T13 (lo que ve llama-swap); `tests/test_topology.py`, `tests/test_turn_daemon.py` | Pasa | [T7](evidencias/T7.md), [T10](evidencias/T10.md), [T13](evidencias/T13.md) |
+| REQ-003 | Operación, conjunto aceptable y concesión: núcleo puro (T8) y daemon (T10); `tests/test_turn.py`, `tests/test_turn_daemon.py` | Pasa | [T8](evidencias/T8.md), [T10](evidencias/T10.md) |
+| REQ-004 | Turno antes que plaza: T8, T10 y la afinidad (T15); `tests/test_turn.py`, `tests/test_turn_daemon.py` | Pasa | [T8](evidencias/T8.md), [T10](evidencias/T10.md), [T15](evidencias/T15.md) |
+| REQ-005 | Sin inanición, orden de llegada: T8 con reloj simulado; `tests/test_turn.py` | Pasa | [T8](evidencias/T8.md) |
+| REQ-006 | Saltos de respaldo con su espera: T8, T10; `tests/test_turn_daemon.py`, `tests/test_respaldo.py` | Pasa | [T10](evidencias/T10.md) |
+| REQ-007 | Liberación y red de seguridad: T8, T10; `tests/test_turn.py`, `tests/test_turn_daemon.py` | Pasa | [T8](evidencias/T8.md), [T10](evidencias/T10.md) |
+| REQ-008 | Observabilidad del turno: T10; `tests/test_panel_estados.py`, `tests/test_metrics.py`; en vivo, T17 paso 5 («en cola local» en 108 de 304 lecturas, `turn_wait_ms 55811`) | Pasa | [T10](evidencias/T10.md), [T17](evidencias/T17.md) |
+| REQ-009 | Relectura de la topología por `mtime`/tamaño: T7, T10; `tests/test_topology.py`, `tests/test_turn_daemon.py` | Pasa | [T10](evidencias/T10.md) |
+| REQ-010 | Matriz tool × alternativo con tres estados: veredicto de T6 (cuatro celdas aprobadas) e implementación en T15; `tests/test_affinity.py` | Pasa | [T6](evidencias/T6.md), [T15](evidencias/T15.md) |
+| REQ-011 | Solo las direcciones permitidas: T15; `tests/test_affinity.py` | Pasa | [T15](evidencias/T15.md) |
+| REQ-012 | Elección pura del modelo: T15; `tests/test_affinity.py` | Pasa | [T15](evidencias/T15.md) |
+| REQ-013 | «Cargado con margen» y foto `observado` solo cuando hace falta: T2 (TTL real) y T15; `tests/test_affinity.py`; en vivo, T17 paso 7 | Pasa | [T2](evidencias/T2.md), [T15](evidencias/T15.md), [T17](evidencias/T17.md) |
+| REQ-014 | Con afinidad se conservan tope y prompts del rol: T15; `tests/test_affinity.py` | Pasa | [T15](evidencias/T15.md) |
+| REQ-015 | Fallo del alternativo vuelve al modelo del rol (también por capacidad, decisión 6): T15; `tests/test_affinity.py`, `tests/test_respaldo.py` | Pasa | [T15](evidencias/T15.md), «Decisión 6» arriba |
+| REQ-016 | La afinidad no añade texto a la respuesta: T15; `tests/test_affinity.py` | Pasa | [T15](evidencias/T15.md) |
+| REQ-017 | Sin afinidad con backend remoto: T15; `tests/test_affinity.py` | Pasa | [T15](evidencias/T15.md) |
+| REQ-018 | La condición «ninguna celda aprobada» no se dio: el veredicto de T6 aprueba cuatro, y T15 implementa solo esas | Pasa (no aplica la caída) | [T6](evidencias/T6.md), «Ola 9» arriba |
+| REQ-019 | Paso `loaded` en lugar de `residente`: T12, miembros de `loaded` en T15; `tests/test_cadenas.py`, `tests/test_respaldo.py` | Pasa | [T12](evidencias/T12.md), [T15](evidencias/T15.md) |
+| REQ-020 | Cadenas por defecto: T12; `tests/test_cadenas.py` | Pasa | [T12](evidencias/T12.md) |
+| REQ-021 | La capacidad solo salta a `loaded` (salvo dentro de la afinidad, decisión 6): T12, T15; `tests/test_cadenas.py`, `tests/test_respaldo.py` | Pasa | [T12](evidencias/T12.md), [T15](evidencias/T15.md) |
+| REQ-022 | `residente` sigue aceptado como sinónimo en `LOCAL_DELEGATE_FALLBACK_<ROL>`: T12; `tests/test_cadenas.py` | Pasa | [T12](evidencias/T12.md) |
+| REQ-023 | `local_status`, `doctor` y la wiki solo hablan de residente si lo hay: T12, T16; `tests/test_checks.py`, `tests/test_observabilidad_respaldo.py`; en vivo, T17 paso 4 | Pasa | [T12](evidencias/T12.md), [T16](evidencias/T16.md), [T17](evidencias/T17.md) |
+| REQ-024 | `timings` en el log, espera e inferencia por separado: T3, T14; `tests/test_slowness.py`, `tests/test_metrics.py`; en vivo, T17 paso 5 (las dos líneas traen `inference_ms`, `wait_ms`, `tok_s`) | Pasa | [T14](evidencias/T14.md), [T17](evidencias/T17.md) |
+| REQ-025 | Velocidad normal por mediana: T3, T9, T14; `tests/test_pace.py`, `tests/test_measure_slowness.py` | Pasa | [T9](evidencias/T9.md), [T14](evidencias/T14.md) |
+| REQ-026 | `ram_libre_mb` con `lento` en local: T14 (`server.py:643`, según la revisión del paso 9) | Pasa | [T14](evidencias/T14.md), [T17](evidencias/T17.md) paso 9 |
+| REQ-027 | Panel con espera, inferencia y marca: T10 (palabras del turno), T14; `tests/test_panel_estados.py`, `tests/test_dashboard_js.py` | Pasa | [T10](evidencias/T10.md), [T14](evidencias/T14.md) |
+| REQ-028 | Observar no rompe una tool: T9, T14; `tests/test_slowness.py`, `tests/test_pace.py` | Pasa | [T14](evidencias/T14.md) |
+| REQ-029 | `llamaswap residency` sin opciones muestra la config: T11; `tests/test_residency.py`, `tests/test_residency_cli.py`; en vivo, T17 pasos 3 y 6.2 | Pasa | [T11](evidencias/T11.md), [T17](evidencias/T17.md) |
+| REQ-030 | `--none`: T11; `tests/test_residency.py`; en vivo, T17 paso 3 («nada que cambiar») | Pasa | [T11](evidencias/T11.md), [T17](evidencias/T17.md) |
+| REQ-031 | `--pin` opt-in, con el estimador sin validar: T11; `tests/test_residency.py`; en vivo, T17 paso 3 (se niega, código 2) | Pasa | [T11](evidencias/T11.md), [T17](evidencias/T17.md) |
+| REQ-032 | `--ttl MODEL=SECONDS`: T11 (`residency.py:794-808`, según la revisión del paso 9); en vivo, T17 pasos 3 y 6.4 | Pasa | [T11](evidencias/T11.md), [T17](evidencias/T17.md) |
+| REQ-033 | Escritura con copia fechada y `--dry-run`: T11, T13; `tests/test_residency.py`, `tests/test_llamaswap_config.py`; en vivo, T17 pasos 3 y 6 | Pasa | [T11](evidencias/T11.md), [T17](evidencias/T17.md) |
+| REQ-034 | `-watch-config` antes y después de escribir: T2, T11, T13; en vivo, T17 paso 3 («no vigila el fichero») y paso 6 (`configuration reloaded`) | Pasa | [T13](evidencias/T13.md), [T17](evidencias/T17.md) |
+| REQ-035 | `init-llamaswap` deja de recomendar residente: T11, T16 | Pasa | [T11](evidencias/T11.md), [T16](evidencias/T16.md) |
+| REQ-036 | Dos checks nuevos de `doctor`: T13; `tests/test_checks.py`, `tests/test_doctor.py`; en vivo, T17 paso 4 (los dos `[ OK ]`) | Pasa | [T13](evidencias/T13.md), [T17](evidencias/T17.md) |
+| REQ-037 | Enmienda de F3 registrada: T1 (sección «T1» arriba), T12 en el código; control en T17 paso 2 | Pasa | «T1 — Enmienda de F3» arriba, [T12](evidencias/T12.md), [T17](evidencias/T17.md) |
+| REQ-038 | `--restore`: T11 (ficheros), T13 (negativas y confirmación); `tests/test_residency_cli.py`; en vivo, T17 pasos 3 y 6.5 | Pasa | [T11](evidencias/T11.md), [T13](evidencias/T13.md), [T17](evidencias/T17.md) |
+| REQ-039 | Credencial y estado del backend sin pedírselos al usuario: T2, T13; `tests/test_llamaswap_api.py`, `tests/test_metrics.py`; control de seguridad del paso 9 | Pasa | [T13](evidencias/T13.md), [T17](evidencias/T17.md) |
+| REQ-040 | Corpus de afinidad: T4; `tests/test_corpus.py`, `tests/test_footprint.py` | Pasa | [T4](evidencias/T4.md) |
+| REQ-041 | Tanda con flags de producción: T5; `tests/test_affinity_batch.py` | Pasa | [T5](evidencias/T5.md), «Ola 2 — T5» arriba |
+| REQ-042 | Hoja a ciegas de commit_msg: T4, T5 (hoja 1 regenerada), T6 (juicio); `tests/test_hoja_pares.py` | Pasa | [T4](evidencias/T4.md), [T5](evidencias/T5.md), [T6](evidencias/T6.md) |
+| REQ-043 | Veredicto por programa: T4, T6; `tests/test_analisis_benchmark.py`, `tests/test_affinity.py:489` | Pasa | [T6](evidencias/T6.md) |
+| REQ-044 | Idioma del mensaje de `local_commit_msg`: T5b; `tests/test_commit_language.py` | Pasa | [T5b](evidencias/T5b.md) |
 
 ## Quality checks
 
-- [ ] Project-native tests pass.
-- [ ] Lint, formatting, type checking, and build checks pass where applicable.
-- [ ] Secret scanning passes.
-- [ ] No unrelated changes are present.
+- [x] Project-native tests pass. Suite completa con Playwright en T17 paso 1:
+  `2245 passed, 2 skipped, 1 warning in 219.75s (0:03:39)`. Tras cambiar las claves falsas,
+  `tests/test_llamaswap_api.py` y `tests/test_metrics.py`: `96 passed, 1 warning in 20.06s`.
+- [x] Lint, formatting, type checking, and build checks pass where applicable. `ruff check .` y
+  `ruff format --check .` limpios (T17 paso 1), `node --check` del JS del panel y de la captura con
+  `exit=0`. T17 no corre comprobación de tipos ni build del paquete; el CI del PR lo dirá.
+- [x] Secret scanning passes. `gitleaks git --log-opts=main..HEAD --redact`: 17 commits,
+  `no leaks found` (T17 paso 9); las fixtures solo llevan `clave-falsa-N`.
+- [x] No unrelated changes are present en lo commiteado de este cambio. En el árbol de trabajo hay
+  cambios sin commitear de otro cambio (`panel-coste-cuota-dashboard`: `web/metrics.py`, tests del
+  panel, `CHANGELOG.md`, la wiki de ahorro), que el paso 9 no revisó y que no son de este SDD.
 
 ## Deviations and residual risk
 
-- Record skipped checks, known limitations, and why the evidence is still sufficient or not.
+### Desviaciones aceptadas
+
+- **Ola 2 (T5):** descartes por sonda que solo afectan a los recursos y ruta de perfil en las filas
+  del techo, corregidos con test y mutante («Ola 2 — T5», «Desviaciones»). Hoja 1 regenerada con
+  reparto de lados equilibrado («Ola 2 — T5: hoja 1 regenerada»).
+- **Ola 9 (decisión 6):** con afinidad, un fallo de capacidad del alternativo vuelve al modelo del
+  rol aunque REQ-021 diga que la capacidad no salta; lo decidió el usuario y está en la tabla de
+  aclaraciones de `spec.md`, reaprobada.
+- **T17 paso 5:** el panel se leyó con Playwright de Python y no con `browser_evaluate` (el MCP de
+  Playwright no hereda el token del panel), y la secuencia de modelos salió del panel y del log de
+  uso porque `/api/metrics/activity` de llama-swap pide su propia clave (401). La conclusión se
+  sostiene.
+- **T17 paso 6.4:** la consulta previa no imprime «no hay trabajo en curso»; con trabajo en curso
+  se habría negado (T13), así que el silencio es lo esperado, aunque el criterio del plan pedía la
+  frase.
+- **T17 paso 7 antes que el 6:** por orden de recursos (el 7 necesita el 26B cargado; el 6, el
+  backend vacío).
+
+### Riesgos que quedan
+
+- **Estimador de `--pin` sin validar.** `ESTIMADOR_NCMOE_VALIDADO = False` (ola 5): con los GGUF
+  reales, el estimador solo acierta con `gemma3-4b` y se pasa entre un 14 % y un 330 % con los
+  demás, así que `--pin` exige `--vram-model` para
+  todos los modelos implicados. Validarlo queda fuera de este cambio.
+- **El plazo de los clientes MCP no lo conserva `install`.** `install`/`update` reescriben la
+  entrada del cliente; en Codex hay que reponer `tool_timeout_sec` a mano tras cada uno (ola 10).
+  Va al backlog.
+- **Calidad de `local_summarize` y `local_lint_summary`.** En el paso 5, `local_lint_summary` salió
+  truncado por `max_tokens` en 1 de 4 llamadas (`finish_reason length`); en el paso 7, el resumen
+  del diff salió pobre (secciones repetidas y dos sin resumir). Es calidad del resumen, no reparto
+  del backend, y queda fuera de este cambio.
+- **Hoja a ciegas.** En la hoja vigente ninguna trampa con cuerpo tiene pareja de Qwen3.6, así que
+  el recorte del punto solo se ejerció en un par, y las trampas de misma zona siguen siendo frases
+  más pulidas que las de Qwen3.6 (ola 2).
+- **Las pruebas en vivo ensucian las métricas.** Las llamadas de los pasos 5 y 7 quedan en el log de
+  uso y en el panel como si fueran trabajo real. Decidido: se trata en un SDD propio. Mientras
+  tanto, toda medición de P-4 y F1 excluye las dos ventanas de arriba.
+- **La vigía repite el log de llama-swap.** Con `rejected`, devuelve tal cual la línea del log
+  (`llamaswap_api.py:536-543`); si la config rechazada tuviera un error de tipo en una clave, el
+  mensaje de Go podría citar el valor. Solo llega al CLI local y a un endpoint con token.
+- **`config_path` en `/api/llamaswap/status`.** Publica la ruta de la config en disco, a propósito
+  (REQ-034), detrás del token.
+- **Hooks de otra versión en esta PC.** `doctor` (paso 4) avisa de «hooks copiados: scripts de otra
+  versión»; no se corrió `update` porque reescribe las entradas de los clientes.
+- **Captura del README desfasada.** No enseña «lento» ni el desglose espera/inferencia (ola 10).
