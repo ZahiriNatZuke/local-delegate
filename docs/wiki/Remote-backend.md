@@ -216,9 +216,9 @@ Qué dice el panel cuando el cómputo es remoto (el panel del daemon de la Mac, 
   [Troubleshooting](Troubleshooting.md).
 - El badge del backend dice lo mismo: «conectado», «sin acceso» en ámbar o «caído · no contesta»
   en rojo. Un fallo suelto no lo cambia; hacen falta dos sondeos fallidos seguidos.
-- La sección de procesos de Sistema lleva siempre la nota «El backend corre en `<host>`: su RAM y
-  VRAM se ven en el panel de esa máquina»; sin procesos locales, es lo único que sale. En macOS la
-  RAM y la VRAM dicen «no se miden en macOS todavía».
+- La tarjeta Sistema lleva la fila **Backend** con el host como enlace al panel de esa máquina
+  (mismo host, puerto web del daemon, en pestaña nueva; pide el token de aquella máquina). En macOS
+  la fila **RAM / VRAM** dice «—». La explicación está en el botón ⓘ de la tarjeta.
 - Con el backend remoto, una delegación que no puede conectar no pregunta «¿Lo arranco?» y se rinde
   a los 10 s, en vez de quedarse colgada lo que tarde macOS en agotar la conexión (~75 s).
 

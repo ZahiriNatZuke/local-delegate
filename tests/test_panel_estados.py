@@ -1,7 +1,7 @@
 """Estados del panel, **ejecutados** con node (T4 de `panel-cuentas-y-estados-honestos`).
 
 Las decisiones del panel sobre el backend son funciones JS puras (`estadoVisible`, `badgeBackend`,
-`estadoModelo`, `ordenModelos`, `chipEstado`, `textoStats`, `textosSistema`) para poder correrlas
+`estadoModelo`, `ordenModelos`, `chipEstado`, `textoStats`, `systemRows`) para poder correrlas
 aquí sin navegador, con `_extraer`/`_correr` de `test_dashboard_js.py`. Los sondeos (`pollInflight`,
 `pollBackend`) se corren con un `fetch`, un `document` y un `setTimeout` de mentira: lo que se mira
 es cuántas peticiones salen y qué se programa, que es lo que REQ-026 promete.
@@ -435,40 +435,46 @@ def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
     assert "v236" in html
 
 
-# --- textosSistema (REQ-025) -----------------------------------------------------------------
+# --- systemRows (REQ-025) --------------------------------------------------------------------
 
 
-def test_textos_del_panel_sistema(tmp_path):
-    """Control (b). Mutante: sin la rama de `origin` → falla `"El backend corre en" in nota`."""
+def test_filas_del_panel_sistema(tmp_path):
+    """La tarjeta Sistema dice lo que no mide con filas etiqueta/valor, no con prosa.
+
+    Mutantes: sin la rama de `origin` → falla la fila «Backend» de la Mac; con el host completo
+    (`own-pc…:9292`) → falla el valor sin puerto; sin validar el esquema → falla `javascript:`.
+    """
     r = _js(
         tmp_path,
-        [_f("textosSistema")],
+        [_f("systemRows")],
         """
         const casos = [
-          {platform:'darwin', origin:'remote', host:'100.64.0.2:9292', ram:null, vram:null, processes:[]},
-          {platform:'win32', origin:'local', host:'127.0.0.1:9292', ram:null, vram:null, processes:[]},
-          {platform:'linux', origin:'remote', host:'pc.lan:9292', ram:null, vram:null,
-           processes:[{name:'python', pid:1, ram_mb:10}]},
-          {platform:'darwin', origin:'local', host:'127.0.0.1:9292', ram:null, vram:null, processes:[]},
+          {platform:'darwin', origin:'remote', host:'pc.ts.net:9292',
+           panel_url:'https://pc.ts.net:9393/', ram:null, vram:null, processes:[]},
+          {platform:'win32', origin:'local', host:'127.0.0.1:9292', panel_url:'',
+           ram:{pct:1}, vram:null, processes:[]},
+          {platform:'linux', origin:'remote', host:'pc.lan:9292', panel_url:'javascript:alert(1)',
+           ram:{pct:1}, vram:null, processes:[{name:'python', pid:1, ram_mb:10}]},
+          {platform:'darwin', origin:'local', host:'127.0.0.1:9292', panel_url:'',
+           ram:null, vram:null, processes:[]},
         ];
-        salida((casos.map(textosSistema)));
+        salida(casos.map(systemRows));
         """,
     )
     mac, win, linux, mac_local = r
-    nota = mac["nota"] or ""
-    assert "El backend corre en" in nota
-    assert nota == (
-        "El backend corre en 100.64.0.2:9292: su RAM y VRAM se ven en el panel de esa máquina"
-    )
-    assert mac["procesosVacia"] is None  # la nota es lo único que se ve
-    assert mac["memoriaVacia"] == "RAM y VRAM no se miden en macOS todavía."
-    assert win["nota"] is None
-    assert win["procesosVacia"] == "Ningún proceso del backend detectado."
-    assert win["memoriaVacia"] == "Métricas de sistema no disponibles en esta plataforma."
-    assert linux["nota"].startswith("El backend corre en pc.lan:9292")
-    assert (
-        mac_local["procesosVacia"] == "La lista de procesos no está disponible en darwin todavía."
-    )
+    assert mac["rows"] == [
+        {"label": "Backend", "value": "pc.ts.net", "href": "https://pc.ts.net:9393/"},
+        {"label": "RAM / VRAM", "value": None, "href": None},
+    ]
+    assert mac["showProcs"] is False  # los procesos del backend no están en esta máquina
+    assert win == {"rows": [], "showProcs": True}  # con RAM medida no hay filas de «—»
+    assert linux["rows"] == [{"label": "Backend", "value": "pc.lan", "href": None}]
+    assert linux["showProcs"] is True  # hay procesos locales que enseñar
+    assert mac_local["rows"] == [
+        {"label": "RAM / VRAM", "value": None, "href": None},
+        {"label": "Procesos", "value": None, "href": None},
+    ]
+    assert mac_local["showProcs"] is False
 
 
 # --- Sondeos: separados, sin solaparse y encadenados (REQ-026, REQ-027) ------------------------

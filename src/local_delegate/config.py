@@ -138,6 +138,25 @@ def backend_host(url: str | None = None) -> str:
     return f"{host}{port}" if host else ""
 
 
+def remote_panel_url(url: str | None = None) -> str:
+    """Panel del daemon de la máquina del backend, o "" si el backend es local.
+
+    Mismo esquema y host que el backend, con el puerto web de este daemon: las dos máquinas corren
+    el mismo paquete, y `tailscale serve` publica los dos puertos igual. El puerto del backend
+    (llama-swap) no sirve aquí: su `/ui` no enseña la RAM ni la VRAM, que es lo que falta.
+    """
+    target = url if url is not None else BASE_URL
+    if backend_origin(target) != "remote":
+        return ""
+    parts = urlsplit(target)
+    host = parts.hostname or ""
+    if not host:
+        return ""
+    if ":" in host:  # IPv6: urlsplit le quita los corchetes
+        host = f"[{host}]"
+    return f"{parts.scheme or 'http'}://{host}:{WEB_PORT}/"
+
+
 # --- Log de uso/ahorro (JSONL) ----------------------------------------------
 # Por defecto se rota por mes: usage-YYYYMM.jsonl dentro de LOG_DIR. Si el usuario fija
 # LOCAL_DELEGATE_LOG (archivo explícito), se usa ESE archivo tal cual, sin rotación —

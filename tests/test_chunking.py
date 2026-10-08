@@ -197,6 +197,22 @@ def test_backend_host_drops_scheme_and_path():
     assert config.backend_host("https://pc.ts.net:9292/v1") == "pc.ts.net:9292"
 
 
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://pc.ts.net:9292/v1", "https://pc.ts.net:9393/"),
+        ("http://192.168.1.50:9292/v1", "http://192.168.1.50:9393/"),
+        ("http://[fd7a::2]:9292/v1", "http://[fd7a::2]:9393/"),
+        ("http://127.0.0.1:9292/v1", ""),
+    ],
+)
+def test_remote_panel_url_lleva_al_panel_de_la_maquina_del_backend(monkeypatch, url, expected):
+    """El enlace de la tarjeta Sistema: mismo esquema y host, puerto web del daemon, no el 9292."""
+    monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", "auto")
+    monkeypatch.setattr(config, "WEB_PORT", 9393)
+    assert config.remote_panel_url(url) == expected
+
+
 @pytest.mark.parametrize("override", ["local", "remote"])
 def test_backend_origin_override_gana_a_la_heuristica(monkeypatch, override):
     """El caso del túnel: `ssh -L 9292:...` enseña un backend remoto en 127.0.0.1."""

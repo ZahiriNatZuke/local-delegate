@@ -466,57 +466,130 @@ def test_la_latencia_va_en_segundos(medidas):
     assert sorted(medidas["latenciaFilas"]) == ["2,0 s", "4,0 s"]
 
 
-# --- Sistema con cómputo remoto (REQ-025, REQ-034 h) -------------------------------------------
+# --- Tarjeta Sistema y tipografía de todas las tarjetas (guardián) -----------------------------
+#
+# En la Mac (backend en la PC) la tarjeta Sistema enseñaba dos frases en dos fuentes y el host del
+# backend como texto plano. Ya se había arreglado «a mano» antes y volvió: este guardián recorre
+# TODOS los nodos de texto visibles de todas las tarjetas en los tres estados de la tarjeta y exige
+# que su `font-family` computado sea una de las dos pilas del panel (`--sans`, `--mono`). Compara la
+# pila declarada, no anchos: en el CI Linux la fuente web no carga, y medir anchos ahí miente.
 
-
-def test_la_nota_de_computo_remoto_sale_en_Inter_y_sin_fila_vacia(tmp_path, monkeypatch):
-    """La Mac contra el backend de la PC: la nota es lo único que se ve, y es prosa (Inter).
-
-    `/api/system` se intercepta con `page.route` porque la plataforma y el origen son de la máquina.
-    """
-    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    metrics._FILE_CACHE.clear()
-    sistema = {
+_PANEL_URL = "https://pc.ejemplo.ts.net:9393/"
+_SISTEMA_ESTADOS = {
+    # Windows con el backend en la misma máquina: medidores y procesos.
+    "local": {
+        "ram": {"used_gb": 18.5, "total_gb": 31.8, "free_gb": 13.3, "pct": 58.2},
+        "vram": {"used_mb": 8908, "total_mb": 16311, "pct": 54.6, "gpu_util_pct": 68},
+        "processes": [{"pid": 4242, "name": "llama-server.exe", "ram_mb": 7640, "vram_mb": 8420}],
+        "platform": "win32",
+        "origin": "local",
+        "host": "127.0.0.1:9292",
+        "panel_url": "",
+    },
+    # Linux contra un backend remoto: la RAM de aquí sí se mide; los procesos del backend, no.
+    "remoto": {
+        "ram": {"used_gb": 6.1, "total_gb": 15.5, "free_gb": 9.4, "pct": 39.4},
+        "vram": None,
+        "processes": [],
+        "platform": "linux",
+        "origin": "remote",
+        "host": "pc.ejemplo.ts.net:9292",
+        "panel_url": _PANEL_URL,
+    },
+    # La Mac contra la PC: ni RAM ni VRAM ni procesos aquí.
+    "macos": {
         "ram": None,
         "vram": None,
         "processes": [],
         "platform": "darwin",
         "origin": "remote",
-        "host": "100.64.0.2:9292",
+        "host": "pc.ejemplo.ts.net:9292",
+        "panel_url": _PANEL_URL,
+    },
+}
+
+_TIPOGRAFIA_TARJETAS = """() => {
+  const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).filter(Boolean).join(',');
+  const raiz = getComputedStyle(document.documentElement);
+  const permitidas = ['--sans', '--mono'].map(v => norm(raiz.getPropertyValue(v)));
+  const fuera = [];
+  let vistos = 0;
+  for (const card of document.querySelectorAll('.card')) {
+    if (!card.checkVisibility()) continue;
+    const w = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const texto = n.textContent.trim();
+      const el = n.parentElement;
+      if (!texto || !el || !el.checkVisibility()) continue;
+      vistos++;
+      const familia = norm(getComputedStyle(el).fontFamily);
+      if (!permitidas.includes(familia)) fuera.push(texto.slice(0, 50) + ' -> ' + familia);
     }
+  }
+  const sistema = document.getElementById('metersBody').closest('.card');
+  const textos = [];
+  const w = document.createTreeWalker(sistema, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const t = n.textContent.trim();
+    if (t && n.parentElement && n.parentElement.checkVisibility()) textos.push(t);
+  }
+  const a = sistema.querySelector('a[href]');
+  return {
+    permitidas, vistos, fuera, textos,
+    enlace: a ? {href: a.getAttribute('href'), target: a.target, rel: a.rel, texto: a.innerText.trim()}
+              : null,
+  };
+}"""
+
+
+@pytest.mark.parametrize("estado", list(_SISTEMA_ESTADOS))
+def test_las_tarjetas_solo_usan_las_fuentes_del_panel(tmp_path, monkeypatch, estado):
+    """Guardián: ningún texto visible de ninguna tarjeta sale en una fuente ajena al panel, y la
+    tarjeta Sistema no lleva prosa ni el host como texto plano."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "WEB_FONTS", True)
+    hoy = datetime.now(UTC)
+    (tmp_path / f"usage-{hoy:%Y%m}.jsonl").write_text(_log_presentacion(), encoding="utf-8")
+    metrics._FILE_CACHE.clear()
     with _Servidor(9496) as servidor, sync_playwright() as pw:
         navegador = _navegador(pw)
-        pagina = navegador.new_page()
+        pagina = navegador.new_page(viewport={"width": 1440, "height": 1000})
         pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
-        pagina.route(
-            re.compile(r"/api/system(\?|$)"),
-            lambda r: r.fulfill(
-                status=200, content_type="application/json", body=json.dumps(sistema)
-            ),
-        )
+        pagina.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS))
+        pagina.route(re.compile(r"/api/system(\?|$)"), _json(_SISTEMA_ESTADOS[estado]))
         pagina.goto(servidor.url)
+        pagina.wait_for_selector("#activity tbody tr")
+        pagina.wait_for_selector("#hooksBody table")
         pagina.wait_for_function(
             "() => !document.getElementById('metersBody').innerText.includes('Leyendo')"
         )
-        m = pagina.evaluate(
-            """() => {
-              const n = document.getElementById('procNota');
-              return {
-                texto: n ? n.innerText : '',
-                familia: n ? getComputedStyle(n).fontFamily : '',
-                procesos: document.getElementById('procTable').innerText,
-                memoria: document.getElementById('metersBody').innerText,
-              };
-            }"""
-        )
+        m = pagina.evaluate(_TIPOGRAFIA_TARJETAS)
         navegador.close()
-    texto = m["texto"]
-    assert "El backend corre en" in texto
-    assert "100.64.0.2:9292" in texto
-    assert m["familia"].startswith("Inter"), m["familia"]
-    assert "Ningún proceso del backend detectado" not in m["procesos"]
-    assert "RAM y VRAM no se miden en macOS todavía" in m["memoria"]
+    metrics._FILE_CACHE.clear()
+
+    # Control positivo de la propia medida: las dos pilas se leyeron y hubo textos que mirar.
+    assert all(m["permitidas"]) and len(set(m["permitidas"])) == 2, m["permitidas"]
+    assert m["vistos"] >= 40, m["vistos"]
+    assert not m["fuera"], "texto en una fuente ajena al panel: " + "; ".join(m["fuera"])
+
+    # Sin prosa en la tarjeta Sistema: etiquetas y cifras, nada de frases (van en su ⓘ).
+    frases = [t for t in m["textos"] if len(t.split()) >= 6]
+    assert not frases, frases
+
+    if _SISTEMA_ESTADOS[estado]["origin"] == "remote":
+        enlace = m["enlace"]
+        assert enlace is not None, "el host del backend tiene que ser un enlace"
+        assert enlace["href"] == _PANEL_URL
+        assert enlace["texto"] == "pc.ejemplo.ts.net"
+        assert enlace["target"] == "_blank"
+        assert "noopener" in enlace["rel"].split()
+        assert "Procesos del backend".upper() not in [t.upper() for t in m["textos"]]
+    else:
+        assert m["enlace"] is None
+        assert "llama-server.exe" in m["textos"]
+    if _SISTEMA_ESTADOS[estado]["ram"] is None:
+        assert "RAM / VRAM" in m["textos"] and "—" in m["textos"]
 
 
 # --- Coste equivalente, cuota e imágenes (coste-api-y-cuota, T6) -------------------------------
