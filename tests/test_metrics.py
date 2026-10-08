@@ -463,6 +463,7 @@ def test_api_system_dice_plataforma_origen_y_host(monkeypatch):
     assert j.get("platform") == sys.platform
     assert j.get("origin") == "remote"
     assert j.get("host") == "100.64.0.2:9292"
+    assert j.get("panel_url") == f"http://100.64.0.2:{config.WEB_PORT}/"
 
 
 def test_api_inflight_deja_pasar_la_espera_local(tmp_path, monkeypatch):

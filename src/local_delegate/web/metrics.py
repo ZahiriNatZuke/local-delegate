@@ -837,6 +837,7 @@ def system():
             "platform": sys.platform,
             "origin": config.backend_origin(),
             "host": config.backend_host(),
+            "panel_url": config.remote_panel_url(),
         }
     )
 
@@ -1339,9 +1340,19 @@ dialog.help.wide{max-width:680px;max-height:calc(100vh - 48px);overflow:auto}
    estados vacíos con tipografías distintas, porque el de tools usa `.tchip`, que sí es mono. */
 .empty{color:var(--mut);padding:30px;text-align:center;font-size:12.5px;
   font-family:var(--mono);letter-spacing:.01em}
-/* Prosa dentro de una tarjeta (la nota de hooks, la de cómputo remoto): Inter, como `.k-hint`.
-   Antes la nota de hooks reutilizaba `.empty`, que es mono porque es un estado vacío. */
-.nota{color:var(--mut);font-size:12.5px;padding:10px 12px;font-family:var(--sans);text-align:left}
+/* Filas etiqueta/valor de la tarjeta Sistema cuando una cifra no se mide aquí (backend remoto,
+   macOS): la etiqueta como la de los medidores, el valor en mono como `.meter-val`, y la
+   explicación en el diálogo ⓘ, no en la tarjeta. */
+.sysrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;
+  border-bottom:1px solid color-mix(in srgb,var(--bd) 75%,transparent)}
+.sysrow:last-child{border-bottom:0}
+.sysrow-lbl{font-size:10.5px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.sysrow-val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:600;color:var(--tx);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sysrow-val.nodata{color:var(--mut);font-weight:400}
+.sysrow-val a{color:var(--blue);display:inline-flex;align-items:center;gap:5px}
+.sysrow-val a:hover{text-decoration:underline}
+.sysrow-val a svg{width:12px;height:12px;flex:0 0 auto}
 footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;border-top:1px solid var(--bd);
   text-align:center;font-family:var(--mono);letter-spacing:.01em}
 .tt{position:fixed;z-index:60;max-width:270px;background:var(--bg2);border:1px solid var(--bd2);
@@ -1402,11 +1413,14 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <div class="toolchips" id="toolsBody"><span class="tchip">…</span></div>
     </div>
     <div class="card" style="--hc:var(--amber)">
-      <div class="panel-h"><h2>Sistema</h2></div>
+      <div class="panel-h"><h2>Sistema</h2>
+        <span class="ph-r"><button class="ibtn" id="systemInfo" data-group="sistema" aria-haspopup="dialog"
+          title="Qué mide esta tarjeta" aria-label="Información sobre la tarjeta Sistema"></button></span></div>
       <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
-      <div class="subh">Procesos del backend</div>
-      <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
-      <div class="nota" id="procNota" style="display:none"></div>
+      <div id="procSection">
+        <div class="subh">Procesos del backend</div>
+        <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
+      </div>
     </div>
   </div>
 
@@ -1551,6 +1565,13 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <b>Lecturas vistas</b> reparte las lecturas que vio el hook de lectura por lo que hizo con
       ellas: avisó, o se calló porque la lectura era acotada, de código, pequeña, iba por otro
       MCP o el backend no estaba.</p></section>
+    <section id="dlgSistema" data-group="sistema" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
+      <p>La <b>RAM</b>, la <b>carga de la GPU</b> y la <b>VRAM</b> de la máquina donde corre este
+      panel, y los procesos del backend que encuentra en ella. La lista de procesos solo se lee en
+      Windows y Linux; en macOS todavía no se miden ni la RAM ni la VRAM, y la fila sale con «—».</p>
+      <p>Con el <b>backend en otra máquina</b>, la fila <b>Backend</b> enlaza al panel de esa
+      máquina, que es donde se ven su RAM, su VRAM y sus procesos. Ese panel pide el token de
+      aquella máquina, no el de esta.</p></section>
   </div>
 </dialog>
 
@@ -2359,20 +2380,33 @@ function fmtHace(s){
 }
 
 // --- Sistema: /api/system (RAM/VRAM + procesos, 5s) ---
-// Los textos de la tarjeta que dependen de dónde corre el cómputo y de la plataforma (REQ-025).
-function textosSistema(j){
-  const plat = (j && j.platform) || '', remoto = !!(j && j.origin==='remote');
-  const nota = remoto
-    ? 'El backend corre en '+(j.host||'otra máquina')+': su RAM y VRAM se ven en el panel de esa máquina'
-    : null;
-  let procesosVacia = null;
-  if(!remoto) procesosVacia = (plat && plat!=='win32' && plat!=='linux')
-    ? 'La lista de procesos no está disponible en '+plat+' todavía.'
-    : 'Ningún proceso del backend detectado.';
-  const memoriaVacia = plat==='darwin'
-    ? 'RAM y VRAM no se miden en macOS todavía.'
-    : 'Métricas de sistema no disponibles en esta plataforma.';
-  return {nota, procesosVacia, memoriaVacia};
+// Lo que la tarjeta no puede medir aquí, como filas etiqueta/valor (REQ-025): con el backend en
+// otra máquina, una fila «Backend» que enlaza a su panel; sin RAM ni VRAM, una fila con «—». La
+// explicación va en el diálogo ⓘ de la tarjeta. Pura: la prueba node en test_panel_estados.py.
+function systemRows(j){
+  const plat = (j && j.platform) || '', remote = !!(j && j.origin==='remote');
+  const procs = (j && j.processes) || [];
+  const rows = [];
+  if(remote){
+    const host = String((j && j.host) || '').replace(/:\d+$/, '');
+    const url = String((j && j.panel_url) || '');
+    rows.push({label:'Backend', value: host || null, href: /^https?:\/\//.test(url) ? url : null});
+  }
+  if(!(j && (j.ram || j.vram))) rows.push({label:'RAM / VRAM', value:null, href:null});
+  // Con el backend remoto sus procesos no están aquí: la sección se oculta si no hay ninguno.
+  const listable = !plat || plat==='win32' || plat==='linux';
+  if(!remote && !listable && !procs.length) rows.push({label:'Procesos', value:null, href:null});
+  const showProcs = procs.length > 0 || (!remote && listable);
+  return {rows, showProcs};
+}
+const EXT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+function systemRowHTML(r){
+  let val;
+  if(r.value==null) val = '<span class="sysrow-val nodata">—</span>';
+  else if(r.href) val = '<span class="sysrow-val"><a href="'+escHooks(r.href)+'" target="_blank" rel="noopener noreferrer"'
+    + ' title="Abrir el panel de esa máquina">'+escHooks(r.value)+EXT_ICON+'</a></span>';
+  else val = '<span class="sysrow-val">'+escHooks(r.value)+'</span>';
+  return '<div class="sysrow"><span class="sysrow-lbl">'+escHooks(r.label)+'</span>'+val+'</div>';
 }
 function fmtMB(mb){ return mb>=1024 ? F1.format(mb/1024)+' GiB' : F.format(Math.round(mb))+' MiB'; }
 // Una fila con barra de la tarjeta Sistema. `valTxt` vacío: la fila es solo un porcentaje (la carga
@@ -2393,20 +2427,15 @@ async function pollSystem(){
     // medir (otra plataforma, sin nvidia-smi) no hay `vram` y las dos filas se ocultan, como la RAM.
     if(j.vram && j.vram.gpu_util_pct!=null) h += meterHTML('Carga de la GPU', '', j.vram.gpu_util_pct, 'var(--violet)');
     if(j.vram) h += meterHTML('VRAM', F1.format(j.vram.used_mb/1024)+' / '+F1.format(j.vram.total_mb/1024)+' GiB', j.vram.pct);
-    const t = textosSistema(j);
-    document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">'+escHooks(t.memoriaVacia)+'</div>';
+    const sr = systemRows(j);
+    document.getElementById('metersBody').innerHTML = h + sr.rows.map(systemRowHTML).join('');
     const procs = j.processes||[];
     const tbl = document.getElementById('procTable');
-    // REQ-025: con cómputo remoto, la nota va siempre (es prosa: `.nota`, en Inter).
-    const nota = document.getElementById('procNota');
-    nota.innerHTML = t.nota ? escHooks(t.nota) : '';
-    nota.style.display = t.nota ? '' : 'none';
+    document.getElementById('procSection').hidden = !sr.showProcs;
     if(!procs.length){
-      // Estado vacío: `.empty` (mono), como los demás vacíos del panel. Con cómputo remoto no hay
-      // fila vacía: la nota es lo único que se ve.
-      tbl.innerHTML = t.procesosVacia
-        ? '<tbody><tr><td class="empty" style="padding:10px 8px;color:var(--faint);border:0">'+escHooks(t.procesosVacia)+'</td></tr></tbody>'
-        : '';
+      // Estado vacío: `.empty` (mono), como los demás vacíos del panel.
+      tbl.innerHTML = '<tbody><tr><td class="empty" style="padding:10px 8px;color:var(--faint);border:0">'
+        + 'Ningún proceso del backend detectado.</td></tr></tbody>';
     }else{
       tbl.innerHTML = '<thead><tr><th>Proceso</th><th>PID</th><th>RAM</th><th>VRAM</th></tr></thead><tbody>'
         + procs.map(p=>`<tr><td class="mono">${p.name}${p.self?'<span class="selfchip">DAEMON MCP</span>':''}</td>
@@ -2753,6 +2782,7 @@ const infoDlg=document.getElementById('infoDlg');
 const INFO_GRUPOS = {
   coste:{titulo:'Coste, cuota e imágenes', icono:ICON.cost, color:'var(--amber)'},
   hooks:{titulo:'Sugerencias de los hooks', icono:ICON.info, color:'var(--amber)'},
+  sistema:{titulo:'Sistema', icono:ICON.gen, color:'var(--amber)'},
 };
 function openInfo(grupo, seccion){
   const g = INFO_GRUPOS[grupo] || INFO_GRUPOS.coste;
