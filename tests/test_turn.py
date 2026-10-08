@@ -459,3 +459,64 @@ def test_wrapper_choose_after_forced_waits_and_chooses():
     assert result == [M26B]
     own = t.snapshot().active("op")
     assert own is not None and own.reserve == {M26B}
+
+
+# --- T15: `Turn.choose` partido (aclaración de la ola 4) -------------------------------------
+
+
+def test_choose_without_waiting_is_valid_with_a_slot():
+    """El daemon elige con la plaza de su primera llamada en la mano: no salta el aserto."""
+    t = Turn(clashes_today)
+    t.request(pet("op", M4B, M26B))
+    with turn.slot_taken():
+        model = t.choose_without_waiting("op", [M26B, M4B])
+    assert model == M26B
+    own = t.snapshot().active("op")
+    assert own is not None and own.reserve == {M26B}
+
+
+def test_choose_without_waiting_returns_none_and_leaves_op_at_head():
+    t = Turn(clashes_today, tick=5.0)
+    t.request(pet("op", M4B, M26B))
+    forced = Active(Wait(pet("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    waiting = Request(t, pet("behind", M4B))
+    wait_in_queue(t, "behind")
+    with t._cond:  # montaje directo del estado tras una forzada
+        t._state = State(actives=(*t._state.actives, forced), queue=t._state.queue)
+
+    with turn.slot_taken():
+        model = t.choose_without_waiting("op", [M26B, M4B])
+
+    assert model is None
+    state = t.snapshot()
+    assert state.active("op") is None
+    assert [w.id for w in state.queue] == ["op", "behind"]
+    t.release_slot("f")
+    t.abandon("behind")
+    waiting.ready.wait(CAP_S)
+
+
+def test_wait_for_grant_with_a_slot_raises():
+    """REQ-004: la espera de la nueva concesión, nunca con plaza."""
+    t = Turn(clashes_today)
+    with t._cond:  # una concesión ya lista: sin el aserto, `wait_for_grant` volvería con ella
+        t._granted["op"] = turn.Grant("op", frozenset({M4B}))
+    with turn.slot_taken(), pytest.raises(AssertionError):
+        t.wait_for_grant("op")
+    assert t.wait_for_grant("op").model == M4B  # sin la marca, la recoge
+
+
+def test_choose_without_waiting_wakes_the_queue_when_it_shrinks():
+    """La reducción de `choose_without_waiting` avisa a la cola sin esperar al tic (aquí, 5 s)."""
+    t = Turn(clashes_today, tick=5.0)
+    t.request(pet("w1", M4B, M26B, QWEN))
+    w2 = Request(t, pet("w2", M26B))
+    wait_in_queue(t, "w2")
+
+    with turn.slot_taken():
+        assert t.choose_without_waiting("w1", [M26B]) == M26B
+    w2.ready.wait(CAP_S)
+    reached = time.monotonic()
+    t.release_slot("w1")
+
+    assert w2.instant is not None and w2.instant <= reached, "W2 no entró al reducirse W1"

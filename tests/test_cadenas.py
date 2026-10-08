@@ -389,16 +389,17 @@ def test_with_provider_hop_goes_to_loaded_member(recargar_config, attempts):
     recargar_config()
     seen_set: list[tuple] = []
 
-    def provider(tool, has_failed, own_items, nobody_else):
+    def provider(tool, has_failed, own_items, nobody_else, role):
         seen_set.append((tool, has_failed))
         return (MECANICO,)
 
+    previous_provider = cadenas._loaded_provider
     cadenas.register_loaded_provider(provider)
     try:
         _backend({CODIGO: _fallo(500), MECANICO: _ok("del 4B"), LARGO: _ok()})
         server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.register_loaded_provider(None)
+        cadenas.register_loaded_provider(previous_provider)
 
     assert seen_set == [("local_commit_msg", CODIGO)]
     assert [i.modelo for i in attempts] == [CODIGO, MECANICO]
@@ -466,12 +467,13 @@ def test_with_ttl_0_in_persistent_group_describe_names_resident(
 def test_loaded_member_repeating_later_step_not_called_twice(recargar_config):
     """`code -> loaded -> long` con `loaded` = el 26B: si el 26B falla, el paso `long` no lo repite."""
     recargar_config()
+    previous_provider = cadenas._loaded_provider
     cadenas.register_loaded_provider(lambda *_: (LARGO,))
     try:
         requested = _backend({CODIGO: _fallo(500, "original"), LARGO: _fallo(500, "otro")})
         output = server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.register_loaded_provider(None)
+        cadenas.register_loaded_provider(previous_provider)
 
     assert requested == [CODIGO, LARGO]
     # REQ-008: la línea de «también fallaron» no repite modelo.

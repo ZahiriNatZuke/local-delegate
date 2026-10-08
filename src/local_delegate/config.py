@@ -309,6 +309,11 @@ TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
 # (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.
 SLOW_THRESHOLD = _env_float("LOCAL_DELEGATE_SLOW_THRESHOLD", 0.5)
 
+# --- Afinidad (daemon-reparte-el-backend, REQ-013, T15) ---------------------------------------
+# Un alternativo ya cargado cuenta «con margen» si le quedan al menos estos segundos de TTL. 5 s
+# por defecto: T2 (b) midió la ventana decisión-llegada con p99 de 3,1 ms, así que no se subió.
+AFFINITY_MARGIN_S = _env_float("LOCAL_DELEGATE_AFFINITY_MARGIN_S", 5.0)
+
 
 # --- llama-swap: autoarranque, doctor y residente -----------------------------
 # Se leen al LLAMAR y no al importar, como siempre se leyeron: el autoarranque y los tests las fijan

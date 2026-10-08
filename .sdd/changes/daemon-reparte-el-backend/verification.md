@@ -746,6 +746,111 @@ se siembra, nombres en inglés y clase propia `slowchip`.
 - Config real de llama-swap: `sha256` sin cambios
   (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
 
+## Ola 9 — T15, afinidad (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. Puerta: `veredicto.json` de T6
+(`solo_mecanicas: false`) aprueba cuatro celdas, todas frente al rol mecánico (`gemma3-4b`), y solo
+esas se implementan:
+
+| Tool | Alternativo | Estado |
+| --- | --- | --- |
+| `local_translate` | `gemma4-26b-a4b` | aprobada |
+| `local_translate` | `qwen36-35b-a3b` | aprobada |
+| `local_lint_summary` | `gemma4-26b-a4b` | aprobada |
+| `local_delegate` | `gemma4-26b-a4b` | aprobada |
+| `local_classify` (26B y Qwen3.6), `local_extract` (26B y Qwen3.6), `local_lint_summary` (Qwen3.6), `local_delegate` (Qwen3.6) | | rechazada |
+| `local_commit_msg` → `gemma4-26b-a4b` (frente a `qwen36-35b-a3b`) | | rechazada; además, decisión del usuario: la afinidad de commit no se implementa |
+
+Los escenarios de la spec con `local_classify` (rechazada) van con `local_translate` y
+`local_delegate`; el de «una celda no aprobada no se usa», con `local_explain_code`. `Turn.choose`
+se partió en `choose_without_waiting` y `wait_for_grant` antes de conectar la afinidad, con los
+mutantes de T8 repetidos. Evidencia completa (qué se hizo, controles con el assert que disparó,
+decisiones propias, lo que salió del inventario): [evidencias/T15.md](evidencias/T15.md).
+
+### Comprobaciones
+
+- Línea de verificación de T15: `219 passed, 1 skipped in 19.27s`.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `1 failed, 2226 passed, 2 skipped, 1 warning in 349.90s (0:05:49)` (antes, 2197; +30). El fallo
+  es `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` (control de T2 contra un llama-swap
+  v255 con un modelo falso: no estaba cargado al primer segundo); no importa nada de `src/`, falla
+  igual corrido solo y queda como riesgo del entorno, sin tocar.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `179 files already formatted`; `node --check` del JS del panel: sin errores.
+- Controles: un (a) y trece (b) de la tabla del plan más ocho del turno partido (cinco de T8
+  repetidos y tres nuevos), todos mutan, caen en su assert y se restauran con `sha256` comprobado.
+- ~~Pendiente: el panel cuenta la afinidad como respaldo.~~ Resuelto en la segunda pasada (abajo).
+- Las cuatro celdas coinciden con la config real (`footprint_differences` vacío). Config real de
+  llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
+### Segunda pasada de la ola 9 (2026-10-07)
+
+- **Panel (REQ-016):** con autorización para tocar `web/metrics.py`, la afinidad deja de contar
+  como respaldo en los dos lados a la vez (`server._accounting` y el JS, chip «↪» incluido). Caso de
+  afinidad en el test de paridad y dos tests nuevos; tres mutantes (JS, Python, chip), los tres caen
+  en su assert. Detalle en la evidencia.
+- **`test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` en `HEAD`** (worktree aparte de
+  `bcc3177`, con su `.venv`, tres corridas con `pesado.sh`):
+
+  ```
+  (a) durante={1.0: False, 2.0: True, 3.0: True} t_descarga=3.0426998138427734
+  1 failed in 11.95s
+  (a) durante={1.0: False, 2.0: True, 3.0: True} t_descarga=3.0245022773742676
+  1 failed in 11.57s
+  (a) durante={1.0: False, 2.0: True, 3.0: True} t_descarga=3.020219087600708
+  1 failed in 11.95s
+  ```
+
+  Falla igual sin T15: **es del entorno** (el modelo falso no está `ready` al primer segundo en esta
+  PC). Worktree borrado; el llama-swap real (9292) no se tocó.
+- Línea de verificación de T15: `219 passed, 1 skipped in 18.50s`.
+- Suite completa: `1 failed, 2228 passed, 2 skipped, 1 warning in 342.38s (0:05:42)` (el fallo, el
+  de arriba).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `179 files already formatted`; `node --check` del JS del panel: sin errores.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
+### Corrección tras la revisión de la ola 9 (2026-10-07)
+
+Revisión de solo lectura: ningún bloqueante, tres importantes y doce menores. Corregidos los
+pedidos (1 a 12, 14 y 15), cada uno con su test y su mutante cuando cambia el comportamiento;
+detalle en [evidencias/T15.md](evidencias/T15.md) («Corrección tras la revisión de la ola 9»). Lo
+principal: el motivo de un respaldo tras fallar el alternativo ya es el real (no «en
+enfriamiento»); `doctor` avisa del rol cambiado por variable y de otro GGUF bajo el id en esta
+máquina, y en otra máquina dice que la afinidad está inerte, sin `[WARN]`; el salto vacío a
+`loaded` tiene un control que discrimina; la foto de REQ-013 tiene tope de 1 s también para
+conectar. La decisión 6 (capacidad del alternativo sin salto al rol) queda pendiente del usuario.
+Cuatro filas nuevas en la tabla de aclaraciones de `spec.md`, pendientes de aceptación. Fuera de
+la lista de T15: `topology.py` y `llamaswap_api.py` (aditivos) y `tests/test_respaldo.py`.
+
+- Línea de verificación de T15: `233 passed, 1 skipped in 19.13s`.
+- Suite completa: `1 failed, 2242 passed, 2 skipped, 1 warning in 328.53s (0:05:28)` (el fallo, el
+  del entorno ya anotado).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `179 files already formatted`; `node --check` del JS del panel: sin errores.
+- Mutantes: catorce nuevos y los catorce de la primera pasada repetidos; todos caen en su assert.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
+### Decisión 6, resuelta por el usuario (2026-10-07)
+
+Con afinidad, un fallo **de capacidad** del alternativo salta al modelo del rol y luego a su cadena
+(REQ-015), aunque REQ-021 diga que la capacidad no salta; fuera de la afinidad, REQ-021 no cambia. El
+evento lleva `affinity_dropped` y `affinity_dropped_class`. Fila nueva en la tabla de aclaraciones
+de `spec.md`, aceptada; las cuatro filas de la corrección tras la revisión, marcadas como aceptadas
+el 2026-10-07. Tres mutantes (volver a no saltar, sin la clase, la capacidad siempre salta), los tres
+caen en su assert; detalle en [evidencias/T15.md](evidencias/T15.md).
+
+- Línea de verificación de T15: `235 passed, 1 skipped in 11.79s`.
+- Suite completa: `2245 passed, 2 skipped, 1 warning in 217.95s (0:03:37)` (esta vez sin el fallo
+  del entorno de `test_a_ttl_counts_from_request_end`).
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `179 files already formatted`.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

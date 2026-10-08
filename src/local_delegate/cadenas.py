@@ -50,8 +50,10 @@ CADENAS_POR_DEFECTO: dict[str, tuple[str, ...]] = {
     "mechanical": (LOADED, "long"),
 }
 
-#: Firma del proveedor de miembros de `loaded`: (tool, fallido, propios, nobody_else) -> modelos.
-LoadedProvider = Callable[[str | None, str, frozenset[str], bool], Sequence[str]]
+#: Firma del proveedor de miembros de `loaded`: (tool, fallido, propios, nobody_else, rol) ->
+#: modelos. `rol` es el nombre del rol de la operación (`mechanical`…): las direcciones de REQ-011
+#: dependen de él (T15).
+LoadedProvider = Callable[[str | None, str, frozenset[str], bool, str | None], Sequence[str]]
 _loaded_provider: LoadedProvider | None = None
 
 
@@ -72,13 +74,20 @@ class Cadena:
 
 
 def register_loaded_provider(provider: LoadedProvider | None) -> None:
-    """Registra (o quita, con `None`) quién sabe los miembros de `loaded`. Lo pone T15."""
+    """Registra (o quita, con `None`) quién sabe los miembros de `loaded`.
+
+    T15 registra el de la afinidad (`server._affinity_loaded_provider`) al importar `server`.
+    """
     global _loaded_provider
     _loaded_provider = provider
 
 
 def loaded_members(
-    tool: str | None, has_failed: str, own_items: frozenset[str], nobody_else: bool
+    tool: str | None,
+    has_failed: str,
+    own_items: frozenset[str],
+    nobody_else: bool,
+    role: str | None = None,
 ) -> tuple[str, ...]:
     """Los miembros de `loaded` en el momento del salto (REQ-019), en orden y sin `fallido`.
 
@@ -91,7 +100,7 @@ def loaded_members(
     if provider is None:
         return ()
     seen_set: list[str] = []
-    for model in provider(tool, has_failed, own_items, nobody_else):
+    for model in provider(tool, has_failed, own_items, nobody_else, role):
         if model != has_failed and model not in seen_set:
             seen_set.append(model)
     return tuple(seen_set)

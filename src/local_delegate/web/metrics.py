@@ -2301,7 +2301,8 @@ function acct(e){
     returned = tokensClaude(charsReturned,'returned',e);
   }
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
-  const fallback = !!e.model_requested;
+  // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
+  const fallback = !!e.model_requested && e.routing !== 'affinity';
   const cause = e.error_class || e.fallback_class || null;
   const copia = v => (v===undefined ? null : v);
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
@@ -2522,7 +2523,7 @@ function drawActivity(ev){
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
     const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
-    const fb=e.model_requested?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
+    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
     const causa=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';

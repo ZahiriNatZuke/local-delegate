@@ -24,7 +24,7 @@ import threading
 import time
 from collections.abc import Callable, Collection, Generator, Iterable, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,8 @@ from . import (
     enfriamiento,
     estado_json,
     fallos,
+    llamaswap_api,
+    matrix,
     pace,
     preguntas,
     secciones,
@@ -687,6 +689,11 @@ def _log_event(
     fallo_conexion: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
+    routing: str | None = None,
+    affinity_foreign_flight: int | None = None,
+    affinity_failed: bool | None = None,
+    affinity_dropped: str | None = None,
+    affinity_dropped_class: str | None = None,
     attempts: Sequence[Intento] = (),
 ) -> None:
     """Escribe una línea JSONL en el log activo (rotado por mes o fijo). Nunca rompe una tool.
@@ -810,6 +817,22 @@ def _log_event(
             rec["turn_wait_ms"] = int(turn_wait_ms)
         if turn is not None:
             rec["turn"] = turn
+        # Afinidad (REQ-016): respondió un alternativo ya cargado en lugar del modelo del rol
+        # (`model_requested`). No es un respaldo ni lleva aviso. `affinity_foreign_flight`: las
+        # peticiones de otros clientes contra ese modelo en la foto; `affinity_failed`, sin
+        # ninguna y con una espera de backend de 3 s o más en la primera llamada (tuvo que cargar).
+        if routing is not None:
+            rec["routing"] = routing
+        if affinity_foreign_flight is not None:
+            rec["affinity_foreign_flight"] = int(affinity_foreign_flight)
+        if affinity_failed:
+            rec["affinity_failed"] = True
+        # La afinidad eligió este alternativo, pero un salto la apagó (respondió el rol o su
+        # cadena): no es `routing: "affinity"`, y sin esto el evento no diría que se probó.
+        if affinity_dropped is not None:
+            rec["affinity_dropped"] = affinity_dropped
+        if affinity_dropped_class is not None:
+            rec["affinity_dropped_class"] = affinity_dropped_class
         # Espera frente a lentitud (REQ-024 a REQ-026). Su propio `try`: el general de abajo solo
         # atrapa `OSError`, y observar no puede romper una tool (REQ-028). Si algo falla, el
         # evento se escribe sin ninguno de estos campos.
@@ -968,7 +991,8 @@ def _accounting(row: dict) -> dict:
         "estimated": estimated,
         # F3, tarea 29: si respondió un respaldo, y la causa (la del fallo, o la del salto). Un
         # evento anterior a esos campos da `False` y `None`: se lee igual que siempre.
-        "fallback": bool(row.get("model_requested")),
+        # T15 (REQ-016): la afinidad también lleva `model_requested`, pero no es un respaldo.
+        "fallback": bool(row.get("model_requested")) and row.get("routing") != "affinity",
         "cause": row.get("error_class") or row.get("fallback_class") or None,
         # Contrato con `coste-api-y-cuota`: desglose en caracteres y campos del evento.
         "chars_saved_text": chars_saved_text,
@@ -1038,12 +1062,18 @@ def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
     )
 
 
-def _respaldo_de(model: str, result: ChatResult, intentos: list[Intento]) -> dict | None:
-    """Si respondió un modelo distinto del pedido: cuál, en lugar de cuál y por qué (REQ-007)."""
-    if not (result.ok and intentos and intentos[-1].modelo != model):
+def _respaldo_de(
+    model: str, result: ChatResult, intentos: list[Intento], affinity: str | None = None
+) -> dict | None:
+    """Si respondió un modelo distinto del pedido: cuál, en lugar de cuál y por qué (REQ-007).
+
+    `affinity` es el alternativo que eligió la afinidad para el modelo pedido (T15): que responda
+    él **no** es un respaldo (REQ-016), y su fallo es el motivo de un salto posterior.
+    """
+    if not (result.ok and intentos and intentos[-1].modelo not in (model, affinity)):
         return None
     primero = intentos[0]
-    if primero.modelo == model:
+    if primero.modelo in (model, affinity):
         motivo, clase = primero.error, _valor_clase(primero.clase)
     else:
         motivo, clase = "en enfriamiento", "enfriamiento"
@@ -1409,76 +1439,418 @@ def _topology() -> topology.Snapshot | topology.NoTopology:
     return snapshot
 
 
+# --- Afinidad (REQ-010 a REQ-017 y los miembros de `loaded` de REQ-019, T15) -------------------
+# Un alternativo con celda aprobada y vigente (`matrix`) que ya está cargado responde en lugar del
+# modelo del rol. Solo en local (el turno exige topología y loopback: `_topology`), nunca con modelo
+# explícito, y solo en la primera llamada de la operación: los trozos siguientes siguen en él.
+
+#: Lo que puede fallar al tomar la foto de REQ-013: cualquiera deja el dato como «no se sabe».
+_AFFINITY_QUERY_ERRORS = (llamaswap_api.QueryError, httpx2.HTTPError, ValueError, OSError)
+#: Espera de backend en la primera llamada a partir de la cual, sin vuelo ajeno, la afinidad
+#: se apunta como fallida: el modelo tuvo que cargarse (las cargas medidas, de 6 a 14 s; REQ-016).
+_AFFINITY_FAILED_WAIT_MS = 3000
+#: Tope de cada consulta de la foto de REQ-013, conexión incluida: se hace con la plaza en la mano
+#: y REQ-004 solo deja esperar cosas externas con tope (1 s por consulta).
+_AFFINITY_QUERY_CAP_S = 1.0
+
+#: Llamadas al backend en vuelo de ESTE daemon, por modelo: la foto de `/api/events` las cuenta
+#: también, y `affinity_foreign_flight` solo quiere las de otros clientes (REQ-016).
+_own_calls: dict[str, int] = {}
+_own_calls_lock = threading.Lock()
+
+
+@contextmanager
+def _own_call(model: str) -> Generator[None, None, None]:
+    with _own_calls_lock:
+        _own_calls[model] = _own_calls.get(model, 0) + 1
+    try:
+        yield
+    finally:
+        with _own_calls_lock:
+            _own_calls[model] -= 1
+
+
+def _own_calls_of(model: str) -> int:
+    with _own_calls_lock:
+        return _own_calls.get(model, 0)
+
+
+def _affinity_prompt(tool: str) -> str | None:
+    """El prompt de la huella de una tool, construido con el código VIGENTE (REQ-010).
+
+    Los mismos parámetros que usó el corpus de la evaluación (`matrix.PROMPT_INPUTS`) pasan por
+    las mismas funciones que usa la tool: si cambia `_guard` o el texto de la tool, cambia la
+    huella y la celda queda «sin base». `None` si la tool no tiene celda posible.
+    """
+    builders: dict[str, Callable[[Any], str]] = {
+        "local_translate": _translate_system,
+        "local_lint_summary": _lint_system,
+        "local_delegate": _guard,
+    }
+    inputs = matrix.PROMPT_INPUTS.get(tool)
+    builder = builders.get(tool)
+    if inputs is None or builder is None:
+        return None
+    return matrix.joined_prompt([builder(value) for value in inputs])
+
+
+def _model_config(snapshot: topology.Snapshot, model: str) -> dict[str, Any] | None:
+    """La entrada de `model` en la config de llama-swap, reducida a lo que mira la huella."""
+    if snapshot.resolve(model) is None:
+        return None
+    return {"cmd": snapshot.cmd(model) or ""}
+
+
+def _approved_alternatives(
+    tool: str | None,
+    role_name: str | None,
+    role_model: str,
+    snapshot: topology.Snapshot,
+    size: int = 0,
+) -> tuple[str, ...]:
+    """Los alternativos de la matriz para esta tool y este rol: aprobados, en una dirección de
+    REQ-011, vigentes (huella) y que admiten el tamaño (REQ-014). Sin red: solo config y disco."""
+    if tool is None or role_name is None:
+        return ()
+    roles = config.modelos_por_rol()
+    prompt = _affinity_prompt(tool)
+    found: list[str] = []
+    for cell in matrix.CELLS:
+        if cell.tool != tool or cell.alternative in found or cell.compared_role != role_model:
+            continue
+        if not matrix.allowed_direction(cell, role_name, roles):
+            continue
+        if cell.alternative not in config.ALLOWED_MODELS:
+            continue
+        if size > config.max_chars_for(cell.alternative):
+            continue
+        if not matrix.is_current(cell, _model_config(snapshot, cell.alternative), prompt):
+            continue
+        found.append(cell.alternative)
+    return tuple(found)
+
+
+def _activity_end(row: dict[str, Any] | None) -> float | None:
+    """La hora de fin de la última petición (`timestamp` de v255, ISO con zona y truncada al
+    segundo: T2 (a)), en segundos del reloj del sistema. `None` si no se puede leer."""
+    stamp = row.get("timestamp") if row else None
+    if not isinstance(stamp, str):
+        return None
+    try:
+        return datetime.fromisoformat(stamp).timestamp()
+    except ValueError:
+        return None
+
+
+def _affinity_observe(
+    alternatives: Collection[str], snapshot: topology.Snapshot
+) -> matrix.Observed:
+    """La foto `observado` de REQ-013, con la plaza ya en la mano y tope de 1 s por consulta.
+
+    En orden: `/running`, la foto `inflight` de `/api/events` y, la última y solo si hace falta,
+    `/api/metrics/activity` del id real de cada alternativo. Lo que falla queda sin dato y ese
+    alternativo no cuenta como cargado con margen. `ahora` sale de `time.time()` (REQ-013).
+    """
+    backend = llamaswap_api.local_backend()
+    cap = _AFFINITY_QUERY_CAP_S
+
+    def real(model: str) -> str:
+        return snapshot.resolve(model) or model
+
+    observed = matrix.Observed(
+        now=time.time(),
+        margin_s=config.AFFINITY_MARGIN_S,
+        clashes=snapshot.clashes,
+        alias={model: real(model) for model in alternatives},
+    )
+    try:
+        running = llamaswap_api.running(backend, cap_s=cap)
+    except _AFFINITY_QUERY_ERRORS:
+        return observed
+    ttl: dict[str, int] = {}
+    for entry in running:
+        value = entry["ttl"]
+        if value is None or value < 0:
+            value = snapshot.effective_ttl(entry["id"])
+        if value is not None:
+            ttl[real(entry["id"])] = value
+    ready = frozenset(real(e["id"]) for e in running if e["state"] == "ready")
+    observed = replace(observed, ready=ready, ttl=ttl)
+    try:
+        counts = llamaswap_api.in_flight(backend, cap_s=cap, connect_s=cap)
+    except _AFFINITY_QUERY_ERRORS:
+        return observed
+    in_flight: dict[str, int] = {}
+    for model, count in counts.items():
+        in_flight[real(model)] = in_flight.get(real(model), 0) + count
+    observed = replace(observed, in_flight=in_flight)
+    last_end: dict[str, float] = {}
+    for model in alternatives:
+        if not observed.needs_activity(model):
+            continue
+        try:
+            end = _activity_end(llamaswap_api.activity(backend, real(model), cap_s=cap))
+        except _AFFINITY_QUERY_ERRORS:
+            continue
+        if end is not None:
+            last_end[real(model)] = end
+    return replace(observed, last_end=last_end)
+
+
+def _affinity_loaded_provider(
+    tool: str | None,
+    has_failed: str,
+    own_items: frozenset[str],
+    nobody_else: bool,
+    role_name: str | None,
+) -> tuple[str, ...]:
+    """Los miembros de `loaded` (REQ-019): los alternativos aprobados y vigentes para la tool,
+    distintos del que falló, que están en `propios` o, si el daemon no tiene a nadie más en
+    `activos`, todos (el «cargado con margen» lo decide REQ-012 al conceder, con la plaza y la
+    foto). Sin topología no hay celda vigente: `()` sin tocar la red."""
+    snapshot = _topology()
+    role_model = config.modelos_por_rol().get(role_name or "")
+    if not isinstance(snapshot, topology.Snapshot) or role_model is None:
+        return ()
+    return tuple(
+        model
+        for model in _approved_alternatives(tool, role_name, role_model, snapshot)
+        if model != has_failed and (model in own_items or nobody_else)
+    )
+
+
+cadenas.register_loaded_provider(_affinity_loaded_provider)
+
+
 class _OperationTurn:
     """El turno de UNA operación (REQ-003): se pide antes que la plaza y dura toda la operación.
 
-    `asegurar(modelo)` va justo antes de pedir la plaza de cada llamada. Si la operación ya tiene
+    `ensure(modelo)` va justo antes de pedir la plaza de cada llamada. Si la operación ya tiene
     turno para ese modelo, no hace nada; si no —la primera llamada, o un salto de respaldo—, suelta
-    el que tuviera y pide uno con `A = {modelo}` al final de la cola (REQ-006). Sin topología, con
-    backend remoto o con un modelo que la config no conoce, no pide nada (REQ-002).
+    el que tuviera y pide uno al final de la cola (REQ-006). Sin topología, con backend remoto o
+    con un modelo que la config no conoce, no pide nada (REQ-002).
+
+    Con afinidad (T15), la primera llamada pide `A = {rol} ∪ alternativos aprobados`; si la
+    concesión trae varios, el modelo se elige con la plaza ya en la mano (`pick`, REQ-003
+    «Elección» y REQ-012). Un salto a `loaded` pide turno con sus miembros y `direct` vacío
+    (`ensure_loaded`).
     """
 
-    def __init__(self, entry_id: int, role_model: str, tool: str | None = None) -> None:
+    def __init__(
+        self,
+        entry_id: int,
+        role_model: str,
+        tool: str | None = None,
+        *,
+        role_name: str | None = None,
+        explicit: bool = False,
+    ) -> None:
         self.entry_id = entry_id
         #: La tool de la operación: los miembros de `loaded` dependen de ella (REQ-019).
         self.tool = tool
         self.op_id = f"{os.getpid()}:{entry_id}"
         #: El modelo del rol de la operación: decide el de una concesión forzada (REQ-007).
         self.role = role_model
+        #: El nombre del rol (`mechanical`…): las direcciones de la afinidad dependen de él.
+        self.role_name = role_name
+        #: Un modelo pedido por quien llama nunca usa afinidad (REQ-011).
+        self.explicit = explicit
         #: El modelo para el que se pidió turno por última vez (o se decidió ir sin él).
         self.model: str | None = None
         self.wait_ms = 0
         self.forced = False
         self._turn: turn.Turn | None = None
+        self._snapshot: topology.Snapshot | None = None
+        self._chain: tuple[str, ...] = ()
+        #: La reserva concedida tiene que reducirse eligiendo con la plaza en la mano.
+        self._pending = False
+        #: El turno pendiente es el de un salto a `loaded` (REQ-019).
+        self._loaded_hop = False
+        #: Ya hubo una primera llamada: la afinidad solo se decide en ella.
+        self._started = False
+        #: El alternativo que eligió la afinidad mientras siga siendo el modelo de la operación.
+        self.affinity: str | None = None
+        #: El alternativo que eligió la afinidad, aunque después un salto la apagara: el motivo de
+        #: un respaldo posterior es su fallo (REQ-015) y el evento deja rastro de él.
+        self.affinity_tried: str | None = None
+        self.affinity_foreign_flight: int | None = None
+        #: La clase con la que falló el alternativo cuando un salto apagó la afinidad.
+        self._dropped_class: str | None = None
+        self._first_wait_ms: int | None = None
 
-    def ensure(self, model: str, chain: Sequence[str] = ()) -> None:
-        if self.model == model:
-            return
+    # --- pedir turno -------------------------------------------------------------------------
+
+    def _on_wait_factory(self) -> tuple[Callable[[int, tuple[str, ...]], None], list[bool]]:
+        waiting = [False]
+
+        def on_wait(position: int, in_use: tuple[str, ...]) -> None:
+            # Los datos primero: el panel nunca ve `local_wait: "turn"` sin `turn_in_use`.
+            _inflight_turn(self.entry_id, in_use, position)
+            if not waiting[0]:
+                waiting[0] = True
+                _inflight_espera_local(self.entry_id, "turn")
+
+        return on_wait, waiting
+
+    def _waiting_for(self, wait: Callable[[turn.OnWait], turn.Grant]) -> turn.Grant:
+        """Una espera de turno con su contabilidad: `turn_wait_ms` y las claves del panel."""
+        on_wait, waiting = self._on_wait_factory()
+        t0 = time.monotonic()
+        try:
+            grant = wait(on_wait)
+        finally:
+            if waiting[0]:
+                # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
+                self.wait_ms += int((time.monotonic() - t0) * 1000)
+                _inflight_espera_local(self.entry_id, None)
+                _inflight_turn(self.entry_id, None, None)
+        if grant.forced:
+            self.forced = True
+        return grant
+
+    def _reset(self) -> None:
         self.release_slot()
         # `model` se fija solo al conceder o al decidir «sin turno»: si `request` sale con error,
         # la operación no queda creyéndose con un turno que no tiene.
         self.model = None
+        self._pending = False
+        self._loaded_hop = False
+
+    def ensure(
+        self, model: str, chain: Sequence[str] = (), *, hop: bool = False, size: int = 0
+    ) -> None:
+        if not hop and self.affinity is not None and model == self.role:
+            return  # los trozos siguientes siguen en el alternativo que eligió la afinidad
+        if hop:
+            self.affinity = None
+        if self.model == model and not self._pending:
+            return
+        self._reset()
         snapshot = _topology()
         if not isinstance(snapshot, topology.Snapshot) or snapshot.resolve(model) is None:
             # Sin turno para todo lo que quede con este modelo, también si el motivo era pasajero
             # (un `ilegible` por un `OSError`): REQ-002, cualquier `NoTopology` es «sin turno».
             self.model = model
             return
+        acceptable = {model}
+        if not hop and not self._started and not self.explicit and model == self.role:
+            acceptable.update(
+                _approved_alternatives(self.tool, self.role_name, self.role, snapshot, size)
+            )
         # Aclarado el 2026-10-07: el destino de un salto entra en `A'` como el rol (`direct`),
         # y `role` sigue siendo el original, que es el que mira una concesión forzada.
         request = turn.PendingRequest(
             self.op_id,
-            frozenset({model}),
+            frozenset(acceptable),
             self.role,
             chain_order=tuple(chain),
             direct=frozenset({model}),
         )
+        self._grant(request, snapshot, chain, requested=model)
+
+    def ensure_loaded(self, members: Sequence[str], chain: Sequence[str] = ()) -> bool:
+        """El salto a `loaded` (REQ-019): turno con sus miembros y `direct` vacío; el modelo se
+        elige al conceder (`pick`). `False` sin topología: entonces el salto va al primer miembro,
+        como a un destino suelto (T12)."""
+        self.affinity = None
+        self._reset()
+        snapshot = _topology()
+        known = [
+            m for m in members if isinstance(snapshot, topology.Snapshot) and snapshot.resolve(m)
+        ]
+        if not isinstance(snapshot, topology.Snapshot) or not known:
+            return False
+        request = turn.PendingRequest(
+            self.op_id, frozenset(known), self.role, chain_order=tuple(chain)
+        )
+        self._loaded_hop = True
+        self._grant(request, snapshot, chain, requested=None)
+        return True
+
+    def _grant(
+        self,
+        request: turn.PendingRequest,
+        snapshot: topology.Snapshot,
+        chain: Sequence[str],
+        *,
+        requested: str | None,
+    ) -> None:
         turn_state = _turn
-        waiting = False
-
-        def on_wait(position: int, in_use: tuple[str, ...]) -> None:
-            nonlocal waiting
-            # Los datos primero: el panel nunca ve `local_wait: "turn"` sin `turn_in_use`.
-            _inflight_turn(self.entry_id, in_use, position)
-            if not waiting:
-                waiting = True
-                _inflight_espera_local(self.entry_id, "turn")
-
-        t0 = time.monotonic()
-        try:
-            grant = turn_state.request(request, on_wait)
-        finally:
-            if waiting:
-                # Al conceder (o al salir por error), las tres claves fuera (REQ-008).
-                self.wait_ms += int((time.monotonic() - t0) * 1000)
-                _inflight_espera_local(self.entry_id, None)
-                _inflight_turn(self.entry_id, None, None)
+        grant = self._waiting_for(lambda on_wait: turn_state.request(request, on_wait))
         self._turn = turn_state
+        self._snapshot = snapshot
+        self._chain = tuple(chain)
+        if grant.model is not None and not self._loaded_hop:
+            # Con un solo modelo en `A'`, ese (REQ-003, «Elección»).
+            self.model = grant.model
+            if requested is not None and grant.model != requested:
+                self.affinity = self.affinity_tried = grant.model
+        else:
+            self._pending = True
+
+    # --- elegir con la plaza en la mano ------------------------------------------------------
+
+    def pick(self) -> tuple[str | None, bool]:
+        """El modelo de esta llamada, ya con la plaza (REQ-003, «Elección»; REQ-012).
+
+        `(modelo, False)` para enviar; `(None, False)` si la operación volvió a la cabeza de la
+        cola (tras una forzada ajena): quien llama suelta la plaza y espera con `wait_again`;
+        `(None, True)` si el salto a `loaded` no tiene ya ningún miembro que cumpla REQ-012: se
+        salta sin gastar salto (REQ-019).
+        """
+        if not self._pending:
+            return self.model, False
+        assert self._turn is not None and self._snapshot is not None
+        state = self._turn.snapshot()
+        mine = state.active(self.op_id)
+        reserve = mine.reserve if mine is not None else frozenset()
+        others = [a for a in state.actives if a.id != self.op_id]
+        own = frozenset(a.chosen for a in others if a.chosen is not None)
+        observed = None
+        if matrix.needs_snapshot(reserve, self.role, own):
+            observed = _affinity_observe(reserve - {self.role}, self._snapshot)
+        choice = matrix.choose(
+            reserve,
+            self.role,
+            observed,
+            own,
+            approved=reserve - {self.role},
+            chain_order=self._chain,
+        )
+        if choice is None:
+            self._reset()
+            return None, True
+        candidates = [choice]
+        if self.role in reserve and choice != self.role:
+            candidates.append(self.role)
+        model = self._turn.choose_without_waiting(self.op_id, candidates)
+        if model is None:
+            return None, False
+        self._pending = False
         self.model = model
-        if grant.forced:
-            self.forced = True
-        # `A` tiene aquí un solo modelo (el del rol, el explícito o el destino del salto), así que
-        # la concesión ya lo trae elegido. Con varios (bloque B, T15) se elige con `Turn.choose`.
+        if not self._loaded_hop and model != self.role:
+            self.affinity = self.affinity_tried = model
+            if observed is not None and observed.in_flight is not None:
+                in_flight = observed.in_flight.get(observed.real(model), 0)
+                self.affinity_foreign_flight = max(0, in_flight - _own_calls_of(model))
+        self._loaded_hop = False
+        return model, False
+
+    def wait_again(self) -> None:
+        """Sin plaza: espera la nueva concesión tras volver a la cabeza (REQ-004)."""
+        assert self._turn is not None
+        turn_state = self._turn
+        self._waiting_for(lambda on_wait: turn_state.wait_for_grant(self.op_id, on_wait))
+
+    def note_attempt(self, attempt: Intento) -> None:
+        """La primera llamada al alternativo: su espera de backend decide `affinity_failed`."""
+        self._started = True
+        if attempt.modelo == self.affinity_tried and not attempt.ok and self._dropped_class is None:
+            self._dropped_class = _valor_clase(attempt.clase)
+        if self._first_wait_ms is None and attempt.modelo == self.affinity:
+            timings = attempt.timings or {}
+            inference = sum(v for v in (timings.get("prompt_ms"), timings.get("predicted_ms")) if v)
+            self._first_wait_ms = max(0, int(attempt.ms - inference))
 
     def release_slot(self) -> None:
         """Sale de `actives`. Idempotente; va en el `finally` de cada operación (REQ-007)."""
@@ -1487,10 +1859,22 @@ class _OperationTurn:
             self._turn = None
 
     def log_fields(self) -> dict:
-        return {
+        fields: dict[str, Any] = {
             "turn_wait_ms": self.wait_ms,
             "turn": "forced" if self.forced else None,
         }
+        if self.affinity is not None:
+            fields["routing"] = "affinity"
+            fields["affinity_foreign_flight"] = self.affinity_foreign_flight
+            fields["affinity_failed"] = (
+                self.affinity_foreign_flight == 0
+                and self._first_wait_ms is not None
+                and self._first_wait_ms >= _AFFINITY_FAILED_WAIT_MS
+            ) or None
+        elif self.affinity_tried is not None:
+            fields["affinity_dropped"] = self.affinity_tried
+            fields["affinity_dropped_class"] = self._dropped_class
+        return fields
 
 
 @contextmanager
@@ -1524,14 +1908,14 @@ def _llamar_modelo(
     """
     t0 = time.monotonic()
     envio = {"model": model, **payload}
-    with _turn.in_flight():
+    with _turn.in_flight(), _own_call(model):
         result = _post_chat(model, envio)
     json_schema_status = "used" if "response_format" in envio else None
     if json_schema_status and not result.ok and result.error == "http_400":
         if json_schema_fallback:
             # El backend no soporta response_format con schema: reintenta en modo libre.
             envio.pop("response_format", None)
-            with _turn.in_flight():
+            with _turn.in_flight(), _own_call(model):
                 result = _post_chat(model, envio)
             json_schema_status = "fallback"
         else:
@@ -1568,8 +1952,11 @@ def _next_hop(
     last: ChatResult | None,
     loaded_members: Callable[[], Sequence[str]],
     attempted: Collection[str] = (),
-) -> tuple[int, str] | None:
-    """La decisión de saltar, FUERA de la plaza: (índice del paso, modelo destino), o `None`.
+) -> tuple[int, tuple[str, ...]] | None:
+    """La decisión de saltar, FUERA de la plaza: (índice del paso, destinos), o `None`.
+
+    Los destinos son uno, el del paso, salvo en el paso `loaded`: ahí son todos sus miembros que
+    valen, y el salto pide turno con ese conjunto y elige al conceder (REQ-019, T15).
 
     - tras un salto fallido, solo sigue un fallo del modelo, y nunca tras uno de capacidad;
     - nunca más de `FALLBACK_MAX_HOPS` saltos;
@@ -1593,16 +1980,19 @@ def _next_hop(
             continue
         else:
             candidates = (step,)
-        for candidate in candidates:
-            if (
+        valid = tuple(
+            candidate
+            for candidate in candidates
+            if not (
                 candidate == model
                 or candidate in attempted
                 or candidate not in config.ALLOWED_MODELS
                 or size > config.max_chars_for(candidate)
                 or state.consultar(candidate) is not None
-            ):
-                continue
-            return i, candidate
+            )
+        )
+        if valid:
+            return i, valid
     return None
 
 
@@ -1610,15 +2000,29 @@ def _loaded_members(op: _OperationTurn | None, has_failed: str) -> tuple[str, ..
     """Los miembros del paso `loaded` para este salto (REQ-019), con lo que el daemon sabe de sí.
 
     `own_items` son los modelos elegidos por las demás operaciones de este daemon en `actives`, y
-    `nobody_else` si no hay ninguna otra. Sin proveedor registrado (sin bloque B) `cadenas` devuelve
-    `()` sin consultar nada. El turno con el conjunto (`direct` vacío, `Turn.choose`) llega
-    con T15; hasta entonces, si hay miembros, el salto va al primero que vale, como a un destino.
+    `nobody_else` si no hay ninguna otra. Sin proveedor registrado `cadenas` devuelve `()` sin
+    consultar nada. Con turno, el salto pide turno con el conjunto (`direct` vacío) y elige al
+    conceder (`_OperationTurn.ensure_loaded` y `pick`); sin turno va al primero que vale (T12).
     """
     op_id = op.op_id if op is not None else None
     others = [a for a in _turn.snapshot().actives if a.id != op_id]
     own_items = frozenset(a.chosen for a in others if a.chosen is not None)
     tool = op.tool if op is not None else None
-    return cadenas.loaded_members(tool, has_failed, own_items, not others)
+    role_name = op.role_name if op is not None else None
+    return cadenas.loaded_members(tool, has_failed, own_items, not others, role_name)
+
+
+def _first(result: ChatResult | None) -> ChatResult:
+    """La primera llamada de una operación nunca es un salto a `loaded`, así que siempre trae
+    resultado (`llamar` vuelve al rol si la afinidad se queda sin modelo). Por si acaso, un error
+    limpio en vez de un `AssertionError`."""
+    if result is None:
+        return ChatResult(
+            text="[local-delegate error] la operación se quedó sin modelo al elegir.",
+            ok=False,
+            error="no_model",
+        )
+    return result
 
 
 def _con_respaldo(
@@ -1653,41 +2057,81 @@ def _con_respaldo(
     intentos: list[Intento] = []
     schema: str | None = None
 
-    def llamar(modelo: str, cadena: Sequence[str] = ()) -> ChatResult:
+    def llamar(
+        modelo: str, cadena: Sequence[str] = (), *, hop: bool = False, members: Sequence[str] = ()
+    ) -> ChatResult | None:
+        """Una llamada: el turno siempre ANTES que la plaza (REQ-004) y, con varios modelos en la
+        reserva, la elección con la plaza en la mano (REQ-003, «Elección»). `None`: el salto a
+        `loaded` se queda sin miembro que cumpla REQ-012 y se salta sin gastar salto (REQ-019)."""
         nonlocal schema
         if op is not None:
-            op.ensure(modelo, cadena)  # el turno, siempre ANTES que la plaza (REQ-004)
-        with _slot(entry_id):
-            result, schema = _attempt(modelo, payload, json_schema_fallback, estado, intentos)
-        return result
+            if not members:
+                op.ensure(modelo, cadena, hop=hop, size=tamano)
+            elif not op.ensure_loaded(members, cadena):
+                op.ensure(members[0], cadena, hop=True)
+        while True:
+            retry_role = False
+            with _slot(entry_id):
+                if op is None:
+                    target, skip = (members[0] if members else modelo), False
+                else:
+                    target, skip = op.pick()
+                if skip and members:
+                    return None
+                if skip:
+                    # La afinidad se quedó sin modelo al elegir (sin el rol en `A'` y sin foto):
+                    # fuera de la plaza, la operación pide turno para el rol, sin afinidad.
+                    retry_role = True
+                elif target is not None:
+                    result, schema = _attempt(
+                        target, payload, json_schema_fallback, estado, intentos
+                    )
+                    if op is not None:
+                        op.note_attempt(intentos[-1])
+                    return result
+            assert op is not None
+            if retry_role:
+                op.ensure(modelo, cadena, hop=True, size=tamano)
+                continue
+            # Volvió a la cabeza de la cola tras una forzada ajena: sin plaza, a esperar.
+            op.wait_again()
 
     if explicito:
-        return llamar(model), schema, intentos
+        return _first(llamar(model)), schema, intentos
 
     enfriado = estado.consultar(model)
     original: ChatResult | None = None
     clase: str | None = None
+    served = model
     if enfriado is None:
-        original = llamar(model)
+        original = _first(llamar(model))
         if original.ok or original.clase not in _CLASES_QUE_SALTAN:
             return original, schema, intentos
         clase = original.clase
+        served = intentos[-1].modelo if intentos else model
 
     pasos = cadenas.resolver(rol).pasos if rol and config.FALLBACK else ()
     # El orden de la cadena para una concesión forzada (REQ-007): solo modelos concretos.
     cadena = tuple(paso for paso in pasos if paso != cadenas.LOADED)
+    if served != model:
+        # Falló el alternativo que eligió la afinidad: el primer candidato es el modelo del rol, y
+        # después su cadena, con el tope de saltos de siempre (REQ-015).
+        pasos = (model, *pasos)
     saltos = 0
     desde = 0
     ultimo: ChatResult | None = None
-    has_failed = model
-    attempted = {model}
+    has_failed = served
+    attempted = {served}
     while True:
         salto = _next_hop(
             pasos,
             desde,
-            model=model,
+            model=served,
             size=tamano,
-            capacity=clase == fallos.Clase.CAPACIDAD,
+            # Un fallo de capacidad solo salta a `loaded` (REQ-021), salvo el del alternativo que
+            # eligió la afinidad: la eligió el daemon, no quien llama, así que se prueba el rol y
+            # su cadena (REQ-015; decisión del usuario del 2026-10-07).
+            capacity=clase == fallos.Clase.CAPACIDAD and served == model,
             state=estado,
             hops=saltos,
             last=ultimo,
@@ -1696,12 +2140,19 @@ def _con_respaldo(
         )
         if salto is None:
             break
-        indice, destino = salto
-        saltos += 1
+        indice, targets = salto
         desde = indice + 1
+        if pasos[indice] == cadenas.LOADED:
+            result = llamar(targets[0], cadena, hop=True, members=targets)
+        else:
+            result = llamar(targets[0], cadena, hop=True)
+        if result is None:
+            continue  # `loaded` sin miembro al conceder: sin gastar salto (REQ-019)
+        destino = intentos[-1].modelo
+        saltos += 1
         has_failed = destino
         attempted.add(destino)
-        ultimo = llamar(destino, cadena)
+        ultimo = result
         if ultimo.ok:
             return ultimo, schema, intentos
 
@@ -1829,13 +2280,29 @@ class _ModeloVigente:
             entry_id=self.entry_id,
             op=self.op,
         )
-        info = _respaldo_de(self.modelo, result, intentos)
+        info = _respaldo_de(self.modelo, result, intentos, self.affinity_tried)
         if info is not None:
             if self.salto is None:
                 self.salto = {**info, "en_lugar_de": self.pedido, "trozo": self.trozo}
             self.modelo = info["respondio"]
             self.rol = None
         return result, ms, intentos
+
+    @property
+    def affinity(self) -> str | None:
+        """El alternativo que eligió la afinidad para el modelo pedido, si sigue vigente (T15)."""
+        return self.op.affinity if self.op is not None else None
+
+    @property
+    def affinity_tried(self) -> str | None:
+        return self.op.affinity_tried if self.op is not None else None
+
+    @property
+    def served(self) -> str:
+        """El modelo que responde: el alternativo de la afinidad en lugar del del rol (REQ-016)."""
+        if self.affinity is not None and self.modelo == self.pedido:
+            return self.affinity
+        return self.modelo
 
     def campos_de_log(self, failed: ChatResult | None) -> dict:
         """Los campos del respaldo para el evento de la operación entera (REQ-013)."""
@@ -1848,6 +2315,8 @@ class _ModeloVigente:
             campos["model_requested"] = self.pedido
             campos["fallback_reason"] = self.salto["motivo"]
             campos["fallback_class"] = self.salto["clase"]
+        elif self.affinity is not None:
+            campos["model_requested"] = self.pedido
         if self.op is not None:
             campos.update(self.op.log_fields())
         return campos
@@ -1917,7 +2386,7 @@ def _chat(
     """
     entry_id = _inflight_start(tool=tool, model=model, source=source, chars_in=chars_in)
     # Turno por operación (REQ-003): una llamada simple (también la de imagen) es una operación.
-    op = _OperationTurn(entry_id, model, tool)
+    op = _OperationTurn(entry_id, model, tool, role_name=rol, explicit=explicito)
     try:
         result, latency_ms, json_schema_status, intentos = _run_chat(
             model,
@@ -1953,7 +2422,9 @@ def _chat(
     # que generó el modelo y nada más.
     if truncated_out and write_to is None:
         text += aviso_truncado
-    info_respaldo = _respaldo_de(model, result, intentos)
+    info_respaldo = _respaldo_de(model, result, intentos, op.affinity_tried)
+    # La afinidad (T15) no es un respaldo ni lleva aviso: queda en el log (REQ-016).
+    served = info_respaldo["respondio"] if info_respaldo else (op.affinity or model)
     aviso_respaldo = ""
     if info_respaldo is not None:
         if respaldo is not None:
@@ -1964,7 +2435,7 @@ def _chat(
         text += aviso_respaldo
     _log_event(
         tool=tool,
-        model=info_respaldo["respondio"] if info_respaldo else model,
+        model=served,
         source=source,
         chars_in=chars_in,
         chars_out=len(text),
@@ -1982,7 +2453,7 @@ def _chat(
         input_unit=input_unit,
         output_to_file=write_to is not None and result.ok,
         chunks=len(intentos),
-        model_requested=model if info_respaldo else None,
+        model_requested=model if info_respaldo or op.affinity else None,
         fallback_reason=info_respaldo["motivo"] if info_respaldo else None,
         fallback_class=info_respaldo["clase"] if info_respaldo else None,
         error_class=None if result.ok else _valor_clase(result.clase),
@@ -2227,7 +2698,7 @@ def _chat_chunked(
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Intento] = []
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool)
+    op = _OperationTurn(entry_id, model, tool, role_name=rol, explicit=explicito)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
 
     def _accumulate(result: ChatResult, ms: int, attempts: list[Intento]) -> None:
@@ -2295,7 +2766,7 @@ def _chat_chunked(
 
     _log_event(
         tool=tool,
-        model=vigente.modelo if ok else model,
+        model=vigente.served if ok or vigente.affinity else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -2451,7 +2922,7 @@ def _chat_map_reduce(
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Intento] = []
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool)
+    op = _OperationTurn(entry_id, model, tool, role_name=rol, explicit=explicito)
     vigente = _ModeloVigente(model, rol, explicito, entry_id, op)
 
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
@@ -2634,7 +3105,7 @@ def _chat_map_reduce(
 
     _log_event(
         tool=tool,
-        model=vigente.modelo if ok else model,
+        model=vigente.served if ok or vigente.affinity else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -2732,6 +3203,20 @@ def _guard(formato: str, max_words: int | None = None) -> str:
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
         f"Output EXACTO: {formato}.{limite} Nada fuera del formato."
     )
+
+
+def _lint_system(max_words: int) -> str:
+    """El prompt de sistema de `local_lint_summary`. También entra en la huella (T15)."""
+    return _guard(
+        "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
+        "error/regla y los más relevantes primero",
+        max_words,
+    )
+
+
+def _translate_system(target_lang: str) -> str:
+    """El prompt de sistema de `local_translate`. También entra en la huella (T15)."""
+    return _guard(f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios")
 
 
 # --- Validación de imagen (local_describe_image, F6) -------------------------
@@ -3285,11 +3770,7 @@ def local_lint_summary(
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
-    system = _guard(
-        "un resumen de los problemas agrupados por archivo, con el conteo por tipo de "
-        "error/regla y los más relevantes primero",
-        max_words,
-    )
+    system = _lint_system(max_words)
 
     def _build(piece: str) -> str:
         return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
@@ -3494,9 +3975,7 @@ def local_translate(
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(rol))
-    system = _guard(
-        f"la traducción fiel al {target_lang}, conservando el formato y sin comentarios"
-    )
+    system = _translate_system(target_lang)
     result = _chat_chunked(
         model,
         system,

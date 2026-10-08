@@ -104,8 +104,13 @@ def local_backend() -> Backend:
     return Backend(config.BASE_URL.removesuffix("/v1"), config.auth_headers())
 
 
-def _client(read: float = READ_S) -> httpx2.Client:
-    return httpx2.Client(timeout=httpx2.Timeout(read, connect=CONNECT_S))
+def _client(read: float = READ_S, connect: float = CONNECT_S) -> httpx2.Client:
+    return httpx2.Client(timeout=httpx2.Timeout(read, connect=connect))
+
+
+def _caps(cap_s: float | None) -> tuple[float, float]:
+    """(lectura, conexión): con `cap_s`, las dos con ese tope; sin él, las de siempre."""
+    return (READ_S, CONNECT_S) if cap_s is None else (cap_s, cap_s)
 
 
 def _check(response: httpx2.Response, what: str) -> None:
@@ -115,9 +120,13 @@ def _check(response: httpx2.Response, what: str) -> None:
         raise QueryError(f"llama-swap respondió {response.status_code} en {what}")
 
 
-def running(backend: Backend) -> list[dict[str, Any]]:
-    """`/running` reducido a `{id, state, ttl}`. Todo lo demás (el `cmd` incluido) se descarta."""
-    with _client() as c:
+def running(backend: Backend, cap_s: float | None = None) -> list[dict[str, Any]]:
+    """`/running` reducido a `{id, state, ttl}`. Todo lo demás (el `cmd` incluido) se descarta.
+
+    `cap_s` es el tope de toda la consulta, también de la conexión (la foto de la afinidad, T15,
+    con la plaza en la mano: REQ-004). Sin él, los plazos de siempre.
+    """
+    with _client(*_caps(cap_s)) as c:
         r = c.get(f"{backend.base}/running", headers=dict(backend.headers))
     _check(r, "/running")
     try:
@@ -182,8 +191,8 @@ def _count_by_model(data: Any) -> dict[str, int]:
 class _Stream:
     """Una conexión a `/api/events`, abierta hasta que se cierre a mano."""
 
-    def __init__(self, backend: Backend, read: float = READ_S) -> None:
-        self._client = _client(read)
+    def __init__(self, backend: Backend, read: float = READ_S, connect: float = CONNECT_S) -> None:
+        self._client = _client(read, connect)
         try:
             request = self._client.build_request(
                 "GET", f"{backend.base}/api/events", headers=dict(backend.headers)
@@ -219,13 +228,15 @@ class _Stream:
             self._client.close()
 
 
-def in_flight(backend: Backend, cap_s: float = IN_FLIGHT_CAP_S) -> dict[str, int]:
+def in_flight(
+    backend: Backend, cap_s: float = IN_FLIGHT_CAP_S, connect_s: float = CONNECT_S
+) -> dict[str, int]:
     """Peticiones en vuelo por modelo, de cualquier cliente: la foto de la carga inicial.
 
     Lee `/api/events` hasta el primer `inflight`, con tope de `cap_s` (la lectura de cada trozo
     también lo lleva), y cierra. Sin cabeceras ni nada más de cada petición.
     """
-    stream = _Stream(backend, read=cap_s)
+    stream = _Stream(backend, read=cap_s, connect=connect_s)
     try:
         return stream.initial_load(cap_s)[1]
     except httpx2.TimeoutException:
@@ -234,13 +245,13 @@ def in_flight(backend: Backend, cap_s: float = IN_FLIGHT_CAP_S) -> dict[str, int
         stream.close()
 
 
-def activity(backend: Backend, model: str) -> dict[str, Any] | None:
+def activity(backend: Backend, model: str, cap_s: float | None = None) -> dict[str, Any] | None:
     """La última petición terminada de `model` en `/api/metrics/activity`, o `None` si no hay.
 
     v255 apunta el id real (no el alias) y la hora de fin en `timestamp`, truncada al segundo
     (T2, puntos (a) y (c)). Solo se devuelven los campos sin datos de la petición.
     """
-    with _client() as c:
+    with _client(*_caps(cap_s)) as c:
         r = c.get(
             f"{backend.base}/api/metrics/activity",
             params={"model": model, "limit": 1},

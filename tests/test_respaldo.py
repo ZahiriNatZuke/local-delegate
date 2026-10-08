@@ -292,12 +292,13 @@ def test_capacity_only_hops_to_loaded_without_second_hop(recargar_config, tmp_pa
     a nada más. Sin miembros no salta: `test_cadenas.py::test_capacity_failure_with_nothing_loaded`.
     """
     recargar_config()
+    previous_provider = cadenas._loaded_provider
     cadenas.register_loaded_provider(lambda *_: (MECANICO,))
     try:
         requested = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
         output = server.local_explain_code(code="x = 1")
     finally:
-        cadenas.register_loaded_provider(None)
+        cadenas.register_loaded_provider(previous_provider)
 
     assert requested == [CODIGO, MECANICO], "tras capacidad, `loaded` y nada más"
     assert output.startswith("[local-delegate error]")

@@ -355,6 +355,11 @@ class Snapshot:
         real = self.resolve(model)
         return None if real is None else self._ttl[real]
 
+    def cmd(self, model: str) -> str | None:
+        """El `cmd` de un modelo (id o alias) tal como está en la config; `None` si no tiene."""
+        real = self.resolve(model)
+        return None if real is None else self._cmd.get(real)
+
     def mmproj(self, model: str) -> str | None:
         """Ruta del `--mmproj` del `cmd` (via `footprint.cmd_flags`), o `None`."""
         real = self.resolve(model)

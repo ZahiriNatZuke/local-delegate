@@ -515,6 +515,35 @@ class Turn:
             self._apply()  # punto 1: llega una petición
         return self._wait(request.id, on_wait, on_grant)
 
+    def choose_without_waiting(self, op_id: str, candidates: Sequence[str]) -> str | None:
+        """La elección atómica de REQ-003, sin esperar: válida con una plaza en la mano.
+
+        Bajo **un solo** cerrojo reduce la reserva al primer candidato que cabe y devuelve el
+        modelo; si ninguno cabe (una forzada de otra entró tras la concesión), deja la operación
+        en la **cabeza** de la cola, reevalúa y devuelve `None`. Entonces quien llama suelta su
+        plaza y espera con `wait_for_grant` (aclaración de la ola 4: el daemon elige con la plaza
+        de su primera llamada en la mano).
+        """
+        with self._cond:
+            self._state, model = choose(self._state, op_id, candidates, self._clashes)
+            self._cond.notify_all()  # punto 3 (se reduce) o punto 2 (sale de `actives`)
+            if model is None:
+                self._apply()
+            return model
+
+    def wait_for_grant(
+        self,
+        op_id: str,
+        on_wait: OnWait | None = None,
+        on_grant: Callable[[Grant], None] | None = None,
+    ) -> Grant:
+        """Espera la nueva concesión de una operación que volvió a la cabeza (REQ-004: sin plaza).
+
+        Puede lanzar `AbandonedWait`.
+        """
+        _check_without_slot()
+        return self._wait(op_id, on_wait, on_grant)
+
     def choose(
         self,
         op_id: str,
@@ -522,21 +551,18 @@ class Turn:
         on_wait: OnWait | None = None,
         on_grant: Callable[[Grant], None] | None = None,
     ) -> str:
-        """Elige modelo de la reserva y la reduce a él, todo bajo **un solo** cerrojo (REQ-003).
+        """`choose_without_waiting` y, si vuelve a la cabeza, `wait_for_grant`, hasta elegir.
 
-        Es la entrada que debe usar el daemon (T10). Si ningún candidato cabe (una forzada de
-        otra entró tras la concesión), la operación vuelve a la cabeza, espera nueva concesión y
-        repite la elección. Devuelve el modelo elegido; puede lanzar `AbandonedWait`.
+        Para quien elige **sin** plaza. El daemon no la usa: elige con la plaza de su primera
+        llamada en la mano y la suelta antes de esperar. Devuelve el modelo elegido; puede lanzar
+        `AbandonedWait`.
         """
         _check_without_slot()
         while True:
-            with self._cond:
-                self._state, model = choose(self._state, op_id, candidates, self._clashes)
-                self._cond.notify_all()  # punto 3 (se reduce) o punto 2 (sale de `actives`)
-                if model is not None:
-                    return model
-                self._apply()
-            self._wait(op_id, on_wait, on_grant)
+            model = self.choose_without_waiting(op_id, candidates)
+            if model is not None:
+                return model
+            self.wait_for_grant(op_id, on_wait, on_grant)
 
     def compatible_models(self, op_id: str) -> frozenset[str]:
         """Modelos de la reserva que aún se pueden elegir (REQ-003, «Elección»).

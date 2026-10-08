@@ -1174,6 +1174,15 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             tokens_out=90,
         ),
         _ev(ok=False, error="config_max_tokens", error_class="configuracion", tokens_in=50),
+        # T15 (REQ-016): la afinidad lleva `model_requested` y NO es un respaldo en ninguna copia.
+        _ev(
+            model="gemma4-26b-a4b",
+            model_requested="gemma3-4b",
+            routing="affinity",
+            affinity_foreign_flight=0,
+            tokens_in=300,
+            tokens_out=40,
+        ),
         # Los dos campos a la vez: una operación por trozos que saltó y luego falló. Sin este caso
         # un mutante que invertía el orden de la causa en el JS sobrevivía a la paridad.
         _ev(
@@ -1236,6 +1245,10 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     assert any(py["bytes_saved_image"] > 0 for py in desde_py)
     assert any(py["chars_saved_output"] > 0 for py in desde_py)
     assert any(py["fallback"] for py in desde_py)
+    assert any(
+        c.get("routing") == "affinity" and not py["fallback"]
+        for c, py in zip(casos, desde_py, strict=True)
+    ), "falta el caso de afinidad"
     assert any(py["cause"] == "configuracion" for py in desde_py)
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
@@ -1411,6 +1424,14 @@ def test_accounting_marca_el_salto_y_su_causa():
     assert a["fallback"] is True
     assert a["cause"] == "modelo"
     assert a["backend_calls"] == 2, "la llamada del respaldo también gastó backend"
+
+
+def test_accounting_affinity_is_not_fallback():
+    """T15 (REQ-016): la afinidad lleva `model_requested`, pero el panel no la cuenta como salto."""
+    a = metrics._accounting(
+        _ev(model="gemma4-26b-a4b", model_requested="gemma3-4b", routing="affinity")
+    )
+    assert a["fallback"] is False
 
 
 def test_accounting_causa_de_configuracion_en_un_fallo():

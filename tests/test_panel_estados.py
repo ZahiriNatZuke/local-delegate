@@ -773,3 +773,30 @@ def test_activity_row_shows_wait_inference_and_slow_mark(tmp_path):
     # Marca propia, distinta de la del salto (`fbchip`): en una fila con las dos no se confunden.
     assert 'class="chunkchip slowchip"' in r
     assert "fbchip" not in r
+
+
+def test_activity_row_affinity_has_no_fallback_chip(tmp_path):
+    """T15 (REQ-016): la afinidad lleva `model_requested`, pero la fila no la marca como salto; un
+    salto de verdad sí."""
+    helpers = [_f(n) for n in ("slowMark", "waitInferenceText") if f"function {n}(" in metrics.HTML]
+    functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
+    row = (
+        "{ts: '2026-10-07T10:00:00+00:00', tool: 'local_translate', model: 'gemma4-26b-a4b',"
+        " source: 'inline', backend: 'local', chars_in: 10, chars_out: 10, latency_ms: 900,"
+        " ok: true, model_requested: 'gemma3-4b', %s}"
+    )
+    r = _js(
+        tmp_path,
+        functions,
+        f"""
+        drawActivity([{row % "routing: 'affinity'"}]);
+        const affinity = _els.activity.innerHTML;
+        drawActivity([{row % "fallback_reason: 'http_500'"}]);
+        salida({{affinity: affinity, fallback: _els.activity.innerHTML}});
+        """,
+        _DOM
+        + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
+        + "const FMT_TIME = new Intl.DateTimeFormat('es', {hour: '2-digit', minute: '2-digit'});\n",
+    )
+    assert "fbchip" in r["fallback"], "guarda: el mismo guion con un salto sí lleva la marca"
+    assert "fbchip" not in r["affinity"]

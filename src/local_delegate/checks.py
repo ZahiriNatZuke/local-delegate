@@ -1416,6 +1416,13 @@ def _probe_residency(ctx: Context) -> Result:
     if isinstance(photo, topology.NoTopology):
         detail = f": {photo.detail}" if photo.detail else ""
         return Result(UNKNOWN, f"no se puede leer la residencia ({photo.reason}{detail}; {source})")
+    return _with_stale_affinity(_residency_result(photo, loaded, source), photo)
+
+
+def _residency_result(photo, loaded, source: str) -> Result:
+    """El veredicto de residencia de una config ya leída (REQ-036)."""
+    from . import residency
+
     view = residency.view(photo, loaded.data)
     persistent = [
         f"`{f.model}` (grupo `{f.group}`, TTL {f.ttl})"
@@ -1443,6 +1450,79 @@ def _probe_residency(ctx: Context) -> Result:
         f"{view.verdict} (residencia opt-in: {vram} de forma permanente; {source})",
         RESIDENCY_HINT,
     )
+
+
+AFFINITY_HINT = (
+    "la afinidad no usa esas celdas hasta que se vuelvan a medir (benchmarks/afinidad-2026-10) "
+    "o la config vuelva a la huella medida"
+)
+
+
+def _is_file(path: object) -> bool:
+    return isinstance(path, str) and bool(path) and Path(path).is_file()
+
+
+def _stale_affinity_cells(photo) -> tuple[list[str], int]:
+    """Las celdas aprobadas de la afinidad que no valen con esta config (REQ-010, T15).
+
+    Devuelve (avisos, celdas medidas en otra máquina). Una celda cuyo modelo no está en la config
+    no aplica. Si la config apunta a otro GGUF:
+
+    - y los dos ficheros, el medido y el de la config, existen aquí: **otro GGUF bajo el id en
+      esta máquina**, aviso;
+    - si no: la celda se midió en **otra máquina** (sus rutas no existen aquí). No es una avería,
+      pero la afinidad queda inerte y el detalle lo dice, sin `[WARN]`.
+
+    Con el GGUF medido, avisan también otro modelo en el rol por variable (la celda se comparó
+    contra otro) y cualquier diferencia de la huella (`-ncmoe`, contexto, tamaño, prompt).
+    Import diferido: `server` trae el SDK de MCP.
+    """
+    from . import config as configuration
+    from . import matrix, server
+
+    roles = configuration.modelos_por_rol()
+    stale: list[str] = []
+    elsewhere = 0
+    for cell in matrix.CELLS:
+        model_cfg = server._model_config(photo, cell.alternative)
+        prompt = server._affinity_prompt(cell.tool)
+        if model_cfg is None or prompt is None:
+            continue
+        current = matrix.current_footprint(model_cfg, prompt)
+        measured, configured = cell.footprint.get("ruta"), current.get("ruta")
+        if configured != measured and not (_is_file(measured) and _is_file(configured)):
+            elsewhere += 1
+            continue
+        changes: list[str] = []
+        if configured != measured:
+            changes.append(f"otro GGUF bajo el id: {configured}")
+        role = roles.get("code" if cell.tool == matrix.COMMIT_TOOL else "mechanical")
+        if cell.compared_role != role:
+            changes.append(
+                f"el modelo del rol es {role}, la celda se midió contra {cell.compared_role}"
+            )
+        changes += [c for c in matrix.footprint_differences(cell, current) if c != "ruta"]
+        if changes:
+            stale.append(f"`{cell.tool}` → `{cell.alternative}` ({', '.join(changes)})")
+    return stale, elsewhere
+
+
+def _with_stale_affinity(result: Result, photo) -> Result:
+    """Añade al resultado el aviso de las celdas «sin base» (un OK pasa a WARN) o, si se midieron
+    en otra máquina, la nota de que aquí la afinidad está inerte (sin cambiar el estado)."""
+    stale, elsewhere = _stale_affinity_cells(photo)
+    if not stale:
+        if not elsewhere:
+            return result
+        note = (
+            f"{result.detail}; afinidad inerte aquí: {elsewhere} celda(s) se midieron con GGUF "
+            "que no existen en esta máquina"
+        )
+        return Result(result.status, note, result.fix_hint)
+    detail = f"{result.detail}; afinidad sin base: {'; '.join(stale)}"
+    if result.status == OK:
+        return Result(WARN, detail, AFFINITY_HINT)
+    return Result(result.status, detail, result.fix_hint)
 
 
 def _no_turn_is_fine(reason: str) -> bool:
