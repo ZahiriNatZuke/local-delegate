@@ -3,9 +3,9 @@
   "slug": "test-windows-out-of-metrics",
   "title": "Las pruebas fuera de las métricas: ventanas de prueba y una sola regla de exclusión en todo el panel",
   "mode": "standard",
-  "status": "verifying",
+  "status": "closed",
   "createdAt": "2026-10-08T12:31:16.275Z",
-  "updatedAt": "2026-10-08T14:50:36.335Z",
+  "updatedAt": "2026-10-08T14:51:32.546Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -155,6 +155,27 @@
       "at": "2026-10-08T14:50:36.335Z",
       "evidence": "Memoria Claude Code actualizada 2026-10-08: MEMORY.md (regla test-window start/stop, P-4 sin --excluir), plan-2026-10-08-tres-frentes, pendiente-menos-uno cerrado",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "result-review",
+      "at": "2026-10-08T14:51:31.918Z",
+      "reason": "Revisión de resultado hecha: conforms-with-notes (review.md); notas cerradas"
+    },
+    {
+      "type": "transition",
+      "from": "result-review",
+      "to": "closing",
+      "at": "2026-10-08T14:51:32.214Z",
+      "reason": "T9 ejecutado y memoria actualizada"
+    },
+    {
+      "type": "transition",
+      "from": "closing",
+      "to": "closed",
+      "at": "2026-10-08T14:51:32.546Z",
+      "reason": "Cinco gates aprobados; T9 ejecutado contra el daemon real el 2026-10-08"
     }
   ]
 }
