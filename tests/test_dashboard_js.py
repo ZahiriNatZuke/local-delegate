@@ -531,4 +531,5 @@ def test_las_tres_peticiones_llevan_la_misma_query(tmp_path, incluir):
     assert [u.split("?")[0] for u in urls] == ["/api/events", "/api/stats", "/api/hooks"]
     queries = {u.split("?", 1)[1] for u in urls}
     assert len(queries) == 1, urls
-    assert ("include_tests=1" in queries.pop()) is incluir
+    (query,) = queries
+    assert ("include_tests=1" in query) is incluir

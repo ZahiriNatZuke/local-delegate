@@ -1814,8 +1814,6 @@ def test_un_fichero_roto_avisa_con_el_motivo(tmp_path):
 
 
 def test_las_entradas_ignoradas_se_cuentan(tmp_path):
-    import json
-
     from local_delegate import test_windows
 
     (tmp_path / test_windows.FILE_NAME).write_text(
