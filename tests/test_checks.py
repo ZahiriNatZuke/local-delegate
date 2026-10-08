@@ -1122,6 +1122,7 @@ _NUMERO = {
     22: "veintidós",
     23: "veintitrés",
     24: "veinticuatro",
+    25: "veinticinco",
 }
 _NUMERO_SIN_SUSTANTIVO = {**_NUMERO, 21: "veintiuno"}
 
@@ -1764,3 +1765,62 @@ def test_topology_without_turn_according_to_the_daemon_says_why(tmp_path):
     r = checks._probe_topology(ctx)
     assert r.status == checks.WARN
     assert "sin turno según el daemon: dos sintaxis" in r.detail
+
+
+# --- Ventanas de prueba (test-windows-out-of-metrics, REQ-019) -----------------------------------
+
+
+def _probe_ventanas(tmp_path):
+    return checks._probe_test_windows(checks.Context(home=tmp_path / "home", log_dir=tmp_path))
+
+
+def test_ventanas_sin_fichero_es_correcto(tmp_path):
+    r = _probe_ventanas(tmp_path)
+    assert (r.status, r.detail) == (checks.OK, "sin ventanas")
+
+
+def test_ventanas_cerradas_es_correcto(tmp_path):
+    from local_delegate import test_windows
+
+    test_windows.add(tmp_path, "2026-10-08T01:00:00Z", "2026-10-08T02:00:00Z")
+    test_windows.add(tmp_path, "2026-10-08T03:00:00Z", "2026-10-08T04:00:00Z")
+    r = _probe_ventanas(tmp_path)
+    assert (r.status, r.detail) == (checks.OK, "2 ventanas, ninguna abierta")
+
+
+@pytest.mark.parametrize(("horas", "aviso"), [(13, True), (1, False)])
+def test_una_ventana_olvidada_avisa_con_la_orden(tmp_path, horas, aviso):
+    """D6: más de 12 h abierta. Control: mutante con el umbral en 24 h → falla el caso de 13 h."""
+    from datetime import UTC, datetime, timedelta
+
+    from local_delegate import test_windows
+
+    w = test_windows.start(tmp_path, now=datetime.now(UTC) - timedelta(hours=horas))
+    r = _probe_ventanas(tmp_path)
+    if aviso:
+        assert r.status == checks.WARN
+        assert w.id in r.detail
+        assert r.fix_hint == f"local-delegate test-window stop {w.id}"
+    else:
+        assert (r.status, r.detail) == (checks.OK, "1 ventanas, 1 abierta(s)")
+
+
+def test_un_fichero_roto_avisa_con_el_motivo(tmp_path):
+    from local_delegate import test_windows
+
+    (tmp_path / test_windows.FILE_NAME).write_text("{roto", encoding="utf-8")
+    r = _probe_ventanas(tmp_path)
+    assert r.status == checks.WARN and "JSON roto" in r.detail
+
+
+def test_las_entradas_ignoradas_se_cuentan(tmp_path):
+    import json
+
+    from local_delegate import test_windows
+
+    (tmp_path / test_windows.FILE_NAME).write_text(
+        json.dumps({"version": 1, "windows": [{"id": "x"}, {"id": "y", "start": "mal"}]}),
+        encoding="utf-8",
+    )
+    r = _probe_ventanas(tmp_path)
+    assert r.status == checks.WARN and "2 entrada(s) ignorada(s)" in r.detail

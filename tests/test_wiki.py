@@ -44,6 +44,7 @@ _NUMERO_DE_CHECKS = {
     22: "veintidós",
     23: "veintitrés",
     24: "veinticuatro",
+    25: "veinticinco",
 }
 
 # `[texto](destino)`, quedándose con el destino.
