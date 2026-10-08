@@ -326,8 +326,15 @@ def _count_rows_by_window(log_dir: Path, ventanas) -> dict[str, int]:
     """Cuántas filas del log de uso estampa cada ventana (la primera por inicio, como `fundir`)."""
     import json
 
+    from . import config
+
     cuenta: dict[str, int] = {}
-    for ruta in sorted(log_dir.glob("usage-*.jsonl")):
+    # Los mismos ficheros que lee el panel: los rotados por mes y el log de nombre fijo, si existe.
+    rutas = sorted(log_dir.glob("usage-*.jsonl"))
+    fijo = config.USAGE_LOG
+    if fijo.is_file() and fijo.resolve() not in {r.resolve() for r in rutas}:
+        rutas.append(fijo)
+    for ruta in rutas:
         try:
             lineas = ruta.read_text(encoding="utf-8").splitlines()
         except OSError:

@@ -257,3 +257,18 @@ def test_main_de_verdad_sale_con_cero(escenario, monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["medir_adopcion.py", "--desde", "2026-09-10"])
     assert medir_adopcion.main() == 0
     assert "Pruebas fuera:" in capsys.readouterr().out
+
+
+def test_las_filas_de_banco_no_cuentan_como_delegacion(escenario):
+    """La marca `banco` llega por el relleno, no por el log: sin fundir, la fila se colaba.
+    Control: mutante «sin fundir» (filas crudas) → la delegación de banco vuelve a contar."""
+    from local_delegate import atribucion
+
+    _escribir(
+        config.LOG_DIR / "usage-202610.jsonl",
+        [{"ts": "2026-10-01T10:00:00Z", "tool": "local_summarize", "tool_use_id": "toolu_bk"}],
+    )
+    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 3, "guarda: sin relleno"
+    atribucion.escribir_relleno(config.LOG_DIR, "202610", {"toolu_bk": {"banco": True}})
+    assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
+    assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3

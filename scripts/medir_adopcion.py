@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import atribucion, config, test_windows
+from local_delegate import atribucion, config, coste, test_windows
 
 
 def telemetria_de_hooks() -> Path:
@@ -67,9 +67,22 @@ def leer(ruta: Path, desde: str | None) -> list[dict]:
     return eventos
 
 
+def usos_fundidos(desde: str | None) -> list[dict]:
+    """Las filas del log de uso FUNDIDAS como las ve el panel (`coste.fundir`): con el `banco` del
+    relleno y el `test_window` estampado. Se funde el fichero entero y se filtra despues, porque la
+    clave de una fila sin `tool_use_id` depende de su posicion en el fichero."""
+    usos = []
+    for ruta in logs_de_uso():
+        for e in coste.fundir(leer(ruta, None), log_dir=directorio_de_logs()):
+            if desde and str(e.get("ts", "")) < desde:
+                continue
+            usos.append(e)
+    return usos
+
+
 def medir(desde: str | None, include_tests: bool = False) -> dict:
     hooks = leer(telemetria_de_hooks(), desde)
-    usos = [e for ruta in logs_de_uso() for e in leer(ruta, desde)]
+    usos = usos_fundidos(desde)
     fuera = {"hooks": 0, "usage": 0}
     aplicadas: list[dict] = []
     if not include_tests:
@@ -79,11 +92,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         hooks = [e for e in hooks if ventanas.find(e.get("ts")) is None]
         fuera["hooks"] = antes - len(hooks)
         antes = len(usos)
-        usos = [
-            e
-            for e in usos
-            if not atribucion.test_reason({**e, "test_window": ventanas.find(e.get("ts"))})
-        ]
+        usos = [e for e in usos if not atribucion.test_reason(e)]
         fuera["usage"] = antes - len(usos)
 
     lecturas = [e for e in hooks if e.get("category") in {"read", "shell"}]

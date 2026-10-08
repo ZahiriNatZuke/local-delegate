@@ -130,3 +130,18 @@ def test_un_fichero_ilegible_no_se_pisa(log_dir, capsys):
     assert cli.run(["test-window", "start"]) == 2
     assert "ilegible" in capsys.readouterr().err
     assert (log_dir / tw.FILE_NAME).read_text(encoding="utf-8") == "{roto"
+
+
+def test_list_cuenta_tambien_el_log_de_nombre_fijo(log_dir, capsys, monkeypatch):
+    """Los mismos ficheros que el panel: también `config.USAGE_LOG` si no es uno rotado."""
+    fijo = log_dir / "usage.jsonl"
+    fijo.write_text(
+        json.dumps({"ts": "2026-10-08T01:21:00+00:00", "tool": "local_extract"}) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config, "USAGE_LOG", fijo)
+    _log(log_dir, ["01:21:10"])
+    cli.run(["test-window", "add", "2026-10-08T01:20:05.255Z", "2026-10-08T01:22:31.544Z"])
+    capsys.readouterr()
+    cli.run(["test-window", "list"])
+    assert "2 filas" in capsys.readouterr().out

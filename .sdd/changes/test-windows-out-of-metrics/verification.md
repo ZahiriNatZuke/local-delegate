@@ -31,7 +31,7 @@ a `evidencias/T9.md`.
 | REQ-018 | `local_status` 4 eventos, «(2 de pruebas fuera)», ventana abierta | pasa; mutante falla | T6 |
 | REQ-019 | `metrics.test_windows`: sin fichero, cerradas, 13 h, 1 h, roto, ignoradas; tabla de la wiki | pasa; mutante de 24 h falla | T6 |
 | REQ-020 | `main()` de verdad; P-4 con ventana = `--include-tests --excluir`; `--excluir` por instantes; `--include-tests` no quita `--excluir` | pasa; 3 mutantes fallan | T7 |
-| REQ-021 | bloqueo y delegación en ventana fuera; `mcp` fuera; `--include-tests` | pasa; mutante falla | T7 |
+| REQ-021 | bloqueo y delegación en ventana fuera; `mcp` y banco fuera (fundiendo); `--include-tests` | pasa; mutantes «ignora el fichero» y «sin fundir» fallan | T7 |
 | REQ-022 | `directorio_de_logs() == config.LOG_DIR` con y sin variable; los dos scripts importan `test_windows` | pasa | T7 |
 | REQ-023 | siembra en el `LOG_DIR` real | **pendiente**: preparada y probada en un `LOG_DIR` temporal (57 ventanas, idempotente); no se ejecutó en la PC por las reglas del encargo | T9 |
 | REQ-024 | CHANGELOG, README, wiki (sección nueva, tabla de APIs, tabla del doctor) | hecho; `tests/test_wiki.py` verde | T6, T8 |
@@ -57,5 +57,6 @@ a `evidencias/T9.md`.
   construcción; ningún test puede distinguir ese mutante (T4).
 - **`medir_enfriamiento.py` aplica solo las ventanas**, no la regla común entera; `medir_adopcion.py`
   sí la aplica al log de uso (T7). Interpretación para cumplir el escenario de P-4 del spec.
+- **D8 abierta** (ver `spec.md`): elección de regla en `medir_enfriamiento.py`.
 - **`find` optimizado**: `Window.contains` se quitó y la regla vive solo en `Windows.find`; los
   controles de T1 se repitieron sobre el código nuevo.

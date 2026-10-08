@@ -99,7 +99,11 @@ class Window:
 
 @dataclass
 class Windows:
-    """Lo leído del fichero: las ventanas válidas ordenadas por inicio, lo ignorado y el error."""
+    """Lo leído del fichero: las ventanas válidas ordenadas por inicio, lo ignorado y el error.
+
+    El índice de `find` se arma una vez al construirlo: no cambies `windows` después; construye
+    otro `Windows` (es lo que hacen `load` y los medidores).
+    """
 
     windows: list[Window] = field(default_factory=list)
     ignored: int = 0

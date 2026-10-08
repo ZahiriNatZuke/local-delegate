@@ -295,3 +295,15 @@ Están escritas con la recomendación; si el usuario elige otra cosa, cambian lo
 | REQ-023 | T9 | evidencia `test-window list` en esta PC |
 | REQ-024, REQ-025 | T8 | `tests/test_wiki.py`, `tests/test_aislamiento_entorno.py`, revisión |
 | REQ-026 (si D7) | T4 (dato), T5 (punto) | `tests/test_metrics.py`, `tests/test_dashboard_ui.py` |
+
+## Nota de implementación pendiente de decisión del usuario (2026-10-08)
+
+**D8 (nueva, abierta): ¿`medir_enfriamiento.py` aplica la regla común entera o solo las
+ventanas?** REQ-022 dice que, para el log de uso, los scripts usan `atribucion.test_reason`; el
+escenario «P-4 se puede volver a medir» exige que «con la ventana en el fichero» dé lo mismo que
+«`--include-tests --excluir …`», y REQ-020 (c) dice que `--include-tests` desactiva **las ventanas
+del fichero**. Si el script aplicara también la regla del cliente `mcp` y de bancos, ese escenario
+dejaría de cumplirse en cuanto el periodo de P-4 tenga filas de ese tipo. La implementación eligió
+**solo ventanas** en `medir_enfriamiento.py` (los fallos de un banco también disparan el
+enfriamiento, así que son datos de P-4) y la regla común entera en `medir_adopcion.py`. El revisor
+del resultado lo señaló como desviación de REQ-022 que debe aprobar el usuario o corregirse.
