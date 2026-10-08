@@ -15,6 +15,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   ninguno. Con un plazo, opencode se registra escribiendo el fichero y no con `opencode mcp add`,
   que no lo expresa, y si `claude mcp add-json` no lo deja escrito se escribe `~/.claude.json`.
   `doctor` enseña el plazo puesto en la línea de cada entrada.
+- **La tarjeta «Sistema» ya no lleva frases ni el host como texto plano.** En la Mac, con el backend
+  en la PC, salían dos frases en dos tipografías («RAM y VRAM no se miden en macOS todavía.» y «El
+  backend corre en …»). Ahora son filas etiqueta/valor con la letra del panel: «Backend» enlaza, en
+  pestaña nueva, al panel de la máquina del backend (mismo host, puerto web del daemon; `/api/system`
+  trae `panel_url`), y «RAM / VRAM» dice «—». La explicación pasa al diálogo ⓘ de la tarjeta. Un
+  test con Playwright recorre todas las tarjetas en los tres estados (local, remoto y macOS) y falla
+  si algún texto sale con una fuente que no sea una de las dos del panel.
 
 ## [0.33.0] - 2026-10-08
 

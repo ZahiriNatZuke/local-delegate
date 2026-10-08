@@ -359,10 +359,11 @@ detectados. La insignia `DAEMON MCP` marca el proceso servidor compartido; debe 
 fila con esa insignia. No cuenta sesiones de Codex/Claude ni conexiones HTTP. Una sesión nueva no
 debe crear otra fila: solo abre otra conexión al mismo daemon.
 
-Con el backend en otra máquina, debajo de la tabla sale siempre la nota «El backend corre en
-`<host>`: su RAM y VRAM se ven en el panel de esa máquina», y sin procesos locales es lo único que
-sale. En una plataforma sin lista de procesos (hoy, macOS) la tabla vacía lo dice en vez de
-«Ningún proceso del backend detectado».
+Con el backend en otra máquina, la tarjeta lleva una fila **Backend** con el host como enlace al
+panel de esa máquina (mismo host, puerto web del daemon; pide el token de aquella máquina), y la
+tabla de procesos se oculta si aquí no hay ninguno. Donde no se miden RAM y VRAM (hoy, macOS) la
+fila **RAM / VRAM** dice «—», y sin lista de procesos, la fila **Procesos** también. La explicación
+está en el botón ⓘ de la tarjeta, no en ella.
 
 Rollback: detén el servicio/tarea y restaura en cada cliente el bloque `command`/`args` de `stdio`:
 
