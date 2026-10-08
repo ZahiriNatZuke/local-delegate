@@ -3,9 +3,9 @@
   "slug": "test-windows-out-of-metrics",
   "title": "Las pruebas fuera de las métricas: ventanas de prueba y una sola regla de exclusión en todo el panel",
   "mode": "standard",
-  "status": "implementing",
+  "status": "verifying",
   "createdAt": "2026-10-08T12:31:16.275Z",
-  "updatedAt": "2026-10-08T13:46:56.041Z",
+  "updatedAt": "2026-10-08T14:03:18.526Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -118,6 +118,13 @@
       "at": "2026-10-08T13:46:56.041Z",
       "evidence": "2026-10-08: pytest completo 2381 passed, 2 skipped (con Playwright); ruff check y ruff format --check limpios; node --check del JS del panel; gitleaks origin/main..HEAD sin fugas; controles positivos por tarea en evidencias/T1-T7. Excepcion explicita: T9 (siembra y comprobacion en la PC real) no ejecutado por las reglas del encargo; medicion de rendimiento con log sintetico.",
       "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-08T14:03:18.526Z",
+      "reason": "PR #244 en verde (CLEAN). Revisor: conforms-with-notes; conformidad pendiente de T9 en la PC real y de la decision D8 del usuario"
     }
   ]
 }
