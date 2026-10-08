@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "slug": "test-windows-out-of-metrics",
+  "title": "Las pruebas fuera de las métricas: ventanas de prueba y una sola regla de exclusión en todo el panel",
+  "mode": "standard",
+  "status": "specifying",
+  "createdAt": "2026-10-08T12:31:16.275Z",
+  "updatedAt": "2026-10-08T12:43:47.937Z",
+  "gates": {
+    "spec": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "plan": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "quality": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-08T12:31:16.275Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-08T12:36:58.151Z",
+      "reason": "Mapa de impacto en research.md (2026-10-08)"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-08T12:36:58.365Z",
+      "reason": "spec.md con REQ-001 a REQ-025 y decisiones D1-D6"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "researching",
+      "at": "2026-10-08T12:43:47.729Z",
+      "reason": "Revisión adversaria de spec y plan (personal-sdd-plan-reviewer, 2026-10-08): APROBADO CON CAMBIOS, 0 bloqueantes, 8 importantes, 6 menores. Se reabre la research para corregir referencias (_bloque_cuota metrics.py:520, bloque_imagenes, tabla del doctor en Integration-install.md)."
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-08T12:43:47.937Z",
+      "reason": "Los 14 hallazgos de la revisión adversaria corregidos en research.md, spec.md (REQ-002, 004, 011, 014, 016, 022, 024, REQ-026 nuevo, D5 y D7) y plan.md (T0-T10; tabla en «Revisión adversaria»). Gates spec y plan pendientes de la aprobación del usuario y de sus respuestas a D1-D7."
+    }
+  ]
+}
