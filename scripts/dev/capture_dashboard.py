@@ -463,7 +463,8 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             await page.goto(url, wait_until="networkidle")
             total = await page.evaluate(SEED_AND_MOCK, _tablas_del_paquete())
             info = await page.evaluate(REFRESH)
-            if info["canvas"] < 6 or not info["filas"]:
+            # Cinco gráficos: el hero, el de ahorro en el tiempo y los tres donuts/barras.
+            if info["canvas"] < 5 or not info["filas"]:
                 print(f"el panel no se pobló como se esperaba: {info}", file=sys.stderr)
                 return 1
             out.parent.mkdir(parents=True, exist_ok=True)

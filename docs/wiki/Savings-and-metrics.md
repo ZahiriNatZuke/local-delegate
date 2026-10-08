@@ -104,7 +104,7 @@ la GPU dieciséis veces daban el mismo número.
   repite el prompt de sistema en cada trozo, así que aquí sí paga el troceo: en un caso real de
   cuatro trozos, 26 131 tokens de coste frente a 21 044 de ahorro, un **+24 %** que antes no se
   veía en ningún sitio.
-- **Generado en local** = Σ `tokens_out`: generación que hicieron los modelos locales en vez de
+- **Generado en local** (el KPI «Generado») = Σ `tokens_out`: generación que hicieron los modelos locales en vez de
   Claude.
 - **En el coste local se usa siempre el token real** que reporta el backend (`usage`). La
   aproximación de **~4 chars/token** (`CHARS_PER_TOKEN`) es solo el respaldo del modelo **local**
@@ -133,7 +133,7 @@ del panel (`acct`), atadas por un test de paridad:
 | Estimados | Delegaciones que salieron bien sin `usage` del backend | Fallos |
 
 - **Qué es un fallo**: el campo `ok` existe y vale exactamente `false`. Un evento con `ok: null` o
-  sin la clave **no** es un fallo. Ese mismo predicado es el que usan «Tasa de error», el punto
+  sin la clave **no** es un fallo. Ese mismo predicado es el que usan el KPI «Errores» (la tasa de error), el punto
   rojo de la tabla de actividad y los errores por herramienta de `/api/stats`.
 - **El neto puede ser negativo**: una delegación que devuelve más de lo que leyó resta. El KPI, la
   chispa y «Ahorro por herramienta» lo enseñan con su signo (una barra negativa sale a la izquierda
@@ -226,14 +226,18 @@ a la de Python por un test de paridad que las ejecuta con `node` y compara.
 
 ## Coste equivalente a precio de API
 
-El panel dice **«Equivalente estimado a precio de API: entre $X y ~$Y»**, con la nota **«no es
-dinero que hayas ahorrado: tu suscripción es de tarifa plana»**. La pregunta que responde es otra:
+La tarjeta del panel enseña la **cota baja** ($X, con la pista «no es un ahorro: tarifa plana») y la
+**estimación** (~$Y) como cifras, junto a la tabla por modelo, hilo y esfuerzo de las delegaciones
+del rango elegido. Su botón **ⓘ** abre el diálogo con el titular **«Equivalente estimado a precio
+de API: entre $X y ~$Y»** y la nota **«no es dinero que hayas ahorrado: tu suscripción es de
+tarifa plana»**. La pregunta que responde es otra:
 *¿cuánto costaría, a precio de lista de la API, que Claude hubiera leído él mismo lo que se
 delegó?* Sirve para comparar el peso de lo delegado entre periodos y entre modelos, no para hacer
 cuentas de dinero.
 
-Es una **estimación con supuestos**, y el panel los enseña siempre junto a la cifra; sin ese
-bloque no hay cifra.
+Es una **estimación con supuestos**, y el panel los enseña siempre junto a la cifra, en ese
+diálogo de información (cobertura, modelo supuesto, relecturas, densidad, lo que queda fuera,
+contrafactual y fecha de precios); sin ese bloque no hay cifra.
 
 ### La fórmula
 
@@ -361,9 +365,11 @@ es **«sin calibrar»**.
   uno de la mediana de los demás) es **menor del 25 %**. Si los dos puntos más recientes se alejan
   más del 25 % en el mismo sentido, es **deriva** (cambiaron los límites): los anteriores dejan de
   contar.
-- **Sin calibrar**, el bloque enseña los puntos que hay, los rechazos, la dispersión si hay dos o
+- **Sin calibrar**, la tarjeta de cuota **no se pinta**; el diálogo de información (el botón
+  **ⓘ** de la tarjeta de coste) enseña los puntos que hay, los rechazos, la dispersión si hay dos o
   más, los descartes por motivo y **qué falta** («faltan 3 puntos del statusline»). **Ningún %.**
-- **Calibrado**, enseña «≈ entre A % y B % de una ventana de 5 h», con A y B la cota baja y la
+- **Calibrado**, la tarjeta enseña por cada ventana la cifra «A – B %» y un medidor de 0 a
+  100 % (A en sólido, de A a B en claro); el diálogo dice «≈ entre A % y B % de una ventana de 5 h», con A y B la cota baja y la
   estimación de lo delegado en las últimas 5 h (o 7 días) entre la capacidad, sea cual sea el
   periodo que elijas en el panel. Si la capacidad calibrada sale menor que la de un rechazo
   observado, avisa de un probable uso en otras superficies.
@@ -378,8 +384,9 @@ salieron `contaminado` o fuera de rango).
 
 ## Imágenes
 
-Las delegaciones de `local_describe_image` se enseñan en su propio bloque: número de imágenes,
-bytes leídos en local (Σ `bytes_saved_image`) y caracteres devueltos a Claude. **Sin ninguna
+Las delegaciones de `local_describe_image` se enseñan en su propia tarjeta, como cifras: número de
+imágenes, bytes leídos en local (Σ `bytes_saved_image`) y caracteres devueltos a Claude. Sin
+imágenes en el rango la tarjeta no se pinta; la explicación va en el diálogo de información. **Sin ninguna
 cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensiones no hay forma
 honesta de calcularla. Por lo mismo, no entran ni en «Contexto conservado» ni en el coste
 equivalente.
@@ -444,10 +451,13 @@ tu zona.
 
 ### Local vs remoto
 
-El donut *Dónde corrió el cómputo*, la insignia del panel de backend y la columna **Cómputo** de
-la tabla separan lo generado por el backend de esta máquina de lo generado por uno remoto. Útil
-cuando alternas topologías: la misma Mac puede tener sesiones contra su propio backend y sesiones
-apuntando a la GPU de la PC.
+La insignia del panel de backend («cómputo local» o «remoto») y la columna **Cómputo** de la
+tabla (con «Local», «Remoto» o «Sin dato») separan lo generado por el backend de esta máquina de lo
+generado por uno remoto. El origen se deduce de la dirección del backend en el momento de la
+llamada (loopback = local) y se fuerza con `LOCAL_DELEGATE_BACKEND_ORIGIN` detrás de un túnel. Las
+delegaciones que otra máquina hace contra este backend se apuntan en el log de esa máquina. El
+panel ya no trae el donut *Dónde corrió el cómputo*: el backend es fijo por instalación y el donut
+siempre daba 100 % de un lado.
 
 ### Delegaciones en curso ("En curso")
 
@@ -590,6 +600,11 @@ página. Y hay una frontera que conviene tener clara, porque es la única forma 
 signifique algo:
 
 > **La tarjeta no mide cuántas sugerencias se siguieron.** El hook sugiere y tú decides.
+
+Esa advertencia la abre el botón **ⓘ** de la cabecera de la tarjeta. Las categorías y los motivos
+se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro
+MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `acotada`, `pequeno`,
+`mcp_ajeno`…).
 
 Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
 común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada

@@ -108,6 +108,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   permisos de escritura; sus commits los firma GitHub y él mismo lanza los checks del PR.
 
 ### Changed
+- **El panel, más legible y simétrico.** Las tarjetas de coste, cuota e imágenes llevan cifras y no
+  párrafos: la prosa (supuestos del coste, calibración de la cuota, nota de las imágenes y la de los
+  hooks) pasa a un diálogo de información con un botón ⓘ por tarjeta (se cierra con Esc). La cuota
+  sin calibrar no se pinta y, calibrada, sale como medidor por ventana; las imágenes se ocultan si
+  no hay ninguna. Las tablas enseñan etiquetas en español en vez de claves internas (categorías y
+  motivos de los hooks, clientes, esfuerzo, hilo, origen, estado del modelo) y comparten tipografía.
+  La fila de KPIs queda simétrica (títulos en una línea: «Generado», «Latencia», «Errores»; cifra
+  y pista a la misma altura; la línea del hero ya no pisa su pista; la pista de
+  «Delegaciones» es una línea y el desglose va al tooltip) y la cifra de «Contexto conservado» ya no
+  corta la unidad. «Sistema» cambia el «GPU N%» de la cabecera por una fila con barra, «Carga de la
+  GPU». Todas las cifras usan coma decimal. Se quita el donut «Dónde corrió el cómputo», que siempre
+  daba 100 % de un lado (el backend es fijo por instalación). Además: hueco uniforme entre tarjetas,
+  icono del calendario visible en modo oscuro y la flecha del selector de rango ya no desaparece al
+  pasar el ratón.
 - **Cadenas de respaldo sin residente; código y largo nunca caen al mecánico.** El paso
   `residente` pasa a llamarse `loaded`: los alternativos con celda aprobada para la tool que ya
   están cargados, resueltos al saltar y sin cargar nada (si no hay, se salta sin gastar salto).

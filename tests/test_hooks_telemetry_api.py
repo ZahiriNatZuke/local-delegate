@@ -286,6 +286,11 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
     esc_js = _extraer_funcion_js(metrics.HTML, "function escHooks(s){")
     # Los formateadores del panel (REQ-030/031): `F` y `F1` son objetos sobre `fmtNum`.
     fmt_js = _extraer_funcion_js(metrics.HTML, "function fmtNum(")
+    # Las etiquetas legibles de las categorías (clave interna → texto del panel).
+    etiquetas_js = "\n".join(
+        _extraer_funcion_js(metrics.HTML, cabecera)
+        for cabecera in ("const LABELS = {", "function humanLabel(", "function labelFor(")
+    )
 
     programa = tmp_path / "render.mjs"
     programa.write_text(
@@ -297,6 +302,7 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
         "globalThis.F = {format: n => fmtNum(n, 0)};\n"
         "globalThis.F1 = {format: n => fmtNum(n, 1)};\n"
         f"{esc_js}\n"
+        f"{etiquetas_js}\n"
         f"{render_js}\n"
         "const salida = [];\n"
         "for (const caso of [null, {enabled:false}, {enabled:true, total:0},\n"
@@ -324,10 +330,15 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
     assert con_datos["display"] == "", "con datos, la tarjeta se enseña"
     assert "3 de 10" in con_datos["head"]
     assert "30,0 %" in con_datos["head"], "el porcentaje va con coma decimal, como el resto"
-    assert "bash" in con_datos["body"]
+    assert "Shell" in con_datos["body"]  # `bash`, con su etiqueta legible
     assert "25,0 %" in con_datos["body"], "la tasa por categoría es 2 de 8"
-    # Lo que la tarjeta NO puede dejar de decir: que esto cuenta sugerencias, no delegaciones.
-    assert "sugieren" in con_datos["body"]
+    # Lo que la tarjeta NO puede dejar de decir: que esto cuenta sugerencias, no delegaciones. Lo
+    # dice el diálogo de información que abre el ⓘ de su cabecera, no un párrafo en el cuerpo.
+    assert "sugieren" not in con_datos["body"]
+    dialogo = metrics.HTML[metrics.HTML.index('<section id="dlgHooks"') :]
+    dialogo = dialogo[: dialogo.index("</section>")]
+    assert "Los hooks <b>sugieren</b>; delegar lo decides tú." in dialogo
+    assert 'id="hooksInfo" data-group="hooks"' in metrics.HTML
 
     # Y que el escapado se USE, no solo que exista. Probar `escHooks` por su cuenta deja pasar
     # el mutante que quita la llamada — ya ocurrió, y por eso el caso malicioso entra aquí, en
