@@ -57,6 +57,6 @@ a `evidencias/T9.md`.
   construcción; ningún test puede distinguir ese mutante (T4).
 - **`medir_enfriamiento.py` aplica solo las ventanas**, no la regla común entera; `medir_adopcion.py`
   sí la aplica al log de uso (T7). Interpretación para cumplir el escenario de P-4 del spec.
-- **D8 abierta** (ver `spec.md`): elección de regla en `medir_enfriamiento.py`.
+- **D8 aprobada por el usuario (2026-10-08)**: `medir_enfriamiento.py` aplica solo las ventanas.
 - **`find` optimizado**: `Window.contains` se quitó y la regla vive solo en `Windows.find`; los
   controles de T1 se repitieron sobre el código nuevo.

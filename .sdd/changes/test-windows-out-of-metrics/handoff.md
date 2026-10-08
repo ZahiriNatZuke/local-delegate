@@ -24,12 +24,12 @@ real y el daemon, y el clasificador bloqueó leer ese directorio. Pasos exactos 
 ## Decisions
 
 - D1-D7 aprobadas por el usuario el 2026-10-08 tal cual las recomienda el spec.
-- `medir_enfriamiento.py` aplica solo las ventanas; `medir_adopcion.py`, la regla común entera
-  (ver `evidencias/T7.md`).
+- D8, aprobada por el usuario el 2026-10-08: `medir_enfriamiento.py` aplica solo las ventanas (no
+  cambia las reglas de P-4 a mitad de ventana); `medir_adopcion.py`, la regla común entera.
 
 ## Next action
 
-1. Ejecutar T9 en la PC (orden en `evidencias/T9.md`): instalar la rama, sembrar con
+1. El orquestador ejecuta T9 en la PC tras mezclar el PR #244 (orden en `evidencias/T9.md`): instalar la rama, sembrar con
    `sembrar_T9.py`, anotar las cifras de `medir_adopcion.py` antes (`--include-tests`) y después, y
    comprobar `/api/stats`, `local_status` y `doctor` contra el daemon.
 2. Medir P-4 a 30 días (2026-10-15) con `uv run python scripts/medir_enfriamiento.py --desde
