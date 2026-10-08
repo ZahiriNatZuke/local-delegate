@@ -514,7 +514,8 @@ _TIPOGRAFIA_TARJETAS = """() => {
   const permitidas = ['--sans', '--mono'].map(v => norm(raiz.getPropertyValue(v)));
   const fuera = [];
   let vistos = 0;
-  for (const card of document.querySelectorAll('.card')) {
+  // La barra de controles entra también: el interruptor «Pruebas» vive ahí (test-windows).
+  for (const card of document.querySelectorAll('.card, .topbar .controls')) {
     if (!card.checkVisibility()) continue;
     const w = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
@@ -534,8 +535,10 @@ _TIPOGRAFIA_TARJETAS = """() => {
     if (t && n.parentElement && n.parentElement.checkVisibility()) textos.push(t);
   }
   const a = sistema.querySelector('a[href]');
+  const textos_barra = [...document.querySelectorAll('.topbar .controls button')]
+    .map(b => b.innerText.trim()).filter(Boolean);
   return {
-    permitidas, vistos, fuera, textos,
+    permitidas, vistos, fuera, textos, textos_barra,
     enlace: a ? {href: a.getAttribute('href'), target: a.target, rel: a.rel, texto: a.innerText.trim()}
               : null,
   };
@@ -572,6 +575,8 @@ def test_las_tarjetas_solo_usan_las_fuentes_del_panel(tmp_path, monkeypatch, est
     assert all(m["permitidas"]) and len(set(m["permitidas"])) == 2, m["permitidas"]
     assert m["vistos"] >= 40, m["vistos"]
     assert not m["fuera"], "texto en una fuente ajena al panel: " + "; ".join(m["fuera"])
+    # El botón «Pruebas» entra en lo que mide el guardián (y por tanto en `fuera` si se sale).
+    assert "Pruebas" in m["textos_barra"], m["textos_barra"]
 
     # Sin prosa en la tarjeta Sistema: etiquetas y cifras, nada de frases (van en su ⓘ).
     frases = [t for t in m["textos"] if len(t.split()) >= 6]
@@ -1318,3 +1323,91 @@ def test_en_el_CI_este_modulo_NO_puede_saltarse():
     with sync_playwright() as pw:
         navegador = pw.chromium.launch()  # sin `_navegador`: aquí un fallo debe ser rojo, no skip
         navegador.close()
+
+
+# --- Interruptor «Pruebas» (test-windows-out-of-metrics, REQ-016 y REQ-026) ----------------------
+
+
+def test_el_interruptor_de_pruebas_pide_las_tres_con_el_parametro(tmp_path, monkeypatch):
+    """Empieza apagado; con una ventana abierta enseña el punto; su ⓘ dice cuántas filas quedan
+    fuera; al pulsarlo, las tres peticiones llevan `include_tests=1` y el estado se recuerda."""
+    from local_delegate import test_windows
+
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+    ahora = datetime.now(UTC)
+    prueba = {
+        "ts": ahora.isoformat(timespec="seconds"),
+        "tool": "local_extract",
+        "model": "modelo-de-prueba",
+        "source": "inline",
+        "chars_in": 10,
+        "chars_out": 5,
+        "ok": True,
+        "client": "mcp",
+        "backend": "local",
+    }
+    (tmp_path / f"usage-{ahora:%Y%m}.jsonl").write_text(
+        _eventos(4) + json.dumps(prueba) + "\n", encoding="utf-8"
+    )
+    # Abierta DESPUÉS de las filas: si no, taparía la última fila real del mismo segundo.
+    abierta = test_windows.start(tmp_path, "en vivo", now=ahora + timedelta(seconds=5))
+    metrics._FILE_CACHE.clear()
+    pedidas: list[str] = []
+    with _Servidor(9487) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page(viewport={"width": 1440, "height": 1000})
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.on("request", lambda r: pedidas.append(r.url) if "/api/" in r.url else None)
+        pagina.goto(servidor.url)
+        pagina.wait_for_selector("#activity tbody tr")
+        inicial = pagina.evaluate(
+            """() => ({on: document.getElementById('tests').classList.contains('on'),
+                       pressed: document.getElementById('tests').getAttribute('aria-pressed'),
+                       punto: document.getElementById('testsDot').checkVisibility()})"""
+        )
+        pagina.click("#testsInfo")
+        texto_apagado = pagina.inner_text("#dlgPruebas")
+        codigo = pagina.evaluate(
+            """() => {
+              const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono');
+              const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).join(',');
+              return [...document.querySelectorAll('#dlgPruebas code')].map(c => ({
+                texto: c.innerText.trim(),
+                mono: norm(getComputedStyle(c).fontFamily) === norm(mono)}));
+            }"""
+        )
+        pagina.keyboard.press("Escape")
+        antes = [u for u in pedidas if re.search(r"/api/(events|stats|hooks)\?", u)]
+        pedidas.clear()
+        with pagina.expect_response(lambda r: "/api/stats" in r.url and "include_tests=1" in r.url):
+            pagina.click("#tests")
+        pagina.wait_for_function(
+            "() => document.getElementById('dlgPruebasBody').innerText.includes('incluidas')"
+        )
+        despues = [u for u in pedidas if re.search(r"/api/(events|stats|hooks)\?", u)]
+        recordado = pagina.evaluate("() => localStorage.getItem('ld-tests')")
+        encendido = pagina.evaluate(
+            "() => document.getElementById('tests').classList.contains('on')"
+        )
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+
+    assert inicial == {"on": False, "pressed": "false", "punto": True}
+    assert "Fuera de las cifras: 1 fila de prueba" in texto_apagado
+    assert f"local-delegate test-window stop {abierta.id}" in texto_apagado
+    # Los comandos y el id van como código, en la mono del panel; la fecha, legible.
+    textos_codigo = [c["texto"] for c in codigo]
+    assert f"local-delegate test-window stop {abierta.id}" in textos_codigo, codigo
+    assert abierta.id in textos_codigo
+    assert codigo and all(c["mono"] for c in codigo), codigo
+    assert "T" not in texto_apagado.split(" desde ", 1)[1].split(".", 1)[0], texto_apagado
+    assert len(antes) >= 3 and not any("include_tests" in u for u in antes), antes
+    assert sorted(u.split("?")[0].rsplit("/", 1)[1] for u in despues) == [
+        "events",
+        "hooks",
+        "stats",
+    ]
+    assert all("include_tests=1" in u for u in despues), despues
+    assert (recordado, encendido) == ("1", True)

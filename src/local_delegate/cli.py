@@ -322,6 +322,116 @@ def cmd_recalcular_coste(args: argparse.Namespace) -> int:
     return 0
 
 
+def _count_rows_by_window(log_dir: Path, ventanas) -> dict[str, int]:
+    """Cuántas filas del log de uso estampa cada ventana (la primera por inicio, como `fundir`)."""
+    import json
+
+    from . import config
+
+    cuenta: dict[str, int] = {}
+    # Los mismos ficheros que lee el panel: los rotados por mes y el log de nombre fijo, si existe.
+    rutas = sorted(log_dir.glob("usage-*.jsonl"))
+    fijo = config.USAGE_LOG
+    if fijo.is_file() and fijo.resolve() not in {r.resolve() for r in rutas}:
+        rutas.append(fijo)
+    for ruta in rutas:
+        try:
+            lineas = ruta.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for linea in lineas:
+            try:
+                fila = json.loads(linea)
+            except ValueError:
+                continue
+            ventana = ventanas.find(fila.get("ts")) if isinstance(fila, dict) else None
+            if ventana:
+                cuenta[ventana] = cuenta.get(ventana, 0) + 1
+    return cuenta
+
+
+def cmd_test_window(args: argparse.Namespace) -> int:
+    """`test-window` (test-windows-out-of-metrics, REQ-006 a REQ-010): marca las pruebas en vivo."""
+    import json
+
+    from . import config
+    from . import test_windows as tw
+
+    log_dir = config.LOG_DIR
+    accion = args.test_window_command
+    try:
+        if accion == "start":
+            w = tw.start(log_dir, args.label or "")
+            print(w.id)
+            return 0
+        if accion == "stop":
+            w = tw.stop(log_dir, args.id)
+            print(f"{w.id} cerrada: {tw.format_instant(w.start)} a {tw.format_instant(w.end)}")
+            return 0
+        if accion == "add":
+            w, creada = tw.add(log_dir, args.start, args.end, args.label or "")
+            if creada:
+                print(f"{w.id} añadida")
+            else:
+                print(f"ya existía: {w.id} (no se añade otra)")
+            return 0
+    except tw.TestWindowError as e:
+        print(f"test-window: {e}", file=sys.stderr)
+        return 2
+
+    ventanas = tw.load(log_dir)
+    filas = _count_rows_by_window(log_dir, ventanas)
+    if args.json:
+        datos = {
+            "file": str(tw.path_for(log_dir)),
+            "error": ventanas.error,
+            "ignored": ventanas.ignored,
+            "windows": [{**w.to_json(), "rows": filas.get(w.id, 0)} for w in ventanas.windows],
+        }
+        print(json.dumps(datos, ensure_ascii=False, indent=2))
+        return 0
+    if ventanas.error:
+        print(f"{tw.path_for(log_dir)} es ilegible: {ventanas.error}")
+        return 0
+    if not ventanas.windows:
+        print("sin ventanas de prueba")
+    for w in ventanas.windows:
+        fin = tw.format_instant(w.end) if w.end is not None else "abierta"
+        etiqueta = f"  {w.label}" if w.label else ""
+        print(f"{w.id}  {tw.format_instant(w.start)}  {fin}  {filas.get(w.id, 0)} filas{etiqueta}")
+    if ventanas.ignored:
+        print(f"entradas ignoradas por ilegibles: {ventanas.ignored}")
+    return 0
+
+
+def _add_test_window_parser(sub) -> None:
+    tw_parser = sub.add_parser(
+        "test-window",
+        help=(
+            "Marca ventanas de prueba: las filas del log de uso que caen dentro no cuentan en el "
+            "panel, en local_status ni en el coste."
+        ),
+    )
+    twsub = tw_parser.add_subparsers(dest="test_window_command", required=True)
+    start = twsub.add_parser(
+        "start", help="abre una ventana que empieza ahora e imprime su id (guárdalo)"
+    )
+    start.add_argument("--label", default="", help="etiqueta libre (sin rutas ni contenido)")
+    stop = twsub.add_parser(
+        "stop", help="cierra la ventana ID (sin ID, la única abierta; si hay varias, falla)"
+    )
+    stop.add_argument("id", nargs="?", default=None, help="id que imprimió `start`")
+    add = twsub.add_parser("add", help="añade una ventana cerrada (ISO 8601; sin zona = UTC)")
+    add.add_argument("start", help="inicio, p. ej. 2026-10-08T01:20:05.255Z")
+    add.add_argument("end", help="fin, posterior al inicio")
+    add.add_argument("--label", default="", help="etiqueta libre (sin rutas ni contenido)")
+    lst = twsub.add_parser(
+        "list", help="lista las ventanas y cuántas filas del log caen en cada una"
+    )
+    lst.add_argument("--json", action="store_true", help="salida en JSON")
+    tw_parser.set_defaults(func=cmd_test_window)
+
+
 def cmd_uninstall(args: argparse.Namespace) -> int:
     return _run_install(args, uninstall=True)
 
@@ -1274,6 +1384,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="directorio de Claude Code (default: ~/.claude); solo se lee",
     )
     recalc.set_defaults(func=cmd_recalcular_coste)
+
+    _add_test_window_parser(sub)
 
     _add_install_parsers(sub)
     return parser

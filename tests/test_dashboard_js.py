@@ -460,3 +460,89 @@ def test_no_quedan_plurales_con_parentesis_ni_toFixed():
     assert "leído(s)" not in html
     assert "delegación(es)" not in html
     assert "toFixed(" not in html, "los decimales pasan todos por F1 (coma y un decimal)"
+
+
+# --- Interruptor «Pruebas» (test-windows-out-of-metrics, T5) ------------------------------------
+
+_TEXTO_PRUEBAS = [
+    "function fmtNum(",
+    "function plural(",
+    "function fmtLocalTs(",
+    "function textoPruebas(",
+]
+_PRELUDIO_F = (
+    "const F = {format: n => fmtNum(n, 0)};\n"
+    "const FMT_TIME = new Intl.DateTimeFormat('es',{day:'2-digit',month:'2-digit',"
+    "hour:'2-digit',minute:'2-digit',hour12:false});"
+)
+
+
+def _texto_pruebas(tmp_path, stats) -> str:
+    cuerpo = f"console.log(JSON.stringify(textoPruebas({json.dumps(stats)}).join('\\n')));"
+    return _correr(tmp_path, _TEXTO_PRUEBAS, cuerpo, _PRELUDIO_F)
+
+
+def test_texto_pruebas_dice_cuantas_filas_quedan_fuera(tmp_path):
+    texto = _texto_pruebas(tmp_path, {"excluded_tests": 7, "tests_in_range": 7})
+    assert "Fuera de las cifras: 7 filas de prueba" in texto
+    assert "test-window stop <id>" in texto  # cómo cerrar una prueba en vivo
+
+
+def test_texto_pruebas_sin_pruebas_y_con_pruebas_incluidas(tmp_path):
+    assert "no hay pruebas" in _texto_pruebas(tmp_path, {"excluded_tests": 0, "tests_in_range": 0})
+    incluidas = _texto_pruebas(tmp_path, {"excluded_tests": 0, "tests_in_range": 1})
+    assert "Pruebas incluidas: 1 fila de prueba" in incluidas
+
+
+def test_texto_pruebas_nombra_la_ventana_abierta_con_su_orden(tmp_path):
+    stats = {
+        "excluded_tests": 0,
+        "tests_in_range": 0,
+        "open_test_windows": [{"id": "w-20261008T090000Z", "start": "2026-10-08T09:00:00.000Z"}],
+    }
+    texto = _texto_pruebas(tmp_path, stats)
+    assert "`local-delegate test-window stop w-20261008T090000Z`" in texto
+    # La hora, legible y en la zona local (TZ_PRUEBA = La Habana, UTC-4 en octubre), no cruda.
+    # Con el formato de la tabla de actividad (`fmtLocalTs`); el cero del día depende del ICU.
+    assert re.search(r"desde 0?8/10 05:00\.", texto), texto
+    assert "2026-10-08T09:00:00" not in texto
+
+
+@pytest.mark.parametrize("incluir", [False, True])
+def test_build_query_lleva_el_rango_y_el_interruptor(tmp_path, incluir):
+    cuerpo = (
+        "const q = new URLSearchParams(buildQuery({from: 'F', to: 'T'}, "
+        + ("true" if incluir else "false")
+        + "));\nconsole.log(JSON.stringify(Object.fromEntries(q)));"
+    )
+    datos = _correr(tmp_path, ["function buildQuery("], cuerpo)
+    esperado = {"from": "F", "to": "T", **({"include_tests": "1"} if incluir else {})}
+    assert datos == esperado
+
+
+_PRELUDIO_FETCH = """
+const urls = [];
+globalThis.fetch = async u => { urls.push(u); return {json: async () => ({})}; };
+const state = {range: 'today', tests: TESTS, events: [], meta: {}};
+function computeRange(){ return {from: '2026-10-08T04:00:00.000Z', to: '2026-10-08T16:00:00.000Z'}; }
+function renderClients(){} function renderCoste(){} function renderPruebas(){}
+function renderHooks(){} function render(){} function updateLive(){}
+function plural(){ return ''; }
+const CPT = 4, TZ = 'x', TZ_OFFSET_TXT = 'y';
+const document = {getElementById: () => ({textContent: '', innerHTML: '', classList: {add(){}}})};
+"""
+
+
+@pytest.mark.parametrize("incluir", [False, True])
+def test_las_tres_peticiones_llevan_la_misma_query(tmp_path, incluir):
+    """REQ-016. Control: mutante «/api/hooks con su propia query sin el parámetro» → falla."""
+    preludio = _PRELUDIO_FETCH.replace("TESTS", "true" if incluir else "false")
+    cuerpo = "await fetchData();\nconsole.log(JSON.stringify(urls));"
+    urls = _correr(
+        tmp_path, ["function buildQuery(", "async function fetchData("], cuerpo, preludio
+    )
+    assert [u.split("?")[0] for u in urls] == ["/api/events", "/api/stats", "/api/hooks"]
+    queries = {u.split("?", 1)[1] for u in urls}
+    assert len(queries) == 1, urls
+    (query,) = queries
+    assert ("include_tests=1" in query) is incluir

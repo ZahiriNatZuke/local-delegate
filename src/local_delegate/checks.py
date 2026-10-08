@@ -2,7 +2,7 @@
 
 Antes de este módulo cada subcomando sabía un pedazo del sistema: ``doctor`` solo miraba el
 backend, ``install`` escribía sin verificar y nadie miraba el daemon. Aquí vive **una sola
-definición de «estar a punto»**: los veinticuatro elementos del andamiaje, cada uno con un ``probe``
+definición de «estar a punto»**: los veinticinco elementos del andamiaje, cada uno con un ``probe``
 que responde en qué estado está.
 
 Tres reglas ordenan el módulo:
@@ -12,7 +12,7 @@ Tres reglas ordenan el módulo:
 2. **Lo que no se pudo comprobar es ``unknown``, nunca ``missing``.** Un cliente que no está
    instalado o un fichero ilegible por permisos no significan «falta»: si se reportaran así,
    un ``fix`` posterior sobrescribiría configuración ajena.
-3. **Es una lista, no un framework.** Veinticuatro checks son una tupla de objetos con una función;
+3. **Es una lista, no un framework.** Veinticinco checks son una tupla de objetos con una función;
    no hay registro dinámico, ni entry points, ni herencia. Si hiciera falta algo de eso, el
    diseño se revisa antes de seguir.
 
@@ -36,7 +36,7 @@ from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas
+from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas, test_windows
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -1734,8 +1734,47 @@ def _probe_coste(ctx: Context) -> Result:
     )
 
 
+def _probe_test_windows(ctx: Context) -> Result:
+    """¿Hay ventanas de prueba que se estén comiendo datos sin querer? (test-windows-out-of-metrics,
+    REQ-019).
+
+    Nunca es un fallo: una ventana mal puesta no rompe el MCP, solo aparta filas del panel. Avisa si
+    el fichero es ilegible, si hay entradas ignoradas o si una ventana lleva abierta más de
+    `OPEN_WARN_HOURS` horas (casi seguro, una que se olvidó cerrar).
+    """
+    log_dir = ctx.log_dir if ctx.log_dir is not None else config.LOG_DIR
+    ventanas = test_windows.load(log_dir)
+    ruta = test_windows.path_for(log_dir)
+    if ventanas.error:
+        return Result(
+            WARN,
+            f"{ruta} es ilegible ({ventanas.error}): no se aparta ninguna prueba por ventana",
+            "arréglalo a mano o bórralo; `local-delegate test-window list` dice qué ve",
+        )
+    avisos: list[str] = []
+    if ventanas.ignored:
+        avisos.append(f"{ventanas.ignored} entrada(s) ignorada(s) por ilegibles en {ruta}")
+    viejas = ventanas.stale()
+    for w in viejas:
+        avisos.append(
+            f"la ventana {w.id} lleva abierta desde {test_windows.format_instant(w.start)} "
+            f"(más de {test_windows.OPEN_WARN_HOURS} h)"
+        )
+    if avisos:
+        hint = (
+            " · ".join(f"local-delegate test-window stop {w.id}" for w in viejas)
+            or "corrige o borra las entradas en el fichero"
+        )
+        return Result(WARN, "; ".join(avisos), hint)
+    if not ventanas.windows:
+        return Result(OK, "sin ventanas")
+    abiertas = len(ventanas.open_windows())
+    estado = "ninguna abierta" if not abiertas else f"{abiertas} abierta(s)"
+    return Result(OK, f"{len(ventanas.windows)} ventanas, {estado}")
+
+
 # --- El registro --------------------------------------------------------------
-# Veinticuatro elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
+# Veinticinco elementos, en orden de grupo. Una tupla: si esto necesitara alguna vez cargarse solo,
 # el problema no sería el registro sino el diseño.
 #
 # El número se dice en cinco sitios de este módulo y llegó a decir «once» con doce checks ya
@@ -1751,6 +1790,7 @@ CHECKS: tuple[Check, ...] = (
     Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
+    Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),
     Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
     Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
     Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
@@ -1783,7 +1823,7 @@ CHECKS: tuple[Check, ...] = (
 
 
 def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tuple[Check, Result]]:
-    """Corre los veinticuatro probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
+    """Corre los veinticinco probes. Un probe que falle es ``unknown``, nunca tumba el diagnóstico.
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
@@ -1797,7 +1837,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
             continue
         try:
             result = check.probe(ctx)
-        except Exception as exc:  # un check roto no debe impedir ver los otros veintitrés
+        except Exception as exc:  # un check roto no debe impedir ver los otros veinticuatro
             result = Result(UNKNOWN, f"la comprobación falló: {exc}")
         results.append((check, result))
     return results

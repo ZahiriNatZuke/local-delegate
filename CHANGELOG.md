@@ -6,7 +6,38 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+- **Las pruebas ya no ensucian las métricas: ventanas de prueba y una sola regla.** Antes de una
+  prueba en vivo contra el MCP o el daemon, `local-delegate test-window start --label "…"` abre una
+  ventana e imprime su id; `local-delegate test-window stop <id>` la cierra; `add INICIO FIN` añade
+  una pasada y `list` dice cuántas filas del log caen en cada una. Viven en
+  `LOG_DIR/test-windows.json` (cada máquina las suyas). Una fila es una prueba si es del cliente
+  `mcp` de los scripts, de un banco o cae en una ventana, y esa regla la aplican el panel entero,
+  `local_status`, el coste equivalente, `recalcular-coste` y los medidores de `scripts/`. El log no
+  se reescribe: se filtra al leer.
+- **Interruptor «Pruebas» en el panel.** Apagado (por defecto) aparta las pruebas de todo el panel;
+  encendido, las enseña (`include_tests=1` en `/api/events`, `/api/stats` y `/api/hooks`). Su ⓘ dice
+  cuántas filas quedaron fuera, y un punto en el botón avisa si hay una ventana abierta, con la
+  orden para cerrarla. El coste y la cuota no dependen del interruptor.
+- **`doctor` comprueba las ventanas de prueba** (`metrics.test_windows`): avisa si el fichero es
+  ilegible, si hay entradas ignoradas o si una ventana lleva abierta más de 12 h. `local_status`
+  dice cuántas filas de prueba quedaron fuera y qué ventanas siguen abiertas.
+
+### Changed
+- **Las cifras del panel y de `local_status` bajan, a propósito.** Las filas del cliente `mcp` y de
+  bancos, que hasta ahora solo apartaba el coste, dejan de contar también en los KPIs, las tablas,
+  los gráficos y la tarjeta de hooks. No es una regresión: es lo que antes se contaba de más.
+- **`--excluir` de `scripts/medir_enfriamiento.py` cambia de regla.** Antes comparaba cadenas con un
+  intervalo semiabierto (`inicio <= ts < fin`), que dejaba colarse una fila `…01:20:05+00:00`
+  frente a un inicio `…01:20:05.255Z`; ahora compara instantes con la regla de las ventanas
+  (intervalo cerrado, al segundo). Las cifras de P-4 pueden moverse un poco. Los dos medidores
+  (`medir_enfriamiento.py` y `medir_adopcion.py`) leen ahora el `LOG_DIR` de `config` y se corren con
+  `uv run python`; `--include-tests` desactiva las ventanas del fichero.
+
 ### Fixed
+- **`scripts/medir_enfriamiento.py` vuelve a arrancar.** Su `main()` leía `args.exclude` en vez de
+  `args.excluir` y reventaba siempre con `AttributeError`, así que la medición de P-4 no se podía
+  hacer. Un test corre ahora el `main()` de verdad.
 - **`install` y `update` ya no borran el plazo que subiste a mano.** Al reescribir la entrada
   `local-delegate` de cada cliente se perdía el `tool_timeout_sec` de Codex (que corta a los 60 s,
   menos de lo que puede durar una espera de turno), el `timeout` de Claude Code y el de opencode.

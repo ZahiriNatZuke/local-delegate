@@ -795,3 +795,57 @@ def test_el_inventario_se_colapsa_por_directorio_cuando_no_cabe():
     assert len(colapsado) <= 4_000
     assert "300 archivos, +900 -300" in colapsado
     assert "300 en total" in colapsado  # el conteo real sobrevive al colapso
+
+
+# --- test-windows-out-of-metrics (REQ-018): local_status sin pruebas -----------------------------
+@backend_mock.mock
+def test_local_status_deja_fuera_las_pruebas_y_nombra_la_ventana_abierta(monkeypatch, tmp_path):
+    from datetime import UTC, datetime, timedelta
+
+    from local_delegate import test_windows
+
+    ahora = datetime.now(UTC).replace(microsecond=0)
+    log = tmp_path / f"usage-{ahora:%Y%m}.jsonl"
+    filas = [
+        {
+            "ts": (ahora - timedelta(minutes=10 + i)).isoformat(),
+            "tool": "local_summarize",
+            "source": "path",
+            "chars_in": 400,
+            "ok": True,
+            "client": "claude-code",
+        }
+        for i in range(4)
+    ]
+    en_ventana = ahora - timedelta(minutes=3)
+    filas += [
+        {
+            "ts": en_ventana.isoformat(),
+            "tool": "local_summarize",
+            "source": "path",
+            "chars_in": 400,
+            "ok": True,
+            "client": "claude-code",
+        },
+        {
+            "ts": en_ventana.isoformat(),
+            "tool": "local_extract",
+            "source": "path",
+            "chars_in": 400,
+            "ok": True,
+            "client": "claude-code",
+        },
+    ]
+    log.write_text("".join(json.dumps(f) + "\n" for f in filas), encoding="utf-8")
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
+    monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+    backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
+    backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
+    test_windows.add(tmp_path, en_ventana - timedelta(seconds=5), en_ventana)
+    abierta = test_windows.start(tmp_path, "en vivo")
+
+    text = server.local_status()
+    assert "eventos: 4 " in text
+    assert "(2 de pruebas fuera)" in text
+    assert f"Ventana de prueba abierta: {abierta.id} desde" in text

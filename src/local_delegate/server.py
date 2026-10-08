@@ -35,6 +35,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import (
+    atribucion,
     autostart,
     cadenas,
     clients,
@@ -48,6 +49,7 @@ from . import (
     pace,
     preguntas,
     secciones,
+    test_windows,
     topology,
     turn,
 )
@@ -4438,6 +4440,7 @@ def local_status() -> str:
 
     current_log = _current_log_path()
     n_events = 0
+    n_tests = 0
     backend_calls = 0
     saved_tokens = 0
     net_tokens = 0
@@ -4455,6 +4458,11 @@ def local_status() -> str:
         # Misma fusión y misma contabilidad que el dashboard (coste-api-y-cuota, REQ-006): sin
         # fundir, la fila no trae su densidad y esta tool daría 0 donde el panel da la cifra.
         for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
+            # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
+            # REQ-018): cliente `mcp`, banco o ventana de prueba.
+            if atribucion.test_reason(rec):
+                n_tests += 1
+                continue
             n_events += 1
             acc = _accounting(rec)
             backend_calls += acc["backend_calls"]
@@ -4467,7 +4475,13 @@ def local_status() -> str:
         # REQ-005: el neto (lo leído server-side menos lo devuelto al contexto), como el KPI del
         # panel, y el bruto entre paréntesis. Los fallos no suman a ninguno de los dos.
         f"contexto conservado: ~{net_tokens} tokens netos (bruto ~{saved_tokens})"
+        + (f" ({n_tests} de pruebas fuera)" if n_tests else "")
     )
+    for ventana in test_windows.load(config.LOG_DIR).open_windows():
+        lines.append(
+            f"  Ventana de prueba abierta: {ventana.id} desde "
+            f"{test_windows.format_instant(ventana.start)}"
+        )
     # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028).
     try:
         lines.append(f"  {_describe_pace()}")

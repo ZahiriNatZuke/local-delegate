@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "slug": "test-windows-out-of-metrics",
+  "title": "Las pruebas fuera de las métricas: ventanas de prueba y una sola regla de exclusión en todo el panel",
+  "mode": "standard",
+  "status": "verifying",
+  "createdAt": "2026-10-08T12:31:16.275Z",
+  "updatedAt": "2026-10-08T14:14:31.779Z",
+  "gates": {
+    "spec": {
+      "status": "approved",
+      "updatedAt": "2026-10-08T12:59:42.681Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra).",
+      "actor": "user"
+    },
+    "plan": {
+      "status": "approved",
+      "updatedAt": "2026-10-08T12:59:42.942Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra). Plan T0-T10 tras revisión adversaria sin bloqueantes.",
+      "actor": "user"
+    },
+    "quality": {
+      "status": "approved",
+      "updatedAt": "2026-10-08T13:46:56.041Z",
+      "evidence": "2026-10-08: pytest completo 2381 passed, 2 skipped (con Playwright); ruff check y ruff format --check limpios; node --check del JS del panel; gitleaks origin/main..HEAD sin fugas; controles positivos por tarea en evidencias/T1-T7. Excepcion explicita: T9 (siembra y comprobacion en la PC real) no ejecutado por las reglas del encargo; medicion de rendimiento con log sintetico.",
+      "actor": "user"
+    },
+    "conformance": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    },
+    "memory": {
+      "status": "pending",
+      "updatedAt": null,
+      "evidence": null,
+      "actor": null
+    }
+  },
+  "history": [
+    {
+      "type": "transition",
+      "from": null,
+      "to": "understanding",
+      "at": "2026-10-08T12:31:16.275Z",
+      "reason": "SDD change created"
+    },
+    {
+      "type": "transition",
+      "from": "understanding",
+      "to": "researching",
+      "at": "2026-10-08T12:36:58.151Z",
+      "reason": "Mapa de impacto en research.md (2026-10-08)"
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-08T12:36:58.365Z",
+      "reason": "spec.md con REQ-001 a REQ-025 y decisiones D1-D6"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "researching",
+      "at": "2026-10-08T12:43:47.729Z",
+      "reason": "Revisión adversaria de spec y plan (personal-sdd-plan-reviewer, 2026-10-08): APROBADO CON CAMBIOS, 0 bloqueantes, 8 importantes, 6 menores. Se reabre la research para corregir referencias (_bloque_cuota metrics.py:520, bloque_imagenes, tabla del doctor en Integration-install.md)."
+    },
+    {
+      "type": "transition",
+      "from": "researching",
+      "to": "specifying",
+      "at": "2026-10-08T12:43:47.937Z",
+      "reason": "Los 14 hallazgos de la revisión adversaria corregidos en research.md, spec.md (REQ-002, 004, 011, 014, 016, 022, 024, REQ-026 nuevo, D5 y D7) y plan.md (T0-T10; tabla en «Revisión adversaria»). Gates spec y plan pendientes de la aprobación del usuario y de sus respuestas a D1-D7."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-08T12:59:42.681Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-08T12:59:42.942Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra). Plan T0-T10 tras revisión adversaria sin bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-08T12:59:43.173Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-08T12:59:47.797Z",
+      "reason": "plan aprobado por el usuario 2026-10-08"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-08T12:59:48.717Z",
+      "reason": "plan aprobado por el usuario 2026-10-08"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-08T13:46:56.041Z",
+      "evidence": "2026-10-08: pytest completo 2381 passed, 2 skipped (con Playwright); ruff check y ruff format --check limpios; node --check del JS del panel; gitleaks origin/main..HEAD sin fugas; controles positivos por tarea en evidencias/T1-T7. Excepcion explicita: T9 (siembra y comprobacion en la PC real) no ejecutado por las reglas del encargo; medicion de rendimiento con log sintetico.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-08T14:03:18.526Z",
+      "reason": "PR #244 en verde (CLEAN). Revisor: conforms-with-notes; conformidad pendiente de T9 en la PC real y de la decision D8 del usuario"
+    },
+    {
+      "type": "transition",
+      "from": "verifying",
+      "to": "implementing",
+      "at": "2026-10-08T14:14:31.561Z",
+      "reason": "Retoques del dialogo Pruebas (comandos en mono, hora local) pedidos antes de mezclar; D8 aprobada por el usuario el 2026-10-08: medir_enfriamiento.py aplica solo las ventanas de prueba para no cambiar las reglas de P-4 a mitad de ventana"
+    },
+    {
+      "type": "transition",
+      "from": "implementing",
+      "to": "verifying",
+      "at": "2026-10-08T14:14:31.779Z",
+      "reason": "PR #244 en verde y CLEAN tras los retoques (d42f387). Pendiente solo T9 (siembra en la PC real), que hara el orquestador tras mezclar"
+    }
+  ]
+}

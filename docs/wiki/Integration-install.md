@@ -173,7 +173,7 @@ legítimos (el CLI fuera del PATH si se instaló con `uvx`, o un cliente que no 
 
 Reinicia el cliente. Verifica con:
 
-- `local-delegate doctor` → comprueba de una vez las veinticuatro piezas (ver abajo), incluidos el
+- `local-delegate doctor` → comprueba de una vez las veinticinco piezas (ver abajo), incluidos el
   daemon y el backend, que el reporte de `install` no mira a propósito.
 - `local_status` → backend, catálogo y si el cómputo es local o remoto.
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
@@ -299,6 +299,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Entorno | rol rápido retirado | si `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST` siguen en el entorno. El rol `fast` se retiró en la 0.30.0 —no lo enrutaba ninguna tool— y esas variables ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo |
 | Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles (`mechanical`, `long`, `code`), el paso `loaded` o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías—; `warn` también si una variable usa `residente` o `resident`, que siguen valiendo como sinónimos obsoletos de `loaded`. Con todo bien, dice «sin residente» o «residente: X» según la config de llama-swap tenga algún modelo con TTL efectivo 0 |
 | Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `coste-agregados.json`, el log de uso y los `atribucion-AAAAMM.json` de `LOG_DIR`, y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recalcular-coste` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
+| Entorno | ventanas de prueba | si `LOG_DIR/test-windows.json` (las ventanas que marca `local-delegate test-window`) se puede leer y si alguna ventana se quedó abierta. `warn` si el fichero es ilegible (con el motivo: entonces no se aparta ninguna prueba por ventana), si hay entradas ignoradas (cuántas) o si una ventana lleva abierta más de 12 h, con la orden `local-delegate test-window stop <id>` para cerrarla; `ok` sin ventanas o con todas cerradas. Nunca `missing`: una ventana mal puesta no rompe el MCP, solo aparta filas del panel |
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
 | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
@@ -330,7 +331,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las veinticuatro comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las veinticinco comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión

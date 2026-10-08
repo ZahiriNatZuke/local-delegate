@@ -276,3 +276,26 @@ def test_el_cli_lo_lanza(tmp_path, monkeypatch, capsys):
     assert (log / recalcular.NOMBRE).is_file()
     assert "Plazo de borrado" in salida
     assert str(tmp_path) not in salida  # el resumen da conteos, no rutas
+
+
+def test_los_agregados_de_n_no_cuentan_las_filas_en_ventana(tmp_path):
+    """test-windows-out-of-metrics, REQ-015. La misma delegación cuenta sin ventana y deja de
+    contar con ella: el test comprueba algo en los dos sentidos.
+    Control: mutante «`test_reason` ignora `test_window`» → el agregado sigue con el 50."""
+    from local_delegate import test_windows
+
+    claude, log = tmp_path / "claude", tmp_path / "log"
+    _delegacion_con_n(subagente(claude, "a1"), "toolu_cc", 40)
+    _delegacion_con_n(subagente(claude, "a2"), "toolu_win", 50, s0=500)
+    escribir_log(
+        log,
+        [linea_log(1, tool_use_id="toolu_cc"), linea_log(501, tool_use_id="toolu_win")],
+    )
+    recalcular.ejecutar(claude, log, ahora=AHORA)
+    sin_ventana = recalcular.leer_agregados(log)["n_por_mes"][MES]["claude-opus-5-5|subagent"]
+    assert sorted(sin_ventana) == [40, 50]
+    inicio = BASE + timedelta(seconds=500)
+    test_windows.add(log, inicio, inicio + timedelta(seconds=10), "prueba")
+    recalcular.ejecutar(claude, log, ahora=AHORA)
+    con_ventana = recalcular.leer_agregados(log)["n_por_mes"][MES]["claude-opus-5-5|subagent"]
+    assert con_ventana == [40]

@@ -425,6 +425,68 @@ más antigua tiene más de ese plazo **menos 10 días**: es el aviso para lanzar
 comando, el panel valora todo con el respaldo y el `N` declarado, y el bloque de cuota dice que no
 hay datos y cómo generarlos.
 
+## Pruebas y ventanas de prueba
+
+Una prueba en vivo contra el MCP o el daemon escribe en el mismo log que el trabajo real. El log
+**no se reescribe**: todo el que lo lee aparta las pruebas con **una sola regla**
+(`atribucion.test_reason`). Una fila es una prueba si:
+
+1. la pidió el cliente `mcp` (el de los scripts del repo);
+2. es de un banco (el relleno de `recalcular-coste` la marcó `banco`); o
+3. su `ts` cae en una **ventana de prueba** de `LOG_DIR/test-windows.json`.
+
+Esa regla la aplican el panel entero, `local_status`, el coste equivalente (que ya apartaba las dos
+primeras), `recalcular-coste` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
+de Codex **siguen contando** como uso; solo el coste las deja fuera («no es Claude»).
+
+### Marcar una prueba en vivo
+
+```bash
+local-delegate test-window start --label "ola 11, paso 5"   # imprime el id: guárdalo
+# … la prueba …
+local-delegate test-window stop w-20261008T012005Z
+```
+
+**Guarda el id que imprime `start` y cierra con `stop <id>`.** Puede haber varias ventanas abiertas
+a la vez (agentes en paralelo), y entonces `stop` sin id sale con código 2 y lista los ids abiertos.
+Para una prueba ya pasada, `local-delegate test-window add INICIO FIN --label "…"` (ISO 8601, sin
+zona = UTC; repetirla no duplica). `local-delegate test-window list` (o `--json`) dice cuántas filas
+del log caen en cada ventana.
+
+Una marca está dentro de una ventana si `inicio <= ts <= fin` comparando instantes **truncados al
+segundo**: el log escribe `ts` al segundo, así que una fila de las `01:22:31` está dentro de una
+ventana que acaba a las `01:22:31.544` y una de las `01:22:32` no. Una ventana abierta llega hasta
+el momento de leer. Si dos ventanas se solapan, la fila cuenta una vez, para la que empieza antes.
+
+**Cada máquina marca en su `LOG_DIR`.** La Mac delega contra el backend de la PC pero con su propio
+daemon y su propio log: sus pruebas se marcan con el CLI de la Mac. Las ventanas no se sincronizan.
+
+`doctor` avisa (`metrics.test_windows`) si el fichero es ilegible, si hay entradas ignoradas o si una
+ventana lleva abierta más de 12 h, con la orden para cerrarla. `local_status` dice cuántas filas de
+prueba quedaron fuera del mes y qué ventanas siguen abiertas.
+
+### El interruptor «Pruebas»
+
+En la barra del panel, junto al rango. **Apagado** (por defecto) el panel aparta las pruebas de los
+KPIs, las tablas, los gráficos, las imágenes y la tarjeta de hooks; **encendido**, las tres
+peticiones del panel llevan `include_tests=1` y las enseñan. El estado se recuerda en el navegador.
+Su ⓘ dice cuántas filas quedaron fuera en el rango y nombra las ventanas abiertas; si hay alguna,
+el botón lleva un punto. El **coste equivalente y la cuota no dependen del interruptor**: los dos
+ven siempre todas las filas y apartan las pruebas ellos mismos. Lo vivo (el indicador EN CURSO / EN
+VIVO y `/api/inflight`) tampoco se filtra.
+
+### Los medidores
+
+```bash
+uv run python scripts/medir_adopcion.py --desde 2026-09-12 --json
+uv run python scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41
+```
+
+Los dos leen el `LOG_DIR` de `config` (el mismo `test-windows.json` que el panel) y aplican las
+ventanas solos; `--include-tests` las desactiva. `medir_enfriamiento.py` aplica además los tramos de
+`--excluir` (con la misma regla de instantes), y su salida dice cuánto quitó cada fuente.
+`medir_adopcion.py` aparta también, en el log de uso, las filas del cliente `mcp`.
+
 ## La web
 
 Dashboard en `http://127.0.0.1:9393`. Con `local-delegate serve` vive en el daemon singleton;
@@ -577,15 +639,15 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 |---|---|
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
-| `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
+| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |
 | `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`, `GET /api/llamaswap/watch/<id>` | Estado de llama-swap para el CLI y `doctor`, y vigía de recarga de `llamaswap residency`. Ver [Daemon](Daemon.md#llama-swap-visto-desde-el-daemon) |
 | `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin`, `host` y `panel_url` (panel de la máquina del backend; vacío si es local) |
-| `GET /api/hooks?from=&to=` | Lo que los hooks consultivos **sugirieron** en el rango: `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
+| `GET /api/hooks?from=&to=&include_tests=` | Lo que los hooks consultivos **sugirieron** en el rango, sin los eventos que caen en una ventana de prueba salvo con `include_tests=1` (`excluded_tests` dice cuántos): `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
 
 ### Sugerencias de los hooks

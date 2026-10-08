@@ -227,6 +227,18 @@ un porcentaje sin esa calibración. Para atribuir el histórico y alimentar esos
 de vez en cuando `local-delegate recalcular-coste` (lee tus transcripts en local y escribe solo
 agregados); `doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
 
+Las **pruebas no cuentan**: las delegaciones del cliente `mcp` de los scripts, las de bancos y
+las que caen en una **ventana de prueba** se apartan del panel y de `local_status`. Antes de probar
+en vivo contra el MCP o el daemon, marca el intervalo y guarda el id que imprime:
+
+```bash
+local-delegate test-window start --label "prueba del lunes"   # imprime el id
+local-delegate test-window stop <id>
+local-delegate test-window list                               # ventanas y filas en cada una
+```
+
+El botón **Pruebas** de la barra del panel las vuelve a enseñar; su ⓘ dice cuántas quedaron fuera.
+
 Los rangos, los días del gráfico y las horas de la tabla usan **tu zona horaria** (el log se
 escribe en UTC, que es un instante sin ambigüedad; la conversión es de presentación). El
 dashboard también separa **dónde corrió el cómputo**: `local` si el backend escucha en loopback,
