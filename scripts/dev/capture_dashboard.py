@@ -268,7 +268,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
 
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
-      count: events.length, files_read: ['usage-202607.jsonl'],
+      count: events.length, excluded_tests: 0, tests_in_range: 0, files_read: ['usage-202607.jsonl'],
       range_from: events[0].ts, range_to: events[events.length - 1].ts}, events},
     // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío. Sin
     // `running_ok: true` las filas caerían en «montado»/«frío» (backend que no es llama-swap) y la
@@ -310,6 +310,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       // El KPI «Contexto conservado» es el NETO (`tokens_context_net`) y su pista dice el bruto
       // y el devuelto: sin estas dos claves la captura lo enseñaría a 0.
       tokens_context_saved: stats.saved, tokens_returned: stats.returned,
+      // Interruptor «Pruebas» (test-windows-out-of-metrics): el mock casa por pathname, así que
+      // responde igual con `include_tests=1`; sin pruebas ni ventanas abiertas en el ejemplo.
+      excluded_tests: 0, tests_in_range: 0, open_test_windows: [],
       tokens_context_net: stats.saved - stats.returned, tokens_generated_local: stats.tokens_out,
       tokens_local_input: stats.tokens_in, backend_calls: stats.backend_calls,
       estimated_events: 0, by_tool: [], by_model: [], by_backend: [],

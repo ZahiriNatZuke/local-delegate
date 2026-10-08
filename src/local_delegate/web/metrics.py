@@ -1159,6 +1159,10 @@ a{color:var(--blue);text-decoration:none}
   background:color-mix(in srgb,var(--acc) 10%,transparent)}
 .btn.icon{padding:8px 9px}
 .btn svg{width:16px;height:16px;display:block;flex:0 0 auto}
+/* Punto de aviso del botón «Pruebas»: hay una ventana de prueba abierta. Sin texto: la orden
+   para cerrarla está en su ⓘ. */
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:0 0 auto;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--amber) 28%,transparent)}
 .ver{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);
   background:color-mix(in srgb,var(--acc) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
@@ -1447,6 +1451,13 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       </select>
       <input type="date" id="rangeFrom" class="btn" style="display:none" title="Desde">
       <input type="date" id="rangeTo" class="btn" style="display:none" title="Hasta">
+      <!-- Interruptor «Pruebas» (test-windows-out-of-metrics, REQ-016): apagado, el panel aparta
+           las pruebas; encendido, las tres peticiones de fetchData llevan include_tests=1. -->
+      <button id="tests" class="btn" title="Incluir pruebas" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6.5L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.5V3"/><path d="M7.5 15h9"/></svg>
+        Pruebas<span class="tdot" id="testsDot" hidden></span></button>
+      <button class="ibtn" id="testsInfo" data-group="tests" aria-haspopup="dialog"
+        title="Qué cuenta como prueba" aria-label="Información sobre las pruebas"></button>
       <button id="auto" class="btn on" title="Auto-refresco cada 15 s">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.4-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
         Auto</button>
@@ -1616,6 +1627,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <section id="dlgCoste" data-group="coste" style="--hc:var(--amber)"><h4>Equivalente a precio de API</h4><div id="dlgCosteBody"></div></section>
     <section id="dlgCuota" data-group="coste" style="--hc:var(--violet)"><h4>Cuota de la suscripción</h4><div id="dlgCuotaBody"></div></section>
     <section id="dlgImagenes" data-group="coste" style="--hc:var(--cyan)"><h4>Imágenes</h4><div id="dlgImagenesBody"></div></section>
+    <section id="dlgPruebas" data-group="tests" style="--hc:var(--amber)"><h4>Qué cuenta como prueba</h4><div id="dlgPruebasBody"></div></section>
     <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
       <p>Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se
       siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué avisó
@@ -1661,7 +1673,7 @@ function fmtSeg(ms){
 }
 // «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada, sin «(s)».
 function plural(n, uno, varios){ return fmtNum(n, 0) + ' ' + (n === 1 ? uno : varios); }
-const state = {events:[], stats:null, range:'today', auto:true, charts:{},
+const state = {events:[], stats:null, range:'today', auto:true, tests:false, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -1765,27 +1777,35 @@ function computeRange(preset){
   return {from:null, to:null};
 }
 
+// La query de las tres peticiones del panel. Pura, para que node la pruebe: rango e interruptor
+// «Pruebas» van juntos y una petición no puede salir con otro conjunto que las demás.
+function buildQuery(range, includeTests){
+  const qs = new URLSearchParams();
+  if(range && range.from) qs.set('from', range.from);
+  if(range && range.to) qs.set('to', range.to);
+  if(includeTests) qs.set('include_tests', '1');
+  return qs.toString();
+}
+
 async function fetchData(){
   try{
-    const {from, to} = computeRange(state.range);
-    const qs = new URLSearchParams();
-    if(from) qs.set('from', from);
-    if(to) qs.set('to', to);
+    const q = buildQuery(computeRange(state.range), state.tests);
     // Los KPIs vienen de /api/stats y NO se recalculan aquí: es la única implementación de las
     // cuentas (la de Python). Además /api/events viene topado a MAX_EVENTS, así que sumar sobre
     // esta lista subestimaría en rangos grandes mientras el pie muestra el total real.
     const [r, rs, rh] = await Promise.all([
-      fetch('/api/events?' + qs.toString()),
-      fetch('/api/stats?' + qs.toString()),
-      // Mismo rango que el resto de la página: una tarjeta que contara otro periodo se leería
-      // como una contradicción de los KPIs de arriba.
-      fetch('/api/hooks?' + qs.toString()),
+      fetch('/api/events?' + q),
+      fetch('/api/stats?' + q),
+      // Mismo rango (y mismo interruptor) que el resto de la página: una tarjeta que contara otro
+      // conjunto se leería como una contradicción de los KPIs de arriba.
+      fetch('/api/hooks?' + q),
     ]);
     const j = await r.json();
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
     renderClients(state.stats);
     renderCoste(state.stats);
+    renderPruebas(state.stats);
     try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
     const cnt = plural(state.meta.count||0, 'evento', 'eventos');
@@ -1887,6 +1907,32 @@ function celdasCoste(g){
     + '<td class="num" style="color:var(--amber)">' + dolares(g.estimacion) + '</td>';
 }
 
+// --- Pruebas: el texto de su ⓘ y el punto del botón (test-windows-out-of-metrics) ---
+function textoPruebas(j){
+  if(!j) return [];
+  const L = [];
+  const fuera = j.excluded_tests||0, enRango = j.tests_in_range||0;
+  if(fuera) L.push('Fuera de las cifras: ' + plural(fuera, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
+  else if(enRango) L.push('Pruebas incluidas: ' + plural(enRango, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
+  else L.push('En el rango elegido no hay pruebas.');
+  for(const w of (j.open_test_windows||[])){
+    L.push('Ventana de prueba abierta: ' + w.id + ' desde ' + w.start
+      + '. Ciérrala con local-delegate test-window stop ' + w.id + '.');
+  }
+  L.push('Una prueba es una delegación del cliente mcp de los scripts del repo, la de un banco, '
+    + 'o cualquiera hecha dentro de una ventana de prueba. Apagado, el interruptor las aparta de '
+    + 'todo el panel; encendido, las enseña.');
+  L.push('El coste equivalente y la cuota las apartan siempre, con el interruptor como esté.');
+  L.push('Para marcar una prueba en vivo: local-delegate test-window start --label «…» antes de '
+    + 'empezar, guarda el id que imprime, y local-delegate test-window stop <id> al acabar.');
+  return L;
+}
+
+function renderPruebas(s){
+  document.getElementById('dlgPruebasBody').innerHTML = parrafosHtml(textoPruebas(s), true);
+  document.getElementById('testsDot').hidden = !((s && s.open_test_windows)||[]).length;
+}
+
 function textoCoste(j){
   const c = j && j.coste;
   if(!c) return [];
@@ -1902,7 +1948,7 @@ function textoCoste(j){
   L.push('Cobertura: ' + plural(b.al_momento||0, 'atribuida al momento', 'atribuidas al momento')
     + ' · ' + F.format(b.por_relleno||0) + ' por relleno · ' + F.format(b.pendiente||0)
     + ' pendientes · ' + F.format(b.supuesto||0) + ' supuestas · ' + F.format(b.excluido||0)
-    + ' excluidas (pruebas (scripts y bancos) y clientes que no son Claude).');
+    + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
   L.push(F.format(b.con_modelo_supuesto||0) + ' de ' + F.format(b.valoradas||0)
     + ' con modelo supuesto: ' + (r.nombre||'') + ' en ' + (HILO_TXT[r.hilo]||r.hilo||'')
     + (r.invalido ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
@@ -2830,6 +2876,18 @@ document.getElementById('theme').onclick=()=>{
   try{localStorage.setItem('ld-theme',nx);}catch(e){} applyDefaults(); render();
 };
 document.getElementById('auto').onclick=e=>{ state.auto=!state.auto; e.currentTarget.classList.toggle('on',state.auto); };
+// Interruptor «Pruebas»: apagado por defecto (D2); se recuerda por navegador, como el tema.
+function pintarTests(){
+  const b = document.getElementById('tests');
+  b.classList.toggle('on', state.tests); b.setAttribute('aria-pressed', String(state.tests));
+}
+try{ state.tests = localStorage.getItem('ld-tests') === '1'; }catch(e){ state.tests = false; }
+pintarTests();
+document.getElementById('tests').onclick=()=>{
+  state.tests = !state.tests; pintarTests();
+  try{ localStorage.setItem('ld-tests', state.tests ? '1' : '0'); }catch(e){}
+  fetchData();
+};
 document.getElementById('pgPrev').onclick=()=>{ state.page--; drawActivity(state.events); };
 document.getElementById('pgNext').onclick=()=>{ state.page++; drawActivity(state.events); };
 const helpDlg=document.getElementById('helpDlg');
@@ -2843,6 +2901,7 @@ const INFO_GRUPOS = {
   coste:{titulo:'Coste, cuota e imágenes', icono:ICON.cost, color:'var(--amber)'},
   hooks:{titulo:'Sugerencias de los hooks', icono:ICON.info, color:'var(--amber)'},
   sistema:{titulo:'Sistema', icono:ICON.gen, color:'var(--amber)'},
+  tests:{titulo:'Pruebas', icono:ICON.info, color:'var(--amber)'},
 };
 function openInfo(grupo, seccion){
   const g = INFO_GRUPOS[grupo] || INFO_GRUPOS.coste;
