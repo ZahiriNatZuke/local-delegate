@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "hoja": 1,
+  "juego": 1,
+  "sha256": "cbbb971e5dbe694cc5c999460972e2c42aff9a42afd6e7eaa52d5523d8b19893",
+  "semilla": 1058076688,
+  "label_26b": "gemma4-26b-a4b",
+  "label_qwen": "qwen36-35b-a3b",
+  "pares": {
+    "01": {
+      "tipo": "real",
+      "caso": "commit-eb35363",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "02": {
+      "tipo": "real",
+      "caso": "commit-f7c8d6e",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "03": {
+      "tipo": "real",
+      "caso": "commit-53c9dcb",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "04": {
+      "tipo": "real",
+      "caso": "commit-a4502a7",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "05": {
+      "tipo": "real",
+      "caso": "commit-11c65b5",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "06": {
+      "tipo": "real",
+      "caso": "commit-4ef1ba0",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "07": {
+      "tipo": "real",
+      "caso": "commit-daddf39",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "08": {
+      "tipo": "real",
+      "caso": "commit-64311f5",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "09": {
+      "tipo": "real",
+      "caso": "commit-67e585f",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "10": {
+      "tipo": "real",
+      "caso": "commit-1dd97a3",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "11": {
+      "tipo": "real",
+      "caso": "commit-6a7959e",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "12": {
+      "tipo": "trampa",
+      "caso": "commit-trampa-1314b0b",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "trampa"
+      },
+      "trampa_tipo": "misma-zona"
+    },
+    "13": {
+      "tipo": "real",
+      "caso": "commit-2fbfe93",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "14": {
+      "tipo": "real",
+      "caso": "commit-8610c74",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "15": {
+      "tipo": "real",
+      "caso": "commit-e7deb0d",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "16": {
+      "tipo": "real",
+      "caso": "commit-4e9035a",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "17": {
+      "tipo": "real",
+      "caso": "commit-b2545e9",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "18": {
+      "tipo": "real",
+      "caso": "commit-ad79697",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "19": {
+      "tipo": "real",
+      "caso": "commit-e428c07",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "20": {
+      "tipo": "real",
+      "caso": "commit-9eb197b",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "21": {
+      "tipo": "real",
+      "caso": "commit-2c602eb",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "22": {
+      "tipo": "trampa",
+      "caso": "commit-trampa-4f41311",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "trampa"
+      },
+      "trampa_tipo": "secundario"
+    },
+    "23": {
+      "tipo": "real",
+      "caso": "commit-diff-19k",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "24": {
+      "tipo": "real",
+      "caso": "commit-71f2a41",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "25": {
+      "tipo": "real",
+      "caso": "commit-e34c102",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "26": {
+      "tipo": "real",
+      "caso": "commit-c2312cd",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "27": {
+      "tipo": "real",
+      "caso": "commit-ccddeea",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "28": {
+      "tipo": "real",
+      "caso": "commit-56f588d",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "29": {
+      "tipo": "real",
+      "caso": "commit-4aa2141",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "30": {
+      "tipo": "real",
+      "caso": "commit-8b061ec",
+      "lados": {
+        "A": "qwen36-35b-a3b",
+        "B": "gemma4-26b-a4b"
+      }
+    },
+    "31": {
+      "tipo": "real",
+      "caso": "commit-67eb74a",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "32": {
+      "tipo": "real",
+      "caso": "commit-bcbe39f",
+      "lados": {
+        "A": "gemma4-26b-a4b",
+        "B": "qwen36-35b-a3b"
+      }
+    },
+    "33": {
+      "tipo": "trampa",
+      "caso": "commit-trampa-3b20fb3",
+      "lados": {
+        "A": "trampa",
+        "B": "gemma4-26b-a4b"
+      },
+      "trampa_tipo": "generico"
+    }
+  },
+  "omitidos": []
+}

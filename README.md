@@ -73,8 +73,17 @@ uvx local-delegate-mcp serve
 
 El daemon sirve MCP en `http://127.0.0.1:9393/mcp` y el dashboard en
 `http://127.0.0.1:9393/`. Codex, Claude Code, opencode y cualquier cliente compatible con Streamable HTTP
-pueden compartir esa URL sin levantar procesos MCP duplicados. Guía completa:
-[Daemon compartido](./docs/wiki/Daemon.md).
+pueden compartir esa URL sin levantar procesos MCP duplicados. Con un llama-swap local, el extra
+`[llamaswap]` y `LLAMASWAP_CONFIG` apuntando a su `config.yaml`, el daemon además **reparte el backend por turno**:
+dos delegaciones cuyos modelos se desalojarían entre sí no se pisan, y la segunda espera (el panel
+lo enseña como espera local). Guía completa: [Daemon compartido](./docs/wiki/Daemon.md).
+
+Una delegación puede sumar espera de turno e inferencia, y algunos clientes cortan antes: **Codex
+corta toda llamada a una tool MCP a los 60 s** (`tool_timeout_sec` en `[mcp_servers.local-delegate]`
+de `config.toml` lo sube, y hay que reponerlo tras cada `install`/`update`, que reescriben ese
+bloque) y Claude Code corta una llamada HTTP **tras 5 min sin respuesta** (la variable
+`CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, en ms, lo sube y sobrevive a `install`). Detalle en
+[Instalación de la integración](./docs/wiki/Integration-install.md#plazos-de-los-clientes-mcp).
 
 Para usar la GPU de otra máquina manteniendo los paths locales del cliente, usa un MCP local que
 apunte al backend remoto: [guía Mac → PC](./docs/wiki/Remote-backend.md) y
@@ -182,11 +191,15 @@ cámbialos por los de tu backend.
 | `LOCAL_DELEGATE_WEB_HOST` / `_PORT` | `127.0.0.1` / `9393` | Host/puerto de la web o del daemon |
 | `LOCAL_DELEGATE_WEB_FONTS` | `1` | Tipografía de marca desde Google Fonts (`0` = cero peticiones a terceros) |
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | Auto-arranque de llama-swap (opt-in) |
-| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1` |
+| `LLAMASWAP_EXE` / `LLAMASWAP_CONFIG` / `LLAMASWAP_LISTEN` | — | Solo si `AUTOSTART=1`; `LLAMASWAP_CONFIG` además activa el turno y la afinidad del daemon (con el extra `[llamaswap]`) |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
 | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
 | `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
+| `LOCAL_DELEGATE_COMMIT_LANGUAGE` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`: `es`, `en`, `fr`, `pt`, `de`, `it` o un nombre libre. Vacío: el idioma predominante de los textos del diff |
+| `LOCAL_DELEGATE_TURN_MAX_S` | `600` | Turno del daemon entre modelos que chocan en llama-swap: si la primera de la cola lleva estos segundos esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le concede el turno igual (`turn: "forced"` en el log) |
+| `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | Una llamada es «lenta» (`slow` en el log, «lento ×0,37» en el panel) si genera a menos de esta fracción de la velocidad normal de su modelo |
+| `LOCAL_DELEGATE_AFFINITY_MARGIN_S` | `5` | Afinidad: un modelo ya cargado solo se aprovecha si le quedan al menos estos segundos de TTL |
 
 ## La métrica de ahorro
 
@@ -272,21 +285,33 @@ Ver [Instalación de la integración](./docs/wiki/Integration-install.md) y
 
 ## Groups de llama-swap (opcional)
 
-Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles dos CLIs para gestionar
-**groups** de llama-swap (un modelo residente siempre cargado + un pool que se turna) con
-guardrail de VRAM **y RAM de sistema** incorporado (`--ram-gb` es opcional: `llama-server`
+Con `pip install "local-delegate-mcp[llamaswap]"` quedan disponibles los CLIs para gestionar
+**groups** de llama-swap (un pool que se turna y, solo si lo pides, un modelo que se queda
+cargado) con guardrail de VRAM **y RAM de sistema** incorporado (`--ram-gb` es opcional: `llama-server`
 mapea el GGUF también en RAM aunque el cómputo sea 100% GPU, así que un catálogo que cabe en
 VRAM puede igual agotar la RAM en máquinas con menos de 32 GB):
 
 ```bash
 local-delegate check-llamaswap --config config.yaml --vram-gb 16 --ram-gb 32
-local-delegate init-llamaswap --config config.yaml --resident gemma3-4b --swap gemma4-26b-a4b,qwen36-35b-a3b --vram-gb 16 --ram-gb 32
+local-delegate init-llamaswap --config config.yaml --swap gemma3-4b,gemma4-26b-a4b,qwen36-35b-a3b --vram-gb 16 --ram-gb 32
+local-delegate llamaswap residency            # qué se queda cargado y con qué TTL; no escribe
+local-delegate llamaswap residency --none --ttl gemma3-4b=120   # volver a «ningún residente»
 ```
+
+**Lo recomendado es ningún residente**: con el turno del daemon, los modelos que chocan se
+reparten el backend sin pelearse, y un modelo ya cargado se aprovecha cuando hay una celda
+aprobada para esa tool (ver [Tools](./docs/wiki/Tools.md)). La **residencia es opt-in**:
+`init-llamaswap --resident ID` o `llamaswap residency --pin ID` dejan ese modelo en un grupo
+`persistent` con `ttl: 0`, y **retiene su VRAM de forma permanente** (`--pin` pide la VRAM medida de
+cada modelo con `--vram-model ID=GiB` y se niega si no cabe junto al peor caso del resto). `--ttl-resident` vale 0 por defecto: con `persistent` y un TTL
+mayor que 0 el modelo se descarga igual y no hay residencia de verdad.
 
 El paquete **nunca** toca tu `config.yaml` por su cuenta — estos comandos solo corren si vos
 los invocás. `init-llamaswap` corre el/los guardrail(es) antes de escribir (no escribe nada si
 no cabe en VRAM o, si pasaste `--ram-gb`, en RAM) y nunca sobreescribe sin `--force` (dejando
-`.bak`). Detalle completo, semántica de `groups` verificada contra el código de llama-swap, y
+una copia `<config>.<AAAAMMDD-HHMMSS>.bak`). `llamaswap residency` edita solo las líneas que
+cambian, deja la misma copia con fecha, no escribe con delegaciones en curso (salvo `--now`) y
+dice qué hizo llama-swap con la recarga. Detalle completo, semántica de `groups` verificada contra el código de llama-swap, y
 ritual de aplicación en [`docs/recipes/llama-swap-groups.md`](./docs/recipes/llama-swap-groups.md).
 
 ## Enlaces

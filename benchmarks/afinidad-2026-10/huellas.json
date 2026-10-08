@@ -1,0 +1,348 @@
+{
+  "gemma3-4b": {
+    "local_classify": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    },
+    "local_delegate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    },
+    "local_extract": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    },
+    "local_lint_summary": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    },
+    "local_summarize": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "132abf5e62d533eb10bff446043bbe5c6c067c41dff095435b4b9bbe470a6dae",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    },
+    "local_translate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+      "ruta": "D:\\Projects\\llms\\models\\gemma3-4b\\gemma-3-4b-it-Q4_K_M.gguf",
+      "tamano_bytes": 2489894016
+    }
+  },
+  "gemma4-26b-a4b": {
+    "local_classify": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_commit_msg": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "6c7420eed06eb52bce3dcfee8c3431becfb544574507d89f46bd0d224a56dbae",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_delegate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_extract": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_lint_summary": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_summarize": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "132abf5e62d533eb10bff446043bbe5c6c067c41dff095435b4b9bbe470a6dae",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    },
+    "local_translate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 38400,
+        "mmproj": null,
+        "n_cpu_moe": 12,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+      "ruta": "D:\\Projects\\llms\\models\\gemma4-26b-a4b\\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf",
+      "tamano_bytes": 13597177568
+    }
+  },
+  "qwen35-2b": {
+    "local_classify": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    },
+    "local_delegate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    },
+    "local_extract": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    },
+    "local_lint_summary": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    },
+    "local_summarize": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "132abf5e62d533eb10bff446043bbe5c6c067c41dff095435b4b9bbe470a6dae",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    },
+    "local_translate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 8192,
+        "mmproj": null,
+        "n_cpu_moe": null,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+      "ruta": "D:\\Projects\\llms\\models\\Qwen3.5-2B\\Qwen3.5-2B-UD-Q8_K_XL.gguf",
+      "tamano_bytes": 2834940160
+    }
+  },
+  "qwen36-35b-a3b": {
+    "local_classify": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "f423060bf17e16f4ef717958fa4f487fe0178f2f2705c45325c931d468c8d586",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_commit_msg": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "6c7420eed06eb52bce3dcfee8c3431becfb544574507d89f46bd0d224a56dbae",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_delegate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "804bdc0a8674dfef530698a753cfcd6c4546e89b5d434d647cda0321b260615b",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_extract": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5073ac7f8d58b4bb7445c1033db1191f09619aa6778ff3754758a269326f384c",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_lint_summary": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "5202980b8aab9b7676889f5e7e7b1ba00a7c6cd38cd3111a8f9f71ca6d016838",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_summarize": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "132abf5e62d533eb10bff446043bbe5c6c067c41dff095435b4b9bbe470a6dae",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    },
+    "local_translate": {
+      "flags": {
+        "cache_type_k": null,
+        "cache_type_v": null,
+        "ctx_size": 16384,
+        "mmproj": null,
+        "n_cpu_moe": 20,
+        "reasoning": "off"
+      },
+      "prompt_sha256": "146a43ac5f5b129d7f93e76cda4a3d46ebc65395557aa1b81533cf45e10f13e5",
+      "ruta": "D:\\Projects\\llms\\models\\qwen36-35b-a3b\\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+      "tamano_bytes": 17730509792
+    }
+  }
+}

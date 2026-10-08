@@ -178,6 +178,18 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       });
     }
   }
+  // Espera frente a lentitud (T14): unos eventos locales llevan la inferencia y la espera por
+  // separado, y uno de cada nueve, la marca «lento». Se derivan de los campos que ya hay, sin
+  // gastar `rnd()`: la serie de ejemplo sigue siendo la misma de antes.
+  events.forEach((e, i) => {
+    if (e.backend !== 'local' || !e.ok || i % 3) return;
+    const slow = i % 9 === 0;
+    e.inference_ms = Math.round(e.latency_ms * (slow ? 0.9 : 0.7));
+    e.wait_ms = e.latency_ms - e.inference_ms;
+    e.tok_s = slow ? 15.2 : 41.3;
+    e.prefill_tok_s = 1850.4;
+    if (slow) Object.assign(e, {pace_rel: 0.37, slow: true, free_ram_mb: 7680});
+  });
   events.sort((a, b) => a.ts.localeCompare(b.ts));
 
   // Los cuatro KPIs grandes NO se calculan sobre `events`: el panel los pide a `/api/stats`,
@@ -451,7 +463,8 @@ async def run(url: str, out: Path, width: int, timezone: str) -> int:
             await page.goto(url, wait_until="networkidle")
             total = await page.evaluate(SEED_AND_MOCK, _tablas_del_paquete())
             info = await page.evaluate(REFRESH)
-            if info["canvas"] < 6 or not info["filas"]:
+            # Cinco gráficos: el hero, el de ahorro en el tiempo y los tres donuts/barras.
+            if info["canvas"] < 5 or not info["filas"]:
                 print(f"el panel no se pobló como se esperaba: {info}", file=sys.stderr)
                 return 1
             out.parent.mkdir(parents=True, exist_ok=True)

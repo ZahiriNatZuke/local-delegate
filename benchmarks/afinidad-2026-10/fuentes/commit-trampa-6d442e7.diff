@@ -1,0 +1,175 @@
+diff --git a/.sdd/changes/auditoria-backlog/state.json b/.sdd/changes/auditoria-backlog/state.json
+index 989cce3..62563cd 100644
+--- a/.sdd/changes/auditoria-backlog/state.json
++++ b/.sdd/changes/auditoria-backlog/state.json
+@@ -3,9 +3,9 @@
+   "slug": "auditoria-backlog",
+   "title": "Auditoría del backlog: veredicto por punto",
+   "mode": "lite",
+-  "status": "result-review",
++  "status": "closed",
+   "createdAt": "2026-07-31T19:01:13.406Z",
+-  "updatedAt": "2026-07-31T19:38:12.849Z",
++  "updatedAt": "2026-07-31T19:46:11.272Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T19:46:11.206Z",
++      "evidence": "vault: backlog.md reescrito y jornada-2026-07-31-el-backlog-auditado.md; memoria Claude: MEMORY.md, backlog-pendientes.md, diagnostico-vale-para-su-camino.md (nueva), gotchas-tecnicos.md; sin secretos ni PII",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -126,6 +126,28 @@
+       "at": "2026-07-31T19:38:12.849Z",
+       "evidence": "review.md: conforms-with-notes; 5 de 5 requisitos implementados y verificados; desviación de alcance declarada (4 confirmados quedan propuestos con tamaño)",
+       "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-07-31T19:46:11.142Z",
++      "reason": "PR #103 mergeado en a0e4f4f; config aplicada y doctor en OK"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T19:46:11.206Z",
++      "evidence": "vault: backlog.md reescrito y jornada-2026-07-31-el-backlog-auditado.md; memoria Claude: MEMORY.md, backlog-pendientes.md, diagnostico-vale-para-su-camino.md (nueva), gotchas-tecnicos.md; sin secretos ni PII",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T19:46:11.272Z",
++      "reason": "auditoria cerrada"
+     }
+   ]
+ }
+diff --git a/SECURITY.md b/SECURITY.md
+index a60c3dc..db4db65 100644
+--- a/SECURITY.md
++++ b/SECURITY.md
+@@ -36,6 +36,12 @@ conviene tener presentes al reportar o al desplegar:
+ - **Puertos de escucha.** El dashboard y el daemon escuchan en `127.0.0.1` por defecto. Cambiar
+   `LOCAL_DELEGATE_WEB_HOST` a `0.0.0.0` publica en la red local un panel **sin autenticación**
+   con tu actividad y las rutas de los archivos delegados. No lo hagas sin poner algo delante.
++
++  **Y `127.0.0.1` no basta como garantía:** cualquier proxy que pongas delante lo publica igual sin
++  tocar esa variable — un `tailscale serve --https=9393`, un túnel, un nginx. El puerto expone el
++  panel **y** el endpoint `/mcp`, y ese endpoint corre dentro del daemon, o sea **con la credencial
++  del backend ya cargada**: quien lo alcance puede delegar sin tener ninguna key. Si publicas el
++  9393 más allá de tu máquina, pon autenticación delante.
+ - **Backend remoto.** `LOCAL_DELEGATE_BASE_URL` puede apuntar a otra máquina; el contenido
+   delegado viaja hasta ahí. Usa HTTPS y una red privada (ver
+   [Backend remoto](docs/wiki/Remote-backend.md)), nunca un puerto abierto a internet.
+diff --git a/docs/wiki/Troubleshooting.md b/docs/wiki/Troubleshooting.md
+index a26a73f..994e451 100644
+--- a/docs/wiki/Troubleshooting.md
++++ b/docs/wiki/Troubleshooting.md
+@@ -87,9 +87,37 @@ Cómo salir:
+ 
+ ## `doctor` dice que el backend está CAÍDO pero llama-swap está corriendo
+ 
+-Si además responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
+-entorno**. Desde la 0.14.0 el `doctor` lo distingue y lo reporta como `[ -- ] … responde 401`, que
+-no cuenta como aviso. Exporta `LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
++Si responde a `curl` con **401**, no está caído: está arriba y **falta la credencial en ese
++entorno**. Desde la 0.18.1 `doctor` ni siquiera llega ahí — le pregunta primero al daemon, que sí
++tiene credencial, y solo prueba por su cuenta si no hay daemon. Si aun así lo ves, exporta
++`LOCAL_DELEGATE_API_KEY` en la shell desde la que lo ejecutas.
++
++## Las tools `local_*` responden `401` aunque `doctor` diga que el backend está bien
++
++**Son dos caminos distintos al mismo backend, y solo uno lleva la credencial.** El daemon la recibe
++de su lanzador (en Windows, descifrada con DPAPI); el proceso MCP en modo `stdio` lo arranca el
++**cliente** y hereda el entorno del cliente, donde normalmente no está. Así que `doctor` puede
++verlo todo bien mientras cada delegación falla.
++
++Lo avisa el check **«credencial del backend»**:
++
++```
++[WARN] credencial del backend: el backend exige credencial y Claude Code habla por stdio
++       sin ella: sus tools local_* responderán 401
++       arréglalo con: local-delegate install --mcp-mode http
++```
++
++La salida es apuntar la entrada MCP al daemon, que ya tiene el secreto:
++
++```bash
++local-delegate install --clients claude --clients codex --no-hooks --no-skill --no-memory --mcp-mode http
++```
++
++Después **reinicia el cliente**, y comprueba que una tool responde de verdad — que `doctor` diga
++`[ OK ]` no lo demuestra.
++
++Ojo: `--api-key-env` **no** resuelve este caso. Reenvía `${LOCAL_DELEGATE_API_KEY}`, que sale del
++mismo entorno que está vacío. Sirve cuando la variable sí existe y solo hay que propagarla.
+ 
+ ## `uvx` no encuentra el comando / Claude no arranca el MCP
+ 
+diff --git a/src/local_delegate/update.py b/src/local_delegate/update.py
+index ba63324..9411ff1 100644
+--- a/src/local_delegate/update.py
++++ b/src/local_delegate/update.py
+@@ -136,10 +136,17 @@ class Repair:
+ 
+ 
+ # Los checks que no aparecen aquí —`cli.path`, `client.presence`, `client.observed`,
+-# `service.backend`, `backend.llamaswap`, `backend.llamaserver`— no se reparan escribiendo en el
+-# HOME: de ellos se imprime su `fix_hint` y ya. `service.daemon` tampoco está: lo atiende el
+-# control del daemon. `client.observed` además no tiene arreglo posible: informa de con qué
+-# clientes se ha hablado, y eso no se configura desde aquí.
++# `service.backend`, `service.credential`, `backend.llamaswap`, `backend.llamaserver`— no se
++# reparan escribiendo en el HOME: de ellos se imprime su `fix_hint` y ya. `service.daemon` tampoco
++# está: lo atiende el control del daemon. `client.observed` además no tiene arreglo posible:
++# informa de con qué clientes se ha hablado, y eso no se configura desde aquí.
++#
++# `service.credential` está fuera por una razón distinta y deliberada: **sí** se sabría reparar
++# —reinstalar la entrada MCP en modo `http`, que `_infer_mcp_mode` ya sabe elegir—, pero eso
++# cambiaría el **modo de transporte** que el usuario configuró, y eso es una decisión suya, no un
++# trozo de andamiaje roto que haya que reponer. Es el mismo criterio que deja fuera el `warn` de
++# `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
++# qué comando lo arregla; ejecutarlo es del usuario.
+ REPAIRS: tuple[Repair, ...] = (
+     Repair("scaffold.hook_files", (checks.MISSING,), frozenset({"hooks"}), frozenset({"claude"})),
+     Repair(
+diff --git a/tests/test_update.py b/tests/test_update.py
+index caac509..2a794f5 100644
+--- a/tests/test_update.py
++++ b/tests/test_update.py
+@@ -89,6 +89,22 @@ def test_client_observed_no_se_repara_nunca(tmp_path):
+         assert all(getattr(a, "check_id", None) != "client.observed" for a in actions)
+ 
+ 
++def test_service_credential_no_se_repara_nunca(tmp_path):
++    """El transporte de la entrada MCP lo elige el usuario; `update` no se lo cambia.
++
++    Este check **sí** se sabría reparar —reinstalar en modo `http`, que `_infer_mcp_mode` ya sabe
++    elegir—, y justo por eso hace falta atarlo: la reparación es tan fácil de añadir «por simetría»
++    con el resto de la tabla que alguien la pondría sin ver que pisa una decisión del usuario. Mismo
++    criterio que el `warn` de `scaffold.mcp_codex`.
++    """
++    assert [r for r in update.REPAIRS if r.check_id == "service.credential"] == []
++    home = make_home(tmp_path, complete=False)
++    for estado in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
++        results = results_from(**{"service.credential": estado})
++        actions, _notes = update.plan_repairs(results, opts_for(home))
++        assert all(getattr(a, "check_id", None) != "service.credential" for a in actions)
++
++
+ def test_warn_de_mcp_codex_no_produce_ninguna_accion(tmp_path):
+     """Ese `warn` dice «entrada puesta a mano»: es configuración del usuario, no basura nuestra."""
+     home = make_home(tmp_path, complete=False)

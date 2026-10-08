@@ -2,8 +2,11 @@
 
 Los escenarios de la spec (REQ-002 a REQ-019) sobre `backend_mock`, con un backend que responde
 **según el modelo pedido**: así cada test ve a qué modelos se llamó y en qué orden, que es lo único
-que distingue un salto de un reintento. Los nombres son los defectos del paquete; el residente, sin
-`LLAMASWAP_CONFIG`, es el del rol mecánico.
+que distingue un salto de un reintento. Los nombres son los defectos del paquete. Desde T12 de
+`daemon-reparte-el-backend` (REQ-019 a REQ-021) no hay residente: las cadenas por defecto son
+`code -> loaded -> long`, `long -> loaded -> code` y `mechanical -> loaded -> long`, y sin bloque B
+`loaded` no tiene miembros, así que código y largo nunca caen al mecánico. Los tests que miden la
+mecánica de varios saltos fijan la cadena a mano con la variable del rol.
 
 La batería de tools en camino feliz no sirve aquí: da lo mismo con el interruptor roto. Cada test
 fija un fallo concreto y mira las llamadas.
@@ -19,7 +22,7 @@ from pathlib import Path
 import backend_mock
 import httpx2
 
-from local_delegate import config, enfriamiento, preguntas, server
+from local_delegate import cadenas, config, enfriamiento, preguntas, server
 from local_delegate.fallos import Clase
 
 URL = "http://test-backend/v1/chat/completions"
@@ -91,21 +94,23 @@ def _texto(caracteres: int) -> str:
     return (parrafo * (caracteres // len(parrafo) + 1))[:caracteres]
 
 
-# --- Escenario: el modelo largo falla y responde el residente ---------------------------------
+# --- Escenario: el modelo largo falla y responde el de código (T12: ya no el residente) --------
 
 
 @backend_mock.mock
-def test_el_largo_falla_y_responde_el_residente(recargar_config, tmp_path):
+def test_long_fails_and_code_answers(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({LARGO: _fallo(500), MECANICO: _ok("resumen del residente")})
+    requested = _backend(
+        {LARGO: _fallo(500), CODIGO: _ok("resumen del respaldo"), MECANICO: _ok("del 4B")}
+    )
 
-    salida = server.local_summarize(text=_texto(10_000))
+    output = server.local_summarize(text=_texto(10_000))
 
-    assert pedidos == [LARGO, MECANICO]
-    assert "resumen del residente" in salida
-    aviso = salida.split("resumen del residente", 1)[1]
-    assert MECANICO in aviso and LARGO in aviso and "http_500" in aviso
-    assert _ultimo_evento(tmp_path)["model"] == MECANICO
+    assert requested == [LARGO, CODIGO], "`loaded` vacío se salta y el 4B no es candidato"
+    assert "resumen del respaldo" in output
+    warning = output.split("resumen del respaldo", 1)[1]
+    assert CODIGO in warning and LARGO in warning and "http_500" in warning
+    assert _ultimo_evento(tmp_path)["model"] == CODIGO
 
 
 # --- Escenario: la entrada no cabe en el respaldo ---------------------------------------------
@@ -168,7 +173,7 @@ def test_el_backend_caido_no_salta_ni_enfria(recargar_config, tmp_path, monkeypa
 @backend_mock.mock
 def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("explicado")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
     server.local_explain_code(code="x = 1")
     server.local_explain_code(code="x = 2")
@@ -179,7 +184,7 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
     pedidos.clear()
     salida = server.local_explain_code(code="x = 3")
 
-    assert pedidos == [MECANICO], "el modelo enfriado no recibe la cuarta llamada"
+    assert pedidos == [LARGO], "el modelo enfriado no recibe la cuarta llamada"
     assert "explicado" in salida and "enfriamiento" in salida
 
 
@@ -239,19 +244,19 @@ def test_vence_el_enfriamiento_y_la_prueba_falla_dobla_la_espera(recargar_config
 @backend_mock.mock
 def test_traduccion_en_cuatro_trozos_cambia_de_modelo_una_sola_vez(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({LARGO: [_ok("uno"), _fallo(500), _ok("NO")], MECANICO: _ok("otro")})
+    pedidos = _backend({LARGO: [_ok("uno"), _fallo(500), _ok("NO")], CODIGO: _ok("otro")})
 
     salida = server.local_translate(target_lang="inglés", text=_texto(12_000))
 
-    assert pedidos == [LARGO, LARGO, MECANICO, MECANICO, MECANICO]
+    assert pedidos == [LARGO, LARGO, CODIGO, CODIGO, CODIGO]
     assert "NO" not in salida
-    assert "trozo 2" in salida and MECANICO in salida
+    assert "trozo 2" in salida and CODIGO in salida
 
 
 @backend_mock.mock
 def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp_path):
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("- a: cambia")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("- a: cambia")})
     diff = "".join(
         f"diff --git a/f{i}.py b/f{i}.py\n" + "+linea de codigo nueva\n" * 200 for i in range(6)
     )
@@ -260,7 +265,7 @@ def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp
     salida = server.local_commit_msg(diff=diff)
 
     assert pedidos.count(CODIGO) == 1, "tras el salto, los trozos siguientes van al respaldo"
-    assert set(pedidos) == {CODIGO, MECANICO}
+    assert set(pedidos) == {CODIGO, LARGO}
     assert not salida.startswith("[local-delegate error]")
 
 
@@ -278,18 +283,25 @@ def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(recarga
     assert salida.startswith("[local-delegate error]")
 
 
-# --- Escenario: el modelo no cabe en la VRAM (REQ-018) ----------------------------------------
+# --- Escenario: el modelo no cabe en la VRAM (REQ-018 de F3, enmendado por REQ-021) -----------
 
 
 @backend_mock.mock
-def test_capacidad_solo_salta_al_residente_y_sin_segundo_salto(recargar_config, tmp_path):
+def test_capacity_only_hops_to_loaded_without_second_hop(recargar_config, tmp_path):
+    """Con un miembro en `loaded` (el proveedor lo pone T15; aquí, a mano), capacidad salta a él y
+    a nada más. Sin miembros no salta: `test_cadenas.py::test_capacity_failure_with_nothing_loaded`.
+    """
     recargar_config()
-    pedidos = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
+    previous_provider = cadenas._loaded_provider
+    cadenas.register_loaded_provider(lambda *_: (MECANICO,))
+    try:
+        requested = _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _fallo(500), LARGO: _ok()})
+        output = server.local_explain_code(code="x = 1")
+    finally:
+        cadenas.register_loaded_provider(previous_provider)
 
-    salida = server.local_explain_code(code="x = 1")
-
-    assert pedidos == [CODIGO, MECANICO], "tras capacidad, residente y nada más"
-    assert salida.startswith("[local-delegate error]")
+    assert requested == [CODIGO, MECANICO], "tras capacidad, `loaded` y nada más"
+    assert output.startswith("[local-delegate error]")
     assert CODIGO not in _entradas(tmp_path), "capacidad no enfría"
 
 
@@ -447,11 +459,11 @@ def test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy(recargar_con
 def test_el_mismo_caso_con_el_mecanismo_encendido_salta(recargar_config, tmp_path):
     recargar_config()
     _enfriar(tmp_path, CODIGO)
-    pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok("explicado")})
+    pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
     salida = server.local_explain_code(code="x = 1")
 
-    assert pedidos == [MECANICO]
+    assert pedidos == [LARGO]
     assert "explicado" in salida
 
 
@@ -478,8 +490,10 @@ def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
     """Con el rol `fast` retirado (0.30.0) quedan tres modelos de texto, así que una cadena no
     puede tener más de dos candidatos distintos del principal: este test pasa a comprobar que los
     **recorre los dos** y que ahí se acaba. Que el tope CORTA lo prueba el de abajo, bajándolo a 1.
+    Desde T12 las cadenas por defecto solo tienen un modelo concreto (`loaded` sale vacío sin bloque
+    B), así que la cadena de dos se fija a mano: el mecánico, por variable, sí se puede pedir.
     """
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,long")
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500)})
 
     server.local_explain_code(code="x = 1")
@@ -489,7 +503,9 @@ def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
+    recargar_config(
+        LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1", LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long"
+    )
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -499,7 +515,7 @@ def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, tmp_path):
-    recargar_config()
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(400, "malo"), LARGO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -512,7 +528,7 @@ def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, 
 
 @backend_mock.mock
 def test_si_fallan_los_respaldos_vuelve_el_error_original_y_la_lista(recargar_config, tmp_path):
-    recargar_config()
+    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     _backend({CODIGO: _fallo(500, "original"), MECANICO: _fallo(502), LARGO: _fallo(503)})
 
     salida = server.local_explain_code(code="x = 1")
@@ -544,14 +560,14 @@ def test_en_extract_el_aviso_va_en_los_metadatos(recargar_config, tmp_path):
 @backend_mock.mock
 def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(recargar_config, tmp_path):
     recargar_config()
-    _backend({CODIGO: _fallo(500), MECANICO: _ok("def f():\n    return 1")})
+    _backend({CODIGO: _fallo(500), LARGO: _ok("def f():\n    return 1")})
     destino = tmp_path / "gen.py"
 
     recibo = server.local_boilerplate(spec="f", language="python", target=str(destino))
 
     # `_escribir_destino` termina el fichero en salto de línea; lo que importa es que no hay aviso.
     assert destino.read_text(encoding="utf-8") == "def f():\n    return 1\n"
-    assert MECANICO in recibo and CODIGO in recibo
+    assert LARGO in recibo and CODIGO in recibo
 
 
 @backend_mock.mock
@@ -594,50 +610,70 @@ def test_vision_que_falla_no_salta(recargar_config, tmp_path):
     assert pedidos == [VISION]
 
 
-# --- REQ-017: el salto ocupa la misma plaza ---------------------------------------------------
+# --- REQ-006 (enmienda REQ-017 de F3): el salto suelta la plaza y el tope se sigue cumpliendo ----
 
 
-def test_el_salto_no_suelta_la_plaza_entre_el_principal_y_el_respaldo(
-    recargar_config, tmp_path, monkeypatch
-):
+def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_path, monkeypatch):
+    """Sustituye al test de REQ-017 de F3 («el salto no suelta la plaza»), con el mismo escenario.
+
+    Una sola plaza; A falla en su principal mientras B ya espera la plaza. Con REQ-006 el salto de
+    A suelta la plaza ANTES de decidir y volver a pedirla, así que B entra entre el principal y el
+    respaldo de A; y aun así nunca hay dos llamadas a la vez (el tope de `MAX_CONCURRENT_REQUESTS`).
+    La decisión del salto de A espera (con tope) a que B haya entrado: sin eso, que A recupere la
+    plaza antes que B dependería del planificador. Con el salto DENTRO de la plaza, B no puede
+    entrar, la espera agota su tope y el orden sale A, A, B, B.
+    """
     recargar_config()
-    orden: list[tuple[str, str]] = []
-    dentro = 0
-    pico = 0
-    cerrojo = threading.Lock()
-    principal_de_a = threading.Event()
+    order: list[tuple[str, str]] = []
+    inside = 0
+    peak = 0
+    lock = threading.Lock()
+    primary_of_a = threading.Event()
+    b_entered = threading.Event()
 
     def post_chat(model, _payload):
-        nonlocal dentro, pico
-        with cerrojo:
-            dentro += 1
-            pico = max(pico, dentro)
-            orden.append((threading.current_thread().name, model))
+        nonlocal inside, peak
+        with lock:
+            inside += 1
+            peak = max(peak, inside)
+            order.append((threading.current_thread().name, model))
         if threading.current_thread().name == "A" and model == CODIGO:
-            principal_de_a.set()
+            primary_of_a.set()
+        if threading.current_thread().name == "B":
+            b_entered.set()
         time.sleep(0.1)
-        with cerrojo:
-            dentro -= 1
+        with lock:
+            inside -= 1
         if model == CODIGO:
             return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
+    decide = server._next_hop
+
+    def next_hop(*args, **kwargs):
+        if threading.current_thread().name == "A" and kwargs.get("ultimo") is None:
+            b_entered.wait(timeout=2)
+        return decide(*args, **kwargs)
+
     monkeypatch.setattr(server, "_post_chat", post_chat)
+    monkeypatch.setattr(server, "_next_hop", next_hop)
     monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(1))
 
-    def llamar() -> None:
+    def call_fn() -> None:
         server._chat(CODIGO, "s", "u", 8, rol="code")
 
-    a = threading.Thread(target=llamar, name="A")
-    b = threading.Thread(target=llamar, name="B")
+    a = threading.Thread(target=call_fn, name="A")
+    b = threading.Thread(target=call_fn, name="B")
     a.start()
-    assert principal_de_a.wait(timeout=5)
-    b.start()  # B ya espera la plaza cuando A falla: si A la soltara, B se colaría
-    a.join(timeout=5)
-    b.join(timeout=5)
+    assert primary_of_a.wait(timeout=5)
+    b.start()  # B ya espera la plaza cuando A falla: como A la suelta para saltar, B entra
+    a.join(timeout=10)
+    b.join(timeout=10)
 
-    assert pico == 1
-    assert [hilo for hilo, _ in orden] == ["A", "A", "B", "B"], orden
+    assert not a.is_alive() and not b.is_alive()
+    assert peak == 1
+    assert [thread for thread, _ in order[:2]] == ["A", "B"], order
+    assert sorted(order) == sorted([("A", CODIGO), ("A", LARGO), ("B", CODIGO), ("B", LARGO)])
 
 
 # --- El camino feliz no escribe el estado -----------------------------------------------------

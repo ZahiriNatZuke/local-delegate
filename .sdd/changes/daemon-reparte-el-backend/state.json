@@ -3,39 +3,43 @@
   "slug": "daemon-reparte-el-backend",
   "title": "Daemon: no se pelea por el modelo, aprovecha el cargado, avisa de la lentitud y deja la residencia configurable",
   "mode": "standard",
-  "status": "plan-review",
+  "status": "closed",
   "createdAt": "2026-10-06T14:16:18.644Z",
-  "updatedAt": "2026-10-06T17:10:45.310Z",
+  "updatedAt": "2026-10-08T02:23:18.529Z",
   "gates": {
     "spec": {
       "status": "approved",
-      "updatedAt": "2026-10-06T15:38:40.389Z",
-      "evidence": "Revisión adversaria (2 BLOQ/12 IMP) + corrección + segunda pasada (1 BLOQ nuevo: choque con espera_local del panel) + ronda final: todo resuelto (review.md, Respuesta a la segunda pasada). Turno/plaza sin ciclo comprobado; TTL de v255 verificado en el código Go. Decisiones del usuario 2026-10-06 en brief (incluidas las dos condiciones extra de la evaluación, confirmadas).",
-      "actor": "user"
+      "updatedAt": "2026-10-07T15:07:39.924Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
+      "actor": "user",
+      "at": "2026-10-08T01:44:25.593Z"
     },
     "plan": {
       "status": "approved",
-      "updatedAt": "2026-10-06T17:10:45.099Z",
-      "evidence": "Revisión adversaria del plan (4 BLOQ/7 IMP) resuelta en plan rev. 2 (review.md, Respuesta a la revisión del plan); controles comprobados ejecutándolos; config real protegida con --config, fixture y sha256 por ola; enmienda F3 exige approve nuevo con evidencia del usuario; reglas.json deja parametrizadas las dos reglas pendientes del usuario.",
+      "updatedAt": "2026-10-07T15:07:40.141Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
       "actor": "user"
     },
     "quality": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 paso 1: suite completa con Playwright `2245 passed, 2 skipped, 1 warning in 219.75s`, `ruff check .` y `ruff format --check .` limpios, `node --check` del panel y de la captura con exit 0; tras cambiar las claves falsas del paso 9, `tests/test_llamaswap_api.py` y `tests/test_metrics.py` con `96 passed`; gitleaks sobre main..HEAD sin fugas. Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Quality checks», y evidencias/T17.md.",
+      "actor": "orchestrator",
+      "at": "2026-10-08T01:51:08.564Z"
     },
     "conformance": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 pasos 1 a 8 pasan con dato literal y la revisión del resultado del paso 9 cubre REQ-001 a REQ-044; sus dos bloqueantes (evidencia del paso 4, reaprobación del gate spec del 2026-10-08T01:44:25Z) y los dos importantes (ola 11 y plantillas de verification.md, handoff.md) quedan resueltos, y el menor de las claves falsas corregido. Desviaciones y riesgos aceptados en «Deviations and residual risk». Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Evidence», y evidencias/T17.md.",
+      "actor": "orchestrator",
+      "at": "2026-10-08T01:51:08.564Z"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T02:22:59.360Z",
+      "evidence": "Nota de jornada en el vault: projects/local-delegate/jornada-2026-10-08-el-panel-que-era-un-dashboard.md (olas 8-11, ventanas excluidas de P-4/F1, lecciones); backlog del vault actualizado (pruebas en métricas, «Quién usa el backend», idioma es/en, plazo MCP); punteros en la memoria del proyecto (índice de jornadas y memoria panel-es-un-dashboard).",
+      "actor": "orchestrator",
+      "at": "2026-10-08T02:22:59.360Z"
     }
   },
   "history": [
@@ -89,6 +93,68 @@
       "to": "plan-review",
       "at": "2026-10-06T17:10:45.310Z",
       "reason": "Plan rev. 2 tras revisión adversaria"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-07T10:29:37.694Z",
+      "reason": "Spec y plan aprobados tras revisión adversaria; decisiones del usuario cerradas en brief.md (2026-10-06). Arranca la ola 0: T0 y T1."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-07T15:07:39.924Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-07T15:07:40.141Z",
+      "evidence": "Aclaraciones del 2026-10-07 tras la revisión de la ola 3 (REQ-002, REQ-003, REQ-005, REQ-007 en spec.md, sección de aclaraciones; T7, T8, T10, T11 y T14 en plan.md). Aprobadas por el usuario el 2026-10-07, en respuesta a la pregunta explícita de la sesión principal: «Sí, apruébalas (Recomendado)»; y para --ninguno con todo en TTL 0: «Lo dice y no propone nada».",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-08T01:44:25.593Z",
+      "evidence": "Reaprobación tras T17 paso 9: el usuario aprueba la spec con todas las filas de la tabla de aclaraciones del 2026-10-07 (spec.md desde la l. 1039) añadidas después de 2026-10-07T15:07:39Z: salto sin turno (REQ-002/006), «cabe» de --pin (REQ-031), nombres del CLI, paso `loaded`, nombres de interfaz y renombrado a inglés, aviso informativo con residente (REQ-036), ritmo con salto/espera/siembra (REQ-024 a REQ-026), huella del alternativo, huella del prompt, rutas de esta PC y rol en enfriamiento (REQ-010/012/015), capacidad del alternativo vuelve al rol (REQ-015/021) y la tabla de nombres viejos → nuevos. Respuesta literal: «si esta aprobada, cada una de las filas tiene mi OK».",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "quality",
+      "status": "approved",
+      "at": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 paso 1: suite completa con Playwright `2245 passed, 2 skipped, 1 warning in 219.75s`, `ruff check .` y `ruff format --check .` limpios, `node --check` del panel y de la captura con exit 0; tras cambiar las claves falsas del paso 9, `tests/test_llamaswap_api.py` y `tests/test_metrics.py` con `96 passed`; gitleaks sobre main..HEAD sin fugas. Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Quality checks», y evidencias/T17.md.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "gate",
+      "gate": "conformance",
+      "status": "approved",
+      "at": "2026-10-08T01:51:08.564Z",
+      "evidence": "T17 pasos 1 a 8 pasan con dato literal y la revisión del resultado del paso 9 cubre REQ-001 a REQ-044; sus dos bloqueantes (evidencia del paso 4, reaprobación del gate spec del 2026-10-08T01:44:25Z) y los dos importantes (ola 11 y plantillas de verification.md, handoff.md) quedan resueltos, y el menor de las claves falsas corregido. Desviaciones y riesgos aceptados en «Deviations and residual risk». Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Evidence», y evidencias/T17.md.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-08T02:22:59.360Z",
+      "evidence": "Nota de jornada en el vault: projects/local-delegate/jornada-2026-10-08-el-panel-que-era-un-dashboard.md (olas 8-11, ventanas excluidas de P-4/F1, lecciones); backlog del vault actualizado (pruebas en métricas, «Quién usa el backend», idioma es/en, plazo MCP); punteros en la memoria del proyecto (índice de jornadas y memoria panel-es-un-dashboard).",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "status",
+      "status": "closed",
+      "at": "2026-10-08T02:23:18.529Z",
+      "evidence": "Los cinco gates aprobados (spec, plan, quality, conformance, memory); T0-T17 cerrados.",
+      "actor": "orchestrator"
     }
   ]
 }

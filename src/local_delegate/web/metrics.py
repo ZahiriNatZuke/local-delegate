@@ -10,6 +10,9 @@ Lee los usage-YYYYMM.jsonl rotados por mes (+ el usage.jsonl legado si existe) y
   GET /api/status     -> versión del MCP, modelos del backend con status loaded/unloaded (#901),
                          catálogo y tools
   GET /api/system     -> RAM/VRAM de sistema + consumo por proceso (best-effort, ver sysinfo)
+  GET /api/llamaswap/status, POST /api/llamaswap/watch, GET /api/llamaswap/watch/<id>
+                      -> estado de llama-swap y vigía de recarga para `llamaswap residency`
+                         (siempre tras el token web)
   GET /favicon.svg    -> icono de marca (chip) servido inline
 
 `from`/`to` son ISO 8601 (fecha u datetime); sin parámetros, por defecto los últimos 30 días.
@@ -47,11 +50,23 @@ from pathlib import Path
 
 import httpx2
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
-from .. import clients, config, coste, cuota, fallos, precios, recalcular, server, valoracion
-from . import sysinfo
+from .. import (
+    clients,
+    config,
+    coste,
+    cuota,
+    fallos,
+    llamaswap_api,
+    precios,
+    recalcular,
+    server,
+    topology,
+    valoracion,
+)
+from . import auth, sysinfo
 
 CHARS_PER_TOKEN = config.CHARS_PER_TOKEN  # aproximación: tokens ~ chars / 4
 MAX_EVENTS = 5000  # tope de eventos servidos al cliente
@@ -826,6 +841,69 @@ def system():
     )
 
 
+# --- llama-swap para el CLI de residencia (T13: REQ-034, REQ-039) ---------------------------
+#
+# El CLI no tiene la key de llama-swap (vive en el lanzador del daemon), así que pregunta aquí.
+# Tras el token web dos veces: la puerta del puerto (`auth.proteger`, en `daemon.build_app`) y una
+# dependencia propia de cada ruta, porque esta app también se sirve sola (`run_in_thread`, el
+# modo manual) y ahí no hay puerta. Sin token configurado, como el resto del panel: abiertas.
+
+
+def _require_web_token(request: Request) -> None:
+    token = config.WEB_TOKEN
+    if not token:
+        return
+    if auth.peticion_autorizada(request.headers.get("authorization"), token):
+        return
+    if auth.sesion_valida(request.cookies.get(auth.COOKIE), token) is not None:
+        return
+    raise HTTPException(status_code=401, detail="falta el token del puerto o no es correcto")
+
+
+_WITH_WEB_TOKEN = [Depends(_require_web_token)]
+
+
+@app.get("/api/llamaswap/status", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_status():
+    """Estado de llama-swap para la comprobación previa: modelos con su estado y TTL, peticiones
+    en vuelo por modelo (de cualquier cliente), delegaciones propias vivas y la config que usa
+    el daemon, y si tiene turno (para `doctor`, REQ-036). Nunca devuelve `cmd`, cabeceras ni
+    claves. El campo de la ruta es `residency.CONFIG_PATH_FIELD` (lo pone `Status.to_json`)."""
+    status = llamaswap_api.query_status(
+        llamaswap_api.local_backend(), own_delegations=len(server.inflight_snapshot())
+    )
+    status.config_path = config.llamaswap_config_path() or None
+    status.watch_config = config.llamaswap_watch_config()
+    status.autostart = config.AUTOSTART
+    photo = server._topology()
+    status.turn_active = not isinstance(photo, topology.NoTopology)
+    if isinstance(photo, topology.NoTopology):
+        status.turn_reason, status.turn_detail = photo.reason, photo.detail or ""
+    else:
+        status.turn_detail = server._clashes_by_groups(photo)
+    return JSONResponse(status.to_json())
+
+
+@app.post("/api/llamaswap/watch", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_watch_open():
+    """Abre una vigía de recarga con la key del daemon. Responde con su id cuando ya se tragó la
+    carga inicial de `/api/events`: lo que se escriba después, la vigía lo ve."""
+    try:
+        wid = llamaswap_api.watches.open(llamaswap_api.local_backend())
+    except (llamaswap_api.QueryError, httpx2.HTTPError) as e:
+        return JSONResponse({"error": str(e) or type(e).__name__}, status_code=502)
+    return JSONResponse({"id": wid})
+
+
+@app.get("/api/llamaswap/watch/{wid}", dependencies=_WITH_WEB_TOKEN)
+def llamaswap_watch_result(wid: str):
+    """La salida de la vigía (`outcome`, `null` mientras no se sabe) y la línea que la decidió."""
+    result = llamaswap_api.watches.result(wid)
+    if result is None:
+        return JSONResponse({"error": "no hay ninguna vigía con ese id"}, status_code=404)
+    return JSONResponse(result)
+
+
 # Icono de marca: un corchete de terminal abrazando el chevrón de delegación — «lo que entra
 # aquí, se queda aquí». El corchete de cierre va a menos opacidad para que el chevrón sea lo
 # primero que se lee; a 16px la silueta son dos formas con aire entre ellas, que es lo que
@@ -954,8 +1032,12 @@ __WEB_FONTS__
   --shadow-h:0 1px 2px rgba(0,0,0,.5),0 20px 44px -10px rgba(0,0,0,.6);
   --sans:'Inter',system-ui,'Segoe UI',Roboto,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'Cascadia Code',Consolas,monospace;
+  /* Los controles nativos (icono del calendario de <input type=date>, lista del <select>, barras
+     de scroll) siguen al tema: sin esto el icono del calendario salía negro sobre el panel oscuro. */
+  color-scheme:dark;
 }
 [data-theme=light]{
+  color-scheme:light;
   --bg:#f6f8fc; --bg2:#eef2f8; --panel:#ffffff; --panel2:#f4f7fb; --bd:#e4e9f1; --bd2:#d4dbe6;
   --tx:#0e1526; --tx2:#33405a; --mut:#64748b; --faint:#94a3b8;
   --glow:rgba(5,150,105,.10);
@@ -1009,7 +1091,9 @@ a{color:var(--blue);text-decoration:none}
 .btn{background:var(--panel);border:1px solid var(--bd);color:var(--tx2);border-radius:10px;
   padding:8px 12px;font-size:13px;cursor:pointer;font-weight:600;font-family:var(--sans);
   display:inline-flex;align-items:center;gap:6px;transition:.14s}
-.btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--panel2)}
+/* `background-color`, no el atajo `background`: el atajo borraba el `background-image` de la flecha
+   del <select> al pasar el ratón. */
+.btn:hover{border-color:var(--bd2);color:var(--tx);background-color:var(--panel2)}
 .btn.on{border-color:color-mix(in srgb,var(--acc) 55%,transparent);color:var(--acc);
   background:color-mix(in srgb,var(--acc) 10%,transparent)}
 .btn.icon{padding:8px 9px}
@@ -1021,6 +1105,11 @@ a{color:var(--blue);text-decoration:none}
 select.btn{appearance:none;padding-right:28px;
   background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);
   background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+input[type=date].btn{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65;transition:opacity .13s}
+input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+.btn:focus-visible,.ibtn:focus-visible,.help-x:focus-visible,.pbtn:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:2px}
 
 /* ---------- grid + cards ---------- */
 .grid{display:grid;gap:16px}
@@ -1035,25 +1124,47 @@ select.btn{appearance:none;padding-right:28px;
   border-radius:16px;padding:17px 18px;box-shadow:var(--shadow);transition:transform .16s,border-color .16s,box-shadow .16s}
 .card:hover{border-color:var(--bd2)}
 .chartcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-h)}
-.hero{position:relative;overflow:hidden;grid-row:span 1;
+.hero{position:relative;overflow:hidden;grid-row:span 1;container-type:inline-size;
   background:
     radial-gradient(120% 140% at 100% 0,color-mix(in srgb,var(--acc) 20%,transparent),transparent 55%),
     linear-gradient(180deg,var(--panel),var(--panel2));
   border-color:color-mix(in srgb,var(--acc) 30%,var(--bd))}
 .hero::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(80% 60% at 90% 10%,color-mix(in srgb,var(--acc) 10%,transparent),transparent 60%)}
-.hero .spark{position:absolute;inset:auto 0 0 0;height:52px;opacity:.7;pointer-events:none}
+/* La línea del hero ocupa solo la franja de abajo, debajo de la pista: con 52 px cruzaba el
+   texto «bruto … − devuelto …». La pista reserva dos líneas y el hero usa una. */
+.hero .spark{position:absolute;inset:auto 0 0 0;height:24px;opacity:.7;pointer-events:none}
+/* Fila de KPIs simétrica: el bloque del título mide lo mismo en todas (hasta dos líneas, con el ⓘ
+   pegado a la última palabra), la cifra empieza a la misma altura y apoya en el fondo de una caja
+   de alto fijo, y la pista reserva dos líneas. Así las cifras quedan en la misma línea. */
 .k-top{display:flex;align-items:center;gap:6px}
+/* El título va en UNA línea pase lo que pase con la fuente: si la de reserva es más ancha
+   (sin Google Fonts, en otro sistema), se recorta con «…» y el título entero queda en `title`;
+   el ⓘ no se recorta nunca. Con dos líneas posibles, la simetría dependía de la fuente. */
+/* El título SÍ aporta su ancho a la rejilla (sin `width:0`): con una fuente ancha la columna crece
+   en vez de recortar, y el hero, que escala su cifra, cede el sitio. El «…» queda de red. */
+#kpis .k-top{height:26px}
+#kpis .k-lbl{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto}
+#kpis .k-lbl-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#kpis .k-lbl .info{flex:0 0 auto}
 .k-ico{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;
   background:color-mix(in srgb,var(--kc,var(--mut)) 15%,transparent);color:var(--kc,var(--mut))}
 .k-ico svg{width:15px;height:15px}
 .k-lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.055em;font-weight:700}
 .k-val{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:12px;line-height:1;color:var(--tx)}
-.hero .k-val{font-size:42px;color:var(--acc);position:relative;z-index:1;
+/* El hero escala la cifra con el ancho de SU tarjeta (unidades de contenedor): entre 1320 y 1440 px
+   la tarjeta mide ~260 px y «3.161.168 tok» a 42 px no cabía, el `overflow:hidden` cortaba la unidad. */
+.hero .k-val{font-size:clamp(26px,12cqi,42px);color:var(--acc);position:relative;z-index:1;
   text-shadow:0 2px 20px color-mix(in srgb,var(--acc) 40%,transparent)}
+#kpis .k-val{height:44px;display:flex;align-items:flex-end;white-space:nowrap}
+#kpis .k-num{display:inline-block;line-height:1}
 .k-val .unit{font-size:15px;font-weight:600;color:var(--mut);margin-left:5px;letter-spacing:0}
 .hero .k-val .unit{color:color-mix(in srgb,var(--acc) 75%,var(--mut))}
-.k-hint{color:var(--mut);font-size:11.5px;margin-top:9px;position:relative;z-index:1;display:flex;align-items:center;gap:6px}
+.k-hint{color:var(--mut);font-size:11.5px;line-height:1.45;margin-top:9px;position:relative;z-index:1}
+#kpis .k-hint{min-height:calc(2 * 1.45em);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* En el hero la pista va en una sola línea (con «…» si no cabe): la segunda línea reservada es el
+   sitio de su gráfico, y una pista partida (tarjeta estrecha, fuente ancha) caía encima. */
+#kpis .hero .k-hint{display:block;white-space:nowrap;text-overflow:ellipsis}
 .k-hint .num{color:var(--tx2)}
 .info{width:14px;height:14px;color:var(--faint);cursor:help;flex:0 0 auto;display:inline-flex;transition:.13s}
 .info svg{width:100%;height:100%;display:block}
@@ -1100,6 +1211,7 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .chunkchip{font-family:var(--mono);font-size:10px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;
   background:color-mix(in srgb,var(--violet) 14%,transparent);color:var(--violet)}
 .fbchip{background:color-mix(in srgb,var(--amber,#d97706) 16%,transparent);color:var(--amber,#d97706)}
+.slowchip{background:color-mix(in srgb,var(--red,#dc2626) 14%,transparent);color:var(--red,#dc2626)}
 .flow{color:var(--faint)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 .dot.ok{background:var(--acc);box-shadow:0 0 8px color-mix(in srgb,var(--acc) 60%,transparent)}
@@ -1154,10 +1266,11 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .meter{height:8px;border-radius:6px;background:color-mix(in srgb,var(--bd) 75%,transparent);overflow:hidden;margin-bottom:15px}
 .meter i{display:block;height:100%;border-radius:6px;width:0;transition:width .6s cubic-bezier(.2,.8,.2,1);
   background:linear-gradient(90deg,color-mix(in srgb,var(--mc,var(--acc)) 45%,transparent),var(--mc,var(--acc)))}
-.proc{width:100%;border-collapse:collapse;font-size:12px}
+/* Misma tipografía que las demás tablas del panel (13 px las celdas, 10,5 px las cabeceras). */
+.proc{width:100%;border-collapse:collapse;font-size:13px}
 .proc th,.proc td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb,var(--bd) 75%,transparent);text-align:right;white-space:nowrap}
 .proc th:first-child,.proc td:first-child{text-align:left}
-.proc thead th{color:var(--faint);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.proc thead th{color:var(--faint);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
 .proc tbody tr:last-child td{border-bottom:0}
 .proc td{color:var(--tx2)}
 .selfchip{font-family:var(--sans);font-size:9.5px;font-weight:700;padding:1.5px 6px;border-radius:5px;margin-left:6px;letter-spacing:.04em;
@@ -1191,6 +1304,33 @@ dialog.help::backdrop{background:rgba(3,5,9,.6);backdrop-filter:blur(5px)}
 .help-in .frm{margin:14px 0 0;padding:12px 14px;border-radius:11px;font-family:var(--mono);font-size:12px;
   background:color-mix(in srgb,var(--acc) 7%,transparent);border:1px solid color-mix(in srgb,var(--acc) 22%,transparent);color:var(--tx2)}
 .help-in .frm b{color:var(--acc)}
+/* El diálogo de información de coste, cuota e imágenes: la prosa que no cabe en un dashboard. */
+dialog.help.wide{max-width:680px;max-height:calc(100vh - 48px);overflow:auto}
+.help-in section{scroll-margin-top:12px}
+.help-in h4{margin:22px 0 0;font-size:11px;font-weight:700;color:var(--tx);text-transform:uppercase;letter-spacing:.055em;
+  display:flex;align-items:center;gap:8px}
+.help-in h4::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--hc,var(--acc))}
+.help-in section p{margin:8px 0 0;line-height:1.6;font-size:13px}
+.help-in section p.lead{color:var(--tx);font-weight:700}
+.help-in code{font-family:var(--mono);font-size:12px;color:var(--tx);padding:1px 5px;border-radius:5px;
+  background:color-mix(in srgb,var(--bd) 60%,transparent)}
+
+/* ---------- coste, cuota e imágenes: cifras como los KPIs ---------- */
+.ph-r{display:flex;align-items:center;gap:10px}
+.ibtn{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;padding:0;cursor:pointer;
+  border:1px solid var(--bd);background:transparent;color:var(--mut);transition:.13s}
+.ibtn:hover{color:var(--tx);border-color:var(--bd2)}
+.ibtn svg{width:15px;height:15px;display:block}
+.kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px}
+.kstat .k-val{margin-top:10px}
+.kstat .k-hint{margin-top:7px}
+#costeCard .kstats{padding-bottom:14px;margin-bottom:4px;border-bottom:1px solid var(--bd)}
+.qrange{position:relative;height:8px;border-radius:6px;margin-top:12px;overflow:hidden;
+  background:color-mix(in srgb,var(--bd) 75%,transparent)}
+.qrange i{position:absolute;top:0;bottom:0;border-radius:6px}
+.qrange .qa{left:0;background:var(--violet)}
+.qrange .qb{background:color-mix(in srgb,var(--violet) 38%,transparent)}
+.qscale{display:flex;justify-content:space-between;margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--faint)}
 
 /* ---------- misc ---------- */
 /* Los estados vacíos viven dentro de paneles técnicos —modelos, métricas del backend, RAM/VRAM,
@@ -1262,7 +1402,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <div class="toolchips" id="toolsBody"><span class="tchip">…</span></div>
     </div>
     <div class="card" style="--hc:var(--amber)">
-      <div class="panel-h"><h2>Sistema</h2><span class="mut" id="gpuUtil"></span></div>
+      <div class="panel-h"><h2>Sistema</h2></div>
       <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
       <div class="subh">Procesos del backend</div>
       <div style="overflow-x:auto"><table class="proc" id="procTable"></table></div>
@@ -1273,21 +1413,29 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
   <div class="grid kpis" id="kpis"></div>
 
   <!-- Coste equivalente a precio de API, cuota e imágenes (coste-api-y-cuota). Todo lo calcula
-       Python en /api/stats; aquí solo se pinta. Sin el bloque de supuestos no hay cifra (REQ-044),
-       así que los dos salen siempre juntos. -->
-  <div class="card tablecard" id="costeCard" style="display:none">
-    <div class="panel-h" style="--hc:var(--amber)"><h2>Equivalente a precio de API</h2>
-      <span class="mut" id="costeHead"></span></div>
+       Python en /api/stats; aquí solo se pinta. Las tarjetas llevan cifras; los supuestos sin los
+       que no hay cifra (REQ-044) van en el diálogo `infoDlg`, a un clic del botón ⓘ de cada una. -->
+  <div class="card tablecard" id="costeCard" style="--hc:var(--amber);display:none">
+    <div class="panel-h"><h2>Equivalente a precio de API</h2>
+      <span class="ph-r"><span class="mut" id="costeHead"></span>
+        <button class="ibtn" id="costeInfo" data-group="coste" data-section="dlgCoste" aria-haspopup="dialog"
+          title="Cómo leer esta cifra, la cuota y las imágenes" aria-label="Información sobre el equivalente a precio de API"></button></span></div>
     <div id="costeBody"></div>
   </div>
 
-  <div class="grid duo">
+  <div class="grid cols2" id="cuotaImgRow" style="display:none">
     <div class="card" id="cuotaCard" style="--hc:var(--violet);display:none">
-      <div class="panel-h"><h2>Cuota de la suscripción</h2><span class="mut" id="cuotaHead"></span></div>
+      <div class="panel-h"><h2>Cuota de la suscripción</h2>
+        <span class="ph-r"><span class="mut" id="cuotaHead"></span>
+          <button class="ibtn" data-group="coste" data-section="dlgCuota" aria-haspopup="dialog"
+            title="Cómo se calibra la cuota" aria-label="Información sobre la cuota"></button></span></div>
       <div id="cuotaBody"></div>
     </div>
     <div class="card" id="imagenesCard" style="--hc:var(--cyan);display:none">
-      <div class="panel-h"><h2>Imágenes</h2><span class="mut">fuera del neto</span></div>
+      <div class="panel-h"><h2>Imágenes</h2>
+        <span class="ph-r"><span class="mut">fuera del neto</span>
+          <button class="ibtn" data-group="coste" data-section="dlgImagenes" aria-haspopup="dialog"
+            title="Por qué las imágenes van aparte" aria-label="Información sobre las imágenes"></button></span></div>
       <div id="imagenesBody"></div>
     </div>
   </div>
@@ -1303,18 +1451,16 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
   </div>
 
-  <div class="grid cols3">
+  <!-- «Dónde corrió el cómputo» se quitó: el backend es fijo por instalación, así que el donut
+       siempre daba 100 % de un lado; lo dice ya la píldora de cómputo local/remoto del Backend. -->
+  <div class="grid cols2">
     <div class="card chartcard" style="--hc:var(--violet)">
       <div class="panel-h"><h2>Llamadas por modelo</h2><span class="mut">llamadas</span></div>
       <div class="cbox donut"><canvas id="modelBar"></canvas></div>
     </div>
     <div class="card chartcard" style="--hc:var(--acc)">
-      <div class="panel-h"><h2>Origen del input</h2><span class="mut">path = ahorro real</span></div>
+      <div class="panel-h"><h2>Origen del input</h2><span class="mut">por ruta = ahorro real</span></div>
       <div class="cbox donut"><canvas id="srcDonut"></canvas></div>
-    </div>
-    <div class="card chartcard" style="--hc:var(--cyan)">
-      <div class="panel-h"><h2>Dónde corrió el cómputo</h2><span class="mut" id="backendHosts">local vs remoto</span></div>
-      <div class="cbox donut"><canvas id="originDonut"></canvas></div>
     </div>
   </div>
 
@@ -1344,7 +1490,9 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
        y cruzarlos sería inventar una correlación. El texto de la tarjeta lo dice. -->
   <div class="card tablecard" id="hooksCard" style="display:none">
     <div class="panel-h" style="--hc:var(--amber)"><h2>Sugerencias de los hooks</h2>
-      <span class="mut" id="hooksHead"></span></div>
+      <span class="ph-r"><span class="mut" id="hooksHead"></span>
+        <button class="ibtn" id="hooksInfo" data-group="hooks" aria-haspopup="dialog"
+          title="Qué mide esta tarjeta" aria-label="Información sobre las sugerencias de los hooks"></button></span></div>
     <div id="hooksBody"></div>
   </div>
 
@@ -1375,6 +1523,34 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     <div class="frm">coste local: el token <b>real</b> que reporta el backend, caracteres ÷ 4 solo
     cuando falta &nbsp;·&nbsp; contexto conservado: tokens de Claude por familia y tipo de contenido
     &nbsp;·&nbsp; ahorro real = solo llamadas con <b>source=path</b></div>
+  </div>
+</dialog>
+
+<!-- Diálogo de información: la prosa que no cabe en un dashboard. Cada botón ⓘ lo abre con su
+     grupo de secciones (`data-group`). El texto del coste, la cuota y las imágenes sale de
+     textoCoste/textoCuota/textoImagenes (las funciones puras que prueba node), así que lo que se lee
+     aquí es lo que se prueba. La sección de la cuota está aunque su tarjeta no se pinte: sin
+     calibrar, este es su único sitio. -->
+<dialog class="help wide" id="infoDlg" aria-labelledby="infoDlgTitle">
+  <div class="help-in">
+    <div class="help-h">
+      <span class="k-ico" id="infoDlgIco"></span>
+      <h3 id="infoDlgTitle"></h3>
+      <button class="help-x" id="infoDlgClose" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <section id="dlgCoste" data-group="coste" style="--hc:var(--amber)"><h4>Equivalente a precio de API</h4><div id="dlgCosteBody"></div></section>
+    <section id="dlgCuota" data-group="coste" style="--hc:var(--violet)"><h4>Cuota de la suscripción</h4><div id="dlgCuotaBody"></div></section>
+    <section id="dlgImagenes" data-group="coste" style="--hc:var(--cyan)"><h4>Imágenes</h4><div id="dlgImagenesBody"></div></section>
+    <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
+      <p>Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se
+      siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué avisó
+      el hook de lectura y por qué se calló en el resto.</p>
+      <p><b>Categoría</b> es el hook que sugirió (lectura, shell) o la tarea que el hook de prompt
+      reconoció en tu mensaje (resumen, extracción, clasificación, traducción, código repetitivo).
+      <b>Lecturas vistas</b> reparte las lecturas que vio el hook de lectura por lo que hizo con
+      ellas: avisó, o se calló porque la lectura era acotada, de código, pequeña, iba por otro
+      MCP o el backend no estaba.</p></section>
   </div>
 </dialog>
 
@@ -1442,6 +1618,9 @@ if(HAS_CHART) Chart.register({ id:'centerText',
 function applyDefaults(){
   if(!HAS_CHART) return;
   Chart.defaults.font.family=SANS; Chart.defaults.font.size=11;
+  // Ejes y tooltips con el formato del panel (punto de miles, coma decimal), como `fmtNum`: sin
+  // esto Chart.js formatea con el idioma del navegador y un eje enseñaba «1,000» o «0.5».
+  Chart.defaults.locale='de-DE';
   Chart.defaults.color=cssv('--mut');
   Chart.defaults.animation.duration=650; Chart.defaults.animation.easing='easeOutQuart';
   Chart.defaults.plugins.tooltip.backgroundColor=cssv('--bg2');
@@ -1559,7 +1738,7 @@ function renderClients(s){
 
   const cuerpo = filas.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
-    return '<tr><td class="mono">' + escHooks(c.client) + '</td>'
+    return '<tr><td class="mono" title="' + escHooks(c.client) + '">' + escHooks(labelFor('client', c.client)) + '</td>'
       + '<td class="num">' + F.format(c.calls) + '</td>'
       + '<td class="num" style="color:var(--tx2)">' + F.format(c.backend_calls) + '</td>'
       + '<td class="num" style="color:var(--green)">' + F.format(c.tokens_net) + '</td>'
@@ -1581,6 +1760,42 @@ function renderClients(s){
 // presenta como dinero en el bolsillo ni como un trozo de cuota medido (REQ-045), y sin calibrar no
 // hay % (REQ-059).
 const HILO_TXT = {main:'hilo principal', subagent:'subagente'};
+
+// Etiquetas de presentación: clave interna (la del log y la de la API, que NO cambian) → texto que
+// se lee en el panel. Los nombres propios de tools y modelos (`local_summarize`, `gemma4-26b-a4b`)
+// no pasan por aquí: se enseñan tal cual. Una clave que no esté en el mapa no sale cruda:
+// `humanLabel` le quita los guiones bajos y le pone la mayúscula inicial.
+const LABELS = {
+  // Categoría de la sugerencia: el hook que la emitió (lectura, shell) o la tarea que el hook de
+  // prompt reconoció en el mensaje (resumir, extraer, …).
+  hookCategory: {read:'Lectura', shell:'Shell', bash:'Shell', lint:'Lint', summarize:'Resumen',
+    extract:'Extracción', classify:'Clasificación', translate:'Traducción',
+    boilerplate:'Código repetitivo', 'sin categoría':'Sin categoría'},
+  // Por qué el hook de lectura avisó o se calló (`motivo` del log de hooks).
+  hookReason: {'avisó':'Avisó', aviso:'Avisó', acotada:'Lectura acotada', codigo:'Código',
+    pequeno:'Pequeño', mcp_ajeno:'Por otro MCP', backend_ausente:'Backend ausente',
+    modelo_enfriado:'Modelo enfriado', prosa_grande:'Prosa grande', no_es_prosa:'No es prosa',
+    no_es_volcado:'No es un volcado', sin_fichero:'Sin fichero', bloqueo_apagado:'Bloqueo apagado',
+    'sin registrar':'Sin registrar'},
+  client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
+    codex:'Codex', 'codex-mcp-client':'Codex',
+    desconocido:'Desconocido'},
+  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', 'sin dato':'Sin dato'},
+  thread: {main:'Hilo principal', subagent:'Subagente'},
+  origin: {local:'Local', remote:'Remoto', unknown:'Sin dato'},
+  // Estado del modelo que informa el backend (llama-swap) en la insignia de cada fila.
+  // Origen del input: `path` = el MCP leyó el fichero server-side (ahorro real); `inline`, no.
+  source: {path:'Por ruta (path)', inline:'Texto en línea (inline)'},
+  modelStatus: {loaded:'Cargado', unloaded:'Sin cargar', starting:'Cargando', stopping:'Descargando', ready:'Listo'},
+};
+function humanLabel(key){
+  const s = String(key===null || key===undefined || key==='' ? 'sin dato' : key).replace(/_/g, ' ').trim();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function labelFor(kind, key){
+  const m = LABELS[kind] || {};
+  return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
+}
 function dolares(x){ return '$' + fmtNum(x, 2); }
 
 // Las dos celdas en dólares de una fila del desglose. Con T ≤ 0 la tool devolvió tanto o más de lo
@@ -1657,7 +1872,11 @@ function textoCuota(j){
     let t = nombre + ': sin calibrar (' + (e.motivo||'') + ')';
     if(!q.hay_agregados) t += '; los genera ' + q.comando;
     L.push(t + '.');
-    const desc = Object.entries(e.descartes||{}).filter(([,k])=>k).map(([m,k]) => m + ' ' + F.format(k));
+    // Los motivos de descarte son claves de `cuota.py`; aquí, en palabras.
+    const DESCARTE = {linea_corrupta:'línea corrupta', fuera_de_rango:'fuera de rango',
+      delta_pequeno:'variación pequeña', sin_uso_local:'sin uso local', contaminado:'contaminado'};
+    const desc = Object.entries(e.descartes||{}).filter(([,k])=>k)
+      .map(([m,k]) => (DESCARTE[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
     L.push(nombre + ': ' + plural(e.puntos||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
       + ', ' + plural(e.puntos_rechazo||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
       + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
@@ -1675,41 +1894,95 @@ function textoImagenes(j){
       + 'conservado ni en el equivalente a precio de API.'];
 }
 
-function lineasHtml(L, desde){
-  return L.slice(desde||0).map(x => '<div class="nota">' + escHooks(x) + '</div>').join('');
+// Las líneas de texto van al diálogo de información, como párrafos; la primera del coste es el
+// titular. En las tarjetas solo quedan cifras (un dashboard no lleva párrafos).
+function parrafosHtml(L, lead){
+  return L.map((x, i) => '<p' + (lead && i===0 ? ' class="lead"' : '') + '>' + escHooks(x) + '</p>').join('');
+}
+
+// Una cifra con la misma forma que los KPIs de arriba: etiqueta, valor en mono y una pista corta.
+// `val` y `hint` llegan ya escapados o son cifras formateadas.
+function kstat(lbl, val, hint, color){
+  return '<div class="kstat"><div class="k-lbl">' + lbl + '</div>'
+    + '<div class="k-val num"' + (color ? ' style="color:' + color + '"' : '') + '>' + val + '</div>'
+    + (hint ? '<div class="k-hint">' + hint + '</div>' : '') + '</div>';
+}
+
+const VENTANAS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']];
+
+// Ventanas calibradas: sin ninguna, la tarjeta de cuota no se pinta (su explicación vive en el
+// diálogo). Calibrada sin cifra cuenta como calibrada: se pinta con «–».
+function ventanasCalibradas(q){
+  return q ? VENTANAS.filter(([t]) => q[t] && q[t].estado==='calibrado').length : 0;
+}
+
+// Medidor de una ventana: de 0 a la cota baja (A) en sólido y de A a la estimación (B) en claro,
+// sobre una escala de 0 a 100 % de la ventana. Sin cifra no hay medidor.
+// Ancho CSS con dos decimales, sin arrastrar el error de coma flotante de una resta.
+function pct2(x){ return Math.round(x*100)/100; }
+
+function medidorCuota(e, nombre){
+  if(!e || e.estado!=='calibrado' || e.a_pct===null || e.a_pct===undefined){
+    return kstat(nombre, '–', e && e.estado==='calibrado' ? 'calibrada, sin cifra' : 'sin calibrar');
+  }
+  const a = Math.max(0, Math.min(100, e.a_pct)), b = Math.max(a, Math.min(100, e.b_pct));
+  return kstat(nombre, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
+      'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos'))
+    + '<div class="qrange" role="img" aria-label="Entre ' + F1.format(e.a_pct) + ' % y '
+    + F1.format(e.b_pct) + ' % de la ventana"><i class="qa" style="width:' + pct2(a) + '%"></i>'
+    + '<i class="qb" style="left:' + pct2(a) + '%;width:' + pct2(b - a) + '%"></i></div>'
+    + '<div class="qscale"><span>0 %</span><span>100 %</span></div>';
 }
 
 function renderCoste(s){
   const cc = document.getElementById('costeCard'), qc = document.getElementById('cuotaCard');
-  const ic = document.getElementById('imagenesCard');
+  const ic = document.getElementById('imagenesCard'), row = document.getElementById('cuotaImgRow');
   const c = s && s.coste;
   cc.style.display = c ? '' : 'none';
   if(c){
-    const L = textoCoste(s);
     document.getElementById('costeHead').textContent = c.cifra ? plural(c.eventos||0, 'delegación', 'delegaciones') : '';
     const filas = (c.desglose||[]).map(g => '<tr><td class="mono">' + escHooks(g.nombre) + '</td>'
-      + '<td class="mono">' + escHooks(HILO_TXT[g.hilo]||g.hilo) + '</td>'
-      + '<td class="mono">' + escHooks(g.esfuerzo) + '</td>'
+      + '<td class="mono">' + escHooks(labelFor('thread', g.hilo)) + '</td>'
+      + '<td class="mono">' + escHooks(labelFor('effort', g.esfuerzo)) + '</td>'
       + '<td class="num">' + F.format(g.casos) + '</td>'
       + '<td class="num">' + F.format(g.T) + '</td>'
       + celdasCoste(g) + '</tr>').join('');
-    document.getElementById('costeBody').innerHTML =
-      '<div class="nota" style="color:var(--tx);font-size:15px;font-weight:700">' + escHooks(L[0]) + '</div>'
-      + lineasHtml(L, 1)
+    const cifras = c.cifra
+      ? kstat('Cota baja', dolares(c.cifra.cota_baja), 'no es un ahorro: tarifa plana')
+        + kstat('Estimación', '~' + dolares(c.cifra.estimacion), 'con relecturas de caché', 'var(--amber)')
+        + (c.T !== undefined ? kstat('Tokens valorados', F.format(c.T) + '<span class="unit">tok</span>',
+            'netos de Claude, con precio') : '')
+      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.motivo||'')));
+    document.getElementById('costeBody').innerHTML = '<div class="kstats">' + cifras + '</div>'
       + (filas ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
         + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
         + '</tr></thead><tbody>' + filas + '</tbody></table></div>' : '');
   }
-  const q = s && s.cuota;
-  qc.style.display = q ? '' : 'none';
-  if(q){
-    const cal = ['five_hour','seven_day'].filter(t => q[t] && q[t].estado==='calibrado').length;
-    document.getElementById('cuotaHead').textContent = cal ? plural(cal, 'ventana calibrada', 'ventanas calibradas') : 'sin calibrar';
-    document.getElementById('cuotaBody').innerHTML = lineasHtml(textoCuota(s));
+  const q = s && s.cuota, cal = ventanasCalibradas(q);
+  qc.style.display = cal ? '' : 'none';
+  if(cal){
+    document.getElementById('cuotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
+    document.getElementById('cuotaBody').innerHTML = '<div class="kstats">'
+      + VENTANAS.map(([t, nombre]) => '<div>' + medidorCuota(q[t], nombre) + '</div>').join('') + '</div>';
   }
-  const im = s && s.imagenes;
-  ic.style.display = im ? '' : 'none';
-  if(im) document.getElementById('imagenesBody').innerHTML = lineasHtml(textoImagenes(s));
+  // Sin imágenes en el rango la tarjeta no se pinta, como «Quién delegó» sin clientes.
+  const im = s && s.imagenes, hayImg = !!(im && im.n);
+  ic.style.display = hayImg ? '' : 'none';
+  if(hayImg){
+    document.getElementById('imagenesBody').innerHTML = '<div class="kstats">'
+      + kstat('Imágenes', F.format(im.n), 'delegaciones sin fallo')
+      + kstat('Bytes leídos', F.format(im.bytes||0) + '<span class="unit">B</span>', 'leídos server-side')
+      + kstat('Devuelto a Claude', F.format(im.chars_devueltos||0) + '<span class="unit">car.</span>', 'texto de la descripción')
+      + '</div>';
+  }
+  // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
+  row.style.display = (cal || hayImg) ? '' : 'none';
+  qc.style.gridColumn = hayImg ? '' : '1 / -1';
+  ic.style.gridColumn = cal ? '' : '1 / -1';
+  // El diálogo de información: el mismo texto que antes llenaba las tarjetas.
+  document.getElementById('dlgCosteBody').innerHTML = c ? parrafosHtml(textoCoste(s), true) : '';
+  document.getElementById('dlgCuotaBody').innerHTML = q ? parrafosHtml(textoCuota(s)) : '<p>Sin datos de cuota.</p>';
+  document.getElementById('dlgImagenesBody').innerHTML = im ? parrafosHtml(textoImagenes(s)) : '<p>Sin imágenes en el rango.</p>';
 }
 
 // --- Sugerencias de los hooks: /api/hooks ---
@@ -1735,7 +2008,7 @@ function renderHooks(h){
 
   const filas = (h.by_category||[]).map(c=>{
     const p = c.total ? (c.suggested/c.total*100) : 0;
-    return `<tr><td class="mono">${escHooks(c.category)}</td>`
+    return `<tr><td class="mono" title="${escHooks(c.category)}">${escHooks(labelFor('hookCategory', c.category))}</td>`
       + `<td class="num">${F.format(c.suggested)}</td>`
       + `<td class="num" style="color:var(--tx2)">${F.format(c.total)}</td>`
       + `<td class="num" style="color:var(--amber)">${F1.format(p)} %</td></tr>`;
@@ -1752,7 +2025,7 @@ function renderHooks(h){
     + '<th>Reparto</th></tr></thead><tbody>'
     + motivos.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
-        return '<tr><td class="mono">' + escHooks(m.motivo) + '</td>'
+        return '<tr><td class="mono" title="' + escHooks(m.motivo) + '">' + escHooks(labelFor('hookReason', m.motivo)) + '</td>'
           + '<td class="num">' + F.format(m.total) + '</td>'
           + '<td class="num" style="color:var(--amber)">' + F1.format(p) + ' %</td></tr>';
       }).join('')
@@ -1763,11 +2036,7 @@ function renderHooks(h){
     + '<thead><tr><th>Categoría</th><th>Sugeridas</th>'
     + '<th>Vistas</th><th>Tasa</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>'
-    + punteria
-    + '<div class="nota">'
-    + 'Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se '
-    + 'siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué '
-    + 'avisó el hook de lectura y por qué se calló en el resto.</div>';
+    + punteria;
 }
 
 // --- Backend local: /api/status (identidad, 1x/min) + /api/backend (estado y modelos, 2s) ---
@@ -1794,7 +2063,13 @@ function roleLabels(model){
 const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
 // Estados de /running y motivos de espera local, en palabras (REQ-022).
 const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
-const PALABRAS_ESPERA = {plaza:'esperando plaza (máximo de llamadas a la vez)'};
+const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
+
+// La espera de turno del daemon en palabras (REQ-008): una sola fuente para el title de la fila
+// del modelo y para «En curso».
+function turnWords(it){
+  return 'esperando turno del daemon (en uso: '+((it.turn_in_use||[]).join(', ')||'nada')+')';
+}
 
 function vistaInicial(){
   return {estado:'comprobando', disponible:false, ref:null, bueno:null, fallos:0, ultimo:null};
@@ -1851,7 +2126,7 @@ function estadoModelo(o){
   const vista = o.vista || vistaInicial(), ref = vista.ref || {}, disponible = !!vista.disponible;
   const llamadas = (o.inflight||[]).filter(it=>it && it.model===o.modelo);
   const enVuelo = llamadas.length>0;
-  const esperaLocal = enVuelo && llamadas.every(it=>it.espera_local!==undefined && it.espera_local!==null);
+  const esperaLocal = enVuelo && llamadas.every(it=>it.local_wait!==undefined && it.local_wait!==null);
   const run = (ref.running||[]).find(r=>r && r.model===o.modelo);
   const running = run ? (run.state||'ready') : null;
   const mod = (ref.models||[]).find(m=>m && m.id===o.modelo);
@@ -1861,10 +2136,17 @@ function estadoModelo(o){
   if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
     +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
   if(enVuelo && esperaLocal){
-    const motivos = [];
-    llamadas.forEach(it=>{ const m = PALABRAS_ESPERA[it.espera_local] || String(it.espera_local);
-      if(!motivos.includes(m)) motivos.push(m); });
-    return fila('en cola local', 'esperando dentro de local-delegate: '+motivos.join(', '));
+    // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
+    // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
+    // Solo cambia el title: la fila sigue siendo la 3, como cualquier espera local.
+    const motivos = [], turnParts = [];
+    llamadas.forEach(it=>{
+      const bucket = it.local_wait==='turn' ? turnParts : motivos;
+      const m = it.local_wait==='turn' ? turnWords(it)
+        : (PALABRAS_ESPERA[it.local_wait] || String(it.local_wait));
+      if(!bucket.includes(m)) bucket.push(m); });
+    const parts = motivos.length ? ['esperando dentro de local-delegate: '+motivos.join(', ')] : [];
+    return fila('en cola local', parts.concat(turnParts).join('; '));
   }
   if(!ref.running_ok && enVuelo) return fila('en curso');
   if(!ref.running_ok) return fila(status==='loaded' ? 'montado' : 'frío');
@@ -1926,10 +2208,10 @@ function renderBackend(){
     const cls = (PUNTO[e.texto]||'') + (busy && PUNTO[e.texto]!=='busy' ? ' busy' : '');
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
     const chip = chipEstado(statusById[m]);
-    const badge = chip ? `<span class="mstatus ${chip}">${escHooks(statusById[m])}</span>` : '';
+    const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
     const filaCls = (busy?' busy':'') + (e.atenuada?' atenuada':'');
     return `<div class="mrow${filaCls}"><span class="mdot ${cls}"></span><span class="mname">${escHooks(m)}</span>${roles}`
-      + `<span class="mstate" title="${escHooks(e.title)}">${e.texto}</span>${badge}</div>`;
+      + `<span class="mstate" title="${escHooks(e.title)}">${escHooks(humanLabel(e.texto))}</span>${badge}</div>`;
   }).join('');
 }
 
@@ -1952,11 +2234,11 @@ function renderBackendStats(j){
   }
   const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
   const f1 = x => F1.format(x);   // sin dato, «–» (lo pone fmtNum)
-  if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' req') : '';
+  if(head) head.textContent = (s.total_requests!=null) ? ('· '+F.format(s.total_requests)+' '+(s.total_requests===1?'petición':'peticiones')) : '';
   el.innerHTML = `<div class="bstats">
-    <div class="bstat"><div class="bk">gen tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
-    <div class="bstat"><div class="bk">prompt tok/s</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
-    <div class="bstat"><div class="bk">tokens in/out</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">cache ${F.format(s.total_cache_tokens||0)}</div></div>
+    <div class="bstat"><div class="bk">Generación tok/s</div><div class="bv">${f1(gen.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(gen.p95)}</div></div>
+    <div class="bstat"><div class="bk">Entrada tok/s</div><div class="bv">${f1(pr.p50)}<span class="bp">p50</span></div><div class="bsub">p95 ${f1(pr.p95)}</div></div>
+    <div class="bstat"><div class="bk">Tokens entrada/salida</div><div class="bv">${F.format(s.total_input_tokens||0)}/${F.format(s.total_output_tokens||0)}</div><div class="bsub">caché ${F.format(s.total_cache_tokens||0)}</div></div>
   </div>`;
 }
 
@@ -2032,11 +2314,14 @@ function renderInflight(){
 
   if(state.inflight.length){
     body.innerHTML = state.inflight.map(it=>{
-      const chunk = it.chunks ? `<span class="chunkchip">trozo ${it.chunk||1}/${it.chunks}</span>` : '';
+      const chunk = it.chunks ? `<span class="chunkchip">Trozo ${it.chunk||1}/${it.chunks}</span>` : '';
       const org = it.backend ? `<span class="org ${it.backend}">${it.backend==='remote'?'remoto':'local'}</span>` : '';
+      // Espera de turno del daemon (REQ-008): las mismas palabras que el title de la fila del modelo.
+      const turnText = it.local_wait==='turn' ? turnWords(it) : '';
+      const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
-        <span class="badge model">${it.model}</span>${chunk}${org}
-        <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} ·${F.format(it.chars_in||0)} chars</span></div>`;
+        <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
+        <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} car.</span></div>`;
     }).join('');
     head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
     return;
@@ -2058,7 +2343,7 @@ function renderInflight(){
       <span class="num" style="color:var(--faint)">hace ${fmtHace(hace)}</span>
       <span class="badge">${ev.tool||'?'}</span>
       <span class="badge model">${ev.model||'?'}</span>${org}
-      <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} chars</span></div>`;
+      <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} car.</span></div>`;
   } else {
     body.innerHTML = '<div class="ifrow" style="color:var(--faint)">Sin delegaciones todavía</div>';
   }
@@ -2090,9 +2375,12 @@ function textosSistema(j){
   return {nota, procesosVacia, memoriaVacia};
 }
 function fmtMB(mb){ return mb>=1024 ? F1.format(mb/1024)+' GiB' : F.format(Math.round(mb))+' MiB'; }
-function meterHTML(lbl,valTxt,pct){
-  const col = pct>=88?'var(--danger)':pct>=70?'var(--amber)':'var(--acc)';
-  return `<div class="meter-lbl"><span>${lbl}</span><span class="meter-val"><b>${valTxt}</b> · ${pct}%</span></div>
+// Una fila con barra de la tarjeta Sistema. `valTxt` vacío: la fila es solo un porcentaje (la carga
+// de la GPU). `color` fija el color: la carga alta de la GPU es trabajo, no un aviso de memoria llena.
+function meterHTML(lbl,valTxt,pct,color){
+  const col = color || (pct>=88?'var(--danger)':pct>=70?'var(--amber)':'var(--acc)');
+  const pctTxt = F.format(pct)+' %';
+  return `<div class="meter-lbl"><span>${lbl}</span><span class="meter-val">${valTxt?'<b>'+valTxt+'</b> · '+pctTxt:'<b>'+pctTxt+'</b>'}</span></div>
     <div class="meter" style="--mc:${col}"><i style="width:${Math.min(100,pct)}%"></i></div>`;
 }
 async function pollSystem(){
@@ -2101,10 +2389,12 @@ async function pollSystem(){
     const r = await fetch('/api/system'); const j = await r.json();
     let h = '';
     if(j.ram) h += meterHTML('RAM de sistema', F1.format(j.ram.used_gb)+' / '+F1.format(j.ram.total_gb)+' GiB', j.ram.pct);
+    // Carga de la GPU (uso del procesador gráfico) y, debajo, VRAM (memoria llena). Sin GPU que
+    // medir (otra plataforma, sin nvidia-smi) no hay `vram` y las dos filas se ocultan, como la RAM.
+    if(j.vram && j.vram.gpu_util_pct!=null) h += meterHTML('Carga de la GPU', '', j.vram.gpu_util_pct, 'var(--violet)');
     if(j.vram) h += meterHTML('VRAM', F1.format(j.vram.used_mb/1024)+' / '+F1.format(j.vram.total_mb/1024)+' GiB', j.vram.pct);
     const t = textosSistema(j);
     document.getElementById('metersBody').innerHTML = h || '<div class="empty" style="padding:16px">'+escHooks(t.memoriaVacia)+'</div>';
-    document.getElementById('gpuUtil').textContent = j.vram ? 'GPU '+j.vram.gpu_util_pct+'%' : '';
     const procs = j.processes||[];
     const tbl = document.getElementById('procTable');
     // REQ-025: con cómputo remoto, la nota va siempre (es prosa: `.nota`, en Inter).
@@ -2152,8 +2442,8 @@ function kpiCard(o){
   const ico = o.icon?`<span class="k-ico" style="--kc:${o.kc||'var(--mut)'}">${o.icon}</span>`:'';
   const unit = o.unit?`<span class="unit">${o.unit}</span>`:'';
   return `<div class="card ${o.hero?'hero':''}">${o.hero?'<div class="spark"><canvas id="spark"></canvas></div>':''}
-    <div class="k-top">${ico}<div class="k-lbl">${o.lbl} ${i}</div></div>
-    <div class="k-val num">${o.val}${unit}</div>
+    <div class="k-top">${ico}<div class="k-lbl" title="${o.lbl}"><span class="k-lbl-t">${o.lbl}</span>${i}</div></div>
+    <div class="k-val num"><span class="k-num">${o.val}${unit}</span></div>
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
 
@@ -2206,7 +2496,8 @@ function acct(e){
     returned = tokensClaude(charsReturned,'returned',e);
   }
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
-  const fallback = !!e.model_requested;
+  // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
+  const fallback = !!e.model_requested && e.routing !== 'affinity';
   const cause = e.error_class || e.fallback_class || null;
   const copia = v => (v===undefined ? null : v);
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
@@ -2234,10 +2525,11 @@ function render(){
   const bCalls = s.backend_calls||nEv;
   const estN = s.estimated_events||0;
   // Las llamadas de más salen de trocear o de un respaldo que respondió: las dos gastan backend.
-  const extra = bCalls>nEv ? ' (+'+F.format(bCalls-nEv)+' por trocear o saltar)' : '';
-  const estTxt = estN ? ' · '+plural(estN,'estimado','estimados') : '';
+  // El desglose va al tooltip del ⓘ: la pista de cada KPI es UNA línea corta (REQ de simetría).
+  const extra = bCalls>nEv ? ' Desglose: +'+F.format(bCalls-nEv)+' por trocear o saltar' : '';
+  const estTxt = estN ? ' En este rango: '+plural(estN,'estimado','estimados')+'.' : '';
   const fbN = s.fallback_events||0;
-  const fbTxt = fbN ? ' · '+F.format(fbN)+' con salto' : '';
+  const fbTxt = fbN ? (extra ? ', ' : ' Desglose: ')+F.format(fbN)+' con salto' : '';
 
   document.getElementById('kpis').innerHTML =
     kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(neto),unit:'tok',
@@ -2245,22 +2537,21 @@ function render(){
        hint:'bruto <span class="num">'+F.format(saved)+'</span> − devuelto <span class="num">'+F.format(devuelto)+'</span>',
        tip:'Neto: lo que el MCP leyó server-side (source=path) o escribió a un fichero y no viajó al contexto de Claude, menos lo que la tool devolvió a tu contexto. Se cuenta UNA vez por delegación aunque se trocee, y los fallos no suman. No descuenta relecturas: si luego lees tú el mismo fichero, eso no se resta.'})
     + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
-       hint:'<span class="num">'+F.format(bCalls)+'</span> al backend'+extra+fbTxt,
-       tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'})
-    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:'Generado en local',
-       hint:'salida de los modelos'+estTxt,tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'})
+       hint:'<span class="num">'+F.format(bCalls)+'</span> '+(bCalls===1?'llamada':'llamadas')+' al backend',
+       tip:'Invocaciones a tools locales. Una delegación troceada gasta N llamadas al backend: por eso las dos cifras pueden no coincidir.'+extra+fbTxt+((extra||fbTxt)?'.':'')})
+    + kpiCard({icon:ICON.gen,kc:'var(--violet)',val:F.format(gen),unit:'tok',lbl:'Generado',
+       hint:'salida de los modelos locales',tip:'Tokens de salida que reportó el backend (usage.completion_tokens). Solo se estima con chars÷4 cuando el backend no los da.'+estTxt})
     + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
-       hint:'entrada consumida por la GPU',
+       hint:'entrada leída por la GPU',
        tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso crece con el troceo y el contexto conservado no. Son tokens del modelo local, no de Claude.'})
     // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSeg` decide la forma entera.
-    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSeg(lat)),lbl:'Latencia media',
-       hint:'incluye carga de modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
-    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Tasa de error',
+    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSeg(lat)),lbl:'Latencia',
+       hint:'con la carga del modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
+    + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Errores',
        hint:'<span class="num">'+F.format(errs)+'</span> '+(errs===1?'fallo':'fallos'),tip:'Porcentaje de llamadas con ok=false.'});
 
   if(HAS_CHART){
     drawSpark(ev); drawTs(ev); drawToolDonut(ev); drawModelBar(ev); drawSrcDonut(ev);
-    drawOriginDonut(ev);
   } else {
     document.querySelectorAll('.cbox').forEach(el=>{
       el.innerHTML='<div class="empty">Gráficos no disponibles: no se pudo cargar Chart.js (¿sin conexión?). El resto del panel funciona igual.</div>';
@@ -2356,29 +2647,6 @@ function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv
 
 // Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
 // que se registrara el campo salen como "n/d" en vez de asumirse locales.
-function drawOriginDonut(ev){
-  const label=b=>b==='remote'?'remoto':b==='local'?'local':'n/d';
-  const pairs=agg(ev.map(e=>({b:e.backend||'unknown'})),'b',()=>1);
-  const hosts=[...new Set(ev.map(e=>e.backend_host).filter(Boolean))];
-  const hostEl=document.getElementById('backendHosts');
-  if(hostEl) hostEl.textContent = hosts.length?hosts.slice(0,2).join(' · ')+(hosts.length>2?' +'+(hosts.length-2):''):'local vs remoto';
-  const el=fresh('originDonut');
-  const total=pairs.reduce((a,p)=>a+p[1],0);
-  const remoteN=(pairs.find(p=>p[0]==='remote')||[,0])[1];
-  const pct=total?Math.round(100*remoteN/total):0;
-  const colFor=b=>b==='remote'?cssv('--cyan'):b==='local'?cssv('--acc'):cssv('--mut');
-  if(!pairs.length){ return state.charts.originDonut=new Chart(el,{type:'doughnut',
-    data:{labels:['sin datos'],datasets:[{data:[1],backgroundColor:[cssv('--bd')],borderWidth:0}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},centerText:false}}}); }
-  state.charts.originDonut=new Chart(el,{type:'doughnut',
-    data:{labels:pairs.map(p=>label(p[0])),datasets:[{data:pairs.map(p=>p[1]),
-      backgroundColor:pairs.map(p=>colFor(p[0])),borderColor:cssv('--panel'),borderWidth:3,hoverOffset:6}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
-      plugins:{centerText:{text:pct+'%',sub:'remoto',color:cssv('--cyan')},
-        legend:{position:'bottom',labels:{color:cssv('--mut'),boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'circle',padding:14,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>' '+c.label+': '+F.format(c.parsed)+' llamadas'}}}}});
-}
-
 function drawSrcDonut(ev){
   const pairs=agg(ev,'source',()=>1); const el=fresh('srcDonut');
   const total=pairs.reduce((a,p)=>a+p[1],0);
@@ -2389,12 +2657,25 @@ function drawSrcDonut(ev){
     data:{labels:['sin datos'],datasets:[{data:[1],backgroundColor:[cssv('--bd')],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},centerText:false}}}); }
   state.charts.srcDonut=new Chart(el,{type:'doughnut',
-    data:{labels:pairs.map(p=>p[0]),datasets:[{data:pairs.map(p=>p[1]),
+    data:{labels:pairs.map(p=>labelFor('source', p[0])),datasets:[{data:pairs.map(p=>p[1]),
       backgroundColor:pairs.map(p=>colFor(p[0])),borderColor:cssv('--panel'),borderWidth:3,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'70%',
-      plugins:{centerText:{text:pct+'%',sub:'path',color:cssv('--acc')},
+      plugins:{centerText:{text:F.format(pct)+' %',sub:'por ruta',color:cssv('--acc')},
         legend:{position:'bottom',labels:{color:cssv('--mut'),boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'circle',padding:14,font:{size:11}}},
         tooltip:{callbacks:{label:c=>' '+c.label+': '+F.format(c.parsed)+' llamadas'}}}}});
+}
+
+// Espera frente a lentitud (REQ-027). `slowMark` marca una llamada que generó por debajo de la
+// velocidad normal de su modelo: «lento ×0,37». Sin `slow`, nada. Funciones puras: las corre node.
+function slowMark(e){
+  if(!e || e.slow!==true || e.pace_rel===null || e.pace_rel===undefined) return '';
+  return 'lento ×' + fmtNum(e.pace_rel, 2);
+}
+// La espera (turno, plaza, cola de llama-swap, carga) y la inferencia, por separado. Sin
+// `inference_ms` (backend sin `timings`), nada: no se inventa un reparto.
+function waitInferenceText(e){
+  if(!e || e.inference_ms===null || e.inference_ms===undefined) return '';
+  return 'espera ' + fmtSeg(e.wait_ms) + ' · inferencia ' + fmtSeg(e.inference_ms);
 }
 
 function drawActivity(ev){
@@ -2410,18 +2691,21 @@ function drawActivity(ev){
   let h='<thead><tr><th>Hora</th><th>Tool</th><th>Modelo</th><th>Input</th><th>Cómputo</th><th>Chars in→out</th><th>Latencia</th><th>OK</th></tr></thead><tbody>';
   rows.forEach(e=>{ const time=fmtLocalTs(e.ts);   // hora LOCAL, el log guarda UTC
     const org=e.backend||'unknown';
-    const orgTxt=org==='remote'?'remoto':org==='local'?'local':'n/d';
+    const orgTxt=org==='remote'?'Remoto':org==='local'?'Local':'Sin dato';   // = LABELS.origin
     // `chunks` del log son LLAMADAS al backend, no trozos: el título decía otra cosa que el dato
     const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
-    const fb=e.model_requested?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
+    const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
     const causa=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
+    const split=waitInferenceText(e), slow=slowMark(e);
+    const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
+    const slowChip=slow?`<span class="chunkchip slowchip" title="Generó a ${escHooks(fmtNum(e.tok_s,1))} tok/s, por debajo de la velocidad normal de ${e.model}">${escHooks(slow)}</span>`:'';
     h+=`<tr><td class="mono" title="${e.ts||''}">${time}</td><td><span class="badge">${e.tool}</span>${chunks}</td>
       <td><span class="badge model">${e.model}</span>${fb}</td>
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
-      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}</td>
+      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}${slowChip}${timings}</td>
       <td><span class="dot ${e.ok===false?'err':'ok'}"${causa}></span></td></tr>`; });
   document.getElementById('activity').innerHTML=h+'</tbody>';
   pager.style.display = pages>1?'':'none';
@@ -2463,6 +2747,29 @@ const helpDlg=document.getElementById('helpDlg');
 document.getElementById('help').onclick=()=>helpDlg.showModal();
 document.getElementById('helpClose').onclick=()=>helpDlg.close();
 helpDlg.addEventListener('click',e=>{ if(e.target===helpDlg) helpDlg.close(); });
+// Diálogo de información de coste, cuota e imágenes. Cada ⓘ abre el mismo diálogo en su sección;
+// Esc lo cierra (es un <dialog> modal) y el foco vuelve al botón que lo abrió.
+const infoDlg=document.getElementById('infoDlg');
+const INFO_GRUPOS = {
+  coste:{titulo:'Coste, cuota e imágenes', icono:ICON.cost, color:'var(--amber)'},
+  hooks:{titulo:'Sugerencias de los hooks', icono:ICON.info, color:'var(--amber)'},
+};
+function openInfo(grupo, seccion){
+  const g = INFO_GRUPOS[grupo] || INFO_GRUPOS.coste;
+  document.getElementById('infoDlgTitle').textContent = g.titulo;
+  const ico = document.getElementById('infoDlgIco'); ico.innerHTML = g.icono; ico.style.setProperty('--kc', g.color);
+  infoDlg.querySelectorAll('section[data-group]').forEach(s => { s.hidden = s.dataset.group !== grupo; });
+  infoDlg.showModal();
+  const sec = seccion && document.getElementById(seccion);
+  const primera = infoDlg.querySelector('section[data-group="' + grupo + '"]');
+  if(sec && sec !== primera) sec.scrollIntoView({block:'start'}); else infoDlg.scrollTop = 0;
+}
+document.querySelectorAll('.ibtn[data-group]').forEach(b=>{
+  b.innerHTML=ICON.info;
+  b.onclick=()=>openInfo(b.dataset.group, b.dataset.section);
+});
+document.getElementById('infoDlgClose').onclick=()=>infoDlg.close();
+infoDlg.addEventListener('click',e=>{ if(e.target===infoDlg) infoDlg.close(); });
 try{const th=localStorage.getItem('ld-theme'); if(th) document.documentElement.setAttribute('data-theme',th);}catch(e){}
 applyDefaults();
 setInterval(()=>{ if(state.auto) fetchData(); },15000);

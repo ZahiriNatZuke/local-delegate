@@ -6,8 +6,9 @@ concreto detrás de los defaults del paquete; cámbialo por el tuyo con las env 
 
 ## Por qué llama-swap
 
-`local-delegate` enruta a 4 *roles* de modelo (mecánico, largo, código, rápido). En 16 GB cada
-modelo entra de sobra por separado, pero los 4 residentes a la vez no caben. **llama-swap**
+`local-delegate` enruta a 3 *roles* de texto (mecánico, largo y código; el rápido se retiró en la
+0.30.0) más el de visión. En 16 GB cada modelo entra de sobra por separado, pero todos cargados a la
+vez no caben. **llama-swap**
 actúa de proxy OpenAI-compatible y hace *hot-swap*: carga el modelo pedido en VRAM al vuelo y
 descarga el anterior. Así un solo endpoint (`:9292/v1`) expone los 4 modelos con **uno a la vez**
 en VRAM (default de llama-swap sin `matrix`).

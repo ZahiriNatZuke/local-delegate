@@ -293,10 +293,27 @@ COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900
 FALLBACK = _env_flag("LOCAL_DELEGATE_FALLBACK", True)
 FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
 #: Cadena sobrescrita por rol: `None` es la de la spec; `""` o `none` desactivan el respaldo de ese
-#: rol; si no, roles (`mechanical`, `long`, `code`, `residente`) o ids separados por comas.
+#: rol; si no, roles (`mechanical`, `long`, `code`, `loaded`) o ids separados por comas
+#: (`residente` y `resident` se aceptan como sinónimos obsoletos de `loaded`, con aviso de `doctor`).
 FALLBACK_CHAINS: dict[str, str | None] = {
     rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}") for rol in ("mechanical", "long", "code")
 }
+
+
+# --- Turno por conjunto de modelos compatibles (daemon-reparte-el-backend, REQ-007) -----------
+# Red de seguridad del turno: la cabeza de la cola se concede forzada si lleva este tiempo
+# esperando Y el daemon lleva este tiempo sin ninguna llamada al backend en vuelo.
+TURN_MAX_S = _env_float("LOCAL_DELEGATE_TURN_MAX_S", 600.0)
+
+# --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-025) ----------------------------
+# Una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo
+# (`pace_rel` < umbral). 0,5 por defecto, decisión del usuario.
+SLOW_THRESHOLD = _env_float("LOCAL_DELEGATE_SLOW_THRESHOLD", 0.5)
+
+# --- Afinidad (daemon-reparte-el-backend, REQ-013, T15) ---------------------------------------
+# Un alternativo ya cargado cuenta «con margen» si le quedan al menos estos segundos de TTL. 5 s
+# por defecto: T2 (b) midió la ventana decisión-llegada con p99 de 3,1 ms, así que no se subió.
+AFFINITY_MARGIN_S = _env_float("LOCAL_DELEGATE_AFFINITY_MARGIN_S", 5.0)
 
 
 # --- llama-swap: autoarranque, doctor y residente -----------------------------
@@ -319,8 +336,23 @@ def llamaswap_watch_config() -> bool:
     return _env_flag("LLAMASWAP_WATCH_CONFIG", False)
 
 
-# Una lectura al importar, solo para que los cuatro nombres entren en `VARIABLES_DE_ENTORNO`.
-for _lectura in (llamaswap_config_path, llamaswap_exe, llamaswap_listen, llamaswap_watch_config):
+# --- Idioma del mensaje de `local_commit_msg` (daemon-reparte-el-backend, REQ-044) --------------
+# Texto libre y corto: `es`, `en`, `fr`… o un nombre (`español`). Vacío = el idioma predominante de
+# los textos del diff. Se lee al LLAMAR, como las de llama-swap: así un test lo fija con
+# `monkeypatch.setenv` sin recargar el módulo, y el constructor del corpus de afinidad puede
+# capturar el prompt con el idioma que tendrá la máquina en producción.
+def commit_language() -> str:
+    return _env("LOCAL_DELEGATE_COMMIT_LANGUAGE", "").strip()
+
+
+# Una lectura al importar, solo para que estos nombres entren en `VARIABLES_DE_ENTORNO`.
+for _lectura in (
+    llamaswap_config_path,
+    llamaswap_exe,
+    llamaswap_listen,
+    llamaswap_watch_config,
+    commit_language,
+):
     _lectura()
 
 

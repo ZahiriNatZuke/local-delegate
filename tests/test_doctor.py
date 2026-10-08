@@ -253,7 +253,10 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     home = make_home(tmp_path)
     # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
-    args = argparse.Namespace(config=None, online=False, home=str(home))
+    # `backend.residency` y `backend.topology` (T13) leen la config de llama-swap de `--config`: la
+    # de hoy (copia con claves falsas), sin residente y con turno. Sin ella serían `unknown`.
+    hoy = Path(__file__).parent / "fixtures" / "residencia" / "hoy.yaml"
+    args = argparse.Namespace(config=str(hoy), online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
     # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.
     lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("  [")]

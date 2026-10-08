@@ -56,6 +56,33 @@ con saltos pudo contaminarla un swap.
   a partir de la nota que deja el hook `anotar_llamada.py` (ver
   [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
   `caller_*`. Nunca lleva el id de sesión.
+- **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
+  omiten, nunca valen 0):
+  - `inference_ms`: Σ `prompt_ms` + `predicted_ms` de **todas** las llamadas reales de la operación,
+    saltos incluidos.
+  - `wait_ms`: `latency_ms − inference_ms` (mínimo 0): todo lo que no fue inferencia medida —turno,
+    plaza, cola de llama-swap, carga del modelo— y también una llamada fallida sin `timings` (un
+    timeout, un 500), que cuenta entera aquí.
+  - `tok_s` y `prefill_tok_s`: velocidad de generación y de lectura del prompt, **solo de las llamadas
+    del modelo que respondió** (`model`), a dos decimales.
+  - `pace_rel`: `tok_s` / la velocidad normal de ese modelo (la mediana de `tok_s` de sus últimos 50
+    eventos correctos con `tokens_out` ≥ 8; hacen falta 10). Sin referencia, o con `tokens_out`
+    desconocido, se omite.
+  - `slow` va con `pace_rel` en todo evento con referencia: `true` si `pace_rel` <
+    `LOCAL_DELEGATE_SLOW_THRESHOLD` (0,5), `false` si no. Con backend **local**, una
+    llamada lenta lleva además `free_ram_mb` (la RAM libre en ese momento, best-effort), porque la
+    causa más común es que Windows haya echado parte del modelo de la VRAM.
+- **Turno del daemon:** `turn_wait_ms` (solo si > 0) es lo que la operación esperó turno; `turn:
+  "forced"` marca una concesión forzada por `LOCAL_DELEGATE_TURN_MAX_S`.
+- **Afinidad** (ver [Tools](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado)): `routing:
+  "affinity"` cuando respondió un alternativo ya cargado en lugar del modelo del rol, con
+  `model_requested` (el del rol), `affinity_foreign_flight` (peticiones de otros clientes en vuelo
+  contra ese modelo cuando se decidió) y `affinity_failed: true` si, sin peticiones ajenas, el
+  alternativo tardó en empezar como si hubiera que cargarlo (se descargó a pesar del margen). Si el
+  alternativo falló y respondió el rol o su cadena, el evento no lleva `routing` y sí
+  `affinity_dropped` (el alternativo que se probó) y `affinity_dropped_class` (la clase del fallo).
+  **Una fila con `routing: "affinity"` no es un respaldo**: no lleva ↪ ni cuenta en «con salto»,
+  aunque tenga `model_requested`.
 - `error` (solo si `ok=false`), `truncated_in`/`truncated_out`, `raw_len`, `path`, `v`
   (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos
   campos se sigue leyendo sin romperse.
@@ -77,7 +104,7 @@ la GPU dieciséis veces daban el mismo número.
   repite el prompt de sistema en cada trozo, así que aquí sí paga el troceo: en un caso real de
   cuatro trozos, 26 131 tokens de coste frente a 21 044 de ahorro, un **+24 %** que antes no se
   veía en ningún sitio.
-- **Generado en local** = Σ `tokens_out`: generación que hicieron los modelos locales en vez de
+- **Generado en local** (el KPI «Generado») = Σ `tokens_out`: generación que hicieron los modelos locales en vez de
   Claude.
 - **En el coste local se usa siempre el token real** que reporta el backend (`usage`). La
   aproximación de **~4 chars/token** (`CHARS_PER_TOKEN`) es solo el respaldo del modelo **local**
@@ -106,7 +133,7 @@ del panel (`acct`), atadas por un test de paridad:
 | Estimados | Delegaciones que salieron bien sin `usage` del backend | Fallos |
 
 - **Qué es un fallo**: el campo `ok` existe y vale exactamente `false`. Un evento con `ok: null` o
-  sin la clave **no** es un fallo. Ese mismo predicado es el que usan «Tasa de error», el punto
+  sin la clave **no** es un fallo. Ese mismo predicado es el que usan el KPI «Errores» (la tasa de error), el punto
   rojo de la tabla de actividad y los errores por herramienta de `/api/stats`.
 - **El neto puede ser negativo**: una delegación que devuelve más de lo que leyó resta. El KPI, la
   chispa y «Ahorro por herramienta» lo enseñan con su signo (una barra negativa sale a la izquierda
@@ -199,14 +226,18 @@ a la de Python por un test de paridad que las ejecuta con `node` y compara.
 
 ## Coste equivalente a precio de API
 
-El panel dice **«Equivalente estimado a precio de API: entre $X y ~$Y»**, con la nota **«no es
-dinero que hayas ahorrado: tu suscripción es de tarifa plana»**. La pregunta que responde es otra:
+La tarjeta del panel enseña la **cota baja** ($X, con la pista «no es un ahorro: tarifa plana») y la
+**estimación** (~$Y) como cifras, junto a la tabla por modelo, hilo y esfuerzo de las delegaciones
+del rango elegido. Su botón **ⓘ** abre el diálogo con el titular **«Equivalente estimado a precio
+de API: entre $X y ~$Y»** y la nota **«no es dinero que hayas ahorrado: tu suscripción es de
+tarifa plana»**. La pregunta que responde es otra:
 *¿cuánto costaría, a precio de lista de la API, que Claude hubiera leído él mismo lo que se
 delegó?* Sirve para comparar el peso de lo delegado entre periodos y entre modelos, no para hacer
 cuentas de dinero.
 
-Es una **estimación con supuestos**, y el panel los enseña siempre junto a la cifra; sin ese
-bloque no hay cifra.
+Es una **estimación con supuestos**, y el panel los enseña siempre junto a la cifra, en ese
+diálogo de información (cobertura, modelo supuesto, relecturas, densidad, lo que queda fuera,
+contrafactual y fecha de precios); sin ese bloque no hay cifra.
 
 ### La fórmula
 
@@ -334,9 +365,11 @@ es **«sin calibrar»**.
   uno de la mediana de los demás) es **menor del 25 %**. Si los dos puntos más recientes se alejan
   más del 25 % en el mismo sentido, es **deriva** (cambiaron los límites): los anteriores dejan de
   contar.
-- **Sin calibrar**, el bloque enseña los puntos que hay, los rechazos, la dispersión si hay dos o
+- **Sin calibrar**, la tarjeta de cuota **no se pinta**; el diálogo de información (el botón
+  **ⓘ** de la tarjeta de coste) enseña los puntos que hay, los rechazos, la dispersión si hay dos o
   más, los descartes por motivo y **qué falta** («faltan 3 puntos del statusline»). **Ningún %.**
-- **Calibrado**, enseña «≈ entre A % y B % de una ventana de 5 h», con A y B la cota baja y la
+- **Calibrado**, la tarjeta enseña por cada ventana la cifra «A – B %» y un medidor de 0 a
+  100 % (A en sólido, de A a B en claro); el diálogo dice «≈ entre A % y B % de una ventana de 5 h», con A y B la cota baja y la
   estimación de lo delegado en las últimas 5 h (o 7 días) entre la capacidad, sea cual sea el
   periodo que elijas en el panel. Si la capacidad calibrada sale menor que la de un rechazo
   observado, avisa de un probable uso en otras superficies.
@@ -351,8 +384,9 @@ salieron `contaminado` o fuera de rango).
 
 ## Imágenes
 
-Las delegaciones de `local_describe_image` se enseñan en su propio bloque: número de imágenes,
-bytes leídos en local (Σ `bytes_saved_image`) y caracteres devueltos a Claude. **Sin ninguna
+Las delegaciones de `local_describe_image` se enseñan en su propia tarjeta, como cifras: número de
+imágenes, bytes leídos en local (Σ `bytes_saved_image`) y caracteres devueltos a Claude. Sin
+imágenes en el rango la tarjeta no se pinta; la explicación va en el diálogo de información. **Sin ninguna
 cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensiones no hay forma
 honesta de calcularla. Por lo mismo, no entran ni en «Contexto conservado» ni en el coste
 equivalente.
@@ -417,10 +451,13 @@ tu zona.
 
 ### Local vs remoto
 
-El donut *Dónde corrió el cómputo*, la insignia del panel de backend y la columna **Cómputo** de
-la tabla separan lo generado por el backend de esta máquina de lo generado por uno remoto. Útil
-cuando alternas topologías: la misma Mac puede tener sesiones contra su propio backend y sesiones
-apuntando a la GPU de la PC.
+La insignia del panel de backend («cómputo local» o «remoto») y la columna **Cómputo** de la
+tabla (con «Local», «Remoto» o «Sin dato») separan lo generado por el backend de esta máquina de lo
+generado por uno remoto. El origen se deduce de la dirección del backend en el momento de la
+llamada (loopback = local) y se fuerza con `LOCAL_DELEGATE_BACKEND_ORIGIN` detrás de un túnel. Las
+delegaciones que otra máquina hace contra este backend se apuntan en el log de esa máquina. El
+panel ya no trae el donut *Dónde corrió el cómputo*: el backend es fijo por instalación y el donut
+siempre daba 100 % de un lado.
 
 ### Delegaciones en curso ("En curso")
 
@@ -469,7 +506,7 @@ así que salen las mismas filas en el mismo orden: primero por el rol del catál
 |---|---|
 | esperando al backend | El backend no está disponible y hay una llamada a ese modelo en vuelo |
 | desconocido | El backend no está disponible |
-| en cola local | Todas las llamadas a ese modelo esperan **dentro de local-delegate**, antes de enviarse (hoy, plaza en el máximo de llamadas a la vez) |
+| en cola local | Todas las llamadas a ese modelo esperan **dentro de local-delegate**, antes de enviarse: plaza en el máximo de llamadas a la vez (`slot`) o turno del daemon, porque su modelo choca con el que está en uso (`turn`) |
 | en curso | El backend no es llama-swap (no expone `/running`) y hay una llamada en vuelo |
 | montado / frío | El backend no es llama-swap: según el `status` de `/v1/models` |
 | cargando | llama-swap lo está arrancando |
@@ -479,10 +516,17 @@ así que salen las mismas filas en el mismo orden: primero por el rol del catál
 | descargando | llama-swap lo está parando |
 | frío | El resto |
 
-La espera local se publica en la entrada en vuelo con el campo `espera_local` (el motivo como
-texto) y se borra al terminar. Así «esperando turno» queda solo para lo que ya se envió a
+La espera local se publica en la entrada en vuelo con el campo `local_wait` (el motivo como
+texto: `slot` o `turn`) y se borra al terminar. Así «esperando turno» queda solo para lo que ya se envió a
 llama-swap: el panel no le atribuye una espera nuestra. Un motivo nuevo que el panel no conozca se
-enseña tal cual en el `title` de la fila.
+enseña tal cual en el `title` de la fila. Con `turn`, la entrada lleva además `turn_in_use` (los
+modelos que tienen el turno) y `turn_position` (su puesto en la cola), y el `title` de la fila y
+«En curso» dicen «esperando turno del daemon (en uso: <modelos>)».
+
+En la tabla de actividad, cada llamada cuyo backend manda `timings` enseña bajo la latencia
+«espera X s · inferencia Y s» (`wait_ms` e `inference_ms`), y una llamada lenta lleva la marca
+**«lento ×0,37»** (`pace_rel`), con su velocidad en el `title`. Una fila con `routing: "affinity"`
+no lleva ↪: la afinidad no es un respaldo.
 
 La tarjeta de **métricas de llama-swap** dice «sin datos (… requiere llama-swap ≥ v236)» **solo**
 cuando el backend responde 404 a `/api/metrics/stats`; con cualquier otro fallo dice «sin datos:
@@ -535,10 +579,11 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
 | `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
-| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `espera_local` con el motivo) + `last_event_ts` y `now` para el indicador de actividad |
+| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |
+| `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`, `GET /api/llamaswap/watch/<id>` | Estado de llama-swap para el CLI y `doctor`, y vigía de recarga de `llamaswap residency`. Ver [Daemon](Daemon.md#llama-swap-visto-desde-el-daemon) |
 | `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin` y `host` |
 | `GET /api/hooks?from=&to=` | Lo que los hooks consultivos **sugirieron** en el rango: `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |
@@ -555,6 +600,11 @@ página. Y hay una frontera que conviene tener clara, porque es la única forma 
 signifique algo:
 
 > **La tarjeta no mide cuántas sugerencias se siguieron.** El hook sugiere y tú decides.
+
+Esa advertencia la abre el botón **ⓘ** de la cabecera de la tarjeta. Las categorías y los motivos
+se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro
+MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `acotada`, `pequeno`,
+`mcp_ajeno`…).
 
 Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
 común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada

@@ -492,7 +492,7 @@
         "model": "qwen36-35b-a3b",
         "calls": 1
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma predominante de los textos del diff (comentarios, documentación y mensajes).",
       "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
       "max_tokens": 256,
       "temperature": 0.2,
@@ -780,7 +780,7 @@
         "model": "qwen36-35b-a3b",
         "calls": 13
       },
-      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato.",
+      "system": "Responde directo desde el input. NO uses herramientas, NO busques en internet. Output EXACTO: un mensaje de commit estilo Conventional Commits: primera línea 'tipo(scope): resumen' en imperativo y <=72 caracteres; cuerpo opcional con viñetas '- '. Nada fuera del formato. Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma predominante de los textos del diff (comentarios, documentación y mensajes).",
       "user_template": "Escribe el mensaje de commit para este diff:\n\n{CONTENIDO}",
       "max_tokens": 256,
       "temperature": 0.2,

@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib.util
 import itertools
 import json
+import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -891,3 +893,617 @@ def test_la_latencia_se_compara_solo_en_los_casos_que_los_dos_terminan():
     assert d["latencia_ms"]["fuera"] == ["lint-9k"]
     assert d["latencia_ms"]["vigente"] is not None
     assert (d["veredicto"], d["motivos"]) == ("sustituye", [])
+
+
+# =====================================================================================================
+# Afinidad (REQ-040 a REQ-043): puntuadores y veredicto, con datos sinteticos. Todo el criterio esta
+# escrito y probado aqui antes de que exista un solo resultado real.
+# =====================================================================================================
+
+ROLE, ALT, QWEN, WEAK = "gemma3-4b", "gemma4-26b-a4b", "qwen36-35b-a3b", "qwen35-2b"
+PROD = {"models": {"mechanical": ROLE, "long": ALT, "code": QWEN, "vision": "gemma4-12b"}}
+REGLAS = {
+    "version": 1,
+    "max_inventa_26b": 2,
+    "preguntas_opcionales": ["principal", "especifico"],
+    "formato": {
+        "primera_linea_max": 72,
+        "prefijo": r"^(feat|fix|docs|refactor|perf|test|build|ci|chore|style|revert)(\([^)]+\))?!?: ",
+        "sin_adornos": {
+            "vallas_de_codigo": True,
+            "comillas_envolventes": True,
+            "encabezados_markdown": True,
+            "frases_de_presentacion": [r"^(aquí|aqui)\b"],
+        },
+    },
+    "parada_anticipada": True,
+}
+
+
+# --- Puntuadores -----------------------------------------------------------------------------------
+
+
+def _p(spec, text):
+    return analizar.score_affinity({"id": "x", "puntuador": spec}, text)
+
+
+def test_classify_is_exact_against_acceptable_set():
+    spec = {
+        "tipo": "classify",
+        "etiquetas": ["bug", "feature", "docs", "question"],
+        "aceptables": ["bug"],
+    }
+    assert _p(spec, "bug") == {"calidad": 1.0, "formato": True}
+    assert _p(spec, "  bug\n") == {"calidad": 1.0, "formato": True}
+    assert _p(spec, "feature") == {"calidad": 0.0, "formato": True}
+    # Etiqueta correcta con adorno: no es «exactamente una etiqueta».
+    assert _p(spec, "bug.") == {"calidad": 0.0, "formato": False}
+    assert _p(spec, "Bug") == {"calidad": 0.0, "formato": False}
+
+
+def test_extract_requires_strict_json_with_exact_keys():
+    spec = {
+        "tipo": "extract",
+        "claves": ["a", "b", "c"],
+        "esperado": {"a": "x", "b": 502, "c": None},
+    }
+    ok = '{"a": "x", "b": 502, "c": null}'
+    assert _p(spec, ok) == {"calidad": 1.0, "formato": True}
+    assert _p(spec, "```json\n" + ok + "\n```")["calidad"] == 1.0  # como `_strip_fences` de la tool
+    # Un 502 como cadena, un null como cadena vacia o como 0, y `true` por 1 no valen.
+    assert _p(spec, '{"a": "x", "b": "502", "c": null}')["calidad"] == pytest.approx(2 / 3)
+    assert _p(spec, '{"a": "x", "b": 502, "c": ""}')["calidad"] == pytest.approx(2 / 3)
+    assert _p(spec, '{"a": "x", "b": 502, "c": 0}')["calidad"] == pytest.approx(2 / 3)
+    spec_bool = {"tipo": "extract", "claves": ["k"], "esperado": {"k": 1}}
+    assert _p(spec_bool, '{"k": true}')["calidad"] == 0.0
+    # Una clave de mas, una de menos o no ser JSON: formato roto y calidad 0.
+    assert _p(spec, '{"a": "x", "b": 502, "c": null, "d": 1}') == {"calidad": 0.0, "formato": False}
+    assert _p(spec, '{"a": "x", "b": 502}') == {"calidad": 0.0, "formato": False}
+    assert _p(spec, "no es json") == {"calidad": 0.0, "formato": False}
+
+
+MD = (
+    "# Titulo\n\n- uno\n- dos\n\n```bash\n# no es un titulo\necho hola\n```\n\n"
+    "## Otro\n\n1. a\n2. b\n"
+)
+
+
+def _spec_md(text=MD):
+    est = analizar.markdown_structure(text)
+    return {
+        "tipo": "translate",
+        "titulos": est["titulos"],
+        "listas": est["listas"],
+        "bloques": est["bloques"],
+        "codigo": est["codigo"],
+    }
+
+
+def test_markdown_structure_ignores_fenced_content():
+    est = analizar.markdown_structure(MD)
+    assert (est["titulos"], est["listas"], est["bloques"]) == (2, 4, 1)
+    assert est["codigo"] == ["# no es un titulo\necho hola"]
+
+
+def test_translate_keeps_structure_and_code_byte_for_byte():
+    spec = _spec_md()
+    good_one = MD.replace("Titulo", "Título").replace("uno", "uno ")
+    assert _p(spec, good_one) == {"calidad": 1.0, "formato": True}
+    # Se traduce el comentario del codigo: la estructura sigue, el codigo no.
+    bad_one = MD.replace("# no es un titulo", "# no es un título")
+    assert _p(spec, bad_one) == {"calidad": 0.75, "formato": True}
+    # Se pierde un elemento de la lista: falla la estructura y el formato.
+    assert _p(spec, MD.replace("- dos\n", ""))["formato"] is False
+    # Toda la respuesta envuelta en una valla de mas: otro numero de bloques.
+    assert _p(spec, "```markdown\n" + MD + "```\n")["formato"] is False
+
+
+def test_lint_counts_match_source_and_word_limit():
+    spec = {"tipo": "lint", "conteos": {"E501": [4, 3, 2, 1], "F401": [3, 2, 1]}, "max_words": 20}
+    assert _p(spec, "E501: 4 avisos en 3 archivos.\nF401: 3 avisos") == {
+        "calidad": 1.0,
+        "formato": True,
+    }
+    assert _p(spec, "E501: 6 avisos\nF401: 3 avisos")["calidad"] == 0.5
+    # Una regla nombrada sin conteo no cuadra.
+    assert _p(spec, "E501 es la mas frecuente. F401: 3")["calidad"] == 0.5
+    long = "E501: 4 " + "palabra " * 30
+    assert _p(spec, long)["formato"] is False
+
+
+def test_delegate_asks_exact_format():
+    spec = {"tipo": "delegate", "esperado": "9", "formato": r"\d+"}
+    assert _p(spec, " 9\n") == {"calidad": 1.0, "formato": True}
+    assert _p(spec, "10") == {"calidad": 0.0, "formato": True}
+    assert _p(spec, "El texto tiene 9 palabras") == {"calidad": 0.0, "formato": False}
+
+
+def test_f2_keeps_runner_scoring_and_unknown_scorer_fails():
+    case = {"id": "x", "puntuador": {"tipo": "f2"}}
+    record = {"score": {"quality": 0.5, "format_ok": False}}
+    assert analizar.score_affinity(case, "t", record) == {"calidad": 0.5, "formato": False}
+    with pytest.raises(ValueError, match="desconocido"):
+        analizar.score_affinity({"id": "x", "puntuador": {"tipo": "?"}}, "t")
+
+
+# --- Escenarios del veredicto -----------------------------------------------------------------------
+
+
+def _caso(i, tool="local_classify", discriminant=True, ok="a", bad="b"):
+    return {
+        "id": f"c{i}",
+        "tool": tool,
+        "role": "mechanical",
+        "kind": "calidad",
+        "discriminante": discriminant,
+        "rol_en_hoja": None,
+        "puntuador": {"tipo": "classify", "etiquetas": ["a", "b", "c", "d"], "aceptables": ["a"]},
+        "reference_ok": ok,
+        "reference_bad": bad,
+    }
+
+
+def _r(label, case, text, *, run=1, outcome="ok", finish="stop", lat=1000, thermal="warm"):
+    return {
+        "schema_version": 2,
+        "label": label,
+        "case": case,
+        "run": run,
+        "attempt": 1,
+        "input_variant": None,
+        "outcome": outcome,
+        "finish_reason": finish,
+        "latency_ms": lat,
+        "thermal_state": thermal,
+        "descartada": False,
+        "response": text,
+        "response_chars": len(text),
+        "score": None,
+    }
+
+
+def _mechanical(
+    alt=("a", "a", "a", "a"), role=("a", "a", "a", "b"), weak=("b", "b", "b", "b"), **kw
+):
+    """Cuatro casos de `local_classify`: el rol falla el ultimo y el debil todos."""
+    cases = [_caso(i) for i in range(4)]
+    records = []
+    for tag, texts in ((ALT, alt), (QWEN, alt), (ROLE, role), (WEAK, weak)):
+        for case, text in zip(cases, texts, strict=True):
+            records.append(_r(tag, case["id"], text, **kw.get(tag, {})))
+    return {c["id"]: c for c in cases}, analizar.group_runs(records)
+
+
+def _footprints():
+    return {
+        model: {
+            t: {"ruta": f"{model}.gguf", "flags": {"n_cpu_moe": 12}, "tool": t}
+            for t in (*analizar.TOOLS_WITH_CELL, analizar.TOOL_COMMIT)
+        }
+        for model in (ROLE, ALT, QWEN, WEAK)
+    }
+
+
+def _verdict(corpus, runs, cold=0.0, judgement=None, rules=REGLAS, only=True):
+    return analizar.compute_verdict(
+        corpus, PROD, runs, _footprints(), cold, rules, judgement, mechanical_only=only
+    )
+
+
+def _celda(v, alternative=ALT, tool="local_classify"):
+    return next(c for c in v["celdas"] if c["tool"] == tool and c["alternativo"] == alternative)
+
+
+def test_mechanical_cell_all_in_order_approved():
+    corpus, runs = _mechanical()
+    cell = _celda(_verdict(corpus, runs))
+    assert cell["estado"] == "aprobada", cell["criterios"]
+    assert all(c["ok"] for c in cell["criterios"].values())
+    assert cell["rol_comparado"] == ROLE
+
+
+def test_mechanical_criterion_1_fails_and_2_baseless_never_rejected():
+    # Referencia mala que puntua 1 (el corpus no discrimina) y el candidato peor que el rol.
+    corpus, runs = _mechanical(alt=("b", "b", "b", "b"))
+    corpus["c0"] = {**corpus["c0"], "reference_bad": "a"}
+    cell = _celda(_verdict(corpus, runs))
+    assert not cell["criterios"]["discrimina"]["ok"]
+    assert not cell["criterios"]["calidad"]["ok"]
+    state = cell["estado"]
+    assert state == "sin base", "falla el 1 y el 2: tiene que ser sin base, nunca rechazada"
+
+
+def test_mechanical_nobody_fails_corpus_does_not_discriminate():
+    corpus, runs = _mechanical(role=("a", "a", "a", "a"), weak=("a", "a", "a", "a"))
+    cell = _celda(_verdict(corpus, runs))
+    assert cell["criterios"]["discrimina"]["casos_donde_el_rol_o_el_debil_fallan"] == []
+    assert cell["estado"] == "sin base"
+
+
+@pytest.mark.parametrize(
+    ("key", "kwargs"),
+    [
+        ("calidad", {"alt": ("a", "a", "b", "a")}),
+        ("formato", {"alt": ("a", "a", "a", "bug")}),  # el rol da formato correcto en c3 («b»)
+        ("verbosidad", {"alt": ("a" * 3,) * 4, "rol": ("a", "a", "a", "b")}),
+        ("fiabilidad", {"extra": {ALT: {"outcome": "truncado", "finish": "length"}}}),
+        ("latencia", {"extra": {ALT: {"lat": 9000}}}),
+    ],
+)
+def test_each_mechanical_criterion_can_reject_a_cell(key, kwargs):
+    extra = kwargs.pop("extra", {})
+    corpus, runs = _mechanical(**kwargs, **extra)
+    cell = _celda(_verdict(corpus, runs))
+    assert not cell["criterios"][key]["ok"], cell["criterios"][key]
+    assert cell["estado"] == "rechazada"
+
+
+def test_latency_allows_role_cold_load():
+    corpus, runs = _mechanical(**{ALT: {"lat": 6500}})
+    assert _celda(_verdict(corpus, runs, cold=0.0))["criterios"]["latencia"]["ok"] is False
+    assert _celda(_verdict(corpus, runs, cold=6.0))["criterios"]["latencia"]["ok"] is True
+
+
+def test_regression_cases_count_in_2_but_not_in_1():
+    corpus, runs = _mechanical()
+    regression = {
+        **_caso(9, discriminant=False),
+        "reference_bad": "a",
+    }  # su referencia mala puntua 1
+    corpus["c9"] = regression
+    records = [_r(m, "c9", t) for m, t in ((ALT, "b"), (QWEN, "a"), (ROLE, "a"), (WEAK, "a"))]
+    for attempts in runs.values():
+        records.extend(attempts)
+    cell = _celda(_verdict(corpus, analizar.group_runs(records)))
+    assert cell["criterios"]["discrimina"]["ok"] is True  # la regresion no entra en el 1
+    assert cell["criterios"]["calidad"]["casos_peores"] == ["c9"]  # y si en el 2
+    assert cell["estado"] == "rechazada"
+
+
+def test_missing_data_no_invented_verdict():
+    corpus, runs = _mechanical()
+    del runs[(ALT, "c2", 1)]
+    with pytest.raises(analizar.NoData, match="falta la corrida 1 de gemma4-26b-a4b en c2"):
+        _verdict(corpus, runs)
+    corpus, runs = _mechanical()
+    runs[(ALT, "c1", 1)][-1]["descartada"] = True
+    with pytest.raises(analizar.NoData, match="anulada"):
+        _verdict(corpus, runs)
+
+
+@pytest.mark.parametrize("reason", ["zero_vram_samples", "zero_ram_samples"])
+def test_row_cancelled_only_for_lack_of_samples_counts_in_cell(reason):
+    """La sonda no llegó a muestrear (respuesta de menos de 100 ms): la respuesta vale y la celda
+    se evalúa con ella. Este veredicto no juzga recursos."""
+    corpus, runs = _mechanical()
+    for tag in (ALT, ROLE):
+        runs[(tag, "c1", 1)][-1].update(descartada=True, descartada_motivo=reason)
+    cell = _celda(_verdict(corpus, runs))
+    assert cell["estado"] == "aprobada", cell["criterios"]
+    assert cell["criterios"]["fiabilidad"]["casos_que_fallan_solo_en_el_alternativo"] == []
+
+
+@pytest.mark.parametrize("reason", ["multiple_processes", "process_changed", None])
+def test_row_cancelled_by_process_still_not_counted(reason):
+    corpus, runs = _mechanical()
+    runs[(ALT, "c1", 1)][-1].update(descartada=True, descartada_motivo=reason)
+    with pytest.raises(analizar.NoData, match="anulada"):
+        _verdict(corpus, runs)
+
+
+def test_verdict_json_copies_footprint_from_footprints_json():
+    corpus, runs = _mechanical()
+    v = _verdict(corpus, runs)
+    for cell in v["celdas"]:
+        expected_one = _footprints()[cell["alternativo"]][cell["tool"]]
+        assert cell["huella"] == expected_one
+        assert cell["huella_rol"] == _footprints()[ROLE][cell["tool"]]
+    # Una huella que falta no se sustituye por nada.
+    footprints = _footprints()
+    del footprints[ALT]["local_classify"]
+    with pytest.raises(analizar.NoData, match="no trae la huella"):
+        analizar.compute_verdict(
+            corpus, PROD, runs, footprints, 0.0, REGLAS, None, mechanical_only=True
+        )
+
+
+def test_no_way_to_force_a_state(tmp_path):
+    with pytest.raises(SystemExit):
+        analizar.main(["affinity-verdict", "--forzar", "aprobada", str(tmp_path / "x.jsonl")])
+    parser = _verdict_parser()
+    options = {o for a in parser._actions for o in a.option_strings}
+    assert not {o for o in options if "forz" in o or "aprob" in o or "estado" in o}
+
+
+def _verdict_parser():
+    import argparse
+
+    parent = argparse.ArgumentParser()
+    sub = parent.add_subparsers()
+    analizar._verdict_parser(sub)
+    return sub.choices["affinity-verdict"]
+
+
+# --- Carga en frio desde una copia de metrics.db ---------------------------------------------------
+
+
+def _metrics_db(path, rows):
+    with_ = sqlite3.connect(path)
+    with_.execute(
+        "CREATE TABLE activity (id INTEGER PRIMARY KEY AUTOINCREMENT, ts_created INTEGER, model_id TEXT, "
+        "input_tokens INTEGER, output_tokens INTEGER, prompt_per_second REAL, tokens_per_second REAL, "
+        "duration_ms INTEGER, resp_status_code INTEGER, error_msg TEXT)"
+    )
+    with_.executemany(
+        "INSERT INTO activity (ts_created, model_id, input_tokens, output_tokens, prompt_per_second, "
+        "tokens_per_second, duration_ms, resp_status_code, error_msg) VALUES (?,?,?,?,?,?,?,?,?)",
+        rows,
+    )
+    with_.commit()
+    with_.close()
+
+
+def test_median_cold_load_of_copy(tmp_path):
+    # Inferencia: 100/100 + 100/100 = 2 s. Cada duracion trae 2 s de inferencia mas su carga.
+    def row(ts, duration_s, model=ROLE, state=200):
+        return (ts, model, 100, 100, 100.0, 100.0, int(duration_s * 1000), state, "")
+
+    base = 1_000_000
+    rows = [
+        row(base, 3),  # la primera del modelo: sin peticion anterior, no es «en frio»
+        row(base + 10, 3),  # caliente: 7 s despues de la anterior
+        row(base + 1000, 8),  # en frio: carga 6 s
+        row(base + 1100, 3),  # caliente
+        row(base + 3000, 10),  # en frio: carga 8 s
+        row(base + 5000, 4, state=500),  # error: no cuenta
+        row(base + 7000, 12, model=ALT),  # otro modelo: no cuenta
+    ]
+    db = tmp_path / "metrics.db"
+    _metrics_db(db, rows)
+    assert analizar.median_cold_load(db, ROLE) == pytest.approx(7.0)
+    assert analizar.median_cold_load(db, "no-existe") is None
+
+
+# --- Celda de commit --------------------------------------------------------------------------------
+
+N_REAL = 30
+
+
+def _commit_corpus():
+    cases = {}
+    for i in range(N_REAL):
+        cases[f"k{i}"] = {
+            "id": f"k{i}",
+            "tool": analizar.TOOL_COMMIT,
+            "role": "code",
+            "kind": "calidad",
+            "discriminante": True,
+            "rol_en_hoja": "real",
+            "puntuador": {"tipo": "hoja"},
+        }
+    for i in range(3):
+        cases[f"t{i}"] = {
+            **cases["k0"],
+            "id": f"t{i}",
+            "discriminante": False,
+            "rol_en_hoja": "trampa",
+        }
+    cases[analizar.CEILING_CASE_ID] = {
+        "id": analizar.CEILING_CASE_ID,
+        "tool": analizar.TOOL_COMMIT,
+        "role": "code",
+        "kind": "techo",
+        "discriminante": False,
+        "rol_en_hoja": None,
+        "puntuador": {"tipo": "techo"},
+    }
+    return cases
+
+
+def _commit_runs(*, ceiling_fails_on=None, alt_fails_on=(), qwen_fails_on=(), alt_text=None):
+    records = []
+    for i in range(N_REAL):
+        for tag, fails in ((ALT, alt_fails_on), (QWEN, qwen_fails_on)):
+            bad = i in fails
+            text = (alt_text or {}).get(i, "feat: algo") if tag == ALT else "feat: otra cosa"
+            records.append(
+                _r(
+                    tag,
+                    f"k{i}",
+                    text,
+                    outcome="truncado" if bad else "ok",
+                    finish="length" if bad else "stop",
+                )
+            )
+    for run in (1, 2, 3):
+        bad = run == ceiling_fails_on
+        records.append(
+            _r(
+                ALT,
+                analizar.CEILING_CASE_ID,
+                "feat: techo",
+                run=run,
+                outcome="error" if bad else "ok",
+            )
+        )
+    return analizar.group_runs(records)
+
+
+def _verdict_cell(
+    c=15, v=10, invents_26b=0, worse_traps=3, case_set_item=1, partial=False, invents_on_traps=0
+):
+    """30 pares reales: `c` los gana el 26B, `v` Qwen y el resto empata; 3 trampas."""
+    pair_items = {}
+    for i in range(N_REAL):
+        sides = {"A": ALT, "B": QWEN} if i % 2 == 0 else {"A": QWEN, "B": ALT}
+        alt_side = "A" if sides["A"] == ALT else "B"
+        qwen_side = "B" if alt_side == "A" else "A"
+        pref = alt_side if i < c else qwen_side if i < c + v else "="
+        invents = {alt_side: "s" if i < invents_26b else "n", qwen_side: "n"}
+        pair_items[f"{i + 1:02d}"] = {
+            "tipo": "real",
+            "caso": f"k{i}",
+            "lados": sides,
+            "inventa": invents,
+            "principal": {"A": None, "B": None},
+            "especifico": {"A": None, "B": None},
+            "preferencia": pref,
+        }
+    for j in range(3):
+        # El modelo de la trampa es el 26B: si se contaran sus «inventa», el criterio 1 saldria mal.
+        worse = j < worse_traps
+        pair_items[f"{N_REAL + j + 1:02d}"] = {
+            "tipo": "trampa",
+            "caso": f"t{j}",
+            "lados": {"A": "trampa", "B": ALT},
+            "inventa": {"A": "n", "B": "s" if j < invents_on_traps else "n"},
+            "principal": {"A": None, "B": None},
+            "especifico": {"A": None, "B": None},
+            "preferencia": "B" if worse else "A",
+        }
+    return {"schema_version": 1, "juego": case_set_item, "parcial": partial, "pares": pair_items}
+
+
+def _commit_cell(judgement, runs=None, rules=REGLAS, **kw):
+    runs = runs if runs is not None else _commit_runs(**kw)
+    v = _verdict(_commit_corpus(), runs, judgement=judgement, rules=rules, only=False)
+    return _celda(v, ALT, analizar.TOOL_COMMIT)
+
+
+def test_commit_approved_if_sheet_valid_and_all_pass():
+    cell = _commit_cell(_verdict_cell())
+    assert cell["estado"] == "aprobada", cell["criterios"]
+    assert cell["criterios"]["preferencia"] == {"ok": True, "c": 15, "v": 10, "empates": 5}
+
+
+@pytest.mark.parametrize(
+    ("maximum", "invents", "state"),
+    [(2, 2, "aprobada"), (2, 3, "rechazada"), (1, 2, "rechazada"), (1, 1, "aprobada")],
+)
+def test_commit_invents_read_from_rules_json(maximum, invents, state):
+    rules = {**REGLAS, "max_inventa_26b": maximum}
+    cell = _commit_cell(_verdict_cell(invents_26b=invents), rules=rules)
+    assert cell["criterios"]["inventa"]["si"] == invents
+    result = cell["estado"]
+    assert result == state, cell["criterios"]["inventa"]
+
+
+def test_commit_c_equal_v_does_not_lose_and_ties_do_not_count():
+    cell = _commit_cell(_verdict_cell(c=12, v=12))
+    assert cell["criterios"]["preferencia"] == {"ok": True, "c": 12, "v": 12, "empates": 6}
+    assert cell["estado"] == "aprobada"
+    cell = _commit_cell(_verdict_cell(c=11, v=12))
+    assert cell["estado"] == "rechazada"
+
+
+def test_commit_invents_on_real_message_of_trap_pair_not_counted_for_1():
+    cell = _commit_cell(_verdict_cell(invents_on_traps=3))
+    assert cell["criterios"]["inventa"]["n"] == 30
+    assert cell["criterios"]["inventa"]["si"] == 0
+
+
+def test_commit_one_of_three_traps_marked_worse_is_baseless_and_repeat_sheet():
+    cell = _commit_cell(_verdict_cell(worse_traps=1))
+    assert cell["criterios"]["hoja_valida"]["trampas_marcadas_como_peores"] == 1
+    state = cell["estado"]
+    assert state == "sin base"
+    assert "repetir hoja" in cell["informe"]
+    # Con dos de tres la hoja vale.
+    assert _commit_cell(_verdict_cell(worse_traps=2))["estado"] == "aprobada"
+    # La tercera hoja que no vale ya no dice «repetir».
+    assert "repetir" not in _commit_cell(_verdict_cell(worse_traps=0, case_set_item=3))["informe"]
+
+
+def test_commit_ceiling_or_26b_only_failure_rejects_even_if_sheet_wins():
+    cell = _commit_cell(
+        _verdict_cell(c=30, v=0), ceiling_fails_on=2
+    )  # 3a: una de las tres corridas falla
+    assert cell["criterios"]["funcionamiento"]["techo_3_de_3"] is False
+    assert cell["estado"] == "rechazada"
+    cell = _commit_cell(
+        _verdict_cell(c=30, v=0), alt_fails_on={4}
+    )  # 3b: `length` en el 26B, no en Qwen
+    assert cell["criterios"]["funcionamiento"]["casos_que_fallan_solo_en_el_alternativo"] == ["k4"]
+    state = cell["estado"]
+    assert state == "rechazada"
+    # Si Qwen tambien falla en ese caso, no cuenta contra el 26B.
+    cell = _commit_cell(_verdict_cell(c=30, v=0), alt_fails_on={4}, qwen_fails_on={4})
+    assert cell["estado"] == "aprobada"
+
+
+def test_commit_partial_judgement_gives_no_verdict():
+    with pytest.raises(analizar.NoData, match="parcial"):
+        _commit_cell(_verdict_cell(partial=True))
+
+
+def test_format_computed_by_program_and_state_unchanged():
+    rule = REGLAS["formato"]
+    f = analizar.message_format
+    assert f("feat: x", rule)
+    assert f("fix(scope)!: cambia algo\n\n- uno\n- dos", rule)
+    assert not f("x" * 10, rule)  # sin prefijo convencional
+    assert not f("feat: " + "x" * 67, rule)  # 73 caracteres
+    assert f("feat: " + "x" * 66, rule)  # 72
+    assert not f("feat: x\n\n```\ncodigo\n```", rule)  # valla de codigo en el cuerpo
+    assert not f("feat: x\n\n# Titulo", rule)  # encabezado Markdown
+    assert not f('"feat: x"', rule)
+    assert not f("Aquí tienes el mensaje:\nfeat: x", rule)
+    # No decide: dos corridas, una con formato impecable y otra con vallas, dan el mismo estado.
+    clean = _commit_cell(_verdict_cell(), alt_text={i: "feat: ok" for i in range(N_REAL)})
+    dirty = _commit_cell(_verdict_cell(), alt_text={i: "```\nfeat: ok\n```" for i in range(N_REAL)})
+    assert clean["estado"] == dirty["estado"] == "aprobada"
+    assert clean["publicados"][ALT]["formato"] == 30
+    assert dirty["publicados"][ALT]["formato"] == 0
+
+
+def test_rules_json_is_validated(tmp_path):
+    def with_(**changes):
+        path = tmp_path / "reglas.json"
+        path.write_text(json.dumps({**REGLAS, **changes}), encoding="utf-8")
+        return path
+
+    assert analizar.read_affinity_rules(with_())["max_inventa_26b"] == 2
+    with pytest.raises(SystemExit, match="inventa"):
+        analizar.read_affinity_rules(with_(preguntas_opcionales=["inventa"]))
+    with pytest.raises(SystemExit, match="max_inventa_26b"):
+        analizar.read_affinity_rules(with_(max_inventa_26b=-1))
+
+
+# --- El veredicto no importa el paquete -------------------------------------------------------------
+
+
+def _write_scenario(tmp_path):
+    corpus, runs = _mechanical()
+    cases = {
+        "schema_version": 2,
+        "production_config": PROD,
+        "cases": list(corpus.values()),
+    }
+    (tmp_path / "cases.json").write_text(json.dumps(cases), encoding="utf-8")
+    (tmp_path / "reglas.json").write_text(json.dumps(REGLAS), encoding="utf-8")
+    (tmp_path / "huellas.json").write_text(json.dumps(_footprints()), encoding="utf-8")
+    records = [r for attempts in runs.values() for r in attempts]
+    (tmp_path / "r.jsonl").write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    _metrics_db(tmp_path / "metrics.db", [])
+
+
+def test_does_not_import_package(tmp_path):
+    """`affinity-verdict` corre con `local_delegate` bloqueado: importarlo cargaria `server.py`
+    mientras otras tareas lo editan."""
+    _write_scenario(tmp_path)
+    program = (
+        "import runpy, sys\n"
+        "sys.modules['local_delegate'] = None\n"
+        f"sys.argv = ['analizar_benchmark.py', 'affinity-verdict', '--mechanical-only',"
+        f" '--cases', r'{tmp_path / 'cases.json'}', '--rules', r'{tmp_path / 'reglas.json'}',"
+        f" '--footprints', r'{tmp_path / 'huellas.json'}', '--metrics-db', r'{tmp_path / 'metrics.db'}',"
+        f" '--salida', r'{tmp_path / 'veredicto.json'}', r'{tmp_path / 'r.jsonl'}']\n"
+        f"runpy.run_path(r'{RAIZ / 'scripts' / 'analizar_benchmark.py'}', run_name='__main__')\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", program], capture_output=True, text=True, timeout=60
+    )
+    assert proc.returncode == 0, proc.stderr
+    verdict = json.loads((tmp_path / "veredicto.json").read_text(encoding="utf-8"))
+    assert {c["estado"] for c in verdict["celdas"]} == {"aprobada"}
+    assert "aprobada" in proc.stdout

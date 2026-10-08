@@ -18,6 +18,10 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import json
+import threading
+import time
+from collections.abc import Callable
 
 import httpx2
 
@@ -155,3 +159,126 @@ class _Mock:
 
 
 mock = _Mock()
+
+
+# --- Respuesta de chat con `timings` (T14 de daemon-reparte-el-backend) ------------------------
+
+
+def llama_timings(
+    *,
+    prompt_n: int = 1000,
+    prompt_ms: float = 500.0,
+    predicted_n: int = 150,
+    predicted_ms: float = 10_000.0,
+) -> dict:
+    """Un bloque `timings` como el de llama-server, con sus derivados (`*_per_second`)."""
+    return {
+        "prompt_n": prompt_n,
+        "prompt_ms": prompt_ms,
+        "prompt_per_second": prompt_n * 1000 / prompt_ms if prompt_ms else 0.0,
+        "predicted_n": predicted_n,
+        "predicted_ms": predicted_ms,
+        "predicted_per_second": predicted_n * 1000 / predicted_ms if predicted_ms else 0.0,
+    }
+
+
+def chat_response(
+    content: str = "hecho",
+    *,
+    timings: dict | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+) -> httpx2.Response:
+    """Un 200 de `/chat/completions`. Con `timings`, los lleva como llama-server; sin él, no."""
+    body: dict = {"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}
+    usage = {
+        key: value
+        for key, value in (("prompt_tokens", tokens_in), ("completion_tokens", tokens_out))
+        if value is not None
+    }
+    if usage:
+        body["usage"] = usage
+    if timings is not None:
+        body["timings"] = timings
+    return httpx2.Response(200, json=body)
+
+
+# --- Modo «cuenta cambios» (T10 de daemon-reparte-el-backend) ----------------------------------
+
+
+def _ok_response(model: str) -> httpx2.Response:
+    return httpx2.Response(
+        200,
+        json={"choices": [{"message": {"content": f"ok de {model}"}, "finish_reason": "stop"}]},
+    )
+
+
+class ChangeCount:
+    """Un backend de chat que atiende UNA petición a la vez, en orden de llegada, y cuenta cambios.
+
+    Hace lo que hace llama-swap con `-np 1` y su cola FIFO: la segunda petición espera a que acabe
+    la primera. Cada vez que el modelo servido difiere del anterior cuenta un **cambio** (el primero
+    no cuenta: cargar el primer modelo no quita a nadie). Es lo que mide si dos operaciones se
+    quitan el modelo una a otra.
+
+    - `latency_s`: lo que tarda en contestar cada petición, ya con el turno de servicio.
+    - `barrera`: si es N > 0, ninguna petición se atiende hasta que hayan **llegado** N, con un tope
+      de `barrier_cap_s`. Si el tope vence, `did_not_overlap` queda en `True`: las N no estuvieron
+      a la vez dentro del daemon (cada una con su plaza).
+    - `responder(modelo, request)`: la respuesta; por defecto, un 200 con `ok de <modelo>`.
+    """
+
+    def __init__(
+        self,
+        *,
+        latency_s: float = 0.01,
+        barrier: int = 0,
+        barrier_cap_s: float = 2.0,
+        respond: Callable[[str, httpx2.Request], httpx2.Response] | None = None,
+    ) -> None:
+        self.latency_s = latency_s
+        self.barrier = barrier
+        self.barrier_cap_s = barrier_cap_s
+        self.respond = respond or (lambda model, _request: _ok_response(model))
+        self.arrivals: list[str] = []
+        self.served: list[str] = []
+        self.changes = 0
+        self.did_not_overlap = False
+        self._cond = threading.Condition()
+        self._next = 0
+        self._serving = 0
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        model = json.loads(request.content)["model"]
+        with self._cond:
+            self.arrivals.append(model)
+            self._cond.notify_all()
+            if self.barrier:
+                end = time.monotonic() + self.barrier_cap_s
+                while len(self.arrivals) < self.barrier:
+                    remaining = end - time.monotonic()
+                    if remaining <= 0:
+                        self.did_not_overlap = True
+                        break
+                    self._cond.wait(remaining)
+            ticket = self._next
+            self._next += 1
+            while ticket != self._serving:
+                self._cond.wait()
+            if self.served and self.served[-1] != model:
+                self.changes += 1
+            self.served.append(model)
+        try:
+            time.sleep(self.latency_s)
+            return self.respond(model, request)
+        finally:
+            with self._cond:
+                self._serving += 1
+                self._cond.notify_all()
+
+
+def count_changes(url: str, **options) -> ChangeCount:
+    """Registra el POST de chat en modo «cuenta cambios» y devuelve el contador."""
+    server = ChangeCount(**options)
+    post(url).mock(side_effect=server)
+    return server

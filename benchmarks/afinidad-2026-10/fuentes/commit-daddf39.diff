@@ -1,0 +1,268 @@
+diff --git a/.sdd/changes/opencode-tercer-cliente/handoff.md b/.sdd/changes/opencode-tercer-cliente/handoff.md
+index ae7de00..ce48de7 100644
+--- a/.sdd/changes/opencode-tercer-cliente/handoff.md
++++ b/.sdd/changes/opencode-tercer-cliente/handoff.md
+@@ -2,12 +2,16 @@
+ 
+ ## Current state
+ 
+-- SDD status: `verifying`. Gates `spec` y `plan` aprobados; `quality`, `conformance` y `memory`
+-  pendientes de la revisión del usuario, con la evidencia ya recogida en `verification.md`.
+-- Rama `claude/opencode-mcb-integration-m8q9qq`, base `67e585f`.
+-- Suite: **700 passed, 4 skipped, 1 failed**. El fallo es anterior y ambiental (la suite corre
+-  como root y `chmod 000` no le quita permiso de lectura); baseline antes de tocar nada:
+-  `667 passed, 1 failed`, el mismo.
++- SDD status: **`closed`** (2026-09-08). Los cinco gates aprobados. El código lleva en `main` desde
++  el PR #123 y salió publicado con la 0.19.0; el cambio se quedó en `verifying` un mes por los tres
++  gates finales, no por trabajo pendiente.
++- Suite en el cierre: **794 passed, 2 skipped** en Windows, con los 36 tests propios del change en
++  verde. La evidencia de agosto (`710 passed`) era de un árbol con 84 tests menos y **no** se
++  reutilizó: todo se volvió a medir. Ver la sección «Revalidación para el cierre» de
++  `verification.md`.
++- Verificado también contra el binario real de **opencode 1.18.29** en Windows (agosto fue 1.18.11
++  en Linux): `opencode mcp add` sigue registrando la entrada, conserva comentarios y claves del
++  usuario, y `opencode mcp list` dice `connected`.
+ 
+ ## What changed
+ 
+@@ -39,6 +43,9 @@ Las cuatro que no se deducen del código, cada una con lo que las decidió:
+   estilo: una clave de primer nivel desconocida hace que opencode **no arranque**. De ahí también
+   que no exista un `--force-mcp-opencode`: sin marcadores no hay forma de distinguir nuestra
+   entrada de una escrita a mano, exactamente como en Claude Code.
++  *(Al cerrar, 2026-09-08: la primera mitad de ese motivo **caducó**. Medido contra los dos
++  binarios el mismo día, 1.18.11 rechaza la clave desconocida y **1.18.29 ya no**. La decisión se
++  mantiene —ahora por prudencia— y la segunda mitad, la de los marcadores, sigue intacta.)*
+ - **La skill y la memoria se instalan en el sitio propio de opencode**, aunque esté medido que lee
+   `~/.claude/skills/` y `~/.claude/CLAUDE.md`. Las dos compatibilidades son apagables
+   (`OPENCODE_DISABLE_EXTERNAL_SKILLS`, `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT`) y **no existen** en
+@@ -65,10 +72,17 @@ Dos cosas que se decidieron **midiendo, no diseñando**:
+ 
+ ## Next steps
+ 
+-1. Aprobar los gates `quality` y `conformance` con `verification.md` delante.
+-2. Dejar que el CI corra el e2e en Windows y macOS: es lo único de este change que aquí solo se
+-   ejercitó en Linux.
+-3. Al publicar, la línea del `CHANGELOG` ya está redactada en `Unreleased`.
++Ninguno para este change: cerrado el 2026-09-08 con los cinco gates aprobados, el código en `main`
++y el CI en verde. Lo que salió de la revalidación y **no** pertenece aquí:
++
++1. **Tres frases de documentación desactualizadas por el cliente, no por nosotros.** `spec.md`
++   (REQ-011), el docstring de `install.py` y `docs/wiki/Integration-install.md` dicen que una clave
++   de primer nivel desconocida impide arrancar opencode. Era cierto en 1.18.11 y **ya no lo es en
++   1.18.29** (medido con los dos binarios el mismo día). El comportamiento del paquete no cambia;
++   corregir la justificación es un cambio de documentación aparte.
++2. **`update` repone en el transporte de la máquina, no en el que había.** Con el daemon levantado,
++   una entrada `stdio` borrada vuelve como `http`. Hace lo mismo con Claude Code, así que es
++   comportamiento de `update` y no de este change; queda anotado por si alguna vez sorprende.
+ 
+ ## Cómo repetir las mediciones
+ 
+diff --git a/.sdd/changes/opencode-tercer-cliente/state.json b/.sdd/changes/opencode-tercer-cliente/state.json
+index 14507bf..854b9b8 100644
+--- a/.sdd/changes/opencode-tercer-cliente/state.json
++++ b/.sdd/changes/opencode-tercer-cliente/state.json
+@@ -3,9 +3,9 @@
+   "slug": "opencode-tercer-cliente",
+   "title": "opencode como tercer cliente de install",
+   "mode": "standard",
+-  "status": "verifying",
++  "status": "closed",
+   "createdAt": "2026-08-02T15:45:00.000Z",
+-  "updatedAt": "2026-08-02T21:30:00.000Z",
++  "updatedAt": "2026-09-09T01:10:07.588Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -20,22 +20,22 @@
+       "actor": "user"
+     },
+     "quality": {
+-      "status": "pending",
+-      "updatedAt": "2026-08-02T17:40:00.000Z",
+-      "evidence": "pytest 710 passed 2 skipped en Windows (en Linux eran 701 passed 4 skipped con 1 failed ambiental: la suite corre como root y chmod 000 no le quita lectura; baseline 667 passed con el mismo fallo); ruff check All checks passed; ruff format 74 files already formatted; extract_dashboard_js exit 0; check_install_e2e OK en linux y en win32 (ampliado para cubrir opencode); 11 mutantes verificados al reves, cada uno rompe su propio test; verificado contra el binario real: opencode mcp list responde local-delegate connected. Dos revisiones del diff encontraron dos defectos reales, ambos corregidos con test: la lectura tolerante que confundia vacio con ilegible, y el falso OK del check de la skill (miraba solo la de Claude Code mientras install la escribia tambien en opencode, asi que doctor decia 'instalada' con la de opencode borrada y update no la reponia)",
+-      "actor": "pending"
++      "status": "approved",
++      "updatedAt": "2026-09-09T01:03:02.365Z",
++      "evidence": "Revalidado el 2026-09-08 contra el arbol de hoy, sin reutilizar la evidencia de agosto: pytest 794 passed 2 skipped (los 36 propios del change en verde); ruff check All checks passed; ruff format 77 files already formatted; extract_dashboard_js exit 0; check_install_e2e instalador OK en win32. Ademas los 8 escenarios de aceptacion reejecutados end-to-end con el CLI real sobre HOMEs simulados: 26/26 comprobaciones en verde, con control positivo (--no-mcp --no-skill no deja fichero, asi que un OK vacio se caeria solo). REQ-030 medido y no razonado: con la entrada MCP y la skill borradas, doctor las da por FALT y update las repone.",
++      "actor": "user"
+     },
+     "conformance": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": "",
+-      "actor": "pending"
++      "status": "approved",
++      "updatedAt": "2026-09-09T01:03:13.418Z",
++      "evidence": "Revision fresca contra los 34 requisitos con el codigo de main de hoy. Verificado contra el binario REAL de opencode 1.18.29 (agosto fue 1.18.11 en Linux; esto es Windows): debug paths resuelve a <home>/.config/opencode; opencode mcp add registra la entrada conservando comentario y clave theme del usuario; reejecutar deja una sola entrada; nuestra entrada escrita a mano coincide clave por clave con la que escribe la CLI (lo que sostiene no escribir enabled: true); opencode mcp list dice local-delegate connected. REQ-034 remedido: el initialize declara solo roots, protocolo 2025-11-25, sin elicitation. Dos derivas deliberadas ya documentadas: enabled (REQ-007/008) quitado por medicion, y diecisiete->dieciocho checks (REQ-029/032) por un check posterior, con el test del docstring en verde. Un hallazgo: la justificacion de REQ-011 caduco con la version del cliente -- 1.18.11 rechaza una clave de primer nivel desconocida (exit 1, Unrecognized key) y 1.18.29 ya no. La medicion de agosto era correcta; el cliente relajo la validacion. El comportamiento del paquete no cambia (no escribir claves ajenas sigue siendo lo correcto); lo que queda desactualizado son tres frases de documentacion, que son un cambio aparte. Todo en verification.md.",
++      "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": "",
+-      "actor": "pending"
++      "status": "approved",
++      "updatedAt": "2026-09-09T01:05:52.076Z",
++      "evidence": "Handoff actualizado al estado de cierre (suite del cierre, verificacion contra 1.18.29 en Windows, y los dos cabos que NO pertenecen a este change). Nota durable en el vault: projects/local-delegate/jornada-2026-09-08-la-justificacion-que-caduco.md, con el metodo (instalar tambien la version vieja para distinguir 'me equivoque' de 'el mundo cambio') y las dos trampas de medicion. Puntero anadido a la memoria del proyecto en Claude Code. Sin secretos ni datos personales: el escenario del token comprueba justamente que el valor NO llega a disco.",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -101,6 +101,51 @@
+       "type": "note",
+       "at": "2026-08-02T21:30:00.000Z",
+       "note": "Revision del diff desde Windows: dos correcciones. (1) Falso OK del check de la skill, que miraba solo ~/.claude/skills mientras plan_install la escribia tambien en opencode: con Claude Code presente, doctor decia 'instalada' con la de opencode borrada y update no la reponia. Corregido en _probe_skill (recorre _clientes) y en el Repair (PRESENT en vez de claude); anadido REQ-030b. Un test pasaba por la guarda equivocada (se llamaba 'solo Codex' con opencode instalado por defecto). Tres mutantes nuevos, cada uno cazado. (2) Cuatro ficheros habian pasado de CRLF a LF al editarse desde un runner Linux, inflando el diff de 2213 a 4340 lineas; devueltos a CRLF. Verificado en Windows: 710 passed 2 skipped, ruff limpio, check_install_e2e OK en win32"
++    },
++    {
++      "type": "gate",
++      "gate": "quality",
++      "status": "approved",
++      "at": "2026-09-09T01:03:02.365Z",
++      "evidence": "Revalidado el 2026-09-08 contra el arbol de hoy, sin reutilizar la evidencia de agosto: pytest 794 passed 2 skipped (los 36 propios del change en verde); ruff check All checks passed; ruff format 77 files already formatted; extract_dashboard_js exit 0; check_install_e2e instalador OK en win32. Ademas los 8 escenarios de aceptacion reejecutados end-to-end con el CLI real sobre HOMEs simulados: 26/26 comprobaciones en verde, con control positivo (--no-mcp --no-skill no deja fichero, asi que un OK vacio se caeria solo). REQ-030 medido y no razonado: con la entrada MCP y la skill borradas, doctor las da por FALT y update las repone.",
++      "actor": "user"
++    },
++    {
++      "type": "gate",
++      "gate": "conformance",
++      "status": "approved",
++      "at": "2026-09-09T01:03:13.418Z",
++      "evidence": "Revision fresca contra los 34 requisitos con el codigo de main de hoy. Verificado contra el binario REAL de opencode 1.18.29 (agosto fue 1.18.11 en Linux; esto es Windows): debug paths resuelve a <home>/.config/opencode; opencode mcp add registra la entrada conservando comentario y clave theme del usuario; reejecutar deja una sola entrada; nuestra entrada escrita a mano coincide clave por clave con la que escribe la CLI (lo que sostiene no escribir enabled: true); opencode mcp list dice local-delegate connected. REQ-034 remedido: el initialize declara solo roots, protocolo 2025-11-25, sin elicitation. Dos derivas deliberadas ya documentadas: enabled (REQ-007/008) quitado por medicion, y diecisiete->dieciocho checks (REQ-029/032) por un check posterior, con el test del docstring en verde. Un hallazgo: la justificacion de REQ-011 caduco con la version del cliente -- 1.18.11 rechaza una clave de primer nivel desconocida (exit 1, Unrecognized key) y 1.18.29 ya no. La medicion de agosto era correcta; el cliente relajo la validacion. El comportamiento del paquete no cambia (no escribir claves ajenas sigue siendo lo correcto); lo que queda desactualizado son tres frases de documentacion, que son un cambio aparte. Todo en verification.md.",
++      "actor": "user"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-09-09T01:05:52.076Z",
++      "evidence": "Handoff actualizado al estado de cierre (suite del cierre, verificacion contra 1.18.29 en Windows, y los dos cabos que NO pertenecen a este change). Nota durable en el vault: projects/local-delegate/jornada-2026-09-08-la-justificacion-que-caduco.md, con el metodo (instalar tambien la version vieja para distinguir 'me equivoque' de 'el mundo cambio') y las dos trampas de medicion. Puntero anadido a la memoria del proyecto en Claude Code. Sin secretos ni datos personales: el escenario del token comprueba justamente que el valor NO llega a disco.",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "verifying",
++      "to": "result-review",
++      "at": "2026-09-09T01:06:10.705Z",
++      "reason": "Evidencia revalidada el 2026-09-08 (suite, ocho escenarios e2e y binario real de opencode 1.18.29 en Windows); pasa a revision del resultado contra la spec."
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-09-09T01:10:07.345Z",
++      "reason": "Revision del resultado hecha por medicion: 26/26 escenarios e2e, 9/10 comprobaciones contra el binario real 1.18.29, y las tres desviaciones de la spec resueltas y documentadas en verification.md."
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-09-09T01:10:07.588Z",
++      "reason": "Cinco gates aprobados con evidencia revalidada el 2026-09-08 contra el arbol y el binario de hoy. El codigo lleva en main desde el PR #123."
+     }
+   ]
+ }
+diff --git a/.sdd/changes/opencode-tercer-cliente/verification.md b/.sdd/changes/opencode-tercer-cliente/verification.md
+index cafdbaa..dc27d70 100644
+--- a/.sdd/changes/opencode-tercer-cliente/verification.md
++++ b/.sdd/changes/opencode-tercer-cliente/verification.md
+@@ -170,3 +170,101 @@ inspección directa del artefacto:
+ - **El camino por CLI bajo `--home`.** Está apagado a propósito (`use_cli=False` con HOME simulado)
+   para que la suite no dependa de qué binarios haya en la máquina. Se ejercitó a mano, con el
+   binario real, llamando a `_register_opencode_mcp` directamente (punto 2 de arriba).
++
++## Revalidación para el cierre (2026-09-08)
++
++El código lleva en `main` desde el PR #123 y la evidencia de arriba es del 2 de agosto. Antes de
++cerrar los gates se **volvió a medir todo**, contra el árbol de hoy y contra el binario de hoy. No
++se reutilizó ni una línea de la evidencia anterior.
++
++### Suite y estática, hoy
++
++```
++uv run pytest -q             → 794 passed, 2 skipped
++uv run pytest tests/test_install_opencode.py -q → 36 passed
++uv run ruff check .          → All checks passed!
++uv run ruff format --check   → 77 files already formatted
++scripts/extract_dashboard_js.py → exit 0
++scripts/check_install_e2e.py    → instalador OK en win32
++```
++
++Los `710 passed` de agosto eran de un árbol con 84 tests menos. Los 36 propios de este change
++siguen todos en verde.
++
++### Los ocho escenarios de aceptación, reejecutados
++
++Corridos con el CLI de verdad sobre HOMEs simulados, comprobando el artefacto en disco:
++**26 de 26 comprobaciones en verde**. Cubren los siete escenarios de `spec.md` que no dependen del
++binario del cliente: solo-opencode (sin crear `.claude` ni `.codex`), idempotencia con `theme` y
++entrada MCP ajena, comentarios sin CLI (fichero intacto byte a byte, exit code sin subir, y el
++aviso con ruta + motivo + qué hacer), HTTP con `{env:LOCAL_DELEGATE_WEB_TOKEN}` y **sin** el valor
++del token en disco, desinstalación que deja la entrada ajena y el `theme`, config roto que no se
++toca, y `--home` con `XDG_CONFIG_HOME` puesta escribiendo dentro del árbol simulado.
++
++**Control positivo:** con `--no-mcp --no-skill` el fichero de config no llega a existir, así que
++una comprobación que diera `ok` sin haberse escrito nada se caería sola. Se verificó.
++
++**REQ-030, medido y no razonado:** con la entrada MCP y la skill borradas a mano, `doctor` las da
++las dos por `[FALT]` y `update` las repone; el `doctor` posterior las da por `[ OK ]`. De paso se
++observó que `update` repone en el transporte que corresponde a **la máquina** (aquí `http`, con el
++daemon levantado) aunque la instalación original fuera `stdio`. **No es de este change**: se
++comprobó que hace exactamente lo mismo con la entrada de Claude Code.
++
++### Contra el binario real, hoy y en Windows
++
++En agosto esto se midió en Linux contra opencode **1.18.11**. Se repitió contra **1.18.29**, que es
++lo que instala hoy `npm i opencode-ai@latest`, y en Windows, que en agosto era justo lo que faltaba:
++
++| Comprobación | Resultado |
++|---|---|
++| `debug paths` apunta a `<home>/.config/opencode` | OK |
++| `opencode mcp add` con nuestros args registra la entrada | OK |
++| el comentario y la clave `theme` del usuario sobreviven | OK |
++| reejecutar deja **una sola** entrada | OK |
++| nuestra entrada escrita a mano == la que escribe la CLI | OK (mismas claves y mismo contenido) |
++| `opencode mcp list` → `✓ local-delegate connected` | OK |
++
++La quinta fila es la que sostiene la decisión de **no escribir `"enabled": true`**: los dos caminos
++siguen dejando exactamente la misma forma en disco.
++
++**REQ-034 remedido:** el `initialize` de 1.18.29 declara `capabilities {"roots":{}}`, protocolo
++`2025-11-25`, `clientInfo {"name":"opencode","version":"1.18.29"}`. Sigue **sin** `elicitation`, así
++que la documentación no promete nada falso.
++
++### Un hallazgo: la justificación de REQ-011 caducó con la versión del cliente
++
++`spec.md` (REQ-011), el docstring de `install.py` y `docs/wiki/Integration-install.md` dicen que una
++clave de primer nivel desconocida hace que opencode **no arranque** (`ConfigInvalidError`), y que
++por eso no existe un `--force-mcp-opencode`. Medido hoy con los dos binarios, mismo config y mismos
++subcomandos:
++
++| opencode | `{"clave_que_no_existe": true}` |
++|---|---|
++| **1.18.11** (el de agosto) | `exit=1`, «Unrecognized key» en `mcp list`, `debug config` y `models` |
++| **1.18.29** (hoy) | `exit=0`, sin queja: la tolera |
++
++La medición de agosto **era correcta**; el cliente relajó la validación entre las dos versiones.
++
++Dos avisos sobre cómo se midió, porque la primera pasada no discriminaba:
++
++- **El `exit code` no sirve de señal**: con un JSON sintácticamente roto, opencode imprime
++  `Error: Config file ... is not valid JSON(C)` y aun así **devuelve 0**. Hay que mirar la salida.
++  (Es el mismo aprendizaje que ya está en el código para `_register_opencode_mcp`.)
++- **Con un control positivo que tampoco discriminaba** —`{"theme": 12345}`, tipo equivocado en una
++  clave que sí existe— **ninguna** de las dos versiones se queja. La validación que existía en
++  1.18.11 era específica de claves desconocidas, no del esquema entero.
++
++**Qué cambia y qué no.** El comportamiento del paquete **no cambia**: no escribir ninguna clave
++ajena a `mcp` sigue siendo lo correcto, ahora por prudencia en vez de por obligación, y la ausencia
++de `--force-mcp-opencode` se sostiene igual por el otro motivo, que sigue en pie: sin marcadores no
++hay forma de distinguir nuestra entrada de una escrita a mano. Lo que queda desactualizado es la
++**justificación escrita**, atada a una versión concreta del cliente. Corregir esas tres frases es un
++cambio de documentación independiente, no un defecto de este change.
++
++### Deriva respecto a la spec, ya conocida y deliberada
++
++- **`enabled`** (REQ-007/008): la spec lo pedía; se quitó al medir que la CLI del cliente tampoco lo
++  escribe. Reconfirmado hoy: las dos formas coinciden.
++- **«diecisiete»** (REQ-029/032): hoy el `doctor` tiene **dieciocho** checks porque después de este
++  change entró uno más. El requisito de fondo —que las frases de tamaño digan el número de verdad—
++  lo guarda `test_el_docstring_dice_cuantos_checks_hay_de_verdad`, que está en verde.

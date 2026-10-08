@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import json
+import socket
+import struct
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -59,6 +63,96 @@ def sin_lista_de_modelos_guardada():
     vaciar()
     yield
     vaciar()
+
+
+@pytest.fixture(autouse=True)
+def turn_and_topology_zeroed():
+    """Cada test empieza sin nadie en el turno del daemon y sin foto de topología en caché.
+
+    El turno es un estado único del proceso (`server._turn`): sin esto, una operación que un test
+    dejara en `activos` o en la cola haría esperar a las del siguiente. Y la caché de `topology`
+    va por (ruta, mtime, tamaño): dos `tmp_path` distintos pueden coincidir en las tres. Como en
+    `sin_lista_de_modelos_guardada`, se mira `sys.modules` para no importar nada que nadie usa.
+    """
+
+    def clear() -> None:
+        topo = sys.modules.get("local_delegate.topology")
+        if topo is not None:
+            topo._forget()
+        reset = getattr(sys.modules.get("local_delegate.server"), "_reset_turn", None)
+        if reset is not None:
+            reset()
+
+    clear()
+    yield
+    clear()
+
+
+# --- T11: la consulta del CLI al daemon nunca llega al daemon real -----------------------------
+DEAD_PORT = pytest.StashKey[int]()
+CUT_DAEMON = pytest.StashKey["RejectingServer"]()
+
+
+class RejectingServer:
+    """Acepta cada conexión y la cierra en el acto con un RST (`SO_LINGER` a 0).
+
+    Es el «daemon apagado» de la suite, y rápido: en Windows conectar a un puerto cerrado tarda
+    ~2,1 s en dar `ConnectError` (el sistema reintenta el SYN), y esto da un `ReadError` en ~0,02 s.
+    Cuenta las conexiones, para que un test compruebe que la consulta llegó aquí y no a otro sitio.
+    """
+
+    def __init__(self) -> None:
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(64)
+        self.port = self.sock.getsockname()[1]
+        self.accepted = 0
+        self._thread = threading.Thread(target=self._serve, daemon=True, name="daemon-cortado")
+        self._thread.start()
+
+    def _serve(self) -> None:
+        while True:
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                return  # cerrado al terminar la sesión
+            self.accepted += 1
+            with contextlib.suppress(OSError):
+                conn.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            conn.close()
+
+    def close(self) -> None:
+        self.sock.close()
+        self._thread.join(timeout=5)
+
+
+@pytest.fixture(scope="session")
+def _rejecting_server():
+    server = RejectingServer()
+    yield server
+    server.close()
+
+
+@pytest.fixture(autouse=True)
+def real_daemon_down(request, monkeypatch, _rejecting_server):
+    """El CLI y `doctor` preguntan al daemon (puerto y token web, los de `doctor`) por la config y
+    el estado de llama-swap. En la suite esa consulta va a un servidor local que corta cada conexión
+    (`RejectingServer`): sin esto, un test de `llamaswap residency` sin `--config` leería la ruta
+    del daemon de verdad y podría acabar escribiendo en la config real de llama-swap.
+
+    Se parchean `cli._daemon_target` y `checks._llamaswap_daemon_destination`, y no
+    `config.WEB_PORT`: este último lo comparan con las entradas de los clientes otros tests
+    (`test_checks.py`), y cambiarlo para todos los rompería. El puerto queda en
+    `request.node.stash[DEAD_PORT]` para que un test compruebe que la fixture se aplicó sin
+    pedirla (si dejara de ser autouse, no habría puerto guardado).
+    """
+    port = _rejecting_server.port
+    request.node.stash[DEAD_PORT] = port
+    request.node.stash[CUT_DAEMON] = _rejecting_server
+    monkeypatch.setattr("local_delegate.cli._daemon_target", lambda: ("127.0.0.1", port, {}))
+    monkeypatch.setattr(
+        "local_delegate.checks._llamaswap_daemon_destination", lambda: ("127.0.0.1", port, {})
+    )
 
 
 @pytest.fixture

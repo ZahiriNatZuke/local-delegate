@@ -1,0 +1,58 @@
+store:
+  path: 'MODELOS/metrics.db'
+
+apiKeys:
+  - "clave-falsa-1"
+
+models:
+  gemma3-4b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/gemma-3-4b-it-Q4_K_M.gguf -ngl 99
+      --ctx-size 8192 --jinja --reasoning off
+
+      '
+    ttl: 600
+  qwen35-2b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Qwen3.5-2B-UD-Q8_K_XL.gguf -ngl 99
+      --ctx-size 8192 --jinja --reasoning off
+
+      '
+    ttl: 300
+  llama31-8b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+      -ngl 99 --ctx-size 16384 --jinja
+
+      '
+    ttl: 300
+  qwen25-coder-14b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf
+      -ngl 99 --ctx-size 8192 --jinja --cache-type-k q4_0 --cache-type-v q4_0
+
+      '
+    ttl: 300
+  qwen3-vl-8b:
+    cmd: 'MODELOS/llama-server.exe --port ${PORT} --host 127.0.0.1
+      --model MODELOS/Qwen3VL-8B-Instruct-Q4_K_M.gguf
+      --mmproj MODELOS/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf
+      -ngl 99 --ctx-size 8192 --jinja
+
+      '
+    ttl: 30
+groups:
+  resident:
+    persistent: true
+    swap: false
+    exclusive: false
+    members:
+    - gemma3-4b
+  swap:
+    swap: true
+    exclusive: false
+    members:
+    - llama31-8b
+    - qwen25-coder-14b
+    - qwen35-2b
+    - qwen3-vl-8b

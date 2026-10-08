@@ -1,0 +1,12 @@
+src/a.py:5:1: D100 Missing docstring in public module
+src/b.py:1:1: D100 Missing docstring in public module
+src/c.py:1:1: D100 Missing docstring in public module
+src/a.py:14:5: D103 Missing docstring in public function
+src/a.py:30:5: D103 Missing docstring in public function
+src/b.py:8:5: D103 Missing docstring in public function
+src/b.py:22:5: D103 Missing docstring in public function
+src/b.py:44:5: D103 Missing docstring in public function
+src/c.py:17:9: T201 `print` found
+src/c.py:18:9: T201 `print` found
+src/c.py:19:9: T201 `print` found
+src/a.py:61:12: B006 Do not use mutable data structures for argument defaults

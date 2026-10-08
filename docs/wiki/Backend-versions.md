@@ -21,6 +21,23 @@ Ambos proyectos publican en *rolling release* (llama.cpp etiqueta casi cada merg
 numera correlativo). No hay canal "estable" vs "nightly": para actualizar, toma un build con unos
 días de rodaje en vez del filo absoluto, y verifica una inferencia real antes de confiar en él.
 
+### Qué se usa de llama-swap v255 y de llama-server
+
+El turno, la afinidad, la espera frente a lentitud y `llamaswap residency` dependen de detalles de
+estas versiones. Todo es opcional: con otro backend, o si algo de esto falta, el daemon sigue sin
+esas piezas.
+
+| De dónde | Qué se lee | Para qué |
+|---|---|---|
+| `config.yaml` (reglas de `load.go`) | `groups` con `swap`, `exclusive` (por defecto `true`) y `persistent`; `ttl` por modelo (`-1` o ausente = `globalTTL`, que por defecto es 0); `hooks.on_startup.preload`; `--mmproj` y `-ncmoe`/`--n-cpu-moe` del `cmd` | Qué modelos chocan (turno), el TTL efectivo (residencia, margen de la afinidad) y la huella de las celdas. El router `matrix`, las dos sintaxis de grupos a la vez o una config que `load.go` rechazaría dejan el daemon sin turno |
+| `GET /running` | `model`, `state` y `ttl`; **nunca** el `cmd` | Si un modelo está `ready` (afinidad) y si hay modelos cargados (antes de escribir la config) |
+| `GET /api/events` (SSE) | El mensaje `inflight` de la carga inicial (peticiones en vuelo por modelo, de cualquier cliente) y las líneas de log de la recarga: «reloading configuration», «configuration reloaded», «failed to reload config», «failed to build new server during reload» | La foto de peticiones ajenas (afinidad, negativas de `residency`) y la vigía de recarga. De la foto **no** se leen las cabeceras |
+| `GET /api/metrics/activity` | La última petición terminada de cada modelo | Cuánto TTL le queda a un modelo cargado. Necesita la persistencia de métricas (`store`, ver [abajo](#métricas-persistentes-del-backend-898)); sin ella, la afinidad solo aprovecha un modelo con TTL 0, con una petición en vuelo o en uso por el propio daemon |
+| `-watch-config` | Sondeo de unos 2 s del fichero | `residency` avisa de que una recarga **descarga todos los modelos y corta las peticiones en curso**, aunque su modelo no cambie (medido en v255: `502` a los ~1,8 s) |
+| `timings` de llama-server en cada respuesta | `prompt_n`, `prompt_ms`, `predicted_n`, `predicted_ms` | `inference_ms`, `wait_ms`, `tok_s`, `prefill_tok_s` y «lento» |
+
+llama-swap resuelve un alias al id real; el turno, la afinidad y la foto usan siempre el id real.
+
 ## Workspace de referencia
 
 Todo vive autocontenido bajo un único raíz (aquí `D:\Projects\llms\`):
@@ -52,7 +69,8 @@ Variables de entorno que enlazan las piezas (en el config del host MCP — Claud
 
 El detalle de GPU (build CUDA para Blackwell, `-ngl`, flash-attn) está en el
 [recipe de llama-swap Blackwell](../recipes/llama-swap-blackwell.md); los `groups`
-(residente + swap) en el [recipe de groups](../recipes/llama-swap-groups.md).
+(un pool `swap` y, solo si la quieres, la residencia opt-in) en el
+[recipe de groups](../recipes/llama-swap-groups.md).
 
 ## Chequear tu instalación: `local-delegate doctor`
 

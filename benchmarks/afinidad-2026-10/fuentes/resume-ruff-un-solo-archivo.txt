@@ -1,0 +1,8 @@
+tools/gen.py:4:1: E402 Module level import not at top of file
+tools/gen.py:5:1: E402 Module level import not at top of file
+tools/gen.py:6:1: E402 Module level import not at top of file
+tools/gen.py:7:1: E402 Module level import not at top of file
+tools/gen.py:20:110: E501 Line too long
+tools/gen.py:31:121: E501 Line too long
+tools/gen.py:32:122: E501 Line too long
+tools/gen.py:50:5: E711 Comparison to `None` should be `cond is None`

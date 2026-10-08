@@ -1,0 +1,270 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 96fb403..6f569c2 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,40 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++## [0.22.1] - 2026-08-03
++
++### Fixed
++- **La captura del README publicaba el log real de quien la regeneraba.** El script promete
++  interceptar `/api/*` con datos de ejemplo para no publicar actividad real, pero dos endpoints se
++  habían quedado fuera de la lista: `/api/stats`, de donde salen los **cuatro KPIs grandes** de la
++  cabecera, y `/api/hooks`, que pinta la tabla de sugerencias. Los dos llegaban al servidor real,
++  así que la imagen enseñaba las cuentas y la telemetría de quien capturó.
++
++  No saltó a la vista porque **dependía del entorno**: sin `LD_HOOK_TELEMETRY_LOG` definida la
++  tarjeta de hooks se esconde sola, así que para quien no tuviera esa variable el escape era
++  invisible. La imagen sí lo delataba, y llevaba varias releases haciéndolo: el pie decía
++  «390 eventos» —los de ejemplo— y el KPI de al lado «120 delegaciones», que eran de otro sitio.
++
++  Ahora los dos están mockeados, y el de `/api/stats` **se deriva de los mismos eventos de
++  ejemplo** en vez de llevar números a mano, así que la cabecera no puede volver a contradecir al
++  resto del panel. `tests/test_captura.py` gana un guardián que compara los `/api/*` que la página
++  pide con los que el script intercepta: un endpoint nuevo sin mock rompe el test en vez de
++  filtrarse callado.
++
++### Changed
++- **Dependencias al día.** Seis actualizaciones de Dependabot, sin cambios de código propio:
++  `fastapi` 0.140.7 → 0.141.1, `uvicorn` 0.51.0 → 0.52.0, `filelock` 3.32.0 → 3.32.2 y `ruff`
++  0.16.0 → 0.16.1 en el grupo de desarrollo. Las cuatro son bumps de minor o parche dentro de los
++  rangos ya declarados —`filelock` sigue bajo su techo `<4`— y ninguna requirió tocar
++  `pyproject.toml`.
++
++- **`actions/upload-pages-artifact` y `actions/deploy-pages`, de la v4 a la v5** en
++  `pages.yml`. Son bumps de **major**, así que se comprobó qué cambia antes de mezclarlos: el
++  `action.yml` de la v5 conserva las dos cosas de las que depende el workflow —el input `path` en
++  la primera y el output `page_url` en la segunda—, y el major solo mueve el runtime
++  (`deploy-pages` pasa a `node24`; `upload-pages-artifact` usa `upload-artifact` v7 por dentro).
++  Ninguna entrada del workflow cambia.
++
+ ## [0.22.0] - 2026-08-02
+ 
+ ### Added
+@@ -1471,7 +1505,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
+   registro oficial de MCP.
+ 
+-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...HEAD
++[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.1...HEAD
++[0.22.1]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.22.0...v0.22.1
+ [0.22.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.21.0...v0.22.0
+ [0.21.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.20.0...v0.21.0
+ [0.20.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.19.0...v0.20.0
+diff --git a/docs/assets/dashboard.json b/docs/assets/dashboard.json
+index 1502e50..185607b 100644
+--- a/docs/assets/dashboard.json
++++ b/docs/assets/dashboard.json
+@@ -11,7 +11,7 @@
+     "Lo comprueba `tests/test_captura.py`. Procedimiento: docs/wiki/Publishing.md."
+   ],
+   "file": "dashboard.png",
+-  "version": "0.22.0",
+-  "sha256": "24d7eaab509bfd835e37ff493c72c9a758dbb7a723e000077ecfec738cc71f2b",
+-  "bytes": 661142
++  "version": "0.22.1",
++  "sha256": "321e97747153b9ad4ec5a5deba58d2f3248ac617cc959eb73f36f686909d45b1",
++  "bytes": 670690
+ }
+diff --git a/docs/assets/dashboard.png b/docs/assets/dashboard.png
+index 007c323..7512353 100644
+Binary files a/docs/assets/dashboard.png and b/docs/assets/dashboard.png differ
+diff --git a/pyproject.toml b/pyproject.toml
+index 043d594..56e9679 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,6 +1,6 @@
+ [project]
+ name = "local-delegate-mcp"
+-version = "0.22.0"
++version = "0.22.1"
+ description = "Delegate mechanical text tasks to a local OpenAI-compatible LLM endpoint to conserve Claude subscription quota."
+ readme = "README.md"
+ requires-python = ">=3.11"
+diff --git a/scripts/dev/capture_dashboard.py b/scripts/dev/capture_dashboard.py
+index 58dd111..286c3f0 100755
+--- a/scripts/dev/capture_dashboard.py
++++ b/scripts/dev/capture_dashboard.py
+@@ -11,6 +11,11 @@ con datos de ejemplo **deterministas**, así que:
+ - `/api/status` se deja pasar sin tocar, para que la versión, el catálogo de modelos y el
+   número de tools que aparecen sean los de verdad.
+ 
++Que la segunda promesa se cumpla **no depende de acordarse**: `tests/test_captura.py` compara los
++`/api/*` que la página pide con las claves de `MOCKS`, y un endpoint nuevo sin interceptar rompe el
++test. Se añadió después de descubrir que `/api/hooks` y `/api/stats` llevaban tiempo escapándose y
++publicando el log real de quien capturaba.
++
+ El README avisa de que son «datos de ejemplo». Mantener ese pie es parte del trato.
+ 
+ Junto al PNG se escribe un **manifiesto** (`dashboard.json`) con la versión que sirvió el
+@@ -150,6 +155,28 @@ SEED_AND_MOCK = """() => {
+   }
+   events.sort((a, b) => a.ts.localeCompare(b.ts));
+ 
++  // Los cuatro KPIs grandes NO se calculan sobre `events`: el panel los pide a `/api/stats`,
++  // porque `/api/events` viene topado y sumar ahí subestimaría. Así que este mock no es opcional
++  // —sin él la cabecera del panel enseña el log real de quien captura— y tampoco puede llevar
++  // números a mano: se derivan de los mismos eventos de ejemplo, con las reglas de
++  // `_accounting()`. Cuando no cuadraban, la imagen se contradecía a sí misma: el pie decía
++  // «390 eventos» y el KPI de al lado «120 delegaciones».
++  const CPT = 4;
++  const stats = events.reduce((a, e) => {
++    const chunks = e.chunks || 1;
++    // `chars_in` de local_describe_image son BYTES, no caracteres: ahí estimar por chars no
++    // significa nada y el token real es el único orden de magnitud honesto.
++    const estimable = e.tool !== 'local_describe_image';
++    a.calls += 1;
++    a.backend_calls += chunks;
++    a.tokens_in += e.tokens_in;
++    a.tokens_out += e.tokens_out;
++    // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
++    if (e.source === 'path') a.saved += estimable ? Math.floor(e.chars_in / CPT) : e.tokens_in;
++    if (!e.ok) a.errors += 1;
++    return a;
++  }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, errors: 0});
++
+   const MOCKS = {
+     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
+       count: events.length, files_read: ['usage-202607.jsonl'],
+@@ -178,6 +205,38 @@ SEED_AND_MOCK = """() => {
+       gen_histogram: {p50: 61.4, p95: 48.2},
+       prompt_histogram: {p50: 1840.5, p95: 1210.7},
+       total_input_tokens: 486320, total_output_tokens: 138940, total_cache_tokens: 214880}},
++    // Los eventos de ejemplo siempre traen `tokens_in`/`tokens_out`, así que no hay ninguno
++    // estimado: `estimated_events: 0` es la consecuencia, no una simplificación.
++    '/api/stats': {total: {calls: stats.calls, backend_calls: stats.backend_calls,
++      errors: stats.errors, tokens_in: stats.tokens_in, tokens_out: stats.tokens_out,
++      saved: stats.saved, estimated_events: 0},
++      tokens_context_saved: stats.saved, tokens_generated_local: stats.tokens_out,
++      tokens_local_input: stats.tokens_in, backend_calls: stats.backend_calls,
++      estimated_events: 0, by_tool: [], by_model: [], by_backend: []},
++    // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
++    // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
++    // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
++    // la cabecera de este script promete que no pasa. Con `LD_HOOK_TELEMETRY_LOG` sin definir la
++    // tarjeta se esconde y el fallo no se veía: dependía del entorno de quien capturaba.
++    //
++    // `total`, `suggested` y `rate` se derivan de las filas en vez de escribirse a mano: si la
++    // cabecera dijera un número y la tabla sumara otro, la imagen enseñaría un panel que el
++    // dashboard real nunca puede pintar.
++    '/api/hooks': (() => {
++      const cats = [
++        {category: 'bash', suggested: 148, total: 604},
++        {category: 'lint', suggested: 96, total: 96},
++        {category: 'sin categoría', suggested: 0, total: 214},
++        {category: 'summarize', suggested: 72, total: 80},
++        {category: 'read', suggested: 41, total: 130},
++        {category: 'extract', suggested: 18, total: 22},
++      ];
++      const total = cats.reduce((a, c) => a + c.total, 0);
++      const suggested = cats.reduce((a, c) => a + c.suggested, 0);
++      return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
++        total, suggested, rate: suggested / total,
++        by_category: cats, by_event: [], by_day: []};
++    })(),
+   };
+ 
+   const real = window.fetch.bind(window);
+diff --git a/server.json b/server.json
+index 58c326d..f57d548 100644
+--- a/server.json
++++ b/server.json
+@@ -6,12 +6,12 @@
+     "url": "https://github.com/ZahiriNatZuke/local-delegate",
+     "source": "github"
+   },
+-  "version": "0.22.0",
++  "version": "0.22.1",
+   "packages": [
+     {
+       "registryType": "pypi",
+       "identifier": "local-delegate-mcp",
+-      "version": "0.22.0",
++      "version": "0.22.1",
+       "transport": { "type": "stdio" },
+       "environmentVariables": [
+         {
+diff --git a/tests/test_captura.py b/tests/test_captura.py
+index 4b3e63b..ff9aadb 100644
+--- a/tests/test_captura.py
++++ b/tests/test_captura.py
+@@ -20,6 +20,7 @@ from __future__ import annotations
+ 
+ import hashlib
+ import json
++import re
+ import tomllib
+ from pathlib import Path
+ 
+@@ -28,6 +29,16 @@ import pytest
+ RAIZ = Path(__file__).resolve().parents[1]
+ CAPTURA = RAIZ / "docs" / "assets" / "dashboard.png"
+ MANIFIESTO = RAIZ / "docs" / "assets" / "dashboard.json"
++SCRIPT = RAIZ / "scripts" / "dev" / "capture_dashboard.py"
++PANEL = RAIZ / "src" / "local_delegate" / "web" / "metrics.py"
++
++# Lo que el script deja pasar al servidor real, con su motivo. Es una lista corta y explícita a
++# propósito: crecer aquí es una decisión, no un descuido.
++PASAN_AL_SERVIDOR_REAL = {
++    # La versión del badge, el catálogo de modelos y el número de tools tienen que ser los de
++    # verdad — el manifiesto los usa para fechar la captura.
++    "/api/status",
++}
+ 
+ REGENERAR = (
+     "Regenera la captura y su manifiesto (necesita Playwright):\n"
+@@ -74,6 +85,39 @@ def test_la_captura_ensena_la_version_actual_del_proyecto():
+     )
+ 
+ 
++def test_la_captura_no_publica_datos_reales_por_un_endpoint_sin_mock():
++    """Todo `/api/*` que la página pide o está mockeado, o está en la lista de los que pasan.
++
++    Este es el fallo que motivó la comprobación: `/api/hooks` y `/api/stats` no estaban en los
++    mocks, llegaban al servidor real y la captura publicaba la telemetría y los KPIs de quien la
++    regeneraba. No saltó a la vista porque **dependía del entorno**: sin
++    `LD_HOOK_TELEMETRY_LOG` la tarjeta de hooks se esconde sola, así que el escape era invisible
++    para quien no tuviera la variable puesta.
++
++    Se comparan los endpoints que la página **pide** —no los que el servidor expone— porque solo
++    puede filtrar lo que el navegador llega a preguntar.
++    """
++    pedidos = set(re.findall(r"fetch\('(/api/[a-z/]+)", PANEL.read_text(encoding="utf-8")))
++    mockeados = set(
++        re.findall(r"^\s*'(/api/[a-z/]+)':", SCRIPT.read_text(encoding="utf-8"), re.MULTILINE)
++    )
++
++    # Control positivo: si un refactor cambia la forma de pedir o de mockear, estas dos búsquedas
++    # devolverían conjuntos vacíos y el test pasaría sin haber comprobado nada.
++    assert len(pedidos) >= 6, f"la extracción de endpoints no encontró casi nada: {pedidos}"
++    assert "/api/events" in mockeados, (
++        f"la extracción de mocks no encontró los conocidos: {mockeados}"
++    )
++
++    escapan = pedidos - mockeados - PASAN_AL_SERVIDOR_REAL
++    assert not escapan, (
++        f"la página pide {sorted(escapan)} y el script no lo intercepta, así que la captura "
++        f"publicaría la respuesta real de quien la regenere.\n"
++        f"Añádelo a MOCKS en {SCRIPT.relative_to(RAIZ).as_posix()}, o a PASAN_AL_SERVIDOR_REAL "
++        f"con su motivo si de verdad tiene que pasar."
++    )
++
++
+ def test_el_manifiesto_no_se_escribe_a_mano():
+     """El texto que explica de dónde sale el manifiesto viaja con él, no en un comentario suelto.
+ 
+diff --git a/uv.lock b/uv.lock
+index f73bc03..7513bca 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -437,7 +437,7 @@ wheels = [
+ 
+ [[package]]
+ name = "local-delegate-mcp"
+-version = "0.22.0"
++version = "0.22.1"
+ source = { editable = "." }
+ dependencies = [
+     { name = "fastapi" },

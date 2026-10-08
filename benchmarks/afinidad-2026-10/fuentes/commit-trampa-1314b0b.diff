@@ -1,0 +1,456 @@
+diff --git a/.sdd/changes/auth-puerto-daemon/state.json b/.sdd/changes/auth-puerto-daemon/state.json
+index 424008f..f2614d3 100644
+--- a/.sdd/changes/auth-puerto-daemon/state.json
++++ b/.sdd/changes/auth-puerto-daemon/state.json
+@@ -3,9 +3,9 @@
+   "slug": "auth-puerto-daemon",
+   "title": "El puerto del daemon exige token cuando se configura uno",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T21:02:45.922Z",
+-  "updatedAt": "2026-07-31T21:29:27.659Z",
++  "updatedAt": "2026-07-31T23:06:55.393Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:55.265Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T21:29:27.659Z",
+       "reason": "CI verde, hilo resuelto, PR mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:55.265Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:55.393Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/cancelled-ci-main/state.json b/.sdd/changes/cancelled-ci-main/state.json
+index 6c60f12..632735c 100644
+--- a/.sdd/changes/cancelled-ci-main/state.json
++++ b/.sdd/changes/cancelled-ci-main/state.json
+@@ -3,9 +3,9 @@
+   "slug": "cancelled-ci-main",
+   "title": "El cancelled del CI en main tiene causa conocida y firma reconocible",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T21:41:26.677Z",
+-  "updatedAt": "2026-07-31T21:59:32.101Z",
++  "updatedAt": "2026-07-31T23:06:56.015Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:55.824Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T21:59:32.101Z",
+       "reason": "CI verde y PR mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:55.824Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:56.015Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/ctrl-c-limpio/state.json b/.sdd/changes/ctrl-c-limpio/state.json
+index 780a047..92bcf34 100644
+--- a/.sdd/changes/ctrl-c-limpio/state.json
++++ b/.sdd/changes/ctrl-c-limpio/state.json
+@@ -3,9 +3,9 @@
+   "slug": "ctrl-c-limpio",
+   "title": "Ctrl+C sobre el MCP stdio sale limpio en vez de con traceback",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T22:20:08.487Z",
+-  "updatedAt": "2026-07-31T22:29:04.806Z",
++  "updatedAt": "2026-07-31T23:06:56.738Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:56.588Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T22:29:04.806Z",
+       "reason": "CI verde y mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:56.588Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:56.738Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/iconos-atados-al-svg/state.json b/.sdd/changes/iconos-atados-al-svg/state.json
+index d2650a3..0625d81 100644
+--- a/.sdd/changes/iconos-atados-al-svg/state.json
++++ b/.sdd/changes/iconos-atados-al-svg/state.json
+@@ -3,9 +3,9 @@
+   "slug": "iconos-atados-al-svg",
+   "title": "Los PNG de la marca quedan atados al favicon.svg",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T22:43:27.651Z",
+-  "updatedAt": "2026-07-31T22:55:19.711Z",
++  "updatedAt": "2026-07-31T23:06:57.235Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:57.118Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T22:55:19.711Z",
+       "reason": "CI verde y mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:57.118Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:57.235Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/js-dashboard-comportamiento/state.json b/.sdd/changes/js-dashboard-comportamiento/state.json
+index 3d01fbf..16f0bb4 100644
+--- a/.sdd/changes/js-dashboard-comportamiento/state.json
++++ b/.sdd/changes/js-dashboard-comportamiento/state.json
+@@ -3,9 +3,9 @@
+   "slug": "js-dashboard-comportamiento",
+   "title": "El JS del panel se prueba ejecutandolo",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T22:34:37.136Z",
+-  "updatedAt": "2026-07-31T22:41:43.998Z",
++  "updatedAt": "2026-07-31T23:06:57.018Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:56.863Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T22:41:43.998Z",
+       "reason": "CI verde y mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:56.863Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:57.018Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/sync-wiki-nativa/state.json b/.sdd/changes/sync-wiki-nativa/state.json
+index 5a1ade9..3680aa8 100644
+--- a/.sdd/changes/sync-wiki-nativa/state.json
++++ b/.sdd/changes/sync-wiki-nativa/state.json
+@@ -3,9 +3,9 @@
+   "slug": "sync-wiki-nativa",
+   "title": "La wiki nativa se sincroniza sola desde docs/wiki",
+   "mode": "standard",
+-  "status": "verifying",
++  "status": "closed",
+   "createdAt": "2026-07-31T21:29:27.814Z",
+-  "updatedAt": "2026-07-31T21:37:33.143Z",
++  "updatedAt": "2026-07-31T23:07:20.634Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -26,16 +26,16 @@
+       "actor": "user"
+     },
+     "conformance": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:07:20.431Z",
++      "evidence": "PR 108 mergeado; el workflow corrio y publico (commit 5ce59fa en la wiki): 11 paginas, 18 enlaces convertidos, 0 rotos, 18 internos conservados, e identicas a lo que genera el script",
++      "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:55.520Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -111,6 +111,43 @@
+       "at": "2026-07-31T21:37:33.143Z",
+       "evidence": "620 passed 1 skipped (611 antes); ruff y format limpios; node --check OK; 5 mutantes, 5 cazados tras arreglar un test que no podia ver lo que decia comprobar",
+       "actor": "user"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:55.520Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "verifying",
++      "to": "result-review",
++      "at": "2026-07-31T23:07:08.567Z",
++      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
++    },
++    {
++      "type": "gate",
++      "gate": "conformance",
++      "status": "approved",
++      "at": "2026-07-31T23:07:20.431Z",
++      "evidence": "PR 108 mergeado; el workflow corrio y publico (commit 5ce59fa en la wiki): 11 paginas, 18 enlaces convertidos, 0 rotos, 18 internos conservados, e identicas a lo que genera el script",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "result-review",
++      "to": "closing",
++      "at": "2026-07-31T23:07:20.527Z",
++      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:07:20.634Z",
++      "reason": "wiki verificada contra la publicada; 0.20.0 fuera"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/telemetria-hooks-dashboard/state.json b/.sdd/changes/telemetria-hooks-dashboard/state.json
+index b6c4d4c..041f2fd 100644
+--- a/.sdd/changes/telemetria-hooks-dashboard/state.json
++++ b/.sdd/changes/telemetria-hooks-dashboard/state.json
+@@ -3,9 +3,9 @@
+   "slug": "telemetria-hooks-dashboard",
+   "title": "El dashboard lee la telemetria de los hooks",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T22:00:22.634Z",
+-  "updatedAt": "2026-07-31T22:18:36.031Z",
++  "updatedAt": "2026-07-31T23:06:56.436Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:56.132Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T22:18:36.031Z",
+       "reason": "CI verde y mergeado"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:56.132Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:56.436Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }
+diff --git a/.sdd/changes/version-derivada/state.json b/.sdd/changes/version-derivada/state.json
+index 6372a0e..5a55448 100644
+--- a/.sdd/changes/version-derivada/state.json
++++ b/.sdd/changes/version-derivada/state.json
+@@ -3,9 +3,9 @@
+   "slug": "version-derivada",
+   "title": "__version__ deja de ser un literal clavado y sale de la metadata del paquete",
+   "mode": "standard",
+-  "status": "closing",
++  "status": "closed",
+   "createdAt": "2026-07-31T20:30:38.654Z",
+-  "updatedAt": "2026-07-31T20:42:01.027Z",
++  "updatedAt": "2026-07-31T23:06:55.115Z",
+   "gates": {
+     "spec": {
+       "status": "approved",
+@@ -32,10 +32,10 @@
+       "actor": "user"
+     },
+     "memory": {
+-      "status": "pending",
+-      "updatedAt": null,
+-      "evidence": null,
+-      "actor": null
++      "status": "approved",
++      "updatedAt": "2026-07-31T23:06:54.949Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
+     }
+   },
+   "history": [
+@@ -133,6 +133,21 @@
+       "to": "closing",
+       "at": "2026-07-31T20:42:01.027Z",
+       "reason": "Sin follow-up requerido; queda la nota del vault al cierre de sesion"
++    },
++    {
++      "type": "gate",
++      "gate": "memory",
++      "status": "approved",
++      "at": "2026-07-31T23:06:54.949Z",
++      "evidence": "Backlog del vault vaciado y jornada-2026-07-31-el-backlog-cerrado escrita; punteros de memoria de Claude Code actualizados; sin secretos ni datos personales",
++      "actor": "user"
++    },
++    {
++      "type": "transition",
++      "from": "closing",
++      "to": "closed",
++      "at": "2026-07-31T23:06:55.115Z",
++      "reason": "0.20.0 publicada en PyPI y en el registro MCP; verificado con una tool real"
+     }
+   ]
+ }

@@ -39,6 +39,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
   no aparece en la config— o si el backend **no es local** (cualquier host que no sea loopback: la Mac,
   que está fuera de alcance). Un modelo sin turno se trata como compatible con todos. `doctor` y
   `local_status` dicen por qué no hay turno.
+  *(Aclarado el 2026-10-07: dos motivos más y sus textos, en «Aclaraciones posteriores a la
+  aprobación».)*
 - **REQ-003: Operación, conjunto aceptable y concesión.** Una **operación** es una llamada a una tool
   (simple, troceada o map-reduce, con sus saltos de respaldo).
   - Al empezar, **sin consultar la red**, la operación calcula su **conjunto aceptable** `A`: el modelo
@@ -75,6 +77,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
     modelo de `A'` es compatible con `modelos(activos)` sin contar la propia operación (solo puede
     pasar tras una concesión forzada), la operación suelta la plaza y su reserva y vuelve a la
     **cabeza** de la cola, sin perder su puesto.
+    *(Aclarado el 2026-10-07: `A'` con el destino de un salto y la elección atómica, en
+    «Aclaraciones posteriores a la aprobación».)*
   - La operación conserva el turno de principio a fin; cada trozo toma y suelta su plaza como hoy. Las
     operaciones con el mismo modelo comparten el turno, y su concurrencia la sigue limitando
     `MAX_CONCURRENT_REQUESTS`.
@@ -90,11 +94,13 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
   *Justificación:* un `m` así no desaloja nada de lo que usan ni de lo que piden los que esperan, así
   que no retrasa ningún cambio de modelo, y no impide que la cabeza se conceda, porque la concesión
   solo mira la compatibilidad. Con la config de hoy (un solo grupo `swap`) no se da nunca; solo sirve
-  con un residente opcional (`--fijar`). La afinidad **no** se aprovecha de E-1: un alternativo que
+  con un residente opcional (`--pin`). La afinidad **no** se aprovecha de E-1: un alternativo que
   choca con lo que pide la cabeza no la cumple.
   *Cota:* una espera solo puede ser adelantada por peticiones de E-1, que no chocan con ella. Por
   tanto, se concede como muy tarde cuando terminan las operaciones que estaban en `activos` al llegar
   ella y las que esperaban delante.
+  *(Aclarado el 2026-10-07: E-1 también en evaluaciones posteriores, en «Aclaraciones posteriores a
+  la aprobación».)*
 - **REQ-006: Saltos de respaldo.** Si una operación necesita otro modelo a mitad (un salto de respaldo,
   REQ-006 de F3), primero **suelta su plaza** y **sale de `activos`**. Después pide turno con
   `A = {destino}` (o, para el paso `cargado`, el conjunto de REQ-019), **al final de la cola**, y por
@@ -113,6 +119,8 @@ requisitos de afinidad (B) **no se implementan** si la evaluación (F) no aprueb
     conservan. Las demás siguen la regla normal: un `activos` con modelos que chocan entre sí no deja
     pasar a nadie que choque con alguno de ellos. Quien comprueba la condición es la propia espera,
     que se despierta al menos una vez por segundo (REQ-003, punto 6).
+    *(Aclarado el 2026-10-07: la forzada pone el reloj a cero y hay una como mucho por evaluación,
+    en «Aclaraciones posteriores a la aprobación».)*
     *Por qué así, sin suponer ningún plazo HTTP:* una llamada en vuelo es una operación viva. Termina
     cuando la corta su propio plazo, `HTTP_TIMEOUT` (`LOCAL_DELEGATE_TIMEOUT`, 180 s por defecto), sea
     cual sea su valor. Por eso el tiempo en vuelo no cuenta como falta de progreso. **Con
@@ -338,7 +346,7 @@ vez no bloquean».
 
 ### E. CLI de residencia y TTL
 
-- **REQ-029:** `local-delegate llamaswap residencia` (sin opciones) **muestra**, para la config
+- **REQ-029:** `local-delegate llamaswap residency` (sin opciones) **muestra**, para la config
   resuelta (`--config`; si no, `LLAMASWAP_CONFIG` del shell; si no, la ruta que usa el daemon, que la da
   su endpoint de REQ-039): cada modelo con su grupo, `swap`/`exclusive`/`persistent`, el **TTL
   efectivo** (resolviendo `-1` y la ausencia a `globalTTL`), si tiene `--mmproj` y si está en
@@ -347,17 +355,17 @@ vez no bloquean».
   `persistent` con TTL efectivo mayor que 0 («`persistent` no lo mantiene cargado») y de los modelos
   con TTL efectivo 0 fuera de un grupo persistente («se queda cargado hasta que otro lo desaloje»).
   Nunca imprime claves de API ni los `cmd`.
-- **REQ-030:** `--ninguno` deja la config **sin residente**. Mueve los miembros de los grupos
-  `persistent` al único grupo con `swap: true` (si no hay exactamente uno, pide `--grupo`), borra los
+- **REQ-030:** `--none` deja la config **sin residente**. Mueve los miembros de los grupos
+  `persistent` al único grupo con `swap: true` (si no hay exactamente uno, pide `--group`), borra los
   grupos `persistent` vacíos y pone `--ttl` a los modelos con TTL efectivo 0. Si hay alguno y no se
   pasa `--ttl`, falla y sugiere el TTL más frecuente entre los demás modelos sin `--mmproj` (hoy, 120).
   Si la config ya cumple, dice «nada que cambiar» y **no escribe**.
-- **REQ-031:** `--fijar MODELO` es la residencia **opt-in**: pone el modelo en un grupo
+- **REQ-031:** `--pin MODEL` es la residencia **opt-in**: pone el modelo en un grupo
   `persistent: true, swap: false, exclusive: false` con `ttl: 0`. Siempre avisa de que ese modelo
   ocupará VRAM de forma permanente. Solo lo hace si
-  `vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserva-gb` (2 por
+  `vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserve-gb` (2 por
   defecto); si no cabe, se niega y dice cuánto falta. La VRAM de cada modelo sale, en este orden, de:
-  1. `--vram-modelo ID=GiB` (repetible): cifras medidas, por ejemplo las de la tabla de coexistencia de
+  1. `--vram-model ID=GiB` (repetible): cifras medidas, por ejemplo las de la tabla de coexistencia de
      F2 (`insumos/llamaswap-grupos.md` §2);
   2. el estimador de `llamaswap_config.py`, **ampliado para `-ncmoe`/`--n-cpu-moe N`**: a los pesos se
      les restan los bytes de los tensores de expertos (`blk.<i>.ffn_*_exps.*`) de las capas `i < N`. El
@@ -365,10 +373,10 @@ vez no bloquean».
      consecutivos, sin tabla de tipos) y se suma el fichero de `--mmproj` si lo hay. Solo se usa si
      pasó su control en los cuatro modelos medidos (ver «Controles»); si falla en alguno, no se usa
      para ninguno;
-  3. si no hay cifra fiable para algún modelo implicado, se niega y pide `--vram-modelo` para ese
+  3. si no hay cifra fiable para algún modelo implicado, se niega y pide `--vram-model` para ese
      modelo.
-- **REQ-032:** `--ttl MODELO=SEGUNDOS` (repetible) cambia el TTL. `SEGUNDOS` es un entero ≥ 1. El 0 se
-  rechaza y remite a `--fijar`, porque es residencia. El `-1` solo se acepta si `globalTTL` es mayor
+- **REQ-032:** `--ttl MODEL=SECONDS` (repetible) cambia el TTL. `SECONDS` es un entero ≥ 1. El 0 se
+  rechaza y remite a `--pin`, porque es residencia. El `-1` solo se acepta si `globalTTL` es mayor
   que 0.
 - **REQ-033:** **Escritura:**
   - edición **quirúrgica**: las líneas que no cambian quedan **byte a byte** iguales (comentarios,
@@ -387,7 +395,7 @@ vez no bloquean».
     línea que contenga `key`.
 - **REQ-034:** **`-watch-config`, antes y después de escribir.**
   - *Antes:* el CLI avisa de que llama-swap recargará en unos 2 s y **descargará todos los modelos**. Se
-    niega, salvo con `--ahora`, si hay delegaciones propias en curso (`inflight.json` con pids vivos),
+    niega, salvo con `--now`, si hay delegaciones propias en curso (`inflight.json` con pids vivos),
     peticiones en vuelo en llama-swap de **cualquier** cliente (la foto de REQ-013) o modelos en
     `/running`.
   - *Después:* confirma qué pasó con la vigía de REQ-039, que se abre **antes** de escribir y espera
@@ -411,7 +419,7 @@ vez no bloquean».
   informativo con un residente configurado (cuánta VRAM retiene); aviso si hay un grupo `persistent`
   con TTL mayor que 0 o una celda de la matriz con la huella cambiada. **Topología**: dice si hay
   turno y, si no, por qué (REQ-002).
-- **REQ-038:** `residencia --restaurar <bak>` vuelve a una copia. Valida que la copia parsea y cumple
+- **REQ-038:** `residency --restore <bak>` vuelve a una copia. Valida que la copia parsea y cumple
   lo de `load.go`, hace a su vez una copia del fichero actual, reemplaza de forma atómica (REQ-033) y
   pasa por las mismas negativas y la misma confirmación de REQ-034. Restaura los bytes tal cual, sin
   edición quirúrgica.
@@ -429,8 +437,8 @@ vez no bloquean».
   2. si el daemon no responde, directamente contra llama-swap con `LOCAL_DELEGATE_API_KEY` del shell,
      haciendo lo mismo;
   3. si ninguna de las dos funciona (sin daemon, 401 o sin key), el estado es **«no se sabe»**: el CLI
-     se niega a escribir salvo con `--ahora`, dice qué no pudo comprobar y no pide la key. Con
-     `--ahora` escribe y avisa de que no puede confirmar la recarga.
+     se niega a escribir salvo con `--now`, dice qué no pudo comprobar y no pide la key. Con
+     `--now` escribe y avisa de que no puede confirmar la recarga.
 
 ### F. Evaluación que aprueba las celdas (va antes de implementar B)
 
@@ -495,6 +503,26 @@ vez no bloquean».
 - **REQ-043:** **Veredicto por programa**: un subcomando de `analizar_benchmark.py` aplica los criterios
   de abajo y escribe `benchmarks/afinidad-2026-10/veredicto.json` (estado, criterios y **huella** de
   REQ-010 por celda) y la tabla que se pega en `verification.md`. Ninguna celda se aprueba a mano.
+- **REQ-044:** **Idioma del mensaje de `local_commit_msg`** (decisión del usuario, 2026-10-07: «Fijar el
+  idioma y repetir»). La tanda de T5 midió que, con un prompt que no pedía idioma, el 26B escribió 17
+  de los 30 mensajes en inglés y Qwen3.6, 6; las trampas de REQ-042 están en español, así que el
+  idioma las habría delatado y la hoja no se podía generar.
+  - Variable nueva **`LOCAL_DELEGATE_COMMIT_IDIOMA`** (texto libre y corto, `es`, `en`…; se lee con
+    `config.commit_idioma()` por los helpers `_env*`, al llamar).
+  - Con ella puesta, el prompt de sistema de `local_commit_msg` termina con la orden «Escribe el mensaje
+    de commit entero (primera línea y cuerpo) en *idioma*.» `es` → «español», `en` → «inglés», y también
+    `fr`, `pt`, `de` e `it`; un código con región (`es-CU`) se reconoce por su primera parte, y lo que
+    no está en el mapa se usa tal cual.
+  - Sin ella, la orden es «Escribe el mensaje de commit entero (primera línea y cuerpo) en el idioma
+    predominante de los textos del diff (comentarios, documentación y mensajes).»
+  - Vale para los dos estilos (`conventional` y `plain`) y va **solo donde se redacta el mensaje**: la
+    llamada única y el reduce del map-reduce. El map y el reagrupado de partes producen notas
+    intermedias que nadie lee y no la llevan (lo que decide el idioma del resultado es el reduce).
+  - **Efecto en la evaluación:** los casos de commit de `benchmarks/afinidad-2026-10/cases.json` se
+    reconstruyen con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`, que es lo que tendrá esta PC en producción, y
+    sus resultados sin idioma se apartan a `resultados-sin-idioma/`. Solo cambian los prompts (`system`)
+    de los 30 casos reales, las 9 trampas y el techo; los casos, las trampas y las reglas no
+    cambian.
 
 #### Criterio de aceptación de las celdas (escrito antes de medir)
 
@@ -718,7 +746,7 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 ### Scenario: ver la residencia
 
 - **Given** la config de hoy
-- **When** se ejecuta `local-delegate llamaswap residencia`
+- **When** se ejecuta `local-delegate llamaswap residency`
 - **Then** dice «sin residente (recomendado)», lista los 5 modelos con TTL 120 (el 12B, 30) y no
   imprime claves ni `cmd`.
 
@@ -726,39 +754,39 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 
 - **Given** una copia de `config.yaml.pre-sin-residente-20261006.bak` (grupo `resident` persistente con
   `gemma3-4b`, TTL 600)
-- **When** se ejecuta `residencia --ninguno --config <copia>`
+- **When** se ejecuta `residency --none --config <copia>`
 - **Then** el `diff` contra la copia son exactamente las líneas del grupo `resident` borradas y
   `- gemma3-4b` añadida a `swap` (el TTL 600 no se toca, porque no es 0); queda una copia
   `.<fecha>.bak` y el YAML parsea a lo esperado.
 
 ### Scenario: fijar un residente que no cabe
 
-- **Given** `--vram-gb 16 --reserva-gb 2` y `--vram-modelo` con las cifras medidas (26B 10,29 GiB,
+- **Given** `--vram-gb 16 --reserve-gb 2` y `--vram-model` con las cifras medidas (26B 10,29 GiB,
   Qwen3.6 9,88 GiB)
-- **When** se ejecuta `residencia --fijar gemma4-26b-a4b`
+- **When** se ejecuta `residency --pin gemma4-26b-a4b`
 - **Then** se niega: 10,29 + 9,88 = 20,17 GiB no caben en 14; dice que faltan 6,17 GiB y no escribe.
 
 ### Scenario: fijar el 4B con la config de hoy se acepta
 
-- **Given** la config de hoy, `--vram-gb 16 --reserva-gb 2` y `--vram-modelo` para los cinco: las
+- **Given** la config de hoy, `--vram-gb 16 --reserve-gb 2` y `--vram-model` para los cinco: las
   cifras medidas (4B 3,19; 12B 8,85; Qwen3.6 9,88; 26B 10,29 GiB) y, para `qwen35-2b`, que no se midió,
   3,5 GiB (el extremo alto de la estimación del insumo)
-- **When** se ejecuta `residencia --fijar gemma3-4b --config <copia>`
+- **When** se ejecuta `residency --pin gemma3-4b --config <copia>`
 - **Then** se acepta (3,19 + 10,29 = 13,48 ≤ 14 GiB): el 4B pasa a un grupo `persistent` con `ttl: 0` y el CLI avisa
-  de que retendrá VRAM. Si el estimador pasa su control, lo mismo sin `--vram-modelo`.
+  de que retendrá VRAM. Si el estimador pasa su control, lo mismo sin `--vram-model`.
 
 ### Scenario: no escribir con delegaciones en curso
 
 - **Given** una delegación viva en `inflight.json`, o una petición en vuelo de otro cliente en la foto
   de llama-swap
-- **When** se ejecuta `residencia --ttl gemma4-12b=60`
-- **Then** se niega y explica que la recarga descargaría el modelo; con `--ahora`, escribe.
+- **When** se ejecuta `residency --ttl gemma4-12b=60`
+- **Then** se niega y explica que la recarga descargaría el modelo; con `--now`, escribe.
 
 ### Scenario: sin credencial no se escribe a ciegas
 
 - **Given** el daemon apagado y el shell sin `LOCAL_DELEGATE_API_KEY`
-- **When** se ejecuta `residencia --ttl gemma4-12b=60`
-- **Then** se niega con «no se sabe si hay delegaciones en curso», sin pedir la key; con `--ahora`,
+- **When** se ejecuta `residency --ttl gemma4-12b=60`
+- **Then** se niega con «no se sabe si hay delegaciones en curso», sin pedir la key; con `--now`,
   escribe y avisa de que no puede confirmar la recarga.
 
 ### Scenario: llama-swap rechaza la config
@@ -778,9 +806,17 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 ### Scenario: restaurar una copia
 
 - **Given** una config cambiada con `--ttl` y su copia `.bak`
-- **When** se ejecuta `residencia --restaurar <bak>`
+- **When** se ejecuta `residency --restore <bak>`
 - **Then** el fichero queda byte a byte como la copia, el actual queda guardado en otra copia y se
   informa de la recarga.
+
+### Scenario: el mensaje de commit sale en el idioma pedido
+
+- **Given** `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y un diff con comentarios en inglés
+- **When** se llama a `local_commit_msg` (`conventional` o `plain`)
+- **Then** el prompt de sistema lleva la orden de escribir el mensaje entero en español; sin la variable,
+  lleva la de escribir en el idioma predominante del diff. En un diff que se procesa por partes, la
+  lleva la llamada que redacta el mensaje y no las que describen cada trozo.
 
 ## Edge cases and failure behavior
 
@@ -812,7 +848,7 @@ Los nombres de modelo son los de hoy. Lo que se comprueba es el rol y la topolog
 - **Las dos sintaxis de grupos a la vez:** el CLI se niega (llama-swap tampoco arranca).
 - **Un `.bak` con el mismo segundo ya existe:** se añade un sufijo; nunca se pisa.
 - **El disco falla a mitad del reemplazo:** el original queda intacto (renombrado atómico).
-- **`--ninguno` sin ningún grupo `swap: true`:** error, con `--grupo`.
+- **`--none` sin ningún grupo `swap: true`:** error, con `--group`.
 - **Procesos fuera del daemon** (una instancia stdio de Claude Desktop, `benchmark.py`, la Mac): no
   pasan por el turno, pero sus peticiones en vuelo **sí** aparecen en la foto de REQ-013 y cuentan para
   las condiciones b y c.
@@ -904,9 +940,9 @@ Cada control nombra la tarea del plan que produce lo que consume y puede dar un 
 | Umbral de lentitud: la regla exacta | (a) Sobre las filas **de la PC** de la copia de `metrics.db`, cruzadas con `usage-*.jsonl` como en el insumo y agrupadas por evento, en orden temporal y con la ventana de 50, el mínimo de 10 y `tokens_out ≥ 8`: marca como mucho el 5 % de los eventos. Si marca más, el umbral se revisa con el usuario antes de implementar D. (b) **Control positivo de la regla** (no de la población del daemon): la misma regla sobre las filas de Qwen3.6 de todos los orígenes marca las 570, 571 y 573. Si no las marca, la regla está mal, no el umbral | Copia de `metrics.db`, `usage-*.jsonl` y un script nuevo que sustituye a `umbral_lento.py` | Tarea de la referencia de velocidad |
 | Lentitud y tamaño de la entrada | Mediana de generación por tramos de entrada en las filas de la PC: si el tramo de más de 10k es menor que 0,75 × el de menos de 2k, la referencia va por tramos (REQ-025); si no, una sola. Además cuenta los falsos positivos con entradas de más de 10k tokens con la regla elegida | Lo mismo | Tarea de la referencia de velocidad |
 | Edición quirúrgica | Sobre copias de la config vigente y de la del 2026-09-15, y sobre una tabla de casos: secuencias sangradas y sin sangrar (la de hoy es sin sangrar); comentarios en la misma línea y entre miembros; un modelo sin `ttl` cuyo `ttl` se inserta después de un `cmd` entre comillas en varias líneas y después de un escalar `\|` o `>`; un grupo al final del fichero sin salto de línea final; fin de línea mixto (el real `config.yaml.pre-b10909-20260915.bak`); BOM; claves entre comillas; la sintaxis `routing.router.settings.groups`; y, para rechazar, anclas, alias, `<<:` y claves duplicadas. En cada caso, o el `diff` son solo las líneas pedidas, o hay una negativa con mensaje: nunca un fichero roto. Un mutante que reescriba con `safe_dump` falla porque pierde los comentarios de la cabecera y cambia las comillas de `apiKeys` (el número de líneas lo da el test) | Copias de los `config.yaml`, con las claves sustituidas por valores falsos | Tarea del CLI |
-| Estimador de VRAM con `-ncmoe` | Contra lo medido en F2 (`insumos/llamaswap-grupos.md` §2: 4B 3 270, 12B con mmproj 9 060, 26B `-ncmoe 12` 10 534 y Qwen3.6 `-ncmoe 20` 10 120 MiB): pasa si las cuatro estimaciones quedan entre −3 % y +10 % de lo medido (quedarse corto es lo peligroso: da OOM). Si alguna no pasa, `--fijar` exige `--vram-modelo` para todos los modelos implicados (REQ-031) | GGUF reales (solo lectura de cabecera) | Tarea del CLI |
+| Estimador de VRAM con `-ncmoe` | Contra lo medido en F2 (`insumos/llamaswap-grupos.md` §2: 4B 3 270, 12B con mmproj 9 060, 26B `-ncmoe 12` 10 534 y Qwen3.6 `-ncmoe 20` 10 120 MiB): pasa si las cuatro estimaciones quedan entre −3 % y +10 % de lo medido (quedarse corto es lo peligroso: da OOM). Si alguna no pasa, `--pin` exige `--vram-model` para todos los modelos implicados (REQ-031) | GGUF reales (solo lectura de cabecera) | Tarea del CLI |
 | Recarga con `-watch-config` | Salen las cuatro salidas de REQ-034 con el llama-swap de prueba (recarga válida, rechazo escrito sin autocomprobación, sin `-watch-config`, apagado). Además se mide si las peticiones en curso **se cortan** al recargar: si no se cortan, el aviso de REQ-034 se suaviza; si se cortan, se mantiene la negativa | llama-swap v255 de prueba con su propio `store` | Tarea de prueba de llama-swap |
-| Restaurar | `--restaurar` deja el fichero byte a byte como la copia. Un lector que relee el fichero en bucle durante una restauración lenta nunca ve un YAML a medias; con un mutante que copia en dos pasos, sí lo ve | Copias de prueba | Tarea del CLI |
+| Restaurar | `--restore` deja el fichero byte a byte como la copia. Un lector que relee el fichero en bucle durante una restauración lenta nunca ve un YAML a medias; con un mutante que copia en dos pasos, sí lo ve | Copias de prueba | Tarea del CLI |
 
 ## Traceability
 
@@ -917,8 +953,9 @@ Cada control nombra la tarea del plan que produce lo que consume y puede dar un 
 | REQ-010 a REQ-018 | Matriz con huella, elección pura y foto de llama-swap | Tests con endpoints simulados; test matriz = veredicto; prueba de la carrera |
 | REQ-019 a REQ-023, REQ-037 | `cadenas.py`, `checks.py`, `local_status`, wiki; enmienda registrada en F3 | Tests de cadenas con y sin `cargado` (matriz vacía); textos de `doctor` y `local_status`; punto en la spec de F3 y gate de F3 aprobado |
 | REQ-024 a REQ-028 | `timings`, ventana de referencia, log y panel | Tests del log con y sin `timings`; paridad JS; controles de lentitud |
-| REQ-029 a REQ-036, REQ-038, REQ-039 | CLI `llamaswap residencia`, endpoints del daemon, `init-llamaswap`, checks de `doctor` | Tests sobre copias; tabla de edición; estimador contra lo medido; prueba de recarga y restauración |
+| REQ-029 a REQ-036, REQ-038, REQ-039 | CLI `llamaswap residency`, endpoints del daemon, `init-llamaswap`, checks de `doctor` | Tests sobre copias; tabla de edición; estimador contra lo medido; prueba de recarga y restauración |
 | REQ-040 a REQ-043 | Corpus, tanda, hoja y veredicto | `veredicto.json` y tabla en `verification.md` |
+| REQ-044 | Orden de idioma en `local_commit_msg` y corpus reconstruido con `es` (T5b) | Tests con mutantes; `afinidad --comprobar`; `--seco` con solo las celdas de commit pendientes |
 
 ## Decisiones confirmadas
 
@@ -955,8 +992,8 @@ gane en la hoja:
    pedir la key. Recomendado: sí.
 5. **Orden de llegada estricto**, sin ventana para unirse al turno (hallazgo menor 27): cuesta un
    cambio de modelo de más en el escenario de la inanición. Recomendado: estricto.
-6. **Nombre del comando:** `local-delegate llamaswap residencia` con `--ninguno`, `--fijar`, `--ttl`,
-   `--restaurar` y `--vram-modelo`.
+6. **Nombre del comando:** `local-delegate llamaswap residency` con `--none`, `--pin`, `--ttl`,
+   `--restore` y `--vram-model`.
 
 ## Aclaraciones posteriores a la aprobación
 
@@ -987,3 +1024,92 @@ cambia.** Se aclara:
    primera hoja.
 6. **Si la hoja no se termina**, la celda de commit queda no aprobada y `local_commit_msg` sigue como
    hoy (REQ-018 para esa celda).
+
+### REQ-044: idioma del mensaje de commit (2026-10-07, durante T5)
+
+La tanda de T5 se paró antes de la hoja porque los modelos escribían los commits en idiomas distintos
+(26B: 17 en inglés, 13 en español; Qwen3.6: 23 en español, 6 en inglés, 1 ambiguo), y las trampas, en
+español, se habrían notado. La sesión principal preguntó al usuario cómo seguir y **decidió: «Fijar el
+idioma y repetir»**. Se añade REQ-044 (y la tarea T5b del plan): el idioma pasa a ser parte del prompt
+de producción, se reconstruye el corpus con él y se repiten solo las celdas de commit. **La regla de
+aprobación del usuario no cambia**; las filas mecánicas ya medidas se conservan, y las de commit sin
+idioma se apartan, sin borrarse, a `resultados-sin-idioma/`. Las trampas no se reescriben: siguen siendo
+las preregistradas en T4, y con el idioma fijado ya no las delata el idioma.
+
+### REQ-002, REQ-003, REQ-005 y REQ-007: aclaraciones tras la revisión de la ola 3 (2026-10-07)
+
+Las propuso la revisión del código de la ola 3 (T7 lector de topología, T8 núcleo del turno, T9
+referencia de velocidad) para alinear el texto con lo implementado. El texto de arriba no se
+reescribe; cada requisito afectado lleva una línea que remite aquí y, **donde contradiga esta tabla,
+manda la tabla**. Como la enmienda de F3 (REQ-037), necesita una aprobación **nueva** del gate `spec`
+de este cambio, del usuario, posterior a esta escritura y con evidencia que cite esta tabla. Las
+tareas del plan que la recogen (T7, T8, T10, T11 y T14) llevan la marca «aclarado el 2026-10-07».
+
+| Requisito | Texto vigente | Queda así |
+| --- | --- | --- |
+| REQ-003, conjunto concedible (`:66-69`) | «si no, `A'_W` contiene el modelo del rol si es compatible con `modelos(activos)`, y los alternativos de `A_W` que **ya están** en `modelos(activos)` con un modelo elegido» | «si no, `A'_W` contiene el modelo del rol —o, en una espera de salto, el destino (campo `directos` de la petición)— si es compatible con `modelos(activos)`; los demás de `A_W` solo si ya están elegidos en `activos` y son compatibles con ellos». La última frase («un alternativo que no está en uso…») sigue igual |
+| REQ-003, «Elección» (`:74-79`) | La operación reduce su reserva al modelo elegido o, si ninguno cabe, suelta plaza y reserva y vuelve a la cabeza | Igual, y además **la elección es atómica**: reducir la reserva al primer candidato compatible o volver a la cabeza de la cola se hace en un solo paso, bajo el mismo cerrojo que la concesión, sin que otra evaluación vea un estado intermedio |
+| REQ-005, E-1 (`:91-93`) | «se concede **en el acto** una petición `R` con algún modelo `m`…» | «se concede, **al llegar o en cualquier evaluación posterior, con la misma condición**, una petición `R` con algún modelo `m`…». La justificación y la cota no cambian |
+| REQ-007, red de seguridad (`:112-121`) | El reloj de falta de progreso se pone a cero cuando una llamada empieza o termina | Además, **una concesión forzada también pone a cero el reloj** de falta de progreso, y **como mucho se concede una forzada por evaluación** |
+| REQ-002, motivos de «sin topología» (`:37-41`) | «sin `LLAMASWAP_CONFIG`, sin el extra `[llamaswap]`, YAML ilegible, router `matrix`, o un modelo que no aparece en la config» | Se añaden **«dos sintaxis»** (`groups`/`matrix` arriba y `routing.router` a la vez) y **«no cumple load.go»** (la config que `load.go` de v255 rechazaría, con las reglas de REQ-033). Una config con **forma inesperada** nunca rompe la lectura: cuenta como sin topología: «ilegible» si el YAML no se puede leer o su raíz no es un mapa, y «no cumple load.go» si una clave tiene un tipo que `load.go` no puede deserializar (un mapa escrito como lista o al revés). `doctor` y `local_status` dicen el motivo con estas palabras: «sin LLAMASWAP_CONFIG», «sin PyYAML» (el extra `[llamaswap]`), «ilegible», «matrix», «dos sintaxis», «no cumple load.go»; en `local_status`, «Turno: no (<motivo>)» (plan, T10 punto 8). El backend no local y el modelo que no aparece en la config siguen como estaban |
+| REQ-002 y REQ-006, el salto sin turno (`:37-41`, `:104-109`) — **aceptada por el usuario el 2026-10-07** (propuesta de la revisión de la ola 4) | «se comporta como hoy» sin topología; REQ-006 describe el salto con turno | **Sin turno, el salto también suelta la plaza** y la vuelve a pedir: REQ-037 enmienda REQ-017 de F3 de forma incondicional, y el daemon tiene un solo camino de código para el salto. Por eso, también sin topología, puede verse una espera de plaza (`espera_local: "plaza"`) a mitad de una operación, entre el intento fallido y el respaldo. El tope de `MAX_CONCURRENT_REQUESTS` no cambia |
+| REQ-031, la comprobación de «cabe» de `--pin` (`:363-377`) — **aceptada por el usuario el 2026-10-07** (propuesta de la revisión de la ola 5) | «`vram(MODELO) + max(vram(m) de los modelos de los demás grupos) ≤ --vram-gb − --reserve-gb`» | «`vram(MODELO)` + la suma de los residentes que ya hay (TTL efectivo 0) + el peor caso del resto por grupos `≤ --vram-gb − --reserve-gb`», con el peor caso de `llamaswap_config.worst_case_gb` (por grupo, el mayor si `swap: true` y la suma si `swap: false`; suma entre grupos). Solo puede negar más: con el texto vigente, un residente que ya existe o un grupo `swap: false` quedaban fuera de la cuenta. Los dos escenarios de la spec dan lo mismo (20,17 GiB frente a 14, faltan 6,17; 13,48 frente a 14, se acepta) |
+| REQ-029 a REQ-034 y REQ-038, nombres del CLI — **nombres del CLI en inglés, decisión del usuario 2026-10-07** | Subcomando y opciones en español: `llamaswap residencia`, `--ninguno`, `--fijar MODELO`, `--restaurar`, `--ahora`, `--vram-modelo ID=GiB`, `--grupo`, `--reserva-gb`, `--ttl MODELO=SEGUNDOS` | En inglés, como el resto del CLI, sin alias en español (el comando es nuevo): `llamaswap residency`, `--none`, `--pin MODEL`, `--restore`, `--now`, `--vram-model ID=GiB`, `--group`, `--reserve-gb`, `--ttl MODEL=SECONDS`; `--config`, `--dry-run`, `--vram-gb` y `--ttl` no cambian. Las referencias de esta spec ya usan los nombres nuevos; la ayuda y los mensajes siguen en español, como los de `init-llamaswap` |
+| REQ-019 a REQ-023, nombre del paso de las cadenas — **decisión del usuario, 2026-10-07** (nombres que se teclean en inglés) | El paso se llama `cargado`; cadenas `code → cargado → long`, `long → cargado → code`, `mechanical → cargado → long` | **El paso de las cadenas se llama `loaded`** (decisión del usuario, nombres que se teclean en inglés), como los roles `mechanical`, `long` y `code`: `code → loaded → long`, `long → loaded → code`, `mechanical → loaded → long`, y `doctor` dice «usa roles (mechanical, long, code, loaded)». `residente` y `resident` siguen como sinónimos obsoletos con el aviso de REQ-022; `cargado` no se acepta (nunca llegó a publicarse). Las menciones a `cargado` de arriba se leen como `loaded` |
+| REQ-034, REQ-036 y REQ-039, nombres de interfaz — **decisión del usuario, 2026-10-07** (lo que es código o término de máquina va en inglés; en español solo los textos para personas y la prosa) | Endpoints `GET /api/llamaswap/estado`, `POST /api/llamaswap/vigia`, `GET /api/llamaswap/vigia/<id>`; checks `backend.residencia` y `backend.topologia`; campo `ruta_config` | Endpoints **`GET /api/llamaswap/status`**, **`POST /api/llamaswap/watch`**, **`GET /api/llamaswap/watch/<id>`**; checks **`backend.residency`** y **`backend.topology`**. Campos del JSON del estado: `llamaswap` (`ok`, `down`, `unknown`), `detail`, `models` (`id`, `state`, `ttl`), `in_flight` (peticiones por modelo), `own_delegations`, **`config_path`** (antes `ruta_config`), `watch_config`, `autostart`. La vigía: `id` al abrir; `outcome` (`reloaded`, `rejected`, `not_watching`, `down`, y `unresolved` si llama-swap empezó a recargar y no terminó en 45 s) y `line`. Lo que se imprime sigue en español: «recargó», «rechazó», «no vigila el fichero», «caído». Las menciones de arriba a los nombres viejos se leen con estos |
+| REQ-036, «aviso informativo con un residente configurado» — **decisión del orquestador, 2026-10-07** (revisión de la ola 7) | «aviso informativo con un residente configurado (cuánta VRAM retiene)» | `doctor` no tiene un estado informativo: un residente elegido con `--pin` sale **`[ OK ]`** con la VRAM que retiene en el detalle («residente: X (residencia opt-in: `X` retiene N GiB de VRAM de forma permanente)», o «sin cifra fiable» si no la hay). Un `[WARN]` subiría el exit code de una máquina configurada así a propósito. El aviso (`[WARN]`) queda para el grupo `persistent` con TTL mayor que 0. Además, los dos checks toman la config como el CLI (`--config`, si no `LLAMASWAP_CONFIG` del shell, si no la del daemon) y el de topología dice lo que el daemon informa de su turno cuando contesta; el detalle dice de dónde salió |
+| Todos, nombres del código — **renombrado a inglés del código de esta rama (decisión del usuario, 2026-10-07)** | Módulos, identificadores, variables de entorno, campos y valores de máquina que añadió esta rama, en español (`turno.py`, `LOCAL_DELEGATE_TURNO_MAX_S`, `espera_turno_ms`, `turno_en_uso`…) | **En inglés**, sin alias (nada de esto se publicó), con las equivalencias de «Renombrado a inglés del código de esta rama» al final de esta sección. Los textos para personas (mensajes, ayuda, `doctor`, `local_status`, panel) y la prosa siguen en español. Por excepción, también el campo `espera_local` de `/api/inflight` e `inflight.json` (anterior a la rama) y sus valores: solo viajan entre el daemon y el panel, que salen juntos, y no se guardan en ningún log. Las menciones de arriba a los nombres viejos se leen con los nuevos |
+| REQ-024 a REQ-026, ritmo con salto, espera y siembra — **propuesta de la revisión de la ola 8 (T14), 2026-10-07** | REQ-024: `tok_s` y `prefill_tok_s` «sumados sobre sus llamadas reales»; REQ-025: la referencia se siembra «al arrancar» con «el log de uso del mes en curso y del anterior» | `inference_ms` y `wait_ms` siguen sumando **todas** las llamadas reales de la operación, saltos incluidos; una llamada sin `timings` (un timeout, un 500) cuenta entera en `wait_ms`. Los ritmos (`tok_s`, `prefill_tok_s`) del evento salen **solo de las llamadas del modelo que respondió** (el `model` del evento), y es ese `tok_s` el que se compara con su referencia (`pace_rel`, `slow`, `free_ram_mb`) y el que entra en su ventana; si ese modelo no tiene llamadas con `timings`, no se mide ni se registra. La referencia se crea y se siembra **la primera vez que hace falta** (el primer evento con ritmo, o `local_status`), una vez por origen de la siembra; con el log fijo (`LOCAL_DELEGATE_LOG`, sin rotación) se siembra con el fichero entero, y la caché va atada a ese fichero |
+| REQ-010, qué huella se compara — **propuesta de la integración de la ola 9 (T15), aceptada por el usuario el 2026-10-07** | «Solo se usa una celda `aprobada` cuya **huella** coincide con la config vigente» (sin decir de qué modelo) | Se compara **la huella del alternativo** (`huella` de `veredicto.json`); `huella_rol` no. Un cambio del modelo del rol por variable lo cubre la clave de la celda (`compared_role` frente a `config.modelos_por_rol()`): la celda deja de valer y `doctor` lo avisa. Límite: otra cuantización del 4B **bajo el mismo id** no se detecta |
+| REQ-010, huella del prompt — **aceptada por el usuario el 2026-10-07** | «el `sha256` del prompt de sistema de la tool» | El `sha256` de los prompts que construyó el corpus (sus parámetros en `matrix.PROMPT_INPUTS`: `español` e `inglés` para `local_translate`, `max_words=200` para `local_lint_summary`, los cinco formatos de `local_delegate`), **reconstruidos con el código vigente**: un cambio de `_guard` o del texto de la tool deja la celda sin base. Límite: una traducción a otro idioma o un `local_lint_summary` con otro `max_words` usan la celda aunque ese prompt concreto no se midiera |
+| REQ-010, `doctor` y las rutas de esta PC — **aceptada por el usuario el 2026-10-07** | «Una celda que no está en `veredicto.json`, o cuya huella no coincide, no se usa (cuenta como `sin base`), y `doctor` lo avisa» | Las celdas de `matrix.py` llevan las rutas de los GGUF de la PC donde se midieron (`D:\Projects\llms\models\…`, ya en git en `veredicto.json`). En **otra máquina** (la ruta medida y la de la config no existen las dos aquí) no hay afinidad, y `doctor` lo dice en el detalle **sin `[WARN]`** («afinidad inerte aquí»). **Otro GGUF bajo el mismo id en esta máquina** (los dos ficheros existen), otro modelo en el rol por variable o cualquier otra diferencia de la huella: `[WARN]`. T16 lo documenta |
+| REQ-012 y REQ-015, el rol en enfriamiento — **aceptada por el usuario el 2026-10-07** | No lo trata | Con el modelo del rol en enfriamiento no hay afinidad: la operación va directa a la cadena del rol, como antes de T15 (su paso `loaded` puede llevar a un alternativo, con aviso de respaldo) |
+| REQ-015 y REQ-021, fallo de capacidad del alternativo de la afinidad — **decisión del usuario, 2026-10-07 (aceptada)** | REQ-015: «si el alternativo falla con una clase que salta, el primer candidato es el modelo del rol y después su cadena»; REQ-021: «un fallo de capacidad solo puede saltar a `loaded`» | Con afinidad, si el alternativo falla **por capacidad**, se intenta el **modelo del rol y luego su cadena** (REQ-015), aunque REQ-021 diga que la capacidad no salta: la afinidad la eligió el daemon, no quien llama. El evento lleva `affinity_dropped` y `affinity_dropped_class` (la clase con que falló el alternativo). Fuera de la afinidad, REQ-021 no cambia |
+
+*Por qué cada una:*
+
+- **REQ-003.** Con el texto vigente, una espera de salto (`A = {destino}`, REQ-006) no tiene «modelo
+  del rol» dentro de `A` y su destino solo entraría en `A'` si ya estuviera en uso: con alguien en
+  `activos`, el salto no se concedería nunca por la regla normal. El destino cuenta como el rol. Y
+  «compatibles con ellos» solo restringe tras una concesión forzada, cuando `activos` puede tener
+  modelos que chocan entre sí (REQ-007, «las demás siguen la regla normal»). La elección atómica
+  evita que dos evaluaciones vean la reserva a medio reducir.
+- **REQ-005.** Una petición que llega cuando aún no cumple E-1 y la cumple después (por ejemplo, al
+  salir alguien de `activos`) se concede entonces, en vez de quedar detrás de la cabeza. Sigue sin
+  chocar con nada de lo que usan ni piden los de delante, así que la cota se mantiene.
+- **REQ-007.** Sin poner el reloj a cero, tras una forzada la siguiente cabeza encontraría el reloj ya
+  pasado de `LOCAL_DELEGATE_TURNO_MAX_S` y se forzaría también, en cascada, en la misma evaluación.
+- **REQ-002.** Son los motivos que ya devuelve el lector (`topologia.py`) y que `doctor` y
+  `local_status` deben poder nombrar.
+- **REQ-024 a REQ-026 (ola 8).** Con un salto, sumar la velocidad de los dos modelos da un `slow` falso
+  (un 200 inservible del largo con 4096 tokens a 40 tok/s seguido de 200 tokens del de código a 100
+  tok/s da `pace_rel` 0,41 contra la referencia del de código) y mete ~41 en la ventana del respaldo.
+  La espera de REQ-024 es la fórmula `latency_ms − inference_ms`: lo que no fue inferencia medida,
+  incluido un intento fallido sin `timings`. Sembrar al primer uso lee el log una vez por proceso,
+  como pide REQ-025, sin tocar los dos arranques (`entrypoint.main`, `daemon.serve`); el coste es que
+  la primera delegación lee el log dentro de la llamada.
+
+### Renombrado a inglés del código de esta rama (2026-10-07)
+
+Decisión del usuario: lo que es código o término de máquina va en inglés; los textos para personas y
+la prosa, en español. Alcance: lo que **definió** esta rama (base `4c7115b`); lo publicado antes lo
+hará el SDD siguiente. Sin alias: nada de esto se publicó. Detalle, controles y lo que quedó fuera a
+propósito, en `evidencias/renombrado.md`.
+
+| Antes | Ahora |
+| --- | --- |
+| `src/local_delegate/turno.py`, `topologia.py`, `residencia.py`, `ritmo.py`, `huella.py` | `turn.py`, `topology.py`, `residency.py`, `pace.py`, `footprint.py` |
+| `tests/llamaswap_de_prueba.py`, `tests/servidor_falso_llama.py` | `tests/fake_llamaswap.py`, `tests/fake_llama_server.py` |
+| `tests/test_turno.py`, `test_turno_daemon.py`, `test_topologia.py`, `test_residencia.py`, `test_residencia_cli.py`, `test_ritmo.py`, `test_huella.py` | `test_turn.py`, `test_turn_daemon.py`, `test_topology.py`, `test_residency.py`, `test_residency_cli.py`, `test_pace.py`, `test_footprint.py` |
+| `tests/test_llamaswap_de_prueba.py`, `test_medir_lentitud.py`, `test_tanda_afinidad.py`, `test_commit_idioma.py` | `test_fake_llamaswap.py`, `test_measure_slowness.py`, `test_affinity_batch.py`, `test_commit_language.py` |
+| `scripts/medir_lentitud.py`, `scripts/dev/tanda_afinidad.py`, `scripts/dev/medir_carrera_ttl.py` | `scripts/measure_slowness.py`, `scripts/dev/affinity_batch.py`, `scripts/dev/measure_ttl_race.py` |
+| `LOCAL_DELEGATE_TURNO_MAX_S`, `LOCAL_DELEGATE_COMMIT_IDIOMA`, `LOCAL_DELEGATE_AFINIDAD_MARGEN_S`, `LD_AFINIDAD_CORPUS` | `LOCAL_DELEGATE_TURN_MAX_S`, `LOCAL_DELEGATE_COMMIT_LANGUAGE`, `LOCAL_DELEGATE_AFFINITY_MARGIN_S`, `LD_AFFINITY_CORPUS` |
+| `/api/inflight` e `inflight.json`: `espera_local` (`"plaza"`, `"turno"`), `turno_en_uso`, `turno_posicion` | `local_wait` (`"slot"`, `"turn"`), `turn_in_use`, `turn_position` |
+| Log de uso: `espera_turno_ms`, `turno: "forzado"` | `turn_wait_ms`, `turn: "forced"` |
+| REQ-025 (`pace.py`): `ritmo_rel`, `lento`; por ventana `modelo`, `tramo`, `mediana`, `muestras`; por evento `elegible` | `pace_rel`, `slow`; `model`, `span`, `median`, `samples`; `eligible` (la clave de entrada del evento sigue siendo `modelo`, como las filas de `metrics.db`) |
+| REQ-024 a REQ-026, campos del log y variable (T14): `inferencia_ms`, `espera_ms`, `ram_libre_mb`, el prefill de REQ-024 y `LOCAL_DELEGATE_UMBRAL_LENTO` (`config.UMBRAL_LENTO`) | `inference_ms`, `wait_ms`, `free_ram_mb`, `prefill_tok_s` y `LOCAL_DELEGATE_SLOW_THRESHOLD` (`config.SLOW_THRESHOLD`); `tok_s` no cambia |
+| Estimador (`llamaswap_config`): `expertos_cpu_bytes`, fuente `"cifra"` de `--vram-model` | `cpu_expert_bytes`, `"figure"` |
+| Clases y funciones principales: `Turno`, `Peticion`, `Espera`, `Activo`, `Concesion`, `Estado`; `Foto`, `SinTopologia`, `topologia.leer`/`foto`; `Referencias`, `sembrar_desde_log`; `huella.huella`, `flags_del_cmd`; `Turno.pedir`/`soltar`/`elegir` | `Turn`, `PendingRequest`, `Wait`, `Active`, `Grant`, `State`; `Snapshot`, `NoTopology`, `topology.read`/`snapshot`; `References`, `seed_from_log`; `footprint.footprint`, `cmd_flags`; `Turn.request`/`release_slot`/`choose` |
+| Panel (JS): `palabrasTurno`, `turnoTxt`; motivo `PALABRAS_ESPERA.plaza` | `turnWords`, `turnText`; `PALABRAS_ESPERA.slot` |
+| Opciones de los scripts nuevos: `veredicto-afinidad`, `generar-commit`, `leer-commit`, `afinidad` (corpus), `--reglas`, `--huellas`, `--juicio`, `--solo-mecanicas`, `--trampas`, `--seco`, `--copia`, `--desde`… | `affinity-verdict`, `generate-commit`, `read-commit`, `affinity`, `--rules`, `--footprints`, `--judgement`, `--mechanical-only`, `--traps`, `--dry`, `--copy`, `--since`… (lista completa en la evidencia) |
+| REQ-010 a REQ-019, nombres de T15 (afinidad) | `elegir(A', rol, observado, propios)`, `vigente`, el estado `sin base` de una celda, `routing: "afinidad"`, `afinidad_vuelo_ajeno`, `afinidad_fallida`, `LOCAL_DELEGATE_AFINIDAD_MARGEN_S`, el paso `cargado` | `matrix.choose(grantable, role, observed, own)` (pura), `matrix.is_current(cell, …)`; «sin base» no es un valor de máquina: una celda sin base no se usa y `doctor` lo dice en texto («afinidad sin base, la huella cambió»); `routing: "affinity"`, `affinity_foreign_flight`, `affinity_failed`, `config.AFFINITY_MARGIN_S` (`LOCAL_DELEGATE_AFFINITY_MARGIN_S`), `loaded`. Además: `matrix.Cell(tool, alternative, compared_role, footprint)`, `matrix.CELLS`, `matrix.Observed`, `Turn.choose_without_waiting` y `Turn.wait_for_grant`. Las claves de `veredicto.json` (`celdas`, `alternativo`, `rol_comparado`, `estado`: `aprobada`/`rechazada`, `huella`) no cambian: son datos publicados del benchmark |

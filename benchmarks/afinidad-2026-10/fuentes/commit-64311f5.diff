@@ -1,0 +1,324 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 33b6a99..b37dbc9 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++### Fixed
++- **`update` no reponía los hooks de una versión anterior.** El chequeo `scaffold.hook_files` solo
++  miraba que los scripts existieran con su nombre, así que unos hooks viejos daban `[ OK ]`, y la
++  reparación solo actuaba si faltaba la carpeta entera. Actualizar el paquete no toca
++  `~/.claude/hooks/`, de modo que `uv tool install … && local-delegate update` dejaba corriendo los
++  hooks del último `install`: la Mac pasó una semana en la 0.31.1 con los hooks de la 0.27, sin la
++  telemetría de F1 ni el bloqueo. Ahora el chequeo compara cada script con el del paquete, byte a
++  byte, y avisa también si falta uno que no se registra (`hook_common.py`); `update` los repone en
++  los dos casos.
++- **Al reponer los hooks, `update` quitaba el de lectura.** Reescribía su registro en
++  `settings.json` sin la bandera del hook de lectura, y `merge_hook_settings` retira antes todas
++  nuestras entradas. Hasta ahora solo pasaba si faltaba la carpeta de hooks; con el arreglo anterior
++  habría pasado en cada actualización. Ahora `update` deja el de lectura como estaba.
++
+ ## [0.31.1] - 2026-09-22
+ 
+ ### Security
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index 1969c1e..cf8093c 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -200,7 +200,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Entorno | clientes MCP observados | con qué clientes se ha **hablado** de verdad: versión, revisión de protocolo negociada y si declaran `elicitation` (o sea, si las tools pueden preguntarles en vez de fallar). Sale de `clients.jsonl`, en `LOG_DIR`, y es **informativo**: nunca sube el exit code |
+ | Entorno | rol rápido retirado | si `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST` siguen en el entorno. El rol `fast` se retiró en la 0.30.0 —no lo enrutaba ninguna tool— y esas variables ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo |
+ | Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías— y de qué modelo sale el residente: del grupo `persistent` de llama-swap o, si no se puede leer, del rol mecánico |
+-| Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/` |
++| Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
+ | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
+ | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
+ | Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
+diff --git a/docs/wiki/Remote-backend.md b/docs/wiki/Remote-backend.md
+index 07693c7..af6b9a1 100644
+--- a/docs/wiki/Remote-backend.md
++++ b/docs/wiki/Remote-backend.md
+@@ -77,7 +77,12 @@ local-delegate update             # aplica y deja el daemon arriba
+ 
+ Revisa el estado real de la máquina con las mismas comprobaciones que `doctor`, actualiza el pin
+ donde exista, completa la configuración que falte y termina dejando el daemon arriba: lo reinicia si
+-corría, lo levanta si no. Es idempotente. El backend de inferencia **no se toca** salvo que lo pidas
++corría, lo levanta si no. Es idempotente.
++
++Eso incluye **los hooks de Claude Code**: si los de `~/.claude/hooks/local-delegate/` no son los del
++paquete instalado, los repone, y deja el hook de lectura como estaba —registrado si lo estaba, fuera
++si no—. Hasta la 0.31.1 no lo hacía: miraba solo que los ficheros existieran, así que tras actualizar
++el paquete seguían corriendo los hooks de la versión con la que se hizo el último `install`. El backend de inferencia **no se toca** salvo que lo pidas
+ con `--restart-backend`, porque reiniciar llama-swap descargaría los modelos de la VRAM.
+ 
+ **Lo que `update` NO hace: actualizar el propio CLI si lo instalaste con `uv tool`.** Te lo dice al
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index b5d6ca4..766d0ee 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -53,6 +53,7 @@ STATUS_LABEL: dict[str, str] = {
+ }
+ 
+ INSTALL_HINT = "local-delegate install"
++UPDATE_HOOKS_HINT = "local-delegate update  (repone los hooks sin tocar el resto)"
+ SERVE_HINT = "local-delegate serve  (o arranca la tarea programada del daemon)"
+ CLI_HINT = "uv tool install local-delegate-mcp  (deja `local-delegate` en el PATH)"
+ RESTART_HINT = "reinicia el daemon para que sirva la versión instalada"
+@@ -408,6 +409,31 @@ def _dir_entries(path: Path) -> tuple[list[str] | None, str | None]:
+         return None, f"no se pudo listar {path}: {exc.strerror or exc}"
+ 
+ 
++def _packaged_hooks() -> dict[str, Path]:
++    """Los ``.py`` de hooks que trae el paquete instalado, por nombre. Vacío si no se pueden leer.
++
++    Vacío degrada a mirar solo los nombres de ``_HOOK_EVENTS``, como antes: sin la referencia no
++    hay con qué comparar, y un ``warn`` inventado haría que ``update`` reescribiera los hooks en
++    cada pasada.
++    """
++    try:
++        return {
++            p.name: p for p in (install.resources_dir() / "hooks").iterdir() if p.suffix == ".py"
++        }
++    except OSError:
++        return {}
++
++
++def _differs(instalado: Path, empaquetado: Path | None) -> bool:
++    """True si el script instalado no es byte a byte el del paquete. Sin referencia, no se afirma."""
++    if empaquetado is None:
++        return False
++    try:
++        return instalado.read_bytes() != empaquetado.read_bytes()
++    except OSError:
++        return False
++
++
+ def _has_block(text: str, begin: str, end: str) -> bool:
+     """True si el bloque gestionado está delimitado y en orden."""
+     start = text.find(begin)
+@@ -627,10 +653,22 @@ def _probe_hook_files(ctx: Context) -> Result:
+         return Result(UNKNOWN, reason)
+     if entries is None:
+         return Result(MISSING, f"no existe {ctx.hooks_dir}", INSTALL_HINT)
+-    expected = [script for script, _event, _matcher in install._HOOK_EVENTS]
++    empaquetados = _packaged_hooks()
++    expected = sorted(empaquetados) or [script for script, _event, _matcher in install._HOOK_EVENTS]
+     faltan = [name for name in expected if name not in entries]
+     if faltan:
+         return Result(WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(faltan)}", INSTALL_HINT)
++    # Que estén no basta: hay que mirar que sean LOS DE ESTA VERSIÓN. Actualizar el paquete no
++    # toca `~/.claude/hooks/`, y mirando solo los nombres unos hooks de la 0.27 pasaban por buenos
++    # con la 0.31.1 instalada —así estuvo la Mac del 2026-09-15 al 2026-09-22, sin el bloqueo ni
++    # la telemetría de F1, y `update` respondiendo que no había nada que reparar—.
++    viejos = [name for name in expected if _differs(ctx.hooks_dir / name, empaquetados.get(name))]
++    if viejos:
++        return Result(
++            WARN,
++            f"scripts de otra versión en {ctx.hooks_dir}: {', '.join(viejos)}",
++            UPDATE_HOOKS_HINT,
++        )
+     # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
+     # Python deja ahí un `__pycache__/` y el conteo decía «4 script(s)» donde hay 3. No es cosmético
+     # —es JUSTO el número que se mira para confirmar que un script retirado desapareció—, y con un
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index dde6faf..e7266ac 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -327,6 +327,31 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
+     return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
+ 
+ 
++def read_hook_registered(claude_dir: Path) -> bool:
++    """True si el ``settings.json`` de Claude Code registra ya nuestro hook de lectura.
++
++    Lo necesita ``update``: al reponer los hooks reescribe el registro con ``merge_hook_settings``,
++    que **retira** todas nuestras entradas previas antes de poner las nuevas. Si no sabe que el de
++    lectura estaba puesto, lo quita, y el bloqueo se apaga en silencio justo al actualizar.
++    Se mira el nombre del script y no ``READ_HOOK_FLAG``: una entrada vieja sin la bandera también
++    es una decisión del usuario de tenerlo, y respetarla es no quitarlo.
++    """
++    hooks = _read_json(claude_dir / "settings.json").get("hooks")
++    if not isinstance(hooks, dict):
++        return False
++    hooks_dir = claude_dir / "hooks" / HOOKS_SUBDIR
++    for groups in hooks.values():
++        for group in groups if isinstance(groups, list) else []:
++            for hook in group.get("hooks", []) if isinstance(group, dict) else []:
++                if not isinstance(hook, dict) or not _is_ours(hook, hooks_dir):
++                    continue
++                args = hook.get("args")
++                texto = " ".join([str(hook.get("command", ""))] + [str(a) for a in args or []])
++                if _READ_HOOK[0] in texto:
++                    return True
++    return False
++
++
+ def merge_hook_settings(
+     settings: dict, entries: list[tuple[str, str | None, str]], hooks_dir: Path
+ ) -> tuple[dict, int]:
+diff --git a/src/local_delegate/update.py b/src/local_delegate/update.py
+index 2872cfe..56e4255 100644
+--- a/src/local_delegate/update.py
++++ b/src/local_delegate/update.py
+@@ -153,7 +153,16 @@ class Repair:
+ # `scaffold.mcp_codex`: no se pisa configuración escrita por una persona. El aviso dice qué pasa y
+ # qué comando lo arregla; ejecutarlo es del usuario.
+ REPAIRS: tuple[Repair, ...] = (
+-    Repair("scaffold.hook_files", (checks.MISSING,), frozenset({"hooks"}), frozenset({"claude"})),
++    Repair(
++        "scaffold.hook_files",
++        # `warn` aquí significa «faltan scripts» o «son de otra versión»: los dos son nuestros y
++        # están viejos. Sin repararlo en `warn`, actualizar el paquete dejaba los hooks de la
++        # versión anterior para siempre, porque nada más en `update` los reescribe.
++        (checks.MISSING, checks.WARN),
++        frozenset({"hooks"}),
++        frozenset({"claude"}),
++        why="scripts de hooks de otra versión",
++    ),
+     Repair(
+         "scaffold.hook_settings",
+         # `warn` aquí significa «hooks de una instalación anterior»: son nuestros y están
+@@ -263,6 +272,10 @@ def plan_repairs(
+                         targets={target},
+                         python_exe=install.default_python(),
+                         mcp_mode=mcp_mode,
++                        # Reponer los hooks reescribe su registro, y `merge_hook_settings` retira
++                        # antes todas nuestras entradas: sin esto, el hook de lectura desaparecía
++                        # al actualizar y el bloqueo se apagaba sin que nadie lo pidiera.
++                        enable_read_hook=install.read_hook_registered(opts.home / ".claude"),
+                         # Con un HOME simulado hay que escribir el fichero a mano: el camino
+                         # por CLI (`claude mcp add-json --scope user`) escribe SIEMPRE en el
+                         # `~/.claude.json` del usuario real, ignorando `home`. Se descubrió
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 0e7660b..6791c4a 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -87,8 +87,10 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complet
+         if complete:
+             hooks_dir = claude_dir / "hooks" / install.HOOKS_SUBDIR
+             hooks_dir.mkdir(parents=True)
+-            for script, _event, _matcher in install._HOOK_EVENTS:
+-                (hooks_dir / script).write_text("# hook\n", encoding="utf-8")
++            # Los scripts de verdad, byte a byte: `scaffold.hook_files` compara contra los del
++            # paquete, y un «# hook» de relleno contaría como hooks de otra versión.
++            for script in (install.resources_dir() / "hooks").glob("*.py"):
++                (hooks_dir / script.name).write_bytes(script.read_bytes())
+             entries = [
+                 (event, matcher, install.hook_command(hooks_dir, script, "python"))
+                 for script, event, matcher in install._HOOK_EVENTS
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index 319fb6b..d4899cc 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -1347,16 +1347,43 @@ def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
+ def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
+     """Control del test de arriba: sin esto, un conteo clavado a mano lo dejaría en verde.
+ 
+-    Se añade un `.py` en vez de borrar uno porque el HOME de pruebas tiene **un solo** script (el
+-    de `_HOOK_EVENTS`), y quitarlo dispararía el `warn` de «faltan scripts», que es otro camino y
+-    no diría nada del conteo.
++    Se añade un `.py` en vez de borrar uno porque quitarlo dispararía el `warn` de «faltan
++    scripts», que es otro camino y no diría nada del conteo. Y se añade uno que **no** es del
++    paquete: reescribir uno de los nuestros ahora es «script de otra versión», también otro camino.
+     """
+     home = make_home(tmp_path)
+     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
+     antes = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
+ 
+-    (hooks_dir / "hook_common.py").write_text("# ayudante", encoding="utf-8")
++    (hooks_dir / "mi_hook_propio.py").write_text("# del usuario", encoding="utf-8")
+ 
+     result = result_for("scaffold.hook_files", make_ctx(home))
+     assert result.status == checks.OK
+     assert f"{antes + 1} script(s)" in result.detail, result.detail
++
++
++def test_hooks_de_otra_version_son_warn(tmp_path):
++    """Los nombres están todos, pero el contenido no es el del paquete instalado.
++
++    Es lo que tuvo la Mac una semana: paquete en 0.31.1 y hooks de la 0.27, y el check en `ok`
++    porque solo miraba nombres. `update` no los reponía y la telemetría de F1 nunca llegó a correr.
++    """
++    home = make_home(tmp_path)
++    script = install._READ_HOOK[0]
++    (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / script).write_text(
++        "# versión anterior\n", encoding="utf-8"
++    )
++    result = result_for("scaffold.hook_files", make_ctx(home))
++    assert result.status == checks.WARN
++    assert "otra versión" in result.detail
++    assert script in result.detail
++    assert result.fix_hint == checks.UPDATE_HOOKS_HINT
++
++
++def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
++    """`hook_common.py` no está en `_HOOK_EVENTS`, pero sin él ningún hook arranca."""
++    home = make_home(tmp_path)
++    (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / "hook_common.py").unlink()
++    result = result_for("scaffold.hook_files", make_ctx(home))
++    assert result.status == checks.WARN
++    assert "hook_common.py" in result.detail
+diff --git a/tests/test_update.py b/tests/test_update.py
+index 2a794f5..fec28a1 100644
+--- a/tests/test_update.py
++++ b/tests/test_update.py
+@@ -749,3 +749,57 @@ def test_los_nombres_del_servicio_coinciden_con_la_wiki():
+     texto = wiki.read_text(encoding="utf-8")
+     for nombre in (update.TASK_NAME, update.LAUNCH_LABEL, update.SYSTEMD_UNIT):
+         assert nombre in texto, f"{nombre} no aparece en docs/wiki/Daemon.md"
++
++
++# --- Hooks de otra versión: el caso de la Mac ---------------------------------
++
++
++def test_hooks_de_otra_version_se_reponen_sin_apagar_el_de_lectura(tmp_path):
++    """Paquete nuevo, hooks viejos y el de lectura encendido: `update` los repone y lo respeta.
++
++    Tres cosas, y cada una falló o habría fallado: el check daba `ok` con hooks de otra versión,
++    la reparación solo actuaba si faltaba el directorio entero, y al reponer los hooks se
++    reescribía su registro sin el de lectura —con el arreglo de los dos primeros, eso habría
++    apagado el bloqueo en cada actualización—.
++    """
++    home = make_home(tmp_path, complete=False)
++    install.apply(
++        install.plan_install(
++            install.Options(
++                home=home,
++                components={"hooks"},
++                targets={"claude"},
++                python_exe="python",
++                enable_read_hook=True,
++            )
++        ),
++        dry_run=False,
++        out=lambda *a: None,
++    )
++    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
++    viejo = hooks_dir / install._READ_HOOK[0]
++    viejo.write_text("# versión anterior\n", encoding="utf-8")
++    assert install.read_hook_registered(home / ".claude")
++
++    actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
++    assert any(a.kind == "copy" and a.target == hooks_dir for a in actions), actions
++    install.apply(actions, dry_run=False, out=lambda *a: None)
++
++    empaquetado = install.resources_dir() / "hooks" / install._READ_HOOK[0]
++    assert viejo.read_bytes() == empaquetado.read_bytes()
++    assert install.read_hook_registered(home / ".claude"), "update apagó el hook de lectura"
++    segunda, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
++    assert [a for a in segunda if "hooks" in str(a.target)] == []
++
++
++def test_sin_hook_de_lectura_registrado_update_no_lo_enciende(tmp_path):
++    """El otro lado: respetar la elección es también no activarlo si no estaba."""
++    home = make_home(tmp_path)
++    assert not install.read_hook_registered(home / ".claude")
++    hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
++    (hooks_dir / install._HOOK_EVENTS[0][0]).write_text("# versión anterior\n", encoding="utf-8")
++
++    actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
++    assert actions
++    install.apply(actions, dry_run=False, out=lambda *a: None)
++    assert not install.read_hook_registered(home / ".claude")

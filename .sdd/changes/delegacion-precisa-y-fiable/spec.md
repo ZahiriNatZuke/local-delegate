@@ -242,6 +242,30 @@ separado**. Se conservan sus identificadores `REQ-001` a `REQ-020` para no rompe
 - **Sigue sin medir**: los numeros del enfriamiento (3 fallos, 120 s, duplicar, tope 900 s), que
   vienen de bajar de escala los de OmniRoute. Se parametrizan y se validan con datos de F2. Ver P-4
   del brief.
+- **Enmienda del 2026-10-06 (`daemon-reparte-el-backend`, decisión del usuario).** Sin residente:
+  `cargado` en lugar de residente, código y largo nunca caen al mecánico, un fallo de capacidad solo
+  salta a `cargado` y el salto suelta la plaza. El detalle, y los escenarios que sustituyen a los de
+  aquí, están en REQ-006, REQ-019 a REQ-021 y REQ-037 de
+  [`../daemon-reparte-el-backend/spec.md`](../daemon-reparte-el-backend/spec.md). El texto heredado
+  de F3 no se reescribe; donde contradiga esta tabla, manda la tabla.
+
+  Nota (2026-10-07): el paso que aquí se llama `cargado` se llama `loaded` en el código; ver la
+  aclaración en `.sdd/changes/daemon-reparte-el-backend/spec.md`.
+
+  | Punto de F3 | Texto vigente | Queda así |
+  | --- | --- | --- |
+  | REQ-004 (`:304-317`) | «La regla es "primero el residente, después el resto": residente = el modelo de un grupo persistente de llama-swap, si su configuración se puede leer; si no, el del rol mecánico; código → residente → largo; largo → residente → código; rápido → residente → largo; mecánico → largo» | REQ-019 y REQ-020: `cargado` en lugar de `residente`, sin caída al mecánico, y `mecánico → cargado → largo`. Lo demás de REQ-004 (por rol, repetidos fuera, sobrescribible por variable) sigue igual |
+  | REQ-017 (`:372-373`) | «La llamada del respaldo ocupa la misma plaza de concurrencia que la original: el mecanismo nunca supera `MAX_CONCURRENT_REQUESTS`» | REQ-006: el salto suelta la plaza, pide turno y vuelve a pedir plaza. El tope de `MAX_CONCURRENT_REQUESTS` se mantiene |
+  | REQ-018 (`:374-376`) | «Un fallo de capacidad o carga solo puede saltar al residente, que ya está en memoria y no obliga a cargar nada…» | REQ-021: solo a `cargado`; si no hay, no salta. Sin segundo salto, sin enfriamiento y con el timeout durante la carga igual que hoy |
+  | D-3 (`:549`) y su combinación con D-4 (`:553-554`) | «Hasta 2 saltos por llamada, aceptando que el segundo puede forzar un swap»; «el primer salto es siempre el residente (sin swap)» | Se mantienen los 2 saltos. El primero es `cargado` (sin swap) o se salta sin gastar salto; la premisa «el residente no fuerza swap» cae |
+  | D-4 (`:550-551`) | «El rol de código también tiene respaldo, y el primero es el mecánico» | Revocada por el usuario (2026-10-06): código y largo nunca caen al mecánico |
+  | «Cambios respecto al original», P-3 (`:234-235`) | «el primero va siempre al residente, que ya está en memoria» | Como D-3 |
+  | Requisito no funcional de VRAM (`:526-528`) | «el primer salto va al mecánico (el residente en la receta de grupos), que no fuerza swaps» | Como D-3 |
+  | Escenarios «el modelo largo falla y responde el mecánico» (`:397`), «la entrada no cabe en el respaldo» (`:405`) y «el modelo no cabe en la VRAM» (`:456`) | Usan la caída al mecánico o al residente | Los sustituyen los escenarios de C de esta spec; los tests correspondientes se reescriben, no se borran sin sustituto |
+
+  Es la tabla de REQ-037 sin cambios salvo en los números de línea: aquella cita este fichero antes
+  de añadir este punto, y todo lo que va detrás de él bajó 21 líneas. «Esta spec», en la última
+  fila, es la de `daemon-reparte-el-backend`.
 
 El texto heredado sigue a continuacion, con sus encabezados rebajados un nivel.
 ### Clasificación de fallos

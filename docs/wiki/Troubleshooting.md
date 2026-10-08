@@ -192,6 +192,49 @@ Es el *cold-load* en VRAM (llama-swap carga el modelo al vuelo). Las siguientes 
 Ajusta el `ttl` de llama-swap para el equilibrio VRAM/latencia — ver
 [recipe · Descarga de VRAM](../recipes/llama-swap-blackwell.md#descarga-de-vram-ttl).
 
+Para saber si fue carga o un modelo lento de verdad, mira la fila en la tabla de actividad: «espera
+X s · inferencia Y s» separa lo que fue espera (turno, plaza, cola de llama-swap, **carga**) de la
+generación. Si además lleva **«lento ×0,37»**, el modelo generó a un 37 % de su velocidad normal; con
+backend local, el evento guarda `free_ram_mb`, y una RAM libre muy baja suele querer decir que
+Windows echó parte del modelo de la VRAM (ver [Savings & metrics](Savings-and-metrics.md#qué-se-mide)).
+
+## Una delegación espera turno («esperando turno del daemon»)
+
+Es el **turno** del daemon, no una avería: su modelo choca en llama-swap con uno que está en uso
+(cargarlo lo desalojaría), y espera a que esa operación termine en vez de quitarle el modelo. El
+`title` de la fila y «En curso» dicen qué modelos tienen el turno; `local_status` dice «Turno: sí
+(choques: …; en uso: …; esperan: N)».
+
+- **Es lo esperado** con dos tools de modelos distintos a la vez (un resumen largo y un mensaje de
+  commit, por ejemplo). La espera queda en el log como `turn_wait_ms`.
+- **Si no avanza nunca**: a los `LOCAL_DELEGATE_TURN_MAX_S` (600 s) sin ninguna llamada al backend en
+  vuelo, la primera de la cola se concede forzada (`turn: "forced"` en el log). Si ves forzadas a
+  menudo, algo se queda colgado con el turno en la mano: mira «En curso».
+- **Si el cliente corta antes**: Codex corta una tool MCP a los 60 s y Claude Code tras 5 min sin
+  respuesta por HTTP. Súbelos como dice [Instalación](Integration-install.md#plazos-de-los-clientes-mcp).
+- **Si no quieres turno**: sin `LLAMASWAP_CONFIG` en el daemon no lo hay, y el daemon vuelve a dejar
+  que llama-swap desaloje lo que haga falta.
+
+## `llamaswap residency` no escribe, o dice qué hizo llama-swap
+
+Escribir la config hace que llama-swap (con `-watch-config`) recargue en unos 2 s, **descargue todos
+los modelos y corte las peticiones en curso de cualquier cliente**. Por eso el comando **no escribe**
+si hay delegaciones de local-delegate en curso, peticiones en vuelo en llama-swap o modelos
+cargados, ni si no puede saberlo («no se sabe»: sin daemon y sin la credencial de llama-swap en el
+shell). El error dice cuál de esas es; espera, o usa `--now` si te da igual cortarlas.
+
+Después de escribir dice qué hizo llama-swap, con la línea de su log que lo decidió:
+
+| Mensaje | Qué pasó | Qué hacer |
+|---|---|---|
+| «llama-swap recargó la config» | La recarga fue bien | Nada |
+| «llama-swap rechazó la config y sigue con la anterior» | llama-swap no la aceptó (`failed to reload config` o `failed to build new server during reload`). El comando **restaura la copia** para que el fichero coincida con lo que corre, y deja la rechazada en otra copia con fecha | Lee su error, corrige y vuelve a intentarlo |
+| «llama-swap no vigila el fichero» | No apareció «reloading configuration» en 10 s: llama-swap corre sin `-watch-config` | El cambio se aplica en el próximo arranque. Si lo arranca el daemon, pon `LLAMASWAP_WATCH_CONFIG=1` en su lanzador |
+| «llama-swap caído» | llama-swap no responde | El cambio se aplica en el próximo arranque |
+
+Si empezó a recargar y no terminó en 45 s, dice «sin resolver». Para volver atrás:
+`local-delegate llamaswap residency --restore <config>.<AAAAMMDD-HHMMSS>.bak`.
+
 ## El dashboard está vacío
 
 No hay ningún `usage-YYYYMM.jsonl` todavía (se crea en la primera delegación tras arrancar

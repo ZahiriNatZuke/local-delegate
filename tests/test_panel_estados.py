@@ -14,9 +14,14 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
+from pathlib import Path
 
+from fastapi.testclient import TestClient
 from test_dashboard_js import _correr, _extraer, _formateadores
 
+from local_delegate import config, server
 from local_delegate.web import metrics
 
 # --- piezas comunes ------------------------------------------------------------------------
@@ -38,8 +43,9 @@ const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
 def _globales() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
     partes = [_SALIDA, _formateadores(), _extraer("function escHooks(")]
-    if "function vistaInicial(" in metrics.HTML:
-        partes.append(_extraer("function vistaInicial("))
+    for funcion in ("vistaInicial", "turnWords"):
+        if f"function {funcion}(" in metrics.HTML:
+            partes.append(_extraer(f"function {funcion}("))
     for nombre in ("CAUSAS_CONTESTA", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
         if f"const {nombre} = {{" in metrics.HTML:
             partes.append(_const(nombre))
@@ -246,7 +252,7 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
         # 2. no disponible
         {"secuencia": [FALLIDO, FALLIDO], "inflight": []},
         # 3. en vuelo y en espera local (gana a running `ready`)
-        {"secuencia": [_con(QWEN_READY)], "inflight": [{**VUELO[0], "espera_local": "plaza"}]},
+        {"secuencia": [_con(QWEN_READY)], "inflight": [{**VUELO[0], "local_wait": "slot"}]},
         # 4. running_ok falso y en vuelo
         {"secuencia": [_con([], running_ok=False)], "inflight": VUELO},
         # 5. running_ok falso: montado si loaded, si no frío
@@ -291,14 +297,14 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
 def test_la_espera_local_es_un_punto_de_extension(tmp_path):
     """Un motivo que el panel no conoce también es «en cola local», y se pinta tal cual.
 
-    Control (b). Mutante: la regla 3 exige `espera_local === 'plaza'` → da «procesando».
+    Control (b). Mutante: la regla 3 exige `local_wait === 'slot'` → da «procesando».
     """
     fila = _fila(
         tmp_path,
         [
             {
                 "secuencia": [_con(QWEN_READY)],
-                "inflight": [{**VUELO[0], "espera_local": "turno_grupo"}],
+                "inflight": [{**VUELO[0], "local_wait": "turno_grupo"}],
             }
         ],
     )[0]
@@ -309,7 +315,7 @@ def test_la_espera_local_es_un_punto_de_extension(tmp_path):
 
 def test_la_espera_local_exige_todas_las_llamadas(tmp_path):
     """«En espera local» = TODAS las llamadas a ese modelo esperan dentro de local-delegate."""
-    vuelo = [{**VUELO[0], "espera_local": "plaza"}, VUELO[0]]
+    vuelo = [{**VUELO[0], "local_wait": "slot"}, VUELO[0]]
     fila = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": vuelo}])[0]
     assert fila["texto"] == "procesando"
 
@@ -615,3 +621,182 @@ def test_el_js_no_redacta_las_etiquetas_de_las_causas():
     """REQ-011: la etiqueta corta llega del daemon (`fallos.py`); el panel no tiene su copia."""
     for etiqueta in ("no resuelve", "nadie escucha", "sin acceso", "responde con error"):
         assert not re.search(rf"['\"]{etiqueta}['\"]", metrics.HTML), etiqueta
+
+
+# --- T10 de daemon-reparte-el-backend: la espera de turno del daemon (REQ-008, REQ-027) --------
+
+
+def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
+    """Escenario «la espera de turno se ve en el panel como espera local», de punta a punta.
+
+    Una operación del 26B tiene el turno (atascada en el backend) y una de Qwen3.6 lo espera; se lee
+    `/api/inflight` con `TestClient` y su entrada pasa a `estadoModelo` con node, con Qwen3.6
+    `ready` en `/running`. Control (b). Mutante 1: una clave propia (`esperando_turno: true`) en
+    vez de `local_wait` → la fila sale «procesando». Mutante 2: `inflight_snapshot` sin copiar
+    `turn_in_use` → el `title` dice «en uso: nada».
+    """
+    today = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
+    copy = tmp_path / "llamaswap.yaml"
+    copy.write_bytes(today.read_bytes())
+    monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))
+    monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9292/v1")
+    monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(2))
+    x_inside, continue_x = threading.Event(), threading.Event()
+
+    def post_chat(model, _payload):
+        if model == "gemma4-26b-a4b":
+            x_inside.set()
+            continue_x.wait(5)
+        return server.ChatResult(text="ok", ok=True, finish_reason="stop")
+
+    monkeypatch.setattr(server, "_post_chat", post_chat)
+
+    def operation(model: str, tool: str) -> None:
+        server._chat(model, "s", "u", 8, tool=tool, rol="long")
+
+    threads = [
+        threading.Thread(target=operation, args=("gemma4-26b-a4b", "op_x"), daemon=True),
+        threading.Thread(target=operation, args=("qwen36-35b-a3b", "op_y"), daemon=True),
+    ]
+    client = TestClient(metrics.app)
+
+    def input_and() -> dict | None:
+        rows = client.get("/api/inflight").json()["inflight"]
+        return next((e for e in rows if e.get("tool") == "op_y"), None)
+
+    try:
+        threads[0].start()
+        assert x_inside.wait(2), "la operación del 26B no llegó al backend"
+        threads[1].start()
+        entry = None
+        end = time.monotonic() + 2
+        while time.monotonic() < end:
+            e = input_and()
+            queued = bool(server._turn.snapshot().queue)
+            if queued and e and (e.get("local_wait") or e.get("turn_in_use")):
+                entry = e
+                break
+            time.sleep(0.01)
+        assert entry, f"la operación de Qwen3.6 no llegó a esperar turno: {input_and()}"
+    finally:
+        continue_x.set()
+        for thread in threads:
+            thread.join(5)
+
+    row = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": [entry]}])[0]
+    assert row["texto"] == "en cola local"
+    assert "esperando turno del daemon" in row["title"]
+    assert "en uso: gemma4-26b-a4b" in row["title"]
+    assert row["title"].count("esperando") == 1, row["title"]  # sin «esperando … esperando»
+
+
+def test_in_progress_shows_turn_wait(tmp_path):
+    """«En curso» pinta la espera de turno con las mismas palabras que el `title` de la fila.
+
+    Control (a): hoy «En curso» no dice nada de la espera.
+    """
+    r = _js(
+        tmp_path,
+        [_f("renderInflight")],
+        """
+        const state = {inflight: [{tool: 't', model: 'qwen36-35b-a3b', elapsed_s: 1, chars_in: 1,
+                                   local_wait: 'turn', turn_in_use: ['gemma4-26b-a4b'],
+                                   turn_position: 1}],
+                       activity: {skewMs: 0}, lastEvent: null};
+        renderInflight();
+        salida(_els.inflightBody.innerHTML);
+        """,
+        _DOM,
+    )
+    assert "esperando turno del daemon (en uso: gemma4-26b-a4b)" in r
+
+
+# --- Espera frente a lentitud (T14 de daemon-reparte-el-backend, REQ-027) ----------------------
+
+
+def test_slow_mark_uses_the_panel_number_format(tmp_path):
+    """Mutante (b): punto decimal (`toFixed`) → falla `assert txt == "lento ×0,37"`."""
+    r = _js(
+        tmp_path,
+        [_f("slowMark")],
+        """
+        salida({txt: slowMark({slow: true, pace_rel: 0.37}),
+                notSlow: slowMark({slow: false, pace_rel: 0.8}),
+                noField: slowMark({pace_rel: 0.37})});
+        """,
+    )
+    txt = r["txt"]
+    assert txt == "lento ×0,37"
+    assert r["notSlow"] == ""
+    assert r["noField"] == ""
+
+
+def test_wait_and_inference_shown_apart(tmp_path):
+    """La espera y la inferencia por separado; sin `inference_ms`, nada (no se inventa reparto)."""
+    r = _js(
+        tmp_path,
+        [_f("waitInferenceText")],
+        """
+        salida({both: waitInferenceText({wait_ms: 47000, inference_ms: 10500}),
+                none: waitInferenceText({latency_ms: 57500})});
+        """,
+    )
+    assert r["both"] == "espera 47,0 s · inferencia 10,5 s"
+    assert r["none"] == ""
+
+
+def test_activity_row_shows_wait_inference_and_slow_mark(tmp_path):
+    """La fila de actividad de una llamada lenta lleva las dos cosas y la marca (escenario D).
+
+    Control (a): hoy la fila solo enseña la latencia total.
+    """
+    # Las dos ayudantes solo si existen: así el control (a) cae en el assert y no al recortarlas.
+    helpers = [_f(n) for n in ("slowMark", "waitInferenceText") if f"function {n}(" in metrics.HTML]
+    functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
+    r = _js(
+        tmp_path,
+        functions,
+        """
+        drawActivity([{ts: '2026-10-07T10:00:00+00:00', tool: 'local_summarize',
+                       model: 'gemma4-26b-a4b', source: 'inline', backend: 'local',
+                       chars_in: 10000, chars_out: 300, latency_ms: 57500, ok: true,
+                       inference_ms: 10500, wait_ms: 47000, tok_s: 15, pace_rel: 0.37,
+                       slow: true}]);
+        salida(_els.activity.innerHTML);
+        """,
+        _DOM
+        + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
+        + "const FMT_TIME = new Intl.DateTimeFormat('es', {hour: '2-digit', minute: '2-digit'});\n",
+    )
+    assert "espera 47,0 s · inferencia 10,5 s" in r
+    assert "lento ×0,37" in r
+    # Marca propia, distinta de la del salto (`fbchip`): en una fila con las dos no se confunden.
+    assert 'class="chunkchip slowchip"' in r
+    assert "fbchip" not in r
+
+
+def test_activity_row_affinity_has_no_fallback_chip(tmp_path):
+    """T15 (REQ-016): la afinidad lleva `model_requested`, pero la fila no la marca como salto; un
+    salto de verdad sí."""
+    helpers = [_f(n) for n in ("slowMark", "waitInferenceText") if f"function {n}(" in metrics.HTML]
+    functions = [_f("fmtLocalTs"), *helpers, _f("drawActivity")]
+    row = (
+        "{ts: '2026-10-07T10:00:00+00:00', tool: 'local_translate', model: 'gemma4-26b-a4b',"
+        " source: 'inline', backend: 'local', chars_in: 10, chars_out: 10, latency_ms: 900,"
+        " ok: true, model_requested: 'gemma3-4b', %s}"
+    )
+    r = _js(
+        tmp_path,
+        functions,
+        f"""
+        drawActivity([{row % "routing: 'affinity'"}]);
+        const affinity = _els.activity.innerHTML;
+        drawActivity([{row % "fallback_reason: 'http_500'"}]);
+        salida({{affinity: affinity, fallback: _els.activity.innerHTML}});
+        """,
+        _DOM
+        + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
+        + "const FMT_TIME = new Intl.DateTimeFormat('es', {hour: '2-digit', minute: '2-digit'});\n",
+    )
+    assert "fbchip" in r["fallback"], "guarda: el mismo guion con un salto sí lleva la marca"
+    assert "fbchip" not in r["affinity"]

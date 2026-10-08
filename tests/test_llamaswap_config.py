@@ -11,6 +11,7 @@ filesystem y llegó a llenar el disco del usuario; de ahí este enfoque).
 from __future__ import annotations
 
 import os
+import re
 import struct
 from pathlib import Path
 
@@ -464,7 +465,8 @@ def test_init_llamaswap_writes_groups_and_ttl(monkeypatch, tmp_path):
     assert data["groups"]["resident"]["members"] == ["gemma3-4b"]
     assert data["groups"]["resident"]["persistent"] is True
     assert data["groups"]["swap"]["members"] == ["llama31-8b"]
-    assert data["models"]["gemma3-4b"]["ttl"] == 600
+    # REQ-035: `--ttl-resident` vale 0 por defecto (con `persistent` y TTL > 0 no hay residencia).
+    assert data["models"]["gemma3-4b"]["ttl"] == 0
     assert data["models"]["llama31-8b"]["ttl"] == 300
 
 
@@ -484,7 +486,7 @@ def test_init_llamaswap_refuses_overwrite_without_force(monkeypatch, tmp_path):
         ]
     )
     assert rc == 2
-    assert not (tmp_path / "config.yaml.bak").exists()
+    assert not list(tmp_path.glob("config.yaml*.bak"))
 
 
 def test_init_llamaswap_force_creates_backup(monkeypatch, tmp_path):
@@ -505,8 +507,11 @@ def test_init_llamaswap_force_creates_backup(monkeypatch, tmp_path):
         ]
     )
     assert rc == 0
-    backup = config_path.with_suffix(config_path.suffix + ".bak")
-    assert backup.read_text(encoding="utf-8") == original
+    # REQ-035: la copia lleva fecha (`<config>.<AAAAMMDD-HHMMSS>.bak`), como la de `residency`.
+    copias = list(tmp_path.glob("config.yaml.*.bak"))
+    assert len(copias) == 1
+    assert re.fullmatch(r"config\.yaml\.\d{8}-\d{6}\.bak", copias[0].name)
+    assert copias[0].read_text(encoding="utf-8") == original
 
 
 def test_init_llamaswap_idempotent(monkeypatch, tmp_path):
@@ -549,7 +554,7 @@ def test_init_llamaswap_dry_run_writes_nothing(monkeypatch, tmp_path):
     )
     assert rc == 0
     assert config_path.read_text(encoding="utf-8") == before
-    assert not (config_path.with_suffix(config_path.suffix + ".bak")).exists()
+    assert not list(tmp_path.glob("config.yaml*.bak"))
 
 
 def test_init_llamaswap_add_model_creates_minimal_entry(monkeypatch, tmp_path):
@@ -597,7 +602,7 @@ def test_init_llamaswap_vram_check_failure_writes_nothing(monkeypatch, tmp_path)
     )
     assert rc == 1
     assert config_path.read_text(encoding="utf-8") == original
-    assert not (config_path.with_suffix(config_path.suffix + ".bak")).exists()
+    assert not list(tmp_path.glob("config.yaml*.bak"))
 
 
 def test_init_llamaswap_missing_model_id_errors(monkeypatch, tmp_path):
@@ -705,7 +710,7 @@ def test_init_llamaswap_ram_check_failure_writes_nothing(monkeypatch, tmp_path):
     )
     assert rc == 1
     assert config_path.read_text(encoding="utf-8") == original
-    assert not (config_path.with_suffix(config_path.suffix + ".bak")).exists()
+    assert not list(tmp_path.glob("config.yaml*.bak"))
 
 
 def test_init_llamaswap_ram_gb_ok_writes_groups(monkeypatch, tmp_path):
@@ -731,3 +736,102 @@ def test_init_llamaswap_ram_gb_ok_writes_groups(monkeypatch, tmp_path):
     assert rc == 0
     data = lc.load_config(config_path)
     assert "groups" in data
+
+
+# --- Estimador con `-ncmoe` y `--mmproj` (T11, REQ-031) ------------------------------------
+
+
+def _write_gguf_with_tensors(path: Path, tensors: list[tuple[str, int]], alignment: int = 32):
+    """GGUF sintético con tabla de tensores de verdad y sección de datos del tamaño indicado.
+
+    Cada tensor ocupa exactamente `tamaño` bytes en la sección de datos (múltiplo de la alineación,
+    para que el relleno no se mezcle con la cifra que se comprueba). Ficheros de pocos KB.
+    """
+    buf = bytearray(b"GGUF")
+    buf += struct.pack("<I", 3)
+    buf += struct.pack("<Q", len(tensors))
+    buf += struct.pack("<Q", 1)
+    key = b"general.alignment"
+    buf += struct.pack("<Q", len(key)) + key + struct.pack("<I", 4) + struct.pack("<I", alignment)
+    offset = 0
+    for name, size in tensors:
+        assert size % alignment == 0
+        raw = name.encode("utf-8")
+        buf += struct.pack("<Q", len(raw)) + raw
+        buf += struct.pack("<I", 1) + struct.pack("<Q", size)  # 1 dimensión
+        buf += struct.pack("<I", 0)  # tipo F32 (no se usa)
+        buf += struct.pack("<Q", offset)
+        offset += size
+    buf += b"\0" * (-len(buf) % alignment)
+    buf += b"\0" * offset
+    path.write_bytes(bytes(buf))
+
+
+def _moe_tensors(layers: int = 4) -> tuple[list[tuple[str, int]], dict[int, int]]:
+    """Expertos en las capas 0..capas-1, de tamaño distinto por capa; y bytes de expertos por capa."""
+    tensors = [("token_embd.weight", 4096)]
+    by_layer: dict[int, int] = {}
+    for i in range(layers):
+        tensors.append((f"blk.{i}.attn_q.weight", 256))
+        experts = [
+            (f"blk.{i}.ffn_gate_exps.weight", 1024 * (i + 1)),
+            (f"blk.{i}.ffn_up_exps.weight", 1024 * (i + 1)),
+            (f"blk.{i}.ffn_down_exps.weight", 2048 * (i + 1)),
+        ]
+        tensors += experts
+        tensors.append((f"blk.{i}.ffn_gate_inp.weight", 64))
+        by_layer[i] = sum(t for _n, t in experts)
+    return tensors, by_layer
+
+
+def test_read_gguf_tensor_sizes_come_from_offsets(tmp_path):
+    p = tmp_path / "moe.gguf"
+    tensors, _ = _moe_tensors()
+    _write_gguf_with_tensors(p, tensors)
+    assert lc.read_gguf_tensor_sizes(p) == dict(tensors)
+
+
+def test_ncmoe_subtracts_only_experts_of_layers_below_n(tmp_path):
+    """`-ncmoe 2` deja en la CPU los expertos de las capas 0 y 1, no los de la 2 ni la 3."""
+    p = tmp_path / "moe.gguf"
+    tensors, by_layer = _moe_tensors(4)
+    _write_gguf_with_tensors(p, tensors)
+    layer_0_1_bytes = by_layer[0] + by_layer[1]
+    assert layer_0_1_bytes not in (by_layer[0], layer_0_1_bytes + by_layer[2])  # discrimina
+
+    est = lc.estimate_model_vram("m", {"cmd": f"llama-server --model {p} -ncmoe 2"})
+    subtracted = est.cpu_expert_bytes
+    assert subtracted == layer_0_1_bytes
+    without = lc.estimate_model_vram("m", {"cmd": f"llama-server --model {p}"})
+    assert without.cpu_expert_bytes == 0
+    assert without.gb - est.gb == pytest.approx(layer_0_1_bytes * 1.2 / GIB)
+    # La forma larga del flag cuenta igual (sale del parser único de `cmd`, `huella`).
+    long = lc.estimate_model_vram("m", {"cmd": f"llama-server --model {p} --n-cpu-moe 2"})
+    assert long.cpu_expert_bytes == layer_0_1_bytes
+
+
+def test_mmproj_is_added(tmp_path):
+    p = tmp_path / "m.gguf"
+    tensors, _ = _moe_tensors(1)
+    _write_gguf_with_tensors(p, tensors)
+    mm = tmp_path / "mmproj.gguf"
+    mm.write_bytes(b"\0" * 5000)
+    with_ = lc.estimate_model_vram("m", {"cmd": f"llama-server --model {p} --mmproj {mm}"})
+    without = lc.estimate_model_vram("m", {"cmd": f"llama-server --model {p}"})
+    assert with_.mmproj_bytes == 5000
+    assert with_.gb - without.gb == pytest.approx(5000 / GIB)
+
+
+def test_missing_mmproj_is_error(tmp_path):
+    p = tmp_path / "m.gguf"
+    tensors, _ = _moe_tensors(1)
+    _write_gguf_with_tensors(p, tensors)
+    est = lc.estimate_model_vram(
+        "m", {"cmd": f"llama-server --model {p} --mmproj {tmp_path / 'falta.gguf'}"}
+    )
+    assert est.error and "mmproj" in est.error
+
+
+def test_ncmoe_estimator_validated_is_boolean_with_control():
+    """La constante la fija el control con los GGUF reales (cifras en su comentario)."""
+    assert isinstance(lc.NCMOE_ESTIMATOR_VALIDATED, bool)

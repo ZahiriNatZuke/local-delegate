@@ -1,0 +1,1 @@
+Estaría bien que el panel permitiera exportar los datos a CSV.

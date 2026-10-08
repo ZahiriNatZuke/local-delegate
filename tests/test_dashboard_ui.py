@@ -284,11 +284,12 @@ _MEDIR = """() => {
     document.getElementById('modelsBody').appendChild(e);
     const f = fam(e); e.remove(); return f;
   };
-  const nota = Array.from(document.querySelectorAll('#hooksBody div'))
-    .find(d => d.textContent.includes('decides tú') && !d.querySelector('div'));
+  // La nota de los hooks vive en el diálogo de información (su ⓘ), no en la tarjeta.
+  const nota = Array.from(document.querySelectorAll('#dlgHooks p'))
+    .find(d => d.textContent.includes('decides tú'));
   const hero = document.querySelector('.card.hero');
   const lat = Array.from(document.querySelectorAll('.card'))
-    .find(c => (c.querySelector('.k-lbl')||{}).textContent?.includes('Latencia media'));
+    .find(c => (c.querySelector('.k-lbl')||{}).textContent?.includes('Latencia'));
   const fonts = document.querySelector('link[href*="fonts.googleapis.com/css2"]');
   return {
     th: Array.from(document.querySelectorAll('thead th')).map(fam),
@@ -302,7 +303,7 @@ _MEDIR = """() => {
     cerrarAyuda: fam(document.getElementById('helpClose')),
     body: fam(document.body),
     fuentes: fonts ? fonts.href : '',
-    kpi: hero.querySelector('.k-val').firstChild.textContent.trim(),
+    kpi: hero.querySelector('.k-num').firstChild.textContent.trim(),
     pista: hero.querySelector('.k-hint').innerText,
     tooltip: hero.querySelector('.info')?.getAttribute('data-tip') || '',
     columnaNeto: document.querySelector('#clientsBody tbody td:nth-child(4)').innerText.trim(),
@@ -422,7 +423,7 @@ def test_la_fila_vacia_de_procesos_va_como_los_demas_vacios(medidas):
 
 
 def test_la_nota_de_hooks_es_prosa_en_Inter(medidas):
-    """REQ-034 (d): la nota dejó de reutilizar `.empty`, que es mono."""
+    """REQ-034 (d): la nota dejó de reutilizar `.empty`, que es mono. Ahora va en el diálogo."""
     assert medidas["nota"] is not None, "control positivo: la nota tiene que estar pintada"
     assert medidas["nota"].startswith("Inter")
 
@@ -521,10 +522,8 @@ def test_la_nota_de_computo_remoto_sale_en_Inter_y_sin_fila_vacia(tmp_path, monk
 # --- Coste equivalente, cuota e imágenes (coste-api-y-cuota, T6) -------------------------------
 
 
-def test_los_bloques_de_coste_cuota_e_imagenes(tmp_path, monkeypatch):
-    """El panel pinta lo que trae `/api/stats`: el rótulo del coste con su nota de tarifa plana, la
-    cuota «sin calibrar» (sin `coste-agregados.json` en esta carpeta) y el número de imágenes. Las
-    líneas son prosa (`.nota`, en Inter)."""
+def _log_coste_e_imagen(tmp_path, monkeypatch) -> None:
+    """Un resumen por path y una imagen, hoy: hay cifra de coste y una imagen en el rango."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "COSTE_RESPALDO", "")
@@ -559,38 +558,678 @@ def test_los_bloques_de_coste_cuota_e_imagenes(tmp_path, monkeypatch):
         "\n".join(json.dumps(e, ensure_ascii=False) for e in eventos) + "\n", encoding="utf-8"
     )
     metrics._FILE_CACHE.clear()
+
+
+# Lo que se mide de las tres tarjetas: ningún párrafo, la misma tipografía que los KPIs de arriba,
+# el hueco con la fila de debajo y el diálogo de información con todo el texto que salió de ellas.
+_MEDIR_TARJETAS = """() => {
+  const cuerpos = ['costeBody', 'cuotaBody', 'imagenesBody'].map(i => document.getElementById(i));
+  const textos = cuerpos.flatMap(c => [...c.querySelectorAll('*')]
+    .filter(e => !e.children.length).map(e => e.textContent.trim()));
+  const estilo = sel => { const e = document.querySelector(sel);
+    if (!e) return null; const s = getComputedStyle(e);
+    return [s.fontFamily, s.fontSize, s.fontWeight].join('|'); };
+  const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
+  const coste = document.getElementById('costeCard').getBoundingClientRect();
+  const fila = document.getElementById('cuotaImgRow').getBoundingClientRect();
+  return {
+    coste: document.getElementById('costeBody').innerText,
+    imagenes: document.getElementById('imagenesBody').innerText,
+    parrafos: cuerpos.reduce((n, c) => n + c.querySelectorAll('p, .nota').length, 0),
+    masLargo: Math.max(...textos.map(t => t.length)),
+    desglose: document.querySelectorAll('#costeBody tbody tr').length,
+    cuotaVisible: vis('cuotaCard'), imagenesVisible: vis('imagenesCard'),
+    valCoste: estilo('#costeBody .k-val'), valKpi: estilo('#kpis .card:not(.hero) .k-val'),
+    lblCoste: estilo('#costeBody .k-lbl'), lblKpi: estilo('#kpis .k-lbl'),
+    hueco: Math.round(fila.top - coste.bottom),
+  };
+}"""
+
+
+def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_path, monkeypatch):
+    """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
+    su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
+    `coste-agregados.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         navegador = _navegador(pw)
         pagina = navegador.new_page()
         pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         pagina.goto(servidor.url)
-        pagina.wait_for_selector("#costeBody .nota")
-        pagina.wait_for_selector("#cuotaBody .nota")
-        pagina.wait_for_selector("#imagenesBody .nota")
+        pagina.wait_for_selector("#costeBody .kstat")
+        pagina.wait_for_selector("#imagenesBody .kstat")
+        m = pagina.evaluate(_MEDIR_TARJETAS)
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    # Sin relleno: Opus 5.5 en subagente con N = 40 → $2,50 y ~$6,50 (escenario de la spec).
+    assert "$2,50" in m["coste"]
+    assert "~$6,50" in m["coste"]
+    assert "no es un ahorro: tarifa plana" in m["coste"]
+    assert m["desglose"] == 1
+    assert not m["cuotaVisible"]  # sin calibrar no hay tarjeta
+    assert m["imagenesVisible"]
+    assert "250.000" in m["imagenes"]
+    assert m["parrafos"] == 0
+    assert m["masLargo"] <= 40, m["masLargo"]
+    assert m["valCoste"] == m["valKpi"], (m["valCoste"], m["valKpi"])
+    assert m["lblCoste"] == m["lblKpi"], (m["lblCoste"], m["lblKpi"])
+    assert m["hueco"] == 16, m["hueco"]  # el mismo `gap` que entre el resto de tarjetas
+
+
+def test_el_dialogo_de_informacion_lleva_el_texto_y_se_cierra_con_esc(tmp_path, monkeypatch):
+    """El ⓘ de la tarjeta de coste abre un diálogo con los supuestos, la calibración de la cuota y
+    la nota de las imágenes; Esc lo cierra y el foco vuelve al botón."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(servidor.url)
+        pagina.wait_for_selector("#costeBody .kstat")
+        pagina.focus("#costeInfo")
+        pagina.keyboard.press("Enter")
+        abierto = pagina.evaluate("() => document.getElementById('infoDlg').open")
+        texto = pagina.inner_text("#infoDlg")
+        pagina.keyboard.press("Escape")
+        m = pagina.evaluate(
+            """() => ({abierto: document.getElementById('infoDlg').open,
+                       foco: document.activeElement && document.activeElement.id})"""
+        )
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert abierto
+    assert "Equivalente estimado a precio de API: entre $2,50 y ~$6,50" in texto
+    assert "No es dinero que hayas ahorrado: tu suscripción es de tarifa plana." in texto
+    assert "1 de 1 con modelo supuesto: Opus 5.5 en subagente" in texto
+    assert "Precios de la tabla del paquete del" in texto
+    assert "sin calibrar" in texto
+    assert "1 imagen" in texto
+    assert "250.000 bytes" in texto
+    assert not m["abierto"]
+    assert m["foco"] == "costeInfo"
+
+
+def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
+    """Con una ventana calibrada la tarjeta aparece con la cifra A – B % y un medidor; la otra,
+    sin calibrar, dice «sin calibrar» con «–». `/api/stats` se intercepta para inyectar la cuota:
+    calibrarla de verdad pide tres puntos del statusline."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    cuota_calibrada = {
+        "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
+        "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
+        "hay_agregados": True,
+        "comando": "local-delegate recalcular-coste",
+    }
+
+    def _inyectar(ruta):
+        respuesta = ruta.fetch()
+        datos = respuesta.json()
+        datos["cuota"] = cuota_calibrada
+        ruta.fulfill(response=respuesta, body=json.dumps(datos))
+
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.route(re.compile(r"/api/stats(\?|$)"), _inyectar)
+        pagina.goto(servidor.url)
+        pagina.wait_for_selector("#cuotaBody .qrange")
         m = pagina.evaluate(
             """() => ({
-              coste: document.getElementById('costeBody').innerText,
-              cuota: document.getElementById('cuotaBody').innerText,
-              cuotaHead: document.getElementById('cuotaHead').innerText,
-              imagenes: document.getElementById('imagenesBody').innerText,
-              familia: getComputedStyle(document.querySelector('#costeBody .nota')).fontFamily,
-              desglose: document.querySelectorAll('#costeBody tbody tr').length,
+              texto: document.getElementById('cuotaBody').innerText,
+              cabecera: document.getElementById('cuotaHead').innerText,
+              medidores: document.querySelectorAll('#cuotaBody .qrange').length,
+              ancho: document.querySelector('#cuotaBody .qrange .qb').style.width,
             })"""
         )
         navegador.close()
     metrics._FILE_CACHE.clear()
-    assert "Equivalente estimado a precio de API: entre $" in m["coste"]
-    # Sin relleno: Opus 5.5 en subagente con N = 40 → $2,50 y ~$6,50 (escenario de la spec).
-    assert "entre $2,50 y ~$6,50" in m["coste"]
-    assert "No es dinero que hayas ahorrado: tu suscripción es de tarifa plana." in m["coste"]
-    assert "1 de 1 con modelo supuesto: Opus 5.5 en subagente" in m["coste"]
-    assert m["desglose"] == 1
-    assert "sin calibrar" in m["cuota"]
-    assert "%" not in m["cuota"].replace("dispersión", "")  # ningún % de cuota sin calibrar
-    assert m["cuotaHead"] == "sin calibrar"
-    assert "1 imagen" in m["imagenes"]
-    assert "250.000 bytes" in m["imagenes"]
-    assert m["familia"].startswith("Inter"), m["familia"]
+    assert "3,4 – 11,9" in m["texto"]
+    assert "sin calibrar" in m["texto"]
+    assert m["cabecera"] == "1 ventana calibrada"
+    assert m["medidores"] == 1
+    assert m["ancho"] == "8.5%"
+
+
+def test_los_controles_nativos_siguen_al_tema(panel):
+    """`color-scheme` sigue al tema: es lo que pinta claro el icono del calendario de los
+    `<input type=date>` en oscuro (antes salía negro sobre el panel) y la lista del `<select>`."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(url)
+        oscuro = pagina.evaluate(
+            "() => getComputedStyle(document.getElementById('rangeFrom')).colorScheme"
+        )
+        pagina.click("#theme")
+        claro = pagina.evaluate(
+            "() => getComputedStyle(document.getElementById('rangeFrom')).colorScheme"
+        )
+        navegador.close()
+    assert oscuro == "dark"
+    assert claro == "light"
+
+
+# Tres situaciones de fuente, porque la simetría no puede depender de cuál cargue:
+# - `bloqueadas`: Google Fonts no responde (lo del CI y de un equipo sin red), queda la de reserva;
+# - `ancha`: además se fuerza una de reserva ANCHA (Verdana / DejaVu Sans, Courier New / DejaVu
+#   Sans Mono), la peor que puede tocar en otro sistema;
+# - `cargadas`: se deja pedir Inter y JetBrains Mono (solo se cargan si hay red).
+FUENTES = ("bloqueadas", "ancha", "cargadas")
+_FUENTE_ANCHA = (
+    ":root,:root[data-theme]{--sans:'Verdana','DejaVu Sans',sans-serif;"
+    "--mono:'Courier New','DejaVu Sans Mono',monospace}"
+)
+# Inter de verdad cargada (no basta `document.fonts.check`: sin la hoja de Google Fonts no hay
+# ninguna cara registrada y `check` devuelve true).
+_INTER_CARGADA = (
+    "() => document.fonts.ready.then(() => [...document.fonts].some(f =>"
+    " f.family.replace(/[\"']/g, '') === 'Inter' && f.status === 'loaded'))"
+)
+
+
+def _antes_de_cargar(pagina, fuentes):
+    if fuentes != "cargadas":
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+
+
+def _tras_cargar(pagina, fuentes):
+    if fuentes == "ancha":
+        pagina.add_style_tag(content=_FUENTE_ANCHA)
+    pagina.evaluate("() => document.fonts.ready.then(() => 1)")
+
+
+# Cada cifra de los KPIs, con su unidad, dentro de su tarjeta: ni la cifra desborda su caja ni la
+# unidad pasa del borde interior de la tarjeta (el hero tiene `overflow:hidden` y la cortaba).
+_DESBORDES_KPI = """() => [...document.querySelectorAll('#kpis .k-val')].flatMap(v => {
+  const card = v.closest('.card'), c = card.getBoundingClientRect();
+  const borde = c.right - parseFloat(getComputedStyle(card).paddingRight) + 0.5;
+  const fuera = [];
+  if (v.scrollWidth > v.clientWidth) fuera.push(v.textContent + ': la cifra desborda su caja');
+  const u = v.querySelector('.unit');
+  if (u && u.getBoundingClientRect().right > borde) fuera.push(v.textContent + ': unidad cortada');
+  return fuera;
+})"""
+
+
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_unidad_de_los_kpis_no_se_corta(tmp_path, monkeypatch, fuentes):
+    """«3.161.168 tok» en el hero salía como «3.161.168 to» entre 1320 y 1440 px. Con cifras de
+    siete dígitos en los KPIs, a 1280, 1366 y 1440 px y en los dos temas, nada se sale."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+
+    def _cifras_grandes(ruta):
+        respuesta = ruta.fetch()
+        datos = respuesta.json()
+        datos.update(
+            tokens_context_net=3_161_168,
+            tokens_context_saved=3_250_647,
+            tokens_returned=89_479,
+            tokens_generated_local=123_478,
+            tokens_local_input=1_898_456,
+        )
+        ruta.fulfill(response=respuesta, body=json.dumps(datos))
+
+    desbordes = {}
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        for ancho in (1280, 1366, 1440):
+            for tema in ("dark", "light"):
+                pagina = navegador.new_page(viewport={"width": ancho, "height": 900})
+                pagina.add_init_script(
+                    f"try{{localStorage.setItem('ld-theme','{tema}')}}catch(e){{}}"
+                )
+                _antes_de_cargar(pagina, fuentes)
+                pagina.route(re.compile(r"/api/stats(\?|$)"), _cifras_grandes)
+                pagina.goto(servidor.url)
+                pagina.wait_for_function(
+                    "() => document.querySelector('#kpis .hero .k-val')?.textContent.includes('3.161.168')"
+                )
+                _tras_cargar(pagina, fuentes)
+                desbordes[(ancho, tema)] = pagina.evaluate(_DESBORDES_KPI)
+                pagina.close()
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert all(not v for v in desbordes.values()), desbordes
+
+
+# --- Etiquetas legibles, tipografía, simetría de los KPIs y la tarjeta Sistema -----------------
+
+# Claves internas tal como llegan del log y de la API, y una desconocida para el respaldo.
+_HOOKS_CRUDOS = {
+    "enabled": True,
+    "log": "hooks.jsonl",
+    "exists": True,
+    "total": 60,
+    "suggested": 20,
+    "rate": 1 / 3,
+    "by_category": [
+        {"category": "read", "suggested": 8, "total": 30},
+        {"category": "shell", "suggested": 6, "total": 10},
+        {"category": "extract", "suggested": 4, "total": 5},
+        {"category": "sin categoría", "suggested": 0, "total": 10},
+        {"category": "clave_rara_nueva", "suggested": 2, "total": 5},
+    ],
+    "by_event": [],
+    "by_day": [],
+    "read_total": 30,
+    "by_motivo": [
+        {"motivo": "avisó", "total": 8},
+        {"motivo": "acotada", "total": 6},
+        {"motivo": "codigo", "total": 5},
+        {"motivo": "pequeno", "total": 4},
+        {"motivo": "mcp_ajeno", "total": 4},
+        {"motivo": "motivo_que_no_existe", "total": 3},
+    ],
+    "by_ext": [],
+}
+_SISTEMA = {
+    "ram": {"used_gb": 13.4, "total_gb": 31.1, "free_gb": 17.7, "pct": 43},
+    "vram": {"used_mb": 8908, "total_mb": 16311, "pct": 54.6, "gpu_util_pct": 68},
+    "processes": [{"pid": 4242, "name": "llama-server.exe", "ram_mb": 7640, "vram_mb": 8420}],
+    "platform": "win32",
+    "origin": "local",
+    "host": "127.0.0.1:9292",
+}
+
+
+def _json(cuerpo):
+    return lambda ruta: ruta.fulfill(
+        status=200, content_type="application/json", body=json.dumps(cuerpo)
+    )
+
+
+def _clientes_crudos(ruta):
+    """`/api/stats` real con un desglose por cliente que trae claves internas."""
+    respuesta = ruta.fetch()
+    datos = respuesta.json()
+    fila = {"calls": 1, "backend_calls": 1, "tokens_net": 10, "tokens_saved": 10}
+    datos["by_client"] = [
+        {**fila, "client": "claude-code"},
+        {**fila, "client": "codex-mcp-client"},
+        {**fila, "client": "desconocido"},
+        {**fila, "client": "cliente_nuevo"},
+    ]
+    ruta.fulfill(response=respuesta, body=json.dumps(datos))
+
+
+def _pagina_completa(pw, url, ancho=1366, tema="dark", fuentes="bloqueadas"):
+    navegador = _navegador(pw)
+    pagina = navegador.new_page(viewport={"width": ancho, "height": 1000})
+    pagina.add_init_script(f"try{{localStorage.setItem('ld-theme','{tema}')}}catch(e){{}}")
+    _antes_de_cargar(pagina, fuentes)
+    pagina.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS_CRUDOS))
+    pagina.route(re.compile(r"/api/system(\?|$)"), _json(_SISTEMA))
+    pagina.route(re.compile(r"/api/stats(\?|$)"), _clientes_crudos)
+    pagina.goto(url)
+    pagina.wait_for_selector("#hooksBody tbody tr")
+    pagina.wait_for_selector("#clientsBody tbody tr")
+    pagina.wait_for_selector("#costeBody tbody tr")
+    pagina.wait_for_function(
+        "() => document.getElementById('metersBody').innerText.includes('GiB')"
+    )
+    _tras_cargar(pagina, fuentes)
+    return navegador, pagina
+
+
+_PRIMERAS_COLUMNAS = """() => {
+  const ids = ['hooksBody', 'clientsBody', 'costeBody'];
+  return ids.flatMap(id => [...document.querySelectorAll('#' + id + ' tbody tr td:first-child')]
+    .map(td => td.innerText.trim()));
+}"""
+
+
+def test_ninguna_tabla_ensena_claves_internas(tmp_path, monkeypatch):
+    """La primera columna de las tablas de hooks, clientes y coste dice etiquetas legibles: ni
+    guiones bajos ni minúscula inicial. Una clave desconocida sale humanizada, no cruda. Los nombres
+    de modelo (primera columna del coste) ya empiezan en mayúscula; los de proceso y tool no pasan
+    por aquí (son nombres propios)."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador, pagina = _pagina_completa(pw, servidor.url)
+        celdas = pagina.evaluate(_PRIMERAS_COLUMNAS)
+        esfuerzo = pagina.inner_text("#costeBody tbody tr td:nth-child(3)")
+        hilo = pagina.inner_text("#costeBody tbody tr td:nth-child(2)")
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert len(celdas) == 5 + 6 + 4 + 1, celdas  # guarda: llegaron todas las filas
+    malas = [c for c in celdas if "_" in c or not c[:1].isupper()]
+    assert not malas, malas
+    for esperada in (
+        "Lectura",
+        "Shell",
+        "Extracción",
+        "Sin categoría",
+        "Avisó",
+        "Lectura acotada",
+        "Código",
+        "Pequeño",
+        "Por otro MCP",
+        "Claude Code",
+        "Codex",
+        "Desconocido",
+    ):
+        assert esperada in celdas, (esperada, celdas)
+    # El respaldo: la clave desconocida, sin guiones bajos y con mayúscula.
+    assert "Clave rara nueva" in celdas
+    assert "Motivo que no existe" in celdas
+    assert "Cliente nuevo" in celdas
+    assert hilo == "Subagente"
+    assert esfuerzo == "Sin dato"
+
+
+_TIPOGRAFIA_TABLAS = """() => {
+  const estilo = el => { const s = getComputedStyle(el); return s.fontFamily + '|' + s.fontSize; };
+  const tablas = [...document.querySelectorAll('table')].filter(t => t.querySelector('tbody td'));
+  return tablas.map(t => ({
+    id: t.id || t.closest('.card').querySelector('h2').textContent,
+    primera: estilo(t.querySelector('tbody td:first-child')),
+    cabecera: t.querySelector('thead th') ? estilo(t.querySelector('thead th')) : null,
+  }));
+}"""
+
+
+def test_todas_las_tablas_comparten_tipografia_por_columna(tmp_path, monkeypatch):
+    """Primera columna y cabecera con la misma familia y tamaño en todas las tablas del panel,
+    también la de procesos de Sistema (antes en 12 px)."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador, pagina = _pagina_completa(pw, servidor.url)
+        pagina.wait_for_selector("#procTable tbody td")
+        tablas = pagina.evaluate(_TIPOGRAFIA_TABLAS)
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert len(tablas) >= 6, tablas  # procesos, coste, actividad, clientes y las dos de hooks
+    assert len({t["primera"] for t in tablas}) == 1, tablas
+    assert len({t["cabecera"] for t in tablas if t["cabecera"]}) == 1, tablas
+
+
+def test_la_nota_de_los_hooks_esta_en_el_dialogo(tmp_path, monkeypatch):
+    """El párrafo de «los hooks sugieren» ya no está en la tarjeta: lo abre su ⓘ."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador, pagina = _pagina_completa(pw, servidor.url)
+        cuerpo = pagina.inner_text("#hooksBody")
+        parrafos = pagina.evaluate(
+            "() => document.querySelectorAll('#hooksBody p, #hooksBody .nota').length"
+        )
+        pagina.click("#hooksInfo")
+        titulo = pagina.inner_text("#infoDlgTitle")
+        visible = pagina.inner_text("#dlgHooks")
+        oculto = pagina.evaluate("() => document.getElementById('dlgCoste').hidden")
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert "sugieren" not in cuerpo
+    assert parrafos == 0
+    assert titulo == "Sugerencias de los hooks"
+    assert "Los hooks sugieren; delegar lo decides tú." in visible
+    assert oculto  # el diálogo enseña solo las secciones de su grupo
+
+
+# Por tarjeta de la fila de KPIs: dónde empieza la cifra y cuánto mide el bloque del título,
+# relativo a la propia tarjeta (a 400 px van apiladas, una por fila).
+_SIMETRIA_KPIS = """() => [...document.querySelectorAll('#kpis > .card')].map(card => {
+  const c = card.getBoundingClientRect();
+  return {
+    lbl: card.querySelector('.k-lbl').textContent.trim(),
+    cifra: Math.round(card.querySelector('.k-val').getBoundingClientRect().top - c.top),
+    titulo: Math.round(card.querySelector('.k-top').getBoundingClientRect().height),
+    pista: Math.round(card.querySelector('.k-hint').getBoundingClientRect().height),
+    texto: card.querySelector('.k-val').innerText + ' ' + card.querySelector('.k-hint').innerText,
+  };
+})"""
+
+# Un decimal con punto («0.0», «13.4»): un punto seguido de uno o dos dígitos y nada más. El punto
+# de miles (1.514) lleva tres dígitos detrás y no cuenta.
+_DECIMAL_CON_PUNTO = re.compile(r"\d\.\d{1,2}(?!\d)")
+
+
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_fila_de_kpis_es_simetrica_y_usa_coma_decimal(tmp_path, monkeypatch, fuentes):
+    """A 1280, 1366, 1440 y 400 px, en los dos temas y con cualquier fuente: misma altura del
+    título, la cifra empieza a la misma altura en todas las tarjetas, la pista ocupa lo mismo y
+    ningún número usa punto decimal."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    resultados = {}
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        for ancho in (1280, 1366, 1440, 400):
+            for tema in ("dark", "light"):
+                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema, fuentes)
+                resultados[(ancho, tema)] = pagina.evaluate(_SIMETRIA_KPIS)
+                navegador.close()
+    metrics._FILE_CACHE.clear()
+    for clave, tarjetas in resultados.items():
+        assert len(tarjetas) == 6, (clave, tarjetas)
+        cifras = [t["cifra"] for t in tarjetas]
+        assert max(cifras) - min(cifras) <= 2, (clave, tarjetas)
+        assert len({t["titulo"] for t in tarjetas}) == 1, (clave, tarjetas)
+        pistas = [t["pista"] for t in tarjetas]
+        assert max(pistas) - min(pistas) <= 1, (clave, tarjetas)
+        for t in tarjetas:
+            assert not _DECIMAL_CON_PUNTO.search(t["texto"]), (clave, t)
+    # La pista de «Delegaciones» es una frase corta; el desglose va al tooltip.
+    delegaciones = next(t for t in resultados[(1366, "dark")] if "Delegaciones" in t["lbl"])
+    assert "trocear" not in delegaciones["texto"]
+    assert "llamada" in delegaciones["texto"]
+
+
+def test_sistema_ensena_la_carga_de_la_gpu_como_barra(tmp_path, monkeypatch):
+    """La cabecera de Sistema ya no lleva «GPU 68%»: la carga es una fila con barra, entre la RAM y
+    la VRAM, y todas las cifras van con coma decimal y espacio antes de %."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador, pagina = _pagina_completa(pw, servidor.url)
+        cabecera = pagina.evaluate(
+            "() => [...document.querySelectorAll('.panel-h')]"
+            ".find(h => h.querySelector('h2').textContent === 'Sistema').innerText"
+        )
+        filas = pagina.evaluate(
+            "() => [...document.querySelectorAll('#metersBody .meter-lbl')].map(e => e.innerText)"
+        )
+        barras = pagina.evaluate("() => document.querySelectorAll('#metersBody .meter').length")
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert "GPU" not in cabecera and "%" not in cabecera, cabecera
+    assert len(filas) == 3 and barras == 3, filas
+    assert filas[1].upper().startswith("CARGA DE LA GPU"), filas
+    assert "68 %" in filas[1]
+    assert "13,4 / 31,1 GiB · 43 %" in filas[0]
+    assert "55 %" in filas[2]  # 54,6 redondeado, sin punto decimal
+    for f in filas:
+        assert not _DECIMAL_CON_PUNTO.search(f), f
+
+
+def test_la_flecha_del_selector_de_rango_no_se_va_al_pasar_el_raton(panel):
+    """`.btn:hover` cambiaba el atajo `background` y borraba la flecha (un `background-image`)."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(url)
+        imagen = "() => getComputedStyle(document.getElementById('range')).backgroundImage"
+        reposo = pagina.evaluate(imagen)
+        pagina.hover("#range")
+        encima = pagina.evaluate(imagen)
+        pagina.focus("#range")
+        foco = pagina.evaluate(imagen)
+        navegador.close()
+    assert "gradient" in reposo
+    assert encima == reposo
+    assert foco == reposo
+
+
+_SPARK_Y_PISTA = """() => {
+  const hero = document.querySelector('#kpis .hero');
+  const canvas = hero.querySelector('.spark canvas').getBoundingClientRect();
+  const rango = document.createRange();
+  rango.selectNodeContents(hero.querySelector('.k-hint'));
+  const texto = rango.getBoundingClientRect();
+  const lineas = [...document.querySelectorAll('#kpis .k-lbl')].map(l => {
+    const t = l.querySelector('.k-lbl-t'), card = l.closest('.card').getBoundingClientRect();
+    const info = l.querySelector('.info');
+    return {lbl: t.textContent.trim(), title: l.getAttribute('title'),
+      alto: Math.round(l.getBoundingClientRect().height),
+      recortado: t.scrollWidth > t.clientWidth,
+      infoDentro: !info || info.getBoundingClientRect().right <= card.right};
+  });
+  return {canvasTop: canvas.top, canvasAlto: canvas.height, textoBottom: texto.bottom, lineas};
+}"""
+
+
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_linea_del_hero_no_pisa_su_pista(tmp_path, monkeypatch, fuentes):
+    """La línea del hero cruzaba «bruto … − devuelto …». La caja del gráfico empieza por debajo
+    del texto de la pista, en los cuatro anchos y los dos temas. El título de cada KPI va en UNA
+    línea con cualquier fuente (si no cabe se recorta con «…», el ⓘ sigue dentro de la tarjeta y
+    el título entero queda en `title`); que quepa SIN recortar solo se exige a 1366 px y más con
+    Inter cargada de verdad, porque con otra fuente lo que se mide es el entorno (lo cazó el CI:
+    en ubuntu la de reserva es más ancha)."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    medidas = {}
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        for ancho in (1280, 1366, 1440, 400):
+            for tema in ("dark", "light"):
+                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema, fuentes)
+                medidas[(ancho, tema)] = pagina.evaluate(_SPARK_Y_PISTA)
+                medidas[(ancho, tema)]["inter"] = pagina.evaluate(_INTER_CARGADA)
+                navegador.close()
+    metrics._FILE_CACHE.clear()
+    for clave, m in medidas.items():
+        assert m["canvasAlto"] > 0, (clave, m)  # guarda: el gráfico se pintó
+        assert m["canvasTop"] >= m["textoBottom"], (clave, m)
+        for linea in m["lineas"]:
+            assert linea["alto"] <= 24, (clave, linea)  # una línea (~19 px); dos son ~35
+            assert linea["title"] == linea["lbl"], (clave, linea)
+            assert linea["infoDentro"], (clave, linea)
+        if fuentes == "bloqueadas" or fuentes == "ancha":
+            assert not m["inter"], (clave, "la fuente tenía que estar bloqueada")
+        if m["inter"] and clave[0] >= 1366:
+            assert not any(x["recortado"] for x in m["lineas"]), (clave, m["lineas"])
+
+
+def test_backend_y_en_curso_hablan_en_espanol(tmp_path, monkeypatch):
+    """Estados de modelo con mayúscula inicial, «Trozo 9/14», «· 39.110 car.» y «peticiones» /
+    «caché» en el rendimiento del backend: nada en minúscula de máquina ni en inglés."""
+    _log_coste_e_imagen(tmp_path, monkeypatch)
+    backend = {
+        "available": True,
+        "running": [{"model": "modelo-b", "state": "ready"}],
+        "running_ok": True,
+        "models_stale": False,
+        "causa": None,
+        "etiqueta": None,
+        "detalle": None,
+        "origin": "local",
+        "host": "127.0.0.1:9292",
+        "models": [
+            {"id": "modelo-a", "status": "unloaded"},
+            {"id": "modelo-b", "status": "loaded"},
+        ],
+    }
+    en_curso = {
+        "inflight": [
+            {
+                "id": "1:1",
+                "tool": "local_translate",
+                "model": "modelo-a",
+                "source": "path",
+                "chars_in": 39110,
+                "backend": "local",
+                "elapsed_s": 13.4,
+                "chunks": 14,
+                "chunk": 9,
+            }
+        ],
+        "count": 1,
+        "last_event_ts": datetime.now(UTC).isoformat(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+    rendimiento = {
+        "available": True,
+        "stats": {
+            "total_requests": 1284,
+            "gen_histogram": {"p50": 61.4, "p95": 48.2},
+            "prompt_histogram": {"p50": 1840.5, "p95": 1210.7},
+            "total_input_tokens": 486320,
+            "total_output_tokens": 138940,
+            "total_cache_tokens": 214880,
+        },
+    }
+    with _Servidor(9495) as servidor, sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.route(re.compile(r"/api/backend(\?|$)"), _json(backend))
+        pagina.route(re.compile(r"/api/inflight(\?|$)"), _json(en_curso))
+        pagina.route(re.compile(r"/api/backend/stats(\?|$)"), _json(rendimiento))
+        pagina.goto(servidor.url)
+        pagina.wait_for_selector("#inflightBody .chunkchip")
+        pagina.wait_for_function("() => document.getElementById('bstatsHead').textContent")
+        m = pagina.evaluate(
+            """() => ({
+              estados: [...document.querySelectorAll('#modelsBody .mstate')].map(e => e.textContent),
+              curso: document.getElementById('inflightBody').textContent,
+              cabecera: document.getElementById('bstatsHead').textContent,
+              rendimiento: document.getElementById('backendStats').textContent,
+            })"""
+        )
+        navegador.close()
+    metrics._FILE_CACHE.clear()
+    assert m["estados"], m  # guarda: hay filas de modelos
+    assert all(e[:1].isupper() for e in m["estados"]), m["estados"]
+    assert "Trozo 9/14" in m["curso"], m["curso"]
+    assert "· 39.110 car." in m["curso"], m["curso"]
+    assert "chars" not in m["curso"]
+    assert "1.284 peticiones" in m["cabecera"], m["cabecera"]
+    assert "caché" in m["rendimiento"] and "cache " not in m["rendimiento"], m["rendimiento"]
+
+
+def test_la_leyenda_del_origen_del_input_esta_en_espanol(panel):
+    """«path»/«inline» pasan a «Por ruta (path)» y «Texto en línea (inline)»; el centro dice «por
+    ruta». Se lee del gráfico de Chart.js: la leyenda se pinta en el canvas."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(url)
+        pagina.wait_for_function("() => state.charts && state.charts.srcDonut")
+        m = pagina.evaluate(
+            """() => ({etiquetas: state.charts.srcDonut.data.labels,
+                       centro: state.charts.srcDonut.options.plugins.centerText.sub})"""
+        )
+        navegador.close()
+    assert m["etiquetas"] == ["Por ruta (path)"], m  # el log de `panel` es todo por path
+    assert m["centro"] == "por ruta"
+
+
+def test_ya_no_hay_tarjeta_de_donde_corrio_el_computo(panel):
+    """Se quitó: el backend es fijo por instalación y el donut siempre daba 100 % de un lado. La
+    columna de origen de la actividad sigue, con etiqueta legible."""
+    url, _ = panel
+    with sync_playwright() as pw:
+        navegador = _navegador(pw)
+        pagina = navegador.new_page()
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+        pagina.goto(url)
+        pagina.wait_for_selector("#activity tbody tr .org")
+        m = pagina.evaluate(
+            """() => ({
+              donut: !!document.getElementById('originDonut'),
+              titulos: [...document.querySelectorAll('h2')].map(h => h.textContent),
+              origen: document.querySelector('#activity tbody tr .org').textContent,
+              fila: getComputedStyle(document.getElementById('modelBar').closest('.grid'))
+                .gridTemplateColumns.split(' ').length,
+            })"""
+        )
+        navegador.close()
+    assert not m["donut"]
+    assert "Dónde corrió el cómputo" not in m["titulos"]
+    assert m["origen"] == "Local"
+    assert m["fila"] == 2  # la fila de donuts queda en dos columnas, sin hueco
 
 
 @pytest.mark.skipif(

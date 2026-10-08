@@ -13,9 +13,12 @@ cosas, cae a una estimación gruesa (``tamaño_archivo * 1.2``) y lo marca como 
 
 from __future__ import annotations
 
+import re
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from . import footprint
 
 try:
     import yaml
@@ -23,6 +26,19 @@ except ImportError:  # pragma: no cover - depende del entorno de instalación
     yaml = None  # type: ignore[assignment]
 
 _EXTRA_INSTALL_MSG = 'pip install "local-delegate-mcp[llamaswap]"'
+
+# ¿Vale el estimador de VRAM (con `-ncmoe` y `--mmproj`) para decidir si cabe un residente
+# (`llamaswap residency --pin`, REQ-031)? Solo si sus cuatro estimaciones quedan entre -3 % y
+# +10 % de lo medido en F2 (insumos/llamaswap-grupos.md §2), con los `-ncmoe` MEDIDOS. Control del
+# 2026-10-07 con los GGUF reales (solo cabecera), en MiB, estimado frente a medido:
+#   gemma3-4b 3 581 / 3 270 (+9,5 %, pasa); gemma4-12b + mmproj 19 587 / 9 060 (+116,2 %);
+#   gemma4-26b-a4b -ncmoe 12 45 280 / 10 534 (+329,8 %); qwen36-35b-a3b -ncmoe 20 11 559 / 10 120
+#   (+14,2 %).
+# Falla en tres. La resta de expertos da 4,03 y 6,95 GiB a la CPU; lo que se dispara es el KV cache
+# (12 GiB en el 12B, 35 GiB en el 26B), que se calcula como si todas las capas tuvieran atención
+# completa sobre todo el contexto. Hipótesis, sin medir: los Gemma usan ventana deslizante en la
+# mayoría de capas. Por eso `--pin` exige `--vram-model` para todos los modelos implicados.
+NCMOE_ESTIMATOR_VALIDATED = False
 
 
 def _require_yaml() -> None:
@@ -135,6 +151,70 @@ def read_gguf_arch_info(gguf_path: Path) -> dict[str, int] | None:
     }
 
 
+# --- Tabla de tensores del GGUF (para restar los expertos de `-ncmoe`) ---------------------
+#
+# Despues de los metadatos, el GGUF lista cada tensor: nombre, dimensiones, tipo y offset dentro de
+# la seccion de datos. El tamano de cada tensor se saca como la diferencia entre offsets
+# consecutivos (el ultimo, hasta el final del fichero), sin tabla de tipos: asi no hay que saber
+# cuantos bytes ocupa cada cuantizacion, y el relleno de alineacion cae dentro del tensor anterior.
+# Se lee solo la cabecera (unos MB en un GGUF con vocabulario grande), nunca los pesos.
+
+_DEFAULT_ALIGNMENT = 32
+# `blk.<i>.ffn_*_exps.*`: los tensores de expertos que `-ncmoe N` deja en la CPU para `i < N`.
+_EXPERT_TENSOR = re.compile(r"^blk\.(\d+)\.ffn_[A-Za-z0-9_]*_exps\.")
+
+
+def read_gguf_tensor_sizes(gguf_path: Path) -> dict[str, int] | None:
+    """Bytes de cada tensor del GGUF, por nombre. `None` si la cabecera no se puede leer."""
+    try:
+        file_size = gguf_path.stat().st_size
+        with gguf_path.open("rb") as f:
+            if f.read(4) != _GGUF_MAGIC:
+                return None
+            (version,) = struct.unpack("<I", f.read(4))
+            if version < 2:
+                return None
+            (tensor_count,) = struct.unpack("<Q", f.read(8))
+            (kv_count,) = struct.unpack("<Q", f.read(8))
+            alignment = _DEFAULT_ALIGNMENT
+            for _ in range(kv_count):
+                key = _read_gguf_string(f)
+                (vtype,) = struct.unpack("<I", f.read(4))
+                value = _read_gguf_value(f, vtype)
+                if key == "general.alignment" and isinstance(value, int) and value > 0:
+                    alignment = value
+            offsets: list[tuple[int, str]] = []
+            for _ in range(tensor_count):
+                name = _read_gguf_string(f)
+                (n_dims,) = struct.unpack("<I", f.read(4))
+                f.read(8 * n_dims)
+                f.read(4)  # tipo: no hace falta, el tamano sale de los offsets
+                (offset,) = struct.unpack("<Q", f.read(8))
+                offsets.append((offset, name))
+            header_end = f.tell()
+    except (OSError, struct.error, KeyError, UnicodeDecodeError):
+        return None
+    data_start = -(-header_end // alignment) * alignment
+    offsets.sort()
+    sizes: dict[str, int] = {}
+    for i, (offset, name) in enumerate(offsets):
+        next_item = offsets[i + 1][0] if i + 1 < len(offsets) else file_size - data_start
+        if next_item < offset:
+            return None
+        sizes[name] = next_item - offset
+    return sizes
+
+
+def compute_cpu_expert_bytes(sizes: dict[str, int], n_cpu_moe: int) -> int:
+    """Bytes de los tensores de expertos de las capas `i < n_cpu_moe` (los que no van a la GPU)."""
+    total = 0
+    for name, size in sizes.items():
+        layer = _EXPERT_TENSOR.match(name)
+        if layer and int(layer.group(1)) < n_cpu_moe:
+            total += size
+    return total
+
+
 # --- Parser ligero de flags relevantes en el 'cmd' de una entrada models.<id> -----------
 
 # bytes por elemento del KV cache según --cache-type-k/-v de llama-server (aproximado).
@@ -190,6 +270,10 @@ class ResourceEstimate:
     detail: str
     gguf_path: Path | None = None
     error: str | None = None
+    # Bytes de expertos que `-ncmoe` deja en la CPU y que se restaron de los pesos (0 sin el flag).
+    cpu_expert_bytes: int = 0
+    # Bytes del fichero de `--mmproj` que se sumaron (0 sin el flag).
+    mmproj_bytes: int = 0
 
 
 VramEstimate = ResourceEstimate  # alias retrocompatible (nombre histórico de F7.1-F7.7)
@@ -223,10 +307,40 @@ def estimate_model_vram(
             error=f"archivo no encontrado: {gguf_path}",
         )
 
-    size_gb = gguf_path.stat().st_size / 1024**3
     flags = _parse_cmd_flags(cmd)
+    # `-ncmoe` y `--mmproj` salen del parser unico de `cmd` (`huella.cmd_flags`), que conoce la
+    # forma corta y la larga de cada flag.
+    footprint_flags = footprint.cmd_flags(cmd)
+    n_cpu_moe = footprint_flags.get("n_cpu_moe")
+    n_cpu_moe = n_cpu_moe if isinstance(n_cpu_moe, int) and n_cpu_moe > 0 else 0
+    experts = 0
+    moe_note = ""
+    if n_cpu_moe:
+        tamanos = read_gguf_tensor_sizes(gguf_path)
+        if tamanos is None:
+            moe_note = f"; -ncmoe {n_cpu_moe} sin restar (tabla de tensores ilegible)"
+        else:
+            experts = compute_cpu_expert_bytes(tamanos, n_cpu_moe)
+            moe_note = f"; -ncmoe {n_cpu_moe}: {experts / 1024**3:.2f} GiB de expertos en CPU"
+    mmproj_bytes = 0
+    if footprint_flags.get("mmproj"):
+        mmproj = Path(footprint_flags["mmproj"])
+        if not mmproj.is_file():
+            return VramEstimate(
+                model_id,
+                0.0,
+                "error",
+                "",
+                gguf_path=gguf_path,
+                error=f"mmproj no encontrado: {mmproj}",
+            )
+        mmproj_bytes = mmproj.stat().st_size
+    mmproj_gb = mmproj_bytes / 1024**3
+    mm_note = f" + mmproj {mmproj_gb:.2f} GiB" if mmproj_bytes else ""
+    size_gb = (gguf_path.stat().st_size - experts) / 1024**3
     ctx = int(flags["ctx_size"]) if flags.get("ctx_size", "").isdigit() else None
     arch_info = read_gguf_arch_info(gguf_path) if ctx else None
+    extra = {"cpu_expert_bytes": experts, "mmproj_bytes": mmproj_bytes}
 
     if arch_info and ctx:
         bytes_k = _CACHE_TYPE_BYTES.get(flags.get("cache_type_k", ""), _DEFAULT_CACHE_BYTES)
@@ -238,19 +352,21 @@ def estimate_model_vram(
             * ctx
             * (bytes_k + bytes_v)
         ) / 1024**3
-        total = size_gb * 1.05 + kv_gb
+        total = size_gb * 1.05 + kv_gb + mmproj_gb
         detail = (
-            f"pesos {size_gb:.2f} GiB + KV {kv_gb:.2f} GiB "
+            f"pesos {size_gb:.2f} GiB + KV {kv_gb:.2f} GiB{mm_note} "
             f"(ctx={ctx}, capas={arch_info['n_layer']}, kv_heads={arch_info['n_head_kv']}, "
-            f"cache_k={flags.get('cache_type_k', 'f16')}, cache_v={flags.get('cache_type_v', 'f16')})"
+            f"cache_k={flags.get('cache_type_k', 'f16')}, cache_v={flags.get('cache_type_v', 'f16')}"
+            f"{moe_note})"
         )
-        return VramEstimate(model_id, total, "gguf-metadata", detail, gguf_path=gguf_path)
+        return VramEstimate(model_id, total, "gguf-metadata", detail, gguf_path=gguf_path, **extra)
 
-    total = size_gb * 1.2
+    total = size_gb * 1.2 + mmproj_gb
     detail = (
-        f"pesos {size_gb:.2f} GiB x1.2 (estimación gruesa: sin metadatos GGUF o sin --ctx-size)"
+        f"pesos {size_gb:.2f} GiB x1.2{mm_note} "
+        f"(estimación gruesa: sin metadatos GGUF o sin --ctx-size{moe_note})"
     )
-    return VramEstimate(model_id, total, "flat-fallback", detail, gguf_path=gguf_path)
+    return VramEstimate(model_id, total, "flat-fallback", detail, gguf_path=gguf_path, **extra)
 
 
 def estimate_model_ram(

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "max_inventa_26b": 1,
+  "preguntas_opcionales": ["principal", "especifico"],
+  "formato": {
+    "primera_linea_max": 72,
+    "prefijo": "^(feat|fix|docs|refactor|perf|test|build|ci|chore|style|revert)(\\([^)]+\\))?!?: ",
+    "sin_adornos": {
+      "vallas_de_codigo": true,
+      "comillas_envolventes": true,
+      "encabezados_markdown": true,
+      "frases_de_presentacion": [
+        "^(aquí|aqui)\\b",
+        "^(here is|here's|here are)\\b",
+        "^(claro|por supuesto|desde luego|sure|certainly|of course)\\b",
+        "^(mensaje de commit|commit message)\\s*:",
+        "^(este|el siguiente) (mensaje|commit)\\b"
+      ]
+    }
+  },
+  "parada_anticipada": true
+}

@@ -2,7 +2,10 @@
 
 Plan sobre `spec.md` (aprobada el 2026-10-06, REQ-001 a REQ-043, con la aclaración de REQ-042 del
 mismo día al final de la spec). **Revisión 2**, tras la revisión adversaria del plan (`review.md`,
-«Revisión del plan» y «Respuesta a la revisión del plan»). Se implementa **después** de
+«Revisión del plan» y «Respuesta a la revisión del plan»). **Aclaraciones del 2026-10-07**, tras la
+revisión del código de la ola 3: T7, T8, T10, T11 y T14 llevan la marca «aclarado el 2026-10-07»,
+que recoge las aclaraciones de REQ-002, REQ-003, REQ-005 y REQ-007 del final de la spec y las
+firmas que fijó el código. Se implementa **después** de
 `panel-cuentas-y-estados-honestos` y de `coste-api-y-cuota`, y parte del estado que dejan los dos
 mezclados en `main`. Nada de este plan da por hecho el código actual de `server.py`,
 `web/metrics.py`, `checks.py`, `cli.py` ni `config.py`: las zonas se nombran **por función**, y el
@@ -64,7 +67,7 @@ escribe.
     T3 los pide, siembra desde el log de uso) y el cálculo de `ritmo_rel`/`lento`. Puro.
   - `residencia.py` (T11): la edición quirúrgica de REQ-033 (marcas de posición de
     `yaml.compose()`), la autocomprobación, las negativas de formato, la copia con fecha y el
-    reemplazo atómico con reintentos; `--ninguno`, `--fijar`, `--ttl` y `--restaurar` como
+    reemplazo atómico con reintentos; `--none`, `--pin`, `--ttl` y `--restore` como
     transformaciones puras «bytes → bytes».
   - `llamaswap_api.py` (T13): las consultas a llama-swap con tope de 1 s (`/running` reducido a id,
     estado y TTL; la foto `inflight` de la carga inicial de `/api/events`; la actividad), y la vigía
@@ -87,14 +90,14 @@ escribe.
 - **Variables nuevas** por `_env*` en `config.py`, cada una en la tarea que la usa:
   `LOCAL_DELEGATE_TURNO_MAX_S` (T10), `LOCAL_DELEGATE_UMBRAL_LENTO` (T14) y
   `LOCAL_DELEGATE_AFINIDAD_MARGEN_S` (T15, solo si hay afinidad).
-- **Comando:** `local-delegate llamaswap residencia` (subparser nuevo `llamaswap` con el
-  subcomando `residencia`), con `--config`, `--ninguno`, `--grupo`, `--fijar`, `--ttl`,
-  `--restaurar`, `--vram-gb`, `--reserva-gb`, `--vram-modelo`, `--dry-run` y `--ahora`.
+- **Comando:** `local-delegate llamaswap residency` (subparser nuevo `llamaswap` con el
+  subcomando `residency`), con `--config`, `--none`, `--group`, `--pin`, `--ttl`,
+  `--restore`, `--vram-gb`, `--reserve-gb`, `--vram-model`, `--dry-run` y `--now`.
   `check-llamaswap` e `init-llamaswap` siguen donde están.
-- **Endpoints nuevos del daemon**, tras el token web: `GET /api/llamaswap/estado`,
-  `POST /api/llamaswap/vigia` y `GET /api/llamaswap/vigia/<id>`. El panel no los pide, así que
+- **Endpoints nuevos del daemon**, tras el token web: `GET /api/llamaswap/status`,
+  `POST /api/llamaswap/watch` y `GET /api/llamaswap/watch/<id>`. El panel no los pide, así que
   `tests/test_captura.py` no cambia de lista (solo mira lo que la página hace `fetch`).
-- **Checks nuevos de `doctor`:** `backend.residencia` y `backend.topologia`, en el grupo «Backend»,
+- **Checks nuevos de `doctor`:** `backend.residency` y `backend.topology`, en el grupo «Backend»,
   detrás de `backend.llamaserver`. Pasan de veintidós a veinticuatro, con sus guardianes de tamaño.
 
 ### Olas
@@ -193,11 +196,11 @@ tarea lo vuelve a medir antes de editar.
 | `src/local_delegate/topologia.py`, `tests/test_topologia.py`, `tests/fixtures/topologia/` (nuevos) | LF | T7 | |
 | `src/local_delegate/turno.py`, `tests/test_turno.py` (nuevos) | LF | T8 → T10 → T15 | T8: núcleo y envoltura. T10: solo si la integración pide un cambio de interfaz, anotado. T15: nada (las reservas con alternativos ya están en T8) |
 | `src/local_delegate/ritmo.py`, `tests/test_ritmo.py` (nuevos) | LF | T9 | |
-| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `cargado`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `ritmo` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
+| `src/local_delegate/server.py` | CRLF | T10 → T12 → T14 → T15 | T10: `_chat`, `_chat_chunked`, `_chat_map_reduce` (turno por operación), `_run_chat` (marca de plaza para el aserto), `_con_respaldo` partido en intento y decisión de salto, `_ModeloVigente` (el salto vuelve a la operación), contador de llamadas en vuelo alrededor de `_post_chat`, ayudante nuevo `_inflight_turno` (escribe y borra `turno_en_uso` y `turno_posicion`), las dos claves en `inflight_snapshot`, `_log_event` (`espera_turno_ms`, `turno`), y en `local_status` el bloque del turno. T12: decisión de salto (paso `loaded`, capacidad), y en `local_status` la línea de cadenas. T14: `ChatResult` (`timings`), `_post_chat`, `_log_event` (campos de D), siembra de `pace` al arrancar, y en `local_status` las medianas. T15: cálculo de `A`, elección tras la primera plaza, campos de afinidad de `_log_event` |
 | `src/local_delegate/config.py` | LF | T10 → T14 → T15 | una variable cada una |
 | `tests/conftest.py` | LF | T10 → T11 | T10: fixture autouse que vacía el estado del turno y la caché de topología. T11: fixture autouse que apunta la consulta al daemon a un puerto muerto |
-| `src/local_delegate/web/metrics.py` | CRLF | T10 → T13 → T14 | T10: palabras del motivo `"turno"` en el `title` de `estadoModelo` y en «En curso» (`renderInflight`), con `turno_en_uso`; **no** toca la tabla de estados ni la condición de la fila 3. T13: los tres endpoints de `/api/llamaswap/`. T14: columnas de espera, inferencia y marca «lento» en la tabla de actividad (función JS pura nueva `marcaLento`) |
-| `tests/test_panel_estados.py` | LF | T10 → T14 | T10: motivo `"turno"`. T14: `marcaLento` |
+| `src/local_delegate/web/metrics.py` | CRLF | T10 → T13 → T14 | T10: palabras del motivo `"turno"` en el `title` de `estadoModelo` y en «En curso» (`renderInflight`), con `turno_en_uso`; **no** toca la tabla de estados ni la condición de la fila 3. T13: los tres endpoints de `/api/llamaswap/`. T14: columnas de espera, inferencia y marca «lento» en la tabla de actividad (función JS pura nueva `slowMark`) |
+| `tests/test_panel_estados.py` | LF | T10 → T14 | T10: motivo `"turno"`. T14: `slowMark` |
 | `tests/test_metrics.py` | LF | T10 → T13 → T14 | T10: `/api/inflight` con las claves nuevas. T13: endpoints nuevos. T14: `/api/events` con los campos nuevos |
 | `tests/test_dashboard_js.py`, `tests/test_dashboard_ui.py` | LF / CRLF | T14 | solo lo que salga del inventario de T14 |
 | `tests/backend_mock.py` | LF | T10 → T14 | T10: modo que cuenta cambios de modelo y serializa como `-np 1`. T14: `timings` en las respuestas |
@@ -205,15 +208,15 @@ tarea lo vuelve a medir antes de editar.
 | tests existentes que rompa el turno (inventario de T10: `test_respaldo.py`, `test_map_reduce.py`, `test_chunking.py`, `test_post_chat_caminos.py`, `test_observabilidad_respaldo.py`, los que salgan) | ver EOL | T10 | solo lo que sale del inventario ejecutado |
 | `src/local_delegate/residencia.py`, `tests/test_residencia.py`, `tests/fixtures/residencia/` (nuevos) | LF | T11 → T13 | T11: transformaciones y escritura. T13: nada en el módulo; las negativas y la vigía van en `cli.py` |
 | `src/local_delegate/llamaswap_config.py`, `tests/test_llamaswap_config.py` | LF | T11 | estimador con `-ncmoe`; `.bak` con fecha de `init-llamaswap`; `--ttl-resident` a 0 |
-| `src/local_delegate/cli.py` | CRLF | T11 → T13 | T11: subparser `llamaswap residencia` y su comando con la comprobación previa como interfaz que devuelve «no se sabe»; ayuda de `init-llamaswap`. T13: comprobación previa y vigía de verdad |
-| `src/local_delegate/cadenas.py`, `tests/test_cadenas.py` | LF | T12 → T15 | T12: paso `cargado`, cadenas por defecto, sinónimo `residente`, `describir()`. T15: el proveedor de miembros de `cargado` |
-| `src/local_delegate/checks.py` | LF | T12 → T13 → T15 | T12: `_probe_fallback` (textos y aviso del sinónimo). T13: `_probe_residencia`, `_probe_topologia`, dos entradas de `CHECKS`, las frases de tamaño del docstring. T15: aviso de huella en `_probe_residencia` |
+| `src/local_delegate/cli.py` | CRLF | T11 → T13 | T11: subparser `llamaswap residency` y su comando con la comprobación previa como interfaz que devuelve «no se sabe»; ayuda de `init-llamaswap`. T13: comprobación previa y vigía de verdad |
+| `src/local_delegate/cadenas.py`, `tests/test_cadenas.py` | LF | T12 → T15 | T12: paso `loaded`, cadenas por defecto, sinónimo `residente`, `describir()`. T15: el proveedor de miembros de `loaded` |
+| `src/local_delegate/checks.py` | LF | T12 → T13 → T15 | T12: `_probe_fallback` (textos y aviso del sinónimo). T13: `_probe_residencia`, `_probe_topologia`, dos entradas de `CHECKS`, las frases de tamaño del docstring. T15: aviso de huella en `_probe_residency` |
 | `tests/test_checks.py`, `tests/test_wiki.py` | LF | T12 → T13 | T12: textos de `_probe_fallback`. T13: `_NUMERO[23]`, `_NUMERO[24]`, `_NUMERO_DE_CHECKS[23]`, `_NUMERO_DE_CHECKS[24]` y tests de los dos checks |
 | `docs/wiki/Integration-install.md` | CRLF | T13 → T16 | T13: las dos filas de la tabla del doctor y «las veinticuatro piezas». T16: el resto |
 | tests de respaldo que nombran al residente (`test_respaldo.py`, `test_observabilidad_respaldo.py`, `test_rol_fast_retirado.py`, los que salgan) | LF | T12 | inventario ejecutado; se reescriben, no se borran sin sustituto |
 | `src/local_delegate/llamaswap_api.py`, `tests/test_llamaswap_api.py`, `tests/test_residencia_cli.py` (nuevos) | LF | T13 | |
 | `src/local_delegate/web/sysinfo.py` | comprobar | T14 | solo si `ram_stats()` necesita una variante que no reviente |
-| `src/local_delegate/matriz.py`, `tests/test_afinidad.py` (nuevos) | LF | T15 | |
+| `src/local_delegate/matrix.py`, `tests/test_affinity.py` (nuevos) | LF | T15 | |
 | `tests/test_aislamiento_entorno.py` | LF | T10 → T14 → T15 | solo si alguna aserción de tamaño lo pide |
 | `CHANGELOG.md`, `README.md` | CRLF | T16 | |
 | `docs/wiki/Configuration.md`, `Tools.md`, `Architecture.md`, `Backend-versions.md`, `Savings-and-metrics.md`, `Troubleshooting.md`, `Daemon.md`, `docs/recipes/llama-swap-groups.md` | LF | T16 | |
@@ -233,7 +236,7 @@ Reglas comunes:
   ninguna tarea** salvo T17.6, que la lanza la sesión principal con permiso del usuario.
   `LLAMASWAP_CONFIG` está definida a nivel de usuario y apunta a ella, y el CLI resuelve la ruta con
   `--config`, después `LLAMASWAP_CONFIG` y, por último, la que da el daemon. Por eso:
-  - **toda orden de `llamaswap residencia`** que escriba un plan, un encargo o un test lleva
+  - **toda orden de `llamaswap residency`** que escriba un plan, un encargo o un test lleva
     `--config <copia>` explícito, escrito literal;
   - una fixture **autouse** de `tests/conftest.py` (T11) apunta la consulta al daemon a un puerto
     muerto, y `conftest` ya aísla `LLAMASWAP_CONFIG`; un test de T11 demuestra que, sin `--config`
@@ -626,6 +629,39 @@ mismo guion sin turno da varios cambios de modelo) antes del assert principal.
   escrito.
 - **Rollback:** los resultados se conservan; nada del producto cambia.
 
+### T5b — Idioma del mensaje de commit (entre T5 y T6)
+
+Insertada el 2026-10-07 tras la parada de T5 antes de la hoja (decisión del usuario: «Fijar el idioma y
+repetir»). No sustituye nada de T5: las celdas mecánicas siguen como están.
+
+- **Ficheros:** `src/local_delegate/config.py` (`commit_idioma()`), `src/local_delegate/server.py`
+  (`_orden_de_idioma_de_commit`, usada en `local_commit_msg`), `scripts/construir_corpus.py` (la captura
+  conserva la variable), `tests/test_commit_idioma.py`, `tests/test_corpus.py`,
+  `benchmarks/afinidad-2026-10/cases.json`, `benchmarks/catalogo-2026-09/cases.json` (solo el `system` de
+  sus 2 casos de commit), `benchmarks/afinidad-2026-10/resultados/` y `resultados-sin-idioma/`,
+  `README.md`, `docs/wiki/Configuration.md`, `docs/wiki/Tools.md`, `examples/.env.example`,
+  `CHANGELOG.md`; `evidencias/T5b.md`.
+- **Requisitos:** REQ-044. No cambia REQ-040 a REQ-043 (el corpus conserva sus 30 reales, sus 9 trampas
+  y el techo; solo cambia su `system`).
+- **Qué se hace:**
+  1. Variable por `_env*` y orden en el prompt de la llamada que redacta el mensaje (única o reduce).
+  2. Tests y mutantes: con `es`, la orden de español (mutante: no leer la variable); sin variable, la
+     del idioma del diff (mutante: quitar la rama); el reduce del map-reduce la lleva y el map no
+     (mutantes: reduce sin la orden; map con ella); traducción del código (mutante: sin traducir).
+  3. Corpus reconstruido **con `LOCAL_DELEGATE_COMMIT_IDIOMA=es`**; `afinidad --comprobar` con la misma
+     variable da `ok`, y sin ella da diferencia (control). Solo cambia el `system` de los 40 casos de
+     commit; `trampas.json` y `reglas.json` no cambian. El corpus de F2 (`catalogo-2026-09`), que
+     recaptura los mismos dos casos de commit sin la variable, se regenera con el entorno limpio.
+  4. Las filas de commit de `resultados/` (30 reales, 9 trampas y el techo) se mueven, sin borrar, a
+     `resultados-sin-idioma/`. `tanda_afinidad.py --seco` tiene que dar 39 + 39 + 3 pendientes y 0 en
+     las mecánicas.
+- **Repetición de las celdas de commit:** la hace la sesión principal con el lanzador de la tanda, que
+  debe llevar `LOCAL_DELEGATE_COMMIT_IDIOMA=es` y `--rehacer-huellas` (cambia solo `prompt_sha256` de
+  `local_commit_msg` en los dos modelos). El techo hereda el entorno. Después siguen los pasos 3 a 7 de T5
+  (delegaciones ajenas, ventana, hoja y su comprobación).
+- **Rollback:** quitar la variable devuelve el prompt de «idioma del diff»; los resultados sin idioma se
+  conservan donde están.
+
 ### T6 — Juicio del usuario y veredicto de commit (asíncrona, en paralelo con las olas 3 a 8)
 
 No toca código ni `verification.md`: escribe en `benchmarks/afinidad-2026-10/` y en
@@ -689,15 +725,19 @@ cierra.**
   grupos con los valores por defecto de v255, `(default)`, alias → id, `choca(a, b)` según
   `EvictionFor` en los dos sentidos, `ttl_efectivo(m)`, `mmproj(m)` (vía `huella.flags_del_cmd`),
   `precargados()`, `residentes()` y `version`. `validar_como_load_go(datos)` con las reglas de
-  REQ-033. `foto()` lee `config.LLAMASWAP_CONFIG` en caliente y cachea por `(ruta, mtime, tamaño)`.
-  Un modelo que no está en la config: `choca` responde «compatible con todos» (REQ-002).
+  REQ-033. `foto()` lee `config.llamaswap_config_path()` en caliente y cachea por `(ruta, mtime,
+  tamaño)`. Un modelo que no está en la config: `choca` responde «compatible con todos» (REQ-002).
+  *(Aclarado el 2026-10-07, tras la revisión de la ola 3: la fuente de `EvictionFor` es
+  `internal/router/group.go:70-104` de llama-swap v255, commit `7761aa1`, no `src_group.go`; la ruta
+  sale de `config.llamaswap_config_path()`, no de `config.LLAMASWAP_CONFIG`; y los motivos son los
+  seis de la aclaración de REQ-002 en la spec, con «no cumple load.go» y forma inesperada incluidos.)*
 - **Tests:**
 
   | Test | Control | Debe fallar con el mutante en |
   |---|---|---|
-  | Tabla de casos contra `EvictionFor` (copiada de `src_group.go:70-104` en el docstring): mismo grupo con `swap` y sin él; grupos distintos con `exclusive` en el de A y `persistent` en el de B; los dos sentidos; un modelo consigo mismo | (b) | Mutante 1: ignorar el defecto `exclusive: true` (grupo sin la clave) → falla el caso «grupo sin claves desaloja a otro grupo» (`assert choca(a, b)`). Mutante 2: solo un sentido → falla el caso con `exclusive` solo en B |
+  | Tabla de casos contra `EvictionFor` (copiada de `internal/router/group.go:70-104` de v255, commit `7761aa1`, en el docstring): mismo grupo con `swap` y sin él; grupos distintos con `exclusive` en el de A y `persistent` en el de B; los dos sentidos; un modelo consigo mismo | (b) | Mutante 1: ignorar el defecto `exclusive: true` (grupo sin la clave) → falla el caso «grupo sin claves desaloja a otro grupo» (`assert choca(a, b)`). Mutante 2: solo un sentido → falla el caso con `exclusive` solo en B |
   | Modelos sin grupo en `(default)` chocan con todo lo no persistente | (b) | Mutante: sin `(default)` → falla `assert foto.choca("suelto", "gemma4-26b-a4b")` |
-  | Las dos sintaxis: `groups` arriba y `routing.router.settings.groups`; las dos a la vez → `SinTopologia("dos sintaxis")`; `use: matrix` → `SinTopologia("matrix")` | (b) | Mutante: solo `groups` arriba → falla `assert foto.choca(...)` con la sintaxis `routing` |
+  | Las dos sintaxis: `groups` arriba y `routing.router.settings.groups`; las dos a la vez → `SinTopologia("dos sintaxis")`; `use: matrix` → `SinTopologia("matrix")` | (b) | Mutante (el 4 de `evidencias/T7.md`): solo `groups` arriba → falla **`assert not f.choca(...)`** con la sintaxis `routing` (`a` en un grupo `persistent` no exclusivo; `b` y `c` en otro). *Aclarado el 2026-10-07:* la forma original, `assert foto.choca(...)`, no tiene datos que la hagan mutar: si se ignora `routing.router.settings.groups`, todo cae en `(default)` y todos los pares chocan, igual que con la lectura correcta de un grupo exclusivo |
   | Alias: `choca("alias-del-26b", "qwen36-35b-a3b")` igual que con el id real | (b) | Mutante: sin resolver alias → falla el assert (un id desconocido es compatible) |
   | TTL efectivo: `-1` y ausencia → `globalTTL`; `residentes()` con la config de hoy está vacío y con la del 2026-09-15 también (TTL 600), y con `ttl: 0` contiene el modelo | (b) | Mutante: `-1` como infinito → falla `assert ttl_efectivo == 120` |
   | Relectura por `mtime`/tamaño: cambiar el fichero sube `version`; no tocarlo no relee (contador de lecturas) | (b) | Mutante: caché solo por ruta → falla `assert f2.version > f1.version` |
@@ -711,19 +751,36 @@ cierra.**
 - **Ficheros:** `src/local_delegate/turno.py`, `tests/test_turno.py` (nuevos).
 - **Requisitos:** REQ-003 a REQ-007 en su parte pura y de hilos, sin `server.py`.
 - **Qué se hace:**
-  1. **Núcleo puro**: `Estado(activos, cola)`, `Peticion(id, A, rol, orden_cadena)`,
+  1. **Núcleo puro**: `Estado(activos, cola)`, `Peticion(id, A, rol, orden_cadena,
+     directos=frozenset())`,
      `evaluar(estado, choca, ahora, sin_progreso_desde, turno_max_s) -> Decision`: concesión de la
      cabeza con `A'` (REQ-003), E-1 (REQ-005), forzada (REQ-007, modelo del rol si está en `A`; si
      no, el primero de `A` en el orden de la cadena; nunca con alternativos), y «vuelve a la cabeza»
-     cuando la elección no cabe (REQ-003, «Elección»).
+     cuando la elección no cabe (REQ-003, «Elección»). `directos` son los modelos de `A` que entran
+     en `A'` por ser compatibles, como el rol (el destino de un salto); el rol, si está en `A`,
+     siempre lo es. Elección atómica:
+     `elegir(estado, op_id, candidatos, choca) -> tuple[Estado, str | None]` reduce la reserva al
+     primer candidato, en orden, que esté en ella y no choque con los demás de `activos`; `None`
+     quiere decir que volvió a la cabeza; `ValueError` si ningún candidato está en la reserva.
+     `compatibles`, `reducir` y `volver` siguen existiendo como piezas, pero el daemon no las usa
+     sueltas.
   2. **Envoltura**: `Turno` con `threading.Condition`; `pedir(peticion, al_esperar, al_conceder)`
      bloquea con `wait(timeout=1.0)` y reevalúa al despertar; `reducir(op, modelo)`, `soltar(op)`
      y la salida de la cola por abandono hacen `notify_all` (puntos 2 a 4 de REQ-003);
-     `cambio_topologia()` también (punto 5); `en_vuelo()` es un gestor de contexto que mueve el
+     `elegir(op_id, candidatos, al_esperar=None, al_conceder=None) -> str` hace la elección
+     atómica bajo **un solo** cerrojo: reduce al primer candidato que cabe o, si ninguno cabe, vuelve
+     a la cabeza, espera otra concesión y repite; puede lanzar `EsperaAbandonada`. Es la entrada que
+     usa T10, no `reducir` suelto;
+     `cambio_topologia(choca)` también notifica (punto 5); `en_vuelo()` es un gestor de contexto que mueve el
      contador y pone a cero el reloj de falta de progreso. Los ganchos `al_esperar` (posición, modelos
      en uso) y `al_conceder` los pone T10; aquí son funciones de prueba. El reloj es inyectable.
   3. Aserto de orden de adquisición: `pedir` lanza `AssertionError` si el hilo tiene plaza (marca en
      `threading.local` que pondrá `_run_chat`; aquí la ponen los tests).
+  4. *(Aclarado el 2026-10-07, tras la revisión de la ola 3, con la spec, «Aclaraciones posteriores a
+     la aprobación»):* `A'` incluye el destino de un salto vía `directos`, y los demás de `A` solo si
+     ya están elegidos en `activos` y son compatibles con ellos; E-1 se mira al llegar y en cada
+     evaluación posterior; una forzada pone a cero el reloj de falta de progreso y hay como mucho una
+     por evaluación.
 - **Tests (`tests/test_turno.py`):** los del núcleo con reloj simulado, sin dormir; los de la
   envoltura con hilos y latencias de milisegundos y un tope propio de 2 s.
 
@@ -736,7 +793,7 @@ cierra.**
   | E-1 no se aplica si choca con lo que pide alguien de la cola | (b) | Mutante: E-1 mira solo `activos` → falla `assert concedida is None` |
   | Escenario «sin progreso»: forzada a los 600 s sin nadie que llegue ni salga | (b) | Mutante 1 (sin la comprobación periódica: `wait()` sin tope) → con la envoltura y reloj inyectado, falla `assert decision.forzada` tras 600 s simulados (se avanza el reloj y se deja despertar). Mutante 2 (mide la espera total, no la falta de progreso): con una llamada que termina en el 599, falla `assert not decision.forzada` a los 600 |
   | Escenario «llamada larga con plazo HTTP mayor que 600 s»: una llamada en vuelo de 700 s | (b) | Mutante: el reloj corre también con llamadas en vuelo → falla `assert not decision.forzada` a los 650 |
-  | Forzada de un salto con `A = {destino}` → el destino; con el conjunto de `cargado` → el primero en el orden de la cadena | (b) | Mutante: siempre el rol → falla `assert decision.modelo == "gemma4-26b-a4b"` |
+  | Forzada de un salto con `A = {destino}` → el destino; con el conjunto de `loaded` → el primero en el orden de la cadena | (b) | Mutante: siempre el rol → falla `assert decision.modelo == "gemma4-26b-a4b"` |
   | Escenario «cuando una reserva se reduce, la cola se vuelve a mirar» (W1 con {4B, 26B, Qwen3.6}, W2 del 26B) | (b) | Mutante: `reducir` sin `notify_all` → falla `assert w2_empezo < w1_termino` (con hilos; W1 hace 3 trozos de 50 ms) |
   | Una espera que sale de la cola por abandono deja pasar a la siguiente compatible | (b) | Mutante: el abandono sin `notify_all` → falla `assert concedida_a_tiempo` (la siguiente se concede en menos de 0,2 s; sin la notificación espera al tic, así que el test construye el `Turno` con `tic=5.0` —parámetro del constructor, 1 s por defecto— para que el mutante mute) |
   | `cambio_topologia()` concede a una espera que la topología nueva permite | (b) | Mutante: sin `notify_all` en el cambio → falla igual que el anterior |
@@ -786,7 +843,8 @@ cierra.**
      escenario equivalente; ninguno se borra sin sustituto. La lista va a `verification.md`.
   2. `config.TURNO_MAX_S = _env_float("LOCAL_DELEGATE_TURNO_MAX_S", 600.0)`.
   3. `_turno` global de `turno.Turno` y un `_topologia()` que devuelve la foto o el motivo (sin
-     `LLAMASWAP_CONFIG`, sin extra, ilegible, `matrix`, backend no loopback → sin turno, REQ-002).
+     `LLAMASWAP_CONFIG`, sin extra, ilegible, `matrix`, dos sintaxis, no cumple load.go, backend no
+     loopback → sin turno, REQ-002 con su aclaración del 2026-10-07).
   4. **Turno por operación** en `_chat`, `_chat_chunked` y `_chat_map_reduce` (y en la de imagen,
      que pasa por `_chat`): `A = {rol}` (sin bloque B), o `{model}` si es explícito; espera con
      `_inflight_espera_local(entry_id, "turno")` y el ayudante nuevo `_inflight_turno(entry_id,
@@ -798,6 +856,13 @@ cierra.**
      reintento sin schema, dentro de la plaza) y `_siguiente_salto` (la decisión, fuera); la
      operación suelta plaza y turno, pide turno con `A = {destino}` al final de la cola, y pide plaza.
      El tope de `MAX_CONCURRENT_REQUESTS` se mantiene porque la plaza es el mismo semáforo.
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* el salto pide turno con
+     `Peticion(A={destino}, directos={destino}, rol=<rol original>)`, y el paso `loaded` con
+     `directos` vacío (su conjunto de REQ-019 solo entra si ya está elegido en `activos`). Con varios
+     modelos en `A'`, la elección usa `Turno.elegir(op_id, candidatos, al_esperar, al_conceder)`, no
+     `reducir` suelto. Cuando sube `topologia.foto().version`, el daemon llama a
+     `Turno.cambio_topologia(foto.choca)` (REQ-009). Cualquier `SinTopologia`, sea cual sea su
+     motivo, se trata como «sin turno» (REQ-002).
   7. `_log_event`: `espera_turno_ms` si es mayor que 0 y `turno: "forzado"` si lo fue.
   8. `local_status`: «Turno: sí (choques: …; en uso: …; esperan: N)» o «Turno: no (<motivo>)».
   9. `web/metrics.py`: en `estadoModelo`, el `title` con motivo `"turno"` dice «esperando turno del
@@ -820,7 +885,7 @@ cierra.**
       que no está en la spec) **solo si** el N con turno es **menor** que el de la línea base, **o**
       menor que 3 veces el pico de operaciones simultáneas que midió T0.6. Si no, se anotan los dos N
       y el pico. Además se deja escrito, y lo prueba T13: con el limitador agotado,
-      `/api/llamaswap/estado` (también síncrono) no contesta a tiempo y el CLI responde «no se sabe»,
+      `/api/llamaswap/status` (también síncrono) no contesta a tiempo y el CLI responde «no se sabe»,
       que es la negativa segura.
 - **Tests (`tests/test_turno_daemon.py` salvo que se diga otra cosa):** el `backend_mock` en modo
   «cuenta cambios» procesa una petición a la vez (como `-np 1` y el FIFO de llama-swap) y cuenta un
@@ -853,7 +918,7 @@ cierra.**
   (zona T11: la fixture que corta la consulta al daemon real).
 - **Requisitos:** REQ-029 a REQ-033, REQ-035, REQ-038 (la parte de ficheros). La comprobación
   previa de REQ-034 y la vigía son de T13: aquí son una interfaz que devuelve «no se sabe», así que
-  **toda escritura de T11 exige `--ahora`** (corte (c) para los tests de T13).
+  **toda escritura de T11 exige `--now`** (corte (c) para los tests de T13).
 - **Qué se hace:**
   1. **Fixtures**: copias de la config de hoy, de `config.yaml.pre-sin-residente-20261006.bak` y de
      `config.yaml.pre-b10909-20260915.bak` (la del fin de línea mixto), con toda clave sustituida, y
@@ -866,6 +931,14 @@ cierra.**
      `topologia.validar_como_load_go`), copia `<config>.<AAAAMMDD-HHMMSS>.bak` sin pisar (sufijo si
      existe), reemplazo atómico con temporal en la misma carpeta y `os.replace` con 5 reintentos a
      200 ms ante violación de compartición; `ninguno`, `fijar`, `ttl` y `restaurar`.
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* el grupo que escribe `fijar` lleva
+     `exclusive: false` **explícito**: el defecto de v255 es `exclusive: true`, y un grupo residente
+     sin la clave desalojaría a los demás grupos al cargar. Y, para `residency` y `--none`, se
+     documenta (en la ayuda y en la wiki de T16) que **sin `globalTTL` ni `ttl` todos los modelos
+     tienen TTL efectivo 0** (`load.go`: `ttl` ausente o `-1` vale `globalTTL`, que por defecto es 0)
+     y por eso salen como residentes (REQ-029); `--none` exige entonces `--ttl` para todos
+     (REQ-030) y, como no queda ningún TTL distinto de 0 que sugerir, el mensaje lo dice en vez de
+     proponer uno (decisión del usuario, 2026-10-07).
   3. **Estimador** (`llamaswap_config.estimate_model_vram`): con `-ncmoe N`, resta los bytes de los
      tensores `blk.<i>.ffn_*_exps.*` de las capas `i < N` (diferencia entre offsets consecutivos de
      la tabla de tensores del GGUF) y suma el `--mmproj`. **Control con los GGUF reales** (solo la
@@ -873,9 +946,9 @@ cierra.**
      (`insumos/llamaswap-grupos.md` §2: 4B 3 270, 12B con mmproj 9 060, 26B `-ncmoe 12` 10 534,
      Qwen3.6 `-ncmoe 20` 10 120 MiB). Las cifras se calculan con los `-ncmoe` **medidos**, no con los
      de la config de hoy. El resultado fija la constante `ESTIMADOR_NCMOE_VALIDADO` (con el motivo y
-     las cifras en su comentario): si una falla, `False`, y `--fijar` exige `--vram-modelo` para
+     las cifras en su comentario): si una falla, `False`, y `--pin` exige `--vram-model` para
      todos los implicados.
-  4. `cli.py`: subparser `llamaswap` con `residencia` y sus opciones; la vista de REQ-029 con
+  4. `cli.py`: subparser `llamaswap` con `residency` y sus opciones; la vista de REQ-029 con
      `topologia`; `init-llamaswap` con `--ttl-resident` 0, ayuda que presenta `--resident` como
      opt-in, y `.bak` con fecha (REQ-035).
   5. **Primero la fixture** (antes de cualquier test del CLI): en `tests/conftest.py`, una fixture
@@ -888,19 +961,21 @@ cierra.**
   |---|---|---|
   | Tabla «Edición quirúrgica» (secuencias sangradas y sin sangrar, comentarios en línea y entre miembros, `ttl` insertado tras un `cmd` plegado entre comillas y tras `\|` y `>`, grupo al final sin salto final, fin de línea mixto, BOM, claves entre comillas, sintaxis `routing`): o el `diff` son solo las líneas pedidas, o una negativa con mensaje | (b) | Mutante: reescribir con `yaml.safe_dump` → falla `assert lineas_cambiadas == esperadas` (pierde los comentarios de la cabecera y cambia las comillas de `apiKeys`; el número exacto lo da el test) |
   | Anclas, alias, `<<:`, claves duplicadas, flujo → negativa con su motivo, fichero intacto (`sha256` igual); para las duplicadas, `pytest.raises(ErrorResidencia, match="clave duplicada")` | (b) | Mutante: sin la negativa de duplicadas → el editor cambia la **primera** aparición, `safe_load` se queda con la última y la autocomprobación lanza `ErrorResidencia` con **otro** mensaje («la autocomprobación no cuadra»): sin `match=` el mutante pasaría; con él, falla el `raises`. **Comprobado** |
-  | `test_sin_config_no_se_sabe`: sin `--config`, con `LLAMASWAP_CONFIG` vacía y la consulta al daemon apuntada a un puerto muerto (fixture autouse), el CLI dice «no se sabe» y **no abre ningún fichero** (espía sobre `open`, `Path.read_bytes` y `Path.read_text` dentro de `residencia` y `cli`) | (b) | Mutante: caer a una ruta por defecto (`config.yaml` del directorio actual) → falla `assert abiertos == []` |
+  | `test_sin_config_no_se_sabe`: sin `--config`, con `LLAMASWAP_CONFIG` vacía y la consulta al daemon apuntada a un puerto muerto (fixture autouse), el CLI dice «no se sabe» y **no abre ningún fichero** (espía sobre `open`, `Path.read_bytes` y `Path.read_text` dentro de `residency` y `cli`) | (b) | Mutante: caer a una ruta por defecto (`config.yaml` del directorio actual) → falla `assert abiertos == []` |
   | `test_la_fixture_corta_el_daemon_real`: con la fixture, la URL que usa el CLI para preguntar al daemon apunta a un puerto sin nadie escuchando | (b) | Mutante: fixture sin `autouse` → falla `assert puerto == puerto_muerto` |
   | Escenario «volver a "ningún residente" desde la config del 2026-09-15» | (a) contra el corte | `assert diff == esperado` (borra el grupo `resident`, añade `- gemma3-4b` a `swap`, no toca el TTL 600) |
-  | `--ninguno` sin grupo `swap: true` → error con `--grupo`; con la config de hoy → «nada que cambiar» y `mtime` intacta | (b) | Mutante: escribir aunque no cambie nada → falla `assert os.stat(ruta).st_mtime_ns == antes` |
-  | `--ttl 0` → remite a `--fijar`; `-1` solo con `globalTTL > 0` | (b) | Mutante: aceptar 0 → falla `pytest.raises(...)` |
-  | Escenario «fijar un residente que no cabe» (`--vram-modelo` del escenario) | (b) | Mutante: sin la reserva → falla `assert "faltan 6,17 GiB" in salida` (sin reserva faltarían 4,17) |
+  | `--none` sin grupo `swap: true` → error con `--group`; con la config de hoy → «nada que cambiar» y `mtime` intacta | (b) | Mutante: escribir aunque no cambie nada → falla `assert os.stat(ruta).st_mtime_ns == antes` |
+  | `--ttl 0` → remite a `--pin`; `-1` solo con `globalTTL > 0` | (b) | Mutante: aceptar 0 → falla `pytest.raises(...)` |
+  | Escenario «fijar un residente que no cabe» (`--vram-model` del escenario) | (b) | Mutante: sin la reserva → falla `assert "faltan 6,17 GiB" in salida` (sin reserva faltarían 4,17) |
   | Escenario «fijar el 4B con la config de hoy se acepta», y con el estimador si `ESTIMADOR_NCMOE_VALIDADO` | (b) | Mutante: `max` por la suma de los demás → falla `assert aceptado` |
+  | `--pin` escribe `exclusive: false` **explícito** en el grupo residente: el YAML resultante, leído con `safe_load`, tiene la clave en ese grupo con valor `False`, y `topologia` lo da como no exclusivo *(aclarado el 2026-10-07)* | (b) | Mutante: no escribir la clave (dejar el defecto de v255, `true`) → falla `assert grupo.get("exclusive") is False` y, con la foto, `assert not foto.choca(residente, "gemma4-26b-a4b")` |
+  | `residency` con una config sin `globalTTL` ni `ttl`: todos los modelos con TTL efectivo 0 y como residentes, y el texto lo explica *(aclarado el 2026-10-07)* | guarda | `assert set(vista.residentes) == set(modelos)` |
   | Escenario «ver la residencia»: «sin residente (recomendado)», 5 modelos con TTL 120 (el 12B, 30), sin claves ni `cmd` (busca `clave-falsa`, `--port` y `llama-server` en la salida) | (b) | Mutante: imprimir el `cmd` → falla `assert "llama-server" not in salida` |
   | Copia con fecha sin pisar: dos escrituras en el mismo segundo dan dos `.bak` | (b) | Mutante: sin sufijo → falla `assert len(baks) == 2` |
   | Reemplazo atómico: `os.replace` falla con `PermissionError(winerror=32)` dos veces y luego funciona → escrito; cinco veces → original intacto y sin temporal | (b) | Mutante: sin reintentos → falla `assert escrito` |
   | Escenario «restaurar una copia» (parte de ficheros) y un lector en bucle durante una restauración lenta | (b) | Mutante: copiar en dos pasos (truncar y escribir) → el lector ve un YAML a medias y falla `assert not vistos_rotos` |
   | `--dry-run` imprime solo las líneas cambiadas y oculta los valores de cualquier línea con `key` | (b) | Mutante: sin ocultar → falla `assert "clave-falsa" not in salida` |
-  | Toda escritura sin `--ahora` se niega con «no se sabe si hay delegaciones en curso» (corte de T11) | (c) | Lo usa T13: tras T13, este test se reescribe con el escenario «sin credencial no se escribe a ciegas» |
+  | Toda escritura sin `--now` se niega con «no se sabe si hay delegaciones en curso» (corte de T11) | (c) | Lo usa T13: tras T13, este test se reescribe con el escenario «sin credencial no se escribe a ciegas» |
   | Estimador: tabla de tensores sintética con expertos en las capas 0–3 y `-ncmoe 2` resta solo las capas 0 y 1 | (b) | Mutante: `i <= N` → falla `assert restado == bytes_capas_0_1` |
   | Ningún fixture lleva una clave real | guarda | descrito en el paso 1 |
 - **Verificación:**
@@ -914,6 +989,9 @@ cierra.**
 - **Ficheros:** `cadenas.py`, zona T12 de `server.py`, zona T12 de `checks.py`,
   `tests/test_cadenas.py`, `tests/test_checks.py` (zona T12) y los tests del inventario.
 - **Requisitos:** REQ-019 a REQ-023, y lo de REQ-037 que vive en el código.
+- **Nombre del paso** *(decisión del usuario del 2026-10-07: lo que se teclea va en inglés)*: el
+  paso se llama `loaded`, no `cargado`; `residente`/`resident` siguen como sinónimos obsoletos con
+  aviso, y `cargado` no se acepta. Ver la aclaración en `spec.md`.
 - **Precondición:** T1 hecha (la enmienda está escrita). El gate de F3 puede estar pendiente; la
   mezcla espera (T17).
 - **Qué se hace:**
@@ -921,17 +999,17 @@ cierra.**
      y, tras el cambio, la suite; cada test que caiga se reescribe al escenario de C que lo
      sustituye (tabla de REQ-037: «el modelo largo falla y responde el mecánico», «la entrada no cabe
      en el respaldo», «el modelo no cabe en la VRAM»). Lista en `verification.md`.
-  2. `cadenas.py`: paso `CARGADO = "cargado"`; `residente`/`resident` en las variables como
-     sinónimo, con la marca para el aviso; cadenas por defecto `code → cargado → long`,
-     `long → cargado → code`, `mechanical → cargado → long`; `miembros_cargado(tool, fallido,
+  2. `cadenas.py`: paso `LOADED = "loaded"`; `residente`/`resident` en las variables como
+     sinónimo, con la marca para el aviso; cadenas por defecto `code → loaded → long`,
+     `long → loaded → code`, `mechanical → loaded → long`; `miembros_loaded(tool, fallido,
      propios, nadie_mas)` que **sin proveedor registrado devuelve `()`** sin tocar la red (el
      proveedor lo pone T15, si hay afinidad); `describir()` con «sin residente» o «residente: X»
      según `topologia.residentes()`.
-  3. `server.py` (decisión de salto de T10): el paso `cargado` se resuelve en el momento del salto;
-     vacío → se salta **sin gastar salto**; un fallo de capacidad solo salta a `cargado` y sin segundo
-     salto; sin `cargado`, devuelve el error de siempre.
+  3. `server.py` (decisión de salto de T10): el paso `loaded` se resuelve en el momento del salto;
+     vacío → se salta **sin gastar salto**; un fallo de capacidad solo salta a `loaded` y sin segundo
+     salto; sin `loaded`, devuelve el error de siempre.
   4. `checks._probe_fallback`: «cadenas válidas; sin residente» (o «residente: X» con TTL 0), aviso
-     si una variable usa `residente`, y el texto «usa roles (mechanical, long, code, cargado)».
+     si una variable usa `residente`, y el texto «usa roles (mechanical, long, code, loaded)».
 - **Tests:**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
@@ -939,9 +1017,9 @@ cierra.**
   | Escenario «código nunca cae al mecánico» (`backend_mock`: Qwen3.6 da error del modelo; el 4B «cargado» no importa porque no hay celdas) | (a) | `assert intentos[1].modelo == "gemma4-26b-a4b"` (hoy `gemma3-4b`, el residente) |
   | `long` que falla salta a `code`, nunca al mecánico; `mechanical` que falla salta a `long` | (a) | `assert "gemma3-4b" not in [i.modelo for i in intentos]` en el de `long` |
   | Escenario «fallo de capacidad sin nada cargado» (`local_explain_code`) | (a) | `assert [i.modelo for i in intentos] == ["qwen36-35b-a3b"]` (hoy salta al 4B) |
-  | `cargado` vacío no gasta salto: con `FALLBACK_MAX_HOPS = 1`, `code → cargado → long` llega a `long` | (b) | Mutante: contar el salto vacío → falla `assert intentos[-1].modelo == "gemma4-26b-a4b"` |
-  | `miembros_cargado` sin proveedor no consulta la red (un `backend_mock` sin rutas registradas haría fallar el test si la consultara) | (b) | Mutante: llamar a `/running` → falla por ruta no registrada; el test lo comprueba con `assert rutas_pedidas == []` |
-  | `LOCAL_DELEGATE_FALLBACK_CODE=residente,long` funciona como `cargado,long` y `doctor` avisa del nombre | (a) | `assert "renombra" in (r.hint or "")` |
+  | `loaded` vacío no gasta salto: con `FALLBACK_MAX_HOPS = 1`, `code → loaded → long` llega a `long` | (b) | Mutante: contar el salto vacío → falla `assert intentos[-1].modelo == "gemma4-26b-a4b"` |
+  | `miembros_loaded` sin proveedor no consulta la red (un `backend_mock` sin rutas registradas haría fallar el test si la consultara) | (b) | Mutante: llamar a `/running` → falla por ruta no registrada; el test lo comprueba con `assert rutas_pedidas == []` |
+  | `LOCAL_DELEGATE_FALLBACK_CODE=residente,long` funciona como `loaded,long` y `doctor` avisa del nombre | (a) | `assert "renombra" in (r.fix_hint or "")` |
   | Escenario «el estado ya no habla de un residente fantasma» (`local_status` y `doctor` con la config de hoy) | (a) | `assert "residente gemma3-4b" not in texto` (hoy sale «cadenas válidas; residente gemma3-4b (defecto: el modelo del rol mecánico)») y `assert "sin residente" in texto` |
   | Con una config con `ttl: 0` en el 4B dentro de un grupo `persistent`, `describir()` dice «residente: gemma3-4b» | (b) | Mutante: decir siempre «sin residente» → falla el assert |
 - **Verificación:**
@@ -964,12 +1042,12 @@ cierra.**
      consume la carga inicial y clasifica las líneas siguientes en las cuatro salidas de REQ-034,
      con 10 s para «no vigila» y 45 s en total). Con la key del daemon o, en el CLI sin daemon, la del
      shell; sin key, «no se sabe».
-  2. Endpoints del daemon tras el token web: `GET /api/llamaswap/estado` (estado, TTL, en vuelo por
+  2. Endpoints del daemon tras el token web: `GET /api/llamaswap/status` (estado, TTL, en vuelo por
      modelo, delegaciones propias vivas, ruta de la config que usa el daemon),
-     `POST /api/llamaswap/vigia` y `GET /api/llamaswap/vigia/<id>`.
+     `POST /api/llamaswap/watch` y `GET /api/llamaswap/watch/<id>`.
   3. `cli.py`: la comprobación previa de verdad (daemon con `web_auth_headers()` → directo con la
      key del shell → «no se sabe») y las negativas de REQ-034 (delegaciones propias, peticiones de
-     cualquier cliente o modelos en `/running`), salvo `--ahora`; la vigía abierta **antes** de
+     cualquier cliente o modelos en `/running`), salvo `--now`; la vigía abierta **antes** de
      escribir; las cuatro salidas con su mensaje; con «rechazó», restaurar la copia por el camino de
      REQ-038 y mostrar el error de llama-swap; con «no vigila», decir que falta
      `LLAMASWAP_WATCH_CONFIG=1` si el daemon arrancó llama-swap. El aviso de «descargará todos los
@@ -978,8 +1056,8 @@ cierra.**
   4. `checks.py`, **en este orden**: primero `_NUMERO[23] = "veintitrés"`,
      `_NUMERO[24] = "veinticuatro"`, `_NUMERO_DE_CHECKS[23] = "veintitrés"` y
      `_NUMERO_DE_CHECKS[24] = "veinticuatro"` (si se registran antes los checks, los guardianes caen
-     por `KeyError`, que no vale como control); después `Check("backend.residencia", …)` y
-     `Check("backend.topologia", …)` tras `backend.llamaserver`, los textos de REQ-036, las frases de
+     por `KeyError`, que no vale como control); después `Check("backend.residency", …)` y
+     `Check("backend.topology", …)` tras `backend.llamaserver`, los textos de REQ-036, las frases de
      tamaño del docstring con «veinticuatro»/«veintitrés», y las dos filas de la tabla del doctor y
      «las veinticuatro piezas» en `Integration-install.md` (CRLF).
   5. Los tests que usan el llama-swap de prueba reutilizan la fixture de T2, con su control de
@@ -988,44 +1066,69 @@ cierra.**
 
   | Test | Control | Debe fallar con el mutante en |
   |---|---|---|
-  | `GET /api/llamaswap/estado` con `/running` simulado que trae `cmd` con `--api-key clave-falsa-1` y `/api/events` con cabeceras: ninguna de las dos cosas sale | (b) | Mutante: devolver la fila de `/running` entera → falla `assert "clave-falsa-1" not in r.text` |
+  | `GET /api/llamaswap/status` con `/running` simulado que trae `cmd` con `--api-key clave-falsa-1` y `/api/events` con cabeceras: ninguna de las dos cosas sale | (b) | Mutante: devolver la fila de `/running` entera → falla `assert "clave-falsa-1" not in r.text` |
   | Los endpoints exigen el token web | (b) | Mutante: sin la dependencia del token → falla `assert r.status_code == 401` |
-  | Con el limitador de hilos agotado, la consulta previa del CLI no espera: `/api/llamaswap/estado` simulado que no contesta en su plazo → el CLI dice «no se sabe» y no escribe | (b) | Mutante: consulta sin plazo → falla `assert transcurrido < 5` (con tope propio del test) |
+  | Con el limitador de hilos agotado, la consulta previa del CLI no espera: `/api/llamaswap/status` simulado que no contesta en su plazo → el CLI dice «no se sabe» y no escribe | (b) | Mutante: consulta sin plazo → falla `assert transcurrido < 5` (con tope propio del test) |
   | `en_vuelo()` con una carga inicial de 100 KB de log antes del `inflight` (contra el llama-swap de prueba de T2) | guarda | `assert foto["gemma4-26b-a4b"] == 1` en menos de 1 s |
-  | Escenario «no escribir con delegaciones en curso» (entrada viva en `inflight.json`; y, aparte, una petición de otro cliente en la foto) | (c) tras T11 | `assert "descargaría" in salida` y fichero intacto (en el corte de T11 sale «no se sabe»); con `--ahora`, escribe |
+  | Escenario «no escribir con delegaciones en curso» (entrada viva en `inflight.json`; y, aparte, una petición de otro cliente en la foto) | (c) tras T11 | `assert "descargaría" in salida` y fichero intacto (en el corte de T11 sale «no se sabe»); con `--now`, escribe |
   | Escenario «sin credencial no se escribe a ciegas» (daemon simulado apagado, shell sin key) | (b) | Mutante: pedir la key → falla `assert "LOCAL_DELEGATE_API_KEY" not in salida`; y `assert "no se sabe si hay delegaciones en curso" in salida` |
   | Escenario «llama-swap rechaza la config» (llama-swap de prueba con `-watch-config`; el fichero se escribe por la función interna sin autocomprobación) | (b) | Mutante: sin restaurar → falla `assert sha256(fichero) == sha256(copia)`. Salida «rechazó» con el mensaje de llama-swap |
   | Escenario «llama-swap no vigila el fichero» | (b) | Mutante: tope de «no vigila» de 60 s → falla `assert transcurrido < 15` |
   | Recarga válida → «recargó»; llama-swap apagado → «caído» | (b) | Mutante: confundir «caído» con «no vigila» (sin la comprobación de conexión) → falla `assert salida == "caído"` |
   | Escenario «restaurar una copia» completo: byte a byte, copia del actual y la recarga informada | (a) contra el corte de T11 | `assert "recargó" in salida` (en el corte no hay vigía) |
-  | `doctor`: `backend.residencia` OK con «sin residente» en la config de hoy; aviso informativo con un residente; aviso con `persistent` y TTL > 0 (la config del 2026-09-15) | (c) | Corte: los dos checks ya registrados (con sus guardianes de tamaño en verde) y sus probes devolviendo `UNKNOWN`. Falla `assert r.status == WARN` con la config del 2026-09-15. Un test que buscara el check por id fallaría por `None`, que no vale como control |
-  | `doctor`: `backend.topologia` dice «turno activo» o el motivo (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto) | (c) | Mismo corte: falla `assert "matrix" in r.message` |
+  | `doctor`: `backend.residency` OK con «sin residente» en la config de hoy; aviso informativo con un residente; aviso con `persistent` y TTL > 0 (la config del 2026-09-15) | (c) | Corte: los dos checks ya registrados (con sus guardianes de tamaño en verde) y sus probes devolviendo `UNKNOWN`. Falla `assert r.status == WARN` con la config del 2026-09-15. Un test que buscara el check por id fallaría por `None`, que no vale como control |
+  | `doctor`: `backend.topology` dice «turno activo» o el motivo (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto) | (c) | Mismo corte: falla `assert "matrix" in r.message` |
   | Guardianes de tamaño: `test_el_docstring_dice_cuantos_checks_hay_de_verdad` y el de `test_wiki.py` con 24 | guarda existente | Fallan si falta una frase o una fila: es lo que tienen que hacer |
 - **Verificación:**
   `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_llamaswap_api.py tests/test_residencia_cli.py tests/test_residencia.py tests/test_llamaswap_de_prueba.py tests/test_metrics.py tests/test_checks.py tests/test_doctor.py tests/test_wiki.py -rs -q`
   (sin saltos en los ficheros del llama-swap de prueba), `node --check` del JS y la suite completa.
 - **Rollback:** revertir; los endpoints y checks son nuevos.
+- *(Aclarado tras la revisión de la ola 5)* el campo de `GET /api/llamaswap/status` con la ruta
+  de la config se llama `ruta_config` (constante `residencia.CAMPO_RUTA_CONFIG`, que ya lee
+  `cli._ruta_del_daemon`); toda consulta nueva del CLI al daemon pasa por
+  `cli._destino_del_daemon`, con una guarda que lo compruebe (la de T11,
+  `test_toda_consulta_del_cli_al_daemon_pasa_por_su_destino`, recorre las llamadas a `httpx2` de
+  `cli.py`).
+- *(Aclarado el 2026-10-07, decisión del usuario: lo que es código o interfaz va en inglés)* los
+  endpoints son `GET /api/llamaswap/status`, `POST /api/llamaswap/watch` y
+  `GET /api/llamaswap/watch/<id>`; los checks, `backend.residency` y `backend.topology`. El campo
+  con la ruta de la config se llama `config_path` (el **valor** de `residencia.CAMPO_RUTA_CONFIG`;
+  el nombre de la constante lo cambia la ola de renombrado). El módulo nuevo usa nombres en inglés
+  (`running()`, `in_flight()`, `activity()`, `Watcher`, `WatchRegistry`, `Status`); los campos del
+  JSON nuevos y las salidas de la vigía como valor de máquina, también (`reloaded`, `rejected`,
+  `not_watching`, `down`); lo que se imprime sigue en español («recargó», «rechazó», «no vigila
+  el fichero», «caído»). Equivalencias en la tabla de aclaraciones de `spec.md`.
 
 ### T14 — Espera frente a lentitud (ola 8)
 
-- **Ficheros:** zona T14 de `server.py`, `config.py` (`UMBRAL_LENTO`), zona T14 de
+- **Ficheros:** zona T14 de `server.py`, `config.py` (`SLOW_THRESHOLD`), zona T14 de
   `web/metrics.py`, `tests/backend_mock.py` (`timings`), `tests/test_panel_estados.py` (zona T14),
   `tests/test_metrics.py` (zona T14), `scripts/dev/capture_dashboard.py`, `web/sysinfo.py` si hace
-  falta, tests nuevos en `tests/test_lentitud.py`, y lo que salga del inventario.
+  falta, tests nuevos en `tests/test_slowness.py`, y lo que salga del inventario.
 - **Requisitos:** REQ-024 a REQ-028.
 - **Qué se hace:**
-  1. `config.UMBRAL_LENTO = _env_float("LOCAL_DELEGATE_UMBRAL_LENTO", 0.5)`.
+  1. `config.SLOW_THRESHOLD = _env_float("LOCAL_DELEGATE_SLOW_THRESHOLD", 0.5)`.
   2. `ChatResult` gana `timings: dict | None`; `_post_chat` copia `timings` de la respuesta si viene.
-  3. `_log_event` suma sobre las llamadas **reales** de la operación (los `intentos`): `inferencia_ms`,
-     `espera_ms` (`latency_ms − inferencia_ms`, mínimo 0), `tok_s`, `prefill_tok_s`; con referencia,
-     `ritmo_rel` y `lento`; con `lento` y backend local, `ram_libre_mb` (`sysinfo.ram_stats()`).
+  3. `_log_event` suma sobre las llamadas **reales** de la operación (los `intentos`): `inference_ms`,
+     `wait_ms` (`latency_ms − inference_ms`, mínimo 0), `tok_s`, `prefill_tok_s`; con referencia,
+     `pace_rel` y `slow`; con `slow` y backend local, `free_ram_mb` (`sysinfo.ram_stats()`).
      Todo dentro de un `try` que, si falla, registra el evento sin esos campos (REQ-028). Sin
-     `timings`, los campos se omiten, nunca 0.
-  4. `ritmo.Referencias` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
-     con cada evento propio.
+     `timings`, los campos se omiten, nunca 0. *(Aclarado el 2026-10-07, tras la revisión de la
+     ola 8):* `inference_ms` y `wait_ms` suman todas las llamadas (una sin `timings` cuenta como
+     espera); `tok_s` y `prefill_tok_s`, y por tanto `pace_rel`, `slow`, `free_ram_mb` y lo que
+     entra en la ventana, salen solo de las llamadas del modelo que respondió (tabla de
+     aclaraciones de `spec.md`).
+  4. `pace.References` sembrada al arrancar el servidor (log del mes y del anterior) y alimentada
+     con cada evento propio. *(Aclarado el 2026-10-07, tras la revisión de la ola 3):* se crea con
+     `References()`, sin `by_spans` (T3 decidió una sola referencia), y se siembra con
+     `pace.seed_from_log(references, directory, now)`, que nunca lanza, no con `seed`
+     suelto. En cada evento propio se **mide antes de registrar**: `measure(...)` con la ventana sin
+     ese evento y después `record(event)`, para que una llamada no se compare consigo misma.
+     *(Aclarado tras la revisión de la ola 8):* la siembra ocurre la primera vez que hace falta,
+     no en los arranques; con log fijo se siembra el fichero entero y la caché va atada a él.
   5. `local_status`: «Ritmo de referencia: gemma4-26b-a4b 40,5 tok/s (50 muestras)…».
   6. Panel: en la tabla de actividad, espera e inferencia por separado y la marca «lento ×0,37» con
-     una función pura `marcaLento(e)` (devuelve `""` sin `lento`); formato con los ayudantes del
+     una función pura `slowMark(e)` (devuelve `""` sin `slow`); formato con los ayudantes del
      panel (`fmtNum`).
   7. `backend_mock` devuelve `timings` cuando el test lo pide; `capture_dashboard.py` añade los
      campos nuevos a unos eventos del mock.
@@ -1033,16 +1136,16 @@ cierra.**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
   |---|---|---|
-  | Escenario «una llamada lenta se distingue de una espera» de punta a punta (`backend_mock` con `timings` y 47 s simulados de espera vía reloj inyectado; 20 eventos previos en el log de `tmp_path`) | (a) | `assert linea.get("ritmo_rel") == 0.37` (hoy `None`); después `espera_ms ≈ 47000`, `lento is True` y `ram_libre_mb` con backend local |
-  | Sin `timings`, ningún campo de D en el evento | (b) | Mutante: poner 0 → falla `assert "tok_s" not in linea` |
-  | Con backend remoto, `lento` sin `ram_libre_mb` | (b) | Mutante: sin mirar el origen → falla `assert "ram_libre_mb" not in linea` |
-  | Operación troceada: `inferencia_ms` es la suma de las llamadas reales, incluido un salto | (b) | Mutante: solo la última llamada → falla `assert linea["inferencia_ms"] == 300` |
-  | REQ-028: `ritmo.medir` sustituida por una que lanza → el evento se registra igual, sin `ritmo_rel` | (b) | Mutante: sin el `try` → falla `assert linea.get("ok") is True` (el test captura la excepción del `_chat` y la convierte en fallo de assert) |
-  | `marcaLento` con node: `{lento:true, ritmo_rel:0.37}` → «lento ×0,37»; sin `lento` → `""` | (b) | Mutante: punto decimal → falla `assert txt == "lento ×0,37"` |
-  | `local_status` muestra la referencia y las muestras | (a) | `assert "Ritmo de referencia" in texto` |
+  | Escenario «una llamada lenta se distingue de una espera» de punta a punta (`backend_mock` con `timings` y 47 s simulados de espera vía reloj inyectado; 20 eventos previos en el log de `tmp_path`) | (a) | `assert line.get("pace_rel") == 0.37` (hoy `None`); después `wait_ms ≈ 47000`, `slow is True` y `free_ram_mb` con backend local |
+  | Sin `timings`, ningún campo de D en el evento | (b) | Mutante: poner 0 → falla `assert "tok_s" not in line` |
+  | Con backend remoto, `slow` sin `free_ram_mb` | (b) | Mutante: sin mirar el origen → falla `assert "free_ram_mb" not in line` |
+  | Operación troceada: `inference_ms` es la suma de las llamadas reales, incluido un salto | (b) | Mutante: solo la última llamada → falla `assert line["inference_ms"] == 300` |
+  | REQ-028: `pace.References.measure` sustituida por una que lanza → el evento se registra igual, sin `pace_rel` | (b) | Mutante: sin el `try` → falla `assert line.get("ok") is True` (el test captura la excepción del `_chat` y la convierte en fallo de assert) |
+  | `slowMark` con node: `{slow:true, pace_rel:0.37}` → «lento ×0,37»; sin `slow` → `""` | (b) | Mutante: punto decimal → falla `assert txt == "lento ×0,37"` |
+  | `local_status` muestra la referencia y las muestras | (a) | `assert "Ritmo de referencia" in text` |
   | `test_captura.py` sigue en verde con el mock ampliado | guarda existente | |
 - **Verificación:**
-  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_lentitud.py tests/test_ritmo.py tests/test_panel_estados.py tests/test_metrics.py tests/test_dashboard_js.py tests/test_captura.py -q`,
+  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_slowness.py tests/test_pace.py tests/test_panel_estados.py tests/test_metrics.py tests/test_dashboard_js.py tests/test_captura.py -q`,
   `node --check` y la suite completa.
 - **Rollback:** revertir; los campos son aditivos y los lectores los ignoran.
 
@@ -1051,54 +1154,67 @@ cierra.**
 **Puerta:** `veredicto.json` de T6. Tres salidas:
 
 - **Ninguna celda aprobada:** REQ-010 a REQ-017 **no se implementan** (REQ-018). T15 se reduce a
-  dejarlo escrito en `verification.md` con la tabla del veredicto, comprobar que `cargado` sigue sin
+  dejarlo escrito en `verification.md` con la tabla del veredicto, comprobar que `loaded` sigue sin
   miembros y que ningún texto (wiki, `doctor`, `local_status`) promete afinidad. No hay código.
 - **Algunas aprobadas:** se implementa con **esas** celdas y solo esas. Si la hoja de commit no se
   terminó (T6, «Si la hoja no se termina»), la celda de commit cuenta como no aprobada y se deja
   escrito así en `verification.md`; el PR se cierra igual.
 - **Todas:** igual.
 
-- **Ficheros (si hay celdas):** `src/local_delegate/matriz.py`, `tests/test_afinidad.py` (nuevos),
-  zona T15 de `server.py`, `config.py` (`AFINIDAD_MARGEN_S`), zona T15 de `cadenas.py` (proveedor) y
+- **Ficheros (si hay celdas):** `src/local_delegate/matrix.py`, `tests/test_affinity.py` (nuevos),
+  zona T15 de `server.py`, `config.py` (`AFFINITY_MARGIN_S`), zona T15 de `cadenas.py` (proveedor) y
   de `checks.py` (aviso de huella).
-- **Requisitos:** REQ-010 a REQ-017 para las celdas aprobadas; los miembros de `cargado` de REQ-019.
+- **Requisitos:** REQ-010 a REQ-017 para las celdas aprobadas; los miembros de `loaded` de REQ-019.
 - **Qué se hace:**
-  1. `matriz.py`: las celdas aprobadas **escritas en el código** (una tupla de
-     `Celda(tool, alternativo, rol_comparado, huella)`; `veredicto.json` no viaja en el paquete), y
-     un test que las compara con `veredicto.json` (REQ-043). `vigente(celda)` compara la huella con la
-     config y el prompt actuales vía `huella.huella`; una celda con huella distinta cuenta como
+  1. `matrix.py`: las celdas aprobadas **escritas en el código** (una tupla de
+     `Cell(tool, alternative, compared_role, footprint)`; `veredicto.json` no viaja en el paquete), y
+     un test que las compara con `veredicto.json` (REQ-043). `is_current(cell)` compara la huella con la
+     config y el prompt actuales vía `footprint.footprint`; una celda con huella distinta cuenta como
      `sin base`. Direcciones de REQ-011 como guarda (una celda fuera de ellas no se acepta).
-  2. `elegir(A', rol, observado, propios)` pura, con el desempate de REQ-012.
+  2. `choose(A', role, observed, own)` pura, con el desempate de REQ-012.
   3. Foto de REQ-013 con `llamaswap_api` (la consulta de actividad, la última), solo cuando hace
-     falta; `ahora = time.time()`; margen `config.AFINIDAD_MARGEN_S` (5, o lo que subió T2 (b)); si
+     falta; `ahora = time.time()`; margen `config.AFFINITY_MARGIN_S` (`LOCAL_DELEGATE_AFFINITY_MARGIN_S`) (5, o lo que subió T2 (b)); si
      T2 (c) vio alias en la actividad, la consulta pide el id real y sus alias.
   4. En la operación: `A` con los alternativos aprobados y vigentes (y que admiten el tamaño,
-     REQ-014: `max_chars_for(alternativo)`, conservando el tope y los prompts del rol); la elección
-     después de la primera plaza y la reserva reducida con `turno.reducir`; sin afinidad con backend
+     REQ-014: `max_chars_for(alternative)`, conservando el tope y los prompts del rol); la elección
+     después de la primera plaza y la reserva reducida con `turn.reduce`; sin afinidad con backend
      remoto o modelo explícito; REQ-015 (primero el rol y luego su cadena).
-  5. `_log_event`: `routing: "afinidad"`, `model_requested`, `afinidad_vuelo_ajeno` y, sin vuelo
-     ajeno y con espera de backend ≥ 3 000 ms, `afinidad_fallida: true`. El panel **no** la cuenta
+     *(Aclarado el 2026-10-07, tras la revisión de la ola 4):* `Turn.choose` no sirve tal cual
+     para REQ-003, porque comprueba que no hay plaza (el aserto de REQ-004) y, si nada cabe, espera
+     dentro la nueva concesión. Antes de conectar la afinidad hay que partirlo en
+     `choose_without_waiting(op_id, candidates) -> str | None` (atómica y válida con plaza; si nada
+     cabe deja la operación en la cabeza de la cola y devuelve `None`) y
+     `wait_for_grant(op_id, …)` (pública, con el aserto de REQ-004). El daemon elige con la
+     plaza de su primera llamada en la mano y, si sale `None`, suelta la plaza antes de
+     `wait_for_grant`. En T10 no se conectó: allí `A` tiene siempre un solo modelo.
+  5. `_log_event`: `routing: "affinity"`, `model_requested`, `affinity_foreign_flight` y, sin vuelo
+     ajeno y con espera de backend ≥ 3 000 ms, `affinity_failed: true`. El panel **no** la cuenta
      como respaldo y la respuesta no lleva aviso.
-  6. Proveedor de `miembros_cargado` registrado en `cadenas` (REQ-019).
-  7. `_probe_residencia`: aviso de una celda con la huella cambiada.
+  6. Proveedor de `loaded_members` registrado en `cadenas` (REQ-019).
+     *(Aclarado tras la revisión de la ola 6):* al conectar el proveedor, el salto a `loaded` pide
+     turno con `direct` vacío y elige con el `Turn.choose` partido (ver la nota de la ola 4), y
+     si al conceder ya no queda ningún miembro que cumpla REQ-012 se salta sin gastar salto
+     (REQ-019). Hoy (T12) `server._loaded_members` va al primer miembro que vale, con
+     `direct={target}`, como a un destino suelto (`register_loaded_provider` es el enganche).
+  7. `_probe_residency`: aviso de una celda con la huella cambiada.
 - **Tests (solo con celdas aprobadas; los escenarios de la celda de la spec usan `local_classify`;
   si esa celda no se aprobó, se usa una que sí, y se anota):**
 
   | Test | Control | Debe fallar hoy / con el mutante en |
   |---|---|---|
-  | Escenario «la tarea mecánica usa el 26B cargado» (`/running`, `/api/events` y actividad simulados) | (a) | `assert linea.get("routing") == "afinidad"` (hoy no existe); después `model_requested == "gemma3-4b"` y la respuesta sin aviso |
-  | Escenarios «al cargado le quedan 3 s» (→ 4B) y «le quedan 40 s» (→ 26B) | (b) | Mutante: sin margen → falla `assert modelo == "gemma3-4b"` con 3 s |
-  | Escenario «el cargado está trabajando para otro cliente» | (b) | Mutante: ignorar el vuelo → falla `assert modelo == "gemma4-26b-a4b"` |
-  | Escenario «otro cliente tiene un cambio de modelo pendiente» | (b) | Mutante: ignorar el cambio pendiente → falla `assert modelo == "gemma3-4b"` |
-  | Escenario «una celda no aprobada no se usa» (`local_explain_code`) | (b) | Mutante: celdas en cualquier dirección → falla `assert modelo == "qwen36-35b-a3b"` |
-  | Escenario «la huella cambió»: celda aprobada con la huella de `-ncmoe 12` (el valor real de hoy) y una config **sintética** en `tmp_path` con `-ncmoe 16` | (b) | Mutante: `vigente` sin comparar flags → falla `assert modelo == "gemma3-4b"`; y `doctor` avisa |
+  | Escenario «la tarea mecánica usa el 26B cargado» (`/running`, `/api/events` y actividad simulados) | (a) | `assert line.get("routing") == "affinity"` (hoy no existe); después `model_requested == "gemma3-4b"` y la respuesta sin aviso |
+  | Escenarios «al cargado le quedan 3 s» (→ 4B) y «le quedan 40 s» (→ 26B) | (b) | Mutante: sin margen → falla `assert model == "gemma3-4b"` con 3 s |
+  | Escenario «el cargado está trabajando para otro cliente» | (b) | Mutante: ignorar el vuelo → falla `assert model == "gemma4-26b-a4b"` |
+  | Escenario «otro cliente tiene un cambio de modelo pendiente» | (b) | Mutante: ignorar el cambio pendiente → falla `assert model == "gemma3-4b"` |
+  | Escenario «una celda no aprobada no se usa» (`local_explain_code`) | (b) | Mutante: celdas en cualquier dirección → falla `assert model == "qwen36-35b-a3b"` |
+  | Escenario «la huella cambió»: celda aprobada con la huella de `-ncmoe 12` (el valor real de hoy) y una config **sintética** en `tmp_path` con `-ncmoe 16` | (b) | Mutante: `vigente` sin comparar flags → falla `assert model == "gemma3-4b"`; y `doctor` avisa |
   | Escenarios «la afinidad no se cuela» y «se une si nadie espera» de punta a punta, y el de «la reserva se reduce» con dos celdas | (b) | Los mutantes de T8 aplicados en la integración, con los mismos asserts |
-  | `matriz` = `veredicto.json` | (b) | Mutante: añadir a mano una celda `rechazada` como aprobada → falla `assert celdas_codigo == celdas_aprobadas_veredicto` |
-  | Camino feliz sin red: con el rol en `propios`, ninguna consulta (rutas sin registrar) | (b) | Mutante: pedir la foto siempre → falla `assert rutas_pedidas == []` |
-  | Backend remoto o `model` explícito: sin afinidad | (b) | Mutante: sin mirar el origen → falla `assert linea.get("routing") is None` |
+  | `matrix` = `veredicto.json` | (b) | Mutante: añadir a mano una celda `rechazada` como aprobada → falla `assert code_cells == verdict_approved_cells` |
+  | Camino feliz sin red: con el rol en `propios`, ninguna consulta (rutas sin registrar) | (b) | Mutante: pedir la foto siempre → falla `assert requested_paths == []` |
+  | Backend remoto o `model` explícito: sin afinidad | (b) | Mutante: sin mirar el origen → falla `assert line.get("routing") is None` |
   | Fallo del alternativo: el primer candidato es el rol | (b) | Mutante: seguir la cadena del alternativo → falla `assert intentos[1].modelo == "gemma3-4b"` |
 - **Verificación:**
-  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_afinidad.py tests/test_turno.py tests/test_turno_daemon.py tests/test_cadenas.py tests/test_checks.py -q`
+  `bash ~/.claude/scripts/pesado.sh uv run pytest tests/test_affinity.py tests/test_turn.py tests/test_turn_daemon.py tests/test_cadenas.py tests/test_checks.py -q`
   y la suite completa.
 - **Rollback:** vaciar la tupla de celdas: el código queda inerte y el comportamiento es el de T14.
 
@@ -1109,17 +1225,20 @@ cierra.**
   `Daemon.md`, `Integration-install.md` (zona T16, CRLF), `docs/recipes/llama-swap-groups.md`.
 - **Requisitos:** «Release» y «Variables nuevas» de los no funcionales, REQ-023 (la wiki solo habla
   de «residente» con TTL 0), REQ-035 (README), el caso límite «Plazos de los clientes MCP».
+- **Comentarios viejos que dejó T12** *(anotado tras la revisión de la ola 6)*: `turn.py:38`
+  (docstring de `PendingRequest`: «el conjunto de `cargado`»; tras el renombrado ya dice `loaded`, se comprueba) y `config.py:296` (comentario de
+  `FALLBACK_CHAINS`: «roles (`mechanical`, `long`, `code`, `residente`)») deben decir `loaded`.
 - **Qué se hace:**
   - CHANGELOG `[Unreleased]` (editando el bloque propio, nunca reescribiendo la sección): `Added`
     turno por modelos que chocan, espera de turno en el panel, espera e inferencia por separado y
-    «lento», `llamaswap residencia`, dos checks; `Changed` cadenas sin residente y código/largo
-    nunca al mecánico, un fallo de capacidad sin `cargado` ya no tiene respaldo (consecuencia
+    «lento», `llamaswap residency`, dos checks; `Changed` cadenas sin residente y código/largo
+    nunca al mecánico, un fallo de capacidad sin `loaded` ya no tiene respaldo (consecuencia
     aceptada en REQ-021), `init-llamaswap` sin residente por defecto; y, si hubo celdas, la
     afinidad con la tabla del veredicto. Sin versión ni fecha.
   - README (`:257-264` y la mención de `init-llamaswap`) y la receta de grupos: «ningún residente»
     como recomendado; la residencia como opt-in con su coste de VRAM.
   - Wiki: `Configuration.md` con las variables nuevas; `Tools.md` y `Architecture.md` con el turno,
-    `cargado` y, si la hay, la matriz; `Savings-and-metrics.md` con los campos nuevos del log y del
+    `loaded` y, si la hay, la matriz; `Savings-and-metrics.md` con los campos nuevos del log y del
     panel; `Troubleshooting.md` con «una delegación espera turno» y los cuatro mensajes de la
     recarga; `Daemon.md` con los endpoints; `Backend-versions.md` con lo que se usa de v255;
     `Integration-install.md` con el comando; y los plazos de Claude Code y Codex medidos en T0.5
@@ -1129,6 +1248,12 @@ cierra.**
   `git ls-files --eol` igual que antes en cada fichero, `rg -n "residente" docs/wiki README.md docs/recipes`
   revisado línea a línea (solo puede quedar con TTL 0 o como opt-in), y la suite completa.
 - **Rollback:** revertir los Markdown.
+- *(Aclarado tras la revisión de la ola 5)* T11 cambió también el comportamiento de
+  `check-llamaswap` e `init-llamaswap`, porque comparten el estimador: un `--mmproj` que no existe
+  ahora es error de estimación (código 2), el fichero del `--mmproj` se suma a la VRAM y, con
+  `-ncmoe`/`--n-cpu-moe N`, se restan los expertos de las capas `i < N`. Va al CHANGELOG
+  (`Changed`) y a la wiki (`Integration-install.md` y la receta de grupos), junto con que
+  `init-llamaswap --force` deja la copia con fecha.
 
 ### T17 — Verificación final (ola 11)
 
@@ -1145,18 +1270,18 @@ esperada.
    `approved` no basta: lo está desde el 2026-09-12.
 3. **CLI sobre una COPIA de la config real** (con las claves sustituidas, en
    `<scratchpad>/t17/config.yaml`; **cada orden con `--config`**, literal):
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml`
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml --dry-run --ttl gemma4-12b=60`
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml --ttl gemma4-12b=60 --ahora`
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml --restaurar <scratchpad>/t17/config.yaml.<fecha>.bak --ahora`
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml --ninguno` (dice
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml`
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml --dry-run --ttl gemma4-12b=60`
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml --ttl gemma4-12b=60 --now`
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml --restore <scratchpad>/t17/config.yaml.<fecha>.bak --now`
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml --none` (dice
      «nada que cambiar»)
-   - `local-delegate llamaswap residencia --config <scratchpad>/t17/config.yaml --fijar gemma4-26b-a4b --vram-gb 16 --reserva-gb 2 --vram-modelo gemma4-26b-a4b=10.29 --vram-modelo qwen36-35b-a3b=9.88 --vram-modelo gemma3-4b=3.19 --vram-modelo gemma4-12b=8.85 --vram-modelo qwen35-2b=3.5`
+   - `local-delegate llamaswap residency --config <scratchpad>/t17/config.yaml --pin gemma4-26b-a4b --vram-gb 16 --reserve-gb 2 --vram-model gemma4-26b-a4b=10.29 --vram-model qwen36-35b-a3b=9.88 --vram-model gemma3-4b=3.19 --vram-model gemma4-12b=8.85 --vram-model qwen35-2b=3.5`
      (se niega)
 
    **Falla** si el `diff` de cada escritura no es exactamente la línea pedida, si la restauración
    no deja el `sha256` de la copia original, o si el `sha256` de la config **real** cambió durante
-   el paso (se compara antes y después). Con `--ahora` sobre la copia, la vigía mira el llama-swap
+   el paso (se compara antes y después). Con `--now` sobre la copia, la vigía mira el llama-swap
    real, que no vigila ese fichero: la salida esperada es «no vigila el fichero», y se anota.
 4. **Daemon real con la versión del repo** (lo lanza la sesión principal, con el permiso del
    usuario; reinicia el daemon):
@@ -1164,7 +1289,7 @@ esperada.
    y `schtasks /Run` de la tarea del daemon. Después:
    - `local_status` por MCP: «Turno: sí», «sin residente» y ninguna mención a «residente
      gemma3-4b». **Falla** si no.
-   - `uv run local-delegate doctor`: `backend.topologia` OK con turno y `backend.residencia` OK con
+   - `uv run local-delegate doctor`: `backend.topology` OK con turno y `backend.residency` OK con
      «sin residente». **Falla** con `UNKNOWN` o `WARN`.
 5. **Dos tools en paralelo contra el backend real** (carga modelos: bajo `pesado.sh`, el usuario
    avisado, ventana anotada como excluida de P-4 y F1, nadie más usando `local_*`): desde un
@@ -1174,26 +1299,26 @@ esperada.
    `/api/metrics/activity` de la ventana.
    - **Falla** si en la secuencia de modelos que sirvió llama-swap hay más de **un** cambio entre
      los dos modelos (alternancia).
-   - **Falla** si ninguna de las dos líneas del log lleva `espera_turno_ms > 0`.
+   - **Falla** si ninguna de las dos líneas del log lleva `turn_wait_ms > 0`.
    - **Falla** si ninguna lectura del panel dice «en cola local» con un `title` que contiene
      «esperando turno del daemon».
-   - **Falla** si alguna línea con `timings` no trae `inferencia_ms` y `espera_ms`; `ritmo_rel` se
+   - **Falla** si alguna línea con `timings` no trae `inference_ms` y `wait_ms`; `pace_rel` se
      anota si hay referencia (con menos de 10 muestras no sale, y no es fallo).
 6. **Config real, solo ida y vuelta** (lo lanza la sesión principal **con el permiso explícito del
    usuario**, avisándole de que la recarga descarga los modelos):
    1. copia de seguridad manual `config.yaml.pre-daemon-reparte-t17-<AAAAMMDD-HHMMSS>.bak` y su
       `sha256`, que tiene que coincidir con el último anotado al cerrar la ola 10;
-   2. `local-delegate llamaswap residencia --config D:\Projects\llms\llama-swap\config.yaml`
+   2. `local-delegate llamaswap residency --config D:\Projects\llms\llama-swap\config.yaml`
       (solo lectura): «sin residente (recomendado)»;
    3. **sin modelos cargados**: el paso 5 deja modelos (TTL 120, el 12B 30). Se sondea `/running`
-      (por `doctor` o `/api/llamaswap/estado` del daemon) cada 10 s hasta que quede vacío, con un
+      (por `doctor` o `/api/llamaswap/status` del daemon) cada 10 s hasta que quede vacío, con un
       tope de 3 minutos, sin delegar nada mientras. Si en 3 minutos no queda vacío, se mira quién lo
       usa (`/api/inflight`, la foto de llama-swap) y se espera otro TTL; si tampoco, se para y se
-      anota. **Nunca** con `--ahora` aquí: el paso tiene que probar también la negativa y la
+      anota. **Nunca** con `--now` aquí: el paso tiene que probar también la negativa y la
       consulta previa reales;
-   4. `local-delegate llamaswap residencia --config D:\Projects\llms\llama-swap\config.yaml --ttl gemma4-12b=31`
+   4. `local-delegate llamaswap residency --config D:\Projects\llms\llama-swap\config.yaml --ttl gemma4-12b=31`
       → la consulta previa dice que no hay trabajo en curso y la vigía dice «recargó»;
-   5. `local-delegate llamaswap residencia --config D:\Projects\llms\llama-swap\config.yaml --restaurar <la copia con fecha que dejó el paso 4>`
+   5. `local-delegate llamaswap residency --config D:\Projects\llms\llama-swap\config.yaml --restore <la copia con fecha que dejó el paso 4>`
       → «recargó»;
    6. `sha256` del fichero igual al del paso 1. **Falla** si difiere: se restaura **en el acto**
       desde la copia manual con `Copy-Item` y se avisa al usuario. Si la vigía no dijo «recargó» en
@@ -1203,7 +1328,7 @@ esperada.
       vuelta atrás. Se anotan sus nombres en `verification.md`.
 7. **Afinidad en vivo** (solo si T15 implementó alguna celda): con el 26B cargado por un
    `local_summarize`, una llamada a la tool de una celda aprobada dentro del margen. **Falla** si la
-   línea no lleva `routing: "afinidad"` o si `/running` muestra que se cargó el modelo del rol.
+   línea no lleva `routing: "affinity"` o si `/running` muestra que se cargó el modelo del rol.
 8. **Devolver el daemon a la versión publicada** (sesión principal), salvo que el usuario diga
    otra cosa: el panel de uso diario no enseña código sin publicar.
 9. `personal-sdd-review` del resultado contra la spec y `personal-security-check` sobre el diff
@@ -1247,14 +1372,14 @@ esperada.
 - **Variables:** `residente` en `LOCAL_DELEGATE_FALLBACK_<ROL>` sigue valiendo (con aviso). Tres
   variables nuevas con valores por defecto.
 - **Comportamiento visible:** dos operaciones que chocan ya no se intercalan (una espera); un fallo
-  de capacidad sin `cargado` ya no tiene respaldo; código y largo nunca caen al mecánico. Sin
+  de capacidad sin `loaded` ya no tiene respaldo; código y largo nunca caen al mecánico. Sin
   topología o con backend remoto, todo sigue como hoy (salida de emergencia: `LLAMASWAP_CONFIG`
   vacío en el lanzador).
 - **`init-llamaswap`:** `--ttl-resident` pasa a 0 y su copia lleva fecha.
 - **Otras máquinas:** la Mac (backend remoto) no tiene turno ni afinidad; Claude Desktop en stdio y
   `benchmark.py` no pasan por el turno, pero sus peticiones se ven en la foto.
 - **Interfaces internas:** `_con_respaldo` se parte en dos; `ChatResult` gana `timings`;
-  `cadenas.residente()` desaparece en favor de `miembros_cargado` y de `topologia.residentes()`
+  `cadenas.residente()` desaparece en favor de `miembros_loaded` y de `topologia.residentes()`
   (T12 busca y actualiza a todos sus llamadores).
 - **Release:** fuera de este plan; T16 deja listos CHANGELOG, README y `docs/wiki/`.
 
@@ -1291,7 +1416,7 @@ esperada.
 - **Plazos de los clientes MCP:** una operación suma espera de turno e inferencia. T0 averigua los
   plazos y T16 documenta cómo subirlos; no se cambia nada.
 - **La recarga de llama-swap descarga todos los modelos**, y quizá corta peticiones (T2 lo mide).
-  El CLI se niega con trabajo en curso salvo `--ahora`, y la ida y vuelta de T17.6 solo se hace con
+  El CLI se niega con trabajo en curso salvo `--now`, y la ida y vuelta de T17.6 solo se hace con
   permiso del usuario.
 - **La enmienda de F3** necesita una aprobación **nueva** del usuario, posterior a la enmienda; sin
   ese evento en el historial de F3, el PR no se mezcla (T17.2). El harness no permite retroceder F3,
@@ -1338,20 +1463,21 @@ esperada.
 | Requisito | Tarea | Evidencia |
 |---|---|---|
 | REQ-001, REQ-009 | T7, T10 | Tabla contra `EvictionFor`, alias, dos sintaxis, relectura; topología nueva en la siguiente concesión |
-| REQ-002 | T7, T10, T13 | Motivos de «sin topología»; sin turno con backend remoto; `local_status` y `backend.topologia` |
+| REQ-002 | T7, T10, T13 | Motivos de «sin topología»; sin turno con backend remoto; `local_status` y `backend.topology` |
 | REQ-003, REQ-004, REQ-005 | T8, T10 | Orden, E-1, reserva que se reduce, abandono, cambio de topología, aserto de orden de adquisición |
 | REQ-006 | T10 | Dos saltos a la vez no bloquean; el salto suelta la plaza antes de pedir turno |
 | REQ-007 | T8, T10 | Forzada por falta de progreso, comprobación periódica, plazo HTTP de 900; liberación con excepción; hilos de anyio |
 | REQ-008 | T10 | `espera_local: "turno"`, `turno_en_uso`, `turno_posicion`, fila 3 y `title` con node; `espera_turno_ms`, `turno: "forzado"` |
 | REQ-010 a REQ-017 | T15 (si hay celdas), T2 (margen y alias) | Escenarios de afinidad, matriz = veredicto, huella, camino feliz sin red; T17.7 en vivo |
 | REQ-018 | T6, T15 | `veredicto.json`; sin celdas, nada implementado y anotado |
-| REQ-019 a REQ-023 | T12, T15 (proveedor) | Código nunca al mecánico; capacidad sin `cargado`; salto vacío sin gastar; sinónimo; «sin residente» |
+| REQ-019 a REQ-023 | T12, T15 (proveedor) | Código nunca al mecánico; capacidad sin `loaded`; salto vacío sin gastar; sinónimo; «sin residente» |
 | REQ-024 a REQ-028 | T3, T9, T14 | Control de lentitud con datos reales; ventana; evento lento de punta a punta; sin `timings`; robustez; `marcaLento` |
-| REQ-029 a REQ-033, REQ-035, REQ-038 | T11, T13 | Tabla de edición; escenarios de `--ninguno`, `--fijar`, `--ttl`, restaurar; estimador contra F2 |
+| REQ-029 a REQ-033, REQ-035, REQ-038 | T11, T13 | Tabla de edición; escenarios de `--none`, `--pin`, `--ttl`, restaurar; estimador contra F2 |
 | REQ-034, REQ-039 | T2, T13 | Cuatro salidas con el llama-swap de prueba; negativas; sin credencial; endpoints sin secretos |
 | REQ-036 | T13, T15 | Dos checks y guardianes de tamaño; aviso de huella |
 | REQ-037 | T1, T12, T17.2 | Punto en la spec de F3, evento del harness, gate reaprobado; tests de F3 reescritos |
 | REQ-040 a REQ-043 | T4, T5, T6 | Corpus, puntuadores, trampas preregistradas, tanda, hoja válida, `veredicto.json` y tabla |
+| REQ-044 | T5b | Orden de idioma con mutantes; corpus reconstruido con `es` y `--comprobar`; `--seco` con solo las celdas de commit pendientes |
 | Caso límite «Plazos de los clientes MCP» | T0, T16 | Plazos con su fuente, en la wiki |
 
 ## Llamadas `local_*` al escribir este plan

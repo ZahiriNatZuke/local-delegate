@@ -42,6 +42,8 @@ _NUMERO_DE_CHECKS = {
     # Femenino: la frase es «las N piezas».
     21: "veintiuna",
     22: "veintidós",
+    23: "veintitrés",
+    24: "veinticuatro",
 }
 
 # `[texto](destino)`, quedándose con el destino.

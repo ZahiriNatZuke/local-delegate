@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "regla_de_forma": "Si el mensaje del modelo emparejado tiene cuerpo, la trampa lleva el asunto mas tantas lineas de su cuerpo como lineas de cuerpo tenga ese mensaje (como mucho 5); si no lo tiene, solo el asunto. La aplica `hoja_pares.py generar-commit` al armar el par. El cuerpo se parte por unidades enteras (una viñeta o una frase), nunca por lineas fisicas, y al recortar se quitan unidades enteras. La trampa copia la puntuacion final de su pareja (sin punto si la mayoria de sus lineas no lo llevan) y su viñeta media no pasa de 1,5 veces la de la pareja. Idioma: español, el de la tool (su prompt esta en español) y el del historial del repo.",
+  "misma-zona": "El asunto REAL de otro commit, fuera de los 30 y de los 9, que toca el fichero mas cambiado del caso trampa; elegido por codigo entre los asuntos de 72 caracteres como mucho y con prefijo convencional (el mas reciente); si ese fichero no da ninguno, el siguiente fichero mas cambiado. Cuerpo: el cuerpo real de ese commit (sin firmas ni enlaces), condensado en hasta 5 frases completas y cortas, con tildes y una afirmacion por frase, cada una comprobada contra el cuerpo de ese commit; si no hay cuerpo redactado a mano, las 5 primeras lineas reales y, si tiene menos de 5, lineas redactadas sobre lo secundario del diff.",
+  "secundario": "Redactado a mano: un mensaje con buen formato que solo nombra un cambio SECUNDARIO del diff (aqui, el registro de un gate de una traza SDD, la entrada del CHANGELOG de una subida de version o una explicacion lateral de un documento, que acompañan al cambio principal pero no lo son). Cada linea del cuerpo se comprueba contra el diff: no dice nada falso, solo deja fuera lo principal.",
+  "generico": "Redactado a mano: un mensaje con buen formato (prefijo convencional, asunto corto) que no dice nada concreto del diff. El cuerpo repite vaguedades sin nombrar ficheros ni cambios.",
+  "juegos": [
+    {
+      "juego": 1,
+      "trampas": [
+        {
+          "caso": "commit-trampa-1314b0b",
+          "commit": "1314b0bd3321c9f59a47daf6b9a0f59fe5d9164a",
+          "tipo": "misma-zona",
+          "asunto": "feat(wiki): la wiki nativa se sincroniza sola desde docs/wiki",
+          "cuerpo": [
+            "Era el último fleco manual del release.",
+            "La wiki estaba congelada desde el 28 de julio.",
+            "El workflow se dispara en el push a main, no en el tag.",
+            "Arregla 18 enlaces rotos en 6 páginas de la wiki.",
+            "La wiki pasa a ser un artefacto generado."
+          ],
+          "cuerpo_origen": "real-reescrito",
+          "asunto_de": {
+            "hash": "821d1dc84fc42bd40b08e005aae68f667b393b91",
+            "fichero": ".sdd/changes/sync-wiki-nativa/state.json"
+          }
+        },
+        {
+          "caso": "commit-trampa-4f41311",
+          "commit": "4f41311ae3a0c440ab8d28d1de28ca8af9fbf9e2",
+          "tipo": "secundario",
+          "asunto": "docs(sdd): registra la aprobación de la conformidad de una traza",
+          "cuerpo": [
+            "Actualiza el state.json de una traza SDD.",
+            "Registra el gate de conformidad como aprobado.",
+            "Anota que el CI del PR estaba en verde y que se mergeó.",
+            "Pasa la traza de verificando a cierre.",
+            "No cambia código."
+          ],
+          "cuerpo_origen": "redactado"
+        },
+        {
+          "caso": "commit-trampa-3b20fb3",
+          "commit": "3b20fb384192ec44f1d1d2dd5f512cd9f6cc05cd",
+          "tipo": "generico",
+          "asunto": "chore: realiza tareas de mantenimiento",
+          "cuerpo": [
+            "Actualiza varios archivos.",
+            "Mejora algunos detalles.",
+            "Ajusta el contenido existente.",
+            "Pone al día partes del proyecto.",
+            "Revisa y corrige cosas menores."
+          ],
+          "cuerpo_origen": "redactado"
+        }
+      ]
+    },
+    {
+      "juego": 2,
+      "trampas": [
+        {
+          "caso": "commit-trampa-6d442e7",
+          "commit": "6d442e78c9a0f18c717f0272ba0e1c75ac9799f6",
+          "tipo": "misma-zona",
+          "asunto": "docs: preparación de la release 0.28.0",
+          "cuerpo": [
+            "Diez títulos del CHANGELOG pasan a cuatro, uno por tipo.",
+            "Quedan las mismas 37 entradas y las mismas 321 líneas.",
+            "Los defaults del paquete son los ganadores de F2.",
+            "El apagado en caliente es el fichero, no la variable.",
+            "El README documenta las variables de respaldo y enfriamiento."
+          ],
+          "cuerpo_origen": "real-reescrito",
+          "asunto_de": {
+            "hash": "cf527b740bc00e76eb68d4bb46aafb67a74cde4a",
+            "fichero": "docs/wiki/Troubleshooting.md"
+          }
+        },
+        {
+          "caso": "commit-trampa-b04a5e2",
+          "commit": "b04a5e267ef95522f37875265ff26f4085c07d02",
+          "tipo": "secundario",
+          "asunto": "docs: añade la entrada 0.18.1 al CHANGELOG",
+          "cuerpo": [
+            "Añade la sección 0.18.1 al CHANGELOG.",
+            "Actualiza el enlace Unreleased y añade el de la 0.18.1.",
+            "Fija la fecha de la entrada en 2026-07-31.",
+            "No reescribe entradas anteriores.",
+            "No cambia código de la aplicación."
+          ],
+          "cuerpo_origen": "redactado"
+        },
+        {
+          "caso": "commit-trampa-7d0f4ac",
+          "commit": "7d0f4ac80ba7272996f0043f5861ff60ba4ba745",
+          "tipo": "generico",
+          "asunto": "docs: mejora la documentación",
+          "cuerpo": [
+            "Realiza ajustes en varias partes.",
+            "Corrige pequeños detalles.",
+            "Actualiza el texto donde hacía falta.",
+            "Mantiene todo al día.",
+            "Ordena algunos elementos."
+          ],
+          "cuerpo_origen": "redactado"
+        }
+      ]
+    },
+    {
+      "juego": 3,
+      "trampas": [
+        {
+          "caso": "commit-trampa-9d2c242",
+          "commit": "9d2c242c08bd6270c3a7458fce636f8972f37812",
+          "tipo": "misma-zona",
+          "asunto": "feat(docs): la captura del README no puede quedarse vieja en silencio",
+          "cuerpo": [
+            "Publishing.md pedía regenerar la captura y nadie lo verificaba.",
+            "Solo 5 de 25 releases regeneraron la captura en su commit.",
+            "La 0.16.0 salió con el badge diciendo v0.15.0.",
+            "Un test compara la versión de dashboard.json con pyproject.toml.",
+            "El manifiesto lo escribe solo el script que captura."
+          ],
+          "cuerpo_origen": "real-reescrito",
+          "asunto_de": {
+            "hash": "d0934c5841810fe0a290e3d0d47de9bad4dddbb9",
+            "fichero": "docs/assets/dashboard.json"
+          }
+        },
+        {
+          "caso": "commit-trampa-fa08d64",
+          "commit": "fa08d64fa69afc1b3647f5ade133806987419816",
+          "tipo": "secundario",
+          "asunto": "docs(sdd): precisa por qué subscriptions no aplica",
+          "cuerpo": [
+            "Reescribe en research.md la explicación del descarte de subscriptions.",
+            "Dice que esas notificaciones son sobre recursos y prompts.",
+            "Anota que el servidor no expone ningún recurso ni prompt.",
+            "Cambia una palabra en la fila de elicitation de la tabla.",
+            "No toca código."
+          ],
+          "cuerpo_origen": "redactado"
+        },
+        {
+          "caso": "commit-trampa-6710a6b",
+          "commit": "6710a6b80f88f4f496dfdd511c3b9123a0ac6126",
+          "tipo": "generico",
+          "asunto": "fix: corrige varios problemas",
+          "cuerpo": [
+            "Corrige varios problemas.",
+            "Resuelve algunos errores menores.",
+            "Mejora la robustez general.",
+            "Actualiza lo necesario.",
+            "Revisa los casos pendientes."
+          ],
+          "cuerpo_origen": "redactado"
+        }
+      ]
+    }
+  ]
+}
