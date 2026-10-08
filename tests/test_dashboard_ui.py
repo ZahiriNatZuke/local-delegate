@@ -1369,6 +1369,15 @@ def test_el_interruptor_de_pruebas_pide_las_tres_con_el_parametro(tmp_path, monk
         )
         pagina.click("#testsInfo")
         texto_apagado = pagina.inner_text("#dlgPruebas")
+        codigo = pagina.evaluate(
+            """() => {
+              const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono');
+              const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).join(',');
+              return [...document.querySelectorAll('#dlgPruebas code')].map(c => ({
+                texto: c.innerText.trim(),
+                mono: norm(getComputedStyle(c).fontFamily) === norm(mono)}));
+            }"""
+        )
         pagina.keyboard.press("Escape")
         antes = [u for u in pedidas if re.search(r"/api/(events|stats|hooks)\?", u)]
         pedidas.clear()
@@ -1388,6 +1397,12 @@ def test_el_interruptor_de_pruebas_pide_las_tres_con_el_parametro(tmp_path, monk
     assert inicial == {"on": False, "pressed": "false", "punto": True}
     assert "Fuera de las cifras: 1 fila de prueba" in texto_apagado
     assert f"local-delegate test-window stop {abierta.id}" in texto_apagado
+    # Los comandos y el id van como código, en la mono del panel; la fecha, legible.
+    textos_codigo = [c["texto"] for c in codigo]
+    assert f"local-delegate test-window stop {abierta.id}" in textos_codigo, codigo
+    assert abierta.id in textos_codigo
+    assert codigo and all(c["mono"] for c in codigo), codigo
+    assert "T" not in texto_apagado.split(" desde ", 1)[1].split(".", 1)[0], texto_apagado
     assert len(antes) >= 3 and not any("include_tests" in u for u in antes), antes
     assert sorted(u.split("?")[0].rsplit("/", 1)[1] for u in despues) == [
         "events",

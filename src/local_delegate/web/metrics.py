@@ -1915,21 +1915,24 @@ function textoPruebas(j){
   if(fuera) L.push('Fuera de las cifras: ' + plural(fuera, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
   else if(enRango) L.push('Pruebas incluidas: ' + plural(enRango, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
   else L.push('En el rango elegido no hay pruebas.');
+  // Los comandos y los ids van entre comillas invertidas: `renderPruebas` los pinta como código.
   for(const w of (j.open_test_windows||[])){
-    L.push('Ventana de prueba abierta: ' + w.id + ' desde ' + w.start
-      + '. Ciérrala con local-delegate test-window stop ' + w.id + '.');
+    L.push('Ventana de prueba abierta: `' + w.id + '` desde ' + fmtLocalTs(w.start)
+      + '. Ciérrala con `local-delegate test-window stop ' + w.id + '`.');
   }
-  L.push('Una prueba es una delegación del cliente mcp de los scripts del repo, la de un banco, '
+  L.push('Una prueba es una delegación del cliente `mcp` de los scripts del repo, la de un banco, '
     + 'o cualquiera hecha dentro de una ventana de prueba. Apagado, el interruptor las aparta de '
     + 'todo el panel; encendido, las enseña.');
   L.push('El coste equivalente y la cuota las apartan siempre, con el interruptor como esté.');
-  L.push('Para marcar una prueba en vivo: local-delegate test-window start --label «…» antes de '
-    + 'empezar, guarda el id que imprime, y local-delegate test-window stop <id> al acabar.');
+  L.push('Para marcar una prueba en vivo: `local-delegate test-window start --label «…»` antes de '
+    + 'empezar, guarda el id que imprime, y `local-delegate test-window stop <id>` al acabar.');
   return L;
 }
 
 function renderPruebas(s){
-  document.getElementById('dlgPruebasBody').innerHTML = parrafosHtml(textoPruebas(s), true);
+  // Se escapa primero y después cada `…` pasa a <code> (mono, como los demás valores de máquina).
+  document.getElementById('dlgPruebasBody').innerHTML = parrafosHtml(textoPruebas(s), true)
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
   document.getElementById('testsDot').hidden = !((s && s.open_test_windows)||[]).length;
 }
 

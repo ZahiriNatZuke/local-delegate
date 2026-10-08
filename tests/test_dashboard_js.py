@@ -464,8 +464,17 @@ def test_no_quedan_plurales_con_parentesis_ni_toFixed():
 
 # --- Interruptor «Pruebas» (test-windows-out-of-metrics, T5) ------------------------------------
 
-_TEXTO_PRUEBAS = ["function fmtNum(", "function plural(", "function textoPruebas("]
-_PRELUDIO_F = "const F = {format: n => fmtNum(n, 0)};"
+_TEXTO_PRUEBAS = [
+    "function fmtNum(",
+    "function plural(",
+    "function fmtLocalTs(",
+    "function textoPruebas(",
+]
+_PRELUDIO_F = (
+    "const F = {format: n => fmtNum(n, 0)};\n"
+    "const FMT_TIME = new Intl.DateTimeFormat('es',{day:'2-digit',month:'2-digit',"
+    "hour:'2-digit',minute:'2-digit',hour12:false});"
+)
 
 
 def _texto_pruebas(tmp_path, stats) -> str:
@@ -492,7 +501,11 @@ def test_texto_pruebas_nombra_la_ventana_abierta_con_su_orden(tmp_path):
         "open_test_windows": [{"id": "w-20261008T090000Z", "start": "2026-10-08T09:00:00.000Z"}],
     }
     texto = _texto_pruebas(tmp_path, stats)
-    assert "local-delegate test-window stop w-20261008T090000Z" in texto
+    assert "`local-delegate test-window stop w-20261008T090000Z`" in texto
+    # La hora, legible y en la zona local (TZ_PRUEBA = La Habana, UTC-4 en octubre), no cruda.
+    # Con el formato de la tabla de actividad (`fmtLocalTs`); el cero del día depende del ICU.
+    assert re.search(r"desde 0?8/10 05:00\.", texto), texto
+    assert "2026-10-08T09:00:00" not in texto
 
 
 @pytest.mark.parametrize("incluir", [False, True])
