@@ -3,21 +3,21 @@
   "slug": "test-windows-out-of-metrics",
   "title": "Las pruebas fuera de las métricas: ventanas de prueba y una sola regla de exclusión en todo el panel",
   "mode": "standard",
-  "status": "specifying",
+  "status": "implementing",
   "createdAt": "2026-10-08T12:31:16.275Z",
-  "updatedAt": "2026-10-08T12:43:47.937Z",
+  "updatedAt": "2026-10-08T12:59:48.717Z",
   "gates": {
     "spec": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T12:59:42.681Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra).",
+      "actor": "user"
     },
     "plan": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T12:59:42.942Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra). Plan T0-T10 tras revisión adversaria sin bloqueantes.",
+      "actor": "user"
     },
     "quality": {
       "status": "pending",
@@ -73,6 +73,43 @@
       "to": "specifying",
       "at": "2026-10-08T12:43:47.937Z",
       "reason": "Los 14 hallazgos de la revisión adversaria corregidos en research.md, spec.md (REQ-002, 004, 011, 014, 016, 022, 024, REQ-026 nuevo, D5 y D7) y plan.md (T0-T10; tabla en «Revisión adversaria»). Gates spec y plan pendientes de la aprobación del usuario y de sus respuestas a D1-D7."
+    },
+    {
+      "type": "gate",
+      "gate": "spec",
+      "status": "approved",
+      "at": "2026-10-08T12:59:42.681Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra).",
+      "actor": "user"
+    },
+    {
+      "type": "gate",
+      "gate": "plan",
+      "status": "approved",
+      "at": "2026-10-08T12:59:42.942Z",
+      "evidence": "Aprobado por el usuario el 2026-10-08 (encargo del orquestador): D1-D7 tal cual recomienda el spec, incluida D7 (REQ-026 entra). Plan T0-T10 tras revisión adversaria sin bloqueantes.",
+      "actor": "user"
+    },
+    {
+      "type": "transition",
+      "from": "specifying",
+      "to": "planning",
+      "at": "2026-10-08T12:59:43.173Z",
+      "reason": "spec aprobada"
+    },
+    {
+      "type": "transition",
+      "from": "planning",
+      "to": "plan-review",
+      "at": "2026-10-08T12:59:47.797Z",
+      "reason": "plan aprobado por el usuario 2026-10-08"
+    },
+    {
+      "type": "transition",
+      "from": "plan-review",
+      "to": "implementing",
+      "at": "2026-10-08T12:59:48.717Z",
+      "reason": "plan aprobado por el usuario 2026-10-08"
     }
   ]
 }
