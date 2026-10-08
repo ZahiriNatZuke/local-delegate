@@ -1695,3 +1695,171 @@ def test_llamaswap_watch_that_cannot_open_is_502(monkeypatch):
 
     assert r.status_code == 502
     assert "401" in r.json()["error"]
+
+
+# --- Las pruebas fuera de las métricas (test-windows-out-of-metrics, T4) -------------------------
+
+
+class _Mezcla:
+    """Un log con 10 filas reales y 3 de prueba (ventana, cliente `mcp` y banco), y opcionalmente
+    filas de Codex fuera de toda ventana. La de ventana es de `local_describe_image`, para que
+    `imagenes` cambie con el interruptor.
+    """
+
+    def __init__(self, tmp_path, monkeypatch, *, codex: int = 0) -> None:
+        from datetime import timedelta
+
+        from test_panel_coste import IMAGEN, _agregados, _linea, _punto
+
+        from local_delegate import atribucion, test_windows
+
+        self.logs = tmp_path / "logs"
+        self.logs.mkdir()
+        monkeypatch.setattr(config, "LOG_DIR", self.logs)
+        monkeypatch.setattr(config, "USAGE_LOG", self.logs / "usage.jsonl")
+        monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+        monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+        self.ahora = datetime.now(UTC).replace(microsecond=0)
+        monkeypatch.setattr(metrics, "_ahora", lambda: self.ahora)
+        a = self.ahora
+        filas = [_linea(a - timedelta(minutes=10 + i), n=i) for i in range(10)]
+        en_ventana = a - timedelta(minutes=5)
+        filas.append(
+            {**IMAGEN, "ts": en_ventana.isoformat(timespec="seconds"), "tool_use_id": "toolu_win"}
+        )
+        filas.append(_linea(a - timedelta(minutes=6), n=90, client="mcp"))
+        filas.append(_linea(a - timedelta(minutes=7), n=91))  # banco por el relleno
+        filas += [
+            _linea(a - timedelta(minutes=30 + i), n=80 + i, client="codex-mcp-client")
+            for i in range(codex)
+        ]
+        filas.sort(key=lambda f: f["ts"])
+        self.log = self.logs / f"usage-{a:%Y%m}.jsonl"
+        _write_jsonl(self.log, filas)
+        atribucion.escribir_relleno(self.logs, f"{a:%Y%m}", {"toolu_0091": {"banco": True}})
+        test_windows.add(self.logs, en_ventana - timedelta(seconds=2), en_ventana, "prueba")
+        # Cuota calibrada, para que `_bloque_cuota` llegue a llamar a `_load` (REQ-014).
+        _agregados(
+            self.logs,
+            [_punto(a - timedelta(days=d), c) for d, c in ((20, 150.0), (10, 160.0), (2, 170.0))],
+        )
+        metrics._FILE_CACHE.clear()
+        desde = (a - timedelta(days=1)).isoformat().replace("+", "%2B")
+        hasta = (a + timedelta(minutes=1)).isoformat().replace("+", "%2B")
+        self.qs = f"from={desde}&to={hasta}"
+        self.cliente = TestClient(metrics.app)
+
+    def get(self, ruta: str, include: bool = False) -> dict:
+        extra = "&include_tests=1" if include else ""
+        return self.cliente.get(f"{ruta}?{self.qs}{extra}").json()
+
+
+def test_una_prueba_marcada_no_cuenta_en_el_panel(tmp_path, monkeypatch):
+    import hashlib
+
+    m = _Mezcla(tmp_path, monkeypatch)
+    antes = hashlib.sha256(m.log.read_bytes()).hexdigest()
+    s, e = m.get("/api/stats"), m.get("/api/events")
+    assert s["total"]["calls"] == 10
+    assert e["meta"]["count"] == 10
+    assert s["excluded_tests"] == e["meta"]["excluded_tests"] == 3
+    assert s["imagenes"]["n"] == 0
+    assert hashlib.sha256(m.log.read_bytes()).hexdigest() == antes
+
+
+def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
+    """Control: mutantes «`bloque_coste` con las filas filtradas» y «`_bloque_cuota` filtra» →
+    fallan las igualdades de `coste` y de `cuota`."""
+    m = _Mezcla(tmp_path, monkeypatch)
+    sin, con = m.get("/api/stats"), m.get("/api/stats", include=True)
+    e = m.get("/api/events", include=True)
+    assert con["total"]["calls"] == 13
+    assert e["meta"]["count"] == 13
+    assert con["excluded_tests"] == e["meta"]["excluded_tests"] == 0
+    assert con["tests_in_range"] == 3
+    assert con["cuota"]["five_hour"]["estado"] == "calibrado", "guarda: la cuota llega a _load"
+    assert con["coste"] == sin["coste"]
+    assert con["cuota"] == sin["cuota"]
+    # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
+    assert con["coste"]["barra"]["excluidas_por_motivo"] == {"pruebas": 2}
+    assert (sin["imagenes"]["n"], con["imagenes"]["n"]) == (0, 1)
+
+
+def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
+    m = _Mezcla(tmp_path, monkeypatch, codex=2)
+    s = m.get("/api/stats")
+    assert s["total"]["calls"] == 12
+    por_cliente = {c["client"]: c["calls"] for c in s["by_client"]}
+    assert por_cliente.get("codex-mcp-client") == 2
+    assert s["coste"]["barra"]["excluidas_por_motivo"]["no es Claude"] == 2
+
+
+@pytest.mark.parametrize("include", [False, True])
+def test_events_y_stats_cuentan_el_mismo_conjunto(tmp_path, monkeypatch, include):
+    """Paridad de conjunto (REQ-011). Control: mutante «solo `stats` filtra» → falla `meta.count`;
+    mutante «`test_reason` ignora el `banco` de la fila» → bajan los `excluded_tests`."""
+    m = _Mezcla(tmp_path, monkeypatch, codex=2)
+    s, e = m.get("/api/stats", include), m.get("/api/events", include)
+    assert m.get("/api/stats")["excluded_tests"] == 3, "guarda: el log tiene pruebas que quitar"
+    assert e["meta"]["count"] == s["total"]["calls"]
+    assert e["meta"]["excluded_tests"] == s["excluded_tests"]
+    assert e["meta"]["tests_in_range"] == s["tests_in_range"] == 3
+
+
+def test_open_test_windows_nombra_las_abiertas(tmp_path, monkeypatch):
+    from local_delegate import test_windows
+
+    m = _Mezcla(tmp_path, monkeypatch)
+    assert m.get("/api/stats")["open_test_windows"] == []
+    w = test_windows.start(m.logs, "en vivo")
+    abiertas = m.get("/api/stats")["open_test_windows"]
+    assert abiertas == [{"id": w.id, "start": test_windows.format_instant(w.start)}]
+
+
+def test_api_hooks_aparta_las_ventanas(tmp_path, monkeypatch):
+    from local_delegate import test_windows
+
+    hooks_log = tmp_path / "telemetry.jsonl"
+    _write_jsonl(
+        hooks_log,
+        [
+            {"ts": "2026-10-08T01:00:00Z", "event": "PreToolUse", "category": "read"},
+            {"ts": "2026-10-08T01:21:00Z", "event": "PreToolUse", "category": "read"},
+            {"ts": "2026-10-08T01:21:30Z", "event": "PreToolUse", "category": "read"},
+        ],
+    )
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", hooks_log)
+    test_windows.add(tmp_path, "2026-10-08T01:20:05.255Z", "2026-10-08T01:22:31.544Z")
+    metrics._FILE_CACHE.clear()
+    qs = "from=2026-10-08T00:00:00%2B00:00&to=2026-10-09T00:00:00%2B00:00"
+    cliente = TestClient(metrics.app)
+    sin = cliente.get(f"/api/hooks?{qs}").json()
+    con = cliente.get(f"/api/hooks?{qs}&include_tests=1").json()
+    assert (sin["total"], sin["excluded_tests"]) == (1, 2)
+    assert (con["total"], con["excluded_tests"]) == (3, 0)
+
+
+def test_lo_vivo_no_se_filtra(tmp_path, monkeypatch):
+    """REQ-017: la última fila, aunque esté en una ventana, es la que enseña el indicador."""
+    from local_delegate import test_windows
+
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    _write_jsonl(
+        tmp_path / "usage-202610.jsonl",
+        [
+            {"ts": "2026-10-08T01:00:00+00:00", "tool": "local_extract"},
+            {"ts": "2026-10-08T01:21:00+00:00", "tool": "local_summarize"},
+        ],
+    )
+    test_windows.add(tmp_path, "2026-10-08T01:20:05.255Z", "2026-10-08T01:22:31.544Z")
+    metrics._FILE_CACHE.clear()
+    assert metrics._last_event()["tool"] == "local_summarize"
+    ultimo = TestClient(metrics.app).get("/api/inflight").json()["last_event"]
+    assert ultimo["tool"] == "local_summarize"
+
+
+@pytest.mark.parametrize("valor", ["0", "yes", "", "TRUE ", "1", "true"])
+def test_include_tests_solo_se_enciende_con_1_o_true(valor):
+    assert metrics._include_tests(valor) is (valor.strip().lower() in {"1", "true"})

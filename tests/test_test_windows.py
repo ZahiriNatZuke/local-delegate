@@ -92,7 +92,12 @@ def test_una_ventana_abierta_llega_hasta_ahora(tmp_path):
 def test_solapadas_se_estampa_la_primera_por_inicio(tmp_path):
     tw.add(tmp_path, "2026-10-08T02:00:00Z", "2026-10-08T03:00:00Z", "b")
     tw.add(tmp_path, "2026-10-08T01:00:00Z", "2026-10-08T04:00:00Z", "a")
-    assert tw.load(tmp_path).find("2026-10-08T02:30:00Z") == "w-20261008T010000Z"
+    v = tw.load(tmp_path)
+    assert v.find("2026-10-08T02:30:00Z") == "w-20261008T010000Z"
+    # Dentro de «a» y después del fin de «b», la última por inicio: el descarte rápido tiene que
+    # mirar el mayor fin de las anteriores, no solo el de la última.
+    assert v.find("2026-10-08T03:30:00Z") == "w-20261008T010000Z"
+    assert v.find("2026-10-08T04:00:01Z") is None
 
 
 # --- Lectura tolerante (REQ-003) -----------------------------------------------------------------

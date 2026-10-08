@@ -16,7 +16,9 @@ Solo guarda fechas, ids y la etiqueta que escriba quien marca: ni rutas ni conte
 
 from __future__ import annotations
 
+import bisect
 import json
+import math
 import os
 import tempfile
 from dataclasses import dataclass, field
@@ -60,8 +62,9 @@ def format_instant(dt: datetime) -> str:
     return dt.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def _floor_s(dt: datetime) -> datetime:
-    return dt.replace(microsecond=0)
+def _epoch_s(dt: datetime) -> int:
+    """Segundos enteros desde la época, truncados (`floor_s` de REQ-002)."""
+    return math.floor(dt.timestamp())
 
 
 def _floor_ms(dt: datetime) -> datetime:
@@ -84,12 +87,6 @@ class Window:
     def is_open(self) -> bool:
         return self.end is None
 
-    def contains(self, ts: datetime, now: datetime) -> bool:
-        """REQ-002: `floor_s(start) <= floor_s(ts) <= floor_s(end)`; abierta = hasta `now`."""
-        t = _floor_s(ts)
-        end = self.end if self.end is not None else now
-        return _floor_s(self.start) <= t <= _floor_s(end)
-
     def to_json(self) -> dict:
         return {
             "id": self.id,
@@ -109,26 +106,44 @@ class Windows:
     error: str | None = None
     exists: bool = False
 
+    def __post_init__(self) -> None:
+        # Índice en segundos enteros (REQ-002: truncados al segundo), por inicio. `_max_end[i]` es
+        # el mayor fin de las ventanas 0..i (abierta = infinito): si es menor que la marca, ninguna
+        # ventana anterior la contiene y se descarta sin recorrerlas. Es el caso de casi todas las
+        # filas del log, y lo que mantiene el coste del panel dentro del 10 % con decenas de
+        # ventanas (requisito no funcional del spec).
+        self.windows.sort(key=lambda w: (w.start, w.id))
+        self._starts = [_epoch_s(w.start) for w in self.windows]
+        self._ends = [None if w.end is None else _epoch_s(w.end) for w in self.windows]
+        self._max_end: list[float] = []
+        tope = float("-inf")
+        for e in self._ends:
+            tope = max(tope, float("inf") if e is None else e)
+            self._max_end.append(tope)
+
     def find(self, ts: object, now: datetime | None = None) -> str | None:
         """El id de la primera ventana (por inicio) que contiene `ts`, o `None`. Nunca lanza.
 
-        Una marca ilegible no está en ninguna ventana. Se recorre la lista ordenada y se para en
-        cuanto una ventana empieza después de la marca, así que el coste es lineal en las ventanas
-        anteriores a la marca y no en todas.
+        Una marca ilegible no está en ninguna ventana. Una ventana abierta llega hasta `now`.
         """
         if not self.windows:
             return None
         try:
-            t = parse_instant(ts)
-        except (ValueError, TypeError):
+            t = _epoch_s(parse_instant(ts))
+        except (ValueError, TypeError, OverflowError):
             return None
-        now = now if now is not None else _now()
-        t_s = _floor_s(t)
-        for w in self.windows:
-            if _floor_s(w.start) > t_s:
-                break
-            if w.contains(t, now):
-                return w.id
+        hi = bisect.bisect_right(self._starts, t)
+        if hi == 0 or self._max_end[hi - 1] < t:
+            return None
+        ahora: int | None = None
+        for i in range(hi):
+            fin = self._ends[i]
+            if fin is None:
+                if ahora is None:
+                    ahora = _epoch_s(now if now is not None else _now())
+                fin = ahora
+            if t <= fin:
+                return self.windows[i].id
         return None
 
     def open_windows(self) -> list[Window]:

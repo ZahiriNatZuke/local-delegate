@@ -54,6 +54,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from .. import (
+    atribucion,
     clients,
     config,
     coste,
@@ -63,6 +64,7 @@ from .. import (
     precios,
     recalcular,
     server,
+    test_windows,
     topology,
     valoracion,
 )
@@ -463,10 +465,40 @@ def _aggregate(rows: list[dict]) -> dict:
     }
 
 
+def _include_tests(value: str | None) -> bool:
+    """`include_tests=1` (o `true`) enciende el interruptor «Pruebas»; cualquier otra cosa, no."""
+    return str(value or "").strip().lower() in {"1", "true"}
+
+
+def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(uso, pruebas) con la ÚNICA regla de «es una prueba» (`atribucion.test_reason`).
+
+    Es el único sitio del panel que separa las pruebas (test-windows-out-of-metrics, REQ-011):
+    `/api/events` y `/api/stats` la llaman igual, así que cuentan el mismo conjunto.
+    """
+    kept: list[dict] = []
+    tests: list[dict] = []
+    for r in rows:
+        (tests if atribucion.test_reason(r) else kept).append(r)
+    return kept, tests
+
+
+def _usage_rows(rows: list[dict], include: bool) -> tuple[list[dict], dict]:
+    """Las filas que cuentan como uso y los contadores que lo explican (REQ-011, REQ-012)."""
+    kept, tests = _split_tests(rows)
+    shown = rows if include else kept
+    return shown, {"excluded_tests": 0 if include else len(tests), "tests_in_range": len(tests)}
+
+
 @app.get("/api/events")
-def events(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+def events(
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = Query(None),
+    include_tests: str | None = Query(None),
+):
     range_from, range_to = _resolve_range(from_, to)
     rows, files_read = _load(range_from, range_to)
+    rows, cuenta = _usage_rows(rows, _include_tests(include_tests))
     rows.reverse()  # más recientes primero
     return JSONResponse(
         {
@@ -474,6 +506,7 @@ def events(from_: str | None = Query(None, alias="from"), to: str | None = Query
                 "chars_per_token": CHARS_PER_TOKEN,
                 "log_dir": str(config.LOG_DIR),
                 "count": len(rows),
+                **cuenta,
                 "files_read": files_read,
                 "range_from": range_from.isoformat(),
                 "range_to": range_to.isoformat(),
@@ -484,16 +517,28 @@ def events(from_: str | None = Query(None, alias="from"), to: str | None = Query
 
 
 @app.get("/api/stats")
-def stats(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+def stats(
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = Query(None),
+    include_tests: str | None = Query(None),
+):
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
-    datos = _aggregate(rows)
+    usage, cuenta = _usage_rows(list(rows), _include_tests(include_tests))
+    datos = _aggregate(usage)
+    datos.update(cuenta)
+    datos["open_test_windows"] = [
+        {"id": w.id, "start": test_windows.format_instant(w.start)}
+        for w in test_windows.load(config.LOG_DIR).open_windows()
+    ]
     # Coste equivalente, imágenes y cuota (coste-api-y-cuota). Solo se lee lo que dejó el comando
     # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
+    # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `excluida`:
+    # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
     ahora = _ahora()
     agregados = recalcular.leer_agregados(config.LOG_DIR)
     datos["coste"] = valoracion.bloque_coste(rows, agregados, ahora=ahora)
-    datos["imagenes"] = valoracion.bloque_imagenes(rows)
+    datos["imagenes"] = valoracion.bloque_imagenes(usage)
     datos["densidad_tabla"] = {
         k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
     }
@@ -620,7 +665,11 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
 
 
 @app.get("/api/hooks")
-def hooks(from_: str | None = Query(None, alias="from"), to: str | None = Query(None)):
+def hooks(
+    from_: str | None = Query(None, alias="from"),
+    to: str | None = Query(None),
+    include_tests: str | None = Query(None),
+):
     """Lo que los hooks consultivos han sugerido, en el mismo rango que el resto del panel.
 
     `enabled` distingue las dos formas de no tener datos: el usuario no activó la telemetría, o la
@@ -633,6 +682,7 @@ def hooks(from_: str | None = Query(None, alias="from"), to: str | None = Query(
             {
                 "enabled": False,
                 "reason": "LD_HOOK_TELEMETRY_LOG no está definida en el entorno del daemon",
+                "excluded_tests": 0,
                 **_aggregate_hooks([]),
             }
         )
@@ -643,11 +693,21 @@ def hooks(from_: str | None = Query(None, alias="from"), to: str | None = Query(
         for fila in _read_file_cached(ruta)
         if (ts := _parse_ts(fila.get("ts"))) is not None and range_from <= ts <= range_to
     ]
+    # La telemetría no lleva `client`: de la regla de pruebas solo le aplican las ventanas (REQ-013).
+    excluidas = 0
+    if not _include_tests(include_tests):
+        ventanas = test_windows.load(config.LOG_DIR)
+        if ventanas.windows:
+            ahora = datetime.now(UTC)
+            antes = len(filas)
+            filas = [f for f in filas if ventanas.find(f.get("ts"), now=ahora) is None]
+            excluidas = antes - len(filas)
     return JSONResponse(
         {
             "enabled": True,
             "log": str(ruta),
             "exists": ruta.is_file(),
+            "excluded_tests": excluidas,
             **_aggregate_hooks(filas),
         }
     )
