@@ -36,8 +36,15 @@ VIGENCIA_DE_NOTA_S = hook_common.VIGENCIA_DE_NOTA_S
 COLA_BYTES = 256 * 1024
 PRESUPUESTO_S = 0.050
 
-#: Clientes cuyas delegaciones no se valoran, con el rótulo del tramo `excluido` (REQ-007).
-CLIENTES_EXCLUIDOS = {"codex-mcp-client": "no es Claude", "mcp": "pruebas"}
+#: Clientes que no son Claude: sus delegaciones cuentan como uso, pero no se valoran (REQ-007).
+CLIENTES_NO_CLAUDE = {"codex-mcp-client": "no es Claude"}
+
+#: El cliente `mcp` es el de los scripts del repo: lo que hace es una prueba (test-windows-out-of-metrics).
+CLIENTES_DE_PRUEBA = {"mcp": "pruebas"}
+
+#: Clientes cuyas delegaciones no se valoran, con el rótulo del tramo `excluido` (REQ-007). Se
+#: conserva como unión de los dos de arriba; la regla vive en `excluida` y `test_reason`.
+CLIENTES_EXCLUIDOS = {**CLIENTES_NO_CLAUDE, **CLIENTES_DE_PRUEBA}
 
 #: Orden de los cruces del relleno: una entrada solo se sustituye por otra de rango MAYOR (REQ-005).
 RANGO_DE_CRUCE = {"exacto": 2, "ventana": 1, "ventana+path": 1, "ambiguo": 0, "sin_cruce": 0}
@@ -324,18 +331,33 @@ def escribir_relleno(log_dir: Path, mes: str, entradas: dict[str, dict]) -> dict
 # --- Lo que no cuenta y cuánto viven los transcripts ---------------------------------------------
 
 
+def test_reason(fila: dict, entrada_relleno: dict | None = None) -> str | None:
+    """`"pruebas"` si la fila es una prueba, o `None`. Es la ÚNICA regla de «esto es una prueba»
+    (test-windows-out-of-metrics, REQ-004): la aplican el panel entero, `local_status`, el coste, el
+    recálculo y los medidores de `scripts/`.
+
+    Es una prueba si la pidió el cliente `mcp` de los scripts, si es de un transcript de banco
+    (`banco` en `entrada_relleno` o, si no se pasa, en la propia fila ya fundida), o si `fundir` le
+    estampó `test_window` porque su `ts` cae en una ventana de prueba.
+    """
+    motivo = CLIENTES_DE_PRUEBA.get(str(fila.get("client") or ""))
+    if motivo:
+        return motivo
+    banco = entrada_relleno.get("banco") if isinstance(entrada_relleno, dict) else fila.get("banco")
+    if banco or fila.get("test_window"):
+        return "pruebas"
+    return None
+
+
 def excluida(fila: dict, entrada_relleno: dict | None = None) -> str | None:
     """El motivo por el que la delegación no se valora (REQ-007), o `None` si cuenta.
 
-    `no es Claude` (Codex) o `pruebas` (el cliente `mcp` de los scripts, o un transcript de banco
-    que el relleno marcó `banco`).
+    `no es Claude` (Codex) o `pruebas` (`test_reason`). Las de Codex sí cuentan como uso en el
+    panel: solo el coste las deja fuera.
     """
-    motivo = CLIENTES_EXCLUIDOS.get(str(fila.get("client") or ""))
-    if motivo:
-        return motivo
-    if isinstance(entrada_relleno, dict) and entrada_relleno.get("banco"):
-        return "pruebas"
-    return None
+    return CLIENTES_NO_CLAUDE.get(str(fila.get("client") or "")) or test_reason(
+        fila, entrada_relleno
+    )
 
 
 def plazo_de_borrado(claude_dir: Path) -> int:

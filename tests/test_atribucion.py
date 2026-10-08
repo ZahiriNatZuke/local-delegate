@@ -624,3 +624,23 @@ def test_plazo_de_borrado(tmp_path):
         assert atribucion.plazo_de_borrado(d) == 30, malo
     (d / "settings.json").write_text("{roto", encoding="utf-8")
     assert atribucion.plazo_de_borrado(d) == 30
+
+
+# --- Una sola regla de «es una prueba» (test-windows-out-of-metrics, REQ-004) -------------------
+
+
+def test_test_reason_reconoce_las_tres_clases_de_prueba():
+    """Control: mutante «`test_reason` ignora `test_window`» → falla el caso de la ventana."""
+    assert atribucion.test_reason({"client": "mcp"}) == "pruebas"
+    assert atribucion.test_reason({"client": "claude-code"}, {"banco": True}) == "pruebas"
+    # El panel la llama con un solo argumento sobre la fila ya fundida, que trae `banco`.
+    assert atribucion.test_reason({"client": "claude-code", "banco": True}) == "pruebas"
+    assert atribucion.test_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
+    assert atribucion.test_reason({"client": "codex-mcp-client"}) is None
+    assert atribucion.test_reason({"client": "claude-code"}) is None
+
+
+def test_excluida_suma_no_claude_y_pruebas():
+    assert atribucion.excluida({"client": "codex-mcp-client"}) == "no es Claude"
+    assert atribucion.excluida({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
+    assert atribucion.excluida({"client": "claude-code"}) is None

@@ -23,7 +23,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import atribucion, config, precios
+from . import atribucion, config, precios, test_windows
 
 # El respaldo declarado (REQ-008): el grupo más frecuente medido (135 de 149 atribuidas).
 RESPALDO_DECLARADO = {"modelo": "claude-opus-5-5", "hilo": "subagent"}
@@ -220,12 +220,21 @@ def fundir(filas: Iterable[dict], *, log_dir: Path) -> list[dict]:
     claves = atribucion.claves_del_fichero(filas)
     por_mes: dict[str | None, dict[str, dict]] = {}
     r = respaldo()
+    # Ventanas de prueba (test-windows-out-of-metrics, REQ-005): se estampa `test_window` en la
+    # COPIA; el fichero de log no cambia. Una sola lectura (cacheada) y un solo reloj por llamada.
+    ventanas = test_windows.load(log_dir)
+    ahora = datetime.now(UTC)
     fundidas: list[dict] = []
     for fila, clave in zip(filas, claves, strict=True):
         mes = _mes(fila.get("ts"))
         if mes not in por_mes:
             por_mes[mes] = atribucion.leer_relleno(log_dir, mes) if mes else {}
-        fundidas.append(fundir_fila(fila, por_mes[mes].get(clave), respaldo_=r))
+        nueva = fundir_fila(fila, por_mes[mes].get(clave), respaldo_=r)
+        if ventanas.windows:
+            ventana = ventanas.find(fila.get("ts"), now=ahora)
+            if ventana:
+                nueva["test_window"] = ventana
+        fundidas.append(nueva)
     return fundidas
 
 

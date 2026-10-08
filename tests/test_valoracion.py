@@ -273,3 +273,40 @@ def test_el_respaldo_se_nombra_en_la_barra(tmp_path):
     assert (b["respaldo"]["nombre"], b["respaldo"]["hilo"]) == ("Opus 5.5", "subagent")
     assert b["n_origen"]["declarado"] == 1
     assert json.dumps(b)  # serializable tal cual para `/api/stats`
+
+
+# --- Ventanas de prueba (test-windows-out-of-metrics, REQ-005 y REQ-014) -------------------------
+
+
+def _con_ventana(tmp_path, lineas: list[dict]) -> list[dict]:
+    """Una ventana que cubre solo la línea 1 (`AHORA - 1 h - 1 s`)."""
+    from local_delegate import test_windows
+
+    t = AHORA - timedelta(hours=1, seconds=1)
+    test_windows.add(tmp_path, t, t + timedelta(milliseconds=500), "prueba")
+    return lineas
+
+
+def test_fundir_estampa_la_ventana_y_no_toca_el_log(tmp_path):
+    import hashlib
+
+    lineas = _con_ventana(tmp_path, [_linea(0), _linea(1), _linea(2)])
+    log = tmp_path / f"usage-{MES}.jsonl"
+    log.write_text("".join(json.dumps(x) + "\n" for x in lineas), encoding="utf-8")
+    antes = hashlib.sha256(log.read_bytes()).hexdigest()
+    crudas = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    filas = coste.fundir(crudas, log_dir=tmp_path)
+    assert [f.get("test_window") for f in filas] == [None, "w-20261006T105959Z", None]
+    assert all("test_window" not in c for c in crudas), "fundir copia: no muta la entrada"
+    assert hashlib.sha256(log.read_bytes()).hexdigest() == antes
+
+
+def test_una_fila_en_ventana_va_al_tramo_excluido_como_prueba(tmp_path):
+    """Control: mutante «`test_reason` ignora `test_window`» → la fila cuenta y suma."""
+    lineas = _con_ventana(tmp_path, [_linea(0), _linea(1)])
+    relleno = {k: _relleno() for k in ("toolu_0000", "toolu_0001")}
+    filas = _fundidas(tmp_path, lineas, relleno)
+    assert coste.tramo(filas[1], ahora=AHORA, plazo_dias=30) == "excluido"
+    assert coste.tramo(filas[0], ahora=AHORA, plazo_dias=30) != "excluido", "guarda"
+    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+    assert b["barra"]["excluidas_por_motivo"] == {"pruebas": 1}
