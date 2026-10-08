@@ -914,6 +914,20 @@ def _codex_mcp_section(ctx: Context) -> str | None:
     return section.group(0) if section else None
 
 
+def _entry_timeouts(entry: dict, target: str) -> dict:
+    """Los plazos puestos a mano en una entrada JSON (Claude Code u opencode)."""
+    return {k: entry[k] for k in install.TIMEOUT_KEYS[target] if entry.get(k) is not None}
+
+
+def _timeouts_text(plazos: dict) -> str:
+    """``, plazo tool_timeout_sec = 900`` para el detalle, o nada si no hay plazo puesto.
+
+    Se enseña porque `install` y `update` lo conservan: así se ve, sin abrir el fichero, que el
+    plazo que subiste sigue ahí.
+    """
+    return f", plazo {install._describe_timeouts(plazos)}" if plazos else ""
+
+
 def _probe_mcp_claude(ctx: Context) -> Result:
     path = ctx.home / ".claude.json"
     if not ctx.claude_dir.is_dir() and not path.exists():
@@ -929,7 +943,8 @@ def _probe_mcp_claude(ctx: Context) -> Result:
         return Result(MISSING, f"'{install.SERVER_NAME}' no está en {path}", INSTALL_HINT)
     kind = _entry_mode(entry)
     where = entry.get("url") or entry.get("command") or ""
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''})")
+    plazos = _timeouts_text(_entry_timeouts(entry, "claude"))
+    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{plazos})")
 
 
 def _probe_mcp_codex(ctx: Context) -> Result:
@@ -945,6 +960,7 @@ def _probe_mcp_codex(ctx: Context) -> Result:
     if not section:
         return Result(MISSING, f"sin [mcp_servers.{install.SERVER_NAME}] en {path}", INSTALL_HINT)
     kind = _codex_mode(section.group(0))
+    kind += _timeouts_text(dict(install._CODEX_TIMEOUT_RE.findall(section.group(0))))
     if install.TOML_BEGIN not in text:
         return Result(WARN, f"entrada {kind} en {path}, pero puesta a mano (sin marcadores)")
     # El de apertura basta para saber que es nuestra. Si falta el de cierre es que otro programa
@@ -995,7 +1011,8 @@ def _probe_mcp_opencode(ctx: Context) -> Result:
         )
     kind = str(entry.get("type") or "?")
     where = entry.get("url") or entry.get("command") or ""
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''})")
+    plazos = _timeouts_text(_entry_timeouts(entry, "opencode"))
+    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{plazos})")
 
 
 def _probe_mcp_credential(ctx: Context) -> Result:

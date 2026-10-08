@@ -184,7 +184,7 @@ Reinicia el cliente. Verifica con:
 Una delegación puede sumar **espera de turno** (el daemon reparte el backend entre los modelos que
 chocan, ver [Tools](Tools.md#turno-dos-tools-que-no-se-quitan-el-modelo)) e inferencia, y una
 operación de muchos trozos ya tarda minutos. Los clientes tienen sus propios plazos para una tool
-MCP, y `install` **no** los sube. Consultados el 2026-10-07 en la documentación oficial de cada
+MCP, y `install` **no** los sube (pero conserva el que pongas, ver abajo). Consultados el 2026-10-07 en la documentación oficial de cada
 uno:
 
 | Cliente | Plazo | Por defecto | Cómo se sube |
@@ -199,13 +199,23 @@ Las dos esperas en negrita son menores que lo que puede durar una operación con
 corta **todo lo que pase de 60 s**, y en Claude Code, contra el daemon, una llamada que pase **5 min
 sin respuesta ni notificación de progreso**. Si te pasa, súbelas.
 
-> **`install` y `update` reescriben la entrada `local-delegate` de cada cliente**, y con ella quitan
-> lo que le hayas añadido a mano (`tool_timeout_sec` en Codex, `timeout` en Claude Code). Por eso:
+**`install` y `update` conservan el plazo que pongas en la entrada `local-delegate`** (desde la
+versión siguiente a la 0.33.0; antes se lo llevaban al reescribirla). Lo leen de la entrada que ya
+hay y lo vuelven a escribir tal cual, en `stdio` y en `http`, también si cambias de modo. Si no
+pusiste ninguno, no añaden ninguno. Se conservan estas claves:
 
-- **Claude Code**: usa la variable `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (ms) en el entorno del
-  cliente, por ejemplo `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=900000` en el bloque `env` de
-  `~/.claude/settings.json`. Vive fuera de la entrada, así que sobrevive a `install`/`update`. El
-  `"timeout"` dentro de la entrada también funciona, pero el siguiente `install` lo borra.
+| Cliente | Claves que se conservan |
+|---|---|
+| Claude Code (`~/.claude.json`) | `timeout` |
+| Codex (`~/.codex/config.toml`) | `tool_timeout_sec`, `startup_timeout_sec` y `startup_timeout_ms` |
+| opencode (`opencode.json`/`.jsonc`) | `timeout` |
+
+`local-delegate doctor` enseña el plazo puesto en la línea de cada entrada (por ejemplo
+`(http, plazo tool_timeout_sec = 900)`), y el `--dry-run` de `install` avisa de que lo conserva.
+
+- **Claude Code**: pon `"timeout"` (ms) en la entrada, o usa la variable
+  `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (ms) en el entorno del cliente, por ejemplo
+  `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=900000` en el bloque `env` de `~/.claude/settings.json`.
 - **Codex**: añade **esta línea** a tu bloque `[mcp_servers.local-delegate]` de
   `~/.codex/config.toml`, sin tocar el resto (en modo HTTP, el bloque que escribe `install` lleva
   también `bearer_token_env_var`, y sin él el daemon con token responde `401`):
@@ -219,8 +229,11 @@ sin respuesta ni notificación de progreso**. Si te pasa, súbelas.
   # local-delegate:end
   ```
 
-  **Vuelve a ponerla después de cada `install` o `update`**: el bloque entre los marcadores es
-  gestionado y se reescribe entero.
+  El siguiente `install` la mueve al final del bloque y le quita el comentario, pero conserva el
+  valor.
+- **opencode**: con un `timeout` en la entrada, `install` no la registra con `opencode mcp add`
+  (no tiene opción para el plazo) sino escribiendo el fichero. Si el fichero tiene comentarios no
+  lo reescribe: avisa y deja la entrada como estaba, con su plazo.
 
 El plazo total de Claude Code no se extiende con notificaciones de progreso; el de inactividad sí
 las cuenta como actividad. No está documentado qué

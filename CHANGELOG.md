@@ -7,6 +7,14 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Fixed
+- **`install` y `update` ya no borran el plazo que subiste a mano.** Al reescribir la entrada
+  `local-delegate` de cada cliente se perdía el `tool_timeout_sec` de Codex (que corta a los 60 s,
+  menos de lo que puede durar una espera de turno), el `timeout` de Claude Code y el de opencode.
+  Ahora se leen de la entrada que ya hay y se vuelven a escribir tal cual, en `stdio` y en `http`;
+  en Codex también `startup_timeout_sec` y `startup_timeout_ms`. Sin plazo previo no se añade
+  ninguno. Con un plazo, opencode se registra escribiendo el fichero y no con `opencode mcp add`,
+  que no lo expresa, y si `claude mcp add-json` no lo deja escrito se escribe `~/.claude.json`.
+  `doctor` enseña el plazo puesto en la línea de cada entrada.
 - **La tarjeta «Sistema» ya no lleva frases ni el host como texto plano.** En la Mac, con el backend
   en la PC, salían dos frases en dos tipografías («RAM y VRAM no se miden en macOS todavía.» y «El
   backend corre en …»). Ahora son filas etiqueta/valor con la letra del panel: «Backend» enlaza, en
