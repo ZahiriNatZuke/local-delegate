@@ -34,7 +34,8 @@ hace `POST /chat/completions` al endpoint configurado y devuelve **solo texto**.
 - **`path` server-side = el ahorro real.** `summarize`/`extract`/`lint_summary`/… aceptan `path`:
   el MCP lee el archivo **en tu máquina** y solo devuelve el resultado corto. El contenido grande
   **nunca entra al contexto de Claude** → ahí está la cuota conservada.
-- **Roles de modelo.** Las tools enrutan a 4 roles de texto (mecánico, largo, código, rápido) más
+- **Roles de modelo.** Las tools enrutan a 3 roles de texto (mecánico, largo, código; el rápido se
+  retiró en la 0.30.0) más
   un rol de visión (`local_describe_image`), cada uno un id de modelo configurable. Las que
   dependen del tamaño del input eligen mecánico vs. largo por un umbral
   (`LOCAL_DELEGATE_LONG_INPUT_CHARS`).
@@ -129,6 +130,40 @@ módulo puede traer dos cosas de tamaño muy distinto.
 Claude Code negocia `2025-11-25` y Codex `2025-06-18`. Implementar hoy contra la revisión más nueva
 sería escribir código que ningún cliente negocia.
 
+## Turno, afinidad y lentitud
+
+Tres piezas del daemon que solo se encienden con un llama-swap **local** cuya config se puede leer
+(`LLAMASWAP_CONFIG` y el extra `[llamaswap]`). Sin eso, o con un backend remoto, el daemon se
+comporta como antes de tenerlas.
+
+```text
+operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (MAX_CONCURRENT_REQUESTS) ──▶ backend
+                  │ espera: local_wait="turn"              │ espera: local_wait="slot"
+                  └─ afinidad: ¿hay un alternativo aprobado ya cargado? (solo en la 1.ª llamada)
+```
+
+- **Turno.** Se pide **antes** que la plaza, y nunca con una plaza en la mano: así turno y plaza no
+  se bloquean mutuamente. El conjunto aceptable de una operación es el modelo del rol más los
+  alternativos con celda aprobada (o `{model}` con modelo explícito, o el destino de un salto). La
+  primera de la cola se concede si alguno de sus modelos es compatible con lo que está en uso; una
+  que llega después solo se adelanta si no choca ni con lo que está en uso ni con lo que piden las de
+  delante (E-1), así que nadie espera para siempre. Si la cola no avanza en
+  `LOCAL_DELEGATE_TURN_MAX_S` sin llamadas en vuelo, la cabeza se concede forzada. Un salto de
+  respaldo suelta la plaza y vuelve a pedir turno. El estado se ve en `local_status`, en
+  `/api/inflight` (`local_wait`, `turn_in_use`, `turn_position`) y en el panel.
+- **Afinidad.** Con la plaza en la mano, en la primera llamada de la operación y solo si la tool
+  tiene celdas aprobadas y ni el rol ni el alternativo están ya en uso por el daemon, se hacen hasta
+  tres consultas de 1 s a llama-swap (`/running`, la foto de peticiones en vuelo de `/api/events` y
+  `/api/metrics/activity`). La elección es pura (`matrix.choose`): primero el rol si ya está cargado;
+  después un alternativo aprobado cargado con margen; si no, el rol. Cualquier fallo de esas
+  consultas deja la operación sin afinidad. El detalle para el usuario, con la tabla de celdas, está
+  en [Tools](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado).
+- **Espera frente a lentitud.** `_post_chat` conserva los `timings` de llama-server. Cada evento
+  separa la inferencia (`inference_ms`) de todo lo demás (`wait_ms`: turno, plaza, cola de
+  llama-swap y carga) y compara el `tok_s` del modelo que respondió con su mediana de referencia
+  (`pace_rel`, `slow`). Observar nunca rompe una tool: si falla el cálculo, el evento se escribe sin
+  esos campos. Ver [Savings & metrics](Savings-and-metrics.md#qué-se-mide).
+
 ## Módulos
 
 | Módulo | Rol |
@@ -141,7 +176,15 @@ sería escribir código que ningún cliente negocia.
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
 | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
 | `fallos.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `sin_clasificar` |
-| `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, y el residente de llama-swap |
+| `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, con el paso `loaded` (los alternativos aprobados que ya están cargados) y el texto «sin residente» / «residente: X» |
+| `topology.py` | Lee los grupos de `LLAMASWAP_CONFIG` en caliente y dice qué modelos chocan, con la regla de llama-swap; si no puede, el motivo de «sin topología» |
+| `turn.py` | El turno del daemon: núcleo puro (cola, concesión, E-1, concesión forzada) y su envoltura asíncrona |
+| `matrix.py` | Las celdas aprobadas de la afinidad (`CELLS`) y la elección pura `choose(grantable, role, observed, own)` |
+| `footprint.py` | La huella de un modelo en la config (GGUF, flags, prompt) con la que se comparan las celdas |
+| `pace.py` | Ritmo de referencia por modelo (mediana de `tok_s`) y la regla de `pace_rel`/`slow` |
+| `llamaswap_api.py` | Lo que se lee de llama-swap (`/running`, `/api/events`, `/api/metrics/activity`), el estado de `/api/llamaswap/status` y la vigía de recarga |
+| `llamaswap_config.py` | Estimador de VRAM/RAM de los grupos (`check-llamaswap`, `init-llamaswap`, `--pin`) |
+| `residency.py` | `llamaswap residency`: lectura de la residencia y edición quirúrgica, con copia y reemplazo atómico, del `config.yaml` |
 | `enfriamiento.py` | Enfriamiento por modelo compartido entre procesos (`enfriamiento.json`) y registro de episodios (`enfriamiento-eventos.jsonl`) |
 | `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
 

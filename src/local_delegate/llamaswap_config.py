@@ -28,7 +28,7 @@ except ImportError:  # pragma: no cover - depende del entorno de instalación
 _EXTRA_INSTALL_MSG = 'pip install "local-delegate-mcp[llamaswap]"'
 
 # ¿Vale el estimador de VRAM (con `-ncmoe` y `--mmproj`) para decidir si cabe un residente
-# (`llamaswap residencia --fijar`, REQ-031)? Solo si sus cuatro estimaciones quedan entre -3 % y
+# (`llamaswap residency --pin`, REQ-031)? Solo si sus cuatro estimaciones quedan entre -3 % y
 # +10 % de lo medido en F2 (insumos/llamaswap-grupos.md §2), con los `-ncmoe` MEDIDOS. Control del
 # 2026-10-07 con los GGUF reales (solo cabecera), en MiB, estimado frente a medido:
 #   gemma3-4b 3 581 / 3 270 (+9,5 %, pasa); gemma4-12b + mmproj 19 587 / 9 060 (+116,2 %);
@@ -37,7 +37,7 @@ _EXTRA_INSTALL_MSG = 'pip install "local-delegate-mcp[llamaswap]"'
 # Falla en tres. La resta de expertos da 4,03 y 6,95 GiB a la CPU; lo que se dispara es el KV cache
 # (12 GiB en el 12B, 35 GiB en el 26B), que se calcula como si todas las capas tuvieran atención
 # completa sobre todo el contexto. Hipótesis, sin medir: los Gemma usan ventana deslizante en la
-# mayoría de capas. Por eso `--fijar` exige `--vram-modelo` para todos los modelos implicados.
+# mayoría de capas. Por eso `--pin` exige `--vram-model` para todos los modelos implicados.
 NCMOE_ESTIMATOR_VALIDATED = False
 
 

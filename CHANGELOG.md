@@ -14,6 +14,50 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   cuerpo. Sin ella, el prompt pide el idioma predominante de los textos del diff (comentarios,
   documentación y mensajes). Vale para `conventional` y `plain`, y también para la redacción final
   de un diff que no cabe y se procesa por partes; las notas intermedias no llevan la orden.
+- **El daemon reparte el backend por turno entre los modelos que chocan.** Con un llama-swap local,
+  el extra `[llamaswap]` y `LLAMASWAP_CONFIG`, el daemon lee los grupos de la config (con la regla
+  de `load.go` de v255) y, si dos delegaciones piden modelos que se desalojarían entre sí, la
+  segunda espera su turno en vez de quitarle el modelo a la primera. Las compatibles pasan sin
+  esperar, nadie se queda detrás para siempre, un salto de respaldo suelta su plaza y vuelve a
+  pedir turno, y una cola que no avanza se destraba sola: la primera se concede forzada a los
+  `LOCAL_DELEGATE_TURN_MAX_S` (600 s) sin llamadas en vuelo (`turn: "forced"` en el log). Sin
+  config, con el router `matrix` o con backend remoto, todo va como antes; `local_status` dice
+  «Turno: sí (…)» o «Turno: no (<motivo>)». Una espera de turno puede pasar del plazo de tu cliente
+  MCP (Codex corta a los 60 s): la wiki dice cómo subirlo.
+- **Espera de turno en el panel.** La fila del modelo dice «en cola local» y su `title`, como «En
+  curso», «esperando turno del daemon (en uso: …)»; `/api/inflight` lleva `local_wait: "turn"`,
+  `turn_in_use` y `turn_position`, y el log, `turn_wait_ms`.
+- **Espera e inferencia por separado, y «lento».** Con los `timings` de llama-server, cada evento
+  lleva `inference_ms`, `wait_ms` (turno, plaza, cola de llama-swap y carga), `tok_s` y
+  `prefill_tok_s`. Cada evento con referencia (la velocidad normal del modelo: la mediana de sus
+  últimos 50 eventos, con 10 como mínimo) lleva `pace_rel` y `slow`; si genera a menos de
+  `LOCAL_DELEGATE_SLOW_THRESHOLD` (0,5) de esa velocidad, `slow: true` y, con backend local,
+  `free_ram_mb`. El panel enseña «espera X s · inferencia Y s» y la marca
+  «lento ×0,37»; `local_status`, el ritmo de referencia de cada modelo. Sin `timings`, los campos se
+  omiten.
+- **Afinidad: usar el modelo que ya está cargado.** Si el modelo grande ya está en memoria, las
+  tools con una celda aprobada por la medición de `benchmarks/afinidad-2026-10` lo usan en vez de
+  cargar el mecánico: `local_translate` → `gemma4-26b-a4b` y → `qwen36-35b-a3b`,
+  `local_lint_summary` → `gemma4-26b-a4b` y `local_delegate` → `gemma4-26b-a4b`. Las demás celdas
+  se rechazaron, `local_commit_msg` incluida. Solo con el alternativo cargado con margen
+  (`LOCAL_DELEGATE_AFFINITY_MARGIN_S`, 5 s de TTL) y sin nadie esperando turno. El evento lleva
+  `routing: "affinity"`, `model_requested`, `affinity_foreign_flight` y, si hubo que cargarlo,
+  `affinity_failed`; no cuenta como respaldo. Si el alternativo falla, también por capacidad, se
+  prueba el modelo del rol y su cadena (`affinity_dropped`, `affinity_dropped_class`). En otra
+  máquina, donde los GGUF medidos no existen, la afinidad queda inerte y `doctor` lo dice.
+- **`local-delegate llamaswap residency`.** Muestra qué modelo se queda cargado y el TTL efectivo de
+  cada uno («sin residente (recomendado)» o «residente: X»), y lo cambia: `--none` (volver a
+  ningún residente), `--pin MODEL` (residencia opt-in, que retiene VRAM y se niega si no cabe;
+  hoy pide `--vram-model ID=GiB`), `--ttl MODEL=SECONDS` y `--restore BAK`. Edita solo las
+  líneas que cambian, deja una copia `<config>.<AAAAMMDD-HHMMSS>.bak`, reemplaza de forma atómica,
+  no escribe con delegaciones o peticiones en curso (salvo `--now`, porque la recarga corta lo que
+  esté corriendo) y dice qué hizo llama-swap: recargó, rechazó (y restaura la copia), no vigila el
+  fichero o caído. La credencial la pone el daemon: tres endpoints nuevos tras el token del puerto,
+  `GET /api/llamaswap/status`, `POST /api/llamaswap/watch` y `GET /api/llamaswap/watch/<id>`.
+- **Dos checks en `doctor`, que ya tiene 24.** `backend.residency`: `[ OK ]` sin residente o con
+  uno elegido con `--pin` (con la VRAM que retiene), `[WARN]` con un grupo `persistent` de TTL
+  mayor que 0 o una celda de la afinidad cuya huella ya no coincide. `backend.topology`: si el
+  daemon tiene turno y, si no, por qué.
 - **Equivalente estimado a precio de API, con sus supuestos a la vista.** El panel dice
   «Equivalente estimado a precio de API: entre $X y ~$Y», con la nota «no es dinero que hayas
   ahorrado: tu suscripción es de tarifa plana». Es una **estimación**, no una medida: valora el
@@ -64,6 +108,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   permisos de escritura; sus commits los firma GitHub y él mismo lanza los checks del PR.
 
 ### Changed
+- **Cadenas de respaldo sin residente; código y largo nunca caen al mecánico.** El paso
+  `residente` pasa a llamarse `loaded`: los alternativos con celda aprobada para la tool que ya
+  están cargados, resueltos al saltar y sin cargar nada (si no hay, se salta sin gastar salto).
+  Cadenas por defecto: `code → loaded → long`, `long → loaded → code` y `mechanical → loaded →
+  long`. `residente` y `resident` siguen valiendo en `LOCAL_DELEGATE_FALLBACK_<ROL>`, y `doctor`
+  pide renombrarlos. `local_status`, `doctor` y la wiki solo hablan de un residente si la config
+  tiene un modelo con TTL efectivo 0.
+- **Un fallo de capacidad sin nada en `loaded` ya no tiene respaldo.** Antes saltaba al modelo
+  mecánico, que sin residente había que cargar, justo lo que el respaldo de capacidad quería
+  evitar. Ahora vuelve el error de siempre (consecuencia aceptada). La excepción es la afinidad.
+- **`init-llamaswap` deja de recomendar residente.** `--resident` es la residencia opt-in,
+  `--ttl-resident` vale 0 por defecto (con `persistent` y TTL mayor que 0 no había residencia de
+  verdad) y `--force` deja una copia con fecha en vez de pisar un `.bak` fijo. El README y la
+  receta de grupos recomiendan ningún residente.
+- **El estimador de VRAM de `check-llamaswap` e `init-llamaswap` cambia.** Suma el fichero de
+  `--mmproj`, resta con `-ncmoe`/`--n-cpu-moe N` los expertos de las capas `i < N`, y un `--mmproj`
+  que no existe pasa a ser un error de estimación (código 2).
+- **Un salto de respaldo suelta su plaza de concurrencia** y la vuelve a pedir, también sin turno:
+  puede verse una espera de plaza entre el intento fallido y el respaldo. El tope de
+  `LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS` no cambia.
 - **«Contexto conservado» se cuenta en tokens de Claude de verdad, y la cifra sube.** La
   conversión de caracteres a tokens deja de ser `÷ 4` y usa una tabla de densidad medida por
   familia de tokenizador (la de Opus 5.5, Sonnet 5.5, Opus 5 y Fable 5.1, y la anterior, de Haiku

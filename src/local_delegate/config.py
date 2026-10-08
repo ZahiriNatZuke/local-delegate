@@ -293,7 +293,8 @@ COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900
 FALLBACK = _env_flag("LOCAL_DELEGATE_FALLBACK", True)
 FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
 #: Cadena sobrescrita por rol: `None` es la de la spec; `""` o `none` desactivan el respaldo de ese
-#: rol; si no, roles (`mechanical`, `long`, `code`, `residente`) o ids separados por comas.
+#: rol; si no, roles (`mechanical`, `long`, `code`, `loaded`) o ids separados por comas
+#: (`residente` y `resident` se aceptan como sinónimos obsoletos de `loaded`, con aviso de `doctor`).
 FALLBACK_CHAINS: dict[str, str | None] = {
     rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}") for rol in ("mechanical", "long", "code")
 }

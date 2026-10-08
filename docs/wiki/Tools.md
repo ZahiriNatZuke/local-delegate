@@ -217,8 +217,12 @@ local_status() -> str
 ```
 
 Diagnóstico de solo lectura: backend, catálogo de modelos, ruta del log, VRAM y RAM del sistema,
-las cadenas de respaldo resueltas (con el residente) y los modelos enfriados, con el tiempo que les
-queda y cuántas veces seguidas han vuelto a entrar.
+las cadenas de respaldo resueltas (con el paso `loaded`, y «sin residente» o «residente: X» según
+haya en la config de llama-swap algún modelo con TTL efectivo 0) y los modelos enfriados, con el
+tiempo que les queda y cuántas veces seguidas han vuelto a entrar. Además, el **turno** del daemon
+(«Turno: sí (choques: …; en uso: …; esperan: N)» o «Turno: no (<motivo>)») y el **ritmo de
+referencia** de cada modelo (la mediana de tok/s con la que se decide «lento», y cuántas muestras
+tiene).
 **No llama al backend de chat**, así que sirve para saber si el backend responde, pero **no**
 prueba que la credencial funcione — para eso hace falta una tool que ejerza el modelo de verdad.
 Para el diagnóstico completo de la instalación, `local-delegate doctor` (ver
@@ -239,6 +243,65 @@ Cuatro perfiles, todos cambiables por entorno (ver [Configuration](Configuration
 
 El salto de mecánico a largo es **automático** y se decide sondeando el tamaño: bytes del archivo
 para `path`, caracteres para `text`.
+
+## Turno: dos tools que no se quitan el modelo
+
+En el daemon, con un llama-swap local y `LLAMASWAP_CONFIG` legible, cada delegación **pide turno**
+antes de su plaza de concurrencia. Dos modelos **chocan** si cargar uno desaloja al otro, con la
+misma regla que llama-swap (mismo grupo con `swap: true`, o uno `exclusive` y el otro no
+`persistent`). Una delegación cuyo modelo choca con lo que está en uso **espera**, en cola; una con
+un modelo compatible pasa sin esperar si tampoco choca con lo que piden las de delante. Así, un
+resumen y un mensaje de commit lanzados a la vez ya no se desalojan el modelo el uno al otro: el
+segundo espera y luego carga el suyo.
+
+- El panel enseña esa espera como **espera local** («esperando turno del daemon (en uso: …)»), y el
+  log guarda cuánto duró (`turn_wait_ms`).
+- Un salto de respaldo **suelta** su plaza y pide turno para el modelo nuevo, al final de la cola.
+- Red de seguridad: si la primera de la cola lleva `LOCAL_DELEGATE_TURN_MAX_S` (600 s) esperando
+  **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le
+  concede igual (`turn: "forced"` en el log).
+- Sin topología (sin `LLAMASWAP_CONFIG`, router `matrix`, backend remoto…) no hay turno y todo va
+  como antes; `local_status` dice por qué. Los procesos que no pasan por el daemon (un `stdio`
+  suelto, la Mac) no piden turno.
+- Una espera de turno más la inferencia puede pasar del plazo de tu cliente MCP: ver
+  [plazos de los clientes](Integration-install.md#plazos-de-los-clientes-mcp).
+
+## Afinidad: usar el modelo que ya está cargado
+
+Si el modelo grande ya está en memoria, a veces es mejor usarlo para una tarea mecánica que
+desalojarlo para cargar el pequeño. El daemon lo hace **solo** donde una medición previa lo aprobó:
+una celda «tool → modelo alternativo» que pasó, frente al modelo del rol, el criterio de aprobación
+escrito antes de medir (`benchmarks/afinidad-2026-10/veredicto.json`). Hoy hay **cuatro celdas aprobadas**, todas frente
+al rol mecánico (`gemma3-4b`); la de commit se midió frente al rol de código:
+
+| Tool | Alternativo | Estado |
+| --- | --- | --- |
+| `local_translate` | `gemma4-26b-a4b` | aprobada |
+| `local_translate` | `qwen36-35b-a3b` | aprobada |
+| `local_lint_summary` | `gemma4-26b-a4b` | aprobada |
+| `local_delegate` | `gemma4-26b-a4b` | aprobada |
+| `local_classify`, `local_extract` (los dos alternativos); `local_lint_summary` y `local_delegate` con `qwen36-35b-a3b` | — | rechazadas |
+| `local_commit_msg` | `gemma4-26b-a4b` | rechazada, frente a `qwen36-35b-a3b` (el rol de código); además, por decisión del usuario, sin afinidad de commit |
+
+`local_summarize` queda fuera, y nunca se va de código o largo al modelo mecánico ni con `model`
+explícito. Con una celda aprobada, el alternativo se usa si está en uso por el propio daemon o
+**cargado con margen**: `ready` en `/running`, sin un cambio de modelo pendiente de otro cliente que
+lo desalojaría, y con TTL 0, una petición en vuelo o al menos `LOCAL_DELEGATE_AFFINITY_MARGIN_S` (5 s)
+de TTL por delante. Si alguien espera turno, la afinidad no se cuela. Si el rol ya está cargado, se
+usa el rol.
+
+- **Huella.** Cada celda se midió con un GGUF, unos flags (`-ncmoe`, contexto, cachés, `--reasoning`,
+  `--mmproj`) y unos prompts concretos. Si la config vigente difiere, la celda no se usa y `doctor`
+  avisa («afinidad sin base»). En **otra máquina**, donde las rutas de los GGUF medidos no existen,
+  la afinidad queda **inerte** y `doctor` lo dice en el detalle, sin `[WARN]`.
+- **Si falla el alternativo**, se prueba el modelo del rol y luego su cadena, también por un fallo
+  de capacidad (la afinidad la eligió el daemon, no quien llama). Fuera de la afinidad, un fallo de
+  capacidad sigue sin respaldo si no hay nada en `loaded` (ver [Configuration](Configuration.md#respaldo-entre-modelos)).
+- Con el modelo del rol en enfriamiento no hay afinidad: va a la cadena del rol, como siempre.
+- En el log: `routing: "affinity"`, `model_requested` (el del rol), `affinity_foreign_flight` y, si
+  el alternativo hubo que cargarlo, `affinity_failed`; si el alternativo falló, `affinity_dropped` y
+  `affinity_dropped_class`. **No cuenta como respaldo** en el panel. Ver
+  [Savings & metrics](Savings-and-metrics.md#qué-se-mide).
 
 ## Cuándo NO delegar
 

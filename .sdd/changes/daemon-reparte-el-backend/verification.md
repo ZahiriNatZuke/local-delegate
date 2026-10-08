@@ -851,6 +851,60 @@ caen en su assert; detalle en [evidencias/T15.md](evidencias/T15.md).
 - Config real de llama-swap: `sha256` sin cambios
   (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
 
+## Ola 10 — T16, documentación (2026-10-07)
+
+Una sola tarea, con un solo agente que es escritor e integrador. CHANGELOG (`[Unreleased]`, bloque
+propio, sin versión ni fecha), README y wiki (`Configuration`, `Tools`, `Architecture`,
+`Backend-versions`, `Savings-and-metrics`, `Troubleshooting`, `Daemon`, `Integration-install`) y
+`docs/recipes/llama-swap-groups.md`. Único cambio de código: el comentario de `FALLBACK_CHAINS` en
+`config.py` (`residente` → `loaded`); `turn.py:38` ya decía `loaded`. Detalle, pendientes
+recogidos de las olas y decisiones en [evidencias/T16.md](evidencias/T16.md).
+
+### Comprobaciones
+
+- Línea de verificación de T16 (`pesado.sh uv run pytest tests/test_wiki.py tests/test_captura.py
+  tests/test_release_metadata.py -q -p no:cacheprovider`): `24 passed in 0.23s`.
+- Suite completa (`pesado.sh uv run pytest -q -p no:cacheprovider`):
+  `2245 passed, 2 skipped, 1 warning in 217.87s (0:03:37)` (igual que la ola 9).
+- `uv run ruff check src/local_delegate/config.py` → `All checks passed!`;
+  `uv run ruff format --check src/local_delegate/config.py` → `1 file already formatted`.
+- `git ls-files --eol`: los doce ficheros tocados, igual que antes (`CHANGELOG.md`, `README.md` e
+  `Integration-install.md` en CRLF; el resto en LF).
+- `rg -n "residente" docs/wiki README.md docs/recipes`: 27 líneas, revisadas una a una (salida
+  literal en la evidencia). Todas hablan de «sin residente» como lo recomendado, de «residente: X»
+  con TTL efectivo 0, de la residencia opt-in o del nombre obsoleto del paso; las dos de
+  `llama-swap-blackwell.md:10` y `llama-swap-groups.md:132` usan la palabra en otro sentido
+  (cargados a la vez, RAM del proceso). **Pasa.**
+- Captura del README sin regenerar (`test_captura.py` pasa; queda desfasada: no enseña «lento» ni
+  el desglose espera/inferencia).
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
+### Corrección tras la revisión de la ola 10 (2026-10-07)
+
+La revisión dio diez hallazgos, sin bloqueantes, y los diez quedan corregidos. Los de más peso:
+- **Plazos:** `install`/`update` reescriben la entrada del cliente. En Claude Code se recomienda
+  `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`, nombre comprobado en la doc oficial. En Codex, el bloque
+  completo lleva `bearer_token_env_var` y hay que reponer `tool_timeout_sec` tras cada
+  `install`/`update`.
+- **`.env.example`:** usa `loaded` y lleva las tres variables nuevas.
+- **Concesión forzada:** README, `Configuration.md` y `Tools.md` dan la condición completa de
+  `turn.must_force`.
+
+Ficheros autorizados fuera de la lista: `examples/.env.example`, los comentarios de
+`llamaswap_config.py`, la docstring de `pace.py` y `docs/recipes/llama-swap-blackwell.md`.
+Pendiente para el backlog: que `install` conserve el plazo. Detalle en
+[evidencias/T16.md](evidencias/T16.md).
+
+- `rg -n "residente" docs/wiki README.md docs/recipes examples`: 26 líneas, revisadas; **pasa**.
+- Línea de verificación de T16: `24 passed in 0.24s`.
+- Suite completa: `2245 passed, 2 skipped, 1 warning in 217.88s (0:03:37)`.
+- `uv run ruff check .` → `All checks passed!`; `uv run ruff format --check .` →
+  `179 files already formatted`.
+- `git ls-files --eol`: sin cambios en ningún fichero tocado.
+- Config real de llama-swap: `sha256` sin cambios
+  (`7F763F8538FD719FD3C8DD4FC3C1F6BFBF6C2543FEF3E67C2D8EBAD3A5FB68F0`).
+
 ## Evidence
 
 | Requirement | Check performed | Result | Evidence |

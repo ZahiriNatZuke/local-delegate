@@ -56,6 +56,33 @@ con saltos pudo contaminarla un swap.
   a partir de la nota que deja el hook `anotar_llamada.py` (ver
   [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
   `caller_*`. Nunca lleva el id de sesión.
+- **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
+  omiten, nunca valen 0):
+  - `inference_ms`: Σ `prompt_ms` + `predicted_ms` de **todas** las llamadas reales de la operación,
+    saltos incluidos.
+  - `wait_ms`: `latency_ms − inference_ms` (mínimo 0): todo lo que no fue inferencia medida —turno,
+    plaza, cola de llama-swap, carga del modelo— y también una llamada fallida sin `timings` (un
+    timeout, un 500), que cuenta entera aquí.
+  - `tok_s` y `prefill_tok_s`: velocidad de generación y de lectura del prompt, **solo de las llamadas
+    del modelo que respondió** (`model`), a dos decimales.
+  - `pace_rel`: `tok_s` / la velocidad normal de ese modelo (la mediana de `tok_s` de sus últimos 50
+    eventos correctos con `tokens_out` ≥ 8; hacen falta 10). Sin referencia, o con `tokens_out`
+    desconocido, se omite.
+  - `slow` va con `pace_rel` en todo evento con referencia: `true` si `pace_rel` <
+    `LOCAL_DELEGATE_SLOW_THRESHOLD` (0,5), `false` si no. Con backend **local**, una
+    llamada lenta lleva además `free_ram_mb` (la RAM libre en ese momento, best-effort), porque la
+    causa más común es que Windows haya echado parte del modelo de la VRAM.
+- **Turno del daemon:** `turn_wait_ms` (solo si > 0) es lo que la operación esperó turno; `turn:
+  "forced"` marca una concesión forzada por `LOCAL_DELEGATE_TURN_MAX_S`.
+- **Afinidad** (ver [Tools](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado)): `routing:
+  "affinity"` cuando respondió un alternativo ya cargado en lugar del modelo del rol, con
+  `model_requested` (el del rol), `affinity_foreign_flight` (peticiones de otros clientes en vuelo
+  contra ese modelo cuando se decidió) y `affinity_failed: true` si, sin peticiones ajenas, el
+  alternativo tardó en empezar como si hubiera que cargarlo (se descargó a pesar del margen). Si el
+  alternativo falló y respondió el rol o su cadena, el evento no lleva `routing` y sí
+  `affinity_dropped` (el alternativo que se probó) y `affinity_dropped_class` (la clase del fallo).
+  **Una fila con `routing: "affinity"` no es un respaldo**: no lleva ↪ ni cuenta en «con salto»,
+  aunque tenga `model_requested`.
 - `error` (solo si `ok=false`), `truncated_in`/`truncated_out`, `raw_len`, `path`, `v`
   (versión del paquete) — todos opcionales; un dashboard viejo o un log legado sin estos
   campos se sigue leyendo sin romperse.
@@ -469,7 +496,7 @@ así que salen las mismas filas en el mismo orden: primero por el rol del catál
 |---|---|
 | esperando al backend | El backend no está disponible y hay una llamada a ese modelo en vuelo |
 | desconocido | El backend no está disponible |
-| en cola local | Todas las llamadas a ese modelo esperan **dentro de local-delegate**, antes de enviarse (hoy, plaza en el máximo de llamadas a la vez) |
+| en cola local | Todas las llamadas a ese modelo esperan **dentro de local-delegate**, antes de enviarse: plaza en el máximo de llamadas a la vez (`slot`) o turno del daemon, porque su modelo choca con el que está en uso (`turn`) |
 | en curso | El backend no es llama-swap (no expone `/running`) y hay una llamada en vuelo |
 | montado / frío | El backend no es llama-swap: según el `status` de `/v1/models` |
 | cargando | llama-swap lo está arrancando |
@@ -480,9 +507,16 @@ así que salen las mismas filas en el mismo orden: primero por el rol del catál
 | frío | El resto |
 
 La espera local se publica en la entrada en vuelo con el campo `local_wait` (el motivo como
-texto) y se borra al terminar. Así «esperando turno» queda solo para lo que ya se envió a
+texto: `slot` o `turn`) y se borra al terminar. Así «esperando turno» queda solo para lo que ya se envió a
 llama-swap: el panel no le atribuye una espera nuestra. Un motivo nuevo que el panel no conozca se
-enseña tal cual en el `title` de la fila.
+enseña tal cual en el `title` de la fila. Con `turn`, la entrada lleva además `turn_in_use` (los
+modelos que tienen el turno) y `turn_position` (su puesto en la cola), y el `title` de la fila y
+«En curso» dicen «esperando turno del daemon (en uso: <modelos>)».
+
+En la tabla de actividad, cada llamada cuyo backend manda `timings` enseña bajo la latencia
+«espera X s · inferencia Y s» (`wait_ms` e `inference_ms`), y una llamada lenta lleva la marca
+**«lento ×0,37»** (`pace_rel`), con su velocidad en el `title`. Una fila con `routing: "affinity"`
+no lleva ↪: la afinidad no es un respaldo.
 
 La tarjeta de **métricas de llama-swap** dice «sin datos (… requiere llama-swap ≥ v236)» **solo**
 cuando el backend responde 404 a `/api/metrics/stats`; con cualquier otro fallo dice «sin datos:
@@ -535,10 +569,11 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`). Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
 | `GET /api/stats?from=&to=` | Agregados del mismo rango (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
-| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`) + `last_event_ts` y `now` para el indicador de actividad |
+| `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
 | `GET /api/backend/stats` | Métricas de llama-swap (`/api/metrics/stats`). Sin datos trae `causa`, `etiqueta`, `detalle` y `status_http` |
+| `GET /api/llamaswap/status`, `POST /api/llamaswap/watch`, `GET /api/llamaswap/watch/<id>` | Estado de llama-swap para el CLI y `doctor`, y vigía de recarga de `llamaswap residency`. Ver [Daemon](Daemon.md#llama-swap-visto-desde-el-daemon) |
 | `GET /api/system` | RAM, VRAM y procesos del backend, más `platform`, `origin` y `host` |
 | `GET /api/hooks?from=&to=` | Lo que los hooks consultivos **sugirieron** en el rango: `total`, `suggested`, `rate`, y desglose por evento, categoría y día. `enabled: false` cuando `LD_HOOK_TELEMETRY_LOG` no está definida |
 | `GET /favicon.svg` | Icono de marca — el **mismo** fichero que la landing y que el icono del header del panel, inyectado desde `resources/brand/favicon.svg` |

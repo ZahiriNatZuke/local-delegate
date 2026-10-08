@@ -1,16 +1,24 @@
-# Recipe: groups de llama-swap (residente + swap, con guardrail de VRAM)
+# Recipe: groups de llama-swap (pool swap, residencia opt-in, con guardrail de VRAM)
 
 Por defecto, llama-swap corre **un modelo a la vez**: cada request hot-swapea el modelo activo.
 Eso funciona bien pero paga un "cold-load" (unos segundos) cada vez que Claude delega a un
-modelo distinto del que ya estaba cargado. Si delegás seguido a roles distintos (mecánico +
-código, por ejemplo), tiene sentido mantener **un modelo residente siempre cargado** mientras
-el resto sigue turnándose. Eso es exactamente lo que resuelven los **groups** de llama-swap.
+modelo distinto del que ya estaba cargado. Los **groups** de llama-swap dicen qué modelos se
+turnan y cuáles pueden convivir.
 
-> **El paquete nunca toca tu `config.yaml` por su cuenta.** Estos dos comandos (`check-llamaswap`,
-> `init-llamaswap`) son **opt-in**: solo corren si vos los invocás explícitamente. Un `groups:`
-> mal armado puede provocar OOM o thrashing de VRAM — por eso el default es no tocar nada, y por
-> eso `init-llamaswap` corre el guardrail de VRAM (`check-llamaswap`) **antes** de escribir y
-> nunca sobreescribe sin `--force` (dejando `.bak`).
+**Lo recomendado es ningún residente**: todos los modelos de texto en un grupo `swap` y con un TTL
+mayor que 0. El daemon de local-delegate lee esos grupos y **reparte el backend por turno**: dos
+delegaciones cuyos modelos se desalojarían entre sí ya no se pisan (la segunda espera), y si el
+modelo grande ya está cargado, las tools con una celda aprobada lo usan en vez de cargar el
+pequeño (ver la [afinidad](../wiki/Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado)). Un
+modelo residente, que se queda cargado siempre, es una **opción (opt-in)** con un coste fijo: la
+VRAM que retiene se le quita a los demás, que en una GPU de 16 GB obliga a mandar más expertos a RAM.
+
+> **El paquete nunca toca tu `config.yaml` por su cuenta.** Estos comandos (`check-llamaswap`,
+> `init-llamaswap`, `llamaswap residency`) son **opt-in**: solo corren si vos los invocás
+> explícitamente. Un `groups:` mal armado puede provocar OOM o thrashing de VRAM — por eso el
+> default es no tocar nada, y por eso `init-llamaswap` corre el guardrail de VRAM
+> (`check-llamaswap`) **antes** de escribir y nunca sobreescribe sin `--force` (dejando una copia
+> `<config>.<AAAAMMDD-HHMMSS>.bak`).
 
 ## Instalación
 
@@ -30,8 +38,19 @@ comandos solo fallan con un mensaje claro si intentás usarlos sin `pyyaml` inst
 llama-swap tiene hoy DOS mecanismos para correr más de un modelo a la vez: `groups` (el
 histórico, "legacy" mas no deprecado — sigue siendo el router **default**) y `matrix` (un DSL
 más nuevo basado en un solver, pensado para combinaciones complejas de modelos concurrentes).
-Esta recipe usa `groups`, que es el que mapea directo al caso de uso "un residente + un pool
-que se turna":
+Esta recipe usa `groups` (el turno del daemon tampoco entiende `matrix`: con ese router va sin
+turno). Lo recomendado, sin residente:
+
+```yaml
+groups:
+  swap:
+    swap: true           # solo 1 modelo de este grupo corre a la vez (hot-swap normal)
+    exclusive: false
+    members: [gemma3-4b, gemma4-26b-a4b, qwen36-35b-a3b]
+```
+
+con un `ttl` mayor que 0 en cada modelo (por ejemplo 120 o 300 s). Y la **residencia opt-in**, si
+de verdad quieres un modelo siempre cargado y te cabe:
 
 ```yaml
 groups:
@@ -43,20 +62,27 @@ groups:
   swap:
     swap: true           # solo 1 modelo de este grupo corre a la vez (hot-swap normal)
     exclusive: false      # cargar un modelo de este grupo NO descarga 'resident'
-    members: [llama31-8b, qwen25-coder-14b]
+    members: [gemma4-26b-a4b, qwen36-35b-a3b]
 ```
+
+con `ttl: 0` en `gemma3-4b`. **Sin `ttl: 0` no es residente**: `persistent` no lo mantiene cargado.
 
 Puntos que sorprenden si venís de la doc vieja o de memoria:
 
 - **`ttl` no es una clave de `groups`.** Es una clave **por modelo** (`models.<id>.ttl`) o
   global (`globalTTL`). `init-llamaswap` fija `ttl:` en cada modelo referenciado por
-  `--resident`/`--swap`, no en el grupo.
-- `exclusive` controla si cargar un modelo de este grupo **descarga todos los demás grupos**.
-  Para el patrón residente+swap lo querés en `false` en ambos grupos (si no, cargar el modelo
-  de código descargaría al residente, que es justo lo que querías evitar).
-- `persistent` solo evita que OTROS grupos descarguen a este — no fuerza precarga. Si querés
-  que el residente esté cargado desde que arranca llama-swap, usá además `hooks.on_startup.preload`
-  (fuera del alcance de estos comandos; se agrega a mano en el `config.yaml`).
+  `--resident`/`--swap`, no en el grupo. Ojo: un `ttl` ausente o `-1` vale `globalTTL`, que **por
+  defecto es 0**, así que sin `globalTTL` ni `ttl` **todos los modelos tienen TTL efectivo 0** y
+  ninguno se descarga por TTL (`llamaswap residency` los enseña como residentes).
+- `exclusive` controla si cargar un modelo de este grupo **descarga todos los demás grupos**, y
+  **vale `true` si no se pone**. Con la residencia opt-in lo querés en `false` en ambos grupos
+  (si no, cargar el modelo de código descargaría al residente, que es justo lo que querías
+  evitar); `--pin` lo escribe explícito.
+- `persistent` solo evita que OTROS grupos descarguen a este — no fuerza precarga **ni lo mantiene
+  cargado**: con un TTL mayor que 0 el modelo se descarga igual al vencer, y no hay residencia de
+  verdad (`doctor` lo avisa). Si querés el residente opt-in cargado desde que arranca llama-swap,
+  usá además `hooks.on_startup.preload` (fuera del alcance de estos comandos; se agrega a mano en el
+  `config.yaml`).
 
 ## Presupuesto de VRAM
 
@@ -72,6 +98,20 @@ Cada modelo se estima así (**guardrail conservador, no un simulador**):
    `cmd` del modelo tiene `--ctx-size` explícito → `pesos*1.05 + KV cache real` (usa
    `--cache-type-k/v` si están, default `f16`).
 2. Si no → `tamaño_de_archivo * 1.2` (estimación gruesa, marcada como tal en el reporte).
+
+Además, con el `cmd` del modelo:
+
+- **`--mmproj`**: se suma el tamaño de ese fichero. Si el fichero **no existe**, es un **error de
+  estimación** (exit code `2`), no un cero silencioso.
+- **`-ncmoe N` / `--n-cpu-moe N`**: a los pesos se les restan los tensores de expertos
+  (`blk.<i>.ffn_*_exps.*`) de las capas `i < N`, que van a la RAM. El tamaño de cada tensor sale de
+  la tabla de tensores del GGUF.
+
+Con los GGUF de referencia esta estimación **falla su control** en tres de los cuatro modelos medidos
+(sobrestima el KV cache: lo calcula como si todas las capas tuvieran atención completa sobre todo
+el contexto; la hipótesis, sin medir, es la ventana deslizante de los Gemma). Para
+`check-llamaswap` sigue siendo un límite superior; `llamaswap residency --pin`, en cambio, no se fía
+de ella y pide la VRAM medida de cada modelo con `--vram-model ID=GiB`.
 
 Ejemplo real (16 GB de VRAM, verificado con los GGUF reales del catálogo de referencia):
 
@@ -109,7 +149,7 @@ Ejemplo real (mismo catálogo, verificado con `Get-Process` mientras corrían am
 |---|---|---|
 | `gemma3-4b` + `qwen25-coder-14b` cargados a la vez | 10.69 GiB | ~10.30 GB |
 
-## Los dos comandos
+## Los comandos
 
 ### `check-llamaswap` — valida un config existente
 
@@ -126,20 +166,23 @@ falta `groups:`, un modelo referenciado no existe, o no se pudo ubicar/leer su `
 ```bash
 local-delegate init-llamaswap \
   --config D:\Projects\llms\llama-swap\config.yaml \
-  --resident gemma3-4b \
-  --swap llama31-8b,qwen25-coder-14b \
-  --ttl-resident 600 --ttl-swap 300 \
+  --swap gemma3-4b,gemma4-26b-a4b,qwen36-35b-a3b \
+  --ttl-swap 300 \
   --vram-gb 16 --margin-gb 1.5 \
   --ram-gb 32 --ram-margin-gb 4 \
   --force
 ```
 
+- **Sin residente por defecto.** `--resident ID[,ID…]` es la residencia opt-in: esos modelos van a
+  un grupo `persistent` y retienen VRAM. `--ttl-resident` vale **0** por defecto, porque con
+  `persistent` y un TTL mayor que 0 el modelo se descarga igual y no hay residencia de verdad.
 - Lee el `--config` existente (donde ya viven tus `cmd` de `llama-server` afinados a mano) y le
   **añade/reemplaza** la sección `groups:`, más `ttl:` en los modelos referenciados.
 - Corre el/los guardrail(es) (igual que `check-llamaswap`) **antes** de escribir — si no cabe en
   VRAM o (si pasaste `--ram-gb`) en RAM, no escribe nada y sale con exit code `1`.
-- `--force` es necesario para sobreescribir un `--config` que ya existe; siempre deja un
-  `<config>.bak` con el contenido anterior.
+- `--force` es necesario para sobreescribir un `--config` que ya existe; siempre deja una copia
+  `<config>.<AAAAMMDD-HHMMSS>.bak` con el contenido anterior, sin pisar ninguna copia previa (antes
+  era un `<config>.bak` fijo, que la siguiente pasada pisaba).
 - `--dry-run` imprime el YAML resultante sin tocar disco — usalo primero para revisar.
 - `--add-model ID=RUTA.gguf[:VRAM_GB]` (repetible) define una entrada **mínima** de modelo si
   `ID` todavía no existe en `--config` (útil para un catálogo nuevo desde cero); el `cmd`
@@ -151,6 +194,39 @@ preserva comentarios ni el formato original** (los bloques `>` multilinea sobrev
 contenido, pero pierden el formato "bonito"). Por eso el `.bak` es obligatorio al sobreescribir
 — es tu red de seguridad, no una promesa de que el archivo se vea igual.
 
+### `llamaswap residency` — ver y cambiar qué se queda cargado
+
+```bash
+local-delegate llamaswap residency                              # muestra; no escribe
+local-delegate llamaswap residency --none --ttl gemma3-4b=120   # volver a «ningún residente»
+local-delegate llamaswap residency --pin gemma3-4b --vram-gb 16 \
+  --vram-model gemma3-4b=<GiB> --vram-model gemma4-26b-a4b=<GiB> --vram-model qwen36-35b-a3b=<GiB>
+local-delegate llamaswap residency --ttl qwen36-35b-a3b=300 --dry-run
+local-delegate llamaswap residency --restore <config>.<AAAAMMDD-HHMMSS>.bak
+```
+
+- Sin opciones enseña, por modelo, su grupo, `swap`/`exclusive`/`persistent`, el TTL efectivo, si
+  tiene `--mmproj` y si está en `hooks.on_startup.preload`, y el veredicto: **«sin residente
+  (recomendado)»** o «residente: X» por cada modelo con TTL efectivo 0. No imprime claves ni `cmd`.
+- `--none` mueve los miembros de los grupos `persistent` al único grupo con `swap: true` (si hay más
+  de uno, pide `--group`), borra los `persistent` vacíos y exige `--ttl` para los modelos con TTL
+  efectivo 0 (sugiere el más frecuente entre los demás). Si ya no hay residente, «nada que cambiar».
+- `--pin MODEL` es la **residencia opt-in**: grupo `persistent: true, swap: false, exclusive: false`
+  con `ttl: 0`. Siempre avisa de la VRAM que va a retener, y se niega si `vram(MODEL)` + los
+  residentes que ya hay + el peor caso del resto no cabe en `--vram-gb` − `--reserve-gb` (2 por
+  defecto), diciendo cuánto falta.
+- `--ttl MODEL=SECONDS` (repetible): entero ≥ 1; el 0 es `--pin`, y el `-1` solo vale con
+  `globalTTL` > 0.
+- **A diferencia de `init-llamaswap`, edita solo las líneas que cambian**: comentarios, comillas,
+  plegado de los `cmd`, sangría, fin de línea y BOM quedan byte a byte. Se niega con anclas,
+  alias, nodos en estilo flujo, claves duplicadas o el router `matrix`. Antes de escribir deja la
+  copia con fecha y reemplaza el fichero de forma atómica.
+- **No escribe con trabajo en curso** (delegaciones propias, peticiones en vuelo en llama-swap de
+  cualquier cliente o modelos cargados), porque la recarga de `-watch-config` descarga todos los
+  modelos y corta lo que esté corriendo; `--now` escribe igual. Después dice qué hizo llama-swap
+  (recargó, rechazó y se restauró la copia, no vigila el fichero, caído): ver
+  [Troubleshooting](../wiki/Troubleshooting.md#llamaswap-residency-no-escribe-o-dice-qué-hizo-llama-swap).
+
 ## Ritual de aplicación (recomendado, manual)
 
 1. Backup del `config.yaml` real (aparte del `.bak` automático de `init-llamaswap`).
@@ -159,10 +235,12 @@ contenido, pero pierden el formato "bonito"). Por eso el `.bak` es obligatorio a
 3. Aplicá con `init-llamaswap` (sin `--dry-run`), revisá el desglose que imprime.
 4. Reiniciá llama-swap.
 5. Verificá con `nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader`:
-   - En reposo (solo el residente cargado): debería rondar la estimación del grupo `resident`.
+   - En reposo: sin residente, cerca de 0 una vez vencidos los TTL; con un residente opt-in,
+     debería rondar la estimación del grupo `resident`.
    - En pico (forzá una delegación al modelo más pesado del grupo `swap`): debería rondar el
      total reportado por `check-llamaswap`.
-6. **Rollback:** si ves OOM o VRAM usada por encima de lo esperado, restaurá el `.bak` y
+6. **Rollback:** si ves OOM o VRAM usada por encima de lo esperado, restaurá el `.bak` (con
+   `llamaswap residency --restore`, que valida la copia y guarda a su vez la actual) y
    reiniciá llama-swap. No seguir insistiendo con ajustes en caliente — volver al estado
    conocido primero.
 

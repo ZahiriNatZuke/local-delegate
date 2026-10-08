@@ -81,6 +81,37 @@ El daemon aplica además backpressure global con `LOCAL_DELEGATE_MAX_CONCURRENT_
 `2`). Este límite evita que una ráfaga de clientes cree solicitudes ilimitadas; `llama-swap`
 continúa siendo la única fuente de verdad para decidir qué modelos pueden convivir en VRAM.
 
+## llama-swap visto desde el daemon
+
+**Turno.** Si el backend es un llama-swap **local** y el daemon tiene `LLAMASWAP_CONFIG` (con el
+extra `[llamaswap]`), lee los grupos de esa config en caliente y reparte el backend por **turno**
+entre los modelos que chocan: una delegación cuyo modelo desalojaría al que está en uso espera, y el
+panel lo enseña como espera local («esperando turno del daemon (en uso: …)»). El turno se pide antes
+que la plaza de `MAX_CONCURRENT_REQUESTS`, y una cola que no avanza se destraba sola a los
+`LOCAL_DELEGATE_TURN_MAX_S` (600 s) sin llamadas en vuelo. Sin config, con `matrix`, con una config
+que llama-swap rechazaría o con un backend remoto, el daemon va sin turno, como antes, y
+`local_status` y `doctor` dicen por qué. Solo el daemon reparte: un proceso `stdio` suelto o la Mac
+no piden turno, aunque sus peticiones en vuelo sí se ven al decidir la afinidad. Detalle en
+[Architecture](Architecture.md#turno-afinidad-y-lentitud) y [Tools](Tools.md#turno-dos-tools-que-no-se-quitan-el-modelo).
+
+**Endpoints para el CLI y `doctor`.** La API key de llama-swap vive en el lanzador del daemon, no en
+tu shell, así que `local-delegate llamaswap residency` y `doctor` le preguntan al daemon. Los tres
+van detrás del token del puerto (`LOCAL_DELEGATE_WEB_TOKEN`) y **nunca** devuelven `cmd`, cabeceras
+ni claves:
+
+| Endpoint | Qué devuelve |
+|---|---|
+| `GET /api/llamaswap/status` | `llamaswap` (`ok`, `down`, `unknown`) y `detail`; `models` (`id`, `state`, `ttl`); `in_flight` (peticiones en vuelo por modelo, de **cualquier** cliente); `own_delegations` (delegaciones propias vivas); `config_path` (la config que usa el daemon); `watch_config`, `autostart`; y el turno: `turn_active`, `turn_reason` (el motivo de «sin turno») y `turn_detail` (los choques por grupo) |
+| `POST /api/llamaswap/watch` | Abre una **vigía de recarga**: se suscribe a `/api/events` de llama-swap con la key del daemon y responde `{"id": …}` cuando ya consumió la carga inicial, así que lo que se escriba después lo ve. `502` con `error` si no puede |
+| `GET /api/llamaswap/watch/<id>` | `outcome` (`null` mientras no se sabe; luego `reloaded`, `rejected`, `not_watching`, `down` o `unresolved` si llama-swap empezó a recargar y no terminó en 45 s) y `line`, la línea de llama-swap que lo decidió. `404` si no existe esa vigía |
+
+Si el daemon no responde, el CLI prueba contra llama-swap con `LOCAL_DELEGATE_API_KEY` de su shell;
+si tampoco, el estado es «no se sabe», no escribe salvo con `--now` y **no pide la key**.
+
+Para que `llamaswap residency` vea la recarga, llama-swap tiene que correr con `-watch-config`: si
+lo arranca el daemon, pon `LLAMASWAP_WATCH_CONFIG=1` en su lanzador (como en el ejemplo de
+[Arranque](#arranque)).
+
 ## Autenticación del puerto
 
 Por defecto el puerto **no pide nada**: el daemon escucha en loopback y exigir credenciales

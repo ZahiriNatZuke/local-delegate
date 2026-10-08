@@ -22,11 +22,11 @@ Para una Mac que usa llama-swap en otra máquina, conserva el MCP en la Mac, fij
 Los defaults apuntan a un setup de referencia con llama-swap; cámbialos por los ids de tu backend.
 
 Largo, código y visión son los modelos que ganaron la medición de septiembre de 2026 (antes
-`llama31-8b`, `qwen25-coder-14b` y `qwen3-vl-8b`). En una GPU de 16 GB, con `gemma3-4b` residente al
-lado, la configuración de referencia es: Gemma 4 26B-A4B con `-ncmoe 12 --ctx-size 38400`, Qwen3.6-35B-A3B
+`llama31-8b`, `qwen25-coder-14b` y `qwen3-vl-8b`). En una GPU de 16 GB, medida con `gemma3-4b` cargado
+al lado, la configuración de referencia es: Gemma 4 26B-A4B con `-ncmoe 12 --ctx-size 38400`, Qwen3.6-35B-A3B
 con `-ncmoe 20 --ctx-size 16384`, los dos con `--reasoning off`, y Gemma 4 12B con su `--mmproj`,
 `--batch-size 2048 --ubatch-size 2048` (sin eso aborta al procesar una imagen). Con menos expertos en
-RAM van más rápidos, pero Windows desaloja al residente de la VRAM para hacerles sitio.
+RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para hacerles sitio.
 
 | Variable | Default | Rol |
 |---|---|---|
@@ -65,27 +65,36 @@ una variable nombra algo que no existe.
 |---|---|---|
 | `LOCAL_DELEGATE_FALLBACK` | `1` | `0` lo apaga |
 | `LOCAL_DELEGATE_FALLBACK_MAX_HOPS` | `2` | saltos máximos por llamada |
-| `LOCAL_DELEGATE_FALLBACK_CODE` | `residente,long` | cadena del rol de código |
-| `LOCAL_DELEGATE_FALLBACK_LONG` | `residente,code` | cadena del rol largo |
-| `LOCAL_DELEGATE_FALLBACK_MECHANICAL` | `long` | cadena del rol mecánico |
+| `LOCAL_DELEGATE_FALLBACK_CODE` | `loaded,long` | cadena del rol de código |
+| `LOCAL_DELEGATE_FALLBACK_LONG` | `loaded,code` | cadena del rol largo |
+| `LOCAL_DELEGATE_FALLBACK_MECHANICAL` | `loaded,long` | cadena del rol mecánico |
 
-> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`, `residente`) o ids del
+> **Cómo se escribe una cadena:** roles (`mechanical`, `long`, `code`), el paso `loaded` o ids del
 > catálogo, separados por comas y en orden. Lo repetido y el propio modelo del rol se quitan solos;
-> lo que no sea ni rol ni modelo del catálogo se ignora. **`none` desactiva** el respaldo de ese rol:
-> una variable vacía también, pero en Windows fijarla a vacío la borra y el rol volvería a su cadena
-> por defecto. Visión no tiene respaldo.
+> lo que no sea ni rol, ni `loaded`, ni modelo del catálogo se ignora. **`none` desactiva** el
+> respaldo de ese rol: una variable vacía también, pero en Windows fijarla a vacío la borra y el rol
+> volvería a su cadena por defecto. Visión no tiene respaldo. **Ninguna cadena por defecto lleva al
+> modelo mecánico** desde código o largo.
 >
-> **El residente** es el modelo del grupo `persistent` de tu `config.yaml` de llama-swap
-> (`LLAMASWAP_CONFIG`, necesita el extra `pyyaml`), que ya está en memoria y no obliga a cargar nada.
-> Si no se puede leer, es el del rol mecánico.
+> **`loaded`** son los modelos que **ya están cargados** y tienen una celda aprobada de la
+> [afinidad](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado) para esa tool, distintos del que
+> falló. Se resuelve en el momento del salto y nunca carga nada; si no hay ninguno, el paso se salta
+> sin gastar salto. Con las celdas de hoy solo tiene miembros para el rol mecánico (en
+> `local_translate`, `local_lint_summary` y `local_delegate`); para código y largo las cadenas
+> efectivas son `code → long` y `long → code`. `residente` y `resident` se siguen aceptando como
+> sinónimos obsoletos de `loaded`, y `doctor` pide renombrarlos.
 
 **Cuándo salta, y cuándo no.** Solo los fallos **del modelo** (un 5xx, una respuesta rota) pasan al
 siguiente de la cadena, y cada salto exige que el anterior fallara también por el modelo. Un modelo
-que **no se pudo cargar** (falta de memoria, error de carga) salta **solo al residente** y sin
-segundo salto: saltar a otro modelo grande encadenaría swaps y OOM. No saltan un 4xx (incluido el
+que **no se pudo cargar** (falta de memoria, error de carga) salta **solo a `loaded`** y sin
+segundo salto: saltar a otro modelo grande encadenaría swaps y OOM. **Si no hay nada en `loaded`, no
+salta** y vuelve el error de siempre: antes saltaba al modelo mecánico, que sin residente había que
+cargar (consecuencia aceptada). La excepción es la afinidad: si el alternativo que eligió el daemon
+falla por capacidad, se prueba el modelo del rol y luego su cadena. No saltan un 4xx (incluido el
 desborde de contexto), un backend caído, un timeout de lectura con el modelo ya cargado ni un
-razonamiento que agotó `max_tokens`: vuelve el error de siempre. El salto ocupa la misma plaza de
-concurrencia que la llamada original, y `local_delegate` con `model` explícito no salta nunca.
+razonamiento que agotó `max_tokens`: vuelve el error de siempre. El salto **suelta su plaza de
+concurrencia**, pide turno para el modelo nuevo y vuelve a pedir plaza (el tope de
+`MAX_CONCURRENT_REQUESTS` se mantiene), y `local_delegate` con `model` explícito no salta nunca.
 
 **Un candidato que no admite la entrada se salta sin llamarlo**: su tope (`LOCAL_DELEGATE_MAX_CHARS_*`
 del rol que lo usa) tiene que cubrir lo que se va a enviar. Por eso, con los topes por defecto, **en un
@@ -129,6 +138,30 @@ episodios y 10 fallos que cuenten no hay datos para decidir).
 > sí. Los números no están medidos todavía: son configurables a propósito.
 >
 > El daemon lee estas variables al arrancar: para cambiarlas hay que reiniciarlo.
+
+## Turno, afinidad y lentitud
+
+Con un llama-swap **local** y su `config.yaml` legible (`LLAMASWAP_CONFIG` y el extra
+`[llamaswap]`), el daemon reparte el backend por turno entre los modelos que chocan, aprovecha un
+modelo ya cargado cuando hay una celda aprobada para la tool y marca las llamadas lentas. El detalle
+está en [Architecture](Architecture.md#turno-afinidad-y-lentitud); aquí, lo que se ajusta.
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `LOCAL_DELEGATE_TURN_MAX_S` | `600` | red de seguridad del turno: la primera de la cola se concede **forzada** si lleva estos segundos esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend (el reloj se pone a cero con cada llamada que empieza o termina, y no corre mientras hay alguna en vuelo). Su evento lleva `turn: "forced"` |
+| `LOCAL_DELEGATE_AFFINITY_MARGIN_S` | `5` | afinidad: un modelo ya cargado solo cuenta como «cargado con margen» si le quedan al menos estos segundos de TTL (o tiene TTL 0, o una petición en vuelo) |
+| `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | una llamada es `slow` si genera a menos de esta fracción de la velocidad normal de su modelo (`pace_rel` < umbral) |
+| `LLAMASWAP_CONFIG` | *(vacío)* | ruta del `config.yaml` de llama-swap. Sin ella no hay turno ni afinidad, y el daemon se comporta como antes |
+| `LLAMASWAP_WATCH_CONFIG` | `0` | con el auto-arranque, `1` añade `-watch-config` al llama-swap que lanza el daemon, para que `llamaswap residency` vea la recarga |
+
+> **Sin turno** (sin `LLAMASWAP_CONFIG`, sin PyYAML, YAML ilegible, router `matrix`, las dos
+> sintaxis de grupos a la vez, una config que `load.go` rechazaría o un backend que no es local) el
+> daemon va como siempre, y `local_status` y `doctor` dicen el motivo («Turno: no (…)»).
+>
+> La «velocidad normal» de un modelo es la mediana de `tok_s` de sus últimos 50 eventos correctos con
+> 8 tokens de salida o más; hacen falta 10 para que haya referencia. Se siembra con el log de uso del
+> mes en curso y del anterior la primera vez que hace falta. Estas variables, como las demás, se leen
+> al arrancar.
 
 ## Daemon y web de métricas
 
@@ -274,6 +307,6 @@ Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.
 |---|---|---|
 | `LOCAL_DELEGATE_AUTOSTART` | `0` | `1` intenta arrancar llama-swap si el endpoint no responde |
 | `LLAMASWAP_EXE` | *(busca `llama-swap` en PATH)* | Ruta al ejecutable |
-| `LLAMASWAP_CONFIG` | *(vacío)* | Ruta al `config.yaml` de llama-swap |
+| `LLAMASWAP_CONFIG` | *(vacío)* | Ruta al `config.yaml` de llama-swap. Fuera del auto-arranque también la usan el turno y la afinidad (ver [arriba](#turno-afinidad-y-lentitud)) y `llamaswap residency` |
 | `LLAMASWAP_LISTEN` | `127.0.0.1:9292` | host:puerto de llama-swap |
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` cuando hay `LLAMASWAP_CONFIG` |

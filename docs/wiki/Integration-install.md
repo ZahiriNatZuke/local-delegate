@@ -179,6 +179,91 @@ Reinicia el cliente. Verifica con:
 - Un prompt tipo "resume este archivo en cinco viñetas" → debe aparecer la sugerencia del hook.
 - `http://127.0.0.1:9393` → panel de ahorro.
 
+## Plazos de los clientes MCP
+
+Una delegación puede sumar **espera de turno** (el daemon reparte el backend entre los modelos que
+chocan, ver [Tools](Tools.md#turno-dos-tools-que-no-se-quitan-el-modelo)) e inferencia, y una
+operación de muchos trozos ya tarda minutos. Los clientes tienen sus propios plazos para una tool
+MCP, y `install` **no** los sube. Consultados el 2026-10-07 en la documentación oficial de cada
+uno:
+
+| Cliente | Plazo | Por defecto | Cómo se sube |
+|---|---|---|---|
+| Claude Code | total por llamada | 28 h si `MCP_TOOL_TIMEOUT` no está puesta | `MCP_TOOL_TIMEOUT` (ms, global) o `timeout` (ms) en la entrada del servidor, que gana a la variable |
+| Claude Code | **inactividad** | **5 min** en HTTP (el daemon); 30 min en stdio | `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (ms; `0` lo desactiva). Un `timeout` por servidor ≥ 1000 hace de suelo |
+| Claude Code | arranque | el mayor de 60 s, el plazo de tool del servidor y `MCP_TIMEOUT` | `MCP_TIMEOUT` (ms) |
+| Codex | **total por llamada** | **60 s** | `tool_timeout_sec` en `[mcp_servers.local-delegate]` de `~/.codex/config.toml` |
+| Codex | arranque | 10 s | `startup_timeout_sec` (o `startup_timeout_ms`) |
+
+Las dos esperas en negrita son menores que lo que puede durar una operación con turno: en Codex se
+corta **todo lo que pase de 60 s**, y en Claude Code, contra el daemon, una llamada que pase **5 min
+sin respuesta ni notificación de progreso**. Si te pasa, súbelas.
+
+> **`install` y `update` reescriben la entrada `local-delegate` de cada cliente**, y con ella quitan
+> lo que le hayas añadido a mano (`tool_timeout_sec` en Codex, `timeout` en Claude Code). Por eso:
+
+- **Claude Code**: usa la variable `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (ms) en el entorno del
+  cliente, por ejemplo `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT=900000` en el bloque `env` de
+  `~/.claude/settings.json`. Vive fuera de la entrada, así que sobrevive a `install`/`update`. El
+  `"timeout"` dentro de la entrada también funciona, pero el siguiente `install` lo borra.
+- **Codex**: añade **esta línea** a tu bloque `[mcp_servers.local-delegate]` de
+  `~/.codex/config.toml`, sin tocar el resto (en modo HTTP, el bloque que escribe `install` lleva
+  también `bearer_token_env_var`, y sin él el daemon con token responde `401`):
+
+  ```toml
+  # local-delegate:begin
+  [mcp_servers.local-delegate]
+  url = "http://127.0.0.1:9393/mcp"
+  bearer_token_env_var = "LOCAL_DELEGATE_WEB_TOKEN"
+  tool_timeout_sec = 900          # ← la línea que añades
+  # local-delegate:end
+  ```
+
+  **Vuelve a ponerla después de cada `install` o `update`**: el bloque entre los marcadores es
+  gestionado y se reescribe entero.
+
+El plazo total de Claude Code no se extiende con notificaciones de progreso; el de inactividad sí
+las cuenta como actividad. No está documentado qué
+ve el modelo en Codex cuando vence el plazo, ni si cancela la petición en el servidor.
+
+## llama-swap: residencia y grupos (`[llamaswap]`)
+
+Con el extra `[llamaswap]` hay tres comandos sobre el `config.yaml` de llama-swap. Ninguno corre
+solo: el paquete no toca la config por su cuenta.
+
+```bash
+local-delegate llamaswap residency                     # muestra; no escribe
+local-delegate llamaswap residency --none --ttl gemma3-4b=120
+local-delegate llamaswap residency --pin gemma3-4b --vram-gb 16 \
+  --vram-model gemma3-4b=<GiB> --vram-model gemma4-26b-a4b=<GiB>   # residencia opt-in, cifras medidas
+local-delegate llamaswap residency --restore config.yaml.20261007-120000.bak
+local-delegate check-llamaswap --config config.yaml --vram-gb 16
+local-delegate init-llamaswap --config config.yaml --swap gemma3-4b,gemma4-26b-a4b --vram-gb 16
+```
+
+- **`llamaswap residency`** sin opciones dice, por modelo, su grupo, `swap`/`exclusive`/`persistent`,
+  el **TTL efectivo** (un `ttl` ausente o `-1` vale `globalTTL`, que por defecto es 0) y si está en
+  `hooks.on_startup.preload`, y el veredicto: «sin residente (recomendado)» o «residente: X» por cada
+  modelo con TTL efectivo 0. La config sale de `--config`, si no de `LLAMASWAP_CONFIG`, si no de la
+  que usa el daemon. `--none` deja la config sin residente (mueve los miembros de los grupos
+  `persistent` al grupo `swap` y pide `--ttl` para los de TTL 0); `--pin MODEL` es la **residencia
+  opt-in** (grupo `persistent`, `ttl: 0`), que retiene VRAM para siempre y se niega si no cabe con
+  el peor caso del resto (`--vram-gb` − `--reserve-gb`, 2 por defecto). Hoy **pide `--vram-model
+  ID=GiB` para cada modelo implicado**: el estimador con `-ncmoe` no pasó su control con los modelos
+  medidos (sobrestima el KV cache de los Gemma) y no se usa para decidir; `--ttl MODEL=SECONDS` cambia un TTL; `--restore BAK` vuelve a una copia.
+  Escribe **solo las líneas que cambian**, deja antes una copia `<config>.<AAAAMMDD-HHMMSS>.bak`,
+  reemplaza de forma atómica y no escribe con delegaciones o peticiones en curso salvo `--now`
+  (`--dry-run` enseña las líneas que cambiarían). Qué dice después sobre la recarga, en
+  [Troubleshooting](Troubleshooting.md#llamaswap-residency-no-escribe-o-dice-qué-hizo-llama-swap).
+- **`init-llamaswap`** ya no recomienda residente: `--resident` es la residencia opt-in y
+  `--ttl-resident` vale 0 por defecto (con `persistent` y TTL mayor que 0 no hay residencia de
+  verdad). Con `--force`, la copia deja de ser un `.bak` fijo y lleva fecha, como la de
+  `residency`.
+- **El estimador de VRAM** que comparten `check-llamaswap`, `init-llamaswap` y `--pin` suma el
+  fichero de `--mmproj`, resta con `-ncmoe`/`--n-cpu-moe N` los tensores de expertos de las capas
+  `i < N` (que van a RAM) y trata un `--mmproj` que no existe como **error de estimación** (código 2)
+  en vez de ignorarlo.
+
 ## Comprobar la instalación: `local-delegate doctor`
 
 `install` escribe; `doctor` **solo mira**. Recorre el registro único de comprobaciones
@@ -199,7 +284,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Entorno | clientes | si existen `~/.claude`, `~/.codex` y `~/.config/opencode` |
 | Entorno | clientes MCP observados | con qué clientes se ha **hablado** de verdad: versión, revisión de protocolo negociada y si declaran `elicitation` (o sea, si las tools pueden preguntarles en vez de fallar). Sale de `clients.jsonl`, en `LOG_DIR`, y es **informativo**: nunca sube el exit code |
 | Entorno | rol rápido retirado | si `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST` siguen en el entorno. El rol `fast` se retiró en la 0.30.0 —no lo enrutaba ninguna tool— y esas variables ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo |
-| Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías— y de qué modelo sale el residente: del grupo `persistent` de llama-swap o, si no se puede leer, del rol mecánico |
+| Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles (`mechanical`, `long`, `code`), el paso `loaded` o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías—; `warn` también si una variable usa `residente` o `resident`, que siguen valiendo como sinónimos obsoletos de `loaded`. Con todo bien, dice «sin residente» o «residente: X» según la config de llama-swap tenga algún modelo con TTL efectivo 0 |
 | Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `coste-agregados.json`, el log de uso y los `atribucion-AAAAMM.json` de `LOG_DIR`, y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recalcular-coste` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
 | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
@@ -216,7 +301,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Servicios | token de Claude Desktop | si la entrada `local-delegate` de Claude Desktop —que `install` **no** escribe— puede entrar al puerto del daemon. Lee `claude_desktop_config.json` (en Windows, `%APPDATA%\Claude\`), saca la cabecera `Authorization` del `--header` de `mcp-remote` y **prueba ese token** contra el puerto, porque va escrito literal y un token viejo tiene la misma forma que uno bueno. Nunca lo imprime. Sin fichero, sin entrada nuestra, por stdio o apuntando a otra máquina, `unknown`. Existe porque al rotar el token `install` arregla los otros tres clientes y este se quedaba en `401` en silencio |
 | Backend | llama-swap | versión instalada vs probada |
 | Backend | llama-server | versión instalada vs probada |
-| Backend | residencia de llama-swap | la config que usa llama-swap (`--config`, si no `LLAMASWAP_CONFIG` de este shell, si no la que dice el daemon): `[ OK ]` con «sin residente» (lo recomendado); con un residente elegido con `--pin`, también `[ OK ]`, e informa de la VRAM que retiene; `warn` si hay un grupo `persistent` con TTL mayor que 0, porque `persistent` no lo mantiene cargado |
+| Backend | residencia de llama-swap | la config que usa llama-swap (`--config`, si no `LLAMASWAP_CONFIG` de este shell, si no la que dice el daemon): `[ OK ]` con «sin residente» (lo recomendado); con un residente elegido con `--pin`, también `[ OK ]`, e informa de la VRAM que retiene; `warn` si hay un grupo `persistent` con TTL mayor que 0, porque `persistent` no lo mantiene cargado. Mira también las celdas de la [afinidad](Tools.md#afinidad-usar-el-modelo-que-ya-está-cargado): `warn` («afinidad sin base») si la config apunta a otro GGUF bajo el mismo id en esta máquina, si el modelo del rol cambió por variable o si difiere otra parte de la huella (`-ncmoe`, contexto, tamaño, prompt); en **otra máquina**, donde los GGUF medidos no existen, lo dice en el detalle («afinidad inerte aquí») sin `[WARN]` |
 | Backend | turno del daemon | si el daemon reparte el backend por turno entre los modelos que chocan y, si no, por qué (sin `LLAMASWAP_CONFIG`, `matrix`, backend remoto…). Lo pregunta al daemon; si no contesta, lee la config de este shell y lo dice |
 
 Cuatro estados, y la diferencia entre los dos últimos importa:
@@ -232,7 +317,7 @@ Cuatro estados, y la diferencia entre los dos últimos importa:
 como «falta», un arreglo automático posterior sobrescribiría configuración que no es nuestra. El
 exit code es **0** sin avisos y **1** con al menos uno.
 
-De las trece comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
+De las veinticuatro comprobaciones, **«versión publicada» es la única que consulta PyPI**, con un timeout
 de dos segundos y degradando a `[ -- ]` si no hay red. Y lo hace **solo en `doctor`**: ni el
 reporte de `install` ni el diagnóstico interno de `update` salen a internet por ella —el primero
 porque instalar unos hooks no es motivo para hacerlo, y el segundo porque ya pregunta la versión

@@ -1,8 +1,9 @@
 """La velocidad normal de cada modelo y el ritmo de una llamada contra ella (REQ-025, REQ-028).
 
 La velocidad **normal** de un modelo es la mediana de `tok_s` de sus ultimos 50 eventos correctos
-con `tokens_out >= 8`. Vive en una ventana en memoria por modelo que se siembra al arrancar con el
-log de uso del mes en curso y del anterior (`seed`) y se alimenta con cada evento propio
+con `tokens_out >= 8`. Vive en una ventana en memoria por modelo que se siembra la primera vez que
+hace falta (el primer evento con ritmo, o `local_status`) con el log de uso del mes en curso y del
+anterior (`seed`) y se alimenta con cada evento propio
 (`record`); nunca se relee el log en cada llamada. Con al menos 10 muestras, `measure` devuelve
 `pace_rel` (`tok_s` / mediana, a dos decimales) y `slow` (`pace_rel < umbral`); sin referencia
 devuelve `{}` y el evento omite los dos campos (nunca valen 0).
