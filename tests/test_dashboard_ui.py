@@ -712,6 +712,35 @@ def test_los_controles_nativos_siguen_al_tema(panel):
     assert claro == "light"
 
 
+# Tres situaciones de fuente, porque la simetría no puede depender de cuál cargue:
+# - `bloqueadas`: Google Fonts no responde (lo del CI y de un equipo sin red), queda la de reserva;
+# - `ancha`: además se fuerza una de reserva ANCHA (Verdana / DejaVu Sans, Courier New / DejaVu
+#   Sans Mono), la peor que puede tocar en otro sistema;
+# - `cargadas`: se deja pedir Inter y JetBrains Mono (solo se cargan si hay red).
+FUENTES = ("bloqueadas", "ancha", "cargadas")
+_FUENTE_ANCHA = (
+    ":root,:root[data-theme]{--sans:'Verdana','DejaVu Sans',sans-serif;"
+    "--mono:'Courier New','DejaVu Sans Mono',monospace}"
+)
+# Inter de verdad cargada (no basta `document.fonts.check`: sin la hoja de Google Fonts no hay
+# ninguna cara registrada y `check` devuelve true).
+_INTER_CARGADA = (
+    "() => document.fonts.ready.then(() => [...document.fonts].some(f =>"
+    " f.family.replace(/[\"']/g, '') === 'Inter' && f.status === 'loaded'))"
+)
+
+
+def _antes_de_cargar(pagina, fuentes):
+    if fuentes != "cargadas":
+        pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+
+
+def _tras_cargar(pagina, fuentes):
+    if fuentes == "ancha":
+        pagina.add_style_tag(content=_FUENTE_ANCHA)
+    pagina.evaluate("() => document.fonts.ready.then(() => 1)")
+
+
 # Cada cifra de los KPIs, con su unidad, dentro de su tarjeta: ni la cifra desborda su caja ni la
 # unidad pasa del borde interior de la tarjeta (el hero tiene `overflow:hidden` y la cortaba).
 _DESBORDES_KPI = """() => [...document.querySelectorAll('#kpis .k-val')].flatMap(v => {
@@ -725,7 +754,8 @@ _DESBORDES_KPI = """() => [...document.querySelectorAll('#kpis .k-val')].flatMap
 })"""
 
 
-def test_la_unidad_de_los_kpis_no_se_corta(tmp_path, monkeypatch):
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_unidad_de_los_kpis_no_se_corta(tmp_path, monkeypatch, fuentes):
     """«3.161.168 tok» en el hero salía como «3.161.168 to» entre 1320 y 1440 px. Con cifras de
     siete dígitos en los KPIs, a 1280, 1366 y 1440 px y en los dos temas, nada se sale."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
@@ -751,14 +781,13 @@ def test_la_unidad_de_los_kpis_no_se_corta(tmp_path, monkeypatch):
                 pagina.add_init_script(
                     f"try{{localStorage.setItem('ld-theme','{tema}')}}catch(e){{}}"
                 )
-                pagina.route(
-                    re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort()
-                )
+                _antes_de_cargar(pagina, fuentes)
                 pagina.route(re.compile(r"/api/stats(\?|$)"), _cifras_grandes)
                 pagina.goto(servidor.url)
                 pagina.wait_for_function(
                     "() => document.querySelector('#kpis .hero .k-val')?.textContent.includes('3.161.168')"
                 )
+                _tras_cargar(pagina, fuentes)
                 desbordes[(ancho, tema)] = pagina.evaluate(_DESBORDES_KPI)
                 pagina.close()
         navegador.close()
@@ -826,11 +855,11 @@ def _clientes_crudos(ruta):
     ruta.fulfill(response=respuesta, body=json.dumps(datos))
 
 
-def _pagina_completa(pw, url, ancho=1366, tema="dark"):
+def _pagina_completa(pw, url, ancho=1366, tema="dark", fuentes="bloqueadas"):
     navegador = _navegador(pw)
     pagina = navegador.new_page(viewport={"width": ancho, "height": 1000})
     pagina.add_init_script(f"try{{localStorage.setItem('ld-theme','{tema}')}}catch(e){{}}")
-    pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
+    _antes_de_cargar(pagina, fuentes)
     pagina.route(re.compile(r"/api/hooks(\?|$)"), _json(_HOOKS_CRUDOS))
     pagina.route(re.compile(r"/api/system(\?|$)"), _json(_SISTEMA))
     pagina.route(re.compile(r"/api/stats(\?|$)"), _clientes_crudos)
@@ -841,6 +870,7 @@ def _pagina_completa(pw, url, ancho=1366, tema="dark"):
     pagina.wait_for_function(
         "() => document.getElementById('metersBody').innerText.includes('GiB')"
     )
+    _tras_cargar(pagina, fuentes)
     return navegador, pagina
 
 
@@ -956,15 +986,17 @@ _SIMETRIA_KPIS = """() => [...document.querySelectorAll('#kpis > .card')].map(ca
 _DECIMAL_CON_PUNTO = re.compile(r"\d\.\d{1,2}(?!\d)")
 
 
-def test_la_fila_de_kpis_es_simetrica_y_usa_coma_decimal(tmp_path, monkeypatch):
-    """A 1280, 1366, 1440 y 400 px, en los dos temas: misma altura del título, la cifra empieza a la
-    misma altura en todas las tarjetas, la pista ocupa lo mismo y ningún número usa punto decimal."""
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_fila_de_kpis_es_simetrica_y_usa_coma_decimal(tmp_path, monkeypatch, fuentes):
+    """A 1280, 1366, 1440 y 400 px, en los dos temas y con cualquier fuente: misma altura del
+    título, la cifra empieza a la misma altura en todas las tarjetas, la pista ocupa lo mismo y
+    ningún número usa punto decimal."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     resultados = {}
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         for ancho in (1280, 1366, 1440, 400):
             for tema in ("dark", "light"):
-                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema)
+                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema, fuentes)
                 resultados[(ancho, tema)] = pagina.evaluate(_SIMETRIA_KPIS)
                 navegador.close()
     metrics._FILE_CACHE.clear()
@@ -1035,31 +1067,47 @@ _SPARK_Y_PISTA = """() => {
   const rango = document.createRange();
   rango.selectNodeContents(hero.querySelector('.k-hint'));
   const texto = rango.getBoundingClientRect();
-  const lineas = [...document.querySelectorAll('#kpis .k-lbl')].map(l => ({
-    lbl: l.textContent.trim(), alto: Math.round(l.getBoundingClientRect().height)}));
+  const lineas = [...document.querySelectorAll('#kpis .k-lbl')].map(l => {
+    const t = l.querySelector('.k-lbl-t'), card = l.closest('.card').getBoundingClientRect();
+    const info = l.querySelector('.info');
+    return {lbl: t.textContent.trim(), title: l.getAttribute('title'),
+      alto: Math.round(l.getBoundingClientRect().height),
+      recortado: t.scrollWidth > t.clientWidth,
+      infoDentro: !info || info.getBoundingClientRect().right <= card.right};
+  });
   return {canvasTop: canvas.top, canvasAlto: canvas.height, textoBottom: texto.bottom, lineas};
 }"""
 
 
-def test_la_linea_del_hero_no_pisa_su_pista(tmp_path, monkeypatch):
+@pytest.mark.parametrize("fuentes", FUENTES)
+def test_la_linea_del_hero_no_pisa_su_pista(tmp_path, monkeypatch, fuentes):
     """La línea del hero cruzaba «bruto … − devuelto …». La caja del gráfico empieza por debajo
-    del texto de la pista, en los cuatro anchos y los dos temas. A 1366 px y más, además, cada
-    título de KPI cabe en una línea."""
+    del texto de la pista, en los cuatro anchos y los dos temas. El título de cada KPI va en UNA
+    línea con cualquier fuente (si no cabe se recorta con «…», el ⓘ sigue dentro de la tarjeta y
+    el título entero queda en `title`); que quepa SIN recortar solo se exige a 1366 px y más con
+    Inter cargada de verdad, porque con otra fuente lo que se mide es el entorno (lo cazó el CI:
+    en ubuntu la de reserva es más ancha)."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     medidas = {}
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         for ancho in (1280, 1366, 1440, 400):
             for tema in ("dark", "light"):
-                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema)
+                navegador, pagina = _pagina_completa(pw, servidor.url, ancho, tema, fuentes)
                 medidas[(ancho, tema)] = pagina.evaluate(_SPARK_Y_PISTA)
+                medidas[(ancho, tema)]["inter"] = pagina.evaluate(_INTER_CARGADA)
                 navegador.close()
     metrics._FILE_CACHE.clear()
     for clave, m in medidas.items():
         assert m["canvasAlto"] > 0, (clave, m)  # guarda: el gráfico se pintó
         assert m["canvasTop"] >= m["textoBottom"], (clave, m)
-        if clave[0] >= 1366:
-            altos = {x["alto"] for x in m["lineas"]}
-            assert max(altos) <= 24, (clave, m["lineas"])  # una línea (19 px); dos son 35
+        for linea in m["lineas"]:
+            assert linea["alto"] <= 24, (clave, linea)  # una línea (~19 px); dos son ~35
+            assert linea["title"] == linea["lbl"], (clave, linea)
+            assert linea["infoDentro"], (clave, linea)
+        if fuentes == "bloqueadas" or fuentes == "ancha":
+            assert not m["inter"], (clave, "la fuente tenía que estar bloqueada")
+        if m["inter"] and clave[0] >= 1366:
+            assert not any(x["recortado"] for x in m["lineas"]), (clave, m["lineas"])
 
 
 def test_backend_y_en_curso_hablan_en_espanol(tmp_path, monkeypatch):

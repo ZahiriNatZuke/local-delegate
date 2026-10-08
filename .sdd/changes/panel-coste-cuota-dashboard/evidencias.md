@@ -56,6 +56,19 @@ protocolo que el panel documenta: «path = ahorro real»).
 - Títulos de KPI en una línea a 1366 px: «Generado» (pista «salida de los modelos locales»),
   «Latencia», «Errores». La wiki nombra los KPIs nuevos.
 
+### Quinta vuelta (CI del PR #240)
+- En ubuntu, sin Google Fonts, «Coste local» ocupaba dos líneas: la simetría dependía de la fuente.
+  Ahora el título de KPI va en una línea siempre (`nowrap` + «…», título entero en `title`, el ⓘ
+  nunca se recorta); el título sí aporta su ancho a la rejilla, así que con una fuente ancha la
+  columna crece y el hero (cifra en `clamp(26px,12cqi,42px)`, pista en una línea con «…») cede.
+- Tests de simetría, hero y unidad parametrizados con tres fuentes: `bloqueadas` (lo del CI),
+  `ancha` (Verdana/DejaVu Sans y Courier New/DejaVu Sans Mono forzadas) y `cargadas`. «Cabe sin
+  recortar» solo se exige con Inter cargada de verdad (`document.fonts`, no `check`).
+- Controles: CSS de antes (dos líneas) → fallan `ancha` y `cargadas`; título sin aporte de ancho
+  (`width:0`) → falla «cabe sin recortar» con Inter.
+- `tests/test_dashboard_ui.py`: `35 passed, 1 skipped`; suite: `2265 passed, 2 skipped, 1 warning
+  in 244.18s (0:04:04)`.
+
 ### Otros
 - `.btn:hover` usa `background-color`, no el atajo: la flecha del `<select>` ya no se va.
 - Hooks: el párrafo «Los hooks sugieren…» pasa al diálogo, con otro que explica categorías y

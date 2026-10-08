@@ -1138,7 +1138,15 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
    pegado a la última palabra), la cifra empieza a la misma altura y apoya en el fondo de una caja
    de alto fijo, y la pista reserva dos líneas. Así las cifras quedan en la misma línea. */
 .k-top{display:flex;align-items:center;gap:6px}
-#kpis .k-top{height:34px}
+/* El título va en UNA línea pase lo que pase con la fuente: si la de reserva es más ancha
+   (sin Google Fonts, en otro sistema), se recorta con «…» y el título entero queda en `title`;
+   el ⓘ no se recorta nunca. Con dos líneas posibles, la simetría dependía de la fuente. */
+/* El título SÍ aporta su ancho a la rejilla (sin `width:0`): con una fuente ancha la columna crece
+   en vez de recortar, y el hero, que escala su cifra, cede el sitio. El «…» queda de red. */
+#kpis .k-top{height:26px}
+#kpis .k-lbl{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto}
+#kpis .k-lbl-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#kpis .k-lbl .info{flex:0 0 auto}
 .k-ico{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;
   background:color-mix(in srgb,var(--kc,var(--mut)) 15%,transparent);color:var(--kc,var(--mut))}
 .k-ico svg{width:15px;height:15px}
@@ -1146,7 +1154,7 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .k-val{font-size:31px;font-weight:700;letter-spacing:-.02em;margin-top:12px;line-height:1;color:var(--tx)}
 /* El hero escala la cifra con el ancho de SU tarjeta (unidades de contenedor): entre 1320 y 1440 px
    la tarjeta mide ~260 px y «3.161.168 tok» a 42 px no cabía, el `overflow:hidden` cortaba la unidad. */
-.hero .k-val{font-size:clamp(28px,13cqi,42px);color:var(--acc);position:relative;z-index:1;
+.hero .k-val{font-size:clamp(26px,12cqi,42px);color:var(--acc);position:relative;z-index:1;
   text-shadow:0 2px 20px color-mix(in srgb,var(--acc) 40%,transparent)}
 #kpis .k-val{height:44px;display:flex;align-items:flex-end;white-space:nowrap}
 #kpis .k-num{display:inline-block;line-height:1}
@@ -1154,6 +1162,9 @@ input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 .hero .k-val .unit{color:color-mix(in srgb,var(--acc) 75%,var(--mut))}
 .k-hint{color:var(--mut);font-size:11.5px;line-height:1.45;margin-top:9px;position:relative;z-index:1}
 #kpis .k-hint{min-height:calc(2 * 1.45em);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* En el hero la pista va en una sola línea (con «…» si no cabe): la segunda línea reservada es el
+   sitio de su gráfico, y una pista partida (tarjeta estrecha, fuente ancha) caía encima. */
+#kpis .hero .k-hint{display:block;white-space:nowrap;text-overflow:ellipsis}
 .k-hint .num{color:var(--tx2)}
 .info{width:14px;height:14px;color:var(--faint);cursor:help;flex:0 0 auto;display:inline-flex;transition:.13s}
 .info svg{width:100%;height:100%;display:block}
@@ -2431,7 +2442,7 @@ function kpiCard(o){
   const ico = o.icon?`<span class="k-ico" style="--kc:${o.kc||'var(--mut)'}">${o.icon}</span>`:'';
   const unit = o.unit?`<span class="unit">${o.unit}</span>`:'';
   return `<div class="card ${o.hero?'hero':''}">${o.hero?'<div class="spark"><canvas id="spark"></canvas></div>':''}
-    <div class="k-top">${ico}<div class="k-lbl">${o.lbl}${i?'&nbsp;'+i:''}</div></div>
+    <div class="k-top">${ico}<div class="k-lbl" title="${o.lbl}"><span class="k-lbl-t">${o.lbl}</span>${i}</div></div>
     <div class="k-val num"><span class="k-num">${o.val}${unit}</span></div>
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
