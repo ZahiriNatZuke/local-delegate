@@ -3,9 +3,9 @@
   "slug": "daemon-reparte-el-backend",
   "title": "Daemon: no se pelea por el modelo, aprovecha el cargado, avisa de la lentitud y deja la residencia configurable",
   "mode": "standard",
-  "status": "implementing",
+  "status": "closed",
   "createdAt": "2026-10-06T14:16:18.644Z",
-  "updatedAt": "2026-10-08T01:51:08.564Z",
+  "updatedAt": "2026-10-08T02:23:18.529Z",
   "gates": {
     "spec": {
       "status": "approved",
@@ -35,10 +35,11 @@
       "at": "2026-10-08T01:51:08.564Z"
     },
     "memory": {
-      "status": "pending",
-      "updatedAt": null,
-      "evidence": null,
-      "actor": null
+      "status": "approved",
+      "updatedAt": "2026-10-08T02:22:59.360Z",
+      "evidence": "Nota de jornada en el vault: projects/local-delegate/jornada-2026-10-08-el-panel-que-era-un-dashboard.md (olas 8-11, ventanas excluidas de P-4/F1, lecciones); backlog del vault actualizado (pruebas en métricas, «Quién usa el backend», idioma es/en, plazo MCP); punteros en la memoria del proyecto (índice de jornadas y memoria panel-es-un-dashboard).",
+      "actor": "orchestrator",
+      "at": "2026-10-08T02:22:59.360Z"
     }
   },
   "history": [
@@ -138,6 +139,21 @@
       "status": "approved",
       "at": "2026-10-08T01:51:08.564Z",
       "evidence": "T17 pasos 1 a 8 pasan con dato literal y la revisión del resultado del paso 9 cubre REQ-001 a REQ-044; sus dos bloqueantes (evidencia del paso 4, reaprobación del gate spec del 2026-10-08T01:44:25Z) y los dos importantes (ola 11 y plantillas de verification.md, handoff.md) quedan resueltos, y el menor de las claves falsas corregido. Desviaciones y riesgos aceptados en «Deviations and residual risk». Ver verification.md, «Ola 11 — T17, verificación final (2026-10-08)» y «Evidence», y evidencias/T17.md.",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "gate",
+      "gate": "memory",
+      "status": "approved",
+      "at": "2026-10-08T02:22:59.360Z",
+      "evidence": "Nota de jornada en el vault: projects/local-delegate/jornada-2026-10-08-el-panel-que-era-un-dashboard.md (olas 8-11, ventanas excluidas de P-4/F1, lecciones); backlog del vault actualizado (pruebas en métricas, «Quién usa el backend», idioma es/en, plazo MCP); punteros en la memoria del proyecto (índice de jornadas y memoria panel-es-un-dashboard).",
+      "actor": "orchestrator"
+    },
+    {
+      "type": "status",
+      "status": "closed",
+      "at": "2026-10-08T02:23:18.529Z",
+      "evidence": "Los cinco gates aprobados (spec, plan, quality, conformance, memory); T0-T17 cerrados.",
       "actor": "orchestrator"
     }
   ]
