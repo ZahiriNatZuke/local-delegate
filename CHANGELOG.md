@@ -6,6 +6,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-08
+
 ### Added
 - **`local_commit_msg` ya pide idioma.** Antes el prompt no decía en cuál escribir y el modelo
   elegía: sobre 30 commits de un repo documentado en español, `gemma4-26b-a4b` escribió 17 mensajes
@@ -2453,7 +2455,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...HEAD
+[0.33.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...v0.32.0
 [0.31.4]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.3...v0.31.4
 [0.31.3]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.2...v0.31.3
