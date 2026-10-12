@@ -1,0 +1,9 @@
+{
+  "_about": "Control de las heurísticas del detector (REQ-044). Ninguna de estas palabras puede estar en spanish_lexicon.json: así las decide solo la heurística (eñe, tilde o sufijo español). Las españolas se detectan; las inglesas, que se parecen a los sufijos, no.",
+  "spanish": {
+    "enye": ["montaña", "pequeñísimo", "cumpleaños"],
+    "accent": ["pájaro", "búho", "lámpara", "canción", "cántaro"],
+    "suffix": ["fabricacion", "crecimiento", "felicidad", "lentamente", "aterrizaje", "corriendo", "navegaciones", "nacionalidades"]
+  },
+  "english": ["station", "nation", "garage", "comment", "movement", "identity", "quantity", "battery", "lantern", "harbor", "lending"]
+}

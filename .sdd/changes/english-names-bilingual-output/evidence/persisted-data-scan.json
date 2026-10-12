@@ -1,0 +1,331 @@
+{
+ "usage-*.jsonl": {
+  "files": 4,
+  "records": 446,
+  "unparsable": 0,
+  "keys_total": 44,
+  "es_keys": [
+   "bloqueo_id",
+   "secciones"
+  ],
+  "es_enum_values": {
+   "fallback_class": [
+    "enfriamiento",
+    "modelo"
+   ],
+   "error_class": [
+    "modelo",
+    "timeout_lectura"
+   ]
+  }
+ },
+ "clients.jsonl": {
+  "files": 1,
+  "records": 135,
+  "unparsable": 0,
+  "keys_total": 5,
+  "es_keys": [],
+  "es_enum_values": {}
+ },
+ "enfriamiento-eventos.jsonl": {
+  "files": 1,
+  "records": 2,
+  "unparsable": 0,
+  "keys_total": 7,
+  "es_keys": [
+   "clase",
+   "espera_s",
+   "evento",
+   "modelo",
+   "tras_vencer"
+  ],
+  "es_enum_values": {
+   "evento": [
+    "entra",
+    "limpia"
+   ],
+   "clase": [
+    "modelo"
+   ]
+  }
+ },
+ "enfriamiento.json": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 0,
+  "es_keys": [],
+  "es_enum_values": {}
+ },
+ "inflight.json": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 0,
+  "es_keys": [],
+  "es_enum_values": {}
+ },
+ "daemon.json": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 9,
+  "es_keys": [],
+  "es_enum_values": {}
+ },
+ "test-windows.json": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 7,
+  "es_keys": [],
+  "es_enum_values": {}
+ },
+ "atribucion-*.json": {
+  "files": 4,
+  "records": 4,
+  "unparsable": 0,
+  "keys_total": 18,
+  "es_keys": [
+   "entradas",
+   "entradas.<dyn>.banco",
+   "entradas.<dyn>.cruce",
+   "entradas.<tool_use_id>.banco",
+   "entradas.<tool_use_id>.cruce"
+  ],
+  "es_enum_values": {
+   "entradas.<dyn>.cruce": [
+    "ambiguo",
+    "sin_cruce",
+    "ventana"
+   ],
+   "entradas.<tool_use_id>.cruce": [
+    "exacto"
+   ]
+  }
+ },
+ "coste-agregados.json": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 36,
+  "es_keys": [
+   "cotejo",
+   "cotejo.fecha",
+   "cotejo.fuera",
+   "cotejo.juzgadas",
+   "cotejo.sin_precio",
+   "cotejo.veredicto",
+   "cotejo.version_tabla",
+   "descartes.five_hour.contaminado",
+   "descartes.five_hour.fuera_de_rango",
+   "descartes.seven_day.contaminado",
+   "fuentes",
+   "generado",
+   "n_por_mes",
+   "plazo_dias",
+   "puntos",
+   "puntos[].fin",
+   "puntos[].fuente",
+   "puntos[].inicio",
+   "puntos[].marcas",
+   "puntos[].peticiones_sin_precio",
+   "puntos[].tipo"
+  ],
+  "es_enum_values": {
+   "cotejo.veredicto": [
+    "pasa"
+   ],
+   "puntos[].fuente": [
+    "rechazo"
+   ]
+  }
+ },
+ "telemetry.jsonl (hooks)": {
+  "files": 1,
+  "records": 31691,
+  "unparsable": 0,
+  "keys_total": 20,
+  "es_keys": [
+   "bloqueo",
+   "camino",
+   "motivo",
+   "oferta",
+   "rutas"
+  ],
+  "es_enum_values": {
+   "motivo": [
+    "acotada",
+    "backend_ausente",
+    "codigo",
+    "mcp_ajeno",
+    "no_es_prosa",
+    "no_es_volcado",
+    "pequeno",
+    "prosa_grande",
+    "sin_fichero"
+   ],
+   "bloqueo": [
+    "encendido"
+   ]
+  }
+ },
+ "precios.json (paquete)": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 109,
+  "es_keys": [
+   "_nota",
+   "busqueda_web_por_1000",
+   "consultado",
+   "fuente",
+   "modelos",
+   "modelos.claude-fable-5-1.admite_esfuerzo",
+   "modelos.claude-fable-5-1.entrada",
+   "modelos.claude-fable-5-1.familia",
+   "modelos.claude-fable-5-1.lectura",
+   "modelos.claude-fable-5-1.salida",
+   "modelos.claude-fable-5.admite_esfuerzo",
+   "modelos.claude-fable-5.entrada",
+   "modelos.claude-fable-5.familia",
+   "modelos.claude-fable-5.lectura",
+   "modelos.claude-fable-5.salida",
+   "modelos.claude-haiku-4-5.admite_esfuerzo",
+   "modelos.claude-haiku-4-5.entrada",
+   "modelos.claude-haiku-4-5.familia",
+   "modelos.claude-haiku-4-5.lectura",
+   "modelos.claude-haiku-4-5.salida",
+   "modelos.claude-opus-4-5.admite_esfuerzo",
+   "modelos.claude-opus-4-5.entrada",
+   "modelos.claude-opus-4-5.familia",
+   "modelos.claude-opus-4-5.lectura",
+   "modelos.claude-opus-4-5.salida",
+   "modelos.claude-opus-4-6.admite_esfuerzo",
+   "modelos.claude-opus-4-6.entrada",
+   "modelos.claude-opus-4-6.familia",
+   "modelos.claude-opus-4-6.lectura",
+   "modelos.claude-opus-4-6.salida",
+   "modelos.claude-opus-4-7.admite_esfuerzo",
+   "modelos.claude-opus-4-7.entrada",
+   "modelos.claude-opus-4-7.familia",
+   "modelos.claude-opus-4-7.lectura",
+   "modelos.claude-opus-4-7.salida",
+   "modelos.claude-opus-4-8.admite_esfuerzo",
+   "modelos.claude-opus-4-8.entrada",
+   "modelos.claude-opus-4-8.familia",
+   "modelos.claude-opus-4-8.lectura",
+   "modelos.claude-opus-4-8.salida",
+   "modelos.claude-opus-5-5.admite_esfuerzo",
+   "modelos.claude-opus-5-5.entrada",
+   "modelos.claude-opus-5-5.familia",
+   "modelos.claude-opus-5-5.lectura",
+   "modelos.claude-opus-5-5.salida",
+   "modelos.claude-opus-5.admite_esfuerzo",
+   "modelos.claude-opus-5.entrada",
+   "modelos.claude-opus-5.familia",
+   "modelos.claude-opus-5.lectura",
+   "modelos.claude-opus-5.salida",
+   "modelos.claude-sonnet-4-5.admite_esfuerzo",
+   "modelos.claude-sonnet-4-5.entrada",
+   "modelos.claude-sonnet-4-5.familia",
+   "modelos.claude-sonnet-4-5.lectura",
+   "modelos.claude-sonnet-4-5.salida",
+   "modelos.claude-sonnet-4-6.admite_esfuerzo",
+   "modelos.claude-sonnet-4-6.entrada",
+   "modelos.claude-sonnet-4-6.familia",
+   "modelos.claude-sonnet-4-6.lectura",
+   "modelos.claude-sonnet-4-6.salida",
+   "modelos.claude-sonnet-5-5.admite_esfuerzo",
+   "modelos.claude-sonnet-5-5.entrada",
+   "modelos.claude-sonnet-5-5.familia",
+   "modelos.claude-sonnet-5-5.lectura",
+   "modelos.claude-sonnet-5-5.salida",
+   "modelos.claude-sonnet-5.admite_esfuerzo",
+   "modelos.claude-sonnet-5.entrada",
+   "modelos.claude-sonnet-5.familia",
+   "modelos.claude-sonnet-5.lectura",
+   "modelos.claude-sonnet-5.salida"
+  ],
+  "es_enum_values": {
+   "modelos.claude-fable-5-1.familia": [
+    "nueva"
+   ],
+   "modelos.claude-fable-5.familia": [
+    "nueva"
+   ],
+   "modelos.claude-opus-5-5.familia": [
+    "nueva"
+   ],
+   "modelos.claude-opus-5.familia": [
+    "nueva"
+   ],
+   "modelos.claude-opus-4-8.familia": [
+    "nueva"
+   ],
+   "modelos.claude-opus-4-7.familia": [
+    "nueva"
+   ],
+   "modelos.claude-opus-4-6.familia": [
+    "anterior"
+   ],
+   "modelos.claude-opus-4-5.familia": [
+    "anterior"
+   ],
+   "modelos.claude-sonnet-5-5.familia": [
+    "nueva"
+   ],
+   "modelos.claude-sonnet-5.familia": [
+    "nueva"
+   ],
+   "modelos.claude-sonnet-4-6.familia": [
+    "anterior"
+   ],
+   "modelos.claude-sonnet-4-5.familia": [
+    "anterior"
+   ],
+   "modelos.claude-haiku-4-5.familia": [
+    "anterior"
+   ]
+  }
+ },
+ "densidad.json (paquete)": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 23,
+  "es_keys": [
+   "_nota",
+   "familias",
+   "familias.anterior",
+   "familias.anterior.formato_read",
+   "familias.anterior.medido_con",
+   "familias.anterior.sin_numerar",
+   "familias.anterior.sin_numerar.codigo",
+   "familias.anterior.sin_numerar.estructurado",
+   "familias.anterior.sin_numerar.prosa",
+   "familias.nueva",
+   "familias.nueva.formato_read",
+   "familias.nueva.formato_read.codigo",
+   "familias.nueva.formato_read.prosa",
+   "familias.nueva.medido_con",
+   "familias.nueva.sin_numerar",
+   "familias.nueva.sin_numerar.codigo",
+   "familias.nueva.sin_numerar.estructurado",
+   "familias.nueva.sin_numerar.prosa",
+   "medido"
+  ],
+  "es_enum_values": {}
+ },
+ "vendor.json (paquete)": {
+  "files": 1,
+  "records": 1,
+  "unparsable": 0,
+  "keys_total": 13,
+  "es_keys": [
+   "_acerca_de",
+   "files[]._procedencia"
+  ],
+  "es_enum_values": {}
+ }
+}

@@ -1626,27 +1626,55 @@ def _probe_fallback(ctx: Context) -> Result:
     return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
 
 
-def _probe_rol_retirado(ctx: Context) -> Result:
-    """Variables del rol `fast`, retirado en la 0.30.0, que siguen puestas y ya no hacen nada.
+def _probe_deprecated_names(ctx: Context) -> Result:
+    """Nombres obsoletos que siguen en uso: variables renombradas o retiradas e interruptores viejos.
+
+    Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
+    `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
+    el probe. Hoy el registro solo tiene las tres variables del rol `fast`, retirado en la 0.30.0.
 
     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
     quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
-    que ya no existe. Pedir ese modelo por `model=` da un error claro solo — sale de
+    que ya no existe. Pedir ese modelo por `model=` da un error claro solo —sale de
     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
 
-    Mira el entorno y nada más, así que vive en `entorno`: no sale a la red ni toca ficheros.
+    Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
+    where corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de where heredan los hooks)
+    y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
+    cuenta `local_status`.
     """
-    from . import config as configuracion
+    from . import config as config_module
+    from . import deprecations
 
-    puestas = [n for n, valor in configuracion.VARIABLES_ROL_RETIRADO.items() if valor is not None]
-    if not puestas:
-        return Result(OK, "sin variables del rol rápido, retirado en la 0.30.0")
-    return Result(
-        WARN,
-        f"{', '.join(puestas)}: el rol rápido se retiró en la 0.30.0 y estas variables ya no "
-        "tienen efecto",
-        "quítalas del entorno; los roles vigentes son mechanical, long, code y vision",
-    )
+    warnings: list[str] = []
+    seen: list[deprecations.DeprecatedName] = []
+
+    def _note(where: str, item: deprecations.DeprecatedName) -> None:
+        warnings.append(f"{where}: {deprecations.warning_text(item)}")
+        if item not in seen:
+            seen.append(item)
+
+    for nombre, valor in config_module.DEPRECATED_ENV_VALUES.items():
+        if valor is not None and (entry := deprecations.find(nombre)) is not None:
+            _note("en la shell", entry)
+
+    settings, _motivo = read_json(ctx.claude_dir / "settings.json")
+    env = settings.get("env") if settings else None
+    if isinstance(env, dict):
+        for entry in deprecations.env_vars():
+            if entry.old in env:
+                _note("en el env de settings.json", entry)
+
+    for entry in deprecations.switch_files():
+        if (ctx.claude_dir / entry.old).exists():
+            _note("en ~/.claude", entry)
+
+    if not warnings:
+        return Result(OK, "sin nombres obsoletos en uso")
+    hints = [f"quita {e.old}" if e.is_retired else f"renombra {e.old} a {e.new}" for e in seen]
+    if any(e.old.endswith("_FAST") for e in seen):
+        hints.append("los roles vigentes son mechanical, long, code y vision")
+    return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
 RECALCULAR_HINT = "local-delegate recalcular-coste"
@@ -1787,7 +1815,7 @@ CHECKS: tuple[Check, ...] = (
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
-    Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
+    Check("config.deprecated_names", "entorno", "rol rápido retirado", _probe_deprecated_names),
     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
     Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),
