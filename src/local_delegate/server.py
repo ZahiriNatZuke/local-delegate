@@ -532,21 +532,6 @@ def _recent_block_id(path: str) -> str | None:
         except (ValueError, KeyError, TypeError):
             continue
     return best[1] if best else None
-    try:
-        huella = hook_common.path_digest(path)
-        lineas = hook_common.block_notes_path().read_text(encoding="utf-8").splitlines()
-    except (OSError, ValueError):
-        return None
-
-    ahora = _utcnow().timestamp()
-    for linea in reversed(lineas):
-        try:
-            nota = json.loads(linea)
-            if nota["sha"] == huella and ahora - float(nota["ts"]) <= VENTANA_DE_BLOQUEO_S:
-                return str(nota["id"])
-        except (ValueError, KeyError, TypeError):
-            continue
-    return None
 
 
 # --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-024 a REQ-028) -----------------
