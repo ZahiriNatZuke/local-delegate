@@ -1,6 +1,6 @@
 """Coste equivalente a precio de API, por evento y por periodo (coste-api-y-cuota, T6).
 
-Las filas pasan **antes** por la fusión de Python (`coste.fundir`), como en producción: el coste
+Las filas pasan **antes** por la fusión de Python (`cost.merge`), como en producción: el coste
 nunca se calcula sobre una fila cruda. Los agregados de `N` se escriben con
 `recalcular.escribir_agregados` (T5), que es también el cruce de formato entre el escritor y el
 lector.
@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from local_delegate import attribution, config, coste, precios, recalcular, valoracion
+from local_delegate import attribution, config, cost, precios, recalcular, valoracion
 
 AHORA = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 MES = f"{AHORA:%Y%m}"
@@ -46,7 +46,7 @@ def _linea(n: int = 0, **extra) -> dict:
 def _fundidas(tmp_path, lineas: list[dict], relleno: dict | None = None) -> list[dict]:
     if relleno:
         attribution.write_backfill(tmp_path, MES, relleno)
-    return coste.fundir(lineas, log_dir=tmp_path)
+    return cost.merge(lineas, log_dir=tmp_path)
 
 
 def _relleno(modelo="claude-opus-5-5", hilo="subagent", n=40, cad=0, **extra) -> dict:
@@ -70,7 +70,7 @@ def test_un_millon_de_caracteres(tmp_path):
     T = 1 000 000 × 100 // 200 = 500 000; cota baja = 500 000 × $5/MTok = $2,50; estimación =
     500 000 × ($5 + 40 × $0,20)/MTok = $6,50."""
     filas = _fundidas(tmp_path, [_linea()], {"toolu_0000": _relleno()})
-    assert filas[0]["densidad"]["text"] == [200, "medida"]  # guarda: la celda del escenario
+    assert filas[0]["density"]["text"] == [200, "measured"]  # guarda: la celda del escenario
     c = valoracion.coste_evento(filas[0])
     assert c["cota_baja"] == 2.50
     assert c["estimacion"] == 6.50
@@ -80,8 +80,8 @@ def test_un_millon_de_caracteres(tmp_path):
     b = valoracion.bloque_coste(filas, None, ahora=AHORA)
     assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
     # La respuesta trae la cobertura, la densidad con su origen, N con su origen y la tabla.
-    assert b["barra"]["por_relleno"] == 1
-    assert b["densidad"]["origen"]["medida"] == 1
+    assert b["barra"]["backfilled"] == 1
+    assert b["densidad"]["origen"]["measured"] == 1
     assert b["n_origen"] == {"relleno": 1, "agregado": 0, "declarado": 0}
     assert b["tabla"]["consultado"] == precios.cargar_precios()["consultado"]
 
@@ -173,12 +173,12 @@ def test_un_modelo_sin_precio_no_da_cero(tmp_path):
     assert b["sin_precio"]["ids"] == ["claude-nadie-9"]
     assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
 
-    # Los dos con un modelo sin precio en la propia línea (`al_momento`).
-    solas = coste.fundir(
+    # Los dos con un modelo sin precio en la propia línea (`at_call`).
+    solas = cost.merge(
         [_linea(5, caller_model="claude-nadie-9"), _linea(6, caller_model="claude-nadie-9")],
         log_dir=tmp_path,
     )
-    assert all(f["caller_origen"] == "linea" for f in solas)  # guarda: no tomó el respaldo
+    assert all(f["caller_origin"] == "line" for f in solas)  # guarda: no tomó el respaldo
     b = valoracion.bloque_coste(solas, None, ahora=AHORA)
     assert b["cifra"] is None
     assert b["motivo"] == valoracion.TODAS_SIN_PRECIO
@@ -259,7 +259,7 @@ def test_los_excluidos_van_a_la_barra_y_no_suman(tmp_path):
     lineas = [_linea(0), _linea(1, client="mcp"), _linea(2, client="codex-mcp-client")]
     relleno = {k: _relleno() for k in ("toolu_0000", "toolu_0001", "toolu_0002")}
     b = valoracion.bloque_coste(_fundidas(tmp_path, lineas, relleno), None, ahora=AHORA)
-    assert b["barra"]["excluido"] == 2
+    assert b["barra"]["excluded"] == 2
     assert b["barra"]["excluidas_por_motivo"] == {"no es Claude": 1, "pruebas": 1}
     assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
 
@@ -267,8 +267,8 @@ def test_los_excluidos_van_a_la_barra_y_no_suman(tmp_path):
 def test_el_respaldo_se_nombra_en_la_barra(tmp_path):
     """Sin relleno ni línea con modelo, viejo y sin transcript: `supuesto`, con el respaldo."""
     vieja = _linea(ts=(AHORA - timedelta(days=45)).isoformat(timespec="seconds"))
-    b = valoracion.bloque_coste(coste.fundir([vieja], log_dir=tmp_path), None, ahora=AHORA)
-    assert b["barra"]["supuesto"] == 1
+    b = valoracion.bloque_coste(cost.merge([vieja], log_dir=tmp_path), None, ahora=AHORA)
+    assert b["barra"]["assumed"] == 1
     assert b["barra"]["con_modelo_supuesto"] == 1
     assert (b["respaldo"]["nombre"], b["respaldo"]["hilo"]) == ("Opus 5.5", "subagent")
     assert b["n_origen"]["declarado"] == 1
@@ -295,7 +295,7 @@ def test_fundir_estampa_la_ventana_y_no_toca_el_log(tmp_path):
     log.write_text("".join(json.dumps(x) + "\n" for x in lineas), encoding="utf-8")
     antes = hashlib.sha256(log.read_bytes()).hexdigest()
     crudas = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    filas = coste.fundir(crudas, log_dir=tmp_path)
+    filas = cost.merge(crudas, log_dir=tmp_path)
     assert [f.get("test_window") for f in filas] == [None, "w-20261006T105959Z", None]
     assert all("test_window" not in c for c in crudas), "fundir copia: no muta la entrada"
     assert hashlib.sha256(log.read_bytes()).hexdigest() == antes
@@ -306,7 +306,7 @@ def test_una_fila_en_ventana_va_al_tramo_excluido_como_prueba(tmp_path):
     lineas = _con_ventana(tmp_path, [_linea(0), _linea(1)])
     relleno = {k: _relleno() for k in ("toolu_0000", "toolu_0001")}
     filas = _fundidas(tmp_path, lineas, relleno)
-    assert coste.tramo(filas[1], ahora=AHORA, plazo_dias=30) == "excluido"
-    assert coste.tramo(filas[0], ahora=AHORA, plazo_dias=30) != "excluido", "guarda"
+    assert cost.segment(filas[1], now=AHORA, cleanup_days=30) == "excluded"
+    assert cost.segment(filas[0], now=AHORA, cleanup_days=30) != "excluded", "guarda"
     b = valoracion.bloque_coste(filas, None, ahora=AHORA)
     assert b["barra"]["excluidas_por_motivo"] == {"pruebas": 1}

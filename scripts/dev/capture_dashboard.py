@@ -127,16 +127,16 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   let seed = 20260728;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 
-  // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolver_densidad`
-  // en Python); el JS del panel solo divide. Sin `densidad`, `tokensClaude` da 0 y las series por
+  // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolve_density`
+  // en Python); el JS del panel solo divide. Sin `density`, `tokensClaude` da 0 y las series por
   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
   // `nueva`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
   const DENS = DENSIDAD.familias.nueva;
   const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
     local_explain_code: 'codigo'};
   const celda = (columna, clase) => {
-    if (DENS[columna][clase]) return [DENS[columna][clase], 'medida'];
-    return [DENS.sin_numerar[clase], 'sin_numerar'];
+    if (DENS[columna][clase]) return [DENS[columna][clase], 'measured'];
+    return [DENS.sin_numerar[clase], 'unnumbered'];
   };
   const densidadDe = (tool, porPath) => {
     if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
@@ -144,9 +144,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     const devuelta = tool === 'local_extract' ? 'estructurado'
       : (tool === 'local_boilerplate' ? 'codigo' : 'prosa');
     return {
-      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'medida'],
-      returned: [DENS.sin_numerar[devuelta], 'medida'],
-      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'medida'],
+      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'measured'],
+      returned: [DENS.sin_numerar[devuelta], 'measured'],
+      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'measured'],
     };
   };
   const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
@@ -174,7 +174,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
-        familia: 'nueva', densidad: densidadDe(tool, path),
+        family: 'nueva', density: densidadDe(tool, path),
       });
     }
   }
@@ -219,28 +219,28 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     }
     // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
     if (e.source === 'path') {
-      a.saved += aTokens(e.chars_in, e.densidad.text);
+      a.saved += aTokens(e.chars_in, e.density.text);
       // Lo que la tool devolvió al contexto se resta: el KPI enseña el NETO.
-      if (e.chars_in > 0) a.returned += aTokens(e.chars_out, e.densidad.returned);
+      if (e.chars_in > 0) a.returned += aTokens(e.chars_out, e.density.returned);
     }
     return a;
   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
       errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
 
   // Coste equivalente y cuota de ejemplo. Salen de correr `valoracion.bloque_coste` y
-  // `cuota.estado` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
+  // `quota.status` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
   // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
   // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
   // que verá casi todo el mundo: nunca se enseña un % sin calibración.
   const COSTE = {cifra: {cota_baja: 6.87, estimacion: 27.4}, motivo: null, eventos: 98,
     T: 1241362,
-    barra: {excluido: 22, al_momento: 94, por_relleno: 0, pendiente: 4, supuesto: 0,
+    barra: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
       valoradas: 98, con_modelo_supuesto: 4,
       excluidas_por_motivo: {'no es Claude': 15, pruebas: 7}, plazo_dias: 30},
     respaldo: {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent',
       invalido: false, variable: 'LOCAL_DELEGATE_COSTE_RESPALDO'},
     n_origen: {relleno: 0, agregado: 0, declarado: 98}, n_declarado: {main: 127, subagent: 40},
-    densidad: {origen: {medida: 74, sin_numerar: 24, conservadora: 0}, familias: {nueva: 98},
+    densidad: {origen: {measured: 74, unnumbered: 24, conservative: 0}, familias: {nueva: 98},
       familia_supuesta: 0, densidad_de_la_familia: 0},
     sin_precio: {n: 0, ids: []},
     fuera_de_la_base: {imagenes: stats.img_n, salida_a_fichero: 0},
@@ -258,13 +258,13 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       fuente: 'https://platform.claude.com/docs/en/about-claude/pricing'},
     comando: 'local-delegate recalcular-coste'};
   const CUOTA = {
-    five_hour: {deriva: false, puntos: 1, estado: 'sin calibrar',
-      motivo: 'faltan 2 puntos del statusline', puntos_rechazo: 1,
-      descartes: {contaminado: 1, delta_pequeno: 2}, reinicio: null},
-    seven_day: {deriva: false, puntos: 0, estado: 'sin calibrar',
-      motivo: 'faltan 3 puntos del statusline', puntos_rechazo: 0,
-      descartes: {delta_pequeno: 3}, reinicio: null},
-    hay_agregados: true, comando: 'local-delegate recalcular-coste'};
+    five_hour: {drift: false, points: 1, status: 'uncalibrated',
+      reason: 'faltan 2 puntos del statusline', rejection_points: 1,
+      discards: {contaminado: 1, delta_pequeno: 2}, reset: null},
+    seven_day: {drift: false, points: 0, status: 'uncalibrated',
+      reason: 'faltan 3 puntos del statusline', rejection_points: 0,
+      discards: {delta_pequeno: 3}, reset: null},
+    has_aggregates: true, command: 'local-delegate recompute-cost'};
 
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
@@ -330,7 +330,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
-      coste: COSTE, cuota: CUOTA,
+      coste: COSTE, quota: CUOTA,
       imagenes: {n: stats.img_n, bytes: stats.img_bytes, chars_devueltos: stats.img_devueltos},
       densidad_tabla: DENSIDAD},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó

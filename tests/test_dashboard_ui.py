@@ -733,16 +733,16 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
     calibrarla de verdad pide tres puntos del statusline."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     cuota_calibrada = {
-        "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
-        "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
-        "hay_agregados": True,
-        "comando": "local-delegate recompute-cost",
+        "five_hour": {"status": "calibrated", "points": 4, "a_pct": 3.4, "b_pct": 11.9},
+        "seven_day": {"status": "uncalibrated", "points": 1, "reason": "faltan 2 puntos"},
+        "has_aggregates": True,
+        "command": "local-delegate recompute-cost",
     }
 
     def _inyectar(ruta):
         respuesta = ruta.fetch()
         datos = respuesta.json()
-        datos["cuota"] = cuota_calibrada
+        datos["quota"] = cuota_calibrada
         ruta.fulfill(response=respuesta, body=json.dumps(datos))
 
     with _Servidor(9495) as servidor, sync_playwright() as pw:

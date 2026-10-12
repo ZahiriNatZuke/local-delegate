@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import attribution, config, coste, legacy_names, test_windows
+from local_delegate import attribution, config, cost, legacy_names, test_windows
 
 
 def telemetria_de_hooks() -> Path:
@@ -68,14 +68,14 @@ def leer(ruta: Path, desde: str | None) -> list[dict]:
 
 
 def usos_fundidos(desde: str | None) -> list[dict]:
-    """Las filas del log de uso FUNDIDAS como las ve el panel (`coste.fundir`): con el `banco` del
+    """Las filas del log de uso FUNDIDAS como las ve el panel (`cost.merge`): con el `banco` del
     relleno y el `test_window` estampado. Se funde el fichero entero y se filtra despues, porque la
     clave de una fila sin `tool_use_id` depende de su posicion en el fichero."""
     usos = []
     for ruta in logs_de_uso():
         # Filas viejas y nuevas al mismo formato (REQ-006): `bloqueo_id` se lee como `block_id`.
         filas = [legacy_names.normalize("usage", e) for e in leer(ruta, None)]
-        for e in coste.fundir(filas, log_dir=directorio_de_logs()):
+        for e in cost.merge(filas, log_dir=directorio_de_logs()):
             if desde and str(e.get("ts", "")) < desde:
                 continue
             usos.append(e)

@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import attribution, coste, cuota, recalcular, server
+from local_delegate import attribution, cost, quota, recalcular, server
 from local_delegate import config as cfg
 from local_delegate.web import metrics
 
@@ -115,7 +115,7 @@ def _punto(fin: datetime, c: float, fuente: str = "statusline", horas: int = 4) 
         "delta_pct": 40 if fuente == "statusline" else 100,
         "delta_usd": round(c * 0.4, 2),
         "C": c,
-        "marcas": [cuota.MARCA_OTRAS_SUPERFICIES],
+        "marcas": [quota.MARK_OTHER_SURFACES],
         "peticiones_sin_precio": None,
     }
 
@@ -205,8 +205,8 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
     _escribir_log(logs, [_linea(ts, caller_src="hook", caller_kind="subagent")])
 
     barra = _stats()["coste"]["barra"]
-    assert barra["pendiente"] == 1
-    assert barra["por_relleno"] == 0
+    assert barra["pending"] == 1
+    assert barra["backfilled"] == 0
 
     attribution.write_backfill(
         logs,
@@ -223,8 +223,8 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
         },
     )
     c = _stats()["coste"]
-    assert c["barra"]["por_relleno"] == 1
-    assert c["barra"]["pendiente"] == 0
+    assert c["barra"]["backfilled"] == 1
+    assert c["barra"]["pending"] == 0
     assert c["n_origen"]["relleno"] == 1
     # 3 000 000 × 100 // 200 = 1 500 000 tokens: $7,50 y $19,50 con N = 40.
     assert c["cifra"] == {"cota_baja": 7.5, "estimacion": 19.5}
@@ -238,7 +238,7 @@ def test_api_stats_trae_coste_cuota_e_imagenes(entorno):
     j = _stats()
     assert j.get("coste") is not None
     assert j.get("imagenes") == {"n": 1, "bytes": 250000, "chars_devueltos": 800}
-    assert j.get("cuota", {}).get("five_hour", {}).get("estado") == "sin calibrar"
+    assert j.get("quota", {}).get("five_hour", {}).get("status") == "uncalibrated"
     assert set(j.get("densidad_tabla", {}).get("familias", {})) == {"nueva", "anterior"}
     # Las claves de siempre siguen ahí: las nuevas son aditivas.
     assert j["total"]["calls"] == 2
@@ -260,13 +260,13 @@ def test_la_cuota_no_depende_del_rango(entorno):
 
     j = _stats(ahora - timedelta(days=60), ahora - timedelta(days=35))
     assert j["coste"]["motivo"] == "sin delegaciones en el periodo"  # el rango está vacío
-    c = j["cuota"]
-    assert c["five_hour"]["estado"] == "calibrado"
-    assert (c["five_hour"].get("a_pct") or 0) > 0, c["five_hour"].get("motivo_pct")
+    c = j["quota"]
+    assert c["five_hour"]["status"] == "calibrated"
+    assert (c["five_hour"].get("a_pct") or 0) > 0, c["five_hour"].get("pct_reason")
     # 1 500 000 tokens × $5/MTok = $7,50 de cota baja; mediana(C) = 160 → 4,7 %.
     assert c["five_hour"]["a_pct"] == 4.7
     assert c["five_hour"]["b_pct"] == round(7.5 * (1 + 40 * 0.2 / 5) / 160 * 100, 1)
-    assert c["seven_day"]["estado"] == "sin calibrar"
+    assert c["seven_day"]["status"] == "uncalibrated"
 
 
 def test_un_punto_viejo_caduca_sin_regenerar(entorno, tmp_path):
@@ -279,9 +279,9 @@ def test_un_punto_viejo_caduca_sin_regenerar(entorno, tmp_path):
         [_punto(ahora - timedelta(days=d), c) for d, c in ((61, 150.0), (10, 160.0), (2, 170.0))],
     )
     j = _stats()
-    c = j["cuota"]
-    assert c["five_hour"]["estado"] == "sin calibrar"
-    assert "faltan 1 puntos" in c["five_hour"]["motivo"]
+    c = j["quota"]
+    assert c["five_hour"]["status"] == "uncalibrated"
+    assert "faltan 1 puntos" in c["five_hour"]["reason"]
     texto = _textos(tmp_path, j)["cuota"]
     assert "faltan 1 puntos" in texto
     assert "de una ventana de 5 h" not in texto  # ningún % sin calibrar (REQ-059)
@@ -298,7 +298,7 @@ def test_aviso_contra_un_rechazo(entorno, tmp_path):
     _agregados(logs, puntos)
     _escribir_log(logs, [_linea(ahora - timedelta(hours=1))])
     j = _stats()
-    assert j["cuota"]["five_hour"]["estado"] == "calibrado"  # guarda: el aviso solo va calibrado
+    assert j["quota"]["five_hour"]["status"] == "calibrated"  # guarda: el aviso solo va calibrado
     texto = _textos(tmp_path, j)["cuota"]
     assert "probable uso en otras superficies" in texto
     assert "de una ventana de 5 h" in texto
@@ -320,11 +320,11 @@ def test_un_punto_mal_formado_se_descarta_sin_tumbar_la_respuesta(entorno):
 
     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
     assert r.status_code == 200
-    q = r.json()["cuota"]
-    assert q["five_hour"]["estado"] == "calibrado"
-    assert q["five_hour"]["puntos"] == 3
-    assert q["five_hour"]["descartes"]["linea_corrupta"] == 4
-    assert q["seven_day"]["descartes"]["linea_corrupta"] == 2
+    q = r.json()["quota"]
+    assert q["five_hour"]["status"] == "calibrated"
+    assert q["five_hour"]["points"] == 3
+    assert q["five_hour"]["discards"]["linea_corrupta"] == 4
+    assert q["seven_day"]["discards"]["linea_corrupta"] == 2
 
 
 def test_home_vacio(entorno, tmp_path):
@@ -337,12 +337,12 @@ def test_home_vacio(entorno, tmp_path):
 
     j = _stats()
     b = j["coste"]["barra"]
-    assert b["pendiente"] + b["supuesto"] == b["valoradas"] == 1
+    assert b["pending"] + b["assumed"] == b["valoradas"] == 1
     assert j["coste"]["n_origen"]["declarado"] == 1
     assert j["coste"]["cifra"] is not None
-    q = j["cuota"]
-    assert q["five_hour"]["motivo"] == "no hay datos de calibración en esta máquina"
-    assert q["hay_agregados"] is False
+    q = j["quota"]
+    assert q["five_hour"]["reason"] == "no hay datos de calibración en esta máquina"
+    assert q["has_aggregates"] is False
     texto = _textos(tmp_path, j)["cuota"]
     assert "no hay datos de calibración en esta máquina" in texto
     assert "local-delegate recompute-cost" in texto
@@ -350,7 +350,7 @@ def test_home_vacio(entorno, tmp_path):
     (logs / recalcular.NOMBRE).write_text("{ esto no es JSON", encoding="utf-8")
     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
     assert r.status_code == 200
-    assert r.json()["cuota"]["five_hour"]["motivo"] == "no hay datos de calibración en esta máquina"
+    assert r.json()["quota"]["five_hour"]["reason"] == "no hay datos de calibración en esta máquina"
 
 
 # --- Lo que el panel no hace (REQ-012, REQ-073) --------------------------------------------------
@@ -485,19 +485,19 @@ def test_frases_prohibidas(entorno, tmp_path, monkeypatch):
     coletilla = server._savings_feedback(
         4000,
         "chars",
-        evento=coste.fila_en_vuelo(tool="local_summarize", source="path", path="a.md"),
+        evento=cost.in_flight_row(tool="local_summarize", source="path", path="a.md"),
     )
     coletilla_imagen = server._savings_feedback(
         250000,
         "bytes imagen",
-        evento=coste.fila_en_vuelo(
+        evento=cost.in_flight_row(
             tool="local_describe_image", source="path", path="a.png", input_unit="bytes"
         ),
     )
     recibo = server._escribir_destino(
         tmp_path / "salida.py",
         "x = 1\n",
-        evento=coste.fila_en_vuelo(tool="local_boilerplate", source="inline"),
+        evento=cost.in_flight_row(tool="local_boilerplate", source="inline"),
     )
     fuente_extract = inspect.getsource(server.local_extract)
     i = fuente_extract.index('meta["leido_server_side"]')
@@ -536,7 +536,7 @@ def test_texto_del_coste_con_la_barra_y_el_respaldo(entorno, tmp_path):
     viejo = ahora - timedelta(days=45)  # sin relleno y fuera del plazo: `supuesto`
     _escribir_log(logs, [_linea(viejo, 0), _linea(ahora - timedelta(hours=1), 1)])
     j = _stats(ahora - timedelta(days=60), ahora)
-    assert j["coste"]["barra"]["supuesto"] == 1  # guarda: la fila vieja cayó donde debía
+    assert j["coste"]["barra"]["assumed"] == 1  # guarda: la fila vieja cayó donde debía
     texto = _textos(tmp_path, j)["coste"]
     assert "2 de 2 con modelo supuesto: Opus 5.5 en subagente" in texto
     assert "cota baja con estos supuestos" in texto

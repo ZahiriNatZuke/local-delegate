@@ -40,7 +40,7 @@ from . import (
     attribution,
     clients,
     config,
-    coste,
+    cost,
     failures,
     install,
     legacy_names,
@@ -1762,7 +1762,7 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
     """(cuántas delegaciones `pendiente` pasan de `H` − 10 días, días de la más vieja).
 
     Solo los ficheros del log que pueden tener filas dentro del plazo, y cada uno ENTERO: la clave
-    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`coste.fundir`).
+    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`cost.merge`).
     """
     primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
     umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
@@ -1770,10 +1770,10 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
     for path, mes in recalcular._ficheros_del_log(log_dir):
         if mes < primer_mes:
             continue
-        for fila in coste.fundir(recalcular._leer_log(path), log_dir=log_dir):
-            if coste.tramo(fila, ahora=ahora, plazo_dias=plazo_dias) != "pendiente":
+        for fila in cost.merge(recalcular._leer_log(path), log_dir=log_dir):
+            if cost.segment(fila, now=ahora, cleanup_days=plazo_dias) != "pending":
                 continue
-            edad = ahora - coste._instante(fila.get("ts"))
+            edad = ahora - cost._instant(fila.get("ts"))
             if edad > umbral:
                 cuantas += 1
                 mas_vieja = max(mas_vieja, edad)

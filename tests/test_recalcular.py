@@ -257,7 +257,7 @@ def test_sin_transcripts_no_rellena(tmp_path):
     agregados = recalcular.leer_agregados(log)
     assert agregados["fuentes"] == {"transcripts": False, "statusline": False}
     assert agregados["cotejo"] is None
-    assert resumen["cuota"] == {"five_hour": "sin calibrar", "seven_day": "sin calibrar"}
+    assert resumen["cuota"] == {"five_hour": "uncalibrated", "seven_day": "uncalibrated"}
 
 
 # --- REQ-070: el subcomando -------------------------------------------------------------------
@@ -299,3 +299,24 @@ def test_los_agregados_de_n_no_cuentan_las_filas_en_ventana(tmp_path):
     recalcular.ejecutar(claude, log, ahora=AHORA)
     con_ventana = recalcular.leer_agregados(log)["n_por_mes"][MES]["claude-opus-5-5|subagent"]
     assert con_ventana == [40]
+
+
+def test_el_resumen_dice_el_estado_de_la_cuota_en_palabras():
+    """`quota.status` da `calibrated|uncalibrated` (valor de máquina); la terminal lo dice en
+    español, sin colar el valor en inglés en la prosa."""
+    resumen = {
+        "plazo_dias": 30,
+        "transcripts": 0,
+        "lineas_corruptas": 0,
+        "lineas_rellenadas": 0,
+        "cruces": {},
+        "n_casos": 0,
+        "cotejo": None,
+        "puntos": {},
+        "descartes": {},
+        "cuota": {"five_hour": "calibrated", "seven_day": "uncalibrated"},
+    }
+    texto = recalcular.texto_del_resumen(resumen)
+    assert "Cuota five_hour: calibrada;" in texto
+    assert "Cuota seven_day: sin calibrar;" in texto
+    assert "uncalibrated" not in texto

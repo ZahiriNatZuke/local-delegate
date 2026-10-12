@@ -197,12 +197,12 @@ medido con Haiku 4.5. La columna
 **formato `Read`** cuenta la numeración de líneas que añade `Read`: es lo que Claude habría leído
 si no hubiera delegado.
 
-Para cada delegación, la regla es una sola y vive en Python (`coste.resolver_densidad`):
+Para cada delegación, la regla es una sola y vive en Python (`cost.resolve_density`):
 
 - **familia**: la del modelo que pidió la delegación (`caller_model`); sin modelo, la del
   [respaldo](#cobertura-y-respaldo); un modelo que no está en la tabla de precios se trata como
-  `nueva` y lleva la marca `familia supuesta`. Un modelo con familia conocida pero que no está
-  entre los medidos lleva la marca `densidad de la familia`;
+  `nueva` y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
+  que no está entre los medidos lleva la marca `family_density` (densidad de la familia);
 - **clase de contenido**, sin leer el texto: primero por la tool (`local_lint_summary` → log,
   `local_commit_msg` → diff, `local_explain_code` → código) y si no por la extensión del `path`
   (`.md .txt .rst .html` → prosa; `.py .js .ts .ps1 .sh …` → código; `.json .jsonl .yaml .toml
@@ -210,12 +210,12 @@ Para cada delegación, la regla es una sola y vive en Python (`coste.resolver_de
 - **columna**: formato `Read` si la entrada fue por `path`, sin numerar si no. Lo devuelto a
   Claude va siempre sin numerar (estructurado en `local_extract`, código en `local_boilerplate`,
   prosa en el resto);
-- **respaldo de celda**, en este orden: la celda exacta (`medida`); la misma clase sin numerar
-  (`sin_numerar`); la mayor densidad sin numerar de la familia (`conservadora`). Los dos respaldos
+- **respaldo de celda**, en este orden: la celda exacta (`measured`); la misma clase sin numerar
+  (`unnumbered`); la mayor densidad sin numerar de la familia (`conservative`). Los dos respaldos
   dan **menos** tokens que la celda real, nunca más, porque la numeración solo añade tokens.
 
-`/api/events` entrega cada fila ya resuelta, con `densidad` (`{"text": [c100, origen],
-"returned": …, "output": …}`, en centésimas), `familia` y `marcas`; Python y el JS del panel
+`/api/events` entrega cada fila ya resuelta, con `density` (`{"text": [c100, origen],
+"returned": …, "output": …}`, en centésimas), `family` y `marks`; Python y el JS del panel
 solo dividen (`cantidad × 100 // c100`), así que las dos cuentas no pueden separarse. La coletilla
 de ahorro, el recibo de la salida a fichero y `tokens_aprox` de `local_extract` dicen
 «≈ N tokens de Claude» con esa misma conversión; la coletilla de `local_describe_image`, solo los
@@ -281,10 +281,11 @@ Para saber qué modelo pidió cada delegación hacen falta dos piezas:
   el `path` como único desempate. Con los datos de referencia, el 96,5 % de las líneas casan sin
   ambigüedad.
 
-La **barra de cobertura** reparte cada delegación en un tramo, en este orden: `excluido` (clientes
+La **barra de cobertura** reparte cada delegación en un tramo, en este orden: excluidas (`excluded`: clientes
 que no son Claude, como `codex-mcp-client`, y pruebas: el cliente `mcp` de los scripts y las
-sesiones de bancos), `al momento`, `por relleno`, `pendiente` (sin modelo, pero su transcript aún
-puede existir) y `supuesto` (el resto). Las excluidas no suman. Las `pendiente` y `supuesto` se
+sesiones de bancos), al momento (`at_call`), por relleno (`backfilled`), pendientes (`pending`: sin
+modelo, pero su transcript aún puede existir) y supuestas (`assumed`: el resto). Las excluidas no
+suman. Las pendientes y las supuestas se
 valoran con el **respaldo** declarado, **Opus 5.5 en subagente** (el grupo más frecuente medido),
 y el rótulo lo nombra («3 de 152 con modelo supuesto: Opus 5.5 en subagente»). Se cambia con
 `LOCAL_DELEGATE_COST_FALLBACK` (ver [Configuration](Configuration.md#coste-equivalente)).
@@ -647,8 +648,8 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 |---|---|
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
-| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
+| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |

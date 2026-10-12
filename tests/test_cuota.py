@@ -19,7 +19,7 @@ from test_transcripts import (
     ts,
 )
 
-from local_delegate import cuota, recalcular, transcripts
+from local_delegate import quota, recalcular, transcripts
 
 R1 = "2026-10-01T17:00:00+00:00"  # resets de 5 h (valor opaco: solo agrupa)
 R7 = "2026-10-05T00:00:00+00:00"
@@ -43,8 +43,8 @@ def _lineas(filas: list) -> list[str]:
 
 
 def puntos_de(filas: list, peticiones: list | None = None):
-    por_tipo, sesiones, d0 = cuota.sanear(_lineas(filas))
-    puntos, d1 = cuota.puntos_del_statusline(por_tipo, sesiones, peticiones or [])
+    por_tipo, sesiones, d0 = quota.sanitize(_lineas(filas))
+    puntos, d1 = quota.statusline_points(por_tipo, sesiones, peticiones or [])
     return puntos, d0, d1
 
 
@@ -76,7 +76,7 @@ def test_cinco_filas_son_un_punto():
     assert p["delta_usd"] == 4.0
     assert p["C"] == 10.0
     assert p["inicio"] == (BASE).isoformat()
-    assert cuota.MARCA_OTRAS_SUPERFICIES in p["marcas"]
+    assert quota.MARK_OTHER_SURFACES in p["marcas"]
 
 
 def test_sesiones_en_paralelo():
@@ -115,7 +115,7 @@ def test_descartes(tmp_path):
     )
     (p,) = [p for p in puntos if p["tipo"] == "five_hour"]
     assert p["delta_usd"] == 2.0
-    assert cuota.MARCA_REINICIO in p["marcas"]
+    assert quota.MARK_RESET in p["marcas"]
 
     # Dos ventanas que se solapan: se queda la de mayor Δ%.
     puntos, _, _ = puntos_de(
@@ -126,7 +126,7 @@ def test_descartes(tmp_path):
             fila(300, "B", 30, 2.0, reset="r6"),
         ]
     )
-    puntos, d = cuota.quitar_solapados([p for p in puntos if p["tipo"] == "five_hour"])
+    puntos, d = quota.drop_overlapping([p for p in puntos if p["tipo"] == "five_hour"])
     assert d["five_hour"].get("solapado") == 1
     assert [p["delta_pct"] for p in puntos] == [30]
 
@@ -140,7 +140,7 @@ def test_sanear_y_lineas_corruptas(tmp_path):
     ]
     escapo = None
     try:
-        _, _, d = cuota.sanear(_lineas(filas))
+        _, _, d = quota.sanitize(_lineas(filas))
     except Exception as e:  # una línea rota nunca rompe el comando (REQ-061)
         escapo, d = e, {"five_hour": {}, "seven_day": {}}
     assert not escapo
@@ -213,37 +213,37 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
     escribir(subagente(claude, "s1"), rechazos(1100, 3, "u"))
     escribir(subagente(claude, "s2"), rechazos(1200, 3, "v"))
     indice = transcripts.read(claude / "projects")
-    rechazos_ = cuota.puntos_de_rechazo(indice.rejections, indice.requests.values())
+    rechazos_ = quota.rejection_points(indice.rejections, indice.requests.values())
     assert len(rechazos_) == 1
     p = rechazos_[0]
     assert p["delta_usd"] == 12.0
     assert p["fin"] == (BASE + timedelta(seconds=1000)).isoformat()
-    assert p["marcas"] == [cuota.MARCA_COTA_BAJA, cuota.MARCA_SOLO_COMPROBACION]
+    assert p["marcas"] == [quota.MARK_LOW_BOUND, quota.MARK_CHECK_ONLY]
     assert p["peticiones_sin_precio"] == 0
-    e = cuota.estado({"puntos": rechazos_}, BASE + timedelta(days=1))
-    assert e["five_hour"]["estado"] == "sin calibrar"
-    assert e["five_hour"]["puntos_rechazo"] == 1
+    e = quota.status({"puntos": rechazos_}, BASE + timedelta(days=1))
+    assert e["five_hour"]["status"] == "uncalibrated"
+    assert e["five_hour"]["rejection_points"] == 1
 
 
 # --- REQ-055 y REQ-056: criterio ----------------------------------------------------------
 
 
 def test_criterio_de_la_spec():
-    r = cuota.criterio([150, 160, 170, 175])
-    assert (r["estado"], r["dispersion"]) == ("calibrado", 0.078)
-    r = cuota.criterio([150, 160, 170, 175, 300])
-    assert (r["estado"], r["dispersion"]) == ("calibrado", 0.072)
-    r = cuota.criterio([100, 160, 250])
-    assert r["estado"] == "sin calibrar"
-    assert r["motivo"] == "dispersión 51,2 % ≥ 25 %"
-    r = cuota.criterio([150, 160, 170, 175, 230, 240])
-    assert (r["estado"], r["deriva"]) == ("sin calibrar", True)
-    assert r["motivo"] == "faltan 1 puntos del statusline"
-    r = cuota.criterio([150, 160, 170, 175, 230, 100])  # sentidos opuestos: no es deriva
-    assert r["estado"] == "calibrado"
-    assert r["deriva"] is False
-    r = cuota.criterio([150, 160, 170, 175, 230, 240, 235])
-    assert (r["estado"], r["mediana_C"]) == ("calibrado", 235)
+    r = quota.criterion([150, 160, 170, 175])
+    assert (r["status"], r["dispersion"]) == ("calibrated", 0.078)
+    r = quota.criterion([150, 160, 170, 175, 300])
+    assert (r["status"], r["dispersion"]) == ("calibrated", 0.072)
+    r = quota.criterion([100, 160, 250])
+    assert r["status"] == "uncalibrated"
+    assert r["reason"] == "dispersión 51,2 % ≥ 25 %"
+    r = quota.criterion([150, 160, 170, 175, 230, 240])
+    assert (r["status"], r["drift"]) == ("uncalibrated", True)
+    assert r["reason"] == "faltan 1 puntos del statusline"
+    r = quota.criterion([150, 160, 170, 175, 230, 100])  # sentidos opuestos: no es deriva
+    assert r["status"] == "calibrated"
+    assert r["drift"] is False
+    r = quota.criterion([150, 160, 170, 175, 230, 240, 235])
+    assert (r["status"], r["median_C"]) == ("calibrated", 235)
 
 
 # --- REQ-054 y REQ-057: vigencia y reinicio ------------------------------------------------
@@ -253,21 +253,21 @@ def test_un_punto_de_61_dias_no_cuenta():
     ahora = BASE
     fuentes = {"transcripts": True, "statusline": True}
     frescos = [_punto(20, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
-    guarda = cuota.estado({"puntos": frescos, "fuentes": fuentes}, ahora)["five_hour"]
-    assert guarda["estado"] == "calibrado"  # sin el punto viejo, calibra
+    guarda = quota.status({"puntos": frescos, "fuentes": fuentes}, ahora)["five_hour"]
+    assert guarda["status"] == "calibrated"  # sin el punto viejo, calibra
 
     con_viejo = [_punto(61, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
-    r = cuota.estado({"puntos": con_viejo, "fuentes": fuentes}, ahora)["five_hour"]
-    assert r["estado"] == "sin calibrar"
-    assert r["motivo"] == "faltan 1 puntos del statusline"
-    assert r["descartes"].get("caducado") == 1
+    r = quota.status({"puntos": con_viejo, "fuentes": fuentes}, ahora)["five_hour"]
+    assert r["status"] == "uncalibrated"
+    assert r["reason"] == "faltan 1 puntos del statusline"
+    assert r["discards"].get("caducado") == 1
 
 
 def test_reinicio_a_mano(tmp_path):
     ahora = BASE
     puntos = [_punto(5, 150, ahora)]
-    assert cuota.vigentes(puntos, ahora) == puntos  # guarda
-    vigentes = cuota.vigentes(puntos, ahora, (ahora - timedelta(days=1)).isoformat())
+    assert quota.current_points(puntos, ahora) == puntos  # guarda
+    vigentes = quota.current_points(puntos, ahora, (ahora - timedelta(days=1)).isoformat())
     assert vigentes == []
 
     # El comando guarda la fecha del reinicio y conserva la del otro tipo.
@@ -282,7 +282,7 @@ def test_sin_fuentes_lo_dice():
     """REQ-061: sin registro ni transcripts, «no hay datos de calibración en esta máquina»."""
     ahora = BASE
     sin_nada = {"puntos": [], "fuentes": {"transcripts": False, "statusline": False}}
-    assert cuota.estado(sin_nada, ahora)["five_hour"]["motivo"] == cuota.SIN_DATOS
-    assert cuota.estado(None, ahora)["seven_day"]["motivo"] == cuota.SIN_DATOS
+    assert quota.status(sin_nada, ahora)["five_hour"]["reason"] == quota.NO_DATA
+    assert quota.status(None, ahora)["seven_day"]["reason"] == quota.NO_DATA
     solo_transcripts = {"puntos": [], "fuentes": {"transcripts": True, "statusline": False}}
-    assert cuota.estado(solo_transcripts, ahora)["five_hour"]["motivo"] == cuota.SIN_STATUSLINE
+    assert quota.status(solo_transcripts, ahora)["five_hour"]["reason"] == quota.NO_STATUSLINE

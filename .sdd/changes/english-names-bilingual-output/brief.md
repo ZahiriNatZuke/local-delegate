@@ -166,6 +166,13 @@ Pasar siempre `projectPath: "D:\\Projects\\local-delegate"`.
   del rename se hace y se registra como desviación; cualquier otra cosa, parar y preguntar.
 - `local_commit_msg` tiende a salir en inglés y truncado: revisarlo y dejarlo en español.
 - Un test de node que agota tiempo en el runner de Windows es inestabilidad conocida.
+- **PyCharm pisa las ediciones hechas desde fuera** (A5b-1): si un fichero se edita en disco y
+  después se renombra algo en él con PyCharm, PyCharm escribe su copia en memoria y deshace la
+  edición. Hacer primero todos los `rename_refactoring` de un fichero y editarlo desde fuera después.
+- En ficheros CRLF, editar con Python y `newline=""`; nunca `sed -i` (A5b-1 pasó `metrics.py` a LF).
+- PyCharm puede elegir un kwarg homónimo en vez de la función (A5b-1, `estado=`): si el rename
+  toca ficheros inesperados, pasar esa fila a búsqueda y edición.
+- `--help` no basta para el control de scripts (REQ-014): corrida mínima con datos sintéticos (A5a).
 
 ## Otras reglas que aplican a los agentes
 

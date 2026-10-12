@@ -12,7 +12,7 @@ MCP server-side. **No es dinero ahorrado** (la suscripción es de tarifa plana) 
 - `bloque_coste(filas, agregados)`: la cifra del periodo con todo lo que la acompaña (REQ-007,
   REQ-008, REQ-016, REQ-044, REQ-046, REQ-047); `bloque_imagenes(filas)`: REQ-038.
 
-Las filas llegan **fundidas** (`coste.fundir`, REQ-006). Solo stdlib; no abre sockets ni lee
+Las filas llegan **fundidas** (`cost.merge`, REQ-006). Solo stdlib; no abre sockets ni lee
 `~/.claude`: los agregados los trae quien llama (`recalcular.leer_agregados`).
 """
 
@@ -23,7 +23,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from . import attribution, coste, precios, server
+from . import attribution, cost, precios, server
 
 #: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
 #: subagente 40 (135 casos).
@@ -34,7 +34,7 @@ MIN_CASOS_GRUPO = 10
 PLAZO_POR_DEFECTO = attribution.DEFAULT_CLEANUP_DAYS
 
 ORIGENES_N = ("relleno", "agregado", "declarado")
-ORIGENES_DENSIDAD = ("medida", "sin_numerar", "conservadora")
+ORIGENES_DENSIDAD = ("measured", "unnumbered", "conservative")
 
 SIN_DELEGACIONES = "sin delegaciones en el periodo"
 SIN_TABLA = "no se pudo cargar la tabla de precios del paquete"
@@ -53,7 +53,7 @@ def nombre_del_modelo(mid: str) -> str:
 
 def _hilo(fila: dict) -> str:
     hilo = fila.get("caller_kind")
-    return hilo if hilo in coste.HILOS else coste.respaldo()["hilo"]
+    return hilo if hilo in cost.THREADS else cost.fallback()["thread"]
 
 
 def precio(m: str, hilo: str, tabla: dict | None = None) -> dict | None:
@@ -97,7 +97,7 @@ def n_de(fila: dict, agregados: dict | None) -> tuple[float, int, str]:
 def tokens_netos(fila: dict) -> int:
     """`T`: tokens de Claude del texto leído server-side menos los devueltos (Definiciones). 0 en
     una imagen (REQ-038). Pasa SOLO por `server.tokens_claude`."""
-    if coste.es_imagen(fila):
+    if cost.is_image(fila):
         return 0
     acc = server._accounting(fila)
     return server.tokens_claude(
@@ -135,7 +135,7 @@ def coste_evento(fila: dict, agregados: dict | None = None, tabla: dict | None =
 
 def _en_la_base(fila: dict, acc: dict) -> bool:
     """REQ-040: atribuible (sin fallo), de texto, con algo leído o devuelto."""
-    if acc["failed"] or coste.es_imagen(fila):
+    if acc["failed"] or cost.is_image(fila):
         return False
     return acc["chars_saved_text"] > 0 or acc["chars_returned"] > 0
 
@@ -156,12 +156,12 @@ def bloque_coste(
         plazo = _entero(agregados.get("plazo_dias")) or PLAZO_POR_DEFECTO
     try:
         tabla = precios.cargar_precios()
-        r = coste.respaldo()
+        r = cost.fallback()
     except Exception:
         # Sin tabla no hay cifra (REQ-046), pero la barra y el motivo se enseñan igual.
-        tabla, r = None, dict(coste.RESPALDO_DECLARADO, respaldo_invalido=False)
+        tabla, r = None, dict(cost.DECLARED_FALLBACK, fallback_invalid=False)
 
-    barra: Counter = Counter({t: 0 for t in coste.TRAMOS})
+    barra: Counter = Counter({t: 0 for t in cost.SEGMENTS})
     excluidas_por_motivo: Counter = Counter()
     n_origen: Counter = Counter({o: 0 for o in ORIGENES_N})
     densidad_origen: Counter = Counter({o: 0 for o in ORIGENES_DENSIDAD})
@@ -170,7 +170,7 @@ def bloque_coste(
     fuera = {"imagenes": 0, "salida_a_fichero": 0}
     sin_precio: Counter = Counter()
     desglose: dict[tuple, dict] = {}
-    respaldo_invalido = bool(r.get("respaldo_invalido"))
+    respaldo_invalido = bool(r.get("fallback_invalid"))
     cota = estimacion = 0.0
     t_total = valoradas = en_base = 0
 
@@ -178,28 +178,28 @@ def bloque_coste(
         acc = server._accounting(fila)
         if acc["failed"]:
             continue
-        if coste.es_imagen(fila):
+        if cost.is_image(fila):
             fuera["imagenes"] += 1
             continue
         if acc["chars_saved_output"] > 0:
             fuera["salida_a_fichero"] += 1
         if not _en_la_base(fila, acc):
             continue
-        tramo = coste.tramo(fila, ahora=ahora, plazo_dias=plazo)
+        tramo = cost.segment(fila, now=ahora, cleanup_days=plazo)
         barra[tramo] += 1
-        if tramo == "excluido":
+        if tramo == "excluded":
             excluidas_por_motivo[
                 attribution.exclusion_reason(fila, {"bench": fila.get("bench")})
             ] += 1
             continue
         en_base += 1
-        if fila.get("respaldo_invalido"):
+        if fila.get("fallback_invalid"):
             respaldo_invalido = True
-        texto = (fila.get("densidad") or {}).get("text")
+        texto = (fila.get("density") or {}).get("text")
         if texto:
             densidad_origen[texto[1]] += 1
-        familias[str(fila.get("familia"))] += 1
-        marcas.update(fila.get("marcas") or [])
+        familias[str(fila.get("family"))] += 1
+        marcas.update(fila.get("marks") or [])
         if tabla is None:
             continue
         c = coste_evento(fila, agregados, tabla)
@@ -239,7 +239,7 @@ def bloque_coste(
     else:
         motivo = None
 
-    con_supuesto = barra["pendiente"] + barra["supuesto"]
+    con_supuesto = barra["pending"] + barra["assumed"]
     return {
         "cifra": None
         if motivo
@@ -248,16 +248,16 @@ def bloque_coste(
         "eventos": valoradas,
         "T": t_total,
         "barra": {
-            **{t: barra[t] for t in coste.TRAMOS},
+            **{t: barra[t] for t in cost.SEGMENTS},
             "valoradas": en_base,
             "con_modelo_supuesto": con_supuesto,
             "excluidas_por_motivo": dict(sorted(excluidas_por_motivo.items())),
             "plazo_dias": plazo,
         },
         "respaldo": {
-            "modelo": r["modelo"],
-            "nombre": nombre_del_modelo(r["modelo"]),
-            "hilo": r["hilo"],
+            "modelo": r["model"],
+            "nombre": nombre_del_modelo(r["model"]),
+            "hilo": r["thread"],
             "invalido": respaldo_invalido,
             "variable": FALLBACK_VARIABLE,
         },
@@ -266,8 +266,8 @@ def bloque_coste(
         "densidad": {
             "origen": {o: densidad_origen[o] for o in ORIGENES_DENSIDAD},
             "familias": dict(sorted(familias.items())),
-            "familia_supuesta": marcas[coste.MARCA_FAMILIA_SUPUESTA],
-            "densidad_de_la_familia": marcas[coste.MARCA_DENSIDAD_DE_LA_FAMILIA],
+            "familia_supuesta": marcas[cost.MARK_ASSUMED_FAMILY],
+            "densidad_de_la_familia": marcas[cost.MARK_FAMILY_DENSITY],
         },
         "sin_precio": {"n": sum(sin_precio.values()), "ids": sorted(sin_precio)},
         "fuera_de_la_base": fuera,
@@ -288,7 +288,7 @@ def bloque_imagenes(filas: Iterable[dict]) -> dict:
     ninguna cifra de tokens de Claude. Los fallos no cuentan."""
     n = bytes_ = devueltos = 0
     for fila in filas:
-        if not coste.es_imagen(fila):
+        if not cost.is_image(fila):
             continue
         acc = server._accounting(fila)
         if acc["failed"]:

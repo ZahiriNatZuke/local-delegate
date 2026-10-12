@@ -57,12 +57,12 @@ from .. import (
     attribution,
     clients,
     config,
-    coste,
-    cuota,
+    cost,
     failures,
     legacy_names,
     llamaswap_api,
     precios,
+    quota,
     recalcular,
     server,
     test_windows,
@@ -187,7 +187,7 @@ def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[st
         # Fusión del relleno y densidad resuelta (coste-api-y-cuota, REQ-006): por fichero y ANTES
         # de filtrar por rango, porque la clave de una línea sin `tool_use_id` lleva su ordinal en
         # el fichero entero. `fundir` copia cada fila: la caché de `_read_file_cached` no cambia.
-        for r in coste.fundir(file_rows, log_dir=config.LOG_DIR):
+        for r in cost.merge(file_rows, log_dir=config.LOG_DIR):
             t = _parse_ts(r.get("ts"))
             if t is None or t < range_from or t > range_to:
                 continue
@@ -541,44 +541,44 @@ def stats(
     # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
     # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
-    ahora = _ahora()
+    ahora = _now()
     agregados = recalcular.leer_agregados(config.LOG_DIR)
     datos["coste"] = valoracion.bloque_coste(rows, agregados, ahora=ahora)
     datos["imagenes"] = valoracion.bloque_imagenes(usage)
     datos["densidad_tabla"] = {
         k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
     }
-    datos["cuota"] = _bloque_cuota(agregados, ahora)
+    datos["quota"] = _quota_block(agregados, ahora)
     return JSONResponse(datos)
 
 
-def _ahora() -> datetime:
+def _now() -> datetime:
     """El reloj de `/api/stats`, aparte para que un test pueda fijarlo."""
     return datetime.now(UTC)
 
 
-def _bloque_cuota(agregados: dict | None, ahora: datetime) -> dict:
-    """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `cuota.estado`).
+def _quota_block(agregados: dict | None, ahora: datetime) -> dict:
+    """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `quota.status`).
 
     Un tipo `calibrado` lleva el % sobre SU ventana móvil, que termina ahora y no depende del
     rango que elija el panel (REQ-060): A = cota baja de lo delegado en las últimas 5 h (o 7 días)
     ÷ mediana(C) × 100, y B = la estimación de esos mismos eventos ÷ mediana(C) × 100.
     """
-    estado = cuota.estado(agregados, ahora)
-    for tipo, e in estado.items():
-        if e.get("estado") != "calibrado":
+    status = quota.status(agregados, ahora)
+    for kind, e in status.items():
+        if e.get("status") != "calibrated":
             continue
-        filas, _ = _load(ahora - cuota.DURACION[tipo], ahora)
-        bloque = valoracion.bloque_coste(filas, agregados, ahora=ahora)
-        capacidad = e.get("mediana_C")
-        cifra = bloque["cifra"]
-        if cifra and capacidad:
-            e["a_pct"] = round(cifra["cota_baja"] / capacidad * 100, 1)
-            e["b_pct"] = round(cifra["estimacion"] / capacidad * 100, 1)
+        rows, _ = _load(ahora - quota.DURATION[kind], ahora)
+        block = valoracion.bloque_coste(rows, agregados, ahora=ahora)
+        capacity = e.get("median_C")
+        figure = block["cifra"]
+        if figure and capacity:
+            e["a_pct"] = round(figure["cota_baja"] / capacity * 100, 1)
+            e["b_pct"] = round(figure["estimacion"] / capacity * 100, 1)
         else:
             e["a_pct"] = e["b_pct"] = None
-            e["motivo_pct"] = bloque["motivo"]
-    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMMAND}
+            e["pct_reason"] = block["motivo"]
+    return {**status, "has_aggregates": agregados is not None, "command": valoracion.COMMAND}
 
 
 def _aggregate_hooks(rows: list[dict]) -> dict:
@@ -1970,9 +1970,9 @@ function textoCoste(j){
   if(c.cifra) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
     + 'el segundo suma las relecturas de caché posteriores y las caducidades.');
   const b = c.barra || {}, r = c.respaldo || {};
-  L.push('Cobertura: ' + plural(b.al_momento||0, 'atribuida al momento', 'atribuidas al momento')
-    + ' · ' + F.format(b.por_relleno||0) + ' por relleno · ' + F.format(b.pendiente||0)
-    + ' pendientes · ' + F.format(b.supuesto||0) + ' supuestas · ' + F.format(b.excluido||0)
+  L.push('Cobertura: ' + plural(b.at_call||0, 'atribuida al momento', 'atribuidas al momento')
+    + ' · ' + F.format(b.backfilled||0) + ' por relleno · ' + F.format(b.pending||0)
+    + ' pendientes · ' + F.format(b.assumed||0) + ' supuestas · ' + F.format(b.excluded||0)
     + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
   L.push(F.format(b.con_modelo_supuesto||0) + ' de ' + F.format(b.valoradas||0)
     + ' con modelo supuesto: ' + (r.nombre||'') + ' en ' + (HILO_TXT[r.hilo]||r.hilo||'')
@@ -1984,8 +1984,8 @@ function textoCoste(j){
   const d = c.densidad || {}, o = d.origen || {};
   const fams = Object.entries(d.familias||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
-    + F.format(o.medida||0) + ', sin numerar ' + F.format(o.sin_numerar||0) + ', conservadora '
-    + F.format(o.conservadora||0) + '; ' + F.format(d.densidad_de_la_familia||0)
+    + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
+    + F.format(o.conservative||0) + '; ' + F.format(d.densidad_de_la_familia||0)
     + ' con densidad de la familia y ' + F.format(d.familia_supuesta||0) + ' con familia supuesta.');
   const sp = c.sin_precio || {};
   if(sp.n) L.push(plural(sp.n, 'delegación de un modelo sin precio', 'delegaciones de modelos sin precio')
@@ -2000,7 +2000,7 @@ function textoCoste(j){
 }
 
 function textoCuota(j){
-  const q = j && j.cuota;
+  const q = j && j.quota;
   if(!q) return [];
   const L = [];
   [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([tipo, nombre])=>{
@@ -2008,31 +2008,31 @@ function textoCuota(j){
     if(!e) return;
     const disp = (e.dispersion!==undefined && e.dispersion!==null)
       ? ', dispersión ' + F1.format(e.dispersion*100) + ' %' : '';
-    if(e.estado==='calibrado'){
+    if(e.status==='calibrated'){
       const v = tipo==='five_hour'
         ? 'de una ventana de 5 h (lo delegado en las últimas 5 h'
         : 'de una ventana semanal (lo delegado en los últimos 7 días';
       L.push(e.a_pct!==null && e.a_pct!==undefined
         ? nombre + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
           + '; la estimación incluye relecturas que pueden caer después de la ventana); estimación '
-          + 'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos') + disp
+          + 'calibrada con ' + plural(e.points||0, 'punto', 'puntos') + disp
           + '; supone que la cuota sigue al precio de lista.'
-        : nombre + ': calibrada, sin cifra (' + (e.motivo_pct||'') + ').');
-      if(e.aviso) L.push(nombre + ': ' + e.aviso + '.');
+        : nombre + ': calibrada, sin cifra (' + (e.pct_reason||'') + ').');
+      if(e.warning) L.push(nombre + ': ' + e.warning + '.');
       return;
     }
-    let t = nombre + ': sin calibrar (' + (e.motivo||'') + ')';
-    if(!q.hay_agregados) t += '; los genera ' + q.comando;
+    let t = nombre + ': sin calibrar (' + (e.reason||'') + ')';
+    if(!q.has_aggregates) t += '; los genera ' + q.command;
     L.push(t + '.');
     // Los motivos de descarte son claves de `cuota.py`; aquí, en palabras.
     const DESCARTE = {linea_corrupta:'línea corrupta', fuera_de_rango:'fuera de rango',
       delta_pequeno:'variación pequeña', sin_uso_local:'sin uso local', contaminado:'contaminado'};
-    const desc = Object.entries(e.descartes||{}).filter(([,k])=>k)
+    const desc = Object.entries(e.discards||{}).filter(([,k])=>k)
       .map(([m,k]) => (DESCARTE[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
-    L.push(nombre + ': ' + plural(e.puntos||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
-      + ', ' + plural(e.puntos_rechazo||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
+    L.push(nombre + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
+      + ', ' + plural(e.rejection_points||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
       + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
-      + (e.deriva ? '; hubo deriva' : '') + (e.reinicio ? '; reiniciada a mano el ' + e.reinicio : '') + '.');
+      + (e.drift ? '; hubo deriva' : '') + (e.reset ? '; reiniciada a mano el ' + e.reset : '') + '.');
   });
   return L;
 }
@@ -2065,7 +2065,7 @@ const VENTANAS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal'
 // Ventanas calibradas: sin ninguna, la tarjeta de cuota no se pinta (su explicación vive en el
 // diálogo). Calibrada sin cifra cuenta como calibrada: se pinta con «–».
 function ventanasCalibradas(q){
-  return q ? VENTANAS.filter(([t]) => q[t] && q[t].estado==='calibrado').length : 0;
+  return q ? VENTANAS.filter(([t]) => q[t] && q[t].status==='calibrated').length : 0;
 }
 
 // Medidor de una ventana: de 0 a la cota baja (A) en sólido y de A a la estimación (B) en claro,
@@ -2074,12 +2074,12 @@ function ventanasCalibradas(q){
 function pct2(x){ return Math.round(x*100)/100; }
 
 function medidorCuota(e, nombre){
-  if(!e || e.estado!=='calibrado' || e.a_pct===null || e.a_pct===undefined){
-    return kstat(nombre, '–', e && e.estado==='calibrado' ? 'calibrada, sin cifra' : 'sin calibrar');
+  if(!e || e.status!=='calibrated' || e.a_pct===null || e.a_pct===undefined){
+    return kstat(nombre, '–', e && e.status==='calibrated' ? 'calibrada, sin cifra' : 'sin calibrar');
   }
   const a = Math.max(0, Math.min(100, e.a_pct)), b = Math.max(a, Math.min(100, e.b_pct));
   return kstat(nombre, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
-      'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos'))
+      'calibrada con ' + plural(e.points||0, 'punto', 'puntos'))
     + '<div class="qrange" role="img" aria-label="Entre ' + F1.format(e.a_pct) + ' % y '
     + F1.format(e.b_pct) + ' % de la ventana"><i class="qa" style="width:' + pct2(a) + '%"></i>'
     + '<i class="qb" style="left:' + pct2(a) + '%;width:' + pct2(b - a) + '%"></i></div>'
@@ -2110,7 +2110,7 @@ function renderCoste(s){
         + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
         + '</tr></thead><tbody>' + filas + '</tbody></table></div>' : '');
   }
-  const q = s && s.cuota, cal = ventanasCalibradas(q);
+  const q = s && s.quota, cal = ventanasCalibradas(q);
   qc.style.display = cal ? '' : 'none';
   if(cal){
     document.getElementById('cuotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
@@ -2610,12 +2610,12 @@ function kpiCard(o){
 // Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `tokens_claude` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
 // Aquí no se resuelve nada (coste-api-y-cuota, REQ-033): /api/events entrega cada fila ya
-// fundida por Python, con `densidad[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
+// fundida por Python, con `density[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
 // cantidad×100/c100 redondeado hacia abajo, como la división entera de Python.
 function tokensClaude(cantidad,tipo,e){
   if(tipo!=='text'&&tipo!=='returned'&&tipo!=='output'&&tipo!=='image') throw new Error('tipo de conversión desconocido: '+tipo);
   if(tipo==='image') return 0;
-  const celda = e && e.densidad ? e.densidad[tipo] : null;
+  const celda = e && e.density ? e.density[tipo] : null;
   if(!celda) return 0;
   return Math.floor(cantidad*100/celda[0]);
 }

@@ -73,6 +73,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   viejo, una sola vez y con la regla de siempre (un cruce solo lo sustituye otro mejor); desde ahí
   solo se lee el nuevo, y el viejo queda intacto. El resumen «cruces» de `recompute-cost` muestra
   ya los valores nuevos.
+- **`/api/stats` devuelve la cuota como `quota`** (antes `cuota`), con sus campos en inglés:
+  `status` (`calibrated` o `uncalibrated`; antes `estado` con `calibrado` o `sin calibrar`),
+  `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning` y
+  `pct_reason` (antes `motivo`, `puntos`, `puntos_rechazo`, `descartes`, `deriva`, `reinicio`,
+  `mediana_C`, `aviso` y `motivo_pct`), y `has_aggregates` y `command` (antes `hay_agregados` y
+  `comando`). No cambia nada de lo que se ve en el panel.
+- **Las filas de `/api/events` llevan la densidad y la atribución en inglés:** `density`,
+  `family`, `marks`, `caller_origin` y `fallback_invalid` (antes `densidad`, `familia`, `marcas`,
+  `caller_origen` y `respaldo_invalido`). El origen del modelo es `line`, `backfill` o `fallback`
+  (antes `linea`, `relleno` o `respaldo`); el de la celda de densidad, `measured`, `unnumbered` o
+  `conservative` (antes `medida`, `sin_numerar` o `conservadora`); y las marcas, `assumed_family`
+  y `family_density` (antes `familia supuesta` y `densidad de la familia`). Los tramos de la barra
+  de cobertura de `/api/stats` son `excluded`, `at_call`, `backfilled`, `pending` y `assumed`
+  (antes `excluido`, `al_momento`, `por_relleno`, `pendiente` y `supuesto`). Son datos que el
+  servidor calcula al vuelo: no hay nada guardado que convertir.
 
 ## [0.34.0] - 2026-10-08
 

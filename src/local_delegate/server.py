@@ -41,7 +41,7 @@ from . import (
     clients,
     config,
     cooldown,
-    coste,
+    cost,
     estado_json,
     failures,
     legacy_names,
@@ -424,7 +424,7 @@ def _validar_destino(target: str, overwrite: bool) -> Path:
 def _escribir_destino(p: Path, contenido: str, *, evento: dict) -> str:
     """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto.
 
-    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): el recibo dice los caracteres
+    `evento` es la fila en curso ya fundida (`cost.in_flight_row`): el recibo dice los caracteres
     y los tokens de **Claude** que no entraron (REQ-035).
     """
     # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
@@ -883,11 +883,11 @@ def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
     """Convierte lo ahorrado o lo devuelto a tokens de **Claude**. Única conversión del paquete.
 
     `_accounting` (y su espejo JS `tokensClaude`) pasan por aquí para `saved`, `returned` y `net`.
-    `evento` es la fila **fundida** del log (`coste.fundir`, coste-api-y-cuota REQ-006): trae en
-    `densidad[tipo]` el `[c100, origen]` ya resuelto por `coste.resolver_densidad`. Esta función
+    `evento` es la fila **fundida** del log (`cost.merge`, coste-api-y-cuota REQ-006): trae en
+    `density[tipo]` el `[c100, origen]` ya resuelto por `cost.resolve_density`. Esta función
     no resuelve nada, solo divide (REQ-033):
 
-    - `image`, o una fila sin `densidad[tipo]` (una imagen, o una fila sin fundir): 0. Una fusión
+    - `image`, o una fila sin `density[tipo]` (una imagen, o una fila sin fundir): 0. Una fusión
       olvidada da un 0 visible, nunca una cifra con una densidad inventada.
     - si no, `cantidad × 100 // c100` (`c100` = caracteres por token de Claude, en centésimas).
 
@@ -897,7 +897,7 @@ def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
         raise ValueError(f"tipo de conversión desconocido: {tipo!r} (válidos: {_TIPOS_CLAUDE})")
     if tipo == "image":
         return 0
-    densidad = evento.get("densidad")
+    densidad = evento.get("density")
     celda = densidad.get(tipo) if isinstance(densidad, dict) else None
     if not celda:
         return 0
@@ -2354,11 +2354,11 @@ class _ModeloVigente:
 def _savings_feedback(chars_in: int, label: str, *, evento: dict) -> str:
     """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side.
 
-    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): los tokens son de **Claude**
+    `evento` es la fila en curso ya fundida (`cost.in_flight_row`): los tokens son de **Claude**
     (`tokens_claude`, REQ-035), nunca el `tokens_in` del modelo local. Una imagen dice solo los
     bytes: sin dimensiones no hay forma de saber sus tokens de Claude (REQ-038).
     """
-    if coste.es_imagen(evento):
+    if cost.is_image(evento):
         return f"\n\n(leído server-side: {chars_in:,} {label} que no entraron a tu contexto)"
     tokens = tokens_claude(chars_in, tipo="text", evento=evento)
     return (
@@ -2491,7 +2491,7 @@ def _chat(
             _escribir_destino(
                 write_to,
                 text,
-                evento=coste.fila_en_vuelo(tool=tool, source=source, path=path),
+                evento=cost.in_flight_row(tool=tool, source=source, path=path),
             )
             + (aviso_truncado if truncated_out else "")
             + aviso_respaldo
@@ -2499,7 +2499,7 @@ def _chat(
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path, input_unit=input_unit)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path, input_unit=input_unit)
         text += _savings_feedback(chars_in, feedback_label, evento=evento)
     return text
 
@@ -2805,7 +2805,7 @@ def _chat_chunked(
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(procesado en {calls} trozos por local-delegate)"
@@ -3146,7 +3146,7 @@ def _chat_map_reduce(
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
@@ -3637,7 +3637,7 @@ def local_extract(
         meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
-        evento = coste.fila_en_vuelo(tool="local_extract", source="path", path=path)
+        evento = cost.in_flight_row(tool="local_extract", source="path", path=path)
         meta["leido_server_side"] = {
             "chars": len(content),
             "tokens_aprox": tokens_claude(len(content), tipo="text", evento=evento),
@@ -4479,7 +4479,7 @@ def local_status() -> str:
         registros = [
             legacy_names.normalize("usage", r) if isinstance(r, dict) else r for r in registros
         ]
-        for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
+        for rec in cost.merge(registros, log_dir=config.LOG_DIR):
             # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
             # REQ-018): cliente `mcp`, banco o ventana de prueba.
             if attribution.test_reason(rec):

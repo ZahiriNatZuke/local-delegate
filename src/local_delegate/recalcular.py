@@ -23,7 +23,7 @@ from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, coste, cuota, precios, transcripts
+from . import attribution, cost, precios, quota, transcripts
 
 NOMBRE = "coste-agregados.json"
 VERSION = 1
@@ -121,7 +121,7 @@ def _n_del_fichero(fundidas: list[dict]) -> dict[str, dict[str, list[int]]]:
     no están excluidas (ni clientes de pruebas ni bancos)."""
     por_mes: dict[str, dict[str, list[int]]] = {}
     for f in fundidas:
-        if f.get("ok") is False or f.get("caller_origen") == "respaldo":
+        if f.get("ok") is False or f.get("caller_origin") == "fallback":
             continue
         n = f.get("n")
         if isinstance(n, bool) or not isinstance(n, int):
@@ -130,7 +130,7 @@ def _n_del_fichero(fundidas: list[dict]) -> dict[str, dict[str, list[int]]]:
             continue
         mes = _mes(f.get("ts"))
         modelo, hilo = f.get("caller_model"), f.get("caller_kind")
-        if not mes or not modelo or hilo not in coste.HILOS:
+        if not mes or not modelo or hilo not in cost.THREADS:
             continue
         por_mes.setdefault(mes, {}).setdefault(f"{modelo}|{hilo}", []).append(n)
     return por_mes
@@ -185,37 +185,37 @@ def _sumar(destino: dict[str, Counter], origen: dict[str, Counter]) -> None:
 def _puntos(
     claude_dir: Path, indice: transcripts.Index, previos: list, *, ahora: datetime
 ) -> tuple[list[dict], dict[str, dict[str, int]], bool]:
-    descartes = cuota.descartes_vacios()
+    descartes = quota.empty_discards()
     if indice.corrupt_lines or indice.unreadable_files:
-        for tipo in cuota.TIPOS:
+        for tipo in quota.TYPES:
             descartes[tipo]["linea_corrupta"] += indice.corrupt_lines + indice.unreadable_files
     peticiones = list(indice.requests.values())
-    nuevos = cuota.puntos_de_rechazo(indice.rejections, peticiones)
+    nuevos = quota.rejection_points(indice.rejections, peticiones)
 
     registro = Path(claude_dir) / "cuota-statusline.jsonl"
     hay_registro = registro.is_file()
     if hay_registro:
         try:
             with registro.open(encoding="utf-8", errors="replace") as flujo:
-                por_tipo, sesiones, d = cuota.sanear(flujo)
+                por_tipo, sesiones, d = quota.sanitize(flujo)
         except OSError:
-            por_tipo, sesiones, d = {}, set(), cuota.descartes_vacios()
-            for tipo in cuota.TIPOS:
+            por_tipo, sesiones, d = {}, set(), quota.empty_discards()
+            for tipo in quota.TYPES:
                 d[tipo]["linea_corrupta"] += 1
         _sumar(descartes, d)
-        del_statusline, d = cuota.puntos_del_statusline(por_tipo, sesiones, peticiones)
+        del_statusline, d = quota.statusline_points(por_tipo, sesiones, peticiones)
         _sumar(descartes, d)
         nuevos += del_statusline
 
     # Fundir con los del JSON anterior por (fuente, tipo, inicio, fin): un punto cuyo transcript
     # ya se borró sigue ahí hasta que caduca (REQ-071).
-    previos, d = cuota.separar_mal_formados(previos)
+    previos, d = quota.split_malformed(previos)
     _sumar(descartes, d)
     por_clave = {_clave_de_punto(p): p for p in previos}
     for p in nuevos:
         por_clave[_clave_de_punto(p)] = p
-    vivos = [p for p in por_clave.values() if cuota.vigentes([p], ahora)]
-    puntos, d = cuota.quitar_solapados(vivos)
+    vivos = [p for p in por_clave.values() if quota.current_points([p], ahora)]
+    puntos, d = quota.drop_overlapping(vivos)
     _sumar(descartes, d)
     limpios = {tipo: dict(sorted(c.items())) for tipo, c in descartes.items()}
     return puntos, limpios, hay_registro
@@ -267,7 +267,7 @@ def ejecutar(
     # 2. Agregados de N, sobre las filas fundidas con el relleno ya escrito.
     nuevos_n: dict[str, dict[str, list[int]]] = {}
     for filas in filas_por_fichero:
-        for mes, grupos in _n_del_fichero(coste.fundir(filas, log_dir=log_dir)).items():
+        for mes, grupos in _n_del_fichero(cost.merge(filas, log_dir=log_dir)).items():
             destino = nuevos_n.setdefault(mes, {})
             for grupo, valores in grupos.items():
                 destino.setdefault(grupo, []).extend(valores)
@@ -282,9 +282,9 @@ def ejecutar(
     # 4. Puntos de cuota y reinicios.
     previos_puntos = previo.get("puntos") if isinstance(previo.get("puntos"), list) else []
     puntos, descartes, hay_registro = _puntos(claude_dir, indice, previos_puntos, ahora=ahora)
-    reinicios = {tipo: None for tipo in cuota.TIPOS}
+    reinicios = {tipo: None for tipo in quota.TYPES}
     if isinstance(previo.get("reinicios"), dict):
-        reinicios.update({t: previo["reinicios"].get(t) for t in cuota.TIPOS})
+        reinicios.update({t: previo["reinicios"].get(t) for t in quota.TYPES})
     if reiniciar:
         reinicios[reiniciar] = ahora.isoformat(timespec="seconds")
 
@@ -301,7 +301,7 @@ def ejecutar(
     }
     escribir_agregados(log_dir, agregados)
 
-    estado = cuota.estado(agregados, ahora)
+    estado = quota.status(agregados, ahora)
     return {
         "plazo_dias": plazo,
         "transcripts": indice.files,
@@ -312,9 +312,13 @@ def ejecutar(
         "n_casos": sum(len(v) for g in n_por_mes.values() for v in g.values()),
         "puntos": dict(Counter(f"{p['fuente']}:{p['tipo']}" for p in puntos)),
         "descartes": descartes,
-        "cuota": {t: e["estado"] for t, e in estado.items()},
+        "cuota": {t: e["status"] for t, e in estado.items()},
         "reinicios": reinicios,
     }
+
+
+#: Rótulo del estado de la cuota en el resumen (`quota.status` da el valor de máquina).
+_STATUS_LABEL = {"calibrated": "calibrada", "uncalibrated": "sin calibrar"}
 
 
 def texto_del_resumen(r: dict) -> str:
@@ -340,10 +344,10 @@ def texto_del_resumen(r: dict) -> str:
         )
     else:
         lineas.append("Cotejo de precios: sin datos de coste en los transcripts.")
-    for tipo in cuota.TIPOS:
+    for tipo in quota.TYPES:
         d = r["descartes"].get(tipo) or {}
         lineas.append(
-            f"Cuota {tipo}: {r['cuota'][tipo]}; puntos: "
+            f"Cuota {tipo}: {_STATUS_LABEL.get(r['cuota'][tipo], r['cuota'][tipo])}; puntos: "
             f"{r['puntos'].get('statusline:' + tipo, 0)} del statusline, "
             f"{r['puntos'].get('rechazo:' + tipo, 0)} de rechazo; descartes: "
             + (", ".join(f"{k} {v}" for k, v in d.items()) or "ninguno")

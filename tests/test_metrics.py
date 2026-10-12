@@ -17,7 +17,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, coste, failures, legacy_names, server
+from local_delegate import config, cost, failures, legacy_names, server
 from local_delegate.web import metrics
 
 
@@ -728,7 +728,7 @@ def _resuelta(fila: dict) -> dict:
     5.5, familia nueva). `_ev` no trae `path`: clase `otro`, que en `formato_read` cae en el
     respaldo (3), la mayor `c` sin numerar de la familia, 2,41; lo devuelto es prosa sin numerar,
     2,23; la salida, prosa sin numerar, 2,23."""
-    return coste.fundir_fila(fila)
+    return cost.merge_row(fila)
 
 
 def test_accounting_una_llamada_sin_trocear():
@@ -1196,7 +1196,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             chunks=3,
         ),
         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
-        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `medida`.
+        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `measured`.
         _ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", tokens_in=1100, tokens_out=90),
         # La misma prosa inline, escrita a fichero: columna `sin_numerar` (la de lo que la tool
         # escribe). Inline no reclama ahorro de entrada, así que es la salida la que cambia.
@@ -1212,7 +1212,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         _ev(
             path="C:/docs/notas.md", caller_model="claude-haiku-4-5", tokens_in=1100, tokens_out=90
         ),
-        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservadora`.
+        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservative`.
         _ev(path="C:/datos/volcado.bin", caller_model="claude-opus-5-5", tokens_in=900),
         # Imagen con `chars_returned > 0`: todo 0 (REQ-038).
         _ev(
@@ -1230,7 +1230,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     ]
     # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
     # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
-    casos = coste.fundir(crudos, log_dir=tmp_path)
+    casos = cost.merge(crudos, log_dir=tmp_path)
     desde_js = _acct_en_js(node, tmp_path, casos)
 
     desde_py = [metrics._accounting(c) for c in casos]
@@ -1256,14 +1256,14 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     assert any(py["cause"] == "configuration" for py in desde_py)
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
-    origenes = {c["densidad"]["text"][1] for c in casos if c["densidad"]["text"]}
-    assert origenes >= {"medida", "sin_numerar", "conservadora"}
-    assert {c["familia"] for c in casos} >= {"nueva", "anterior"}
+    origenes = {c["density"]["text"][1] for c in casos if c["density"]["text"]}
+    assert origenes >= {"measured", "unnumbered", "conservative"}
+    assert {c["family"] for c in casos} >= {"nueva", "anterior"}
     assert any(
-        c["densidad"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
+        c["density"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
         for c, py in zip(casos, desde_py, strict=True)
     )
-    assert any("familia supuesta" in c["marcas"] for c in casos)
+    assert any("assumed_family" in c["marks"] for c in casos)
 
 
 def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
@@ -1298,12 +1298,12 @@ def test_el_js_sigue_a_python(tmp_path):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en el PATH")
-    (fila,) = coste.fundir(
+    (fila,) = cost.merge(
         [_ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", chars_out=0)],
         log_dir=tmp_path,
     )
-    assert fila["densidad"]["text"] == [200, "medida"]  # guarda: el punto de partida
-    fila["densidad"]["text"] = [250, "medida"]
+    assert fila["density"]["text"] == [200, "measured"]  # guarda: el punto de partida
+    fila["density"]["text"] = [250, "measured"]
     chars = fila["chars_in"]
     (js,) = _acct_en_js(node, tmp_path, [fila])
     py = metrics._accounting(fila)
@@ -1333,7 +1333,7 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
     metrics._FILE_CACHE.clear()
 
     # El panel agrega las filas que le da `_load`, ya fundidas (coste-api-y-cuota, REQ-006).
-    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    agregado = metrics._aggregate(cost.merge(filas, log_dir=tmp_path))
     assert agregado["tokens_context_saved"] == 34928  # guarda: 84178 × 100 // 241 + imagen 0
     texto = server.local_status()
     assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
@@ -1354,7 +1354,7 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
     _write_jsonl(log, filas)
     metrics._FILE_CACHE.clear()
 
-    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    agregado = metrics._aggregate(cost.merge(filas, log_dir=tmp_path))
     assert agregado.get("tokens_context_net") == 1480 - 193  # guarda: ninguna cifra a 0
     # Si la clave falta (código de antes), el texto esperado tampoco está: falla el assert y no un
     # `TypeError` al formatear un `None`.
@@ -1367,7 +1367,7 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
 
 def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
     """coste-api-y-cuota, REQ-006: `local_status` funde el relleno como el panel. Una línea sin
-    `caller_model` cuyo relleno dice Haiku: sin fusión no trae `densidad` y da 0."""
+    `caller_model` cuyo relleno dice Haiku: sin fusión no trae `density` y da 0."""
     from local_delegate import attribution
 
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
@@ -1408,8 +1408,8 @@ def test_las_filas_de_api_events_vienen_resueltas(tmp_path, monkeypatch):
         .json()["events"]
     )
     assert len(eventos) == 2  # guarda: hay filas que mirar
-    assert all("densidad" in e for e in eventos)
-    assert all(e.get("caller_model") and e.get("familia") for e in eventos)
+    assert all("density" in e for e in eventos)
+    assert all(e.get("caller_model") and e.get("family") for e in eventos)
 
 
 # --- F3, tarea 29: el salto y su causa, en la cuenta y en el panel -----------------------------
@@ -1784,7 +1784,7 @@ class _Mezcla:
         monkeypatch.setattr(config, "COST_FALLBACK", "")
         monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
         self.ahora = datetime.now(UTC).replace(microsecond=0)
-        monkeypatch.setattr(metrics, "_ahora", lambda: self.ahora)
+        monkeypatch.setattr(metrics, "_now", lambda: self.ahora)
         a = self.ahora
         filas = [_linea(a - timedelta(minutes=10 + i), n=i) for i in range(10)]
         en_ventana = a - timedelta(minutes=5)
@@ -1841,9 +1841,9 @@ def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
     assert e["meta"]["count"] == 13
     assert con["excluded_tests"] == e["meta"]["excluded_tests"] == 0
     assert con["tests_in_range"] == 3
-    assert con["cuota"]["five_hour"]["estado"] == "calibrado", "guarda: la cuota llega a _load"
+    assert con["quota"]["five_hour"]["status"] == "calibrated", "guarda: la cuota llega a _load"
     assert con["coste"] == sin["coste"]
-    assert con["cuota"] == sin["cuota"]
+    assert con["quota"] == sin["quota"]
     # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
     assert con["coste"]["barra"]["excluidas_por_motivo"] == {"pruebas": 2}
     assert (sin["imagenes"]["n"], con["imagenes"]["n"]) == (0, 1)
