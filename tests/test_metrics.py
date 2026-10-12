@@ -1366,7 +1366,7 @@ def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
     from local_delegate import atribucion
 
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
     monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
     fila = _ev(ts="2026-10-06T10:00:00+00:00", path="C:/docs/notas.md", tool_use_id="toolu_h")
     _write_jsonl(tmp_path / "usage-202610.jsonl", [fila])
@@ -1717,7 +1717,7 @@ class _Mezcla:
         self.logs.mkdir()
         monkeypatch.setattr(config, "LOG_DIR", self.logs)
         monkeypatch.setattr(config, "USAGE_LOG", self.logs / "usage.jsonl")
-        monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+        monkeypatch.setattr(config, "COST_FALLBACK", "")
         monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
         self.ahora = datetime.now(UTC).replace(microsecond=0)
         monkeypatch.setattr(metrics, "_ahora", lambda: self.ahora)

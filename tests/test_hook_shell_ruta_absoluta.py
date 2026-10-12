@@ -56,8 +56,8 @@ TEXTO_SHELL = (
 @pytest.fixture(autouse=True)
 def _entorno(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "no-existe"))
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "no-existe"))
     # Hook y servidor importan `hook_common` por caminos distintos (módulo suelto y paquete): son
     # dos objetos. Los dos calculan la ruta de las notas con `tempfile.gettempdir()` en cada
     # llamada, así que redirigir eso los apunta al mismo fichero.

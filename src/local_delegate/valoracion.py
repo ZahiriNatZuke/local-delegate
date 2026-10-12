@@ -39,8 +39,8 @@ ORIGENES_DENSIDAD = ("medida", "sin_numerar", "conservadora")
 SIN_DELEGACIONES = "sin delegaciones en el periodo"
 SIN_TABLA = "no se pudo cargar la tabla de precios del paquete"
 TODAS_SIN_PRECIO = "todas las delegaciones del periodo son de modelos sin precio"
-COMANDO = "local-delegate recalcular-coste"
-VARIABLE_RESPALDO = "LOCAL_DELEGATE_COSTE_RESPALDO"
+COMMAND = "local-delegate recompute-cost"
+FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
 
 
 def nombre_del_modelo(mid: str) -> str:
@@ -257,7 +257,7 @@ def bloque_coste(
             "nombre": nombre_del_modelo(r["modelo"]),
             "hilo": r["hilo"],
             "invalido": respaldo_invalido,
-            "variable": VARIABLE_RESPALDO,
+            "variable": FALLBACK_VARIABLE,
         },
         "n_origen": {o: n_origen[o] for o in ORIGENES_N},
         "n_declarado": dict(N_DECLARADO),
@@ -277,7 +277,7 @@ def bloque_coste(
             "consultado": (tabla or {}).get("consultado"),
             "fuente": (tabla or {}).get("fuente"),
         },
-        "comando": COMANDO,
+        "comando": COMMAND,
     }
 
 

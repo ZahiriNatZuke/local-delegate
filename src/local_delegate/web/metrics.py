@@ -572,7 +572,7 @@ def _bloque_cuota(agregados: dict | None, ahora: datetime) -> dict:
         else:
             e["a_pct"] = e["b_pct"] = None
             e["motivo_pct"] = bloque["motivo"]
-    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMANDO}
+    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMMAND}
 
 
 def _aggregate_hooks(rows: list[dict]) -> dict:

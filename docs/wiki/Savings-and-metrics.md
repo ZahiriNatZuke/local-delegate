@@ -272,7 +272,7 @@ Para saber qué modelo pidió cada delegación hacen falta dos piezas:
   transcript. Al escribir la línea del log, el servidor busca la nota y saca el modelo de la cola
   (256 KB) del transcript que señala, sin guardar nada más de él;
 - **por relleno**: lo que no se pudo atribuir al momento (el histórico, o una nota que llegó
-  tarde) lo atribuye después [`local-delegate recalcular-coste`](#local-delegate-recalcular-coste),
+  tarde) lo atribuye después [`local-delegate recompute-cost`](#local-delegate-recompute-cost),
   cruzando el log con los transcripts: por `tool_use_id` si lo hay, y si no por tool y hora, con
   el `path` como único desempate. Con los datos de referencia, el 96,5 % de las líneas casan sin
   ambigüedad.
@@ -283,7 +283,7 @@ sesiones de bancos), `al momento`, `por relleno`, `pendiente` (sin modelo, pero 
 puede existir) y `supuesto` (el resto). Las excluidas no suman. Las `pendiente` y `supuesto` se
 valoran con el **respaldo** declarado, **Opus 5.5 en subagente** (el grupo más frecuente medido),
 y el rótulo lo nombra («3 de 152 con modelo supuesto: Opus 5.5 en subagente»). Se cambia con
-`LOCAL_DELEGATE_COSTE_RESPALDO` (ver [Configuration](Configuration.md#coste-equivalente)).
+`LOCAL_DELEGATE_COST_FALLBACK` (ver [Configuration](Configuration.md#coste-equivalente)).
 **Sin la barra no hay cifra.**
 
 El **esfuerzo** se guarda y se enseña, pero no entra en la fórmula: medido, no cambia los tokens
@@ -333,7 +333,7 @@ la fecha y el sufijo `[1m]`. **Ni la carga de la tabla ni `/api/stats` usan la r
 mantiene al día el [vigilante semanal](Repo-hardening.md#vigilante-de-precios-y-límites), que
 abre un PR cuando cambia la página.
 
-Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recalcular-coste` recalcula
+Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recompute-cost` recalcula
 con la tabla el coste de las sesiones de tus transcripts y lo compara con el que calcula Claude
 Code. Si no cuadra, `doctor` lo dice (check `config.coste`, ver
 [Troubleshooting](Troubleshooting.md#doctor-da-warn-coste-y-relleno)). En la máquina de referencia
@@ -374,7 +374,7 @@ es **«sin calibrar»**.
   periodo que elijas en el panel. Si la capacidad calibrada sale menor que la de un rechazo
   observado, avisa de un probable uso en otras superficies.
 - **Reinicio a mano.** Cuando el vigilante avisa de que cambió el artículo de límites de uso,
-  `local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`) deja fuera
+  `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`) deja fuera
   los puntos anteriores de ese tipo.
 
 Todo punto lleva la marca «cota baja si hubo uso en otras superficies»: claude.ai, otra máquina o
@@ -391,15 +391,15 @@ cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensio
 honesta de calcularla. Por lo mismo, no entran ni en «Contexto conservado» ni en el coste
 equivalente.
 
-## `local-delegate recalcular-coste`
+## `local-delegate recompute-cost`
 
 El daemon y el panel **no leen** `~/.claude/projects` ni el registro del statusline (con una sola
 excepción acotada: la cola del transcript que señala la nota del hook, para sacar el modelo de una
 línea). Lo que necesita el coste y la cuota lo calcula este comando, que lanzas tú:
 
 ```bash
-local-delegate recalcular-coste
-local-delegate recalcular-coste --reiniciar-calibracion five_hour   # o seven_day
+local-delegate recompute-cost
+local-delegate recompute-cost --reset-calibration five_hour   # o seven_day
 ```
 
 Lee en local los transcripts, el registro del statusline y el log de uso, y escribe **solo** en el
@@ -432,11 +432,11 @@ Una prueba en vivo contra el MCP o el daemon escribe en el mismo log que el trab
 (`atribucion.test_reason`). Una fila es una prueba si:
 
 1. la pidió el cliente `mcp` (el de los scripts del repo);
-2. es de un banco (el relleno de `recalcular-coste` la marcó `banco`); o
+2. es de un banco (el relleno de `recompute-cost` la marcó `banco`); o
 3. su `ts` cae en una **ventana de prueba** de `LOG_DIR/test-windows.json`.
 
 Esa regla la aplican el panel entero, `local_status`, el coste equivalente (que ya apartaba las dos
-primeras), `recalcular-coste` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
+primeras), `recompute-cost` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
 de Codex **siguen contando** como uso; solo el coste las deja fuera («no es Claude»).
 
 ### Marcar una prueba en vivo
@@ -639,7 +639,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 |---|---|
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
-| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
+| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
 | `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |

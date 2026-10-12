@@ -247,11 +247,35 @@ def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Pa
 
 VERDADEROS = {"1", "true", "yes", "on"}
 
+# Nombres viejos que los hooks siguen leyendo, como `(kind, old, new)`. Es la copia minima del
+# registro `local_delegate.deprecations` (los hooks no importan el paquete);
+# `tests/test_deprecations.py` exige que sea igual a `deprecations.hook_names()`.
+DEPRECATED_HOOK_NAMES = (
+    ("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"),
+    ("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE"),
+)
+
+# Nombres viejos leidos con valor en esta invocacion (REQ-003).
+DEPRECATED_SEEN: set[str] = set()
+
+
+def env_alias(new: str, old: str, default: str = "") -> str:
+    """Lee una variable renombrada: gana la nueva; si solo esta la vieja, vale la vieja y se anota
+    en `DEPRECATED_SEEN`. Es el equivalente de `config._env_alias` para los hooks."""
+    value = os.environ.get(new)
+    if value is not None:
+        return value
+    old_value = os.environ.get(old)
+    if old_value is not None:
+        DEPRECATED_SEEN.add(old)
+        return old_value
+    return default
+
 
 def ruta_del_interruptor() -> Path:
     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
     el instalador reescribe y poda."""
-    destino = os.environ.get("LD_HOOK_READ_INTERRUPTOR", "").strip()
+    destino = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
     return Path(destino) if destino else Path.home() / ".claude" / "local-delegate-bloqueo-apagado"
 
 
@@ -260,7 +284,7 @@ def estado_del_bloqueo() -> str:
     medicion sepa en que estado estaba la regla cuando decidio."""
     if ruta_del_interruptor().exists():
         return "apagado_fichero"
-    if os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
+    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
         return "encendido"
     return "apagado_variable"
 

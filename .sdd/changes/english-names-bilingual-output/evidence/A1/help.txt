@@ -1,0 +1,59 @@
+$ local-delegate --help
+usage: local-delegate [-h] [--version]
+                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                      ...
+
+Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario
+arranca el servidor MCP stdio, que es como lo lanzan Claude Code, Codex y
+opencode. `check-llamaswap` e `init-llamaswap` piden el extra [llamaswap].
+
+positional arguments:
+  {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+    benchmark           Ejecuta el corpus v2 de tareas reales contra un
+                        backend canary y escribe JSONL.
+    check-llamaswap     Valida el presupuesto de VRAM (y opcionalmente RAM) de
+                        los groups de un config.yaml.
+    init-llamaswap      Genera/actualiza groups en un config.yaml de llama-
+                        swap con guardrail de VRAM/RAM.
+    llamaswap           Residencia y TTL de los modelos de llama-swap (pide el
+                        extra [llamaswap]).
+    doctor              Diagnostica el andamiaje (hooks, skill, memoria, MCP),
+                        el daemon y el backend.
+    serve               Sirve MCP Streamable HTTP (/mcp) y dashboard (/) como
+                        daemon singleton.
+    recompute-cost      Lee los transcripts de Claude Code y deja en el
+                        directorio de logs el relleno de atribución, los
+                        agregados de N, el cotejo de precios y los puntos de
+                        cuota.
+    test-window         Marca ventanas de prueba: las filas del log de uso que
+                        caen dentro no cuentan en el panel, en local_status ni
+                        en el coste.
+    install             Instala hooks, skill, memoria y la entrada MCP en
+                        Claude Code / Codex / opencode.
+    update              Actualiza el pin, completa lo que falte del andamiaje
+                        y deja el daemon arriba.
+    uninstall           Revierte lo que instaló `local-delegate install` (solo
+                        lo suyo).
+
+options:
+  -h, --help            show this help message and exit
+  --version             imprime la versión instalada y termina
+
+$ local-delegate recompute-cost --help
+usage: local-delegate recompute-cost [-h]
+                                     [--reset-calibration {five_hour,seven_day}]
+                                     [--claude-dir CLAUDE_DIR]
+
+options:
+  -h, --help            show this help message and exit
+  --reset-calibration {five_hour,seven_day}
+                        los puntos de cuota de ese tipo anteriores a hoy dejan
+                        de contar
+  --claude-dir CLAUDE_DIR
+                        directorio de Claude Code (default: ~/.claude); solo
+                        se lee
+
+$ local-delegate recalcular-coste --help  (alias oculto: sigue aceptÃ¡ndose)
+usage: local-delegate recalcular-coste [-h]
+                                       [--reset-calibration {five_hour,seven_day}]
+                                       [--claude-dir CLAUDE_DIR]

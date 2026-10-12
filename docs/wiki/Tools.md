@@ -66,7 +66,7 @@ length`, `truncated_out`).
 
 ### Resumen por secciones (experimental, apagado)
 
-Con `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO=1` y un documento Markdown que va al modelo largo, el
+Con `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1` y un documento Markdown que va al modelo largo, el
 resumen sigue la estructura: una línea `## <título>` por sección, en orden, con la introducción y
 las subsecciones, y el servidor completa las que el modelo se salte. Está **apagado por defecto**:
 mejora mucho la salida (100 % de títulos en los documentos de prueba, frente a 0–11 % en prosa),

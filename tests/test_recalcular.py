@@ -268,7 +268,7 @@ def test_el_cli_lo_lanza(tmp_path, monkeypatch, capsys):
     _delegacion_con_n(subagente(claude, "a1"), "toolu_cli", 3)
     monkeypatch.setattr(config, "LOG_DIR", log)
     try:
-        codigo = cli.run(["recalcular-coste", "--claude-dir", str(claude)])
+        codigo = cli.run(["recompute-cost", "--claude-dir", str(claude)])
     except SystemExit as e:
         codigo = e.code
     salida = capsys.readouterr().out

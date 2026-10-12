@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **El subcomando, su opción y cuatro variables de entorno pasan a inglés.** Los nombres viejos
+  siguen funcionando igual, con un aviso, durante esta versión y las dos menores siguientes, y se
+  retiran en la tercera. Si están el viejo y el nuevo, gana el nuevo.
+  - `recalcular-coste` pasa a `recompute-cost`, y su opción `--reiniciar-calibracion` a
+    `--reset-calibration`. Los viejos ya no salen en la ayuda y avisan en `stderr`.
+  - `LD_HOOK_READ_BLOQUEAR` pasa a `LD_HOOK_READ_BLOCK` y `LD_HOOK_READ_INTERRUPTOR` a
+    `LD_HOOK_READ_SWITCH_FILE`: los hooks instalados leen los dos nombres.
+  - `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` pasa a `LOCAL_DELEGATE_STRUCTURED_SUMMARY` y
+    `LOCAL_DELEGATE_COSTE_RESPALDO` a `LOCAL_DELEGATE_COST_FALLBACK`.
+- **El check `config.deprecated_names` de `doctor` se llama ahora «nombres obsoletos»** y avisa
+  también de estas variables viejas si siguen en la shell o en el `env` de
+  `~/.claude/settings.json`. `local_status` dice los nombres viejos que leyó el daemon o el
+  servidor por stdio, que `doctor` no ve.
+
 ## [0.34.0] - 2026-10-08
 
 ### Added

@@ -343,7 +343,7 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
 
 
 def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if encendido else "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if encendido else "0")
     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: backend)
     return _correr_hook(monkeypatch, capsys, tool_input)
 
@@ -419,7 +419,7 @@ def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
     """Se enciende cuando este escrito el criterio de la quinta medicion, no antes."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
-    monkeypatch.delenv("LD_HOOK_READ_BLOQUEAR", raising=False)
+    monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
 
     decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
@@ -433,10 +433,10 @@ def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsy
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
 
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
     assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
 
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
     assert "deny" not in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
 
 
@@ -445,7 +445,7 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
@@ -527,8 +527,8 @@ def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeyp
             tmp_path,
             monkeypatch,
             texto,
-            LD_HOOK_READ_BLOQUEAR="1",
-            LD_HOOK_READ_INTERRUPTOR=str(tmp_path / "no-existe"),
+            LD_HOOK_READ_BLOCK="1",
+            LD_HOOK_READ_SWITCH_FILE=str(tmp_path / "no-existe"),
         )
         assert evento["session_id"] == "s-123", texto
         assert evento["version"]  # huella del script que corrió

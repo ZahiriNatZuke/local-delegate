@@ -35,7 +35,7 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para 
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
 | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
-| `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
+| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` (antes `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`) | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
@@ -201,11 +201,11 @@ variable:
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
+| `LOCAL_DELEGATE_COST_FALLBACK` (antes `LOCAL_DELEGATE_COSTE_RESPALDO`) | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
 
 El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
 local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
-borra los transcripts (30 días si no está puesto). `local-delegate recalcular-coste` lo lee y lo
+borra los transcripts (30 días si no está puesto). `local-delegate recompute-cost` lo lee y lo
 guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
 abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
 valor declarado de su hilo, en ese orden.
@@ -258,13 +258,13 @@ muda de sitio.
 | `LD_HOOK_READ_ENABLED` | `0` | Enciende el hook de lectura. `install --enable-read-hook` lo pasa como argumento, así que no hace falta ponerla a mano |
 | `LD_HOOK_READ_SUGGEST_KB` | `8` | A partir de aquí se avisa. Bajó de 32 a 8 tras medir: 24 de 24 lecturas calladas por tamaño eran documentación |
 | `LD_HOOK_READ_STRONG_KB` | `100` | A partir de aquí el aviso es «recomendación fuerte» |
-| `LD_HOOK_READ_BLOQUEAR` | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
+| `LD_HOOK_READ_BLOCK` (antes `LD_HOOK_READ_BLOQUEAR`) | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
 | `LD_HOOK_ENABLED` | `1` | Interruptor del experimento: `0` apaga hooks **y** telemetría, para la rama baseline de un A/B. Solo puede apagar |
 | `LD_HOOK_TELEMETRY_LOG` | *(vacío = sin telemetría)* | Fichero JSONL donde los hooks registran lo que deciden |
 
 ### El bloqueo
 
-Con `LD_HOOK_READ_BLOQUEAR=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
+Con `LD_HOOK_READ_BLOCK=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
 umbral se rechaza con un mensaje que nombra la tool que sirve, el `path` para llamarla y la salida
 de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo mismo con los
 volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
@@ -276,8 +276,8 @@ Nace apagado. Estas son las formas de que no bloquee:
   vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
   reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
   `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
-  `LD_HOOK_READ_INTERRUPTOR` se puede poner en otra ruta.
-- `LD_HOOK_READ_BLOQUEAR=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
+  `LD_HOOK_READ_SWITCH_FILE` (antes `LD_HOOK_READ_INTERRUPTOR`) se puede poner en otra ruta.
+- `LD_HOOK_READ_BLOCK=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
   porque hereda el entorno del lanzador. Por eso existe el fichero.
 - Que el backend local no responda. El hook lo sondea él mismo (300 ms, cacheado un minuto) en vez
   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
@@ -298,6 +298,25 @@ una subida de las delegaciones no distinguiría «se delegó» de «se leyó por
 `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
 —un `package.json`, la línea del error— y un resumen no sustituye a la lectura. El código no dice
 nada, ni antes ni ahora.
+
+## Nombres viejos de variables (alias con aviso)
+
+Cuatro variables cambiaron de nombre al pasar a inglés. El nombre viejo **sigue funcionando** igual
+durante la versión que publica el cambio y las dos menores siguientes, y se retira en la tercera.
+Si están las dos, gana la nueva. `doctor` avisa del nombre viejo (check «nombres obsoletos») si lo
+ve en la shell o en el bloque `env` de `~/.claude/settings.json`, y `local_status` dice los que
+haya leído el daemon o el servidor por stdio.
+
+| Nombre nuevo | Nombre viejo |
+|---|---|
+| `LD_HOOK_READ_BLOCK` | `LD_HOOK_READ_BLOQUEAR` |
+| `LD_HOOK_READ_SWITCH_FILE` | `LD_HOOK_READ_INTERRUPTOR` |
+| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` |
+| `LOCAL_DELEGATE_COST_FALLBACK` | `LOCAL_DELEGATE_COSTE_RESPALDO` |
+
+Lo mismo vale para el subcomando `recompute-cost` (antes `recalcular-coste`) y su opción
+`--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos siguen aceptándose,
+ocultos en la ayuda y con un aviso en `stderr`.
 
 ## Auto-arranque de llama-swap (opt-in)
 

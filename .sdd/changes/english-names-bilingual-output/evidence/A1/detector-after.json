@@ -1,0 +1,45 @@
+{
+  "_about": "Detector tras la ola A1 (rama sdd/english-names-a1, working tree), comparado con la línea base de A0. Solo recuentos.",
+  "command": "python scripts/detect_spanish_names.py --exceptions .sdd/changes/english-names-bilingual-output/rename-exceptions.md --json <fichero>",
+  "unique_findings": {
+    "A0": 8478,
+    "A1": 8464,
+    "delta": -14
+  },
+  "unique_spanish_names": {
+    "A0": 4386,
+    "A1": 4377,
+    "delta": -9
+  },
+  "files_with_findings": {
+    "A0": 168,
+    "A1": 170,
+    "delta": 2
+  },
+  "unique_findings_by_category": {
+    "dom_id": 19,
+    "file_name": 32,
+    "identifier": 5905,
+    "js_identifier": 68,
+    "js_key": 35,
+    "js_property": 68,
+    "js_string": 9,
+    "json_key": 23,
+    "json_value": 2,
+    "string_key": 1263,
+    "string_value": 1040
+  },
+  "occurrences_by_category": {
+    "dom_id": 19,
+    "file_name": 32,
+    "identifier": 9159,
+    "js_identifier": 76,
+    "js_key": 64,
+    "js_property": 132,
+    "js_string": 11,
+    "json_key": 91,
+    "json_value": 13,
+    "string_key": 3100,
+    "string_value": 1684
+  }
+}

@@ -239,7 +239,7 @@ def _llamar(
     # Apagado por defecto desde la retirada (etapa 2 de la v3): aquí se prueba encendido salvo
     # que el test diga lo contrario.
     if estructurado is not None:  # None: el valor por defecto real, sin tocar
-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", estructurado)
+        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", estructurado)
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
@@ -352,7 +352,7 @@ def test_salida_cortada_se_completa_y_conserva_el_aviso(monkeypatch, tmp_path):
 def test_un_error_del_backend_no_se_completa(monkeypatch, tmp_path):
     @backend_mock.mock
     def _falla():
-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
+        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
@@ -495,7 +495,7 @@ def test_desborde_en_un_trozo_se_reparte_por_secciones(monkeypatch, tmp_path):
     # El primer trozo desborda: el backend responde 400 con el texto de contexto excedido.
     @backend_mock.mock
     def _con_desborde():
-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
+        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
@@ -664,12 +664,13 @@ def test_el_modo_estructurado_esta_apagado_por_defecto():
     En un proceso limpio y sin la variable: recargar `config` aquí desharía el aislamiento de la
     suite, y comparar el texto fuente no prueba el valor cargado.
     """
-    entorno = {k: v for k, v in os.environ.items() if k != "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
+    nombres = {"LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
+    entorno = {k: v for k, v in os.environ.items() if k not in nombres}
     salida = subprocess.run(
         [
             sys.executable,
             "-c",
-            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
+            "from local_delegate import config; print(config.STRUCTURED_SUMMARY)",
         ],
         capture_output=True,
         text=True,
@@ -677,12 +678,12 @@ def test_el_modo_estructurado_esta_apagado_por_defecto():
         check=True,
     )
     assert salida.stdout.strip() == "False"
-    con_variable = {**entorno, "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1"}
+    con_variable = {**entorno, "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "1"}
     salida = subprocess.run(
         [
             sys.executable,
             "-c",
-            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
+            "from local_delegate import config; print(config.STRUCTURED_SUMMARY)",
         ],
         capture_output=True,
         text=True,
@@ -696,6 +697,6 @@ def test_con_el_valor_por_defecto_la_tool_resume_en_prosa(monkeypatch, tmp_path)
     """Sin tocar el interruptor: lo que ve cualquier usuario tras la retirada."""
     texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
     _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, estructurado=None, text=texto)
-    assert config.RESUMEN_ESTRUCTURADO is False
+    assert config.STRUCTURED_SUMMARY is False
     assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
     assert vistos[0]["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"
