@@ -1,7 +1,8 @@
 """deprecations.py — registro único de nombres obsoletos (D1 del SDD english-names-bilingual-output).
 
 Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo que el paquete todavía reconoce:
-subcomandos y opciones del CLI, variables de entorno, ficheros interruptor y nombres retirados.
+subcomandos y opciones del CLI, variables de entorno, ficheros interruptor, ficheros que se siguen
+escribiendo también con el nombre viejo (`legacy_write`) y nombres retirados.
 La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.deprecated_names` de
 `doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
 paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
@@ -83,6 +84,10 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
         "UNRELEASED",
         used_by_hooks=True,
     ),
+    # Ola A4: excepción de REQ-005. El daemon escribe también `enfriamiento.json` (claves viejas)
+    # para que los hooks de versiones anteriores sigan viendo los modelos enfriados. Mientras esta
+    # entrada exista, `cooldown.legacy_write_enabled()` es True; al retirarla, se deja de escribir.
+    DeprecatedName("legacy_write", "enfriamiento.json", "cooldown.json", "UNRELEASED"),
 )
 
 

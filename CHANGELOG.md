@@ -52,6 +52,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **`/api/backend`, `/api/status` y `/api/backend/stats` devuelven la causa como `cause`, `label`
   y `detail`** (antes `causa`, `etiqueta` y `detalle`). `doctor` entiende también la respuesta de
   un daemon de la 0.34.0.
+- **El estado de enfriamiento pasa a `cooldown.json` y su registro de episodios a
+  `cooldown-events.jsonl`**, los dos en `LOG_DIR` y con claves y valores en inglés: `failures`,
+  `wait_s`, `until` y `reentries` en el estado (antes `fallos`, `espera_s`, `hasta` y
+  `reentradas`), y `model`, `event`, `class` y `after_expiry` en los episodios (antes `modelo`,
+  `evento`, `clase` y `tras_vencer`), con los eventos `enter`, `reenter` y `clear` (antes `entra`,
+  `reentra` y `limpia`). El daemon arranca desde `enfriamiento.json` si aún no hay
+  `cooldown.json`, y si están los dos manda el nuevo. Durante esta versión y las dos menores
+  siguientes escribe además `enfriamiento.json` con las claves viejas, para que los hooks de una
+  versión anterior sigan viendo los modelos enfriados; los hooks nuevos leen `cooldown.json` y, si
+  no existe, `enfriamiento.json`. `enfriamiento-eventos.jsonl` ya no crece, pero
+  `scripts/medir_enfriamiento.py` (mismo nombre, mismas opciones) lee los dos registros y da el
+  mismo informe con filas viejas, nuevas o mezcladas.
 
 ## [0.34.0] - 2026-10-08
 

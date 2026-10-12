@@ -112,14 +112,19 @@ con una línea que lista lo que se probó.
 
 Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo
 cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
-(`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
+(`cooldown.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
 se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
 `local_status` lista los modelos enfriados, con los segundos que les quedan y cuántas veces seguidas
 han vuelto a entrar sin un éxito de por medio.
 
+Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json`. El daemon arranca desde él si aún no
+hay `cooldown.json` (si están los dos, manda el nuevo) y, durante tres versiones menores, lo sigue
+escribiendo con sus claves viejas para los hooks de una versión anterior.
+
 Cada vez que un modelo **entra** en enfriamiento, **vuelve a entrar** o **se recupera**, se añade
-una línea a `enfriamiento-eventos.jsonl`, junto al log de uso: modelo, hora, clase del fallo,
-espera y reentradas, nunca prompts ni rutas. `enfriamiento.json` solo guarda el presente; este
+una línea a `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`, que se sigue leyendo),
+junto al log de uso: modelo, hora, clase del fallo, espera y reentradas, nunca prompts ni rutas.
+`cooldown.json` solo guarda el presente; este
 registro es lo que permite contar después cuántos episodios hubo y cómo acabaron. Para saber si los
 números de abajo convienen, `uv run python scripts/medir_enfriamiento.py --desde AAAA-MM-DD` lo
 cruza con el log de uso y responde «cambiar», «se quedan» o «no concluyente» (con menos de 5
@@ -284,7 +289,8 @@ Nace apagado. Estas son las formas de que no bloquee:
   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
   marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay delegaciones.
 - Que el modelo que haría el resumen esté **en enfriamiento**: el hook lee el mismo
-  `enfriamiento.json` que el servidor y, si ese modelo está parado, deja pasar la lectura. Mira el
+  `cooldown.json` que el servidor (o `enfriamiento.json`, si el daemon es de una versión anterior)
+  y, si ese modelo está parado, deja pasar la lectura. Mira el
   modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
 - `LD_HOOK_ENABLED=0`.
 

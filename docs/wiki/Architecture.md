@@ -185,7 +185,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
 | `llamaswap_api.py` | Lo que se lee de llama-swap (`/running`, `/api/events`, `/api/metrics/activity`), el estado de `/api/llamaswap/status` y la vigía de recarga |
 | `llamaswap_config.py` | Estimador de VRAM/RAM de los grupos (`check-llamaswap`, `init-llamaswap`, `--pin`) |
 | `residency.py` | `llamaswap residency`: lectura de la residencia y edición quirúrgica, con copia y reemplazo atómico, del `config.yaml` |
-| `enfriamiento.py` | Enfriamiento por modelo compartido entre procesos (`enfriamiento.json`) y registro de episodios (`enfriamiento-eventos.jsonl`) |
+| `cooldown.py` | Enfriamiento por modelo compartido entre procesos (`cooldown.json`, antes `enfriamiento.json`) y registro de episodios (`cooldown-events.jsonl`, antes `enfriamiento-eventos.jsonl`) |
 | `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
 
 **Una sola librería HTTP: `httpx2`.** Es la que usa el SDK `mcp` 2.x, y el cliente propio del

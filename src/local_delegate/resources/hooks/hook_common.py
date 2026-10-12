@@ -172,6 +172,18 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
+    # En `LOG_DIR`: lo escribe el daemon (los dos, mientras viva su `legacy_write`) y lo lee
+    # `cooled_model`. Gana el nuevo; el viejo cubre un daemon de una version anterior.
+    "cooldown_state": ("enfriamiento.json", "cooldown.json"),
+}
+
+#: Claves viejas -> nuevas del estado de enfriamiento. Copia de
+#: `local_delegate.legacy_names.FORMATS["cooldown_state"]["keys"]` (mismo test de igualdad).
+COOLDOWN_STATE_KEYS: dict[str, str] = {
+    "fallos": "failures",
+    "espera_s": "wait_s",
+    "hasta": "until",
+    "reentradas": "reentries",
 }
 
 
@@ -331,7 +343,7 @@ def block_state() -> str:
 # --- El modelo del resumen en enfriamiento (REQ-F1-10) -------------------------------------------
 #
 # Bloquear hacia un modelo que el servidor no va a llamar deja al agente peor que antes. El estado lo
-# escribe el servidor en `LOG_DIR/enfriamiento.json`; el hook es stdlib y no puede importar `config`,
+# escribe el servidor en `LOG_DIR/cooldown.json`; el hook es stdlib y no puede importar `config`,
 # asi que lleva su copia de los defectos, y `tests/test_conformidad_f1.py` la ata a `config.py`. Con
 # un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
 # defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
@@ -370,14 +382,30 @@ def summary_model(size: int) -> str:
     )
 
 
+def _cooldown_until(name: str, model: str, key: str) -> object:
+    """El vencimiento del modelo en un fichero de estado, o None si no se puede leer."""
+    try:
+        data = json.loads((log_dir() / name).read_text(encoding="utf-8"))
+        return data[model][key]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def cooled_model(model: str) -> bool:
     """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
-    un bloqueo con un dato legible y vigente, nunca por un fichero roto."""
+    un bloqueo con un dato legible y vigente, nunca por un fichero roto.
+
+    Lee `cooldown.json` y, si no existe, `enfriamiento.json` con su clave vieja (un daemon de una
+    version anterior). Si existe el nuevo, manda el nuevo aunque no tenga el modelo."""
+    old_name, new_name = FILE_NAMES["cooldown_state"]
+    new_key = COOLDOWN_STATE_KEYS["hasta"]
+    if (log_dir() / new_name).exists():
+        until = _cooldown_until(new_name, model, new_key)
+    else:
+        until = _cooldown_until(old_name, model, "hasta")
     try:
-        data = json.loads((log_dir() / "enfriamiento.json").read_text(encoding="utf-8"))
-        until = data[model]["hasta"]
         return isinstance(until, (int, float)) and float(until) > time.time()
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OverflowError, ValueError):
         return False
 
 
