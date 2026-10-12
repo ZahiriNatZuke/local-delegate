@@ -1,0 +1,222 @@
+# approved-by-main: 2026-10-12 (con las respuestas 1-9 de la sesion principal)
+# wave=A5a generated=2026-10-12 en dos partes. (1) Filas de `tools/make_mapping.py build --wave A5a --paths src/local_delegate/atribucion.py src/local_delegate/transcripts.py` (191 filas: cross_module=44, function_local=113, module_local=33, unresolved=1); nombres `new` propuestos por el agente. (2) Filas a mano (el script solo ve definiciones Python y el detector se saltó `n_y_caducidades`, `_por_tool` y el campo `Hilo.compactaciones`): nombre de la caché en disco, claves y valores de D4, tablas de legacy_names, lector dual y siembra, y las consecuencias fuera de «posee». Pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)
+# Columna scope en las filas a mano: owned = de la lista «posee» de A5a; NOT-OWNED = fuera, necesita aprobación; keep = se deja a propósito (con la ola que lo toca). function_local: comprobado por AST que el nombre nuevo no existe ya en la función (sin colisiones).
+# Verificación: todas las cross_module (44) y la unresolved con search_regex/search_symbol/search_text de PyCharm; muestra de module_local: 20 de 36 con semilla 20261012, 0 discrepancias.
+old,new,kind,definition,scope,method,reason,verified
+atribucion,attribution,module,src/local_delegate/atribucion.py:1@<module>,cross_module,search_edit,"PyCharm no renombra módulos (A3/A4): git mv + search_regex('from \.?atribucion|import atribucion') y los `atribucion.<attr>` en checks.py, server.py, web/metrics.py, coste.py, recalcular.py, valoracion.py, scripts/medir_adopcion.py y tests (solo la línea de import y el prefijo)","ok (search_regex: importan el módulo checks.py, coste.py, medir_adopcion.py, metrics.py, recalcular.py, server.py, test_atribucion.py, test_coste_doctor.py, test_densidad.py, test_hook_legacy_names.py, test_medir_adopcion.py, test_metrics.py, test_panel_coste.py, test_transcripts.py, test_valoracion.py, valoracion.py)"
+VIGENCIA_DE_NOTA_S,NOTE_TTL_S,constant,src/local_delegate/atribucion.py:33@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+COLA_BYTES,TAIL_BYTES,constant,src/local_delegate/atribucion.py:36@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+PRESUPUESTO_S,BUDGET_S,constant,src/local_delegate/atribucion.py:37@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+CLIENTES_NO_CLAUDE,NON_CLAUDE_CLIENTS,constant,src/local_delegate/atribucion.py:40@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+CLIENTES_DE_PRUEBA,TEST_CLIENTS,constant,src/local_delegate/atribucion.py:43@<module>,module_local,pycharm,,
+CLIENTES_EXCLUIDOS,EXCLUDED_CLIENTS,constant,src/local_delegate/atribucion.py:47@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+RANGO_DE_CRUCE,MATCH_RANK,constant,src/local_delegate/atribucion.py:50@<module>,module_local,pycharm,,
+PLAZO_POR_DEFECTO,DEFAULT_CLEANUP_DAYS,constant,src/local_delegate/atribucion.py:53@<module>,cross_module,pycharm,,ok (search_regex: valoracion.py)
+_VERSION_RELLENO,_BACKFILL_VERSION,constant,src/local_delegate/atribucion.py:55@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+_valido,_valid_id,function,src/local_delegate/atribucion.py:61@<module>,module_local,pycharm,,
+directorio,directory,param,src/local_delegate/atribucion.py:65@leer_nota,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+leer_nota,read_note,function,src/local_delegate/atribucion.py:65@<module>,cross_module,pycharm,,"ok (search_regex: hook_common.py, test_atribucion.py, test_hook_legacy_names.py)"
+nota,note,variable,src/local_delegate/atribucion.py:81@leer_nota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_raiz_de_proyectos,_projects_root,function,src/local_delegate/atribucion.py:89@<module>,unresolved,pycharm,,"ok (search_text: atribucion.py:89/228 y la cadena de monkeypatch en test_atribucion.py:406, que PyCharm no cambia: se edita a mano)"
+_ruta_segura,_safe_path,function,src/local_delegate/atribucion.py:93@<module>,module_local,pycharm,,
+raiz,root,param,src/local_delegate/atribucion.py:93@_ruta_segura,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+ruta,path,param,src/local_delegate/atribucion.py:93@_ruta_segura,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+resuelta,resolved,variable,src/local_delegate/atribucion.py:100@_ruta_segura,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nota,note,param,src/local_delegate/atribucion.py:108@_transcript_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+raiz,root,param,src/local_delegate/atribucion.py:108@_transcript_de,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+camino,raw_path,variable,src/local_delegate/atribucion.py:114@_transcript_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+agente,agent,variable,src/local_delegate/atribucion.py:120@_transcript_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_modelo_de_la_linea,_model_from_line,function,src/local_delegate/atribucion.py:128@<module>,module_local,pycharm,,
+linea,line,param,src/local_delegate/atribucion.py:128@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+datos,data,variable,src/local_delegate/atribucion.py:131@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mensaje,message,variable,src/local_delegate/atribucion.py:132@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+contenido,content,variable,src/local_delegate/atribucion.py:135@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bloque,block,variable,src/local_delegate/atribucion.py:138@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/atribucion.py:144@_modelo_de_la_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_buscar_modelo,_find_model,function,src/local_delegate/atribucion.py:151@<module>,module_local,pycharm,,
+abrir,opener,param,src/local_delegate/atribucion.py:152@_buscar_modelo,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+reloj,clock,param,src/local_delegate/atribucion.py:152@_buscar_modelo,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+ruta,path,param,src/local_delegate/atribucion.py:152@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+inicio,start,variable,src/local_delegate/atribucion.py:159@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+aguja,needle,variable,src/local_delegate/atribucion.py:160@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+flujo,stream,variable,src/local_delegate/atribucion.py:162@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tamano,size,variable,src/local_delegate/atribucion.py:164@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+desde,offset,variable,src/local_delegate/atribucion.py:165@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+cola,tail,variable,src/local_delegate/atribucion.py:167@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+lineas,lines,variable,src/local_delegate/atribucion.py:170@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+linea,line,variable,src/local_delegate/atribucion.py:173@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/atribucion.py:178@_buscar_modelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_admite_esfuerzo,_supports_effort,function,src/local_delegate/atribucion.py:184@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+modelo,model,param,src/local_delegate/atribucion.py:184@_admite_esfuerzo,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+entrada,entry,variable,src/local_delegate/atribucion.py:186@_admite_esfuerzo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+resolver_llamada,resolve_call,function,src/local_delegate/atribucion.py:192@<module>,cross_module,pycharm,,ok (search_regex: test_atribucion.py)
+notas,notes,param,src/local_delegate/atribucion.py:195@resolver_llamada,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+ahora,now,param,src/local_delegate/atribucion.py:196@resolver_llamada,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+reloj,clock,param,src/local_delegate/atribucion.py:197@resolver_llamada,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+abrir,opener,param,src/local_delegate/atribucion.py:198@resolver_llamada,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+proyectos,projects,param,src/local_delegate/atribucion.py:199@resolver_llamada,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+nota,note,variable,src/local_delegate/atribucion.py:209@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+momento,instant,variable,src/local_delegate/atribucion.py:212@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+agente,agent,variable,src/local_delegate/atribucion.py:219@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,entry_type,variable,src/local_delegate/atribucion.py:221@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+esfuerzo,effort,variable,src/local_delegate/atribucion.py:224@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ruta,path,variable,src/local_delegate/atribucion.py:228@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/atribucion.py:229@resolver_llamada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+llamada_actual,current_call,function,src/local_delegate/atribucion.py:240@<module>,cross_module,pycharm,,"ok (search_regex: coste.py, server.py, test_atribucion.py)"
+memoria,memo,variable,src/local_delegate/atribucion.py:249@llamada_actual,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+resultado,result,variable,src/local_delegate/atribucion.py:252@llamada_actual,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+claves_del_fichero,file_keys,function,src/local_delegate/atribucion.py:261@<module>,cross_module,pycharm,,"ok (search_regex: coste.py, recalcular.py, test_atribucion.py, test_coste_doctor.py, test_densidad.py, test_transcripts.py, transcripts.py)"
+filas,rows,param,src/local_delegate/atribucion.py:261@claves_del_fichero,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+vistos,seen,variable,src/local_delegate/atribucion.py:269@claves_del_fichero,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+claves,keys,variable,src/local_delegate/atribucion.py:270@claves_del_fichero,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,variable,src/local_delegate/atribucion.py:271@claves_del_fichero,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+par,pair,variable,src/local_delegate/atribucion.py:276@claves_del_fichero,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mes,month,param,src/local_delegate/atribucion.py:283@ruta_de_relleno,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+ruta_de_relleno,backfill_path,function,src/local_delegate/atribucion.py:283@<module>,module_local,pycharm,,
+leer_relleno,read_backfill,function,src/local_delegate/atribucion.py:288@<module>,cross_module,pycharm,,"ok (search_regex: coste.py, test_atribucion.py, test_transcripts.py)"
+mes,month,param,src/local_delegate/atribucion.py:288@leer_relleno,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+datos,data,variable,src/local_delegate/atribucion.py:291@leer_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entradas,entries,variable,src/local_delegate/atribucion.py:294@leer_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_rango,_rank,function,src/local_delegate/atribucion.py:300@<module>,module_local,pycharm,,
+entrada,entry,param,src/local_delegate/atribucion.py:300@_rango,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entradas,entries,param,src/local_delegate/atribucion.py:304@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+escribir_relleno,write_backfill,function,src/local_delegate/atribucion.py:304@<module>,cross_module,pycharm,,"ok (search_regex: recalcular.py, test_atribucion.py, test_coste_doctor.py, test_densidad.py, test_medir_adopcion.py, test_metrics.py, test_panel_coste.py, test_valoracion.py)"
+mes,month,param,src/local_delegate/atribucion.py:304@escribir_relleno,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+fundidas,merged,variable,src/local_delegate/atribucion.py:310@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clave,key,variable,src/local_delegate/atribucion.py:311@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nueva,new_entry,variable,src/local_delegate/atribucion.py:311@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+vieja,old_entry,variable,src/local_delegate/atribucion.py:312@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+destino,target,variable,src/local_delegate/atribucion.py:315@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+flujo,stream,variable,src/local_delegate/atribucion.py:319@escribir_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada_relleno,backfill_entry,param,src/local_delegate/atribucion.py:341@test_reason,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,param,src/local_delegate/atribucion.py:341@test_reason,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+motivo,reason,variable,src/local_delegate/atribucion.py:350@test_reason,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+banco,bench,variable,src/local_delegate/atribucion.py:353@test_reason,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada_relleno,backfill_entry,param,src/local_delegate/atribucion.py:359@excluida,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+excluida,exclusion_reason,function,src/local_delegate/atribucion.py:359@<module>,cross_module,pycharm,,"ok (search_regex: coste.py, recalcular.py, test_atribucion.py, valoracion.py)"
+fila,row,param,src/local_delegate/atribucion.py:359@excluida,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+plazo_de_borrado,cleanup_period_days,function,src/local_delegate/atribucion.py:370@<module>,cross_module,pycharm,,"ok (search_regex: checks.py, recalcular.py, test_atribucion.py)"
+datos,data,variable,src/local_delegate/atribucion.py:374@plazo_de_borrado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+valor,value,variable,src/local_delegate/atribucion.py:377@plazo_de_borrado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+PREFIJO,TOOL_PREFIX,constant,src/local_delegate/transcripts.py:30@<module>,cross_module,pycharm,,ok (search_regex: test_transcripts.py)
+ANTES,MARGIN_BEFORE,constant,src/local_delegate/transcripts.py:36@<module>,module_local,pycharm,,
+DESPUES,MARGIN_AFTER,constant,src/local_delegate/transcripts.py:37@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+SIN_RESULTADO,NO_RESULT_WINDOW,constant,src/local_delegate/transcripts.py:38@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+CAMPOS_COTEJO,CHECK_FIELDS,constant,src/local_delegate/transcripts.py:41@<module>,module_local,pycharm,,
+instante,parse_instant,function,src/local_delegate/transcripts.py:44@<module>,cross_module,pycharm,,ok (search_regex: recalcular.py)
+valor,value,param,src/local_delegate/transcripts.py:44@instante,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+Delegacion,Delegation,class,src/local_delegate/transcripts.py:56@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+hilo,thread,variable,src/local_delegate/transcripts.py:64@Delegacion,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+modelo,model,variable,src/local_delegate/transcripts.py:66@Delegacion,cross_module,pycharm,,"ok (search_regex `.modelo`: metrics.py, server.py, test_affinity.py, test_cadenas.py, test_panel_estados.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)"
+esfuerzo,effort,variable,src/local_delegate/transcripts.py:67@Delegacion,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+banco,bench,variable,src/local_delegate/transcripts.py:69@Delegacion,cross_module,pycharm,,ok (search_regex `.banco`: experimento_adopcion.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)
+Hilo,Thread,class,src/local_delegate/transcripts.py:75@<module>,module_local,pycharm,,
+peticiones,requests,variable,src/local_delegate/transcripts.py:77@Hilo,cross_module,pycharm,,"ok (search_regex `.peticiones`: recalcular.py, test_cuota.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)"
+Indice,Index,class,src/local_delegate/transcripts.py:82@<module>,cross_module,pycharm,,ok (search_regex: recalcular.py)
+delegaciones,delegations,variable,src/local_delegate/transcripts.py:85@Indice,cross_module,pycharm,,ok (search_regex `.delegaciones`: test_transcripts.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)
+hilos,threads,variable,src/local_delegate/transcripts.py:86@Indice,module_local,pycharm,,
+peticiones,requests,variable,src/local_delegate/transcripts.py:88@Indice,cross_module,pycharm,,"ok (search_regex `.peticiones`: recalcular.py, test_cuota.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)"
+rechazos,rejections,variable,src/local_delegate/transcripts.py:90@Indice,cross_module,pycharm,,"ok (search_regex `.rechazos`: recalcular.py, test_cuota.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)"
+costes,costs,variable,src/local_delegate/transcripts.py:92@Indice,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+ficheros,files,variable,src/local_delegate/transcripts.py:93@Indice,cross_module,pycharm,,"ok (search_regex `.ficheros`: hoja_pares.py, recalcular.py, test_vigilante.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)"
+ficheros_ilegibles,unreadable_files,variable,src/local_delegate/transcripts.py:94@Indice,cross_module,pycharm,,ok (search_regex `.ficheros_ilegibles`: recalcular.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)
+lineas_corruptas,corrupt_lines,variable,src/local_delegate/transcripts.py:95@Indice,cross_module,pycharm,,ok (search_regex `.lineas_corruptas`: recalcular.py); homónimos de otras clases en esa lista: revisar el diff (lección A3)
+coste_de_peticion,request_cost,function,src/local_delegate/transcripts.py:98@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+mensaje,message,param,src/local_delegate/transcripts.py:98@coste_de_peticion,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+valor,value,param,src/local_delegate/transcripts.py:119@_quota_limits,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_leer_linea,_read_line,function,src/local_delegate/transcripts.py:125@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+banco,bench,param,src/local_delegate/transcripts.py:125@_leer_linea,module_local,pycharm,,
+hilo,thread,param,src/local_delegate/transcripts.py:125@_leer_linea,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+indice,index,param,src/local_delegate/transcripts.py:125@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nombre,name,param,src/local_delegate/transcripts.py:125@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+orden,order,param,src/local_delegate/transcripts.py:125@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,entry_type,variable,src/local_delegate/transcripts.py:126@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+uso,usage,variable,src/local_delegate/transcripts.py:133@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mensaje,message,variable,src/local_delegate/transcripts.py:139@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clave,key,variable,src/local_delegate/transcripts.py:144@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+contenido,content,variable,src/local_delegate/transcripts.py:152@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bloque,block,variable,src/local_delegate/transcripts.py:153@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nombre_tool,tool_name,variable,src/local_delegate/transcripts.py:156@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/transcripts.py:159@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+esfuerzo,effort,variable,src/local_delegate/transcripts.py:160@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+camino,raw_path,variable,src/local_delegate/transcripts.py:161@_leer_linea,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+leer,read,function,src/local_delegate/transcripts.py:184@<module>,cross_module,pycharm,,"ok (search_regex: recalcular.py, test_cuota.py, test_transcripts.py)"
+raiz,root,param,src/local_delegate/transcripts.py:184@leer,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+indice,index,variable,src/local_delegate/transcripts.py:187@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+orden,order,variable,src/local_delegate/transcripts.py:191@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fichero,file,variable,src/local_delegate/transcripts.py:192@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+partes,parts,variable,src/local_delegate/transcripts.py:193@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+banco,bench,variable,src/local_delegate/transcripts.py:195@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nombre,name,variable,src/local_delegate/transcripts.py:196@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hilo,thread,variable,src/local_delegate/transcripts.py:197@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+flujo,stream,variable,src/local_delegate/transcripts.py:200@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+linea,line,variable,src/local_delegate/transcripts.py:201@leer,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+indice,index,param,src/local_delegate/transcripts.py:221@n_y_caducidades,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hilo,thread,variable,src/local_delegate/transcripts.py:229@n_y_caducidades,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+corte,cutoff,variable,src/local_delegate/transcripts.py:233@n_y_caducidades,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+posteriores,later,variable,src/local_delegate/transcripts.py:234@n_y_caducidades,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+previo,previous,variable,src/local_delegate/transcripts.py:240@n_y_caducidades,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+percentil,percentile,function,src/local_delegate/transcripts.py:248@<module>,cross_module,pycharm,,ok (search_regex: test_transcripts.py)
+valores,values,param,src/local_delegate/transcripts.py:248@percentil,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bajo,low,variable,src/local_delegate/transcripts.py:255@percentil,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+alto,high,variable,src/local_delegate/transcripts.py:256@percentil,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mediana,median,function,src/local_delegate/transcripts.py:260@<module>,cross_module,pycharm,,ok (search_regex: test_transcripts.py)
+valores,values,param,src/local_delegate/transcripts.py:260@mediana,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_mismo_path,_same_path,function,src/local_delegate/transcripts.py:267@<module>,module_local,pycharm,,
+_admite_esfuerzo,_supports_effort,function,src/local_delegate/transcripts.py:273@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+modelo,model,param,src/local_delegate/transcripts.py:273@_admite_esfuerzo,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+cruce,match_kind,param,src/local_delegate/transcripts.py:278@entrada_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada_de,entry_for,function,src/local_delegate/transcripts.py:278@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+indice,index,param,src/local_delegate/transcripts.py:278@entrada_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/transcripts.py:281@entrada_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+esfuerzo,effort,variable,src/local_delegate/transcripts.py:282@entrada_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/transcripts.py:285@entrada_de,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+indice,index,param,src/local_delegate/transcripts.py:294@_por_tool,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+grupos,groups,variable,src/local_delegate/transcripts.py:295@_por_tool,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,param,src/local_delegate/transcripts.py:302@necesita_relleno,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+necesita_relleno,needs_backfill,function,src/local_delegate/transcripts.py:302@<module>,module_local,pycharm,,
+casar,match_lines,function,src/local_delegate/transcripts.py:307@<module>,cross_module,pycharm,,"ok (search_regex: recalcular.py, test_transcripts.py)"
+desde,since,param,src/local_delegate/transcripts.py:308@casar,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py; recalcular.py:255 `desde=`)
+indice,index,param,src/local_delegate/transcripts.py:308@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+lineas,lines,param,src/local_delegate/transcripts.py:308@casar,cross_module,pycharm,,ok (search_regex de llamadas con palabra clave: test_atribucion.py)
+grupos,groups,variable,src/local_delegate/transcripts.py:318@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+resultado,result,variable,src/local_delegate/transcripts.py:319@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clave,key,variable,src/local_delegate/transcripts.py:320@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,variable,src/local_delegate/transcripts.py:320@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+candidatos,candidates,variable,src/local_delegate/transcripts.py:333@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fin,end,variable,src/local_delegate/transcripts.py:335@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mismos,same_path,variable,src/local_delegate/transcripts.py:341@casar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+indice,index,param,src/local_delegate/transcripts.py:354@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+filas,rows,variable,src/local_delegate/transcripts.py:357@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_orden,_position,variable,src/local_delegate/transcripts.py:358@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+uso,usage,variable,src/local_delegate/transcripts.py:358@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/transcripts.py:359@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+valores,values,variable,src/local_delegate/transcripts.py:359@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,variable,src/local_delegate/transcripts.py:362@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+campo,field_name,variable,src/local_delegate/transcripts.py:363@cost_state,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+n_y_caducidades,n_and_expiries,function,src/local_delegate/transcripts.py:221@<module>,module_local,pycharm,,
+_por_tool,_by_tool,function,src/local_delegate/transcripts.py:294@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+compactaciones,compactions,variable,src/local_delegate/transcripts.py:78@Hilo,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+atribucion-AAAAMM.json,attribution-YYYYMM.json,file_name,src/local_delegate/atribucion.py:285@ruta_de_relleno,owned,search_edit,"nombre de fichero en disco; se escribe solo el nuevo, se siembra una vez desde el viejo (REQ-005/006); tabla en legacy_names.ATTRIBUTION_FILE_PREFIXES",
+entradas,entries,json_key,src/local_delegate/atribucion.py:294@leer_relleno,owned,search_edit,clave JSON de la caché (D4); se lee con legacy_names.read_key,
+cruce,match,json_key,src/local_delegate/transcripts.py:285@entrada_de,owned,search_edit,clave JSON de cada entrada (D4); legacy_names.FORMATS['attribution'],
+banco,bench,json_key,src/local_delegate/transcripts.py:285@entrada_de,owned,search_edit,clave JSON de cada entrada (D4),
+caducidades,expiries,json_key,src/local_delegate/transcripts.py:285@entrada_de,owned,search_edit,clave JSON de cada entrada; D4 no la nombra (duda 1),
+exacto,exact,json_value,src/local_delegate/transcripts.py:328@casar,owned,search_edit,valor de `match` (D4),
+ventana,window,json_value,src/local_delegate/transcripts.py:339@casar,owned,search_edit,valor de `match` (D4),
+ventana+path,window+path,json_value,src/local_delegate/transcripts.py:343@casar,owned,search_edit,valor de `match`; D4 no lo nombra (duda 2),
+ambiguo,ambiguous,json_value,src/local_delegate/transcripts.py:345@casar,owned,search_edit,valor de `match` (D4),
+sin_cruce,no_match,json_value,src/local_delegate/transcripts.py:330@casar,owned,search_edit,valor de `match` (D4),
+(nuevo),FORMATS['attribution'],legacy_table,src/local_delegate/legacy_names.py:FORMATS,owned,search_edit,tabla de claves y valores de la entrada (D2),
+(nuevo),ATTRIBUTION_FILE_PREFIXES,legacy_table,src/local_delegate/legacy_names.py,owned,search_edit,"(viejo, nuevo) del prefijo de la caché; aparte de FILE_NAMES porque los hooks no la leen (FILE_NAMES está atada a hook_common por test)",
+(lectura),"read_backfill: nuevo, si no existe el viejo normalizado",dual_reader,src/local_delegate/atribucion.py:288@leer_relleno,owned,search_edit,lectura dual (REQ-006); el viejo nunca se reescribe,
+(siembra),write_backfill: siembra una vez + regla de mejor cruce,seed,src/local_delegate/atribucion.py:304@escribir_relleno,owned,search_edit,"si attribution-* no existe, parte del viejo normalizado; luego solo el nuevo (REQ-006)",
+cruce/banco/caducidades,match/bench/expiries,json_key,src/local_delegate/coste.py:60@CAMPOS_DEL_RELLENO,NOT-OWNED,search_edit,campos que el relleno aporta a la fila: deben ser los nuevos o la fila fundida pierde el dato (consecuencia mecánica),
+ambiguo/sin_cruce,ambiguous/no_match,json_value,src/local_delegate/coste.py:71@_CRUCES_SIN_REMEDIO,NOT-OWNED,search_edit,valores comparados contra `match` (consecuencia mecánica),
+{'banco': fila.get('banco')},{'bench': fila.get('bench')},json_key,src/local_delegate/coste.py:271@tramo,NOT-OWNED,search_edit,consecuencia mecánica,
+fila.get('cruce'),fila.get('match'),json_key,src/local_delegate/coste.py:280@tramo,NOT-OWNED,search_edit,consecuencia mecánica,
+{'banco': f.get('banco')} / e['cruce'],{'bench': …} / e['match'],json_key,"src/local_delegate/recalcular.py:129,265",NOT-OWNED,search_edit,"consecuencia mecánica; la salida «cruces» de recompute-cost muestra ya los valores nuevos (exact, window…)",
+{'banco': …} / fila.get('caducidades'),{'bench': …} / fila.get('expiries'),json_key,"src/local_delegate/valoracion.py:90,191",NOT-OWNED,search_edit,consecuencia mecánica (la clave `caducidades` de la salida de valoracion :125 NO se toca: es de A5b),
+cruce/banco/caducidades en fixtures,match/bench/expiries,json_key,"tests/test_densidad.py, test_coste_doctor.py, test_metrics.py, test_panel_coste.py, test_medir_adopcion.py, test_valoracion.py, test_recalcular.py",NOT-OWNED,search_edit,fixtures que construyen entradas o filas fundidas; solo las líneas que dejan de pasar (las que pasan por write_backfill se normalizan al escribir),
+atribucion-AAAAMM.json (docs),attribution-YYYYMM.json,doc,"docs/wiki/Savings-and-metrics.md:412, docs/wiki/Integration-install.md:301, CHANGELOG",NOT-OWNED,search_edit,nombre de fichero visible y valores de cruce en la wiki,
+cost_state: clave 'modelo',(sin cambio en A5a),json_key,src/local_delegate/transcripts.py:362@cost_state,keep,search_edit,"clave del cotejo de precios (`cotejo`→`check`, cost-aggregates): la renombra A5b/A5c con su tabla",

@@ -8,7 +8,7 @@ Tres preguntas, un solo sitio de verdad para cada una:
   `Read`) y respaldo de celda en su único orden. Devuelve `c` en **centésimas** con su origen. Ni
   `server.tokens_claude` ni el JS del panel resuelven nada: solo dividen por lo que trae la fila.
 - **¿Qué se sabe de quien llamó?** `fundir(filas, log_dir=...)` (REQ-006): por campo, la línea del
-  log manda, luego el relleno (`atribucion-AAAAMM.json`) y por último el respaldo declarado
+  log manda, luego el relleno (`attribution-AAAAMM.json`) y por último el respaldo declarado
   (REQ-008). En el mismo paso añade la densidad resuelta. Copia cada fila: nunca muta las de la
   caché del lector.
 - **¿En qué tramo de la barra cae?** `tramo(fila, ahora=..., plazo_dias=...)` (REQ-007).
@@ -23,7 +23,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import atribucion, config, precios, test_windows
+from . import attribution, config, precios, test_windows
 
 # El respaldo declarado (REQ-008): el grupo más frecuente medido (135 de 149 atribuidas).
 RESPALDO_DECLARADO = {"modelo": "claude-opus-5-5", "hilo": "subagent"}
@@ -62,13 +62,13 @@ CAMPOS_DEL_RELLENO = (
     "caller_kind",
     "caller_effort",
     "n",
-    "caducidades",
-    "cruce",
-    "banco",
+    "expiries",
+    "match",
+    "bench",
 )
 
 TRAMOS = ("excluido", "al_momento", "por_relleno", "pendiente", "supuesto")
-_CRUCES_SIN_REMEDIO = ("ambiguo", "sin_cruce")
+_CRUCES_SIN_REMEDIO = ("ambiguous", "no_match")
 
 _MES = re.compile(r"^(\d{4})-(\d{2})")
 
@@ -213,11 +213,11 @@ def fundir(filas: Iterable[dict], *, log_dir: Path) -> list[dict]:
     """Las filas de UN fichero del log, fundidas y resueltas, en su orden.
 
     Hay que pasarle el fichero ENTERO, antes de filtrar por rango: la clave de una línea sin
-    `tool_use_id` lleva su ordinal dentro del fichero (`atribucion.claves_del_fichero`). El
-    relleno de cada línea se busca en `atribucion-AAAAMM.json` del mes de su `ts`.
+    `tool_use_id` lleva su ordinal dentro del fichero (`attribution.file_keys`). El
+    relleno de cada línea se busca en `attribution-AAAAMM.json` del mes de su `ts`.
     """
     filas = list(filas)
-    claves = atribucion.claves_del_fichero(filas)
+    claves = attribution.file_keys(filas)
     por_mes: dict[str | None, dict[str, dict]] = {}
     r = respaldo()
     # Ventanas de prueba (test-windows-out-of-metrics, REQ-005): se estampa `test_window` en la
@@ -228,7 +228,7 @@ def fundir(filas: Iterable[dict], *, log_dir: Path) -> list[dict]:
     for fila, clave in zip(filas, claves, strict=True):
         mes = _mes(fila.get("ts"))
         if mes not in por_mes:
-            por_mes[mes] = atribucion.leer_relleno(log_dir, mes) if mes else {}
+            por_mes[mes] = attribution.read_backfill(log_dir, mes) if mes else {}
         nueva = fundir_fila(fila, por_mes[mes].get(clave), respaldo_=r)
         if ventanas.windows:
             ventana = ventanas.find(fila.get("ts"), now=ahora)
@@ -249,7 +249,7 @@ def fila_en_vuelo(
     if input_unit != "chars":
         fila["input_unit"] = input_unit
     try:
-        fila.update(atribucion.llamada_actual())
+        fila.update(attribution.current_call())
     except Exception:
         pass  # observar nunca rompe una tool: sin atribución, respaldo
     return fundir_fila(fila)
@@ -268,7 +268,7 @@ def _instante(ts: object) -> datetime | None:
 def tramo(fila: dict, *, ahora: datetime, plazo_dias: int) -> str:
     """El tramo de la barra de cobertura de una fila fundida (REQ-007), en su orden:
     `excluido`, `al_momento`, `por_relleno`, `pendiente` o `supuesto`."""
-    if atribucion.excluida(fila, {"banco": fila.get("banco")}):
+    if attribution.exclusion_reason(fila, {"bench": fila.get("bench")}):
         return "excluido"
     origen = fila.get("caller_origen")
     if origen is None:
@@ -277,7 +277,7 @@ def tramo(fila: dict, *, ahora: datetime, plazo_dias: int) -> str:
         return "al_momento"
     if origen == "relleno":
         return "por_relleno"
-    if fila.get("cruce") in _CRUCES_SIN_REMEDIO:
+    if fila.get("match") in _CRUCES_SIN_REMEDIO:
         return "supuesto"
     t = _instante(fila.get("ts"))
     if t is not None and ahora - t < timedelta(days=plazo_dias):

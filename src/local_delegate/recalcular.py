@@ -4,7 +4,7 @@ Lo lanza el usuario (REQ-070). Lee los transcripts de `claude_dir/projects`, el 
 statusline (`claude_dir/cuota-statusline.jsonl`) y el log de uso, y escribe SOLO en el
 directorio de logs (REQ-074):
 
-- `atribucion-AAAAMM.json` por mes, con `atribucion.escribir_relleno` (REQ-004, REQ-005);
+- `attribution-AAAAMM.json` por mes, con `attribution.write_backfill` (REQ-004, REQ-005);
 - `coste-agregados.json`, cuyo formato lee y escribe solo este módulo (ver el plan):
   `{"version", "generado", "plazo_dias", "cotejo", "n_por_mes", "puntos", "descartes",
   "reinicios", "fuentes"}`.
@@ -23,7 +23,7 @@ from collections import Counter
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import atribucion, coste, cuota, precios, transcripts
+from . import attribution, coste, cuota, precios, transcripts
 
 NOMBRE = "coste-agregados.json"
 VERSION = 1
@@ -104,7 +104,7 @@ def _leer_log(path: Path) -> list[dict]:
 
 
 def _mes(ts: object) -> str | None:
-    t = transcripts.instante(ts)
+    t = transcripts.parse_instant(ts)
     return f"{t:%Y%m}" if t else None
 
 
@@ -126,7 +126,7 @@ def _n_del_fichero(fundidas: list[dict]) -> dict[str, dict[str, list[int]]]:
         n = f.get("n")
         if isinstance(n, bool) or not isinstance(n, int):
             continue
-        if atribucion.excluida(f, {"banco": f.get("banco")}):
+        if attribution.exclusion_reason(f, {"bench": f.get("bench")}):
             continue
         mes = _mes(f.get("ts"))
         modelo, hilo = f.get("caller_model"), f.get("caller_kind")
@@ -151,7 +151,7 @@ def _fundir_n_por_mes(nuevos: dict, previos: dict, *, ahora: datetime) -> dict:
 # --- Cotejo (REQ-014) -----------------------------------------------------------------------
 
 
-def _cotejo(indice: transcripts.Indice, *, ahora: datetime) -> dict | None:
+def _cotejo(indice: transcripts.Index, *, ahora: datetime) -> dict | None:
     filas = transcripts.cost_state(indice)
     if not filas:
         return None
@@ -183,14 +183,14 @@ def _sumar(destino: dict[str, Counter], origen: dict[str, Counter]) -> None:
 
 
 def _puntos(
-    claude_dir: Path, indice: transcripts.Indice, previos: list, *, ahora: datetime
+    claude_dir: Path, indice: transcripts.Index, previos: list, *, ahora: datetime
 ) -> tuple[list[dict], dict[str, dict[str, int]], bool]:
     descartes = cuota.descartes_vacios()
-    if indice.lineas_corruptas or indice.ficheros_ilegibles:
+    if indice.corrupt_lines or indice.unreadable_files:
         for tipo in cuota.TIPOS:
-            descartes[tipo]["linea_corrupta"] += indice.lineas_corruptas + indice.ficheros_ilegibles
-    peticiones = list(indice.peticiones.values())
-    nuevos = cuota.puntos_de_rechazo(indice.rechazos, peticiones)
+            descartes[tipo]["linea_corrupta"] += indice.corrupt_lines + indice.unreadable_files
+    peticiones = list(indice.requests.values())
+    nuevos = cuota.puntos_de_rechazo(indice.rejections, peticiones)
 
     registro = Path(claude_dir) / "cuota-statusline.jsonl"
     hay_registro = registro.is_file()
@@ -234,10 +234,10 @@ def ejecutar(
     """Recalcula todo y devuelve un resumen con conteos (sin rutas)."""
     ahora = ahora or datetime.now(UTC)
     claude_dir, log_dir = Path(claude_dir), Path(log_dir)
-    plazo = atribucion.plazo_de_borrado(claude_dir)
+    plazo = attribution.cleanup_period_days(claude_dir)
     proyectos = claude_dir / "projects"
     hay_transcripts = proyectos.is_dir()
-    indice = transcripts.leer(proyectos)
+    indice = transcripts.read(proyectos)
     previo = leer_agregados(log_dir) or {}
 
     # 1. Relleno, por fichero y con las claves del fichero ENTERO (REQ-004, REQ-005).
@@ -250,9 +250,9 @@ def ejecutar(
         filas = _leer_log(path)
         filas_por_fichero.append(filas)
         if not hay_transcripts:
-            continue  # sin transcripts no hay nada con qué casar: no se marca nada `sin_cruce`
-        claves = atribucion.claves_del_fichero(filas)
-        entradas = transcripts.casar(zip(claves, filas, strict=True), indice, desde=desde)
+            continue  # sin transcripts no hay nada con qué casar: no se marca nada `no_match`
+        claves = attribution.file_keys(filas)
+        entradas = transcripts.match_lines(zip(claves, filas, strict=True), indice, since=desde)
         por_mes: dict[str, dict[str, dict]] = {}
         for clave, fila in zip(claves, filas, strict=True):
             if clave in entradas:
@@ -260,9 +260,9 @@ def ejecutar(
                 if mes:
                     por_mes.setdefault(mes, {})[clave] = entradas[clave]
         for mes, del_mes in sorted(por_mes.items()):
-            atribucion.escribir_relleno(log_dir, mes, del_mes)
+            attribution.write_backfill(log_dir, mes, del_mes)
         lineas_en_plazo += len(entradas)
-        cruces.update(e["cruce"] for e in entradas.values())
+        cruces.update(e["match"] for e in entradas.values())
 
     # 2. Agregados de N, sobre las filas fundidas con el relleno ya escrito.
     nuevos_n: dict[str, dict[str, list[int]]] = {}
@@ -304,8 +304,8 @@ def ejecutar(
     estado = cuota.estado(agregados, ahora)
     return {
         "plazo_dias": plazo,
-        "transcripts": indice.ficheros,
-        "lineas_corruptas": indice.lineas_corruptas + indice.ficheros_ilegibles,
+        "transcripts": indice.files,
+        "lineas_corruptas": indice.corrupt_lines + indice.unreadable_files,
         "lineas_rellenadas": lineas_en_plazo,
         "cruces": dict(sorted(cruces.items())),
         "cotejo": cotejo,

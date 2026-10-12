@@ -1368,15 +1368,15 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
 def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
     """coste-api-y-cuota, REQ-006: `local_status` funde el relleno como el panel. Una línea sin
     `caller_model` cuyo relleno dice Haiku: sin fusión no trae `densidad` y da 0."""
-    from local_delegate import atribucion
+    from local_delegate import attribution
 
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "COST_FALLBACK", "")
     monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
     fila = _ev(ts="2026-10-06T10:00:00+00:00", path="C:/docs/notas.md", tool_use_id="toolu_h")
     _write_jsonl(tmp_path / "usage-202610.jsonl", [fila])
-    atribucion.escribir_relleno(
-        tmp_path, "202610", {"toolu_h": {"caller_model": "claude-haiku-4-5", "cruce": "exacto"}}
+    attribution.write_backfill(
+        tmp_path, "202610", {"toolu_h": {"caller_model": "claude-haiku-4-5", "match": "exact"}}
     )
     metrics._FILE_CACHE.clear()
 
@@ -1775,7 +1775,7 @@ class _Mezcla:
 
         from test_panel_coste import IMAGEN, _agregados, _linea, _punto
 
-        from local_delegate import atribucion, test_windows
+        from local_delegate import attribution, test_windows
 
         self.logs = tmp_path / "logs"
         self.logs.mkdir()
@@ -1800,7 +1800,7 @@ class _Mezcla:
         filas.sort(key=lambda f: f["ts"])
         self.log = self.logs / f"usage-{a:%Y%m}.jsonl"
         _write_jsonl(self.log, filas)
-        atribucion.escribir_relleno(self.logs, f"{a:%Y%m}", {"toolu_0091": {"banco": True}})
+        attribution.write_backfill(self.logs, f"{a:%Y%m}", {"toolu_0091": {"bench": True}})
         test_windows.add(self.logs, en_ventana - timedelta(seconds=2), en_ventana, "prueba")
         # Cuota calibrada, para que `_bloque_cuota` llegue a llamar a `_load` (REQ-014).
         _agregados(

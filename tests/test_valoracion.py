@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from local_delegate import atribucion, config, coste, precios, recalcular, valoracion
+from local_delegate import attribution, config, coste, precios, recalcular, valoracion
 
 AHORA = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 MES = f"{AHORA:%Y%m}"
@@ -45,7 +45,7 @@ def _linea(n: int = 0, **extra) -> dict:
 
 def _fundidas(tmp_path, lineas: list[dict], relleno: dict | None = None) -> list[dict]:
     if relleno:
-        atribucion.escribir_relleno(tmp_path, MES, relleno)
+        attribution.write_backfill(tmp_path, MES, relleno)
     return coste.fundir(lineas, log_dir=tmp_path)
 
 
@@ -55,8 +55,8 @@ def _relleno(modelo="claude-opus-5-5", hilo="subagent", n=40, cad=0, **extra) ->
         "caller_kind": hilo,
         "caller_effort": "high",
         "n": n,
-        "caducidades": cad,
-        "cruce": "exacto",
+        "expiries": cad,
+        "match": "exact",
         **extra,
     }
 

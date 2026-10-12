@@ -8,4 +8,6 @@ OK    A3.md
       · A3-mapping.csv: 126 filas, 4 discrepancia(s)
 OK    A4.md
       · A4-mapping.csv: 116 filas, 6 discrepancia(s)
-5/5 registro(s) cumplen los mínimos de §2.1
+OK    A5a.md
+      · A5a-mapping.csv: 217 filas, 0 discrepancia(s)
+6/6 registro(s) cumplen los mínimos de §2.1

@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import atribucion, coste, cuota, recalcular, server
+from local_delegate import attribution, coste, cuota, recalcular, server
 from local_delegate import config as cfg
 from local_delegate.web import metrics
 
@@ -208,7 +208,7 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
     assert barra["pendiente"] == 1
     assert barra["por_relleno"] == 0
 
-    atribucion.escribir_relleno(
+    attribution.write_backfill(
         logs,
         f"{ts:%Y%m}",
         {
@@ -217,8 +217,8 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
                 "caller_kind": "subagent",
                 "caller_effort": "high",
                 "n": 40,
-                "caducidades": 0,
-                "cruce": "exacto",
+                "expiries": 0,
+                "match": "exact",
             }
         },
     )

@@ -409,9 +409,12 @@ local-delegate recompute-cost --reset-calibration five_hour   # o seven_day
 Lee en local los transcripts, el registro del statusline y el log de uso, y escribe **solo** en el
 directorio de logs (`LOG_DIR`):
 
-- `atribucion-AAAAMM.json`, por mes: para cada línea del log, el modelo, el hilo, el esfuerzo, `N`,
-  las caducidades, cómo se cruzó (`exacto`, `ventana`, `ventana+path`, `ambiguo`, `sin_cruce`) y si
-  venía de una sesión de pruebas. Una entrada solo se sustituye por otra de cruce mejor;
+- `attribution-AAAAMM.json` (antes `atribucion-AAAAMM.json`), por mes: para cada línea del log, el
+  modelo, el hilo, el esfuerzo, `N`, las caducidades (`expiries`), cómo se cruzó (`match`: `exact`,
+  `window`, `window+path`, `ambiguous`, `no_match`) y si venía de una sesión de pruebas (`bench`).
+  Una entrada solo se sustituye por otra de cruce mejor. Si de un mes solo existe el fichero viejo,
+  se lee traducido y la primera escritura siembra el nuevo desde él, una sola vez; el viejo no se
+  toca nunca;
 - `coste-agregados.json`: el cotejo de la tabla de precios, los agregados de `N` por grupo, los
   puntos de calibración con sus descartes y los reinicios.
 
@@ -433,7 +436,7 @@ hay datos y cómo generarlos.
 
 Una prueba en vivo contra el MCP o el daemon escribe en el mismo log que el trabajo real. El log
 **no se reescribe**: todo el que lo lee aparta las pruebas con **una sola regla**
-(`atribucion.test_reason`). Una fila es una prueba si:
+(`attribution.test_reason`). Una fila es una prueba si:
 
 1. la pidió el cliente `mcp` (el de los scripts del repo);
 2. es de un banco (el relleno de `recompute-cost` la marcó `banco`); o

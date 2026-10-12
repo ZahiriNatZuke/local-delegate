@@ -35,7 +35,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import (
-    atribucion,
+    attribution,
     autostart,
     cadenas,
     clients,
@@ -755,9 +755,9 @@ def _log_event(
             tool_use_id = clients.tool_use_id_actual()
             if tool_use_id:
                 rec["tool_use_id"] = tool_use_id
-                from . import atribucion
+                from . import attribution
 
-                rec.update(atribucion.llamada_actual())
+                rec.update(attribution.current_call())
         except Exception:
             # Silencio intencionado: la atribución es observación. Si falla, la línea se escribe
             # igual sin esos campos; registrar aquí podría fallar otra vez, y observar nunca
@@ -4482,7 +4482,7 @@ def local_status() -> str:
         for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
             # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
             # REQ-018): cliente `mcp`, banco o ventana de prueba.
-            if atribucion.test_reason(rec):
+            if attribution.test_reason(rec):
                 n_tests += 1
                 continue
             n_events += 1

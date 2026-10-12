@@ -98,7 +98,7 @@ def test_la_privacidad(tmp_path):
 
     textos = _textos(log)
     assert recalcular.NOMBRE in textos
-    assert f"atribucion-{MES}.json" in textos  # guarda: el relleno se escribió
+    assert f"attribution-{MES}.json" in textos  # guarda: el relleno se escribió
     texto_de_todos_los_json = "\n".join(textos.values())
     assert MARCADORA not in texto_de_todos_los_json
     assert SESION not in texto_de_todos_los_json
@@ -154,8 +154,8 @@ def test_idempotente_y_solo_lectura(tmp_path):
 
     despues = _foto(claude)
     assert despues == antes
-    assert set(primera) == set(segunda) == {recalcular.NOMBRE, f"atribucion-{MES}.json"}
-    assert primera[f"atribucion-{MES}.json"] == segunda[f"atribucion-{MES}.json"]
+    assert set(primera) == set(segunda) == {recalcular.NOMBRE, f"attribution-{MES}.json"}
+    assert primera[f"attribution-{MES}.json"] == segunda[f"attribution-{MES}.json"]
     a1, a2 = json.loads(primera[recalcular.NOMBRE]), json.loads(segunda[recalcular.NOMBRE])
     assert a1["generado"] != a2["generado"]
     assert _sin_fechas(a1) == _sin_fechas(a2)
@@ -253,7 +253,7 @@ def test_sin_transcripts_no_rellena(tmp_path):
     claude, log = tmp_path / "claude", tmp_path / "log"
     escribir_log(log, [linea_log(1)])
     resumen = recalcular.ejecutar(claude, log, ahora=AHORA)
-    assert list(log.glob("atribucion-*.json")) == []
+    assert list(log.glob("attribution-*.json")) == []
     agregados = recalcular.leer_agregados(log)
     assert agregados["fuentes"] == {"transcripts": False, "statusline": False}
     assert agregados["cotejo"] is None

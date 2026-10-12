@@ -54,7 +54,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from .. import (
-    atribucion,
+    attribution,
     clients,
     config,
     coste,
@@ -477,7 +477,7 @@ def _include_tests(value: str | None) -> bool:
 
 
 def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
-    """(uso, pruebas) con la ÚNICA regla de «es una prueba» (`atribucion.test_reason`).
+    """(uso, pruebas) con la ÚNICA regla de «es una prueba» (`attribution.test_reason`).
 
     Es el único sitio del panel que separa las pruebas (test-windows-out-of-metrics, REQ-011):
     `/api/events` y `/api/stats` la llaman igual, así que cuentan el mismo conjunto.
@@ -485,7 +485,7 @@ def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     kept: list[dict] = []
     tests: list[dict] = []
     for r in rows:
-        (tests if atribucion.test_reason(r) else kept).append(r)
+        (tests if attribution.test_reason(r) else kept).append(r)
     return kept, tests
 
 
@@ -539,7 +539,7 @@ def stats(
     ]
     # Coste equivalente, imágenes y cuota (coste-api-y-cuota). Solo se lee lo que dejó el comando
     # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
-    # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `excluida`:
+    # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
     ahora = _ahora()
     agregados = recalcular.leer_agregados(config.LOG_DIR)

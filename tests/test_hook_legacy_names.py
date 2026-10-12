@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from local_delegate import atribucion, checks, config, deprecations, legacy_names, server
+from local_delegate import attribution, checks, config, deprecations, legacy_names, server
 from local_delegate import install as inst
 from local_delegate.resources.hooks import hook_common
 
@@ -109,12 +109,12 @@ def test_la_nota_de_atribucion_de_un_hook_viejo_se_sigue_encontrando(temporal):
     nota = {"tool_use_id": "toolu_viejo", "ts": time.time(), "agent_type": "general-purpose"}
     (viejo / "toolu_viejo.json").write_text(json.dumps(nota), encoding="utf-8")
 
-    assert atribucion.leer_nota("toolu_viejo") == nota
+    assert attribution.read_note("toolu_viejo") == nota
 
     assert hook_common.record_call({"tool_use_id": "toolu_nuevo", "agent_type": "Explore"})
     assert (temporal / "local-delegate-calls" / "toolu_nuevo.json").is_file()
     assert not (viejo / "toolu_nuevo.json").exists()
-    assert atribucion.leer_nota("toolu_nuevo")["agent_type"] == "Explore"
+    assert attribution.read_note("toolu_nuevo")["agent_type"] == "Explore"
 
 
 def test_la_marca_de_salud_usa_el_nombre_nuevo(temporal, monkeypatch):
