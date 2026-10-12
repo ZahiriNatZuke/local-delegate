@@ -204,9 +204,20 @@ class FileAnalysis:
             s = s.parent
         return s
 
+    def _sibling(self, name: str | None) -> str | None:
+        """`import x` / `from x import y` plano que es un VECINO del fichero (un script que el
+        intérprete importa por `sys.path[0]`, como `from hook_common import …` entre hooks).
+
+        Sin esto los símbolos que un hook importa de otro salían `module_local` (ola A2)."""
+        if not name or name in self.p.modules:
+            return None
+        package = module_name(self.rel).split(".")[:-1]
+        sibling = ".".join([*package, name])
+        return sibling if sibling in self.p.modules else None
+
     def _resolve_module(self, node: ast.ImportFrom) -> str | None:
         if node.level == 0:
-            return node.module
+            return self._sibling(node.module) or node.module
         package = module_name(self.rel).split(".")
         if not self.rel.endswith("__init__.py"):
             package = package[:-1]
@@ -218,10 +229,15 @@ class FileAnalysis:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 local = alias.asname or alias.name.split(".")[0]
-                self.import_alias[local] = alias.name if alias.asname else local
+                sibling = self._sibling(alias.name)
+                if sibling is not None:
+                    self.import_alias[local] = sibling
+                    self._note_module_import(sibling, node.lineno)
+                else:
+                    self.import_alias[local] = alias.name if alias.asname else local
+                    self._note_module_import(alias.name, node.lineno)
                 if alias.asname:
                     self.define(scope, alias.asname, "import_alias", node.lineno)
-                self._note_module_import(alias.name, node.lineno)
             return
         base = self._resolve_module(node)
         if base is None:

@@ -272,10 +272,11 @@ ruta; con una tubería, una redirección, comandos encadenados o un flag que ya 
 
 Nace apagado. Estas son las formas de que no bloquee:
 
-- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-bloqueo-apagado`** (vacío
-  vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
-  reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
-  `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
+- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-block-off`** (vacío
+  vale; antes `local-delegate-bloqueo-apagado`, que sigue apagando con aviso). Gana a la variable
+  y el hook lo mira en cada lectura, así que no hace falta cerrar ni reiniciar nada; bórralo para
+  volver a encenderlo. En PowerShell:
+  `New-Item "$HOME\.claude\local-delegate-block-off" -ItemType File`. Con
   `LD_HOOK_READ_SWITCH_FILE` (antes `LD_HOOK_READ_INTERRUPTOR`) se puede poner en otra ruta.
 - `LD_HOOK_READ_BLOCK=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
   porque hereda el entorno del lanzador. Por eso existe el fichero.
@@ -287,12 +288,16 @@ Nace apagado. Estas son las formas de que no bloquee:
   modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
 - `LD_HOOK_ENABLED=0`.
 
-Cada evento de la telemetría lleva `bloqueo` (`encendido`, `apagado_fichero` o
-`apagado_variable`), para que una medición sepa en qué estado estaba la regla.
+Cada evento de la telemetría lleva `block` (`on`, `off_file` u `off_variable`), para que una
+medición sepa en qué estado estaba la regla. Hasta la versión anterior la clave se llamaba `bloqueo`
+(`encendido`, `apagado_fichero`, `apagado_variable`), y el motivo de cada decisión, `motivo` (hoy
+`reason`); el panel y los scripts de medición leen los dos formatos, también mezclados en el mismo
+fichero. Si un hook leyó un nombre viejo (una variable o el interruptor), su evento lo dice en
+`deprecated_names`, y `doctor` lo avisa mirando los últimos 7 días del fichero.
 
 **Las lecturas por otros MCP se cuentan, no se bloquean.** `--enable-read-hook` registra el mismo
 hook para las tools de lectura de otros servidores MCP (`mcp__*__read_*` y
-`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `camino: mcp`: sin contarlas,
+`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `route: mcp`: sin contarlas,
 una subida de las delegaciones no distinguiría «se delegó» de «se leyó por otro sitio».
 
 `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
@@ -317,6 +322,23 @@ haya leído el daemon o el servidor por stdio.
 Lo mismo vale para el subcomando `recompute-cost` (antes `recalcular-coste`) y su opción
 `--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos siguen aceptándose,
 ocultos en la ayuda y con un aviso en `stderr`.
+
+Y para el fichero que apaga el bloqueo: `~/.claude/local-delegate-block-off` (antes
+`local-delegate-bloqueo-apagado`). El viejo sigue apagando durante el mismo plazo; `doctor` avisa
+si existe, y también si la telemetría de los hooks dice que lo leyeron.
+
+### Nombres en disco que cambiaron
+
+Los hooks y el daemon comparten ficheros en el temporal del usuario. Desde esta versión se escriben
+con el nombre nuevo, y el daemon sigue leyendo el viejo, por si queda instalado un hook de una
+versión anterior:
+
+| Nombre nuevo | Nombre viejo | Qué es |
+|---|---|---|
+| `local-delegate-blocks.jsonl` | `local-delegate-bloqueos.jsonl` | notas de cada bloqueo, para cruzarlo con la delegación |
+| `local-delegate-calls/` | `local-delegate-llamadas/` | notas del hook de atribución |
+| `local-delegate-health-<huella>.json` | `local-delegate-salud-<huella>.json` | caché de un minuto de «el backend responde» |
+| hook `record_call.py` | hook `anotar_llamada.py` | `install`/`update` retiran el viejo (copia y registro) |
 
 ## Auto-arranque de llama-swap (opt-in)
 

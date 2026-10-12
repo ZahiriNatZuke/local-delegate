@@ -53,7 +53,7 @@ con saltos pudo contaminarla un swap.
   cruzar la línea con el transcript.
 - `caller_kind` (`main` o `subagent`), `caller_agent_type`, `caller_effort`, `caller_model` y
   `caller_src` (`hook+transcript` o `hook`): **quién pidió** la delegación. Los escribe el servidor
-  a partir de la nota que deja el hook `anotar_llamada.py` (ver
+  a partir de la nota que deja el hook `record_call.py` (antes `anotar_llamada.py`; ver
   [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
   `caller_*`. Nunca lleva el id de sesión.
 - **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
@@ -267,7 +267,7 @@ contrafactual es salida generada y no lectura.
 
 Para saber qué modelo pidió cada delegación hacen falta dos piezas:
 
-- **al momento**: el hook `anotar_llamada.py` (`PreToolUse` sobre `mcp__local-delegate__.*`, se
+- **al momento**: el hook `record_call.py` (antes `anotar_llamada.py`; `PreToolUse` sobre `mcp__local-delegate__.*`, se
   instala siempre) deja una nota con el `tool_use_id`, el agente, su tipo, el esfuerzo y el
   transcript. Al escribir la línea del log, el servidor busca la nota y saca el modelo de la cola
   (256 KB) del transcript que señala, sin guardar nada más de él;
@@ -665,8 +665,9 @@ signifique algo:
 
 Esa advertencia la abre el botón **ⓘ** de la cabecera de la tarjeta. Las categorías y los motivos
 se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro
-MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `acotada`, `pequeno`,
-`mcp_ajeno`…).
+MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `bounded`, `small`,
+`foreign_mcp`…). Los valores que escribían los hooks hasta la versión anterior (`acotada`,
+`pequeno`, `mcp_ajeno`…) se leen igual y se pintan con la misma etiqueta.
 
 Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
 común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada

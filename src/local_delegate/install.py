@@ -56,12 +56,13 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 # Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
 # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
 #
-# `anotar_llamada.py` (coste-api-y-cuota, REQ-002) va siempre, no detrás de `--enable-read-hook`:
-# no avisa ni bloquea, solo anota quién pide cada delegación. Va AL FINAL para que
-# `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los tests.
+# `record_call.py` (coste-api-y-cuota, REQ-002; antes `anotar_llamada.py`) va siempre, no detrás
+# de `--enable-read-hook`: no avisa ni bloquea, solo anota quién pide cada delegación. Va AL
+# FINAL para que `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los
+# tests.
 _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
-    ("anotar_llamada.py", "PreToolUse", "mcp__local-delegate__.*"),
+    ("record_call.py", "PreToolUse", "mcp__local-delegate__.*"),
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
@@ -99,10 +100,17 @@ _MCP_READ_HOOK = (
 #: llega cuando el coste ya se pagó y sin la salida completa, así que no habilita ningún ahorro—.
 #: Nunca llegaron a registrarse como hook, pero sí se copiaron a `~/.claude/hooks/`, así que sin
 #: esta lista sus 24 KB se quedarían ahí para siempre.
-_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
+#: `anotar_llamada.py` se renombró a `record_call.py` (REQ-012): sin esta entrada la copia vieja y
+#: su registro en `settings.json` seguirían anotando cada llamada, dos veces.
+_RETIRED_SCRIPTS = (
+    "suggest_lint_summary.py",
+    "output_policy.py",
+    "output_stats.py",
+    "anotar_llamada.py",
+)
 
 #: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
-#: `_SCRIPTS_RETIRADOS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
+#: `_RETIRED_SCRIPTS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
 #: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
 #: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
 _RETIRED_SKILLS: tuple[str, ...] = ()
@@ -317,7 +325,7 @@ _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
     "suggest_delegate_shell.py",
-    "anotar_llamada.py",
+    "record_call.py",
 )
 
 
@@ -336,7 +344,7 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
     normalized = " ".join(parts).replace("\\", "/")
     if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
         return True
-    return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
+    return any(name in normalized for name in _SCRIPT_NAMES + _RETIRED_SCRIPTS)
 
 
 def read_hook_registered(claude_dir: Path) -> bool:
@@ -902,7 +910,7 @@ def packaged_hook_names() -> set[str]:
         empaquetados = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
     except OSError:
         return set()
-    return empaquetados | set(_SCRIPTS_RETIRADOS)
+    return empaquetados | set(_RETIRED_SCRIPTS)
 
 
 def orphan_hook_scripts(claude_dir: Path) -> list[Path]:

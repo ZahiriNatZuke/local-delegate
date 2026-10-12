@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Hook PreToolUse de las tools de local-delegate: anota quien pide cada delegacion.
 
-No avisa ni bloquea: deja una nota (`hook_common.anotar_llamada`) con `agent_id`, `agent_type`,
+Antes se llamaba `anotar_llamada.py`; `install` retira la copia y el registro viejos (REQ-012).
+
+No avisa ni bloquea: deja una nota (`hook_common.record_call`) con `agent_id`, `agent_type`,
 `effort` y `transcript_path`, que el servidor recoge por `tool_use_id` al escribir la linea del log
 de uso. El modelo de quien llama no viene en la entrada del hook; el servidor lo saca del
 transcript que apunta la nota.
@@ -15,16 +17,16 @@ from __future__ import annotations
 import json
 import sys
 
-from hook_common import anotar_llamada
+from hook_common import record_call
 
 
 def main() -> None:
     try:
-        entrada = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
+        hook_input = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
     except (OSError, ValueError, AttributeError):
         return
-    if isinstance(entrada, dict):
-        anotar_llamada(entrada)
+    if isinstance(hook_input, dict):
+        record_call(hook_input)
 
 
 if __name__ == "__main__":

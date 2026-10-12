@@ -118,15 +118,15 @@ def test_la_huella_del_script_cambia_cuando_el_script_cambia(tmp_path):
 
 
 def test_el_contexto_dice_que_script_corrio_y_en_que_sesion():
-    contexto = common.contexto_de({"session_id": "abc-123"}, str(HOOKS / "hook_common.py"))
+    contexto = common.context_of({"session_id": "abc-123"}, str(HOOKS / "hook_common.py"))
     assert contexto["session_id"] == "abc-123"
     assert len(contexto["version"]) == 8
     # Un payload sin sesión no rompe nada, pero se nota en el dato.
-    assert common.contexto_de({}, "x")["session_id"] == ""
+    assert common.context_of({}, "x")["session_id"] == ""
 
 
 def test_cada_identificador_es_distinto():
-    ids = {common.nuevo_id() for _ in range(100)}
+    ids = {common.new_id() for _ in range(100)}
     assert len(ids) == 100
     assert all(len(i) == 12 for i in ids)
 
@@ -142,10 +142,10 @@ def _marca(tmp_path, ok: bool, antiguedad_s: float = 0.0):
 
 def test_una_marca_fresca_se_cree_y_no_se_sondea(monkeypatch, tmp_path):
     sondeos = []
-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
+    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
 
-    assert common.backend_disponible(marca=_marca(tmp_path, ok=True)) is True
-    assert common.backend_disponible(marca=_marca(tmp_path, ok=False)) is False
+    assert common.backend_available(marker=_marca(tmp_path, ok=True)) is True
+    assert common.backend_available(marker=_marca(tmp_path, ok=False)) is False
     assert sondeos == [], "una marca fresca no debería costar un sondeo"
 
 
@@ -165,19 +165,19 @@ def test_una_marca_fresca_se_cree_y_no_se_sondea(monkeypatch, tmp_path):
 def test_una_marca_que_no_sirve_se_vuelve_a_preguntar(monkeypatch, tmp_path, preparar):
     """Ninguna de estas se interpreta: se sondea otra vez. Interpretarlas es inventar."""
     sondeos = []
-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
+    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
 
-    assert common.backend_disponible(marca=preparar(tmp_path)) is True
+    assert common.backend_available(marker=preparar(tmp_path)) is True
     assert len(sondeos) == 1
 
 
 def test_el_sondeo_se_guarda_para_no_repetirlo(monkeypatch, tmp_path):
     sondeos = []
-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
+    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
     archivo = tmp_path / "salud.json"
 
-    common.backend_disponible(marca=archivo)
-    common.backend_disponible(marca=archivo)
+    common.backend_available(marker=archivo)
+    common.backend_available(marker=archivo)
 
     assert len(sondeos) == 1, "el segundo debería haber salido de la marca recién escrita"
     assert json.loads(archivo.read_text(encoding="utf-8"))["ok"] is True
@@ -185,21 +185,21 @@ def test_el_sondeo_se_guarda_para_no_repetirlo(monkeypatch, tmp_path):
 
 def test_si_no_se_puede_escribir_la_marca_igual_se_responde(monkeypatch, tmp_path):
     """Sin caché se sondea más a menudo: es lento, no incorrecto."""
-    monkeypatch.setattr(common, "_sondear", lambda t: True)
+    monkeypatch.setattr(common, "_probe", lambda t: True)
     inalcanzable = tmp_path / "no" / "existe" / "salud.json"
 
-    assert common.backend_disponible(marca=inalcanzable) is True
+    assert common.backend_available(marker=inalcanzable) is True
 
 
 def test_un_backend_que_no_esta_da_false_sin_lanzar(monkeypatch, tmp_path):
     """Control positivo del sondeo de verdad: contra un puerto donde no hay nadie."""
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
-    assert common.backend_disponible(marca=tmp_path / "salud.json", timeout_s=0.2) is False
+    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
 
 
 def test_una_url_invalida_tampoco_lanza(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "no-es-una-url")
-    assert common.backend_disponible(marca=tmp_path / "salud.json", timeout_s=0.2) is False
+    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
 
 
 def test_un_401_significa_que_el_backend_SI_esta(monkeypatch, tmp_path):
@@ -220,7 +220,7 @@ def test_un_401_significa_que_el_backend_SI_esta(monkeypatch, tmp_path):
 
     monkeypatch.setattr(common.urllib.request, "urlopen", _lanza_401)
 
-    assert common.backend_disponible(marca=tmp_path / "salud.json") is True
+    assert common.backend_available(marker=tmp_path / "salud.json") is True
 
 
 def test_un_500_no_cuenta_como_backend_sano(monkeypatch, tmp_path):
@@ -237,7 +237,7 @@ def test_un_500_no_cuenta_como_backend_sano(monkeypatch, tmp_path):
 
     monkeypatch.setattr(common.urllib.request, "urlopen", lambda *a, **k: _Respuesta())
 
-    assert common.backend_disponible(marca=tmp_path / "salud.json") is False
+    assert common.backend_available(marker=tmp_path / "salud.json") is False
 
 
 def test_cada_endpoint_tiene_su_propia_marca_de_salud(monkeypatch):
@@ -247,10 +247,10 @@ def test_cada_endpoint_tiene_su_propia_marca_de_salud(monkeypatch):
     backend de verdad todavia fresca, recibia un bloqueo que no tocaba.
     """
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
-    uno = common._ruta_de_salud()
+    uno = common._health_path()
 
     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
-    otro = common._ruta_de_salud()
+    otro = common._health_path()
 
     assert uno != otro
     assert uno.parent == otro.parent

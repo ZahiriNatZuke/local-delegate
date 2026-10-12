@@ -166,7 +166,14 @@ def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
     """
     from local_delegate import deprecations
 
-    renombradas = {n for _k, old, new in deprecations.hook_names() for n in (old, new) if n}
+    # Solo variables: el interruptor viejo (`switch_file`) es un fichero, no se lee del entorno.
+    renombradas = {
+        n
+        for kind, old, new in deprecations.hook_names()
+        if kind == "env_var"
+        for n in (old, new)
+        if n
+    }
     # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
     assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renombradas
     por_alias = set().union(*_variables_que_leen_los_hooks().values())

@@ -2,7 +2,7 @@
 
 Tres preguntas, y las reglas que varios consumidores necesitan, en un solo sitio:
 
-- **Al momento** (REQ-002, REQ-003): el hook `anotar_llamada.py` deja una nota por `tool_use_id`
+- **Al momento** (REQ-002, REQ-003): el hook `record_call.py` deja una nota por `tool_use_id`
   con `agent_id`, `agent_type`, `effort` y `transcript_path`; `resolver_llamada` la lee y busca el
   modelo en la cola del transcript que señala la nota. `llamada_actual` lo hace una vez por
   petición y lo memoriza en el dict que el middleware pone en `clients`.
@@ -30,7 +30,7 @@ from . import clients, precios
 from .resources.hooks import hook_common
 
 #: Una nota de más de diez minutos ya no cuenta (REQ-003).
-VIGENCIA_DE_NOTA_S = hook_common.VIGENCIA_DE_NOTA_S
+VIGENCIA_DE_NOTA_S = hook_common.NOTE_TTL_S
 
 #: Cuánto del final del transcript se lee como mucho, y en cuánto tiempo (REQ-003).
 COLA_BYTES = 256 * 1024
@@ -59,7 +59,7 @@ _VERSION_RELLENO = 1
 
 
 def _valido(tool_use_id: object) -> bool:
-    return isinstance(tool_use_id, str) and bool(hook_common.PATRON_TOOL_USE_ID.match(tool_use_id))
+    return isinstance(tool_use_id, str) and bool(hook_common.TOOL_USE_ID_PATTERN.match(tool_use_id))
 
 
 def leer_nota(tool_use_id: str, *, directorio: Path | None = None) -> dict | None:
@@ -67,16 +67,23 @@ def leer_nota(tool_use_id: str, *, directorio: Path | None = None) -> dict | Non
 
     Una nota ilegible, a medias o de otro id cuenta como «sin nota».
     """
-    try:
-        if not _valido(tool_use_id):
-            return None
-        base = directorio or hook_common.directorio_de_notas_de_llamadas()
-        nota = json.loads((base / f"{tool_use_id}.json").read_text(encoding="utf-8"))
-        if not isinstance(nota, dict) or nota.get("tool_use_id") != tool_use_id:
-            return None
-        return nota
-    except (OSError, ValueError, TypeError):
+    if not _valido(tool_use_id):
         return None
+    # Sin directorio explícito, el nombre nuevo y luego el viejo (REQ-012): un hook
+    # `anotar_llamada.py` de una versión anterior sigue escribiendo en `local-delegate-llamadas/`.
+    bases = (
+        [directorio]
+        if directorio is not None
+        else [hook_common.call_notes_dir(), hook_common.legacy_call_notes_dir()]
+    )
+    for base in bases:
+        try:
+            nota = json.loads((base / f"{tool_use_id}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+        if isinstance(nota, dict) and nota.get("tool_use_id") == tool_use_id:
+            return nota
+    return None
 
 
 def _raiz_de_proyectos() -> Path:

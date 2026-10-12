@@ -1,0 +1,3333 @@
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py b/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
+index 6139a4d..443fe0a 100755
+--- a/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
++++ b/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
+@@ -204,9 +204,20 @@ class FileAnalysis:
+             s = s.parent
+         return s
+ 
++    def _sibling(self, name: str | None) -> str | None:
++        """`import x` / `from x import y` plano que es un VECINO del fichero (un script que el
++        intérprete importa por `sys.path[0]`, como `from hook_common import …` entre hooks).
++
++        Sin esto los símbolos que un hook importa de otro salían `module_local` (ola A2)."""
++        if not name or name in self.p.modules:
++            return None
++        package = module_name(self.rel).split(".")[:-1]
++        sibling = ".".join([*package, name])
++        return sibling if sibling in self.p.modules else None
++
+     def _resolve_module(self, node: ast.ImportFrom) -> str | None:
+         if node.level == 0:
+-            return node.module
++            return self._sibling(node.module) or node.module
+         package = module_name(self.rel).split(".")
+         if not self.rel.endswith("__init__.py"):
+             package = package[:-1]
+@@ -218,10 +229,15 @@ class FileAnalysis:
+         if isinstance(node, ast.Import):
+             for alias in node.names:
+                 local = alias.asname or alias.name.split(".")[0]
+-                self.import_alias[local] = alias.name if alias.asname else local
++                sibling = self._sibling(alias.name)
++                if sibling is not None:
++                    self.import_alias[local] = sibling
++                    self._note_module_import(sibling, node.lineno)
++                else:
++                    self.import_alias[local] = alias.name if alias.asname else local
++                    self._note_module_import(alias.name, node.lineno)
+                 if alias.asname:
+                     self.define(scope, alias.asname, "import_alias", node.lineno)
+-                self._note_module_import(alias.name, node.lineno)
+             return
+         base = self._resolve_module(node)
+         if base is None:
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py b/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py
+index 1b00dda..2ab6eee 100644
+--- a/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py
++++ b/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py
+@@ -92,6 +92,31 @@ def test_scopes_cross_module_module_local_unreferenced_test_and_unresolved(tmp_p
+     assert by_name["calcular_resto"]["method"] == "pycharm"
+ 
+ 
++def test_a_flat_import_between_sibling_scripts_counts_as_cross_module(tmp_path):
++    """Los hooks se importan entre ellos por `sys.path[0]` (`from hook_common import x`), no por
++    el paquete. En la ola A2 eso dejó como `module_local` diez símbolos que sí se usaban fuera."""
++    root = _tree(
++        tmp_path,
++        {
++            "src/local_delegate/resources/hooks/comun.py": (
++                "def estado_del_bloqueo():\n    return 1\n"
++                "def solo_aqui():\n    return estado_del_bloqueo()\n"
++                "def importado_entero():\n    return 2\n"
++            ),
++            "src/local_delegate/resources/hooks/lector.py": (
++                "from comun import estado_del_bloqueo\n"
++                "import comun\n"
++                "def principal():\n    return estado_del_bloqueo() + comun.importado_entero()\n"
++            ),
++        },
++    )
++    by_name = {r["old"]: r for r in mm.build_rows(root, []) if r["kind"] == "function"}
++    assert by_name["estado_del_bloqueo"]["scope"] == "cross_module"
++    assert by_name["importado_entero"]["scope"] == "cross_module"
++    # Control: lo que nadie importa sigue siendo local.
++    assert by_name["solo_aqui"]["scope"] == "module_local"
++
++
+ def test_paths_filters_by_definition_file(tmp_path):
+     root = _tree(
+         tmp_path,
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 9ecb6e5..5535d2b 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -20,6 +20,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+   también de estas variables viejas si siguen en la shell o en el `env` de
+   `~/.claude/settings.json`. `local_status` dice los nombres viejos que leyó el daemon o el
+   servidor por stdio, que `doctor` no ve.
++- **El fichero que apaga el bloqueo pasa a `~/.claude/local-delegate-block-off`.** El viejo,
++  `local-delegate-bloqueo-apagado`, sigue apagando con aviso durante el mismo plazo que los demás
++  alias, y `doctor` avisa si existe.
++- **El hook `anotar_llamada.py` pasa a llamarse `record_call.py`.** `install` y `update` borran la
++  copia vieja y su registro en `settings.json`, así que la nota de cada llamada no se escribe dos
++  veces.
++- **Los ficheros que comparten los hooks y el daemon en el temporal pasan a inglés:**
++  `local-delegate-blocks.jsonl` (antes `local-delegate-bloqueos.jsonl`), `local-delegate-calls/`
++  (antes `local-delegate-llamadas/`) y `local-delegate-health-<huella>.json` (antes
++  `local-delegate-salud-<huella>.json`). El daemon sigue leyendo los viejos, por si queda un hook
++  de una versión anterior instalado.
++- **La telemetría de los hooks escribe sus claves y valores en inglés:** `reason` (antes
++  `motivo`), `block` (antes `bloqueo`, con `on`, `off_file` y `off_variable`), `route` (antes
++  `camino`) y `paths` (antes `rutas`), y los motivos `bounded`, `code`, `small`,
++  `backend_missing`, `model_cooled`, `large_prose`, `not_a_dump`, `no_file`, `not_prose`,
++  `block_off` y `foreign_mcp`. El panel y los scripts de medición leen los dos formatos, también
++  mezclados en el mismo fichero. `/api/hooks` devuelve `by_reason` (antes `by_motivo`).
++- **Los hooks dicen qué nombres viejos leyeron.** Con la telemetría encendida, cada evento lleva
++  `deprecated_names` cuando la invocación leyó una variable o el interruptor con su nombre viejo, y
++  el check «nombres obsoletos» de `doctor` lo avisa mirando los últimos 7 días del fichero.
+ 
+ ## [0.34.0] - 2026-10-08
+ 
+diff --git a/README.md b/README.md
+index d874e58..d98738e 100644
+--- a/README.md
++++ b/README.md
+@@ -279,7 +279,7 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige
+ plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
+ pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
+ 
+-Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `anotar_llamada.py`
++Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
+ (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
+ cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
+ lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
+diff --git a/docs/recipes/claude-code-hooks.md b/docs/recipes/claude-code-hooks.md
+index 287af89..8f092c8 100644
+--- a/docs/recipes/claude-code-hooks.md
++++ b/docs/recipes/claude-code-hooks.md
+@@ -5,7 +5,7 @@ y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enab
+ están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
+ bloquean si además se enciende `LD_HOOK_READ_BLOCK` (ver «El bloqueo»). El que se **retiró** el
+ 2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Aparte va
+-`anotar_llamada.py`, que no sugiere nada: anota quién pide cada delegación y se instala siempre.
++`record_call.py` (antes `anotar_llamada.py`), que no sugiere nada: anota quién pide cada delegación y se instala siempre.
+ Ninguno envía el prompt a otro modelo.
+ 
+ Los scripts se distribuyen **dentro del paquete**
+@@ -59,7 +59,8 @@ El mensaje del rechazo nombra la tool que sirve, el `path` para llamarla y la sa
+ leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias formas de que no
+ bloquee:
+ 
+-- **el fichero `~/.claude/local-delegate-bloqueo-apagado`** (o la ruta de
++- **el fichero `~/.claude/local-delegate-block-off`** (antes `local-delegate-bloqueo-apagado`,
++  que sigue valiendo con aviso; o la ruta de
+   `LD_HOOK_READ_SWITCH_FILE`): gana a la variable y se mira en cada lectura, así que apaga al
+   momento sin cerrar la sesión; bórralo para volver a encender;
+ - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
+@@ -68,7 +69,7 @@ bloquee:
+ - o `LD_HOOK_ENABLED=0`.
+ 
+ Con la misma bandera se registra el hook para las tools de lectura de otros MCP
+-(`mcp__*__read_*`, `mcp__*__get_file_contents`): por ahí solo registra el evento (`camino: mcp`) y
++(`mcp__*__read_*`, `mcp__*__get_file_contents`): por ahí solo registra el evento (`route: mcp`) y
+ nunca bloquea.
+ 
+ `.json`, `.csv`, `.log` y `.yaml` se avisan pero no se bloquean: ahí se busca un valor exacto y un
+@@ -93,7 +94,7 @@ delegación con el bloqueo.
+ Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
+ por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.
+ 
+-### `anotar_llamada.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
++### `record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
+ 
+ No sugiere, no avisa y no bloquea: no imprime nada y sale siempre con 0, también con una entrada
+ rota. Su único trabajo es dejar una nota corta por cada llamada a una tool de local-delegate, con
+@@ -140,7 +141,7 @@ El comando copia los scripts a `~/.claude/hooks/local-delegate/` y registra en
+ `~/.claude/settings.json` los que van encendidos. Es idempotente (reinstalar no duplica entradas),
+ no toca hooks ajenos y se revierte con `local-delegate uninstall`. Los de lectura solo se
+ registran con `--enable-read-hook`, así que **por defecto quedan registrados el de
+-`UserPromptSubmit` y `anotar_llamada.py`**.
++`UserPromptSubmit` y `record_call.py`**.
+ 
+ El resultado en `settings.json` tiene esta forma:
+ 
+diff --git a/docs/wiki/Configuration.md b/docs/wiki/Configuration.md
+index dd91c9c..916943e 100644
+--- a/docs/wiki/Configuration.md
++++ b/docs/wiki/Configuration.md
+@@ -272,10 +272,11 @@ ruta; con una tubería, una redirección, comandos encadenados o un flag que ya
+ 
+ Nace apagado. Estas son las formas de que no bloquee:
+ 
+-- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-bloqueo-apagado`** (vacío
+-  vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
+-  reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
+-  `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
++- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-block-off`** (vacío
++  vale; antes `local-delegate-bloqueo-apagado`, que sigue apagando con aviso). Gana a la variable
++  y el hook lo mira en cada lectura, así que no hace falta cerrar ni reiniciar nada; bórralo para
++  volver a encenderlo. En PowerShell:
++  `New-Item "$HOME\.claude\local-delegate-block-off" -ItemType File`. Con
+   `LD_HOOK_READ_SWITCH_FILE` (antes `LD_HOOK_READ_INTERRUPTOR`) se puede poner en otra ruta.
+ - `LD_HOOK_READ_BLOCK=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
+   porque hereda el entorno del lanzador. Por eso existe el fichero.
+@@ -287,12 +288,16 @@ Nace apagado. Estas son las formas de que no bloquee:
+   modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
+ - `LD_HOOK_ENABLED=0`.
+ 
+-Cada evento de la telemetría lleva `bloqueo` (`encendido`, `apagado_fichero` o
+-`apagado_variable`), para que una medición sepa en qué estado estaba la regla.
++Cada evento de la telemetría lleva `block` (`on`, `off_file` u `off_variable`), para que una
++medición sepa en qué estado estaba la regla. Hasta la versión anterior la clave se llamaba `bloqueo`
++(`encendido`, `apagado_fichero`, `apagado_variable`), y el motivo de cada decisión, `motivo` (hoy
++`reason`); el panel y los scripts de medición leen los dos formatos, también mezclados en el mismo
++fichero. Si un hook leyó un nombre viejo (una variable o el interruptor), su evento lo dice en
++`deprecated_names`, y `doctor` lo avisa mirando los últimos 7 días del fichero.
+ 
+ **Las lecturas por otros MCP se cuentan, no se bloquean.** `--enable-read-hook` registra el mismo
+ hook para las tools de lectura de otros servidores MCP (`mcp__*__read_*` y
+-`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `camino: mcp`: sin contarlas,
++`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `route: mcp`: sin contarlas,
+ una subida de las delegaciones no distinguiría «se delegó» de «se leyó por otro sitio».
+ 
+ `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
+@@ -318,6 +323,23 @@ Lo mismo vale para el subcomando `recompute-cost` (antes `recalcular-coste`) y s
+ `--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos siguen aceptándose,
+ ocultos en la ayuda y con un aviso en `stderr`.
+ 
++Y para el fichero que apaga el bloqueo: `~/.claude/local-delegate-block-off` (antes
++`local-delegate-bloqueo-apagado`). El viejo sigue apagando durante el mismo plazo; `doctor` avisa
++si existe, y también si la telemetría de los hooks dice que lo leyeron.
++
++### Nombres en disco que cambiaron
++
++Los hooks y el daemon comparten ficheros en el temporal del usuario. Desde esta versión se escriben
++con el nombre nuevo, y el daemon sigue leyendo el viejo, por si queda instalado un hook de una
++versión anterior:
++
++| Nombre nuevo | Nombre viejo | Qué es |
++|---|---|---|
++| `local-delegate-blocks.jsonl` | `local-delegate-bloqueos.jsonl` | notas de cada bloqueo, para cruzarlo con la delegación |
++| `local-delegate-calls/` | `local-delegate-llamadas/` | notas del hook de atribución |
++| `local-delegate-health-<huella>.json` | `local-delegate-salud-<huella>.json` | caché de un minuto de «el backend responde» |
++| hook `record_call.py` | hook `anotar_llamada.py` | `install`/`update` retiran el viejo (copia y registro) |
++
+ ## Auto-arranque de llama-swap (opt-in)
+ 
+ Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index a45336e..91acad3 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -22,7 +22,7 @@ local-delegate uninstall             # revierte solo lo que instaló
+ | Componente | Destino | Notas |
+ |---|---|---|
+ | Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI), `~/.codex/config.toml` y opencode (`opencode mcp add`, o `~/.config/opencode/opencode.json[c]` si no está la CLI) | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
+-| Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `anotar_llamada.py` (`PreToolUse` sobre `mcp__local-delegate__.*`) siempre; los de lectura (`PreToolUse`/`Read` y `PreToolUse`/`Bash\|PowerShell`) solo con `--enable-read-hook`, que los deja activos. `anotar_llamada.py` no avisa ni bloquea: anota qué agente pidió cada delegación, con qué esfuerzo y en qué transcript, para que el log de uso guarde su modelo (ver [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) |
++| Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `record_call.py` (`PreToolUse` sobre `mcp__local-delegate__.*`) siempre; los de lectura (`PreToolUse`/`Read` y `PreToolUse`/`Bash\|PowerShell`) solo con `--enable-read-hook`, que los deja activos. `anotar_llamada.py` no avisa ni bloquea: anota qué agente pidió cada delegación, con qué esfuerzo y en qué transcript, para que el log de uso guarde su modelo (ver [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) |
+ | Skill | `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
+ | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
+ 
+diff --git a/docs/wiki/Savings-and-metrics.md b/docs/wiki/Savings-and-metrics.md
+index f378150..eec5972 100644
+--- a/docs/wiki/Savings-and-metrics.md
++++ b/docs/wiki/Savings-and-metrics.md
+@@ -53,7 +53,7 @@ con saltos pudo contaminarla un swap.
+   cruzar la línea con el transcript.
+ - `caller_kind` (`main` o `subagent`), `caller_agent_type`, `caller_effort`, `caller_model` y
+   `caller_src` (`hook+transcript` o `hook`): **quién pidió** la delegación. Los escribe el servidor
+-  a partir de la nota que deja el hook `anotar_llamada.py` (ver
++  a partir de la nota que deja el hook `record_call.py` (antes `anotar_llamada.py`; ver
+   [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
+   `caller_*`. Nunca lleva el id de sesión.
+ - **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
+@@ -267,7 +267,7 @@ contrafactual es salida generada y no lectura.
+ 
+ Para saber qué modelo pidió cada delegación hacen falta dos piezas:
+ 
+-- **al momento**: el hook `anotar_llamada.py` (`PreToolUse` sobre `mcp__local-delegate__.*`, se
++- **al momento**: el hook `record_call.py` (antes `anotar_llamada.py`; `PreToolUse` sobre `mcp__local-delegate__.*`, se
+   instala siempre) deja una nota con el `tool_use_id`, el agente, su tipo, el esfuerzo y el
+   transcript. Al escribir la línea del log, el servidor busca la nota y saca el modelo de la cola
+   (256 KB) del transcript que señala, sin guardar nada más de él;
+@@ -665,8 +665,9 @@ signifique algo:
+ 
+ Esa advertencia la abre el botón **ⓘ** de la cabecera de la tarjeta. Las categorías y los motivos
+ se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro
+-MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `acotada`, `pequeno`,
+-`mcp_ajeno`…).
++MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `bounded`, `small`,
++`foreign_mcp`…). Los valores que escribían los hooks hasta la versión anterior (`acotada`,
++`pequeno`, `mcp_ajeno`…) se leen igual y se pintan con la misma etiqueta.
+ 
+ Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
+ común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada
+diff --git a/scripts/_banco_claude.py b/scripts/_banco_claude.py
+index 25a2fd0..875b6cf 100644
+--- a/scripts/_banco_claude.py
++++ b/scripts/_banco_claude.py
+@@ -232,10 +232,13 @@ def eventos_de_telemetria(ruta: Path) -> list[dict]:
+ def corrida_valida(telemetria: list[dict], session_id: str) -> bool:
+     """El hook de prompt deja un evento en TODO prompt: si no está, con el bloqueo encendido, la
+     corrida no corrió con los hooks que se querían medir."""
++    from local_delegate import legacy_names
++
++    # El estado del bloqueo en el formato viejo (`bloqueo: encendido`) o el nuevo (`block: on`).
+     return any(
+         e.get("event") == "UserPromptSubmit"
+         and e.get("session_id") == session_id
+-        and e.get("bloqueo") == "encendido"
++        and legacy_names.normalize("hook_telemetry", e).get("block") == "on"
+         for e in telemetria
+     )
+ 
+diff --git a/scripts/dev/capture_dashboard.py b/scripts/dev/capture_dashboard.py
+index e1abec0..6b9094b 100755
+--- a/scripts/dev/capture_dashboard.py
++++ b/scripts/dev/capture_dashboard.py
+@@ -354,10 +354,10 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+       const total = cats.reduce((a, c) => a + c.total, 0);
+       const suggested = cats.reduce((a, c) => a + c.suggested, 0);
+       const motivos = [
+-        {motivo: 'codigo', total: 52},
+-        {motivo: 'aviso', total: 41},
+-        {motivo: 'acotada', total: 24},
+-        {motivo: 'pequeno', total: 13},
++        {reason: 'code', total: 52},
++        {reason: 'suggested', total: 41},
++        {reason: 'bounded', total: 24},
++        {reason: 'small', total: 13},
+       ];
+       return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
+         total, suggested, rate: suggested / total,
+@@ -366,9 +366,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+         // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no
+         // cuadran es un panel que el dashboard real nunca puede pintar.
+         read_total: motivos.reduce((a, m) => a + m.total, 0),
+-        by_motivo: motivos,
++        by_reason: motivos,
+         by_ext: [{ext: '.ts', total: 48}, {ext: '.md', total: 39},
+-                 {ext: '.py', total: 22}, {ext: 'sin extension', total: 21}]};
++                 {ext: '.py', total: 22}, {ext: 'no_extension', total: 21}]};
+     })(),
+   };
+ 
+diff --git a/scripts/medir_adopcion.py b/scripts/medir_adopcion.py
+index 3ada359..215506c 100755
+--- a/scripts/medir_adopcion.py
++++ b/scripts/medir_adopcion.py
+@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
+ from datetime import UTC, datetime
+ from pathlib import Path
+ 
+-from local_delegate import atribucion, config, coste, test_windows
++from local_delegate import atribucion, config, coste, legacy_names, test_windows
+ 
+ 
+ def telemetria_de_hooks() -> Path:
+@@ -81,7 +81,10 @@ def usos_fundidos(desde: str | None) -> list[dict]:
+ 
+ 
+ def medir(desde: str | None, include_tests: bool = False) -> dict:
+-    hooks = leer(telemetria_de_hooks(), desde)
++    # Claves y valores viejos (`motivo`, `bloqueo`, `camino`…) y nuevos dan lo mismo (REQ-006).
++    hooks = [
++        legacy_names.normalize("hook_telemetry", e) for e in leer(telemetria_de_hooks(), desde)
++    ]
+     usos = usos_fundidos(desde)
+     fuera = {"hooks": 0, "usage": 0}
+     aplicadas: list[dict] = []
+@@ -112,10 +115,10 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
+         clave = (evento.get("session_id", ""), evento.get("path_sha", ""))
+         if not clave[1]:
+             continue  # eventos viejos, sin huella: no se pueden agrupar
+-        if evento.get("motivo") == "acotada":
++        if evento.get("reason") == "bounded":
+             franjas_por_sesion[clave] += 1
+         else:
+-            enteras_por_sesion[clave].add(evento.get("motivo") or "aviso")
++            enteras_por_sesion[clave].add(evento.get("reason") or "aviso")
+ 
+     acotadas = [c for c, n in franjas_por_sesion.items() if n]
+     convenia = [c for c in acotadas if c in enteras_por_sesion or franjas_por_sesion[c] >= 3]
+@@ -127,11 +130,11 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
+         "lecturas": len(lecturas),
+         "por_motivo": dict(
+             Counter(
+-                e.get("motivo") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
++                e.get("reason") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
+                 for e in lecturas
+             )
+         ),
+-        "por_camino": dict(Counter(e.get("camino", "read") for e in lecturas)),
++        "por_camino": dict(Counter(e.get("route", "read") for e in lecturas)),
+         "ofrecidos": len(ofrecidos),
+         "bloqueos": len(bloqueos),
+         "aceptados": len(aceptados),
+diff --git a/src/local_delegate/atribucion.py b/src/local_delegate/atribucion.py
+index 5634b02..b904d8d 100644
+--- a/src/local_delegate/atribucion.py
++++ b/src/local_delegate/atribucion.py
+@@ -2,7 +2,7 @@
+ 
+ Tres preguntas, y las reglas que varios consumidores necesitan, en un solo sitio:
+ 
+-- **Al momento** (REQ-002, REQ-003): el hook `anotar_llamada.py` deja una nota por `tool_use_id`
++- **Al momento** (REQ-002, REQ-003): el hook `record_call.py` deja una nota por `tool_use_id`
+   con `agent_id`, `agent_type`, `effort` y `transcript_path`; `resolver_llamada` la lee y busca el
+   modelo en la cola del transcript que señala la nota. `llamada_actual` lo hace una vez por
+   petición y lo memoriza en el dict que el middleware pone en `clients`.
+@@ -30,7 +30,7 @@ from . import clients, precios
+ from .resources.hooks import hook_common
+ 
+ #: Una nota de más de diez minutos ya no cuenta (REQ-003).
+-VIGENCIA_DE_NOTA_S = hook_common.VIGENCIA_DE_NOTA_S
++VIGENCIA_DE_NOTA_S = hook_common.NOTE_TTL_S
+ 
+ #: Cuánto del final del transcript se lee como mucho, y en cuánto tiempo (REQ-003).
+ COLA_BYTES = 256 * 1024
+@@ -59,7 +59,7 @@ _VERSION_RELLENO = 1
+ 
+ 
+ def _valido(tool_use_id: object) -> bool:
+-    return isinstance(tool_use_id, str) and bool(hook_common.PATRON_TOOL_USE_ID.match(tool_use_id))
++    return isinstance(tool_use_id, str) and bool(hook_common.TOOL_USE_ID_PATTERN.match(tool_use_id))
+ 
+ 
+ def leer_nota(tool_use_id: str, *, directorio: Path | None = None) -> dict | None:
+@@ -67,16 +67,23 @@ def leer_nota(tool_use_id: str, *, directorio: Path | None = None) -> dict | Non
+ 
+     Una nota ilegible, a medias o de otro id cuenta como «sin nota».
+     """
+-    try:
+-        if not _valido(tool_use_id):
+-            return None
+-        base = directorio or hook_common.directorio_de_notas_de_llamadas()
+-        nota = json.loads((base / f"{tool_use_id}.json").read_text(encoding="utf-8"))
+-        if not isinstance(nota, dict) or nota.get("tool_use_id") != tool_use_id:
+-            return None
+-        return nota
+-    except (OSError, ValueError, TypeError):
++    if not _valido(tool_use_id):
+         return None
++    # Sin directorio explícito, el nombre nuevo y luego el viejo (REQ-012): un hook
++    # `anotar_llamada.py` de una versión anterior sigue escribiendo en `local-delegate-llamadas/`.
++    bases = (
++        [directorio]
++        if directorio is not None
++        else [hook_common.call_notes_dir(), hook_common.legacy_call_notes_dir()]
++    )
++    for base in bases:
++        try:
++            nota = json.loads((base / f"{tool_use_id}.json").read_text(encoding="utf-8"))
++        except (OSError, ValueError, TypeError):
++            continue
++        if isinstance(nota, dict) and nota.get("tool_use_id") == tool_use_id:
++            return nota
++    return None
+ 
+ 
+ def _raiz_de_proyectos() -> Path:
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index ed099b4..4d9dbcd 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -1626,6 +1626,60 @@ def _probe_fallback(ctx: Context) -> Result:
+     return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
+ 
+ 
++#: Cuántos días de la cola de la telemetría de hooks mira `doctor` buscando nombres obsoletos.
++DEPRECATED_TAIL_DAYS = 7
++_TAIL_BLOCK = 64 * 1024
++
++
++def deprecated_names_in_hook_telemetry(
++    path: Path | None, *, now: datetime | None = None, days: int = DEPRECATED_TAIL_DAYS
++) -> set[str]:
++    """Nombres viejos que los hooks dicen haber leído (`deprecated_names`) en los últimos `days`.
++
++    Lee el fichero **desde el final**, por bloques, y para en cuanto encuentra un evento más viejo
++    que el corte: la telemetría crece sin freno (31 691 líneas en la máquina de referencia) y un
++    check no puede recorrerla entera. Nunca lanza: sin fichero, o ilegible, no hay nada que avisar.
++    """
++    if path is None:
++        return set()
++    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
++    found: set[str] = set()
++    try:
++        with path.open("rb") as stream:
++            stream.seek(0, os.SEEK_END)
++            position = stream.tell()
++            tail = b""
++            while position > 0:
++                step = min(_TAIL_BLOCK, position)
++                position -= step
++                stream.seek(position)
++                tail = stream.read(step) + tail
++                lines = tail.split(b"\n")
++                # La primera línea puede estar cortada: se guarda para el bloque siguiente.
++                tail = lines[0] if position > 0 else b""
++                complete = lines[1:] if position > 0 else lines
++                older = False
++                for raw in reversed(complete):
++                    try:
++                        event = json.loads(raw)
++                        ts = datetime.fromisoformat(str(event["ts"]))
++                    except (ValueError, KeyError, TypeError):
++                        continue
++                    if ts.tzinfo is None:
++                        ts = ts.replace(tzinfo=UTC)
++                    if ts < cutoff:
++                        older = True
++                        break
++                    names = event.get("deprecated_names")
++                    if isinstance(names, list):
++                        found.update(n for n in names if isinstance(n, str))
++                if older:
++                    break
++    except OSError:
++        return set()
++    return found
++
++
+ def _probe_deprecated_names(ctx: Context) -> Result:
+     """Nombres obsoletos que siguen en uso: variables renombradas o retiradas e interruptores viejos.
+ 
+@@ -1642,7 +1696,8 @@ def _probe_deprecated_names(ctx: Context) -> Result:
+     Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
+     donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
+     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
+-    cuenta `local_status`.
++    cuenta `local_status`. Y desde la ola A2, lo que los hooks dicen haber leído: con la telemetría
++    encendida cada evento lleva `deprecated_names`, y aquí se mira la cola de los últimos 7 días.
+     """
+     from . import config as config_module
+     from . import deprecations
+@@ -1670,6 +1725,10 @@ def _probe_deprecated_names(ctx: Context) -> Result:
+         if (ctx.claude_dir / entry.old).exists():
+             _note("en ~/.claude", entry)
+ 
++    for name in sorted(deprecated_names_in_hook_telemetry(config_module.HOOK_TELEMETRY_LOG)):
++        if (entry := deprecations.find(name)) is not None and entry not in seen:
++            _note(f"leído por los hooks (últimos {DEPRECATED_TAIL_DAYS} días)", entry)
++
+     if not warnings:
+         return Result(OK, "sin nombres obsoletos en uso")
+     hints = [f"quita {e.old}" if e.is_retired else f"renombra {e.old} a {e.new}" for e in seen]
+diff --git a/src/local_delegate/deprecations.py b/src/local_delegate/deprecations.py
+index 570fca5..8136cd2 100644
+--- a/src/local_delegate/deprecations.py
++++ b/src/local_delegate/deprecations.py
+@@ -75,6 +75,14 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
+     DeprecatedName(
+         "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "UNRELEASED"
+     ),
++    # Ola A2: el fichero que apaga el bloqueo (REQ-012). Vive en `~/.claude/`; lo lee el hook.
++    DeprecatedName(
++        "switch_file",
++        "local-delegate-bloqueo-apagado",
++        "local-delegate-block-off",
++        "UNRELEASED",
++        used_by_hooks=True,
++    ),
+ )
+ 
+ 
+@@ -126,7 +134,7 @@ def env_vars() -> tuple[DeprecatedName, ...]:
+ 
+ 
+ def switch_files() -> tuple[DeprecatedName, ...]:
+-    """Ficheros interruptor con nombre viejo (vacío hasta la ola A2)."""
++    """Ficheros interruptor con nombre viejo, relativos a `~/.claude/`."""
+     return tuple(e for e in DEPRECATED_NAMES if e.kind == "switch_file")
+ 
+ 
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index 1158f86..3a81e5b 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -56,12 +56,13 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
+ # Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
+ # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
+ #
+-# `anotar_llamada.py` (coste-api-y-cuota, REQ-002) va siempre, no detrás de `--enable-read-hook`:
+-# no avisa ni bloquea, solo anota quién pide cada delegación. Va AL FINAL para que
+-# `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los tests.
++# `record_call.py` (coste-api-y-cuota, REQ-002; antes `anotar_llamada.py`) va siempre, no detrás
++# de `--enable-read-hook`: no avisa ni bloquea, solo anota quién pide cada delegación. Va AL
++# FINAL para que `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los
++# tests.
+ _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
+     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
+-    ("anotar_llamada.py", "PreToolUse", "mcp__local-delegate__.*"),
++    ("record_call.py", "PreToolUse", "mcp__local-delegate__.*"),
+ )
+ _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
+ 
+@@ -99,10 +100,17 @@ _MCP_READ_HOOK = (
+ #: llega cuando el coste ya se pagó y sin la salida completa, así que no habilita ningún ahorro—.
+ #: Nunca llegaron a registrarse como hook, pero sí se copiaron a `~/.claude/hooks/`, así que sin
+ #: esta lista sus 24 KB se quedarían ahí para siempre.
+-_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
++#: `anotar_llamada.py` se renombró a `record_call.py` (REQ-012): sin esta entrada la copia vieja y
++#: su registro en `settings.json` seguirían anotando cada llamada, dos veces.
++_RETIRED_SCRIPTS = (
++    "suggest_lint_summary.py",
++    "output_policy.py",
++    "output_stats.py",
++    "anotar_llamada.py",
++)
+ 
+ #: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
+-#: `_SCRIPTS_RETIRADOS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
++#: `_RETIRED_SCRIPTS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
+ #: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
+ #: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
+ _RETIRED_SKILLS: tuple[str, ...] = ()
+@@ -317,7 +325,7 @@ _SCRIPT_NAMES = (
+     "suggest_delegate_prompt.py",
+     "suggest_delegate_read.py",
+     "suggest_delegate_shell.py",
+-    "anotar_llamada.py",
++    "record_call.py",
+ )
+ 
+ 
+@@ -336,7 +344,7 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
+     normalized = " ".join(parts).replace("\\", "/")
+     if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
+         return True
+-    return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
++    return any(name in normalized for name in _SCRIPT_NAMES + _RETIRED_SCRIPTS)
+ 
+ 
+ def read_hook_registered(claude_dir: Path) -> bool:
+@@ -902,7 +910,7 @@ def packaged_hook_names() -> set[str]:
+         empaquetados = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
+     except OSError:
+         return set()
+-    return empaquetados | set(_SCRIPTS_RETIRADOS)
++    return empaquetados | set(_RETIRED_SCRIPTS)
+ 
+ 
+ def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
+diff --git a/src/local_delegate/legacy_names.py b/src/local_delegate/legacy_names.py
+index 2eb6a80..3c55281 100644
+--- a/src/local_delegate/legacy_names.py
++++ b/src/local_delegate/legacy_names.py
+@@ -6,8 +6,8 @@ formato viejo, y no se reescriben en el sitio. Este módulo es la única tabla d
+ todo lector del paquete traduce por aquí, y los hooks llevan en `hook_common.py` solo las
+ equivalencias que leen ellos, atadas a esta por un test de igualdad.
+ 
+-Estado tras la ola A0: **esqueleto**. La API está fijada y las tablas vacías; cada ola del frente
+-A añade las de su formato (p. ej. A3 el log de uso, A4 el enfriamiento).
++Cada ola del frente A añade las tablas de su formato (A2 la telemetría de hooks y los nombres en
++disco; A3 el log de uso; A4 el enfriamiento…).
+ 
+ Forma de cada formato en `FORMATS`:
+ 
+@@ -20,7 +20,61 @@ from __future__ import annotations
+ from collections.abc import Mapping
+ from typing import Any
+ 
+-FORMATS: dict[str, dict[str, dict[str, Any]]] = {}
++FORMATS: dict[str, dict[str, dict[str, Any]]] = {
++    # Telemetría de hooks (`LD_HOOK_TELEMETRY_LOG`). `oferta` ya no la escribe nadie: solo se lee.
++    "hook_telemetry": {
++        "keys": {
++            "motivo": "reason",
++            "bloqueo": "block",
++            "camino": "route",
++            "rutas": "paths",
++            "oferta": "offer",
++        },
++        "values": {
++            "reason": {
++                "acotada": "bounded",
++                "codigo": "code",
++                "pequeno": "small",
++                "backend_ausente": "backend_missing",
++                "modelo_enfriado": "model_cooled",
++                "prosa_grande": "large_prose",
++                "no_es_volcado": "not_a_dump",
++                "sin_fichero": "no_file",
++                "no_es_prosa": "not_prose",
++                "bloqueo_apagado": "block_off",
++                "mcp_ajeno": "foreign_mcp",
++            },
++            "block": {
++                "encendido": "on",
++                "apagado_fichero": "off_file",
++                "apagado_variable": "off_variable",
++            },
++        },
++    },
++}
++
++#: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
++#: escribe solo el nuevo y se leen los dos. `hook_common.FILE_NAMES` es su copia (los hooks no
++#: importan el paquete) y `tests/test_hook_legacy_names.py` exige que sean iguales.
++FILE_NAMES: dict[str, tuple[str, str]] = {
++    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
++    "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
++    "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
++    "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
++}
++
++#: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
++#: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
++#: Además de los motivos persistidos, van los cubos que fabricaba el propio servidor en español.
++PANEL_VALUE_ALIASES: dict[str, dict[str, str]] = {
++    "hookReason": {
++        **FORMATS["hook_telemetry"]["values"]["reason"],
++        "avisó": "suggested",
++        "aviso": "suggested",
++        "sin registrar": "unrecorded",
++    },
++    "hookCategory": {"sin categoría": "no_category"},
++}
+ 
+ 
+ def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) -> Any:
+diff --git a/src/local_delegate/resources/hooks/hook_common.py b/src/local_delegate/resources/hooks/hook_common.py
+index da5260e..02de4c7 100644
+--- a/src/local_delegate/resources/hooks/hook_common.py
++++ b/src/local_delegate/resources/hooks/hook_common.py
+@@ -35,7 +35,7 @@ def enabled() -> bool:
+     **Solo puede apagar, nunca encender.** Que un hook este activo lo decide el registro
+     (`settings.json`), y de ahi no se sale: cuando la unica puerta era una variable de entorno,
+     `install --enable-read-hook` registro el script sin ponerla y el hook quedo instalado e
+-    inerte, en silencio. Esa es la historia que hay detras de `esta_encendido()` en
++    inerte, en silencio. Esa es la historia que hay detras de `is_enabled()` en
+     `suggest_delegate_read.py`, y la razon de que ningun hook nuevo deba mirar aqui para saber
+     si nacio encendido.
+     """
+@@ -47,7 +47,7 @@ def enabled() -> bool:
+     }
+ 
+ 
+-def nuevo_id() -> str:
++def new_id() -> str:
+     """Identificador corto de un aviso o un bloqueo, para poder cruzarlo con lo que pase despues.
+ 
+     Es lo que hace medible el «aceptado» de la telemetria: el hook y el servidor MCP son procesos
+@@ -74,7 +74,7 @@ def version_de(script: str) -> str:
+         return ""
+ 
+ 
+-def contexto_de(payload: dict, script: str) -> dict:
++def context_of(payload: dict, script: str) -> dict:
+     """Los campos que lleva TODO evento: que script corrio y en que sesion.
+ 
+     Sin esto una medicion no se puede leer: el 2026-09-09 catorce lecturas se comportaron con el
+@@ -95,6 +95,10 @@ def record(event: str, **metadata: object) -> None:
+     if not destination:
+         return
+     payload = {"ts": datetime.now(UTC).isoformat(), "event": event, **metadata}
++    if DEPRECATED_SEEN:
++        # Nombres viejos que esta invocacion leyo (REQ-003). Solo viaja con la telemetria
++        # encendida; `doctor` los cuenta desde la cola de este mismo fichero.
++        payload["deprecated_names"] = sorted(DEPRECATED_SEEN)
+     try:
+         path = Path(destination)
+         path.parent.mkdir(parents=True, exist_ok=True)
+@@ -125,14 +129,16 @@ def emit(event: str, context: str, **metadata: object) -> None:
+     )
+ 
+ 
+-def deny(event: str, razon: str, **metadata: object) -> None:
+-    """Camino que BLOQUEA: la tool no llega a ejecutarse y el modelo lee ``motivo``.
++def deny(event: str, message: str, **metadata: object) -> None:
++    """Camino que BLOQUEA: la tool no llega a ejecutarse y el modelo lee ``message``.
+ 
+     El contrato es el de ``PreToolUseHookSpecificOutput``: ``permissionDecision`` acepta
+-    ``allow``, ``deny``, ``ask`` y ``defer``, y ``permissionDecisionReason`` —aqui ``razon``— es el texto
+-    que ve quien recibe el bloqueo. Se llama asi, y no ``motivo``, porque ``motivo`` es el campo
+-    con el que la telemetria de los hooks etiqueta cada decision y los dos viajan juntos. Ese texto **tiene que nombrar la salida**: una regla que dice «no»
+-    sin decir por donde se pasa es una regla que se acaba apagando.
++    ``allow``, ``deny``, ``ask`` y ``defer``, y ``permissionDecisionReason`` —aqui ``message``— es
++    el texto que ve quien recibe el bloqueo. Se llama asi, y no ``reason``, porque ``reason`` es el
++    campo con el que la telemetria de los hooks etiqueta cada decision y los dos viajan juntos
++    (antes ``motivo``; ver `FILE_NAMES` y `legacy_names`). Ese texto **tiene que nombrar la
++    salida**: una regla que dice «no» sin decir por donde se pasa es una regla que se acaba
++    apagando.
+ 
+     No se usa ``updatedInput``, que seria la forma de reescribir la llamada en vez de rechazarla:
+     el permiso del usuario se evalua sobre la entrada original, asi que cambiarla por debajo
+@@ -147,7 +153,7 @@ def deny(event: str, razon: str, **metadata: object) -> None:
+                 "hookSpecificOutput": {
+                     "hookEventName": event,
+                     "permissionDecision": "deny",
+-                    "permissionDecisionReason": razon,
++                    "permissionDecisionReason": message,
+                 }
+             },
+             ensure_ascii=False,
+@@ -155,6 +161,20 @@ def deny(event: str, razon: str, **metadata: object) -> None:
+     )
+ 
+ 
++# --- Nombres en disco (REQ-012) -----------------------------------------------------------------
++#
++# `(viejo, nuevo)` de cada fichero que comparten los hooks y el daemon. Se ESCRIBE solo el nuevo; el
++# viejo se sigue LEYENDO porque un hook de una version anterior puede seguir instalado (y
++# escribiendo) y porque el interruptor viejo apaga el bloqueo mientras viva su alias. Es la copia minima de
++# `local_delegate.legacy_names.FILE_NAMES`; `tests/test_hook_legacy_names.py` exige que sean iguales.
++FILE_NAMES: dict[str, tuple[str, str]] = {
++    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
++    "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
++    "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
++    "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
++}
++
++
+ # --- Salud del backend ------------------------------------------------------------------------
+ #
+ # Una regla que bloquea una lectura tiene que saber si hay a donde delegar: si el backend local no
+@@ -167,7 +187,7 @@ def deny(event: str, razon: str, **metadata: object) -> None:
+ # lectura.
+ 
+ 
+-def _ruta_de_salud() -> Path:
++def _health_path() -> Path:
+     """Un fichero por endpoint, no uno global.
+ 
+     Con uno solo, la marca de un backend valdria para otro: basta cambiar
+@@ -176,11 +196,11 @@ def _ruta_de_salud() -> Path:
+     y recibia un bloqueo, porque la marca del backend de verdad seguia fresca.
+     """
+     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
+-    huella = hashlib.sha256(base.encode("utf-8", "replace")).hexdigest()[:12]
+-    return Path(tempfile.gettempdir()) / f"local-delegate-salud-{huella}.json"
++    digest = hashlib.sha256(base.encode("utf-8", "replace")).hexdigest()[:12]
++    return Path(tempfile.gettempdir()) / f"{FILE_NAMES['health_prefix'][1]}{digest}.json"
+ 
+ 
+-def _sondear(timeout_s: float) -> bool:
++def _probe(timeout_s: float) -> bool:
+     """¿Contesta alguien en el endpoint? Un GET a /models con un plazo muy corto.
+ 
+     La pregunta es si el backend **esta escuchando**, no si nos autoriza a nosotros: quien delega
+@@ -194,16 +214,16 @@ def _sondear(timeout_s: float) -> bool:
+     URL que ni siquiera se puede construir.
+     """
+     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
+-    clave = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
++    api_key = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
+     try:
+         # El `Request` se construye DENTRO del try: con una `LOCAL_DELEGATE_BASE_URL` mal escrita
+         # lanza `ValueError` en el constructor, no al abrir, y eso reventaria el hook entero y con
+         # el la lectura del usuario.
+-        peticion = urllib.request.Request(f"{base}/models", method="GET")
+-        if clave:
+-            peticion.add_header("Authorization", f"Bearer {clave}")
+-        with urllib.request.urlopen(peticion, timeout=timeout_s) as respuesta:
+-            return respuesta.status < 500
++        request = urllib.request.Request(f"{base}/models", method="GET")
++        if api_key:
++            request.add_header("Authorization", f"Bearer {api_key}")
++        with urllib.request.urlopen(request, timeout=timeout_s) as response:
++            return response.status < 500
+     except urllib.error.HTTPError:
+         # 401, 403, 404... da igual cual: hubo respuesta, luego hay alguien escuchando.
+         return True
+@@ -213,29 +233,29 @@ def _sondear(timeout_s: float) -> bool:
+         return False
+ 
+ 
+-def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Path | None = None):
++def backend_available(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marker: Path | None = None):
+     """¿Hay a donde delegar ahora mismo? Ante la duda, **False**, que es lo que no bloquea.
+ 
+     La respuesta se cachea ``ttl_s`` segundos en un fichero, asi que el sondeo se paga como mucho
+     una vez por minuto y no una vez por lectura. Una marca ilegible, corrupta o vieja no se
+     interpreta: se vuelve a preguntar.
+     """
+-    archivo = marca or _ruta_de_salud()
+-    ahora = time.time()
++    marker_file = marker or _health_path()
++    now = time.time()
+     try:
+-        datos = json.loads(archivo.read_text(encoding="utf-8"))
+-        if ahora - float(datos["ts"]) < ttl_s:
+-            return bool(datos["ok"])
++        data = json.loads(marker_file.read_text(encoding="utf-8"))
++        if now - float(data["ts"]) < ttl_s:
++            return bool(data["ok"])
+     except (OSError, ValueError, KeyError, TypeError):
+         pass
+ 
+-    disponible = _sondear(timeout_s)
++    available = _probe(timeout_s)
+     try:
+-        archivo.write_text(json.dumps({"ts": ahora, "ok": disponible}), encoding="utf-8")
++        marker_file.write_text(json.dumps({"ts": now, "ok": available}), encoding="utf-8")
+     except OSError:
+         # Sin cache se sondea mas a menudo; es lento, no incorrecto.
+         pass
+-    return disponible
++    return available
+ 
+ 
+ # --- Estado del bloqueo (REQ-F1-11) ---------------------------------------------------------------
+@@ -245,7 +265,7 @@ def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Pa
+ # sin cerrar nada es algo que el hook lea en cada invocacion y que el usuario pueda tocar a mano.
+ # Un fichero cumple las dos cosas. La variable sigue siendo la que ENCIENDE; el fichero gana y apaga.
+ 
+-VERDADEROS = {"1", "true", "yes", "on"}
++TRUTHY = {"1", "true", "yes", "on"}
+ 
+ # Nombres viejos que los hooks siguen leyendo, como `(kind, old, new)`. Es la copia minima del
+ # registro `local_delegate.deprecations` (los hooks no importan el paquete);
+@@ -253,6 +273,7 @@ VERDADEROS = {"1", "true", "yes", "on"}
+ DEPRECATED_HOOK_NAMES = (
+     ("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"),
+     ("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE"),
++    ("switch_file", "local-delegate-bloqueo-apagado", "local-delegate-block-off"),
+ )
+ 
+ # Nombres viejos leidos con valor en esta invocacion (REQ-003).
+@@ -272,21 +293,39 @@ def env_alias(new: str, old: str, default: str = "") -> str:
+     return default
+ 
+ 
+-def ruta_del_interruptor() -> Path:
++def switch_path() -> Path:
+     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
+     el instalador reescribe y poda."""
+-    destino = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
+-    return Path(destino) if destino else Path.home() / ".claude" / "local-delegate-bloqueo-apagado"
++    target = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
++    return Path(target) if target else Path.home() / ".claude" / FILE_NAMES["switch_file"][1]
++
+ 
++def legacy_switch_path() -> Path:
++    """El interruptor con su nombre viejo, que sigue apagando mientras viva su alias (REQ-012)."""
++    return Path.home() / ".claude" / FILE_NAMES["switch_file"][0]
+ 
+-def estado_del_bloqueo() -> str:
+-    """`encendido`, `apagado_fichero` o `apagado_variable`. Va en cada evento, para que una
+-    medicion sepa en que estado estaba la regla cuando decidio."""
+-    if ruta_del_interruptor().exists():
+-        return "apagado_fichero"
+-    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
+-        return "encendido"
+-    return "apagado_variable"
++
++def switch_on() -> bool:
++    """¿Esta puesto el fichero que apaga el bloqueo? El nuevo o, si no se eligio otra ruta, el
++    viejo; el viejo se anota en `DEPRECATED_SEEN` para que `doctor` pueda avisar."""
++    if switch_path().exists():
++        return True
++    configured = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
++    if not configured and legacy_switch_path().exists():
++        DEPRECATED_SEEN.add(FILE_NAMES["switch_file"][0])
++        return True
++    return False
++
++
++def block_state() -> str:
++    """`on`, `off_file` u `off_variable` (antes `encendido`, `apagado_fichero` y
++    `apagado_variable`). Va en cada evento, para que una medicion sepa en que estado estaba la regla
++    cuando decidio."""
++    if switch_on():
++        return "off_file"
++    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in TRUTHY:
++        return "on"
++    return "off_variable"
+ 
+ 
+ # --- El modelo del resumen en enfriamiento (REQ-F1-10) -------------------------------------------
+@@ -297,15 +336,15 @@ def estado_del_bloqueo() -> str:
+ # un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
+ # defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
+ 
+-MODELOS_POR_DEFECTO = {"long": "gemma4-26b-a4b", "mechanical": "gemma3-4b"}
+-UMBRAL_LARGO_CHARS = 6000
++DEFAULT_MODELS = {"long": "gemma4-26b-a4b", "mechanical": "gemma3-4b"}
++LONG_THRESHOLD_CHARS = 6000
+ 
+ 
+-def directorio_de_logs() -> Path:
++def log_dir() -> Path:
+     """`LOG_DIR` como lo resuelve `config.py` (`platformdirs.user_data_dir`, sin autor)."""
+-    destino = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
+-    if destino:
+-        return Path(destino)
++    target = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
++    if target:
++        return Path(target)
+     if sys.platform == "win32":
+         return (
+             Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+@@ -317,28 +356,27 @@ def directorio_de_logs() -> Path:
+     return (Path(base) if base else Path.home() / ".local" / "share") / "local-delegate"
+ 
+ 
+-def modelo_del_resumen(tamano: int) -> str:
+-    """El modelo al que iria `local_summarize` con un fichero de `tamano` bytes (`_rol_por_tamano`)."""
++def summary_model(size: int) -> str:
++    """El modelo al que iria `local_summarize` con un fichero de `size` bytes (`_rol_por_tamano`)."""
+     try:
+-        umbral = int(
+-            os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or UMBRAL_LARGO_CHARS
++        threshold = int(
++            os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or LONG_THRESHOLD_CHARS
+         )
+     except ValueError:
+-        umbral = UMBRAL_LARGO_CHARS
+-    rol = "long" if tamano > umbral else "mechanical"
++        threshold = LONG_THRESHOLD_CHARS
++    role = "long" if size > threshold else "mechanical"
+     return (
+-        os.environ.get(f"LOCAL_DELEGATE_MODEL_{rol.upper()}", "").strip()
+-        or MODELOS_POR_DEFECTO[rol]
++        os.environ.get(f"LOCAL_DELEGATE_MODEL_{role.upper()}", "").strip() or DEFAULT_MODELS[role]
+     )
+ 
+ 
+-def modelo_enfriado(modelo: str) -> bool:
++def cooled_model(model: str) -> bool:
+     """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
+     un bloqueo con un dato legible y vigente, nunca por un fichero roto."""
+     try:
+-        datos = json.loads((directorio_de_logs() / "enfriamiento.json").read_text(encoding="utf-8"))
+-        hasta = datos[modelo]["hasta"]
+-        return isinstance(hasta, (int, float)) and float(hasta) > time.time()
++        data = json.loads((log_dir() / "enfriamiento.json").read_text(encoding="utf-8"))
++        until = data[model]["hasta"]
++        return isinstance(until, (int, float)) and float(until) > time.time()
+     except (OSError, ValueError, KeyError, TypeError):
+         return False
+ 
+@@ -357,36 +395,41 @@ def modelo_enfriado(modelo: str) -> bool:
+ # hooks, que nunca escribe rutas ni contenido.
+ 
+ #: Cuantas notas se conservan. Son el rastro de los ultimos bloqueos, no un historial.
+-MAX_NOTAS = 200
++MAX_NOTES = 200
+ 
+ 
+-def huella_de_ruta(ruta: str) -> str:
++def path_digest(path: str) -> str:
+     """Huella estable de una ruta, para poder cruzarla sin guardarla.
+ 
+     Normaliza may/minusculas y separadores porque Windows da la misma ruta de varias formas y el
+     hook la recibe del cliente mientras que el servidor la recibe del agente.
+     """
+-    normal = os.path.normcase(os.path.abspath(ruta))
++    normal = os.path.normcase(os.path.abspath(path))
+     return hashlib.sha256(normal.encode("utf-8", "replace")).hexdigest()[:16]
+ 
+ 
+-def ruta_de_notas() -> Path:
+-    return Path(tempfile.gettempdir()) / "local-delegate-bloqueos.jsonl"
++def block_notes_path() -> Path:
++    return Path(tempfile.gettempdir()) / FILE_NAMES["block_notes"][1]
++
+ 
++def legacy_block_notes_path() -> Path:
++    """Las notas que escribe un hook de una version anterior: el daemon las lee tambien."""
++    return Path(tempfile.gettempdir()) / FILE_NAMES["block_notes"][0]
+ 
+-def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> None:
++
++def record_block(block_id: str, path: str, notes: Path | None = None) -> None:
+     """Deja la nota del bloqueo. Best-effort: si falla, se pierde la medicion, no la sesion."""
+-    archivo = notas or ruta_de_notas()
+-    linea = json.dumps(
+-        {"id": identificador, "sha": huella_de_ruta(ruta), "ts": time.time()},
++    notes_file = notes or block_notes_path()
++    line = json.dumps(
++        {"id": block_id, "sha": path_digest(path), "ts": time.time()},
+         ensure_ascii=False,
+     )
+     try:
+-        previas = archivo.read_text(encoding="utf-8").splitlines()[-(MAX_NOTAS - 1) :]
++        previous = notes_file.read_text(encoding="utf-8").splitlines()[-(MAX_NOTES - 1) :]
+     except OSError:
+-        previas = []
++        previous = []
+     try:
+-        archivo.write_text("\n".join([*previas, linea]) + "\n", encoding="utf-8")
++        notes_file.write_text("\n".join([*previous, line]) + "\n", encoding="utf-8")
+     except OSError:
+         # Best-effort a proposito: perder esta nota cuesta una correlacion en la medicion;
+         # romperle la lectura al usuario por no poder escribir un fichero cuesta mucho mas.
+@@ -395,9 +438,9 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) ->
+ 
+ # --- Notas de atribucion: quien pidio cada delegacion (coste-api-y-cuota, REQ-002) ---------------
+ #
+-# El hook `anotar_llamada.py` deja, por cada `tools/call` de local-delegate, una nota con lo que
+-# solo trae la entrada del hook (`agent_id`, `agent_type`, `effort`) y el `transcript_path`, que es
+-# donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
++# El hook `record_call.py` (antes `anotar_llamada.py`) deja, por cada `tools/call` de
++# local-delegate, una nota con lo que solo trae la entrada del hook (`agent_id`, `agent_type`,
++# `effort`) y el `transcript_path`, que es donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
+ # (`atribucion.leer_nota`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
+ #
+ # UNA nota por fichero, y no un fichero con todas como el de los bloqueos: los subagentes llaman en
+@@ -409,75 +452,80 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) ->
+ # telemetria, vive en el temporal y caduca a los diez minutos.
+ 
+ #: Pasado este rato una nota ya no cuenta (REQ-003) y el hook la borra.
+-VIGENCIA_DE_NOTA_S = 600.0
++NOTE_TTL_S = 600.0
+ 
+ #: Forma de un `tool_use_id`. Se valida ANTES de construir la ruta: el id acaba en un nombre de
+ #: fichero, y uno con `..` o separadores escribiria fuera del directorio.
+-PATRON_TOOL_USE_ID = re.compile(r"^toolu_[A-Za-z0-9_-]{1,64}$")
++TOOL_USE_ID_PATTERN = re.compile(r"^toolu_[A-Za-z0-9_-]{1,64}$")
++
++
++def call_notes_dir() -> Path:
++    """Junto a `block_notes_path()`: el temporal del usuario, que comparten el hook y el daemon."""
++    return Path(tempfile.gettempdir()) / FILE_NAMES["call_notes_dir"][1]
+ 
+ 
+-def directorio_de_notas_de_llamadas() -> Path:
+-    """Junto a `ruta_de_notas()`: el temporal del usuario, que comparten el hook y el daemon."""
+-    return Path(tempfile.gettempdir()) / "local-delegate-llamadas"
++def legacy_call_notes_dir() -> Path:
++    """Donde deja sus notas un hook `anotar_llamada.py` de una version anterior."""
++    return Path(tempfile.gettempdir()) / FILE_NAMES["call_notes_dir"][0]
+ 
+ 
+-def _esfuerzo_de(entrada: dict) -> str | None:
++def _effort_of(hook_input: dict) -> str | None:
+     """`effort.level` de la entrada del hook. NUNCA `CLAUDE_EFFORT`: esa variable se hereda del
+     proceso padre y no dice el esfuerzo de esta llamada (medido: `--effort low` y el hook vio
+     `high`)."""
+-    esfuerzo = entrada.get("effort")
+-    nivel = esfuerzo.get("level") if isinstance(esfuerzo, dict) else None
+-    return nivel if isinstance(nivel, str) and nivel else None
++    effort = hook_input.get("effort")
++    level = effort.get("level") if isinstance(effort, dict) else None
++    return level if isinstance(level, str) and level else None
+ 
+ 
+-def _texto(valor: object) -> str | None:
+-    return valor if isinstance(valor, str) and valor else None
++def _text(value: object) -> str | None:
++    return value if isinstance(value, str) and value else None
+ 
+ 
+-def _podar_notas(directorio: Path, ahora: float) -> None:
++def _prune_notes(directory: Path, now: float) -> None:
+     """Borra, best-effort, las notas que ya no cuentan. Sin esto el directorio solo creceria."""
+     try:
+-        viejas = [p for p in directorio.iterdir() if ahora - p.stat().st_mtime > VIGENCIA_DE_NOTA_S]
++        stale = [p for p in directory.iterdir() if now - p.stat().st_mtime > NOTE_TTL_S]
+     except OSError:
+         return
+-    for vieja in viejas:
++    for stale_note in stale:
+         try:
+-            vieja.unlink()
++            stale_note.unlink()
+         except OSError:
+             pass  # otro hook la borro antes, o esta abierta: se intentara la proxima vez
+ 
+ 
+-def anotar_llamada(entrada: dict, directorio: Path | None = None) -> bool:
++def record_call(hook_input: dict, directory: Path | None = None) -> bool:
+     """Escribe la nota de esta llamada. Devuelve si la escribio. Nunca lanza."""
+     try:
+-        tool_use_id = entrada.get("tool_use_id")
+-        if not isinstance(tool_use_id, str) or not PATRON_TOOL_USE_ID.match(tool_use_id):
++        tool_use_id = hook_input.get("tool_use_id")
++        if not isinstance(tool_use_id, str) or not TOOL_USE_ID_PATTERN.match(tool_use_id):
+             return False
+-        destino = directorio or directorio_de_notas_de_llamadas()
+-        ahora = time.time()
+-        nota = {
++        target = directory or call_notes_dir()
++        now = time.time()
++        note = {
+             "tool_use_id": tool_use_id,
+-            "ts": ahora,
+-            "agent_id": _texto(entrada.get("agent_id")),
+-            "agent_type": _texto(entrada.get("agent_type")),
+-            "effort": _esfuerzo_de(entrada),
+-            "transcript_path": _texto(entrada.get("transcript_path")),
++            "ts": now,
++            "agent_id": _text(hook_input.get("agent_id")),
++            "agent_type": _text(hook_input.get("agent_type")),
++            "effort": _effort_of(hook_input),
++            "transcript_path": _text(hook_input.get("transcript_path")),
+         }
+-        destino.mkdir(parents=True, exist_ok=True)
+-        descriptor, temporal = tempfile.mkstemp(dir=destino, prefix=".", suffix=".tmp")
++        target.mkdir(parents=True, exist_ok=True)
++        descriptor, tmp_name = tempfile.mkstemp(dir=target, prefix=".", suffix=".tmp")
+         try:
+-            with os.fdopen(descriptor, "w", encoding="utf-8") as flujo:
+-                json.dump(nota, flujo, ensure_ascii=False)
+-            os.replace(temporal, destino / f"{tool_use_id}.json")
++            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
++                json.dump(note, stream, ensure_ascii=False)
++            os.replace(tmp_name, target / f"{tool_use_id}.json")
+         except OSError:
+             try:
+-                os.unlink(temporal)
++                os.unlink(tmp_name)
+             except OSError:
+                 # Limpieza de mejor esfuerzo: un hook nunca lanza, y el fallo ya se comunica
+                 # devolviendo False justo debajo.
+                 pass
+             return False
+-        _podar_notas(destino, ahora)
++        _prune_notes(target, now)
+         return True
+     except Exception:
+         # Best-effort a proposito: perder la nota deja la delegacion para el relleno; romperle la
+diff --git a/src/local_delegate/resources/hooks/anotar_llamada.py b/src/local_delegate/resources/hooks/record_call.py
+similarity index 71%
+rename from src/local_delegate/resources/hooks/anotar_llamada.py
+rename to src/local_delegate/resources/hooks/record_call.py
+index 9677e9b..c4a421f 100755
+--- a/src/local_delegate/resources/hooks/anotar_llamada.py
++++ b/src/local_delegate/resources/hooks/record_call.py
+@@ -1,7 +1,9 @@
+ #!/usr/bin/env python3
+ """Hook PreToolUse de las tools de local-delegate: anota quien pide cada delegacion.
+ 
+-No avisa ni bloquea: deja una nota (`hook_common.anotar_llamada`) con `agent_id`, `agent_type`,
++Antes se llamaba `anotar_llamada.py`; `install` retira la copia y el registro viejos (REQ-012).
++
++No avisa ni bloquea: deja una nota (`hook_common.record_call`) con `agent_id`, `agent_type`,
+ `effort` y `transcript_path`, que el servidor recoge por `tool_use_id` al escribir la linea del log
+ de uso. El modelo de quien llama no viene en la entrada del hook; el servidor lo saca del
+ transcript que apunta la nota.
+@@ -15,16 +17,16 @@ from __future__ import annotations
+ import json
+ import sys
+ 
+-from hook_common import anotar_llamada
++from hook_common import record_call
+ 
+ 
+ def main() -> None:
+     try:
+-        entrada = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
++        hook_input = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
+     except (OSError, ValueError, AttributeError):
+         return
+-    if isinstance(entrada, dict):
+-        anotar_llamada(entrada)
++    if isinstance(hook_input, dict):
++        record_call(hook_input)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/local_delegate/resources/hooks/suggest_delegate_prompt.py b/src/local_delegate/resources/hooks/suggest_delegate_prompt.py
+index e2f3fa3..29441a5 100755
+--- a/src/local_delegate/resources/hooks/suggest_delegate_prompt.py
++++ b/src/local_delegate/resources/hooks/suggest_delegate_prompt.py
+@@ -7,7 +7,7 @@ import json
+ import re
+ import sys
+ 
+-from hook_common import contexto_de, emit, estado_del_bloqueo, record
++from hook_common import block_state, context_of, emit, record
+ 
+ _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
+     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
+@@ -33,18 +33,18 @@ _HOST_ONLY = re.compile(
+ # solo cwd, hook_event_name, permission_mode, prompt_id, session_id y transcript_path); lo unico
+ # que los distingue es como empieza `prompt`. Sin este filtro, un informe que dice «summary»
+ # recibia el aviso de delegar, y cada uno contaba como un prompt mas en la telemetria.
+-_EVENTO_SISTEMA = re.compile(
++_SYSTEM_EVENT = re.compile(
+     r"\A\s*(?:Another Claude session sent a message:\s*)?"
+     r"<(?:task-notification|agent-message|cross-session-message|system-reminder)\b"
+ )
+ 
+ 
+-def es_evento_sistema(prompt: str) -> bool:
+-    return bool(_EVENTO_SISTEMA.match(prompt))
++def is_system_event(prompt: str) -> bool:
++    return bool(_SYSTEM_EVENT.match(prompt))
+ 
+ 
+ def classify(prompt: str) -> str | None:
+-    if not prompt.strip() or es_evento_sistema(prompt) or _HOST_ONLY.search(prompt):
++    if not prompt.strip() or is_system_event(prompt) or _HOST_ONLY.search(prompt):
+         return None
+     for category, pattern in _CATEGORIES:
+         if pattern.search(prompt):
+@@ -58,23 +58,23 @@ def main() -> None:
+     except (json.JSONDecodeError, ValueError):
+         return
+     prompt = str(payload.get("prompt") or "")
+-    if es_evento_sistema(prompt):
++    if is_system_event(prompt):
+         # Ni aviso ni telemetria: no es un prompt, y contarlo inflaria el total del panel.
+         return
+     # Sesión, versión y estado del bloqueo en TODO evento, como los hooks de lectura: sin sesión
+     # no se puede atribuir un evento a su corrida, y el banco de `scripts/` valida cada corrida por
+     # aquí.
+-    comun = {**contexto_de(payload, __file__), "bloqueo": estado_del_bloqueo()}
++    common = {**context_of(payload, __file__), "block": block_state()}
+     category = classify(prompt)
+     if category is None:
+-        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **comun)
++        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **common)
+         return
+     context = (
+         f"Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
+         "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que exija "
+         "criterio, varias fuentes, tools externas o acciones de riesgo."
+     )
+-    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **comun)
++    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **common)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/local_delegate/resources/hooks/suggest_delegate_read.py b/src/local_delegate/resources/hooks/suggest_delegate_read.py
+index 977f3a1..7d316c9 100755
+--- a/src/local_delegate/resources/hooks/suggest_delegate_read.py
++++ b/src/local_delegate/resources/hooks/suggest_delegate_read.py
+@@ -34,8 +34,9 @@ exacto, y ahí el resumen no sirve.
+ 
+ Tres cosas apagan el bloqueo, y las tres son deliberadas:
+ 
+-- `LD_HOOK_READ_BLOQUEAR=0`, que se lee **en cada invocación**: una sesión abierta hereda el
+-  entorno del lanzador, así que una variable que solo se mire al arrancar no serviría de freno.
++- `LD_HOOK_READ_BLOCK=0` (antes `LD_HOOK_READ_BLOQUEAR`), que se lee **en cada invocación**: una
++  sesión abierta hereda el entorno del lanzador, así que una variable que solo se mire al arrancar
++  no serviría de freno.
+ - Que el backend local no responda: bloquear sin sitio a donde delegar deja al agente sin forma de
+   leer el fichero.
+ - El interruptor general del experimento, `LD_HOOK_ENABLED=0`.
+@@ -60,37 +61,37 @@ import os
+ import sys
+ 
+ from hook_common import (
+-    anotar_bloqueo,
+-    backend_disponible,
+-    contexto_de,
++    backend_available,
++    block_state,
++    context_of,
++    cooled_model,
+     deny,
+     emit,
+-    estado_del_bloqueo,
+-    huella_de_ruta,
+-    modelo_del_resumen,
+-    modelo_enfriado,
+-    nuevo_id,
++    new_id,
++    path_digest,
+     record,
++    record_block,
++    summary_model,
+ )
+ 
+-VERDADEROS = {"1", "true", "yes", "on"}
+-FALSOS = {"0", "false", "no", "off"}
++TRUTHY = {"1", "true", "yes", "on"}
++FALSY = {"0", "false", "no", "off"}
+ 
+ #: Prosa: lo que un resumen puede sustituir. Son las dos extensiones con volumen medido —`.md` 49
+ #: y `.txt` 15 de los 85 avisos del periodo— y las únicas que se bloquean.
+-EXTENSIONES_DE_PROSA = frozenset({".md", ".txt", ".markdown", ".rst"})
++PROSE_EXTENSIONS = frozenset({".md", ".txt", ".markdown", ".rst"})
+ 
+ #: Se leen para encontrar un valor exacto: un `package.json`, un `state.json`, la línea del error
+ #: en un log. Se avisa, pero no se bloquea, porque ahí el resumen no sustituye a la lectura. De
+ #: `.csv` y `.log` no hubo **ni un aviso** en el periodo medido, así que entrar a bloquearlos
+ #: habría sido inventar el caso.
+-EXTENSIONES_DE_DATOS = frozenset({".json", ".csv", ".log", ".yaml", ".yml", ".xml", ".toml"})
++DATA_EXTENSIONS = frozenset({".json", ".csv", ".log", ".yaml", ".yml", ".xml", ".toml"})
+ 
+ #: Extensiones que se leen para editarlas, no para transformarlas. Es una constante de módulo y no
+ #: una lista dentro de la decisión para que ampliarla no obligue a tocar la lógica —y para que un
+ #: test pueda leerla. Deja fuera a propósito `.md`, `.json`, `.txt`, `.csv` y `.log`, que son los
+ #: formatos donde un resumen o una extracción sí sustituyen a la lectura entera.
+-EXTENSIONES_DE_CODIGO = frozenset(
++CODE_EXTENSIONS = frozenset(
+     {
+         ".c",
+         ".cpp",
+@@ -130,7 +131,7 @@ EXTENSIONES_DE_CODIGO = frozenset(
+ MAX_EXT = 12
+ 
+ 
+-def esta_encendido(argv: list[str] | None = None) -> bool:
++def is_enabled(argv: list[str] | None = None) -> bool:
+     """¿Debe hacer algo este hook? Por el argumento del registro o por el entorno.
+ 
+     Cualquiera de las dos basta. `argv` se puede inyectar para poder probar la decisión sin
+@@ -139,10 +140,10 @@ def esta_encendido(argv: list[str] | None = None) -> bool:
+     args = sys.argv[1:] if argv is None else argv
+     if "--enabled" in args:
+         return True
+-    return os.environ.get("LD_HOOK_READ_ENABLED", "0").strip().lower() in VERDADEROS
++    return os.environ.get("LD_HOOK_READ_ENABLED", "0").strip().lower() in TRUTHY
+ 
+ 
+-def extension_de(file_path: str) -> str:
++def extension_of(file_path: str) -> str:
+     """La extensión en minúsculas, acotada y sin nada que identifique al archivo.
+ 
+     Devuelve `""` cuando no hay extensión, cuando pasa de `MAX_EXT` o cuando trae algo que no sea
+@@ -154,60 +155,60 @@ def extension_de(file_path: str) -> str:
+     return ext
+ 
+ 
+-def es_lectura_acotada(tool_input: dict) -> bool:
++def is_bounded_read(tool_input: dict) -> bool:
+     """Una franja pedida con offset/limit es intencionada: el modelo ya sabe qué parte quiere."""
+     return tool_input.get("offset") is not None or tool_input.get("limit") is not None
+ 
+ 
+-def bloqueo_encendido() -> bool:
++def block_on() -> bool:
+     """Si la regla puede rechazar una lectura. Se consulta EN CADA invocación, a propósito.
+ 
+-    Nace apagado: se enciende con `LD_HOOK_READ_BLOQUEAR=1`, y se apaga en caliente con el fichero
+-    de `hook_common.ruta_del_interruptor()`, que gana a la variable. La variable sola no servía de
++    Nace apagado: se enciende con `LD_HOOK_READ_BLOCK=1`, y se apaga en caliente con el fichero
++    de `hook_common.switch_path()`, que gana a la variable. La variable sola no servía de
+     freno: una sesión abierta hereda el entorno del lanzador —medido: catorce lecturas con el umbral
+     viejo después de cambiarlo— (REQ-F1-11).
+     """
+-    return estado_del_bloqueo() == "encendido"
++    return block_state() == "on"
+ 
+ 
+ #: Máximo del nombre de tool que va a la telemetría.
+ MAX_TOOL = 80
+ 
+ 
+-def registrar_lectura_mcp(tool_name: str, tool_input: dict, payload: dict) -> None:
++def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
+     """Una lectura por la tool de OTRO MCP: se cuenta y nunca se bloquea ni se sugiere (P-6).
+ 
+     Sin este registro el denominador de la medición no incluye el camino de al lado, y una subida
+     de la adopción no distinguiría «se delegó» de «se leyó por otro sitio» (REQ-F1-9).
+     """
+-    rutas = tool_input.get("paths")
+-    if not isinstance(rutas, list):
+-        rutas = [tool_input.get("path") or tool_input.get("file_path")]
+-    rutas = [ruta for ruta in rutas if isinstance(ruta, str) and ruta]
+-    evento: dict = {
++    paths = tool_input.get("paths")
++    if not isinstance(paths, list):
++        paths = [tool_input.get("path") or tool_input.get("file_path")]
++    paths = [item for item in paths if isinstance(item, str) and item]
++    fields: dict = {
+         "category": "read",
+-        "camino": "mcp",
+-        "motivo": "mcp_ajeno",
++        "route": "mcp",
++        "reason": "foreign_mcp",
+         "tool": tool_name[:MAX_TOOL],
+-        "rutas": len(rutas),
+-        "bloqueo": estado_del_bloqueo(),
+-        **contexto_de(payload, __file__),
++        "paths": len(paths),
++        "block": block_state(),
++        **context_of(payload, __file__),
+     }
+-    if rutas:
+-        evento["path_sha"] = huella_de_ruta(rutas[0])
+-        evento["ext"] = extension_de(rutas[0])
++    if paths:
++        fields["path_sha"] = path_digest(paths[0])
++        fields["ext"] = extension_of(paths[0])
+         try:
+-            evento["size_kb"] = round(os.path.getsize(rutas[0]) / 1024, 1)
++            fields["size_kb"] = round(os.path.getsize(paths[0]) / 1024, 1)
+         except OSError:
+             # El tamaño es un dato extra: si la ruta no existe o no se puede leer (otro MCP puede
+             # leer rutas remotas o relativas a su propia raíz), el evento se registra sin él. Perder
+             # la lectura del usuario por un `getsize` sería mucho peor que un evento incompleto.
+             pass
+-    record("PreToolUse", suggested=False, **evento)
++    record("PreToolUse", suggested=False, **fields)
+ 
+ 
+ def main() -> None:
+-    if not esta_encendido():
++    if not is_enabled():
+         return
+ 
+     try:
+@@ -218,39 +219,41 @@ def main() -> None:
+     tool_input = payload.get("tool_input") or {}
+     tool_name = str(payload.get("tool_name") or "")
+     if tool_name.startswith("mcp__"):
+-        registrar_lectura_mcp(tool_name, tool_input, payload)
++        record_mcp_read(tool_name, tool_input, payload)
+         return
+ 
+     file_path = tool_input.get("file_path")
+     if not file_path:
+         return
+ 
+-    ext = extension_de(file_path)
++    ext = extension_of(file_path)
+     # La HUELLA de la ruta, nunca la ruta. Sin ella no se puede agrupar por fichero, y esa es la
+     # pregunta que la guarda de «acotada» tiene pendiente: de las 277 lecturas por franjas
+     # registradas, cuantas eran de un fichero que acabo leyendose entero de todas formas. La
+     # telemetria sigue sin poder decir QUE fichero era.
+-    huella = {
+-        "path_sha": huella_de_ruta(file_path),
+-        "bloqueo": estado_del_bloqueo(),
+-        **contexto_de(payload, __file__),
++    base_fields = {
++        "path_sha": path_digest(file_path),
++        "block": block_state(),
++        **context_of(payload, __file__),
+     }
+ 
+     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
+     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
+-    if es_lectura_acotada(tool_input):
++    if is_bounded_read(tool_input):
+         record(
+             "PreToolUse",
+             suggested=False,
+             category="read",
+             ext=ext,
+-            motivo="acotada",
+-            **huella,
++            reason="bounded",
++            **base_fields,
+         )
+         return
+ 
+-    if ext in EXTENSIONES_DE_CODIGO:
+-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo", **huella)
++    if ext in CODE_EXTENSIONS:
++        record(
++            "PreToolUse", suggested=False, category="read", ext=ext, reason="code", **base_fields
++        )
+         return
+ 
+     try:
+@@ -267,35 +270,35 @@ def main() -> None:
+             category="read",
+             ext=ext,
+             size_kb=round(size_kb, 1),
+-            motivo="pequeno",
+-            **huella,
++            reason="small",
++            **base_fields,
+         )
+         return
+ 
+     band = "strong" if size_kb > strong_kb else "suggest"
+-    comun = {
++    common = {
+         "category": "read",
+         "band": band,
+         "ext": ext,
+         "size_kb": round(size_kb, 1),
+-        "id": nuevo_id(),
+-        **huella,
++        "id": new_id(),
++        **base_fields,
+     }
+ 
+     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas
+     # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato
+     # y no en la irritacion del usuario.
+-    if ext in EXTENSIONES_DE_PROSA and bloqueo_encendido():
+-        if not backend_disponible():
+-            record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
+-        elif modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
++    if ext in PROSE_EXTENSIONS and block_on():
++        if not backend_available():
++            record("PreToolUse", suggested=False, reason="backend_missing", **common)
++        elif cooled_model(summary_model(int(size_kb * 1024))):
+             # El servidor no llamaria a ese modelo: bloquear mandaria al agente a un destino que
+             # no esta vivo (REQ-F1-10).
+-            record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
++            record("PreToolUse", suggested=False, reason="model_cooled", **common)
+         else:
+             # La nota va ANTES del bloqueo: si el agente delega acto seguido, el servidor tiene
+             # que encontrarla ya escrita.
+-            anotar_bloqueo(comun["id"], file_path)
++            record_block(common["id"], file_path)
+             deny(
+                 "PreToolUse",
+                 f"Este archivo pesa {size_kb:.0f} KB y es prosa. Pasalo por una tool local con "
+@@ -304,23 +307,23 @@ def main() -> None:
+                 "contexto.\n\n"
+                 "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
+                 "leelo por franjas con `offset` y `limit`, que no se bloquean.",
+-                motivo="prosa_grande",
+-                **comun,
++                reason="large_prose",
++                **common,
+             )
+             return
+ 
+     strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
+-    destino = (
++    target = (
+         "una tool local_* con path"
+-        if ext not in EXTENSIONES_DE_DATOS
++        if ext not in DATA_EXTENSIONS
+         else "local_extract con path, si lo que buscas son campos concretos"
+     )
+     emit(
+         "PreToolUse",
+         f"{strength}: este archivo pesa {size_kb:.0f} KB. Si necesitas una transformacion "
+-        f"global (resumen, campos, traduccion o explicacion), usa {destino} para "
++        f"global (resumen, campos, traduccion o explicacion), usa {target} para "
+         "que no entre al contexto. Leelo directamente si necesitas lineas exactas para razonar o editar.",
+-        **comun,
++        **common,
+     )
+ 
+ 
+diff --git a/src/local_delegate/resources/hooks/suggest_delegate_shell.py b/src/local_delegate/resources/hooks/suggest_delegate_shell.py
+index 1b3c2ce..c497d0d 100755
+--- a/src/local_delegate/resources/hooks/suggest_delegate_shell.py
++++ b/src/local_delegate/resources/hooks/suggest_delegate_shell.py
+@@ -13,7 +13,7 @@ una sustitución, varios ficheros, o un flag que ya acota la lectura— **no se
+ registra para tener el denominador. Bloquear un comando mal parseado no es un consejo malo: es
+ impedir algo que el usuario pidió, y se apaga el primer día.
+ 
+-Se apaga igual que el de lectura: `LD_HOOK_READ_BLOQUEAR=0`, un backend que no responde, o el
++Se apaga igual que el de lectura: `LD_HOOK_READ_BLOCK=0`, un backend que no responde, o el
+ interruptor general `LD_HOOK_ENABLED=0`. Sin dependencias (stdlib únicamente).
+ """
+ 
+@@ -25,26 +25,26 @@ import shlex
+ import sys
+ 
+ from hook_common import (
+-    anotar_bloqueo,
+-    backend_disponible,
+-    contexto_de,
++    backend_available,
++    block_state,
++    context_of,
++    cooled_model,
+     deny,
+-    estado_del_bloqueo,
+-    huella_de_ruta,
+-    modelo_del_resumen,
+-    modelo_enfriado,
+-    nuevo_id,
++    new_id,
++    path_digest,
+     record,
++    record_block,
++    summary_model,
+ )
+ from suggest_delegate_read import (
+-    EXTENSIONES_DE_PROSA,
+-    bloqueo_encendido,
+-    esta_encendido,
+-    extension_de,
++    PROSE_EXTENSIONS,
++    block_on,
++    extension_of,
++    is_enabled,
+ )
+ 
+ #: Verbos que vuelcan un fichero entero. El valor es cuántas palabras ocupa el verbo.
+-VERBOS = {
++VERBS = {
+     "cat": 1,
+     "type": 1,
+     "more": 1,
+@@ -56,10 +56,10 @@ VERBOS = {
+ 
+ #: Cualquiera de estos convierte el comando en algo que este hook no entiende, y lo que no se
+ #: entiende no se bloquea.
+-METACARACTERES = ("|", ">", "<", "&", ";", "`", "$(", "&&", "||", "\n")
++METACHARACTERS = ("|", ">", "<", "&", ";", "`", "$(", "&&", "||", "\n")
+ 
+ #: Flags que ya acotan la lectura: quien los usa sabe qué trozo quiere, igual que un `offset`.
+-FLAGS_QUE_ACOTAN = {
++BOUNDING_FLAGS = {
+     "-n",
+     "-c",
+     "-totalcount",
+@@ -71,47 +71,47 @@ FLAGS_QUE_ACOTAN = {
+ }
+ 
+ 
+-def trocear(comando: str) -> list[str] | None:
++def split_words(command: str) -> list[str] | None:
+     """Las palabras del comando, o `None` si no se puede leer con seguridad."""
+-    if any(meta in comando for meta in METACARACTERES):
++    if any(meta in command for meta in METACHARACTERS):
+         return None
+     try:
+         # `posix=False` conserva las comillas, que es lo que hace PowerShell; se quitan después.
+-        palabras = shlex.split(comando, posix=False)
++        words = shlex.split(command, posix=False)
+     except ValueError:
+         return None
+-    return [p.strip("\"'") for p in palabras if p.strip()] or None
++    return [p.strip("\"'") for p in words if p.strip()] or None
+ 
+ 
+-def fichero_volcado_entero(comando: str) -> str | None:
++def whole_dump_path(command: str) -> str | None:
+     """La ruta que este comando vuelca entera, o `None` si no es uno de esos comandos.
+ 
+     Es deliberadamente estrecho. Todo lo que no encaje exactamente en «verbo + una ruta» sale por
+     `None`, que es el lado que deja pasar la lectura.
+     """
+-    palabras = trocear(comando)
+-    if not palabras:
++    words = split_words(command)
++    if not words:
+         return None
+ 
+-    minusculas = [p.lower() for p in palabras]
+-    for verbo, largo in VERBOS.items():
+-        if " ".join(minusculas[:largo]) == verbo:
+-            resto = palabras[largo:]
++    lowered = [p.lower() for p in words]
++    for verb, length in VERBS.items():
++        if " ".join(lowered[:length]) == verb:
++            rest = words[length:]
+             break
+     else:
+         return None
+ 
+-    if len(resto) != 1:
++    if len(rest) != 1:
+         # Ni cero (un `cat` que lee de la entrada estándar) ni dos o más (varios ficheros, o un
+         # flag). Con un flag que acota, además, la lectura ya es intencionada.
+         return None
+-    if resto[0].lower() in FLAGS_QUE_ACOTAN or resto[0].startswith("-"):
++    if rest[0].lower() in BOUNDING_FLAGS or rest[0].startswith("-"):
+         return None
+-    return resto[0]
++    return rest[0]
+ 
+ 
+ def main() -> None:
+-    if not esta_encendido():
++    if not is_enabled():
+         return
+ 
+     try:
+@@ -119,71 +119,71 @@ def main() -> None:
+     except (json.JSONDecodeError, ValueError):
+         return
+ 
+-    comando = (payload.get("tool_input") or {}).get("command")
+-    if not isinstance(comando, str) or not comando.strip():
++    command = (payload.get("tool_input") or {}).get("command")
++    if not isinstance(command, str) or not command.strip():
+         return
+ 
+-    comun = {
++    common = {
+         "category": "shell",
+-        "camino": "shell",
+-        "bloqueo": estado_del_bloqueo(),
+-        **contexto_de(payload, __file__),
++        "route": "shell",
++        "block": block_state(),
++        **context_of(payload, __file__),
+     }
+ 
+-    ruta = fichero_volcado_entero(comando)
+-    if ruta is None:
++    path = whole_dump_path(command)
++    if path is None:
+         # Se cuenta igual: sin el denominador no se sabe cuánta lectura se va por aquí, y esa era
+         # justo la pregunta que la cuarta medición no pudo responder.
+-        record("PreToolUse", suggested=False, motivo="no_es_volcado", **comun)
++        record("PreToolUse", suggested=False, reason="not_a_dump", **common)
+         return
+ 
+     # Absoluta con el `cwd` de la sesión (revisión del plan, B2): `cat docs/x.md` trae una ruta
+     # relativa, y el daemon —otro proceso, otro directorio— la resolvería contra el suyo. Con la
+     # relativa, la huella de la nota no casaba con la de la delegación y el bloqueo no se contaba
+     # como aceptado.
+-    if not os.path.isabs(ruta):
+-        ruta = os.path.normpath(os.path.join(str(payload.get("cwd") or os.getcwd()), ruta))
++    if not os.path.isabs(path):
++        path = os.path.normpath(os.path.join(str(payload.get("cwd") or os.getcwd()), path))
+ 
+-    ext = extension_de(ruta)
++    ext = extension_of(path)
+     try:
+         suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
+-        size_kb = os.path.getsize(ruta) / 1024
++        size_kb = os.path.getsize(path) / 1024
+     except (OSError, ValueError):
+-        record("PreToolUse", suggested=False, ext=ext, motivo="sin_fichero", **comun)
++        record("PreToolUse", suggested=False, ext=ext, reason="no_file", **common)
+         return
+ 
+-    comun = {**comun, "ext": ext, "size_kb": round(size_kb, 1), "path_sha": huella_de_ruta(ruta)}
++    common = {**common, "ext": ext, "size_kb": round(size_kb, 1), "path_sha": path_digest(path)}
+ 
+-    if ext not in EXTENSIONES_DE_PROSA:
+-        record("PreToolUse", suggested=False, motivo="no_es_prosa", **comun)
++    if ext not in PROSE_EXTENSIONS:
++        record("PreToolUse", suggested=False, reason="not_prose", **common)
+         return
+     if size_kb <= suggest_kb:
+-        record("PreToolUse", suggested=False, motivo="pequeno", **comun)
++        record("PreToolUse", suggested=False, reason="small", **common)
+         return
+-    if not bloqueo_encendido():
+-        record("PreToolUse", suggested=False, motivo="bloqueo_apagado", **comun)
++    if not block_on():
++        record("PreToolUse", suggested=False, reason="block_off", **common)
+         return
+-    if not backend_disponible():
+-        record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
++    if not backend_available():
++        record("PreToolUse", suggested=False, reason="backend_missing", **common)
+         return
+-    if modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
+-        record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
++    if cooled_model(summary_model(int(size_kb * 1024))):
++        record("PreToolUse", suggested=False, reason="model_cooled", **common)
+         return
+ 
+-    identificador = nuevo_id()
+-    anotar_bloqueo(identificador, ruta)
++    block_id = new_id()
++    record_block(block_id, path)
+     # La ruta que se ofrece es la absoluta: con la relativa, el daemon la resolvería contra su
+     # propio directorio y no encontraría el fichero.
+     deny(
+         "PreToolUse",
+         f"Este comando vuelca {size_kb:.0f} KB de prosa al contexto. Pasalo por una tool local "
+-        f'con `path="{ruta}"`: `local_summarize` para el contenido, `local_extract` para campos '
++        f'con `path="{path}"`: `local_summarize` para el contenido, `local_extract` para campos '
+         "concretos.\n\n"
+         "Si necesitas el texto literal, pide solo el trozo que te hace falta —`sed -n`, "
+         "`head -n`, `Get-Content -TotalCount`— que no se bloquean.",
+-        motivo="prosa_grande",
+-        id=identificador,
+-        **comun,
++        reason="large_prose",
++        id=block_id,
++        **common,
+     )
+ 
+ 
+diff --git a/src/local_delegate/server.py b/src/local_delegate/server.py
+index 63394b3..24c1260 100644
+--- a/src/local_delegate/server.py
++++ b/src/local_delegate/server.py
+@@ -494,10 +494,10 @@ def _append_log_line(log_path: Path, line: str) -> None:
+ VENTANA_DE_BLOQUEO_S = 600.0
+ 
+ 
+-def _bloqueo_reciente(path: str) -> str | None:
++def _recent_block_id(path: str) -> str | None:
+     """El identificador del bloqueo que provoco esta lectura, si lo hubo.
+ 
+-    Las notas las deja el hook (`hook_common.anotar_bloqueo`), que es stdlib pura y no puede
++    Las notas las deja el hook (`hook_common.record_block`), que es stdlib pura y no puede
+     importar este modulo: el formato vive en dos sitios y por eso hay un test de ida y vuelta que
+     escribe con el hook y lee con esto. Es la misma cautela que el espejo JS del panel.
+ 
+@@ -508,8 +508,33 @@ def _bloqueo_reciente(path: str) -> str | None:
+     except ImportError:
+         return None
+     try:
+-        huella = hook_common.huella_de_ruta(path)
+-        lineas = hook_common.ruta_de_notas().read_text(encoding="utf-8").splitlines()
++        digest = hook_common.path_digest(path)
++    except (OSError, ValueError):
++        return None
++    # El nombre nuevo y el viejo (REQ-012): un hook de una version anterior puede seguir
++    # instalado y escribiendo en `local-delegate-bloqueos.jsonl`. Gana la nota mas reciente.
++    lines: list[str] = []
++    for notes in (hook_common.block_notes_path(), hook_common.legacy_block_notes_path()):
++        try:
++            lines += notes.read_text(encoding="utf-8").splitlines()
++        except (OSError, ValueError):
++            continue
++
++    now = _utcnow().timestamp()
++    best: tuple[float, str] | None = None
++    for line in lines:
++        try:
++            note = json.loads(line)
++            ts = float(note["ts"])
++            fresh = note["sha"] == digest and now - ts <= VENTANA_DE_BLOQUEO_S
++            if fresh and (best is None or ts >= best[0]):
++                best = (ts, str(note["id"]))
++        except (ValueError, KeyError, TypeError):
++            continue
++    return best[1] if best else None
++    try:
++        huella = hook_common.path_digest(path)
++        lineas = hook_common.block_notes_path().read_text(encoding="utf-8").splitlines()
+     except (OSError, ValueError):
+         return None
+ 
+@@ -781,7 +806,7 @@ def _log_event(
+             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
+             # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
+             # comparables sin cruzar dos logs a mano.
+-            bloqueo = _bloqueo_reciente(path)
++            bloqueo = _recent_block_id(path)
+             if bloqueo:
+                 rec["bloqueo_id"] = bloqueo
+         if json_schema is not None:
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index 7433f63..a6de1ae 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -60,6 +60,7 @@ from .. import (
+     coste,
+     cuota,
+     fallos,
++    legacy_names,
+     llamaswap_api,
+     precios,
+     recalcular,
+@@ -593,13 +594,15 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
+     # Esto NO es conversión —nada enlaza una sugerencia con la delegación que vino después— sino
+     # selectividad, que vive entera dentro de este mismo fichero y no hay que cruzarla con nada.
+     #
+-    # Sólo entran los eventos de lectura: `motivo` y `ext` los escribe ese hook y nadie más, así
++    # Sólo entran los eventos de lectura: `reason` y `ext` los escribe ese hook y nadie más, así
+     # que meter los de `lint` o `summarize` daría un denominador que no es y la tarjeta diría
+     # que el hook descarta sin motivo la mitad de las veces.
+-    por_motivo: dict[str, int] = {}
++    by_reason: dict[str, int] = {}
+     por_ext: dict[str, int] = {}
+ 
+-    for row in rows:
++    for raw in rows:
++        # Filas viejas (`motivo`, `bloqueo`… en español) y nuevas dan lo mismo (REQ-006).
++        row = legacy_names.normalize("hook_telemetry", raw)
+         # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
+         # es lo que significaba antes de que el campo existiera.
+         sugerida = bool(row.get("suggested"))
+@@ -607,25 +610,25 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
+ 
+         for clave, destino in (
+             (row.get("event") or "?", por_evento),
+-            (row.get("category") or "sin categoría", por_categoria),
++            (row.get("category") or "no_category", por_categoria),
+         ):
+             casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
+             casilla["total"] += 1
+             casilla["suggested"] += sugerida
+ 
+         if row.get("category") == "read":
+-            # Un evento sin `motivo` es o bien un aviso, o bien uno de antes del PR #146, que no
++            # Un evento sin `reason` es o bien un aviso, o bien uno de antes del PR #146, que no
+             # lo escribía. Se separan porque decir «descartado sin motivo» de una telemetría
+             # vieja sería inventarle una razón que nunca tuvo.
+             if sugerida:
+-                clave = "avisó"
++                clave = "suggested"
+             else:
+-                clave = str(row.get("motivo") or "sin registrar")
+-            por_motivo[clave] = por_motivo.get(clave, 0) + 1
++                clave = str(row.get("reason") or "unrecorded")
++            by_reason[clave] = by_reason.get(clave, 0) + 1
+ 
+             ext = row.get("ext")
+-            por_ext[str(ext) if ext else "sin extensión"] = (
+-                por_ext.get(str(ext) if ext else "sin extensión", 0) + 1
++            por_ext[str(ext) if ext else "no_extension"] = (
++                por_ext.get(str(ext) if ext else "no_extension", 0) + 1
+             )
+ 
+         ts = _parse_ts(row.get("ts"))
+@@ -652,10 +655,10 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
+             key=lambda d: d["day"],
+         ),
+         # Sólo de los eventos de lectura; su total NO es el `total` de arriba.
+-        "read_total": sum(por_motivo.values()),
+-        "by_motivo": [
+-            {"motivo": nombre, "total": n}
+-            for nombre, n in sorted(por_motivo.items(), key=lambda kv: (-kv[1], kv[0]))
++        "read_total": sum(by_reason.values()),
++        "by_reason": [
++            {"reason": nombre, "total": n}
++            for nombre, n in sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))
+         ],
+         "by_ext": [
+             {"ext": nombre, "total": n}
+@@ -1037,7 +1040,11 @@ def render_index() -> str:
+     # de estar escrita en el HTML. Antes había un SVG dibujado a mano ahí: al unificar la marca
+     # se actualizó el favicon y el header se quedó con el icono viejo, así que el panel enseñaba
+     # una marca y su propia pestaña otra. Inyectándolo no pueden volver a separarse.
+-    return HTML.replace("__WEB_FONTS__", tags).replace("__BRAND_MARK__", FAVICON.strip())
++    return (
++        HTML.replace("__WEB_FONTS__", tags)
++        .replace("__BRAND_MARK__", FAVICON.strip())
++        .replace("__LEGACY_VALUES__", json.dumps(legacy_names.PANEL_VALUE_ALIASES))
++    )
+ 
+ 
+ @app.get("/", response_class=HTMLResponse)
+@@ -1871,13 +1878,14 @@ const LABELS = {
+   // prompt reconoció en el mensaje (resumir, extraer, …).
+   hookCategory: {read:'Lectura', shell:'Shell', bash:'Shell', lint:'Lint', summarize:'Resumen',
+     extract:'Extracción', classify:'Clasificación', translate:'Traducción',
+-    boilerplate:'Código repetitivo', 'sin categoría':'Sin categoría'},
+-  // Por qué el hook de lectura avisó o se calló (`motivo` del log de hooks).
+-  hookReason: {'avisó':'Avisó', aviso:'Avisó', acotada:'Lectura acotada', codigo:'Código',
+-    pequeno:'Pequeño', mcp_ajeno:'Por otro MCP', backend_ausente:'Backend ausente',
+-    modelo_enfriado:'Modelo enfriado', prosa_grande:'Prosa grande', no_es_prosa:'No es prosa',
+-    no_es_volcado:'No es un volcado', sin_fichero:'Sin fichero', bloqueo_apagado:'Bloqueo apagado',
+-    'sin registrar':'Sin registrar'},
++    boilerplate:'Código repetitivo', no_category:'Sin categoría'},
++  // Por qué el hook de lectura avisó o se calló (`reason` del log de hooks). Los valores viejos
++  // (`mcp_ajeno`, `avisó`…) los traduce `LEGACY_VALUES`, que inyecta el servidor (REQ-009).
++  hookReason: {suggested:'Avisó', bounded:'Lectura acotada', code:'Código',
++    small:'Pequeño', foreign_mcp:'Por otro MCP', backend_missing:'Backend ausente',
++    model_cooled:'Modelo enfriado', large_prose:'Prosa grande', not_prose:'No es prosa',
++    not_a_dump:'No es un volcado', no_file:'Sin fichero', block_off:'Bloqueo apagado',
++    unrecorded:'Sin registrar'},
+   client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
+     codex:'Codex', 'codex-mcp-client':'Codex',
+     desconocido:'Desconocido'},
+@@ -1893,8 +1901,13 @@ function humanLabel(key){
+   const s = String(key===null || key===undefined || key==='' ? 'sin dato' : key).replace(/_/g, ' ').trim();
+   return s.charAt(0).toUpperCase() + s.slice(1);
+ }
++// Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
++// y lo inyecta el servidor: el JS no lleva una segunda copia de la tabla (REQ-009, D2).
++const LEGACY_VALUES = __LEGACY_VALUES__;
+ function labelFor(kind, key){
+   const m = LABELS[kind] || {};
++  const alias = LEGACY_VALUES[kind] || {};
++  if(Object.prototype.hasOwnProperty.call(alias, key)) key = alias[key];
+   return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
+ }
+ function dolares(x){ return '$' + fmtNum(x, 2); }
+@@ -2147,7 +2160,7 @@ function renderHooks(h){
+   // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
+   // "sin registrar" son los eventos anteriores a que el hook escribiera el motivo; se muestran
+   // aparte en vez de repartirlos, porque de esos no se sabe la razón.
+-  const motivos = (h.by_motivo||[]);
++  const motivos = (h.by_reason||[]);
+   const totalRead = h.read_total || 0;
+   const punteria = !motivos.length ? '' :
+     '<div style="overflow-x:auto;margin-top:4px"><table>'
+@@ -2155,7 +2168,7 @@ function renderHooks(h){
+     + '<th>Reparto</th></tr></thead><tbody>'
+     + motivos.map(m=>{
+         const p = totalRead ? (m.total/totalRead*100) : 0;
+-        return '<tr><td class="mono" title="' + escHooks(m.motivo) + '">' + escHooks(labelFor('hookReason', m.motivo)) + '</td>'
++        return '<tr><td class="mono" title="' + escHooks(m.reason) + '">' + escHooks(labelFor('hookReason', m.reason)) + '</td>'
+           + '<td class="num">' + F.format(m.total) + '</td>'
+           + '<td class="num" style="color:var(--amber)">' + F1.format(p) + ' %</td></tr>';
+       }).join('')
+diff --git a/tests/test_aislamiento_entorno.py b/tests/test_aislamiento_entorno.py
+index 6fcf96c..2f8429f 100644
+--- a/tests/test_aislamiento_entorno.py
++++ b/tests/test_aislamiento_entorno.py
+@@ -166,7 +166,14 @@ def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
+     """
+     from local_delegate import deprecations
+ 
+-    renombradas = {n for _k, old, new in deprecations.hook_names() for n in (old, new) if n}
++    # Solo variables: el interruptor viejo (`switch_file`) es un fichero, no se lee del entorno.
++    renombradas = {
++        n
++        for kind, old, new in deprecations.hook_names()
++        if kind == "env_var"
++        for n in (old, new)
++        if n
++    }
+     # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
+     assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renombradas
+     por_alias = set().union(*_variables_que_leen_los_hooks().values())
+diff --git a/tests/test_atribucion.py b/tests/test_atribucion.py
+index 3d0fb9a..a90e8b7 100644
+--- a/tests/test_atribucion.py
++++ b/tests/test_atribucion.py
+@@ -25,7 +25,7 @@ from mcp.types import Implementation
+ from local_delegate import atribucion, clients, server
+ from local_delegate.resources.hooks import hook_common
+ 
+-HOOK = Path(hook_common.__file__).parent / "anotar_llamada.py"
++HOOK = Path(hook_common.__file__).parent / "record_call.py"
+ AGENTE = "general-purpose"
+ OPUS = "claude-opus-5-5"
+ 
+@@ -60,7 +60,7 @@ def _lanzar_hook(entrada: bytes, temporal: Path) -> subprocess.CompletedProcess:
+ 
+ 
+ def _dir_notas(temporal: Path) -> Path:
+-    return temporal / "local-delegate-llamadas"
++    return temporal / "local-delegate-calls"
+ 
+ 
+ def _entrada_hook(tool_use_id: str, transcript: Path | str, **extra) -> dict:
+@@ -108,7 +108,7 @@ def _escribir(ruta: Path, lineas: list[str]) -> Path:
+ 
+ 
+ def _anotar(notas: Path, tool_use_id: str, transcript: Path, **extra) -> None:
+-    assert hook_common.anotar_llamada(_entrada_hook(tool_use_id, transcript, **extra), notas)
++    assert hook_common.record_call(_entrada_hook(tool_use_id, transcript, **extra), notas)
+ 
+ 
+ # --- El hook ------------------------------------------------------------------------------------
+@@ -402,7 +402,7 @@ def log_y_notas(tmp_path, monkeypatch):
+     notas = tmp_path / "notas"
+     raiz = _proyectos(tmp_path)
+     monkeypatch.setattr(server, "_current_log_path", lambda: log)
+-    monkeypatch.setattr(hook_common, "directorio_de_notas_de_llamadas", lambda: notas)
++    monkeypatch.setattr(hook_common, "call_notes_dir", lambda: notas)
+     monkeypatch.setattr(atribucion, "_raiz_de_proyectos", lambda: raiz)
+     return log, notas, raiz
+ 
+diff --git a/tests/test_cli_renamed_names.py b/tests/test_cli_renamed_names.py
+index 04ab4d3..0ecdaf6 100644
+--- a/tests/test_cli_renamed_names.py
++++ b/tests/test_cli_renamed_names.py
+@@ -215,16 +215,16 @@ def _installed_prompt_hook_state(home: Path, variables: dict[str, str]) -> str:
+         env=env,
+     )
+     assert proc.returncode == 0, proc.stderr
+-    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["bloqueo"]
++    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["block"]
+ 
+ 
+ @pytest.mark.parametrize(
+     ("variables", "expected"),
+     [
+-        ({"LD_HOOK_READ_BLOQUEAR": "1"}, "encendido"),
+-        ({"LD_HOOK_READ_BLOCK": "1"}, "encendido"),
+-        ({"LD_HOOK_READ_BLOCK": "0", "LD_HOOK_READ_BLOQUEAR": "1"}, "apagado_variable"),
+-        ({}, "apagado_variable"),
++        ({"LD_HOOK_READ_BLOQUEAR": "1"}, "on"),
++        ({"LD_HOOK_READ_BLOCK": "1"}, "on"),
++        ({"LD_HOOK_READ_BLOCK": "0", "LD_HOOK_READ_BLOQUEAR": "1"}, "off_variable"),
++        ({}, "off_variable"),
+     ],
+     ids=["old-only", "new-only", "both-new-wins", "none"],
+ )
+@@ -248,7 +248,7 @@ def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables
+     other = tmp_path / "no-existe"
+     resolved = {k: v.format(switch=switch, other=other) for k, v in variables.items()}
+     state = _installed_prompt_hook_state(tmp_path, {"LD_HOOK_READ_BLOCK": "1", **resolved})
+-    assert state == "apagado_fichero"
++    assert state == "off_file"
+ 
+ 
+ # --- REQ-003: `local_status` dice lo que leyó el proceso -------------------------------------
+diff --git a/tests/test_conformidad_f1.py b/tests/test_conformidad_f1.py
+index 5755766..09851ae 100644
+--- a/tests/test_conformidad_f1.py
++++ b/tests/test_conformidad_f1.py
+@@ -57,8 +57,8 @@ def entorno(tmp_path, monkeypatch):
+     for variable in ("LOCAL_DELEGATE_MODEL_LONG", "LOCAL_DELEGATE_MODEL_MECHANICAL"):
+         monkeypatch.delenv(variable, raising=False)
+     monkeypatch.delenv("LOCAL_DELEGATE_LONG_INPUT_CHARS", raising=False)
+-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+-    monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: True)
++    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
++    monkeypatch.setattr(shell_hook, "backend_available", lambda **k: True)
+     return tmp_path
+ 
+ 
+@@ -114,10 +114,10 @@ def test_una_lectura_por_otro_mcp_se_cuenta_y_no_se_bloquea(entorno, monkeypatch
+     )
+     assert salida == "", "ni bloqueo ni sugerencia"
+     (evento,) = _eventos(entorno)
+-    assert evento["camino"] == "mcp"
++    assert evento["route"] == "mcp"
+     assert evento["category"] == "read", "tiene que entrar en el denominador de medir_adopcion"
+-    assert evento["motivo"] == "mcp_ajeno"
+-    assert evento["path_sha"] == common.huella_de_ruta(str(destino))
++    assert evento["reason"] == "foreign_mcp"
++    assert evento["path_sha"] == common.path_digest(str(destino))
+     assert str(destino) not in json.dumps(evento), "la telemetria nunca guarda rutas"
+ 
+ 
+@@ -146,7 +146,7 @@ def test_una_lectura_multiple_por_otro_mcp_tambien_se_cuenta(entorno, monkeypatc
+     )
+     assert salida == ""
+     (evento,) = _eventos(entorno)
+-    assert evento["camino"] == "mcp"
++    assert evento["route"] == "mcp"
+ 
+ 
+ def test_el_instalador_registra_el_hook_para_las_lecturas_de_otros_mcp():
+@@ -177,7 +177,7 @@ def test_con_el_modelo_largo_enfriado_la_prosa_no_se_bloquea(entorno, monkeypatc
+     _enfriar(entorno, "gemma4-26b-a4b", 100)
+     salida = _correr(read_hook, monkeypatch, capsys, {"tool_input": {"file_path": str(destino)}})
+     assert "deny" not in salida
+-    assert any(e.get("motivo") == "modelo_enfriado" for e in _eventos(entorno))
++    assert any(e.get("reason") == "model_cooled" for e in _eventos(entorno))
+ 
+ 
+ def test_un_enfriamiento_vencido_no_quita_el_bloqueo(entorno, monkeypatch, capsys):
+@@ -218,7 +218,7 @@ def test_el_volcado_por_shell_tambien_respeta_el_enfriamiento(entorno, monkeypat
+     )
+     _enfriar(entorno, "gemma4-26b-a4b", 100)
+     assert "deny" not in _correr(shell_hook, monkeypatch, capsys, payload)
+-    assert _eventos(entorno)[-1]["motivo"] == "modelo_enfriado"
++    assert _eventos(entorno)[-1]["reason"] == "model_cooled"
+ 
+ 
+ def test_los_defectos_del_hook_son_los_de_config():
+@@ -227,14 +227,14 @@ def test_los_defectos_del_hook_son_los_de_config():
+     for rol, variable in (("long", "LONG"), ("mechanical", "MECHANICAL")):
+         defecto = re.search(rf'"LOCAL_DELEGATE_MODEL_{variable}",\s*"([^"]+)"', fuente)
+         assert defecto, variable
+-        assert common.MODELOS_POR_DEFECTO[rol] == defecto.group(1)
++        assert common.DEFAULT_MODELS[rol] == defecto.group(1)
+     umbral = re.search(r'"LOCAL_DELEGATE_LONG_INPUT_CHARS",\s*(\d+)', fuente)
+-    assert umbral and common.UMBRAL_LARGO_CHARS == int(umbral.group(1))
++    assert umbral and common.LONG_THRESHOLD_CHARS == int(umbral.group(1))
+ 
+ 
+ def test_el_directorio_de_logs_del_hook_es_el_de_config(monkeypatch):
+     monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR", raising=False)
+-    assert common.directorio_de_logs() == config._default_log_dir()
++    assert common.log_dir() == config._default_log_dir()
+ 
+ 
+ # --- REQ-F1-11: apagado en caliente por fichero, y el estado en cada evento -----------------------
+@@ -260,11 +260,11 @@ def test_cada_evento_anota_el_estado_del_bloqueo(entorno, monkeypatch, capsys):
+     (entorno / "bloqueo-apagado").unlink()
+     _correr(read_hook, monkeypatch, capsys, franja)
+     _correr(shell_hook, monkeypatch, capsys, {"tool_input": {"command": "git status"}})
+-    assert [e["bloqueo"] for e in _eventos(entorno)] == [
+-        "encendido",
+-        "apagado_fichero",
+-        "apagado_variable",
+-        "apagado_variable",
++    assert [e["block"] for e in _eventos(entorno)] == [
++        "on",
++        "off_file",
++        "off_variable",
++        "off_variable",
+     ]
+ 
+ 
+diff --git a/tests/test_correlacion.py b/tests/test_correlacion.py
+index 9f3fa15..614d674 100644
+--- a/tests/test_correlacion.py
++++ b/tests/test_correlacion.py
+@@ -21,7 +21,9 @@ from local_delegate.resources.hooks import hook_common
+ @pytest.fixture
+ def notas(tmp_path, monkeypatch):
+     archivo = tmp_path / "bloqueos.jsonl"
+-    monkeypatch.setattr(hook_common, "ruta_de_notas", lambda: archivo)
++    monkeypatch.setattr(hook_common, "block_notes_path", lambda: archivo)
++    # El nombre viejo también se lee (REQ-012): que no lea el temporal real del usuario.
++    monkeypatch.setattr(hook_common, "legacy_block_notes_path", lambda: tmp_path / "viejo.jsonl")
+     return archivo
+ 
+ 
+@@ -30,16 +32,16 @@ def test_el_identificador_del_bloqueo_llega_al_servidor(notas, tmp_path):
+     documento = tmp_path / "informe.md"
+     documento.write_text("hola", encoding="utf-8")
+ 
+-    hook_common.anotar_bloqueo("abc123def456", str(documento))
++    hook_common.record_block("abc123def456", str(documento))
+ 
+-    assert server._bloqueo_reciente(str(documento)) == "abc123def456"
++    assert server._recent_block_id(str(documento)) == "abc123def456"
+ 
+ 
+ def test_otra_ruta_no_se_lleva_el_bloqueo_ajeno(notas, tmp_path):
+     """Control positivo: si cualquier lectura heredara el id, la adopcion medida seria falsa."""
+-    hook_common.anotar_bloqueo("abc123def456", str(tmp_path / "informe.md"))
++    hook_common.record_block("abc123def456", str(tmp_path / "informe.md"))
+ 
+-    assert server._bloqueo_reciente(str(tmp_path / "otro.md")) is None
++    assert server._recent_block_id(str(tmp_path / "otro.md")) is None
+ 
+ 
+ def test_la_misma_ruta_escrita_de_otra_forma_sigue_cruzando(notas, tmp_path):
+@@ -49,43 +51,43 @@ def test_la_misma_ruta_escrita_de_otra_forma_sigue_cruzando(notas, tmp_path):
+     documento.parent.mkdir()
+     documento.write_text("hola", encoding="utf-8")
+ 
+-    hook_common.anotar_bloqueo("id-largo-1234", str(documento))
++    hook_common.record_block("id-largo-1234", str(documento))
+     otra_forma = str(tmp_path / "sub" / ".." / "sub" / "informe.md")
+ 
+-    assert server._bloqueo_reciente(otra_forma) == "id-largo-1234"
++    assert server._recent_block_id(otra_forma) == "id-largo-1234"
+ 
+ 
+ def test_un_bloqueo_viejo_ya_no_cuenta(notas, tmp_path, monkeypatch):
+     """Pasada la ventana, el agente hizo otra cosa por el camino: atribuirselo infla la adopcion."""
+     documento = tmp_path / "informe.md"
+-    hook_common.anotar_bloqueo("caducado1234", str(documento))
++    hook_common.record_block("caducado1234", str(documento))
+ 
+     viejo = json.loads(notas.read_text(encoding="utf-8").strip())
+     viejo["ts"] = time.time() - server.VENTANA_DE_BLOQUEO_S - 1
+     notas.write_text(json.dumps(viejo) + "\n", encoding="utf-8")
+ 
+-    assert server._bloqueo_reciente(str(documento)) is None
++    assert server._recent_block_id(str(documento)) is None
+ 
+ 
+ def test_gana_el_bloqueo_mas_reciente_de_esa_ruta(notas, tmp_path):
+     documento = tmp_path / "informe.md"
+-    hook_common.anotar_bloqueo("primero12345", str(documento))
+-    hook_common.anotar_bloqueo("segundo12345", str(documento))
++    hook_common.record_block("primero12345", str(documento))
++    hook_common.record_block("segundo12345", str(documento))
+ 
+-    assert server._bloqueo_reciente(str(documento)) == "segundo12345"
++    assert server._recent_block_id(str(documento)) == "segundo12345"
+ 
+ 
+ def test_las_notas_no_crecen_sin_freno(notas, tmp_path):
+-    for i in range(hook_common.MAX_NOTAS + 50):
+-        hook_common.anotar_bloqueo(f"id{i:010d}", str(tmp_path / f"{i}.md"))
++    for i in range(hook_common.MAX_NOTES + 50):
++        hook_common.record_block(f"id{i:010d}", str(tmp_path / f"{i}.md"))
+ 
+-    assert len(notas.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTAS
++    assert len(notas.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTES
+ 
+ 
+ def test_la_nota_no_guarda_la_ruta(notas, tmp_path):
+     """Hereda la regla de la telemetria de hooks: ni rutas ni contenido, solo una huella."""
+     documento = tmp_path / "secreto-del-cliente.md"
+-    hook_common.anotar_bloqueo("abc123def456", str(documento))
++    hook_common.record_block("abc123def456", str(documento))
+ 
+     crudo = notas.read_text(encoding="utf-8")
+     assert "secreto-del-cliente" not in crudo
+@@ -100,12 +102,12 @@ def test_la_nota_no_guarda_la_ruta(notas, tmp_path):
+ def test_un_fichero_de_notas_roto_no_rompe_la_tool(notas, tmp_path, contenido):
+     notas.write_text(contenido, encoding="utf-8")
+ 
+-    assert server._bloqueo_reciente(str(tmp_path / "informe.md")) is None
++    assert server._recent_block_id(str(tmp_path / "informe.md")) is None
+ 
+ 
+ def test_sin_fichero_de_notas_tampoco_pasa_nada(notas, tmp_path):
+     assert not notas.exists()
+-    assert server._bloqueo_reciente(str(tmp_path / "informe.md")) is None
++    assert server._recent_block_id(str(tmp_path / "informe.md")) is None
+ 
+ 
+ # --- Y lo que de verdad importa: que acabe en el evento del log -------------------------------
+@@ -126,7 +128,7 @@ def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypat
+     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
+     documento = tmp_path / "informe.md"
+     documento.write_text("hola", encoding="utf-8")
+-    hook_common.anotar_bloqueo("abc123def456", str(documento))
++    hook_common.record_block("abc123def456", str(documento))
+ 
+     server._log_event(
+         tool="local_summarize",
+diff --git a/tests/test_dashboard_ui.py b/tests/test_dashboard_ui.py
+index 9340a90..d989068 100644
+--- a/tests/test_dashboard_ui.py
++++ b/tests/test_dashboard_ui.py
+@@ -271,7 +271,7 @@ _HOOKS = {
+     "suggested": 3,
+     "rate": 0.3,
+     "by_category": [{"category": "read", "total": 8, "suggested": 2}],
+-    "by_motivo": [{"motivo": "pequeño", "total": 5}],
++    "by_reason": [{"reason": "small", "total": 5}],
+     "read_total": 5,
+ }
+ 
+@@ -893,13 +893,14 @@ _HOOKS_CRUDOS = {
+     "by_event": [],
+     "by_day": [],
+     "read_total": 30,
+-    "by_motivo": [
+-        {"motivo": "avisó", "total": 8},
+-        {"motivo": "acotada", "total": 6},
+-        {"motivo": "codigo", "total": 5},
+-        {"motivo": "pequeno", "total": 4},
+-        {"motivo": "mcp_ajeno", "total": 4},
+-        {"motivo": "motivo_que_no_existe", "total": 3},
++    # Valores nuevos y viejos mezclados (REQ-009): los viejos se pintan con la misma etiqueta.
++    "by_reason": [
++        {"reason": "suggested", "total": 8},
++        {"reason": "acotada", "total": 6},
++        {"reason": "code", "total": 5},
++        {"reason": "pequeno", "total": 4},
++        {"reason": "foreign_mcp", "total": 4},
++        {"reason": "motivo_que_no_existe", "total": 3},
+     ],
+     "by_ext": [],
+ }
+diff --git a/tests/test_hook_common.py b/tests/test_hook_common.py
+index 0b0e4aa..c0f0404 100644
+--- a/tests/test_hook_common.py
++++ b/tests/test_hook_common.py
+@@ -118,15 +118,15 @@ def test_la_huella_del_script_cambia_cuando_el_script_cambia(tmp_path):
+ 
+ 
+ def test_el_contexto_dice_que_script_corrio_y_en_que_sesion():
+-    contexto = common.contexto_de({"session_id": "abc-123"}, str(HOOKS / "hook_common.py"))
++    contexto = common.context_of({"session_id": "abc-123"}, str(HOOKS / "hook_common.py"))
+     assert contexto["session_id"] == "abc-123"
+     assert len(contexto["version"]) == 8
+     # Un payload sin sesión no rompe nada, pero se nota en el dato.
+-    assert common.contexto_de({}, "x")["session_id"] == ""
++    assert common.context_of({}, "x")["session_id"] == ""
+ 
+ 
+ def test_cada_identificador_es_distinto():
+-    ids = {common.nuevo_id() for _ in range(100)}
++    ids = {common.new_id() for _ in range(100)}
+     assert len(ids) == 100
+     assert all(len(i) == 12 for i in ids)
+ 
+@@ -142,10 +142,10 @@ def _marca(tmp_path, ok: bool, antiguedad_s: float = 0.0):
+ 
+ def test_una_marca_fresca_se_cree_y_no_se_sondea(monkeypatch, tmp_path):
+     sondeos = []
+-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
++    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
+ 
+-    assert common.backend_disponible(marca=_marca(tmp_path, ok=True)) is True
+-    assert common.backend_disponible(marca=_marca(tmp_path, ok=False)) is False
++    assert common.backend_available(marker=_marca(tmp_path, ok=True)) is True
++    assert common.backend_available(marker=_marca(tmp_path, ok=False)) is False
+     assert sondeos == [], "una marca fresca no debería costar un sondeo"
+ 
+ 
+@@ -165,19 +165,19 @@ def test_una_marca_fresca_se_cree_y_no_se_sondea(monkeypatch, tmp_path):
+ def test_una_marca_que_no_sirve_se_vuelve_a_preguntar(monkeypatch, tmp_path, preparar):
+     """Ninguna de estas se interpreta: se sondea otra vez. Interpretarlas es inventar."""
+     sondeos = []
+-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
++    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
+ 
+-    assert common.backend_disponible(marca=preparar(tmp_path)) is True
++    assert common.backend_available(marker=preparar(tmp_path)) is True
+     assert len(sondeos) == 1
+ 
+ 
+ def test_el_sondeo_se_guarda_para_no_repetirlo(monkeypatch, tmp_path):
+     sondeos = []
+-    monkeypatch.setattr(common, "_sondear", lambda t: sondeos.append(t) or True)
++    monkeypatch.setattr(common, "_probe", lambda t: sondeos.append(t) or True)
+     archivo = tmp_path / "salud.json"
+ 
+-    common.backend_disponible(marca=archivo)
+-    common.backend_disponible(marca=archivo)
++    common.backend_available(marker=archivo)
++    common.backend_available(marker=archivo)
+ 
+     assert len(sondeos) == 1, "el segundo debería haber salido de la marca recién escrita"
+     assert json.loads(archivo.read_text(encoding="utf-8"))["ok"] is True
+@@ -185,21 +185,21 @@ def test_el_sondeo_se_guarda_para_no_repetirlo(monkeypatch, tmp_path):
+ 
+ def test_si_no_se_puede_escribir_la_marca_igual_se_responde(monkeypatch, tmp_path):
+     """Sin caché se sondea más a menudo: es lento, no incorrecto."""
+-    monkeypatch.setattr(common, "_sondear", lambda t: True)
++    monkeypatch.setattr(common, "_probe", lambda t: True)
+     inalcanzable = tmp_path / "no" / "existe" / "salud.json"
+ 
+-    assert common.backend_disponible(marca=inalcanzable) is True
++    assert common.backend_available(marker=inalcanzable) is True
+ 
+ 
+ def test_un_backend_que_no_esta_da_false_sin_lanzar(monkeypatch, tmp_path):
+     """Control positivo del sondeo de verdad: contra un puerto donde no hay nadie."""
+     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
+-    assert common.backend_disponible(marca=tmp_path / "salud.json", timeout_s=0.2) is False
++    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
+ 
+ 
+ def test_una_url_invalida_tampoco_lanza(monkeypatch, tmp_path):
+     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "no-es-una-url")
+-    assert common.backend_disponible(marca=tmp_path / "salud.json", timeout_s=0.2) is False
++    assert common.backend_available(marker=tmp_path / "salud.json", timeout_s=0.2) is False
+ 
+ 
+ def test_un_401_significa_que_el_backend_SI_esta(monkeypatch, tmp_path):
+@@ -220,7 +220,7 @@ def test_un_401_significa_que_el_backend_SI_esta(monkeypatch, tmp_path):
+ 
+     monkeypatch.setattr(common.urllib.request, "urlopen", _lanza_401)
+ 
+-    assert common.backend_disponible(marca=tmp_path / "salud.json") is True
++    assert common.backend_available(marker=tmp_path / "salud.json") is True
+ 
+ 
+ def test_un_500_no_cuenta_como_backend_sano(monkeypatch, tmp_path):
+@@ -237,7 +237,7 @@ def test_un_500_no_cuenta_como_backend_sano(monkeypatch, tmp_path):
+ 
+     monkeypatch.setattr(common.urllib.request, "urlopen", lambda *a, **k: _Respuesta())
+ 
+-    assert common.backend_disponible(marca=tmp_path / "salud.json") is False
++    assert common.backend_available(marker=tmp_path / "salud.json") is False
+ 
+ 
+ def test_cada_endpoint_tiene_su_propia_marca_de_salud(monkeypatch):
+@@ -247,10 +247,10 @@ def test_cada_endpoint_tiene_su_propia_marca_de_salud(monkeypatch):
+     backend de verdad todavia fresca, recibia un bloqueo que no tocaba.
+     """
+     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
+-    uno = common._ruta_de_salud()
++    uno = common._health_path()
+ 
+     monkeypatch.setenv("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9/v1")
+-    otro = common._ruta_de_salud()
++    otro = common._health_path()
+ 
+     assert uno != otro
+     assert uno.parent == otro.parent
+diff --git a/tests/test_hook_recipes.py b/tests/test_hook_recipes.py
+index 3a45649..1039a04 100644
+--- a/tests/test_hook_recipes.py
++++ b/tests/test_hook_recipes.py
+@@ -59,7 +59,7 @@ def test_prompt_hook_ignores_system_events(tmp_path, monkeypatch, capsys):
+         cuerpo = texto.split(">", 1)[1]
+         assert prompt.classify(cuerpo) == "summarize"
+ 
+-        assert prompt.es_evento_sistema(texto)
++        assert prompt.is_system_event(texto)
+         assert prompt.classify(texto) is None
+         monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": texto})))
+         prompt.main()
+@@ -74,7 +74,7 @@ def test_prompt_hook_matches_every_system_prefix():
+         "<system-reminder>\nresume esto",
+         "  \n<task-notification>\nresume esto",  # espacios y saltos delante
+     ):
+-        assert prompt.es_evento_sistema(texto), texto
++        assert prompt.is_system_event(texto), texto
+ 
+ 
+ def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch, capsys):
+@@ -96,7 +96,7 @@ def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch
+ 
+ def test_prompt_hook_still_classifies_user_prompts_mentioning_tags():
+     # Un usuario que cita la etiqueta a mitad de su mensaje sigue siendo un prompt.
+-    assert not prompt.es_evento_sistema("Resume qué hace <task-notification> en este log")
++    assert not prompt.is_system_event("Resume qué hace <task-notification> en este log")
+     assert prompt.classify("Resume qué hace <task-notification> en este log") == "summarize"
+ 
+ 
+@@ -255,7 +255,7 @@ def test_read_hook_registra_los_descartes_para_poder_medir_punteria(tmp_path, mo
+     evento = json.loads(log.read_text(encoding="utf-8").strip())
+     assert evento["suggested"] is False
+     assert evento["ext"] == ".tsx"
+-    assert evento["motivo"] == "codigo"
++    assert evento["reason"] == "code"
+ 
+ 
+ def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, monkeypatch):
+@@ -280,7 +280,7 @@ def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, mo
+     assert '"ext": ".md"' in texto
+     assert "confidencial" not in texto
+     assert "secreto" not in texto
+-    assert read_hook.extension_de("/x/y.contrato-acme-2026") == ""
++    assert read_hook.extension_of("/x/y.contrato-acme-2026") == ""
+ 
+ 
+ def _default_del_hook(variable: str) -> float:
+@@ -344,7 +344,7 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
+ 
+ def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
+     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if encendido else "0")
+-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: backend)
++    monkeypatch.setattr(read_hook, "backend_available", lambda **k: backend)
+     return _correr_hook(monkeypatch, capsys, tool_input)
+ 
+ 
+@@ -420,7 +420,7 @@ def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
+     target = tmp_path / "informe.md"
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+     monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
+-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
++    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
+ 
+     decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
+ 
+@@ -431,7 +431,7 @@ def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsy
+     """La variable se consulta en CADA invocacion: un freno que exige reiniciar no es un freno."""
+     target = tmp_path / "informe.md"
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
++    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
+ 
+     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+     assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+@@ -446,7 +446,7 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
+     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
++    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
+     target = tmp_path / "informe.md"
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+     monkeypatch.setattr(
+@@ -483,7 +483,7 @@ def test_la_huella_agrupa_por_fichero_sin_decir_cual_es(tmp_path, monkeypatch, c
+     _correr_hook(monkeypatch, capsys, {"file_path": str(documento)})
+ 
+     eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+-    assert [e["motivo"] for e in eventos[:1]] == ["acotada"]
++    assert [e["reason"] for e in eventos[:1]] == ["bounded"]
+     assert eventos[0]["path_sha"] == eventos[1]["path_sha"], "el mismo fichero, la misma huella"
+ 
+     crudo = log.read_text(encoding="utf-8")
+@@ -532,4 +532,4 @@ def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeyp
+         )
+         assert evento["session_id"] == "s-123", texto
+         assert evento["version"]  # huella del script que corrió
+-        assert evento["bloqueo"] == "encendido"
++        assert evento["block"] == "on"
+diff --git a/tests/test_hook_shell.py b/tests/test_hook_shell.py
+index cbec439..c3455d5 100644
+--- a/tests/test_hook_shell.py
++++ b/tests/test_hook_shell.py
+@@ -37,7 +37,7 @@ def _correr(monkeypatch, capsys, comando, *, backend=True, bloquear=True, log=No
+     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if bloquear else "0")
+     if log is not None:
+         monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+-    monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: backend)
++    monkeypatch.setattr(shell_hook, "backend_available", lambda **k: backend)
+     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"tool_input": {"command": comando}})))
+     shell_hook.main()
+     return capsys.readouterr().out
+@@ -160,15 +160,15 @@ def test_todo_comando_deja_rastro_para_poder_medir(monkeypatch, capsys, document
+     _correr(monkeypatch, capsys, f"cat {documento}", log=log)
+ 
+     eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+-    assert [e["motivo"] for e in eventos] == ["no_es_volcado", "no_es_volcado", "prosa_grande"]
+-    assert all(e["camino"] == "shell" for e in eventos)
++    assert [e["reason"] for e in eventos] == ["not_a_dump", "not_a_dump", "large_prose"]
++    assert all(e["route"] == "shell" for e in eventos)
+     assert eventos[-1]["blocked"] is True
+     # Ni el comando ni la ruta entran nunca en la telemetría.
+     assert str(documento) not in log.read_text(encoding="utf-8")
+ 
+ 
+ def _motivos(log) -> list[str]:
+-    return [json.loads(x)["motivo"] for x in log.read_text(encoding="utf-8").splitlines()]
++    return [json.loads(x)["reason"] for x in log.read_text(encoding="utf-8").splitlines()]
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -192,19 +192,19 @@ def test_los_metacaracteres_sin_espacios_tambien_frenan(
+ 
+     # Y se registra por lo que es. Sin la guarda de metacaracteres el comando tampoco se
+     # bloquearia —el fichero «informe.md>copia.md» no existe— pero quedaria contado como
+-    # «sin_fichero», y el denominador de F1 se lee por motivo.
+-    assert _motivos(log) == ["no_es_volcado"]
++    # «no_file», y el denominador de F1 se lee por motivo.
++    assert _motivos(log) == ["not_a_dump"]
+ 
+ 
+ def test_un_flag_suelto_no_se_confunde_con_una_ruta(monkeypatch, capsys, tmp_path):
+     """`cat -v` no lee ningún fichero, y tiene que notarse en el motivo, no en un error de disco.
+ 
+     Sin la guarda de flags, el hook intentaría medir el tamaño de un fichero llamado «-v» y
+-    registraría «sin_fichero»: el mismo no-bloqueo, pero por la razón equivocada, y la telemetría
++    registraría «no_file»: el mismo no-bloqueo, pero por la razón equivocada, y la telemetría
+     contaría mal.
+     """
+     log = tmp_path / "telemetria.jsonl"
+ 
+     assert _correr(monkeypatch, capsys, "cat -v", log=log) == ""
+ 
+-    assert _motivos(log) == ["no_es_volcado"]
++    assert _motivos(log) == ["not_a_dump"]
+diff --git a/tests/test_hook_shell_ruta_absoluta.py b/tests/test_hook_shell_ruta_absoluta.py
+index bed0e9c..0e507cf 100644
+--- a/tests/test_hook_shell_ruta_absoluta.py
++++ b/tests/test_hook_shell_ruta_absoluta.py
+@@ -63,8 +63,8 @@ def _entorno(tmp_path, monkeypatch):
+     # llamada, así que redirigir eso los apunta al mismo fichero.
+     monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+     for hook in (shell_hook, read_hook):
+-        monkeypatch.setattr(hook, "backend_disponible", lambda **k: True)
+-        monkeypatch.setattr(hook, "modelo_enfriado", lambda modelo: False)
++        monkeypatch.setattr(hook, "backend_available", lambda **k: True)
++        monkeypatch.setattr(hook, "cooled_model", lambda modelo: False)
+ 
+ 
+ def _razon(salida: str) -> str:
+@@ -109,4 +109,4 @@ def test_un_cat_relativo_se_cruza_con_la_delegacion(monkeypatch, capsys, documen
+     ofrecida = re.search(r'path="([^"]+)"', razon).group(1)
+     # El modelo delega con la ruta que se le ofreció, y la nota tiene que estar a ese nombre.
+     assert Path(ofrecida) == documento
+-    assert server._bloqueo_reciente(ofrecida) is not None
++    assert server._recent_block_id(ofrecida) is not None
+diff --git a/tests/test_hooks_telemetry_api.py b/tests/test_hooks_telemetry_api.py
+index c2ce2ea..2498e33 100644
+--- a/tests/test_hooks_telemetry_api.py
++++ b/tests/test_hooks_telemetry_api.py
+@@ -84,7 +84,7 @@ def test_sin_eventos_la_tasa_es_cero_y_no_revienta():
+         "by_category": [],
+         "by_day": [],
+         "read_total": 0,
+-        "by_motivo": [],
++        "by_reason": [],
+         "by_ext": [],
+     }
+ 
+@@ -114,12 +114,12 @@ def test_agrupa_por_evento_categoria_y_dia():
+ 
+ 
+ def test_una_categoria_ausente_no_se_pierde_en_el_recuento():
+-    """Sin la casilla «sin categoría», los totales por categoría no sumarían el total."""
++    """Sin la casilla `no_category` («Sin categoría»), los totales por categoría no sumarían el total."""
+     fila = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "suggested": True}
+     agregado = metrics._aggregate_hooks([fila])
+ 
+     assert sum(d["total"] for d in agregado["by_category"]) == agregado["total"]
+-    assert agregado["by_category"][0]["category"] == "sin categoría"
++    assert agregado["by_category"][0]["category"] == "no_category"
+ 
+ 
+ def test_las_listas_salen_ordenadas_por_volumen():
+@@ -218,6 +218,21 @@ def test_el_endpoint_no_devuelve_ni_comandos_ni_prompts(monkeypatch, tmp_path):
+ # --- El JS de la tarjeta, ejecutado de verdad ---------------------------------
+ 
+ 
++def _etiquetas_js(pagina: str) -> str:
++    """Las etiquetas legibles (clave interna → texto del panel) y la tabla de valores viejos que
++    inyecta el servidor, tal como salen en la página servida."""
++    partes = [
++        _extraer_funcion_js(pagina, cabecera)
++        for cabecera in (
++            "const LABELS = {",
++            "const LEGACY_VALUES = {",
++            "function humanLabel(",
++            "function labelFor(",
++        )
++    ]
++    return ";\n".join(partes) + ";"
++
++
+ def _extraer_funcion_js(fuente: str, cabecera: str) -> str:
+     """Recorta una función del `<script>` balanceando llaves. Igual que en `test_metrics.py`."""
+     i = fuente.index(cabecera)
+@@ -282,15 +297,12 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
+     if node is None:
+         pytest.skip("node no está en el PATH")
+ 
+-    render_js = _extraer_funcion_js(metrics.HTML, "function renderHooks(h){")
+-    esc_js = _extraer_funcion_js(metrics.HTML, "function escHooks(s){")
++    pagina = metrics.render_index()
++    render_js = _extraer_funcion_js(pagina, "function renderHooks(h){")
++    esc_js = _extraer_funcion_js(pagina, "function escHooks(s){")
+     # Los formateadores del panel (REQ-030/031): `F` y `F1` son objetos sobre `fmtNum`.
+-    fmt_js = _extraer_funcion_js(metrics.HTML, "function fmtNum(")
+-    # Las etiquetas legibles de las categorías (clave interna → texto del panel).
+-    etiquetas_js = "\n".join(
+-        _extraer_funcion_js(metrics.HTML, cabecera)
+-        for cabecera in ("const LABELS = {", "function humanLabel(", "function labelFor(")
+-    )
++    fmt_js = _extraer_funcion_js(pagina, "function fmtNum(")
++    etiquetas_js = _etiquetas_js(pagina)
+ 
+     programa = tmp_path / "render.mjs"
+     programa.write_text(
+@@ -364,16 +376,16 @@ def test_agrupa_las_lecturas_por_motivo_de_descarte():
+     agregado = metrics._aggregate_hooks(
+         [
+             _evento_de_lectura(suggested=True, ext=".md", band="strong"),
+-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+-            _evento_de_lectura(suggested=False, ext=".md", motivo="acotada"),
++            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
++            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
++            _evento_de_lectura(suggested=False, ext=".md", reason="bounded"),
+         ]
+     )
+ 
+-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {
+-        "codigo": 2,
+-        "avisó": 1,
+-        "acotada": 1,
++    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {
++        "code": 2,
++        "suggested": 1,
++        "bounded": 1,
+     }
+     assert agregado["read_total"] == 4
+ 
+@@ -381,8 +393,8 @@ def test_agrupa_las_lecturas_por_motivo_de_descarte():
+ def test_agrupa_las_lecturas_por_extension():
+     agregado = metrics._aggregate_hooks(
+         [
+-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
++            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
++            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
+             _evento_de_lectura(suggested=True, ext=".md"),
+         ]
+     )
+@@ -391,7 +403,7 @@ def test_agrupa_las_lecturas_por_extension():
+ 
+ 
+ def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
+-    """Los eventos anteriores al PR #146 no traen `motivo` ni `ext`.
++    """Los eventos anteriores al PR #146 no traen `motivo` (hoy `reason`) ni `ext`.
+ 
+     Meterlos en un motivo concreto diría que el hook descartaba por una razón que nunca registró,
+     y en este log eso son miles de líneas: la tarjeta contaría una historia falsa sobre el pasado.
+@@ -400,14 +412,14 @@ def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
+         [_evento_de_lectura(suggested=False), _evento_de_lectura(suggested=False)]
+     )
+ 
+-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"sin registrar": 2}
+-    assert agregado["by_ext"] == [{"ext": "sin extensión", "total": 2}]
++    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"unrecorded": 2}
++    assert agregado["by_ext"] == [{"ext": "no_extension", "total": 2}]
+ 
+ 
+ def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
+     """Control de los tres de arriba, y el fallo más fácil de cometer aquí.
+ 
+-    `motivo` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
++    `reason` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
+     de `lint` y `summarize` caerían en «sin registrar» y la tarjeta diría que el hook descarta sin
+     motivo la mitad de las veces — un número que se lee bien y significa otra cosa.
+     """
+@@ -426,4 +438,75 @@ def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
+ 
+     assert agregado["total"] == 3
+     assert agregado["read_total"] == 1
+-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"avisó": 1}
++    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"suggested": 1}
++
++
++# --- Telemetría vieja y nueva mezcladas (REQ-005/006/009, ola A2) -------------------------------
++
++
++def _filas_de_lectura(formato: str) -> list[dict]:
++    """El mismo reparto de motivos, escrito con las claves y valores viejos o con los nuevos."""
++    viejo = formato == "viejo"
++    clave, bloqueo = ("motivo", "bloqueo") if viejo else ("reason", "block")
++    valores = (
++        ["codigo", "codigo", "acotada", "mcp_ajeno", "prosa_grande"]
++        if viejo
++        else ["code", "code", "bounded", "foreign_mcp", "large_prose"]
++    )
++    estado = "encendido" if viejo else "on"
++    return [_evento_de_lectura(suggested=False, **{clave: v, bloqueo: estado}) for v in valores]
++
++
++def test_la_telemetria_mezclada_da_el_mismo_reparto_que_la_nueva():
++    """Un fichero con filas viejas y nuevas da el mismo `by_reason` que con todas nuevas: la
++    historia en español (31 691 líneas en la máquina de referencia) se sigue leyendo entera."""
++    nuevas = _filas_de_lectura("nuevo")
++    mezcladas = _filas_de_lectura("viejo")[:3] + nuevas[3:]
++
++    solo_nuevas = metrics._aggregate_hooks(nuevas)
++    mezcla = metrics._aggregate_hooks(mezcladas)
++
++    assert solo_nuevas["by_reason"] == [
++        {"reason": "code", "total": 2},
++        {"reason": "bounded", "total": 1},
++        {"reason": "foreign_mcp", "total": 1},
++        {"reason": "large_prose", "total": 1},
++    ]
++    assert mezcla["by_reason"] == solo_nuevas["by_reason"]
++    assert (
++        metrics._aggregate_hooks(_filas_de_lectura("viejo"))["by_reason"]
++        == (solo_nuevas["by_reason"])
++    )
++
++
++def test_el_diccionario_de_motivos_da_la_misma_etiqueta_al_valor_viejo_y_al_nuevo(tmp_path):
++    """Se ejecuta con node el `labelFor` de la página servida: `mcp_ajeno` y `foreign_mcp` (y el
++    resto de pares viejo/nuevo) tienen que pintarse igual, sin una segunda copia de la tabla."""
++    node = shutil.which("node")
++    if node is None:
++        pytest.skip("node no está en el PATH")
++    from local_delegate import legacy_names
++
++    pares = sorted(legacy_names.PANEL_VALUE_ALIASES["hookReason"].items())
++    programa = tmp_path / "etiquetas.mjs"
++    programa.write_text(
++        f"{_etiquetas_js(metrics.render_index())}\n"
++        f"const pares = {json.dumps(pares)};\n"
++        "console.log(JSON.stringify(pares.map(([v, n]) => [labelFor('hookReason', v),"
++        " labelFor('hookReason', n)])));\n",
++        encoding="utf-8",
++    )
++    salida = subprocess.run(
++        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
++    )
++    etiquetas = json.loads(salida.stdout)
++
++    assert len(etiquetas) == len(pares) >= 14
++    assert dict(zip([v for v, _n in pares], etiquetas, strict=True))["mcp_ajeno"] == [
++        "Por otro MCP",
++        "Por otro MCP",
++    ]
++    for (viejo, nuevo), (de_viejo, de_nuevo) in zip(pares, etiquetas, strict=True):
++        assert de_viejo == de_nuevo, f"{viejo} y {nuevo} se pintan distinto"
++        # Y con una etiqueta escrita, no la que inventa `humanLabel` a partir de la clave.
++        assert de_nuevo != nuevo, f"{nuevo} no tiene etiqueta en LABELS.hookReason"
+diff --git a/tests/test_install.py b/tests/test_install.py
+index d4423f1..1771454 100644
+--- a/tests/test_install.py
++++ b/tests/test_install.py
+@@ -139,12 +139,74 @@ def test_el_hook_de_atribucion_se_registra(tmp_path):
+         if g.get("matcher") == "mcp__local-delegate__.*"
+         for h in g["hooks"]
+     ]
+-    assert len(comandos) == 1 and "anotar_llamada.py" in comandos[0]
++    assert len(comandos) == 1 and "record_call.py" in comandos[0]
+     hooks_dir = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+-    assert (hooks_dir / "anotar_llamada.py").is_file(), (
+-        "el script registrado tiene que estar copiado"
++    assert (hooks_dir / "record_call.py").is_file(), "el script registrado tiene que estar copiado"
++
++
++def _simular_instalacion_034(home: Path) -> Path:
++    """Lo que dejaba `install` en la 0.34.0: el hook de atribución con su nombre viejo, copiado y
++    registrado. Se parte de una instalación de hoy y se le devuelve el nombre de entonces."""
++    assert _install(home) == 0
++    hooks_dir = home / ".claude" / "hooks" / inst.HOOKS_SUBDIR
++    (hooks_dir / "record_call.py").rename(hooks_dir / "anotar_llamada.py")
++    settings_path = home / ".claude" / "settings.json"
++    texto = settings_path.read_text(encoding="utf-8")
++    assert "record_call.py" in texto
++    settings_path.write_text(texto.replace("record_call.py", "anotar_llamada.py"), encoding="utf-8")
++    return hooks_dir
++
++
++def test_install_sobre_una_034_retira_anotar_llamada_y_registra_record_call(tmp_path):
++    """REQ-012: tras `install` sobre una 0.34.0, el hook viejo no queda ni en el disco ni en
++    `settings.json`, y el nuevo está una sola vez. Sin esto la copia vieja seguiría anotando cada
++    llamada por su cuenta."""
++    hooks_dir = _simular_instalacion_034(tmp_path)
++    assert (hooks_dir / "anotar_llamada.py").is_file(), "guarda: la 0.34.0 simulada lo tiene"
++
++    assert _install(tmp_path) == 0
++
++    assert not (hooks_dir / "anotar_llamada.py").exists(), "la copia vieja sigue en el disco"
++    assert (hooks_dir / "record_call.py").is_file()
++    texto = (tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8")
++    assert "anotar_llamada.py" not in texto, "el registro viejo sigue en settings.json"
++    assert texto.count("record_call.py") == 1
++
++
++def test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira(tmp_path):
++    """La otra mitad de REQ-012, y la que depende de `_RETIRED_SCRIPTS`: la copia de
++    `hooks/local-delegate/` la repone `install` entera, pero una puesta a mano siguiendo la recipe
++    (en la raíz de `~/.claude/hooks/`, registrada con su ruta) solo se reconoce como nuestra por el
++    nombre. Sin la entrada, se quedaría anotando cada llamada para siempre."""
++    claude = tmp_path / ".claude"
++    (claude / "hooks").mkdir(parents=True)
++    a_mano = claude / "hooks" / "anotar_llamada.py"
++    a_mano.write_text("# copiado a mano desde la recipe de la 0.34.0\n", encoding="utf-8")
++    (claude / "settings.json").write_text(
++        json.dumps(
++            {
++                "hooks": {
++                    "PreToolUse": [
++                        {
++                            "matcher": "mcp__local-delegate__.*",
++                            "hooks": [
++                                {"type": "command", "command": f"python {a_mano.as_posix()}"}
++                            ],
++                        }
++                    ]
++                }
++            }
++        ),
++        encoding="utf-8",
+     )
+ 
++    assert _install(tmp_path) == 0
++
++    assert not a_mano.exists(), "la copia a mano del hook viejo sigue en el disco"
++    texto = (claude / "settings.json").read_text(encoding="utf-8")
++    assert "anotar_llamada.py" not in texto, "su registro sigue en settings.json"
++    assert texto.count("record_call.py") == 1
++
+ 
+ def _comando_del_hook_de_read(home: Path) -> str | None:
+     """El comando de Read tal y como quedó escrito en settings.json, o None si no hay."""
+@@ -520,13 +582,13 @@ def test_la_instalacion_buena_sobrevive_al_retirado(tmp_path):
+     _con_huerfanos(tmp_path)
+     assert _install(tmp_path) == 0
+     buenos = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+-    empaquetados = inst.packaged_hook_names() - set(inst._SCRIPTS_RETIRADOS)
++    empaquetados = inst.packaged_hook_names() - set(inst._RETIRED_SCRIPTS)
+     assert empaquetados, "sin scripts empaquetados este test no comprobaría nada"
+     for nombre in empaquetados:
+         assert (buenos / nombre).is_file(), f"{nombre} debía seguir en {buenos}"
+     # Y la otra mitad: un retirado se reconoce como nuestro para poder limpiarlo, pero NO se
+     # instala. Sin esto, meterlo en `packaged_hook_names()` podría hacer que volviera a copiarse.
+-    for nombre in inst._SCRIPTS_RETIRADOS:
++    for nombre in inst._RETIRED_SCRIPTS:
+         assert not (buenos / nombre).exists(), f"{nombre} está retirado y no debe instalarse"
+ 
+ 
+@@ -541,7 +603,7 @@ def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
+     Se simula una instalación anterior: el script en la raíz de `hooks/` (como lo dejaba la
+     recipe vieja) y su entrada registrada en `settings.json`.
+     """
+-    retirado = inst._SCRIPTS_RETIRADOS[0]
++    retirado = inst._RETIRED_SCRIPTS[0]
+     claude = tmp_path / ".claude"
+     (claude / "hooks").mkdir(parents=True)
+     viejo = claude / "hooks" / retirado
+diff --git a/tests/test_medir_adopcion.py b/tests/test_medir_adopcion.py
+index 746b656..1c796a2 100644
+--- a/tests/test_medir_adopcion.py
++++ b/tests/test_medir_adopcion.py
+@@ -272,3 +272,29 @@ def test_las_filas_de_banco_no_cuentan_como_delegacion(escenario):
+     atribucion.escribir_relleno(config.LOG_DIR, "202610", {"toolu_bk": {"banco": True}})
+     assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
+     assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3
++
++
++# --- Telemetría vieja y nueva (REQ-006, ola A2 del renombrado) ---------------------------------
++
++
++def _a_formato_nuevo(evento: dict) -> dict:
++    """La misma fila con las claves y valores en inglés, como la escribe un hook de hoy."""
++    from local_delegate import legacy_names
++
++    return legacy_names.normalize("hook_telemetry", evento)
++
++
++@pytest.mark.parametrize("formato", ["nuevo", "mezclado"])
++def test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas(escenario, formato):
++    """El escenario está escrito en el formato viejo (`motivo`, `camino`…). Traducido entero, o la
++    mitad, la medida tiene que salir idéntica: la historia en español se sigue contando."""
++    antes = medir_adopcion.medir("2026-09-10")
++    filas = [json.loads(x) for x in escenario.read_text(encoding="utf-8").splitlines() if x]
++    assert any("motivo" in f for f in filas), "guarda: el escenario trae filas viejas"
++    nuevas = [
++        _a_formato_nuevo(f) if formato == "nuevo" or i % 2 else f for i, f in enumerate(filas)
++    ]
++    assert any("reason" in f for f in nuevas)
++    _escribir(escenario, nuevas)
++
++    assert medir_adopcion.medir("2026-09-10") == antes
+diff --git a/tests/test_hook_legacy_names.py b/tests/test_hook_legacy_names.py
+new file mode 100644
+index 0000000..fa4d1c3
+--- /dev/null
++++ b/tests/test_hook_legacy_names.py
+@@ -0,0 +1,296 @@
++"""Ola A2 del renombrado: nombres en disco, interruptor y `deprecated_names` de los hooks.
++
++Los hooks escriben solo los nombres nuevos (`local-delegate-blocks.jsonl`, `local-delegate-calls/`,
++`local-delegate-health-*.json`, `~/.claude/local-delegate-block-off`) y el daemon sigue leyendo
++los viejos, porque un hook de una versión anterior puede seguir instalado y escribiendo (REQ-005,
++REQ-006, REQ-012). Con la telemetría encendida, cada evento dice qué nombres viejos leyó la
++invocación, y `doctor` lo cuenta desde la cola del fichero (REQ-003).
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import subprocess
++import sys
++import tempfile
++import time
++from datetime import UTC, datetime, timedelta
++from pathlib import Path
++
++import pytest
++
++from local_delegate import atribucion, checks, config, deprecations, legacy_names, server
++from local_delegate import install as inst
++from local_delegate.resources.hooks import hook_common
++
++OLD_SWITCH, NEW_SWITCH = hook_common.FILE_NAMES["switch_file"]
++
++
++@pytest.fixture
++def temporal(tmp_path, monkeypatch):
++    """El temporal del usuario, que comparten el hook y el daemon, apuntando a `tmp_path`."""
++    destino = tmp_path / "temp"
++    destino.mkdir()
++    monkeypatch.setattr(tempfile, "tempdir", str(destino))
++    return destino
++
++
++@pytest.fixture
++def casa(tmp_path, monkeypatch):
++    """Un HOME de prueba sin interruptor configurado y con el bloqueo encendido por variable."""
++    home = tmp_path / "home"
++    (home / ".claude").mkdir(parents=True)
++    for nombre in ("HOME", "USERPROFILE"):
++        monkeypatch.setenv(nombre, str(home))
++    for nombre in (
++        "LD_HOOK_READ_SWITCH_FILE",
++        "LD_HOOK_READ_INTERRUPTOR",
++        "LD_HOOK_READ_BLOQUEAR",
++    ):
++        monkeypatch.delenv(nombre, raising=False)
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
++    hook_common.DEPRECATED_SEEN.clear()
++    yield home
++    hook_common.DEPRECATED_SEEN.clear()
++
++
++# --- Una sola tabla ---------------------------------------------------------------------------
++
++
++def test_la_tabla_de_ficheros_es_la_misma_en_los_hooks_y_en_el_paquete():
++    """Los hooks no importan el paquete y llevan su copia: si divergen, uno escribe donde el otro
++    no lee."""
++    assert hook_common.FILE_NAMES == legacy_names.FILE_NAMES
++
++
++def test_el_interruptor_viejo_esta_en_el_registro_y_en_la_copia_de_los_hooks():
++    entrada = deprecations.find(OLD_SWITCH)
++    assert entrada is not None and entrada.kind == "switch_file" and entrada.new == NEW_SWITCH
++    assert ("switch_file", OLD_SWITCH, NEW_SWITCH) in hook_common.DEPRECATED_HOOK_NAMES
++
++
++# --- Temporales: escribe el nuevo, lee los dos ----------------------------------------------
++
++
++def test_el_daemon_lee_las_notas_de_bloqueo_de_un_hook_viejo(temporal, tmp_path):
++    """Un hook de la 0.34.0 sigue escribiendo `local-delegate-bloqueos.jsonl`: el bloqueo que
++    provocó tiene que seguir contando como aceptado cuando el agente delega."""
++    documento = tmp_path / "informe.md"
++    viejo = temporal / "local-delegate-bloqueos.jsonl"
++    nota = {"id": "viejo1234567", "sha": hook_common.path_digest(str(documento)), "ts": time.time()}
++    viejo.write_text(json.dumps(nota) + "\n", encoding="utf-8")
++
++    assert server._recent_block_id(str(documento)) == "viejo1234567"
++
++
++def test_el_hook_escribe_las_notas_solo_con_el_nombre_nuevo_y_gana_la_mas_reciente(
++    temporal, tmp_path
++):
++    documento = tmp_path / "informe.md"
++    viejo = temporal / "local-delegate-bloqueos.jsonl"
++    antigua = {
++        "id": "viejo1234567",
++        "sha": hook_common.path_digest(str(documento)),
++        "ts": time.time() - 30,
++    }
++    viejo.write_text(json.dumps(antigua) + "\n", encoding="utf-8")
++
++    hook_common.record_block("nuevo1234567", str(documento))
++
++    assert (temporal / "local-delegate-blocks.jsonl").is_file()
++    assert viejo.read_text(encoding="utf-8").count("\n") == 1, "el fichero viejo no se toca"
++    assert server._recent_block_id(str(documento)) == "nuevo1234567"
++
++
++def test_la_nota_de_atribucion_de_un_hook_viejo_se_sigue_encontrando(temporal):
++    viejo = temporal / "local-delegate-llamadas"
++    viejo.mkdir()
++    nota = {"tool_use_id": "toolu_viejo", "ts": time.time(), "agent_type": "general-purpose"}
++    (viejo / "toolu_viejo.json").write_text(json.dumps(nota), encoding="utf-8")
++
++    assert atribucion.leer_nota("toolu_viejo") == nota
++
++    assert hook_common.record_call({"tool_use_id": "toolu_nuevo", "agent_type": "Explore"})
++    assert (temporal / "local-delegate-calls" / "toolu_nuevo.json").is_file()
++    assert not (viejo / "toolu_nuevo.json").exists()
++    assert atribucion.leer_nota("toolu_nuevo")["agent_type"] == "Explore"
++
++
++def test_la_marca_de_salud_usa_el_nombre_nuevo(temporal, monkeypatch):
++    monkeypatch.setattr(hook_common, "_probe", lambda _timeout: True)
++
++    assert hook_common.backend_available() is True
++
++    nombres = sorted(p.name for p in temporal.iterdir())
++    assert len(nombres) == 1 and nombres[0].startswith("local-delegate-health-"), nombres
++
++
++# --- El interruptor -------------------------------------------------------------------------
++
++
++def test_el_interruptor_viejo_sigue_apagando_y_queda_anotado(casa):
++    (casa / ".claude" / OLD_SWITCH).write_text("", encoding="utf-8")
++
++    assert hook_common.block_state() == "off_file"
++    assert OLD_SWITCH in hook_common.DEPRECATED_SEEN
++
++
++def test_el_interruptor_nuevo_apaga_sin_aviso(casa):
++    (casa / ".claude" / NEW_SWITCH).write_text("", encoding="utf-8")
++
++    assert hook_common.block_state() == "off_file"
++    assert hook_common.DEPRECATED_SEEN == set()
++
++
++def test_sin_interruptor_manda_la_variable(casa):
++    """Control de los dos anteriores: sin ningún fichero, el bloqueo está encendido."""
++    assert hook_common.block_state() == "on"
++    assert hook_common.DEPRECATED_SEEN == set()
++
++
++# --- `deprecated_names` en la telemetría, con el hook INSTALADO --------------------------------
++
++
++def _correr_hook_instalado(home: Path, variables: dict[str, str]) -> subprocess.CompletedProcess:
++    inst.apply(
++        inst.plan_install(
++            inst.Options(
++                home=home,
++                components={"hooks"},
++                targets={"claude"},
++                python_exe="python3",
++                use_cli=False,
++            )
++        ),
++        dry_run=False,
++        out=lambda *_a: None,
++    )
++    hooks_dir = home / ".claude" / "hooks" / inst.HOOKS_SUBDIR
++    quitar = {
++        "LD_HOOK_READ_BLOCK",
++        "LD_HOOK_READ_BLOQUEAR",
++        "LD_HOOK_READ_SWITCH_FILE",
++        "LD_HOOK_READ_INTERRUPTOR",
++        "LD_HOOK_TELEMETRY_LOG",
++    }
++    env = {k: v for k, v in os.environ.items() if k not in quitar}
++    env.update({"HOME": str(home), "USERPROFILE": str(home), **variables})
++    proc = subprocess.run(
++        [sys.executable, str(hooks_dir / "suggest_delegate_prompt.py")],
++        input=json.dumps({"prompt": "Hola", "session_id": "s-a2"}),
++        capture_output=True,
++        text=True,
++        env=env,
++        timeout=60,
++    )
++    assert proc.returncode == 0, proc.stderr
++    return proc
++
++
++def _ultimo_evento(log: Path) -> dict:
++    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
++
++
++def test_el_evento_dice_que_nombres_viejos_leyo_el_hook(tmp_path):
++    log = tmp_path / "telemetry.jsonl"
++    _correr_hook_instalado(
++        tmp_path, {"LD_HOOK_READ_BLOQUEAR": "1", "LD_HOOK_TELEMETRY_LOG": str(log)}
++    )
++
++    evento = _ultimo_evento(log)
++    assert evento["block"] == "on"
++    assert evento["deprecated_names"] == ["LD_HOOK_READ_BLOQUEAR"]
++
++
++def test_el_interruptor_viejo_tambien_viaja_en_el_evento(tmp_path):
++    log = tmp_path / "telemetry.jsonl"
++    (tmp_path / ".claude").mkdir(exist_ok=True)
++    (tmp_path / ".claude" / OLD_SWITCH).write_text("", encoding="utf-8")
++    _correr_hook_instalado(tmp_path, {"LD_HOOK_READ_BLOCK": "1", "LD_HOOK_TELEMETRY_LOG": str(log)})
++
++    evento = _ultimo_evento(log)
++    assert evento["block"] == "off_file"
++    assert evento["deprecated_names"] == [OLD_SWITCH]
++
++
++def test_con_nombres_nuevos_el_evento_no_lleva_la_clave(tmp_path):
++    """Control: la clave solo aparece cuando se leyó algo viejo."""
++    log = tmp_path / "telemetry.jsonl"
++    _correr_hook_instalado(tmp_path, {"LD_HOOK_READ_BLOCK": "1", "LD_HOOK_TELEMETRY_LOG": str(log)})
++
++    evento = _ultimo_evento(log)
++    assert evento["block"] == "on"
++    assert "deprecated_names" not in evento
++
++
++def test_sin_telemetria_no_se_escribe_nada(tmp_path):
++    _correr_hook_instalado(tmp_path, {"LD_HOOK_READ_BLOQUEAR": "1"})
++
++    assert not list(tmp_path.glob("**/*.jsonl")), "sin LD_HOOK_TELEMETRY_LOG no hay evento"
++
++
++# --- `doctor` lee la cola de la telemetría ---------------------------------------------------
++
++
++def _evento(cuando: datetime, nombres: list[str] | None = None) -> dict:
++    fila: dict = {"ts": cuando.isoformat(), "event": "UserPromptSubmit", "block": "on"}
++    if nombres:
++        fila["deprecated_names"] = nombres
++    return fila
++
++
++def _escribir_telemetria(path: Path, filas: list[dict], relleno: int = 0) -> None:
++    lineas = [json.dumps(f) for f in filas]
++    # Relleno de eventos viejos al principio: obliga a leer por bloques desde el final.
++    viejo = json.dumps(_evento(datetime.now(UTC) - timedelta(days=60)))
++    path.write_text("\n".join([viejo] * relleno + lineas) + "\n", encoding="utf-8")
++
++
++def test_la_cola_de_7_dias_da_los_nombres_y_no_mira_mas_atras(tmp_path):
++    ahora = datetime.now(UTC)
++    log = tmp_path / "telemetry.jsonl"
++    _escribir_telemetria(
++        log,
++        [
++            _evento(ahora - timedelta(days=9), ["LD_HOOK_READ_INTERRUPTOR"]),
++            _evento(ahora - timedelta(days=2), ["LD_HOOK_READ_BLOQUEAR"]),
++            _evento(ahora - timedelta(hours=1)),
++            _evento(ahora, [OLD_SWITCH]),
++        ],
++        relleno=3000,
++    )
++    assert log.stat().st_size > 2 * checks._TAIL_BLOCK, "el caso tiene que cruzar bloques"
++
++    nombres = checks.deprecated_names_in_hook_telemetry(log, now=ahora)
++
++    assert nombres == {"LD_HOOK_READ_BLOQUEAR", OLD_SWITCH}
++
++
++def test_doctor_avisa_de_lo_que_leyeron_los_hooks(tmp_path, monkeypatch):
++    log = tmp_path / "telemetry.jsonl"
++    _escribir_telemetria(log, [_evento(datetime.now(UTC), ["LD_HOOK_READ_BLOQUEAR"])])
++    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
++    for nombre in config.DEPRECATED_ENV_VALUES:
++        monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, nombre, None)
++    ctx = checks.Context(home=tmp_path)
++
++    resultado = checks._probe_deprecated_names(ctx)
++
++    assert resultado.status == checks.WARN
++    assert "leído por los hooks" in resultado.detail
++    assert "LD_HOOK_READ_BLOQUEAR está obsoleto: usa LD_HOOK_READ_BLOCK" in resultado.detail
++
++
++def test_doctor_avisa_del_interruptor_viejo_en_claude(tmp_path, monkeypatch):
++    monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
++    for nombre in config.DEPRECATED_ENV_VALUES:
++        monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, nombre, None)
++    claude = tmp_path / ".claude"
++    claude.mkdir()
++    (claude / OLD_SWITCH).write_text("", encoding="utf-8")
++
++    resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
++
++    assert resultado.status == checks.WARN
++    assert f"renombra {OLD_SWITCH} a {NEW_SWITCH}" in resultado.fix_hint

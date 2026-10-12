@@ -279,7 +279,7 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige 
 plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
 pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
 
-Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `anotar_llamada.py`
+Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo

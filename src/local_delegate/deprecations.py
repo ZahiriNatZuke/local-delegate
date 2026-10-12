@@ -75,6 +75,14 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
     DeprecatedName(
         "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "UNRELEASED"
     ),
+    # Ola A2: el fichero que apaga el bloqueo (REQ-012). Vive en `~/.claude/`; lo lee el hook.
+    DeprecatedName(
+        "switch_file",
+        "local-delegate-bloqueo-apagado",
+        "local-delegate-block-off",
+        "UNRELEASED",
+        used_by_hooks=True,
+    ),
 )
 
 
@@ -126,7 +134,7 @@ def env_vars() -> tuple[DeprecatedName, ...]:
 
 
 def switch_files() -> tuple[DeprecatedName, ...]:
-    """Ficheros interruptor con nombre viejo (vacío hasta la ola A2)."""
+    """Ficheros interruptor con nombre viejo, relativos a `~/.claude/`."""
     return tuple(e for e in DEPRECATED_NAMES if e.kind == "switch_file")
 
 

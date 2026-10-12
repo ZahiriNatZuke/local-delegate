@@ -6,8 +6,8 @@ formato viejo, y no se reescriben en el sitio. Este módulo es la única tabla d
 todo lector del paquete traduce por aquí, y los hooks llevan en `hook_common.py` solo las
 equivalencias que leen ellos, atadas a esta por un test de igualdad.
 
-Estado tras la ola A0: **esqueleto**. La API está fijada y las tablas vacías; cada ola del frente
-A añade las de su formato (p. ej. A3 el log de uso, A4 el enfriamiento).
+Cada ola del frente A añade las tablas de su formato (A2 la telemetría de hooks y los nombres en
+disco; A3 el log de uso; A4 el enfriamiento…).
 
 Forma de cada formato en `FORMATS`:
 
@@ -20,7 +20,61 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-FORMATS: dict[str, dict[str, dict[str, Any]]] = {}
+FORMATS: dict[str, dict[str, dict[str, Any]]] = {
+    # Telemetría de hooks (`LD_HOOK_TELEMETRY_LOG`). `oferta` ya no la escribe nadie: solo se lee.
+    "hook_telemetry": {
+        "keys": {
+            "motivo": "reason",
+            "bloqueo": "block",
+            "camino": "route",
+            "rutas": "paths",
+            "oferta": "offer",
+        },
+        "values": {
+            "reason": {
+                "acotada": "bounded",
+                "codigo": "code",
+                "pequeno": "small",
+                "backend_ausente": "backend_missing",
+                "modelo_enfriado": "model_cooled",
+                "prosa_grande": "large_prose",
+                "no_es_volcado": "not_a_dump",
+                "sin_fichero": "no_file",
+                "no_es_prosa": "not_prose",
+                "bloqueo_apagado": "block_off",
+                "mcp_ajeno": "foreign_mcp",
+            },
+            "block": {
+                "encendido": "on",
+                "apagado_fichero": "off_file",
+                "apagado_variable": "off_variable",
+            },
+        },
+    },
+}
+
+#: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
+#: escribe solo el nuevo y se leen los dos. `hook_common.FILE_NAMES` es su copia (los hooks no
+#: importan el paquete) y `tests/test_hook_legacy_names.py` exige que sean iguales.
+FILE_NAMES: dict[str, tuple[str, str]] = {
+    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
+    "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
+    "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
+    "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
+}
+
+#: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
+#: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
+#: Además de los motivos persistidos, van los cubos que fabricaba el propio servidor en español.
+PANEL_VALUE_ALIASES: dict[str, dict[str, str]] = {
+    "hookReason": {
+        **FORMATS["hook_telemetry"]["values"]["reason"],
+        "avisó": "suggested",
+        "aviso": "suggested",
+        "sin registrar": "unrecorded",
+    },
+    "hookCategory": {"sin categoría": "no_category"},
+}
 
 
 def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) -> Any:

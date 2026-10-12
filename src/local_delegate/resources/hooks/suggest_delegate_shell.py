@@ -13,7 +13,7 @@ una sustitución, varios ficheros, o un flag que ya acota la lectura— **no se 
 registra para tener el denominador. Bloquear un comando mal parseado no es un consejo malo: es
 impedir algo que el usuario pidió, y se apaga el primer día.
 
-Se apaga igual que el de lectura: `LD_HOOK_READ_BLOQUEAR=0`, un backend que no responde, o el
+Se apaga igual que el de lectura: `LD_HOOK_READ_BLOCK=0`, un backend que no responde, o el
 interruptor general `LD_HOOK_ENABLED=0`. Sin dependencias (stdlib únicamente).
 """
 
@@ -25,26 +25,26 @@ import shlex
 import sys
 
 from hook_common import (
-    anotar_bloqueo,
-    backend_disponible,
-    contexto_de,
+    backend_available,
+    block_state,
+    context_of,
+    cooled_model,
     deny,
-    estado_del_bloqueo,
-    huella_de_ruta,
-    modelo_del_resumen,
-    modelo_enfriado,
-    nuevo_id,
+    new_id,
+    path_digest,
     record,
+    record_block,
+    summary_model,
 )
 from suggest_delegate_read import (
-    EXTENSIONES_DE_PROSA,
-    bloqueo_encendido,
-    esta_encendido,
-    extension_de,
+    PROSE_EXTENSIONS,
+    block_on,
+    extension_of,
+    is_enabled,
 )
 
 #: Verbos que vuelcan un fichero entero. El valor es cuántas palabras ocupa el verbo.
-VERBOS = {
+VERBS = {
     "cat": 1,
     "type": 1,
     "more": 1,
@@ -56,10 +56,10 @@ VERBOS = {
 
 #: Cualquiera de estos convierte el comando en algo que este hook no entiende, y lo que no se
 #: entiende no se bloquea.
-METACARACTERES = ("|", ">", "<", "&", ";", "`", "$(", "&&", "||", "\n")
+METACHARACTERS = ("|", ">", "<", "&", ";", "`", "$(", "&&", "||", "\n")
 
 #: Flags que ya acotan la lectura: quien los usa sabe qué trozo quiere, igual que un `offset`.
-FLAGS_QUE_ACOTAN = {
+BOUNDING_FLAGS = {
     "-n",
     "-c",
     "-totalcount",
@@ -71,47 +71,47 @@ FLAGS_QUE_ACOTAN = {
 }
 
 
-def trocear(comando: str) -> list[str] | None:
+def split_words(command: str) -> list[str] | None:
     """Las palabras del comando, o `None` si no se puede leer con seguridad."""
-    if any(meta in comando for meta in METACARACTERES):
+    if any(meta in command for meta in METACHARACTERS):
         return None
     try:
         # `posix=False` conserva las comillas, que es lo que hace PowerShell; se quitan después.
-        palabras = shlex.split(comando, posix=False)
+        words = shlex.split(command, posix=False)
     except ValueError:
         return None
-    return [p.strip("\"'") for p in palabras if p.strip()] or None
+    return [p.strip("\"'") for p in words if p.strip()] or None
 
 
-def fichero_volcado_entero(comando: str) -> str | None:
+def whole_dump_path(command: str) -> str | None:
     """La ruta que este comando vuelca entera, o `None` si no es uno de esos comandos.
 
     Es deliberadamente estrecho. Todo lo que no encaje exactamente en «verbo + una ruta» sale por
     `None`, que es el lado que deja pasar la lectura.
     """
-    palabras = trocear(comando)
-    if not palabras:
+    words = split_words(command)
+    if not words:
         return None
 
-    minusculas = [p.lower() for p in palabras]
-    for verbo, largo in VERBOS.items():
-        if " ".join(minusculas[:largo]) == verbo:
-            resto = palabras[largo:]
+    lowered = [p.lower() for p in words]
+    for verb, length in VERBS.items():
+        if " ".join(lowered[:length]) == verb:
+            rest = words[length:]
             break
     else:
         return None
 
-    if len(resto) != 1:
+    if len(rest) != 1:
         # Ni cero (un `cat` que lee de la entrada estándar) ni dos o más (varios ficheros, o un
         # flag). Con un flag que acota, además, la lectura ya es intencionada.
         return None
-    if resto[0].lower() in FLAGS_QUE_ACOTAN or resto[0].startswith("-"):
+    if rest[0].lower() in BOUNDING_FLAGS or rest[0].startswith("-"):
         return None
-    return resto[0]
+    return rest[0]
 
 
 def main() -> None:
-    if not esta_encendido():
+    if not is_enabled():
         return
 
     try:
@@ -119,71 +119,71 @@ def main() -> None:
     except (json.JSONDecodeError, ValueError):
         return
 
-    comando = (payload.get("tool_input") or {}).get("command")
-    if not isinstance(comando, str) or not comando.strip():
+    command = (payload.get("tool_input") or {}).get("command")
+    if not isinstance(command, str) or not command.strip():
         return
 
-    comun = {
+    common = {
         "category": "shell",
-        "camino": "shell",
-        "bloqueo": estado_del_bloqueo(),
-        **contexto_de(payload, __file__),
+        "route": "shell",
+        "block": block_state(),
+        **context_of(payload, __file__),
     }
 
-    ruta = fichero_volcado_entero(comando)
-    if ruta is None:
+    path = whole_dump_path(command)
+    if path is None:
         # Se cuenta igual: sin el denominador no se sabe cuánta lectura se va por aquí, y esa era
         # justo la pregunta que la cuarta medición no pudo responder.
-        record("PreToolUse", suggested=False, motivo="no_es_volcado", **comun)
+        record("PreToolUse", suggested=False, reason="not_a_dump", **common)
         return
 
     # Absoluta con el `cwd` de la sesión (revisión del plan, B2): `cat docs/x.md` trae una ruta
     # relativa, y el daemon —otro proceso, otro directorio— la resolvería contra el suyo. Con la
     # relativa, la huella de la nota no casaba con la de la delegación y el bloqueo no se contaba
     # como aceptado.
-    if not os.path.isabs(ruta):
-        ruta = os.path.normpath(os.path.join(str(payload.get("cwd") or os.getcwd()), ruta))
+    if not os.path.isabs(path):
+        path = os.path.normpath(os.path.join(str(payload.get("cwd") or os.getcwd()), path))
 
-    ext = extension_de(ruta)
+    ext = extension_of(path)
     try:
         suggest_kb = float(os.environ.get("LD_HOOK_READ_SUGGEST_KB", "8"))
-        size_kb = os.path.getsize(ruta) / 1024
+        size_kb = os.path.getsize(path) / 1024
     except (OSError, ValueError):
-        record("PreToolUse", suggested=False, ext=ext, motivo="sin_fichero", **comun)
+        record("PreToolUse", suggested=False, ext=ext, reason="no_file", **common)
         return
 
-    comun = {**comun, "ext": ext, "size_kb": round(size_kb, 1), "path_sha": huella_de_ruta(ruta)}
+    common = {**common, "ext": ext, "size_kb": round(size_kb, 1), "path_sha": path_digest(path)}
 
-    if ext not in EXTENSIONES_DE_PROSA:
-        record("PreToolUse", suggested=False, motivo="no_es_prosa", **comun)
+    if ext not in PROSE_EXTENSIONS:
+        record("PreToolUse", suggested=False, reason="not_prose", **common)
         return
     if size_kb <= suggest_kb:
-        record("PreToolUse", suggested=False, motivo="pequeno", **comun)
+        record("PreToolUse", suggested=False, reason="small", **common)
         return
-    if not bloqueo_encendido():
-        record("PreToolUse", suggested=False, motivo="bloqueo_apagado", **comun)
+    if not block_on():
+        record("PreToolUse", suggested=False, reason="block_off", **common)
         return
-    if not backend_disponible():
-        record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
+    if not backend_available():
+        record("PreToolUse", suggested=False, reason="backend_missing", **common)
         return
-    if modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
-        record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
+    if cooled_model(summary_model(int(size_kb * 1024))):
+        record("PreToolUse", suggested=False, reason="model_cooled", **common)
         return
 
-    identificador = nuevo_id()
-    anotar_bloqueo(identificador, ruta)
+    block_id = new_id()
+    record_block(block_id, path)
     # La ruta que se ofrece es la absoluta: con la relativa, el daemon la resolvería contra su
     # propio directorio y no encontraría el fichero.
     deny(
         "PreToolUse",
         f"Este comando vuelca {size_kb:.0f} KB de prosa al contexto. Pasalo por una tool local "
-        f'con `path="{ruta}"`: `local_summarize` para el contenido, `local_extract` para campos '
+        f'con `path="{path}"`: `local_summarize` para el contenido, `local_extract` para campos '
         "concretos.\n\n"
         "Si necesitas el texto literal, pide solo el trozo que te hace falta —`sed -n`, "
         "`head -n`, `Get-Content -TotalCount`— que no se bloquean.",
-        motivo="prosa_grande",
-        id=identificador,
-        **comun,
+        reason="large_prose",
+        id=block_id,
+        **common,
     )
 
 

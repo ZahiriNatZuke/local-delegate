@@ -60,6 +60,7 @@ from .. import (
     coste,
     cuota,
     fallos,
+    legacy_names,
     llamaswap_api,
     precios,
     recalcular,
@@ -593,13 +594,15 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     # Esto NO es conversión —nada enlaza una sugerencia con la delegación que vino después— sino
     # selectividad, que vive entera dentro de este mismo fichero y no hay que cruzarla con nada.
     #
-    # Sólo entran los eventos de lectura: `motivo` y `ext` los escribe ese hook y nadie más, así
+    # Sólo entran los eventos de lectura: `reason` y `ext` los escribe ese hook y nadie más, así
     # que meter los de `lint` o `summarize` daría un denominador que no es y la tarjeta diría
     # que el hook descarta sin motivo la mitad de las veces.
-    por_motivo: dict[str, int] = {}
+    by_reason: dict[str, int] = {}
     por_ext: dict[str, int] = {}
 
-    for row in rows:
+    for raw in rows:
+        # Filas viejas (`motivo`, `bloqueo`… en español) y nuevas dan lo mismo (REQ-006).
+        row = legacy_names.normalize("hook_telemetry", raw)
         # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
         # es lo que significaba antes de que el campo existiera.
         sugerida = bool(row.get("suggested"))
@@ -607,25 +610,25 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
 
         for clave, destino in (
             (row.get("event") or "?", por_evento),
-            (row.get("category") or "sin categoría", por_categoria),
+            (row.get("category") or "no_category", por_categoria),
         ):
             casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
             casilla["total"] += 1
             casilla["suggested"] += sugerida
 
         if row.get("category") == "read":
-            # Un evento sin `motivo` es o bien un aviso, o bien uno de antes del PR #146, que no
+            # Un evento sin `reason` es o bien un aviso, o bien uno de antes del PR #146, que no
             # lo escribía. Se separan porque decir «descartado sin motivo» de una telemetría
             # vieja sería inventarle una razón que nunca tuvo.
             if sugerida:
-                clave = "avisó"
+                clave = "suggested"
             else:
-                clave = str(row.get("motivo") or "sin registrar")
-            por_motivo[clave] = por_motivo.get(clave, 0) + 1
+                clave = str(row.get("reason") or "unrecorded")
+            by_reason[clave] = by_reason.get(clave, 0) + 1
 
             ext = row.get("ext")
-            por_ext[str(ext) if ext else "sin extensión"] = (
-                por_ext.get(str(ext) if ext else "sin extensión", 0) + 1
+            por_ext[str(ext) if ext else "no_extension"] = (
+                por_ext.get(str(ext) if ext else "no_extension", 0) + 1
             )
 
         ts = _parse_ts(row.get("ts"))
@@ -652,10 +655,10 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
             key=lambda d: d["day"],
         ),
         # Sólo de los eventos de lectura; su total NO es el `total` de arriba.
-        "read_total": sum(por_motivo.values()),
-        "by_motivo": [
-            {"motivo": nombre, "total": n}
-            for nombre, n in sorted(por_motivo.items(), key=lambda kv: (-kv[1], kv[0]))
+        "read_total": sum(by_reason.values()),
+        "by_reason": [
+            {"reason": nombre, "total": n}
+            for nombre, n in sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "by_ext": [
             {"ext": nombre, "total": n}
@@ -1037,7 +1040,11 @@ def render_index() -> str:
     # de estar escrita en el HTML. Antes había un SVG dibujado a mano ahí: al unificar la marca
     # se actualizó el favicon y el header se quedó con el icono viejo, así que el panel enseñaba
     # una marca y su propia pestaña otra. Inyectándolo no pueden volver a separarse.
-    return HTML.replace("__WEB_FONTS__", tags).replace("__BRAND_MARK__", FAVICON.strip())
+    return (
+        HTML.replace("__WEB_FONTS__", tags)
+        .replace("__BRAND_MARK__", FAVICON.strip())
+        .replace("__LEGACY_VALUES__", json.dumps(legacy_names.PANEL_VALUE_ALIASES))
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1871,13 +1878,14 @@ const LABELS = {
   // prompt reconoció en el mensaje (resumir, extraer, …).
   hookCategory: {read:'Lectura', shell:'Shell', bash:'Shell', lint:'Lint', summarize:'Resumen',
     extract:'Extracción', classify:'Clasificación', translate:'Traducción',
-    boilerplate:'Código repetitivo', 'sin categoría':'Sin categoría'},
-  // Por qué el hook de lectura avisó o se calló (`motivo` del log de hooks).
-  hookReason: {'avisó':'Avisó', aviso:'Avisó', acotada:'Lectura acotada', codigo:'Código',
-    pequeno:'Pequeño', mcp_ajeno:'Por otro MCP', backend_ausente:'Backend ausente',
-    modelo_enfriado:'Modelo enfriado', prosa_grande:'Prosa grande', no_es_prosa:'No es prosa',
-    no_es_volcado:'No es un volcado', sin_fichero:'Sin fichero', bloqueo_apagado:'Bloqueo apagado',
-    'sin registrar':'Sin registrar'},
+    boilerplate:'Código repetitivo', no_category:'Sin categoría'},
+  // Por qué el hook de lectura avisó o se calló (`reason` del log de hooks). Los valores viejos
+  // (`mcp_ajeno`, `avisó`…) los traduce `LEGACY_VALUES`, que inyecta el servidor (REQ-009).
+  hookReason: {suggested:'Avisó', bounded:'Lectura acotada', code:'Código',
+    small:'Pequeño', foreign_mcp:'Por otro MCP', backend_missing:'Backend ausente',
+    model_cooled:'Modelo enfriado', large_prose:'Prosa grande', not_prose:'No es prosa',
+    not_a_dump:'No es un volcado', no_file:'Sin fichero', block_off:'Bloqueo apagado',
+    unrecorded:'Sin registrar'},
   client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
     codex:'Codex', 'codex-mcp-client':'Codex',
     desconocido:'Desconocido'},
@@ -1893,8 +1901,13 @@ function humanLabel(key){
   const s = String(key===null || key===undefined || key==='' ? 'sin dato' : key).replace(/_/g, ' ').trim();
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+// Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
+// y lo inyecta el servidor: el JS no lleva una segunda copia de la tabla (REQ-009, D2).
+const LEGACY_VALUES = __LEGACY_VALUES__;
 function labelFor(kind, key){
   const m = LABELS[kind] || {};
+  const alias = LEGACY_VALUES[kind] || {};
+  if(Object.prototype.hasOwnProperty.call(alias, key)) key = alias[key];
   return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
 }
 function dolares(x){ return '$' + fmtNum(x, 2); }
@@ -2147,7 +2160,7 @@ function renderHooks(h){
   // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
   // "sin registrar" son los eventos anteriores a que el hook escribiera el motivo; se muestran
   // aparte en vez de repartirlos, porque de esos no se sabe la razón.
-  const motivos = (h.by_motivo||[]);
+  const motivos = (h.by_reason||[]);
   const totalRead = h.read_total || 0;
   const punteria = !motivos.length ? '' :
     '<div style="overflow-x:auto;margin-top:4px"><table>'
@@ -2155,7 +2168,7 @@ function renderHooks(h){
     + '<th>Reparto</th></tr></thead><tbody>'
     + motivos.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
-        return '<tr><td class="mono" title="' + escHooks(m.motivo) + '">' + escHooks(labelFor('hookReason', m.motivo)) + '</td>'
+        return '<tr><td class="mono" title="' + escHooks(m.reason) + '">' + escHooks(labelFor('hookReason', m.reason)) + '</td>'
           + '<td class="num">' + F.format(m.total) + '</td>'
           + '<td class="num" style="color:var(--amber)">' + F1.format(p) + ' %</td></tr>';
       }).join('')

@@ -20,6 +20,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   también de estas variables viejas si siguen en la shell o en el `env` de
   `~/.claude/settings.json`. `local_status` dice los nombres viejos que leyó el daemon o el
   servidor por stdio, que `doctor` no ve.
+- **El fichero que apaga el bloqueo pasa a `~/.claude/local-delegate-block-off`.** El viejo,
+  `local-delegate-bloqueo-apagado`, sigue apagando con aviso durante el mismo plazo que los demás
+  alias, y `doctor` avisa si existe.
+- **El hook `anotar_llamada.py` pasa a llamarse `record_call.py`.** `install` y `update` borran la
+  copia vieja y su registro en `settings.json`, así que la nota de cada llamada no se escribe dos
+  veces.
+- **Los ficheros que comparten los hooks y el daemon en el temporal pasan a inglés:**
+  `local-delegate-blocks.jsonl` (antes `local-delegate-bloqueos.jsonl`), `local-delegate-calls/`
+  (antes `local-delegate-llamadas/`) y `local-delegate-health-<huella>.json` (antes
+  `local-delegate-salud-<huella>.json`). El daemon sigue leyendo los viejos, por si queda un hook
+  de una versión anterior instalado.
+- **La telemetría de los hooks escribe sus claves y valores en inglés:** `reason` (antes
+  `motivo`), `block` (antes `bloqueo`, con `on`, `off_file` y `off_variable`), `route` (antes
+  `camino`) y `paths` (antes `rutas`), y los motivos `bounded`, `code`, `small`,
+  `backend_missing`, `model_cooled`, `large_prose`, `not_a_dump`, `no_file`, `not_prose`,
+  `block_off` y `foreign_mcp`. El panel y los scripts de medición leen los dos formatos, también
+  mezclados en el mismo fichero. `/api/hooks` devuelve `by_reason` (antes `by_motivo`).
+- **Los hooks dicen qué nombres viejos leyeron.** Con la telemetría encendida, cada evento lleva
+  `deprecated_names` cuando la invocación leyó una variable o el interruptor con su nombre viejo, y
+  el check «nombres obsoletos» de `doctor` lo avisa mirando los últimos 7 días del fichero.
 
 ## [0.34.0] - 2026-10-08
 

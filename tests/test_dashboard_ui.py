@@ -271,7 +271,7 @@ _HOOKS = {
     "suggested": 3,
     "rate": 0.3,
     "by_category": [{"category": "read", "total": 8, "suggested": 2}],
-    "by_motivo": [{"motivo": "pequeño", "total": 5}],
+    "by_reason": [{"reason": "small", "total": 5}],
     "read_total": 5,
 }
 
@@ -893,13 +893,14 @@ _HOOKS_CRUDOS = {
     "by_event": [],
     "by_day": [],
     "read_total": 30,
-    "by_motivo": [
-        {"motivo": "avisó", "total": 8},
-        {"motivo": "acotada", "total": 6},
-        {"motivo": "codigo", "total": 5},
-        {"motivo": "pequeno", "total": 4},
-        {"motivo": "mcp_ajeno", "total": 4},
-        {"motivo": "motivo_que_no_existe", "total": 3},
+    # Valores nuevos y viejos mezclados (REQ-009): los viejos se pintan con la misma etiqueta.
+    "by_reason": [
+        {"reason": "suggested", "total": 8},
+        {"reason": "acotada", "total": 6},
+        {"reason": "code", "total": 5},
+        {"reason": "pequeno", "total": 4},
+        {"reason": "foreign_mcp", "total": 4},
+        {"reason": "motivo_que_no_existe", "total": 3},
     ],
     "by_ext": [],
 }

@@ -494,10 +494,10 @@ def _append_log_line(log_path: Path, line: str) -> None:
 VENTANA_DE_BLOQUEO_S = 600.0
 
 
-def _bloqueo_reciente(path: str) -> str | None:
+def _recent_block_id(path: str) -> str | None:
     """El identificador del bloqueo que provoco esta lectura, si lo hubo.
 
-    Las notas las deja el hook (`hook_common.anotar_bloqueo`), que es stdlib pura y no puede
+    Las notas las deja el hook (`hook_common.record_block`), que es stdlib pura y no puede
     importar este modulo: el formato vive en dos sitios y por eso hay un test de ida y vuelta que
     escribe con el hook y lee con esto. Es la misma cautela que el espejo JS del panel.
 
@@ -508,8 +508,33 @@ def _bloqueo_reciente(path: str) -> str | None:
     except ImportError:
         return None
     try:
-        huella = hook_common.huella_de_ruta(path)
-        lineas = hook_common.ruta_de_notas().read_text(encoding="utf-8").splitlines()
+        digest = hook_common.path_digest(path)
+    except (OSError, ValueError):
+        return None
+    # El nombre nuevo y el viejo (REQ-012): un hook de una version anterior puede seguir
+    # instalado y escribiendo en `local-delegate-bloqueos.jsonl`. Gana la nota mas reciente.
+    lines: list[str] = []
+    for notes in (hook_common.block_notes_path(), hook_common.legacy_block_notes_path()):
+        try:
+            lines += notes.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+
+    now = _utcnow().timestamp()
+    best: tuple[float, str] | None = None
+    for line in lines:
+        try:
+            note = json.loads(line)
+            ts = float(note["ts"])
+            fresh = note["sha"] == digest and now - ts <= VENTANA_DE_BLOQUEO_S
+            if fresh and (best is None or ts >= best[0]):
+                best = (ts, str(note["id"]))
+        except (ValueError, KeyError, TypeError):
+            continue
+    return best[1] if best else None
+    try:
+        huella = hook_common.path_digest(path)
+        lineas = hook_common.block_notes_path().read_text(encoding="utf-8").splitlines()
     except (OSError, ValueError):
         return None
 
@@ -781,7 +806,7 @@ def _log_event(
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
             # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
             # comparables sin cruzar dos logs a mano.
-            bloqueo = _bloqueo_reciente(path)
+            bloqueo = _recent_block_id(path)
             if bloqueo:
                 rec["bloqueo_id"] = bloqueo
         if json_schema is not None:

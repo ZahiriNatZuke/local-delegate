@@ -59,7 +59,7 @@ def test_prompt_hook_ignores_system_events(tmp_path, monkeypatch, capsys):
         cuerpo = texto.split(">", 1)[1]
         assert prompt.classify(cuerpo) == "summarize"
 
-        assert prompt.es_evento_sistema(texto)
+        assert prompt.is_system_event(texto)
         assert prompt.classify(texto) is None
         monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": texto})))
         prompt.main()
@@ -74,7 +74,7 @@ def test_prompt_hook_matches_every_system_prefix():
         "<system-reminder>\nresume esto",
         "  \n<task-notification>\nresume esto",  # espacios y saltos delante
     ):
-        assert prompt.es_evento_sistema(texto), texto
+        assert prompt.is_system_event(texto), texto
 
 
 def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch, capsys):
@@ -96,7 +96,7 @@ def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch
 
 def test_prompt_hook_still_classifies_user_prompts_mentioning_tags():
     # Un usuario que cita la etiqueta a mitad de su mensaje sigue siendo un prompt.
-    assert not prompt.es_evento_sistema("Resume qué hace <task-notification> en este log")
+    assert not prompt.is_system_event("Resume qué hace <task-notification> en este log")
     assert prompt.classify("Resume qué hace <task-notification> en este log") == "summarize"
 
 
@@ -255,7 +255,7 @@ def test_read_hook_registra_los_descartes_para_poder_medir_punteria(tmp_path, mo
     evento = json.loads(log.read_text(encoding="utf-8").strip())
     assert evento["suggested"] is False
     assert evento["ext"] == ".tsx"
-    assert evento["motivo"] == "codigo"
+    assert evento["reason"] == "code"
 
 
 def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, monkeypatch):
@@ -280,7 +280,7 @@ def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, mo
     assert '"ext": ".md"' in texto
     assert "confidencial" not in texto
     assert "secreto" not in texto
-    assert read_hook.extension_de("/x/y.contrato-acme-2026") == ""
+    assert read_hook.extension_of("/x/y.contrato-acme-2026") == ""
 
 
 def _default_del_hook(variable: str) -> float:
@@ -344,7 +344,7 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
 
 def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if encendido else "0")
-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: backend)
+    monkeypatch.setattr(read_hook, "backend_available", lambda **k: backend)
     return _correr_hook(monkeypatch, capsys, tool_input)
 
 
@@ -420,7 +420,7 @@ def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
 
     decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
 
@@ -431,7 +431,7 @@ def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsy
     """La variable se consulta en CADA invocacion: un freno que exige reiniciar no es un freno."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
 
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
     assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
@@ -446,7 +446,7 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.setattr(
@@ -483,7 +483,7 @@ def test_la_huella_agrupa_por_fichero_sin_decir_cual_es(tmp_path, monkeypatch, c
     _correr_hook(monkeypatch, capsys, {"file_path": str(documento)})
 
     eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    assert [e["motivo"] for e in eventos[:1]] == ["acotada"]
+    assert [e["reason"] for e in eventos[:1]] == ["bounded"]
     assert eventos[0]["path_sha"] == eventos[1]["path_sha"], "el mismo fichero, la misma huella"
 
     crudo = log.read_text(encoding="utf-8")
@@ -532,4 +532,4 @@ def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeyp
         )
         assert evento["session_id"] == "s-123", texto
         assert evento["version"]  # huella del script que corrió
-        assert evento["bloqueo"] == "encendido"
+        assert evento["block"] == "on"
