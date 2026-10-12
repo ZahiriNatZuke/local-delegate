@@ -101,6 +101,12 @@ _MCP_READ_HOOK = (
 #: esta lista sus 24 KB se quedarían ahí para siempre.
 _SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
 
+#: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
+#: `_SCRIPTS_RETIRADOS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
+#: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
+#: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
+_RETIRED_SKILLS: tuple[str, ...] = ()
+
 # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
 #
 # `--enable-read-hook` registraba el script y ya: el hook seguía exigiendo además
@@ -922,6 +928,34 @@ def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
     return [p for p in entries if p.name in names and p.is_file()]
 
 
+def retired_skill_dirs(skills_root: Path) -> list[Path]:
+    """Skills retiradas presentes en ``skills_root``, buscadas por su nombre exacto.
+
+    No se lista el directorio: se pregunta por cada nombre de `_RETIRED_SKILLS`. Así es imposible
+    que una skill ajena entre en la lista por parecido o por estar ahí.
+    """
+    return [skills_root / name for name in _RETIRED_SKILLS if (skills_root / name).is_dir()]
+
+
+def _retire_skills_action(skills_root: Path) -> Action:
+    def _run() -> str:
+        removed, failed = [], []
+        for path in retired_skill_dirs(skills_root):
+            try:
+                shutil.rmtree(path)
+                removed.append(path.name)
+            except OSError as exc:
+                # Igual que con los hooks huérfanos: lo que no se deja borrar se dice y se sigue.
+                failed.append(f"{path.name} ({exc.strerror or exc})")
+        detail = (
+            f"retiradas {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
+        )
+        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
+
+    names = ", ".join(p.name for p in retired_skill_dirs(skills_root))
+    return Action("prune", skills_root, f"retira skills de una versión anterior ({names})", _run)
+
+
 def _prune_orphans_action(claude_dir: Path) -> Action:
     root = claude_dir / "hooks"
 
@@ -1023,6 +1057,8 @@ def plan_install(opts: Options) -> list[Action]:
         )
 
     if "skill" in opts.components and "claude" in opts.targets:
+        if retired_skill_dirs(claude / "skills"):
+            actions.append(_retire_skills_action(claude / "skills"))
         actions.append(
             _copy_tree_action(
                 res / "skills" / SKILL_NAME,
@@ -1038,6 +1074,8 @@ def plan_install(opts: Options) -> list[Action]:
     # Crearle un `~/.claude/` a quien no tiene Claude Code es justo lo que se corrigió al retirar
     # el default `--target all`.
     if "skill" in opts.components and "opencode" in opts.targets:
+        if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
+            actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
         actions.append(
             _copy_tree_action(
                 res / "skills" / SKILL_NAME,

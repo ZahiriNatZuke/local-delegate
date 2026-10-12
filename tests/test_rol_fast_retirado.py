@@ -141,7 +141,7 @@ def test_el_modelo_retirado_tampoco_vale_como_respuesta_a_la_pregunta(monkeypatc
 def test_sin_variables_del_rol_retirado_el_check_esta_en_ok(recargar_config, tmp_path):
     """Control: el caso normal —nadie las tiene puestas— no puede dar aviso."""
     recargar_config()
-    resultado = checks._probe_rol_retirado(checks.Context(home=tmp_path))
+    resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert resultado.status == checks.OK
 
 
@@ -149,7 +149,7 @@ def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(recargar_config, 
     """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
     for variable in VARIABLES_RETIRADAS:
         recargar_config(**{variable: "lo-que-sea"})
-        resultado = checks._probe_rol_retirado(checks.Context(home=tmp_path))
+        resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
         assert resultado.status == checks.WARN, f"{variable} puesta no dio aviso"
         assert variable in resultado.detail
         assert "0.30.0" in resultado.detail or "0.30.0" in resultado.fix_hint
@@ -157,14 +157,46 @@ def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(recargar_config, 
 
 def test_el_aviso_las_nombra_todas_cuando_estan_las_tres(recargar_config, tmp_path):
     recargar_config(**dict.fromkeys(VARIABLES_RETIRADAS, "lo-que-sea"))
-    detalle = checks._probe_rol_retirado(checks.Context(home=tmp_path)).detail
+    detalle = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
     assert all(v in detalle for v in VARIABLES_RETIRADAS)
 
 
 def test_el_check_esta_en_el_registro(recargar_config):
-    """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás."""
+    """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás.
+
+    Desde la ola A0 del renombrado es el check general de nombres obsoletos (REQ-003), que
+    sustituye a `config.rol_retirado` sin cambiar lo que avisa.
+    """
     ids = [c.id for c in checks.CHECKS]
-    assert "config.rol_retirado" in ids
-    # Y en un grupo que no sale a la red: solo mira variables de entorno.
-    check = next(c for c in checks.CHECKS if c.id == "config.rol_retirado")
+    assert "config.deprecated_names" in ids
+    assert "config.rol_retirado" not in ids
+    # Y en un grupo que no sale a la red: solo mira el entorno y ficheros locales.
+    check = next(c for c in checks.CHECKS if c.id == "config.deprecated_names")
     assert check.group == "entorno"
+
+
+def test_retired_variable_in_settings_json_env_is_also_warned(recargar_config, tmp_path):
+    """Los hooks heredan de `env` de `settings.json`, que `doctor` no ve en su propia shell."""
+    recargar_config()
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    (claude / "settings.json").write_text(
+        json.dumps({"env": {"LOCAL_DELEGATE_MAX_CHARS_FAST": "9000", "OTRA": "1"}}),
+        encoding="utf-8",
+    )
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert result.status == checks.WARN, "la variable del env de settings.json no dio aviso"
+    assert "LOCAL_DELEGATE_MAX_CHARS_FAST" in result.detail
+    assert "settings.json" in result.detail
+    assert "OTRA" not in result.detail
+
+
+def test_retired_variables_come_from_the_single_registry(recargar_config):
+    """Una sola fuente: `config` no escribe la lista a mano, la toma de `deprecations`."""
+    from local_delegate import deprecations
+
+    recargar_config()
+    retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
+    assert retired == set(VARIABLES_RETIRADAS)
+    assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired
+    assert retired <= config.VARIABLES_DE_ENTORNO

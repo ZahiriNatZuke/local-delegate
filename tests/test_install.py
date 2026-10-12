@@ -715,3 +715,34 @@ def test_quitar_la_entrada_de_un_codex_reescrito_deja_lo_demas(tmp_path):
     assert "local-delegate" not in data["mcp_servers"]
     assert set(data["mcp_servers"]) == {"git", "pycharm"}
     assert inst.TOML_BEGIN not in result
+
+
+# --- Skills retiradas (REQ-013) -----------------------------------------------
+def test_retired_skill_is_removed_from_every_target_and_foreign_one_stays(tmp_path, monkeypatch):
+    """Renombrar la skill no puede dejar la copia vieja viva, ni llevarse una del usuario."""
+    monkeypatch.setattr(inst, "_RETIRED_SKILLS", ("retired-test-skill",))
+    targets = [
+        tmp_path / ".claude" / "skills",
+        inst.opencode_dir(tmp_path) / inst.OPENCODE_SKILL_SUBDIR,
+    ]
+    for target_dir in targets:
+        (target_dir / "retired-test-skill").mkdir(parents=True)
+        (target_dir / "retired-test-skill" / "SKILL.md").write_text("vieja\n", encoding="utf-8")
+        (target_dir / "ajena").mkdir()
+        (target_dir / "ajena" / "SKILL.md").write_text("del usuario\n", encoding="utf-8")
+
+    assert _install(tmp_path, targets={"claude", "opencode"}) == 0
+
+    for target_dir in targets:
+        assert not (target_dir / "retired-test-skill").exists(), (
+            f"sigue la retirada en {target_dir}"
+        )
+        assert (target_dir / "ajena").exists(), f"se borró la skill ajena en {target_dir}"
+        assert (target_dir / inst.SKILL_NAME / "SKILL.md").is_file()
+
+
+def test_no_retired_skills_means_no_skill_removal_planned(tmp_path, monkeypatch):
+    monkeypatch.setattr(inst, "_RETIRED_SKILLS", ("retired-test-skill",))
+    (tmp_path / ".claude" / "skills" / "ajena").mkdir(parents=True)
+    actions = inst.plan_install(_opts(tmp_path))
+    assert [a for a in actions if a.kind == "prune" and "skills" in str(a.target)] == []

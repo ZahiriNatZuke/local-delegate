@@ -1822,3 +1822,59 @@ def test_las_entradas_ignoradas_se_cuentan(tmp_path):
     )
     r = _probe_ventanas(tmp_path)
     assert r.status == checks.WARN and "2 entrada(s) ignorada(s)" in r.detail
+
+
+# --- config.deprecated_names (REQ-003): alias con sucesor e interruptores viejos ---
+def _test_registry(monkeypatch, tmp_path):
+    """Un alias de variable y un interruptor viejo de mentira: el registro real aún no tiene."""
+    from local_delegate import config, deprecations
+
+    entries = (
+        deprecations.DeprecatedName("env_var", "LD_OLD_TEST_VAR", "LD_NEW_FOR_TEST", "0.35.0"),
+        deprecations.DeprecatedName(
+            "switch_file", "old-test-switch", "old-switch-for-test", "0.35.0"
+        ),
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
+    monkeypatch.setattr(config, "DEPRECATED_ENV_VALUES", {"LD_OLD_TEST_VAR": None})
+    (tmp_path / ".claude").mkdir(exist_ok=True)
+    return config
+
+
+def test_deprecated_names_ok_when_nothing_is_deprecated(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+
+
+def test_deprecated_names_warns_shell_alias_with_new_name_and_removal(monkeypatch, tmp_path):
+    config = _test_registry(monkeypatch, tmp_path)
+    monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, "LD_OLD_TEST_VAR", "1")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "LD_OLD_TEST_VAR" in r.detail and "LD_NEW_FOR_TEST" in r.detail
+    assert "0.38.0" in r.detail, "el aviso no nombra la versión de retirada"
+    assert "renombra LD_OLD_TEST_VAR a LD_NEW_FOR_TEST" in r.fix_hint
+
+
+def test_deprecated_names_warns_alias_in_settings_json_env(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {"LD_OLD_TEST_VAR": "1"}}), encoding="utf-8"
+    )
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "settings.json" in r.detail and "LD_OLD_TEST_VAR" in r.detail
+
+
+def test_deprecated_names_warns_old_switch_file_left_on_disk(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "old-test-switch").write_text("", encoding="utf-8")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "old-test-switch" in r.detail and "old-switch-for-test" in r.detail
+
+
+def test_deprecated_names_survives_unreadable_settings_json(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK

@@ -19,6 +19,8 @@ from urllib.parse import urlsplit
 
 from platformdirs import user_data_dir
 
+from . import deprecations
+
 APP_NAME = "local-delegate"
 
 
@@ -60,6 +62,27 @@ def _env_float(name: str, default: float) -> float:
         return float(_env(name, str(default)))
     except ValueError:
         return default
+
+
+# Nombres viejos de variables que este proceso ha leído con valor (por `_env_alias`). Lo consulta
+# `local_status`, porque `doctor` no ve el entorno del daemon ni del servidor por stdio (REQ-003).
+DEPRECATED_SEEN: set[str] = set()
+
+
+def _env_alias(new: str, old: str) -> str | None:
+    """Lee una variable renombrada: el nombre nuevo y el viejo, los dos por la puerta `_leer`.
+
+    Gana el nuevo si están los dos. Si solo está el viejo, devuelve su valor y lo anota en
+    `DEPRECATED_SEEN` para poder avisar. Los dos nombres entran en `VARIABLES_DE_ENTORNO`, así que
+    la suite aísla ambos.
+    """
+    value = _leer(new)
+    old_value = _leer(old)
+    if value is not None:
+        return value
+    if old_value is not None:
+        DEPRECATED_SEEN.add(old)
+    return old_value
 
 
 # --- Endpoint OpenAI-compatible ---------------------------------------------
@@ -239,15 +262,18 @@ ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
 # ninguna tool lo enrutaba. Sus tres variables se siguen **leyendo** —por la puerta registrada, así
 # que constan en el inventario y la suite las sigue aislando— pero ya no tienen efecto. Se leen para
 # poder AVISAR: borrarlas sin más las habría vuelto mudas, que es justo el fallo que este repo
-# persigue. El aviso lo da `doctor` (`config.rol_retirado`) y no una excepción al arrancar: romper
-# el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
-VARIABLES_ROL_RETIRADO: dict[str, str | None] = {
-    nombre: _leer(nombre)
-    for nombre in (
-        "LOCAL_DELEGATE_MODEL_FAST",
-        "LOCAL_DELEGATE_MAX_CHARS_FAST",
-        "LOCAL_DELEGATE_FALLBACK_FAST",
-    )
+# persigue. El aviso lo da `doctor` (`config.deprecated_names`) y no una excepción al arrancar:
+# romper el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
+#
+# Desde la ola A0 del SDD english-names-bilingual-output los nombres salen del registro único
+# `deprecations.DEPRECATED_NAMES` (entradas `retired`), no de una lista escrita aquí.
+DEPRECATED_ENV_VALUES: dict[str, str | None] = {
+    entry.old: _leer(entry.old) for entry in deprecations.env_vars()
+}
+RETIRED_FAST_ROLE_VARIABLES: dict[str, str | None] = {
+    name: value
+    for name, value in DEPRECATED_ENV_VALUES.items()
+    if (entry := deprecations.find(name)) is not None and entry.is_retired
 }
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.

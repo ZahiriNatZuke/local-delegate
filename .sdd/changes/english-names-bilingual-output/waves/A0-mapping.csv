@@ -1,0 +1,5 @@
+# approved-by-main: 2026-10-12
+# wave=A0 escrito a mano (make_mapping.py nace en esta misma ola): las dos definiciones que A0 renombra con PyCharm, fijadas por plan.md §1.2 A0. Pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)
+old,new,kind,definition,scope,method,reason,verified
+VARIABLES_ROL_RETIRADO,RETIRED_FAST_ROLE_VARIABLES,constant,src/local_delegate/config.py:244@<module>,cross_module,pycharm,,ok (search_symbol y search_text antes del rename: config.py:244 y checks.py:1641; la cita en el docstring de cadenas.py no la cubre PyCharm)
+_probe_rol_retirado,_probe_deprecated_names,function,src/local_delegate/checks.py:1629@<module>,cross_module,pycharm,,ok (search_text: checks.py:1629 y 1790 y 3 llamadas en tests/test_rol_fast_retirado.py)
