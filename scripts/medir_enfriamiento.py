@@ -34,7 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from medir_adopcion import directorio_de_logs, leer, logs_de_uso
 
-from local_delegate import test_windows
+from local_delegate import legacy_names, test_windows
 from local_delegate.enfriamiento import CLASES_QUE_CUENTAN, FICHERO_EVENTOS
 
 #: Por debajo de cualquiera de los dos, el resultado es «no concluyente» (criterio de P-4).
@@ -42,6 +42,10 @@ MINIMO_EPISODIOS = 5
 MINIMO_FALLOS = 10
 
 CLASES = {clase.value for clase in CLASES_QUE_CUENTAN}
+
+#: Clase de fallo en el formato nuevo, venga del log viejo (`modelo`, `timeout_lectura`,
+#: `enfriamiento`…) o del nuevo (REQ-007): el informe es el mismo con los dos formatos.
+_CLASE_NUEVA = legacy_names.FAILURE_CLASS_VALUES
 
 #: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
 REGLAS = {
@@ -116,7 +120,7 @@ def episodios(eventos: list[dict], tmax_s: float) -> list[dict]:
             episodio = {
                 "modelo": modelo,
                 "desde": _ts(evento),
-                "clase": evento.get("clase"),
+                "clase": legacy_names.new_value(_CLASE_NUEVA, evento.get("clase")),
                 "reentradas": 0,
                 "en_tmax": int(en_tmax),
                 "final": None,
@@ -159,14 +163,14 @@ def medir(
     excluidos = list(excluidos)
     filtro = _Filtro(excluidos, include_tests)
     usos = [
-        evento
+        legacy_names.normalize("usage", evento)
         for ruta in logs_de_uso()
         for evento in leer(ruta, None)
         if _en_rango(_ts(evento), desde, hasta) and filtro.deja(_ts(evento), "usage_rows")
     ]
     # Un minimo, no el total: con salto, el log solo ve el fallo del pedido y el ultimo.
     fallos = sum(1 for e in usos if e.get("error_class") in CLASES) + sum(
-        1 for e in usos if e.get("fallback_class") == "modelo"
+        1 for e in usos if e.get("fallback_class") == "model"
     )
     saltos = Counter(e["fallback_class"] for e in usos if e.get("fallback_class"))
     al_momento = sum(1 for e in usos if e.get("error") == "cooldown")
@@ -203,12 +207,12 @@ def medir(
         "fallos_que_cuentan": fallos,
         "saltos_por_clase": dict(saltos),
         "fallos_al_momento": al_momento,
-        "operaciones_desviadas": saltos.get("enfriamiento", 0) + al_momento,
+        "operaciones_desviadas": saltos.get("cooldown", 0) + al_momento,
         "episodios": len(eps),
         "episodios_con_desenlace": len(con_desenlace),
         "episodios_que_reentraron": len(reentraron),
         "R": round(len(reentraron) / len(con_desenlace), 3) if con_desenlace else None,
-        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "timeout_lectura"),
+        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "read_timeout"),
         "episodios_que_reentran_en_tmax": sum(1 for ep in eps if ep["en_tmax"] >= 2),
         "fuera_de_p4_fallos_al_momento_sobre_5_pct": delegaciones > 0
         and al_momento > 0.05 * delegaciones,

@@ -22,7 +22,7 @@ import httpx2
 import pytest
 
 from local_delegate import config, server, topology
-from local_delegate.fallos import Clase
+from local_delegate.failures import FailureClass
 from local_delegate.turn import PendingRequest
 
 BASE = "http://127.0.0.1:9292/v1"
@@ -74,7 +74,7 @@ def _ok(text: str = "ok") -> server.ChatResult:
 
 
 def _model_failure() -> server.ChatResult:
-    return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
+    return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
 
 
 def _events(tmp_path: Path) -> list[dict]:

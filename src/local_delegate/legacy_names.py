@@ -20,7 +20,47 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+#: Valores de `failures.FailureClass` (`error_class`, `fallback_class` y `affinity_dropped_class`
+#: del log de uso, y `clase` de los eventos de enfriamiento). `enfriamiento` no es un miembro del
+#: enum: es la clase que el daemon escribe en `fallback_class` cuando salta por un modelo enfriado.
+FAILURE_CLASS_VALUES: dict[str, str] = {
+    "peticion": "request",
+    "capacidad_o_carga": "capacity_or_load",
+    "timeout_lectura": "read_timeout",
+    "configuracion": "configuration",
+    "modelo": "model",
+    "sin_clasificar": "unclassified",
+    "enfriamiento": "cooldown",
+}
+
+#: Valores de `failures.ConnectionCause` (`connection_failure` del log de uso y `cause` de `/api/*`).
+CONNECTION_CAUSE_VALUES: dict[str, str] = {
+    "rechazada": "refused",
+    "sin_ruta": "no_route",
+    "timeout_conexion": "connect_timeout",
+    "credencial": "credential",
+    "sin_respuesta": "no_response",
+    "respuesta_invalida": "invalid_response",
+    "url_invalida": "invalid_url",
+    "transporte": "transport",
+    "desconocida": "unknown",
+}
+
 FORMATS: dict[str, dict[str, dict[str, Any]]] = {
+    # Log de uso (`usage-*.jsonl`).
+    "usage": {
+        "keys": {
+            "bloqueo_id": "block_id",
+            "secciones": "sections",
+            "fallo_conexion": "connection_failure",
+        },
+        "values": {
+            "error_class": FAILURE_CLASS_VALUES,
+            "fallback_class": FAILURE_CLASS_VALUES,
+            "affinity_dropped_class": FAILURE_CLASS_VALUES,
+            "connection_failure": CONNECTION_CAUSE_VALUES,
+        },
+    },
     # Telemetría de hooks (`LD_HOOK_TELEMETRY_LOG`). `oferta` ya no la escribe nadie: solo se lee.
     "hook_telemetry": {
         "keys": {
@@ -74,7 +114,17 @@ PANEL_VALUE_ALIASES: dict[str, dict[str, str]] = {
         "sin registrar": "unrecorded",
     },
     "hookCategory": {"sin categoría": "no_category"},
+    # La causa de `/api/backend` y la clase de fallo de un evento (`cause` de `acct()`).
+    "connectionCause": CONNECTION_CAUSE_VALUES,
+    "failureClass": FAILURE_CLASS_VALUES,
 }
+
+
+def new_value(table: Mapping[str, str], value: Any) -> Any:
+    """`value` en el formato nuevo si es un valor viejo de `table`; si no, tal cual."""
+    if isinstance(value, str):
+        return table.get(value, value)
+    return value
 
 
 def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) -> Any:

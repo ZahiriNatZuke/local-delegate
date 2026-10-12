@@ -740,7 +740,7 @@ def test_reason_after_affinity_failure_is_the_real_one_chunked(affinity, attempt
 
     assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
     line = _line(tmp_path, "local_translate")
-    assert line.get("fallback_class") == "modelo"
+    assert line.get("fallback_class") == "model"
     assert line.get("fallback_reason") == "http_500"
     assert "enfriamiento" not in out
 
@@ -764,7 +764,7 @@ def test_reason_after_affinity_failure_is_the_real_one_single_call(
 
     assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
     line = _line(tmp_path, "local_delegate")
-    assert line.get("fallback_class") == "modelo"
+    assert line.get("fallback_class") == "model"
     assert "enfriamiento" not in out
 
 
@@ -964,13 +964,13 @@ def test_capacity_failure_of_affinity_alternative_goes_to_role(affinity, attempt
 
     out = _translate()
 
-    assert attempts[0].clase == "capacidad_o_carga", "guarda: el 26B falló por capacidad"
+    assert attempts[0].clase == "capacity_or_load", "guarda: el 26B falló por capacidad"
     responded = backend.served[-1]
     assert responded == MECH
     line = _line(tmp_path, "local_translate")
     assert line.get("model") == MECH
     assert line.get("affinity_dropped") == LONG
-    assert line.get("affinity_dropped_class") == "capacidad_o_carga"
+    assert line.get("affinity_dropped_class") == "capacity_or_load"
     assert "aviso" not in out
 
 

@@ -29,6 +29,7 @@ import subprocess
 
 import pytest
 
+from local_delegate import legacy_names
 from local_delegate.web import metrics
 
 TZ_PRUEBA = "America/Havana"  # UTC-5/-4: si algo cae a UTC, se nota
@@ -49,6 +50,15 @@ def _extraer(cabecera: str) -> str:
         j += 1
 
 
+def _legado() -> str:
+    """La tabla de valores viejos que el servidor inyecta (`__LEGACY_VALUES__`) y su traductor.
+
+    `metrics.HTML` es la plantilla sin rellenar: aquí se pone lo mismo que pone `render_index`.
+    """
+    tabla = json.dumps(legacy_names.PANEL_VALUE_ALIASES)
+    return f"const LEGACY_VALUES = {tabla};\n" + _extraer("function legacyValue(")
+
+
 def _correr(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
     """Ejecuta `cuerpo` con esas funciones del panel cargadas. Devuelve lo que imprima en JSON."""
     node = shutil.which("node")
@@ -57,7 +67,7 @@ def _correr(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
 
     programa = tmp_path / "prueba.mjs"
     programa.write_text(
-        "\n".join([preludio, *(_extraer(f) for f in funciones), cuerpo]),
+        "\n".join([_legado(), preludio, *(_extraer(f) for f in funciones), cuerpo]),
         encoding="utf-8",
     )
     # El entorno se hereda ENTERO con `TZ` encima. Recortarlo a `PATH` + `TZ` mata a node en

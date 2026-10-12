@@ -208,7 +208,7 @@ def group_by_event(rows: Sequence[dict[str, Any]], calls: Sequence[dict[str, Any
         generation_ms = sum(f["salida"] / f["tps"] for f in group)  # segundos
         return {
             "ts": ts,
-            "modelo": group[0]["modelo"],
+            "model": group[0]["modelo"],
             "origen": origin,
             "ok": ok,
             "tokens_out": output,
@@ -257,7 +257,7 @@ def control_a(
         "detalle": [
             {
                 "filas": e["filas"],
-                "modelo": e["modelo"],
+                "modelo": e["model"],
                 "tok_s": round(e["tok_s"], 1),
                 "ref": round(e["ref"], 1),
                 "pace_rel": e["pace_rel"],
@@ -273,11 +273,11 @@ def control_b(evaluated: Sequence[Event]) -> dict[str, Any]:
     """(b) La regla sobre las filas de Qwen3.6 de todos los origenes marca 570, 571 y 573."""
     marked_ones: set[int] = set()
     for e in evaluated:
-        if e["modelo"] == CONTROL_MODEL and e.get("slow"):
+        if e["model"] == CONTROL_MODEL and e.get("slow"):
             marked_ones.update(e["filas"])
     by_row = {}
     for e in evaluated:
-        if e["modelo"] == CONTROL_MODEL:
+        if e["model"] == CONTROL_MODEL:
             for row in e["filas"]:
                 if row in EXPECTED_ROWS or row == 574:
                     by_row[row] = {
@@ -313,7 +313,7 @@ def control_spans(events: Sequence[Event], since_ts: float) -> dict[str, Any]:
     ]
     by_model: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for e in pc:
-        by_model[e["modelo"]][span_of(e["tokens_in"]) or "?"].append(e["tok_s"])
+        by_model[e["model"]][span_of(e["tokens_in"]) or "?"].append(e["tok_s"])
     models_summary = {}
     normalized: dict[str, list[float]] = defaultdict(list)
     for model, spans in sorted(by_model.items()):
@@ -367,7 +367,7 @@ def long_false_positives(
         "detalle": [
             {
                 "filas": e["filas"],
-                "modelo": e["modelo"],
+                "modelo": e["model"],
                 "tok_s": round(e["tok_s"], 1),
                 "ref": round(e["ref"], 1),
                 "pace_rel": e["pace_rel"],

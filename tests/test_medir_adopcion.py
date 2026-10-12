@@ -298,3 +298,21 @@ def test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas(escenar
     _escribir(escenario, nuevas)
 
     assert medir_adopcion.medir("2026-09-10") == antes
+
+
+# --- Log de uso viejo y nuevo (REQ-006, ola A3 del renombrado) ---------------------------------
+
+
+def test_el_block_id_nuevo_cuenta_igual_que_el_bloqueo_id_viejo(escenario):
+    """El escenario trae la delegación aceptada con `bloqueo_id` (0.34.0). Con `block_id`, la
+    aceptación y las delegaciones espontáneas salen iguales."""
+    antes = medir_adopcion.medir("2026-09-10")
+    assert antes["aceptados"] == 1, "guarda: el escenario cruza un bloqueo con su delegación"
+    uso = config.LOG_DIR / "usage-202609.jsonl"
+    filas = [json.loads(x) for x in uso.read_text(encoding="utf-8").splitlines() if x]
+    assert any("bloqueo_id" in f for f in filas), "guarda: el escenario trae la clave vieja"
+    _escribir(
+        uso, [{("block_id" if k == "bloqueo_id" else k): v for k, v in f.items()} for f in filas]
+    )
+
+    assert medir_adopcion.medir("2026-09-10") == antes

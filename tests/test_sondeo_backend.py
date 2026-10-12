@@ -130,7 +130,7 @@ def test_el_sondeo_fallido_marca_la_lista_como_vieja(remoto):
 
     assert bueno.models_stale is False and bueno.causa is None and bueno.detalle is None
     assert malo.models_stale is True
-    assert malo.causa == "transporte"
+    assert malo.causa == "transport"
     assert malo.status_http is None
 
 
@@ -162,7 +162,7 @@ def test_un_cuerpo_con_otra_forma_es_respuesta_invalida(remoto, cuerpo):
     estado = server.sondear_backend()
 
     assert estado.available is False
-    assert estado.causa == "respuesta_invalida"
+    assert estado.causa == "invalid_response"
     assert "/models" in estado.detalle
 
 
@@ -187,7 +187,7 @@ def test_un_401_es_credencial_y_no_disponible(remoto):
     estado = server.sondear_backend()
 
     assert estado.available is False
-    assert estado.causa == "credencial"
+    assert estado.causa == "credential"
     assert estado.status_http == 401
     assert estado.detalle == "test-backend responde 401: está arriba pero rechaza la credencial"
 
@@ -203,7 +203,7 @@ def test_el_sondeo_nunca_lanza(remoto):
         pytest.fail(f"el sondeo lanzó {exc!r}")
 
     assert estado.available is False
-    assert estado.causa == "desconocida"
+    assert estado.causa == "unknown"
 
 
 @backend_mock.mock
@@ -216,7 +216,7 @@ def test_un_connect_timeout_en_loopback_es_rechazada(monkeypatch):
 
     estado = server.sondear_backend()
 
-    assert estado.causa == "rechazada"
+    assert estado.causa == "refused"
 
 
 def _ip_de_salida() -> str:
@@ -242,4 +242,4 @@ def test_un_puerto_cerrado_remoto_no_parece_una_vpn(monkeypatch):
 
     estado = server.sondear_backend()
 
-    assert estado.causa == "rechazada"
+    assert estado.causa == "refused"

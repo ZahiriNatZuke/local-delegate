@@ -36,7 +36,18 @@ from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas, test_windows
+from . import (
+    atribucion,
+    clients,
+    config,
+    coste,
+    failures,
+    install,
+    legacy_names,
+    recalcular,
+    sondas,
+    test_windows,
+)
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -158,8 +169,8 @@ def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
     return None
 
 
-def _default_backend_models() -> fallos.VistaBackend:
-    """Lo que se sabe del backend (`fallos.VistaBackend`), preguntando primero al daemon.
+def _default_backend_models() -> failures.BackendView:
+    """Lo que se sabe del backend (`failures.BackendView`), preguntando primero al daemon.
 
     El orden importa y no es una optimización. La clave del backend se lee **del entorno del
     proceso**: el daemon la recibe de su lanzador, pero un `local-delegate doctor` escrito en una
@@ -185,13 +196,18 @@ def _default_backend_models() -> fallos.VistaBackend:
     visto = daemon.query_backend(host, port, timeout=plazo)
     if visto is not None:
         if visto.get("available"):
-            return fallos.VistaBackend(True, "", None, "daemon")
-        causa, detalle = visto.get("causa"), visto.get("detalle")
+            return failures.BackendView(True, "", None, "daemon")
+        # Un daemon de una versión anterior manda `causa`/`detalle` y el valor viejo de la causa
+        # (REQ-006): se leen las dos claves y el valor se pasa al formato nuevo.
+        causa = legacy_names.new_value(
+            legacy_names.CONNECTION_CAUSE_VALUES, legacy_names.read_key(visto, "cause", "causa")
+        )
+        detalle = legacy_names.read_key(visto, "detail", "detalle")
         if isinstance(causa, str) and isinstance(detalle, str) and detalle:
-            return fallos.VistaBackend(False, detalle, causa, "daemon")
-        # Daemon antiguo, sin `causa`: el texto de siempre. El daemon SÍ tiene credencial, así
+            return failures.BackendView(False, detalle, causa, "daemon")
+        # Daemon antiguo, sin causa: el texto de siempre. El daemon SÍ tiene credencial, así
         # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
-        return fallos.VistaBackend(
+        return failures.BackendView(
             False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
         )
     return sondas.backend_probe()
@@ -334,7 +350,7 @@ class Context:
     daemon_needs_token: Callable[[str, int], bool | None] = field(
         default_factory=lambda f=_default_daemon_needs_token: f
     )
-    backend_models: Callable[[], fallos.VistaBackend] = field(
+    backend_models: Callable[[], failures.BackendView] = field(
         default_factory=lambda f=_default_backend_models: f
     )
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = field(
@@ -1352,17 +1368,17 @@ def _probe_daemon(ctx: Context) -> Result:
 
 def _probe_backend_models(ctx: Context) -> Result:
     vista = ctx.backend_models()
-    if vista.sano:
+    if vista.healthy:
         return Result(OK, f"{config.BASE_URL}/models responde")
     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
-    pista = fallos.pista(
-        vista.causa,
-        origen=config.backend_origin(),
-        fuente=vista.fuente,
+    pista = failures.hint(
+        vista.cause,
+        origin=config.backend_origin(),
+        source=vista.source,
         host=config.backend_host(),
     )
-    detalle = f"{config.BASE_URL}/models: {vista.detalle or 'no responde'}"
-    if vista.causa == fallos.CausaConexion.CREDENCIAL.value and vista.fuente == "directo":
+    detalle = f"{config.BASE_URL}/models: {vista.detail or 'no responde'}"
+    if vista.cause == failures.ConnectionCause.CREDENTIAL.value and vista.source == "direct":
         # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
         # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
         # su clave, es un problema de verdad: WARN, con la pista que manda a su lanzador.

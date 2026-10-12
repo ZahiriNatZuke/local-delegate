@@ -175,7 +175,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
 | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
-| `fallos.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `sin_clasificar` |
+| `failures.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `unclassified` |
 | `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, con el paso `loaded` (los alternativos aprobados que ya están cargados) y el texto «sin residente» / «residente: X» |
 | `topology.py` | Lee los grupos de `LLAMASWAP_CONFIG` en caliente y dice qué modelos chocan, con la regla de llama-swap; si no puede, el motivo de «sin topología» |
 | `turn.py` | El turno del daemon: núcleo puro (cola, concesión, E-1, concesión forzada) y su envoltura asíncrona |

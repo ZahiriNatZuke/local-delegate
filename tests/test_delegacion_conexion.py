@@ -97,7 +97,7 @@ def test_una_delegacion_sin_ruta_se_rinde_en_10_s(monkeypatch, registradores, cl
 
     assert transcurrido < 13, f"tardó {transcurrido:.1f} s en rendirse"
     linea = _ultima_linea_del_log()
-    assert linea.get("fallo_conexion") in {"timeout_conexion", "sin_ruta"}
+    assert linea.get("connection_failure") in {"connect_timeout", "no_route"}
     assert linea["error"] == "connect_error"
     assert texto.startswith("[local-delegate error] no se pudo conectar con el backend: ")
     assert preguntas_hechas == [] and arranques == []
@@ -211,7 +211,7 @@ def test_el_error_de_conexion_dice_la_causa_y_va_al_log(
     texto = camino(tmp_path, monkeypatch)
 
     linea = _ultima_linea_del_log()
-    assert linea.get("fallo_conexion") == "timeout_conexion"
+    assert linea.get("connection_failure") == "connect_timeout"
     assert linea["error"] == "connect_error"
     # Compatibilidad del log y del enfriamiento: la clase no cambia.
     assert linea.get("error_class") == "endpoint"
@@ -221,13 +221,13 @@ def test_el_error_de_conexion_dice_la_causa_y_va_al_log(
 
 @backend_mock.mock
 def test_un_fallo_que_no_es_de_conexion_no_escribe_la_clave(monkeypatch):
-    """`fallo_conexion` solo aparece cuando hay causa: el log no engorda en cada evento."""
+    """`connection_failure` solo aparece cuando hay causa: el log no engorda en cada evento."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.post(CHAT).mock(return_value=httpx2.Response(500, text="boom"))
 
     server.local_summarize(text="hola")
 
-    assert "fallo_conexion" not in _ultima_linea_del_log()
+    assert "connection_failure" not in _ultima_linea_del_log()
 
 
 # --- REQ-022: la espera de plaza se ve en «En curso» ---------------------------------------------

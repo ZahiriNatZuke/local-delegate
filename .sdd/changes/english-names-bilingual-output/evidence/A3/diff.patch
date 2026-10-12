@@ -1,0 +1,3834 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 5535d2b..35dc4d5 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -40,6 +40,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ - **Los hooks dicen qué nombres viejos leyeron.** Con la telemetría encendida, cada evento lleva
+   `deprecated_names` cuando la invocación leyó una variable o el interruptor con su nombre viejo, y
+   el check «nombres obsoletos» de `doctor` lo avisa mirando los últimos 7 días del fichero.
++- **El log de uso (`usage-*.jsonl`) escribe sus claves y valores de fallo en inglés:**
++  `block_id` (antes `bloqueo_id`), `sections` (antes `secciones`) y `connection_failure` (antes
++  `fallo_conexion`, con las causas `refused`, `no_route`, `connect_timeout`, `credential`,
++  `no_response`, `invalid_response`, `invalid_url`, `transport` y `unknown`). Las clases de
++  `error_class`, `fallback_class` y `affinity_dropped_class` pasan a `request`,
++  `capacity_or_load`, `read_timeout`, `configuration`, `model`, `unclassified` y `cooldown`, y
++  las de los eventos de enfriamiento también. El panel, `local_status`, `doctor` y los scripts de
++  medición (`medir_enfriamiento.py` incluido, con el mismo nombre y las mismas opciones) leen los
++  dos formatos, también mezclados en el mismo fichero, y los cuentan juntos.
++- **`/api/backend`, `/api/status` y `/api/backend/stats` devuelven la causa como `cause`, `label`
++  y `detail`** (antes `causa`, `etiqueta` y `detalle`). `doctor` entiende también la respuesta de
++  un daemon de la 0.34.0.
+ 
+ ## [0.34.0] - 2026-10-08
+ 
+diff --git a/docs/wiki/Architecture.md b/docs/wiki/Architecture.md
+index c7a57c5..b2cd5ad 100644
+--- a/docs/wiki/Architecture.md
++++ b/docs/wiki/Architecture.md
+@@ -175,7 +175,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
+ | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
+ | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
+ | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
+-| `fallos.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `sin_clasificar` |
++| `failures.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `unclassified` |
+ | `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, con el paso `loaded` (los alternativos aprobados que ya están cargados) y el texto «sin residente» / «residente: X» |
+ | `topology.py` | Lee los grupos de `LLAMASWAP_CONFIG` en caliente y dice qué modelos chocan, con la regla de llama-swap; si no puede, el motivo de «sin topología» |
+ | `turn.py` | El turno del daemon: núcleo puro (cola, concesión, E-1, concesión forzada) y su envoltura asíncrona |
+diff --git a/docs/wiki/Savings-and-metrics.md b/docs/wiki/Savings-and-metrics.md
+index eec5972..429e998 100644
+--- a/docs/wiki/Savings-and-metrics.md
++++ b/docs/wiki/Savings-and-metrics.md
+@@ -17,8 +17,11 @@ fuente adicional.
+ ```
+ 
+ Cuando responde un **modelo de respaldo**, el evento suma `model_requested` (el que se pidió),
+-`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`modelo`, `capacidad_o_carga`,
+-`enfriamiento`); un evento fallido lleva `error_class` (`configuracion`, `modelo`…). `model` sigue
++`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`model`, `capacity_or_load`,
++`cooldown`); un evento fallido lleva `error_class` (`configuration`, `model`…). Hasta la 0.34.0
++esos valores se escribían en español (`modelo`, `capacidad_o_carga`, `enfriamiento`,
++`configuracion`…); el panel, `local_status` y los scripts de medición los siguen leyendo y los
++cuentan junto a los nuevos. `model` sigue
+ siendo el que **respondió** y `chunks` cuenta también las llamadas del respaldo, así que los tokens se
+ atribuyen a quien los gastó y un evento sin salto es idéntico a los de antes. El panel marca esas
+ filas con **↪** y la tarjeta de delegaciones dice cuántas tuvieron salto: una medición que coincida
+@@ -44,10 +47,11 @@ con saltos pudo contaminarla un swap.
+   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
+   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
+   lo traen y se reconocen por el nombre de la tool.
+-- `fallo_conexion` (solo si la delegación no pudo conectar con el backend): la **causa** del
+-  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `rechazada`,
+-  `timeout_conexion`, `credencial`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
+-  valiendo `connect_error` y `error_class` no cambia, así que un lector viejo del log no se rompe.
++- `connection_failure` (solo si la delegación no pudo conectar con el backend): la **causa** del
++  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `refused`,
++  `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
++  valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
++  español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
+ - `tool_use_id` (solo si el cliente lo manda; Claude Code sí, Codex y los scripts no): el id de la
+   llamada en el transcript, leído de `_meta["claudecode/toolUseId"]`. Es la clave exacta para
+   cruzar la línea con el transcript.
+@@ -547,7 +551,8 @@ vuelo, y el siguiente sondeo sale 2 s **después de que termine** el anterior. A
+ 
+ El `title` del badge es el detalle de la causa (la tabla completa de causas y qué hacer con cada
+ una está en [Troubleshooting](Troubleshooting.md)). Las etiquetas y los detalles los redacta
+-**solo** `fallos.py`, en el daemon; el panel los recibe ya escritos.
++**solo** `failures.py`, en el daemon; el panel los recibe ya escritos (campos `cause`, `label` y
++`detail` de `/api/backend`).
+ 
+ **Hacen falta dos sondeos fallidos seguidos para pasar a «caído».** Un fallo suelto tras uno bueno
+ **conserva** lo que se pintaba —badge en verde, filas con su último estado y sin atenuar— y el
+@@ -673,7 +678,7 @@ Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros
+ común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada
+ aviso y cada bloqueo llevan un identificador; cuando el hook rechaza una lectura deja una nota con
+ ese identificador y una **huella** de la ruta —nunca la ruta—, y la tool que recibe ese mismo
+-`path` se queda con él en su evento (`bloqueo_id`). El identificador no viaja por el agente a
++`path` se queda con él en su evento (`block_id`; `bloqueo_id` hasta la 0.34.0). El identificador no viaja por el agente a
+ propósito: pedirle que lo pase sería depender de que obedezca, que es justo lo que se quiere medir.
+ 
+ Quien responde la pregunta es `scripts/medir_adopcion.py`, que cruza los dos registros sin trabajo
+diff --git a/docs/wiki/Troubleshooting.md b/docs/wiki/Troubleshooting.md
+index eee1365..c7aa27d 100644
+--- a/docs/wiki/Troubleshooting.md
++++ b/docs/wiki/Troubleshooting.md
+@@ -41,22 +41,23 @@ seguir diciendo la versión vieja con el servidor sirviendo ya la nueva.
+ 
+ El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`. Detrás de los dos puntos va
+ la **causa**, la misma que enseñan el badge del panel, `local_status` y `doctor`, y que el log de
+-uso guarda en la clave `fallo_conexion` (las versiones anteriores a este cambio decían «no se pudo
+-conectar al endpoint» sin más).
++uso guarda en la clave `connection_failure` (`fallo_conexion` hasta la 0.34.0, con los valores en
++español: `rechazada`, `sin_ruta`, `timeout_conexion`…). Las versiones anteriores a la causa decían
++«no se pudo conectar al endpoint» sin más.
+ 
+-| Causa (`fallo_conexion`) | Badge | Qué dice | Qué hacer |
++| Causa (`connection_failure`) | Badge | Qué dice | Qué hacer |
+ |---|---|---|---|
+ | `dns` | caído · no resuelve | no se resuelve el nombre `<host>` (¿VPN o DNS?) | Revisa el nombre en `LOCAL_DELEGATE_BASE_URL`; con un backend remoto, `tailscale status` o usa la IP 100.x de la tailnet |
+-| `rechazada` | caído · nadie escucha | `<host>` rechaza la conexión: no hay nada escuchando en ese puerto | Arranca llama-swap (en local) o revisa el puerto; en otra máquina, arráncalo allí |
+-| `sin_ruta` | caído · sin ruta | no hay ruta de red hacia `<host>` | Revisa la red hacia ese host: VPN, cortafuegos, Tailscale |
+-| `timeout_conexion` | caído · no contesta | `<host>` no contesta a la conexión (ruta, cortafuegos o VPN) | Igual que `sin_ruta`; es el caso típico de una VPN que se come el tráfico |
+-| `credencial` | sin acceso (ámbar) | `<host>` responde `<N>`: está arriba pero rechaza la credencial | Falta o no vale `LOCAL_DELEGATE_API_KEY` en el entorno de quien llama (ver abajo) |
++| `refused` | caído · nadie escucha | `<host>` rechaza la conexión: no hay nada escuchando en ese puerto | Arranca llama-swap (en local) o revisa el puerto; en otra máquina, arráncalo allí |
++| `no_route` | caído · sin ruta | no hay ruta de red hacia `<host>` | Revisa la red hacia ese host: VPN, cortafuegos, Tailscale |
++| `connect_timeout` | caído · no contesta | `<host>` no contesta a la conexión (ruta, cortafuegos o VPN) | Igual que `no_route`; es el caso típico de una VPN que se come el tráfico |
++| `credential` | sin acceso (ámbar) | `<host>` responde `<N>`: está arriba pero rechaza la credencial | Falta o no vale `LOCAL_DELEGATE_API_KEY` en el entorno de quien llama (ver abajo) |
+ | `http_error` | responde con error (ámbar) | `<host>` responde HTTP `<N>` | Revisa `LOCAL_DELEGATE_BASE_URL` (¿falta `/v1`?) |
+-| `respuesta_invalida` | respuesta no válida (ámbar) | `<host>` responde a `<endpoint>`, pero con un cuerpo que no se entiende | Lo que escucha en ese puerto no es un backend OpenAI-compatible |
+-| `sin_respuesta` | no responde a tiempo (ámbar) | `<host>` acepta la conexión pero no responde a tiempo | El backend está colgado o saturado; revísalo en ese host |
+-| `url_invalida` | caído · URL no válida | la URL del backend no es válida: revisa LOCAL_DELEGATE_BASE_URL | Corrige la URL |
+-| `transporte` | caído · fallo de red | fallo de red con `<host>` | Sin pista específica: revisa el backend en ese host |
+-| `desconocida` | caído · fallo inesperado | fallo inesperado al sondear `<host>` | Igual; el tipo de excepción va entre paréntesis en el detalle |
++| `invalid_response` | respuesta no válida (ámbar) | `<host>` responde a `<endpoint>`, pero con un cuerpo que no se entiende | Lo que escucha en ese puerto no es un backend OpenAI-compatible |
++| `no_response` | no responde a tiempo (ámbar) | `<host>` acepta la conexión pero no responde a tiempo | El backend está colgado o saturado; revísalo en ese host |
++| `invalid_url` | caído · URL no válida | la URL del backend no es válida: revisa LOCAL_DELEGATE_BASE_URL | Corrige la URL |
++| `transport` | caído · fallo de red | fallo de red con `<host>` | Sin pista específica: revisa el backend en ese host |
++| `unknown` | caído · fallo inesperado | fallo inesperado al sondear `<host>` | Igual; el tipo de excepción va entre paréntesis en el detalle |
+ 
+ El badge rojo (con «caído») es para cuando no se llega al backend; el ámbar, para cuando **alguien
+ contesta** pero la respuesta no sirve. En el panel hacen falta dos sondeos fallidos seguidos para
+@@ -78,9 +79,9 @@ Si el backend está en otra máquina:
+ 
+ - `dns` (o `Could not resolve host` con `curl`): MagicDNS no está resolviendo; prueba primero
+   `tailscale status` y `tailscale ping <PC>` desde la Mac.
+-- `timeout_conexion` o `sin_ruta` (`Operation timed out` con `curl`): DNS resolvió, pero falta
++- `connect_timeout` o `no_route` (`Operation timed out` con `curl`): DNS resolvió, pero falta
+   ruta/grant, Tailscale Serve no está activo o una VPN se come el tráfico.
+-- `credencial` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
++- `credential` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
+ - No cambies a MCP remoto completo para “arreglar” `path`: el MCP debe seguir local en la Mac.
+ 
+ Guía completa: [Backend remoto Mac → PC](Remote-backend.md).
+diff --git a/scripts/analizar_benchmark.py b/scripts/analizar_benchmark.py
+index 8ff22ea..1a4f004 100755
+--- a/scripts/analizar_benchmark.py
++++ b/scripts/analizar_benchmark.py
+@@ -67,7 +67,7 @@ TOLERANCIA = 1e-3
+ # Comparacion por pares (P-15): prueba de signos de una cola sobre los pares con eleccion.
+ ALFA_PARES = 0.05
+ # Aceptadas: el backend recibio la entrada entera, aunque luego no puntue.
+-_ACEPTADAS = frozenset({"ok", "truncado", "configuracion"})
++_ACEPTADAS = frozenset({"ok", "truncado", "configuracion", "configuration"})
+ 
+ 
+ # --- Lectura ------------------------------------------------------------------------------------
+diff --git a/scripts/measure_slowness.py b/scripts/measure_slowness.py
+index 565841f..7e6d84b 100755
+--- a/scripts/measure_slowness.py
++++ b/scripts/measure_slowness.py
+@@ -208,7 +208,7 @@ def group_by_event(rows: Sequence[dict[str, Any]], calls: Sequence[dict[str, Any
+         generation_ms = sum(f["salida"] / f["tps"] for f in group)  # segundos
+         return {
+             "ts": ts,
+-            "modelo": group[0]["modelo"],
++            "model": group[0]["modelo"],
+             "origen": origin,
+             "ok": ok,
+             "tokens_out": output,
+@@ -257,7 +257,7 @@ def control_a(
+         "detalle": [
+             {
+                 "filas": e["filas"],
+-                "modelo": e["modelo"],
++                "modelo": e["model"],
+                 "tok_s": round(e["tok_s"], 1),
+                 "ref": round(e["ref"], 1),
+                 "pace_rel": e["pace_rel"],
+@@ -273,11 +273,11 @@ def control_b(evaluated: Sequence[Event]) -> dict[str, Any]:
+     """(b) La regla sobre las filas de Qwen3.6 de todos los origenes marca 570, 571 y 573."""
+     marked_ones: set[int] = set()
+     for e in evaluated:
+-        if e["modelo"] == CONTROL_MODEL and e.get("slow"):
++        if e["model"] == CONTROL_MODEL and e.get("slow"):
+             marked_ones.update(e["filas"])
+     by_row = {}
+     for e in evaluated:
+-        if e["modelo"] == CONTROL_MODEL:
++        if e["model"] == CONTROL_MODEL:
+             for row in e["filas"]:
+                 if row in EXPECTED_ROWS or row == 574:
+                     by_row[row] = {
+@@ -313,7 +313,7 @@ def control_spans(events: Sequence[Event], since_ts: float) -> dict[str, Any]:
+     ]
+     by_model: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+     for e in pc:
+-        by_model[e["modelo"]][span_of(e["tokens_in"]) or "?"].append(e["tok_s"])
++        by_model[e["model"]][span_of(e["tokens_in"]) or "?"].append(e["tok_s"])
+     models_summary = {}
+     normalized: dict[str, list[float]] = defaultdict(list)
+     for model, spans in sorted(by_model.items()):
+@@ -367,7 +367,7 @@ def long_false_positives(
+         "detalle": [
+             {
+                 "filas": e["filas"],
+-                "modelo": e["modelo"],
++                "modelo": e["model"],
+                 "tok_s": round(e["tok_s"], 1),
+                 "ref": round(e["ref"], 1),
+                 "pace_rel": e["pace_rel"],
+diff --git a/scripts/medir_adopcion.py b/scripts/medir_adopcion.py
+index 215506c..36a892d 100755
+--- a/scripts/medir_adopcion.py
++++ b/scripts/medir_adopcion.py
+@@ -73,7 +73,9 @@ def usos_fundidos(desde: str | None) -> list[dict]:
+     clave de una fila sin `tool_use_id` depende de su posicion en el fichero."""
+     usos = []
+     for ruta in logs_de_uso():
+-        for e in coste.fundir(leer(ruta, None), log_dir=directorio_de_logs()):
++        # Filas viejas y nuevas al mismo formato (REQ-006): `bloqueo_id` se lee como `block_id`.
++        filas = [legacy_names.normalize("usage", e) for e in leer(ruta, None)]
++        for e in coste.fundir(filas, log_dir=directorio_de_logs()):
+             if desde and str(e.get("ts", "")) < desde:
+                 continue
+             usos.append(e)
+@@ -104,7 +106,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
+ 
+     # «Aceptado» = el identificador del bloqueo aparece en un evento de tool. Sin esto, lo unico
+     # medible era «hubo delegaciones», que no dice si las provoco el aviso.
+-    ids_delegados = {e["bloqueo_id"] for e in usos if e.get("bloqueo_id")}
++    ids_delegados = {e["block_id"] for e in usos if e.get("block_id")}
+     aceptados = [b for b in bloqueos if b.get("id") in ids_delegados]
+ 
+     # De las lecturas acotadas, cuantas eran de un fichero que en la misma sesion acabo leyendose
+@@ -141,7 +143,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
+         "tasa_de_aceptacion": round(len(aceptados) / len(bloqueos), 3) if bloqueos else None,
+         "delegaciones_totales": len([e for e in usos if e.get("tool", "").startswith("local_")]),
+         "delegaciones_espontaneas": len(
+-            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("bloqueo_id")]
++            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("block_id")]
+         ),
+         "acotadas_con_huella": len(acotadas),
+         "acotadas_que_convenia_delegar": len(convenia),
+diff --git a/scripts/medir_enfriamiento.py b/scripts/medir_enfriamiento.py
+index e5e83fd..ba62885 100755
+--- a/scripts/medir_enfriamiento.py
++++ b/scripts/medir_enfriamiento.py
+@@ -34,7 +34,7 @@ from pathlib import Path
+ sys.path.insert(0, str(Path(__file__).parent))
+ from medir_adopcion import directorio_de_logs, leer, logs_de_uso
+ 
+-from local_delegate import test_windows
++from local_delegate import legacy_names, test_windows
+ from local_delegate.enfriamiento import CLASES_QUE_CUENTAN, FICHERO_EVENTOS
+ 
+ #: Por debajo de cualquiera de los dos, el resultado es «no concluyente» (criterio de P-4).
+@@ -43,6 +43,10 @@ MINIMO_FALLOS = 10
+ 
+ CLASES = {clase.value for clase in CLASES_QUE_CUENTAN}
+ 
++#: Clase de fallo en el formato nuevo, venga del log viejo (`modelo`, `timeout_lectura`,
++#: `enfriamiento`…) o del nuevo (REQ-007): el informe es el mismo con los dos formatos.
++_CLASE_NUEVA = legacy_names.FAILURE_CLASS_VALUES
++
+ #: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
+ REGLAS = {
+     1: ("R > 60 %: el modelo seguia roto al vencer", "T pasa a 240 s"),
+@@ -116,7 +120,7 @@ def episodios(eventos: list[dict], tmax_s: float) -> list[dict]:
+             episodio = {
+                 "modelo": modelo,
+                 "desde": _ts(evento),
+-                "clase": evento.get("clase"),
++                "clase": legacy_names.new_value(_CLASE_NUEVA, evento.get("clase")),
+                 "reentradas": 0,
+                 "en_tmax": int(en_tmax),
+                 "final": None,
+@@ -159,14 +163,14 @@ def medir(
+     excluidos = list(excluidos)
+     filtro = _Filtro(excluidos, include_tests)
+     usos = [
+-        evento
++        legacy_names.normalize("usage", evento)
+         for ruta in logs_de_uso()
+         for evento in leer(ruta, None)
+         if _en_rango(_ts(evento), desde, hasta) and filtro.deja(_ts(evento), "usage_rows")
+     ]
+     # Un minimo, no el total: con salto, el log solo ve el fallo del pedido y el ultimo.
+     fallos = sum(1 for e in usos if e.get("error_class") in CLASES) + sum(
+-        1 for e in usos if e.get("fallback_class") == "modelo"
++        1 for e in usos if e.get("fallback_class") == "model"
+     )
+     saltos = Counter(e["fallback_class"] for e in usos if e.get("fallback_class"))
+     al_momento = sum(1 for e in usos if e.get("error") == "cooldown")
+@@ -203,12 +207,12 @@ def medir(
+         "fallos_que_cuentan": fallos,
+         "saltos_por_clase": dict(saltos),
+         "fallos_al_momento": al_momento,
+-        "operaciones_desviadas": saltos.get("enfriamiento", 0) + al_momento,
++        "operaciones_desviadas": saltos.get("cooldown", 0) + al_momento,
+         "episodios": len(eps),
+         "episodios_con_desenlace": len(con_desenlace),
+         "episodios_que_reentraron": len(reentraron),
+         "R": round(len(reentraron) / len(con_desenlace), 3) if con_desenlace else None,
+-        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "timeout_lectura"),
++        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "read_timeout"),
+         "episodios_que_reentran_en_tmax": sum(1 for ep in eps if ep["en_tmax"] >= 2),
+         "fuera_de_p4_fallos_al_momento_sobre_5_pct": delegaciones > 0
+         and al_momento > 0.05 * delegaciones,
+diff --git a/scripts/medir_resumen_estructurado.py b/scripts/medir_resumen_estructurado.py
+index 49b1d2b..281d38f 100755
+--- a/scripts/medir_resumen_estructurado.py
++++ b/scripts/medir_resumen_estructurado.py
+@@ -44,7 +44,7 @@ import time
+ from datetime import UTC, datetime
+ from pathlib import Path
+ 
+-from local_delegate import secciones
++from local_delegate import legacy_names, secciones
+ 
+ RAIZ = Path(__file__).parents[1]
+ BANCO = RAIZ / "benchmarks" / "resumen-estructurado"
+@@ -227,7 +227,7 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
+                 "truncated_out": bool(evento.get("truncated_out")),
+                 "chunks": evento.get("chunks", 1),
+                 "modelo": evento.get("model"),
+-                "secciones_log": evento.get("secciones"),
++                "secciones_log": legacy_names.read_key(evento, "sections", "secciones"),
+                 "focus_log": bool(evento.get("focus")),
+             }
+         )
+diff --git a/src/local_delegate/benchmark.py b/src/local_delegate/benchmark.py
+index 9349e20..a63c406 100644
+--- a/src/local_delegate/benchmark.py
++++ b/src/local_delegate/benchmark.py
+@@ -32,7 +32,7 @@ from typing import Any, Self
+ 
+ import httpx2
+ 
+-from . import config, fallos
++from . import config, failures
+ 
+ # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
+ logging.getLogger("httpx2").setLevel(logging.WARNING)
+@@ -1120,8 +1120,8 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
+     error = None
+     if finish == "length" and not text.strip() and reasoning.strip():
+         # Se gasto max_tokens pensando y no contesto: es configuracion, no calidad (§4.7 punto 4),
+-        # la misma clase que ya da `fallos.py`. Repetirlo con mas tokens taparia el problema.
+-        outcome = fallos.Clase.CONFIGURACION.value
++        # la misma clase que ya da `failures.py`. Repetirlo con mas tokens taparia el problema.
++        outcome = failures.FailureClass.CONFIGURATION.value
+     elif finish == "length":
+         outcome = "truncado"
+     elif not isinstance(content, str):
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index 4d9dbcd..229cd04 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -36,7 +36,18 @@ from itertools import pairwise
+ from pathlib import Path
+ from urllib.parse import urlsplit
+ 
+-from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas, test_windows
++from . import (
++    atribucion,
++    clients,
++    config,
++    coste,
++    failures,
++    install,
++    legacy_names,
++    recalcular,
++    sondas,
++    test_windows,
++)
+ 
+ # --- Estados -----------------------------------------------------------------
+ OK = "ok"  # está y como debe estar
+@@ -158,8 +169,8 @@ def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
+     return None
+ 
+ 
+-def _default_backend_models() -> fallos.VistaBackend:
+-    """Lo que se sabe del backend (`fallos.VistaBackend`), preguntando primero al daemon.
++def _default_backend_models() -> failures.BackendView:
++    """Lo que se sabe del backend (`failures.BackendView`), preguntando primero al daemon.
+ 
+     El orden importa y no es una optimización. La clave del backend se lee **del entorno del
+     proceso**: el daemon la recibe de su lanzador, pero un `local-delegate doctor` escrito en una
+@@ -185,13 +196,18 @@ def _default_backend_models() -> fallos.VistaBackend:
+     visto = daemon.query_backend(host, port, timeout=plazo)
+     if visto is not None:
+         if visto.get("available"):
+-            return fallos.VistaBackend(True, "", None, "daemon")
+-        causa, detalle = visto.get("causa"), visto.get("detalle")
++            return failures.BackendView(True, "", None, "daemon")
++        # Un daemon de una versión anterior manda `causa`/`detalle` y el valor viejo de la causa
++        # (REQ-006): se leen las dos claves y el valor se pasa al formato nuevo.
++        causa = legacy_names.new_value(
++            legacy_names.CONNECTION_CAUSE_VALUES, legacy_names.read_key(visto, "cause", "causa")
++        )
++        detalle = legacy_names.read_key(visto, "detail", "detalle")
+         if isinstance(causa, str) and isinstance(detalle, str) and detalle:
+-            return fallos.VistaBackend(False, detalle, causa, "daemon")
+-        # Daemon antiguo, sin `causa`: el texto de siempre. El daemon SÍ tiene credencial, así
++            return failures.BackendView(False, detalle, causa, "daemon")
++        # Daemon antiguo, sin causa: el texto de siempre. El daemon SÍ tiene credencial, así
+         # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
+-        return fallos.VistaBackend(
++        return failures.BackendView(
+             False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
+         )
+     return sondas.backend_probe()
+@@ -334,7 +350,7 @@ class Context:
+     daemon_needs_token: Callable[[str, int], bool | None] = field(
+         default_factory=lambda f=_default_daemon_needs_token: f
+     )
+-    backend_models: Callable[[], fallos.VistaBackend] = field(
++    backend_models: Callable[[], failures.BackendView] = field(
+         default_factory=lambda f=_default_backend_models: f
+     )
+     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = field(
+@@ -1352,17 +1368,17 @@ def _probe_daemon(ctx: Context) -> Result:
+ 
+ def _probe_backend_models(ctx: Context) -> Result:
+     vista = ctx.backend_models()
+-    if vista.sano:
++    if vista.healthy:
+         return Result(OK, f"{config.BASE_URL}/models responde")
+     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
+-    pista = fallos.pista(
+-        vista.causa,
+-        origen=config.backend_origin(),
+-        fuente=vista.fuente,
++    pista = failures.hint(
++        vista.cause,
++        origin=config.backend_origin(),
++        source=vista.source,
+         host=config.backend_host(),
+     )
+-    detalle = f"{config.BASE_URL}/models: {vista.detalle or 'no responde'}"
+-    if vista.causa == fallos.CausaConexion.CREDENCIAL.value and vista.fuente == "directo":
++    detalle = f"{config.BASE_URL}/models: {vista.detail or 'no responde'}"
++    if vista.cause == failures.ConnectionCause.CREDENTIAL.value and vista.source == "direct":
+         # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
+         # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
+         # su clave, es un problema de verdad: WARN, con la pista que manda a su lanzador.
+diff --git a/src/local_delegate/enfriamiento.py b/src/local_delegate/enfriamiento.py
+index f155c3c..e0a8964 100644
+--- a/src/local_delegate/enfriamiento.py
++++ b/src/local_delegate/enfriamiento.py
+@@ -33,12 +33,12 @@ from filelock import FileLock, Timeout
+ 
+ from . import config
+ from .estado_json import escribir_json_atomico, leer_json
+-from .fallos import Clase
++from .failures import FailureClass
+ 
+ #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
+ #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
+ #: responde bien cuando se le deja.
+-CLASES_QUE_CUENTAN = frozenset({Clase.MODELO, Clase.TIMEOUT_LECTURA})
++CLASES_QUE_CUENTAN = frozenset({FailureClass.MODEL, FailureClass.READ_TIMEOUT})
+ 
+ #: Cuánto se espera al bloqueo del fichero antes de seguir sin enfriamiento, como `inflight.json`.
+ ESPERA_BLOQUEO_S = 2.0
+@@ -111,9 +111,9 @@ class Estado:
+ 
+     # --- Escribir ------------------------------------------------------------------------------
+ 
+-    def registrar_fallo(self, modelo: str, clase: Clase | str) -> None:
++    def registrar_fallo(self, modelo: str, clase: FailureClass | str) -> None:
+         """Suma un fallo si su clase cuenta; enfría al llegar a N, o al primer fallo tras vencer."""
+-        if Clase(clase) not in CLASES_QUE_CUENTAN:
++        if FailureClass(clase) not in CLASES_QUE_CUENTAN:
+             return
+         ahora = self._reloj()
+         eventos: list[dict] = []
+@@ -131,7 +131,9 @@ class Estado:
+                 entrada["hasta"] = ahora + entrada["espera_s"]
+                 entrada["reentradas"] += 1
+                 entrada["fallos"] = 0
+-                eventos.append(_evento(ahora, modelo, "reentra", entrada, clase=Clase(clase).value))
++                eventos.append(
++                    _evento(ahora, modelo, "reentra", entrada, clase=FailureClass(clase).value)
++                )
+             else:
+                 entrada["fallos"] += 1
+                 if entrada["fallos"] >= self._fallos:
+@@ -140,7 +142,7 @@ class Estado:
+                     entrada["reentradas"] = 1
+                     entrada["fallos"] = 0
+                     eventos.append(
+-                        _evento(ahora, modelo, "entra", entrada, clase=Clase(clase).value)
++                        _evento(ahora, modelo, "entra", entrada, clase=FailureClass(clase).value)
+                     )
+             datos[modelo] = entrada
+ 
+diff --git a/src/local_delegate/fallos.py b/src/local_delegate/failures.py
+similarity index 54%
+rename from src/local_delegate/fallos.py
+rename to src/local_delegate/failures.py
+index 60d073b..5731a45 100644
+--- a/src/local_delegate/fallos.py
++++ b/src/local_delegate/failures.py
+@@ -24,8 +24,8 @@ cuenten fallos, y uno ya cargado que no termina sí. F0 todavía no sabe disting
+ porque esa señal sale de los patrones reales que captura REQ-020 en F3; hasta entonces, lo que no
+ se pueda atribuir cae del lado que **no** castiga al modelo lento de montar.
+ 
+-Regla de la casa para este módulo: **lo que no encaje va a `SIN_CLASIFICAR`, nunca a `MODELO`.**
+-Equivocarse hacia `MODELO` es lo caro: es la única clase que dispara el respaldo y suma para el
++Regla de la casa para este módulo: **lo que no encaje va a `UNCLASSIFIED`, nunca a `MODEL`.**
++Equivocarse hacia `MODEL` es lo caro: es la única clase que dispara el respaldo y suma para el
+ enfriamiento, así que una variante desconocida mal leída provocaría saltos de modelo y expulsiones
+ de VRAM por un fallo que a lo mejor era de la petición.
+ """
+@@ -41,17 +41,28 @@ from typing import NamedTuple
+ 
+ import httpx2
+ 
++from . import legacy_names
+ 
+-class Clase(str, Enum):
+-    """Las siete clases de la tabla de la spec. Hereda de `str` para que el log las escriba solas."""
++
++class FailureClass(str, Enum):
++    """Las siete clases de la tabla de la spec. Hereda de `str` para que el log las escriba solas.
++
++    Acepta también el valor viejo en español (`FailureClass("modelo")` es `MODEL`): el log de uso y
++    los eventos de enfriamiento ya escritos se leen para siempre (REQ-006).
++    """
+ 
+     ENDPOINT = "endpoint"
+-    PETICION = "peticion"
+-    CAPACIDAD = "capacidad_o_carga"
+-    TIMEOUT_LECTURA = "timeout_lectura"
+-    CONFIGURACION = "configuracion"
+-    MODELO = "modelo"
+-    SIN_CLASIFICAR = "sin_clasificar"
++    REQUEST = "request"
++    CAPACITY = "capacity_or_load"
++    READ_TIMEOUT = "read_timeout"
++    CONFIGURATION = "configuration"
++    MODEL = "model"
++    UNCLASSIFIED = "unclassified"
++
++    @classmethod
++    def _missing_(cls, value: object) -> FailureClass | None:
++        new = legacy_names.FAILURE_CLASS_VALUES.get(value) if isinstance(value, str) else None
++        return cls._value2member_map_.get(new) if new else None  # type: ignore[return-value]
+ 
+ 
+ #: Patrones que delatan un fallo de capacidad o de carga dentro de un 5xx, en minúsculas.
+@@ -60,7 +71,7 @@ class Clase(str, Enum):
+ #: como fallo del modelo haría saltar el respaldo a otro modelo grande y encadenaría swaps y OOM.
+ #: Cada uno lleva la versión de la que salió; si el backend cambia, se recapturan
+ #: (`tests/fixtures/backend/`, `tests/test_fallos_capturas.py`).
+-PATRONES_DE_CAPACIDAD: tuple[str, ...] = (
++CAPACITY_PATTERNS: tuple[str, ...] = (
+     # llama-swap v255 + llama-server b10909, capturado el 2026-09-15. Es el 500 que da llama-swap
+     # cuando el `llama-server` que arranca muere antes de estar listo, y es el MISMO cuerpo, byte a
+     # byte, para un OOM con la política «Prefer No Sysmem Fallback» y para un modelo que no existe.
+@@ -69,7 +80,7 @@ PATRONES_DE_CAPACIDAD: tuple[str, ...] = (
+ 
+ 
+ @dataclass(frozen=True)
+-class Respuesta:
++class BackendResponse:
+     """Lo justo que hace falta de una respuesta HTTP para clasificarla.
+ 
+     No es el objeto vivo de `httpx2` a propósito: así el clasificador se puede probar entero sin
+@@ -78,28 +89,28 @@ class Respuesta:
+ 
+     status: int
+     #: El JSON ya parseado, o `None` si no se pudo parsear (que en sí mismo es un fallo del modelo).
+-    datos: dict | None = None
++    data: dict | None = None
+     #: El cuerpo crudo, recortado. Solo se usa para los patrones de capacidad.
+-    texto: str = ""
++    text: str = ""
+ 
+ 
+-def clasificar(
+-    suceso: BaseException | Respuesta,
++def classify(
++    event: BaseException | BackendResponse,
+     *,
+-    modelo_cargado: bool | None = None,
+-) -> Clase | None:
++    model_loaded: bool | None = None,
++) -> FailureClass | None:
+     """La clase del fallo, o `None` si lo que llegó no es un fallo.
+ 
+-    `modelo_cargado` dice si el modelo ya estaba en memoria cuando venció el plazo de lectura.
++    `model_loaded` dice si el modelo ya estaba en memoria cuando venció el plazo de lectura.
+     `None` significa «no se sabe», que es lo normal en F0: sin esa señal, un `ReadTimeout` se lee
+     como carga y no como modelo colgado.
+     """
+-    if isinstance(suceso, BaseException):
+-        return _clasificar_excepcion(suceso, modelo_cargado=modelo_cargado)
+-    return _clasificar_respuesta(suceso)
++    if isinstance(event, BaseException):
++        return _classify_exception(event, model_loaded=model_loaded)
++    return _classify_response(event)
+ 
+ 
+-def es_backend_ausente(suceso: BaseException | Respuesta) -> bool:
++def is_backend_missing(event: BaseException | BackendResponse) -> bool:
+     """True si el fallo significa que no hay nadie escuchando en el endpoint.
+ 
+     Es lo que separa «ofrezco arrancar el backend» de «no lo ofrezco», y por eso no se puede
+@@ -112,159 +123,168 @@ def es_backend_ausente(suceso: BaseException | Respuesta) -> bool:
+     comprobado contra el `httpx2` instalado—, y ese detalle es justo el defecto que se verificó por
+     ejecución: hoy un plazo de conexión agotado no ofrece arrancar nada.
+     """
+-    return isinstance(suceso, (httpx2.ConnectError, httpx2.ConnectTimeout))
++    return isinstance(event, (httpx2.ConnectError, httpx2.ConnectTimeout))
+ 
+ 
+-def _clasificar_excepcion(exc: BaseException, *, modelo_cargado: bool | None) -> Clase:
++def _classify_exception(exc: BaseException, *, model_loaded: bool | None) -> FailureClass:
+     # `ReadTimeout` va ANTES que su padre `TimeoutException` y que el `HTTPError` genérico: es la
+     # única excepción de transporte que no es culpa del endpoint, porque ahí el backend sí aceptó
+     # la conexión. `ConnectTimeout` no necesita rama propia —cae en `HTTPError` y ya da ENDPOINT—;
+-    # lo que sí necesita es `es_backend_ausente()`, que es donde su diferencia se nota.
++    # lo que sí necesita es `is_backend_missing()`, que es donde su diferencia se nota.
+     if isinstance(exc, httpx2.ReadTimeout):
+-        return Clase.TIMEOUT_LECTURA if modelo_cargado else Clase.CAPACIDAD
++        return FailureClass.READ_TIMEOUT if model_loaded else FailureClass.CAPACITY
+     if isinstance(exc, httpx2.HTTPStatusError):
+-        return _clasificar_status(exc.response.status_code, getattr(exc.response, "text", ""))
++        return _classify_status(exc.response.status_code, getattr(exc.response, "text", ""))
+     # `ConnectError`, el resto de timeouts (`WriteTimeout`, `PoolTimeout`) y cualquier otro error
+     # de transporte: el modelo no llegó a responder, así que no se le puede achacar nada.
+     if isinstance(exc, httpx2.HTTPError):
+-        return Clase.ENDPOINT
+-    return Clase.SIN_CLASIFICAR
++        return FailureClass.ENDPOINT
++    return FailureClass.UNCLASSIFIED
+ 
+ 
+-def _clasificar_respuesta(respuesta: Respuesta) -> Clase | None:
+-    if respuesta.status >= 400:
+-        return _clasificar_status(respuesta.status, respuesta.texto)
+-    if not 200 <= respuesta.status < 300:
++def _classify_response(response: BackendResponse) -> FailureClass | None:
++    if response.status >= 400:
++        return _classify_status(response.status, response.text)
++    if not 200 <= response.status < 300:
+         # Un 1xx o un 3xx que llegue hasta aqui no es lo que el protocolo espera, pero tampoco hay
+         # nada que achacarle al modelo: no llego a responder una peticion de chat.
+-        return Clase.SIN_CLASIFICAR
+-    if respuesta.datos is None:
++        return FailureClass.UNCLASSIFIED
++    if response.data is None:
+         # Se recibió un 2xx que no era JSON: el modelo respondió algo roto.
+-        return Clase.MODELO
+-    return _clasificar_cuerpo(respuesta.datos)
++        return FailureClass.MODEL
++    return _classify_body(response.data)
+ 
+ 
+-def _clasificar_status(status: int, texto: str) -> Clase:
++def _classify_status(status: int, text: str) -> FailureClass:
+     if 400 <= status < 500:
+         # Incluye el desborde de contexto (400), el schema no soportado y la autenticación. Culpa
+         # de la petición: cambiar de modelo no arregla ninguno.
+-        return Clase.PETICION
++        return FailureClass.REQUEST
+     if status >= 500:
+-        minusculas = texto.lower()
+-        if any(patron in minusculas for patron in PATRONES_DE_CAPACIDAD):
+-            return Clase.CAPACIDAD
+-        return Clase.MODELO
+-    return Clase.SIN_CLASIFICAR
++        lowered = text.lower()
++        if any(pattern in lowered for pattern in CAPACITY_PATTERNS):
++            return FailureClass.CAPACITY
++        return FailureClass.MODEL
++    return FailureClass.UNCLASSIFIED
+ 
+ 
+-def _clasificar_cuerpo(datos: dict) -> Clase | None:
+-    choices = datos.get("choices")
++def _classify_body(data: dict) -> FailureClass | None:
++    choices = data.get("choices")
+     if not isinstance(choices, list) or not choices:
+-        return Clase.MODELO
+-    primera = choices[0]
+-    if not isinstance(primera, dict):
+-        return Clase.MODELO
+-    mensaje = primera.get("message")
+-    if not isinstance(mensaje, dict):
+-        return Clase.MODELO
+-
+-    contenido = mensaje.get("content")
+-    motivo = primera.get("finish_reason")
+-    razonamiento = mensaje.get("reasoning_content") or ""
+-    if isinstance(contenido, str):
++        return FailureClass.MODEL
++    first = choices[0]
++    if not isinstance(first, dict):
++        return FailureClass.MODEL
++    message = first.get("message")
++    if not isinstance(message, dict):
++        return FailureClass.MODEL
++
++    content = message.get("content")
++    finish = first.get("finish_reason")
++    reasoning = message.get("reasoning_content") or ""
++    if isinstance(content, str):
+         # Un contenido vacío ("") NO es un fallo: se trata como hoy. Con UNA excepción, decidida por
+         # el usuario el 2026-09-15: vacío + `length` + razonamiento es la forma REAL en que
+         # llama-server b10909 devuelve un razonamiento que agotó `max_tokens` (capturado; no llega
+         # como `null`). Sin esta rama la clase de configuración no saltaba nunca contra el backend
+         # real y la respuesta vacía llegaba como éxito.
+-        if not contenido.strip() and motivo == "length" and razonamiento.strip():
+-            return Clase.CONFIGURACION
++        if not content.strip() and finish == "length" and reasoning.strip():
++            return FailureClass.CONFIGURATION
+         return None
+ 
+-    if motivo == "length":
++    if finish == "length":
+         # El modelo se gastó `max_tokens` pensando y no llegó a contestar. Es configuración, no
+         # avería: taparlo con un respaldo haría que nadie lo arreglara nunca.
+-        if razonamiento.strip():
+-            return Clase.CONFIGURACION
++        if reasoning.strip():
++            return FailureClass.CONFIGURATION
+         # Mismo síntoma sin rastro de razonamiento: no se sabe qué pasó, y adivinar aquí es
+         # justo lo que la regla de la casa prohíbe.
+-        return Clase.SIN_CLASIFICAR
+-    return Clase.MODELO
++        return FailureClass.UNCLASSIFIED
++    return FailureClass.MODEL
+ 
+ 
+ # --- Causa de un fallo de conexión ------------------------------------------------------------
+ #
+-# Responde a otra pregunta que `clasificar`. Aquella decide respaldo y enfriamiento; esta le dice a
++# Responde a otra pregunta que `classify`. Aquella decide respaldo y enfriamiento; esta le dice a
+ # una persona POR QUÉ no se llega al backend, con el mismo texto en el panel, en `local_status`, en
+ # `doctor` y en el error de una delegación (REQ-010, REQ-011, REQ-016). Por eso nadie fuera de aquí
+ # redacta los textos de una causa. Sigue la regla del módulo: sin red y sin leer configuración;
+-# host, loopback, origen, fuente, código y endpoint entran como argumentos.
++# `host`, `loopback`, `origin`, `source`, el código y `endpoint` entran como argumentos.
+ 
+ 
+-class CausaConexion(str, Enum):
+-    """Las once causas de REQ-010. Hereda de `str` para viajar tal cual en el JSON y en el log."""
++class ConnectionCause(str, Enum):
++    """Las once causas de REQ-010. Hereda de `str` para viajar tal cual en el JSON y en el log.
++
++    Acepta también el valor viejo en español (`ConnectionCause("rechazada")` es `REFUSED`), el que
++    escribían el log y un daemon de una versión anterior (REQ-006).
++    """
+ 
+     DNS = "dns"
+-    RECHAZADA = "rechazada"
+-    SIN_RUTA = "sin_ruta"
+-    TIMEOUT_CONEXION = "timeout_conexion"
+-    CREDENCIAL = "credencial"
++    REFUSED = "refused"
++    NO_ROUTE = "no_route"
++    CONNECT_TIMEOUT = "connect_timeout"
++    CREDENTIAL = "credential"
+     HTTP_ERROR = "http_error"
+-    SIN_RESPUESTA = "sin_respuesta"
+-    RESPUESTA_INVALIDA = "respuesta_invalida"
+-    URL_INVALIDA = "url_invalida"
+-    TRANSPORTE = "transporte"
+-    DESCONOCIDA = "desconocida"
++    NO_RESPONSE = "no_response"
++    INVALID_RESPONSE = "invalid_response"
++    INVALID_URL = "invalid_url"
++    TRANSPORT = "transport"
++    UNKNOWN = "unknown"
++
++    @classmethod
++    def _missing_(cls, value: object) -> ConnectionCause | None:
++        new = legacy_names.CONNECTION_CAUSE_VALUES.get(value) if isinstance(value, str) else None
++        return cls._value2member_map_.get(new) if new else None  # type: ignore[return-value]
+ 
+ 
+-class VistaBackend(NamedTuple):
++class BackendView(NamedTuple):
+     """Lo que `doctor` sabe del backend: si está sano, el texto que enseña y la causa.
+ 
+-    `fuente` dice quién lo vio: `"daemon"` (la causa viene del `/api/backend` del daemon) o
+-    `"directo"` (sondeo propio de esta consola). Importa para la pista de una credencial: no es lo
+-    mismo que falte la clave en la consola que en el lanzador del daemon (REQ-016). `causa` es
++    `source` dice quién lo vio: `"daemon"` (la causa viene del `/api/backend` del daemon) o
++    `"direct"` (sondeo propio de esta consola). Importa para la pista de una credencial: no es lo
++    mismo que falte la clave en la consola que en el lanzador del daemon (REQ-016). `cause` es
+     `None` cuando está sano o cuando el daemon es antiguo y no la manda.
+     """
+ 
+-    sano: bool
+-    detalle: str
+-    causa: str | None
+-    fuente: str
++    healthy: bool
++    detail: str
++    cause: str | None
++    source: str
+ 
+ 
+ #: «No hay ruta»: los errno de la plataforma y, siempre, los de Winsock (10051 red inalcanzable,
+ #: 10065 host inalcanzable), que en Linux y macOS no coinciden con `errno.ENETUNREACH`.
+-_ERRNO_SIN_RUTA = frozenset({errno.ENETUNREACH, errno.EHOSTUNREACH, 10051, 10065})
++_NO_ROUTE_ERRNOS = frozenset({errno.ENETUNREACH, errno.EHOSTUNREACH, 10051, 10065})
+ 
+-_CODIGOS_DE_CREDENCIAL = frozenset({401, 403})
++_CREDENTIAL_CODES = frozenset({401, 403})
+ 
+ 
+-def _cadena(exc: BaseException) -> Iterator[BaseException]:
++def _chain(exc: BaseException) -> Iterator[BaseException]:
+     """La excepción y todas las de sus `__cause__`/`__context__`, cada una una sola vez.
+ 
+     Los visitados van por identidad: una cadena con ciclo (una excepción que es su propio
+     `__context__`, o dos que se apuntan) termina en vez de dar vueltas.
+     """
+-    vistas: set[int] = set()
+-    pendientes: list[BaseException | None] = [exc]
+-    while pendientes:
+-        actual = pendientes.pop()
+-        if actual is None or id(actual) in vistas:
++    seen: set[int] = set()
++    pending: list[BaseException | None] = [exc]
++    while pending:
++        current = pending.pop()
++        if current is None or id(current) in seen:
+             continue
+-        vistas.add(id(actual))
+-        yield actual
+-        pendientes.append(actual.__context__)
+-        pendientes.append(actual.__cause__)
++        seen.add(id(current))
++        yield current
++        pending.append(current.__context__)
++        pending.append(current.__cause__)
+ 
+ 
+-def _errno_sin_ruta(exc: BaseException) -> bool:
+-    return isinstance(exc, OSError) and exc.errno in _ERRNO_SIN_RUTA
++def _is_no_route_errno(exc: BaseException) -> bool:
++    return isinstance(exc, OSError) and exc.errno in _NO_ROUTE_ERRNOS
+ 
+ 
+-def causa_conexion(suceso: BaseException | int, *, loopback: bool) -> CausaConexion:
++def connection_cause(event: BaseException | int, *, loopback: bool) -> ConnectionCause:
+     """La causa de un fallo al hablar con el backend. Total: toda entrada tiene causa.
+ 
+-    `suceso` es el código de una respuesta no 2xx o la excepción que saltó. `loopback` dice si el
++    `event` es el código de una respuesta no 2xx o la excepción que saltó. `loopback` dice si el
+     **host real** de la URL es de loopback (no el origen declarado: un túnel en loopback hacia un
+     backend remoto sigue siendo loopback para esto). Las reglas van en el orden de la tabla de
+     REQ-010 y gana la primera; las 3 a 6 buscan en toda la cadena de la excepción y las demás miran
+@@ -272,158 +292,158 @@ def causa_conexion(suceso: BaseException | int, *, loopback: bool) -> CausaConex
+ 
+     Un código 2xx no es un fallo: lanza `ValueError`, porque llamar así es un error de quien llama.
+     """
+-    if isinstance(suceso, int):
+-        if 200 <= suceso < 300:
+-            raise ValueError(f"un {suceso} no es un fallo: no tiene causa que clasificar")
++    if isinstance(event, int):
++        if 200 <= event < 300:
++            raise ValueError(f"un {event} no es un fallo: no tiene causa que clasificar")
+         # Reglas 1 y 2 para un código suelto.
+-        if suceso in _CODIGOS_DE_CREDENCIAL:
+-            return CausaConexion.CREDENCIAL
+-        return CausaConexion.HTTP_ERROR
++        if event in _CREDENTIAL_CODES:
++            return ConnectionCause.CREDENTIAL
++        return ConnectionCause.HTTP_ERROR
+ 
+     # 1 y 2. Un `HTTPStatusError` es un backend que contesta: lo que dice su código manda.
+-    if isinstance(suceso, httpx2.HTTPStatusError):
+-        if suceso.response.status_code in _CODIGOS_DE_CREDENCIAL:
+-            return CausaConexion.CREDENCIAL
+-        return CausaConexion.HTTP_ERROR
++    if isinstance(event, httpx2.HTTPStatusError):
++        if event.response.status_code in _CREDENTIAL_CODES:
++            return ConnectionCause.CREDENTIAL
++        return ConnectionCause.HTTP_ERROR
+ 
+-    cadena = list(_cadena(suceso))
++    chain = list(_chain(event))
+     # 3. `InvalidURL` no es un `HTTPError` (comprobado contra el `httpx2` instalado): va por nombre.
+-    if any(isinstance(e, (httpx2.InvalidURL, httpx2.UnsupportedProtocol)) for e in cadena):
+-        return CausaConexion.URL_INVALIDA
++    if any(isinstance(e, (httpx2.InvalidURL, httpx2.UnsupportedProtocol)) for e in chain):
++        return ConnectionCause.INVALID_URL
+     # 4. Va antes que 5 y 6: `gaierror` también es un `OSError`.
+-    if any(isinstance(e, socket.gaierror) for e in cadena):
+-        return CausaConexion.DNS
++    if any(isinstance(e, socket.gaierror) for e in chain):
++        return ConnectionCause.DNS
+     # 5. `OSError(ECONNREFUSED, …)` ya nace como `ConnectionRefusedError`.
+-    if any(isinstance(e, ConnectionRefusedError) for e in cadena):
+-        return CausaConexion.RECHAZADA
++    if any(isinstance(e, ConnectionRefusedError) for e in chain):
++        return ConnectionCause.REFUSED
+     # 6. Red o host inalcanzable: inmediato y con su errno, distinto del timeout de una VPN.
+-    if any(_errno_sin_ruta(e) for e in cadena):
+-        return CausaConexion.SIN_RUTA
++    if any(_is_no_route_errno(e) for e in chain):
++        return ConnectionCause.NO_ROUTE
+     # 7. En Windows un puerto cerrado tarda ~2 s en rechazarse y con un plazo menor llega como
+     #    `ConnectTimeout`. En loopback no hay ruta que perder: es que nadie escucha.
+-    if isinstance(suceso, httpx2.ConnectTimeout) and loopback:
+-        return CausaConexion.RECHAZADA
++    if isinstance(event, httpx2.ConnectTimeout) and loopback:
++        return ConnectionCause.REFUSED
+     # 8. Incluye el plazo del kernel (el caso de la Mac: `TimeoutError(ETIMEDOUT)` en la cadena).
+-    if isinstance(suceso, httpx2.ConnectTimeout):
+-        return CausaConexion.TIMEOUT_CONEXION
++    if isinstance(event, httpx2.ConnectTimeout):
++        return ConnectionCause.CONNECT_TIMEOUT
+     # 9. Lectura, escritura o pool: la conexión sí se estableció.
+-    if isinstance(suceso, httpx2.TimeoutException):
+-        return CausaConexion.SIN_RESPUESTA
++    if isinstance(event, httpx2.TimeoutException):
++        return ConnectionCause.NO_RESPONSE
+     # 10. Un 2xx con un cuerpo que no es JSON o no tiene la forma esperada.
+-    if isinstance(suceso, ValueError):
+-        return CausaConexion.RESPUESTA_INVALIDA
++    if isinstance(event, ValueError):
++        return ConnectionCause.INVALID_RESPONSE
+     # 11.
+-    if isinstance(suceso, httpx2.HTTPError):
+-        return CausaConexion.TRANSPORTE
++    if isinstance(event, httpx2.HTTPError):
++        return ConnectionCause.TRANSPORT
+     # 12.
+-    return CausaConexion.DESCONOCIDA
+-
+-
+-_ETIQUETAS: dict[CausaConexion, str] = {
+-    CausaConexion.DNS: "no resuelve",
+-    CausaConexion.RECHAZADA: "nadie escucha",
+-    CausaConexion.SIN_RUTA: "sin ruta",
+-    CausaConexion.TIMEOUT_CONEXION: "no contesta",
+-    CausaConexion.CREDENCIAL: "sin acceso",
+-    CausaConexion.HTTP_ERROR: "responde con error",
+-    CausaConexion.SIN_RESPUESTA: "no responde a tiempo",
+-    CausaConexion.RESPUESTA_INVALIDA: "respuesta no válida",
+-    CausaConexion.URL_INVALIDA: "URL no válida",
+-    CausaConexion.TRANSPORTE: "fallo de red",
+-    CausaConexion.DESCONOCIDA: "fallo inesperado",
++    return ConnectionCause.UNKNOWN
++
++
++_LABELS: dict[ConnectionCause, str] = {
++    ConnectionCause.DNS: "no resuelve",
++    ConnectionCause.REFUSED: "nadie escucha",
++    ConnectionCause.NO_ROUTE: "sin ruta",
++    ConnectionCause.CONNECT_TIMEOUT: "no contesta",
++    ConnectionCause.CREDENTIAL: "sin acceso",
++    ConnectionCause.HTTP_ERROR: "responde con error",
++    ConnectionCause.NO_RESPONSE: "no responde a tiempo",
++    ConnectionCause.INVALID_RESPONSE: "respuesta no válida",
++    ConnectionCause.INVALID_URL: "URL no válida",
++    ConnectionCause.TRANSPORT: "fallo de red",
++    ConnectionCause.UNKNOWN: "fallo inesperado",
+ }
+ 
+ 
+-def etiqueta(causa: CausaConexion | str) -> str:
++def label(cause: ConnectionCause | str) -> str:
+     """La etiqueta corta de la causa (la del badge). Acepta el valor en texto, como llega del JSON."""
+-    return _ETIQUETAS[CausaConexion(causa)]
++    return _LABELS[ConnectionCause(cause)]
+ 
+ 
+-def detalle(
+-    causa: CausaConexion | str,
++def detail(
++    cause: ConnectionCause | str,
+     *,
+     host: str,
+     status: int | None = None,
+     endpoint: str | None = None,
+-    excepcion: BaseException | None = None,
++    exception: BaseException | None = None,
+ ) -> str:
+     """El texto largo de la causa (REQ-011), con el host, el código y el endpoint que se pasen.
+ 
+     Si falta `status` y la excepción es un `HTTPStatusError`, el código se toma de su respuesta.
+     Lo que no se pase se omite del texto en vez de escribirse como `None`.
+     """
+-    causa = CausaConexion(causa)
+-    if status is None and isinstance(excepcion, httpx2.HTTPStatusError):
+-        status = excepcion.response.status_code
+-    tipo = f" ({type(excepcion).__name__})" if excepcion is not None else ""
+-    codigo = f" {status}" if status is not None else ""
++    cause = ConnectionCause(cause)
++    if status is None and isinstance(exception, httpx2.HTTPStatusError):
++        status = exception.response.status_code
++    type_suffix = f" ({type(exception).__name__})" if exception is not None else ""
++    status_suffix = f" {status}" if status is not None else ""
+ 
+-    if causa is CausaConexion.DNS:
++    if cause is ConnectionCause.DNS:
+         return f"no se resuelve el nombre {host} (¿VPN o DNS?)"
+-    if causa is CausaConexion.RECHAZADA:
++    if cause is ConnectionCause.REFUSED:
+         return f"{host} rechaza la conexión: no hay nada escuchando en ese puerto"
+-    if causa is CausaConexion.SIN_RUTA:
++    if cause is ConnectionCause.NO_ROUTE:
+         return f"no hay ruta de red hacia {host}"
+-    if causa is CausaConexion.TIMEOUT_CONEXION:
++    if cause is ConnectionCause.CONNECT_TIMEOUT:
+         return f"{host} no contesta a la conexión (ruta, cortafuegos o VPN)"
+-    if causa is CausaConexion.CREDENCIAL:
+-        return f"{host} responde{codigo}: está arriba pero rechaza la credencial"
+-    if causa is CausaConexion.HTTP_ERROR:
++    if cause is ConnectionCause.CREDENTIAL:
++        return f"{host} responde{status_suffix}: está arriba pero rechaza la credencial"
++    if cause is ConnectionCause.HTTP_ERROR:
+         if status is None:
+             return f"{host} responde con un error HTTP"
+         return f"{host} responde HTTP {status}"
+-    if causa is CausaConexion.SIN_RESPUESTA:
++    if cause is ConnectionCause.NO_RESPONSE:
+         return f"{host} acepta la conexión pero no responde a tiempo"
+-    if causa is CausaConexion.RESPUESTA_INVALIDA:
+-        a_quien = f" a {endpoint}" if endpoint else ""
+-        return f"{host} responde{a_quien}, pero con un cuerpo que no se entiende"
+-    if causa is CausaConexion.URL_INVALIDA:
++    if cause is ConnectionCause.INVALID_RESPONSE:
++        target = f" a {endpoint}" if endpoint else ""
++        return f"{host} responde{target}, pero con un cuerpo que no se entiende"
++    if cause is ConnectionCause.INVALID_URL:
+         # Sin host, como en la tabla de REQ-011: con la URL rota, el host puede no significar nada.
+-        return f"la URL del backend no es válida{tipo}: revisa LOCAL_DELEGATE_BASE_URL"
+-    if causa is CausaConexion.TRANSPORTE:
+-        return f"fallo de red con {host}{tipo}"
+-    return f"fallo inesperado al sondear {host}{tipo}"
++        return f"la URL del backend no es válida{type_suffix}: revisa LOCAL_DELEGATE_BASE_URL"
++    if cause is ConnectionCause.TRANSPORT:
++        return f"fallo de red con {host}{type_suffix}"
++    return f"fallo inesperado al sondear {host}{type_suffix}"
+ 
+ 
+-def pista(causa: CausaConexion | str | None, *, origen: str, fuente: str, host: str) -> str:
++def hint(cause: ConnectionCause | str | None, *, origin: str, source: str, host: str) -> str:
+     """Qué hacer ante la causa (tabla de REQ-016). Depende de quién la vio y de dónde corre el backend.
+ 
+-    `origen` es el de `config.backend_origin()`: solo `"local"` cuenta como local, así que un valor
+-    raro nunca manda a arrancar llama-swap aquí. `fuente` es la de `VistaBackend`. Una causa `None`
++    `origin` es el de `config.backend_origin()`: solo `"local"` cuenta como local, así que un valor
++    raro nunca manda a arrancar llama-swap aquí. `source` es la de `BackendView`. Una causa `None`
+     (daemon antiguo que no la manda) o que este código no conoce da la pista genérica.
+     """
+-    generica = f"revisa el backend en {host}"
+-    if causa is None:
+-        return generica
++    generic = f"revisa el backend en {host}"
++    if cause is None:
++        return generic
+     try:
+-        causa = CausaConexion(causa)
++        cause = ConnectionCause(cause)
+     except ValueError:
+-        return generica
+-    local = origen == "local"
++        return generic
++    local = origin == "local"
+ 
+-    if causa is CausaConexion.RECHAZADA:
++    if cause is ConnectionCause.REFUSED:
+         if local:
+             return "arranca llama-swap (o revisa LOCAL_DELEGATE_BASE_URL)"
+         return f"arranca llama-swap en {host} o revisa el puerto"
+-    if causa is CausaConexion.DNS:
++    if cause is ConnectionCause.DNS:
+         if local:
+             return "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
+         return (
+             "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
+             " o usa la IP (p. ej. la 100.x de la tailnet)"
+         )
+-    if causa in (CausaConexion.SIN_RUTA, CausaConexion.TIMEOUT_CONEXION):
++    if cause in (ConnectionCause.NO_ROUTE, ConnectionCause.CONNECT_TIMEOUT):
+         if local:
+             return "revisa LOCAL_DELEGATE_BASE_URL"
+         return f"revisa la red hacia {host} (VPN, cortafuegos, Tailscale)"
+-    if causa is CausaConexion.CREDENCIAL:
+-        if fuente == "daemon":
++    if cause is ConnectionCause.CREDENTIAL:
++        if source == "daemon":
+             return "la clave del daemon no vale: revisa LOCAL_DELEGATE_API_KEY en su lanzador"
+         return "exporta LOCAL_DELEGATE_API_KEY en este entorno"
+-    if causa in (
+-        CausaConexion.HTTP_ERROR,
+-        CausaConexion.RESPUESTA_INVALIDA,
+-        CausaConexion.URL_INVALIDA,
++    if cause in (
++        ConnectionCause.HTTP_ERROR,
++        ConnectionCause.INVALID_RESPONSE,
++        ConnectionCause.INVALID_URL,
+     ):
+         return "revisa LOCAL_DELEGATE_BASE_URL"
+-    return generica
++    return generic
+diff --git a/src/local_delegate/legacy_names.py b/src/local_delegate/legacy_names.py
+index 3c55281..22374ba 100644
+--- a/src/local_delegate/legacy_names.py
++++ b/src/local_delegate/legacy_names.py
+@@ -20,7 +20,47 @@ from __future__ import annotations
+ from collections.abc import Mapping
+ from typing import Any
+ 
++#: Valores de `failures.FailureClass` (`error_class`, `fallback_class` y `affinity_dropped_class`
++#: del log de uso, y `clase` de los eventos de enfriamiento). `enfriamiento` no es un miembro del
++#: enum: es la clase que el daemon escribe en `fallback_class` cuando salta por un modelo enfriado.
++FAILURE_CLASS_VALUES: dict[str, str] = {
++    "peticion": "request",
++    "capacidad_o_carga": "capacity_or_load",
++    "timeout_lectura": "read_timeout",
++    "configuracion": "configuration",
++    "modelo": "model",
++    "sin_clasificar": "unclassified",
++    "enfriamiento": "cooldown",
++}
++
++#: Valores de `failures.ConnectionCause` (`connection_failure` del log de uso y `cause` de `/api/*`).
++CONNECTION_CAUSE_VALUES: dict[str, str] = {
++    "rechazada": "refused",
++    "sin_ruta": "no_route",
++    "timeout_conexion": "connect_timeout",
++    "credencial": "credential",
++    "sin_respuesta": "no_response",
++    "respuesta_invalida": "invalid_response",
++    "url_invalida": "invalid_url",
++    "transporte": "transport",
++    "desconocida": "unknown",
++}
++
+ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
++    # Log de uso (`usage-*.jsonl`).
++    "usage": {
++        "keys": {
++            "bloqueo_id": "block_id",
++            "secciones": "sections",
++            "fallo_conexion": "connection_failure",
++        },
++        "values": {
++            "error_class": FAILURE_CLASS_VALUES,
++            "fallback_class": FAILURE_CLASS_VALUES,
++            "affinity_dropped_class": FAILURE_CLASS_VALUES,
++            "connection_failure": CONNECTION_CAUSE_VALUES,
++        },
++    },
+     # Telemetría de hooks (`LD_HOOK_TELEMETRY_LOG`). `oferta` ya no la escribe nadie: solo se lee.
+     "hook_telemetry": {
+         "keys": {
+@@ -74,9 +114,19 @@ PANEL_VALUE_ALIASES: dict[str, dict[str, str]] = {
+         "sin registrar": "unrecorded",
+     },
+     "hookCategory": {"sin categoría": "no_category"},
++    # La causa de `/api/backend` y la clase de fallo de un evento (`cause` de `acct()`).
++    "connectionCause": CONNECTION_CAUSE_VALUES,
++    "failureClass": FAILURE_CLASS_VALUES,
+ }
+ 
+ 
++def new_value(table: Mapping[str, str], value: Any) -> Any:
++    """`value` en el formato nuevo si es un valor viejo de `table`; si no, tal cual."""
++    if isinstance(value, str):
++        return table.get(value, value)
++    return value
++
++
+ def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) -> Any:
+     """El valor de `new` en `row`, o el de `old` si la fila es del formato viejo. Gana la nueva."""
+     if new in row:
+diff --git a/src/local_delegate/pace.py b/src/local_delegate/pace.py
+index 177dc1a..47411ef 100644
+--- a/src/local_delegate/pace.py
++++ b/src/local_delegate/pace.py
+@@ -90,11 +90,11 @@ class References:
+     def __init__(
+         self, *, window: int = WINDOW, minimum: int = MINIMUM, by_spans: bool = False
+     ) -> None:
+-        self._tam = window
++        self._size = window
+         self._minimum = minimum
+         self._by_spans = by_spans
+         self._windows: dict[tuple[str, str | None], deque[float]] = defaultdict(
+-            lambda: deque(maxlen=self._tam)
++            lambda: deque(maxlen=self._size)
+         )
+         self._lock = threading.Lock()
+ 
+@@ -281,7 +281,7 @@ def compute_slowness(
+ ) -> list[Event]:
+     """Aplica la regla de REQ-025 a una serie y devuelve los eventos ordenados con su referencia.
+ 
+-    Cada evento de entrada es un dict con `ts` (numero; orden temporal), `modelo`, `tok_s`,
++    Cada evento de entrada es un dict con `ts` (numero; orden temporal), `model`, `tok_s`,
+     `tokens_out`, `ok` (opcional, por defecto cierto) y, si `by_spans`, `tokens_in`. La salida
+     son copias en orden temporal con `ref`, `pace_rel` y `slow` **solo** cuando hay referencia
+     (con menos de `minimum` muestras se omiten, nunca valen 0).
+@@ -297,9 +297,9 @@ def compute_slowness(
+         if not eligible:
+             continue
+         result = references.evaluate(
+-            event["modelo"], event["tok_s"], event.get("tokens_in"), threshold=threshold
++            event["model"], event["tok_s"], event.get("tokens_in"), threshold=threshold
+         )
+         if result is not None:
+             event["ref"], event["pace_rel"], event["slow"] = result
+-        references.add(event["modelo"], event["tok_s"], event.get("tokens_in"))
++        references.add(event["model"], event["tok_s"], event.get("tokens_in"))
+     return sorted_ones
+diff --git a/src/local_delegate/server.py b/src/local_delegate/server.py
+index e19eeb7..48a9b5c 100644
+--- a/src/local_delegate/server.py
++++ b/src/local_delegate/server.py
+@@ -43,7 +43,8 @@ from . import (
+     coste,
+     enfriamiento,
+     estado_json,
+-    fallos,
++    failures,
++    legacy_names,
+     llamaswap_api,
+     matrix,
+     pace,
+@@ -696,9 +697,9 @@ def _log_event(
+     fallback_reason: str | None = None,
+     fallback_class: str | None = None,
+     error_class: str | None = None,
+-    num_secciones: int | None = None,
++    num_sections: int | None = None,
+     focus: bool = False,
+-    fallo_conexion: str | None = None,
++    connection_failure: str | None = None,
+     turn_wait_ms: int | None = None,
+     turn: str | None = None,
+     routing: str | None = None,
+@@ -791,9 +792,9 @@ def _log_event(
+             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
+             # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
+             # comparables sin cruzar dos logs a mano.
+-            bloqueo = _recent_block_id(path)
+-            if bloqueo:
+-                rec["bloqueo_id"] = bloqueo
++            block_id = _recent_block_id(path)
++            if block_id:
++                rec["block_id"] = block_id
+         if json_schema is not None:
+             rec["json_schema"] = json_schema
+         # La SALIDA se escribió a un archivo, así que tampoco entró al contexto de quien llama.
+@@ -812,15 +813,15 @@ def _log_event(
+         # alguien la arregle (REQ-019).
+         if error_class is not None:
+             rec["error_class"] = error_class
+-        # Por qué no se pudo conectar (REQ-017): `dns`, `timeout_conexion`… Solo en los
++        # Por qué no se pudo conectar (REQ-017): `dns`, `connect_timeout`… Solo en los
+         # `connect_error`, para no engordar cada línea; `error` sigue siendo `connect_error`.
+-        if fallo_conexion is not None:
+-            rec["fallo_conexion"] = fallo_conexion
++        if connection_failure is not None:
++            rec["connection_failure"] = connection_failure
+         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
+         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
+         # ni los títulos: el log no guarda contenido.
+-        if num_secciones is not None:
+-            rec["secciones"] = int(num_secciones)
++        if num_sections is not None:
++            rec["sections"] = int(num_sections)
+         if focus:
+             rec["focus"] = True
+         # Turno del daemon (REQ-008): cuánto esperó la operación a que le tocara, solo si esperó,
+@@ -1005,7 +1006,12 @@ def _accounting(row: dict) -> dict:
+         # evento anterior a esos campos da `False` y `None`: se lee igual que siempre.
+         # T15 (REQ-016): la afinidad también lleva `model_requested`, pero no es un respaldo.
+         "fallback": bool(row.get("model_requested")) and row.get("routing") != "affinity",
+-        "cause": row.get("error_class") or row.get("fallback_class") or None,
++        # La clase en el formato nuevo aunque la fila sea vieja (REQ-006): el espejo JS traduce
++        # igual, con la misma tabla inyectada (`LEGACY_VALUES.failureClass`).
++        "cause": legacy_names.new_value(
++            legacy_names.FAILURE_CLASS_VALUES,
++            row.get("error_class") or row.get("fallback_class") or None,
++        ),
+         # Contrato con `coste-api-y-cuota`: desglose en caracteres y campos del evento.
+         "chars_saved_text": chars_saved_text,
+         "bytes_saved_image": bytes_saved_image,
+@@ -1027,12 +1033,12 @@ class ChatResult:
+     finish_reason: str | None = None  # choices[0].finish_reason
+     tokens_in: int | None = None  # usage.prompt_tokens si el backend lo da
+     tokens_out: int | None = None  # usage.completion_tokens
+-    #: La clase del fallo (`fallos.Clase`) cuando `ok=False`, y `None` cuando salió bien. Es
++    #: La clase del fallo (`failures.FailureClass`) cuando `ok=False`, y `None` cuando salió bien. Es
+     #: aditivo: quien solo mire `error` sigue viendo exactamente lo de antes.
+     clase: str | None = None
+-    #: La causa de un `connect_error` (`fallos.CausaConexion`, como texto), y `None` en cualquier
+-    #: otro caso. Va al log como `fallo_conexion` (REQ-017); `error` sigue diciendo `connect_error`.
+-    fallo_conexion: str | None = None
++    #: La causa de un `connect_error` (`failures.ConnectionCause`, como texto), y `None` en cualquier
++    #: otro caso. Va al log como `connection_failure` (REQ-017); `error` sigue diciendo `connect_error`.
++    connection_failure: str | None = None
+     #: Los `timings` de llama-server tal como llegan (`prompt_n`, `prompt_ms`, `predicted_n`,
+     #: `predicted_ms`…), o `None` si el backend no los manda (REQ-024).
+     timings: dict | None = None
+@@ -1057,7 +1063,7 @@ class Intento:
+ 
+ 
+ #: Las clases que permiten saltar (tabla de F3). Capacidad solo al residente (REQ-018).
+-_CLASES_QUE_SALTAN = frozenset({fallos.Clase.MODELO, fallos.Clase.CAPACIDAD})
++_CLASES_QUE_SALTAN = frozenset({failures.FailureClass.MODEL, failures.FailureClass.CAPACITY})
+ 
+ 
+ def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
+@@ -1088,7 +1094,7 @@ def _respaldo_de(
+     if primero.modelo in (model, affinity):
+         motivo, clase = primero.error, _valor_clase(primero.clase)
+     else:
+-        motivo, clase = "en enfriamiento", "enfriamiento"
++        motivo, clase = "en enfriamiento", "cooldown"
+     return {
+         "respondio": intentos[-1].modelo,
+         "en_lugar_de": model,
+@@ -1098,8 +1104,8 @@ def _respaldo_de(
+ 
+ 
+ def _valor_clase(clase: str | None) -> str | None:
+-    """La clase como texto plano para el log (`modelo`, `configuracion`…), o None."""
+-    return fallos.Clase(clase).value if clase else None
++    """La clase como texto plano para el log (`model`, `configuration`…), o None."""
++    return failures.FailureClass(clase).value if clase else None
+ 
+ 
+ def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
+@@ -1111,13 +1117,15 @@ def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
+     )
+ 
+ 
+-def _fallo_de_cuerpo(model: str, clase: fallos.Clase, timings: dict | None = None) -> ChatResult:
++def _fallo_de_cuerpo(
++    model: str, clase: failures.FailureClass, timings: dict | None = None
++) -> ChatResult:
+     """El error legible de una respuesta que llegó con 200 y aun así no sirve.
+ 
+     Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
+     no estaba en el `except` de abajo— y se llevaba la tool por delante.
+     """
+-    if clase is fallos.Clase.CONFIGURACION:
++    if clase is failures.FailureClass.CONFIGURATION:
+         return ChatResult(
+             text=(
+                 f"[local-delegate error] {model} agotó `max_tokens` razonando y no llegó a "
+@@ -1250,11 +1258,11 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
+             data = r.json()
+             # La respuesta pasa por el clasificador ANTES de tocarla: un 200 puede traer
+             # `content: null`, o venir de un modelo que gastó `max_tokens` razonando.
+-            clase = fallos.clasificar(
+-                fallos.Respuesta(
++            clase = failures.classify(
++                failures.BackendResponse(
+                     status=r.status_code,
+-                    datos=data if isinstance(data, dict) else None,
+-                    texto=r.text[:300],
++                    data=data if isinstance(data, dict) else None,
++                    text=r.text[:300],
+                 )
+             )
+             if clase is not None:
+@@ -1277,10 +1285,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
+             # clasificaba como `http_error` y nadie ofrecía arrancar el backend.
+             if isinstance(e, httpx2.ReadTimeout):
+                 # La señal de REQ-018 es la muestra tomada al vencer, no una consulta ahora.
+-                clase = fallos.clasificar(e, modelo_cargado=sonda.modelo_cargado())
++                clase = failures.classify(e, model_loaded=sonda.modelo_cargado())
+             else:
+-                clase = fallos.clasificar(e)
+-            if fallos.es_backend_ausente(e):
++                clase = failures.classify(e)
++            if failures.is_backend_missing(e):
+                 # REQ-018: un backend REMOTO no se arranca desde aquí, así que ni se pregunta ni
+                 # se intenta, valga AUTOSTART lo que valga. Con origen local, como siempre.
+                 local = config.backend_origin() == "local"
+@@ -1308,18 +1316,18 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
+                         and autostart.ensure_backend(wait=30)
+                     ):
+                         continue
+-                # REQ-017: la causa, con el texto único de `fallos`, en vez de suponer que el
++                # REQ-017: la causa, con el texto único de `failures`, en vez de suponer que el
+                 # backend no está corriendo (con una VPN caída, lo está).
+-                causa = fallos.causa_conexion(e, loopback=_backend_en_loopback())
++                causa = failures.connection_cause(e, loopback=_backend_en_loopback())
+                 return ChatResult(
+                     text=(
+                         "[local-delegate error] no se pudo conectar con el backend: "
+-                        + fallos.detalle(causa, host=config.backend_host(), excepcion=e)
++                        + failures.detail(causa, host=config.backend_host(), exception=e)
+                     ),
+                     ok=False,
+                     error="connect_error",
+                     clase=clase,
+-                    fallo_conexion=causa.value,
++                    connection_failure=causa.value,
+                 )
+             if isinstance(e, httpx2.HTTPStatusError):
+                 return ChatResult(
+@@ -1354,7 +1362,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
+                 text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
+                 ok=False,
+                 error="bad_response",
+-                clase=fallos.Clase.MODELO,
++                clase=failures.FailureClass.MODEL,
+             )
+         finally:
+             sonda.cancelar()
+@@ -1980,7 +1988,7 @@ def _next_hop(
+     - un candidato ya intentado en esta llamada (`intentados`: el pedido y cada destino) tampoco se
+       vuelve a llamar: un miembro de `loaded` que repite un paso posterior no se llama dos veces.
+     """
+-    if last is not None and (capacity or last.clase != fallos.Clase.MODELO):
++    if last is not None and (capacity or last.clase != failures.FailureClass.MODEL):
+         return None
+     if hops >= config.FALLBACK_MAX_HOPS:
+         return None
+@@ -2143,7 +2151,7 @@ def _con_respaldo(
+             # Un fallo de capacidad solo salta a `loaded` (REQ-021), salvo el del alternativo que
+             # eligió la afinidad: la eligió el daemon, no quien llama, así que se prueba el rol y
+             # su cadena (REQ-015; decisión del usuario del 2026-10-07).
+-            capacity=clase == fallos.Clase.CAPACIDAD and served == model,
++            capacity=clase == failures.FailureClass.CAPACITY and served == model,
+             state=estado,
+             hops=saltos,
+             last=ultimo,
+@@ -2183,7 +2191,7 @@ def _con_respaldo(
+             tokens_in=base.tokens_in,
+             tokens_out=base.tokens_out,
+             clase=base.clase,
+-            fallo_conexion=base.fallo_conexion,
++            connection_failure=base.connection_failure,
+         ),
+         schema,
+         intentos,
+@@ -2321,7 +2329,7 @@ class _ModeloVigente:
+         campos: dict = {
+             "error_class": _valor_clase(failed.clase) if failed else None,
+             # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
+-            "fallo_conexion": failed.fallo_conexion if failed else None,
++            "connection_failure": failed.connection_failure if failed else None,
+         }
+         if self.salto is not None:
+             campos["model_requested"] = self.pedido
+@@ -2469,9 +2477,9 @@ def _chat(
+         fallback_reason=info_respaldo["motivo"] if info_respaldo else None,
+         fallback_class=info_respaldo["clase"] if info_respaldo else None,
+         error_class=None if result.ok else _valor_clase(result.clase),
+-        num_secciones=num_secciones,
++        num_sections=num_secciones,
+         focus=focus,
+-        fallo_conexion=None if result.ok else result.fallo_conexion,
++        connection_failure=None if result.ok else result.connection_failure,
+         attempts=intentos,
+         **op.log_fields(),
+     )
+@@ -3132,7 +3140,7 @@ def _chat_map_reduce(
+         raw_len=raw_len,
+         path=path if source == "path" else None,
+         chunks=calls,
+-        num_secciones=num_secciones,
++        num_sections=num_secciones,
+         focus=focus,
+         attempts=all_attempts,
+         **vigente.campos_de_log(failed),
+@@ -4229,7 +4237,7 @@ def _plazo_sonda() -> httpx2.Timeout:
+ class EstadoBackend:
+     """Lo que dice un sondeo de `/v1/models` (REQ-012).
+ 
+-    `causa` es un valor de `fallos.CausaConexion` como texto, y `detalle` su texto; los dos `None`
++    `causa` es un valor de `failures.ConnectionCause` como texto, y `detalle` su texto; los dos `None`
+     cuando el backend está disponible. Con un fallo, `models` es la última lista buena de ESTA
+     `BASE_URL` (o vacía), con `status: None` en cada modelo y `models_stale=True`.
+     """
+@@ -4251,7 +4259,7 @@ def sondear_backend() -> EstadoBackend:
+     """Sondea `GET /v1/models` y dice si el backend está disponible y, si no, por qué. Nunca lanza.
+ 
+     `available` exige un 2xx cuyo cuerpo sea un objeto con una lista `data`; cualquier otra forma
+-    se trata como `ValueError` y sale `respuesta_invalida` (antes, un 2xx sin `data` daba
++    se trata como `ValueError` y sale `invalid_response` (antes, un 2xx sin `data` daba
+     «disponible sin modelos»). Dentro de `data`, la tolerancia de siempre: una entrada que no es un
+     objeto se ignora y un `id` ausente se pinta `"?"`.
+     """
+@@ -4263,13 +4271,13 @@ def sondear_backend() -> EstadoBackend:
+         with httpx2.Client(timeout=_plazo_sonda()) as c:
+             r = c.get(endpoint, headers=config.auth_headers())
+         if not r.is_success:
+-            causa = fallos.causa_conexion(r.status_code, loopback=_backend_en_loopback())
++            causa = failures.connection_cause(r.status_code, loopback=_backend_en_loopback())
+             return _sondeo_fallido(url, causa, status=r.status_code, status_http=r.status_code)
+         cuerpo = r.json()
+         data = cuerpo.get("data") if isinstance(cuerpo, dict) else None
+         if not isinstance(data, list):
+             # `ValueError` y no `TypeError` a propósito: es la regla 10 del clasificador
+-            # (`respuesta_invalida`), la misma que un cuerpo que no es JSON (REQ-012).
++            # (`invalid_response`), la misma que un cuerpo que no es JSON (REQ-012).
+             raise ValueError(  # noqa: TRY004
+                 "el cuerpo de /models no es un objeto con una lista `data`"
+             )
+@@ -4280,7 +4288,7 @@ def sondear_backend() -> EstadoBackend:
+         ]
+         models.sort(key=lambda x: x["id"])
+     except Exception as exc:  # el sondeo nunca lanza: lo que no se espera también tiene causa
+-        causa = fallos.causa_conexion(exc, loopback=_backend_en_loopback())
++        causa = failures.connection_cause(exc, loopback=_backend_en_loopback())
+         return _sondeo_fallido(url, causa, endpoint=endpoint, excepcion=exc)
+     _LISTAS_BUENAS[url] = models
+     return EstadoBackend(True, models, False, None, None, r.status_code)
+@@ -4288,7 +4296,7 @@ def sondear_backend() -> EstadoBackend:
+ 
+ def _sondeo_fallido(
+     url: str,
+-    causa: fallos.CausaConexion,
++    causa: failures.ConnectionCause,
+     *,
+     status: int | None = None,
+     status_http: int | None = None,
+@@ -4296,12 +4304,12 @@ def _sondeo_fallido(
+     excepcion: BaseException | None = None,
+ ) -> EstadoBackend:
+     guardada = [{**m, "status": None} for m in _LISTAS_BUENAS.get(url, [])]
+-    texto = fallos.detalle(
++    texto = failures.detail(
+         causa,
+         host=config.backend_host(url),
+         status=status,
+         endpoint=endpoint,
+-        excepcion=excepcion,
++        exception=excepcion,
+     )
+     return EstadoBackend(False, guardada, True, causa.value, texto, status_http)
+ 
+@@ -4393,9 +4401,9 @@ def _describe_turn() -> str:
+ #: Las causas en las que ALGUIEN contesta: no es «caído» (el ámbar del badge, REQ-014/REQ-015).
+ _CAUSAS_CON_RESPUESTA = frozenset(
+     {
+-        fallos.CausaConexion.HTTP_ERROR.value,
+-        fallos.CausaConexion.RESPUESTA_INVALIDA.value,
+-        fallos.CausaConexion.SIN_RESPUESTA.value,
++        failures.ConnectionCause.HTTP_ERROR.value,
++        failures.ConnectionCause.INVALID_RESPONSE.value,
++        failures.ConnectionCause.NO_RESPONSE.value,
+     }
+ )
+ 
+@@ -4404,7 +4412,7 @@ def _estado_backend_en_texto(estado: EstadoBackend) -> str:
+     """El estado de la línea `Backend:` de `local_status`, con el criterio del badge (REQ-015)."""
+     if estado.available:
+         return "arriba"
+-    if estado.causa == fallos.CausaConexion.CREDENCIAL.value:
++    if estado.causa == failures.ConnectionCause.CREDENTIAL.value:
+         return f"SIN ACCESO: {estado.detalle}"
+     if estado.causa in _CAUSAS_CON_RESPUESTA:
+         return f"RESPONDE CON ERROR: {estado.detalle}"
+@@ -4467,6 +4475,10 @@ def local_status() -> str:
+                     continue
+         # Misma fusión y misma contabilidad que el dashboard (coste-api-y-cuota, REQ-006): sin
+         # fundir, la fila no trae su densidad y esta tool daría 0 donde el panel da la cifra.
++        # Filas viejas y nuevas al mismo formato antes de contar (REQ-006).
++        registros = [
++            legacy_names.normalize("usage", r) if isinstance(r, dict) else r for r in registros
++        ]
+         for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
+             # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
+             # REQ-018): cliente `mcp`, banco o ventana de prueba.
+diff --git a/src/local_delegate/sondas.py b/src/local_delegate/sondas.py
+index 8c551d4..1bb0739 100644
+--- a/src/local_delegate/sondas.py
++++ b/src/local_delegate/sondas.py
+@@ -22,7 +22,7 @@ import sys
+ from datetime import UTC, datetime
+ from pathlib import Path
+ 
+-from . import autostart, config, fallos
++from . import autostart, config, failures
+ 
+ # --- Fuente de verdad de versiones probadas ----------------------------------------------
+ # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
+@@ -260,13 +260,13 @@ def _backend_up() -> bool:
+     return backend_probe()[0]
+ 
+ 
+-def backend_probe() -> fallos.VistaBackend:
+-    """Lo que ve ESTA consola del backend, con su causa (REQ-016). Fuente: `"directo"`.
++def backend_probe() -> failures.BackendView:
++    """Lo que ve ESTA consola del backend, con su causa (REQ-016). Fuente: `"direct"`.
+ 
+     Un 401 significa que el backend **está arriba** y que falta la key en este entorno, no que
+     esté caído. Confundirlos manda a arrancar un servicio que ya está corriendo, y ese falso
+     diagnóstico se dio de verdad: con la key sin cargar, `doctor` decía CAÍDO sobre un
+-    llama-swap vivo y sirviendo. El texto y la causa salen de `fallos`, como en el daemon, y el
++    llama-swap vivo y sirviendo. El texto y la causa salen de `failures`, como en el daemon, y el
+     plazo es el de todo sondeo de estado (REQ-013).
+     """
+     # El host real SIN puerto, como pide la regla 7 del clasificador (ver `server`).
+@@ -280,14 +280,14 @@ def backend_probe() -> fallos.VistaBackend:
+         with httpx2.Client(timeout=plazo) as c:
+             response = c.get(endpoint, headers=config.auth_headers())
+     except Exception as exc:
+-        causa = fallos.causa_conexion(exc, loopback=loopback)
+-        texto = fallos.detalle(causa, host=host, endpoint=endpoint, excepcion=exc)
+-        return fallos.VistaBackend(False, texto, causa.value, "directo")
++        causa = failures.connection_cause(exc, loopback=loopback)
++        texto = failures.detail(causa, host=host, endpoint=endpoint, exception=exc)
++        return failures.BackendView(False, texto, causa.value, "direct")
+     if response.is_success:
+-        return fallos.VistaBackend(True, "", None, "directo")
+-    causa = fallos.causa_conexion(response.status_code, loopback=loopback)
+-    texto = fallos.detalle(causa, host=host, status=response.status_code)
+-    return fallos.VistaBackend(False, texto, causa.value, "directo")
++        return failures.BackendView(True, "", None, "direct")
++    causa = failures.connection_cause(response.status_code, loopback=loopback)
++    texto = failures.detail(causa, host=host, status=response.status_code)
++    return failures.BackendView(False, texto, causa.value, "direct")
+ 
+ 
+ def backend_requires_key() -> tuple[bool | None, str]:
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index a6de1ae..db25dab 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -59,7 +59,7 @@ from .. import (
+     config,
+     coste,
+     cuota,
+-    fallos,
++    failures,
+     legacy_names,
+     llamaswap_api,
+     precios,
+@@ -116,7 +116,12 @@ def _read_file_cached(path) -> list[dict]:
+                 if not line:
+                     continue
+                 try:
+-                    rows.append(json.loads(line))
++                    # Formato nuevo aunque la fila sea vieja (REQ-006): todo lo que sale de
++                    # aquí (/api/events, /api/stats, «En curso») ya habla con claves en inglés.
++                    row = json.loads(line)
++                    rows.append(
++                        legacy_names.normalize("usage", row) if isinstance(row, dict) else row
++                    )
+                 except json.JSONDecodeError:
+                     continue
+     except OSError:
+@@ -304,7 +309,7 @@ def _aggregate(rows: list[dict]) -> dict:
+         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
+         "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
+     }
+-    # Causa de cada fallo o salto (`configuracion`, `modelo`, `enfriamiento`…): una de configuración
++    # Causa de cada fallo o salto (`configuration`, `model`, `cooldown`…): una de configuración
+     # tiene que verse en el panel para que alguien la arregle (REQ-019).
+     causes: dict[str, int] = defaultdict(int)
+ 
+@@ -754,7 +759,7 @@ def backend():
+       - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
+       - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
+ 
+-    Con un fallo, `causa`/`etiqueta`/`detalle` dicen por qué (REQ-012, textos de `fallos.py`) y
++    Con un fallo, `cause`/`label`/`detail` dicen por qué (REQ-012, textos de `failures.py`) y
+     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
+     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
+     """
+@@ -767,20 +772,20 @@ def backend():
+             "running_ok": running_ok,
+             "models": estado.models,
+             "models_stale": estado.models_stale,
+-            **_causa_json(estado.causa, estado.detalle),
++            **_cause_json(estado.causa, estado.detalle),
+             "origin": config.backend_origin(),
+             "host": config.backend_host(),
+         }
+     )
+ 
+ 
+-def _causa_json(causa: str | None, detalle: str | None) -> dict:
+-    """Las claves de la causa para el panel. La etiqueta corta sale de `fallos.py`, como el detalle:
++def _cause_json(cause: str | None, detail: str | None) -> dict:
++    """Las claves de la causa para el panel. La etiqueta corta sale de `failures.py`, como el detalle:
+     el JS no redacta los textos de una causa (REQ-011)."""
+     return {
+-        "causa": causa,
+-        "etiqueta": fallos.etiqueta(causa) if causa else None,
+-        "detalle": detalle,
++        "cause": cause,
++        "label": failures.label(cause) if cause else None,
++        "detail": detail,
+     }
+ 
+ 
+@@ -812,7 +817,7 @@ def backend_stats():
+     `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
+     degrada a {available: false} sin romper el dashboard.
+ 
+-    Sin datos, dice por qué (REQ-020): `causa`, `etiqueta`, `detalle` y `status_http` (este último
++    Sin datos, dice por qué (REQ-020): `cause`, `label`, `detail` y `status_http` (este último
+     solo con una respuesta HTTP). El panel solo culpa a la versión de llama-swap con un 404.
+     """
+     base = config.BASE_URL.removesuffix("/v1")
+@@ -822,19 +827,19 @@ def backend_stats():
+         with httpx2.Client(timeout=server._plazo_sonda()) as c:
+             r = c.get(endpoint, headers=config.auth_headers())
+         if not r.is_success:
+-            causa = fallos.causa_conexion(r.status_code, loopback=loopback)
+-            texto = fallos.detalle(causa, host=config.backend_host(), status=r.status_code)
+-            return JSONResponse(_sin_stats(causa.value, texto, r.status_code))
++            cause = failures.connection_cause(r.status_code, loopback=loopback)
++            text = failures.detail(cause, host=config.backend_host(), status=r.status_code)
++            return JSONResponse(_no_stats(cause.value, text, r.status_code))
+         data = r.json()
+     except Exception as exc:  # como el sondeo: lo que no se espera también tiene causa
+-        causa = fallos.causa_conexion(exc, loopback=loopback)
+-        texto = fallos.detalle(causa, host=config.backend_host(), endpoint=endpoint, excepcion=exc)
+-        return JSONResponse(_sin_stats(causa.value, texto, None))
++        cause = failures.connection_cause(exc, loopback=loopback)
++        text = failures.detail(cause, host=config.backend_host(), endpoint=endpoint, exception=exc)
++        return JSONResponse(_no_stats(cause.value, text, None))
+     return JSONResponse({"available": True, "stats": data})
+ 
+ 
+-def _sin_stats(causa: str, detalle: str, status_http: int | None) -> dict:
+-    return {"available": False, **_causa_json(causa, detalle), "status_http": status_http}
++def _no_stats(cause: str, detail: str, status_http: int | None) -> dict:
++    return {"available": False, **_cause_json(cause, detail), "status_http": status_http}
+ 
+ 
+ @app.get("/api/status")
+@@ -869,7 +874,7 @@ def status():
+                 "available": estado.available,
+                 "models": estado.models,
+                 "models_stale": estado.models_stale,
+-                **_causa_json(estado.causa, estado.detalle),
++                **_cause_json(estado.causa, estado.detalle),
+                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
+                 "origin": config.backend_origin(),
+                 "host": config.backend_host(),
+@@ -1904,6 +1909,10 @@ function humanLabel(key){
+ // Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
+ // y lo inyecta el servidor: el JS no lleva una segunda copia de la tabla (REQ-009, D2).
+ const LEGACY_VALUES = __LEGACY_VALUES__;
++function legacyValue(kind, key){
++  const alias = LEGACY_VALUES[kind] || {};
++  return Object.prototype.hasOwnProperty.call(alias, key) ? alias[key] : key;
++}
+ function labelFor(kind, key){
+   const m = LABELS[kind] || {};
+   const alias = LEGACY_VALUES[kind] || {};
+@@ -2202,8 +2211,8 @@ function roleLabels(model){
+ }
+ 
+ // Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
+-// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por fallos.py.
+-const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
++// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
++const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
+ // Estados de /running y motivos de espera local, en palabras (REQ-022).
+ const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
+ const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
+@@ -2238,13 +2247,13 @@ function estadoVisible(prev, bj){
+ function badgeBackend(vista, baseUrl){
+   const v = vista || vistaInicial(), u = v.ultimo || {};
+   if(v.estado==='conectado'){
+-    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detalle||u.etiqueta||'sin respuesta') : '';
++    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
+     return {texto:'conectado', clase:'up', title:(baseUrl||'')+aviso};
+   }
+-  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detalle||''};
+-  const et = u.etiqueta || u.causa || 'sin respuesta';
+-  if(CAUSAS_CONTESTA[u.causa]) return {texto:et, clase:'warn', title:u.detalle||''};
+-  return {texto:'caído · '+et, clase:'down', title:u.detalle||''};
++  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detail||''};
++  const et = u.label || u.cause || 'sin respuesta';
++  if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {texto:et, clase:'warn', title:u.detail||''};
++  return {texto:'caído · '+et, clase:'down', title:u.detail||''};
+ }
+ 
+ // Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
+@@ -2277,7 +2286,7 @@ function estadoModelo(o){
+   const fila = (texto, title) => ({texto, title:title||'', atenuada:!disponible});
+   if(!disponible && enVuelo) return fila('esperando al backend');
+   if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
+-    +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
++    +(((vista.ultimo||{}).label) || 'comprobando…'));
+   if(enVuelo && esperaLocal){
+     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
+     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
+@@ -2362,7 +2371,7 @@ function renderBackend(){
+ // con un 404; con cualquier otra causa, su etiqueta corta.
+ function textoStats(j){
+   if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
+-  if(j && j.etiqueta) return 'sin datos: '+j.etiqueta;
++  if(j && j.label) return 'sin datos: '+j.label;
+   return 'sin datos';
+ }
+ 
+@@ -2371,7 +2380,7 @@ function renderBackendStats(j){
+   const el = document.getElementById('backendStats'); if(!el) return;
+   const head = document.getElementById('bstatsHead');
+   if(!j || !j.available || !j.stats){
+-    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detalle)||'')+'">'
++    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detail)||'')+'">'
+       + escHooks(textoStats(j))+'</div>';
+     if(head) head.textContent=''; return;
+   }
+@@ -2649,7 +2658,7 @@ function acct(e){
+   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
+   // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
+   const fallback = !!e.model_requested && e.routing !== 'affinity';
+-  const cause = e.error_class || e.fallback_class || null;
++  const cause = legacyValue('failureClass', e.error_class || e.fallback_class || null);
+   const copia = v => (v===undefined ? null : v);
+   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
+     net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,
+diff --git a/tests/test_affinity.py b/tests/test_affinity.py
+index 8bea361..2a8a06f 100644
+--- a/tests/test_affinity.py
++++ b/tests/test_affinity.py
+@@ -740,7 +740,7 @@ def test_reason_after_affinity_failure_is_the_real_one_chunked(affinity, attempt
+ 
+     assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
+     line = _line(tmp_path, "local_translate")
+-    assert line.get("fallback_class") == "modelo"
++    assert line.get("fallback_class") == "model"
+     assert line.get("fallback_reason") == "http_500"
+     assert "enfriamiento" not in out
+ 
+@@ -764,7 +764,7 @@ def test_reason_after_affinity_failure_is_the_real_one_single_call(
+ 
+     assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
+     line = _line(tmp_path, "local_delegate")
+-    assert line.get("fallback_class") == "modelo"
++    assert line.get("fallback_class") == "model"
+     assert "enfriamiento" not in out
+ 
+ 
+@@ -964,13 +964,13 @@ def test_capacity_failure_of_affinity_alternative_goes_to_role(affinity, attempt
+ 
+     out = _translate()
+ 
+-    assert attempts[0].clase == "capacidad_o_carga", "guarda: el 26B falló por capacidad"
++    assert attempts[0].clase == "capacity_or_load", "guarda: el 26B falló por capacidad"
+     responded = backend.served[-1]
+     assert responded == MECH
+     line = _line(tmp_path, "local_translate")
+     assert line.get("model") == MECH
+     assert line.get("affinity_dropped") == LONG
+-    assert line.get("affinity_dropped_class") == "capacidad_o_carga"
++    assert line.get("affinity_dropped_class") == "capacity_or_load"
+     assert "aviso" not in out
+ 
+ 
+diff --git a/tests/test_benchmark.py b/tests/test_benchmark.py
+index 6377f83..c22e9b3 100644
+--- a/tests/test_benchmark.py
++++ b/tests/test_benchmark.py
+@@ -584,7 +584,7 @@ def test_contenido_vacio_por_razonar_es_configuracion_y_no_se_repite(tmp_path, m
+         return _respuesta("", "length", reasoning_content="pensando largo y tendido")
+ 
+     _, (registro,) = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+-    assert registro["outcome"] == "configuracion"
++    assert registro["outcome"] == "configuration"
+     assert registro["reasoning_chars"] > 0 and registro["score"] is None
+     assert len(vistos) == 1
+ 
+diff --git a/tests/test_causa_conexion.py b/tests/test_causa_conexion.py
+index b75beaf..3a40f23 100644
+--- a/tests/test_causa_conexion.py
++++ b/tests/test_causa_conexion.py
+@@ -17,14 +17,14 @@ import threading
+ import httpx2
+ import pytest
+ 
+-from local_delegate import config
+-from local_delegate.fallos import (
+-    CausaConexion,
+-    VistaBackend,
+-    causa_conexion,
+-    detalle,
+-    etiqueta,
+-    pista,
++from local_delegate import config, legacy_names
++from local_delegate.failures import (
++    BackendView,
++    ConnectionCause,
++    connection_cause,
++    detail,
++    hint,
++    label,
+ )
+ 
+ HOST = "pc.tailnet.ts.net:9292"
+@@ -58,19 +58,19 @@ _CASOS = [
+         "gaierror-es-dns",
+         lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
+         False,
+-        CausaConexion.DNS,
++        ConnectionCause.DNS,
+     ),
+     (
+         "gaierror-en-loopback-sigue-siendo-dns",
+         lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
+         True,
+-        CausaConexion.DNS,
++        ConnectionCause.DNS,
+     ),
+     (
+         "econnrefused-es-rechazada",
+         lambda: _envuelta(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused")),
+         False,
+-        CausaConexion.RECHAZADA,
++        ConnectionCause.REFUSED,
+     ),
+     (
+         "enetunreach-es-sin-ruta",
+@@ -78,88 +78,88 @@ _CASOS = [
+             httpx2.ConnectError, OSError(errno.ENETUNREACH, "Network is unreachable")
+         ),
+         False,
+-        CausaConexion.SIN_RUTA,
++        ConnectionCause.NO_ROUTE,
+     ),
+     (
+         "ehostunreach-es-sin-ruta",
+         lambda: _envuelta(httpx2.ConnectError, OSError(errno.EHOSTUNREACH, "No route to host")),
+         False,
+-        CausaConexion.SIN_RUTA,
++        ConnectionCause.NO_ROUTE,
+     ),
+     (
+         "winsock-10051-es-sin-ruta",
+         lambda: _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable")),
+         False,
+-        CausaConexion.SIN_RUTA,
++        ConnectionCause.NO_ROUTE,
+     ),
+     (
+         "winsock-10065-es-sin-ruta",
+         lambda: _envuelta(httpx2.ConnectError, OSError(10065, "host inalcanzable")),
+         False,
+-        CausaConexion.SIN_RUTA,
++        ConnectionCause.NO_ROUTE,
+     ),
+     (
+         "connect-timeout-en-loopback-es-rechazada",
+         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
+         True,
+-        CausaConexion.RECHAZADA,
++        ConnectionCause.REFUSED,
+     ),
+     (
+         "connect-timeout-remoto-es-timeout-conexion",
+         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
+         False,
+-        CausaConexion.TIMEOUT_CONEXION,
++        ConnectionCause.CONNECT_TIMEOUT,
+     ),
+     (
+         "caso-de-la-mac-etimedout-remoto",
+         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
+         False,
+-        CausaConexion.TIMEOUT_CONEXION,
++        ConnectionCause.CONNECT_TIMEOUT,
+     ),
+     (
+         "caso-de-la-mac-etimedout-en-loopback",
+         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
+         True,
+-        CausaConexion.RECHAZADA,
++        ConnectionCause.REFUSED,
+     ),
+-    ("read-timeout", lambda: httpx2.ReadTimeout("lectura"), False, CausaConexion.SIN_RESPUESTA),
+-    ("write-timeout", lambda: httpx2.WriteTimeout("escritura"), False, CausaConexion.SIN_RESPUESTA),
+-    ("value-error", lambda: ValueError("sin data"), False, CausaConexion.RESPUESTA_INVALIDA),
++    ("read-timeout", lambda: httpx2.ReadTimeout("lectura"), False, ConnectionCause.NO_RESPONSE),
++    ("write-timeout", lambda: httpx2.WriteTimeout("escritura"), False, ConnectionCause.NO_RESPONSE),
++    ("value-error", lambda: ValueError("sin data"), False, ConnectionCause.INVALID_RESPONSE),
+     (
+         "json-roto",
+         lambda: json.JSONDecodeError("Expecting value", "<html>", 0),
+         False,
+-        CausaConexion.RESPUESTA_INVALIDA,
++        ConnectionCause.INVALID_RESPONSE,
+     ),
+     (
+         "remote-protocol-error",
+         lambda: httpx2.RemoteProtocolError("cortado"),
+         False,
+-        CausaConexion.TRANSPORTE,
++        ConnectionCause.TRANSPORT,
+     ),
+-    ("invalid-url", lambda: httpx2.InvalidURL("url rota"), False, CausaConexion.URL_INVALIDA),
++    ("invalid-url", lambda: httpx2.InvalidURL("url rota"), False, ConnectionCause.INVALID_URL),
+     (
+         "unsupported-protocol",
+         lambda: httpx2.UnsupportedProtocol("ftp://"),
+         False,
+-        CausaConexion.URL_INVALIDA,
++        ConnectionCause.INVALID_URL,
+     ),
+-    ("http-status-401", lambda: _http_status(401), False, CausaConexion.CREDENCIAL),
+-    ("http-status-403", lambda: _http_status(403), False, CausaConexion.CREDENCIAL),
+-    ("http-status-500", lambda: _http_status(500), False, CausaConexion.HTTP_ERROR),
+-    ("codigo-401", lambda: 401, False, CausaConexion.CREDENCIAL),
+-    ("codigo-403", lambda: 403, False, CausaConexion.CREDENCIAL),
+-    ("codigo-404", lambda: 404, False, CausaConexion.HTTP_ERROR),
+-    ("codigo-500", lambda: 500, False, CausaConexion.HTTP_ERROR),
+-    ("attribute-error", lambda: AttributeError("x"), False, CausaConexion.DESCONOCIDA),
+-    ("key-error", lambda: KeyError("data"), False, CausaConexion.DESCONOCIDA),
++    ("http-status-401", lambda: _http_status(401), False, ConnectionCause.CREDENTIAL),
++    ("http-status-403", lambda: _http_status(403), False, ConnectionCause.CREDENTIAL),
++    ("http-status-500", lambda: _http_status(500), False, ConnectionCause.HTTP_ERROR),
++    ("codigo-401", lambda: 401, False, ConnectionCause.CREDENTIAL),
++    ("codigo-403", lambda: 403, False, ConnectionCause.CREDENTIAL),
++    ("codigo-404", lambda: 404, False, ConnectionCause.HTTP_ERROR),
++    ("codigo-500", lambda: 500, False, ConnectionCause.HTTP_ERROR),
++    ("attribute-error", lambda: AttributeError("x"), False, ConnectionCause.UNKNOWN),
++    ("key-error", lambda: KeyError("data"), False, ConnectionCause.UNKNOWN),
+     (
+         # Las reglas 7 a 12 miran solo la excepción de arriba: una propia que envuelve un
+         # `ConnectTimeout` cae en la 12, de forma determinista.
+         "propia-que-envuelve-connect-timeout",
+         lambda: _envuelta(_Propia, httpx2.ConnectTimeout("plazo")),
+         True,
+-        CausaConexion.DESCONOCIDA,
++        ConnectionCause.UNKNOWN,
+     ),
+ ]
+ 
+@@ -169,7 +169,7 @@ _CASOS = [
+     [pytest.param(f, lb, esp, id=nombre) for nombre, f, lb, esp in _CASOS],
+ )
+ def test_cada_suceso_tiene_su_causa(fabrica, loopback, esperada):
+-    causa = causa_conexion(fabrica(), loopback=loopback)
++    causa = connection_cause(fabrica(), loopback=loopback)
+     assert causa is esperada
+ 
+ 
+@@ -186,14 +186,14 @@ def test_un_oserror_sin_errno_no_es_sin_ruta():
+     assert OSError(10051, "red inalcanzable").errno == 10051
+     un_argumento = _envuelta(httpx2.ConnectError, OSError(10051))
+     dos_argumentos = _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable"))
+-    assert causa_conexion(un_argumento, loopback=False) is CausaConexion.TRANSPORTE
+-    assert causa_conexion(dos_argumentos, loopback=False) is CausaConexion.SIN_RUTA
++    assert connection_cause(un_argumento, loopback=False) is ConnectionCause.TRANSPORT
++    assert connection_cause(dos_argumentos, loopback=False) is ConnectionCause.NO_ROUTE
+ 
+ 
+ @pytest.mark.parametrize("codigo", [200, 204, 299])
+ def test_un_2xx_no_se_clasifica(codigo):
+     with pytest.raises(ValueError):
+-        causa_conexion(codigo, loopback=False)
++        connection_cause(codigo, loopback=False)
+ 
+ 
+ def _clasifica_en_un_hilo(suceso: BaseException) -> list:
+@@ -201,7 +201,7 @@ def _clasifica_en_un_hilo(suceso: BaseException) -> list:
+     assert en vez de colgar la suite."""
+     resultado: list = []
+     hilo = threading.Thread(
+-        target=lambda: resultado.append(causa_conexion(suceso, loopback=False)), daemon=True
++        target=lambda: resultado.append(connection_cause(suceso, loopback=False)), daemon=True
+     )
+     hilo.start()
+     hilo.join(timeout=5)
+@@ -212,13 +212,13 @@ def _clasifica_en_un_hilo(suceso: BaseException) -> list:
+ def test_una_cadena_con_ciclo_termina():
+     propia = httpx2.ConnectError("se apunta a sí misma")
+     propia.__context__ = propia
+-    assert _clasifica_en_un_hilo(propia) == [CausaConexion.TRANSPORTE]
++    assert _clasifica_en_un_hilo(propia) == [ConnectionCause.TRANSPORT]
+ 
+     a = httpx2.ConnectError("a")
+     b = OSError(errno.ENETUNREACH, "b")
+     a.__cause__ = b
+     b.__context__ = a
+-    assert _clasifica_en_un_hilo(a) == [CausaConexion.SIN_RUTA]
++    assert _clasifica_en_un_hilo(a) == [ConnectionCause.NO_ROUTE]
+ 
+ 
+ # --- Fallos de red real ---------------------------------------------------------------------
+@@ -248,22 +248,22 @@ def _puerto_recien_liberado() -> int:
+ 
+ def test_red_real_un_nombre_que_no_resuelve_es_dns():
+     url = "http://no-existe.invalid:9292/v1/models"
+-    causa = causa_conexion(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
+-    assert causa is CausaConexion.DNS
++    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
++    assert causa is ConnectionCause.DNS
+ 
+ 
+ def test_red_real_un_puerto_cerrado_en_loopback_es_rechazada():
+     url = f"http://127.0.0.1:{_puerto_recien_liberado()}/v1/models"
+     assert _loopback(url)
+-    causa = causa_conexion(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
+-    assert causa is CausaConexion.RECHAZADA
++    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
++    assert causa is ConnectionCause.REFUSED
+ 
+ 
+ def test_red_real_una_ip_que_no_contesta_no_es_dns_ni_rechazada():
+     url = "http://192.0.2.1:9292/v1/models"
+     assert not _loopback(url)
+-    causa = causa_conexion(_fallo_real(url, conexion=0.5), loopback=_loopback(url))
+-    assert causa in {CausaConexion.TIMEOUT_CONEXION, CausaConexion.SIN_RUTA}
++    causa = connection_cause(_fallo_real(url, conexion=0.5), loopback=_loopback(url))
++    assert causa in {ConnectionCause.CONNECT_TIMEOUT, ConnectionCause.NO_ROUTE}
+ 
+ 
+ # --- Textos ---------------------------------------------------------------------------------
+@@ -275,20 +275,20 @@ def _sin_el_arranque_remoto(texto: str) -> str:
+ 
+ 
+ def test_pista_remota_nunca_manda_a_arrancar_llama_swap_a_secas():
+-    for causa in [*CausaConexion, None]:
+-        for fuente in ("daemon", "directo"):
+-            texto = pista(causa, origen="remote", fuente=fuente, host=HOST)
++    for causa in [*ConnectionCause, None]:
++        for fuente in ("daemon", "direct"):
++            texto = hint(causa, origin="remote", source=fuente, host=HOST)
+             assert "arranca llama-swap" not in _sin_el_arranque_remoto(texto), (causa, texto)
+ 
+ 
+ def test_pista_local_de_rechazada_manda_a_arrancar_llama_swap():
+-    texto = pista(CausaConexion.RECHAZADA, origen="local", fuente="directo", host=HOST)
++    texto = hint(ConnectionCause.REFUSED, origin="local", source="direct", host=HOST)
+     assert "arranca llama-swap" in texto
+ 
+ 
+ def test_pista_de_credencial_depende_de_quien_vio_el_401():
+-    del_daemon = pista(CausaConexion.CREDENCIAL, origen="local", fuente="daemon", host=HOST)
+-    directa = pista(CausaConexion.CREDENCIAL, origen="local", fuente="directo", host=HOST)
++    del_daemon = hint(ConnectionCause.CREDENTIAL, origin="local", source="daemon", host=HOST)
++    directa = hint(ConnectionCause.CREDENTIAL, origin="local", source="direct", host=HOST)
+     assert "lanzador" in del_daemon
+     assert "en este entorno" in directa
+     assert "lanzador" not in directa
+@@ -297,78 +297,102 @@ def test_pista_de_credencial_depende_de_quien_vio_el_401():
+ def test_pista_sin_causa_es_la_generica():
+     """Daemon antiguo que no manda `causa`, o una causa que este código no conoce."""
+     esperada = f"revisa el backend en {HOST}"
+-    assert pista(None, origen="local", fuente="daemon", host=HOST) == esperada
+-    assert pista("causa_del_futuro", origen="remote", fuente="daemon", host=HOST) == esperada
++    assert hint(None, origin="local", source="daemon", host=HOST) == esperada
++    assert hint("causa_del_futuro", origin="remote", source="daemon", host=HOST) == esperada
+ 
+ 
+ def test_todos_los_detalles_dicen_el_host():
+-    for causa in list(CausaConexion):
+-        texto = detalle(
++    for causa in list(ConnectionCause):
++        texto = detail(
+             causa,
+             host=HOST,
+             status=500,
+             endpoint="/v1/models",
+-            excepcion=httpx2.ConnectError("x"),
++            exception=httpx2.ConnectError("x"),
+         )
+-        if causa is CausaConexion.URL_INVALIDA:
++        if causa is ConnectionCause.INVALID_URL:
+             # La tabla de REQ-011 no lleva host aquí: con la URL rota puede no significar nada.
+             assert "LOCAL_DELEGATE_BASE_URL" in texto
+             continue
+         assert HOST in texto, causa
+-    invalida = detalle(CausaConexion.RESPUESTA_INVALIDA, host=HOST, endpoint="/v1/models")
++    invalida = detail(ConnectionCause.INVALID_RESPONSE, host=HOST, endpoint="/v1/models")
+     assert "/v1/models" in invalida
+ 
+ 
+ def test_un_detalle_sin_datos_opcionales_no_escribe_none():
+-    for causa in list(CausaConexion):
+-        assert "None" not in detalle(causa, host=HOST), causa
++    for causa in list(ConnectionCause):
++        assert "None" not in detail(causa, host=HOST), causa
+ 
+ 
+ _DETALLES = {
+-    CausaConexion.DNS: f"no se resuelve el nombre {HOST} (¿VPN o DNS?)",
+-    CausaConexion.RECHAZADA: f"{HOST} rechaza la conexión: no hay nada escuchando en ese puerto",
+-    CausaConexion.SIN_RUTA: f"no hay ruta de red hacia {HOST}",
+-    CausaConexion.TIMEOUT_CONEXION: f"{HOST} no contesta a la conexión (ruta, cortafuegos o VPN)",
+-    CausaConexion.CREDENCIAL: f"{HOST} responde 401: está arriba pero rechaza la credencial",
+-    CausaConexion.HTTP_ERROR: f"{HOST} responde HTTP 401",
+-    CausaConexion.SIN_RESPUESTA: f"{HOST} acepta la conexión pero no responde a tiempo",
+-    CausaConexion.RESPUESTA_INVALIDA: (
++    ConnectionCause.DNS: f"no se resuelve el nombre {HOST} (¿VPN o DNS?)",
++    ConnectionCause.REFUSED: f"{HOST} rechaza la conexión: no hay nada escuchando en ese puerto",
++    ConnectionCause.NO_ROUTE: f"no hay ruta de red hacia {HOST}",
++    ConnectionCause.CONNECT_TIMEOUT: f"{HOST} no contesta a la conexión (ruta, cortafuegos o VPN)",
++    ConnectionCause.CREDENTIAL: f"{HOST} responde 401: está arriba pero rechaza la credencial",
++    ConnectionCause.HTTP_ERROR: f"{HOST} responde HTTP 401",
++    ConnectionCause.NO_RESPONSE: f"{HOST} acepta la conexión pero no responde a tiempo",
++    ConnectionCause.INVALID_RESPONSE: (
+         f"{HOST} responde a /v1/models, pero con un cuerpo que no se entiende"
+     ),
+-    CausaConexion.URL_INVALIDA: (
++    ConnectionCause.INVALID_URL: (
+         "la URL del backend no es válida (HTTPStatusError): revisa LOCAL_DELEGATE_BASE_URL"
+     ),
+-    CausaConexion.TRANSPORTE: f"fallo de red con {HOST} (HTTPStatusError)",
+-    CausaConexion.DESCONOCIDA: f"fallo inesperado al sondear {HOST} (HTTPStatusError)",
++    ConnectionCause.TRANSPORT: f"fallo de red con {HOST} (HTTPStatusError)",
++    ConnectionCause.UNKNOWN: f"fallo inesperado al sondear {HOST} (HTTPStatusError)",
+ }
+ 
+ _ETIQUETAS = {
+     "dns": "no resuelve",
+-    "rechazada": "nadie escucha",
+-    "sin_ruta": "sin ruta",
+-    "timeout_conexion": "no contesta",
+-    "credencial": "sin acceso",
++    "refused": "nadie escucha",
++    "no_route": "sin ruta",
++    "connect_timeout": "no contesta",
++    "credential": "sin acceso",
+     "http_error": "responde con error",
+-    "sin_respuesta": "no responde a tiempo",
+-    "respuesta_invalida": "respuesta no válida",
+-    "url_invalida": "URL no válida",
+-    "transporte": "fallo de red",
+-    "desconocida": "fallo inesperado",
++    "no_response": "no responde a tiempo",
++    "invalid_response": "respuesta no válida",
++    "invalid_url": "URL no válida",
++    "transport": "fallo de red",
++    "unknown": "fallo inesperado",
+ }
+ 
+ 
+ def test_los_textos_son_los_de_la_tabla_de_req_011():
+     """El código sale de la excepción cuando no se pasa: `HTTPStatusError(401)` da «responde 401»."""
+-    assert set(_ETIQUETAS) == {c.value for c in CausaConexion}
++    assert set(_ETIQUETAS) == {c.value for c in ConnectionCause}
+     for valor, esperada in _ETIQUETAS.items():
+-        assert etiqueta(valor) == esperada
++        assert label(valor) == esperada
+     excepcion = _http_status(401)
+     for causa, esperado in _DETALLES.items():
+-        texto = detalle(causa, host=HOST, endpoint="/v1/models", excepcion=excepcion)
++        texto = detail(causa, host=HOST, endpoint="/v1/models", exception=excepcion)
+         assert texto == esperado
+ 
+ 
+ def test_vista_backend_tiene_los_campos_de_req_016():
+-    vista = VistaBackend(sano=False, detalle="d", causa="credencial", fuente="daemon")
+-    assert vista._fields == ("sano", "detalle", "causa", "fuente")
+-    assert tuple(vista) == (False, "d", "credencial", "daemon")
++    vista = BackendView(healthy=False, detail="d", cause="credential", source="daemon")
++    assert vista._fields == ("healthy", "detail", "cause", "source")
++    assert tuple(vista) == (False, "d", "credential", "daemon")
++
++
++# --- Valores viejos (REQ-006) -------------------------------------------------------------------
++#
++# El log de uso guarda `connection_failure` (antes `fallo_conexion`) y un daemon de la 0.34.0 manda
++# `causa` con el valor en español. Los dos se siguen entendiendo, con la misma etiqueta.
++
++
++@pytest.mark.parametrize("viejo,nuevo", sorted(legacy_names.CONNECTION_CAUSE_VALUES.items()))
++def test_el_valor_viejo_de_la_causa_da_el_mismo_miembro_y_la_misma_etiqueta(viejo, nuevo):
++    assert ConnectionCause(viejo) is ConnectionCause(nuevo)
++    assert label(viejo) == label(nuevo)
++    assert hint(viejo, origin="local", source="direct", host=HOST) == hint(
++        nuevo, origin="local", source="direct", host=HOST
++    )
++
++
++def test_la_tabla_de_causas_viejas_cubre_todas_las_que_cambiaron():
++    """Cada miembro cuyo valor no es ya el de antes tiene su valor viejo en la tabla."""
++    sin_cambio = {"dns", "http_error"}
++    nuevos = {c.value for c in ConnectionCause} - sin_cambio
++    assert set(legacy_names.CONNECTION_CAUSE_VALUES.values()) == nuevos
++    with pytest.raises(ValueError):
++        ConnectionCause("no_existe")
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index 1a0d9e0..5378f2f 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -17,7 +17,7 @@ import pytest
+ from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+ 
+ from local_delegate import checks, install, llamaswap_api, recalcular, sondas
+-from local_delegate.fallos import VistaBackend
++from local_delegate.failures import BackendView
+ 
+ 
+ def make_ctx(home, **kwargs):
+@@ -33,7 +33,7 @@ def make_ctx(home, **kwargs):
+             "pid": 42,
+             "mcp_url": f"http://{host}:{port}/mcp",
+         },
+-        "backend_models": lambda: VistaBackend(True, "", None, "directo"),
++        "backend_models": lambda: BackendView(True, "", None, "direct"),
+         "version_of": lambda component, cfg: (sondas.RECOMMENDED_VERSIONS[component], None),
+         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
+         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
+@@ -767,7 +767,7 @@ def test_sin_saber_si_exige_token_se_mantiene_el_mensaje_de_siempre(tmp_path, mo
+ def test_backend_down_is_warn(tmp_path):
+     ctx = make_ctx(
+         make_home(tmp_path),
+-        backend_models=lambda: VistaBackend(False, "no responde (ConnectError)", None, "directo"),
++        backend_models=lambda: BackendView(False, "no responde (ConnectError)", None, "direct"),
+     )
+     result = result_for("service.backend", ctx)
+     assert result.status == checks.WARN
+@@ -782,11 +782,11 @@ def test_backend_401_is_unknown_not_down(tmp_path):
+     """
+     ctx = make_ctx(
+         make_home(tmp_path),
+-        backend_models=lambda: VistaBackend(
++        backend_models=lambda: BackendView(
+             False,
+             "responde 401: está arriba pero rechaza la credencial",
+-            "credencial",
+-            "directo",
++            "credential",
++            "direct",
+         ),
+     )
+     result = result_for("service.backend", ctx)
+@@ -803,11 +803,11 @@ def test_doctor_remoto_no_manda_a_arrancar_llama_swap(tmp_path, monkeypatch):
+     monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.tailnet.ts.net:9292/v1")
+     ctx = make_ctx(
+         make_home(tmp_path),
+-        backend_models=lambda: VistaBackend(
++        backend_models=lambda: BackendView(
+             False,
+             "pc.tailnet.ts.net:9292 no contesta a la conexión (ruta, cortafuegos o VPN)",
+-            "timeout_conexion",
+-            "directo",
++            "connect_timeout",
++            "direct",
+         ),
+     )
+ 
+@@ -834,8 +834,8 @@ def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
+         monkeypatch,
+         {
+             "available": False,
+-            "causa": "dns",
+-            "detalle": "no se resuelve el nombre pc.lan (¿VPN o DNS?)",
++            "cause": "dns",
++            "detail": "no se resuelve el nombre pc.lan (¿VPN o DNS?)",
+         },
+     )
+ 
+@@ -850,6 +850,25 @@ def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
+ 
+ def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
+     """El daemon SÍ tiene la clave de su lanzador: si da 401, la que no vale es la suya."""
++    ctx = _ctx_con_daemon(
++        tmp_path,
++        monkeypatch,
++        {
++            "available": False,
++            "cause": "credential",
++            "detail": "127.0.0.1:9292 responde 401: está arriba pero rechaza la credencial",
++        },
++    )
++
++    r = result_for("service.backend", ctx)
++
++    assert "lanzador" in (r.fix_hint or "")
++    assert r.status == checks.WARN
++
++
++def test_doctor_entiende_la_causa_de_un_daemon_de_la_0_34(tmp_path, monkeypatch):
++    """Un daemon de la 0.34.0 manda `causa`/`detalle` y el valor en español (REQ-006): `doctor`
++    nuevo da la misma pista que con el daemon nuevo."""
+     ctx = _ctx_con_daemon(
+         tmp_path,
+         monkeypatch,
+@@ -862,6 +881,7 @@ def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
+ 
+     r = result_for("service.backend", ctx)
+ 
++    assert "responde 401" in r.detail
+     assert "lanzador" in (r.fix_hint or "")
+     assert r.status == checks.WARN
+ 
+@@ -887,7 +907,7 @@ def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
+         plazos.append(timeout)
+ 
+     monkeypatch.setattr(daemon, "query_backend", _registra)
+-    monkeypatch.setattr(sondas, "backend_probe", lambda: VistaBackend(True, "", None, "directo"))
++    monkeypatch.setattr(sondas, "backend_probe", lambda: BackendView(True, "", None, "direct"))
+ 
+     checks._default_backend_models()
+ 
+diff --git a/tests/test_correlacion.py b/tests/test_correlacion.py
+index 614d674..493844c 100644
+--- a/tests/test_correlacion.py
++++ b/tests/test_correlacion.py
+@@ -141,7 +141,7 @@ def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypat
+         path=str(documento),
+     )
+ 
+-    assert _eventos(tmp_path / "logs")[-1]["bloqueo_id"] == "abc123def456"
++    assert _eventos(tmp_path / "logs")[-1]["block_id"] == "abc123def456"
+ 
+ 
+ def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch):
+@@ -163,4 +163,4 @@ def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch
+         path=str(tmp_path / "nadie-me-bloqueo.md"),
+     )
+ 
+-    assert "bloqueo_id" not in _eventos(tmp_path / "logs")[-1]
++    assert "block_id" not in _eventos(tmp_path / "logs")[-1]
+diff --git a/tests/test_dashboard_js.py b/tests/test_dashboard_js.py
+index 512e4f6..a504f3a 100644
+--- a/tests/test_dashboard_js.py
++++ b/tests/test_dashboard_js.py
+@@ -29,6 +29,7 @@ import subprocess
+ 
+ import pytest
+ 
++from local_delegate import legacy_names
+ from local_delegate.web import metrics
+ 
+ TZ_PRUEBA = "America/Havana"  # UTC-5/-4: si algo cae a UTC, se nota
+@@ -49,6 +50,15 @@ def _extraer(cabecera: str) -> str:
+         j += 1
+ 
+ 
++def _legado() -> str:
++    """La tabla de valores viejos que el servidor inyecta (`__LEGACY_VALUES__`) y su traductor.
++
++    `metrics.HTML` es la plantilla sin rellenar: aquí se pone lo mismo que pone `render_index`.
++    """
++    tabla = json.dumps(legacy_names.PANEL_VALUE_ALIASES)
++    return f"const LEGACY_VALUES = {tabla};\n" + _extraer("function legacyValue(")
++
++
+ def _correr(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
+     """Ejecuta `cuerpo` con esas funciones del panel cargadas. Devuelve lo que imprima en JSON."""
+     node = shutil.which("node")
+@@ -57,7 +67,7 @@ def _correr(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
+ 
+     programa = tmp_path / "prueba.mjs"
+     programa.write_text(
+-        "\n".join([preludio, *(_extraer(f) for f in funciones), cuerpo]),
++        "\n".join([_legado(), preludio, *(_extraer(f) for f in funciones), cuerpo]),
+         encoding="utf-8",
+     )
+     # El entorno se hereda ENTERO con `TZ` encima. Recortarlo a `PATH` + `TZ` mata a node en
+diff --git a/tests/test_delegacion_conexion.py b/tests/test_delegacion_conexion.py
+index 9d212aa..4ae1afe 100644
+--- a/tests/test_delegacion_conexion.py
++++ b/tests/test_delegacion_conexion.py
+@@ -97,7 +97,7 @@ def test_una_delegacion_sin_ruta_se_rinde_en_10_s(monkeypatch, registradores, cl
+ 
+     assert transcurrido < 13, f"tardó {transcurrido:.1f} s en rendirse"
+     linea = _ultima_linea_del_log()
+-    assert linea.get("fallo_conexion") in {"timeout_conexion", "sin_ruta"}
++    assert linea.get("connection_failure") in {"connect_timeout", "no_route"}
+     assert linea["error"] == "connect_error"
+     assert texto.startswith("[local-delegate error] no se pudo conectar con el backend: ")
+     assert preguntas_hechas == [] and arranques == []
+@@ -211,7 +211,7 @@ def test_el_error_de_conexion_dice_la_causa_y_va_al_log(
+     texto = camino(tmp_path, monkeypatch)
+ 
+     linea = _ultima_linea_del_log()
+-    assert linea.get("fallo_conexion") == "timeout_conexion"
++    assert linea.get("connection_failure") == "connect_timeout"
+     assert linea["error"] == "connect_error"
+     # Compatibilidad del log y del enfriamiento: la clase no cambia.
+     assert linea.get("error_class") == "endpoint"
+@@ -221,13 +221,13 @@ def test_el_error_de_conexion_dice_la_causa_y_va_al_log(
+ 
+ @backend_mock.mock
+ def test_un_fallo_que_no_es_de_conexion_no_escribe_la_clave(monkeypatch):
+-    """`fallo_conexion` solo aparece cuando hay causa: el log no engorda en cada evento."""
++    """`connection_failure` solo aparece cuando hay causa: el log no engorda en cada evento."""
+     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+     backend_mock.post(CHAT).mock(return_value=httpx2.Response(500, text="boom"))
+ 
+     server.local_summarize(text="hola")
+ 
+-    assert "fallo_conexion" not in _ultima_linea_del_log()
++    assert "connection_failure" not in _ultima_linea_del_log()
+ 
+ 
+ # --- REQ-022: la espera de plaza se ve en «En curso» ---------------------------------------------
+diff --git a/tests/test_densidad.py b/tests/test_densidad.py
+index 3282741..8f6d0ec 100644
+--- a/tests/test_densidad.py
++++ b/tests/test_densidad.py
+@@ -16,7 +16,7 @@ import backend_mock
+ import httpx2
+ import pytest
+ 
+-from local_delegate import atribucion, config, coste, server
++from local_delegate import atribucion, config, coste, legacy_names, server
+ from local_delegate.web import metrics
+ 
+ 
+@@ -64,6 +64,8 @@ def _acct_en_js(tmp_path, casos: list[dict]) -> list[dict]:
+         "import {readFileSync} from 'node:fs';\n"
+         "const CPT = 4;\n"
+         "const tok = c => Math.floor(c/CPT);\n"
++        f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
++        f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
+         f"{_extraer_funcion_js(metrics.HTML, 'function tokensClaude(')}\n"
+         f"{_extraer_funcion_js(metrics.HTML, 'function acct(e){')}\n"
+         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
+diff --git a/tests/test_doctor.py b/tests/test_doctor.py
+index 9ffe282..4ba4ce8 100644
+--- a/tests/test_doctor.py
++++ b/tests/test_doctor.py
+@@ -11,7 +11,7 @@ from pathlib import Path
+ from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+ 
+ from local_delegate import checks, daemon, doctor, install, recalcular, sondas, update
+-from local_delegate.fallos import VistaBackend
++from local_delegate.failures import BackendView
+ 
+ 
+ def test_vnum_extracts_number():
+@@ -187,9 +187,9 @@ def _stub_environment(
+         sondas,
+         "backend_probe",
+         lambda: (
+-            VistaBackend(True, "", None, "directo")
++            BackendView(True, "", None, "direct")
+             if backend
+-            else VistaBackend(False, "no responde (ConnectError)", None, "directo")
++            else BackendView(False, "no responde (ConnectError)", None, "direct")
+         ),
+     )
+     # Mismo caso que `query_backend`: sin doblarlo, `service.credential` pediría `/models` al
+@@ -406,6 +406,6 @@ def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
+     vista = sondas.backend_probe()
+ 
+     assert "no se resuelve" in vista[1]
+-    assert vista.causa == "dns"
+-    assert vista.fuente == "directo"
+-    assert vista.sano is False
++    assert vista.cause == "dns"
++    assert vista.source == "direct"
++    assert vista.healthy is False
+diff --git a/tests/test_enfriamiento.py b/tests/test_enfriamiento.py
+index d7f5105..9ce6004 100644
+--- a/tests/test_enfriamiento.py
++++ b/tests/test_enfriamiento.py
+@@ -17,7 +17,7 @@ import json
+ import pytest
+ 
+ from local_delegate import enfriamiento
+-from local_delegate.fallos import Clase
++from local_delegate.failures import FailureClass
+ 
+ INICIO = 1_800_000_000.0
+ 
+@@ -49,7 +49,7 @@ def _estado(ruta, reloj, **opciones) -> enfriamiento.Estado:
+     return enfriamiento.Estado(ruta, reloj=reloj, **parametros)
+ 
+ 
+-def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=Clase.MODELO) -> None:
++def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=FailureClass.MODEL) -> None:
+     for _ in range(veces):
+         estado.registrar_fallo(modelo, clase)
+ 
+@@ -85,7 +85,7 @@ def test_los_fallos_de_dos_procesos_se_suman(ruta, reloj):
+ 
+ def test_el_timeout_con_el_modelo_cargado_tambien_cuenta(ruta, reloj):
+     estado = _estado(ruta, reloj)
+-    _fallar(estado, "m", 3, clase=Clase.TIMEOUT_LECTURA)
++    _fallar(estado, "m", 3, clase=FailureClass.READ_TIMEOUT)
+     assert estado.consultar("m") is not None
+ 
+ 
+@@ -110,7 +110,13 @@ def test_un_exito_pone_el_contador_a_cero(ruta, reloj):
+ 
+ @pytest.mark.parametrize(
+     "neutra",
+-    [Clase.ENDPOINT, Clase.PETICION, Clase.SIN_CLASIFICAR, Clase.CAPACIDAD, Clase.CONFIGURACION],
++    [
++        FailureClass.ENDPOINT,
++        FailureClass.REQUEST,
++        FailureClass.UNCLASSIFIED,
++        FailureClass.CAPACITY,
++        FailureClass.CONFIGURATION,
++    ],
+ )
+ def test_las_clases_neutras_ni_suman_ni_ponen_a_cero(ruta, reloj, neutra):
+     estado = _estado(ruta, reloj)
+@@ -265,11 +271,11 @@ def test_entrar_deja_un_evento_con_la_clase_que_lo_disparo(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 2)
+     assert _eventos(ruta) == [], "un fallo por debajo de N no es un episodio"
+-    _fallar(estado, "m", 1, clase=Clase.TIMEOUT_LECTURA)
++    _fallar(estado, "m", 1, clase=FailureClass.READ_TIMEOUT)
+     (evento,) = _eventos(ruta)
+     assert evento["evento"] == "entra"
+     assert evento["modelo"] == "m"
+-    assert evento["clase"] == "timeout_lectura"
++    assert evento["clase"] == "read_timeout"
+     assert evento["reentradas"] == 1
+     assert evento["espera_s"] == pytest.approx(120.0)
+     assert evento["ts"].startswith("2027-01-15T08:00:00")
+diff --git a/tests/test_fallos.py b/tests/test_fallos.py
+index 2270e38..b21a7a4 100644
+--- a/tests/test_fallos.py
++++ b/tests/test_fallos.py
+@@ -12,8 +12,8 @@ from __future__ import annotations
+ import httpx2
+ import pytest
+ 
+-from local_delegate import fallos
+-from local_delegate.fallos import Clase, Respuesta, clasificar
++from local_delegate import failures, legacy_names
++from local_delegate.failures import BackendResponse, FailureClass, classify
+ 
+ 
+ def _respuesta_http(status: int, texto: str = "") -> httpx2.Response:
+@@ -38,22 +38,22 @@ def _cuerpo(content, *, finish_reason: str | None = "stop", reasoning: str | Non
+ 
+ def test_connect_timeout_es_del_endpoint():
+     """El defecto verificado: hoy cae en `http_error` y por eso no ofrece arrancar el backend."""
+-    assert clasificar(httpx2.ConnectTimeout("timed out")) is Clase.ENDPOINT
++    assert classify(httpx2.ConnectTimeout("timed out")) is FailureClass.ENDPOINT
+ 
+ 
+ def test_read_timeout_no_es_del_endpoint():
+     """Control positivo del anterior: mismo padre `TimeoutException`, destino distinto."""
+-    assert clasificar(httpx2.ReadTimeout("timed out")) is not Clase.ENDPOINT
++    assert classify(httpx2.ReadTimeout("timed out")) is not FailureClass.ENDPOINT
+ 
+ 
+ def test_connect_error_sigue_siendo_del_endpoint():
+-    assert clasificar(httpx2.ConnectError("connection refused")) is Clase.ENDPOINT
++    assert classify(httpx2.ConnectError("connection refused")) is FailureClass.ENDPOINT
+ 
+ 
+ @pytest.mark.parametrize("excepcion", [httpx2.WriteTimeout("x"), httpx2.PoolTimeout("x")])
+ def test_los_demas_timeouts_son_del_endpoint(excepcion):
+     """No todo `TimeoutException` es un timeout de lectura: el modelo no llegó a responder."""
+-    assert clasificar(excepcion) is Clase.ENDPOINT
++    assert classify(excepcion) is FailureClass.ENDPOINT
+ 
+ 
+ # --- Capacidad y timeout de lectura ---------------------------------------------------------
+@@ -61,19 +61,19 @@ def test_los_demas_timeouts_son_del_endpoint(excepcion):
+ 
+ def test_read_timeout_sin_saber_si_estaba_cargado_es_capacidad():
+     """El lado que no castiga a un modelo lento de montar, que es lo que pide REQ-F0-2."""
+-    assert clasificar(httpx2.ReadTimeout("timed out")) is Clase.CAPACIDAD
++    assert classify(httpx2.ReadTimeout("timed out")) is FailureClass.CAPACITY
+ 
+ 
+ def test_read_timeout_con_el_modelo_cargado_es_timeout_de_lectura():
+     """Control positivo: la MISMA excepción cambia de clase según la señal de carga."""
+-    assert clasificar(httpx2.ReadTimeout("timed out"), modelo_cargado=True) is Clase.TIMEOUT_LECTURA
++    assert classify(httpx2.ReadTimeout("timed out"), model_loaded=True) is FailureClass.READ_TIMEOUT
+ 
+ 
+ def test_un_5xx_con_patron_de_capacidad_no_es_del_modelo(monkeypatch):
+     """El punto de extensión de REQ-020 funciona; hoy está vacío porque los patrones son de F3."""
+-    monkeypatch.setattr(fallos, "PATRONES_DE_CAPACIDAD", ("failed to load model",))
+-    assert clasificar(Respuesta(status=503, texto="Failed to load model: out of memory")) is (
+-        Clase.CAPACIDAD
++    monkeypatch.setattr(failures, "CAPACITY_PATTERNS", ("failed to load model",))
++    assert classify(BackendResponse(status=503, text="Failed to load model: out of memory")) is (
++        FailureClass.CAPACITY
+     )
+ 
+ 
+@@ -83,9 +83,9 @@ def test_sin_patrones_un_5xx_es_del_modelo(monkeypatch):
+     La tupla ya no está vacía (los patrones reales llegaron con las capturas de F3), así que el test
+     la vacía él mismo: lo que prueba es el punto de extensión, no el contenido de la tupla.
+     """
+-    monkeypatch.setattr(fallos, "PATRONES_DE_CAPACIDAD", ())
+-    assert clasificar(Respuesta(status=503, texto="Failed to load model: out of memory")) is (
+-        Clase.MODELO
++    monkeypatch.setattr(failures, "CAPACITY_PATTERNS", ())
++    assert classify(BackendResponse(status=503, text="Failed to load model: out of memory")) is (
++        FailureClass.MODEL
+     )
+ 
+ 
+@@ -95,11 +95,11 @@ def test_sin_patrones_un_5xx_es_del_modelo(monkeypatch):
+ @pytest.mark.parametrize("status", [400, 401, 403, 404, 413, 422, 499])
+ def test_los_4xx_son_de_la_peticion(status):
+     """Incluye el desborde de contexto (400): cambiar de modelo no arregla ninguno."""
+-    assert clasificar(Respuesta(status=status)) is Clase.PETICION
++    assert classify(BackendResponse(status=status)) is FailureClass.REQUEST
+ 
+ 
+ def test_un_500_no_es_de_la_peticion():
+-    assert clasificar(Respuesta(status=500)) is not Clase.PETICION
++    assert classify(BackendResponse(status=500)) is not FailureClass.REQUEST
+ 
+ 
+ def test_el_status_error_de_httpx_se_clasifica_por_su_codigo():
+@@ -109,8 +109,8 @@ def test_el_status_error_de_httpx_se_clasifica_por_su_codigo():
+     error_503 = httpx2.HTTPStatusError(
+         "unavailable", request=_respuesta_http(503).request, response=_respuesta_http(503)
+     )
+-    assert clasificar(error_404) is Clase.PETICION
+-    assert clasificar(error_503) is Clase.MODELO
++    assert classify(error_404) is FailureClass.REQUEST
++    assert classify(error_503) is FailureClass.MODEL
+ 
+ 
+ # --- Configuración --------------------------------------------------------------------------
+@@ -119,18 +119,18 @@ def test_el_status_error_de_httpx_se_clasifica_por_su_codigo():
+ def test_length_con_razonamiento_es_de_configuracion():
+     """El canary de julio: el modelo se gastó `max_tokens` pensando y no contestó."""
+     cuerpo = _cuerpo(None, finish_reason="length", reasoning="pensando muy fuerte")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.CONFIGURACION
++    assert classify(BackendResponse(status=200, data=cuerpo)) is FailureClass.CONFIGURATION
+ 
+ 
+ def test_length_sin_razonamiento_no_es_de_configuracion():
+     """Control positivo: mismo síntoma, sin rastro de razonamiento, no se adivina la causa."""
+     cuerpo = _cuerpo(None, finish_reason="length")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.SIN_CLASIFICAR
++    assert classify(BackendResponse(status=200, data=cuerpo)) is FailureClass.UNCLASSIFIED
+ 
+ 
+ def test_length_con_razonamiento_en_blanco_tampoco_cuenta():
+     cuerpo = _cuerpo(None, finish_reason="length", reasoning="   ")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.SIN_CLASIFICAR
++    assert classify(BackendResponse(status=200, data=cuerpo)) is FailureClass.UNCLASSIFIED
+ 
+ 
+ def test_contenido_vacio_con_length_y_razonamiento_es_de_configuracion():
+@@ -140,19 +140,19 @@ def test_contenido_vacio_con_length_y_razonamiento_es_de_configuracion():
+     recibía una respuesta vacía como si todo hubiera ido bien (decisión del usuario, opción A).
+     """
+     cuerpo = _cuerpo("", finish_reason="length", reasoning="pensando muy fuerte")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is Clase.CONFIGURACION
++    assert classify(BackendResponse(status=200, data=cuerpo)) is FailureClass.CONFIGURATION
+ 
+ 
+ def test_contenido_vacio_con_length_sin_razonamiento_no_es_un_fallo():
+     """Control positivo: sin rastro de razonamiento, la cadena vacía sigue tratándose como hoy."""
+     cuerpo = _cuerpo("", finish_reason="length")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is None
++    assert classify(BackendResponse(status=200, data=cuerpo)) is None
+ 
+ 
+ def test_contenido_vacio_con_razonamiento_que_termino_bien_no_es_un_fallo():
+     """Control positivo: si no se agotó `max_tokens`, un razonamiento no convierte el vacío en fallo."""
+     cuerpo = _cuerpo("", finish_reason="stop", reasoning="pensé y no hacía falta decir nada")
+-    assert clasificar(Respuesta(status=200, datos=cuerpo)) is None
++    assert classify(BackendResponse(status=200, data=cuerpo)) is None
+ 
+ 
+ # --- Modelo ---------------------------------------------------------------------------------
+@@ -160,11 +160,11 @@ def test_contenido_vacio_con_razonamiento_que_termino_bien_no_es_un_fallo():
+ 
+ def test_content_nulo_por_otro_motivo_es_del_modelo():
+     """El defecto verificado: hoy esto revienta con `AttributeError` fuera de `_post_chat`."""
+-    assert clasificar(Respuesta(status=200, datos=_cuerpo(None))) is Clase.MODELO
++    assert classify(BackendResponse(status=200, data=_cuerpo(None))) is FailureClass.MODEL
+ 
+ 
+ def test_content_ausente_es_del_modelo():
+-    assert clasificar(Respuesta(status=200, datos=_cuerpo(...))) is Clase.MODELO
++    assert classify(BackendResponse(status=200, data=_cuerpo(...))) is FailureClass.MODEL
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -173,24 +173,27 @@ def test_content_ausente_es_del_modelo():
+     ids=["sin choices", "choices vacio", "sin message", "choice que no es dict"],
+ )
+ def test_una_respuesta_rota_es_del_modelo(datos):
+-    assert clasificar(Respuesta(status=200, datos=datos)) is Clase.MODELO
++    assert classify(BackendResponse(status=200, data=datos)) is FailureClass.MODEL
+ 
+ 
+ def test_un_200_que_no_era_json_es_del_modelo():
+-    assert clasificar(Respuesta(status=200, datos=None, texto="<html>502</html>")) is Clase.MODELO
++    assert (
++        classify(BackendResponse(status=200, data=None, text="<html>502</html>"))
++        is FailureClass.MODEL
++    )
+ 
+ 
+ # --- Lo que NO es un fallo ------------------------------------------------------------------
+ 
+ 
+ def test_una_respuesta_buena_no_es_ningun_fallo():
+-    assert clasificar(Respuesta(status=200, datos=_cuerpo("la respuesta"))) is None
++    assert classify(BackendResponse(status=200, data=_cuerpo("la respuesta"))) is None
+ 
+ 
+ def test_el_content_vacio_no_es_un_fallo():
+     """Se trata como hoy. Control positivo del `content` nulo, que sí lo es."""
+-    assert clasificar(Respuesta(status=200, datos=_cuerpo(""))) is None
+-    assert clasificar(Respuesta(status=200, datos=_cuerpo(None))) is not None
++    assert classify(BackendResponse(status=200, data=_cuerpo(""))) is None
++    assert classify(BackendResponse(status=200, data=_cuerpo(None))) is not None
+ 
+ 
+ # --- Sin clasificar -------------------------------------------------------------------------
+@@ -198,21 +201,21 @@ def test_el_content_vacio_no_es_un_fallo():
+ 
+ def test_una_excepcion_ajena_no_se_achaca_al_modelo():
+     """La regla de la casa: lo desconocido nunca va a MODELO, que es la clase cara."""
+-    assert clasificar(ValueError("vete a saber")) is Clase.SIN_CLASIFICAR
++    assert classify(ValueError("vete a saber")) is FailureClass.UNCLASSIFIED
+ 
+ 
+ def test_un_status_raro_no_se_achaca_al_modelo():
+     """Un 3xx no es una respuesta de chat, pero tampoco es culpa del modelo.
+ 
+-    La segunda mitad ejercita la rama defensiva de `_clasificar_status`: `raise_for_status` nunca
++    La segunda mitad ejercita la rama defensiva de `_classify_status`: `raise_for_status` nunca
+     fabrica un `HTTPStatusError` con un 3xx, pero nada impide construirlo a mano, y una rama sin
+     prueba es la que se pudre.
+     """
+-    assert clasificar(Respuesta(status=302)) is Clase.SIN_CLASIFICAR
++    assert classify(BackendResponse(status=302)) is FailureClass.UNCLASSIFIED
+     error_302 = httpx2.HTTPStatusError(
+         "redirect", request=_respuesta_http(302).request, response=_respuesta_http(302)
+     )
+-    assert clasificar(error_302) is Clase.SIN_CLASIFICAR
++    assert classify(error_302) is FailureClass.UNCLASSIFIED
+ 
+ 
+ # --- Arrancar o no arrancar el backend ------------------------------------------------------
+@@ -225,7 +228,7 @@ def test_un_status_raro_no_se_achaca_al_modelo():
+ )
+ def test_nadie_escuchando_habilita_el_autoarranque(excepcion):
+     """REQ-F0-6: el segundo caso es el defecto verificado, hoy no ofrece arrancar nada."""
+-    assert fallos.es_backend_ausente(excepcion) is True
++    assert failures.is_backend_missing(excepcion) is True
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -244,8 +247,38 @@ def test_los_demas_fallos_de_transporte_no_lo_habilitan(excepcion):
+     Por eso la decisión no puede salir de la clase: arrancar otro backend no arregla un fallo que
+     ocurrió con la conexión ya establecida.
+     """
+-    assert fallos.es_backend_ausente(excepcion) is False
++    assert failures.is_backend_missing(excepcion) is False
+ 
+ 
+ def test_una_respuesta_nunca_habilita_el_autoarranque():
+-    assert fallos.es_backend_ausente(Respuesta(status=503)) is False
++    assert failures.is_backend_missing(BackendResponse(status=503)) is False
++
++
++# --- Valores viejos (REQ-006) -------------------------------------------------------------------
++
++
++@pytest.mark.parametrize("viejo,nuevo", sorted(legacy_names.FAILURE_CLASS_VALUES.items()))
++def test_el_valor_viejo_de_la_clase_se_lee_como_el_nuevo(viejo, nuevo):
++    """El log de uso y los eventos de enfriamiento ya escritos traen la clase en español."""
++    if nuevo == "cooldown":
++        # No es un miembro: es la clase que el daemon escribe en `fallback_class` al saltar por un
++        # modelo enfriado. Solo se traduce el valor.
++        assert legacy_names.new_value(legacy_names.FAILURE_CLASS_VALUES, viejo) == "cooldown"
++        return
++    assert FailureClass(viejo) is FailureClass(nuevo)
++
++
++def test_los_valores_que_se_escriben_son_los_nuevos():
++    escritos = {c.value for c in FailureClass}
++    assert escritos == {
++        "endpoint",
++        "request",
++        "capacity_or_load",
++        "read_timeout",
++        "configuration",
++        "model",
++        "unclassified",
++    }
++    assert not escritos & set(legacy_names.FAILURE_CLASS_VALUES), (
++        "un valor viejo sigue escribiéndose"
++    )
+diff --git a/tests/test_fallos_capturas.py b/tests/test_fallos_capturas.py
+index a3ff681..54b2239 100644
+--- a/tests/test_fallos_capturas.py
++++ b/tests/test_fallos_capturas.py
+@@ -5,7 +5,7 @@ llama-server b10909 (protocolo-f2.md §10, sesión 8), con la clase esperada esc
+ Cada una lleva sus versiones: si el backend cambia, se recapturan, no se retocan.
+ 
+ Lo que ve el cliente se reconstruye igual que en `_post_chat`: una respuesta HTTP se convierte en
+-`Respuesta` con el cuerpo recortado a 300 caracteres, y un `ReadTimeout` se clasifica con la señal
++`BackendResponse` con el cuerpo recortado a 300 caracteres, y un `ReadTimeout` se clasifica con la señal
+ de carga que daba `/running` al vencer.
+ """
+ 
+@@ -17,7 +17,7 @@ from pathlib import Path
+ import httpx2
+ import pytest
+ 
+-from local_delegate.fallos import Clase, Respuesta, clasificar
++from local_delegate.failures import BackendResponse, FailureClass, classify
+ 
+ FIXTURES = Path(__file__).parent / "fixtures" / "backend"
+ 
+@@ -35,19 +35,19 @@ def _modelo_cargado_al_terminar(doc: dict) -> bool | None:
+     return None
+ 
+ 
+-def _clasificar_captura(doc: dict) -> Clase | None:
++def _clasificar_captura(doc: dict) -> FailureClass | None:
+     if "excepcion" in doc:
+         assert doc["excepcion"]["tipo"] == "ReadTimeout", (
+             "solo se capturó ReadTimeout como excepción"
+         )
+-        return clasificar(
++        return classify(
+             httpx2.ReadTimeout(doc["excepcion"]["mensaje"]),
+-            modelo_cargado=_modelo_cargado_al_terminar(doc),
++            model_loaded=_modelo_cargado_al_terminar(doc),
+         )
+     respuesta = doc["respuesta"]
+-    return clasificar(
+-        Respuesta(
+-            status=respuesta["status"], datos=respuesta["json"], texto=respuesta["texto"][:300]
++    return classify(
++        BackendResponse(
++            status=respuesta["status"], data=respuesta["json"], text=respuesta["texto"][:300]
+         )
+     )
+ 
+@@ -68,23 +68,24 @@ def test_todas_las_capturas_llevan_version_y_clase_esperada():
+ def test_el_modelo_que_no_se_puede_montar_es_de_capacidad(nombre):
+     """OOM con la política del driver y modelo inexistente: llama-swap da el MISMO 500 a los dos."""
+     doc = _captura(nombre)
+-    assert doc["clase_esperada"] == Clase.CAPACIDAD.value
+-    assert _clasificar_captura(doc) is Clase.CAPACIDAD
++    # Las capturas guardan el valor viejo (`capacidad_o_carga`): el enum lo sigue leyendo (REQ-006).
++    assert FailureClass(doc["clase_esperada"]) is FailureClass.CAPACITY
++    assert _clasificar_captura(doc) is FailureClass.CAPACITY
+ 
+ 
+ def test_el_timeout_durante_la_carga_es_de_capacidad():
+     """`/running` decía `starting` al vencer: no se le cuenta el fallo a un modelo lento de montar."""
+     doc = _captura("timeout-durante-carga")
+     assert _modelo_cargado_al_terminar(doc) is False
+-    assert _clasificar_captura(doc) is Clase.CAPACIDAD
++    assert _clasificar_captura(doc) is FailureClass.CAPACITY
+ 
+ 
+ def test_el_mismo_timeout_con_el_modelo_ya_cargado_seria_de_lectura():
+     """Control positivo del anterior: la misma captura con la señal cambiada cambia de clase."""
+     doc = _captura("timeout-durante-carga")
+     assert (
+-        clasificar(httpx2.ReadTimeout(doc["excepcion"]["mensaje"]), modelo_cargado=True)
+-        is Clase.TIMEOUT_LECTURA
++        classify(httpx2.ReadTimeout(doc["excepcion"]["mensaje"]), model_loaded=True)
++        is FailureClass.READ_TIMEOUT
+     )
+ 
+ 
+@@ -107,7 +108,7 @@ def test_el_oom_sin_perfil_no_llego_a_timeout_y_queda_sin_capturar():
+     demuestra, para que nadie la cite como si lo hiciera.
+     """
+     doc = _captura("oom-sin-perfil")
+-    assert doc["clase_esperada"] == Clase.TIMEOUT_LECTURA.value
++    assert FailureClass(doc["clase_esperada"]) is FailureClass.READ_TIMEOUT
+     assert "excepcion" not in doc
+     assert doc["respuesta"]["status"] == 200
+     assert _clasificar_captura(doc) is None
+@@ -119,13 +120,13 @@ def test_el_razonamiento_que_agota_max_tokens_es_de_configuracion():
+     mensaje = doc["respuesta"]["json"]["choices"][0]["message"]
+     assert mensaje["content"] == "", "la captura es la que destapó el vacío: si cambia, recapturar"
+     assert mensaje["reasoning_content"].strip()
+-    assert _clasificar_captura(doc) is Clase.CONFIGURACION
++    assert _clasificar_captura(doc) is FailureClass.CONFIGURATION
+ 
+ 
+ def test_un_500_de_llama_swap_que_no_es_de_carga_sigue_siendo_del_modelo():
+     """Control positivo del patrón: otro 500 del mismo origen, sin el texto de carga, no es capacidad."""
+     cuerpo = '{"src":"llama-swap","error":{"message":"upstream error","type":"server_error"}}'
+-    assert clasificar(Respuesta(status=500, texto=cuerpo)) is Clase.MODELO
++    assert classify(BackendResponse(status=500, text=cuerpo)) is FailureClass.MODEL
+ 
+ 
+ def test_ninguna_captura_lleva_rutas_ni_credenciales():
+diff --git a/tests/test_fallos_integracion.py b/tests/test_fallos_integracion.py
+index c205373..89b9e5c 100644
+--- a/tests/test_fallos_integracion.py
++++ b/tests/test_fallos_integracion.py
+@@ -12,7 +12,7 @@ import backend_mock
+ import httpx2
+ import pytest
+ 
+-from local_delegate import config, fallos, server
++from local_delegate import config, failures, server
+ 
+ URL = "http://test-backend/v1/chat/completions"
+ 
+@@ -56,7 +56,7 @@ def test_content_nulo_devuelve_un_error_legible(backend):
+     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": None}}]}))
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert resultado.ok is False
+-    assert resultado.clase == fallos.Clase.MODELO
++    assert resultado.clase == failures.FailureClass.MODEL
+     assert "[local-delegate error]" in resultado.text
+ 
+ 
+@@ -87,7 +87,7 @@ def test_razonamiento_que_se_come_max_tokens_se_dice_en_claro(backend):
+     )
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert resultado.ok is False
+-    assert resultado.clase == fallos.Clase.CONFIGURACION
++    assert resultado.clase == failures.FailureClass.CONFIGURATION
+     assert "max_tokens" in resultado.text
+ 
+ 
+@@ -109,7 +109,7 @@ def test_razonamiento_con_contenido_vacio_tambien_se_dice_en_claro(backend):
+     )
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert resultado.ok is False
+-    assert resultado.clase == fallos.Clase.CONFIGURACION
++    assert resultado.clase == failures.FailureClass.CONFIGURATION
+     assert resultado.error == "config_max_tokens"
+ 
+ 
+@@ -123,7 +123,7 @@ def test_connect_timeout_ofrece_arrancar_el_backend(backend, sin_preguntar):
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert sin_preguntar, "no se ofreció arrancar el backend"
+     assert resultado.ok is False
+-    assert resultado.clase == fallos.Clase.ENDPOINT
++    assert resultado.clase == failures.FailureClass.ENDPOINT
+     assert resultado.error == "connect_error"
+ 
+ 
+@@ -143,7 +143,7 @@ def test_read_timeout_no_ofrece_arrancar_nada(backend, sin_preguntar):
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert not sin_preguntar, "se ofreció arrancar un backend que ya estaba corriendo"
+     assert resultado.ok is False
+-    assert resultado.clase == fallos.Clase.CAPACIDAD
++    assert resultado.clase == failures.FailureClass.CAPACITY
+     assert resultado.error != "http_error"
+ 
+ 
+@@ -153,14 +153,14 @@ def test_un_error_de_transporte_cualquiera_sigue_siendo_del_endpoint(backend, si
+     backend(side_effect=httpx2.RemoteProtocolError("server disconnected"))
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+     assert not sin_preguntar
+-    assert resultado.clase == fallos.Clase.ENDPOINT
++    assert resultado.clase == failures.FailureClass.ENDPOINT
+ 
+ 
+ @backend_mock.mock
+ def test_un_500_es_del_modelo(backend):
+     backend(return_value=httpx2.Response(500, text="boom"))
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+-    assert resultado.clase == fallos.Clase.MODELO
++    assert resultado.clase == failures.FailureClass.MODEL
+     assert resultado.error == "http_500", "el codigo de error de siempre no cambia"
+ 
+ 
+@@ -169,7 +169,7 @@ def test_un_400_es_de_la_peticion(backend):
+     """En test aparte: dos rutas para la misma URL no se pisan, gana la primera registrada."""
+     backend(return_value=httpx2.Response(400, text="context too long"))
+     resultado = server._post_chat("modelo", {"model": "modelo"})
+-    assert resultado.clase == fallos.Clase.PETICION
++    assert resultado.clase == failures.FailureClass.REQUEST
+     assert resultado.error == "http_400"
+ 
+ 
+diff --git a/tests/test_measure_slowness.py b/tests/test_measure_slowness.py
+index c5122d4..5f9b9e6 100644
+--- a/tests/test_measure_slowness.py
++++ b/tests/test_measure_slowness.py
+@@ -42,7 +42,7 @@ def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **
+     return {
+         "id": i,
+         "ts": float(i),
+-        "modelo": MODEL,
++        "model": MODEL,
+         "tok_s": tok_s,
+         "tokens_out": tokens_out,
+         "tokens_in": tokens_in,
+@@ -115,7 +115,7 @@ def test_failed_event_not_in_normal_speed() -> None:
+ 
+ 
+ def test_each_model_has_its_window() -> None:
+-    slow_ones = [{**_ev(i, 100.0), "modelo": "rapido"} for i in range(12)]
++    slow_ones = [{**_ev(i, 100.0), "model": "rapido"} for i in range(12)]
+     slow_ones += [_ev(100 + i, 10.0) for i in range(12)]
+     result = ml.compute_slowness(slow_ones)
+     assert not any(e.get("slow") for e in result)  # 10 tok/s es normal para modelo-a
+diff --git a/tests/test_medir_adopcion.py b/tests/test_medir_adopcion.py
+index 1c796a2..1b9b2dc 100644
+--- a/tests/test_medir_adopcion.py
++++ b/tests/test_medir_adopcion.py
+@@ -298,3 +298,21 @@ def test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas(escenar
+     _escribir(escenario, nuevas)
+ 
+     assert medir_adopcion.medir("2026-09-10") == antes
++
++
++# --- Log de uso viejo y nuevo (REQ-006, ola A3 del renombrado) ---------------------------------
++
++
++def test_el_block_id_nuevo_cuenta_igual_que_el_bloqueo_id_viejo(escenario):
++    """El escenario trae la delegación aceptada con `bloqueo_id` (0.34.0). Con `block_id`, la
++    aceptación y las delegaciones espontáneas salen iguales."""
++    antes = medir_adopcion.medir("2026-09-10")
++    assert antes["aceptados"] == 1, "guarda: el escenario cruza un bloqueo con su delegación"
++    uso = config.LOG_DIR / "usage-202609.jsonl"
++    filas = [json.loads(x) for x in uso.read_text(encoding="utf-8").splitlines() if x]
++    assert any("bloqueo_id" in f for f in filas), "guarda: el escenario trae la clave vieja"
++    _escribir(
++        uso, [{("block_id" if k == "bloqueo_id" else k): v for k, v in f.items()} for f in filas]
++    )
++
++    assert medir_adopcion.medir("2026-09-10") == antes
+diff --git a/tests/test_medir_enfriamiento.py b/tests/test_medir_enfriamiento.py
+index 6b5d219..7c32ab6 100644
+--- a/tests/test_medir_enfriamiento.py
++++ b/tests/test_medir_enfriamiento.py
+@@ -412,3 +412,53 @@ def test_excluir_compara_instantes_y_no_cadenas(logs):
+     m = logs.medir(excluidos=[("2026-09-20T01:20:05.255Z", "2026-09-20T01:22:31.544Z")])
+     assert m["excluded_manual"]["usage_rows"] == 1
+     assert m["fallos_que_cuentan"] == 0
++
++
++# --- Formato viejo, nuevo y mezclado (REQ-007, ola A3) --------------------------------------------
++
++_VIEJA_A_NUEVA = {
++    "modelo": "model",
++    "timeout_lectura": "read_timeout",
++    "capacidad_o_carga": "capacity_or_load",
++    "peticion": "request",
++    "enfriamiento": "cooldown",
++}
++
++
++def _escenario(logs: Logs, formato: str) -> dict:
++    """El mismo tramo de P-4 escrito con las clases viejas, las nuevas o mitad y mitad."""
++
++    def clase(vieja: str, i: int) -> str:
++        if formato == "viejo" or (formato == "mezclado" and i % 2 == 0):
++            return vieja
++        return _VIEJA_A_NUEVA[vieja]
++
++    for i, vieja in enumerate(["modelo"] * 4 + ["timeout_lectura"] * 4 + ["capacidad_o_carga"] * 3):
++        logs.fallos(1, clase=clase(vieja, i))
++    for i in range(4):
++        logs.usos.append(
++            {"ts": _ts(20), "tool": "local_summarize", "fallback_class": clase("enfriamiento", i)}
++        )
++        logs.usos.append(
++            {"ts": _ts(21), "tool": "local_summarize", "fallback_class": clase("modelo", i)}
++        )
++    for dia in range(20, 26):
++        vieja = "timeout_lectura" if dia < 23 else "modelo"
++        esperas = (240.0,) if dia < 22 else ()
++        logs.episodio(dia, modelo=f"m{dia}", clase=clase(vieja, dia), esperas_reentrada=esperas)
++    return logs.medir()
++
++
++def test_el_informe_es_el_mismo_con_clases_viejas_nuevas_y_mezcladas(tmp_path, monkeypatch):
++    medidas = {}
++    for formato in ("viejo", "nuevo", "mezclado"):
++        directorio = tmp_path / formato
++        monkeypatch.setattr(config, "LOG_DIR", directorio)
++        medidas[formato] = _escenario(Logs(directorio), formato)
++        medidas[formato].pop("excluidos", None)
++    # Guarda: el escenario llega a contar algo en cada medida que depende de la clase.
++    assert medidas["viejo"]["fallos_que_cuentan"] == 12
++    assert medidas["viejo"]["episodios_por_timeout"] == 3
++    assert medidas["viejo"]["operaciones_desviadas"] == 4
++    assert medidas["nuevo"] == medidas["viejo"]
++    assert medidas["mezclado"] == medidas["viejo"]
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index 500dded..5598769 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -17,7 +17,7 @@ import httpx2
+ import pytest
+ from fastapi.testclient import TestClient
+ 
+-from local_delegate import config, coste, server
++from local_delegate import config, coste, failures, legacy_names, server
+ from local_delegate.web import metrics
+ 
+ 
+@@ -190,9 +190,9 @@ def test_api_backend_unavailable(monkeypatch):
+         "running_ok": False,  # /running ni se pide con /models caído (REQ-013)
+         "models": [],
+         "models_stale": True,
+-        "causa": "transporte",
+-        "etiqueta": "fallo de red",
+-        "detalle": "fallo de red con test-backend (ConnectError)",
++        "cause": "transport",
++        "label": "fallo de red",
++        "detail": "fallo de red con test-backend (ConnectError)",
+         "origin": "remote",  # host no-loopback => la inferencia correría fuera de esta máquina
+         "host": "test-backend",
+     }
+@@ -280,9 +280,9 @@ def test_api_backend_stats_unavailable_on_404(monkeypatch):
+     client = TestClient(metrics.app)
+     assert client.get("/api/backend/stats").json() == {
+         "available": False,
+-        "causa": "http_error",
+-        "etiqueta": "responde con error",
+-        "detalle": "test-backend responde HTTP 404",
++        "cause": "http_error",
++        "label": "responde con error",
++        "detail": "test-backend responde HTTP 404",
+         "status_http": 404,
+     }
+ 
+@@ -297,9 +297,9 @@ def test_api_status_backend_down(monkeypatch):
+         "available": False,
+         "models": [],
+         "models_stale": True,
+-        "causa": "transporte",
+-        "etiqueta": "fallo de red",
+-        "detalle": "fallo de red con test-backend (ConnectError)",
++        "cause": "transport",
++        "label": "fallo de red",
++        "detail": "fallo de red con test-backend (ConnectError)",
+         "origin": "remote",
+         "host": "test-backend",
+     }
+@@ -323,9 +323,9 @@ def test_api_backend_dice_la_causa_de_un_401(monkeypatch):
+ 
+     j = TestClient(metrics.app).get("/api/backend").json()
+ 
+-    assert j.get("causa") == "credencial"
++    assert j.get("cause") == "credential"
+     assert j["available"] is False
+-    assert "401" in (j.get("detalle") or "")
++    assert "401" in (j.get("detail") or "")
+ 
+ 
+ @backend_mock.mock
+@@ -346,7 +346,7 @@ def test_api_backend_conserva_la_lista_y_la_marca_vieja(monkeypatch):
+     assert bueno.get("models_stale") is False
+     assert [m["id"] for m in j["models"]] == ["m1"]
+     assert j["models"][0]["status"] is None
+-    assert j.get("causa") == "transporte"
++    assert j.get("cause") == "transport"
+ 
+ 
+ @backend_mock.mock
+@@ -392,9 +392,9 @@ def test_api_status_dice_la_causa_en_el_bloque_backend(monkeypatch):
+ 
+     data = TestClient(metrics.app).get("/api/status").json()
+ 
+-    assert data["backend"].get("causa") == "credencial"
++    assert data["backend"].get("cause") == "credential"
+     assert data["backend"].get("models_stale") is True
+-    assert "401" in (data["backend"].get("detalle") or "")
++    assert "401" in (data["backend"].get("detail") or "")
+ 
+ 
+ @backend_mock.mock
+@@ -406,7 +406,7 @@ def test_api_backend_stats_dice_el_codigo_con_un_404(monkeypatch):
+     j = TestClient(metrics.app).get("/api/backend/stats").json()
+ 
+     assert j.get("status_http") == 404
+-    assert j.get("causa") == "http_error"
++    assert j.get("cause") == "http_error"
+     assert j["available"] is False
+ 
+ 
+@@ -416,9 +416,9 @@ def test_api_backend_stats_dice_la_causa_con_un_nombre_que_no_resuelve(monkeypat
+ 
+     j = TestClient(metrics.app).get("/api/backend/stats").json()
+ 
+-    assert j.get("causa") == "dns"
++    assert j.get("cause") == "dns"
+     assert j.get("status_http") is None
+-    assert "no-existe.invalid" in (j.get("detalle") or "")
++    assert "no-existe.invalid" in (j.get("detail") or "")
+ 
+ 
+ def _plazo_de_conexion(t):
+@@ -1192,7 +1192,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+             fallback_reason="http_500",
+             fallback_class="modelo",
+             error="http_503",
+-            error_class="sin_clasificar",
++            error_class="unclassified",
+             chunks=3,
+         ),
+         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
+@@ -1250,7 +1250,10 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+         c.get("routing") == "affinity" and not py["fallback"]
+         for c, py in zip(casos, desde_py, strict=True)
+     ), "falta el caso de afinidad"
+-    assert any(py["cause"] == "configuracion" for py in desde_py)
++    # Filas viejas y nuevas (REQ-006): las dos copias traducen la clase con la misma tabla.
++    assert any(c.get("error_class") == "configuracion" for c in casos), "falta la fila vieja"
++    assert any(c.get("error_class") == "unclassified" for c in casos), "falta la fila nueva"
++    assert any(py["cause"] == "configuration" for py in desde_py)
+     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
+     # devuelto que da 0 en las dos copias.
+     origenes = {c["densidad"]["text"][1] for c in casos if c["densidad"]["text"]}
+@@ -1274,6 +1277,8 @@ def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
+         "import {readFileSync} from 'node:fs';\n"
+         "const CPT = 4;\n"
+         "const tok = c => Math.floor(c/CPT);\n"
++        f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
++        f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
+         f"{tokens_claude_js}\n"
+         f"{acct_js}\n"
+         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
+@@ -1423,7 +1428,7 @@ def test_accounting_marca_el_salto_y_su_causa():
+         )
+     )
+     assert a["fallback"] is True
+-    assert a["cause"] == "modelo"
++    assert a["cause"] == "model"
+     assert a["backend_calls"] == 2, "la llamada del respaldo también gastó backend"
+ 
+ 
+@@ -1436,9 +1441,10 @@ def test_accounting_affinity_is_not_fallback():
+ 
+ 
+ def test_accounting_causa_de_configuracion_en_un_fallo():
++    # Fila del formato viejo (0.34.0): la causa sale ya en el formato nuevo (REQ-006).
+     a = metrics._accounting(_ev(ok=False, error="config_max_tokens", error_class="configuracion"))
+     assert a["fallback"] is False
+-    assert a["cause"] == "configuracion"
++    assert a["cause"] == "configuration"
+ 
+ 
+ def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
+@@ -1447,10 +1453,10 @@ def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
+             ok=False,
+             model_requested="gemma4-26b-a4b",
+             fallback_class="modelo",
+-            error_class="sin_clasificar",
++            error_class="unclassified",
+         )
+     )
+-    assert a["cause"] == "sin_clasificar", "manda cómo acabó la operación, no por qué saltó"
++    assert a["cause"] == "unclassified", "manda cómo acabó la operación, no por qué saltó"
+     assert a["fallback"] is True
+ 
+ 
+@@ -1483,7 +1489,7 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
+                 model="gemma4-26b-a4b",
+                 ok=False,
+                 error="config_max_tokens",
+-                error_class="configuracion",
++                error_class="configuration",
+                 tokens_in=50,
+                 tokens_out=0,
+             ),
+@@ -1497,13 +1503,71 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
+         .json()
+     )
+     assert j["fallback_events"] == 1
+-    assert j["causes"] == {"modelo": 1, "configuracion": 1}
++    # El salto es una fila vieja (`modelo`) y el fallo una nueva: cuentan juntos (REQ-006).
++    assert j["causes"] == {"model": 1, "configuration": 1}
+     por_modelo = {m["model"]: m for m in j["by_model"]}
+     assert por_modelo["gemma3-4b"]["tokens_in"] == 600, "los tokens del salto van al que respondió"
+     assert por_modelo["gemma3-4b"]["backend_calls"] == 3
+     assert por_modelo["gemma3-4b"]["fallback_calls"] == 1
+ 
+ 
++def test_un_log_con_filas_viejas_y_nuevas_se_lee_como_si_fueran_todas_nuevas(tmp_path, monkeypatch):
++    """Escenario de la spec (REQ-005/006, ola A3): en un mismo `usage-*.jsonl` conviven filas de la
++    0.34.0 (`bloqueo_id`, `fallo_conexion: rechazada`, `error_class: timeout_lectura`) y filas
++    nuevas. `/api/events` las entrega todas con las claves y valores nuevos, y `/api/stats` suma
++    las causas viejas y nuevas en el mismo cubo, con la misma etiqueta."""
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
++    viejas = [
++        _ev(ts="2026-07-15T10:00:00+00:00", bloqueo_id="b-viejo", secciones=4),
++        _ev(
++            ts="2026-07-15T10:01:00+00:00",
++            ok=False,
++            error="connect_error",
++            error_class="endpoint",
++            fallo_conexion="rechazada",
++        ),
++        _ev(
++            ts="2026-07-15T10:02:00+00:00", ok=False, error="timeout", error_class="timeout_lectura"
++        ),
++    ]
++    nuevas = [
++        _ev(ts="2026-07-15T11:00:00+00:00", block_id="b-nuevo", sections=4),
++        _ev(
++            ts="2026-07-15T11:01:00+00:00",
++            ok=False,
++            error="connect_error",
++            error_class="endpoint",
++            connection_failure="refused",
++        ),
++        _ev(ts="2026-07-15T11:02:00+00:00", ok=False, error="timeout", error_class="read_timeout"),
++    ]
++    _write_jsonl(tmp_path / "usage-202607.jsonl", viejas + nuevas)
++    metrics._FILE_CACHE.clear()
++    cliente = TestClient(metrics.app)
++    rango = "from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00"
++
++    eventos = cliente.get(f"/api/events?{rango}").json()["events"]
++    assert len(eventos) == 6
++    assert sorted(e["block_id"] for e in eventos if "block_id" in e) == ["b-nuevo", "b-viejo"]
++    assert [e["connection_failure"] for e in eventos if "connection_failure" in e] == [
++        "refused",
++        "refused",
++    ]
++    assert [e.get("sections") for e in eventos if e.get("sections")] == [4, 4]
++    viejas_en_la_salida = {"bloqueo_id", "secciones", "fallo_conexion"} & {
++        k for e in eventos for k in e
++    }
++    assert not viejas_en_la_salida, viejas_en_la_salida
++
++    j = cliente.get(f"/api/stats?{rango}").json()
++    assert j["causes"] == {"endpoint": 2, "read_timeout": 2}
++    etiquetas = {
++        failures.label(e["connection_failure"]) for e in eventos if "connection_failure" in e
++    }
++    assert etiquetas == {"nadie escucha"}
++
++
+ def test_el_panel_marca_las_operaciones_con_salto():
+     html = metrics.HTML
+     assert "e.model_requested" in html and "fbchip" in html
+diff --git a/tests/test_observabilidad_respaldo.py b/tests/test_observabilidad_respaldo.py
+index 3bfbd7d..35776fd 100644
+--- a/tests/test_observabilidad_respaldo.py
++++ b/tests/test_observabilidad_respaldo.py
+@@ -27,7 +27,7 @@ from test_respaldo import (
+ )
+ 
+ from local_delegate import enfriamiento, server
+-from local_delegate.fallos import Clase
++from local_delegate.failures import FailureClass
+ 
+ CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_class")
+ 
+@@ -46,7 +46,7 @@ def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config,
+     assert evento["model"] == CODIGO, "`model` es el que respondió"
+     assert evento["model_requested"] == LARGO
+     assert evento["fallback_reason"] == "http_500"
+-    assert evento["fallback_class"] == "modelo"
++    assert evento["fallback_class"] == "model"
+     assert evento["chunks"] == 2, "la llamada del respaldo también cuenta"
+     assert "error_class" not in evento
+ 
+@@ -92,7 +92,7 @@ def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(recargar_conf
+     server.local_classify(text="hola", labels=["a", "b"])
+ 
+     evento = _ultimo_evento(tmp_path)
+-    assert evento["error_class"] == "configuracion"
++    assert evento["error_class"] == "configuration"
+     assert evento["error"] == "config_max_tokens"
+     assert "model_requested" not in evento
+ 
+@@ -108,7 +108,7 @@ def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp
+     evento = _ultimo_evento(tmp_path)
+     assert evento["model"] == LARGO
+     assert evento["model_requested"] == CODIGO
+-    assert evento["fallback_class"] == "enfriamiento"
++    assert evento["fallback_class"] == "cooldown"
+     assert "chunks" not in evento, "el modelo enfriado no se llamó: una sola llamada"
+ 
+ 
+@@ -124,7 +124,7 @@ def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_pat
+ 
+     evento = _ultimo_evento(tmp_path)
+     assert evento["model"] == LARGO and evento["model_requested"] == CODIGO
+-    assert evento["fallback_class"] == "modelo"
++    assert evento["fallback_class"] == "model"
+ 
+ 
+ # --- local_status ------------------------------------------------------------------------------
+@@ -138,7 +138,7 @@ def status_sin_red(monkeypatch):
+     monkeypatch.setattr(
+         server,
+         "sondear_backend",
+-        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
++        lambda: server.EstadoBackend(False, [], True, "refused", "sin red en los tests", None),
+     )
+     for nombre in ("_vram_info", "_ram_info", "_llamaswap_groups"):
+         monkeypatch.setattr(server, nombre, lambda: None)
+@@ -157,7 +157,7 @@ def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
+     recargar_config()
+     estado = enfriamiento.desde_config()
+     for _ in range(3):
+-        estado.registrar_fallo(CODIGO, Clase.MODELO)
++        estado.registrar_fallo(CODIGO, FailureClass.MODEL)
+ 
+     linea = _linea_de(server.local_status(), CODIGO)
+ 
+@@ -170,7 +170,7 @@ def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path,
+     recargar_config()
+     vencido = {CODIGO: {"fallos": 0, "espera_s": 120.0, "hasta": time.time() - 1, "reentradas": 1}}
+     _estado_fichero(tmp_path).write_text(json.dumps(vencido), encoding="utf-8")
+-    enfriamiento.desde_config().registrar_fallo(CODIGO, Clase.MODELO)
++    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
+ 
+     linea = _linea_de(server.local_status(), CODIGO)
+ 
+diff --git a/tests/test_pace.py b/tests/test_pace.py
+index f0be221..0614ea2 100644
+--- a/tests/test_pace.py
++++ b/tests/test_pace.py
+@@ -24,7 +24,7 @@ def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **
+     return {
+         "id": i,
+         "ts": float(i),
+-        "modelo": MODEL,
++        "model": MODEL,
+         "tok_s": tok_s,
+         "tokens_out": tokens_out,
+         "tokens_in": tokens_in,
+diff --git a/tests/test_panel_estados.py b/tests/test_panel_estados.py
+index 1511a8c..68a3e2d 100644
+--- a/tests/test_panel_estados.py
++++ b/tests/test_panel_estados.py
+@@ -46,7 +46,7 @@ def _globales() -> str:
+     for funcion in ("vistaInicial", "turnWords"):
+         if f"function {funcion}(" in metrics.HTML:
+             partes.append(_extraer(f"function {funcion}("))
+-    for nombre in ("CAUSAS_CONTESTA", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
++    for nombre in ("CAUSES_ANSWERING", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
+         if f"const {nombre} = {{" in metrics.HTML:
+             partes.append(_const(nombre))
+     return "\n".join(partes)
+@@ -74,9 +74,9 @@ BUENO = {
+         {"id": "qwen36-35b-a3b", "status": "unloaded"},
+     ],
+     "models_stale": False,
+-    "causa": None,
+-    "etiqueta": None,
+-    "detalle": None,
++    "cause": None,
++    "label": None,
++    "detail": None,
+ }
+ FALLIDO = {
+     "available": False,
+@@ -84,9 +84,9 @@ FALLIDO = {
+     "running_ok": False,
+     "models": [{**m, "status": None} for m in BUENO["models"]],
+     "models_stale": True,
+-    "causa": "dns",
+-    "etiqueta": "no resuelve",
+-    "detalle": "no se resuelve el nombre pc.lan:9292 (¿VPN o DNS?)",
++    "cause": "dns",
++    "label": "no resuelve",
++    "detail": "no se resuelve el nombre pc.lan:9292 (¿VPN o DNS?)",
+ }
+ CATALOGO = [
+     {"role": "mechanical", "label": "mecánico", "model": "gemma4-26b-a4b"},
+@@ -97,7 +97,7 @@ CATALOGO = [
+ 
+ 
+ def _fallido(causa: str, etiqueta: str, detalle: str) -> dict:
+-    return {**FALLIDO, "causa": causa, "etiqueta": etiqueta, "detalle": detalle}
++    return {**FALLIDO, "cause": causa, "label": etiqueta, "detail": detalle}
+ 
+ 
+ # --- estadoVisible: dos sondeos fallidos antes de «caído» (REQ-028) ----------------------------
+@@ -175,10 +175,10 @@ def _badge(tmp_path, secuencia: list[dict]) -> dict:
+ 
+ 
+ def test_el_badge_dice_la_causa(tmp_path):
+-    """Control (b). Mutante 1: `credencial` como caída → falla `clase == "warn"`. Mutante 2:
++    """Control (b). Mutante 1: `credential` como caída → falla `clase == "warn"`. Mutante 2:
+     `title` fijo → falla `title == detalle`."""
+     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
+-    cred = _fallido("credencial", "sin acceso", det_401)
++    cred = _fallido("credential", "sin acceso", det_401)
+     b = _badge(tmp_path, [cred, cred])
+     clase, texto, title = b["clase"], b["texto"], b["title"]
+     assert clase == "warn"
+@@ -193,17 +193,29 @@ def test_el_badge_dice_la_causa(tmp_path):
+     b = _badge(tmp_path, [FALLIDO, FALLIDO])
+     assert b["texto"] == "caído · no resuelve"
+     assert b["clase"] == "down"
+-    assert b["title"] == FALLIDO["detalle"]
++    assert b["title"] == FALLIDO["detail"]
+ 
+     b = _badge(tmp_path, [BUENO])
+     assert (b["texto"], b["clase"], b["title"]) == ("conectado", "up", "http://pc.lan:9292/v1")
+ 
+ 
++def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
++    """REQ-009: el diccionario de causas del JS acepta el valor viejo y el nuevo, con la tabla que
++    inyecta el servidor (`LEGACY_VALUES.connectionCause`), no con una copia propia."""
++    det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
++    viejo = _fallido("credencial", "sin acceso", det_401)
++    b = _badge(tmp_path, [viejo, viejo])
++    assert (b["clase"], b["texto"]) == ("warn", "sin acceso")
++    assert "credencial" not in re.sub(
++        r"//[^\n]*", "", metrics.HTML.split("CAUSES_ANSWERING", 1)[1][:200]
++    )
++
++
+ def test_el_badge_avisa_del_ultimo_sondeo_sin_dejar_de_decir_conectado(tmp_path):
+     """REQ-028: un fallo tras uno bueno conserva «conectado» y lo cuenta en el `title`."""
+     b = _badge(tmp_path, [BUENO, FALLIDO])
+     assert b["texto"] == "conectado"
+-    assert "último sondeo: " + FALLIDO["detalle"] in b["title"]
++    assert "último sondeo: " + FALLIDO["detail"] in b["title"]
+ 
+     b = _badge(tmp_path, [FALLIDO])
+     assert b["texto"] == "comprobando…"
+@@ -418,11 +430,11 @@ def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
+         tmp_path,
+         funciones,
+         """
+-        renderBackendStats({available:false, causa:'dns', etiqueta:'no resuelve',
+-                            detalle:'no se resuelve el nombre pc.lan (¿VPN o DNS?)'});
++        renderBackendStats({available:false, cause:'dns', label:'no resuelve',
++                            detail:'no se resuelve el nombre pc.lan (¿VPN o DNS?)'});
+         const dns = _els.backendStats.innerHTML;
+-        renderBackendStats({available:false, causa:'http_error', etiqueta:'responde con error',
+-                            detalle:'pc.lan responde HTTP 404', status_http:404});
++        renderBackendStats({available:false, cause:'http_error', label:'responde con error',
++                            detail:'pc.lan responde HTTP 404', status_http:404});
+         const e404 = _els.backendStats.innerHTML;
+         salida(({dns, e404}));
+         """,
+@@ -624,7 +636,7 @@ def test_ultima_delegacion_cuando_nada_corre(tmp_path):
+ 
+ 
+ def test_el_js_no_redacta_las_etiquetas_de_las_causas():
+-    """REQ-011: la etiqueta corta llega del daemon (`fallos.py`); el panel no tiene su copia."""
++    """REQ-011: la etiqueta corta llega del daemon (`failures.py`); el panel no tiene su copia."""
+     for etiqueta in ("no resuelve", "nadie escucha", "sin acceso", "responde con error"):
+         assert not re.search(rf"['\"]{etiqueta}['\"]", metrics.HTML), etiqueta
+ 
+diff --git a/tests/test_respaldo.py b/tests/test_respaldo.py
+index ae7b5b1..f1305ee 100644
+--- a/tests/test_respaldo.py
++++ b/tests/test_respaldo.py
+@@ -23,7 +23,7 @@ import backend_mock
+ import httpx2
+ 
+ from local_delegate import cadenas, config, enfriamiento, preguntas, server
+-from local_delegate.fallos import Clase
++from local_delegate.failures import FailureClass
+ 
+ URL = "http://test-backend/v1/chat/completions"
+ MECANICO = "gemma3-4b"
+@@ -74,7 +74,7 @@ def _estado_fichero(tmp_path: Path) -> Path:
+ def _enfriar(tmp_path: Path, modelo: str) -> None:
+     enfriamiento.Estado(
+         _estado_fichero(tmp_path), fallos=1, espera_s=120, espera_max_s=900
+-    ).registrar_fallo(modelo, Clase.MODELO)
++    ).registrar_fallo(modelo, FailureClass.MODEL)
+ 
+ 
+ def _entradas(tmp_path: Path) -> dict:
+@@ -178,7 +178,7 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
+     server.local_explain_code(code="x = 1")
+     server.local_explain_code(code="x = 2")
+     # El tercer fallo lo registra «otro proceso»: otra instancia sobre el mismo fichero.
+-    enfriamiento.desde_config().registrar_fallo(CODIGO, Clase.MODELO)
++    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
+     assert enfriamiento.desde_config().consultar(CODIGO) is not None
+ 
+     pedidos.clear()
+@@ -645,7 +645,7 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
+         with lock:
+             inside -= 1
+         if model == CODIGO:
+-            return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
++            return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
+         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
+ 
+     decide = server._next_hop
+diff --git a/tests/test_resumen_estructurado.py b/tests/test_resumen_estructurado.py
+index e0595c7..ce2f5a5 100644
+--- a/tests/test_resumen_estructurado.py
++++ b/tests/test_resumen_estructurado.py
+@@ -295,7 +295,7 @@ def test_sin_titulos_el_payload_es_el_de_main(monkeypatch, tmp_path):
+     assert payload["messages"][0]["content"] == SISTEMA_MAIN
+     assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"
+     assert payload["max_tokens"] == 364
+-    assert "secciones" not in _eventos(tmp_path)[0]
++    assert "sections" not in _eventos(tmp_path)[0]
+ 
+ 
+ def test_con_el_interruptor_apagado_el_payload_es_el_de_main(monkeypatch, tmp_path):
+@@ -332,7 +332,7 @@ def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatc
+     assert salida.rstrip().endswith("que no entraron a tu contexto)")
+     assert salida.index("secciones sin resumir") < salida.index("(leído server-side")
+     evento = _eventos(tmp_path)[0]
+-    assert evento["secciones"] == 3
++    assert evento["sections"] == 3
+     assert evento["chars_out"] == len(salida.split("\n\n(leído server-side")[0])
+ 
+ 
+@@ -463,7 +463,7 @@ def test_documento_largo_se_resume_por_secciones_y_se_concatena(monkeypatch, tmp
+     assert "(sin resumir)" not in salida
+     evento = _eventos(tmp_path)[0]
+     assert evento["chunks"] == len(vistos)
+-    assert evento["secciones"] == 30
++    assert evento["sections"] == 30
+     assert f"(resumido de {len(vistos)} partes" in salida
+ 
+ 
+@@ -637,7 +637,7 @@ def test_la_introduccion_se_pide_y_se_completa(monkeypatch, tmp_path):
+     lista = _lista_del_prompt(vistos[0]["messages"][1]["content"])
+     assert [t for t, _p, _s in lista] == ["Introducción", "Uno", "Dos"]
+     assert salida.startswith("## Introducción\n(sin resumir)")
+-    assert _eventos(tmp_path)[0]["secciones"] == 3
++    assert _eventos(tmp_path)[0]["sections"] == 3
+ 
+ 
+ def test_con_el_modelo_mecanico_va_en_prosa_aunque_haya_titulos(monkeypatch, tmp_path):
+diff --git a/tests/test_sonda_carga.py b/tests/test_sonda_carga.py
+index 4a33675..7fb9f9f 100644
+--- a/tests/test_sonda_carga.py
++++ b/tests/test_sonda_carga.py
+@@ -18,7 +18,7 @@ import backend_mock
+ import httpx2
+ import pytest
+ 
+-from local_delegate import config, fallos, server
++from local_delegate import config, failures, server
+ 
+ URL_CHAT = "http://test-backend/v1/chat/completions"
+ URL_RUNNING = "http://test-backend/running"
+@@ -142,7 +142,7 @@ def _timeout_tras(segundos: float):
+ @backend_mock.mock
+ @pytest.mark.parametrize(
+     ("estado", "clase"),
+-    [("ready", fallos.Clase.TIMEOUT_LECTURA), ("starting", fallos.Clase.CAPACIDAD)],
++    [("ready", failures.FailureClass.READ_TIMEOUT), ("starting", failures.FailureClass.CAPACITY)],
+ )
+ def test_post_chat_clasifica_el_timeout_con_la_muestra(backend, monkeypatch, estado, clase):
+     """La pieza en su uso: el `ReadTimeout` real de `_post_chat` lleva la señal de la sonda."""
+diff --git a/tests/test_sondeo_backend.py b/tests/test_sondeo_backend.py
+index 8e03f6c..15d2b89 100644
+--- a/tests/test_sondeo_backend.py
++++ b/tests/test_sondeo_backend.py
+@@ -130,7 +130,7 @@ def test_el_sondeo_fallido_marca_la_lista_como_vieja(remoto):
+ 
+     assert bueno.models_stale is False and bueno.causa is None and bueno.detalle is None
+     assert malo.models_stale is True
+-    assert malo.causa == "transporte"
++    assert malo.causa == "transport"
+     assert malo.status_http is None
+ 
+ 
+@@ -162,7 +162,7 @@ def test_un_cuerpo_con_otra_forma_es_respuesta_invalida(remoto, cuerpo):
+     estado = server.sondear_backend()
+ 
+     assert estado.available is False
+-    assert estado.causa == "respuesta_invalida"
++    assert estado.causa == "invalid_response"
+     assert "/models" in estado.detalle
+ 
+ 
+@@ -187,7 +187,7 @@ def test_un_401_es_credencial_y_no_disponible(remoto):
+     estado = server.sondear_backend()
+ 
+     assert estado.available is False
+-    assert estado.causa == "credencial"
++    assert estado.causa == "credential"
+     assert estado.status_http == 401
+     assert estado.detalle == "test-backend responde 401: está arriba pero rechaza la credencial"
+ 
+@@ -203,7 +203,7 @@ def test_el_sondeo_nunca_lanza(remoto):
+         pytest.fail(f"el sondeo lanzó {exc!r}")
+ 
+     assert estado.available is False
+-    assert estado.causa == "desconocida"
++    assert estado.causa == "unknown"
+ 
+ 
+ @backend_mock.mock
+@@ -216,7 +216,7 @@ def test_un_connect_timeout_en_loopback_es_rechazada(monkeypatch):
+ 
+     estado = server.sondear_backend()
+ 
+-    assert estado.causa == "rechazada"
++    assert estado.causa == "refused"
+ 
+ 
+ def _ip_de_salida() -> str:
+@@ -242,4 +242,4 @@ def test_un_puerto_cerrado_remoto_no_parece_una_vpn(monkeypatch):
+ 
+     estado = server.sondear_backend()
+ 
+-    assert estado.causa == "rechazada"
++    assert estado.causa == "refused"
+diff --git a/tests/test_turn_daemon.py b/tests/test_turn_daemon.py
+index 39a60a7..c0464f7 100644
+--- a/tests/test_turn_daemon.py
++++ b/tests/test_turn_daemon.py
+@@ -22,7 +22,7 @@ import httpx2
+ import pytest
+ 
+ from local_delegate import config, server, topology
+-from local_delegate.fallos import Clase
++from local_delegate.failures import FailureClass
+ from local_delegate.turn import PendingRequest
+ 
+ BASE = "http://127.0.0.1:9292/v1"
+@@ -74,7 +74,7 @@ def _ok(text: str = "ok") -> server.ChatResult:
+ 
+ 
+ def _model_failure() -> server.ChatResult:
+-    return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
++    return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
+ 
+ 
+ def _events(tmp_path: Path) -> list[dict]:
+diff --git a/tests/test_update.py b/tests/test_update.py
+index 6054726..31d5575 100644
+--- a/tests/test_update.py
++++ b/tests/test_update.py
+@@ -15,7 +15,7 @@ import pytest
+ from conftest import make_home, snapshot
+ 
+ from local_delegate import checks, install, update
+-from local_delegate.fallos import VistaBackend
++from local_delegate.failures import BackendView
+ 
+ 
+ @pytest.fixture(autouse=True)
+@@ -225,7 +225,7 @@ def _ctx(home):
+     return checks.Context(
+         home=home,
+         daemon_status=lambda host, port: None,
+-        backend_models=lambda: VistaBackend(True, "", None, "directo"),
++        backend_models=lambda: BackendView(True, "", None, "direct"),
+         version_of=lambda component, cfg: ("v238", None),
+         latest_release=checks.SKIP_PYPI,
+     )

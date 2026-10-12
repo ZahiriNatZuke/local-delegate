@@ -24,8 +24,8 @@ cuenten fallos, y uno ya cargado que no termina sí. F0 todavía no sabe disting
 porque esa señal sale de los patrones reales que captura REQ-020 en F3; hasta entonces, lo que no
 se pueda atribuir cae del lado que **no** castiga al modelo lento de montar.
 
-Regla de la casa para este módulo: **lo que no encaje va a `SIN_CLASIFICAR`, nunca a `MODELO`.**
-Equivocarse hacia `MODELO` es lo caro: es la única clase que dispara el respaldo y suma para el
+Regla de la casa para este módulo: **lo que no encaje va a `UNCLASSIFIED`, nunca a `MODEL`.**
+Equivocarse hacia `MODEL` es lo caro: es la única clase que dispara el respaldo y suma para el
 enfriamiento, así que una variante desconocida mal leída provocaría saltos de modelo y expulsiones
 de VRAM por un fallo que a lo mejor era de la petición.
 """
@@ -41,17 +41,28 @@ from typing import NamedTuple
 
 import httpx2
 
+from . import legacy_names
 
-class Clase(str, Enum):
-    """Las siete clases de la tabla de la spec. Hereda de `str` para que el log las escriba solas."""
+
+class FailureClass(str, Enum):
+    """Las siete clases de la tabla de la spec. Hereda de `str` para que el log las escriba solas.
+
+    Acepta también el valor viejo en español (`FailureClass("modelo")` es `MODEL`): el log de uso y
+    los eventos de enfriamiento ya escritos se leen para siempre (REQ-006).
+    """
 
     ENDPOINT = "endpoint"
-    PETICION = "peticion"
-    CAPACIDAD = "capacidad_o_carga"
-    TIMEOUT_LECTURA = "timeout_lectura"
-    CONFIGURACION = "configuracion"
-    MODELO = "modelo"
-    SIN_CLASIFICAR = "sin_clasificar"
+    REQUEST = "request"
+    CAPACITY = "capacity_or_load"
+    READ_TIMEOUT = "read_timeout"
+    CONFIGURATION = "configuration"
+    MODEL = "model"
+    UNCLASSIFIED = "unclassified"
+
+    @classmethod
+    def _missing_(cls, value: object) -> FailureClass | None:
+        new = legacy_names.FAILURE_CLASS_VALUES.get(value) if isinstance(value, str) else None
+        return cls._value2member_map_.get(new) if new else None  # type: ignore[return-value]
 
 
 #: Patrones que delatan un fallo de capacidad o de carga dentro de un 5xx, en minúsculas.
@@ -60,7 +71,7 @@ class Clase(str, Enum):
 #: como fallo del modelo haría saltar el respaldo a otro modelo grande y encadenaría swaps y OOM.
 #: Cada uno lleva la versión de la que salió; si el backend cambia, se recapturan
 #: (`tests/fixtures/backend/`, `tests/test_fallos_capturas.py`).
-PATRONES_DE_CAPACIDAD: tuple[str, ...] = (
+CAPACITY_PATTERNS: tuple[str, ...] = (
     # llama-swap v255 + llama-server b10909, capturado el 2026-09-15. Es el 500 que da llama-swap
     # cuando el `llama-server` que arranca muere antes de estar listo, y es el MISMO cuerpo, byte a
     # byte, para un OOM con la política «Prefer No Sysmem Fallback» y para un modelo que no existe.
@@ -69,7 +80,7 @@ PATRONES_DE_CAPACIDAD: tuple[str, ...] = (
 
 
 @dataclass(frozen=True)
-class Respuesta:
+class BackendResponse:
     """Lo justo que hace falta de una respuesta HTTP para clasificarla.
 
     No es el objeto vivo de `httpx2` a propósito: así el clasificador se puede probar entero sin
@@ -78,28 +89,28 @@ class Respuesta:
 
     status: int
     #: El JSON ya parseado, o `None` si no se pudo parsear (que en sí mismo es un fallo del modelo).
-    datos: dict | None = None
+    data: dict | None = None
     #: El cuerpo crudo, recortado. Solo se usa para los patrones de capacidad.
-    texto: str = ""
+    text: str = ""
 
 
-def clasificar(
-    suceso: BaseException | Respuesta,
+def classify(
+    event: BaseException | BackendResponse,
     *,
-    modelo_cargado: bool | None = None,
-) -> Clase | None:
+    model_loaded: bool | None = None,
+) -> FailureClass | None:
     """La clase del fallo, o `None` si lo que llegó no es un fallo.
 
-    `modelo_cargado` dice si el modelo ya estaba en memoria cuando venció el plazo de lectura.
+    `model_loaded` dice si el modelo ya estaba en memoria cuando venció el plazo de lectura.
     `None` significa «no se sabe», que es lo normal en F0: sin esa señal, un `ReadTimeout` se lee
     como carga y no como modelo colgado.
     """
-    if isinstance(suceso, BaseException):
-        return _clasificar_excepcion(suceso, modelo_cargado=modelo_cargado)
-    return _clasificar_respuesta(suceso)
+    if isinstance(event, BaseException):
+        return _classify_exception(event, model_loaded=model_loaded)
+    return _classify_response(event)
 
 
-def es_backend_ausente(suceso: BaseException | Respuesta) -> bool:
+def is_backend_missing(event: BaseException | BackendResponse) -> bool:
     """True si el fallo significa que no hay nadie escuchando en el endpoint.
 
     Es lo que separa «ofrezco arrancar el backend» de «no lo ofrezco», y por eso no se puede
@@ -112,159 +123,168 @@ def es_backend_ausente(suceso: BaseException | Respuesta) -> bool:
     comprobado contra el `httpx2` instalado—, y ese detalle es justo el defecto que se verificó por
     ejecución: hoy un plazo de conexión agotado no ofrece arrancar nada.
     """
-    return isinstance(suceso, (httpx2.ConnectError, httpx2.ConnectTimeout))
+    return isinstance(event, (httpx2.ConnectError, httpx2.ConnectTimeout))
 
 
-def _clasificar_excepcion(exc: BaseException, *, modelo_cargado: bool | None) -> Clase:
+def _classify_exception(exc: BaseException, *, model_loaded: bool | None) -> FailureClass:
     # `ReadTimeout` va ANTES que su padre `TimeoutException` y que el `HTTPError` genérico: es la
     # única excepción de transporte que no es culpa del endpoint, porque ahí el backend sí aceptó
     # la conexión. `ConnectTimeout` no necesita rama propia —cae en `HTTPError` y ya da ENDPOINT—;
-    # lo que sí necesita es `es_backend_ausente()`, que es donde su diferencia se nota.
+    # lo que sí necesita es `is_backend_missing()`, que es donde su diferencia se nota.
     if isinstance(exc, httpx2.ReadTimeout):
-        return Clase.TIMEOUT_LECTURA if modelo_cargado else Clase.CAPACIDAD
+        return FailureClass.READ_TIMEOUT if model_loaded else FailureClass.CAPACITY
     if isinstance(exc, httpx2.HTTPStatusError):
-        return _clasificar_status(exc.response.status_code, getattr(exc.response, "text", ""))
+        return _classify_status(exc.response.status_code, getattr(exc.response, "text", ""))
     # `ConnectError`, el resto de timeouts (`WriteTimeout`, `PoolTimeout`) y cualquier otro error
     # de transporte: el modelo no llegó a responder, así que no se le puede achacar nada.
     if isinstance(exc, httpx2.HTTPError):
-        return Clase.ENDPOINT
-    return Clase.SIN_CLASIFICAR
+        return FailureClass.ENDPOINT
+    return FailureClass.UNCLASSIFIED
 
 
-def _clasificar_respuesta(respuesta: Respuesta) -> Clase | None:
-    if respuesta.status >= 400:
-        return _clasificar_status(respuesta.status, respuesta.texto)
-    if not 200 <= respuesta.status < 300:
+def _classify_response(response: BackendResponse) -> FailureClass | None:
+    if response.status >= 400:
+        return _classify_status(response.status, response.text)
+    if not 200 <= response.status < 300:
         # Un 1xx o un 3xx que llegue hasta aqui no es lo que el protocolo espera, pero tampoco hay
         # nada que achacarle al modelo: no llego a responder una peticion de chat.
-        return Clase.SIN_CLASIFICAR
-    if respuesta.datos is None:
+        return FailureClass.UNCLASSIFIED
+    if response.data is None:
         # Se recibió un 2xx que no era JSON: el modelo respondió algo roto.
-        return Clase.MODELO
-    return _clasificar_cuerpo(respuesta.datos)
+        return FailureClass.MODEL
+    return _classify_body(response.data)
 
 
-def _clasificar_status(status: int, texto: str) -> Clase:
+def _classify_status(status: int, text: str) -> FailureClass:
     if 400 <= status < 500:
         # Incluye el desborde de contexto (400), el schema no soportado y la autenticación. Culpa
         # de la petición: cambiar de modelo no arregla ninguno.
-        return Clase.PETICION
+        return FailureClass.REQUEST
     if status >= 500:
-        minusculas = texto.lower()
-        if any(patron in minusculas for patron in PATRONES_DE_CAPACIDAD):
-            return Clase.CAPACIDAD
-        return Clase.MODELO
-    return Clase.SIN_CLASIFICAR
+        lowered = text.lower()
+        if any(pattern in lowered for pattern in CAPACITY_PATTERNS):
+            return FailureClass.CAPACITY
+        return FailureClass.MODEL
+    return FailureClass.UNCLASSIFIED
 
 
-def _clasificar_cuerpo(datos: dict) -> Clase | None:
-    choices = datos.get("choices")
+def _classify_body(data: dict) -> FailureClass | None:
+    choices = data.get("choices")
     if not isinstance(choices, list) or not choices:
-        return Clase.MODELO
-    primera = choices[0]
-    if not isinstance(primera, dict):
-        return Clase.MODELO
-    mensaje = primera.get("message")
-    if not isinstance(mensaje, dict):
-        return Clase.MODELO
+        return FailureClass.MODEL
+    first = choices[0]
+    if not isinstance(first, dict):
+        return FailureClass.MODEL
+    message = first.get("message")
+    if not isinstance(message, dict):
+        return FailureClass.MODEL
 
-    contenido = mensaje.get("content")
-    motivo = primera.get("finish_reason")
-    razonamiento = mensaje.get("reasoning_content") or ""
-    if isinstance(contenido, str):
+    content = message.get("content")
+    finish = first.get("finish_reason")
+    reasoning = message.get("reasoning_content") or ""
+    if isinstance(content, str):
         # Un contenido vacío ("") NO es un fallo: se trata como hoy. Con UNA excepción, decidida por
         # el usuario el 2026-09-15: vacío + `length` + razonamiento es la forma REAL en que
         # llama-server b10909 devuelve un razonamiento que agotó `max_tokens` (capturado; no llega
         # como `null`). Sin esta rama la clase de configuración no saltaba nunca contra el backend
         # real y la respuesta vacía llegaba como éxito.
-        if not contenido.strip() and motivo == "length" and razonamiento.strip():
-            return Clase.CONFIGURACION
+        if not content.strip() and finish == "length" and reasoning.strip():
+            return FailureClass.CONFIGURATION
         return None
 
-    if motivo == "length":
+    if finish == "length":
         # El modelo se gastó `max_tokens` pensando y no llegó a contestar. Es configuración, no
         # avería: taparlo con un respaldo haría que nadie lo arreglara nunca.
-        if razonamiento.strip():
-            return Clase.CONFIGURACION
+        if reasoning.strip():
+            return FailureClass.CONFIGURATION
         # Mismo síntoma sin rastro de razonamiento: no se sabe qué pasó, y adivinar aquí es
         # justo lo que la regla de la casa prohíbe.
-        return Clase.SIN_CLASIFICAR
-    return Clase.MODELO
+        return FailureClass.UNCLASSIFIED
+    return FailureClass.MODEL
 
 
 # --- Causa de un fallo de conexión ------------------------------------------------------------
 #
-# Responde a otra pregunta que `clasificar`. Aquella decide respaldo y enfriamiento; esta le dice a
+# Responde a otra pregunta que `classify`. Aquella decide respaldo y enfriamiento; esta le dice a
 # una persona POR QUÉ no se llega al backend, con el mismo texto en el panel, en `local_status`, en
 # `doctor` y en el error de una delegación (REQ-010, REQ-011, REQ-016). Por eso nadie fuera de aquí
 # redacta los textos de una causa. Sigue la regla del módulo: sin red y sin leer configuración;
-# host, loopback, origen, fuente, código y endpoint entran como argumentos.
+# `host`, `loopback`, `origin`, `source`, el código y `endpoint` entran como argumentos.
 
 
-class CausaConexion(str, Enum):
-    """Las once causas de REQ-010. Hereda de `str` para viajar tal cual en el JSON y en el log."""
+class ConnectionCause(str, Enum):
+    """Las once causas de REQ-010. Hereda de `str` para viajar tal cual en el JSON y en el log.
+
+    Acepta también el valor viejo en español (`ConnectionCause("rechazada")` es `REFUSED`), el que
+    escribían el log y un daemon de una versión anterior (REQ-006).
+    """
 
     DNS = "dns"
-    RECHAZADA = "rechazada"
-    SIN_RUTA = "sin_ruta"
-    TIMEOUT_CONEXION = "timeout_conexion"
-    CREDENCIAL = "credencial"
+    REFUSED = "refused"
+    NO_ROUTE = "no_route"
+    CONNECT_TIMEOUT = "connect_timeout"
+    CREDENTIAL = "credential"
     HTTP_ERROR = "http_error"
-    SIN_RESPUESTA = "sin_respuesta"
-    RESPUESTA_INVALIDA = "respuesta_invalida"
-    URL_INVALIDA = "url_invalida"
-    TRANSPORTE = "transporte"
-    DESCONOCIDA = "desconocida"
+    NO_RESPONSE = "no_response"
+    INVALID_RESPONSE = "invalid_response"
+    INVALID_URL = "invalid_url"
+    TRANSPORT = "transport"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def _missing_(cls, value: object) -> ConnectionCause | None:
+        new = legacy_names.CONNECTION_CAUSE_VALUES.get(value) if isinstance(value, str) else None
+        return cls._value2member_map_.get(new) if new else None  # type: ignore[return-value]
 
 
-class VistaBackend(NamedTuple):
+class BackendView(NamedTuple):
     """Lo que `doctor` sabe del backend: si está sano, el texto que enseña y la causa.
 
-    `fuente` dice quién lo vio: `"daemon"` (la causa viene del `/api/backend` del daemon) o
-    `"directo"` (sondeo propio de esta consola). Importa para la pista de una credencial: no es lo
-    mismo que falte la clave en la consola que en el lanzador del daemon (REQ-016). `causa` es
+    `source` dice quién lo vio: `"daemon"` (la causa viene del `/api/backend` del daemon) o
+    `"direct"` (sondeo propio de esta consola). Importa para la pista de una credencial: no es lo
+    mismo que falte la clave en la consola que en el lanzador del daemon (REQ-016). `cause` es
     `None` cuando está sano o cuando el daemon es antiguo y no la manda.
     """
 
-    sano: bool
-    detalle: str
-    causa: str | None
-    fuente: str
+    healthy: bool
+    detail: str
+    cause: str | None
+    source: str
 
 
 #: «No hay ruta»: los errno de la plataforma y, siempre, los de Winsock (10051 red inalcanzable,
 #: 10065 host inalcanzable), que en Linux y macOS no coinciden con `errno.ENETUNREACH`.
-_ERRNO_SIN_RUTA = frozenset({errno.ENETUNREACH, errno.EHOSTUNREACH, 10051, 10065})
+_NO_ROUTE_ERRNOS = frozenset({errno.ENETUNREACH, errno.EHOSTUNREACH, 10051, 10065})
 
-_CODIGOS_DE_CREDENCIAL = frozenset({401, 403})
+_CREDENTIAL_CODES = frozenset({401, 403})
 
 
-def _cadena(exc: BaseException) -> Iterator[BaseException]:
+def _chain(exc: BaseException) -> Iterator[BaseException]:
     """La excepción y todas las de sus `__cause__`/`__context__`, cada una una sola vez.
 
     Los visitados van por identidad: una cadena con ciclo (una excepción que es su propio
     `__context__`, o dos que se apuntan) termina en vez de dar vueltas.
     """
-    vistas: set[int] = set()
-    pendientes: list[BaseException | None] = [exc]
-    while pendientes:
-        actual = pendientes.pop()
-        if actual is None or id(actual) in vistas:
+    seen: set[int] = set()
+    pending: list[BaseException | None] = [exc]
+    while pending:
+        current = pending.pop()
+        if current is None or id(current) in seen:
             continue
-        vistas.add(id(actual))
-        yield actual
-        pendientes.append(actual.__context__)
-        pendientes.append(actual.__cause__)
+        seen.add(id(current))
+        yield current
+        pending.append(current.__context__)
+        pending.append(current.__cause__)
 
 
-def _errno_sin_ruta(exc: BaseException) -> bool:
-    return isinstance(exc, OSError) and exc.errno in _ERRNO_SIN_RUTA
+def _is_no_route_errno(exc: BaseException) -> bool:
+    return isinstance(exc, OSError) and exc.errno in _NO_ROUTE_ERRNOS
 
 
-def causa_conexion(suceso: BaseException | int, *, loopback: bool) -> CausaConexion:
+def connection_cause(event: BaseException | int, *, loopback: bool) -> ConnectionCause:
     """La causa de un fallo al hablar con el backend. Total: toda entrada tiene causa.
 
-    `suceso` es el código de una respuesta no 2xx o la excepción que saltó. `loopback` dice si el
+    `event` es el código de una respuesta no 2xx o la excepción que saltó. `loopback` dice si el
     **host real** de la URL es de loopback (no el origen declarado: un túnel en loopback hacia un
     backend remoto sigue siendo loopback para esto). Las reglas van en el orden de la tabla de
     REQ-010 y gana la primera; las 3 a 6 buscan en toda la cadena de la excepción y las demás miran
@@ -272,158 +292,158 @@ def causa_conexion(suceso: BaseException | int, *, loopback: bool) -> CausaConex
 
     Un código 2xx no es un fallo: lanza `ValueError`, porque llamar así es un error de quien llama.
     """
-    if isinstance(suceso, int):
-        if 200 <= suceso < 300:
-            raise ValueError(f"un {suceso} no es un fallo: no tiene causa que clasificar")
+    if isinstance(event, int):
+        if 200 <= event < 300:
+            raise ValueError(f"un {event} no es un fallo: no tiene causa que clasificar")
         # Reglas 1 y 2 para un código suelto.
-        if suceso in _CODIGOS_DE_CREDENCIAL:
-            return CausaConexion.CREDENCIAL
-        return CausaConexion.HTTP_ERROR
+        if event in _CREDENTIAL_CODES:
+            return ConnectionCause.CREDENTIAL
+        return ConnectionCause.HTTP_ERROR
 
     # 1 y 2. Un `HTTPStatusError` es un backend que contesta: lo que dice su código manda.
-    if isinstance(suceso, httpx2.HTTPStatusError):
-        if suceso.response.status_code in _CODIGOS_DE_CREDENCIAL:
-            return CausaConexion.CREDENCIAL
-        return CausaConexion.HTTP_ERROR
+    if isinstance(event, httpx2.HTTPStatusError):
+        if event.response.status_code in _CREDENTIAL_CODES:
+            return ConnectionCause.CREDENTIAL
+        return ConnectionCause.HTTP_ERROR
 
-    cadena = list(_cadena(suceso))
+    chain = list(_chain(event))
     # 3. `InvalidURL` no es un `HTTPError` (comprobado contra el `httpx2` instalado): va por nombre.
-    if any(isinstance(e, (httpx2.InvalidURL, httpx2.UnsupportedProtocol)) for e in cadena):
-        return CausaConexion.URL_INVALIDA
+    if any(isinstance(e, (httpx2.InvalidURL, httpx2.UnsupportedProtocol)) for e in chain):
+        return ConnectionCause.INVALID_URL
     # 4. Va antes que 5 y 6: `gaierror` también es un `OSError`.
-    if any(isinstance(e, socket.gaierror) for e in cadena):
-        return CausaConexion.DNS
+    if any(isinstance(e, socket.gaierror) for e in chain):
+        return ConnectionCause.DNS
     # 5. `OSError(ECONNREFUSED, …)` ya nace como `ConnectionRefusedError`.
-    if any(isinstance(e, ConnectionRefusedError) for e in cadena):
-        return CausaConexion.RECHAZADA
+    if any(isinstance(e, ConnectionRefusedError) for e in chain):
+        return ConnectionCause.REFUSED
     # 6. Red o host inalcanzable: inmediato y con su errno, distinto del timeout de una VPN.
-    if any(_errno_sin_ruta(e) for e in cadena):
-        return CausaConexion.SIN_RUTA
+    if any(_is_no_route_errno(e) for e in chain):
+        return ConnectionCause.NO_ROUTE
     # 7. En Windows un puerto cerrado tarda ~2 s en rechazarse y con un plazo menor llega como
     #    `ConnectTimeout`. En loopback no hay ruta que perder: es que nadie escucha.
-    if isinstance(suceso, httpx2.ConnectTimeout) and loopback:
-        return CausaConexion.RECHAZADA
+    if isinstance(event, httpx2.ConnectTimeout) and loopback:
+        return ConnectionCause.REFUSED
     # 8. Incluye el plazo del kernel (el caso de la Mac: `TimeoutError(ETIMEDOUT)` en la cadena).
-    if isinstance(suceso, httpx2.ConnectTimeout):
-        return CausaConexion.TIMEOUT_CONEXION
+    if isinstance(event, httpx2.ConnectTimeout):
+        return ConnectionCause.CONNECT_TIMEOUT
     # 9. Lectura, escritura o pool: la conexión sí se estableció.
-    if isinstance(suceso, httpx2.TimeoutException):
-        return CausaConexion.SIN_RESPUESTA
+    if isinstance(event, httpx2.TimeoutException):
+        return ConnectionCause.NO_RESPONSE
     # 10. Un 2xx con un cuerpo que no es JSON o no tiene la forma esperada.
-    if isinstance(suceso, ValueError):
-        return CausaConexion.RESPUESTA_INVALIDA
+    if isinstance(event, ValueError):
+        return ConnectionCause.INVALID_RESPONSE
     # 11.
-    if isinstance(suceso, httpx2.HTTPError):
-        return CausaConexion.TRANSPORTE
+    if isinstance(event, httpx2.HTTPError):
+        return ConnectionCause.TRANSPORT
     # 12.
-    return CausaConexion.DESCONOCIDA
+    return ConnectionCause.UNKNOWN
 
 
-_ETIQUETAS: dict[CausaConexion, str] = {
-    CausaConexion.DNS: "no resuelve",
-    CausaConexion.RECHAZADA: "nadie escucha",
-    CausaConexion.SIN_RUTA: "sin ruta",
-    CausaConexion.TIMEOUT_CONEXION: "no contesta",
-    CausaConexion.CREDENCIAL: "sin acceso",
-    CausaConexion.HTTP_ERROR: "responde con error",
-    CausaConexion.SIN_RESPUESTA: "no responde a tiempo",
-    CausaConexion.RESPUESTA_INVALIDA: "respuesta no válida",
-    CausaConexion.URL_INVALIDA: "URL no válida",
-    CausaConexion.TRANSPORTE: "fallo de red",
-    CausaConexion.DESCONOCIDA: "fallo inesperado",
+_LABELS: dict[ConnectionCause, str] = {
+    ConnectionCause.DNS: "no resuelve",
+    ConnectionCause.REFUSED: "nadie escucha",
+    ConnectionCause.NO_ROUTE: "sin ruta",
+    ConnectionCause.CONNECT_TIMEOUT: "no contesta",
+    ConnectionCause.CREDENTIAL: "sin acceso",
+    ConnectionCause.HTTP_ERROR: "responde con error",
+    ConnectionCause.NO_RESPONSE: "no responde a tiempo",
+    ConnectionCause.INVALID_RESPONSE: "respuesta no válida",
+    ConnectionCause.INVALID_URL: "URL no válida",
+    ConnectionCause.TRANSPORT: "fallo de red",
+    ConnectionCause.UNKNOWN: "fallo inesperado",
 }
 
 
-def etiqueta(causa: CausaConexion | str) -> str:
+def label(cause: ConnectionCause | str) -> str:
     """La etiqueta corta de la causa (la del badge). Acepta el valor en texto, como llega del JSON."""
-    return _ETIQUETAS[CausaConexion(causa)]
+    return _LABELS[ConnectionCause(cause)]
 
 
-def detalle(
-    causa: CausaConexion | str,
+def detail(
+    cause: ConnectionCause | str,
     *,
     host: str,
     status: int | None = None,
     endpoint: str | None = None,
-    excepcion: BaseException | None = None,
+    exception: BaseException | None = None,
 ) -> str:
     """El texto largo de la causa (REQ-011), con el host, el código y el endpoint que se pasen.
 
     Si falta `status` y la excepción es un `HTTPStatusError`, el código se toma de su respuesta.
     Lo que no se pase se omite del texto en vez de escribirse como `None`.
     """
-    causa = CausaConexion(causa)
-    if status is None and isinstance(excepcion, httpx2.HTTPStatusError):
-        status = excepcion.response.status_code
-    tipo = f" ({type(excepcion).__name__})" if excepcion is not None else ""
-    codigo = f" {status}" if status is not None else ""
+    cause = ConnectionCause(cause)
+    if status is None and isinstance(exception, httpx2.HTTPStatusError):
+        status = exception.response.status_code
+    type_suffix = f" ({type(exception).__name__})" if exception is not None else ""
+    status_suffix = f" {status}" if status is not None else ""
 
-    if causa is CausaConexion.DNS:
+    if cause is ConnectionCause.DNS:
         return f"no se resuelve el nombre {host} (¿VPN o DNS?)"
-    if causa is CausaConexion.RECHAZADA:
+    if cause is ConnectionCause.REFUSED:
         return f"{host} rechaza la conexión: no hay nada escuchando en ese puerto"
-    if causa is CausaConexion.SIN_RUTA:
+    if cause is ConnectionCause.NO_ROUTE:
         return f"no hay ruta de red hacia {host}"
-    if causa is CausaConexion.TIMEOUT_CONEXION:
+    if cause is ConnectionCause.CONNECT_TIMEOUT:
         return f"{host} no contesta a la conexión (ruta, cortafuegos o VPN)"
-    if causa is CausaConexion.CREDENCIAL:
-        return f"{host} responde{codigo}: está arriba pero rechaza la credencial"
-    if causa is CausaConexion.HTTP_ERROR:
+    if cause is ConnectionCause.CREDENTIAL:
+        return f"{host} responde{status_suffix}: está arriba pero rechaza la credencial"
+    if cause is ConnectionCause.HTTP_ERROR:
         if status is None:
             return f"{host} responde con un error HTTP"
         return f"{host} responde HTTP {status}"
-    if causa is CausaConexion.SIN_RESPUESTA:
+    if cause is ConnectionCause.NO_RESPONSE:
         return f"{host} acepta la conexión pero no responde a tiempo"
-    if causa is CausaConexion.RESPUESTA_INVALIDA:
-        a_quien = f" a {endpoint}" if endpoint else ""
-        return f"{host} responde{a_quien}, pero con un cuerpo que no se entiende"
-    if causa is CausaConexion.URL_INVALIDA:
+    if cause is ConnectionCause.INVALID_RESPONSE:
+        target = f" a {endpoint}" if endpoint else ""
+        return f"{host} responde{target}, pero con un cuerpo que no se entiende"
+    if cause is ConnectionCause.INVALID_URL:
         # Sin host, como en la tabla de REQ-011: con la URL rota, el host puede no significar nada.
-        return f"la URL del backend no es válida{tipo}: revisa LOCAL_DELEGATE_BASE_URL"
-    if causa is CausaConexion.TRANSPORTE:
-        return f"fallo de red con {host}{tipo}"
-    return f"fallo inesperado al sondear {host}{tipo}"
+        return f"la URL del backend no es válida{type_suffix}: revisa LOCAL_DELEGATE_BASE_URL"
+    if cause is ConnectionCause.TRANSPORT:
+        return f"fallo de red con {host}{type_suffix}"
+    return f"fallo inesperado al sondear {host}{type_suffix}"
 
 
-def pista(causa: CausaConexion | str | None, *, origen: str, fuente: str, host: str) -> str:
+def hint(cause: ConnectionCause | str | None, *, origin: str, source: str, host: str) -> str:
     """Qué hacer ante la causa (tabla de REQ-016). Depende de quién la vio y de dónde corre el backend.
 
-    `origen` es el de `config.backend_origin()`: solo `"local"` cuenta como local, así que un valor
-    raro nunca manda a arrancar llama-swap aquí. `fuente` es la de `VistaBackend`. Una causa `None`
+    `origin` es el de `config.backend_origin()`: solo `"local"` cuenta como local, así que un valor
+    raro nunca manda a arrancar llama-swap aquí. `source` es la de `BackendView`. Una causa `None`
     (daemon antiguo que no la manda) o que este código no conoce da la pista genérica.
     """
-    generica = f"revisa el backend en {host}"
-    if causa is None:
-        return generica
+    generic = f"revisa el backend en {host}"
+    if cause is None:
+        return generic
     try:
-        causa = CausaConexion(causa)
+        cause = ConnectionCause(cause)
     except ValueError:
-        return generica
-    local = origen == "local"
+        return generic
+    local = origin == "local"
 
-    if causa is CausaConexion.RECHAZADA:
+    if cause is ConnectionCause.REFUSED:
         if local:
             return "arranca llama-swap (o revisa LOCAL_DELEGATE_BASE_URL)"
         return f"arranca llama-swap en {host} o revisa el puerto"
-    if causa is CausaConexion.DNS:
+    if cause is ConnectionCause.DNS:
         if local:
             return "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
         return (
             "revisa el nombre en LOCAL_DELEGATE_BASE_URL"
             " o usa la IP (p. ej. la 100.x de la tailnet)"
         )
-    if causa in (CausaConexion.SIN_RUTA, CausaConexion.TIMEOUT_CONEXION):
+    if cause in (ConnectionCause.NO_ROUTE, ConnectionCause.CONNECT_TIMEOUT):
         if local:
             return "revisa LOCAL_DELEGATE_BASE_URL"
         return f"revisa la red hacia {host} (VPN, cortafuegos, Tailscale)"
-    if causa is CausaConexion.CREDENCIAL:
-        if fuente == "daemon":
+    if cause is ConnectionCause.CREDENTIAL:
+        if source == "daemon":
             return "la clave del daemon no vale: revisa LOCAL_DELEGATE_API_KEY en su lanzador"
         return "exporta LOCAL_DELEGATE_API_KEY en este entorno"
-    if causa in (
-        CausaConexion.HTTP_ERROR,
-        CausaConexion.RESPUESTA_INVALIDA,
-        CausaConexion.URL_INVALIDA,
+    if cause in (
+        ConnectionCause.HTTP_ERROR,
+        ConnectionCause.INVALID_RESPONSE,
+        ConnectionCause.INVALID_URL,
     ):
         return "revisa LOCAL_DELEGATE_BASE_URL"
-    return generica
+    return generic

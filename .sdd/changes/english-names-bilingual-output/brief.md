@@ -148,6 +148,25 @@ Pasar siempre `projectPath: "D:\\Projects\\local-delegate"`.
   no responde, seguir con búsqueda + edición y decirlo en la entrega.
 - **Entrega:** como con `local_*`, listar las llamadas `mcp__pycharm__*` hechas.
 
+## Lecciones de las olas A0–A2 (aplicar en cada ola)
+
+- `rename_refactoring` también reescribe documentos históricos de `.sdd/` (A1: 4, A2: 23). Tras
+  cada rename, `git diff --stat -- .sdd` y devolver con `git checkout` lo que no sea de la ola.
+- Un rename tradujo «donde»→«where» dentro de prosa española (A0). Revisar el diff buscando
+  palabras inglesas coladas en comentarios, docstrings y textos en español.
+- PyCharm no cambia cadenas de `monkeypatch.setattr(mod, "…")`, cargas por `importlib` ni algunos
+  docstrings: buscarlos con `search_text` tras cada rename.
+- **Código muerto tras reescribir una función** (A2: el cuerpo viejo de `_recent_block_id` quedó
+  detrás del `return` nuevo; la suite no lo ve, CodeQL sí y bloquea el merge). Al reescribir una
+  función, comprobar que no queda nada inalcanzable tras su `return`.
+- Ficheros con shebang: `git update-index --chmod=+x` (si no, ruff EXE001 en Linux).
+- `make_mapping.py` resuelve ya los imports planos entre hooks (A2). Nombres de una palabra
+  ambigua más preposición (`version_de`) se le escapan al detector: incluirlos a mano si se ven.
+- Las olas A van en serie: un cambio fuera de la propiedad de la ola que sea consecuencia mecánica
+  del rename se hace y se registra como desviación; cualquier otra cosa, parar y preguntar.
+- `local_commit_msg` tiende a salir en inglés y truncado: revisarlo y dejarlo en español.
+- Un test de node que agota tiempo en el runner de Windows es inestabilidad conocida.
+
 ## Otras reglas que aplican a los agentes
 
 - Todo en español en los entregables; nada de códigos internos sueltos como único nombre.

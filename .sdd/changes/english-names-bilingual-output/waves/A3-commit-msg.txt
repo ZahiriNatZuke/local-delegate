@@ -1,0 +1,25 @@
+feat(rename): log de uso y clases de fallo en inglés, con lectura doble (ola A3)
+
+Cuarta ola del frente A del SDD english-names-bilingual-output (REQ-005 y REQ-006 en el log de
+uso, los campos de causa de REQ-009 y la parte de REQ-007 que toca a los valores de clase).
+
+- El módulo `fallos.py` pasa a `failures.py`, con `FailureClass` (antes `Clase`),
+  `ConnectionCause` (antes `CausaConexion`), `BackendView` (antes `VistaBackend`),
+  `BackendResponse`, `classify`, `is_backend_missing`, `connection_cause`, `label`, `detail` y
+  `hint`: 56 renombres con PyCharm y las variables locales a mano, acotadas a su función.
+- Los valores de clase y de causa pasan a inglés (`model`, `read_timeout`, `capacity_or_load`,
+  `configuration`, `unclassified`, `cooldown`; `refused`, `no_route`, `connect_timeout`,
+  `credential`…). Los dos enums aceptan además el valor viejo (`_missing_`), así que el estado y
+  los eventos ya escritos se siguen leyendo.
+- El log de uso escribe `block_id`, `sections` y `connection_failure` (antes `bloqueo_id`,
+  `secciones` y `fallo_conexion`). `legacy_names.FORMATS["usage"]` traduce las filas viejas en el
+  lector del panel, en `local_status` y en `medir_adopcion.py`, `medir_enfriamiento.py` y
+  `medir_resumen_estructurado.py`; `analizar_benchmark.py` acepta `configuration`.
+- `/api/backend`, `/api/status` y `/api/backend/stats` devuelven `cause`, `label` y `detail`;
+  `doctor` entiende también la respuesta de un daemon de la 0.34.0. El JS del panel traduce la
+  causa y la clase con la tabla que inyecta el servidor (`legacyValue`), y `_accounting` y su
+  espejo `acct` dan la misma `cause` sobre filas viejas y nuevas.
+- `pace.compute_slowness` usa la clave `model` en sus eventos (y `measure_slowness.py` con ella).
+- Tests nuevos con filas de los dos formatos (panel, P-4, adopción, doctor, badge, enums), cada uno
+  con su control positivo. La medición P-4 documentada da la misma salida que en main.
+- Wiki (Architecture, Savings-and-metrics y Troubleshooting) y CHANGELOG al día.

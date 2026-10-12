@@ -584,7 +584,7 @@ def test_contenido_vacio_por_razonar_es_configuracion_y_no_se_repite(tmp_path, m
         return _respuesta("", "length", reasoning_content="pensando largo y tendido")
 
     _, (registro,) = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert registro["outcome"] == "configuracion"
+    assert registro["outcome"] == "configuration"
     assert registro["reasoning_chars"] > 0 and registro["score"] is None
     assert len(vistos) == 1
 

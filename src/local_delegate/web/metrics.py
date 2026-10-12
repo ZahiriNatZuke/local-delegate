@@ -59,7 +59,7 @@ from .. import (
     config,
     coste,
     cuota,
-    fallos,
+    failures,
     legacy_names,
     llamaswap_api,
     precios,
@@ -116,7 +116,12 @@ def _read_file_cached(path) -> list[dict]:
                 if not line:
                     continue
                 try:
-                    rows.append(json.loads(line))
+                    # Formato nuevo aunque la fila sea vieja (REQ-006): todo lo que sale de
+                    # aquí (/api/events, /api/stats, «En curso») ya habla con claves en inglés.
+                    row = json.loads(line)
+                    rows.append(
+                        legacy_names.normalize("usage", row) if isinstance(row, dict) else row
+                    )
                 except json.JSONDecodeError:
                     continue
     except OSError:
@@ -304,7 +309,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
         "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
     }
-    # Causa de cada fallo o salto (`configuracion`, `modelo`, `enfriamiento`…): una de configuración
+    # Causa de cada fallo o salto (`configuration`, `model`, `cooldown`…): una de configuración
     # tiene que verse en el panel para que alguien la arregle (REQ-019).
     causes: dict[str, int] = defaultdict(int)
 
@@ -754,7 +759,7 @@ def backend():
       - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
       - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
 
-    Con un fallo, `causa`/`etiqueta`/`detalle` dicen por qué (REQ-012, textos de `fallos.py`) y
+    Con un fallo, `cause`/`label`/`detail` dicen por qué (REQ-012, textos de `failures.py`) y
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
@@ -767,20 +772,20 @@ def backend():
             "running_ok": running_ok,
             "models": estado.models,
             "models_stale": estado.models_stale,
-            **_causa_json(estado.causa, estado.detalle),
+            **_cause_json(estado.causa, estado.detalle),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
     )
 
 
-def _causa_json(causa: str | None, detalle: str | None) -> dict:
-    """Las claves de la causa para el panel. La etiqueta corta sale de `fallos.py`, como el detalle:
+def _cause_json(cause: str | None, detail: str | None) -> dict:
+    """Las claves de la causa para el panel. La etiqueta corta sale de `failures.py`, como el detalle:
     el JS no redacta los textos de una causa (REQ-011)."""
     return {
-        "causa": causa,
-        "etiqueta": fallos.etiqueta(causa) if causa else None,
-        "detalle": detalle,
+        "cause": cause,
+        "label": failures.label(cause) if cause else None,
+        "detail": detail,
     }
 
 
@@ -812,7 +817,7 @@ def backend_stats():
     `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
     degrada a {available: false} sin romper el dashboard.
 
-    Sin datos, dice por qué (REQ-020): `causa`, `etiqueta`, `detalle` y `status_http` (este último
+    Sin datos, dice por qué (REQ-020): `cause`, `label`, `detail` y `status_http` (este último
     solo con una respuesta HTTP). El panel solo culpa a la versión de llama-swap con un 404.
     """
     base = config.BASE_URL.removesuffix("/v1")
@@ -822,19 +827,19 @@ def backend_stats():
         with httpx2.Client(timeout=server._plazo_sonda()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
-            causa = fallos.causa_conexion(r.status_code, loopback=loopback)
-            texto = fallos.detalle(causa, host=config.backend_host(), status=r.status_code)
-            return JSONResponse(_sin_stats(causa.value, texto, r.status_code))
+            cause = failures.connection_cause(r.status_code, loopback=loopback)
+            text = failures.detail(cause, host=config.backend_host(), status=r.status_code)
+            return JSONResponse(_no_stats(cause.value, text, r.status_code))
         data = r.json()
     except Exception as exc:  # como el sondeo: lo que no se espera también tiene causa
-        causa = fallos.causa_conexion(exc, loopback=loopback)
-        texto = fallos.detalle(causa, host=config.backend_host(), endpoint=endpoint, excepcion=exc)
-        return JSONResponse(_sin_stats(causa.value, texto, None))
+        cause = failures.connection_cause(exc, loopback=loopback)
+        text = failures.detail(cause, host=config.backend_host(), endpoint=endpoint, exception=exc)
+        return JSONResponse(_no_stats(cause.value, text, None))
     return JSONResponse({"available": True, "stats": data})
 
 
-def _sin_stats(causa: str, detalle: str, status_http: int | None) -> dict:
-    return {"available": False, **_causa_json(causa, detalle), "status_http": status_http}
+def _no_stats(cause: str, detail: str, status_http: int | None) -> dict:
+    return {"available": False, **_cause_json(cause, detail), "status_http": status_http}
 
 
 @app.get("/api/status")
@@ -869,7 +874,7 @@ def status():
                 "available": estado.available,
                 "models": estado.models,
                 "models_stale": estado.models_stale,
-                **_causa_json(estado.causa, estado.detalle),
+                **_cause_json(estado.causa, estado.detalle),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),
@@ -1904,6 +1909,10 @@ function humanLabel(key){
 // Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
 // y lo inyecta el servidor: el JS no lleva una segunda copia de la tabla (REQ-009, D2).
 const LEGACY_VALUES = __LEGACY_VALUES__;
+function legacyValue(kind, key){
+  const alias = LEGACY_VALUES[kind] || {};
+  return Object.prototype.hasOwnProperty.call(alias, key) ? alias[key] : key;
+}
 function labelFor(kind, key){
   const m = LABELS[kind] || {};
   const alias = LEGACY_VALUES[kind] || {};
@@ -2202,8 +2211,8 @@ function roleLabels(model){
 }
 
 // Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
-// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por fallos.py.
-const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
+// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
+const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
 // Estados de /running y motivos de espera local, en palabras (REQ-022).
 const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
 const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
@@ -2238,13 +2247,13 @@ function estadoVisible(prev, bj){
 function badgeBackend(vista, baseUrl){
   const v = vista || vistaInicial(), u = v.ultimo || {};
   if(v.estado==='conectado'){
-    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detalle||u.etiqueta||'sin respuesta') : '';
+    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
     return {texto:'conectado', clase:'up', title:(baseUrl||'')+aviso};
   }
-  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detalle||''};
-  const et = u.etiqueta || u.causa || 'sin respuesta';
-  if(CAUSAS_CONTESTA[u.causa]) return {texto:et, clase:'warn', title:u.detalle||''};
-  return {texto:'caído · '+et, clase:'down', title:u.detalle||''};
+  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detail||''};
+  const et = u.label || u.cause || 'sin respuesta';
+  if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {texto:et, clase:'warn', title:u.detail||''};
+  return {texto:'caído · '+et, clase:'down', title:u.detail||''};
 }
 
 // Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
@@ -2277,7 +2286,7 @@ function estadoModelo(o){
   const fila = (texto, title) => ({texto, title:title||'', atenuada:!disponible});
   if(!disponible && enVuelo) return fila('esperando al backend');
   if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
-    +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
+    +(((vista.ultimo||{}).label) || 'comprobando…'));
   if(enVuelo && esperaLocal){
     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
@@ -2362,7 +2371,7 @@ function renderBackend(){
 // con un 404; con cualquier otra causa, su etiqueta corta.
 function textoStats(j){
   if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
-  if(j && j.etiqueta) return 'sin datos: '+j.etiqueta;
+  if(j && j.label) return 'sin datos: '+j.label;
   return 'sin datos';
 }
 
@@ -2371,7 +2380,7 @@ function renderBackendStats(j){
   const el = document.getElementById('backendStats'); if(!el) return;
   const head = document.getElementById('bstatsHead');
   if(!j || !j.available || !j.stats){
-    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detalle)||'')+'">'
+    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detail)||'')+'">'
       + escHooks(textoStats(j))+'</div>';
     if(head) head.textContent=''; return;
   }
@@ -2649,7 +2658,7 @@ function acct(e){
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
   // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
   const fallback = !!e.model_requested && e.routing !== 'affinity';
-  const cause = e.error_class || e.fallback_class || null;
+  const cause = legacyValue('failureClass', e.error_class || e.fallback_class || null);
   const copia = v => (v===undefined ? null : v);
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
     net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,

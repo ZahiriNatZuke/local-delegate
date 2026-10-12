@@ -33,12 +33,12 @@ from filelock import FileLock, Timeout
 
 from . import config
 from .estado_json import escribir_json_atomico, leer_json
-from .fallos import Clase
+from .failures import FailureClass
 
 #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
 #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
 #: responde bien cuando se le deja.
-CLASES_QUE_CUENTAN = frozenset({Clase.MODELO, Clase.TIMEOUT_LECTURA})
+CLASES_QUE_CUENTAN = frozenset({FailureClass.MODEL, FailureClass.READ_TIMEOUT})
 
 #: Cuánto se espera al bloqueo del fichero antes de seguir sin enfriamiento, como `inflight.json`.
 ESPERA_BLOQUEO_S = 2.0
@@ -111,9 +111,9 @@ class Estado:
 
     # --- Escribir ------------------------------------------------------------------------------
 
-    def registrar_fallo(self, modelo: str, clase: Clase | str) -> None:
+    def registrar_fallo(self, modelo: str, clase: FailureClass | str) -> None:
         """Suma un fallo si su clase cuenta; enfría al llegar a N, o al primer fallo tras vencer."""
-        if Clase(clase) not in CLASES_QUE_CUENTAN:
+        if FailureClass(clase) not in CLASES_QUE_CUENTAN:
             return
         ahora = self._reloj()
         eventos: list[dict] = []
@@ -131,7 +131,9 @@ class Estado:
                 entrada["hasta"] = ahora + entrada["espera_s"]
                 entrada["reentradas"] += 1
                 entrada["fallos"] = 0
-                eventos.append(_evento(ahora, modelo, "reentra", entrada, clase=Clase(clase).value))
+                eventos.append(
+                    _evento(ahora, modelo, "reentra", entrada, clase=FailureClass(clase).value)
+                )
             else:
                 entrada["fallos"] += 1
                 if entrada["fallos"] >= self._fallos:
@@ -140,7 +142,7 @@ class Estado:
                     entrada["reentradas"] = 1
                     entrada["fallos"] = 0
                     eventos.append(
-                        _evento(ahora, modelo, "entra", entrada, clase=Clase(clase).value)
+                        _evento(ahora, modelo, "entra", entrada, clase=FailureClass(clase).value)
                     )
             datos[modelo] = entrada
 
