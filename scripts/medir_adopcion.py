@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import atribucion, config, coste, test_windows
+from local_delegate import atribucion, config, coste, legacy_names, test_windows
 
 
 def telemetria_de_hooks() -> Path:
@@ -81,7 +81,10 @@ def usos_fundidos(desde: str | None) -> list[dict]:
 
 
 def medir(desde: str | None, include_tests: bool = False) -> dict:
-    hooks = leer(telemetria_de_hooks(), desde)
+    # Claves y valores viejos (`motivo`, `bloqueo`, `camino`…) y nuevos dan lo mismo (REQ-006).
+    hooks = [
+        legacy_names.normalize("hook_telemetry", e) for e in leer(telemetria_de_hooks(), desde)
+    ]
     usos = usos_fundidos(desde)
     fuera = {"hooks": 0, "usage": 0}
     aplicadas: list[dict] = []
@@ -112,10 +115,10 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         clave = (evento.get("session_id", ""), evento.get("path_sha", ""))
         if not clave[1]:
             continue  # eventos viejos, sin huella: no se pueden agrupar
-        if evento.get("motivo") == "acotada":
+        if evento.get("reason") == "bounded":
             franjas_por_sesion[clave] += 1
         else:
-            enteras_por_sesion[clave].add(evento.get("motivo") or "aviso")
+            enteras_por_sesion[clave].add(evento.get("reason") or "aviso")
 
     acotadas = [c for c, n in franjas_por_sesion.items() if n]
     convenia = [c for c in acotadas if c in enteras_por_sesion or franjas_por_sesion[c] >= 3]
@@ -127,11 +130,11 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         "lecturas": len(lecturas),
         "por_motivo": dict(
             Counter(
-                e.get("motivo") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
+                e.get("reason") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
                 for e in lecturas
             )
         ),
-        "por_camino": dict(Counter(e.get("camino", "read") for e in lecturas)),
+        "por_camino": dict(Counter(e.get("route", "read") for e in lecturas)),
         "ofrecidos": len(ofrecidos),
         "bloqueos": len(bloqueos),
         "aceptados": len(aceptados),

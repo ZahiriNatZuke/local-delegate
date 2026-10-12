@@ -1626,6 +1626,60 @@ def _probe_fallback(ctx: Context) -> Result:
     return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
 
 
+#: Cuántos días de la cola de la telemetría de hooks mira `doctor` buscando nombres obsoletos.
+DEPRECATED_TAIL_DAYS = 7
+_TAIL_BLOCK = 64 * 1024
+
+
+def deprecated_names_in_hook_telemetry(
+    path: Path | None, *, now: datetime | None = None, days: int = DEPRECATED_TAIL_DAYS
+) -> set[str]:
+    """Nombres viejos que los hooks dicen haber leído (`deprecated_names`) en los últimos `days`.
+
+    Lee el fichero **desde el final**, por bloques, y para en cuanto encuentra un evento más viejo
+    que el corte: la telemetría crece sin freno (31 691 líneas en la máquina de referencia) y un
+    check no puede recorrerla entera. Nunca lanza: sin fichero, o ilegible, no hay nada que avisar.
+    """
+    if path is None:
+        return set()
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
+    found: set[str] = set()
+    try:
+        with path.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            position = stream.tell()
+            tail = b""
+            while position > 0:
+                step = min(_TAIL_BLOCK, position)
+                position -= step
+                stream.seek(position)
+                tail = stream.read(step) + tail
+                lines = tail.split(b"\n")
+                # La primera línea puede estar cortada: se guarda para el bloque siguiente.
+                tail = lines[0] if position > 0 else b""
+                complete = lines[1:] if position > 0 else lines
+                older = False
+                for raw in reversed(complete):
+                    try:
+                        event = json.loads(raw)
+                        ts = datetime.fromisoformat(str(event["ts"]))
+                    except (ValueError, KeyError, TypeError):
+                        continue
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=UTC)
+                    if ts < cutoff:
+                        older = True
+                        break
+                    names = event.get("deprecated_names")
+                    if isinstance(names, list):
+                        found.update(n for n in names if isinstance(n, str))
+                if older:
+                    break
+    except OSError:
+        return set()
+    return found
+
+
 def _probe_deprecated_names(ctx: Context) -> Result:
     """Nombres obsoletos que siguen en uso: variables renombradas o retiradas e interruptores viejos.
 
@@ -1642,7 +1696,8 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
     donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
-    cuenta `local_status`.
+    cuenta `local_status`. Y desde la ola A2, lo que los hooks dicen haber leído: con la telemetría
+    encendida cada evento lleva `deprecated_names`, y aquí se mira la cola de los últimos 7 días.
     """
     from . import config as config_module
     from . import deprecations
@@ -1669,6 +1724,10 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     for entry in deprecations.switch_files():
         if (ctx.claude_dir / entry.old).exists():
             _note("en ~/.claude", entry)
+
+    for name in sorted(deprecated_names_in_hook_telemetry(config_module.HOOK_TELEMETRY_LOG)):
+        if (entry := deprecations.find(name)) is not None and entry not in seen:
+            _note(f"leído por los hooks (últimos {DEPRECATED_TAIL_DAYS} días)", entry)
 
     if not warnings:
         return Result(OK, "sin nombres obsoletos en uso")

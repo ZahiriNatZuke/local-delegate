@@ -354,10 +354,10 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       const total = cats.reduce((a, c) => a + c.total, 0);
       const suggested = cats.reduce((a, c) => a + c.suggested, 0);
       const motivos = [
-        {motivo: 'codigo', total: 52},
-        {motivo: 'aviso', total: 41},
-        {motivo: 'acotada', total: 24},
-        {motivo: 'pequeno', total: 13},
+        {reason: 'code', total: 52},
+        {reason: 'suggested', total: 41},
+        {reason: 'bounded', total: 24},
+        {reason: 'small', total: 13},
       ];
       return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
         total, suggested, rate: suggested / total,
@@ -366,9 +366,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no
         // cuadran es un panel que el dashboard real nunca puede pintar.
         read_total: motivos.reduce((a, m) => a + m.total, 0),
-        by_motivo: motivos,
+        by_reason: motivos,
         by_ext: [{ext: '.ts', total: 48}, {ext: '.md', total: 39},
-                 {ext: '.py', total: 22}, {ext: 'sin extension', total: 21}]};
+                 {ext: '.py', total: 22}, {ext: 'no_extension', total: 21}]};
     })(),
   };
 

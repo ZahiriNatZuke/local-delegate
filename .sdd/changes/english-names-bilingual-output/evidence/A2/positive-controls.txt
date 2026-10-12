@@ -1,0 +1,71 @@
+- lector de /api/hooks que solo entiende `reason` (sin normalize)
+  test: test_la_telemetria_mezclada_da_el_mismo_reparto_que_la_nueva
+  falla: True | assert: >       assert mezcla["by_reason"] == solo_nuevas["by_reason"]
+  E       AssertionError: assert [{'reason': '..., 'total': 1}] == [{'reason': '..., 'total': 1}]
+  restaurado: True
+
+- medir_adopcion sin lectura doble
+  test: test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas
+  falla: True | assert: >       assert medir_adopcion.medir("2026-09-10") == antes
+  E       AssertionError: assert {'ventana_des...uras': 7, ...} == {'ventana_des...uras': 7, ...}
+  restaurado: True
+
+- el daemon deja de leer el temporal viejo de bloqueos
+  test: test_el_daemon_lee_las_notas_de_bloqueo_de_un_hook_viejo
+  falla: True | assert: >       assert server._recent_block_id(str(documento)) == "viejo1234567"
+  E       AssertionError: assert None == 'viejo1234567'
+  restaurado: True
+
+- leer_nota deja de mirar local-delegate-llamadas/
+  test: test_la_nota_de_atribucion_de_un_hook_viejo_se_sigue_encontrando
+  falla: True | assert: >       assert atribucion.leer_nota("toolu_viejo") == nota
+  E       AssertionError: assert None == {'tool_use_id': 'toolu_viejo', 'ts': 1791828489.9650471, 'agent_type': 'general-purpose'}
+  restaurado: True
+
+- anotar_llamada.py fuera de _RETIRED_SCRIPTS
+  test: test_install_sobre_una_034_retira_anotar_llamada_y_registra_record_call
+  falla: False | assert: (sin assert)
+  
+  restaurado: True
+
+- record() no escribe deprecated_names
+  test: test_el_evento_dice_que_nombres_viejos_leyo_el_hook
+  falla: True | assert: >       assert evento["deprecated_names"] == ["LD_HOOK_READ_BLOQUEAR"]
+  E       KeyError: 'deprecated_names'
+  restaurado: True
+
+- el interruptor viejo ya no apaga
+  test: test_el_interruptor_viejo_sigue_apagando_y_queda_anotado
+  falla: True | assert: >       assert hook_common.block_state() == "off_file"
+  E       AssertionError: assert 'on' == 'off_file'
+  restaurado: True
+
+- labelFor ignora LEGACY_VALUES
+  test: test_el_diccionario_de_motivos_da_la_misma_etiqueta_al_valor_viejo_y_al_nuevo
+  falla: True | assert: >       assert dict(zip([v for v, _n in pares], etiquetas, strict=True))["mcp_ajeno"] == [
+  E       AssertionError: assert ['Mcp ajeno', 'Por otro MCP'] == ['Por otro MC...Por otro MCP']
+  restaurado: True
+
+- doctor no mira la cola de la telemetría
+  test: test_doctor_avisa_de_lo_que_leyeron_los_hooks
+  falla: True | assert: >       assert resultado.status == checks.WARN
+  E       AssertionError: assert 'ok' == 'warn'
+  restaurado: True
+
+- la cola no para en el corte de 7 días
+  test: test_la_cola_de_7_dias_da_los_nombres_y_no_mira_mas_atras
+  falla: True | assert: >       assert nombres == {"LD_HOOK_READ_BLOQUEAR", OLD_SWITCH}
+  E       AssertionError: assert {'LD_HOOK_REA...queo-apagado'} == {'LD_HOOK_REA...queo-apagado'}
+  restaurado: True
+
+- make_mapping no resuelve imports planos entre vecinos
+  test: test_a_flat_import_between_sibling_scripts_counts_as_cross_module
+  falla: True | assert: >       assert by_name["estado_del_bloqueo"]["scope"] == "cross_module"
+  E       AssertionError: assert 'module_local' == 'cross_module'
+  restaurado: True
+
+- anotar_llamada.py fuera de _RETIRED_SCRIPTS (segundo test, añadido porque el primero no lo cazaba)
+  test: test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira
+  falla: True | assert: >       assert not a_mano.exists(), "la copia a mano del hook viejo sigue en el disco"
+  E       AssertionError: la copia a mano del hook viejo sigue en el disco
+  restaurado: True

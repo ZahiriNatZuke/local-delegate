@@ -272,3 +272,29 @@ def test_las_filas_de_banco_no_cuentan_como_delegacion(escenario):
     atribucion.escribir_relleno(config.LOG_DIR, "202610", {"toolu_bk": {"banco": True}})
     assert medir_adopcion.medir("2026-09-10")["delegaciones_totales"] == 2
     assert medir_adopcion.medir("2026-09-10", include_tests=True)["delegaciones_totales"] == 3
+
+
+# --- Telemetría vieja y nueva (REQ-006, ola A2 del renombrado) ---------------------------------
+
+
+def _a_formato_nuevo(evento: dict) -> dict:
+    """La misma fila con las claves y valores en inglés, como la escribe un hook de hoy."""
+    from local_delegate import legacy_names
+
+    return legacy_names.normalize("hook_telemetry", evento)
+
+
+@pytest.mark.parametrize("formato", ["nuevo", "mezclado"])
+def test_las_filas_nuevas_o_mezcladas_dan_la_misma_medida_que_las_viejas(escenario, formato):
+    """El escenario está escrito en el formato viejo (`motivo`, `camino`…). Traducido entero, o la
+    mitad, la medida tiene que salir idéntica: la historia en español se sigue contando."""
+    antes = medir_adopcion.medir("2026-09-10")
+    filas = [json.loads(x) for x in escenario.read_text(encoding="utf-8").splitlines() if x]
+    assert any("motivo" in f for f in filas), "guarda: el escenario trae filas viejas"
+    nuevas = [
+        _a_formato_nuevo(f) if formato == "nuevo" or i % 2 else f for i, f in enumerate(filas)
+    ]
+    assert any("reason" in f for f in nuevas)
+    _escribir(escenario, nuevas)
+
+    assert medir_adopcion.medir("2026-09-10") == antes

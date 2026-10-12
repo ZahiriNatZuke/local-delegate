@@ -92,6 +92,31 @@ def test_scopes_cross_module_module_local_unreferenced_test_and_unresolved(tmp_p
     assert by_name["calcular_resto"]["method"] == "pycharm"
 
 
+def test_a_flat_import_between_sibling_scripts_counts_as_cross_module(tmp_path):
+    """Los hooks se importan entre ellos por `sys.path[0]` (`from hook_common import x`), no por
+    el paquete. En la ola A2 eso dejó como `module_local` nueve símbolos que sí se usaban fuera."""
+    root = _tree(
+        tmp_path,
+        {
+            "src/local_delegate/resources/hooks/comun.py": (
+                "def estado_del_bloqueo():\n    return 1\n"
+                "def solo_aqui():\n    return estado_del_bloqueo()\n"
+                "def importado_entero():\n    return 2\n"
+            ),
+            "src/local_delegate/resources/hooks/lector.py": (
+                "from comun import estado_del_bloqueo\n"
+                "import comun\n"
+                "def principal():\n    return estado_del_bloqueo() + comun.importado_entero()\n"
+            ),
+        },
+    )
+    by_name = {r["old"]: r for r in mm.build_rows(root, []) if r["kind"] == "function"}
+    assert by_name["estado_del_bloqueo"]["scope"] == "cross_module"
+    assert by_name["importado_entero"]["scope"] == "cross_module"
+    # Control: lo que nadie importa sigue siendo local.
+    assert by_name["solo_aqui"]["scope"] == "module_local"
+
+
 def test_paths_filters_by_definition_file(tmp_path):
     root = _tree(
         tmp_path,

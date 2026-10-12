@@ -139,11 +139,73 @@ def test_el_hook_de_atribucion_se_registra(tmp_path):
         if g.get("matcher") == "mcp__local-delegate__.*"
         for h in g["hooks"]
     ]
-    assert len(comandos) == 1 and "anotar_llamada.py" in comandos[0]
+    assert len(comandos) == 1 and "record_call.py" in comandos[0]
     hooks_dir = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
-    assert (hooks_dir / "anotar_llamada.py").is_file(), (
-        "el script registrado tiene que estar copiado"
+    assert (hooks_dir / "record_call.py").is_file(), "el script registrado tiene que estar copiado"
+
+
+def _simular_instalacion_034(home: Path) -> Path:
+    """Lo que dejaba `install` en la 0.34.0: el hook de atribución con su nombre viejo, copiado y
+    registrado. Se parte de una instalación de hoy y se le devuelve el nombre de entonces."""
+    assert _install(home) == 0
+    hooks_dir = home / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+    (hooks_dir / "record_call.py").rename(hooks_dir / "anotar_llamada.py")
+    settings_path = home / ".claude" / "settings.json"
+    texto = settings_path.read_text(encoding="utf-8")
+    assert "record_call.py" in texto
+    settings_path.write_text(texto.replace("record_call.py", "anotar_llamada.py"), encoding="utf-8")
+    return hooks_dir
+
+
+def test_install_sobre_una_034_retira_anotar_llamada_y_registra_record_call(tmp_path):
+    """REQ-012: tras `install` sobre una 0.34.0, el hook viejo no queda ni en el disco ni en
+    `settings.json`, y el nuevo está una sola vez. Sin esto la copia vieja seguiría anotando cada
+    llamada por su cuenta."""
+    hooks_dir = _simular_instalacion_034(tmp_path)
+    assert (hooks_dir / "anotar_llamada.py").is_file(), "guarda: la 0.34.0 simulada lo tiene"
+
+    assert _install(tmp_path) == 0
+
+    assert not (hooks_dir / "anotar_llamada.py").exists(), "la copia vieja sigue en el disco"
+    assert (hooks_dir / "record_call.py").is_file()
+    texto = (tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8")
+    assert "anotar_llamada.py" not in texto, "el registro viejo sigue en settings.json"
+    assert texto.count("record_call.py") == 1
+
+
+def test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira(tmp_path):
+    """La otra mitad de REQ-012, y la que depende de `_RETIRED_SCRIPTS`: la copia de
+    `hooks/local-delegate/` la repone `install` entera, pero una puesta a mano siguiendo la recipe
+    (en la raíz de `~/.claude/hooks/`, registrada con su ruta) solo se reconoce como nuestra por el
+    nombre. Sin la entrada, se quedaría anotando cada llamada para siempre."""
+    claude = tmp_path / ".claude"
+    (claude / "hooks").mkdir(parents=True)
+    a_mano = claude / "hooks" / "anotar_llamada.py"
+    a_mano.write_text("# copiado a mano desde la recipe de la 0.34.0\n", encoding="utf-8")
+    (claude / "settings.json").write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": "mcp__local-delegate__.*",
+                            "hooks": [
+                                {"type": "command", "command": f"python {a_mano.as_posix()}"}
+                            ],
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
     )
+
+    assert _install(tmp_path) == 0
+
+    assert not a_mano.exists(), "la copia a mano del hook viejo sigue en el disco"
+    texto = (claude / "settings.json").read_text(encoding="utf-8")
+    assert "anotar_llamada.py" not in texto, "su registro sigue en settings.json"
+    assert texto.count("record_call.py") == 1
 
 
 def _comando_del_hook_de_read(home: Path) -> str | None:
@@ -520,13 +582,13 @@ def test_la_instalacion_buena_sobrevive_al_retirado(tmp_path):
     _con_huerfanos(tmp_path)
     assert _install(tmp_path) == 0
     buenos = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
-    empaquetados = inst.packaged_hook_names() - set(inst._SCRIPTS_RETIRADOS)
+    empaquetados = inst.packaged_hook_names() - set(inst._RETIRED_SCRIPTS)
     assert empaquetados, "sin scripts empaquetados este test no comprobaría nada"
     for nombre in empaquetados:
         assert (buenos / nombre).is_file(), f"{nombre} debía seguir en {buenos}"
     # Y la otra mitad: un retirado se reconoce como nuestro para poder limpiarlo, pero NO se
     # instala. Sin esto, meterlo en `packaged_hook_names()` podría hacer que volviera a copiarse.
-    for nombre in inst._SCRIPTS_RETIRADOS:
+    for nombre in inst._RETIRED_SCRIPTS:
         assert not (buenos / nombre).exists(), f"{nombre} está retirado y no debe instalarse"
 
 
@@ -541,7 +603,7 @@ def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
     Se simula una instalación anterior: el script en la raíz de `hooks/` (como lo dejaba la
     recipe vieja) y su entrada registrada en `settings.json`.
     """
-    retirado = inst._SCRIPTS_RETIRADOS[0]
+    retirado = inst._RETIRED_SCRIPTS[0]
     claude = tmp_path / ".claude"
     (claude / "hooks").mkdir(parents=True)
     viejo = claude / "hooks" / retirado

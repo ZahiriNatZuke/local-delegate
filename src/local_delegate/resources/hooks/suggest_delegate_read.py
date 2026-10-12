@@ -34,8 +34,9 @@ exacto, y ahí el resumen no sirve.
 
 Tres cosas apagan el bloqueo, y las tres son deliberadas:
 
-- `LD_HOOK_READ_BLOQUEAR=0`, que se lee **en cada invocación**: una sesión abierta hereda el
-  entorno del lanzador, así que una variable que solo se mire al arrancar no serviría de freno.
+- `LD_HOOK_READ_BLOCK=0` (antes `LD_HOOK_READ_BLOQUEAR`), que se lee **en cada invocación**: una
+  sesión abierta hereda el entorno del lanzador, así que una variable que solo se mire al arrancar
+  no serviría de freno.
 - Que el backend local no responda: bloquear sin sitio a donde delegar deja al agente sin forma de
   leer el fichero.
 - El interruptor general del experimento, `LD_HOOK_ENABLED=0`.
@@ -60,37 +61,37 @@ import os
 import sys
 
 from hook_common import (
-    anotar_bloqueo,
-    backend_disponible,
-    contexto_de,
+    backend_available,
+    block_state,
+    context_of,
+    cooled_model,
     deny,
     emit,
-    estado_del_bloqueo,
-    huella_de_ruta,
-    modelo_del_resumen,
-    modelo_enfriado,
-    nuevo_id,
+    new_id,
+    path_digest,
     record,
+    record_block,
+    summary_model,
 )
 
-VERDADEROS = {"1", "true", "yes", "on"}
-FALSOS = {"0", "false", "no", "off"}
+TRUTHY = {"1", "true", "yes", "on"}
+FALSY = {"0", "false", "no", "off"}
 
 #: Prosa: lo que un resumen puede sustituir. Son las dos extensiones con volumen medido —`.md` 49
 #: y `.txt` 15 de los 85 avisos del periodo— y las únicas que se bloquean.
-EXTENSIONES_DE_PROSA = frozenset({".md", ".txt", ".markdown", ".rst"})
+PROSE_EXTENSIONS = frozenset({".md", ".txt", ".markdown", ".rst"})
 
 #: Se leen para encontrar un valor exacto: un `package.json`, un `state.json`, la línea del error
 #: en un log. Se avisa, pero no se bloquea, porque ahí el resumen no sustituye a la lectura. De
 #: `.csv` y `.log` no hubo **ni un aviso** en el periodo medido, así que entrar a bloquearlos
 #: habría sido inventar el caso.
-EXTENSIONES_DE_DATOS = frozenset({".json", ".csv", ".log", ".yaml", ".yml", ".xml", ".toml"})
+DATA_EXTENSIONS = frozenset({".json", ".csv", ".log", ".yaml", ".yml", ".xml", ".toml"})
 
 #: Extensiones que se leen para editarlas, no para transformarlas. Es una constante de módulo y no
 #: una lista dentro de la decisión para que ampliarla no obligue a tocar la lógica —y para que un
 #: test pueda leerla. Deja fuera a propósito `.md`, `.json`, `.txt`, `.csv` y `.log`, que son los
 #: formatos donde un resumen o una extracción sí sustituyen a la lectura entera.
-EXTENSIONES_DE_CODIGO = frozenset(
+CODE_EXTENSIONS = frozenset(
     {
         ".c",
         ".cpp",
@@ -130,7 +131,7 @@ EXTENSIONES_DE_CODIGO = frozenset(
 MAX_EXT = 12
 
 
-def esta_encendido(argv: list[str] | None = None) -> bool:
+def is_enabled(argv: list[str] | None = None) -> bool:
     """¿Debe hacer algo este hook? Por el argumento del registro o por el entorno.
 
     Cualquiera de las dos basta. `argv` se puede inyectar para poder probar la decisión sin
@@ -139,10 +140,10 @@ def esta_encendido(argv: list[str] | None = None) -> bool:
     args = sys.argv[1:] if argv is None else argv
     if "--enabled" in args:
         return True
-    return os.environ.get("LD_HOOK_READ_ENABLED", "0").strip().lower() in VERDADEROS
+    return os.environ.get("LD_HOOK_READ_ENABLED", "0").strip().lower() in TRUTHY
 
 
-def extension_de(file_path: str) -> str:
+def extension_of(file_path: str) -> str:
     """La extensión en minúsculas, acotada y sin nada que identifique al archivo.
 
     Devuelve `""` cuando no hay extensión, cuando pasa de `MAX_EXT` o cuando trae algo que no sea
@@ -154,60 +155,60 @@ def extension_de(file_path: str) -> str:
     return ext
 
 
-def es_lectura_acotada(tool_input: dict) -> bool:
+def is_bounded_read(tool_input: dict) -> bool:
     """Una franja pedida con offset/limit es intencionada: el modelo ya sabe qué parte quiere."""
     return tool_input.get("offset") is not None or tool_input.get("limit") is not None
 
 
-def bloqueo_encendido() -> bool:
+def block_on() -> bool:
     """Si la regla puede rechazar una lectura. Se consulta EN CADA invocación, a propósito.
 
-    Nace apagado: se enciende con `LD_HOOK_READ_BLOQUEAR=1`, y se apaga en caliente con el fichero
-    de `hook_common.ruta_del_interruptor()`, que gana a la variable. La variable sola no servía de
+    Nace apagado: se enciende con `LD_HOOK_READ_BLOCK=1`, y se apaga en caliente con el fichero
+    de `hook_common.switch_path()`, que gana a la variable. La variable sola no servía de
     freno: una sesión abierta hereda el entorno del lanzador —medido: catorce lecturas con el umbral
     viejo después de cambiarlo— (REQ-F1-11).
     """
-    return estado_del_bloqueo() == "encendido"
+    return block_state() == "on"
 
 
 #: Máximo del nombre de tool que va a la telemetría.
 MAX_TOOL = 80
 
 
-def registrar_lectura_mcp(tool_name: str, tool_input: dict, payload: dict) -> None:
+def record_mcp_read(tool_name: str, tool_input: dict, payload: dict) -> None:
     """Una lectura por la tool de OTRO MCP: se cuenta y nunca se bloquea ni se sugiere (P-6).
 
     Sin este registro el denominador de la medición no incluye el camino de al lado, y una subida
     de la adopción no distinguiría «se delegó» de «se leyó por otro sitio» (REQ-F1-9).
     """
-    rutas = tool_input.get("paths")
-    if not isinstance(rutas, list):
-        rutas = [tool_input.get("path") or tool_input.get("file_path")]
-    rutas = [ruta for ruta in rutas if isinstance(ruta, str) and ruta]
-    evento: dict = {
+    paths = tool_input.get("paths")
+    if not isinstance(paths, list):
+        paths = [tool_input.get("path") or tool_input.get("file_path")]
+    paths = [item for item in paths if isinstance(item, str) and item]
+    fields: dict = {
         "category": "read",
-        "camino": "mcp",
-        "motivo": "mcp_ajeno",
+        "route": "mcp",
+        "reason": "foreign_mcp",
         "tool": tool_name[:MAX_TOOL],
-        "rutas": len(rutas),
-        "bloqueo": estado_del_bloqueo(),
-        **contexto_de(payload, __file__),
+        "paths": len(paths),
+        "block": block_state(),
+        **context_of(payload, __file__),
     }
-    if rutas:
-        evento["path_sha"] = huella_de_ruta(rutas[0])
-        evento["ext"] = extension_de(rutas[0])
+    if paths:
+        fields["path_sha"] = path_digest(paths[0])
+        fields["ext"] = extension_of(paths[0])
         try:
-            evento["size_kb"] = round(os.path.getsize(rutas[0]) / 1024, 1)
+            fields["size_kb"] = round(os.path.getsize(paths[0]) / 1024, 1)
         except OSError:
             # El tamaño es un dato extra: si la ruta no existe o no se puede leer (otro MCP puede
             # leer rutas remotas o relativas a su propia raíz), el evento se registra sin él. Perder
             # la lectura del usuario por un `getsize` sería mucho peor que un evento incompleto.
             pass
-    record("PreToolUse", suggested=False, **evento)
+    record("PreToolUse", suggested=False, **fields)
 
 
 def main() -> None:
-    if not esta_encendido():
+    if not is_enabled():
         return
 
     try:
@@ -218,39 +219,41 @@ def main() -> None:
     tool_input = payload.get("tool_input") or {}
     tool_name = str(payload.get("tool_name") or "")
     if tool_name.startswith("mcp__"):
-        registrar_lectura_mcp(tool_name, tool_input, payload)
+        record_mcp_read(tool_name, tool_input, payload)
         return
 
     file_path = tool_input.get("file_path")
     if not file_path:
         return
 
-    ext = extension_de(file_path)
+    ext = extension_of(file_path)
     # La HUELLA de la ruta, nunca la ruta. Sin ella no se puede agrupar por fichero, y esa es la
     # pregunta que la guarda de «acotada» tiene pendiente: de las 277 lecturas por franjas
     # registradas, cuantas eran de un fichero que acabo leyendose entero de todas formas. La
     # telemetria sigue sin poder decir QUE fichero era.
-    huella = {
-        "path_sha": huella_de_ruta(file_path),
-        "bloqueo": estado_del_bloqueo(),
-        **contexto_de(payload, __file__),
+    base_fields = {
+        "path_sha": path_digest(file_path),
+        "block": block_state(),
+        **context_of(payload, __file__),
     }
 
     # Las dos guardas siguientes registran en vez de callarse: sin denominador no hay puntería que
     # medir, y no poder medirla es lo que dejó a este hook tres semanas apuntando a código.
-    if es_lectura_acotada(tool_input):
+    if is_bounded_read(tool_input):
         record(
             "PreToolUse",
             suggested=False,
             category="read",
             ext=ext,
-            motivo="acotada",
-            **huella,
+            reason="bounded",
+            **base_fields,
         )
         return
 
-    if ext in EXTENSIONES_DE_CODIGO:
-        record("PreToolUse", suggested=False, category="read", ext=ext, motivo="codigo", **huella)
+    if ext in CODE_EXTENSIONS:
+        record(
+            "PreToolUse", suggested=False, category="read", ext=ext, reason="code", **base_fields
+        )
         return
 
     try:
@@ -267,35 +270,35 @@ def main() -> None:
             category="read",
             ext=ext,
             size_kb=round(size_kb, 1),
-            motivo="pequeno",
-            **huella,
+            reason="small",
+            **base_fields,
         )
         return
 
     band = "strong" if size_kb > strong_kb else "suggest"
-    comun = {
+    common = {
         "category": "read",
         "band": band,
         "ext": ext,
         "size_kb": round(size_kb, 1),
-        "id": nuevo_id(),
-        **huella,
+        "id": new_id(),
+        **base_fields,
     }
 
     # Solo la prosa se bloquea, y solo si hay a donde delegar. Cada una de las tres guardas
     # siguientes registra su motivo: si la regla se equivoca a menudo, tiene que verse en el dato
     # y no en la irritacion del usuario.
-    if ext in EXTENSIONES_DE_PROSA and bloqueo_encendido():
-        if not backend_disponible():
-            record("PreToolUse", suggested=False, motivo="backend_ausente", **comun)
-        elif modelo_enfriado(modelo_del_resumen(int(size_kb * 1024))):
+    if ext in PROSE_EXTENSIONS and block_on():
+        if not backend_available():
+            record("PreToolUse", suggested=False, reason="backend_missing", **common)
+        elif cooled_model(summary_model(int(size_kb * 1024))):
             # El servidor no llamaria a ese modelo: bloquear mandaria al agente a un destino que
             # no esta vivo (REQ-F1-10).
-            record("PreToolUse", suggested=False, motivo="modelo_enfriado", **comun)
+            record("PreToolUse", suggested=False, reason="model_cooled", **common)
         else:
             # La nota va ANTES del bloqueo: si el agente delega acto seguido, el servidor tiene
             # que encontrarla ya escrita.
-            anotar_bloqueo(comun["id"], file_path)
+            record_block(common["id"], file_path)
             deny(
                 "PreToolUse",
                 f"Este archivo pesa {size_kb:.0f} KB y es prosa. Pasalo por una tool local con "
@@ -304,23 +307,23 @@ def main() -> None:
                 "contexto.\n\n"
                 "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
                 "leelo por franjas con `offset` y `limit`, que no se bloquean.",
-                motivo="prosa_grande",
-                **comun,
+                reason="large_prose",
+                **common,
             )
             return
 
     strength = "Recomendacion fuerte" if band == "strong" else "Sugerencia"
-    destino = (
+    target = (
         "una tool local_* con path"
-        if ext not in EXTENSIONES_DE_DATOS
+        if ext not in DATA_EXTENSIONS
         else "local_extract con path, si lo que buscas son campos concretos"
     )
     emit(
         "PreToolUse",
         f"{strength}: este archivo pesa {size_kb:.0f} KB. Si necesitas una transformacion "
-        f"global (resumen, campos, traduccion o explicacion), usa {destino} para "
+        f"global (resumen, campos, traduccion o explicacion), usa {target} para "
         "que no entre al contexto. Leelo directamente si necesitas lineas exactas para razonar o editar.",
-        **comun,
+        **common,
     )
 
 

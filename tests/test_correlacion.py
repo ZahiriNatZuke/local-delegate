@@ -21,7 +21,9 @@ from local_delegate.resources.hooks import hook_common
 @pytest.fixture
 def notas(tmp_path, monkeypatch):
     archivo = tmp_path / "bloqueos.jsonl"
-    monkeypatch.setattr(hook_common, "ruta_de_notas", lambda: archivo)
+    monkeypatch.setattr(hook_common, "block_notes_path", lambda: archivo)
+    # El nombre viejo también se lee (REQ-012): que no lea el temporal real del usuario.
+    monkeypatch.setattr(hook_common, "legacy_block_notes_path", lambda: tmp_path / "viejo.jsonl")
     return archivo
 
 
@@ -30,16 +32,16 @@ def test_el_identificador_del_bloqueo_llega_al_servidor(notas, tmp_path):
     documento = tmp_path / "informe.md"
     documento.write_text("hola", encoding="utf-8")
 
-    hook_common.anotar_bloqueo("abc123def456", str(documento))
+    hook_common.record_block("abc123def456", str(documento))
 
-    assert server._bloqueo_reciente(str(documento)) == "abc123def456"
+    assert server._recent_block_id(str(documento)) == "abc123def456"
 
 
 def test_otra_ruta_no_se_lleva_el_bloqueo_ajeno(notas, tmp_path):
     """Control positivo: si cualquier lectura heredara el id, la adopcion medida seria falsa."""
-    hook_common.anotar_bloqueo("abc123def456", str(tmp_path / "informe.md"))
+    hook_common.record_block("abc123def456", str(tmp_path / "informe.md"))
 
-    assert server._bloqueo_reciente(str(tmp_path / "otro.md")) is None
+    assert server._recent_block_id(str(tmp_path / "otro.md")) is None
 
 
 def test_la_misma_ruta_escrita_de_otra_forma_sigue_cruzando(notas, tmp_path):
@@ -49,43 +51,43 @@ def test_la_misma_ruta_escrita_de_otra_forma_sigue_cruzando(notas, tmp_path):
     documento.parent.mkdir()
     documento.write_text("hola", encoding="utf-8")
 
-    hook_common.anotar_bloqueo("id-largo-1234", str(documento))
+    hook_common.record_block("id-largo-1234", str(documento))
     otra_forma = str(tmp_path / "sub" / ".." / "sub" / "informe.md")
 
-    assert server._bloqueo_reciente(otra_forma) == "id-largo-1234"
+    assert server._recent_block_id(otra_forma) == "id-largo-1234"
 
 
 def test_un_bloqueo_viejo_ya_no_cuenta(notas, tmp_path, monkeypatch):
     """Pasada la ventana, el agente hizo otra cosa por el camino: atribuirselo infla la adopcion."""
     documento = tmp_path / "informe.md"
-    hook_common.anotar_bloqueo("caducado1234", str(documento))
+    hook_common.record_block("caducado1234", str(documento))
 
     viejo = json.loads(notas.read_text(encoding="utf-8").strip())
     viejo["ts"] = time.time() - server.VENTANA_DE_BLOQUEO_S - 1
     notas.write_text(json.dumps(viejo) + "\n", encoding="utf-8")
 
-    assert server._bloqueo_reciente(str(documento)) is None
+    assert server._recent_block_id(str(documento)) is None
 
 
 def test_gana_el_bloqueo_mas_reciente_de_esa_ruta(notas, tmp_path):
     documento = tmp_path / "informe.md"
-    hook_common.anotar_bloqueo("primero12345", str(documento))
-    hook_common.anotar_bloqueo("segundo12345", str(documento))
+    hook_common.record_block("primero12345", str(documento))
+    hook_common.record_block("segundo12345", str(documento))
 
-    assert server._bloqueo_reciente(str(documento)) == "segundo12345"
+    assert server._recent_block_id(str(documento)) == "segundo12345"
 
 
 def test_las_notas_no_crecen_sin_freno(notas, tmp_path):
-    for i in range(hook_common.MAX_NOTAS + 50):
-        hook_common.anotar_bloqueo(f"id{i:010d}", str(tmp_path / f"{i}.md"))
+    for i in range(hook_common.MAX_NOTES + 50):
+        hook_common.record_block(f"id{i:010d}", str(tmp_path / f"{i}.md"))
 
-    assert len(notas.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTAS
+    assert len(notas.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTES
 
 
 def test_la_nota_no_guarda_la_ruta(notas, tmp_path):
     """Hereda la regla de la telemetria de hooks: ni rutas ni contenido, solo una huella."""
     documento = tmp_path / "secreto-del-cliente.md"
-    hook_common.anotar_bloqueo("abc123def456", str(documento))
+    hook_common.record_block("abc123def456", str(documento))
 
     crudo = notas.read_text(encoding="utf-8")
     assert "secreto-del-cliente" not in crudo
@@ -100,12 +102,12 @@ def test_la_nota_no_guarda_la_ruta(notas, tmp_path):
 def test_un_fichero_de_notas_roto_no_rompe_la_tool(notas, tmp_path, contenido):
     notas.write_text(contenido, encoding="utf-8")
 
-    assert server._bloqueo_reciente(str(tmp_path / "informe.md")) is None
+    assert server._recent_block_id(str(tmp_path / "informe.md")) is None
 
 
 def test_sin_fichero_de_notas_tampoco_pasa_nada(notas, tmp_path):
     assert not notas.exists()
-    assert server._bloqueo_reciente(str(tmp_path / "informe.md")) is None
+    assert server._recent_block_id(str(tmp_path / "informe.md")) is None
 
 
 # --- Y lo que de verdad importa: que acabe en el evento del log -------------------------------
@@ -126,7 +128,7 @@ def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypat
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     documento = tmp_path / "informe.md"
     documento.write_text("hola", encoding="utf-8")
-    hook_common.anotar_bloqueo("abc123def456", str(documento))
+    hook_common.record_block("abc123def456", str(documento))
 
     server._log_event(
         tool="local_summarize",

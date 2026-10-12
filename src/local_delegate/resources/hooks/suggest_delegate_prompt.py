@@ -7,7 +7,7 @@ import json
 import re
 import sys
 
-from hook_common import contexto_de, emit, estado_del_bloqueo, record
+from hook_common import block_state, context_of, emit, record
 
 _CATEGORIES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("summarize", re.compile(r"\b(resum|sintetiz|summary|summarize)\w*\b", re.IGNORECASE)),
@@ -33,18 +33,18 @@ _HOST_ONLY = re.compile(
 # solo cwd, hook_event_name, permission_mode, prompt_id, session_id y transcript_path); lo unico
 # que los distingue es como empieza `prompt`. Sin este filtro, un informe que dice «summary»
 # recibia el aviso de delegar, y cada uno contaba como un prompt mas en la telemetria.
-_EVENTO_SISTEMA = re.compile(
+_SYSTEM_EVENT = re.compile(
     r"\A\s*(?:Another Claude session sent a message:\s*)?"
     r"<(?:task-notification|agent-message|cross-session-message|system-reminder)\b"
 )
 
 
-def es_evento_sistema(prompt: str) -> bool:
-    return bool(_EVENTO_SISTEMA.match(prompt))
+def is_system_event(prompt: str) -> bool:
+    return bool(_SYSTEM_EVENT.match(prompt))
 
 
 def classify(prompt: str) -> str | None:
-    if not prompt.strip() or es_evento_sistema(prompt) or _HOST_ONLY.search(prompt):
+    if not prompt.strip() or is_system_event(prompt) or _HOST_ONLY.search(prompt):
         return None
     for category, pattern in _CATEGORIES:
         if pattern.search(prompt):
@@ -58,23 +58,23 @@ def main() -> None:
     except (json.JSONDecodeError, ValueError):
         return
     prompt = str(payload.get("prompt") or "")
-    if es_evento_sistema(prompt):
+    if is_system_event(prompt):
         # Ni aviso ni telemetria: no es un prompt, y contarlo inflaria el total del panel.
         return
     # Sesión, versión y estado del bloqueo en TODO evento, como los hooks de lectura: sin sesión
     # no se puede atribuir un evento a su corrida, y el banco de `scripts/` valida cada corrida por
     # aquí.
-    comun = {**contexto_de(payload, __file__), "bloqueo": estado_del_bloqueo()}
+    common = {**context_of(payload, __file__), "block": block_state()}
     category = classify(prompt)
     if category is None:
-        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **comun)
+        record("UserPromptSubmit", suggested=False, prompt_chars=len(prompt), **common)
         return
     context = (
         f"Oportunidad mecanica detectada ({category}). Antes de leer contenido grande, evalua "
         "usar la tool local_* especifica con path. Conserva en Claude cualquier parte que exija "
         "criterio, varias fuentes, tools externas o acciones de riesgo."
     )
-    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **comun)
+    emit("UserPromptSubmit", context, category=category, prompt_chars=len(prompt), **common)
 
 
 if __name__ == "__main__":

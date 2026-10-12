@@ -215,16 +215,16 @@ def _installed_prompt_hook_state(home: Path, variables: dict[str, str]) -> str:
         env=env,
     )
     assert proc.returncode == 0, proc.stderr
-    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["bloqueo"]
+    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["block"]
 
 
 @pytest.mark.parametrize(
     ("variables", "expected"),
     [
-        ({"LD_HOOK_READ_BLOQUEAR": "1"}, "encendido"),
-        ({"LD_HOOK_READ_BLOCK": "1"}, "encendido"),
-        ({"LD_HOOK_READ_BLOCK": "0", "LD_HOOK_READ_BLOQUEAR": "1"}, "apagado_variable"),
-        ({}, "apagado_variable"),
+        ({"LD_HOOK_READ_BLOQUEAR": "1"}, "on"),
+        ({"LD_HOOK_READ_BLOCK": "1"}, "on"),
+        ({"LD_HOOK_READ_BLOCK": "0", "LD_HOOK_READ_BLOQUEAR": "1"}, "off_variable"),
+        ({}, "off_variable"),
     ],
     ids=["old-only", "new-only", "both-new-wins", "none"],
 )
@@ -248,7 +248,7 @@ def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables
     other = tmp_path / "no-existe"
     resolved = {k: v.format(switch=switch, other=other) for k, v in variables.items()}
     state = _installed_prompt_hook_state(tmp_path, {"LD_HOOK_READ_BLOCK": "1", **resolved})
-    assert state == "apagado_fichero"
+    assert state == "off_file"
 
 
 # --- REQ-003: `local_status` dice lo que leyó el proceso -------------------------------------

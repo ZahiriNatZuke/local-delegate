@@ -25,7 +25,7 @@ from mcp.types import Implementation
 from local_delegate import atribucion, clients, server
 from local_delegate.resources.hooks import hook_common
 
-HOOK = Path(hook_common.__file__).parent / "anotar_llamada.py"
+HOOK = Path(hook_common.__file__).parent / "record_call.py"
 AGENTE = "general-purpose"
 OPUS = "claude-opus-5-5"
 
@@ -60,7 +60,7 @@ def _lanzar_hook(entrada: bytes, temporal: Path) -> subprocess.CompletedProcess:
 
 
 def _dir_notas(temporal: Path) -> Path:
-    return temporal / "local-delegate-llamadas"
+    return temporal / "local-delegate-calls"
 
 
 def _entrada_hook(tool_use_id: str, transcript: Path | str, **extra) -> dict:
@@ -108,7 +108,7 @@ def _escribir(ruta: Path, lineas: list[str]) -> Path:
 
 
 def _anotar(notas: Path, tool_use_id: str, transcript: Path, **extra) -> None:
-    assert hook_common.anotar_llamada(_entrada_hook(tool_use_id, transcript, **extra), notas)
+    assert hook_common.record_call(_entrada_hook(tool_use_id, transcript, **extra), notas)
 
 
 # --- El hook ------------------------------------------------------------------------------------
@@ -402,7 +402,7 @@ def log_y_notas(tmp_path, monkeypatch):
     notas = tmp_path / "notas"
     raiz = _proyectos(tmp_path)
     monkeypatch.setattr(server, "_current_log_path", lambda: log)
-    monkeypatch.setattr(hook_common, "directorio_de_notas_de_llamadas", lambda: notas)
+    monkeypatch.setattr(hook_common, "call_notes_dir", lambda: notas)
     monkeypatch.setattr(atribucion, "_raiz_de_proyectos", lambda: raiz)
     return log, notas, raiz
 

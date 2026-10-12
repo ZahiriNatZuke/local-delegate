@@ -5,7 +5,7 @@ y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enab
 están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
 bloquean si además se enciende `LD_HOOK_READ_BLOCK` (ver «El bloqueo»). El que se **retiró** el
 2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Aparte va
-`anotar_llamada.py`, que no sugiere nada: anota quién pide cada delegación y se instala siempre.
+`record_call.py` (antes `anotar_llamada.py`), que no sugiere nada: anota quién pide cada delegación y se instala siempre.
 Ninguno envía el prompt a otro modelo.
 
 Los scripts se distribuyen **dentro del paquete**
@@ -59,7 +59,8 @@ El mensaje del rechazo nombra la tool que sirve, el `path` para llamarla y la sa
 leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias formas de que no
 bloquee:
 
-- **el fichero `~/.claude/local-delegate-bloqueo-apagado`** (o la ruta de
+- **el fichero `~/.claude/local-delegate-block-off`** (antes `local-delegate-bloqueo-apagado`,
+  que sigue valiendo con aviso; o la ruta de
   `LD_HOOK_READ_SWITCH_FILE`): gana a la variable y se mira en cada lectura, así que apaga al
   momento sin cerrar la sesión; bórralo para volver a encender;
 - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
@@ -68,7 +69,7 @@ bloquee:
 - o `LD_HOOK_ENABLED=0`.
 
 Con la misma bandera se registra el hook para las tools de lectura de otros MCP
-(`mcp__*__read_*`, `mcp__*__get_file_contents`): por ahí solo registra el evento (`camino: mcp`) y
+(`mcp__*__read_*`, `mcp__*__get_file_contents`): por ahí solo registra el evento (`route: mcp`) y
 nunca bloquea.
 
 `.json`, `.csv`, `.log` y `.yaml` se avisan pero no se bloquean: ahí se busca un valor exacto y un
@@ -93,7 +94,7 @@ delegación con el bloqueo.
 Registra **todos** los comandos, se bloqueen o no. Sin denominador no se sabe cuánta lectura se va
 por este camino, que es justo la pregunta que las mediciones anteriores no pudieron responder.
 
-### `anotar_llamada.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
+### `record_call.py` — `PreToolUse`, matcher `mcp__local-delegate__.*`
 
 No sugiere, no avisa y no bloquea: no imprime nada y sale siempre con 0, también con una entrada
 rota. Su único trabajo es dejar una nota corta por cada llamada a una tool de local-delegate, con
@@ -140,7 +141,7 @@ El comando copia los scripts a `~/.claude/hooks/local-delegate/` y registra en
 `~/.claude/settings.json` los que van encendidos. Es idempotente (reinstalar no duplica entradas),
 no toca hooks ajenos y se revierte con `local-delegate uninstall`. Los de lectura solo se
 registran con `--enable-read-hook`, así que **por defecto quedan registrados el de
-`UserPromptSubmit` y `anotar_llamada.py`**.
+`UserPromptSubmit` y `record_call.py`**.
 
 El resultado en `settings.json` tiene esta forma:
 
