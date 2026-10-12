@@ -12,7 +12,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from local_delegate import atribucion, checks, recalcular
+from local_delegate import attribution, checks, recalcular
 
 TOOL = "local_summarize"
 
@@ -159,16 +159,16 @@ def test_cotejo_bueno_ok_y_sin_cotejo_unknown(tmp_path):
 
 
 def test_lo_rellenado_y_lo_excluido_no_avisan(tmp_path):
-    """Lee los `atribucion-*.json`: una línea ya rellenada no está pendiente; Codex no cuenta."""
+    """Lee los `attribution-*.json`: una línea ya rellenada no está pendiente; Codex no cuenta."""
     home = _home(tmp_path)
     log_dir = tmp_path / "log"
     (fila,) = _log(log_dir, 21)
     mes = fila["ts"][:4] + fila["ts"][5:7]
-    (clave,) = atribucion.claves_del_fichero([fila])
-    atribucion.escribir_relleno(
+    (clave,) = attribution.file_keys([fila])
+    attribution.write_backfill(
         log_dir,
         mes,
-        {clave: {"caller_model": "claude-opus-5", "caller_kind": "main", "cruce": "ventana"}},
+        {clave: {"caller_model": "claude-opus-5", "caller_kind": "main", "match": "window"}},
     )
     assert _probe(home, log_dir).status == checks.UNKNOWN
 

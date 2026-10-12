@@ -37,7 +37,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from . import (
-    atribucion,
+    attribution,
     clients,
     config,
     coste,
@@ -379,7 +379,7 @@ class Context:
     daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
         default_factory=lambda f=_default_daemon_accepts_token: f
     )
-    # Dónde están el log de uso, los `atribucion-*.json` y `coste-agregados.json`. Un campo simple
+    # Dónde están el log de uso, los `attribution-*.json` y `coste-agregados.json`. Un campo simple
     # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
     # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
     log_dir: Path | None = None
@@ -1783,7 +1783,7 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
 def _probe_coste(ctx: Context) -> Result:
     """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
 
-    Lee **solo** `coste-agregados.json`, el log de uso y los `atribucion-*.json` (más
+    Lee **solo** `coste-agregados.json`, el log de uso y los `attribution-*.json` (más
     `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son cosa del comando que
     lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
     cotejo fallido, cotejo bueno, sin cotejo. Si se cumplen las dos primeras, dice las dos.
@@ -1797,7 +1797,7 @@ def _probe_coste(ctx: Context) -> Result:
     avisos: list[str] = []
 
     if (ctx.claude_dir / "projects").is_dir():
-        plazo = atribucion.plazo_de_borrado(ctx.claude_dir)
+        plazo = attribution.cleanup_period_days(ctx.claude_dir)
         cuantas, dias = _pendiente_mas_vieja(log_dir, ahora=ahora, plazo_dias=plazo)
         if cuantas:
             avisos.append(

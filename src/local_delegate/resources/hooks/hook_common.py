@@ -469,7 +469,7 @@ def record_block(block_id: str, path: str, notes: Path | None = None) -> None:
 # El hook `record_call.py` (antes `anotar_llamada.py`) deja, por cada `tools/call` de
 # local-delegate, una nota con lo que solo trae la entrada del hook (`agent_id`, `agent_type`,
 # `effort`) y el `transcript_path`, que es donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
-# (`atribucion.leer_nota`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
+# (`attribution.read_note`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
 #
 # UNA nota por fichero, y no un fichero con todas como el de los bloqueos: los subagentes llaman en
 # paralelo, y dos hooks que reescriben el mismo fichero se pisan. Cada nota se escribe en un

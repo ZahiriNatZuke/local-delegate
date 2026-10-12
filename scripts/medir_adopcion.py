@@ -12,7 +12,7 @@ mal una vez en este repo, catorce contra treinta y cuatro.
 
 Las pruebas no cuentan: los eventos de hooks dentro de una ventana de prueba
 (`LOG_DIR/test-windows.json`) y las filas del log de uso que la regla comun
-(`atribucion.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
+(`attribution.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
 cuantas. `--include-tests` las deja.
 
 Uso:
@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import atribucion, config, coste, legacy_names, test_windows
+from local_delegate import attribution, config, coste, legacy_names, test_windows
 
 
 def telemetria_de_hooks() -> Path:
@@ -97,7 +97,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         hooks = [e for e in hooks if ventanas.find(e.get("ts")) is None]
         fuera["hooks"] = antes - len(hooks)
         antes = len(usos)
-        usos = [e for e in usos if not atribucion.test_reason(e)]
+        usos = [e for e in usos if not attribution.test_reason(e)]
         fuera["usage"] = antes - len(usos)
 
     lecturas = [e for e in hooks if e.get("category") in {"read", "shell"}]

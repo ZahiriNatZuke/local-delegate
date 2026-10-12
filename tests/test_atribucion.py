@@ -22,7 +22,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.shared.memory import create_client_server_memory_streams
 from mcp.types import Implementation
 
-from local_delegate import atribucion, clients, server
+from local_delegate import attribution, clients, server
 from local_delegate.resources.hooks import hook_common
 
 HOOK = Path(hook_common.__file__).parent / "record_call.py"
@@ -130,7 +130,7 @@ def test_ida_y_vuelta_hook_servidor(tmp_path):
     )
     proc = _lanzar_hook(json.dumps(entrada).encode("utf-8"), temporal)
     assert proc.returncode == 0, proc.stderr
-    nota = atribucion.leer_nota("toolu_ida", directorio=_dir_notas(temporal))
+    nota = attribution.read_note("toolu_ida", directory=_dir_notas(temporal))
     assert nota is not None, "el hook no dejó nota legible"
     assert nota.get("effort") == "low"
     assert nota.get("agent_id") == "a1"
@@ -172,8 +172,8 @@ def test_dos_llamadas_no_se_pisan(tmp_path):
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_a", tmp_path / "s.jsonl")
     _anotar(notas, "toolu_b", tmp_path / "s.jsonl")
-    assert atribucion.leer_nota("toolu_a", directorio=notas) is not None
-    assert atribucion.leer_nota("toolu_b", directorio=notas) is not None
+    assert attribution.read_note("toolu_a", directory=notas) is not None
+    assert attribution.read_note("toolu_b", directory=notas) is not None
 
 
 def test_ocho_hooks_a_la_vez(tmp_path):
@@ -195,18 +195,18 @@ def test_ocho_hooks_a_la_vez(tmp_path):
         proceso.communicate(datos.encode("utf-8"), timeout=30)
     assert all(p.returncode == 0 for p in procesos)
     notas = _dir_notas(temporal)
-    assert sum(atribucion.leer_nota(i, directorio=notas) is not None for i in ids) == 8
+    assert sum(attribution.read_note(i, directory=notas) is not None for i in ids) == 8
 
 
 def test_una_nota_a_medias_es_sin_nota(tmp_path):
-    """Control (b): mutante «`leer_nota` sin `try`» → la excepción escapa."""
+    """Control (b): mutante «`read_note` sin `try`» → la excepción escapa."""
     notas = tmp_path / "notas"
     notas.mkdir()
     (notas / "toolu_medias.json").write_text('{"tool_use_id": ', encoding="utf-8")
     escapo = False
     resultado = "sin leer"
     try:
-        resultado = atribucion.leer_nota("toolu_medias", directorio=notas)
+        resultado = attribution.read_note("toolu_medias", directory=notas)
     except Exception:
         escapo = True
     assert not escapo
@@ -243,7 +243,7 @@ def test_resuelve_el_modelo_del_subagente(tmp_path):
     _anotar(
         notas, "toolu_sub", principal, agent_id="a1", agent_type=AGENTE, effort={"level": "low"}
     )
-    r = atribucion.resolver_llamada("toolu_sub", notas=notas, proyectos=raiz)
+    r = attribution.resolve_call("toolu_sub", notes=notas, projects=raiz)
     assert r.get("caller_model") == OPUS
     assert r.get("caller_kind") == "subagent"
     assert r.get("caller_agent_type") == AGENTE
@@ -257,7 +257,7 @@ def test_en_el_principal_no_hay_agent_type(tmp_path):
     principal = _escribir(raiz / "D--proyecto" / "s1.jsonl", [_linea_tool_use("toolu_main", OPUS)])
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_main", principal, agent_type=AGENTE, effort={"level": "high"})
-    r = atribucion.resolver_llamada("toolu_main", notas=notas, proyectos=raiz)
+    r = attribution.resolve_call("toolu_main", notes=notas, projects=raiz)
     assert r.get("caller_model") == OPUS, "guarda: la resolución llegó al transcript"
     assert r.get("caller_kind") == "main"
     assert "caller_agent_type" not in r
@@ -269,7 +269,7 @@ def test_una_ruta_fuera_de_projects_no_se_abre(tmp_path):
     fuera = _escribir(tmp_path / "fuera" / "s1.jsonl", [_linea_tool_use("toolu_fuera", OPUS)])
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_fuera", fuera, effort={"level": "high"})
-    r = atribucion.resolver_llamada("toolu_fuera", notas=notas, proyectos=raiz)
+    r = attribution.resolve_call("toolu_fuera", notes=notas, projects=raiz)
     assert r.get("caller_kind") == "main", "guarda: la nota sí se leyó"
     assert r.get("caller_model") is None
     assert r.get("caller_src") == "hook"
@@ -281,7 +281,7 @@ def test_la_carrera_deja_caller_src_hook(tmp_path):
     principal = _escribir(raiz / "D--proyecto" / "s1.jsonl", [_linea_tool_use("toolu_otra", OPUS)])
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_carrera", principal, effort={"level": "high"})
-    r = atribucion.resolver_llamada("toolu_carrera", notas=notas, proyectos=raiz)
+    r = attribution.resolve_call("toolu_carrera", notes=notas, projects=raiz)
     assert r.get("caller_src") == "hook"
     assert "caller_model" not in r
 
@@ -293,10 +293,10 @@ def test_una_nota_vieja_no_cuenta(tmp_path):
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_vieja", principal)
     ahora = time.time()
-    assert "caller_kind" in atribucion.resolver_llamada(
-        "toolu_vieja", notas=notas, proyectos=raiz, ahora=ahora
+    assert "caller_kind" in attribution.resolve_call(
+        "toolu_vieja", notes=notas, projects=raiz, now=ahora
     ), "guarda: la misma nota, fresca, sí cuenta"
-    r = atribucion.resolver_llamada("toolu_vieja", notas=notas, proyectos=raiz, ahora=ahora + 660)
+    r = attribution.resolve_call("toolu_vieja", notes=notas, projects=raiz, now=ahora + 660)
     assert "caller_kind" not in r
 
 
@@ -313,8 +313,8 @@ def test_haiku_sin_esfuerzo_es_na_y_opus_sin_esfuerzo_falta(tmp_path):
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_haiku", principal)
     _anotar(notas, "toolu_opus", principal)
-    r_haiku = atribucion.resolver_llamada("toolu_haiku", notas=notas, proyectos=raiz)
-    r_opus = atribucion.resolver_llamada("toolu_opus", notas=notas, proyectos=raiz)
+    r_haiku = attribution.resolve_call("toolu_haiku", notes=notas, projects=raiz)
+    r_opus = attribution.resolve_call("toolu_opus", notes=notas, projects=raiz)
     assert r_haiku.get("caller_model") == "claude-haiku-4-5"
     assert r_haiku.get("caller_effort") == "n/a"
     assert r_opus.get("caller_model") == OPUS, "guarda: Opus también se resolvió"
@@ -341,7 +341,7 @@ class _Contador:
 
 
 class _EspiaDeLectura:
-    """Sustituye a `open` en `resolver_llamada(abrir=...)`."""
+    """Sustituye a `open` en `resolve_call(opener=...)`."""
 
     def __init__(self) -> None:
         self.leidos = 0
@@ -365,7 +365,7 @@ def test_no_lee_mas_de_256_kb(tmp_path):
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_lejos", principal)
     espia = _EspiaDeLectura()
-    r = atribucion.resolver_llamada("toolu_lejos", notas=notas, proyectos=raiz, abrir=espia)
+    r = attribution.resolve_call("toolu_lejos", notes=notas, projects=raiz, opener=espia)
     assert espia.leidos > 0, "guarda: se llegó a abrir el transcript"
     assert espia.leidos <= 256 * 1024
     assert r.get("caller_model") is None
@@ -380,14 +380,12 @@ def test_el_presupuesto_de_50_ms_corta(tmp_path):
     )
     notas = tmp_path / "notas"
     _anotar(notas, "toolu_lento", principal)
-    parado = atribucion.resolver_llamada(
-        "toolu_lento", notas=notas, proyectos=raiz, reloj=lambda: 0.0
-    )
+    parado = attribution.resolve_call("toolu_lento", notes=notas, projects=raiz, clock=lambda: 0.0)
     assert parado.get("caller_model") == OPUS, "guarda: con tiempo de sobra se encuentra"
 
     instantes = iter(i * 0.060 for i in range(1000))
-    r = atribucion.resolver_llamada(
-        "toolu_lento", notas=notas, proyectos=raiz, reloj=lambda: next(instantes)
+    r = attribution.resolve_call(
+        "toolu_lento", notes=notas, projects=raiz, clock=lambda: next(instantes)
     )
     assert r.get("caller_model") is None
 
@@ -403,7 +401,7 @@ def log_y_notas(tmp_path, monkeypatch):
     raiz = _proyectos(tmp_path)
     monkeypatch.setattr(server, "_current_log_path", lambda: log)
     monkeypatch.setattr(hook_common, "call_notes_dir", lambda: notas)
-    monkeypatch.setattr(atribucion, "_raiz_de_proyectos", lambda: raiz)
+    monkeypatch.setattr(attribution, "_projects_root", lambda: raiz)
     return log, notas, raiz
 
 
@@ -471,7 +469,7 @@ def test_una_resolucion_rota_no_se_lleva_la_linea(log_y_notas, monkeypatch):
     def revienta(*_a, **_k):
         raise RuntimeError("resolución rota")
 
-    monkeypatch.setattr(atribucion, "resolver_llamada", revienta)
+    monkeypatch.setattr(attribution, "resolve_call", revienta)
     escapo = False
     try:
         _en_peticion("toolu_roto", _log_minimo)
@@ -522,16 +520,16 @@ async def _peticiones(ids: list[str], en_la_tool) -> list:
 
 
 def test_la_resolucion_se_hace_una_vez_por_peticion(log_y_notas, monkeypatch):
-    """Control (b): mutante «`llamada_actual` sin memoria» → se resuelve dos veces."""
+    """Control (b): mutante «`current_call` sin memoria» → se resuelve dos veces."""
     log, notas, raiz = log_y_notas
     principal = _escribir(raiz / "D--proyecto" / "s1.jsonl", [_linea_tool_use("toolu_una", OPUS)])
     _anotar(notas, "toolu_una", principal)
-    espia = _Espia(atribucion.resolver_llamada)
-    monkeypatch.setattr(atribucion, "resolver_llamada", espia)
+    espia = _Espia(attribution.resolve_call)
+    monkeypatch.setattr(attribution, "resolve_call", espia)
 
     def en_la_tool():
         _log_minimo()
-        return atribucion.llamada_actual()
+        return attribution.current_call()
 
     vistos = anyio.run(_peticiones, ["toolu_una"], en_la_tool)
     assert vistos and vistos[0].get("caller_model") == OPUS, "guarda: se resolvió de verdad"
@@ -550,7 +548,7 @@ def test_la_memoria_no_cruza_peticiones(log_y_notas):
     _anotar(notas, "toolu_p2", principal)
 
     def en_la_tool():
-        atribucion.llamada_actual()
+        attribution.current_call()
         memoria = clients.memoria_de_peticion()
         return sorted(memoria) if memoria is not None else None
 
@@ -569,61 +567,61 @@ def test_dos_lineas_del_mismo_segundo_no_comparten_clave():
     """REQ-005. Control (b): mutante «clave `ts|tool`» → las dos comparten clave."""
     ts = "2026-10-06T12:00:00+00:00"
     filas = [{"ts": ts, "tool": "local_summarize"}, {"ts": ts, "tool": "local_summarize"}]
-    claves_antes = atribucion.claves_del_fichero(filas)
+    claves_antes = attribution.file_keys(filas)
     assert len(set(claves_antes)) == 2
-    claves = atribucion.claves_del_fichero([*filas, {"ts": ts, "tool": "local_summarize"}])
+    claves = attribution.file_keys([*filas, {"ts": ts, "tool": "local_summarize"}])
     assert claves[:2] == claves_antes
     assert len(set(claves)) == 3
-    con_id = atribucion.claves_del_fichero([{"ts": ts, "tool": "x", "tool_use_id": "toolu_k"}])
+    con_id = attribution.file_keys([{"ts": ts, "tool": "x", "tool_use_id": "toolu_k"}])
     assert con_id == ["toolu_k"]
 
 
 def test_el_relleno_solo_mejora(tmp_path):
     """REQ-005. Control (b): mutante «escribir siempre la nueva» → `ventana` pisa a `exacto`."""
-    atribucion.escribir_relleno(
+    attribution.write_backfill(
         tmp_path,
         "202610",
-        {"k1": {"cruce": "exacto", "caller_model": OPUS}, "k2": {"cruce": "ambiguo"}},
+        {"k1": {"match": "exact", "caller_model": OPUS}, "k2": {"match": "ambiguous"}},
     )
-    atribucion.escribir_relleno(
+    attribution.write_backfill(
         tmp_path,
         "202610",
         {
-            "k1": {"cruce": "ventana", "caller_model": "claude-haiku-4-5"},
-            "k2": {"cruce": "ventana", "caller_model": OPUS},
+            "k1": {"match": "window", "caller_model": "claude-haiku-4-5"},
+            "k2": {"match": "window", "caller_model": OPUS},
         },
     )
-    assert (tmp_path / "atribucion-202610.json").is_file()
-    entradas = atribucion.leer_relleno(tmp_path, "202610")
-    assert entradas["k1"]["cruce"] == "exacto"
+    assert (tmp_path / "attribution-202610.json").is_file()
+    entradas = attribution.read_backfill(tmp_path, "202610")
+    assert entradas["k1"]["match"] == "exact"
     assert entradas["k1"]["caller_model"] == OPUS
-    assert entradas["k2"]["cruce"] == "ventana", "guarda: un cruce mejor sí sustituye"
-    atribucion.escribir_relleno(tmp_path, "202610", {"k3": {"cruce": "sin_cruce"}})
-    assert set(atribucion.leer_relleno(tmp_path, "202610")) == {"k1", "k2", "k3"}
+    assert entradas["k2"]["match"] == "window", "guarda: un cruce mejor sí sustituye"
+    attribution.write_backfill(tmp_path, "202610", {"k3": {"match": "no_match"}})
+    assert set(attribution.read_backfill(tmp_path, "202610")) == {"k1", "k2", "k3"}
 
 
 def test_excluida():
     """REQ-007. Control (b): mutante «sin la rama de `banco`» → la de banco cuenta."""
-    assert atribucion.excluida({"client": "codex-mcp-client"}) == "no es Claude"
-    assert atribucion.excluida({"client": "mcp"}) == "pruebas"
+    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "no es Claude"
+    assert attribution.exclusion_reason({"client": "mcp"}) == "pruebas"
     f = {"client": "claude-code"}
-    assert atribucion.excluida(f, {"banco": True}) == "pruebas"
-    assert atribucion.excluida(f, {"banco": False}) is None
-    assert atribucion.excluida(f) is None
+    assert attribution.exclusion_reason(f, {"bench": True}) == "pruebas"
+    assert attribution.exclusion_reason(f, {"bench": False}) is None
+    assert attribution.exclusion_reason(f) is None
 
 
 def test_plazo_de_borrado(tmp_path):
     """Enmienda 1. Control (b): mutante «devolver 30 siempre» → no lee los 90."""
     d = tmp_path / "claude"
     d.mkdir()
-    assert atribucion.plazo_de_borrado(d) == 30
+    assert attribution.cleanup_period_days(d) == 30
     (d / "settings.json").write_text(json.dumps({"cleanupPeriodDays": 90}), encoding="utf-8")
-    assert atribucion.plazo_de_borrado(d) == 90
+    assert attribution.cleanup_period_days(d) == 90
     for malo in ("abc", 0, -5, True, 1.5):
         (d / "settings.json").write_text(json.dumps({"cleanupPeriodDays": malo}), encoding="utf-8")
-        assert atribucion.plazo_de_borrado(d) == 30, malo
+        assert attribution.cleanup_period_days(d) == 30, malo
     (d / "settings.json").write_text("{roto", encoding="utf-8")
-    assert atribucion.plazo_de_borrado(d) == 30
+    assert attribution.cleanup_period_days(d) == 30
 
 
 # --- Una sola regla de «es una prueba» (test-windows-out-of-metrics, REQ-004) -------------------
@@ -631,16 +629,122 @@ def test_plazo_de_borrado(tmp_path):
 
 def test_test_reason_reconoce_las_tres_clases_de_prueba():
     """Control: mutante «`test_reason` ignora `test_window`» → falla el caso de la ventana."""
-    assert atribucion.test_reason({"client": "mcp"}) == "pruebas"
-    assert atribucion.test_reason({"client": "claude-code"}, {"banco": True}) == "pruebas"
-    # El panel la llama con un solo argumento sobre la fila ya fundida, que trae `banco`.
-    assert atribucion.test_reason({"client": "claude-code", "banco": True}) == "pruebas"
-    assert atribucion.test_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
-    assert atribucion.test_reason({"client": "codex-mcp-client"}) is None
-    assert atribucion.test_reason({"client": "claude-code"}) is None
+    assert attribution.test_reason({"client": "mcp"}) == "pruebas"
+    assert attribution.test_reason({"client": "claude-code"}, {"bench": True}) == "pruebas"
+    # El panel la llama con un solo argumento sobre la fila ya fundida, que trae `bench`.
+    assert attribution.test_reason({"client": "claude-code", "bench": True}) == "pruebas"
+    assert attribution.test_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
+    assert attribution.test_reason({"client": "codex-mcp-client"}) is None
+    assert attribution.test_reason({"client": "claude-code"}) is None
 
 
 def test_excluida_suma_no_claude_y_pruebas():
-    assert atribucion.excluida({"client": "codex-mcp-client"}) == "no es Claude"
-    assert atribucion.excluida({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
-    assert atribucion.excluida({"client": "claude-code"}) is None
+    assert attribution.exclusion_reason({"client": "codex-mcp-client"}) == "no es Claude"
+    assert (
+        attribution.exclusion_reason({"client": "claude-code", "test_window": "w-1"}) == "pruebas"
+    )
+    assert attribution.exclusion_reason({"client": "claude-code"}) is None
+
+
+# --- Caché del relleno: nombre nuevo, lectura dual y siembra una sola vez (A5a, REQ-005/006) ----
+
+
+def _relleno_viejo(log_dir: Path, mes: str, entradas: dict) -> Path:
+    """Un `atribucion-AAAAMM.json` como lo dejaba una versión anterior: claves y valores viejos."""
+    viejo = log_dir / f"atribucion-{mes}.json"
+    viejo.write_text(
+        json.dumps({"version": 1, "entradas": entradas}, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    return viejo
+
+
+ENTRADAS_VIEJAS = {
+    "k1": {"cruce": "exacto", "banco": False, "n": 3, "caducidades": 1, "caller_model": OPUS},
+    "k2": {"cruce": "ventana+path", "banco": True, "n": 0, "caducidades": 0},
+    "k3": {"cruce": "ambiguo", "banco": False},
+    "k4": {"cruce": "sin_cruce", "banco": False},
+}
+
+
+def test_el_relleno_viejo_se_lee_traducido_si_no_hay_nuevo(tmp_path):
+    """REQ-006. Control: mutante «`read_backfill` solo lee `attribution-*`» → `{}`."""
+    _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    leidas = attribution.read_backfill(tmp_path, "202609")
+    assert leidas["k1"] == {
+        "match": "exact",
+        "bench": False,
+        "n": 3,
+        "expiries": 1,
+        "caller_model": OPUS,
+    }
+    assert [leidas[k]["match"] for k in ("k2", "k3", "k4")] == [
+        "window+path",
+        "ambiguous",
+        "no_match",
+    ]
+    assert not (tmp_path / "attribution-202609.json").exists(), "leer no escribe nada"
+
+
+def test_la_siembra_ocurre_una_sola_vez(tmp_path):
+    """REQ-006 (siembra). Control: mutante «sembrar desde el viejo en cada escritura» → la entrada
+    que una versión anterior añade al viejo DESPUÉS de sembrar entra en la segunda corrida."""
+    viejo = _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    primera = attribution.write_backfill(tmp_path, "202609", {"k9": {"match": "exact"}})
+    assert set(primera) == {"k1", "k2", "k3", "k4", "k9"}, "guarda: la primera corrida siembra"
+    # Una 0.34.0 rezagada (la Mac) sigue escribiendo el fichero viejo.
+    _relleno_viejo(tmp_path, "202609", {**ENTRADAS_VIEJAS, "k5": {"cruce": "exacto"}})
+    assert viejo.is_file()
+    segunda = attribution.write_backfill(tmp_path, "202609", {})
+    assert len(segunda) == len(primera)
+    assert segunda == primera
+    assert set(attribution.read_backfill(tmp_path, "202609")) == set(primera)
+
+
+def test_un_cruce_exacto_viejo_no_se_pierde_frente_a_una_ventana_nueva(tmp_path):
+    """REQ-006 (mejor cruce al sembrar). Control: mutante «fundir sin la regla de mejor cruce»
+    (la entrada nueva pisa siempre) → `k1` pasa a `window` y pierde su modelo."""
+    _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    fundidas = attribution.write_backfill(
+        tmp_path,
+        "202609",
+        {
+            "k1": {"match": "window", "caller_model": "claude-haiku-4-5"},
+            "k3": {"match": "window", "caller_model": OPUS},
+        },
+    )
+    assert fundidas["k1"]["match"] == "exact"
+    assert fundidas["k1"]["caller_model"] == OPUS
+    assert fundidas["k3"]["match"] == "window", "guarda: un cruce mejor sí sustituye"
+
+
+def test_sembrar_deja_el_fichero_viejo_intacto_byte_a_byte(tmp_path):
+    """REQ-006 (intactos). Control: mutante «reescribir el viejo en el formato nuevo al sembrar» →
+    cambian los bytes."""
+    viejo = _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    antes = viejo.read_bytes()
+    attribution.write_backfill(tmp_path, "202609", {"k9": {"match": "exact"}})
+    attribution.write_backfill(tmp_path, "202609", {"k1": {"match": "window"}})
+    assert (tmp_path / "attribution-202609.json").is_file(), "guarda: se sembró el nuevo"
+    assert viejo.read_bytes() == antes
+
+
+def test_el_relleno_se_escribe_solo_en_el_formato_nuevo(tmp_path):
+    """REQ-005. Control: mutante «`write_backfill` no traduce lo que recibe» → `cruce` en disco."""
+    _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    attribution.write_backfill(tmp_path, "202609", {"k8": {"cruce": "ventana", "banco": True}})
+    datos = json.loads((tmp_path / "attribution-202609.json").read_text(encoding="utf-8"))
+    assert set(datos) == {"version", "entries"}
+    texto = json.dumps(datos, ensure_ascii=False)
+    for viejo in ('"cruce"', '"banco"', '"caducidades"', '"exacto"', '"ventana', '"sin_cruce"'):
+        assert viejo not in texto, viejo
+    assert datos["entries"]["k8"] == {"match": "window", "bench": True}
+
+
+def test_con_los_dos_ficheros_manda_el_nuevo(tmp_path):
+    """REQ-006. Control: mutante «leer primero el viejo» → `k1` vuelve a ser el del viejo."""
+    _relleno_viejo(tmp_path, "202609", ENTRADAS_VIEJAS)
+    (tmp_path / "attribution-202609.json").write_text(
+        json.dumps({"version": 1, "entries": {"k1": {"match": "window"}}}), encoding="utf-8"
+    )
+    assert attribution.read_backfill(tmp_path, "202609") == {"k1": {"match": "window"}}

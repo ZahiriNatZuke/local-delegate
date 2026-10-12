@@ -64,6 +64,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   no existe, `enfriamiento.json`. `enfriamiento-eventos.jsonl` ya no crece, pero
   `scripts/medir_enfriamiento.py` (mismo nombre, mismas opciones) lee los dos registros y da el
   mismo informe con filas viejas, nuevas o mezcladas.
+- **La caché del relleno pasa a `attribution-AAAAMM.json`** (antes `atribucion-AAAAMM.json`), con
+  claves y valores en inglés: `entries`, y en cada entrada `match`, `bench` y `expiries` (antes
+  `entradas`, `cruce`, `banco` y `caducidades`), con los cruces `exact`, `window`, `window+path`,
+  `ambiguous` y `no_match` (antes `exacto`, `ventana`, `ventana+path`, `ambiguo` y `sin_cruce`).
+  Mientras de un mes solo exista el fichero viejo, el panel, `doctor`, `recompute-cost` y los
+  scripts de medición lo leen traducido. La primera escritura de ese mes siembra el nuevo desde el
+  viejo, una sola vez y con la regla de siempre (un cruce solo lo sustituye otro mejor); desde ahí
+  solo se lee el nuevo, y el viejo queda intacto. El resumen «cruces» de `recompute-cost` muestra
+  ya los valores nuevos.
 
 ## [0.34.0] - 2026-10-08
 

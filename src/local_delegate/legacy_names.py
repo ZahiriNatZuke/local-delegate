@@ -116,6 +116,24 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "class": FAILURE_CLASS_VALUES,
         },
     },
+    # Cada entrada del relleno (`attribution-AAAAMM.json`; antes `atribucion-AAAAMM.json`). La
+    # clave de primer nivel `entradas`→`entries` se lee con `read_key`.
+    "attribution": {
+        "keys": {
+            "cruce": "match",
+            "banco": "bench",
+            "caducidades": "expiries",
+        },
+        "values": {
+            "match": {
+                "exacto": "exact",
+                "ventana": "window",
+                "ventana+path": "window+path",
+                "ambiguo": "ambiguous",
+                "sin_cruce": "no_match",
+            },
+        },
+    },
 }
 
 #: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
@@ -137,6 +155,12 @@ COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
     "enfriamiento-eventos.jsonl",
     "cooldown-events.jsonl",
 )
+
+#: Prefijo de la caché del relleno por mes (`<prefijo>AAAAMM.json`, en `LOG_DIR`), como
+#: `(viejo, nuevo)`. Solo la usan el paquete (`attribution`): los hooks no la leen, así que no va en
+#: `FILE_NAMES`, que tiene copia en `hook_common`. Se escribe el nuevo; el viejo siembra el nuevo una
+#: sola vez y no se reescribe nunca (REQ-006).
+ATTRIBUTION_FILE_PREFIXES: tuple[str, str] = ("atribucion-", "attribution-")
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.

@@ -23,7 +23,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from . import atribucion, coste, precios, server
+from . import attribution, coste, precios, server
 
 #: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
 #: subagente 40 (135 casos).
@@ -31,7 +31,7 @@ N_DECLARADO = {"main": 127, "subagent": 40}
 #: Casos mínimos de un grupo para usar su mediana (REQ-042 (2)).
 MIN_CASOS_GRUPO = 10
 #: Plazo de borrado de los transcripts sin `coste-agregados.json` (Definiciones, `H`).
-PLAZO_POR_DEFECTO = atribucion.PLAZO_POR_DEFECTO
+PLAZO_POR_DEFECTO = attribution.DEFAULT_CLEANUP_DAYS
 
 ORIGENES_N = ("relleno", "agregado", "declarado")
 ORIGENES_DENSIDAD = ("medida", "sin_numerar", "conservadora")
@@ -82,12 +82,12 @@ def _n_del_grupo(agregados: dict | None, grupo: str) -> list[int]:
 def n_de(fila: dict, agregados: dict | None) -> tuple[float, int, str]:
     """`(N, caducidades, origen)` de un evento, en el orden único de REQ-042:
 
-    (1) `n` y `caducidades` del relleno; (2) la mediana de `N` del grupo (`modelo|hilo`) en los
+    (1) `n` y `expiries` del relleno; (2) la mediana de `N` del grupo (`modelo|hilo`) en los
     agregados guardados, si tiene al menos 10 casos, con 0 caducidades; (3) el declarado del hilo.
     """
     n = _entero(fila.get("n"))
     if n is not None:
-        return n, _entero(fila.get("caducidades")) or 0, "relleno"
+        return n, _entero(fila.get("expiries")) or 0, "relleno"
     valores = _n_del_grupo(agregados, f"{fila.get('caller_model')}|{_hilo(fila)}")
     if len(valores) >= MIN_CASOS_GRUPO:
         return statistics.median(valores), 0, "agregado"
@@ -188,7 +188,9 @@ def bloque_coste(
         tramo = coste.tramo(fila, ahora=ahora, plazo_dias=plazo)
         barra[tramo] += 1
         if tramo == "excluido":
-            excluidas_por_motivo[atribucion.excluida(fila, {"banco": fila.get("banco")})] += 1
+            excluidas_por_motivo[
+                attribution.exclusion_reason(fila, {"bench": fila.get("bench")})
+            ] += 1
             continue
         en_base += 1
         if fila.get("respaldo_invalido"):

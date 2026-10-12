@@ -104,7 +104,7 @@ def test_descartes(tmp_path):
     # Una sesión que no está en el registro (`claude -p`) pidió dentro del intervalo.
     claude = tmp_path / "claude"
     escribir(principal(claude, sesion="ajena"), [peticion(50, "x1", sesion="ajena")])
-    peticiones = list(transcripts.leer(claude / "projects").peticiones.values())
+    peticiones = list(transcripts.read(claude / "projects").requests.values())
     puntos, _, d = puntos_de([fila(0, "A", 10, 1.0), fila(100, "A", 40, 2.0)], peticiones)
     assert d["five_hour"].get("contaminado") == 1
     assert [p for p in puntos if p["tipo"] == "five_hour"] == []
@@ -212,8 +212,8 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
     )
     escribir(subagente(claude, "s1"), rechazos(1100, 3, "u"))
     escribir(subagente(claude, "s2"), rechazos(1200, 3, "v"))
-    indice = transcripts.leer(claude / "projects")
-    rechazos_ = cuota.puntos_de_rechazo(indice.rechazos, indice.peticiones.values())
+    indice = transcripts.read(claude / "projects")
+    rechazos_ = cuota.puntos_de_rechazo(indice.rejections, indice.requests.values())
     assert len(rechazos_) == 1
     p = rechazos_[0]
     assert p["delta_usd"] == 12.0

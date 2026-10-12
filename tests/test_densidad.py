@@ -16,7 +16,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import atribucion, config, coste, legacy_names, server
+from local_delegate import attribution, config, coste, legacy_names, server
 from local_delegate.web import metrics
 
 
@@ -219,19 +219,19 @@ def test_la_fusion_respeta_el_orden(tmp_path):
         _fila(tool_use_id="toolu_b", caller_kind="main", caller_src="hook"),
         _fila(ts="2026-10-06T10:00:05+00:00"),
     ]
-    atribucion.escribir_relleno(
+    attribution.write_backfill(
         tmp_path,
         "202610",
         {
-            "toolu_a": {"caller_model": DEL_RELLENO, "caller_kind": "subagent", "cruce": "exacto"},
+            "toolu_a": {"caller_model": DEL_RELLENO, "caller_kind": "subagent", "match": "exact"},
             "toolu_b": {
                 "caller_model": DEL_RELLENO,
                 "caller_kind": "subagent",
                 "caller_effort": "n/a",
                 "n": 12,
-                "caducidades": 1,
-                "cruce": "exacto",
-                "banco": False,
+                "expiries": 1,
+                "match": "exact",
+                "bench": False,
             },
         },
     )
@@ -242,7 +242,7 @@ def test_la_fusion_respeta_el_orden(tmp_path):
 
     assert (b["caller_model"], b.get("caller_origen")) == (DEL_RELLENO, "relleno")
     assert b["caller_kind"] == "main", "por campo: el hilo de la línea manda sobre el del relleno"
-    assert (b.get("n"), b.get("caducidades"), b.get("caller_effort")) == (12, 1, "n/a")
+    assert (b.get("n"), b.get("expiries"), b.get("caller_effort")) == (12, 1, "n/a")
     assert b.get("familia") == "anterior"
 
     assert (c["caller_model"], c["caller_kind"], c.get("caller_origen")) == (
@@ -252,7 +252,7 @@ def test_la_fusion_respeta_el_orden(tmp_path):
     )
     assert "respaldo_invalido" not in c
     # La entrada del relleno se busca con la clave del fichero entero.
-    assert atribucion.claves_del_fichero(lineas)[2] == "2026-10-06T10:00:05+00:00|local_summarize|0"
+    assert attribution.file_keys(lineas)[2] == "2026-10-06T10:00:05+00:00|local_summarize|0"
 
 
 def test_la_fusion_no_toca_la_cache(tmp_path, monkeypatch):
@@ -286,12 +286,12 @@ def test_tramos(tmp_path):
     # Excluidos: clientes declarados y bancos, aunque traigan modelo.
     assert t(fundida(_fila(client="codex-mcp-client")), ahora=ahora, plazo_dias=30) == "excluido"
     assert t(fundida(_fila(client="mcp")), ahora=ahora, plazo_dias=30) == "excluido"
-    banco = fundida(_fila(client="claude-code"), {"caller_model": DEL_RELLENO, "banco": True})
+    banco = fundida(_fila(client="claude-code"), {"caller_model": DEL_RELLENO, "bench": True})
     assert t(banco, ahora=ahora, plazo_dias=30) == "excluido"
     # Al momento y por relleno.
     linea = fundida(_fila(caller_model=DE_LA_LINEA, ts=hace(100)))
     assert t(linea, ahora=ahora, plazo_dias=30) == "al_momento"
-    relleno = fundida(_fila(ts=hace(100)), {"caller_model": DEL_RELLENO, "cruce": "exacto"})
+    relleno = fundida(_fila(ts=hace(100)), {"caller_model": DEL_RELLENO, "match": "exact"})
     assert t(relleno, ahora=ahora, plazo_dias=30) == "por_relleno"
     # Sin modelo: pendiente mientras el transcript puede existir; supuesto después.
     f29, f31, f60 = (fundida(_fila(ts=hace(d))) for d in (29, 31, 60))
@@ -300,9 +300,9 @@ def test_tramos(tmp_path):
     assert t(f60, ahora=ahora, plazo_dias=90) == "pendiente"
     assert t(f60, ahora=ahora, plazo_dias=30) == "supuesto"
     # Un cruce `ambiguo` o `sin_cruce` ya no se arregla: supuesto aunque sea reciente.
-    f = fundida(_fila(ts=hace(1)), {"cruce": "ambiguo"})
+    f = fundida(_fila(ts=hace(1)), {"match": "ambiguous"})
     assert t(f, ahora=ahora, plazo_dias=30) == "supuesto"
-    f = fundida(_fila(ts=hace(1)), {"cruce": "sin_cruce"})
+    f = fundida(_fila(ts=hace(1)), {"match": "no_match"})
     assert t(f, ahora=ahora, plazo_dias=30) == "supuesto"
 
 
@@ -392,8 +392,8 @@ def test_la_coletilla_usa_el_modelo_de_la_nota_si_ya_esta(monkeypatch, tmp_path)
     respaldo (2), prosa sin numerar, c = 3,01 → 4000 × 100 // 301 = 1328 (con Opus 5.5, 2000)."""
     _backend(monkeypatch, tmp_path, prompt_tokens=9999)
     monkeypatch.setattr(
-        atribucion,
-        "llamada_actual",
+        attribution,
+        "current_call",
         lambda: {"caller_model": "claude-haiku-4-5", "caller_kind": "main", "caller_src": "hook"},
     )
     doc = tmp_path / "notas.md"
