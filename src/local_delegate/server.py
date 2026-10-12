@@ -40,8 +40,8 @@ from . import (
     cadenas,
     clients,
     config,
+    cooldown,
     coste,
-    enfriamiento,
     estado_json,
     failures,
     legacy_names,
@@ -1066,13 +1066,13 @@ class Intento:
 _CLASES_QUE_SALTAN = frozenset({failures.FailureClass.MODEL, failures.FailureClass.CAPACITY})
 
 
-def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
+def _cooldown_error(model: str, enfriado: cooldown.ActiveCooldown) -> ChatResult:
     """REQ-009: el modelo está enfriándose y no queda candidato. Falla al momento, sin timeout."""
-    hasta = datetime.fromtimestamp(enfriado.hasta, UTC).strftime("%H:%M:%S UTC")
+    hasta = datetime.fromtimestamp(enfriado.until, UTC).strftime("%H:%M:%S UTC")
     return ChatResult(
         text=(
             f"[local-delegate error] {model} está en enfriamiento hasta las {hasta} (quedan "
-            f"{enfriado.restante_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
+            f"{enfriado.remaining_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
             "disponible."
         ),
         ok=False,
@@ -1947,16 +1947,16 @@ def _attempt(
     model: str,
     payload: dict,
     json_schema_fallback: bool,
-    state: enfriamiento.Estado,
+    state: cooldown.CooldownState,
     attempts: list[Intento],
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
     result, schema, ms = _llamar_modelo(model, payload, json_schema_fallback)
     attempts.append(Intento(model, result.ok, result.error, result.clase, ms, result.timings))
     if result.ok:
-        state.registrar_exito(model)
+        state.record_success(model)
     elif result.clase is not None:
-        state.registrar_fallo(model, result.clase)
+        state.record_failure(model, result.clase)
     return result, schema
 
 
@@ -1967,7 +1967,7 @@ def _next_hop(
     model: str,
     size: int,
     capacity: bool,
-    state: enfriamiento.Estado,
+    state: cooldown.CooldownState,
     hops: int,
     last: ChatResult | None,
     loaded_members: Callable[[], Sequence[str]],
@@ -2008,7 +2008,7 @@ def _next_hop(
                 or candidate in attempted
                 or candidate not in config.ALLOWED_MODELS
                 or size > config.max_chars_for(candidate)
-                or state.consultar(candidate) is not None
+                or state.lookup(candidate) is not None
             )
         )
         if valid:
@@ -2073,7 +2073,7 @@ def _con_respaldo(
     La cadena se resuelve aquí, y solo si hace falta: resolverla antes leería la config de
     llama-swap en cada delegación, también en el camino feliz.
     """
-    estado = enfriamiento.desde_config()
+    estado = cooldown.from_config()
     intentos: list[Intento] = []
     schema: str | None = None
 
@@ -2119,7 +2119,7 @@ def _con_respaldo(
     if explicito:
         return _first(llamar(model)), schema, intentos
 
-    enfriado = estado.consultar(model)
+    enfriado = estado.lookup(model)
     original: ChatResult | None = None
     clase: str | None = None
     served = model
@@ -2176,7 +2176,7 @@ def _con_respaldo(
         if ultimo.ok:
             return ultimo, schema, intentos
 
-    base = original if original is not None else _error_enfriado(model, enfriado)
+    base = original if original is not None else _cooldown_error(model, enfriado)
     probados = [i for i in intentos if i.modelo != model]
     if not probados:
         return base, schema, intentos
@@ -4354,14 +4354,14 @@ def _describir_enfriamiento() -> list[str]:
             f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
         )
     ]
-    activos = enfriamiento.desde_config().activos()
+    activos = cooldown.from_config().active()
     if not activos:
         lineas.append("  ningún modelo enfriado")
     for modelo, enfriado in sorted(activos.items()):
         veces = (
-            "1 vez seguida" if enfriado.reentradas == 1 else f"{enfriado.reentradas} veces seguidas"
+            "1 vez seguida" if enfriado.reentries == 1 else f"{enfriado.reentries} veces seguidas"
         )
-        lineas.append(f"  {modelo}: quedan {enfriado.restante_s:.0f} s, ha entrado {veces}")
+        lineas.append(f"  {modelo}: quedan {enfriado.remaining_s:.0f} s, ha entrado {veces}")
     return lineas
 
 

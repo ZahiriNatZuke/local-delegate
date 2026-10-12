@@ -22,7 +22,7 @@ from pathlib import Path
 import backend_mock
 import httpx2
 
-from local_delegate import cadenas, config, enfriamiento, preguntas, server
+from local_delegate import cadenas, config, cooldown, preguntas, server
 from local_delegate.failures import FailureClass
 
 URL = "http://test-backend/v1/chat/completions"
@@ -72,9 +72,9 @@ def _estado_fichero(tmp_path: Path) -> Path:
 
 
 def _enfriar(tmp_path: Path, modelo: str) -> None:
-    enfriamiento.Estado(
-        _estado_fichero(tmp_path), fallos=1, espera_s=120, espera_max_s=900
-    ).registrar_fallo(modelo, FailureClass.MODEL)
+    cooldown.CooldownState(
+        _estado_fichero(tmp_path), failures=1, wait_s=120, max_wait_s=900
+    ).record_failure(modelo, FailureClass.MODEL)
 
 
 def _entradas(tmp_path: Path) -> dict:
@@ -178,8 +178,8 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
     server.local_explain_code(code="x = 1")
     server.local_explain_code(code="x = 2")
     # El tercer fallo lo registra «otro proceso»: otra instancia sobre el mismo fichero.
-    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
-    assert enfriamiento.desde_config().consultar(CODIGO) is not None
+    cooldown.from_config().record_failure(CODIGO, FailureClass.MODEL)
+    assert cooldown.from_config().lookup(CODIGO) is not None
 
     pedidos.clear()
     salida = server.local_explain_code(code="x = 3")

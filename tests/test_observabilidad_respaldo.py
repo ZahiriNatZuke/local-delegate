@@ -26,7 +26,7 @@ from test_respaldo import (
     _ultimo_evento,
 )
 
-from local_delegate import enfriamiento, server
+from local_delegate import cooldown, server
 from local_delegate.failures import FailureClass
 
 CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_class")
@@ -155,9 +155,9 @@ def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
     recargar_config, tmp_path, status_sin_red
 ):
     recargar_config()
-    estado = enfriamiento.desde_config()
+    estado = cooldown.from_config()
     for _ in range(3):
-        estado.registrar_fallo(CODIGO, FailureClass.MODEL)
+        estado.record_failure(CODIGO, FailureClass.MODEL)
 
     linea = _linea_de(server.local_status(), CODIGO)
 
@@ -170,7 +170,7 @@ def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path, 
     recargar_config()
     vencido = {CODIGO: {"fallos": 0, "espera_s": 120.0, "hasta": time.time() - 1, "reentradas": 1}}
     _estado_fichero(tmp_path).write_text(json.dumps(vencido), encoding="utf-8")
-    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
+    cooldown.from_config().record_failure(CODIGO, FailureClass.MODEL)
 
     linea = _linea_de(server.local_status(), CODIGO)
 

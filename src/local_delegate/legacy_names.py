@@ -7,7 +7,7 @@ todo lector del paquete traduce por aquí, y los hooks llevan en `hook_common.py
 equivalencias que leen ellos, atadas a esta por un test de igualdad.
 
 Cada ola del frente A añade las tablas de su formato (A2 la telemetría de hooks y los nombres en
-disco; A3 el log de uso; A4 el enfriamiento…).
+disco; A3 el log de uso; A4 el estado y los episodios de enfriamiento…).
 
 Forma de cada formato en `FORMATS`:
 
@@ -91,6 +91,31 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             },
         },
     },
+    # Estado de enfriamiento (`cooldown.json`; antes `enfriamiento.json`). `hook_common` copia
+    # estas claves en `COOLDOWN_STATE_KEYS` y `tests/test_hook_legacy_names.py` exige que sean iguales.
+    "cooldown_state": {
+        "keys": {
+            "fallos": "failures",
+            "espera_s": "wait_s",
+            "hasta": "until",
+            "reentradas": "reentries",
+        },
+    },
+    # Registro de episodios (`cooldown-events.jsonl`; antes `enfriamiento-eventos.jsonl`).
+    "cooldown_events": {
+        "keys": {
+            "modelo": "model",
+            "evento": "event",
+            "clase": "class",
+            "tras_vencer": "after_expiry",
+            "reentradas": "reentries",
+            "espera_s": "wait_s",
+        },
+        "values": {
+            "event": {"entra": "enter", "reentra": "reenter", "limpia": "clear"},
+            "class": FAILURE_CLASS_VALUES,
+        },
+    },
 }
 
 #: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
@@ -101,7 +126,17 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
+    # En `LOG_DIR`. El daemon escribe los dos mientras viva su entrada `legacy_write` de
+    # `deprecations` (excepción de REQ-005); se lee el nuevo y, si no existe, el viejo.
+    "cooldown_state": ("enfriamiento.json", "cooldown.json"),
 }
+
+#: El registro de episodios de enfriamiento, como `(viejo, nuevo)`. Solo lo escribe el daemon y lo
+#: lee `scripts/medir_enfriamiento.py` (los dos ficheros, siempre): los hooks no lo copian.
+COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
+    "enfriamiento-eventos.jsonl",
+    "cooldown-events.jsonl",
+)
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -134,6 +169,16 @@ def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) ->
     if old in row:
         return row[old]
     return default
+
+
+def old_keys(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    """Copia de `row` con las claves del formato nuevo devueltas a su nombre viejo.
+
+    Solo para las escrituras dobles que mantiene una excepción temporal (`legacy_write`): los
+    valores se copian tal cual, porque esos formatos no tienen valores de enumeración traducidos.
+    """
+    back = {new: old for old, new in FORMATS.get(fmt, {}).get("keys", {}).items()}
+    return {back.get(key, key): value for key, value in row.items()}
 
 
 def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:

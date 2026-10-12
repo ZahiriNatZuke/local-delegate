@@ -1,0 +1,45 @@
+{
+  "_about": "Detector de nombres en español tras la ola A4 (2026-10-12): solo recuentos, comparados con A3.",
+  "command": "python scripts/detect_spanish_names.py --exceptions .sdd/changes/english-names-bilingual-output/rename-exceptions.md --json <fichero>",
+  "unique_findings": {
+    "A3": 8343,
+    "A4": 8312,
+    "delta": -31
+  },
+  "unique_spanish_names": {
+    "A3": 4358,
+    "A4": 4351,
+    "delta": -7
+  },
+  "files_with_findings": {
+    "A3": 166,
+    "A4": 165,
+    "delta": -1
+  },
+  "unique_findings_by_category": {
+    "dom_id": 19,
+    "file_name": 29,
+    "identifier": 5805,
+    "js_identifier": 67,
+    "js_key": 20,
+    "js_property": 64,
+    "js_string": 9,
+    "json_key": 23,
+    "json_value": 2,
+    "string_key": 1254,
+    "string_value": 1020
+  },
+  "occurrences_by_category": {
+    "dom_id": 19,
+    "file_name": 29,
+    "identifier": 8979,
+    "js_identifier": 75,
+    "js_key": 49,
+    "js_property": 117,
+    "js_string": 11,
+    "json_key": 91,
+    "json_value": 13,
+    "string_key": 3026,
+    "string_value": 1673
+  }
+}

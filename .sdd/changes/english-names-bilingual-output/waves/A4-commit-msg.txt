@@ -1,0 +1,18 @@
+feat(rename): enfriamiento en inglés, con escritura doble del estado y lectura doble (ola A4)
+
+El módulo `enfriamiento` pasa a `cooldown` (`CooldownState`, `ActiveCooldown`, `record_failure`,
+`record_success`, `lookup`, `active`, `from_config`), y el estado y sus episodios se escriben en
+inglés:
+
+- `cooldown.json` (antes `enfriamiento.json`), con las claves `failures`, `wait_s`, `until` y
+  `reentries`. El daemon lo lee y, si aún no existe, parte de `enfriamiento.json` traducido; si
+  están los dos, gana el nuevo.
+- Excepción de REQ-005: mientras viva su entrada `legacy_write` en `deprecations`, cada escritura
+  deja también `enfriamiento.json` con las claves viejas, para los hooks de versiones anteriores.
+- `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`), con `model`, `event`, `class` y
+  `after_expiry`, y los eventos `enter`, `reenter` y `clear`.
+- Los hooks leen `cooldown.json` y, si no existe, `enfriamiento.json`; su copia de nombres y
+  claves está atada a `legacy_names` por test.
+- `scripts/medir_enfriamiento.py` (mismo nombre y opciones) lee los dos registros y traduce las
+  filas viejas: el comando de P-4 da el mismo informe sobre los datos reales.
+- `server._error_enfriado` pasa a `_cooldown_error`. CHANGELOG y wiki al día.

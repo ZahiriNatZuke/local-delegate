@@ -1,0 +1,5 @@
+# REQ-014, ola A4 (2026-10-12). Código de salida de cada comando; sin salida literal (lleva datos locales).
+scripts/medir_enfriamiento.py --help: 0
+scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41 --json: 0
+import cooldown y server: CooldownState
+local-delegate --help: 0

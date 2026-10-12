@@ -1,0 +1,1676 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 35dc4d5..a8571d9 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -52,6 +52,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ - **`/api/backend`, `/api/status` y `/api/backend/stats` devuelven la causa como `cause`, `label`
+   y `detail`** (antes `causa`, `etiqueta` y `detalle`). `doctor` entiende también la respuesta de
+   un daemon de la 0.34.0.
++- **El estado de enfriamiento pasa a `cooldown.json` y su registro de episodios a
++  `cooldown-events.jsonl`**, los dos en `LOG_DIR` y con claves y valores en inglés: `failures`,
++  `wait_s`, `until` y `reentries` en el estado (antes `fallos`, `espera_s`, `hasta` y
++  `reentradas`), y `model`, `event`, `class` y `after_expiry` en los episodios (antes `modelo`,
++  `evento`, `clase` y `tras_vencer`), con los eventos `enter`, `reenter` y `clear` (antes `entra`,
++  `reentra` y `limpia`). El daemon arranca desde `enfriamiento.json` si aún no hay
++  `cooldown.json`, y si están los dos manda el nuevo. Durante esta versión y las dos menores
++  siguientes escribe además `enfriamiento.json` con las claves viejas, para que los hooks de una
++  versión anterior sigan viendo los modelos enfriados; los hooks nuevos leen `cooldown.json` y, si
++  no existe, `enfriamiento.json`. `enfriamiento-eventos.jsonl` ya no crece, pero
++  `scripts/medir_enfriamiento.py` (mismo nombre, mismas opciones) lee los dos registros y da el
++  mismo informe con filas viejas, nuevas o mezcladas.
+ 
+ ## [0.34.0] - 2026-10-08
+ 
+diff --git a/docs/wiki/Architecture.md b/docs/wiki/Architecture.md
+index b2cd5ad..8908855 100644
+--- a/docs/wiki/Architecture.md
++++ b/docs/wiki/Architecture.md
+@@ -185,7 +185,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
+ | `llamaswap_api.py` | Lo que se lee de llama-swap (`/running`, `/api/events`, `/api/metrics/activity`), el estado de `/api/llamaswap/status` y la vigía de recarga |
+ | `llamaswap_config.py` | Estimador de VRAM/RAM de los grupos (`check-llamaswap`, `init-llamaswap`, `--pin`) |
+ | `residency.py` | `llamaswap residency`: lectura de la residencia y edición quirúrgica, con copia y reemplazo atómico, del `config.yaml` |
+-| `enfriamiento.py` | Enfriamiento por modelo compartido entre procesos (`enfriamiento.json`) y registro de episodios (`enfriamiento-eventos.jsonl`) |
++| `cooldown.py` | Enfriamiento por modelo compartido entre procesos (`cooldown.json`, antes `enfriamiento.json`) y registro de episodios (`cooldown-events.jsonl`, antes `enfriamiento-eventos.jsonl`) |
+ | `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
+ 
+ **Una sola librería HTTP: `httpx2`.** Es la que usa el SDK `mcp` 2.x, y el cliente propio del
+diff --git a/docs/wiki/Configuration.md b/docs/wiki/Configuration.md
+index 916943e..b9ff6a7 100644
+--- a/docs/wiki/Configuration.md
++++ b/docs/wiki/Configuration.md
+@@ -112,14 +112,19 @@ con una línea que lista lo que se probó.
+ 
+ Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo
+ cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
+-(`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
++(`cooldown.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
+ se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
+ `local_status` lista los modelos enfriados, con los segundos que les quedan y cuántas veces seguidas
+ han vuelto a entrar sin un éxito de por medio.
+ 
++Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json`. El daemon arranca desde él si aún no
++hay `cooldown.json` (si están los dos, manda el nuevo) y, durante tres versiones menores, lo sigue
++escribiendo con sus claves viejas para los hooks de una versión anterior.
++
+ Cada vez que un modelo **entra** en enfriamiento, **vuelve a entrar** o **se recupera**, se añade
+-una línea a `enfriamiento-eventos.jsonl`, junto al log de uso: modelo, hora, clase del fallo,
+-espera y reentradas, nunca prompts ni rutas. `enfriamiento.json` solo guarda el presente; este
++una línea a `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`, que se sigue leyendo),
++junto al log de uso: modelo, hora, clase del fallo, espera y reentradas, nunca prompts ni rutas.
++`cooldown.json` solo guarda el presente; este
+ registro es lo que permite contar después cuántos episodios hubo y cómo acabaron. Para saber si los
+ números de abajo convienen, `uv run python scripts/medir_enfriamiento.py --desde AAAA-MM-DD` lo
+ cruza con el log de uso y responde «cambiar», «se quedan» o «no concluyente» (con menos de 5
+@@ -284,7 +289,8 @@ Nace apagado. Estas son las formas de que no bloquee:
+   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
+   marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay delegaciones.
+ - Que el modelo que haría el resumen esté **en enfriamiento**: el hook lee el mismo
+-  `enfriamiento.json` que el servidor y, si ese modelo está parado, deja pasar la lectura. Mira el
++  `cooldown.json` que el servidor (o `enfriamiento.json`, si el daemon es de una versión anterior)
++  y, si ese modelo está parado, deja pasar la lectura. Mira el
+   modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
+ - `LD_HOOK_ENABLED=0`.
+ 
+diff --git a/scripts/medir_enfriamiento.py b/scripts/medir_enfriamiento.py
+index ba62885..24ae46b 100755
+--- a/scripts/medir_enfriamiento.py
++++ b/scripts/medir_enfriamiento.py
+@@ -6,8 +6,11 @@ este script es quien lo aplica. Si el recuento se hiciera a mano, el criterio vo
+ opinion. Lee dos ficheros de `LOG_DIR`:
+ 
+ - el log de uso (`usage-*.jsonl`): saltos por clase, fallos que cuentan y fallos al momento;
+-- `enfriamiento-eventos.jsonl`: los episodios. El log de uso no los puede reconstruir, porque
+-  guarda un evento por operacion y no ve el fallo del segundo salto ni el de los trozos siguientes.
++- `cooldown-events.jsonl` y el viejo `enfriamiento-eventos.jsonl` (los dos, siempre): los
++  episodios. El log de uso no los puede reconstruir, porque guarda un evento por operacion y no ve
++  el fallo del segundo salto ni el de los trozos siguientes. Las filas del formato viejo (claves
++  `modelo`, `evento`, `clase`…, valores `entra`, `reentra`, `limpia`) se traducen al nuevo antes de
++  contar (REQ-007): el informe es el mismo con los dos formatos.
+ 
+ Las ventanas de prueba de `LOG_DIR/test-windows.json` se aplican solas a las filas del log y a los
+ episodios, ademas de los tramos de `--excluir`; `--include-tests` desactiva las del fichero (no las
+@@ -35,17 +38,13 @@ sys.path.insert(0, str(Path(__file__).parent))
+ from medir_adopcion import directorio_de_logs, leer, logs_de_uso
+ 
+ from local_delegate import legacy_names, test_windows
+-from local_delegate.enfriamiento import CLASES_QUE_CUENTAN, FICHERO_EVENTOS
++from local_delegate.cooldown import COUNTING_CLASSES, EVENTS_FILE, LEGACY_EVENTS_FILE
+ 
+ #: Por debajo de cualquiera de los dos, el resultado es «no concluyente» (criterio de P-4).
+ MINIMO_EPISODIOS = 5
+ MINIMO_FALLOS = 10
+ 
+-CLASES = {clase.value for clase in CLASES_QUE_CUENTAN}
+-
+-#: Clase de fallo en el formato nuevo, venga del log viejo (`modelo`, `timeout_lectura`,
+-#: `enfriamiento`…) o del nuevo (REQ-007): el informe es el mismo con los dos formatos.
+-_CLASE_NUEVA = legacy_names.FAILURE_CLASS_VALUES
++CLASES = {clase.value for clase in COUNTING_CLASSES}
+ 
+ #: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
+ REGLAS = {
+@@ -105,33 +104,34 @@ class _Filtro:
+ 
+ 
+ def episodios(eventos: list[dict], tmax_s: float) -> list[dict]:
+-    """Agrupa las transiciones en episodios: de un `entra` al `limpia` del mismo modelo.
++    """Agrupa las transiciones en episodios: de un `enter` al `clear` del mismo modelo.
+ 
+-    Un `reentra` o un `limpia` sin su `entra` es de un episodio empezado antes del registro: se
+-    ignora, porque no se sabe con que clase empezo.
++    Un `reenter` o un `clear` sin su `enter` es de un episodio empezado antes del registro: se
++    ignora, porque no se sabe con que clase empezo. Las filas del formato viejo se traducen antes.
+     """
+     abiertos: dict[str, dict] = {}
+     todos: list[dict] = []
+-    for evento in sorted(eventos, key=_ts):
+-        modelo = str(evento.get("modelo"))
+-        tipo = evento.get("evento")
+-        en_tmax = float(evento.get("espera_s") or 0) >= tmax_s
+-        if tipo == "entra":
++    nuevos = (legacy_names.normalize("cooldown_events", evento) for evento in eventos)
++    for evento in sorted(nuevos, key=_ts):
++        modelo = str(evento.get("model"))
++        tipo = evento.get("event")
++        en_tmax = float(evento.get("wait_s") or 0) >= tmax_s
++        if tipo == "enter":
+             episodio = {
+                 "modelo": modelo,
+                 "desde": _ts(evento),
+-                "clase": legacy_names.new_value(_CLASE_NUEVA, evento.get("clase")),
++                "clase": evento.get("class"),
+                 "reentradas": 0,
+                 "en_tmax": int(en_tmax),
+                 "final": None,
+             }
+             abiertos[modelo] = episodio
+             todos.append(episodio)
+-        elif tipo == "reentra" and modelo in abiertos:
++        elif tipo == "reenter" and modelo in abiertos:
+             abiertos[modelo]["reentradas"] += 1
+             abiertos[modelo]["en_tmax"] += int(en_tmax)
+-        elif tipo == "limpia" and modelo in abiertos:
+-            final = "recuperado" if evento.get("tras_vencer") else "exito_explicito"
++        elif tipo == "clear" and modelo in abiertos:
++            final = "recuperado" if evento.get("after_expiry") else "exito_explicito"
+             abiertos.pop(modelo)["final"] = final
+     return todos
+ 
+@@ -176,7 +176,12 @@ def medir(
+     al_momento = sum(1 for e in usos if e.get("error") == "cooldown")
+     delegaciones = sum(1 for e in usos if str(e.get("tool", "")).startswith("local_"))
+ 
+-    registro = leer(directorio_de_logs() / FICHERO_EVENTOS, None)
++    # Los dos registros, siempre: el viejo dejo de crecer al actualizar, pero su historia cuenta.
++    registro = [
++        evento
++        for nombre in (LEGACY_EVENTS_FILE, EVENTS_FILE)
++        for evento in leer(directorio_de_logs() / nombre, None)
++    ]
+     eps = [
+         ep
+         for ep in episodios(registro, tmax_s)
+diff --git a/src/local_delegate/enfriamiento.py b/src/local_delegate/cooldown.py
+similarity index 33%
+rename from src/local_delegate/enfriamiento.py
+rename to src/local_delegate/cooldown.py
+index e0a8964..29696db 100644
+--- a/src/local_delegate/enfriamiento.py
++++ b/src/local_delegate/cooldown.py
+@@ -4,17 +4,24 @@ Un modelo que acumula N fallos seguidos de las clases que cuentan deja de recibi
+ T segundos. Al vencer vuelve a recibir: el primer éxito lo deja limpio y el primer fallo que cuente
+ lo enfría otra vez con la espera doblada, hasta Tmax. Ningún enfriamiento es permanente.
+ 
+-El estado vive en un fichero (`LOG_DIR/enfriamiento.json`) para que el daemon y cualquier proceso
++El estado vive en un fichero (`LOG_DIR/cooldown.json`) para que el daemon y cualquier proceso
+ stdio de la misma máquina vean el mismo contador y para que sobreviva a un reinicio. Se lee y se
+ escribe bajo bloqueo, y **si el fichero no se puede leer o el bloqueo no llega a tiempo, se sigue
+ como si no hubiera enfriamiento**: este módulo nunca bloquea ni hace fallar una delegación.
+ 
++Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json` y sus claves iban en español. Se lee el
++nuevo y, si no existe, el viejo traducido (REQ-006: gana el nuevo). Mientras viva la entrada
++`legacy_write` de `deprecations` (excepción de REQ-005), cada escritura deja también
++`enfriamiento.json` con las claves viejas, para que los hooks de una versión anterior, que leen ese
++fichero, sigan viendo los modelos enfriados.
++
+ Solo guarda nombres de modelo, contadores y fechas. Nunca prompts, rutas ni contenido.
+ 
+-Además del estado, cada transición deja una línea en `enfriamiento-eventos.jsonl`: `entra`,
+-`reentra` y `limpia`. El estado solo guarda el presente y el primer éxito lo borra, así que sin ese
+-registro nadie podría contar después cuántos episodios hubo ni cómo acabaron, que es lo que decide
+-el criterio de P-4 (tarea 30).
++Además del estado, cada transición deja una línea en `cooldown-events.jsonl`: `enter`, `reenter`
++y `clear` (antes `enfriamiento-eventos.jsonl`, con `entra`, `reentra` y `limpia`; ese fichero ya
++no se escribe, pero `scripts/medir_enfriamiento.py` lo sigue leyendo). El estado solo guarda el
++presente y el primer éxito lo borra, así que sin ese registro nadie podría contar después cuántos
++episodios hubo ni cómo acabaron, que es lo que decide el criterio de P-4 (tarea 30).
+ 
+ Este módulo decide el estado; quién lo consulta y qué hace con él (saltar al respaldo, fallar al
+ momento) es de la tarea 28.
+@@ -31,238 +38,281 @@ from pathlib import Path
+ 
+ from filelock import FileLock, Timeout
+ 
+-from . import config
++from . import config, deprecations, legacy_names
+ from .estado_json import escribir_json_atomico, leer_json
+ from .failures import FailureClass
+ 
+ #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
+ #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
+ #: responde bien cuando se le deja.
+-CLASES_QUE_CUENTAN = frozenset({FailureClass.MODEL, FailureClass.READ_TIMEOUT})
++COUNTING_CLASSES = frozenset({FailureClass.MODEL, FailureClass.READ_TIMEOUT})
+ 
+ #: Cuánto se espera al bloqueo del fichero antes de seguir sin enfriamiento, como `inflight.json`.
+-ESPERA_BLOQUEO_S = 2.0
++LOCK_WAIT_S = 2.0
++
++#: El fichero de estado, con su nombre viejo, que se sigue escribiendo mientras viva `legacy_write`.
++LEGACY_STATE_FILE, STATE_FILE = legacy_names.FILE_NAMES["cooldown_state"]
++
++#: El registro de episodios, junto al fichero de estado. Lo lee `scripts/medir_enfriamiento.py`,
++#: que lee también el viejo.
++LEGACY_EVENTS_FILE, EVENTS_FILE = legacy_names.COOLDOWN_EVENTS_FILE_NAMES
+ 
+-#: El registro de episodios, junto al fichero de estado. Lo lee `scripts/medir_enfriamiento.py`.
+-FICHERO_EVENTOS = "enfriamiento-eventos.jsonl"
+ 
++def legacy_write_enabled() -> bool:
++    """¿Se escribe todavía `enfriamiento.json`? Mientras su entrada `legacy_write` siga registrada."""
++    entry = deprecations.find(LEGACY_STATE_FILE)
++    return entry is not None and entry.kind == "legacy_write"
+ 
+-def _anadir_lineas(ruta: Path, eventos: list[dict]) -> None:
+-    with ruta.open("a", encoding="utf-8") as f:
+-        f.writelines(json.dumps(evento, ensure_ascii=False) + "\n" for evento in eventos)
+ 
++def _append_lines(path: Path, events: list[dict]) -> None:
++    with path.open("a", encoding="utf-8") as f:
++        f.writelines(json.dumps(event, ensure_ascii=False) + "\n" for event in events)
+ 
+-def _evento(ahora: float, modelo: str, tipo: str, entrada: dict, **extra: object) -> dict:
+-    """Una línea del registro: nombre de modelo, contadores y fechas, como el estado."""
++
++def _event_row(now: float, model: str, kind: str, entry: dict, extra: dict) -> dict:
++    """Una línea del registro: nombre de modelo, contadores y fechas, como el estado.
++
++    `extra` va como diccionario y no como argumentos con nombre porque una de sus claves es
++    `class`, palabra reservada de Python.
++    """
+     return {
+-        "ts": datetime.fromtimestamp(ahora, UTC).isoformat(timespec="seconds"),
+-        "modelo": modelo,
+-        "evento": tipo,
+-        "reentradas": entrada["reentradas"],
+-        "espera_s": entrada["espera_s"],
++        "ts": datetime.fromtimestamp(now, UTC).isoformat(timespec="seconds"),
++        "model": model,
++        "event": kind,
++        "reentries": entry["reentries"],
++        "wait_s": entry["wait_s"],
+         **extra,
+     }
+ 
+ 
+ @dataclass(frozen=True)
+-class Enfriado:
++class ActiveCooldown:
+     """Un modelo que ahora mismo no debe recibir peticiones."""
+ 
+-    hasta: float
+-    restante_s: float
++    until: float
++    remaining_s: float
+     #: Cuántas veces seguidas ha vuelto a entrar sin un éxito de por medio (1 la primera).
+-    reentradas: int
+-
+-
+-def _entrada(bruta: object) -> dict:
+-    """La entrada de un modelo con su esquema fijo, tolerando lo que haya dejado un fichero viejo."""
+-    entrada: dict = {"fallos": 0, "espera_s": 0.0, "hasta": None, "reentradas": 0}
+-    if not isinstance(bruta, dict):
+-        return entrada
+-    for clave in ("fallos", "reentradas"):
+-        valor = bruta.get(clave)
+-        if isinstance(valor, int) and not isinstance(valor, bool) and valor >= 0:
+-            entrada[clave] = valor
+-    for clave in ("espera_s", "hasta"):
+-        valor = bruta.get(clave)
+-        if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+-            entrada[clave] = float(valor)
+-    return entrada
+-
+-
+-class Estado:
++    reentries: int
++
++
++def _entry(raw: object) -> dict:
++    """La entrada de un modelo con su esquema fijo, tolerando lo que haya dejado un fichero viejo
++    (claves en español incluidas)."""
++    entry: dict = {"failures": 0, "wait_s": 0.0, "until": None, "reentries": 0}
++    if not isinstance(raw, dict):
++        return entry
++    raw = legacy_names.normalize("cooldown_state", raw)
++    for key in ("failures", "reentries"):
++        value = raw.get(key)
++        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
++            entry[key] = value
++    for key in ("wait_s", "until"):
++        value = raw.get(key)
++        if isinstance(value, (int, float)) and not isinstance(value, bool):
++            entry[key] = float(value)
++    return entry
++
++
++class CooldownState:
+     def __init__(
+         self,
+-        ruta: Path,
++        path: Path,
+         *,
+-        fallos: int,
+-        espera_s: float,
+-        espera_max_s: float,
+-        activo: bool = True,
+-        reloj: Callable[[], float] = time.time,
++        failures: int,
++        wait_s: float,
++        max_wait_s: float,
++        enabled: bool = True,
++        clock: Callable[[], float] = time.time,
++        legacy_write: bool | None = None,
+     ) -> None:
+-        self._ruta = Path(ruta)
+-        self._ruta_eventos = self._ruta.with_name(FICHERO_EVENTOS)
+-        self._fallos = max(1, int(fallos))
+-        self._espera_max_s = float(espera_max_s)
+-        self._espera_s = min(float(espera_s), self._espera_max_s)
+-        self._activo = activo
+-        self._reloj = reloj
++        self._path = Path(path)
++        self._events_path = self._path.with_name(EVENTS_FILE)
++        self._legacy_path = self._path.with_name(LEGACY_STATE_FILE)
++        self._failures = max(1, int(failures))
++        self._max_wait_s = float(max_wait_s)
++        self._wait_s = min(float(wait_s), self._max_wait_s)
++        self._enabled = enabled
++        self._clock = clock
++        # `None`: lo decide el registro de nombres obsoletos. Si la ruta ya es la vieja (un test, o
++        # quien pase `enfriamiento.json` a mano), no hay segundo fichero que escribir.
++        legacy = legacy_write_enabled() if legacy_write is None else legacy_write
++        self._legacy_write = legacy and self._legacy_path != self._path
+ 
+     # --- Escribir ------------------------------------------------------------------------------
+ 
+-    def registrar_fallo(self, modelo: str, clase: FailureClass | str) -> None:
++    def record_failure(self, model: str, failure_class: FailureClass | str) -> None:
+         """Suma un fallo si su clase cuenta; enfría al llegar a N, o al primer fallo tras vencer."""
+-        if FailureClass(clase) not in CLASES_QUE_CUENTAN:
++        if FailureClass(failure_class) not in COUNTING_CLASSES:
+             return
+-        ahora = self._reloj()
+-        eventos: list[dict] = []
+-
+-        def aplicar(datos: dict) -> None:
+-            entrada = _entrada(datos.get(modelo))
+-            hasta = entrada["hasta"]
+-            if hasta is not None and ahora < hasta:
++        now = self._clock()
++        events: list[dict] = []
++        extra = {"class": FailureClass(failure_class).value}
++
++        def apply(data: dict) -> None:
++            entry = _entry(data.get(model))
++            until = entry["until"]
++            if until is not None and now < until:
+                 # Ya está enfriándose (solo le llegan llamadas con `model` explícito, REQ-005): no
+                 # se dobla la espera por cada una, o unas pocas lo llevarían a Tmax de golpe.
+                 pass
+-            elif hasta is not None:
++            elif until is not None:
+                 # Venció y el primer fallo que cuenta lo vuelve a enfriar con la espera doblada.
+-                entrada["espera_s"] = min(entrada["espera_s"] * 2, self._espera_max_s)
+-                entrada["hasta"] = ahora + entrada["espera_s"]
+-                entrada["reentradas"] += 1
+-                entrada["fallos"] = 0
+-                eventos.append(
+-                    _evento(ahora, modelo, "reentra", entrada, clase=FailureClass(clase).value)
+-                )
++                entry["wait_s"] = min(entry["wait_s"] * 2, self._max_wait_s)
++                entry["until"] = now + entry["wait_s"]
++                entry["reentries"] += 1
++                entry["failures"] = 0
++                events.append(_event_row(now, model, "reenter", entry, extra))
+             else:
+-                entrada["fallos"] += 1
+-                if entrada["fallos"] >= self._fallos:
+-                    entrada["espera_s"] = self._espera_s
+-                    entrada["hasta"] = ahora + self._espera_s
+-                    entrada["reentradas"] = 1
+-                    entrada["fallos"] = 0
+-                    eventos.append(
+-                        _evento(ahora, modelo, "entra", entrada, clase=FailureClass(clase).value)
+-                    )
+-            datos[modelo] = entrada
+-
+-        self._mutar(aplicar, eventos)
+-
+-    def registrar_exito(self, modelo: str) -> None:
++                entry["failures"] += 1
++                if entry["failures"] >= self._failures:
++                    entry["wait_s"] = self._wait_s
++                    entry["until"] = now + self._wait_s
++                    entry["reentries"] = 1
++                    entry["failures"] = 0
++                    events.append(_event_row(now, model, "enter", entry, extra))
++            data[model] = entry
++
++        self._mutate(apply, events)
++
++    def record_success(self, model: str) -> None:
+         """Cualquier éxito deja el modelo limpio: sin contador y con la espera base (REQ-010/011).
+ 
+         Sin entrada no hay nada que limpiar y no se escribe: el éxito es el camino de casi todas
+         las delegaciones, y reescribir el fichero en cada una sería el coste que la spec no admite.
+-        Si el modelo llegó a enfriarse, el éxito cierra el episodio. `tras_vencer` distingue la
++        Si el modelo llegó a enfriarse, el éxito cierra el episodio. `after_expiry` distingue la
+         recuperación de verdad de un éxito con `model` explícito en pleno enfriamiento (REQ-005).
+         """
+-        ahora = self._reloj()
+-        eventos: list[dict] = []
++        now = self._clock()
++        events: list[dict] = []
+ 
+-        def aplicar(datos: dict) -> bool:
+-            bruta = datos.pop(modelo, None)
+-            if bruta is None:
++        def apply(data: dict) -> bool:
++            raw = data.pop(model, None)
++            if raw is None:
+                 return False
+-            entrada = _entrada(bruta)
+-            if entrada["hasta"] is not None:
+-                tras_vencer = ahora >= entrada["hasta"]
+-                eventos.append(_evento(ahora, modelo, "limpia", entrada, tras_vencer=tras_vencer))
++            entry = _entry(raw)
++            if entry["until"] is not None:
++                after_expiry = now >= entry["until"]
++                events.append(
++                    _event_row(now, model, "clear", entry, {"after_expiry": after_expiry})
++                )
+             return True
+ 
+-        self._mutar(aplicar, eventos)
++        self._mutate(apply, events)
+ 
+     # --- Leer ----------------------------------------------------------------------------------
+ 
+-    def consultar(self, modelo: str) -> Enfriado | None:
++    def lookup(self, model: str) -> ActiveCooldown | None:
+         """El enfriamiento vigente del modelo, o None si puede recibir peticiones."""
+-        return self.activos().get(modelo)
++        return self.active().get(model)
+ 
+-    def activos(self) -> dict[str, Enfriado]:
++    def active(self) -> dict[str, ActiveCooldown]:
+         """Los modelos que ahora mismo están enfriándose, para `local_status`."""
+-        datos = self._leer()
+-        ahora = self._reloj()
+-        self._recortar_vencimientos_lejanos(datos, ahora)
+-        vigentes = {modelo: self._vigente(bruta, ahora) for modelo, bruta in datos.items()}
+-        return {modelo: enfriado for modelo, enfriado in vigentes.items() if enfriado is not None}
++        data = self._read()
++        now = self._clock()
++        self._clamp_distant_expiries(data, now)
++        current = {model: self._active_entry(raw, now) for model, raw in data.items()}
++        return {model: cooled for model, cooled in current.items() if cooled is not None}
+ 
+     # --- Interno -------------------------------------------------------------------------------
+ 
+-    def _recortar_vencimientos_lejanos(self, datos: dict, ahora: float) -> None:
+-        """Un `hasta` más allá de Tmax (un cambio de hora, un fichero de otra máquina) se GUARDA
++    def _clamp_distant_expiries(self, data: dict, now: float) -> None:
++        """Un `until` más allá de Tmax (un cambio de hora, un fichero de otra máquina) se GUARDA
+         recortado, no solo se recorta al leer.
+ 
+         Recortar contra «ahora» en cada lectura dejaba siempre Tmax por delante: el modelo no
+         vencía nunca, que es justo el enfriamiento permanente que la spec prohíbe. Lo destapó un
+         test que comprobaba el restante y no que el modelo llegara a quedar libre.
+         """
+-        limite = ahora + self._espera_max_s
+-        lejanos = [
+-            modelo
+-            for modelo, bruta in datos.items()
+-            if (hasta := _entrada(bruta)["hasta"]) is not None and hasta > limite
++        limit = now + self._max_wait_s
++        distant = [
++            model
++            for model, raw in data.items()
++            if (until := _entry(raw)["until"]) is not None and until > limit
+         ]
+-        if not lejanos:
++        if not distant:
+             return
+ 
+-        def recortar(actuales: dict) -> None:
+-            for modelo in lejanos:
+-                entrada = _entrada(actuales.get(modelo))
+-                if entrada["hasta"] is not None and entrada["hasta"] > limite:
+-                    entrada["hasta"] = limite
+-                    actuales[modelo] = entrada
+-
+-        self._mutar(recortar)
+-        for modelo in lejanos:
+-            entrada = _entrada(datos[modelo])
+-            entrada["hasta"] = limite
+-            datos[modelo] = entrada
+-
+-    def _vigente(self, bruta: object, ahora: float) -> Enfriado | None:
+-        entrada = _entrada(bruta)
+-        hasta = entrada["hasta"]
+-        if hasta is None or hasta <= ahora:
++        def clamp(current: dict) -> None:
++            for model in distant:
++                entry = _entry(current.get(model))
++                if entry["until"] is not None and entry["until"] > limit:
++                    entry["until"] = limit
++                    current[model] = entry
++
++        self._mutate(clamp)
++        for model in distant:
++            entry = _entry(data[model])
++            entry["until"] = limit
++            data[model] = entry
++
++    def _active_entry(self, raw: object, now: float) -> ActiveCooldown | None:
++        entry = _entry(raw)
++        until = entry["until"]
++        if until is None or until <= now:
+             return None
+-        return Enfriado(hasta=hasta, restante_s=hasta - ahora, reentradas=entrada["reentradas"])
+-
+-    def _bloqueo(self) -> FileLock:
+-        return FileLock(str(self._ruta) + ".lock", timeout=ESPERA_BLOQUEO_S)
+-
+-    def _leer(self) -> dict:
+-        if not self._activo:
++        return ActiveCooldown(until=until, remaining_s=until - now, reentries=entry["reentries"])
++
++    def _lock(self) -> FileLock:
++        return FileLock(str(self._path) + ".lock", timeout=LOCK_WAIT_S)
++
++    def _load(self) -> dict:
++        """El estado vigente: el fichero nuevo y, si aún no existe, el viejo traducido (REQ-006)."""
++        if self._path.exists() or self._legacy_path == self._path:
++            return leer_json(self._path)
++        return {
++            model: _entry(raw) if isinstance(raw, dict) else raw
++            for model, raw in leer_json(self._legacy_path).items()
++        }
++
++    def _read(self) -> dict:
++        if not self._enabled:
+             return {}
+         try:
+-            with self._bloqueo():
+-                return leer_json(self._ruta)
++            with self._lock():
++                return self._load()
+         except (Timeout, OSError):
+             return {}  # REQ-012: sin bloqueo o sin disco, como si no hubiera enfriamiento
+ 
+-    def _mutar(self, aplicar: Callable[[dict], object], eventos: list[dict] | None = None) -> None:
+-        """Aplica un cambio bajo el bloqueo. `aplicar` llena `eventos` si hubo transición: se
++    def _mutate(self, apply: Callable[[dict], object], events: list[dict] | None = None) -> None:
++        """Aplica un cambio bajo el bloqueo. `apply` llena `events` si hubo transición: se
+         escriben bajo el mismo bloqueo para que el orden del registro sea el del estado."""
+-        if not self._activo:
++        if not self._enabled:
+             return
+         try:
+-            self._ruta.parent.mkdir(parents=True, exist_ok=True)
+-            with self._bloqueo():
+-                datos = leer_json(self._ruta)
+-                if aplicar(datos) is False:
++            self._path.parent.mkdir(parents=True, exist_ok=True)
++            with self._lock():
++                data = self._load()
++                if apply(data) is False:
+                     return  # nada cambió: no se reescribe el fichero
+-                escribir_json_atomico(self._ruta, datos)
+-                if eventos:
++                escribir_json_atomico(self._path, data)
++                if self._legacy_write:
++                    self._write_legacy(data)
++                if events:
+                     try:
+-                        _anadir_lineas(self._ruta_eventos, eventos)
++                        _append_lines(self._events_path, events)
+                     except OSError:
+                         pass  # el registro es para medir: perderlo no deshace el estado ya escrito
+         except (Timeout, OSError):
+             return  # REQ-012: nunca bloquea ni hace fallar una delegación
+ 
++    def _write_legacy(self, data: dict) -> None:
++        """`enfriamiento.json` con el mismo estado y las claves viejas (excepción de REQ-005)."""
++        old = {
++            model: legacy_names.old_keys("cooldown_state", _entry(raw))
++            for model, raw in data.items()
++        }
++        try:
++            escribir_json_atomico(self._legacy_path, old)
++        except OSError:
++            pass  # la copia vieja es para hooks de otra versión: perderla no deshace el estado
++
+ 
+-def desde_config() -> Estado:
++def from_config() -> CooldownState:
+     """El estado con la configuración vigente, leída al llamar (los tests cambian `LOG_DIR`)."""
+-    return Estado(
+-        config.LOG_DIR / "enfriamiento.json",
+-        fallos=config.COOLDOWN_FAILURES,
+-        espera_s=config.COOLDOWN_S,
+-        espera_max_s=config.COOLDOWN_MAX_S,
+-        activo=config.COOLDOWN,
++    return CooldownState(
++        config.LOG_DIR / STATE_FILE,
++        failures=config.COOLDOWN_FAILURES,
++        wait_s=config.COOLDOWN_S,
++        max_wait_s=config.COOLDOWN_MAX_S,
++        enabled=config.COOLDOWN,
+     )
+diff --git a/src/local_delegate/deprecations.py b/src/local_delegate/deprecations.py
+index 8136cd2..7cc7c43 100644
+--- a/src/local_delegate/deprecations.py
++++ b/src/local_delegate/deprecations.py
+@@ -1,7 +1,8 @@
+ """deprecations.py — registro único de nombres obsoletos (D1 del SDD english-names-bilingual-output).
+ 
+ Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo que el paquete todavía reconoce:
+-subcomandos y opciones del CLI, variables de entorno, ficheros interruptor y nombres retirados.
++subcomandos y opciones del CLI, variables de entorno, ficheros interruptor, ficheros que se siguen
++escribiendo también con el nombre viejo (`legacy_write`) y nombres retirados.
+ La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.deprecated_names` de
+ `doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
+ paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
+@@ -83,6 +84,10 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
+         "UNRELEASED",
+         used_by_hooks=True,
+     ),
++    # Ola A4: excepción de REQ-005. El daemon escribe también `enfriamiento.json` (claves viejas)
++    # para que los hooks de versiones anteriores sigan viendo los modelos enfriados. Mientras esta
++    # entrada exista, `cooldown.legacy_write_enabled()` es True; al retirarla, se deja de escribir.
++    DeprecatedName("legacy_write", "enfriamiento.json", "cooldown.json", "UNRELEASED"),
+ )
+ 
+ 
+diff --git a/src/local_delegate/legacy_names.py b/src/local_delegate/legacy_names.py
+index 22374ba..bd67842 100644
+--- a/src/local_delegate/legacy_names.py
++++ b/src/local_delegate/legacy_names.py
+@@ -7,7 +7,7 @@ todo lector del paquete traduce por aquí, y los hooks llevan en `hook_common.py
+ equivalencias que leen ellos, atadas a esta por un test de igualdad.
+ 
+ Cada ola del frente A añade las tablas de su formato (A2 la telemetría de hooks y los nombres en
+-disco; A3 el log de uso; A4 el enfriamiento…).
++disco; A3 el log de uso; A4 el estado y los episodios de enfriamiento…).
+ 
+ Forma de cada formato en `FORMATS`:
+ 
+@@ -91,6 +91,31 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
+             },
+         },
+     },
++    # Estado de enfriamiento (`cooldown.json`; antes `enfriamiento.json`). `hook_common` copia
++    # estas claves en `COOLDOWN_STATE_KEYS` y `tests/test_hook_legacy_names.py` exige que sean iguales.
++    "cooldown_state": {
++        "keys": {
++            "fallos": "failures",
++            "espera_s": "wait_s",
++            "hasta": "until",
++            "reentradas": "reentries",
++        },
++    },
++    # Registro de episodios (`cooldown-events.jsonl`; antes `enfriamiento-eventos.jsonl`).
++    "cooldown_events": {
++        "keys": {
++            "modelo": "model",
++            "evento": "event",
++            "clase": "class",
++            "tras_vencer": "after_expiry",
++            "reentradas": "reentries",
++            "espera_s": "wait_s",
++        },
++        "values": {
++            "event": {"entra": "enter", "reentra": "reenter", "limpia": "clear"},
++            "class": FAILURE_CLASS_VALUES,
++        },
++    },
+ }
+ 
+ #: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
+@@ -101,8 +126,18 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
+     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
+     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
+     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
++    # En `LOG_DIR`. El daemon escribe los dos mientras viva su entrada `legacy_write` de
++    # `deprecations` (excepción de REQ-005); se lee el nuevo y, si no existe, el viejo.
++    "cooldown_state": ("enfriamiento.json", "cooldown.json"),
+ }
+ 
++#: El registro de episodios de enfriamiento, como `(viejo, nuevo)`. Solo lo escribe el daemon y lo
++#: lee `scripts/medir_enfriamiento.py` (los dos ficheros, siempre): los hooks no lo copian.
++COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
++    "enfriamiento-eventos.jsonl",
++    "cooldown-events.jsonl",
++)
++
+ #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
+ #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
+ #: Además de los motivos persistidos, van los cubos que fabricaba el propio servidor en español.
+@@ -136,6 +171,16 @@ def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) ->
+     return default
+ 
+ 
++def old_keys(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
++    """Copia de `row` con las claves del formato nuevo devueltas a su nombre viejo.
++
++    Solo para las escrituras dobles que mantiene una excepción temporal (`legacy_write`): los
++    valores se copian tal cual, porque esos formatos no tienen valores de enumeración traducidos.
++    """
++    back = {new: old for old, new in FORMATS.get(fmt, {}).get("keys", {}).items()}
++    return {back.get(key, key): value for key, value in row.items()}
++
++
+ def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
+     """Copia de `row` con claves y valores de enumeración traducidos al formato nuevo.
+ 
+diff --git a/src/local_delegate/resources/hooks/hook_common.py b/src/local_delegate/resources/hooks/hook_common.py
+index 02de4c7..5f98b64 100644
+--- a/src/local_delegate/resources/hooks/hook_common.py
++++ b/src/local_delegate/resources/hooks/hook_common.py
+@@ -172,6 +172,18 @@ FILE_NAMES: dict[str, tuple[str, str]] = {
+     "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
+     "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
+     "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
++    # En `LOG_DIR`: lo escribe el daemon (los dos, mientras viva su `legacy_write`) y lo lee
++    # `cooled_model`. Gana el nuevo; el viejo cubre un daemon de una version anterior.
++    "cooldown_state": ("enfriamiento.json", "cooldown.json"),
++}
++
++#: Claves viejas -> nuevas del estado de enfriamiento. Copia de
++#: `local_delegate.legacy_names.FORMATS["cooldown_state"]["keys"]` (mismo test de igualdad).
++COOLDOWN_STATE_KEYS: dict[str, str] = {
++    "fallos": "failures",
++    "espera_s": "wait_s",
++    "hasta": "until",
++    "reentradas": "reentries",
+ }
+ 
+ 
+@@ -331,7 +343,7 @@ def block_state() -> str:
+ # --- El modelo del resumen en enfriamiento (REQ-F1-10) -------------------------------------------
+ #
+ # Bloquear hacia un modelo que el servidor no va a llamar deja al agente peor que antes. El estado lo
+-# escribe el servidor en `LOG_DIR/enfriamiento.json`; el hook es stdlib y no puede importar `config`,
++# escribe el servidor en `LOG_DIR/cooldown.json`; el hook es stdlib y no puede importar `config`,
+ # asi que lleva su copia de los defectos, y `tests/test_conformidad_f1.py` la ata a `config.py`. Con
+ # un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
+ # defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
+@@ -370,14 +382,30 @@ def summary_model(size: int) -> str:
+     )
+ 
+ 
++def _cooldown_until(name: str, model: str, key: str) -> object:
++    """El vencimiento del modelo en un fichero de estado, o None si no se puede leer."""
++    try:
++        data = json.loads((log_dir() / name).read_text(encoding="utf-8"))
++        return data[model][key]
++    except (OSError, ValueError, KeyError, TypeError):
++        return None
++
++
+ def cooled_model(model: str) -> bool:
+     """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
+-    un bloqueo con un dato legible y vigente, nunca por un fichero roto."""
++    un bloqueo con un dato legible y vigente, nunca por un fichero roto.
++
++    Lee `cooldown.json` y, si no existe, `enfriamiento.json` con su clave vieja (un daemon de una
++    version anterior). Si existe el nuevo, manda el nuevo aunque no tenga el modelo."""
++    old_name, new_name = FILE_NAMES["cooldown_state"]
++    new_key = COOLDOWN_STATE_KEYS["hasta"]
++    if (log_dir() / new_name).exists():
++        until = _cooldown_until(new_name, model, new_key)
++    else:
++        until = _cooldown_until(old_name, model, "hasta")
+     try:
+-        data = json.loads((log_dir() / "enfriamiento.json").read_text(encoding="utf-8"))
+-        until = data[model]["hasta"]
+         return isinstance(until, (int, float)) and float(until) > time.time()
+-    except (OSError, ValueError, KeyError, TypeError):
++    except (OverflowError, ValueError):
+         return False
+ 
+ 
+diff --git a/src/local_delegate/server.py b/src/local_delegate/server.py
+index 48a9b5c..03cd403 100644
+--- a/src/local_delegate/server.py
++++ b/src/local_delegate/server.py
+@@ -40,8 +40,8 @@ from . import (
+     cadenas,
+     clients,
+     config,
++    cooldown,
+     coste,
+-    enfriamiento,
+     estado_json,
+     failures,
+     legacy_names,
+@@ -1066,13 +1066,13 @@ class Intento:
+ _CLASES_QUE_SALTAN = frozenset({failures.FailureClass.MODEL, failures.FailureClass.CAPACITY})
+ 
+ 
+-def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
++def _cooldown_error(model: str, enfriado: cooldown.ActiveCooldown) -> ChatResult:
+     """REQ-009: el modelo está enfriándose y no queda candidato. Falla al momento, sin timeout."""
+-    hasta = datetime.fromtimestamp(enfriado.hasta, UTC).strftime("%H:%M:%S UTC")
++    hasta = datetime.fromtimestamp(enfriado.until, UTC).strftime("%H:%M:%S UTC")
+     return ChatResult(
+         text=(
+             f"[local-delegate error] {model} está en enfriamiento hasta las {hasta} (quedan "
+-            f"{enfriado.restante_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
++            f"{enfriado.remaining_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
+             "disponible."
+         ),
+         ok=False,
+@@ -1947,16 +1947,16 @@ def _attempt(
+     model: str,
+     payload: dict,
+     json_schema_fallback: bool,
+-    state: enfriamiento.Estado,
++    state: cooldown.CooldownState,
+     attempts: list[Intento],
+ ) -> tuple[ChatResult, str | None]:
+     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
+     result, schema, ms = _llamar_modelo(model, payload, json_schema_fallback)
+     attempts.append(Intento(model, result.ok, result.error, result.clase, ms, result.timings))
+     if result.ok:
+-        state.registrar_exito(model)
++        state.record_success(model)
+     elif result.clase is not None:
+-        state.registrar_fallo(model, result.clase)
++        state.record_failure(model, result.clase)
+     return result, schema
+ 
+ 
+@@ -1967,7 +1967,7 @@ def _next_hop(
+     model: str,
+     size: int,
+     capacity: bool,
+-    state: enfriamiento.Estado,
++    state: cooldown.CooldownState,
+     hops: int,
+     last: ChatResult | None,
+     loaded_members: Callable[[], Sequence[str]],
+@@ -2008,7 +2008,7 @@ def _next_hop(
+                 or candidate in attempted
+                 or candidate not in config.ALLOWED_MODELS
+                 or size > config.max_chars_for(candidate)
+-                or state.consultar(candidate) is not None
++                or state.lookup(candidate) is not None
+             )
+         )
+         if valid:
+@@ -2073,7 +2073,7 @@ def _con_respaldo(
+     La cadena se resuelve aquí, y solo si hace falta: resolverla antes leería la config de
+     llama-swap en cada delegación, también en el camino feliz.
+     """
+-    estado = enfriamiento.desde_config()
++    estado = cooldown.from_config()
+     intentos: list[Intento] = []
+     schema: str | None = None
+ 
+@@ -2119,7 +2119,7 @@ def _con_respaldo(
+     if explicito:
+         return _first(llamar(model)), schema, intentos
+ 
+-    enfriado = estado.consultar(model)
++    enfriado = estado.lookup(model)
+     original: ChatResult | None = None
+     clase: str | None = None
+     served = model
+@@ -2176,7 +2176,7 @@ def _con_respaldo(
+         if ultimo.ok:
+             return ultimo, schema, intentos
+ 
+-    base = original if original is not None else _error_enfriado(model, enfriado)
++    base = original if original is not None else _cooldown_error(model, enfriado)
+     probados = [i for i in intentos if i.modelo != model]
+     if not probados:
+         return base, schema, intentos
+@@ -4354,14 +4354,14 @@ def _describir_enfriamiento() -> list[str]:
+             f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
+         )
+     ]
+-    activos = enfriamiento.desde_config().activos()
++    activos = cooldown.from_config().active()
+     if not activos:
+         lineas.append("  ningún modelo enfriado")
+     for modelo, enfriado in sorted(activos.items()):
+         veces = (
+-            "1 vez seguida" if enfriado.reentradas == 1 else f"{enfriado.reentradas} veces seguidas"
++            "1 vez seguida" if enfriado.reentries == 1 else f"{enfriado.reentries} veces seguidas"
+         )
+-        lineas.append(f"  {modelo}: quedan {enfriado.restante_s:.0f} s, ha entrado {veces}")
++        lineas.append(f"  {modelo}: quedan {enfriado.remaining_s:.0f} s, ha entrado {veces}")
+     return lineas
+ 
+ 
+diff --git a/tests/test_enfriamiento.py b/tests/test_enfriamiento.py
+index 9ce6004..c493f35 100644
+--- a/tests/test_enfriamiento.py
++++ b/tests/test_enfriamiento.py
+@@ -1,7 +1,7 @@
+ """Tarea 26 de F3: el estado de enfriamiento compartido entre procesos (REQ-009 a REQ-012).
+ 
+ Todo con reloj inyectable: ningún test espera de verdad 120 s. «Dos procesos» son dos instancias de
+-`Estado` sobre el mismo fichero, que es lo que ven el daemon y un proceso stdio de la misma máquina.
++`CooldownState` sobre el mismo fichero, que es lo que ven el daemon y un proceso stdio de la misma máquina.
+ 
+ Defectos de la spec que se fijan aquí, no se reinterpretan en cada consumidor:
+ - cuentan solo los fallos del modelo y los timeouts con el modelo cargado (tabla de F3);
+@@ -16,7 +16,7 @@ import json
+ 
+ import pytest
+ 
+-from local_delegate import enfriamiento
++from local_delegate import cooldown
+ from local_delegate.failures import FailureClass
+ 
+ INICIO = 1_800_000_000.0
+@@ -40,18 +40,20 @@ def reloj() -> Reloj:
+ 
+ @pytest.fixture
+ def ruta(tmp_path):
+-    return tmp_path / "enfriamiento.json"
++    return tmp_path / "cooldown.json"
+ 
+ 
+-def _estado(ruta, reloj, **opciones) -> enfriamiento.Estado:
+-    parametros = {"fallos": 3, "espera_s": 120.0, "espera_max_s": 900.0, "activo": True}
++def _estado(ruta, reloj, **opciones) -> cooldown.CooldownState:
++    parametros = {"failures": 3, "wait_s": 120.0, "max_wait_s": 900.0, "enabled": True}
+     parametros.update(opciones)
+-    return enfriamiento.Estado(ruta, reloj=reloj, **parametros)
++    return cooldown.CooldownState(ruta, clock=reloj, **parametros)
+ 
+ 
+-def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=FailureClass.MODEL) -> None:
++def _fallar(
++    estado: cooldown.CooldownState, modelo: str, veces: int, clase=FailureClass.MODEL
++) -> None:
+     for _ in range(veces):
+-        estado.registrar_fallo(modelo, clase)
++        estado.record_failure(modelo, clase)
+ 
+ 
+ # --- REQ-009: N fallos seguidos enfrían -------------------------------------------------------
+@@ -60,17 +62,17 @@ def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=FailureC
+ def test_tres_fallos_seguidos_enfrian_el_modelo_120_s(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+-    enfriado = estado.consultar("m")
++    enfriado = estado.lookup("m")
+     assert enfriado is not None
+-    assert enfriado.restante_s == pytest.approx(120.0)
+-    assert enfriado.reentradas == 1
++    assert enfriado.remaining_s == pytest.approx(120.0)
++    assert enfriado.reentries == 1
+ 
+ 
+ def test_dos_fallos_no_enfrian(ruta, reloj):
+     """Control positivo del anterior: el umbral es N, no «cualquier fallo»."""
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 2)
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+ 
+ 
+ def test_los_fallos_de_dos_procesos_se_suman(ruta, reloj):
+@@ -79,22 +81,22 @@ def test_los_fallos_de_dos_procesos_se_suman(ruta, reloj):
+     stdio = _estado(ruta, reloj)
+     _fallar(daemon, "m", 2)
+     _fallar(stdio, "m", 1)
+-    assert daemon.consultar("m") is not None
+-    assert stdio.consultar("m") is not None
++    assert daemon.lookup("m") is not None
++    assert stdio.lookup("m") is not None
+ 
+ 
+ def test_el_timeout_con_el_modelo_cargado_tambien_cuenta(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3, clase=FailureClass.READ_TIMEOUT)
+-    assert estado.consultar("m") is not None
++    assert estado.lookup("m") is not None
+ 
+ 
+ def test_cada_modelo_lleva_su_propio_contador(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "a", 2)
+     _fallar(estado, "b", 2)
+-    assert estado.consultar("a") is None
+-    assert estado.consultar("b") is None
++    assert estado.lookup("a") is None
++    assert estado.lookup("b") is None
+ 
+ 
+ # --- REQ-011: el éxito pone a cero y las clases neutras no tocan nada ---------------------------
+@@ -103,9 +105,9 @@ def test_cada_modelo_lleva_su_propio_contador(ruta, reloj):
+ def test_un_exito_pone_el_contador_a_cero(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 2)
+-    estado.registrar_exito("m")
++    estado.record_success("m")
+     _fallar(estado, "m", 2)
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -122,9 +124,9 @@ def test_las_clases_neutras_ni_suman_ni_ponen_a_cero(ruta, reloj, neutra):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 2)
+     _fallar(estado, "m", 5, clase=neutra)  # no suman...
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+     _fallar(estado, "m", 1)  # ...ni han puesto a cero: este es el tercero que cuenta
+-    assert estado.consultar("m") is not None
++    assert estado.lookup("m") is not None
+ 
+ 
+ # --- REQ-010: vencimiento, prueba y espera doblada ----------------------------------------------
+@@ -134,19 +136,19 @@ def test_vencido_el_enfriamiento_el_modelo_vuelve_a_recibir(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+     reloj.avanzar(120.1)
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+ 
+ 
+ def test_vencido_y_un_exito_el_modelo_queda_limpio(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+     reloj.avanzar(121)
+-    estado.registrar_exito("m")
+-    assert estado.activos() == {}
++    estado.record_success("m")
++    assert estado.active() == {}
+     _fallar(estado, "m", 2)
+-    assert estado.consultar("m") is None, "el contador no volvió a cero"
++    assert estado.lookup("m") is None, "el contador no volvió a cero"
+     _fallar(estado, "m", 1)
+-    assert estado.consultar("m").restante_s == pytest.approx(120.0), "la espera no volvió a la base"
++    assert estado.lookup("m").remaining_s == pytest.approx(120.0), "la espera no volvió a la base"
+ 
+ 
+ def test_vencido_y_un_solo_fallo_vuelve_a_enfriar_con_la_espera_doblada(ruta, reloj):
+@@ -154,10 +156,10 @@ def test_vencido_y_un_solo_fallo_vuelve_a_enfriar_con_la_espera_doblada(ruta, re
+     _fallar(estado, "m", 3)
+     reloj.avanzar(121)
+     _fallar(estado, "m", 1)
+-    enfriado = estado.consultar("m")
++    enfriado = estado.lookup("m")
+     assert enfriado is not None, "tras vencer tiene que bastar UN fallo"
+-    assert enfriado.restante_s == pytest.approx(240.0)
+-    assert enfriado.reentradas == 2
++    assert enfriado.remaining_s == pytest.approx(240.0)
++    assert enfriado.reentries == 2
+ 
+ 
+ def test_la_espera_nunca_pasa_de_tmax(ruta, reloj):
+@@ -167,13 +169,13 @@ def test_la_espera_nunca_pasa_de_tmax(ruta, reloj):
+     for _ in range(8):
+         reloj.avanzar(1000)
+         _fallar(estado, "m", 1)
+-        esperas.append(estado.consultar("m").restante_s)
++        esperas.append(estado.lookup("m").remaining_s)
+     assert esperas[:3] == [pytest.approx(240.0), pytest.approx(480.0), pytest.approx(900.0)]
+     assert max(esperas) == pytest.approx(900.0)
+     # Lo que de verdad importa del tope: pasados Tmax segundos, el modelo QUEDA LIBRE. Mirar solo el
+     # restante no basta: la lectura lo recorta y tapaba una espera guardada sin límite (mutante vivo).
+     reloj.avanzar(900.1)
+-    assert estado.consultar("m") is None, "pasado Tmax el modelo sigue enfriado"
++    assert estado.lookup("m") is None, "pasado Tmax el modelo sigue enfriado"
+ 
+ 
+ def test_la_espera_guardada_tampoco_pasa_de_tmax(ruta, reloj):
+@@ -183,26 +185,26 @@ def test_la_espera_guardada_tampoco_pasa_de_tmax(ruta, reloj):
+         reloj.avanzar(1000)
+         _fallar(estado, "m", 1)
+     entrada = json.loads(ruta.read_text(encoding="utf-8"))["m"]
+-    assert entrada["espera_s"] <= 900.0
+-    assert entrada["hasta"] - reloj.ahora <= 900.0
++    assert entrada["wait_s"] <= 900.0
++    assert entrada["until"] - reloj.ahora <= 900.0
+ 
+ 
+ def test_un_vencimiento_en_el_futuro_lejano_se_recorta_a_tmax(ruta, reloj):
+-    """Un cambio de hora puede dejar un `hasta` absurdo: ningún enfriamiento es permanente."""
++    """Un cambio de hora puede dejar un `until` absurdo: ningún enfriamiento es permanente."""
+     ruta.write_text(
+         json.dumps(
+-            {"m": {"fallos": 0, "espera_s": 120.0, "hasta": INICIO + 10**7, "reentradas": 1}}
++            {"m": {"failures": 0, "wait_s": 120.0, "until": INICIO + 10**7, "reentries": 1}}
+         ),
+         encoding="utf-8",
+     )
+     estado = _estado(ruta, reloj)
+-    enfriado = estado.consultar("m")
++    enfriado = estado.lookup("m")
+     assert enfriado is not None
+-    assert enfriado.restante_s <= 900.0
++    assert enfriado.remaining_s <= 900.0
+     # Y VENCE: recortar contra «ahora» en cada lectura dejaba siempre 900 s por delante, o sea un
+     # enfriamiento permanente, justo lo que la spec prohíbe.
+     reloj.avanzar(900.1)
+-    assert estado.consultar("m") is None, "el vencimiento lejano no vence nunca"
++    assert estado.lookup("m") is None, "el vencimiento lejano no vence nunca"
+ 
+ 
+ # --- REQ-012: el estado ilegible nunca bloquea ni falla -----------------------------------------
+@@ -211,9 +213,9 @@ def test_un_vencimiento_en_el_futuro_lejano_se_recorta_a_tmax(ruta, reloj):
+ def test_un_fichero_corrupto_se_lee_como_sin_enfriamiento(ruta, reloj):
+     ruta.write_text("{esto no es json", encoding="utf-8")
+     estado = _estado(ruta, reloj)
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+     _fallar(estado, "m", 3)  # no lanza
+-    assert estado.consultar("m") is not None, "tras un fichero corrupto se vuelve a escribir bien"
++    assert estado.lookup("m") is not None, "tras un fichero corrupto se vuelve a escribir bien"
+ 
+ 
+ def test_un_bloqueo_ocupado_no_bloquea_ni_falla(ruta, reloj, monkeypatch):
+@@ -222,15 +224,15 @@ def test_un_bloqueo_ocupado_no_bloquea_ni_falla(ruta, reloj, monkeypatch):
+             pass
+ 
+         def __enter__(self):
+-            raise enfriamiento.Timeout(str(ruta))
++            raise cooldown.Timeout(str(ruta))
+ 
+         def __exit__(self, *_exc) -> None:
+             return None
+ 
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+-    monkeypatch.setattr(enfriamiento, "FileLock", BloqueoOcupado)
+-    assert estado.consultar("m") is None, "sin el bloqueo se sigue como si no hubiera enfriamiento"
++    monkeypatch.setattr(cooldown, "FileLock", BloqueoOcupado)
++    assert estado.lookup("m") is None, "sin el bloqueo se sigue como si no hubiera enfriamiento"
+     _fallar(estado, "otro", 3)  # no lanza
+ 
+ 
+@@ -242,7 +244,7 @@ def test_el_fichero_solo_guarda_contadores_y_fechas(ruta, reloj):
+     datos = json.loads(ruta.read_text(encoding="utf-8"))
+     assert set(datos) == {"m", "n"}
+     for entrada in datos.values():
+-        assert set(entrada) == {"fallos", "espera_s", "hasta", "reentradas"}
++        assert set(entrada) == {"failures", "wait_s", "until", "reentries"}
+         assert all(valor is None or isinstance(valor, (int, float)) for valor in entrada.values())
+ 
+ 
+@@ -250,18 +252,18 @@ def test_el_fichero_solo_guarda_contadores_y_fechas(ruta, reloj):
+ 
+ 
+ def test_apagado_no_registra_ni_enfria(ruta, reloj):
+-    estado = _estado(ruta, reloj, activo=False)
++    estado = _estado(ruta, reloj, enabled=False)
+     _fallar(estado, "m", 10)
+-    assert estado.consultar("m") is None
++    assert estado.lookup("m") is None
+     assert not ruta.exists(), "apagado no debe ni tocar el fichero"
+-    assert not (ruta.parent / enfriamiento.FICHERO_EVENTOS).exists(), "ni el de episodios"
++    assert not (ruta.parent / cooldown.EVENTS_FILE).exists(), "ni el de episodios"
+ 
+ 
+ # --- Tarea 30: los episodios, que el criterio de P-4 cuenta y el fichero de estado no guarda -----
+ 
+ 
+ def _eventos(ruta) -> list[dict]:
+-    destino = ruta.parent / enfriamiento.FICHERO_EVENTOS
++    destino = ruta.parent / cooldown.EVENTS_FILE
+     if not destino.exists():
+         return []
+     return [json.loads(linea) for linea in destino.read_text(encoding="utf-8").splitlines()]
+@@ -273,11 +275,11 @@ def test_entrar_deja_un_evento_con_la_clase_que_lo_disparo(ruta, reloj):
+     assert _eventos(ruta) == [], "un fallo por debajo de N no es un episodio"
+     _fallar(estado, "m", 1, clase=FailureClass.READ_TIMEOUT)
+     (evento,) = _eventos(ruta)
+-    assert evento["evento"] == "entra"
+-    assert evento["modelo"] == "m"
+-    assert evento["clase"] == "read_timeout"
+-    assert evento["reentradas"] == 1
+-    assert evento["espera_s"] == pytest.approx(120.0)
++    assert evento["event"] == "enter"
++    assert evento["model"] == "m"
++    assert evento["class"] == "read_timeout"
++    assert evento["reentries"] == 1
++    assert evento["wait_s"] == pytest.approx(120.0)
+     assert evento["ts"].startswith("2027-01-15T08:00:00")
+ 
+ 
+@@ -286,10 +288,10 @@ def test_reentrar_tras_vencer_deja_su_evento_con_la_espera_doblada(ruta, reloj):
+     _fallar(estado, "m", 3)
+     reloj.avanzar(121)
+     _fallar(estado, "m", 1)
+-    assert [e["evento"] for e in _eventos(ruta)] == ["entra", "reentra"]
++    assert [e["event"] for e in _eventos(ruta)] == ["enter", "reenter"]
+     reentra = _eventos(ruta)[1]
+-    assert reentra["reentradas"] == 2
+-    assert reentra["espera_s"] == pytest.approx(240.0)
++    assert reentra["reentries"] == 2
++    assert reentra["wait_s"] == pytest.approx(240.0)
+ 
+ 
+ def test_los_fallos_durante_el_enfriamiento_no_dejan_evento(ruta, reloj):
+@@ -297,18 +299,18 @@ def test_los_fallos_durante_el_enfriamiento_no_dejan_evento(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+     _fallar(estado, "m", 4)
+-    assert [e["evento"] for e in _eventos(ruta)] == ["entra"]
++    assert [e["event"] for e in _eventos(ruta)] == ["enter"]
+ 
+ 
+ def test_el_exito_tras_vencer_cierra_el_episodio_como_recuperado(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+     reloj.avanzar(121)
+-    estado.registrar_exito("m")
++    estado.record_success("m")
+     limpia = _eventos(ruta)[-1]
+-    assert limpia["evento"] == "limpia"
+-    assert limpia["tras_vencer"] is True
+-    assert limpia["reentradas"] == 1
++    assert limpia["event"] == "clear"
++    assert limpia["after_expiry"] is True
++    assert limpia["reentries"] == 1
+ 
+ 
+ def test_el_exito_antes_de_vencer_se_distingue(ruta, reloj):
+@@ -317,16 +319,16 @@ def test_el_exito_antes_de_vencer_se_distingue(ruta, reloj):
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)
+     reloj.avanzar(10)
+-    estado.registrar_exito("m")
+-    assert _eventos(ruta)[-1]["tras_vencer"] is False
++    estado.record_success("m")
++    assert _eventos(ruta)[-1]["after_expiry"] is False
+ 
+ 
+ def test_el_exito_de_un_modelo_con_fallos_sueltos_no_es_un_episodio(ruta, reloj):
+     """Control positivo de los dos anteriores: limpiar un contador no es cerrar un enfriamiento."""
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 2)
+-    estado.registrar_exito("m")
+-    estado.registrar_exito("otro")
++    estado.record_success("m")
++    estado.record_success("otro")
+     assert _eventos(ruta) == []
+ 
+ 
+@@ -336,8 +338,8 @@ def test_los_eventos_de_dos_procesos_van_al_mismo_fichero(ruta, reloj):
+     _fallar(daemon, "m", 2)
+     _fallar(stdio, "m", 1)
+     reloj.avanzar(121)
+-    daemon.registrar_exito("m")
+-    assert [e["evento"] for e in _eventos(ruta)] == ["entra", "limpia"]
++    daemon.record_success("m")
++    assert [e["event"] for e in _eventos(ruta)] == ["enter", "clear"]
+ 
+ 
+ def test_el_fichero_de_episodios_solo_guarda_nombres_contadores_y_fechas(ruta, reloj):
+@@ -346,13 +348,13 @@ def test_el_fichero_de_episodios_solo_guarda_nombres_contadores_y_fechas(ruta, r
+     reloj.avanzar(121)
+     _fallar(estado, "m", 1)
+     reloj.avanzar(241)
+-    estado.registrar_exito("m")
+-    permitidas = {"ts", "modelo", "evento", "clase", "reentradas", "espera_s", "tras_vencer"}
++    estado.record_success("m")
++    permitidas = {"ts", "model", "event", "class", "reentries", "wait_s", "after_expiry"}
+     eventos = _eventos(ruta)
+     assert len(eventos) == 3
+     for evento in eventos:
+         assert set(evento) <= permitidas
+-        assert evento["evento"] in {"entra", "reentra", "limpia"}
++        assert evento["event"] in {"enter", "reenter", "clear"}
+ 
+ 
+ def test_sin_disco_para_los_episodios_el_enfriamiento_sigue(ruta, reloj, monkeypatch):
+@@ -361,7 +363,151 @@ def test_sin_disco_para_los_episodios_el_enfriamiento_sigue(ruta, reloj, monkeyp
+     def sin_disco(*_args, **_kwargs):
+         raise OSError("disco lleno")
+ 
+-    monkeypatch.setattr(enfriamiento, "_anadir_lineas", sin_disco)
++    monkeypatch.setattr(cooldown, "_append_lines", sin_disco)
+     estado = _estado(ruta, reloj)
+     _fallar(estado, "m", 3)  # no lanza
+-    assert estado.consultar("m") is not None
++    assert estado.lookup("m") is not None
++
++
++# --- Ola A4 del renombrado: `cooldown.json`, `enfriamiento.json` y su escritura doble -----------
++#
++# REQ-005 (excepción): mientras viva la entrada `legacy_write` de `deprecations`, el daemon escribe
++# también `enfriamiento.json` con las claves viejas, para los hooks de una versión anterior.
++# REQ-006: se lee `cooldown.json` y, si no existe, `enfriamiento.json` traducido; gana el nuevo.
++
++
++def _viejo(ruta) -> dict:
++    return json.loads(ruta.with_name("enfriamiento.json").read_text(encoding="utf-8"))
++
++
++def _nuevo(ruta) -> dict:
++    return json.loads(ruta.read_text(encoding="utf-8"))
++
++
++def _mismo_estado(ruta) -> None:
++    """Los dos ficheros dicen lo mismo: el viejo, traducido, es igual al nuevo."""
++    viejo = {modelo: cooldown._entry(entrada) for modelo, entrada in _viejo(ruta).items()}
++    assert viejo == _nuevo(ruta)
++
++
++def test_la_escritura_doble_deja_el_mismo_estado_tras_entrar_reentrar_y_limpiar(ruta, reloj):
++    estado = _estado(ruta, reloj)
++    _fallar(estado, "m", 3)
++    assert _nuevo(ruta)["m"]["until"] is not None, "tras entrar"
++    _mismo_estado(ruta)
++    reloj.avanzar(121)
++    _fallar(estado, "m", 1)
++    assert _nuevo(ruta)["m"]["reentries"] == 2, "tras reentrar"
++    _mismo_estado(ruta)
++    reloj.avanzar(241)
++    estado.record_success("m")
++    assert _nuevo(ruta) == {}, "tras limpiar"
++    _mismo_estado(ruta)
++    assert [e["event"] for e in _eventos(ruta)] == ["enter", "reenter", "clear"]
++
++
++def test_el_fichero_viejo_lleva_las_claves_viejas_que_lee_un_hook_anterior(ruta, reloj):
++    """Un hook de la 0.34.0 lee `data[modelo]["hasta"]` de `enfriamiento.json`."""
++    estado = _estado(ruta, reloj)
++    _fallar(estado, "m", 3)
++    entrada = _viejo(ruta)["m"]
++    assert set(entrada) == {"fallos", "espera_s", "hasta", "reentradas"}
++    assert entrada["hasta"] == pytest.approx(INICIO + 120.0)
++
++
++def test_un_estado_viejo_de_un_daemon_anterior_se_lee_si_no_hay_nuevo(ruta, reloj):
++    ruta.with_name("enfriamiento.json").write_text(
++        json.dumps({"m": {"fallos": 0, "espera_s": 120.0, "hasta": INICIO + 60, "reentradas": 1}}),
++        encoding="utf-8",
++    )
++    estado = _estado(ruta, reloj)
++    enfriado = estado.lookup("m")
++    assert enfriado is not None, "el estado viejo no se leyó"
++    assert enfriado.remaining_s == pytest.approx(60.0)
++    # Y la siguiente escritura parte de él: el nuevo nace con el modelo enfriado, en claves nuevas.
++    _fallar(estado, "n", 1)
++    assert _nuevo(ruta)["m"]["until"] == pytest.approx(INICIO + 60)
++    assert set(_nuevo(ruta)["m"]) == {"failures", "wait_s", "until", "reentries"}
++
++
++def test_con_los_dos_ficheros_gana_el_nuevo(ruta, reloj):
++    ruta.with_name("enfriamiento.json").write_text(
++        json.dumps({"m": {"fallos": 0, "espera_s": 120.0, "hasta": INICIO + 60, "reentradas": 1}}),
++        encoding="utf-8",
++    )
++    ruta.write_text("{}", encoding="utf-8")
++    assert _estado(ruta, reloj).lookup("m") is None
++
++
++def test_sin_su_entrada_legacy_write_no_se_escribe_el_fichero_viejo(ruta, reloj, monkeypatch):
++    """La excepción tiene horizonte: al retirar la entrada del registro, deja de escribirse."""
++    from local_delegate import deprecations
++
++    assert cooldown.legacy_write_enabled()
++    sin_ella = tuple(e for e in deprecations.DEPRECATED_NAMES if e.kind != "legacy_write")
++    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", sin_ella)
++    assert not cooldown.legacy_write_enabled()
++    _fallar(_estado(ruta, reloj), "m", 3)
++    assert ruta.exists()
++    assert not ruta.with_name("enfriamiento.json").exists()
++
++
++def test_from_config_escribe_cooldown_json_y_el_registro_nuevo(tmp_path, monkeypatch):
++    from local_delegate import config
++
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++    monkeypatch.setattr(config, "COOLDOWN", True)
++    monkeypatch.setattr(config, "COOLDOWN_FAILURES", 1)
++    cooldown.from_config().record_failure("m", FailureClass.MODEL)
++    assert (tmp_path / "cooldown.json").exists()
++    assert (tmp_path / "enfriamiento.json").exists()
++    assert (tmp_path / "cooldown-events.jsonl").exists()
++    assert not (tmp_path / "enfriamiento-eventos.jsonl").exists()
++
++
++# --- La copia de los hooks: lee los dos ficheros (gana `cooldown.json`) --------------------------
++
++
++@pytest.fixture
++def hook(tmp_path, monkeypatch):
++    from local_delegate.resources.hooks import hook_common
++
++    monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path))
++    return hook_common
++
++
++def _escribir(ruta, datos: dict) -> None:
++    ruta.write_text(json.dumps(datos), encoding="utf-8")
++
++
++def test_el_hook_nuevo_ve_el_modelo_enfriado_por_un_daemon_viejo(hook, tmp_path):
++    import time
++
++    _escribir(tmp_path / "enfriamiento.json", {"m": {"hasta": time.time() + 60}})
++    assert hook.cooled_model("m")
++
++
++def test_el_hook_nuevo_lee_cooldown_json_y_ahi_gana_el_nuevo(hook, tmp_path):
++    import time
++
++    _escribir(tmp_path / "cooldown.json", {"m": {"until": time.time() + 60}})
++    assert hook.cooled_model("m")
++    _escribir(tmp_path / "enfriamiento.json", {"n": {"hasta": time.time() + 60}})
++    assert not hook.cooled_model("n"), "con cooldown.json presente no se mira el viejo"
++
++
++def test_el_hook_lee_lo_que_escribe_el_daemon(hook, tmp_path, reloj):
++    import time
++
++    reloj.ahora = time.time()
++    _fallar(_estado(tmp_path / "cooldown.json", reloj), "m", 3)
++    assert hook.cooled_model("m")
++    assert not hook.cooled_model("otro")
++
++
++def test_la_tabla_de_claves_del_hook_es_la_del_paquete():
++    from local_delegate import legacy_names
++    from local_delegate.resources.hooks import hook_common
++
++    assert hook_common.COOLDOWN_STATE_KEYS == legacy_names.FORMATS["cooldown_state"]["keys"]
++    assert hook_common.FILE_NAMES["cooldown_state"] == legacy_names.FILE_NAMES["cooldown_state"]
+diff --git a/tests/test_medir_enfriamiento.py b/tests/test_medir_enfriamiento.py
+index 7c32ab6..13c7df0 100644
+--- a/tests/test_medir_enfriamiento.py
++++ b/tests/test_medir_enfriamiento.py
+@@ -41,7 +41,10 @@ class Logs:
+     def __init__(self, directorio: Path) -> None:
+         self.directorio = directorio
+         self.usos: list[dict] = []
++        #: Filas para `enfriamiento-eventos.jsonl` (el registro viejo, hasta la 0.34.0) y para
++        #: `cooldown-events.jsonl` (el nuevo). El script lee los dos, siempre (REQ-007).
+         self.registro: list[dict] = []
++        self.registro_nuevo: list[dict] = []
+ 
+     def fallos(self, cuantos: int, dia: int = 20, clase: str = "modelo") -> None:
+         self.usos += [
+@@ -106,6 +109,9 @@ class Logs:
+         (self.directorio / "enfriamiento-eventos.jsonl").write_text(
+             "".join(json.dumps(e) + "\n" for e in self.registro), encoding="utf-8"
+         )
++        (self.directorio / "cooldown-events.jsonl").write_text(
++            "".join(json.dumps(e) + "\n" for e in self.registro_nuevo), encoding="utf-8"
++        )
+         return medir_enfriamiento.medir(opciones.pop("desde", "2026-09-16"), **opciones)
+ 
+ 
+@@ -320,26 +326,27 @@ def test_el_aviso_fuera_de_p4_salta_por_encima_del_5_pct(logs):
+ 
+ 
+ def test_lee_el_registro_que_escribe_el_modulo(logs):
+-    """Ida y vuelta: los eventos que escribe `Estado` son los que este script agrupa. Sin esto, los
++    """Ida y vuelta: los eventos que escribe `CooldownState` son los que este script agrupa. Sin esto, los
+     tests de arriba prueban el script contra un formato que yo mismo escribi a mano."""
+-    from local_delegate import enfriamiento
++    from local_delegate import cooldown
+ 
+     ahora = [1_789_900_000.0]  # 2026-09-20
+-    estado = enfriamiento.Estado(
+-        logs.directorio / "enfriamiento.json",
+-        fallos=3,
+-        espera_s=120.0,
+-        espera_max_s=900.0,
+-        reloj=lambda: ahora[0],
++    estado = cooldown.CooldownState(
++        logs.directorio / "cooldown.json",
++        failures=3,
++        wait_s=120.0,
++        max_wait_s=900.0,
++        clock=lambda: ahora[0],
+     )
+     for _ in range(3):
+-        estado.registrar_fallo("m", "timeout_lectura")
++        estado.record_failure("m", "timeout_lectura")
+     ahora[0] += 121
+-    estado.registrar_fallo("m", "modelo")
++    estado.record_failure("m", "modelo")
+     ahora[0] += 241
+-    estado.registrar_exito("m")
+-    registro = (logs.directorio / enfriamiento.FICHERO_EVENTOS).read_text(encoding="utf-8")
+-    logs.registro = [json.loads(linea) for linea in registro.splitlines()]
++    estado.record_success("m")
++    registro = (logs.directorio / cooldown.EVENTS_FILE).read_text(encoding="utf-8")
++    logs.registro_nuevo = [json.loads(linea) for linea in registro.splitlines()]
++    assert {e["event"] for e in logs.registro_nuevo} == {"enter", "reenter", "clear"}
+     medida = logs.medir()
+     assert medida["episodios"] == 1
+     assert medida["episodios_que_reentraron"] == 1
+@@ -462,3 +469,75 @@ def test_el_informe_es_el_mismo_con_clases_viejas_nuevas_y_mezcladas(tmp_path, m
+     assert medidas["viejo"]["operaciones_desviadas"] == 4
+     assert medidas["nuevo"] == medidas["viejo"]
+     assert medidas["mezclado"] == medidas["viejo"]
++
++
++# --- Registro de episodios viejo, nuevo y mezclado (REQ-007, ola A4) ------------------------------
++#
++# Desde la A4 el daemon escribe `cooldown-events.jsonl` con claves y valores en inglés; lo escrito
++# antes sigue en `enfriamiento-eventos.jsonl`. La traducción de la fila se escribe aquí a mano, no
++# con `legacy_names`: si no, el test compararía la tabla consigo misma.
++
++_CLAVE_NUEVA = {
++    "modelo": "model",
++    "evento": "event",
++    "clase": "class",
++    "reentradas": "reentries",
++    "espera_s": "wait_s",
++    "tras_vencer": "after_expiry",
++}
++_EVENTO_NUEVO = {"entra": "enter", "reentra": "reenter", "limpia": "clear"}
++
++
++def _fila_nueva(fila: dict) -> dict:
++    nueva = {_CLAVE_NUEVA.get(k, k): v for k, v in fila.items()}
++    nueva["event"] = _EVENTO_NUEVO[nueva["event"]]
++    if "class" in nueva:
++        nueva["class"] = _VIEJA_A_NUEVA[nueva["class"]]
++    return nueva
++
++
++def _episodios_de_p4(logs: Logs) -> list[dict]:
++    """Seis episodios en formato viejo: tres por timeout, dos que reentran, uno sin desenlace."""
++    logs.fallos(10)
++    for dia in range(20, 26):
++        clase = "timeout_lectura" if dia < 23 else "modelo"
++        esperas = (240.0, 900.0, 900.0) if dia < 22 else ()
++        final = None if dia == 25 else ("recuperado" if dia % 2 else "exito_explicito")
++        logs.episodio(dia, modelo=f"m{dia}", clase=clase, esperas_reentrada=esperas, final=final)
++    filas, logs.registro = logs.registro, []
++    return filas
++
++
++@pytest.mark.parametrize(
++    "formato", ["nuevo", "mezclado_en_dos_ficheros", "mezclado_en_el_fichero_nuevo"]
++)
++def test_el_informe_es_el_mismo_con_el_registro_viejo_nuevo_y_mezclado(
++    tmp_path, monkeypatch, formato
++):
++    def medida(nombre: str, reparto) -> dict:
++        directorio = tmp_path / nombre
++        monkeypatch.setattr(config, "LOG_DIR", directorio)
++        logs = Logs(directorio)
++        for i, fila in enumerate(_episodios_de_p4(logs)):
++            destino, fila = reparto(i, fila)
++            (logs.registro if destino == "viejo" else logs.registro_nuevo).append(fila)
++        return logs.medir()
++
++    viejo = medida("viejo", lambda i, fila: ("viejo", fila))
++    # Guarda: el escenario cuenta algo en cada medida que depende del registro de episodios.
++    assert viejo["episodios"] == 6
++    assert viejo["episodios_por_timeout"] == 3
++    assert viejo["episodios_que_reentraron"] == 2
++    assert viejo["episodios_que_reentran_en_tmax"] == 2
++    assert viejo["episodios_con_desenlace"] == 3
++    repartos = {
++        "nuevo": lambda i, fila: ("nuevo", _fila_nueva(fila)),
++        "mezclado_en_dos_ficheros": lambda i, fila: (
++            ("viejo", fila) if i % 2 else ("nuevo", _fila_nueva(fila))
++        ),
++        "mezclado_en_el_fichero_nuevo": lambda i, fila: (
++            "nuevo",
++            fila if i % 2 else _fila_nueva(fila),
++        ),
++    }
++    assert medida(formato, repartos[formato]) == viejo
+diff --git a/tests/test_observabilidad_respaldo.py b/tests/test_observabilidad_respaldo.py
+index 35776fd..d917509 100644
+--- a/tests/test_observabilidad_respaldo.py
++++ b/tests/test_observabilidad_respaldo.py
+@@ -26,7 +26,7 @@ from test_respaldo import (
+     _ultimo_evento,
+ )
+ 
+-from local_delegate import enfriamiento, server
++from local_delegate import cooldown, server
+ from local_delegate.failures import FailureClass
+ 
+ CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_class")
+@@ -155,9 +155,9 @@ def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
+     recargar_config, tmp_path, status_sin_red
+ ):
+     recargar_config()
+-    estado = enfriamiento.desde_config()
++    estado = cooldown.from_config()
+     for _ in range(3):
+-        estado.registrar_fallo(CODIGO, FailureClass.MODEL)
++        estado.record_failure(CODIGO, FailureClass.MODEL)
+ 
+     linea = _linea_de(server.local_status(), CODIGO)
+ 
+@@ -170,7 +170,7 @@ def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path,
+     recargar_config()
+     vencido = {CODIGO: {"fallos": 0, "espera_s": 120.0, "hasta": time.time() - 1, "reentradas": 1}}
+     _estado_fichero(tmp_path).write_text(json.dumps(vencido), encoding="utf-8")
+-    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
++    cooldown.from_config().record_failure(CODIGO, FailureClass.MODEL)
+ 
+     linea = _linea_de(server.local_status(), CODIGO)
+ 
+diff --git a/tests/test_respaldo.py b/tests/test_respaldo.py
+index f1305ee..d023846 100644
+--- a/tests/test_respaldo.py
++++ b/tests/test_respaldo.py
+@@ -22,7 +22,7 @@ from pathlib import Path
+ import backend_mock
+ import httpx2
+ 
+-from local_delegate import cadenas, config, enfriamiento, preguntas, server
++from local_delegate import cadenas, config, cooldown, preguntas, server
+ from local_delegate.failures import FailureClass
+ 
+ URL = "http://test-backend/v1/chat/completions"
+@@ -72,9 +72,9 @@ def _estado_fichero(tmp_path: Path) -> Path:
+ 
+ 
+ def _enfriar(tmp_path: Path, modelo: str) -> None:
+-    enfriamiento.Estado(
+-        _estado_fichero(tmp_path), fallos=1, espera_s=120, espera_max_s=900
+-    ).registrar_fallo(modelo, FailureClass.MODEL)
++    cooldown.CooldownState(
++        _estado_fichero(tmp_path), failures=1, wait_s=120, max_wait_s=900
++    ).record_failure(modelo, FailureClass.MODEL)
+ 
+ 
+ def _entradas(tmp_path: Path) -> dict:
+@@ -178,8 +178,8 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
+     server.local_explain_code(code="x = 1")
+     server.local_explain_code(code="x = 2")
+     # El tercer fallo lo registra «otro proceso»: otra instancia sobre el mismo fichero.
+-    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
+-    assert enfriamiento.desde_config().consultar(CODIGO) is not None
++    cooldown.from_config().record_failure(CODIGO, FailureClass.MODEL)
++    assert cooldown.from_config().lookup(CODIGO) is not None
+ 
+     pedidos.clear()
+     salida = server.local_explain_code(code="x = 3")

@@ -1,0 +1,44 @@
+# P-4 después de A4 (2026-10-12), datos reales de esta PC. Solo recuentos: se omiten las líneas de cada ventana de prueba (llevan etiquetas).
+# Comando documentado: uv run python scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41  (código de salida 0)
+  quitado por --excluir: 0 filas, 0 episodios
+  quitado por ventanas de prueba: 58 filas, 1 episodios
+
+Delegaciones:              263
+Fallos que cuentan (min.): 5  (minimo 10)
+Saltos por clase:          {}
+Fallos al momento:         0
+Operaciones desviadas:     0
+
+Episodios:                 0  (minimo 5)
+  con desenlace conocido:  0
+  reentraron:              0  (R: None)
+  abiertos por timeout:    0
+  reentran en Tmax:        0
+
+RESULTADO: no concluyente
+
+# Misma corrida con el tramo cerrado (--hasta 2026-10-12T20:20:00), para comparar con la de antes sin que entren delegaciones nuevas (código de salida 0):
+  quitado por --excluir: 0 filas, 0 episodios
+  quitado por ventanas de prueba: 58 filas, 1 episodios
+
+Delegaciones:              262
+Fallos que cuentan (min.): 5  (minimo 10)
+Saltos por clase:          {}
+Fallos al momento:         0
+Operaciones desviadas:     0
+
+Episodios:                 0  (minimo 5)
+  con desenlace conocido:  0
+  reentraron:              0  (R: None)
+  abiertos por timeout:    0
+  reentran en Tmax:        0
+
+RESULTADO: no concluyente
+
+# Comparación con p4-before.txt:
+# - Tramo cerrado (--hasta 2026-10-12T20:20:00): salida idéntica línea a línea salvo la hora de la
+#   corrida en la cabecera «Ventana:» (20:21 frente a 20:36 UTC). IGUALES.
+# - Comando documentado (tramo abierto): igual salvo «Delegaciones» 262 -> 263: entre las dos
+#   corridas hubo una delegación real (la llamada local_lint_summary del log de la suite de esta
+#   ola). Fallos, saltos, episodios (0 en el tramo, 1 quitado por la ventana de la prueba del
+#   2026-09-15, que solo está en enfriamiento-eventos.jsonl) y resultado no cambian.

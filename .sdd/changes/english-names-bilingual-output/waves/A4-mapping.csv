@@ -1,0 +1,120 @@
+# approved-by-main: 2026-10-12 (con las respuestas 1-6; Estado -> CooldownState)
+# wave=A4 generated=2026-10-12 en dos partes. (1) Filas 1-87: salen de `tools/make_mapping.py build --wave A4 --paths src/local_delegate/enfriamiento.py` (87 filas: cross_module=26, function_local=45, module_local=15, unresolved=1); nombres `new` propuestos por el agente; scope corregido en 6 filas tras verificarlo (columna verified). (2) Filas a mano (el script solo ve definiciones Python): el atributo `reentradas` que el detector no listó, los nombres de fichero en disco, claves y valores de D4, tablas de legacy_names/hook_common, la entrada legacy_write, lectores dobles, `_error_enfriado` de server.py y consecuencias fuera de «posee». Fuente: grep sin .sdd/ ni benchmarks/. Pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)
+# Columna scope en las filas a mano: owned = de la lista «posee» de A4; NOT-OWNED = fuera, necesita aprobación; keep = se deja a propósito (con la ola que lo toca). Muestra de module_local: son 15, se verificaron todas (sin semilla).
+old,new,kind,definition,scope,method,reason,verified
+enfriamiento,cooldown,module,src/local_delegate/enfriamiento.py:1@<module>,cross_module,search_edit,"PyCharm no pudo («Couldn't find symbol 'enfriamiento'», probado desde enfriamiento.py y desde server.py): git mv + script acotado a los imports y a `enfriamiento.<atributo>` en código","ok (importan el módulo: server.py:44, scripts/medir_enfriamiento.py:38, tests/test_enfriamiento.py, test_medir_enfriamiento.py, test_observabilidad_respaldo.py, test_respaldo.py); aplicado: git mv src/local_delegate/enfriamiento.py src/local_delegate/cooldown.py"
+CLASES_QUE_CUENTAN,COUNTING_CLASSES,constant,src/local_delegate/enfriamiento.py:41@<module>,cross_module,pycharm,,ok (scripts/medir_enfriamiento.py:38/44)
+ESPERA_BLOQUEO_S,LOCK_WAIT_S,constant,src/local_delegate/enfriamiento.py:44@<module>,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+FICHERO_EVENTOS,EVENTS_FILE,constant,src/local_delegate/enfriamiento.py:47@<module>,cross_module,pycharm,,"ok (scripts/medir_enfriamiento.py:38/179, tests/test_medir_enfriamiento.py:341)"
+_anadir_lineas,_append_lines,function,src/local_delegate/enfriamiento.py:50@<module>,cross_module,pycharm,,discrepancia corregida: unresolved->cross_module (tests/test_enfriamiento.py:364 lo parchea con monkeypatch.setattr por cadena: hay que editar la cadena a mano)
+eventos,events,param,src/local_delegate/enfriamiento.py:50@_anadir_lineas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ruta,path,param,src/local_delegate/enfriamiento.py:50@_anadir_lineas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+evento,event,variable,src/local_delegate/enfriamiento.py:52@_anadir_lineas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_evento,_event_row,function,src/local_delegate/enfriamiento.py:55@<module>,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+ahora,now,param,src/local_delegate/enfriamiento.py:55@_evento,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (_evento: todas las llamadas son posicionales; el detector lo confundía con un homónimo)
+entrada,entry,param,src/local_delegate/enfriamiento.py:55@_evento,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,param,src/local_delegate/enfriamiento.py:55@_evento,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (_evento: todas las llamadas son posicionales; el detector lo confundía con un homónimo)
+tipo,kind,param,src/local_delegate/enfriamiento.py:55@_evento,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (_evento: todas las llamadas son posicionales; el detector lo confundía con un homónimo)
+Enfriado,ActiveCooldown,class,src/local_delegate/enfriamiento.py:68@<module>,cross_module,pycharm,,ok (server.py:1069 como anotación de tipo)
+hasta,until,variable,src/local_delegate/enfriamiento.py:71@Enfriado,cross_module,pycharm,,ok (server.py:1071 enfriado.hasta; tests/test_enfriamiento.py)
+restante_s,remaining_s,variable,src/local_delegate/enfriamiento.py:72@Enfriado,cross_module,pycharm,,ok (server.py:1075/4364; tests/test_enfriamiento.py)
+_entrada,_entry,function,src/local_delegate/enfriamiento.py:77@<module>,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+bruta,raw,param,src/local_delegate/enfriamiento.py:77@_entrada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:79@_entrada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clave,key,variable,src/local_delegate/enfriamiento.py:82@_entrada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+valor,value,variable,src/local_delegate/enfriamiento.py:83@_entrada,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+Estado,CooldownState,class,src/local_delegate/enfriamiento.py:93@<module>,cross_module,pycharm,,"ok (server.py:1950/1970; tests/test_enfriamiento.py, test_medir_enfriamiento.py:328, test_respaldo.py:75)"
+ruta,path,param,src/local_delegate/enfriamiento.py:96@Estado.__init__,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fallos,failures,param,src/local_delegate/enfriamiento.py:98@Estado.__init__,cross_module,pycharm,,"ok (palabra clave en desde_config, tests/test_enfriamiento.py:47, test_respaldo.py:76, test_medir_enfriamiento.py:330)"
+espera_s,wait_s,param,src/local_delegate/enfriamiento.py:99@Estado.__init__,cross_module,pycharm,,ok (palabra clave: mismos sitios que fallos)
+espera_max_s,max_wait_s,param,src/local_delegate/enfriamiento.py:100@Estado.__init__,cross_module,pycharm,,ok (palabra clave: mismos sitios que fallos)
+activo,enabled,param,src/local_delegate/enfriamiento.py:101@Estado.__init__,cross_module,pycharm,,ok (palabra clave: desde_config y tests/test_enfriamiento.py:47)
+reloj,clock,param,src/local_delegate/enfriamiento.py:102@Estado.__init__,cross_module,pycharm,,"ok (palabra clave: tests/test_enfriamiento.py:49, test_medir_enfriamiento.py:332)"
+_ruta,_path,attribute,src/local_delegate/enfriamiento.py:104@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_ruta_eventos,_events_path,attribute,src/local_delegate/enfriamiento.py:105@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_fallos,_failures,attribute,src/local_delegate/enfriamiento.py:106@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_espera_max_s,_max_wait_s,attribute,src/local_delegate/enfriamiento.py:107@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_espera_s,_wait_s,attribute,src/local_delegate/enfriamiento.py:108@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_activo,_enabled,attribute,src/local_delegate/enfriamiento.py:109@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_reloj,_clock,attribute,src/local_delegate/enfriamiento.py:110@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+clase,failure_class,param,src/local_delegate/enfriamiento.py:114@Estado.registrar_fallo,cross_module,pycharm,,ok (posicional en server.py:1959 y tests; se renombra con la firma por coherencia)
+modelo,model,param,src/local_delegate/enfriamiento.py:114@Estado.registrar_fallo,cross_module,pycharm,,ok (posicional en server.py:1957/1959 y tests)
+registrar_fallo,record_failure,method,src/local_delegate/enfriamiento.py:114@Estado,cross_module,pycharm,,"ok (server.py:1959; test_observabilidad_respaldo.py:173, test_respaldo.py:77/181, tests)"
+ahora,now,variable,src/local_delegate/enfriamiento.py:118@Estado.registrar_fallo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+eventos,events,variable,src/local_delegate/enfriamiento.py:119@Estado.registrar_fallo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+aplicar,apply,function,src/local_delegate/enfriamiento.py:121@Estado.registrar_fallo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+datos,data,param,src/local_delegate/enfriamiento.py:121@Estado.registrar_fallo.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:122@Estado.registrar_fallo.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hasta,until,variable,src/local_delegate/enfriamiento.py:123@Estado.registrar_fallo.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,param,src/local_delegate/enfriamiento.py:151@Estado.registrar_exito,cross_module,pycharm,,ok (posicional en server.py:1957)
+registrar_exito,record_success,method,src/local_delegate/enfriamiento.py:151@Estado,cross_module,pycharm,,ok (server.py:1957; tests)
+ahora,now,variable,src/local_delegate/enfriamiento.py:159@Estado.registrar_exito,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+eventos,events,variable,src/local_delegate/enfriamiento.py:160@Estado.registrar_exito,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+aplicar,apply,function,src/local_delegate/enfriamiento.py:162@Estado.registrar_exito,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+datos,data,param,src/local_delegate/enfriamiento.py:162@Estado.registrar_exito.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bruta,raw,variable,src/local_delegate/enfriamiento.py:163@Estado.registrar_exito.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:166@Estado.registrar_exito.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tras_vencer,after_expiry,variable,src/local_delegate/enfriamiento.py:168@Estado.registrar_exito.aplicar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+consultar,lookup,method,src/local_delegate/enfriamiento.py:176@Estado,cross_module,pycharm,,ok (server.py:2011/2122; test_respaldo.py:182; tests)
+modelo,model,param,src/local_delegate/enfriamiento.py:176@Estado.consultar,cross_module,pycharm,,ok (posicional en server.py:2011/2122)
+activos,active,method,src/local_delegate/enfriamiento.py:180@Estado,cross_module,pycharm,,ok (server.py:4357; tests)
+datos,data,variable,src/local_delegate/enfriamiento.py:182@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ahora,now,variable,src/local_delegate/enfriamiento.py:183@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bruta,raw,variable,src/local_delegate/enfriamiento.py:185@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/enfriamiento.py:185@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+vigentes,current,variable,src/local_delegate/enfriamiento.py:185@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+enfriado,cooled,variable,src/local_delegate/enfriamiento.py:186@Estado.activos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_recortar_vencimientos_lejanos,_clamp_distant_expiries,method,src/local_delegate/enfriamiento.py:190@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+ahora,now,param,src/local_delegate/enfriamiento.py:190@Estado._recortar_vencimientos_lejanos,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (_recortar_vencimientos_lejanos: todas las llamadas son posicionales; el detector lo confundía con un homónimo)
+datos,data,param,src/local_delegate/enfriamiento.py:190@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+limite,limit,variable,src/local_delegate/enfriamiento.py:198@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+lejanos,distant,variable,src/local_delegate/enfriamiento.py:199@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bruta,raw,variable,src/local_delegate/enfriamiento.py:201@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/enfriamiento.py:201@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hasta,until,variable,src/local_delegate/enfriamiento.py:202@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+actuales,current,param,src/local_delegate/enfriamiento.py:207@Estado._recortar_vencimientos_lejanos.recortar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+recortar,clamp,function,src/local_delegate/enfriamiento.py:207@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/enfriamiento.py:208@Estado._recortar_vencimientos_lejanos.recortar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:209@Estado._recortar_vencimientos_lejanos.recortar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:216@Estado._recortar_vencimientos_lejanos,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_vigente,_active_entry,method,src/local_delegate/enfriamiento.py:220@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+ahora,now,param,src/local_delegate/enfriamiento.py:220@Estado._vigente,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (_vigente: todas las llamadas son posicionales; el detector lo confundía con un homónimo)
+bruta,raw,param,src/local_delegate/enfriamiento.py:220@Estado._vigente,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+entrada,entry,variable,src/local_delegate/enfriamiento.py:221@Estado._vigente,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hasta,until,variable,src/local_delegate/enfriamiento.py:222@Estado._vigente,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_bloqueo,_lock,method,src/local_delegate/enfriamiento.py:227@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_leer,_read,method,src/local_delegate/enfriamiento.py:230@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+_mutar,_mutate,method,src/local_delegate/enfriamiento.py:239@Estado,module_local,pycharm,,"ok (search_regex: solo en enfriamiento.py y, si acaso, en tests/test_enfriamiento.py)"
+aplicar,apply,param,src/local_delegate/enfriamiento.py:239@Estado._mutar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+eventos,events,param,src/local_delegate/enfriamiento.py:239@Estado._mutar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+datos,data,variable,src/local_delegate/enfriamiento.py:247@Estado._mutar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+desde_config,from_config,function,src/local_delegate/enfriamiento.py:260@<module>,cross_module,pycharm,,"ok (server.py:2076/4357; test_observabilidad_respaldo.py:158/173, test_respaldo.py:181/182)"
+reentradas,reentries,variable,src/local_delegate/enfriamiento.py:74@Enfriado,cross_module,pycharm,,a mano: el detector no lo listó; ok (server.py:4362 enfriado.reentradas; tests/test_enfriamiento.py)
+(nuevo),LEGACY_STATE_FILE,constant,src/local_delegate/enfriamiento.py@<module>,owned,search_edit,constante nueva = legacy_names.FILE_NAMES['cooldown_state'][0] ('enfriamiento.json'): el daemon lo sigue escribiendo (legacy_write) y lo lee si falta el nuevo,
+(nuevo),LEGACY_EVENTS_FILE,constant,src/local_delegate/enfriamiento.py@<module>,owned,search_edit,constante nueva ('enfriamiento-eventos.jsonl'): solo se lee (medir_enfriamiento); no se escribe más,
+enfriamiento.json,cooldown.json,file_name,src/local_delegate/enfriamiento.py:263@desde_config,owned,search_edit,"nombre de fichero en disco: escritura doble mientras viva la excepción de REQ-005 (deprecations: legacy_write); lectura: gana cooldown.json; si falta, enfriamiento.json",
+enfriamiento-eventos.jsonl,cooldown-events.jsonl,file_name,src/local_delegate/enfriamiento.py:47@<module>,owned,search_edit,nombre de fichero en disco: se escribe solo el nuevo; medir_enfriamiento lee los dos (REQ-006/007),
+fallos,failures,json_key,cooldown.json,owned,search_edit,clave persistida (D4); legacy_names.FORMATS['cooldown_state'],
+espera_s,wait_s,json_key,cooldown.json + eventos,owned,search_edit,clave persistida (D4),
+hasta,until,json_key,cooldown.json,owned,search_edit,clave persistida (D4); la lee también hook_common.cooled_model,
+reentradas,reentries,json_key,cooldown.json + eventos,owned,search_edit,clave persistida (D4),
+modelo,model,json_key,cooldown-events.jsonl,owned,search_edit,clave persistida (D4); legacy_names.FORMATS['cooldown_events'],
+evento,event,json_key,cooldown-events.jsonl,owned,search_edit,clave persistida (D4),
+clase,class,json_key,cooldown-events.jsonl,owned,search_edit,"clave persistida (D4); el VALOR ya es inglés desde A3. `class` es palabra reservada: se pasa como dict, no como **kwargs",
+tras_vencer,after_expiry,json_key,cooldown-events.jsonl,owned,search_edit,clave persistida (D4),
+entra,enter,json_value,cooldown-events.jsonl:event,owned,search_edit,valor de enumeración persistido (D4),
+reentra,reenter,json_value,cooldown-events.jsonl:event,owned,search_edit,valor de enumeración persistido (D4),
+limpia,clear,json_value,cooldown-events.jsonl:event,owned,search_edit,valor de enumeración persistido (D4),
+(nuevo),"FORMATS['cooldown_state'], FORMATS['cooldown_events'], FILE_NAMES['cooldown_state']",table,src/local_delegate/legacy_names.py,owned,search_edit,tabla D2 del enfriamiento,
+(nuevo),FILE_NAMES['cooldown_state'] + COOLDOWN_STATE_KEYS,table,src/local_delegate/resources/hooks/hook_common.py,owned,search_edit,"copia de los hooks (stdlib), atada a legacy_names por test de igualdad (tests/test_hook_legacy_names.py ya compara FILE_NAMES)",
+(nuevo),"DeprecatedName('legacy_write', 'enfriamiento.json', 'cooldown.json', 'UNRELEASED')",registry,src/local_delegate/deprecations.py,owned,search_edit,excepción de REQ-005 con horizonte (introduced+3); comprobar que el check config.deprecated_names no la trata como variable,
+enfriamiento.json/hasta,cooldown.json/until (+ viejo),reader,src/local_delegate/resources/hooks/hook_common.py:377@cooled_model,owned,search_edit,"lectura dual: gana cooldown.json; si falta o no tiene el modelo, enfriamiento.json con `hasta`",
+FICHERO_EVENTOS + claves/valores viejos,"EVENTS_FILE + LEGACY_EVENTS_FILE, normalize('cooldown_events')",reader,scripts/medir_enfriamiento.py:116-135/179,owned,search_edit,lectura dual de ficheros y claves; mismo nombre de script y mismas opciones (REQ-046),
+_error_enfriado,_cooldown_error,function,src/local_delegate/server.py:1069@<module>,owned,pycharm,,duda 2: es el «:1081» del plan (A3 corrió las líneas); solo lo llama server.py
+enfriado,cooled,param,src/local_delegate/server.py:1069@_error_enfriado,owned,search_edit,parámetro de la función anterior: reemplazo acotado,
+enfriamiento (import),cooldown,import,"tests/test_respaldo.py, tests/test_observabilidad_respaldo.py",NOT-OWNED,search_edit,"no es un rename propio: lo arrastran los rename_refactoring del módulo y de sus símbolos; consecuencia mecánica del rename del módulo y de sus funciones (Estado, desde_config, registrar_fallo, consultar)",
+enfriamiento.py / enfriamiento.json / enfriamiento-eventos.jsonl,cooldown.py / cooldown.json / cooldown-events.jsonl,doc,"docs/wiki/Architecture.md:188, docs/wiki/Configuration.md:115-122/287",NOT-OWNED,search_edit,wiki: cambia algo visible (nombres de fichero en disco); prosa en español intacta,
+"_describir_enfriamiento, _CLASES_QUE_SALTAN, estado/enfriado (locales de server.py)",,keep,src/local_delegate/server.py:1066/2076/2122/4347,keep,search_edit,resto de server.py: A7,
+"escribir_json_atomico, leer_json",,keep,src/local_delegate/estado_json.py,keep,search_edit,A8a (estado_json),
+"claves de salida de medir_enfriamiento (episodios, reentradas, R…) y sus funciones",,keep,scripts/medir_enfriamiento.py,keep,search_edit,A10 (scripts); REQ-046 congela nombre y opciones hasta cerrar P-4,
+nombres de test y enfriamiento.json en tests/test_conformidad_f1.py y test_respaldo.py,,keep,tests/,keep,search_edit,A9; test_conformidad_f1 escribe enfriamiento.json con claves viejas: queda como prueba del daemon viejo,
