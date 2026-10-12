@@ -87,9 +87,9 @@ def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
     r = _probe(_home(tmp_path), log_dir)
     assert not recalcular.ruta(log_dir).exists()
     assert r.status == checks.WARN
-    assert "recalcular-coste" in r.detail
+    assert "recompute-cost" in r.detail
     assert "hace 21 días" in r.detail
-    assert r.fix_hint == "local-delegate recalcular-coste"
+    assert r.fix_hint == "local-delegate recompute-cost"
 
     # Con 10 días todavía hay margen: sin cotejo, `unknown`.
     log_corto = tmp_path / "log-corto"
@@ -120,7 +120,7 @@ def test_las_dos_cosas_a_la_vez(tmp_path):
     r = _probe(_home(tmp_path), log_dir)
     assert r.status == checks.WARN
     assert "2 delegación(es) pendiente(s)" in r.detail
-    assert "recalcular-coste" in r.detail
+    assert "recompute-cost" in r.detail
     assert "claude-opus-5" in r.detail
     assert "3 fila(s) fuera" in r.detail
 

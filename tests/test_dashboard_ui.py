@@ -604,7 +604,7 @@ def _log_coste_e_imagen(tmp_path, monkeypatch) -> None:
     """Un resumen por path y una imagen, hoy: hay cifra de coste y una imagen en el rango."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
     ahora = datetime.now(UTC)
     medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
     paso = min(timedelta(seconds=30), (ahora - medianoche_local) / 2)
@@ -736,7 +736,7 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
         "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
         "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
         "hay_agregados": True,
-        "comando": "local-delegate recalcular-coste",
+        "comando": "local-delegate recompute-cost",
     }
 
     def _inyectar(ruta):

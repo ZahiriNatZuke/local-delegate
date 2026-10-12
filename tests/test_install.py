@@ -635,7 +635,7 @@ def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monk
     entorno = {**os.environ, "PYTHONPATH": str(hooks_dir)}
     entorno.pop("LD_HOOK_READ_ENABLED", None)
     # El bloqueo nace apagado; aquí se enciende a mano para ver que el camino entero funciona.
-    entorno["LD_HOOK_READ_BLOQUEAR"] = "1"
+    entorno["LD_HOOK_READ_BLOCK"] = "1"
     # Sin backend no se bloquea, que es lo correcto, así que se apunta a uno que sí responde...
     # salvo que no hay ninguno en CI. Se comprueba entonces el caso que no depende de él.
     entorno["LOCAL_DELEGATE_BASE_URL"] = "http://127.0.0.1:9/v1"

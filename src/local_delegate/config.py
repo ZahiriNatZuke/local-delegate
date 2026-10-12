@@ -85,6 +85,20 @@ def _env_alias(new: str, old: str) -> str | None:
     return old_value
 
 
+def _env_alias_str(new: str, old: str, default: str) -> str:
+    """`_env` para una variable renombrada (`_env_alias` con defecto)."""
+    raw = _env_alias(new, old)
+    return default if raw is None else raw
+
+
+def _env_alias_flag(new: str, old: str, default: bool) -> bool:
+    """`_env_flag` para una variable renombrada: mismas reglas de verdad que `_env_flag`."""
+    raw = _env_alias(new, old)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off", ""}
+
+
 # --- Endpoint OpenAI-compatible ---------------------------------------------
 BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
 API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
@@ -229,11 +243,15 @@ HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
 #: este escrito el criterio de la quinta medicion, incluido el resultado que la retira. El hook la
 #: consulta en cada invocacion —no al arrancar— porque una sesion abierta hereda el entorno del
 #: lanzador, y un freno que exige reiniciar la sesion no frena nada.
-HOOK_READ_BLOQUEAR: bool = _env_flag("LD_HOOK_READ_BLOQUEAR", False)
+#: `LD_HOOK_READ_BLOQUEAR` es su nombre viejo (alias con aviso, REQ-002).
+HOOK_READ_BLOCK: bool = _env_alias_flag("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", False)
 #: Donde vive el fichero que APAGA el bloqueo en caliente (REQ-F1-11): si existe, no se bloquea
-#: aunque `LD_HOOK_READ_BLOQUEAR` diga 1. La variable no sirve de freno porque una sesion abierta
+#: aunque `LD_HOOK_READ_BLOCK` diga 1. La variable no sirve de freno porque una sesion abierta
 #: hereda el entorno del lanzador; un fichero se lee en cada invocacion. Vacia = el defecto del hook.
-HOOK_READ_INTERRUPTOR: str = _env("LD_HOOK_READ_INTERRUPTOR", "")
+#: `LD_HOOK_READ_INTERRUPTOR` es su nombre viejo (alias con aviso, REQ-002).
+HOOK_READ_SWITCH_FILE: str = _env_alias_str(
+    "LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR", ""
+)
 
 
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
@@ -285,7 +303,10 @@ LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 # subsecciones), pero en la medición con `claude -p` no redujo las relecturas —Claude releía para
 # comprobar, no por lo que faltaba— y el criterio escrito antes de medir era retirarlo. Lo lee el
 # daemon al arrancar: para encenderlo hay que ponerlo en el entorno del lanzador y reiniciarlo.
-RESUMEN_ESTRUCTURADO = _env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False)
+# Nombre viejo: `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` (alias con aviso, REQ-002).
+STRUCTURED_SUMMARY = _env_alias_flag(
+    "LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False
+)
 
 # Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
 # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
@@ -440,7 +461,8 @@ CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca
 # Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
 # `modelo` o `modelo:main|subagent`. Vacío = el declarado en `coste.py` (Opus 5.5 en subagente).
 # Un valor inválido no rompe nada: se usa el declarado y la fila lo dice (`respaldo_invalido`).
-COSTE_RESPALDO = _env("LOCAL_DELEGATE_COSTE_RESPALDO", "")
+# Nombre viejo: `LOCAL_DELEGATE_COSTE_RESPALDO` (alias con aviso, REQ-002).
+COST_FALLBACK = _env_alias_str("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO", "")
 
 # Token del puerto del daemon. Vacío = sin autenticación, que es el comportamiento histórico y
 # sigue siendo el default: exigirlo siempre rompería toda instalación existente el día que se

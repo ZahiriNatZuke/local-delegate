@@ -23,7 +23,7 @@ from local_delegate.web import metrics
 @pytest.fixture(autouse=True)
 def _respaldo_declarado(monkeypatch):
     """Sin variable de respaldo: el declarado (Opus 5.5 en subagente) en todos los tests."""
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
 
 
 def _fila(**kw) -> dict:
@@ -139,7 +139,7 @@ def test_las_columnas_de_devuelto_y_salida():
 def test_respaldo_por_variable(monkeypatch):
     """REQ-008: la variable manda sobre el declarado; con solo `modelo`, el hilo es `subagent`;
     un valor inválido usa el declarado y lo dice."""
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "claude-haiku-4-5")
+    monkeypatch.setattr(config, "COST_FALLBACK", "claude-haiku-4-5")
     r = coste.respaldo()
     assert r["familia"] == "anterior"
     assert (r["modelo"], r["hilo"], r.get("respaldo_invalido")) == (
@@ -148,11 +148,11 @@ def test_respaldo_por_variable(monkeypatch):
         False,
     )
 
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "claude-opus-5:main")
+    monkeypatch.setattr(config, "COST_FALLBACK", "claude-opus-5:main")
     r = coste.respaldo()
     assert (r["modelo"], r["hilo"], r["familia"]) == ("claude-opus-5", "main", "nueva")
 
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "xyz")
+    monkeypatch.setattr(config, "COST_FALLBACK", "xyz")
     r = coste.respaldo()
     assert r.get("respaldo_invalido") is True
     assert (r["modelo"], r["hilo"]) == ("claude-opus-5-5", "subagent")
@@ -164,7 +164,8 @@ def test_respaldo_por_variable(monkeypatch):
 
 
 def test_la_variable_de_respaldo_se_lee_por_la_puerta_registrada():
-    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.VARIABLES_DE_ENTORNO
+    assert "LOCAL_DELEGATE_COST_FALLBACK" in config.VARIABLES_DE_ENTORNO
+    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.VARIABLES_DE_ENTORNO  # alias (REQ-002)
 
 
 def test_marcas_de_familia():

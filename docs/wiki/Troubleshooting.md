@@ -245,13 +245,13 @@ justo esto.
 ## `doctor` da `[WARN] coste y relleno`
 
 El check `config.coste` mira si la cifra de coste equivalente es de fiar y si se está perdiendo
-histórico. No lee transcripts: lee lo que dejó `local-delegate recalcular-coste` en `LOG_DIR`. Da
+histórico. No lee transcripts: lee lo que dejó `local-delegate recompute-cost` en `LOG_DIR`. Da
 `warn` por dos motivos, y si se cumplen los dos los dice juntos:
 
 - **«N delegación(es) pendiente(s) de relleno, la más antigua de hace D días»**. Hay delegaciones
   sin modelo atribuido cuyo transcript está a menos de 10 días de borrarse (Claude Code los borra a
   los `cleanupPeriodDays` de `~/.claude/settings.json`, 30 si no está puesto). Lanza
-  `local-delegate recalcular-coste`: las atribuye cruzando el log con los transcripts y el aviso
+  `local-delegate recompute-cost`: las atribuye cruzando el log con los transcripts y el aviso
   desaparece. Una vez borrado el transcript, esa delegación se valora para siempre con el
   respaldo (ver [Configuration](Configuration.md#coste-equivalente)). Avisa aunque el comando no
   se haya lanzado nunca: lo que mira es la pendiente más antigua, no la fecha del último relleno.
@@ -270,9 +270,9 @@ Es lo esperado. Para decir qué parte de una ventana de 5 h o de la semanal supo
 hacen falta al menos **tres medidas del statusline de ventanas distintas** con una dispersión
 menor del 25 %, y hasta entonces el panel no enseña ningún porcentaje. Esas medidas salen del
 registro del statusline (`~/.claude/cuota-statusline.jsonl`), que solo existe si tu statusline lo
-escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recalcular-coste`
+escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recompute-cost`
 para incorporar las medidas nuevas. El bloque enseña además cuántas se descartaron y por qué
 (`contaminado`, `delta_pequeno`, `solapado`…): una medida tomada mientras otra sesión que no está
 en el registro gastaba cuota no sirve para calibrar. Si cambian los límites de uso (el vigilante
 abre un PR con el texto nuevo), descarta la calibración vieja con
-`local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`).
+`local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`).

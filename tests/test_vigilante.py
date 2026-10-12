@@ -319,7 +319,7 @@ def test_limites_sin_titulo_falla():
 
 def test_el_pr_de_limites_dice_como_reiniciar():
     cuerpo = _v().cuerpo_pr_limites()
-    assert "recalcular-coste --reiniciar-calibracion" in cuerpo
+    assert "recompute-cost --reset-calibration" in cuerpo
 
 
 # --- El flujo de GitHub, con un cliente falso ---------------------------------------------------
@@ -600,7 +600,7 @@ def test_limites_cambiados_abren_su_pr(raiz):
     assert ("PUT", ruta) in falso.llamadas
     pr = falso.cuerpos[falso.llamadas.index(("POST", f"/repos/{REPO}/pulls"))]
     assert pr["head"] == "vigilante/limites"
-    assert "recalcular-coste --reiniciar-calibracion" in pr["body"]
+    assert "recompute-cost --reset-calibration" in pr["body"]
 
 
 def test_limites_iguales_no_tocan_github(raiz):

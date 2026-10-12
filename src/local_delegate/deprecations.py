@@ -53,6 +53,28 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
     DeprecatedName("retired", "LOCAL_DELEGATE_MODEL_FAST", None, "0.30.0", "0.37.0"),
     DeprecatedName("retired", "LOCAL_DELEGATE_MAX_CHARS_FAST", None, "0.30.0", "0.37.0"),
     DeprecatedName("retired", "LOCAL_DELEGATE_FALLBACK_FAST", None, "0.30.0", "0.37.0"),
+    # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
+    DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "UNRELEASED"),
+    DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "UNRELEASED"),
+    DeprecatedName(
+        "env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "UNRELEASED", used_by_hooks=True
+    ),
+    DeprecatedName(
+        "env_var",
+        "LD_HOOK_READ_INTERRUPTOR",
+        "LD_HOOK_READ_SWITCH_FILE",
+        "UNRELEASED",
+        used_by_hooks=True,
+    ),
+    DeprecatedName(
+        "env_var",
+        "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+        "LOCAL_DELEGATE_STRUCTURED_SUMMARY",
+        "UNRELEASED",
+    ),
+    DeprecatedName(
+        "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "UNRELEASED"
+    ),
 )
 
 

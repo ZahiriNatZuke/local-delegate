@@ -1631,7 +1631,8 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
     Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
     `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
-    el probe. Hoy el registro solo tiene las tres variables del rol `fast`, retirado en la 0.30.0.
+    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso) y las tres
+    del rol `fast`, retirado en la 0.30.0.
 
     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
     quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
@@ -1639,7 +1640,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
 
     Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
-    where corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de where heredan los hooks)
+    donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
     cuenta `local_status`.
     """
@@ -1677,7 +1678,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
-RECALCULAR_HINT = "local-delegate recalcular-coste"
+RECALCULAR_HINT = "local-delegate recompute-cost"
 # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
 _MARGEN_DEL_RELLENO = timedelta(days=10)
 
@@ -1815,7 +1816,7 @@ CHECKS: tuple[Check, ...] = (
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
-    Check("config.deprecated_names", "entorno", "rol rápido retirado", _probe_deprecated_names),
+    Check("config.deprecated_names", "entorno", "nombres obsoletos", _probe_deprecated_names),
     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
     Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),

@@ -34,7 +34,7 @@ shell_hook = _load("suggest_delegate_shell")
 
 def _correr(monkeypatch, capsys, comando, *, backend=True, bloquear=True, log=None):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if bloquear else "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if bloquear else "0")
     if log is not None:
         monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: backend)

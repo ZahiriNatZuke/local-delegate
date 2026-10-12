@@ -21,7 +21,7 @@ MES = f"{AHORA:%Y%m}"
 
 @pytest.fixture(autouse=True)
 def _sin_respaldo_del_entorno(monkeypatch):
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
 
 
 def _linea(n: int = 0, **extra) -> dict:

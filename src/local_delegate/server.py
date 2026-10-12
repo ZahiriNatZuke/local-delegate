@@ -3457,7 +3457,7 @@ def local_summarize(
     extra = _texto_focus(enfoque)
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
-    estructurado = config.RESUMEN_ESTRUCTURADO and rol == "long"
+    estructurado = config.STRUCTURED_SUMMARY and rol == "long"
     estructura = secciones.detectar(content) if estructurado else None
     if estructura is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
@@ -4517,7 +4517,24 @@ def local_status() -> str:
     if groups:
         lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
 
+    lines.extend(_describe_deprecated_names())
     return "\n".join(lines)
+
+
+def _describe_deprecated_names() -> list[str]:
+    """Nombres viejos de variables que ESTE proceso leyó (REQ-003).
+
+    `doctor` mira la shell donde corre y el `env` de `settings.json`, pero no el entorno del daemon
+    ni el del servidor por stdio: eso solo lo sabe el propio proceso, por `config.DEPRECATED_SEEN`.
+    """
+    from . import deprecations
+
+    entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
+    if not entries:
+        return []
+    return ["", "Nombres obsoletos leídos por este proceso:"] + [
+        f"  {deprecations.warning_text(e)}" for e in entries
+    ]
 
 
 def preparar_ctrl_break() -> None:

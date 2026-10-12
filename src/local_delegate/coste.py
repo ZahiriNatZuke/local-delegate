@@ -106,12 +106,12 @@ def clase_de_contenido(evento: dict) -> str:
 def respaldo() -> dict:
     """El modelo y el hilo con que se valora una delegación sin modelo (REQ-008).
 
-    `config.COSTE_RESPALDO` (`modelo` o `modelo:main|subagent`; solo `modelo` = `subagent`) manda
+    `config.COST_FALLBACK` (`modelo` o `modelo:main|subagent`; solo `modelo` = `subagent`) manda
     sobre el declarado. Un valor vacío usa el declarado; uno que no se entiende o cuyo modelo no
     está en la tabla de precios, también, pero con `respaldo_invalido: True` para que se diga.
     """
     declarado = dict(RESPALDO_DECLARADO, respaldo_invalido=False)
-    valor = str(config.COSTE_RESPALDO or "").strip()
+    valor = str(config.COST_FALLBACK or "").strip()
     if valor:
         modelo, sep, hilo = valor.partition(":")
         modelo = precios.normalizar_id(modelo.strip())

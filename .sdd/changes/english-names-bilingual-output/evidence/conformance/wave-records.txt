@@ -1,3 +1,3 @@
-OK    A0.md
-      · A0-mapping.csv: 2 filas, 0 discrepancia(s)
+OK    A1.md
+      · A1-mapping.csv: 35 filas, 0 discrepancia(s)
 1/1 registro(s) cumplen los mínimos de §2.1

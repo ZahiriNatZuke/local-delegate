@@ -3,7 +3,7 @@
 El hook recomendado es `UserPromptSubmit`, que solo sugiere. Los de lectura —`PreToolUse/Read`
 y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enable-read-hook` y
 están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
-bloquean si además se enciende `LD_HOOK_READ_BLOQUEAR` (ver «El bloqueo»). El que se **retiró** el
+bloquean si además se enciende `LD_HOOK_READ_BLOCK` (ver «El bloqueo»). El que se **retiró** el
 2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Aparte va
 `anotar_llamada.py`, que no sugiere nada: anota quién pide cada delegación y se instala siempre.
 Ninguno envía el prompt a otro modelo.
@@ -48,7 +48,7 @@ desobediencia era un aviso que nunca llegaba.
 
 Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
 
-#### El bloqueo (`LD_HOOK_READ_BLOQUEAR`, apagado por defecto)
+#### El bloqueo (`LD_HOOK_READ_BLOCK`, apagado por defecto)
 
 Con él encendido, la lectura **completa** de un `.md` o un `.txt` por encima del umbral no se
 sugiere: se rechaza, con `permissionDecision: deny`. El motivo de que exista es que está medido
@@ -60,7 +60,7 @@ leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias forma
 bloquee:
 
 - **el fichero `~/.claude/local-delegate-bloqueo-apagado`** (o la ruta de
-  `LD_HOOK_READ_INTERRUPTOR`): gana a la variable y se mira en cada lectura, así que apaga al
+  `LD_HOOK_READ_SWITCH_FILE`): gana a la variable y se mira en cada lectura, así que apaga al
   momento sin cerrar la sesión; bórralo para volver a encender;
 - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
 - un backend local que no responde;
@@ -106,7 +106,7 @@ guarda el id de sesión ni nada más del transcript.
 
 Con eso el panel puede valorar cada delegación con el precio del modelo que la pidió (ver
 [Savings & metrics](../wiki/Savings-and-metrics.md#coste-equivalente-a-precio-de-api)). Si la
-nota se pierde, la delegación no se rompe: queda para `local-delegate recalcular-coste`, que la
+nota se pierde, la delegación no se rompe: queda para `local-delegate recompute-cost`, que la
 atribuye después cruzando el log con los transcripts.
 
 Se registra **siempre** con `install`, no detrás de `--enable-read-hook`, porque no cambia nada

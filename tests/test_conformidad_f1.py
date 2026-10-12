@@ -51,8 +51,8 @@ def entorno(tmp_path, monkeypatch):
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "bloqueo-apagado"))
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "bloqueo-apagado"))
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
     for variable in ("LOCAL_DELEGATE_MODEL_LONG", "LOCAL_DELEGATE_MODEL_MECHANICAL"):
         monkeypatch.delenv(variable, raising=False)
@@ -256,7 +256,7 @@ def test_cada_evento_anota_el_estado_del_bloqueo(entorno, monkeypatch, capsys):
     _correr(read_hook, monkeypatch, capsys, franja)
     (entorno / "bloqueo-apagado").write_text("", encoding="utf-8")
     _correr(read_hook, monkeypatch, capsys, franja)
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
     (entorno / "bloqueo-apagado").unlink()
     _correr(read_hook, monkeypatch, capsys, franja)
     _correr(shell_hook, monkeypatch, capsys, {"tool_input": {"command": "git status"}})
@@ -290,8 +290,8 @@ def test_el_apagado_no_necesita_relanzar_nada(tmp_path):
         interruptor = tmp_path / "bloqueo-apagado"
         env = {
             **os.environ,
-            "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_INTERRUPTOR": str(interruptor),
+            "LD_HOOK_READ_BLOCK": "1",
+            "LD_HOOK_READ_SWITCH_FILE": str(interruptor),
             "LD_HOOK_ENABLED": "1",
             "LOCAL_DELEGATE_BASE_URL": f"http://127.0.0.1:{servidor.server_address[1]}/v1",
             "LOCAL_DELEGATE_LOG_DIR": str(tmp_path / "logs"),

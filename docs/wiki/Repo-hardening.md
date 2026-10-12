@@ -377,7 +377,7 @@ que usa la red para esto.
 | Job | Qué mira | Qué hace si cambia |
 |---|---|---|
 | `precios` | la tabla «Model pricing» de la página oficial, contra `precios.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consultado` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
-| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recalcular-coste --reiniciar-calibracion …`) |
+| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
 
 **Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
 cabecera de la tabla, si extrae menos de 5 filas o si un precio no se lee como número; en el de

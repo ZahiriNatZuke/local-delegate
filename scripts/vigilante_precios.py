@@ -91,7 +91,7 @@ PROVISIONAL_NUEVO = {"familia": "nueva", "admite_esfuerzo": True}
 TITULO_LIMITES = "How do usage and length limits work?"
 MIN_CHARS_LIMITES = 500
 
-COMANDO_REINICIO = "local-delegate recalcular-coste --reiniciar-calibracion five_hour|seven_day"
+COMANDO_REINICIO = "local-delegate recompute-cost --reset-calibration five_hour|seven_day"
 
 COMENTARIO_BLOQUEADO = (
     "**El vigilante no puede dejar este PR listo para mezclar.** Los checks que exige el ruleset "

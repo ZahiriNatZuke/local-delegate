@@ -46,7 +46,7 @@ def entorno(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setattr(cfg, "LOG_DIR", logs)
     monkeypatch.setattr(cfg, "USAGE_LOG", logs / "usage.jsonl")
-    monkeypatch.setattr(cfg, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(cfg, "COST_FALLBACK", "")
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     metrics._FILE_CACHE.clear()
     yield logs, home
@@ -345,7 +345,7 @@ def test_home_vacio(entorno, tmp_path):
     assert q["hay_agregados"] is False
     texto = _textos(tmp_path, j)["cuota"]
     assert "no hay datos de calibración en esta máquina" in texto
-    assert "local-delegate recalcular-coste" in texto
+    assert "local-delegate recompute-cost" in texto
 
     (logs / recalcular.NOMBRE).write_text("{ esto no es JSON", encoding="utf-8")
     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
