@@ -23,7 +23,7 @@ import backend_mock
 import httpx2
 
 from local_delegate import cadenas, config, enfriamiento, preguntas, server
-from local_delegate.fallos import Clase
+from local_delegate.failures import FailureClass
 
 URL = "http://test-backend/v1/chat/completions"
 MECANICO = "gemma3-4b"
@@ -74,7 +74,7 @@ def _estado_fichero(tmp_path: Path) -> Path:
 def _enfriar(tmp_path: Path, modelo: str) -> None:
     enfriamiento.Estado(
         _estado_fichero(tmp_path), fallos=1, espera_s=120, espera_max_s=900
-    ).registrar_fallo(modelo, Clase.MODELO)
+    ).registrar_fallo(modelo, FailureClass.MODEL)
 
 
 def _entradas(tmp_path: Path) -> dict:
@@ -178,7 +178,7 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
     server.local_explain_code(code="x = 1")
     server.local_explain_code(code="x = 2")
     # El tercer fallo lo registra «otro proceso»: otra instancia sobre el mismo fichero.
-    enfriamiento.desde_config().registrar_fallo(CODIGO, Clase.MODELO)
+    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
     assert enfriamiento.desde_config().consultar(CODIGO) is not None
 
     pedidos.clear()
@@ -645,7 +645,7 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
         with lock:
             inside -= 1
         if model == CODIGO:
-            return server.ChatResult(text="x", ok=False, error="http_500", clase=Clase.MODELO)
+            return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
     decide = server._next_hop

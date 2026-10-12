@@ -44,7 +44,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import secciones
+from local_delegate import legacy_names, secciones
 
 RAIZ = Path(__file__).parents[1]
 BANCO = RAIZ / "benchmarks" / "resumen-estructurado"
@@ -227,7 +227,7 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
                 "truncated_out": bool(evento.get("truncated_out")),
                 "chunks": evento.get("chunks", 1),
                 "modelo": evento.get("model"),
-                "secciones_log": evento.get("secciones"),
+                "secciones_log": legacy_names.read_key(evento, "sections", "secciones"),
                 "focus_log": bool(evento.get("focus")),
             }
         )

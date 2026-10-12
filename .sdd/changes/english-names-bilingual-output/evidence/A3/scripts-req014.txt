@@ -1,0 +1,15 @@
+== scripts/medir_enfriamiento.py --help
+exit=0
+== scripts/medir_adopcion.py --help
+exit=0
+== scripts/analizar_benchmark.py --help
+exit=0
+== scripts/medir_resumen_estructurado.py --help
+exit=0
+== scripts/measure_slowness.py --help (PYTHONIOENCODING=utf-8; sin ella la consola cp1252 no imprime la «Σ» de la ayuda: la ayuda no cambia en esta ola)
+exit=0
+== local-delegate --help
+exit=0
+== medir_enfriamiento: corrida real del comando P-4 documentado
+ver p4-command.txt (exit=0, salida idéntica a la de main)
+== src/local_delegate/failures.py y módulos que lo importan: get_file_problems/lint_files de PyCharm, 0 errores

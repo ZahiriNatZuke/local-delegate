@@ -22,7 +22,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import autostart, config, fallos
+from . import autostart, config, failures
 
 # --- Fuente de verdad de versiones probadas ----------------------------------------------
 # Versiones del backend verificadas en vivo con esta release de local-delegate. La doc
@@ -260,13 +260,13 @@ def _backend_up() -> bool:
     return backend_probe()[0]
 
 
-def backend_probe() -> fallos.VistaBackend:
-    """Lo que ve ESTA consola del backend, con su causa (REQ-016). Fuente: `"directo"`.
+def backend_probe() -> failures.BackendView:
+    """Lo que ve ESTA consola del backend, con su causa (REQ-016). Fuente: `"direct"`.
 
     Un 401 significa que el backend **está arriba** y que falta la key en este entorno, no que
     esté caído. Confundirlos manda a arrancar un servicio que ya está corriendo, y ese falso
     diagnóstico se dio de verdad: con la key sin cargar, `doctor` decía CAÍDO sobre un
-    llama-swap vivo y sirviendo. El texto y la causa salen de `fallos`, como en el daemon, y el
+    llama-swap vivo y sirviendo. El texto y la causa salen de `failures`, como en el daemon, y el
     plazo es el de todo sondeo de estado (REQ-013).
     """
     # El host real SIN puerto, como pide la regla 7 del clasificador (ver `server`).
@@ -280,14 +280,14 @@ def backend_probe() -> fallos.VistaBackend:
         with httpx2.Client(timeout=plazo) as c:
             response = c.get(endpoint, headers=config.auth_headers())
     except Exception as exc:
-        causa = fallos.causa_conexion(exc, loopback=loopback)
-        texto = fallos.detalle(causa, host=host, endpoint=endpoint, excepcion=exc)
-        return fallos.VistaBackend(False, texto, causa.value, "directo")
+        causa = failures.connection_cause(exc, loopback=loopback)
+        texto = failures.detail(causa, host=host, endpoint=endpoint, exception=exc)
+        return failures.BackendView(False, texto, causa.value, "direct")
     if response.is_success:
-        return fallos.VistaBackend(True, "", None, "directo")
-    causa = fallos.causa_conexion(response.status_code, loopback=loopback)
-    texto = fallos.detalle(causa, host=host, status=response.status_code)
-    return fallos.VistaBackend(False, texto, causa.value, "directo")
+        return failures.BackendView(True, "", None, "direct")
+    causa = failures.connection_cause(response.status_code, loopback=loopback)
+    texto = failures.detail(causa, host=host, status=response.status_code)
+    return failures.BackendView(False, texto, causa.value, "direct")
 
 
 def backend_requires_key() -> tuple[bool | None, str]:

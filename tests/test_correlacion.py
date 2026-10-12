@@ -141,7 +141,7 @@ def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypat
         path=str(documento),
     )
 
-    assert _eventos(tmp_path / "logs")[-1]["bloqueo_id"] == "abc123def456"
+    assert _eventos(tmp_path / "logs")[-1]["block_id"] == "abc123def456"
 
 
 def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch):
@@ -163,4 +163,4 @@ def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch
         path=str(tmp_path / "nadie-me-bloqueo.md"),
     )
 
-    assert "bloqueo_id" not in _eventos(tmp_path / "logs")[-1]
+    assert "block_id" not in _eventos(tmp_path / "logs")[-1]

@@ -16,7 +16,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import atribucion, config, coste, server
+from local_delegate import atribucion, config, coste, legacy_names, server
 from local_delegate.web import metrics
 
 
@@ -64,6 +64,8 @@ def _acct_en_js(tmp_path, casos: list[dict]) -> list[dict]:
         "import {readFileSync} from 'node:fs';\n"
         "const CPT = 4;\n"
         "const tok = c => Math.floor(c/CPT);\n"
+        f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
+        f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
         f"{_extraer_funcion_js(metrics.HTML, 'function tokensClaude(')}\n"
         f"{_extraer_funcion_js(metrics.HTML, 'function acct(e){')}\n"
         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"

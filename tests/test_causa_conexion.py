@@ -17,14 +17,14 @@ import threading
 import httpx2
 import pytest
 
-from local_delegate import config
-from local_delegate.fallos import (
-    CausaConexion,
-    VistaBackend,
-    causa_conexion,
-    detalle,
-    etiqueta,
-    pista,
+from local_delegate import config, legacy_names
+from local_delegate.failures import (
+    BackendView,
+    ConnectionCause,
+    connection_cause,
+    detail,
+    hint,
+    label,
 )
 
 HOST = "pc.tailnet.ts.net:9292"
@@ -58,19 +58,19 @@ _CASOS = [
         "gaierror-es-dns",
         lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
         False,
-        CausaConexion.DNS,
+        ConnectionCause.DNS,
     ),
     (
         "gaierror-en-loopback-sigue-siendo-dns",
         lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
         True,
-        CausaConexion.DNS,
+        ConnectionCause.DNS,
     ),
     (
         "econnrefused-es-rechazada",
         lambda: _envuelta(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused")),
         False,
-        CausaConexion.RECHAZADA,
+        ConnectionCause.REFUSED,
     ),
     (
         "enetunreach-es-sin-ruta",
@@ -78,88 +78,88 @@ _CASOS = [
             httpx2.ConnectError, OSError(errno.ENETUNREACH, "Network is unreachable")
         ),
         False,
-        CausaConexion.SIN_RUTA,
+        ConnectionCause.NO_ROUTE,
     ),
     (
         "ehostunreach-es-sin-ruta",
         lambda: _envuelta(httpx2.ConnectError, OSError(errno.EHOSTUNREACH, "No route to host")),
         False,
-        CausaConexion.SIN_RUTA,
+        ConnectionCause.NO_ROUTE,
     ),
     (
         "winsock-10051-es-sin-ruta",
         lambda: _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable")),
         False,
-        CausaConexion.SIN_RUTA,
+        ConnectionCause.NO_ROUTE,
     ),
     (
         "winsock-10065-es-sin-ruta",
         lambda: _envuelta(httpx2.ConnectError, OSError(10065, "host inalcanzable")),
         False,
-        CausaConexion.SIN_RUTA,
+        ConnectionCause.NO_ROUTE,
     ),
     (
         "connect-timeout-en-loopback-es-rechazada",
         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
         True,
-        CausaConexion.RECHAZADA,
+        ConnectionCause.REFUSED,
     ),
     (
         "connect-timeout-remoto-es-timeout-conexion",
         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
         False,
-        CausaConexion.TIMEOUT_CONEXION,
+        ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
         "caso-de-la-mac-etimedout-remoto",
         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         False,
-        CausaConexion.TIMEOUT_CONEXION,
+        ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
         "caso-de-la-mac-etimedout-en-loopback",
         lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         True,
-        CausaConexion.RECHAZADA,
+        ConnectionCause.REFUSED,
     ),
-    ("read-timeout", lambda: httpx2.ReadTimeout("lectura"), False, CausaConexion.SIN_RESPUESTA),
-    ("write-timeout", lambda: httpx2.WriteTimeout("escritura"), False, CausaConexion.SIN_RESPUESTA),
-    ("value-error", lambda: ValueError("sin data"), False, CausaConexion.RESPUESTA_INVALIDA),
+    ("read-timeout", lambda: httpx2.ReadTimeout("lectura"), False, ConnectionCause.NO_RESPONSE),
+    ("write-timeout", lambda: httpx2.WriteTimeout("escritura"), False, ConnectionCause.NO_RESPONSE),
+    ("value-error", lambda: ValueError("sin data"), False, ConnectionCause.INVALID_RESPONSE),
     (
         "json-roto",
         lambda: json.JSONDecodeError("Expecting value", "<html>", 0),
         False,
-        CausaConexion.RESPUESTA_INVALIDA,
+        ConnectionCause.INVALID_RESPONSE,
     ),
     (
         "remote-protocol-error",
         lambda: httpx2.RemoteProtocolError("cortado"),
         False,
-        CausaConexion.TRANSPORTE,
+        ConnectionCause.TRANSPORT,
     ),
-    ("invalid-url", lambda: httpx2.InvalidURL("url rota"), False, CausaConexion.URL_INVALIDA),
+    ("invalid-url", lambda: httpx2.InvalidURL("url rota"), False, ConnectionCause.INVALID_URL),
     (
         "unsupported-protocol",
         lambda: httpx2.UnsupportedProtocol("ftp://"),
         False,
-        CausaConexion.URL_INVALIDA,
+        ConnectionCause.INVALID_URL,
     ),
-    ("http-status-401", lambda: _http_status(401), False, CausaConexion.CREDENCIAL),
-    ("http-status-403", lambda: _http_status(403), False, CausaConexion.CREDENCIAL),
-    ("http-status-500", lambda: _http_status(500), False, CausaConexion.HTTP_ERROR),
-    ("codigo-401", lambda: 401, False, CausaConexion.CREDENCIAL),
-    ("codigo-403", lambda: 403, False, CausaConexion.CREDENCIAL),
-    ("codigo-404", lambda: 404, False, CausaConexion.HTTP_ERROR),
-    ("codigo-500", lambda: 500, False, CausaConexion.HTTP_ERROR),
-    ("attribute-error", lambda: AttributeError("x"), False, CausaConexion.DESCONOCIDA),
-    ("key-error", lambda: KeyError("data"), False, CausaConexion.DESCONOCIDA),
+    ("http-status-401", lambda: _http_status(401), False, ConnectionCause.CREDENTIAL),
+    ("http-status-403", lambda: _http_status(403), False, ConnectionCause.CREDENTIAL),
+    ("http-status-500", lambda: _http_status(500), False, ConnectionCause.HTTP_ERROR),
+    ("codigo-401", lambda: 401, False, ConnectionCause.CREDENTIAL),
+    ("codigo-403", lambda: 403, False, ConnectionCause.CREDENTIAL),
+    ("codigo-404", lambda: 404, False, ConnectionCause.HTTP_ERROR),
+    ("codigo-500", lambda: 500, False, ConnectionCause.HTTP_ERROR),
+    ("attribute-error", lambda: AttributeError("x"), False, ConnectionCause.UNKNOWN),
+    ("key-error", lambda: KeyError("data"), False, ConnectionCause.UNKNOWN),
     (
         # Las reglas 7 a 12 miran solo la excepción de arriba: una propia que envuelve un
         # `ConnectTimeout` cae en la 12, de forma determinista.
         "propia-que-envuelve-connect-timeout",
         lambda: _envuelta(_Propia, httpx2.ConnectTimeout("plazo")),
         True,
-        CausaConexion.DESCONOCIDA,
+        ConnectionCause.UNKNOWN,
     ),
 ]
 
@@ -169,7 +169,7 @@ _CASOS = [
     [pytest.param(f, lb, esp, id=nombre) for nombre, f, lb, esp in _CASOS],
 )
 def test_cada_suceso_tiene_su_causa(fabrica, loopback, esperada):
-    causa = causa_conexion(fabrica(), loopback=loopback)
+    causa = connection_cause(fabrica(), loopback=loopback)
     assert causa is esperada
 
 
@@ -186,14 +186,14 @@ def test_un_oserror_sin_errno_no_es_sin_ruta():
     assert OSError(10051, "red inalcanzable").errno == 10051
     un_argumento = _envuelta(httpx2.ConnectError, OSError(10051))
     dos_argumentos = _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable"))
-    assert causa_conexion(un_argumento, loopback=False) is CausaConexion.TRANSPORTE
-    assert causa_conexion(dos_argumentos, loopback=False) is CausaConexion.SIN_RUTA
+    assert connection_cause(un_argumento, loopback=False) is ConnectionCause.TRANSPORT
+    assert connection_cause(dos_argumentos, loopback=False) is ConnectionCause.NO_ROUTE
 
 
 @pytest.mark.parametrize("codigo", [200, 204, 299])
 def test_un_2xx_no_se_clasifica(codigo):
     with pytest.raises(ValueError):
-        causa_conexion(codigo, loopback=False)
+        connection_cause(codigo, loopback=False)
 
 
 def _clasifica_en_un_hilo(suceso: BaseException) -> list:
@@ -201,7 +201,7 @@ def _clasifica_en_un_hilo(suceso: BaseException) -> list:
     assert en vez de colgar la suite."""
     resultado: list = []
     hilo = threading.Thread(
-        target=lambda: resultado.append(causa_conexion(suceso, loopback=False)), daemon=True
+        target=lambda: resultado.append(connection_cause(suceso, loopback=False)), daemon=True
     )
     hilo.start()
     hilo.join(timeout=5)
@@ -212,13 +212,13 @@ def _clasifica_en_un_hilo(suceso: BaseException) -> list:
 def test_una_cadena_con_ciclo_termina():
     propia = httpx2.ConnectError("se apunta a sí misma")
     propia.__context__ = propia
-    assert _clasifica_en_un_hilo(propia) == [CausaConexion.TRANSPORTE]
+    assert _clasifica_en_un_hilo(propia) == [ConnectionCause.TRANSPORT]
 
     a = httpx2.ConnectError("a")
     b = OSError(errno.ENETUNREACH, "b")
     a.__cause__ = b
     b.__context__ = a
-    assert _clasifica_en_un_hilo(a) == [CausaConexion.SIN_RUTA]
+    assert _clasifica_en_un_hilo(a) == [ConnectionCause.NO_ROUTE]
 
 
 # --- Fallos de red real ---------------------------------------------------------------------
@@ -248,22 +248,22 @@ def _puerto_recien_liberado() -> int:
 
 def test_red_real_un_nombre_que_no_resuelve_es_dns():
     url = "http://no-existe.invalid:9292/v1/models"
-    causa = causa_conexion(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
-    assert causa is CausaConexion.DNS
+    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
+    assert causa is ConnectionCause.DNS
 
 
 def test_red_real_un_puerto_cerrado_en_loopback_es_rechazada():
     url = f"http://127.0.0.1:{_puerto_recien_liberado()}/v1/models"
     assert _loopback(url)
-    causa = causa_conexion(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
-    assert causa is CausaConexion.RECHAZADA
+    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
+    assert causa is ConnectionCause.REFUSED
 
 
 def test_red_real_una_ip_que_no_contesta_no_es_dns_ni_rechazada():
     url = "http://192.0.2.1:9292/v1/models"
     assert not _loopback(url)
-    causa = causa_conexion(_fallo_real(url, conexion=0.5), loopback=_loopback(url))
-    assert causa in {CausaConexion.TIMEOUT_CONEXION, CausaConexion.SIN_RUTA}
+    causa = connection_cause(_fallo_real(url, conexion=0.5), loopback=_loopback(url))
+    assert causa in {ConnectionCause.CONNECT_TIMEOUT, ConnectionCause.NO_ROUTE}
 
 
 # --- Textos ---------------------------------------------------------------------------------
@@ -275,20 +275,20 @@ def _sin_el_arranque_remoto(texto: str) -> str:
 
 
 def test_pista_remota_nunca_manda_a_arrancar_llama_swap_a_secas():
-    for causa in [*CausaConexion, None]:
-        for fuente in ("daemon", "directo"):
-            texto = pista(causa, origen="remote", fuente=fuente, host=HOST)
+    for causa in [*ConnectionCause, None]:
+        for fuente in ("daemon", "direct"):
+            texto = hint(causa, origin="remote", source=fuente, host=HOST)
             assert "arranca llama-swap" not in _sin_el_arranque_remoto(texto), (causa, texto)
 
 
 def test_pista_local_de_rechazada_manda_a_arrancar_llama_swap():
-    texto = pista(CausaConexion.RECHAZADA, origen="local", fuente="directo", host=HOST)
+    texto = hint(ConnectionCause.REFUSED, origin="local", source="direct", host=HOST)
     assert "arranca llama-swap" in texto
 
 
 def test_pista_de_credencial_depende_de_quien_vio_el_401():
-    del_daemon = pista(CausaConexion.CREDENCIAL, origen="local", fuente="daemon", host=HOST)
-    directa = pista(CausaConexion.CREDENCIAL, origen="local", fuente="directo", host=HOST)
+    del_daemon = hint(ConnectionCause.CREDENTIAL, origin="local", source="daemon", host=HOST)
+    directa = hint(ConnectionCause.CREDENTIAL, origin="local", source="direct", host=HOST)
     assert "lanzador" in del_daemon
     assert "en este entorno" in directa
     assert "lanzador" not in directa
@@ -297,78 +297,102 @@ def test_pista_de_credencial_depende_de_quien_vio_el_401():
 def test_pista_sin_causa_es_la_generica():
     """Daemon antiguo que no manda `causa`, o una causa que este código no conoce."""
     esperada = f"revisa el backend en {HOST}"
-    assert pista(None, origen="local", fuente="daemon", host=HOST) == esperada
-    assert pista("causa_del_futuro", origen="remote", fuente="daemon", host=HOST) == esperada
+    assert hint(None, origin="local", source="daemon", host=HOST) == esperada
+    assert hint("causa_del_futuro", origin="remote", source="daemon", host=HOST) == esperada
 
 
 def test_todos_los_detalles_dicen_el_host():
-    for causa in list(CausaConexion):
-        texto = detalle(
+    for causa in list(ConnectionCause):
+        texto = detail(
             causa,
             host=HOST,
             status=500,
             endpoint="/v1/models",
-            excepcion=httpx2.ConnectError("x"),
+            exception=httpx2.ConnectError("x"),
         )
-        if causa is CausaConexion.URL_INVALIDA:
+        if causa is ConnectionCause.INVALID_URL:
             # La tabla de REQ-011 no lleva host aquí: con la URL rota puede no significar nada.
             assert "LOCAL_DELEGATE_BASE_URL" in texto
             continue
         assert HOST in texto, causa
-    invalida = detalle(CausaConexion.RESPUESTA_INVALIDA, host=HOST, endpoint="/v1/models")
+    invalida = detail(ConnectionCause.INVALID_RESPONSE, host=HOST, endpoint="/v1/models")
     assert "/v1/models" in invalida
 
 
 def test_un_detalle_sin_datos_opcionales_no_escribe_none():
-    for causa in list(CausaConexion):
-        assert "None" not in detalle(causa, host=HOST), causa
+    for causa in list(ConnectionCause):
+        assert "None" not in detail(causa, host=HOST), causa
 
 
 _DETALLES = {
-    CausaConexion.DNS: f"no se resuelve el nombre {HOST} (¿VPN o DNS?)",
-    CausaConexion.RECHAZADA: f"{HOST} rechaza la conexión: no hay nada escuchando en ese puerto",
-    CausaConexion.SIN_RUTA: f"no hay ruta de red hacia {HOST}",
-    CausaConexion.TIMEOUT_CONEXION: f"{HOST} no contesta a la conexión (ruta, cortafuegos o VPN)",
-    CausaConexion.CREDENCIAL: f"{HOST} responde 401: está arriba pero rechaza la credencial",
-    CausaConexion.HTTP_ERROR: f"{HOST} responde HTTP 401",
-    CausaConexion.SIN_RESPUESTA: f"{HOST} acepta la conexión pero no responde a tiempo",
-    CausaConexion.RESPUESTA_INVALIDA: (
+    ConnectionCause.DNS: f"no se resuelve el nombre {HOST} (¿VPN o DNS?)",
+    ConnectionCause.REFUSED: f"{HOST} rechaza la conexión: no hay nada escuchando en ese puerto",
+    ConnectionCause.NO_ROUTE: f"no hay ruta de red hacia {HOST}",
+    ConnectionCause.CONNECT_TIMEOUT: f"{HOST} no contesta a la conexión (ruta, cortafuegos o VPN)",
+    ConnectionCause.CREDENTIAL: f"{HOST} responde 401: está arriba pero rechaza la credencial",
+    ConnectionCause.HTTP_ERROR: f"{HOST} responde HTTP 401",
+    ConnectionCause.NO_RESPONSE: f"{HOST} acepta la conexión pero no responde a tiempo",
+    ConnectionCause.INVALID_RESPONSE: (
         f"{HOST} responde a /v1/models, pero con un cuerpo que no se entiende"
     ),
-    CausaConexion.URL_INVALIDA: (
+    ConnectionCause.INVALID_URL: (
         "la URL del backend no es válida (HTTPStatusError): revisa LOCAL_DELEGATE_BASE_URL"
     ),
-    CausaConexion.TRANSPORTE: f"fallo de red con {HOST} (HTTPStatusError)",
-    CausaConexion.DESCONOCIDA: f"fallo inesperado al sondear {HOST} (HTTPStatusError)",
+    ConnectionCause.TRANSPORT: f"fallo de red con {HOST} (HTTPStatusError)",
+    ConnectionCause.UNKNOWN: f"fallo inesperado al sondear {HOST} (HTTPStatusError)",
 }
 
 _ETIQUETAS = {
     "dns": "no resuelve",
-    "rechazada": "nadie escucha",
-    "sin_ruta": "sin ruta",
-    "timeout_conexion": "no contesta",
-    "credencial": "sin acceso",
+    "refused": "nadie escucha",
+    "no_route": "sin ruta",
+    "connect_timeout": "no contesta",
+    "credential": "sin acceso",
     "http_error": "responde con error",
-    "sin_respuesta": "no responde a tiempo",
-    "respuesta_invalida": "respuesta no válida",
-    "url_invalida": "URL no válida",
-    "transporte": "fallo de red",
-    "desconocida": "fallo inesperado",
+    "no_response": "no responde a tiempo",
+    "invalid_response": "respuesta no válida",
+    "invalid_url": "URL no válida",
+    "transport": "fallo de red",
+    "unknown": "fallo inesperado",
 }
 
 
 def test_los_textos_son_los_de_la_tabla_de_req_011():
     """El código sale de la excepción cuando no se pasa: `HTTPStatusError(401)` da «responde 401»."""
-    assert set(_ETIQUETAS) == {c.value for c in CausaConexion}
+    assert set(_ETIQUETAS) == {c.value for c in ConnectionCause}
     for valor, esperada in _ETIQUETAS.items():
-        assert etiqueta(valor) == esperada
+        assert label(valor) == esperada
     excepcion = _http_status(401)
     for causa, esperado in _DETALLES.items():
-        texto = detalle(causa, host=HOST, endpoint="/v1/models", excepcion=excepcion)
+        texto = detail(causa, host=HOST, endpoint="/v1/models", exception=excepcion)
         assert texto == esperado
 
 
 def test_vista_backend_tiene_los_campos_de_req_016():
-    vista = VistaBackend(sano=False, detalle="d", causa="credencial", fuente="daemon")
-    assert vista._fields == ("sano", "detalle", "causa", "fuente")
-    assert tuple(vista) == (False, "d", "credencial", "daemon")
+    vista = BackendView(healthy=False, detail="d", cause="credential", source="daemon")
+    assert vista._fields == ("healthy", "detail", "cause", "source")
+    assert tuple(vista) == (False, "d", "credential", "daemon")
+
+
+# --- Valores viejos (REQ-006) -------------------------------------------------------------------
+#
+# El log de uso guarda `connection_failure` (antes `fallo_conexion`) y un daemon de la 0.34.0 manda
+# `causa` con el valor en español. Los dos se siguen entendiendo, con la misma etiqueta.
+
+
+@pytest.mark.parametrize("viejo,nuevo", sorted(legacy_names.CONNECTION_CAUSE_VALUES.items()))
+def test_el_valor_viejo_de_la_causa_da_el_mismo_miembro_y_la_misma_etiqueta(viejo, nuevo):
+    assert ConnectionCause(viejo) is ConnectionCause(nuevo)
+    assert label(viejo) == label(nuevo)
+    assert hint(viejo, origin="local", source="direct", host=HOST) == hint(
+        nuevo, origin="local", source="direct", host=HOST
+    )
+
+
+def test_la_tabla_de_causas_viejas_cubre_todas_las_que_cambiaron():
+    """Cada miembro cuyo valor no es ya el de antes tiene su valor viejo en la tabla."""
+    sin_cambio = {"dns", "http_error"}
+    nuevos = {c.value for c in ConnectionCause} - sin_cambio
+    assert set(legacy_names.CONNECTION_CAUSE_VALUES.values()) == nuevos
+    with pytest.raises(ValueError):
+        ConnectionCause("no_existe")

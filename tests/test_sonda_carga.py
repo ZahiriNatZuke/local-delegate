@@ -18,7 +18,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import config, fallos, server
+from local_delegate import config, failures, server
 
 URL_CHAT = "http://test-backend/v1/chat/completions"
 URL_RUNNING = "http://test-backend/running"
@@ -142,7 +142,7 @@ def _timeout_tras(segundos: float):
 @backend_mock.mock
 @pytest.mark.parametrize(
     ("estado", "clase"),
-    [("ready", fallos.Clase.TIMEOUT_LECTURA), ("starting", fallos.Clase.CAPACIDAD)],
+    [("ready", failures.FailureClass.READ_TIMEOUT), ("starting", failures.FailureClass.CAPACITY)],
 )
 def test_post_chat_clasifica_el_timeout_con_la_muestra(backend, monkeypatch, estado, clase):
     """La pieza en su uso: el `ReadTimeout` real de `_post_chat` lleva la señal de la sonda."""

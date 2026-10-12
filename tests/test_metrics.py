@@ -17,7 +17,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, coste, server
+from local_delegate import config, coste, failures, legacy_names, server
 from local_delegate.web import metrics
 
 
@@ -190,9 +190,9 @@ def test_api_backend_unavailable(monkeypatch):
         "running_ok": False,  # /running ni se pide con /models caído (REQ-013)
         "models": [],
         "models_stale": True,
-        "causa": "transporte",
-        "etiqueta": "fallo de red",
-        "detalle": "fallo de red con test-backend (ConnectError)",
+        "cause": "transport",
+        "label": "fallo de red",
+        "detail": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",  # host no-loopback => la inferencia correría fuera de esta máquina
         "host": "test-backend",
     }
@@ -280,9 +280,9 @@ def test_api_backend_stats_unavailable_on_404(monkeypatch):
     client = TestClient(metrics.app)
     assert client.get("/api/backend/stats").json() == {
         "available": False,
-        "causa": "http_error",
-        "etiqueta": "responde con error",
-        "detalle": "test-backend responde HTTP 404",
+        "cause": "http_error",
+        "label": "responde con error",
+        "detail": "test-backend responde HTTP 404",
         "status_http": 404,
     }
 
@@ -297,9 +297,9 @@ def test_api_status_backend_down(monkeypatch):
         "available": False,
         "models": [],
         "models_stale": True,
-        "causa": "transporte",
-        "etiqueta": "fallo de red",
-        "detalle": "fallo de red con test-backend (ConnectError)",
+        "cause": "transport",
+        "label": "fallo de red",
+        "detail": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",
         "host": "test-backend",
     }
@@ -323,9 +323,9 @@ def test_api_backend_dice_la_causa_de_un_401(monkeypatch):
 
     j = TestClient(metrics.app).get("/api/backend").json()
 
-    assert j.get("causa") == "credencial"
+    assert j.get("cause") == "credential"
     assert j["available"] is False
-    assert "401" in (j.get("detalle") or "")
+    assert "401" in (j.get("detail") or "")
 
 
 @backend_mock.mock
@@ -346,7 +346,7 @@ def test_api_backend_conserva_la_lista_y_la_marca_vieja(monkeypatch):
     assert bueno.get("models_stale") is False
     assert [m["id"] for m in j["models"]] == ["m1"]
     assert j["models"][0]["status"] is None
-    assert j.get("causa") == "transporte"
+    assert j.get("cause") == "transport"
 
 
 @backend_mock.mock
@@ -392,9 +392,9 @@ def test_api_status_dice_la_causa_en_el_bloque_backend(monkeypatch):
 
     data = TestClient(metrics.app).get("/api/status").json()
 
-    assert data["backend"].get("causa") == "credencial"
+    assert data["backend"].get("cause") == "credential"
     assert data["backend"].get("models_stale") is True
-    assert "401" in (data["backend"].get("detalle") or "")
+    assert "401" in (data["backend"].get("detail") or "")
 
 
 @backend_mock.mock
@@ -406,7 +406,7 @@ def test_api_backend_stats_dice_el_codigo_con_un_404(monkeypatch):
     j = TestClient(metrics.app).get("/api/backend/stats").json()
 
     assert j.get("status_http") == 404
-    assert j.get("causa") == "http_error"
+    assert j.get("cause") == "http_error"
     assert j["available"] is False
 
 
@@ -416,9 +416,9 @@ def test_api_backend_stats_dice_la_causa_con_un_nombre_que_no_resuelve(monkeypat
 
     j = TestClient(metrics.app).get("/api/backend/stats").json()
 
-    assert j.get("causa") == "dns"
+    assert j.get("cause") == "dns"
     assert j.get("status_http") is None
-    assert "no-existe.invalid" in (j.get("detalle") or "")
+    assert "no-existe.invalid" in (j.get("detail") or "")
 
 
 def _plazo_de_conexion(t):
@@ -1192,7 +1192,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             fallback_reason="http_500",
             fallback_class="modelo",
             error="http_503",
-            error_class="sin_clasificar",
+            error_class="unclassified",
             chunks=3,
         ),
         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
@@ -1250,7 +1250,10 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         c.get("routing") == "affinity" and not py["fallback"]
         for c, py in zip(casos, desde_py, strict=True)
     ), "falta el caso de afinidad"
-    assert any(py["cause"] == "configuracion" for py in desde_py)
+    # Filas viejas y nuevas (REQ-006): las dos copias traducen la clase con la misma tabla.
+    assert any(c.get("error_class") == "configuracion" for c in casos), "falta la fila vieja"
+    assert any(c.get("error_class") == "unclassified" for c in casos), "falta la fila nueva"
+    assert any(py["cause"] == "configuration" for py in desde_py)
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
     origenes = {c["densidad"]["text"][1] for c in casos if c["densidad"]["text"]}
@@ -1274,6 +1277,8 @@ def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
         "import {readFileSync} from 'node:fs';\n"
         "const CPT = 4;\n"
         "const tok = c => Math.floor(c/CPT);\n"
+        f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
+        f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
         f"{tokens_claude_js}\n"
         f"{acct_js}\n"
         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
@@ -1423,7 +1428,7 @@ def test_accounting_marca_el_salto_y_su_causa():
         )
     )
     assert a["fallback"] is True
-    assert a["cause"] == "modelo"
+    assert a["cause"] == "model"
     assert a["backend_calls"] == 2, "la llamada del respaldo también gastó backend"
 
 
@@ -1436,9 +1441,10 @@ def test_accounting_affinity_is_not_fallback():
 
 
 def test_accounting_causa_de_configuracion_en_un_fallo():
+    # Fila del formato viejo (0.34.0): la causa sale ya en el formato nuevo (REQ-006).
     a = metrics._accounting(_ev(ok=False, error="config_max_tokens", error_class="configuracion"))
     assert a["fallback"] is False
-    assert a["cause"] == "configuracion"
+    assert a["cause"] == "configuration"
 
 
 def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
@@ -1447,10 +1453,10 @@ def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
             ok=False,
             model_requested="gemma4-26b-a4b",
             fallback_class="modelo",
-            error_class="sin_clasificar",
+            error_class="unclassified",
         )
     )
-    assert a["cause"] == "sin_clasificar", "manda cómo acabó la operación, no por qué saltó"
+    assert a["cause"] == "unclassified", "manda cómo acabó la operación, no por qué saltó"
     assert a["fallback"] is True
 
 
@@ -1483,7 +1489,7 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
                 model="gemma4-26b-a4b",
                 ok=False,
                 error="config_max_tokens",
-                error_class="configuracion",
+                error_class="configuration",
                 tokens_in=50,
                 tokens_out=0,
             ),
@@ -1497,11 +1503,69 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
         .json()
     )
     assert j["fallback_events"] == 1
-    assert j["causes"] == {"modelo": 1, "configuracion": 1}
+    # El salto es una fila vieja (`modelo`) y el fallo una nueva: cuentan juntos (REQ-006).
+    assert j["causes"] == {"model": 1, "configuration": 1}
     por_modelo = {m["model"]: m for m in j["by_model"]}
     assert por_modelo["gemma3-4b"]["tokens_in"] == 600, "los tokens del salto van al que respondió"
     assert por_modelo["gemma3-4b"]["backend_calls"] == 3
     assert por_modelo["gemma3-4b"]["fallback_calls"] == 1
+
+
+def test_un_log_con_filas_viejas_y_nuevas_se_lee_como_si_fueran_todas_nuevas(tmp_path, monkeypatch):
+    """Escenario de la spec (REQ-005/006, ola A3): en un mismo `usage-*.jsonl` conviven filas de la
+    0.34.0 (`bloqueo_id`, `fallo_conexion: rechazada`, `error_class: timeout_lectura`) y filas
+    nuevas. `/api/events` las entrega todas con las claves y valores nuevos, y `/api/stats` suma
+    las causas viejas y nuevas en el mismo cubo, con la misma etiqueta."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    viejas = [
+        _ev(ts="2026-07-15T10:00:00+00:00", bloqueo_id="b-viejo", secciones=4),
+        _ev(
+            ts="2026-07-15T10:01:00+00:00",
+            ok=False,
+            error="connect_error",
+            error_class="endpoint",
+            fallo_conexion="rechazada",
+        ),
+        _ev(
+            ts="2026-07-15T10:02:00+00:00", ok=False, error="timeout", error_class="timeout_lectura"
+        ),
+    ]
+    nuevas = [
+        _ev(ts="2026-07-15T11:00:00+00:00", block_id="b-nuevo", sections=4),
+        _ev(
+            ts="2026-07-15T11:01:00+00:00",
+            ok=False,
+            error="connect_error",
+            error_class="endpoint",
+            connection_failure="refused",
+        ),
+        _ev(ts="2026-07-15T11:02:00+00:00", ok=False, error="timeout", error_class="read_timeout"),
+    ]
+    _write_jsonl(tmp_path / "usage-202607.jsonl", viejas + nuevas)
+    metrics._FILE_CACHE.clear()
+    cliente = TestClient(metrics.app)
+    rango = "from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00"
+
+    eventos = cliente.get(f"/api/events?{rango}").json()["events"]
+    assert len(eventos) == 6
+    assert sorted(e["block_id"] for e in eventos if "block_id" in e) == ["b-nuevo", "b-viejo"]
+    assert [e["connection_failure"] for e in eventos if "connection_failure" in e] == [
+        "refused",
+        "refused",
+    ]
+    assert [e.get("sections") for e in eventos if e.get("sections")] == [4, 4]
+    viejas_en_la_salida = {"bloqueo_id", "secciones", "fallo_conexion"} & {
+        k for e in eventos for k in e
+    }
+    assert not viejas_en_la_salida, viejas_en_la_salida
+
+    j = cliente.get(f"/api/stats?{rango}").json()
+    assert j["causes"] == {"endpoint": 2, "read_timeout": 2}
+    etiquetas = {
+        failures.label(e["connection_failure"]) for e in eventos if "connection_failure" in e
+    }
+    assert etiquetas == {"nadie escucha"}
 
 
 def test_el_panel_marca_las_operaciones_con_salto():

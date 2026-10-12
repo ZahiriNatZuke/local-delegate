@@ -73,7 +73,9 @@ def usos_fundidos(desde: str | None) -> list[dict]:
     clave de una fila sin `tool_use_id` depende de su posicion en el fichero."""
     usos = []
     for ruta in logs_de_uso():
-        for e in coste.fundir(leer(ruta, None), log_dir=directorio_de_logs()):
+        # Filas viejas y nuevas al mismo formato (REQ-006): `bloqueo_id` se lee como `block_id`.
+        filas = [legacy_names.normalize("usage", e) for e in leer(ruta, None)]
+        for e in coste.fundir(filas, log_dir=directorio_de_logs()):
             if desde and str(e.get("ts", "")) < desde:
                 continue
             usos.append(e)
@@ -104,7 +106,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
 
     # «Aceptado» = el identificador del bloqueo aparece en un evento de tool. Sin esto, lo unico
     # medible era «hubo delegaciones», que no dice si las provoco el aviso.
-    ids_delegados = {e["bloqueo_id"] for e in usos if e.get("bloqueo_id")}
+    ids_delegados = {e["block_id"] for e in usos if e.get("block_id")}
     aceptados = [b for b in bloqueos if b.get("id") in ids_delegados]
 
     # De las lecturas acotadas, cuantas eran de un fichero que en la misma sesion acabo leyendose
@@ -141,7 +143,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         "tasa_de_aceptacion": round(len(aceptados) / len(bloqueos), 3) if bloqueos else None,
         "delegaciones_totales": len([e for e in usos if e.get("tool", "").startswith("local_")]),
         "delegaciones_espontaneas": len(
-            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("bloqueo_id")]
+            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("block_id")]
         ),
         "acotadas_con_huella": len(acotadas),
         "acotadas_que_convenia_delegar": len(convenia),

@@ -1,0 +1,130 @@
+# approved-by-main: 2026-10-12 (con las respuestas 1-5 de la sesion principal)
+# wave=A3 generated=2026-10-12 en dos partes. (1) Filas Python de `failures` (hoy `fallos.py`) y `pace.py`: salen de `tools/make_mapping.py build --wave A3 --paths src/local_delegate/fallos.py src/local_delegate/pace.py` (72 filas); nombres `new` propuestos por el agente; scope corregido en 4 filas tras verificarlo con PyCharm (columna verified). (2) Filas a mano (el script solo ve definiciones Python): claves y valores del log de uso (tabla D4 completa viejo→nuevo), campos de /api/*, JS del panel, lectores dobles y consecuencias fuera de la lista «posee»; fuente: grep y search_regex de PyCharm sin .sdd/ ni benchmarks/. Pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)
+# Columna scope en las filas a mano: owned = fichero/tramo de la lista «posee» de A3; NOT-OWNED = fuera de la lista, necesita aprobación; keep = se deja a propósito (con la ola que lo toca). Muestra de module_local: son 11, se verificaron todas (sin semilla).
+old,new,kind,definition,scope,method,reason,verified
+fallos,failures,module,src/local_delegate/fallos.py:1@<module>,cross_module,search_edit,"PyCharm no pudo («Couldn't find symbol 'fallos'»): git mv + search_regex de los imports y referencias (script acotado a `fallos.<nombre nuevo>`, `from . import`, `local_delegate.fallos`)","ok (search_regex: importan el módulo checks, server, sondas, benchmark, enfriamiento, web/metrics y 13 tests); aplicado: git mv src/local_delegate/fallos.py src/local_delegate/failures.py"
+Clase,FailureClass,class,src/local_delegate/fallos.py:45@<module>,cross_module,pycharm,,"ok (server.py:1060/1120/1357/1983/2146, enfriamiento.py:36/41, benchmark.py:1124, tests)"
+PETICION,REQUEST,constant,src/local_delegate/fallos.py:49@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+CAPACIDAD,CAPACITY,constant,src/local_delegate/fallos.py:50@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+TIMEOUT_LECTURA,READ_TIMEOUT,constant,src/local_delegate/fallos.py:51@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+CONFIGURACION,CONFIGURATION,constant,src/local_delegate/fallos.py:52@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+MODELO,MODEL,constant,src/local_delegate/fallos.py:53@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+SIN_CLASIFICAR,UNCLASSIFIED,constant,src/local_delegate/fallos.py:54@Clase,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+PATRONES_DE_CAPACIDAD,CAPACITY_PATTERNS,constant,src/local_delegate/fallos.py:63@<module>,unresolved,pycharm,,ok (solo fallos.py:154 y tests/test_fallos_capturas.py por atributo)
+Respuesta,BackendResponse,class,src/local_delegate/fallos.py:72@<module>,cross_module,pycharm,,"ok (server.py:1254, tests/test_fallos.py, test_fallos_capturas.py)"
+datos,data,variable,src/local_delegate/fallos.py:81@Respuesta,cross_module,pycharm,,discrepancia corregida: module_local->cross_module (server.py:1256 y tests pasan datos= por palabra clave)
+texto,text,variable,src/local_delegate/fallos.py:83@Respuesta,cross_module,pycharm,,ok (server.py:1257 y tests pasan texto= por palabra clave)
+clasificar,classify,function,src/local_delegate/fallos.py:86@<module>,cross_module,pycharm,,"ok (server.py:1253/1280/1282, tests)"
+suceso,event,param,src/local_delegate/fallos.py:87@clasificar,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo_cargado,model_loaded,param,src/local_delegate/fallos.py:89@clasificar,cross_module,pycharm,,ok (server.py:1280 por palabra clave; tests/test_fallos.py)
+es_backend_ausente,is_backend_missing,function,src/local_delegate/fallos.py:102@<module>,cross_module,pycharm,,"ok (server.py:1283, tests/test_fallos.py:228-251)"
+suceso,event,param,src/local_delegate/fallos.py:102@es_backend_ausente,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_clasificar_excepcion,_classify_exception,function,src/local_delegate/fallos.py:118@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+modelo_cargado,model_loaded,param,src/local_delegate/fallos.py:118@_clasificar_excepcion,cross_module,search_edit,PyCharm respondió «0 usages» y no lo renombró (el primer rename del homónimo en classify ya cambió la llamada): editado a mano en la firma y en su único uso,ok (server.py:1280 por palabra clave; tests/test_fallos.py)
+_clasificar_respuesta,_classify_response,function,src/local_delegate/fallos.py:134@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+respuesta,response,param,src/local_delegate/fallos.py:134@_clasificar_respuesta,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (search_regex: nadie lo pasa por palabra clave; el detector lo confundía con el atributo homónimo)
+_clasificar_status,_classify_status,function,src/local_delegate/fallos.py:147@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+texto,text,param,src/local_delegate/fallos.py:147@_clasificar_status,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (search_regex: nadie lo pasa por palabra clave; el detector lo confundía con el atributo homónimo)
+minusculas,lowered,variable,src/local_delegate/fallos.py:153@_clasificar_status,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+patron,pattern,variable,src/local_delegate/fallos.py:154@_clasificar_status,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_clasificar_cuerpo,_classify_body,function,src/local_delegate/fallos.py:160@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+datos,data,param,src/local_delegate/fallos.py:160@_clasificar_cuerpo,function_local,search_edit,parámetro posicional de una función privada: reemplazo acotado a su función (apply),discrepancia corregida: cross_module->function_local (search_regex: nadie lo pasa por palabra clave; el detector lo confundía con el atributo homónimo)
+primera,first,variable,src/local_delegate/fallos.py:164@_clasificar_cuerpo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mensaje,message,variable,src/local_delegate/fallos.py:167@_clasificar_cuerpo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+contenido,content,variable,src/local_delegate/fallos.py:171@_clasificar_cuerpo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+motivo,finish,variable,src/local_delegate/fallos.py:172@_clasificar_cuerpo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+razonamiento,reasoning,variable,src/local_delegate/fallos.py:173@_clasificar_cuerpo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+CausaConexion,ConnectionCause,class,src/local_delegate/fallos.py:204@<module>,cross_module,pycharm,,"ok (server.py:4396-4407, checks.py:1365, tests/test_causa_conexion.py)"
+RECHAZADA,REFUSED,constant,src/local_delegate/fallos.py:208@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+SIN_RUTA,NO_ROUTE,constant,src/local_delegate/fallos.py:209@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+TIMEOUT_CONEXION,CONNECT_TIMEOUT,constant,src/local_delegate/fallos.py:210@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+CREDENCIAL,CREDENTIAL,constant,src/local_delegate/fallos.py:211@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+SIN_RESPUESTA,NO_RESPONSE,constant,src/local_delegate/fallos.py:213@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+RESPUESTA_INVALIDA,INVALID_RESPONSE,constant,src/local_delegate/fallos.py:214@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+URL_INVALIDA,INVALID_URL,constant,src/local_delegate/fallos.py:215@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+TRANSPORTE,TRANSPORT,constant,src/local_delegate/fallos.py:216@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+DESCONOCIDA,UNKNOWN,constant,src/local_delegate/fallos.py:217@CausaConexion,cross_module,pycharm,,"ok (miembro usado por atributo desde otro fichero: server.py, checks.py, enfriamiento.py, benchmark.py o tests)"
+VistaBackend,BackendView,class,src/local_delegate/fallos.py:220@<module>,cross_module,pycharm,,"ok (checks.py:161-194/337, sondas.py:263-290, tests/test_checks, test_doctor, test_update)"
+sano,healthy,variable,src/local_delegate/fallos.py:229@VistaBackend,cross_module,pycharm,,ok (checks.py:1359/1365 lee vista.causa/vista.fuente; tests construyen la tupla por posición)
+detalle,detail,variable,src/local_delegate/fallos.py:230@VistaBackend,cross_module,pycharm,,ok (checks.py:1359/1365 lee vista.causa/vista.fuente; tests construyen la tupla por posición)
+causa,cause,variable,src/local_delegate/fallos.py:231@VistaBackend,cross_module,pycharm,,ok (checks.py:1359/1365 lee vista.causa/vista.fuente; tests construyen la tupla por posición)
+fuente,source,variable,src/local_delegate/fallos.py:232@VistaBackend,cross_module,pycharm,,ok (checks.py:1359/1365 lee vista.causa/vista.fuente; tests construyen la tupla por posición)
+_ERRNO_SIN_RUTA,_NO_ROUTE_ERRNOS,constant,src/local_delegate/fallos.py:237@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+_CODIGOS_DE_CREDENCIAL,_CREDENTIAL_CODES,constant,src/local_delegate/fallos.py:239@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+_cadena,_chain,function,src/local_delegate/fallos.py:242@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+vistas,seen,variable,src/local_delegate/fallos.py:248@_cadena,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+pendientes,pending,variable,src/local_delegate/fallos.py:249@_cadena,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+actual,current,variable,src/local_delegate/fallos.py:251@_cadena,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_errno_sin_ruta,_is_no_route_errno,function,src/local_delegate/fallos.py:260@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+causa_conexion,connection_cause,function,src/local_delegate/fallos.py:264@<module>,cross_module,pycharm,,"ok (server.py:1313/4266/4283, sondas.py:283/288, web/metrics.py:825/830, tests)"
+suceso,event,param,src/local_delegate/fallos.py:264@causa_conexion,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+cadena,chain,variable,src/local_delegate/fallos.py:289@causa_conexion,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_ETIQUETAS,_LABELS,constant,src/local_delegate/fallos.py:322@<module>,module_local,pycharm,,ok (search_regex: solo en fallos.py)
+causa,cause,param,src/local_delegate/fallos.py:337@etiqueta,cross_module,pycharm,,ok (parámetro: web/metrics.py y server.py pasan excepcion= por palabra clave; causa va posicional)
+etiqueta,label,function,src/local_delegate/fallos.py:337@<module>,cross_module,pycharm,,"ok (web/metrics.py:782, tests/test_causa_conexion.py)"
+detalle,detail,function,src/local_delegate/fallos.py:342@<module>,cross_module,pycharm,,"ok (server.py:1317/4299, sondas.py:284/289, web/metrics.py:826/831, tests)"
+causa,cause,param,src/local_delegate/fallos.py:343@detalle,cross_module,pycharm,,ok (parámetro: web/metrics.py y server.py pasan excepcion= por palabra clave; causa va posicional)
+excepcion,exception,param,src/local_delegate/fallos.py:348@detalle,cross_module,pycharm,,ok (parámetro: web/metrics.py y server.py pasan excepcion= por palabra clave; causa va posicional)
+tipo,type_suffix,variable,src/local_delegate/fallos.py:358@detalle,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+codigo,status_suffix,variable,src/local_delegate/fallos.py:359@detalle,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+a_quien,target,variable,src/local_delegate/fallos.py:378@detalle,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+causa,cause,param,src/local_delegate/fallos.py:388@pista,cross_module,pycharm,,ok (checks.py:1358 pasa origen= y fuente= por palabra clave)
+fuente,source,param,src/local_delegate/fallos.py:388@pista,cross_module,pycharm,,ok (checks.py:1358 pasa origen= y fuente= por palabra clave)
+origen,origin,param,src/local_delegate/fallos.py:388@pista,cross_module,pycharm,,ok (checks.py:1358 pasa origen= y fuente= por palabra clave)
+pista,hint,function,src/local_delegate/fallos.py:388@<module>,cross_module,pycharm,,"ok (checks.py:1358, tests/test_causa_conexion.py)"
+generica,generic,variable,src/local_delegate/fallos.py:395@pista,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_tam,_size,attribute,src/local_delegate/pace.py:93@References,module_local,pycharm,,ok (solo pace.py:93/97)
+bloqueo_id,block_id,json_key,src/local_delegate/server.py:796@_log_event (usage-*.jsonl),owned,search_edit,clave persistida del log de uso: escritura nueva; lectura doble con legacy_names.FORMATS['usage'],
+secciones,sections,json_key,src/local_delegate/server.py:823@_log_event (usage-*.jsonl),owned,search_edit,clave persistida del log de uso (D4),
+fallo_conexion,connection_failure,json_key,src/local_delegate/server.py:818@_log_event (usage-*.jsonl),owned,search_edit,clave persistida del log de uso (D4),
+peticion,request,json_value,error_class|fallback_class|affinity_dropped_class (usage-*); FailureClass.REQUEST,owned,search_edit,valor de enumeración persistido; lectura doble,
+capacidad_o_carga,capacity_or_load,json_value,idem; FailureClass.CAPACITY,owned,search_edit,valor de enumeración persistido; lectura doble,
+timeout_lectura,read_timeout,json_value,idem; FailureClass.READ_TIMEOUT; también clase de enfriamiento-eventos.jsonl,owned,search_edit,valor persistido; lectura doble (también en medir_enfriamiento),
+configuracion,configuration,json_value,idem; FailureClass.CONFIGURATION; también outcome de benchmark,owned,search_edit,valor persistido; lectura doble,
+modelo,model,json_value,idem; FailureClass.MODEL; también clase de enfriamiento-eventos.jsonl,owned,search_edit,valor persistido; lectura doble,
+sin_clasificar,unclassified,json_value,idem; FailureClass.UNCLASSIFIED,owned,search_edit,valor persistido; lectura doble,
+enfriamiento,cooldown,json_value,src/local_delegate/server.py:1091@_respaldo_de (fallback_class),NOT-OWNED,search_edit,valor persistido de fallback_class; el literal vive en server.py fuera del tramo :700-860 (consecuencia directa de REQ-005),
+endpoint,endpoint,json_value,FailureClass.ENDPOINT,keep,keep,ya en inglés,
+rechazada,refused,json_value,"connection_failure (usage-*), cause de /api/*; ConnectionCause.REFUSED",owned,search_edit,valor persistido; lectura doble,
+sin_ruta,no_route,json_value,idem; ConnectionCause.NO_ROUTE,owned,search_edit,valor persistido; lectura doble,
+timeout_conexion,connect_timeout,json_value,idem; ConnectionCause.CONNECT_TIMEOUT,owned,search_edit,valor persistido; lectura doble,
+credencial,credential,json_value,idem; ConnectionCause.CREDENTIAL,owned,search_edit,valor persistido; lectura doble,
+sin_respuesta,no_response,json_value,idem; ConnectionCause.NO_RESPONSE,owned,search_edit,valor persistido; lectura doble,
+respuesta_invalida,invalid_response,json_value,idem; ConnectionCause.INVALID_RESPONSE,owned,search_edit,valor persistido; lectura doble,
+url_invalida,invalid_url,json_value,idem; ConnectionCause.INVALID_URL,owned,search_edit,valor persistido; lectura doble,
+transporte,transport,json_value,idem; ConnectionCause.TRANSPORT,owned,search_edit,valor persistido; lectura doble,
+desconocida,unknown,json_value,idem; ConnectionCause.UNKNOWN,owned,search_edit,valor persistido; lectura doble,
+dns|http_error,dns|http_error,json_value,"ConnectionCause.DNS, HTTP_ERROR",keep,keep,ya en inglés,
+(nuevo),FORMATS['usage'],table,src/local_delegate/legacy_names.py,owned,search_edit,"tabla del log de uso: 3 claves y valores de error_class, fallback_class, affinity_dropped_class y connection_failure",
+(nuevo),FAILURE_CLASS_VALUES / CONNECTION_CAUSE_VALUES,table,src/local_delegate/legacy_names.py,owned,search_edit,"tablas de valores viejo→nuevo compartidas por FORMATS, los enums (_missing_), medir_enfriamiento y el panel",
+(nuevo),PANEL_VALUE_ALIASES['connectionCause'|'failureClass'],table,src/local_delegate/legacy_names.py,owned,search_edit,"el JS del panel acepta valor viejo y nuevo sin copiar la tabla (D2, REQ-009)",
+(nuevo),FailureClass._missing_ / ConnectionCause._missing_,function,src/local_delegate/failures.py,owned,search_edit,FailureClass('modelo') y ConnectionCause('rechazada') devuelven el miembro nuevo: lectura doble de estado y eventos ya escritos,
+num_secciones,num_sections,param,src/local_delegate/server.py:699@_log_event,owned,pycharm,,ok (search_regex: callers en server.py pasan num_secciones= por palabra clave)
+fallo_conexion,connection_failure,param,src/local_delegate/server.py:701@_log_event,owned,pycharm,,ok (server.py:2186/2474 por palabra clave)
+bloqueo,block_id,variable,src/local_delegate/server.py:794@_log_event,function_local,search_edit,variable local: reemplazo acotado a su función (apply),"aplicado a mano en _log_event (server.py, CRLF conservado)"
+fallo_conexion,connection_failure,attribute,src/local_delegate/server.py:1035@ChatResult,NOT-OWNED,pycharm,atributo de ChatResult que va tal cual a la clave del log (server.py:1322/2186/2324/2474); fuera del tramo :700-860 pero acoplado al parámetro,ok (server.py:1322/2186/2324/2474 y tests)
+_valor_clase,_class_value,function,src/local_delegate/server.py:1100,keep,keep,fuera del tramo de A3: lo renombra A7 (resto de server.py),
+clase (ChatResult/Intento),,attribute,src/local_delegate/server.py:1032/1050,keep,keep,fuera del tramo de A3: A7,
+EstadoBackend.causa/detalle,,attribute,src/local_delegate/server.py:4240,keep,keep,fuera del tramo de A3: A7 (la API usa ya cause/detail en web/metrics.py),
+(lectura),"legacy_names.normalize('usage', row)",reader,src/local_delegate/server.py:4455@local_status,NOT-OWNED,search_edit,lector del log de uso de local_status: hoy solo cuenta tokens; se normaliza para que cause/clases lleguen ya traducidas (REQ-006). Fuera del tramo :998,
+(lectura),cause,reader,src/local_delegate/server.py:1008@_accounting,owned,search_edit,"cause = error_class or fallback_class, traducida con FAILURE_CLASS_VALUES (y el espejo JS con LEGACY_VALUES.failureClass): paridad sobre filas viejas",
+causa,cause,json_key,"src/local_delegate/web/metrics.py:781@_causa_json (/api/backend, /api/status.backend, /api/backend/stats)",owned,search_edit,campo de /api/* (REQ-009),
+etiqueta,label,json_key,src/local_delegate/web/metrics.py:782@_causa_json,owned,search_edit,campo de /api/* (REQ-009),
+detalle,detail,json_key,src/local_delegate/web/metrics.py:783@_causa_json,owned,search_edit,campo de /api/* (REQ-009),
+_causa_json,_cause_json,function,src/local_delegate/web/metrics.py:777,owned,pycharm,,ok (solo web/metrics.py:770/837/872)
+_sin_stats,_no_stats,function,src/local_delegate/web/metrics.py:836,owned,pycharm,,ok (solo web/metrics.py:827/832)
+causa (local),cause,variable,src/local_delegate/web/metrics.py:825@backend_stats,function_local,search_edit,variable local: reemplazo acotado a su función,
+texto (local),text,variable,src/local_delegate/web/metrics.py:826@backend_stats,function_local,search_edit,variable local: reemplazo acotado a su función,
+causa|detalle (params),cause|detail,param,src/local_delegate/web/metrics.py:777@_causa_json y :836@_sin_stats,function_local,search_edit,parámetros posicionales: reemplazo acotado,
+(lectura),"legacy_names.normalize('usage', row)",reader,src/local_delegate/web/metrics.py:101@_read_file_cached,owned,search_edit,"todo /api/events, /api/stats y «En curso» ven filas ya en formato nuevo; la caché guarda la fila normalizada",
+CAUSAS_CONTESTA,CAUSES_ANSWERING,js_ident,src/local_delegate/web/metrics.py:2206 (JS),owned,search_edit,JS: claves con los valores nuevos; el valor que llega pasa por LEGACY_VALUES.connectionCause,
+u.causa|u.etiqueta|u.detalle|j.etiqueta|j.detalle,cause|label|detail,js_field,src/local_delegate/web/metrics.py:2241-2374 (JS),owned,search_edit,JS: lectura de los campos renombrados de /api/*,
+bloqueo_id (lectura),block_id,reader,scripts/medir_adopcion.py:107/144,owned,search_edit,"lectura doble con legacy_names.normalize('usage', …)",
+CLASES/'modelo'/'enfriamiento'/'timeout_lectura' (lectura),valores nuevos,reader,scripts/medir_enfriamiento.py:44/168-211,owned,search_edit,"valores de clase del log de uso y de enfriamiento-eventos.jsonl con lectura doble (REQ-007, mismo PR); el nombre del script y sus opciones no cambian (REQ-046)",
+causa|detalle (lectura de /api/backend del daemon),cause|detail,reader,src/local_delegate/checks.py:189@_default_backend_models,NOT-OWNED,search_edit,"doctor nuevo contra daemon viejo: read_key(visto,'cause','causa') y valor normalizado con CONNECTION_CAUSE_VALUES",
+directo,direct,value,"src/local_delegate/sondas.py:264-290, checks.py:1365",NOT-OWNED,search_edit,"valor de BackendView.source (en memoria, no persistido); el renombre del campo lo hace PyCharm, el valor va a mano",
+configuracion (lectura),configuration,reader,scripts/analizar_benchmark.py:70@_ACEPTADAS,NOT-OWNED,search_edit,benchmark.py escribe FailureClass.CONFIGURATION.value: el analizador acepta el valor viejo (corpus guardado) y el nuevo,
+secciones (lectura),sections,reader,scripts/medir_resumen_estructurado.py:230,NOT-OWNED,search_edit,"lector de la clave renombrada del log de uso (REQ-006): read_key('sections','secciones')",
+modelo (clave de evento),model,dict_key,src/local_delegate/pace.py:284-304@compute_slowness,owned,search_edit,"clave del evento de entrada de compute_slowness (en memoria, no persistida); exige cambiar scripts/measure_slowness.py y tests/test_pace.py, test_measure_slowness.py. Ver duda",pendiente de decisión
+fallos.py|fallo_conexion|bloqueo_id|valores de causa,failures.py|connection_failure|block_id|valores nuevos,doc,"docs/wiki/Architecture.md:178, Savings-and-metrics.md:21/47-50/550/676, Troubleshooting.md:44-81",NOT-OWNED,search_edit,documentación de las claves y valores renombrados; la prosa sigue en español,
+(entrada),## [Unreleased],doc,CHANGELOG.md,NOT-OWNED,search_edit,cambio visible: claves y valores del log de uso y campos de /api/*,

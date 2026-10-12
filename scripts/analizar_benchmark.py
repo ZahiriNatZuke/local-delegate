@@ -67,7 +67,7 @@ TOLERANCIA = 1e-3
 # Comparacion por pares (P-15): prueba de signos de una cola sobre los pares con eleccion.
 ALFA_PARES = 0.05
 # Aceptadas: el backend recibio la entrada entera, aunque luego no puntue.
-_ACEPTADAS = frozenset({"ok", "truncado", "configuracion"})
+_ACEPTADAS = frozenset({"ok", "truncado", "configuracion", "configuration"})
 
 
 # --- Lectura ------------------------------------------------------------------------------------

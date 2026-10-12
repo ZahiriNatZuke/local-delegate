@@ -295,7 +295,7 @@ def test_sin_titulos_el_payload_es_el_de_main(monkeypatch, tmp_path):
     assert payload["messages"][0]["content"] == SISTEMA_MAIN
     assert payload["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"
     assert payload["max_tokens"] == 364
-    assert "secciones" not in _eventos(tmp_path)[0]
+    assert "sections" not in _eventos(tmp_path)[0]
 
 
 def test_con_el_interruptor_apagado_el_payload_es_el_de_main(monkeypatch, tmp_path):
@@ -332,7 +332,7 @@ def test_con_titulos_el_modelo_recibe_la_lista_y_el_servidor_completa(monkeypatc
     assert salida.rstrip().endswith("que no entraron a tu contexto)")
     assert salida.index("secciones sin resumir") < salida.index("(leído server-side")
     evento = _eventos(tmp_path)[0]
-    assert evento["secciones"] == 3
+    assert evento["sections"] == 3
     assert evento["chars_out"] == len(salida.split("\n\n(leído server-side")[0])
 
 
@@ -463,7 +463,7 @@ def test_documento_largo_se_resume_por_secciones_y_se_concatena(monkeypatch, tmp
     assert "(sin resumir)" not in salida
     evento = _eventos(tmp_path)[0]
     assert evento["chunks"] == len(vistos)
-    assert evento["secciones"] == 30
+    assert evento["sections"] == 30
     assert f"(resumido de {len(vistos)} partes" in salida
 
 
@@ -637,7 +637,7 @@ def test_la_introduccion_se_pide_y_se_completa(monkeypatch, tmp_path):
     lista = _lista_del_prompt(vistos[0]["messages"][1]["content"])
     assert [t for t, _p, _s in lista] == ["Introducción", "Uno", "Dos"]
     assert salida.startswith("## Introducción\n(sin resumir)")
-    assert _eventos(tmp_path)[0]["secciones"] == 3
+    assert _eventos(tmp_path)[0]["sections"] == 3
 
 
 def test_con_el_modelo_mecanico_va_en_prosa_aunque_haya_titulos(monkeypatch, tmp_path):

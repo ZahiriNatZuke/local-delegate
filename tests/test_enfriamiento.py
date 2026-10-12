@@ -17,7 +17,7 @@ import json
 import pytest
 
 from local_delegate import enfriamiento
-from local_delegate.fallos import Clase
+from local_delegate.failures import FailureClass
 
 INICIO = 1_800_000_000.0
 
@@ -49,7 +49,7 @@ def _estado(ruta, reloj, **opciones) -> enfriamiento.Estado:
     return enfriamiento.Estado(ruta, reloj=reloj, **parametros)
 
 
-def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=Clase.MODELO) -> None:
+def _fallar(estado: enfriamiento.Estado, modelo: str, veces: int, clase=FailureClass.MODEL) -> None:
     for _ in range(veces):
         estado.registrar_fallo(modelo, clase)
 
@@ -85,7 +85,7 @@ def test_los_fallos_de_dos_procesos_se_suman(ruta, reloj):
 
 def test_el_timeout_con_el_modelo_cargado_tambien_cuenta(ruta, reloj):
     estado = _estado(ruta, reloj)
-    _fallar(estado, "m", 3, clase=Clase.TIMEOUT_LECTURA)
+    _fallar(estado, "m", 3, clase=FailureClass.READ_TIMEOUT)
     assert estado.consultar("m") is not None
 
 
@@ -110,7 +110,13 @@ def test_un_exito_pone_el_contador_a_cero(ruta, reloj):
 
 @pytest.mark.parametrize(
     "neutra",
-    [Clase.ENDPOINT, Clase.PETICION, Clase.SIN_CLASIFICAR, Clase.CAPACIDAD, Clase.CONFIGURACION],
+    [
+        FailureClass.ENDPOINT,
+        FailureClass.REQUEST,
+        FailureClass.UNCLASSIFIED,
+        FailureClass.CAPACITY,
+        FailureClass.CONFIGURATION,
+    ],
 )
 def test_las_clases_neutras_ni_suman_ni_ponen_a_cero(ruta, reloj, neutra):
     estado = _estado(ruta, reloj)
@@ -265,11 +271,11 @@ def test_entrar_deja_un_evento_con_la_clase_que_lo_disparo(ruta, reloj):
     estado = _estado(ruta, reloj)
     _fallar(estado, "m", 2)
     assert _eventos(ruta) == [], "un fallo por debajo de N no es un episodio"
-    _fallar(estado, "m", 1, clase=Clase.TIMEOUT_LECTURA)
+    _fallar(estado, "m", 1, clase=FailureClass.READ_TIMEOUT)
     (evento,) = _eventos(ruta)
     assert evento["evento"] == "entra"
     assert evento["modelo"] == "m"
-    assert evento["clase"] == "timeout_lectura"
+    assert evento["clase"] == "read_timeout"
     assert evento["reentradas"] == 1
     assert evento["espera_s"] == pytest.approx(120.0)
     assert evento["ts"].startswith("2027-01-15T08:00:00")

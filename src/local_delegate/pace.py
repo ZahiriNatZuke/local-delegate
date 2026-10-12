@@ -90,11 +90,11 @@ class References:
     def __init__(
         self, *, window: int = WINDOW, minimum: int = MINIMUM, by_spans: bool = False
     ) -> None:
-        self._tam = window
+        self._size = window
         self._minimum = minimum
         self._by_spans = by_spans
         self._windows: dict[tuple[str, str | None], deque[float]] = defaultdict(
-            lambda: deque(maxlen=self._tam)
+            lambda: deque(maxlen=self._size)
         )
         self._lock = threading.Lock()
 
@@ -281,7 +281,7 @@ def compute_slowness(
 ) -> list[Event]:
     """Aplica la regla de REQ-025 a una serie y devuelve los eventos ordenados con su referencia.
 
-    Cada evento de entrada es un dict con `ts` (numero; orden temporal), `modelo`, `tok_s`,
+    Cada evento de entrada es un dict con `ts` (numero; orden temporal), `model`, `tok_s`,
     `tokens_out`, `ok` (opcional, por defecto cierto) y, si `by_spans`, `tokens_in`. La salida
     son copias en orden temporal con `ref`, `pace_rel` y `slow` **solo** cuando hay referencia
     (con menos de `minimum` muestras se omiten, nunca valen 0).
@@ -297,9 +297,9 @@ def compute_slowness(
         if not eligible:
             continue
         result = references.evaluate(
-            event["modelo"], event["tok_s"], event.get("tokens_in"), threshold=threshold
+            event["model"], event["tok_s"], event.get("tokens_in"), threshold=threshold
         )
         if result is not None:
             event["ref"], event["pace_rel"], event["slow"] = result
-        references.add(event["modelo"], event["tok_s"], event.get("tokens_in"))
+        references.add(event["model"], event["tok_s"], event.get("tokens_in"))
     return sorted_ones

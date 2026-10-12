@@ -17,8 +17,11 @@ fuente adicional.
 ```
 
 Cuando responde un **modelo de respaldo**, el evento suma `model_requested` (el que se pidió),
-`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`modelo`, `capacidad_o_carga`,
-`enfriamiento`); un evento fallido lleva `error_class` (`configuracion`, `modelo`…). `model` sigue
+`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`model`, `capacity_or_load`,
+`cooldown`); un evento fallido lleva `error_class` (`configuration`, `model`…). Hasta la 0.34.0
+esos valores se escribían en español (`modelo`, `capacidad_o_carga`, `enfriamiento`,
+`configuracion`…); el panel, `local_status` y los scripts de medición los siguen leyendo y los
+cuentan junto a los nuevos. `model` sigue
 siendo el que **respondió** y `chunks` cuenta también las llamadas del respaldo, así que los tokens se
 atribuyen a quien los gastó y un evento sin salto es idéntico a los de antes. El panel marca esas
 filas con **↪** y la tarjeta de delegaciones dice cuántas tuvieron salto: una medición que coincida
@@ -44,10 +47,11 @@ con saltos pudo contaminarla un swap.
   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
   lo traen y se reconocen por el nombre de la tool.
-- `fallo_conexion` (solo si la delegación no pudo conectar con el backend): la **causa** del
-  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `rechazada`,
-  `timeout_conexion`, `credencial`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
-  valiendo `connect_error` y `error_class` no cambia, así que un lector viejo del log no se rompe.
+- `connection_failure` (solo si la delegación no pudo conectar con el backend): la **causa** del
+  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `refused`,
+  `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
+  valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
+  español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
 - `tool_use_id` (solo si el cliente lo manda; Claude Code sí, Codex y los scripts no): el id de la
   llamada en el transcript, leído de `_meta["claudecode/toolUseId"]`. Es la clave exacta para
   cruzar la línea con el transcript.
@@ -547,7 +551,8 @@ vuelo, y el siguiente sondeo sale 2 s **después de que termine** el anterior. A
 
 El `title` del badge es el detalle de la causa (la tabla completa de causas y qué hacer con cada
 una está en [Troubleshooting](Troubleshooting.md)). Las etiquetas y los detalles los redacta
-**solo** `fallos.py`, en el daemon; el panel los recibe ya escritos.
+**solo** `failures.py`, en el daemon; el panel los recibe ya escritos (campos `cause`, `label` y
+`detail` de `/api/backend`).
 
 **Hacen falta dos sondeos fallidos seguidos para pasar a «caído».** Un fallo suelto tras uno bueno
 **conserva** lo que se pintaba —badge en verde, filas con su último estado y sin atenuar— y el
@@ -673,7 +678,7 @@ Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros
 común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada
 aviso y cada bloqueo llevan un identificador; cuando el hook rechaza una lectura deja una nota con
 ese identificador y una **huella** de la ruta —nunca la ruta—, y la tool que recibe ese mismo
-`path` se queda con él en su evento (`bloqueo_id`). El identificador no viaja por el agente a
+`path` se queda con él en su evento (`block_id`; `bloqueo_id` hasta la 0.34.0). El identificador no viaja por el agente a
 propósito: pedirle que lo pase sería depender de que obedezca, que es justo lo que se quiere medir.
 
 Quien responde la pregunta es `scripts/medir_adopcion.py`, que cruza los dos registros sin trabajo

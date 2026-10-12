@@ -27,7 +27,7 @@ from test_respaldo import (
 )
 
 from local_delegate import enfriamiento, server
-from local_delegate.fallos import Clase
+from local_delegate.failures import FailureClass
 
 CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_class")
 
@@ -46,7 +46,7 @@ def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config,
     assert evento["model"] == CODIGO, "`model` es el que respondió"
     assert evento["model_requested"] == LARGO
     assert evento["fallback_reason"] == "http_500"
-    assert evento["fallback_class"] == "modelo"
+    assert evento["fallback_class"] == "model"
     assert evento["chunks"] == 2, "la llamada del respaldo también cuenta"
     assert "error_class" not in evento
 
@@ -92,7 +92,7 @@ def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(recargar_conf
     server.local_classify(text="hola", labels=["a", "b"])
 
     evento = _ultimo_evento(tmp_path)
-    assert evento["error_class"] == "configuracion"
+    assert evento["error_class"] == "configuration"
     assert evento["error"] == "config_max_tokens"
     assert "model_requested" not in evento
 
@@ -108,7 +108,7 @@ def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp
     evento = _ultimo_evento(tmp_path)
     assert evento["model"] == LARGO
     assert evento["model_requested"] == CODIGO
-    assert evento["fallback_class"] == "enfriamiento"
+    assert evento["fallback_class"] == "cooldown"
     assert "chunks" not in evento, "el modelo enfriado no se llamó: una sola llamada"
 
 
@@ -124,7 +124,7 @@ def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_pat
 
     evento = _ultimo_evento(tmp_path)
     assert evento["model"] == LARGO and evento["model_requested"] == CODIGO
-    assert evento["fallback_class"] == "modelo"
+    assert evento["fallback_class"] == "model"
 
 
 # --- local_status ------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ def status_sin_red(monkeypatch):
     monkeypatch.setattr(
         server,
         "sondear_backend",
-        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
+        lambda: server.EstadoBackend(False, [], True, "refused", "sin red en los tests", None),
     )
     for nombre in ("_vram_info", "_ram_info", "_llamaswap_groups"):
         monkeypatch.setattr(server, nombre, lambda: None)
@@ -157,7 +157,7 @@ def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
     recargar_config()
     estado = enfriamiento.desde_config()
     for _ in range(3):
-        estado.registrar_fallo(CODIGO, Clase.MODELO)
+        estado.registrar_fallo(CODIGO, FailureClass.MODEL)
 
     linea = _linea_de(server.local_status(), CODIGO)
 
@@ -170,7 +170,7 @@ def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path, 
     recargar_config()
     vencido = {CODIGO: {"fallos": 0, "espera_s": 120.0, "hasta": time.time() - 1, "reentradas": 1}}
     _estado_fichero(tmp_path).write_text(json.dumps(vencido), encoding="utf-8")
-    enfriamiento.desde_config().registrar_fallo(CODIGO, Clase.MODELO)
+    enfriamiento.desde_config().registrar_fallo(CODIGO, FailureClass.MODEL)
 
     linea = _linea_de(server.local_status(), CODIGO)
 

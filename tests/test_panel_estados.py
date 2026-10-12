@@ -46,7 +46,7 @@ def _globales() -> str:
     for funcion in ("vistaInicial", "turnWords"):
         if f"function {funcion}(" in metrics.HTML:
             partes.append(_extraer(f"function {funcion}("))
-    for nombre in ("CAUSAS_CONTESTA", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
+    for nombre in ("CAUSES_ANSWERING", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
         if f"const {nombre} = {{" in metrics.HTML:
             partes.append(_const(nombre))
     return "\n".join(partes)
@@ -74,9 +74,9 @@ BUENO = {
         {"id": "qwen36-35b-a3b", "status": "unloaded"},
     ],
     "models_stale": False,
-    "causa": None,
-    "etiqueta": None,
-    "detalle": None,
+    "cause": None,
+    "label": None,
+    "detail": None,
 }
 FALLIDO = {
     "available": False,
@@ -84,9 +84,9 @@ FALLIDO = {
     "running_ok": False,
     "models": [{**m, "status": None} for m in BUENO["models"]],
     "models_stale": True,
-    "causa": "dns",
-    "etiqueta": "no resuelve",
-    "detalle": "no se resuelve el nombre pc.lan:9292 (¿VPN o DNS?)",
+    "cause": "dns",
+    "label": "no resuelve",
+    "detail": "no se resuelve el nombre pc.lan:9292 (¿VPN o DNS?)",
 }
 CATALOGO = [
     {"role": "mechanical", "label": "mecánico", "model": "gemma4-26b-a4b"},
@@ -97,7 +97,7 @@ CATALOGO = [
 
 
 def _fallido(causa: str, etiqueta: str, detalle: str) -> dict:
-    return {**FALLIDO, "causa": causa, "etiqueta": etiqueta, "detalle": detalle}
+    return {**FALLIDO, "cause": causa, "label": etiqueta, "detail": detalle}
 
 
 # --- estadoVisible: dos sondeos fallidos antes de «caído» (REQ-028) ----------------------------
@@ -175,10 +175,10 @@ def _badge(tmp_path, secuencia: list[dict]) -> dict:
 
 
 def test_el_badge_dice_la_causa(tmp_path):
-    """Control (b). Mutante 1: `credencial` como caída → falla `clase == "warn"`. Mutante 2:
+    """Control (b). Mutante 1: `credential` como caída → falla `clase == "warn"`. Mutante 2:
     `title` fijo → falla `title == detalle`."""
     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
-    cred = _fallido("credencial", "sin acceso", det_401)
+    cred = _fallido("credential", "sin acceso", det_401)
     b = _badge(tmp_path, [cred, cred])
     clase, texto, title = b["clase"], b["texto"], b["title"]
     assert clase == "warn"
@@ -193,17 +193,29 @@ def test_el_badge_dice_la_causa(tmp_path):
     b = _badge(tmp_path, [FALLIDO, FALLIDO])
     assert b["texto"] == "caído · no resuelve"
     assert b["clase"] == "down"
-    assert b["title"] == FALLIDO["detalle"]
+    assert b["title"] == FALLIDO["detail"]
 
     b = _badge(tmp_path, [BUENO])
     assert (b["texto"], b["clase"], b["title"]) == ("conectado", "up", "http://pc.lan:9292/v1")
+
+
+def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
+    """REQ-009: el diccionario de causas del JS acepta el valor viejo y el nuevo, con la tabla que
+    inyecta el servidor (`LEGACY_VALUES.connectionCause`), no con una copia propia."""
+    det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
+    viejo = _fallido("credencial", "sin acceso", det_401)
+    b = _badge(tmp_path, [viejo, viejo])
+    assert (b["clase"], b["texto"]) == ("warn", "sin acceso")
+    assert "credencial" not in re.sub(
+        r"//[^\n]*", "", metrics.HTML.split("CAUSES_ANSWERING", 1)[1][:200]
+    )
 
 
 def test_el_badge_avisa_del_ultimo_sondeo_sin_dejar_de_decir_conectado(tmp_path):
     """REQ-028: un fallo tras uno bueno conserva «conectado» y lo cuenta en el `title`."""
     b = _badge(tmp_path, [BUENO, FALLIDO])
     assert b["texto"] == "conectado"
-    assert "último sondeo: " + FALLIDO["detalle"] in b["title"]
+    assert "último sondeo: " + FALLIDO["detail"] in b["title"]
 
     b = _badge(tmp_path, [FALLIDO])
     assert b["texto"] == "comprobando…"
@@ -418,11 +430,11 @@ def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
         tmp_path,
         funciones,
         """
-        renderBackendStats({available:false, causa:'dns', etiqueta:'no resuelve',
-                            detalle:'no se resuelve el nombre pc.lan (¿VPN o DNS?)'});
+        renderBackendStats({available:false, cause:'dns', label:'no resuelve',
+                            detail:'no se resuelve el nombre pc.lan (¿VPN o DNS?)'});
         const dns = _els.backendStats.innerHTML;
-        renderBackendStats({available:false, causa:'http_error', etiqueta:'responde con error',
-                            detalle:'pc.lan responde HTTP 404', status_http:404});
+        renderBackendStats({available:false, cause:'http_error', label:'responde con error',
+                            detail:'pc.lan responde HTTP 404', status_http:404});
         const e404 = _els.backendStats.innerHTML;
         salida(({dns, e404}));
         """,
@@ -624,7 +636,7 @@ def test_ultima_delegacion_cuando_nada_corre(tmp_path):
 
 
 def test_el_js_no_redacta_las_etiquetas_de_las_causas():
-    """REQ-011: la etiqueta corta llega del daemon (`fallos.py`); el panel no tiene su copia."""
+    """REQ-011: la etiqueta corta llega del daemon (`failures.py`); el panel no tiene su copia."""
     for etiqueta in ("no resuelve", "nadie escucha", "sin acceso", "responde con error"):
         assert not re.search(rf"['\"]{etiqueta}['\"]", metrics.HTML), etiqueta
 

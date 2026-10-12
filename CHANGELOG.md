@@ -40,6 +40,18 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - **Los hooks dicen qué nombres viejos leyeron.** Con la telemetría encendida, cada evento lleva
   `deprecated_names` cuando la invocación leyó una variable o el interruptor con su nombre viejo, y
   el check «nombres obsoletos» de `doctor` lo avisa mirando los últimos 7 días del fichero.
+- **El log de uso (`usage-*.jsonl`) escribe sus claves y valores de fallo en inglés:**
+  `block_id` (antes `bloqueo_id`), `sections` (antes `secciones`) y `connection_failure` (antes
+  `fallo_conexion`, con las causas `refused`, `no_route`, `connect_timeout`, `credential`,
+  `no_response`, `invalid_response`, `invalid_url`, `transport` y `unknown`). Las clases de
+  `error_class`, `fallback_class` y `affinity_dropped_class` pasan a `request`,
+  `capacity_or_load`, `read_timeout`, `configuration`, `model`, `unclassified` y `cooldown`, y
+  las de los eventos de enfriamiento también. El panel, `local_status`, `doctor` y los scripts de
+  medición (`medir_enfriamiento.py` incluido, con el mismo nombre y las mismas opciones) leen los
+  dos formatos, también mezclados en el mismo fichero, y los cuentan juntos.
+- **`/api/backend`, `/api/status` y `/api/backend/stats` devuelven la causa como `cause`, `label`
+  y `detail`** (antes `causa`, `etiqueta` y `detalle`). `doctor` entiende también la respuesta de
+  un daemon de la 0.34.0.
 
 ## [0.34.0] - 2026-10-08
 

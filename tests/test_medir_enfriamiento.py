@@ -412,3 +412,53 @@ def test_excluir_compara_instantes_y_no_cadenas(logs):
     m = logs.medir(excluidos=[("2026-09-20T01:20:05.255Z", "2026-09-20T01:22:31.544Z")])
     assert m["excluded_manual"]["usage_rows"] == 1
     assert m["fallos_que_cuentan"] == 0
+
+
+# --- Formato viejo, nuevo y mezclado (REQ-007, ola A3) --------------------------------------------
+
+_VIEJA_A_NUEVA = {
+    "modelo": "model",
+    "timeout_lectura": "read_timeout",
+    "capacidad_o_carga": "capacity_or_load",
+    "peticion": "request",
+    "enfriamiento": "cooldown",
+}
+
+
+def _escenario(logs: Logs, formato: str) -> dict:
+    """El mismo tramo de P-4 escrito con las clases viejas, las nuevas o mitad y mitad."""
+
+    def clase(vieja: str, i: int) -> str:
+        if formato == "viejo" or (formato == "mezclado" and i % 2 == 0):
+            return vieja
+        return _VIEJA_A_NUEVA[vieja]
+
+    for i, vieja in enumerate(["modelo"] * 4 + ["timeout_lectura"] * 4 + ["capacidad_o_carga"] * 3):
+        logs.fallos(1, clase=clase(vieja, i))
+    for i in range(4):
+        logs.usos.append(
+            {"ts": _ts(20), "tool": "local_summarize", "fallback_class": clase("enfriamiento", i)}
+        )
+        logs.usos.append(
+            {"ts": _ts(21), "tool": "local_summarize", "fallback_class": clase("modelo", i)}
+        )
+    for dia in range(20, 26):
+        vieja = "timeout_lectura" if dia < 23 else "modelo"
+        esperas = (240.0,) if dia < 22 else ()
+        logs.episodio(dia, modelo=f"m{dia}", clase=clase(vieja, dia), esperas_reentrada=esperas)
+    return logs.medir()
+
+
+def test_el_informe_es_el_mismo_con_clases_viejas_nuevas_y_mezcladas(tmp_path, monkeypatch):
+    medidas = {}
+    for formato in ("viejo", "nuevo", "mezclado"):
+        directorio = tmp_path / formato
+        monkeypatch.setattr(config, "LOG_DIR", directorio)
+        medidas[formato] = _escenario(Logs(directorio), formato)
+        medidas[formato].pop("excluidos", None)
+    # Guarda: el escenario llega a contar algo en cada medida que depende de la clase.
+    assert medidas["viejo"]["fallos_que_cuentan"] == 12
+    assert medidas["viejo"]["episodios_por_timeout"] == 3
+    assert medidas["viejo"]["operaciones_desviadas"] == 4
+    assert medidas["nuevo"] == medidas["viejo"]
+    assert medidas["mezclado"] == medidas["viejo"]
