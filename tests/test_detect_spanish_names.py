@@ -85,7 +85,7 @@ def test_js_tokenizer_finds_the_five_panel_control_names():
     assert found is not None, "no se encontró el HTML del panel en metrics.py"
     html, _line = found
     scripts = re.findall(
-        r"<script(?![^>]*src=)[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE
+        r"<script(?![^>]*src=)[^>]*>(.*?)</script[^>]*>", html, re.DOTALL | re.IGNORECASE
     )
     declared = {name for name, _l in det.js_declared_names(det.tokenize_js(scripts[-1]))}
     missing = [n for n in JS_CONTROL_NAMES if n not in declared]
@@ -187,7 +187,11 @@ def test_change_exception_list_exists_and_parses():
     path = ROOT / ".sdd" / "changes" / "english-names-bilingual-output" / "rename-exceptions.md"
     if not path.is_file():
         pytest.skip("la carpeta del cambio no está en este árbol")
-    assert det.load_exceptions(path) == []
+    entries = det.load_exceptions(path)
+    # Tras A0 solo hay excepciones para los datos de prueba del propio detector; cada ola añade
+    # las suyas con su motivo.
+    assert entries, "la lista debe parsear al menos las filas de los datos del detector"
+    assert all(e.reason.strip() for e in entries), "toda excepción lleva su motivo"
 
 
 def test_detector_walks_a_tree_and_sees_each_category(tmp_path):

@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import functools
 import io
 import json
 import re
@@ -142,16 +143,14 @@ def is_spanish(name: str, lexicon: Lexicon) -> bool:
     return any(w not in lexicon.function_words for w in words) or len(words) >= 2
 
 
-_DEFAULT_LEXICON: Lexicon | None = None
+@functools.cache
+def _default_lexicon() -> Lexicon:
+    return Lexicon.load()
 
 
 def detect(name: str) -> bool:
     """`is_spanish` con el léxico del repo."""
-    global _DEFAULT_LEXICON
-    lexicon = _DEFAULT_LEXICON
-    if lexicon is None:
-        lexicon = _DEFAULT_LEXICON = Lexicon.load()
-    return is_spanish(name, lexicon)
+    return is_spanish(name, _default_lexicon())
 
 
 # --- Tokenizador de JS (sin dependencias) -------------------------------------
@@ -546,7 +545,7 @@ def scan_panel(root: Path, scan: Scan) -> None:
     for m in re.finditer(r"""\bid\s*=\s*["']([^"']+)["']""", html):
         scan.add("dom_id", rel, base_line + html.count("\n", 0, m.start()), m.group(1))
     for m in re.finditer(
-        r"<script(?![^>]*src=)[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE
+        r"<script(?![^>]*src=)[^>]*>(.*?)</script[^>]*>", html, re.DOTALL | re.IGNORECASE
     ):
         offset = base_line + html.count("\n", 0, m.start(1)) - 1
         tokens = tokenize_js(m.group(1))
