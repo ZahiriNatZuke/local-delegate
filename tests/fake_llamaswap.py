@@ -152,9 +152,9 @@ def real_llamaswap_pid(port: int = 9292) -> int | None:
 
 def _count(text: str) -> dict[str, int]:
     return {
-        "recargando": text.count(_RELOADING_PHRASE),
-        "recargada": text.count(_RELOADED_PHRASE),
-        "rechazo": sum(text.count(f) for f in _REFUSAL_PHRASES),
+        "reloading": text.count(_RELOADING_PHRASE),
+        "reloaded": text.count(_RELOADED_PHRASE),
+        "refusal": sum(text.count(f) for f in _REFUSAL_PHRASES),
     }
 
 
@@ -418,7 +418,7 @@ class FakeLlamaSwap:
         wait: float = 45.0,
         no_watchdog: float = 10.0,
     ) -> str:
-        """Ejecuta `escribir()` y dice cuál de las cuatro salidas de REQ-034 ocurrió.
+        """Ejecuta `write()` y dice cuál de las cuatro salidas de REQ-034 ocurrió.
 
         Mira el historial de logs antes y después de escribir: un `/api/events` abierto se cierra
         cuando llama-swap reinicia su servidor, y el «configuration reloaded» lo escribe el nuevo,
@@ -438,14 +438,14 @@ class FakeLlamaSwap:
             except httpx2.TransportError:
                 text = ""  # el servidor viejo ya cerró y el nuevo aún no escucha
             now = _count(text) if text else before
-            if now["rechazo"] > before["rechazo"]:
+            if now["refusal"] > before["refusal"]:
                 self.reload_detail = next(
                     (x for x in text.splitlines() if any(f in x for f in _REFUSAL_PHRASES)), ""
                 )
                 return REFUSAL
-            if now["recargada"] > before["recargada"]:
+            if now["reloaded"] > before["reloaded"]:
                 return SURCHARGE
-            if now["recargando"] == before["recargando"] and elapsed >= no_watchdog:
+            if now["reloading"] == before["reloading"] and elapsed >= no_watchdog:
                 return NOT_WATCHED
             time.sleep(0.5)
         return UNRESOLVED

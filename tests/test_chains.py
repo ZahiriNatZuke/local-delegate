@@ -1,7 +1,7 @@
 """Tarea 27 de F3 y T12 de `daemon-reparte-el-backend`: las cadenas de respaldo por rol.
 
 Lo que se fija arriba es la RESOLUCIÓN de la cadena con la configuración vigente (REQ-003, REQ-004 y
-REQ-014 de F3); el salto en sí se prueba en `test_respaldo.py` y en el bloque de T12 de abajo. Una
+REQ-014 de F3); el salto en sí se prueba en `test_fallback.py` y en el bloque de T12 de abajo. Una
 cadena es una lista ordenada de pasos, ya sin repetidos, sin el propio modelo principal y solo con
 modelos del catálogo de texto o el paso `loaded`.
 

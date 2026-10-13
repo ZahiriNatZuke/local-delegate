@@ -19,7 +19,7 @@ import backend_mock
 import httpx2
 import pytest
 from backend_mock import chat_response, llama_timings
-from test_respaldo import CODIGO, LARGO, _fallo, _texto
+from test_fallback import CODE, LONG, _failure, _text
 
 from local_delegate import config, pace, server
 from local_delegate.web import sysinfo
@@ -43,7 +43,7 @@ SEED_TOOL = "seed"
 
 
 def _seed_log(
-    tmp_path: Path, model: str = LARGO, count: int = 20, speeds: tuple[float, float] = (40.0, 41.0)
+    tmp_path: Path, model: str = LONG, count: int = 20, speeds: tuple[float, float] = (40.0, 41.0)
 ) -> None:
     """`count` eventos previos de `model`, mitad a cada velocidad de `speeds` (mediana: la media).
 
@@ -127,11 +127,11 @@ def test_a_slow_call_is_told_apart_from_a_wait(reload_config, tmp_path, monkeypa
     monkeypatch.setattr(server, "time", clock)
     _slow_answer(clock)
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
     assert line.get("pace_rel") == 0.37
-    assert line["model"] == LARGO and line["backend"] == "local"
+    assert line["model"] == LONG and line["backend"] == "local"
     assert line["inference_ms"] == 10_500
     assert abs(line["wait_ms"] - 47_000) < 1_000, line["wait_ms"]
     assert line["tok_s"] == 15.0
@@ -147,9 +147,9 @@ def test_the_event_feeds_the_window_after_being_measured(reload_config, tmp_path
     _seed_log(tmp_path)
     _slow_answer()
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
-    window = server._pace_references().window(LARGO)
+    window = server._pace_references().window(LONG)
     assert len(window) == 21
     assert window[-1] == 15.0
 
@@ -164,7 +164,7 @@ def test_without_timings_no_slowness_field(reload_config, tmp_path, free_ram):
     _seed_log(tmp_path)
     backend_mock.post(URL).mock(return_value=chat_response("resumen", tokens_out=150))
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
     assert line.get("ok") is True, "guarda: la operación se registró"
@@ -181,7 +181,7 @@ def test_incomplete_timings_omit_what_depends_on_them(reload_config, tmp_path):
         return_value=chat_response("resumen", timings=timings, tokens_out=150)
     )
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
     assert line.get("ok") is True
@@ -199,7 +199,7 @@ def test_remote_backend_slow_without_free_ram(reload_config, tmp_path, free_ram)
     _seed_log(tmp_path)
     _slow_answer()
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
     assert line["backend"] == "remote"
@@ -222,22 +222,22 @@ def test_chunked_operation_sums_every_real_call_including_a_hop(reload_config, t
     long_ok = chat_response("uno", timings=llama_timings(prompt_ms=20.0, predicted_ms=100.0))
     code_ok = chat_response("otro", timings=llama_timings(prompt_ms=10.0, predicted_ms=50.0))
     requested: list[str] = []
-    long_answers = [long_ok, _fallo(500)]
+    long_answers = [long_ok, _failure(500)]
 
     def respond(request):
         model = json.loads(request.content)["model"]
         requested.append(model)
-        if model == LARGO:
+        if model == LONG:
             return long_answers.pop(0) if len(long_answers) > 1 else long_answers[0]
-        assert model == CODIGO, model
+        assert model == CODE, model
         return code_ok
 
     backend_mock.post(URL).mock(side_effect=respond)
 
-    server.local_translate(target_lang="inglés", text=_texto(12_000))
+    server.local_translate(target_lang="inglés", text=_text(12_000))
 
     line = _own_event(tmp_path)
-    assert requested == [LARGO, LARGO, CODIGO, CODIGO, CODIGO], "guarda: hubo salto"
+    assert requested == [LONG, LONG, CODE, CODE, CODE], "guarda: hubo salto"
     assert line["chunks"] == 5
     assert line["inference_ms"] == 300
 
@@ -259,14 +259,14 @@ def test_a_useless_200_counts_its_inference(reload_config, tmp_path):
     code_ok = chat_response("resumen", timings=llama_timings(prompt_ms=10.0, predicted_ms=40.0))
 
     def respond(request):
-        return useless if json.loads(request.content)["model"] == LARGO else code_ok
+        return useless if json.loads(request.content)["model"] == LONG else code_ok
 
     backend_mock.post(URL).mock(side_effect=respond)
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
-    assert line["model_requested"] == LARGO and line["model"] == CODIGO, "guarda: hubo salto"
+    assert line["model_requested"] == LONG and line["model"] == CODE, "guarda: hubo salto"
     assert line["inference_ms"] == 150
 
 
@@ -298,7 +298,7 @@ def _useless_long_then_fast_code() -> list[str]:
     def respond(request):
         model = json.loads(request.content)["model"]
         requested.append(model)
-        return useless if model == LARGO else code_ok
+        return useless if model == LONG else code_ok
 
     backend_mock.post(URL).mock(side_effect=respond)
     return requested
@@ -310,13 +310,13 @@ def test_hop_pace_is_the_answering_models(reload_config, tmp_path, free_ram):
     `assert line.get("pace_rel") == 1.0` (y saldría `slow: true` sin que el de código fuera lento).
     """
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
-    _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
+    _seed_log(tmp_path, model=CODE, speeds=(99.0, 101.0))
     requested = _useless_long_then_fast_code()
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
-    assert requested == [LARGO, CODIGO] and line["model"] == CODIGO, "guarda: hubo salto"
+    assert requested == [LONG, CODE] and line["model"] == CODE, "guarda: hubo salto"
     assert line.get("pace_rel") == 1.0
     assert line.get("slow") is not True
     assert "free_ram_mb" not in line
@@ -329,15 +329,15 @@ def test_hop_does_not_pollute_the_fallback_window(reload_config, tmp_path, free_
     """Mutante (b): sumar los dos modelos → la ventana del de código recibe ~41 → falla
     `assert window[-1] == 100.0`."""
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
-    _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
+    _seed_log(tmp_path, model=CODE, speeds=(99.0, 101.0))
     _useless_long_then_fast_code()
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
-    window = server._pace_references().window(CODIGO)
+    window = server._pace_references().window(CODE)
     assert len(window) == 21, "guarda: el evento entró en la ventana"
     assert window[-1] == 100.0
-    assert server._pace_references().window(LARGO) == [], "el pedido no respondió: no se registra"
+    assert server._pace_references().window(LONG) == [], "el pedido no respondió: no se registra"
 
 
 @backend_mock.mock
@@ -350,7 +350,7 @@ def test_chunked_hop_at_the_end_measures_only_the_answering_model(
     `assert line.get("pace_rel") == 1.0`.
     """
     reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
-    _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
+    _seed_log(tmp_path, model=CODE, speeds=(99.0, 101.0))
     long_ok = chat_response(
         "uno",
         timings=llama_timings(prompt_ms=100.0, predicted_n=400, predicted_ms=10_000.0),
@@ -361,23 +361,23 @@ def test_chunked_hop_at_the_end_measures_only_the_answering_model(
         timings=llama_timings(prompt_ms=50.0, predicted_n=200, predicted_ms=2_000.0),
         tokens_out=200,
     )
-    long_answers = [long_ok, long_ok, long_ok, _fallo(500)]
+    long_answers = [long_ok, long_ok, long_ok, _failure(500)]
     requested: list[str] = []
 
     def respond(request):
         model = json.loads(request.content)["model"]
         requested.append(model)
-        if model == LARGO:
+        if model == LONG:
             return long_answers.pop(0) if len(long_answers) > 1 else long_answers[0]
         return code_ok
 
     backend_mock.post(URL).mock(side_effect=respond)
 
-    server.local_translate(target_lang="inglés", text=_texto(12_000))
+    server.local_translate(target_lang="inglés", text=_text(12_000))
 
     line = _own_event(tmp_path)
-    assert requested == [LARGO, LARGO, LARGO, LARGO, CODIGO], "guarda: saltó en el último trozo"
-    assert line["model"] == CODIGO
+    assert requested == [LONG, LONG, LONG, LONG, CODE], "guarda: saltó en el último trozo"
+    assert line["model"] == CODE
     assert line.get("pace_rel") == 1.0
     assert line.get("slow") is not True
     assert line["inference_ms"] == 3 * 10_100 + 2_050
@@ -400,11 +400,11 @@ def test_fixed_log_reseeds_when_usage_log_changes(tmp_path, monkeypatch):
     second.write_text("", encoding="utf-8")
 
     monkeypatch.setattr(config, "USAGE_LOG", first)
-    assert len(server._pace_references().window(LARGO)) == 20, "guarda: el log fijo sembró"
+    assert len(server._pace_references().window(LONG)) == 20, "guarda: el log fijo sembró"
 
     monkeypatch.setattr(config, "USAGE_LOG", second)
     references = server._pace_references()
-    assert references.window(LARGO) == []
+    assert references.window(LONG) == []
 
 
 # --- Medir antes de registrar -----------------------------------------------------------------
@@ -421,13 +421,13 @@ def test_measured_before_recorded(reload_config, tmp_path, free_ram):
     _seed_log(tmp_path, count=9)
     _slow_answer()
 
-    server.local_summarize(text=_texto(10_000))
+    server.local_summarize(text=_text(10_000))
 
     line = _own_event(tmp_path)
     assert line.get("tok_s") == 15.0, "guarda: hubo ritmo que medir"
     assert "pace_rel" not in line
     assert "slow" not in line
-    assert len(server._pace_references().window(LARGO)) == 10, "y después sí entra"
+    assert len(server._pace_references().window(LONG)) == 10, "y después sí entra"
 
 
 # --- REQ-028: observar no rompe la tool -------------------------------------------------------
@@ -450,7 +450,7 @@ def test_a_failing_measure_does_not_break_the_tool(reload_config, tmp_path, monk
     monkeypatch.setattr(pace.References, "measure", boom)
 
     try:
-        server.local_summarize(text=_texto(10_000))
+        server.local_summarize(text=_text(10_000))
         line = _own_event(tmp_path)
     except Exception:
         line = {}

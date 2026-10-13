@@ -107,11 +107,11 @@ def _key_shaped(text: str) -> list[str]:
 
     for n, line in enumerate(text.splitlines(), 1):
         body = line.lstrip("\ufeff")
-        sangria = len(body) - len(body.lstrip(" "))
+        indent = len(body) - len(body.lstrip(" "))
         clean = body.strip()
         if sensitive_list is not None:
             item = re.match(r"^#?\s*-\s+(.*)$", clean)
-            if item and sangria > sensitive_list:
+            if item and indent > sensitive_list:
                 if not _FAKE.match(value(item.group(1))):
                     found_ones.append(f"línea {n}: elemento de una lista de claves")
                 continue
@@ -120,16 +120,16 @@ def _key_shaped(text: str) -> list[str]:
         if _SENSIBLE.search(body) and not clean.startswith("#") and ":" in clean:
             key, _, rest = clean.partition(":")
             if not value(rest):
-                sensitive_list = sangria
+                sensitive_list = indent
             elif _SENSIBLE.search(key) and not _FAKE.match(value(rest)):
                 found_ones.append(f"línea {n}: valor de `{key.strip()}`")
-        for patron, name in (
+        for pattern, name in (
             (r"\bsk-[A-Za-z0-9_-]{8,}", "sk-…"),
             (r"(?i)\bbearer\s+(?!clave-falsa-)\S+", "Bearer …"),
             (r"--api-key[ =](?!clave-falsa-)\S+", "--api-key …"),
             (r"(?<![\w.-])[A-Za-z0-9_+/=]{32,}(?![\w.-])", "token largo"),
         ):
-            if re.search(patron, body):
+            if re.search(pattern, body):
                 found_ones.append(f"línea {n}: {name}")
     return found_ones
 
@@ -956,7 +956,7 @@ def test_fixtures_keep_their_line_ending():
 
 
 def test_restore_dry_run_masks_key_lists_and_env_tokens(tmp_path, capsys):
-    actual = _writes(
+    current = _writes(
         tmp_path,
         b'apiKeys:\n  - "clave-falsa-actual-1"\n  - "clave-falsa-actual-2"\nmodels:\n  a:\n'
         b'    cmd: x --model a.gguf\n    env:\n      - "HF_TOKEN=clave-falsa-hf-actual"\n'
@@ -968,7 +968,7 @@ def test_restore_dry_run_masks_key_lists_and_env_tokens(tmp_path, capsys):
         b'    env:\n      - "HF_TOKEN=clave-falsa-hf-copia"\n    ttl: 90\n',
         "copia.bak",
     )
-    rc = _residency("--config", str(actual), "--restore", str(copy), "--dry-run")
+    rc = _residency("--config", str(current), "--restore", str(copy), "--dry-run")
     output = capsys.readouterr().out
     assert "clave-falsa" not in output
     assert rc == 0

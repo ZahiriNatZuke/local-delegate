@@ -1,0 +1,21 @@
+refactor(rename): nombres en inglés en test_recalcular, test_respaldo, test_transcripts y los tests de llama-swap (ola A9c, lote 1)
+
+Renombra a inglés los nombres de los tests del recálculo del coste, del
+salto al respaldo y de la lectura de transcripts: 250 filas del mapping
+aprobado. Los módulos pasan a test_recompute.py, test_recompute_legacy.py
+y test_fallback.py, con sus test_*; los constructores de transcripts
+(peticion → request_entry, resultado → result_entry, principal →
+main_transcript, subagente → subagent, escribir → write_jsonl…), los
+ayudantes del respaldo (_enfriar → _cool_down, _ultimo_evento →
+_last_event, _fallo → _failure…) y sus variables locales.
+
+Las claves propias de los tests de llama-swap pasan a inglés
+(recargando → reloading, rechazo → refusal, durante → during,
+estado → status…). No las lee el producto.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2572.
+
+Por consecuencia cambian los imports y kwargs de test_cli_renamed_names.py,
+test_quota.py, test_fallback_observability.py y test_slowness.py, y la
+cita por ruta del docstring de test_chains.py.

@@ -1,0 +1,13 @@
+sha256 antes fb2e49f65c302301 / con mutante afe60b28950f33b8
+        assert d.kind == "subagent"
+        assert n == KNOWN_N
+>       assert expiries == 1
+E       assert 2 == 1
+        assert d.kind == "main"
+        assert n == 1
+>       assert expiries == 0
+E       assert 1 == 0
+FAILED tests/test_transcripts.py::test_known_n_and_expiries - assert 2 == 1
+FAILED tests/test_transcripts.py::test_the_ttl_depends_on_the_thread - assert...
+2 failed, 5 deselected in 2.91s
+sha256 restaurado fb2e49f65c302301

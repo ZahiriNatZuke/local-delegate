@@ -11,12 +11,12 @@ from datetime import timedelta
 
 from test_transcripts import (
     BASE,
-    escribir,
-    peticion,
-    principal,
-    sintetica,
-    subagente,
+    main_transcript,
+    request_entry,
+    subagent,
+    synthetic,
     ts,
+    write_jsonl,
 )
 
 from local_delegate import quota, recompute, transcripts
@@ -103,7 +103,9 @@ def test_discards(tmp_path):
 
     # Una sesión que no está en el registro (`claude -p`) pidió dentro del intervalo.
     claude = tmp_path / "claude"
-    escribir(principal(claude, sesion="ajena"), [peticion(50, "x1", sesion="ajena")])
+    write_jsonl(
+        main_transcript(claude, session="ajena"), [request_entry(50, "x1", session="ajena")]
+    )
     requests = list(transcripts.read(claude / "projects").requests.values())
     points, _, d = points_of([row(0, "A", 10, 1.0), row(100, "A", 40, 2.0)], requests)
     assert d["five_hour"].get("contaminated") == 1
@@ -148,7 +150,7 @@ def test_sanitize_and_corrupt_lines(tmp_path):
 
     # Una línea rota en un transcript: se salta y cuenta, y el comando sigue.
     claude, log = tmp_path / "claude", tmp_path / "log"
-    escribir(principal(claude), [peticion(0, "m0"), '{"type": "assistant", roto'])
+    write_jsonl(main_transcript(claude), [request_entry(0, "m0"), '{"type": "assistant", roto'])
     escaped = None
     try:
         recompute.run(claude, log, now=BASE + timedelta(days=1))
@@ -163,7 +165,7 @@ def test_a_malformed_previous_point_does_not_break_the_command(tmp_path):
     """REQ-061 en `recalcular-coste`: un punto del JSON anterior sin `delta_pct` (editado a mano)
     se salta y cuenta como `linea_corrupta`, en vez de tumbar `quitar_solapados`."""
     claude, log = tmp_path / "claude", tmp_path / "log"
-    escribir(principal(claude), [peticion(0, "m0")])
+    write_jsonl(main_transcript(claude), [request_entry(0, "m0")])
     broken = {
         "source": "statusline",
         "type": "five_hour",
@@ -194,22 +196,24 @@ def test_duplicate_rejections_are_one_point(tmp_path):
 
     def rejections(s0: int, k: int, prefix: str) -> list:
         return [
-            sintetica(s0 + i, f"{prefix}{i}", quota=[rejection] if i % 2 else rejection)
+            synthetic(s0 + i, f"{prefix}{i}", quota=[rejection] if i % 2 else rejection)
             for i in range(k)
         ]
 
-    escribir(
-        principal(claude),
+    write_jsonl(
+        main_transcript(claude),
         [
-            peticion(-3 * 3600, "antes", usage={"input_tokens": 1_000_000}),
-            peticion(0, "p1", usage={"input_tokens": 1_000_000}),
-            peticion(10, "p2", usage={"cache_creation": {"ephemeral_1h_input_tokens": 1_000_000}}),
-            peticion(2000, "despues", usage={"input_tokens": 1_000_000}),
+            request_entry(-3 * 3600, "antes", usage={"input_tokens": 1_000_000}),
+            request_entry(0, "p1", usage={"input_tokens": 1_000_000}),
+            request_entry(
+                10, "p2", usage={"cache_creation": {"ephemeral_1h_input_tokens": 1_000_000}}
+            ),
+            request_entry(2000, "despues", usage={"input_tokens": 1_000_000}),
         ]
         + rejections(1000, 5, "r"),
     )
-    escribir(subagente(claude, "s1"), rejections(1100, 3, "u"))
-    escribir(subagente(claude, "s2"), rejections(1200, 3, "v"))
+    write_jsonl(subagent(claude, "s1"), rejections(1100, 3, "u"))
+    write_jsonl(subagent(claude, "s2"), rejections(1200, 3, "v"))
     index = transcripts.read(claude / "projects")
     rejections_ = quota.rejection_points(index.rejections, index.requests.values())
     assert len(rejections_) == 1
