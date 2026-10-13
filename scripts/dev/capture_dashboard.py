@@ -12,7 +12,7 @@ con datos de ejemplo **deterministas**, así que:
   tools que aparecen sean los reales; solo se sustituyen su estado del backend (el mismo que
   `/api/backend`, así la captura no necesita la clave) y `log_dir`.
 
-Que la segunda promesa se cumpla **no depende de acordarse**: `tests/test_captura.py` compara los
+Que la segunda promesa se cumpla **no depende de acordarse**: `tests/test_capture.py` compara los
 `/api/*` que la página pide con las claves de `MOCKS`, y un endpoint nuevo sin interceptar rompe el
 test. Se añadió después de descubrir que `/api/hooks` y `/api/stats` llevaban tiempo escapándose y
 publicando el log real de quien capturaba.
@@ -20,7 +20,7 @@ publicando el log real de quien capturaba.
 El README avisa de que son «datos de ejemplo». Mantener ese pie es parte del trato.
 
 Junto al PNG se escribe un **manifiesto** (`dashboard.json`) con la versión que sirvió el
-dashboard capturado y el hash de la imagen. `tests/test_captura.py` lo compara con
+dashboard capturado y el hash de la imagen. `tests/test_capture.py` lo compara con
 `pyproject.toml`, así que una captura que se quede vieja deja de pasar en silencio: durante 20 de
 las 25 releases del proyecto nadie la regeneró, y la 0.16.0 se publicó con el badge diciendo
 `v0.15.0`.
@@ -70,7 +70,7 @@ MANIFIESTO_ACERCA_DE = [
     "La versión es la que sirvió el dashboard capturado (`/api/status`), no la de pyproject.toml:",
     "así, capturar contra el daemon instalado en vez de contra el repo deja constancia en vez de",
     "colar un badge viejo.",
-    "Lo comprueba `tests/test_captura.py`. Procedimiento: docs/wiki/Publishing.md.",
+    "Lo comprueba `tests/test_capture.py`. Procedimiento: docs/wiki/Publishing.md.",
 ]
 
 

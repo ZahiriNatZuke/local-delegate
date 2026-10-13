@@ -2,12 +2,13 @@
 
 La subola se parte en 7 lotes (D13: 1788 filas, máximo 300 por lote y sin partir un módulo, salvo
 la excepción aprobada del JS de `test_dashboard_ui.py`, que va al lote 7). Cada lote es un commit
-que hace la sesión principal, en una rama apilada sobre el anterior. Este registro empieza por el
-**lote 1**; los siguientes añaden su sección. Las tablas de controles positivos, `local_*` y PyCharm
-de la primera sección son las del lote 1 (`check_wave_records.py` lee la primera tabla de cada
-sección).
+que hace la sesión principal, en una rama apilada sobre el anterior. El **lote 1** está en el commit
+`799562a` (PR #272); el **lote 2** está aplicado y registrado en la sección «A9a-2», al final. Las
+tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya aplicados, porque
+`check_wave_records.py` lee la primera tabla de cada sección: 37 + 21 = 58 filas
+`rename_refactoring` = 58 filas `pycharm` de los mappings A9a-1 y A9a-2.
 
-- Rama: `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada) · PR: (lo abre la sesión principal) · Commit del lote 1: pendiente, con el borrador en `waves/A9a-1-commit-msg.txt` (firmado y sin coautoría)
+- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, apilada sobre `799562a` · Commit del lote 2: pendiente, con el borrador en `waves/A9a-2-commit-msg.txt` (firmado y sin coautoría)
 - Quién: un agente hizo los 7 mappings (fase 1). Tras la aprobación de la sesión principal (decisiones 1-8, con `esp`→`expected` y `clase`→`css_class`/`cls`/`content_class` según lo que nombre), el mismo agente aplicó el lote 1 (fase 2)
 - REQ cubiertos por el lote 1: REQ-015 (nombres de `tests/conftest.py`, `tests/backend_mock.py`, `test_agents.py`, `test_aislamiento_entorno.py`→`test_environment_isolation.py` y `test_atribucion.py`→`test_attribution.py`, más los directorios de fixtures `residencia`→`residency` y `topologia`→`topology`) y REQ-017 (ningún assert cambia de sentido)
 - Ficheros poseídos por el lote 1: `tests/conftest.py`, `tests/backend_mock.py`, `tests/test_agents.py`, `tests/test_aislamiento_entorno.py`, `tests/test_atribucion.py` y `tests/fixtures/{residencia,topologia}/`. Lo de fuera, en «Desviaciones»
@@ -23,12 +24,14 @@ sección).
 | Test | Mutante aplicado | Assert que disparó | Restaurado |
 | --- | --- | --- | --- |
 | `tests/test_attribution.py::test_does_not_read_more_than_256_kb` (usa los renombrados `_ReadSpy`, `.reads`, `_stream`, `_spy`, `_projects`, `_write_note`, `_tool_use_line`) | `src/local_delegate/attribution.py`: `TAIL_BYTES = 256 * 1024` → `512 * 1024` (sha256 `32d9a7febbed` → `9d774322a27d`: el mutante muta) | `tests/test_attribution.py:383` `assert spy.reads <= 256 * 1024` → `assert 524288 <= (256 * 1024)`; la guarda `spy.reads > 0` de :382 pasa, así que el test llegó a leer (`evidence/A9a-1/mutant.txt`) | sí: `git checkout` devolvió la versión de HEAD y se repuso la cita de :17 de la ola; sha256 `32d9a7febbed`, igual que antes del mutante |
+| `tests/test_benchmark.py::test_voided_run_is_repeated_with_the_same_tokens` y `::test_the_voided_run_is_repeated_at_most_twice` (lote 2; usan los renombrados `_VoidingProbe`, `.reasons`, `_run`, `_response`) | `src/local_delegate/benchmark.py:1340`: `annul_retries < MAX_ANNUL_RETRIES` → `annul_retries < 0`, sin reintentos (sha256 `4b1593fcf3a5` → `3ca7cad98f5c`) | `test_benchmark.py:565` `assert seen == [16, 16]` → `[16] == [16, 16]`; `:575` `assert len(records) == 1 + benchmark.MAX_ANNUL_RETRIES` → `1 == (1 + 2)` (`evidence/A9a-2/mutant.txt`) | sí, desde una copia guardada antes de mutar: sha256 `4b1593fcf3a5` |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
 | Quién | Tool | Para qué | Resultado (útil / corregido / descartado) |
 | --- | --- | --- | --- |
 | agente A9a-1 | `local_lint_summary(path=evidence/A9a-1/pytest-full.log)` | resumen de la suite | útil: solo los 12 avisos de `BlockingPortal` de Starlette, ningún fallo |
+| agente A9a-2 | `local_lint_summary(path=evidence/A9a-2/pytest-full.log)` | resumen de la suite del lote 2 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 
 Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto de cada nombre, reglas del brief) y las listas largas fueron a ficheros del scratchpad, leídos por franjas.
 
@@ -74,6 +77,28 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 | agente A9a-1 | `rename_refactoring` | `ENTRADAS_VIEJAS` → `OLD_ENTRIES` | 8 usos |
 | agente A9a-1 | `rename_refactoring` | `_temporal` → `_tmp_dir` | 3 usos |
 | agente A9a-1 | `get_file_problems` | `tests/test_attribution.py`, `tests/backend_mock.py`, `tests/conftest.py` (solo errores) | 0 errores |
+| agente A9a-2 | `rename_refactoring` | `test_benchmark.RAIZ` → `ROOT` | 5 usos |
+| agente A9a-2 | `rename_refactoring` | `_COMPONENTES_POR_SENAL` → `_COMPONENTS_BY_SIGNAL` | 2 usos |
+| agente A9a-2 | `rename_refactoring` | `test_benchmark._correr` → `_run` | 13 usos |
+| agente A9a-2 | `rename_refactoring` | `_respuesta` → `_response` | 11 usos |
+| agente A9a-2 | `rename_refactoring` | `_SondaQueAnula` → `_VoidingProbe` | 4 usos |
+| agente A9a-2 | `rename_refactoring` | `_responde` → `_reply` | 17 usos |
+| agente A9a-2 | `rename_refactoring` | `MECANICO` → `MECHANICAL` | 15 usos |
+| agente A9a-2 | `rename_refactoring` | `LARGO` → `LONG` | 28 usos |
+| agente A9a-2 | `rename_refactoring` | `CODIGO` → `CODE` | 17 usos |
+| agente A9a-2 | `rename_refactoring` | `RETIRADO` → `RETIRED` | 3 usos |
+| agente A9a-2 | `rename_refactoring` | `CAPACIDAD` → `CAPACITY_ERROR` | 2 usos |
+| agente A9a-2 | `rename_refactoring` | `HOY` → `TODAY` | 2 usos |
+| agente A9a-2 | `rename_refactoring` | `_fallo` → `_failure` | 8 usos |
+| agente A9a-2 | `rename_refactoring` | `_texto` → `_text` | 1 uso |
+| agente A9a-2 | `rename_refactoring` | `test_captura.RAIZ` → `ROOT` | 9 usos |
+| agente A9a-2 | `rename_refactoring` | `CAPTURA` → `SCREENSHOT` | 5 usos |
+| agente A9a-2 | `rename_refactoring` | `MANIFIESTO` → `MANIFEST` | 4 usos |
+| agente A9a-2 | `rename_refactoring` | `PASAN_AL_SERVIDOR_REAL` → `PASS_TO_REAL_SERVER` | 2 usos |
+| agente A9a-2 | `rename_refactoring` | `REGENERAR` → `REGENERATE` | 4 usos |
+| agente A9a-2 | `rename_refactoring` | `_manifiesto` → `_manifest` | 3 usos |
+| agente A9a-2 | `rename_refactoring` | `_version_declarada` → `_declared_version` | 1 uso |
+| agente A9a-2 | `get_file_problems` | `tests/test_benchmark.py`, `tests/test_chains.py`, `tests/test_capture.py` (solo errores) | 0 errores nuevos: el único, `Unresolved reference 'yaml'` en `test_chains.py:124` (`monkeypatch.setattr(topology, "yaml", None)`), ya estaba en HEAD |
 
 ## Revisión del diff tras rename_refactoring
 
@@ -110,3 +135,41 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 - **Tests nuevos sin renombrado** (respuesta de la sesión principal): el test de `no_credential` («Hallazgos» de A8a-1) va en el lote 3, porque su módulo es `test_checks.py`. El test que fija los esquemas de `elicitation` es de `test_preguntas.py`: va en A9b.
 - **A9b:** `tests/fixtures/backend/*.json` (nombres en español, los usa `test_fallos_capturas.py`); `test_preguntas.py`; lo de `test_panel_estados.py` heredado de A8b.
 - **Lotes 2-7:** aplicar sus mappings con las lecciones de arriba.
+
+---
+
+## A9a-2 — `test_benchmark`, `test_boilerplate_salida`, `test_bump_version`, `test_cadenas` y `test_captura` (aplicado)
+
+- Rama: `sdd/english-names-a9a-2`, apilada sobre el lote 1 (`799562a`)
+- REQ cubiertos: REQ-015 (nombres de `test_benchmark.py`, `test_bump_version.py`, `test_boilerplate_salida.py`→`test_boilerplate_output.py`, `test_cadenas.py`→`test_chains.py` y `test_captura.py`→`test_capture.py`) y REQ-017
+- Ficheros poseídos: esos 5 ficheros de test. Lo de fuera, en «A9a-2 · Fuera del lote»
+- EOL: `evidence/A9a-2/eol-check.txt`: 0 diferencias, todo LF. Ediciones con Python y `newline=""`
+- Mapping: `waves/A9a-2-mapping.csv` aprobado (`# approved-by-main: 2026-10-13`), 236 filas. Filas `pycharm` 21 = filas `rename_refactoring` 21. Filas `search_edit` 215, cada una con su motivo: 209 con `make_mapping.py apply` (412 reemplazos; más el `def` de 2 anidadas, `desborde`→`overflow` y `otro`→`other`, con `a9a/nested_defs.py`), 3 pasadas de `pycharm` a `search_edit` en la fase 2 (`a9a/lineedit.py`) y 3 módulos con `git mv`
+- Tests recogidos: antes 2567 → después 2567 (`evidence/A9a-2/collect.txt`), +0 −0. Por fichero, iguales: `test_benchmark.py` 36, `test_boilerplate_salida.py` 19 → `test_boilerplate_output.py` 19, `test_bump_version.py` 8, `test_cadenas.py` 27 → `test_chains.py` 27 y `test_captura.py` 4 → `test_capture.py` 4
+- Suite: `evidence/A9a-2/pytest-full.log` (`pytest -q -n auto --dist loadgroup`, con `pesado.sh`), verde a la primera: 2565 pasan, 2 saltados y el aviso conocido de `BlockingPortal`, en 60 s. Esta vez no salió el fallo intermitente de `test_dashboard_ui`
+- `ruff check` y `ruff format --check`: limpios (`evidence/A9a-2/ruff-check.txt`, 187 ficheros). Antes, `ruff format` reajustó `test_benchmark.py` y `test_capture.py`, a los que el rename cambió el largo de línea; esos 2 se volvieron a pasar después (40 pasan)
+- Tamaño: 10 ficheros, +466 −468 (`git diff HEAD -M30% --numstat --ignore-cr-at-eol`)
+
+### A9a-2 · Qué se hizo
+
+1. `make_mapping.py apply`: 412 reemplazos (`test_benchmark` 226, `test_boilerplate_salida` 107, `test_cadenas` 41, `test_captura` 30, `test_bump_version` 8). Las filas `recargar_config` del lote ya no cambiaron nada (las hizo el lote 1).
+2. `a9a/nested_defs.py`: el `def` de las anidadas `desborde` y `otro` de `test_benchmark.py` (los handlers del backend falso).
+3. `a9a/lineedit.py`: los parámetros `texto` de `literal` (`test_benchmark.py:191`) y de `_config_llamaswap` (`test_cadenas.py:38`), y el atributo de clase `motivos` de `_SondaQueAnula` con las dos cadenas de `monkeypatch.setattr(…, "motivos", …)` (:560, :570), que PyCharm no ve.
+4. PyCharm: 21 `rename_refactoring` (tabla de arriba). Esta vez no tocó nada de `.sdd/`, y los mappings 3-7 siguen iguales byte a byte.
+5. `git mv` de los 3 módulos y sus citas por ruta.
+
+### A9a-2 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- `tests/test_respaldo.py:292`: `test_cadenas.py::…` → `test_chains.py::…`.
+- `test_captura.py`→`test_capture.py`: `.gitattributes:12`, `docs/wiki/Publishing.md:91`, `docs/assets/dashboard.json:11` y `scripts/dev/capture_dashboard.py:15/:23/:73`. De ese script solo cambian las rutas de test. El manifiesto conserva su `sha256` y su versión, y `test_capture.py` pasa.
+
+### A9a-2 · Barrido final
+
+- AST (`a9a/sweep_after.py`): ninguna definición con un `old` del lote, ninguna en español y ningún uso en código.
+- `git grep -w` en los ficheros del lote, por token: 0 en código; 87 en textos (32 docstrings, 31 comentarios, 24 cadenas), prosa y datos. Repuse la cita `` `_correr` `` de `test_benchmark.py:364`. Se queda `` `otro` `` en el comentario de `test_boilerplate_output.py:297`: es el nombre de una clase de contenido del SDD `coste-api-y-cuota`, no un nombre del test.
+- En el resto del repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`): 0 citas de `test_cadenas`, `test_captura` y `test_boilerplate_salida`. Los homónimos que salen (`CAPACIDAD` en `test_respaldo.py`, `MANIFIESTO` en `scripts/dev/capture_icons.py`, `_responde` en `test_preguntas.py`…) son de otros módulos (A9b, A9c y A10) o prosa.
+
+### A9a-2 · Desviaciones
+
+1. **3 filas `pycharm` → `search_edit`**: `texto` ×2 (parámetros homónimos) y `motivos` (atributo que se nombra también en cadenas de `monkeypatch`). Lo anota una línea `# Fase 2` del CSV.
+2. Ningún test nuevo en este lote: los dos pendientes van en el lote 3 (`no_credential`) y en A9b (`elicitation`).

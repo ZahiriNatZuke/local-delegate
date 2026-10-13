@@ -88,7 +88,7 @@ mientras el JSON seguía anunciando la anterior. Espera un par de minutos y repi
 
 **Regenera la captura del README después del bump**, porque la imagen enseña el badge de versión.
 Ya no depende de que te acuerdes: `docs/assets/dashboard.json` declara con qué versión se generó
-y `tests/test_captura.py` lo compara con `pyproject.toml`, así que **el PR del bump falla hasta
+y `tests/test_capture.py` lo compara con `pyproject.toml`, así que **el PR del bump falla hasta
 que la regeneres**. Antes esto se pedía solo con palabras, y de 25 releases solo 5 la
 regeneraron — la 0.16.0 se publicó con el badge diciendo `v0.15.0`.
 
