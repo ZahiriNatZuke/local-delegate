@@ -855,7 +855,7 @@ def test_looping_reader_never_sees_half_written_yaml(tmp_path, monkeypatch):
 
     monkeypatch.setattr(residency, "_write_bytes", write_slow)
     seen_broken: list[int] = []
-    reads = {"durante": 0}
+    reads = {"during": 0}
     stop_now = threading.Event()
 
     def reader():
@@ -866,7 +866,7 @@ def test_looping_reader_never_sees_half_written_yaml(tmp_path, monkeypatch):
             except OSError:
                 continue
             if writing.is_set():
-                reads["durante"] += 1
+                reads["during"] += 1
             if seen not in valid:
                 seen_broken.append(len(seen))
             time.sleep(0.005)
@@ -878,7 +878,7 @@ def test_looping_reader_never_sees_half_written_yaml(tmp_path, monkeypatch):
     finally:
         stop_now.set()
         thread.join(5)
-    assert reads["durante"] >= 10, "el lector no leyó mientras se escribía"
+    assert reads["during"] >= 10, "el lector no leyó mientras se escribía"
     assert not seen_broken
     assert path.read_bytes() == copy.read_bytes()
 

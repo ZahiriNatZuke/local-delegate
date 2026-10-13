@@ -47,4 +47,5 @@ OK    A9c.md
       · A9c-2-mapping.csv: 245 filas, 0 discrepancia(s)
       · A9c-3-mapping.csv: 291 filas, 0 discrepancia(s)
       · A9c-4-mapping.csv: 197 filas, 0 discrepancia(s)
+      · A9c-5-mapping.csv: 286 filas, 0 discrepancia(s)
 17/17 registro(s) cumplen los mínimos de §2.1

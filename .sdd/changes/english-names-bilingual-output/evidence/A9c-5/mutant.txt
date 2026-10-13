@@ -1,0 +1,11 @@
+== Mutante: n_of ignora las caducidades del relleno (valuation.py:95)
+sha256 antes c04849d23cfc13a9 / con mutante 539425811c5ad934
+>       assert c["estimate"] == pytest.approx(expected, abs=1e-9)
+E       assert 6.5 == 11.3 ± 1.0e-09
+E         
+E         comparison failed
+E         Obtained: 6.5
+E         Expected: 11.3 ± 1.0e-09
+>       assert valuation.n_of(rows[0], aggregates) == (7, 1, "backfill")
+E       AssertionError: assert (7, 0, 'backfill') == (7, 1, 'backfill')
+sha256 restaurado c04849d23cfc13a9

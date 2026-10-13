@@ -1,0 +1,34 @@
+== carga antes (2026-10-13T19:32:02-03:00)
+CPU 33% | RAM libre 15.6 de 31.1 GB
+
+Name              CPU_s RAM_MB
+----              ----- ------
+pycharm64          2414   3394
+claude             1663    508
+warp                921    345
+explorer            230    213
+lghub_system_tray   130     73
+warp                104     73
+RustDesk             97     23
+chrome               89    488
+
+
+
+navegadores/v°deo abiertos: chrome x29
+== carga despu√©s (2026-10-13T19:34:15-03:00)
+CPU 26% | RAM libre 15.9 de 31.1 GB
+
+Name              CPU_s RAM_MB
+----              ----- ------
+pycharm64          2417   3394
+claude             1666    493
+warp                923    345
+explorer            230    212
+lghub_system_tray   130     73
+warp                104     73
+chrome              101    429
+RustDesk             98     23
+
+
+
+navegadores/v°deo abiertos: chrome x24

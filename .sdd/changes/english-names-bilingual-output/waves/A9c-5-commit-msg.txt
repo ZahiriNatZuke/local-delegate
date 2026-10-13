@@ -1,0 +1,25 @@
+refactor(rename): nombres en inglés en test_valoracion, test_vendor, test_vision, test_web_auth y test_wiki (ola A9c, lote 5)
+
+Renombra a inglés los nombres de los tests de la valoración del coste,
+del vendorizado, de la visión, de la autenticación del panel y de la
+wiki: 286 filas del mapping aprobado. test_valoracion.py pasa a
+test_valuation.py; cambian sus test_*, las fixtures (cliente → client,
+vendor_copia → vendor_copy), los ayudantes (_relleno → _backfill,
+_fundidas → _merged, _paginas → _pages, _enlaces → _links…), las
+constantes (VERSION_VENDORIZADA → VENDORED_VERSION, ENLACE_RE →
+LINK_RE…), los argnames de parametrize y sus variables locales.
+
+Arregla además dos restos de renombrados anteriores de A9: en
+test_fallback.py, kwargs.get("ultimo") pasa a "last", que es como se
+llama ya el kwarg de _next_hop (el control positivo no discrimina: el
+test toma una sola decisión de salto y la guarda vale lo mismo); y en
+test_residency.py la clave propia reads["durante"] pasa a "during".
+
+En test_wiki solo cambian los nombres del test: los títulos y textos de
+la wiki con los que compara son datos y no se tocan.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2572.
+
+Cierra A9c y la ola A9 (waves/A9c.md: cierre, detector sobre tests/ y
+pendientes para A10 y el cierre del frente A).

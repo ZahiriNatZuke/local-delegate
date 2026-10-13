@@ -4,16 +4,17 @@ La subola se parte en 5 lotes (D13: 1269 filas, como mucho 300 por lote y sin pa
 aprobados por la sesión principal el 2026-10-13 con las 9 decisiones de la fase 1 tal como se
 recomendaron. Cada lote es un commit que hace la sesión principal, en una rama apilada sobre el
 anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todos los lotes, porque
-`check_wave_records.py` lee la primera tabla de cada sección. Por ahora cubren los **lotes 1 a 4**: 31 + 17 + 17 +
-10 = 75 filas `rename_refactoring` = 75 filas `pycharm` de `waves/A9c-1-mapping.csv`,
-`waves/A9c-2-mapping.csv`, `waves/A9c-3-mapping.csv` y `waves/A9c-4-mapping.csv` (tras su línea
-`# Fase 2`).
+`check_wave_records.py` lee la primera tabla de cada sección. Cubren los **5 lotes**: 31 + 17 + 17 + 10 + 24 = 99
+filas `rename_refactoring` = 99 filas `pycharm` de `waves/A9c-1-mapping.csv`,
+`waves/A9c-2-mapping.csv`, `waves/A9c-3-mapping.csv`, `waves/A9c-4-mapping.csv` y
+`waves/A9c-5-mapping.csv` (tras su línea `# Fase 2`). El cierre de la subola está en «Cierre de A9c»
+y el de toda la ola A9 en «Cierre de la ola A9», al final.
 
 - Rama: lote 1 en `sdd/english-names-a9c-1`, sacada de `main` (`2888d90`, con A9a y A9b mezcladas).
   Commit del lote 1: `d1d002b` (PR #285). Lote 2: `34eb1fa` (PR #286), rebasado sobre `main` (`1d6290f`).
-  Lote 3: `a9a87ba` (PR #287), rebasado sobre `main` (`2ed4fff`). Lote 4 en
-  `sdd/english-names-a9c-4`, encima de `a9a87ba`; commit pendiente, con el borrador en
-  `waves/A9c-4-commit-msg.txt` (firmado y sin coautoría).
+  Lote 3: `a9a87ba` (PR #287), rebasado sobre `main` (`2ed4fff`). Lote 4: `92e9879` (PR #288).
+  Lote 5 en `sdd/english-names-a9c-5`, encima de `92e9879`; commit pendiente, con el borrador en
+  `waves/A9c-5-commit-msg.txt` (firmado y sin coautoría).
 - Quién: un agente hizo los 5 mappings (fase 1) y aplica los lotes tras la aprobación (fase 2).
 - Conteo base: `evidence/A9c/collect-before.txt`, 2572 tests.
 
@@ -26,6 +27,7 @@ anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todo
 | `tests/test_backend_probe.py::test_the_poll_never_raises` (lote 3; el arreglo de CodeQL: `raise AssertionError(…) from exc` en vez de `pytest.fail`) | `src/local_delegate/server.py:4293`: `probe_backend` relanza lo inesperado (`raise` como primera línea del `except Exception`; sha256 `2bfc147a…` → `e76ac534…`) | `raise AssertionError(f"el sondeo lanzó {exc!r}") from exc` → `AssertionError: el sondeo lanzó RuntimeError('inesperado')` (1 failed) | sí, desde copia; sha256 igual al de antes (`evidence/A9c-3/mutant.txt`) |
 | `tests/test_load_probe.py::test_the_sample_translates_to_model_loaded` (lote 3; argnames renombrados `state`/`expected` y el parámetro de la lambda `_model`) | `src/local_delegate/server.py:1232`: `_LoadProbe` toma `"starting"` por cargado en vez de `"ready"` (sha256 → `52eaccc2…`) | `assert probe.model_loaded(wait_s=1.0) is expected` → `assert None is True` y `assert True is False` | sí, desde copia; sha256 igual |
 | `tests/test_test_windows.py::test_the_edge_second` (lote 4; usa la fixture renombrada `wave11`, `_write` y los argnames nuevos `hour`/`inside`) | `src/local_delegate/test_windows.py:149`: `find` excluye el segundo final de la ventana (`t <= end` → `t < end`; sha256 `73a816a0…` → `9445e896…`) | `assert (wave11.find(ts) is not None) is inside, ts` → `assert (None is not None) is True` en `01:22:31` (1 failed, 4 passed) | sí, desde copia; sha256 igual al de antes (`evidence/A9c-4/mutant.txt`) |
+| `tests/test_valuation.py` (lote 5; `test_each_expiry_is_a_rewrite`, con `_merged`, `_line` y `_backfill(exp=2)`, y el test de `n_of` con el relleno) | `src/local_delegate/valuation.py:95`: `n_of` ignora las caducidades del relleno (`… or 0` → `0`; sha256 `c04849d2…` → `53942581…`) | `assert c["estimate"] == pytest.approx(expected, …)` → `6.5 == 11.3`, y `assert valuation.n_of(…) == (7, 1, "backfill")` → `(7, 0, …) == (7, 1, …)` | sí, desde copia; sha256 igual al de antes (`evidence/A9c-5/mutant.txt`) |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -36,6 +38,7 @@ anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todo
 | Agente A9c-2 | `local_lint_summary(path=evidence/A9c-2/pytest-full.log)` | resumen de la suite: verde, solo los 12 `DeprecationWarning` de `starlette.testclient` |
 | Agente A9c-3 | `local_lint_summary(path=evidence/A9c-3/pytest-full.log)` | resumen de la suite: verde (2570 passed, 2 skipped), solo los 12 `DeprecationWarning` de `starlette.testclient` |
 | Agente A9c-4 | `local_lint_summary(path=evidence/A9c-4/pytest-full.log)` | resumen de la suite: verde (2570 passed, 2 skipped), solo los 12 `DeprecationWarning` de `starlette.testclient` |
+| Agente A9c-5 | `local_lint_summary(path=evidence/A9c-5/pytest-full.log)` | resumen de la suite: 1 `TimeoutError` de `Page.goto` en `test_dashboard_ui.py` (intermitente, ver lote 5) y los 12 `DeprecationWarning` de siempre |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -122,6 +125,31 @@ anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todo
 | A9c-4 | `rename_refactoring` | `_sin_senales_reales`→`_without_real_signals` (`test_update.py`) | 0 usos (fixture `autouse`: lo esperado) |
 | A9c-4 | `rename_refactoring` | `_finge_prefix`→`_fake_prefix` | 8 usos |
 | A9c-4 | `get_file_problems` | `test_update.py`, `test_role_caps.py`, `test_test_windows.py` | 0 errores |
+| A9c-5 | `rename_refactoring` | `AHORA`→`NOW` (`test_valoracion.py`) | 20 usos |
+| A9c-5 | `rename_refactoring` | `MES`→`MONTH` | 4 usos |
+| A9c-5 | `rename_refactoring` | `_sin_respaldo_del_entorno`→`_without_env_fallback` | 0 usos (fixture `autouse`: lo esperado) |
+| A9c-5 | `rename_refactoring` | `_linea`→`_line` | 25 usos |
+| A9c-5 | `rename_refactoring` | `_fundidas`→`_merged` | 11 usos |
+| A9c-5 | `rename_refactoring` | `_relleno`→`_backfill` | 14 usos |
+| A9c-5 | `rename_refactoring` | `_con_ventana`→`_with_window` | 2 usos |
+| A9c-5 | `rename_refactoring` | `MUY_POSTERIOR`→`MUCH_LATER` (`test_vendor.py`) | 7 usos |
+| A9c-5 | `rename_refactoring` | `vendor_copia`→`vendor_copy` | 32 usos (fixture: arrastra los parámetros que la piden) |
+| A9c-5 | `rename_refactoring` | `_caido`→`_down` | 3 usos |
+| A9c-5 | `rename_refactoring` | `VERSION_VENDORIZADA`→`VENDORED_VERSION` | 6 usos |
+| A9c-5 | `rename_refactoring` | `_sin_red`→`_without_network` | 9 usos |
+| A9c-5 | `rename_refactoring` | `cliente`→`client` (`test_web_auth.py`) | 16 usos (fixture); reescribió 10 documentos de `.sdd/` de otros cambios (devueltos a HEAD) |
+| A9c-5 | `rename_refactoring` | `_con_cookie`→`_with_cookie` | 7 usos |
+| A9c-5 | `rename_refactoring` | `RAIZ`→`ROOT` (`test_wiki.py`) | 6 usos |
+| A9c-5 | `rename_refactoring` | `_GRUPOS_DE_LA_TABLA`→`_TABLE_GROUPS` | 2 usos |
+| A9c-5 | `rename_refactoring` | `_NUMERO_DE_TOOLS`→`_TOOL_COUNT_WORDS` | 2 usos |
+| A9c-5 | `rename_refactoring` | `_NUMERO_DE_CHECKS`→`_CHECK_COUNT_WORDS` | 13 usos |
+| A9c-5 | `rename_refactoring` | `ENLACE_RE`→`LINK_RE` | 2 usos (no tocó el homónimo de `scripts/sync_wiki.py`) |
+| A9c-5 | `rename_refactoring` | `_paginas`→`_pages` | 7 usos |
+| A9c-5 | `rename_refactoring` | `_enlaces`→`_links` | 4 usos |
+| A9c-5 | `rename_refactoring` | `_filas_de_la_tabla_de_checks`→`_check_table_rows` | 1 usos |
+| A9c-5 | `rename_refactoring` | `_tools_del_servidor`→`_server_tools` | 3 usos |
+| A9c-5 | `rename_refactoring` | `_tools_documentadas`→`_documented_tools` | 1 usos |
+| A9c-5 | `get_file_problems` | `test_valuation.py`, `test_web_auth.py`, `test_wiki.py`, `test_vendor.py` | 0 errores |
 
 ## A9c-1 — `fake_llamaswap`, `test_fake_llamaswap`, `test_recalcular`, `test_recalcular_legacy`, `test_release_metadata`, `test_residency`, `test_respaldo` y `test_transcripts` (aplicado)
 
@@ -321,9 +349,198 @@ anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todo
    propia comprobación en una línea con dos argnames antes de escribir nada, y se rehízo con reemplazo
    de la cadena entre comillas, línea a línea.
 
-## Pendientes
 
-**Fuera de A9c (decisión 9 de la fase 1)**
-1. `src/local_delegate/server.py:1101` y `:2308` siguen escribiendo y leyendo las claves
-   `respaldo`/`respondio`/`en_lugar_de` de `_local_delegate`, y `test_fallback.py` las lee. Son del
-   producto: van al cierre del frente A, no a A9c.
+## A9c-5 — `test_valoracion`, `test_vendor`, `test_vision`, `test_web_auth` y `test_wiki` (aplicado)
+
+### A9c-5 · Qué se hizo
+
+- 24 `rename_refactoring` (tabla de arriba), antes de cualquier edición desde fuera. El de la fixture
+  `cliente` reescribió 10 documentos de `.sdd/` de otros cambios (`chartjs-4-5-1`,
+  `coste-api-y-cuota`, `daemon-reparte-el-backend`, `test-windows-out-of-metrics`); los 10 se
+  devolvieron a HEAD.
+- Los 3 parámetros homónimos (`modelo` y `cad` de `_relleno`, `duracion` de `_app`) por
+  `a9c/param_ren.py`, con sus 6 kwargs (`cad=` ×2, `modelo=`, `duracion=` ×3).
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 118 + 50 + 4 + 178 +
+  148 = 498 reemplazos.
+- A mano (`apply` no lo hace): los `def` de 8 anidadas (`raiz` → `root`, `montada` → `mounted`, `ruta`
+  ×2 → `path`, `recibir` → `receive` y `enviar` → `send` en `test_web_auth.py`; `falso` → `fake` en
+  `test_vendor.py`; `_rota` → `_broken` en `test_valoracion.py`), los argnames de 3 `parametrize`
+  (`"ruta"` → `"path"`, `"cabecera"` → `"header"`, `("version", "esperado")` →
+  `("version", "expected")`) y las citas entre comillas invertidas de `VENDORED_VERSION` y
+  `MUCH_LATER` (comentario de `test_vendor.py`) y de `exp` (docstring de `test_valoracion.py`).
+- `test_wiki.py`: solo nombres del test. Los títulos, grupos y números escritos de la wiki con los que
+  compara (`"Entorno"`, `"diez"`, `"once"`…) son datos y no se tocan.
+- `git mv` de `test_valoracion.py` → `test_valuation.py`.
+- `ruff format` reflowó 2 ficheros.
+- EOL: `test_vendor.py` es CRLF y sigue CRLF; el resto, LF y siguen LF.
+
+### A9c-5 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- Ninguno: nadie importa ni cita por ruta `test_valoracion` fuera de `.sdd/` histórico.
+
+### A9c-5 · Barrido final
+
+- AST de los 5 ficheros: ningún nombre de código, kwarg, argname de `parametrize`, `except … as` ni
+  alias de import con un `old` del lote; todos los argnames son parámetros de su test.
+- Tokens con un `old`: 0 en código; 200 en cadenas y 56 en comentarios. Las cadenas (fuera de
+  docstrings) son mensajes de assert en español, textos del producto (`Extensión de imagen no
+  soportada`, `leído server-side…`), los cuerpos de respuesta de prueba `"raiz"`/`"montada"`
+  (decisión de la fase 1), los rótulos de los casos de `test_web_auth.py` (`"caducada"`,
+  `"firma inventada"`) y rutas de prueba (`fuera-del-repo.md`).
+- `--collect-only`: 2572 (`evidence/A9c-5/collect.txt`), los mismos tests por módulo que en el lote 4
+  y que en `evidence/A9c/collect-before.txt` (con los 10 módulos renombrados).
+- Suite (`-n auto --dist loadgroup`): **1 fallo intermitente ajeno al lote** en las tres corridas
+  completas y en una cuarta que excluye los 5 ficheros del lote
+  (`evidence/A9c-5/pytest-control-sin-lote5.log`): un `Page.goto` de Playwright que agota sus 30 s en
+  un test `[cargadas]` de `test_dashboard_ui.py`, distinto cada vez
+  (`test_the_kpi_row_is_symmetric_and_uses_decimal_comma`, `test_the_hero_line_does_not_overlap_its_hint`,
+  `test_the_kpi_unit_is_not_cut_off`). Suelto pasa, y el módulo entero con `-n auto` también
+  (38 passed, 1 skipped). Corridas: `pytest-full-run1.log` (2 failed, 2568 passed);
+  `pytest-full-run2.log` y `pytest-full.log` (1 failed, 2569 passed cada una). Tras los arreglos de las desviaciones 3 y 4, `pytest-full-final.log`: 2 failed, 2568 passed (el mismo `Page.goto` y el intermitente de tiempos de `test_fake_llamaswap.py`, pendiente 9; los dos pasan sueltos). `ruff check` y
+  `ruff format --check` en verde (`evidence/A9c-5/ruff-check.txt`).
+- CodeQL (aproximación AST sobre el fichero renombrado): 0 patrones; ningún `except X: pass`.
+
+### A9c-5 · Desviaciones
+
+1. **3 filas `pycharm` → `search_edit`**, anotado en la línea `# Fase 2` del CSV: los parámetros
+   homónimos.
+2. El intermitente de `test_dashboard_ui.py` salió en todas las corridas completas de este lote y en
+   ninguna de los lotes 1 a 4; como sale igual sin los ficheros del lote, se anota como intermitente
+   (pendiente 11) y no se toca.
+3. **Dos restos de renombrados de A9 arreglados en este lote** (pedido de la sesión principal):
+   - `test_fallback.py:658`: `kwargs.get("ultimo")` → `kwargs.get("last")` (el kwarg de
+     `server._next_hop` se llama `last` desde una ola anterior).
+   - `test_residency.py:858-881`: la clave propia del test `reads = {"durante": 0}` → `"during"`, con
+     sus 2 lecturas.
+4. **Control positivo del arreglo de `"ultimo"` → `"last"`: NO discrimina** (`evidence/A9c-5/control-last.txt`).
+   Con el test instrumentado (copia restaurada, sha256 igual), las dos claves dan lo mismo: A toma
+   **una sola** decisión de salto, con `last` a `None` (el respaldo sale bien y no hay segunda), así
+   que la guarda vale lo mismo con `"ultimo"` que con `"last"`; y en cualquier decisión posterior
+   `b_entered` ya estaría puesto y la espera no esperaría. El defecto solo cambiaría la duración en un
+   escenario que el test no tiene (salto dentro de la plaza y un segundo salto), y el test no afirma
+   duraciones. No se forzó un mutante: el arreglo es de nombre y lo que el test afirma
+   (`peak == 1` y el orden A, B) no depende de él.
+5. **Barrido del mismo patrón en todo `tests/`** (`evidence/A9c-5/stale-keys-sweep.txt`): toda
+   lectura `.get("x")`, `["x"]`, `.pop("x")` o `"x" in`/`not in` cuya `x` es un `old` de cualquier
+   mapping de A0 a A9c. 107 claves; 81 siguen entre comillas en `src/` o `scripts/` (claves del
+   producto, valores viejos con lectura dual o de A10). Las 26 que ya no salen en `src/` ni en
+   `scripts/` se revisaron una a una: textos en prosa (`"trocear" not in`, `"cierre" in`,
+   `"publicada" in`), datos y nombres de campo que el propio test define (`"puerto"` en
+   `local_extract(fields=…)`, `"otro"`/`"proyecto"` de configs de prueba, `"# cabecera"` del YAML de
+   prueba, `"secreto"`), ids de casos, las claves del programa hijo (decisión 4) y ficheros de A10
+   (`test_vigilante`, `test_medir_enfriamiento`, `test_analisis_benchmark`). **Ninguna es una lectura
+   obsoleta como `"ultimo"`**; con los dos arreglos, el barrido no deja nada de A9.
+
+## Cierre de A9c
+
+- **Barrido de los 5 mappings** sobre los ficheros con su nombre final, incluidos los 4 de fuera del
+  lote 1 (`evidence/A9c-5/a9c-close-sweep.txt`): 0 nombres de código con un `old` en los 31 ficheros;
+  ninguno de los 10 módulos viejos sigue en disco.
+- **Detector** (`scripts/detect_spanish_names.py --exceptions rename-exceptions.md`; completo en
+  `evidence/A9c-5/detector-full.json`, filtrado a los ficheros de A9c en `detector-a9c.json`):
+  **114 hallazgos en los ficheros de A9c, 0 identificadores**. Son 37 `string_key` y 77
+  `string_value`:
+  - claves y valores del producto, persistidos o viejos que el test lee a propósito:
+    `respaldo`/`respondio`/`en_lugar_de` de `_local_delegate` (pendiente 5); `fallos`/`espera_s`/`hasta`
+    del fichero viejo de enfriamiento; el formato viejo de `coste-agregados.json` en
+    `test_recompute_legacy.py` (`puntos`, `fuente`, `veredicto`, `n_por_mes`…); `pruebas` de la
+    valoración (pendiente 10); los nombres viejos con alias (`LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`,
+    `config.rol_retirado`);
+  - de scripts (A10): `sonda_recursos`/`sonda_recursos.py` en `test_resource_probe.py`;
+  - datos de prueba:
+    - ids de casos: `ancla`, `duplicadas`, `flujo` y `residente` en `test_residency.py`; los 18
+      `*_es_lista`/`*_es_texto` de `test_topology.py`; `cambio_ajeno` y `yaml_roto` en
+      `test_fake_llamaswap.py`;
+    - nombres de fichero (`medida.json`, `mapeado.bin`, `copia.bak`…);
+    - tokens y sesiones falsos (`clave-falsa`, `sesion-sintetica-0001`, `otro-token`…);
+    - las claves `quieto`/`anonimo`/`mapeado` del programa hijo (decisión 4);
+    - los rótulos del espía `tomar_plaza`/`soltar_plaza` de `test_turn_daemon.py`;
+  - **dos restos del propio test que la fase 1 no listó**: `kwargs.get("ultimo")` en
+    `test_fallback.py:658` y la clave `"durante"` de `reads` en `test_residency.py:858`. **Hechos** en
+    el lote 5 (desviaciones 3 a 5 de A9c-5).
+- **Tests recogidos**: `evidence/A9c/collect-before.txt` 2572 → `evidence/A9c-5/collect.txt`
+  **2572**, los mismos por módulo.
+- **Mappings**: 1269 filas en 5 lotes, todas aplicadas. 99 `pycharm` = 99 `rename_refactoring`. Las
+  filas que pasaron de `pycharm` a `search_edit` en la fase 2 suman 34 (14 + 4 + 7 + 6 + 3), todas
+  parámetros homónimos, y cada lote las anota en su línea `# Fase 2`.
+- **Lecciones** (además de las de A9a y A9b):
+  1. PyCharm también reescribe documentos de `.sdd/` de **otros** cambios (lote 5: 10 ficheros por la
+     fixture `cliente`): revisar `git status` entero, no solo la carpeta del SDD.
+  2. Los argnames de `parametrize` y los `def` de las anidadas son la mayor fuente de restos de
+     `apply`. Un check AST «todo argname es parámetro de su test» los encuentra todos.
+  3. Las posiciones del AST (`col_offset`) cuentan bytes UTF-8: para editar por columnas, convertir
+     o reemplazar la cadena entera.
+  4. En un fichero CRLF, un mutante buscado con `\n` falla en silencio. Lo que lo destapa es la guarda
+     del sha256.
+  5. Una clave que viaja como **kwarg de una función del producto** (`kwargs.get("ultimo")`) no la ve
+     ni el mapping ni el barrido de nombres: la encontró el detector de cadenas.
+
+## Cierre de la ola A9
+
+- **Detector sobre todo `tests/` salvo los ficheros de A10** (`test_medir_*`,
+  `test_analisis_benchmark`, `test_corpus`, `test_hoja_*`, `test_vigilante`,
+  `test_experimento_adopcion`, `test_sesiones*` y `fixtures/vigilante/`; filtrado en
+  `evidence/A9c-5/detector-a9.json`): **503 hallazgos**: 358 `string_value`, 127 `string_key` y
+  **18 identificadores**. En los ficheros de A10 quedan 1074, que son de A10.
+- **Los 18 identificadores**, todos explicados y ninguno de A9:
+  - 4 kwargs de `ci_gate` (`leer`, `reloj`, `dormir` y `escribir`, en `test_ci_gate.py:175-178`): A10;
+  - 2 kwargs `descartada`/`descartada_motivo` (`test_affinity_batch.py:229`): claves persistidas del
+    benchmark, A10;
+  - 3 kwargs que dan nombre de fichero (`ajeno`, `raro`, `roto` en `test_agents.py`): datos
+    (decisión 6 de A9a);
+  - 3 kwargs con claves viejas que el test mete a propósito (`bloqueo_id`, `secciones` y
+    `fallo_conexion` en `test_metrics.py:1522-1528`): compatibilidad con logs viejos;
+  - el kwarg `LOCAL_DELEGATE_COSTE_RESPALDO` (`test_cli_renamed_names.py:270`): nombre viejo a
+    propósito;
+  - 2 `test_*` que nombran el script retirado `anotar_llamada` (`test_install.py`): dato;
+  - 3 falsos positivos del detector en nombres ingleses (`…_as_suspicion` ×2 y
+    `…_appears_as_a_meter`).
+- **Las cadenas** (485): textos del producto que afirman los tests, valores y claves persistidos o
+  viejos a propósito, datos de prueba (ids, nombres de fichero, etiquetas) y lo de los pendientes de
+  abajo. Ninguna es un nombre de Python de un test.
+- **Tests recogidos al cerrar A9**: 2572 (2567 al empezar A9a, +2 de A9a y +3 de A9b; A9c no añade
+  ninguno).
+
+## Pendientes de A9 (para A10 y el cierre del frente A), por ola
+
+**A10 (scripts)**
+1. Los kwargs de `ci_gate.esperar_veredicto` (`leer=`, `reloj=`, `dormir=`, `escribir=`), su
+   `v.estado`/`v.motivo` y sus constantes: `test_ci_gate.py` cambia por consecuencia (A9a, pendiente 7).
+2. El JS propio de `scripts/dev/capture_dashboard.py` heredado de A8b (A9a, pendiente 8).
+3. Las claves persistidas del benchmark `descartada`/`descartada_motivo` que pasa
+   `test_affinity_batch.py:229` (A9a, pendiente 9), y `sonda_recursos`, que lee
+   `test_resource_probe.py` y cambia con `scripts/sonda_recursos.py` → `resource_probe.py`.
+4. Las claves del informe de `scripts/measure_slowness.py` que lee `test_measure_slowness.py`
+   (`cumple`, `faltan`, `eventos_pc`…; A9b, pendiente 4).
+
+**Cierre del frente A (producto; decide la sesión principal)**
+5. Las claves `respaldo`/`respondio`/`en_lugar_de` de `_local_delegate` que escribe y lee
+   `src/local_delegate/server.py:1101` y `:2308`, y que lee `test_fallback.py` (decisión 9 de A9c).
+6. La clave `desconocido` (cliente por defecto de `web/metrics.py:365`, `LABELS.client`, afirmada
+   en `test_metrics.py` y `test_dashboard_ui.py`): si se traduce, van servidor, JS y tests a la vez
+   (A9a, pendiente 10).
+7. Las claves de huella `modelo`/`tamano_bytes`/`ruta` de `matrix.py`, `footprint.py` y
+   `checks.py:1534`, que lee `test_footprint.py` (A8a, respuesta 8; A9b, pendiente 4).
+8. `pruebas`: la clave de las filas en ventana de prueba que lee `test_valuation.py`; es del
+    producto.
+
+**Hechos en A9c-5** (eran restos de renombrados de A9): `kwargs.get("ultimo")` → `"last"` en
+`test_fallback.py:658` y `reads = {"durante": 0}` → `"during"` en `test_residency.py:858-881`; ver las
+desviaciones 3 a 5 de A9c-5, con el barrido del mismo patrón en todo `tests/`.
+
+**Intermitentes abiertos**
+9. `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` y
+   `::test_d_8_s_request_in_progress_on_reload[cambio_ajeno]` (vistos en A9b-1): **volvió a fallar
+   una vez** el primero, en la última corrida completa de A9c-5 (`pytest-full-final.log`:
+   `assert r["during"] == {1.0: True, …}` → `{1.0: False, …}`, la carga a 1 s todavía no se veía);
+   suelto, con `test_fallback.py` y `test_residency.py`, pasa (112 passed). Es tiempo, no el
+   renombrado de la clave: el valor es el mismo con otro nombre.
+10. `test_residency_cli.py::test_restoring_a_copy_end_to_end` (visto en A9a): **no volvió a fallar en
+    A9c**.
+11. **Nuevo en A9c-5:** `test_dashboard_ui.py`, un test `[cargadas]` distinto en cada corrida completa,
+    con `Page.goto` agotando sus 30 s (las 4 corridas completas del lote 5, también la que excluye
+    los ficheros del lote, y la corrida final). Suelto y con el módulo solo, pasa. Carga de la
+    máquina en la corrida final (`evidence/A9c-5/load-final.txt`): CPU al 33 % antes y al 26 %
+    después, 15,6 GB libres de 31,1, PyCharm con 3,4 GB y **Chrome abierto con 24-29 procesos**:
+    `pesado.sh` serializa los comandos pesados de los agentes, no el navegador del usuario. Parece la
+    carga sobre el primer `goto` del grupo `dashboard_ui`; A9a ya vio uno parecido (`[ancha]`).
