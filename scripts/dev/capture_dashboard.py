@@ -130,23 +130,23 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolve_density`
   // en Python); el JS del panel solo divide. Sin `density`, `tokensClaude` da 0 y las series por
   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
-  // `nueva`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
-  const DENS = DENSIDAD.familias.nueva;
+  // `new`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
+  const DENS = DENSIDAD.families.new;
   const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
-    local_explain_code: 'codigo'};
+    local_explain_code: 'code'};
   const celda = (columna, clase) => {
     if (DENS[columna][clase]) return [DENS[columna][clase], 'measured'];
-    return [DENS.sin_numerar[clase], 'unnumbered'];
+    return [DENS.unnumbered[clase], 'unnumbered'];
   };
   const densidadDe = (tool, porPath) => {
     if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
-    const clase = CLASE_TOOL[tool] || 'prosa';
-    const devuelta = tool === 'local_extract' ? 'estructurado'
-      : (tool === 'local_boilerplate' ? 'codigo' : 'prosa');
+    const clase = CLASE_TOOL[tool] || 'prose';
+    const devuelta = tool === 'local_extract' ? 'structured'
+      : (tool === 'local_boilerplate' ? 'code' : 'prose');
     return {
-      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'measured'],
-      returned: [DENS.sin_numerar[devuelta], 'measured'],
-      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'measured'],
+      text: porPath ? celda('read_format', clase) : [DENS.unnumbered[clase], 'measured'],
+      returned: [DENS.unnumbered[devuelta], 'measured'],
+      output: [DENS.unnumbered[tool === 'local_boilerplate' ? 'code' : 'prose'], 'measured'],
     };
   };
   const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
@@ -174,7 +174,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
-        family: 'nueva', density: densidadDe(tool, path),
+        family: 'new', density: densidadDe(tool, path),
       });
     }
   }
@@ -240,7 +240,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
       invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
     n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},
-    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {nueva: 98},
+    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {new: 98},
       assumed_family: 0, family_density: 0},
     unpriced: {n: 0, ids: []},
     outside_base: {images: stats.img_n, output_to_file: 0},
@@ -426,12 +426,12 @@ def _tablas_del_paquete() -> dict:
     Se leen del fichero en vez de copiarlas al mock para que la captura no se quede con unos
     valores que el vigilante de precios o una medida nueva ya cambiaron.
     """
-    datos = ROOT / "src" / "local_delegate" / "resources" / "datos"
-    densidad = json.loads((datos / "densidad.json").read_text(encoding="utf-8"))
-    precios = json.loads((datos / "precios.json").read_text(encoding="utf-8"))
+    datos = ROOT / "src" / "local_delegate" / "resources" / "data"
+    densidad = json.loads((datos / "density.json").read_text(encoding="utf-8"))
+    precios = json.loads((datos / "prices.json").read_text(encoding="utf-8"))
     return {
         "DENSIDAD": {k: v for k, v in densidad.items() if not k.startswith("_")},
-        "PRECIOS_CONSULTADO": precios.get("consultado"),
+        "PRECIOS_CONSULTADO": precios.get("consulted"),
     }
 
 

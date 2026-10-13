@@ -116,6 +116,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   (`images` y `output_to_file`), `breakdown` (`model`, `name`, `thread`, `effort`, `cases`,
   `low_bound` y `estimate`; el esfuerzo sin dato es `no_data`), `table` (`consulted` y `source`) y
   `command`; en las imágenes, `chars_returned`. No cambia nada de lo que se ve en el panel.
+- **Las tablas de precios y de densidad del paquete pasan a `resources/data/prices.json` y
+  `resources/data/density.json`** (antes `resources/datos/precios.json` y `densidad.json`), con
+  claves en inglés. En la de precios, `source`, `consulted`, `web_search_per_1000` y `models`, y en
+  cada modelo `input`, `cache_read`, `output`, `family` y `supports_effort` (antes `fuente`,
+  `consultado`, `busqueda_web_por_1000`, `modelos`, `entrada`, `lectura`, `salida`, `familia` y
+  `admite_esfuerzo`); `w5m` y `w1h` no cambian. En la de densidad, `measured_on`, `families` y
+  `measured_with` (antes `medido`, `familias` y `medido_con`), las columnas `unnumbered` y
+  `read_format` (antes `sin_numerar` y `formato_read`) y las clases de contenido `prose`, `code`,
+  `log`, `structured`, `diff` y, fuera de la tabla, `other` (antes `prosa`, `codigo`,
+  `estructurado` y `otro`). Las familias de tokenizador son `new` y `previous` (antes `nueva` y
+  `anterior`). Viajan con el código que las lee, así que no hay nada guardado que convertir.
+- **Por eso cambian también `/api/stats` y `/api/events`:** `density_table` trae las claves nuevas
+  de `density.json`, `cost.density.families` cuenta por `new` y `previous`, y el campo `family` de
+  cada fila de `/api/events` vale `new` o `previous`. El panel sigue diciendo «nueva» y
+  «anterior».
+- **El módulo `precios` pasa a `pricing`** (`load_prices`, `load_density`, `normalize_id`,
+  `entry`, `family`, `check_rows` y `verdict`), y el cotejo responde `inside`, `outside` o
+  `unpriced` por fila y `pass` o `fail` de veredicto. `cost-aggregates.json` ya guardaba el
+  veredicto como `pass` o `fail`: su formato no cambia.
+- **`vendor.json` documenta el vendorizado con `_about` y `_provenance`** (antes `_acerca_de` y
+  `_procedencia`). `scripts/check_vendor.py` no las lee: la auditoría no cambia.
 
 ## [0.34.0] - 2026-10-08
 

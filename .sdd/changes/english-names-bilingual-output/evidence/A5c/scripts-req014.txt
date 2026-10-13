@@ -1,0 +1,40 @@
+$ python scripts/check_vendor.py --help
+usage: check_vendor.py [-h] [--offline] [--manifest MANIFEST]
+
+Vigila el JavaScript vendorizado: integridad, CVEs conocidos y versión
+publicada.
+
+options:
+  -h, --help           show this help message and exit
+  --offline            solo la comprobación de integridad; no consulta OSV ni
+                       npm
+  --manifest MANIFEST  ruta del manifiesto (por defecto, el del paquete)
+exit=0
+
+$ python scripts/check_vendor.py   (integridad offline + OSV + npm)
+## Auditoría del vendorizado
+
+- Integridad: OK, cada fichero coincide con su sha256 declarado.
+- CVEs: OSV no conoce ninguna para `chart.js` 4.5.1.
+- Versión: `chart.js` 4.5.1 está al día.
+exit=0
+
+$ python scripts/vigilante_precios.py --help
+usage: vigilante_precios.py [-h] {precios,limites}
+
+Vigilante semanal de precios y límites: abre un PR cuando cambia una página
+oficial.
+
+positional arguments:
+  {precios,limites}
+
+options:
+  -h, --help         show this help message and exit
+exit=0
+
+$ corrida mÃ­nima sin red: extraer la tabla de la pÃ¡gina guardada y compararla con prices.json, y serializar ida y vuelta
+RUTA_PRECIOS: src/local_delegate/resources/data/prices.json existe: True
+claves extraÃ­das: ['models', 'web_search_per_1000'] modelos: 13
+campos de un modelo: ['cache_read', 'input', 'output', 'w1h', 'w5m']
+ida y vuelta del serializador igual al fichero: True
+exit=0

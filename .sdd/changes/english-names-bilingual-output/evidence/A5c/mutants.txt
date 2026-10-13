@@ -1,0 +1,26 @@
+Controles positivos de la ola A5c (cada mutante se aplicó sobre una copia guardada, se corrió el test y se restauró; sha256 comprobado con `sha256sum -c` tras restaurar).
+
+1. Esquema de prices.json y vigilante
+   Mutante: en src/local_delegate/resources/data/prices.json, `"claude-opus-5-5": {"input": 4` → `{"entrada": 4` (una clave vieja que se queda).
+   Comando: uv run pytest -q tests/test_vigilante.py tests/test_precios.py
+   Resultado: 5 fallan, 43 pasan.
+     - tests/test_precios.py::test_la_tabla_cubre_los_13_ids → tests/test_precios.py:116 AssertionError: claude-opus-5-5
+       assert {...} == {...}; Extra items in the left set: 'entrada'; Extra items in the right set: 'input'   (el esquema de la tabla)
+     - tests/test_vigilante.py::test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy y ::test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla
+       → scripts/vigilante_precios.py:321 KeyError: 'input' (el vigilante compara la tabla del paquete campo a campo; llamado desde tests/test_vigilante.py:555 y :576)
+     - tests/test_precios.py::test_cotejo_con_filas_literales y ::test_una_marca_de_ensayo_en_la_tabla_no_cambia_nada → KeyError: 'input' en pricing._judge
+   Restaurado: sí (src/local_delegate/resources/data/prices.json: OK).
+
+2. Rótulos de familia en el panel (FAMILIA)
+   Mutante: en src/local_delegate/web/metrics.py, `const FAMILIA = {new:'nueva', ...}` → `{nueva:'nueva', ...}` (la clave vieja).
+   Comando: uv run pytest -q tests/test_panel_coste.py -k families
+   Resultado: 1 falla → tests/test_panel_coste.py:591
+     AssertionError: assert 'familia de tokenizador (nueva 2, anterior 1)' in 'Equivalente estimado a precio de API: ...'
+   Restaurado: sí (src/local_delegate/web/metrics.py: OK).
+
+3. Paridad Python ↔ JS de la contabilidad (acct)
+   Mutante: en src/local_delegate/web/metrics.py (tokensClaude), `e.density` → `e.densidad` solo en el JS.
+   Comando: uv run pytest -q tests/test_metrics.py -k paridad_acct
+   Resultado: 1 falla → tests/test_metrics.py:1240
+     AssertionError: ('returned', {...'tool': 'local_summarize'...}); assert 0 == 179
+   Restaurado: sí (src/local_delegate/web/metrics.py: OK).

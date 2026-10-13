@@ -61,7 +61,7 @@ from .. import (
     failures,
     legacy_names,
     llamaswap_api,
-    precios,
+    pricing,
     quota,
     recompute,
     server,
@@ -545,9 +545,9 @@ def stats(
     aggregates = recompute.read_aggregates(config.LOG_DIR)
     datos["cost"] = valuation.cost_block(rows, aggregates, now=now)
     datos["images"] = valuation.images_block(usage)
-    # El contenido es `densidad.json` tal cual: sus claves cambian con su lector (A5c).
+    # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
     datos["density_table"] = {
-        k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
+        k: v for k, v in pricing.load_density().items() if not k.startswith("_")
     }
     datos["quota"] = _quota_block(aggregates, now)
     return JSONResponse(datos)
@@ -1984,7 +1984,10 @@ function textoCoste(j){
     + ' de la mediana de su grupo, ' + F.format(n.declared||0) + ' con el valor declarado (principal '
     + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
   const d = c.density || {}, o = d.origin || {};
-  const fams = Object.entries(d.families||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
+  // Las familias llegan como término de máquina (`new`, `previous`): aquí se dicen en palabras.
+  const FAMILIA = {new:'nueva', previous:'anterior'};
+  const fams = Object.entries(d.families||{})
+    .map(([k,v]) => (FAMILIA[k] || k) + ' ' + F.format(v)).join(', ');
   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
     + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
     + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)

@@ -1,0 +1,25 @@
+feat(rename): precios, densidad, datos del paquete, vigilante y vendor en inglés (ola A5c)
+
+- El módulo `precios` pasa a `pricing` (git mv), con sus nombres en inglés: `CHECK_FIELDS`,
+  `MIN_JUDGED_COST`, `load_prices`, `load_density`, `normalize_id`, `entry`, `family`,
+  `check_rows` y `verdict`. `transcripts` usa `pricing.CHECK_FIELDS` sin alias.
+- Las tablas del paquete pasan a `resources/data/prices.json` y `resources/data/density.json`
+  (antes `resources/datos/precios.json` y `densidad.json`), con claves en inglés: `source`,
+  `consulted`, `web_search_per_1000`, `models`, `input`, `cache_read`, `output`, `family` y
+  `supports_effort`; `measured_on`, `families`, `measured_with`, las columnas `unnumbered` y
+  `read_format`, y las clases `prose`, `code`, `structured` y `other`. Las familias de
+  tokenizador son `new` y `previous`. Viajan con su lector: sin lectura doble.
+- El cotejo responde `inside|outside|unpriced` y el veredicto `pass|fail`, así que `recompute`
+  deja de traducirlo al escribir `cost-aggregates.json` (cuyo formato no cambia); la tabla del
+  formato viejo de `legacy_names` se queda para leer el fichero antiguo.
+- `/api/stats` (`density_table`, `cost.density.families`) y `/api/events` (`family`) llevan las
+  claves y valores nuevos; el panel dice las familias en palabras con un diccionario de rótulos.
+- `vendor.json` documenta con `_about` y `_provenance`; `scripts/check_vendor.py` y su test pasan
+  sus nombres a inglés.
+- El vigilante de precios lee y escribe `prices.json` con las claves nuevas (solo ruta y claves;
+  el nombre del script y sus identificadores van en A10a).
+- Consecuencias mecánicas aprobadas: `cost.py`, `transcripts.py`, `attribution.py`,
+  `valuation.py`, `recompute.py`, `web/metrics.py`, `scripts/dev/capture_dashboard.py`, los tests
+  que leen las tablas, CHANGELOG `[Unreleased]` y la wiki (Repo-hardening y
+  Savings-and-metrics).
+- Test nuevo `test_families_are_said_in_words`, con su control positivo.

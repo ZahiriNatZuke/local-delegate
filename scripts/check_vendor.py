@@ -44,20 +44,20 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parents[1]
-MANIFIESTO_POR_DEFECTO = RAIZ / "src" / "local_delegate" / "resources" / "vendor" / "vendor.json"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MANIFEST = ROOT / "src" / "local_delegate" / "resources" / "vendor" / "vendor.json"
 
 OSV_URL = "https://api.osv.dev/v1/query"
 NPM_URL = "https://registry.npmjs.org/{name}/latest"
 TIMEOUT_S = 15
 
 OK = 0
-FALLO_INTEGRIDAD = 1
-FALLO_VULNERABILIDAD = 2
-FALLO_MANIFIESTO = 3
+INTEGRITY_FAILURE = 1
+VULNERABILITY_FAILURE = 2
+MANIFEST_FAILURE = 3
 
 
-class ServicioNoDisponible(Exception):
+class ServiceUnavailable(Exception):
     """La red falló, o el servicio devolvió algo que no se puede interpretar.
 
     Se trata igual una caída que una respuesta malformada: en ambos casos no sabemos nada, y no
@@ -68,136 +68,136 @@ class ServicioNoDisponible(Exception):
 # --- red ---------------------------------------------------------------------------------------
 # Toda la salida a internet pasa por aquí. Los tests sustituyen esta función y por eso nunca tocan
 # la red de verdad.
-def _pedir_json(url: str, payload: dict | None = None) -> dict:
-    datos = json.dumps(payload).encode("utf-8") if payload is not None else None
+def _fetch_json(url: str, payload: dict | None = None) -> dict:
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
     # Las URLs son constantes https de este módulo, nunca entrada de usuario.
-    peticion = urllib.request.Request(
+    request = urllib.request.Request(
         url,
-        data=datos,
+        data=data,
         headers={"Content-Type": "application/json", "User-Agent": "local-delegate-vendor-audit"},
     )
     try:
-        with urllib.request.urlopen(peticion, timeout=TIMEOUT_S) as respuesta:
-            cuerpo = respuesta.read().decode("utf-8")
+        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
+            body = response.read().decode("utf-8")
     except (urllib.error.URLError, OSError, TimeoutError) as exc:
-        raise ServicioNoDisponible(str(exc)) from exc
+        raise ServiceUnavailable(str(exc)) from exc
     try:
-        cuerpo = json.loads(cuerpo)
+        body = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise ServicioNoDisponible(f"respuesta que no es JSON: {exc}") from exc
-    if not isinstance(cuerpo, dict):
-        raise ServicioNoDisponible("respuesta JSON que no es un objeto")
-    return cuerpo
+        raise ServiceUnavailable(f"respuesta que no es JSON: {exc}") from exc
+    if not isinstance(body, dict):
+        raise ServiceUnavailable("respuesta JSON que no es un objeto")
+    return body
 
 
-def consultar_osv(nombre: str, version: str, ecosistema: str) -> list[dict]:
-    """Vulnerabilidades conocidas de esa versión. Lanza `ServicioNoDisponible` si no se sabe."""
-    respuesta = _pedir_json(
-        OSV_URL, {"package": {"name": nombre, "ecosystem": ecosistema}, "version": version}
+def query_osv(name: str, version: str, ecosystem: str) -> list[dict]:
+    """Vulnerabilidades conocidas de esa versión. Lanza `ServiceUnavailable` si no se sabe."""
+    response = _fetch_json(
+        OSV_URL, {"package": {"name": name, "ecosystem": ecosystem}, "version": version}
     )
-    vulns = respuesta.get("vulns", [])
+    vulns = response.get("vulns", [])
     if not isinstance(vulns, list):
-        raise ServicioNoDisponible("OSV devolvió un campo `vulns` que no es una lista")
+        raise ServiceUnavailable("OSV devolvió un campo `vulns` que no es una lista")
     return vulns
 
 
-def consultar_npm(nombre: str) -> str:
-    """Última versión publicada. Lanza `ServicioNoDisponible` si no se sabe."""
-    respuesta = _pedir_json(NPM_URL.format(name=nombre))
-    version = respuesta.get("version")
+def query_npm(name: str) -> str:
+    """Última versión publicada. Lanza `ServiceUnavailable` si no se sabe."""
+    response = _fetch_json(NPM_URL.format(name=name))
+    version = response.get("version")
     if not isinstance(version, str) or not version:
-        raise ServicioNoDisponible("npm no devolvió un campo `version` utilizable")
+        raise ServiceUnavailable("npm no devolvió un campo `version` utilizable")
     return version
 
 
-def _clave_version(version: str) -> tuple[int, ...] | None:
+def _version_key(version: str) -> tuple[int, ...] | None:
     """`4.4.1` -> `(4, 4, 1)`. `None` si no es comparable (prerelease, formato raro)."""
-    partes = version.split("-")[0].split(".")
-    if not partes:
+    parts = version.split("-")[0].split(".")
+    if not parts:
         return None
     try:
-        return tuple(int(p) for p in partes)
+        return tuple(int(p) for p in parts)
     except ValueError:
         return None
 
 
 # --- integridad (offline) ----------------------------------------------------------------------
-def cargar_manifiesto(ruta: Path) -> dict:
-    contenido = json.loads(ruta.read_text(encoding="utf-8"))
-    if not isinstance(contenido, dict) or not isinstance(contenido.get("files"), list):
+def load_manifest(path: Path) -> dict:
+    content = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(content, dict) or not isinstance(content.get("files"), list):
         # ValueError y no TypeError (TRY004): quien llama recibe un fichero, no un objeto de un
         # tipo equivocado — el problema es que su *contenido* no sirve, y `main` lo trata igual
         # que un JSON roto o un fichero ilegible.
         raise ValueError("el manifiesto no tiene una lista `files`")  # noqa: TRY004
-    return contenido
+    return content
 
 
-def comprobar_integridad(manifiesto: dict, directorio: Path) -> list[str]:
+def check_integrity(manifest: dict, directory: Path) -> list[str]:
     """Errores de integridad. Lista vacía = todo cuadra. No toca la red."""
-    errores: list[str] = []
-    declarados: set[str] = set()
+    errors: list[str] = []
+    declared: set[str] = set()
 
-    for entrada in manifiesto["files"]:
-        nombre_fichero = entrada.get("file")
-        if not nombre_fichero:
-            errores.append("hay una entrada del manifiesto sin campo `file`")
+    for entry in manifest["files"]:
+        file_name = entry.get("file")
+        if not file_name:
+            errors.append("hay una entrada del manifiesto sin campo `file`")
             continue
-        declarados.add(nombre_fichero)
+        declared.add(file_name)
         # La licencia se declara para que el chequeo de sincronía no la vea como intrusa, pero su
         # contenido no se hashea: no es código que se sirva.
-        if entrada.get("licenseFile"):
-            declarados.add(entrada["licenseFile"])
+        if entry.get("licenseFile"):
+            declared.add(entry["licenseFile"])
 
-        ruta = directorio / nombre_fichero
-        if not ruta.is_file():
-            errores.append(f"{nombre_fichero}: declarado en el manifiesto pero NO existe en disco")
+        path = directory / file_name
+        if not path.is_file():
+            errors.append(f"{file_name}: declarado en el manifiesto pero NO existe en disco")
             continue
 
-        datos = ruta.read_bytes()
-        real = hashlib.sha256(datos).hexdigest()
-        esperado = entrada.get("sha256")
-        if real != esperado:
-            mensaje = (
-                f"{nombre_fichero}: el sha256 no coincide.\n"
-                f"    esperado: {esperado}\n"
+        data = path.read_bytes()
+        real = hashlib.sha256(data).hexdigest()
+        expected = entry.get("sha256")
+        if real != expected:
+            message = (
+                f"{file_name}: el sha256 no coincide.\n"
+                f"    esperado: {expected}\n"
                 f"    real:     {real}\n"
-                f"    ({len(datos)} bytes en disco, {entrada.get('bytes')} declarados)"
+                f"    ({len(data)} bytes en disco, {entry.get('bytes')} declarados)"
             )
             # La causa más probable en Windows no es un fichero adulterado: es git convirtiendo
             # los LF en CRLF al hacer checkout (`core.autocrlf=true`, el valor por defecto de Git
             # for Windows). Decirlo aquí ahorra buscar un ataque donde solo hay un fin de línea.
-            if b"\r\n" in datos and len(datos) > (entrada.get("bytes") or 0):
-                mensaje += (
+            if b"\r\n" in data and len(data) > (entry.get("bytes") or 0):
+                message += (
                     "\n    PISTA: el fichero tiene CRLF y pesa de más. Casi seguro que git te lo"
                     "\n    normalizó al clonar. Comprueba que `.gitattributes` marca este"
                     "\n    directorio con `-text` y vuelve a hacer checkout del fichero."
                 )
-            errores.append(mensaje)
-        elif entrada.get("bytes") is not None and len(datos) != entrada["bytes"]:
+            errors.append(message)
+        elif entry.get("bytes") is not None and len(data) != entry["bytes"]:
             # Con el hash bueno el tamaño no puede diferir; si difiere, el manifiesto miente.
-            errores.append(
-                f"{nombre_fichero}: el hash cuadra pero el tamaño declarado no "
-                f"({entrada['bytes']} frente a {len(datos)} reales)"
+            errors.append(
+                f"{file_name}: el hash cuadra pero el tamaño declarado no "
+                f"({entry['bytes']} frente a {len(data)} reales)"
             )
 
     # Un fichero vendorizado sin declarar es exactamente el punto ciego que esto viene a cerrar.
-    presentes = {p.name for p in directorio.iterdir() if p.is_file()}
-    intrusos = sorted(presentes - declarados - {"vendor.json"})
-    for intruso in intrusos:
-        errores.append(f"{intruso}: está en `vendor/` pero NO figura en el manifiesto")
+    present = {p.name for p in directory.iterdir() if p.is_file()}
+    intruders = sorted(present - declared - {"vendor.json"})
+    for intruder in intruders:
+        errors.append(f"{intruder}: está en `vendor/` pero NO figura en el manifiesto")
 
-    return errores
+    return errors
 
 
 # --- informe -----------------------------------------------------------------------------------
-def _escribir_summary(lineas: list[str]) -> None:
+def _write_summary(lines: list[str]) -> None:
     """Vuelca el informe al summary del job, si estamos en Actions."""
-    destino = os.environ.get("GITHUB_STEP_SUMMARY")
-    if not destino:
+    target = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not target:
         return
     try:
-        with open(destino, "a", encoding="utf-8") as fh:
-            fh.write("\n".join(lineas) + "\n")
+        with open(target, "a", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
     except OSError:
         pass  # el summary es un extra; no vale la pena tumbar el job por no poder escribirlo
 
@@ -212,93 +212,93 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=MANIFIESTO_POR_DEFECTO,
+        default=DEFAULT_MANIFEST,
         help="ruta del manifiesto (por defecto, el del paquete)",
     )
     args = parser.parse_args(argv)
 
-    manifiesto_ruta: Path = args.manifest
+    manifest_path: Path = args.manifest
     try:
-        manifiesto = cargar_manifiesto(manifiesto_ruta)
+        manifest = load_manifest(manifest_path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"FALLO: no se pudo leer el manifiesto {manifiesto_ruta}: {exc}")
-        return FALLO_MANIFIESTO
+        print(f"FALLO: no se pudo leer el manifiesto {manifest_path}: {exc}")
+        return MANIFEST_FAILURE
 
-    directorio = manifiesto_ruta.parent
-    lineas: list[str] = ["## Auditoría del vendorizado"]
-    salida = OK
+    directory = manifest_path.parent
+    lines: list[str] = ["## Auditoría del vendorizado"]
+    out = OK
 
-    errores = comprobar_integridad(manifiesto, directorio)
-    if errores:
-        salida = FALLO_INTEGRIDAD
-        lineas.append("")
-        lineas.append("**INTEGRIDAD ROTA.** El contenido vendorizado no es el declarado:")
-        lineas.extend(f"- {e}" for e in errores)
-        lineas.append("")
-        lineas.append(
+    errors = check_integrity(manifest, directory)
+    if errors:
+        out = INTEGRITY_FAILURE
+        lines.append("")
+        lines.append("**INTEGRIDAD ROTA.** El contenido vendorizado no es el declarado:")
+        lines.extend(f"- {e}" for e in errors)
+        lines.append("")
+        lines.append(
             "Si el cambio es intencionado, actualiza `vendor.json` siguiendo "
             "`docs/wiki/Repo-hardening.md`. Si no lo es, **investígalo antes de tocar nada**."
         )
     else:
-        lineas.append("")
-        lineas.append("- Integridad: OK, cada fichero coincide con su sha256 declarado.")
+        lines.append("")
+        lines.append("- Integridad: OK, cada fichero coincide con su sha256 declarado.")
 
     if args.offline:
-        lineas.append("- Red: omitida (`--offline`).")
-        for linea in lineas:
-            print(linea)
-        _escribir_summary(lineas)
-        return salida
+        lines.append("- Red: omitida (`--offline`).")
+        for line in lines:
+            print(line)
+        _write_summary(lines)
+        return out
 
-    for entrada in manifiesto["files"]:
-        nombre = entrada.get("name")
-        version = entrada.get("version")
-        ecosistema = entrada.get("ecosystem", "npm")
-        if not nombre or not version:
+    for entry in manifest["files"]:
+        name = entry.get("name")
+        version = entry.get("version")
+        ecosystem = entry.get("ecosystem", "npm")
+        if not name or not version:
             continue
 
         try:
-            vulns = consultar_osv(nombre, version, ecosistema)
-        except ServicioNoDisponible as exc:
-            lineas.append(f"- AVISO: no se pudo consultar OSV para `{nombre}` {version}: {exc}")
+            vulns = query_osv(name, version, ecosystem)
+        except ServiceUnavailable as exc:
+            lines.append(f"- AVISO: no se pudo consultar OSV para `{name}` {version}: {exc}")
         else:
             if vulns:
                 # La integridad rota manda: es el diagnóstico más grave y el más fiable.
-                if salida == OK:
-                    salida = FALLO_VULNERABILIDAD
+                if out == OK:
+                    out = VULNERABILITY_FAILURE
                 ids = ", ".join(str(v.get("id", "?")) for v in vulns)
-                lineas.append("")
-                lineas.append(
-                    f"**VULNERABILIDAD.** OSV reporta {len(vulns)} para `{nombre}` {version}: {ids}"
+                lines.append("")
+                lines.append(
+                    f"**VULNERABILIDAD.** OSV reporta {len(vulns)} para `{name}` {version}: {ids}"
                 )
-                lineas.append("")
+                lines.append("")
             else:
-                lineas.append(f"- CVEs: OSV no conoce ninguna para `{nombre}` {version}.")
+                lines.append(f"- CVEs: OSV no conoce ninguna para `{name}` {version}.")
 
         try:
-            ultima = consultar_npm(nombre)
-        except ServicioNoDisponible as exc:
-            lineas.append(f"- AVISO: no se pudo consultar npm para `{nombre}`: {exc}")
+            latest = query_npm(name)
+        except ServiceUnavailable as exc:
+            lines.append(f"- AVISO: no se pudo consultar npm para `{name}`: {exc}")
             continue
 
-        actual_k, ultima_k = _clave_version(version), _clave_version(ultima)
-        if actual_k is None or ultima_k is None:
-            lineas.append(
-                f"- AVISO: no se pudieron comparar las versiones de `{nombre}` "
-                f"(vendorizada {version}, publicada {ultima})."
+        current_k, latest_k = _version_key(version), _version_key(latest)
+        if current_k is None or latest_k is None:
+            lines.append(
+                f"- AVISO: no se pudieron comparar las versiones de `{name}` "
+                f"(vendorizada {version}, publicada {latest})."
             )
-        elif ultima_k > actual_k:
-            lineas.append(
-                f"- AVISO: `{nombre}` vendorizado en **{version}**, publicado **{ultima}**. "
+        elif latest_k > current_k:
+            lines.append(
+                f"- AVISO: `{name}` vendorizado en **{version}**, publicado **{latest}**. "
                 "No rompe el CI; actualizarlo es un cambio aparte."
             )
         else:
-            lineas.append(f"- Versión: `{nombre}` {version} está al día.")
+            lines.append(f"- Versión: `{name}` {version} está al día.")
 
-    for linea in lineas:
-        print(linea)
-    _escribir_summary(lineas)
-    return salida
+    for line in lines:
+        print(line)
+    _write_summary(lines)
+    return out
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, cost, legacy_names, precios, quota, transcripts
+from . import attribution, cost, legacy_names, pricing, quota, transcripts
 
 OLD_FILE_NAME, FILE_NAME = legacy_names.COST_AGGREGATES_FILE_NAMES
 VERSION = 1
@@ -168,26 +168,23 @@ def _merge_n_by_month(fresh: dict, previous: dict, *, now: datetime) -> dict:
 
 # --- Cotejo (REQ-014) -----------------------------------------------------------------------
 
-_VERDICT_VALUES = legacy_names.FORMATS["cost_aggregates_check"]["values"]["verdict"]
-
 
 def _check(index: transcripts.Index, *, now: datetime) -> dict | None:
     rows = transcripts.cost_state(index)
     if not rows:
         return None
-    table = precios.cargar_precios()
-    results = precios.cotejar(rows, table)
+    table = pricing.load_prices()
+    results = pricing.check_rows(rows, table)
     unpriced = sorted(
-        {precios.normalizar_id(f["modelo"]) for f, r in zip(rows, results) if r == "sin_precio"}
+        {pricing.normalize_id(f["model"]) for f, r in zip(rows, results) if r == "unpriced"}
     )
     return {
         "date": now.isoformat(timespec="seconds"),
-        "table_version": table.get("consultado"),
+        "table_version": table.get("consulted"),
         "judged": sum(1 for r in results if r is not None),
-        "outside": sum(1 for r in results if r == "fuera"),
+        "outside": sum(1 for r in results if r == "outside"),
         "unpriced": unpriced,
-        # `precios.veredicto` aún responde `pasa|falla`: se guarda el valor nuevo.
-        "verdict": legacy_names.new_value(_VERDICT_VALUES, precios.veredicto(results)),
+        "verdict": pricing.verdict(results),
     }
 
 

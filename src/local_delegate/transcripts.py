@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import precios
+from . import pricing
 
 TOOL_PREFIX = "mcp__local-delegate__"
 
@@ -36,9 +36,6 @@ TTL_S = {"main": 3600, "subagent": 300}
 MARGIN_BEFORE = timedelta(seconds=1)
 MARGIN_AFTER = timedelta(seconds=2)
 NO_RESULT_WINDOW = timedelta(minutes=15)
-
-#: Las seis columnas de `modelUsage` que entran en el cotejo.
-CHECK_FIELDS = precios.CAMPOS_COTEJO
 
 
 def parse_instant(value: object) -> datetime | None:
@@ -98,7 +95,7 @@ class Index:
 def request_cost(message: dict) -> float | None:
     """Coste a precio de lista de una petición (USD), con la escritura a 5 min y a 1 h separadas
     según `usage.cache_creation`; `None` si el modelo no tiene precio (REQ-051)."""
-    p = precios.entrada(str(message.get("model") or ""))
+    p = pricing.entry(str(message.get("model") or ""))
     if p is None:
         return None
     u = message.get("usage") if isinstance(message.get("usage"), dict) else {}
@@ -108,11 +105,11 @@ def request_cost(message: dict) -> float | None:
     if w5 is None and w1 is None:
         w5, w1 = u.get("cache_creation_input_tokens") or 0, 0
     return (
-        (u.get("input_tokens") or 0) * p["entrada"]
+        (u.get("input_tokens") or 0) * p["input"]
         + (w5 or 0) * p["w5m"]
         + (w1 or 0) * p["w1h"]
-        + (u.get("cache_read_input_tokens") or 0) * p["lectura"]
-        + (u.get("output_tokens") or 0) * p["salida"]
+        + (u.get("cache_read_input_tokens") or 0) * p["cache_read"]
+        + (u.get("output_tokens") or 0) * p["output"]
     ) / 1e6
 
 
@@ -271,14 +268,14 @@ def _same_path(a: str | None, b: str | None) -> bool:
 
 
 def _supports_effort(model: str) -> bool:
-    e = precios.entrada(model)
-    return True if e is None else bool(e.get("admite_esfuerzo", True))
+    e = pricing.entry(model)
+    return True if e is None else bool(e.get("supports_effort", True))
 
 
 def entry_for(index: Index, d: Delegation, match_kind: str) -> dict:
     """La entrada del relleno de una línea casada (REQ-005): sin rutas, ids de sesión ni texto."""
     n, cad = n_and_expiries(index, d)
-    model = precios.normalizar_id(d.model) if d.model else None
+    model = pricing.normalize_id(d.model) if d.model else None
     effort = d.effort
     if effort is None and model and not _supports_effort(model):
         effort = "n/a"  # Haiku 4.5: no admite esfuerzo, no es un dato que falte (REQ-003)
@@ -353,14 +350,14 @@ def match_lines(
 
 def cost_state(index: Index) -> list[dict]:
     """Filas «modelo × sesión» de la ÚLTIMA línea `cost-state` por posición de cada
-    `(sessionId, startTime)`: `{"modelo", <los seis campos>}`. Sin ids de sesión."""
+    `(sessionId, startTime)`: `{"model", <los seis campos>}`. Sin ids de sesión."""
     rows: list[dict] = []
     for _position, usage in sorted(index.costs.values(), key=lambda x: x[0]):
         for model, values in usage.items():
             if not isinstance(values, dict):
                 continue
-            row = {"modelo": str(model)}
-            for field_name in CHECK_FIELDS:
+            row = {"model": str(model)}
+            for field_name in pricing.CHECK_FIELDS:
                 row[field_name] = values.get(field_name) or 0
             rows.append(row)
     return rows

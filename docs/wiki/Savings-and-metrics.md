@@ -179,7 +179,7 @@ tokens de bruto con `÷ 4`, un −32 %); contar en tokens de Claude de verdad lo
 ### De caracteres a tokens de Claude
 
 Cuántos caracteres caben en un token depende del **tokenizador** y del **tipo de contenido**. El
-paquete trae una tabla de densidad (`resources/datos/densidad.json`), en caracteres por token,
+paquete trae una tabla de densidad (`resources/data/density.json`), en caracteres por token,
 medida el 2026-10-06 con llamadas reales a Claude Code (`claude -p`) sobre textos públicos de este
 repo: la entrada que reporta `usage`, menos la de una llamada de control vacía, entre los
 caracteres del texto:
@@ -201,12 +201,12 @@ Para cada delegación, la regla es una sola y vive en Python (`cost.resolve_dens
 
 - **familia**: la del modelo que pidió la delegación (`caller_model`); sin modelo, la del
   [respaldo](#cobertura-y-respaldo); un modelo que no está en la tabla de precios se trata como
-  `nueva` y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
+  familia nueva (`new`) y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
   que no está entre los medidos lleva la marca `family_density` (densidad de la familia);
 - **clase de contenido**, sin leer el texto: primero por la tool (`local_lint_summary` → log,
   `local_commit_msg` → diff, `local_explain_code` → código) y si no por la extensión del `path`
   (`.md .txt .rst .html` → prosa; `.py .js .ts .ps1 .sh …` → código; `.json .jsonl .yaml .toml
-  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `otro`);
+  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `other`);
 - **columna**: formato `Read` si la entrada fue por `path`, sin numerar si no. Lo devuelto a
   Claude va siempre sin numerar (estructurado en `local_extract`, código en `local_boilerplate`,
   prosa en el resto);
@@ -331,9 +331,9 @@ céntimo sobre la misma ventana.
 
 ### La tabla de precios
 
-Viaja en el paquete (`resources/datos/precios.json`): precio de entrada, salida, escritura de caché
-a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `fuente` (la
-página oficial) y `consultado` (la fecha del último cambio). Se busca por id exacto, quitando antes
+Viaja en el paquete (`resources/data/prices.json`): precio de entrada, salida, escritura de caché
+a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `source` (la
+página oficial) y `consulted` (la fecha del último cambio). Se busca por id exacto, quitando antes
 la fecha y el sufijo `[1m]`. **Ni la carga de la tabla ni `/api/stats` usan la red**: la tabla la
 mantiene al día el [vigilante semanal](Repo-hardening.md#vigilante-de-precios-y-límites), que
 abre un PR cuando cambia la página.

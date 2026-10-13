@@ -97,8 +97,8 @@ def test_sin_densidad_las_dos_dan_cero(tmp_path):
 
 def test_el_mismo_py_con_haiku_da_menos_tokens():
     """Escenario de la spec: un `.py` por `path`. Opus 5.5 usa `c` = 2,03 (familia nueva, formato
-    `Read`, `medida`); Haiku, `c` = 3,12 (familia anterior, `formato_read` sin medir → respaldo (2),
-    `sin_numerar`). El valor de Haiku coincide con el del respaldo (3) porque `codigo` es la mayor
+    `Read`, `medida`); Haiku, `c` = 3,12 (familia anterior, `read_format` sin medir → respaldo (2),
+    `unnumbered`). El valor de Haiku coincide con el del respaldo (3) porque `code` es la mayor
     `c` de su familia: lo que discrimina es el ORIGEN."""
     base = _fila(path="C:/src/app.py")
     d_opus = cost.resolve_density(dict(base, caller_model="claude-opus-5-5"))
@@ -116,9 +116,9 @@ def test_la_tool_manda_sobre_la_extension():
     clase = cost.content_class({"tool": "local_lint_summary", "path": "C:/src/app.py"})
     assert clase == "log"
     assert cost.content_class({"tool": "local_commit_msg", "path": "x.md"}) == "diff"
-    assert cost.content_class({"tool": "local_summarize", "path": "C:/src/app.py"}) == "codigo"
-    assert cost.content_class({"tool": "local_summarize", "path": "/a/b.LOCK"}) == "estructurado"
-    assert cost.content_class({"tool": "local_summarize", "path": "C:\\a.b\\volcado"}) == "otro"
+    assert cost.content_class({"tool": "local_summarize", "path": "C:/src/app.py"}) == "code"
+    assert cost.content_class({"tool": "local_summarize", "path": "/a/b.LOCK"}) == "structured"
+    assert cost.content_class({"tool": "local_summarize", "path": "C:\\a.b\\volcado"}) == "other"
 
 
 def test_las_columnas_de_devuelto_y_salida():
@@ -128,7 +128,7 @@ def test_las_columnas_de_devuelto_y_salida():
     assert d["returned"] == [188, "measured"]  # estructurado, sin numerar
     assert d["output"] == [223, "measured"]  # prosa, sin numerar
     b = cost.resolve_density(_fila(tool="local_boilerplate", source="inline"))
-    assert b["text"] == [241, "conservative"]  # inline sin path: clase `otro`, sin numerar → (3)
+    assert b["text"] == [241, "conservative"]  # inline sin path: clase `other`, sin numerar → (3)
     assert (b["returned"], b["output"]) == ([241, "measured"], [241, "measured"])  # codigo
 
 
@@ -137,7 +137,7 @@ def test_respaldo_por_variable(monkeypatch):
     un valor inválido usa el declarado y lo dice."""
     monkeypatch.setattr(config, "COST_FALLBACK", "claude-haiku-4-5")
     r = cost.fallback()
-    assert r["family"] == "anterior"
+    assert r["family"] == "previous"
     assert (r["model"], r["thread"], r.get("fallback_invalid")) == (
         "claude-haiku-4-5",
         "subagent",
@@ -146,7 +146,7 @@ def test_respaldo_por_variable(monkeypatch):
 
     monkeypatch.setattr(config, "COST_FALLBACK", "claude-opus-5:main")
     r = cost.fallback()
-    assert (r["model"], r["thread"], r["family"]) == ("claude-opus-5", "main", "nueva")
+    assert (r["model"], r["thread"], r["family"]) == ("claude-opus-5", "main", "new")
 
     monkeypatch.setattr(config, "COST_FALLBACK", "xyz")
     r = cost.fallback()
@@ -167,10 +167,10 @@ def test_la_variable_de_respaldo_se_lee_por_la_puerta_registrada():
 def test_marcas_de_familia():
     """REQ-030/031: un modelo de la familia que no está entre los medidos lleva
     `family_density`; uno fuera de la tabla, `assumed_family` y la familia nueva."""
-    assert cost.family_and_marks("claude-opus-5-5") == ("nueva", [])
-    assert cost.family_and_marks("claude-sonnet-4-6") == ("anterior", ["family_density"])
-    assert cost.family_and_marks("claude-opus-4-8") == ("nueva", ["family_density"])
-    assert cost.family_and_marks("claude-xyz-1") == ("nueva", ["assumed_family"])
+    assert cost.family_and_marks("claude-opus-5-5") == ("new", [])
+    assert cost.family_and_marks("claude-sonnet-4-6") == ("previous", ["family_density"])
+    assert cost.family_and_marks("claude-opus-4-8") == ("new", ["family_density"])
+    assert cost.family_and_marks("claude-xyz-1") == ("new", ["assumed_family"])
 
 
 # --- Imágenes fuera del neto (REQ-038) ----------------------------------------------------------
@@ -237,7 +237,7 @@ def test_la_fusion_respeta_el_orden(tmp_path):
     assert (b["caller_model"], b.get("caller_origin")) == (DEL_RELLENO, "backfill")
     assert b["caller_kind"] == "main", "por campo: el hilo de la línea manda sobre el del relleno"
     assert (b.get("n"), b.get("expiries"), b.get("caller_effort")) == (12, 1, "n/a")
-    assert b.get("family") == "anterior"
+    assert b.get("family") == "previous"
 
     assert (c["caller_model"], c["caller_kind"], c.get("caller_origin")) == (
         "claude-opus-5-5",
@@ -356,7 +356,7 @@ def test_la_coletilla_usa_tokens_de_claude(monkeypatch, tmp_path):
 
 @backend_mock.mock
 def test_el_recibo_de_salida_usa_tokens_de_claude(monkeypatch, tmp_path):
-    """Salida a fichero de `local_boilerplate`: clase `codigo`, sin numerar → c = 2,41."""
+    """Salida a fichero de `local_boilerplate`: clase `code`, sin numerar → c = 2,41."""
     codigo = "x = 1\n" * 100  # 600 caracteres
     _backend(monkeypatch, tmp_path, prompt_tokens=10, texto=codigo.strip())
     destino = tmp_path / "salida.py"
@@ -382,7 +382,7 @@ def test_tokens_aprox_de_extract_es_de_claude(monkeypatch, tmp_path):
 @backend_mock.mock
 def test_la_coletilla_usa_el_modelo_de_la_nota_si_ya_esta(monkeypatch, tmp_path):
     """REQ-035: con la atribución de la llamada en curso (nota del hook y transcript), la coletilla
-    usa ese modelo y no el respaldo. Haiku, `.md` por `path`: su `formato_read` está sin medir →
+    usa ese modelo y no el respaldo. Haiku, `.md` por `path`: su `read_format` está sin medir →
     respaldo (2), prosa sin numerar, c = 3,01 → 4000 × 100 // 301 = 1328 (con Opus 5.5, 2000)."""
     _backend(monkeypatch, tmp_path, prompt_tokens=9999)
     monkeypatch.setattr(

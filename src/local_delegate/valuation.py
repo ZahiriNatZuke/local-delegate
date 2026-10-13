@@ -24,7 +24,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
-from . import attribution, cost, legacy_names, precios, server
+from . import attribution, cost, legacy_names, pricing, server
 
 #: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
 #: subagente 40 (135 casos).
@@ -46,7 +46,7 @@ FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
 
 def model_name(mid: str) -> str:
     """`claude-opus-5-5` → `Opus 5.5`; `claude-haiku-4-5` → `Haiku 4.5`. Solo para rótulos."""
-    parts = precios.normalizar_id(str(mid)).removeprefix("claude-").split("-")
+    parts = pricing.normalize_id(str(mid)).removeprefix("claude-").split("-")
     if not parts or not parts[0]:
         return str(mid)
     return " ".join([parts[0].capitalize(), ".".join(parts[1:])]).strip()
@@ -59,10 +59,10 @@ def _thread(row: dict) -> str:
 
 def price(m: str, thread: str, table: dict | None = None) -> dict | None:
     """`{"w": P_w(m, hilo), "r": P_r(m)}` en USD/MTok, o `None` si `m` no tiene precio."""
-    entry = precios.entrada(str(m or ""), table)
+    entry = pricing.entry(str(m or ""), table)
     if entry is None:
         return None
-    return {"w": entry["w5m"] if thread == "subagent" else entry["w1h"], "r": entry["lectura"]}
+    return {"w": entry["w5m"] if thread == "subagent" else entry["w1h"], "r": entry["cache_read"]}
 
 
 def _int_or_none(v: object) -> int | None:
@@ -163,7 +163,7 @@ def cost_block(
             or DEFAULT_CLEANUP_DAYS
         )
     try:
-        table = precios.cargar_precios()
+        table = pricing.load_prices()
         r = cost.fallback()
     except Exception:
         # Sin tabla no hay cifra (REQ-046), pero la barra y el motivo se enseñan igual.
@@ -211,7 +211,7 @@ def cost_block(
         c = event_cost(row, aggregates, table)
         n_origin[c["n_origin"]] += 1
         if c["low_bound"] is None:
-            unpriced[precios.normalizar_id(c["model"])] += 1
+            unpriced[pricing.normalize_id(c["model"])] += 1
             continue
         valued += 1
         t_total += c["T"]
@@ -282,9 +282,8 @@ def cost_block(
             for g in sorted(breakdown.values(), key=lambda g: -g["estimate"])
         ],
         "table": {
-            # Las claves de `precios.json` (`consultado`, `fuente`) cambian con su lector (A5c).
-            "consulted": (table or {}).get("consultado"),
-            "source": (table or {}).get("fuente"),
+            "consulted": (table or {}).get("consulted"),
+            "source": (table or {}).get("source"),
         },
         "command": COMMAND,
     }

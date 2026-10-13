@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "_acerca_de": [
+  "_about": [
     "Manifiesto de lo que hay vendorizado en este directorio. Es la FUENTE DE VERDAD de la",
     "versión: no la repitas en comentarios del código, remite aquí.",
     "Lo comprueba `scripts/check_vendor.py` (integridad offline, CVEs en OSV.dev y versión",
@@ -17,7 +17,7 @@
       "licenseFile": "chart.js-LICENSE.md",
       "sha256": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
       "bytes": 208522,
-      "_procedencia": [
+      "_provenance": [
         "Verificado el 2026-07-29 contra el TARBALL OFICIAL de npm, que es la fuente canónica:",
         "package/dist/chart.umd.min.js del .tgz de chart.js 4.5.1. jsDelivr sirve exactamente el",
         "mismo contenido, byte a byte, así que la procedencia está establecida por dos caminos.",

@@ -239,7 +239,7 @@ def test_api_stats_trae_coste_cuota_e_imagenes(entorno):
     assert j.get("cost") is not None
     assert j.get("images") == {"n": 1, "bytes": 250000, "chars_returned": 800}
     assert j.get("quota", {}).get("five_hour", {}).get("status") == "uncalibrated"
-    assert set(j.get("density_table", {}).get("familias", {})) == {"nueva", "anterior"}
+    assert set(j.get("density_table", {}).get("families", {})) == {"new", "previous"}
     # Las claves de siempre siguen ahí: las nuevas son aditivas.
     assert j["total"]["calls"] == 2
 
@@ -576,6 +576,19 @@ def test_texto_del_coste_con_la_barra_y_el_respaldo(entorno, tmp_path):
         "Relecturas (N): 0 del relleno, 0 de la mediana de su grupo, 2 con el valor declarado"
         in texto
     )
+
+
+def test_families_are_said_in_words(entorno, tmp_path):
+    """Las familias de tokenizador llegan como `new` y `previous` y el panel las dice en palabras.
+
+    Control: mutante «`FAMILIA` con la clave vieja `nueva`» → sale «new 2»."""
+    logs, _home = entorno
+    _escribir_log(logs, [_linea(_ahora() - timedelta(hours=1))])
+    j = _stats()
+    assert j["cost"]["density"]["families"] == {"new": 1}  # guarda: la fila trae la familia
+    j["cost"]["density"]["families"] = {"new": 2, "previous": 1}
+    texto = _textos(tmp_path, j)["coste"]
+    assert "familia de tokenizador (nueva 2, anterior 1)" in texto
 
 
 def test_una_fila_sin_ahorro_no_pinta_dolares(entorno, tmp_path):
