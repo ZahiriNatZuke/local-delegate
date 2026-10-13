@@ -5,16 +5,16 @@ La subola se parte en 6 lotes (D13: 1507 filas, como mucho 300 por lote y sin pa
 2026-10-13 con las 8 decisiones de la fase 1 tal como se recomendaron. Cada lote es un commit que
 hace la sesión principal, en una rama apilada sobre el anterior. Las tablas de controles positivos,
 `local_*` y PyCharm son las de todos los lotes, porque `check_wave_records.py` lee la primera tabla
-de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 filas
-`rename_refactoring` = 84 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv`,
-`waves/A9b-3-mapping.csv` y `waves/A9b-4-mapping.csv`.
+de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 = 111 filas
+`rename_refactoring` = 111 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv`,
+`waves/A9b-3-mapping.csv`, `waves/A9b-4-mapping.csv` y `waves/A9b-5-mapping.csv`.
 
 - Rama: lote 1 en `sdd/english-names-a9b-1`, apilada sobre `sdd/english-names-a9a-7` (`76fe954`, A9a
   completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, commit `c3ed701`; lote 3 en
-  `sdd/english-names-a9b-3`, commit `3f66253`; lote 4 en `sdd/english-names-a9b-4`, sobre `3f66253` ·
-  Commit del lote 4: pendiente, con el borrador en `waves/A9b-4-commit-msg.txt` (firmado y sin
-  coautoría)
-- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 4 (fase 2).
+  `sdd/english-names-a9b-3`, commit `3f66253`; lote 4 en `sdd/english-names-a9b-4`, commit `7f85d24`;
+  lote 5 en `sdd/english-names-a9b-5`, sobre `7f85d24` · Commit del lote 5: pendiente, con el
+  borrador en `waves/A9b-5-commit-msg.txt` (firmado y sin coautoría)
+- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 5 (fase 2).
 - Conteo base: `evidence/A9b/collect-before.txt`, 2569 tests.
 
 ## Controles positivos
@@ -28,6 +28,7 @@ de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 f
 | `tests/test_failure_captures.py::test_the_oom_without_profile_did_not_reach_timeout_and_stays_uncaptured` (assert negativo del lote 1 con la clave renombrada `exception`) | la captura `oom-without-profile.json` gana una clave `"exception"` | `assert "exception" not in doc` | sí, desde copia; sha256 igual |
 | `tests/test_hooks_telemetry_api.py::test_counts_suggested_over_the_total` (lote 3; usa `_event(…, suggested=…)` con los kwargs renombrados) | `src/local_delegate/web/metrics.py:615`: `_aggregate_hooks` deja de sumar las sugeridas (`suggested_total += suggested` → `+= 0`) | `assert aggregate["suggested"] == 2` → `assert 0 == 2` | sí, desde copia; sha256 igual (`evidence/A9b-3/mutant.txt`) |
 | `tests/test_install_timeouts.py::test_install_keeps_the_hand_set_timeout` (lote 4; usa `_home_with`, `_timeouts_of`, `CLIENTS`, `TIMEOUTS` y los argnames `client`/`mode`) | `src/local_delegate/install.py:665`: la lectura de los plazos de Claude y opencode devuelve `{}` | `assert _timeouts_of(entry, client) == TIMEOUTS[client]` → `assert {} == {'timeout': 900000}` | sí, desde copia; sha256 igual (`evidence/A9b-4/mutant.txt`) |
+| `tests/test_dashboard_cost.py::test_an_old_point_expires_without_regenerating` y `::test_warning_against_a_rejection` (lote 5; leen `_texts(…)["quota"]`, la clave JS renombrada, con `env`, `_aggregates`, `_point`, `_write_log` y `_line`) | `src/local_delegate/web/metrics.py:2007`: `quotaText` del panel devuelve `[]` | `assert "faltan 1 puntos" in text` → `assert 'faltan 1 puntos' in ''` (4 asserts, 2 tests) | sí, desde copia; sha256 igual (`evidence/A9b-5/mutant.txt`) |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -37,6 +38,7 @@ de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 f
 | Agente A9b-1 | `local_lint_summary(path=evidence/A9b-1/pytest-full-run1.log)` | resumen de la primera corrida de la suite (3 fallos: 1 real del lote y 2 de tiempos de `test_fake_llamaswap`) |
 | Agente A9b-2 | (ninguna) | la suite salió verde a la primera (47 líneas de log) y los ficheros se leyeron por franjas concretas: no hubo nada largo que resumir |
 | Agente A9b-4 | (ninguna) | suite verde a la primera y comprobaciones por script AST: nada largo que resumir |
+| Agente A9b-5 | (ninguna) | suite verde a la primera (Playwright incluido, bajo el cerrojo) y comprobaciones por script AST: nada largo que resumir |
 | Agente A9b-3 | (ninguna) | suite verde a la primera; los ficheros se leyeron por franjas y las comprobaciones de cadenas las hizo un script AST: nada largo que resumir |
 
 ## Llamadas `mcp__pycharm__*`
@@ -131,6 +133,34 @@ de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 f
 | A9b-4 | `rename_refactoring` | `_diff_grande→_large_diff` (`test_map_reduce.py`) | 7 usos |
 | A9b-4 | `rename_refactoring` | `_backend_con_techo→_backend_with_ceiling` | 2 usos |
 | A9b-4 | `get_file_problems` | `test_install_timeouts.py`, `test_install_opencode.py`, `test_map_reduce.py` | 0 errores |
+| A9b-5 | `rename_refactoring` | `_plazo_de_conexion→_connect_timeout_of` (`test_metrics.py`) | 1 usos |
+| A9b-5 | `rename_refactoring` | `_resuelta→_resolved` | 13 usos |
+| A9b-5 | `rename_refactoring` | `_NETO_RESTA→_NET_SUBTRACTS` | 7 usos |
+| A9b-5 | `rename_refactoring` | `_SALIDA_A_FICHERO→_OUTPUT_TO_FILE` | 4 usos |
+| A9b-5 | `rename_refactoring` | `_IMAGEN_POR_PATH→_IMAGE_BY_PATH` | 3 usos |
+| A9b-5 | `rename_refactoring` | `_FALLO_SIN_TOKENS→_FAILURE_WITHOUT_TOKENS` | 6 usos |
+| A9b-5 | `rename_refactoring` | `_extraer_funcion_js→_extract_js_function` | 10 usos |
+| A9b-5 | `rename_refactoring` | `_CAMPOS_PARIDAD→_PARITY_FIELDS` | 4 usos |
+| A9b-5 | `rename_refactoring` | `_fila_de_uso→_usage_row` | 5 usos |
+| A9b-5 | `rename_refactoring` | `_Mezcla→_Mix` | 6 usos |
+| A9b-5 | `rename_refactoring` | `_stats_de→_stats_of` | 2 usos |
+| A9b-5 | `rename_refactoring` | `_sin_ok→_without_ok` | 1 usos |
+| A9b-5 | `rename_refactoring` | `_acct_en_js→_acct_in_js` | 5 usos |
+| A9b-5 | `rename_refactoring` | `CAMPOS_NUEVOS→NEW_FIELDS` (`test_observabilidad_respaldo.py`) | 2 usos |
+| A9b-5 | `rename_refactoring` | `_linea_de→_line_of` | 2 usos |
+| A9b-5 | `rename_refactoring` | `status_sin_red→status_offline` (fixture) | 7 usos |
+| A9b-5 | `rename_refactoring` | `FRASES_PROHIBIDAS→FORBIDDEN_PHRASES` (`test_panel_coste.py`) | 2 usos |
+| A9b-5 | `rename_refactoring` | `entorno→env` (fixture) | 26 usos |
+| A9b-5 | `rename_refactoring` | `_ahora→_now` | 15 usos |
+| A9b-5 | `rename_refactoring` | `_linea→_line` (también el import de `test_metrics.py`) | 18 usos |
+| A9b-5 | `rename_refactoring` | `IMAGEN→IMAGE` (ídem) | 6 usos |
+| A9b-5 | `rename_refactoring` | `_escribir_log→_write_log` | 11 usos |
+| A9b-5 | `rename_refactoring` | `_punto→_point` (ídem) | 10 usos |
+| A9b-5 | `rename_refactoring` | `_agregados→_aggregates` (ídem) | 6 usos |
+| A9b-5 | `rename_refactoring` | `_extraer→_extract` | 4 usos |
+| A9b-5 | `rename_refactoring` | `_FUNCIONES→_FUNCTIONS` | 2 usos |
+| A9b-5 | `rename_refactoring` | `_textos→_texts` | 7 usos |
+| A9b-5 | `get_file_problems` | `test_dashboard_cost.py`, `test_fallback_observability.py`, `test_metrics.py` | 0 errores propios: solo `Unresolved reference` en cadenas de `monkeypatch.setattr` (`open`, `connect`, `Client`), falsos positivos que ya estaban |
 
 ## A9b-1 — capturas de `tests/fixtures/backend`, `test_enfriamiento`, `test_fallos` y `test_fallos_capturas` (aplicado)
 
@@ -328,9 +358,70 @@ de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 f
 1. **1 fila `pycharm` → `search_edit`** (el parámetro homónimo `techo`), anotado en la línea
    `# Fase 2` del CSV.
 
+## A9b-5 — `test_metrics`, `test_observabilidad_respaldo` y `test_panel_coste` (aplicado)
+
+### A9b-5 · Qué se hizo
+
+- 27 `rename_refactoring` (tabla de arriba). PyCharm reescribió 10 documentos de `.sdd/` (citas
+  históricas de `_Mezcla`, `_extraer_funcion_js`, `_punto`… en `coste-api-y-cuota`,
+  `panel-cuentas-y-estados-honestos`, `js-dashboard-comportamiento`, `telemetria-hooks-dashboard`,
+  `test-windows-out-of-metrics` y `waves/A8b.md`, `A9a.md`, `A9b.md`), devueltos a HEAD con `git show`.
+  El import `from test_panel_coste import …` de `test_metrics.py` lo cambió el propio rename.
+- A mano, antes de `apply`: los parámetros homónimos `fuente` (×2), `evento`, `casos` (y su cita en
+  el docstring), `modelo`, `fin` y `fuente` de `_punto`, con sus kwargs (`a9b/kwfix.py`: 1, el
+  `fuente="rejection"`), y los atributos `self.ahora`→`self.now` y `self.cliente`→`self.client` de
+  `_Mezcla`.
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 265 + 71 + 212 =
+  548 reemplazos.
+- A mano, después: el `def` de las anidadas `registrador`→`recorder`, `_anotar`→`_write_note`,
+  `_registrar`→`_record` y `_falso`→`_fake`; el argname `valor`→`value`; y el JS propio del test con
+  sus lecturas en Python: claves `coste`/`cuota`/`imagenes` → `cost`/`quota`/`images` (el objeto que
+  devuelve el JS de `_textos` y sus 11 lecturas `["…"]`; ninguna lectura por `.get`, `in`, `not in`,
+  `pop` ni `{**…}`), `filas`→`rowsIn` en `test_panel_coste.py` y `casos`→`testCases` en
+  `test_metrics.py`. Los nombres JS nuevos no chocan con los de `metrics.HTML` (son claves de un
+  objeto propio o variables del script del test).
+- `except OSError: pass` de `test_panel_coste.py:486` → `with contextlib.suppress(OSError):` con el
+  mismo comentario delante: el fichero cambia de nombre y CodeQL lo vería como alerta nueva si su
+  `py/empty-except` no admitiera el comentario; el control (`assert attempts == ["create_connection"]`)
+  sigue igual. Se añade `import contextlib`.
+- `git mv`: `test_panel_coste.py` → `test_dashboard_cost.py`, `test_observabilidad_respaldo.py` →
+  `test_fallback_observability.py`.
+- `ruff format` reflowó 2 ficheros. EOL: los tests son LF y siguen LF.
+- Comparadas por AST las cadenas antes y después: solo cambian los literales JS, el argname y dos
+  citas de docstring. Se quedan, por ser datos: los valores `fallback_class="modelo"` (valor viejo
+  que el producto sigue leyendo), las claves `fallos`/`hasta` del fichero viejo de enfriamiento, la
+  clave `tokens_aprox` que el test busca en el código de `server.local_extract`, y las etiquetas
+  `"coletilla"`/`"recibo"` de los mensajes de `test_frases_prohibidas`. Lambdas: ningún parámetro en
+  español.
+
+### A9b-5 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- `src/local_delegate/web/metrics.py:1873`: el comentario JS cita `test_dashboard_cost.py` (CRLF
+  conservado: 2990 `\r\n` = 2990 `\n`).
+
+### A9b-5 · Barrido final
+
+- AST de los 3 ficheros: ningún nombre de código, kwarg ni argname con un `old` del lote.
+- `git grep -w` de cada `old` en los ficheros del lote, clasificado por token: 0 en código; 313 en
+  textos (114 docstrings, 141 comentarios y 58 cadenas): prosa y datos en español. Cita entre
+  comillas invertidas que queda: `tokens_aprox` (clave del producto).
+- En todo el repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`), los nombres propios del lote:
+  0. Queda `_textos` en `test_recalcular.py`: es otra función, de A9c.
+- `--collect-only`: 2569 (`evidence/A9b-5/collect.txt`). Suite (con Playwright, bajo el cerrojo):
+  2567 passed, 2 skipped (`evidence/A9b-5/pytest-full.log`); los 121 tests del lote, sin saltos.
+  `ruff check` y `ruff format --check` en verde.
+- CodeQL (aproximación AST) sobre los 2 ficheros renombrados: 0 patrones.
+
+### A9b-5 · Desviaciones
+
+1. **21 filas `pycharm` → `search_edit`**, anotado en la línea `# Fase 2` del CSV: 13 parámetros
+   `entorno` (los arrastró el rename de la fixture), 6 parámetros homónimos y 2 atributos.
+2. **`contextlib.suppress` en vez de `except OSError: pass`** en `test_dashboard_cost.py` (pedido
+   de la sesión principal): mismo comportamiento y mismo comentario.
+
 ## Pendientes
 
-1. Lotes A9b-5 y A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
+1. Lote A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
    de lambdas (desviación 2 del lote 2).
 2. En el lote 6: el test nuevo de los esquemas de `elicitation` y el arreglo de la carrera de
    `test_turn_wait_shown_in_panel_as_local_wait` (cabecera de `A9b-6-mapping.csv`).
@@ -341,3 +432,7 @@ de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 f
    carga de `-n auto` en la primera corrida del lote 1;
    `test_residency_cli.py::test_restoring_a_copy_end_to_end` (visto en A9a); y la carrera de
    `test_panel_estados.py::test_turn_wait_shown_in_panel_as_local_wait`, que se arregla en el lote 6.
+5. **Para A9c:** `test_fallback_observability.py` (antes `test_observabilidad_respaldo.py`) importa de
+   `test_respaldo.py` `_enfriar`, `_ultimo_evento`, `CODIGO`, `LARGO` y `MECANICO`; no se tocaron aquí.
+   Cuando A9c los renombre, cambia ese import como consecuencia mecánica. Igual con `_textos` de
+   `test_recalcular.py` (homónimo, sin relación).
