@@ -36,7 +36,7 @@ def _wrapped(cls: type[BaseException], root: BaseException) -> BaseException:
     try:
         try:
             raise root
-        except BaseException as original:
+        except type(root) as original:
             raise cls("fallo de prueba") from original
     except cls as wrapper:
         return wrapper
