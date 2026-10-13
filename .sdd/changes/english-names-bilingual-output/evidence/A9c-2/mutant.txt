@@ -1,0 +1,10 @@
+sha256 antes cda2bd1679b7a373 / con mutante 5aed003db248eefa
+>       assert len(structure.headings) == count
+E       AssertionError: assert 10 == 11
+E        +  where 10 = len((Heading(text='¿Por qué?', level=2, start=1586), Heading(text='Instalación rápida', level=2, start=2032), Heading(text...), Heading(text='Configuración', level=2, start=8338), Heading(text='La métrica de ahorro', level=2, start=11873), ...))
+E        +    where (Heading(text='¿Por qué?', level=2, start=1586), Heading(text='Instalación rápida', level=2, start=2032), Heading(text...), Heading(text='Configuración', level=2, start=8338), Heading(text='La métrica de ahorro', level=2, start=11873), ...) = Structure(level=2, headings=(Heading(text='¿Por qué?', level=2, start=1586), Heading(text='Instalación rápida', level=... Heading(text='Groups de llama-swap (opcional)', level=2, start=16173), Heading(text='Enlaces', level=2, start=17342))).headings
+>       assert len(structure.headings) == count
+E       AssertionError: assert 8 == 9
+E        +  where 8 = len((Heading(text='A qui\xe9n configura', level=2, start=1924), Heading(text='Garant\xedas', level=2, start=3067), Heading(text=...s al d\xeda: `--agents`', level=2, start=9255), Heading(text='Caso Mac \u2192 PC (backend remoto)', level=2, start=10412), ...))
+E        +    where (Heading(text='A qui\xe9n configura', level=2, start=1924), Heading(text='Garant\xedas', level=2, start=3067), Heading(text=...s al d\xeda: `--agents`', level=2, start=9255), Heading(text='Caso Mac \u2192 PC (backend remoto)', level=2, start=10412), ...) = Structure(level=2, headings=(Heading(text='A qui\xe9n configura', level=2, start=1924), Heading(text='Garant\xedas', level=2...alar', level=2, start=10839), Heading(text='Comprobar la instalaci\xf3n: `local-delegate doctor`', level=2, start=11653))).headings
+sha256 restaurado cda2bd1679b7a373

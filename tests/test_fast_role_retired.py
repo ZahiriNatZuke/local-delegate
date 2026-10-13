@@ -29,8 +29,8 @@ from fastapi.testclient import TestClient
 from local_delegate import chains, checks, config, server
 from local_delegate.web import metrics
 
-MODELO_RETIRADO = "qwen35-2b"
-VARIABLES_RETIRADAS = (
+RETIRED_MODEL = "qwen35-2b"
+RETIRED_VARIABLES = (
     "LOCAL_DELEGATE_MODEL_FAST",
     "LOCAL_DELEGATE_MAX_CHARS_FAST",
     "LOCAL_DELEGATE_FALLBACK_FAST",
@@ -38,13 +38,13 @@ VARIABLES_RETIRADAS = (
 
 
 # --- El rol ya no existe en ningún catálogo -----------------------------------
-def test_el_rol_rapido_no_esta_en_el_catalogo_de_roles(reload_config):
+def test_the_fast_role_is_not_in_the_role_catalog(reload_config):
     reload_config()
     assert "fast" not in config.models_by_role()
     assert set(config.models_by_role()) == {"mechanical", "long", "code"}
 
 
-def test_el_rol_rapido_no_tiene_tope_propio(reload_config):
+def test_the_fast_role_has_no_cap_of_its_own(reload_config):
     """Si se quedara el tope sin el rol, `max_chars_for_role('fast')` mentiría con 12 000."""
     reload_config()
     assert "fast" not in config.MAX_CHARS_BY_ROLE
@@ -52,14 +52,14 @@ def test_el_rol_rapido_no_tiene_tope_propio(reload_config):
     assert config.max_chars_for_role("fast") == config.max_chars_for_role("no-existe-este-rol")
 
 
-def test_el_modelo_del_rol_retirado_sale_del_catalogo(reload_config):
+def test_the_retired_role_model_leaves_the_catalog(reload_config):
     reload_config()
-    assert MODELO_RETIRADO not in config.ALLOWED_MODELS
+    assert RETIRED_MODEL not in config.ALLOWED_MODELS
     assert config.ALLOWED_MODELS == {config.MODEL_MECHANICAL, config.MODEL_LONG, config.MODEL_CODE}
 
 
 @backend_mock.mock
-def test_el_panel_no_ensena_la_fila_del_rol_rapido(monkeypatch):
+def test_the_panel_does_not_show_the_fast_role_row(monkeypatch):
     """El dashboard es la otra superficie que lista roles, y se desincroniza sola."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.get("http://test-backend/v1/models").mock(
@@ -71,14 +71,14 @@ def test_el_panel_no_ensena_la_fila_del_rol_rapido(monkeypatch):
     assert roles == {"mechanical", "long", "code", "vision"}
 
 
-def test_las_cadenas_de_respaldo_no_declaran_el_rol_rapido(reload_config):
+def test_the_fallback_chains_do_not_declare_the_fast_role(reload_config):
     """La fila «rápido -> residente -> largo» de REQ-004 era inalcanzable: se va con el rol."""
     reload_config()
     assert "fast" not in chains.TEXT_ROLES
     assert "fast" not in chains.DEFAULT_CHAINS
 
 
-def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(reload_config, tmp_path):
+def test_a_chain_naming_the_retired_role_is_ignored_and_doctor_says_so(reload_config, tmp_path):
     """Nombrar `fast` en una cadena pasa a ser un error de tecleo como cualquier otro."""
     reload_config(LOCAL_DELEGATE_FALLBACK_CODE="fast")
     assert chains.resolve("code").ignored == ("fast",)
@@ -86,80 +86,82 @@ def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(reload
 
 
 # --- Pedir su modelo: error claro, y sin gastar backend -----------------------
-def _responde(valor):
-    def _fn(mensaje, modelo):
-        campo = next(iter(modelo.model_fields))
-        return modelo(**{campo: valor})
+def _reply(value):
+    def _fn(message, model):
+        field = next(iter(model.model_fields))
+        return model(**{field: value})
 
     return _fn
 
 
-def _no_responde(mensaje, modelo):
+def _no_answer(message, model):
     return None
 
 
 @backend_mock.mock
-def _delegar(monkeypatch, tmp_path, **kw):
+def _delegate(monkeypatch, tmp_path, **kw):
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
-    vistos: list[dict] = []
+    seen: list[dict] = []
 
     def _handler(request: httpx2.Request) -> httpx2.Response:
-        vistos.append(json.loads(request.content))
+        seen.append(json.loads(request.content))
         return httpx2.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
 
     backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=_handler)
     args = {"task": "t", "input": "i", "output_format": "bullets"}
     args.update(kw)
-    return server.local_delegate(**args), vistos
+    return server.local_delegate(**args), seen
 
 
-def test_pedir_el_modelo_retirado_da_error_claro_y_no_toca_el_backend(monkeypatch, tmp_path):
+def test_requesting_the_retired_model_gives_a_clear_error_and_does_not_touch_the_backend(
+    monkeypatch, tmp_path
+):
     """Lo que ve quien tenía una llamada con `model="qwen35-2b"` escrita a mano."""
-    monkeypatch.setattr(server.questions, "ask", _no_responde)
-    resultado, vistos = _delegar(monkeypatch, tmp_path, model=MODELO_RETIRADO)
+    monkeypatch.setattr(server.questions, "ask", _no_answer)
+    result, seen = _delegate(monkeypatch, tmp_path, model=RETIRED_MODEL)
 
-    assert f"modelo inválido '{MODELO_RETIRADO}'" in resultado
+    assert f"modelo inválido '{RETIRED_MODEL}'" in result
     # El error nombra la alternativa: un error claro dice qué hacer, no solo que no.
-    assert config.MODEL_MECHANICAL in resultado
-    assert vistos == [], "se llamó al backend con el modelo de un rol retirado"
+    assert config.MODEL_MECHANICAL in result
+    assert seen == [], "se llamó al backend con el modelo de un rol retirado"
 
 
-def test_el_modelo_retirado_tampoco_vale_como_respuesta_a_la_pregunta(monkeypatch, tmp_path):
+def test_the_retired_model_is_not_valid_as_an_answer_to_the_question_either(monkeypatch, tmp_path):
     """El escape de `elicitation` no puede colar por la ventana lo que se retiró por la puerta."""
-    monkeypatch.setattr(server.questions, "ask", _responde(MODELO_RETIRADO))
-    resultado, vistos = _delegar(monkeypatch, tmp_path, model="no-existe")
+    monkeypatch.setattr(server.questions, "ask", _reply(RETIRED_MODEL))
+    result, seen = _delegate(monkeypatch, tmp_path, model="no-existe")
 
-    assert "modelo inválido" in resultado
-    assert vistos == []
+    assert "modelo inválido" in result
+    assert seen == []
 
 
 # --- Las variables huérfanas: `doctor` avisa ----------------------------------
-def test_sin_variables_del_rol_retirado_el_check_esta_en_ok(reload_config, tmp_path):
+def test_without_retired_role_variables_the_check_is_ok(reload_config, tmp_path):
     """Control: el caso normal —nadie las tiene puestas— no puede dar aviso."""
     reload_config()
-    resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
-    assert resultado.status == checks.OK
+    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert result.status == checks.OK
 
 
-def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(reload_config, tmp_path):
+def test_each_retired_role_variable_is_warned_by_name(reload_config, tmp_path):
     """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
-    for variable in VARIABLES_RETIRADAS:
+    for variable in RETIRED_VARIABLES:
         reload_config(**{variable: "lo-que-sea"})
-        resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
-        assert resultado.status == checks.WARN, f"{variable} puesta no dio aviso"
-        assert variable in resultado.detail
-        assert "0.30.0" in resultado.detail or "0.30.0" in resultado.fix_hint
+        result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+        assert result.status == checks.WARN, f"{variable} puesta no dio aviso"
+        assert variable in result.detail
+        assert "0.30.0" in result.detail or "0.30.0" in result.fix_hint
 
 
-def test_el_aviso_las_nombra_todas_cuando_estan_las_tres(reload_config, tmp_path):
-    reload_config(**dict.fromkeys(VARIABLES_RETIRADAS, "lo-que-sea"))
-    detalle = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
-    assert all(v in detalle for v in VARIABLES_RETIRADAS)
+def test_the_warning_names_them_all_when_all_three_are_there(reload_config, tmp_path):
+    reload_config(**dict.fromkeys(RETIRED_VARIABLES, "lo-que-sea"))
+    detail = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
+    assert all(v in detail for v in RETIRED_VARIABLES)
 
 
-def test_el_check_esta_en_el_registro(reload_config):
+def test_the_check_is_in_the_registry(reload_config):
     """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás.
 
     Desde la ola A0 del renombrado es el check general de nombres obsoletos (REQ-003), que
@@ -195,6 +197,6 @@ def test_retired_variables_come_from_the_single_registry(reload_config):
 
     reload_config()
     retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
-    assert retired == set(VARIABLES_RETIRADAS)
+    assert retired == set(RETIRED_VARIABLES)
     assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired
     assert retired <= config.ENVIRONMENT_VARIABLES

@@ -10,7 +10,7 @@ volvía a leer el fichero. Aquí vive todo lo que no le pedimos al modelo porque
   que «no omite ninguna» no dependa de que el modelo obedezca;
 - **trocear** un documento largo por esas secciones, sin cortar dentro de una valla de código.
 
-Todo es puro (sin red ni disco): lo prueban `tests/test_resumen_estructurado.py` y lo usa también
+Todo es puro (sin red ni disco): lo prueban `tests/test_structured_summary.py` y lo usa también
 `scripts/medir_resumen_estructurado.py`, que mide con estas mismas funciones.
 """
 
