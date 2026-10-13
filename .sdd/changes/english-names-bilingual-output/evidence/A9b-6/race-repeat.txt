@@ -1,0 +1,2 @@
+[pesado] plaza plaza-1 tomada tras 0s: bash /<scratchpad>/a9b/rep30.sh
+30 corridas seguidas del test arreglado: 30 pasan, 0 fallan

@@ -1,0 +1,27 @@
+refactor(rename): nombres en inglés en test_panel_estados, test_post_chat_caminos, test_precios y test_preguntas (ola A9b, lote 6)
+
+Renombra a inglés los nombres de test_panel_estados.py,
+test_post_chat_caminos.py, test_precios.py y test_preguntas.py: 238 filas
+del mapping aprobado. Los cuatro módulos pasan a test_dashboard_states.py,
+test_post_chat_paths.py, test_pricing.py y test_questions.py, con sus 52
+test_*, sus constantes (BUENO → GOOD, VUELO → IN_FLIGHT, CAMINOS →
+PATHS…), sus ayudantes, sus variables y el JS propio de los tests de
+estados del panel (salida → emit, llamadas → callCount…), con sus
+lecturas en Python. Cierra la subola A9b.
+
+Además:
+- test nuevo que fija el JSON schema completo de StartBackend,
+  ChooseModel y ChooseFormat (campos y títulos visibles); sin
+  Field(title="Modelo") falla;
+- test_turn_wait_shown_in_panel_as_local_wait espera a que la entrada
+  traiga local_wait y turn_in_use, no solo la segunda: arregla la
+  carrera que se vio en el CI de Ubuntu sin cambiar lo que afirma;
+- el `except OSError: pass` comentado de test_pricing.py pasa a
+  contextlib.suppress(OSError).
+
+Solo se renombra en lo demás: ningún assert cambia de sentido y los
+textos en español que afirman los tests no se tocan. Los tests recogidos
+pasan de 2569 a 2572 (los 3 del test nuevo).
+
+Por consecuencia cambian dos citas por ruta en comentarios de
+src/local_delegate/server.py y src/local_delegate/web/metrics.py.

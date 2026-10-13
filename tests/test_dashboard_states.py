@@ -27,43 +27,43 @@ from local_delegate.web import metrics
 # --- piezas comunes ------------------------------------------------------------------------
 
 
-def _const(nombre: str) -> str:
+def _const(name: str) -> str:
     """Una constante del panel definida como objeto literal (`const X = {…}`)."""
-    return _extract(f"const {nombre} = {{") + ";"
+    return _extract(f"const {name} = {{") + ";"
 
 
 # `_run` lee la salida con la codificación de la consola (cp1252 en Windows): todo lo que no es
 # ASCII sale escapado en el JSON para que «Última» llegue como «Última» y no como «Ãšltima».
-_SALIDA = r"""
-const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
+_EMIT = r"""
+const emit = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
   c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')));
 """
 
 
-def _globales() -> str:
+def _globals() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
-    partes = [_SALIDA, _formatters(), _extract("function escHooks(")]
-    for funcion in ("initialView", "turnWords"):
-        if f"function {funcion}(" in metrics.HTML:
-            partes.append(_extract(f"function {funcion}("))
-    for nombre in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS"):
-        if f"const {nombre} = {{" in metrics.HTML:
-            partes.append(_const(nombre))
-    return "\n".join(partes)
+    parts = [_EMIT, _formatters(), _extract("function escHooks(")]
+    for function in ("initialView", "turnWords"):
+        if f"function {function}(" in metrics.HTML:
+            parts.append(_extract(f"function {function}("))
+    for name in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS"):
+        if f"const {name} = {{" in metrics.HTML:
+            parts.append(_const(name))
+    return "\n".join(parts)
 
 
-def _js(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
-    return _run(tmp_path, funciones, cuerpo, _globales() + "\n" + preludio)
+def _js(tmp_path, functions: list[str], body: str, prelude: str = ""):
+    return _run(tmp_path, functions, body, _globals() + "\n" + prelude)
 
 
-def _f(nombre: str) -> str:
+def _f(name: str) -> str:
     """La cabecera con la que se recorta la función; con `async` delante si lo lleva."""
-    asincrona = f"async function {nombre}("
-    return asincrona if asincrona in metrics.HTML else f"function {nombre}("
+    async_header = f"async function {name}("
+    return async_header if async_header in metrics.HTML else f"function {name}("
 
 
 # Sondeos de `/api/backend` como los sirve el daemon.
-BUENO = {
+GOOD = {
     "available": True,
     "running": [{"model": "gemma4-26b-a4b", "state": "ready"}],
     "running_ok": True,
@@ -78,17 +78,17 @@ BUENO = {
     "label": None,
     "detail": None,
 }
-FALLIDO = {
+FAILED = {
     "available": False,
     "running": [],
     "running_ok": False,
-    "models": [{**m, "status": None} for m in BUENO["models"]],
+    "models": [{**m, "status": None} for m in GOOD["models"]],
     "models_stale": True,
     "cause": "dns",
     "label": "no resuelve",
     "detail": "no se resuelve el nombre pc.lan:9292 (¿VPN o DNS?)",
 }
-CATALOGO = [
+CATALOG = [
     {"role": "mechanical", "label": "mecánico", "model": "gemma4-26b-a4b"},
     {"role": "long", "label": "largo", "model": "gemma4-26b-a4b"},
     {"role": "code", "label": "código", "model": "qwen36-35b-a3b"},
@@ -96,128 +96,128 @@ CATALOGO = [
 ]
 
 
-def _fallido(causa: str, etiqueta: str, detalle: str) -> dict:
-    return {**FALLIDO, "cause": causa, "label": etiqueta, "detail": detalle}
+def _failed(cause: str, label: str, detail: str) -> dict:
+    return {**FAILED, "cause": cause, "label": label, "detail": detail}
 
 
 # --- visibleState: dos sondeos fallidos antes de «caído» (REQ-028) ----------------------------
 
 
-def test_dos_fallos_antes_de_caido(tmp_path):
-    """Escenario «dos fallos antes de caído». Control (b): umbral 1 → `vistos[1]` sería caído."""
+def test_two_failures_before_down(tmp_path):
+    """Escenario «dos fallos antes de caído». Control (b): umbral 1 → `seen[1]` sería caído."""
     r = _js(
         tmp_path,
         [_f("visibleState")],
         f"""
-        const B = {json.dumps(BUENO)}, X = {json.dumps(FALLIDO)};
-        let v = null; const vistos = [];
-        for (const bj of [B, X, X, B]) {{ v = visibleState(v, bj); vistos.push(v.status); }}
-        const desdeCero = [];
+        const B = {json.dumps(GOOD)}, X = {json.dumps(FAILED)};
+        let v = null; const seenStates = [];
+        for (const bj of [B, X, X, B]) {{ v = visibleState(v, bj); seenStates.push(v.status); }}
+        const fromZero = [];
         let w = null;
-        for (const bj of [X, X]) {{ w = visibleState(w, bj); desdeCero.push(w.status); }}
-        salida(({{vistos, desdeCero}}));
+        for (const bj of [X, X]) {{ w = visibleState(w, bj); fromZero.push(w.status); }}
+        emit(({{seenStates, fromZero}}));
         """,
     )
-    vistos, vistos_desde_cero = r["vistos"], r["desdeCero"]
-    assert vistos[1] == "connected"
-    assert vistos == ["connected", "connected", "down", "connected"]
-    assert vistos_desde_cero[0] == "checking"
-    assert vistos_desde_cero[1] == "down"
+    seen, seen_from_zero = r["seenStates"], r["fromZero"]
+    assert seen[1] == "connected"
+    assert seen == ["connected", "connected", "down", "connected"]
+    assert seen_from_zero[0] == "checking"
+    assert seen_from_zero[1] == "down"
 
 
-def _filas_tras(tmp_path, secuencia: list[dict]) -> list[dict]:
+def _rows_after(tmp_path, sequence: list[dict]) -> list[dict]:
     """La fila de `gemma4-26b-a4b` tras cada sondeo de la secuencia, sin nada en vuelo."""
     return _js(
         tmp_path,
         [_f("visibleState"), _f("modelState")],
         f"""
-        let v = null; const filas = [];
-        for (const bj of {json.dumps(secuencia)}) {{
+        let v = null; const rowsOut = [];
+        for (const bj of {json.dumps(sequence)}) {{
           v = visibleState(v, bj);
-          filas.push(modelState({{model: 'gemma4-26b-a4b', view: v, inflight: []}}));
+          rowsOut.push(modelState({{model: 'gemma4-26b-a4b', view: v, inflight: []}}));
         }}
-        salida((filas));
+        emit((rowsOut));
         """,
     )
 
 
-def test_las_filas_aguantan_el_primer_fallo(tmp_path):
+def test_the_rows_withstand_the_first_failure(tmp_path):
     """Escenario «las filas aguantan el primer fallo» (REQ-022, REQ-028).
 
     Control (b). Mutante 1: las filas leen el último `bj` y no el sondeo de referencia → tras el
     primer fallo dirían «frío» (`status: null`, `running_ok: false`, regla 5). Mutante 2: atenuar
     por `models_stale` → la fila saldría atenuada tras el primer fallo.
     """
-    filas = _filas_tras(tmp_path, [BUENO, FALLIDO, FALLIDO])
-    assert filas[0]["text"] == "montado"
-    fila = filas[1]
-    assert fila["text"] == "montado"
-    assert fila["dimmed"] is False
-    fila = filas[2]
-    assert fila["text"] == "desconocido"
-    assert fila["dimmed"] is True
-    assert fila["title"] == "sin conexión con el backend: no resuelve"
+    rows = _rows_after(tmp_path, [GOOD, FAILED, FAILED])
+    assert rows[0]["text"] == "montado"
+    row = rows[1]
+    assert row["text"] == "montado"
+    assert row["dimmed"] is False
+    row = rows[2]
+    assert row["text"] == "desconocido"
+    assert row["dimmed"] is True
+    assert row["title"] == "sin conexión con el backend: no resuelve"
 
 
 # --- badgeBackend (REQ-014) ------------------------------------------------------------------
 
 
-def _badge(tmp_path, secuencia: list[dict]) -> dict:
+def _badge(tmp_path, sequence: list[dict]) -> dict:
     return _js(
         tmp_path,
         [_f("visibleState"), _f("badgeBackend")],
         f"""
         let v = null;
-        for (const bj of {json.dumps(secuencia)}) v = visibleState(v, bj);
-        salida((badgeBackend(v, 'http://pc.lan:9292/v1')));
+        for (const bj of {json.dumps(sequence)}) v = visibleState(v, bj);
+        emit((badgeBackend(v, 'http://pc.lan:9292/v1')));
         """,
     )
 
 
-def test_el_badge_dice_la_causa(tmp_path):
-    """Control (b). Mutante 1: `credential` como caída → falla `clase == "warn"`. Mutante 2:
+def test_the_badge_states_the_cause(tmp_path):
+    """Control (b). Mutante 1: `credential` como caída → falla `css_class == "warn"`. Mutante 2:
     `title` fijo → falla `title == detalle`."""
     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
-    cred = _fallido("credential", "sin acceso", det_401)
+    cred = _failed("credential", "sin acceso", det_401)
     b = _badge(tmp_path, [cred, cred])
-    clase, texto, title = b["cls"], b["text"], b["title"]
-    assert clase == "warn"
-    assert texto == "sin acceso"
+    css_class, text, title = b["cls"], b["text"], b["title"]
+    assert css_class == "warn"
+    assert text == "sin acceso"
     assert title == det_401
 
-    http = _fallido("http_error", "responde con error", "pc.lan:9292 responde HTTP 500")
+    http = _failed("http_error", "responde con error", "pc.lan:9292 responde HTTP 500")
     b = _badge(tmp_path, [http, http])
     assert b["cls"] == "warn"
     assert "caído" not in b["text"]
 
-    b = _badge(tmp_path, [FALLIDO, FALLIDO])
+    b = _badge(tmp_path, [FAILED, FAILED])
     assert b["text"] == "caído · no resuelve"
     assert b["cls"] == "down"
-    assert b["title"] == FALLIDO["detail"]
+    assert b["title"] == FAILED["detail"]
 
-    b = _badge(tmp_path, [BUENO])
+    b = _badge(tmp_path, [GOOD])
     assert (b["text"], b["cls"], b["title"]) == ("conectado", "up", "http://pc.lan:9292/v1")
 
 
-def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
+def test_the_badge_understands_the_old_cause_value(tmp_path):
     """REQ-009: el diccionario de causas del JS acepta el valor viejo y el nuevo, con la tabla que
     inyecta el servidor (`LEGACY_VALUES.connectionCause`), no con una copia propia."""
     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
-    viejo = _fallido("credencial", "sin acceso", det_401)
-    b = _badge(tmp_path, [viejo, viejo])
+    old = _failed("credencial", "sin acceso", det_401)
+    b = _badge(tmp_path, [old, old])
     assert (b["cls"], b["text"]) == ("warn", "sin acceso")
     assert "credencial" not in re.sub(
         r"//[^\n]*", "", metrics.HTML.split("CAUSES_ANSWERING", 1)[1][:200]
     )
 
 
-def test_el_badge_avisa_del_ultimo_sondeo_sin_dejar_de_decir_conectado(tmp_path):
+def test_the_badge_warns_about_the_last_probe_while_still_saying_connected(tmp_path):
     """REQ-028: un fallo tras uno bueno conserva «conectado» y lo cuenta en el `title`."""
-    b = _badge(tmp_path, [BUENO, FALLIDO])
+    b = _badge(tmp_path, [GOOD, FAILED])
     assert b["text"] == "conectado"
-    assert "último sondeo: " + FALLIDO["detail"] in b["title"]
+    assert "último sondeo: " + FAILED["detail"] in b["title"]
 
-    b = _badge(tmp_path, [FALLIDO])
+    b = _badge(tmp_path, [FAILED])
     assert b["text"] == "comprobando…"
     assert b["cls"] == "neutral"
 
@@ -225,67 +225,78 @@ def test_el_badge_avisa_del_ultimo_sondeo_sin_dejar_de_decir_conectado(tmp_path)
 # --- modelState: la tabla de REQ-022, una fila por regla ------------------------------------
 
 
-def _fila(tmp_path, casos: list[dict]) -> list[dict]:
-    """`casos`: [{secuencia, inflight}] → la fila de `qwen36-35b-a3b` tras la secuencia."""
+def _row(tmp_path, cases: list[dict]) -> list[dict]:
+    """`cases`: [{sequence, inflight}] → la fila de `qwen36-35b-a3b` tras la secuencia."""
     return _js(
         tmp_path,
         [_f("visibleState"), _f("modelState")],
         f"""
         const out = [];
-        for (const c of {json.dumps(casos)}) {{
+        for (const c of {json.dumps(cases)}) {{
           let v = null;
-          for (const bj of c.secuencia) v = visibleState(v, bj);
-          out.push(modelState({{model: c.modelo || 'qwen36-35b-a3b', view: v,
+          for (const bj of c.sequence) v = visibleState(v, bj);
+          out.push(modelState({{model: c.model || 'qwen36-35b-a3b', view: v,
                                   inflight: c.inflight}}));
         }}
-        salida((out));
+        emit((out));
         """,
     )
 
 
-def _con(running: list[dict], *, running_ok: bool = True, status: str = "unloaded") -> dict:
-    modelos = [
+def _with_running(
+    running: list[dict], *, running_ok: bool = True, status: str = "unloaded"
+) -> dict:
+    models = [
         {**m, "status": status if m["id"] == "qwen36-35b-a3b" else m["status"]}
-        for m in BUENO["models"]
+        for m in GOOD["models"]
     ]
-    return {**BUENO, "running": running, "running_ok": running_ok, "models": modelos}
+    return {**GOOD, "running": running, "running_ok": running_ok, "models": models}
 
 
-VUELO = [{"model": "qwen36-35b-a3b", "tool": "local_summarize"}]
+IN_FLIGHT = [{"model": "qwen36-35b-a3b", "tool": "local_summarize"}]
 QWEN_STARTING = [{"model": "qwen36-35b-a3b", "state": "starting"}]
 QWEN_READY = [{"model": "qwen36-35b-a3b", "state": "ready"}]
 
 
-def test_estado_modelo_una_fila_por_regla(tmp_path):
+def test_model_state_one_row_per_rule(tmp_path):
     """Control (b), tres mutantes de orden y de regla (ver `verification.md`)."""
-    casos = [
+    cases = [
         # 1. no disponible y en vuelo
-        {"secuencia": [FALLIDO, FALLIDO], "inflight": VUELO},
+        {"sequence": [FAILED, FAILED], "inflight": IN_FLIGHT},
         # 2. no disponible
-        {"secuencia": [FALLIDO, FALLIDO], "inflight": []},
+        {"sequence": [FAILED, FAILED], "inflight": []},
         # 3. en vuelo y en espera local (gana a running `ready`)
-        {"secuencia": [_con(QWEN_READY)], "inflight": [{**VUELO[0], "local_wait": "slot"}]},
+        {
+            "sequence": [_with_running(QWEN_READY)],
+            "inflight": [{**IN_FLIGHT[0], "local_wait": "slot"}],
+        },
         # 4. running_ok falso y en vuelo
-        {"secuencia": [_con([], running_ok=False)], "inflight": VUELO},
+        {"sequence": [_with_running([], running_ok=False)], "inflight": IN_FLIGHT},
         # 5. running_ok falso: montado si loaded, si no frío
-        {"secuencia": [_con([], running_ok=False, status="loaded")], "inflight": []},
-        {"secuencia": [_con([], running_ok=False)], "inflight": []},
+        {"sequence": [_with_running([], running_ok=False, status="loaded")], "inflight": []},
+        {"sequence": [_with_running([], running_ok=False)], "inflight": []},
         # 6. starting, aunque /v1/models diga loaded y haya una llamada en vuelo
-        {"secuencia": [_con(QWEN_STARTING, status="loaded")], "inflight": VUELO},
+        {"sequence": [_with_running(QWEN_STARTING, status="loaded")], "inflight": IN_FLIGHT},
         # 7 y 8. ready
-        {"secuencia": [_con(QWEN_READY)], "inflight": VUELO},
-        {"secuencia": [_con(QWEN_READY)], "inflight": []},
+        {"sequence": [_with_running(QWEN_READY)], "inflight": IN_FLIGHT},
+        {"sequence": [_with_running(QWEN_READY)], "inflight": []},
         # 9. en vuelo y el modelo no está en /running
-        {"secuencia": [_con([{"model": "gemma4-26b-a4b", "state": "ready"}])], "inflight": VUELO},
+        {
+            "sequence": [_with_running([{"model": "gemma4-26b-a4b", "state": "ready"}])],
+            "inflight": IN_FLIGHT,
+        },
         # 10. stopping
-        {"secuencia": [_con([{"model": "qwen36-35b-a3b", "state": "stopping"}])], "inflight": []},
+        {
+            "sequence": [_with_running([{"model": "qwen36-35b-a3b", "state": "stopping"}])],
+            "inflight": [],
+        },
         # 11. resto
-        {"secuencia": [_con([])], "inflight": []},
+        {"sequence": [_with_running([])], "inflight": []},
         # 1 con running_ok falso: la regla 1 gana a la 4
-        {"secuencia": [FALLIDO, FALLIDO], "inflight": VUELO},
+        {"sequence": [FAILED, FAILED], "inflight": IN_FLIGHT},
     ]
-    filas = _fila(tmp_path, casos)
-    txt = [f["text"] for f in filas]
+    rows = _row(tmp_path, cases)
+    txt = [f["text"] for f in rows]
     assert txt[0] == "esperando al backend"
     assert txt[1] == "desconocido"
     assert txt[2] == "en cola local"
@@ -299,109 +310,109 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
     assert txt[10] == "descargando"
     assert txt[11] == "frío"
     assert txt[12] == "esperando al backend"
-    assert filas[2]["title"] == (
+    assert rows[2]["title"] == (
         "esperando dentro de local-delegate: esperando plaza (máximo de llamadas a la vez)"
     )
-    assert [f["dimmed"] for f in filas[:2]] == [True, True]
-    assert not any(f["dimmed"] for f in filas[2:12])
+    assert [f["dimmed"] for f in rows[:2]] == [True, True]
+    assert not any(f["dimmed"] for f in rows[2:12])
 
 
-def test_la_espera_local_es_un_punto_de_extension(tmp_path):
+def test_the_local_wait_is_an_extension_point(tmp_path):
     """Un motivo que el panel no conoce también es «en cola local», y se pinta tal cual.
 
     Control (b). Mutante: la regla 3 exige `local_wait === 'slot'` → da «procesando».
     """
-    fila = _fila(
+    row = _row(
         tmp_path,
         [
             {
-                "secuencia": [_con(QWEN_READY)],
-                "inflight": [{**VUELO[0], "local_wait": "turno_grupo"}],
+                "sequence": [_with_running(QWEN_READY)],
+                "inflight": [{**IN_FLIGHT[0], "local_wait": "turno_grupo"}],
             }
         ],
     )[0]
-    txt, title = fila["text"], fila["title"]
+    txt, title = row["text"], row["title"]
     assert txt == "en cola local"
     assert "turno_grupo" in title
 
 
-def test_la_espera_local_exige_todas_las_llamadas(tmp_path):
+def test_the_local_wait_requires_every_call(tmp_path):
     """«En espera local» = TODAS las llamadas a ese modelo esperan dentro de local-delegate."""
-    vuelo = [{**VUELO[0], "local_wait": "slot"}, VUELO[0]]
-    fila = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": vuelo}])[0]
-    assert fila["text"] == "procesando"
+    in_flight = [{**IN_FLIGHT[0], "local_wait": "slot"}, IN_FLIGHT[0]]
+    row = _row(tmp_path, [{"sequence": [_with_running(QWEN_READY)], "inflight": in_flight}])[0]
+    assert row["text"] == "procesando"
 
 
-def test_esperando_turno_no_afirma_la_causa(tmp_path):
+def test_waiting_for_turn_does_not_assert_the_cause(tmp_path):
     """Fila 9: el `title` lista /running en palabras. Control (b): solo los `ready` → falla."""
     running = [
         {"model": "gemma4-26b-a4b", "state": "ready"},
         {"model": "qwen35-2b", "state": "starting"},
     ]
-    filas = _fila(
+    rows = _row(
         tmp_path,
         [
-            {"secuencia": [_con(running)], "inflight": VUELO},
-            {"secuencia": [_con([])], "inflight": VUELO},
+            {"sequence": [_with_running(running)], "inflight": IN_FLIGHT},
+            {"sequence": [_with_running([])], "inflight": IN_FLIGHT},
         ],
     )
-    assert filas[0]["text"] == "esperando turno"
-    title = filas[0]["title"]
+    assert rows[0]["text"] == "esperando turno"
+    title = rows[0]["title"]
     assert "qwen35-2b cargando" in title
     assert (
         title
         == "llama-swap aún no lo atiende; en /running: gemma4-26b-a4b listo, qwen35-2b cargando"
     )
-    assert filas[1]["title"] == "llama-swap aún no lo atiende; /running está vacío"
+    assert rows[1]["title"] == "llama-swap aún no lo atiende; /running está vacío"
 
 
-def test_escenario_cargando_turno_y_cola_propia(tmp_path):
+def test_scenario_loading_turn_and_own_queue(tmp_path):
     """Escenario de la spec, con los modelos que nombra: «qwen36-35b-a3b cargando» en el title."""
     running = [
         {"model": "gemma4-26b-a4b", "state": "ready"},
         {"model": "qwen36-35b-a3b", "state": "starting"},
     ]
-    filas = _fila(
+    rows = _row(
         tmp_path,
         [
             {
-                "modelo": "gemma4-12b",
-                "secuencia": [_con(running)],
+                "model": "gemma4-12b",
+                "sequence": [_with_running(running)],
                 "inflight": [{"model": "gemma4-12b"}],
             },
         ],
     )
-    assert filas[0]["text"] == "esperando turno"
-    assert "qwen36-35b-a3b cargando" in filas[0]["title"]
-    assert "gemma4-26b-a4b listo" in filas[0]["title"]
+    assert rows[0]["text"] == "esperando turno"
+    assert "qwen36-35b-a3b cargando" in rows[0]["title"]
+    assert "gemma4-26b-a4b listo" in rows[0]["title"]
 
 
 # --- sortModels (REQ-021) y statusChip (REQ-023) ------------------------------------------
 
 
-def test_orden_de_modelos_con_y_sin_conexion(tmp_path):
+def test_model_order_with_and_without_connection(tmp_path):
     """Control (b). Mutante: orden alfabético puro → `gemma4-12b` primero."""
     r = _js(
         tmp_path,
         [_f("sortModels")],
         f"""
-        const cat = {json.dumps(CATALOGO)};
-        const con = sortModels(['gemma4-12b','gemma4-26b-a4b','qwen35-2b','qwen36-35b-a3b'], cat);
-        const sinLista = sortModels([], cat);
-        salida(({{con, sinLista}}));
+        const cat = {json.dumps(CATALOG)};
+        const withList = sortModels(['gemma4-12b','gemma4-26b-a4b','qwen35-2b','qwen36-35b-a3b'], cat);
+        const withoutList = sortModels([], cat);
+        emit(({{withList, withoutList}}));
         """,
     )
-    ids = r["con"]
+    ids = r["withList"]
     assert ids == ["gemma4-26b-a4b", "qwen36-35b-a3b", "gemma4-12b", "qwen35-2b"]
-    assert r["sinLista"] == ["gemma4-26b-a4b", "qwen36-35b-a3b", "gemma4-12b"]
+    assert r["withoutList"] == ["gemma4-26b-a4b", "qwen36-35b-a3b", "gemma4-12b"]
 
 
-def test_chip_de_estado_acepta_cualquier_valor(tmp_path):
+def test_status_chip_accepts_any_value(tmp_path):
     """Control (b). Mutante: todo lo que no es `loaded` con el estilo de `unloaded`."""
     r = _js(
         tmp_path,
         [_f("statusChip")],
-        "salida((['loaded','unloaded','starting',null,undefined].map(statusChip)));",
+        "emit((['loaded','unloaded','starting',null,undefined].map(statusChip)));",
     )
     assert r[0] == "loaded"
     assert r[1] == "unloaded"
@@ -421,14 +432,14 @@ const document = {
 """
 
 
-def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
+def test_the_llama_swap_version_is_blamed_only_on_a_404(tmp_path):
     """Control (a) con `dns`; (b) para la rama positiva: mutante «nunca menciona v236»."""
-    funciones = [_f("renderBackendStats")]
+    functions = [_f("renderBackendStats")]
     if "function statsText(" in metrics.HTML:
-        funciones.insert(0, _f("statsText"))
+        functions.insert(0, _f("statsText"))
     r = _js(
         tmp_path,
-        funciones,
+        functions,
         """
         renderBackendStats({available:false, cause:'dns', label:'no resuelve',
                             detail:'no se resuelve el nombre pc.lan (¿VPN o DNS?)'});
@@ -436,7 +447,7 @@ def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
         renderBackendStats({available:false, cause:'http_error', label:'responde con error',
                             detail:'pc.lan responde HTTP 404', status_http:404});
         const e404 = _els.backendStats.innerHTML;
-        salida(({dns, e404}));
+        emit(({dns, e404}));
         """,
         _DOM,
     )
@@ -450,7 +461,7 @@ def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
 # --- systemRows (REQ-025) --------------------------------------------------------------------
 
 
-def test_filas_del_panel_sistema(tmp_path):
+def test_system_panel_rows(tmp_path):
     """La tarjeta Sistema dice lo que no mide con filas etiqueta/valor, no con prosa.
 
     Mutantes: sin la rama de `origin` → falla la fila «Backend» de la Mac; con el host completo
@@ -460,7 +471,7 @@ def test_filas_del_panel_sistema(tmp_path):
         tmp_path,
         [_f("systemRows")],
         """
-        const casos = [
+        const testCases = [
           {platform:'darwin', origin:'remote', host:'pc.ts.net:9292',
            panel_url:'https://pc.ts.net:9393/', ram:null, vram:null, processes:[]},
           {platform:'win32', origin:'local', host:'127.0.0.1:9292', panel_url:'',
@@ -470,7 +481,7 @@ def test_filas_del_panel_sistema(tmp_path):
           {platform:'darwin', origin:'local', host:'127.0.0.1:9292', panel_url:'',
            ram:null, vram:null, processes:[]},
         ];
-        salida(casos.map(systemRows));
+        emit(testCases.map(systemRows));
         """,
     )
     mac, win, linux, mac_local = r
@@ -491,23 +502,23 @@ def test_filas_del_panel_sistema(tmp_path):
 
 # --- Sondeos: separados, sin solaparse y encadenados (REQ-026, REQ-027) ------------------------
 
-_SONDEO = (
+_POLLING = (
     _DOM
     + """
 const state = {inflight: [], activity: null, lastEvent: null, status: null, view: null,
                backendOrigin: null, backendHost: null};
-const llamadas = {};
-let fetchPendiente = {};          // url -> true: esa ruta no resuelve nunca
-let respuestas = {};              // url -> [json, json, …] (se consumen en orden)
+const callCount = {};
+let fetchPending = {};          // url -> true: esa ruta no resuelve nunca
+let responses = {};              // url -> [json, json, …] (se consumen en orden)
 globalThis.fetch = url => {
-  llamadas[url] = (llamadas[url] || 0) + 1;
-  if (fetchPendiente[url]) return new Promise(() => {});
-  const cola = respuestas[url] || [{}];
-  const j = cola.length > 1 ? cola.shift() : cola[0];
+  callCount[url] = (callCount[url] || 0) + 1;
+  if (fetchPending[url]) return new Promise(() => {});
+  const queue = responses[url] || [{}];
+  const j = queue.length > 1 ? queue.shift() : queue[0];
   return Promise.resolve({json: () => Promise.resolve(j)});
 };
-const retrasos = [];
-globalThis.setTimeout = (fn, ms) => { retrasos.push(ms); return retrasos.length; };
+const delays = [];
+globalThis.setTimeout = (fn, ms) => { delays.push(ms); return delays.length; };
 globalThis.clearTimeout = () => {};
 let renders = 0;
 function renderBackend(){} function renderTools(){} function updateLive(){}
@@ -518,98 +529,98 @@ const tick = () => new Promise(r => setImmediate(r));
 )
 
 
-def _sondeo_globales() -> str:
+def _polling_globals() -> str:
     """El estado de los sondeos (`const POLL = {…}`) si ya existe."""
     return _const("POLL") if "const POLL = {" in metrics.HTML else ""
 
 
-def test_pollInflight_no_se_apila(tmp_path):
+def test_pollInflight_does_not_stack(tmp_path):
     """Control (a): hoy cada llamada lanza otra petición (3, más 3 de `/api/backend`)."""
     r = _js(
         tmp_path,
         [_f("pollInflight")],
         """
-        fetchPendiente['/api/inflight'] = true; fetchPendiente['/api/backend'] = true;
+        fetchPending['/api/inflight'] = true; fetchPending['/api/backend'] = true;
         pollInflight(); pollInflight(); pollInflight();
         await tick();
-        salida((llamadas));
+        emit((callCount));
         """,
-        _SONDEO + _sondeo_globales(),
+        _POLLING + _polling_globals(),
     )
-    llamadas_fetch_inflight = r.get("/api/inflight", 0)
-    assert llamadas_fetch_inflight == 1
+    fetch_inflight_calls = r.get("/api/inflight", 0)
+    assert fetch_inflight_calls == 1
     assert r.get("/api/backend", 0) == 0  # el sondeo de En curso ya no pide el backend
 
 
-def test_pollInflight_se_encadena_tras_terminar(tmp_path):
+def test_pollInflight_chains_after_finishing(tmp_path):
     """Control (a): hoy `pollInflight` no programa nada (lo hacía un `setInterval` al arrancar)."""
     r = _js(
         tmp_path,
         [_f("pollInflight")],
         """
-        respuestas['/api/inflight'] = [{inflight: [], now: new Date().toISOString()}];
-        respuestas['/api/backend'] = [{available: true}];
+        responses['/api/inflight'] = [{inflight: [], now: new Date().toISOString()}];
+        responses['/api/backend'] = [{available: true}];
         await pollInflight();
         await tick();
-        salida(({retrasos}));
+        emit(({delays}));
         """,
-        _SONDEO + _sondeo_globales(),
+        _POLLING + _polling_globals(),
     )
-    assert r["retrasos"] == [2000]
+    assert r["delays"] == [2000]
 
 
-def test_un_backend_lento_no_congela_en_curso(tmp_path):
+def test_a_slow_backend_does_not_freeze_in_progress(tmp_path):
     """Control (a): hoy `Promise.all` espera a `/api/backend` y no pinta «En curso»."""
-    funciones = [_f("pollInflight")]
-    sondear = "pollNow()" if "function pollNow(" in metrics.HTML else "pollInflight()"
+    functions = [_f("pollInflight")]
+    poll_call = "pollNow()" if "function pollNow(" in metrics.HTML else "pollInflight()"
     if "function pollNow(" in metrics.HTML:
-        funciones += [_f("pollBackend"), _f("applyBackend"), _f("pollNow")]
+        functions += [_f("pollBackend"), _f("applyBackend"), _f("pollNow")]
     r = _js(
         tmp_path,
-        funciones,
+        functions,
         f"""
-        fetchPendiente['/api/backend'] = true;
-        respuestas['/api/inflight'] = [{{inflight: [], now: new Date().toISOString()}}];
-        {sondear}; {sondear}; {sondear};
+        fetchPending['/api/backend'] = true;
+        responses['/api/inflight'] = [{{inflight: [], now: new Date().toISOString()}}];
+        {poll_call}; {poll_call}; {poll_call};
         for (let i = 0; i < 5; i++) await tick();
-        salida(({{renders, llamadas}}));
+        emit(({{renders, callCount}}));
         """,
-        _SONDEO + _sondeo_globales(),
+        _POLLING + _polling_globals(),
     )
     renders_inflight = r["renders"]
     assert renders_inflight >= 1
-    assert r["llamadas"].get("/api/backend", 0) <= 1
-    assert r["llamadas"].get("/api/inflight", 0) <= 1
+    assert r["callCount"].get("/api/backend", 0) <= 1
+    assert r["callCount"].get("/api/inflight", 0) <= 1
 
 
-def test_al_reconectar_se_refresca_todo(tmp_path):
+def test_on_reconnect_everything_is_refreshed(tmp_path):
     """REQ-027. Control (b): sin `fetchStatus()` al pasar a disponible → 0 peticiones de status."""
-    x, b = json.dumps(FALLIDO), json.dumps(BUENO)
+    x, b = json.dumps(FAILED), json.dumps(GOOD)
     r = _js(
         tmp_path,
         [_f("visibleState"), _f("pollBackend"), _f("applyBackend"), _f("fetchStatus")],
         f"""
-        respuestas['/api/backend'] = [{x}, {x}, {b}];
-        const estados = [];
+        responses['/api/backend'] = [{x}, {x}, {b}];
+        const stateLog = [];
         for (let i = 0; i < 3; i++) {{
-          await pollBackend(); await tick(); estados.push(state.view.status);
+          await pollBackend(); await tick(); stateLog.push(state.view.status);
         }}
         await tick(); await tick();
-        salida(({{estados, llamadas, retrasos}}));
+        emit(({{stateLog, callCount, delays}}));
         """,
-        _SONDEO + _sondeo_globales(),
+        _POLLING + _polling_globals(),
     )
-    assert r["estados"] == ["checking", "down", "connected"]
-    llamadas_status = r["llamadas"].get("/api/status", 0)
-    assert llamadas_status == 1
-    assert r["llamadas"].get("/api/backend/stats", 0) == 1
-    assert r["retrasos"] == [2000, 2000, 2000]
+    assert r["stateLog"] == ["checking", "down", "connected"]
+    status_calls = r["callCount"].get("/api/status", 0)
+    assert status_calls == 1
+    assert r["callCount"].get("/api/backend/stats", 0) == 1
+    assert r["delays"] == [2000, 2000, 2000]
 
 
 # --- renderInflight (REQ-024) ----------------------------------------------------------------
 
 
-def test_ultima_delegacion_cuando_nada_corre(tmp_path):
+def test_last_delegation_when_nothing_runs(tmp_path):
     """Control (a): hoy el título sigue «En curso» con la última terminada."""
     r = _js(
         tmp_path,
@@ -620,25 +631,25 @@ def test_ultima_delegacion_cuando_nada_corre(tmp_path):
                                    tool: 'local_summarize', model: 'm', latency_ms: 1200,
                                    chars_in: 10, ok: true}};
         renderInflight();
-        const ultima = _els.inflightHead.innerHTML;
+        const lastHtml = _els.inflightHead.innerHTML;
         state.lastEvent = null; renderInflight();
-        const vacio = _els.inflightHead.innerHTML;
+        const emptyHtml = _els.inflightHead.innerHTML;
         state.inflight = [{tool: 't', model: 'm', elapsed_s: 1, chars_in: 1}]; renderInflight();
-        const vivo = _els.inflightHead.innerHTML;
-        salida(({ultima, vacio, vivo}));
+        const liveHtml = _els.inflightHead.innerHTML;
+        emit(({lastHtml, emptyHtml, liveHtml}));
         """,
         _DOM,
     )
-    head = r["ultima"]
+    head = r["lastHtml"]
     assert head == "Última delegación"
-    assert r["vacio"] == "En curso"
-    assert r["vivo"].startswith("En curso")
+    assert r["emptyHtml"] == "En curso"
+    assert r["liveHtml"].startswith("En curso")
 
 
-def test_el_js_no_redacta_las_etiquetas_de_las_causas():
+def test_the_js_does_not_word_the_cause_labels():
     """REQ-011: la etiqueta corta llega del daemon (`failures.py`); el panel no tiene su copia."""
-    for etiqueta in ("no resuelve", "nadie escucha", "sin acceso", "responde con error"):
-        assert not re.search(rf"['\"]{etiqueta}['\"]", metrics.HTML), etiqueta
+    for label in ("no resuelve", "nadie escucha", "sin acceso", "responde con error"):
+        assert not re.search(rf"['\"]{label}['\"]", metrics.HTML), label
 
 
 # --- T10 de daemon-reparte-el-backend: la espera de turno del daemon (REQ-008, REQ-027) --------
@@ -678,7 +689,7 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
     ]
     client = TestClient(metrics.app)
 
-    def input_and() -> dict | None:
+    def op_y_entry() -> dict | None:
         rows = client.get("/api/inflight").json()["inflight"]
         return next((e for e in rows if e.get("tool") == "op_y"), None)
 
@@ -689,19 +700,21 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
         entry = None
         end = time.monotonic() + 2
         while time.monotonic() < end:
-            e = input_and()
+            e = op_y_entry()
             queued = bool(server._turn.snapshot().queue)
-            if queued and e and (e.get("local_wait") or e.get("turn_in_use")):
+            # Las dos marcas: `turn_in_use` se publica antes que `local_wait` (server.py,
+            # `on_wait`), y una entrada con solo la primera aún se pinta «procesando».
+            if queued and e and e.get("local_wait") and e.get("turn_in_use"):
                 entry = e
                 break
             time.sleep(0.01)
-        assert entry, f"la operación de Qwen3.6 no llegó a esperar turno: {input_and()}"
+        assert entry, f"la operación de Qwen3.6 no llegó a esperar turno: {op_y_entry()}"
     finally:
         continue_x.set()
         for thread in threads:
             thread.join(5)
 
-    row = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": [entry]}])[0]
+    row = _row(tmp_path, [{"sequence": [_with_running(QWEN_READY)], "inflight": [entry]}])[0]
     assert row["text"] == "en cola local"
     assert "esperando turno del daemon" in row["title"]
     assert "en uso: gemma4-26b-a4b" in row["title"]
@@ -722,7 +735,7 @@ def test_in_progress_shows_turn_wait(tmp_path):
                                    turn_position: 1}],
                        activity: {skewMs: 0}, lastEvent: null};
         renderInflight();
-        salida(_els.inflightBody.innerHTML);
+        emit(_els.inflightBody.innerHTML);
         """,
         _DOM,
     )
@@ -738,7 +751,7 @@ def test_slow_mark_uses_the_panel_number_format(tmp_path):
         tmp_path,
         [_f("slowMark")],
         """
-        salida({txt: slowMark({slow: true, pace_rel: 0.37}),
+        emit({txt: slowMark({slow: true, pace_rel: 0.37}),
                 notSlow: slowMark({slow: false, pace_rel: 0.8}),
                 noField: slowMark({pace_rel: 0.37})});
         """,
@@ -755,7 +768,7 @@ def test_wait_and_inference_shown_apart(tmp_path):
         tmp_path,
         [_f("waitInferenceText")],
         """
-        salida({both: waitInferenceText({wait_ms: 47000, inference_ms: 10500}),
+        emit({both: waitInferenceText({wait_ms: 47000, inference_ms: 10500}),
                 none: waitInferenceText({latency_ms: 57500})});
         """,
     )
@@ -780,7 +793,7 @@ def test_activity_row_shows_wait_inference_and_slow_mark(tmp_path):
                        chars_in: 10000, chars_out: 300, latency_ms: 57500, ok: true,
                        inference_ms: 10500, wait_ms: 47000, tok_s: 15, pace_rel: 0.37,
                        slow: true}]);
-        salida(_els.activity.innerHTML);
+        emit(_els.activity.innerHTML);
         """,
         _DOM
         + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
@@ -810,7 +823,7 @@ def test_activity_row_affinity_has_no_fallback_chip(tmp_path):
         drawActivity([{row % "routing: 'affinity'"}]);
         const affinity = _els.activity.innerHTML;
         drawActivity([{row % "fallback_reason: 'http_500'"}]);
-        salida({{affinity: affinity, fallback: _els.activity.innerHTML}});
+        emit({{affinity: affinity, fallback: _els.activity.innerHTML}});
         """,
         _DOM
         + "\nconst PAGE = 10;\nconst state = {page: 0};\n"
