@@ -208,7 +208,7 @@ REPAIRS: tuple[Repair, ...] = (
     # opencode NO tiene un `warn` equivalente al de Codex, y no es un olvido: su entrada se
     # identifica por la clave `mcp["local-delegate"]` y no por marcadores —no escribimos ninguna
     # clave de primer nivel ajena al esquema; ver el porqué, y su letra pequeña por versión, en
-    # `install._escanear_jsonc` y alrededores—, así que no hay forma de distinguir la nuestra de
+    # `install._scan_jsonc` y alrededores—, así que no hay forma de distinguir la nuestra de
     # una escrita a mano. Es la misma situación que con Claude Code, y se trata igual: solo se
     # repone si falta.
     Repair("scaffold.mcp_opencode", (checks.MISSING,), frozenset({"mcp"}), frozenset({"opencode"})),
@@ -611,10 +611,10 @@ def _terminate(opts: Options, pid: int | None, out) -> None:
     opts.sleep(1.0)
 
 
-def _sigue_sirviendo(opts: Options, pid: int, espera: float = 6.0) -> bool:
+def _still_serving(opts: Options, pid: int, wait: float = 6.0) -> bool:
     """True si tras parar el servicio ese mismo pid **sigue** respondiendo en el puerto."""
     host, port = checks.daemon_host_port()
-    deadline = opts.clock() + espera
+    deadline = opts.clock() + wait
     while opts.clock() < deadline:
         status = opts.daemon_status(host, port)
         if status is None or status.get("pid") != pid:
@@ -654,7 +654,7 @@ def restart_daemon(opts: Options, out=print) -> int:
         # instancia que no puede escuchar, y el reinicio se da por fallido con el daemon viejo
         # todavía sirviendo. Por eso, si el mismo pid sigue ahí, se le manda la señal — y es
         # legítimo porque ese pid lo confirmó `/api/daemon`, no un fichero de estado.
-        if stop_commands and previous_pid and _sigue_sirviendo(opts, previous_pid):
+        if stop_commands and previous_pid and _still_serving(opts, previous_pid):
             out(f"    el servicio paró pero el pid {previous_pid} sigue sirviendo (launcher")
             out("    desacoplado): se le manda la señal al proceso confirmado.")
             _terminate(opts, previous_pid, out)
@@ -783,9 +783,9 @@ def run_update(opts: Options, out=print) -> int:
 
     # El hermano del bloque de arriba para el otro modo de instalación: `update` tampoco cambia
     # la versión del ejecutable de `uv tool`, y hasta ahora no lo decía nadie.
-    if aviso := uv_tool_lines(version):
+    if notice := uv_tool_lines(version):
         out("")
-        for line in aviso:
+        for line in notice:
             out(line)
 
     # 3. Plan: pines + reparaciones del andamiaje.

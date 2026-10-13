@@ -1,0 +1,4 @@
+# Comparación de model_json_schema() (antes: preguntas.*; después: questions.*). Se normaliza solo la clave de la propiedad (y `required`).
+ArrancarBackend -> StartBackend: IGUALES salvo la clave; propiedades ['arrancar'] -> ['start']; title 'ArrancarBackend' -> 'ArrancarBackend'; títulos de campo ['Arrancar'] -> ['Arrancar']
+ElegirModelo -> ChooseModel: IGUALES salvo la clave; propiedades ['modelo'] -> ['model']; title 'ElegirModelo' -> 'ElegirModelo'; títulos de campo ['Modelo'] -> ['Modelo']
+ElegirFormato -> ChooseFormat: IGUALES salvo la clave; propiedades ['formato'] -> ['format']; title 'ElegirFormato' -> 'ElegirFormato'; títulos de campo ['Formato'] -> ['Formato']

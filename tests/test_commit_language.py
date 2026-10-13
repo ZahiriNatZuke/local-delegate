@@ -66,13 +66,13 @@ def _system(request: dict) -> str:
 
 
 def test_variable_is_in_env_inventory():
-    """El aislamiento de la suite se alimenta de `config.VARIABLES_DE_ENTORNO`.
+    """El aislamiento de la suite se alimenta de `config.ENVIRONMENT_VARIABLES`.
 
     Mutante: leerla con `os.environ.get` en vez de por `_env`. Dispara este assert (y, además, el
     guardián de `test_aislamiento_entorno.py`): la variable no queda en el inventario y la suite
     heredaría la de la máquina.
     """
-    assert VARIABLE in config.VARIABLES_DE_ENTORNO
+    assert VARIABLE in config.ENVIRONMENT_VARIABLES
 
 
 @pytest.mark.parametrize("style", ["conventional", "plain"])

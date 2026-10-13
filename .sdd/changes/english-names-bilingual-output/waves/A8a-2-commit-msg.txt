@@ -1,0 +1,28 @@
+refactor(rename): nombres en inglés en el resto de src/ (ola A8a-2)
+
+Renombra a inglés los identificadores que quedaban en src/local_delegate:
+241 filas del mapping, en install, cli, clients, web/auth, config,
+benchmark, daemon, update, topology, residency, entrypoint, footprint,
+llamaswap_config y test_windows, más tres módulos (git mv):
+estado_json → json_state, preguntas → questions y sondas → probes.
+Entre ellas: preguntar → ask, ElegirModelo/ElegirFormato/ArrancarBackend →
+ChooseModel/ChooseFormat/StartBackend, clients.registrar → record,
+observar_cliente → observe_client, config.VARIABLES_DE_ENTORNO →
+ENVIRONMENT_VARIABLES, _leer → _read, modelos_por_rol → models_by_role,
+TIMEOUT_SONDA_* → PROBE_*_TIMEOUT, auth.proteger → protect,
+TokenPuerto → PortToken, crear_sesion/sesion_valida →
+create_session/valid_session.
+
+Los formularios de elicitation conservan su esquema: los campos pasan a
+start/model/format con Field(title=…) y ConfigDict(title=…), así que el
+model_json_schema() de cada uno solo cambia en la clave de la propiedad
+(y en required). Los nombres de los ContextVar siguen a sus constantes y
+el marcador {motivo} de _OPENCODE_UNTOUCHED pasa a {reason}. No cambia
+ningún otro texto de salida. Los módulos viejos no dejan alias: su nombre
+no se persiste en ningún sitio.
+
+Con el rename cambian, por consecuencia: server.py, checks.py, cooldown.py,
+doctor.py, attribution.py, llamaswap_api.py, las llamadas a auth de
+web/metrics.py, scripts/construir_corpus.py, la wiki (Architecture y
+Backend-versions) y 24 ficheros de test (imports, prefijos, atributos,
+cadenas de monkeypatch y el guardián del aislamiento del entorno).

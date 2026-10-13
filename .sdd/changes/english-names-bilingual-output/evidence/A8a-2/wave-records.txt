@@ -1,0 +1,28 @@
+OK    A0.md
+      · A0-mapping.csv: 2 filas, 0 discrepancia(s)
+OK    A1.md
+      · A1-mapping.csv: 35 filas, 0 discrepancia(s)
+OK    A2.md
+      · A2-mapping.csv: 156 filas, 9 discrepancia(s)
+OK    A3.md
+      · A3-mapping.csv: 126 filas, 4 discrepancia(s)
+OK    A4.md
+      · A4-mapping.csv: 116 filas, 6 discrepancia(s)
+OK    A5a.md
+      · A5a-mapping.csv: 217 filas, 0 discrepancia(s)
+OK    A5b-1.md
+      · A5b-1-mapping.csv: 218 filas, 0 discrepancia(s)
+OK    A5b-2.md
+      · A5b-2-mapping.csv: 277 filas, 0 discrepancia(s)
+OK    A5c.md
+      · A5c-mapping.csv: 124 filas, 0 discrepancia(s)
+OK    A6.md
+      · A6-mapping.csv: 184 filas, 0 discrepancia(s)
+OK    A7a.md
+      · A7a-mapping.csv: 124 filas, 0 discrepancia(s)
+OK    A7b.md
+      · A7b-mapping.csv: 141 filas, 0 discrepancia(s)
+OK    A8a.md
+      · A8a-1-mapping.csv: 151 filas, 0 discrepancia(s)
+      · A8a-2-mapping.csv: 241 filas, 0 discrepancia(s)
+13/13 registro(s) cumplen los mínimos de §2.1

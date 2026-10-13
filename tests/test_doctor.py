@@ -10,15 +10,15 @@ from pathlib import Path
 
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, daemon, doctor, install, recompute, sondas, update
+from local_delegate import checks, daemon, doctor, install, probes, recompute, update
 from local_delegate.failures import BackendView
 
 
 def test_vnum_extracts_number():
-    assert sondas._vnum("v238") == 238
-    assert sondas._vnum("b9925") == 9925
-    assert sondas._vnum(None) is None
-    assert sondas._vnum("sin-numero") is None
+    assert probes._vnum("v238") == 238
+    assert probes._vnum("b9925") == 9925
+    assert probes._vnum(None) is None
+    assert probes._vnum("sin-numero") is None
 
 
 def test_llamaserver_exe_from_config_windows_path(tmp_path):
@@ -29,7 +29,7 @@ def test_llamaserver_exe_from_config_windows_path(tmp_path):
         "    cmd: 'D:\\Projects\\llms\\llamacpp\\llama-server.exe --port ${PORT} --host 127.0.0.1'\n",
         encoding="utf-8",
     )
-    exe = sondas._llamaserver_exe_from_config(cfg)
+    exe = probes._llamaserver_exe_from_config(cfg)
     assert exe == "D:\\Projects\\llms\\llamacpp\\llama-server.exe"
 
 
@@ -38,16 +38,16 @@ def test_llamaserver_exe_from_config_posix_path(tmp_path):
     cfg.write_text(
         "models:\n  m:\n    cmd: '/usr/local/bin/llama-server --port 1'\n", encoding="utf-8"
     )
-    assert sondas._llamaserver_exe_from_config(cfg) == "/usr/local/bin/llama-server"
+    assert probes._llamaserver_exe_from_config(cfg) == "/usr/local/bin/llama-server"
 
 
 def test_detect_llamaserver_version_parses_build(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"
     cfg.write_text("models:\n  m:\n    cmd: '/usr/bin/llama-server --port 1'\n", encoding="utf-8")
     monkeypatch.setattr(
-        sondas, "_run_version", lambda exe: "version: 9925 (ed8c26150)\nbuilt with Clang"
+        probes, "_run_version", lambda exe: "version: 9925 (ed8c26150)\nbuilt with Clang"
     )
-    version, reason = sondas.detect_llamaserver_version(cfg)
+    version, reason = probes.detect_llamaserver_version(cfg)
     assert version == "b9925"
     assert reason is None
 
@@ -58,11 +58,11 @@ def test_detect_llamaserver_version_parses_semver_build(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"
     cfg.write_text("models:\n  m:\n    cmd: '/usr/bin/llama-server --port 1'\n", encoding="utf-8")
     monkeypatch.setattr(
-        sondas,
+        probes,
         "_run_version",
         lambda exe: "version: 0.4.0-dev (build 10909, commit a2878d30d)\nbuilt with Clang 20.1.8",
     )
-    version, reason = sondas.detect_llamaserver_version(cfg)
+    version, reason = probes.detect_llamaserver_version(cfg)
     assert version == "b10909"
     assert reason is None
 
@@ -70,48 +70,48 @@ def test_detect_llamaserver_version_parses_semver_build(tmp_path, monkeypatch):
 def test_detect_llamaserver_version_semver_without_build_is_not_b0(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"
     cfg.write_text("models:\n  m:\n    cmd: '/usr/bin/llama-server --port 1'\n", encoding="utf-8")
-    monkeypatch.setattr(sondas, "_run_version", lambda exe: "version: 0.4.0-dev\nbuilt with Clang")
-    version, reason = sondas.detect_llamaserver_version(cfg)
+    monkeypatch.setattr(probes, "_run_version", lambda exe: "version: 0.4.0-dev\nbuilt with Clang")
+    version, reason = probes.detect_llamaserver_version(cfg)
     assert version is None
     assert reason and "inesperada" in reason
 
 
 def test_detect_llamaserver_version_reports_reason_without_config():
-    version, reason = sondas.detect_llamaserver_version(None)
+    version, reason = probes.detect_llamaserver_version(None)
     assert version is None
     assert reason and "config" in reason.lower()
 
 
 def test_compare_line_warns_when_installed_older():
-    line, warn = sondas._compare_line("llama-swap", "v100", online=False)
+    line, warn = probes._compare_line("llama-swap", "v100", online=False)
     assert warn is True
     assert "considera actualizar" in line
     assert "WARN" in line
 
 
 def test_compare_line_ok_when_equal_to_recommended():
-    recommended = sondas.RECOMMENDED_VERSIONS["llama-swap"]
-    line, warn = sondas._compare_line("llama-swap", recommended, online=False)
+    recommended = probes.RECOMMENDED_VERSIONS["llama-swap"]
+    line, warn = probes._compare_line("llama-swap", recommended, online=False)
     assert warn is False
     assert "OK" in line
 
 
 def test_compare_line_not_detected():
-    line, warn = sondas._compare_line("llama-server", None, online=False)
+    line, warn = probes._compare_line("llama-server", None, online=False)
     assert warn is False  # 'no detectado' no cuenta como warning de actualización
     assert "no detectado" in line
 
 
 def test_release_age_days():
     now = datetime(2026, 7, 23, 12, tzinfo=UTC)
-    assert sondas._release_age_days("2026-07-20T10:00:00Z", now) == 3
-    assert sondas._release_age_days("", now) is None
-    assert sondas._release_age_days("no-es-fecha", now) is None
+    assert probes._release_age_days("2026-07-20T10:00:00Z", now) == 3
+    assert probes._release_age_days("", now) is None
+    assert probes._release_age_days("no-es-fecha", now) is None
 
 
 def test_online_new_release_is_held_before_soak(monkeypatch):
     monkeypatch.setattr(
-        sondas,
+        probes,
         "latest_github_info",
         lambda component: {
             "tag": "v999",
@@ -119,7 +119,7 @@ def test_online_new_release_is_held_before_soak(monkeypatch):
             "url": "https://example.invalid/release",
         },
     )
-    line, warn = sondas._compare_line("llama-swap", sondas.RECOMMENDED_VERSIONS["llama-swap"], True)
+    line, warn = probes._compare_line("llama-swap", probes.RECOMMENDED_VERSIONS["llama-swap"], True)
     assert warn is False
     assert "HOLD" in line
     assert "canary" not in line
@@ -142,7 +142,7 @@ def test_select_relevant_issues_excludes_prs_and_noise():
             "pull_request": {},
         },
     ]
-    assert sondas._select_relevant_issues(items) == [
+    assert probes._select_relevant_issues(items) == [
         {"number": 2, "title": "CUDA crash on unload", "url": "u2"}
     ]
 
@@ -176,15 +176,15 @@ def _stub_environment(
     # `backend_probe` doblado justo debajo. Sin esto la suite **sale a la red de verdad**: verde en
     # CI, donde no hay daemon, y otra cosa en la máquina de quien desarrolla, donde sí lo hay.
     monkeypatch.setattr(daemon, "query_backend", lambda host, port, timeout=1.0: backend_via_daemon)
-    version = sondas.RECOMMENDED_VERSIONS["llama-swap"] if swap == "ok" else swap
-    monkeypatch.setattr(sondas, "detect_llamaswap_version", lambda: version)
+    version = probes.RECOMMENDED_VERSIONS["llama-swap"] if swap == "ok" else swap
+    monkeypatch.setattr(probes, "detect_llamaswap_version", lambda: version)
     monkeypatch.setattr(
-        sondas,
+        probes,
         "detect_llamaserver_version",
-        lambda cfg: (sondas.RECOMMENDED_VERSIONS["llama-server"], None),
+        lambda cfg: (probes.RECOMMENDED_VERSIONS["llama-server"], None),
     )
     monkeypatch.setattr(
-        sondas,
+        probes,
         "backend_probe",
         lambda: (
             BackendView(True, "", None, "direct")
@@ -195,7 +195,7 @@ def _stub_environment(
     # Mismo caso que `query_backend`: sin doblarlo, `service.credential` pediría `/models` al
     # backend REAL de la máquina, verde en CI y otra cosa aquí. Por defecto «no exige credencial»,
     # que es el escenario donde el modo de la entrada MCP no cambia nada.
-    monkeypatch.setattr(sondas, "backend_requires_key", lambda: (needs_key, ""))
+    monkeypatch.setattr(probes, "backend_requires_key", lambda: (needs_key, ""))
     monkeypatch.setattr(
         daemon,
         "query_daemon",
@@ -308,8 +308,8 @@ def test_run_doctor_keeps_the_previous_output(tmp_path, monkeypatch, capsys):
     assert "LLAMASWAP_CONFIG:" in out
     assert "CAÍDO" in out
     assert "Versiones (instalada vs probada; usa --online para comparar con GitHub):" in out
-    assert f"llama-swap: {sondas.RECOMMENDED_VERSIONS['llama-swap']} (= probada)" in out
-    assert f"llama-server: {sondas.RECOMMENDED_VERSIONS['llama-server']} (= probada)" in out
+    assert f"llama-swap: {probes.RECOMMENDED_VERSIONS['llama-swap']} (= probada)" in out
+    assert f"llama-server: {probes.RECOMMENDED_VERSIONS['llama-server']} (= probada)" in out
 
 
 def test_el_daemon_responde_por_el_backend_y_se_acabo_el_401(tmp_path, monkeypatch, capsys):
@@ -346,8 +346,8 @@ def test_sin_daemon_el_backend_se_prueba_directo_como_siempre(tmp_path, monkeypa
 def test_run_doctor_without_network_does_not_fail(tmp_path, monkeypatch, capsys):
     """Sin GitHub ni backend ni daemon, el diagnóstico se completa y no lanza."""
     _stub_environment(monkeypatch, backend=False, daemon_alive=False)
-    monkeypatch.setattr(sondas, "latest_github_info", lambda component: None)
-    monkeypatch.setattr(sondas, "recent_relevant_issues", lambda component: [])
+    monkeypatch.setattr(probes, "latest_github_info", lambda component: None)
+    monkeypatch.setattr(probes, "recent_relevant_issues", lambda component: [])
     args = argparse.Namespace(config=None, online=True, home=str(make_home(tmp_path)))
     assert doctor.run_doctor(args) == 1
     out = capsys.readouterr().out
@@ -398,13 +398,13 @@ def test_backend_probe_usa_el_plazo_de_sondeo(monkeypatch):
 
     monkeypatch.setattr(httpx2, "Client", _Registrador)
 
-    sondas.backend_probe()
+    probes.backend_probe()
 
     (t,) = plazos
     plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
     plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
-    assert plazo_conexion == config.TIMEOUT_SONDA_CONEXION
-    assert plazo_lectura == config.TIMEOUT_SONDA_LECTURA
+    assert plazo_conexion == config.PROBE_CONNECT_TIMEOUT
+    assert plazo_lectura == config.PROBE_READ_TIMEOUT
 
 
 def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
@@ -413,7 +413,7 @@ def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
 
     monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
 
-    vista = sondas.backend_probe()
+    vista = probes.backend_probe()
 
     assert "no se resuelve" in vista[1]
     assert vista.cause == "dns"

@@ -425,17 +425,17 @@ def _log_minimo() -> None:
 
 def _en_peticion(tool_use_id: str, funcion):
     """Corre `funcion` como si fuera dentro de una petición con ese `tool_use_id`."""
-    t1 = clients._TOOL_USE_ID_ACTUAL.set(tool_use_id)
-    t2 = clients._MEMORIA_PETICION.set({})
+    t1 = clients._CURRENT_TOOL_USE_ID.set(tool_use_id)
+    t2 = clients._REQUEST_MEMORY.set({})
     try:
         return funcion()
     finally:
-        clients._MEMORIA_PETICION.reset(t2)
-        clients._TOOL_USE_ID_ACTUAL.reset(t1)
+        clients._REQUEST_MEMORY.reset(t2)
+        clients._CURRENT_TOOL_USE_ID.reset(t1)
 
 
 def test_log_event_escribe_la_atribucion_y_ningun_id_de_sesion(log_y_notas):
-    """Control (c): en el corte, `tool_use_id_actual()` devolvía `None` y no había campo."""
+    """Control (c): en el corte, `current_tool_use_id()` devolvía `None` y no había campo."""
     log, notas, raiz = log_y_notas
     marcador = "sesion-marcador-7f3a"
     principal = _escribir(
@@ -493,7 +493,7 @@ class _Espia:
 
 async def _peticiones(ids: list[str], en_la_tool) -> list:
     """Arnés de `test_clients.py`: un servidor con el middleware y una llamada por id."""
-    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observe_client])
     vistos: list = []
 
     @servidor.tool()
@@ -513,7 +513,7 @@ async def _peticiones(ids: list[str], en_la_tool) -> list:
                 await cliente.initialize()
                 for tool_use_id in ids:
                     await cliente.call_tool(
-                        "delega", {}, meta={clients.CLAVE_TOOL_USE_ID: tool_use_id}
+                        "delega", {}, meta={clients.TOOL_USE_ID_KEY: tool_use_id}
                     )
             tg.cancel_scope.cancel()
     return vistos
@@ -549,7 +549,7 @@ def test_la_memoria_no_cruza_peticiones(log_y_notas):
 
     def en_la_tool():
         attribution.current_call()
-        memoria = clients.memoria_de_peticion()
+        memoria = clients.request_memory()
         return sorted(memoria) if memoria is not None else None
 
     vistos = anyio.run(_peticiones, ["toolu_p1", "toolu_p2"], en_la_tool)

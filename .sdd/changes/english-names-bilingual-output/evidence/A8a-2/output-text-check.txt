@@ -1,0 +1,52 @@
+# Partes literales de las cadenas (sin docstrings), HEAD 0d49cbf frente a A8a-2, por fichero de src/ tocado
+## estado_json.py -> json_state.py: 4 -> 4 literales; idénticos
+## preguntas.py -> questions.py: 8 -> 14 literales; DIFERENCIAS
+1c1,7
+< 'ModeloT'
+---
+> 'Arrancar'
+> 'ArrancarBackend'
+> 'ElegirFormato'
+> 'ElegirModelo'
+> 'Formato'
+> 'ModelT'
+> 'Modelo'
+4c10
+< 'ctx_actual'
+---
+> 'current_ctx'
+## sondas.py -> probes.py: 95 -> 95 literales; idénticos
+## install.py -> install.py: 546 -> 546 literales; DIFERENCIAS
+411c411
+< "no se tocó {path}: sin la CLI `opencode` y con un fichero que no se puede reescribir sin destruir lo que hay ({motivo}). Instala opencode en el PATH y repite, o añade la entrada '{server}' a mano"
+---
+> "no se tocó {path}: sin la CLI `opencode` y con un fichero que no se puede reescribir sin destruir lo que hay ({reason}). Instala opencode en el PATH y repite, o añade la entrada '{server}' a mano"
+## cli.py -> cli.py: 585 -> 585 literales; idénticos
+## clients.py -> clients.py: 37 -> 37 literales; DIFERENCIAS
+18,20c18,20
+< 'local_delegate_cliente_actual'
+< 'local_delegate_memoria_peticion'
+< 'local_delegate_tool_use_id_actual'
+---
+> 'local_delegate_current_client'
+> 'local_delegate_current_tool_use_id'
+> 'local_delegate_request_memory'
+## config.py -> config.py: 129 -> 129 literales; idénticos
+## benchmark.py -> benchmark.py: 463 -> 463 literales; idénticos
+## daemon.py -> daemon.py: 79 -> 79 literales; idénticos
+## update.py -> update.py: 251 -> 251 literales; idénticos
+## topology.py -> topology.py: 133 -> 133 literales; idénticos
+## residency.py -> residency.py: 288 -> 288 literales; idénticos
+## entrypoint.py -> entrypoint.py: 1 -> 1 literales; idénticos
+## footprint.py -> footprint.py: 37 -> 37 literales; idénticos
+## llamaswap_config.py -> llamaswap_config.py: 154 -> 154 literales; idénticos
+## test_windows.py -> test_windows.py: 72 -> 72 literales; idénticos
+## web/auth.py -> web/auth.py: 41 -> 41 literales; idénticos
+## checks.py -> checks.py: 597 -> 597 literales; idénticos
+## server.py -> server.py: 923 -> 923 literales; idénticos
+## cooldown.py -> cooldown.py: 51 -> 51 literales; idénticos
+## doctor.py -> doctor.py: 44 -> 44 literales; idénticos
+## attribution.py -> attribution.py: 80 -> 80 literales; idénticos
+## llamaswap_api.py -> llamaswap_api.py: 159 -> 159 literales; idénticos
+## matrix.py -> matrix.py: 70 -> 70 literales; idénticos
+## web/metrics.py -> web/metrics.py: 459 -> 459 literales; idénticos

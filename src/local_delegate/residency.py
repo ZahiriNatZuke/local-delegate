@@ -238,7 +238,7 @@ def _analyze(text: str) -> tuple[Any, dict[str, Any]]:
 # --- Localizar nodos -------------------------------------------------------------------------
 
 
-def _par(mapping: Any, key: str) -> tuple[Any, Any] | None:
+def _pair(mapping: Any, key: str) -> tuple[Any, Any] | None:
     """El PRIMER par con esa clave (con claves duplicadas, la negativa va antes)."""
     if not isinstance(mapping, yaml.MappingNode):
         return None
@@ -259,7 +259,7 @@ def _groups_path(data: Mapping[str, Any]) -> tuple[str, ...]:
 def _node_at(root: Any, path: Sequence[str]) -> tuple[Any, Any] | None:
     node, pair = root, None
     for key in path:
-        pair = _par(node, key)
+        pair = _pair(node, key)
         if pair is None:
             return None
         node = pair[1]
@@ -354,13 +354,13 @@ def _edit_ttl(t: str, root: Any, c: SetTTL) -> list[Edit]:
     if pair is None or not isinstance(pair[1], yaml.MappingNode) or not pair[1].value:
         raise ResidencyError(f"el modelo `{c.model}` no tiene un mapa en `models`")
     mapping = pair[1]
-    ttl = _par(mapping, "ttl")
+    ttl = _pair(mapping, "ttl")
     if ttl is not None:
         node = ttl[1]
         return [(node.start_mark.index, node.end_mark.index, str(c.seconds))]
-    sangria = mapping.value[0][0].start_mark.column
+    indent = mapping.value[0][0].start_mark.column
     pos = _after(t, mapping)
-    return [(pos, pos, _line_block(t, pos, [" " * sangria + f"ttl: {c.seconds}"]))]
+    return [(pos, pos, _line_block(t, pos, [" " * indent + f"ttl: {c.seconds}"]))]
 
 
 def _group_node(root: Any, data: Mapping[str, Any], group: str) -> tuple[Any, Any]:
@@ -372,7 +372,7 @@ def _group_node(root: Any, data: Mapping[str, Any], group: str) -> tuple[Any, An
 
 def _node_members(root: Any, data: Mapping[str, Any], group: str) -> Any:
     _k, value = _group_node(root, data, group)
-    pair = _par(value, "members")
+    pair = _pair(value, "members")
     if pair is None or not isinstance(pair[1], yaml.SequenceNode) or not pair[1].value:
         raise ResidencyError(f"el grupo `{group}` no tiene una lista `members` en estilo bloque")
     return pair[1]
@@ -421,7 +421,7 @@ def _edit_create(t: str, root: Any, data: Mapping[str, Any], c: CreateGroup) -> 
         for _k, value in groups.value:
             if isinstance(value, yaml.MappingNode) and value.value:
                 inner_column = value.value[0][0].start_mark.column
-                members = _par(value, "members")
+                members = _pair(value, "members")
                 if members and isinstance(members[1], yaml.SequenceNode) and members[1].value:
                     item = members[1].value[0]
                     start_ts = _line_start(t, item.start_mark.index)
@@ -558,13 +558,13 @@ def _sensitive_lines(text: str) -> set[int]:
     for i, line in enumerate(text.splitlines()):
         body = line.lstrip("\ufeff")
         clean = body.strip()
-        sangria = len(body) - len(body.lstrip(" "))
+        indent = len(body) - len(body.lstrip(" "))
         if block is not None:
             if (
                 not clean
                 or clean.startswith("#")
-                or sangria > block
-                or (sangria == block and clean.startswith("-"))
+                or indent > block
+                or (indent == block and clean.startswith("-"))
             ):
                 sensitive.add(i)
                 continue
@@ -575,7 +575,7 @@ def _sensitive_lines(text: str) -> set[int]:
             sensitive.add(i)
             rest = m.group(3).strip()
             if not rest or rest.startswith("#") or rest[0] in "|>":
-                block = sangria
+                block = indent
         elif "key" in clean.lower():
             sensitive.add(i)
     return sensitive
@@ -933,10 +933,10 @@ def plan_pin(
     real = snapshot.resolve(model)
     if real is None:
         raise ResidencyError(f"`{model}` no es un modelo de la config")
-    actual = snapshot.group(real) or topology.DEFAULT_GROUP
-    cfg = snapshot.groups[actual]
+    current = snapshot.group(real) or topology.DEFAULT_GROUP
+    cfg = snapshot.groups[current]
     already_in_resident_group = (
-        actual != topology.DEFAULT_GROUP and cfg.persistent and not cfg.swap and not cfg.exclusive
+        current != topology.DEFAULT_GROUP and cfg.persistent and not cfg.swap and not cfg.exclusive
     )
     if already_in_resident_group and _written_ttl(data, real) == 0:
         return [], ""
@@ -971,16 +971,16 @@ def plan_pin(
         # Ya está en un grupo como el que se crearía: basta con el TTL (diff mínimo).
         warning = (
             f"{real} ocupará {_gib(figures[real])} GiB de VRAM de forma permanente (grupo "
-            f"`{actual}`, persistent y ttl 0); {margin_warning}"
+            f"`{current}`, persistent y ttl 0); {margin_warning}"
         )
         return [SetTTL(real, 0)], warning
     changes: list[Change] = []
-    if actual != topology.DEFAULT_GROUP:
+    if current != topology.DEFAULT_GROUP:
         written_one = next(m for m in cfg.members if snapshot.resolve(m) == real)
         if len(cfg.members) == 1:
-            changes.append(DeleteGroup(actual))
+            changes.append(DeleteGroup(current))
         else:
-            changes.append(RemoveMember(actual, written_one))
+            changes.append(RemoveMember(current, written_one))
     name, n = RESIDENT_GROUP, 1
     while name in snapshot.groups:
         n += 1

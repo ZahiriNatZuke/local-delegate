@@ -1,4 +1,4 @@
-"""sondas.py — lo que ``doctor`` y ``checks`` preguntan al sistema: versiones y backend.
+"""probes.py — lo que ``doctor`` y ``checks`` preguntan al sistema: versiones y backend.
 
 Las versiones instaladas de ``llama-server`` (llama.cpp) y ``llama-swap`` frente a las probadas
 con esta release (``RECOMMENDED_VERSIONS``), la consulta opcional a GitHub (``--online``) y las
@@ -276,18 +276,18 @@ def backend_probe() -> failures.BackendView:
     try:
         import httpx2
 
-        plazo = httpx2.Timeout(config.TIMEOUT_SONDA_LECTURA, connect=config.TIMEOUT_SONDA_CONEXION)
-        with httpx2.Client(timeout=plazo) as c:
+        timeout = httpx2.Timeout(config.PROBE_READ_TIMEOUT, connect=config.PROBE_CONNECT_TIMEOUT)
+        with httpx2.Client(timeout=timeout) as c:
             response = c.get(endpoint, headers=config.auth_headers())
     except Exception as exc:
-        causa = failures.connection_cause(exc, loopback=loopback)
-        texto = failures.detail(causa, host=host, endpoint=endpoint, exception=exc)
-        return failures.BackendView(False, texto, causa.value, "direct")
+        cause = failures.connection_cause(exc, loopback=loopback)
+        text = failures.detail(cause, host=host, endpoint=endpoint, exception=exc)
+        return failures.BackendView(False, text, cause.value, "direct")
     if response.is_success:
         return failures.BackendView(True, "", None, "direct")
-    causa = failures.connection_cause(response.status_code, loopback=loopback)
-    texto = failures.detail(causa, host=host, status=response.status_code)
-    return failures.BackendView(False, texto, causa.value, "direct")
+    cause = failures.connection_cause(response.status_code, loopback=loopback)
+    text = failures.detail(cause, host=host, status=response.status_code)
+    return failures.BackendView(False, text, cause.value, "direct")
 
 
 def backend_requires_key() -> tuple[bool | None, str]:

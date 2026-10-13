@@ -44,8 +44,8 @@ from . import (
     failures,
     install,
     legacy_names,
+    probes,
     recompute,
-    sondas,
     test_windows,
 )
 
@@ -114,9 +114,9 @@ class Check:
 
 # --- Colaboradores por defecto -----------------------------------------------
 # El import de `daemon` es diferido a propósito: arrastra uvicorn y el SDK MCP, que el
-# diagnóstico no necesita cargar. Las sondas de versiones y del backend vienen de `sondas`, un
+# diagnóstico no necesita cargar. Las sondas de versiones y del backend vienen de `probes`, un
 # módulo hoja que no importa ni este ni `doctor`: cuando vivían en `doctor`, los dos módulos se
-# importaban entre sí. Llamarlas como atributo del módulo (`sondas.X()`) y no con `from ...
+# importaban entre sí. Llamarlas como atributo del módulo (`probes.X()`) y no con `from ...
 # import` es lo que permite a los tests doblarlas con monkeypatch sin inyectar nada.
 def _default_daemon_status(host: str, port: int) -> dict | None:
     from . import daemon
@@ -191,7 +191,7 @@ def _default_backend_models() -> failures.BackendView:
     # sondeo fallido del daemon (REQ-016). Con 1 s de lectura, un fallo lento del backend (VPN,
     # puerto cerrado en Windows) agotaba la consulta y la causa que el daemon ya sabía no llegaba.
     timeout = httpx2.Timeout(
-        config.TIMEOUT_SONDA_CONEXION + config.TIMEOUT_SONDA_LECTURA + 1, connect=1.0
+        config.PROBE_CONNECT_TIMEOUT + config.PROBE_READ_TIMEOUT + 1, connect=1.0
     )
     seen = daemon.query_backend(host, port, timeout=timeout)
     if seen is not None:
@@ -210,12 +210,12 @@ def _default_backend_models() -> failures.BackendView:
         return failures.BackendView(
             False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
         )
-    return sondas.backend_probe()
+    return probes.backend_probe()
 
 
 def _default_backend_needs_key() -> tuple[bool | None, str]:
-    """¿El backend rechaza a quien no lleva credencial? Ver ``sondas.backend_requires_key``."""
-    return sondas.backend_requires_key()
+    """¿El backend rechaza a quien no lleva credencial? Ver ``probes.backend_requires_key``."""
+    return probes.backend_requires_key()
 
 
 def NO_KEY_PROBE() -> tuple[bool | None, str]:
@@ -233,8 +233,8 @@ def _default_version_of(component: str, config_path: Path | None) -> tuple[str |
     if component == "llama-swap":
         # Sin motivo a propósito: el doctor tampoco lo da hoy para llama-swap, y con motivo la
         # línea perdería el sufijo de la última release en GitHub que arma `_compare_line`.
-        return sondas.detect_llamaswap_version(), None
-    return sondas.detect_llamaserver_version(config_path)
+        return probes.detect_llamaswap_version(), None
+    return probes.detect_llamaserver_version(config_path)
 
 
 def _default_latest_release() -> tuple[str | None, str | None]:
@@ -277,7 +277,7 @@ def _default_clients_seen() -> tuple[list[dict], str | None]:
     # crecimiento sin límite por un diagnóstico que miente. La lista vacía es lo normal cuando
     # nadie ha hablado todavía, y eso no es un error.
     observed: list[dict] = []
-    for path in clients.rutas_para_leer():
+    for path in clients.paths_to_read():
         text, reason = read_text(path)
         if reason is not None:
             return [], reason
@@ -581,7 +581,7 @@ def _probe_clients_observed(ctx: Context) -> Result:
     como aviso subiría el exit code de una máquina sana. Lo que sí hacía falta es que se vea.
 
     El registro es histórico y **acumula una línea por cada arranque de proceso** —la
-    deduplicación de ``clients.registrar`` es intra-proceso—, así que aquí se agrupa por nombre y
+    deduplicación de ``clients.record`` es intra-proceso—, así que aquí se agrupa por nombre y
     se enseña la observación más reciente de cada uno. Sin eso, el mismo cliente saldría repetido
     tantas veces como se haya lanzado.
     """
@@ -1398,15 +1398,15 @@ def _probe_backend_models(ctx: Context) -> Result:
 def _version_result(ctx: Context, component: str) -> Result:
     """Envuelve la comparación de versiones del doctor sin reescribirla.
 
-    El texto lo sigue armando ``sondas._compare_line`` —incluida la consulta opcional a
+    El texto lo sigue armando ``probes._compare_line`` —incluida la consulta opcional a
     GitHub y la política de soak— y aquí solo se le quita el prefijo, que lo pone el
     renderizador con el resto de los checks.
     """
     installed, reason = ctx.version_of(component, ctx.config_path)
     if installed is None and reason:
-        recommended = sondas.RECOMMENDED_VERSIONS[component]
+        recommended = probes.RECOMMENDED_VERSIONS[component]
         return Result(UNKNOWN, f"no detectado (probada: {recommended}) — {reason}")
-    line, warn = sondas._compare_line(component, installed, ctx.online)
+    line, warn = probes._compare_line(component, installed, ctx.online)
     _prefix, _, text = line.partition("] ")
     detail = text.split(": ", 1)[1] if ": " in text else text
     if warn:
@@ -1522,7 +1522,7 @@ def _stale_affinity_cells(photo) -> tuple[list[str], int]:
     from . import config as configuration
     from . import matrix, server
 
-    roles = configuration.modelos_por_rol()
+    roles = configuration.models_by_role()
     stale: list[str] = []
     elsewhere = 0
     for cell in matrix.CELLS:

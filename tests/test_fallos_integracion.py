@@ -43,7 +43,7 @@ def sin_preguntar(monkeypatch):
     def espia(mensaje, _esquema):
         ofertas.append(mensaje)
 
-    monkeypatch.setattr(server.preguntas, "preguntar", espia)
+    monkeypatch.setattr(server.questions, "ask", espia)
     return ofertas
 
 

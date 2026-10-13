@@ -39,8 +39,8 @@ from pathlib import Path
 from filelock import FileLock, Timeout
 
 from . import config, deprecations, legacy_names
-from .estado_json import escribir_json_atomico, leer_json
 from .failures import FailureClass
+from .json_state import read_json, write_json_atomic
 
 #: Las clases que suman para el enfriamiento (tabla de F3). El resto son neutras: ni suman ni ponen
 #: a cero. Capacidad y configuración incluidas (plan, tarea 26): no dicen nada de si el modelo
@@ -258,10 +258,10 @@ class CooldownState:
     def _load(self) -> dict:
         """El estado vigente: el fichero nuevo y, si aún no existe, el viejo traducido (REQ-006)."""
         if self._path.exists() or self._legacy_path == self._path:
-            return leer_json(self._path)
+            return read_json(self._path)
         return {
             model: _entry(raw) if isinstance(raw, dict) else raw
-            for model, raw in leer_json(self._legacy_path).items()
+            for model, raw in read_json(self._legacy_path).items()
         }
 
     def _read(self) -> dict:
@@ -284,7 +284,7 @@ class CooldownState:
                 data = self._load()
                 if apply(data) is False:
                     return  # nada cambió: no se reescribe el fichero
-                escribir_json_atomico(self._path, data)
+                write_json_atomic(self._path, data)
                 if self._legacy_write:
                     self._write_legacy(data)
                 if events:
@@ -302,7 +302,7 @@ class CooldownState:
             for model, raw in data.items()
         }
         try:
-            escribir_json_atomico(self._legacy_path, old)
+            write_json_atomic(self._legacy_path, old)
         except OSError:
             pass  # la copia vieja es para hooks de otra versión: perderla no deshace el estado
 

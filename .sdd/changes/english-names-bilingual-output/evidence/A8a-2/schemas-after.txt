@@ -1,0 +1,3 @@
+StartBackend {"description": "¿Arrancar el backend local que no responde?", "properties": {"start": {"title": "Arrancar", "type": "boolean"}}, "required": ["start"], "title": "ArrancarBackend", "type": "object"}
+ChooseModel {"description": "Cuál de los modelos del catálogo usar.", "properties": {"model": {"title": "Modelo", "type": "string"}}, "required": ["model"], "title": "ElegirModelo", "type": "object"}
+ChooseFormat {"description": "Qué formato de salida se espera.", "properties": {"format": {"title": "Formato", "type": "string"}}, "required": ["format"], "title": "ElegirFormato", "type": "object"}

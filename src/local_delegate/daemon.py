@@ -188,7 +188,7 @@ def query_backend(host: str, port: int, timeout: float = 1.0) -> dict | None:
     return data if isinstance(data, dict) and "available" in data else None
 
 
-def build_app(host: str | None = None, port: int | None = None) -> Starlette | auth.TokenPuerto:
+def build_app(host: str | None = None, port: int | None = None) -> Starlette | auth.PortToken:
     """Construye el ASGI combinado preservando el lifespan del server MCP.
 
     Devuelve la app envuelta cuando hay token configurado. El tipo de retorno lo dice en vez de
@@ -219,11 +219,11 @@ def build_app(host: str | None = None, port: int | None = None) -> Starlette | a
 
     # El token se exige envolviendo la raíz, o sea DESPUÉS de montar el dashboard: así una ruta
     # nueva queda protegida por existir, no por acordarse de protegerla. Sin token configurado
-    # `proteger` devuelve la misma app y aquí no cambia nada.
-    return auth.proteger(mcp_app, config.WEB_TOKEN, config.WEB_SESSION_SECONDS)
+    # `protect` devuelve la misma app y aquí no cambia nada.
+    return auth.protect(mcp_app, config.WEB_TOKEN, config.WEB_SESSION_SECONDS)
 
 
-def daemon_registrado() -> dict | None:
+def registered_daemon() -> dict | None:
     """El daemon que dejó escrito su estado, mirado **donde él dijo estar**.
 
     Existe por el ámbito del lock: es uno por usuario (`LOG_DIR/daemon.lock`), no uno por puerto.
@@ -236,11 +236,11 @@ def daemon_registrado() -> dict | None:
     diagnóstico incompleto por uno falso.
     """
     try:
-        datos = json.loads(_state_path().read_text(encoding="utf-8"))
-        registrado_host, registrado_port = datos["host"], int(datos["port"])
+        data = json.loads(_state_path().read_text(encoding="utf-8"))
+        registered_host, registered_port = data["host"], int(data["port"])
     except (OSError, ValueError, TypeError, KeyError):
         return None
-    return query_daemon(registrado_host, registrado_port)
+    return query_daemon(registered_host, registered_port)
 
 
 def serve(host: str | None = None, port: int | None = None, log_level: str = "warning") -> int:
@@ -264,14 +264,14 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
             _console_print(f"local-delegate daemon ya está activo (pid={current['pid']})")
             _console_print(current["mcp_url"])
             return 0
-        otro = daemon_registrado()
-        if otro:
+        other = registered_daemon()
+        if other:
             _console_print(
                 f"local-delegate: ya hay un daemon de este usuario en "
-                f"{otro['host']}:{otro['port']} (pid={otro['pid']}), y el lock es uno por usuario. "
+                f"{other['host']}:{other['port']} (pid={other['pid']}), y el lock es uno por usuario. "
                 f"No se puede levantar otro en el puerto {port}."
             )
-            _console_print(otro["mcp_url"])
+            _console_print(other["mcp_url"])
             return 1
         _console_print(
             f"local-delegate: lock ocupado y no responde ningún daemon nuestro "

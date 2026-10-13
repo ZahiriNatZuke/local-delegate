@@ -20,7 +20,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import autostart, config, preguntas, server
+from local_delegate import autostart, config, questions, server
 
 CHAT = "http://test-backend/v1/chat/completions"
 
@@ -53,7 +53,7 @@ def registradores(monkeypatch):
         arranques.append(wait)
         return False
 
-    monkeypatch.setattr(preguntas, "preguntar", _preguntar)
+    monkeypatch.setattr(questions, "ask", _preguntar)
     monkeypatch.setattr(autostart, "ensure_backend", _ensure_backend)
     return preguntas_hechas, arranques
 

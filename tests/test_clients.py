@@ -42,7 +42,7 @@ async def _conversar(nombre: str | None, version: str, llamadas: int = 1) -> str
     Devuelve la revisión de protocolo negociada, que es un dato que las pruebas comprueban en vez
     de dar por supuesto: no coincide con `LATEST_PROTOCOL_VERSION` ni con la constante de defecto.
     """
-    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observe_client])
 
     @servidor.tool()
     def eco(texto: str) -> str:
@@ -79,30 +79,30 @@ class _Caps:
 
 def test_capabilities_ausentes_y_vacias_no_son_lo_mismo():
     # None = el cliente no declaró capabilities. {} = declaró que no tiene ninguna. El registro
-    # devuelve una tupla vacía en ambos casos, pero `registrar` los trata distinto (ver REQ-007).
-    assert clients.nombres_capabilities(None) == ()
-    assert clients.nombres_capabilities(_Caps({})) == ()
+    # devuelve una tupla vacía en ambos casos, pero `record` los trata distinto (ver REQ-007).
+    assert clients.capability_names(None) == ()
+    assert clients.capability_names(_Caps({})) == ()
 
 
 def test_capabilities_se_devuelven_ordenadas_y_sin_las_no_declaradas():
     caps = _Caps({"sampling": {}, "elicitation": {}, "roots": None})
-    assert clients.nombres_capabilities(caps) == ("elicitation", "sampling")
+    assert clients.capability_names(caps) == ("elicitation", "sampling")
 
 
 def test_objeto_que_no_es_del_sdk_no_revienta():
-    assert clients.nombres_capabilities(object()) == ()
+    assert clients.capability_names(object()) == ()
 
 
 def test_sin_capabilities_ni_identidad_no_registra(tmp_path):
     # REQ-007: el caso simétrico de "capabilities sin identidad".
-    assert clients.registrar(None, None, "2025-11-25") is False
+    assert clients.record(None, None, "2025-11-25") is False
     assert _lineas(tmp_path) == []
     assert clients.snapshot() == []
 
 
 def test_capabilities_sin_identidad_si_registra(tmp_path):
     # REQ-006: legítimo desde la revisión 2026-07-28, donde client_info es opcional.
-    assert clients.registrar(_Caps({"elicitation": {}}), None, "2026-07-28") is True
+    assert clients.record(_Caps({"elicitation": {}}), None, "2026-07-28") is True
     (linea,) = _lineas(tmp_path)
     assert linea["client"] is None
     assert linea["caps"] == ["elicitation"]
@@ -111,13 +111,13 @@ def test_capabilities_sin_identidad_si_registra(tmp_path):
 def test_la_linea_tiene_exactamente_los_campos_declarados(tmp_path):
     # "Exactamente", no "al menos": así una cabecera o una ruta coladas por descuido rompen aquí y
     # no acaban en disco.
-    clients.registrar(_Caps({"roots": {}}), Implementation(name="x", version="1"), "2025-11-25")
+    clients.record(_Caps({"roots": {}}), Implementation(name="x", version="1"), "2025-11-25")
     (linea,) = _lineas(tmp_path)
-    assert set(linea) == set(clients.CAMPOS)
+    assert set(linea) == set(clients.FIELDS)
 
 
 def test_snapshot_esta_desligado_del_estado_interno():
-    clients.registrar(_Caps({"roots": {}}), Implementation(name="x", version="1"), "2025-11-25")
+    clients.record(_Caps({"roots": {}}), Implementation(name="x", version="1"), "2025-11-25")
     copia = clients.snapshot()
     copia[0]["client"] = "mutado"
     assert clients.snapshot()[0]["client"] == "x"
@@ -129,10 +129,10 @@ def test_un_fallo_de_escritura_no_propaga(tmp_path, monkeypatch):
     def revienta(destino, linea):
         raise OSError("disco lleno")
 
-    monkeypatch.setattr(clients, "_escribir_linea", revienta)
+    monkeypatch.setattr(clients, "_write_line", revienta)
     with pytest.raises(OSError):
-        clients.registrar(_Caps({}), Implementation(name="x", version="1"), "2025-11-25")
-    # `registrar` sí propaga: quien la envuelve es el middleware, y eso se prueba end-to-end abajo.
+        clients.record(_Caps({}), Implementation(name="x", version="1"), "2025-11-25")
+    # `record` sí propaga: quien la envuelve es el middleware, y eso se prueba end-to-end abajo.
 
 
 # --- integración con servidor y cliente reales -------------------------------
@@ -162,7 +162,7 @@ def test_el_middleware_ignora_initialize_aunque_haya_datos(monkeypatch):
     Esta versión ataca la regla directa: aunque el contexto traiga datos, `initialize` se ignora.
     """
     llamadas = []
-    monkeypatch.setattr(clients, "registrar", lambda *a, **k: llamadas.append(a))
+    monkeypatch.setattr(clients, "record", lambda *a, **k: llamadas.append(a))
 
     class _Sesion:
         client_capabilities = _Caps({"elicitation": {}})
@@ -176,7 +176,7 @@ def test_el_middleware_ignora_initialize_aunque_haya_datos(monkeypatch):
     async def call_next(ctx):
         return "resultado"
 
-    assert anyio.run(clients.observar_cliente, _Ctx(), call_next) == "resultado"
+    assert anyio.run(clients.observe_client, _Ctx(), call_next) == "resultado"
     assert llamadas == [], "el observador leyó durante initialize"
 
 
@@ -250,7 +250,7 @@ def test_api_status_expone_los_clientes_observados(tmp_path):
 
     from local_delegate.web import metrics
 
-    clients.registrar(
+    clients.record(
         _Caps({"elicitation": {}, "roots": {}}),
         Implementation(name="cliente-prueba", version="9.9.9"),
         "2025-11-25",
@@ -267,7 +267,7 @@ def test_un_observador_que_revienta_no_rompe_la_llamada(tmp_path, monkeypatch):
     def revienta(*a, **k):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(clients, "registrar", revienta)
+    monkeypatch.setattr(clients, "record", revienta)
     negociada = anyio.run(_conversar, "cliente-prueba", "9.9.9")
     assert negociada  # la conversación completa funcionó
     assert _lineas(tmp_path) == []
@@ -281,13 +281,13 @@ def test_el_registro_rota_al_pasar_del_techo(tmp_path, monkeypatch):
     monkeypatch.setattr(clients.config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(clients, "MAX_BYTES", 200)  # techo diminuto para no escribir 256 KB aquí
 
-    viva = clients.ruta_registro()
+    viva = clients.log_path()
     viva.write_text("x" * 300 + "\n", encoding="utf-8")  # ya por encima del techo
 
     clients.reset()
-    clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+    clients.record(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
 
-    rotada = viva.with_name(viva.name + clients.SUFIJO_ROTADO)
+    rotada = viva.with_name(viva.name + clients.ROTATED_SUFFIX)
     assert rotada.is_file(), "no se apartó la generación anterior"
     assert "claude-code" in viva.read_text(encoding="utf-8")
     assert viva.stat().st_size < 300, "el fichero vivo debe empezar de nuevo"
@@ -305,7 +305,7 @@ def test_rotar_NO_hace_perder_de_vista_a_un_cliente_ya_anotado(tmp_path, monkeyp
     monkeypatch.setattr(clients.config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(clients, "MAX_BYTES", 200)
 
-    viva = clients.ruta_registro()
+    viva = clients.log_path()
     antiguo = json.dumps(
         {
             "ts": "2026-01-01T00:00:00+00:00",
@@ -319,8 +319,8 @@ def test_rotar_NO_hace_perder_de_vista_a_un_cliente_ya_anotado(tmp_path, monkeyp
     viva.write_text(antiguo + "\n" + "x" * 300 + "\n", encoding="utf-8")
 
     clients.reset()
-    clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
-    assert viva.with_name(viva.name + clients.SUFIJO_ROTADO).is_file(), "no llegó a rotar"
+    clients.record(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+    assert viva.with_name(viva.name + clients.ROTATED_SUFFIX).is_file(), "no llegó a rotar"
 
     vistos, motivo = checks._default_clients_seen()
 
@@ -341,12 +341,12 @@ def test_si_no_se_puede_rotar_se_sigue_anotando(tmp_path, monkeypatch):
 
     monkeypatch.setattr(clients.os, "replace", _rotar_roto)
 
-    viva = clients.ruta_registro()
+    viva = clients.log_path()
     viva.write_text("x" * 300 + "\n", encoding="utf-8")
 
     clients.reset()
     assert (
-        clients.registrar(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
+        clients.record(None, Implementation(name="claude-code", version="2.1.220"), "2025-11-25")
         is True
     )
     assert "claude-code" in viva.read_text(encoding="utf-8")
@@ -364,14 +364,14 @@ def test_si_no_se_puede_rotar_se_sigue_anotando(tmp_path, monkeypatch):
 
 
 async def _firmar(nombre: str | None) -> str | None:
-    """Conecta un cliente y devuelve lo que la tool vio en `cliente_actual()`."""
-    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    """Conecta un cliente y devuelve lo que la tool vio en `current_client()`."""
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observe_client])
     visto: list[str | None] = []
 
     @servidor.tool()
     def quien_soy() -> str:
         """Tool SÍNCRONA: el SDK la corre en el threadpool, igual que a las reales."""
-        visto.append(clients.cliente_actual())
+        visto.append(clients.current_client())
         return "ok"
 
     async with create_client_server_memory_streams() as ((cr, cw), (sr, sw)):
@@ -417,7 +417,7 @@ def test_un_cliente_que_no_se_presenta_sale_como_el_default_del_sdk():
 
 def test_cliente_actual_fuera_de_una_peticion_es_none():
     """`_log_event` también se llama desde el benchmark y desde caminos de arranque."""
-    assert clients.cliente_actual() is None
+    assert clients.current_client() is None
 
 
 # --- El `tool_use_id` llega hasta la tool (coste-api-y-cuota, REQ-001) --------------------------
@@ -429,13 +429,13 @@ def test_cliente_actual_fuera_de_una_peticion_es_none():
 
 async def _tool_use_id_visto(meta: dict | None) -> str | None:
     """Conecta un cliente, llama con ese `_meta` y devuelve lo que la tool vio."""
-    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observar_cliente])
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[clients.observe_client])
     visto: list[str | None] = []
 
     @servidor.tool()
     def quien_llama() -> str:
         """Tool SÍNCRONA, como las de verdad: corre en el threadpool."""
-        visto.append(clients.tool_use_id_actual())
+        visto.append(clients.current_tool_use_id())
         return "ok"
 
     async with create_client_server_memory_streams() as ((cr, cw), (sr, sw)):
@@ -453,7 +453,7 @@ async def _tool_use_id_visto(meta: dict | None) -> str | None:
 
 
 def test_la_tool_ve_el_tool_use_id():
-    """Control (c): en el corte de interfaz `tool_use_id_actual()` devolvía `None`."""
+    """Control (c): en el corte de interfaz `current_tool_use_id()` devolvía `None`."""
     visto = anyio.run(_tool_use_id_visto, {"claudecode/toolUseId": "toolu_prueba"})
     assert visto == "toolu_prueba"
 

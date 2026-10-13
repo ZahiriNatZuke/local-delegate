@@ -120,10 +120,10 @@ class Windows:
         self._starts = [_epoch_s(w.start) for w in self.windows]
         self._ends = [None if w.end is None else _epoch_s(w.end) for w in self.windows]
         self._max_end: list[float] = []
-        tope = float("-inf")
+        cap = float("-inf")
         for e in self._ends:
-            tope = max(tope, float("inf") if e is None else e)
-            self._max_end.append(tope)
+            cap = max(cap, float("inf") if e is None else e)
+            self._max_end.append(cap)
 
     def find(self, ts: object, now: datetime | None = None) -> str | None:
         """El id de la primera ventana (por inicio) que contiene `ts`, o `None`. Nunca lanza.
@@ -139,14 +139,14 @@ class Windows:
         hi = bisect.bisect_right(self._starts, t)
         if hi == 0 or self._max_end[hi - 1] < t:
             return None
-        ahora: int | None = None
+        now_s: int | None = None
         for i in range(hi):
-            fin = self._ends[i]
-            if fin is None:
-                if ahora is None:
-                    ahora = _epoch_s(now if now is not None else _now())
-                fin = ahora
-            if t <= fin:
+            end = self._ends[i]
+            if end is None:
+                if now_s is None:
+                    now_s = _epoch_s(now if now is not None else _now())
+                end = now_s
+            if t <= end:
                 return self.windows[i].id
         return None
 
@@ -346,16 +346,16 @@ def stop(
     now = _floor_ms(now if now is not None else _now())
     with _Locked(log_dir, lock_timeout) as f:
         if window_id is None:
-            abiertas = [w for w in f.windows() if w.is_open]
-            if not abiertas:
+            open_windows = [w for w in f.windows() if w.is_open]
+            if not open_windows:
                 raise TestWindowError("no hay ninguna ventana abierta")
-            if len(abiertas) > 1:
-                ids = ", ".join(w.id for w in abiertas)
+            if len(open_windows) > 1:
+                ids = ", ".join(w.id for w in open_windows)
                 raise TestWindowError(
-                    f"hay {len(abiertas)} ventanas abiertas ({ids}); di cuál con "
+                    f"hay {len(open_windows)} ventanas abiertas ({ids}); di cuál con "
                     "`local-delegate test-window stop <id>`"
                 )
-            window_id = abiertas[0].id
+            window_id = open_windows[0].id
         for i, entry in enumerate(f.entries):
             if isinstance(entry, dict) and entry.get("id") == window_id:
                 w = _window_from(entry)

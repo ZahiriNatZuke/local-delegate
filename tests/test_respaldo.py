@@ -22,7 +22,7 @@ from pathlib import Path
 import backend_mock
 import httpx2
 
-from local_delegate import chains, config, cooldown, preguntas, server
+from local_delegate import chains, config, cooldown, questions, server
 from local_delegate.failures import FailureClass
 
 URL = "http://test-backend/v1/chat/completions"
@@ -157,7 +157,7 @@ def test_un_400_no_salta_ni_cuenta_y_conserva_el_reintento_sin_schema(recargar_c
 @backend_mock.mock
 def test_el_backend_caido_no_salta_ni_enfria(recargar_config, tmp_path, monkeypatch):
     recargar_config()
-    monkeypatch.setattr(preguntas, "preguntar", lambda *a, **k: None)
+    monkeypatch.setattr(questions, "ask", lambda *a, **k: None)
     pedidos = _backend({MECANICO: httpx2.ConnectError("x"), LARGO: _ok()})
 
     salida = server.local_classify(text="hola", labels=["a", "b"])
@@ -428,9 +428,9 @@ def test_el_modelo_elegido_en_la_pregunta_cuenta_como_explicito(
     _enfriar(tmp_path, LARGO)
 
     class _Eleccion:
-        modelo = LARGO
+        model = LARGO
 
-    monkeypatch.setattr(preguntas, "preguntar", lambda *a, **k: _Eleccion())
+    monkeypatch.setattr(questions, "ask", lambda *a, **k: _Eleccion())
     pedidos = _backend({LARGO: _ok(), MECANICO: _ok()})
 
     server.local_delegate(task="t", input="x", output_format="texto", model="no-existe")

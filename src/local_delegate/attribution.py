@@ -239,13 +239,13 @@ def resolve_call(
 def current_call() -> dict:
     """La atribución de la petición en curso, resuelta UNA vez por petición; `{}` fuera de una.
 
-    Se memoriza en el dict que el middleware pone por petición (`clients.memoria_de_peticion`),
+    Se memoriza en el dict que el middleware pone por petición (`clients.request_memory`),
     nunca en el módulo: en el daemon un dict del módulo crecería sin límite.
     """
-    tool_use_id = clients.tool_use_id_actual()
+    tool_use_id = clients.current_tool_use_id()
     if not tool_use_id:
         return {}
-    memo = clients.memoria_de_peticion()
+    memo = clients.request_memory()
     if memo is not None and tool_use_id in memo:
         return memo[tool_use_id]
     result = resolve_call(tool_use_id)

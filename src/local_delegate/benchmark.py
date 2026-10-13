@@ -50,7 +50,7 @@ _TRACKED_METRICS = {
 
 _CORPUS_KINDS = {"calidad", "techo"}
 _CORPUS_ROLES = {"mechanical", "long", "code", "vision"}
-_CORPUS_PROCEDENCIAS = {"congelado", "generado", "reconstruido", "inventado"}
+_CORPUS_PROVENANCES = {"congelado", "generado", "reconstruido", "inventado"}
 _CORPUS_MEDIA = {"texto", "imagen"}
 
 
@@ -60,7 +60,7 @@ class CorpusCase:
     tool: str
     role: str
     kind: str
-    procedencia: str
+    provenance: str
     media_type: str
     source_file: str
     source: bytes
@@ -105,7 +105,7 @@ def load_corpus(path: Path) -> Corpus:
         for field_name, allowed in (
             ("kind", _CORPUS_KINDS),
             ("role", _CORPUS_ROLES),
-            ("procedencia", _CORPUS_PROCEDENCIAS),
+            ("procedencia", _CORPUS_PROVENANCES),
             ("media_type", _CORPUS_MEDIA),
         ):
             if raw.get(field_name) not in allowed:
@@ -116,7 +116,7 @@ def load_corpus(path: Path) -> Corpus:
                 tool=str(raw["tool"]),
                 role=raw["role"],
                 kind=raw["kind"],
-                procedencia=raw["procedencia"],
+                provenance=raw["procedencia"],
                 media_type=raw["media_type"],
                 source_file=raw["source_file"],
                 source=_frozen_source(path.parent, raw),
@@ -175,7 +175,7 @@ EXEC_TIMEOUT_S = 10.0
 # Una comprobacion es {"expr", "expected"} o {"expr", "raises"}. `expected` exige tambien el TIPO:
 # la especificacion pide un int, y 45.0 no lo es. Lo escribe el arnes y no el codigo del modelo, asi
 # que un `print` del codigo generado no puede fingir un resultado: se lee solo la ULTIMA linea.
-_ARNES = r"""
+_HARNESS = r"""
 import json
 comprobaciones = json.load(open("comprobaciones.json", encoding="utf-8"))
 espacio = {"__name__": "generado"}
@@ -208,15 +208,15 @@ def run_execution_checks(code: str, checks: Sequence[dict[str, Any]]) -> list[bo
     """
     from .server import _strip_fences  # lo mismo que `local_boilerplate` deja en el fichero
 
-    fallidas = [False] * len(checks)
+    failed = [False] * len(checks)
     env = {"SYSTEMROOT": os.environ["SYSTEMROOT"]} if "SYSTEMROOT" in os.environ else {}
-    with tempfile.TemporaryDirectory(prefix="ld-exec-") as carpeta:
-        Path(carpeta, "generado.py").write_text(_strip_fences(code), encoding="utf-8")
-        Path(carpeta, "comprobaciones.json").write_text(json.dumps(list(checks)), encoding="utf-8")
+    with tempfile.TemporaryDirectory(prefix="ld-exec-") as workdir:
+        Path(workdir, "generado.py").write_text(_strip_fences(code), encoding="utf-8")
+        Path(workdir, "comprobaciones.json").write_text(json.dumps(list(checks)), encoding="utf-8")
         try:
-            proceso = subprocess.run(
-                [sys.executable, "-I", "-c", _ARNES],
-                cwd=carpeta,
+            proc = subprocess.run(
+                [sys.executable, "-I", "-c", _HARNESS],
+                cwd=workdir,
                 env=env,
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
@@ -226,15 +226,15 @@ def run_execution_checks(code: str, checks: Sequence[dict[str, Any]]) -> list[bo
                 timeout=EXEC_TIMEOUT_S,
             )
         except subprocess.TimeoutExpired:
-            return fallidas
-    lineas = proceso.stdout.strip().splitlines()
+            return failed
+    lines = proc.stdout.strip().splitlines()
     try:
-        resultados = json.loads(lineas[-1]) if lineas else None
+        results = json.loads(lines[-1]) if lines else None
     except json.JSONDecodeError:
-        return fallidas
-    if not isinstance(resultados, list) or len(resultados) != len(checks):
-        return fallidas
-    return [r is True for r in resultados]
+        return failed
+    if not isinstance(results, list) or len(results) != len(checks):
+        return failed
+    return [r is True for r in results]
 
 
 # --- Conteos contra la fuente (protocolo-f2.md §4.7 punto 7) --------------------------------------
@@ -1281,7 +1281,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             "case": case.id,
                             "role": case.role,
                             "kind": case.kind,
-                            "procedencia": case.procedencia,
+                            "procedencia": case.provenance,
                             "input_variant": args.input_control,
                             "run": run,
                             "attempt": attempt,

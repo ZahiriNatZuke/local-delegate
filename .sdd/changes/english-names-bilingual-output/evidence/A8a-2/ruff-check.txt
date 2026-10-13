@@ -1,0 +1,4 @@
+All checks passed!
+rc=0
+187 files already formatted
+rc=0

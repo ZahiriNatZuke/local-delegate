@@ -1,0 +1,12 @@
+$ uv run local-delegate --help | head -3
+usage: local-delegate [-h] [--version]
+                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                      ...
+$ import local_delegate.estado_json
+ModuleNotFoundError: No module named 'local_delegate.estado_json'
+$ import local_delegate.preguntas
+ModuleNotFoundError: No module named 'local_delegate.preguntas'
+$ import local_delegate.sondas
+ModuleNotFoundError: No module named 'local_delegate.sondas'
+$ import json_state, questions, probes
+read_json ask {'llama-server': 'b10909', 'llama-swap': 'v255'}

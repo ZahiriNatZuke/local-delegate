@@ -180,7 +180,7 @@ def test_hook_table_is_the_registry_subset():
 @pytest.fixture
 def isolated_alias(monkeypatch):
     """Lecturas de prueba fuera del inventario real de variables y del registro de vistas."""
-    monkeypatch.setattr(config, "_VARIABLES_LEIDAS", set())
+    monkeypatch.setattr(config, "_READ_VARIABLES", set())
     monkeypatch.setattr(config, "DEPRECATED_SEEN", set())
     monkeypatch.delenv("LD_NEW_TEST_VAR", raising=False)
     monkeypatch.delenv("LD_OLD_TEST_VAR", raising=False)
@@ -202,7 +202,7 @@ def test_env_alias_old_alone_takes_effect_and_is_recorded(isolated_alias):
 
 def test_env_alias_reads_both_through_the_registered_gate(isolated_alias):
     assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") is None
-    assert {"LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR"} <= config._VARIABLES_LEIDAS
+    assert {"LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR"} <= config._READ_VARIABLES
 
 
 # --- legacy_names (D2): API fijada, tablas vacías ------------------------------

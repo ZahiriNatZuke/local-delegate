@@ -16,7 +16,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import autostart, config, preguntas, server
+from local_delegate import autostart, config, questions, server
 from local_delegate.server import ChatResult
 
 URL = "http://test-backend/v1/chat/completions"
@@ -25,7 +25,7 @@ BUENA = {"choices": [{"message": {"content": "hola"}}]}
 
 class _RespuestaDelUsuario:
     def __init__(self, arrancar: bool) -> None:
-        self.arrancar = arrancar
+        self.start = arrancar
 
 
 #: (nombre, kwargs de la ruta, autostart, arranca, responde, remoto)
@@ -102,7 +102,7 @@ def _preparar_camino(monkeypatch, ruta_kwargs, autoarranque, arranca, responde, 
         return None if responde is None else _RespuestaDelUsuario(responde)
 
     monkeypatch.setattr(autostart, "ensure_backend", _ensure_backend)
-    monkeypatch.setattr(preguntas, "preguntar", _preguntar)
+    monkeypatch.setattr(questions, "ask", _preguntar)
     backend_mock.post(URL).mock(**ruta_kwargs)
     return arranques, preguntas_hechas
 

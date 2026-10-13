@@ -205,7 +205,7 @@ def test_las_variables_nuevas_estan_en_el_inventario(recargar_config):
         "LLAMASWAP_LISTEN",
         "LLAMASWAP_WATCH_CONFIG",
     ):
-        assert nombre in config.VARIABLES_DE_ENTORNO, nombre
+        assert nombre in config.ENVIRONMENT_VARIABLES, nombre
 
 
 def test_nadie_fuera_de_config_lee_llamaswap_del_entorno():

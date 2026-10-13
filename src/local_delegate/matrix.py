@@ -126,7 +126,7 @@ def allowed_direction(cell: Cell, role_name: str | None, roles: Mapping[str, str
     - `local_commit_msg` (rol de código) → modelo del rol largo;
     - nunca una tool de código o de largo hacia el modelo mecánico.
 
-    `roles` es `config.modelos_por_rol()`: si una variable cambia el modelo de un rol, la celda
+    `roles` es `config.models_by_role()`: si una variable cambia el modelo de un rol, la celda
     medida contra el de antes ya no coincide.
     """
     mechanical = roles.get("mechanical")

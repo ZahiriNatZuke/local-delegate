@@ -69,8 +69,8 @@ WATCH_TOTAL_S = 45.0
 # La foto `inflight` llega a los 0,016-0,031 s de abrir, con el historial lleno (T2, punto (e)).
 IN_FLIGHT_CAP_S = 1.0
 # Conectar: 3 s, porque en Windows un puerto cerrado tarda ~2,1 s en rechazarse y con menos llegaría
-# como `ConnectTimeout` en vez de «caído» (el mismo criterio que `config.TIMEOUT_SONDA_CONEXION`).
-CONNECT_S = config.TIMEOUT_SONDA_CONEXION
+# como `ConnectTimeout` en vez de «caído» (el mismo criterio que `config.PROBE_CONNECT_TIMEOUT`).
+CONNECT_S = config.PROBE_CONNECT_TIMEOUT
 READ_S = 1.0
 # Lo que el CLI espera al daemon. Más que lo que tarda el daemon en el peor caso (conectar a un
 # llama-swap que no contesta, 3 s, y la foto, 1 s) y menos de 5 s en total con un daemon que acepta

@@ -1,4 +1,4 @@
-"""Pruebas de `preguntas.py`: preguntar en vez de fallar seco.
+"""Pruebas de `questions.py`: preguntar en vez de fallar seco.
 
 Las de integración montan un `MCPServer` real con un `ClientSession` real, como en
 `test_clients.py`. Aquí es todavía más necesario: lo que hay que comprobar —que el plazo corta de
@@ -21,7 +21,7 @@ from mcp.shared.memory import create_client_server_memory_streams
 from mcp.types import ElicitResult, Implementation
 from pydantic import BaseModel
 
-from local_delegate import config, preguntas, server
+from local_delegate import config, questions, server
 
 
 class Respuesta(BaseModel):
@@ -30,11 +30,11 @@ class Respuesta(BaseModel):
 
 @pytest.fixture(autouse=True)
 def contexto_limpio(monkeypatch):
-    monkeypatch.setattr(preguntas.config, "ASK_ENABLED", True)
-    monkeypatch.setattr(preguntas.config, "ASK_TIMEOUT", 2)
-    preguntas.CTX_ACTUAL.set(None)
+    monkeypatch.setattr(questions.config, "ASK_ENABLED", True)
+    monkeypatch.setattr(questions.config, "ASK_TIMEOUT", 2)
+    questions.CURRENT_CTX.set(None)
     yield
-    preguntas.CTX_ACTUAL.set(None)
+    questions.CURRENT_CTX.set(None)
 
 
 # --- puede_preguntar: las dos condiciones, por separado ----------------------
@@ -60,30 +60,30 @@ class _Ctx:
 
 
 def test_sin_contexto_no_se_puede_preguntar():
-    assert preguntas.puede_preguntar() is False
+    assert questions.can_ask() is False
 
 
 def test_con_capability_y_canal_si_se_puede():
-    preguntas.CTX_ACTUAL.set(_Ctx())
-    assert preguntas.puede_preguntar() is True
+    questions.CURRENT_CTX.set(_Ctx())
+    assert questions.can_ask() is True
 
 
 def test_sin_la_capability_no_se_puede():
-    preguntas.CTX_ACTUAL.set(_Ctx(elicitation=None))
-    assert preguntas.puede_preguntar() is False
+    questions.CURRENT_CTX.set(_Ctx(elicitation=None))
+    assert questions.can_ask() is False
 
 
 def test_con_capability_pero_sin_canal_tampoco():
     # Son dos condiciones independientes: declarar `elicitation` no implica que se pueda hablar.
-    preguntas.CTX_ACTUAL.set(_Ctx(canal=False))
-    assert preguntas.puede_preguntar() is False
+    questions.CURRENT_CTX.set(_Ctx(canal=False))
+    assert questions.can_ask() is False
 
 
 def test_apagado_por_configuracion(monkeypatch):
-    monkeypatch.setattr(preguntas.config, "ASK_ENABLED", False)
-    preguntas.CTX_ACTUAL.set(_Ctx())
-    assert preguntas.puede_preguntar() is False
-    assert preguntas.preguntar("¿?", Respuesta) is None
+    monkeypatch.setattr(questions.config, "ASK_ENABLED", False)
+    questions.CURRENT_CTX.set(_Ctx())
+    assert questions.can_ask() is False
+    assert questions.ask("¿?", Respuesta) is None
 
 
 def test_una_sesion_que_revienta_no_propaga():
@@ -92,16 +92,16 @@ def test_una_sesion_que_revienta_no_propaga():
         def session(self):
             raise RuntimeError("boom")
 
-    preguntas.CTX_ACTUAL.set(_Roto())
-    assert preguntas.puede_preguntar() is False
-    assert preguntas.preguntar("¿?", Respuesta) is None
+    questions.CURRENT_CTX.set(_Roto())
+    assert questions.can_ask() is False
+    assert questions.ask("¿?", Respuesta) is None
 
 
 # --- integración con servidor y cliente reales -------------------------------
 
 
 def _montar(respuesta_cliente, tool_fn):
-    servidor = MCPServer("prueba", version="0.0.0", middleware=[preguntas.recordar_contexto])
+    servidor = MCPServer("prueba", version="0.0.0", middleware=[questions.remember_context])
     servidor.tool()(tool_fn)
     return servidor
 
@@ -126,7 +126,7 @@ async def _correr(servidor, callback, nombre="probar"):
 
 def probar() -> str:
     """Tool SÍNCRONA que pregunta desde su hilo, como hacen las 11 de verdad."""
-    r = preguntas.preguntar("¿Cual?", Respuesta)
+    r = questions.ask("¿Cual?", Respuesta)
     return f"respuesta={r.valor if r is not None else None}"
 
 
@@ -190,12 +190,12 @@ def test_el_plazo_se_agota_y_no_antes():
 
 
 # --- los tres puntos de uso --------------------------------------------------
-# El mecanismo ya está probado end-to-end arriba; aquí se dobla `preguntar` para ejercer la lógica
+# El mecanismo ya está probado end-to-end arriba; aquí se dobla `ask` para ejercer la lógica
 # de cada punto de uso sin volver a montar un servidor MCP.
 
 
 def _responde(valor):
-    """Doble de `preguntar` que devuelve el modelo pedido relleno con `valor`."""
+    """Doble de `ask` que devuelve el modelo pedido relleno con `valor`."""
 
     def _fn(mensaje, modelo):
         campo = next(iter(modelo.model_fields))
@@ -228,7 +228,7 @@ def _delegar(monkeypatch, tmp_path, **kw):
 def test_modelo_invalido_con_respuesta_continua_con_el_elegido(monkeypatch, tmp_path):
     """REQ-003."""
     valido = min(config.ALLOWED_MODELS)
-    monkeypatch.setattr(server.preguntas, "preguntar", _responde(valido))
+    monkeypatch.setattr(server.questions, "ask", _responde(valido))
     resultado, vistos = _delegar(monkeypatch, tmp_path, model="no-existe")
     assert "modelo inválido" not in resultado
     assert len(vistos) == 1 and vistos[0]["model"] == valido
@@ -240,14 +240,14 @@ def test_modelo_invalido_sin_respuesta_falla_ya_y_sin_tocar_el_backend(monkeypat
     Sin respuesta el error es el de siempre **y no se consume backend**. Aseverar solo el texto no
     bastaría: lo que hay que impedir es que una llamada mal formada acabe gastando GPU.
     """
-    monkeypatch.setattr(server.preguntas, "preguntar", _no_responde)
+    monkeypatch.setattr(server.questions, "ask", _no_responde)
     resultado, vistos = _delegar(monkeypatch, tmp_path, model="no-existe")
     assert "modelo inválido 'no-existe'" in resultado
     assert vistos == [], "se llamó al backend con un modelo inválido"
 
 
 def test_respuesta_que_no_esta_en_el_catalogo_tampoco_vale(monkeypatch, tmp_path):
-    monkeypatch.setattr(server.preguntas, "preguntar", _responde("tampoco-existe"))
+    monkeypatch.setattr(server.questions, "ask", _responde("tampoco-existe"))
     resultado, vistos = _delegar(monkeypatch, tmp_path, model="no-existe")
     assert "modelo inválido" in resultado
     assert vistos == []
@@ -255,7 +255,7 @@ def test_respuesta_que_no_esta_en_el_catalogo_tampoco_vale(monkeypatch, tmp_path
 
 def test_output_format_en_blanco_se_pregunta(monkeypatch, tmp_path):
     """REQ-004."""
-    monkeypatch.setattr(server.preguntas, "preguntar", _responde("JSON con dos claves"))
+    monkeypatch.setattr(server.questions, "ask", _responde("JSON con dos claves"))
     _, vistos = _delegar(monkeypatch, tmp_path, output_format="   ")
     assert "JSON con dos claves" in vistos[0]["messages"][0]["content"]
 
@@ -266,7 +266,7 @@ def test_con_output_format_no_se_pregunta_nada(monkeypatch, tmp_path):
     def _espia(mensaje, modelo):
         llamadas.append(mensaje)
 
-    monkeypatch.setattr(server.preguntas, "preguntar", _espia)
+    monkeypatch.setattr(server.questions, "ask", _espia)
     _delegar(monkeypatch, tmp_path, output_format="bullets")
     assert llamadas == []
 
@@ -287,7 +287,7 @@ def test_las_preguntas_no_llevan_rutas_ni_contenido(monkeypatch, tmp_path):
     def _espia(mensaje, modelo):
         mensajes.append(mensaje)
 
-    monkeypatch.setattr(server.preguntas, "preguntar", _espia)
+    monkeypatch.setattr(server.questions, "ask", _espia)
     _delegar(monkeypatch, tmp_path, model="no-existe", input="SECRETO-EN-EL-INPUT")
     assert mensajes and all("SECRETO-EN-EL-INPUT" not in m for m in mensajes)
     assert all(str(tmp_path) not in m for m in mensajes)
@@ -300,7 +300,7 @@ class RespuestaOpcional(BaseModel):
 
 
 def responder_opcional() -> str:
-    r = preguntas.preguntar("¿Cual?", RespuestaOpcional)
+    r = questions.ask("¿Cual?", RespuestaOpcional)
     return f"respuesta={r.valor if r is not None else None}"
 
 

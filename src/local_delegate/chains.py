@@ -135,7 +135,7 @@ def resolve(role: str) -> Chain:
     """
     if role not in TEXT_ROLES:
         return Chain(role, ())
-    by_role = config.modelos_por_rol()
+    by_role = config.models_by_role()
     principal = by_role[role]
     steps: list[str] = []
     ignored: list[str] = []

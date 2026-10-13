@@ -29,17 +29,17 @@ APP_NAME = "local-delegate"
 # añada una opción nueva. La suite la usa para aislarse del entorno de quien la corre (ver
 # `tests/conftest.py`): antes de esto, tener `LOCAL_DELEGATE_WEB_TOKEN` puesta —lo normal en una
 # máquina con el daemon instalado— hacía fallar cuatro tests del daemon con 401 en vez de 200.
-_VARIABLES_LEIDAS: set[str] = set()
+_READ_VARIABLES: set[str] = set()
 
 
-def _leer(name: str) -> str | None:
+def _read(name: str) -> str | None:
     """Única puerta a `os.environ` de este módulo: lee y deja constancia del nombre."""
-    _VARIABLES_LEIDAS.add(name)
+    _READ_VARIABLES.add(name)
     return os.environ.get(name)
 
 
 def _env(name: str, default: str) -> str:
-    raw = _leer(name)
+    raw = _read(name)
     return default if raw is None else raw
 
 
@@ -51,7 +51,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _env_flag(name: str, default: bool) -> bool:
-    raw = _leer(name)
+    raw = _read(name)
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "no", "off", ""}
@@ -70,14 +70,14 @@ DEPRECATED_SEEN: set[str] = set()
 
 
 def _env_alias(new: str, old: str) -> str | None:
-    """Lee una variable renombrada: el nombre nuevo y el viejo, los dos por la puerta `_leer`.
+    """Lee una variable renombrada: el nombre nuevo y el viejo, los dos por la puerta `_read`.
 
     Gana el nuevo si están los dos. Si solo está el viejo, devuelve su valor y lo anota en
-    `DEPRECATED_SEEN` para poder avisar. Los dos nombres entran en `VARIABLES_DE_ENTORNO`, así que
+    `DEPRECATED_SEEN` para poder avisar. Los dos nombres entran en `ENVIRONMENT_VARIABLES`, así que
     la suite aísla ambos.
     """
-    value = _leer(new)
-    old_value = _leer(old)
+    value = _read(new)
+    old_value = _read(old)
     if value is not None:
         return value
     if old_value is not None:
@@ -107,12 +107,12 @@ HTTP_TIMEOUT = _env_float("LOCAL_DELEGATE_TIMEOUT", 180.0)
 # las delegaciones. Constantes y sin variable de entorno a propósito (REQ-013): 3 s para conectar
 # porque en Windows un puerto cerrado tarda ~2,1 s en rechazarse, y con un plazo menor llega como
 # `ConnectTimeout` y parece una VPN (medido, `research.md` §2); 2 s para leer, como antes.
-TIMEOUT_SONDA_CONEXION = 3.0
-TIMEOUT_SONDA_LECTURA = 2.0
+PROBE_CONNECT_TIMEOUT = 3.0
+PROBE_READ_TIMEOUT = 2.0
 # Plazo de CONEXIÓN de las delegaciones (REQ-019). Solo el de conexión: la espera de carga de un
 # modelo es de lectura y sigue en HTTP_TIMEOUT. Sin él, el kernel decidía (~21 s en Windows, ~75 s
 # en macOS) y cada fallo de la Mac con la VPN caída bloqueaba la tool más de un minuto.
-TIMEOUT_CONEXION_DELEGACION = 10.0
+DELEGATION_CONNECT_TIMEOUT = 10.0
 # Backpressure del proceso MCP. En el daemon singleton este límite se comparte entre
 # todos los clientes HTTP; llama-swap sigue siendo la autoridad del routing/VRAM.
 MAX_CONCURRENT_REQUESTS = max(1, _env_int("LOCAL_DELEGATE_MAX_CONCURRENT_REQUESTS", 2))
@@ -206,11 +206,11 @@ def _default_log() -> Path:
     return _default_log_dir() / "usage.jsonl"
 
 
-_log_env = _leer("LOCAL_DELEGATE_LOG")
+_log_env = _read("LOCAL_DELEGATE_LOG")
 USAGE_LOG: Path = Path(_log_env) if _log_env else _default_log()  # legado (sin rotación) o default
 LOG_ROTATION_ENABLED: bool = _log_env is None
 
-_log_dir_env = _leer("LOCAL_DELEGATE_LOG_DIR")
+_log_dir_env = _read("LOCAL_DELEGATE_LOG_DIR")
 LOG_DIR: Path = Path(_log_dir_env) if _log_dir_env else _default_log_dir()
 
 
@@ -286,7 +286,7 @@ ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
 # Desde la ola A0 del SDD english-names-bilingual-output los nombres salen del registro único
 # `deprecations.DEPRECATED_NAMES` (entradas `retired`), no de una lista escrita aquí.
 DEPRECATED_ENV_VALUES: dict[str, str | None] = {
-    entry.old: _leer(entry.old) for entry in deprecations.env_vars()
+    entry.old: _read(entry.old) for entry in deprecations.env_vars()
 }
 RETIRED_FAST_ROLE_VARIABLES: dict[str, str | None] = {
     name: value
@@ -312,14 +312,14 @@ STRUCTURED_SUMMARY = _env_alias_flag(
 # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
 # último rol del literal pisara el tope de los demás sin avisar (F3, tarea 25).
 _MAX_CHARS_DEFAULT = 20000
-MAX_CHARS_POR_ROL: dict[str, int] = {
+MAX_CHARS_BY_ROLE: dict[str, int] = {
     "mechanical": _env_int("LOCAL_DELEGATE_MAX_CHARS_MECHANICAL", 20000),
     "long": _env_int("LOCAL_DELEGATE_MAX_CHARS_LONG", 48000),
     "code": _env_int("LOCAL_DELEGATE_MAX_CHARS_CODE", 20000),
 }
 
 
-def modelos_por_rol() -> dict[str, str]:
+def models_by_role() -> dict[str, str]:
     """Rol -> modelo con la configuración vigente (roles de texto; visión va aparte)."""
     return {
         "mechanical": MODEL_MECHANICAL,
@@ -330,7 +330,7 @@ def modelos_por_rol() -> dict[str, str]:
 
 def max_chars_for_role(role: str) -> int:
     """Tope de entrada de un rol: el que usa el modelo principal de una llamada."""
-    return MAX_CHARS_POR_ROL.get(role, _MAX_CHARS_DEFAULT)
+    return MAX_CHARS_BY_ROLE.get(role, _MAX_CHARS_DEFAULT)
 
 
 def max_chars_for(model: str) -> int:
@@ -340,8 +340,12 @@ def max_chars_for(model: str) -> int:
     lo que aguanta el modelo es justo el fallo. El modelo principal de una tool usa
     `max_chars_for_role`, para que dos roles sobre el mismo modelo no se rebajen el uno al otro.
     """
-    topes = [MAX_CHARS_POR_ROL[rol] for rol, modelo in modelos_por_rol().items() if modelo == model]
-    return min(topes) if topes else _MAX_CHARS_DEFAULT
+    caps = [
+        MAX_CHARS_BY_ROLE[role]
+        for role, role_model in models_by_role().items()
+        if role_model == model
+    ]
+    return min(caps) if caps else _MAX_CHARS_DEFAULT
 
 
 # --- Enfriamiento por modelo (F3: REQ-009 a REQ-014) --------------------------
@@ -354,7 +358,7 @@ COOLDOWN_MAX_S = max(COOLDOWN_S, _env_float("LOCAL_DELEGATE_COOLDOWN_MAX_S", 900
 
 
 # --- Respaldo entre modelos (F3: REQ-002, REQ-004, REQ-014) ------------------
-# Encendido por defecto (D-1), hasta 2 saltos (D-3). La cadena de cada rol la resuelve `cadenas.py`
+# Encendido por defecto (D-1), hasta 2 saltos (D-3). La cadena de cada rol la resuelve `chains.py`
 # con la configuración vigente.
 FALLBACK = _env_flag("LOCAL_DELEGATE_FALLBACK", True)
 FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
@@ -362,7 +366,8 @@ FALLBACK_MAX_HOPS = max(0, _env_int("LOCAL_DELEGATE_FALLBACK_MAX_HOPS", 2))
 #: rol; si no, roles (`mechanical`, `long`, `code`, `loaded`) o ids separados por comas
 #: (`residente` y `resident` se aceptan como sinónimos obsoletos de `loaded`, con aviso de `doctor`).
 FALLBACK_CHAINS: dict[str, str | None] = {
-    rol: _leer(f"LOCAL_DELEGATE_FALLBACK_{rol.upper()}") for rol in ("mechanical", "long", "code")
+    role: _read(f"LOCAL_DELEGATE_FALLBACK_{role.upper()}")
+    for role in ("mechanical", "long", "code")
 }
 
 
@@ -387,11 +392,11 @@ AFFINITY_MARGIN_S = _env_float("LOCAL_DELEGATE_AFFINITY_MARGIN_S", 5.0)
 # en caliente. Antes las leían `autostart.py`, `doctor.py` y `server.py` con `os.environ` directo,
 # fuera del inventario de abajo, y por esa rendija la suite heredaba el entorno de la máquina.
 def llamaswap_config_path() -> str:
-    return (_leer("LLAMASWAP_CONFIG") or "").strip()
+    return (_read("LLAMASWAP_CONFIG") or "").strip()
 
 
 def llamaswap_exe() -> str:
-    return (_leer("LLAMASWAP_EXE") or "").strip()
+    return (_read("LLAMASWAP_EXE") or "").strip()
 
 
 def llamaswap_listen() -> str:
@@ -411,15 +416,15 @@ def commit_language() -> str:
     return _env("LOCAL_DELEGATE_COMMIT_LANGUAGE", "").strip()
 
 
-# Una lectura al importar, solo para que estos nombres entren en `VARIABLES_DE_ENTORNO`.
-for _lectura in (
+# Una lectura al importar, solo para que estos nombres entren en `ENVIRONMENT_VARIABLES`.
+for _reader in (
     llamaswap_config_path,
     llamaswap_exe,
     llamaswap_listen,
     llamaswap_watch_config,
     commit_language,
 ):
-    _lectura()
+    _reader()
 
 
 # --- Chunking de salida (local_translate / local_delegate) -------------------
@@ -459,7 +464,7 @@ WEB_FONTS = _env_flag("LOCAL_DELEGATE_WEB_FONTS", True)
 CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca tokens de Claude)
 
 # Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
-# `modelo` o `modelo:main|subagent`. Vacío = el declarado en `coste.py` (Opus 5.5 en subagente).
+# `modelo` o `modelo:main|subagent`. Vacío = el declarado en `cost.py` (Opus 5.5 en subagente).
 # Un valor inválido no rompe nada: se usa el declarado y la fila lo dice (`respaldo_invalido`).
 # Nombre viejo: `LOCAL_DELEGATE_COSTE_RESPALDO` (alias con aviso, REQ-002).
 COST_FALLBACK = _env_alias_str("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO", "")
@@ -522,4 +527,4 @@ FEEDBACK_ENABLED = _env_flag("LOCAL_DELEGATE_FEEDBACK", True)
 # Se congela AQUÍ, al final, cuando ya se han evaluado todas las constantes de arriba y por tanto
 # se ha llamado a los helpers con todos los nombres. Va después a propósito: declararla antes
 # dejaría fuera lo que se lea más abajo, que es justo el fallo que esto viene a impedir.
-VARIABLES_DE_ENTORNO: frozenset[str] = frozenset(_VARIABLES_LEIDAS)
+ENVIRONMENT_VARIABLES: frozenset[str] = frozenset(_READ_VARIABLES)
