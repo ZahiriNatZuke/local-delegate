@@ -548,7 +548,7 @@ def test_happy_path_role_in_own_queries_nothing(affinity, tmp_path, monkeypatch)
 
 @backend_mock.mock
 def test_remote_backend_has_no_affinity(affinity, tmp_path, monkeypatch):
-    monkeypatch.setattr(server, "_backend_en_loopback", lambda: False)
+    monkeypatch.setattr(server, "_backend_on_loopback", lambda: False)
     backend = _Backend().install(ready={LONG: 120}, ended_ago={LONG: 10})
 
     _translate()
@@ -585,16 +585,16 @@ def test_delegate_without_model_uses_affinity(affinity, tmp_path):
 
 @pytest.fixture
 def attempts(monkeypatch) -> list:
-    """Los `Intento` de cada `_con_respaldo`, en orden: las llamadas reales al backend."""
+    """Los `Attempt` de cada `_with_fallback`, en orden: las llamadas reales al backend."""
     seen: list = []
-    original = server._con_respaldo
+    original = server._with_fallback
 
     def spy(*args, **kwargs):
         result = original(*args, **kwargs)
         seen.extend(result[2])
         return result
 
-    monkeypatch.setattr(server, "_con_respaldo", spy)
+    monkeypatch.setattr(server, "_with_fallback", spy)
     return seen
 
 
@@ -608,8 +608,8 @@ def test_alternative_failure_falls_back_to_role_first(affinity, attempts, tmp_pa
     out = _translate()
 
     seen = attempts
-    assert seen[0].modelo == LONG
-    assert seen[1].modelo == MECH
+    assert seen[0].model == LONG
+    assert seen[1].model == MECH
     assert "aviso" not in out, "respondió el modelo pedido"
     line = _line(tmp_path, "local_translate")
     assert line.get("model") == MECH
@@ -632,7 +632,7 @@ def test_loaded_hop_picks_member_with_margin(affinity, attempts):
 
     _translate()
 
-    assert [i.modelo for i in attempts] == [MECH, CODE]
+    assert [i.model for i in attempts] == [MECH, CODE]
 
 
 @backend_mock.mock
@@ -651,7 +651,7 @@ def test_loaded_hop_without_member_with_margin_is_skipped_without_spending_hop(
 
     _translate()
 
-    assert [i.modelo for i in attempts] == [MECH, LONG]
+    assert [i.model for i in attempts] == [MECH, LONG]
 
 
 # --- `matrix.choose`, pura (REQ-012) ----------------------------------------------------------
@@ -738,7 +738,7 @@ def test_reason_after_affinity_failure_is_the_real_one_chunked(affinity, attempt
 
     out = _translate()
 
-    assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
+    assert [i.model for i in attempts] == [LONG, MECH, CODE]
     line = _line(tmp_path, "local_translate")
     assert line.get("fallback_class") == "model"
     assert line.get("fallback_reason") == "http_500"
@@ -762,7 +762,7 @@ def test_reason_after_affinity_failure_is_the_real_one_single_call(
 
     out = server.local_delegate(task="mayúsculas", input="hola", output_format="texto")
 
-    assert [i.modelo for i in attempts] == [LONG, MECH, CODE]
+    assert [i.model for i in attempts] == [LONG, MECH, CODE]
     line = _line(tmp_path, "local_delegate")
     assert line.get("fallback_class") == "model"
     assert "enfriamiento" not in out
@@ -964,7 +964,7 @@ def test_capacity_failure_of_affinity_alternative_goes_to_role(affinity, attempt
 
     out = _translate()
 
-    assert attempts[0].clase == "capacity_or_load", "guarda: el 26B falló por capacidad"
+    assert attempts[0].error_class == "capacity_or_load", "guarda: el 26B falló por capacidad"
     responded = backend.served[-1]
     assert responded == MECH
     line = _line(tmp_path, "local_translate")

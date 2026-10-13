@@ -1,0 +1,18 @@
+# Controles positivos de A7a: mutante, test (con pesado.sh), lo que dispara y restauración (sha256)
+
+## 1. tests/test_post_chat_caminos.py — literal "return _body_failure(" -> "return _fallo_de_cuerpo(" (sha256 8a3eb27e9ee1 -> restaurado 8a3eb27e9ee1)
+>       assert salidas == 7, (
+E       AssertionError: `_post_chat` tiene 6 salidas y esta lista se escribio para 7. Si has anadido una, enumera aqui el camino que la produce; si has quitado otra, baja el numero.
+E       assert 6 == 7
+1 failed, 19 passed in 0.28s
+
+## 2. tests/test_metrics.py::test_tokens_claude_es_la_unica_conversion — lambda amount, *, kind, event -> lambda cantidad, *, tipo, evento (sha256 984afc48b917 -> restaurado 984afc48b917)
+        failed = row.get("ok") is False
+        if failed:
+        if not failed:
+E               TypeError: test_tokens_claude_es_la_unica_conversion.<locals>.<lambda>() got an unexpected keyword argument 'kind'
+1 failed, 1 warning in 0.48s
+
+## 3. tools/tests/test_make_mapping.py::test_an_outer_row_and_a_nested_row_with_the_same_name_do_not_edit_twice — make_mapping.py sin deduplicar (sorted(edits)) (sha256 bb7879e76c99 -> restaurado bb7879e76c99). Además, el test se escribió antes del arreglo y falló igual.
+E                   ValueError: src/x.py:5:20 no contiene `cadena`
+1 failed in 2.64s

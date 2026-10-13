@@ -1,0 +1,1 @@
+# diff de `git ls-files --eol` antes (HEAD f2487bc, árbol limpio) y después de A7a, sobre todo el repo: 0 diferencias

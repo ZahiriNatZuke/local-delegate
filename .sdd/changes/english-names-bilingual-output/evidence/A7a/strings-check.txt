@@ -1,0 +1,19 @@
+# Literales con marcadores en src/ y tests/ (git grep -c -F, líneas), HEAD f2487bc frente al árbol de A7a
+local-delegate aviso: antes 10, después 10
+local-delegate respaldo: antes 1, después 1
+"respaldo": antes 2, después 2
+"aviso": antes 10, después 10
+"truncado": antes 15, después 15
+_local_delegate: antes 22, después 22
+
+# Subcadena dentro de literales (tokenize, apariciones): antes
+aviso: 105
+respaldo: 78
+truncado: 30
+_local_delegate: 17
+# después
+aviso: 105
+respaldo: 72
+truncado: 30
+_local_delegate: 17
+# respaldo −6: tres cadenas de monkeypatch "_con_respaldo" → "_with_fallback" (test_affinity.py:597, test_cadenas.py:304, test_delegacion_conexion.py:307), dos docstrings que citan `_con_respaldo` (test_affinity.py:588, test_cadenas.py:295) y la cita `respaldo` → `fallback` del docstring de _chat (server.py:2400). Ningún marcador.

@@ -202,3 +202,32 @@ def test_unapproved_mapping_is_not_applied(tmp_path):
     else:
         raise AssertionError("se aplicó un mapping sin «# approved-by-main»")
     assert (root / "tests" / "test_x.py").read_bytes().decode("utf-8") == SOURCE_FILE
+
+
+NESTED_FILE = (
+    "def outer(model):\n"
+    "    cadena = (model,)\n"
+    "\n"
+    "    def llamar(cadena=()):\n"
+    "        return list(cadena)\n"
+    "\n"
+    "    return llamar(cadena)\n"
+)
+
+
+def test_an_outer_row_and_a_nested_row_with_the_same_name_do_not_edit_twice(tmp_path):
+    """La fila de la función de fuera recorre también la anidada, y la de la anidada repite esas
+    posiciones. Sin deduplicar, la segunda edición de la misma posición da `ValueError` (A7a)."""
+    root = _tree(tmp_path, {"src/x.py": NESTED_FILE})
+    mapping = _mapping(
+        tmp_path,
+        [
+            _row("cadena", "chain", "src/x.py:2@outer"),
+            _row("cadena", "chain", "src/x.py:4@outer.llamar", kind="param"),
+        ],
+    )
+    counts = mm.apply_mapping(mapping, root)
+    text = (root / "src" / "x.py").read_text(encoding="utf-8")
+    assert "cadena" not in text
+    assert "    def llamar(chain=()):\n        return list(chain)\n" in text
+    assert counts == {"src/x.py": 4}  # 2, 4, 5 y 7: cada posición una vez

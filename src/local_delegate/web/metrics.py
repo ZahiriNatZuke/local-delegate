@@ -823,7 +823,7 @@ def backend_stats():
     """
     base = config.BASE_URL.removesuffix("/v1")
     endpoint = f"{base}/api/metrics/stats"
-    loopback = server._backend_en_loopback()
+    loopback = server._backend_on_loopback()
     try:
         with httpx2.Client(timeout=server._plazo_sonda()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
@@ -2613,7 +2613,7 @@ function kpiCard(o){
     <div class="k-hint">${o.hint||''}</div></div>`;
 }
 
-// Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `tokens_claude` en
+// Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `claude_tokens` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
 // Aquí no se resuelve nada (coste-api-y-cuota, REQ-033): /api/events entrega cada fila ya
 // fundida por Python, con `density[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,

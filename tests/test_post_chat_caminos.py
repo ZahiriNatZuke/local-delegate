@@ -125,7 +125,7 @@ def test_todos_los_caminos_devuelven_un_resultado(
     assert isinstance(resultado, ChatResult)
     assert isinstance(resultado.text, str) and resultado.text
     # Un fallo siempre trae su clase, y un éxito nunca la trae: es lo que hace utilizable el campo.
-    assert (resultado.clase is None) is resultado.ok
+    assert (resultado.error_class is None) is resultado.ok
     if remoto:
         assert arranques == [] and preguntas_hechas == [], "se ofreció arrancar un backend remoto"
 
@@ -164,7 +164,7 @@ def test_la_lista_de_caminos_cubre_todas_las_ramas():
     import inspect
 
     fuente = inspect.getsource(server._post_chat)
-    salidas = fuente.count("return ChatResult(") + fuente.count("return _fallo_de_cuerpo(")
+    salidas = fuente.count("return ChatResult(") + fuente.count("return _body_failure(")
     assert salidas == 7, (
         f"`_post_chat` tiene {salidas} salidas y esta lista se escribio para 7. Si has anadido "
         "una, enumera aqui el camino que la produce; si has quitado otra, baja el numero."
