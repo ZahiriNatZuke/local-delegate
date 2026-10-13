@@ -443,8 +443,8 @@ def test_api_backend_stats_usa_el_plazo_de_sondeo(monkeypatch):
 
     assert plazos, "el endpoint no llegó a crear el cliente"
     plazo_conexion = _plazo_de_conexion(plazos[0])
-    assert plazo_conexion == config.TIMEOUT_SONDA_CONEXION
-    assert plazos[0].read == config.TIMEOUT_SONDA_LECTURA
+    assert plazo_conexion == config.PROBE_CONNECT_TIMEOUT
+    assert plazos[0].read == config.PROBE_READ_TIMEOUT
 
 
 def test_api_system_dice_plataforma_origen_y_host(monkeypatch):
@@ -1720,7 +1720,7 @@ def test_llamaswap_status_counts_own_delegations(monkeypatch):
     ],
 )
 def test_llamaswap_endpoints_require_the_web_token(monkeypatch, method, path):
-    """La app sola, sin la puerta del daemon (`auth.proteger`): la dependencia de cada ruta basta.
+    """La app sola, sin la puerta del daemon (`auth.protect`): la dependencia de cada ruta basta.
 
     `BASE_URL` va a un puerto sin nadie: si la dependencia faltara, el endpoint no saldría a la red
     de verdad (ni al llama-swap real del 9292).

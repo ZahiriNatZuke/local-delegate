@@ -28,11 +28,11 @@ def entorno_sin_variables_del_paquete():
 
     Se recarga el módulo en vez de reasignar constantes una por una a propósito: los defaults
     viven en `config.py` y copiarlos aquí crearía una segunda fuente que se desactualiza sola.
-    La lista de nombres tampoco se escribe a mano — `config.VARIABLES_DE_ENTORNO` se alimenta de
+    La lista de nombres tampoco se escribe a mano — `config.ENVIRONMENT_VARIABLES` se alimenta de
     las lecturas reales del módulo, así que una opción nueva queda cubierta sin tocar esto.
     """
     with pytest.MonkeyPatch.context() as mp:
-        for nombre in config.VARIABLES_DE_ENTORNO:
+        for nombre in config.ENVIRONMENT_VARIABLES:
             mp.delenv(nombre, raising=False)
         importlib.reload(config)
         yield

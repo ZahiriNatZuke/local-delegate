@@ -1,0 +1,26 @@
+# Controles positivos de A8a-2 (a8a/mut.py guarda copia y sha256; todos restaurados y comprobados)
+
+## G — guardián del aislamiento del entorno (tests/test_aislamiento_entorno.py:148), control natural
+Tras el rename de PyCharm `config._leer`→`_read`, y ANTES de cambiar a mano la cadena del guardián (`nodo.name != "_leer"`):
+pytest tests/test_aislamiento_entorno.py -> 1 failed, 4 passed
+FAILED tests/test_aislamiento_entorno.py::test_config_solo_lee_el_entorno_por_la_puerta_registrada
+E  AssertionError: Estas lecturas se saltan `_leer` y no entran en el inventario: ['_read']
+E  assert ['_read'] == []          (el assert `assert culpables == []`, :155)
+Con la cadena ya en "_read": la suite completa pasa. El guardián sigue discriminando: aparta solo la puerta registrada.
+
+## M1 — server.py:1315, `answer.start` devuelto a `answer.arrancar`
+pytest -x tests/test_post_chat_caminos.py -> 1 failed, 12 passed
+FAILED tests/test_post_chat_caminos.py::test_todos_los_caminos_devuelven_un_resultado[dice que sí y arranca]
+tests\test_post_chat_caminos.py:123: AttributeError: '_RespuestaDelUsuario' object has no attribute 'arrancar'
+sha256 original ded71889007c -> restaurado ded71889007c
+
+## M2 — web/auth.py:190, `self.duration = …` devuelto a `self.duracion = …`
+pytest -x tests/test_web_auth.py -> 1 failed
+FAILED tests/test_web_auth.py::test_sin_cabecera_no_entra_por_ninguna_ruta[/mcp]
+tests\test_web_auth.py:80: AttributeError: 'PortToken' object has no attribute 'duration'
+sha256 original 0812e6ab504d -> restaurado 0812e6ab504d
+
+## M3 — questions.py, `model: str = Field(title="Modelo")` sin el Field (control del cotejo de esquemas, no de la suite)
+model_json_schema() de ChooseModel -> "properties": {"model": {"title": "Model", ...}}: el cotejo de schemas-check.txt
+daría DISTINTOS (título visible «Modelo» -> «Model»). Ningún test de la suite fija estos esquemas (hallazgo).
+sha256 original e6d23c91a8bd -> restaurado e6d23c91a8bd

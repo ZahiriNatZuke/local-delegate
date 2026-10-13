@@ -22,7 +22,7 @@ from conftest import (
     write_claude_desktop,
 )
 
-from local_delegate import checks, install, llamaswap_api, recompute, sondas
+from local_delegate import checks, install, llamaswap_api, probes, recompute
 from local_delegate.failures import BackendView
 
 
@@ -40,7 +40,7 @@ def make_ctx(home, **kwargs):
             "mcp_url": f"http://{host}:{port}/mcp",
         },
         "backend_models": lambda: BackendView(True, "", None, "direct"),
-        "version_of": lambda component, cfg: (sondas.RECOMMENDED_VERSIONS[component], None),
+        "version_of": lambda component, cfg: (probes.RECOMMENDED_VERSIONS[component], None),
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
         "latest_release": lambda: (checks._installed_version(), None),
@@ -955,16 +955,14 @@ def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
         plazos.append(timeout)
 
     monkeypatch.setattr(daemon, "query_backend", _registra)
-    monkeypatch.setattr(sondas, "backend_probe", lambda: BackendView(True, "", None, "direct"))
+    monkeypatch.setattr(probes, "backend_probe", lambda: BackendView(True, "", None, "direct"))
 
     checks._default_backend_models()
 
     (t,) = plazos
     plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
     plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
-    assert (
-        plazo_lectura > checks.config.TIMEOUT_SONDA_CONEXION + checks.config.TIMEOUT_SONDA_LECTURA
-    )
+    assert plazo_lectura > checks.config.PROBE_CONNECT_TIMEOUT + checks.config.PROBE_READ_TIMEOUT
     # Conectar con el daemon, que está en esta máquina, no necesita más que antes.
     assert plazo_conexion == 1.0
 
@@ -1067,7 +1065,7 @@ def test_un_cliente_sin_elicitation_sigue_siendo_ok(tmp_path):
 def test_el_mismo_cliente_repetido_sale_una_vez_con_la_version_mas_reciente(tmp_path):
     """`clients.jsonl` acumula una línea por ARRANQUE de proceso: medido, no supuesto.
 
-    La deduplicación de `clients.registrar` es intra-proceso, así que veinte lanzamientos de
+    La deduplicación de `clients.record` es intra-proceso, así que veinte lanzamientos de
     Claude Code dejan veinte líneas idénticas. Sin agrupar, el detail sería una lista repetida.
 
     La observación vieja va **la última** de la lista a propósito: si el check se quedara con la

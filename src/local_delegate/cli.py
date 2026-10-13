@@ -106,7 +106,7 @@ def _install_options(args: argparse.Namespace, targets: set[str], skip_codex_mcp
     )
 
 
-def _hay_terminal() -> bool:
+def _has_terminal() -> bool:
     """True si se puede preguntar de verdad. Un stdin raro NO es una terminal."""
     try:
         return bool(sys.stdin) and sys.stdin.isatty()
@@ -115,7 +115,7 @@ def _hay_terminal() -> bool:
         return False
 
 
-def _codex_mcp_puesto_a_mano(results) -> str:
+def _codex_mcp_set_by_hand(results) -> str:
     """Ruta del `config.toml` con una entrada nuestra escrita a mano, o "" si no la hay.
 
     El `warn` de `scaffold.mcp_codex` significa exactamente eso: la sección existe **sin** los
@@ -130,34 +130,34 @@ def _codex_mcp_puesto_a_mano(results) -> str:
     return ""
 
 
-def _decide_sobre_el_codex_ajeno(detalle: str, args: argparse.Namespace) -> bool:
+def _decide_on_foreign_codex(detail: str, args: argparse.Namespace) -> bool:
     """True si hay que SALTAR la escritura de la entrada MCP de Codex."""
     if getattr(args, "force_mcp_codex", False):
-        print(f"Aviso: {detalle}")
+        print(f"Aviso: {detail}")
         print("       --force-mcp-codex: se reemplaza (queda una copia .bak al lado).")
         return False
     if args.dry_run:
-        print(f"Aviso: {detalle}")
+        print(f"Aviso: {detail}")
         print("       En una ejecución real se pediría confirmación antes de reemplazarla.")
         return False
-    if not _hay_terminal():
-        print(f"Aviso: {detalle}")
+    if not _has_terminal():
+        print(f"Aviso: {detail}")
         print("       Sin terminal para preguntar: se conserva tal cual y no se toca.")
         print("       Para reemplazarla sin preguntar: --force-mcp-codex")
         return True
-    print(f"Aviso: {detalle}")
+    print(f"Aviso: {detail}")
     try:
-        respuesta = input("       ¿Reemplazarla por la entrada gestionada? [s/N]: ").strip().lower()
+        response = input("       ¿Reemplazarla por la entrada gestionada? [s/N]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
-        respuesta = ""
-    if respuesta in ("s", "si", "sí", "y", "yes"):
+        response = ""
+    if response in ("s", "si", "sí", "y", "yes"):
         return False
     print("       Se conserva la entrada del usuario; el resto sí se instala.")
     return True
 
 
-def _reporte_del_andamiaje(home: Path, dry_run: bool) -> None:
+def _scaffold_report(home: Path, dry_run: bool) -> None:
     """Estado real tras escribir, con el mismo formato y los mismos checks que el doctor.
 
     Se recorre el registro **otra vez** a propósito: la primera pasada describe el sistema como
@@ -189,14 +189,14 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
 
     home = Path(args.home).expanduser() if args.home else Path.home()
     try:
-        targets, motivo = _resolve_clients(args, home)
+        targets, reason = _resolve_clients(args, home)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     verb = "Desinstalando" if uninstall else "Instalando"
     print(f"{verb} local-delegate en {home}")
-    print(f"clientes: {motivo}")
+    print(f"clientes: {reason}")
 
     if not targets:
         # Con `auto` y ningún cliente, no hay nada que hacer y casi siempre significa un --home
@@ -205,18 +205,18 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
         print("No se encontró ningún cliente: se buscaron " + " y ".join(_CLIENT_DIR.values()))
         print(f"bajo {home}. No se escribió nada.")
         print("Si querías configurarlo igual:  --clients claude   (o codex, u opencode)")
-        _reporte_del_andamiaje(home, dry_run=True)
+        _scaffold_report(home, dry_run=True)
         return 0
 
     # Primera pasada del registro: para saber si hay configuración del usuario que no se puede
     # pisar sin preguntar. Solo hace falta cuando de verdad vamos a escribir la entrada de Codex.
     skip_codex_mcp = False
     if not uninstall and "codex" in targets and getattr(args, "mcp", True):
-        detalle = _codex_mcp_puesto_a_mano(
+        detail = _codex_mcp_set_by_hand(
             checks.run_all(checks.Context(home=home), groups=("scaffold",))
         )
-        if detalle:
-            skip_codex_mcp = _decide_sobre_el_codex_ajeno(detalle, args)
+        if detail:
+            skip_codex_mcp = _decide_on_foreign_codex(detail, args)
 
     opts = _install_options(args, targets, skip_codex_mcp=skip_codex_mcp)
     if not opts.components:
@@ -229,25 +229,25 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     print()
     if args.dry_run:
         print("--dry-run: no se escribió nada.")
-        _reporte_del_andamiaje(opts.home, dry_run=True)
+        _scaffold_report(opts.home, dry_run=True)
         return 0
     if not uninstall and not failures:
         print("Listo. Reinicia el cliente (Claude Code / Codex / opencode) para tomar los cambios.")
-        _avisa_si_el_cli_no_esta_en_el_path()
-        _deja_el_daemon_arriba(opts)
+        _warn_if_cli_not_on_path()
+        _leave_daemon_up(opts)
     # El reporte va ANTES del código de salida, y también cuando algo falló: si una acción no
     # pudo escribir, saber qué quedó a medias es justo lo que hace falta para arreglarlo.
     # Es informativo y NO cambia el exit code — tras un install correcto quedan avisos legítimos
     # (el CLI fuera del PATH con `uvx`, un cliente ausente) y devolver 1 por eso rompería
     # cualquier script de instalación.
-    _reporte_del_andamiaje(opts.home, dry_run=False)
+    _scaffold_report(opts.home, dry_run=False)
     if failures:
         print(f"{failures} acción(es) fallaron.", file=sys.stderr)
         return 1
     return 0
 
 
-def _deja_el_daemon_arriba(opts) -> None:
+def _leave_daemon_up(opts) -> None:
     """Tras instalar en modo HTTP, el daemon tiene que existir: la entrada MCP apunta a él.
 
     Con `stdio` no se toca nada, porque ahí quien arranca el MCP es el propio cliente vía
@@ -266,7 +266,7 @@ def _deja_el_daemon_arriba(opts) -> None:
     upd.restart_daemon(update_opts)
 
 
-def _avisa_si_el_cli_no_esta_en_el_path() -> None:
+def _warn_if_cli_not_on_path() -> None:
     """Avisa si el comando que toda la documentación manda usar no existe en esta máquina.
 
     Pasa siempre que se instala con `uvx`, que es lo que recomienda el README: `uvx` monta un
@@ -344,11 +344,11 @@ def cmd_recompute_cost(args: argparse.Namespace) -> int:
         return 2
     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
     try:
-        resumen = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
+        summary = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
     except OSError as e:
         print(f"recompute-cost: no se pudo escribir en el directorio de logs ({e.strerror}).")
         return 1
-    print(recompute.summary_text(resumen))
+    print(recompute.summary_text(summary))
     return 0
 
 
@@ -358,32 +358,32 @@ def cmd_recompute_cost_legacy(args: argparse.Namespace) -> int:
     return cmd_recompute_cost(args)
 
 
-def _count_rows_by_window(log_dir: Path, ventanas) -> dict[str, int]:
-    """Cuántas filas del log de uso estampa cada ventana (la primera por inicio, como `fundir`)."""
+def _count_rows_by_window(log_dir: Path, windows) -> dict[str, int]:
+    """Cuántas filas del log de uso estampa cada ventana (la primera por inicio, como `cost.merge`)."""
     import json
 
     from . import config
 
-    cuenta: dict[str, int] = {}
+    counts: dict[str, int] = {}
     # Los mismos ficheros que lee el panel: los rotados por mes y el log de nombre fijo, si existe.
-    rutas = sorted(log_dir.glob("usage-*.jsonl"))
-    fijo = config.USAGE_LOG
-    if fijo.is_file() and fijo.resolve() not in {r.resolve() for r in rutas}:
-        rutas.append(fijo)
-    for ruta in rutas:
+    paths = sorted(log_dir.glob("usage-*.jsonl"))
+    fixed = config.USAGE_LOG
+    if fixed.is_file() and fixed.resolve() not in {r.resolve() for r in paths}:
+        paths.append(fixed)
+    for path in paths:
         try:
-            lineas = ruta.read_text(encoding="utf-8").splitlines()
+            lines = path.read_text(encoding="utf-8").splitlines()
         except OSError:
             continue
-        for linea in lineas:
+        for line in lines:
             try:
-                fila = json.loads(linea)
+                row = json.loads(line)
             except ValueError:
                 continue
-            ventana = ventanas.find(fila.get("ts")) if isinstance(fila, dict) else None
-            if ventana:
-                cuenta[ventana] = cuenta.get(ventana, 0) + 1
-    return cuenta
+            window = windows.find(row.get("ts")) if isinstance(row, dict) else None
+            if window:
+                counts[window] = counts.get(window, 0) + 1
+    return counts
 
 
 def cmd_test_window(args: argparse.Namespace) -> int:
@@ -394,19 +394,19 @@ def cmd_test_window(args: argparse.Namespace) -> int:
     from . import test_windows as tw
 
     log_dir = config.LOG_DIR
-    accion = args.test_window_command
+    action = args.test_window_command
     try:
-        if accion == "start":
+        if action == "start":
             w = tw.start(log_dir, args.label or "")
             print(w.id)
             return 0
-        if accion == "stop":
+        if action == "stop":
             w = tw.stop(log_dir, args.id)
             print(f"{w.id} cerrada: {tw.format_instant(w.start)} a {tw.format_instant(w.end)}")
             return 0
-        if accion == "add":
-            w, creada = tw.add(log_dir, args.start, args.end, args.label or "")
-            if creada:
+        if action == "add":
+            w, created = tw.add(log_dir, args.start, args.end, args.label or "")
+            if created:
                 print(f"{w.id} añadida")
             else:
                 print(f"ya existía: {w.id} (no se añade otra)")
@@ -415,28 +415,28 @@ def cmd_test_window(args: argparse.Namespace) -> int:
         print(f"test-window: {e}", file=sys.stderr)
         return 2
 
-    ventanas = tw.load(log_dir)
-    filas = _count_rows_by_window(log_dir, ventanas)
+    windows = tw.load(log_dir)
+    rows = _count_rows_by_window(log_dir, windows)
     if args.json:
-        datos = {
+        data = {
             "file": str(tw.path_for(log_dir)),
-            "error": ventanas.error,
-            "ignored": ventanas.ignored,
-            "windows": [{**w.to_json(), "rows": filas.get(w.id, 0)} for w in ventanas.windows],
+            "error": windows.error,
+            "ignored": windows.ignored,
+            "windows": [{**w.to_json(), "rows": rows.get(w.id, 0)} for w in windows.windows],
         }
-        print(json.dumps(datos, ensure_ascii=False, indent=2))
+        print(json.dumps(data, ensure_ascii=False, indent=2))
         return 0
-    if ventanas.error:
-        print(f"{tw.path_for(log_dir)} es ilegible: {ventanas.error}")
+    if windows.error:
+        print(f"{tw.path_for(log_dir)} es ilegible: {windows.error}")
         return 0
-    if not ventanas.windows:
+    if not windows.windows:
         print("sin ventanas de prueba")
-    for w in ventanas.windows:
-        fin = tw.format_instant(w.end) if w.end is not None else "abierta"
-        etiqueta = f"  {w.label}" if w.label else ""
-        print(f"{w.id}  {tw.format_instant(w.start)}  {fin}  {filas.get(w.id, 0)} filas{etiqueta}")
-    if ventanas.ignored:
-        print(f"entradas ignoradas por ilegibles: {ventanas.ignored}")
+    for w in windows.windows:
+        end = tw.format_instant(w.end) if w.end is not None else "abierta"
+        label = f"  {w.label}" if w.label else ""
+        print(f"{w.id}  {tw.format_instant(w.start)}  {end}  {rows.get(w.id, 0)} filas{label}")
+    if windows.ignored:
+        print(f"entradas ignoradas por ilegibles: {windows.ignored}")
     return 0
 
 
@@ -819,7 +819,7 @@ def _config_path(args: argparse.Namespace):
     return _daemon_path(answer), answer
 
 
-def _pares(values: list[str], option: str, kind) -> dict[str, float]:
+def _pairs(values: list[str], option: str, kind) -> dict[str, float]:
     pair_items = {}
     for value in values:
         model, same, figure = value.partition("=")
@@ -1022,7 +1022,7 @@ def _report_outcome(outcome: str, line: str, path: Path, previous: bytes, status
 def _write_residency(
     args: argparse.Namespace, path: Path, new: bytes, original: bytes, daemon_answer=None
 ) -> int:
-    """Escribe `nuevo` si el fichero sigue siendo `original` (los bytes sobre los que se decidió).
+    """Escribe `new` si el fichero sigue siendo `original` (los bytes sobre los que se decidió).
 
     Antes, las negativas de REQ-034 (salvo `--now`) y la vigía, que se abre ANTES de comparar el
     fichero: abrirla tarda (hasta 8 s por el daemon) y comparar antes dejaría una ventana en la que
@@ -1091,8 +1091,8 @@ def cmd_llamaswap_residency(args: argparse.Namespace) -> int:
         )
         return 2
     try:
-        ttls = {m: int(s) for m, s in _pares(args.ttl, "--ttl", int).items()}
-        model_vram = _pares(args.vram_model, "--vram-model", float)
+        ttls = {m: int(s) for m, s in _pairs(args.ttl, "--ttl", int).items()}
+        model_vram = _pairs(args.vram_model, "--vram-model", float)
     except ValueError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

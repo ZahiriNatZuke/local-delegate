@@ -388,12 +388,12 @@ def test_doctor_warns_with_another_gguf_under_the_id_here(affinity, tmp_path):
 def test_doctor_warns_when_the_mechanical_role_changes_by_variable(affinity, tmp_path, monkeypatch):
     """Otro modelo en el rol mecánico (variable de entorno): la afinidad se apaga y `doctor` lo
     dice (REQ-010)."""
-    original = config.modelos_por_rol
+    original = config.models_by_role
 
     def other_roles():
         return {**original(), "mechanical": "otro-4b"}
 
-    monkeypatch.setattr(config, "modelos_por_rol", other_roles)
+    monkeypatch.setattr(config, "models_by_role", other_roles)
     result = checks._probe_residency(checks.Context(home=tmp_path, config_path=affinity))
     assert result.status == checks.WARN
     assert "el modelo del rol es otro-4b" in result.detail

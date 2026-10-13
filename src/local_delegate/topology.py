@@ -62,7 +62,7 @@ nunca choca consigo mismo, y un modelo que no esta en la config es compatible co
 Sin topologia (`NoTopology`) el daemon no usa turno y se comporta como hoy. Este modulo no conoce
 el backend: decidir que un backend remoto va sin turno es cosa de quien lo llama.
 
-`foto()` lee la config en caliente (REQ-009): la vuelve a leer cuando cambia la `mtime` o el
+`snapshot()` lee la config en caliente (REQ-009): la vuelve a leer cuando cambia la `mtime` o el
 tamano, y si no, devuelve la misma foto sin tocar el disco. Ningun nombre de modelo ni de grupo
 esta fijo en el codigo.
 """
@@ -222,7 +222,7 @@ def _raw_groups(data: Mapping[str, Any]) -> Mapping[str, Any]:
     return (router.get("settings") or {}).get("groups") or {}
 
 
-def _usa_matrix(data: Mapping[str, Any]) -> bool:
+def _uses_matrix(data: Mapping[str, Any]) -> bool:
     above, _ = _syntax(data)
     if above:
         return data.get("matrix") is not None
@@ -282,7 +282,7 @@ def validate_like_load_go(data: Any) -> list[str]:
             if name in seen_aliases:
                 errors.append(f"alias repetido {name} en el modelo {mid}")
             seen_aliases[name] = str(mid)
-    if _usa_matrix(data):
+    if _uses_matrix(data):
         return errors
     groups = _raw_groups(data)
     if not isinstance(groups, Mapping):
@@ -467,7 +467,7 @@ def _interpret(data: Any, path: str, version: int) -> Snapshot | NoTopology:
     above, in_routing = _syntax(data)
     if above and in_routing:
         return NoTopology(TWO_SYNTAXES, "`groups`/`matrix` arriba y `routing.router` a la vez")
-    if _usa_matrix(data):
+    if _uses_matrix(data):
         return NoTopology(MATRIX, "el router `matrix` no se reparte por grupos")
     errors = validate_like_load_go(data)
     if errors:
@@ -512,7 +512,7 @@ def snapshot() -> Snapshot | NoTopology:
 
 
 def _forget() -> None:
-    """Vacia la cache de `foto()` (para los tests)."""
+    """Vacia la cache de `snapshot()` (para los tests)."""
     global _cache
     with _lock:
         _cache = None
@@ -523,5 +523,5 @@ def _forget() -> None:
 # comportamiento.
 shape_errors = _shape_errors
 syntax = _syntax
-usa_matrix = _usa_matrix
+uses_matrix = _uses_matrix
 interpret = _interpret

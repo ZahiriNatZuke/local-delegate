@@ -316,11 +316,11 @@ def estimate_model_vram(
     experts = 0
     moe_note = ""
     if n_cpu_moe:
-        tamanos = read_gguf_tensor_sizes(gguf_path)
-        if tamanos is None:
+        sizes = read_gguf_tensor_sizes(gguf_path)
+        if sizes is None:
             moe_note = f"; -ncmoe {n_cpu_moe} sin restar (tabla de tensores ilegible)"
         else:
-            experts = compute_cpu_expert_bytes(tamanos, n_cpu_moe)
+            experts = compute_cpu_expert_bytes(sizes, n_cpu_moe)
             moe_note = f"; -ncmoe {n_cpu_moe}: {experts / 1024**3:.2f} GiB de expertos en CPU"
     mmproj_bytes = 0
     if footprint_flags.get("mmproj"):

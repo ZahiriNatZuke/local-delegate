@@ -40,14 +40,14 @@ VARIABLES_RETIRADAS = (
 # --- El rol ya no existe en ningún catálogo -----------------------------------
 def test_el_rol_rapido_no_esta_en_el_catalogo_de_roles(recargar_config):
     recargar_config()
-    assert "fast" not in config.modelos_por_rol()
-    assert set(config.modelos_por_rol()) == {"mechanical", "long", "code"}
+    assert "fast" not in config.models_by_role()
+    assert set(config.models_by_role()) == {"mechanical", "long", "code"}
 
 
 def test_el_rol_rapido_no_tiene_tope_propio(recargar_config):
     """Si se quedara el tope sin el rol, `max_chars_for_role('fast')` mentiría con 12 000."""
     recargar_config()
-    assert "fast" not in config.MAX_CHARS_POR_ROL
+    assert "fast" not in config.MAX_CHARS_BY_ROLE
     # Un rol que no existe cae en el default, como cualquier otro nombre desconocido.
     assert config.max_chars_for_role("fast") == config.max_chars_for_role("no-existe-este-rol")
 
@@ -119,7 +119,7 @@ def _delegar(monkeypatch, tmp_path, **kw):
 
 def test_pedir_el_modelo_retirado_da_error_claro_y_no_toca_el_backend(monkeypatch, tmp_path):
     """Lo que ve quien tenía una llamada con `model="qwen35-2b"` escrita a mano."""
-    monkeypatch.setattr(server.preguntas, "preguntar", _no_responde)
+    monkeypatch.setattr(server.questions, "ask", _no_responde)
     resultado, vistos = _delegar(monkeypatch, tmp_path, model=MODELO_RETIRADO)
 
     assert f"modelo inválido '{MODELO_RETIRADO}'" in resultado
@@ -130,7 +130,7 @@ def test_pedir_el_modelo_retirado_da_error_claro_y_no_toca_el_backend(monkeypatc
 
 def test_el_modelo_retirado_tampoco_vale_como_respuesta_a_la_pregunta(monkeypatch, tmp_path):
     """El escape de `elicitation` no puede colar por la ventana lo que se retiró por la puerta."""
-    monkeypatch.setattr(server.preguntas, "preguntar", _responde(MODELO_RETIRADO))
+    monkeypatch.setattr(server.questions, "ask", _responde(MODELO_RETIRADO))
     resultado, vistos = _delegar(monkeypatch, tmp_path, model="no-existe")
 
     assert "modelo inválido" in resultado
@@ -199,4 +199,4 @@ def test_retired_variables_come_from_the_single_registry(recargar_config):
     retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
     assert retired == set(VARIABLES_RETIRADAS)
     assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired
-    assert retired <= config.VARIABLES_DE_ENTORNO
+    assert retired <= config.ENVIRONMENT_VARIABLES

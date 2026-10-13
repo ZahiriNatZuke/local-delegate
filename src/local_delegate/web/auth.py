@@ -51,10 +51,10 @@ _VERSION = "ld-session|v1"
 
 #: Un año. La sesión se renueva sola en cada visita, así que quien use el panel con alguna
 #: regularidad no vuelve a ver la petición de credenciales.
-DURACION_POR_DEFECTO = 365 * 24 * 3600
+DEFAULT_DURATION = 365 * 24 * 3600
 
 
-def _token_presentado(cabecera: str) -> str | None:
+def _presented_token(header: str) -> str | None:
     """Extrae el token de una cabecera `Authorization`, o ``None`` si no lleva ninguno.
 
     Devolver ``None`` en vez de una cadena vacía es deliberado: «no trae credencial» y «trae una
@@ -62,68 +62,68 @@ def _token_presentado(cabecera: str) -> str | None:
     alguien configurase el token a vacío. El token vacío ya se descarta antes —sin token no hay
     middleware—, pero un dato que solo es seguro por lo que pasa en otro fichero no es seguro.
     """
-    esquema, _, resto = cabecera.partition(" ")
-    resto = resto.strip()
-    if not resto:
+    scheme, _, rest = header.partition(" ")
+    rest = rest.strip()
+    if not rest:
         return None
 
-    esquema = esquema.lower()
-    if esquema == "bearer":
-        return resto
-    if esquema == "basic":
+    scheme = scheme.lower()
+    if scheme == "bearer":
+        return rest
+    if scheme == "basic":
         try:
-            descifrado = base64.b64decode(resto, validate=True).decode("utf-8")
+            decoded = base64.b64decode(rest, validate=True).decode("utf-8")
         except (binascii.Error, ValueError, UnicodeDecodeError):
             # Basic mal formado es una credencial inválida, no un error del servidor: el 401 de
             # más abajo es la respuesta correcta y el navegador volverá a preguntar.
             return None
-        _usuario, separador, contrasena = descifrado.partition(":")
-        return contrasena if separador else None
+        _user, sep, password = decoded.partition(":")
+        return password if sep else None
     return None
 
 
-def peticion_autorizada(cabecera: str | None, token: str) -> bool:
+def is_request_authorized(header: str | None, token: str) -> bool:
     """¿La cabecera `Authorization` presenta el token esperado?
 
     Se compara con :func:`secrets.compare_digest` y no con ``==``: la comparación de cadenas de
     Python corta en el primer byte distinto, y ese tiempo distinto es lo que permite adivinar un
     secreto byte a byte. Es barato ponerlo y caro descubrir que faltaba.
     """
-    if not cabecera:
+    if not header:
         return False
-    presentado = _token_presentado(cabecera)
-    if presentado is None:
+    presented = _presented_token(header)
+    if presented is None:
         return False
-    return secrets.compare_digest(presentado, token)
+    return secrets.compare_digest(presented, token)
 
 
-def es_basic(cabecera: str | None) -> bool:
+def is_basic(header: str | None) -> bool:
     """¿La credencial vino por Basic, o sea desde un navegador?
 
     Solo a esas peticiones se les entrega sesión. Un cliente MCP o el CLI mandan Bearer en cada
     llamada y no tienen dónde guardar una cookie: darles una sería una cabecera que nadie lee y,
     peor, repartir un segundo secreto derivado a procesos que no lo necesitan.
     """
-    return bool(cabecera) and cabecera.split(" ", 1)[0].lower() == "basic"
+    return bool(header) and header.split(" ", 1)[0].lower() == "basic"
 
 
 # --- Sesión del navegador ----------------------------------------------------
 
 
-def _firma(token: str, expira: int) -> str:
-    firma = hmac.new(
-        token.encode("utf-8"), f"{_VERSION}|{expira}".encode(), hashlib.sha256
+def _sign(token: str, expires: int) -> str:
+    signature = hmac.new(
+        token.encode("utf-8"), f"{_VERSION}|{expires}".encode(), hashlib.sha256
     ).digest()
-    return base64.urlsafe_b64encode(firma).rstrip(b"=").decode("ascii")
+    return base64.urlsafe_b64encode(signature).rstrip(b"=").decode("ascii")
 
 
-def crear_sesion(token: str, duracion: int, ahora: float | None = None) -> str:
+def create_session(token: str, duration: int, now: float | None = None) -> str:
     """Valor de cookie que vale hasta ``ahora + duracion``."""
-    expira = int(ahora if ahora is not None else time.time()) + int(duracion)
-    return f"{expira}.{_firma(token, expira)}"
+    expires = int(now if now is not None else time.time()) + int(duration)
+    return f"{expires}.{_sign(token, expires)}"
 
 
-def sesion_valida(valor: str | None, token: str, ahora: float | None = None) -> int | None:
+def valid_session(value: str | None, token: str, now: float | None = None) -> int | None:
     """Instante de expiración de una sesión auténtica y viva, o ``None`` si no lo es.
 
     Devuelve la expiración en vez de un booleano porque quien llama necesita el dato para decidir
@@ -132,37 +132,37 @@ def sesion_valida(valor: str | None, token: str, ahora: float | None = None) -> 
     La firma se comprueba **antes** que la caducidad: la expiración va dentro del mensaje firmado,
     así que hasta que la firma no cuadra ese número es texto que eligió quien mandó la petición.
     """
-    if not valor:
+    if not value:
         return None
-    crudo_expira, separador, firma = valor.partition(".")
-    if not separador or not firma:
+    raw_expires, sep, signature = value.partition(".")
+    if not sep or not signature:
         return None
     try:
-        expira = int(crudo_expira)
+        expires = int(raw_expires)
     except ValueError:
         return None
-    if not secrets.compare_digest(firma, _firma(token, expira)):
+    if not secrets.compare_digest(signature, _sign(token, expires)):
         return None
-    if expira <= (ahora if ahora is not None else time.time()):
+    if expires <= (now if now is not None else time.time()):
         return None
-    return expira
+    return expires
 
 
 def _cookies(scope) -> dict[str, str]:
     """Las cookies de la petición. Tolera varias cabeceras `cookie` y valores con `=` dentro."""
-    crudo: list[str] = []
-    for nombre, valor in scope.get("headers") or ():
-        if nombre == b"cookie":
-            crudo.append(valor.decode("latin-1"))
+    raw: list[str] = []
+    for name, value in scope.get("headers") or ():
+        if name == b"cookie":
+            raw.append(value.decode("latin-1"))
     cookies: dict[str, str] = {}
-    for trozo in ";".join(crudo).split(";"):
-        clave, separador, contenido = trozo.partition("=")
-        if separador:
-            cookies[clave.strip()] = contenido.strip()
+    for chunk in ";".join(raw).split(";"):
+        key, sep, content = chunk.partition("=")
+        if sep:
+            cookies[key.strip()] = content.strip()
     return cookies
 
 
-def _set_cookie(valor: str, duracion: int) -> bytes:
+def _set_cookie(value: str, duration: int) -> bytes:
     """La cabecera `Set-Cookie` de la sesión.
 
     Sin ``Secure`` a propósito, y no por descuido: el daemon habla HTTP plano incluso cuando el
@@ -174,34 +174,34 @@ def _set_cookie(valor: str, duracion: int) -> bytes:
     ``SameSite=Lax`` es lo que sustituye a un token CSRF: una página ajena no consigue que el
     navegador adjunte esta cookie a un `fetch`, un XHR ni un POST hacia el puerto del daemon.
     """
-    return (f"{COOKIE}={valor}; Max-Age={int(duracion)}; Path=/; HttpOnly; SameSite=Lax").encode(
+    return (f"{COOKIE}={value}; Max-Age={int(duration)}; Path=/; HttpOnly; SameSite=Lax").encode(
         "latin-1"
     )
 
 
-class TokenPuerto:
+class PortToken:
     """Envuelve una app ASGI y exige el token —o una sesión suya— en todas sus rutas."""
 
-    def __init__(self, app, token: str, duracion: int = DURACION_POR_DEFECTO) -> None:
+    def __init__(self, app, token: str, duration: int = DEFAULT_DURATION) -> None:
         self.app = app
         self.token = token
         # `duracion <= 0` desactiva la sesión y deja la puerta como estaba: solo cabecera. Es la
         # salida para quien prefiera que el navegador no guarde nada.
-        self.duracion = max(0, int(duracion))
+        self.duration = max(0, int(duration))
 
-    def _entregando_sesion(self, send, valor: str):
+    def _delivering_session(self, send, value: str):
         """`send` envuelto para colgar la cookie de la primera respuesta que salga."""
 
-        async def enviar(mensaje):
-            if mensaje["type"] == "http.response.start":
-                mensaje = dict(mensaje)
-                mensaje["headers"] = [
-                    *(mensaje.get("headers") or []),
-                    (b"set-cookie", _set_cookie(valor, self.duracion)),
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                message = dict(message)
+                message["headers"] = [
+                    *(message.get("headers") or []),
+                    (b"set-cookie", _set_cookie(value, self.duration)),
                 ]
-            await send(mensaje)
+            await send(message)
 
-        return enviar
+        return send_wrapper
 
     async def __call__(self, scope, receive, send) -> None:
         # `lifespan` no es una petición: lo emite el servidor al arrancar y al parar, y filtrarlo
@@ -211,51 +211,51 @@ class TokenPuerto:
             await self.app(scope, receive, send)
             return
 
-        cabecera = None
-        for nombre, valor in scope.get("headers") or ():
-            if nombre == b"authorization":
-                cabecera = valor.decode("latin-1")
+        header = None
+        for name, value in scope.get("headers") or ():
+            if name == b"authorization":
+                header = value.decode("latin-1")
                 break
 
-        ahora = time.time()
+        now = time.time()
 
-        if self.duracion:
-            expira = sesion_valida(_cookies(scope).get(COOKIE), self.token, ahora)
-            if expira is not None:
+        if self.duration:
+            expires = valid_session(_cookies(scope).get(COOKIE), self.token, now)
+            if expires is not None:
                 # Renovar solo cuando ya se gastó media vida, en vez de en cada respuesta: así una
                 # sesión en uso no caduca nunca sin poner una `Set-Cookie` en cada carga de página.
-                if expira - ahora < self.duracion / 2:
-                    send = self._entregando_sesion(send, crear_sesion(self.token, self.duracion))
+                if expires - now < self.duration / 2:
+                    send = self._delivering_session(send, create_session(self.token, self.duration))
                 await self.app(scope, receive, send)
                 return
 
-        if peticion_autorizada(cabecera, self.token):
-            if self.duracion and es_basic(cabecera):
-                send = self._entregando_sesion(send, crear_sesion(self.token, self.duracion))
+        if is_request_authorized(header, self.token):
+            if self.duration and is_basic(header):
+                send = self._delivering_session(send, create_session(self.token, self.duration))
             await self.app(scope, receive, send)
             return
 
-        cuerpo = b"local-delegate: falta el token del puerto o no es correcto\n"
+        body = b"local-delegate: falta el token del puerto o no es correcto\n"
         await send(
             {
                 "type": "http.response.start",
                 "status": 401,
                 "headers": [
                     (b"content-type", b"text/plain; charset=utf-8"),
-                    (b"content-length", str(len(cuerpo)).encode("ascii")),
+                    (b"content-length", str(len(body)).encode("ascii")),
                     # Lo que hace que el navegador pregunte en vez de enseñar un 401 pelado.
                     (b"www-authenticate", _REALM.encode("ascii")),
                 ],
             }
         )
-        await send({"type": "http.response.body", "body": cuerpo})
+        await send({"type": "http.response.body", "body": body})
 
 
-def proteger(app, token: str, duracion: int = DURACION_POR_DEFECTO):
+def protect(app, token: str, duration: int = DEFAULT_DURATION):
     """Devuelve la app protegida, o la misma app si no hay token que exigir.
 
     Se decide aquí y no en quien llama para que exista **un solo** sitio donde se responde «¿este
     puerto está protegido?». Sin token, la app vuelve tal cual: quien no configura nada no paga ni
     una comparación por petición.
     """
-    return TokenPuerto(app, token, duracion) if token else app
+    return PortToken(app, token, duration) if token else app

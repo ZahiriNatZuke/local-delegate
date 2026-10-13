@@ -183,11 +183,11 @@ def test_el_aviso_de_terminal_solo_sale_con_tty_y_por_stderr(monkeypatch, capsys
             return self._tty
 
     monkeypatch.setattr(sys, "stdin", _Stdin(False))
-    entrypoint._aviso_de_terminal_interactiva()
+    entrypoint._interactive_terminal_warning()
     assert capsys.readouterr().err == ""
 
     monkeypatch.setattr(sys, "stdin", _Stdin(True))
-    entrypoint._aviso_de_terminal_interactiva()
+    entrypoint._interactive_terminal_warning()
     salida = capsys.readouterr()
     assert "local-delegate --help" in salida.err
     assert salida.out == ""  # stdout es el canal del protocolo MCP: jamás se escribe ahí
@@ -202,9 +202,9 @@ def test_el_aviso_no_revienta_con_un_stdin_raro(monkeypatch, capsys):
             raise ValueError("I/O operation on closed file")
 
     monkeypatch.setattr(sys, "stdin", None)
-    entrypoint._aviso_de_terminal_interactiva()
+    entrypoint._interactive_terminal_warning()
     monkeypatch.setattr(sys, "stdin", _Cerrado())
-    entrypoint._aviso_de_terminal_interactiva()
+    entrypoint._interactive_terminal_warning()
     assert capsys.readouterr().err == ""
 
 

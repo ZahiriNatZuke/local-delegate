@@ -3,12 +3,12 @@
 Complementa a la tool MCP ``local_status`` (que mira el *runtime*: backend vivo, modelos,
 VRAM/RAM) chequeando la *instalación*: el andamiaje en los clientes (hooks, skill, memoria y
 entradas MCP), el daemon, y qué versiones de ``llama-server`` (llama.cpp) y ``llama-swap``
-tienes instaladas respecto a las que esta release ha probado (``sondas.RECOMMENDED_VERSIONS``).
+tienes instaladas respecto a las que esta release ha probado (``probes.RECOMMENDED_VERSIONS``).
 Con ``--online`` consulta además la última release publicada en GitHub.
 
 Qué se comprueba y cómo no lo decide este módulo: vive una sola vez en ``checks.CHECKS``, y
 aquí solo se recorre y se imprime. Las sondas de versiones y del backend (``detect_*``,
-``_compare_line``, los issues de GitHub, ``backend_probe``) viven en ``sondas``, que no importa
+``_compare_line``, los issues de GitHub, ``backend_probe``) viven en ``probes``, que no importa
 ni este módulo ni ``checks``: así ``checks`` las usa sin importar ``doctor`` y no hay ciclo.
 """
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from . import checks, config, sondas
+from . import checks, config, probes
 
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
 # depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
@@ -96,7 +96,7 @@ def run_doctor(args: argparse.Namespace) -> int:
         print()
         print("Issues abiertos con señales de riesgo (revisión manual antes de canary):")
         for component in ("llama-swap", "llama-server"):
-            issues = sondas.recent_relevant_issues(component)
+            issues = probes.recent_relevant_issues(component)
             if not issues:
                 print(
                     f"  [ -- ] {component}: ninguno detectado en los 30 actualizados más recientes"

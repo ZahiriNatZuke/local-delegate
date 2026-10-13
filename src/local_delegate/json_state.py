@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 
-def leer_json(path: Path) -> dict:
+def read_json(path: Path) -> dict:
     """El objeto JSON del fichero, o `{}` si no existe, no se puede leer o no es un objeto."""
     try:
         with path.open(encoding="utf-8") as f:
@@ -23,7 +23,7 @@ def leer_json(path: Path) -> dict:
         return {}
 
 
-def escribir_json_atomico(path: Path, data: dict) -> None:
+def write_json_atomic(path: Path, data: dict) -> None:
     # El temporal lleva el pid en el nombre: varios procesos MCP (cada sesión de Claude en
     # stdio, más el daemon) escriben este mismo archivo, y un ".tmp" compartido hacía que
     # dos escrituras simultáneas se pisaran el temporal y publicaran contenido mezclado o

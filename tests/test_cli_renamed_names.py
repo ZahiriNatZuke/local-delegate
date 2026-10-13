@@ -192,8 +192,8 @@ def test_package_prefers_the_new_name_when_both_are_set():
 
 def test_both_names_are_in_the_isolated_inventory():
     for new, old in RENAMED_ENV:
-        assert new in config.VARIABLES_DE_ENTORNO, new
-        assert old in config.VARIABLES_DE_ENTORNO, old
+        assert new in config.ENVIRONMENT_VARIABLES, new
+        assert old in config.ENVIRONMENT_VARIABLES, old
 
 
 # --- REQ-002: variables en un hook instalado -------------------------------------------------

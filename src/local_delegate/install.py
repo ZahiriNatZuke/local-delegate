@@ -183,13 +183,13 @@ def present_targets(home: Path) -> set[str]:
     Code, Codex»), no un dato. Derivar de ahí a quién se le escribe la configuración ataría el
     instalador a un string de interfaz.
     """
-    candidatos = {
+    candidates = {
         "claude": home / ".claude",
         "codex": home / ".codex",
         # opencode NO cuelga del HOME como los otros dos: ver `opencode_dir`.
         "opencode": opencode_dir(home),
     }
-    return {name for name, path in candidatos.items() if path.is_dir()}
+    return {name for name, path in candidates.items() if path.is_dir()}
 
 
 def default_python() -> str:
@@ -389,8 +389,8 @@ def hook_command(
     ``extra`` son argumentos para el script. Solo lo usa el hook de Read, y para que el propio
     registro sea el interruptor: ver el comentario de ``_READ_HOOK``.
     """
-    partes = [python_exe, f'"{(hooks_dir / script).as_posix()}"', *extra]
-    return " ".join(partes)
+    parts = [python_exe, f'"{(hooks_dir / script).as_posix()}"', *extra]
+    return " ".join(parts)
 
 
 # Nombres de nuestros scripts: sirven para reconocer instalaciones ANTERIORES hechas a mano
@@ -447,8 +447,8 @@ def read_hook_registered(claude_dir: Path) -> bool:
                 if not isinstance(hook, dict) or not _is_ours(hook, hooks_dir):
                     continue
                 args = hook.get("args")
-                texto = " ".join([str(hook.get("command", ""))] + [str(a) for a in args or []])
-                if _READ_HOOK[0] in texto:
+                text = " ".join([str(hook.get("command", ""))] + [str(a) for a in args or []])
+                if _READ_HOOK[0] in text:
                     return True
     return False
 
@@ -565,11 +565,11 @@ def mcp_entry(
             # expansión de `${VAR}` dentro de `headers` funciona y llega al servidor ya resuelta.
             entry["headers"] = {"Authorization": f"Bearer ${{{WEB_TOKEN_VAR}}}"}
         return entry
-    comando = uvx_command(version)
+    command = uvx_command(version)
     entry: dict = {
         "type": "stdio",
-        "command": comando[0],
-        "args": comando[1:],
+        "command": command[0],
+        "args": command[1:],
     }
     env = stdio_env(base_url, api_key_env, "${LOCAL_DELEGATE_API_KEY}")
     if env:
@@ -584,10 +584,10 @@ def mcp_entry(
 # no se deduce preguntando al daemon: `install` no sale a la red por contrato.
 _CODEX_BEARER_RE = re.compile(r'bearer_token_env_var\s*=\s*"([^"]+)"')
 # `Bearer ${VAR}` (Claude Code) o `Bearer {env:VAR}` (opencode). Lo que no casa es un token literal.
-_REFERENCIA_RE = re.compile(r"^Bearer (?:\$\{([^}]+)\}|\{env:([^}]+)\})$")
+_REFERENCE_RE = re.compile(r"^Bearer (?:\$\{([^}]+)\}|\{env:([^}]+)\})$")
 
 
-def cabecera_existente(home: Path, target: str) -> str | None:
+def existing_header(home: Path, target: str) -> str | None:
     """El valor de `Authorization` de la entrada HTTP ya instalada en ``target``, o ``None``.
 
     Se devuelve **en la sintaxis de ese cliente** y tal cual, incluido un nombre de variable que no
@@ -600,27 +600,27 @@ def cabecera_existente(home: Path, target: str) -> str | None:
     if target == "claude":
         servers = _read_json(home / ".claude.json").get("mcpServers")
         entry = servers.get(SERVER_NAME) if isinstance(servers, dict) else None
-        tipo = "http"
+        kind = "http"
     elif target == "opencode":
         entry = opencode_mcp_installed(home)
-        tipo = "remote"
+        kind = "remote"
     elif target == "codex":
         section = _CODEX_SECTION_RE.search(_read_text(home / ".codex" / "config.toml"))
-        hallado = _CODEX_BEARER_RE.search(section.group(0)) if section else None
-        return f"Bearer ${{{hallado.group(1)}}}" if hallado else None
+        found = _CODEX_BEARER_RE.search(section.group(0)) if section else None
+        return f"Bearer ${{{found.group(1)}}}" if found else None
     else:
         return None
-    if not isinstance(entry, dict) or entry.get("type") != tipo:
+    if not isinstance(entry, dict) or entry.get("type") != kind:
         return None
-    valor = (entry.get("headers") or {}).get("Authorization")
-    return valor if isinstance(valor, str) and valor else None
+    value = (entry.get("headers") or {}).get("Authorization")
+    return value if isinstance(value, str) and value else None
 
 
-def _con_cabecera(entry: dict, cabecera: str | None) -> dict:
+def _with_header(entry: dict, header: str | None) -> dict:
     """``entry`` con la cabecera conservada. Una entrada que no es HTTP se devuelve intacta."""
-    if not cabecera or entry.get("type") not in ("http", "remote"):
+    if not header or entry.get("type") not in ("http", "remote"):
         return entry
-    return {**entry, "headers": {"Authorization": cabecera}}
+    return {**entry, "headers": {"Authorization": header}}
 
 
 # --- Los plazos que ya tenía la entrada ---------------------------------------
@@ -670,13 +670,13 @@ def _describe_timeouts(timeouts: dict) -> str:
     return ", ".join(f"{k} = {v}" for k, v in timeouts.items())
 
 
-def _sin_secretos(entry: dict) -> dict:
+def _without_secrets(entry: dict) -> dict:
     """Copia para ENSEÑAR (el `literal` del `--dry-run`): un token escrito a pelo no se imprime.
 
     Se escribe tal cual en disco —ya estaba ahí—, pero la pantalla no es sitio para un secreto.
     """
-    valor = (entry.get("headers") or {}).get("Authorization")
-    if not valor or _REFERENCIA_RE.match(valor):
+    value = (entry.get("headers") or {}).get("Authorization")
+    if not value or _REFERENCE_RE.match(value):
         return entry
     return {**entry, "headers": {"Authorization": "Bearer <token conservado, no se muestra>"}}
 
@@ -704,7 +704,7 @@ def _codex_mcp_lines(entry: dict) -> list[str]:
             # siquiera sería posible.
             # El nombre sale de la cabecera y no de la constante: una entrada conservada puede
             # referenciar otra variable, y reescribirla con la nuestra sería cambiar lo que iba.
-            ref = _REFERENCIA_RE.match(entry["headers"].get("Authorization", ""))
+            ref = _REFERENCE_RE.match(entry["headers"].get("Authorization", ""))
             var = (ref.group(1) or ref.group(2)) if ref else WEB_TOKEN_VAR
             lines.append(f"bearer_token_env_var = {json.dumps(var)}")
         return lines
@@ -778,7 +778,7 @@ def remove_codex_mcp(text: str) -> str:
 # una que escribió el usuario a mano, así que tampoco hay pregunta previa como la de
 # `--force-mcp-codex`. Es exactamente lo que ya pasa con Claude Code, y por el mismo motivo: lo que
 # protege el `warn` de Codex es el bloque sin marcadores, y aquí no hay marcadores que mirar.
-def _escanear_jsonc(texto: str) -> tuple[str, bool]:
+def _scan_jsonc(text: str) -> tuple[str, bool]:
     """(texto sin comentarios, había comentarios). Una sola definición de «esto es un comentario».
 
     Detectar comentarios con ``"//" in texto`` es **falso** y de un modo que se dispara justo en
@@ -790,57 +790,57 @@ def _escanear_jsonc(texto: str) -> tuple[str, bool]:
     números de línea del texto resultante sigan siendo los del original: si ``json.loads`` falla
     después, el error señala el sitio de verdad.
     """
-    salida: list[str] = []
-    dentro_de_cadena = False
-    escapado = False
-    habia = False
+    out: list[str] = []
+    in_string = False
+    escaped = False
+    had_comments = False
     i = 0
-    n = len(texto)
+    n = len(text)
     while i < n:
-        c = texto[i]
-        if dentro_de_cadena:
-            salida.append(c)
-            if escapado:
-                escapado = False
+        c = text[i]
+        if in_string:
+            out.append(c)
+            if escaped:
+                escaped = False
             elif c == "\\":
-                escapado = True
+                escaped = True
             elif c == '"':
-                dentro_de_cadena = False
+                in_string = False
             i += 1
             continue
         if c == '"':
-            dentro_de_cadena = True
-            salida.append(c)
+            in_string = True
+            out.append(c)
             i += 1
             continue
-        if c == "/" and i + 1 < n and texto[i + 1] == "/":
-            habia = True
-            while i < n and texto[i] != "\n":
-                salida.append(" ")
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            had_comments = True
+            while i < n and text[i] != "\n":
+                out.append(" ")
                 i += 1
             continue
-        if c == "/" and i + 1 < n and texto[i + 1] == "*":
-            habia = True
-            fin = texto.find("*/", i + 2)
-            fin = n if fin == -1 else fin + 2
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            had_comments = True
+            end = text.find("*/", i + 2)
+            end = n if end == -1 else end + 2
             # Los saltos de línea se conservan: si no, un comentario de bloque desplazaría todas
             # las líneas siguientes y el error de parseo señalaría a otro sitio.
-            salida.extend("\n" if ch == "\n" else " " for ch in texto[i:fin])
-            i = fin
+            out.extend("\n" if ch == "\n" else " " for ch in text[i:end])
+            i = end
             continue
-        salida.append(c)
+        out.append(c)
         i += 1
-    return "".join(salida), habia
+    return "".join(out), had_comments
 
 
-def tiene_comentarios(texto: str) -> bool:
+def has_comments(text: str) -> bool:
     """True si el JSONC lleva comentarios fuera de una cadena."""
-    return _escanear_jsonc(texto)[1]
+    return _scan_jsonc(text)[1]
 
 
-def strip_jsonc(texto: str) -> str:
+def strip_jsonc(text: str) -> str:
     """Texto sin comentarios. **Solo para leer**: este resultado nunca se escribe a disco."""
-    return _escanear_jsonc(texto)[0]
+    return _scan_jsonc(text)[0]
 
 
 def opencode_config_paths(home: Path) -> tuple[Path, ...]:
@@ -872,15 +872,15 @@ def read_opencode_config(path: Path) -> tuple[dict | None, str | None]:
     ``(None, motivo)`` cuando existe y no se puede entender, que es ``unknown`` y nunca ``missing``.
     """
     try:
-        texto = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return None, None
     except (OSError, UnicodeDecodeError) as exc:
         return None, f"no se pudo leer {path}: {getattr(exc, 'strerror', None) or exc}"
-    if not texto.strip():
+    if not text.strip():
         return {}, None
     try:
-        data = json.loads(strip_jsonc(texto))
+        data = json.loads(strip_jsonc(text))
     except ValueError as exc:
         return None, f"{path} no es JSON(C) válido ({exc.msg})"
     return (data, None) if isinstance(data, dict) else (None, f"{path} no contiene un objeto")
@@ -932,11 +932,11 @@ def opencode_mcp_add_args(entry: dict) -> list[str]:
     args = ["mcp", "add", SERVER_NAME]
     if entry.get("type") == "remote":
         args += ["--url", str(entry["url"])]
-        for nombre, valor in (entry.get("headers") or {}).items():
-            args += ["--header", f"{nombre}={valor}"]
+        for name, value in (entry.get("headers") or {}).items():
+            args += ["--header", f"{name}={value}"]
         return args
-    for nombre, valor in (entry.get("environment") or {}).items():
-        args += ["--env", f"{nombre}={valor}"]
+    for name, value in (entry.get("environment") or {}).items():
+        args += ["--env", f"{name}={value}"]
     # El comando va tras `--`, y no como valor de una opción: así lo pide la CLI (medido).
     return args + ["--", *entry.get("command", [])]
 
@@ -988,10 +988,10 @@ def packaged_hook_names() -> set[str]:
     degradación segura de una operación destructiva es no hacer nada.
     """
     try:
-        empaquetados = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
+        packaged = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
     except OSError:
         return set()
-    return empaquetados | set(_RETIRED_SCRIPTS)
+    return packaged | set(_RETIRED_SCRIPTS)
 
 
 def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
@@ -1066,28 +1066,28 @@ def _prune_orphans_action(claude_dir: Path) -> Action:
     return Action("prune", root, "retira scripts de hooks de una instalación anterior", _run)
 
 
-def _agents_action(agents_dir: Path, cambios: list) -> Action:
+def _agents_action(agents_dir: Path, changes: list) -> Action:
     """Escribe los subagentes que cambian. `cambios` viene de `agents.pending()`, que solo lee."""
-    resumen = ", ".join(
+    summary = ", ".join(
         f"{path.name} (+{len(added)} tools{', catálogo ' + action if action else ''})"
-        for path, _text, added, action in cambios
+        for path, _text, added, action in changes
     )
 
     def _run() -> str:
-        escritos, fallidos = [], []
-        for path, text, _added, _action in cambios:
+        written, failed = [], []
+        for path, text, _added, _action in changes:
             try:
                 # `_write_text` deja `.bak` y conserva el terminador de línea del fichero: en
                 # Windows, escribir con el de la plataforma marcaría el agente entero como
                 # modificado por haberle añadido una línea.
                 _write_text(path, text)
-                escritos.append(path.name)
+                written.append(path.name)
             except OSError as exc:
-                fallidos.append(f"{path.name} ({exc.strerror or exc})")
-        detalle = f"actualizados {len(escritos)}: {', '.join(escritos)}"
-        return detalle + (f" · NO se pudieron escribir: {'; '.join(fallidos)}" if fallidos else "")
+                failed.append(f"{path.name} ({exc.strerror or exc})")
+        detail = f"actualizados {len(written)}: {', '.join(written)}"
+        return detail + (f" · NO se pudieron escribir: {'; '.join(failed)}" if failed else "")
 
-    return Action("agents", agents_dir, f"actualiza {len(cambios)} subagente(s): {resumen}", _run)
+    return Action("agents", agents_dir, f"actualiza {len(changes)} subagente(s): {summary}", _run)
 
 
 def _copy_tree_action(src: Path, dst: Path, detail: str) -> Action:
@@ -1121,8 +1121,8 @@ def plan_install(opts: Options) -> list[Action]:
         ]
         if opts.enable_read_hook:
             for script, event, matcher in (_READ_HOOK, _MCP_READ_HOOK, _SHELL_HOOK):
-                comando = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
-                entries.append((event, matcher, comando))
+                command = hook_command(hooks_dst, script, opts.python_exe, (READ_HOOK_FLAG,))
+                entries.append((event, matcher, command))
         settings_path = claude / "settings.json"
 
         def _run_settings(path=settings_path, entries=entries, hooks_dir=hooks_dst) -> str:
@@ -1182,9 +1182,9 @@ def plan_install(opts: Options) -> list[Action]:
         from . import agents as agents_mod
 
         skill_md = res / "skills" / SKILL_NAME / "SKILL.md"
-        cambios = agents_mod.pending(claude / "agents", skill_md)
-        if cambios:
-            actions.append(_agents_action(claude / "agents", cambios))
+        changes = agents_mod.pending(claude / "agents", skill_md)
+        if changes:
+            actions.append(_agents_action(claude / "agents", changes))
 
     if "memory" in opts.components:
         block = (res / "memory" / "local-delegate.md").read_text(encoding="utf-8")
@@ -1213,49 +1213,49 @@ def plan_install(opts: Options) -> list[Action]:
             actions.append(Action("markdown", path, "bloque de regla de delegación", _run_md))
 
     if "mcp" in opts.components:
-        pedida = opts.web_token_env is True
+        requested = opts.web_token_env is True
         entry = mcp_entry(
             opts.mcp_mode,
             opts.base_url,
             opts.api_key_env,
             opts.pin_version,
-            pedida,
+            requested,
         )
-        detalle = f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})"
+        detail = f"registra el servidor MCP '{SERVER_NAME}' ({opts.mcp_mode})"
 
-        def _conservada(target: str) -> str | None:
+        def _kept(target: str) -> str | None:
             # Solo cuando nadie dijo nada: un flag explícito, en cualquiera de sus dos sentidos,
             # es una orden y manda sobre lo que hubiera.
             if opts.web_token_env is not None:
                 return None
-            return cabecera_existente(opts.home, target)
+            return existing_header(opts.home, target)
 
-        def _detalle(cabecera: str | None, plazos: dict) -> str:
-            texto = detalle
-            if cabecera:
-                texto += " — conserva la cabecera de autorización que ya tenía"
-            if plazos:
-                texto += f" — conserva el plazo que ya tenía ({_describe_timeouts(plazos)})"
-            return texto
+        def _detail(header: str | None, timeouts: dict) -> str:
+            text = detail
+            if header:
+                text += " — conserva la cabecera de autorización que ya tenía"
+            if timeouts:
+                text += f" — conserva el plazo que ya tenía ({_describe_timeouts(timeouts)})"
+            return text
 
         if "claude" in opts.targets:
-            conservada = _conservada("claude")
-            plazos = existing_timeouts(opts.home, "claude")
-            claude_entry = {**_con_cabecera(entry, conservada), **plazos}
+            kept = _kept("claude")
+            timeouts = existing_timeouts(opts.home, "claude")
+            claude_entry = {**_with_header(entry, kept), **timeouts}
             actions.append(
                 Action(
                     "mcp",
                     "claude",
-                    _detalle(conservada, plazos),
+                    _detail(kept, timeouts),
                     lambda entry=claude_entry: _register_claude_mcp(opts, entry),
-                    literal=json.dumps(_sin_secretos(claude_entry), ensure_ascii=False),
+                    literal=json.dumps(_without_secrets(claude_entry), ensure_ascii=False),
                 )
             )
         if "codex" in opts.targets and not opts.skip_codex_mcp:
             config_path = codex / "config.toml"
-            conservada = _conservada("codex")
-            plazos = existing_timeouts(opts.home, "codex")
-            codex_block = codex_mcp_block(_con_cabecera(entry, conservada), plazos)
+            kept = _kept("codex")
+            timeouts = existing_timeouts(opts.home, "codex")
+            codex_block = codex_mcp_block(_with_header(entry, kept), timeouts)
 
             def _run_codex(path=config_path, block=codex_block) -> str:
                 _write_text(path, upsert_codex_mcp(_read_text(path), block))
@@ -1265,34 +1265,36 @@ def plan_install(opts: Options) -> list[Action]:
                 Action(
                     "toml",
                     config_path,
-                    _detalle(conservada, plazos),
+                    _detail(kept, timeouts),
                     _run_codex,
                     literal=codex_block,
                 )
             )
         if "opencode" in opts.targets:
-            conservada = _conservada("opencode")
-            plazos = existing_timeouts(opts.home, "opencode")
+            kept = _kept("opencode")
+            timeouts = existing_timeouts(opts.home, "opencode")
             oc_entry = {
-                **_con_cabecera(
+                **_with_header(
                     opencode_mcp_entry(
                         opts.mcp_mode,
                         opts.base_url,
                         opts.api_key_env,
                         opts.pin_version,
-                        pedida,
+                        requested,
                     ),
-                    conservada,
+                    kept,
                 ),
-                **plazos,
+                **timeouts,
             }
             actions.append(
                 Action(
                     "mcp",
                     "opencode",
-                    _detalle(conservada, plazos),
+                    _detail(kept, timeouts),
                     lambda entry=oc_entry: _register_opencode_mcp(opts, entry),
-                    literal=json.dumps({SERVER_NAME: _sin_secretos(oc_entry)}, ensure_ascii=False),
+                    literal=json.dumps(
+                        {SERVER_NAME: _without_secrets(oc_entry)}, ensure_ascii=False
+                    ),
                 )
             )
     return actions
@@ -1328,9 +1330,9 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
             )
             # Con un plazo conservado se comprueba que la CLI lo dejó escrito: si lo descartara,
             # el usuario lo perdería igual que antes del arreglo. Si no está, se escribe el fichero.
-            plazos = {k: entry[k] for k in TIMEOUT_KEYS["claude"] if k in entry}
+            timeouts = {k: entry[k] for k in TIMEOUT_KEYS["claude"] if k in entry}
             if done.returncode == 0 and (
-                not plazos or existing_timeouts(opts.home, "claude") == plazos
+                not timeouts or existing_timeouts(opts.home, "claude") == timeouts
             ):
                 return "registrado con `claude mcp add-json --scope user`"
         except (OSError, subprocess.SubprocessError):
@@ -1348,14 +1350,14 @@ def _register_claude_mcp(opts: Options, entry: dict) -> str:
 
 # Lo que se dice cuando la entrada de opencode NO se escribe. Es un aviso, no un fallo: el resto de
 # componentes sí se instala y el exit code no sube (ver la regla en `apply`).
-_OPENCODE_NO_TOCADO = (
+_OPENCODE_UNTOUCHED = (
     "no se tocó {path}: sin la CLI `opencode` y con un fichero que no se puede reescribir sin "
-    "destruir lo que hay ({motivo}). Instala opencode en el PATH y repite, o añade la entrada "
+    "destruir lo que hay ({reason}). Instala opencode en el PATH y repite, o añade la entrada "
     "'{server}' a mano"
 )
 
 
-def _leer_config_opencode(path: Path) -> tuple[str, str | None]:
+def _read_opencode_config(path: Path) -> tuple[str, str | None]:
     """(contenido, motivo por el que no se pudo leer).
 
     **No** vale ``_read_text`` aquí, y la diferencia es un defecto de verdad: aquella devuelve
@@ -1372,7 +1374,7 @@ def _leer_config_opencode(path: Path) -> tuple[str, str | None]:
         return "", f"no se pudo leer: {getattr(exc, 'strerror', None) or exc}"
 
 
-def _motivo_para_no_escribir(texto: str) -> str | None:
+def _reason_not_to_write(text: str) -> str | None:
     """Por qué NO se puede reescribir este config, o ``None`` si sí se puede.
 
     Se comprueba antes de tocar nada y por dos condiciones distintas, porque el riesgo es distinto
@@ -1381,16 +1383,16 @@ def _motivo_para_no_escribir(texto: str) -> str | None:
     sin inventarse lo que decía. En los dos casos el lado seguro es el mismo: no escribir y avisar.
 
     Ojo: recibe el texto **ya leído con éxito**. Que el fichero se pueda leer es condición previa y
-    la resuelve `_leer_config_opencode`, porque un fallo de lectura aquí llegaría como `""` y se
+    la resuelve `_read_opencode_config`, porque un fallo de lectura aquí llegaría como `""` y se
     confundiría con un fichero vacío, que sí es escribible.
     """
-    if not texto.strip():
+    if not text.strip():
         return None
-    limpio, habia = _escanear_jsonc(texto)
-    if habia:
+    clean, had_comments = _scan_jsonc(text)
+    if had_comments:
         return "tiene comentarios y se perderían"
     try:
-        data = json.loads(limpio)
+        data = json.loads(clean)
     except ValueError as exc:
         return f"no es JSON(C) válido: {exc.msg}"
     if not isinstance(data, dict):
@@ -1422,10 +1424,10 @@ def _opencode_cli_env(home: Path) -> dict[str, str]:
     que es justo donde opencode habría escrito. Con `--home`, mantiene la escritura dentro del
     árbol simulado — que es lo que `claude mcp add-json --scope user` **no** sabe hacer.
     """
-    entorno = dict(os.environ)
-    entorno["HOME"] = str(home)
-    entorno["XDG_CONFIG_HOME"] = str(opencode_dir(home).parent)
-    return entorno
+    environment = dict(os.environ)
+    environment["HOME"] = str(home)
+    environment["XDG_CONFIG_HOME"] = str(opencode_dir(home).parent)
+    return environment
 
 
 def _register_opencode_mcp(opts: Options, entry: dict) -> str:
@@ -1445,8 +1447,8 @@ def _register_opencode_mcp(opts: Options, entry: dict) -> str:
     `--header`, `--env`) no lo expresan, y registrar por ahí lo perdería. Se va al fichero, y si
     el fichero no se puede reescribir se avisa y la entrada anterior, con su plazo, queda intacta.
     """
-    lleva_plazo = any(k in entry for k in TIMEOUT_KEYS["opencode"])
-    if opts.use_cli and not lleva_plazo and shutil.which("opencode"):
+    has_timeout = any(k in entry for k in TIMEOUT_KEYS["opencode"])
+    if opts.use_cli and not has_timeout and shutil.which("opencode"):
         try:
             done = subprocess.run(
                 ["opencode", *opencode_mcp_add_args(entry)],
@@ -1465,11 +1467,11 @@ def _register_opencode_mcp(opts: Options, entry: dict) -> str:
             pass  # cae al modo archivo
 
     path = opencode_config_target(opts.home)
-    texto, fallo = _leer_config_opencode(path)
-    motivo = fallo or _motivo_para_no_escribir(texto)
-    if motivo:
-        return _OPENCODE_NO_TOCADO.format(path=path, motivo=motivo, server=SERVER_NAME)
-    data = json.loads(strip_jsonc(texto)) if texto.strip() else {"$schema": OPENCODE_SCHEMA}
+    text, failure = _read_opencode_config(path)
+    reason = failure or _reason_not_to_write(text)
+    if reason:
+        return _OPENCODE_UNTOUCHED.format(path=path, reason=reason, server=SERVER_NAME)
+    data = json.loads(strip_jsonc(text)) if text.strip() else {"$schema": OPENCODE_SCHEMA}
     servers = data.setdefault("mcp", {})
     servers[SERVER_NAME] = entry
     _write_json(path, data)
@@ -1483,16 +1485,16 @@ def _unregister_opencode_mcp(opts: Options) -> str:
     comando en el que delegar, así que la edición es nuestra y con la misma regla de seguridad que
     al instalar.
     """
-    detalles: list[str] = []
+    details: list[str] = []
     for path in opencode_config_paths(opts.home):
         if not path.is_file():
             continue
-        texto, fallo = _leer_config_opencode(path)
-        motivo = fallo or _motivo_para_no_escribir(texto)
-        if motivo:
-            detalles.append(f"{path}: no se tocó ({motivo})")
+        text, failure = _read_opencode_config(path)
+        reason = failure or _reason_not_to_write(text)
+        if reason:
+            details.append(f"{path}: no se tocó ({reason})")
             continue
-        data = json.loads(strip_jsonc(texto)) if texto.strip() else {}
+        data = json.loads(strip_jsonc(text)) if text.strip() else {}
         servers = data.get("mcp")
         if not isinstance(servers, dict) or servers.pop(SERVER_NAME, None) is None:
             continue
@@ -1501,8 +1503,8 @@ def _unregister_opencode_mcp(opts: Options) -> str:
         if not servers:
             data.pop("mcp", None)
         _write_json(path, data)
-        detalles.append(f"quitado de {path}")
-    return " · ".join(detalles) if detalles else "no estaba registrado"
+        details.append(f"quitado de {path}")
+    return " · ".join(details) if details else "no estaba registrado"
 
 
 def plan_uninstall(opts: Options) -> list[Action]:
@@ -1656,8 +1658,8 @@ def apply(actions: list[Action], *, dry_run: bool, out=print) -> int:
             # El literal SOLO aquí: al aplicar de verdad, la salida ya la escribe `action.run()`
             # con lo que pasó, y repetir lo que se iba a escribir sobraría. En `--dry-run` es al
             # revés: es lo único que se puede revisar antes de que toque el disco.
-            for linea in action.literal.splitlines():
-                out(f"          {linea}")
+            for line in action.literal.splitlines():
+                out(f"          {line}")
             continue
         out(action.describe())
         try:

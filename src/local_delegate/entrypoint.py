@@ -22,7 +22,7 @@ import sys
 from . import autostart, config, server
 
 
-def _aviso_de_terminal_interactiva() -> None:
+def _interactive_terminal_warning() -> None:
     """Dice por qué no pasa nada cuando una persona escribe el comando a secas.
 
     Sin argumentos esto es un servidor MCP stdio, que se queda esperando mensajes JSON-RPC:
@@ -36,10 +36,10 @@ def _aviso_de_terminal_interactiva() -> None:
     no redirige desde ``NUL``, usa una **tubería**, y con una tubería no sale nada (verificado).
     """
     try:
-        interactiva = sys.stdin is not None and sys.stdin.isatty()
+        interactive = sys.stdin is not None and sys.stdin.isatty()
     except (AttributeError, ValueError, OSError):
         return  # bajo un host MCP stdin puede estar cerrado o no ser un fichero de verdad
-    if not interactiva:
+    if not interactive:
         return
     print(
         "local-delegate: sin subcomando, esto arranca el servidor MCP stdio y espera por stdin.\n"
@@ -67,7 +67,7 @@ def main() -> None:
 
         sys.exit(cli.run(sys.argv[1:]))
 
-    _aviso_de_terminal_interactiva()
+    _interactive_terminal_warning()
     # Auto-arranque del backend solo si el usuario lo pidió explícitamente (opt-in).
     if config.AUTOSTART:
         autostart.ensure_backend(wait=0)

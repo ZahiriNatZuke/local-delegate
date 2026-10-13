@@ -1,0 +1,13 @@
+# git ls-files --eol, HEAD 0d49cbf frente al árbol de A8a-2
+994d993
+< i/lf    w/lf    attr/                 	src/local_delegate/estado_json.py
+997a997
+> i/lf    w/lf    attr/                 	src/local_delegate/json_state.py
+1003d1002
+< i/crlf  w/crlf  attr/                 	src/local_delegate/preguntas.py
+1004a1004,1005
+> i/lf    w/lf    attr/                 	src/local_delegate/probes.py
+> i/crlf  w/crlf  attr/                 	src/local_delegate/questions.py
+1023d1023
+< i/lf    w/lf    attr/                 	src/local_delegate/sondas.py
+líneas distintas: 6

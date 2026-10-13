@@ -38,7 +38,7 @@ def _con_cookie(valor: str) -> dict[str, str]:
     return {"Cookie": f"{auth.COOKIE}={valor}"}
 
 
-def _app(duracion: int = auth.DURACION_POR_DEFECTO) -> TestClient:
+def _app(duracion: int = auth.DEFAULT_DURATION) -> TestClient:
     """Reproduce la forma real del daemon: una raíz con otra app montada debajo.
 
     Montar de verdad importa: el fallo que este diseño evita es proteger la app de arriba y
@@ -58,7 +58,7 @@ def _app(duracion: int = auth.DURACION_POR_DEFECTO) -> TestClient:
         ]
     )
     externa = Starlette(routes=[Route("/mcp", raiz, methods=["GET"]), Mount("/", app=interna)])
-    return TestClient(auth.proteger(externa, TOKEN, duracion))
+    return TestClient(auth.protect(externa, TOKEN, duracion))
 
 
 @pytest.fixture
@@ -106,8 +106,8 @@ def test_el_prefijo_correcto_no_basta(cliente):
     Escrito aparte porque es la propiedad que rompería una comparación byte a byte con salida
     temprana, que es justo lo que `secrets.compare_digest` existe para evitar.
     """
-    assert not auth.peticion_autorizada(f"Bearer {TOKEN[:-1]}", TOKEN)
-    assert not auth.peticion_autorizada(f"Bearer {TOKEN}x", TOKEN)
+    assert not auth.is_request_authorized(f"Bearer {TOKEN[:-1]}", TOKEN)
+    assert not auth.is_request_authorized(f"Bearer {TOKEN}x", TOKEN)
 
 
 # --- Lo que SÍ debe entrar ---------------------------------------------------
@@ -138,7 +138,7 @@ def test_basic_entra_porque_un_navegador_no_manda_bearer(cliente):
 def test_el_usuario_de_basic_da_igual(cliente):
     """Solo se compara la contraseña: no hay cuentas, hay un secreto."""
     for usuario in ("", "admin", "yohan"):
-        assert auth.peticion_autorizada(_basic(usuario, TOKEN), TOKEN)
+        assert auth.is_request_authorized(_basic(usuario, TOKEN), TOKEN)
 
 
 def test_un_token_con_dos_puntos_dentro_sigue_valiendo():
@@ -149,8 +149,8 @@ def test_un_token_con_dos_puntos_dentro_sigue_valiendo():
     («a mí me funciona» según qué token te toque).
     """
     raro = "abc:def:ghi"
-    assert auth.peticion_autorizada(_basic("usuario", raro), raro)
-    assert auth.peticion_autorizada(f"Bearer {raro}", raro)
+    assert auth.is_request_authorized(_basic("usuario", raro), raro)
+    assert auth.is_request_authorized(f"Bearer {raro}", raro)
 
 
 # --- Cómo se rechaza, que también importa ------------------------------------
@@ -174,14 +174,14 @@ def test_el_rechazo_no_filtra_el_token(cliente):
 
 
 def test_sin_token_la_app_vuelve_intacta():
-    """Quien no configura token no paga ni una comparación: `proteger` devuelve el mismo objeto."""
+    """Quien no configura token no paga ni una comparación: `protect` devuelve el mismo objeto."""
 
     async def ruta(_request):
         return PlainTextResponse("libre")
 
     app = Starlette(routes=[Route("/mcp", ruta, methods=["GET"])])
-    assert auth.proteger(app, "") is app
-    assert TestClient(auth.proteger(app, "")).get("/mcp").status_code == 200
+    assert auth.protect(app, "") is app
+    assert TestClient(auth.protect(app, "")).get("/mcp").status_code == 200
 
 
 # --- La sesión del navegador -------------------------------------------------
@@ -195,13 +195,13 @@ def test_sin_token_la_app_vuelve_intacta():
 def test_la_cookie_buena_entra_y_las_de_alrededor_no():
     """Control positivo y negativos juntos: la misma fábrica produce las de las dos columnas."""
     cliente = _app()
-    buena = auth.crear_sesion(TOKEN, 3600)
+    buena = auth.create_session(TOKEN, 3600)
     assert cliente.get("/", headers=_con_cookie(buena)).status_code == 200, (
         "la sesión legítima no entró: los rechazos de abajo no probarían nada"
     )
 
-    caducada = auth.crear_sesion(TOKEN, -1)
-    de_otro_token = auth.crear_sesion("otro-token", 3600)
+    caducada = auth.create_session(TOKEN, -1)
+    de_otro_token = auth.create_session("otro-token", 3600)
     expira, _, firma = buena.partition(".")
     alargada = f"{int(expira) + 10 * 3600}.{firma}"
 
@@ -227,18 +227,18 @@ def test_alargar_la_sesion_no_es_posible_sin_el_token():
     Si se firmara solo una parte, una cookie legítima recién caducada se convertiría en eterna
     cambiándole el número, que es el único ataque que esta cookie tiene que aguantar.
     """
-    caducada = auth.crear_sesion(TOKEN, -1)
+    caducada = auth.create_session(TOKEN, -1)
     _, _, firma = caducada.partition(".")
     futuro = int(time.time()) + 3600
-    assert auth.sesion_valida(f"{futuro}.{firma}", TOKEN) is None
-    assert auth.sesion_valida(auth.crear_sesion(TOKEN, 3600), TOKEN) is not None
+    assert auth.valid_session(f"{futuro}.{firma}", TOKEN) is None
+    assert auth.valid_session(auth.create_session(TOKEN, 3600), TOKEN) is not None
 
 
 def test_rotar_el_token_invalida_las_sesiones_vivas():
     """Cambiar el secreto tiene que echar a todo el mundo, y sin lista de sesiones que purgar."""
-    vieja = auth.crear_sesion(TOKEN, 3600)
-    assert auth.sesion_valida(vieja, TOKEN) is not None
-    assert auth.sesion_valida(vieja, TOKEN + "-rotado") is None
+    vieja = auth.create_session(TOKEN, 3600)
+    assert auth.valid_session(vieja, TOKEN) is not None
+    assert auth.valid_session(vieja, TOKEN + "-rotado") is None
 
 
 def test_basic_entrega_sesion_y_la_segunda_visita_ya_no_pide_nada():
@@ -268,7 +268,7 @@ def test_basic_entrega_sesion_y_la_segunda_visita_ya_no_pide_nada():
 def test_la_sesion_tambien_alcanza_la_app_montada():
     """Una puerta, un puerto: la sesión no puede cubrir menos rutas que la cabecera."""
     cliente = _app()
-    valor = auth.crear_sesion(TOKEN, 3600)
+    valor = auth.create_session(TOKEN, 3600)
     for ruta, cuerpo in (("/mcp", "raiz"), ("/api/status", "montada"), ("/", "montada")):
         respuesta = cliente.get(ruta, headers=_con_cookie(valor))
         assert respuesta.status_code == 200, ruta
@@ -285,7 +285,7 @@ def test_bearer_no_recibe_cookie():
 def test_entrar_con_la_sesion_no_reparte_una_nueva_cada_vez():
     """Renovar en cada respuesta pondría una `Set-Cookie` en cada carga de página sin ganar nada."""
     cliente = _app(duracion=1000)
-    fresca = cliente.get("/", headers=_con_cookie(auth.crear_sesion(TOKEN, 900)))
+    fresca = cliente.get("/", headers=_con_cookie(auth.create_session(TOKEN, 900)))
     assert fresca.status_code == 200
     assert "set-cookie" not in fresca.headers
 
@@ -293,10 +293,10 @@ def test_entrar_con_la_sesion_no_reparte_una_nueva_cada_vez():
 def test_la_sesion_en_uso_se_renueva_antes_de_caducar():
     """Media vida gastada es el punto de renovación: así una sesión usada no caduca nunca."""
     cliente = _app(duracion=1000)
-    respuesta = cliente.get("/", headers=_con_cookie(auth.crear_sesion(TOKEN, 400)))
+    respuesta = cliente.get("/", headers=_con_cookie(auth.create_session(TOKEN, 400)))
     assert respuesta.status_code == 200
     renovada = respuesta.headers["set-cookie"].split(";")[0].split("=", 1)[1]
-    assert auth.sesion_valida(renovada, TOKEN) > time.time() + 900
+    assert auth.valid_session(renovada, TOKEN) > time.time() + 900
 
 
 def test_con_duracion_cero_no_hay_sesion_ninguna():
@@ -306,25 +306,27 @@ def test_con_duracion_cero_no_hay_sesion_ninguna():
     assert con_basic.status_code == 200
     assert "set-cookie" not in con_basic.headers
     # Y una cookie perfectamente firmada tampoco abre nada, que es la mitad que se olvida.
-    assert cliente.get("/", headers=_con_cookie(auth.crear_sesion(TOKEN, 3600))).status_code == 401
+    assert (
+        cliente.get("/", headers=_con_cookie(auth.create_session(TOKEN, 3600))).status_code == 401
+    )
 
 
 def test_la_sesion_se_encuentra_entre_otras_cookies():
     """El navegador manda todas las cookies del origen juntas, no solo la nuestra."""
     cliente = _app()
-    valor = auth.crear_sesion(TOKEN, 3600)
+    valor = auth.create_session(TOKEN, 3600)
     cabecera = {"Cookie": f"tema=oscuro; {auth.COOKIE}={valor}; otra=cosa"}
     assert cliente.get("/", headers=cabecera).status_code == 200
 
 
 def test_sin_token_configurado_la_sesion_no_existe():
-    """Quien no puso token no gana una cookie: `proteger` sigue devolviendo la misma app."""
+    """Quien no puso token no gana una cookie: `protect` sigue devolviendo la misma app."""
 
     async def ruta(_request):
         return PlainTextResponse("libre")
 
     app = Starlette(routes=[Route("/mcp", ruta, methods=["GET"])])
-    assert auth.proteger(app, "", 3600) is app
+    assert auth.protect(app, "", 3600) is app
 
 
 def test_el_lifespan_no_se_filtra():
@@ -348,7 +350,7 @@ def test_el_lifespan_no_se_filtra():
     async def enviar(mensaje):
         enviados.append(mensaje)
 
-    asyncio.run(auth.proteger(app, TOKEN)({"type": "lifespan"}, recibir, enviar))
+    asyncio.run(auth.protect(app, TOKEN)({"type": "lifespan"}, recibir, enviar))
 
     assert vistos == ["lifespan"], "el lifespan no llegó a la app: la puerta se lo tragó"
     assert enviados == [], f"la puerta respondió a un lifespan: {enviados}"

@@ -1,0 +1,12 @@
+nombres en español (únicos por categoría y fichero): 6764
+  dom_id: 19
+  file_name: 14
+  identifier: 4742
+  js_identifier: 68
+  js_key: 15
+  js_property: 14
+  js_string: 9
+  string_key: 980
+  string_value: 903
+fuera de la lista de excepciones: 6757
+palabras sin clasificar: 171

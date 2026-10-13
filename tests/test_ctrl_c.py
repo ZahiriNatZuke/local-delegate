@@ -40,7 +40,7 @@ def _sin_web_ni_arranques(monkeypatch):
     """El MCP no debe levantar la web ni tocar el backend para probar cómo se para."""
     monkeypatch.setattr(server.config, "WEB_ENABLED", False)
     monkeypatch.setattr(server.config, "AUTOSTART", False)
-    monkeypatch.setattr(entrypoint, "_aviso_de_terminal_interactiva", lambda: None)
+    monkeypatch.setattr(entrypoint, "_interactive_terminal_warning", lambda: None)
 
 
 def _interrumpir(*_a, **_kw):
@@ -246,7 +246,7 @@ def test_ctrl_break_sobre_el_mcp_stdio_sale_por_cero(tmp_path):
     proc = _lanzar([], _entorno_aislado(tmp_path))
 
     # Control positivo: se le habla MCP y se espera su respuesta. Es la única señal fiable de que
-    # está sirviendo —el aviso por stderr NO sirve, porque `_aviso_de_terminal_interactiva` solo
+    # está sirviendo —el aviso por stderr NO sirve, porque `_interactive_terminal_warning` solo
     # lo imprime cuando stdin es una TTY y aquí es una tubería— y además prueba más: que lo que se
     # interrumpe es un servidor en marcha, no un proceso que todavía arranca.
     assert proc.stdin is not None and proc.stdout is not None

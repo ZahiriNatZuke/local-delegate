@@ -48,7 +48,7 @@ def _tokens(cmd: str | Sequence[str]) -> list[str]:
     if not isinstance(cmd, str):
         return [str(part) for part in cmd]
     tokens: list[str] = []
-    actual: list[str] = []
+    current: list[str] = []
     quote: str | None = None
     has_token = False
     for char in cmd:
@@ -56,19 +56,19 @@ def _tokens(cmd: str | Sequence[str]) -> list[str]:
             if char == quote:
                 quote = None
             else:
-                actual.append(char)
+                current.append(char)
         elif char in "\"'":
             quote = char
             has_token = True
         elif char.isspace():
-            if actual or has_token:
-                tokens.append("".join(actual))
-            actual, has_token = [], False
+            if current or has_token:
+                tokens.append("".join(current))
+            current, has_token = [], False
         else:
-            actual.append(char)
+            current.append(char)
             has_token = True
-    if actual or has_token:
-        tokens.append("".join(actual))
+    if current or has_token:
+        tokens.append("".join(current))
     return tokens
 
 

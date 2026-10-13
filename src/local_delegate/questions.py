@@ -33,31 +33,33 @@ import logging
 from typing import Any, TypeVar
 
 import anyio
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import config
 
 logger = logging.getLogger(__name__)
 
-ModeloT = TypeVar("ModeloT", bound=BaseModel)
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
-# El contexto de la petición en curso. Lo puebla `recordar_contexto` y lo lee `preguntar` desde
+# El contexto de la petición en curso. Lo puebla `remember_context` y lo lee `ask` desde
 # cualquier profundidad, incluida una tool síncrona corriendo en el threadpool.
-CTX_ACTUAL: contextvars.ContextVar[Any | None] = contextvars.ContextVar("ctx_actual", default=None)
+CURRENT_CTX: contextvars.ContextVar[Any | None] = contextvars.ContextVar(
+    "current_ctx", default=None
+)
 
 
-async def recordar_contexto(ctx: Any, call_next: Any) -> Any:
+async def remember_context(ctx: Any, call_next: Any) -> Any:
     """Middleware: deja el contexto de esta petición al alcance de las capas de abajo.
 
     Va DESPUÉS del observador de `clients.py` en la lista de `middleware=` (el SDK los aplica
     outermost-first): «observar primero, habilitar después». Hoy son independientes; el orden se
     fija para que nadie lo cambie creyendo que da igual.
     """
-    CTX_ACTUAL.set(ctx)
+    CURRENT_CTX.set(ctx)
     return await call_next(ctx)
 
 
-def puede_preguntar() -> bool:
+def can_ask() -> bool:
     """Si hay a quién preguntar y por dónde.
 
     Son **dos** condiciones independientes y las dos hacen falta. Que el cliente declare
@@ -67,36 +69,36 @@ def puede_preguntar() -> bool:
     """
     if not config.ASK_ENABLED:
         return False
-    ctx = CTX_ACTUAL.get()
+    ctx = CURRENT_CTX.get()
     if ctx is None:
         return False
     try:
-        sesion = ctx.session
-        caps = sesion.client_capabilities
+        session = ctx.session
+        caps = session.client_capabilities
         if caps is None or getattr(caps, "elicitation", None) is None:
             return False
-        return bool(sesion.can_send_request)
+        return bool(session.can_send_request)
     except Exception:
         return False
 
 
-def preguntar(mensaje: str, modelo: type[ModeloT]) -> ModeloT | None:
+def ask(message: str, model: type[ModelT]) -> ModelT | None:
     """Pregunta al usuario y devuelve la respuesta, o `None` si no la hay.
 
     `None` cubre a propósito **todos** los caminos malos —no se puede preguntar, no contestan a
     tiempo, dicen que no, la respuesta no valida, algo revienta—, para que quien llama tenga una
     sola rama y no pueda olvidarse de un caso.
     """
-    if not puede_preguntar():
+    if not can_ask():
         return None
-    ctx = CTX_ACTUAL.get()
+    ctx = CURRENT_CTX.get()
     # `ServerRequestContext` —lo que ve un middleware— NO tiene `.elicit`: eso es del `Context` de
     # alto nivel, que solo llega a las tools que lo declaran en su firma. Desde aquí se va por la
     # sesión, que expone `elicit_form` con el esquema como dict y devuelve la respuesta en crudo,
     # así que la validación contra el modelo la hacemos nosotros.
-    esquema = modelo.model_json_schema()
+    schema = model.model_json_schema()
 
-    async def _con_plazo():
+    async def _with_timeout():
         # El plazo va AQUÍ, dentro de la corrutina que corre en el event loop. Ponerlo del lado
         # del hilo lanza NoEventLoopError; está medido.
         #
@@ -104,24 +106,24 @@ def preguntar(mensaje: str, modelo: type[ModeloT]) -> ModeloT | None:
         # camino es perfectamente alcanzable —es lo que hace anyio al cancelar— pero CodeQL no
         # modela la cancelación y lo marcaba como código muerto. Así no hay que suprimir un aviso
         # falso, y de paso queda explícito por qué la respuesta puede faltar.
-        respuesta = None
+        response = None
         with anyio.move_on_after(config.ASK_TIMEOUT) as scope:
-            respuesta = await ctx.session.elicit_form(mensaje, esquema)
-        return None if scope.cancelled_caught else respuesta
+            response = await ctx.session.elicit_form(message, schema)
+        return None if scope.cancelled_caught else response
 
     try:
-        resultado = anyio.from_thread.run(_con_plazo)
+        result = anyio.from_thread.run(_with_timeout)
     except Exception:
         logger.debug("no se pudo preguntar al cliente", exc_info=True)
         return None
 
-    if resultado is None:  # plazo agotado
+    if result is None:  # plazo agotado
         logger.debug("el cliente no respondió en %ss", config.ASK_TIMEOUT)
         return None
-    if getattr(resultado, "action", None) != "accept":  # decline o cancel
+    if getattr(result, "action", None) != "accept":  # decline o cancel
         return None
     try:
-        return modelo.model_validate(resultado.content or {})
+        return model.model_validate(result.content or {})
     except Exception:
         # Respondieron algo que no encaja con lo pedido: cuenta como no haber respondido.
         logger.debug("la respuesta del cliente no valida contra el esquema", exc_info=True)
@@ -132,19 +134,25 @@ def preguntar(mensaje: str, modelo: type[ModeloT]) -> ModeloT | None:
 # Solo tipos primitivos: es lo que admite la especificación de elicitation.
 
 
-class ArrancarBackend(BaseModel):
+class StartBackend(BaseModel):
     """¿Arrancar el backend local que no responde?"""
 
-    arrancar: bool
+    model_config = ConfigDict(title="ArrancarBackend")
+
+    start: bool = Field(title="Arrancar")
 
 
-class ElegirModelo(BaseModel):
+class ChooseModel(BaseModel):
     """Cuál de los modelos del catálogo usar."""
 
-    modelo: str
+    model_config = ConfigDict(title="ElegirModelo")
+
+    model: str = Field(title="Modelo")
 
 
-class ElegirFormato(BaseModel):
+class ChooseFormat(BaseModel):
     """Qué formato de salida se espera."""
 
-    formato: str
+    model_config = ConfigDict(title="ElegirFormato")
+
+    format: str = Field(title="Formato")

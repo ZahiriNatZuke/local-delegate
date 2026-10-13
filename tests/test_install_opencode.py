@@ -68,7 +68,7 @@ def test_el_home_simulado_ignora_xdg(tmp_path, monkeypatch):
     ],
 )
 def test_tiene_comentarios_distingue_cadenas_de_comentarios(texto, esperado):
-    assert inst.tiene_comentarios(texto) is esperado
+    assert inst.has_comments(texto) is esperado
 
 
 def test_strip_jsonc_deja_json_parseable_y_conserva_las_lineas():

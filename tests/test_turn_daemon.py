@@ -159,8 +159,8 @@ def with_topology(tmp_path, monkeypatch) -> Path:
 
 def _two_tools(monkeypatch, tmp_path) -> tuple[backend_mock.ChangeCount, list[dict]]:
     """`local_commit_msg` (Qwen3.6) y `local_lint_summary` (26B), de 3 trozos cada una, a la vez."""
-    monkeypatch.setitem(config.MAX_CHARS_POR_ROL, "code", 1000)
-    monkeypatch.setitem(config.MAX_CHARS_POR_ROL, "long", 1000)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "code", 1000)
+    monkeypatch.setitem(config.MAX_CHARS_BY_ROLE, "long", 1000)
     monkeypatch.setattr(config, "LONG_INPUT_CHARS", 100)
     before = len(_events(tmp_path))
     startup = threading.Barrier(2)

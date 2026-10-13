@@ -49,16 +49,16 @@ LOG_FILENAME = "clients.jsonl"
 # clientes se han visto?», y un corte mensual haría desaparecer del diagnóstico a un cliente visto
 # en enero por el simple hecho de que llegó febrero. Eso sería peor que el problema que arregla.
 MAX_BYTES = 256 * 1024
-SUFIJO_ROTADO = ".1"
+ROTATED_SUFFIX = ".1"
 
 # Claves EXACTAS de una línea del registro. Las fija aquí y no en el punto de escritura para que el
 # test pueda aseverar el conjunto completo: así un campo colado por descuido —una cabecera, una
 # ruta— rompe el test en vez de acabar en disco.
-CAMPOS = ("ts", "client", "version", "protocol", "caps")
+FIELDS = ("ts", "client", "version", "protocol", "caps")
 
 
 @dataclass(frozen=True)
-class _Identidad:
+class _Identity:
     """Lo que distingue a un cliente. Congelada porque es la clave del registro."""
 
     client: str | None
@@ -70,7 +70,7 @@ class _Identidad:
 # El registro vivo de esta ejecución del daemon. Lo lee /api/status, que en FastAPI es un endpoint
 # SÍNCRONO y por tanto corre en el threadpool de uvicorn: la concurrencia aquí es de hilos, no de
 # corrutinas, así que el lock no es decorativo.
-_VISTOS: dict[_Identidad, dict[str, Any]] = {}
+_SEEN: dict[_Identity, dict[str, Any]] = {}
 _LOCK = threading.Lock()
 
 # El nombre del cliente que está haciendo ESTA petición. Es un `ContextVar` y no una variable de
@@ -80,12 +80,12 @@ _LOCK = threading.Lock()
 # Sobrevive al salto al threadpool —las tools son síncronas y el SDK las corre allí—, cosa que se
 # midió antes de diseñar esto en vez de deducirla. Lo que aquel script no podía medir es si cruza
 # el SDK real; eso lo comprueba la verificación end-to-end de `panel-dice-la-verdad`.
-_CLIENTE_ACTUAL: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "local_delegate_cliente_actual", default=None
+_CURRENT_CLIENT: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_current_client", default=None
 )
 
 
-def cliente_actual() -> str | None:
+def current_client() -> str | None:
     """El nombre del cliente MCP de la petición en curso, o `None` fuera de una.
 
     Sólo el nombre. La versión, el protocolo y las capabilities siguen viviendo en
@@ -95,54 +95,54 @@ def cliente_actual() -> str | None:
     Devuelve `None` sin quejarse fuera de una petición (el benchmark, el arranque): quien
     registra omite el campo en vez de inventarlo.
     """
-    return _CLIENTE_ACTUAL.get()
+    return _CURRENT_CLIENT.get()
 
 
 # El `tool_use_id` que Claude Code manda en `_meta["claudecode/toolUseId"]` de cada `tools/call`
 # (coste-api-y-cuota, REQ-001). Es el mismo id que reciben los hooks y que queda en el transcript,
 # así que es lo que deja cruzar una línea del log con quien la pidió. Otros clientes (Codex,
 # scripts) no lo mandan: entonces vale `None` y la línea no lleva el campo.
-CLAVE_TOOL_USE_ID = "claudecode/toolUseId"
+TOOL_USE_ID_KEY = "claudecode/toolUseId"
 
-_TOOL_USE_ID_ACTUAL: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "local_delegate_tool_use_id_actual", default=None
+_CURRENT_TOOL_USE_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "local_delegate_current_tool_use_id", default=None
 )
 
 # Memoria de ESTA petición: un dict nuevo por petición, puesto por el middleware. Es un dict y no
 # un valor porque el handler de la tool corre en el threadpool con una COPIA del contexto: un
 # `set()` hecho allí no volvería, pero mutar el mismo dict sí se ve desde todos los que lo leen.
 # Nada vive en un dict del módulo, que en el daemon crecería sin límite.
-_MEMORIA_PETICION: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
-    "local_delegate_memoria_peticion", default=None
+_REQUEST_MEMORY: contextvars.ContextVar[dict | None] = contextvars.ContextVar(
+    "local_delegate_request_memory", default=None
 )
 
 
-def tool_use_id_actual() -> str | None:
+def current_tool_use_id() -> str | None:
     """El `tool_use_id` de la petición en curso, o `None` si el cliente no lo mandó o no hay una."""
-    return _TOOL_USE_ID_ACTUAL.get()
+    return _CURRENT_TOOL_USE_ID.get()
 
 
-def memoria_de_peticion() -> dict | None:
+def request_memory() -> dict | None:
     """El dict de la petición en curso (para memorizar lo que se calcula una vez), o `None`."""
-    return _MEMORIA_PETICION.get()
+    return _REQUEST_MEMORY.get()
 
 
-def _tool_use_id_de(ctx: Any) -> str | None:
+def _tool_use_id_from(ctx: Any) -> str | None:
     """Lee `claudecode/toolUseId` del `_meta` de la petición. Medido con el SDK instalado: llega
     como dict en `ctx.meta` (y también en `ctx.params["_meta"]`)."""
     meta = getattr(ctx, "meta", None)
     if not isinstance(meta, dict):
         params = getattr(ctx, "params", None)
         meta = params.get("_meta") if isinstance(params, dict) else None
-    valor = meta.get(CLAVE_TOOL_USE_ID) if isinstance(meta, dict) else None
-    return valor if isinstance(valor, str) and valor else None
+    value = meta.get(TOOL_USE_ID_KEY) if isinstance(meta, dict) else None
+    return value if isinstance(value, str) and value else None
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-def nombres_capabilities(caps: Any) -> tuple[str, ...]:
+def capability_names(caps: Any) -> tuple[str, ...]:
     """Los nombres de las capabilities declaradas, ordenados.
 
     Distingue tres casos que no son el mismo: no haber declarado nada (None), haber declarado el
@@ -152,18 +152,18 @@ def nombres_capabilities(caps: Any) -> tuple[str, ...]:
     if caps is None:
         return ()
     try:
-        datos = caps.model_dump(exclude_none=True)
+        data = caps.model_dump(exclude_none=True)
     except AttributeError:  # no es un modelo del SDK; no se inventa nada
         return ()
-    return tuple(sorted(k for k, v in datos.items() if v is not None))
+    return tuple(sorted(k for k, v in data.items() if v is not None))
 
 
-def _rotar_si_toca(destino: Path) -> None:
+def _rotate_if_due(target: Path) -> None:
     """Aparta el registro cuando pasa del techo, conservando UNA generación.
 
     Rotar y no truncar: quien lee el registro pregunta «¿qué clientes se han visto?», y truncar
     respondería «ninguno» sobre una máquina donde sí se vieron. Con la generación apartada, el
-    diagnóstico sigue encontrándolos —ver :func:`rutas_para_leer`.
+    diagnóstico sigue encontrándolos —ver :func:`paths_to_read`.
 
     `os.replace` es atómico y sobreescribe la generación anterior en los tres sistemas; con
     `Path.rename` esto fallaría en Windows en cuanto existiera un `.1`.
@@ -173,9 +173,9 @@ def _rotar_si_toca(destino: Path) -> None:
     respuesta que se le da al cliente MCP.
     """
     try:
-        if destino.stat().st_size < MAX_BYTES:
+        if target.stat().st_size < MAX_BYTES:
             return
-        os.replace(destino, destino.with_name(destino.name + SUFIJO_ROTADO))
+        os.replace(target, target.with_name(target.name + ROTATED_SUFFIX))
     except OSError:
         # No se pudo mirar el tamaño o no se pudo renombrar (fichero abierto por otro proceso en
         # Windows, disco lleno, permisos). Se sigue anexando a propósito: un registro que crece de
@@ -184,20 +184,20 @@ def _rotar_si_toca(destino: Path) -> None:
         pass
 
 
-def _escribir_linea(destino: Path, linea: str) -> None:
+def _write_line(target: Path, line: str) -> None:
     """Anexa una línea al registro. Punto único de E/S, para que el test pueda doblarlo.
 
     Se dobla ESTA función en las pruebas en vez de jugar con permisos del sistema de ficheros:
     en Windows `chmod` no los aplica como en POSIX y el test mediría una cosa distinta en cada
     runner.
     """
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    _rotar_si_toca(destino)
-    with destino.open("a", encoding="utf-8") as f:
-        f.write(linea)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _rotate_if_due(target)
+    with target.open("a", encoding="utf-8") as f:
+        f.write(line)
 
 
-def ruta_registro() -> Path:
+def log_path() -> Path:
     """Dónde vive el registro. Pública porque el diagnóstico también lo lee.
 
     `checks.py` la consume en vez de recomponer la ruta por su cuenta: el nombre del fichero y su
@@ -209,22 +209,22 @@ def ruta_registro() -> Path:
     return config.LOG_DIR / LOG_FILENAME
 
 
-def rutas_para_leer() -> list[Path]:
+def paths_to_read() -> list[Path]:
     """Los ficheros del registro que hay que leer, **del más viejo al más nuevo**.
 
-    Función aparte de :func:`ruta_registro` porque son dos preguntas distintas: aquella responde
+    Función aparte de :func:`log_path` porque son dos preguntas distintas: aquella responde
     «¿dónde escribo?» y esta «¿dónde está todo lo anotado?». Desde que el registro rota, la
     segunda ya no es la primera, y quien lea solo la primera perdería de vista a un cliente por
     haber rotado — el mismo defecto que la rotación pretendía evitar, girado del revés.
 
     Devuelve solo las que existen: la ausencia de la generación rotada es lo normal.
     """
-    viva = ruta_registro()
-    rotada = viva.with_name(viva.name + SUFIJO_ROTADO)
-    return [p for p in (rotada, viva) if p.is_file()]
+    live = log_path()
+    rotated = live.with_name(live.name + ROTATED_SUFFIX)
+    return [p for p in (rotated, live) if p.is_file()]
 
 
-def registrar(caps: Any, client_info: Any, protocol: str) -> bool:
+def record(caps: Any, client_info: Any, protocol: str) -> bool:
     """Anota esta identidad si es la primera vez que se ve. Devuelve si escribió línea.
 
     El lock cubre comprobar + escribir + añadir como UNA operación. Separarlo dejaría que dos
@@ -232,8 +232,8 @@ def registrar(caps: Any, client_info: Any, protocol: str) -> bool:
     la misma identidad. Sí, eso hace una escritura a disco con el lock tomado: es aceptable porque
     ocurre una vez por identidad, no por mensaje.
     """
-    nombres = nombres_capabilities(caps)
-    nombre = getattr(client_info, "name", None) if client_info is not None else None
+    names = capability_names(caps)
+    name = getattr(client_info, "name", None) if client_info is not None else None
     version = getattr(client_info, "version", None) if client_info is not None else None
 
     # Ni capabilities ni identidad: no hay nada que informar, y una línea vacía contaminaría la
@@ -241,36 +241,36 @@ def registrar(caps: Any, client_info: Any, protocol: str) -> bool:
     if caps is None and client_info is None:
         return False
 
-    ident = _Identidad(client=nombre, version=version, protocol=protocol, caps=nombres)
-    ahora = _utcnow().isoformat(timespec="seconds")
+    ident = _Identity(client=name, version=version, protocol=protocol, caps=names)
+    now = _utcnow().isoformat(timespec="seconds")
 
     with _LOCK:
-        previo = _VISTOS.get(ident)
-        if previo is not None:
-            previo["last_seen"] = ahora
-            previo["messages"] += 1
+        previous = _SEEN.get(ident)
+        if previous is not None:
+            previous["last_seen"] = now
+            previous["messages"] += 1
             return False
 
-        _VISTOS[ident] = {
-            "client": nombre,
+        _SEEN[ident] = {
+            "client": name,
             "version": version,
             "protocol": protocol,
-            "caps": list(nombres),
-            "first_seen": ahora,
-            "last_seen": ahora,
+            "caps": list(names),
+            "first_seen": now,
+            "last_seen": now,
             "messages": 1,
         }
-        linea = json.dumps(
+        line = json.dumps(
             {
-                "ts": ahora,
-                "client": nombre,
+                "ts": now,
+                "client": name,
                 "version": version,
                 "protocol": protocol,
-                "caps": list(nombres),
+                "caps": list(names),
             },
             ensure_ascii=False,
         )
-        _escribir_linea(ruta_registro(), linea + "\n")
+        _write_line(log_path(), line + "\n")
         return True
 
 
@@ -282,16 +282,16 @@ def snapshot() -> list[dict[str, Any]]:
     del MCP: un fallo intermitente en el endpoint que alimenta el panel.
     """
     with _LOCK:
-        return [dict(v) for v in _VISTOS.values()]
+        return [dict(v) for v in _SEEN.values()]
 
 
 def reset() -> None:
     """Vacía el registro en memoria. Para las pruebas; el daemon nunca lo llama."""
     with _LOCK:
-        _VISTOS.clear()
+        _SEEN.clear()
 
 
-async def observar_cliente(ctx: Any, call_next: Any) -> Any:
+async def observe_client(ctx: Any, call_next: Any) -> Any:
     """Middleware: observa y sigue. Nunca altera la petición ni la rompe.
 
     Se salta `initialize` por lo medido —ahí todavía no hay datos— y porque es la zona donde el SDK
@@ -300,23 +300,23 @@ async def observar_cliente(ctx: Any, call_next: Any) -> Any:
     """
     if ctx.method != "initialize":
         try:
-            sesion = ctx.session
-            client_info = getattr(sesion.client_params, "client_info", None)
-            registrar(
-                sesion.client_capabilities,
+            session = ctx.session
+            client_info = getattr(session.client_params, "client_info", None)
+            record(
+                session.client_capabilities,
                 client_info,
                 ctx.protocol_version,
             )
             # Se pone ANTES de `call_next` a propósito: es lo que hace que el handler de la tool
             # —que corre dentro de ese await— lo vea. Después no firmaría nada.
-            _CLIENTE_ACTUAL.set(getattr(client_info, "name", None))
+            _CURRENT_CLIENT.set(getattr(client_info, "name", None))
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
         try:
             # Va en su propio `try`: un fallo leyendo la identidad no puede llevarse el
             # `tool_use_id`, ni al revés. Y también ANTES de `call_next`, por lo mismo de arriba.
-            _TOOL_USE_ID_ACTUAL.set(_tool_use_id_de(ctx))
-            _MEMORIA_PETICION.set({})
+            _CURRENT_TOOL_USE_ID.set(_tool_use_id_from(ctx))
+            _REQUEST_MEMORY.set({})
         except Exception:
             pass  # observar es best-effort; jamás propaga a la respuesta del cliente
     return await call_next(ctx)

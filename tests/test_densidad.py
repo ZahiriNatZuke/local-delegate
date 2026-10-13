@@ -160,8 +160,8 @@ def test_respaldo_por_variable(monkeypatch):
 
 
 def test_la_variable_de_respaldo_se_lee_por_la_puerta_registrada():
-    assert "LOCAL_DELEGATE_COST_FALLBACK" in config.VARIABLES_DE_ENTORNO
-    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.VARIABLES_DE_ENTORNO  # alias (REQ-002)
+    assert "LOCAL_DELEGATE_COST_FALLBACK" in config.ENVIRONMENT_VARIABLES
+    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.ENVIRONMENT_VARIABLES  # alias (REQ-002)
 
 
 def test_marcas_de_familia():

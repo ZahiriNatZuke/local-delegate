@@ -42,13 +42,13 @@ from . import (
     config,
     cooldown,
     cost,
-    estado_json,
     failures,
+    json_state,
     legacy_names,
     llamaswap_api,
     matrix,
     pace,
-    preguntas,
+    questions,
     sections,
     test_windows,
     topology,
@@ -78,7 +78,7 @@ mcp = MCPServer(
     # El SDK los aplica outermost-first, y el orden es deliberado: «observar primero, habilitar
     # después». Hoy son independientes —el observador solo lee, el otro solo deja el contexto al
     # alcance de las capas de abajo—, pero se fija para que nadie lo cambie creyendo que da igual.
-    middleware=[clients.observar_cliente, preguntas.recordar_contexto],
+    middleware=[clients.observe_client, questions.remember_context],
 )
 
 
@@ -134,7 +134,7 @@ def _get_client() -> httpx2.Client:
                 _client = httpx2.Client(
                     timeout=httpx2.Timeout(
                         config.HTTP_TIMEOUT,
-                        connect=min(config.TIMEOUT_CONEXION_DELEGACION, config.HTTP_TIMEOUT),
+                        connect=min(config.DELEGATION_CONNECT_TIMEOUT, config.HTTP_TIMEOUT),
                     )
                 )
     return _client
@@ -182,11 +182,11 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-# La lectura y la escritura atómica viven en `estado_json`, compartidas con el estado de
+# La lectura y la escritura atómica viven en `json_state`, compartidas con el estado de
 # enfriamiento (F3, tarea 26). Se conservan estos nombres porque el resto del módulo y los tests
 # los usan.
-_read_inflight_data = estado_json.leer_json
-_atomic_write_json = estado_json.escribir_json_atomico
+_read_inflight_data = json_state.read_json
+_atomic_write_json = json_state.write_json_atomic
 
 
 def _inflight_mutate(mutate_fn, *, write_on_timeout: bool = True) -> None:
@@ -741,7 +741,7 @@ def _log_event(
         # una firma inventada sería peor que ninguna. Y va envuelto porque el logging entero es
         # best-effort y observar no puede romper una tool.
         try:
-            caller = clients.cliente_actual()
+            caller = clients.current_client()
         except Exception:
             caller = None
         if caller:
@@ -752,7 +752,7 @@ def _log_event(
         # de abajo solo atrapa `OSError`, y un fallo de la resolución no puede llevarse la línea
         # ni salir de esta función. Nunca se escribe el id de sesión.
         try:
-            tool_use_id = clients.tool_use_id_actual()
+            tool_use_id = clients.current_tool_use_id()
             if tool_use_id:
                 rec["tool_use_id"] = tool_use_id
                 from . import attribution
@@ -1308,11 +1308,11 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 # puede dar en caliente. Si no hay a quién preguntar, o dicen que no, cae al
                 # error de siempre.
                 if attempt == 1 and local and not config.AUTOSTART:
-                    answer = preguntas.preguntar(
+                    answer = questions.ask(
                         f"El backend local no responde en {config.backend_host()}. ¿Lo arranco?",
-                        preguntas.ArrancarBackend,
+                        questions.StartBackend,
                     )
-                    if answer is not None and answer.arrancar and autostart.ensure_backend(wait=30):
+                    if answer is not None and answer.start and autostart.ensure_backend(wait=30):
                         continue
                 # REQ-017: la causa, con el texto único de `failures`, en vez de suponer que el
                 # backend no está corriendo (con una VPN caída, lo está).
@@ -1530,7 +1530,7 @@ def _approved_alternatives(
     REQ-011, vigentes (huella) y que admiten el tamaño (REQ-014). Sin red: solo config y disco."""
     if tool is None or role_name is None:
         return ()
-    roles = config.modelos_por_rol()
+    roles = config.models_by_role()
     prompt = _affinity_prompt(tool)
     found: list[str] = []
     for cell in matrix.CELLS:
@@ -1627,7 +1627,7 @@ def _affinity_loaded_provider(
     `activos`, todos (el «cargado con margen» lo decide REQ-012 al conceder, con la plaza y la
     foto). Sin topología no hay celda vigente: `()` sin tocar la red."""
     snapshot = _topology()
-    role_model = config.modelos_por_rol().get(role_name or "")
+    role_model = config.models_by_role().get(role_name or "")
     if not isinstance(snapshot, topology.Snapshot) or role_model is None:
         return ()
     return tuple(
@@ -2871,7 +2871,7 @@ def _role_for_size(probe_len: int) -> tuple[str, str]:
     mismo modelo, preguntar el tope por el nombre del modelo daría el de otro rol.
     """
     role = "long" if probe_len > config.LONG_INPUT_CHARS else "mechanical"
-    return role, config.modelos_por_rol()[role]
+    return role, config.models_by_role()[role]
 
 
 def _map_budget(max_chars: int) -> int:
@@ -3722,25 +3722,25 @@ def local_delegate(
         # Sin respuesta —mecanismo apagado, cliente sin soporte, plazo agotado, negativa— se
         # devuelve el error de hoy tal cual y no se toca el backend.
         valid = sorted(config.ALLOWED_MODELS)
-        model_answer = preguntas.preguntar(
+        model_answer = questions.ask(
             f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(valid)}",
-            preguntas.ElegirModelo,
+            questions.ChooseModel,
         )
-        if model_answer is None or model_answer.modelo not in config.ALLOWED_MODELS:
+        if model_answer is None or model_answer.model not in config.ALLOWED_MODELS:
             return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {valid}"
-        chosen = model_answer.modelo
+        chosen = model_answer.model
     if chunk not in {"auto", "on", "off"}:
         return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
     if not output_format.strip():
         # El parámetro es obligatorio, así que nunca falta — pero nadie comprobaba que trajera algo,
         # y con la cadena vacía el guardrail se queda sin formato y el modelo improvisa. Si no hay
         # quien responda, se sigue como hasta ahora.
-        format_answer = preguntas.preguntar(
+        format_answer = questions.ask(
             "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",
-            preguntas.ElegirFormato,
+            questions.ChooseFormat,
         )
-        if format_answer is not None and format_answer.formato.strip():
-            output_format = format_answer.formato.strip()
+        if format_answer is not None and format_answer.format.strip():
+            output_format = format_answer.format.strip()
     system = _guard(output_format)
     if chunk == "on" or (chunk == "auto" and len(input) > config.CHUNK_CHARS):
         return _chat_chunked(
@@ -4233,7 +4233,7 @@ def _probe_timeout() -> httpx2.Timeout:
     Para conectar no vale menos: en Windows un puerto cerrado tarda ~2,1 s en rechazarse, y con 1 s
     llegaba como `ConnectTimeout` y se leía como una VPN (medido en el paso 0 de T3).
     """
-    return httpx2.Timeout(config.TIMEOUT_SONDA_LECTURA, connect=config.TIMEOUT_SONDA_CONEXION)
+    return httpx2.Timeout(config.PROBE_READ_TIMEOUT, connect=config.PROBE_CONNECT_TIMEOUT)
 
 
 @dataclass(frozen=True)

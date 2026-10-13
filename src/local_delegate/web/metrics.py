@@ -914,7 +914,7 @@ def system():
 # --- llama-swap para el CLI de residencia (T13: REQ-034, REQ-039) ---------------------------
 #
 # El CLI no tiene la key de llama-swap (vive en el lanzador del daemon), así que pregunta aquí.
-# Tras el token web dos veces: la puerta del puerto (`auth.proteger`, en `daemon.build_app`) y una
+# Tras el token web dos veces: la puerta del puerto (`auth.protect`, en `daemon.build_app`) y una
 # dependencia propia de cada ruta, porque esta app también se sirve sola (`run_in_thread`, el
 # modo manual) y ahí no hay puerta. Sin token configurado, como el resto del panel: abiertas.
 
@@ -923,9 +923,9 @@ def _require_web_token(request: Request) -> None:
     token = config.WEB_TOKEN
     if not token:
         return
-    if auth.peticion_autorizada(request.headers.get("authorization"), token):
+    if auth.is_request_authorized(request.headers.get("authorization"), token):
         return
-    if auth.sesion_valida(request.cookies.get(auth.COOKIE), token) is not None:
+    if auth.valid_session(request.cookies.get(auth.COOKIE), token) is not None:
         return
     raise HTTPException(status_code=401, detail="falta el token del puerto o no es correcto")
 

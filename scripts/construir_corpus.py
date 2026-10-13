@@ -689,7 +689,7 @@ def produccion_interceptada() -> Iterator[list[Llamada]]:
     llamadas: list[Llamada] = []
     guardado = {
         n: os.environ[n]
-        for n in config.VARIABLES_DE_ENTORNO
+        for n in config.ENVIRONMENT_VARIABLES
         if n in os.environ and n not in PRESERVED_VARIABLES
     }
 
