@@ -2,7 +2,7 @@
 
 Las decisiones del panel sobre el backend son funciones JS puras (`visibleState`, `badgeBackend`,
 `modelState`, `sortModels`, `statusChip`, `statsText`, `systemRows`) para poder correrlas
-aquí sin navegador, con `_extraer`/`_correr` de `test_dashboard_js.py`. Los sondeos (`pollInflight`,
+aquí sin navegador, con `_extract`/`_run` de `test_dashboard_js.py`. Los sondeos (`pollInflight`,
 `pollBackend`) se corren con un `fetch`, un `document` y un `setTimeout` de mentira: lo que se mira
 es cuántas peticiones salen y qué se programa, que es lo que REQ-026 promete.
 
@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from test_dashboard_js import _correr, _extraer, _formateadores
+from test_dashboard_js import _extract, _formatters, _run
 
 from local_delegate import config, server
 from local_delegate.web import metrics
@@ -29,10 +29,10 @@ from local_delegate.web import metrics
 
 def _const(nombre: str) -> str:
     """Una constante del panel definida como objeto literal (`const X = {…}`)."""
-    return _extraer(f"const {nombre} = {{") + ";"
+    return _extract(f"const {nombre} = {{") + ";"
 
 
-# `_correr` lee la salida con la codificación de la consola (cp1252 en Windows): todo lo que no es
+# `_run` lee la salida con la codificación de la consola (cp1252 en Windows): todo lo que no es
 # ASCII sale escapado en el JSON para que «Última» llegue como «Última» y no como «Ãšltima».
 _SALIDA = r"""
 const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
@@ -42,10 +42,10 @@ const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
 
 def _globales() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
-    partes = [_SALIDA, _formateadores(), _extraer("function escHooks(")]
+    partes = [_SALIDA, _formatters(), _extract("function escHooks(")]
     for funcion in ("initialView", "turnWords"):
         if f"function {funcion}(" in metrics.HTML:
-            partes.append(_extraer(f"function {funcion}("))
+            partes.append(_extract(f"function {funcion}("))
     for nombre in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS"):
         if f"const {nombre} = {{" in metrics.HTML:
             partes.append(_const(nombre))
@@ -53,7 +53,7 @@ def _globales() -> str:
 
 
 def _js(tmp_path, funciones: list[str], cuerpo: str, preludio: str = ""):
-    return _correr(tmp_path, funciones, cuerpo, _globales() + "\n" + preludio)
+    return _run(tmp_path, funciones, cuerpo, _globales() + "\n" + preludio)
 
 
 def _f(nombre: str) -> str:

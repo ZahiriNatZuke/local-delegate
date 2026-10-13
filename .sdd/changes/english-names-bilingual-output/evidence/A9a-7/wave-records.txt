@@ -1,0 +1,9 @@
+OK    A9a.md
+      · A9a-1-mapping.csv: 294 filas, 0 discrepancia(s)
+      · A9a-2-mapping.csv: 236 filas, 0 discrepancia(s)
+      · A9a-3-mapping.csv: 264 filas, 0 discrepancia(s)
+      · A9a-4-mapping.csv: 288 filas, 0 discrepancia(s)
+      · A9a-5-mapping.csv: 299 filas, 0 discrepancia(s)
+      · A9a-6-mapping.csv: 256 filas, 0 discrepancia(s)
+      · A9a-7-mapping.csv: 151 filas, 0 discrepancia(s)
+1/1 registro(s) cumplen los mínimos de §2.1

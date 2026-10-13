@@ -1,0 +1,9 @@
+mutante M1: src/local_delegate/web/metrics.py «to:new Date(y, m, 1).toISOString()};» → «to:new Date(y, m, 2).toISOString()};» (1 sitio/s; sha256 1840a42ecfe1 -> 90c4dd5859c8)
+>       assert (result["startDay"], result["endDay"]) == (1, 1)
+E       assert (1, 2) == (1, 1)
+E         At index 1 diff: 2 != 1
+E         Use -v to get more diff
+tests\test_dashboard_js.py:161: AssertionError
+1 failed in 3.16s
+restaurado desde copia: sha256 1840a42ecfe1 (igual al original: sí)
+

@@ -1,0 +1,2353 @@
+[
+ {
+  "category": "string_value",
+  "file": "tests/conftest.py",
+  "line": 110,
+  "name": "daemon-cortado",
+  "words": [
+   "cortado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 503,
+  "name": "huella",
+  "words": [
+   "huella"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 495,
+  "name": "alternativo",
+  "words": [
+   "alternativo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 495,
+  "name": "rol_comparado",
+  "words": [
+   "rol",
+   "comparado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 496,
+  "name": "celdas",
+  "words": [
+   "celdas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 369,
+  "name": "ruta",
+  "words": [
+   "ruta"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity.py",
+  "line": 497,
+  "name": "estado",
+  "words": [
+   "estado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 36,
+  "name": "afinidad-2026-10",
+  "words": [
+   "afinidad"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 36,
+  "name": "veredicto.json",
+  "words": [
+   "veredicto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 367,
+  "name": "no-existe",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 380,
+  "name": "gemma-4-26B-otra-cuantizacion.gguf",
+  "words": [
+   "otra",
+   "cuantizacion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 394,
+  "name": "otro-4b",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity.py",
+  "line": 495,
+  "name": "rol_comparado",
+  "words": [
+   "rol",
+   "comparado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 44,
+  "name": "rol_en_hoja",
+  "words": [
+   "rol",
+   "en",
+   "hoja"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 79,
+  "name": "descartada",
+  "words": [
+   "descartada"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 312,
+  "name": "texto",
+  "words": [
+   "texto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 340,
+  "name": "viejas",
+  "words": [
+   "viejas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 353,
+  "name": "inicio_utc",
+  "words": [
+   "inicio"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 353,
+  "name": "fin_utc",
+  "words": [
+   "fin"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_affinity_batch.py",
+  "line": 315,
+  "name": "entorno_fijado",
+  "words": [
+   "entorno",
+   "fijado"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_affinity_batch.py",
+  "line": 229,
+  "name": "descartada",
+  "words": [
+   "descartada"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_affinity_batch.py",
+  "line": 229,
+  "name": "descartada_motivo",
+  "words": [
+   "descartada",
+   "motivo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 19,
+  "name": "afinidad-2026-10",
+  "words": [
+   "afinidad"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 44,
+  "name": "rol_en_hoja",
+  "words": [
+   "rol",
+   "en",
+   "hoja"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 53,
+  "name": "techo.diff",
+  "words": [
+   "techo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 130,
+  "name": "huellas.json",
+  "words": [
+   "huellas"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 132,
+  "name": "ventanas.json",
+  "words": [
+   "ventanas"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 194,
+  "name": "techo-gemma4-26b-a4b.jsonl",
+  "words": [
+   "techo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 307,
+  "name": "Perfil-De-Alguien",
+  "words": [
+   "perfil",
+   "de",
+   "alguien"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 309,
+  "name": "tanda-afinidad",
+  "words": [
+   "tanda",
+   "afinidad"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 309,
+  "name": "techo-usage",
+  "words": [
+   "techo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 315,
+  "name": "entorno_fijado",
+  "words": [
+   "entorno",
+   "fijado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 353,
+  "name": "inicio_utc",
+  "words": [
+   "inicio"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 353,
+  "name": "fin_utc",
+  "words": [
+   "fin"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 357,
+  "name": "clave-de-prueba-que-no-debe-salir",
+  "words": [
+   "clave",
+   "de",
+   "prueba",
+   "que",
+   "debe",
+   "salir"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 364,
+  "name": "clave-de-prueba",
+  "words": [
+   "clave",
+   "de",
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_affinity_batch.py",
+  "line": 373,
+  "name": "calentamiento.jsonl",
+  "words": [
+   "calentamiento"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_agents.py",
+  "line": 145,
+  "name": "ajeno",
+  "words": [
+   "ajeno"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_agents.py",
+  "line": 153,
+  "name": "raro",
+  "words": [
+   "raro"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_agents.py",
+  "line": 164,
+  "name": "roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_agents.py",
+  "line": 122,
+  "name": "no-existe.md",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_agents.py",
+  "line": 124,
+  "name": "sin-recursos",
+  "words": [
+   "sin",
+   "recursos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_agents.py",
+  "line": 149,
+  "name": "ajeno.md.bak",
+  "words": [
+   "ajeno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_agents.py",
+  "line": 155,
+  "name": "raro.md",
+  "words": [
+   "raro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_agents.py",
+  "line": 166,
+  "name": "roto.md",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_attribution.py",
+  "line": 676,
+  "name": "cruce",
+  "words": [
+   "cruce"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_attribution.py",
+  "line": 676,
+  "name": "banco",
+  "words": [
+   "banco"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_attribution.py",
+  "line": 669,
+  "name": "entradas",
+  "words": [
+   "entradas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_attribution.py",
+  "line": 372,
+  "name": "relleno",
+  "words": [
+   "relleno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 68,
+  "name": "sesion-sintetica",
+  "words": [
+   "sesion",
+   "sintetica"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 125,
+  "name": "toolu_ida",
+  "words": [
+   "ida"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 144,
+  "name": "stdin_roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 144,
+  "name": "id_malo",
+  "words": [
+   "malo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 153,
+  "name": "toolu_calla",
+  "words": [
+   "calla"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 164,
+  "name": "toolu_calla.json",
+  "words": [
+   "calla"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 205,
+  "name": "toolu_medias.json",
+  "words": [
+   "medias"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 209,
+  "name": "toolu_medias",
+  "words": [
+   "medias"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 219,
+  "name": "toolu_vieja",
+  "words": [
+   "vieja"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 220,
+  "name": "toolu_vieja.json",
+  "words": [
+   "vieja"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 223,
+  "name": "toolu_nueva",
+  "words": [
+   "nueva"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 225,
+  "name": "toolu_nueva.json",
+  "words": [
+   "nueva"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 238,
+  "name": "toolu_otro",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 278,
+  "name": "toolu_fuera",
+  "words": [
+   "fuera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 291,
+  "name": "toolu_otra",
+  "words": [
+   "otra"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 294,
+  "name": "toolu_carrera",
+  "words": [
+   "carrera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 374,
+  "name": "toolu_lejos",
+  "words": [
+   "lejos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 392,
+  "name": "toolu_lento",
+  "words": [
+   "lento"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 453,
+  "name": "sesion-marcador-7f3a",
+  "words": [
+   "sesion",
+   "marcador"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 488,
+  "name": "toolu_roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_attribution.py",
+  "line": 679,
+  "name": "sin_cruce",
+  "words": [
+   "sin",
+   "cruce"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 158,
+  "name": "cobertura",
+  "words": [
+   "cobertura"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 159,
+  "name": "prohibido",
+  "words": [
+   "prohibido"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 160,
+  "name": "json_valido",
+  "words": [
+   "valido"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 161,
+  "name": "json_campos",
+  "words": [
+   "campos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 163,
+  "name": "ejecucion",
+  "words": [
+   "ejecucion"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 164,
+  "name": "conteos",
+  "words": [
+   "conteos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_benchmark.py",
+  "line": 457,
+  "name": "descartada",
+  "words": [
+   "descartada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 23,
+  "name": "catalogo-2026-09",
+  "words": [
+   "catalogo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 160,
+  "name": "json_valido",
+  "words": [
+   "valido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 161,
+  "name": "json_campos",
+  "words": [
+   "campos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 254,
+  "name": "LD_SECRETO_DE_PRUEBA",
+  "words": [
+   "secreto",
+   "de",
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 254,
+  "name": "no-deberia-verse",
+  "words": [
+   "deberia",
+   "verse"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 288,
+  "name": "truncado_repetido",
+  "words": [
+   "truncado",
+   "repetido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 297,
+  "name": "describir-dashboard",
+  "words": [
+   "describir"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 304,
+  "name": "clasificar-53",
+  "words": [
+   "clasificar"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 309,
+  "name": "resumen-md-2k",
+  "words": [
+   "resumen"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 328,
+  "name": "leer-cifras-dashboard",
+  "words": [
+   "leer",
+   "cifras"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 494,
+  "name": "techo-resumen-103k",
+  "words": [
+   "techo",
+   "resumen"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_benchmark.py",
+  "line": 495,
+  "name": "rechazo_por_contexto",
+  "words": [
+   "rechazo",
+   "por",
+   "contexto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_boilerplate_output.py",
+  "line": 50,
+  "name": "suma.py",
+  "words": [
+   "suma"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_boilerplate_output.py",
+  "line": 138,
+  "name": "relativo.py",
+  "words": [
+   "relativo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_boilerplate_output.py",
+  "line": 146,
+  "name": "ya.py",
+  "words": [
+   "ya"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_boilerplate_output.py",
+  "line": 171,
+  "name": "soy_carpeta",
+  "words": [
+   "soy",
+   "carpeta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_boilerplate_output.py",
+  "line": 204,
+  "name": "roto.py",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_bump_version.py",
+  "line": 135,
+  "name": "no-soy-una-version",
+  "words": [
+   "soy",
+   "una"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_capture.py",
+  "line": 125,
+  "name": "_acerca_de",
+  "words": [
+   "acerca",
+   "de"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_capture.py",
+  "line": 125,
+  "name": "_acerca_de",
+  "words": [
+   "acerca",
+   "de"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_chains.py",
+  "line": 169,
+  "name": "modelo-que-no-existe",
+  "words": [
+   "modelo",
+   "que",
+   "existe"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_checks.py",
+  "line": 1342,
+  "name": "test_header_present_but_variable_absent_warns_as_suspicion",
+  "words": [
+   "suspicion"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_checks.py",
+  "line": 1544,
+  "name": "test_desktop_with_missing_variable_warns_as_suspicion",
+  "words": [
+   "suspicion"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_checks.py",
+  "line": 1391,
+  "name": "otro-servidor",
+  "words": [
+   "otro",
+   "servidor"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_checks.py",
+  "line": 923,
+  "name": "causa",
+  "words": [
+   "causa"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_checks.py",
+  "line": 924,
+  "name": "detalle",
+  "words": [
+   "detalle"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_checks.py",
+  "line": 670,
+  "name": "otro",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 321,
+  "name": "hook_de_terceros.py",
+  "words": [
+   "de",
+   "terceros"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 412,
+  "name": "vete-a-saber",
+  "words": [
+   "vete",
+   "saber"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 439,
+  "name": "test.roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 720,
+  "name": "secreto-de-mentira",
+  "words": [
+   "secreto",
+   "de",
+   "mentira"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 783,
+  "name": "un-secreto-que-no-debe-salir",
+  "words": [
+   "un",
+   "secreto",
+   "que",
+   "debe",
+   "salir"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1055,
+  "name": "cliente-mudo",
+  "words": [
+   "cliente",
+   "mudo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1158,
+  "name": "sin-crear",
+  "words": [
+   "sin",
+   "crear"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1253,
+  "name": "un-token-cualquiera",
+  "words": [
+   "un",
+   "cualquiera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1382,
+  "name": "token-literal-de-desktop-que-no-debe-salir-nunca",
+  "words": [
+   "de",
+   "que",
+   "debe",
+   "salir",
+   "nunca"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1391,
+  "name": "otro-servidor",
+  "words": [
+   "otro",
+   "servidor"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1516,
+  "name": "TOKEN_DESKTOP_PRUEBA",
+  "words": [
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1516,
+  "name": "valor-del-entorno",
+  "words": [
+   "valor",
+   "del",
+   "entorno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1540,
+  "name": "token-bueno",
+  "words": [
+   "bueno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_checks.py",
+  "line": 1604,
+  "name": "mi_hook_propio.py",
+  "words": [
+   "mi",
+   "propio"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_ci_gate.py",
+  "line": 175,
+  "name": "leer",
+  "words": [
+   "leer"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_ci_gate.py",
+  "line": 176,
+  "name": "reloj",
+  "words": [
+   "reloj"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_ci_gate.py",
+  "line": 177,
+  "name": "dormir",
+  "words": [
+   "dormir"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_ci_gate.py",
+  "line": 178,
+  "name": "escribir",
+  "words": [
+   "escribir"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 155,
+  "name": "LD_HOOK_READ_BLOQUEAR",
+  "words": [
+   "bloquear"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 156,
+  "name": "LD_HOOK_READ_INTERRUPTOR",
+  "words": [
+   "interruptor"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 157,
+  "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+  "words": [
+   "resumen",
+   "estructurado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 158,
+  "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+  "words": [
+   "coste",
+   "respaldo"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 270,
+  "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+  "words": [
+   "coste",
+   "respaldo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 26,
+  "name": "LD_HOOK_READ_BLOQUEAR",
+  "words": [
+   "bloquear"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 27,
+  "name": "LD_HOOK_READ_INTERRUPTOR",
+  "words": [
+   "interruptor"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 28,
+  "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+  "words": [
+   "resumen",
+   "estructurado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 29,
+  "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+  "words": [
+   "coste",
+   "respaldo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 61,
+  "name": "recalcular-coste",
+  "words": [
+   "recalcular",
+   "coste"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 125,
+  "name": "reiniciar-calibracion",
+  "words": [
+   "reiniciar",
+   "calibracion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 156,
+  "name": "viejo.flag",
+  "words": [
+   "viejo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 169,
+  "name": "nuevo.flag",
+  "words": [
+   "nuevo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 232,
+  "name": "no-existe",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cli_renamed_names.py",
+  "line": 246,
+  "name": "apagado.flag",
+  "words": [
+   "apagado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_clients.py",
+  "line": 142,
+  "name": "cliente-prueba",
+  "words": [
+   "cliente",
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_clients.py",
+  "line": 233,
+  "name": "cliente-a",
+  "words": [
+   "cliente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_clients.py",
+  "line": 234,
+  "name": "cliente-b",
+  "words": [
+   "cliente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_clients.py",
+  "line": 457,
+  "name": "toolu_prueba",
+  "words": [
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 63,
+  "name": "gaierror-en-loopback-sigue-siendo-dns",
+  "words": [
+   "en",
+   "sigue",
+   "siendo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 69,
+  "name": "econnrefused-es-rechazada",
+  "words": [
+   "es",
+   "rechazada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 75,
+  "name": "enetunreach-es-sin-ruta",
+  "words": [
+   "es",
+   "sin",
+   "ruta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 81,
+  "name": "ehostunreach-es-sin-ruta",
+  "words": [
+   "es",
+   "sin",
+   "ruta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 87,
+  "name": "winsock-10051-es-sin-ruta",
+  "words": [
+   "es",
+   "sin",
+   "ruta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 93,
+  "name": "winsock-10065-es-sin-ruta",
+  "words": [
+   "es",
+   "sin",
+   "ruta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 99,
+  "name": "connect-timeout-en-loopback-es-rechazada",
+  "words": [
+   "en",
+   "es",
+   "rechazada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 105,
+  "name": "connect-timeout-remoto-es-timeout-conexion",
+  "words": [
+   "remoto",
+   "es",
+   "conexion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 111,
+  "name": "caso-de-la-mac-etimedout-remoto",
+  "words": [
+   "caso",
+   "de",
+   "la",
+   "remoto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 117,
+  "name": "caso-de-la-mac-etimedout-en-loopback",
+  "words": [
+   "caso",
+   "de",
+   "la",
+   "en"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 126,
+  "name": "json-roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 147,
+  "name": "codigo-401",
+  "words": [
+   "codigo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 148,
+  "name": "codigo-403",
+  "words": [
+   "codigo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 149,
+  "name": "codigo-404",
+  "words": [
+   "codigo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 150,
+  "name": "codigo-500",
+  "words": [
+   "codigo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 156,
+  "name": "propia-que-envuelve-connect-timeout",
+  "words": [
+   "propia",
+   "que",
+   "envuelve"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 300,
+  "name": "causa_del_futuro",
+  "words": [
+   "causa",
+   "del",
+   "futuro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_connection_cause.py",
+  "line": 397,
+  "name": "no_existe",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_core.py",
+  "line": 268,
+  "name": "crudo",
+  "words": [
+   "crudo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_core.py",
+  "line": 289,
+  "name": "puerto",
+  "words": [
+   "puerto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_core.py",
+  "line": 308,
+  "name": "truncado",
+  "words": [
+   "truncado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_core.py",
+  "line": 309,
+  "name": "aviso",
+  "words": [
+   "aviso"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_core.py",
+  "line": 349,
+  "name": "leido_server_side",
+  "words": [
+   "leido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 327,
+  "name": "fuente.md",
+  "words": [
+   "fuente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 349,
+  "name": "leido_server_side",
+  "words": [
+   "leido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 372,
+  "name": "modelo-a",
+  "words": [
+   "modelo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 438,
+  "name": "no-existe.yaml",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 644,
+  "name": "afuera.txt",
+  "words": [
+   "afuera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 654,
+  "name": "dentro.txt",
+  "words": [
+   "dentro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 754,
+  "name": "uno.py",
+  "words": [
+   "uno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 754,
+  "name": "dos.py",
+  "words": [
+   "dos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 767,
+  "name": "nota.md",
+  "words": [
+   "nota"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_core.py",
+  "line": 780,
+  "name": "nuevo.py",
+  "words": [
+   "nuevo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 23,
+  "name": "bloqueos.jsonl",
+  "words": [
+   "bloqueos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 26,
+  "name": "viejo.jsonl",
+  "words": [
+   "viejo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 32,
+  "name": "informe.md",
+  "words": [
+   "informe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 44,
+  "name": "otro.md",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 54,
+  "name": "id-largo-1234",
+  "words": [
+   "largo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 89,
+  "name": "secreto-del-cliente.md",
+  "words": [
+   "secreto",
+   "del",
+   "cliente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 93,
+  "name": "secreto-del-cliente",
+  "words": [
+   "secreto",
+   "del",
+   "cliente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_correlation.py",
+  "line": 163,
+  "name": "nadie-me-bloqueo.md",
+  "words": [
+   "nadie",
+   "me",
+   "bloqueo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cost_doctor.py",
+  "line": 28,
+  "name": "sesion.jsonl",
+  "words": [
+   "sesion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cost_doctor.py",
+  "line": 53,
+  "name": "notas.md",
+  "words": [
+   "notas"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_cost_doctor.py",
+  "line": 95,
+  "name": "log-corto",
+  "words": [
+   "corto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_daemon.py",
+  "line": 79,
+  "name": "el-token-del-puerto",
+  "words": [
+   "el",
+   "del",
+   "puerto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_daemon.py",
+  "line": 207,
+  "name": "el-token-del-entorno",
+  "words": [
+   "el",
+   "del",
+   "entorno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_daemon.py",
+  "line": 211,
+  "name": "el-del-cliente",
+  "words": [
+   "el",
+   "del",
+   "cliente"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_js.py",
+  "line": 68,
+  "name": "prueba.mjs",
+  "words": [
+   "prueba"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 735,
+  "name": "test_the_calibrated_quota_appears_as_a_meter",
+  "words": [
+   "meter"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 495,
+  "name": "remoto",
+  "words": [
+   "remoto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 1204,
+  "name": "causa",
+  "words": [
+   "causa"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 1205,
+  "name": "etiqueta",
+  "words": [
+   "etiqueta"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 1206,
+  "name": "detalle",
+  "words": [
+   "detalle"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 427,
+  "name": "procesosVacia",
+  "words": [
+   "procesos",
+   "vacia"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 82,
+  "name": "modelo-de-prueba",
+  "words": [
+   "modelo",
+   "de",
+   "prueba"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 594,
+  "name": "pc.ejemplo.ts.net",
+  "words": [
+   "ejemplo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 896,
+  "name": "clave_rara_nueva",
+  "words": [
+   "clave",
+   "rara",
+   "nueva"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 908,
+  "name": "motivo_que_no_existe",
+  "words": [
+   "motivo",
+   "que",
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 937,
+  "name": "cliente_nuevo",
+  "words": [
+   "cliente",
+   "nuevo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 1201,
+  "name": "modelo-b",
+  "words": [
+   "modelo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_dashboard_ui.py",
+  "line": 1210,
+  "name": "modelo-a",
+  "words": [
+   "modelo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_delegation_connection.py",
+  "line": 194,
+  "name": "punto.png",
+  "words": [
+   "punto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_delegation_connection.py",
+  "line": 200,
+  "name": "troceada-map-reduce",
+  "words": [
+   "troceada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_delegation_connection.py",
+  "line": 200,
+  "name": "troceada-por-trozos",
+  "words": [
+   "troceada",
+   "por",
+   "trozos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_density.py",
+  "line": 321,
+  "name": "tokens_aprox",
+  "words": [
+   "aprox"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_density.py",
+  "line": 380,
+  "name": "leido_server_side",
+  "words": [
+   "leido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 60,
+  "name": "casos.json",
+  "words": [
+   "casos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 164,
+  "name": "LOCAL_DELEGATE_COSTE_RESPALDO",
+  "words": [
+   "coste",
+   "respaldo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 321,
+  "name": "tokens_aprox",
+  "words": [
+   "aprox"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 352,
+  "name": "notas.md",
+  "words": [
+   "notas"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 366,
+  "name": "salida.py",
+  "words": [
+   "salida"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 377,
+  "name": "datos.json",
+  "words": [
+   "datos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_density.py",
+  "line": 380,
+  "name": "leido_server_side",
+  "words": [
+   "leido"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_deprecations.py",
+  "line": 210,
+  "name": "bloqueo_id",
+  "words": [
+   "bloqueo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_deprecations.py",
+  "line": 219,
+  "name": "motivo",
+  "words": [
+   "motivo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_deprecations.py",
+  "line": 219,
+  "name": "pequeno",
+  "words": [
+   "pequeno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_deprecations.py",
+  "line": 210,
+  "name": "bloqueo_id",
+  "words": [
+   "bloqueo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 43,
+  "name": "bloqueo_id",
+  "words": [
+   "bloqueo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 43,
+  "name": "fallo_conexion",
+  "words": [
+   "fallo",
+   "conexion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 43,
+  "name": "recalcular_coste",
+  "words": [
+   "recalcular",
+   "coste"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 44,
+  "name": "VARIABLES_DE_ENTORNO",
+  "words": [
+   "de",
+   "entorno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 44,
+  "name": "reiniciar_calibracion",
+  "words": [
+   "reiniciar",
+   "calibracion"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 45,
+  "name": "HOOK_READ_INTERRUPTOR",
+  "words": [
+   "interruptor"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 45,
+  "name": "rol_retirado",
+  "words": [
+   "rol",
+   "retirado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 45,
+  "name": "config.coste",
+  "words": [
+   "coste"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 46,
+  "name": "local-delegate-bloqueo-apagado",
+  "words": [
+   "bloqueo",
+   "apagado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 46,
+  "name": "respaldo_invalido",
+  "words": [
+   "respaldo",
+   "invalido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 46,
+  "name": "leido_server_side",
+  "words": [
+   "leido"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 133,
+  "name": "de_la",
+  "words": [
+   "de",
+   "la"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 175,
+  "name": "recalcular-coste",
+  "words": [
+   "recalcular",
+   "coste"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 201,
+  "name": "cuota.py",
+  "words": [
+   "cuota"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 205,
+  "name": "datos.json",
+  "words": [
+   "datos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_detect_spanish_names.py",
+  "line": 209,
+  "name": "leer_precios",
+  "words": [
+   "leer",
+   "precios"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_doctor.py",
+  "line": 21,
+  "name": "sin-numero",
+  "words": [
+   "sin",
+   "numero"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_doctor.py",
+  "line": 109,
+  "name": "no-es-fecha",
+  "words": [
+   "es",
+   "fecha"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_environment_isolation.py",
+  "line": 178,
+  "name": "LD_HOOK_READ_BLOQUEAR",
+  "words": [
+   "bloquear"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_f1_conformance.py",
+  "line": 91,
+  "name": "fallos",
+  "words": [
+   "fallos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_f1_conformance.py",
+  "line": 92,
+  "name": "espera_s",
+  "words": [
+   "espera"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_f1_conformance.py",
+  "line": 93,
+  "name": "hasta",
+  "words": [
+   "hasta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 51,
+  "name": "telemetria.jsonl",
+  "words": [
+   "telemetria"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 55,
+  "name": "bloqueo-apagado",
+  "words": [
+   "bloqueo",
+   "apagado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 79,
+  "name": "informe.md",
+  "words": [
+   "informe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 87,
+  "name": "enfriamiento.json",
+  "words": [
+   "enfriamiento"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 92,
+  "name": "espera_s",
+  "words": [
+   "espera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_f1_conformance.py",
+  "line": 199,
+  "name": "mi-largo",
+  "words": [
+   "mi",
+   "largo"
+  ]
+ },
+ {
+  "category": "identifier",
+  "file": "tests/test_quota.py",
+  "line": 106,
+  "name": "sesion",
+  "words": [
+   "sesion"
+  ]
+ }
+]
