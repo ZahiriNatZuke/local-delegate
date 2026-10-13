@@ -1,0 +1,38 @@
+== Barrido de cierre de A9c: AST (nombres, args, def/class, kwargs, atributos, except-as, alias) de cada mapping sobre sus ficheros con el nombre final; solo 'code'
+-- A9c-1
+tests/fake_llamaswap.py código: 0
+tests/test_fake_llamaswap.py código: 0
+tests/test_recompute.py código: 0
+tests/test_recompute_legacy.py código: 0
+tests/test_release_metadata.py código: 0
+tests/test_residency.py código: 0
+tests/test_fallback.py código: 0
+tests/test_transcripts.py código: 0
+tests/test_quota.py código: 0
+tests/test_cli_renamed_names.py código: 0
+tests/test_fallback_observability.py código: 0
+tests/test_slowness.py código: 0
+-- A9c-2
+tests/test_structured_summary.py código: 0
+tests/test_fast_role_retired.py código: 0
+-- A9c-3
+tests/test_site.py código: 0
+tests/test_smoke.py código: 0
+tests/test_resource_probe.py código: 0
+tests/test_load_probe.py código: 0
+tests/test_backend_probe.py código: 0
+-- A9c-4
+tests/test_test_windows.py código: 0
+tests/test_test_windows_cli.py código: 0
+tests/test_role_caps.py código: 0
+tests/test_turn.py código: 0
+tests/test_turn_daemon.py código: 0
+tests/test_update.py código: 0
+-- A9c-5
+tests/test_valuation.py código: 0
+tests/test_vendor.py código: 0
+tests/test_vision.py código: 0
+tests/test_web_auth.py código: 0
+tests/test_wiki.py código: 0
+-- mÃ³dulos viejos en disco:
+10

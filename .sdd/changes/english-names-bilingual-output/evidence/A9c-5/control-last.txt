@@ -1,0 +1,11 @@
+== clave ultimo
+DECISION A last= False b_entered= False
+ESPERA A b_entered_antes= False
+DECISION B last= False b_entered= True
+1 passed, 34 deselected in 3.22s
+== clave last
+DECISION A last= False b_entered= False
+ESPERA A b_entered_antes= False
+DECISION B last= False b_entered= True
+1 passed, 34 deselected in 0.58s
+restaurado ebe64b7e1dac6bb8 (antes ebe64b7e1dac6bb8)

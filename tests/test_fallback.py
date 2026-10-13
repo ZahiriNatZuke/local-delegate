@@ -655,7 +655,7 @@ def test_hop_releases_slot_between_primary_and_fallback(reload_config, tmp_path,
     decide = server._next_hop
 
     def next_hop(*args, **kwargs):
-        if threading.current_thread().name == "A" and kwargs.get("ultimo") is None:
+        if threading.current_thread().name == "A" and kwargs.get("last") is None:
             b_entered.wait(timeout=2)
         return decide(*args, **kwargs)
 

@@ -1,0 +1,110 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -n auto --dist loadgroup
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+....................................................s................... [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+.........................................F........s.                     [100%]
+================================== FAILURES ===================================
+_______ test_the_kpi_row_is_symmetric_and_uses_decimal_comma[cargadas] ________
+[gw0] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1447/popen-gw0/test_the_kpi_row_is_symmetric_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025852ED0E90>
+fonts = 'cargadas'
+
+    @pytest.mark.parametrize("fonts", FONT_STATES)
+    def test_the_kpi_row_is_symmetric_and_uses_decimal_comma(tmp_path, monkeypatch, fonts):
+        """A 1280, 1366, 1440 y 400 px, en los dos temas y con cualquier fuente: misma altura del
+        título, la cifra empieza a la misma altura en todas las tarjetas, la pista ocupa lo mismo y
+        ningún número usa punto decimal."""
+        _cost_and_image_log(tmp_path, monkeypatch)
+        results = {}
+        with _Server(9495) as server, sync_playwright() as pw:
+            for width in (1280, 1366, 1440, 400):
+                for theme in ("dark", "light"):
+>                   browser, page = _full_page(pw, server.url, width, theme, fonts)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_dashboard_ui.py:1081: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_dashboard_ui.py:950: in _full_page
+    page.goto(url)
+.venv\Lib\site-packages\playwright\sync_api\_generated.py:9903: in goto
+    self._sync(
+.venv\Lib\site-packages\playwright\_impl\_page.py:562: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\playwright\_impl\_frame.py:157: in goto
+    await self._channel.send(
+.venv\Lib\site-packages\playwright\_impl\_connection.py:76: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <playwright._impl._connection.Connection object at 0x0000025852E16810>
+cb = <function Channel.send.<locals>.<lambda> at 0x00000258530D6AC0>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        parsed_st = _attach_api_call_information(
+            getattr(task, "__pw_stack__", None) or _capture_stack_trace(),
+            is_internal,
+            title,
+        )
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.TimeoutError: Page.goto: Timeout 30000ms exceeded.
+E           Call log:
+E             - navigating to "http://127.0.0.1:9495/", waiting until "load"
+
+.venv\Lib\site-packages\playwright\_impl\_connection.py:632: TimeoutError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53: 12 warnings
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_dashboard_ui.py::test_the_kpi_row_is_symmetric_and_uses_decimal_comma[cargadas]@dashboard_ui
+1 failed, 2569 passed, 2 skipped, 12 warnings in 140.18s (0:02:20)

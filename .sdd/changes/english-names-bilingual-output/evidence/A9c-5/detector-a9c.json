@@ -1,0 +1,1093 @@
+[
+ {
+  "category": "string_value",
+  "file": "tests/test_backend_probe.py",
+  "line": 155,
+  "name": "data-texto",
+  "words": [
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fake_llamaswap.py",
+  "line": 85,
+  "name": "m-otro",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fake_llamaswap.py",
+  "line": 116,
+  "name": "yaml_roto",
+  "words": [
+   "roto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fake_llamaswap.py",
+  "line": 116,
+  "name": "modelo_sin_cmd",
+  "words": [
+   "modelo",
+   "sin"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fake_llamaswap.py",
+  "line": 150,
+  "name": "cambia_el_modelo",
+  "words": [
+   "cambia",
+   "el",
+   "modelo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fake_llamaswap.py",
+  "line": 150,
+  "name": "cambio_ajeno",
+  "words": [
+   "cambio",
+   "ajeno"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 557,
+  "name": "respaldo",
+  "words": [
+   "respaldo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 215,
+  "name": "fallos",
+  "words": [
+   "fallos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 215,
+  "name": "espera_s",
+  "words": [
+   "espera"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 215,
+  "name": "hasta",
+  "words": [
+   "hasta"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 559,
+  "name": "motivo",
+  "words": [
+   "motivo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 558,
+  "name": "respondio",
+  "words": [
+   "respondio"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 558,
+  "name": "en_lugar_de",
+  "words": [
+   "en",
+   "lugar",
+   "de"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fallback.py",
+  "line": 658,
+  "name": "ultimo",
+  "words": [
+   "ultimo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fallback.py",
+  "line": 71,
+  "name": "enfriamiento.json",
+  "words": [
+   "enfriamiento"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fallback.py",
+  "line": 215,
+  "name": "espera_s",
+  "words": [
+   "espera"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fallback.py",
+  "line": 438,
+  "name": "no-existe",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fallback.py",
+  "line": 558,
+  "name": "en_lugar_de",
+  "words": [
+   "en",
+   "lugar",
+   "de"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_fast_role_retired.py",
+  "line": 184,
+  "name": "OTRA",
+  "words": [
+   "otra"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fast_role_retired.py",
+  "line": 52,
+  "name": "no-existe-este-rol",
+  "words": [
+   "existe",
+   "este",
+   "rol"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fast_role_retired.py",
+  "line": 134,
+  "name": "no-existe",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fast_role_retired.py",
+  "line": 151,
+  "name": "lo-que-sea",
+  "words": [
+   "lo",
+   "que",
+   "sea"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_fast_role_retired.py",
+  "line": 172,
+  "name": "config.rol_retirado",
+  "words": [
+   "rol",
+   "retirado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute.py",
+  "line": 34,
+  "name": "sesion-sintetica-0001",
+  "words": [
+   "sesion",
+   "sintetica"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute.py",
+  "line": 55,
+  "name": "MARCADORA-7f3a",
+  "words": [
+   "marcadora"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute.py",
+  "line": 56,
+  "name": "sesion-marcadora-9c41",
+  "words": [
+   "sesion",
+   "marcadora"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute.py",
+  "line": 57,
+  "name": "toolu_privado01",
+  "words": [
+   "privado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute.py",
+  "line": 91,
+  "name": "cuota-statusline.jsonl",
+  "words": [
+   "cuota"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 35,
+  "name": "fuente",
+  "words": [
+   "fuente"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 36,
+  "name": "marcas",
+  "words": [
+   "marcas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 84,
+  "name": "generado",
+  "words": [
+   "generado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 85,
+  "name": "plazo_dias",
+  "words": [
+   "plazo",
+   "dias"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 86,
+  "name": "cotejo",
+  "words": [
+   "cotejo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 94,
+  "name": "n_por_mes",
+  "words": [
+   "por",
+   "mes"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 95,
+  "name": "puntos",
+  "words": [
+   "puntos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 96,
+  "name": "descartes",
+  "words": [
+   "descartes"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 97,
+  "name": "reinicios",
+  "words": [
+   "reinicios"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 98,
+  "name": "fuentes",
+  "words": [
+   "fuentes"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 87,
+  "name": "fecha",
+  "words": [
+   "fecha"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 88,
+  "name": "version_tabla",
+  "words": [
+   "tabla"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 89,
+  "name": "juzgadas",
+  "words": [
+   "juzgadas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 90,
+  "name": "fuera",
+  "words": [
+   "fuera"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 91,
+  "name": "sin_precio",
+  "words": [
+   "sin",
+   "precio"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 92,
+  "name": "veredicto",
+  "words": [
+   "veredicto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 96,
+  "name": "delta_pequeno",
+  "words": [
+   "pequeno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 85,
+  "name": "plazo_dias",
+  "words": [
+   "plazo",
+   "dias"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 88,
+  "name": "version_tabla",
+  "words": [
+   "tabla"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 91,
+  "name": "sin_precio",
+  "words": [
+   "sin",
+   "precio"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 94,
+  "name": "n_por_mes",
+  "words": [
+   "por",
+   "mes"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 96,
+  "name": "delta_pequeno",
+  "words": [
+   "pequeno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 259,
+  "name": "s-vieja",
+  "words": [
+   "vieja"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_recompute_legacy.py",
+  "line": 260,
+  "name": "s-nueva",
+  "words": [
+   "nueva"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_residency.py",
+  "line": 416,
+  "name": "flujo",
+  "words": [
+   "flujo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_residency.py",
+  "line": 420,
+  "name": "ancla",
+  "words": [
+   "ancla"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_residency.py",
+  "line": 426,
+  "name": "duplicadas",
+  "words": [
+   "duplicadas"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_residency.py",
+  "line": 728,
+  "name": "residente",
+  "words": [
+   "residente"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_residency.py",
+  "line": 858,
+  "name": "durante",
+  "words": [
+   "durante"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency.py",
+  "line": 143,
+  "name": "clave-falsa-1",
+  "words": [
+   "clave",
+   "falsa"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency.py",
+  "line": 557,
+  "name": "clave-falsa",
+  "words": [
+   "clave",
+   "falsa"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency.py",
+  "line": 835,
+  "name": "mala.bak",
+  "words": [
+   "mala"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency.py",
+  "line": 845,
+  "name": "copia.bak",
+  "words": [
+   "copia"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency.py",
+  "line": 1046,
+  "name": "clave-secreta-sin-cerrar",
+  "words": [
+   "clave",
+   "secreta",
+   "sin",
+   "cerrar"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_residency_cli.py",
+  "line": 51,
+  "name": "clave-falsa-1",
+  "words": [
+   "clave",
+   "falsa"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_resource_probe.py",
+  "line": 470,
+  "name": "sonda_recursos",
+  "words": [
+   "sonda",
+   "recursos"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_resource_probe.py",
+  "line": 566,
+  "name": "quieto",
+  "words": [
+   "quieto"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_resource_probe.py",
+  "line": 567,
+  "name": "anonimo",
+  "words": [
+   "anonimo"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_resource_probe.py",
+  "line": 568,
+  "name": "mapeado",
+  "words": [
+   "mapeado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 363,
+  "name": "catalogo-2026-09",
+  "words": [
+   "catalogo"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 376,
+  "name": "clasificar-53",
+  "words": [
+   "clasificar"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 466,
+  "name": "sonda_recursos",
+  "words": [
+   "sonda",
+   "recursos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 466,
+  "name": "sonda_recursos.py",
+  "words": [
+   "sonda",
+   "recursos"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 478,
+  "name": "medida.json",
+  "words": [
+   "medida"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_resource_probe.py",
+  "line": 544,
+  "name": "mapeado.bin",
+  "words": [
+   "mapeado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_role_caps.py",
+  "line": 74,
+  "name": "FIN-DEL-TEXTO\n",
+  "words": [
+   "fin",
+   "del",
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_site.py",
+  "line": 76,
+  "name": "colado.html",
+  "words": [
+   "colado"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_structured_summary.py",
+  "line": 40,
+  "name": "ficheros",
+  "words": [
+   "ficheros"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_structured_summary.py",
+  "line": 31,
+  "name": "resumen-estructurado",
+  "words": [
+   "resumen",
+   "estructurado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_structured_summary.py",
+  "line": 665,
+  "name": "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
+  "words": [
+   "resumen",
+   "estructurado"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_test_windows.py",
+  "line": 137,
+  "name": "no-es-fecha",
+  "words": [
+   "es",
+   "fecha"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_test_windows.py",
+  "line": 222,
+  "name": "w-nada",
+  "words": [
+   "nada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_test_windows_cli.py",
+  "line": 51,
+  "name": "w-nada",
+  "words": [
+   "nada"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 296,
+  "name": "menos_uno",
+  "words": [
+   "menos",
+   "uno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 354,
+  "name": "no-existe.yaml",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 370,
+  "name": "routing_es_texto",
+  "words": [
+   "es",
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 371,
+  "name": "router_es_texto",
+  "words": [
+   "es",
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 372,
+  "name": "settings_es_numero",
+  "words": [
+   "es",
+   "numero"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 373,
+  "name": "use_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 374,
+  "name": "groups_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 375,
+  "name": "grupo_es_lista",
+  "words": [
+   "grupo",
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 377,
+  "name": "grupo_es_lista_en_routing",
+  "words": [
+   "grupo",
+   "es",
+   "lista",
+   "en"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 381,
+  "name": "members_es_numero",
+  "words": [
+   "es",
+   "numero"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 382,
+  "name": "members_es_texto",
+  "words": [
+   "es",
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 383,
+  "name": "miembro_es_mapa",
+  "words": [
+   "miembro",
+   "es",
+   "mapa"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 384,
+  "name": "hooks_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 385,
+  "name": "on_startup_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 386,
+  "name": "preload_es_texto",
+  "words": [
+   "es",
+   "texto"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 409,
+  "name": "aliases_es_numero",
+  "words": [
+   "es",
+   "numero"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 409,
+  "name": "alias_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_topology.py",
+  "line": 409,
+  "name": "cmd_es_lista",
+  "words": [
+   "es",
+   "lista"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_transcripts.py",
+  "line": 17,
+  "name": "sesion-sintetica-0001",
+  "words": [
+   "sesion",
+   "sintetica"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_transcripts.py",
+  "line": 281,
+  "name": "toolu_banco",
+  "words": [
+   "banco"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_transcripts.py",
+  "line": 287,
+  "name": "toolu_no_esta",
+  "words": [
+   "esta"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_turn_daemon.py",
+  "line": 346,
+  "name": "tomar_plaza",
+  "words": [
+   "tomar",
+   "plaza"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_turn_daemon.py",
+  "line": 350,
+  "name": "soltar_plaza",
+  "words": [
+   "soltar",
+   "plaza"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_update.py",
+  "line": 392,
+  "name": "sin-numeros",
+  "words": [
+   "sin",
+   "numeros"
+  ]
+ },
+ {
+  "category": "string_key",
+  "file": "tests/test_valuation.py",
+  "line": 263,
+  "name": "pruebas",
+  "words": [
+   "pruebas"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_valuation.py",
+  "line": 169,
+  "name": "claude-nadie-9",
+  "words": [
+   "nadie"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_vendor.py",
+  "line": 111,
+  "name": "intruso.min.js",
+  "words": [
+   "intruso"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_vision.py",
+  "line": 50,
+  "name": "no-existe.png",
+  "words": [
+   "existe"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_vision.py",
+  "line": 56,
+  "name": "no-es-imagen.txt",
+  "words": [
+   "es",
+   "imagen"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_web_auth.py",
+  "line": 24,
+  "name": "el-token-bueno",
+  "words": [
+   "el",
+   "bueno"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_web_auth.py",
+  "line": 134,
+  "name": "quien-sea",
+  "words": [
+   "quien",
+   "sea"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_web_auth.py",
+  "line": 204,
+  "name": "otro-token",
+  "words": [
+   "otro"
+  ]
+ },
+ {
+  "category": "string_value",
+  "file": "tests/test_web_auth.py",
+  "line": 217,
+  "name": "no-es-una-sesion",
+  "words": [
+   "es",
+   "una",
+   "sesion"
+  ]
+ }
+]

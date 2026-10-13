@@ -50,31 +50,31 @@ check_vendor = _load_script()
 
 # La versión vendorizada se LEE del manifiesto, nunca se escribe en este archivo: si se clava,
 # cada subida de Chart.js obliga a tocar tests que no tienen nada que ver con lo que prueban.
-# Pasó al subir de 4.4.1 a 4.5.1, y por eso los tests de versión usan `VERSION_VENDORIZADA`
-# («al día») y `MUY_POSTERIOR` («hay una más nueva») en vez de números concretos.
-VERSION_VENDORIZADA = next(
+# Pasó al subir de 4.4.1 a 4.5.1, y por eso los tests de versión usan `VENDORED_VERSION`
+# («al día») y `MUCH_LATER` («hay una más nueva») en vez de números concretos.
+VENDORED_VERSION = next(
     f["version"]
     for f in json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))["files"]
     if f["file"] == "chart.umd.min.js"
 )
-MUY_POSTERIOR = "99.0.0"
+MUCH_LATER = "99.0.0"
 
 
 @pytest.fixture
-def vendor_copia(tmp_path):
+def vendor_copy(tmp_path):
     """Copia intacta del directorio vendorizado. Devuelve la ruta de su manifiesto."""
-    destino = tmp_path / "vendor"
-    shutil.copytree(VENDOR_REAL, destino)
-    return destino / "vendor.json"
+    dest = tmp_path / "vendor"
+    shutil.copytree(VENDOR_REAL, dest)
+    return dest / "vendor.json"
 
 
-def _sin_red(monkeypatch, osv=None, npm=None):
+def _without_network(monkeypatch, osv=None, npm=None):
     """Sustituye la única función que sale a internet.
 
     `osv` y `npm` son callables sin argumentos que devuelven el cuerpo de la respuesta o lanzan.
     """
 
-    def falso(url, payload=None):
+    def fake(url, payload=None):
         if url == check_vendor.OSV_URL:
             if osv is None:
                 raise AssertionError("el test no esperaba una consulta a OSV")
@@ -83,64 +83,64 @@ def _sin_red(monkeypatch, osv=None, npm=None):
             raise AssertionError("el test no esperaba una consulta a npm")
         return npm()
 
-    monkeypatch.setattr(check_vendor, "_fetch_json", falso)
+    monkeypatch.setattr(check_vendor, "_fetch_json", fake)
 
 
 # --- integridad: lo que TIENE que romper el CI ---------------------------------------------------
-def test_blob_alterado_falla(vendor_copia):
+def test_altered_blob_fails(vendor_copy):
     """El test que de verdad importa: si el contenido cambia, el script lo canta."""
-    blob = vendor_copia.parent / "chart.umd.min.js"
-    datos = blob.read_bytes()
-    blob.write_bytes(datos[:-1] + b"X")  # un solo byte distinto
+    blob = vendor_copy.parent / "chart.umd.min.js"
+    data = blob.read_bytes()
+    blob.write_bytes(data[:-1] + b"X")  # un solo byte distinto
 
-    assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+    assert check_vendor.main(["--offline", "--manifest", str(vendor_copy)]) == (
         check_vendor.INTEGRITY_FAILURE
     )
 
 
-def test_blob_ausente_falla(vendor_copia):
-    (vendor_copia.parent / "chart.umd.min.js").unlink()
+def test_missing_blob_fails(vendor_copy):
+    (vendor_copy.parent / "chart.umd.min.js").unlink()
 
-    assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+    assert check_vendor.main(["--offline", "--manifest", str(vendor_copy)]) == (
         check_vendor.INTEGRITY_FAILURE
     )
 
 
-def test_fichero_sin_declarar_falla(vendor_copia):
+def test_undeclared_file_fails(vendor_copy):
     """Un vendorizado no declarado es el punto ciego que este cambio viene a cerrar."""
-    (vendor_copia.parent / "intruso.min.js").write_text("window.x = 1", encoding="utf-8")
+    (vendor_copy.parent / "intruso.min.js").write_text("window.x = 1", encoding="utf-8")
 
-    assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+    assert check_vendor.main(["--offline", "--manifest", str(vendor_copy)]) == (
         check_vendor.INTEGRITY_FAILURE
     )
 
 
-def test_manifiesto_ilegible_falla(tmp_path):
-    roto = tmp_path / "vendor.json"
-    roto.write_text("{esto no es json", encoding="utf-8")
+def test_unreadable_manifest_fails(tmp_path):
+    broken = tmp_path / "vendor.json"
+    broken.write_text("{esto no es json", encoding="utf-8")
 
-    assert check_vendor.main(["--offline", "--manifest", str(roto)]) == (
+    assert check_vendor.main(["--offline", "--manifest", str(broken)]) == (
         check_vendor.MANIFEST_FAILURE
     )
 
 
-def test_manifiesto_real_cuadra_con_el_blob():
+def test_real_manifest_matches_the_blob():
     """Solo lectura sobre el árbol real: el hash declarado es el del fichero que se publica."""
-    manifiesto = json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))
-    errores = check_vendor.check_integrity(manifiesto, VENDOR_REAL)
+    manifest = json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))
+    errors = check_vendor.check_integrity(manifest, VENDOR_REAL)
 
-    assert errores == []
+    assert errors == []
 
 
-def test_el_manifiesto_declara_la_trampa_del_banner():
+def test_the_manifest_declares_the_banner_trap():
     """REQ-006: sin esta nota, el siguiente que verifique a mano concluirá que el blob está mal."""
-    texto = (VENDOR_REAL / "vendor.json").read_text(encoding="utf-8")
+    text = (VENDOR_REAL / "vendor.json").read_text(encoding="utf-8")
 
-    assert "jsDelivr" in texto
-    assert "274" in texto
+    assert "jsDelivr" in text
+    assert "274" in text
 
 
-def test_gitattributes_protege_el_vendorizado_de_la_normalizacion():
+def test_gitattributes_protects_the_vendored_copy_from_normalization():
     """La premisa sin la que nada de esto funciona, y que el CI de Windows cazó.
 
     Con `core.autocrlf=true` —el valor por defecto de Git for Windows y el del runner
@@ -148,97 +148,99 @@ def test_gitattributes_protege_el_vendorizado_de_la_normalizacion():
     vez de 205 125, y el hash deja de cuadrar sin que nadie haya tocado nada. Este test fija el
     `-text` que lo impide; borrarlo rompe el vigilante en toda máquina Windows.
     """
-    texto = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+    text = (ROOT / ".gitattributes").read_text(encoding="utf-8")
 
-    assert "resources/vendor/** -text" in texto
+    assert "resources/vendor/** -text" in text
 
 
-def test_la_pista_de_crlf_sale_cuando_toca(vendor_copia):
+def test_the_crlf_hint_shows_when_due(vendor_copy):
     """Un fin de línea distinto no es un ataque; el mensaje tiene que decirlo."""
-    blob = vendor_copia.parent / "chart.umd.min.js"
+    blob = vendor_copy.parent / "chart.umd.min.js"
     blob.write_bytes(blob.read_bytes().replace(b"\n", b"\r\n"))
-    manifiesto = json.loads(vendor_copia.read_text(encoding="utf-8"))
+    manifest = json.loads(vendor_copy.read_text(encoding="utf-8"))
 
-    errores = check_vendor.check_integrity(manifiesto, vendor_copia.parent)
+    errors = check_vendor.check_integrity(manifest, vendor_copy.parent)
 
-    assert len(errores) == 1
-    assert "PISTA" in errores[0]
-    assert ".gitattributes" in errores[0]
+    assert len(errors) == 1
+    assert "PISTA" in errors[0]
+    assert ".gitattributes" in errors[0]
 
 
 # --- CVEs: lo que TIENE que romper el CI ---------------------------------------------------------
-def test_vulnerabilidad_confirmada_falla(vendor_copia, monkeypatch):
-    _sin_red(
+def test_confirmed_vulnerability_fails(vendor_copy, monkeypatch):
+    _without_network(
         monkeypatch,
         osv=lambda: {"vulns": [{"id": "GHSA-xxxx-yyyy-zzzz"}]},
-        npm=lambda: {"version": VERSION_VENDORIZADA},
+        npm=lambda: {"version": VENDORED_VERSION},
     )
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == (
         check_vendor.VULNERABILITY_FAILURE
     )
 
 
 # --- red: lo que solo puede AVISAR ---------------------------------------------------------------
-def _caido():
+def _down():
     raise check_vendor.ServiceUnavailable("simulado")
 
 
-def test_osv_caido_no_falla(vendor_copia, monkeypatch, capsys):
+def test_osv_down_does_not_fail(vendor_copy, monkeypatch, capsys):
     """Un servicio ajeno caído no puede bloquear un PR legítimo: la integridad ya se comprobó."""
-    _sin_red(monkeypatch, osv=_caido, npm=lambda: {"version": VERSION_VENDORIZADA})
+    _without_network(monkeypatch, osv=_down, npm=lambda: {"version": VENDORED_VERSION})
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
     assert "AVISO" in capsys.readouterr().out
 
 
-def test_npm_caido_no_falla(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=_caido)
+def test_npm_down_does_not_fail(vendor_copy, monkeypatch, capsys):
+    _without_network(monkeypatch, osv=lambda: {"vulns": []}, npm=_down)
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
     assert "AVISO" in capsys.readouterr().out
 
 
-def test_osv_malformado_no_falla(vendor_copia, monkeypatch, capsys):
+def test_malformed_osv_does_not_fail(vendor_copy, monkeypatch, capsys):
     """No saber nada se trata como servicio caído: avisa, no rompe."""
-    _sin_red(monkeypatch, osv=lambda: {"vulns": "esto debería ser una lista"}, npm=_caido)
+    _without_network(monkeypatch, osv=lambda: {"vulns": "esto debería ser una lista"}, npm=_down)
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
     assert "AVISO" in capsys.readouterr().out
 
 
-def test_version_nueva_avisa_sin_fallar(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUY_POSTERIOR})
+def test_new_version_warns_without_failing(vendor_copy, monkeypatch, capsys):
+    _without_network(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUCH_LATER})
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
-    salida = capsys.readouterr().out
-    assert "AVISO" in salida
-    assert MUY_POSTERIOR in salida
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
+    output = capsys.readouterr().out
+    assert "AVISO" in output
+    assert MUCH_LATER in output
 
 
-def test_version_al_dia_no_avisa(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": VERSION_VENDORIZADA})
+def test_up_to_date_version_does_not_warn(vendor_copy, monkeypatch, capsys):
+    _without_network(
+        monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": VENDORED_VERSION}
+    )
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
     assert "AVISO" not in capsys.readouterr().out
 
 
-def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
+def test_integrity_takes_precedence_over_the_vulnerability(vendor_copy, monkeypatch):
     """Con las dos cosas rotas, el código de salida es el del diagnóstico más fiable."""
-    blob = vendor_copia.parent / "chart.umd.min.js"
+    blob = vendor_copy.parent / "chart.umd.min.js"
     blob.write_bytes(b"contenido sustituido")
-    _sin_red(
+    _without_network(
         monkeypatch,
         osv=lambda: {"vulns": [{"id": "GHSA-x"}]},
-        npm=lambda: {"version": VERSION_VENDORIZADA},
+        npm=lambda: {"version": VENDORED_VERSION},
     )
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.INTEGRITY_FAILURE)
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == (check_vendor.INTEGRITY_FAILURE)
 
 
 # --- comparación de versiones --------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ("version", "esperado"),
+    ("version", "expected"),
     [
         ("4.4.1", (4, 4, 1)),
         ("4.5", (4, 5)),
@@ -247,26 +249,28 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
         ("", None),
     ],
 )
-def test_clave_version(version, esperado):
-    assert check_vendor._version_key(version) == esperado
+def test_version_key(version, expected):
+    assert check_vendor._version_key(version) == expected
 
 
-def test_version_incomparable_avisa_sin_fallar(vendor_copia, monkeypatch, capsys):
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": "latest-stable"})
+def test_incomparable_version_warns_without_failing(vendor_copy, monkeypatch, capsys):
+    _without_network(
+        monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": "latest-stable"}
+    )
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == check_vendor.OK
+    assert check_vendor.main(["--manifest", str(vendor_copy)]) == check_vendor.OK
     assert "AVISO" in capsys.readouterr().out
 
 
 # --- summary del job -----------------------------------------------------------------------------
-def test_el_informe_va_tambien_al_summary(vendor_copia, monkeypatch, tmp_path):
+def test_the_report_also_goes_to_the_summary(vendor_copy, monkeypatch, tmp_path):
     """Un aviso enterrado en el log de un job verde no lo lee nadie (F3 de la revisión del plan)."""
     summary = tmp_path / "summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
-    _sin_red(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUY_POSTERIOR})
+    _without_network(monkeypatch, osv=lambda: {"vulns": []}, npm=lambda: {"version": MUCH_LATER})
 
-    check_vendor.main(["--manifest", str(vendor_copia)])
+    check_vendor.main(["--manifest", str(vendor_copy)])
 
-    contenido = summary.read_text(encoding="utf-8")
-    assert "AVISO" in contenido
-    assert MUY_POSTERIOR in contenido
+    content = summary.read_text(encoding="utf-8")
+    assert "AVISO" in content
+    assert MUCH_LATER in content

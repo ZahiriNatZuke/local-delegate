@@ -149,7 +149,7 @@ def test_describe_image_feedback_uses_real_tokens(monkeypatch, tmp_path):
 
 
 @backend_mock.mock
-def test_la_coletilla_de_imagen_no_tiene_tokens(monkeypatch, tmp_path):
+def test_the_image_tail_note_has_no_tokens(monkeypatch, tmp_path):
     """REQ-035: ninguna cifra de tokens en la coletilla de `local_describe_image`."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
@@ -165,9 +165,9 @@ def test_la_coletilla_de_imagen_no_tiene_tokens(monkeypatch, tmp_path):
     )
     text = server.local_describe_image(path)
     assert "(leído server-side" in text  # guarda: hay coletilla que mirar
-    coletilla = text.split("(leído server-side", 1)[1]
-    assert "tokens" not in coletilla
-    assert "300" not in coletilla
+    tail_note = text.split("(leído server-side", 1)[1]
+    assert "tokens" not in tail_note
+    assert "300" not in tail_note
 
 
 @backend_mock.mock
