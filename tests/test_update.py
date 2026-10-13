@@ -19,7 +19,7 @@ from local_delegate.failures import BackendView
 
 
 @pytest.fixture(autouse=True)
-def _sin_senales_reales(monkeypatch):
+def _without_real_signals(monkeypatch):
     """Ningún test de este fichero manda una señal de verdad.
 
     Varios dan un pid inventado a `restart_daemon` (999, 7) sin doblar `os.kill`, y la señal
@@ -77,19 +77,19 @@ def results_from(**statuses):
 # --- La regla que ordena toda la tabla: `unknown` no repara -------------------
 
 
-def test_unknown_no_repara_ninguno_de_los_doce_checks(tmp_path):
+def test_unknown_repairs_none_of_the_twelve_checks(tmp_path):
     """La regla que hereda de `checks`: lo que no se pudo comprobar no se toca.
 
     Se recorren los doce, no solo los reparables: si mañana entra un check nuevo a la tabla
     con `unknown` entre sus estados, este test lo caza.
     """
     home = make_home(tmp_path, complete=False)
-    todos_unknown = {check.id: checks.UNKNOWN for check in checks.CHECKS}
-    actions, _notes = update.plan_repairs(results_from(**todos_unknown), opts_for(home))
+    all_unknown = {check.id: checks.UNKNOWN for check in checks.CHECKS}
+    actions, _notes = update.plan_repairs(results_from(**all_unknown), opts_for(home))
     assert actions == []
 
 
-def test_client_observed_no_se_repara_nunca(tmp_path):
+def test_client_observed_is_never_repaired(tmp_path):
     """Con quién se ha hablado no se «arregla»: es una observación, no una configuración.
 
     El check no tiene `fix_hint` ni entrada en `REPAIRS`, y este test lo ata para que nadie le
@@ -97,13 +97,13 @@ def test_client_observed_no_se_repara_nunca(tmp_path):
     """
     assert [r for r in update.REPAIRS if r.check_id == "client.observed"] == []
     home = make_home(tmp_path, complete=False)
-    for estado in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
-        results = results_from(**{"client.observed": estado})
+    for state in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
+        results = results_from(**{"client.observed": state})
         actions, _notes = update.plan_repairs(results, opts_for(home))
         assert all(getattr(a, "check_id", None) != "client.observed" for a in actions)
 
 
-def test_service_credential_no_se_repara_nunca(tmp_path):
+def test_service_credential_is_never_repaired(tmp_path):
     """El transporte de la entrada MCP lo elige el usuario; `update` no se lo cambia.
 
     Este check **sí** se sabría reparar —reinstalar en modo `http`, que `_infer_mcp_mode` ya sabe
@@ -113,13 +113,13 @@ def test_service_credential_no_se_repara_nunca(tmp_path):
     """
     assert [r for r in update.REPAIRS if r.check_id == "service.credential"] == []
     home = make_home(tmp_path, complete=False)
-    for estado in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
-        results = results_from(**{"service.credential": estado})
+    for state in (checks.OK, checks.WARN, checks.MISSING, checks.UNKNOWN):
+        results = results_from(**{"service.credential": state})
         actions, _notes = update.plan_repairs(results, opts_for(home))
         assert all(getattr(a, "check_id", None) != "service.credential" for a in actions)
 
 
-def test_warn_de_mcp_codex_no_produce_ninguna_accion(tmp_path):
+def test_mcp_codex_warn_produces_no_action(tmp_path):
     """Ese `warn` dice «entrada puesta a mano»: es configuración del usuario, no basura nuestra."""
     home = make_home(tmp_path, complete=False)
     results = results_from(**{"scaffold.mcp_codex": checks.WARN})
@@ -127,7 +127,7 @@ def test_warn_de_mcp_codex_no_produce_ninguna_accion(tmp_path):
     assert [a for a in actions if a.kind == "toml"] == []
 
 
-def test_warn_de_hook_settings_si_repara(tmp_path):
+def test_hook_settings_warn_does_repair(tmp_path):
     """Aquí `warn` significa «hooks nuestros en formato viejo», y reinstalarlos es lo correcto."""
     home = make_home(tmp_path, complete=False)
     results = results_from(**{"scaffold.hook_settings": checks.WARN})
@@ -135,35 +135,35 @@ def test_warn_de_hook_settings_si_repara(tmp_path):
     assert any(a.kind == "settings" for a in actions)
 
 
-def test_warn_de_skill_si_repara(tmp_path):
+def test_skill_warn_does_repair(tmp_path):
     home = make_home(tmp_path, complete=False)
     results = results_from(**{"scaffold.skill": checks.WARN})
     actions, _notes = update.plan_repairs(results, opts_for(home))
     assert any(a.kind == "copy" and "skills" in str(a.target) for a in actions)
 
 
-def test_warn_de_hooks_huerfanos_planifica_el_retirado(tmp_path):
+def test_orphan_hooks_warn_plans_the_removal(tmp_path):
     """Aquí `warn` significa «scripts nuestros de una instalación anterior»: sobran, y se van."""
     home = make_home(tmp_path, complete=False)
-    raiz = home / ".claude" / "hooks"
-    raiz.mkdir(parents=True, exist_ok=True)
-    (raiz / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
+    root = home / ".claude" / "hooks"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
 
     results = results_from(**{"scaffold.hook_orphans": checks.WARN})
     actions, _notes = update.plan_repairs(results, opts_for(home))
     assert any(a.kind == "prune" for a in actions)
 
 
-def test_huerfanos_y_hooks_ausentes_no_planifican_dos_veces_lo_mismo(tmp_path):
+def test_orphans_and_missing_hooks_do_not_plan_the_same_thing_twice(tmp_path):
     """Los dos checks reparan con `components={"hooks"}`, que emite la copia **y** el retirado.
 
     Sin la deduplicación por `(kind, target)` habría dos copias del árbol —y la copia hace
     `rmtree` del destino, así que la segunda borraría lo que escribió la primera— y dos prunes.
     """
     home = make_home(tmp_path, complete=False)
-    raiz = home / ".claude" / "hooks"
-    raiz.mkdir(parents=True, exist_ok=True)
-    (raiz / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
+    root = home / ".claude" / "hooks"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "hook_common.py").write_text("# viejo\n", encoding="utf-8")
 
     results = results_from(
         **{"scaffold.hook_orphans": checks.WARN, "scaffold.hook_files": checks.MISSING}
@@ -173,7 +173,7 @@ def test_huerfanos_y_hooks_ausentes_no_planifican_dos_veces_lo_mismo(tmp_path):
     assert len([a for a in actions if a.kind == "prune"]) == 1
 
 
-def test_no_se_repara_un_cliente_que_no_existe(tmp_path):
+def test_a_client_that_does_not_exist_is_not_repaired(tmp_path):
     """Con Codex ausente, un `missing` suyo no crea `~/.codex` de la nada."""
     home = make_home(tmp_path, claude=True, codex=False, complete=False)
     results = results_from(**{"scaffold.mcp_codex": checks.MISSING})
@@ -184,7 +184,7 @@ def test_no_se_repara_un_cliente_que_no_existe(tmp_path):
 # --- Deduplicación: dos borrados del mismo directorio serían un desastre ------
 
 
-def test_hooks_incompletos_no_planifican_dos_borrados_del_mismo_directorio(tmp_path):
+def test_incomplete_hooks_do_not_plan_two_deletions_of_the_same_directory(tmp_path):
     """`plan_install` emite copia + registro, y la copia hace `rmtree` antes de copiar.
 
     Con `hook_files` y `hook_settings` los dos en `missing` se invoca dos veces, así que sin
@@ -196,20 +196,20 @@ def test_hooks_incompletos_no_planifican_dos_borrados_del_mismo_directorio(tmp_p
         **{"scaffold.hook_files": checks.MISSING, "scaffold.hook_settings": checks.MISSING}
     )
     actions, _notes = update.plan_repairs(results, opts_for(home))
-    copias = [a for a in actions if a.kind == "copy" and "hooks" in str(a.target)]
-    assert len(copias) == 1
+    copies = [a for a in actions if a.kind == "copy" and "hooks" in str(a.target)]
+    assert len(copies) == 1
 
 
 # --- Idempotencia: sale del diseño, se comprueba contando acciones ------------
 
 
-def test_un_home_completo_no_planifica_nada(tmp_path):
+def test_a_complete_home_plans_nothing(tmp_path):
     home = make_home(tmp_path, complete=True)
     actions, _notes = update.plan_repairs(results_from(), opts_for(home))
     assert actions == []
 
 
-def test_segunda_pasada_sobre_el_mismo_home_no_planifica_nada(tmp_path):
+def test_second_pass_over_the_same_home_plans_nothing(tmp_path):
     """La prueba de la idempotencia de verdad: se repara y se vuelve a diagnosticar."""
     home = make_home(tmp_path, complete=False)
     ctx = _ctx(home)
@@ -217,8 +217,8 @@ def test_segunda_pasada_sobre_el_mismo_home_no_planifica_nada(tmp_path):
     assert actions, "la primera pasada debía tener algo que reparar"
     install.apply(actions, dry_run=False, out=lambda *a: None)
 
-    segunda, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
-    assert segunda == []
+    second, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    assert second == []
 
 
 def _ctx(home):
@@ -234,15 +234,15 @@ def _ctx(home):
 # --- `--dry-run` no escribe ni reinicia --------------------------------------
 
 
-def test_dry_run_deja_el_arbol_byte_a_byte_igual(tmp_path):
+def test_dry_run_leaves_the_tree_byte_for_byte_identical(tmp_path):
     home = make_home(tmp_path, complete=False)
-    antes = snapshot(home)
+    before = snapshot(home)
     opts = opts_for(home, dry_run=True)
     update.run_update(opts, out=lambda *a: None)
-    assert snapshot(home) == antes
+    assert snapshot(home) == before
 
 
-def test_dry_run_no_reinicia_el_daemon(tmp_path):
+def test_dry_run_does_not_restart_the_daemon(tmp_path):
     runner = fake_run()
     opts = opts_for(make_home(tmp_path, complete=False), dry_run=True, runner=runner)
     update.run_update(opts, out=lambda *a: None)
@@ -255,7 +255,7 @@ def test_dry_run_no_reinicia_el_daemon(tmp_path):
 # borrar `Scripts/` y deja la instalación destruida (ya había borrado el paquete).
 
 
-def _finge_prefix(monkeypatch, tmp_path, receipt: str | None):
+def _fake_prefix(monkeypatch, tmp_path, receipt: str | None):
     """Un `sys.prefix` de mentira, con o sin `uv-receipt.toml` dentro."""
     monkeypatch.setattr(update, "editable_origin", lambda: None)
     monkeypatch.setattr(update.sys, "prefix", str(tmp_path))
@@ -265,94 +265,92 @@ def _finge_prefix(monkeypatch, tmp_path, receipt: str | None):
     return tmp_path
 
 
-def test_reconoce_una_instalacion_de_uv_tool(monkeypatch, tmp_path):
-    _finge_prefix(
-        monkeypatch, tmp_path, f'[tool]\nrequirements = [{{ name = "{update.PACKAGE}" }}]'
-    )
+def test_recognizes_a_uv_tool_install(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, f'[tool]\nrequirements = [{{ name = "{update.PACKAGE}" }}]')
     assert update.install_kind() == update.UV_TOOL
     assert update.upgrade_command() == update.UV_TOOL_UPGRADE
 
 
-def test_sin_receipt_no_se_afirma_nada(monkeypatch, tmp_path):
+def test_without_a_receipt_nothing_is_claimed(monkeypatch, tmp_path):
     """`pip`, `pipx`, conda… no se adivina: comando genérico, no uno que podría fallar."""
-    _finge_prefix(monkeypatch, tmp_path, None)
+    _fake_prefix(monkeypatch, tmp_path, None)
     assert update.install_kind() == update.OTHER
     assert update.upgrade_command() == update.GENERIC_UPGRADE
 
 
-def test_un_receipt_de_otro_paquete_no_es_el_nuestro(monkeypatch, tmp_path):
-    _finge_prefix(monkeypatch, tmp_path, '[tool]\nrequirements = [{ name = "otra-cosa" }]')
+def test_a_receipt_from_another_package_is_not_ours(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, '[tool]\nrequirements = [{ name = "otra-cosa" }]')
     assert update.install_kind() == update.OTHER
 
 
-def test_la_editable_gana_sobre_el_receipt(monkeypatch, tmp_path):
+def test_the_editable_wins_over_the_receipt(monkeypatch, tmp_path):
     """Si se dieran los dos, manda la editable: es lo que gobierna de dónde sale el código."""
-    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update, "editable_origin", lambda: tmp_path / "repo")
     assert update.install_kind() == update.EDITABLE
     assert "git -C" in update.upgrade_command()
 
 
-def test_un_prefix_ilegible_no_revienta_la_deteccion(monkeypatch):
+def test_an_unreadable_prefix_does_not_break_detection(monkeypatch):
     monkeypatch.setattr(update, "editable_origin", lambda: None)
     monkeypatch.setattr(update.sys, "prefix", "\x00 ruta imposible \x00")
     assert update.install_kind() == update.OTHER
 
 
-def test_el_aviso_de_uv_tool_da_la_version_y_el_comando(monkeypatch, tmp_path):
-    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+def test_the_uv_tool_warning_gives_the_version_and_the_command(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
-    texto = "\n".join(update.uv_tool_lines("0.18.0"))
-    assert "0.17.0" in texto
-    assert update.UV_TOOL_UPGRADE in texto
-    assert "reinstalaría el entorno" in texto, "tiene que decir POR QUÉ no lo hace él"
+    text = "\n".join(update.uv_tool_lines("0.18.0"))
+    assert "0.17.0" in text
+    assert update.UV_TOOL_UPGRADE in text
+    assert "reinstalaría el entorno" in text, "tiene que decir POR QUÉ no lo hace él"
 
 
-@pytest.mark.parametrize("publicada", ["0.17.0", "0.16.0", None])
-def test_sin_nada_que_avisar_el_bloque_no_aparece(monkeypatch, tmp_path, publicada):
+@pytest.mark.parametrize("published", ["0.17.0", "0.16.0", None])
+def test_with_nothing_to_warn_the_block_does_not_appear(monkeypatch, tmp_path, published):
     """Al día, por delante, o sin red: un aviso que sale siempre deja de leerse."""
-    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+    _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
-    assert update.uv_tool_lines(publicada) == []
+    assert update.uv_tool_lines(published) == []
 
 
-def test_una_editable_no_recibe_el_aviso_de_uv_tool(monkeypatch, tmp_path):
+def test_an_editable_does_not_get_the_uv_tool_warning(monkeypatch, tmp_path):
     """Ya tiene el suyo, con `git pull` + `uv sync`. Dos avisos serían uno de más."""
     monkeypatch.setattr(update, "editable_origin", lambda: tmp_path)
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     assert update.uv_tool_lines("0.18.0") == []
 
 
-def test_el_aviso_de_uv_tool_cabe_en_la_consola_de_windows(monkeypatch, tmp_path):
-    _finge_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
+def test_the_uv_tool_warning_fits_in_the_windows_console(monkeypatch, tmp_path):
+    _fake_prefix(monkeypatch, tmp_path, f'[tool]\nname = "{update.PACKAGE}"')
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     "\n".join(update.uv_tool_lines("0.18.0")).encode("cp1252")
     update.GENERIC_UPGRADE.encode("cp1252")
 
 
-def test_el_aviso_de_uv_tool_no_cambia_el_plan_ni_el_exit_code(tmp_path, monkeypatch):
+def test_the_uv_tool_warning_changes_neither_the_plan_nor_the_exit_code(tmp_path, monkeypatch):
     monkeypatch.setattr(update, "latest_version", lambda timeout=0: ("0.18.0", None))
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     home = make_home(tmp_path, complete=False)
 
-    _finge_prefix(monkeypatch, tmp_path / "pref", f'[tool]\nname = "{update.PACKAGE}"')
-    con: list[str] = []
-    code_con = update.run_update(opts_for(home, dry_run=True), out=con.append)
+    _fake_prefix(monkeypatch, tmp_path / "pref", f'[tool]\nname = "{update.PACKAGE}"')
+    out_with: list[str] = []
+    code_with = update.run_update(opts_for(home, dry_run=True), out=out_with.append)
     extra = update.uv_tool_lines("0.18.0")
 
     monkeypatch.setattr(update, "install_kind", lambda: update.OTHER)
-    sin: list[str] = []
-    code_sin = update.run_update(opts_for(home, dry_run=True), out=sin.append)
+    out_without: list[str] = []
+    code_without = update.run_update(opts_for(home, dry_run=True), out=out_without.append)
 
-    assert code_con == code_sin
+    assert code_with == code_without
     assert extra, "el caso de uv tool debería aportar líneas"
 
     # Se ignoran las vacías: son maquetación, y el aviso añade una de separación. Lo que se
     # compara es el contenido — si el plan de acciones cambiara, aquí se vería.
-    def sin_aviso(salida):
-        return [x for x in salida if x.strip() and x not in extra]
+    def without_warning(output):
+        return [x for x in output if x.strip() and x not in extra]
 
-    assert sin_aviso(con) == sin_aviso(sin)
+    assert without_warning(out_with) == without_warning(out_without)
 
 
 # --- De dónde salió la versión, y el desfase tras publicar --------------------
@@ -361,149 +359,149 @@ def test_el_aviso_de_uv_tool_no_cambia_el_plan_ni_el_exit_code(tmp_path, monkeyp
 # durante una publicación real—, pero sí se puede detectar la firma del caso y decirla.
 
 
-def test_la_version_pedida_a_mano_no_se_presenta_como_la_ultima_publicada():
+def test_the_version_requested_by_hand_is_not_shown_as_the_latest_published():
     """`--version 0.17.0` no comprueba nada de PyPI; decir que es «la última» era mentira."""
-    lineas = update.version_lines("0.17.0", None, from_user=True)
-    assert lineas == ["Versión pedida con --version: 0.17.0"]
-    assert not any("publicada" in line for line in lineas)
+    lines = update.version_lines("0.17.0", None, from_user=True)
+    assert lines == ["Versión pedida con --version: 0.17.0"]
+    assert not any("publicada" in line for line in lines)
 
 
-def test_la_version_consultada_dice_de_donde_salio(monkeypatch):
+def test_the_queried_version_says_where_it_came_from(monkeypatch):
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
-    (linea,) = update.version_lines("0.17.0", None, from_user=False)
-    assert "0.17.0" in linea
-    assert update.PYPI_SOURCE in linea
+    (line,) = update.version_lines("0.17.0", None, from_user=False)
+    assert "0.17.0" in line
+    assert update.PYPI_SOURCE in line
 
 
-def test_instalada_mas_nueva_que_la_publicada_avisa_y_recuerda_el_flag(monkeypatch):
+def test_installed_newer_than_published_warns_and_reminds_the_flag(monkeypatch):
     """La firma exacta de una release recién publicada que PyPI todavía no anuncia."""
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
-    texto = "\n".join(update.version_lines("0.16.0", None, from_user=False))
-    assert "0.16.0" in texto and "0.17.0" in texto
+    text = "\n".join(update.version_lines("0.16.0", None, from_user=False))
+    assert "0.16.0" in text and "0.17.0" in text
     # La versión ya sustituida, no un placeholder: quien lee esto acaba de publicar y algo no le
     # cuadra; traducir `X.Y.Z` mentalmente es justo lo que no debe tener que hacer.
-    assert "--version 0.17.0" in texto
+    assert "--version 0.17.0" in text
 
 
-def test_sin_desfase_no_hay_aviso(monkeypatch):
+def test_without_drift_there_is_no_warning(monkeypatch):
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     assert len(update.version_lines("0.17.0", None, from_user=False)) == 1
     assert len(update.version_lines("0.18.0", None, from_user=False)) == 1
 
 
-@pytest.mark.parametrize("instalada", [None, "sin-numeros"])
-def test_sin_con_que_comparar_se_calla(monkeypatch, instalada):
+@pytest.mark.parametrize("installed", [None, "sin-numeros"])
+def test_with_nothing_to_compare_it_stays_quiet(monkeypatch, installed):
     """`unknown` no inventa: sin versión instalada utilizable, no hay aviso que dar."""
-    monkeypatch.setattr(update.checks, "_installed_version", lambda: instalada)
+    monkeypatch.setattr(update.checks, "_installed_version", lambda: installed)
     assert len(update.version_lines("0.16.0", None, from_user=False)) == 1
 
 
-def test_sin_red_se_conserva_el_aviso_de_siempre():
-    (linea,) = update.version_lines(None, "no se pudo consultar PyPI (URLError)", from_user=False)
-    assert "no se pudo consultar PyPI" in linea
-    assert "sin tocar los pines" in linea
+def test_without_network_the_usual_warning_is_kept():
+    (line,) = update.version_lines(None, "no se pudo consultar PyPI (URLError)", from_user=False)
+    assert "no se pudo consultar PyPI" in line
+    assert "sin tocar los pines" in line
 
 
-def test_las_lineas_caben_en_la_consola_de_windows(monkeypatch):
+def test_the_lines_fit_in_the_windows_console(monkeypatch):
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
     for args in [("0.16.0", None, True), ("0.16.0", None, False), (None, "motivo", False)]:
         version, reason, from_user = args
         "\n".join(update.version_lines(version, reason, from_user=from_user)).encode("cp1252")
 
 
-def test_el_aviso_de_desfase_no_cambia_el_plan_ni_el_exit_code(tmp_path, monkeypatch):
+def test_the_drift_warning_changes_neither_the_plan_nor_the_exit_code(tmp_path, monkeypatch):
     """Es información, no un cambio de comportamiento: `update` hace exactamente lo mismo."""
     monkeypatch.setattr(update, "latest_version", lambda timeout=0: ("0.16.0", None))
     home = make_home(tmp_path, complete=False)
 
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.17.0")
-    salida_con: list[str] = []
-    code_con = update.run_update(opts_for(home, dry_run=True), out=salida_con.append)
+    output_with: list[str] = []
+    code_with = update.run_update(opts_for(home, dry_run=True), out=output_with.append)
     # Las líneas que aporta el aviso, tomadas **con la instalada todavía en 0.17.0**.
     extra = update.version_lines("0.16.0", None, from_user=False)[1:]
 
     monkeypatch.setattr(update.checks, "_installed_version", lambda: "0.16.0")
-    salida_sin: list[str] = []
-    code_sin = update.run_update(opts_for(home, dry_run=True), out=salida_sin.append)
+    output_without: list[str] = []
+    code_without = update.run_update(opts_for(home, dry_run=True), out=output_without.append)
 
-    assert code_con == code_sin
-    assert any("MÁS NUEVA" in line for line in salida_con), "no salió el aviso"
-    assert not any("MÁS NUEVA" in line for line in salida_sin)
+    assert code_with == code_without
+    assert any("MÁS NUEVA" in line for line in output_with), "no salió el aviso"
+    assert not any("MÁS NUEVA" in line for line in output_without)
 
     # Y lo único que cambia es ese bloque: quitadas sus líneas exactas —las que `version_lines`
     # añade de más, no las que casen con un substring— las dos salidas son idénticas.
     assert extra, "el caso de desfase debería aportar líneas"
-    assert [line for line in salida_con if line not in extra] == salida_sin
+    assert [line for line in output_with if line not in extra] == output_without
 
 
-def test_pypi_se_consulta_una_sola_vez_en_todo_el_comando(tmp_path, monkeypatch):
+def test_pypi_is_queried_only_once_in_the_whole_command(tmp_path, monkeypatch):
     """`update` ya pregunta por la última versión; el check del registro no debe repetirlo.
 
     Se cuentan las consultas en vez de prohibirlas: la de `run_update` es legítima y necesaria,
     y lo que se vigila es que no aparezca una **segunda** por correr el diagnóstico.
     """
-    consultas: list[float] = []
+    queries: list[float] = []
 
-    def _espia(timeout=0.0):
-        consultas.append(timeout)
+    def _spy(timeout=0.0):
+        queries.append(timeout)
         return "9.9.9", None
 
-    monkeypatch.setattr(update, "latest_version", _espia)
+    monkeypatch.setattr(update, "latest_version", _spy)
     opts = opts_for(make_home(tmp_path, complete=False), dry_run=True)
 
     update.run_update(opts, out=lambda *a: None)
 
-    assert len(consultas) == 1, f"PyPI se consultó {len(consultas)} veces en un solo comando"
+    assert len(queries) == 1, f"PyPI se consultó {len(queries)} veces en un solo comando"
 
 
 # --- Los mecanismos de arranque ----------------------------------------------
 
 
 @pytest.mark.parametrize(
-    ("platform", "esperado", "comando"),
+    ("platform", "expected", "command"),
     [
         ("win32", update.SCHTASKS, "schtasks"),
         ("darwin", update.LAUNCHCTL, "launchctl"),
         ("linux", update.SYSTEMD, "systemctl"),
     ],
 )
-def test_detecta_el_mecanismo_registrado_de_cada_sistema(
-    tmp_path, monkeypatch, platform, esperado, comando
+def test_detects_the_registered_mechanism_of_each_system(
+    tmp_path, monkeypatch, platform, expected, command
 ):
     monkeypatch.setattr(update.sys, "platform", platform)
     runner = fake_run(returncode=0)
-    assert update.detect_mechanism(opts_for(tmp_path, runner=runner)) == esperado
-    assert runner.calls[0][0] == comando
+    assert update.detect_mechanism(opts_for(tmp_path, runner=runner)) == expected
+    assert runner.calls[0][0] == command
 
 
 @pytest.mark.parametrize("platform", ["win32", "darwin", "linux"])
-def test_sin_servicio_registrado_cae_al_fallback(tmp_path, monkeypatch, platform):
+def test_without_a_registered_service_it_falls_back(tmp_path, monkeypatch, platform):
     """Estar en Windows no implica que la tarea exista: se pregunta de verdad."""
     monkeypatch.setattr(update.sys, "platform", platform)
     runner = fake_run(returncode=1)
     assert update.detect_mechanism(opts_for(tmp_path, runner=runner)) == update.FALLBACK
 
 
-def test_el_mecanismo_que_falla_cae_al_fallback_y_relanza(tmp_path, monkeypatch):
+def test_the_failing_mechanism_falls_back_and_relaunches(tmp_path, monkeypatch):
     monkeypatch.setattr(update.sys, "platform", "linux")
-    lanzados: list[list[str]] = []
+    launched: list[list[str]] = []
     # `systemctl cat` responde (existe la unidad) pero `restart` falla.
-    respuestas = iter([0, 1])
+    responses = iter([0, 1])
 
     def runner(argv):
-        return subprocess.CompletedProcess(argv, next(respuestas), "", "unit failed")
+        return subprocess.CompletedProcess(argv, next(responses), "", "unit failed")
 
     opts = opts_for(
         tmp_path,
         runner=runner,
-        spawn=lanzados.append,
+        spawn=launched.append,
         daemon_status=lambda host, port: {"pid": 999, "version": "0.16.0"},
     )
     update.restart_daemon(opts, out=lambda *a: None)
-    assert lanzados, "tras fallar el mecanismo registrado hay que relanzar por el fallback"
+    assert launched, "tras fallar el mecanismo registrado hay que relanzar por el fallback"
 
 
-def test_el_pid_que_sobrevive_al_stop_del_servicio_recibe_la_senal(tmp_path, monkeypatch):
+def test_the_pid_that_survives_the_service_stop_gets_the_signal(tmp_path, monkeypatch):
     """Parar el SERVICIO no siempre para el PROCESO, y se descubrió ejecutándolo en Windows.
 
     La tarea programada lanza `conhost -> powershell -> launcher`, y el launcher crea el daemon
@@ -512,8 +510,8 @@ def test_el_pid_que_sobrevive_al_stop_del_servicio_recibe_la_senal(tmp_path, mon
     escuchar y el reinicio se da por fallido con el daemon viejo todavía sirviendo.
     """
     monkeypatch.setattr(update.sys, "platform", "win32")
-    matados: list[int] = []
-    monkeypatch.setattr(update.os, "kill", lambda pid, sig: matados.append(pid))
+    killed: list[int] = []
+    monkeypatch.setattr(update.os, "kill", lambda pid, sig: killed.append(pid))
     opts = opts_for(
         tmp_path,
         runner=fake_run(returncode=0),
@@ -522,36 +520,36 @@ def test_el_pid_que_sobrevive_al_stop_del_servicio_recibe_la_senal(tmp_path, mon
         spawn=lambda argv: None,
     )
     update.restart_daemon(opts, out=lambda *a: None)
-    assert 41176 in matados
+    assert 41176 in killed
 
 
-def test_el_mecanismo_que_si_para_el_proceso_no_recibe_senal_extra(tmp_path, monkeypatch):
+def test_the_mechanism_that_does_stop_the_process_gets_no_extra_signal(tmp_path, monkeypatch):
     """`systemctl restart` para y arranca en un solo comando: ahí no hay nada que rematar."""
     monkeypatch.setattr(update.sys, "platform", "linux")
-    matados: list[int] = []
-    monkeypatch.setattr(update.os, "kill", lambda pid, sig: matados.append(pid))
+    killed: list[int] = []
+    monkeypatch.setattr(update.os, "kill", lambda pid, sig: killed.append(pid))
     pids = iter([{"pid": 7, "version": "v"}, {"pid": 8, "version": "v"}])
-    ultimo = {}
+    last = {}
 
     def daemon_status(host, port):
-        ultimo["v"] = next(pids, ultimo.get("v"))
-        return ultimo["v"]
+        last["v"] = next(pids, last.get("v"))
+        return last["v"]
 
     opts = opts_for(tmp_path, runner=fake_run(0), daemon_status=daemon_status, spawn=lambda a: None)
     assert update.restart_daemon(opts, out=lambda *a: None) == 0
-    assert matados == []
+    assert killed == []
 
 
 # --- REQ-008: el pid solo sale de /api/daemon --------------------------------
 
 
-def test_sin_daemon_vivo_no_se_envia_ninguna_senal(tmp_path, monkeypatch):
+def test_without_a_live_daemon_no_signal_is_sent(tmp_path, monkeypatch):
     """El caso del pid reciclado: `daemon.json` puede tener un pid ajeno, y nunca se lee.
 
     Si `/api/daemon` no responde, no hay pid que señalar: se trata como caído y se levanta.
     """
-    matados: list[int] = []
-    monkeypatch.setattr(update.os, "kill", lambda pid, sig: matados.append(pid))
+    killed: list[int] = []
+    monkeypatch.setattr(update.os, "kill", lambda pid, sig: killed.append(pid))
     monkeypatch.setattr(update.sys, "platform", "linux")
     opts = opts_for(
         tmp_path,
@@ -560,10 +558,10 @@ def test_sin_daemon_vivo_no_se_envia_ninguna_senal(tmp_path, monkeypatch):
         spawn=lambda argv: None,
     )
     update.restart_daemon(opts, out=lambda *a: None)
-    assert matados == []
+    assert killed == []
 
 
-def test_el_daemon_que_no_vuelve_sale_con_codigo_distinto_de_cero(tmp_path, monkeypatch):
+def test_the_daemon_that_does_not_come_back_exits_nonzero(tmp_path, monkeypatch):
     monkeypatch.setattr(update.sys, "platform", "linux")
     opts = opts_for(
         tmp_path,
@@ -574,7 +572,7 @@ def test_el_daemon_que_no_vuelve_sale_con_codigo_distinto_de_cero(tmp_path, monk
     assert update.restart_daemon(opts, out=lambda *a: None) == 1
 
 
-def test_se_exige_que_el_pid_cambie_tras_reiniciar(tmp_path, monkeypatch):
+def test_the_pid_must_change_after_restarting(tmp_path, monkeypatch):
     """REQ-005: si vuelve el MISMO pid, el servicio no reinició y no vale darlo por bueno."""
     monkeypatch.setattr(update.sys, "platform", "linux")
     opts = opts_for(
@@ -586,14 +584,14 @@ def test_se_exige_que_el_pid_cambie_tras_reiniciar(tmp_path, monkeypatch):
     assert update.restart_daemon(opts, out=lambda *a: None) == 1
 
 
-def test_el_reinicio_correcto_devuelve_cero(tmp_path, monkeypatch):
+def test_the_correct_restart_returns_zero(tmp_path, monkeypatch):
     monkeypatch.setattr(update.sys, "platform", "linux")
     pids = iter([{"pid": 7, "version": "0.16.0"}, {"pid": 8, "version": "0.16.0"}])
-    ultimo = {}
+    last = {}
 
     def daemon_status(host, port):
-        ultimo["v"] = next(pids, ultimo.get("v"))
-        return ultimo["v"]
+        last["v"] = next(pids, last.get("v"))
+        return last["v"]
 
     opts = opts_for(
         tmp_path, runner=fake_run(returncode=0), daemon_status=daemon_status, spawn=lambda a: None
@@ -605,7 +603,7 @@ def test_el_reinicio_correcto_devuelve_cero(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("newline", ["\n", "\r\n"])
-def test_el_pin_conserva_el_terminador_de_linea(tmp_path, newline):
+def test_the_pin_keeps_the_line_terminator(tmp_path, newline):
     """Escribir con el terminador de la plataforma marcaría el fichero entero como modificado."""
     path = tmp_path / ".claude.json"
     raw = '{{"mcpServers": {{"local-delegate": {{"args": ["--from", "local-delegate-mcp==0.13.0"]}}}}}}'
@@ -616,13 +614,13 @@ def test_el_pin_conserva_el_terminador_de_linea(tmp_path, newline):
     assert len(actions) == 1
     install.apply(actions, dry_run=False, out=lambda *a: None)
 
-    escrito = path.read_bytes()
-    assert b"local-delegate-mcp==0.16.0" in escrito
-    assert (b"\r\n" in escrito) == (b"\r\n" in original)
+    written = path.read_bytes()
+    assert b"local-delegate-mcp==0.16.0" in written
+    assert (b"\r\n" in written) == (b"\r\n" in original)
     assert (tmp_path / ".claude.json.bak").is_file()
 
 
-def test_sin_pin_no_hay_nada_que_cambiar(tmp_path):
+def test_without_a_pin_there_is_nothing_to_change(tmp_path):
     """Sin `==X.Y.Z`, uvx ya resuelve la última en cada arranque."""
     (tmp_path / ".claude.json").write_text(
         '{"mcpServers": {"local-delegate": {"args": ["--from", "local-delegate-mcp"]}}}',
@@ -631,56 +629,56 @@ def test_sin_pin_no_hay_nada_que_cambiar(tmp_path):
     assert update.plan_pin(update.Options(home=tmp_path), "0.16.0") == []
 
 
-def test_un_pin_ya_al_dia_no_se_toca(tmp_path):
+def test_an_up_to_date_pin_is_not_touched(tmp_path):
     (tmp_path / ".claude.json").write_text("local-delegate-mcp==0.16.0", encoding="utf-8")
     assert update.plan_pin(update.Options(home=tmp_path), "0.16.0") == []
 
 
-def test_sin_entrada_del_paquete_no_se_toca(tmp_path):
+def test_without_the_package_entry_nothing_is_touched(tmp_path):
     (tmp_path / ".claude.json").write_text('{"mcpServers": {}}', encoding="utf-8")
     assert update.plan_pin(update.Options(home=tmp_path), "0.16.0") == []
 
 
-def test_sin_red_se_avisa_y_se_sigue_con_exito(tmp_path, monkeypatch):
+def test_without_network_it_warns_and_continues_successfully(tmp_path, monkeypatch):
     """Edge case de la spec: PyPI caído no impide completar el andamiaje ni reiniciar."""
     monkeypatch.setattr(update, "latest_version", lambda *a, **k: (None, "sin red"))
-    salida: list[str] = []
+    output: list[str] = []
     opts = opts_for(make_home(tmp_path, complete=True), no_restart=True)
-    assert update.run_update(opts, out=salida.append) == 0
-    assert any("sin red" in line for line in salida)
+    assert update.run_update(opts, out=output.append) == 0
+    assert any("sin red" in line for line in output)
 
 
 # --- El backend no se toca salvo que se pida ---------------------------------
 
 
-def test_sin_la_flag_no_hay_ni_una_invocacion_al_backend(tmp_path, monkeypatch):
+def test_without_the_flag_there_is_not_a_single_backend_call(tmp_path, monkeypatch):
     """REQ-012: reiniciar el daemon no puede descargar los modelos de la VRAM."""
-    llamado = []
-    monkeypatch.setattr(update, "restart_backend", lambda *a, **k: llamado.append(1) or 0)
+    called = []
+    monkeypatch.setattr(update, "restart_backend", lambda *a, **k: called.append(1) or 0)
     opts = opts_for(make_home(tmp_path, complete=True), no_restart=True)
     update.run_update(opts, out=lambda *a: None)
-    assert llamado == []
+    assert called == []
 
 
-def test_con_backend_remoto_no_se_intenta_nada(tmp_path, monkeypatch):
+def test_with_remote_backend_nothing_is_attempted(tmp_path, monkeypatch):
     """El caso de la Mac apuntando a la PC: no hay backend local que reiniciar, y no es error."""
     monkeypatch.setattr(update.config, "backend_origin", lambda *a: "remote")
     runner = fake_run()
-    salida: list[str] = []
-    assert update.restart_backend(opts_for(tmp_path, runner=runner), out=salida.append) == 0
+    output: list[str] = []
+    assert update.restart_backend(opts_for(tmp_path, runner=runner), out=output.append) == 0
     assert runner.calls == []
-    assert any("remoto" in line for line in salida)
+    assert any("remoto" in line for line in output)
 
 
-def test_un_puerto_ocupado_por_otro_proceso_no_recibe_senal(tmp_path, monkeypatch):
+def test_a_port_taken_by_another_process_gets_no_signal(tmp_path, monkeypatch):
     """Dos confirmaciones antes de señalar: el host dice «local», pero el proceso manda."""
     monkeypatch.setattr(update.config, "backend_origin", lambda *a: "local")
     monkeypatch.setattr(update, "_port_owner", lambda opts, port: 1234)
     monkeypatch.setattr(update, "_process_name", lambda opts, pid: "nginx.exe")
-    matados: list[int] = []
-    monkeypatch.setattr(update.os, "kill", lambda pid, sig: matados.append(pid))
+    killed: list[int] = []
+    monkeypatch.setattr(update.os, "kill", lambda pid, sig: killed.append(pid))
     assert update.restart_backend(opts_for(tmp_path), out=lambda *a: None) == 1
-    assert matados == []
+    assert killed == []
 
 
 # --- Instalación editable (PEP 610) ------------------------------------------
@@ -695,7 +693,7 @@ class _FakeDistribution:
 
 
 @pytest.mark.parametrize(
-    ("payload", "espera_ruta"),
+    ("payload", "expects_path"),
     [
         ('{"url": "file:///repo", "dir_info": {"editable": true}}', True),
         ('{"url": "file:///repo", "dir_info": {"editable": false}}', False),
@@ -704,16 +702,16 @@ class _FakeDistribution:
         ("no es json", False),
     ],
 )
-def test_deteccion_de_instalacion_editable(monkeypatch, payload, espera_ruta):
+def test_editable_install_detection(monkeypatch, payload, expects_path):
     monkeypatch.setattr(
         update.metadata.Distribution,
         "from_name",
         staticmethod(lambda name: _FakeDistribution(payload)),
     )
-    assert (update.editable_origin() is not None) is espera_ruta
+    assert (update.editable_origin() is not None) is expects_path
 
 
-def test_sin_metadatos_no_se_asume_editable(monkeypatch):
+def test_without_metadata_editable_is_not_assumed(monkeypatch):
     def boom(name):
         raise update.metadata.PackageNotFoundError(name)
 
@@ -724,7 +722,7 @@ def test_sin_metadatos_no_se_asume_editable(monkeypatch):
 # --- El HOME simulado no toca servicios --------------------------------------
 
 
-def test_home_simulado_no_reinicia_el_daemon_real(tmp_path):
+def test_simulated_home_does_not_restart_the_real_daemon(tmp_path):
     """B-3: el daemon no se deriva de `ctx.home`, así que sin esta regla `--home /tmp` reiniciaría
     el servicio de verdad de la máquina."""
     runner = fake_run()
@@ -734,7 +732,7 @@ def test_home_simulado_no_reinicia_el_daemon_real(tmp_path):
     assert runner.calls == []
 
 
-def test_home_simulado_no_registra_el_mcp_por_la_cli_del_cliente(tmp_path):
+def test_simulated_home_does_not_register_the_mcp_through_the_client_cli(tmp_path):
     """`claude mcp add-json --scope user` escribe en el `~/.claude.json` REAL, ignorando `home`.
 
     Se descubrió ejecutando `update --home <tmp>` dos veces: la segunda volvía a planificar la
@@ -755,20 +753,20 @@ def test_home_simulado_no_registra_el_mcp_por_la_cli_del_cliente(tmp_path):
 # --- Los nombres canónicos viven en un solo sitio ----------------------------
 
 
-def test_los_nombres_del_servicio_coinciden_con_la_wiki():
+def test_the_service_names_match_the_wiki():
     """Si el módulo y la receta se separan, `update` busca un servicio que nadie registró."""
     from pathlib import Path as _Path
 
     wiki = _Path(__file__).resolve().parents[1] / "docs" / "wiki" / "Daemon.md"
-    texto = wiki.read_text(encoding="utf-8")
-    for nombre in (update.TASK_NAME, update.LAUNCH_LABEL, update.SYSTEMD_UNIT):
-        assert nombre in texto, f"{nombre} no aparece en docs/wiki/Daemon.md"
+    text = wiki.read_text(encoding="utf-8")
+    for name in (update.TASK_NAME, update.LAUNCH_LABEL, update.SYSTEMD_UNIT):
+        assert name in text, f"{name} no aparece en docs/wiki/Daemon.md"
 
 
 # --- Hooks de otra versión: el caso de la Mac ---------------------------------
 
 
-def test_hooks_de_otra_version_se_reponen_sin_apagar_el_de_lectura(tmp_path):
+def test_hooks_from_another_version_are_restored_without_turning_off_the_read_hook(tmp_path):
     """Paquete nuevo, hooks viejos y el de lectura encendido: `update` los repone y lo respeta.
 
     Tres cosas, y cada una falló o habría fallado: el check daba `ok` con hooks de otra versión,
@@ -791,22 +789,22 @@ def test_hooks_de_otra_version_se_reponen_sin_apagar_el_de_lectura(tmp_path):
         out=lambda *a: None,
     )
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
-    viejo = hooks_dir / install._READ_HOOK[0]
-    viejo.write_text("# versión anterior\n", encoding="utf-8")
+    old = hooks_dir / install._READ_HOOK[0]
+    old.write_text("# versión anterior\n", encoding="utf-8")
     assert install.read_hook_registered(home / ".claude")
 
     actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
     assert any(a.kind == "copy" and a.target == hooks_dir for a in actions), actions
     install.apply(actions, dry_run=False, out=lambda *a: None)
 
-    empaquetado = install.resources_dir() / "hooks" / install._READ_HOOK[0]
-    assert viejo.read_bytes() == empaquetado.read_bytes()
+    packaged = install.resources_dir() / "hooks" / install._READ_HOOK[0]
+    assert old.read_bytes() == packaged.read_bytes()
     assert install.read_hook_registered(home / ".claude"), "update apagó el hook de lectura"
-    segunda, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
-    assert [a for a in segunda if "hooks" in str(a.target)] == []
+    second, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    assert [a for a in second if "hooks" in str(a.target)] == []
 
 
-def test_sin_hook_de_lectura_registrado_update_no_lo_enciende(tmp_path):
+def test_without_a_registered_read_hook_update_does_not_turn_it_on(tmp_path):
     """El otro lado: respetar la elección es también no activarlo si no estaba."""
     home = make_home(tmp_path)
     assert not install.read_hook_registered(home / ".claude")
@@ -888,13 +886,13 @@ def test_a_crlf_memory_file_that_is_up_to_date_is_not_rewritten(tmp_path):
     home = make_home(tmp_path, complete=True)
     claude_md = home / ".claude" / "CLAUDE.md"
     claude_md.write_bytes(claude_md.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
-    antes, mtime = claude_md.read_bytes(), claude_md.stat().st_mtime_ns
+    before, mtime = claude_md.read_bytes(), claude_md.stat().st_mtime_ns
 
     by_id = {c.id: r for c, r in checks.run_all(_ctx(home))}
     assert by_id["scaffold.memory"].status == checks.OK, by_id["scaffold.memory"].detail
     _update_once(home)
 
-    assert claude_md.read_bytes() == antes
+    assert claude_md.read_bytes() == before
     assert claude_md.stat().st_mtime_ns == mtime
     assert not claude_md.with_suffix(".md.bak").exists()
 
@@ -905,9 +903,9 @@ def test_second_update_pass_changes_nothing(tmp_path):
     downgrade_to_0_34(home)
     _agent_with_catalog(home, OLD_SKILL_NAME)
     assert _update_once(home), "la primera pasada debía reparar algo"
-    antes = snapshot(home)
+    before = snapshot(home)
 
-    segunda = _update_once(home)
+    second = _update_once(home)
 
-    assert segunda == []
-    assert snapshot(home) == antes
+    assert second == []
+    assert snapshot(home) == before

@@ -43,12 +43,12 @@ def never_clashes(a: str, b: str) -> bool:
     return False
 
 
-def pet(op_id: str, role: str, *alternatives: str, **kw) -> PendingRequest:
+def req(op_id: str, role: str, *alternatives: str, **kw) -> PendingRequest:
     return PendingRequest(op_id, frozenset({role, *alternatives}), role, **kw)
 
 
 def active(op_id: str, *reserve: str, since: float = 0.0) -> Active:
-    return Active(Wait(pet(op_id, reserve[0]), since), frozenset(reserve))
+    return Active(Wait(req(op_id, reserve[0]), since), frozenset(reserve))
 
 
 def wait(request: PendingRequest, since: float = 0.0) -> Wait:
@@ -70,7 +70,7 @@ def arrive(state: State, request: PendingRequest, now: float = 0.0) -> State:
 
 def test_nobody_waits_forever():
     """Escenario «nadie se queda esperando para siempre»."""
-    state = State(actives=(active("larga", M26B),), queue=(wait(pet("qwen", QWEN)),))
+    state = State(actives=(active("larga", M26B),), queue=(wait(req("qwen", QWEN)),))
     order = ["larga"]
 
     def serve(state: State) -> State:
@@ -79,7 +79,7 @@ def test_nobody_waits_forever():
         return decision.state
 
     for n in (1, 2, 3):
-        state = serve(arrive(state, pet(f"26b-{n}", M26B)))
+        state = serve(arrive(state, req(f"26b-{n}", M26B)))
     state = serve(turn.release_slot(state, "larga"))
     state = serve(turn.release_slot(state, "qwen"))
 
@@ -89,8 +89,8 @@ def test_nobody_waits_forever():
 
 def test_affinity_does_not_jump_queue_if_someone_waits():
     """Escenario «la afinidad no se cuela si alguien espera», con `A` sintético {4B, 26B}."""
-    state = State(actives=(active("propia", M26B),), queue=(wait(pet("qwen", QWEN)),))
-    state = arrive(state, pet("classify", M4B, M26B))
+    state = State(actives=(active("propia", M26B),), queue=(wait(req("qwen", QWEN)),))
+    state = arrive(state, req("classify", M4B, M26B))
 
     granted = evaluate(state).grant_for("classify")
 
@@ -99,7 +99,7 @@ def test_affinity_does_not_jump_queue_if_someone_waits():
 
 def test_affinity_joins_if_nobody_waits():
     """Escenario «la afinidad se une si nadie espera» (guarda del mutante anterior)."""
-    state = arrive(State(actives=(active("propia", M26B),)), pet("classify", M4B, M26B))
+    state = arrive(State(actives=(active("propia", M26B),)), req("classify", M4B, M26B))
 
     granted = evaluate(state).grant_for("classify")
 
@@ -109,8 +109,8 @@ def test_affinity_joins_if_nobody_waits():
 
 def test_compatible_resident_does_not_wait_e1():
     """Escenario «un residente compatible no espera (E-1)»."""
-    state = State(actives=(active("propia", M26B),), queue=(wait(pet("qwen", QWEN)),))
-    state = arrive(state, pet("classify", M4B))
+    state = State(actives=(active("propia", M26B),), queue=(wait(req("qwen", QWEN)),))
+    state = arrive(state, req("classify", M4B))
 
     decision = evaluate(state, clashes=clashes_resident)
     granted = decision.grant_for("classify")
@@ -122,8 +122,8 @@ def test_compatible_resident_does_not_wait_e1():
 
 def test_e1_not_applied_if_it_clashes_with_queue():
     """El 4B es compatible con `actives` (26B) pero choca con lo que pide la cabeza (Qwen)."""
-    state = State(actives=(active("propia", M26B),), queue=(wait(pet("qwen", QWEN)),))
-    state = arrive(state, pet("classify", M4B))
+    state = State(actives=(active("propia", M26B),), queue=(wait(req("qwen", QWEN)),))
+    state = arrive(state, req("classify", M4B))
 
     granted = evaluate(state, clashes=clashes_4b_with_qwen).grant_for("classify")
 
@@ -131,7 +131,7 @@ def test_e1_not_applied_if_it_clashes_with_queue():
 
 
 def test_without_progress_head_is_force_granted_at_600():
-    state = State(actives=(active("larga", M26B),), queue=(wait(pet("qwen", QWEN), 0.0),))
+    state = State(actives=(active("larga", M26B),), queue=(wait(req("qwen", QWEN), 0.0),))
 
     assert evaluate(state, now=599.0, no_progress_since=0.0).grant_for("qwen") is None
     decision = evaluate(state, now=600.0, no_progress_since=0.0).grant_for("qwen")
@@ -143,7 +143,7 @@ def test_without_progress_head_is_force_granted_at_600():
 
 def test_call_ending_at_599_prevents_forcing_at_600():
     """Mutante 2: medir la espera total en vez de la falta de progreso."""
-    state = State(actives=(active("larga", M26B),), queue=(wait(pet("qwen", QWEN), 0.0),))
+    state = State(actives=(active("larga", M26B),), queue=(wait(req("qwen", QWEN), 0.0),))
 
     decision = evaluate(state, now=600.0, no_progress_since=599.0).grant_for("qwen")
 
@@ -172,11 +172,11 @@ def test_forced_hop_uses_chain_order(acceptable, chain_order):
 
 def test_choice_after_forced_returns_to_head():
     """REQ-003, «Elección»: ningún modelo de `A'` cabe sin contar la propia operación."""
-    op = pet("op", M4B, M26B)
-    forced = Active(Wait(pet("forzada", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    op = req("op", M4B, M26B)
+    forced = Active(Wait(req("forzada", QWEN), 0.0), frozenset({QWEN}), forced=True)
     state = State(
         actives=(Active(Wait(op, 0.0), frozenset({M4B, M26B})), forced),
-        queue=(wait(pet("detras", M26B), 5.0),),
+        queue=(wait(req("detras", M26B), 5.0),),
     )
 
     assert turn.compatible_when_choosing(state, "op", clashes_today) == frozenset()
@@ -189,7 +189,7 @@ def test_choice_after_forced_returns_to_head():
 
 def test_choose_reduces_to_first_fitting_candidate():
     """`choose` respeta el orden de los candidatos y se salta los que chocan."""
-    op = pet("op", M4B, M26B, QWEN)
+    op = req("op", M4B, M26B, QWEN)
     other = active("otro", M26B)
     state = State(actives=(Active(Wait(op, 0.0), frozenset({M4B, M26B, QWEN})), other))
 
@@ -203,11 +203,11 @@ def test_choose_reduces_to_first_fitting_candidate():
 
 def test_choose_returns_to_head_if_none_fits():
     """Tras una forzada de otra, `choose` no reduce: devuelve la operación a la cabeza."""
-    op = pet("op", M4B, M26B)
-    forced = Active(Wait(pet("forzada", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    op = req("op", M4B, M26B)
+    forced = Active(Wait(req("forzada", QWEN), 0.0), frozenset({QWEN}), forced=True)
     state = State(
         actives=(Active(Wait(op, 0.0), frozenset({M4B, M26B})), forced),
-        queue=(wait(pet("detras", M26B), 5.0),),
+        queue=(wait(req("detras", M26B), 5.0),),
     )
 
     state, model = turn.choose(state, "op", [M4B, M26B], clashes_today)
@@ -224,7 +224,7 @@ def test_choose_without_reserve_candidates_fails():
 
 
 def test_with_empty_active_reserve_is_all_a():
-    granted = evaluate(arrive(State(), pet("w1", M4B, M26B, QWEN))).grant_for("w1")
+    granted = evaluate(arrive(State(), req("w1", M4B, M26B, QWEN))).grant_for("w1")
 
     assert granted is not None
     assert granted.reserve == {M4B, M26B, QWEN}
@@ -278,8 +278,8 @@ def test_wrapper_no_progress_forced_by_periodic_check():
     """Mutante 1: `wait()` sin tope no despierta nunca si nadie llega ni sale."""
     clock = Clock()
     t = Turn(clashes_today, tick=0.02, clock=clock)
-    t.request(pet("larga", M26B))
-    w = Request(t, pet("qwen", QWEN))
+    t.request(req("larga", M26B))
+    w = Request(t, req("qwen", QWEN))
     wait_in_queue(t, "qwen")
 
     clock.t = 600.0
@@ -293,10 +293,10 @@ def test_wrapper_long_call_in_flight_not_forced():
     """Escenario «llamada larga con plazo HTTP mayor que 600 s»: 700 s en vuelo."""
     clock = Clock()
     t = Turn(clashes_today, tick=0.02, clock=clock)
-    t.request(pet("larga", M26B))
+    t.request(req("larga", M26B))
     call = t.in_flight()
     call.__enter__()
-    w = Request(t, pet("qwen", QWEN))
+    w = Request(t, req("qwen", QWEN))
     wait_in_queue(t, "qwen")
 
     clock.t = 650.0
@@ -315,9 +315,9 @@ def test_wrapper_long_call_in_flight_not_forced():
 def test_when_a_reserve_shrinks_queue_is_rechecked():
     """Escenario «cuando una reserva se reduce, la cola se vuelve a mirar»."""
     t = Turn(clashes_today, tick=5.0)
-    w1 = t.request(pet("w1", M4B, M26B, QWEN))
+    w1 = t.request(req("w1", M4B, M26B, QWEN))
     assert w1.reserve == {M4B, M26B, QWEN}
-    w2 = Request(t, pet("w2", M26B))
+    w2 = Request(t, req("w2", M26B))
     wait_in_queue(t, "w2")
 
     t.reduce("w1", M26B)
@@ -335,10 +335,10 @@ def test_when_a_reserve_shrinks_queue_is_rechecked():
 
 def test_abandoned_wait_lets_next_compatible_pass():
     t = Turn(clashes_today, tick=5.0)
-    t.request(pet("larga", M26B))
-    head = Request(t, pet("qwen", QWEN))
+    t.request(req("larga", M26B))
+    head = Request(t, req("qwen", QWEN))
     wait_in_queue(t, "qwen")
-    next_item = Request(t, pet("26b", M26B))
+    next_item = Request(t, req("26b", M26B))
     wait_in_queue(t, "26b")
 
     assert t.abandon("qwen")
@@ -352,8 +352,8 @@ def test_abandoned_wait_lets_next_compatible_pass():
 
 def test_topology_change_grants_a_wait_that_now_fits():
     t = Turn(clashes_today, tick=5.0)
-    t.request(pet("larga", M26B))
-    w = Request(t, pet("qwen", QWEN))
+    t.request(req("larga", M26B))
+    w = Request(t, req("qwen", QWEN))
     wait_in_queue(t, "qwen")
 
     t.topology_change(never_clashes)
@@ -377,8 +377,8 @@ def test_tick_hook_shows_new_topology_to_waiters():
         t.topology_change(never_clashes)
 
     t = Turn(clashes_today, tick=0.02, on_tick=on_tick)
-    t.request(pet("larga", M26B))
-    w = Request(t, pet("qwen", QWEN))
+    t.request(req("larga", M26B))
+    w = Request(t, req("qwen", QWEN))
     wait_in_queue(t, "qwen")
 
     granted_in_time = w.ready.wait(CAP_S) and w.grant is not None
@@ -390,22 +390,22 @@ def test_tick_hook_shows_new_topology_to_waiters():
 def test_acquisition_order_request_with_slot_raises():
     t = Turn(clashes_today)
     with turn.slot_taken(), pytest.raises(AssertionError):
-        t.request(pet("op", M26B))
+        t.request(req("op", M26B))
     assert not turn.has_slot()
-    assert t.request(pet("op", M26B)).model == M26B  # sin la marca, se concede
+    assert t.request(req("op", M26B)).model == M26B  # sin la marca, se concede
 
 
 def test_wait_warnings_and_back_to_head_with_threads():
     """`on_wait` recibe posición y modelos en uso; `back` re-espera en la cabeza."""
     t = Turn(clashes_today, tick=0.02)
-    op = t.request(pet("op", M4B, M26B))
+    op = t.request(req("op", M4B, M26B))
     assert op.model is None
     # Una forzada de otra deja la reserva de `op` sin modelo que quepa.
-    forced = Active(Wait(pet("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    forced = Active(Wait(req("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
     with t._cond:  # montaje directo del estado tras una forzada
         t._state = State(actives=(*t._state.actives, forced))
     assert t.compatible_models("op") == frozenset()
-    another = Request(t, pet("otra", M26B))
+    another = Request(t, req("otra", M26B))
     wait_in_queue(t, "otra")
 
     result: list[turn.Grant] = []
@@ -429,21 +429,21 @@ def test_wait_warnings_and_back_to_head_with_threads():
 
 def test_abandon_by_exception_in_hook_cleans_queue():
     t = Turn(clashes_today, tick=5.0)
-    t.request(pet("larga", M26B))
+    t.request(req("larga", M26B))
 
     def hook(position, in_use):
         raise RuntimeError("fallo del gancho")
 
     with pytest.raises(RuntimeError):
-        t.request(pet("qwen", QWEN), hook)
+        t.request(req("qwen", QWEN), hook)
     assert t.snapshot().queue == ()
 
 
 def test_wrapper_choose_after_forced_waits_and_chooses():
     """`Turn.choose`: sin modelo que quepa vuelve a la cabeza, espera y elige al concederse."""
     t = Turn(clashes_today, tick=0.02)
-    t.request(pet("op", M4B, M26B))
-    forced = Active(Wait(pet("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    t.request(req("op", M4B, M26B))
+    forced = Active(Wait(req("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
     with t._cond:  # montaje directo del estado tras una forzada
         t._state = State(actives=(*t._state.actives, forced))
 
@@ -467,7 +467,7 @@ def test_wrapper_choose_after_forced_waits_and_chooses():
 def test_choose_without_waiting_is_valid_with_a_slot():
     """El daemon elige con la plaza de su primera llamada en la mano: no salta el aserto."""
     t = Turn(clashes_today)
-    t.request(pet("op", M4B, M26B))
+    t.request(req("op", M4B, M26B))
     with turn.slot_taken():
         model = t.choose_without_waiting("op", [M26B, M4B])
     assert model == M26B
@@ -477,9 +477,9 @@ def test_choose_without_waiting_is_valid_with_a_slot():
 
 def test_choose_without_waiting_returns_none_and_leaves_op_at_head():
     t = Turn(clashes_today, tick=5.0)
-    t.request(pet("op", M4B, M26B))
-    forced = Active(Wait(pet("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
-    waiting = Request(t, pet("behind", M4B))
+    t.request(req("op", M4B, M26B))
+    forced = Active(Wait(req("f", QWEN), 0.0), frozenset({QWEN}), forced=True)
+    waiting = Request(t, req("behind", M4B))
     wait_in_queue(t, "behind")
     with t._cond:  # montaje directo del estado tras una forzada
         t._state = State(actives=(*t._state.actives, forced), queue=t._state.queue)
@@ -509,8 +509,8 @@ def test_wait_for_grant_with_a_slot_raises():
 def test_choose_without_waiting_wakes_the_queue_when_it_shrinks():
     """La reducción de `choose_without_waiting` avisa a la cola sin esperar al tic (aquí, 5 s)."""
     t = Turn(clashes_today, tick=5.0)
-    t.request(pet("w1", M4B, M26B, QWEN))
-    w2 = Request(t, pet("w2", M26B))
+    t.request(req("w1", M4B, M26B, QWEN))
+    w2 = Request(t, req("w2", M26B))
     wait_in_queue(t, "w2")
 
     with turn.slot_taken():

@@ -1,0 +1,11 @@
+refactor(rename): nombres en inglés en test_test_windows, test_topes_por_rol, test_turn, test_turn_daemon y test_update (ola A9c, lote 4)
+
+Renombra a inglés los nombres de los tests de las ventanas de prueba, de
+los topes por rol, del turno y de update: 197 filas del mapping
+aprobado. test_topes_por_rol.py pasa a test_role_caps.py; cambian sus
+test_*, la fixture ola11 → wave11, los ayudantes (_ventanas → _windows,
+_finge_prefix → _fake_prefix, pet → req…), los argnames de parametrize
+y sus variables locales.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2572.
