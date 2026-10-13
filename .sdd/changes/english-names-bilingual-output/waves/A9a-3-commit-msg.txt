@@ -1,0 +1,21 @@
+refactor(rename): nombres en inglés en test_causa_conexion, test_checks y test_chunking (ola A9a, lote 3)
+
+Renombra a inglés los nombres de test_causa_conexion.py, test_checks.py y
+test_chunking.py: 264 filas del mapping aprobado. Entre ellas, los 107
+test_* de esos módulos, los dobles del diagnóstico (_con_desktop →
+_with_desktop, _desktop_ctx(exige, acepta, llamadas) → requires/accepts/
+calls, observando → observing, _publicada → _published) y los casos de la
+causa de conexión (_CASOS → _CASES, _envuelta → _wrapped), con las
+cadenas de parametrize que los ligan.
+
+Fichero (git mv): test_causa_conexion.py → test_connection_cause.py.
+
+Añade dos tests a test_checks.py para el valor interno "no_credential",
+que no protegía ningún test: uno afirma que una entrada HTTP sin cabecera
+sale por la rama «sin cabecera de autorización» y no por la de «variable
+que no está»; el otro fija lo que devuelve _entry_auth. Los tests
+recogidos pasan de 2567 a 2569.
+
+Solo se renombra: ningún assert de los existentes cambia de sentido y los
+textos en español que afirman los tests no se tocan. Con el rename cambia,
+por consecuencia, la cita de un test en tests/test_wiki.py.

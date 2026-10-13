@@ -219,7 +219,7 @@ def _filas_de_la_tabla_de_checks() -> list[tuple[str, str]]:
 def test_la_tabla_del_doctor_lista_todas_las_comprobaciones():
     """La wiki es la única superficie del doctor que no tenía guardián, y se desfasó.
 
-    `checks.py` sí lo tiene —`test_el_docstring_dice_cuantos_checks_hay_de_verdad`— y por eso sus
+    `checks.py` sí lo tiene —`test_the_docstring_states_how_many_checks_there_really_are`— y por eso sus
     frases de tamaño estaban al día. La wiki no, así que el check `service.daemon_auth` de la
     0.26.0 nunca llegó a la tabla y el texto siguió diciendo «dieciséis» con dieciocho checks en
     el registro. Medido el 2026-09-08: la tabla tenía diecisiete filas.

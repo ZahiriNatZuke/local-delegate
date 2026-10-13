@@ -130,7 +130,7 @@ def test_memory_block_from_0_34_is_outdated_and_the_packaged_one_is_ok(tmp_path)
     assert "desfasado" in result.detail
 
 
-def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
+def test_filtering_by_group_touches_neither_network_nor_backend(tmp_path):
     """`install` reporta el andamiaje que acaba de escribir, y solo eso.
 
     Correr también `service` y `backend` saldría a la red y lanzaría los binarios de llama-swap
@@ -145,32 +145,32 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     es otro mecanismo y se prueba en su propio sitio —
     `test_install_clients.py::test_install_no_consulta_pypi_al_reportar_el_andamiaje`.
     """
-    llamados: list[str] = []
+    called: list[str] = []
 
-    def _anota(nombre):
-        def _colaborador(*_a, **_kw):
-            llamados.append(nombre)
-            raise AssertionError(f"{nombre} no debe correr en el reporte del andamiaje")
+    def _records(name):
+        def _collaborator(*_a, **_kw):
+            called.append(name)
+            raise AssertionError(f"{name} no debe correr en el reporte del andamiaje")
 
-        return _colaborador
+        return _collaborator
 
     home = make_home(tmp_path, complete=False)
     ctx = make_ctx(
         home,
-        daemon_status=_anota("daemon_status"),
-        backend_models=_anota("backend_models"),
-        version_of=_anota("version_of"),
+        daemon_status=_records("daemon_status"),
+        backend_models=_records("backend_models"),
+        version_of=_records("version_of"),
     )
 
     results = checks.run_all(ctx, groups=("environment", "scaffold"))
 
-    assert llamados == [], f"el reporte del andamiaje salió a la red: {llamados}"
-    esperados = [c.id for c in checks.CHECKS if c.group in ("environment", "scaffold")]
-    assert [check.id for check, _r in results] == esperados
+    assert called == [], f"el reporte del andamiaje salió a la red: {called}"
+    expected = [c.id for c in checks.CHECKS if c.group in ("environment", "scaffold")]
+    assert [check.id for check, _r in results] == expected
     assert len(results) < len(checks.CHECKS)
 
 
-def test_los_colaboradores_del_context_no_son_funciones_de_la_clase():
+def test_context_collaborators_are_not_class_functions():
     """Un colaborador con default no puede quedar como función en la CLASE `Context`.
 
     Con `campo: Callable = _default_x`, el dataclass deja `_default_x` como atributo de clase y lo
@@ -180,13 +180,13 @@ def test_los_colaboradores_del_context_no_son_funciones_de_la_clase():
     """
     from dataclasses import fields
 
-    en_la_clase = [
+    in_the_class = [
         f.name for f in fields(checks.Context) if callable(checks.Context.__dict__.get(f.name))
     ]
-    assert not en_la_clase, f"colaboradores guardados como función de clase: {en_la_clase}"
+    assert not in_the_class, f"colaboradores guardados como función de clase: {in_the_class}"
 
 
-def test_sin_filtro_run_all_se_comporta_igual_que_siempre(tmp_path):
+def test_without_filter_run_all_behaves_as_always(tmp_path):
     ctx = make_ctx(make_home(tmp_path, complete=False))
     assert len(checks.run_all(ctx)) == len(checks.CHECKS)
     assert checks.run_all(ctx, groups=None) == checks.run_all(ctx)
@@ -217,70 +217,68 @@ def test_cli_in_path_is_ok(tmp_path, monkeypatch):
 # pero nadie juntaba las dos cosas.
 
 
-def _publicada(tmp_path, monkeypatch, instalada, ultima, motivo=None):
+def _published(tmp_path, monkeypatch, installed, last, reason=None):
     """Resultado de `cli.published` con las dos versiones forzadas."""
-    monkeypatch.setattr(checks, "_installed_version", lambda: instalada)
-    ctx = make_ctx(make_home(tmp_path), latest_release=lambda: (ultima, motivo))
+    monkeypatch.setattr(checks, "_installed_version", lambda: installed)
+    ctx = make_ctx(make_home(tmp_path), latest_release=lambda: (last, reason))
     return result_for("cli.published", ctx)
 
 
-def test_instalacion_atrasada_avisa_con_el_comando_que_la_actualiza(tmp_path, monkeypatch):
-    result = _publicada(tmp_path, monkeypatch, "0.16.0", "0.17.0")
+def test_outdated_install_warns_with_the_command_that_updates_it(tmp_path, monkeypatch):
+    result = _published(tmp_path, monkeypatch, "0.16.0", "0.17.0")
     assert result.status == checks.WARN
     assert "0.16.0" in result.detail and "0.17.0" in result.detail
     assert result.fix_hint
 
 
-def test_instalacion_al_dia_es_ok(tmp_path, monkeypatch):
-    result = _publicada(tmp_path, monkeypatch, "0.17.0", "0.17.0")
+def test_up_to_date_install_is_ok(tmp_path, monkeypatch):
+    result = _published(tmp_path, monkeypatch, "0.17.0", "0.17.0")
     assert result.status == checks.OK
     assert not checks.is_warning(result.status)
 
 
-def test_repo_por_delante_de_lo_publicado_es_ok(tmp_path, monkeypatch):
+def test_repo_ahead_of_the_published_release_is_ok(tmp_path, monkeypatch):
     """Lo normal mientras se trabaja: el repo lleva el bump y PyPI todavía no."""
-    result = _publicada(tmp_path, monkeypatch, "0.18.0", "0.17.0")
+    result = _published(tmp_path, monkeypatch, "0.18.0", "0.17.0")
     assert result.status == checks.OK
     assert "por delante" in result.detail
 
 
-def test_las_versiones_se_comparan_como_numeros_y_no_como_texto(tmp_path, monkeypatch):
+def test_versions_are_compared_as_numbers_and_not_as_text(tmp_path, monkeypatch):
     """Comparadas como texto, `"0.9.0" > "0.11.0"`. Si alguien compara strings, esto lo caza."""
-    result = _publicada(tmp_path, monkeypatch, "0.9.0", "0.11.0")
+    result = _published(tmp_path, monkeypatch, "0.9.0", "0.11.0")
     assert result.status == checks.WARN
 
 
-@pytest.mark.parametrize(("instalada", "ultima"), [("0.17", "0.17.0"), ("0.17.0", "0.17")])
-def test_una_version_mas_corta_no_inventa_una_actualizacion(
-    tmp_path, monkeypatch, instalada, ultima
-):
+@pytest.mark.parametrize(("installed", "last"), [("0.17", "0.17.0"), ("0.17.0", "0.17")])
+def test_a_shorter_version_does_not_make_up_an_update(tmp_path, monkeypatch, installed, last):
     """`0.17` y `0.17.0` son la misma: sin rellenar a la misma longitud, una saldría menor."""
-    assert _publicada(tmp_path, monkeypatch, instalada, ultima).status == checks.OK
+    assert _published(tmp_path, monkeypatch, installed, last).status == checks.OK
 
 
-def test_sin_red_no_se_puede_comparar_y_eso_no_es_una_falta(tmp_path, monkeypatch):
+def test_without_network_it_cannot_compare_and_that_is_not_a_fault(tmp_path, monkeypatch):
     """`unknown`, nunca `missing`: no saber la última publicada no es que falte nada."""
-    result = _publicada(tmp_path, monkeypatch, "0.17.0", None, "no se pudo consultar PyPI (…)")
+    result = _published(tmp_path, monkeypatch, "0.17.0", None, "no se pudo consultar PyPI (…)")
     assert result.status == checks.UNKNOWN
     assert not checks.is_warning(result.status)
     assert "PyPI" in result.detail
 
 
-def test_sin_version_instalada_tampoco_se_compara(tmp_path, monkeypatch):
-    result = _publicada(tmp_path, monkeypatch, None, "0.17.0")
+def test_without_installed_version_it_does_not_compare_either(tmp_path, monkeypatch):
+    result = _published(tmp_path, monkeypatch, None, "0.17.0")
     assert result.status == checks.UNKNOWN
 
 
-def test_una_consulta_que_revienta_no_tumba_el_diagnostico(tmp_path, monkeypatch):
+def test_a_query_that_blows_up_does_not_bring_down_the_diagnosis(tmp_path, monkeypatch):
     """El diagnóstico se ejecuta justo cuando algo va mal; no puede caerse por un dato accesorio."""
 
-    def _revienta():
+    def _blows_up():
         raise RuntimeError("boom")
 
-    results = checks.run_all(make_ctx(make_home(tmp_path), latest_release=_revienta))
+    results = checks.run_all(make_ctx(make_home(tmp_path), latest_release=_blows_up))
     assert len(results) == len(checks.CHECKS)
-    por_id = {check.id: result for check, result in results}
-    assert por_id["cli.published"].status == checks.UNKNOWN
+    by_id = {check.id: result for check, result in results}
+    assert by_id["cli.published"].status == checks.UNKNOWN
 
 
 # --- Hooks huérfanos de instalaciones anteriores ------------------------------
@@ -288,25 +286,25 @@ def test_una_consulta_que_revienta_no_tumba_el_diagnostico(tmp_path, monkeypatch
 # `hooks/local-delegate/` y nunca limpiaba los otros. Esta máquina los tenía: cuatro.
 
 
-def _con_huerfanos(home, *nombres):
-    raiz = home / ".claude" / "hooks"
-    raiz.mkdir(parents=True, exist_ok=True)
-    for nombre in nombres:
-        (raiz / nombre).write_text("# viejo\n", encoding="utf-8")
-    return raiz
+def _with_orphans(home, *names):
+    root = home / ".claude" / "hooks"
+    root.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        (root / name).write_text("# viejo\n", encoding="utf-8")
+    return root
 
 
-def test_los_huerfanos_se_reportan_con_su_numero_y_su_sitio(tmp_path):
+def test_orphans_are_reported_with_their_count_and_location(tmp_path):
     home = make_home(tmp_path)
-    raiz = _con_huerfanos(home, "hook_common.py", "suggest_lint_summary.py")
+    root = _with_orphans(home, "hook_common.py", "suggest_lint_summary.py")
     result = result_for("scaffold.hook_orphans", make_ctx(home))
     assert result.status == checks.WARN
     assert "2 script(s)" in result.detail
-    assert str(raiz) in result.detail
+    assert str(root) in result.detail
     assert result.fix_hint == checks.INSTALL_HINT
 
 
-def test_la_instalacion_buena_no_se_reporta_como_huerfana(tmp_path):
+def test_the_good_install_is_not_reported_as_orphan(tmp_path):
     """El fallo peor posible de este check, y está a un identificador de distancia.
 
     `ctx.hooks_dir` **ya es** `hooks/local-delegate/`. Un probe que mirara ahí reportaría como
@@ -318,18 +316,18 @@ def test_la_instalacion_buena_no_se_reporta_como_huerfana(tmp_path):
     assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.OK
 
 
-def test_un_fichero_ajeno_en_la_raiz_no_cuenta_como_huerfano(tmp_path):
+def test_a_foreign_file_in_the_root_does_not_count_as_orphan(tmp_path):
     home = make_home(tmp_path)
-    _con_huerfanos(home, "hook_de_terceros.py", "telemetry.jsonl")
+    _with_orphans(home, "hook_de_terceros.py", "telemetry.jsonl")
     assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.OK
 
 
-def test_sin_claude_no_se_afirma_nada_sobre_huerfanos(tmp_path):
+def test_without_claude_nothing_is_asserted_about_orphans(tmp_path):
     home = make_home(tmp_path, claude=False, codex=True, complete=False)
     assert result_for("scaffold.hook_orphans", make_ctx(home)).status == checks.UNKNOWN
 
 
-def test_la_pista_depende_de_como_este_instalado(tmp_path, monkeypatch):
+def test_the_hint_depends_on_how_it_is_installed(tmp_path, monkeypatch):
     """Los tres comandos no son intercambiables, y darle el que no toca es un consejo que falla.
 
     En una editable `uv tool upgrade` no actualiza nada —el código sale del repo— y a quien
@@ -338,22 +336,22 @@ def test_la_pista_depende_de_como_este_instalado(tmp_path, monkeypatch):
     """
     from local_delegate import update
 
-    def pista(modo, carpeta):
-        monkeypatch.setattr(update, "install_kind", lambda: modo)
-        return _publicada(tmp_path / carpeta, monkeypatch, "0.16.0", "0.17.0").fix_hint
+    def hint_for(mode, folder):
+        monkeypatch.setattr(update, "install_kind", lambda: mode)
+        return _published(tmp_path / folder, monkeypatch, "0.16.0", "0.17.0").fix_hint
 
-    assert pista(update.UV_TOOL, "a") == update.UV_TOOL_UPGRADE
+    assert hint_for(update.UV_TOOL, "a") == update.UV_TOOL_UPGRADE
 
     monkeypatch.setattr(update, "editable_origin", lambda: tmp_path / "repo")
-    hint = pista(update.EDITABLE, "b")
+    hint = hint_for(update.EDITABLE, "b")
     assert "git -C" in hint and "uv sync" in hint
 
-    assert pista(update.OTHER, "c") == update.GENERIC_UPGRADE
+    assert hint_for(update.OTHER, "c") == update.GENERIC_UPGRADE
 
 
-def test_el_detalle_y_la_pista_caben_en_la_consola_de_windows(tmp_path, monkeypatch):
+def test_the_detail_and_hint_fit_the_windows_console(tmp_path, monkeypatch):
     """Una flecha `→` mata el doctor con UnicodeEncodeError en la consola cp1252."""
-    result = _publicada(tmp_path, monkeypatch, "0.16.0", "0.17.0")
+    result = _published(tmp_path, monkeypatch, "0.16.0", "0.17.0")
     (result.detail + result.fix_hint).encode("cp1252")
 
 
@@ -373,7 +371,7 @@ def test_daemon_running_an_older_version_is_warn(tmp_path, monkeypatch):
     assert result.fix_hint == checks.RESTART_HINT
 
 
-def test_daemon_mas_nuevo_que_lo_instalado_manda_actualizar_no_reiniciar(tmp_path, monkeypatch):
+def test_daemon_newer_than_installed_says_update_not_restart(tmp_path, monkeypatch):
     """El caso al revés, encontrado en producción tras publicar la 0.18.0.
 
     Con el daemon corriendo del venv editable (0.18.0) y el CLI de `uv tool` en 0.17.0, el check
@@ -394,7 +392,7 @@ def test_daemon_mas_nuevo_que_lo_instalado_manda_actualizar_no_reiniciar(tmp_pat
     assert result.fix_hint != checks.RESTART_HINT
 
 
-def test_las_versiones_del_daemon_se_comparan_como_numeros_no_como_texto(tmp_path, monkeypatch):
+def test_daemon_versions_are_compared_as_numbers_not_as_text(tmp_path, monkeypatch):
     """Comparadas como texto, `"0.9.0" > "0.18.0"`. El daemon aquí es el VIEJO."""
     monkeypatch.setattr(checks, "_installed_version", lambda: "0.18.0")
     ctx = make_ctx(
@@ -406,7 +404,7 @@ def test_las_versiones_del_daemon_se_comparan_como_numeros_no_como_texto(tmp_pat
     assert "el daemon sirve la vieja" in result.detail
 
 
-def test_versiones_del_daemon_incomparables_avisan_sin_ofrecer_arreglo(tmp_path, monkeypatch):
+def test_incomparable_daemon_versions_warn_without_offering_a_fix(tmp_path, monkeypatch):
     """Sin poder ordenarlas, cualquier arreglo que se sugiriera podría ser el equivocado."""
     monkeypatch.setattr(checks, "_installed_version", lambda: "0.18.0")
     ctx = make_ctx(
@@ -435,14 +433,14 @@ def test_every_status_has_a_label_and_only_warn_and_missing_count():
 
 
 def test_run_all_survives_a_broken_probe(monkeypatch, tmp_path):
-    def explota(_ctx):
+    def explodes(_ctx):
         raise RuntimeError("boom")
 
-    roto = checks.Check("test.roto", "cliente", "roto", explota)
-    monkeypatch.setattr(checks, "CHECKS", (roto,) + checks.CHECKS)
+    broken = checks.Check("test.roto", "cliente", "roto", explodes)
+    monkeypatch.setattr(checks, "CHECKS", (broken,) + checks.CHECKS)
     results = dict(checks.run_all(make_ctx(make_home(tmp_path))))
-    assert results[roto].status == checks.UNKNOWN
-    assert "boom" in results[roto].detail
+    assert results[broken].status == checks.UNKNOWN
+    assert "boom" in results[broken].detail
 
 
 # --- HOME completo: todo ok ---------------------------------------------------
@@ -478,12 +476,12 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     # `scaffold.memory` queda fuera porque agrega dos clientes, y `scaffold.hook_orphans` porque
     # **nunca** puede ser `missing`: pregunta si SOBRA algo, no si falta. En un HOME vacío la
     # respuesta correcta es `ok` — no hay huérfanos que retirar.
-    aparte = {"scaffold.memory", "scaffold.hook_orphans"}
+    separate = {"scaffold.memory", "scaffold.hook_orphans"}
     ctx = make_ctx(make_home(tmp_path, complete=False))
     scaffold = [
         (check, result)
         for check, result in checks.run_all(ctx)
-        if check.group == "scaffold" and check.id not in aparte
+        if check.group == "scaffold" and check.id not in separate
     ]
     assert scaffold
     for check, result in scaffold:
@@ -539,10 +537,10 @@ def test_unreadable_file_is_unknown_via_read_helpers(tmp_path, monkeypatch):
     path = tmp_path / "settings.json"
     path.write_text("{}", encoding="utf-8")
 
-    def denegado(*_args, **_kwargs):
+    def denied(*_args, **_kwargs):
         raise PermissionError(13, "Permission denied")
 
-    monkeypatch.setattr("pathlib.Path.read_text", denegado)
+    monkeypatch.setattr("pathlib.Path.read_text", denied)
     text, reason = checks.read_text(path)
     assert text is None and reason and "no se pudo leer" in reason
     data, reason = checks.read_json(path)
@@ -680,7 +678,7 @@ def test_claude_mcp_missing_entry(tmp_path):
 # lanzador del daemon y todas las tools `local_*` devolviendo 401 mientras `doctor` daba todo OK.
 
 
-def _con_stdio(home):
+def _with_stdio(home):
     """Deja la entrada de Claude Code en modo stdio, como la escribe `install` por defecto."""
     (home / ".claude.json").write_text(
         json.dumps({"mcpServers": {install.SERVER_NAME: {"type": "stdio", "command": "uvx"}}}),
@@ -689,14 +687,14 @@ def _con_stdio(home):
     return home
 
 
-def test_credencial_ok_cuando_el_backend_no_exige_key(tmp_path, monkeypatch):
+def test_credential_ok_when_the_backend_does_not_require_a_key(tmp_path, monkeypatch):
     """Sin credencial de por medio, el modo de la entrada MCP no cambia nada."""
     monkeypatch.setattr(checks.config, "API_KEY", "")
-    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (False, ""))
+    ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (False, ""))
     assert result_for("service.credential", ctx).status == checks.OK
 
 
-def test_credencial_ok_cuando_las_entradas_van_por_el_daemon(tmp_path, monkeypatch):
+def test_credential_ok_when_the_entries_go_through_the_daemon(tmp_path, monkeypatch):
     """Mismo backend que el test de abajo: lo único que cambia es el modo de la entrada.
 
     Los dos tests son pareja a propósito. Un probe que mirase solo el backend —y no el modo—
@@ -708,25 +706,25 @@ def test_credencial_ok_cuando_las_entradas_van_por_el_daemon(tmp_path, monkeypat
     assert result_for("service.credential", ctx).status == checks.OK
 
 
-def test_credencial_warn_cuando_el_cliente_habla_por_stdio_sin_key(tmp_path, monkeypatch):
+def test_credential_warn_when_the_client_speaks_stdio_without_key(tmp_path, monkeypatch):
     monkeypatch.setattr(checks.config, "API_KEY", "")
-    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
+    ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
     result = result_for("service.credential", ctx)
     assert result.status == checks.WARN
     assert "Claude Code" in result.detail and "401" in result.detail
     assert result.fix_hint == checks.CREDENTIAL_HINT
 
 
-def test_credencial_ok_si_la_key_esta_en_el_entorno(tmp_path, monkeypatch):
+def test_credential_ok_if_the_key_is_in_the_environment(tmp_path, monkeypatch):
     """Con la variable cargada, la entrada stdio la hereda y el 401 no llega a pasar."""
     monkeypatch.setattr(checks.config, "API_KEY", "secreto-de-mentira")
-    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
+    ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=lambda: (True, ""))
     assert result_for("service.credential", ctx).status == checks.OK
 
 
-def test_credencial_unknown_si_no_se_pudo_preguntar(tmp_path):
+def test_credential_unknown_if_it_could_not_ask(tmp_path):
     """Sin respuesta del backend no hay veredicto: lo no comprobable es `unknown`, nunca `missing`."""
-    ctx = make_ctx(_con_stdio(make_home(tmp_path)), backend_needs_key=checks.NO_KEY_PROBE)
+    ctx = make_ctx(_with_stdio(make_home(tmp_path)), backend_needs_key=checks.NO_KEY_PROBE)
     result = result_for("service.credential", ctx)
     assert result.status == checks.UNKNOWN
     assert result.fix_hint == ""
@@ -757,7 +755,7 @@ def test_port_taken_by_another_process_is_warn_not_missing(tmp_path, monkeypatch
     assert "no es nuestro daemon" in result.detail
 
 
-def test_el_puerto_protegido_no_se_confunde_con_un_proceso_ajeno(tmp_path, monkeypatch):
+def test_the_protected_port_is_not_mistaken_for_a_foreign_process(tmp_path, monkeypatch):
     """Dos causas para el mismo silencio, y arreglos opuestos.
 
     Sin esta distinción, poner el token hacía que `doctor` acusara al propio daemon de ser «otro
@@ -779,7 +777,7 @@ def test_el_puerto_protegido_no_se_confunde_con_un_proceso_ajeno(tmp_path, monke
     assert checks.TOKEN_VAR in (result.fix_hint or "")
 
 
-def test_el_diagnostico_del_token_no_imprime_el_secreto(tmp_path, monkeypatch):
+def test_the_token_diagnosis_does_not_print_the_secret(tmp_path, monkeypatch):
     """El arreglo nombra la variable; su valor no sale por pantalla ni por error."""
     monkeypatch.setattr(checks, "_port_taken", lambda host, port: True)
     monkeypatch.setattr(checks.config, "WEB_TOKEN", "un-secreto-que-no-debe-salir")
@@ -794,7 +792,7 @@ def test_el_diagnostico_del_token_no_imprime_el_secreto(tmp_path, monkeypatch):
     assert "un-secreto-que-no-debe-salir" not in (result.fix_hint or "")
 
 
-def test_sin_saber_si_exige_token_se_mantiene_el_mensaje_de_siempre(tmp_path, monkeypatch):
+def test_without_knowing_if_it_requires_a_token_the_usual_message_stays(tmp_path, monkeypatch):
     """`None` es «no se pudo preguntar», y ahí no se inventa un diagnóstico nuevo.
 
     Importa porque el colaborador devuelve `None` cuando el puerto no habla HTTP — justo el caso
@@ -846,7 +844,7 @@ def test_backend_401_is_unknown_not_down(tmp_path):
 # --- service.backend con causa (REQ-016) ---------------------------------------------------------
 
 
-def test_doctor_remoto_no_manda_a_arrancar_llama_swap(tmp_path, monkeypatch):
+def test_remote_doctor_does_not_say_to_start_llama_swap(tmp_path, monkeypatch):
     """La Mac con la VPN caída: el backend vive en otra máquina, arrancar nada aquí no lo arregla."""
     monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.tailnet.ts.net:9292/v1")
     ctx = make_ctx(
@@ -867,17 +865,17 @@ def test_doctor_remoto_no_manda_a_arrancar_llama_swap(tmp_path, monkeypatch):
     assert "no contesta a la conexión" in r.detail
 
 
-def _ctx_con_daemon(tmp_path, monkeypatch, visto):
+def _ctx_with_daemon(tmp_path, monkeypatch, seen):
     """`service.backend` con el colaborador REAL, y el daemon contestando `visto`."""
     from local_delegate import daemon
 
-    monkeypatch.setattr(daemon, "query_backend", lambda host, port, timeout=1.0: visto)
+    monkeypatch.setattr(daemon, "query_backend", lambda host, port, timeout=1.0: seen)
     return make_ctx(make_home(tmp_path), backend_models=checks._default_backend_models)
 
 
-def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
+def test_doctor_uses_the_cause_the_daemon_gives(tmp_path, monkeypatch):
     monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.lan:9292/v1")
-    ctx = _ctx_con_daemon(
+    ctx = _ctx_with_daemon(
         tmp_path,
         monkeypatch,
         {
@@ -896,9 +894,9 @@ def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
     )
 
 
-def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
+def test_doctor_daemon_401_points_to_the_launcher(tmp_path, monkeypatch):
     """El daemon SÍ tiene la clave de su lanzador: si da 401, la que no vale es la suya."""
-    ctx = _ctx_con_daemon(
+    ctx = _ctx_with_daemon(
         tmp_path,
         monkeypatch,
         {
@@ -914,10 +912,10 @@ def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
     assert r.status == checks.WARN
 
 
-def test_doctor_entiende_la_causa_de_un_daemon_de_la_0_34(tmp_path, monkeypatch):
+def test_doctor_understands_the_cause_from_a_0_34_daemon(tmp_path, monkeypatch):
     """Un daemon de la 0.34.0 manda `causa`/`detalle` y el valor en español (REQ-006): `doctor`
     nuevo da la misma pista que con el daemon nuevo."""
-    ctx = _ctx_con_daemon(
+    ctx = _ctx_with_daemon(
         tmp_path,
         monkeypatch,
         {
@@ -934,9 +932,9 @@ def test_doctor_entiende_la_causa_de_un_daemon_de_la_0_34(tmp_path, monkeypatch)
     assert r.status == checks.WARN
 
 
-def test_doctor_con_daemon_antiguo_usa_el_texto_de_hoy(tmp_path, monkeypatch):
+def test_doctor_with_old_daemon_uses_todays_text(tmp_path, monkeypatch):
     """Un daemon sin `causa` en `/api/backend`: el texto de siempre y la pista genérica."""
-    ctx = _ctx_con_daemon(tmp_path, monkeypatch, {"available": False})
+    ctx = _ctx_with_daemon(tmp_path, monkeypatch, {"available": False})
 
     r = result_for("service.backend", ctx)
 
@@ -945,26 +943,26 @@ def test_doctor_con_daemon_antiguo_usa_el_texto_de_hoy(tmp_path, monkeypatch):
     assert r.fix_hint.startswith("revisa el backend en ")
 
 
-def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
+def test_doctor_waits_for_the_daemon_longer_than_its_probe(monkeypatch):
     """La causa que ve el daemon tiene que llegar también en sus fallos lentos (VPN, Windows)."""
     from local_delegate import daemon
 
-    plazos = []
+    timeouts = []
 
-    def _registra(host, port, timeout=1.0):
-        plazos.append(timeout)
+    def _records(host, port, timeout=1.0):
+        timeouts.append(timeout)
 
-    monkeypatch.setattr(daemon, "query_backend", _registra)
+    monkeypatch.setattr(daemon, "query_backend", _records)
     monkeypatch.setattr(probes, "backend_probe", lambda: BackendView(True, "", None, "direct"))
 
     checks._default_backend_models()
 
-    (t,) = plazos
-    plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
-    plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
-    assert plazo_lectura > checks.config.PROBE_CONNECT_TIMEOUT + checks.config.PROBE_READ_TIMEOUT
+    (t,) = timeouts
+    read_timeout = t.read if isinstance(t, httpx2.Timeout) else t
+    connect_timeout = t.connect if isinstance(t, httpx2.Timeout) else t
+    assert read_timeout > checks.config.PROBE_CONNECT_TIMEOUT + checks.config.PROBE_READ_TIMEOUT
     # Conectar con el daemon, que está en esta máquina, no necesita más que antes.
-    assert plazo_conexion == 1.0
+    assert connect_timeout == 1.0
 
 
 # --- Versiones: se envuelve el doctor, no se reescribe -------------------------
@@ -1020,49 +1018,49 @@ CODEX = {
 }
 
 
-def observando(tmp_path, observaciones, motivo=None):
-    return make_ctx(make_home(tmp_path), clients_seen=lambda: (observaciones, motivo))
+def observing(tmp_path, observations, reason=None):
+    return make_ctx(make_home(tmp_path), clients_seen=lambda: (observations, reason))
 
 
-def test_sin_clientes_vistos_es_unknown_y_no_suma_aviso(tmp_path):
+def test_without_seen_clients_is_unknown_and_adds_no_warning(tmp_path):
     """El caso de HOY: `clients.py` está sin publicar, así que no hay registro en ninguna máquina.
 
     Tiene que ser `unknown` y no `missing`: no falta nada que instalar, simplemente todavía no ha
     hablado nadie. Un `missing` mandaría a arreglar una máquina sana.
     """
-    result = result_for("client.observed", observando(tmp_path, []))
+    result = result_for("client.observed", observing(tmp_path, []))
     assert result.status == checks.UNKNOWN
     assert not checks.is_warning(result.status)
     assert "todavía no ha hablado ningún cliente" in result.detail
 
 
-def test_registro_ilegible_es_unknown_con_el_motivo(tmp_path):
-    result = result_for("client.observed", observando(tmp_path, [], "no se pudo leer X: denegado"))
+def test_unreadable_registry_is_unknown_with_the_reason(tmp_path):
+    result = result_for("client.observed", observing(tmp_path, [], "no se pudo leer X: denegado"))
     assert result.status == checks.UNKNOWN
     assert "no se pudo leer X: denegado" in result.detail
 
 
-def test_un_cliente_que_sabe_preguntar_sale_ok(tmp_path):
-    result = result_for("client.observed", observando(tmp_path, [CLAUDE]))
+def test_a_client_that_can_ask_comes_out_ok(tmp_path):
+    result = result_for("client.observed", observing(tmp_path, [CLAUDE]))
     assert result.status == checks.OK
     assert "claude-code 2.1.220 [2025-11-25] elicitation" in result.detail
 
 
-def test_un_cliente_sin_elicitation_sigue_siendo_ok(tmp_path):
+def test_a_client_without_elicitation_is_still_ok(tmp_path):
     """La decisión de diseño del change, y por eso tiene test propio.
 
     Un cliente sin `elicitation` es información, no un defecto: no hay comando del repo que lo
     arregle y marcarlo como aviso subiría el exit code de una máquina sana.
     """
-    mudo = {**CODEX, "client": "cliente-mudo", "caps": []}
-    result = result_for("client.observed", observando(tmp_path, [CLAUDE, mudo]))
+    silent = {**CODEX, "client": "cliente-mudo", "caps": []}
+    result = result_for("client.observed", observing(tmp_path, [CLAUDE, silent]))
     assert result.status == checks.OK
     assert not checks.is_warning(result.status)
     assert "cliente-mudo 0.146.0 [2025-06-18] sin elicitation" in result.detail
     assert "claude-code 2.1.220 [2025-11-25] elicitation" in result.detail
 
 
-def test_el_mismo_cliente_repetido_sale_una_vez_con_la_version_mas_reciente(tmp_path):
+def test_the_same_repeated_client_appears_once_with_the_latest_version(tmp_path):
     """`clients.jsonl` acumula una línea por ARRANQUE de proceso: medido, no supuesto.
 
     La deduplicación de `clients.record` es intra-proceso, así que veinte lanzamientos de
@@ -1073,67 +1071,72 @@ def test_el_mismo_cliente_repetido_sale_una_vez_con_la_version_mas_reciente(tmp_
     final, «agrupa por nombre» y «escoge la más reciente» quedan cubiertos por separado — puesta al
     principio, la segunda mitad no se probaba (comprobado introduciendo el defecto).
     """
-    vieja = {**CLAUDE, "ts": "2026-07-01T09:00:00+00:00", "version": "2.1.219"}
-    result = result_for("client.observed", observando(tmp_path, [CLAUDE] * 20 + [vieja]))
+    old = {**CLAUDE, "ts": "2026-07-01T09:00:00+00:00", "version": "2.1.219"}
+    result = result_for("client.observed", observing(tmp_path, [CLAUDE] * 20 + [old]))
     assert result.detail.count("claude-code") == 1  # agrupa
     assert "2.1.220" in result.detail  # y se queda con la más reciente
     assert "2.1.219" not in result.detail
 
 
-def test_una_observacion_sin_identidad_no_se_pierde(tmp_path):
+def test_an_observation_without_identity_is_not_lost(tmp_path):
     """Desde la revisión 2026-07-28 el `client_info` es opcional: hay capabilities sin nombre."""
-    anonimo = {"ts": CODEX["ts"], "client": None, "protocol": "2026-07-28", "caps": ["elicitation"]}
-    result = result_for("client.observed", observando(tmp_path, [anonimo]))
+    anonymous = {
+        "ts": CODEX["ts"],
+        "client": None,
+        "protocol": "2026-07-28",
+        "caps": ["elicitation"],
+    }
+    result = result_for("client.observed", observing(tmp_path, [anonymous]))
     assert result.status == checks.OK
     assert "(sin identificar) [2026-07-28] elicitation" in result.detail
 
 
-def test_caps_que_no_es_lista_no_cuenta_como_elicitation(tmp_path):
+def test_caps_that_is_not_a_list_does_not_count_as_elicitation(tmp_path):
     """El falso positivo por subcadena que cazó la revisión adversarial del plan.
 
     Con `caps` llegando como la cadena "no-elicitation", un `in` sin comprobar el tipo daría True
     y el check afirmaría justo lo contrario de la verdad.
     """
-    sucio = {**CLAUDE, "caps": "no-elicitation"}
-    result = result_for("client.observed", observando(tmp_path, [sucio]))
+    dirty = {**CLAUDE, "caps": "no-elicitation"}
+    result = result_for("client.observed", observing(tmp_path, [dirty]))
     assert "sin elicitation" in result.detail
 
 
-def test_un_ts_ilegible_no_tumba_el_check(tmp_path):
+def test_an_unreadable_ts_does_not_bring_down_the_check(tmp_path):
     """Una fecha rota debe perder la carrera de «la más reciente», no llevarse el check por delante."""
-    roto = {**CLAUDE, "ts": "ayer por la tarde", "version": "0.0.1"}
-    result = result_for("client.observed", observando(tmp_path, [roto, CLAUDE]))
+    broken = {**CLAUDE, "ts": "ayer por la tarde", "version": "0.0.1"}
+    result = result_for("client.observed", observing(tmp_path, [broken, CLAUDE]))
     assert result.status == checks.OK
     assert "2.1.220" in result.detail
 
 
-def test_el_detail_es_imprimible_en_la_consola_de_windows(tmp_path):
+def test_the_detail_is_printable_in_the_windows_console(tmp_path):
     """El nombre lo pone el CLIENTE: es texto ajeno y puede traer lo que sea.
 
     Una flecha «→» ya mató este doctor una vez. Aquí el dato ni siquiera lo controla el repo.
     """
-    exotico = {**CLAUDE, "client": "cliente-\U0001f600", "version": "1.0—beta"}
-    result = result_for("client.observed", observando(tmp_path, [exotico]))
+    exotic = {**CLAUDE, "client": "cliente-\U0001f600", "version": "1.0—beta"}
+    result = result_for("client.observed", observing(tmp_path, [exotic]))
     result.detail.encode("cp1252")  # si no es codificable, esto lanza y el test falla
 
 
-def test_client_observed_no_ofrece_arreglo(tmp_path):
+def test_client_observed_offers_no_fix(tmp_path):
     """Sin `fix_hint` a propósito: no existe comando de este repo que cambie con quién hablas."""
     home = make_home(tmp_path)
-    for observaciones in ([], [CLAUDE]):
-        ctx = make_ctx(home, clients_seen=lambda obs=observaciones: (obs, None))
+    for observations in ([], [CLAUDE]):
+        ctx = make_ctx(home, clients_seen=lambda obs=observations: (obs, None))
         assert result_for("client.observed", ctx).fix_hint == ""
 
 
 # --- El colaborador por defecto, que sí toca el disco -------------------------
 
 
-def test_default_sin_fichero_no_es_un_error(tmp_path, monkeypatch):
+def test_default_without_file_is_not_an_error(tmp_path, monkeypatch):
     monkeypatch.setattr(checks.config, "LOG_DIR", tmp_path)
     assert checks._default_clients_seen() == ([], None)
 
 
-def test_default_lee_el_registro_y_salta_lo_que_no_sirve(tmp_path, monkeypatch):
+def test_default_reads_the_registry_and_skips_what_is_unusable(tmp_path, monkeypatch):
     """Una línea a medio escribir —proceso muerto durante el write— no puede perder las buenas."""
     monkeypatch.setattr(checks.config, "LOG_DIR", tmp_path)
     (tmp_path / "clients.jsonl").write_text(
@@ -1145,17 +1148,17 @@ def test_default_lee_el_registro_y_salta_lo_que_no_sirve(tmp_path, monkeypatch):
          + json.dumps(CODEX) + "\n",
         encoding="utf-8",
     )
-    observaciones, motivo = checks._default_clients_seen()
-    assert motivo is None
-    assert [o["client"] for o in observaciones] == ["claude-code", "codex-mcp-client"]
+    observations, reason = checks._default_clients_seen()
+    assert reason is None
+    assert [obj["client"] for obj in observations] == ["claude-code", "codex-mcp-client"]
 
 
-def test_default_no_crea_ni_el_directorio_ni_el_fichero(tmp_path, monkeypatch):
+def test_default_creates_neither_the_directory_nor_the_file(tmp_path, monkeypatch):
     """`probe` nunca escribe, y eso incluye no materializar el sitio donde iría el registro."""
-    destino = tmp_path / "sin-crear"
-    monkeypatch.setattr(checks.config, "LOG_DIR", destino)
+    dest = tmp_path / "sin-crear"
+    monkeypatch.setattr(checks.config, "LOG_DIR", dest)
     checks._default_clients_seen()
-    assert not destino.exists()
+    assert not dest.exists()
 
 
 # --- Ningún probe escribe (REQ-013 a nivel de registro) -----------------------
@@ -1170,7 +1173,7 @@ def test_no_probe_writes_anything(tmp_path):
 
 # --- El módulo no puede mentir sobre su propio tamaño ------------------------
 
-_NUMERO = {
+_NUMBER_WORDS = {
     10: "diez",
     11: "once",
     12: "doce",
@@ -1183,17 +1186,17 @@ _NUMERO = {
     19: "diecinueve",
     20: "veinte",
     # Apocopado delante de un sustantivo masculino («los veintiún elementos»); sin sustantivo
-    # detrás («los otros veintiuno») va entero: ver `_NUMERO_SIN_SUSTANTIVO`.
+    # detrás («los otros veintiuno») va entero: ver `_NUMBER_WORDS_WITHOUT_NOUN`.
     21: "veintiún",
     22: "veintidós",
     23: "veintitrés",
     24: "veinticuatro",
     25: "veinticinco",
 }
-_NUMERO_SIN_SUSTANTIVO = {**_NUMERO, 21: "veintiuno"}
+_NUMBER_WORDS_WITHOUT_NOUN = {**_NUMBER_WORDS, 21: "veintiuno"}
 
 
-def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
+def test_the_docstring_states_how_many_checks_there_really_are():
     """El registro dice su tamaño en cuatro sitios, y llegó a decir «once» con doce dentro.
 
     `cli.path` entró en el PR #61 y nadie actualizó el texto, así que durante dos sesiones el
@@ -1202,18 +1205,18 @@ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
     """
     from pathlib import Path
 
-    cuantos = _NUMERO[len(checks.CHECKS)]
-    fuente = Path(checks.__file__).read_text(encoding="utf-8")
+    count = _NUMBER_WORDS[len(checks.CHECKS)]
+    source = Path(checks.__file__).read_text(encoding="utf-8")
 
-    afirmaciones = (
-        f"los {cuantos} elementos del andamiaje",
-        f"{cuantos.capitalize()} checks son una tupla",
-        f"{cuantos.capitalize()} elementos, en orden de grupo",
-        f"Corre los {cuantos} probes",
-        f"ver los otros {_NUMERO_SIN_SUSTANTIVO[len(checks.CHECKS) - 1]}",
+    claims = (
+        f"los {count} elementos del andamiaje",
+        f"{count.capitalize()} checks son una tupla",
+        f"{count.capitalize()} elementos, en orden de grupo",
+        f"Corre los {count} probes",
+        f"ver los otros {_NUMBER_WORDS_WITHOUT_NOUN[len(checks.CHECKS) - 1]}",
     )
-    faltan = [texto for texto in afirmaciones if texto not in fuente]
-    assert not faltan, f"el docstring de checks.py quedó desfasado: {faltan}"
+    missing = [text for text in claims if text not in source]
+    assert not missing, f"el docstring de checks.py quedó desfasado: {missing}"
 
 
 # --- El token del puerto del daemon -------------------------------------------
@@ -1225,7 +1228,7 @@ def test_el_docstring_dice_cuantos_checks_hay_de_verdad():
 # por un camino distinto del roto.
 
 
-def _home_con_credencial(tmp_path, monkeypatch):
+def _home_with_credential(tmp_path, monkeypatch):
     """HOME completo con los TRES clientes autenticados, como los deja `install --web-token-env`.
 
     Los tres y no solo Claude Code: el HOME de `make_home` escribe entradas HTTP sin cabecera, así
@@ -1234,12 +1237,12 @@ def _home_con_credencial(tmp_path, monkeypatch):
     «Codex y opencode» y tenía razón.
     """
     home = make_home(tmp_path)
-    entrada = install.mcp_entry("http", None, False, None, web_token_env=True)
+    entry = install.mcp_entry("http", None, False, None, web_token_env=True)
     (home / ".claude.json").write_text(
-        json.dumps({"mcpServers": {install.SERVER_NAME: entrada}}), encoding="utf-8"
+        json.dumps({"mcpServers": {install.SERVER_NAME: entry}}), encoding="utf-8"
     )
     (home / ".codex" / "config.toml").write_text(
-        install.upsert_codex_mcp("", install.codex_mcp_block(entrada)), encoding="utf-8"
+        install.upsert_codex_mcp("", install.codex_mcp_block(entry)), encoding="utf-8"
     )
     oc_dir = install.opencode_dir(home)
     oc_entry = install.opencode_mcp_entry("http", None, False, None, web_token_env=True)
@@ -1251,7 +1254,7 @@ def _home_con_credencial(tmp_path, monkeypatch):
     return home
 
 
-def test_una_entrada_http_sin_cabecera_contra_un_daemon_con_token_avisa(tmp_path):
+def test_an_http_entry_without_header_against_a_daemon_with_token_warns(tmp_path):
     """La avería exacta que `doctor` daba por buena."""
     ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: True)
     result = result_for("service.daemon_auth", ctx)
@@ -1262,31 +1265,57 @@ def test_una_entrada_http_sin_cabecera_contra_un_daemon_con_token_avisa(tmp_path
     assert "--web-token-env" in (result.fix_hint or "")
 
 
-def test_una_entrada_bien_autenticada_no_molesta(tmp_path, monkeypatch):
+def test_an_http_entry_without_header_is_reported_as_blind_not_as_a_missing_variable(tmp_path):
+    """La entrada sin cabecera cae en la rama «ciega», no en la de «variable que no está».
+
+    Las dos ramas dan `WARN` con «Claude Code», «401» y la misma pista, así que el test de arriba
+    no las distingue (hallazgo de A8a-1). Control: mutante «`_entry_auth` devuelve
+    `"sin_credencial"`» → la entrada pasa por la rama de la variable y falla el primer assert.
+    """
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: True)
+    result = result_for("service.daemon_auth", ctx)
+
+    assert "sin cabecera de autorización" in result.detail, result.detail
+    assert "no está en el entorno" not in result.detail
+
+
+def test_an_http_entry_without_credential_is_tagged_no_credential():
+    """El estado interno de una entrada HTTP sin credencial es `"no_credential"`, en los tres clientes.
+
+    Control: mutante «los tres sitios de `checks.py` vuelven a `"sin_credencial"`» → el probe
+    sigue coherente consigo mismo, pero este test falla.
+    """
+    for client in ("Claude Code", "Codex", "opencode"):
+        assert checks._entry_auth(client, "http", None) == (client, "no_credential")
+        assert checks._entry_auth(client, "http", "") == (client, "no_credential")
+    assert checks._entry_auth("Claude Code", "stdio", None) == ("Claude Code", "stdio")
+
+
+def test_a_properly_authenticated_entry_does_not_bother(tmp_path, monkeypatch):
     """Control de todos los de este bloque, y el que impide que pasen en vacío.
 
     Sin él, un probe que avisara SIEMPRE dejaría en verde a los demás — que es el fallo opuesto y
     el que hace que la gente aprenda a ignorar un check.
     """
-    home = _home_con_credencial(tmp_path, monkeypatch)
+    home = _home_with_credential(tmp_path, monkeypatch)
     ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
     result = result_for("service.daemon_auth", ctx)
 
     assert result.status == checks.OK, result.detail
 
 
-def test_codex_se_autentica_por_su_propia_clave_y_tambien_vale(tmp_path, monkeypatch):
+def test_codex_authenticates_with_its_own_key_and_that_also_counts(tmp_path, monkeypatch):
     """Codex no usa `headers`: escribe `bearer_token_env_var` con el nombre pelado.
 
     Tres clientes, tres vocabularios. Contar mal aquí daría un falso OK en el que no se contó, que
     es exactamente el defecto que este check arregla.
     """
-    home = _home_con_credencial(tmp_path, monkeypatch)
-    bloque = install.codex_mcp_block(
+    home = _home_with_credential(tmp_path, monkeypatch)
+    block = install.codex_mcp_block(
         install.mcp_entry("http", None, False, None, web_token_env=True)
     )
     (home / ".codex" / "config.toml").write_text(
-        install.upsert_codex_mcp("", bloque), encoding="utf-8"
+        install.upsert_codex_mcp("", block), encoding="utf-8"
     )
     ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
     result = result_for("service.daemon_auth", ctx)
@@ -1294,7 +1323,7 @@ def test_codex_se_autentica_por_su_propia_clave_y_tambien_vale(tmp_path, monkeyp
     assert "Codex" not in result.detail
 
 
-def test_un_daemon_abierto_no_genera_ruido(tmp_path):
+def test_an_open_daemon_makes_no_noise(tmp_path):
     """Sin token en el puerto, que la entrada no lleve cabecera da igual."""
     ctx = make_ctx(make_home(tmp_path), daemon_needs_token=lambda host, port: False)
     result = result_for("service.daemon_auth", ctx)
@@ -1302,7 +1331,7 @@ def test_un_daemon_abierto_no_genera_ruido(tmp_path):
     assert result.status == checks.OK
 
 
-def test_no_poder_preguntar_al_puerto_es_unknown_y_nunca_missing(tmp_path):
+def test_being_unable_to_ask_the_port_is_unknown_and_never_missing(tmp_path):
     """Lo no comprobable es `unknown`. Es el contrato del registro entero."""
     ctx = make_ctx(make_home(tmp_path), daemon_needs_token=checks.NO_TOKEN_PROBE)
     result = result_for("service.daemon_auth", ctx)
@@ -1310,14 +1339,14 @@ def test_no_poder_preguntar_al_puerto_es_unknown_y_nunca_missing(tmp_path):
     assert result.status == checks.UNKNOWN
 
 
-def test_la_cabecera_esta_pero_la_variable_no_se_avisa_como_sospecha(tmp_path, monkeypatch):
+def test_header_present_but_variable_absent_warns_as_suspicion(tmp_path, monkeypatch):
     """El segundo camino al mismo 401, y de fuerza distinta.
 
     El entorno de `doctor` es un TESTIGO del que verá el cliente, no una prueba: alguien puede
     haber lanzado el cliente desde otra consola. Por eso el texto nombra el síntoma y no dicta que
     la máquina esté rota.
     """
-    home = _home_con_credencial(tmp_path, monkeypatch)
+    home = _home_with_credential(tmp_path, monkeypatch)
     monkeypatch.delenv("LOCAL_DELEGATE_WEB_TOKEN", raising=False)
     ctx = make_ctx(home, daemon_needs_token=lambda host, port: True)
     result = result_for("service.daemon_auth", ctx)
@@ -1327,12 +1356,12 @@ def test_la_cabecera_esta_pero_la_variable_no_se_avisa_como_sospecha(tmp_path, m
     assert "este proceso" in result.detail
 
 
-def test_una_entrada_stdio_no_cuenta_como_ciega(tmp_path, monkeypatch):
+def test_a_stdio_entry_does_not_count_as_blind(tmp_path, monkeypatch):
     """No habla con el puerto del daemon, y de su problema ya avisa `service.credential`.
 
     Contarla aquí sería un falso positivo y además un aviso duplicado.
     """
-    home = _home_con_credencial(tmp_path, monkeypatch)
+    home = _home_with_credential(tmp_path, monkeypatch)
     (home / ".codex" / "config.toml").write_text(
         install.upsert_codex_mcp("", install.codex_mcp_block({"type": "stdio", "command": "uvx"})),
         encoding="utf-8",
@@ -1357,145 +1386,145 @@ def _desktop_entry(header: str | None = f"Authorization: Bearer {_TOKEN_DESKTOP}
     return desktop_mcp_remote_entry(header)
 
 
-def _con_desktop(home, entry=None, *, crudo=None):
+def _with_desktop(home, entry=None, *, raw=None):
     """Claude Desktop con un servidor ajeno al lado, que es como está el fichero real."""
     servers = {"otro-servidor": {"command": "uvx", "args": ["algo"]}}
     if entry is not None:
         servers[install.SERVER_NAME] = entry
-    write_claude_desktop(home, servers, raw=crudo)
+    write_claude_desktop(home, servers, raw=raw)
     return home
 
 
-def _desktop_ctx(home, *, exige=True, acepta: bool | None = True, llamadas=None):
-    def _acepta(host, port, token):
-        if llamadas is not None:
-            llamadas.append(token)
-        return acepta
+def _desktop_ctx(home, *, requires=True, accepts: bool | None = True, calls=None):
+    def _accepts(host, port, token):
+        if calls is not None:
+            calls.append(token)
+        return accepts
 
     return make_ctx(
         home,
-        daemon_needs_token=lambda host, port: exige,
-        daemon_accepts_token=_acepta,
+        daemon_needs_token=lambda host, port: requires,
+        daemon_accepts_token=_accepts,
     )
 
 
-def _sin_token(result):
+def _without_token(result):
     assert _TOKEN_DESKTOP not in result.detail
     assert _TOKEN_DESKTOP not in (result.fix_hint or "")
 
 
-def test_desktop_con_token_que_el_daemon_acepta_es_ok_y_no_escribe(tmp_path):
+def test_desktop_with_a_token_the_daemon_accepts_is_ok_and_does_not_write(tmp_path):
     """Control positivo del bloque: sin él, un probe que avisara siempre dejaría verdes a los demás."""
-    home = _con_desktop(make_home(tmp_path), _desktop_entry())
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
     before = snapshot(home)
-    llamadas: list[str] = []
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    calls: list[str] = []
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.OK, result.detail
-    assert llamadas == [_TOKEN_DESKTOP]  # el token que se prueba es el del fichero, no otro
-    _sin_token(result)
+    assert calls == [_TOKEN_DESKTOP]  # el token que se prueba es el del fichero, no otro
+    _without_token(result)
     assert snapshot(home) == before
 
 
-def test_desktop_con_token_rotado_avisa_sin_imprimir_el_token(tmp_path):
+def test_desktop_with_rotated_token_warns_without_printing_the_token(tmp_path):
     """La avería que motiva el check: la entrada lleva cabecera, pero el daemon ya no la acepta."""
-    home = _con_desktop(make_home(tmp_path), _desktop_entry())
-    result = result_for("service.desktop_auth", _desktop_ctx(home, acepta=False))
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, accepts=False))
 
     assert result.status == checks.WARN
     assert "Claude Desktop" in result.detail
     assert "401" in result.detail
     assert result.fix_hint
-    _sin_token(result)
+    _without_token(result)
 
 
-def test_desktop_sin_cabecera_contra_daemon_con_token_avisa(tmp_path):
-    llamadas: list[str] = []
-    home = _con_desktop(make_home(tmp_path), _desktop_entry(header=None))
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+def test_desktop_without_header_against_daemon_with_token_warns(tmp_path):
+    calls: list[str] = []
+    home = _with_desktop(make_home(tmp_path), _desktop_entry(header=None))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.WARN
     assert "401" in result.detail
-    assert llamadas == []
+    assert calls == []
 
 
-def test_desktop_contra_daemon_abierto_no_prueba_el_token(tmp_path):
-    llamadas: list[str] = []
-    home = _con_desktop(make_home(tmp_path), _desktop_entry())
-    result = result_for("service.desktop_auth", _desktop_ctx(home, exige=False, llamadas=llamadas))
+def test_desktop_against_open_daemon_does_not_test_the_token(tmp_path):
+    calls: list[str] = []
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, requires=False, calls=calls))
 
     assert result.status == checks.OK
-    assert llamadas == []
+    assert calls == []
 
 
-def test_desktop_sin_fichero_es_unknown_y_no_sale_a_la_red(tmp_path):
+def test_desktop_without_file_is_unknown_and_does_not_go_to_the_network(tmp_path):
     """Una PC sin Claude Desktop no tiene nada roto. Y no hay por qué preguntarle al puerto."""
-    preguntas: list[str] = []
+    questions: list[str] = []
 
-    def _anota(*_args):
-        preguntas.append("red")
+    def _records(*_args):
+        questions.append("red")
         return True
 
-    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=_anota, daemon_accepts_token=_anota)
+    ctx = make_ctx(make_home(tmp_path), daemon_needs_token=_records, daemon_accepts_token=_records)
     # El probe a solas: `run_all` corre también `service.daemon_auth`, que sí pregunta al puerto.
     result = checks._probe_desktop_auth(ctx)
 
     assert result.status == checks.UNKNOWN
-    assert preguntas == []
+    assert questions == []
 
 
-def test_desktop_sin_entrada_nuestra_es_unknown(tmp_path):
-    home = _con_desktop(make_home(tmp_path), None)
+def test_desktop_without_our_entry_is_unknown(tmp_path):
+    home = _with_desktop(make_home(tmp_path), None)
     result = result_for("service.desktop_auth", _desktop_ctx(home))
 
     assert result.status == checks.UNKNOWN
     assert "local-delegate" in result.detail
 
 
-def test_desktop_con_json_roto_es_unknown_y_nunca_missing(tmp_path):
-    home = _con_desktop(make_home(tmp_path), crudo="{ esto no es json")
+def test_desktop_with_broken_json_is_unknown_and_never_missing(tmp_path):
+    home = _with_desktop(make_home(tmp_path), raw="{ esto no es json")
     result = result_for("service.desktop_auth", _desktop_ctx(home))
 
     assert result.status == checks.UNKNOWN
 
 
-def test_desktop_por_stdio_no_pasa_por_el_puerto(tmp_path):
+def test_desktop_over_stdio_does_not_go_through_the_port(tmp_path):
     entry = {"command": "uvx", "args": ["--from", "local-delegate-mcp", "local-delegate"]}
-    llamadas: list[str] = []
-    home = _con_desktop(make_home(tmp_path), entry)
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    calls: list[str] = []
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.UNKNOWN
     assert "stdio" in result.detail
-    assert llamadas == []
+    assert calls == []
 
 
-def test_desktop_que_apunta_a_otro_host_no_se_prueba_contra_el_daemon_local(tmp_path):
+def test_desktop_pointing_to_another_host_is_not_tested_against_the_local_daemon(tmp_path):
     """Probar su token contra NUESTRO puerto diría algo de un servidor al que no habla."""
     entry = _desktop_entry()
     entry["args"][2] = "http://100.64.0.7:9393/mcp"
-    llamadas: list[str] = []
-    home = _con_desktop(make_home(tmp_path), entry)
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    calls: list[str] = []
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.UNKNOWN
-    assert llamadas == []
+    assert calls == []
 
 
-def test_desktop_con_variable_referenciada_prueba_su_valor(tmp_path, monkeypatch):
+def test_desktop_with_referenced_variable_tests_its_value(tmp_path, monkeypatch):
     """`mcp-remote` expande `${VAR}` en las cabeceras: el valor sale de `env` de la entrada o del entorno."""
     monkeypatch.setenv("TOKEN_DESKTOP_PRUEBA", "valor-del-entorno")
-    llamadas: list[str] = []
-    home = _con_desktop(
+    calls: list[str] = []
+    home = _with_desktop(
         make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
     )
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.OK, result.detail
-    assert llamadas == ["valor-del-entorno"]
+    assert calls == ["valor-del-entorno"]
 
 
-def test_desktop_con_bearer_dentro_de_la_variable_prueba_solo_el_token(tmp_path, monkeypatch):
+def test_desktop_with_bearer_inside_the_variable_tests_only_the_token(tmp_path, monkeypatch):
     """La forma de la Mac: `Authorization:${AUTH_HEADER}` y `env.AUTH_HEADER = "Bearer xxx"`.
 
     Con el prefijo quitado solo antes de expandir, lo que se probaba era `Bearer xxx`, la
@@ -1504,36 +1533,36 @@ def test_desktop_con_bearer_dentro_de_la_variable_prueba_solo_el_token(tmp_path,
     monkeypatch.delenv("AUTH_HEADER", raising=False)
     entry = _desktop_entry(header="Authorization:${AUTH_HEADER}")
     entry["env"] = {"AUTH_HEADER": "Bearer token-bueno"}
-    llamadas: list[str] = []
-    home = _con_desktop(make_home(tmp_path), entry)
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    calls: list[str] = []
+    home = _with_desktop(make_home(tmp_path), entry)
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
-    assert llamadas == ["token-bueno"]
+    assert calls == ["token-bueno"]
     assert result.status == checks.OK, result.detail
 
 
-def test_desktop_con_variable_que_no_esta_avisa_como_sospecha(tmp_path, monkeypatch):
+def test_desktop_with_missing_variable_warns_as_suspicion(tmp_path, monkeypatch):
     monkeypatch.delenv("TOKEN_DESKTOP_PRUEBA", raising=False)
-    llamadas: list[str] = []
-    home = _con_desktop(
+    calls: list[str] = []
+    home = _with_desktop(
         make_home(tmp_path), _desktop_entry(header="Authorization: Bearer ${TOKEN_DESKTOP_PRUEBA}")
     )
-    result = result_for("service.desktop_auth", _desktop_ctx(home, llamadas=llamadas))
+    result = result_for("service.desktop_auth", _desktop_ctx(home, calls=calls))
 
     assert result.status == checks.WARN
     assert "TOKEN_DESKTOP_PRUEBA" in result.detail
-    assert llamadas == []
+    assert calls == []
 
 
-def test_desktop_sin_poder_probar_el_token_es_unknown(tmp_path):
-    home = _con_desktop(make_home(tmp_path), _desktop_entry())
-    result = result_for("service.desktop_auth", _desktop_ctx(home, acepta=None))
+def test_desktop_unable_to_test_the_token_is_unknown(tmp_path):
+    home = _with_desktop(make_home(tmp_path), _desktop_entry())
+    result = result_for("service.desktop_auth", _desktop_ctx(home, accepts=None))
 
     assert result.status == checks.UNKNOWN
-    _sin_token(result)
+    _without_token(result)
 
 
-def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
+def test_the_hook_count_does_not_count_pycache(tmp_path):
     """`__pycache__` aparece en cuanto los hooks se ejecutan una vez, y no es un script.
 
     No es cosmético: **ese número es justo el que se mira para confirmar que un script retirado
@@ -1545,23 +1574,23 @@ def test_el_conteo_de_hooks_no_cuenta_el_pycache(tmp_path):
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
     scripts = sorted(p.name for p in hooks_dir.iterdir() if p.suffix == ".py")
 
-    antes = result_for("scaffold.hook_files", make_ctx(home))
-    assert antes.status == checks.OK
-    assert f"{len(scripts)} script(s)" in antes.detail, antes.detail
+    before = result_for("scaffold.hook_files", make_ctx(home))
+    assert before.status == checks.OK
+    assert f"{len(scripts)} script(s)" in before.detail, before.detail
 
     # Lo que hace Python en cuanto el hook corre una vez.
     pycache = hooks_dir / "__pycache__"
     pycache.mkdir()
     (pycache / "hook_common.cpython-311.pyc").write_bytes(b"\x00")
 
-    despues = result_for("scaffold.hook_files", make_ctx(home))
-    assert despues.status == checks.OK
-    assert f"{len(scripts)} script(s)" in despues.detail, (
-        f"el __pycache__ se coló en el conteo: {despues.detail}"
+    after = result_for("scaffold.hook_files", make_ctx(home))
+    assert after.status == checks.OK
+    assert f"{len(scripts)} script(s)" in after.detail, (
+        f"el __pycache__ se coló en el conteo: {after.detail}"
     )
 
 
-def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
+def test_the_hook_count_follows_the_real_scripts(tmp_path):
     """Control del test de arriba: sin esto, un conteo clavado a mano lo dejaría en verde.
 
     Se añade un `.py` en vez de borrar uno porque quitarlo dispararía el `warn` de «faltan
@@ -1570,16 +1599,16 @@ def test_el_conteo_de_hooks_sigue_los_scripts_de_verdad(tmp_path):
     """
     home = make_home(tmp_path)
     hooks_dir = home / ".claude" / "hooks" / install.HOOKS_SUBDIR
-    antes = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
+    before = len([p for p in hooks_dir.iterdir() if p.suffix == ".py"])
 
     (hooks_dir / "mi_hook_propio.py").write_text("# del usuario", encoding="utf-8")
 
     result = result_for("scaffold.hook_files", make_ctx(home))
     assert result.status == checks.OK
-    assert f"{antes + 1} script(s)" in result.detail, result.detail
+    assert f"{before + 1} script(s)" in result.detail, result.detail
 
 
-def test_hooks_de_otra_version_son_warn(tmp_path):
+def test_hooks_from_another_version_are_warn(tmp_path):
     """Los nombres están todos, pero el contenido no es el del paquete instalado.
 
     Es lo que tuvo la Mac una semana: paquete en 0.31.1 y hooks de la 0.27, y el check en `ok`
@@ -1597,7 +1626,7 @@ def test_hooks_de_otra_version_son_warn(tmp_path):
     assert result.fix_hint == checks.UPDATE_HOOKS_HINT
 
 
-def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
+def test_a_packaged_script_is_missing_even_if_not_registered(tmp_path):
     """`hook_common.py` no está en `_HOOK_EVENTS`, pero sin él ningún hook arranca."""
     home = make_home(tmp_path)
     (home / ".claude" / "hooks" / install.HOOKS_SUBDIR / "hook_common.py").unlink()
@@ -1606,7 +1635,7 @@ def test_falta_un_script_empaquetado_aunque_no_se_registre(tmp_path):
     assert "hook_common.py" in result.detail
 
 
-def test_codex_reescrito_por_otro_programa_no_es_missing(tmp_path):
+def test_codex_rewritten_by_another_program_is_not_missing(tmp_path):
     """Indentado y sin marcador de cierre, como lo dejó el plugin de JetBrains: Codex lo carga.
 
     Darlo por ausente no era solo un aviso falso: `update` lo «reparaba» añadiendo otra entrada.
@@ -1623,7 +1652,7 @@ def test_codex_reescrito_por_otro_programa_no_es_missing(tmp_path):
     assert "cierre" in result.detail
 
 
-def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
+def test_indented_codex_without_markers_still_belongs_to_someone_else(tmp_path):
     """Sin el de apertura no es nuestra, con sangría o sin ella: `warn`, y `update` no la pisa."""
     home = make_home(tmp_path)
     (home / ".codex" / "config.toml").write_text(
@@ -1655,7 +1684,7 @@ def test_fallback_with_resident_works_like_loaded_and_warns(
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.OK
 
 
-def test_fallback_cargado_is_not_valid_name(reload_config, tmp_path):
+def test_fallback_loaded_is_not_valid_name(reload_config, tmp_path):
     """El paso se llama `loaded` (nombres que se teclean, en inglés); `cargado` no se acepta."""
     from local_delegate import chains
 
@@ -1836,34 +1865,34 @@ def test_topology_without_turn_according_to_the_daemon_says_why(tmp_path):
 # --- Ventanas de prueba (test-windows-out-of-metrics, REQ-019) -----------------------------------
 
 
-def _probe_ventanas(tmp_path):
+def _probe_windows(tmp_path):
     return checks._probe_test_windows(checks.Context(home=tmp_path / "home", log_dir=tmp_path))
 
 
-def test_ventanas_sin_fichero_es_correcto(tmp_path):
-    r = _probe_ventanas(tmp_path)
+def test_windows_without_file_is_correct(tmp_path):
+    r = _probe_windows(tmp_path)
     assert (r.status, r.detail) == (checks.OK, "sin ventanas")
 
 
-def test_ventanas_cerradas_es_correcto(tmp_path):
+def test_closed_windows_is_correct(tmp_path):
     from local_delegate import test_windows
 
     test_windows.add(tmp_path, "2026-10-08T01:00:00Z", "2026-10-08T02:00:00Z")
     test_windows.add(tmp_path, "2026-10-08T03:00:00Z", "2026-10-08T04:00:00Z")
-    r = _probe_ventanas(tmp_path)
+    r = _probe_windows(tmp_path)
     assert (r.status, r.detail) == (checks.OK, "2 ventanas, ninguna abierta")
 
 
-@pytest.mark.parametrize(("horas", "aviso"), [(13, True), (1, False)])
-def test_una_ventana_olvidada_avisa_con_la_orden(tmp_path, horas, aviso):
+@pytest.mark.parametrize(("hours", "warning"), [(13, True), (1, False)])
+def test_a_forgotten_window_warns_with_the_command(tmp_path, hours, warning):
     """D6: más de 12 h abierta. Control: mutante con el umbral en 24 h → falla el caso de 13 h."""
     from datetime import UTC, datetime, timedelta
 
     from local_delegate import test_windows
 
-    w = test_windows.start(tmp_path, now=datetime.now(UTC) - timedelta(hours=horas))
-    r = _probe_ventanas(tmp_path)
-    if aviso:
+    w = test_windows.start(tmp_path, now=datetime.now(UTC) - timedelta(hours=hours))
+    r = _probe_windows(tmp_path)
+    if warning:
         assert r.status == checks.WARN
         assert w.id in r.detail
         assert r.fix_hint == f"local-delegate test-window stop {w.id}"
@@ -1871,22 +1900,22 @@ def test_una_ventana_olvidada_avisa_con_la_orden(tmp_path, horas, aviso):
         assert (r.status, r.detail) == (checks.OK, "1 ventanas, 1 abierta(s)")
 
 
-def test_un_fichero_roto_avisa_con_el_motivo(tmp_path):
+def test_a_broken_file_warns_with_the_reason(tmp_path):
     from local_delegate import test_windows
 
     (tmp_path / test_windows.FILE_NAME).write_text("{roto", encoding="utf-8")
-    r = _probe_ventanas(tmp_path)
+    r = _probe_windows(tmp_path)
     assert r.status == checks.WARN and "JSON roto" in r.detail
 
 
-def test_las_entradas_ignoradas_se_cuentan(tmp_path):
+def test_ignored_entries_are_counted(tmp_path):
     from local_delegate import test_windows
 
     (tmp_path / test_windows.FILE_NAME).write_text(
         json.dumps({"version": 1, "windows": [{"id": "x"}, {"id": "y", "start": "mal"}]}),
         encoding="utf-8",
     )
-    r = _probe_ventanas(tmp_path)
+    r = _probe_windows(tmp_path)
     assert r.status == checks.WARN and "2 entrada(s) ignorada(s)" in r.detail
 
 

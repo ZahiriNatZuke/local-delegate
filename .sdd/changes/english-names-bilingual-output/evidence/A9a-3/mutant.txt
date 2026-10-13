@@ -1,0 +1,32 @@
+mutante M1: src/local_delegate/failures.py «        return ConnectionCause.REFUSED
+    # 6.» → «        return ConnectionCause.DNS
+    # 6.» (1 sitio/s; sha256 c8e2e0e55c7a -> d0de925733bb)
+>       assert cause is expected
+E       AssertionError: assert <ConnectionCause.DNS: 'dns'> is <ConnectionCause.REFUSED: 'refused'>
+tests\test_connection_cause.py:173: AssertionError
+1 failed, 27 passed in 0.30s
+restaurado desde copia: sha256 c8e2e0e55c7a (igual al original: sí)
+
+mutante M2a: src/local_delegate/checks.py «        return (client, "no_credential")» → «        return (client, "sin_credencial")» (1 sitio/s; sha256 6766bd49328a -> e4f821dfab58)
+>       assert "sin cabecera de autorización" in result.detail, result.detail
+E       AssertionError: el puerto del daemon exige token y Claude Code usa sin_credencial, Codex usa sin_credencial, opencode usa sin_credencial, que no está en el entorno de este proceso: si el cliente tampoco la ve, sus tools local_* responderán 401
+E       assert 'sin cabecera de autorización' in 'el puerto del daemon exige token y Claude Code usa sin_credencial, Codex usa sin_credencial, opencode usa sin_credencial, que no está en el entorno de este proceso: si el cliente tampoco la ve, sus tools local_* responderán 401'
+E        +  where 'el puerto del daemon exige token y Claude Code usa sin_credencial, Codex usa sin_credencial, opencode usa sin_credencial, que no está en el entorno de este proceso: si el cliente tampoco la ve, sus tools local_* responderán 401' = Result(status='warn', detail='el puerto del daemon exige token y Claude Code usa sin_credencial, Codex usa sin_credenc...e tampoco la ve, sus tools local_* responderán 401', fix_hint='local-delegate install --mcp-mode http --web-token-env').detail
+tests\test_checks.py:1275: AssertionError
+>           assert checks._entry_auth(client, "http", None) == (client, "no_credential")
+E           AssertionError: assert ('Claude Code...n_credencial') == ('Claude Code...o_credential')
+E             At index 1 diff: 'sin_credencial' != 'no_credential'
+E             Use -v to get more diff
+tests\test_checks.py:1286: AssertionError
+2 failed, 1 passed in 0.32s
+restaurado desde copia: sha256 6766bd49328a (igual al original: sí)
+
+mutante M2b: src/local_delegate/checks.py «"no_credential"» → «"sin_credencial"» (4 sitio/s; sha256 6766bd49328a -> a7d3cedbcf2b)
+>           assert checks._entry_auth(client, "http", None) == (client, "no_credential")
+E           AssertionError: assert ('Claude Code...n_credencial') == ('Claude Code...o_credential')
+E             At index 1 diff: 'sin_credencial' != 'no_credential'
+E             Use -v to get more diff
+tests\test_checks.py:1286: AssertionError
+1 failed, 2 passed in 0.31s
+restaurado desde copia: sha256 6766bd49328a (igual al original: sí)
+

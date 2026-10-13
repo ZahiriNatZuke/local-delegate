@@ -2,13 +2,14 @@
 
 La subola se parte en 7 lotes (D13: 1788 filas, máximo 300 por lote y sin partir un módulo, salvo
 la excepción aprobada del JS de `test_dashboard_ui.py`, que va al lote 7). Cada lote es un commit
-que hace la sesión principal, en una rama apilada sobre el anterior. El **lote 1** está en el commit
-`799562a` (PR #272); el **lote 2** está aplicado y registrado en la sección «A9a-2», al final. Las
-tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya aplicados, porque
-`check_wave_records.py` lee la primera tabla de cada sección: 37 + 21 = 58 filas
-`rename_refactoring` = 58 filas `pycharm` de los mappings A9a-1 y A9a-2.
+que hace la sesión principal, en una rama apilada sobre el anterior. El **lote 1** está en `main`
+(`2860497`, PR #272) y el **lote 2** en el commit `584845c` (PR #273). El **lote 3** está aplicado
+y registrado en la sección «A9a-3», al final. Las tablas de controles positivos, `local_*` y PyCharm
+son las de los lotes ya aplicados, porque `check_wave_records.py` lee la primera tabla de cada
+sección: 37 + 21 + 21 = 79 filas `rename_refactoring` = 79 filas `pycharm` de los mappings A9a-1,
+A9a-2 y A9a-3.
 
-- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, apilada sobre `799562a` · Commit del lote 2: pendiente, con el borrador en `waves/A9a-2-commit-msg.txt` (firmado y sin coautoría)
+- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, commit `584845c` (PR #273), rebasado sobre `main` con el lote 1 (`2860497`); lote 3 en `sdd/english-names-a9a-3`, apilada sobre `584845c` · Commit del lote 3: pendiente, con el borrador en `waves/A9a-3-commit-msg.txt` (firmado y sin coautoría)
 - Quién: un agente hizo los 7 mappings (fase 1). Tras la aprobación de la sesión principal (decisiones 1-8, con `esp`→`expected` y `clase`→`css_class`/`cls`/`content_class` según lo que nombre), el mismo agente aplicó el lote 1 (fase 2)
 - REQ cubiertos por el lote 1: REQ-015 (nombres de `tests/conftest.py`, `tests/backend_mock.py`, `test_agents.py`, `test_aislamiento_entorno.py`→`test_environment_isolation.py` y `test_atribucion.py`→`test_attribution.py`, más los directorios de fixtures `residencia`→`residency` y `topologia`→`topology`) y REQ-017 (ningún assert cambia de sentido)
 - Ficheros poseídos por el lote 1: `tests/conftest.py`, `tests/backend_mock.py`, `tests/test_agents.py`, `tests/test_aislamiento_entorno.py`, `tests/test_atribucion.py` y `tests/fixtures/{residencia,topologia}/`. Lo de fuera, en «Desviaciones»
@@ -25,6 +26,9 @@ tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya aplic
 | --- | --- | --- | --- |
 | `tests/test_attribution.py::test_does_not_read_more_than_256_kb` (usa los renombrados `_ReadSpy`, `.reads`, `_stream`, `_spy`, `_projects`, `_write_note`, `_tool_use_line`) | `src/local_delegate/attribution.py`: `TAIL_BYTES = 256 * 1024` → `512 * 1024` (sha256 `32d9a7febbed` → `9d774322a27d`: el mutante muta) | `tests/test_attribution.py:383` `assert spy.reads <= 256 * 1024` → `assert 524288 <= (256 * 1024)`; la guarda `spy.reads > 0` de :382 pasa, así que el test llegó a leer (`evidence/A9a-1/mutant.txt`) | sí: `git checkout` devolvió la versión de HEAD y se repuso la cita de :17 de la ola; sha256 `32d9a7febbed`, igual que antes del mutante |
 | `tests/test_benchmark.py::test_voided_run_is_repeated_with_the_same_tokens` y `::test_the_voided_run_is_repeated_at_most_twice` (lote 2; usan los renombrados `_VoidingProbe`, `.reasons`, `_run`, `_response`) | `src/local_delegate/benchmark.py:1340`: `annul_retries < MAX_ANNUL_RETRIES` → `annul_retries < 0`, sin reintentos (sha256 `4b1593fcf3a5` → `3ca7cad98f5c`) | `test_benchmark.py:565` `assert seen == [16, 16]` → `[16] == [16, 16]`; `:575` `assert len(records) == 1 + benchmark.MAX_ANNUL_RETRIES` → `1 == (1 + 2)` (`evidence/A9a-2/mutant.txt`) | sí, desde una copia guardada antes de mutar: sha256 `4b1593fcf3a5` |
+| `tests/test_connection_cause.py::test_each_event_has_its_cause` (lote 3; usa los renombrados `_CASES`, `_wrapped`, `factory`, `expected` y la cadena de `parametrize`) | `src/local_delegate/failures.py:318`: `return ConnectionCause.REFUSED` → `DNS` (sha256 `c8e2e0e55c7a` → `d0de925733bb`) | `test_connection_cause.py:173` `assert cause is expected` → `<ConnectionCause.DNS> is <ConnectionCause.REFUSED>`; 1 falla y 27 pasan (`evidence/A9a-3/mutant.txt`, M1) | sí, desde copia: `c8e2e0e55c7a` |
+| `tests/test_checks.py::test_an_http_entry_without_header_is_reported_as_blind_not_as_a_missing_variable` (test NUEVO del lote 3) | `checks.py:1124`: `_entry_auth` devuelve `"sin_credencial"` y no `"no_credential"` (el mutante M1 del hallazgo de A8a-1; sha256 `6766bd49328a` → `e4f821dfab58`) | `test_checks.py:1275` `assert "sin cabecera de autorización" in result.detail` → el detalle es el de la rama «variable que no está»; también falla el otro test nuevo (:1286). El test viejo `…against_a_daemon_with_token_warns` sigue pasando: no distingue, como decía el hallazgo (M2a) | sí, desde copia: `6766bd49328a` |
+| `tests/test_checks.py::test_an_http_entry_without_credential_is_tagged_no_credential` (test NUEVO del lote 3) | `checks.py`: los 4 `"no_credential"` → `"sin_credencial"`, con lo que el probe queda coherente (sha256 `6766bd49328a` → `a7d3cedbcf2b`) | `test_checks.py:1286` `assert checks._entry_auth(client, "http", None) == (client, "no_credential")` → `'sin_credencial' != 'no_credential'`; los otros dos pasan (M2b) | sí, desde copia: `6766bd49328a` |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -32,6 +36,7 @@ tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya aplic
 | --- | --- | --- | --- |
 | agente A9a-1 | `local_lint_summary(path=evidence/A9a-1/pytest-full.log)` | resumen de la suite | útil: solo los 12 avisos de `BlockingPortal` de Starlette, ningún fallo |
 | agente A9a-2 | `local_lint_summary(path=evidence/A9a-2/pytest-full.log)` | resumen de la suite del lote 2 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
+| agente A9a-3 | `local_lint_summary(path=evidence/A9a-3/pytest-full.log)` | resumen de la suite del lote 3 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 
 Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto de cada nombre, reglas del brief) y las listas largas fueron a ficheros del scratchpad, leídos por franjas.
 
@@ -99,6 +104,28 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 | agente A9a-2 | `rename_refactoring` | `_manifiesto` → `_manifest` | 3 usos |
 | agente A9a-2 | `rename_refactoring` | `_version_declarada` → `_declared_version` | 1 uso |
 | agente A9a-2 | `get_file_problems` | `tests/test_benchmark.py`, `tests/test_chains.py`, `tests/test_capture.py` (solo errores) | 0 errores nuevos: el único, `Unresolved reference 'yaml'` en `test_chains.py:124` (`monkeypatch.setattr(topology, "yaml", None)`), ya estaba en HEAD |
+| agente A9a-3 | `rename_refactoring` | `_PETICION` → `_REQUEST` | 3 usos |
+| agente A9a-3 | `rename_refactoring` | `_envuelta` → `_wrapped` | 15 usos |
+| agente A9a-3 | `rename_refactoring` | `_Propia` → `_OwnError` | 1 uso |
+| agente A9a-3 | `rename_refactoring` | `_CASOS` → `_CASES` | 2 usos |
+| agente A9a-3 | `rename_refactoring` | `_clasifica_en_un_hilo` → `_classify_in_a_thread` | 2 usos |
+| agente A9a-3 | `rename_refactoring` | `_fallo_real` → `_real_failure` | 3 usos |
+| agente A9a-3 | `rename_refactoring` | `_puerto_recien_liberado` → `_just_freed_port` | 1 uso |
+| agente A9a-3 | `rename_refactoring` | `_sin_el_arranque_remoto` → `_without_remote_start` | 1 uso |
+| agente A9a-3 | `rename_refactoring` | `_DETALLES` → `_DETAILS` | 2 usos |
+| agente A9a-3 | `rename_refactoring` | `_ETIQUETAS` → `_LABELS` | 5 usos |
+| agente A9a-3 | `rename_refactoring` | `_publicada` → `_published` | 9 usos |
+| agente A9a-3 | `rename_refactoring` | `_con_huerfanos` → `_with_orphans` | 2 usos |
+| agente A9a-3 | `rename_refactoring` | `observando` → `observing` | 9 usos |
+| agente A9a-3 | `rename_refactoring` | `_NUMERO_SIN_SUSTANTIVO` → `_NUMBER_WORDS_WITHOUT_NOUN` | 4 usos |
+| agente A9a-3 | `rename_refactoring` | `_NUMERO` → `_NUMBER_WORDS` | 3 usos |
+| agente A9a-3 | `rename_refactoring` | `_home_con_credencial` → `_home_with_credential` | 4 usos |
+| agente A9a-3 | `rename_refactoring` | `_probe_ventanas` → `_probe_windows` | 5 usos |
+| agente A9a-3 | `rename_refactoring` | `_con_stdio` → `_with_stdio` | 4 usos |
+| agente A9a-3 | `rename_refactoring` | `_ctx_con_daemon` → `_ctx_with_daemon` | 4 usos |
+| agente A9a-3 | `rename_refactoring` | `_con_desktop` → `_with_desktop` | 13 usos |
+| agente A9a-3 | `rename_refactoring` | `_sin_token` → `_without_token` | 3 usos |
+| agente A9a-3 | `get_file_problems` | `tests/test_checks.py`, `tests/test_connection_cause.py`, `tests/test_chunking.py` (solo errores) | 0 errores |
 
 ## Revisión del diff tras rename_refactoring
 
@@ -132,7 +159,7 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 
 ## Pendientes
 
-- **Tests nuevos sin renombrado** (respuesta de la sesión principal): el test de `no_credential` («Hallazgos» de A8a-1) va en el lote 3, porque su módulo es `test_checks.py`. El test que fija los esquemas de `elicitation` es de `test_preguntas.py`: va en A9b.
+- **Tests nuevos sin renombrado** (respuesta de la sesión principal): el test de `no_credential` («Hallazgos» de A8a-1) está hecho en el lote 3 (2 tests nuevos en `test_checks.py`). El test que fija los esquemas de `elicitation` es de `test_preguntas.py`: va en A9b.
 - **A9b:** `tests/fixtures/backend/*.json` (nombres en español, los usa `test_fallos_capturas.py`); `test_preguntas.py`; lo de `test_panel_estados.py` heredado de A8b.
 - **Lotes 2-7:** aplicar sus mappings con las lecciones de arriba.
 
@@ -173,3 +200,44 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 
 1. **3 filas `pycharm` → `search_edit`**: `texto` ×2 (parámetros homónimos) y `motivos` (atributo que se nombra también en cadenas de `monkeypatch`). Lo anota una línea `# Fase 2` del CSV.
 2. Ningún test nuevo en este lote: los dos pendientes van en el lote 3 (`no_credential`) y en A9b (`elicitation`).
+
+---
+
+## A9a-3 — `test_causa_conexion`, `test_checks` y `test_chunking` (aplicado)
+
+- Rama: `sdd/english-names-a9a-3`, apilada sobre el lote 2 (`584845c`)
+- REQ cubiertos: REQ-015 (nombres de `test_causa_conexion.py`→`test_connection_cause.py`, `test_checks.py` y `test_chunking.py`) y REQ-017. Además, los 2 tests nuevos de `no_credential` que pedía el hallazgo de A8a-1
+- Ficheros poseídos: esos 3 ficheros de test. Fuera: `tests/test_wiki.py:222` (cita un test de `test_checks.py`)
+- EOL: `evidence/A9a-3/eol-check.txt`: 0 diferencias, todo LF
+- Mapping: `waves/A9a-3-mapping.csv` aprobado (`# approved-by-main: 2026-10-13`), 264 filas. Filas `pycharm` 21 = filas `rename_refactoring` 21. Filas `search_edit` 243, cada una con su motivo: 230 con `make_mapping.py apply` (401 reemplazos: `test_causa_conexion` 121, `test_checks` 235, `test_chunking` 45; más el `def` de 10 anidadas con `a9a/nested_defs.py`), 12 pasadas de `pycharm` a `search_edit` en la fase 2 y 1 módulo con `git mv`
+- Tests recogidos: antes 2567 → después **2569 = 2567 + N, con N = 2** tests nuevos (`evidence/A9a-3/collect.txt`). Por fichero: `test_causa_conexion.py` 55 → `test_connection_cause.py` 55, `test_checks.py` 138 → 140 (+2) y `test_chunking.py` 41 → 41
+- Suite: `evidence/A9a-3/pytest-full.log` (`pytest -q -n auto --dist loadgroup`, con `pesado.sh`), verde a la primera: 2567 pasan, 2 saltados y el aviso conocido de `BlockingPortal`, en 56 s
+- `ruff check` y `ruff format --check`: limpios (`evidence/A9a-3/ruff-check.txt`, 187 ficheros). Antes, `ruff format` reajustó `test_checks.py` y `test_connection_cause.py`; esos 2 se volvieron a pasar después (194 pasan y 1 saltado)
+- Tamaño: 4 ficheros, +478 −451 (`git diff HEAD -M30% --numstat --ignore-cr-at-eol`)
+
+### A9a-3 · Qué se hizo
+
+1. `make_mapping.py apply`: 401 reemplazos. `nested_defs.py`: el `def` de 10 anidadas (`_anota` ×2, `_colaborador`, `_revienta`, `pista`→`hint_for`, `explota`, `denegado`, `_registra`, `_acepta` y `seccion`).
+2. **Cadenas de `parametrize`** que `apply` no toca: `("fabrica", "loopback", "esperada")`, `"codigo"` y `"viejo,nuevo"` en `test_causa_conexion.py`; `("instalada", "ultima")` y `("horas", "aviso")` en `test_checks.py`.
+3. **`except … as envoltura`** (`test_causa_conexion.py:41`): `apply` no lo ve porque no es un `ast.Name`. La primera pasada dejó `except … as envoltura` con `return wrapper`; lo cazó el barrido AST antes de correr nada y se corrigió a mano.
+4. `a9a/lineedit.py`: los parámetros homónimos con sus llamadas por keyword (`_fallo_real(conexion=)`, `_desktop_ctx(exige=, acepta=, llamadas=)`, `_con_desktop(crudo=)`, `_diff(archivos=, lineas=)`), y `nombre`/`esp` de la comprensión de `parametrize` (:169).
+5. PyCharm: 21 `rename_refactoring`. Volvió a reescribir 5 documentos de `.sdd/`, entre ellos este registro (`A9a.md`) y `A3.md`: devueltos con `git checkout` antes de editarlo. Los mappings 3-7 no los tocó.
+6. `git mv tests/test_causa_conexion.py tests/test_connection_cause.py`. Ningún fichero lo cita por ruta. Se cambió la cita de un test en su docstring (:5) y en `test_wiki.py:222`.
+
+### A9a-3 · Tests nuevos de `no_credential`
+
+Los pidió el hallazgo de A8a-1: el valor interno `"no_credential"` no lo protegía ningún test, porque con `"sin_credencial"` la entrada sin cabecera cae en la rama de «variable que no está», que también da `WARN` con «Claude Code», «401» y la misma pista.
+
+- `test_an_http_entry_without_header_is_reported_as_blind_not_as_a_missing_variable`: afirma «sin cabecera de autorización» en `result.detail` y que no aparece «no está en el entorno». Falla con el mutante del hallazgo (M2a, un solo sitio a `"sin_credencial"`).
+- `test_an_http_entry_without_credential_is_tagged_no_credential`: fija que `_entry_auth` devuelve `"no_credential"` para una entrada HTTP sin credencial (`None` o `""`) en los tres clientes, y `"stdio"` en stdio. Falla aunque los cuatro sitios cambien juntos y el probe quede coherente (M2b).
+
+### A9a-3 · Barrido final
+
+- AST (`a9a/sweep_after.py`): ninguna definición con un `old` del lote y ningún uso en código. El detector marca como español 2 nombres nuevos en inglés (`…_warns_as_suspicion`), por el sufijo «-sion»: falso positivo del detector.
+- `git grep -w` en los ficheros del lote, por token: 0 en código; 168 en textos (69 docstrings, 43 comentarios y 56 cadenas). Se cambiaron las citas `` `_NUMERO_SIN_SUSTANTIVO` `` (`test_checks.py:1186`) y la del test del docstring del módulo. Se quedan `` `causa` ``, `` `detalle` `` y `` `visto` ``: son claves y valores JSON del daemon 0.34 (datos).
+- Resto del repo: solo homónimos de otros módulos (`_con_huerfanos` en `test_install.py`, que es de A9b) y prosa.
+
+### A9a-3 · Desviaciones
+
+1. **12 filas `pycharm` → `search_edit`** (lo anota una línea `# Fase 2` del CSV): los parámetros homónimos y las variables de la comprensión.
+2. **Lección para los lotes 4-7:** además del `def` de las anidadas, los kwargs y las cadenas de `parametrize`, `apply` tampoco cambia los nombres de `except … as`.
