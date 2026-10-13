@@ -266,13 +266,13 @@ def offline_status(monkeypatch):
     monkeypatch.setattr(server, "_port_listening", lambda *_: False)
 
 
-def test_local_status_lists_the_old_names_read_by_the_server(recargar_config, offline_status):
-    recargar_config(LOCAL_DELEGATE_COSTE_RESPALDO="claude-haiku-4-5")
+def test_local_status_lists_the_old_names_read_by_the_server(reload_config, offline_status):
+    reload_config(LOCAL_DELEGATE_COSTE_RESPALDO="claude-haiku-4-5")
     text = server.local_status()
     assert "Nombres obsoletos leídos por este proceso:" in text
     assert "LOCAL_DELEGATE_COSTE_RESPALDO está obsoleto: usa LOCAL_DELEGATE_COST_FALLBACK" in text
 
 
-def test_local_status_says_nothing_with_the_new_names(recargar_config, offline_status):
-    recargar_config(LOCAL_DELEGATE_COST_FALLBACK="claude-haiku-4-5")
+def test_local_status_says_nothing_with_the_new_names(reload_config, offline_status):
+    reload_config(LOCAL_DELEGATE_COST_FALLBACK="claude-haiku-4-5")
     assert "Nombres obsoletos" not in server.local_status()

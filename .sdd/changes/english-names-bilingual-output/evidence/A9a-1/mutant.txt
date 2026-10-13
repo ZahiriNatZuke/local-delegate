@@ -1,0 +1,7 @@
+mutante M1: src/local_delegate/attribution.py TAIL_BYTES 256*1024 -> 512*1024 (sha256 32d9a7febbed -> 9d774322a27d)
+        assert spy.reads > 0, "guarda: se lleg� a abrir el transcript"
+>       assert spy.reads <= 256 * 1024
+E       assert 524288 <= (256 * 1024)
+tests\test_attribution.py:383: AssertionError
+1 failed in 0.23s
+restaurado: git checkout devolvió la versión de HEAD (sha256 0e033522fd4b) y se repuso la cita de la ola (:17 tests/test_attribution.py): sha256 32d9a7febbed (igual al de antes del mutante: sí)

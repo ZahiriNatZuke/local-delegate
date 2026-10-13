@@ -20,7 +20,7 @@ from local_delegate import config, server
 URL_CHAT = "http://test-backend/v1/chat/completions"
 MODELO_LARGO = "gemma4-26b-a4b"  # el defecto de MODEL_LONG
 
-# El fixture `recargar_config` vive en `conftest.py`: lo comparten estos tests y los de las cadenas.
+# El fixture `reload_config` vive en `conftest.py`: lo comparten estos tests y los de las cadenas.
 
 
 def _respuesta(contenido: str) -> httpx2.Response:
@@ -37,8 +37,8 @@ def _texto(caracteres: int, *, final: str = "") -> str:
 # --- Sin colisión, nada cambia ----------------------------------------------------------------
 
 
-def test_con_la_config_por_defecto_los_topes_son_los_de_siempre(recargar_config):
-    recargar_config()
+def test_con_la_config_por_defecto_los_topes_son_los_de_siempre(reload_config):
+    reload_config()
     assert config.max_chars_for_role("mechanical") == 20000
     assert config.max_chars_for_role("long") == 48000
     assert config.max_chars_for_role("code") == 20000
@@ -50,26 +50,26 @@ def test_con_la_config_por_defecto_los_topes_son_los_de_siempre(recargar_config)
 
 
 @backend_mock.mock
-def test_largo_igual_a_codigo_no_trocea_un_resumen_que_cabe(recargar_config):
+def test_largo_igual_a_codigo_no_trocea_un_resumen_que_cabe(reload_config):
     """30 000 caracteres caben en los 48 000 del rol largo: una llamada, no un map-reduce."""
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     ruta = backend_mock.post(URL_CHAT).mock(return_value=_respuesta("resumen"))
     server.local_summarize(text=_texto(30000))
     assert ruta.call_count == 1, "el rol largo heredó el tope de código y troceó"
 
 
 @backend_mock.mock
-def test_largo_igual_a_codigo_no_trocea_un_log_que_cabe(recargar_config):
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+def test_largo_igual_a_codigo_no_trocea_un_log_que_cabe(reload_config):
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     ruta = backend_mock.post(URL_CHAT).mock(return_value=_respuesta("resumen"))
     server.local_lint_summary(text=_texto(30000))
     assert ruta.call_count == 1
 
 
 @backend_mock.mock
-def test_largo_igual_a_codigo_no_trunca_una_traduccion_que_cabe(recargar_config):
+def test_largo_igual_a_codigo_no_trunca_una_traduccion_que_cabe(reload_config):
     """`local_translate` trunca la entrada al tope antes de trocear: el final no puede perderse."""
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     ruta = backend_mock.post(URL_CHAT).mock(return_value=_respuesta("traducido"))
     server.local_translate(target_lang="inglés", text=_texto(30000, final="FIN-DEL-TEXTO\n"))
     assert any(b"FIN-DEL-TEXTO" in llamada.request.content for llamada in ruta.calls), (
@@ -78,16 +78,16 @@ def test_largo_igual_a_codigo_no_trunca_una_traduccion_que_cabe(recargar_config)
 
 
 @backend_mock.mock
-def test_largo_igual_a_codigo_no_trunca_una_extraccion_que_cabe(recargar_config):
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+def test_largo_igual_a_codigo_no_trunca_una_extraccion_que_cabe(reload_config):
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     backend_mock.post(URL_CHAT).mock(return_value=_respuesta('{"a": 1}'))
     datos = server.local_extract(fields=["a"], text=_texto(30000))
     assert "_local_delegate" not in datos, "se truncó una entrada que cabía en el rol largo"
 
 
-def test_largo_igual_a_codigo_valida_candidatos_contra_el_minimo(recargar_config):
+def test_largo_igual_a_codigo_valida_candidatos_contra_el_minimo(reload_config):
     """El tope POR MODELO sirve para validar un respaldo (REQ-003): ahí prometer de más es el fallo."""
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     assert config.max_chars_for_role("long") == 48000
     assert config.max_chars_for_role("code") == 20000
     assert config.max_chars_for(MODELO_LARGO) == 20000
@@ -103,9 +103,9 @@ def test_largo_igual_a_codigo_valida_candidatos_contra_el_minimo(recargar_config
 
 
 @backend_mock.mock
-def test_un_resumen_que_no_cabe_en_el_rol_largo_se_sigue_troceando(recargar_config):
+def test_un_resumen_que_no_cabe_en_el_rol_largo_se_sigue_troceando(reload_config):
     """Sin esto, un tope infinito pasaría todos los tests de arriba."""
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=MODELO_LARGO)
     ruta = backend_mock.post(URL_CHAT).mock(return_value=_respuesta("resumen"))
     server.local_summarize(text=_texto(60000))
     assert ruta.call_count > 1

@@ -51,7 +51,7 @@ def _backend(respuestas: dict) -> list[str]:
     """
     # `backend_mock` atiende con la PRIMERA ruta que casa: sin limpiar, un segundo `_backend` en el
     # mismo test no recibiría ninguna llamada.
-    backend_mock._rutas.clear()
+    backend_mock._routes.clear()
     pedidos: list[str] = []
     pendientes = {m: list(r) if isinstance(r, list) else [r] for m, r in respuestas.items()}
 
@@ -98,8 +98,8 @@ def _texto(caracteres: int) -> str:
 
 
 @backend_mock.mock
-def test_long_fails_and_code_answers(recargar_config, tmp_path):
-    recargar_config()
+def test_long_fails_and_code_answers(reload_config, tmp_path):
+    reload_config()
     requested = _backend(
         {LARGO: _fallo(500), CODIGO: _ok("resumen del respaldo"), MECANICO: _ok("del 4B")}
     )
@@ -117,16 +117,16 @@ def test_long_fails_and_code_answers(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_la_entrada_que_no_cabe_en_el_respaldo_da_el_error_de_hoy(recargar_config, tmp_path):
+def test_la_entrada_que_no_cabe_en_el_respaldo_da_el_error_de_hoy(reload_config, tmp_path):
     texto = _texto(30_000)  # cabe en largo (48 000); ni residente ni código (20 000) la admiten
 
-    recargar_config(LOCAL_DELEGATE_FALLBACK="0", LOCAL_DELEGATE_COOLDOWN="0")
+    reload_config(LOCAL_DELEGATE_FALLBACK="0", LOCAL_DELEGATE_COOLDOWN="0")
     pedidos_hoy = _backend({LARGO: _fallo(500)})
     error_de_hoy = server.local_summarize(text=texto)
 
-    # Las variables se ENCIENDEN a mano: `recargar_config` solo añade, y sin esto la segunda pasada
+    # Las variables se ENCIENDEN a mano: `reload_config` solo añade, y sin esto la segunda pasada
     # seguiría con el mecanismo apagado y el test no distinguiría nada.
-    recargar_config(LOCAL_DELEGATE_FALLBACK="1", LOCAL_DELEGATE_COOLDOWN="1")
+    reload_config(LOCAL_DELEGATE_FALLBACK="1", LOCAL_DELEGATE_COOLDOWN="1")
     assert config.FALLBACK and config.COOLDOWN
     pedidos = _backend({LARGO: _fallo(500), MECANICO: _ok(), CODIGO: _ok()})
     salida = server.local_summarize(text=texto)
@@ -140,8 +140,8 @@ def test_la_entrada_que_no_cabe_en_el_respaldo_da_el_error_de_hoy(recargar_confi
 
 
 @backend_mock.mock
-def test_un_400_no_salta_ni_cuenta_y_conserva_el_reintento_sin_schema(recargar_config, tmp_path):
-    recargar_config()
+def test_un_400_no_salta_ni_cuenta_y_conserva_el_reintento_sin_schema(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({MECANICO: _fallo(400, "schema no soportado"), LARGO: _ok('{"a": 1}')})
 
     salida = server.local_extract(fields=["a"], text="texto corto")
@@ -155,8 +155,8 @@ def test_un_400_no_salta_ni_cuenta_y_conserva_el_reintento_sin_schema(recargar_c
 
 
 @backend_mock.mock
-def test_el_backend_caido_no_salta_ni_enfria(recargar_config, tmp_path, monkeypatch):
-    recargar_config()
+def test_el_backend_caido_no_salta_ni_enfria(reload_config, tmp_path, monkeypatch):
+    reload_config()
     monkeypatch.setattr(questions, "ask", lambda *a, **k: None)
     pedidos = _backend({MECANICO: httpx2.ConnectError("x"), LARGO: _ok()})
 
@@ -171,8 +171,8 @@ def test_el_backend_caido_no_salta_ni_enfria(recargar_config, tmp_path, monkeypa
 
 
 @backend_mock.mock
-def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_config, tmp_path):
-    recargar_config()
+def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
     server.local_explain_code(code="x = 1")
@@ -192,8 +192,8 @@ def test_tres_fallos_desde_dos_procesos_enfrian_y_la_cuarta_va_directa(recargar_
 
 
 @backend_mock.mock
-def test_enfriado_sin_alternativa_falla_al_momento(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_MECHANICAL="none")
+def test_enfriado_sin_alternativa_falla_al_momento(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK_MECHANICAL="none")
     _enfriar(tmp_path, MECANICO)
     pedidos = _backend({MECANICO: _ok()})
 
@@ -215,8 +215,8 @@ def _vencido(tmp_path: Path, modelo: str, espera_s: float = 120.0) -> None:
 
 
 @backend_mock.mock
-def test_vence_el_enfriamiento_y_la_prueba_sale_bien(recargar_config, tmp_path):
-    recargar_config()
+def test_vence_el_enfriamiento_y_la_prueba_sale_bien(reload_config, tmp_path):
+    reload_config()
     _vencido(tmp_path, MECANICO)
     pedidos = _backend({MECANICO: _ok("a")})
 
@@ -227,8 +227,8 @@ def test_vence_el_enfriamiento_y_la_prueba_sale_bien(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_vence_el_enfriamiento_y_la_prueba_falla_dobla_la_espera(recargar_config, tmp_path):
-    recargar_config()
+def test_vence_el_enfriamiento_y_la_prueba_falla_dobla_la_espera(reload_config, tmp_path):
+    reload_config()
     _vencido(tmp_path, MECANICO)
     pedidos = _backend({MECANICO: _fallo(500), LARGO: _ok("a")})
 
@@ -242,8 +242,8 @@ def test_vence_el_enfriamiento_y_la_prueba_falla_dobla_la_espera(recargar_config
 
 
 @backend_mock.mock
-def test_traduccion_en_cuatro_trozos_cambia_de_modelo_una_sola_vez(recargar_config, tmp_path):
-    recargar_config()
+def test_traduccion_en_cuatro_trozos_cambia_de_modelo_una_sola_vez(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({LARGO: [_ok("uno"), _fallo(500), _ok("NO")], CODIGO: _ok("otro")})
 
     salida = server.local_translate(target_lang="inglés", text=_texto(12_000))
@@ -254,8 +254,8 @@ def test_traduccion_en_cuatro_trozos_cambia_de_modelo_una_sola_vez(recargar_conf
 
 
 @backend_mock.mock
-def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp_path):
-    recargar_config()
+def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("- a: cambia")})
     diff = "".join(
         f"diff --git a/f{i}.py b/f{i}.py\n" + "+linea de codigo nueva\n" * 200 for i in range(6)
@@ -270,11 +270,11 @@ def test_commit_en_map_reduce_salta_y_sigue_con_el_respaldo(recargar_config, tmp
 
 
 @backend_mock.mock
-def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(recargar_config, tmp_path):
+def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(reload_config, tmp_path):
     # Los trozos miden 0,8 x 48 000 = 38 400 chars y ningún candidato de 20 000 los admite
     # (REQ-003): el salto no puede ocurrir con los topes de hoy. Se fija para no descubrirlo en
     # producción.
-    recargar_config()
+    reload_config()
     pedidos = _backend({LARGO: _fallo(500), MECANICO: _ok(), CODIGO: _ok()})
 
     salida = server.local_summarize(text=_texto(60_000))
@@ -287,11 +287,11 @@ def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(recarga
 
 
 @backend_mock.mock
-def test_capacity_only_hops_to_loaded_without_second_hop(recargar_config, tmp_path):
+def test_capacity_only_hops_to_loaded_without_second_hop(reload_config, tmp_path):
     """Con un miembro en `loaded` (el proveedor lo pone T15; aquí, a mano), capacidad salta a él y
     a nada más. Sin miembros no salta: `test_cadenas.py::test_capacity_failure_with_nothing_loaded`.
     """
-    recargar_config()
+    reload_config()
     previous_provider = chains._loaded_provider
     chains.register_loaded_provider(lambda *_: (MECANICO,))
     try:
@@ -306,8 +306,8 @@ def test_capacity_only_hops_to_loaded_without_second_hop(recargar_config, tmp_pa
 
 
 @backend_mock.mock
-def test_capacidad_del_residente_no_salta_a_un_modelo_grande(recargar_config, tmp_path):
-    recargar_config()
+def test_capacidad_del_residente_no_salta_a_un_modelo_grande(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({MECANICO: _fallo(500, CAPACIDAD), LARGO: _ok()})
 
     server.local_classify(text="hola", labels=["a", "b"])
@@ -319,8 +319,8 @@ def test_capacidad_del_residente_no_salta_a_un_modelo_grande(recargar_config, tm
 
 
 @backend_mock.mock
-def test_razonamiento_agotado_no_salta_ni_enfria(recargar_config, tmp_path):
-    recargar_config()
+def test_razonamiento_agotado_no_salta_ni_enfria(reload_config, tmp_path):
+    reload_config()
     agotado = httpx2.Response(
         200,
         json={
@@ -342,8 +342,8 @@ def test_razonamiento_agotado_no_salta_ni_enfria(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_length_sin_razonamiento_es_sin_clasificar_y_no_salta(recargar_config, tmp_path):
-    recargar_config()
+def test_length_sin_razonamiento_es_sin_clasificar_y_no_salta(reload_config, tmp_path):
+    reload_config()
     nulo = httpx2.Response(
         200, json={"choices": [{"message": {"content": None}, "finish_reason": "length"}]}
     )
@@ -358,8 +358,8 @@ def test_length_sin_razonamiento_es_sin_clasificar_y_no_salta(recargar_config, t
 
 
 @backend_mock.mock
-def test_timeout_durante_la_carga_no_enfria(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK="0")
+def test_timeout_durante_la_carga_no_enfria(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK="0")
     _backend({MECANICO: httpx2.ReadTimeout("x")})
 
     server.local_classify(text="hola", labels=["a", "b"])
@@ -368,8 +368,8 @@ def test_timeout_durante_la_carga_no_enfria(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_timeout_con_el_modelo_cargado_cuenta_y_no_salta(recargar_config, tmp_path, monkeypatch):
-    recargar_config()
+def test_timeout_con_el_modelo_cargado_cuenta_y_no_salta(reload_config, tmp_path, monkeypatch):
+    reload_config()
     monkeypatch.setattr(server._LoadProbe, "model_loaded", lambda self, **_: True)
     pedidos = _backend({MECANICO: httpx2.ReadTimeout("x"), LARGO: _ok()})
 
@@ -383,8 +383,8 @@ def test_timeout_con_el_modelo_cargado_cuenta_y_no_salta(recargar_config, tmp_pa
 
 
 @backend_mock.mock
-def test_con_el_respaldo_apagado_ningun_fallo_salta(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK="0")
+def test_con_el_respaldo_apagado_ningun_fallo_salta(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK="0")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -397,9 +397,9 @@ def test_con_el_respaldo_apagado_ningun_fallo_salta(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_modelo_explicito_se_envia_aunque_este_enfriado_y_actualiza_su_estado(
-    recargar_config, tmp_path
+    reload_config, tmp_path
 ):
-    recargar_config()
+    reload_config()
     _enfriar(tmp_path, LARGO)
     pedidos = _backend({LARGO: _ok("hecho por el largo"), MECANICO: _ok()})
 
@@ -411,8 +411,8 @@ def test_modelo_explicito_se_envia_aunque_este_enfriado_y_actualiza_su_estado(
 
 
 @backend_mock.mock
-def test_modelo_explicito_que_falla_no_salta(recargar_config, tmp_path):
-    recargar_config()
+def test_modelo_explicito_que_falla_no_salta(reload_config, tmp_path):
+    reload_config()
     pedidos = _backend({LARGO: _fallo(500), MECANICO: _ok()})
 
     server.local_delegate(task="t", input="x", output_format="texto", model=LARGO)
@@ -422,9 +422,9 @@ def test_modelo_explicito_que_falla_no_salta(recargar_config, tmp_path):
 
 @backend_mock.mock
 def test_el_modelo_elegido_en_la_pregunta_cuenta_como_explicito(
-    recargar_config, tmp_path, monkeypatch
+    reload_config, tmp_path, monkeypatch
 ):
-    recargar_config()
+    reload_config()
     _enfriar(tmp_path, LARGO)
 
     class _Eleccion:
@@ -442,8 +442,8 @@ def test_el_modelo_elegido_en_la_pregunta_cuenta_como_explicito(
 
 
 @backend_mock.mock
-def test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK="0", LOCAL_DELEGATE_COOLDOWN="0")
+def test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK="0", LOCAL_DELEGATE_COOLDOWN="0")
     _enfriar(tmp_path, CODIGO)
     antes = _estado_fichero(tmp_path).read_bytes()
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _ok()})
@@ -456,8 +456,8 @@ def test_con_las_dos_variables_apagadas_es_el_comportamiento_de_hoy(recargar_con
 
 
 @backend_mock.mock
-def test_el_mismo_caso_con_el_mecanismo_encendido_salta(recargar_config, tmp_path):
-    recargar_config()
+def test_el_mismo_caso_con_el_mecanismo_encendido_salta(reload_config, tmp_path):
+    reload_config()
     _enfriar(tmp_path, CODIGO)
     pedidos = _backend({CODIGO: _fallo(500), LARGO: _ok("explicado")})
 
@@ -471,8 +471,8 @@ def test_el_mismo_caso_con_el_mecanismo_encendido_salta(recargar_config, tmp_pat
 
 
 @backend_mock.mock
-def test_con_el_estado_corrupto_se_sigue_sin_enfriamiento(recargar_config, tmp_path):
-    recargar_config()
+def test_con_el_estado_corrupto_se_sigue_sin_enfriamiento(reload_config, tmp_path):
+    reload_config()
     _estado_fichero(tmp_path).write_text("{no es json", encoding="utf-8")
     pedidos = _backend({MECANICO: _ok("a")})
 
@@ -486,14 +486,14 @@ def test_con_el_estado_corrupto_se_sigue_sin_enfriamiento(recargar_config, tmp_p
 
 
 @backend_mock.mock
-def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
+def test_recorre_los_dos_saltos_de_la_cadena(reload_config, tmp_path):
     """Con el rol `fast` retirado (0.30.0) quedan tres modelos de texto, así que una cadena no
     puede tener más de dos candidatos distintos del principal: este test pasa a comprobar que los
     **recorre los dos** y que ahí se acaba. Que el tope CORTA lo prueba el de abajo, bajándolo a 1.
     Desde T12 las cadenas por defecto solo tienen un modelo concreto (`loaded` sale vacío sin bloque
     B), así que la cadena de dos se fija a mano: el mecánico, por variable, sí se puede pedir.
     """
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500)})
 
     server.local_explain_code(code="x = 1")
@@ -502,8 +502,8 @@ def test_recorre_los_dos_saltos_de_la_cadena(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
-    recargar_config(
+def test_el_tope_de_saltos_es_configurable(reload_config, tmp_path):
+    reload_config(
         LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1", LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long"
     )
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _ok()})
@@ -514,8 +514,8 @@ def test_el_tope_de_saltos_es_configurable(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
+def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     pedidos = _backend({CODIGO: _fallo(500), MECANICO: _fallo(400, "malo"), LARGO: _ok()})
 
     server.local_explain_code(code="x = 1")
@@ -527,8 +527,8 @@ def test_un_fallo_de_otra_clase_en_el_respaldo_corta_la_cadena(recargar_config, 
 
 
 @backend_mock.mock
-def test_si_fallan_los_respaldos_vuelve_el_error_original_y_la_lista(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
+def test_si_fallan_los_respaldos_vuelve_el_error_original_y_la_lista(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="mechanical,long")
     _backend({CODIGO: _fallo(500, "original"), MECANICO: _fallo(502), LARGO: _fallo(503)})
 
     salida = server.local_explain_code(code="x = 1")
@@ -545,8 +545,8 @@ def test_si_fallan_los_respaldos_vuelve_el_error_original_y_la_lista(recargar_co
 
 
 @backend_mock.mock
-def test_en_extract_el_aviso_va_en_los_metadatos(recargar_config, tmp_path):
-    recargar_config()
+def test_en_extract_el_aviso_va_en_los_metadatos(reload_config, tmp_path):
+    reload_config()
     _backend({MECANICO: _fallo(500), LARGO: _ok('{"a": 1}')})
 
     datos = server.local_extract(fields=["a"], text="texto corto")
@@ -558,8 +558,8 @@ def test_en_extract_el_aviso_va_en_los_metadatos(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(recargar_config, tmp_path):
-    recargar_config()
+def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(reload_config, tmp_path):
+    reload_config()
     _backend({CODIGO: _fallo(500), LARGO: _ok("def f():\n    return 1")})
     destino = tmp_path / "gen.py"
 
@@ -571,8 +571,8 @@ def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(recargar_con
 
 
 @backend_mock.mock
-def test_en_boilerplate_no_se_escribe_si_fallan_todos(recargar_config, tmp_path):
-    recargar_config()
+def test_en_boilerplate_no_se_escribe_si_fallan_todos(reload_config, tmp_path):
+    reload_config()
     _backend({CODIGO: _fallo(500), MECANICO: _fallo(500), LARGO: _fallo(500)})
     destino = tmp_path / "gen.py"
 
@@ -585,8 +585,8 @@ def test_en_boilerplate_no_se_escribe_si_fallan_todos(recargar_config, tmp_path)
 
 
 @backend_mock.mock
-def test_vision_enfriada_falla_al_momento_sin_respaldo(recargar_config, tmp_path):
-    recargar_config()
+def test_vision_enfriada_falla_al_momento_sin_respaldo(reload_config, tmp_path):
+    reload_config()
     _enfriar(tmp_path, VISION)
     imagen = tmp_path / "x.png"
     imagen.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 16)
@@ -599,8 +599,8 @@ def test_vision_enfriada_falla_al_momento_sin_respaldo(recargar_config, tmp_path
 
 
 @backend_mock.mock
-def test_vision_que_falla_no_salta(recargar_config, tmp_path):
-    recargar_config()
+def test_vision_que_falla_no_salta(reload_config, tmp_path):
+    reload_config()
     imagen = tmp_path / "x.png"
     imagen.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 16)
     pedidos = _backend({VISION: _fallo(500), MECANICO: _ok()})
@@ -613,7 +613,7 @@ def test_vision_que_falla_no_salta(recargar_config, tmp_path):
 # --- REQ-006 (enmienda REQ-017 de F3): el salto suelta la plaza y el tope se sigue cumpliendo ----
 
 
-def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_path, monkeypatch):
+def test_hop_releases_slot_between_primary_and_fallback(reload_config, tmp_path, monkeypatch):
     """Sustituye al test de REQ-017 de F3 («el salto no suelta la plaza»), con el mismo escenario.
 
     Una sola plaza; A falla en su principal mientras B ya espera la plaza. Con REQ-006 el salto de
@@ -623,7 +623,7 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
     plaza antes que B dependería del planificador. Con el salto DENTRO de la plaza, B no puede
     entrar, la espera agota su tope y el orden sale A, A, B, B.
     """
-    recargar_config()
+    reload_config()
     order: list[tuple[str, str]] = []
     inside = 0
     peak = 0
@@ -682,8 +682,8 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
 
 
 @backend_mock.mock
-def test_el_camino_feliz_no_crea_el_fichero_de_estado(recargar_config, tmp_path):
-    recargar_config()
+def test_el_camino_feliz_no_crea_el_fichero_de_estado(reload_config, tmp_path):
+    reload_config()
     _backend({MECANICO: _ok("a")})
 
     server.local_classify(text="hola", labels=["a", "b"])

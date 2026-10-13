@@ -27,10 +27,10 @@ import httpx2
 
 from local_delegate import server
 
-_rutas: list[Ruta] = []
+_routes: list[Route] = []
 
 
-class _Llamada:
+class _Call:
     """Una petición atendida, con su respuesta (``None`` si la ruta lanzó)."""
 
     def __init__(self, request: httpx2.Request, response: httpx2.Response | None) -> None:
@@ -38,23 +38,23 @@ class _Llamada:
         self.response = response
 
 
-class _Llamadas(list):
+class _Calls(list):
     @property
-    def last(self) -> _Llamada:
+    def last(self) -> _Call:
         return self[-1]
 
 
-class Ruta:
+class Route:
     """Una URL y un método mockeados. El equivalente al ``Route`` de respx."""
 
-    def __init__(self, metodo: str, url: str) -> None:
-        self.metodo = metodo.upper()
+    def __init__(self, method: str, url: str) -> None:
+        self.method = method.upper()
         self.url = url
-        self.calls = _Llamadas()
+        self.calls = _Calls()
         self._return_value: httpx2.Response | None = None
         self._side_effect = None
 
-    def mock(self, return_value=None, side_effect=None) -> Ruta:
+    def mock(self, return_value=None, side_effect=None) -> Route:
         self._return_value = return_value
         self._side_effect = side_effect
         return self
@@ -63,72 +63,72 @@ class Ruta:
     def call_count(self) -> int:
         return len(self.calls)
 
-    def _coincide(self, request: httpx2.Request) -> bool:
-        return request.method == self.metodo and str(request.url) == self.url
+    def _matches(self, request: httpx2.Request) -> bool:
+        return request.method == self.method and str(request.url) == self.url
 
-    def _resolver(self, request: httpx2.Request) -> httpx2.Response:
-        indice = len(self.calls)
-        efecto = self._side_effect
+    def _resolve(self, request: httpx2.Request) -> httpx2.Response:
+        index = len(self.calls)
+        effect = self._side_effect
 
-        if efecto is not None:
-            if isinstance(efecto, (list, tuple)):
+        if effect is not None:
+            if isinstance(effect, (list, tuple)):
                 # Secuencia de respuestas: una por llamada, como `side_effect=[r1, r2]`.
-                efecto = efecto[indice] if indice < len(efecto) else efecto[-1]
-            elif callable(efecto) and not isinstance(efecto, type):
-                efecto = efecto(request)
+                effect = effect[index] if index < len(effect) else effect[-1]
+            elif callable(effect) and not isinstance(effect, type):
+                effect = effect(request)
 
-            if isinstance(efecto, BaseException) or (
-                isinstance(efecto, type) and issubclass(efecto, BaseException)
+            if isinstance(effect, BaseException) or (
+                isinstance(effect, type) and issubclass(effect, BaseException)
             ):
-                self.calls.append(_Llamada(request, None))
-                raise efecto
+                self.calls.append(_Call(request, None))
+                raise effect
 
-            self.calls.append(_Llamada(request, efecto))
-            return efecto
+            self.calls.append(_Call(request, effect))
+            return effect
 
         if self._return_value is None:
-            raise AssertionError(f"ruta sin respuesta configurada: {self.metodo} {self.url}")
+            raise AssertionError(f"ruta sin respuesta configurada: {self.method} {self.url}")
 
-        self.calls.append(_Llamada(request, self._return_value))
+        self.calls.append(_Call(request, self._return_value))
         return self._return_value
 
 
-def post(url: str) -> Ruta:
-    ruta = Ruta("POST", url)
-    _rutas.append(ruta)
-    return ruta
+def post(url: str) -> Route:
+    path = Route("POST", url)
+    _routes.append(path)
+    return path
 
 
-def get(url: str) -> Ruta:
-    ruta = Ruta("GET", url)
-    _rutas.append(ruta)
-    return ruta
+def get(url: str) -> Route:
+    path = Route("GET", url)
+    _routes.append(path)
+    return path
 
 
 def _handler(request: httpx2.Request) -> httpx2.Response:
-    for ruta in _rutas:
-        if ruta._coincide(request):
-            return ruta._resolver(request)
+    for path in _routes:
+        if path._matches(request):
+            return path._resolve(request)
     raise AssertionError(f"petición no mockeada: {request.method} {request.url}")
 
 
 @contextlib.contextmanager
-def _activo():
-    _rutas.clear()
-    cliente_original = httpx2.Client
+def _active():
+    _routes.clear()
+    original_client = httpx2.Client
     server._client = None
 
-    def cliente_mockeado(*args, **kwargs):
+    def mocked_client(*args, **kwargs):
         kwargs["transport"] = httpx2.MockTransport(_handler)
-        return cliente_original(*args, **kwargs)
+        return original_client(*args, **kwargs)
 
-    httpx2.Client = cliente_mockeado
+    httpx2.Client = mocked_client
     try:
         yield
     finally:
-        httpx2.Client = cliente_original
+        httpx2.Client = original_client
         server._client = None
-        _rutas.clear()
+        _routes.clear()
 
 
 class _Mock:
@@ -139,23 +139,23 @@ class _Mock:
     """
 
     def __init__(self) -> None:
-        self._pila: list = []
+        self._stack: list = []
 
     def __call__(self, func):
         @functools.wraps(func)
-        def envoltorio(*args, **kwargs):
-            with _activo():
+        def wrapper(*args, **kwargs):
+            with _active():
                 return func(*args, **kwargs)
 
-        return envoltorio
+        return wrapper
 
     def __enter__(self):
-        contexto = _activo()
-        self._pila.append(contexto)
-        return contexto.__enter__()
+        context = _active()
+        self._stack.append(context)
+        return context.__enter__()
 
-    def __exit__(self, *excepcion):
-        return self._pila.pop().__exit__(*excepcion)
+    def __exit__(self, *exception):
+        return self._stack.pop().__exit__(*exception)
 
 
 mock = _Mock()

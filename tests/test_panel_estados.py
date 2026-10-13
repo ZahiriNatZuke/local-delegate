@@ -653,7 +653,7 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
     vez de `local_wait` → la fila sale «procesando». Mutante 2: `inflight_snapshot` sin copiar
     `turn_in_use` → el `title` dice «en uso: nada».
     """
-    today = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
+    today = Path(__file__).parent / "fixtures" / "topology" / "today.yaml"
     copy = tmp_path / "llamaswap.yaml"
     copy.write_bytes(today.read_bytes())
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))

@@ -116,12 +116,12 @@ def _slow_answer(clock: _Clock | None = None, wait_s: float = 47.0):
 
 
 @backend_mock.mock
-def test_a_slow_call_is_told_apart_from_a_wait(recargar_config, tmp_path, monkeypatch, free_ram):
+def test_a_slow_call_is_told_apart_from_a_wait(reload_config, tmp_path, monkeypatch, free_ram):
     """Escenario de la spec: 20 eventos previos a 40,5 tok/s, 47 s de espera y 15 tok/s.
 
     Control (a): hoy el evento no lleva `pace_rel`.
     """
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path)
     clock = _Clock()
     monkeypatch.setattr(server, "time", clock)
@@ -141,9 +141,9 @@ def test_a_slow_call_is_told_apart_from_a_wait(recargar_config, tmp_path, monkey
 
 
 @backend_mock.mock
-def test_the_event_feeds_the_window_after_being_measured(recargar_config, tmp_path, free_ram):
+def test_the_event_feeds_the_window_after_being_measured(reload_config, tmp_path, free_ram):
     """Medir antes de registrar: la llamada no se compara consigo misma, y luego entra."""
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path)
     _slow_answer()
 
@@ -158,9 +158,9 @@ def test_the_event_feeds_the_window_after_being_measured(recargar_config, tmp_pa
 
 
 @backend_mock.mock
-def test_without_timings_no_slowness_field(recargar_config, tmp_path, free_ram):
+def test_without_timings_no_slowness_field(reload_config, tmp_path, free_ram):
     """Mutante (b): poner 0 cuando no hay `timings` → falla `assert "tok_s" not in line`."""
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path)
     backend_mock.post(URL).mock(return_value=chat_response("resumen", tokens_out=150))
 
@@ -173,9 +173,9 @@ def test_without_timings_no_slowness_field(recargar_config, tmp_path, free_ram):
 
 
 @backend_mock.mock
-def test_incomplete_timings_omit_what_depends_on_them(recargar_config, tmp_path):
+def test_incomplete_timings_omit_what_depends_on_them(reload_config, tmp_path):
     """Sin `predicted_ms`: ni inferencia, ni espera, ni `tok_s`; el prefill sí se puede dar."""
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     timings = {"prompt_n": 1000, "prompt_ms": 500.0, "predicted_n": 150}
     backend_mock.post(URL).mock(
         return_value=chat_response("resumen", timings=timings, tokens_out=150)
@@ -193,9 +193,9 @@ def test_incomplete_timings_omit_what_depends_on_them(recargar_config, tmp_path)
 
 
 @backend_mock.mock
-def test_remote_backend_slow_without_free_ram(recargar_config, tmp_path, free_ram):
+def test_remote_backend_slow_without_free_ram(reload_config, tmp_path, free_ram):
     """Mutante (b): sin mirar el origen → falla `assert "free_ram_mb" not in line`."""
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="remote")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="remote")
     _seed_log(tmp_path)
     _slow_answer()
 
@@ -211,14 +211,14 @@ def test_remote_backend_slow_without_free_ram(recargar_config, tmp_path, free_ra
 
 
 @backend_mock.mock
-def test_chunked_operation_sums_every_real_call_including_a_hop(recargar_config, tmp_path):
+def test_chunked_operation_sums_every_real_call_including_a_hop(reload_config, tmp_path):
     """Mutante (b): solo la última llamada → falla `assert line["inference_ms"] == 300`.
 
     Cuatro trozos: el primero lo hace el largo (120 ms de inferencia), el segundo falla en el largo
     con un 500 (sin `timings`) y salta al de código, que hace ese y los dos siguientes (60 ms cada
     uno): 120 + 3 × 60 = 300.
     """
-    recargar_config()
+    reload_config()
     long_ok = chat_response("uno", timings=llama_timings(prompt_ms=20.0, predicted_ms=100.0))
     code_ok = chat_response("otro", timings=llama_timings(prompt_ms=10.0, predicted_ms=50.0))
     requested: list[str] = []
@@ -243,12 +243,12 @@ def test_chunked_operation_sums_every_real_call_including_a_hop(recargar_config,
 
 
 @backend_mock.mock
-def test_a_useless_200_counts_its_inference(recargar_config, tmp_path):
+def test_a_useless_200_counts_its_inference(reload_config, tmp_path):
     """Un 200 con `content: null` también ocupó la GPU: su inferencia entra en la suma.
 
     Mutante (b): `_body_failure` sin los `timings` → falla `assert line["inference_ms"] == 150`.
     """
-    recargar_config()
+    reload_config()
     useless = httpx2.Response(
         200,
         json={
@@ -305,11 +305,11 @@ def _useless_long_then_fast_code() -> list[str]:
 
 
 @backend_mock.mock
-def test_hop_pace_is_the_answering_models(recargar_config, tmp_path, free_ram):
+def test_hop_pace_is_the_answering_models(reload_config, tmp_path, free_ram):
     """Mutante (b): sumar los dos modelos → `tok_s` ≈ 41,2 contra 100 → falla
     `assert line.get("pace_rel") == 1.0` (y saldría `slow: true` sin que el de código fuera lento).
     """
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
     requested = _useless_long_then_fast_code()
 
@@ -325,10 +325,10 @@ def test_hop_pace_is_the_answering_models(recargar_config, tmp_path, free_ram):
 
 
 @backend_mock.mock
-def test_hop_does_not_pollute_the_fallback_window(recargar_config, tmp_path, free_ram):
+def test_hop_does_not_pollute_the_fallback_window(reload_config, tmp_path, free_ram):
     """Mutante (b): sumar los dos modelos → la ventana del de código recibe ~41 → falla
     `assert window[-1] == 100.0`."""
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
     _useless_long_then_fast_code()
 
@@ -342,14 +342,14 @@ def test_hop_does_not_pollute_the_fallback_window(recargar_config, tmp_path, fre
 
 @backend_mock.mock
 def test_chunked_hop_at_the_end_measures_only_the_answering_model(
-    recargar_config, tmp_path, free_ram
+    reload_config, tmp_path, free_ram
 ):
     """Tres trozos del largo a 40 tok/s y el último salta al de código a 100 tok/s.
 
     Mutante (b): sumar todos los modelos → `tok_s` 43,75 contra 100 → falla
     `assert line.get("pace_rel") == 1.0`.
     """
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path, model=CODIGO, speeds=(99.0, 101.0))
     long_ok = chat_response(
         "uno",
@@ -411,13 +411,13 @@ def test_fixed_log_reseeds_when_usage_log_changes(tmp_path, monkeypatch):
 
 
 @backend_mock.mock
-def test_measured_before_recorded(recargar_config, tmp_path, free_ram):
+def test_measured_before_recorded(reload_config, tmp_path, free_ram):
     """Con 9 muestras previas (una menos que el mínimo), medir antes de registrar da «sin
     referencia»; al revés, la propia llamada completaría las 10 y se compararía consigo misma.
 
     Mutante (b): registrar antes de medir → falla `assert "pace_rel" not in line`.
     """
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path, count=9)
     _slow_answer()
 
@@ -434,13 +434,13 @@ def test_measured_before_recorded(recargar_config, tmp_path, free_ram):
 
 
 @backend_mock.mock
-def test_a_failing_measure_does_not_break_the_tool(recargar_config, tmp_path, monkeypatch):
+def test_a_failing_measure_does_not_break_the_tool(reload_config, tmp_path, monkeypatch):
     """Mutante (b): sin el `try` → falla `assert line.get("ok") is True`.
 
     La excepción que se escapara del `_chat` se recoge aquí y se convierte en un evento vacío, así
     que el mutante cae en el assert y no en un error del test.
     """
-    recargar_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
+    reload_config(LOCAL_DELEGATE_BACKEND_ORIGIN="local")
     _seed_log(tmp_path)
     _slow_answer()
 

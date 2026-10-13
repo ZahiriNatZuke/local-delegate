@@ -465,7 +465,7 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
         home,
         clients_seen=lambda: ([CLAUDE], None),
         log_dir=logs,
-        config_path=RESIDENCY_FIXTURES / "hoy.yaml",
+        config_path=RESIDENCY_FIXTURES / "today.yaml",
     )
     for check, result in checks.run_all(ctx):
         assert result.status == checks.OK, f"{check.id}: {result.detail}"
@@ -1362,7 +1362,7 @@ def _con_desktop(home, entry=None, *, crudo=None):
     servers = {"otro-servidor": {"command": "uvx", "args": ["algo"]}}
     if entry is not None:
         servers[install.SERVER_NAME] = entry
-    write_claude_desktop(home, servers, crudo=crudo)
+    write_claude_desktop(home, servers, raw=crudo)
     return home
 
 
@@ -1638,37 +1638,37 @@ def test_codex_indentado_sin_marcadores_sigue_siendo_de_otro(tmp_path):
 
 @pytest.mark.parametrize("obsolete_value", ["residente", "resident", "Residente"])
 def test_fallback_with_resident_works_like_loaded_and_warns(
-    recargar_config, tmp_path, obsolete_value
+    reload_config, tmp_path, obsolete_value
 ):
     """`residente,long` sigue valiendo como `loaded,long`, y `doctor` pide renombrarlo."""
     from local_delegate import chains
 
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsolete_value},long")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsolete_value},long")
     r = checks._probe_fallback(checks.Context(home=tmp_path))
 
     assert "renombra" in (r.fix_hint or "")
     assert r.status == checks.WARN
     assert "LOCAL_DELEGATE_FALLBACK_CODE" in r.detail
     assert chains.resolve("code").steps == (chains.LOADED, "gemma4-26b-a4b")
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="loaded,long")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="loaded,long")
     assert chains.resolve("code").steps == (chains.LOADED, "gemma4-26b-a4b")
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.OK
 
 
-def test_fallback_cargado_is_not_valid_name(recargar_config, tmp_path):
+def test_fallback_cargado_is_not_valid_name(reload_config, tmp_path):
     """El paso se llama `loaded` (nombres que se teclean, en inglés); `cargado` no se acepta."""
     from local_delegate import chains
 
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="cargado,long")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="cargado,long")
     assert chains.resolve("code").ignored == ("cargado",)
     r = checks._probe_fallback(checks.Context(home=tmp_path))
     assert r.status == checks.WARN
     assert r.fix_hint == "usa roles (mechanical, long, code, loaded) o ids del catálogo de texto"
 
 
-def test_fallback_with_obsolete_and_unknown_name_warns_both(recargar_config, tmp_path):
+def test_fallback_with_obsolete_and_unknown_name_warns_both(reload_config, tmp_path):
     """`residente,foo`: los dos avisos en el mismo resultado; arreglar uno no esconde el otro."""
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,foo")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="residente,foo")
     r = checks._probe_fallback(checks.Context(home=tmp_path))
 
     assert r.status == checks.WARN
@@ -1678,7 +1678,7 @@ def test_fallback_with_obsolete_and_unknown_name_warns_both(recargar_config, tmp
 
 
 # --- T13: backend.residency y backend.topology (REQ-036, REQ-002) -------------------------------
-RESIDENCY_FIXTURES = Path(__file__).parent / "fixtures" / "residencia"
+RESIDENCY_FIXTURES = Path(__file__).parent / "fixtures" / "residency"
 WITH_RESIDENT = b"""models:
   a:
     cmd: llama-server -m MODELOS/a.gguf --port ${PORT}
@@ -1714,7 +1714,7 @@ def test_residency_and_topology_are_registered_after_llamaserver():
 
 def test_residency_ok_without_resident_with_todays_config(tmp_path):
     r = checks._probe_residency(
-        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "today.yaml")
     )
     assert r.status == checks.OK
     assert "sin residente" in r.detail
@@ -1747,7 +1747,7 @@ def test_residency_without_config_is_unknown(tmp_path):
 
 def test_topology_says_active_turn_with_todays_config(tmp_path):
     r = checks._probe_topology(
-        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "today.yaml")
     )
     assert r.status == checks.OK
     assert "turno activo" in r.detail
@@ -1780,7 +1780,7 @@ def test_topology_with_a_remote_backend_has_no_turn(tmp_path, monkeypatch):
 
     monkeypatch.setattr(config, "BASE_URL", "http://otra-maquina:9292/v1")
     r = checks._probe_topology(
-        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "hoy.yaml")
+        checks.Context(home=tmp_path, config_path=RESIDENCY_FIXTURES / "today.yaml")
     )
     assert r.status == checks.UNKNOWN
     assert "backend remoto" in r.detail
@@ -1803,7 +1803,7 @@ def test_topology_and_residency_follow_the_daemon_when_the_shell_has_no_config(t
     ctx = checks.Context(
         home=tmp_path,
         config_path=None,
-        llamaswap_daemon=_daemon_with_turn(RESIDENCY_FIXTURES / "hoy.yaml"),
+        llamaswap_daemon=_daemon_with_turn(RESIDENCY_FIXTURES / "today.yaml"),
     )
     topology = checks._probe_topology(ctx)
     residency = checks._probe_residency(ctx)
@@ -1816,7 +1816,7 @@ def test_topology_and_residency_follow_the_daemon_when_the_shell_has_no_config(t
 def test_without_daemon_the_detail_says_it_is_the_shell_config(tmp_path):
     ctx = checks.Context(
         home=tmp_path,
-        config_path=RESIDENCY_FIXTURES / "hoy.yaml",
+        config_path=RESIDENCY_FIXTURES / "today.yaml",
         llamaswap_daemon=checks.NO_LLAMASWAP_DAEMON,
     )
     assert "según la config de este shell" in checks._probe_topology(ctx).detail

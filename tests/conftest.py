@@ -17,7 +17,7 @@ from local_delegate import config, install
 
 
 @pytest.fixture(scope="session", autouse=True)
-def entorno_sin_variables_del_paquete():
+def env_without_package_variables():
     """Corre la suite como si NINGUNA variable del paquete estuviera definida.
 
     La suite tiene que dar el mismo resultado en la máquina de quien la escribe, en la de quien
@@ -32,8 +32,8 @@ def entorno_sin_variables_del_paquete():
     las lecturas reales del módulo, así que una opción nueva queda cubierta sin tocar esto.
     """
     with pytest.MonkeyPatch.context() as mp:
-        for nombre in config.ENVIRONMENT_VARIABLES:
-            mp.delenv(nombre, raising=False)
+        for name in config.ENVIRONMENT_VARIABLES:
+            mp.delenv(name, raising=False)
         importlib.reload(config)
         yield
     importlib.reload(config)  # deja el proceso como estaba para lo que venga después
@@ -47,7 +47,7 @@ def isolate_runtime_logs(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def sin_lista_de_modelos_guardada():
+def no_saved_model_list():
     """Vacía la última lista buena de `/v1/models` que el sondeo guarda por URL (REQ-021).
 
     Sin esto, un test que sondea con éxito dejaría su lista a los siguientes, y un «backend caído»
@@ -55,14 +55,14 @@ def sin_lista_de_modelos_guardada():
     lo ha importado todavía, no hay nada guardado.
     """
 
-    def vaciar() -> None:
-        listas = getattr(sys.modules.get("local_delegate.server"), "_LAST_GOOD_LISTS", None)
-        if listas is not None:
-            listas.clear()
+    def clear() -> None:
+        lists = getattr(sys.modules.get("local_delegate.server"), "_LAST_GOOD_LISTS", None)
+        if lists is not None:
+            lists.clear()
 
-    vaciar()
+    clear()
     yield
-    vaciar()
+    clear()
 
 
 @pytest.fixture(autouse=True)
@@ -72,13 +72,13 @@ def turn_and_topology_zeroed():
     El turno es un estado único del proceso (`server._turn`): sin esto, una operación que un test
     dejara en `activos` o en la cola haría esperar a las del siguiente. Y la caché de `topology`
     va por (ruta, mtime, tamaño): dos `tmp_path` distintos pueden coincidir en las tres. Como en
-    `sin_lista_de_modelos_guardada`, se mira `sys.modules` para no importar nada que nadie usa.
+    `no_saved_model_list`, se mira `sys.modules` para no importar nada que nadie usa.
     """
 
     def clear() -> None:
-        topo = sys.modules.get("local_delegate.topology")
-        if topo is not None:
-            topo._forget()
+        topology = sys.modules.get("local_delegate.topology")
+        if topology is not None:
+            topology._forget()
         reset = getattr(sys.modules.get("local_delegate.server"), "_reset_turn", None)
         if reset is not None:
             reset()
@@ -156,7 +156,7 @@ def real_daemon_down(request, monkeypatch, _rejecting_server):
 
 
 @pytest.fixture
-def recargar_config(tmp_path):
+def reload_config(tmp_path):
     """Recarga `config` con variables de entorno REALES, y lo deja todo como estaba al terminar.
 
     Hace falta cuando lo que se prueba depende de lo que `config` calcula al importar: parchear una
@@ -168,21 +168,21 @@ def recargar_config(tmp_path):
     """
     mp = pytest.MonkeyPatch()
 
-    def aislar_logs() -> None:
+    def isolate_logs() -> None:
         config.LOG_DIR = tmp_path
         config.USAGE_LOG = tmp_path / "usage.jsonl"
 
-    def aplicar(**variables: str) -> None:
+    def apply(**variables: str) -> None:
         mp.setenv("LOCAL_DELEGATE_BASE_URL", "http://test-backend/v1")
-        for nombre, valor in variables.items():
-            mp.setenv(nombre, valor)
+        for name, value in variables.items():
+            mp.setenv(name, value)
         importlib.reload(config)
-        aislar_logs()
+        isolate_logs()
 
-    yield aplicar
+    yield apply
     mp.undo()
     importlib.reload(config)
-    aislar_logs()
+    isolate_logs()
 
 
 # --- HOME simulado, compartido por test_checks.py y test_doctor.py ------------
@@ -262,7 +262,7 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complet
 
 
 def write_claude_desktop(
-    home: Path, servers: dict | None = None, *, crudo: str | None = None
+    home: Path, servers: dict | None = None, *, raw: str | None = None
 ) -> Path:
     """Escribe el `claude_desktop_config.json` del HOME, con la forma real: MCP y preferencias.
 
@@ -273,9 +273,9 @@ def write_claude_desktop(
 
     path = checks.Context(home=home).claude_desktop_config
     path.parent.mkdir(parents=True, exist_ok=True)
-    if crudo is None:
-        crudo = json.dumps({"mcpServers": servers or {}, "preferences": {"sidebarMode": "chat"}})
-    path.write_text(crudo, encoding="utf-8")
+    if raw is None:
+        raw = json.dumps({"mcpServers": servers or {}, "preferences": {"sidebarMode": "chat"}})
+    path.write_text(raw, encoding="utf-8")
     return path
 
 

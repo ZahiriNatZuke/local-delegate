@@ -28,8 +28,8 @@ from fake_llamaswap import FakeModel, binary_available, fake_llamaswap
 from local_delegate import checks, cli, config, llamaswap_api, server
 from local_delegate.web import metrics
 
-FIXTURES = Path(__file__).parent / "fixtures" / "residencia"
-TODAY = FIXTURES / "hoy.yaml"
+FIXTURES = Path(__file__).parent / "fixtures" / "residency"
+TODAY = FIXTURES / "today.yaml"
 
 needs_llamaswap = pytest.mark.skipif(
     not binary_available(), reason="falta llama-swap-v255 de prueba"

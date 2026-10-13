@@ -36,8 +36,8 @@ CAMPOS_NUEVOS = ("model_requested", "fallback_reason", "fallback_class", "error_
 
 
 @backend_mock.mock
-def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config, tmp_path):
-    recargar_config()
+def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(reload_config, tmp_path):
+    reload_config()
     _backend({LARGO: _fallo(500), CODIGO: _ok("resumen")})
 
     server.local_summarize(text=_texto(10_000))
@@ -52,8 +52,8 @@ def test_el_log_registra_pedido_respondido_y_la_causa_del_salto(recargar_config,
 
 
 @backend_mock.mock
-def test_en_trozos_chunks_cuenta_tambien_las_llamadas_del_respaldo(recargar_config, tmp_path):
-    recargar_config()
+def test_en_trozos_chunks_cuenta_tambien_las_llamadas_del_respaldo(reload_config, tmp_path):
+    reload_config()
     _backend({LARGO: [_ok("uno"), _fallo(500)], CODIGO: _ok("otro")})
 
     server.local_translate(target_lang="inglés", text=_texto(12_000))
@@ -65,8 +65,8 @@ def test_en_trozos_chunks_cuenta_tambien_las_llamadas_del_respaldo(recargar_conf
 
 
 @backend_mock.mock
-def test_sin_salto_el_evento_se_escribe_como_antes(recargar_config, tmp_path):
-    recargar_config()
+def test_sin_salto_el_evento_se_escribe_como_antes(reload_config, tmp_path):
+    reload_config()
     _backend({MECANICO: _ok("a")})
 
     server.local_classify(text="hola", labels=["a", "b"])
@@ -77,8 +77,8 @@ def test_sin_salto_el_evento_se_escribe_como_antes(recargar_config, tmp_path):
 
 
 @backend_mock.mock
-def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(recargar_config, tmp_path):
-    recargar_config()
+def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(reload_config, tmp_path):
+    reload_config()
     agotado = httpx2.Response(
         200,
         json={
@@ -98,8 +98,8 @@ def test_el_razonamiento_agotado_queda_como_causa_de_configuracion(recargar_conf
 
 
 @backend_mock.mock
-def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp_path):
-    recargar_config()
+def test_el_salto_por_enfriamiento_se_registra_con_su_causa(reload_config, tmp_path):
+    reload_config()
     _enfriar(tmp_path, CODIGO)
     _backend({LARGO: _ok("explicado")})
 
@@ -113,8 +113,8 @@ def test_el_salto_por_enfriamiento_se_registra_con_su_causa(recargar_config, tmp
 
 
 @backend_mock.mock
-def test_en_map_reduce_el_salto_tambien_queda_en_el_log(recargar_config, tmp_path):
-    recargar_config()
+def test_en_map_reduce_el_salto_tambien_queda_en_el_log(reload_config, tmp_path):
+    reload_config()
     _backend({CODIGO: _fallo(500), LARGO: _ok("- a: cambia")})
     diff = "".join(
         f"diff --git a/f{i}.py b/f{i}.py\n" + "+linea de codigo nueva\n" * 200 for i in range(6)
@@ -152,9 +152,9 @@ def _linea_de(texto: str, modelo: str) -> str:
 
 
 def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
-    recargar_config, tmp_path, status_sin_red
+    reload_config, tmp_path, status_sin_red
 ):
-    recargar_config()
+    reload_config()
     estado = cooldown.from_config()
     for _ in range(3):
         estado.record_failure(CODIGO, FailureClass.MODEL)
@@ -166,8 +166,8 @@ def test_local_status_lista_el_modelo_enfriado_con_lo_que_le_queda(
     assert 100 <= restante <= 120
 
 
-def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path, status_sin_red):
-    recargar_config()
+def test_local_status_cuenta_las_reentradas_seguidas(reload_config, tmp_path, status_sin_red):
+    reload_config()
     vencido = {CODIGO: {"fallos": 0, "espera_s": 120.0, "hasta": time.time() - 1, "reentradas": 1}}
     _estado_fichero(tmp_path).write_text(json.dumps(vencido), encoding="utf-8")
     cooldown.from_config().record_failure(CODIGO, FailureClass.MODEL)
@@ -178,8 +178,8 @@ def test_local_status_cuenta_las_reentradas_seguidas(recargar_config, tmp_path, 
     assert int(linea.split("quedan ")[1].split(" s")[0]) > 120, "la espera se dobló"
 
 
-def test_local_status_sin_enfriados_lo_dice(recargar_config, tmp_path, status_sin_red):
-    recargar_config()
+def test_local_status_sin_enfriados_lo_dice(reload_config, tmp_path, status_sin_red):
+    reload_config()
 
     texto = server.local_status()
 
@@ -187,10 +187,8 @@ def test_local_status_sin_enfriados_lo_dice(recargar_config, tmp_path, status_si
     assert "ningún modelo enfriado" in texto
 
 
-def test_local_status_con_el_enfriamiento_apagado_lo_dice(
-    recargar_config, tmp_path, status_sin_red
-):
-    recargar_config(LOCAL_DELEGATE_COOLDOWN="0")
+def test_local_status_con_el_enfriamiento_apagado_lo_dice(reload_config, tmp_path, status_sin_red):
+    reload_config(LOCAL_DELEGATE_COOLDOWN="0")
     _enfriar(tmp_path, CODIGO)
 
     texto = server.local_status()

@@ -15,7 +15,7 @@ from pathlib import Path
 from local_delegate import config
 
 
-def test_el_inventario_de_variables_no_esta_vacio():
+def test_the_variable_inventory_is_not_empty():
     """Control positivo de los otros dos: sin esto, un inventario roto los dejaría pasar en vacío.
 
     Si `_READ_VARIABLES` dejara de alimentarse, `ENVIRONMENT_VARIABLES` quedaría vacío y tanto la
@@ -27,17 +27,17 @@ def test_el_inventario_de_variables_no_esta_vacio():
     assert "LD_HOOK_TELEMETRY_LOG" in config.ENVIRONMENT_VARIABLES
 
 
-def test_la_suite_corre_sin_variables_del_paquete_definidas():
+def test_the_suite_runs_without_package_variables_defined():
     """Ninguna variable que lea `config` puede estar definida mientras corre la suite."""
-    definidas = sorted(n for n in config.ENVIRONMENT_VARIABLES if n in os.environ)
-    assert definidas == [], (
-        f"El entorno de esta máquina se está colando en la suite: {definidas}. "
-        "La fixture `entorno_sin_variables_del_paquete` de conftest.py debería haberlas quitado."
+    defined = sorted(n for n in config.ENVIRONMENT_VARIABLES if n in os.environ)
+    assert defined == [], (
+        f"El entorno de esta máquina se está colando en la suite: {defined}. "
+        "La fixture `env_without_package_variables` de conftest.py debería haberlas quitado."
     )
 
 
-def _nombre_de_llamada(nodo: ast.Call) -> str | None:
-    func = nodo.func
+def _call_name(node: ast.Call) -> str | None:
+    func = node.func
     if isinstance(func, ast.Name):
         return func.id
     if isinstance(func, ast.Attribute):
@@ -45,7 +45,7 @@ def _nombre_de_llamada(nodo: ast.Call) -> str | None:
     return None
 
 
-def _variables_que_leen_los_hooks(con_alias: bool = True) -> dict[str, set[str]]:
+def _variables_read_by_hooks(with_alias: bool = True) -> dict[str, set[str]]:
     """Escanea `resources/hooks/*.py` y devuelve, por fichero, las variables que consulta.
 
     Que lo cuente el programa y no una lista a mano: contar sitios a ojo ya salió mal una vez en
@@ -57,45 +57,45 @@ def _variables_que_leen_los_hooks(con_alias: bool = True) -> dict[str, set[str]]
     declaran ni se limpian: quitarlas durante la suite rompería justo lo que se quiere probar.
     """
     hooks = Path(config.__file__).parent / "resources" / "hooks"
-    nuestras = ("LD_HOOK_", "LOCAL_DELEGATE_")
-    encontradas: dict[str, set[str]] = {}
-    for archivo in sorted(hooks.glob("*.py")):
-        nombres: set[str] = set()
-        for nodo in ast.walk(ast.parse(archivo.read_text(encoding="utf-8"))):
+    ours = ("LD_HOOK_", "LOCAL_DELEGATE_")
+    found: dict[str, set[str]] = {}
+    for file in sorted(hooks.glob("*.py")):
+        names: set[str] = set()
+        for node in ast.walk(ast.parse(file.read_text(encoding="utf-8"))):
             # os.environ.get("X") / os.getenv("X")
-            if isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Attribute):
-                objetivo = nodo.func.value
-                es_environ_get = (
-                    nodo.func.attr == "get"
-                    and isinstance(objetivo, ast.Attribute)
-                    and objetivo.attr == "environ"
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                target = node.func.value
+                is_environ_get = (
+                    node.func.attr == "get"
+                    and isinstance(target, ast.Attribute)
+                    and target.attr == "environ"
                 )
-                es_getenv = nodo.func.attr == "getenv"
-                if (es_environ_get or es_getenv) and nodo.args:
-                    primero = nodo.args[0]
-                    if isinstance(primero, ast.Constant) and isinstance(primero.value, str):
-                        nombres.add(primero.value)
+                is_getenv = node.func.attr == "getenv"
+                if (is_environ_get or is_getenv) and node.args:
+                    first = node.args[0]
+                    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                        names.add(first.value)
             # env_alias("NUEVA", "VIEJA") de hook_common: las dos se leen (REQ-002)
-            if con_alias and isinstance(nodo, ast.Call) and _nombre_de_llamada(nodo) == "env_alias":
-                for arg in nodo.args[:2]:
+            if with_alias and isinstance(node, ast.Call) and _call_name(node) == "env_alias":
+                for arg in node.args[:2]:
                     if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                        nombres.add(arg.value)
+                        names.add(arg.value)
             # os.environ["X"]
             if (
-                isinstance(nodo, ast.Subscript)
-                and isinstance(nodo.value, ast.Attribute)
-                and nodo.value.attr == "environ"
-                and isinstance(nodo.slice, ast.Constant)
-                and isinstance(nodo.slice.value, str)
+                isinstance(node, ast.Subscript)
+                and isinstance(node.value, ast.Attribute)
+                and node.value.attr == "environ"
+                and isinstance(node.slice, ast.Constant)
+                and isinstance(node.slice.value, str)
             ):
-                nombres.add(nodo.slice.value)
-        propias = {n for n in nombres if n.startswith(nuestras)}
-        if propias:
-            encontradas[archivo.name] = propias
-    return encontradas
+                names.add(node.slice.value)
+        own = {n for n in names if n.startswith(ours)}
+        if own:
+            found[file.name] = own
+    return found
 
 
-def test_toda_variable_que_lean_los_hooks_esta_declarada_en_config():
+def test_every_variable_the_hooks_read_is_declared_in_config():
     """REQ-022: los hooks leen con `os.environ` porque no pueden importar el paquete.
 
     Son stdlib pura y corren fuera de él, así que la lectura tiene que ser directa — pero el
@@ -103,62 +103,62 @@ def test_toda_variable_que_lean_los_hooks_esta_declarada_en_config():
     `config.py`. Una variable que exista para el hook y no esté reflejada aquí es invisible para
     el guardián, y por esa rendija los tests vuelven a heredar lo que haya en la máquina.
     """
-    por_archivo = _variables_que_leen_los_hooks()
+    per_file = _variables_read_by_hooks()
     # Control positivo: si el escáner dejara de encontrar nada, este test pasaría en vacío. El
     # umbral baja de 3 a 2 al retirarse `output_stats.py`, que era el tercer fichero que leía
     # variables propias; sigue cazando un escáner que devuelva vacío o casi.
-    assert len(por_archivo) >= 2, f"el escáner no encontró casi nada: {por_archivo}"
+    assert len(per_file) >= 2, f"el escáner no encontró casi nada: {per_file}"
 
-    sin_declarar = {
-        f"{archivo}:{nombre}"
-        for archivo, nombres in por_archivo.items()
-        for nombre in nombres
-        if nombre not in config.ENVIRONMENT_VARIABLES
+    undeclared = {
+        f"{file}:{name}"
+        for file, names in per_file.items()
+        for name in names
+        if name not in config.ENVIRONMENT_VARIABLES
     }
-    assert sin_declarar == set(), (
-        f"Estas variables las leen los hooks y no constan en `config.py`: {sorted(sin_declarar)}. "
+    assert undeclared == set(), (
+        f"Estas variables las leen los hooks y no constan en `config.py`: {sorted(undeclared)}. "
         "Decláralas allí con los helpers `_env*`, aunque el hook siga leyéndolas por su cuenta."
     )
 
 
-def test_config_solo_lee_el_entorno_por_la_puerta_registrada():
+def test_config_only_reads_the_environment_through_the_registered_door():
     """`os.environ` solo se toca dentro de `_read`, que es quien alimenta el inventario.
 
     Sin esta guarda, una lectura directa nueva (`os.environ.get("LOCAL_DELEGATE_LO_QUE_SEA")`)
     quedaría fuera de `ENVIRONMENT_VARIABLES` y la suite volvería a heredar el entorno por esa
     rendija — que es exactamente como llegó hasta aquí el caso de `LOCAL_DELEGATE_WEB_TOKEN`.
     """
-    fuente = Path(config.__file__).read_text(encoding="utf-8")
-    arbol = ast.parse(fuente)
+    source = Path(config.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
 
-    def toca_el_entorno(nodo: ast.AST) -> bool:
-        for hijo in ast.walk(nodo):
+    def touches_env(node: ast.AST) -> bool:
+        for child in ast.walk(node):
             if (
-                isinstance(hijo, ast.Attribute)
-                and hijo.attr in {"environ", "getenv"}
-                and isinstance(hijo.value, ast.Name)
-                and hijo.value.id == "os"
+                isinstance(child, ast.Attribute)
+                and child.attr in {"environ", "getenv"}
+                and isinstance(child.value, ast.Name)
+                and child.value.id == "os"
             ):
                 return True
         return False
 
-    culpables = [
-        nodo.name
-        for nodo in ast.walk(arbol)
-        if isinstance(nodo, ast.FunctionDef) and nodo.name != "_read" and toca_el_entorno(nodo)
+    culprits = [
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name != "_read" and touches_env(node)
     ]
-    culpables += [
-        f"nivel de módulo (línea {nodo.lineno})"
-        for nodo in arbol.body
-        if not isinstance(nodo, ast.FunctionDef | ast.ClassDef) and toca_el_entorno(nodo)
+    culprits += [
+        f"nivel de módulo (línea {node.lineno})"
+        for node in tree.body
+        if not isinstance(node, ast.FunctionDef | ast.ClassDef) and touches_env(node)
     ]
-    assert culpables == [], (
-        f"Estas lecturas se saltan `_read` y no entran en el inventario: {culpables}. "
+    assert culprits == [], (
+        f"Estas lecturas se saltan `_read` y no entran en el inventario: {culprits}. "
         "Usa `_read`/`_env`/`_env_int`/`_env_flag`/`_env_float` en vez de `os.environ` directo."
     )
 
 
-def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
+def test_hooks_read_renamed_names_only_through_env_alias():
     """REQ-002: una variable renombrada se lee por `hook_common.env_alias`, nunca directa.
 
     Una lectura directa (`os.environ["LD_HOOK_READ_BLOQUEAR"]`) se saltaría el alias: el nombre
@@ -167,7 +167,7 @@ def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
     from local_delegate import deprecations
 
     # Solo variables: el interruptor viejo (`switch_file`) es un fichero, no se lee del entorno.
-    renombradas = {
+    renamed = {
         n
         for kind, old, new in deprecations.hook_names()
         if kind == "env_var"
@@ -175,14 +175,14 @@ def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
         if n
     }
     # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
-    assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renombradas
-    por_alias = set().union(*_variables_que_leen_los_hooks().values())
-    assert renombradas <= por_alias, sorted(renombradas - por_alias)
+    assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renamed
+    via_alias = set().union(*_variables_read_by_hooks().values())
+    assert renamed <= via_alias, sorted(renamed - via_alias)
 
-    directas = {
-        f"{archivo}:{nombre}"
-        for archivo, nombres in _variables_que_leen_los_hooks(con_alias=False).items()
-        for nombre in nombres
-        if nombre in renombradas
+    direct = {
+        f"{file}:{name}"
+        for file, names in _variables_read_by_hooks(with_alias=False).items()
+        for name in names
+        if name in renamed
     }
-    assert directas == set(), f"lectura directa de un nombre renombrado: {sorted(directas)}"
+    assert direct == set(), f"lectura directa de un nombre renombrado: {sorted(direct)}"

@@ -1,0 +1,28 @@
+refactor(rename): nombres en inglés en conftest y tests a*-atribucion (ola A9a, lote 1)
+
+Renombra a inglés los nombres de tests/conftest.py, tests/backend_mock.py,
+test_agents.py, test_aislamiento_entorno.py y test_atribucion.py: 294
+filas del mapping aprobado. Entre ellas, los 50 test_* de esos módulos,
+las fixtures recargar_config → reload_config,
+entorno_sin_variables_del_paquete → env_without_package_variables,
+sin_lista_de_modelos_guardada → no_saved_model_list y
+log_y_notas → log_and_notes, y el doble de respx de backend_mock
+(Ruta → Route, _rutas → _routes, _Llamada(s) → _Call(s)).
+
+Ficheros (git mv): test_aislamiento_entorno.py →
+test_environment_isolation.py, test_atribucion.py → test_attribution.py,
+tests/fixtures/residencia → residency y topologia → topology, y en los
+dos directorios hoy.yaml → today.yaml y pre-sin-residente-20261006.yaml →
+pre-no-resident-20261006.yaml. .gitattributes conserva el -text de los
+fixtures de residencia en su nueva ruta.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2567.
+
+Con el rename cambian, por consecuencia: los parámetros reload_config de
+test_cadenas, test_checks, test_cli_renamed_names, test_observabilidad_respaldo,
+test_respaldo, test_rol_fast_retirado, test_slowness y test_topes_por_rol;
+las rutas de los fixtures en test_doctor, test_panel_estados, test_residency,
+test_residency_cli, test_topology y test_turn_daemon; el kwarg raw= de
+write_claude_desktop en test_checks; y las citas del fichero de test en
+config.py, attribution.py, test_cadenas y test_commit_language.

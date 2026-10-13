@@ -32,7 +32,7 @@ CODIGO = "qwen36-35b-a3b"
 #: catálogo», que es exactamente lo que pasó a ser.
 RETIRADO = "qwen35-2b"
 
-TOPOLOGY_FIXTURES = Path(__file__).parent / "fixtures" / "topologia"
+TOPOLOGY_FIXTURES = Path(__file__).parent / "fixtures" / "topology"
 
 
 def _config_llamaswap(tmp_path: Path, texto: str) -> Path:
@@ -64,9 +64,9 @@ groups:
 # --- Defectos ---------------------------------------------------------------------------------
 
 
-def test_las_cadenas_por_defecto_son_las_de_la_spec(recargar_config):
+def test_las_cadenas_por_defecto_son_las_de_la_spec(reload_config):
     """REQ-020: `loaded` primero y ninguna lleva al mecánico desde código o largo."""
-    recargar_config()
+    reload_config()
     assert chains.resolve("code").steps == (chains.LOADED, LARGO)
     assert chains.resolve("long").steps == (chains.LOADED, CODIGO)
     assert chains.resolve("mechanical").steps == (chains.LOADED, LARGO)
@@ -76,18 +76,18 @@ def test_las_cadenas_por_defecto_son_las_de_la_spec(recargar_config):
     assert chains.resolve("mechanical").models == (LARGO,)
 
 
-def test_vision_no_tiene_cadena(recargar_config):
+def test_vision_no_tiene_cadena(reload_config):
     """Visión queda fuera de `ALLOWED_MODELS` a propósito: su cadena se resuelve vacía ANTES."""
-    recargar_config()
+    reload_config()
     assert chains.resolve("vision").models == ()
 
 
 # --- El residente (REQ-023): solo si la config tiene un modelo con TTL efectivo 0 -----------------
 
 
-def test_without_llamaswap_config_no_resident_nor_mechanical_fallback(recargar_config, monkeypatch):
+def test_without_llamaswap_config_no_resident_nor_mechanical_fallback(reload_config, monkeypatch):
     """Sustituye a «sin config, el residente es el mecánico»: el residente fantasma desaparece."""
-    recargar_config()
+    reload_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
     assert chains.residents() is None
     lines = "\n".join(chains.describe())
@@ -95,12 +95,12 @@ def test_without_llamaswap_config_no_resident_nor_mechanical_fallback(recargar_c
     assert MECANICO not in lines.split("code:")[0], "ni el mecánico como residente"
 
 
-def test_persistent_group_with_ttl_not_resident(recargar_config, monkeypatch, tmp_path):
+def test_persistent_group_with_ttl_not_resident(reload_config, monkeypatch, tmp_path):
     """Sustituye a «el residente sale del grupo persistent»: con la config del 2026-09-15 (4B en un
     grupo `persistent` con TTL 600) llama-swap lo descarga, así que no es residente."""
-    recargar_config()
+    reload_config()
     path = tmp_path / "config.yaml"
-    path.write_bytes((TOPOLOGY_FIXTURES / "pre-sin-residente-20261006.yaml").read_bytes())
+    path.write_bytes((TOPOLOGY_FIXTURES / "pre-no-resident-20261006.yaml").read_bytes())
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(path))
     assert chains.residents() == ()
     assert chains.residents_text() == "sin residente"
@@ -108,27 +108,27 @@ def test_persistent_group_with_ttl_not_resident(recargar_config, monkeypatch, tm
     assert chains.resolve("code").steps == (chains.LOADED, LARGO)
 
 
-def test_with_several_residents_all_named(recargar_config, monkeypatch, tmp_path):
+def test_with_several_residents_all_named(reload_config, monkeypatch, tmp_path):
     """Sustituye a «con varios miembros gana el primero»: ya no se elige uno, se dicen los que hay,
     también los que no están en el catálogo (el del rol retirado): es lo que llama-swap retiene."""
-    recargar_config()
+    reload_config()
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
     assert chains.residents() == (MECANICO, RETIRADO)
     assert chains.residents_text() == f"residente: {MECANICO}, {RETIRADO}"
 
 
-def test_without_pyyaml_unknown_and_no_mechanical_fallback(recargar_config, monkeypatch, tmp_path):
+def test_without_pyyaml_unknown_and_no_mechanical_fallback(reload_config, monkeypatch, tmp_path):
     """Sustituye a «sin pyyaml cae al mecánico y lo dice»: sin PyYAML no se sabe, y se dice."""
-    recargar_config()
+    reload_config()
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
     monkeypatch.setattr(topology, "yaml", None)
     assert chains.residents() is None
     assert chains.residents_text().startswith("sin residente")
 
 
-def test_local_status_shows_chains_with_loaded(recargar_config, monkeypatch):
+def test_local_status_shows_chains_with_loaded(reload_config, monkeypatch):
     """Sustituye a «local_status dice el residente y su origen»: dice las cadenas con su paso."""
-    recargar_config()
+    reload_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
     lines = chains.describe()
     assert f"  code: loaded -> {LARGO}" in lines
@@ -140,43 +140,43 @@ def test_local_status_shows_chains_with_loaded(recargar_config, monkeypatch):
 # --- Sobrescribir -----------------------------------------------------------------------------
 
 
-def test_una_cadena_se_sobrescribe_con_roles_y_modelos(recargar_config):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"long, {MECANICO}")
+def test_una_cadena_se_sobrescribe_con_roles_y_modelos(reload_config):
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE=f"long, {MECANICO}")
     assert chains.resolve("code").models == (LARGO, MECANICO)
 
 
-def test_una_cadena_vacia_desactiva_el_respaldo_de_ese_rol(recargar_config):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_LONG="")
+def test_una_cadena_vacia_desactiva_el_respaldo_de_ese_rol(reload_config):
+    reload_config(LOCAL_DELEGATE_FALLBACK_LONG="")
     assert chains.resolve("long").steps == ()
     assert chains.resolve("code").steps == (chains.LOADED, LARGO), "los demás no cambian"
 
 
-def test_none_tambien_desactiva_porque_windows_no_guarda_variables_vacias(recargar_config):
+def test_none_tambien_desactiva_porque_windows_no_guarda_variables_vacias(reload_config):
     """En Windows fijar una variable a "" la BORRA: en el daemon real la cadena vacía no existe.
 
     `monkeypatch.setenv` sí guarda "" en el diccionario de Python, así que el test de arriba pasa
     igual y no lo habría destapado. `none` es la forma que funciona en las tres plataformas.
     """
-    recargar_config(LOCAL_DELEGATE_FALLBACK_LONG="none")
+    reload_config(LOCAL_DELEGATE_FALLBACK_LONG="none")
     assert chains.resolve("long").models == ()
     assert chains.resolve("long").ignored == ()
 
 
-def test_un_modelo_desconocido_se_ignora_y_se_informa(recargar_config):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
+def test_un_modelo_desconocido_se_ignora_y_se_informa(reload_config):
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
     cadena = chains.resolve("code")
     assert cadena.models == (LARGO,)
     assert cadena.ignored == ("modelo-que-no-existe",)
 
 
-def test_los_repetidos_y_el_propio_modelo_se_quitan(recargar_config):
+def test_los_repetidos_y_el_propio_modelo_se_quitan(reload_config):
     """Largo y código consolidados en uno: ese modelo no se reintenta contra sí mismo."""
-    recargar_config(LOCAL_DELEGATE_MODEL_CODE=LARGO)
+    reload_config(LOCAL_DELEGATE_MODEL_CODE=LARGO)
     assert chains.resolve("long").steps == (chains.LOADED,)
     assert chains.resolve("code").steps == (chains.LOADED,)
     # Y los repetidos dentro de una misma cadena se quitan: «long,code,long» con los dos roles
     # consolidados en un modelo es tres veces el mismo candidato.
-    recargar_config(
+    reload_config(
         LOCAL_DELEGATE_MODEL_CODE=LARGO, LOCAL_DELEGATE_FALLBACK_MECHANICAL="long,code,long"
     )
     assert chains.resolve("mechanical").models == (LARGO,)
@@ -185,14 +185,14 @@ def test_los_repetidos_y_el_propio_modelo_se_quitan(recargar_config):
 # --- Variables (REQ-014) ----------------------------------------------------------------------
 
 
-def test_el_respaldo_viene_encendido_con_dos_saltos(recargar_config):
-    recargar_config()
+def test_el_respaldo_viene_encendido_con_dos_saltos(reload_config):
+    reload_config()
     assert config.FALLBACK is True
     assert config.FALLBACK_MAX_HOPS == 2
 
 
-def test_las_variables_nuevas_estan_en_el_inventario(recargar_config):
-    recargar_config()
+def test_las_variables_nuevas_estan_en_el_inventario(reload_config):
+    reload_config()
     for nombre in (
         "LOCAL_DELEGATE_FALLBACK",
         "LOCAL_DELEGATE_FALLBACK_MAX_HOPS",
@@ -211,7 +211,7 @@ def test_las_variables_nuevas_estan_en_el_inventario(recargar_config):
 def test_nadie_fuera_de_config_lee_llamaswap_del_entorno():
     """Tres sitios leían `LLAMASWAP_CONFIG` con `os.environ` directo: dos fuentes para un dato.
 
-    El guardián de `test_aislamiento_entorno.py` solo mira `config.py`, así que por ahí la suite
+    El guardián de `test_environment_isolation.py` solo mira `config.py`, así que por ahí la suite
     volvía a heredar el entorno de la máquina.
     """
     paquete = Path(config.__file__).parent
@@ -229,16 +229,16 @@ def test_nadie_fuera_de_config_lee_llamaswap_del_entorno():
 # --- doctor -----------------------------------------------------------------------------------
 
 
-def test_doctor_avisa_de_un_modelo_desconocido_en_una_cadena(recargar_config, tmp_path):
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
+def test_doctor_avisa_de_un_modelo_desconocido_en_una_cadena(reload_config, tmp_path):
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
     resultado = checks._probe_fallback(checks.Context(home=tmp_path))
     assert resultado.status == checks.WARN
     assert "modelo-que-no-existe" in resultado.detail
     assert "LOCAL_DELEGATE_FALLBACK_CODE" in resultado.detail
 
 
-def test_doctor_no_avisa_con_las_cadenas_por_defecto(recargar_config, tmp_path):
-    recargar_config()
+def test_doctor_no_avisa_con_las_cadenas_por_defecto(reload_config, tmp_path):
+    reload_config()
     resultado = checks._probe_fallback(checks.Context(home=tmp_path))
     assert resultado.status == checks.OK
 
@@ -257,7 +257,7 @@ def test_doctor_no_avisa_con_las_cadenas_por_defecto(recargar_config, tmp_path):
 
 URL = "http://test-backend/v1/chat/completions"
 CAPACIDAD = '{"error":{"message":"unspecific error: upstream command exited prematurely"}}'
-HOY = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
+HOY = Path(__file__).parent / "fixtures" / "topology" / "today.yaml"
 DIFF = "diff --git a/x b/x\n+hola\n"
 
 
@@ -276,7 +276,7 @@ def _backend(responses: dict) -> list[str]:
 
     Un modelo sin respuesta hace fallar el test.
     """
-    backend_mock._rutas.clear()
+    backend_mock._routes.clear()
     requested: list[str] = []
 
     def effect(request: httpx2.Request):
@@ -311,9 +311,9 @@ def _texto(chars: int) -> str:
 
 
 @backend_mock.mock
-def test_code_never_falls_to_mechanical(recargar_config, attempts):
+def test_code_never_falls_to_mechanical(reload_config, attempts):
     """Escenario «código nunca cae al mecánico»: el 4B no es candidato, no hay celdas aprobadas."""
-    recargar_config()
+    reload_config()
     _backend({CODIGO: _fallo(500), LARGO: _ok("mensaje"), MECANICO: _ok("del 4B")})
 
     server.local_commit_msg(diff=DIFF)
@@ -324,8 +324,8 @@ def test_code_never_falls_to_mechanical(recargar_config, attempts):
 
 
 @backend_mock.mock
-def test_long_hops_to_code_and_mechanical_to_long(recargar_config, attempts):
-    recargar_config()
+def test_long_hops_to_code_and_mechanical_to_long(reload_config, attempts):
+    reload_config()
     _backend({LARGO: _fallo(500), CODIGO: _ok("resumen"), MECANICO: _ok("del 4B")})
     server.local_summarize(text=_texto(10_000))
     assert "gemma3-4b" not in [i.model for i in attempts]
@@ -338,9 +338,9 @@ def test_long_hops_to_code_and_mechanical_to_long(recargar_config, attempts):
 
 
 @backend_mock.mock
-def test_capacity_failure_with_nothing_loaded(recargar_config, attempts):
+def test_capacity_failure_with_nothing_loaded(reload_config, attempts):
     """Escenario: sin `loaded` un fallo de capacidad no salta y vuelve el error de siempre."""
-    recargar_config()
+    reload_config()
     _backend({CODIGO: _fallo(500, CAPACIDAD), MECANICO: _ok(), LARGO: _ok()})
 
     output = server.local_explain_code(code="x = 1")
@@ -350,9 +350,9 @@ def test_capacity_failure_with_nothing_loaded(recargar_config, attempts):
 
 
 @backend_mock.mock
-def test_empty_loaded_spends_no_hop(recargar_config, attempts):
+def test_empty_loaded_spends_no_hop(reload_config, attempts):
     """Con un solo salto, `code → loaded → long` llega a `long`: el paso vacío no lo gasta."""
-    recargar_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
+    reload_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
     assert config.FALLBACK_MAX_HOPS == 1
     assert chains.resolve("code").steps == (chains.LOADED, LARGO)
     _backend({CODIGO: _fallo(500), LARGO: _ok("mensaje")})
@@ -363,9 +363,9 @@ def test_empty_loaded_spends_no_hop(recargar_config, attempts):
     assert [i.model for i in attempts] == [CODIGO, LARGO]
 
 
-def test_loaded_members_without_provider_does_not_query_network(recargar_config, monkeypatch):
+def test_loaded_members_without_provider_does_not_query_network(reload_config, monkeypatch):
     """Sin bloque B no hay proveedor: `loaded` se resuelve vacío y sin tocar la red (REQ-019)."""
-    recargar_config()
+    reload_config()
     requested_paths: list[str] = []
     original = backend_mock._handler
 
@@ -384,9 +384,9 @@ def test_loaded_members_without_provider_does_not_query_network(recargar_config,
 
 
 @backend_mock.mock
-def test_with_provider_hop_goes_to_loaded_member(recargar_config, attempts):
+def test_with_provider_hop_goes_to_loaded_member(reload_config, attempts):
     """El camino con miembros ya existe (el proveedor lo registra T15): recibe tool y fallido."""
-    recargar_config()
+    reload_config()
     seen_set: list[tuple] = []
 
     def provider(tool, has_failed, own_items, nobody_else, role):
@@ -419,10 +419,10 @@ def offline_status(monkeypatch):
 
 
 def test_status_no_longer_mentions_ghost_resident(
-    recargar_config, monkeypatch, tmp_path, offline_status
+    reload_config, monkeypatch, tmp_path, offline_status
 ):
     """Escenario: con la config de hoy (un solo grupo `swap`, TTL 120) no hay residente."""
-    recargar_config()
+    reload_config()
     copy = tmp_path / "llamaswap.yaml"
     copy.write_bytes(HOY.read_bytes())
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(copy))
@@ -437,9 +437,9 @@ def test_status_no_longer_mentions_ghost_resident(
 
 
 def test_with_ttl_0_in_persistent_group_describe_names_resident(
-    recargar_config, monkeypatch, tmp_path
+    reload_config, monkeypatch, tmp_path
 ):
-    recargar_config()
+    reload_config()
     path = tmp_path / "llamaswap.yaml"
     path.write_text(
         "globalTTL: 120\n"
@@ -464,9 +464,9 @@ def test_with_ttl_0_in_persistent_group_describe_names_resident(
 
 
 @backend_mock.mock
-def test_loaded_member_repeating_later_step_not_called_twice(recargar_config):
+def test_loaded_member_repeating_later_step_not_called_twice(reload_config):
     """`code -> loaded -> long` con `loaded` = el 26B: si el 26B falla, el paso `long` no lo repite."""
-    recargar_config()
+    reload_config()
     previous_provider = chains._loaded_provider
     chains.register_loaded_provider(lambda *_: (LARGO,))
     try:
@@ -481,9 +481,9 @@ def test_loaded_member_repeating_later_step_not_called_twice(recargar_config):
     assert line.count(LARGO) == 1, line
 
 
-def test_without_topology_resident_states_reason(recargar_config, monkeypatch, tmp_path):
+def test_without_topology_resident_states_reason(reload_config, monkeypatch, tmp_path):
     """Con una config legible pero `matrix`, «no se sabe: matrix», como «Turno: no (matrix)»."""
-    recargar_config()
+    reload_config()
     matrix = (
         "models:\n  gemma4-26b-a4b: {}\n  qwen36-35b-a3b: {}\n"
         "routing:\n  router:\n    use: matrix\n    settings:\n      matrix: {}\n"
