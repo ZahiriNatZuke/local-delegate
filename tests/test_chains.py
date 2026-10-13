@@ -245,7 +245,7 @@ def test_doctor_does_not_warn_with_the_default_chains(reload_config, tmp_path):
 
 # El bloque «`fast` es inalcanzable desde las tools» se retiró con el rol (0.30.0): comprobaba que
 # ninguna tool enrutaba a él, que era el argumento para quitarlo. Lo que queda por proteger —que su
-# modelo ya no se pueda pedir a mano— vive en `test_rol_fast_retirado.py`.
+# modelo ya no se pueda pedir a mano— vive en `test_fast_role_retired.py`.
 
 
 # --- T12 de `daemon-reparte-el-backend`: cadenas sin residente (REQ-019 a REQ-023) -------------

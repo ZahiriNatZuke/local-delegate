@@ -1,0 +1,18 @@
+refactor(rename): nombres en inglés en test_resumen_estructurado y test_rol_fast_retirado (ola A9c, lote 2)
+
+Renombra a inglés los nombres de los tests del resumen estructurado y
+del rol fast retirado: 245 filas del mapping aprobado. Los módulos pasan
+a test_structured_summary.py y test_fast_role_retired.py, con sus
+test_*; los ayudantes (_llamar → _call_summary, _responde_titulos →
+_answer_headings, _secciones_de → _sections_of, _no_responde →
+_no_answer…), las constantes (FUENTES → SOURCES, ESPERADOS →
+EXPECTED_HEADINGS, MODELO_RETIRADO → RETIRED_MODEL…) y sus variables
+locales.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. La carpeta
+benchmarks/resumen-estructurado no cambia. Los tests recogidos siguen
+siendo 2572.
+
+Por consecuencia cambian dos citas por ruta: el docstring de
+src/local_delegate/sections.py y un comentario de tests/test_chains.py.
