@@ -1,0 +1,35 @@
+Comparación de EOL de cada fichero del diff contra HEAD (siguiendo los git mv, -M30%)
+M	.sdd/changes/english-names-bilingual-output/rename-exceptions.md -> .sdd/changes/english-names-bilingual-output/rename-exceptions.md	lf -> lf
+M	CHANGELOG.md -> CHANGELOG.md	lf -> lf
+M	README.md -> README.md	crlf -> crlf
+M	docs/recipes/claude-code-integration.md -> docs/recipes/claude-code-integration.md	lf -> lf
+M	docs/wiki/Daemon.md -> docs/wiki/Daemon.md	lf -> lf
+M	docs/wiki/Integration-install.md -> docs/wiki/Integration-install.md	crlf -> crlf
+M	docs/wiki/Savings-and-metrics.md -> docs/wiki/Savings-and-metrics.md	lf -> lf
+M	docs/wiki/Troubleshooting.md -> docs/wiki/Troubleshooting.md	lf -> lf
+M	scripts/check_install_e2e.py -> scripts/check_install_e2e.py	lf -> lf
+M	scripts/medir_resumen_estructurado.py -> scripts/medir_resumen_estructurado.py	lf -> lf
+M	src/local_delegate/agents.py -> src/local_delegate/agents.py	lf -> lf
+M	src/local_delegate/checks.py -> src/local_delegate/checks.py	lf -> lf
+M	src/local_delegate/cli.py -> src/local_delegate/cli.py	crlf -> crlf
+M	src/local_delegate/doctor.py -> src/local_delegate/doctor.py	lf -> lf
+M	src/local_delegate/install.py -> src/local_delegate/install.py	crlf -> crlf
+M	src/local_delegate/resources/memory/local-delegate.md -> src/local_delegate/resources/memory/local-delegate.md	lf -> lf
+R099	src/local_delegate/resources/skills/delegacion-local/SKILL.md -> src/local_delegate/resources/skills/local-delegation/SKILL.md	lf -> lf
+R036	src/local_delegate/secciones.py -> src/local_delegate/sections.py	lf -> lf
+M	src/local_delegate/server.py -> src/local_delegate/server.py	crlf -> crlf
+M	src/local_delegate/update.py -> src/local_delegate/update.py	lf -> lf
+M	src/local_delegate/web/auth.py -> src/local_delegate/web/auth.py	lf -> lf
+M	tests/conftest.py -> tests/conftest.py	lf -> lf
+M	tests/test_agents.py -> tests/test_agents.py	lf -> lf
+M	tests/test_checks.py -> tests/test_checks.py	lf -> lf
+M	tests/test_coste_doctor.py -> tests/test_coste_doctor.py	lf -> lf
+M	tests/test_doctor.py -> tests/test_doctor.py	lf -> lf
+M	tests/test_install.py -> tests/test_install.py	lf -> lf
+M	tests/test_install_clients.py -> tests/test_install_clients.py	lf -> lf
+M	tests/test_install_opencode.py -> tests/test_install_opencode.py	lf -> lf
+M	tests/test_resumen_estructurado.py -> tests/test_resumen_estructurado.py	lf -> lf
+M	tests/test_rol_fast_retirado.py -> tests/test_rol_fast_retirado.py	lf -> lf
+M	tests/test_update.py -> tests/test_update.py	lf -> lf
+M	tests/test_web_auth.py -> tests/test_web_auth.py	lf -> lf
+33 entradas; diferencias de EOL: 0

@@ -1,0 +1,30 @@
+feat(rename): doctor, skill, cookie, subagentes y secciones en inglés (ola A6)
+
+- Ids y grupos de los checks en inglés: `config.coste` pasa a `config.cost`, y los grupos
+  `entorno`, `andamiaje` y `servicio` a `environment`, `scaffold` y `service` (`backend` no
+  cambia). Siguen siendo 25. `_probe_coste` pasa a `_probe_cost` y `RECALCULAR_HINT` a
+  `RECOMPUTE_HINT`.
+- La skill pasa a `local-delegation` (git mv del recurso). `delegacion-local` entra en
+  `_RETIRED_SKILLS` de forma permanente: `install` y `update` la retiran de cada destino y
+  `uninstall` también la borra. El bloque gestionado y la regla del catálogo de subagentes
+  nombran la skill nueva.
+- D12: `scaffold.memory` compara el bloque con los empaquetados (`packaged_memory_blocks()`, con
+  los saltos de línea normalizados) y da `warn` si está desfasado; `update` lo repara también en
+  `warn` y no reescribe un fichero que ya está al día. `update` regenera el bloque de catálogo de
+  los subagentes que ya traen los marcadores (`agents.refresh_catalog_block`, sin exigir
+  `is_delegator` ni tocar `tools:`); los que no los traen quedan igual.
+- La cookie del panel pasa a `ld_session`, con el prefijo firmado `ld-session|v1`: la de la
+  0.34.0 da 401 y pide autenticarse una vez.
+- El módulo `secciones` pasa a `sections` (git mv), con sus nombres en inglés (`detect`,
+  `complete`, `match_headings`, `sections_for_summary`, `chunks_by_sections`, `allocate_words`,
+  `split_chunk`, `sanitize_focus`, `Heading`, `Structure`, `Section`, `Chunk`…). El marcador
+  `[local-delegate aviso: …]` no cambia.
+- Tests nuevos: ids exactos del registro, salida de texto de `doctor` por grupo, bloque 0.34.0
+  desfasado, `install` y `update` sobre una 0.34.0 simulada, estabilidad en CRLF y segunda
+  pasada, `uninstall` de la skill retirada, regeneración del catálogo y cookie vieja. Cada uno
+  con su control positivo.
+- Consecuencias mecánicas aprobadas: `server.py` y `scripts/medir_resumen_estructurado.py` (uso
+  de `sections`), `cli.py:216`, `scripts/check_install_e2e.py`, `tests/conftest.py` (bloque
+  empaquetado y HOME 0.34.0), README, la receta de integración, la wiki (Troubleshooting,
+  Savings-and-metrics, Integration-install y Daemon), CHANGELOG `[Unreleased]` y
+  `rename-exceptions.md`.

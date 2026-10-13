@@ -6,8 +6,8 @@ de verdad, y los deja desinstalables:
 
 1. **hooks** consultivos de Claude Code (`resources/hooks/`) en `~/.claude/hooks/local-delegate/`
    y registrados en `~/.claude/settings.json`.
-2. **skill** `delegacion-local` en `~/.claude/skills/delegacion-local/` y en
-   `~/.config/opencode/skill/delegacion-local/`.
+2. **skill** `local-delegation` en `~/.claude/skills/local-delegation/` y en
+   `~/.config/opencode/skill/local-delegation/`.
 3. **memoria global**: un bloque delimitado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y
    `~/.config/opencode/AGENTS.md`.
 4. **servidor MCP** en la configuración del cliente (Claude Code, Codex y/o opencode).
@@ -15,7 +15,7 @@ de verdad, y los deja desinstalables:
 Todo es idempotente y reversible:
 
 - Los archivos copiados viven bajo directorios propios (`hooks/local-delegate/`,
-  `skills/delegacion-local/`), así que desinstalar no toca nada ajeno.
+  `skills/local-delegation/`), así que desinstalar no toca nada ajeno.
 - Los bloques en archivos compartidos van entre marcadores `local-delegate:begin/end`; al
   reinstalar se reemplaza el bloque, nunca se duplica.
 - Antes de sobreescribir un archivo del usuario se deja una copia `.bak`.
@@ -42,7 +42,7 @@ TOML_END = "# local-delegate:end"
 
 SERVER_NAME = "local-delegate"
 HOOKS_SUBDIR = "local-delegate"  # ~/.claude/hooks/local-delegate/
-SKILL_NAME = "delegacion-local"
+SKILL_NAME = "local-delegation"
 
 # --- opencode ----------------------------------------------------------------
 # Los dos nombres de fichero que opencode lee, EN ESTE ORDEN. No es una preferencia nuestra: es
@@ -112,8 +112,10 @@ _RETIRED_SCRIPTS = (
 #: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
 #: `_RETIRED_SCRIPTS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
 #: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
-#: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
-_RETIRED_SKILLS: tuple[str, ...] = ()
+#: otro nombre no se toca jamás. `delegacion-local` es el nombre de la skill hasta la 0.34.0: la
+#: entrada es permanente, porque quien salte de una 0.34 a cualquier versión posterior sigue
+#: teniendo la copia vieja.
+_RETIRED_SKILLS: tuple[str, ...] = ("delegacion-local",)
 
 # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
 #
@@ -282,6 +284,85 @@ def upsert_block(text: str, block: str, begin: str, end: str) -> str:
         return pattern.sub(managed, text, count=1)
     prefix = text.rstrip()
     return (prefix + "\n\n" if prefix else "") + managed + "\n"
+
+
+def managed_block(text: str, begin: str, end: str) -> str | None:
+    """Lo que hay entre los marcadores, o ``None`` si el fichero no tiene el bloque completo."""
+    pattern = re.compile(re.escape(begin) + r"(.*?)" + re.escape(end), re.DOTALL)
+    found = pattern.search(text)
+    return found.group(1) if found else None
+
+
+def packaged_memory_blocks() -> tuple[str, ...]:
+    """El bloque de memoria empaquetado de cada idioma admitido (D12).
+
+    Es la lista contra la que `doctor` decide si el bloque de `CLAUDE.md`/`AGENTS.md` está al
+    día. Hoy solo hay español; el frente B añade aquí el inglés, y por eso `checks` llama a esta
+    función en vez de leer el fichero: no tiene que saber cuántos idiomas hay.
+    """
+    return ((resources_dir() / "memory" / "local-delegate.md").read_text(encoding="utf-8"),)
+
+
+def packaged_catalog_blocks() -> tuple[str, ...]:
+    """El bloque de catálogo de subagentes empaquetado de cada idioma admitido (D12)."""
+    # Import diferido por el mismo motivo que en `plan_install`: `agents` no importa este módulo.
+    from . import agents as agents_mod
+
+    catalog = agents_mod.tool_catalog(resources_dir() / "skills" / SKILL_NAME / "SKILL.md")
+    return (agents_mod.catalog_block(catalog),) if catalog else ()
+
+
+def memory_block_is_current(text: str) -> bool | None:
+    """¿El bloque gestionado de ``text`` es uno de los empaquetados? ``None`` si no hay bloque."""
+    from .agents import normalize_block
+
+    inner = managed_block(text, MD_BEGIN, MD_END)
+    if inner is None:
+        return None
+    packaged = {normalize_block(block) for block in packaged_memory_blocks()}
+    return normalize_block(inner) in packaged
+
+
+def plan_catalog_refresh(home: Path) -> list[Action]:
+    """Regenera el bloque de catálogo de los subagentes que ya lo tienen y está desfasado (D12).
+
+    Solo mira los `~/.claude/agents/*.md` que **ya** traen los marcadores de catálogo, y solo
+    reescribe lo que hay entre ellos: por eso no necesita `--agents`, que es el permiso para
+    tocar ficheros que escribió el usuario. Un subagente sin marcadores no se toca, y uno cuyo
+    bloque coincide con el empaquetado de algún idioma tampoco.
+    """
+    from . import agents as agents_mod
+
+    agents_dir = home / ".claude" / "agents"
+    packaged = packaged_catalog_blocks()
+    if not packaged or not agents_dir.is_dir():
+        return []
+    current = packaged[0]
+    changes = []
+    for path in sorted(agents_dir.glob("*.md")):
+        try:
+            original = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        updated = agents_mod.refresh_catalog_block(original, current, packaged)
+        if updated is not None:
+            changes.append((path, updated))
+    if not changes:
+        return []
+
+    def _run() -> str:
+        written, failed = [], []
+        for path, text in changes:
+            try:
+                _write_text(path, text)
+                written.append(path.name)
+            except OSError as exc:
+                failed.append(f"{path.name} ({exc.strerror or exc})")
+        detail = f"catálogo regenerado en {len(written)}: {', '.join(written)}"
+        return detail + (f" · NO se pudieron escribir: {'; '.join(failed)}" if failed else "")
+
+    names = ", ".join(path.name for path, _ in changes)
+    return [Action("agents", agents_dir, f"regenera el catálogo desfasado ({names})", _run)]
 
 
 def remove_block(text: str, begin: str, end: str) -> str:
@@ -1120,7 +1201,13 @@ def plan_install(opts: Options) -> list[Action]:
         for path in memory_files:
 
             def _run_md(path=path, block=block) -> str:
-                _write_text(path, upsert_block(_read_text(path), block, MD_BEGIN, MD_END))
+                from .agents import normalize_block
+
+                current = _read_text(path)
+                updated = upsert_block(current, block, MD_BEGIN, MD_END)
+                if path.is_file() and normalize_block(updated) == normalize_block(current):
+                    return "bloque gestionado ya al día"
+                _write_text(path, updated)
                 return "bloque gestionado actualizado"
 
             actions.append(Action("markdown", path, "bloque de regla de delegación", _run_md))
@@ -1458,6 +1545,10 @@ def plan_uninstall(opts: Options) -> list[Action]:
             return "no existía"
 
         actions.append(Action("remove", skill_dst, f"borra la skill {SKILL_NAME}", _run_skill))
+        # Una máquina que pasó de la 0.34 sin `install` ni `update` conserva la skill con su
+        # nombre viejo, que también es nuestra.
+        if retired_skill_dirs(claude / "skills"):
+            actions.append(_retire_skills_action(claude / "skills"))
 
     if "skill" in opts.components and "opencode" in opts.targets:
         oc_skill = opencode / OPENCODE_SKILL_SUBDIR / SKILL_NAME
@@ -1471,6 +1562,8 @@ def plan_uninstall(opts: Options) -> list[Action]:
         actions.append(
             Action("remove", oc_skill, f"borra la skill {SKILL_NAME} de opencode", _run_skill_oc)
         )
+        if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
+            actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
 
     if "memory" in opts.components:
         paths = []

@@ -1,0 +1,21 @@
+## scripts/medir_resumen_estructurado.py --help
+usage: medir_resumen_estructurado.py [-h] --etiqueta ETIQUETA
+                                     [--salidas SALIDAS]
+
+Etapa 1 del SDD `resumen-por-secciones`: �sigue `local_summarize` la
+estructura? Sin cuota.
+
+options:
+  -h, --help           show this help message and exit
+  --etiqueta ETIQUETA  p. ej. main o rama
+  --salidas SALIDAS    d�nde dejar las salidas (fuera del repo)
+exit=0
+
+## scripts/check_install_e2e.py (corrida real sobre un HOME temporal; no tiene --help)
+HOME temporal: <TEMP>\ld-e2e-luzxuu4a\casa
+$ local-delegate install --home <TEMP>\ld-e2e-luzxuu4a\casa --no-client-cli --dry-run
+$ local-delegate install --home <TEMP>\ld-e2e-luzxuu4a\casa --no-client-cli
+$ local-delegate install --home <TEMP>\ld-e2e-luzxuu4a\casa --no-client-cli
+$ local-delegate uninstall --home <TEMP>\ld-e2e-luzxuu4a\casa --no-client-cli
+instalador OK en win32
+exit=0

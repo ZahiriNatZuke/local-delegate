@@ -12,7 +12,7 @@ de Claude:
 - **palabras** del texto sin títulos ni avisos, contra `max_words`;
 - `finish_reason`, `truncated_out` y latencia, del evento de uso de la llamada.
 
-El emparejamiento es el de producción (`local_delegate.secciones`): una sola fuente. Por eso los
+El emparejamiento es el de producción (`local_delegate.sections`): una sola fuente. Por eso los
 controles de `tests/test_medir_resumen_estructurado.py` llevan el resultado esperado escrito a
 mano. El banco de T5 (`experimento_adopcion.cobertura_de_titulos`) no se toca: su línea base se
 midió con su normalización.
@@ -44,7 +44,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import legacy_names, secciones
+from local_delegate import legacy_names, sections
 
 RAIZ = Path(__file__).parents[1]
 BANCO = RAIZ / "benchmarks" / "resumen-estructurado"
@@ -76,24 +76,24 @@ _AVISO = re.compile(r"^\s*(\[local-delegate [^\]]*\]|\((leído server-side|resum
 
 def medir(salida: str, esperados: list[str], max_words: int) -> dict:
     """Las métricas de una salida frente a los títulos esperados del documento."""
-    emp = secciones.emparejar(salida, esperados, minimo_contenido=MINIMO_CONTENIDO)
+    emp = sections.match_headings(salida, esperados, min_content=MINIMO_CONTENIDO)
     lineas = salida.split("\n")
-    orden = sorted(emp.pares.items(), key=lambda par: par[1])
+    orden = sorted(emp.pairs.items(), key=lambda par: par[1])
     completadas = 0
     con_contenido = 0
     for pos, (_k, linea) in enumerate(orden):
         fin = orden[pos + 1][1] if pos + 1 < len(orden) else len(lineas)
         cuerpo = "\n".join(x for x in lineas[linea + 1 : fin] if not _AVISO.match(x)).strip()
-        if cuerpo == secciones.SIN_RESUMIR:
+        if cuerpo == sections.NOT_SUMMARIZED:
             completadas += 1
         elif len(re.findall(r"\w+", cuerpo)) >= MINIMO_CONTENIDO:
             con_contenido += 1
-    emparejados = len(emp.pares) - completadas
-    titulos = {linea for linea, _ in secciones.lineas_de_titulo(salida)}
+    emparejados = len(emp.pairs) - completadas
+    titulos = {linea for linea, _ in sections.heading_lines(salida)}
     palabras = sum(
         len(re.findall(r"\w+", x))
         for i, x in enumerate(lineas)
-        if i not in titulos and not _AVISO.match(x) and x.strip() != secciones.SIN_RESUMIR
+        if i not in titulos and not _AVISO.match(x) and x.strip() != sections.NOT_SUMMARIZED
     )
     cobertura = emparejados / len(esperados) if esperados else 0.0
     return {
@@ -101,12 +101,12 @@ def medir(salida: str, esperados: list[str], max_words: int) -> dict:
         "emparejados": emparejados,
         "completadas_por_el_servidor": completadas,
         "con_contenido": con_contenido,
-        "fuera_de_orden": len(emp.fuera_de_orden),
+        "fuera_de_orden": len(emp.out_of_order),
         "cobertura": round(cobertura, 3),
         "palabras": palabras,
         "max_words": max_words,
         "pasa_estructura": (
-            cobertura >= UMBRAL and con_contenido == emparejados and not emp.fuera_de_orden
+            cobertura >= UMBRAL and con_contenido == emparejados and not emp.out_of_order
         ),
     }
 
@@ -117,8 +117,8 @@ def cobertura_subsecciones(salida: str, subtitulos: list[str]) -> dict:
     No decide nada: el prompt pide nombrarlas en negrita dentro de su sección, pero la métrica que
     decide sigue siendo la del nivel estructural.
     """
-    cuerpo = " " + secciones.normal_titulo(salida) + " "
-    nombradas = sum(f" {secciones.normal_titulo(t)} " in cuerpo for t in subtitulos)
+    cuerpo = " " + sections.normalize_heading(salida) + " "
+    nombradas = sum(f" {sections.normalize_heading(t)} " in cuerpo for t in subtitulos)
     return {"total": len(subtitulos), "nombradas": nombradas}
 
 
@@ -201,9 +201,9 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
     for llamada in LLAMADAS:
         ruta = (FUENTES / llamada["fichero"]).resolve()
         documento = ruta.read_text(encoding="utf-8")
-        plan = secciones.secciones_para_resumen(documento, secciones.detectar(documento))
-        esperados = [s.titulo for s in plan]
-        subtitulos = [t for s in plan for t in s.subtitulos]
+        plan = sections.sections_for_summary(documento, sections.detect(documento))
+        esperados = [s.heading for s in plan]
+        subtitulos = [t for s in plan for t in s.subheadings]
         argumentos = {"path": str(ruta), "max_words": llamada["max_words"]}
         if "focus" in llamada:
             argumentos["focus"] = llamada["focus"]
@@ -217,7 +217,7 @@ def ejecutar(etiqueta: str, salidas: Path) -> int:
         (salidas / f"{llamada['id']}.md").write_text(texto, encoding="utf-8")
         fila = medir(texto, esperados, llamada["max_words"])
         fila["subsecciones"] = cobertura_subsecciones(texto, subtitulos)
-        fila["introduccion"] = secciones.INTRODUCCION in esperados
+        fila["introduccion"] = sections.INTRODUCTION in esperados
         evento = _evento_de_uso(ruta, desde)
         fila.update(
             {

@@ -194,7 +194,9 @@ def make_home(tmp_path: Path, *, claude=True, codex=True, opencode=True, complet
     """
     home = tmp_path / "home"
     home.mkdir(parents=True, exist_ok=True)
-    memory_block = "Regla de delegación de prueba."
+    # El bloque empaquetado y no un texto cualquiera: desde D12 `scaffold.memory` da `warn` con
+    # un bloque que no sea uno de los de `install.packaged_memory_blocks()`.
+    memory_block = install.packaged_memory_blocks()[0]
     if claude:
         claude_dir = home / ".claude"
         claude_dir.mkdir(parents=True)
@@ -291,3 +293,36 @@ def snapshot(root: Path) -> dict[str, bytes | None]:
         str(path.relative_to(root)): (path.read_bytes() if path.is_file() else None)
         for path in sorted(root.rglob("*"))
     }
+
+
+# --- Una instalación de la 0.34.0, para la ola A6 (REQ-012, D12) -------------
+OLD_SKILL_NAME = "delegacion-local"
+
+
+def downgrade_to_0_34(home: Path) -> None:
+    """Deja un HOME armado por ``make_home`` como lo dejaba la 0.34.0.
+
+    La skill con su nombre viejo en los dos destinos y los bloques de memoria nombrándola. El
+    bloque de la 0.34.0 es el empaquetado de hoy con el nombre viejo: en A6 solo cambió eso.
+    """
+    roots = (
+        home / ".claude" / "skills",
+        install.opencode_dir(home) / install.OPENCODE_SKILL_SUBDIR,
+    )
+    for skills_root in roots:
+        current = skills_root / install.SKILL_NAME
+        if current.is_dir():
+            current.rename(skills_root / OLD_SKILL_NAME)
+    for md in live_memory_files(home):
+        if md.is_file():
+            text = md.read_text(encoding="utf-8").replace(install.SKILL_NAME, OLD_SKILL_NAME)
+            md.write_text(text, encoding="utf-8")
+
+
+def live_memory_files(home: Path) -> list[Path]:
+    """Los ficheros de memoria con bloque gestionado de los tres clientes."""
+    return [
+        home / ".claude" / "CLAUDE.md",
+        home / ".codex" / "AGENTS.md",
+        install.opencode_dir(home) / "AGENTS.md",
+    ]

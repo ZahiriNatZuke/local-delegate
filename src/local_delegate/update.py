@@ -197,7 +197,9 @@ REPAIRS: tuple[Repair, ...] = (
         PRESENT,
         why="skill incompleta",
     ),
-    Repair("scaffold.memory", (checks.MISSING,), frozenset({"memory"}), PRESENT),
+    # `warn` = el bloque está pero no es el empaquetado (D12): por ejemplo, el de la 0.34.0, que
+    # nombra la skill ya retirada. Lo que se reescribe es solo lo de entre los marcadores.
+    Repair("scaffold.memory", (checks.MISSING, checks.WARN), frozenset({"memory"}), PRESENT),
     Repair("scaffold.mcp_claude", (checks.MISSING,), frozenset({"mcp"}), frozenset({"claude"})),
     # `scaffold.mcp_codex` NO repara en `warn`, y es la excepción que ordena toda la tabla: ese
     # aviso dice «entrada puesta a mano, sin marcadores», o sea configuración escrita por el
@@ -245,7 +247,7 @@ def plan_repairs(
 ) -> tuple[list[install.Action], list[str]]:
     """(acciones a ejecutar, avisos de lo que no se repara solo).
 
-    Pura: no toca disco ni red. La idempotencia sale de aquí sin programarla — si la pasada
+    Solo lee: no escribe en disco ni sale a la red. La idempotencia sale de aquí sin programarla — si la pasada
     anterior arregló todo, los probes responden ``ok``, ningún ``Repair`` casa y la lista de
     acciones queda vacía.
     """
@@ -286,6 +288,12 @@ def plan_repairs(
                     )
                 )
             )
+
+    # Los subagentes con nuestro bloque de catálogo ya puesto (D12). No es un check, porque
+    # `doctor` no mira `~/.claude/agents`, pero se informa como una reparación más: solo se
+    # reescribe lo de entre los marcadores y solo si no es el catálogo empaquetado.
+    if "claude" in present:
+        actions.extend(install.plan_catalog_refresh(opts.home))
 
     # Deduplicación por (kind, target), y no es cosmética: `plan_install` con
     # components={"hooks"} emite DOS acciones —copiar el árbol y registrar en settings.json— y

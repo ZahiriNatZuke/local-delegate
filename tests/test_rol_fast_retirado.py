@@ -172,7 +172,7 @@ def test_el_check_esta_en_el_registro(recargar_config):
     assert "config.rol_retirado" not in ids
     # Y en un grupo que no sale a la red: solo mira el entorno y ficheros locales.
     check = next(c for c in checks.CHECKS if c.id == "config.deprecated_names")
-    assert check.group == "entorno"
+    assert check.group == "environment"
 
 
 def test_retired_variable_in_settings_json_env_is_also_warned(recargar_config, tmp_path):

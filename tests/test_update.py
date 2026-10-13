@@ -12,9 +12,9 @@ from __future__ import annotations
 import subprocess
 
 import pytest
-from conftest import make_home, snapshot
+from conftest import OLD_SKILL_NAME, downgrade_to_0_34, live_memory_files, make_home, snapshot
 
-from local_delegate import checks, install, update
+from local_delegate import agents, checks, install, update
 from local_delegate.failures import BackendView
 
 
@@ -817,3 +817,97 @@ def test_sin_hook_de_lectura_registrado_update_no_lo_enciende(tmp_path):
     assert actions
     install.apply(actions, dry_run=False, out=lambda *a: None)
     assert not install.read_hook_registered(home / ".claude")
+
+
+# --- D12: `update` sobre una 0.34.0 deja todo nombrando la skill nueva --------------------------
+
+
+def _agent_with_catalog(home, rule_skill: str) -> tuple:
+    """Un subagente con nuestro bloque de catálogo (con la regla de la versión que se pida) y otro
+    que delega pero sin marcadores. Devuelve las dos rutas."""
+    agents_dir = home / ".claude" / "agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    skill_md = install.resources_dir() / "skills" / install.SKILL_NAME / "SKILL.md"
+    block = agents.catalog_block(agents.tool_catalog(skill_md))
+    block = block.replace(install.SKILL_NAME, rule_skill)
+    tools = f"tools: Read, {agents.ANCHOR}\n"
+    marked = agents_dir / "with-catalog.md"
+    marked.write_text(
+        f"---\nname: with-catalog\n{tools}---\n\n## Delegación a modelos locales\n\n{block}\n## Otra\n",
+        encoding="utf-8",
+    )
+    unmarked = agents_dir / "without-markers.md"
+    unmarked.write_text(
+        f"---\nname: without-markers\n{tools}---\n\n## Delegación a modelos locales\n\nTexto mío.\n",
+        encoding="utf-8",
+    )
+    return marked, unmarked
+
+
+def _live_files(home) -> list:
+    """Los ficheros vivos de D12: memoria, subagentes y skills instaladas (sin los `.bak`)."""
+    skill_roots = [
+        home / ".claude" / "skills",
+        install.opencode_dir(home) / install.OPENCODE_SKILL_SUBDIR,
+    ]
+    files = [p for p in live_memory_files(home) if p.is_file()]
+    files += sorted((home / ".claude" / "agents").glob("*.md"))
+    for root in skill_roots:
+        files += [p for p in root.rglob("*") if p.is_file()]
+    return files
+
+
+def _update_once(home) -> list:
+    actions, _notes = update.plan_repairs(checks.run_all(_ctx(home)), opts_for(home))
+    install.apply(actions, dry_run=False, out=lambda *a: None)
+    return actions
+
+
+def test_update_over_0_34_leaves_no_trace_of_the_retired_skill(tmp_path):
+    home = make_home(tmp_path, complete=True)
+    downgrade_to_0_34(home)
+    marked, unmarked = _agent_with_catalog(home, OLD_SKILL_NAME)
+    unmarked_before = unmarked.read_bytes()
+    assert OLD_SKILL_NAME in (home / ".claude" / "CLAUDE.md").read_text(encoding="utf-8")
+
+    _update_once(home)
+
+    claude_md = (home / ".claude" / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "delegacion-local" not in claude_md
+    assert "delegacion-local" not in marked.read_text(encoding="utf-8")
+    for path in _live_files(home):
+        assert OLD_SKILL_NAME not in path.read_text(encoding="utf-8"), path
+    assert install.SKILL_NAME in marked.read_text(encoding="utf-8")
+    assert unmarked.read_bytes() == unmarked_before, "un subagente sin marcadores no se toca"
+    assert (home / ".claude" / "skills" / install.SKILL_NAME / "SKILL.md").is_file()
+    assert not (home / ".claude" / "skills" / OLD_SKILL_NAME).exists()
+
+
+def test_a_crlf_memory_file_that_is_up_to_date_is_not_rewritten(tmp_path):
+    """Un `CLAUDE.md` en CRLF con el bloque al día da `ok` y `update` no lo toca."""
+    home = make_home(tmp_path, complete=True)
+    claude_md = home / ".claude" / "CLAUDE.md"
+    claude_md.write_bytes(claude_md.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    antes, mtime = claude_md.read_bytes(), claude_md.stat().st_mtime_ns
+
+    by_id = {c.id: r for c, r in checks.run_all(_ctx(home))}
+    assert by_id["scaffold.memory"].status == checks.OK, by_id["scaffold.memory"].detail
+    _update_once(home)
+
+    assert claude_md.read_bytes() == antes
+    assert claude_md.stat().st_mtime_ns == mtime
+    assert not claude_md.with_suffix(".md.bak").exists()
+
+
+def test_second_update_pass_changes_nothing(tmp_path):
+    """Tras reparar una 0.34.0, otra pasada no informa reparaciones ni deja `.bak` nuevos."""
+    home = make_home(tmp_path, complete=True)
+    downgrade_to_0_34(home)
+    _agent_with_catalog(home, OLD_SKILL_NAME)
+    assert _update_once(home), "la primera pasada debía reparar algo"
+    antes = snapshot(home)
+
+    segunda = _update_once(home)
+
+    assert segunda == []
+    assert snapshot(home) == antes

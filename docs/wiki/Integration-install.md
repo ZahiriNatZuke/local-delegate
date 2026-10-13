@@ -23,7 +23,7 @@ local-delegate uninstall             # revierte solo lo que instaló
 |---|---|---|
 | Entrada MCP | Claude Code (`claude mcp add-json --scope user`, o `~/.claude.json` si no está la CLI), `~/.codex/config.toml` y opencode (`opencode mcp add`, o `~/.config/opencode/opencode.json[c]` si no está la CLI) | `stdio` con `uvx` por defecto; `--mcp-mode http` apunta al daemon compartido |
 | Hooks | `~/.claude/hooks/local-delegate/` + registro en `~/.claude/settings.json` | `UserPromptSubmit` y `record_call.py` (`PreToolUse` sobre `mcp__local-delegate__.*`) siempre; los de lectura (`PreToolUse`/`Read` y `PreToolUse`/`Bash\|PowerShell`) solo con `--enable-read-hook`, que los deja activos. `anotar_llamada.py` no avisa ni bloquea: anota qué agente pidió cada delegación, con qué esfuerzo y en qué transcript, para que el log de uso guarde su modelo (ver [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) |
-| Skill | `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/SKILL.md` | regla de oro + catálogo de tools |
+| Skill | `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/SKILL.md` | regla de oro + catálogo de tools |
 | Memoria | bloque entre marcadores en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | resumen corto de la regla, siempre cargado |
 
 ## A quién configura
@@ -148,6 +148,11 @@ Cuatro reglas gobiernan lo que toca:
 3. **Fuera de los marcadores `<!-- local-delegate:catalog:begin/end -->` no se toca nada**, y si
    no se reconoce dónde va el bloque, no se inserta: no se adivina.
 4. **Cada fichero modificado deja su `.bak`.**
+
+`update` hace una parte de esto sin `--agents`: si un subagente **ya** trae los marcadores de
+catálogo y su bloque no es el del paquete (por ejemplo, el de la 0.34.0, que nombraba la skill
+`delegacion-local`), regenera lo de entre los marcadores. No toca la línea `tools:` ni los
+subagentes sin marcadores.
 
 ## Caso Mac → PC (backend remoto)
 
@@ -303,8 +308,8 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
 | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
 | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
 | Andamiaje | hooks registrados | entradas **nuestras** en `~/.claude/settings.json` (las ajenas no se cuentan) |
-| Andamiaje | skill delegacion-local | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/delegacion-local/SKILL.md` y `~/.config/opencode/skill/delegacion-local/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
-| Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md` |
+| Andamiaje | skill local-delegation | la skill **en cada cliente al que se le escribe**: `~/.claude/skills/local-delegation/SKILL.md` y `~/.config/opencode/skill/local-delegation/`. Mirar solo la de Claude Code daba un `[ OK ]` con la de opencode borrada |
+| Andamiaje | memoria global | el bloque entre marcadores en `CLAUDE.md` y `AGENTS.md`, y que sea **el del paquete** (sin contar saltos de línea ni espacios al final). Con otro texto da `warn` («desfasado») y `update` lo repone dejando el `.bak`; también si lo editaste a mano dentro de los marcadores |
 | Andamiaje | MCP en Claude Code | la entrada `local-delegate` en `~/.claude.json` |
 | Andamiaje | MCP en Codex | la sección `[mcp_servers.local-delegate]` de `~/.codex/config.toml`, **también con sangría**: otros programas reescriben ese fichero a su manera (el plugin de JetBrains lo indenta entero y se come los comentarios). Con el marcador de apertura es nuestra y `[ OK ]`, aunque falte el de cierre; sin marcadores, `warn` y no se pisa |
 | Andamiaje | MCP en opencode | la clave `mcp.local-delegate` de `~/.config/opencode/opencode.json` **o** `opencode.jsonc` — opencode lee los dos y los fusiona |

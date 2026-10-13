@@ -1,5 +1,5 @@
 ---
-name: delegacion-local
+name: local-delegation
 description: Regla y catálogo para delegar pasos mecánicos (resumir, clasificar, extraer, boilerplate, mensaje de commit desde un diff, traducir texto o archivo, resumir salida de lint/tests/CI, explicar código, describir una imagen, verificar si el backend local está disponible) a modelos locales vía las tools local_* del MCP local-delegate, para conservar cuota de la suscripción. Consúltala cuando vayas a resumir/clasificar/extraer de archivos o texto largos, generar boilerplate de código, describir/leer una imagen, o hacer una primera pasada mecánica — antes de generarlo tú mismo.
 ---
 

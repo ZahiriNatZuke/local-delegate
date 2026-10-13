@@ -16,4 +16,6 @@ OK    A5b-2.md
       · A5b-2-mapping.csv: 277 filas, 0 discrepancia(s)
 OK    A5c.md
       · A5c-mapping.csv: 124 filas, 0 discrepancia(s)
-9/9 registro(s) cumplen los mínimos de §2.1
+OK    A6.md
+      · A6-mapping.csv: 184 filas, 0 discrepancia(s)
+10/10 registro(s) cumplen los mínimos de §2.1

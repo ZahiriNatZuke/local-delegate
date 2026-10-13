@@ -49,7 +49,7 @@ from . import (
     matrix,
     pace,
     preguntas,
-    secciones,
+    sections,
     test_windows,
     topology,
     turn,
@@ -3277,8 +3277,8 @@ def _validate_image_path(path: str) -> str:
 # --- Resumen estructurado (local_summarize, SDD resumen-por-secciones) ------------------------
 # En el piloto de T5 la tool nombró entre el 0 % y el 27 % de los títulos aunque Claude pidió
 # 450-600 palabras: el prompt pedía «prosa clara» y el modelo aplanaba el documento. Aquí el
-# servidor detecta las secciones (`secciones.detectar`), se las da al modelo en orden y después
-# completa las que falten (`secciones.completar`).
+# servidor detecta las secciones (`sections.detect`), se las da al modelo en orden y después
+# completa las que falten (`sections.complete`).
 #
 # El presupuesto por sección va EXPLÍCITO en la lista, y en proporción al tamaño de cada sección
 # (v3). La primera versión pedía «1 a 3 frases» y con el CHANGELOG (46 secciones, 500 palabras) el
@@ -3314,14 +3314,14 @@ def _system_estructurado(max_words: int, extra: str) -> str:
 
 def _lista_de_secciones(secciones_, max_words: int) -> str:
     """Una línea por sección con sus palabras, y sus subsecciones anidadas debajo."""
-    reparto = secciones.repartir_por_tamano(
-        [s.tamano for s in secciones_], max_words, minimo=_PALABRAS_MINIMAS_POR_SECCION
+    reparto = sections.allocate_by_size(
+        [s.size for s in secciones_], max_words, minimum=_PALABRAS_MINIMAS_POR_SECCION
     )
     lineas = []
     for seccion, palabras in zip(secciones_, reparto, strict=True):
-        aclaracion = " (el texto antes de la primera sección)" if seccion.sintetica else ""
-        lineas.append(f"- {seccion.titulo}{aclaracion} (unas {palabras} palabras)")
-        lineas.extend(f"  - {sub}" for sub in seccion.subtitulos)
+        aclaracion = " (el texto antes de la primera sección)" if seccion.synthetic else ""
+        lineas.append(f"- {seccion.heading}{aclaracion} (unas {palabras} palabras)")
+        lineas.extend(f"  - {sub}" for sub in seccion.subheadings)
     return "\n".join(lineas)
 
 
@@ -3346,7 +3346,7 @@ def _max_tokens_estructurado(words: int, secciones_) -> int:
     un corte por `max_tokens` a mitad de un trozo deja secciones enteras sin resumir, que es peor
     que un resumen algo más largo (etapa 1: 3 de 5 trozos del CHANGELOG cortados con 2).
     """
-    titulos = [s.titulo for s in secciones_] + [t for s in secciones_ for t in s.subtitulos]
+    titulos = [s.heading for s in secciones_] + [t for s in secciones_ for t in s.subheadings]
     # Y un colchón por sección: con el reparto por tamaño a una sección pequeña le tocan 8
     # palabras y el modelo escribe al menos una frase entera; sin colchón, el CHANGELOG (47
     # secciones) volvía a cortarse por `max_tokens` (etapa 1 de la v3).
@@ -3368,11 +3368,11 @@ def _resumen_estructurado(
     raw_len: int | None,
     path: str | None,
 ) -> str:
-    plan = secciones.secciones_para_resumen(content, estructura)
-    titulos = [s.titulo for s in plan]
+    plan = sections.sections_for_summary(content, estructura)
+    titulos = [s.heading for s in plan]
 
     def _completar(texto: str, cortada: bool) -> str:
-        return secciones.completar(texto, titulos, cortada=cortada).texto
+        return sections.complete(texto, titulos, truncated=cortada).text
 
     max_chars = config.max_chars_for_role(rol)
     if len(content) <= max_chars:
@@ -3396,23 +3396,23 @@ def _resumen_estructurado(
     # Documento largo: se trocea SOLO al principio de las secciones (nunca en un `#` de una valla
     # de código), cada trozo se resume con sus secciones y su parte de `max_words`, y los
     # parciales se concatenan en orden: ya están en el formato final.
-    trozos = secciones.repartir_palabras(
-        secciones.trozos_por_secciones(content, plan, _presupuesto_map(max_chars), _chunk_text),
+    trozos = sections.allocate_words(
+        sections.chunks_by_sections(content, plan, _presupuesto_map(max_chars), _chunk_text),
         max_words,
     )
 
     def _system_trozo(trozo) -> str:
-        if trozo.secciones:
-            return _system_estructurado(trozo.palabras, extra)
-        return _guard("un resumen en prosa clara", trozo.palabras) + extra
+        if trozo.sections:
+            return _system_estructurado(trozo.words, extra)
+        return _guard("un resumen en prosa clara", trozo.words) + extra
 
     def _user_trozo(trozo) -> str:
-        texto = trozo.texto.strip()
-        if trozo.secciones:
-            return _user_estructurado(trozo.secciones, trozo.palabras, texto, trozo.continua_de)
-        if trozo.continua_de:
+        texto = trozo.text.strip()
+        if trozo.sections:
+            return _user_estructurado(trozo.sections, trozo.words, texto, trozo.continues_from)
+        if trozo.continues_from:
             return (
-                f"Este fragmento continúa la sección «{trozo.continua_de}». Resume solo este "
+                f"Este fragmento continúa la sección «{trozo.continues_from}». Resume solo este "
                 f"fragmento en 1 a 3 frases, sin línea de título:\n\n{texto}"
             )
         return f"Resume el siguiente contenido:\n\n{texto}"
@@ -3432,9 +3432,9 @@ def _resumen_estructurado(
         pieces=trozos,
         system_for=_system_trozo,
         user_for=_user_trozo,
-        words_for=lambda trozo: trozo.palabras,
-        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.secciones),
-        split_for=lambda trozo: secciones.partir_trozo(trozo, content, plan, _chunk_text),
+        words_for=lambda trozo: trozo.words,
+        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.sections),
+        split_for=lambda trozo: sections.split_chunk(trozo, content, plan, _chunk_text),
         reduce="concat",
         postproceso=_completar,
         num_secciones=len(plan),
@@ -3471,12 +3471,12 @@ def local_summarize(
     probe_len = Path(path).stat().st_size if probe else len(text or "")
     rol, model = _rol_por_tamano(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
-    enfoque = secciones.sanear_focus(focus)
+    enfoque = sections.sanitize_focus(focus)
     extra = _texto_focus(enfoque)
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
     estructurado = config.STRUCTURED_SUMMARY and rol == "long"
-    estructura = secciones.detectar(content) if estructurado else None
+    estructura = sections.detect(content) if estructurado else None
     if estructura is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
             model=model,

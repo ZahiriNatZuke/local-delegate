@@ -380,7 +380,7 @@ def test_el_probe_de_opencode_no_escribe_nada(tmp_path):
     antes = snapshot(home)
     ctx = checks.Context(home=home, latest_release=checks.SKIP_PYPI)
     resultado = next(
-        r for c, r in checks.run_all(ctx, groups=("andamiaje",)) if c.id.endswith("opencode")
+        r for c, r in checks.run_all(ctx, groups=("scaffold",)) if c.id.endswith("opencode")
     )
     assert resultado.status == checks.OK
     assert snapshot(home) == antes
@@ -401,9 +401,7 @@ def _skill(home: Path):
     from local_delegate import checks
 
     ctx = checks.Context(home=home, latest_release=checks.SKIP_PYPI)
-    return next(
-        r for c, r in checks.run_all(ctx, groups=("andamiaje",)) if c.id == "scaffold.skill"
-    )
+    return next(r for c, r in checks.run_all(ctx, groups=("scaffold",)) if c.id == "scaffold.skill")
 
 
 def test_la_skill_de_opencode_borrada_no_la_tapa_la_de_claude_code(tmp_path):

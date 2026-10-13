@@ -1,4 +1,4 @@
-"""El check `config.coste` de `doctor` (REQ-015, REQ-075).
+"""El check `config.cost` de `doctor` (REQ-015, REQ-075).
 
 Todo con un HOME, un log y unos agregados **sintéticos** en `tmp_path`. El probe se llama directo
 con un `Context` cuyo `log_dir` apunta al log del test: los colaboradores de red no se tocan.
@@ -77,7 +77,7 @@ def _cotejo(log_dir: Path, veredicto: str | None, *, sin_precio=(), fuera: int =
 
 
 def _probe(home: Path, log_dir: Path) -> checks.Result:
-    return checks._probe_coste(checks.Context(home=home, log_dir=log_dir))
+    return checks._probe_cost(checks.Context(home=home, log_dir=log_dir))
 
 
 def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):

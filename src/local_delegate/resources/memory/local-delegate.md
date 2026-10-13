@@ -12,5 +12,5 @@ varias fuentes, **hazlo tú**.
 **El ahorro real está en `path`:** para archivos grandes pasa `path` en vez de leerlos
 primero — el MCP los lee del lado del servidor y el contenido nunca entra al contexto.
 
-Detalle completo y catálogo de tools en la skill `delegacion-local`; diagnóstico del
+Detalle completo y catálogo de tools en la skill `local-delegation`; diagnóstico del
 backend con `local_status`; panel de ahorro en `http://127.0.0.1:9393`.

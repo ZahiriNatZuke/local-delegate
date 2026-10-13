@@ -205,3 +205,31 @@ def test_el_bloque_se_reemplaza_y_no_se_duplica(tmp_path):
     texto = (d / "delegador.md").read_text(encoding="utf-8")
     assert texto.count(agents.CATALOG_BEGIN) == 1
     assert "11 tools" in texto
+
+
+# --- D12: `update` regenera el bloque de catálogo ya marcado ------------------------------------
+def _packaged_block() -> str:
+    skill_md = inst.resources_dir() / "skills" / inst.SKILL_NAME / "SKILL.md"
+    return agents.catalog_block(agents.tool_catalog(skill_md))
+
+
+def test_refresh_replaces_an_outdated_marked_block_and_leaves_tools_alone():
+    block = _packaged_block()
+    old = block.replace(inst.SKILL_NAME, "delegacion-local")
+    text = f"---\nname: x\ntools: Read, Grep\n---\n\nAntes.\n\n{old}\nDespués.\n"
+
+    updated = agents.refresh_catalog_block(text, block, (block,))
+
+    assert updated is not None
+    assert "delegacion-local" not in updated and inst.SKILL_NAME in updated
+    assert updated.startswith("---\nname: x\ntools: Read, Grep\n---\n\nAntes.\n\n")
+    assert updated.endswith("\nDespués.\n")
+
+
+def test_refresh_leaves_unmarked_and_current_blocks_alone():
+    block = _packaged_block()
+    assert agents.refresh_catalog_block("sin marcadores\n", block, (block,)) is None
+    crlf = f"x\r\n{block.replace(chr(10), chr(13) + chr(10))}y\r\n"
+    assert agents.refresh_catalog_block(crlf, block, (block,)) is None
+    orphan = f"{agents.CATALOG_BEGIN}\nsin cierre\n"
+    assert agents.refresh_catalog_block(orphan, block, (block,)) is None

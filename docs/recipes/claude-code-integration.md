@@ -42,7 +42,7 @@ tools que falten. No reordena ni toca agentes sin delegación.
 ## 3. Skill de gobierno de la delegación
 
 La regla de oro ("¿el paso se describe en una frase con formato de salida explícito? → delégalo
-a una tool `local_*`") vive en la skill `delegacion-local` y en un bloque corto de `CLAUDE.md` /
+a una tool `local_*`") vive en la skill `local-delegation` y en un bloque corto de `CLAUDE.md` /
 `AGENTS.md`. Desde v0.11.0 **ambas se distribuyen con el paquete** y las instala
 `local-delegate install` (`--no-skill` / `--no-memory` para excluirlas).
 

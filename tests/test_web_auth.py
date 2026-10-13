@@ -9,6 +9,8 @@ que uno tenía en la cabeza.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import time
 
 import pytest
@@ -350,3 +352,31 @@ def test_el_lifespan_no_se_filtra():
 
     assert vistos == ["lifespan"], "el lifespan no llegó a la app: la puerta se lo tragó"
     assert enviados == [], f"la puerta respondió a un lifespan: {enviados}"
+
+
+# --- A6: la cookie cambia de nombre y de prefijo firmado (REQ-012) ----------------------------
+def _session_from_0_34(token: str, expires: int) -> str:
+    """Una sesión emitida por la 0.34.0: prefijo `ld-sesion|v1` dentro del HMAC."""
+    firma = hmac.new(token.encode(), f"ld-sesion|v1|{expires}".encode(), hashlib.sha256).digest()
+    return f"{expires}." + base64.urlsafe_b64encode(firma).rstrip(b"=").decode("ascii")
+
+
+def test_a_0_34_session_cookie_asks_to_authenticate_without_error():
+    """La cookie vieja no entra, ni con su nombre ni con el nuevo: 401 que pide Basic, sin 500.
+
+    Y autenticarse una vez basta: se recibe la sesión nueva aunque el navegador siga mandando la
+    vieja.
+    """
+    cliente = _app()
+    vieja = _session_from_0_34(TOKEN, int(time.time()) + 3600)
+
+    for name in ("ld_sesion", auth.COOKIE):
+        respuesta = cliente.get("/", headers={"Cookie": f"{name}={vieja}"})
+        assert respuesta.status_code == 401, name
+        assert respuesta.headers["www-authenticate"].startswith("Basic realm=")
+
+    accepted = cliente.get(
+        "/", headers={"Authorization": _basic("x", TOKEN), "Cookie": f"ld_sesion={vieja}"}
+    )
+    assert accepted.status_code == 200
+    assert accepted.headers["set-cookie"].startswith("ld_session=")

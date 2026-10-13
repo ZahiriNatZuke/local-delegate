@@ -41,9 +41,9 @@ _CLIENT_DIR = {
 }
 
 # El reporte final de `install` mira SOLO estos dos grupos del registro. Los otros dos
-# —`servicio` y `backend`— salen a la red y lanzan los binarios de llama-swap, y haber
+# —`service` y `backend`— salen a la red y lanzan los binarios de llama-swap, y haber
 # instalado unos hooks no es motivo para nada de eso.
-_SCAFFOLD_GROUPS = ("entorno", "andamiaje")
+_SCAFFOLD_GROUPS = ("environment", "scaffold")
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -213,7 +213,7 @@ def _run_install(args: argparse.Namespace, uninstall: bool) -> int:
     skip_codex_mcp = False
     if not uninstall and "codex" in targets and getattr(args, "mcp", True):
         detalle = _codex_mcp_puesto_a_mano(
-            checks.run_all(checks.Context(home=home), groups=("andamiaje",))
+            checks.run_all(checks.Context(home=home), groups=("scaffold",))
         )
         if detalle:
             skip_codex_mcp = _decide_sobre_el_codex_ajeno(detalle, args)
@@ -1478,7 +1478,7 @@ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
         "--no-skill",
         dest="skill",
         action="store_false",
-        help="no instalar la skill delegacion-local",
+        help="no instalar la skill local-delegation",
     )
     p.add_argument(
         "--no-memory",
@@ -1515,7 +1515,7 @@ def _add_install_parsers(sub) -> None:
         help="Instala hooks, skill, memoria y la entrada MCP en Claude Code / Codex / opencode.",
         description=(
             "Instala la integración completa en el HOME del usuario: hooks consultivos, la "
-            "skill delegacion-local, un bloque gestionado en CLAUDE.md/AGENTS.md y la entrada "
+            "skill local-delegation, un bloque gestionado en CLAUDE.md/AGENTS.md y la entrada "
             "del servidor MCP. Es idempotente (bloques con marcadores, backups .bak) y se "
             "revierte con `local-delegate uninstall`."
         ),

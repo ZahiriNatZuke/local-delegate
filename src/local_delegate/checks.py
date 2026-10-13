@@ -812,7 +812,7 @@ def _probe_hook_settings(ctx: Context) -> Result:
 
 
 def _probe_skill(ctx: Context) -> Result:
-    """La skill ``delegacion-local`` en cada cliente que sepa cargarla.
+    """La skill ``local-delegation`` en cada cliente que sepa cargarla.
 
     Recorre clientes por lo mismo que ``_probe_memory``, y no por simetría: ``plan_install``
     escribe la skill **también** en el directorio de opencode, así que mirar solo la de Claude Code
@@ -862,8 +862,13 @@ def _probe_skill(ctx: Context) -> Result:
 def _probe_memory(ctx: Context) -> Result:
     """Bloque de la regla de delegación en la memoria global de cada cliente.
 
-    Solo se comprueba que los marcadores estén: lo que el usuario haya editado dentro del
-    bloque es asunto suyo y compararlo literalmente sería pelearse con ediciones legítimas.
+    El bloque presente se compara con los empaquetados (`install.packaged_memory_blocks()`, uno
+    por idioma admitido), con los saltos de línea normalizados y sin espacio al final: si no
+    coincide con ninguno, `warn` («desfasado») y `update` lo repone. Antes solo se miraba que
+    estuvieran los marcadores, y así la 0.35.0 habría dejado el bloque nombrando una skill ya
+    borrada (D12). La contrapartida es deliberada: lo que el usuario edite **dentro** de los
+    marcadores también da aviso, y `update` lo sobrescribe dejando el `.bak`; fuera de ellos no se
+    toca nada.
     """
     ficheros = {
         "Claude Code": "CLAUDE.md",
@@ -889,8 +894,12 @@ def _probe_memory(ctx: Context) -> Result:
             statuses.append(MISSING)
             details.append(f"{label}: no existe {path}")
         elif _has_block(text, install.MD_BEGIN, install.MD_END):
-            statuses.append(OK)
-            details.append(f"{label}: bloque presente en {path}")
+            if install.memory_block_is_current(text):
+                statuses.append(OK)
+                details.append(f"{label}: bloque al día en {path}")
+            else:
+                statuses.append(WARN)
+                details.append(f"{label}: bloque desfasado en {path}")
         else:
             statuses.append(MISSING)
             details.append(f"{label}: sin bloque gestionado en {path}")
@@ -1137,8 +1146,8 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
     exista. Es la tercera vez que el mismo patrón muerde, y las tres veces el diagnóstico miraba
     por un camino distinto del roto.
 
-    En `servicio` y no en `andamiaje` por el mismo motivo que `service.credential`: pregunta al
-    puerto, y `andamiaje` no sale a la red por contrato.
+    En `service` y no en `scaffold` por el mismo motivo que `service.credential`: pregunta al
+    puerto, y `scaffold` no sale a la red por contrato.
     """
     host, port = daemon_host_port()
     exige = ctx.daemon_needs_token(host, port)
@@ -1709,7 +1718,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     que ya no existe. Pedir ese modelo por `model=` da un error claro solo —sale de
     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
 
-    Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
+    Mira tres sitios, y ninguno sale a la red, así que vive en `environment`: el entorno de la shell
     donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
     cuenta `local_status`. Y desde la ola A2, lo que los hooks dicen haber leído: con la telemetría
@@ -1753,7 +1762,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
     return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
-RECALCULAR_HINT = "local-delegate recompute-cost"
+RECOMPUTE_HINT = "local-delegate recompute-cost"
 # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
 _MARGEN_DEL_RELLENO = timedelta(days=10)
 
@@ -1780,7 +1789,7 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
     return cuantas, mas_vieja.days
 
 
-def _probe_coste(ctx: Context) -> Result:
+def _probe_cost(ctx: Context) -> Result:
     """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
 
     Lee **solo** `cost-aggregates.json` (o el viejo `coste-agregados.json`), el log de uso y los
@@ -1803,7 +1812,7 @@ def _probe_coste(ctx: Context) -> Result:
             avisos.append(
                 f"{cuantas} delegación(es) pendiente(s) de relleno, la más antigua de hace {dias} "
                 f"días (Claude Code borra los transcripts a los {plazo}): lanza "
-                f"`{RECALCULAR_HINT}` antes de que Claude Code borre sus transcripts"
+                f"`{RECOMPUTE_HINT}` antes de que Claude Code borre sus transcripts"
             )
 
     agregados = recompute.read_aggregates(log_dir) or {}
@@ -1825,7 +1834,7 @@ def _probe_coste(ctx: Context) -> Result:
         )
 
     if avisos:
-        return Result(WARN, "; y ".join(avisos), RECALCULAR_HINT)
+        return Result(WARN, "; y ".join(avisos), RECOMPUTE_HINT)
     if cotejo is not None and cotejo.get("verdict") == "pass":
         return Result(
             OK,
@@ -1835,7 +1844,7 @@ def _probe_coste(ctx: Context) -> Result:
     return Result(
         UNKNOWN,
         f"no hay cotejo guardado en {log_dir}: sin transcripts en esta máquina o "
-        f"`{RECALCULAR_HINT}` nunca lanzado",
+        f"`{RECOMPUTE_HINT}` nunca lanzado",
     )
 
 
@@ -1887,37 +1896,37 @@ def _probe_test_windows(ctx: Context) -> Result:
 # cinco contra `len(CHECKS)`, porque un comentario que miente sobre el propio registro es lo
 # que hace que alguien planifique sobre un dato falso.
 CHECKS: tuple[Check, ...] = (
-    Check("cli.path", "entorno", "CLI local-delegate", _probe_cli),
-    Check("cli.published", "entorno", "versión publicada", _probe_published),
-    Check("client.presence", "entorno", "clientes", _probe_clients),
-    Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
-    Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
-    Check("config.deprecated_names", "entorno", "nombres obsoletos", _probe_deprecated_names),
-    # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
-    Check("config.coste", "entorno", "coste y relleno", _probe_coste),
-    Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),
-    Check("scaffold.hook_files", "andamiaje", "hooks copiados", _probe_hook_files),
-    Check("scaffold.hook_orphans", "andamiaje", "hooks huérfanos", _probe_hook_orphans),
-    Check("scaffold.hook_settings", "andamiaje", "hooks registrados", _probe_hook_settings),
-    Check("scaffold.skill", "andamiaje", f"skill {install.SKILL_NAME}", _probe_skill),
-    Check("scaffold.memory", "andamiaje", "memoria global", _probe_memory),
-    Check("scaffold.mcp_claude", "andamiaje", "MCP en Claude Code", _probe_mcp_claude),
-    Check("scaffold.mcp_codex", "andamiaje", "MCP en Codex", _probe_mcp_codex),
-    Check("scaffold.mcp_opencode", "andamiaje", "MCP en opencode", _probe_mcp_opencode),
-    Check("service.daemon", "servicio", "daemon", _probe_daemon),
-    Check("service.backend", "servicio", "backend", _probe_backend_models),
-    # En `servicio` y no en `andamiaje` aunque lea las entradas MCP: sale a la red, y el grupo
-    # `andamiaje` no sale a la red por contrato — es lo que permite a `install` correr su reporte
+    Check("cli.path", "environment", "CLI local-delegate", _probe_cli),
+    Check("cli.published", "environment", "versión publicada", _probe_published),
+    Check("client.presence", "environment", "clientes", _probe_clients),
+    Check("client.observed", "environment", "clientes MCP observados", _probe_clients_observed),
+    Check("config.fallback", "environment", "cadenas de respaldo", _probe_fallback),
+    Check("config.deprecated_names", "environment", "nombres obsoletos", _probe_deprecated_names),
+    # En `environment`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
+    Check("config.cost", "environment", "coste y relleno", _probe_cost),
+    Check("metrics.test_windows", "environment", "ventanas de prueba", _probe_test_windows),
+    Check("scaffold.hook_files", "scaffold", "hooks copiados", _probe_hook_files),
+    Check("scaffold.hook_orphans", "scaffold", "hooks huérfanos", _probe_hook_orphans),
+    Check("scaffold.hook_settings", "scaffold", "hooks registrados", _probe_hook_settings),
+    Check("scaffold.skill", "scaffold", f"skill {install.SKILL_NAME}", _probe_skill),
+    Check("scaffold.memory", "scaffold", "memoria global", _probe_memory),
+    Check("scaffold.mcp_claude", "scaffold", "MCP en Claude Code", _probe_mcp_claude),
+    Check("scaffold.mcp_codex", "scaffold", "MCP en Codex", _probe_mcp_codex),
+    Check("scaffold.mcp_opencode", "scaffold", "MCP en opencode", _probe_mcp_opencode),
+    Check("service.daemon", "service", "daemon", _probe_daemon),
+    Check("service.backend", "service", "backend", _probe_backend_models),
+    # En `service` y no en `scaffold` aunque lea las entradas MCP: sale a la red, y el grupo
+    # `scaffold` no sale a la red por contrato — es lo que permite a `install` correr su reporte
     # sin tocar nada externo (ver `_SCAFFOLD_GROUPS` en cli.py). Además se lee junto al backend,
     # que es de lo que habla.
-    Check("service.credential", "servicio", "credencial del backend", _probe_mcp_credential),
-    # Misma razón que el de arriba para estar en `servicio`: pregunta al puerto. Y no es el
+    Check("service.credential", "service", "credencial del backend", _probe_mcp_credential),
+    # Misma razón que el de arriba para estar en `service`: pregunta al puerto. Y no es el
     # mismo check con otro nombre — aquel mira la puerta del backend y este la del daemon, que
     # se cierran por separado.
-    Check("service.daemon_auth", "servicio", "token del puerto del daemon", _probe_mcp_daemon_auth),
+    Check("service.daemon_auth", "service", "token del puerto del daemon", _probe_mcp_daemon_auth),
     # Claude Desktop no está en el registro de clientes y aquel check es ciego para él. Aparte y
     # no dentro de aquel porque este sí prueba el token contra el puerto: el suyo va literal.
-    Check("service.desktop_auth", "servicio", "token de Claude Desktop", _probe_desktop_auth),
+    Check("service.desktop_auth", "service", "token de Claude Desktop", _probe_desktop_auth),
     Check("backend.llamaswap", "backend", "llama-swap", _probe_llamaswap),
     Check("backend.llamaserver", "backend", "llama-server", _probe_llamaserver),
     # REQ-036: leen la config de llama-swap (`--config` de `doctor` o `LLAMASWAP_CONFIG`) y no
@@ -1932,7 +1941,7 @@ def run_all(ctx: Context, *, groups: tuple[str, ...] | None = None) -> list[tupl
 
     Con ``groups`` se corren solo los de esos grupos, en el mismo orden del registro. Lo pide
     ``install``: su reporte final habla del andamiaje que acaba de escribir, y correr también
-    ``servicio`` y ``backend`` saldría a la red y lanzaría los binarios de llama-swap por el
+    ``service`` y ``backend`` saldría a la red y lanzaría los binarios de llama-swap por el
     simple hecho de haber instalado unos hooks. El filtro no toca ni el registro ni los probes:
     sin el argumento, el comportamiento es exactamente el de antes.
     """
