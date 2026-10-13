@@ -63,7 +63,7 @@ def test_un_bloqueo_viejo_ya_no_cuenta(notas, tmp_path, monkeypatch):
     hook_common.record_block("caducado1234", str(documento))
 
     viejo = json.loads(notas.read_text(encoding="utf-8").strip())
-    viejo["ts"] = time.time() - server.VENTANA_DE_BLOQUEO_S - 1
+    viejo["ts"] = time.time() - server.BLOCK_WINDOW_S - 1
     notas.write_text(json.dumps(viejo) + "\n", encoding="utf-8")
 
     assert server._recent_block_id(str(documento)) is None

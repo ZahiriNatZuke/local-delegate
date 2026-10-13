@@ -696,7 +696,7 @@ def produccion_interceptada() -> Iterator[list[Llamada]]:
     def run_chat(model, system, user, max_tokens, temperature, *, response_format=None, **_):
         llamadas.append(Llamada(model, system, user, max_tokens, temperature, response_format))
         resultado = server.ChatResult(text="{}", ok=True, finish_reason="stop")
-        return resultado, 0, None, [server.Intento(model, True, None, None, 0)]
+        return resultado, 0, None, [server.Attempt(model, True, None, None, 0)]
 
     try:
         # Solo se recarga si habia algo que quitar: dentro de la suite el entorno ya viene limpio,

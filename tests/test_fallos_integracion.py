@@ -56,7 +56,7 @@ def test_content_nulo_devuelve_un_error_legible(backend):
     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": None}}]}))
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert resultado.ok is False
-    assert resultado.clase == failures.FailureClass.MODEL
+    assert resultado.error_class == failures.FailureClass.MODEL
     assert "[local-delegate error]" in resultado.text
 
 
@@ -87,7 +87,7 @@ def test_razonamiento_que_se_come_max_tokens_se_dice_en_claro(backend):
     )
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert resultado.ok is False
-    assert resultado.clase == failures.FailureClass.CONFIGURATION
+    assert resultado.error_class == failures.FailureClass.CONFIGURATION
     assert "max_tokens" in resultado.text
 
 
@@ -109,7 +109,7 @@ def test_razonamiento_con_contenido_vacio_tambien_se_dice_en_claro(backend):
     )
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert resultado.ok is False
-    assert resultado.clase == failures.FailureClass.CONFIGURATION
+    assert resultado.error_class == failures.FailureClass.CONFIGURATION
     assert resultado.error == "config_max_tokens"
 
 
@@ -123,7 +123,7 @@ def test_connect_timeout_ofrece_arrancar_el_backend(backend, sin_preguntar):
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert sin_preguntar, "no se ofreció arrancar el backend"
     assert resultado.ok is False
-    assert resultado.clase == failures.FailureClass.ENDPOINT
+    assert resultado.error_class == failures.FailureClass.ENDPOINT
     assert resultado.error == "connect_error"
 
 
@@ -143,7 +143,7 @@ def test_read_timeout_no_ofrece_arrancar_nada(backend, sin_preguntar):
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert not sin_preguntar, "se ofreció arrancar un backend que ya estaba corriendo"
     assert resultado.ok is False
-    assert resultado.clase == failures.FailureClass.CAPACITY
+    assert resultado.error_class == failures.FailureClass.CAPACITY
     assert resultado.error != "http_error"
 
 
@@ -153,14 +153,14 @@ def test_un_error_de_transporte_cualquiera_sigue_siendo_del_endpoint(backend, si
     backend(side_effect=httpx2.RemoteProtocolError("server disconnected"))
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert not sin_preguntar
-    assert resultado.clase == failures.FailureClass.ENDPOINT
+    assert resultado.error_class == failures.FailureClass.ENDPOINT
 
 
 @backend_mock.mock
 def test_un_500_es_del_modelo(backend):
     backend(return_value=httpx2.Response(500, text="boom"))
     resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.clase == failures.FailureClass.MODEL
+    assert resultado.error_class == failures.FailureClass.MODEL
     assert resultado.error == "http_500", "el codigo de error de siempre no cambia"
 
 
@@ -169,7 +169,7 @@ def test_un_400_es_de_la_peticion(backend):
     """En test aparte: dos rutas para la misma URL no se pisan, gana la primera registrada."""
     backend(return_value=httpx2.Response(400, text="context too long"))
     resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.clase == failures.FailureClass.REQUEST
+    assert resultado.error_class == failures.FailureClass.REQUEST
     assert resultado.error == "http_400"
 
 
@@ -179,4 +179,4 @@ def test_una_respuesta_buena_no_trae_clase(backend):
     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": "hola"}}]}))
     resultado = server._post_chat("modelo", {"model": "modelo"})
     assert resultado.ok is True
-    assert resultado.clase is None
+    assert resultado.error_class is None

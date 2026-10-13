@@ -370,7 +370,7 @@ def test_timeout_durante_la_carga_no_enfria(recargar_config, tmp_path):
 @backend_mock.mock
 def test_timeout_con_el_modelo_cargado_cuenta_y_no_salta(recargar_config, tmp_path, monkeypatch):
     recargar_config()
-    monkeypatch.setattr(server._SondaDeCarga, "modelo_cargado", lambda self, **_: True)
+    monkeypatch.setattr(server._LoadProbe, "model_loaded", lambda self, **_: True)
     pedidos = _backend({MECANICO: httpx2.ReadTimeout("x"), LARGO: _ok()})
 
     server.local_classify(text="hola", labels=["a", "b"])
@@ -565,7 +565,7 @@ def test_en_boilerplate_el_aviso_va_en_el_recibo_y_no_en_el_fichero(recargar_con
 
     recibo = server.local_boilerplate(spec="f", language="python", target=str(destino))
 
-    # `_escribir_destino` termina el fichero en salto de línea; lo que importa es que no hay aviso.
+    # `_write_target` termina el fichero en salto de línea; lo que importa es que no hay aviso.
     assert destino.read_text(encoding="utf-8") == "def f():\n    return 1\n"
     assert LARGO in recibo and CODIGO in recibo
 
@@ -645,7 +645,9 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
         with lock:
             inside -= 1
         if model == CODIGO:
-            return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
+            return server.ChatResult(
+                text="x", ok=False, error="http_500", error_class=FailureClass.MODEL
+            )
         return server.ChatResult(text="ok", ok=True, finish_reason="stop")
 
     decide = server._next_hop
@@ -660,7 +662,7 @@ def test_hop_releases_slot_between_primary_and_fallback(recargar_config, tmp_pat
     monkeypatch.setattr(server, "_chat_slots", threading.BoundedSemaphore(1))
 
     def call_fn() -> None:
-        server._chat(CODIGO, "s", "u", 8, rol="code")
+        server._chat(CODIGO, "s", "u", 8, role="code")
 
     a = threading.Thread(target=call_fn, name="A")
     b = threading.Thread(target=call_fn, name="B")

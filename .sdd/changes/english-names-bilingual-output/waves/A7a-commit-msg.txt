@@ -1,0 +1,23 @@
+refactor(rename): nombres en inglés en el núcleo de server.py (ola A7a)
+
+Renombra a inglés los identificadores de src/local_delegate/server.py:1-2506
+(núcleo, espera, respaldo, sonda de carga, turno y _chat): 124 nombres, como
+_con_respaldo → _with_fallback, _ModeloVigente → _CurrentModel,
+_SondaDeCarga → _LoadProbe, Intento → Attempt, tokens_claude → claude_tokens,
+ChatResult.clase → error_class y los parámetros rol/explicito/tamano →
+role/explicit/size. El resto del fichero (troceado, tools y local_status) es
+de la ola A7b.
+
+No cambia ninguna salida: ni los marcadores [local-delegate aviso|respaldo:],
+ni las claves de _local_delegate, ni las del dict de respaldo
+(respondio, en_lugar_de, motivo, clase), que salen en B2. Los nombres de las
+tools MCP y de sus parámetros no se tocan.
+
+Con el rename cambian, por consecuencia: las llamadas de checks.py,
+valuation.py, web/metrics.py y scripts/construir_corpus.py, las citas de
+cost.py, valuation.py y del comentario del espejo JS, la fórmula de
+docs/wiki/Savings-and-metrics.md y 14 ficheros de test (accesos, argumentos
+por nombre y cadenas de monkeypatch).
+
+tools/make_mapping.py: apply deduplica las ediciones, porque la fila de una
+función recorre también sus funciones anidadas. Con su test.

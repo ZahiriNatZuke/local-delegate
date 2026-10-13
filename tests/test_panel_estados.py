@@ -670,7 +670,7 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "_post_chat", post_chat)
 
     def operation(model: str, tool: str) -> None:
-        server._chat(model, "s", "u", 8, tool=tool, rol="long")
+        server._chat(model, "s", "u", 8, tool=tool, role="long")
 
     threads = [
         threading.Thread(target=operation, args=("gemma4-26b-a4b", "op_x"), daemon=True),

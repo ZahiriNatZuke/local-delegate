@@ -513,19 +513,19 @@ def test_frases_prohibidas(entorno, tmp_path, monkeypatch):
     coletilla = server._savings_feedback(
         4000,
         "chars",
-        evento=cost.in_flight_row(tool="local_summarize", source="path", path="a.md"),
+        event=cost.in_flight_row(tool="local_summarize", source="path", path="a.md"),
     )
     coletilla_imagen = server._savings_feedback(
         250000,
         "bytes imagen",
-        evento=cost.in_flight_row(
+        event=cost.in_flight_row(
             tool="local_describe_image", source="path", path="a.png", input_unit="bytes"
         ),
     )
-    recibo = server._escribir_destino(
+    recibo = server._write_target(
         tmp_path / "salida.py",
         "x = 1\n",
-        evento=cost.in_flight_row(tool="local_boilerplate", source="inline"),
+        event=cost.in_flight_row(tool="local_boilerplate", source="inline"),
     )
     fuente_extract = inspect.getsource(server.local_extract)
     i = fuente_extract.index('meta["leido_server_side"]')

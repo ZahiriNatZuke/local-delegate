@@ -35,12 +35,12 @@ def _running(modelo: str, estado: str) -> httpx2.Response:
     ("estado", "esperado"), [("ready", True), ("starting", False), ("stopping", None), (None, None)]
 )
 def test_la_muestra_se_traduce_a_modelo_cargado(estado, esperado):
-    sonda = server._SondaDeCarga("m", retraso_s=0.0, consultar=lambda _modelo: estado)
-    sonda.iniciar()
+    sonda = server._LoadProbe("m", delay_s=0.0, query=lambda _modelo: estado)
+    sonda.start()
     # En produccion el timeout llega ~3 s despues de la muestra; aqui se espera a que la muestra
     # exista, porque pedirla antes de que el temporizador corra da «no se sabe», con razon.
     time.sleep(0.1)
-    assert sonda.modelo_cargado(espera_s=1.0) is esperado
+    assert sonda.model_loaded(wait_s=1.0) is esperado
 
 
 def test_gana_la_muestra_tomada_al_vencer_aunque_despues_cambie():
@@ -52,18 +52,18 @@ def test_gana_la_muestra_tomada_al_vencer_aunque_despues_cambie():
         llamadas.append(modelo)
         return next(estados)
 
-    sonda = server._SondaDeCarga("m", retraso_s=0.0, consultar=consultar)
-    sonda.iniciar()
+    sonda = server._LoadProbe("m", delay_s=0.0, query=consultar)
+    sonda.start()
     time.sleep(0.1)  # la carga «termina» después de la muestra
-    assert sonda.modelo_cargado(espera_s=1.0) is False
+    assert sonda.model_loaded(wait_s=1.0) is False
     assert llamadas == ["m"], "se volvió a consultar después del timeout"
 
 
 def test_si_el_temporizador_no_llego_a_disparar_no_se_sabe_y_no_se_consulta():
     llamadas: list[str] = []
-    sonda = server._SondaDeCarga("m", retraso_s=60.0, consultar=lambda m: llamadas.append(m))
-    sonda.iniciar()
-    assert sonda.modelo_cargado(espera_s=0.1) is None
+    sonda = server._LoadProbe("m", delay_s=60.0, query=lambda m: llamadas.append(m))
+    sonda.start()
+    assert sonda.model_loaded(wait_s=0.1) is None
     time.sleep(0.05)
     assert llamadas == []
 
@@ -75,20 +75,20 @@ def test_una_consulta_lenta_no_retiene_mas_que_su_tope():
         liberar.wait(5.0)
         return "ready"
 
-    sonda = server._SondaDeCarga("m", retraso_s=0.0, consultar=consultar)
-    sonda.iniciar()
+    sonda = server._LoadProbe("m", delay_s=0.0, query=consultar)
+    sonda.start()
     time.sleep(0.05)
     t0 = time.monotonic()
-    assert sonda.modelo_cargado(espera_s=0.2) is None
+    assert sonda.model_loaded(wait_s=0.2) is None
     assert time.monotonic() - t0 < 1.0
     liberar.set()
 
 
 def test_cancelar_evita_la_consulta():
     llamadas: list[str] = []
-    sonda = server._SondaDeCarga("m", retraso_s=0.2, consultar=lambda m: llamadas.append(m))
-    sonda.iniciar()
-    sonda.cancelar()
+    sonda = server._LoadProbe("m", delay_s=0.2, query=lambda m: llamadas.append(m))
+    sonda.start()
+    sonda.cancel()
     time.sleep(0.4)
     assert llamadas == []
 
@@ -105,13 +105,13 @@ def backend(monkeypatch):
 @backend_mock.mock
 def test_estado_en_llamaswap_lee_el_estado_del_modelo(backend):
     backend_mock.get(URL_RUNNING).mock(return_value=_running("m", "starting"))
-    assert server._estado_en_llamaswap("m") == "starting"
+    assert server._llamaswap_state("m") == "starting"
 
 
 @backend_mock.mock
 def test_estado_de_otro_modelo_no_cuenta(backend):
     backend_mock.get(URL_RUNNING).mock(return_value=_running("otro", "ready"))
-    assert server._estado_en_llamaswap("m") is None
+    assert server._llamaswap_state("m") is None
 
 
 @backend_mock.mock
@@ -125,7 +125,7 @@ def test_sin_llamaswap_no_hay_senal(backend, efecto):
         ruta.mock(side_effect=efecto)
     else:
         ruta.mock(return_value=efecto)
-    assert server._estado_en_llamaswap("m") is None
+    assert server._llamaswap_state("m") is None
 
 
 # --- En `_post_chat` ------------------------------------------------------------------------
@@ -146,12 +146,12 @@ def _timeout_tras(segundos: float):
 )
 def test_post_chat_clasifica_el_timeout_con_la_muestra(backend, monkeypatch, estado, clase):
     """La pieza en su uso: el `ReadTimeout` real de `_post_chat` lleva la señal de la sonda."""
-    monkeypatch.setattr(server, "_retraso_sonda", lambda: 0.0)
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.0)
     backend_mock.get(URL_RUNNING).mock(return_value=_running("m", estado))
     backend_mock.post(URL_CHAT).mock(side_effect=_timeout_tras(0.3))
     resultado = server._post_chat("m", {"model": "m"})
     assert resultado.ok is False
-    assert resultado.clase == clase
+    assert resultado.error_class == clase
 
 
 @backend_mock.mock
@@ -161,7 +161,7 @@ def test_el_camino_feliz_no_consulta_running(backend, monkeypatch):
     El retraso es corto A PROPÓSITO y se espera después: con uno largo, un temporizador que nadie
     cancelara tampoco dispararía durante el test, y el test pasaría con el defecto vivo.
     """
-    monkeypatch.setattr(server, "_retraso_sonda", lambda: 0.2)
+    monkeypatch.setattr(server, "_probe_delay", lambda: 0.2)
     running = backend_mock.get(URL_RUNNING).mock(return_value=_running("m", "ready"))
     backend_mock.post(URL_CHAT).mock(
         return_value=httpx2.Response(200, json={"choices": [{"message": {"content": "hola"}}]})

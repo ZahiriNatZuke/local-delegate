@@ -298,13 +298,13 @@ def test_inflight_marca_la_espera_local(tmp_path, monkeypatch):
 def test_sin_espera_no_se_escribe_nada_de_mas(tmp_path, monkeypatch):
     """En el caso normal (hay plaza) la entrada en vuelo es la de siempre."""
     vistas: list[dict] = []
-    original = server._con_respaldo
+    original = server._with_fallback
 
     def _espia(*args, **kwargs):
         vistas.append(dict(_entrada_inflight(tmp_path) or {}))
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(server, "_con_respaldo", _espia)
+    monkeypatch.setattr(server, "_with_fallback", _espia)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     with backend_mock.mock:
         backend_mock.post(CHAT).mock(

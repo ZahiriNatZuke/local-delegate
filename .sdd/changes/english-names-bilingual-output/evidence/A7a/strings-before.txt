@@ -1,0 +1,4 @@
+aviso: 105
+respaldo: 78
+truncado: 30
+_local_delegate: 17
