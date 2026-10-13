@@ -1,0 +1,23 @@
+feat(rename): CLI y variables de entorno en inglés, con alias de los nombres viejos (ola A1)
+
+Segunda ola del frente A del SDD english-names-bilingual-output (REQ-001, REQ-002 y la parte de
+variables de REQ-003).
+
+- `recalcular-coste` pasa a `recompute-cost` y `--reiniciar-calibracion` a `--reset-calibration`.
+  Los viejos siguen aceptándose, ocultos en la ayuda, con un aviso en stderr que nombra el nuevo y
+  la versión de retirada. Si se pasan las dos opciones con valores distintos, el CLI da error.
+- Las cuatro variables pasan a `LD_HOOK_READ_BLOCK`, `LD_HOOK_READ_SWITCH_FILE`,
+  `LOCAL_DELEGATE_STRUCTURED_SUMMARY` y `LOCAL_DELEGATE_COST_FALLBACK`. `config` las lee por
+  `_env_alias` y los hooks por `hook_common.env_alias`: gana la nueva y la vieja se anota para el
+  aviso. `DEPRECATED_HOOK_NAMES` copia el subconjunto del registro que usan los hooks.
+- `deprecations.DEPRECATED_NAMES` gana las 6 entradas, con `introduced="UNRELEASED"`.
+- El check `config.deprecated_names` pasa a titularse «nombres obsoletos». `local_status` lista los
+  nombres viejos que leyó el proceso servidor.
+- Constantes renombradas con PyCharm: `cmd_recompute_cost`, `config.COST_FALLBACK`,
+  `STRUCTURED_SUMMARY`, `HOOK_READ_BLOCK`, `HOOK_READ_SWITCH_FILE`, `valoracion.COMMAND` y
+  `FALLBACK_VARIABLE`.
+- Tests nuevos en `tests/test_cli_renamed_names.py`: alias del CLI, variables en el paquete y en un
+  hook instalado lanzado como subproceso, y `local_status`. El guardián de aislamiento ahora ve
+  `env_alias` y falla ante una lectura directa de un nombre renombrado.
+- Documentación: wiki (con la fila del check), receta de hooks, README y CHANGELOG
+  (`[Unreleased]`).

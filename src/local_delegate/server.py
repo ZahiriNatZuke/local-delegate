@@ -35,15 +35,16 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import (
-    atribucion,
+    attribution,
     autostart,
     cadenas,
     clients,
     config,
-    coste,
-    enfriamiento,
+    cooldown,
+    cost,
     estado_json,
-    fallos,
+    failures,
+    legacy_names,
     llamaswap_api,
     matrix,
     pace,
@@ -423,7 +424,7 @@ def _validar_destino(target: str, overwrite: bool) -> Path:
 def _escribir_destino(p: Path, contenido: str, *, evento: dict) -> str:
     """Escribe el contenido y devuelve el recibo corto, que es lo único que entra al contexto.
 
-    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): el recibo dice los caracteres
+    `evento` es la fila en curso ya fundida (`cost.in_flight_row`): el recibo dice los caracteres
     y los tokens de **Claude** que no entraron (REQ-035).
     """
     # Salto final garantizado: `_post_chat` y `_strip_fences` hacen `.strip()`, así que el texto
@@ -494,10 +495,10 @@ def _append_log_line(log_path: Path, line: str) -> None:
 VENTANA_DE_BLOQUEO_S = 600.0
 
 
-def _bloqueo_reciente(path: str) -> str | None:
+def _recent_block_id(path: str) -> str | None:
     """El identificador del bloqueo que provoco esta lectura, si lo hubo.
 
-    Las notas las deja el hook (`hook_common.anotar_bloqueo`), que es stdlib pura y no puede
+    Las notas las deja el hook (`hook_common.record_block`), que es stdlib pura y no puede
     importar este modulo: el formato vive en dos sitios y por eso hay un test de ida y vuelta que
     escribe con el hook y lee con esto. Es la misma cautela que el espejo JS del panel.
 
@@ -508,20 +509,30 @@ def _bloqueo_reciente(path: str) -> str | None:
     except ImportError:
         return None
     try:
-        huella = hook_common.huella_de_ruta(path)
-        lineas = hook_common.ruta_de_notas().read_text(encoding="utf-8").splitlines()
+        digest = hook_common.path_digest(path)
     except (OSError, ValueError):
         return None
-
-    ahora = _utcnow().timestamp()
-    for linea in reversed(lineas):
+    # El nombre nuevo y el viejo (REQ-012): un hook de una version anterior puede seguir
+    # instalado y escribiendo en `local-delegate-bloqueos.jsonl`. Gana la nota mas reciente.
+    lines: list[str] = []
+    for notes in (hook_common.block_notes_path(), hook_common.legacy_block_notes_path()):
         try:
-            nota = json.loads(linea)
-            if nota["sha"] == huella and ahora - float(nota["ts"]) <= VENTANA_DE_BLOQUEO_S:
-                return str(nota["id"])
+            lines += notes.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            continue
+
+    now = _utcnow().timestamp()
+    best: tuple[float, str] | None = None
+    for line in lines:
+        try:
+            note = json.loads(line)
+            ts = float(note["ts"])
+            fresh = note["sha"] == digest and now - ts <= VENTANA_DE_BLOQUEO_S
+            if fresh and (best is None or ts >= best[0]):
+                best = (ts, str(note["id"]))
         except (ValueError, KeyError, TypeError):
             continue
-    return None
+    return best[1] if best else None
 
 
 # --- Espera frente a lentitud (daemon-reparte-el-backend, REQ-024 a REQ-028) -----------------
@@ -686,9 +697,9 @@ def _log_event(
     fallback_reason: str | None = None,
     fallback_class: str | None = None,
     error_class: str | None = None,
-    num_secciones: int | None = None,
+    num_sections: int | None = None,
     focus: bool = False,
-    fallo_conexion: str | None = None,
+    connection_failure: str | None = None,
     turn_wait_ms: int | None = None,
     turn: str | None = None,
     routing: str | None = None,
@@ -744,9 +755,9 @@ def _log_event(
             tool_use_id = clients.tool_use_id_actual()
             if tool_use_id:
                 rec["tool_use_id"] = tool_use_id
-                from . import atribucion
+                from . import attribution
 
-                rec.update(atribucion.llamada_actual())
+                rec.update(attribution.current_call())
         except Exception:
             # Silencio intencionado: la atribución es observación. Si falla, la línea se escribe
             # igual sin esos campos; registrar aquí podría fallar otra vez, y observar nunca
@@ -781,9 +792,9 @@ def _log_event(
             # Si esta lectura viene de un bloqueo del hook, el evento se queda con su
             # identificador. Es lo que convierte «se ofrecio» y «se acepto» en dos numeros
             # comparables sin cruzar dos logs a mano.
-            bloqueo = _bloqueo_reciente(path)
-            if bloqueo:
-                rec["bloqueo_id"] = bloqueo
+            block_id = _recent_block_id(path)
+            if block_id:
+                rec["block_id"] = block_id
         if json_schema is not None:
             rec["json_schema"] = json_schema
         # La SALIDA se escribió a un archivo, así que tampoco entró al contexto de quien llama.
@@ -802,15 +813,15 @@ def _log_event(
         # alguien la arregle (REQ-019).
         if error_class is not None:
             rec["error_class"] = error_class
-        # Por qué no se pudo conectar (REQ-017): `dns`, `timeout_conexion`… Solo en los
+        # Por qué no se pudo conectar (REQ-017): `dns`, `connect_timeout`… Solo en los
         # `connect_error`, para no engordar cada línea; `error` sigue siendo `connect_error`.
-        if fallo_conexion is not None:
-            rec["fallo_conexion"] = fallo_conexion
+        if connection_failure is not None:
+            rec["connection_failure"] = connection_failure
         # Resumen estructurado (SDD resumen-por-secciones): cuántas secciones del nivel
         # estructural tenía el documento, y si se pidió un enfoque. Nunca el texto del enfoque
         # ni los títulos: el log no guarda contenido.
-        if num_secciones is not None:
-            rec["secciones"] = int(num_secciones)
+        if num_sections is not None:
+            rec["sections"] = int(num_sections)
         if focus:
             rec["focus"] = True
         # Turno del daemon (REQ-008): cuánto esperó la operación a que le tocara, solo si esperó,
@@ -872,11 +883,11 @@ def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
     """Convierte lo ahorrado o lo devuelto a tokens de **Claude**. Única conversión del paquete.
 
     `_accounting` (y su espejo JS `tokensClaude`) pasan por aquí para `saved`, `returned` y `net`.
-    `evento` es la fila **fundida** del log (`coste.fundir`, coste-api-y-cuota REQ-006): trae en
-    `densidad[tipo]` el `[c100, origen]` ya resuelto por `coste.resolver_densidad`. Esta función
+    `evento` es la fila **fundida** del log (`cost.merge`, coste-api-y-cuota REQ-006): trae en
+    `density[tipo]` el `[c100, origen]` ya resuelto por `cost.resolve_density`. Esta función
     no resuelve nada, solo divide (REQ-033):
 
-    - `image`, o una fila sin `densidad[tipo]` (una imagen, o una fila sin fundir): 0. Una fusión
+    - `image`, o una fila sin `density[tipo]` (una imagen, o una fila sin fundir): 0. Una fusión
       olvidada da un 0 visible, nunca una cifra con una densidad inventada.
     - si no, `cantidad × 100 // c100` (`c100` = caracteres por token de Claude, en centésimas).
 
@@ -886,7 +897,7 @@ def tokens_claude(cantidad: int, *, tipo: str, evento: dict) -> int:
         raise ValueError(f"tipo de conversión desconocido: {tipo!r} (válidos: {_TIPOS_CLAUDE})")
     if tipo == "image":
         return 0
-    densidad = evento.get("densidad")
+    densidad = evento.get("density")
     celda = densidad.get(tipo) if isinstance(densidad, dict) else None
     if not celda:
         return 0
@@ -995,7 +1006,12 @@ def _accounting(row: dict) -> dict:
         # evento anterior a esos campos da `False` y `None`: se lee igual que siempre.
         # T15 (REQ-016): la afinidad también lleva `model_requested`, pero no es un respaldo.
         "fallback": bool(row.get("model_requested")) and row.get("routing") != "affinity",
-        "cause": row.get("error_class") or row.get("fallback_class") or None,
+        # La clase en el formato nuevo aunque la fila sea vieja (REQ-006): el espejo JS traduce
+        # igual, con la misma tabla inyectada (`LEGACY_VALUES.failureClass`).
+        "cause": legacy_names.new_value(
+            legacy_names.FAILURE_CLASS_VALUES,
+            row.get("error_class") or row.get("fallback_class") or None,
+        ),
         # Contrato con `coste-api-y-cuota`: desglose en caracteres y campos del evento.
         "chars_saved_text": chars_saved_text,
         "bytes_saved_image": bytes_saved_image,
@@ -1017,12 +1033,12 @@ class ChatResult:
     finish_reason: str | None = None  # choices[0].finish_reason
     tokens_in: int | None = None  # usage.prompt_tokens si el backend lo da
     tokens_out: int | None = None  # usage.completion_tokens
-    #: La clase del fallo (`fallos.Clase`) cuando `ok=False`, y `None` cuando salió bien. Es
+    #: La clase del fallo (`failures.FailureClass`) cuando `ok=False`, y `None` cuando salió bien. Es
     #: aditivo: quien solo mire `error` sigue viendo exactamente lo de antes.
     clase: str | None = None
-    #: La causa de un `connect_error` (`fallos.CausaConexion`, como texto), y `None` en cualquier
-    #: otro caso. Va al log como `fallo_conexion` (REQ-017); `error` sigue diciendo `connect_error`.
-    fallo_conexion: str | None = None
+    #: La causa de un `connect_error` (`failures.ConnectionCause`, como texto), y `None` en cualquier
+    #: otro caso. Va al log como `connection_failure` (REQ-017); `error` sigue diciendo `connect_error`.
+    connection_failure: str | None = None
     #: Los `timings` de llama-server tal como llegan (`prompt_n`, `prompt_ms`, `predicted_n`,
     #: `predicted_ms`…), o `None` si el backend no los manda (REQ-024).
     timings: dict | None = None
@@ -1047,16 +1063,16 @@ class Intento:
 
 
 #: Las clases que permiten saltar (tabla de F3). Capacidad solo al residente (REQ-018).
-_CLASES_QUE_SALTAN = frozenset({fallos.Clase.MODELO, fallos.Clase.CAPACIDAD})
+_CLASES_QUE_SALTAN = frozenset({failures.FailureClass.MODEL, failures.FailureClass.CAPACITY})
 
 
-def _error_enfriado(model: str, enfriado: enfriamiento.Enfriado) -> ChatResult:
+def _cooldown_error(model: str, enfriado: cooldown.ActiveCooldown) -> ChatResult:
     """REQ-009: el modelo está enfriándose y no queda candidato. Falla al momento, sin timeout."""
-    hasta = datetime.fromtimestamp(enfriado.hasta, UTC).strftime("%H:%M:%S UTC")
+    hasta = datetime.fromtimestamp(enfriado.until, UTC).strftime("%H:%M:%S UTC")
     return ChatResult(
         text=(
             f"[local-delegate error] {model} está en enfriamiento hasta las {hasta} (quedan "
-            f"{enfriado.restante_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
+            f"{enfriado.remaining_s:.0f} s) tras fallar varias veces seguidas, y no hay respaldo "
             "disponible."
         ),
         ok=False,
@@ -1078,7 +1094,7 @@ def _respaldo_de(
     if primero.modelo in (model, affinity):
         motivo, clase = primero.error, _valor_clase(primero.clase)
     else:
-        motivo, clase = "en enfriamiento", "enfriamiento"
+        motivo, clase = "en enfriamiento", "cooldown"
     return {
         "respondio": intentos[-1].modelo,
         "en_lugar_de": model,
@@ -1088,8 +1104,8 @@ def _respaldo_de(
 
 
 def _valor_clase(clase: str | None) -> str | None:
-    """La clase como texto plano para el log (`modelo`, `configuracion`…), o None."""
-    return fallos.Clase(clase).value if clase else None
+    """La clase como texto plano para el log (`model`, `configuration`…), o None."""
+    return failures.FailureClass(clase).value if clase else None
 
 
 def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
@@ -1101,13 +1117,15 @@ def _aviso_respaldo(info: dict, desde: str | None = None) -> str:
     )
 
 
-def _fallo_de_cuerpo(model: str, clase: fallos.Clase, timings: dict | None = None) -> ChatResult:
+def _fallo_de_cuerpo(
+    model: str, clase: failures.FailureClass, timings: dict | None = None
+) -> ChatResult:
     """El error legible de una respuesta que llegó con 200 y aun así no sirve.
 
     Antes de esto, un `content` nulo reventaba con `AttributeError` a medio `_post_chat` —el tipo
     no estaba en el `except` de abajo— y se llevaba la tool por delante.
     """
-    if clase is fallos.Clase.CONFIGURACION:
+    if clase is failures.FailureClass.CONFIGURATION:
         return ChatResult(
             text=(
                 f"[local-delegate error] {model} agotó `max_tokens` razonando y no llegó a "
@@ -1240,11 +1258,11 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             data = r.json()
             # La respuesta pasa por el clasificador ANTES de tocarla: un 200 puede traer
             # `content: null`, o venir de un modelo que gastó `max_tokens` razonando.
-            clase = fallos.clasificar(
-                fallos.Respuesta(
+            clase = failures.classify(
+                failures.BackendResponse(
                     status=r.status_code,
-                    datos=data if isinstance(data, dict) else None,
-                    texto=r.text[:300],
+                    data=data if isinstance(data, dict) else None,
+                    text=r.text[:300],
                 )
             )
             if clase is not None:
@@ -1267,10 +1285,10 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
             # clasificaba como `http_error` y nadie ofrecía arrancar el backend.
             if isinstance(e, httpx2.ReadTimeout):
                 # La señal de REQ-018 es la muestra tomada al vencer, no una consulta ahora.
-                clase = fallos.clasificar(e, modelo_cargado=sonda.modelo_cargado())
+                clase = failures.classify(e, model_loaded=sonda.modelo_cargado())
             else:
-                clase = fallos.clasificar(e)
-            if fallos.es_backend_ausente(e):
+                clase = failures.classify(e)
+            if failures.is_backend_missing(e):
                 # REQ-018: un backend REMOTO no se arranca desde aquí, así que ni se pregunta ni
                 # se intenta, valga AUTOSTART lo que valga. Con origen local, como siempre.
                 local = config.backend_origin() == "local"
@@ -1298,18 +1316,18 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                         and autostart.ensure_backend(wait=30)
                     ):
                         continue
-                # REQ-017: la causa, con el texto único de `fallos`, en vez de suponer que el
+                # REQ-017: la causa, con el texto único de `failures`, en vez de suponer que el
                 # backend no está corriendo (con una VPN caída, lo está).
-                causa = fallos.causa_conexion(e, loopback=_backend_en_loopback())
+                causa = failures.connection_cause(e, loopback=_backend_en_loopback())
                 return ChatResult(
                     text=(
                         "[local-delegate error] no se pudo conectar con el backend: "
-                        + fallos.detalle(causa, host=config.backend_host(), excepcion=e)
+                        + failures.detail(causa, host=config.backend_host(), exception=e)
                     ),
                     ok=False,
                     error="connect_error",
                     clase=clase,
-                    fallo_conexion=causa.value,
+                    connection_failure=causa.value,
                 )
             if isinstance(e, httpx2.HTTPStatusError):
                 return ChatResult(
@@ -1344,7 +1362,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
                 text=f"[local-delegate error] respuesta inesperada de {model}: {e}",
                 ok=False,
                 error="bad_response",
-                clase=fallos.Clase.MODELO,
+                clase=failures.FailureClass.MODEL,
             )
         finally:
             sonda.cancelar()
@@ -1929,16 +1947,16 @@ def _attempt(
     model: str,
     payload: dict,
     json_schema_fallback: bool,
-    state: enfriamiento.Estado,
+    state: cooldown.CooldownState,
     attempts: list[Intento],
 ) -> tuple[ChatResult, str | None]:
     """UNA llamada y su reintento sin schema, DENTRO de la plaza; anota el intento y el estado."""
     result, schema, ms = _llamar_modelo(model, payload, json_schema_fallback)
     attempts.append(Intento(model, result.ok, result.error, result.clase, ms, result.timings))
     if result.ok:
-        state.registrar_exito(model)
+        state.record_success(model)
     elif result.clase is not None:
-        state.registrar_fallo(model, result.clase)
+        state.record_failure(model, result.clase)
     return result, schema
 
 
@@ -1949,7 +1967,7 @@ def _next_hop(
     model: str,
     size: int,
     capacity: bool,
-    state: enfriamiento.Estado,
+    state: cooldown.CooldownState,
     hops: int,
     last: ChatResult | None,
     loaded_members: Callable[[], Sequence[str]],
@@ -1970,7 +1988,7 @@ def _next_hop(
     - un candidato ya intentado en esta llamada (`intentados`: el pedido y cada destino) tampoco se
       vuelve a llamar: un miembro de `loaded` que repite un paso posterior no se llama dos veces.
     """
-    if last is not None and (capacity or last.clase != fallos.Clase.MODELO):
+    if last is not None and (capacity or last.clase != failures.FailureClass.MODEL):
         return None
     if hops >= config.FALLBACK_MAX_HOPS:
         return None
@@ -1990,7 +2008,7 @@ def _next_hop(
                 or candidate in attempted
                 or candidate not in config.ALLOWED_MODELS
                 or size > config.max_chars_for(candidate)
-                or state.consultar(candidate) is not None
+                or state.lookup(candidate) is not None
             )
         )
         if valid:
@@ -2055,7 +2073,7 @@ def _con_respaldo(
     La cadena se resuelve aquí, y solo si hace falta: resolverla antes leería la config de
     llama-swap en cada delegación, también en el camino feliz.
     """
-    estado = enfriamiento.desde_config()
+    estado = cooldown.from_config()
     intentos: list[Intento] = []
     schema: str | None = None
 
@@ -2101,7 +2119,7 @@ def _con_respaldo(
     if explicito:
         return _first(llamar(model)), schema, intentos
 
-    enfriado = estado.consultar(model)
+    enfriado = estado.lookup(model)
     original: ChatResult | None = None
     clase: str | None = None
     served = model
@@ -2133,7 +2151,7 @@ def _con_respaldo(
             # Un fallo de capacidad solo salta a `loaded` (REQ-021), salvo el del alternativo que
             # eligió la afinidad: la eligió el daemon, no quien llama, así que se prueba el rol y
             # su cadena (REQ-015; decisión del usuario del 2026-10-07).
-            capacity=clase == fallos.Clase.CAPACIDAD and served == model,
+            capacity=clase == failures.FailureClass.CAPACITY and served == model,
             state=estado,
             hops=saltos,
             last=ultimo,
@@ -2158,7 +2176,7 @@ def _con_respaldo(
         if ultimo.ok:
             return ultimo, schema, intentos
 
-    base = original if original is not None else _error_enfriado(model, enfriado)
+    base = original if original is not None else _cooldown_error(model, enfriado)
     probados = [i for i in intentos if i.modelo != model]
     if not probados:
         return base, schema, intentos
@@ -2173,7 +2191,7 @@ def _con_respaldo(
             tokens_in=base.tokens_in,
             tokens_out=base.tokens_out,
             clase=base.clase,
-            fallo_conexion=base.fallo_conexion,
+            connection_failure=base.connection_failure,
         ),
         schema,
         intentos,
@@ -2311,7 +2329,7 @@ class _ModeloVigente:
         campos: dict = {
             "error_class": _valor_clase(failed.clase) if failed else None,
             # REQ-017: la causa de un `connect_error` también en las delegaciones troceadas.
-            "fallo_conexion": failed.fallo_conexion if failed else None,
+            "connection_failure": failed.connection_failure if failed else None,
         }
         if self.salto is not None:
             campos["model_requested"] = self.pedido
@@ -2336,11 +2354,11 @@ class _ModeloVigente:
 def _savings_feedback(chars_in: int, label: str, *, evento: dict) -> str:
     """Línea de ahorro que se anexa al resultado cuando la entrada se leyó server-side.
 
-    `evento` es la fila en curso ya fundida (`coste.fila_en_vuelo`): los tokens son de **Claude**
+    `evento` es la fila en curso ya fundida (`cost.in_flight_row`): los tokens son de **Claude**
     (`tokens_claude`, REQ-035), nunca el `tokens_in` del modelo local. Una imagen dice solo los
     bytes: sin dimensiones no hay forma de saber sus tokens de Claude (REQ-038).
     """
-    if coste.es_imagen(evento):
+    if cost.is_image(evento):
         return f"\n\n(leído server-side: {chars_in:,} {label} que no entraron a tu contexto)"
     tokens = tokens_claude(chars_in, tipo="text", evento=evento)
     return (
@@ -2459,9 +2477,9 @@ def _chat(
         fallback_reason=info_respaldo["motivo"] if info_respaldo else None,
         fallback_class=info_respaldo["clase"] if info_respaldo else None,
         error_class=None if result.ok else _valor_clase(result.clase),
-        num_secciones=num_secciones,
+        num_sections=num_secciones,
         focus=focus,
-        fallo_conexion=None if result.ok else result.fallo_conexion,
+        connection_failure=None if result.ok else result.connection_failure,
         attempts=intentos,
         **op.log_fields(),
     )
@@ -2473,7 +2491,7 @@ def _chat(
             _escribir_destino(
                 write_to,
                 text,
-                evento=coste.fila_en_vuelo(tool=tool, source=source, path=path),
+                evento=cost.in_flight_row(tool=tool, source=source, path=path),
             )
             + (aviso_truncado if truncated_out else "")
             + aviso_respaldo
@@ -2481,7 +2499,7 @@ def _chat(
     # `feedback=False` lo usa quien va a PARSEAR el resultado: anexar la línea de ahorro al texto
     # rompería un JSON válido. Ver `local_extract`, que la recoloca dentro de `_local_delegate`.
     if feedback and source == "path" and result.ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path, input_unit=input_unit)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path, input_unit=input_unit)
         text += _savings_feedback(chars_in, feedback_label, evento=evento)
     return text
 
@@ -2787,7 +2805,7 @@ def _chat_chunked(
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(procesado en {calls} trozos por local-delegate)"
@@ -3122,13 +3140,13 @@ def _chat_map_reduce(
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
-        num_secciones=num_secciones,
+        num_sections=num_secciones,
         focus=focus,
         attempts=all_attempts,
         **vigente.campos_de_log(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = coste.fila_en_vuelo(tool=tool, source=source, path=path)
+        evento = cost.in_flight_row(tool=tool, source=source, path=path)
         text += _savings_feedback(len(content), "chars", evento=evento)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
@@ -3457,7 +3475,7 @@ def local_summarize(
     extra = _texto_focus(enfoque)
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
-    estructurado = config.RESUMEN_ESTRUCTURADO and rol == "long"
+    estructurado = config.STRUCTURED_SUMMARY and rol == "long"
     estructura = secciones.detectar(content) if estructurado else None
     if estructura is not None:
         return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
@@ -3619,7 +3637,7 @@ def local_extract(
         meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
-        evento = coste.fila_en_vuelo(tool="local_extract", source="path", path=path)
+        evento = cost.in_flight_row(tool="local_extract", source="path", path=path)
         meta["leido_server_side"] = {
             "chars": len(content),
             "tokens_aprox": tokens_claude(len(content), tipo="text", evento=evento),
@@ -4219,7 +4237,7 @@ def _plazo_sonda() -> httpx2.Timeout:
 class EstadoBackend:
     """Lo que dice un sondeo de `/v1/models` (REQ-012).
 
-    `causa` es un valor de `fallos.CausaConexion` como texto, y `detalle` su texto; los dos `None`
+    `causa` es un valor de `failures.ConnectionCause` como texto, y `detalle` su texto; los dos `None`
     cuando el backend está disponible. Con un fallo, `models` es la última lista buena de ESTA
     `BASE_URL` (o vacía), con `status: None` en cada modelo y `models_stale=True`.
     """
@@ -4241,7 +4259,7 @@ def sondear_backend() -> EstadoBackend:
     """Sondea `GET /v1/models` y dice si el backend está disponible y, si no, por qué. Nunca lanza.
 
     `available` exige un 2xx cuyo cuerpo sea un objeto con una lista `data`; cualquier otra forma
-    se trata como `ValueError` y sale `respuesta_invalida` (antes, un 2xx sin `data` daba
+    se trata como `ValueError` y sale `invalid_response` (antes, un 2xx sin `data` daba
     «disponible sin modelos»). Dentro de `data`, la tolerancia de siempre: una entrada que no es un
     objeto se ignora y un `id` ausente se pinta `"?"`.
     """
@@ -4253,13 +4271,13 @@ def sondear_backend() -> EstadoBackend:
         with httpx2.Client(timeout=_plazo_sonda()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
-            causa = fallos.causa_conexion(r.status_code, loopback=_backend_en_loopback())
+            causa = failures.connection_cause(r.status_code, loopback=_backend_en_loopback())
             return _sondeo_fallido(url, causa, status=r.status_code, status_http=r.status_code)
         cuerpo = r.json()
         data = cuerpo.get("data") if isinstance(cuerpo, dict) else None
         if not isinstance(data, list):
             # `ValueError` y no `TypeError` a propósito: es la regla 10 del clasificador
-            # (`respuesta_invalida`), la misma que un cuerpo que no es JSON (REQ-012).
+            # (`invalid_response`), la misma que un cuerpo que no es JSON (REQ-012).
             raise ValueError(  # noqa: TRY004
                 "el cuerpo de /models no es un objeto con una lista `data`"
             )
@@ -4270,7 +4288,7 @@ def sondear_backend() -> EstadoBackend:
         ]
         models.sort(key=lambda x: x["id"])
     except Exception as exc:  # el sondeo nunca lanza: lo que no se espera también tiene causa
-        causa = fallos.causa_conexion(exc, loopback=_backend_en_loopback())
+        causa = failures.connection_cause(exc, loopback=_backend_en_loopback())
         return _sondeo_fallido(url, causa, endpoint=endpoint, excepcion=exc)
     _LISTAS_BUENAS[url] = models
     return EstadoBackend(True, models, False, None, None, r.status_code)
@@ -4278,7 +4296,7 @@ def sondear_backend() -> EstadoBackend:
 
 def _sondeo_fallido(
     url: str,
-    causa: fallos.CausaConexion,
+    causa: failures.ConnectionCause,
     *,
     status: int | None = None,
     status_http: int | None = None,
@@ -4286,12 +4304,12 @@ def _sondeo_fallido(
     excepcion: BaseException | None = None,
 ) -> EstadoBackend:
     guardada = [{**m, "status": None} for m in _LISTAS_BUENAS.get(url, [])]
-    texto = fallos.detalle(
+    texto = failures.detail(
         causa,
         host=config.backend_host(url),
         status=status,
         endpoint=endpoint,
-        excepcion=excepcion,
+        exception=excepcion,
     )
     return EstadoBackend(False, guardada, True, causa.value, texto, status_http)
 
@@ -4336,14 +4354,14 @@ def _describir_enfriamiento() -> list[str]:
             f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
         )
     ]
-    activos = enfriamiento.desde_config().activos()
+    activos = cooldown.from_config().active()
     if not activos:
         lineas.append("  ningún modelo enfriado")
     for modelo, enfriado in sorted(activos.items()):
         veces = (
-            "1 vez seguida" if enfriado.reentradas == 1 else f"{enfriado.reentradas} veces seguidas"
+            "1 vez seguida" if enfriado.reentries == 1 else f"{enfriado.reentries} veces seguidas"
         )
-        lineas.append(f"  {modelo}: quedan {enfriado.restante_s:.0f} s, ha entrado {veces}")
+        lineas.append(f"  {modelo}: quedan {enfriado.remaining_s:.0f} s, ha entrado {veces}")
     return lineas
 
 
@@ -4383,9 +4401,9 @@ def _describe_turn() -> str:
 #: Las causas en las que ALGUIEN contesta: no es «caído» (el ámbar del badge, REQ-014/REQ-015).
 _CAUSAS_CON_RESPUESTA = frozenset(
     {
-        fallos.CausaConexion.HTTP_ERROR.value,
-        fallos.CausaConexion.RESPUESTA_INVALIDA.value,
-        fallos.CausaConexion.SIN_RESPUESTA.value,
+        failures.ConnectionCause.HTTP_ERROR.value,
+        failures.ConnectionCause.INVALID_RESPONSE.value,
+        failures.ConnectionCause.NO_RESPONSE.value,
     }
 )
 
@@ -4394,7 +4412,7 @@ def _estado_backend_en_texto(estado: EstadoBackend) -> str:
     """El estado de la línea `Backend:` de `local_status`, con el criterio del badge (REQ-015)."""
     if estado.available:
         return "arriba"
-    if estado.causa == fallos.CausaConexion.CREDENCIAL.value:
+    if estado.causa == failures.ConnectionCause.CREDENTIAL.value:
         return f"SIN ACCESO: {estado.detalle}"
     if estado.causa in _CAUSAS_CON_RESPUESTA:
         return f"RESPONDE CON ERROR: {estado.detalle}"
@@ -4457,10 +4475,14 @@ def local_status() -> str:
                     continue
         # Misma fusión y misma contabilidad que el dashboard (coste-api-y-cuota, REQ-006): sin
         # fundir, la fila no trae su densidad y esta tool daría 0 donde el panel da la cifra.
-        for rec in coste.fundir(registros, log_dir=config.LOG_DIR):
+        # Filas viejas y nuevas al mismo formato antes de contar (REQ-006).
+        registros = [
+            legacy_names.normalize("usage", r) if isinstance(r, dict) else r for r in registros
+        ]
+        for rec in cost.merge(registros, log_dir=config.LOG_DIR):
             # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
             # REQ-018): cliente `mcp`, banco o ventana de prueba.
-            if atribucion.test_reason(rec):
+            if attribution.test_reason(rec):
                 n_tests += 1
                 continue
             n_events += 1
@@ -4517,7 +4539,24 @@ def local_status() -> str:
     if groups:
         lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
 
+    lines.extend(_describe_deprecated_names())
     return "\n".join(lines)
+
+
+def _describe_deprecated_names() -> list[str]:
+    """Nombres viejos de variables que ESTE proceso leyó (REQ-003).
+
+    `doctor` mira la shell donde corre y el `env` de `settings.json`, pero no el entorno del daemon
+    ni el del servidor por stdio: eso solo lo sabe el propio proceso, por `config.DEPRECATED_SEEN`.
+    """
+    from . import deprecations
+
+    entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
+    if not entries:
+        return []
+    return ["", "Nombres obsoletos leídos por este proceso:"] + [
+        f"  {deprecations.warning_text(e)}" for e in entries
+    ]
 
 
 def preparar_ctrl_break() -> None:

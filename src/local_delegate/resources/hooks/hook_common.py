@@ -35,7 +35,7 @@ def enabled() -> bool:
     **Solo puede apagar, nunca encender.** Que un hook este activo lo decide el registro
     (`settings.json`), y de ahi no se sale: cuando la unica puerta era una variable de entorno,
     `install --enable-read-hook` registro el script sin ponerla y el hook quedo instalado e
-    inerte, en silencio. Esa es la historia que hay detras de `esta_encendido()` en
+    inerte, en silencio. Esa es la historia que hay detras de `is_enabled()` en
     `suggest_delegate_read.py`, y la razon de que ningun hook nuevo deba mirar aqui para saber
     si nacio encendido.
     """
@@ -47,7 +47,7 @@ def enabled() -> bool:
     }
 
 
-def nuevo_id() -> str:
+def new_id() -> str:
     """Identificador corto de un aviso o un bloqueo, para poder cruzarlo con lo que pase despues.
 
     Es lo que hace medible el «aceptado» de la telemetria: el hook y el servidor MCP son procesos
@@ -74,7 +74,7 @@ def version_de(script: str) -> str:
         return ""
 
 
-def contexto_de(payload: dict, script: str) -> dict:
+def context_of(payload: dict, script: str) -> dict:
     """Los campos que lleva TODO evento: que script corrio y en que sesion.
 
     Sin esto una medicion no se puede leer: el 2026-09-09 catorce lecturas se comportaron con el
@@ -95,6 +95,10 @@ def record(event: str, **metadata: object) -> None:
     if not destination:
         return
     payload = {"ts": datetime.now(UTC).isoformat(), "event": event, **metadata}
+    if DEPRECATED_SEEN:
+        # Nombres viejos que esta invocacion leyo (REQ-003). Solo viaja con la telemetria
+        # encendida; `doctor` los cuenta desde la cola de este mismo fichero.
+        payload["deprecated_names"] = sorted(DEPRECATED_SEEN)
     try:
         path = Path(destination)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,14 +129,16 @@ def emit(event: str, context: str, **metadata: object) -> None:
     )
 
 
-def deny(event: str, razon: str, **metadata: object) -> None:
-    """Camino que BLOQUEA: la tool no llega a ejecutarse y el modelo lee ``motivo``.
+def deny(event: str, message: str, **metadata: object) -> None:
+    """Camino que BLOQUEA: la tool no llega a ejecutarse y el modelo lee ``message``.
 
     El contrato es el de ``PreToolUseHookSpecificOutput``: ``permissionDecision`` acepta
-    ``allow``, ``deny``, ``ask`` y ``defer``, y ``permissionDecisionReason`` —aqui ``razon``— es el texto
-    que ve quien recibe el bloqueo. Se llama asi, y no ``motivo``, porque ``motivo`` es el campo
-    con el que la telemetria de los hooks etiqueta cada decision y los dos viajan juntos. Ese texto **tiene que nombrar la salida**: una regla que dice «no»
-    sin decir por donde se pasa es una regla que se acaba apagando.
+    ``allow``, ``deny``, ``ask`` y ``defer``, y ``permissionDecisionReason`` —aqui ``message``— es
+    el texto que ve quien recibe el bloqueo. Se llama asi, y no ``reason``, porque ``reason`` es el
+    campo con el que la telemetria de los hooks etiqueta cada decision y los dos viajan juntos
+    (antes ``motivo``; ver `FILE_NAMES` y `legacy_names`). Ese texto **tiene que nombrar la
+    salida**: una regla que dice «no» sin decir por donde se pasa es una regla que se acaba
+    apagando.
 
     No se usa ``updatedInput``, que seria la forma de reescribir la llamada en vez de rechazarla:
     el permiso del usuario se evalua sobre la entrada original, asi que cambiarla por debajo
@@ -147,12 +153,38 @@ def deny(event: str, razon: str, **metadata: object) -> None:
                 "hookSpecificOutput": {
                     "hookEventName": event,
                     "permissionDecision": "deny",
-                    "permissionDecisionReason": razon,
+                    "permissionDecisionReason": message,
                 }
             },
             ensure_ascii=False,
         )
     )
+
+
+# --- Nombres en disco (REQ-012) -----------------------------------------------------------------
+#
+# `(viejo, nuevo)` de cada fichero que comparten los hooks y el daemon. Se ESCRIBE solo el nuevo; el
+# viejo se sigue LEYENDO porque un hook de una version anterior puede seguir instalado (y
+# escribiendo) y porque el interruptor viejo apaga el bloqueo mientras viva su alias. Es la copia minima de
+# `local_delegate.legacy_names.FILE_NAMES`; `tests/test_hook_legacy_names.py` exige que sean iguales.
+FILE_NAMES: dict[str, tuple[str, str]] = {
+    "switch_file": ("local-delegate-bloqueo-apagado", "local-delegate-block-off"),
+    "block_notes": ("local-delegate-bloqueos.jsonl", "local-delegate-blocks.jsonl"),
+    "call_notes_dir": ("local-delegate-llamadas", "local-delegate-calls"),
+    "health_prefix": ("local-delegate-salud-", "local-delegate-health-"),
+    # En `LOG_DIR`: lo escribe el daemon (los dos, mientras viva su `legacy_write`) y lo lee
+    # `cooled_model`. Gana el nuevo; el viejo cubre un daemon de una version anterior.
+    "cooldown_state": ("enfriamiento.json", "cooldown.json"),
+}
+
+#: Claves viejas -> nuevas del estado de enfriamiento. Copia de
+#: `local_delegate.legacy_names.FORMATS["cooldown_state"]["keys"]` (mismo test de igualdad).
+COOLDOWN_STATE_KEYS: dict[str, str] = {
+    "fallos": "failures",
+    "espera_s": "wait_s",
+    "hasta": "until",
+    "reentradas": "reentries",
+}
 
 
 # --- Salud del backend ------------------------------------------------------------------------
@@ -167,7 +199,7 @@ def deny(event: str, razon: str, **metadata: object) -> None:
 # lectura.
 
 
-def _ruta_de_salud() -> Path:
+def _health_path() -> Path:
     """Un fichero por endpoint, no uno global.
 
     Con uno solo, la marca de un backend valdria para otro: basta cambiar
@@ -176,11 +208,11 @@ def _ruta_de_salud() -> Path:
     y recibia un bloqueo, porque la marca del backend de verdad seguia fresca.
     """
     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1")
-    huella = hashlib.sha256(base.encode("utf-8", "replace")).hexdigest()[:12]
-    return Path(tempfile.gettempdir()) / f"local-delegate-salud-{huella}.json"
+    digest = hashlib.sha256(base.encode("utf-8", "replace")).hexdigest()[:12]
+    return Path(tempfile.gettempdir()) / f"{FILE_NAMES['health_prefix'][1]}{digest}.json"
 
 
-def _sondear(timeout_s: float) -> bool:
+def _probe(timeout_s: float) -> bool:
     """¿Contesta alguien en el endpoint? Un GET a /models con un plazo muy corto.
 
     La pregunta es si el backend **esta escuchando**, no si nos autoriza a nosotros: quien delega
@@ -194,16 +226,16 @@ def _sondear(timeout_s: float) -> bool:
     URL que ni siquiera se puede construir.
     """
     base = os.environ.get("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
-    clave = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
+    api_key = os.environ.get("LOCAL_DELEGATE_API_KEY", "").strip()
     try:
         # El `Request` se construye DENTRO del try: con una `LOCAL_DELEGATE_BASE_URL` mal escrita
         # lanza `ValueError` en el constructor, no al abrir, y eso reventaria el hook entero y con
         # el la lectura del usuario.
-        peticion = urllib.request.Request(f"{base}/models", method="GET")
-        if clave:
-            peticion.add_header("Authorization", f"Bearer {clave}")
-        with urllib.request.urlopen(peticion, timeout=timeout_s) as respuesta:
-            return respuesta.status < 500
+        request = urllib.request.Request(f"{base}/models", method="GET")
+        if api_key:
+            request.add_header("Authorization", f"Bearer {api_key}")
+        with urllib.request.urlopen(request, timeout=timeout_s) as response:
+            return response.status < 500
     except urllib.error.HTTPError:
         # 401, 403, 404... da igual cual: hubo respuesta, luego hay alguien escuchando.
         return True
@@ -213,29 +245,29 @@ def _sondear(timeout_s: float) -> bool:
         return False
 
 
-def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Path | None = None):
+def backend_available(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marker: Path | None = None):
     """¿Hay a donde delegar ahora mismo? Ante la duda, **False**, que es lo que no bloquea.
 
     La respuesta se cachea ``ttl_s`` segundos en un fichero, asi que el sondeo se paga como mucho
     una vez por minuto y no una vez por lectura. Una marca ilegible, corrupta o vieja no se
     interpreta: se vuelve a preguntar.
     """
-    archivo = marca or _ruta_de_salud()
-    ahora = time.time()
+    marker_file = marker or _health_path()
+    now = time.time()
     try:
-        datos = json.loads(archivo.read_text(encoding="utf-8"))
-        if ahora - float(datos["ts"]) < ttl_s:
-            return bool(datos["ok"])
+        data = json.loads(marker_file.read_text(encoding="utf-8"))
+        if now - float(data["ts"]) < ttl_s:
+            return bool(data["ok"])
     except (OSError, ValueError, KeyError, TypeError):
         pass
 
-    disponible = _sondear(timeout_s)
+    available = _probe(timeout_s)
     try:
-        archivo.write_text(json.dumps({"ts": ahora, "ok": disponible}), encoding="utf-8")
+        marker_file.write_text(json.dumps({"ts": now, "ok": available}), encoding="utf-8")
     except OSError:
         # Sin cache se sondea mas a menudo; es lento, no incorrecto.
         pass
-    return disponible
+    return available
 
 
 # --- Estado del bloqueo (REQ-F1-11) ---------------------------------------------------------------
@@ -245,43 +277,86 @@ def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Pa
 # sin cerrar nada es algo que el hook lea en cada invocacion y que el usuario pueda tocar a mano.
 # Un fichero cumple las dos cosas. La variable sigue siendo la que ENCIENDE; el fichero gana y apaga.
 
-VERDADEROS = {"1", "true", "yes", "on"}
+TRUTHY = {"1", "true", "yes", "on"}
+
+# Nombres viejos que los hooks siguen leyendo, como `(kind, old, new)`. Es la copia minima del
+# registro `local_delegate.deprecations` (los hooks no importan el paquete);
+# `tests/test_deprecations.py` exige que sea igual a `deprecations.hook_names()`.
+DEPRECATED_HOOK_NAMES = (
+    ("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"),
+    ("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE"),
+    ("switch_file", "local-delegate-bloqueo-apagado", "local-delegate-block-off"),
+)
+
+# Nombres viejos leidos con valor en esta invocacion (REQ-003).
+DEPRECATED_SEEN: set[str] = set()
 
 
-def ruta_del_interruptor() -> Path:
+def env_alias(new: str, old: str, default: str = "") -> str:
+    """Lee una variable renombrada: gana la nueva; si solo esta la vieja, vale la vieja y se anota
+    en `DEPRECATED_SEEN`. Es el equivalente de `config._env_alias` para los hooks."""
+    value = os.environ.get(new)
+    if value is not None:
+        return value
+    old_value = os.environ.get(old)
+    if old_value is not None:
+        DEPRECATED_SEEN.add(old)
+        return old_value
+    return default
+
+
+def switch_path() -> Path:
     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
     el instalador reescribe y poda."""
-    destino = os.environ.get("LD_HOOK_READ_INTERRUPTOR", "").strip()
-    return Path(destino) if destino else Path.home() / ".claude" / "local-delegate-bloqueo-apagado"
+    target = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
+    return Path(target) if target else Path.home() / ".claude" / FILE_NAMES["switch_file"][1]
 
 
-def estado_del_bloqueo() -> str:
-    """`encendido`, `apagado_fichero` o `apagado_variable`. Va en cada evento, para que una
-    medicion sepa en que estado estaba la regla cuando decidio."""
-    if ruta_del_interruptor().exists():
-        return "apagado_fichero"
-    if os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
-        return "encendido"
-    return "apagado_variable"
+def legacy_switch_path() -> Path:
+    """El interruptor con su nombre viejo, que sigue apagando mientras viva su alias (REQ-012)."""
+    return Path.home() / ".claude" / FILE_NAMES["switch_file"][0]
+
+
+def switch_on() -> bool:
+    """¿Esta puesto el fichero que apaga el bloqueo? El nuevo o, si no se eligio otra ruta, el
+    viejo; el viejo se anota en `DEPRECATED_SEEN` para que `doctor` pueda avisar."""
+    if switch_path().exists():
+        return True
+    configured = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
+    if not configured and legacy_switch_path().exists():
+        DEPRECATED_SEEN.add(FILE_NAMES["switch_file"][0])
+        return True
+    return False
+
+
+def block_state() -> str:
+    """`on`, `off_file` u `off_variable` (antes `encendido`, `apagado_fichero` y
+    `apagado_variable`). Va en cada evento, para que una medicion sepa en que estado estaba la regla
+    cuando decidio."""
+    if switch_on():
+        return "off_file"
+    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in TRUTHY:
+        return "on"
+    return "off_variable"
 
 
 # --- El modelo del resumen en enfriamiento (REQ-F1-10) -------------------------------------------
 #
 # Bloquear hacia un modelo que el servidor no va a llamar deja al agente peor que antes. El estado lo
-# escribe el servidor en `LOG_DIR/enfriamiento.json`; el hook es stdlib y no puede importar `config`,
+# escribe el servidor en `LOG_DIR/cooldown.json`; el hook es stdlib y no puede importar `config`,
 # asi que lleva su copia de los defectos, y `tests/test_conformidad_f1.py` la ata a `config.py`. Con
 # un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
 # defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
 
-MODELOS_POR_DEFECTO = {"long": "gemma4-26b-a4b", "mechanical": "gemma3-4b"}
-UMBRAL_LARGO_CHARS = 6000
+DEFAULT_MODELS = {"long": "gemma4-26b-a4b", "mechanical": "gemma3-4b"}
+LONG_THRESHOLD_CHARS = 6000
 
 
-def directorio_de_logs() -> Path:
+def log_dir() -> Path:
     """`LOG_DIR` como lo resuelve `config.py` (`platformdirs.user_data_dir`, sin autor)."""
-    destino = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
-    if destino:
-        return Path(destino)
+    target = os.environ.get("LOCAL_DELEGATE_LOG_DIR", "").strip()
+    if target:
+        return Path(target)
     if sys.platform == "win32":
         return (
             Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
@@ -293,29 +368,44 @@ def directorio_de_logs() -> Path:
     return (Path(base) if base else Path.home() / ".local" / "share") / "local-delegate"
 
 
-def modelo_del_resumen(tamano: int) -> str:
-    """El modelo al que iria `local_summarize` con un fichero de `tamano` bytes (`_rol_por_tamano`)."""
+def summary_model(size: int) -> str:
+    """El modelo al que iria `local_summarize` con un fichero de `size` bytes (`_rol_por_tamano`)."""
     try:
-        umbral = int(
-            os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or UMBRAL_LARGO_CHARS
+        threshold = int(
+            os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or LONG_THRESHOLD_CHARS
         )
     except ValueError:
-        umbral = UMBRAL_LARGO_CHARS
-    rol = "long" if tamano > umbral else "mechanical"
+        threshold = LONG_THRESHOLD_CHARS
+    role = "long" if size > threshold else "mechanical"
     return (
-        os.environ.get(f"LOCAL_DELEGATE_MODEL_{rol.upper()}", "").strip()
-        or MODELOS_POR_DEFECTO[rol]
+        os.environ.get(f"LOCAL_DELEGATE_MODEL_{role.upper()}", "").strip() or DEFAULT_MODELS[role]
     )
 
 
-def modelo_enfriado(modelo: str) -> bool:
-    """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
-    un bloqueo con un dato legible y vigente, nunca por un fichero roto."""
+def _cooldown_until(name: str, model: str, key: str) -> object:
+    """El vencimiento del modelo en un fichero de estado, o None si no se puede leer."""
     try:
-        datos = json.loads((directorio_de_logs() / "enfriamiento.json").read_text(encoding="utf-8"))
-        hasta = datos[modelo]["hasta"]
-        return isinstance(hasta, (int, float)) and float(hasta) > time.time()
+        data = json.loads((log_dir() / name).read_text(encoding="utf-8"))
+        return data[model][key]
     except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def cooled_model(model: str) -> bool:
+    """¿Esta ese modelo enfriandose ahora? Ante cualquier duda, False: la guarda solo puede quitar
+    un bloqueo con un dato legible y vigente, nunca por un fichero roto.
+
+    Lee `cooldown.json` y, si no existe, `enfriamiento.json` con su clave vieja (un daemon de una
+    version anterior). Si existe el nuevo, manda el nuevo aunque no tenga el modelo."""
+    old_name, new_name = FILE_NAMES["cooldown_state"]
+    new_key = COOLDOWN_STATE_KEYS["hasta"]
+    if (log_dir() / new_name).exists():
+        until = _cooldown_until(new_name, model, new_key)
+    else:
+        until = _cooldown_until(old_name, model, "hasta")
+    try:
+        return isinstance(until, (int, float)) and float(until) > time.time()
+    except (OverflowError, ValueError):
         return False
 
 
@@ -333,36 +423,41 @@ def modelo_enfriado(modelo: str) -> bool:
 # hooks, que nunca escribe rutas ni contenido.
 
 #: Cuantas notas se conservan. Son el rastro de los ultimos bloqueos, no un historial.
-MAX_NOTAS = 200
+MAX_NOTES = 200
 
 
-def huella_de_ruta(ruta: str) -> str:
+def path_digest(path: str) -> str:
     """Huella estable de una ruta, para poder cruzarla sin guardarla.
 
     Normaliza may/minusculas y separadores porque Windows da la misma ruta de varias formas y el
     hook la recibe del cliente mientras que el servidor la recibe del agente.
     """
-    normal = os.path.normcase(os.path.abspath(ruta))
+    normal = os.path.normcase(os.path.abspath(path))
     return hashlib.sha256(normal.encode("utf-8", "replace")).hexdigest()[:16]
 
 
-def ruta_de_notas() -> Path:
-    return Path(tempfile.gettempdir()) / "local-delegate-bloqueos.jsonl"
+def block_notes_path() -> Path:
+    return Path(tempfile.gettempdir()) / FILE_NAMES["block_notes"][1]
 
 
-def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> None:
+def legacy_block_notes_path() -> Path:
+    """Las notas que escribe un hook de una version anterior: el daemon las lee tambien."""
+    return Path(tempfile.gettempdir()) / FILE_NAMES["block_notes"][0]
+
+
+def record_block(block_id: str, path: str, notes: Path | None = None) -> None:
     """Deja la nota del bloqueo. Best-effort: si falla, se pierde la medicion, no la sesion."""
-    archivo = notas or ruta_de_notas()
-    linea = json.dumps(
-        {"id": identificador, "sha": huella_de_ruta(ruta), "ts": time.time()},
+    notes_file = notes or block_notes_path()
+    line = json.dumps(
+        {"id": block_id, "sha": path_digest(path), "ts": time.time()},
         ensure_ascii=False,
     )
     try:
-        previas = archivo.read_text(encoding="utf-8").splitlines()[-(MAX_NOTAS - 1) :]
+        previous = notes_file.read_text(encoding="utf-8").splitlines()[-(MAX_NOTES - 1) :]
     except OSError:
-        previas = []
+        previous = []
     try:
-        archivo.write_text("\n".join([*previas, linea]) + "\n", encoding="utf-8")
+        notes_file.write_text("\n".join([*previous, line]) + "\n", encoding="utf-8")
     except OSError:
         # Best-effort a proposito: perder esta nota cuesta una correlacion en la medicion;
         # romperle la lectura al usuario por no poder escribir un fichero cuesta mucho mas.
@@ -371,10 +466,10 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> 
 
 # --- Notas de atribucion: quien pidio cada delegacion (coste-api-y-cuota, REQ-002) ---------------
 #
-# El hook `anotar_llamada.py` deja, por cada `tools/call` de local-delegate, una nota con lo que
-# solo trae la entrada del hook (`agent_id`, `agent_type`, `effort`) y el `transcript_path`, que es
-# donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
-# (`atribucion.leer_nota`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
+# El hook `record_call.py` (antes `anotar_llamada.py`) deja, por cada `tools/call` de
+# local-delegate, una nota con lo que solo trae la entrada del hook (`agent_id`, `agent_type`,
+# `effort`) y el `transcript_path`, que es donde el servidor busca despues el modelo. El servidor la recoge por `tool_use_id`
+# (`attribution.read_note`): el formato vive en dos sitios y lo ata un test de ida y vuelta.
 #
 # UNA nota por fichero, y no un fichero con todas como el de los bloqueos: los subagentes llaman en
 # paralelo, y dos hooks que reescriben el mismo fichero se pisan. Cada nota se escribe en un
@@ -385,75 +480,80 @@ def anotar_bloqueo(identificador: str, ruta: str, notas: Path | None = None) -> 
 # telemetria, vive en el temporal y caduca a los diez minutos.
 
 #: Pasado este rato una nota ya no cuenta (REQ-003) y el hook la borra.
-VIGENCIA_DE_NOTA_S = 600.0
+NOTE_TTL_S = 600.0
 
 #: Forma de un `tool_use_id`. Se valida ANTES de construir la ruta: el id acaba en un nombre de
 #: fichero, y uno con `..` o separadores escribiria fuera del directorio.
-PATRON_TOOL_USE_ID = re.compile(r"^toolu_[A-Za-z0-9_-]{1,64}$")
+TOOL_USE_ID_PATTERN = re.compile(r"^toolu_[A-Za-z0-9_-]{1,64}$")
 
 
-def directorio_de_notas_de_llamadas() -> Path:
-    """Junto a `ruta_de_notas()`: el temporal del usuario, que comparten el hook y el daemon."""
-    return Path(tempfile.gettempdir()) / "local-delegate-llamadas"
+def call_notes_dir() -> Path:
+    """Junto a `block_notes_path()`: el temporal del usuario, que comparten el hook y el daemon."""
+    return Path(tempfile.gettempdir()) / FILE_NAMES["call_notes_dir"][1]
 
 
-def _esfuerzo_de(entrada: dict) -> str | None:
+def legacy_call_notes_dir() -> Path:
+    """Donde deja sus notas un hook `anotar_llamada.py` de una version anterior."""
+    return Path(tempfile.gettempdir()) / FILE_NAMES["call_notes_dir"][0]
+
+
+def _effort_of(hook_input: dict) -> str | None:
     """`effort.level` de la entrada del hook. NUNCA `CLAUDE_EFFORT`: esa variable se hereda del
     proceso padre y no dice el esfuerzo de esta llamada (medido: `--effort low` y el hook vio
     `high`)."""
-    esfuerzo = entrada.get("effort")
-    nivel = esfuerzo.get("level") if isinstance(esfuerzo, dict) else None
-    return nivel if isinstance(nivel, str) and nivel else None
+    effort = hook_input.get("effort")
+    level = effort.get("level") if isinstance(effort, dict) else None
+    return level if isinstance(level, str) and level else None
 
 
-def _texto(valor: object) -> str | None:
-    return valor if isinstance(valor, str) and valor else None
+def _text(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
-def _podar_notas(directorio: Path, ahora: float) -> None:
+def _prune_notes(directory: Path, now: float) -> None:
     """Borra, best-effort, las notas que ya no cuentan. Sin esto el directorio solo creceria."""
     try:
-        viejas = [p for p in directorio.iterdir() if ahora - p.stat().st_mtime > VIGENCIA_DE_NOTA_S]
+        stale = [p for p in directory.iterdir() if now - p.stat().st_mtime > NOTE_TTL_S]
     except OSError:
         return
-    for vieja in viejas:
+    for stale_note in stale:
         try:
-            vieja.unlink()
+            stale_note.unlink()
         except OSError:
             pass  # otro hook la borro antes, o esta abierta: se intentara la proxima vez
 
 
-def anotar_llamada(entrada: dict, directorio: Path | None = None) -> bool:
+def record_call(hook_input: dict, directory: Path | None = None) -> bool:
     """Escribe la nota de esta llamada. Devuelve si la escribio. Nunca lanza."""
     try:
-        tool_use_id = entrada.get("tool_use_id")
-        if not isinstance(tool_use_id, str) or not PATRON_TOOL_USE_ID.match(tool_use_id):
+        tool_use_id = hook_input.get("tool_use_id")
+        if not isinstance(tool_use_id, str) or not TOOL_USE_ID_PATTERN.match(tool_use_id):
             return False
-        destino = directorio or directorio_de_notas_de_llamadas()
-        ahora = time.time()
-        nota = {
+        target = directory or call_notes_dir()
+        now = time.time()
+        note = {
             "tool_use_id": tool_use_id,
-            "ts": ahora,
-            "agent_id": _texto(entrada.get("agent_id")),
-            "agent_type": _texto(entrada.get("agent_type")),
-            "effort": _esfuerzo_de(entrada),
-            "transcript_path": _texto(entrada.get("transcript_path")),
+            "ts": now,
+            "agent_id": _text(hook_input.get("agent_id")),
+            "agent_type": _text(hook_input.get("agent_type")),
+            "effort": _effort_of(hook_input),
+            "transcript_path": _text(hook_input.get("transcript_path")),
         }
-        destino.mkdir(parents=True, exist_ok=True)
-        descriptor, temporal = tempfile.mkstemp(dir=destino, prefix=".", suffix=".tmp")
+        target.mkdir(parents=True, exist_ok=True)
+        descriptor, tmp_name = tempfile.mkstemp(dir=target, prefix=".", suffix=".tmp")
         try:
-            with os.fdopen(descriptor, "w", encoding="utf-8") as flujo:
-                json.dump(nota, flujo, ensure_ascii=False)
-            os.replace(temporal, destino / f"{tool_use_id}.json")
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                json.dump(note, stream, ensure_ascii=False)
+            os.replace(tmp_name, target / f"{tool_use_id}.json")
         except OSError:
             try:
-                os.unlink(temporal)
+                os.unlink(tmp_name)
             except OSError:
                 # Limpieza de mejor esfuerzo: un hook nunca lanza, y el fallo ya se comunica
                 # devolviendo False justo debajo.
                 pass
             return False
-        _podar_notas(destino, ahora)
+        _prune_notes(target, now)
         return True
     except Exception:
         # Best-effort a proposito: perder la nota deja la delegacion para el relleno; romperle la

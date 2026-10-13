@@ -56,12 +56,13 @@ OPENCODE_SCHEMA = "https://opencode.ai/config.json"
 # Hooks recomendados tras el piloto A/B (docs/recipes/claude-code-hooks.md). El de Read
 # quedó apagado por defecto: en el piloto avisó en 2 de 4 tareas negativas.
 #
-# `anotar_llamada.py` (coste-api-y-cuota, REQ-002) va siempre, no detrás de `--enable-read-hook`:
-# no avisa ni bloquea, solo anota quién pide cada delegación. Va AL FINAL para que
-# `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los tests.
+# `record_call.py` (coste-api-y-cuota, REQ-002; antes `anotar_llamada.py`) va siempre, no detrás
+# de `--enable-read-hook`: no avisa ni bloquea, solo anota quién pide cada delegación. Va AL
+# FINAL para que `_HOOK_EVENTS[0]` siga siendo el de `UserPromptSubmit`, que es el que miran los
+# tests.
 _HOOK_EVENTS: tuple[tuple[str, str, str | None], ...] = (
     ("suggest_delegate_prompt.py", "UserPromptSubmit", None),
-    ("anotar_llamada.py", "PreToolUse", "mcp__local-delegate__.*"),
+    ("record_call.py", "PreToolUse", "mcp__local-delegate__.*"),
 )
 _READ_HOOK = ("suggest_delegate_read.py", "PreToolUse", "Read")
 
@@ -99,7 +100,20 @@ _MCP_READ_HOOK = (
 #: llega cuando el coste ya se pagó y sin la salida completa, así que no habilita ningún ahorro—.
 #: Nunca llegaron a registrarse como hook, pero sí se copiaron a `~/.claude/hooks/`, así que sin
 #: esta lista sus 24 KB se quedarían ahí para siempre.
-_SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
+#: `anotar_llamada.py` se renombró a `record_call.py` (REQ-012): sin esta entrada la copia vieja y
+#: su registro en `settings.json` seguirían anotando cada llamada, dos veces.
+_RETIRED_SCRIPTS = (
+    "suggest_lint_summary.py",
+    "output_policy.py",
+    "output_stats.py",
+    "anotar_llamada.py",
+)
+
+#: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
+#: `_RETIRED_SCRIPTS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
+#: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
+#: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
+_RETIRED_SKILLS: tuple[str, ...] = ()
 
 # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
 #
@@ -311,7 +325,7 @@ _SCRIPT_NAMES = (
     "suggest_delegate_prompt.py",
     "suggest_delegate_read.py",
     "suggest_delegate_shell.py",
-    "anotar_llamada.py",
+    "record_call.py",
 )
 
 
@@ -330,7 +344,7 @@ def _is_ours(hook: dict, hooks_dir: Path) -> bool:
     normalized = " ".join(parts).replace("\\", "/")
     if f"hooks/{HOOKS_SUBDIR}" in normalized or str(hooks_dir).replace("\\", "/") in normalized:
         return True
-    return any(name in normalized for name in _SCRIPT_NAMES + _SCRIPTS_RETIRADOS)
+    return any(name in normalized for name in _SCRIPT_NAMES + _RETIRED_SCRIPTS)
 
 
 def read_hook_registered(claude_dir: Path) -> bool:
@@ -896,7 +910,7 @@ def packaged_hook_names() -> set[str]:
         empaquetados = {p.name for p in (resources_dir() / "hooks").iterdir() if p.suffix == ".py"}
     except OSError:
         return set()
-    return empaquetados | set(_SCRIPTS_RETIRADOS)
+    return empaquetados | set(_RETIRED_SCRIPTS)
 
 
 def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
@@ -920,6 +934,34 @@ def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
     # `is_file()` y no `exists()`: un directorio que se llame como uno de nuestros scripts no es
     # nuestro script, y aquí lo que está en juego es un borrado.
     return [p for p in entries if p.name in names and p.is_file()]
+
+
+def retired_skill_dirs(skills_root: Path) -> list[Path]:
+    """Skills retiradas presentes en ``skills_root``, buscadas por su nombre exacto.
+
+    No se lista el directorio: se pregunta por cada nombre de `_RETIRED_SKILLS`. Así es imposible
+    que una skill ajena entre en la lista por parecido o por estar ahí.
+    """
+    return [skills_root / name for name in _RETIRED_SKILLS if (skills_root / name).is_dir()]
+
+
+def _retire_skills_action(skills_root: Path) -> Action:
+    def _run() -> str:
+        removed, failed = [], []
+        for path in retired_skill_dirs(skills_root):
+            try:
+                shutil.rmtree(path)
+                removed.append(path.name)
+            except OSError as exc:
+                # Igual que con los hooks huérfanos: lo que no se deja borrar se dice y se sigue.
+                failed.append(f"{path.name} ({exc.strerror or exc})")
+        detail = (
+            f"retiradas {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
+        )
+        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
+
+    names = ", ".join(p.name for p in retired_skill_dirs(skills_root))
+    return Action("prune", skills_root, f"retira skills de una versión anterior ({names})", _run)
 
 
 def _prune_orphans_action(claude_dir: Path) -> Action:
@@ -1023,6 +1065,8 @@ def plan_install(opts: Options) -> list[Action]:
         )
 
     if "skill" in opts.components and "claude" in opts.targets:
+        if retired_skill_dirs(claude / "skills"):
+            actions.append(_retire_skills_action(claude / "skills"))
         actions.append(
             _copy_tree_action(
                 res / "skills" / SKILL_NAME,
@@ -1038,6 +1082,8 @@ def plan_install(opts: Options) -> list[Action]:
     # Crearle un `~/.claude/` a quien no tiene Claude Code es justo lo que se corrigió al retirar
     # el default `--target all`.
     if "skill" in opts.components and "opencode" in opts.targets:
+        if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
+            actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
         actions.append(
             _copy_tree_action(
                 res / "skills" / SKILL_NAME,

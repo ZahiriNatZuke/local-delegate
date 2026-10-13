@@ -175,7 +175,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
 | `autostart.py` | Arranque opt-in de llama-swap (específico de ese backend) |
 | `daemon.py` | ASGI singleton: MCP `/mcp`, dashboard `/`, lock y estado por usuario |
 | `web/metrics.py` | Dashboard de ahorro (FastAPI, montado por el daemon o embebido en `stdio`) |
-| `fallos.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `sin_clasificar` |
+| `failures.py` | Clasificación pura de los fallos del backend (sin red ni estado); lo que no encaja va a `unclassified` |
 | `cadenas.py` | Cadenas de respaldo por rol, resueltas con la configuración vigente, con el paso `loaded` (los alternativos aprobados que ya están cargados) y el texto «sin residente» / «residente: X» |
 | `topology.py` | Lee los grupos de `LLAMASWAP_CONFIG` en caliente y dice qué modelos chocan, con la regla de llama-swap; si no puede, el motivo de «sin topología» |
 | `turn.py` | El turno del daemon: núcleo puro (cola, concesión, E-1, concesión forzada) y su envoltura asíncrona |
@@ -185,7 +185,7 @@ operación ──▶ turno (¿choca con lo que está en uso?) ──▶ plaza (M
 | `llamaswap_api.py` | Lo que se lee de llama-swap (`/running`, `/api/events`, `/api/metrics/activity`), el estado de `/api/llamaswap/status` y la vigía de recarga |
 | `llamaswap_config.py` | Estimador de VRAM/RAM de los grupos (`check-llamaswap`, `init-llamaswap`, `--pin`) |
 | `residency.py` | `llamaswap residency`: lectura de la residencia y edición quirúrgica, con copia y reemplazo atómico, del `config.yaml` |
-| `enfriamiento.py` | Enfriamiento por modelo compartido entre procesos (`enfriamiento.json`) y registro de episodios (`enfriamiento-eventos.jsonl`) |
+| `cooldown.py` | Enfriamiento por modelo compartido entre procesos (`cooldown.json`, antes `enfriamiento.json`) y registro de episodios (`cooldown-events.jsonl`, antes `enfriamiento-eventos.jsonl`) |
 | `resources/vendor/` | Chart.js servido **desde el paquete**, con `vendor.json` (versión, origen y SHA-256) como fuente de verdad. Lo vigila `scripts/check_vendor.py` en el CI |
 
 **Una sola librería HTTP: `httpx2`.** Es la que usa el SDK `mcp` 2.x, y el cliente propio del

@@ -195,7 +195,7 @@ cámbialos por los de tu backend.
 | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
 | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
 | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
-| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
+| `LOCAL_DELEGATE_COST_FALLBACK` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
 | `LOCAL_DELEGATE_COMMIT_LANGUAGE` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`: `es`, `en`, `fr`, `pt`, `de`, `it` o un nombre libre. Vacío: el idioma predominante de los textos del diff |
 | `LOCAL_DELEGATE_TURN_MAX_S` | `600` | Turno del daemon entre modelos que chocan en llama-swap: si la primera de la cola lleva estos segundos esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le concede el turno igual (`turn: "forced"` en el log) |
 | `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | Una llamada es «lenta» (`slow` en el log, «lento ×0,37» en el panel) si genera a menos de esta fracción de la velocidad normal de su modelo |
@@ -224,7 +224,7 @@ modelo se atribuye cada delegación, cuántas peticiones siguieron, qué densida
 descuenta las relecturas del mismo fichero. Junto a ella, un bloque de **cuota** que sale «sin
 calibrar» hasta que hay al menos tres medidas del statusline de ventanas distintas, y nunca enseña
 un porcentaje sin esa calibración. Para atribuir el histórico y alimentar esos dos bloques, lanza
-de vez en cuando `local-delegate recalcular-coste` (lee tus transcripts en local y escribe solo
+de vez en cuando `local-delegate recompute-cost` (lee tus transcripts en local y escribe solo
 agregados); `doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
 
 Las **pruebas no cuentan**: las delegaciones del cliente `mcp` de los scripts, las de bancos y
@@ -279,7 +279,7 @@ Por defecto se configuran **solo los clientes que tengas instalados**; se elige 
 plugins en TypeScript, que es otra superficie, y Claude Desktop no tiene hooks en absoluto. Cada
 pieza se puede excluir (`--no-hooks`, `--no-skill`, `--no-memory`, `--no-mcp`).
 
-Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `anotar_llamada.py`
+Se instalan solos dos hooks: `UserPromptSubmit` (intenciones mecánicas) y `record_call.py`
 (`PreToolUse` sobre las tools de local-delegate), que no avisa ni bloquea: anota qué agente pidió
 cada delegación y con qué esfuerzo, para atribuir el coste equivalente a su modelo. Los dos de
 lectura —`PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`— quedan apagados salvo
@@ -288,7 +288,7 @@ porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat 
 abierto no cambia la conducta, la muda de sitio.
 
 Esos dos avisan; **rechazar** una lectura es otra cosa y viene aparte y apagada
-(`LD_HOOK_READ_BLOQUEAR`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
+(`LD_HOOK_READ_BLOCK`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
 el backend local respondiendo, y el mensaje del rechazo nombra la tool que sirve y la salida de
 emergencia: leer por franjas nunca se bloquea. El motivo de que exista es que está medido —cuatro
 veces— que sugerir no cambia la conducta.

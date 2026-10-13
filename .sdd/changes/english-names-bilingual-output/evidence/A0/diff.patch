@@ -1,0 +1,3074 @@
+diff --git a/scripts/bump_version.py b/scripts/bump_version.py
+index 554d954..909e481 100755
+--- a/scripts/bump_version.py
++++ b/scripts/bump_version.py
+@@ -17,6 +17,10 @@ Uso:
+     python scripts/bump_version.py --check           # ¿coinciden los cuatro? (sale 1 si no)
+ 
+ `--check` es lo mismo que comprueba el CI, disponible en local antes del push.
++
++Al subir de versión también pone la versión en las entradas de `src/local_delegate/deprecations.py`
++que aún dicen `UNRELEASED`: es la primera versión publicada con ese renombrado, y de ella sale el
++horizonte de cada alias (REQ-004).
+ """
+ 
+ from __future__ import annotations
+@@ -50,6 +54,10 @@ PYPROJECT_VERSION_RE = re.compile(
+ # diff); la coherencia del resultado se comprueba después parseándolo.
+ SERVER_VERSION_RE = re.compile(r'("version"\s*:\s*")([^"]+)(")')
+ 
++# El registro de nombres obsoletos: sus entradas nuevas llevan `introduced="UNRELEASED"` hasta que
++# se publica la versión que las contiene, y es este script quien pone esa versión.
++DEPRECATIONS_FILE = Path("src") / "local_delegate" / "deprecations.py"
++
+ 
+ class BumpError(RuntimeError):
+     """Algo no cuadra; el mensaje ya está redactado para el usuario."""
+@@ -141,9 +149,33 @@ def plan(new_version: str, root: Path = ROOT) -> dict[Path, tuple[str, str]]:
+     _verify_server_json(text, new_text, new_version)
+     changes[server_path] = (new_text, newline)
+ 
++    deprecations_path = root / DEPRECATIONS_FILE
++    if deprecations_path.exists():
++        text, newline = _read(deprecations_path)
++        new_text = stamp_unreleased(text, new_version)
++        if new_text != text:
++            changes[deprecations_path] = (new_text, newline)
++
+     return changes
+ 
+ 
++def stamp_unreleased(text: str, new_version: str) -> str:
++    """Cambia cada `"UNRELEASED"` de las entradas de `DEPRECATED_NAMES` por la versión publicada.
++
++    Solo dentro de la tupla del registro: la constante `UNRELEASED` y los comentarios que la citan
++    se quedan como están. La versión que se publica es la primera que contiene el renombrado, que
++    es lo que el horizonte de los alias necesita saber (REQ-004).
++    """
++    start = text.find("DEPRECATED_NAMES:")
++    if start == -1:
++        raise BumpError(f"{DEPRECATIONS_FILE} no declara DEPRECATED_NAMES")
++    end = text.find("\n)\n", start)
++    if end == -1:
++        raise BumpError(f"no se encontró el cierre de DEPRECATED_NAMES en {DEPRECATIONS_FILE}")
++    block = text[start:end].replace('"UNRELEASED"', f'"{new_version}"')
++    return text[:start] + block + text[end:]
++
++
+ def _verify_pyproject(before: str, after: str, new_version: str) -> None:
+     """Parsea el resultado y comprueba que solo cambió la versión."""
+     old = tomllib.loads(before)
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index 99c9678..0a5fc10 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -1626,27 +1626,55 @@ def _probe_fallback(ctx: Context) -> Result:
+     return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
+ 
+ 
+-def _probe_rol_retirado(ctx: Context) -> Result:
+-    """Variables del rol `fast`, retirado en la 0.30.0, que siguen puestas y ya no hacen nada.
++def _probe_deprecated_names(ctx: Context) -> Result:
++    """Nombres obsoletos que siguen en uso: variables renombradas o retiradas e interruptores viejos.
++
++    Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
++    `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
++    el probe. Hoy el registro solo tiene las tres variables del rol `fast`, retirado en la 0.30.0.
+ 
+     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
+     quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
+-    que ya no existe. Pedir ese modelo por `model=` da un error claro solo — sale de
++    que ya no existe. Pedir ese modelo por `model=` da un error claro solo —sale de
+     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
+ 
+-    Mira el entorno y nada más, así que vive en `entorno`: no sale a la red ni toca ficheros.
++    Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
++    where corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de where heredan los hooks)
++    y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
++    cuenta `local_status`.
+     """
+-    from . import config as configuracion
++    from . import config as config_module
++    from . import deprecations
+ 
+-    puestas = [n for n, valor in configuracion.VARIABLES_ROL_RETIRADO.items() if valor is not None]
+-    if not puestas:
+-        return Result(OK, "sin variables del rol rápido, retirado en la 0.30.0")
+-    return Result(
+-        WARN,
+-        f"{', '.join(puestas)}: el rol rápido se retiró en la 0.30.0 y estas variables ya no "
+-        "tienen efecto",
+-        "quítalas del entorno; los roles vigentes son mechanical, long, code y vision",
+-    )
++    warnings: list[str] = []
++    seen: list[deprecations.DeprecatedName] = []
++
++    def _note(where: str, item: deprecations.DeprecatedName) -> None:
++        warnings.append(f"{where}: {deprecations.warning_text(item)}")
++        if item not in seen:
++            seen.append(item)
++
++    for nombre, valor in config_module.DEPRECATED_ENV_VALUES.items():
++        if valor is not None and (entry := deprecations.find(nombre)) is not None:
++            _note("en la shell", entry)
++
++    settings, _motivo = read_json(ctx.claude_dir / "settings.json")
++    env = settings.get("env") if settings else None
++    if isinstance(env, dict):
++        for entry in deprecations.env_vars():
++            if entry.old in env:
++                _note("en el env de settings.json", entry)
++
++    for entry in deprecations.switch_files():
++        if (ctx.claude_dir / entry.old).exists():
++            _note("en ~/.claude", entry)
++
++    if not warnings:
++        return Result(OK, "sin nombres obsoletos en uso")
++    hints = [f"quita {e.old}" if e.is_retired else f"renombra {e.old} a {e.new}" for e in seen]
++    if any(e.old.endswith("_FAST") for e in seen):
++        hints.append("los roles vigentes son mechanical, long, code y vision")
++    return Result(WARN, " | ".join(warnings), "; ".join(hints))
+ 
+ 
+ RECALCULAR_HINT = "local-delegate recalcular-coste"
+@@ -1787,7 +1815,7 @@ CHECKS: tuple[Check, ...] = (
+     Check("client.presence", "entorno", "clientes", _probe_clients),
+     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
+     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
+-    Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
++    Check("config.deprecated_names", "entorno", "rol rápido retirado", _probe_deprecated_names),
+     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
+     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
+     Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),
+diff --git a/src/local_delegate/config.py b/src/local_delegate/config.py
+index bd03e4a..be11fad 100644
+--- a/src/local_delegate/config.py
++++ b/src/local_delegate/config.py
+@@ -19,6 +19,8 @@ from urllib.parse import urlsplit
+ 
+ from platformdirs import user_data_dir
+ 
++from . import deprecations
++
+ APP_NAME = "local-delegate"
+ 
+ 
+@@ -62,6 +64,27 @@ def _env_float(name: str, default: float) -> float:
+         return default
+ 
+ 
++# Nombres viejos de variables que este proceso ha leído con valor (por `_env_alias`). Lo consulta
++# `local_status`, porque `doctor` no ve el entorno del daemon ni del servidor por stdio (REQ-003).
++DEPRECATED_SEEN: set[str] = set()
++
++
++def _env_alias(new: str, old: str) -> str | None:
++    """Lee una variable renombrada: el nombre nuevo y el viejo, los dos por la puerta `_leer`.
++
++    Gana el nuevo si están los dos. Si solo está el viejo, devuelve su valor y lo anota en
++    `DEPRECATED_SEEN` para poder avisar. Los dos nombres entran en `VARIABLES_DE_ENTORNO`, así que
++    la suite aísla ambos.
++    """
++    value = _leer(new)
++    old_value = _leer(old)
++    if value is not None:
++        return value
++    if old_value is not None:
++        DEPRECATED_SEEN.add(old)
++    return old_value
++
++
+ # --- Endpoint OpenAI-compatible ---------------------------------------------
+ BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
+ API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
+@@ -239,15 +262,18 @@ ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
+ # ninguna tool lo enrutaba. Sus tres variables se siguen **leyendo** —por la puerta registrada, así
+ # que constan en el inventario y la suite las sigue aislando— pero ya no tienen efecto. Se leen para
+ # poder AVISAR: borrarlas sin más las habría vuelto mudas, que es justo el fallo que este repo
+-# persigue. El aviso lo da `doctor` (`config.rol_retirado`) y no una excepción al arrancar: romper
+-# el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
+-VARIABLES_ROL_RETIRADO: dict[str, str | None] = {
+-    nombre: _leer(nombre)
+-    for nombre in (
+-        "LOCAL_DELEGATE_MODEL_FAST",
+-        "LOCAL_DELEGATE_MAX_CHARS_FAST",
+-        "LOCAL_DELEGATE_FALLBACK_FAST",
+-    )
++# persigue. El aviso lo da `doctor` (`config.deprecated_names`) y no una excepción al arrancar:
++# romper el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
++#
++# Desde la ola A0 del SDD english-names-bilingual-output los nombres salen del registro único
++# `deprecations.DEPRECATED_NAMES` (entradas `retired`), no de una lista escrita aquí.
++DEPRECATED_ENV_VALUES: dict[str, str | None] = {
++    entry.old: _leer(entry.old) for entry in deprecations.env_vars()
++}
++RETIRED_FAST_ROLE_VARIABLES: dict[str, str | None] = {
++    name: value
++    for name, value in DEPRECATED_ENV_VALUES.items()
++    if (entry := deprecations.find(name)) is not None and entry.is_retired
+ }
+ 
+ # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
+diff --git a/src/local_delegate/install.py b/src/local_delegate/install.py
+index 087203c..1158f86 100644
+--- a/src/local_delegate/install.py
++++ b/src/local_delegate/install.py
+@@ -101,6 +101,12 @@ _MCP_READ_HOOK = (
+ #: esta lista sus 24 KB se quedarían ahí para siempre.
+ _SCRIPTS_RETIRADOS = ("suggest_lint_summary.py", "output_policy.py", "output_stats.py")
+ 
++#: Skills que el paquete instaló alguna vez y ya no instala (REQ-013). Mismo papel que
++#: `_SCRIPTS_RETIRADOS` para los hooks: sin esta lista, renombrar la skill dejaría la copia vieja
++#: en cada destino para siempre. Se borran **solo por nombre exacto**: una skill del usuario con
++#: otro nombre no se toca jamás. Vacía hasta la ola que renombra la skill (A6).
++_RETIRED_SKILLS: tuple[str, ...] = ()
++
+ # El argumento con el que se registra el hook de Read, y **por qué existe uno**.
+ #
+ # `--enable-read-hook` registraba el script y ya: el hook seguía exigiendo además
+@@ -922,6 +928,34 @@ def orphan_hook_scripts(claude_dir: Path) -> list[Path]:
+     return [p for p in entries if p.name in names and p.is_file()]
+ 
+ 
++def retired_skill_dirs(skills_root: Path) -> list[Path]:
++    """Skills retiradas presentes en ``skills_root``, buscadas por su nombre exacto.
++
++    No se lista el directorio: se pregunta por cada nombre de `_RETIRED_SKILLS`. Así es imposible
++    que una skill ajena entre en la lista por parecido o por estar ahí.
++    """
++    return [skills_root / name for name in _RETIRED_SKILLS if (skills_root / name).is_dir()]
++
++
++def _retire_skills_action(skills_root: Path) -> Action:
++    def _run() -> str:
++        removed, failed = [], []
++        for path in retired_skill_dirs(skills_root):
++            try:
++                shutil.rmtree(path)
++                removed.append(path.name)
++            except OSError as exc:
++                # Igual que con los hooks huérfanos: lo que no se deja borrar se dice y se sigue.
++                failed.append(f"{path.name} ({exc.strerror or exc})")
++        detail = (
++            f"retiradas {len(removed)}: {', '.join(removed)}" if removed else "nada que retirar"
++        )
++        return detail + (f" · NO se pudieron retirar: {'; '.join(failed)}" if failed else "")
++
++    names = ", ".join(p.name for p in retired_skill_dirs(skills_root))
++    return Action("prune", skills_root, f"retira skills de una versión anterior ({names})", _run)
++
++
+ def _prune_orphans_action(claude_dir: Path) -> Action:
+     root = claude_dir / "hooks"
+ 
+@@ -1023,6 +1057,8 @@ def plan_install(opts: Options) -> list[Action]:
+         )
+ 
+     if "skill" in opts.components and "claude" in opts.targets:
++        if retired_skill_dirs(claude / "skills"):
++            actions.append(_retire_skills_action(claude / "skills"))
+         actions.append(
+             _copy_tree_action(
+                 res / "skills" / SKILL_NAME,
+@@ -1038,6 +1074,8 @@ def plan_install(opts: Options) -> list[Action]:
+     # Crearle un `~/.claude/` a quien no tiene Claude Code es justo lo que se corrigió al retirar
+     # el default `--target all`.
+     if "skill" in opts.components and "opencode" in opts.targets:
++        if retired_skill_dirs(opencode / OPENCODE_SKILL_SUBDIR):
++            actions.append(_retire_skills_action(opencode / OPENCODE_SKILL_SUBDIR))
+         actions.append(
+             _copy_tree_action(
+                 res / "skills" / SKILL_NAME,
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index 69a39f0..1a0d9e0 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -1822,3 +1822,59 @@ def test_las_entradas_ignoradas_se_cuentan(tmp_path):
+     )
+     r = _probe_ventanas(tmp_path)
+     assert r.status == checks.WARN and "2 entrada(s) ignorada(s)" in r.detail
++
++
++# --- config.deprecated_names (REQ-003): alias con sucesor e interruptores viejos ---
++def _test_registry(monkeypatch, tmp_path):
++    """Un alias de variable y un interruptor viejo de mentira: el registro real aún no tiene."""
++    from local_delegate import config, deprecations
++
++    entries = (
++        deprecations.DeprecatedName("env_var", "LD_OLD_TEST_VAR", "LD_NEW_FOR_TEST", "0.35.0"),
++        deprecations.DeprecatedName(
++            "switch_file", "old-test-switch", "old-switch-for-test", "0.35.0"
++        ),
++    )
++    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
++    monkeypatch.setattr(config, "DEPRECATED_ENV_VALUES", {"LD_OLD_TEST_VAR": None})
++    (tmp_path / ".claude").mkdir(exist_ok=True)
++    return config
++
++
++def test_deprecated_names_ok_when_nothing_is_deprecated(monkeypatch, tmp_path):
++    _test_registry(monkeypatch, tmp_path)
++    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
++
++
++def test_deprecated_names_warns_shell_alias_with_new_name_and_removal(monkeypatch, tmp_path):
++    config = _test_registry(monkeypatch, tmp_path)
++    monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, "LD_OLD_TEST_VAR", "1")
++    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
++    assert r.status == checks.WARN
++    assert "LD_OLD_TEST_VAR" in r.detail and "LD_NEW_FOR_TEST" in r.detail
++    assert "0.38.0" in r.detail, "el aviso no nombra la versión de retirada"
++    assert "renombra LD_OLD_TEST_VAR a LD_NEW_FOR_TEST" in r.fix_hint
++
++
++def test_deprecated_names_warns_alias_in_settings_json_env(monkeypatch, tmp_path):
++    _test_registry(monkeypatch, tmp_path)
++    (tmp_path / ".claude" / "settings.json").write_text(
++        json.dumps({"env": {"LD_OLD_TEST_VAR": "1"}}), encoding="utf-8"
++    )
++    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
++    assert r.status == checks.WARN
++    assert "settings.json" in r.detail and "LD_OLD_TEST_VAR" in r.detail
++
++
++def test_deprecated_names_warns_old_switch_file_left_on_disk(monkeypatch, tmp_path):
++    _test_registry(monkeypatch, tmp_path)
++    (tmp_path / ".claude" / "old-test-switch").write_text("", encoding="utf-8")
++    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
++    assert r.status == checks.WARN
++    assert "old-test-switch" in r.detail and "old-switch-for-test" in r.detail
++
++
++def test_deprecated_names_survives_unreadable_settings_json(monkeypatch, tmp_path):
++    _test_registry(monkeypatch, tmp_path)
++    (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
++    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+diff --git a/tests/test_install.py b/tests/test_install.py
+index b127c3f..a231d82 100644
+--- a/tests/test_install.py
++++ b/tests/test_install.py
+@@ -715,3 +715,34 @@ def test_quitar_la_entrada_de_un_codex_reescrito_deja_lo_demas(tmp_path):
+     assert "local-delegate" not in data["mcp_servers"]
+     assert set(data["mcp_servers"]) == {"git", "pycharm"}
+     assert inst.TOML_BEGIN not in result
++
++
++# --- Skills retiradas (REQ-013) -----------------------------------------------
++def test_retired_skill_is_removed_from_every_target_and_foreign_one_stays(tmp_path, monkeypatch):
++    """Renombrar la skill no puede dejar la copia vieja viva, ni llevarse una del usuario."""
++    monkeypatch.setattr(inst, "_RETIRED_SKILLS", ("retired-test-skill",))
++    targets = [
++        tmp_path / ".claude" / "skills",
++        inst.opencode_dir(tmp_path) / inst.OPENCODE_SKILL_SUBDIR,
++    ]
++    for target_dir in targets:
++        (target_dir / "retired-test-skill").mkdir(parents=True)
++        (target_dir / "retired-test-skill" / "SKILL.md").write_text("vieja\n", encoding="utf-8")
++        (target_dir / "ajena").mkdir()
++        (target_dir / "ajena" / "SKILL.md").write_text("del usuario\n", encoding="utf-8")
++
++    assert _install(tmp_path, targets={"claude", "opencode"}) == 0
++
++    for target_dir in targets:
++        assert not (target_dir / "retired-test-skill").exists(), (
++            f"sigue la retirada en {target_dir}"
++        )
++        assert (target_dir / "ajena").exists(), f"se borró la skill ajena en {target_dir}"
++        assert (target_dir / inst.SKILL_NAME / "SKILL.md").is_file()
++
++
++def test_no_retired_skills_means_no_skill_removal_planned(tmp_path, monkeypatch):
++    monkeypatch.setattr(inst, "_RETIRED_SKILLS", ("retired-test-skill",))
++    (tmp_path / ".claude" / "skills" / "ajena").mkdir(parents=True)
++    actions = inst.plan_install(_opts(tmp_path))
++    assert [a for a in actions if a.kind == "prune" and "skills" in str(a.target)] == []
+diff --git a/tests/test_rol_fast_retirado.py b/tests/test_rol_fast_retirado.py
+index a873c1d..25e2e47 100644
+--- a/tests/test_rol_fast_retirado.py
++++ b/tests/test_rol_fast_retirado.py
+@@ -141,7 +141,7 @@ def test_el_modelo_retirado_tampoco_vale_como_respuesta_a_la_pregunta(monkeypatc
+ def test_sin_variables_del_rol_retirado_el_check_esta_en_ok(recargar_config, tmp_path):
+     """Control: el caso normal —nadie las tiene puestas— no puede dar aviso."""
+     recargar_config()
+-    resultado = checks._probe_rol_retirado(checks.Context(home=tmp_path))
++    resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+     assert resultado.status == checks.OK
+ 
+ 
+@@ -149,7 +149,7 @@ def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(recargar_config,
+     """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
+     for variable in VARIABLES_RETIRADAS:
+         recargar_config(**{variable: "lo-que-sea"})
+-        resultado = checks._probe_rol_retirado(checks.Context(home=tmp_path))
++        resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+         assert resultado.status == checks.WARN, f"{variable} puesta no dio aviso"
+         assert variable in resultado.detail
+         assert "0.30.0" in resultado.detail or "0.30.0" in resultado.fix_hint
+@@ -157,14 +157,46 @@ def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(recargar_config,
+ 
+ def test_el_aviso_las_nombra_todas_cuando_estan_las_tres(recargar_config, tmp_path):
+     recargar_config(**dict.fromkeys(VARIABLES_RETIRADAS, "lo-que-sea"))
+-    detalle = checks._probe_rol_retirado(checks.Context(home=tmp_path)).detail
++    detalle = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
+     assert all(v in detalle for v in VARIABLES_RETIRADAS)
+ 
+ 
+ def test_el_check_esta_en_el_registro(recargar_config):
+-    """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás."""
++    """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás.
++
++    Desde la ola A0 del renombrado es el check general de nombres obsoletos (REQ-003), que
++    sustituye a `config.rol_retirado` sin cambiar lo que avisa.
++    """
+     ids = [c.id for c in checks.CHECKS]
+-    assert "config.rol_retirado" in ids
+-    # Y en un grupo que no sale a la red: solo mira variables de entorno.
+-    check = next(c for c in checks.CHECKS if c.id == "config.rol_retirado")
++    assert "config.deprecated_names" in ids
++    assert "config.rol_retirado" not in ids
++    # Y en un grupo que no sale a la red: solo mira el entorno y ficheros locales.
++    check = next(c for c in checks.CHECKS if c.id == "config.deprecated_names")
+     assert check.group == "entorno"
++
++
++def test_retired_variable_in_settings_json_env_is_also_warned(recargar_config, tmp_path):
++    """Los hooks heredan de `env` de `settings.json`, que `doctor` no ve en su propia shell."""
++    recargar_config()
++    claude = tmp_path / ".claude"
++    claude.mkdir()
++    (claude / "settings.json").write_text(
++        json.dumps({"env": {"LOCAL_DELEGATE_MAX_CHARS_FAST": "9000", "OTRA": "1"}}),
++        encoding="utf-8",
++    )
++    result = checks._probe_deprecated_names(checks.Context(home=tmp_path))
++    assert result.status == checks.WARN, "la variable del env de settings.json no dio aviso"
++    assert "LOCAL_DELEGATE_MAX_CHARS_FAST" in result.detail
++    assert "settings.json" in result.detail
++    assert "OTRA" not in result.detail
++
++
++def test_retired_variables_come_from_the_single_registry(recargar_config):
++    """Una sola fuente: `config` no escribe la lista a mano, la toma de `deprecations`."""
++    from local_delegate import deprecations
++
++    recargar_config()
++    retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
++    assert retired == set(VARIABLES_RETIRADAS)
++    assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired
++    assert retired <= config.VARIABLES_DE_ENTORNO
+diff --git a/scripts/detect_spanish_names.py b/scripts/detect_spanish_names.py
+new file mode 100644
+index 0000000..7af3677
+--- /dev/null
++++ b/scripts/detect_spanish_names.py
+@@ -0,0 +1,729 @@
++#!/usr/bin/env python3
++"""Detector de nombres en español en el código y los datos del paquete (REQ-044 y REQ-016).
++
++Recorre los identificadores de Python (`src/local_delegate`, `tests/`, `scripts/`), las claves y
++valores de máquina en cadenas, el bloque `<script>` del panel, los ids del DOM, las claves y
++valores de los `.json` de `src/**/resources` y los nombres de fichero y directorio, y dice cuáles
++están en español.
++
++Cómo decide, palabra por palabra (un nombre se parte por `snake_case`, `camelCase`, `kebab-case`
++y puntos):
++
++1. una palabra con tilde o eñe es española;
++2. si no, manda el léxico congelado `scripts/data/spanish_lexicon.json`: las palabras que salen en
++   el propio repo, clasificadas una vez como español o inglés (el procedimiento está en
++   `spanish_lexicon.README.md`);
++3. si no está en el léxico, la heurística de sufijos españoles (`-cion`, `-miento`, `-idad`…);
++4. lo que queda se informa como **sin clasificar**: no cuenta como inglés, para que el léxico no se
++   quede viejo en silencio.
++
++Un nombre es español si tiene alguna palabra española que no sea funcional (`de`, `en`, `o`…), o
++dos o más funcionales.
++
++No necesita red ni dependencias: solo la biblioteca estándar.
++
++Uso:
++    python scripts/detect_spanish_names.py                       # resumen por categoría
++    python scripts/detect_spanish_names.py --json salida.json    # resumen y hallazgos completos
++    python scripts/detect_spanish_names.py --exceptions .sdd/changes/<slug>/rename-exceptions.md
++    python scripts/detect_spanish_names.py --dump-words palabras.json  # para generar el léxico
++"""
++
++from __future__ import annotations
++
++import argparse
++import ast
++import io
++import json
++import re
++import sys
++import tokenize
++import unicodedata
++from collections import Counter
++from dataclasses import dataclass, field
++from fnmatch import fnmatch
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++DATA_DIR = Path(__file__).resolve().parent / "data"
++LEXICON_PATH = DATA_DIR / "spanish_lexicon.json"
++RESERVED_PATH = DATA_DIR / "reserved_words.json"
++
++ACCENTED = frozenset("áéíóúñüÁÉÍÓÚÑÜ")
++# Sufijos españoles sobre la palabra ya plegada (sin tildes). Solo se aplican a palabras que NO
++# están en el léxico y que miden al menos `_MIN_SUFFIX_WORD` letras. Falsos positivos conocidos:
++# `suspicion` y `coercion` (inglés en `-cion`); si salen en el repo, el léxico los fija como inglés.
++SPANISH_SUFFIXES = (
++    "ciones",
++    "cion",
++    "mientos",
++    "miento",
++    "idades",
++    "idad",
++    "iendo",
++    "mente",
++    "ajes",
++    "aje",
++)
++_MIN_SUFFIX_WORD = 6
++
++# Cadenas que parecen un término de máquina: identificador, clave o valor de enumeración.
++_MACHINE_STRING = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:[.\-][A-Za-z0-9_]+)*$")
++_WORD = re.compile(r"[A-ZÁÉÍÓÚÑÜ]?[a-záéíóúñü]+|[A-ZÁÉÍÓÚÑÜ]+(?![a-záéíóúñü])|\d+")
++
++
++# --- Palabras -----------------------------------------------------------------
++def fold(word: str) -> str:
++    """Minúsculas y sin tildes: `Canción` → `cancion`."""
++    decomposed = unicodedata.normalize("NFD", word)
++    return "".join(c for c in decomposed if unicodedata.category(c) != "Mn").lower()
++
++
++def split_identifier(name: str) -> list[str]:
++    """Parte un nombre en palabras (sin plegar): `fmtNum` → `['fmt', 'Num']`."""
++    words: list[str] = []
++    for part in re.split(r"[_\-\s.:/]+", name):
++        words += [w for w in _WORD.findall(part) if not w.isdigit()]
++    return words
++
++
++@dataclass(frozen=True)
++class Lexicon:
++    spanish: frozenset[str]
++    english: frozenset[str]
++    function_words: frozenset[str]
++
++    @classmethod
++    def load(cls, path: Path = LEXICON_PATH) -> Lexicon:
++        data = json.loads(path.read_text(encoding="utf-8"))
++        return cls(
++            spanish=frozenset(data["es"]),
++            english=frozenset(data["en"]),
++            function_words=frozenset(data["function_words"]),
++        )
++
++    def __contains__(self, word: str) -> bool:
++        folded = fold(word)
++        return folded in self.spanish or folded in self.english
++
++
++def has_spanish_suffix(folded: str) -> bool:
++    return len(folded) >= _MIN_SUFFIX_WORD and folded.endswith(SPANISH_SUFFIXES)
++
++
++def classify_word(word: str, lexicon: Lexicon) -> str:
++    """`es`, `en` o `unclassified` (ver el docstring del módulo para el orden)."""
++    if any(c in ACCENTED for c in word):
++        return "es"
++    folded = fold(word)
++    if folded in lexicon.spanish or folded in lexicon.function_words:
++        return "es"
++    if folded in lexicon.english:
++        return "en"
++    if has_spanish_suffix(folded):
++        return "es"
++    if len(folded) < 3:
++        # Demasiado corta para decir nada (`x`, `i`, `ok` fuera del léxico): neutra.
++        return "en"
++    return "unclassified"
++
++
++def spanish_words(name: str, lexicon: Lexicon) -> list[str]:
++    return [fold(w) for w in split_identifier(name) if classify_word(w, lexicon) == "es"]
++
++
++def unclassified_words(name: str, lexicon: Lexicon) -> list[str]:
++    return [fold(w) for w in split_identifier(name) if classify_word(w, lexicon) == "unclassified"]
++
++
++def is_spanish(name: str, lexicon: Lexicon) -> bool:
++    words = spanish_words(name, lexicon)
++    # Un nombre hecho de UNA sola palabra funcional (`o`, `en`) no cuenta.
++    return any(w not in lexicon.function_words for w in words) or len(words) >= 2
++
++
++_DEFAULT_LEXICON: Lexicon | None = None
++
++
++def detect(name: str) -> bool:
++    """`is_spanish` con el léxico del repo."""
++    global _DEFAULT_LEXICON
++    lexicon = _DEFAULT_LEXICON
++    if lexicon is None:
++        lexicon = _DEFAULT_LEXICON = Lexicon.load()
++    return is_spanish(name, lexicon)
++
++
++# --- Tokenizador de JS (sin dependencias) -------------------------------------
++@dataclass(frozen=True)
++class JsToken:
++    kind: str  # name | string | template | regex | number | punct
++    value: str
++    line: int
++
++
++_REGEX_AFTER_KEYWORDS = frozenset(
++    [
++        "return",
++        "typeof",
++        "case",
++        "do",
++        "else",
++        "in",
++        "of",
++        "new",
++        "delete",
++        "void",
++        "throw",
++        "instanceof",
++        "yield",
++        "await",
++    ]
++)
++_REGEX_AFTER_PUNCT = frozenset(
++    [
++        "(",
++        ",",
++        "=",
++        ":",
++        "[",
++        "!",
++        "&",
++        "|",
++        "?",
++        "{",
++        "}",
++        ";",
++        "+",
++        "-",
++        "*",
++        "%",
++        "<",
++        ">",
++        "~",
++        "^",
++        "=>",
++        "==",
++        "===",
++        "!=",
++        "!==",
++        "&&",
++        "||",
++    ]
++)
++_PUNCT3 = ("===", "!==", "**=", "...", ">>>", "<<=", ">>=", "&&=", "||=", "??=")
++_PUNCT2 = (
++    "=>",
++    "==",
++    "!=",
++    "<=",
++    ">=",
++    "&&",
++    "||",
++    "??",
++    "?.",
++    "++",
++    "--",
++    "+=",
++    "-=",
++    "*=",
++    "/=",
++    "%=",
++    "&=",
++    "|=",
++    "^=",
++    "<<",
++    ">>",
++    "**",
++)
++
++
++def tokenize_js(src: str) -> list[JsToken]:
++    """Tokens de JS con comillas, plantillas (`${…}` anidadas), comentarios y regex literales.
++
++    Un `/` abre una expresión regular cuando el token significativo anterior no puede cerrar una
++    expresión (operador, `(`, `,`, palabra clave como `return`…), y divide en otro caso. Es lo que
++    hace falta para no perderse en `.replace(/`([^`]+)`/g, …)`, donde una comilla invertida dentro
++    de la regex parecería abrir una plantilla.
++    """
++    tokens: list[JsToken] = []
++    i, n, line = 0, len(src), 1
++    # Pila de plantillas abiertas: cada entrada es la profundidad de llaves dentro de su `${`.
++    template_stack: list[int] = []
++
++    def regex_allowed() -> bool:
++        if not tokens:
++            return True
++        prev = tokens[-1]
++        if prev.kind == "punct":
++            return prev.value in _REGEX_AFTER_PUNCT
++        if prev.kind == "name":
++            return prev.value in _REGEX_AFTER_KEYWORDS
++        return False
++
++    def scan_template(start: int, start_line: int) -> tuple[int, int]:
++        """Lee desde `start` (tras la comilla o tras `}`) hasta el cierre o el siguiente `${`."""
++        pos, ln, parts = start, start_line, []
++        while pos < n:
++            ch = src[pos]
++            if ch == "\\":
++                parts.append(src[pos : pos + 2])
++                pos += 2
++                continue
++            if ch == "`":
++                tokens.append(JsToken("template", "".join(parts), start_line))
++                return pos + 1, ln
++            if ch == "$" and pos + 1 < n and src[pos + 1] == "{":
++                tokens.append(JsToken("template", "".join(parts), start_line))
++                template_stack.append(0)
++                return pos + 2, ln
++            if ch == "\n":
++                ln += 1
++            parts.append(ch)
++            pos += 1
++        tokens.append(JsToken("template", "".join(parts), start_line))
++        return pos, ln
++
++    while i < n:
++        c = src[i]
++        if c == "\n":
++            line += 1
++            i += 1
++        elif c.isspace():
++            i += 1
++        elif src.startswith("//", i):
++            end = src.find("\n", i)
++            i = n if end == -1 else end
++        elif src.startswith("/*", i):
++            end = src.find("*/", i + 2)
++            end = n if end == -1 else end + 2
++            line += src.count("\n", i, end)
++            i = end
++        elif c in "'\"":
++            j, buf = i + 1, []
++            while j < n and src[j] != c and src[j] != "\n":
++                if src[j] == "\\":
++                    buf.append(src[j : j + 2])
++                    j += 2
++                    continue
++                buf.append(src[j])
++                j += 1
++            tokens.append(JsToken("string", "".join(buf), line))
++            i = j + 1
++        elif c == "`":
++            i, line = scan_template(i + 1, line)
++        elif c == "}" and template_stack and template_stack[-1] == 0:
++            template_stack.pop()
++            i, line = scan_template(i + 1, line)
++        elif c == "/" and regex_allowed():
++            j, in_class = i + 1, False
++            while j < n and src[j] != "\n":
++                if src[j] == "\\":
++                    j += 2
++                    continue
++                if src[j] == "[":
++                    in_class = True
++                elif src[j] == "]":
++                    in_class = False
++                elif src[j] == "/" and not in_class:
++                    break
++                j += 1
++            j += 1
++            while j < n and (src[j].isalnum() or src[j] == "_"):
++                j += 1  # flags
++            tokens.append(JsToken("regex", src[i:j], line))
++            i = j
++        elif c.isalpha() or c in "_$":
++            j = i + 1
++            while j < n and (src[j].isalnum() or src[j] in "_$"):
++                j += 1
++            tokens.append(JsToken("name", src[i:j], line))
++            i = j
++        elif c.isdigit():
++            j = i + 1
++            while j < n and (src[j].isalnum() or src[j] in "._"):
++                j += 1
++            tokens.append(JsToken("number", src[i:j], line))
++            i = j
++        else:
++            for op in (*_PUNCT3, *_PUNCT2):
++                if src.startswith(op, i):
++                    break
++            else:
++                op = c
++            if template_stack and op == "{":
++                template_stack[-1] += 1
++            elif template_stack and op == "}":
++                template_stack[-1] -= 1
++            tokens.append(JsToken("punct", op, line))
++            i += len(op)
++    return tokens
++
++
++_DECL_KEYWORDS = frozenset({"const", "let", "var"})
++
++
++def js_declared_names(tokens: list[JsToken]) -> list[tuple[str, int]]:
++    """Nombres que el JS declara: variables, funciones, clases y parámetros (también de flechas)."""
++    found: list[tuple[str, int]] = []
++    for k, tok in enumerate(tokens):
++        if tok.kind != "name":
++            continue
++        nxt = tokens[k + 1] if k + 1 < len(tokens) else None
++        if tok.value in _DECL_KEYWORDS and nxt is not None:
++            if nxt.kind == "name":
++                found.append((nxt.value, nxt.line))
++            elif nxt.kind == "punct" and nxt.value in "{[":
++                found += _names_until_close(tokens, k + 1)
++        elif tok.value in ("function", "class") and nxt is not None:
++            j = k + 1
++            if nxt.kind == "name":
++                found.append((nxt.value, nxt.line))
++                j += 1
++            if tok.value == "function" and j < len(tokens) and tokens[j].value == "(":
++                found += _names_until_close(tokens, j)
++    # Parámetros de funciones flecha: `(a, b) =>` y `x =>`.
++    for k, tok in enumerate(tokens):
++        if tok.kind == "punct" and tok.value == "=>" and k > 0:
++            prev = tokens[k - 1]
++            if prev.kind == "name":
++                found.append((prev.value, prev.line))
++            elif prev.kind == "punct" and prev.value == ")":
++                depth, j = 0, k - 1
++                while j >= 0:
++                    if tokens[j].value == ")":
++                        depth += 1
++                    elif tokens[j].value == "(":
++                        depth -= 1
++                        if depth == 0:
++                            break
++                    j -= 1
++                if j >= 0:
++                    found += _names_until_close(tokens, j)
++    return found
++
++
++def _names_until_close(tokens: list[JsToken], open_index: int) -> list[tuple[str, int]]:
++    """Nombres de un grupo `(…)`, `{…}` o `[…]` que no van tras `=` ni `.` (parámetros y patrones)."""
++    pairs = {"(": ")", "{": "}", "[": "]"}
++    depth, names = 0, []
++    in_default = False
++    for j in range(open_index, len(tokens)):
++        tok = tokens[j]
++        if tok.kind == "punct" and tok.value in pairs:
++            depth += 1
++        elif tok.kind == "punct" and tok.value in pairs.values():
++            depth -= 1
++            if depth == 0:
++                break
++        elif tok.kind == "punct" and tok.value == "=":
++            in_default = True
++        elif tok.kind == "punct" and tok.value == ",":
++            in_default = False
++        elif tok.kind == "name" and not in_default:
++            prev = tokens[j - 1]
++            if not (prev.kind == "punct" and prev.value in (".", "?.", ":")):
++                names.append((tok.value, tok.line))
++    return names
++
++
++# --- Hallazgos ----------------------------------------------------------------
++@dataclass
++class Finding:
++    category: str
++    file: str
++    line: int
++    name: str
++    words: list[str] = field(default_factory=list)
++
++
++@dataclass
++class Scan:
++    names: list[tuple[str, str, int, str]] = field(
++        default_factory=list
++    )  # category, file, line, name
++
++    def add(self, category: str, file: str, line: int, name: str) -> None:
++        if name:
++            self.names.append((category, file, line, name))
++
++
++def _rel(path: Path, root: Path) -> str:
++    return path.relative_to(root).as_posix()
++
++
++def _python_files(root: Path) -> list[Path]:
++    files: list[Path] = []
++    for base in (root / "src" / "local_delegate", root / "tests", root / "scripts"):
++        if base.is_dir():
++            files += [p for p in sorted(base.rglob("*.py")) if "__pycache__" not in p.parts]
++    return files
++
++
++def _is_machine_constant(node: ast.AST | None) -> bool:
++    return (
++        isinstance(node, ast.Constant)
++        and isinstance(node.value, str)
++        and bool(_MACHINE_STRING.match(node.value))
++    )
++
++
++def scan_python(path: Path, root: Path, scan: Scan) -> None:
++    rel = _rel(path, root)
++    source = path.read_text(encoding="utf-8")
++    try:
++        tree = ast.parse(source)
++    except SyntaxError:
++        return
++    for node in ast.walk(tree):
++        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
++            scan.add("identifier", rel, node.lineno, node.name)
++            a = node.args
++            extra = [x for x in (a.vararg, a.kwarg) if x is not None]
++            for arg in [*a.posonlyargs, *a.args, *a.kwonlyargs, *extra]:
++                if arg.arg not in ("self", "cls"):
++                    scan.add("identifier", rel, arg.lineno, arg.arg)
++        elif isinstance(node, ast.ClassDef):
++            scan.add("identifier", rel, node.lineno, node.name)
++        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
++            scan.add("identifier", rel, node.lineno, node.id)
++        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
++            scan.add("identifier", rel, node.lineno, node.attr)
++        elif isinstance(node, ast.alias) and node.asname:
++            scan.add("identifier", rel, node.lineno, node.asname)
++        elif isinstance(node, ast.keyword) and node.arg:
++            scan.add("identifier", rel, node.value.lineno, node.arg)
++        elif isinstance(node, ast.Dict):
++            for key in node.keys:
++                if _is_machine_constant(key):
++                    scan.add("string_key", rel, key.lineno, key.value)
++        elif isinstance(node, ast.Subscript):
++            if _is_machine_constant(node.slice):
++                scan.add("string_key", rel, node.lineno, node.slice.value)
++        elif (
++            isinstance(node, ast.Call)
++            and isinstance(node.func, ast.Attribute)
++            and node.func.attr in ("get", "pop", "setdefault")
++            and node.args
++            and _is_machine_constant(node.args[0])
++        ):
++            scan.add("string_key", rel, node.lineno, node.args[0].value)
++    # Valores de máquina en cadenas: con separador (`snake_case`, `kebab-case`, `a.b`). Las
++    # palabras sueltas son casi siempre prosa para personas, que es el frente B.
++    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
++        if tok.type != tokenize.STRING:
++            continue
++        try:
++            value = ast.literal_eval(tok.string)
++        except (ValueError, SyntaxError):
++            continue
++        if isinstance(value, str) and _MACHINE_STRING.match(value) and re.search(r"[_\-.]", value):
++            scan.add("string_value", rel, tok.start[0], value)
++
++
++def _panel_html(root: Path) -> tuple[str, int] | None:
++    metrics = root / "src" / "local_delegate" / "web" / "metrics.py"
++    if not metrics.is_file():
++        return None
++    tree = ast.parse(metrics.read_text(encoding="utf-8"))
++    for node in tree.body:
++        if (
++            isinstance(node, ast.Assign)
++            and any(isinstance(t, ast.Name) and t.id == "HTML" for t in node.targets)
++            and isinstance(node.value, ast.Constant)
++            and isinstance(node.value.value, str)
++        ):
++            return node.value.value, node.value.lineno
++    return None
++
++
++def scan_panel(root: Path, scan: Scan) -> None:
++    found = _panel_html(root)
++    if found is None:
++        return
++    html, base_line = found
++    rel = "src/local_delegate/web/metrics.py"
++    for m in re.finditer(r"""\bid\s*=\s*["']([^"']+)["']""", html):
++        scan.add("dom_id", rel, base_line + html.count("\n", 0, m.start()), m.group(1))
++    for m in re.finditer(
++        r"<script(?![^>]*src=)[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE
++    ):
++        offset = base_line + html.count("\n", 0, m.start(1)) - 1
++        tokens = tokenize_js(m.group(1))
++        for name, line in js_declared_names(tokens):
++            scan.add("js_identifier", rel, offset + line, name)
++        for k, tok in enumerate(tokens):
++            prev = tokens[k - 1] if k else None
++            nxt = tokens[k + 1] if k + 1 < len(tokens) else None
++            if tok.kind == "name" and prev is not None and prev.value in (".", "?."):
++                scan.add("js_property", rel, offset + tok.line, tok.value)
++            elif (
++                tok.kind == "name"
++                and nxt is not None
++                and nxt.value == ":"
++                and prev is not None
++                and prev.value in ("{", ",")
++            ):
++                scan.add("js_key", rel, offset + tok.line, tok.value)
++            elif tok.kind == "string" and _MACHINE_STRING.match(tok.value):
++                keyish = (prev is not None and prev.value == "[") or (
++                    nxt is not None and nxt.value == ":"
++                )
++                if keyish or re.search(r"[_\-.]", tok.value):
++                    scan.add("js_string", rel, offset + tok.line, tok.value)
++
++
++def _walk_json(value: object, rel: str, scan: Scan) -> None:
++    if isinstance(value, dict):
++        for key, sub in value.items():
++            if _MACHINE_STRING.match(key):
++                scan.add("json_key", rel, 0, key)
++            _walk_json(sub, rel, scan)
++    elif isinstance(value, list):
++        for sub in value:
++            _walk_json(sub, rel, scan)
++    elif isinstance(value, str) and _MACHINE_STRING.match(value) and len(value) <= 60:
++        scan.add("json_value", rel, 0, value)
++
++
++def scan_resources_json(root: Path, scan: Scan) -> None:
++    base = root / "src"
++    for path in sorted(base.rglob("*.json")):
++        if "resources" not in path.parts:
++            continue
++        try:
++            data = json.loads(path.read_text(encoding="utf-8"))
++        except (ValueError, UnicodeDecodeError):
++            continue
++        _walk_json(data, _rel(path, root), scan)
++
++
++def scan_file_names(root: Path, scan: Scan) -> None:
++    for base in (root / "src" / "local_delegate", root / "scripts"):
++        if not base.is_dir():
++            continue
++        for path in sorted(base.rglob("*")):
++            if "__pycache__" in path.parts:
++                continue
++            name = path.name if path.is_dir() else path.stem
++            scan.add("file_name", _rel(path, root), 0, name)
++
++
++def collect(root: Path = ROOT) -> Scan:
++    scan = Scan()
++    for path in _python_files(root):
++        scan_python(path, root, scan)
++    scan_panel(root, scan)
++    scan_resources_json(root, scan)
++    scan_file_names(root, scan)
++    return scan
++
++
++# --- Excepciones (REQ-016) ----------------------------------------------------
++@dataclass(frozen=True)
++class ExceptionEntry:
++    name: str
++    file_glob: str
++    reason: str
++    section: str
++
++
++def load_exceptions(path: Path) -> list[ExceptionEntry]:
++    """Filas `| nombre | fichero (glob) | motivo | … |` de las tablas de `rename-exceptions.md`."""
++    entries: list[ExceptionEntry] = []
++    section = ""
++    for raw in path.read_text(encoding="utf-8").splitlines():
++        line = raw.strip()
++        if line.startswith("## "):
++            section = line[3:].strip()
++            continue
++        if not line.startswith("|"):
++            continue
++        cells = [c.strip() for c in line.strip("|").split("|")]
++        if len(cells) < 3 or set(cells[0]) <= set("-: ") or cells[0].lower() == "nombre":
++            continue
++        name = cells[0].strip("`")
++        entries.append(ExceptionEntry(name, cells[1].strip("`") or "*", cells[2], section))
++    return entries
++
++
++def is_excepted(finding: Finding, exceptions: list[ExceptionEntry]) -> bool:
++    return any(e.name == finding.name and fnmatch(finding.file, e.file_glob) for e in exceptions)
++
++
++# --- Informe ------------------------------------------------------------------
++def analyse(scan: Scan, lexicon: Lexicon, exceptions: list[ExceptionEntry] | None = None) -> dict:
++    exceptions = exceptions or []
++    seen: set[tuple[str, str, str]] = set()
++    findings: list[Finding] = []
++    occurrences: Counter[str] = Counter()
++    unclassified: dict[str, str] = {}
++    for category, file, line, name in scan.names:
++        for word in unclassified_words(name, lexicon):
++            unclassified.setdefault(word, f"{file}:{line}")
++        if not is_spanish(name, lexicon):
++            continue
++        occurrences[category] += 1
++        key = (category, file, name)
++        if key in seen:
++            continue
++        seen.add(key)
++        findings.append(Finding(category, file, line, name, spanish_words(name, lexicon)))
++    outside = [f for f in findings if not is_excepted(f, exceptions)]
++    by_category = Counter(f.category for f in findings)
++    by_file = Counter(f.file for f in findings)
++    return {
++        "unique_findings": len(findings),
++        "occurrences_by_category": dict(sorted(occurrences.items())),
++        "unique_findings_by_category": dict(sorted(by_category.items())),
++        "unique_spanish_names": len({f.name for f in findings}),
++        "outside_exceptions": len(outside),
++        "unclassified_words": dict(sorted(unclassified.items())),
++        "files_with_findings": len(by_file),
++        "top_files": by_file.most_common(30),
++        "findings": [f.__dict__ for f in outside],
++    }
++
++
++def all_words(scan: Scan) -> list[str]:
++    """Todas las palabras plegadas que ve el detector: el universo del léxico."""
++    return sorted({fold(w) for *_rest, name in scan.names for w in split_identifier(name)})
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(
++        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
++    )
++    parser.add_argument("--root", type=Path, default=ROOT, help="raíz del repo")
++    parser.add_argument("--lexicon", type=Path, default=LEXICON_PATH)
++    parser.add_argument("--exceptions", type=Path, help="rename-exceptions.md (REQ-016)")
++    parser.add_argument("--json", type=Path, help="escribe el informe completo en este fichero")
++    parser.add_argument(
++        "--dump-words", type=Path, help="escribe todas las palabras vistas (para el léxico) y sale"
++    )
++    args = parser.parse_args(argv)
++
++    scan = collect(args.root)
++    if args.dump_words:
++        args.dump_words.write_text(
++            json.dumps(all_words(scan), ensure_ascii=False, indent=0) + "\n", encoding="utf-8"
++        )
++        print(f"{len(all_words(scan))} palabras escritas en {args.dump_words}")
++        return 0
++
++    exceptions = load_exceptions(args.exceptions) if args.exceptions else []
++    report = analyse(scan, Lexicon.load(args.lexicon), exceptions)
++    if args.json:
++        args.json.write_text(
++            json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
++        )
++    print(f"nombres en español (únicos por categoría y fichero): {report['unique_findings']}")
++    for category, count in report["unique_findings_by_category"].items():
++        print(f"  {category}: {count}")
++    print(f"fuera de la lista de excepciones: {report['outside_exceptions']}")
++    print(f"palabras sin clasificar: {len(report['unclassified_words'])}")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/scripts/data/spanish_lexicon.README.md b/scripts/data/spanish_lexicon.README.md
+new file mode 100644
+index 0000000..cd3a4b9
+--- /dev/null
++++ b/scripts/data/spanish_lexicon.README.md
+@@ -0,0 +1,79 @@
++# Léxico del detector de nombres en español
++
++`spanish_lexicon.json` es el léxico **congelado** que usa `scripts/detect_spanish_names.py`
++(REQ-044). `reserved_words.json` es el control de sus heurísticas.
++
++## Qué contiene
++
++- `es`: palabras (plegadas: minúsculas y sin tildes) que en este repo son español.
++- `en`: palabras que en este repo son inglés o neutras (abreviaturas técnicas como `cmd`, `gib`,
++  `jsonrpc`; letras sueltas).
++- `function_words`: palabras funcionales españolas cortas (`de`, `en`, `o`…). Cuentan como
++  español, pero un nombre hecho de **una sola** no se marca.
++
++Son **solo palabras que aparecen en el propio repo**: identificadores de Python, claves y valores
++de máquina en cadenas, nombres del JS del panel, ids del DOM, claves y valores de los `.json` de
++`src/**/resources` y nombres de fichero. No hay ningún dato de terceros: ni frecuencias, ni listas
++de diccionario.
++
++## Cómo se generó (2026-10-12, ola A0)
++
++1. Universo de palabras, con el propio detector y sin red:
++
++   ```
++   python scripts/detect_spanish_names.py --dump-words palabras.json
++   ```
++
++   Dio 4 680 palabras.
++
++2. Propuesta de clasificación **fuera del repo** con `wordfreq` 3.1.1 (Socket: 100 en las cinco
++   puntuaciones el 2026-10-12), en un directorio temporal y sin tocar el entorno del proyecto:
++
++   ```
++   uv run --no-project --with wordfreq==3.1.1 python -I gen_lexicon.py palabras.json propuesta.json
++   ```
++
++   Regla (la de la investigación, `research-rename.md` §0): una palabra es española si su
++   frecuencia Zipf en español es ≥ 1,8 y supera a la inglesa en más de 1,0. Antes de mirar
++   frecuencias, una lista corta de términos técnicos (`id`, `url`, `gpu`, `llama`, `util`…) y de
++   palabras que en código son inglés (`total`, `local`, `error`, `general`…) va a `en`, y las
++   palabras de menos de tres letras también. De la propuesta solo se copia la **etiqueta** de cada
++   palabra; las frecuencias no se guardan.
++
++3. Revisión a mano de los dudosos: las 141 propuestas como español con frecuencia inglesa alta
++   (todas se quedaron en español salvo `ver`, que en el repo es abreviatura de versión) y las 174
++   propuestas como inglés con frecuencia española mayor. De estas, pasaron a español las que en el
++   repo se usan en español (`cola`, `canal`, `coma`, `patron`, `sale`, `son`, `sea`, `pie`,
++   `meter`, `favor`, `coincide`, `vigilante`, `subagentes`, `tam`, `rech`…); se quedaron en inglés
++   las que se escriben igual en los dos idiomas y no piden renombre (`temporal`, `tension`,
++   `dispersion`, `revision`, `social`, `personal`, `extension`…).
++
++4. Auditoría por muestreo: 110 palabras con `random.Random(20261012)`, revisadas una a una. Un error
++   (`actual`, que en el repo es el adjetivo español y se había quedado en inglés): 0,91 %, por
++   debajo del 2 % que exige la spec. Se corrigió en el léxico. La muestra completa está en
++   `.sdd/changes/english-names-bilingual-output/evidence/A0/lexicon-audit.csv`.
++
++5. Al cerrar la ola A0, el detector informó de 85 palabras sin clasificar que traían los ficheros
++   nuevos de la propia ola (`horizonte`, `sellado`, `overdue`, `removal`…). Se clasificaron a
++   mano, sin `wordfreq`: 29 español y 56 inglés.
++
++## Heurísticas (no usan datos ajenos)
++
++En `detect_spanish_names.classify_word`, en este orden:
++
++1. tilde o eñe → español;
++2. léxico (`es`, `function_words` → español; `en` → inglés);
++3. sufijo español sobre la palabra plegada, con seis letras o más: `-cion(es)`, `-miento(s)`,
++   `-idad(es)`, `-iendo`, `-mente`, `-aje(s)`;
++4. menos de tres letras → neutra;
++5. el resto → **sin clasificar**.
++
++Falsos positivos conocidos del sufijo: `suspicion` y `coercion`. Si salen en el repo, el léxico
++los fija como inglés, y el léxico manda sobre la heurística.
++
++## Cuándo se actualiza
++
++Cuando el detector informa de palabras **sin clasificar** (salen en el repo y no están en el
++léxico). Esas palabras bloquean el cierre de REQ-016 hasta que alguien las clasifica a mano y las
++añade a `es` o `en`. Ninguna palabra de `reserved_words.json` puede entrar en el léxico: lo
++comprueba `tests/test_detect_spanish_names.py`.
+diff --git a/scripts/data/reserved_words.json b/scripts/data/reserved_words.json
+new file mode 100644
+index 0000000..cce253a
+--- /dev/null
++++ b/scripts/data/reserved_words.json
+@@ -0,0 +1,9 @@
++{
++  "_about": "Control de las heurísticas del detector (REQ-044). Ninguna de estas palabras puede estar en spanish_lexicon.json: así las decide solo la heurística (eñe, tilde o sufijo español). Las españolas se detectan; las inglesas, que se parecen a los sufijos, no.",
++  "spanish": {
++    "enye": ["montaña", "pequeñísimo", "cumpleaños"],
++    "accent": ["pájaro", "búho", "lámpara", "canción", "cántaro"],
++    "suffix": ["fabricacion", "crecimiento", "felicidad", "lentamente", "aterrizaje", "corriendo", "navegaciones", "nacionalidades"]
++  },
++  "english": ["station", "nation", "garage", "comment", "movement", "identity", "quantity", "battery", "lantern", "harbor", "lending"]
++}
+diff --git a/src/local_delegate/deprecations.py b/src/local_delegate/deprecations.py
+new file mode 100644
+index 0000000..1416a90
+--- /dev/null
++++ b/src/local_delegate/deprecations.py
+@@ -0,0 +1,130 @@
++"""deprecations.py — registro único de nombres obsoletos (D1 del SDD english-names-bilingual-output).
++
++Una sola tabla, `DEPRECATED_NAMES`, para todo nombre viejo que el paquete todavía reconoce:
++subcomandos y opciones del CLI, variables de entorno, ficheros interruptor y nombres retirados.
++La leen el CLI (aviso en `stderr`), `config` (variables), el check `config.deprecated_names` de
++`doctor` y los tests de horizonte (`tests/test_deprecations.py`). Los hooks no importan el
++paquete: llevan su copia mínima en `hook_common.py`, atada a esta por un test de igualdad.
++
++Hay dos clases de entrada, y la regla es estricta:
++
++- **Alias con sucesor** (`new` no es `None`, `kind` distinto de `retired`). El nombre viejo
++  funciona con aviso en la versión que lo renombra (`introduced`) y en las dos menores siguientes,
++  y se retira en la tercera: si se publica en 0.N, vive en 0.N, 0.N+1 y 0.N+2. Toda entrada nueva
++  es de esta clase y nace con `introduced="UNRELEASED"`; `scripts/bump_version.py` cambia ese
++  valor por la versión que se publica.
++- **Nombre retirado sin sucesor** (`kind="retired"`, `new=None`). Ya **no** tiene efecto: el check
++  solo avisa de que sigue puesto. Lleva siempre `warn_until`, la última serie menor en la que el
++  check avisa de él (`"0.37.0"` cubre toda la 0.37.x), y el test de horizonte lo mide contra ella.
++"""
++
++from __future__ import annotations
++
++import re
++from dataclasses import dataclass
++
++UNRELEASED = "UNRELEASED"
++
++KINDS = frozenset(
++    {"cli_command", "cli_option", "env_var", "switch_file", "legacy_write", "retired"}
++)
++# Menores que vive un alias desde su versión de introducción (REQ-004): 0.N, 0.N+1 y 0.N+2.
++ALIAS_MINOR_VERSIONS = 3
++
++
++@dataclass(frozen=True)
++class DeprecatedName:
++    kind: str
++    old: str
++    new: str | None
++    introduced: str
++    warn_until: str | None = None
++    # Lo lee también un hook instalado (`hook_common.py`), que lleva su propia copia.
++    used_by_hooks: bool = False
++
++    @property
++    def is_retired(self) -> bool:
++        return self.kind == "retired"
++
++
++DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
++    # El rol `fast`, retirado en la 0.30.0 (sección `[0.30.0]` del CHANGELOG). Antes lo cubría
++    # `config.rol_retirado`; el check generalizado avisa igual y deja de hacerlo tras la 0.37.x.
++    DeprecatedName("retired", "LOCAL_DELEGATE_MODEL_FAST", None, "0.30.0", "0.37.0"),
++    DeprecatedName("retired", "LOCAL_DELEGATE_MAX_CHARS_FAST", None, "0.30.0", "0.37.0"),
++    DeprecatedName("retired", "LOCAL_DELEGATE_FALLBACK_FAST", None, "0.30.0", "0.37.0"),
++)
++
++
++def parse_version(version: str) -> tuple[int, int, int]:
++    """`0.34.0` → `(0, 34, 0)`. Ignora sufijos de pre-release (`0.35.0rc1` → `(0, 35, 0)`)."""
++    match = re.match(r"^(\d+)\.(\d+)\.(\d+)", version)
++    if not match:
++        raise ValueError(f"versión no válida: {version!r}")
++    major, minor, patch = (int(g) for g in match.groups())
++    return major, minor, patch
++
++
++def removal_version(entry: DeprecatedName) -> str | None:
++    """Versión en la que el alias deja de existir: `introduced` + 3 menores.
++
++    `None` mientras no se haya publicado (`UNRELEASED`) y para los retirados, que no tienen una
++    retirada futura: ya no funcionan.
++    """
++    if entry.is_retired or entry.introduced == UNRELEASED:
++        return None
++    major, minor, _patch = parse_version(entry.introduced)
++    return f"{major}.{minor + ALIAS_MINOR_VERSIONS}.0"
++
++
++def overdue(version: str, entries: tuple[DeprecatedName, ...] = DEPRECATED_NAMES) -> list[str]:
++    """Nombres que ya deberían haber salido del registro en `version` (el test de horizonte).
++
++    Un alias vence al llegar a su versión de retirada; un retirado, al pasar de `warn_until`.
++    """
++    current = parse_version(version)
++    late: list[str] = []
++    for entry in entries:
++        if entry.is_retired:
++            # `warn_until="0.37.0"` cubre toda la serie 0.37.x: se compara hasta la menor.
++            if entry.warn_until is None or current[:2] > parse_version(entry.warn_until)[:2]:
++                late.append(entry.old)
++            continue
++        removal = removal_version(entry)
++        if removal is not None and current >= parse_version(removal):
++            late.append(entry.old)
++    return late
++
++
++def env_vars() -> tuple[DeprecatedName, ...]:
++    """Variables de entorno obsoletas: alias con sucesor y retiradas."""
++    return tuple(
++        e for e in DEPRECATED_NAMES if e.kind == "env_var" or (e.is_retired and _looks_env(e.old))
++    )
++
++
++def switch_files() -> tuple[DeprecatedName, ...]:
++    """Ficheros interruptor con nombre viejo (vacío hasta la ola A2)."""
++    return tuple(e for e in DEPRECATED_NAMES if e.kind == "switch_file")
++
++
++def hook_names() -> tuple[tuple[str, str, str | None], ...]:
++    """El subconjunto que copian los hooks, en la forma de su tabla: `(kind, old, new)`."""
++    return tuple((e.kind, e.old, e.new) for e in DEPRECATED_NAMES if e.used_by_hooks)
++
++
++def find(old: str) -> DeprecatedName | None:
++    return next((e for e in DEPRECATED_NAMES if e.old == old), None)
++
++
++def warning_text(entry: DeprecatedName) -> str:
++    """El aviso de un nombre obsoleto: nombra el viejo, el nuevo y la versión de retirada."""
++    if entry.is_retired:
++        return f"{entry.old} ya no tiene efecto desde la {entry.introduced}"
++    removal = removal_version(entry)
++    when = f"se retira en la {removal}" if removal else "se retirará tres versiones menores después"
++    return f"{entry.old} está obsoleto: usa {entry.new} ({when})"
++
++
++def _looks_env(name: str) -> bool:
++    return bool(re.fullmatch(r"[A-Z][A-Z0-9_]+", name))
+diff --git a/src/local_delegate/legacy_names.py b/src/local_delegate/legacy_names.py
+new file mode 100644
+index 0000000..2eb6a80
+--- /dev/null
++++ b/src/local_delegate/legacy_names.py
+@@ -0,0 +1,54 @@
++"""legacy_names.py — equivalencias viejo→nuevo de los datos ya escritos (D2 del SDD).
++
++Los datos que el paquete y los hooks escribieron con nombres en español (log de uso, estado de
++enfriamiento, telemetría de hooks, cachés de atribución y coste…) se leen **para siempre** en el
++formato viejo, y no se reescriben en el sitio. Este módulo es la única tabla de equivalencias:
++todo lector del paquete traduce por aquí, y los hooks llevan en `hook_common.py` solo las
++equivalencias que leen ellos, atadas a esta por un test de igualdad.
++
++Estado tras la ola A0: **esqueleto**. La API está fijada y las tablas vacías; cada ola del frente
++A añade las de su formato (p. ej. A3 el log de uso, A4 el enfriamiento).
++
++Forma de cada formato en `FORMATS`:
++
++- `keys`: `{clave_vieja: clave_nueva}`;
++- `values`: `{clave_nueva: {valor_viejo: valor_nuevo}}`, para los valores de enumeración.
++"""
++
++from __future__ import annotations
++
++from collections.abc import Mapping
++from typing import Any
++
++FORMATS: dict[str, dict[str, dict[str, Any]]] = {}
++
++
++def read_key(row: Mapping[str, Any], new: str, old: str, default: Any = None) -> Any:
++    """El valor de `new` en `row`, o el de `old` si la fila es del formato viejo. Gana la nueva."""
++    if new in row:
++        return row[new]
++    if old in row:
++        return row[old]
++    return default
++
++
++def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
++    """Copia de `row` con claves y valores de enumeración traducidos al formato nuevo.
++
++    Una fila ya nueva sale igual; una clave que no está en la tabla se conserva tal cual. Si la
++    fila trae la clave vieja y la nueva a la vez, gana la nueva.
++    """
++    table = FORMATS.get(fmt, {})
++    keys: Mapping[str, str] = table.get("keys", {})
++    values: Mapping[str, Mapping[str, str]] = table.get("values", {})
++    out: dict[str, Any] = {}
++    for key, value in row.items():
++        new_key = keys.get(key, key)
++        if new_key != key and new_key in row:
++            continue  # la clave nueva también está: manda ella
++        out[new_key] = value
++    for key, mapping in values.items():
++        value = out.get(key)
++        if isinstance(value, str) and value in mapping:
++            out[key] = mapping[value]
++    return out
+diff --git a/tests/test_deprecations.py b/tests/test_deprecations.py
+new file mode 100644
+index 0000000..0c6294f
+--- /dev/null
++++ b/tests/test_deprecations.py
+@@ -0,0 +1,277 @@
++"""El registro único de nombres obsoletos (`deprecations.py`, D1) y sus guardianes (REQ-004).
++
++Tres guardianes que no dependen de que alguien se acuerde:
++
++- **horizonte**: un alias vive en la versión que lo publica y en las dos menores siguientes, y
++  desaparece en la tercera; un nombre retirado se avisa hasta su `warn_until`. Cuando la versión
++  del paquete llega ahí, la suite falla y nombra lo que hay que quitar;
++- **CHANGELOG**: la versión que registra cada entrada es la de la sección del CHANGELOG que la
++  anuncia, y esa sección nombra el nombre viejo y el nuevo;
++- **paridad con los hooks**: los hooks no importan el paquete y llevan su propia tabla; tiene que
++  ser igual al subconjunto `used_by_hooks` del registro.
++
++Además: `config._env_alias`, el esqueleto de `legacy_names` (D2) y el stamped de `UNRELEASED` que
++hace `scripts/bump_version.py` al publicar.
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import re
++import sys
++import tomllib
++from pathlib import Path
++
++import pytest
++
++from local_delegate import config, deprecations, legacy_names
++from local_delegate.deprecations import DeprecatedName
++from local_delegate.resources.hooks import hook_common
++
++ROOT = Path(__file__).parents[1]
++
++
++def _package_version() -> str:
++    with (ROOT / "pyproject.toml").open("rb") as fh:
++        return tomllib.load(fh)["project"]["version"]
++
++
++def _assert_horizon(version: str, entries=deprecations.DEPRECATED_NAMES) -> None:
++    overdue = deprecations.overdue(version, entries)
++    assert not overdue, overdue
++
++
++# --- Forma del registro -------------------------------------------------------
++def test_each_entry_follows_the_rule_of_its_class():
++    for e in deprecations.DEPRECATED_NAMES:
++        assert e.kind in deprecations.KINDS, e
++        if e.is_retired:
++            assert e.new is None and e.warn_until, f"{e.old}: un retirado lleva warn_until y no new"
++        else:
++            assert e.new and e.warn_until is None, f"{e.old}: un alias lleva new y no warn_until"
++        assert e.introduced == deprecations.UNRELEASED or re.fullmatch(
++            r"\d+\.\d+\.\d+", e.introduced
++        ), e
++
++
++def test_old_names_are_unique():
++    old_names = [e.old for e in deprecations.DEPRECATED_NAMES]
++    assert len(old_names) == len(set(old_names))
++
++
++def test_registry_holds_the_three_fast_role_variables_as_retired():
++    fast = {e.old: e for e in deprecations.DEPRECATED_NAMES if e.old.endswith("_FAST")}
++    assert set(fast) == {
++        "LOCAL_DELEGATE_MODEL_FAST",
++        "LOCAL_DELEGATE_MAX_CHARS_FAST",
++        "LOCAL_DELEGATE_FALLBACK_FAST",
++    }
++    for e in fast.values():
++        assert (e.kind, e.new, e.introduced, e.warn_until) == ("retired", None, "0.30.0", "0.37.0")
++
++
++# --- Horizonte (REQ-004) ------------------------------------------------------
++def test_horizon_no_deprecated_name_is_overdue_in_the_current_version():
++    """EL guardián: cuando la versión del paquete alcanza la retirada, esto falla con el nombre."""
++    _assert_horizon(_package_version())
++
++
++ALIAS = DeprecatedName("env_var", "LD_OLD_TEST_ALIAS", "LD_TEST_ALIAS", "0.35.0")
++RETIRED = DeprecatedName("retired", "LD_RETIRED_TEST_VAR", None, "0.30.0", "0.37.0")
++
++
++@pytest.mark.parametrize("version", ["0.35.0", "0.36.4", "0.37.0", "0.37.9"])
++def test_alias_lives_three_minors_and_retired_until_warn_until(version):
++    _assert_horizon(version, (ALIAS, RETIRED))
++
++
++def test_alias_expires_at_introduced_plus_three_and_failure_names_it():
++    """Control positivo del guardián: subir la versión a 0.38.0 lo pone en rojo."""
++    with pytest.raises(AssertionError, match="LD_OLD_TEST_ALIAS"):
++        _assert_horizon("0.38.0", (ALIAS,))
++    assert deprecations.removal_version(ALIAS) == "0.38.0"
++
++
++def test_retired_expires_after_warn_until_and_failure_names_it():
++    with pytest.raises(AssertionError, match="LD_RETIRED_TEST_VAR"):
++        _assert_horizon("0.38.0", (RETIRED,))
++
++
++def test_real_fast_variables_expire_in_0_38_0():
++    with pytest.raises(AssertionError, match="LOCAL_DELEGATE_MODEL_FAST"):
++        _assert_horizon("0.38.0")
++
++
++def test_unreleased_alias_never_expires():
++    unreleased_entry = DeprecatedName("env_var", "LD_X", "LD_Y", deprecations.UNRELEASED)
++    _assert_horizon("9.99.0", (unreleased_entry,))
++    assert deprecations.removal_version(unreleased_entry) is None
++
++
++def test_warning_names_old_new_and_removal_version():
++    assert deprecations.warning_text(ALIAS) == (
++        "LD_OLD_TEST_ALIAS está obsoleto: usa LD_TEST_ALIAS (se retira en la 0.38.0)"
++    )
++    retired_text = deprecations.warning_text(RETIRED)
++    assert "LD_RETIRED_TEST_VAR" in retired_text and "0.30.0" in retired_text
++
++
++# --- CHANGELOG (REQ-004) ------------------------------------------------------
++def _changelog_sections(text: str) -> dict[str, str]:
++    """`{versión: cuerpo}` por cada `## [versión]`; `Unreleased` incluida."""
++    parts = re.split(r"(?m)^## \[([^\]]+)\][^\n]*\n", text)
++    return {parts[i]: parts[i + 1] for i in range(1, len(parts) - 1, 2)}
++
++
++def changelog_problems(text: str, entries) -> list[str]:
++    sections = _changelog_sections(text)
++    problems = []
++    for e in entries:
++        version = "Unreleased" if e.introduced == deprecations.UNRELEASED else e.introduced
++        body = sections.get(version)
++        if body is None:
++            problems.append(f"{e.old}: no hay sección ## [{version}] en el CHANGELOG")
++            continue
++        for name in (e.old, e.new):
++            if name and name not in body:
++                problems.append(f"{e.old}: la sección [{version}] no nombra {name}")
++    return problems
++
++
++def test_each_entry_matches_the_changelog_section_that_announces_it():
++    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
++    assert changelog_problems(text, deprecations.DEPRECATED_NAMES) == []
++
++
++TEST_CHANGELOG = """# Changelog
++
++## [Unreleased]
++
++- `LD_X` pasa a llamarse `LD_Y`.
++
++## [0.30.0] - 2026-09-15
++
++- Se retira `LD_RETIRED_TEST_VAR`.
++"""
++
++
++def test_changelog_check_detects_the_missing_line():
++    unreleased_entry = DeprecatedName("env_var", "LD_X", "LD_Y", deprecations.UNRELEASED)
++    assert changelog_problems(TEST_CHANGELOG, (unreleased_entry, RETIRED)) == []
++    # Mutante del fixture: se borra la línea que anuncia el retirado.
++    mutated = TEST_CHANGELOG.replace("- Se retira `LD_RETIRED_TEST_VAR`.\n", "")
++    problems = changelog_problems(mutated, (RETIRED,))
++    assert problems == ["LD_RETIRED_TEST_VAR: la sección [0.30.0] no nombra LD_RETIRED_TEST_VAR"]
++    # Y una versión registrada que no tiene sección.
++    assert "no hay sección" in changelog_problems(mutated, (ALIAS,))[0]
++
++
++# --- Paridad con los hooks (D1) -----------------------------------------------
++def test_hook_table_is_the_registry_subset():
++    """`hook_common` declarará `DEPRECATED_HOOK_NAMES` con `(kind, old, new)` (ola A2).
++
++    Hasta entonces las dos partes están vacías y el test ya vigila que sigan siendo iguales.
++    """
++    from_hooks = tuple(getattr(hook_common, "DEPRECATED_HOOK_NAMES", ()))
++    assert from_hooks == deprecations.hook_names()
++
++
++# --- config._env_alias --------------------------------------------------------
++@pytest.fixture
++def isolated_alias(monkeypatch):
++    """Lecturas de prueba fuera del inventario real de variables y del registro de vistas."""
++    monkeypatch.setattr(config, "_VARIABLES_LEIDAS", set())
++    monkeypatch.setattr(config, "DEPRECATED_SEEN", set())
++    monkeypatch.delenv("LD_NEW_TEST_VAR", raising=False)
++    monkeypatch.delenv("LD_OLD_TEST_VAR", raising=False)
++    return monkeypatch
++
++
++def test_env_alias_new_wins_when_both_are_set(isolated_alias):
++    isolated_alias.setenv("LD_NEW_TEST_VAR", "nueva")
++    isolated_alias.setenv("LD_OLD_TEST_VAR", "vieja")
++    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") == "nueva"
++    assert config.DEPRECATED_SEEN == set()
++
++
++def test_env_alias_old_alone_takes_effect_and_is_recorded(isolated_alias):
++    isolated_alias.setenv("LD_OLD_TEST_VAR", "vieja")
++    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") == "vieja"
++    assert config.DEPRECATED_SEEN == {"LD_OLD_TEST_VAR"}
++
++
++def test_env_alias_reads_both_through_the_registered_gate(isolated_alias):
++    assert config._env_alias("LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR") is None
++    assert {"LD_NEW_TEST_VAR", "LD_OLD_TEST_VAR"} <= config._VARIABLES_LEIDAS
++
++
++# --- legacy_names (D2): API fijada, tablas vacías ------------------------------
++def test_read_key_prefers_new_key_and_falls_back_to_old():
++    assert legacy_names.read_key({"block_id": 1, "bloqueo_id": 2}, "block_id", "bloqueo_id") == 1
++    assert legacy_names.read_key({"bloqueo_id": 2}, "block_id", "bloqueo_id") == 2
++    assert legacy_names.read_key({}, "block_id", "bloqueo_id", "x") == "x"
++
++
++def test_normalize_translates_keys_and_values_of_the_format(monkeypatch):
++    monkeypatch.setitem(
++        legacy_names.FORMATS,
++        "prueba",
++        {"keys": {"motivo": "reason"}, "values": {"reason": {"pequeno": "small"}}},
++    )
++    assert legacy_names.normalize("prueba", {"motivo": "pequeno", "n": 1}) == {
++        "reason": "small",
++        "n": 1,
++    }
++    # Con las dos claves, manda la nueva.
++    assert legacy_names.normalize("prueba", {"motivo": "pequeno", "reason": "x"}) == {"reason": "x"}
++    # Un formato sin tabla deja la fila igual.
++    assert legacy_names.normalize("no-table", {"a": 1}) == {"a": 1}
++
++
++# --- scripts/bump_version.py sella UNRELEASED ---------------------------------
++def _bump_module():
++    path = ROOT / "scripts" / "bump_version.py"
++    if not path.is_file():
++        pytest.skip("scripts/ no está en el árbol (sdist)")
++    spec = importlib.util.spec_from_file_location("bump_version_a0", path)
++    assert spec is not None and spec.loader is not None
++    module = importlib.util.module_from_spec(spec)
++    sys.modules["bump_version_a0"] = module
++    spec.loader.exec_module(module)
++    return module
++
++
++TEST_DEPRECATIONS = """UNRELEASED = "UNRELEASED"
++
++DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
++    DeprecatedName("env_var", "LD_A", "LD_B", "UNRELEASED"),
++    DeprecatedName("retired", "LD_C", None, "0.30.0", "0.37.0"),
++)
++
++
++def f(e):
++    return e.introduced == "UNRELEASED"
++"""
++
++
++def test_bump_stamps_only_registry_entries():
++    bump = _bump_module()
++    stamped = bump.stamp_unreleased(TEST_DEPRECATIONS, "0.35.0")
++    assert 'DeprecatedName("env_var", "LD_A", "LD_B", "0.35.0")' in stamped
++    assert stamped.startswith('UNRELEASED = "UNRELEASED"\n')
++    assert 'return e.introduced == "UNRELEASED"' in stamped
++
++
++def test_bump_plans_deprecations_only_when_there_is_something_to_stamp(tmp_path):
++    bump = _bump_module()
++    for name in ("pyproject.toml", "server.json"):
++        (tmp_path / name).write_bytes((ROOT / name).read_bytes())
++    target = tmp_path / "src" / "local_delegate" / "deprecations.py"
++    target.parent.mkdir(parents=True)
++    target.write_text(TEST_DEPRECATIONS, encoding="utf-8")
++    changes = bump.plan("0.35.0", tmp_path)
++    assert target in changes
++    assert '"LD_B", "0.35.0")' in changes[target][0]
++
++    target.write_text(TEST_DEPRECATIONS.replace('"LD_B", "UNRELEASED"', '"LD_B", "0.34.0"'))
++    assert target not in bump.plan("0.35.0", tmp_path)
+diff --git a/tests/test_detect_spanish_names.py b/tests/test_detect_spanish_names.py
+new file mode 100644
+index 0000000..47a1920
+--- /dev/null
++++ b/tests/test_detect_spanish_names.py
+@@ -0,0 +1,211 @@
++"""El detector de nombres en español (`scripts/detect_spanish_names.py`, REQ-044).
++
++Dos clases de prueba, y no valen lo mismo:
++
++- **Regresión.** El léxico sale del propio repo, así que los 30 nombres españoles y los 54 ingleses
++  conocidos se cumplen casi por construcción. Sirven para que nadie rompa el léxico o el troceo de
++  nombres sin enterarse, no para demostrar que el detector funciona.
++- **Control de las heurísticas.** Palabras **reservadas** (`scripts/data/reserved_words.json`) que
++  no están en el léxico: ahí decide solo la heurística (eñe, tilde, sufijo), y es lo único que
++  dice algo de una palabra que aparezca mañana en el repo.
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import json
++import re
++import sys
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).parents[1]
++SCRIPT = ROOT / "scripts" / "detect_spanish_names.py"
++
++if not SCRIPT.is_file():
++    pytest.skip(
++        "scripts/ no está en el árbol (sdist): estas pruebas necesitan el repositorio",
++        allow_module_level=True,
++    )
++
++_spec = importlib.util.spec_from_file_location("detect_spanish_names", SCRIPT)
++assert _spec is not None and _spec.loader is not None
++det = importlib.util.module_from_spec(_spec)
++sys.modules["detect_spanish_names"] = det
++_spec.loader.exec_module(det)
++
++LEXICON = det.Lexicon.load()
++
++# Los 30 de la investigación (rename §0). `tokensClaude` es el que se escapa: palabras inglesas en
++# orden español, que una regla por palabras no puede ver.
++KNOWN_SPANISH = (
++    "bloqueo_id", "secciones", "fallo_conexion", "recalcular_coste", "enfriamiento", "cuota",
++    "atribucion", "VARIABLES_DE_ENTORNO", "reiniciar_calibracion", "fundirFila", "tokensClaude",
++    "aplicarBackend", "HOOK_READ_INTERRUPTOR", "rol_retirado", "config.coste",
++    "local-delegate-bloqueo-apagado", "respaldo_invalido", "leido_server_side", "camino", "motivo",
++    "densidad", "precios", "huella", "comprobaciones", "andamiaje", "entorno", "sondas",
++    "preguntas", "valoracion", "cadenas",
++)  # fmt: skip
++# Los 52 del script de la investigación, más dos nombres ingleses del repo para llegar a los 54
++# que cita rename §0 (`fallback` y `cooldown`).
++KNOWN_ENGLISH = (
++    "cooldown_failures", "test_windows", "build_parser", "max_chars", "tool_use_id",
++    "caller_model", "error_class", "fallback_class", "saved", "returned", "net", "residency",
++    "topology", "footprint", "inflight", "daemon", "status", "loaded", "model", "role", "install",
++    "update", "pace", "matrix", "turn", "transcripts", "clients", "agents", "version", "benchmark",
++    "metrics", "auth", "sysinfo", "chunk", "label", "start", "stop", "window", "no_restart",
++    "general", "total", "real", "local", "error", "control", "base", "plan", "prompt", "hooks",
++    "shell", "read", "suggest_delegate", "fallback", "cooldown",
++)  # fmt: skip
++JS_CONTROL_NAMES = ("tokensClaude", "aplicarBackend", "acct", "fmtNum", "decimales")
++
++
++# --- Regresión ----------------------------------------------------------------
++def test_regression_lists_have_the_research_sizes():
++    assert len(KNOWN_SPANISH) == 30
++    assert len(KNOWN_ENGLISH) == 54
++    assert len(set(KNOWN_SPANISH)) == 30 and len(set(KNOWN_ENGLISH)) == 54
++
++
++def test_detects_at_least_29_of_the_30_known_spanish_names():
++    missed = [n for n in KNOWN_SPANISH if not det.detect(n)]
++    assert len(missed) <= 1, missed
++
++
++def test_no_known_english_name_is_a_false_positive():
++    false_positives = [(n, det.spanish_words(n, LEXICON)) for n in KNOWN_ENGLISH if det.detect(n)]
++    assert false_positives == []
++
++
++def test_js_tokenizer_finds_the_five_panel_control_names():
++    """Con un tokenizador malo se pierde código entero: el primero de la investigación vio 77 de
++    311 declaraciones. Estos cinco nombres están repartidos por todo el `<script>`."""
++    found = det._panel_html(ROOT)
++    assert found is not None, "no se encontró el HTML del panel en metrics.py"
++    html, _line = found
++    scripts = re.findall(
++        r"<script(?![^>]*src=)[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE
++    )
++    declared = {name for name, _l in det.js_declared_names(det.tokenize_js(scripts[-1]))}
++    missing = [n for n in JS_CONTROL_NAMES if n not in declared]
++    assert missing == []
++    # Guarda de «esto llegó a comprobar algo»: el panel declara cientos de nombres.
++    assert len(declared) > 250
++
++
++# --- Control de las heurísticas -----------------------------------------------
++RESERVED = json.loads((ROOT / "scripts" / "data" / "reserved_words.json").read_text("utf-8"))
++RESERVED_SPANISH = [w for group in RESERVED["spanish"].values() for w in group]
++
++
++def test_no_reserved_word_is_in_the_lexicon():
++    """Si una reservada entrara en el léxico, su test pasaría por el léxico y no por la heurística."""
++    leaked = [
++        w
++        for w in [*RESERVED_SPANISH, *RESERVED["english"]]
++        if w in LEXICON or det.fold(w) in LEXICON.function_words
++    ]
++    assert leaked == []
++
++
++@pytest.mark.parametrize("word", RESERVED_SPANISH)
++def test_heuristics_detect_each_reserved_spanish_word(word):
++    assert det.detect(word), f"{word} no se detecta como español"
++
++
++@pytest.mark.parametrize("word", RESERVED["english"])
++def test_heuristics_do_not_flag_lookalike_english_words(word):
++    assert not det.detect(word), f"{word} se marca como español"
++
++
++def test_new_word_without_heuristic_is_unclassified_not_english():
++    """Que el léxico no se quede viejo en silencio: lo desconocido se informa aparte."""
++    # Se arma en tiempo de ejecución: escrita entera, el propio detector la vería en este fichero.
++    new_word = "zaran" + "dajas"
++    assert new_word not in LEXICON
++    assert det.classify_word(new_word, LEXICON) == "unclassified"
++    assert det.unclassified_words(f"{new_word}_count", LEXICON) == [new_word]
++
++
++def test_one_function_word_is_not_enough_but_two_are():
++    assert not det.detect("en")
++    assert det.detect("de_la")
++
++
++# --- Tokenizador de JS ------------------------------------------------------
++def test_regex_with_backtick_does_not_open_a_template():
++    """La trampa de `metrics.py`: `.replace(/`([^`]+)`/g, …)`."""
++    src = "x = s.replace(/`([^`]+)`/g, '<code>$1</code>');\nconst despues = 1;"
++    tokens = det.tokenize_js(src)
++    assert [t.kind for t in tokens if t.kind in ("regex", "template")] == ["regex"]
++    assert ("despues", 2) in det.js_declared_names(tokens)
++
++
++def test_division_is_not_mistaken_for_a_regex():
++    tokens = det.tokenize_js("const a = b / c / d;")
++    assert not [t for t in tokens if t.kind == "regex"]
++
++
++def test_nested_templates_and_comments():
++    src = (
++        "// const fuera = 1;\n/* let tampoco = 2; */\nconst t = `a ${f(`b ${c}`)} d`;\nlet ultimo;"
++    )
++    declared = [n for n, _l in det.js_declared_names(det.tokenize_js(src))]
++    assert declared == ["t", "ultimo"]
++
++
++def test_function_and_arrow_parameters():
++    src = "function fmt(n, decimales = 2){}\nconst g = (uno, {dos}) => uno;\nh = tres => tres;"
++    declared = {n for n, _l in det.js_declared_names(det.tokenize_js(src))}
++    assert {"fmt", "n", "decimales", "g", "uno", "dos", "tres"} <= declared
++
++
++# --- Lista de excepciones (REQ-016) -------------------------------------------
++def test_exception_list_sets_aside_only_its_name_and_file(tmp_path):
++    exceptions = tmp_path / "rename-exceptions.md"
++    exceptions.write_text(
++        "# Excepciones\n\n## Alias de compatibilidad\n\n"
++        "| Nombre | Fichero | Motivo |\n| --- | --- | --- |\n"
++        "| `recalcular-coste` | `src/local_delegate/cli.py` | alias, se retira en la 0.38.0 |\n",
++        encoding="utf-8",
++    )
++    entries = det.load_exceptions(exceptions)
++    assert [(e.name, e.section) for e in entries] == [
++        ("recalcular-coste", "Alias de compatibilidad")
++    ]
++    scan = det.Scan()
++    scan.add("string_value", "src/local_delegate/cli.py", 1, "recalcular-coste")
++    scan.add("string_value", "src/local_delegate/otro.py", 1, "recalcular-coste")
++    report = det.analyse(scan, LEXICON, entries)
++    assert report["unique_findings"] == 2
++    assert report["outside_exceptions"] == 1
++    assert report["findings"][0]["file"] == "src/local_delegate/otro.py"
++
++
++def test_change_exception_list_exists_and_parses():
++    path = ROOT / ".sdd" / "changes" / "english-names-bilingual-output" / "rename-exceptions.md"
++    if not path.is_file():
++        pytest.skip("la carpeta del cambio no está en este árbol")
++    assert det.load_exceptions(path) == []
++
++
++def test_detector_walks_a_tree_and_sees_each_category(tmp_path):
++    """Un no-resultado no vale si la búsqueda no podía encontrar nada: árbol sembrado a mano."""
++    pkg = tmp_path / "src" / "local_delegate"
++    (pkg / "resources").mkdir(parents=True)
++    (pkg / "cuota.py").write_text(
++        'def leer_precios(x):\n    return {"motivo": x.get("camino"), "k": "fallo_conexion"}\n',
++        encoding="utf-8",
++    )
++    (pkg / "resources" / "datos.json").write_text('{"familia": "nueva"}', encoding="utf-8")
++    report = det.analyse(det.collect(tmp_path), LEXICON)
++    names = {(f["category"], f["name"]) for f in report["findings"]}
++    assert {
++        ("identifier", "leer_precios"),
++        ("string_key", "motivo"),
++        ("string_key", "camino"),
++        ("string_value", "fallo_conexion"),
++        ("json_key", "familia"),
++        ("file_name", "cuota"),
++    } <= names
+diff --git a/.sdd/changes/english-names-bilingual-output/rename-exceptions.md b/.sdd/changes/english-names-bilingual-output/rename-exceptions.md
+new file mode 100644
+index 0000000..8971829
+--- /dev/null
++++ b/.sdd/changes/english-names-bilingual-output/rename-exceptions.md
+@@ -0,0 +1,46 @@
++# Excepciones del detector de nombres en español (REQ-016)
++
++Lista de nombres en español que pueden quedar en el repo al cerrar el frente A, cada uno con su
++motivo. La lee `scripts/detect_spanish_names.py --exceptions <este fichero>`: toma las filas de las
++tablas (`| Nombre | Fichero | Motivo |`) y aparta un hallazgo cuando coinciden el nombre y el
++fichero (el fichero admite comodines, `*` para cualquiera).
++
++Los únicos motivos válidos (REQ-016):
++
++- alias de compatibilidad (REQ-001, REQ-002, REQ-012), con su versión de retirada;
++- lectura de formato viejo (excepción de REQ-005, REQ-006, REQ-007, REQ-008);
++- envoltorio de REQ-046;
++- dato de un tercero que no controla el paquete;
++- **pendiente**: lo que el frente A renombra pero se publica en el B (las subclaves y marcadores
++  de REQ-010, que salen en B2).
++
++Al cerrar el frente A, la sección «Pendiente» solo puede tener lo de REQ-010; al cerrar el cambio,
++tiene que estar vacía.
++
++Estado al terminar la ola A0: **lista vacía**. Cada ola añade aquí las filas que necesite, en la
++sección de su motivo.
++
++## Alias de compatibilidad
++
++| Nombre | Fichero | Motivo |
++| --- | --- | --- |
++
++## Lectura de formato viejo
++
++| Nombre | Fichero | Motivo |
++| --- | --- | --- |
++
++## Envoltorio de REQ-046
++
++| Nombre | Fichero | Motivo |
++| --- | --- | --- |
++
++## Dato de un tercero
++
++| Nombre | Fichero | Motivo |
++| --- | --- | --- |
++
++## Pendiente
++
++| Nombre | Fichero | Motivo |
++| --- | --- | --- |
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py b/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
+new file mode 100644
+index 0000000..6139a4d
+--- /dev/null
++++ b/.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
+@@ -0,0 +1,540 @@
++#!/usr/bin/env python3
++"""Fichero de correspondencias de una ola del renombrado (D13) y su aplicador acotado.
++
++Dos subcomandos:
++
++``build``  Recorre `src/local_delegate`, `tests/` y `scripts/`, resuelve nombres por AST (ámbitos,
++           atributos e imports) y escribe `waves/<ola>-mapping.csv` con **una fila por
++           definición** en español (lo decide el detector de A0, `scripts/detect_spanish_names.py`),
++           filtrada por los ficheros de la ola (`--paths`, globs relativos a la raíz).
++
++``apply``  Aplica las filas `method=search_edit` de ámbito `function_local` (variables locales) y
++           `unreferenced_test` (funciones `test_*` sin referencias) de un mapping **aprobado**
++           (`# approved-by-main: <fecha>`). Una variable local se reemplaza **solo dentro del tramo
++           de su función**, nunca en todo el fichero. Abre y escribe con `newline=""`, así que no
++           cambia los saltos de línea.
++
++Columnas del CSV: `old`, `new` (propuesta; la rellena el agente y la revisa la sesión principal),
++`kind`, `definition` (`fichero:línea@ámbito`), `scope` (`cross_module`, `module_local`,
++`function_local`, `unreferenced_test` o `unresolved`), `method` (`pycharm` o `search_edit`),
++`reason` (obligatorio con `search_edit`) y `verified` (lo escribe el agente).
++
++Uso:
++    python make_mapping.py build --wave A3 --paths "src/local_delegate/fallos.py" --out waves/A3-mapping.csv
++    python make_mapping.py apply --mapping waves/A9a-1-mapping.csv [--dry-run]
++"""
++
++from __future__ import annotations
++
++import argparse
++import ast
++import csv
++import importlib.util
++import sys
++from collections import defaultdict
++from dataclasses import dataclass, field
++from datetime import UTC, datetime
++from fnmatch import fnmatch
++from pathlib import Path
++
++DEFAULT_ROOT = Path(__file__).resolve().parents[4]
++COLUMNS = ("old", "new", "kind", "definition", "scope", "method", "reason", "verified")
++SEARCH_EDIT_SCOPES = ("function_local", "unreferenced_test")
++APPROVAL_PREFIX = "# approved-by-main"
++_DYNAMIC_CALLS = frozenset({"getattr", "setattr", "hasattr", "delattr", "patch", "object"})
++
++
++# --- Detector -----------------------------------------------------------------
++def load_detector(root: Path):
++    path = root / "scripts" / "detect_spanish_names.py"
++    spec = importlib.util.spec_from_file_location("detect_spanish_names", path)
++    if spec is None or spec.loader is None:
++        raise SystemExit(f"no se pudo cargar el detector: {path}")
++    module = importlib.util.module_from_spec(spec)
++    sys.modules.setdefault("detect_spanish_names", module)
++    spec.loader.exec_module(module)
++    return module
++
++
++# --- Modelo -------------------------------------------------------------------
++@dataclass
++class Scope:
++    kind: str  # module | class | function
++    qualname: str
++    parent: Scope | None
++    span: tuple[int, int]
++    symbols: dict[str, Definition] = field(default_factory=dict)
++    globals: set[str] = field(default_factory=set)
++    nonlocals: set[str] = field(default_factory=set)
++
++
++@dataclass
++class Definition:
++    name: str
++    kind: str
++    file: str
++    line: int
++    scope: Scope
++    refs: list[tuple[str, int]] = field(default_factory=list)  # (fichero, línea)
++
++    @property
++    def definition(self) -> str:
++        return f"{self.file}:{self.line}@{self.scope.qualname}"
++
++
++@dataclass
++class Project:
++    root: Path
++    modules: dict[str, str] = field(default_factory=dict)  # nombre con puntos -> fichero
++    definitions: list[Definition] = field(default_factory=list)
++    attr_refs: dict[str, list[tuple[str, int]]] = field(default_factory=lambda: defaultdict(list))
++    kw_refs: dict[str, list[tuple[str, int]]] = field(default_factory=lambda: defaultdict(list))
++    dyn_refs: dict[str, list[tuple[str, int]]] = field(default_factory=lambda: defaultdict(list))
++    # (fichero del módulo, nombre) -> referencias desde OTROS ficheros (imports y `mod.nombre`)
++    cross_refs: dict[tuple[str, str], list[tuple[str, int]]] = field(
++        default_factory=lambda: defaultdict(list)
++    )
++    imported_modules: dict[str, list[tuple[str, int]]] = field(
++        default_factory=lambda: defaultdict(list)
++    )
++
++
++def module_name(rel: str) -> str:
++    parts = rel[:-3].split("/")
++    if parts[0] == "src" or parts[0] in ("tests", "scripts"):
++        parts = parts[1:]
++    if parts[-1] == "__init__":
++        parts = parts[:-1]
++    return ".".join(parts)
++
++
++def python_files(root: Path) -> list[str]:
++    out = []
++    for base in ("src/local_delegate", "tests", "scripts"):
++        directory = root / base
++        if directory.is_dir():
++            out += [
++                p.relative_to(root).as_posix()
++                for p in sorted(directory.rglob("*.py"))
++                if "__pycache__" not in p.parts
++            ]
++    return out
++
++
++# --- Análisis por fichero -----------------------------------------------------
++class FileAnalysis:
++    """Dos pasadas: la primera define (ámbitos y símbolos), la segunda resuelve las lecturas."""
++
++    def __init__(self, project: Project, rel: str, tree: ast.Module) -> None:
++        self.p = project
++        self.rel = rel
++        self.tree = tree
++        self.scope_of: dict[int, Scope] = {}
++        self.module_scope = Scope("module", "<module>", None, (1, 10**9))
++        self.import_alias: dict[str, str] = {}  # alias local -> módulo (nombre con puntos)
++
++    # pasada 1
++    def define(self, scope: Scope, name: str, kind: str, line: int) -> None:
++        target = scope
++        if name in scope.globals:
++            target = self.module_scope
++        elif name in scope.nonlocals:
++            target = scope.parent
++            while target is not None and (target.kind != "function" or name not in target.symbols):
++                target = target.parent
++            target = target or scope
++        if name not in target.symbols:
++            d = Definition(name, kind, self.rel, line, target)
++            target.symbols[name] = d
++            self.p.definitions.append(d)
++
++    def collect(self, node: ast.AST, scope: Scope) -> None:
++        self.scope_of[id(node)] = scope
++        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
++            kind = "method" if scope.kind == "class" else "function"
++            self.define(scope, node.name, kind, node.lineno)
++            for deco in node.decorator_list:
++                self.collect(deco, scope)
++            for default in [*node.args.defaults, *node.args.kw_defaults]:
++                if default is not None:
++                    self.collect(default, scope)
++            qual = node.name if scope.kind == "module" else f"{scope.qualname}.{node.name}"
++            inner = Scope("function", qual, scope, (node.lineno, node.end_lineno or node.lineno))
++            self.scope_of[id(node)] = inner
++            a = node.args
++            extra = [x for x in (a.vararg, a.kwarg) if x is not None]
++            for arg in [*a.posonlyargs, *a.args, *a.kwonlyargs, *extra]:
++                self.scope_of[id(arg)] = inner
++                if arg.arg not in ("self", "cls"):
++                    self.define(inner, arg.arg, "param", arg.lineno)
++            for stmt in node.body:
++                self.collect(stmt, inner)
++            return
++        if isinstance(node, ast.ClassDef):
++            self.define(scope, node.name, "class", node.lineno)
++            for item in [*node.decorator_list, *node.bases, *node.keywords]:
++                self.collect(item, scope)
++            qual = node.name if scope.kind == "module" else f"{scope.qualname}.{node.name}"
++            inner = Scope("class", qual, scope, (node.lineno, node.end_lineno or node.lineno))
++            self.scope_of[id(node)] = inner
++            for stmt in node.body:
++                self.collect(stmt, inner)
++            return
++        if isinstance(node, ast.Global):
++            scope.globals.update(node.names)
++        elif isinstance(node, ast.Nonlocal):
++            scope.nonlocals.update(node.names)
++        elif isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
++            kind = "constant" if node.id.isupper() else "variable"
++            self.define(scope, node.id, kind, node.lineno)
++        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store):
++            cls = self._enclosing_class(scope)
++            if cls is not None and isinstance(node.value, ast.Name) and node.value.id == "self":
++                self.define(cls, node.attr, "attribute", node.lineno)
++        elif isinstance(node, (ast.Import, ast.ImportFrom)):
++            self._collect_import(node, scope)
++        elif isinstance(node, ast.ExceptHandler) and node.name:
++            self.define(scope, node.name, "variable", node.lineno)
++        for child in ast.iter_child_nodes(node):
++            self.collect(child, scope)
++
++    def _enclosing_class(self, scope: Scope) -> Scope | None:
++        s = scope
++        while s is not None and s.kind != "class":
++            s = s.parent
++        return s
++
++    def _resolve_module(self, node: ast.ImportFrom) -> str | None:
++        if node.level == 0:
++            return node.module
++        package = module_name(self.rel).split(".")
++        if not self.rel.endswith("__init__.py"):
++            package = package[:-1]
++        if node.level > 1:
++            package = package[: len(package) - (node.level - 1)]
++        return ".".join([*package, *([node.module] if node.module else [])])
++
++    def _collect_import(self, node: ast.Import | ast.ImportFrom, scope: Scope) -> None:
++        if isinstance(node, ast.Import):
++            for alias in node.names:
++                local = alias.asname or alias.name.split(".")[0]
++                self.import_alias[local] = alias.name if alias.asname else local
++                if alias.asname:
++                    self.define(scope, alias.asname, "import_alias", node.lineno)
++                self._note_module_import(alias.name, node.lineno)
++            return
++        base = self._resolve_module(node)
++        if base is None:
++            return
++        for alias in node.names:
++            local = alias.asname or alias.name
++            full = f"{base}.{alias.name}"
++            if full in self.p.modules:  # `from paquete import modulo`
++                self.import_alias[local] = full
++                self._note_module_import(full, node.lineno)
++            elif base in self.p.modules:
++                target = self.p.modules[base]
++                if target != self.rel:
++                    self.p.cross_refs[(target, alias.name)].append((self.rel, node.lineno))
++            if alias.asname:
++                self.define(scope, alias.asname, "import_alias", node.lineno)
++
++    def _note_module_import(self, dotted: str, line: int) -> None:
++        if dotted in self.p.modules and self.p.modules[dotted] != self.rel:
++            self.p.imported_modules[self.p.modules[dotted]].append((self.rel, line))
++
++    # pasada 2
++    def resolve(self) -> None:
++        for node in ast.walk(self.tree):
++            scope = self.scope_of.get(id(node), self.module_scope)
++            if isinstance(node, ast.Name):
++                d = self._lookup(scope, node.id)
++                if d is not None and not (d.line == node.lineno and d.file == self.rel):
++                    d.refs.append((self.rel, node.lineno))
++            elif isinstance(node, ast.Attribute):
++                self.p.attr_refs[node.attr].append((self.rel, node.lineno))
++                if isinstance(node.value, ast.Name) and node.value.id in self.import_alias:
++                    target = self.p.modules.get(self.import_alias[node.value.id])
++                    if target is not None and target != self.rel:
++                        self.p.cross_refs[(target, node.attr)].append((self.rel, node.lineno))
++            elif isinstance(node, ast.keyword) and node.arg:
++                self.p.kw_refs[node.arg].append((self.rel, node.value.lineno))
++            elif isinstance(node, ast.Call):
++                self._dynamic(node)
++            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
++                value = node.value
++                if "." in value and all(part.isidentifier() for part in value.split(".")):
++                    self.p.dyn_refs[value.rsplit(".", 1)[1]].append((self.rel, node.lineno))
++
++    def _dynamic(self, node: ast.Call) -> None:
++        func = node.func
++        name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
++        if name not in _DYNAMIC_CALLS:
++            return
++        for arg in node.args[:3]:
++            if (
++                isinstance(arg, ast.Constant)
++                and isinstance(arg.value, str)
++                and arg.value.isidentifier()
++            ):
++                self.p.dyn_refs[arg.value].append((self.rel, node.lineno))
++
++    def _lookup(self, scope: Scope, name: str) -> Definition | None:
++        if name in scope.globals:
++            return self.module_scope.symbols.get(name)
++        s: Scope | None = scope
++        first = True
++        while s is not None:
++            if (first or s.kind != "class") and name in s.symbols:
++                return s.symbols[name]
++            first = False
++            s = s.parent
++        return None
++
++
++def analyse_project(root: Path) -> Project:
++    project = Project(root)
++    files = python_files(root)
++    for rel in files:
++        project.modules[module_name(rel)] = rel
++    analyses = []
++    for rel in files:
++        try:
++            tree = ast.parse((root / rel).read_text(encoding="utf-8"))
++        except SyntaxError:
++            continue
++        fa = FileAnalysis(project, rel, tree)
++        fa.collect(tree, fa.module_scope)
++        analyses.append(fa)
++    for fa in analyses:
++        fa.resolve()
++    return project
++
++
++# --- Clasificación ------------------------------------------------------------
++def classify(d: Definition, p: Project) -> str:
++    other_files = lambda refs: [r for r in refs if r[0] != d.file]
++    if d.scope.kind == "function":
++        if d.kind == "param" and p.kw_refs.get(d.name):
++            return "cross_module" if other_files(p.kw_refs[d.name]) else "module_local"
++        return "function_local"
++    if d.scope.kind == "module":
++        if other_files(p.cross_refs.get((d.file, d.name), [])):
++            return "cross_module"
++        if p.dyn_refs.get(d.name):
++            return "unresolved"
++        if _is_unreferenced_test(d, p):
++            return "unreferenced_test"
++        return "module_local"
++    # miembros de clase: atributos y métodos se leen como `x.nombre`, sin tipo conocido
++    if _is_unreferenced_test(d, p):
++        return "unreferenced_test"
++    if other_files(p.attr_refs.get(d.name, [])):
++        return "cross_module"
++    if p.dyn_refs.get(d.name):
++        return "unresolved"
++    return "module_local"
++
++
++def _is_unreferenced_test(d: Definition, p: Project) -> bool:
++    return (
++        d.file.startswith("tests/")
++        and d.kind in ("function", "method")
++        and d.name.startswith("test_")
++        and not d.refs
++        and not p.attr_refs.get(d.name)
++        and not p.dyn_refs.get(d.name)
++    )
++
++
++def build_rows(root: Path, paths: list[str]) -> list[dict[str, str]]:
++    detector = load_detector(root)
++    lexicon = detector.Lexicon.load(root / "scripts" / "data" / "spanish_lexicon.json")
++    project = analyse_project(root)
++    rows = []
++    for d in project.definitions:
++        if paths and not any(fnmatch(d.file, pat) for pat in paths):
++            continue
++        if not detector.is_spanish(d.name, lexicon):
++            continue
++        scope = classify(d, project)
++        method = "search_edit" if scope in SEARCH_EDIT_SCOPES else "pycharm"
++        reason = {
++            "function_local": "variable local: reemplazo acotado a su función (apply)",
++            "unreferenced_test": "test sin referencias: reemplazo del nombre en su def (apply)",
++        }.get(scope, "")
++        rows.append(
++            dict(  # noqa: C408
++                old=d.name, new="", kind=d.kind, definition=d.definition, scope=scope,
++                method=method, reason=reason, verified="",
++            )
++        )  # fmt: skip
++    # Módulos con nombre en español (el fichero en sí).
++    for rel in project.modules.values():
++        stem = rel.rsplit("/", 1)[1][:-3]
++        if stem == "__init__" or (paths and not any(fnmatch(rel, pat) for pat in paths)):
++            continue
++        if detector.is_spanish(stem, lexicon):
++            scope = "cross_module" if project.imported_modules.get(rel) else "module_local"
++            rows.append(
++                dict(  # noqa: C408
++                    old=stem, new="", kind="module", definition=f"{rel}:1@<module>",
++                    scope=scope, method="pycharm", reason="", verified="",
++                )
++            )  # fmt: skip
++    rows.sort(key=lambda r: (r["definition"].split(":")[0], _line(r["definition"]), r["old"]))
++    return rows
++
++
++def _line(definition: str) -> int:
++    return int(definition.split(":", 1)[1].split("@", 1)[0])
++
++
++def write_mapping(rows: list[dict[str, str]], out: Path, wave: str) -> None:
++    out.parent.mkdir(parents=True, exist_ok=True)
++    with out.open("w", encoding="utf-8", newline="") as fh:
++        fh.write(
++            f"# wave={wave} generated={datetime.now(UTC).date().isoformat()} by tools/make_mapping.py; "
++            "pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)\n"
++        )
++        writer = csv.DictWriter(fh, fieldnames=COLUMNS, lineterminator="\n")
++        writer.writeheader()
++        writer.writerows(rows)
++
++
++def read_mapping(path: Path) -> tuple[list[str], list[dict[str, str]]]:
++    text = path.read_text(encoding="utf-8")
++    comments = [line for line in text.splitlines() if line.startswith("#")]
++    body = [line for line in text.splitlines() if not line.startswith("#")]
++    return comments, list(csv.DictReader(body))
++
++
++# --- Aplicador acotado --------------------------------------------------------
++def _find_function(tree: ast.AST, qualname: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
++    parts = qualname.split(".")
++
++    def walk(nodes, depth):
++        for node in nodes:
++            if (
++                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
++                and node.name == parts[depth]
++            ):
++                if depth == len(parts) - 1:
++                    return node if not isinstance(node, ast.ClassDef) else None
++                found = walk(node.body, depth + 1)
++                if found is not None:
++                    return found
++        return None
++
++    return walk(getattr(tree, "body", []), 0)
++
++
++def _char_col(line_text: str, byte_col: int) -> int:
++    return len(line_text.encode("utf-8")[:byte_col].decode("utf-8"))
++
++
++def _local_edits(tree, lines, row) -> list[tuple[int, int, str, str]]:
++    """(línea, columna, viejo, nuevo) de cada aparición de la variable dentro de SU función."""
++    definition = row["definition"]
++    qualname = definition.split("@", 1)[1]
++    func = _find_function(tree, qualname)
++    if func is None:
++        raise ValueError(f"no se encontró la función {qualname} ({definition})")
++    old, new = row["old"], row["new"]
++    edits = []
++    for node in ast.walk(func):
++        if (
++            isinstance(node, ast.Name)
++            and node.id == old
++            or isinstance(node, ast.arg)
++            and node.arg == old
++        ):
++            edits.append((node.lineno, node.col_offset))
++    return [(ln, _char_col(lines[ln - 1], col), old, new) for ln, col in sorted(set(edits))]
++
++
++def _test_def_edit(lines, row) -> list[tuple[int, int, str, str]]:
++    line_no = _line(row["definition"])
++    text = lines[line_no - 1]
++    marker = f"def {row['old']}("
++    col = text.find(marker)
++    if col == -1:
++        raise ValueError(f"no está `{marker}` en {row['definition']}")
++    return [(line_no, col + 4, row["old"], row["new"])]
++
++
++def apply_mapping(mapping: Path, root: Path, dry_run: bool = False) -> dict[str, int]:
++    comments, rows = read_mapping(mapping)
++    if not any(c.startswith(APPROVAL_PREFIX) for c in comments):
++        raise SystemExit(f"{mapping} no está aprobado (falta «{APPROVAL_PREFIX}: <fecha>»)")
++    todo = [
++        r
++        for r in rows
++        if r["method"] == "search_edit" and r["scope"] in SEARCH_EDIT_SCOPES and r["new"].strip()
++    ]
++    by_file: dict[str, list[dict[str, str]]] = defaultdict(list)
++    for r in todo:
++        by_file[r["definition"].split(":", 1)[0]].append(r)
++    counts: dict[str, int] = {}
++    for rel, file_rows in by_file.items():
++        path = root / rel
++        with path.open(encoding="utf-8", newline="") as fh:
++            source = fh.read()
++        lines = source.splitlines(keepends=True)
++        tree = ast.parse(source)
++        edits = []
++        for r in file_rows:
++            edits += (
++                _local_edits(tree, lines, r)
++                if r["scope"] == "function_local"
++                else (_test_def_edit(lines, r))
++            )
++        # De atrás adelante para que las columnas de una línea no se desplacen.
++        for ln, col, old, new in sorted(edits, reverse=True):
++            text = lines[ln - 1]
++            if text[col : col + len(old)] != old:
++                raise ValueError(f"{rel}:{ln}:{col} no contiene `{old}`")
++            lines[ln - 1] = text[:col] + new + text[col + len(old) :]
++        counts[rel] = len(edits)
++        if not dry_run:
++            with path.open("w", encoding="utf-8", newline="") as fh:
++                fh.write("".join(lines))
++    return counts
++
++
++# --- CLI ----------------------------------------------------------------------
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(
++        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
++    )
++    parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
++    sub = parser.add_subparsers(dest="cmd", required=True)
++    b = sub.add_parser("build", help="genera el mapping de una ola")
++    b.add_argument("--wave", required=True)
++    b.add_argument("--paths", nargs="*", default=[], help="globs de los ficheros de la ola")
++    b.add_argument("--out", type=Path, help="por defecto, waves/<ola>-mapping.csv")
++    a = sub.add_parser("apply", help="aplica las filas search_edit acotadas de un mapping aprobado")
++    a.add_argument("--mapping", type=Path, required=True)
++    a.add_argument("--dry-run", action="store_true")
++    args = parser.parse_args(argv)
++
++    if args.cmd == "build":
++        rows = build_rows(args.root, args.paths)
++        out = args.out or Path(__file__).resolve().parents[1] / "waves" / f"{args.wave}-mapping.csv"
++        write_mapping(rows, out, args.wave)
++        by_scope: dict[str, int] = defaultdict(int)
++        for r in rows:
++            by_scope[r["scope"]] += 1
++        print(
++            f"{len(rows)} filas en {out}: "
++            + ", ".join(f"{k}={v}" for k, v in sorted(by_scope.items()))
++        )
++        return 0
++    counts = apply_mapping(args.mapping, args.root, args.dry_run)
++    for rel, n in counts.items():
++        print(f"{rel}: {n} reemplazo(s){' (ensayo)' if args.dry_run else ''}")
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/check_wave_records.py b/.sdd/changes/english-names-bilingual-output/tools/check_wave_records.py
+new file mode 100644
+index 0000000..187ec0a
+--- /dev/null
++++ b/.sdd/changes/english-names-bilingual-output/tools/check_wave_records.py
+@@ -0,0 +1,190 @@
++#!/usr/bin/env python3
++"""Comprueba los mínimos de los registros de ola (`waves/<ola>.md`, plan §2.1; REQ-036 y REQ-037).
++
++Para cada registro:
++
++- la tabla de llamadas `local_*` tiene la fila de `local_lint_summary` (el resumen de la suite);
++- la tabla de controles positivos tiene al menos una fila, y cada fila dice el assert que disparó;
++- si el registro cita mappings (`waves/<…>-mapping.csv`, olas que renombran Python):
++  - cada mapping existe y lleva la cabecera `# approved-by-main`;
++  - las filas `rename_refactoring` de la tabla de PyCharm son tantas como las filas
++    `method=pycharm` de sus mappings;
++  - cada fila `search_edit` lleva su motivo;
++  - todas las filas `cross_module` y `unresolved` tienen `verified` rellena; se cuentan las
++    discrepancias;
++  - hay al menos un `get_file_problems` o `lint_files`;
++- si no cita mappings (A8b y las olas B): al menos un `search_text` o `search_regex` y un
++  `get_file_problems`/`lint_files`, o una fila que diga el motivo de no tenerlos.
++
++Escribe el informe en `evidence/conformance/wave-records.txt` (o `--out`) y sale con 1 si algún
++registro no cumple.
++
++Uso:
++    python check_wave_records.py [--waves-dir DIR] [--out FICHERO] [registro.md …]
++"""
++
++from __future__ import annotations
++
++import argparse
++import csv
++import re
++import sys
++from dataclasses import dataclass, field
++from pathlib import Path
++
++CHANGE_DIR = Path(__file__).resolve().parents[1]
++MAPPING_RE = re.compile(r"waves/([\w.\-]+-mapping\.csv)")
++
++
++@dataclass
++class RecordCheck:
++    record: str
++    problems: list[str] = field(default_factory=list)
++    notes: list[str] = field(default_factory=list)
++
++    @property
++    def ok(self) -> bool:
++        return not self.problems
++
++
++def sections(text: str) -> dict[str, list[str]]:
++    """`{título de sección ##: líneas}`."""
++    out: dict[str, list[str]] = {}
++    current = ""
++    for line in text.splitlines():
++        if line.startswith("## "):
++            current = line[3:].strip()
++            out[current] = []
++        else:
++            out.setdefault(current, []).append(line)
++    return out
++
++
++def table_rows(lines: list[str]) -> list[list[str]]:
++    """Filas de datos de la primera tabla de la sección (sin cabecera ni separador)."""
++    rows: list[list[str]] = []
++    in_table = False
++    for line in lines:
++        stripped = line.strip()
++        if stripped.startswith("|"):
++            cells = [c.strip() for c in stripped.strip("|").split("|")]
++            if not in_table:
++                in_table = True  # cabecera
++                continue
++            if all(set(c) <= set("-: ") for c in cells):
++                continue
++            rows.append(cells)
++        elif in_table and stripped and not stripped.startswith("<!--"):
++            break
++    return rows
++
++
++def _section(secs: dict[str, list[str]], prefix: str) -> list[str]:
++    for title, lines in secs.items():
++        if title.lower().startswith(prefix.lower()):
++            return lines
++    return []
++
++
++def read_mapping(path: Path) -> tuple[list[str], list[dict[str, str]]]:
++    text = path.read_text(encoding="utf-8")
++    comments = [line for line in text.splitlines() if line.startswith("#")]
++    body = [line for line in text.splitlines() if not line.startswith("#")]
++    return comments, list(csv.DictReader(body))
++
++
++def check_record(path: Path, waves_dir: Path) -> RecordCheck:
++    result = RecordCheck(path.name)
++    text = path.read_text(encoding="utf-8")
++    secs = sections(text)
++
++    local_rows = table_rows(_section(secs, "Llamadas `local_*`"))
++    if not any("local_lint_summary" in " ".join(r) for r in local_rows):
++        result.problems.append(
++            "falta la fila de local_lint_summary en la tabla de llamadas local_*"
++        )
++
++    controls = table_rows(_section(secs, "Controles positivos"))
++    if not controls:
++        result.problems.append("la tabla de controles positivos está vacía")
++    for row in controls:
++        if len(row) < 3 or not row[2].strip():
++            result.problems.append(f"control positivo sin el assert que disparó: {row[0]}")
++
++    pycharm_rows = table_rows(_section(secs, "Llamadas `mcp__pycharm__*`"))
++    tools = [r[1] if len(r) > 1 else "" for r in pycharm_rows]
++    renames = sum("rename_refactoring" in t for t in tools)
++    problems_calls = sum(("get_file_problems" in t) or ("lint_files" in t) for t in tools)
++    searches = sum(("search_text" in t) or ("search_regex" in t) for t in tools)
++
++    mappings = sorted(set(MAPPING_RE.findall(text)))
++    if mappings:
++        pycharm_defs = 0
++        for name in mappings:
++            mpath = waves_dir / name
++            if not mpath.is_file():
++                result.problems.append(f"no existe el mapping {name}")
++                continue
++            comments, rows = read_mapping(mpath)
++            if not any(c.startswith("# approved-by-main") for c in comments):
++                result.problems.append(f"{name} sin la cabecera «# approved-by-main»")
++            pycharm_defs += sum(r.get("method") == "pycharm" for r in rows)
++            for r in rows:
++                if r.get("method") == "search_edit" and not (r.get("reason") or "").strip():
++                    result.problems.append(f"{name}: fila search_edit sin motivo ({r.get('old')})")
++                if (
++                    r.get("scope") in ("cross_module", "unresolved")
++                    and not (r.get("verified") or "").strip()
++                ):
++                    result.problems.append(
++                        f"{name}: {r.get('old')} ({r.get('scope')}) sin verificar"
++                    )
++            discrepancies = sum((r.get("verified") or "").startswith("discrepancia") for r in rows)
++            result.notes.append(f"{name}: {len(rows)} filas, {discrepancies} discrepancia(s)")
++        if renames != pycharm_defs:
++            result.problems.append(
++                f"filas rename_refactoring ({renames}) ≠ filas method=pycharm de los mappings "
++                f"({pycharm_defs})"
++            )
++        if not problems_calls:
++            result.problems.append("ninguna llamada get_file_problems/lint_files registrada")
++    else:
++        has_reason = any("motivo" in " ".join(r).lower() for r in pycharm_rows)
++        if not has_reason and (not searches or not problems_calls):
++            result.problems.append(
++                "sin mapping: hace falta al menos un search_text/search_regex y un "
++                "get_file_problems/lint_files, o su motivo"
++            )
++    return result
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(
++        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
++    )
++    parser.add_argument("records", nargs="*", type=Path)
++    parser.add_argument("--waves-dir", type=Path, default=CHANGE_DIR / "waves")
++    parser.add_argument(
++        "--out", type=Path, default=CHANGE_DIR / "evidence" / "conformance" / "wave-records.txt"
++    )
++    args = parser.parse_args(argv)
++
++    records = args.records or sorted(args.waves_dir.glob("*.md"))
++    results = [check_record(r, args.waves_dir) for r in records]
++    lines = []
++    for res in results:
++        lines.append(f"{'OK   ' if res.ok else 'FALLA'} {res.record}")
++        lines += [f"      - {p}" for p in res.problems]
++        lines += [f"      · {n}" for n in res.notes]
++    lines.append(
++        f"{sum(r.ok for r in results)}/{len(results)} registro(s) cumplen los mínimos de §2.1"
++    )
++    report = "\n".join(lines) + "\n"
++    args.out.parent.mkdir(parents=True, exist_ok=True)
++    args.out.write_text(report, encoding="utf-8", newline="\n")
++    sys.stdout.write(report)
++    return 0 if results and all(r.ok for r in results) else 1
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py b/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py
+new file mode 100644
+index 0000000..1b00dda
+--- /dev/null
++++ b/.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py
+@@ -0,0 +1,179 @@
++"""Tests de `tools/make_mapping.py` (D13): una fila por definición y el reemplazo acotado.
++
++Se corren aparte de la suite del paquete (viven en la carpeta del cambio):
++
++    uv run pytest .sdd/changes/english-names-bilingual-output/tools/tests -q -p no:cacheprovider
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import shutil
++import sys
++from pathlib import Path
++
++TOOLS = Path(__file__).resolve().parents[1]
++REPO = TOOLS.parents[3]
++
++_spec = importlib.util.spec_from_file_location("make_mapping", TOOLS / "make_mapping.py")
++assert _spec is not None and _spec.loader is not None
++mm = importlib.util.module_from_spec(_spec)
++sys.modules["make_mapping"] = mm
++_spec.loader.exec_module(mm)
++
++
++def _tree(tmp_path: Path, files: dict[str, str]) -> Path:
++    """Repo mínimo: el detector y su léxico reales más los ficheros de prueba."""
++    (tmp_path / "scripts" / "data").mkdir(parents=True)
++    shutil.copy(REPO / "scripts" / "detect_spanish_names.py", tmp_path / "scripts")
++    for name in ("spanish_lexicon.json", "reserved_words.json"):
++        shutil.copy(REPO / "scripts" / "data" / name, tmp_path / "scripts" / "data")
++    for rel, text in files.items():
++        path = tmp_path / rel
++        path.parent.mkdir(parents=True, exist_ok=True)
++        path.write_text(text, encoding="utf-8", newline="")
++    return tmp_path
++
++
++# --- build: una fila por definición -------------------------------------------
++def test_two_same_name_locals_in_two_files_are_two_function_local_rows(tmp_path):
++    root = _tree(
++        tmp_path,
++        {
++            "src/local_delegate/uno.py": "def a():\n    estado = 1\n    return estado\n",
++            "src/local_delegate/dos.py": "def b():\n    estado = 2\n    return estado + 1\n",
++        },
++    )
++    rows = [r for r in mm.build_rows(root, []) if r["old"] == "estado"]
++    assert len(rows) == 2, rows
++    assert {r["scope"] for r in rows} == {"function_local"}
++    assert {r["definition"] for r in rows} == {
++        "src/local_delegate/uno.py:2@a",
++        "src/local_delegate/dos.py:2@b",
++    }
++    assert {r["method"] for r in rows} == {"search_edit"}
++    assert all(r["reason"] for r in rows)
++
++
++def test_scopes_cross_module_module_local_unreferenced_test_and_unresolved(tmp_path):
++    root = _tree(
++        tmp_path,
++        {
++            "src/local_delegate/__init__.py": "",
++            "src/local_delegate/cuota.py": (
++                "LIMITE_DIARIO = 3\n"
++                "def calcular_resto(x):\n    return x - LIMITE_DIARIO\n"
++                "def ayuda_privada():\n    return calcular_resto(1)\n"
++                "def leida_por_nombre():\n    return 0\n"
++            ),
++            "src/local_delegate/otro.py": (
++                "from local_delegate.cuota import calcular_resto\n"
++                "def usa():\n    return calcular_resto(2)\n"
++            ),
++            "tests/test_cuota.py": (
++                "import local_delegate.cuota as cuota\n"
++                "def test_el_resto_cuadra(monkeypatch):\n"
++                "    monkeypatch.setattr(cuota, 'leida_por_nombre', lambda: 1)\n"
++                "    assert cuota.LIMITE_DIARIO == 3\n"
++            ),
++        },
++    )
++    rows = mm.build_rows(root, [])
++    by_name = {r["old"]: r for r in rows if r["kind"] != "module"}
++    by_name["cuota"] = next(r for r in rows if r["kind"] == "module")
++    # El alias `as cuota` del test es otra definición, en otra fila.
++    assert any(r["kind"] == "import_alias" and r["old"] == "cuota" for r in rows)
++    assert by_name["calcular_resto"]["scope"] == "cross_module"
++    assert by_name["LIMITE_DIARIO"]["scope"] == "cross_module"  # `cuota.LIMITE_DIARIO` en el test
++    assert by_name["ayuda_privada"]["scope"] == "module_local"
++    assert by_name["leida_por_nombre"]["scope"] == "unresolved"
++    assert by_name["test_el_resto_cuadra"]["scope"] == "unreferenced_test"
++    assert by_name["cuota"]["kind"] == "module" and by_name["cuota"]["scope"] == "cross_module"
++    assert by_name["calcular_resto"]["method"] == "pycharm"
++
++
++def test_paths_filters_by_definition_file(tmp_path):
++    root = _tree(
++        tmp_path,
++        {
++            "src/local_delegate/uno.py": "def a():\n    estado = 1\n    return estado\n",
++            "src/local_delegate/dos.py": "def b():\n    estado = 2\n    return estado\n",
++        },
++    )
++    rows = mm.build_rows(root, ["src/local_delegate/uno.py"])
++    assert {r["definition"].split(":")[0] for r in rows} == {"src/local_delegate/uno.py"}
++
++
++# --- apply: reemplazo acotado a la función ------------------------------------
++SOURCE_FILE = (
++    "def first():\r\n"
++    "    estado = 1\r\n"
++    "    texto = f'{estado}'\r\n"
++    "    return estado, texto\r\n"
++    "\r\n"
++    "\r\n"
++    "def second(estado):\r\n"
++    "    resultado = {'estado': estado}\r\n"
++    "    return resultado['estado'] + estado\r\n"
++    "\r\n"
++    "\r\n"
++    "def test_algo_viejo():\r\n"
++    "    assert second(1) == 2\r\n"
++)
++
++
++def _mapping(tmp_path: Path, rows: list[dict[str, str]], approved: bool = True) -> Path:
++    path = tmp_path / "waves" / "X-mapping.csv"
++    mm.write_mapping(rows, path, "X")
++    if approved:
++        text = path.read_text(encoding="utf-8")
++        path.write_text("# approved-by-main: 2026-10-12\n" + text, encoding="utf-8", newline="")
++    return path
++
++
++def _row(old, new, definition, scope="function_local", kind="variable"):
++    return dict(  # noqa: C408
++        old=old, new=new, kind=kind, definition=definition, scope=scope,
++        method="search_edit", reason="prueba", verified="",
++    )  # fmt: skip
++
++
++def test_same_name_locals_in_two_functions_each_get_their_own_name(tmp_path):
++    root = _tree(tmp_path, {"tests/test_x.py": SOURCE_FILE})
++    mapping = _mapping(
++        tmp_path,
++        [
++            _row("estado", "state", "tests/test_x.py:2@first"),
++            _row("estado", "status_value", "tests/test_x.py:7@second", kind="param"),
++            _row("test_algo_viejo", "test_something_old", "tests/test_x.py:12@<module>",
++                 scope="unreferenced_test", kind="function"),
++        ],
++    )  # fmt: skip
++    mm.apply_mapping(mapping, root)
++    text = (root / "tests" / "test_x.py").read_bytes().decode("utf-8")
++    head, tail = text.split("def second")
++    assert "estado" not in head.replace("'estado'", "")
++    assert "    state = 1\r\n" in head and "f'{state}'" in head
++    # La segunda función tiene SU nombre, no el de la primera.
++    assert "def second(status_value):" not in head
++    tail = "def second" + tail
++    assert "def second(status_value):" in tail
++    assert "return resultado['estado'] + status_value" in tail
++    assert "state" not in tail.replace("status_value", "")
++    # Las claves de cadena no se tocan; el test se renombra en su def.
++    assert "{'estado': status_value}" in tail
++    assert "def test_something_old():" in tail
++    # Los finales de línea siguen siendo CRLF, todos.
++    assert text.count("\r\n") == SOURCE_FILE.count("\r\n") and "\n" not in text.replace("\r\n", "")
++
++
++def test_unapproved_mapping_is_not_applied(tmp_path):
++    root = _tree(tmp_path, {"tests/test_x.py": SOURCE_FILE})
++    mapping = _mapping(tmp_path, [_row("estado", "state", "tests/test_x.py:2@first")], False)
++    try:
++        mm.apply_mapping(mapping, root)
++    except SystemExit as exc:
++        assert "no está aprobado" in str(exc)
++    else:
++        raise AssertionError("se aplicó un mapping sin «# approved-by-main»")
++    assert (root / "tests" / "test_x.py").read_bytes().decode("utf-8") == SOURCE_FILE
+diff --git a/.sdd/changes/english-names-bilingual-output/tools/tests/test_check_wave_records.py b/.sdd/changes/english-names-bilingual-output/tools/tests/test_check_wave_records.py
+new file mode 100644
+index 0000000..445ba52
+--- /dev/null
++++ b/.sdd/changes/english-names-bilingual-output/tools/tests/test_check_wave_records.py
+@@ -0,0 +1,98 @@
++"""Tests de `tools/check_wave_records.py` (plan §2.1).
++
++uv run pytest .sdd/changes/english-names-bilingual-output/tools/tests -q -p no:cacheprovider
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import sys
++from pathlib import Path
++
++TOOLS = Path(__file__).resolve().parents[1]
++_spec = importlib.util.spec_from_file_location(
++    "check_wave_records", TOOLS / "check_wave_records.py"
++)
++assert _spec is not None and _spec.loader is not None
++cwr = importlib.util.module_from_spec(_spec)
++sys.modules["check_wave_records"] = cwr
++_spec.loader.exec_module(cwr)
++
++RECORD = """# Ola X — prueba
++
++- Mapping: `waves/X-mapping.csv` aprobado
++
++## Controles positivos
++| Test | Mutante aplicado | Assert que disparó | Restaurado |
++| --- | --- | --- | --- |
++| test_a | se quita el filtro | `assert (dest/"ajena").exists()` | sí |
++
++## Llamadas `local_*` (sesión principal y cada agente)
++| Quién | Tool | Para qué | Resultado (útil / corregido / descartado) |
++| --- | --- | --- | --- |
++| agente | `local_lint_summary` | resumen de la suite | útil |
++| agente | `local_commit_msg` | borrador del commit | corregido |
++
++## Llamadas `mcp__pycharm__*`
++| Quién | Tool | Símbolo o patrón | Resultado |
++| --- | --- | --- | --- |
++| agente | `rename_refactoring` | `a.py:3` VIEJO→NEW | ok |
++| agente | `get_file_problems` | a.py | sin errores |
++"""
++
++MAPPING = """# approved-by-main: 2026-10-12
++old,new,kind,definition,scope,method,reason,verified
++VIEJO,NEW,constant,a.py:3@<module>,cross_module,pycharm,,ok
++estado,state,variable,a.py:9@f,function_local,search_edit,variable local,
++"""
++
++
++def _waves(tmp_path: Path, record: str = RECORD, mapping: str = MAPPING) -> Path:
++    waves = tmp_path / "waves"
++    waves.mkdir()
++    (waves / "X.md").write_text(record, encoding="utf-8")
++    (waves / "X-mapping.csv").write_text(mapping, encoding="utf-8")
++    return waves
++
++
++def _run(tmp_path: Path, waves: Path) -> tuple[int, str]:
++    out = tmp_path / "wave-records.txt"
++    code = cwr.main(["--waves-dir", str(waves), "--out", str(out)])
++    return code, out.read_text(encoding="utf-8")
++
++
++def test_complete_record_passes(tmp_path):
++    code, report = _run(tmp_path, _waves(tmp_path))
++    assert code == 0, report
++    assert "OK    X.md" in report
++
++
++def test_fails_without_local_lint_summary_row(tmp_path):
++    record = RECORD.replace("| agente | `local_lint_summary` | resumen de la suite | útil |\n", "")
++    code, report = _run(tmp_path, _waves(tmp_path, record))
++    assert code == 1
++    assert "falta la fila de local_lint_summary" in report
++
++
++def test_fails_when_renames_do_not_match_mapping(tmp_path):
++    mapping = MAPPING + "OTRO,OTHER,function,a.py:20@<module>,module_local,pycharm,,\n"
++    code, report = _run(tmp_path, _waves(tmp_path, mapping=mapping))
++    assert code == 1
++    assert "filas rename_refactoring (1) ≠ filas method=pycharm de los mappings (2)" in report
++
++
++def test_fails_without_approval_verification_or_reason(tmp_path):
++    mapping = MAPPING.replace("# approved-by-main: 2026-10-12\n", "").replace(",ok\n", ",\n")
++    mapping = mapping.replace("variable local", "")
++    code, report = _run(tmp_path, _waves(tmp_path, mapping=mapping))
++    assert code == 1
++    assert "sin la cabecera «# approved-by-main»" in report
++    assert "VIEJO (cross_module) sin verificar" in report
++    assert "fila search_edit sin motivo (estado)" in report
++
++
++def test_fails_when_a_positive_control_lacks_its_assert(tmp_path):
++    record = RECORD.replace('`assert (dest/"ajena").exists()`', "")
++    code, report = _run(tmp_path, _waves(tmp_path, record))
++    assert code == 1
++    assert "control positivo sin el assert que disparó: test_a" in report
+(spanish_lexicon.json: fichero de datos nuevo, 4777 líneas; no se incluye en el parche)

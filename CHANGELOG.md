@@ -6,6 +6,138 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **El subcomando, su opción y cuatro variables de entorno pasan a inglés.** Los nombres viejos
+  siguen funcionando igual, con un aviso, durante esta versión y las dos menores siguientes, y se
+  retiran en la tercera. Si están el viejo y el nuevo, gana el nuevo.
+  - `recalcular-coste` pasa a `recompute-cost`, y su opción `--reiniciar-calibracion` a
+    `--reset-calibration`. Los viejos ya no salen en la ayuda y avisan en `stderr`.
+  - `LD_HOOK_READ_BLOQUEAR` pasa a `LD_HOOK_READ_BLOCK` y `LD_HOOK_READ_INTERRUPTOR` a
+    `LD_HOOK_READ_SWITCH_FILE`: los hooks instalados leen los dos nombres.
+  - `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` pasa a `LOCAL_DELEGATE_STRUCTURED_SUMMARY` y
+    `LOCAL_DELEGATE_COSTE_RESPALDO` a `LOCAL_DELEGATE_COST_FALLBACK`.
+- **El check `config.deprecated_names` de `doctor` se llama ahora «nombres obsoletos»** y avisa
+  también de estas variables viejas si siguen en la shell o en el `env` de
+  `~/.claude/settings.json`. `local_status` dice los nombres viejos que leyó el daemon o el
+  servidor por stdio, que `doctor` no ve.
+- **El fichero que apaga el bloqueo pasa a `~/.claude/local-delegate-block-off`.** El viejo,
+  `local-delegate-bloqueo-apagado`, sigue apagando con aviso durante el mismo plazo que los demás
+  alias, y `doctor` avisa si existe.
+- **El hook `anotar_llamada.py` pasa a llamarse `record_call.py`.** `install` y `update` borran la
+  copia vieja y su registro en `settings.json`, así que la nota de cada llamada no se escribe dos
+  veces.
+- **Los ficheros que comparten los hooks y el daemon en el temporal pasan a inglés:**
+  `local-delegate-blocks.jsonl` (antes `local-delegate-bloqueos.jsonl`), `local-delegate-calls/`
+  (antes `local-delegate-llamadas/`) y `local-delegate-health-<huella>.json` (antes
+  `local-delegate-salud-<huella>.json`). El daemon sigue leyendo los viejos, por si queda un hook
+  de una versión anterior instalado.
+- **La telemetría de los hooks escribe sus claves y valores en inglés:** `reason` (antes
+  `motivo`), `block` (antes `bloqueo`, con `on`, `off_file` y `off_variable`), `route` (antes
+  `camino`) y `paths` (antes `rutas`), y los motivos `bounded`, `code`, `small`,
+  `backend_missing`, `model_cooled`, `large_prose`, `not_a_dump`, `no_file`, `not_prose`,
+  `block_off` y `foreign_mcp`. El panel y los scripts de medición leen los dos formatos, también
+  mezclados en el mismo fichero. `/api/hooks` devuelve `by_reason` (antes `by_motivo`).
+- **Los hooks dicen qué nombres viejos leyeron.** Con la telemetría encendida, cada evento lleva
+  `deprecated_names` cuando la invocación leyó una variable o el interruptor con su nombre viejo, y
+  el check «nombres obsoletos» de `doctor` lo avisa mirando los últimos 7 días del fichero.
+- **El log de uso (`usage-*.jsonl`) escribe sus claves y valores de fallo en inglés:**
+  `block_id` (antes `bloqueo_id`), `sections` (antes `secciones`) y `connection_failure` (antes
+  `fallo_conexion`, con las causas `refused`, `no_route`, `connect_timeout`, `credential`,
+  `no_response`, `invalid_response`, `invalid_url`, `transport` y `unknown`). Las clases de
+  `error_class`, `fallback_class` y `affinity_dropped_class` pasan a `request`,
+  `capacity_or_load`, `read_timeout`, `configuration`, `model`, `unclassified` y `cooldown`, y
+  las de los eventos de enfriamiento también. El panel, `local_status`, `doctor` y los scripts de
+  medición (`medir_enfriamiento.py` incluido, con el mismo nombre y las mismas opciones) leen los
+  dos formatos, también mezclados en el mismo fichero, y los cuentan juntos.
+- **`/api/backend`, `/api/status` y `/api/backend/stats` devuelven la causa como `cause`, `label`
+  y `detail`** (antes `causa`, `etiqueta` y `detalle`). `doctor` entiende también la respuesta de
+  un daemon de la 0.34.0.
+- **El estado de enfriamiento pasa a `cooldown.json` y su registro de episodios a
+  `cooldown-events.jsonl`**, los dos en `LOG_DIR` y con claves y valores en inglés: `failures`,
+  `wait_s`, `until` y `reentries` en el estado (antes `fallos`, `espera_s`, `hasta` y
+  `reentradas`), y `model`, `event`, `class` y `after_expiry` en los episodios (antes `modelo`,
+  `evento`, `clase` y `tras_vencer`), con los eventos `enter`, `reenter` y `clear` (antes `entra`,
+  `reentra` y `limpia`). El daemon arranca desde `enfriamiento.json` si aún no hay
+  `cooldown.json`, y si están los dos manda el nuevo. Durante esta versión y las dos menores
+  siguientes escribe además `enfriamiento.json` con las claves viejas, para que los hooks de una
+  versión anterior sigan viendo los modelos enfriados; los hooks nuevos leen `cooldown.json` y, si
+  no existe, `enfriamiento.json`. `enfriamiento-eventos.jsonl` ya no crece, pero
+  `scripts/medir_enfriamiento.py` (mismo nombre, mismas opciones) lee los dos registros y da el
+  mismo informe con filas viejas, nuevas o mezcladas.
+- **La caché del relleno pasa a `attribution-AAAAMM.json`** (antes `atribucion-AAAAMM.json`), con
+  claves y valores en inglés: `entries`, y en cada entrada `match`, `bench` y `expiries` (antes
+  `entradas`, `cruce`, `banco` y `caducidades`), con los cruces `exact`, `window`, `window+path`,
+  `ambiguous` y `no_match` (antes `exacto`, `ventana`, `ventana+path`, `ambiguo` y `sin_cruce`).
+  Mientras de un mes solo exista el fichero viejo, el panel, `doctor`, `recompute-cost` y los
+  scripts de medición lo leen traducido. La primera escritura de ese mes siembra el nuevo desde el
+  viejo, una sola vez y con la regla de siempre (un cruce solo lo sustituye otro mejor); desde ahí
+  solo se lee el nuevo, y el viejo queda intacto. El resumen «cruces» de `recompute-cost` muestra
+  ya los valores nuevos.
+- **`/api/stats` devuelve la cuota como `quota`** (antes `cuota`), con sus campos en inglés:
+  `status` (`calibrated` o `uncalibrated`; antes `estado` con `calibrado` o `sin calibrar`),
+  `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning` y
+  `pct_reason` (antes `motivo`, `puntos`, `puntos_rechazo`, `descartes`, `deriva`, `reinicio`,
+  `mediana_C`, `aviso` y `motivo_pct`), y `has_aggregates` y `command` (antes `hay_agregados` y
+  `comando`). No cambia nada de lo que se ve en el panel.
+- **Las filas de `/api/events` llevan la densidad y la atribución en inglés:** `density`,
+  `family`, `marks`, `caller_origin` y `fallback_invalid` (antes `densidad`, `familia`, `marcas`,
+  `caller_origen` y `respaldo_invalido`). El origen del modelo es `line`, `backfill` o `fallback`
+  (antes `linea`, `relleno` o `respaldo`); el de la celda de densidad, `measured`, `unnumbered` o
+  `conservative` (antes `medida`, `sin_numerar` o `conservadora`); y las marcas, `assumed_family`
+  y `family_density` (antes `familia supuesta` y `densidad de la familia`). Los tramos de la barra
+  de cobertura de `/api/stats` son `excluded`, `at_call`, `backfilled`, `pending` y `assumed`
+  (antes `excluido`, `al_momento`, `por_relleno`, `pendiente` y `supuesto`). Son datos que el
+  servidor calcula al vuelo: no hay nada guardado que convertir.
+- **Los agregados del coste pasan a `cost-aggregates.json`** (antes `coste-agregados.json`), con
+  claves y valores en inglés: `generated`, `cleanup_days`, `check`, `n_by_month`, `points`,
+  `discards`, `resets` y `sources` (antes `generado`, `plazo_dias`, `cotejo`, `n_por_mes`,
+  `puntos`, `descartes`, `reinicios` y `fuentes`). En el cotejo, `date`, `table_version`, `judged`,
+  `outside`, `unpriced` y `verdict`, con `pass` o `fail` (antes `pasa` o `falla`). En cada punto
+  de cuota, `source` (`statusline` o `rejection`, antes `rechazo`), `type`, `start`, `end`, `marks`
+  y `unpriced_requests`. Las marcas pasan a valores de máquina: `low_bound`, `check_only`,
+  `low_bound_if_other_surfaces` y `reset` (antes «cota baja», «solo comprobación», «cota baja si
+  hubo uso en otras superficies» y «reinicio»); y los motivos de descarte, `corrupt_line`,
+  `out_of_range`, `small_delta`, `no_local_use`, `contaminated`, `overlapping`, `expired` y
+  `reset`. Mientras solo exista el fichero viejo, el panel, `doctor` y `recompute-cost` lo leen
+  traducido; la primera corrida de `recompute-cost` siembra el nuevo desde él, una sola vez y con
+  los puntos ya traducidos antes de juntarlos, así que un punto viejo y el mismo punto sacado otra
+  vez de los transcripts cuentan como uno. Desde ahí solo se lee el nuevo, y el viejo queda
+  intacto. El panel y el resumen de `recompute-cost` siguen diciendo los motivos y el veredicto en
+  palabras.
+- **El registro del statusline se busca también como `~/.claude/quota-statusline.jsonl`.** El
+  nombre de siempre, `cuota-statusline.jsonl`, sigue valiendo sin plazo: lo escribe tu statusline,
+  no local-delegate. Si existen los dos, `recompute-cost` lee los dos.
+- **`/api/stats` devuelve el coste como `cost`, las imágenes como `images` y la tabla de densidad
+  como `density_table`** (antes `coste`, `imagenes` y `densidad_tabla`), con sus campos en inglés:
+  `figure` (`low_bound` y `estimate`), `reason`, `events`, `bar` (con `valued`,
+  `with_assumed_model`, `excluded_by_reason` y `cleanup_days`), `fallback` (`model`, `name`,
+  `thread`, `invalid`), `n_origin` (`backfill`, `aggregate` y `declared`), `n_declared`, `density`
+  (`origin`, `families`, `assumed_family` y `family_density`), `unpriced`, `outside_base`
+  (`images` y `output_to_file`), `breakdown` (`model`, `name`, `thread`, `effort`, `cases`,
+  `low_bound` y `estimate`; el esfuerzo sin dato es `no_data`), `table` (`consulted` y `source`) y
+  `command`; en las imágenes, `chars_returned`. No cambia nada de lo que se ve en el panel.
+- **Las tablas de precios y de densidad del paquete pasan a `resources/data/prices.json` y
+  `resources/data/density.json`** (antes `resources/datos/precios.json` y `densidad.json`), con
+  claves en inglés. En la de precios, `source`, `consulted`, `web_search_per_1000` y `models`, y en
+  cada modelo `input`, `cache_read`, `output`, `family` y `supports_effort` (antes `fuente`,
+  `consultado`, `busqueda_web_por_1000`, `modelos`, `entrada`, `lectura`, `salida`, `familia` y
+  `admite_esfuerzo`); `w5m` y `w1h` no cambian. En la de densidad, `measured_on`, `families` y
+  `measured_with` (antes `medido`, `familias` y `medido_con`), las columnas `unnumbered` y
+  `read_format` (antes `sin_numerar` y `formato_read`) y las clases de contenido `prose`, `code`,
+  `log`, `structured`, `diff` y, fuera de la tabla, `other` (antes `prosa`, `codigo`,
+  `estructurado` y `otro`). Las familias de tokenizador son `new` y `previous` (antes `nueva` y
+  `anterior`). Viajan con el código que las lee, así que no hay nada guardado que convertir.
+- **Por eso cambian también `/api/stats` y `/api/events`:** `density_table` trae las claves nuevas
+  de `density.json`, `cost.density.families` cuenta por `new` y `previous`, y el campo `family` de
+  cada fila de `/api/events` vale `new` o `previous`. El panel sigue diciendo «nueva» y
+  «anterior».
+- **El módulo `precios` pasa a `pricing`** (`load_prices`, `load_density`, `normalize_id`,
+  `entry`, `family`, `check_rows` y `verdict`), y el cotejo responde `inside`, `outside` o
+  `unpriced` por fila y `pass` o `fail` de veredicto. `cost-aggregates.json` ya guardaba el
+  veredicto como `pass` o `fail`: su formato no cambia.
+- **`vendor.json` documenta el vendorizado con `_about` y `_provenance`** (antes `_acerca_de` y
+  `_procedencia`). `scripts/check_vendor.py` no las lee: la auditoría no cambia.
+
 ## [0.34.0] - 2026-10-08
 
 ### Added

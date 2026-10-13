@@ -15,7 +15,7 @@ import pytest
 from conftest import make_home, snapshot
 
 from local_delegate import checks, install, update
-from local_delegate.fallos import VistaBackend
+from local_delegate.failures import BackendView
 
 
 @pytest.fixture(autouse=True)
@@ -225,7 +225,7 @@ def _ctx(home):
     return checks.Context(
         home=home,
         daemon_status=lambda host, port: None,
-        backend_models=lambda: VistaBackend(True, "", None, "directo"),
+        backend_models=lambda: BackendView(True, "", None, "direct"),
         version_of=lambda component, cfg: ("v238", None),
         latest_release=checks.SKIP_PYPI,
     )

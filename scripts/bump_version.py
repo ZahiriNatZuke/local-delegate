@@ -17,6 +17,10 @@ Uso:
     python scripts/bump_version.py --check           # ¿coinciden los cuatro? (sale 1 si no)
 
 `--check` es lo mismo que comprueba el CI, disponible en local antes del push.
+
+Al subir de versión también pone la versión en las entradas de `src/local_delegate/deprecations.py`
+que aún dicen `UNRELEASED`: es la primera versión publicada con ese renombrado, y de ella sale el
+horizonte de cada alias (REQ-004).
 """
 
 from __future__ import annotations
@@ -49,6 +53,10 @@ PYPROJECT_VERSION_RE = re.compile(
 # reformatear el resto del archivo (`json.dump` expandiría las tablas inline y ensuciaría el
 # diff); la coherencia del resultado se comprueba después parseándolo.
 SERVER_VERSION_RE = re.compile(r'("version"\s*:\s*")([^"]+)(")')
+
+# El registro de nombres obsoletos: sus entradas nuevas llevan `introduced="UNRELEASED"` hasta que
+# se publica la versión que las contiene, y es este script quien pone esa versión.
+DEPRECATIONS_FILE = Path("src") / "local_delegate" / "deprecations.py"
 
 
 class BumpError(RuntimeError):
@@ -141,7 +149,31 @@ def plan(new_version: str, root: Path = ROOT) -> dict[Path, tuple[str, str]]:
     _verify_server_json(text, new_text, new_version)
     changes[server_path] = (new_text, newline)
 
+    deprecations_path = root / DEPRECATIONS_FILE
+    if deprecations_path.exists():
+        text, newline = _read(deprecations_path)
+        new_text = stamp_unreleased(text, new_version)
+        if new_text != text:
+            changes[deprecations_path] = (new_text, newline)
+
     return changes
+
+
+def stamp_unreleased(text: str, new_version: str) -> str:
+    """Cambia cada `"UNRELEASED"` de las entradas de `DEPRECATED_NAMES` por la versión publicada.
+
+    Solo dentro de la tupla del registro: la constante `UNRELEASED` y los comentarios que la citan
+    se quedan como están. La versión que se publica es la primera que contiene el renombrado, que
+    es lo que el horizonte de los alias necesita saber (REQ-004).
+    """
+    start = text.find("DEPRECATED_NAMES:")
+    if start == -1:
+        raise BumpError(f"{DEPRECATIONS_FILE} no declara DEPRECATED_NAMES")
+    end = text.find("\n)\n", start)
+    if end == -1:
+        raise BumpError(f"no se encontró el cierre de DEPRECATED_NAMES en {DEPRECATIONS_FILE}")
+    block = text[start:end].replace('"UNRELEASED"', f'"{new_version}"')
+    return text[:start] + block + text[end:]
 
 
 def _verify_pyproject(before: str, after: str, new_version: str) -> None:

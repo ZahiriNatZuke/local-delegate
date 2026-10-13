@@ -232,10 +232,13 @@ def eventos_de_telemetria(ruta: Path) -> list[dict]:
 def corrida_valida(telemetria: list[dict], session_id: str) -> bool:
     """El hook de prompt deja un evento en TODO prompt: si no está, con el bloqueo encendido, la
     corrida no corrió con los hooks que se querían medir."""
+    from local_delegate import legacy_names
+
+    # El estado del bloqueo en el formato viejo (`bloqueo: encendido`) o el nuevo (`block: on`).
     return any(
         e.get("event") == "UserPromptSubmit"
         and e.get("session_id") == session_id
-        and e.get("bloqueo") == "encendido"
+        and legacy_names.normalize("hook_telemetry", e).get("block") == "on"
         for e in telemetria
     )
 

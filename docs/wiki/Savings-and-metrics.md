@@ -17,8 +17,11 @@ fuente adicional.
 ```
 
 Cuando responde un **modelo de respaldo**, el evento suma `model_requested` (el que se pidió),
-`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`modelo`, `capacidad_o_carga`,
-`enfriamiento`); un evento fallido lleva `error_class` (`configuracion`, `modelo`…). `model` sigue
+`fallback_reason` (`http_500`, `en enfriamiento`…) y `fallback_class` (`model`, `capacity_or_load`,
+`cooldown`); un evento fallido lleva `error_class` (`configuration`, `model`…). Hasta la 0.34.0
+esos valores se escribían en español (`modelo`, `capacidad_o_carga`, `enfriamiento`,
+`configuracion`…); el panel, `local_status` y los scripts de medición los siguen leyendo y los
+cuentan junto a los nuevos. `model` sigue
 siendo el que **respondió** y `chunks` cuenta también las llamadas del respaldo, así que los tokens se
 atribuyen a quien los gastó y un evento sin salto es idéntico a los de antes. El panel marca esas
 filas con **↪** y la tarjeta de delegaciones dice cuántas tuvieron salto: una medición que coincida
@@ -44,16 +47,17 @@ con saltos pudo contaminarla un swap.
   `bytes`, porque ahí la entrada es una imagen y **estimar tokens dividiendo bytes entre 4 da un
   número disparatado** (×46 medido contra el token real). Los eventos anteriores a la v0.14.0 no
   lo traen y se reconocen por el nombre de la tool.
-- `fallo_conexion` (solo si la delegación no pudo conectar con el backend): la **causa** del
-  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `rechazada`,
-  `timeout_conexion`, `credencial`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
-  valiendo `connect_error` y `error_class` no cambia, así que un lector viejo del log no se rompe.
+- `connection_failure` (solo si la delegación no pudo conectar con el backend): la **causa** del
+  fallo, con los mismos nombres que usan el badge del panel y `doctor` (`dns`, `refused`,
+  `connect_timeout`, `credential`…; tabla en [Troubleshooting](Troubleshooting.md)). `error` sigue
+  valiendo `connect_error`. Hasta la 0.34.0 la clave era `fallo_conexion` y los valores iban en
+  español (`rechazada`, `timeout_conexion`…): se siguen leyendo.
 - `tool_use_id` (solo si el cliente lo manda; Claude Code sí, Codex y los scripts no): el id de la
   llamada en el transcript, leído de `_meta["claudecode/toolUseId"]`. Es la clave exacta para
   cruzar la línea con el transcript.
 - `caller_kind` (`main` o `subagent`), `caller_agent_type`, `caller_effort`, `caller_model` y
   `caller_src` (`hook+transcript` o `hook`): **quién pidió** la delegación. Los escribe el servidor
-  a partir de la nota que deja el hook `anotar_llamada.py` (ver
+  a partir de la nota que deja el hook `record_call.py` (antes `anotar_llamada.py`; ver
   [Coste equivalente](#coste-equivalente-a-precio-de-api)); sin nota, la línea no lleva ningún
   `caller_*`. Nunca lleva el id de sesión.
 - **Espera frente a lentitud** (solo si el backend manda `timings`, como llama-server; si no, se
@@ -175,7 +179,7 @@ tokens de bruto con `÷ 4`, un −32 %); contar en tokens de Claude de verdad lo
 ### De caracteres a tokens de Claude
 
 Cuántos caracteres caben en un token depende del **tokenizador** y del **tipo de contenido**. El
-paquete trae una tabla de densidad (`resources/datos/densidad.json`), en caracteres por token,
+paquete trae una tabla de densidad (`resources/data/density.json`), en caracteres por token,
 medida el 2026-10-06 con llamadas reales a Claude Code (`claude -p`) sobre textos públicos de este
 repo: la entrada que reporta `usage`, menos la de una llamada de control vacía, entre los
 caracteres del texto:
@@ -193,25 +197,25 @@ medido con Haiku 4.5. La columna
 **formato `Read`** cuenta la numeración de líneas que añade `Read`: es lo que Claude habría leído
 si no hubiera delegado.
 
-Para cada delegación, la regla es una sola y vive en Python (`coste.resolver_densidad`):
+Para cada delegación, la regla es una sola y vive en Python (`cost.resolve_density`):
 
 - **familia**: la del modelo que pidió la delegación (`caller_model`); sin modelo, la del
   [respaldo](#cobertura-y-respaldo); un modelo que no está en la tabla de precios se trata como
-  `nueva` y lleva la marca `familia supuesta`. Un modelo con familia conocida pero que no está
-  entre los medidos lleva la marca `densidad de la familia`;
+  familia nueva (`new`) y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
+  que no está entre los medidos lleva la marca `family_density` (densidad de la familia);
 - **clase de contenido**, sin leer el texto: primero por la tool (`local_lint_summary` → log,
   `local_commit_msg` → diff, `local_explain_code` → código) y si no por la extensión del `path`
   (`.md .txt .rst .html` → prosa; `.py .js .ts .ps1 .sh …` → código; `.json .jsonl .yaml .toml
-  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `otro`);
+  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `other`);
 - **columna**: formato `Read` si la entrada fue por `path`, sin numerar si no. Lo devuelto a
   Claude va siempre sin numerar (estructurado en `local_extract`, código en `local_boilerplate`,
   prosa en el resto);
-- **respaldo de celda**, en este orden: la celda exacta (`medida`); la misma clase sin numerar
-  (`sin_numerar`); la mayor densidad sin numerar de la familia (`conservadora`). Los dos respaldos
+- **respaldo de celda**, en este orden: la celda exacta (`measured`); la misma clase sin numerar
+  (`unnumbered`); la mayor densidad sin numerar de la familia (`conservative`). Los dos respaldos
   dan **menos** tokens que la celda real, nunca más, porque la numeración solo añade tokens.
 
-`/api/events` entrega cada fila ya resuelta, con `densidad` (`{"text": [c100, origen],
-"returned": …, "output": …}`, en centésimas), `familia` y `marcas`; Python y el JS del panel
+`/api/events` entrega cada fila ya resuelta, con `density` (`{"text": [c100, origen],
+"returned": …, "output": …}`, en centésimas), `family` y `marks`; Python y el JS del panel
 solo dividen (`cantidad × 100 // c100`), así que las dos cuentas no pueden separarse. La coletilla
 de ahorro, el recibo de la salida a fichero y `tokens_aprox` de `local_extract` dicen
 «≈ N tokens de Claude» con esa misma conversión; la coletilla de `local_describe_image`, solo los
@@ -267,23 +271,24 @@ contrafactual es salida generada y no lectura.
 
 Para saber qué modelo pidió cada delegación hacen falta dos piezas:
 
-- **al momento**: el hook `anotar_llamada.py` (`PreToolUse` sobre `mcp__local-delegate__.*`, se
+- **al momento**: el hook `record_call.py` (antes `anotar_llamada.py`; `PreToolUse` sobre `mcp__local-delegate__.*`, se
   instala siempre) deja una nota con el `tool_use_id`, el agente, su tipo, el esfuerzo y el
   transcript. Al escribir la línea del log, el servidor busca la nota y saca el modelo de la cola
   (256 KB) del transcript que señala, sin guardar nada más de él;
 - **por relleno**: lo que no se pudo atribuir al momento (el histórico, o una nota que llegó
-  tarde) lo atribuye después [`local-delegate recalcular-coste`](#local-delegate-recalcular-coste),
+  tarde) lo atribuye después [`local-delegate recompute-cost`](#local-delegate-recompute-cost),
   cruzando el log con los transcripts: por `tool_use_id` si lo hay, y si no por tool y hora, con
   el `path` como único desempate. Con los datos de referencia, el 96,5 % de las líneas casan sin
   ambigüedad.
 
-La **barra de cobertura** reparte cada delegación en un tramo, en este orden: `excluido` (clientes
+La **barra de cobertura** reparte cada delegación en un tramo, en este orden: excluidas (`excluded`: clientes
 que no son Claude, como `codex-mcp-client`, y pruebas: el cliente `mcp` de los scripts y las
-sesiones de bancos), `al momento`, `por relleno`, `pendiente` (sin modelo, pero su transcript aún
-puede existir) y `supuesto` (el resto). Las excluidas no suman. Las `pendiente` y `supuesto` se
+sesiones de bancos), al momento (`at_call`), por relleno (`backfilled`), pendientes (`pending`: sin
+modelo, pero su transcript aún puede existir) y supuestas (`assumed`: el resto). Las excluidas no
+suman. Las pendientes y las supuestas se
 valoran con el **respaldo** declarado, **Opus 5.5 en subagente** (el grupo más frecuente medido),
 y el rótulo lo nombra («3 de 152 con modelo supuesto: Opus 5.5 en subagente»). Se cambia con
-`LOCAL_DELEGATE_COSTE_RESPALDO` (ver [Configuration](Configuration.md#coste-equivalente)).
+`LOCAL_DELEGATE_COST_FALLBACK` (ver [Configuration](Configuration.md#coste-equivalente)).
 **Sin la barra no hay cifra.**
 
 El **esfuerzo** se guarda y se enseña, pero no entra en la fórmula: medido, no cambia los tokens
@@ -326,14 +331,14 @@ céntimo sobre la misma ventana.
 
 ### La tabla de precios
 
-Viaja en el paquete (`resources/datos/precios.json`): precio de entrada, salida, escritura de caché
-a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `fuente` (la
-página oficial) y `consultado` (la fecha del último cambio). Se busca por id exacto, quitando antes
+Viaja en el paquete (`resources/data/prices.json`): precio de entrada, salida, escritura de caché
+a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `source` (la
+página oficial) y `consulted` (la fecha del último cambio). Se busca por id exacto, quitando antes
 la fecha y el sufijo `[1m]`. **Ni la carga de la tabla ni `/api/stats` usan la red**: la tabla la
 mantiene al día el [vigilante semanal](Repo-hardening.md#vigilante-de-precios-y-límites), que
 abre un PR cuando cambia la página.
 
-Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recalcular-coste` recalcula
+Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recompute-cost` recalcula
 con la tabla el coste de las sesiones de tus transcripts y lo compara con el que calcula Claude
 Code. Si no cuadra, `doctor` lo dice (check `config.coste`, ver
 [Troubleshooting](Troubleshooting.md#doctor-da-warn-coste-y-relleno)). En la máquina de referencia
@@ -347,16 +352,18 @@ delegué?». Para eso hace falta saber cuántos dólares a precio de lista caben
 es **«sin calibrar»**.
 
 - **Puntos del statusline.** De un registro que escribe tu statusline de Claude Code,
-  `~/.claude/cuota-statusline.jsonl` (una fila por refresco con `ts`, `session_id`, `model`,
+  `~/.claude/quota-statusline.jsonl` o, con el nombre de siempre, `~/.claude/cuota-statusline.jsonl`
+  (si existen los dos, se leen los dos; una fila por refresco con `ts`, `session_id`, `model`,
   `five_hour`, `five_reset`, `seven_day`, `seven_reset`, `cost_usd` y, opcional, `effort`):
   local-delegate **no lo instala**, solo lo lee si existe. De cada ventana sale como mucho un punto:
   cuánto subió el % (Δ%), con las dos filas de una misma sesión porque las sesiones en paralelo
   ven el % desfasado, y cuánto costó a precio de lista lo que hicieron todas las sesiones del
   registro en ese intervalo (Δ$, de los incrementos de `cost_usd`).
   Su capacidad es `C = Δ$ × 100 / Δ%`. Se descartan, y se cuentan por motivo, los puntos con
-  Δ% < 10 (`delta_pequeno`), sin uso local (`sin_uso_local`), con sesiones que gastaban cuota sin
-  estar en el registro, como `claude -p` (`contaminado`), los que se solapan con otro
-  (`solapado`), las filas con un % imposible (`fuera_de_rango`) y los de más de 60 días.
+  Δ% < 10 (`small_delta`), sin uso local (`no_local_use`), con sesiones que gastaban cuota sin
+  estar en el registro, como `claude -p` (`contaminated`), los que se solapan con otro
+  (`overlapping`), las filas con un % imposible (`out_of_range`) y los de más de 60 días
+  (`expired`). El panel los dice en palabras.
 - **Puntos de rechazo.** Cada rechazo de cuota que aparece en los transcripts da un punto con
   Δ% = 100. Solo sirven de **comprobación**: recogen una parte del coste en sesiones grandes, un
   sesgo del orden del propio umbral, así que no entran en el cálculo.
@@ -374,13 +381,14 @@ es **«sin calibrar»**.
   periodo que elijas en el panel. Si la capacidad calibrada sale menor que la de un rechazo
   observado, avisa de un probable uso en otras superficies.
 - **Reinicio a mano.** Cuando el vigilante avisa de que cambió el artículo de límites de uso,
-  `local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`) deja fuera
+  `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`) deja fuera
   los puntos anteriores de ese tipo.
 
-Todo punto lleva la marca «cota baja si hubo uso en otras superficies»: claude.ai, otra máquina o
+Todo punto del statusline lleva la marca `low_bound_if_other_surfaces` (cota baja si hubo uso en
+otras superficies): claude.ai, otra máquina o
 Claude Desktop gastan la misma cuota y desde aquí no se ven. En la máquina de referencia, el
 2026-10-06, los dos tipos siguen **sin calibrar** (faltan 3 puntos del statusline: los que había
-salieron `contaminado` o fuera de rango).
+salieron contaminados o fuera de rango).
 
 ## Imágenes
 
@@ -391,25 +399,30 @@ cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensio
 honesta de calcularla. Por lo mismo, no entran ni en «Contexto conservado» ni en el coste
 equivalente.
 
-## `local-delegate recalcular-coste`
+## `local-delegate recompute-cost`
 
 El daemon y el panel **no leen** `~/.claude/projects` ni el registro del statusline (con una sola
 excepción acotada: la cola del transcript que señala la nota del hook, para sacar el modelo de una
 línea). Lo que necesita el coste y la cuota lo calcula este comando, que lanzas tú:
 
 ```bash
-local-delegate recalcular-coste
-local-delegate recalcular-coste --reiniciar-calibracion five_hour   # o seven_day
+local-delegate recompute-cost
+local-delegate recompute-cost --reset-calibration five_hour   # o seven_day
 ```
 
 Lee en local los transcripts, el registro del statusline y el log de uso, y escribe **solo** en el
 directorio de logs (`LOG_DIR`):
 
-- `atribucion-AAAAMM.json`, por mes: para cada línea del log, el modelo, el hilo, el esfuerzo, `N`,
-  las caducidades, cómo se cruzó (`exacto`, `ventana`, `ventana+path`, `ambiguo`, `sin_cruce`) y si
-  venía de una sesión de pruebas. Una entrada solo se sustituye por otra de cruce mejor;
-- `coste-agregados.json`: el cotejo de la tabla de precios, los agregados de `N` por grupo, los
-  puntos de calibración con sus descartes y los reinicios.
+- `attribution-AAAAMM.json` (antes `atribucion-AAAAMM.json`), por mes: para cada línea del log, el
+  modelo, el hilo, el esfuerzo, `N`, las caducidades (`expiries`), cómo se cruzó (`match`: `exact`,
+  `window`, `window+path`, `ambiguous`, `no_match`) y si venía de una sesión de pruebas (`bench`).
+  Una entrada solo se sustituye por otra de cruce mejor. Si de un mes solo existe el fichero viejo,
+  se lee traducido y la primera escritura siembra el nuevo desde él, una sola vez; el viejo no se
+  toca nunca;
+- `cost-aggregates.json` (antes `coste-agregados.json`): el cotejo de la tabla de precios
+  (`check`), los agregados de `N` por grupo (`n_by_month`), los puntos de calibración (`points`)
+  con sus descartes (`discards`) y los reinicios (`resets`). Si solo existe el viejo, se lee
+  traducido y la primera corrida siembra el nuevo desde él, una sola vez; el viejo no se toca.
 
 **Ni texto de conversaciones, ni rutas, ni ids de sesión, ni prompts**: solo números, fechas, ids
 de modelo, niveles de esfuerzo y nombres de motivo (y, como clave del relleno, el `tool_use_id` o
@@ -429,14 +442,14 @@ hay datos y cómo generarlos.
 
 Una prueba en vivo contra el MCP o el daemon escribe en el mismo log que el trabajo real. El log
 **no se reescribe**: todo el que lo lee aparta las pruebas con **una sola regla**
-(`atribucion.test_reason`). Una fila es una prueba si:
+(`attribution.test_reason`). Una fila es una prueba si:
 
 1. la pidió el cliente `mcp` (el de los scripts del repo);
-2. es de un banco (el relleno de `recalcular-coste` la marcó `banco`); o
+2. es de un banco (el relleno de `recompute-cost` la marcó `banco`); o
 3. su `ts` cae en una **ventana de prueba** de `LOG_DIR/test-windows.json`.
 
 Esa regla la aplican el panel entero, `local_status`, el coste equivalente (que ya apartaba las dos
-primeras), `recalcular-coste` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
+primeras), `recompute-cost` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
 de Codex **siguen contando** como uso; solo el coste las deja fuera («no es Claude»).
 
 ### Marcar una prueba en vivo
@@ -547,7 +560,8 @@ vuelo, y el siguiente sondeo sale 2 s **después de que termine** el anterior. A
 
 El `title` del badge es el detalle de la causa (la tabla completa de causas y qué hacer con cada
 una está en [Troubleshooting](Troubleshooting.md)). Las etiquetas y los detalles los redacta
-**solo** `fallos.py`, en el daemon; el panel los recibe ya escritos.
+**solo** `failures.py`, en el daemon; el panel los recibe ya escritos (campos `cause`, `label` y
+`detail` de `/api/backend`).
 
 **Hacen falta dos sondeos fallidos seguidos para pasar a «caído».** Un fallo suelto tras uno bueno
 **conserva** lo que se pintaba —badge en verde, filas con su último estado y sin atenuar— y el
@@ -639,8 +653,8 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 |---|---|
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
-| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
+| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`) y `density_table`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
@@ -665,14 +679,15 @@ signifique algo:
 
 Esa advertencia la abre el botón **ⓘ** de la cabecera de la tarjeta. Las categorías y los motivos
 se enseñan con etiquetas en español («Lectura», «Shell», «Lectura acotada», «Pequeño», «Por otro
-MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `acotada`, `pequeno`,
-`mcp_ajeno`…).
+MCP»…); en el log y en `/api/hooks` siguen siendo las claves internas (`read`, `bounded`, `small`,
+`foreign_mcp`…). Los valores que escribían los hooks hasta la versión anterior (`acotada`,
+`pequeno`, `mcp_ajeno`…) se leen igual y se pintan con la misma etiqueta.
 
 Durante mucho tiempo eso no se podía medir de ninguna forma: eran dos registros sin identificador
 común, y cruzarlos habría sido inventar una correlación y presentarla como un dato. **Ya no.** Cada
 aviso y cada bloqueo llevan un identificador; cuando el hook rechaza una lectura deja una nota con
 ese identificador y una **huella** de la ruta —nunca la ruta—, y la tool que recibe ese mismo
-`path` se queda con él en su evento (`bloqueo_id`). El identificador no viaja por el agente a
+`path` se queda con él en su evento (`block_id`; `bloqueo_id` hasta la 0.34.0). El identificador no viaja por el agente a
 propósito: pedirle que lo pase sería depender de que obedezca, que es justo lo que se quiere medir.
 
 Quien responde la pregunta es `scripts/medir_adopcion.py`, que cruza los dos registros sin trabajo

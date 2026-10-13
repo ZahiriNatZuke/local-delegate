@@ -1,0 +1,20 @@
+feat(rename): andamiaje de compatibilidad y detector de nombres en español (ola A0)
+
+Primera ola del frente A del SDD english-names-bilingual-output: las piezas que usan las demás
+olas, sin renombrar todavía nada publicado.
+
+- deprecations.py: registro único de nombres obsoletos (D1). Hoy solo las tres variables del rol
+  fast, como retiradas desde la 0.30.0 con aviso hasta la 0.37.x.
+- legacy_names.py: esqueleto de la tabla viejo→nuevo de los datos escritos (D2), con
+  read_key y normalize y las tablas vacías.
+- config: _env_alias(new, old) lee las dos por la puerta registrada, gana la nueva y anota la
+  vieja en DEPRECATED_SEEN. VARIABLES_ROL_RETIRADO pasa a RETIRED_FAST_ROLE_VARIABLES y sale
+  del registro.
+- doctor: config.rol_retirado se sustituye por config.deprecated_names, que mira la shell, el
+  env de ~/.claude/settings.json y los interruptores viejos. Siguen siendo 25 checks.
+- install: _RETIRED_SKILLS y retirada por nombre exacto en cada destino de skills (REQ-013).
+- bump_version.py: sella "UNRELEASED" en las entradas del registro al publicar (REQ-004).
+- scripts/detect_spanish_names.py: detector sin dependencias, con léxico congelado del propio
+  repo, heurísticas de eñe, tilde y sufijo y tokenizador de JS propio (REQ-044).
+- Tests: horizonte de alias, cotejo con el CHANGELOG, paridad con hook_common, retirada de
+  skills y el check nuevo. Cada uno con su control positivo.

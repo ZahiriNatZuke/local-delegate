@@ -35,7 +35,7 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para 
 | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
 | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
 | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
-| `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
+| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` (antes `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`) | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
 | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
 | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
 | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
@@ -112,14 +112,19 @@ con una línea que lista lo que se probó.
 
 Un modelo que falla varias veces seguidas deja de recibir peticiones durante un rato, y vuelve solo
 cuando vence. El estado lo comparten el daemon y los procesos stdio de la máquina
-(`enfriamiento.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
+(`cooldown.json`, junto al log de uso) y sobrevive a un reinicio. Si ese fichero no se puede leer,
 se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una delegación.
 `local_status` lista los modelos enfriados, con los segundos que les quedan y cuántas veces seguidas
 han vuelto a entrar sin un éxito de por medio.
 
+Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json`. El daemon arranca desde él si aún no
+hay `cooldown.json` (si están los dos, manda el nuevo) y, durante tres versiones menores, lo sigue
+escribiendo con sus claves viejas para los hooks de una versión anterior.
+
 Cada vez que un modelo **entra** en enfriamiento, **vuelve a entrar** o **se recupera**, se añade
-una línea a `enfriamiento-eventos.jsonl`, junto al log de uso: modelo, hora, clase del fallo,
-espera y reentradas, nunca prompts ni rutas. `enfriamiento.json` solo guarda el presente; este
+una línea a `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`, que se sigue leyendo),
+junto al log de uso: modelo, hora, clase del fallo, espera y reentradas, nunca prompts ni rutas.
+`cooldown.json` solo guarda el presente; este
 registro es lo que permite contar después cuántos episodios hubo y cómo acabaron. Para saber si los
 números de abajo convienen, `uv run python scripts/medir_enfriamiento.py --desde AAAA-MM-DD` lo
 cruza con el log de uso y responde «cambiar», «se quedan» o «no concluyente» (con menos de 5
@@ -201,12 +206,12 @@ variable:
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
+| `LOCAL_DELEGATE_COST_FALLBACK` (antes `LOCAL_DELEGATE_COSTE_RESPALDO`) | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
 
 El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
 local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
-borra los transcripts (30 días si no está puesto). `local-delegate recalcular-coste` lo lee y lo
-guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
+borra los transcripts (30 días si no está puesto). `local-delegate recompute-cost` lo lee y lo
+guarda en `cost-aggregates.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
 abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
 valor declarado de su hilo, en ese orden.
 
@@ -258,13 +263,13 @@ muda de sitio.
 | `LD_HOOK_READ_ENABLED` | `0` | Enciende el hook de lectura. `install --enable-read-hook` lo pasa como argumento, así que no hace falta ponerla a mano |
 | `LD_HOOK_READ_SUGGEST_KB` | `8` | A partir de aquí se avisa. Bajó de 32 a 8 tras medir: 24 de 24 lecturas calladas por tamaño eran documentación |
 | `LD_HOOK_READ_STRONG_KB` | `100` | A partir de aquí el aviso es «recomendación fuerte» |
-| `LD_HOOK_READ_BLOQUEAR` | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
+| `LD_HOOK_READ_BLOCK` (antes `LD_HOOK_READ_BLOQUEAR`) | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
 | `LD_HOOK_ENABLED` | `1` | Interruptor del experimento: `0` apaga hooks **y** telemetría, para la rama baseline de un A/B. Solo puede apagar |
 | `LD_HOOK_TELEMETRY_LOG` | *(vacío = sin telemetría)* | Fichero JSONL donde los hooks registran lo que deciden |
 
 ### El bloqueo
 
-Con `LD_HOOK_READ_BLOQUEAR=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
+Con `LD_HOOK_READ_BLOCK=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
 umbral se rechaza con un mensaje que nombra la tool que sirve, el `path` para llamarla y la salida
 de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo mismo con los
 volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
@@ -272,32 +277,74 @@ ruta; con una tubería, una redirección, comandos encadenados o un flag que ya 
 
 Nace apagado. Estas son las formas de que no bloquee:
 
-- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-bloqueo-apagado`** (vacío
-  vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
-  reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
-  `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
-  `LD_HOOK_READ_INTERRUPTOR` se puede poner en otra ruta.
-- `LD_HOOK_READ_BLOQUEAR=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
+- **Apagarlo al momento: crea el fichero `~/.claude/local-delegate-block-off`** (vacío
+  vale; antes `local-delegate-bloqueo-apagado`, que sigue apagando con aviso). Gana a la variable
+  y el hook lo mira en cada lectura, así que no hace falta cerrar ni reiniciar nada; bórralo para
+  volver a encenderlo. En PowerShell:
+  `New-Item "$HOME\.claude\local-delegate-block-off" -ItemType File`. Con
+  `LD_HOOK_READ_SWITCH_FILE` (antes `LD_HOOK_READ_INTERRUPTOR`) se puede poner en otra ruta.
+- `LD_HOOK_READ_BLOCK=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
   porque hereda el entorno del lanzador. Por eso existe el fichero.
 - Que el backend local no responda. El hook lo sondea él mismo (300 ms, cacheado un minuto) en vez
   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
   marca fresca, sin marca fresca no se bloquea, y sin bloqueo no hay delegaciones.
 - Que el modelo que haría el resumen esté **en enfriamiento**: el hook lee el mismo
-  `enfriamiento.json` que el servidor y, si ese modelo está parado, deja pasar la lectura. Mira el
+  `cooldown.json` que el servidor (o `enfriamiento.json`, si el daemon es de una versión anterior)
+  y, si ese modelo está parado, deja pasar la lectura. Mira el
   modelo por defecto del rol, o `LOCAL_DELEGATE_MODEL_LONG`/`_MECHANICAL` si el cliente las tiene.
 - `LD_HOOK_ENABLED=0`.
 
-Cada evento de la telemetría lleva `bloqueo` (`encendido`, `apagado_fichero` o
-`apagado_variable`), para que una medición sepa en qué estado estaba la regla.
+Cada evento de la telemetría lleva `block` (`on`, `off_file` u `off_variable`), para que una
+medición sepa en qué estado estaba la regla. Hasta la versión anterior la clave se llamaba `bloqueo`
+(`encendido`, `apagado_fichero`, `apagado_variable`), y el motivo de cada decisión, `motivo` (hoy
+`reason`); el panel y los scripts de medición leen los dos formatos, también mezclados en el mismo
+fichero. Si un hook leyó un nombre viejo (una variable o el interruptor), su evento lo dice en
+`deprecated_names`, y `doctor` lo avisa mirando los últimos 7 días del fichero.
 
 **Las lecturas por otros MCP se cuentan, no se bloquean.** `--enable-read-hook` registra el mismo
 hook para las tools de lectura de otros servidores MCP (`mcp__*__read_*` y
-`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `camino: mcp`: sin contarlas,
+`mcp__*__get_file_contents`). Por ese camino solo deja un evento con `route: mcp`: sin contarlas,
 una subida de las delegaciones no distinguiría «se delegó» de «se leyó por otro sitio».
 
 `.json`, `.csv`, `.log` y `.yaml` **se avisan pero no se bloquean**: ahí se busca un valor exacto
 —un `package.json`, la línea del error— y un resumen no sustituye a la lectura. El código no dice
 nada, ni antes ni ahora.
+
+## Nombres viejos de variables (alias con aviso)
+
+Cuatro variables cambiaron de nombre al pasar a inglés. El nombre viejo **sigue funcionando** igual
+durante la versión que publica el cambio y las dos menores siguientes, y se retira en la tercera.
+Si están las dos, gana la nueva. `doctor` avisa del nombre viejo (check «nombres obsoletos») si lo
+ve en la shell o en el bloque `env` de `~/.claude/settings.json`, y `local_status` dice los que
+haya leído el daemon o el servidor por stdio.
+
+| Nombre nuevo | Nombre viejo |
+|---|---|
+| `LD_HOOK_READ_BLOCK` | `LD_HOOK_READ_BLOQUEAR` |
+| `LD_HOOK_READ_SWITCH_FILE` | `LD_HOOK_READ_INTERRUPTOR` |
+| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` |
+| `LOCAL_DELEGATE_COST_FALLBACK` | `LOCAL_DELEGATE_COSTE_RESPALDO` |
+
+Lo mismo vale para el subcomando `recompute-cost` (antes `recalcular-coste`) y su opción
+`--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos siguen aceptándose,
+ocultos en la ayuda y con un aviso en `stderr`.
+
+Y para el fichero que apaga el bloqueo: `~/.claude/local-delegate-block-off` (antes
+`local-delegate-bloqueo-apagado`). El viejo sigue apagando durante el mismo plazo; `doctor` avisa
+si existe, y también si la telemetría de los hooks dice que lo leyeron.
+
+### Nombres en disco que cambiaron
+
+Los hooks y el daemon comparten ficheros en el temporal del usuario. Desde esta versión se escriben
+con el nombre nuevo, y el daemon sigue leyendo el viejo, por si queda instalado un hook de una
+versión anterior:
+
+| Nombre nuevo | Nombre viejo | Qué es |
+|---|---|---|
+| `local-delegate-blocks.jsonl` | `local-delegate-bloqueos.jsonl` | notas de cada bloqueo, para cruzarlo con la delegación |
+| `local-delegate-calls/` | `local-delegate-llamadas/` | notas del hook de atribución |
+| `local-delegate-health-<huella>.json` | `local-delegate-salud-<huella>.json` | caché de un minuto de «el backend responde» |
+| hook `record_call.py` | hook `anotar_llamada.py` | `install`/`update` retiran el viejo (copia y registro) |
 
 ## Auto-arranque de llama-swap (opt-in)
 

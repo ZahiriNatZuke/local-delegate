@@ -1,0 +1,1512 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index d564775..9ecb6e5 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,21 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+ 
+ ## [Unreleased]
+ 
++### Changed
++- **El subcomando, su opción y cuatro variables de entorno pasan a inglés.** Los nombres viejos
++  siguen funcionando igual, con un aviso, durante esta versión y las dos menores siguientes, y se
++  retiran en la tercera. Si están el viejo y el nuevo, gana el nuevo.
++  - `recalcular-coste` pasa a `recompute-cost`, y su opción `--reiniciar-calibracion` a
++    `--reset-calibration`. Los viejos ya no salen en la ayuda y avisan en `stderr`.
++  - `LD_HOOK_READ_BLOQUEAR` pasa a `LD_HOOK_READ_BLOCK` y `LD_HOOK_READ_INTERRUPTOR` a
++    `LD_HOOK_READ_SWITCH_FILE`: los hooks instalados leen los dos nombres.
++  - `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` pasa a `LOCAL_DELEGATE_STRUCTURED_SUMMARY` y
++    `LOCAL_DELEGATE_COSTE_RESPALDO` a `LOCAL_DELEGATE_COST_FALLBACK`.
++- **El check `config.deprecated_names` de `doctor` se llama ahora «nombres obsoletos»** y avisa
++  también de estas variables viejas si siguen en la shell o en el `env` de
++  `~/.claude/settings.json`. `local_status` dice los nombres viejos que leyó el daemon o el
++  servidor por stdio, que `doctor` no ve.
++
+ ## [0.34.0] - 2026-10-08
+ 
+ ### Added
+diff --git a/README.md b/README.md
+index 12f53fc..d874e58 100644
+--- a/README.md
++++ b/README.md
+@@ -195,7 +195,7 @@ cámbialos por los de tu backend.
+ | `LLAMASWAP_WATCH_CONFIG` | `0` | `1` añade `-watch-config` al backend autoarrancado |
+ | `LOCAL_DELEGATE_FALLBACK` | `1` | Respaldo entre modelos: si el modelo de un rol falla por su culpa, responde el siguiente de su cadena (`_MAX_HOPS`=2; cadenas con `_<ROL>`, ver la wiki). `0` lo apaga |
+ | `LOCAL_DELEGATE_COOLDOWN` | `1` | Enfriamiento por modelo: 3 fallos seguidos (`_FAILURES`) lo paran 120 s (`_S`), doblando hasta 900 s (`_MAX_S`). `0` lo apaga |
+-| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
++| `LOCAL_DELEGATE_COST_FALLBACK` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación sin modelo atribuido: `modelo` o `modelo:main\|subagent`. Un valor inválido no rompe nada: el panel usa el declarado y lo dice |
+ | `LOCAL_DELEGATE_COMMIT_LANGUAGE` | *(vacío = el idioma del diff)* | Idioma del mensaje de `local_commit_msg`: `es`, `en`, `fr`, `pt`, `de`, `it` o un nombre libre. Vacío: el idioma predominante de los textos del diff |
+ | `LOCAL_DELEGATE_TURN_MAX_S` | `600` | Turno del daemon entre modelos que chocan en llama-swap: si la primera de la cola lleva estos segundos esperando **y** el daemon lleva otros tantos sin que empiece ni termine ninguna llamada al backend, se le concede el turno igual (`turn: "forced"` en el log) |
+ | `LOCAL_DELEGATE_SLOW_THRESHOLD` | `0.5` | Una llamada es «lenta» (`slow` en el log, «lento ×0,37» en el panel) si genera a menos de esta fracción de la velocidad normal de su modelo |
+@@ -224,7 +224,7 @@ modelo se atribuye cada delegación, cuántas peticiones siguieron, qué densida
+ descuenta las relecturas del mismo fichero. Junto a ella, un bloque de **cuota** que sale «sin
+ calibrar» hasta que hay al menos tres medidas del statusline de ventanas distintas, y nunca enseña
+ un porcentaje sin esa calibración. Para atribuir el histórico y alimentar esos dos bloques, lanza
+-de vez en cuando `local-delegate recalcular-coste` (lee tus transcripts en local y escribe solo
++de vez en cuando `local-delegate recompute-cost` (lee tus transcripts en local y escribe solo
+ agregados); `doctor` avisa si hay delegaciones a punto de quedarse sin transcript.
+ 
+ Las **pruebas no cuentan**: las delegaciones del cliente `mcp` de los scripts, las de bancos y
+@@ -288,7 +288,7 @@ porque son una regla sola sobre dos caminos: cerrar la tool `Read` y dejar `cat
+ abierto no cambia la conducta, la muda de sitio.
+ 
+ Esos dos avisan; **rechazar** una lectura es otra cosa y viene aparte y apagada
+-(`LD_HOOK_READ_BLOQUEAR`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
++(`LD_HOOK_READ_BLOCK`). Solo alcanza a la lectura completa de un `.md` o un `.txt` grande, con
+ el backend local respondiendo, y el mensaje del rechazo nombra la tool que sirve y la salida de
+ emergencia: leer por franjas nunca se bloquea. El motivo de que exista es que está medido —cuatro
+ veces— que sugerir no cambia la conducta.
+diff --git a/docs/recipes/claude-code-hooks.md b/docs/recipes/claude-code-hooks.md
+index e574bbe..287af89 100644
+--- a/docs/recipes/claude-code-hooks.md
++++ b/docs/recipes/claude-code-hooks.md
+@@ -3,7 +3,7 @@
+ El hook recomendado es `UserPromptSubmit`, que solo sugiere. Los de lectura —`PreToolUse/Read`
+ y su otra mitad, `PreToolUse` sobre `Bash|PowerShell`— se instalan con `--enable-read-hook` y
+ están apagados por defecto porque produjeron avisos ruidosos en tareas de arquitectura. Solo
+-bloquean si además se enciende `LD_HOOK_READ_BLOQUEAR` (ver «El bloqueo»). El que se **retiró** el
++bloquean si además se enciende `LD_HOOK_READ_BLOCK` (ver «El bloqueo»). El que se **retiró** el
+ 2026-09-08 por puntería fue el de resumir la salida de lint en `Bash` (ver abajo). Aparte va
+ `anotar_llamada.py`, que no sugiere nada: anota quién pide cada delegación y se instala siempre.
+ Ninguno envía el prompt a otro modelo.
+@@ -48,7 +48,7 @@ desobediencia era un aviso que nunca llegaba.
+ 
+ Aclara que una lectura directa sigue siendo correcta para líneas exactas usadas al razonar o editar.
+ 
+-#### El bloqueo (`LD_HOOK_READ_BLOQUEAR`, apagado por defecto)
++#### El bloqueo (`LD_HOOK_READ_BLOCK`, apagado por defecto)
+ 
+ Con él encendido, la lectura **completa** de un `.md` o un `.txt` por encima del umbral no se
+ sugiere: se rechaza, con `permissionDecision: deny`. El motivo de que exista es que está medido
+@@ -60,7 +60,7 @@ leer por franjas con `offset`/`limit`, que nunca se bloquean. Y hay varias forma
+ bloquee:
+ 
+ - **el fichero `~/.claude/local-delegate-bloqueo-apagado`** (o la ruta de
+-  `LD_HOOK_READ_INTERRUPTOR`): gana a la variable y se mira en cada lectura, así que apaga al
++  `LD_HOOK_READ_SWITCH_FILE`): gana a la variable y se mira en cada lectura, así que apaga al
+   momento sin cerrar la sesión; bórralo para volver a encender;
+ - la variable a `0`, que no afecta a una sesión ya abierta, porque hereda el entorno del lanzador;
+ - un backend local que no responde;
+@@ -106,7 +106,7 @@ guarda el id de sesión ni nada más del transcript.
+ 
+ Con eso el panel puede valorar cada delegación con el precio del modelo que la pidió (ver
+ [Savings & metrics](../wiki/Savings-and-metrics.md#coste-equivalente-a-precio-de-api)). Si la
+-nota se pierde, la delegación no se rompe: queda para `local-delegate recalcular-coste`, que la
++nota se pierde, la delegación no se rompe: queda para `local-delegate recompute-cost`, que la
+ atribuye después cruzando el log con los transcripts.
+ 
+ Se registra **siempre** con `install`, no detrás de `--enable-read-hook`, porque no cambia nada
+diff --git a/docs/wiki/Configuration.md b/docs/wiki/Configuration.md
+index 0a22b57..dd91c9c 100644
+--- a/docs/wiki/Configuration.md
++++ b/docs/wiki/Configuration.md
+@@ -35,7 +35,7 @@ RAM van más rápidos, pero Windows desaloja al modelo pequeño de la VRAM para
+ | `LOCAL_DELEGATE_MODEL_CODE` | `qwen36-35b-a3b` | código |
+ | `LOCAL_DELEGATE_MODEL_VISION` | `gemma4-12b` | visión (imagen→texto, `local_describe_image`) |
+ | `LOCAL_DELEGATE_LONG_INPUT_CHARS` | `6000` | umbral mecánico↔largo |
+-| `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
++| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` (antes `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`) | `0` | `local_summarize` sigue la estructura de un Markdown (solo modelo largo); experimental, ver [Tools](Tools#resumen-por-secciones-experimental-apagado) |
+ | `LOCAL_DELEGATE_MAX_CHARS_MECHANICAL` / `_LONG` / `_CODE` / `_FAST` | `20000` / `48000` / `20000` / `12000` | tope de chars de entrada **por rol** |
+ | `LOCAL_DELEGATE_MAX_IMAGE_MB` | `8` | tope de tamaño de imagen para `local_describe_image` |
+ | `LOCAL_DELEGATE_CHUNK_CHARS` | `3500` | tamaño de trozo al partir documentos largos (`local_translate`, `local_delegate`) |
+@@ -201,11 +201,11 @@ variable:
+ 
+ | Variable | Default | Descripción |
+ |---|---|---|
+-| `LOCAL_DELEGATE_COSTE_RESPALDO` | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
++| `LOCAL_DELEGATE_COST_FALLBACK` (antes `LOCAL_DELEGATE_COSTE_RESPALDO`) | *(vacío = `claude-opus-5-5` en subagente)* | Con qué modelo e hilo se valora una delegación a la que no se le pudo atribuir modelo: `modelo` o `modelo:main\|subagent` (con solo `modelo`, el hilo es `subagent`). Gana al valor declarado. Un valor que no se entiende, o un modelo que no está en la tabla de precios, no rompe nada: se usa el declarado y el panel lo dice. El rótulo de la barra de cobertura nombra siempre el respaldo en uso |
+ 
+ El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
+ local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
+-borra los transcripts (30 días si no está puesto). `local-delegate recalcular-coste` lo lee y lo
++borra los transcripts (30 días si no está puesto). `local-delegate recompute-cost` lo lee y lo
+ guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
+ abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
+ valor declarado de su hilo, en ese orden.
+@@ -258,13 +258,13 @@ muda de sitio.
+ | `LD_HOOK_READ_ENABLED` | `0` | Enciende el hook de lectura. `install --enable-read-hook` lo pasa como argumento, así que no hace falta ponerla a mano |
+ | `LD_HOOK_READ_SUGGEST_KB` | `8` | A partir de aquí se avisa. Bajó de 32 a 8 tras medir: 24 de 24 lecturas calladas por tamaño eran documentación |
+ | `LD_HOOK_READ_STRONG_KB` | `100` | A partir de aquí el aviso es «recomendación fuerte» |
+-| `LD_HOOK_READ_BLOQUEAR` | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
++| `LD_HOOK_READ_BLOCK` (antes `LD_HOOK_READ_BLOQUEAR`) | `0` | **Rechaza** la lectura en vez de sugerir. Ver abajo |
+ | `LD_HOOK_ENABLED` | `1` | Interruptor del experimento: `0` apaga hooks **y** telemetría, para la rama baseline de un A/B. Solo puede apagar |
+ | `LD_HOOK_TELEMETRY_LOG` | *(vacío = sin telemetría)* | Fichero JSONL donde los hooks registran lo que deciden |
+ 
+ ### El bloqueo
+ 
+-Con `LD_HOOK_READ_BLOQUEAR=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
++Con `LD_HOOK_READ_BLOCK=1`, una lectura **completa** de un `.md` o un `.txt` por encima del
+ umbral se rechaza con un mensaje que nombra la tool que sirve, el `path` para llamarla y la salida
+ de emergencia: leer por franjas con `offset`/`limit`, que nunca se bloquean. Lo mismo con los
+ volcados de shell (`cat`, `type`, `more`, `Get-Content`, `gc`, `rtk read`, `head`) sobre una única
+@@ -276,8 +276,8 @@ Nace apagado. Estas son las formas de que no bloquee:
+   vale). Gana a la variable y el hook lo mira en cada lectura, así que no hace falta cerrar ni
+   reiniciar nada; bórralo para volver a encenderlo. En PowerShell:
+   `New-Item "$HOME\.claude\local-delegate-bloqueo-apagado" -ItemType File`. Con
+-  `LD_HOOK_READ_INTERRUPTOR` se puede poner en otra ruta.
+-- `LD_HOOK_READ_BLOQUEAR=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
++  `LD_HOOK_READ_SWITCH_FILE` (antes `LD_HOOK_READ_INTERRUPTOR`) se puede poner en otra ruta.
++- `LD_HOOK_READ_BLOCK=0`. Ojo: una sesión ya abierta sigue con el valor con el que arrancó,
+   porque hereda el entorno del lanzador. Por eso existe el fichero.
+ - Que el backend local no responda. El hook lo sondea él mismo (300 ms, cacheado un minuto) en vez
+   de fiarse de las delegaciones anteriores, que sería un círculo cerrado: sin delegaciones no hay
+@@ -299,6 +299,25 @@ una subida de las delegaciones no distinguiría «se delegó» de «se leyó por
+ —un `package.json`, la línea del error— y un resumen no sustituye a la lectura. El código no dice
+ nada, ni antes ni ahora.
+ 
++## Nombres viejos de variables (alias con aviso)
++
++Cuatro variables cambiaron de nombre al pasar a inglés. El nombre viejo **sigue funcionando** igual
++durante la versión que publica el cambio y las dos menores siguientes, y se retira en la tercera.
++Si están las dos, gana la nueva. `doctor` avisa del nombre viejo (check «nombres obsoletos») si lo
++ve en la shell o en el bloque `env` de `~/.claude/settings.json`, y `local_status` dice los que
++haya leído el daemon o el servidor por stdio.
++
++| Nombre nuevo | Nombre viejo |
++|---|---|
++| `LD_HOOK_READ_BLOCK` | `LD_HOOK_READ_BLOQUEAR` |
++| `LD_HOOK_READ_SWITCH_FILE` | `LD_HOOK_READ_INTERRUPTOR` |
++| `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` |
++| `LOCAL_DELEGATE_COST_FALLBACK` | `LOCAL_DELEGATE_COSTE_RESPALDO` |
++
++Lo mismo vale para el subcomando `recompute-cost` (antes `recalcular-coste`) y su opción
++`--reset-calibration` (antes `--reiniciar-calibracion`): los nombres viejos siguen aceptándose,
++ocultos en la ayuda y con un aviso en `stderr`.
++
+ ## Auto-arranque de llama-swap (opt-in)
+ 
+ Solo se usa si `LOCAL_DELEGATE_AUTOSTART=1`. Específico de llama-swap.
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index abdbbe0..a45336e 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -111,7 +111,7 @@ opencode mcp list      # debe decir: ✓ local-delegate connected
+ | `--target claude \| codex \| opencode \| all` | histórico, equivale a `--clients`; `all` fuerza los tres aunque no estén instalados. No se combina con `--clients` |
+ | `--no-hooks` / `--no-skill` / `--no-memory` / `--no-mcp` | excluye ese componente |
+ | `--agents` | actualiza tus subagentes de `~/.claude/agents/` (opt-in, ver abajo) |
+-| `--enable-read-hook` | registra **y enciende** los dos hooks de lectura: `PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`. Van juntos porque son una regla sola sobre dos caminos —cerrar `Read` y dejar `cat informe.md` abierto solo muda la conducta de sitio—. Registra además el mismo hook para las tools de lectura de otros MCP (`mcp__*__read_*`, `mcp__*__get_file_contents`), que solo dejan el evento (`camino: mcp`) y nunca bloquean. Antes solo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada. El **bloqueo** viene aparte y apagado (`LD_HOOK_READ_BLOQUEAR`, ver Configuration) |
++| `--enable-read-hook` | registra **y enciende** los dos hooks de lectura: `PreToolUse`/`Read` y `PreToolUse`/`Bash|PowerShell`. Van juntos porque son una regla sola sobre dos caminos —cerrar `Read` y dejar `cat informe.md` abierto solo muda la conducta de sitio—. Registra además el mismo hook para las tools de lectura de otros MCP (`mcp__*__read_*`, `mcp__*__get_file_contents`), que solo dejan el evento (`camino: mcp`) y nunca bloquean. Antes solo registraba: el script exigía además `LD_HOOK_READ_ENABLED=1` y la bandera no encendía nada. El **bloqueo** viene aparte y apagado (`LD_HOOK_READ_BLOCK`, ver Configuration) |
+ | `--mcp-mode stdio\|http` | proceso por sesión (`uvx`) o daemon compartido en `/mcp`. **Si tu backend exige API key, `http` suele ser la única opción que funciona**: el proceso `stdio` lo lanza el cliente y hereda *su* entorno, no el del lanzador del daemon, que es quien tiene el secreto. Lo avisa el check «credencial del backend» |
+ | `--base-url URL` | fija `LOCAL_DELEGATE_BASE_URL` en la entrada MCP (backend remoto) |
+ | `--api-key-env` | reenvía `LOCAL_DELEGATE_API_KEY` desde el entorno |
+@@ -296,9 +296,9 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Entorno | versión publicada | la instalada vs la última en PyPI, para que una instalación vieja no pase el diagnóstico en silencio |
+ | Entorno | clientes | si existen `~/.claude`, `~/.codex` y `~/.config/opencode` |
+ | Entorno | clientes MCP observados | con qué clientes se ha **hablado** de verdad: versión, revisión de protocolo negociada y si declaran `elicitation` (o sea, si las tools pueden preguntarles en vez de fallar). Sale de `clients.jsonl`, en `LOG_DIR`, y es **informativo**: nunca sube el exit code |
+-| Entorno | rol rápido retirado | si `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST` siguen en el entorno. El rol `fast` se retiró en la 0.30.0 —no lo enrutaba ninguna tool— y esas variables ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo |
++| Entorno | nombres obsoletos | nombres viejos que siguen en uso: las variables renombradas (`LD_HOOK_READ_BLOQUEAR`, `LD_HOOK_READ_INTERRUPTOR`, `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`, `LOCAL_DELEGATE_COSTE_RESPALDO`) en la shell o en el `env` de `~/.claude/settings.json`, con su nombre nuevo y la versión en que se retira el alias; y `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST`, del rol `fast` retirado en la 0.30.0, que ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo. Es un aviso, no un fallo. Lo que solo ve el daemon lo dice `local_status` |
+ | Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles (`mechanical`, `long`, `code`), el paso `loaded` o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías—; `warn` también si una variable usa `residente` o `resident`, que siguen valiendo como sinónimos obsoletos de `loaded`. Con todo bien, dice «sin residente» o «residente: X» según la config de llama-swap tenga algún modelo con TTL efectivo 0 |
+-| Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `coste-agregados.json`, el log de uso y los `atribucion-AAAAMM.json` de `LOG_DIR`, y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recalcular-coste` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
++| Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `coste-agregados.json`, el log de uso y los `atribucion-AAAAMM.json` de `LOG_DIR`, y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recompute-cost` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
+ | Entorno | ventanas de prueba | si `LOG_DIR/test-windows.json` (las ventanas que marca `local-delegate test-window`) se puede leer y si alguna ventana se quedó abierta. `warn` si el fichero es ilegible (con el motivo: entonces no se aparta ninguna prueba por ventana), si hay entradas ignoradas (cuántas) o si una ventana lleva abierta más de 12 h, con la orden `local-delegate test-window stop <id>` para cerrarla; `ok` sin ventanas o con todas cerradas. Nunca `missing`: una ventana mal puesta no rompe el MCP, solo aparta filas del panel |
+ | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
+ | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
+diff --git a/docs/wiki/Repo-hardening.md b/docs/wiki/Repo-hardening.md
+index 873974a..6dc339e 100644
+--- a/docs/wiki/Repo-hardening.md
++++ b/docs/wiki/Repo-hardening.md
+@@ -377,7 +377,7 @@ que usa la red para esto.
+ | Job | Qué mira | Qué hace si cambia |
+ |---|---|---|
+ | `precios` | la tabla «Model pricing» de la página oficial, contra `precios.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consultado` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
+-| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recalcular-coste --reiniciar-calibracion …`) |
++| `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
+ 
+ **Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
+ cabecera de la tabla, si extrae menos de 5 filas o si un precio no se lee como número; en el de
+diff --git a/docs/wiki/Savings-and-metrics.md b/docs/wiki/Savings-and-metrics.md
+index 6379c00..f378150 100644
+--- a/docs/wiki/Savings-and-metrics.md
++++ b/docs/wiki/Savings-and-metrics.md
+@@ -272,7 +272,7 @@ Para saber qué modelo pidió cada delegación hacen falta dos piezas:
+   transcript. Al escribir la línea del log, el servidor busca la nota y saca el modelo de la cola
+   (256 KB) del transcript que señala, sin guardar nada más de él;
+ - **por relleno**: lo que no se pudo atribuir al momento (el histórico, o una nota que llegó
+-  tarde) lo atribuye después [`local-delegate recalcular-coste`](#local-delegate-recalcular-coste),
++  tarde) lo atribuye después [`local-delegate recompute-cost`](#local-delegate-recompute-cost),
+   cruzando el log con los transcripts: por `tool_use_id` si lo hay, y si no por tool y hora, con
+   el `path` como único desempate. Con los datos de referencia, el 96,5 % de las líneas casan sin
+   ambigüedad.
+@@ -283,7 +283,7 @@ sesiones de bancos), `al momento`, `por relleno`, `pendiente` (sin modelo, pero
+ puede existir) y `supuesto` (el resto). Las excluidas no suman. Las `pendiente` y `supuesto` se
+ valoran con el **respaldo** declarado, **Opus 5.5 en subagente** (el grupo más frecuente medido),
+ y el rótulo lo nombra («3 de 152 con modelo supuesto: Opus 5.5 en subagente»). Se cambia con
+-`LOCAL_DELEGATE_COSTE_RESPALDO` (ver [Configuration](Configuration.md#coste-equivalente)).
++`LOCAL_DELEGATE_COST_FALLBACK` (ver [Configuration](Configuration.md#coste-equivalente)).
+ **Sin la barra no hay cifra.**
+ 
+ El **esfuerzo** se guarda y se enseña, pero no entra en la fórmula: medido, no cambia los tokens
+@@ -333,7 +333,7 @@ la fecha y el sufijo `[1m]`. **Ni la carga de la tabla ni `/api/stats` usan la r
+ mantiene al día el [vigilante semanal](Repo-hardening.md#vigilante-de-precios-y-límites), que
+ abre un PR cuando cambia la página.
+ 
+-Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recalcular-coste` recalcula
++Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recompute-cost` recalcula
+ con la tabla el coste de las sesiones de tus transcripts y lo compara con el que calcula Claude
+ Code. Si no cuadra, `doctor` lo dice (check `config.coste`, ver
+ [Troubleshooting](Troubleshooting.md#doctor-da-warn-coste-y-relleno)). En la máquina de referencia
+@@ -374,7 +374,7 @@ es **«sin calibrar»**.
+   periodo que elijas en el panel. Si la capacidad calibrada sale menor que la de un rechazo
+   observado, avisa de un probable uso en otras superficies.
+ - **Reinicio a mano.** Cuando el vigilante avisa de que cambió el artículo de límites de uso,
+-  `local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`) deja fuera
++  `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`) deja fuera
+   los puntos anteriores de ese tipo.
+ 
+ Todo punto lleva la marca «cota baja si hubo uso en otras superficies»: claude.ai, otra máquina o
+@@ -391,15 +391,15 @@ cifra de tokens de Claude**: el log guarda bytes, no dimensiones, y sin dimensio
+ honesta de calcularla. Por lo mismo, no entran ni en «Contexto conservado» ni en el coste
+ equivalente.
+ 
+-## `local-delegate recalcular-coste`
++## `local-delegate recompute-cost`
+ 
+ El daemon y el panel **no leen** `~/.claude/projects` ni el registro del statusline (con una sola
+ excepción acotada: la cola del transcript que señala la nota del hook, para sacar el modelo de una
+ línea). Lo que necesita el coste y la cuota lo calcula este comando, que lanzas tú:
+ 
+ ```bash
+-local-delegate recalcular-coste
+-local-delegate recalcular-coste --reiniciar-calibracion five_hour   # o seven_day
++local-delegate recompute-cost
++local-delegate recompute-cost --reset-calibration five_hour   # o seven_day
+ ```
+ 
+ Lee en local los transcripts, el registro del statusline y el log de uso, y escribe **solo** en el
+@@ -432,11 +432,11 @@ Una prueba en vivo contra el MCP o el daemon escribe en el mismo log que el trab
+ (`atribucion.test_reason`). Una fila es una prueba si:
+ 
+ 1. la pidió el cliente `mcp` (el de los scripts del repo);
+-2. es de un banco (el relleno de `recalcular-coste` la marcó `banco`); o
++2. es de un banco (el relleno de `recompute-cost` la marcó `banco`); o
+ 3. su `ts` cae en una **ventana de prueba** de `LOG_DIR/test-windows.json`.
+ 
+ Esa regla la aplican el panel entero, `local_status`, el coste equivalente (que ya apartaba las dos
+-primeras), `recalcular-coste` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
++primeras), `recompute-cost` (los agregados de `N`) y los medidores de `scripts/`. Las delegaciones
+ de Codex **siguen contando** como uso; solo el coste las deja fuera («no es Claude»).
+ 
+ ### Marcar una prueba en vivo
+@@ -639,7 +639,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
+ |---|---|
+ | `GET /` | Dashboard HTML |
+ | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
+-| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recalcular-coste` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
++| `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `densidad`, `familia` y `marcas` resueltas: el JS no funde ni resuelve nada |
+ | `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `cuota` (estado por tipo de ventana, `five_hour` y `seven_day`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+ | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
+ | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
+diff --git a/docs/wiki/Tools.md b/docs/wiki/Tools.md
+index 2830fef..d9c8e6a 100644
+--- a/docs/wiki/Tools.md
++++ b/docs/wiki/Tools.md
+@@ -66,7 +66,7 @@ length`, `truncated_out`).
+ 
+ ### Resumen por secciones (experimental, apagado)
+ 
+-Con `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO=1` y un documento Markdown que va al modelo largo, el
++Con `LOCAL_DELEGATE_STRUCTURED_SUMMARY=1` y un documento Markdown que va al modelo largo, el
+ resumen sigue la estructura: una línea `## <título>` por sección, en orden, con la introducción y
+ las subsecciones, y el servidor completa las que el modelo se salte. Está **apagado por defecto**:
+ mejora mucho la salida (100 % de títulos en los documentos de prueba, frente a 0–11 % en prosa),
+diff --git a/docs/wiki/Troubleshooting.md b/docs/wiki/Troubleshooting.md
+index f02a82f..eee1365 100644
+--- a/docs/wiki/Troubleshooting.md
++++ b/docs/wiki/Troubleshooting.md
+@@ -245,13 +245,13 @@ justo esto.
+ ## `doctor` da `[WARN] coste y relleno`
+ 
+ El check `config.coste` mira si la cifra de coste equivalente es de fiar y si se está perdiendo
+-histórico. No lee transcripts: lee lo que dejó `local-delegate recalcular-coste` en `LOG_DIR`. Da
++histórico. No lee transcripts: lee lo que dejó `local-delegate recompute-cost` en `LOG_DIR`. Da
+ `warn` por dos motivos, y si se cumplen los dos los dice juntos:
+ 
+ - **«N delegación(es) pendiente(s) de relleno, la más antigua de hace D días»**. Hay delegaciones
+   sin modelo atribuido cuyo transcript está a menos de 10 días de borrarse (Claude Code los borra a
+   los `cleanupPeriodDays` de `~/.claude/settings.json`, 30 si no está puesto). Lanza
+-  `local-delegate recalcular-coste`: las atribuye cruzando el log con los transcripts y el aviso
++  `local-delegate recompute-cost`: las atribuye cruzando el log con los transcripts y el aviso
+   desaparece. Una vez borrado el transcript, esa delegación se valora para siempre con el
+   respaldo (ver [Configuration](Configuration.md#coste-equivalente)). Avisa aunque el comando no
+   se haya lanzado nunca: lo que mira es la pendiente más antigua, no la fecha del último relleno.
+@@ -270,9 +270,9 @@ Es lo esperado. Para decir qué parte de una ventana de 5 h o de la semanal supo
+ hacen falta al menos **tres medidas del statusline de ventanas distintas** con una dispersión
+ menor del 25 %, y hasta entonces el panel no enseña ningún porcentaje. Esas medidas salen del
+ registro del statusline (`~/.claude/cuota-statusline.jsonl`), que solo existe si tu statusline lo
+-escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recalcular-coste`
++escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recompute-cost`
+ para incorporar las medidas nuevas. El bloque enseña además cuántas se descartaron y por qué
+ (`contaminado`, `delta_pequeno`, `solapado`…): una medida tomada mientras otra sesión que no está
+ en el registro gastaba cuota no sirve para calibrar. Si cambian los límites de uso (el vigilante
+ abre un PR con el texto nuevo), descarta la calibración vieja con
+-`local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`).
++`local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`).
+diff --git a/scripts/vigilante_precios.py b/scripts/vigilante_precios.py
+index 1f8a922..fc6a7a7 100644
+--- a/scripts/vigilante_precios.py
++++ b/scripts/vigilante_precios.py
+@@ -91,7 +91,7 @@ PROVISIONAL_NUEVO = {"familia": "nueva", "admite_esfuerzo": True}
+ TITULO_LIMITES = "How do usage and length limits work?"
+ MIN_CHARS_LIMITES = 500
+ 
+-COMANDO_REINICIO = "local-delegate recalcular-coste --reiniciar-calibracion five_hour|seven_day"
++COMANDO_REINICIO = "local-delegate recompute-cost --reset-calibration five_hour|seven_day"
+ 
+ COMENTARIO_BLOQUEADO = (
+     "**El vigilante no puede dejar este PR listo para mezclar.** Los checks que exige el ruleset "
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index 0a5fc10..ed099b4 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -1631,7 +1631,8 @@ def _probe_deprecated_names(ctx: Context) -> Result:
+ 
+     Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
+     `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
+-    el probe. Hoy el registro solo tiene las tres variables del rol `fast`, retirado en la 0.30.0.
++    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso) y las tres
++    del rol `fast`, retirado en la 0.30.0.
+ 
+     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
+     quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
+@@ -1639,7 +1640,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
+     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
+ 
+     Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
+-    where corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de where heredan los hooks)
++    donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
+     y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
+     cuenta `local_status`.
+     """
+@@ -1677,7 +1678,7 @@ def _probe_deprecated_names(ctx: Context) -> Result:
+     return Result(WARN, " | ".join(warnings), "; ".join(hints))
+ 
+ 
+-RECALCULAR_HINT = "local-delegate recalcular-coste"
++RECALCULAR_HINT = "local-delegate recompute-cost"
+ # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
+ _MARGEN_DEL_RELLENO = timedelta(days=10)
+ 
+@@ -1815,7 +1816,7 @@ CHECKS: tuple[Check, ...] = (
+     Check("client.presence", "entorno", "clientes", _probe_clients),
+     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
+     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
+-    Check("config.deprecated_names", "entorno", "rol rápido retirado", _probe_deprecated_names),
++    Check("config.deprecated_names", "entorno", "nombres obsoletos", _probe_deprecated_names),
+     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
+     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
+     Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),
+diff --git a/src/local_delegate/cli.py b/src/local_delegate/cli.py
+index 05b91df..13ea428 100644
+--- a/src/local_delegate/cli.py
++++ b/src/local_delegate/cli.py
+@@ -306,22 +306,58 @@ def cmd_install(args: argparse.Namespace) -> int:
+     return _run_install(args, uninstall=False)
+ 
+ 
+-def cmd_recalcular_coste(args: argparse.Namespace) -> int:
+-    """`recalcular-coste` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
++def _warn_deprecated(old: str) -> None:
++    """Aviso en `stderr` por un nombre viejo del CLI: nombra el nuevo y la versión de retirada."""
++    from . import deprecations
++
++    entry = deprecations.find(old)
++    if entry is not None:
++        print(f"aviso: {deprecations.warning_text(entry)}", file=sys.stderr)
++
++
++def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
++    """`--reset-calibration` o su alias oculto `--reiniciar-calibracion` (REQ-001).
++
++    Si llegan los dos con valores distintos no hay lectura obvia, así que se rechaza, como
++    `--clients`/`--target`.
++    """
++    new = getattr(args, "reset_calibration", None)
++    old = getattr(args, "legacy_reset_calibration", None)
++    if old is None:
++        return new
++    _warn_deprecated("--reiniciar-calibracion")
++    if new is not None and new != old:
++        raise ValueError(
++            "--reset-calibration y --reiniciar-calibracion no coinciden: usa solo --reset-calibration"
++        )
++    return old
++
++
++def cmd_recompute_cost(args: argparse.Namespace) -> int:
++    """`recompute-cost` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
+     from . import config, recalcular
+ 
++    try:
++        reset = _resolve_reset_calibration(args)
++    except ValueError as exc:
++        print(f"error: {exc}", file=sys.stderr)
++        return 2
+     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
+     try:
+-        resumen = recalcular.ejecutar(
+-            claude_dir, config.LOG_DIR, reiniciar=args.reiniciar_calibracion
+-        )
++        resumen = recalcular.ejecutar(claude_dir, config.LOG_DIR, reiniciar=reset)
+     except OSError as e:
+-        print(f"recalcular-coste: no se pudo escribir en el directorio de logs ({e.strerror}).")
++        print(f"recompute-cost: no se pudo escribir en el directorio de logs ({e.strerror}).")
+         return 1
+     print(recalcular.texto_del_resumen(resumen))
+     return 0
+ 
+ 
++def cmd_recompute_cost_legacy(args: argparse.Namespace) -> int:
++    """`recalcular-coste`, alias oculto de `recompute-cost`: mismo handler, con aviso."""
++    _warn_deprecated("recalcular-coste")
++    return cmd_recompute_cost(args)
++
++
+ def _count_rows_by_window(log_dir: Path, ventanas) -> dict[str, int]:
+     """Cuántas filas del log de uso estampa cada ventana (la primera por inicio, como `fundir`)."""
+     import json
+@@ -1366,29 +1402,51 @@ def build_parser() -> argparse.ArgumentParser:
+     serve.set_defaults(func=cmd_serve)
+ 
+     recalc = sub.add_parser(
+-        "recalcular-coste",
++        "recompute-cost",
+         help=(
+             "Lee los transcripts de Claude Code y deja en el directorio de logs el relleno de "
+             "atribución, los agregados de N, el cotejo de precios y los puntos de cuota."
+         ),
+     )
+-    recalc.add_argument(
+-        "--reiniciar-calibracion",
++    _add_recompute_cost_args(recalc)
++    recalc.set_defaults(func=cmd_recompute_cost)
++    # Nombre viejo (REQ-001): sin `help`, argparse no lo lista en la ayuda; avisa al usarse.
++    legacy = sub.add_parser("recalcular-coste")
++    _add_recompute_cost_args(legacy)
++    legacy.set_defaults(func=cmd_recompute_cost_legacy)
++
++    _add_test_window_parser(sub)
++
++    _add_install_parsers(sub)
++    # Sin `metavar`, argparse pinta en el `usage` todos los subcomandos, ocultos incluidos.
++    sub.metavar = "{" + ",".join(n for n in sub.choices if n not in _HIDDEN_COMMANDS) + "}"
++    return parser
++
++
++# Subcomandos que siguen funcionando pero no salen en la ayuda (alias de `deprecations`).
++_HIDDEN_COMMANDS = frozenset({"recalcular-coste"})
++
++
++def _add_recompute_cost_args(p: argparse.ArgumentParser) -> None:
++    p.add_argument(
++        "--reset-calibration",
+         choices=("five_hour", "seven_day"),
+         default=None,
+         help="los puntos de cuota de ese tipo anteriores a hoy dejan de contar",
+     )
+-    recalc.add_argument(
++    # Nombre viejo (REQ-001), oculto en la ayuda; `_resolve_reset_calibration` avisa al usarlo.
++    p.add_argument(
++        "--reiniciar-calibracion",
++        dest="legacy_reset_calibration",
++        choices=("five_hour", "seven_day"),
++        default=None,
++        help=argparse.SUPPRESS,
++    )
++    p.add_argument(
+         "--claude-dir",
+         default=None,
+         help="directorio de Claude Code (default: ~/.claude); solo se lee",
+     )
+-    recalc.set_defaults(func=cmd_recalcular_coste)
+-
+-    _add_test_window_parser(sub)
+-
+-    _add_install_parsers(sub)
+-    return parser
+ 
+ 
+ def _add_common_install_args(p: argparse.ArgumentParser) -> None:
+diff --git a/src/local_delegate/config.py b/src/local_delegate/config.py
+index be11fad..2dc76ec 100644
+--- a/src/local_delegate/config.py
++++ b/src/local_delegate/config.py
+@@ -85,6 +85,20 @@ def _env_alias(new: str, old: str) -> str | None:
+     return old_value
+ 
+ 
++def _env_alias_str(new: str, old: str, default: str) -> str:
++    """`_env` para una variable renombrada (`_env_alias` con defecto)."""
++    raw = _env_alias(new, old)
++    return default if raw is None else raw
++
++
++def _env_alias_flag(new: str, old: str, default: bool) -> bool:
++    """`_env_flag` para una variable renombrada: mismas reglas de verdad que `_env_flag`."""
++    raw = _env_alias(new, old)
++    if raw is None:
++        return default
++    return raw.strip().lower() not in {"0", "false", "no", "off", ""}
++
++
+ # --- Endpoint OpenAI-compatible ---------------------------------------------
+ BASE_URL = _env("LOCAL_DELEGATE_BASE_URL", "http://127.0.0.1:9292/v1").rstrip("/")
+ API_KEY = _env("LOCAL_DELEGATE_API_KEY", "")  # opcional; algunos endpoints lo exigen
+@@ -229,11 +243,15 @@ HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
+ #: este escrito el criterio de la quinta medicion, incluido el resultado que la retira. El hook la
+ #: consulta en cada invocacion —no al arrancar— porque una sesion abierta hereda el entorno del
+ #: lanzador, y un freno que exige reiniciar la sesion no frena nada.
+-HOOK_READ_BLOQUEAR: bool = _env_flag("LD_HOOK_READ_BLOQUEAR", False)
++#: `LD_HOOK_READ_BLOQUEAR` es su nombre viejo (alias con aviso, REQ-002).
++HOOK_READ_BLOCK: bool = _env_alias_flag("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", False)
+ #: Donde vive el fichero que APAGA el bloqueo en caliente (REQ-F1-11): si existe, no se bloquea
+-#: aunque `LD_HOOK_READ_BLOQUEAR` diga 1. La variable no sirve de freno porque una sesion abierta
++#: aunque `LD_HOOK_READ_BLOCK` diga 1. La variable no sirve de freno porque una sesion abierta
+ #: hereda el entorno del lanzador; un fichero se lee en cada invocacion. Vacia = el defecto del hook.
+-HOOK_READ_INTERRUPTOR: str = _env("LD_HOOK_READ_INTERRUPTOR", "")
++#: `LD_HOOK_READ_INTERRUPTOR` es su nombre viejo (alias con aviso, REQ-002).
++HOOK_READ_SWITCH_FILE: str = _env_alias_str(
++    "LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR", ""
++)
+ 
+ 
+ # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
+@@ -285,7 +303,10 @@ LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
+ # subsecciones), pero en la medición con `claude -p` no redujo las relecturas —Claude releía para
+ # comprobar, no por lo que faltaba— y el criterio escrito antes de medir era retirarlo. Lo lee el
+ # daemon al arrancar: para encenderlo hay que ponerlo en el entorno del lanzador y reiniciarlo.
+-RESUMEN_ESTRUCTURADO = _env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False)
++# Nombre viejo: `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` (alias con aviso, REQ-002).
++STRUCTURED_SUMMARY = _env_alias_flag(
++    "LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False
++)
+ 
+ # Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
+ # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
+@@ -440,7 +461,8 @@ CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca
+ # Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
+ # `modelo` o `modelo:main|subagent`. Vacío = el declarado en `coste.py` (Opus 5.5 en subagente).
+ # Un valor inválido no rompe nada: se usa el declarado y la fila lo dice (`respaldo_invalido`).
+-COSTE_RESPALDO = _env("LOCAL_DELEGATE_COSTE_RESPALDO", "")
++# Nombre viejo: `LOCAL_DELEGATE_COSTE_RESPALDO` (alias con aviso, REQ-002).
++COST_FALLBACK = _env_alias_str("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO", "")
+ 
+ # Token del puerto del daemon. Vacío = sin autenticación, que es el comportamiento histórico y
+ # sigue siendo el default: exigirlo siempre rompería toda instalación existente el día que se
+diff --git a/src/local_delegate/coste.py b/src/local_delegate/coste.py
+index 6e1bf56..a5a4f63 100644
+--- a/src/local_delegate/coste.py
++++ b/src/local_delegate/coste.py
+@@ -106,12 +106,12 @@ def clase_de_contenido(evento: dict) -> str:
+ def respaldo() -> dict:
+     """El modelo y el hilo con que se valora una delegación sin modelo (REQ-008).
+ 
+-    `config.COSTE_RESPALDO` (`modelo` o `modelo:main|subagent`; solo `modelo` = `subagent`) manda
++    `config.COST_FALLBACK` (`modelo` o `modelo:main|subagent`; solo `modelo` = `subagent`) manda
+     sobre el declarado. Un valor vacío usa el declarado; uno que no se entiende o cuyo modelo no
+     está en la tabla de precios, también, pero con `respaldo_invalido: True` para que se diga.
+     """
+     declarado = dict(RESPALDO_DECLARADO, respaldo_invalido=False)
+-    valor = str(config.COSTE_RESPALDO or "").strip()
++    valor = str(config.COST_FALLBACK or "").strip()
+     if valor:
+         modelo, sep, hilo = valor.partition(":")
+         modelo = precios.normalizar_id(modelo.strip())
+diff --git a/src/local_delegate/deprecations.py b/src/local_delegate/deprecations.py
+index 1416a90..570fca5 100644
+--- a/src/local_delegate/deprecations.py
++++ b/src/local_delegate/deprecations.py
+@@ -53,6 +53,28 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
+     DeprecatedName("retired", "LOCAL_DELEGATE_MODEL_FAST", None, "0.30.0", "0.37.0"),
+     DeprecatedName("retired", "LOCAL_DELEGATE_MAX_CHARS_FAST", None, "0.30.0", "0.37.0"),
+     DeprecatedName("retired", "LOCAL_DELEGATE_FALLBACK_FAST", None, "0.30.0", "0.37.0"),
++    # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
++    DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "UNRELEASED"),
++    DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "UNRELEASED"),
++    DeprecatedName(
++        "env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "UNRELEASED", used_by_hooks=True
++    ),
++    DeprecatedName(
++        "env_var",
++        "LD_HOOK_READ_INTERRUPTOR",
++        "LD_HOOK_READ_SWITCH_FILE",
++        "UNRELEASED",
++        used_by_hooks=True,
++    ),
++    DeprecatedName(
++        "env_var",
++        "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
++        "LOCAL_DELEGATE_STRUCTURED_SUMMARY",
++        "UNRELEASED",
++    ),
++    DeprecatedName(
++        "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "UNRELEASED"
++    ),
+ )
+ 
+ 
+diff --git a/src/local_delegate/resources/hooks/hook_common.py b/src/local_delegate/resources/hooks/hook_common.py
+index 6ad405f..da5260e 100644
+--- a/src/local_delegate/resources/hooks/hook_common.py
++++ b/src/local_delegate/resources/hooks/hook_common.py
+@@ -247,11 +247,35 @@ def backend_disponible(*, ttl_s: float = 60.0, timeout_s: float = 0.3, marca: Pa
+ 
+ VERDADEROS = {"1", "true", "yes", "on"}
+ 
++# Nombres viejos que los hooks siguen leyendo, como `(kind, old, new)`. Es la copia minima del
++# registro `local_delegate.deprecations` (los hooks no importan el paquete);
++# `tests/test_deprecations.py` exige que sea igual a `deprecations.hook_names()`.
++DEPRECATED_HOOK_NAMES = (
++    ("env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"),
++    ("env_var", "LD_HOOK_READ_INTERRUPTOR", "LD_HOOK_READ_SWITCH_FILE"),
++)
++
++# Nombres viejos leidos con valor en esta invocacion (REQ-003).
++DEPRECATED_SEEN: set[str] = set()
++
++
++def env_alias(new: str, old: str, default: str = "") -> str:
++    """Lee una variable renombrada: gana la nueva; si solo esta la vieja, vale la vieja y se anota
++    en `DEPRECATED_SEEN`. Es el equivalente de `config._env_alias` para los hooks."""
++    value = os.environ.get(new)
++    if value is not None:
++        return value
++    old_value = os.environ.get(old)
++    if old_value is not None:
++        DEPRECATED_SEEN.add(old)
++        return old_value
++    return default
++
+ 
+ def ruta_del_interruptor() -> Path:
+     """Donde vive el fichero que apaga el bloqueo. Fuera de `~/.claude/hooks/local-delegate/`, que
+     el instalador reescribe y poda."""
+-    destino = os.environ.get("LD_HOOK_READ_INTERRUPTOR", "").strip()
++    destino = env_alias("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR").strip()
+     return Path(destino) if destino else Path.home() / ".claude" / "local-delegate-bloqueo-apagado"
+ 
+ 
+@@ -260,7 +284,7 @@ def estado_del_bloqueo() -> str:
+     medicion sepa en que estado estaba la regla cuando decidio."""
+     if ruta_del_interruptor().exists():
+         return "apagado_fichero"
+-    if os.environ.get("LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
++    if env_alias("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", "0").strip().lower() in VERDADEROS:
+         return "encendido"
+     return "apagado_variable"
+ 
+diff --git a/src/local_delegate/server.py b/src/local_delegate/server.py
+index d2fab57..63394b3 100644
+--- a/src/local_delegate/server.py
++++ b/src/local_delegate/server.py
+@@ -3457,7 +3457,7 @@ def local_summarize(
+     extra = _texto_focus(enfoque)
+     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
+     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
+-    estructurado = config.RESUMEN_ESTRUCTURADO and rol == "long"
++    estructurado = config.STRUCTURED_SUMMARY and rol == "long"
+     estructura = secciones.detectar(content) if estructurado else None
+     if estructura is not None:
+         return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
+@@ -4517,9 +4517,26 @@ def local_status() -> str:
+     if groups:
+         lines.append(f"llama-swap groups activos (LLAMASWAP_CONFIG): {groups}")
+ 
++    lines.extend(_describe_deprecated_names())
+     return "\n".join(lines)
+ 
+ 
++def _describe_deprecated_names() -> list[str]:
++    """Nombres viejos de variables que ESTE proceso leyó (REQ-003).
++
++    `doctor` mira la shell donde corre y el `env` de `settings.json`, pero no el entorno del daemon
++    ni el del servidor por stdio: eso solo lo sabe el propio proceso, por `config.DEPRECATED_SEEN`.
++    """
++    from . import deprecations
++
++    entries = [e for e in map(deprecations.find, sorted(config.DEPRECATED_SEEN)) if e is not None]
++    if not entries:
++        return []
++    return ["", "Nombres obsoletos leídos por este proceso:"] + [
++        f"  {deprecations.warning_text(e)}" for e in entries
++    ]
++
++
+ def preparar_ctrl_break() -> None:
+     """Hace que Ctrl+Break se pare como Ctrl+C. Solo hace algo en Windows.
+ 
+diff --git a/src/local_delegate/valoracion.py b/src/local_delegate/valoracion.py
+index 475b7ba..063bf0d 100644
+--- a/src/local_delegate/valoracion.py
++++ b/src/local_delegate/valoracion.py
+@@ -39,8 +39,8 @@ ORIGENES_DENSIDAD = ("medida", "sin_numerar", "conservadora")
+ SIN_DELEGACIONES = "sin delegaciones en el periodo"
+ SIN_TABLA = "no se pudo cargar la tabla de precios del paquete"
+ TODAS_SIN_PRECIO = "todas las delegaciones del periodo son de modelos sin precio"
+-COMANDO = "local-delegate recalcular-coste"
+-VARIABLE_RESPALDO = "LOCAL_DELEGATE_COSTE_RESPALDO"
++COMMAND = "local-delegate recompute-cost"
++FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
+ 
+ 
+ def nombre_del_modelo(mid: str) -> str:
+@@ -257,7 +257,7 @@ def bloque_coste(
+             "nombre": nombre_del_modelo(r["modelo"]),
+             "hilo": r["hilo"],
+             "invalido": respaldo_invalido,
+-            "variable": VARIABLE_RESPALDO,
++            "variable": FALLBACK_VARIABLE,
+         },
+         "n_origen": {o: n_origen[o] for o in ORIGENES_N},
+         "n_declarado": dict(N_DECLARADO),
+@@ -277,7 +277,7 @@ def bloque_coste(
+             "consultado": (tabla or {}).get("consultado"),
+             "fuente": (tabla or {}).get("fuente"),
+         },
+-        "comando": COMANDO,
++        "comando": COMMAND,
+     }
+ 
+ 
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index 0485f01..7433f63 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -572,7 +572,7 @@ def _bloque_cuota(agregados: dict | None, ahora: datetime) -> dict:
+         else:
+             e["a_pct"] = e["b_pct"] = None
+             e["motivo_pct"] = bloque["motivo"]
+-    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMANDO}
++    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMMAND}
+ 
+ 
+ def _aggregate_hooks(rows: list[dict]) -> dict:
+diff --git a/tests/test_aislamiento_entorno.py b/tests/test_aislamiento_entorno.py
+index a8e54b1..6fcf96c 100644
+--- a/tests/test_aislamiento_entorno.py
++++ b/tests/test_aislamiento_entorno.py
+@@ -36,7 +36,16 @@ def test_la_suite_corre_sin_variables_del_paquete_definidas():
+     )
+ 
+ 
+-def _variables_que_leen_los_hooks() -> dict[str, set[str]]:
++def _nombre_de_llamada(nodo: ast.Call) -> str | None:
++    func = nodo.func
++    if isinstance(func, ast.Name):
++        return func.id
++    if isinstance(func, ast.Attribute):
++        return func.attr
++    return None
++
++
++def _variables_que_leen_los_hooks(con_alias: bool = True) -> dict[str, set[str]]:
+     """Escanea `resources/hooks/*.py` y devuelve, por fichero, las variables que consulta.
+ 
+     Que lo cuente el programa y no una lista a mano: contar sitios a ojo ya salió mal una vez en
+@@ -66,6 +75,11 @@ def _variables_que_leen_los_hooks() -> dict[str, set[str]]:
+                     primero = nodo.args[0]
+                     if isinstance(primero, ast.Constant) and isinstance(primero.value, str):
+                         nombres.add(primero.value)
++            # env_alias("NUEVA", "VIEJA") de hook_common: las dos se leen (REQ-002)
++            if con_alias and isinstance(nodo, ast.Call) and _nombre_de_llamada(nodo) == "env_alias":
++                for arg in nodo.args[:2]:
++                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
++                        nombres.add(arg.value)
+             # os.environ["X"]
+             if (
+                 isinstance(nodo, ast.Subscript)
+@@ -142,3 +156,26 @@ def test_config_solo_lee_el_entorno_por_la_puerta_registrada():
+         f"Estas lecturas se saltan `_leer` y no entran en el inventario: {culpables}. "
+         "Usa `_leer`/`_env`/`_env_int`/`_env_flag`/`_env_float` en vez de `os.environ` directo."
+     )
++
++
++def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
++    """REQ-002: una variable renombrada se lee por `hook_common.env_alias`, nunca directa.
++
++    Una lectura directa (`os.environ["LD_HOOK_READ_BLOQUEAR"]`) se saltaría el alias: el nombre
++    nuevo no ganaría y el viejo no quedaría anotado para el aviso.
++    """
++    from local_delegate import deprecations
++
++    renombradas = {n for _k, old, new in deprecations.hook_names() for n in (old, new) if n}
++    # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
++    assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renombradas
++    por_alias = set().union(*_variables_que_leen_los_hooks().values())
++    assert renombradas <= por_alias, sorted(renombradas - por_alias)
++
++    directas = {
++        f"{archivo}:{nombre}"
++        for archivo, nombres in _variables_que_leen_los_hooks(con_alias=False).items()
++        for nombre in nombres
++        if nombre in renombradas
++    }
++    assert directas == set(), f"lectura directa de un nombre renombrado: {sorted(directas)}"
+diff --git a/tests/test_conformidad_f1.py b/tests/test_conformidad_f1.py
+index bd5cb54..5755766 100644
+--- a/tests/test_conformidad_f1.py
++++ b/tests/test_conformidad_f1.py
+@@ -51,8 +51,8 @@ def entorno(tmp_path, monkeypatch):
+     log = tmp_path / "telemetria.jsonl"
+     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "bloqueo-apagado"))
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
++    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "bloqueo-apagado"))
+     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
+     for variable in ("LOCAL_DELEGATE_MODEL_LONG", "LOCAL_DELEGATE_MODEL_MECHANICAL"):
+         monkeypatch.delenv(variable, raising=False)
+@@ -256,7 +256,7 @@ def test_cada_evento_anota_el_estado_del_bloqueo(entorno, monkeypatch, capsys):
+     _correr(read_hook, monkeypatch, capsys, franja)
+     (entorno / "bloqueo-apagado").write_text("", encoding="utf-8")
+     _correr(read_hook, monkeypatch, capsys, franja)
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
+     (entorno / "bloqueo-apagado").unlink()
+     _correr(read_hook, monkeypatch, capsys, franja)
+     _correr(shell_hook, monkeypatch, capsys, {"tool_input": {"command": "git status"}})
+@@ -290,8 +290,8 @@ def test_el_apagado_no_necesita_relanzar_nada(tmp_path):
+         interruptor = tmp_path / "bloqueo-apagado"
+         env = {
+             **os.environ,
+-            "LD_HOOK_READ_BLOQUEAR": "1",
+-            "LD_HOOK_READ_INTERRUPTOR": str(interruptor),
++            "LD_HOOK_READ_BLOCK": "1",
++            "LD_HOOK_READ_SWITCH_FILE": str(interruptor),
+             "LD_HOOK_ENABLED": "1",
+             "LOCAL_DELEGATE_BASE_URL": f"http://127.0.0.1:{servidor.server_address[1]}/v1",
+             "LOCAL_DELEGATE_LOG_DIR": str(tmp_path / "logs"),
+diff --git a/tests/test_coste_doctor.py b/tests/test_coste_doctor.py
+index 21fec3a..7b64775 100644
+--- a/tests/test_coste_doctor.py
++++ b/tests/test_coste_doctor.py
+@@ -87,9 +87,9 @@ def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
+     r = _probe(_home(tmp_path), log_dir)
+     assert not recalcular.ruta(log_dir).exists()
+     assert r.status == checks.WARN
+-    assert "recalcular-coste" in r.detail
++    assert "recompute-cost" in r.detail
+     assert "hace 21 días" in r.detail
+-    assert r.fix_hint == "local-delegate recalcular-coste"
++    assert r.fix_hint == "local-delegate recompute-cost"
+ 
+     # Con 10 días todavía hay margen: sin cotejo, `unknown`.
+     log_corto = tmp_path / "log-corto"
+@@ -120,7 +120,7 @@ def test_las_dos_cosas_a_la_vez(tmp_path):
+     r = _probe(_home(tmp_path), log_dir)
+     assert r.status == checks.WARN
+     assert "2 delegación(es) pendiente(s)" in r.detail
+-    assert "recalcular-coste" in r.detail
++    assert "recompute-cost" in r.detail
+     assert "claude-opus-5" in r.detail
+     assert "3 fila(s) fuera" in r.detail
+ 
+diff --git a/tests/test_dashboard_ui.py b/tests/test_dashboard_ui.py
+index 276aaab..9340a90 100644
+--- a/tests/test_dashboard_ui.py
++++ b/tests/test_dashboard_ui.py
+@@ -604,7 +604,7 @@ def _log_coste_e_imagen(tmp_path, monkeypatch) -> None:
+     """Un resumen por path y una imagen, hoy: hay cifra de coste y una imagen en el rango."""
+     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
++    monkeypatch.setattr(config, "COST_FALLBACK", "")
+     ahora = datetime.now(UTC)
+     medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+     paso = min(timedelta(seconds=30), (ahora - medianoche_local) / 2)
+@@ -736,7 +736,7 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
+         "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
+         "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
+         "hay_agregados": True,
+-        "comando": "local-delegate recalcular-coste",
++        "comando": "local-delegate recompute-cost",
+     }
+ 
+     def _inyectar(ruta):
+diff --git a/tests/test_densidad.py b/tests/test_densidad.py
+index 7c9def1..3282741 100644
+--- a/tests/test_densidad.py
++++ b/tests/test_densidad.py
+@@ -23,7 +23,7 @@ from local_delegate.web import metrics
+ @pytest.fixture(autouse=True)
+ def _respaldo_declarado(monkeypatch):
+     """Sin variable de respaldo: el declarado (Opus 5.5 en subagente) en todos los tests."""
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
++    monkeypatch.setattr(config, "COST_FALLBACK", "")
+ 
+ 
+ def _fila(**kw) -> dict:
+@@ -139,7 +139,7 @@ def test_las_columnas_de_devuelto_y_salida():
+ def test_respaldo_por_variable(monkeypatch):
+     """REQ-008: la variable manda sobre el declarado; con solo `modelo`, el hilo es `subagent`;
+     un valor inválido usa el declarado y lo dice."""
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "claude-haiku-4-5")
++    monkeypatch.setattr(config, "COST_FALLBACK", "claude-haiku-4-5")
+     r = coste.respaldo()
+     assert r["familia"] == "anterior"
+     assert (r["modelo"], r["hilo"], r.get("respaldo_invalido")) == (
+@@ -148,11 +148,11 @@ def test_respaldo_por_variable(monkeypatch):
+         False,
+     )
+ 
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "claude-opus-5:main")
++    monkeypatch.setattr(config, "COST_FALLBACK", "claude-opus-5:main")
+     r = coste.respaldo()
+     assert (r["modelo"], r["hilo"], r["familia"]) == ("claude-opus-5", "main", "nueva")
+ 
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "xyz")
++    monkeypatch.setattr(config, "COST_FALLBACK", "xyz")
+     r = coste.respaldo()
+     assert r.get("respaldo_invalido") is True
+     assert (r["modelo"], r["hilo"]) == ("claude-opus-5-5", "subagent")
+@@ -164,7 +164,8 @@ def test_respaldo_por_variable(monkeypatch):
+ 
+ 
+ def test_la_variable_de_respaldo_se_lee_por_la_puerta_registrada():
+-    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.VARIABLES_DE_ENTORNO
++    assert "LOCAL_DELEGATE_COST_FALLBACK" in config.VARIABLES_DE_ENTORNO
++    assert "LOCAL_DELEGATE_COSTE_RESPALDO" in config.VARIABLES_DE_ENTORNO  # alias (REQ-002)
+ 
+ 
+ def test_marcas_de_familia():
+diff --git a/tests/test_hook_recipes.py b/tests/test_hook_recipes.py
+index 450f406..3a45649 100644
+--- a/tests/test_hook_recipes.py
++++ b/tests/test_hook_recipes.py
+@@ -343,7 +343,7 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
+ 
+ 
+ def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if encendido else "0")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if encendido else "0")
+     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: backend)
+     return _correr_hook(monkeypatch, capsys, tool_input)
+ 
+@@ -419,7 +419,7 @@ def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
+     """Se enciende cuando este escrito el criterio de la quinta medicion, no antes."""
+     target = tmp_path / "informe.md"
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+-    monkeypatch.delenv("LD_HOOK_READ_BLOQUEAR", raising=False)
++    monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
+     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+ 
+     decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
+@@ -433,10 +433,10 @@ def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsy
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+ 
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+     assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+ 
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
+     assert "deny" not in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+ 
+ 
+@@ -445,7 +445,7 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
+     log = tmp_path / "telemetria.jsonl"
+     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+     monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
+     target = tmp_path / "informe.md"
+     target.write_text("x" * 40 * 1024, encoding="utf-8")
+@@ -527,8 +527,8 @@ def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeyp
+             tmp_path,
+             monkeypatch,
+             texto,
+-            LD_HOOK_READ_BLOQUEAR="1",
+-            LD_HOOK_READ_INTERRUPTOR=str(tmp_path / "no-existe"),
++            LD_HOOK_READ_BLOCK="1",
++            LD_HOOK_READ_SWITCH_FILE=str(tmp_path / "no-existe"),
+         )
+         assert evento["session_id"] == "s-123", texto
+         assert evento["version"]  # huella del script que corrió
+diff --git a/tests/test_hook_shell.py b/tests/test_hook_shell.py
+index dbef017..cbec439 100644
+--- a/tests/test_hook_shell.py
++++ b/tests/test_hook_shell.py
+@@ -34,7 +34,7 @@ shell_hook = _load("suggest_delegate_shell")
+ 
+ def _correr(monkeypatch, capsys, comando, *, backend=True, bloquear=True, log=None):
+     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if bloquear else "0")
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if bloquear else "0")
+     if log is not None:
+         monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
+     monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: backend)
+diff --git a/tests/test_hook_shell_ruta_absoluta.py b/tests/test_hook_shell_ruta_absoluta.py
+index 7287782..bed0e9c 100644
+--- a/tests/test_hook_shell_ruta_absoluta.py
++++ b/tests/test_hook_shell_ruta_absoluta.py
+@@ -56,8 +56,8 @@ TEXTO_SHELL = (
+ @pytest.fixture(autouse=True)
+ def _entorno(tmp_path, monkeypatch):
+     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
+-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "no-existe"))
++    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
++    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "no-existe"))
+     # Hook y servidor importan `hook_common` por caminos distintos (módulo suelto y paquete): son
+     # dos objetos. Los dos calculan la ruta de las notas con `tempfile.gettempdir()` en cada
+     # llamada, así que redirigir eso los apunta al mismo fichero.
+diff --git a/tests/test_install.py b/tests/test_install.py
+index a231d82..d4423f1 100644
+--- a/tests/test_install.py
++++ b/tests/test_install.py
+@@ -635,7 +635,7 @@ def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monk
+     entorno = {**os.environ, "PYTHONPATH": str(hooks_dir)}
+     entorno.pop("LD_HOOK_READ_ENABLED", None)
+     # El bloqueo nace apagado; aquí se enciende a mano para ver que el camino entero funciona.
+-    entorno["LD_HOOK_READ_BLOQUEAR"] = "1"
++    entorno["LD_HOOK_READ_BLOCK"] = "1"
+     # Sin backend no se bloquea, que es lo correcto, así que se apunta a uno que sí responde...
+     # salvo que no hay ninguno en CI. Se comprueba entonces el caso que no depende de él.
+     entorno["LOCAL_DELEGATE_BASE_URL"] = "http://127.0.0.1:9/v1"
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index a49ec10..500dded 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -1366,7 +1366,7 @@ def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
+     from local_delegate import atribucion
+ 
+     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
++    monkeypatch.setattr(config, "COST_FALLBACK", "")
+     monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
+     fila = _ev(ts="2026-10-06T10:00:00+00:00", path="C:/docs/notas.md", tool_use_id="toolu_h")
+     _write_jsonl(tmp_path / "usage-202610.jsonl", [fila])
+@@ -1717,7 +1717,7 @@ class _Mezcla:
+         self.logs.mkdir()
+         monkeypatch.setattr(config, "LOG_DIR", self.logs)
+         monkeypatch.setattr(config, "USAGE_LOG", self.logs / "usage.jsonl")
+-        monkeypatch.setattr(config, "COSTE_RESPALDO", "")
++        monkeypatch.setattr(config, "COST_FALLBACK", "")
+         monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
+         self.ahora = datetime.now(UTC).replace(microsecond=0)
+         monkeypatch.setattr(metrics, "_ahora", lambda: self.ahora)
+diff --git a/tests/test_panel_coste.py b/tests/test_panel_coste.py
+index 39d0b9a..61911b1 100644
+--- a/tests/test_panel_coste.py
++++ b/tests/test_panel_coste.py
+@@ -46,7 +46,7 @@ def entorno(tmp_path, monkeypatch):
+     home.mkdir()
+     monkeypatch.setattr(cfg, "LOG_DIR", logs)
+     monkeypatch.setattr(cfg, "USAGE_LOG", logs / "usage.jsonl")
+-    monkeypatch.setattr(cfg, "COSTE_RESPALDO", "")
++    monkeypatch.setattr(cfg, "COST_FALLBACK", "")
+     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+     metrics._FILE_CACHE.clear()
+     yield logs, home
+@@ -345,7 +345,7 @@ def test_home_vacio(entorno, tmp_path):
+     assert q["hay_agregados"] is False
+     texto = _textos(tmp_path, j)["cuota"]
+     assert "no hay datos de calibración en esta máquina" in texto
+-    assert "local-delegate recalcular-coste" in texto
++    assert "local-delegate recompute-cost" in texto
+ 
+     (logs / recalcular.NOMBRE).write_text("{ esto no es JSON", encoding="utf-8")
+     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
+diff --git a/tests/test_recalcular.py b/tests/test_recalcular.py
+index 34a4813..f28923a 100644
+--- a/tests/test_recalcular.py
++++ b/tests/test_recalcular.py
+@@ -268,7 +268,7 @@ def test_el_cli_lo_lanza(tmp_path, monkeypatch, capsys):
+     _delegacion_con_n(subagente(claude, "a1"), "toolu_cli", 3)
+     monkeypatch.setattr(config, "LOG_DIR", log)
+     try:
+-        codigo = cli.run(["recalcular-coste", "--claude-dir", str(claude)])
++        codigo = cli.run(["recompute-cost", "--claude-dir", str(claude)])
+     except SystemExit as e:
+         codigo = e.code
+     salida = capsys.readouterr().out
+diff --git a/tests/test_resumen_estructurado.py b/tests/test_resumen_estructurado.py
+index 2a56825..e0595c7 100644
+--- a/tests/test_resumen_estructurado.py
++++ b/tests/test_resumen_estructurado.py
+@@ -239,7 +239,7 @@ def _llamar(
+     # Apagado por defecto desde la retirada (etapa 2 de la v3): aquí se prueba encendido salvo
+     # que el test diga lo contrario.
+     if estructurado is not None:  # None: el valor por defecto real, sin tocar
+-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", estructurado)
++        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", estructurado)
+     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
+@@ -352,7 +352,7 @@ def test_salida_cortada_se_completa_y_conserva_el_aviso(monkeypatch, tmp_path):
+ def test_un_error_del_backend_no_se_completa(monkeypatch, tmp_path):
+     @backend_mock.mock
+     def _falla():
+-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
++        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
+         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
+         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+@@ -495,7 +495,7 @@ def test_desborde_en_un_trozo_se_reparte_por_secciones(monkeypatch, tmp_path):
+     # El primer trozo desborda: el backend responde 400 con el texto de contexto excedido.
+     @backend_mock.mock
+     def _con_desborde():
+-        monkeypatch.setattr(config, "RESUMEN_ESTRUCTURADO", True)
++        monkeypatch.setattr(config, "STRUCTURED_SUMMARY", True)
+         monkeypatch.setattr(config, "LONG_INPUT_CHARS", 0)
+         monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+         monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+@@ -664,12 +664,13 @@ def test_el_modo_estructurado_esta_apagado_por_defecto():
+     En un proceso limpio y sin la variable: recargar `config` aquí desharía el aislamiento de la
+     suite, y comparar el texto fuente no prueba el valor cargado.
+     """
+-    entorno = {k: v for k, v in os.environ.items() if k != "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
++    nombres = {"LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"}
++    entorno = {k: v for k, v in os.environ.items() if k not in nombres}
+     salida = subprocess.run(
+         [
+             sys.executable,
+             "-c",
+-            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
++            "from local_delegate import config; print(config.STRUCTURED_SUMMARY)",
+         ],
+         capture_output=True,
+         text=True,
+@@ -677,12 +678,12 @@ def test_el_modo_estructurado_esta_apagado_por_defecto():
+         check=True,
+     )
+     assert salida.stdout.strip() == "False"
+-    con_variable = {**entorno, "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1"}
++    con_variable = {**entorno, "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "1"}
+     salida = subprocess.run(
+         [
+             sys.executable,
+             "-c",
+-            "from local_delegate import config; print(config.RESUMEN_ESTRUCTURADO)",
++            "from local_delegate import config; print(config.STRUCTURED_SUMMARY)",
+         ],
+         capture_output=True,
+         text=True,
+@@ -696,6 +697,6 @@ def test_con_el_valor_por_defecto_la_tool_resume_en_prosa(monkeypatch, tmp_path)
+     """Sin tocar el interruptor: lo que ve cualquier usuario tras la retirada."""
+     texto = "## Uno\n\ntexto\n\n## Dos\n\ntexto"
+     _out, vistos = _llamar(monkeypatch, tmp_path, _eco_prosa, estructurado=None, text=texto)
+-    assert config.RESUMEN_ESTRUCTURADO is False
++    assert config.STRUCTURED_SUMMARY is False
+     assert vistos[0]["messages"][0]["content"] == SISTEMA_MAIN
+     assert vistos[0]["messages"][1]["content"] == f"Resume el siguiente contenido:\n\n{texto}"
+diff --git a/tests/test_valoracion.py b/tests/test_valoracion.py
+index 6754cca..eaa98f6 100644
+--- a/tests/test_valoracion.py
++++ b/tests/test_valoracion.py
+@@ -21,7 +21,7 @@ MES = f"{AHORA:%Y%m}"
+ 
+ @pytest.fixture(autouse=True)
+ def _sin_respaldo_del_entorno(monkeypatch):
+-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
++    monkeypatch.setattr(config, "COST_FALLBACK", "")
+ 
+ 
+ def _linea(n: int = 0, **extra) -> dict:
+diff --git a/tests/test_vigilante.py b/tests/test_vigilante.py
+index 06e6360..6cdb33a 100644
+--- a/tests/test_vigilante.py
++++ b/tests/test_vigilante.py
+@@ -319,7 +319,7 @@ def test_limites_sin_titulo_falla():
+ 
+ def test_el_pr_de_limites_dice_como_reiniciar():
+     cuerpo = _v().cuerpo_pr_limites()
+-    assert "recalcular-coste --reiniciar-calibracion" in cuerpo
++    assert "recompute-cost --reset-calibration" in cuerpo
+ 
+ 
+ # --- El flujo de GitHub, con un cliente falso ---------------------------------------------------
+@@ -600,7 +600,7 @@ def test_limites_cambiados_abren_su_pr(raiz):
+     assert ("PUT", ruta) in falso.llamadas
+     pr = falso.cuerpos[falso.llamadas.index(("POST", f"/repos/{REPO}/pulls"))]
+     assert pr["head"] == "vigilante/limites"
+-    assert "recalcular-coste --reiniciar-calibracion" in pr["body"]
++    assert "recompute-cost --reset-calibration" in pr["body"]
+ 
+ 
+ def test_limites_iguales_no_tocan_github(raiz):
+diff --git a/tests/test_cli_renamed_names.py b/tests/test_cli_renamed_names.py
+new file mode 100644
+index 0000000..04ab4d3
+--- /dev/null
++++ b/tests/test_cli_renamed_names.py
+@@ -0,0 +1,278 @@
++"""Nombres renombrados del CLI y del entorno, con su alias viejo (SDD english-names, ola A1).
++
++REQ-001: `recompute-cost` y `--reset-calibration`, con `recalcular-coste` y
++`--reiniciar-calibracion` como alias ocultos que avisan. REQ-002: las cuatro variables, con el
++nombre viejo vivo en el paquete y en los hooks instalados. REQ-003: `local_status` dice los
++nombres viejos que leyó el proceso servidor.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import subprocess
++import sys
++from dataclasses import replace
++from pathlib import Path
++
++import pytest
++from test_install import _install
++from test_recalcular import _delegacion_con_n
++from test_transcripts import subagente
++
++from local_delegate import cli, config, deprecations, recalcular, server
++
++RENAMED_ENV = (
++    ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR"),
++    ("LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR"),
++    ("LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO"),
++    ("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO"),
++)
++
++
++def _run(argv: list[str]) -> int:
++    try:
++        return cli.run(argv)
++    except SystemExit as e:
++        return int(e.code or 0)
++
++
++# --- REQ-001: subcomando y opción ------------------------------------------------------------
++
++
++def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int, dict, str]:
++    claude, log = tmp_path / command / "claude", tmp_path / command / "log"
++    _delegacion_con_n(subagente(claude, "a1"), "toolu_cli", 3)
++    monkeypatch.setattr(config, "LOG_DIR", log)
++    code = _run([command, "--claude-dir", str(claude)])
++    stderr = capsys.readouterr().err
++    written = log / recalcular.NOMBRE
++    data = json.loads(written.read_text(encoding="utf-8")) if written.is_file() else {}
++    return code, data, stderr
++
++
++def _without_times(data: dict) -> dict:
++    """Lo escrito por dos corridas seguidas, sin lo que depende del reloj."""
++    return {k: v for k, v in data.items() if "generado" not in k and "ts" not in k}
++
++
++def test_legacy_command_writes_the_same_file_and_warns(tmp_path, monkeypatch, capsys):
++    code_new, data_new, err_new = _recompute(tmp_path, monkeypatch, capsys, "recompute-cost")
++    code_old, data_old, err_old = _recompute(tmp_path, monkeypatch, capsys, "recalcular-coste")
++
++    assert data_new, "el nombre nuevo no escribió el fichero de agregados"
++    assert code_old == code_new == 0
++    assert _without_times(data_old) == _without_times(data_new)
++    assert err_new == "", f"el nombre nuevo no debe avisar: {err_new!r}"
++    assert "recalcular-coste" in err_old and "recompute-cost" in err_old
++
++
++def test_warning_names_the_removal_version_once_released(monkeypatch, capsys):
++    """Publicado en la 0.35.0, el alias vive 0.35, 0.36 y 0.37 y se retira en la 0.38.0."""
++    released = tuple(
++        replace(e, introduced="0.35.0") if e.old == "recalcular-coste" else e
++        for e in deprecations.DEPRECATED_NAMES
++    )
++    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", released)
++    cli._warn_deprecated("recalcular-coste")
++    err = capsys.readouterr().err
++    assert "usa recompute-cost" in err
++    assert "0.38.0" in err
++
++
++@pytest.mark.parametrize(
++    ("argv", "expected"),
++    [
++        (["--reset-calibration", "five_hour"], "five_hour"),
++        (["--reiniciar-calibracion", "seven_day"], "seven_day"),
++        (["--reset-calibration", "five_hour", "--reiniciar-calibracion", "five_hour"], "five_hour"),
++        ([], None),
++    ],
++)
++def test_reset_calibration_and_its_alias_reach_the_same_argument(
++    argv, expected, tmp_path, monkeypatch, capsys
++):
++    seen: list[str | None] = []
++
++    def fake_run(claude_dir, log_dir, *, reiniciar=None, **_kw):
++        seen.append(reiniciar)
++        return {}
++
++    monkeypatch.setattr(recalcular, "ejecutar", fake_run)
++    monkeypatch.setattr(recalcular, "texto_del_resumen", lambda _r: "")
++    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
++    assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 0
++    assert seen == [expected]
++    err = capsys.readouterr().err
++    assert ("--reiniciar-calibracion" in err) == ("--reiniciar-calibracion" in argv)
++
++
++def test_reset_calibration_with_two_different_values_is_an_error(tmp_path, monkeypatch, capsys):
++    monkeypatch.setattr(
++        recalcular, "ejecutar", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
++    )
++    argv = ["--reset-calibration", "five_hour", "--reiniciar-calibracion", "seven_day"]
++    assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 2
++    assert "no coinciden" in capsys.readouterr().err
++
++
++def test_help_shows_only_the_new_names(capsys):
++    assert _run(["--help"]) == 0
++    top = capsys.readouterr().out
++    assert _run(["recompute-cost", "--help"]) == 0
++    sub = capsys.readouterr().out
++    assert "recompute-cost" in top and "--reset-calibration" in sub
++    for old in ("recalcular-coste", "reiniciar-calibracion", "SUPPRESS"):
++        assert old not in top + sub, old
++
++
++# --- REQ-002: variables en el paquete --------------------------------------------------------
++
++_PRINT_CONFIG = (
++    "from local_delegate import config; "
++    "print(config.HOOK_READ_BLOCK, config.HOOK_READ_SWITCH_FILE, config.STRUCTURED_SUMMARY, "
++    "config.COST_FALLBACK, sorted(config.DEPRECATED_SEEN), sep='|')"
++)
++
++
++def _config_in_subprocess(variables: dict[str, str]) -> list[str]:
++    names = {n for pair in RENAMED_ENV for n in pair}
++    env = {k: v for k, v in os.environ.items() if k not in names}
++    env.update(variables)
++    out = subprocess.run(
++        [sys.executable, "-c", _PRINT_CONFIG],
++        capture_output=True,
++        text=True,
++        env=env,
++        check=True,
++    )
++    return out.stdout.strip().split("|")
++
++
++def test_package_reads_the_old_names_alone():
++    values = _config_in_subprocess(
++        {
++            "LD_HOOK_READ_BLOQUEAR": "1",
++            "LD_HOOK_READ_INTERRUPTOR": "viejo.flag",
++            "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
++            "LOCAL_DELEGATE_COSTE_RESPALDO": "claude-haiku-4-5",
++        }
++    )
++    assert values[:4] == ["True", "viejo.flag", "True", "claude-haiku-4-5"]
++    assert values[4] == repr(sorted(old for _new, old in RENAMED_ENV))
++
++
++def test_package_reads_the_new_names_without_deprecation():
++    values = _config_in_subprocess(
++        {
++            "LD_HOOK_READ_BLOCK": "1",
++            "LD_HOOK_READ_SWITCH_FILE": "nuevo.flag",
++            "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "1",
++            "LOCAL_DELEGATE_COST_FALLBACK": "claude-opus-5:main",
++        }
++    )
++    assert values == ["True", "nuevo.flag", "True", "claude-opus-5:main", "[]"]
++
++
++def test_package_prefers_the_new_name_when_both_are_set():
++    values = _config_in_subprocess(
++        {
++            "LD_HOOK_READ_BLOCK": "0",
++            "LD_HOOK_READ_BLOQUEAR": "1",
++            "LD_HOOK_READ_SWITCH_FILE": "nuevo.flag",
++            "LD_HOOK_READ_INTERRUPTOR": "viejo.flag",
++            "LOCAL_DELEGATE_STRUCTURED_SUMMARY": "0",
++            "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO": "1",
++            "LOCAL_DELEGATE_COST_FALLBACK": "nuevo",
++            "LOCAL_DELEGATE_COSTE_RESPALDO": "viejo",
++        }
++    )
++    assert values == ["False", "nuevo.flag", "False", "nuevo", "[]"]
++
++
++def test_both_names_are_in_the_isolated_inventory():
++    for new, old in RENAMED_ENV:
++        assert new in config.VARIABLES_DE_ENTORNO, new
++        assert old in config.VARIABLES_DE_ENTORNO, old
++
++
++# --- REQ-002: variables en un hook instalado -------------------------------------------------
++
++
++def _installed_prompt_hook_state(home: Path, variables: dict[str, str]) -> str:
++    """Estado del bloqueo que escribe el hook de prompt INSTALADO, lanzado como subproceso."""
++    _install(home, components={"hooks"}, targets={"claude"})
++    hooks_dir = home / ".claude" / "hooks" / "local-delegate"
++    log = home / "hooks.jsonl"
++    names = {n for pair in RENAMED_ENV for n in pair}
++    env = {k: v for k, v in os.environ.items() if k not in names}
++    env.update({"LD_HOOK_TELEMETRY_LOG": str(log), "PYTHONPATH": str(hooks_dir), **variables})
++    proc = subprocess.run(
++        [sys.executable, str(hooks_dir / "suggest_delegate_prompt.py")],
++        input=json.dumps({"prompt": "Hola", "session_id": "s-a1"}),
++        capture_output=True,
++        text=True,
++        env=env,
++    )
++    assert proc.returncode == 0, proc.stderr
++    return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])["bloqueo"]
++
++
++@pytest.mark.parametrize(
++    ("variables", "expected"),
++    [
++        ({"LD_HOOK_READ_BLOQUEAR": "1"}, "encendido"),
++        ({"LD_HOOK_READ_BLOCK": "1"}, "encendido"),
++        ({"LD_HOOK_READ_BLOCK": "0", "LD_HOOK_READ_BLOQUEAR": "1"}, "apagado_variable"),
++        ({}, "apagado_variable"),
++    ],
++    ids=["old-only", "new-only", "both-new-wins", "none"],
++)
++def test_installed_hook_reads_block_variable_and_alias(tmp_path, variables, expected):
++    switch = {"LD_HOOK_READ_SWITCH_FILE": str(tmp_path / "no-existe")}
++    assert _installed_prompt_hook_state(tmp_path, {**switch, **variables}) == expected
++
++
++@pytest.mark.parametrize(
++    "variables",
++    [
++        {"LD_HOOK_READ_INTERRUPTOR": "{switch}"},
++        {"LD_HOOK_READ_SWITCH_FILE": "{switch}"},
++        {"LD_HOOK_READ_SWITCH_FILE": "{switch}", "LD_HOOK_READ_INTERRUPTOR": "{other}"},
++    ],
++    ids=["old-only", "new-only", "both-new-wins"],
++)
++def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables):
++    switch = tmp_path / "apagado.flag"
++    switch.write_text("", encoding="utf-8")
++    other = tmp_path / "no-existe"
++    resolved = {k: v.format(switch=switch, other=other) for k, v in variables.items()}
++    state = _installed_prompt_hook_state(tmp_path, {"LD_HOOK_READ_BLOCK": "1", **resolved})
++    assert state == "apagado_fichero"
++
++
++# --- REQ-003: `local_status` dice lo que leyó el proceso -------------------------------------
++
++
++@pytest.fixture
++def offline_status(monkeypatch):
++    monkeypatch.setattr(
++        server,
++        "sondear_backend",
++        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
++    )
++    for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
++        monkeypatch.setattr(server, name, lambda: None)
++    monkeypatch.setattr(server, "_port_listening", lambda *_: False)
++
++
++def test_local_status_lists_the_old_names_read_by_the_server(recargar_config, offline_status):
++    recargar_config(LOCAL_DELEGATE_COSTE_RESPALDO="claude-haiku-4-5")
++    text = server.local_status()
++    assert "Nombres obsoletos leídos por este proceso:" in text
++    assert "LOCAL_DELEGATE_COSTE_RESPALDO está obsoleto: usa LOCAL_DELEGATE_COST_FALLBACK" in text
++
++
++def test_local_status_says_nothing_with_the_new_names(recargar_config, offline_status):
++    recargar_config(LOCAL_DELEGATE_COST_FALLBACK="claude-haiku-4-5")
++    assert "Nombres obsoletos" not in server.local_status()

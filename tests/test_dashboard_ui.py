@@ -271,7 +271,7 @@ _HOOKS = {
     "suggested": 3,
     "rate": 0.3,
     "by_category": [{"category": "read", "total": 8, "suggested": 2}],
-    "by_motivo": [{"motivo": "pequeño", "total": 5}],
+    "by_reason": [{"reason": "small", "total": 5}],
     "read_total": 5,
 }
 
@@ -604,7 +604,7 @@ def _log_coste_e_imagen(tmp_path, monkeypatch) -> None:
     """Un resumen por path y una imagen, hoy: hay cifra de coste y una imagen en el rango."""
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
     ahora = datetime.now(UTC)
     medianoche_local = ahora.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
     paso = min(timedelta(seconds=30), (ahora - medianoche_local) / 2)
@@ -667,7 +667,7 @@ _MEDIR_TARJETAS = """() => {
 def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_path, monkeypatch):
     """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
     su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
-    `coste-agregados.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         navegador = _navegador(pw)
@@ -733,16 +733,16 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
     calibrarla de verdad pide tres puntos del statusline."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     cuota_calibrada = {
-        "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
-        "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
-        "hay_agregados": True,
-        "comando": "local-delegate recalcular-coste",
+        "five_hour": {"status": "calibrated", "points": 4, "a_pct": 3.4, "b_pct": 11.9},
+        "seven_day": {"status": "uncalibrated", "points": 1, "reason": "faltan 2 puntos"},
+        "has_aggregates": True,
+        "command": "local-delegate recompute-cost",
     }
 
     def _inyectar(ruta):
         respuesta = ruta.fetch()
         datos = respuesta.json()
-        datos["cuota"] = cuota_calibrada
+        datos["quota"] = cuota_calibrada
         ruta.fulfill(response=respuesta, body=json.dumps(datos))
 
     with _Servidor(9495) as servidor, sync_playwright() as pw:
@@ -893,13 +893,14 @@ _HOOKS_CRUDOS = {
     "by_event": [],
     "by_day": [],
     "read_total": 30,
-    "by_motivo": [
-        {"motivo": "avisó", "total": 8},
-        {"motivo": "acotada", "total": 6},
-        {"motivo": "codigo", "total": 5},
-        {"motivo": "pequeno", "total": 4},
-        {"motivo": "mcp_ajeno", "total": 4},
-        {"motivo": "motivo_que_no_existe", "total": 3},
+    # Valores nuevos y viejos mezclados (REQ-009): los viejos se pintan con la misma etiqueta.
+    "by_reason": [
+        {"reason": "suggested", "total": 8},
+        {"reason": "acotada", "total": 6},
+        {"reason": "code", "total": 5},
+        {"reason": "pequeno", "total": 4},
+        {"reason": "foreign_mcp", "total": 4},
+        {"reason": "motivo_que_no_existe", "total": 3},
     ],
     "by_ext": [],
 }

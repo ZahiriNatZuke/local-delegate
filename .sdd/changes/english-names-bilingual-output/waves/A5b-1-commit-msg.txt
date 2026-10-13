@@ -1,0 +1,20 @@
+feat(rename): coste y cuota en inglés, con la fila fundida y la cuota de /api/stats en inglés (ola A5b-1)
+
+- Los módulos `coste` y `cuota` pasan a `cost` y `quota` (git mv), con sus constantes, funciones
+  y parámetros en inglés (`merge`, `merge_row`, `resolve_density`, `segment`, `fallback`,
+  `status`, `criterion`, `sanitize`, `statusline_points`, `drop_overlapping`…).
+- La fila fundida de /api/events lleva `density`, `family`, `marks`, `caller_origin` y
+  `fallback_invalid`, con los orígenes `line|backfill|fallback`, los orígenes de densidad
+  `measured|unnumbered|conservative`, las marcas `assumed_family|family_density` y los tramos
+  `excluded|at_call|backfilled|pending|assumed`. Son datos calculados al vuelo: no hay nada
+  guardado que convertir.
+- /api/stats devuelve la cuota como `quota`, con `status` (`calibrated|uncalibrated`), `reason`,
+  `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`,
+  `pct_reason`, `has_aggregates` y `command`; el JS del panel lee los nombres nuevos.
+- Consecuencias aprobadas fuera de la lista de la ola: `server.tokens_claude` lee `density`,
+  `doctor` compara el tramo `pending`, `scripts/dev/capture_dashboard.py` usa los datos nuevos y
+  se rehacen los imports en cli, server, checks, metrics y medir_adopcion.
+- El resumen de `recompute-cost` sigue diciendo «calibrada» y «sin calibrar» en español.
+- El formato persistido de `coste-agregados.json` y el fichero del statusline no cambian: van en
+  A5b-2.
+- CHANGELOG `[Unreleased]` y wiki (Savings-and-metrics) al día.

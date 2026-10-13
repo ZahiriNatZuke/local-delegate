@@ -1,0 +1,26 @@
+M	CHANGELOG.md -> CHANGELOG.md	lf -> lf	ok
+M	docs/wiki/Integration-install.md -> docs/wiki/Integration-install.md	crlf -> crlf	ok
+M	docs/wiki/Savings-and-metrics.md -> docs/wiki/Savings-and-metrics.md	lf -> lf	ok
+M	scripts/medir_adopcion.py -> scripts/medir_adopcion.py	lf -> lf	ok
+R(git mv, sin emparejar por git)	src/local_delegate/atribucion.py -> src/local_delegate/attribution.py	lf -> lf	ok
+M	src/local_delegate/checks.py -> src/local_delegate/checks.py	lf -> lf	ok
+M	src/local_delegate/coste.py -> src/local_delegate/coste.py	lf -> lf	ok
+M	src/local_delegate/legacy_names.py -> src/local_delegate/legacy_names.py	lf -> lf	ok
+M	src/local_delegate/recalcular.py -> src/local_delegate/recalcular.py	lf -> lf	ok
+M	src/local_delegate/resources/hooks/hook_common.py -> src/local_delegate/resources/hooks/hook_common.py	lf -> lf	ok
+M	src/local_delegate/server.py -> src/local_delegate/server.py	crlf -> crlf	ok
+M	src/local_delegate/transcripts.py -> src/local_delegate/transcripts.py	lf -> lf	ok
+M	src/local_delegate/valoracion.py -> src/local_delegate/valoracion.py	lf -> lf	ok
+M	src/local_delegate/web/metrics.py -> src/local_delegate/web/metrics.py	crlf -> crlf	ok
+M	tests/test_atribucion.py -> tests/test_atribucion.py	lf -> lf	ok
+M	tests/test_coste_doctor.py -> tests/test_coste_doctor.py	lf -> lf	ok
+M	tests/test_cuota.py -> tests/test_cuota.py	lf -> lf	ok
+M	tests/test_densidad.py -> tests/test_densidad.py	lf -> lf	ok
+M	tests/test_hook_legacy_names.py -> tests/test_hook_legacy_names.py	lf -> lf	ok
+M	tests/test_medir_adopcion.py -> tests/test_medir_adopcion.py	lf -> lf	ok
+M	tests/test_metrics.py -> tests/test_metrics.py	lf -> lf	ok
+M	tests/test_panel_coste.py -> tests/test_panel_coste.py	lf -> lf	ok
+M	tests/test_recalcular.py -> tests/test_recalcular.py	lf -> lf	ok
+M	tests/test_transcripts.py -> tests/test_transcripts.py	lf -> lf	ok
+M	tests/test_valoracion.py -> tests/test_valoracion.py	lf -> lf	ok
+diferencias: 0 (el git mv del módulo se sigue a mano: git no lo empareja porque se reescribió más de la mitad)

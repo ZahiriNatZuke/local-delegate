@@ -42,7 +42,7 @@ def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **
     return {
         "id": i,
         "ts": float(i),
-        "modelo": MODEL,
+        "model": MODEL,
         "tok_s": tok_s,
         "tokens_out": tokens_out,
         "tokens_in": tokens_in,
@@ -115,7 +115,7 @@ def test_failed_event_not_in_normal_speed() -> None:
 
 
 def test_each_model_has_its_window() -> None:
-    slow_ones = [{**_ev(i, 100.0), "modelo": "rapido"} for i in range(12)]
+    slow_ones = [{**_ev(i, 100.0), "model": "rapido"} for i in range(12)]
     slow_ones += [_ev(100 + i, 10.0) for i in range(12)]
     result = ml.compute_slowness(slow_ones)
     assert not any(e.get("slow") for e in result)  # 10 tok/s es normal para modelo-a

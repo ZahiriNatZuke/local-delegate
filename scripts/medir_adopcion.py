@@ -12,7 +12,7 @@ mal una vez en este repo, catorce contra treinta y cuatro.
 
 Las pruebas no cuentan: los eventos de hooks dentro de una ventana de prueba
 (`LOG_DIR/test-windows.json`) y las filas del log de uso que la regla comun
-(`atribucion.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
+(`attribution.test_reason`, con la ventana estampada) marca como prueba se quitan, y la salida dice
 cuantas. `--include-tests` las deja.
 
 Uso:
@@ -31,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from local_delegate import atribucion, config, coste, test_windows
+from local_delegate import attribution, config, cost, legacy_names, test_windows
 
 
 def telemetria_de_hooks() -> Path:
@@ -68,12 +68,14 @@ def leer(ruta: Path, desde: str | None) -> list[dict]:
 
 
 def usos_fundidos(desde: str | None) -> list[dict]:
-    """Las filas del log de uso FUNDIDAS como las ve el panel (`coste.fundir`): con el `banco` del
+    """Las filas del log de uso FUNDIDAS como las ve el panel (`cost.merge`): con el `banco` del
     relleno y el `test_window` estampado. Se funde el fichero entero y se filtra despues, porque la
     clave de una fila sin `tool_use_id` depende de su posicion en el fichero."""
     usos = []
     for ruta in logs_de_uso():
-        for e in coste.fundir(leer(ruta, None), log_dir=directorio_de_logs()):
+        # Filas viejas y nuevas al mismo formato (REQ-006): `bloqueo_id` se lee como `block_id`.
+        filas = [legacy_names.normalize("usage", e) for e in leer(ruta, None)]
+        for e in cost.merge(filas, log_dir=directorio_de_logs()):
             if desde and str(e.get("ts", "")) < desde:
                 continue
             usos.append(e)
@@ -81,7 +83,10 @@ def usos_fundidos(desde: str | None) -> list[dict]:
 
 
 def medir(desde: str | None, include_tests: bool = False) -> dict:
-    hooks = leer(telemetria_de_hooks(), desde)
+    # Claves y valores viejos (`motivo`, `bloqueo`, `camino`…) y nuevos dan lo mismo (REQ-006).
+    hooks = [
+        legacy_names.normalize("hook_telemetry", e) for e in leer(telemetria_de_hooks(), desde)
+    ]
     usos = usos_fundidos(desde)
     fuera = {"hooks": 0, "usage": 0}
     aplicadas: list[dict] = []
@@ -92,7 +97,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         hooks = [e for e in hooks if ventanas.find(e.get("ts")) is None]
         fuera["hooks"] = antes - len(hooks)
         antes = len(usos)
-        usos = [e for e in usos if not atribucion.test_reason(e)]
+        usos = [e for e in usos if not attribution.test_reason(e)]
         fuera["usage"] = antes - len(usos)
 
     lecturas = [e for e in hooks if e.get("category") in {"read", "shell"}]
@@ -101,7 +106,7 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
 
     # «Aceptado» = el identificador del bloqueo aparece en un evento de tool. Sin esto, lo unico
     # medible era «hubo delegaciones», que no dice si las provoco el aviso.
-    ids_delegados = {e["bloqueo_id"] for e in usos if e.get("bloqueo_id")}
+    ids_delegados = {e["block_id"] for e in usos if e.get("block_id")}
     aceptados = [b for b in bloqueos if b.get("id") in ids_delegados]
 
     # De las lecturas acotadas, cuantas eran de un fichero que en la misma sesion acabo leyendose
@@ -112,10 +117,10 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         clave = (evento.get("session_id", ""), evento.get("path_sha", ""))
         if not clave[1]:
             continue  # eventos viejos, sin huella: no se pueden agrupar
-        if evento.get("motivo") == "acotada":
+        if evento.get("reason") == "bounded":
             franjas_por_sesion[clave] += 1
         else:
-            enteras_por_sesion[clave].add(evento.get("motivo") or "aviso")
+            enteras_por_sesion[clave].add(evento.get("reason") or "aviso")
 
     acotadas = [c for c, n in franjas_por_sesion.items() if n]
     convenia = [c for c in acotadas if c in enteras_por_sesion or franjas_por_sesion[c] >= 3]
@@ -127,18 +132,18 @@ def medir(desde: str | None, include_tests: bool = False) -> dict:
         "lecturas": len(lecturas),
         "por_motivo": dict(
             Counter(
-                e.get("motivo") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
+                e.get("reason") or ("(ofrecido)" if e.get("suggested") else "(sin motivo)")
                 for e in lecturas
             )
         ),
-        "por_camino": dict(Counter(e.get("camino", "read") for e in lecturas)),
+        "por_camino": dict(Counter(e.get("route", "read") for e in lecturas)),
         "ofrecidos": len(ofrecidos),
         "bloqueos": len(bloqueos),
         "aceptados": len(aceptados),
         "tasa_de_aceptacion": round(len(aceptados) / len(bloqueos), 3) if bloqueos else None,
         "delegaciones_totales": len([e for e in usos if e.get("tool", "").startswith("local_")]),
         "delegaciones_espontaneas": len(
-            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("bloqueo_id")]
+            [e for e in usos if e.get("tool", "").startswith("local_") and not e.get("block_id")]
         ),
         "acotadas_con_huella": len(acotadas),
         "acotadas_que_convenia_delegar": len(convenia),

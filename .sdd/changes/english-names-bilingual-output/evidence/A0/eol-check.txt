@@ -1,0 +1,32 @@
+# Finales de línea, ola A0 (plan §0.6), sobre todo el diff contra HEAD 8ec2f1d.
+# Modificados: w/ antes (eol-before.txt) y después. Nuevos de A0: deben ser LF. Los ficheros de la
+# carpeta del cambio anteriores a A0 (investigación, spec, plan) no son de esta ola y se cuentan aparte.
+OK	M	scripts/bump_version.py -> scripts/bump_version.py	w/lf -> w/lf
+OK	M	src/local_delegate/checks.py -> src/local_delegate/checks.py	w/lf -> w/lf
+OK	M	src/local_delegate/config.py -> src/local_delegate/config.py	w/lf -> w/lf
+OK	M	src/local_delegate/install.py -> src/local_delegate/install.py	w/crlf -> w/crlf
+OK	M	tests/test_checks.py -> tests/test_checks.py	w/lf -> w/lf
+OK	M	tests/test_install.py -> tests/test_install.py	w/lf -> w/lf
+OK	M	tests/test_rol_fast_retirado.py -> tests/test_rol_fast_retirado.py	w/lf -> w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/detector-baseline.json	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/eol-after.txt	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/eol-before.txt	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/eol-check.txt	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/lexicon-audit.csv	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/evidence/A0/pytest-full.log	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/rename-exceptions.md	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/tools/check_wave_records.py	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/tools/make_mapping.py	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/tools/tests/test_check_wave_records.py	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/tools/tests/test_make_mapping.py	(nuevo) w/lf
+OK	A	.sdd/changes/english-names-bilingual-output/waves/A0-mapping.csv	(nuevo) w/lf
+OK	A	scripts/data/reserved_words.json	(nuevo) w/lf
+OK	A	scripts/data/spanish_lexicon.README.md	(nuevo) w/lf
+OK	A	scripts/data/spanish_lexicon.json	(nuevo) w/lf
+OK	A	scripts/detect_spanish_names.py	(nuevo) w/lf
+OK	A	src/local_delegate/deprecations.py	(nuevo) w/lf
+OK	A	src/local_delegate/legacy_names.py	(nuevo) w/lf
+OK	A	tests/test_deprecations.py	(nuevo) w/lf
+OK	A	tests/test_detect_spanish_names.py	(nuevo) w/lf
+ficheros previos a A0 sin comprobar: 27
+diferencias: 0

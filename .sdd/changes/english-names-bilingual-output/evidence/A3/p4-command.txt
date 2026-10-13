@@ -1,0 +1,27 @@
+# Corrida del comando P-4 documentado (REQ-046), ola A3, 2026-10-12
+# Comando, sin cambios de nombre ni de opciones:
+#   uv run python scripts/medir_enfriamiento.py --desde 2026-09-15T19:26:41
+# Datos: los logs locales de esta PC (todos en el formato de la 0.34.0). Solo recuentos: se omiten
+# las etiquetas de las ventanas de prueba. La misma corrida con el script y el paquete de main
+# (HEAD, src extraído con git archive) da una salida idéntica línea a línea (diff vacío).
+# Código de salida: 0
+
+Ventana: 2026-09-15T19:26:41 a (ahora)
+  quitado por --excluir: 0 filas, 0 episodios
+  quitado por ventanas de prueba: 58 filas, 1 episodios
+
+Delegaciones:              257
+Fallos que cuentan (min.): 5  (minimo 10)
+Saltos por clase:          {}
+Fallos al momento:         0
+Operaciones desviadas:     0
+
+Episodios:                 0  (minimo 5)
+  con desenlace conocido:  0
+  reentraron:              0  (R: None)
+  abiertos por timeout:    0
+  reentran en Tmax:        0
+
+RESULTADO: no concluyente
+
+# diff contra main: vacío (IGUALES)

@@ -127,26 +127,26 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   let seed = 20260728;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 
-  // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolver_densidad`
-  // en Python); el JS del panel solo divide. Sin `densidad`, `tokensClaude` da 0 y las series por
+  // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolve_density`
+  // en Python); el JS del panel solo divide. Sin `density`, `tokensClaude` da 0 y las series por
   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
-  // `nueva`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
-  const DENS = DENSIDAD.familias.nueva;
+  // `new`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
+  const DENS = DENSIDAD.families.new;
   const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
-    local_explain_code: 'codigo'};
+    local_explain_code: 'code'};
   const celda = (columna, clase) => {
-    if (DENS[columna][clase]) return [DENS[columna][clase], 'medida'];
-    return [DENS.sin_numerar[clase], 'sin_numerar'];
+    if (DENS[columna][clase]) return [DENS[columna][clase], 'measured'];
+    return [DENS.unnumbered[clase], 'unnumbered'];
   };
   const densidadDe = (tool, porPath) => {
     if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
-    const clase = CLASE_TOOL[tool] || 'prosa';
-    const devuelta = tool === 'local_extract' ? 'estructurado'
-      : (tool === 'local_boilerplate' ? 'codigo' : 'prosa');
+    const clase = CLASE_TOOL[tool] || 'prose';
+    const devuelta = tool === 'local_extract' ? 'structured'
+      : (tool === 'local_boilerplate' ? 'code' : 'prose');
     return {
-      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'medida'],
-      returned: [DENS.sin_numerar[devuelta], 'medida'],
-      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'medida'],
+      text: porPath ? celda('read_format', clase) : [DENS.unnumbered[clase], 'measured'],
+      returned: [DENS.unnumbered[devuelta], 'measured'],
+      output: [DENS.unnumbered[tool === 'local_boilerplate' ? 'code' : 'prose'], 'measured'],
     };
   };
   const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
@@ -174,7 +174,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
-        familia: 'nueva', densidad: densidadDe(tool, path),
+        family: 'new', density: densidadDe(tool, path),
       });
     }
   }
@@ -219,52 +219,52 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
     }
     // Solo `source: 'path'` ahorra contexto: si el input viajó inline, ya pasó por Claude.
     if (e.source === 'path') {
-      a.saved += aTokens(e.chars_in, e.densidad.text);
+      a.saved += aTokens(e.chars_in, e.density.text);
       // Lo que la tool devolvió al contexto se resta: el KPI enseña el NETO.
-      if (e.chars_in > 0) a.returned += aTokens(e.chars_out, e.densidad.returned);
+      if (e.chars_in > 0) a.returned += aTokens(e.chars_out, e.density.returned);
     }
     return a;
   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
       errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
 
-  // Coste equivalente y cuota de ejemplo. Salen de correr `valoracion.bloque_coste` y
-  // `cuota.estado` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
+  // Coste equivalente y cuota de ejemplo. Salen de correr `valuation.cost_block` y
+  // `quota.status` de verdad sobre un log y un `cost-aggregates.json` sintéticos (sin datos de
   // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
   // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
   // que verá casi todo el mundo: nunca se enseña un % sin calibración.
-  const COSTE = {cifra: {cota_baja: 6.87, estimacion: 27.4}, motivo: null, eventos: 98,
+  const COSTE = {figure: {low_bound: 6.87, estimate: 27.4}, reason: null, events: 98,
     T: 1241362,
-    barra: {excluido: 22, al_momento: 94, por_relleno: 0, pendiente: 4, supuesto: 0,
-      valoradas: 98, con_modelo_supuesto: 4,
-      excluidas_por_motivo: {'no es Claude': 15, pruebas: 7}, plazo_dias: 30},
-    respaldo: {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent',
-      invalido: false, variable: 'LOCAL_DELEGATE_COSTE_RESPALDO'},
-    n_origen: {relleno: 0, agregado: 0, declarado: 98}, n_declarado: {main: 127, subagent: 40},
-    densidad: {origen: {medida: 74, sin_numerar: 24, conservadora: 0}, familias: {nueva: 98},
-      familia_supuesta: 0, densidad_de_la_familia: 0},
-    sin_precio: {n: 0, ids: []},
-    fuera_de_la_base: {imagenes: stats.img_n, salida_a_fichero: 0},
-    desglose: [
-      {modelo: 'claude-opus-5', nombre: 'Opus 5', hilo: 'main', esfuerzo: 'high', casos: 17,
-       T: 191044, cota_baja: 1.91, estimacion: 14.04},
-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'high',
-       casos: 69, T: 880897, cota_baja: 4.4, estimacion: 11.45},
-      {modelo: 'claude-sonnet-5-5', nombre: 'Sonnet 5.5', hilo: 'subagent', esfuerzo: 'medium',
-       casos: 8, T: 117678, cota_baja: 0.29, estimacion: 1.24},
-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'sin dato',
-       casos: 4, T: 51743, cota_baja: 0.26, estimacion: 0.67},
+    bar: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
+      valued: 98, with_assumed_model: 4,
+      excluded_by_reason: {'no es Claude': 15, pruebas: 7}, cleanup_days: 30},
+    fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
+      invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
+    n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},
+    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {new: 98},
+      assumed_family: 0, family_density: 0},
+    unpriced: {n: 0, ids: []},
+    outside_base: {images: stats.img_n, output_to_file: 0},
+    breakdown: [
+      {model: 'claude-opus-5', name: 'Opus 5', thread: 'main', effort: 'high', cases: 17,
+       T: 191044, low_bound: 1.91, estimate: 14.04},
+      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'high',
+       cases: 69, T: 880897, low_bound: 4.4, estimate: 11.45},
+      {model: 'claude-sonnet-5-5', name: 'Sonnet 5.5', thread: 'subagent', effort: 'medium',
+       cases: 8, T: 117678, low_bound: 0.29, estimate: 1.24},
+      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'no_data',
+       cases: 4, T: 51743, low_bound: 0.26, estimate: 0.67},
     ],
-    tabla: {consultado: PRECIOS_CONSULTADO,
-      fuente: 'https://platform.claude.com/docs/en/about-claude/pricing'},
-    comando: 'local-delegate recalcular-coste'};
+    table: {consulted: PRECIOS_CONSULTADO,
+      source: 'https://platform.claude.com/docs/en/about-claude/pricing'},
+    command: 'local-delegate recompute-cost'};
   const CUOTA = {
-    five_hour: {deriva: false, puntos: 1, estado: 'sin calibrar',
-      motivo: 'faltan 2 puntos del statusline', puntos_rechazo: 1,
-      descartes: {contaminado: 1, delta_pequeno: 2}, reinicio: null},
-    seven_day: {deriva: false, puntos: 0, estado: 'sin calibrar',
-      motivo: 'faltan 3 puntos del statusline', puntos_rechazo: 0,
-      descartes: {delta_pequeno: 3}, reinicio: null},
-    hay_agregados: true, comando: 'local-delegate recalcular-coste'};
+    five_hour: {drift: false, points: 1, status: 'uncalibrated',
+      reason: 'faltan 2 puntos del statusline', rejection_points: 1,
+      discards: {contaminated: 1, small_delta: 2}, reset: null},
+    seven_day: {drift: false, points: 0, status: 'uncalibrated',
+      reason: 'faltan 3 puntos del statusline', rejection_points: 0,
+      discards: {small_delta: 3}, reset: null},
+    has_aggregates: true, command: 'local-delegate recompute-cost'};
 
   const MOCKS = {
     '/api/events': {meta: {chars_per_token: 4, log_dir: 'D:\\\\datos\\\\local-delegate',
@@ -330,9 +330,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
-      coste: COSTE, cuota: CUOTA,
-      imagenes: {n: stats.img_n, bytes: stats.img_bytes, chars_devueltos: stats.img_devueltos},
-      densidad_tabla: DENSIDAD},
+      cost: COSTE, quota: CUOTA,
+      images: {n: stats.img_n, bytes: stats.img_bytes, chars_returned: stats.img_devueltos},
+      density_table: DENSIDAD},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
@@ -354,10 +354,10 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       const total = cats.reduce((a, c) => a + c.total, 0);
       const suggested = cats.reduce((a, c) => a + c.suggested, 0);
       const motivos = [
-        {motivo: 'codigo', total: 52},
-        {motivo: 'aviso', total: 41},
-        {motivo: 'acotada', total: 24},
-        {motivo: 'pequeno', total: 13},
+        {reason: 'code', total: 52},
+        {reason: 'suggested', total: 41},
+        {reason: 'bounded', total: 24},
+        {reason: 'small', total: 13},
       ];
       return {enabled: true, log: 'D:\\\\datos\\\\local-delegate\\\\hooks.jsonl', exists: true,
         total, suggested, rate: suggested / total,
@@ -366,9 +366,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
         // avisos son sus 'suggested' —41—, no números sueltos: un panel cuyas dos tablas no
         // cuadran es un panel que el dashboard real nunca puede pintar.
         read_total: motivos.reduce((a, m) => a + m.total, 0),
-        by_motivo: motivos,
+        by_reason: motivos,
         by_ext: [{ext: '.ts', total: 48}, {ext: '.md', total: 39},
-                 {ext: '.py', total: 22}, {ext: 'sin extension', total: 21}]};
+                 {ext: '.py', total: 22}, {ext: 'no_extension', total: 21}]};
     })(),
   };
 
@@ -426,12 +426,12 @@ def _tablas_del_paquete() -> dict:
     Se leen del fichero en vez de copiarlas al mock para que la captura no se quede con unos
     valores que el vigilante de precios o una medida nueva ya cambiaron.
     """
-    datos = ROOT / "src" / "local_delegate" / "resources" / "datos"
-    densidad = json.loads((datos / "densidad.json").read_text(encoding="utf-8"))
-    precios = json.loads((datos / "precios.json").read_text(encoding="utf-8"))
+    datos = ROOT / "src" / "local_delegate" / "resources" / "data"
+    densidad = json.loads((datos / "density.json").read_text(encoding="utf-8"))
+    precios = json.loads((datos / "prices.json").read_text(encoding="utf-8"))
     return {
         "DENSIDAD": {k: v for k, v in densidad.items() if not k.startswith("_")},
-        "PRECIOS_CONSULTADO": precios.get("consultado"),
+        "PRECIOS_CONSULTADO": precios.get("consulted"),
     }
 
 

@@ -1,0 +1,20 @@
+feat(rename): atribución en inglés, con caché nueva sembrada una sola vez y lectura doble (ola A5a)
+
+- El módulo `atribucion` pasa a `attribution` (`git mv`) y sus nombres a inglés:
+  `read_note`, `resolve_call`, `current_call`, `file_keys`, `read_backfill`,
+  `write_backfill`, `exclusion_reason`, `cleanup_period_days`, `MATCH_RANK`, etc.
+  `transcripts` también: `Index`, `Delegation`, `Thread`, `read`, `match_lines`,
+  `n_and_expiries`, `percentile`, `median`…
+- La caché del relleno pasa a `attribution-AAAAMM.json`, con `entries` y, en cada
+  entrada, `match`, `bench` y `expiries`; los cruces son `exact`, `window`,
+  `window+path`, `ambiguous` y `no_match` (tablas en `legacy_names`).
+- Lectura doble: mientras de un mes solo exista `atribucion-AAAAMM.json`, se lee
+  traducido. La primera escritura siembra el nuevo desde el viejo, una sola vez y
+  con la regla de mejor cruce; el viejo queda intacto byte a byte.
+- `write_backfill` escribe siempre el formato nuevo, aunque reciba claves viejas.
+- `coste`, `recalcular` y `valoracion` leen `match`, `bench` y `expiries` de la
+  fila fundida; el resto de importadores solo cambia la línea de import.
+- Seis tests nuevos (siembra única, mejor cruce, intactos, lectura doble, escritura
+  en formato nuevo, gana el nuevo), cada uno con su control positivo, y el
+  control de REQ-014 con `scripts/medir_adopcion.py`.
+- CHANGELOG `[Unreleased]` y wiki (`Savings-and-metrics.md`, `Integration-install.md`).

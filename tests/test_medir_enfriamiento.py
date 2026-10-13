@@ -41,7 +41,10 @@ class Logs:
     def __init__(self, directorio: Path) -> None:
         self.directorio = directorio
         self.usos: list[dict] = []
+        #: Filas para `enfriamiento-eventos.jsonl` (el registro viejo, hasta la 0.34.0) y para
+        #: `cooldown-events.jsonl` (el nuevo). El script lee los dos, siempre (REQ-007).
         self.registro: list[dict] = []
+        self.registro_nuevo: list[dict] = []
 
     def fallos(self, cuantos: int, dia: int = 20, clase: str = "modelo") -> None:
         self.usos += [
@@ -105,6 +108,9 @@ class Logs:
         )
         (self.directorio / "enfriamiento-eventos.jsonl").write_text(
             "".join(json.dumps(e) + "\n" for e in self.registro), encoding="utf-8"
+        )
+        (self.directorio / "cooldown-events.jsonl").write_text(
+            "".join(json.dumps(e) + "\n" for e in self.registro_nuevo), encoding="utf-8"
         )
         return medir_enfriamiento.medir(opciones.pop("desde", "2026-09-16"), **opciones)
 
@@ -320,26 +326,27 @@ def test_el_aviso_fuera_de_p4_salta_por_encima_del_5_pct(logs):
 
 
 def test_lee_el_registro_que_escribe_el_modulo(logs):
-    """Ida y vuelta: los eventos que escribe `Estado` son los que este script agrupa. Sin esto, los
+    """Ida y vuelta: los eventos que escribe `CooldownState` son los que este script agrupa. Sin esto, los
     tests de arriba prueban el script contra un formato que yo mismo escribi a mano."""
-    from local_delegate import enfriamiento
+    from local_delegate import cooldown
 
     ahora = [1_789_900_000.0]  # 2026-09-20
-    estado = enfriamiento.Estado(
-        logs.directorio / "enfriamiento.json",
-        fallos=3,
-        espera_s=120.0,
-        espera_max_s=900.0,
-        reloj=lambda: ahora[0],
+    estado = cooldown.CooldownState(
+        logs.directorio / "cooldown.json",
+        failures=3,
+        wait_s=120.0,
+        max_wait_s=900.0,
+        clock=lambda: ahora[0],
     )
     for _ in range(3):
-        estado.registrar_fallo("m", "timeout_lectura")
+        estado.record_failure("m", "timeout_lectura")
     ahora[0] += 121
-    estado.registrar_fallo("m", "modelo")
+    estado.record_failure("m", "modelo")
     ahora[0] += 241
-    estado.registrar_exito("m")
-    registro = (logs.directorio / enfriamiento.FICHERO_EVENTOS).read_text(encoding="utf-8")
-    logs.registro = [json.loads(linea) for linea in registro.splitlines()]
+    estado.record_success("m")
+    registro = (logs.directorio / cooldown.EVENTS_FILE).read_text(encoding="utf-8")
+    logs.registro_nuevo = [json.loads(linea) for linea in registro.splitlines()]
+    assert {e["event"] for e in logs.registro_nuevo} == {"enter", "reenter", "clear"}
     medida = logs.medir()
     assert medida["episodios"] == 1
     assert medida["episodios_que_reentraron"] == 1
@@ -412,3 +419,125 @@ def test_excluir_compara_instantes_y_no_cadenas(logs):
     m = logs.medir(excluidos=[("2026-09-20T01:20:05.255Z", "2026-09-20T01:22:31.544Z")])
     assert m["excluded_manual"]["usage_rows"] == 1
     assert m["fallos_que_cuentan"] == 0
+
+
+# --- Formato viejo, nuevo y mezclado (REQ-007, ola A3) --------------------------------------------
+
+_VIEJA_A_NUEVA = {
+    "modelo": "model",
+    "timeout_lectura": "read_timeout",
+    "capacidad_o_carga": "capacity_or_load",
+    "peticion": "request",
+    "enfriamiento": "cooldown",
+}
+
+
+def _escenario(logs: Logs, formato: str) -> dict:
+    """El mismo tramo de P-4 escrito con las clases viejas, las nuevas o mitad y mitad."""
+
+    def clase(vieja: str, i: int) -> str:
+        if formato == "viejo" or (formato == "mezclado" and i % 2 == 0):
+            return vieja
+        return _VIEJA_A_NUEVA[vieja]
+
+    for i, vieja in enumerate(["modelo"] * 4 + ["timeout_lectura"] * 4 + ["capacidad_o_carga"] * 3):
+        logs.fallos(1, clase=clase(vieja, i))
+    for i in range(4):
+        logs.usos.append(
+            {"ts": _ts(20), "tool": "local_summarize", "fallback_class": clase("enfriamiento", i)}
+        )
+        logs.usos.append(
+            {"ts": _ts(21), "tool": "local_summarize", "fallback_class": clase("modelo", i)}
+        )
+    for dia in range(20, 26):
+        vieja = "timeout_lectura" if dia < 23 else "modelo"
+        esperas = (240.0,) if dia < 22 else ()
+        logs.episodio(dia, modelo=f"m{dia}", clase=clase(vieja, dia), esperas_reentrada=esperas)
+    return logs.medir()
+
+
+def test_el_informe_es_el_mismo_con_clases_viejas_nuevas_y_mezcladas(tmp_path, monkeypatch):
+    medidas = {}
+    for formato in ("viejo", "nuevo", "mezclado"):
+        directorio = tmp_path / formato
+        monkeypatch.setattr(config, "LOG_DIR", directorio)
+        medidas[formato] = _escenario(Logs(directorio), formato)
+        medidas[formato].pop("excluidos", None)
+    # Guarda: el escenario llega a contar algo en cada medida que depende de la clase.
+    assert medidas["viejo"]["fallos_que_cuentan"] == 12
+    assert medidas["viejo"]["episodios_por_timeout"] == 3
+    assert medidas["viejo"]["operaciones_desviadas"] == 4
+    assert medidas["nuevo"] == medidas["viejo"]
+    assert medidas["mezclado"] == medidas["viejo"]
+
+
+# --- Registro de episodios viejo, nuevo y mezclado (REQ-007, ola A4) ------------------------------
+#
+# Desde la A4 el daemon escribe `cooldown-events.jsonl` con claves y valores en inglés; lo escrito
+# antes sigue en `enfriamiento-eventos.jsonl`. La traducción de la fila se escribe aquí a mano, no
+# con `legacy_names`: si no, el test compararía la tabla consigo misma.
+
+_CLAVE_NUEVA = {
+    "modelo": "model",
+    "evento": "event",
+    "clase": "class",
+    "reentradas": "reentries",
+    "espera_s": "wait_s",
+    "tras_vencer": "after_expiry",
+}
+_EVENTO_NUEVO = {"entra": "enter", "reentra": "reenter", "limpia": "clear"}
+
+
+def _fila_nueva(fila: dict) -> dict:
+    nueva = {_CLAVE_NUEVA.get(k, k): v for k, v in fila.items()}
+    nueva["event"] = _EVENTO_NUEVO[nueva["event"]]
+    if "class" in nueva:
+        nueva["class"] = _VIEJA_A_NUEVA[nueva["class"]]
+    return nueva
+
+
+def _episodios_de_p4(logs: Logs) -> list[dict]:
+    """Seis episodios en formato viejo: tres por timeout, dos que reentran, uno sin desenlace."""
+    logs.fallos(10)
+    for dia in range(20, 26):
+        clase = "timeout_lectura" if dia < 23 else "modelo"
+        esperas = (240.0, 900.0, 900.0) if dia < 22 else ()
+        final = None if dia == 25 else ("recuperado" if dia % 2 else "exito_explicito")
+        logs.episodio(dia, modelo=f"m{dia}", clase=clase, esperas_reentrada=esperas, final=final)
+    filas, logs.registro = logs.registro, []
+    return filas
+
+
+@pytest.mark.parametrize(
+    "formato", ["nuevo", "mezclado_en_dos_ficheros", "mezclado_en_el_fichero_nuevo"]
+)
+def test_el_informe_es_el_mismo_con_el_registro_viejo_nuevo_y_mezclado(
+    tmp_path, monkeypatch, formato
+):
+    def medida(nombre: str, reparto) -> dict:
+        directorio = tmp_path / nombre
+        monkeypatch.setattr(config, "LOG_DIR", directorio)
+        logs = Logs(directorio)
+        for i, fila in enumerate(_episodios_de_p4(logs)):
+            destino, fila = reparto(i, fila)
+            (logs.registro if destino == "viejo" else logs.registro_nuevo).append(fila)
+        return logs.medir()
+
+    viejo = medida("viejo", lambda i, fila: ("viejo", fila))
+    # Guarda: el escenario cuenta algo en cada medida que depende del registro de episodios.
+    assert viejo["episodios"] == 6
+    assert viejo["episodios_por_timeout"] == 3
+    assert viejo["episodios_que_reentraron"] == 2
+    assert viejo["episodios_que_reentran_en_tmax"] == 2
+    assert viejo["episodios_con_desenlace"] == 3
+    repartos = {
+        "nuevo": lambda i, fila: ("nuevo", _fila_nueva(fila)),
+        "mezclado_en_dos_ficheros": lambda i, fila: (
+            ("viejo", fila) if i % 2 else ("nuevo", _fila_nueva(fila))
+        ),
+        "mezclado_en_el_fichero_nuevo": lambda i, fila: (
+            "nuevo",
+            fila if i % 2 else _fila_nueva(fila),
+        ),
+    }
+    assert medida(formato, repartos[formato]) == viejo

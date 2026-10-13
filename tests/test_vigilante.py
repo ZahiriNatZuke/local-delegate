@@ -50,10 +50,10 @@ def _v():
 
 # La tabla que da `precios.html` tal como se guardó el 2026-10-06. Trece modelos: fuera los cuatro
 # «Retired» (Opus 4.1, Opus 4, Sonnet 4, Haiku 3.5) y los dos «Invite only» (Mythos 5.1 y 5).
-_P = ("entrada", "salida", "w5m", "w1h", "lectura")
+_P = ("input", "output", "w5m", "w1h", "cache_read")
 ESPERADA = {
-    "busqueda_web_por_1000": 10,
-    "modelos": {
+    "web_search_per_1000": 10,
+    "models": {
         mid: dict(zip(_P, valores, strict=True))
         for mid, valores in {
             "claude-fable-5-1": (10, 50, 12.5, 20, 0.25),
@@ -73,14 +73,14 @@ ESPERADA = {
     },
 }
 
-# Una tabla «del paquete» congelada, con la forma de `precios.json`, igual a la página guardada.
+# Una tabla «del paquete» congelada, con la forma de `prices.json`, igual a la página guardada.
 PAQUETE = {
-    "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
-    "consultado": "2026-10-06",
-    "busqueda_web_por_1000": 10,
-    "modelos": {
-        mid: {**precios, "familia": "nueva", "admite_esfuerzo": True}
-        for mid, precios in ESPERADA["modelos"].items()
+    "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "consulted": "2026-10-06",
+    "web_search_per_1000": 10,
+    "models": {
+        mid: {**precios, "family": "new", "supports_effort": True}
+        for mid, precios in ESPERADA["models"].items()
     },
 }
 
@@ -88,11 +88,11 @@ HOY = dt.date(2026, 10, 12)
 
 
 def _tabla_real_limpia() -> tuple[str, dict]:
-    """El `precios.json` del checkout, con su formato, sin marcas de ensayo (`_ensayo...`).
+    """El `prices.json` del checkout, con su formato, sin marcas de ensayo (`_ensayo...`).
 
     En la rama de un PR de ensayo el fichero ya trae `_ensayo`, y un test que lo lea tal cual da
     otro resultado que en `main` (run 37526624930). Se quita aquí, sobre una copia, para que los
-    tests den lo mismo en las dos ramas. `_nota` no es de ensayo y se queda.
+    tests den lo mismo en las dos ramas. `_note` no es de ensayo y se queda.
     """
     v = _v()
     real = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
@@ -155,7 +155,7 @@ def test_una_nota_al_pie_en_el_nombre_no_cambia_el_id():
         "Claude Opus 5.5</a>",
         "Claude Opus 5.5<sup>1</sup></a>",
     )
-    assert "claude-opus-5-5" in _v().extraer_tabla_precios(html)["modelos"]
+    assert "claude-opus-5-5" in _v().extraer_tabla_precios(html)["models"]
 
 
 @pytest.mark.parametrize(
@@ -179,7 +179,7 @@ def test_un_precio_cambiado_da_ese_diff():
     v = _v()
     html = _cambiar_en_fila(_pagina_precios(), "Claude Opus 5.5", "$0.20", f"${NUEVO:.2f}")
     cambios = v.comparar(v.extraer_tabla_precios(html), PAQUETE)
-    assert cambios.precios == [("claude-opus-5-5", "lectura", 0.20, NUEVO)]
+    assert cambios.precios == [("claude-opus-5-5", "cache_read", 0.20, NUEVO)]
     assert cambios.nuevos == [] and cambios.desaparecidos == []
     assert cambios.hay_cambios
 
@@ -206,8 +206,8 @@ def test_un_modelo_nuevo_sale_listado_en_el_pr():
     tabla = v.tabla_actualizada(
         PAQUETE, v.extraer_tabla_precios(_con_modelo_nuevo(_pagina_precios())), cambios, HOY
     )
-    assert tabla["modelos"]["claude-nuevo-9"]["entrada"] == 4
-    assert tabla["consultado"] == HOY.isoformat()
+    assert tabla["models"]["claude-nuevo-9"]["input"] == 4
+    assert tabla["consulted"] == HOY.isoformat()
 
 
 def test_un_modelo_que_desaparece_no_se_borra():
@@ -217,12 +217,12 @@ def test_un_modelo_que_desaparece_no_se_borra():
     html = html[:desde] + html[hasta:]
     html = _cambiar_en_fila(html, "Claude Opus 5.5", "$0.20", f"${NUEVO:.2f}")
     nueva = v.extraer_tabla_precios(html)
-    assert "claude-opus-4-5" not in nueva["modelos"]  # guarda: de verdad desapareció
+    assert "claude-opus-4-5" not in nueva["models"]  # guarda: de verdad desapareció
     cambios = v.comparar(nueva, PAQUETE)
     assert cambios.desaparecidos == ["claude-opus-4-5"]
     resultado = v.tabla_actualizada(PAQUETE, nueva, cambios, HOY)
-    assert "claude-opus-4-5" in resultado["modelos"]
-    assert resultado["modelos"]["claude-opus-5-5"]["lectura"] == NUEVO
+    assert "claude-opus-4-5" in resultado["models"]
+    assert resultado["models"]["claude-opus-5-5"]["cache_read"] == NUEVO
     assert "claude-opus-4-5" in v.cuerpo_pr_precios(cambios)
 
 
@@ -259,9 +259,9 @@ def test_serializar_conserva_el_formato_del_paquete():
     v = _v()
     original, tabla = _tabla_real_limpia()
     assert v.serializar_precios(tabla, original) == original
-    primero = next(iter(tabla["modelos"]))
-    tabla["modelos"][primero]["salida"] = 999
-    tabla["consultado"] = HOY.isoformat()
+    primero = next(iter(tabla["models"]))
+    tabla["models"][primero]["output"] = 999
+    tabla["consulted"] = HOY.isoformat()
     distintas = [
         (a, b)
         for a, b in zip(
@@ -319,13 +319,13 @@ def test_limites_sin_titulo_falla():
 
 def test_el_pr_de_limites_dice_como_reiniciar():
     cuerpo = _v().cuerpo_pr_limites()
-    assert "recalcular-coste --reiniciar-calibracion" in cuerpo
+    assert "recompute-cost --reset-calibration" in cuerpo
 
 
 # --- El flujo de GitHub, con un cliente falso ---------------------------------------------------
 
 REPO = "o/r"
-RUTA_CONTENIDOS_PRECIOS = f"/repos/{REPO}/contents/src/local_delegate/resources/datos/precios.json"
+RUTA_CONTENIDOS_PRECIOS = f"/repos/{REPO}/contents/src/local_delegate/resources/data/prices.json"
 
 
 class FalsoGitHub:
@@ -460,8 +460,8 @@ def test_el_pr_se_hace_por_la_api_y_lanza_los_dos_checks(raiz):
     cuerpo = falso.cuerpos[falso.llamadas.index(("PUT", RUTA_CONTENIDOS_PRECIOS))]
     escrita = json.loads(base64.b64decode(cuerpo["content"]))
     assert cuerpo["branch"] == "vigilante/precios"
-    assert escrita["modelos"]["claude-opus-5-5"]["lectura"] == NUEVO
-    assert escrita["consultado"] == HOY.isoformat()
+    assert escrita["models"]["claude-opus-5-5"]["cache_read"] == NUEVO
+    assert escrita["consulted"] == HOY.isoformat()
     # Con el PR en `clean`, no hay comentario.
     assert not any(r.endswith("/comments") for _m, r in falso.llamadas)
 
@@ -551,7 +551,7 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
     real, tabla = _tabla_real_limpia()
     assert v.serializar_precios(tabla, real) == real, "guarda: sin cambios no hay diff"
     (raiz / v.RUTA_PRECIOS).write_text(real, encoding="utf-8")
-    hoy = dt.date.fromisoformat(tabla["consultado"])
+    hoy = dt.date.fromisoformat(tabla["consulted"])
     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "37524585928"})
     assert codigo == 0
     escrita = _tabla_escrita(falso)
@@ -561,7 +561,7 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
 
 
 def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
-    """Run 37526624930: en la rama de ensayo `precios.json` ya trae `_ensayo` de un run anterior.
+    """Run 37526624930: en la rama de ensayo `prices.json` ya trae `_ensayo` de un run anterior.
 
     Mutante «la marca del paquete pisa a la nueva» (`{CLAVE_ENSAYO: marca, **paquete}`, el código
     de #233) → `codigo == 1`: la tabla propuesta es idéntica y no hay diff.
@@ -572,7 +572,7 @@ def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
     sembrada = v.serializar_precios(vieja, real)
     assert '"_ensayo"' in sembrada and "111" in sembrada, "guarda: la marca vieja está sembrada"
     (raiz / v.RUTA_PRECIOS).write_text(sembrada, encoding="utf-8")
-    hoy = dt.date.fromisoformat(tabla["consultado"])
+    hoy = dt.date.fromisoformat(tabla["consulted"])
     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "222"})
     assert codigo == 0, "con la marca vieja en la tabla el ensayo no tuvo diff"
     escrita = _tabla_escrita(falso)
@@ -600,7 +600,7 @@ def test_limites_cambiados_abren_su_pr(raiz):
     assert ("PUT", ruta) in falso.llamadas
     pr = falso.cuerpos[falso.llamadas.index(("POST", f"/repos/{REPO}/pulls"))]
     assert pr["head"] == "vigilante/limites"
-    assert "recalcular-coste --reiniciar-calibracion" in pr["body"]
+    assert "recompute-cost --reset-calibration" in pr["body"]
 
 
 def test_limites_iguales_no_tocan_github(raiz):

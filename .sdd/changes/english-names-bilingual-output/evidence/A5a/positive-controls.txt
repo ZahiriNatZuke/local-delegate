@@ -1,0 +1,62 @@
+## sembrar desde el viejo en cada escritura
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_la_siembra_ocurre_una_sola_vez
+falla con el mutante: sí
+assert: AssertionError: assert 6 == 5
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## fundir sin la regla de mejor cruce (la nueva pisa siempre)
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_un_cruce_exacto_viejo_no_se_pierde_frente_a_una_ventana_nueva
+falla con el mutante: sí
+assert: AssertionError: assert 'window' == 'exact'
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## reescribir el viejo en el formato nuevo al sembrar
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_sembrar_deja_el_fichero_viejo_intacto_byte_a_byte
+falla con el mutante: sí
+assert: assert b'{"entries":..."version": 1}' == b'{"entradas"..."version": 1}'
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## read_backfill solo lee attribution-* (sin lectura dual)
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_el_relleno_viejo_se_lee_traducido_si_no_hay_nuevo
+falla con el mutante: sí
+assert: KeyError: 'k1'
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## write_backfill no traduce lo que recibe
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_el_relleno_se_escribe_solo_en_el_formato_nuevo
+falla con el mutante: sí
+assert: AssertionError: "cruce"
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## con los dos ficheros manda el viejo
+fichero: src/local_delegate/attribution.py
+test: tests/test_atribucion.py::test_con_los_dos_ficheros_manda_el_nuevo
+falla con el mutante: sí
+assert: AssertionError: assert {'k1': {'benc...: 'no_match'}} == {'k1': {'match': 'window'}}
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí
+
+## REQ-014: renombrar attribution.test_reason sin tocar scripts/medir_adopcion.py
+fichero: src/local_delegate/attribution.py
+test: SCRIPT
+falla con el mutante: sí
+assert: --help exit=0; corrida mínima exit=1: AttributeError: module 'local_delegate.attribution' has no attribute 'test_reason'. Did you mean: 'test_reason_x'?
+sha256 antes=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+sha256 después=aaf5ddaf1b05f3469152f3383d85d3ec1b401a3a8754f32f7c693e039d257d7e
+restaurado: sí

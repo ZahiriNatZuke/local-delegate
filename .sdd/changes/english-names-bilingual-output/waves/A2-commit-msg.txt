@@ -1,0 +1,31 @@
+feat(rename): hooks, telemetría, temporales e interruptor en inglés, con lectura doble (ola A2)
+
+Tercera ola del frente A del SDD english-names-bilingual-output (REQ-005, REQ-006 y REQ-012 en lo
+que toca a los hooks, la parte de hooks de REQ-003, `/api/hooks` de REQ-009 y el resto de REQ-002).
+
+- Los 99 identificadores en español de los hooks pasan a inglés: 50 renombres con PyCharm
+  (`block_state`, `backend_available`, `record_block`, `path_digest`, `call_notes_dir`,
+  `cooled_model`…, más `install._RETIRED_SCRIPTS` y `server._recent_block_id`) y las variables
+  locales con `make_mapping apply`.
+- El hook `anotar_llamada.py` pasa a `record_call.py`; el viejo entra en `_RETIRED_SCRIPTS`, así
+  que `install`/`update` borran su copia y su registro en settings.json.
+- La telemetría escribe `reason`, `block` (`on`, `off_file`, `off_variable`), `route` y `paths`, y
+  los motivos en inglés (`foreign_mcp`, `large_prose`…). `legacy_names` gana la tabla
+  `hook_telemetry`; el panel (`/api/hooks`), `medir_adopcion.py` y `_banco_claude.py` leen los dos
+  formatos, también mezclados. `/api/hooks` devuelve `by_reason`, y sus cubos `suggested`,
+  `unrecorded`, `no_category` y `no_extension`.
+- El diccionario de motivos del panel acepta el valor viejo y el nuevo con la tabla que inyecta el
+  servidor (`__LEGACY_VALUES__`, desde `legacy_names.PANEL_VALUE_ALIASES`), sin segunda copia.
+- Temporales: `local-delegate-blocks.jsonl`, `local-delegate-calls/` y
+  `local-delegate-health-<huella>.json`. Los hooks escriben solo los nuevos; el daemon y
+  `atribucion.leer_nota` leen también los viejos. `hook_common.FILE_NAMES` y
+  `legacy_names.FILE_NAMES`, atadas por un test.
+- Interruptor `~/.claude/local-delegate-block-off`; el viejo sigue apagando, entra en
+  `DEPRECATED_NAMES` (`switch_file`) y en la copia de los hooks.
+- Con la telemetría encendida, cada evento lleva `deprecated_names`; el check «nombres
+  obsoletos» de doctor lo lee de la cola de 7 días del fichero, por bloques desde el final.
+- `tools/make_mapping.py` resuelve los imports planos entre scripts vecinos, para que A3+ no
+  vuelvan a marcar como locales los símbolos que se importan entre hooks.
+- Tests nuevos en `tests/test_hook_legacy_names.py`, más casos en `test_install.py` (0.34.0
+  simulada y copia a mano), `test_hooks_telemetry_api.py` (telemetría mezclada y etiquetas con
+  node) y `test_medir_adopcion.py`. CHANGELOG, wiki, recipe y README actualizados.

@@ -24,7 +24,7 @@ def _ev(i: int, tok_s: float, *, tokens_out: int = 100, tokens_in: int = 500, **
     return {
         "id": i,
         "ts": float(i),
-        "modelo": MODEL,
+        "model": MODEL,
         "tok_s": tok_s,
         "tokens_out": tokens_out,
         "tokens_in": tokens_in,

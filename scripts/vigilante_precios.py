@@ -3,7 +3,7 @@
 Dos trabajos, uno por página (REQ-020 a REQ-025 de `coste-api-y-cuota`):
 
 - `precios`: descarga la página oficial de precios, extrae la tabla «Model pricing» y la compara
-  con `src/local_delegate/resources/datos/precios.json`. Si cambia un precio, aparece un modelo o
+  con `src/local_delegate/resources/data/prices.json`. Si cambia un precio, aparece un modelo o
   cambia la búsqueda web, abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la
   tabla nueva y `consultado` = hoy. Un modelo que desaparece **no** se borra: los transcripts
   viejos lo siguen necesitando, y el aviso sale en el log.
@@ -49,14 +49,14 @@ RAIZ = Path(__file__).resolve().parents[1]
 URL_PRECIOS = "https://platform.claude.com/docs/en/about-claude/pricing"
 URL_LIMITES = "https://support.claude.com/en/articles/11647753-how-do-usage-and-length-limits-work"
 
-RUTA_PRECIOS = "src/local_delegate/resources/datos/precios.json"
+RUTA_PRECIOS = "src/local_delegate/resources/data/prices.json"
 RUTA_LIMITES = ".github/vigilante/limites-de-uso.txt"
 
 RAMA_BASE = "main"
 RAMA_PRECIOS = "vigilante/precios"
 RAMA_LIMITES = "vigilante/limites"
 RAMA_ENSAYO = "vigilante/ensayo"
-# Clave que añade el ensayo a `precios.json`; con `_` delante, como `_nota`, no es un dato.
+# Clave que añade el ensayo a `prices.json`; con `_` delante, como `_note`, no es un dato.
 CLAVE_ENSAYO = "_ensayo"
 
 # Los dos workflows que contienen los checks que exige el ruleset `protect-main` (REQ-025).
@@ -73,25 +73,25 @@ MIN_FILAS = 5
 # Filas que no son modelos con precio público en vigor. La página marca «Retired» e «Invite only»
 # en el `aria-label` del botón que acompaña al nombre; «limited availability» lo nombra la spec.
 MARCAS_IGNORADAS = ("retired", "limited availability", "invite only")
-# Cabecera de columna de la página → campo de `precios.json`.
+# Cabecera de columna de la página → campo de `prices.json`.
 COLUMNAS = {
-    "input": "entrada",
-    "output": "salida",
+    "input": "input",
+    "output": "output",
     "5m writes": "w5m",
     "1h writes": "w1h",
-    "hits and refreshes": "lectura",
+    "hits and refreshes": "cache_read",
 }
-CAMPOS = ("entrada", "w5m", "w1h", "lectura", "salida")
+CAMPOS = ("input", "w5m", "w1h", "cache_read", "output")
 _BUSQUEDA_WEB = re.compile(
     r"Web search is available on the Claude API for \$(\d+(?:\.\d+)?) per 1,000 searches"
 )
 # Lo que se pone a un modelo nuevo hasta que una persona lo revise; el cuerpo del PR lo pide.
-PROVISIONAL_NUEVO = {"familia": "nueva", "admite_esfuerzo": True}
+PROVISIONAL_NUEVO = {"family": "new", "supports_effort": True}
 
 TITULO_LIMITES = "How do usage and length limits work?"
 MIN_CHARS_LIMITES = 500
 
-COMANDO_REINICIO = "local-delegate recalcular-coste --reiniciar-calibracion five_hour|seven_day"
+COMANDO_REINICIO = "local-delegate recompute-cost --reset-calibration five_hour|seven_day"
 
 COMENTARIO_BLOQUEADO = (
     "**El vigilante no puede dejar este PR listo para mezclar.** Los checks que exige el ruleset "
@@ -241,7 +241,7 @@ def _ignorada(celda_nombre: dict) -> bool:
 
 
 def extraer_tabla_precios(html: str) -> dict:
-    """La tabla «Model pricing» de la página: `{"busqueda_web_por_1000", "modelos": {id: {...}}}`.
+    """La tabla «Model pricing» de la página: `{"web_search_per_1000", "models": {id: {...}}}`.
 
     Falla en voz alta (REQ-022) sin la cabecera, sin la tabla, con menos de 5 filas válidas o con
     una celda que no es un número. Ignora las filas «retired», «limited availability» e «invite
@@ -288,7 +288,7 @@ def extraer_tabla_precios(html: str) -> dict:
         raise ErrorDelVigilante("no aparece el precio de la búsqueda web")
     valor = m.group(1)
     busqueda = float(valor) if "." in valor else int(valor)
-    return {"busqueda_web_por_1000": busqueda, "modelos": modelos}
+    return {"web_search_per_1000": busqueda, "models": modelos}
 
 
 @dataclass
@@ -312,16 +312,16 @@ class Cambios:
 def comparar(nueva: dict, paquete: dict) -> Cambios:
     """Compara la tabla extraída con la del paquete, campo a campo y por valor numérico."""
     cambios = Cambios()
-    viejos = paquete["modelos"]
-    for mid, precios in nueva["modelos"].items():
+    viejos = paquete["models"]
+    for mid, precios in nueva["models"].items():
         if mid not in viejos:
             cambios.nuevos.append(mid)
             continue
         for campo in CAMPOS:
             if float(precios[campo]) != float(viejos[mid][campo]):
                 cambios.precios.append((mid, campo, viejos[mid][campo], precios[campo]))
-    cambios.desaparecidos = [mid for mid in viejos if mid not in nueva["modelos"]]
-    antes, ahora = paquete["busqueda_web_por_1000"], nueva["busqueda_web_por_1000"]
+    cambios.desaparecidos = [mid for mid in viejos if mid not in nueva["models"]]
+    antes, ahora = paquete["web_search_per_1000"], nueva["web_search_per_1000"]
     if float(antes) != float(ahora):
         cambios.busqueda_web = (antes, ahora)
     return cambios
@@ -331,12 +331,12 @@ def tabla_actualizada(paquete: dict, nueva: dict, cambios: Cambios, hoy: dt.date
     """La tabla del paquete con los cambios aplicados y `consultado` = hoy. No borra modelos."""
     tabla = copy.deepcopy(paquete)
     for mid, campo, _viejo, valor in cambios.precios:
-        tabla["modelos"][mid][campo] = valor
+        tabla["models"][mid][campo] = valor
     for mid in cambios.nuevos:
-        tabla["modelos"][mid] = {**nueva["modelos"][mid], **PROVISIONAL_NUEVO}
+        tabla["models"][mid] = {**nueva["models"][mid], **PROVISIONAL_NUEVO}
     if cambios.busqueda_web is not None:
-        tabla["busqueda_web_por_1000"] = cambios.busqueda_web[1]
-    tabla["consultado"] = hoy.isoformat()
+        tabla["web_search_per_1000"] = cambios.busqueda_web[1]
+    tabla["consulted"] = hoy.isoformat()
     return tabla
 
 
@@ -344,13 +344,13 @@ _LINEA_MODELO = re.compile(r'^\s*"([^"]+)": (\{.*\}),?\s*$')
 
 
 def serializar_precios(tabla: dict, original: str) -> str:
-    """`precios.json` con el formato del repo: una línea por modelo.
+    """`prices.json` con el formato del repo: una línea por modelo.
 
     Las líneas de los modelos que no cambian se copian **tal cual** del original (con su `0.20`),
     para que el diff del PR enseñe solo lo que cambió.
     """
     lineas_originales: dict[str, str] = {}
-    datos_originales = json.loads(original).get("modelos", {})
+    datos_originales = json.loads(original).get("models", {})
     for linea in original.splitlines():
         m = _LINEA_MODELO.match(linea)
         if m and m.group(1) in datos_originales:
@@ -363,13 +363,13 @@ def serializar_precios(tabla: dict, original: str) -> str:
     claves = list(tabla)
     for k in claves:
         coma = "," if k != claves[-1] else ""
-        if k != "modelos":
+        if k != "models":
             salida.append(f"  {_valor(k)}: {_valor(tabla[k])}{coma}")
             continue
-        salida.append('  "modelos": {')
-        ids = list(tabla["modelos"])
+        salida.append('  "models": {')
+        ids = list(tabla["models"])
         for mid in ids:
-            entrada = tabla["modelos"][mid]
+            entrada = tabla["models"][mid]
             if mid in lineas_originales and datos_originales.get(mid) == entrada:
                 cuerpo = lineas_originales[mid]
             else:
@@ -413,9 +413,9 @@ def cuerpo_pr_precios(cambios: Cambios, *, ensayo: bool = False) -> str:
             "",
             (
                 "El id se deduce del nombre comercial (la página no trae ids): compáralo con "
-                "«Models overview» y «Model IDs and versioning». `familia` y `admite_esfuerzo` "
-                f"van provisionales ({PROVISIONAL_NUEVO['familia']} / "
-                f"{str(PROVISIONAL_NUEVO['admite_esfuerzo']).lower()}): corrígelos antes de "
+                "«Models overview» y «Model IDs and versioning». `family` y `supports_effort` "
+                f"van provisionales ({PROVISIONAL_NUEVO['family']} / "
+                f"{str(PROVISIONAL_NUEVO['supports_effort']).lower()}): corrígelos antes de "
                 "mezclar."
             ),
             "",

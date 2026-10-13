@@ -10,8 +10,8 @@ from pathlib import Path
 
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, daemon, doctor, install, recalcular, sondas, update
-from local_delegate.fallos import VistaBackend
+from local_delegate import checks, daemon, doctor, install, recompute, sondas, update
+from local_delegate.failures import BackendView
 
 
 def test_vnum_extracts_number():
@@ -187,9 +187,9 @@ def _stub_environment(
         sondas,
         "backend_probe",
         lambda: (
-            VistaBackend(True, "", None, "directo")
+            BackendView(True, "", None, "direct")
             if backend
-            else VistaBackend(False, "no responde (ConnectError)", None, "directo")
+            else BackendView(False, "no responde (ConnectError)", None, "direct")
         ),
     )
     # Mismo caso que `query_backend`: sin doblarlo, `service.credential` pediría `/models` al
@@ -248,7 +248,7 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
         encoding="utf-8",
     )
     # Igual con el cotejo de `config.coste`: vive en `LOG_DIR`, y sin él el check es `unknown`.
-    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
+    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
     # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.
@@ -406,6 +406,6 @@ def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
     vista = sondas.backend_probe()
 
     assert "no se resuelve" in vista[1]
-    assert vista.causa == "dns"
-    assert vista.fuente == "directo"
-    assert vista.sano is False
+    assert vista.cause == "dns"
+    assert vista.source == "direct"
+    assert vista.healthy is False

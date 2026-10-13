@@ -5,7 +5,7 @@ llama-server b10909 (protocolo-f2.md §10, sesión 8), con la clase esperada esc
 Cada una lleva sus versiones: si el backend cambia, se recapturan, no se retocan.
 
 Lo que ve el cliente se reconstruye igual que en `_post_chat`: una respuesta HTTP se convierte en
-`Respuesta` con el cuerpo recortado a 300 caracteres, y un `ReadTimeout` se clasifica con la señal
+`BackendResponse` con el cuerpo recortado a 300 caracteres, y un `ReadTimeout` se clasifica con la señal
 de carga que daba `/running` al vencer.
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 import httpx2
 import pytest
 
-from local_delegate.fallos import Clase, Respuesta, clasificar
+from local_delegate.failures import BackendResponse, FailureClass, classify
 
 FIXTURES = Path(__file__).parent / "fixtures" / "backend"
 
@@ -35,19 +35,19 @@ def _modelo_cargado_al_terminar(doc: dict) -> bool | None:
     return None
 
 
-def _clasificar_captura(doc: dict) -> Clase | None:
+def _clasificar_captura(doc: dict) -> FailureClass | None:
     if "excepcion" in doc:
         assert doc["excepcion"]["tipo"] == "ReadTimeout", (
             "solo se capturó ReadTimeout como excepción"
         )
-        return clasificar(
+        return classify(
             httpx2.ReadTimeout(doc["excepcion"]["mensaje"]),
-            modelo_cargado=_modelo_cargado_al_terminar(doc),
+            model_loaded=_modelo_cargado_al_terminar(doc),
         )
     respuesta = doc["respuesta"]
-    return clasificar(
-        Respuesta(
-            status=respuesta["status"], datos=respuesta["json"], texto=respuesta["texto"][:300]
+    return classify(
+        BackendResponse(
+            status=respuesta["status"], data=respuesta["json"], text=respuesta["texto"][:300]
         )
     )
 
@@ -68,23 +68,24 @@ def test_todas_las_capturas_llevan_version_y_clase_esperada():
 def test_el_modelo_que_no_se_puede_montar_es_de_capacidad(nombre):
     """OOM con la política del driver y modelo inexistente: llama-swap da el MISMO 500 a los dos."""
     doc = _captura(nombre)
-    assert doc["clase_esperada"] == Clase.CAPACIDAD.value
-    assert _clasificar_captura(doc) is Clase.CAPACIDAD
+    # Las capturas guardan el valor viejo (`capacidad_o_carga`): el enum lo sigue leyendo (REQ-006).
+    assert FailureClass(doc["clase_esperada"]) is FailureClass.CAPACITY
+    assert _clasificar_captura(doc) is FailureClass.CAPACITY
 
 
 def test_el_timeout_durante_la_carga_es_de_capacidad():
     """`/running` decía `starting` al vencer: no se le cuenta el fallo a un modelo lento de montar."""
     doc = _captura("timeout-durante-carga")
     assert _modelo_cargado_al_terminar(doc) is False
-    assert _clasificar_captura(doc) is Clase.CAPACIDAD
+    assert _clasificar_captura(doc) is FailureClass.CAPACITY
 
 
 def test_el_mismo_timeout_con_el_modelo_ya_cargado_seria_de_lectura():
     """Control positivo del anterior: la misma captura con la señal cambiada cambia de clase."""
     doc = _captura("timeout-durante-carga")
     assert (
-        clasificar(httpx2.ReadTimeout(doc["excepcion"]["mensaje"]), modelo_cargado=True)
-        is Clase.TIMEOUT_LECTURA
+        classify(httpx2.ReadTimeout(doc["excepcion"]["mensaje"]), model_loaded=True)
+        is FailureClass.READ_TIMEOUT
     )
 
 
@@ -107,7 +108,7 @@ def test_el_oom_sin_perfil_no_llego_a_timeout_y_queda_sin_capturar():
     demuestra, para que nadie la cite como si lo hiciera.
     """
     doc = _captura("oom-sin-perfil")
-    assert doc["clase_esperada"] == Clase.TIMEOUT_LECTURA.value
+    assert FailureClass(doc["clase_esperada"]) is FailureClass.READ_TIMEOUT
     assert "excepcion" not in doc
     assert doc["respuesta"]["status"] == 200
     assert _clasificar_captura(doc) is None
@@ -119,13 +120,13 @@ def test_el_razonamiento_que_agota_max_tokens_es_de_configuracion():
     mensaje = doc["respuesta"]["json"]["choices"][0]["message"]
     assert mensaje["content"] == "", "la captura es la que destapó el vacío: si cambia, recapturar"
     assert mensaje["reasoning_content"].strip()
-    assert _clasificar_captura(doc) is Clase.CONFIGURACION
+    assert _clasificar_captura(doc) is FailureClass.CONFIGURATION
 
 
 def test_un_500_de_llama_swap_que_no_es_de_carga_sigue_siendo_del_modelo():
     """Control positivo del patrón: otro 500 del mismo origen, sin el texto de carga, no es capacidad."""
     cuerpo = '{"src":"llama-swap","error":{"message":"upstream error","type":"server_error"}}'
-    assert clasificar(Respuesta(status=500, texto=cuerpo)) is Clase.MODELO
+    assert classify(BackendResponse(status=500, text=cuerpo)) is FailureClass.MODEL
 
 
 def test_ninguna_captura_lleva_rutas_ni_credenciales():

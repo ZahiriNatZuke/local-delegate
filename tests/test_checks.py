@@ -16,8 +16,8 @@ import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, install, llamaswap_api, recalcular, sondas
-from local_delegate.fallos import VistaBackend
+from local_delegate import checks, install, llamaswap_api, recompute, sondas
+from local_delegate.failures import BackendView
 
 
 def make_ctx(home, **kwargs):
@@ -33,7 +33,7 @@ def make_ctx(home, **kwargs):
             "pid": 42,
             "mcp_url": f"http://{host}:{port}/mcp",
         },
-        "backend_models": lambda: VistaBackend(True, "", None, "directo"),
+        "backend_models": lambda: BackendView(True, "", None, "direct"),
         "version_of": lambda component, cfg: (sondas.RECOMMENDED_VERSIONS[component], None),
         # Igual que el daemon: **la instalada**, no una fija. Con una fija, el check de versión
         # publicada saldría `warn` u `ok` según la versión que lleve el repo ese día.
@@ -410,7 +410,7 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
     logs = tmp_path / "logs"
-    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
+    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
     # se les da la de hoy, sin residente y con turno.
     ctx = make_ctx(
@@ -767,7 +767,7 @@ def test_sin_saber_si_exige_token_se_mantiene_el_mensaje_de_siempre(tmp_path, mo
 def test_backend_down_is_warn(tmp_path):
     ctx = make_ctx(
         make_home(tmp_path),
-        backend_models=lambda: VistaBackend(False, "no responde (ConnectError)", None, "directo"),
+        backend_models=lambda: BackendView(False, "no responde (ConnectError)", None, "direct"),
     )
     result = result_for("service.backend", ctx)
     assert result.status == checks.WARN
@@ -782,11 +782,11 @@ def test_backend_401_is_unknown_not_down(tmp_path):
     """
     ctx = make_ctx(
         make_home(tmp_path),
-        backend_models=lambda: VistaBackend(
+        backend_models=lambda: BackendView(
             False,
             "responde 401: está arriba pero rechaza la credencial",
-            "credencial",
-            "directo",
+            "credential",
+            "direct",
         ),
     )
     result = result_for("service.backend", ctx)
@@ -803,11 +803,11 @@ def test_doctor_remoto_no_manda_a_arrancar_llama_swap(tmp_path, monkeypatch):
     monkeypatch.setattr(checks.config, "BASE_URL", "http://pc.tailnet.ts.net:9292/v1")
     ctx = make_ctx(
         make_home(tmp_path),
-        backend_models=lambda: VistaBackend(
+        backend_models=lambda: BackendView(
             False,
             "pc.tailnet.ts.net:9292 no contesta a la conexión (ruta, cortafuegos o VPN)",
-            "timeout_conexion",
-            "directo",
+            "connect_timeout",
+            "direct",
         ),
     )
 
@@ -834,8 +834,8 @@ def test_doctor_usa_la_causa_que_da_el_daemon(tmp_path, monkeypatch):
         monkeypatch,
         {
             "available": False,
-            "causa": "dns",
-            "detalle": "no se resuelve el nombre pc.lan (¿VPN o DNS?)",
+            "cause": "dns",
+            "detail": "no se resuelve el nombre pc.lan (¿VPN o DNS?)",
         },
     )
 
@@ -855,6 +855,25 @@ def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
         monkeypatch,
         {
             "available": False,
+            "cause": "credential",
+            "detail": "127.0.0.1:9292 responde 401: está arriba pero rechaza la credencial",
+        },
+    )
+
+    r = result_for("service.backend", ctx)
+
+    assert "lanzador" in (r.fix_hint or "")
+    assert r.status == checks.WARN
+
+
+def test_doctor_entiende_la_causa_de_un_daemon_de_la_0_34(tmp_path, monkeypatch):
+    """Un daemon de la 0.34.0 manda `causa`/`detalle` y el valor en español (REQ-006): `doctor`
+    nuevo da la misma pista que con el daemon nuevo."""
+    ctx = _ctx_con_daemon(
+        tmp_path,
+        monkeypatch,
+        {
+            "available": False,
             "causa": "credencial",
             "detalle": "127.0.0.1:9292 responde 401: está arriba pero rechaza la credencial",
         },
@@ -862,6 +881,7 @@ def test_doctor_401_del_daemon_apunta_al_lanzador(tmp_path, monkeypatch):
 
     r = result_for("service.backend", ctx)
 
+    assert "responde 401" in r.detail
     assert "lanzador" in (r.fix_hint or "")
     assert r.status == checks.WARN
 
@@ -887,7 +907,7 @@ def test_doctor_espera_al_daemon_mas_que_su_sondeo(monkeypatch):
         plazos.append(timeout)
 
     monkeypatch.setattr(daemon, "query_backend", _registra)
-    monkeypatch.setattr(sondas, "backend_probe", lambda: VistaBackend(True, "", None, "directo"))
+    monkeypatch.setattr(sondas, "backend_probe", lambda: BackendView(True, "", None, "direct"))
 
     checks._default_backend_models()
 
@@ -1822,3 +1842,59 @@ def test_las_entradas_ignoradas_se_cuentan(tmp_path):
     )
     r = _probe_ventanas(tmp_path)
     assert r.status == checks.WARN and "2 entrada(s) ignorada(s)" in r.detail
+
+
+# --- config.deprecated_names (REQ-003): alias con sucesor e interruptores viejos ---
+def _test_registry(monkeypatch, tmp_path):
+    """Un alias de variable y un interruptor viejo de mentira: el registro real aún no tiene."""
+    from local_delegate import config, deprecations
+
+    entries = (
+        deprecations.DeprecatedName("env_var", "LD_OLD_TEST_VAR", "LD_NEW_FOR_TEST", "0.35.0"),
+        deprecations.DeprecatedName(
+            "switch_file", "old-test-switch", "old-switch-for-test", "0.35.0"
+        ),
+    )
+    monkeypatch.setattr(deprecations, "DEPRECATED_NAMES", entries)
+    monkeypatch.setattr(config, "DEPRECATED_ENV_VALUES", {"LD_OLD_TEST_VAR": None})
+    (tmp_path / ".claude").mkdir(exist_ok=True)
+    return config
+
+
+def test_deprecated_names_ok_when_nothing_is_deprecated(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK
+
+
+def test_deprecated_names_warns_shell_alias_with_new_name_and_removal(monkeypatch, tmp_path):
+    config = _test_registry(monkeypatch, tmp_path)
+    monkeypatch.setitem(config.DEPRECATED_ENV_VALUES, "LD_OLD_TEST_VAR", "1")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "LD_OLD_TEST_VAR" in r.detail and "LD_NEW_FOR_TEST" in r.detail
+    assert "0.38.0" in r.detail, "el aviso no nombra la versión de retirada"
+    assert "renombra LD_OLD_TEST_VAR a LD_NEW_FOR_TEST" in r.fix_hint
+
+
+def test_deprecated_names_warns_alias_in_settings_json_env(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {"LD_OLD_TEST_VAR": "1"}}), encoding="utf-8"
+    )
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "settings.json" in r.detail and "LD_OLD_TEST_VAR" in r.detail
+
+
+def test_deprecated_names_warns_old_switch_file_left_on_disk(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "old-test-switch").write_text("", encoding="utf-8")
+    r = checks._probe_deprecated_names(checks.Context(home=tmp_path))
+    assert r.status == checks.WARN
+    assert "old-test-switch" in r.detail and "old-switch-for-test" in r.detail
+
+
+def test_deprecated_names_survives_unreadable_settings_json(monkeypatch, tmp_path):
+    _test_registry(monkeypatch, tmp_path)
+    (tmp_path / ".claude" / "settings.json").write_text("{no es json", encoding="utf-8")
+    assert checks._probe_deprecated_names(checks.Context(home=tmp_path)).status == checks.OK

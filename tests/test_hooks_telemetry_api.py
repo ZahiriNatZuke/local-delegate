@@ -84,7 +84,7 @@ def test_sin_eventos_la_tasa_es_cero_y_no_revienta():
         "by_category": [],
         "by_day": [],
         "read_total": 0,
-        "by_motivo": [],
+        "by_reason": [],
         "by_ext": [],
     }
 
@@ -114,12 +114,12 @@ def test_agrupa_por_evento_categoria_y_dia():
 
 
 def test_una_categoria_ausente_no_se_pierde_en_el_recuento():
-    """Sin la casilla «sin categoría», los totales por categoría no sumarían el total."""
+    """Sin la casilla `no_category` («Sin categoría»), los totales por categoría no sumarían el total."""
     fila = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "suggested": True}
     agregado = metrics._aggregate_hooks([fila])
 
     assert sum(d["total"] for d in agregado["by_category"]) == agregado["total"]
-    assert agregado["by_category"][0]["category"] == "sin categoría"
+    assert agregado["by_category"][0]["category"] == "no_category"
 
 
 def test_las_listas_salen_ordenadas_por_volumen():
@@ -218,6 +218,21 @@ def test_el_endpoint_no_devuelve_ni_comandos_ni_prompts(monkeypatch, tmp_path):
 # --- El JS de la tarjeta, ejecutado de verdad ---------------------------------
 
 
+def _etiquetas_js(pagina: str) -> str:
+    """Las etiquetas legibles (clave interna → texto del panel) y la tabla de valores viejos que
+    inyecta el servidor, tal como salen en la página servida."""
+    partes = [
+        _extraer_funcion_js(pagina, cabecera)
+        for cabecera in (
+            "const LABELS = {",
+            "const LEGACY_VALUES = {",
+            "function humanLabel(",
+            "function labelFor(",
+        )
+    ]
+    return ";\n".join(partes) + ";"
+
+
 def _extraer_funcion_js(fuente: str, cabecera: str) -> str:
     """Recorta una función del `<script>` balanceando llaves. Igual que en `test_metrics.py`."""
     i = fuente.index(cabecera)
@@ -282,15 +297,12 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
     if node is None:
         pytest.skip("node no está en el PATH")
 
-    render_js = _extraer_funcion_js(metrics.HTML, "function renderHooks(h){")
-    esc_js = _extraer_funcion_js(metrics.HTML, "function escHooks(s){")
+    pagina = metrics.render_index()
+    render_js = _extraer_funcion_js(pagina, "function renderHooks(h){")
+    esc_js = _extraer_funcion_js(pagina, "function escHooks(s){")
     # Los formateadores del panel (REQ-030/031): `F` y `F1` son objetos sobre `fmtNum`.
-    fmt_js = _extraer_funcion_js(metrics.HTML, "function fmtNum(")
-    # Las etiquetas legibles de las categorías (clave interna → texto del panel).
-    etiquetas_js = "\n".join(
-        _extraer_funcion_js(metrics.HTML, cabecera)
-        for cabecera in ("const LABELS = {", "function humanLabel(", "function labelFor(")
-    )
+    fmt_js = _extraer_funcion_js(pagina, "function fmtNum(")
+    etiquetas_js = _etiquetas_js(pagina)
 
     programa = tmp_path / "render.mjs"
     programa.write_text(
@@ -364,16 +376,16 @@ def test_agrupa_las_lecturas_por_motivo_de_descarte():
     agregado = metrics._aggregate_hooks(
         [
             _evento_de_lectura(suggested=True, ext=".md", band="strong"),
-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
-            _evento_de_lectura(suggested=False, ext=".md", motivo="acotada"),
+            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
+            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
+            _evento_de_lectura(suggested=False, ext=".md", reason="bounded"),
         ]
     )
 
-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {
-        "codigo": 2,
-        "avisó": 1,
-        "acotada": 1,
+    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {
+        "code": 2,
+        "suggested": 1,
+        "bounded": 1,
     }
     assert agregado["read_total"] == 4
 
@@ -381,8 +393,8 @@ def test_agrupa_las_lecturas_por_motivo_de_descarte():
 def test_agrupa_las_lecturas_por_extension():
     agregado = metrics._aggregate_hooks(
         [
-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
-            _evento_de_lectura(suggested=False, ext=".ts", motivo="codigo"),
+            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
+            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
             _evento_de_lectura(suggested=True, ext=".md"),
         ]
     )
@@ -391,7 +403,7 @@ def test_agrupa_las_lecturas_por_extension():
 
 
 def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
-    """Los eventos anteriores al PR #146 no traen `motivo` ni `ext`.
+    """Los eventos anteriores al PR #146 no traen `motivo` (hoy `reason`) ni `ext`.
 
     Meterlos en un motivo concreto diría que el hook descartaba por una razón que nunca registró,
     y en este log eso son miles de líneas: la tarjeta contaría una historia falsa sobre el pasado.
@@ -400,14 +412,14 @@ def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
         [_evento_de_lectura(suggested=False), _evento_de_lectura(suggested=False)]
     )
 
-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"sin registrar": 2}
-    assert agregado["by_ext"] == [{"ext": "sin extensión", "total": 2}]
+    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"unrecorded": 2}
+    assert agregado["by_ext"] == [{"ext": "no_extension", "total": 2}]
 
 
 def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
     """Control de los tres de arriba, y el fallo más fácil de cometer aquí.
 
-    `motivo` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
+    `reason` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
     de `lint` y `summarize` caerían en «sin registrar» y la tarjeta diría que el hook descarta sin
     motivo la mitad de las veces — un número que se lee bien y significa otra cosa.
     """
@@ -426,4 +438,75 @@ def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
 
     assert agregado["total"] == 3
     assert agregado["read_total"] == 1
-    assert {m["motivo"]: m["total"] for m in agregado["by_motivo"]} == {"avisó": 1}
+    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"suggested": 1}
+
+
+# --- Telemetría vieja y nueva mezcladas (REQ-005/006/009, ola A2) -------------------------------
+
+
+def _filas_de_lectura(formato: str) -> list[dict]:
+    """El mismo reparto de motivos, escrito con las claves y valores viejos o con los nuevos."""
+    viejo = formato == "viejo"
+    clave, bloqueo = ("motivo", "bloqueo") if viejo else ("reason", "block")
+    valores = (
+        ["codigo", "codigo", "acotada", "mcp_ajeno", "prosa_grande"]
+        if viejo
+        else ["code", "code", "bounded", "foreign_mcp", "large_prose"]
+    )
+    estado = "encendido" if viejo else "on"
+    return [_evento_de_lectura(suggested=False, **{clave: v, bloqueo: estado}) for v in valores]
+
+
+def test_la_telemetria_mezclada_da_el_mismo_reparto_que_la_nueva():
+    """Un fichero con filas viejas y nuevas da el mismo `by_reason` que con todas nuevas: la
+    historia en español (31 691 líneas en la máquina de referencia) se sigue leyendo entera."""
+    nuevas = _filas_de_lectura("nuevo")
+    mezcladas = _filas_de_lectura("viejo")[:3] + nuevas[3:]
+
+    solo_nuevas = metrics._aggregate_hooks(nuevas)
+    mezcla = metrics._aggregate_hooks(mezcladas)
+
+    assert solo_nuevas["by_reason"] == [
+        {"reason": "code", "total": 2},
+        {"reason": "bounded", "total": 1},
+        {"reason": "foreign_mcp", "total": 1},
+        {"reason": "large_prose", "total": 1},
+    ]
+    assert mezcla["by_reason"] == solo_nuevas["by_reason"]
+    assert (
+        metrics._aggregate_hooks(_filas_de_lectura("viejo"))["by_reason"]
+        == (solo_nuevas["by_reason"])
+    )
+
+
+def test_el_diccionario_de_motivos_da_la_misma_etiqueta_al_valor_viejo_y_al_nuevo(tmp_path):
+    """Se ejecuta con node el `labelFor` de la página servida: `mcp_ajeno` y `foreign_mcp` (y el
+    resto de pares viejo/nuevo) tienen que pintarse igual, sin una segunda copia de la tabla."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node no está en el PATH")
+    from local_delegate import legacy_names
+
+    pares = sorted(legacy_names.PANEL_VALUE_ALIASES["hookReason"].items())
+    programa = tmp_path / "etiquetas.mjs"
+    programa.write_text(
+        f"{_etiquetas_js(metrics.render_index())}\n"
+        f"const pares = {json.dumps(pares)};\n"
+        "console.log(JSON.stringify(pares.map(([v, n]) => [labelFor('hookReason', v),"
+        " labelFor('hookReason', n)])));\n",
+        encoding="utf-8",
+    )
+    salida = subprocess.run(
+        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
+    )
+    etiquetas = json.loads(salida.stdout)
+
+    assert len(etiquetas) == len(pares) >= 14
+    assert dict(zip([v for v, _n in pares], etiquetas, strict=True))["mcp_ajeno"] == [
+        "Por otro MCP",
+        "Por otro MCP",
+    ]
+    for (viejo, nuevo), (de_viejo, de_nuevo) in zip(pares, etiquetas, strict=True):
+        assert de_viejo == de_nuevo, f"{viejo} y {nuevo} se pintan distinto"
+        # Y con una etiqueta escrita, no la que inventa `humanLabel` a partir de la clave.
+        assert de_nuevo != nuevo, f"{nuevo} no tiene etiqueta en LABELS.hookReason"

@@ -1,0 +1,19 @@
+## recompute-cost --help
+exit 0
+## corrida mínima (statusline de 2 líneas y log de 1 línea, sintéticos)
+Plazo de borrado de los transcripts: 30 días.
+Transcripts leídos: 0 (líneas ilegibles: 0).
+Líneas del log rellenadas: 1 (no_match: 1).
+Casos de N en los agregados: 0.
+Cotejo de precios: sin datos de coste en los transcripts.
+Cuota five_hour: sin calibrar; puntos: 1 del statusline, 0 de rechazo; descartes: ninguno.
+Cuota seven_day: sin calibrar; puntos: 0 del statusline, 0 de rechazo; descartes: delta_pequeno 1.
+exit 0
+## agregados escritos (el formato persistido no cambia hasta A5b-2)
+1
+## medir_adopcion --help
+exit 0
+## medir_adopcion corrida mínima (importa cost.merge)
+  "delegaciones_totales": 1,
+  "delegaciones_espontaneas": 1,
+exit 0

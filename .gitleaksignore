@@ -1,0 +1,3 @@
+# Falsos positivos: nombres de tests con «token» en la línea base del detector (ola A0).
+.sdd/changes/english-names-bilingual-output/evidence/A0/detector-baseline.json:generic-api-key:4118
+.sdd/changes/english-names-bilingual-output/evidence/A0/detector-baseline.json:generic-api-key:4219

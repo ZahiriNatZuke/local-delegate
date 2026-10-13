@@ -34,10 +34,10 @@ shell_hook = _load("suggest_delegate_shell")
 
 def _correr(monkeypatch, capsys, comando, *, backend=True, bloquear=True, log=None):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1" if bloquear else "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if bloquear else "0")
     if log is not None:
         monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: backend)
+    monkeypatch.setattr(shell_hook, "backend_available", lambda **k: backend)
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"tool_input": {"command": comando}})))
     shell_hook.main()
     return capsys.readouterr().out
@@ -160,15 +160,15 @@ def test_todo_comando_deja_rastro_para_poder_medir(monkeypatch, capsys, document
     _correr(monkeypatch, capsys, f"cat {documento}", log=log)
 
     eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    assert [e["motivo"] for e in eventos] == ["no_es_volcado", "no_es_volcado", "prosa_grande"]
-    assert all(e["camino"] == "shell" for e in eventos)
+    assert [e["reason"] for e in eventos] == ["not_a_dump", "not_a_dump", "large_prose"]
+    assert all(e["route"] == "shell" for e in eventos)
     assert eventos[-1]["blocked"] is True
     # Ni el comando ni la ruta entran nunca en la telemetría.
     assert str(documento) not in log.read_text(encoding="utf-8")
 
 
 def _motivos(log) -> list[str]:
-    return [json.loads(x)["motivo"] for x in log.read_text(encoding="utf-8").splitlines()]
+    return [json.loads(x)["reason"] for x in log.read_text(encoding="utf-8").splitlines()]
 
 
 @pytest.mark.parametrize(
@@ -192,19 +192,19 @@ def test_los_metacaracteres_sin_espacios_tambien_frenan(
 
     # Y se registra por lo que es. Sin la guarda de metacaracteres el comando tampoco se
     # bloquearia —el fichero «informe.md>copia.md» no existe— pero quedaria contado como
-    # «sin_fichero», y el denominador de F1 se lee por motivo.
-    assert _motivos(log) == ["no_es_volcado"]
+    # «no_file», y el denominador de F1 se lee por motivo.
+    assert _motivos(log) == ["not_a_dump"]
 
 
 def test_un_flag_suelto_no_se_confunde_con_una_ruta(monkeypatch, capsys, tmp_path):
     """`cat -v` no lee ningún fichero, y tiene que notarse en el motivo, no en un error de disco.
 
     Sin la guarda de flags, el hook intentaría medir el tamaño de un fichero llamado «-v» y
-    registraría «sin_fichero»: el mismo no-bloqueo, pero por la razón equivocada, y la telemetría
+    registraría «no_file»: el mismo no-bloqueo, pero por la razón equivocada, y la telemetría
     contaría mal.
     """
     log = tmp_path / "telemetria.jsonl"
 
     assert _correr(monkeypatch, capsys, "cat -v", log=log) == ""
 
-    assert _motivos(log) == ["no_es_volcado"]
+    assert _motivos(log) == ["not_a_dump"]

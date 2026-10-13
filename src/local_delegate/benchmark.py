@@ -32,7 +32,7 @@ from typing import Any, Self
 
 import httpx2
 
-from . import config, fallos
+from . import config, failures
 
 # El muestreo frecuente de /metrics no debe convertir el benchmark en un log de cada GET.
 logging.getLogger("httpx2").setLevel(logging.WARNING)
@@ -1120,8 +1120,8 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
     error = None
     if finish == "length" and not text.strip() and reasoning.strip():
         # Se gasto max_tokens pensando y no contesto: es configuracion, no calidad (§4.7 punto 4),
-        # la misma clase que ya da `fallos.py`. Repetirlo con mas tokens taparia el problema.
-        outcome = fallos.Clase.CONFIGURACION.value
+        # la misma clase que ya da `failures.py`. Repetirlo con mas tokens taparia el problema.
+        outcome = failures.FailureClass.CONFIGURATION.value
     elif finish == "length":
         outcome = "truncado"
     elif not isinstance(content, str):

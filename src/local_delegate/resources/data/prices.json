@@ -1,0 +1,21 @@
+{
+  "_note": "Tabla de precios del paquete (REQ-010). USD por millón de tokens; web_search_per_1000 en USD por cada 1000 búsquedas. Claves = id normalizado (sin [1m] ni sufijo de fecha -AAAAMMDD), búsqueda exacta (REQ-011). family = tokenizador: 'new' = Claude Opus 4.7 y posteriores; 'previous' = Opus 4.6, Sonnet 4.6 y anteriores, Haiku 4.5. Ids de las páginas «Models overview» y «Model IDs and versioning». supports_effort comprobado el 2026-10-06 en la página de cada modelo (fila «Default effort»: «Not supported» en Haiku 4.5 y Sonnet 4.5) y en la lista supportedModels de build-with-claude/effort. consulted = fecha del último cambio de la tabla.",
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+  "consulted": "2026-10-06",
+  "web_search_per_1000": 10,
+  "models": {
+    "claude-fable-5-1": {"input": 10, "w5m": 12.5, "w1h": 20, "cache_read": 0.25, "output": 50, "family": "new", "supports_effort": true},
+    "claude-fable-5": {"input": 10, "w5m": 12.5, "w1h": 20, "cache_read": 1.0, "output": 50, "family": "new", "supports_effort": true},
+    "claude-opus-5-5": {"input": 4, "w5m": 5, "w1h": 8, "cache_read": 0.20, "output": 20, "family": "new", "supports_effort": true},
+    "claude-opus-5": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
+    "claude-opus-4-8": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
+    "claude-opus-4-7": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
+    "claude-opus-4-6": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
+    "claude-opus-4-5": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
+    "claude-sonnet-5-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
+    "claude-sonnet-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
+    "claude-sonnet-4-6": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": true},
+    "claude-sonnet-4-5": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": false},
+    "claude-haiku-4-5": {"input": 1, "w5m": 1.25, "w1h": 2, "cache_read": 0.10, "output": 5, "family": "previous", "supports_effort": false}
+  }
+}

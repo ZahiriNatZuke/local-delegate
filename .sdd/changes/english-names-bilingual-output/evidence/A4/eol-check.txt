@@ -1,0 +1,22 @@
+M	CHANGELOG.md->CHANGELOG.md	w/lf	w/lf	ok
+M	docs/wiki/Architecture.md->docs/wiki/Architecture.md	w/lf	w/lf	ok
+M	docs/wiki/Configuration.md->docs/wiki/Configuration.md	w/lf	w/lf	ok
+M	scripts/medir_enfriamiento.py->scripts/medir_enfriamiento.py	w/lf	w/lf	ok
+M	src/local_delegate/deprecations.py->src/local_delegate/deprecations.py	w/lf	w/lf	ok
+R(git mv)	src/local_delegate/enfriamiento.py->src/local_delegate/cooldown.py	w/lf	w/lf	ok
+M	src/local_delegate/legacy_names.py->src/local_delegate/legacy_names.py	w/lf	w/lf	ok
+M	src/local_delegate/resources/hooks/hook_common.py->src/local_delegate/resources/hooks/hook_common.py	w/lf	w/lf	ok
+M	src/local_delegate/server.py->src/local_delegate/server.py	w/crlf	w/crlf	ok
+M	tests/test_enfriamiento.py->tests/test_enfriamiento.py	w/lf	w/lf	ok
+M	tests/test_medir_enfriamiento.py->tests/test_medir_enfriamiento.py	w/lf	w/lf	ok
+M	tests/test_observabilidad_respaldo.py->tests/test_observabilidad_respaldo.py	w/lf	w/lf	ok
+M	tests/test_respaldo.py->tests/test_respaldo.py	w/lf	w/lf	ok
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/eol-after.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/eol-after.txt	(nuevo)	w/crlf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/eol-before.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/eol-before.txt	(nuevo)	w/lf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/eol-check.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/eol-check.txt	(nuevo)	w/crlf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/p4-after.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/p4-after.txt	(nuevo)	w/lf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/p4-before.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/p4-before.txt	(nuevo)	w/lf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/positive-controls.txt->.sdd/changes/english-names-bilingual-output/evidence/A4/positive-controls.txt	(nuevo)	w/lf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/evidence/A4/pytest-full.log->.sdd/changes/english-names-bilingual-output/evidence/A4/pytest-full.log	(nuevo)	w/crlf	ok (nuevo)
+A	.sdd/changes/english-names-bilingual-output/waves/A4-mapping.csv->.sdd/changes/english-names-bilingual-output/waves/A4-mapping.csv	(nuevo)	w/lf	ok (nuevo)
+# diferencias: 0

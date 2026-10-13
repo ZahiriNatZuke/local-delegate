@@ -56,15 +56,15 @@ TEXTO_SHELL = (
 @pytest.fixture(autouse=True)
 def _entorno(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "no-existe"))
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "no-existe"))
     # Hook y servidor importan `hook_common` por caminos distintos (módulo suelto y paquete): son
     # dos objetos. Los dos calculan la ruta de las notas con `tempfile.gettempdir()` en cada
     # llamada, así que redirigir eso los apunta al mismo fichero.
     monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
     for hook in (shell_hook, read_hook):
-        monkeypatch.setattr(hook, "backend_disponible", lambda **k: True)
-        monkeypatch.setattr(hook, "modelo_enfriado", lambda modelo: False)
+        monkeypatch.setattr(hook, "backend_available", lambda **k: True)
+        monkeypatch.setattr(hook, "cooled_model", lambda modelo: False)
 
 
 def _razon(salida: str) -> str:
@@ -109,4 +109,4 @@ def test_un_cat_relativo_se_cruza_con_la_delegacion(monkeypatch, capsys, documen
     ofrecida = re.search(r'path="([^"]+)"', razon).group(1)
     # El modelo delega con la ruta que se le ofreció, y la nota tiene que estar a ese nombre.
     assert Path(ofrecida) == documento
-    assert server._bloqueo_reciente(ofrecida) is not None
+    assert server._recent_block_id(ofrecida) is not None

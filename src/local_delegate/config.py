@@ -19,6 +19,8 @@ from urllib.parse import urlsplit
 
 from platformdirs import user_data_dir
 
+from . import deprecations
+
 APP_NAME = "local-delegate"
 
 
@@ -60,6 +62,41 @@ def _env_float(name: str, default: float) -> float:
         return float(_env(name, str(default)))
     except ValueError:
         return default
+
+
+# Nombres viejos de variables que este proceso ha leído con valor (por `_env_alias`). Lo consulta
+# `local_status`, porque `doctor` no ve el entorno del daemon ni del servidor por stdio (REQ-003).
+DEPRECATED_SEEN: set[str] = set()
+
+
+def _env_alias(new: str, old: str) -> str | None:
+    """Lee una variable renombrada: el nombre nuevo y el viejo, los dos por la puerta `_leer`.
+
+    Gana el nuevo si están los dos. Si solo está el viejo, devuelve su valor y lo anota en
+    `DEPRECATED_SEEN` para poder avisar. Los dos nombres entran en `VARIABLES_DE_ENTORNO`, así que
+    la suite aísla ambos.
+    """
+    value = _leer(new)
+    old_value = _leer(old)
+    if value is not None:
+        return value
+    if old_value is not None:
+        DEPRECATED_SEEN.add(old)
+    return old_value
+
+
+def _env_alias_str(new: str, old: str, default: str) -> str:
+    """`_env` para una variable renombrada (`_env_alias` con defecto)."""
+    raw = _env_alias(new, old)
+    return default if raw is None else raw
+
+
+def _env_alias_flag(new: str, old: str, default: bool) -> bool:
+    """`_env_flag` para una variable renombrada: mismas reglas de verdad que `_env_flag`."""
+    raw = _env_alias(new, old)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off", ""}
 
 
 # --- Endpoint OpenAI-compatible ---------------------------------------------
@@ -206,11 +243,15 @@ HOOK_READ_STRONG_KB: float = _env_float("LD_HOOK_READ_STRONG_KB", 100.0)
 #: este escrito el criterio de la quinta medicion, incluido el resultado que la retira. El hook la
 #: consulta en cada invocacion —no al arrancar— porque una sesion abierta hereda el entorno del
 #: lanzador, y un freno que exige reiniciar la sesion no frena nada.
-HOOK_READ_BLOQUEAR: bool = _env_flag("LD_HOOK_READ_BLOQUEAR", False)
+#: `LD_HOOK_READ_BLOQUEAR` es su nombre viejo (alias con aviso, REQ-002).
+HOOK_READ_BLOCK: bool = _env_alias_flag("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR", False)
 #: Donde vive el fichero que APAGA el bloqueo en caliente (REQ-F1-11): si existe, no se bloquea
-#: aunque `LD_HOOK_READ_BLOQUEAR` diga 1. La variable no sirve de freno porque una sesion abierta
+#: aunque `LD_HOOK_READ_BLOCK` diga 1. La variable no sirve de freno porque una sesion abierta
 #: hereda el entorno del lanzador; un fichero se lee en cada invocacion. Vacia = el defecto del hook.
-HOOK_READ_INTERRUPTOR: str = _env("LD_HOOK_READ_INTERRUPTOR", "")
+#: `LD_HOOK_READ_INTERRUPTOR` es su nombre viejo (alias con aviso, REQ-002).
+HOOK_READ_SWITCH_FILE: str = _env_alias_str(
+    "LD_HOOK_READ_SWITCH_FILE", "LD_HOOK_READ_INTERRUPTOR", ""
+)
 
 
 # --- Raíces permitidas para 'path' en las tools (opt-in) ---------------------
@@ -239,15 +280,18 @@ ALLOWED_MODELS: set[str] = {MODEL_MECHANICAL, MODEL_LONG, MODEL_CODE}
 # ninguna tool lo enrutaba. Sus tres variables se siguen **leyendo** —por la puerta registrada, así
 # que constan en el inventario y la suite las sigue aislando— pero ya no tienen efecto. Se leen para
 # poder AVISAR: borrarlas sin más las habría vuelto mudas, que es justo el fallo que este repo
-# persigue. El aviso lo da `doctor` (`config.rol_retirado`) y no una excepción al arrancar: romper
-# el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
-VARIABLES_ROL_RETIRADO: dict[str, str | None] = {
-    nombre: _leer(nombre)
-    for nombre in (
-        "LOCAL_DELEGATE_MODEL_FAST",
-        "LOCAL_DELEGATE_MAX_CHARS_FAST",
-        "LOCAL_DELEGATE_FALLBACK_FAST",
-    )
+# persigue. El aviso lo da `doctor` (`config.deprecated_names`) y no una excepción al arrancar:
+# romper el arranque castigaría a quien actualiza con la variable puesta, que no hizo nada malo.
+#
+# Desde la ola A0 del SDD english-names-bilingual-output los nombres salen del registro único
+# `deprecations.DEPRECATED_NAMES` (entradas `retired`), no de una lista escrita aquí.
+DEPRECATED_ENV_VALUES: dict[str, str | None] = {
+    entry.old: _leer(entry.old) for entry in deprecations.env_vars()
+}
+RETIRED_FAST_ROLE_VARIABLES: dict[str, str | None] = {
+    name: value
+    for name, value in DEPRECATED_ENV_VALUES.items()
+    if (entry := deprecations.find(name)) is not None and entry.is_retired
 }
 
 # Umbral para elegir el modelo "largo" vs "mecánico" en tools que enrutan por tamaño.
@@ -259,7 +303,10 @@ LONG_INPUT_CHARS = _env_int("LOCAL_DELEGATE_LONG_INPUT_CHARS", 6000)
 # subsecciones), pero en la medición con `claude -p` no redujo las relecturas —Claude releía para
 # comprobar, no por lo que faltaba— y el criterio escrito antes de medir era retirarlo. Lo lee el
 # daemon al arrancar: para encenderlo hay que ponerlo en el entorno del lanzador y reiniciarlo.
-RESUMEN_ESTRUCTURADO = _env_flag("LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False)
+# Nombre viejo: `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` (alias con aviso, REQ-002).
+STRUCTURED_SUMMARY = _env_alias_flag(
+    "LOCAL_DELEGATE_STRUCTURED_SUMMARY", "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO", False
+)
 
 # Tope de entrada POR ROL (evita desbordar el ctx del backend). Por rol y no por modelo: dos roles
 # pueden resolver al mismo modelo (REQ-004), y un dict indexado por nombre de modelo hacía que el
@@ -414,7 +461,8 @@ CHARS_PER_TOKEN = 4  # aproximación del modelo LOCAL: tokens ~ chars / 4 (nunca
 # Respaldo de modelo para valorar una delegación sin `caller_model` (coste-api-y-cuota, REQ-008):
 # `modelo` o `modelo:main|subagent`. Vacío = el declarado en `coste.py` (Opus 5.5 en subagente).
 # Un valor inválido no rompe nada: se usa el declarado y la fila lo dice (`respaldo_invalido`).
-COSTE_RESPALDO = _env("LOCAL_DELEGATE_COSTE_RESPALDO", "")
+# Nombre viejo: `LOCAL_DELEGATE_COSTE_RESPALDO` (alias con aviso, REQ-002).
+COST_FALLBACK = _env_alias_str("LOCAL_DELEGATE_COST_FALLBACK", "LOCAL_DELEGATE_COSTE_RESPALDO", "")
 
 # Token del puerto del daemon. Vacío = sin autenticación, que es el comportamiento histórico y
 # sigue siendo el default: exigirlo siempre rompería toda instalación existente el día que se

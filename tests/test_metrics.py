@@ -17,7 +17,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from local_delegate import config, coste, server
+from local_delegate import config, cost, failures, legacy_names, server
 from local_delegate.web import metrics
 
 
@@ -190,9 +190,9 @@ def test_api_backend_unavailable(monkeypatch):
         "running_ok": False,  # /running ni se pide con /models caído (REQ-013)
         "models": [],
         "models_stale": True,
-        "causa": "transporte",
-        "etiqueta": "fallo de red",
-        "detalle": "fallo de red con test-backend (ConnectError)",
+        "cause": "transport",
+        "label": "fallo de red",
+        "detail": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",  # host no-loopback => la inferencia correría fuera de esta máquina
         "host": "test-backend",
     }
@@ -280,9 +280,9 @@ def test_api_backend_stats_unavailable_on_404(monkeypatch):
     client = TestClient(metrics.app)
     assert client.get("/api/backend/stats").json() == {
         "available": False,
-        "causa": "http_error",
-        "etiqueta": "responde con error",
-        "detalle": "test-backend responde HTTP 404",
+        "cause": "http_error",
+        "label": "responde con error",
+        "detail": "test-backend responde HTTP 404",
         "status_http": 404,
     }
 
@@ -297,9 +297,9 @@ def test_api_status_backend_down(monkeypatch):
         "available": False,
         "models": [],
         "models_stale": True,
-        "causa": "transporte",
-        "etiqueta": "fallo de red",
-        "detalle": "fallo de red con test-backend (ConnectError)",
+        "cause": "transport",
+        "label": "fallo de red",
+        "detail": "fallo de red con test-backend (ConnectError)",
         "origin": "remote",
         "host": "test-backend",
     }
@@ -323,9 +323,9 @@ def test_api_backend_dice_la_causa_de_un_401(monkeypatch):
 
     j = TestClient(metrics.app).get("/api/backend").json()
 
-    assert j.get("causa") == "credencial"
+    assert j.get("cause") == "credential"
     assert j["available"] is False
-    assert "401" in (j.get("detalle") or "")
+    assert "401" in (j.get("detail") or "")
 
 
 @backend_mock.mock
@@ -346,7 +346,7 @@ def test_api_backend_conserva_la_lista_y_la_marca_vieja(monkeypatch):
     assert bueno.get("models_stale") is False
     assert [m["id"] for m in j["models"]] == ["m1"]
     assert j["models"][0]["status"] is None
-    assert j.get("causa") == "transporte"
+    assert j.get("cause") == "transport"
 
 
 @backend_mock.mock
@@ -392,9 +392,9 @@ def test_api_status_dice_la_causa_en_el_bloque_backend(monkeypatch):
 
     data = TestClient(metrics.app).get("/api/status").json()
 
-    assert data["backend"].get("causa") == "credencial"
+    assert data["backend"].get("cause") == "credential"
     assert data["backend"].get("models_stale") is True
-    assert "401" in (data["backend"].get("detalle") or "")
+    assert "401" in (data["backend"].get("detail") or "")
 
 
 @backend_mock.mock
@@ -406,7 +406,7 @@ def test_api_backend_stats_dice_el_codigo_con_un_404(monkeypatch):
     j = TestClient(metrics.app).get("/api/backend/stats").json()
 
     assert j.get("status_http") == 404
-    assert j.get("causa") == "http_error"
+    assert j.get("cause") == "http_error"
     assert j["available"] is False
 
 
@@ -416,9 +416,9 @@ def test_api_backend_stats_dice_la_causa_con_un_nombre_que_no_resuelve(monkeypat
 
     j = TestClient(metrics.app).get("/api/backend/stats").json()
 
-    assert j.get("causa") == "dns"
+    assert j.get("cause") == "dns"
     assert j.get("status_http") is None
-    assert "no-existe.invalid" in (j.get("detalle") or "")
+    assert "no-existe.invalid" in (j.get("detail") or "")
 
 
 def _plazo_de_conexion(t):
@@ -725,10 +725,10 @@ def _ev(**kw) -> dict:
 def _resuelta(fila: dict) -> dict:
     """La fila como la entrega `_load` en producción: fundida y con su densidad resuelta
     (coste-api-y-cuota, REQ-006). Sin relleno ni `caller_model`, toma el respaldo declarado (Opus
-    5.5, familia nueva). `_ev` no trae `path`: clase `otro`, que en `formato_read` cae en el
+    5.5, familia nueva). `_ev` no trae `path`: clase `other`, que en `read_format` cae en el
     respaldo (3), la mayor `c` sin numerar de la familia, 2,41; lo devuelto es prosa sin numerar,
     2,23; la salida, prosa sin numerar, 2,23."""
-    return coste.fundir_fila(fila)
+    return cost.merge_row(fila)
 
 
 def test_accounting_una_llamada_sin_trocear():
@@ -1192,13 +1192,13 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             fallback_reason="http_500",
             fallback_class="modelo",
             error="http_503",
-            error_class="sin_clasificar",
+            error_class="unclassified",
             chunks=3,
         ),
         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
-        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `medida`.
+        # Prosa por `path` de Opus 5.5: familia nueva, columna `read_format`, origen `measured`.
         _ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", tokens_in=1100, tokens_out=90),
-        # La misma prosa inline, escrita a fichero: columna `sin_numerar` (la de lo que la tool
+        # La misma prosa inline, escrita a fichero: columna `unnumbered` (la de lo que la tool
         # escribe). Inline no reclama ahorro de entrada, así que es la salida la que cambia.
         _ev(
             source="inline",
@@ -1208,11 +1208,11 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             tokens_out=950,
             output_to_file=True,
         ),
-        # `.md` por `path` de Haiku 4.5: familia anterior, su `formato_read` sin medir → respaldo (2).
+        # `.md` por `path` de Haiku 4.5: familia anterior, su `read_format` sin medir → respaldo (2).
         _ev(
             path="C:/docs/notas.md", caller_model="claude-haiku-4-5", tokens_in=1100, tokens_out=90
         ),
-        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservadora`.
+        # `.bin` por `path`: clase `other`, sin celda → respaldo (3), `conservative`.
         _ev(path="C:/datos/volcado.bin", caller_model="claude-opus-5-5", tokens_in=900),
         # Imagen con `chars_returned > 0`: todo 0 (REQ-038).
         _ev(
@@ -1230,7 +1230,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     ]
     # Como en producción: las filas pasan antes por la fusión de Python (REQ-006, REQ-037). Sin
     # relleno en `tmp_path`, las que no traen `caller_model` toman el respaldo declarado.
-    casos = coste.fundir(crudos, log_dir=tmp_path)
+    casos = cost.merge(crudos, log_dir=tmp_path)
     desde_js = _acct_en_js(node, tmp_path, casos)
 
     desde_py = [metrics._accounting(c) for c in casos]
@@ -1250,17 +1250,20 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
         c.get("routing") == "affinity" and not py["fallback"]
         for c, py in zip(casos, desde_py, strict=True)
     ), "falta el caso de afinidad"
-    assert any(py["cause"] == "configuracion" for py in desde_py)
+    # Filas viejas y nuevas (REQ-006): las dos copias traducen la clase con la misma tabla.
+    assert any(c.get("error_class") == "configuracion" for c in casos), "falta la fila vieja"
+    assert any(c.get("error_class") == "unclassified" for c in casos), "falta la fila nueva"
+    assert any(py["cause"] == "configuration" for py in desde_py)
     # Guarda de REQ-037: un evento de cada origen de celda, de cada familia, y una imagen con
     # devuelto que da 0 en las dos copias.
-    origenes = {c["densidad"]["text"][1] for c in casos if c["densidad"]["text"]}
-    assert origenes >= {"medida", "sin_numerar", "conservadora"}
-    assert {c["familia"] for c in casos} >= {"nueva", "anterior"}
+    origenes = {c["density"]["text"][1] for c in casos if c["density"]["text"]}
+    assert origenes >= {"measured", "unnumbered", "conservative"}
+    assert {c["family"] for c in casos} >= {"new", "previous"}
     assert any(
-        c["densidad"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
+        c["density"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
         for c, py in zip(casos, desde_py, strict=True)
     )
-    assert any("familia supuesta" in c["marcas"] for c in casos)
+    assert any("assumed_family" in c["marks"] for c in casos)
 
 
 def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
@@ -1274,6 +1277,8 @@ def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
         "import {readFileSync} from 'node:fs';\n"
         "const CPT = 4;\n"
         "const tok = c => Math.floor(c/CPT);\n"
+        f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
+        f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
         f"{tokens_claude_js}\n"
         f"{acct_js}\n"
         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
@@ -1293,12 +1298,12 @@ def test_el_js_sigue_a_python(tmp_path):
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en el PATH")
-    (fila,) = coste.fundir(
+    (fila,) = cost.merge(
         [_ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", chars_out=0)],
         log_dir=tmp_path,
     )
-    assert fila["densidad"]["text"] == [200, "medida"]  # guarda: el punto de partida
-    fila["densidad"]["text"] = [250, "medida"]
+    assert fila["density"]["text"] == [200, "measured"]  # guarda: el punto de partida
+    fila["density"]["text"] = [250, "measured"]
     chars = fila["chars_in"]
     (js,) = _acct_en_js(node, tmp_path, [fila])
     py = metrics._accounting(fila)
@@ -1328,7 +1333,7 @@ def test_local_status_y_el_dashboard_cuentan_igual(tmp_path, monkeypatch):
     metrics._FILE_CACHE.clear()
 
     # El panel agrega las filas que le da `_load`, ya fundidas (coste-api-y-cuota, REQ-006).
-    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    agregado = metrics._aggregate(cost.merge(filas, log_dir=tmp_path))
     assert agregado["tokens_context_saved"] == 34928  # guarda: 84178 × 100 // 241 + imagen 0
     texto = server.local_status()
     assert f"(bruto ~{agregado['tokens_context_saved']})" in texto
@@ -1349,7 +1354,7 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
     _write_jsonl(log, filas)
     metrics._FILE_CACHE.clear()
 
-    agregado = metrics._aggregate(coste.fundir(filas, log_dir=tmp_path))
+    agregado = metrics._aggregate(cost.merge(filas, log_dir=tmp_path))
     assert agregado.get("tokens_context_net") == 1480 - 193  # guarda: ninguna cifra a 0
     # Si la clave falta (código de antes), el texto esperado tampoco está: falla el assert y no un
     # `TypeError` al formatear un `None`.
@@ -1362,16 +1367,16 @@ def test_local_status_cuenta_el_neto_como_el_panel(tmp_path, monkeypatch):
 
 def test_local_status_funde_como_el_panel(tmp_path, monkeypatch):
     """coste-api-y-cuota, REQ-006: `local_status` funde el relleno como el panel. Una línea sin
-    `caller_model` cuyo relleno dice Haiku: sin fusión no trae `densidad` y da 0."""
-    from local_delegate import atribucion
+    `caller_model` cuyo relleno dice Haiku: sin fusión no trae `density` y da 0."""
+    from local_delegate import attribution
 
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
-    monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+    monkeypatch.setattr(config, "COST_FALLBACK", "")
     monkeypatch.setattr(server, "_utcnow", lambda: datetime(2026, 10, 6, 12, 0, tzinfo=UTC))
     fila = _ev(ts="2026-10-06T10:00:00+00:00", path="C:/docs/notas.md", tool_use_id="toolu_h")
     _write_jsonl(tmp_path / "usage-202610.jsonl", [fila])
-    atribucion.escribir_relleno(
-        tmp_path, "202610", {"toolu_h": {"caller_model": "claude-haiku-4-5", "cruce": "exacto"}}
+    attribution.write_backfill(
+        tmp_path, "202610", {"toolu_h": {"caller_model": "claude-haiku-4-5", "match": "exact"}}
     )
     metrics._FILE_CACHE.clear()
 
@@ -1403,8 +1408,8 @@ def test_las_filas_de_api_events_vienen_resueltas(tmp_path, monkeypatch):
         .json()["events"]
     )
     assert len(eventos) == 2  # guarda: hay filas que mirar
-    assert all("densidad" in e for e in eventos)
-    assert all(e.get("caller_model") and e.get("familia") for e in eventos)
+    assert all("density" in e for e in eventos)
+    assert all(e.get("caller_model") and e.get("family") for e in eventos)
 
 
 # --- F3, tarea 29: el salto y su causa, en la cuenta y en el panel -----------------------------
@@ -1423,7 +1428,7 @@ def test_accounting_marca_el_salto_y_su_causa():
         )
     )
     assert a["fallback"] is True
-    assert a["cause"] == "modelo"
+    assert a["cause"] == "model"
     assert a["backend_calls"] == 2, "la llamada del respaldo también gastó backend"
 
 
@@ -1436,9 +1441,10 @@ def test_accounting_affinity_is_not_fallback():
 
 
 def test_accounting_causa_de_configuracion_en_un_fallo():
+    # Fila del formato viejo (0.34.0): la causa sale ya en el formato nuevo (REQ-006).
     a = metrics._accounting(_ev(ok=False, error="config_max_tokens", error_class="configuracion"))
     assert a["fallback"] is False
-    assert a["cause"] == "configuracion"
+    assert a["cause"] == "configuration"
 
 
 def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
@@ -1447,10 +1453,10 @@ def test_accounting_en_un_fallo_tras_saltar_la_causa_es_la_del_fallo():
             ok=False,
             model_requested="gemma4-26b-a4b",
             fallback_class="modelo",
-            error_class="sin_clasificar",
+            error_class="unclassified",
         )
     )
-    assert a["cause"] == "sin_clasificar", "manda cómo acabó la operación, no por qué saltó"
+    assert a["cause"] == "unclassified", "manda cómo acabó la operación, no por qué saltó"
     assert a["fallback"] is True
 
 
@@ -1483,7 +1489,7 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
                 model="gemma4-26b-a4b",
                 ok=False,
                 error="config_max_tokens",
-                error_class="configuracion",
+                error_class="configuration",
                 tokens_in=50,
                 tokens_out=0,
             ),
@@ -1497,11 +1503,69 @@ def test_stats_cuenta_los_saltos_y_las_causas_y_atribuye_al_que_respondio(tmp_pa
         .json()
     )
     assert j["fallback_events"] == 1
-    assert j["causes"] == {"modelo": 1, "configuracion": 1}
+    # El salto es una fila vieja (`modelo`) y el fallo una nueva: cuentan juntos (REQ-006).
+    assert j["causes"] == {"model": 1, "configuration": 1}
     por_modelo = {m["model"]: m for m in j["by_model"]}
     assert por_modelo["gemma3-4b"]["tokens_in"] == 600, "los tokens del salto van al que respondió"
     assert por_modelo["gemma3-4b"]["backend_calls"] == 3
     assert por_modelo["gemma3-4b"]["fallback_calls"] == 1
+
+
+def test_un_log_con_filas_viejas_y_nuevas_se_lee_como_si_fueran_todas_nuevas(tmp_path, monkeypatch):
+    """Escenario de la spec (REQ-005/006, ola A3): en un mismo `usage-*.jsonl` conviven filas de la
+    0.34.0 (`bloqueo_id`, `fallo_conexion: rechazada`, `error_class: timeout_lectura`) y filas
+    nuevas. `/api/events` las entrega todas con las claves y valores nuevos, y `/api/stats` suma
+    las causas viejas y nuevas en el mismo cubo, con la misma etiqueta."""
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+    monkeypatch.setattr(config, "USAGE_LOG", tmp_path / "usage.jsonl")
+    viejas = [
+        _ev(ts="2026-07-15T10:00:00+00:00", bloqueo_id="b-viejo", secciones=4),
+        _ev(
+            ts="2026-07-15T10:01:00+00:00",
+            ok=False,
+            error="connect_error",
+            error_class="endpoint",
+            fallo_conexion="rechazada",
+        ),
+        _ev(
+            ts="2026-07-15T10:02:00+00:00", ok=False, error="timeout", error_class="timeout_lectura"
+        ),
+    ]
+    nuevas = [
+        _ev(ts="2026-07-15T11:00:00+00:00", block_id="b-nuevo", sections=4),
+        _ev(
+            ts="2026-07-15T11:01:00+00:00",
+            ok=False,
+            error="connect_error",
+            error_class="endpoint",
+            connection_failure="refused",
+        ),
+        _ev(ts="2026-07-15T11:02:00+00:00", ok=False, error="timeout", error_class="read_timeout"),
+    ]
+    _write_jsonl(tmp_path / "usage-202607.jsonl", viejas + nuevas)
+    metrics._FILE_CACHE.clear()
+    cliente = TestClient(metrics.app)
+    rango = "from=2026-07-01T00:00:00%2B00:00&to=2026-08-01T00:00:00%2B00:00"
+
+    eventos = cliente.get(f"/api/events?{rango}").json()["events"]
+    assert len(eventos) == 6
+    assert sorted(e["block_id"] for e in eventos if "block_id" in e) == ["b-nuevo", "b-viejo"]
+    assert [e["connection_failure"] for e in eventos if "connection_failure" in e] == [
+        "refused",
+        "refused",
+    ]
+    assert [e.get("sections") for e in eventos if e.get("sections")] == [4, 4]
+    viejas_en_la_salida = {"bloqueo_id", "secciones", "fallo_conexion"} & {
+        k for e in eventos for k in e
+    }
+    assert not viejas_en_la_salida, viejas_en_la_salida
+
+    j = cliente.get(f"/api/stats?{rango}").json()
+    assert j["causes"] == {"endpoint": 2, "read_timeout": 2}
+    etiquetas = {
+        failures.label(e["connection_failure"]) for e in eventos if "connection_failure" in e
+    }
+    assert etiquetas == {"nadie escucha"}
 
 
 def test_el_panel_marca_las_operaciones_con_salto():
@@ -1711,16 +1775,16 @@ class _Mezcla:
 
         from test_panel_coste import IMAGEN, _agregados, _linea, _punto
 
-        from local_delegate import atribucion, test_windows
+        from local_delegate import attribution, test_windows
 
         self.logs = tmp_path / "logs"
         self.logs.mkdir()
         monkeypatch.setattr(config, "LOG_DIR", self.logs)
         monkeypatch.setattr(config, "USAGE_LOG", self.logs / "usage.jsonl")
-        monkeypatch.setattr(config, "COSTE_RESPALDO", "")
+        monkeypatch.setattr(config, "COST_FALLBACK", "")
         monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
         self.ahora = datetime.now(UTC).replace(microsecond=0)
-        monkeypatch.setattr(metrics, "_ahora", lambda: self.ahora)
+        monkeypatch.setattr(metrics, "_now", lambda: self.ahora)
         a = self.ahora
         filas = [_linea(a - timedelta(minutes=10 + i), n=i) for i in range(10)]
         en_ventana = a - timedelta(minutes=5)
@@ -1736,7 +1800,7 @@ class _Mezcla:
         filas.sort(key=lambda f: f["ts"])
         self.log = self.logs / f"usage-{a:%Y%m}.jsonl"
         _write_jsonl(self.log, filas)
-        atribucion.escribir_relleno(self.logs, f"{a:%Y%m}", {"toolu_0091": {"banco": True}})
+        attribution.write_backfill(self.logs, f"{a:%Y%m}", {"toolu_0091": {"bench": True}})
         test_windows.add(self.logs, en_ventana - timedelta(seconds=2), en_ventana, "prueba")
         # Cuota calibrada, para que `_bloque_cuota` llegue a llamar a `_load` (REQ-014).
         _agregados(
@@ -1763,13 +1827,13 @@ def test_una_prueba_marcada_no_cuenta_en_el_panel(tmp_path, monkeypatch):
     assert s["total"]["calls"] == 10
     assert e["meta"]["count"] == 10
     assert s["excluded_tests"] == e["meta"]["excluded_tests"] == 3
-    assert s["imagenes"]["n"] == 0
+    assert s["images"]["n"] == 0
     assert hashlib.sha256(m.log.read_bytes()).hexdigest() == antes
 
 
 def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
-    """Control: mutantes «`bloque_coste` con las filas filtradas» y «`_bloque_cuota` filtra» →
-    fallan las igualdades de `coste` y de `cuota`."""
+    """Control: mutantes «`cost_block` con las filas filtradas» y «`_quota_block` filtra» →
+    fallan las igualdades de `cost` y de `quota`."""
     m = _Mezcla(tmp_path, monkeypatch)
     sin, con = m.get("/api/stats"), m.get("/api/stats", include=True)
     e = m.get("/api/events", include=True)
@@ -1777,12 +1841,12 @@ def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
     assert e["meta"]["count"] == 13
     assert con["excluded_tests"] == e["meta"]["excluded_tests"] == 0
     assert con["tests_in_range"] == 3
-    assert con["cuota"]["five_hour"]["estado"] == "calibrado", "guarda: la cuota llega a _load"
-    assert con["coste"] == sin["coste"]
-    assert con["cuota"] == sin["cuota"]
+    assert con["quota"]["five_hour"]["status"] == "calibrated", "guarda: la cuota llega a _load"
+    assert con["cost"] == sin["cost"]
+    assert con["quota"] == sin["quota"]
     # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
-    assert con["coste"]["barra"]["excluidas_por_motivo"] == {"pruebas": 2}
-    assert (sin["imagenes"]["n"], con["imagenes"]["n"]) == (0, 1)
+    assert con["cost"]["bar"]["excluded_by_reason"] == {"pruebas": 2}
+    assert (sin["images"]["n"], con["images"]["n"]) == (0, 1)
 
 
 def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
@@ -1791,7 +1855,7 @@ def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
     assert s["total"]["calls"] == 12
     por_cliente = {c["client"]: c["calls"] for c in s["by_client"]}
     assert por_cliente.get("codex-mcp-client") == 2
-    assert s["coste"]["barra"]["excluidas_por_motivo"]["no es Claude"] == 2
+    assert s["cost"]["bar"]["excluded_by_reason"]["no es Claude"] == 2
 
 
 @pytest.mark.parametrize("include", [False, True])

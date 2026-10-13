@@ -1,0 +1,26 @@
+M	.github/workflows/vigilante-precios.yml -> .github/workflows/vigilante-precios.yml	HEAD=lf	worktree=lf	ok
+M	CHANGELOG.md -> CHANGELOG.md	HEAD=lf	worktree=lf	ok
+M	docs/wiki/Repo-hardening.md -> docs/wiki/Repo-hardening.md	HEAD=lf	worktree=lf	ok
+M	docs/wiki/Savings-and-metrics.md -> docs/wiki/Savings-and-metrics.md	HEAD=lf	worktree=lf	ok
+M	scripts/check_vendor.py -> scripts/check_vendor.py	HEAD=lf	worktree=lf	ok
+M	scripts/dev/capture_dashboard.py -> scripts/dev/capture_dashboard.py	HEAD=lf	worktree=lf	ok
+M	scripts/vigilante_precios.py -> scripts/vigilante_precios.py	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/attribution.py -> src/local_delegate/attribution.py	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/cost.py -> src/local_delegate/cost.py	HEAD=lf	worktree=lf	ok
+A	src/local_delegate/pricing.py -> src/local_delegate/pricing.py	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/recompute.py -> src/local_delegate/recompute.py	HEAD=lf	worktree=lf	ok
+A	src/local_delegate/resources/data/density.json -> src/local_delegate/resources/data/density.json	HEAD=lf	worktree=lf	ok
+A	src/local_delegate/resources/data/prices.json -> src/local_delegate/resources/data/prices.json	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/resources/vendor/vendor.json -> src/local_delegate/resources/vendor/vendor.json	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/transcripts.py -> src/local_delegate/transcripts.py	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/valuation.py -> src/local_delegate/valuation.py	HEAD=lf	worktree=lf	ok
+M	src/local_delegate/web/metrics.py -> src/local_delegate/web/metrics.py	HEAD=crlf	worktree=crlf	ok
+M	tests/test_densidad.py -> tests/test_densidad.py	HEAD=lf	worktree=lf	ok
+M	tests/test_metrics.py -> tests/test_metrics.py	HEAD=lf	worktree=lf	ok
+M	tests/test_panel_coste.py -> tests/test_panel_coste.py	HEAD=lf	worktree=lf	ok
+M	tests/test_precios.py -> tests/test_precios.py	HEAD=lf	worktree=lf	ok
+M	tests/test_transcripts.py -> tests/test_transcripts.py	HEAD=lf	worktree=lf	ok
+M	tests/test_valoracion.py -> tests/test_valoracion.py	HEAD=lf	worktree=lf	ok
+M	tests/test_vendor.py -> tests/test_vendor.py	HEAD=crlf	worktree=crlf	ok
+M	tests/test_vigilante.py -> tests/test_vigilante.py	HEAD=lf	worktree=lf	ok
+diferencias: 0

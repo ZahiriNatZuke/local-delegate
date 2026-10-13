@@ -1,0 +1,10 @@
+# REQ-014 en A5a (rename de atribucion -> attribution y de transcripts)
+## scripts/medir_adopcion.py --help
+exit=0
+## scripts/medir_adopcion.py --desde 2026-10-01 --json sobre fixtures sintéticas (usage-202610.jsonl con 2 filas y un atribucion-202610.json VIEJO que marca toolu_b como banco)
+exit=0
+excluded_tests= {'hooks': 0, 'usage': 2}
+## local-delegate recompute-cost --help
+exit=0
+## import attribution, transcripts, coste, recalcular, valoracion, server, checks, web.metrics
+ok

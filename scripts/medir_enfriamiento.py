@@ -6,8 +6,11 @@ este script es quien lo aplica. Si el recuento se hiciera a mano, el criterio vo
 opinion. Lee dos ficheros de `LOG_DIR`:
 
 - el log de uso (`usage-*.jsonl`): saltos por clase, fallos que cuentan y fallos al momento;
-- `enfriamiento-eventos.jsonl`: los episodios. El log de uso no los puede reconstruir, porque
-  guarda un evento por operacion y no ve el fallo del segundo salto ni el de los trozos siguientes.
+- `cooldown-events.jsonl` y el viejo `enfriamiento-eventos.jsonl` (los dos, siempre): los
+  episodios. El log de uso no los puede reconstruir, porque guarda un evento por operacion y no ve
+  el fallo del segundo salto ni el de los trozos siguientes. Las filas del formato viejo (claves
+  `modelo`, `evento`, `clase`…, valores `entra`, `reentra`, `limpia`) se traducen al nuevo antes de
+  contar (REQ-007): el informe es el mismo con los dos formatos.
 
 Las ventanas de prueba de `LOG_DIR/test-windows.json` se aplican solas a las filas del log y a los
 episodios, ademas de los tramos de `--excluir`; `--include-tests` desactiva las del fichero (no las
@@ -34,14 +37,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from medir_adopcion import directorio_de_logs, leer, logs_de_uso
 
-from local_delegate import test_windows
-from local_delegate.enfriamiento import CLASES_QUE_CUENTAN, FICHERO_EVENTOS
+from local_delegate import legacy_names, test_windows
+from local_delegate.cooldown import COUNTING_CLASSES, EVENTS_FILE, LEGACY_EVENTS_FILE
 
 #: Por debajo de cualquiera de los dos, el resultado es «no concluyente» (criterio de P-4).
 MINIMO_EPISODIOS = 5
 MINIMO_FALLOS = 10
 
-CLASES = {clase.value for clase in CLASES_QUE_CUENTAN}
+CLASES = {clase.value for clase in COUNTING_CLASSES}
 
 #: Las reglas en su orden de precedencia: se aplica solo la primera que se cumpla.
 REGLAS = {
@@ -101,33 +104,34 @@ class _Filtro:
 
 
 def episodios(eventos: list[dict], tmax_s: float) -> list[dict]:
-    """Agrupa las transiciones en episodios: de un `entra` al `limpia` del mismo modelo.
+    """Agrupa las transiciones en episodios: de un `enter` al `clear` del mismo modelo.
 
-    Un `reentra` o un `limpia` sin su `entra` es de un episodio empezado antes del registro: se
-    ignora, porque no se sabe con que clase empezo.
+    Un `reenter` o un `clear` sin su `enter` es de un episodio empezado antes del registro: se
+    ignora, porque no se sabe con que clase empezo. Las filas del formato viejo se traducen antes.
     """
     abiertos: dict[str, dict] = {}
     todos: list[dict] = []
-    for evento in sorted(eventos, key=_ts):
-        modelo = str(evento.get("modelo"))
-        tipo = evento.get("evento")
-        en_tmax = float(evento.get("espera_s") or 0) >= tmax_s
-        if tipo == "entra":
+    nuevos = (legacy_names.normalize("cooldown_events", evento) for evento in eventos)
+    for evento in sorted(nuevos, key=_ts):
+        modelo = str(evento.get("model"))
+        tipo = evento.get("event")
+        en_tmax = float(evento.get("wait_s") or 0) >= tmax_s
+        if tipo == "enter":
             episodio = {
                 "modelo": modelo,
                 "desde": _ts(evento),
-                "clase": evento.get("clase"),
+                "clase": evento.get("class"),
                 "reentradas": 0,
                 "en_tmax": int(en_tmax),
                 "final": None,
             }
             abiertos[modelo] = episodio
             todos.append(episodio)
-        elif tipo == "reentra" and modelo in abiertos:
+        elif tipo == "reenter" and modelo in abiertos:
             abiertos[modelo]["reentradas"] += 1
             abiertos[modelo]["en_tmax"] += int(en_tmax)
-        elif tipo == "limpia" and modelo in abiertos:
-            final = "recuperado" if evento.get("tras_vencer") else "exito_explicito"
+        elif tipo == "clear" and modelo in abiertos:
+            final = "recuperado" if evento.get("after_expiry") else "exito_explicito"
             abiertos.pop(modelo)["final"] = final
     return todos
 
@@ -159,20 +163,25 @@ def medir(
     excluidos = list(excluidos)
     filtro = _Filtro(excluidos, include_tests)
     usos = [
-        evento
+        legacy_names.normalize("usage", evento)
         for ruta in logs_de_uso()
         for evento in leer(ruta, None)
         if _en_rango(_ts(evento), desde, hasta) and filtro.deja(_ts(evento), "usage_rows")
     ]
     # Un minimo, no el total: con salto, el log solo ve el fallo del pedido y el ultimo.
     fallos = sum(1 for e in usos if e.get("error_class") in CLASES) + sum(
-        1 for e in usos if e.get("fallback_class") == "modelo"
+        1 for e in usos if e.get("fallback_class") == "model"
     )
     saltos = Counter(e["fallback_class"] for e in usos if e.get("fallback_class"))
     al_momento = sum(1 for e in usos if e.get("error") == "cooldown")
     delegaciones = sum(1 for e in usos if str(e.get("tool", "")).startswith("local_"))
 
-    registro = leer(directorio_de_logs() / FICHERO_EVENTOS, None)
+    # Los dos registros, siempre: el viejo dejo de crecer al actualizar, pero su historia cuenta.
+    registro = [
+        evento
+        for nombre in (LEGACY_EVENTS_FILE, EVENTS_FILE)
+        for evento in leer(directorio_de_logs() / nombre, None)
+    ]
     eps = [
         ep
         for ep in episodios(registro, tmax_s)
@@ -203,12 +212,12 @@ def medir(
         "fallos_que_cuentan": fallos,
         "saltos_por_clase": dict(saltos),
         "fallos_al_momento": al_momento,
-        "operaciones_desviadas": saltos.get("enfriamiento", 0) + al_momento,
+        "operaciones_desviadas": saltos.get("cooldown", 0) + al_momento,
         "episodios": len(eps),
         "episodios_con_desenlace": len(con_desenlace),
         "episodios_que_reentraron": len(reentraron),
         "R": round(len(reentraron) / len(con_desenlace), 3) if con_desenlace else None,
-        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "timeout_lectura"),
+        "episodios_por_timeout": sum(1 for ep in eps if ep["clase"] == "read_timeout"),
         "episodios_que_reentran_en_tmax": sum(1 for ep in eps if ep["en_tmax"] >= 2),
         "fuera_de_p4_fallos_al_momento_sobre_5_pct": delegaciones > 0
         and al_momento > 0.05 * delegaciones,

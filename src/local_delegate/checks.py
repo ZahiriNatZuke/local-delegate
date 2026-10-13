@@ -36,7 +36,18 @@ from itertools import pairwise
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import atribucion, clients, config, coste, fallos, install, recalcular, sondas, test_windows
+from . import (
+    attribution,
+    clients,
+    config,
+    cost,
+    failures,
+    install,
+    legacy_names,
+    recompute,
+    sondas,
+    test_windows,
+)
 
 # --- Estados -----------------------------------------------------------------
 OK = "ok"  # está y como debe estar
@@ -158,8 +169,8 @@ def NO_TOKEN_PROBE(_host: str, _port: int) -> bool | None:
     return None
 
 
-def _default_backend_models() -> fallos.VistaBackend:
-    """Lo que se sabe del backend (`fallos.VistaBackend`), preguntando primero al daemon.
+def _default_backend_models() -> failures.BackendView:
+    """Lo que se sabe del backend (`failures.BackendView`), preguntando primero al daemon.
 
     El orden importa y no es una optimización. La clave del backend se lee **del entorno del
     proceso**: el daemon la recibe de su lanzador, pero un `local-delegate doctor` escrito en una
@@ -185,13 +196,18 @@ def _default_backend_models() -> fallos.VistaBackend:
     visto = daemon.query_backend(host, port, timeout=plazo)
     if visto is not None:
         if visto.get("available"):
-            return fallos.VistaBackend(True, "", None, "daemon")
-        causa, detalle = visto.get("causa"), visto.get("detalle")
+            return failures.BackendView(True, "", None, "daemon")
+        # Un daemon de una versión anterior manda `causa`/`detalle` y el valor viejo de la causa
+        # (REQ-006): se leen las dos claves y el valor se pasa al formato nuevo.
+        causa = legacy_names.new_value(
+            legacy_names.CONNECTION_CAUSE_VALUES, legacy_names.read_key(visto, "cause", "causa")
+        )
+        detalle = legacy_names.read_key(visto, "detail", "detalle")
         if isinstance(causa, str) and isinstance(detalle, str) and detalle:
-            return fallos.VistaBackend(False, detalle, causa, "daemon")
-        # Daemon antiguo, sin `causa`: el texto de siempre. El daemon SÍ tiene credencial, así
+            return failures.BackendView(False, detalle, causa, "daemon")
+        # Daemon antiguo, sin causa: el texto de siempre. El daemon SÍ tiene credencial, así
         # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
-        return fallos.VistaBackend(
+        return failures.BackendView(
             False, "no responde (según el daemon, que sí tiene credencial)", None, "daemon"
         )
     return sondas.backend_probe()
@@ -334,7 +350,7 @@ class Context:
     daemon_needs_token: Callable[[str, int], bool | None] = field(
         default_factory=lambda f=_default_daemon_needs_token: f
     )
-    backend_models: Callable[[], fallos.VistaBackend] = field(
+    backend_models: Callable[[], failures.BackendView] = field(
         default_factory=lambda f=_default_backend_models: f
     )
     version_of: Callable[[str, Path | None], tuple[str | None, str | None]] = field(
@@ -363,7 +379,7 @@ class Context:
     daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
         default_factory=lambda f=_default_daemon_accepts_token: f
     )
-    # Dónde están el log de uso, los `atribucion-*.json` y `coste-agregados.json`. Un campo simple
+    # Dónde están el log de uso, los `attribution-*.json` y `cost-aggregates.json`. Un campo simple
     # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
     # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
     log_dir: Path | None = None
@@ -1352,17 +1368,17 @@ def _probe_daemon(ctx: Context) -> Result:
 
 def _probe_backend_models(ctx: Context) -> Result:
     vista = ctx.backend_models()
-    if vista.sano:
+    if vista.healthy:
         return Result(OK, f"{config.BASE_URL}/models responde")
     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
-    pista = fallos.pista(
-        vista.causa,
-        origen=config.backend_origin(),
-        fuente=vista.fuente,
+    pista = failures.hint(
+        vista.cause,
+        origin=config.backend_origin(),
+        source=vista.source,
         host=config.backend_host(),
     )
-    detalle = f"{config.BASE_URL}/models: {vista.detalle or 'no responde'}"
-    if vista.causa == fallos.CausaConexion.CREDENCIAL.value and vista.fuente == "directo":
+    detalle = f"{config.BASE_URL}/models: {vista.detail or 'no responde'}"
+    if vista.cause == failures.ConnectionCause.CREDENTIAL.value and vista.source == "direct":
         # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
         # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
         # su clave, es un problema de verdad: WARN, con la pista que manda a su lanzador.
@@ -1626,30 +1642,118 @@ def _probe_fallback(ctx: Context) -> Result:
     return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
 
 
-def _probe_rol_retirado(ctx: Context) -> Result:
-    """Variables del rol `fast`, retirado en la 0.30.0, que siguen puestas y ya no hacen nada.
+#: Cuántos días de la cola de la telemetría de hooks mira `doctor` buscando nombres obsoletos.
+DEPRECATED_TAIL_DAYS = 7
+_TAIL_BLOCK = 64 * 1024
+
+
+def deprecated_names_in_hook_telemetry(
+    path: Path | None, *, now: datetime | None = None, days: int = DEPRECATED_TAIL_DAYS
+) -> set[str]:
+    """Nombres viejos que los hooks dicen haber leído (`deprecated_names`) en los últimos `days`.
+
+    Lee el fichero **desde el final**, por bloques, y para en cuanto encuentra un evento más viejo
+    que el corte: la telemetría crece sin freno (31 691 líneas en la máquina de referencia) y un
+    check no puede recorrerla entera. Nunca lanza: sin fichero, o ilegible, no hay nada que avisar.
+    """
+    if path is None:
+        return set()
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
+    found: set[str] = set()
+    try:
+        with path.open("rb") as stream:
+            stream.seek(0, os.SEEK_END)
+            position = stream.tell()
+            tail = b""
+            while position > 0:
+                step = min(_TAIL_BLOCK, position)
+                position -= step
+                stream.seek(position)
+                tail = stream.read(step) + tail
+                lines = tail.split(b"\n")
+                # La primera línea puede estar cortada: se guarda para el bloque siguiente.
+                tail = lines[0] if position > 0 else b""
+                complete = lines[1:] if position > 0 else lines
+                older = False
+                for raw in reversed(complete):
+                    try:
+                        event = json.loads(raw)
+                        ts = datetime.fromisoformat(str(event["ts"]))
+                    except (ValueError, KeyError, TypeError):
+                        continue
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=UTC)
+                    if ts < cutoff:
+                        older = True
+                        break
+                    names = event.get("deprecated_names")
+                    if isinstance(names, list):
+                        found.update(n for n in names if isinstance(n, str))
+                if older:
+                    break
+    except OSError:
+        return set()
+    return found
+
+
+def _probe_deprecated_names(ctx: Context) -> Result:
+    """Nombres obsoletos que siguen en uso: variables renombradas o retiradas e interruptores viejos.
+
+    Sustituye a `config.rol_retirado` (REQ-003) y lo generaliza: la lista sale del registro único
+    `deprecations.DEPRECATED_NAMES`, así que cada alias que añada una ola se avisa aquí sin tocar
+    el probe. Desde la ola A1 trae las cuatro variables renombradas (alias con aviso) y las tres
+    del rol `fast`, retirado en la 0.30.0.
 
     Retirar algo tiene dos mitades y la segunda se olvida siempre: quitar el código es fácil, y
     quien tenía `LOCAL_DELEGATE_MODEL_FAST` en su entorno se queda creyendo que configura un modelo
-    que ya no existe. Pedir ese modelo por `model=` da un error claro solo — sale de
+    que ya no existe. Pedir ese modelo por `model=` da un error claro solo —sale de
     `ALLOWED_MODELS`—; la variable, en cambio, no fallaría nunca. De ahí este aviso.
 
-    Mira el entorno y nada más, así que vive en `entorno`: no sale a la red ni toca ficheros.
+    Mira tres sitios, y ninguno sale a la red, así que vive en `entorno`: el entorno de la shell
+    donde corre `doctor`, el bloque `env` de `~/.claude/settings.json` (de donde heredan los hooks)
+    y la existencia de los ficheros interruptor con nombre viejo. Lo que solo ve el daemon lo
+    cuenta `local_status`. Y desde la ola A2, lo que los hooks dicen haber leído: con la telemetría
+    encendida cada evento lleva `deprecated_names`, y aquí se mira la cola de los últimos 7 días.
     """
-    from . import config as configuracion
+    from . import config as config_module
+    from . import deprecations
 
-    puestas = [n for n, valor in configuracion.VARIABLES_ROL_RETIRADO.items() if valor is not None]
-    if not puestas:
-        return Result(OK, "sin variables del rol rápido, retirado en la 0.30.0")
-    return Result(
-        WARN,
-        f"{', '.join(puestas)}: el rol rápido se retiró en la 0.30.0 y estas variables ya no "
-        "tienen efecto",
-        "quítalas del entorno; los roles vigentes son mechanical, long, code y vision",
-    )
+    warnings: list[str] = []
+    seen: list[deprecations.DeprecatedName] = []
+
+    def _note(where: str, item: deprecations.DeprecatedName) -> None:
+        warnings.append(f"{where}: {deprecations.warning_text(item)}")
+        if item not in seen:
+            seen.append(item)
+
+    for nombre, valor in config_module.DEPRECATED_ENV_VALUES.items():
+        if valor is not None and (entry := deprecations.find(nombre)) is not None:
+            _note("en la shell", entry)
+
+    settings, _motivo = read_json(ctx.claude_dir / "settings.json")
+    env = settings.get("env") if settings else None
+    if isinstance(env, dict):
+        for entry in deprecations.env_vars():
+            if entry.old in env:
+                _note("en el env de settings.json", entry)
+
+    for entry in deprecations.switch_files():
+        if (ctx.claude_dir / entry.old).exists():
+            _note("en ~/.claude", entry)
+
+    for name in sorted(deprecated_names_in_hook_telemetry(config_module.HOOK_TELEMETRY_LOG)):
+        if (entry := deprecations.find(name)) is not None and entry not in seen:
+            _note(f"leído por los hooks (últimos {DEPRECATED_TAIL_DAYS} días)", entry)
+
+    if not warnings:
+        return Result(OK, "sin nombres obsoletos en uso")
+    hints = [f"quita {e.old}" if e.is_retired else f"renombra {e.old} a {e.new}" for e in seen]
+    if any(e.old.endswith("_FAST") for e in seen):
+        hints.append("los roles vigentes son mechanical, long, code y vision")
+    return Result(WARN, " | ".join(warnings), "; ".join(hints))
 
 
-RECALCULAR_HINT = "local-delegate recalcular-coste"
+RECALCULAR_HINT = "local-delegate recompute-cost"
 # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
 _MARGEN_DEL_RELLENO = timedelta(days=10)
 
@@ -1658,18 +1762,18 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
     """(cuántas delegaciones `pendiente` pasan de `H` − 10 días, días de la más vieja).
 
     Solo los ficheros del log que pueden tener filas dentro del plazo, y cada uno ENTERO: la clave
-    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`coste.fundir`).
+    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`cost.merge`).
     """
     primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
     umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
     cuantas, mas_vieja = 0, timedelta(0)
-    for path, mes in recalcular._ficheros_del_log(log_dir):
+    for path, mes in recompute._log_files(log_dir):
         if mes < primer_mes:
             continue
-        for fila in coste.fundir(recalcular._leer_log(path), log_dir=log_dir):
-            if coste.tramo(fila, ahora=ahora, plazo_dias=plazo_dias) != "pendiente":
+        for fila in cost.merge(recompute._read_log(path), log_dir=log_dir):
+            if cost.segment(fila, now=ahora, cleanup_days=plazo_dias) != "pending":
                 continue
-            edad = ahora - coste._instante(fila.get("ts"))
+            edad = ahora - cost._instant(fila.get("ts"))
             if edad > umbral:
                 cuantas += 1
                 mas_vieja = max(mas_vieja, edad)
@@ -1679,9 +1783,9 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
 def _probe_coste(ctx: Context) -> Result:
     """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
 
-    Lee **solo** `coste-agregados.json`, el log de uso y los `atribucion-*.json` (más
-    `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son cosa del comando que
-    lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
+    Lee **solo** `cost-aggregates.json` (o el viejo `coste-agregados.json`), el log de uso y los
+    `attribution-*.json` (más `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son
+    cosa del comando que lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
     cotejo fallido, cotejo bueno, sin cotejo. Si se cumplen las dos primeras, dice las dos.
 
     El aviso del relleno mira la pendiente más antigua, no la fecha del último relleno: así salta
@@ -1693,7 +1797,7 @@ def _probe_coste(ctx: Context) -> Result:
     avisos: list[str] = []
 
     if (ctx.claude_dir / "projects").is_dir():
-        plazo = atribucion.plazo_de_borrado(ctx.claude_dir)
+        plazo = attribution.cleanup_period_days(ctx.claude_dir)
         cuantas, dias = _pendiente_mas_vieja(log_dir, ahora=ahora, plazo_dias=plazo)
         if cuantas:
             avisos.append(
@@ -1702,18 +1806,19 @@ def _probe_coste(ctx: Context) -> Result:
                 f"`{RECALCULAR_HINT}` antes de que Claude Code borre sus transcripts"
             )
 
-    agregados = recalcular.leer_agregados(log_dir) or {}
-    cotejo = agregados.get("cotejo")
+    agregados = recompute.read_aggregates(log_dir) or {}
+    # `read_aggregates` entrega el formato nuevo aunque en disco solo esté el viejo (REQ-006).
+    cotejo = agregados.get("check")
     if not isinstance(cotejo, dict):
         cotejo = None
-    fecha = str((cotejo or {}).get("fecha") or "?")
-    if cotejo is not None and cotejo.get("veredicto") == "falla":
-        sin_precio = [str(m) for m in cotejo.get("sin_precio") or []]
+    fecha = str((cotejo or {}).get("date") or "?")
+    if cotejo is not None and cotejo.get("verdict") == "fail":
+        sin_precio = [str(m) for m in cotejo.get("unpriced") or []]
         partes = []
         if sin_precio:
             partes.append("modelos sin precio en la tabla: " + ", ".join(sin_precio))
-        if cotejo.get("fuera"):
-            partes.append(f"{cotejo['fuera']} fila(s) fuera de la banda")
+        if cotejo.get("outside"):
+            partes.append(f"{cotejo['outside']} fila(s) fuera de la banda")
         avisos.append(
             f"el último cotejo ({fecha}) no cuadra con lo que cobra Claude Code: "
             + ("; ".join(partes) or "sin detalle")
@@ -1721,11 +1826,11 @@ def _probe_coste(ctx: Context) -> Result:
 
     if avisos:
         return Result(WARN, "; y ".join(avisos), RECALCULAR_HINT)
-    if cotejo is not None and cotejo.get("veredicto") == "pasa":
+    if cotejo is not None and cotejo.get("verdict") == "pass":
         return Result(
             OK,
-            f"el último cotejo ({fecha}) cuadra: {cotejo.get('juzgadas', '?')} fila(s) juzgadas "
-            f"con la tabla de precios del {cotejo.get('version_tabla') or '?'}",
+            f"el último cotejo ({fecha}) cuadra: {cotejo.get('judged', '?')} fila(s) juzgadas "
+            f"con la tabla de precios del {cotejo.get('table_version') or '?'}",
         )
     return Result(
         UNKNOWN,
@@ -1787,7 +1892,7 @@ CHECKS: tuple[Check, ...] = (
     Check("client.presence", "entorno", "clientes", _probe_clients),
     Check("client.observed", "entorno", "clientes MCP observados", _probe_clients_observed),
     Check("config.fallback", "entorno", "cadenas de respaldo", _probe_fallback),
-    Check("config.rol_retirado", "entorno", "rol rápido retirado", _probe_rol_retirado),
+    Check("config.deprecated_names", "entorno", "nombres obsoletos", _probe_deprecated_names),
     # En `entorno`: lee ficheros locales del log y de `~/.claude`, no sale a la red.
     Check("config.coste", "entorno", "coste y relleno", _probe_coste),
     Check("metrics.test_windows", "entorno", "ventanas de prueba", _probe_test_windows),

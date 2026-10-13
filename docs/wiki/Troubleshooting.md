@@ -41,22 +41,23 @@ seguir diciendo la versión vieja con el servidor sirviendo ya la nueva.
 
 El backend OpenAI-compatible no responde en `LOCAL_DELEGATE_BASE_URL`. Detrás de los dos puntos va
 la **causa**, la misma que enseñan el badge del panel, `local_status` y `doctor`, y que el log de
-uso guarda en la clave `fallo_conexion` (las versiones anteriores a este cambio decían «no se pudo
-conectar al endpoint» sin más).
+uso guarda en la clave `connection_failure` (`fallo_conexion` hasta la 0.34.0, con los valores en
+español: `rechazada`, `sin_ruta`, `timeout_conexion`…). Las versiones anteriores a la causa decían
+«no se pudo conectar al endpoint» sin más.
 
-| Causa (`fallo_conexion`) | Badge | Qué dice | Qué hacer |
+| Causa (`connection_failure`) | Badge | Qué dice | Qué hacer |
 |---|---|---|---|
 | `dns` | caído · no resuelve | no se resuelve el nombre `<host>` (¿VPN o DNS?) | Revisa el nombre en `LOCAL_DELEGATE_BASE_URL`; con un backend remoto, `tailscale status` o usa la IP 100.x de la tailnet |
-| `rechazada` | caído · nadie escucha | `<host>` rechaza la conexión: no hay nada escuchando en ese puerto | Arranca llama-swap (en local) o revisa el puerto; en otra máquina, arráncalo allí |
-| `sin_ruta` | caído · sin ruta | no hay ruta de red hacia `<host>` | Revisa la red hacia ese host: VPN, cortafuegos, Tailscale |
-| `timeout_conexion` | caído · no contesta | `<host>` no contesta a la conexión (ruta, cortafuegos o VPN) | Igual que `sin_ruta`; es el caso típico de una VPN que se come el tráfico |
-| `credencial` | sin acceso (ámbar) | `<host>` responde `<N>`: está arriba pero rechaza la credencial | Falta o no vale `LOCAL_DELEGATE_API_KEY` en el entorno de quien llama (ver abajo) |
+| `refused` | caído · nadie escucha | `<host>` rechaza la conexión: no hay nada escuchando en ese puerto | Arranca llama-swap (en local) o revisa el puerto; en otra máquina, arráncalo allí |
+| `no_route` | caído · sin ruta | no hay ruta de red hacia `<host>` | Revisa la red hacia ese host: VPN, cortafuegos, Tailscale |
+| `connect_timeout` | caído · no contesta | `<host>` no contesta a la conexión (ruta, cortafuegos o VPN) | Igual que `no_route`; es el caso típico de una VPN que se come el tráfico |
+| `credential` | sin acceso (ámbar) | `<host>` responde `<N>`: está arriba pero rechaza la credencial | Falta o no vale `LOCAL_DELEGATE_API_KEY` en el entorno de quien llama (ver abajo) |
 | `http_error` | responde con error (ámbar) | `<host>` responde HTTP `<N>` | Revisa `LOCAL_DELEGATE_BASE_URL` (¿falta `/v1`?) |
-| `respuesta_invalida` | respuesta no válida (ámbar) | `<host>` responde a `<endpoint>`, pero con un cuerpo que no se entiende | Lo que escucha en ese puerto no es un backend OpenAI-compatible |
-| `sin_respuesta` | no responde a tiempo (ámbar) | `<host>` acepta la conexión pero no responde a tiempo | El backend está colgado o saturado; revísalo en ese host |
-| `url_invalida` | caído · URL no válida | la URL del backend no es válida: revisa LOCAL_DELEGATE_BASE_URL | Corrige la URL |
-| `transporte` | caído · fallo de red | fallo de red con `<host>` | Sin pista específica: revisa el backend en ese host |
-| `desconocida` | caído · fallo inesperado | fallo inesperado al sondear `<host>` | Igual; el tipo de excepción va entre paréntesis en el detalle |
+| `invalid_response` | respuesta no válida (ámbar) | `<host>` responde a `<endpoint>`, pero con un cuerpo que no se entiende | Lo que escucha en ese puerto no es un backend OpenAI-compatible |
+| `no_response` | no responde a tiempo (ámbar) | `<host>` acepta la conexión pero no responde a tiempo | El backend está colgado o saturado; revísalo en ese host |
+| `invalid_url` | caído · URL no válida | la URL del backend no es válida: revisa LOCAL_DELEGATE_BASE_URL | Corrige la URL |
+| `transport` | caído · fallo de red | fallo de red con `<host>` | Sin pista específica: revisa el backend en ese host |
+| `unknown` | caído · fallo inesperado | fallo inesperado al sondear `<host>` | Igual; el tipo de excepción va entre paréntesis en el detalle |
 
 El badge rojo (con «caído») es para cuando no se llega al backend; el ámbar, para cuando **alguien
 contesta** pero la respuesta no sirve. En el panel hacen falta dos sondeos fallidos seguidos para
@@ -78,9 +79,9 @@ Si el backend está en otra máquina:
 
 - `dns` (o `Could not resolve host` con `curl`): MagicDNS no está resolviendo; prueba primero
   `tailscale status` y `tailscale ping <PC>` desde la Mac.
-- `timeout_conexion` o `sin_ruta` (`Operation timed out` con `curl`): DNS resolvió, pero falta
+- `connect_timeout` o `no_route` (`Operation timed out` con `curl`): DNS resolvió, pero falta
   ruta/grant, Tailscale Serve no está activo o una VPN se come el tráfico.
-- `credencial` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
+- `credential` (`401`): la red funciona; carga la key desde Keychain y confirma el header Bearer.
 - No cambies a MCP remoto completo para “arreglar” `path`: el MCP debe seguir local en la Mac.
 
 Guía completa: [Backend remoto Mac → PC](Remote-backend.md).
@@ -245,13 +246,13 @@ justo esto.
 ## `doctor` da `[WARN] coste y relleno`
 
 El check `config.coste` mira si la cifra de coste equivalente es de fiar y si se está perdiendo
-histórico. No lee transcripts: lee lo que dejó `local-delegate recalcular-coste` en `LOG_DIR`. Da
+histórico. No lee transcripts: lee lo que dejó `local-delegate recompute-cost` en `LOG_DIR`. Da
 `warn` por dos motivos, y si se cumplen los dos los dice juntos:
 
 - **«N delegación(es) pendiente(s) de relleno, la más antigua de hace D días»**. Hay delegaciones
   sin modelo atribuido cuyo transcript está a menos de 10 días de borrarse (Claude Code los borra a
   los `cleanupPeriodDays` de `~/.claude/settings.json`, 30 si no está puesto). Lanza
-  `local-delegate recalcular-coste`: las atribuye cruzando el log con los transcripts y el aviso
+  `local-delegate recompute-cost`: las atribuye cruzando el log con los transcripts y el aviso
   desaparece. Una vez borrado el transcript, esa delegación se valora para siempre con el
   respaldo (ver [Configuration](Configuration.md#coste-equivalente)). Avisa aunque el comando no
   se haya lanzado nunca: lo que mira es la pendiente más antigua, no la fecha del último relleno.
@@ -269,10 +270,11 @@ o en la que el comando no se ha lanzado. El check nunca da `missing`.
 Es lo esperado. Para decir qué parte de una ventana de 5 h o de la semanal supone lo delegado,
 hacen falta al menos **tres medidas del statusline de ventanas distintas** con una dispersión
 menor del 25 %, y hasta entonces el panel no enseña ningún porcentaje. Esas medidas salen del
-registro del statusline (`~/.claude/cuota-statusline.jsonl`), que solo existe si tu statusline lo
-escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recalcular-coste`
+registro del statusline (`~/.claude/quota-statusline.jsonl` o `~/.claude/cuota-statusline.jsonl`,
+que valen los dos), que solo existe si tu statusline lo
+escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recompute-cost`
 para incorporar las medidas nuevas. El bloque enseña además cuántas se descartaron y por qué
-(`contaminado`, `delta_pequeno`, `solapado`…): una medida tomada mientras otra sesión que no está
+(contaminado, variación pequeña, solapado…): una medida tomada mientras otra sesión que no está
 en el registro gastaba cuota no sirve para calibrar. Si cambian los límites de uso (el vigilante
 abre un PR con el texto nuevo), descarta la calibración vieja con
-`local-delegate recalcular-coste --reiniciar-calibracion five_hour` (o `seven_day`).
+`local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`).

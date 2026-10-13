@@ -54,19 +54,20 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from .. import (
-    atribucion,
+    attribution,
     clients,
     config,
-    coste,
-    cuota,
-    fallos,
+    cost,
+    failures,
+    legacy_names,
     llamaswap_api,
-    precios,
-    recalcular,
+    pricing,
+    quota,
+    recompute,
     server,
     test_windows,
     topology,
-    valoracion,
+    valuation,
 )
 from . import auth, sysinfo
 
@@ -115,7 +116,12 @@ def _read_file_cached(path) -> list[dict]:
                 if not line:
                     continue
                 try:
-                    rows.append(json.loads(line))
+                    # Formato nuevo aunque la fila sea vieja (REQ-006): todo lo que sale de
+                    # aquí (/api/events, /api/stats, «En curso») ya habla con claves en inglés.
+                    row = json.loads(line)
+                    rows.append(
+                        legacy_names.normalize("usage", row) if isinstance(row, dict) else row
+                    )
                 except json.JSONDecodeError:
                     continue
     except OSError:
@@ -181,7 +187,7 @@ def _load(range_from: datetime, range_to: datetime) -> tuple[list[dict], list[st
         # Fusión del relleno y densidad resuelta (coste-api-y-cuota, REQ-006): por fichero y ANTES
         # de filtrar por rango, porque la clave de una línea sin `tool_use_id` lleva su ordinal en
         # el fichero entero. `fundir` copia cada fila: la caché de `_read_file_cached` no cambia.
-        for r in coste.fundir(file_rows, log_dir=config.LOG_DIR):
+        for r in cost.merge(file_rows, log_dir=config.LOG_DIR):
             t = _parse_ts(r.get("ts"))
             if t is None or t < range_from or t > range_to:
                 continue
@@ -303,7 +309,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "estimated_events": 0,  # cuántos no traían token real y hubo que estimar
         "fallback_events": 0,  # respondió un respaldo: la medición pudo contaminarla un swap
     }
-    # Causa de cada fallo o salto (`configuracion`, `modelo`, `enfriamiento`…): una de configuración
+    # Causa de cada fallo o salto (`configuration`, `model`, `cooldown`…): una de configuración
     # tiene que verse en el panel para que alguien la arregle (REQ-019).
     causes: dict[str, int] = defaultdict(int)
 
@@ -471,7 +477,7 @@ def _include_tests(value: str | None) -> bool:
 
 
 def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
-    """(uso, pruebas) con la ÚNICA regla de «es una prueba» (`atribucion.test_reason`).
+    """(uso, pruebas) con la ÚNICA regla de «es una prueba» (`attribution.test_reason`).
 
     Es el único sitio del panel que separa las pruebas (test-windows-out-of-metrics, REQ-011):
     `/api/events` y `/api/stats` la llaman igual, así que cuentan el mismo conjunto.
@@ -479,7 +485,7 @@ def _split_tests(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     kept: list[dict] = []
     tests: list[dict] = []
     for r in rows:
-        (tests if atribucion.test_reason(r) else kept).append(r)
+        (tests if attribution.test_reason(r) else kept).append(r)
     return kept, tests
 
 
@@ -532,47 +538,48 @@ def stats(
         for w in test_windows.load(config.LOG_DIR).open_windows()
     ]
     # Coste equivalente, imágenes y cuota (coste-api-y-cuota). Solo se lee lo que dejó el comando
-    # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
-    # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `excluida`:
+    # `recompute-cost` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
+    # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
-    ahora = _ahora()
-    agregados = recalcular.leer_agregados(config.LOG_DIR)
-    datos["coste"] = valoracion.bloque_coste(rows, agregados, ahora=ahora)
-    datos["imagenes"] = valoracion.bloque_imagenes(usage)
-    datos["densidad_tabla"] = {
-        k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
+    now = _now()
+    aggregates = recompute.read_aggregates(config.LOG_DIR)
+    datos["cost"] = valuation.cost_block(rows, aggregates, now=now)
+    datos["images"] = valuation.images_block(usage)
+    # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
+    datos["density_table"] = {
+        k: v for k, v in pricing.load_density().items() if not k.startswith("_")
     }
-    datos["cuota"] = _bloque_cuota(agregados, ahora)
+    datos["quota"] = _quota_block(aggregates, now)
     return JSONResponse(datos)
 
 
-def _ahora() -> datetime:
+def _now() -> datetime:
     """El reloj de `/api/stats`, aparte para que un test pueda fijarlo."""
     return datetime.now(UTC)
 
 
-def _bloque_cuota(agregados: dict | None, ahora: datetime) -> dict:
-    """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `cuota.estado`).
+def _quota_block(aggregates: dict | None, now: datetime) -> dict:
+    """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `quota.status`).
 
     Un tipo `calibrado` lleva el % sobre SU ventana móvil, que termina ahora y no depende del
     rango que elija el panel (REQ-060): A = cota baja de lo delegado en las últimas 5 h (o 7 días)
     ÷ mediana(C) × 100, y B = la estimación de esos mismos eventos ÷ mediana(C) × 100.
     """
-    estado = cuota.estado(agregados, ahora)
-    for tipo, e in estado.items():
-        if e.get("estado") != "calibrado":
+    status = quota.status(aggregates, now)
+    for kind, e in status.items():
+        if e.get("status") != "calibrated":
             continue
-        filas, _ = _load(ahora - cuota.DURACION[tipo], ahora)
-        bloque = valoracion.bloque_coste(filas, agregados, ahora=ahora)
-        capacidad = e.get("mediana_C")
-        cifra = bloque["cifra"]
-        if cifra and capacidad:
-            e["a_pct"] = round(cifra["cota_baja"] / capacidad * 100, 1)
-            e["b_pct"] = round(cifra["estimacion"] / capacidad * 100, 1)
+        rows, _ = _load(now - quota.DURATION[kind], now)
+        block = valuation.cost_block(rows, aggregates, now=now)
+        capacity = e.get("median_C")
+        figure = block["figure"]
+        if figure and capacity:
+            e["a_pct"] = round(figure["low_bound"] / capacity * 100, 1)
+            e["b_pct"] = round(figure["estimate"] / capacity * 100, 1)
         else:
             e["a_pct"] = e["b_pct"] = None
-            e["motivo_pct"] = bloque["motivo"]
-    return {**estado, "hay_agregados": agregados is not None, "comando": valoracion.COMANDO}
+            e["pct_reason"] = block["reason"]
+    return {**status, "has_aggregates": aggregates is not None, "command": valuation.COMMAND}
 
 
 def _aggregate_hooks(rows: list[dict]) -> dict:
@@ -593,13 +600,15 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     # Esto NO es conversión —nada enlaza una sugerencia con la delegación que vino después— sino
     # selectividad, que vive entera dentro de este mismo fichero y no hay que cruzarla con nada.
     #
-    # Sólo entran los eventos de lectura: `motivo` y `ext` los escribe ese hook y nadie más, así
+    # Sólo entran los eventos de lectura: `reason` y `ext` los escribe ese hook y nadie más, así
     # que meter los de `lint` o `summarize` daría un denominador que no es y la tarjeta diría
     # que el hook descarta sin motivo la mitad de las veces.
-    por_motivo: dict[str, int] = {}
+    by_reason: dict[str, int] = {}
     por_ext: dict[str, int] = {}
 
-    for row in rows:
+    for raw in rows:
+        # Filas viejas (`motivo`, `bloqueo`… en español) y nuevas dan lo mismo (REQ-006).
+        row = legacy_names.normalize("hook_telemetry", raw)
         # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
         # es lo que significaba antes de que el campo existiera.
         sugerida = bool(row.get("suggested"))
@@ -607,25 +616,25 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
 
         for clave, destino in (
             (row.get("event") or "?", por_evento),
-            (row.get("category") or "sin categoría", por_categoria),
+            (row.get("category") or "no_category", por_categoria),
         ):
             casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
             casilla["total"] += 1
             casilla["suggested"] += sugerida
 
         if row.get("category") == "read":
-            # Un evento sin `motivo` es o bien un aviso, o bien uno de antes del PR #146, que no
+            # Un evento sin `reason` es o bien un aviso, o bien uno de antes del PR #146, que no
             # lo escribía. Se separan porque decir «descartado sin motivo» de una telemetría
             # vieja sería inventarle una razón que nunca tuvo.
             if sugerida:
-                clave = "avisó"
+                clave = "suggested"
             else:
-                clave = str(row.get("motivo") or "sin registrar")
-            por_motivo[clave] = por_motivo.get(clave, 0) + 1
+                clave = str(row.get("reason") or "unrecorded")
+            by_reason[clave] = by_reason.get(clave, 0) + 1
 
             ext = row.get("ext")
-            por_ext[str(ext) if ext else "sin extensión"] = (
-                por_ext.get(str(ext) if ext else "sin extensión", 0) + 1
+            por_ext[str(ext) if ext else "no_extension"] = (
+                por_ext.get(str(ext) if ext else "no_extension", 0) + 1
             )
 
         ts = _parse_ts(row.get("ts"))
@@ -652,10 +661,10 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
             key=lambda d: d["day"],
         ),
         # Sólo de los eventos de lectura; su total NO es el `total` de arriba.
-        "read_total": sum(por_motivo.values()),
-        "by_motivo": [
-            {"motivo": nombre, "total": n}
-            for nombre, n in sorted(por_motivo.items(), key=lambda kv: (-kv[1], kv[0]))
+        "read_total": sum(by_reason.values()),
+        "by_reason": [
+            {"reason": nombre, "total": n}
+            for nombre, n in sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "by_ext": [
             {"ext": nombre, "total": n}
@@ -751,7 +760,7 @@ def backend():
       - `running`: proxy best-effort de GET {base}/running de llama-swap (estado de montaje).
       - `models`: `[{id, status}]` de /v1/models (#901, loaded/unloaded); [] si el backend no lo da.
 
-    Con un fallo, `causa`/`etiqueta`/`detalle` dicen por qué (REQ-012, textos de `fallos.py`) y
+    Con un fallo, `cause`/`label`/`detail` dicen por qué (REQ-012, textos de `failures.py`) y
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
@@ -764,20 +773,20 @@ def backend():
             "running_ok": running_ok,
             "models": estado.models,
             "models_stale": estado.models_stale,
-            **_causa_json(estado.causa, estado.detalle),
+            **_cause_json(estado.causa, estado.detalle),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
     )
 
 
-def _causa_json(causa: str | None, detalle: str | None) -> dict:
-    """Las claves de la causa para el panel. La etiqueta corta sale de `fallos.py`, como el detalle:
+def _cause_json(cause: str | None, detail: str | None) -> dict:
+    """Las claves de la causa para el panel. La etiqueta corta sale de `failures.py`, como el detalle:
     el JS no redacta los textos de una causa (REQ-011)."""
     return {
-        "causa": causa,
-        "etiqueta": fallos.etiqueta(causa) if causa else None,
-        "detalle": detalle,
+        "cause": cause,
+        "label": failures.label(cause) if cause else None,
+        "detail": detail,
     }
 
 
@@ -809,7 +818,7 @@ def backend_stats():
     `store.path` en su config.yaml. Con otro backend o versión vieja responde 404/error y aquí
     degrada a {available: false} sin romper el dashboard.
 
-    Sin datos, dice por qué (REQ-020): `causa`, `etiqueta`, `detalle` y `status_http` (este último
+    Sin datos, dice por qué (REQ-020): `cause`, `label`, `detail` y `status_http` (este último
     solo con una respuesta HTTP). El panel solo culpa a la versión de llama-swap con un 404.
     """
     base = config.BASE_URL.removesuffix("/v1")
@@ -819,19 +828,19 @@ def backend_stats():
         with httpx2.Client(timeout=server._plazo_sonda()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
-            causa = fallos.causa_conexion(r.status_code, loopback=loopback)
-            texto = fallos.detalle(causa, host=config.backend_host(), status=r.status_code)
-            return JSONResponse(_sin_stats(causa.value, texto, r.status_code))
+            cause = failures.connection_cause(r.status_code, loopback=loopback)
+            text = failures.detail(cause, host=config.backend_host(), status=r.status_code)
+            return JSONResponse(_no_stats(cause.value, text, r.status_code))
         data = r.json()
     except Exception as exc:  # como el sondeo: lo que no se espera también tiene causa
-        causa = fallos.causa_conexion(exc, loopback=loopback)
-        texto = fallos.detalle(causa, host=config.backend_host(), endpoint=endpoint, excepcion=exc)
-        return JSONResponse(_sin_stats(causa.value, texto, None))
+        cause = failures.connection_cause(exc, loopback=loopback)
+        text = failures.detail(cause, host=config.backend_host(), endpoint=endpoint, exception=exc)
+        return JSONResponse(_no_stats(cause.value, text, None))
     return JSONResponse({"available": True, "stats": data})
 
 
-def _sin_stats(causa: str, detalle: str, status_http: int | None) -> dict:
-    return {"available": False, **_causa_json(causa, detalle), "status_http": status_http}
+def _no_stats(cause: str, detail: str, status_http: int | None) -> dict:
+    return {"available": False, **_cause_json(cause, detail), "status_http": status_http}
 
 
 @app.get("/api/status")
@@ -866,7 +875,7 @@ def status():
                 "available": estado.available,
                 "models": estado.models,
                 "models_stale": estado.models_stale,
-                **_causa_json(estado.causa, estado.detalle),
+                **_cause_json(estado.causa, estado.detalle),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),
@@ -1037,7 +1046,11 @@ def render_index() -> str:
     # de estar escrita en el HTML. Antes había un SVG dibujado a mano ahí: al unificar la marca
     # se actualizó el favicon y el header se quedó con el icono viejo, así que el panel enseñaba
     # una marca y su propia pestaña otra. Inyectándolo no pueden volver a separarse.
-    return HTML.replace("__WEB_FONTS__", tags).replace("__BRAND_MARK__", FAVICON.strip())
+    return (
+        HTML.replace("__WEB_FONTS__", tags)
+        .replace("__BRAND_MARK__", FAVICON.strip())
+        .replace("__LEGACY_VALUES__", json.dumps(legacy_names.PANEL_VALUE_ALIASES))
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1871,17 +1884,19 @@ const LABELS = {
   // prompt reconoció en el mensaje (resumir, extraer, …).
   hookCategory: {read:'Lectura', shell:'Shell', bash:'Shell', lint:'Lint', summarize:'Resumen',
     extract:'Extracción', classify:'Clasificación', translate:'Traducción',
-    boilerplate:'Código repetitivo', 'sin categoría':'Sin categoría'},
-  // Por qué el hook de lectura avisó o se calló (`motivo` del log de hooks).
-  hookReason: {'avisó':'Avisó', aviso:'Avisó', acotada:'Lectura acotada', codigo:'Código',
-    pequeno:'Pequeño', mcp_ajeno:'Por otro MCP', backend_ausente:'Backend ausente',
-    modelo_enfriado:'Modelo enfriado', prosa_grande:'Prosa grande', no_es_prosa:'No es prosa',
-    no_es_volcado:'No es un volcado', sin_fichero:'Sin fichero', bloqueo_apagado:'Bloqueo apagado',
-    'sin registrar':'Sin registrar'},
+    boilerplate:'Código repetitivo', no_category:'Sin categoría'},
+  // Por qué el hook de lectura avisó o se calló (`reason` del log de hooks). Los valores viejos
+  // (`mcp_ajeno`, `avisó`…) los traduce `LEGACY_VALUES`, que inyecta el servidor (REQ-009).
+  hookReason: {suggested:'Avisó', bounded:'Lectura acotada', code:'Código',
+    small:'Pequeño', foreign_mcp:'Por otro MCP', backend_missing:'Backend ausente',
+    model_cooled:'Modelo enfriado', large_prose:'Prosa grande', not_prose:'No es prosa',
+    not_a_dump:'No es un volcado', no_file:'Sin fichero', block_off:'Bloqueo apagado',
+    unrecorded:'Sin registrar'},
   client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
     codex:'Codex', 'codex-mcp-client':'Codex',
     desconocido:'Desconocido'},
-  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', 'sin dato':'Sin dato'},
+  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', no_data:'Sin dato',
+    'sin dato':'Sin dato'},
   thread: {main:'Hilo principal', subagent:'Subagente'},
   origin: {local:'Local', remote:'Remoto', unknown:'Sin dato'},
   // Estado del modelo que informa el backend (llama-swap) en la insignia de cada fila.
@@ -1893,8 +1908,17 @@ function humanLabel(key){
   const s = String(key===null || key===undefined || key==='' ? 'sin dato' : key).replace(/_/g, ' ').trim();
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+// Valores viejos de máquina → nuevos, por diccionario. Sale de `legacy_names.PANEL_VALUE_ALIASES`
+// y lo inyecta el servidor: el JS no lleva una segunda copia de la tabla (REQ-009, D2).
+const LEGACY_VALUES = __LEGACY_VALUES__;
+function legacyValue(kind, key){
+  const alias = LEGACY_VALUES[kind] || {};
+  return Object.prototype.hasOwnProperty.call(alias, key) ? alias[key] : key;
+}
 function labelFor(kind, key){
   const m = LABELS[kind] || {};
+  const alias = LEGACY_VALUES[kind] || {};
+  if(Object.prototype.hasOwnProperty.call(alias, key)) key = alias[key];
   return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
 }
 function dolares(x){ return '$' + fmtNum(x, 2); }
@@ -1903,8 +1927,8 @@ function dolares(x){ return '$' + fmtNum(x, 2); }
 // que leyó: la fila no tiene ahorro y no se pinta una cifra (sería «$0,00» o un negativo sin signo).
 function celdasCoste(g){
   if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">sin ahorro</td>';
-  return '<td class="num">' + dolares(g.cota_baja) + '</td>'
-    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimacion) + '</td>';
+  return '<td class="num">' + dolares(g.low_bound) + '</td>'
+    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimate) + '</td>';
 }
 
 // --- Pruebas: el texto de su ⓘ y el punto del botón (test-windows-out-of-metrics) ---
@@ -1937,48 +1961,51 @@ function renderPruebas(s){
 }
 
 function textoCoste(j){
-  const c = j && j.coste;
+  const c = j && j.cost;
   if(!c) return [];
   const L = [];
-  L.push(c.cifra
-    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.cifra.cota_baja)
-      + ' y ~' + dolares(c.cifra.estimacion)
-    : 'Equivalente estimado a precio de API: sin cifra (' + c.motivo + ')');
+  L.push(c.figure
+    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.figure.low_bound)
+      + ' y ~' + dolares(c.figure.estimate)
+    : 'Equivalente estimado a precio de API: sin cifra (' + c.reason + ')');
   L.push('No es dinero que hayas ahorrado: tu suscripción es de tarifa plana.');
-  if(c.cifra) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
+  if(c.figure) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
     + 'el segundo suma las relecturas de caché posteriores y las caducidades.');
-  const b = c.barra || {}, r = c.respaldo || {};
-  L.push('Cobertura: ' + plural(b.al_momento||0, 'atribuida al momento', 'atribuidas al momento')
-    + ' · ' + F.format(b.por_relleno||0) + ' por relleno · ' + F.format(b.pendiente||0)
-    + ' pendientes · ' + F.format(b.supuesto||0) + ' supuestas · ' + F.format(b.excluido||0)
+  const b = c.bar || {}, r = c.fallback || {};
+  L.push('Cobertura: ' + plural(b.at_call||0, 'atribuida al momento', 'atribuidas al momento')
+    + ' · ' + F.format(b.backfilled||0) + ' por relleno · ' + F.format(b.pending||0)
+    + ' pendientes · ' + F.format(b.assumed||0) + ' supuestas · ' + F.format(b.excluded||0)
     + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
-  L.push(F.format(b.con_modelo_supuesto||0) + ' de ' + F.format(b.valoradas||0)
-    + ' con modelo supuesto: ' + (r.nombre||'') + ' en ' + (HILO_TXT[r.hilo]||r.hilo||'')
-    + (r.invalido ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
-  const n = c.n_origen || {}, nd = c.n_declarado || {};
-  L.push('Relecturas (N): ' + F.format(n.relleno||0) + ' del relleno, ' + F.format(n.agregado||0)
-    + ' de la mediana de su grupo, ' + F.format(n.declarado||0) + ' con el valor declarado (principal '
+  L.push(F.format(b.with_assumed_model||0) + ' de ' + F.format(b.valued||0)
+    + ' con modelo supuesto: ' + (r.name||'') + ' en ' + (HILO_TXT[r.thread]||r.thread||'')
+    + (r.invalid ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
+  const n = c.n_origin || {}, nd = c.n_declared || {};
+  L.push('Relecturas (N): ' + F.format(n.backfill||0) + ' del relleno, ' + F.format(n.aggregate||0)
+    + ' de la mediana de su grupo, ' + F.format(n.declared||0) + ' con el valor declarado (principal '
     + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
-  const d = c.densidad || {}, o = d.origen || {};
-  const fams = Object.entries(d.familias||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
+  const d = c.density || {}, o = d.origin || {};
+  // Las familias llegan como término de máquina (`new`, `previous`): aquí se dicen en palabras.
+  const FAMILIA = {new:'nueva', previous:'anterior'};
+  const fams = Object.entries(d.families||{})
+    .map(([k,v]) => (FAMILIA[k] || k) + ' ' + F.format(v)).join(', ');
   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
-    + F.format(o.medida||0) + ', sin numerar ' + F.format(o.sin_numerar||0) + ', conservadora '
-    + F.format(o.conservadora||0) + '; ' + F.format(d.densidad_de_la_familia||0)
-    + ' con densidad de la familia y ' + F.format(d.familia_supuesta||0) + ' con familia supuesta.');
-  const sp = c.sin_precio || {};
+    + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
+    + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)
+    + ' con densidad de la familia y ' + F.format(d.assumed_family||0) + ' con familia supuesta.');
+  const sp = c.unpriced || {};
   if(sp.n) L.push(plural(sp.n, 'delegación de un modelo sin precio', 'delegaciones de modelos sin precio')
     + ', fuera de la suma: ' + (sp.ids||[]).join(', ') + '.');
-  const fb = c.fuera_de_la_base || {};
-  L.push('Fuera de la cifra: ' + plural(fb.imagenes||0, 'imagen', 'imágenes') + ' y '
-    + plural(fb.salida_a_fichero||0, 'salida a fichero', 'salidas a fichero') + '.');
+  const fb = c.outside_base || {};
+  L.push('Fuera de la cifra: ' + plural(fb.images||0, 'imagen', 'imágenes') + ' y '
+    + plural(fb.output_to_file||0, 'salida a fichero', 'salidas a fichero') + '.');
   L.push('Neto de la respuesta de la tool. Contrafactual: si Claude hubiera leído el fichero entero '
     + 'una vez con Read. No descuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).');
-  L.push('Precios de la tabla del paquete del ' + ((c.tabla||{}).consultado || 'sin fecha') + '.');
+  L.push('Precios de la tabla del paquete del ' + ((c.table||{}).consulted || 'sin fecha') + '.');
   return L;
 }
 
 function textoCuota(j){
-  const q = j && j.cuota;
+  const q = j && j.quota;
   if(!q) return [];
   const L = [];
   [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([tipo, nombre])=>{
@@ -1986,40 +2013,41 @@ function textoCuota(j){
     if(!e) return;
     const disp = (e.dispersion!==undefined && e.dispersion!==null)
       ? ', dispersión ' + F1.format(e.dispersion*100) + ' %' : '';
-    if(e.estado==='calibrado'){
+    if(e.status==='calibrated'){
       const v = tipo==='five_hour'
         ? 'de una ventana de 5 h (lo delegado en las últimas 5 h'
         : 'de una ventana semanal (lo delegado en los últimos 7 días';
       L.push(e.a_pct!==null && e.a_pct!==undefined
         ? nombre + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
           + '; la estimación incluye relecturas que pueden caer después de la ventana); estimación '
-          + 'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos') + disp
+          + 'calibrada con ' + plural(e.points||0, 'punto', 'puntos') + disp
           + '; supone que la cuota sigue al precio de lista.'
-        : nombre + ': calibrada, sin cifra (' + (e.motivo_pct||'') + ').');
-      if(e.aviso) L.push(nombre + ': ' + e.aviso + '.');
+        : nombre + ': calibrada, sin cifra (' + (e.pct_reason||'') + ').');
+      if(e.warning) L.push(nombre + ': ' + e.warning + '.');
       return;
     }
-    let t = nombre + ': sin calibrar (' + (e.motivo||'') + ')';
-    if(!q.hay_agregados) t += '; los genera ' + q.comando;
+    let t = nombre + ': sin calibrar (' + (e.reason||'') + ')';
+    if(!q.has_aggregates) t += '; los genera ' + q.command;
     L.push(t + '.');
-    // Los motivos de descarte son claves de `cuota.py`; aquí, en palabras.
-    const DESCARTE = {linea_corrupta:'línea corrupta', fuera_de_rango:'fuera de rango',
-      delta_pequeno:'variación pequeña', sin_uso_local:'sin uso local', contaminado:'contaminado'};
-    const desc = Object.entries(e.descartes||{}).filter(([,k])=>k)
+    // Los motivos de descarte son claves de `quota.py`; aquí, en palabras.
+    const DESCARTE = {corrupt_line:'línea corrupta', out_of_range:'fuera de rango',
+      small_delta:'variación pequeña', no_local_use:'sin uso local', contaminated:'contaminado',
+      overlapping:'solapado', expired:'caducado', reset:'reinicio'};
+    const desc = Object.entries(e.discards||{}).filter(([,k])=>k)
       .map(([m,k]) => (DESCARTE[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
-    L.push(nombre + ': ' + plural(e.puntos||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
-      + ', ' + plural(e.puntos_rechazo||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
+    L.push(nombre + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
+      + ', ' + plural(e.rejection_points||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
       + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
-      + (e.deriva ? '; hubo deriva' : '') + (e.reinicio ? '; reiniciada a mano el ' + e.reinicio : '') + '.');
+      + (e.drift ? '; hubo deriva' : '') + (e.reset ? '; reiniciada a mano el ' + e.reset : '') + '.');
   });
   return L;
 }
 
 function textoImagenes(j){
-  const i = j && j.imagenes;
+  const i = j && j.images;
   if(!i) return [];
   return [plural(i.n||0, 'imagen', 'imágenes') + ' · ' + F.format(i.bytes||0) + ' bytes leídos server-side · '
-      + F.format(i.chars_devueltos||0) + ' caracteres devueltos a Claude',
+      + F.format(i.chars_returned||0) + ' caracteres devueltos a Claude',
     'Sin cifra de tokens de Claude: el log guarda bytes, no dimensiones. No entran en el contexto '
       + 'conservado ni en el equivalente a precio de API.'];
 }
@@ -2043,7 +2071,7 @@ const VENTANAS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal'
 // Ventanas calibradas: sin ninguna, la tarjeta de cuota no se pinta (su explicación vive en el
 // diálogo). Calibrada sin cifra cuenta como calibrada: se pinta con «–».
 function ventanasCalibradas(q){
-  return q ? VENTANAS.filter(([t]) => q[t] && q[t].estado==='calibrado').length : 0;
+  return q ? VENTANAS.filter(([t]) => q[t] && q[t].status==='calibrated').length : 0;
 }
 
 // Medidor de una ventana: de 0 a la cota baja (A) en sólido y de A a la estimación (B) en claro,
@@ -2052,12 +2080,12 @@ function ventanasCalibradas(q){
 function pct2(x){ return Math.round(x*100)/100; }
 
 function medidorCuota(e, nombre){
-  if(!e || e.estado!=='calibrado' || e.a_pct===null || e.a_pct===undefined){
-    return kstat(nombre, '–', e && e.estado==='calibrado' ? 'calibrada, sin cifra' : 'sin calibrar');
+  if(!e || e.status!=='calibrated' || e.a_pct===null || e.a_pct===undefined){
+    return kstat(nombre, '–', e && e.status==='calibrated' ? 'calibrada, sin cifra' : 'sin calibrar');
   }
   const a = Math.max(0, Math.min(100, e.a_pct)), b = Math.max(a, Math.min(100, e.b_pct));
   return kstat(nombre, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
-      'calibrada con ' + plural(e.puntos||0, 'punto', 'puntos'))
+      'calibrada con ' + plural(e.points||0, 'punto', 'puntos'))
     + '<div class="qrange" role="img" aria-label="Entre ' + F1.format(e.a_pct) + ' % y '
     + F1.format(e.b_pct) + ' % de la ventana"><i class="qa" style="width:' + pct2(a) + '%"></i>'
     + '<i class="qb" style="left:' + pct2(a) + '%;width:' + pct2(b - a) + '%"></i></div>'
@@ -2067,28 +2095,28 @@ function medidorCuota(e, nombre){
 function renderCoste(s){
   const cc = document.getElementById('costeCard'), qc = document.getElementById('cuotaCard');
   const ic = document.getElementById('imagenesCard'), row = document.getElementById('cuotaImgRow');
-  const c = s && s.coste;
+  const c = s && s.cost;
   cc.style.display = c ? '' : 'none';
   if(c){
-    document.getElementById('costeHead').textContent = c.cifra ? plural(c.eventos||0, 'delegación', 'delegaciones') : '';
-    const filas = (c.desglose||[]).map(g => '<tr><td class="mono">' + escHooks(g.nombre) + '</td>'
-      + '<td class="mono">' + escHooks(labelFor('thread', g.hilo)) + '</td>'
-      + '<td class="mono">' + escHooks(labelFor('effort', g.esfuerzo)) + '</td>'
-      + '<td class="num">' + F.format(g.casos) + '</td>'
+    document.getElementById('costeHead').textContent = c.figure ? plural(c.events||0, 'delegación', 'delegaciones') : '';
+    const filas = (c.breakdown||[]).map(g => '<tr><td class="mono">' + escHooks(g.name) + '</td>'
+      + '<td class="mono">' + escHooks(labelFor('thread', g.thread)) + '</td>'
+      + '<td class="mono">' + escHooks(labelFor('effort', g.effort)) + '</td>'
+      + '<td class="num">' + F.format(g.cases) + '</td>'
       + '<td class="num">' + F.format(g.T) + '</td>'
       + celdasCoste(g) + '</tr>').join('');
-    const cifras = c.cifra
-      ? kstat('Cota baja', dolares(c.cifra.cota_baja), 'no es un ahorro: tarifa plana')
-        + kstat('Estimación', '~' + dolares(c.cifra.estimacion), 'con relecturas de caché', 'var(--amber)')
+    const cifras = c.figure
+      ? kstat('Cota baja', dolares(c.figure.low_bound), 'no es un ahorro: tarifa plana')
+        + kstat('Estimación', '~' + dolares(c.figure.estimate), 'con relecturas de caché', 'var(--amber)')
         + (c.T !== undefined ? kstat('Tokens valorados', F.format(c.T) + '<span class="unit">tok</span>',
             'netos de Claude, con precio') : '')
-      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.motivo||'')));
+      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.reason||'')));
     document.getElementById('costeBody').innerHTML = '<div class="kstats">' + cifras + '</div>'
       + (filas ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
         + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
         + '</tr></thead><tbody>' + filas + '</tbody></table></div>' : '');
   }
-  const q = s && s.cuota, cal = ventanasCalibradas(q);
+  const q = s && s.quota, cal = ventanasCalibradas(q);
   qc.style.display = cal ? '' : 'none';
   if(cal){
     document.getElementById('cuotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
@@ -2096,13 +2124,13 @@ function renderCoste(s){
       + VENTANAS.map(([t, nombre]) => '<div>' + medidorCuota(q[t], nombre) + '</div>').join('') + '</div>';
   }
   // Sin imágenes en el rango la tarjeta no se pinta, como «Quién delegó» sin clientes.
-  const im = s && s.imagenes, hayImg = !!(im && im.n);
+  const im = s && s.images, hayImg = !!(im && im.n);
   ic.style.display = hayImg ? '' : 'none';
   if(hayImg){
     document.getElementById('imagenesBody').innerHTML = '<div class="kstats">'
       + kstat('Imágenes', F.format(im.n), 'delegaciones sin fallo')
       + kstat('Bytes leídos', F.format(im.bytes||0) + '<span class="unit">B</span>', 'leídos server-side')
-      + kstat('Devuelto a Claude', F.format(im.chars_devueltos||0) + '<span class="unit">car.</span>', 'texto de la descripción')
+      + kstat('Devuelto a Claude', F.format(im.chars_returned||0) + '<span class="unit">car.</span>', 'texto de la descripción')
       + '</div>';
   }
   // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
@@ -2147,7 +2175,7 @@ function renderHooks(h){
   // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
   // "sin registrar" son los eventos anteriores a que el hook escribiera el motivo; se muestran
   // aparte en vez de repartirlos, porque de esos no se sabe la razón.
-  const motivos = (h.by_motivo||[]);
+  const motivos = (h.by_reason||[]);
   const totalRead = h.read_total || 0;
   const punteria = !motivos.length ? '' :
     '<div style="overflow-x:auto;margin-top:4px"><table>'
@@ -2155,7 +2183,7 @@ function renderHooks(h){
     + '<th>Reparto</th></tr></thead><tbody>'
     + motivos.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
-        return '<tr><td class="mono" title="' + escHooks(m.motivo) + '">' + escHooks(labelFor('hookReason', m.motivo)) + '</td>'
+        return '<tr><td class="mono" title="' + escHooks(m.reason) + '">' + escHooks(labelFor('hookReason', m.reason)) + '</td>'
           + '<td class="num">' + F.format(m.total) + '</td>'
           + '<td class="num" style="color:var(--amber)">' + F1.format(p) + ' %</td></tr>';
       }).join('')
@@ -2189,8 +2217,8 @@ function roleLabels(model){
 }
 
 // Causas en las que ALGUIEN CONTESTA (REQ-014): el badge dice su etiqueta en ámbar, sin «caído».
-// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por fallos.py.
-const CAUSAS_CONTESTA = {credencial:1, http_error:1, respuesta_invalida:1, sin_respuesta:1};
+// Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
+const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
 // Estados de /running y motivos de espera local, en palabras (REQ-022).
 const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
 const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
@@ -2225,13 +2253,13 @@ function estadoVisible(prev, bj){
 function badgeBackend(vista, baseUrl){
   const v = vista || vistaInicial(), u = v.ultimo || {};
   if(v.estado==='conectado'){
-    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detalle||u.etiqueta||'sin respuesta') : '';
+    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
     return {texto:'conectado', clase:'up', title:(baseUrl||'')+aviso};
   }
-  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detalle||''};
-  const et = u.etiqueta || u.causa || 'sin respuesta';
-  if(CAUSAS_CONTESTA[u.causa]) return {texto:et, clase:'warn', title:u.detalle||''};
-  return {texto:'caído · '+et, clase:'down', title:u.detalle||''};
+  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detail||''};
+  const et = u.label || u.cause || 'sin respuesta';
+  if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {texto:et, clase:'warn', title:u.detail||''};
+  return {texto:'caído · '+et, clase:'down', title:u.detail||''};
 }
 
 // Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
@@ -2264,7 +2292,7 @@ function estadoModelo(o){
   const fila = (texto, title) => ({texto, title:title||'', atenuada:!disponible});
   if(!disponible && enVuelo) return fila('esperando al backend');
   if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
-    +(((vista.ultimo||{}).etiqueta) || 'comprobando…'));
+    +(((vista.ultimo||{}).label) || 'comprobando…'));
   if(enVuelo && esperaLocal){
     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
@@ -2349,7 +2377,7 @@ function renderBackend(){
 // con un 404; con cualquier otra causa, su etiqueta corta.
 function textoStats(j){
   if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
-  if(j && j.etiqueta) return 'sin datos: '+j.etiqueta;
+  if(j && j.label) return 'sin datos: '+j.label;
   return 'sin datos';
 }
 
@@ -2358,7 +2386,7 @@ function renderBackendStats(j){
   const el = document.getElementById('backendStats'); if(!el) return;
   const head = document.getElementById('bstatsHead');
   if(!j || !j.available || !j.stats){
-    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detalle)||'')+'">'
+    el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detail)||'')+'">'
       + escHooks(textoStats(j))+'</div>';
     if(head) head.textContent=''; return;
   }
@@ -2588,12 +2616,12 @@ function kpiCard(o){
 // Conversión a tokens de CLAUDE de lo ahorrado y lo devuelto. Espejo de `tokens_claude` en
 // server.py y única conversión del panel: `acct` no divide por CPT para saved/returned/net.
 // Aquí no se resuelve nada (coste-api-y-cuota, REQ-033): /api/events entrega cada fila ya
-// fundida por Python, con `densidad[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
+// fundida por Python, con `density[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
 // cantidad×100/c100 redondeado hacia abajo, como la división entera de Python.
 function tokensClaude(cantidad,tipo,e){
   if(tipo!=='text'&&tipo!=='returned'&&tipo!=='output'&&tipo!=='image') throw new Error('tipo de conversión desconocido: '+tipo);
   if(tipo==='image') return 0;
-  const celda = e && e.densidad ? e.densidad[tipo] : null;
+  const celda = e && e.density ? e.density[tipo] : null;
   if(!celda) return 0;
   return Math.floor(cantidad*100/celda[0]);
 }
@@ -2636,7 +2664,7 @@ function acct(e){
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
   // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
   const fallback = !!e.model_requested && e.routing !== 'affinity';
-  const cause = e.error_class || e.fallback_class || null;
+  const cause = legacyValue('failureClass', e.error_class || e.fallback_class || null);
   const copia = v => (v===undefined ? null : v);
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
     net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,

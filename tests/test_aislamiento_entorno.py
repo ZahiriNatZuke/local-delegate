@@ -36,7 +36,16 @@ def test_la_suite_corre_sin_variables_del_paquete_definidas():
     )
 
 
-def _variables_que_leen_los_hooks() -> dict[str, set[str]]:
+def _nombre_de_llamada(nodo: ast.Call) -> str | None:
+    func = nodo.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _variables_que_leen_los_hooks(con_alias: bool = True) -> dict[str, set[str]]:
     """Escanea `resources/hooks/*.py` y devuelve, por fichero, las variables que consulta.
 
     Que lo cuente el programa y no una lista a mano: contar sitios a ojo ya salió mal una vez en
@@ -66,6 +75,11 @@ def _variables_que_leen_los_hooks() -> dict[str, set[str]]:
                     primero = nodo.args[0]
                     if isinstance(primero, ast.Constant) and isinstance(primero.value, str):
                         nombres.add(primero.value)
+            # env_alias("NUEVA", "VIEJA") de hook_common: las dos se leen (REQ-002)
+            if con_alias and isinstance(nodo, ast.Call) and _nombre_de_llamada(nodo) == "env_alias":
+                for arg in nodo.args[:2]:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        nombres.add(arg.value)
             # os.environ["X"]
             if (
                 isinstance(nodo, ast.Subscript)
@@ -142,3 +156,33 @@ def test_config_solo_lee_el_entorno_por_la_puerta_registrada():
         f"Estas lecturas se saltan `_leer` y no entran en el inventario: {culpables}. "
         "Usa `_leer`/`_env`/`_env_int`/`_env_flag`/`_env_float` en vez de `os.environ` directo."
     )
+
+
+def test_los_hooks_leen_los_nombres_renombrados_solo_por_env_alias():
+    """REQ-002: una variable renombrada se lee por `hook_common.env_alias`, nunca directa.
+
+    Una lectura directa (`os.environ["LD_HOOK_READ_BLOQUEAR"]`) se saltaría el alias: el nombre
+    nuevo no ganaría y el viejo no quedaría anotado para el aviso.
+    """
+    from local_delegate import deprecations
+
+    # Solo variables: el interruptor viejo (`switch_file`) es un fichero, no se lee del entorno.
+    renombradas = {
+        n
+        for kind, old, new in deprecations.hook_names()
+        if kind == "env_var"
+        for n in (old, new)
+        if n
+    }
+    # Control positivo: el registro trae las dos variables de hooks y el escáner de alias las ve.
+    assert {"LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK"} <= renombradas
+    por_alias = set().union(*_variables_que_leen_los_hooks().values())
+    assert renombradas <= por_alias, sorted(renombradas - por_alias)
+
+    directas = {
+        f"{archivo}:{nombre}"
+        for archivo, nombres in _variables_que_leen_los_hooks(con_alias=False).items()
+        for nombre in nombres
+        if nombre in renombradas
+    }
+    assert directas == set(), f"lectura directa de un nombre renombrado: {sorted(directas)}"

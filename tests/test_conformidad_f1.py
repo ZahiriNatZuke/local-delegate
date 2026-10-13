@@ -51,14 +51,14 @@ def entorno(tmp_path, monkeypatch):
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "1")
-    monkeypatch.setenv("LD_HOOK_READ_INTERRUPTOR", str(tmp_path / "bloqueo-apagado"))
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
+    monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "bloqueo-apagado"))
     monkeypatch.setenv("LOCAL_DELEGATE_LOG_DIR", str(tmp_path / "logs"))
     for variable in ("LOCAL_DELEGATE_MODEL_LONG", "LOCAL_DELEGATE_MODEL_MECHANICAL"):
         monkeypatch.delenv(variable, raising=False)
     monkeypatch.delenv("LOCAL_DELEGATE_LONG_INPUT_CHARS", raising=False)
-    monkeypatch.setattr(read_hook, "backend_disponible", lambda **k: True)
-    monkeypatch.setattr(shell_hook, "backend_disponible", lambda **k: True)
+    monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
+    monkeypatch.setattr(shell_hook, "backend_available", lambda **k: True)
     return tmp_path
 
 
@@ -114,10 +114,10 @@ def test_una_lectura_por_otro_mcp_se_cuenta_y_no_se_bloquea(entorno, monkeypatch
     )
     assert salida == "", "ni bloqueo ni sugerencia"
     (evento,) = _eventos(entorno)
-    assert evento["camino"] == "mcp"
+    assert evento["route"] == "mcp"
     assert evento["category"] == "read", "tiene que entrar en el denominador de medir_adopcion"
-    assert evento["motivo"] == "mcp_ajeno"
-    assert evento["path_sha"] == common.huella_de_ruta(str(destino))
+    assert evento["reason"] == "foreign_mcp"
+    assert evento["path_sha"] == common.path_digest(str(destino))
     assert str(destino) not in json.dumps(evento), "la telemetria nunca guarda rutas"
 
 
@@ -146,7 +146,7 @@ def test_una_lectura_multiple_por_otro_mcp_tambien_se_cuenta(entorno, monkeypatc
     )
     assert salida == ""
     (evento,) = _eventos(entorno)
-    assert evento["camino"] == "mcp"
+    assert evento["route"] == "mcp"
 
 
 def test_el_instalador_registra_el_hook_para_las_lecturas_de_otros_mcp():
@@ -177,7 +177,7 @@ def test_con_el_modelo_largo_enfriado_la_prosa_no_se_bloquea(entorno, monkeypatc
     _enfriar(entorno, "gemma4-26b-a4b", 100)
     salida = _correr(read_hook, monkeypatch, capsys, {"tool_input": {"file_path": str(destino)}})
     assert "deny" not in salida
-    assert any(e.get("motivo") == "modelo_enfriado" for e in _eventos(entorno))
+    assert any(e.get("reason") == "model_cooled" for e in _eventos(entorno))
 
 
 def test_un_enfriamiento_vencido_no_quita_el_bloqueo(entorno, monkeypatch, capsys):
@@ -218,7 +218,7 @@ def test_el_volcado_por_shell_tambien_respeta_el_enfriamiento(entorno, monkeypat
     )
     _enfriar(entorno, "gemma4-26b-a4b", 100)
     assert "deny" not in _correr(shell_hook, monkeypatch, capsys, payload)
-    assert _eventos(entorno)[-1]["motivo"] == "modelo_enfriado"
+    assert _eventos(entorno)[-1]["reason"] == "model_cooled"
 
 
 def test_los_defectos_del_hook_son_los_de_config():
@@ -227,14 +227,14 @@ def test_los_defectos_del_hook_son_los_de_config():
     for rol, variable in (("long", "LONG"), ("mechanical", "MECHANICAL")):
         defecto = re.search(rf'"LOCAL_DELEGATE_MODEL_{variable}",\s*"([^"]+)"', fuente)
         assert defecto, variable
-        assert common.MODELOS_POR_DEFECTO[rol] == defecto.group(1)
+        assert common.DEFAULT_MODELS[rol] == defecto.group(1)
     umbral = re.search(r'"LOCAL_DELEGATE_LONG_INPUT_CHARS",\s*(\d+)', fuente)
-    assert umbral and common.UMBRAL_LARGO_CHARS == int(umbral.group(1))
+    assert umbral and common.LONG_THRESHOLD_CHARS == int(umbral.group(1))
 
 
 def test_el_directorio_de_logs_del_hook_es_el_de_config(monkeypatch):
     monkeypatch.delenv("LOCAL_DELEGATE_LOG_DIR", raising=False)
-    assert common.directorio_de_logs() == config._default_log_dir()
+    assert common.log_dir() == config._default_log_dir()
 
 
 # --- REQ-F1-11: apagado en caliente por fichero, y el estado en cada evento -----------------------
@@ -256,15 +256,15 @@ def test_cada_evento_anota_el_estado_del_bloqueo(entorno, monkeypatch, capsys):
     _correr(read_hook, monkeypatch, capsys, franja)
     (entorno / "bloqueo-apagado").write_text("", encoding="utf-8")
     _correr(read_hook, monkeypatch, capsys, franja)
-    monkeypatch.setenv("LD_HOOK_READ_BLOQUEAR", "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
     (entorno / "bloqueo-apagado").unlink()
     _correr(read_hook, monkeypatch, capsys, franja)
     _correr(shell_hook, monkeypatch, capsys, {"tool_input": {"command": "git status"}})
-    assert [e["bloqueo"] for e in _eventos(entorno)] == [
-        "encendido",
-        "apagado_fichero",
-        "apagado_variable",
-        "apagado_variable",
+    assert [e["block"] for e in _eventos(entorno)] == [
+        "on",
+        "off_file",
+        "off_variable",
+        "off_variable",
     ]
 
 
@@ -290,8 +290,8 @@ def test_el_apagado_no_necesita_relanzar_nada(tmp_path):
         interruptor = tmp_path / "bloqueo-apagado"
         env = {
             **os.environ,
-            "LD_HOOK_READ_BLOQUEAR": "1",
-            "LD_HOOK_READ_INTERRUPTOR": str(interruptor),
+            "LD_HOOK_READ_BLOCK": "1",
+            "LD_HOOK_READ_SWITCH_FILE": str(interruptor),
             "LD_HOOK_ENABLED": "1",
             "LOCAL_DELEGATE_BASE_URL": f"http://127.0.0.1:{servidor.server_address[1]}/v1",
             "LOCAL_DELEGATE_LOG_DIR": str(tmp_path / "logs"),
