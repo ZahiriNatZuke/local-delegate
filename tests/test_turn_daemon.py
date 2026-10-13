@@ -555,8 +555,8 @@ def test_new_topology_on_next_grant(with_topology, monkeypatch):
     try:
         x.start()
         assert x_inside.wait(2), "X no llegó al backend"
-        topo = server._topology()
-        assert topo.clashes(LONG, CODE)  # guarda: con la de hoy, Qwen3.6 tendría que esperar
+        topology = server._topology()
+        assert topology.clashes(LONG, CODE)  # guarda: con la de hoy, Qwen3.6 tendría que esperar
         # Con X en curso, la config pasa a una en la que el 26B y Qwen3.6 no chocan.
         with_topology.write_text(SEPARATE, encoding="utf-8")
         y.start()

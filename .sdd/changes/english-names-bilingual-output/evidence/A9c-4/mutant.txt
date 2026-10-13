@@ -1,0 +1,9 @@
+== Mutante: Windows.find excluye el segundo final (test_windows.py:149, '<=' -> '<')
+sha256 antes 73a816a00c15e20d / con mutante 9445e896bf63d286
+>       assert (wave11.find(ts) is not None) is inside, ts
+E       AssertionError: 2026-10-08T01:22:31+00:00
+E       assert (None is not None) is True
+E        +  where None = find('2026-10-08T01:22:31+00:00')
+E        +    where find = Windows(windows=[Window(id='w-20261008T012005Z', start=datetime.datetime(2026, 10, 8, 1, 20, 5, 255000, tzinfo=datetim...fo=datetime.timezone.utc), label='ola 11', created_at='2026-10-13T21:56:07.008Z')], ignored=0, error=None, exists=True).find
+1 failed, 4 passed, 23 deselected in 0.22s
+sha256 restaurado 73a816a00c15e20d
