@@ -1,0 +1,6 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+M | lf | lf | tests/test_checks.py
+M | lf | lf | tests/test_chunking.py
+R052 | lf | lf | tests/test_causa_conexion.py -> tests/test_connection_cause.py
+M | lf | lf | tests/test_wiki.py
+diferencias de EOL: 0

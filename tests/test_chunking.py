@@ -51,10 +51,10 @@ def test_chunk_text_cuts_on_markdown_headers_first():
 
 
 def test_chunk_text_falls_back_to_paragraphs_then_lines():
-    parrafos = "uno " * 30 + "\n\n" + "dos " * 30 + "\n\n"
-    assert len(server._chunk_text(parrafos, 130)) > 1
-    lineas = "".join(f"linea {i} con texto\n" for i in range(40))
-    chunks = server._chunk_text(lineas, 100)
+    paragraphs = "uno " * 30 + "\n\n" + "dos " * 30 + "\n\n"
+    assert len(server._chunk_text(paragraphs, 130)) > 1
+    lines = "".join(f"linea {i} con texto\n" for i in range(40))
+    chunks = server._chunk_text(lines, 100)
     assert all(c.endswith("\n") for c in chunks)
 
 
@@ -206,7 +206,7 @@ def test_backend_host_drops_scheme_and_path():
         ("http://127.0.0.1:9292/v1", ""),
     ],
 )
-def test_remote_panel_url_lleva_al_panel_de_la_maquina_del_backend(monkeypatch, url, expected):
+def test_remote_panel_url_leads_to_the_backend_machine_panel(monkeypatch, url, expected):
     """El enlace de la tarjeta Sistema: mismo esquema y host, puerto web del daemon, no el 9292."""
     monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", "auto")
     monkeypatch.setattr(config, "WEB_PORT", 9393)
@@ -214,7 +214,7 @@ def test_remote_panel_url_lleva_al_panel_de_la_maquina_del_backend(monkeypatch, 
 
 
 @pytest.mark.parametrize("override", ["local", "remote"])
-def test_backend_origin_override_gana_a_la_heuristica(monkeypatch, override):
+def test_backend_origin_override_beats_the_heuristic(monkeypatch, override):
     """El caso del túnel: `ssh -L 9292:...` enseña un backend remoto en 127.0.0.1."""
     monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", override)
     assert config.backend_origin("http://127.0.0.1:9292/v1") == override
@@ -222,7 +222,7 @@ def test_backend_origin_override_gana_a_la_heuristica(monkeypatch, override):
 
 
 @pytest.mark.parametrize("value", ["auto", "", "AUTO", "sí", "1"])
-def test_backend_origin_cae_a_la_heuristica_si_el_override_no_sirve(monkeypatch, value):
+def test_backend_origin_falls_back_to_the_heuristic_if_the_override_is_unusable(monkeypatch, value):
     """Una errata en la variable no debe romper el arranque ni mentir: se deduce por host."""
     monkeypatch.setattr(config, "BACKEND_ORIGIN_OVERRIDE", value)
     assert config.backend_origin("http://127.0.0.1:9292/v1") == "local"
@@ -337,70 +337,70 @@ def test_inflight_prunes_entries_of_dead_processes(tmp_path, monkeypatch):
 # Un diff no tiene headers Markdown, así que sin un splitter propio caía a párrafos: medido
 # sobre un diff real de 44 archivos, 1 de 11 trozos empezaba en frontera de archivo y los otros
 # arrancaban a mitad de hunk, con líneas `+` cuya cabecera quedó en el trozo anterior.
-def _diff(archivos: int = 6, lineas: int = 40) -> str:
+def _diff(files: int = 6, lines: int = 40) -> str:
     return "".join(
         f"diff --git a/src/mod{i}.py b/src/mod{i}.py\n"
         f"index 1111111..2222222 100644\n"
         f"--- a/src/mod{i}.py\n"
         f"+++ b/src/mod{i}.py\n"
-        f"@@ -1,{lineas} +1,{lineas} @@\n"
-        + "".join(f"+linea {j} del modulo {i} con relleno suficiente\n" for j in range(lineas))
-        for i in range(archivos)
+        f"@@ -1,{lines} +1,{lines} @@\n"
+        + "".join(f"+linea {j} del modulo {i} con relleno suficiente\n" for j in range(lines))
+        for i in range(files)
     )
 
 
-def test_diff_se_parte_solo_en_fronteras_de_archivo():
-    texto = _diff(archivos=6, lineas=10)
+def test_diff_is_split_only_at_file_boundaries():
+    text = _diff(files=6, lines=10)
     # Cada archivo cabe holgadamente en el presupuesto: si aquí se partiera dentro de uno sería
     # por el splitter, no porque no quedara más remedio.
-    assert len(texto) // 6 < 900
-    trozos = server._chunk_text(texto, 900)
-    assert len(trozos) > 1, "el diff de prueba tiene que dar más de un trozo"
-    assert all(t.lstrip().startswith("diff --git ") for t in trozos)
+    assert len(text) // 6 < 900
+    chunks = server._chunk_text(text, 900)
+    assert len(chunks) > 1, "el diff de prueba tiene que dar más de un trozo"
+    assert all(t.lstrip().startswith("diff --git ") for t in chunks)
 
 
-def test_el_partido_de_un_diff_no_pierde_ni_inventa_nada():
-    texto = _diff(archivos=6, lineas=10)
-    assert "".join(server._chunk_text(texto, 900)) == texto
+def test_splitting_a_diff_neither_loses_nor_invents_anything():
+    text = _diff(files=6, lines=10)
+    assert "".join(server._chunk_text(text, 900)) == text
 
 
-def test_un_archivo_mas_grande_que_el_presupuesto_se_subdivide_sin_perder_contenido():
+def test_a_file_larger_than_the_budget_is_subdivided_without_losing_content():
     """REQ-002 admite partir dentro de un archivo solo cuando él solo excede el presupuesto."""
-    texto = _diff(archivos=1, lineas=200)
-    trozos = server._chunk_text(texto, 900)
-    assert len(trozos) > 1
-    assert "".join(trozos) == texto
+    text = _diff(files=1, lines=200)
+    chunks = server._chunk_text(text, 900)
+    assert len(chunks) > 1
+    assert "".join(chunks) == text
 
 
-def test_un_markdown_con_un_diff_embebido_se_sigue_partiendo_por_headers():
+def test_a_markdown_with_an_embedded_diff_is_still_split_by_headers():
     """El splitter de diff se autoinhibe: no puede degradar translate/summarize sobre docs."""
 
-    def seccion(i: int) -> str:
+    def section(i: int) -> str:
         return f"## Seccion {i}\n\n" + ("palabra " * 60) + "\n\n"
 
-    texto = (
-        seccion(1)
-        + seccion(2)
+    text = (
+        section(1)
+        + section(2)
         + "## Con diff\n\n```\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n+una linea\n```\n\n"
-        + seccion(3)
+        + section(3)
     )
-    trozos = server._chunk_text(texto, 600)
-    assert len(trozos) > 1
-    assert all(t.lstrip().startswith("##") for t in trozos)
+    chunks = server._chunk_text(text, 600)
+    assert len(chunks) > 1
+    assert all(t.lstrip().startswith("##") for t in chunks)
 
 
-def test_en_un_diff_git_no_se_corta_por_las_cabeceras_de_archivo():
+def test_a_git_diff_is_not_cut_at_the_file_headers():
     """Cada archivo trae también su `--- a/x`: cortar por ahí lo partiría en dos."""
-    piezas = server._split_by_diff_files(_diff(archivos=3, lineas=2))
-    assert len(piezas) == 3
-    assert all(p.startswith("diff --git ") for p in piezas)
+    pieces = server._split_by_diff_files(_diff(files=3, lines=2))
+    assert len(pieces) == 3
+    assert all(p.startswith("diff --git ") for p in pieces)
 
 
-def test_un_diff_sin_git_se_parte_por_la_cabecera_clasica():
-    texto = (
+def test_a_non_git_diff_is_split_at_the_classic_header():
+    text = (
         "--- viejo/a.txt\n+++ nuevo/a.txt\n@@ -1 +1 @@\n-uno\n+dos\n"
         "--- viejo/b.txt\n+++ nuevo/b.txt\n@@ -1 +1 @@\n-tres\n+cuatro\n"
     )
-    piezas = server._split_by_diff_files(texto)
-    assert len(piezas) == 2
-    assert "".join(piezas) == texto
+    pieces = server._split_by_diff_files(text)
+    assert len(pieces) == 2
+    assert "".join(pieces) == text

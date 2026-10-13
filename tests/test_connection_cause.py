@@ -2,7 +2,7 @@
 
 Las excepciones se construyen **como las crea el socket**, con errno y mensaje, y encadenadas con
 `raise … from …` para que `__cause__` sea real: un `OSError(10051)` con un solo argumento deja
-`errno` en `None` y probaría otra regla (lo vigila `test_un_oserror_sin_errno_no_es_sin_ruta`).
+`errno` en `None` y probaría otra regla (lo vigila `test_an_oserror_without_errno_is_not_no_route`).
 Los fallos de red real van sin dobles ni `skip`: son los que dicen si la tabla acierta con lo que
 de verdad devuelve `httpx2` en cada sistema del CI.
 """
@@ -28,97 +28,95 @@ from local_delegate.failures import (
 )
 
 HOST = "pc.tailnet.ts.net:9292"
-_PETICION = httpx2.Request("GET", "http://pc.tailnet.ts.net:9292/v1/models")
+_REQUEST = httpx2.Request("GET", "http://pc.tailnet.ts.net:9292/v1/models")
 
 
-def _envuelta(clase: type[BaseException], raiz: BaseException) -> BaseException:
-    """`clase` lanzada con `raise … from raiz`, como hace `httpcore2` al traducir el `OSError`."""
+def _wrapped(cls: type[BaseException], root: BaseException) -> BaseException:
+    """`cls` lanzada con `raise … from root`, como hace `httpcore2` al traducir el `OSError`."""
     try:
         try:
-            raise raiz
+            raise root
         except BaseException as original:
-            raise clase("fallo de prueba") from original
-    except BaseException as envoltura:
-        return envoltura
+            raise cls("fallo de prueba") from original
+    except cls as wrapper:
+        return wrapper
 
 
-def _http_status(codigo: int) -> httpx2.HTTPStatusError:
-    respuesta = httpx2.Response(codigo, request=_PETICION)
-    return httpx2.HTTPStatusError(f"HTTP {codigo}", request=_PETICION, response=respuesta)
+def _http_status(code: int) -> httpx2.HTTPStatusError:
+    response = httpx2.Response(code, request=_REQUEST)
+    return httpx2.HTTPStatusError(f"HTTP {code}", request=_REQUEST, response=response)
 
 
-class _Propia(Exception):
+class _OwnError(Exception):
     """Una excepción de quien llama que envuelve a otra."""
 
 
 # (id, fábrica del suceso, loopback, causa esperada). Fábricas, no instancias: cada caso construye
 # su cadena de cero y ningún test comparte un `__context__` con otro.
-_CASOS = [
+_CASES = [
     (
         "gaierror-es-dns",
-        lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
+        lambda: _wrapped(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
         False,
         ConnectionCause.DNS,
     ),
     (
         "gaierror-en-loopback-sigue-siendo-dns",
-        lambda: _envuelta(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
+        lambda: _wrapped(httpx2.ConnectError, socket.gaierror(11001, "getaddrinfo failed")),
         True,
         ConnectionCause.DNS,
     ),
     (
         "econnrefused-es-rechazada",
-        lambda: _envuelta(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused")),
+        lambda: _wrapped(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused")),
         False,
         ConnectionCause.REFUSED,
     ),
     (
         "enetunreach-es-sin-ruta",
-        lambda: _envuelta(
-            httpx2.ConnectError, OSError(errno.ENETUNREACH, "Network is unreachable")
-        ),
+        lambda: _wrapped(httpx2.ConnectError, OSError(errno.ENETUNREACH, "Network is unreachable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
         "ehostunreach-es-sin-ruta",
-        lambda: _envuelta(httpx2.ConnectError, OSError(errno.EHOSTUNREACH, "No route to host")),
+        lambda: _wrapped(httpx2.ConnectError, OSError(errno.EHOSTUNREACH, "No route to host")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
         "winsock-10051-es-sin-ruta",
-        lambda: _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable")),
+        lambda: _wrapped(httpx2.ConnectError, OSError(10051, "red inalcanzable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
         "winsock-10065-es-sin-ruta",
-        lambda: _envuelta(httpx2.ConnectError, OSError(10065, "host inalcanzable")),
+        lambda: _wrapped(httpx2.ConnectError, OSError(10065, "host inalcanzable")),
         False,
         ConnectionCause.NO_ROUTE,
     ),
     (
         "connect-timeout-en-loopback-es-rechazada",
-        lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
+        lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError()),
         True,
         ConnectionCause.REFUSED,
     ),
     (
         "connect-timeout-remoto-es-timeout-conexion",
-        lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError()),
+        lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError()),
         False,
         ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
         "caso-de-la-mac-etimedout-remoto",
-        lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
+        lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         False,
         ConnectionCause.CONNECT_TIMEOUT,
     ),
     (
         "caso-de-la-mac-etimedout-en-loopback",
-        lambda: _envuelta(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
+        lambda: _wrapped(httpx2.ConnectTimeout, TimeoutError(errno.ETIMEDOUT, "timed out")),
         True,
         ConnectionCause.REFUSED,
     ),
@@ -157,7 +155,7 @@ _CASOS = [
         # Las reglas 7 a 12 miran solo la excepción de arriba: una propia que envuelve un
         # `ConnectTimeout` cae en la 12, de forma determinista.
         "propia-que-envuelve-connect-timeout",
-        lambda: _envuelta(_Propia, httpx2.ConnectTimeout("plazo")),
+        lambda: _wrapped(_OwnError, httpx2.ConnectTimeout("plazo")),
         True,
         ConnectionCause.UNKNOWN,
     ),
@@ -165,60 +163,60 @@ _CASOS = [
 
 
 @pytest.mark.parametrize(
-    ("fabrica", "loopback", "esperada"),
-    [pytest.param(f, lb, esp, id=nombre) for nombre, f, lb, esp in _CASOS],
+    ("factory", "loopback", "expected"),
+    [pytest.param(f, lb, expected, id=name) for name, f, lb, expected in _CASES],
 )
-def test_cada_suceso_tiene_su_causa(fabrica, loopback, esperada):
-    causa = connection_cause(fabrica(), loopback=loopback)
-    assert causa is esperada
+def test_each_event_has_its_cause(factory, loopback, expected):
+    cause = connection_cause(factory(), loopback=loopback)
+    assert cause is expected
 
 
-def test_el_montaje_de_los_casos_es_el_del_socket():
+def test_the_case_setup_matches_the_socket():
     """Guarda del montaje: `ECONNREFUSED` nace como `ConnectionRefusedError` y la cadena es real."""
-    rechazada = _envuelta(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused"))
-    assert type(rechazada.__cause__) is ConnectionRefusedError
-    assert isinstance(rechazada, httpx2.ConnectError)
+    rejected = _wrapped(httpx2.ConnectError, OSError(errno.ECONNREFUSED, "refused"))
+    assert type(rejected.__cause__) is ConnectionRefusedError
+    assert isinstance(rejected, httpx2.ConnectError)
 
 
-def test_un_oserror_sin_errno_no_es_sin_ruta():
+def test_an_oserror_without_errno_is_not_no_route():
     """Con UN argumento `errno` queda en `None`: el caso 10051 tiene que llevar dos."""
     assert OSError(10051).errno is None
     assert OSError(10051, "red inalcanzable").errno == 10051
-    un_argumento = _envuelta(httpx2.ConnectError, OSError(10051))
-    dos_argumentos = _envuelta(httpx2.ConnectError, OSError(10051, "red inalcanzable"))
-    assert connection_cause(un_argumento, loopback=False) is ConnectionCause.TRANSPORT
-    assert connection_cause(dos_argumentos, loopback=False) is ConnectionCause.NO_ROUTE
+    one_argument = _wrapped(httpx2.ConnectError, OSError(10051))
+    two_arguments = _wrapped(httpx2.ConnectError, OSError(10051, "red inalcanzable"))
+    assert connection_cause(one_argument, loopback=False) is ConnectionCause.TRANSPORT
+    assert connection_cause(two_arguments, loopback=False) is ConnectionCause.NO_ROUTE
 
 
-@pytest.mark.parametrize("codigo", [200, 204, 299])
-def test_un_2xx_no_se_clasifica(codigo):
+@pytest.mark.parametrize("code", [200, 204, 299])
+def test_a_2xx_is_not_classified(code):
     with pytest.raises(ValueError):
-        connection_cause(codigo, loopback=False)
+        connection_cause(code, loopback=False)
 
 
-def _clasifica_en_un_hilo(suceso: BaseException) -> list:
+def _classify_in_a_thread(event: BaseException) -> list:
     """Clasifica en un hilo aparte: si la cadena con ciclo no terminara, el test falla en el
     assert en vez de colgar la suite."""
-    resultado: list = []
-    hilo = threading.Thread(
-        target=lambda: resultado.append(connection_cause(suceso, loopback=False)), daemon=True
+    result: list = []
+    thread = threading.Thread(
+        target=lambda: result.append(connection_cause(event, loopback=False)), daemon=True
     )
-    hilo.start()
-    hilo.join(timeout=5)
-    assert not hilo.is_alive(), "la cadena con ciclo no terminó"
-    return resultado
+    thread.start()
+    thread.join(timeout=5)
+    assert not thread.is_alive(), "la cadena con ciclo no terminó"
+    return result
 
 
-def test_una_cadena_con_ciclo_termina():
-    propia = httpx2.ConnectError("se apunta a sí misma")
-    propia.__context__ = propia
-    assert _clasifica_en_un_hilo(propia) == [ConnectionCause.TRANSPORT]
+def test_a_chain_with_a_cycle_terminates():
+    own = httpx2.ConnectError("se apunta a sí misma")
+    own.__context__ = own
+    assert _classify_in_a_thread(own) == [ConnectionCause.TRANSPORT]
 
     a = httpx2.ConnectError("a")
     b = OSError(errno.ENETUNREACH, "b")
     a.__cause__ = b
     b.__context__ = a
-    assert _clasifica_en_un_hilo(a) == [ConnectionCause.NO_ROUTE]
+    assert _classify_in_a_thread(a) == [ConnectionCause.NO_ROUTE]
 
 
 # --- Fallos de red real ---------------------------------------------------------------------
@@ -229,102 +227,104 @@ def _loopback(url: str) -> bool:
     return config._is_loopback_host(config._split_host_port(url)[0])
 
 
-def _fallo_real(url: str, *, conexion: float) -> BaseException:
+def _real_failure(url: str, *, connection: float) -> BaseException:
     # `trust_env=False`: un proxy del entorno cambiaría el fallo que se quiere ver.
-    plazo = httpx2.Timeout(5.0, connect=conexion)
-    with httpx2.Client(timeout=plazo, trust_env=False) as cliente:
+    timeout = httpx2.Timeout(5.0, connect=connection)
+    with httpx2.Client(timeout=timeout, trust_env=False) as client:
         try:
-            respuesta = cliente.get(url)
+            response = client.get(url)
         except Exception as exc:
             return exc
-    pytest.fail(f"{url} respondió {respuesta.status_code}: se esperaba un fallo de conexión")
+    raise AssertionError(
+        f"{url} respondió {response.status_code}: se esperaba un fallo de conexión"
+    )
 
 
-def _puerto_recien_liberado() -> int:
+def _just_freed_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
-def test_red_real_un_nombre_que_no_resuelve_es_dns():
+def test_real_network_a_name_that_does_not_resolve_is_dns():
     url = "http://no-existe.invalid:9292/v1/models"
-    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
-    assert causa is ConnectionCause.DNS
+    cause = connection_cause(_real_failure(url, connection=3.0), loopback=_loopback(url))
+    assert cause is ConnectionCause.DNS
 
 
-def test_red_real_un_puerto_cerrado_en_loopback_es_rechazada():
-    url = f"http://127.0.0.1:{_puerto_recien_liberado()}/v1/models"
+def test_real_network_a_closed_loopback_port_is_refused():
+    url = f"http://127.0.0.1:{_just_freed_port()}/v1/models"
     assert _loopback(url)
-    causa = connection_cause(_fallo_real(url, conexion=3.0), loopback=_loopback(url))
-    assert causa is ConnectionCause.REFUSED
+    cause = connection_cause(_real_failure(url, connection=3.0), loopback=_loopback(url))
+    assert cause is ConnectionCause.REFUSED
 
 
-def test_red_real_una_ip_que_no_contesta_no_es_dns_ni_rechazada():
+def test_real_network_an_ip_that_does_not_answer_is_neither_dns_nor_refused():
     url = "http://192.0.2.1:9292/v1/models"
     assert not _loopback(url)
-    causa = connection_cause(_fallo_real(url, conexion=0.5), loopback=_loopback(url))
-    assert causa in {ConnectionCause.CONNECT_TIMEOUT, ConnectionCause.NO_ROUTE}
+    cause = connection_cause(_real_failure(url, connection=0.5), loopback=_loopback(url))
+    assert cause in {ConnectionCause.CONNECT_TIMEOUT, ConnectionCause.NO_ROUTE}
 
 
 # --- Textos ---------------------------------------------------------------------------------
 
 
-def _sin_el_arranque_remoto(texto: str) -> str:
+def _without_remote_start(text: str) -> str:
     """Quita «arranca llama-swap en <host>», que sí es válido en remoto: lo prohibido es a secas."""
-    return texto.replace(f"arranca llama-swap en {HOST}", "")
+    return text.replace(f"arranca llama-swap en {HOST}", "")
 
 
-def test_pista_remota_nunca_manda_a_arrancar_llama_swap_a_secas():
-    for causa in [*ConnectionCause, None]:
-        for fuente in ("daemon", "direct"):
-            texto = hint(causa, origin="remote", source=fuente, host=HOST)
-            assert "arranca llama-swap" not in _sin_el_arranque_remoto(texto), (causa, texto)
+def test_remote_hint_never_just_says_to_start_llama_swap():
+    for cause in [*ConnectionCause, None]:
+        for source in ("daemon", "direct"):
+            text = hint(cause, origin="remote", source=source, host=HOST)
+            assert "arranca llama-swap" not in _without_remote_start(text), (cause, text)
 
 
-def test_pista_local_de_rechazada_manda_a_arrancar_llama_swap():
-    texto = hint(ConnectionCause.REFUSED, origin="local", source="direct", host=HOST)
-    assert "arranca llama-swap" in texto
+def test_local_refused_hint_says_to_start_llama_swap():
+    text = hint(ConnectionCause.REFUSED, origin="local", source="direct", host=HOST)
+    assert "arranca llama-swap" in text
 
 
-def test_pista_de_credencial_depende_de_quien_vio_el_401():
-    del_daemon = hint(ConnectionCause.CREDENTIAL, origin="local", source="daemon", host=HOST)
-    directa = hint(ConnectionCause.CREDENTIAL, origin="local", source="direct", host=HOST)
-    assert "lanzador" in del_daemon
-    assert "en este entorno" in directa
-    assert "lanzador" not in directa
+def test_credential_hint_depends_on_who_saw_the_401():
+    from_daemon = hint(ConnectionCause.CREDENTIAL, origin="local", source="daemon", host=HOST)
+    direct = hint(ConnectionCause.CREDENTIAL, origin="local", source="direct", host=HOST)
+    assert "lanzador" in from_daemon
+    assert "en este entorno" in direct
+    assert "lanzador" not in direct
 
 
-def test_pista_sin_causa_es_la_generica():
+def test_hint_without_cause_is_the_generic_one():
     """Daemon antiguo que no manda `causa`, o una causa que este código no conoce."""
-    esperada = f"revisa el backend en {HOST}"
-    assert hint(None, origin="local", source="daemon", host=HOST) == esperada
-    assert hint("causa_del_futuro", origin="remote", source="daemon", host=HOST) == esperada
+    expected = f"revisa el backend en {HOST}"
+    assert hint(None, origin="local", source="daemon", host=HOST) == expected
+    assert hint("causa_del_futuro", origin="remote", source="daemon", host=HOST) == expected
 
 
-def test_todos_los_detalles_dicen_el_host():
-    for causa in list(ConnectionCause):
-        texto = detail(
-            causa,
+def test_every_detail_names_the_host():
+    for cause in list(ConnectionCause):
+        text = detail(
+            cause,
             host=HOST,
             status=500,
             endpoint="/v1/models",
             exception=httpx2.ConnectError("x"),
         )
-        if causa is ConnectionCause.INVALID_URL:
+        if cause is ConnectionCause.INVALID_URL:
             # La tabla de REQ-011 no lleva host aquí: con la URL rota puede no significar nada.
-            assert "LOCAL_DELEGATE_BASE_URL" in texto
+            assert "LOCAL_DELEGATE_BASE_URL" in text
             continue
-        assert HOST in texto, causa
-    invalida = detail(ConnectionCause.INVALID_RESPONSE, host=HOST, endpoint="/v1/models")
-    assert "/v1/models" in invalida
+        assert HOST in text, cause
+    invalid = detail(ConnectionCause.INVALID_RESPONSE, host=HOST, endpoint="/v1/models")
+    assert "/v1/models" in invalid
 
 
-def test_un_detalle_sin_datos_opcionales_no_escribe_none():
-    for causa in list(ConnectionCause):
-        assert "None" not in detail(causa, host=HOST), causa
+def test_a_detail_without_optional_data_does_not_write_none():
+    for cause in list(ConnectionCause):
+        assert "None" not in detail(cause, host=HOST), cause
 
 
-_DETALLES = {
+_DETAILS = {
     ConnectionCause.DNS: f"no se resuelve el nombre {HOST} (¿VPN o DNS?)",
     ConnectionCause.REFUSED: f"{HOST} rechaza la conexión: no hay nada escuchando en ese puerto",
     ConnectionCause.NO_ROUTE: f"no hay ruta de red hacia {HOST}",
@@ -342,7 +342,7 @@ _DETALLES = {
     ConnectionCause.UNKNOWN: f"fallo inesperado al sondear {HOST} (HTTPStatusError)",
 }
 
-_ETIQUETAS = {
+_LABELS = {
     "dns": "no resuelve",
     "refused": "nadie escucha",
     "no_route": "sin ruta",
@@ -357,21 +357,21 @@ _ETIQUETAS = {
 }
 
 
-def test_los_textos_son_los_de_la_tabla_de_req_011():
+def test_the_texts_are_the_ones_in_the_req_011_table():
     """El código sale de la excepción cuando no se pasa: `HTTPStatusError(401)` da «responde 401»."""
-    assert set(_ETIQUETAS) == {c.value for c in ConnectionCause}
-    for valor, esperada in _ETIQUETAS.items():
-        assert label(valor) == esperada
-    excepcion = _http_status(401)
-    for causa, esperado in _DETALLES.items():
-        texto = detail(causa, host=HOST, endpoint="/v1/models", exception=excepcion)
-        assert texto == esperado
+    assert set(_LABELS) == {c.value for c in ConnectionCause}
+    for value, expected_label in _LABELS.items():
+        assert label(value) == expected_label
+    exception = _http_status(401)
+    for cause, expected_detail in _DETAILS.items():
+        text = detail(cause, host=HOST, endpoint="/v1/models", exception=exception)
+        assert text == expected_detail
 
 
-def test_vista_backend_tiene_los_campos_de_req_016():
-    vista = BackendView(healthy=False, detail="d", cause="credential", source="daemon")
-    assert vista._fields == ("healthy", "detail", "cause", "source")
-    assert tuple(vista) == (False, "d", "credential", "daemon")
+def test_backend_view_has_the_req_016_fields():
+    view = BackendView(healthy=False, detail="d", cause="credential", source="daemon")
+    assert view._fields == ("healthy", "detail", "cause", "source")
+    assert tuple(view) == (False, "d", "credential", "daemon")
 
 
 # --- Valores viejos (REQ-006) -------------------------------------------------------------------
@@ -380,19 +380,19 @@ def test_vista_backend_tiene_los_campos_de_req_016():
 # `causa` con el valor en español. Los dos se siguen entendiendo, con la misma etiqueta.
 
 
-@pytest.mark.parametrize("viejo,nuevo", sorted(legacy_names.CONNECTION_CAUSE_VALUES.items()))
-def test_el_valor_viejo_de_la_causa_da_el_mismo_miembro_y_la_misma_etiqueta(viejo, nuevo):
-    assert ConnectionCause(viejo) is ConnectionCause(nuevo)
-    assert label(viejo) == label(nuevo)
-    assert hint(viejo, origin="local", source="direct", host=HOST) == hint(
-        nuevo, origin="local", source="direct", host=HOST
+@pytest.mark.parametrize("old,new", sorted(legacy_names.CONNECTION_CAUSE_VALUES.items()))
+def test_the_old_cause_value_gives_the_same_member_and_label(old, new):
+    assert ConnectionCause(old) is ConnectionCause(new)
+    assert label(old) == label(new)
+    assert hint(old, origin="local", source="direct", host=HOST) == hint(
+        new, origin="local", source="direct", host=HOST
     )
 
 
-def test_la_tabla_de_causas_viejas_cubre_todas_las_que_cambiaron():
+def test_the_old_causes_table_covers_every_one_that_changed():
     """Cada miembro cuyo valor no es ya el de antes tiene su valor viejo en la tabla."""
-    sin_cambio = {"dns", "http_error"}
-    nuevos = {c.value for c in ConnectionCause} - sin_cambio
-    assert set(legacy_names.CONNECTION_CAUSE_VALUES.values()) == nuevos
+    unchanged = {"dns", "http_error"}
+    new_ones = {c.value for c in ConnectionCause} - unchanged
+    assert set(legacy_names.CONNECTION_CAUSE_VALUES.values()) == new_ones
     with pytest.raises(ValueError):
         ConnectionCause("no_existe")
