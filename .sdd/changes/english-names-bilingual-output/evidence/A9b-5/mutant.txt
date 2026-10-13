@@ -1,0 +1,14 @@
+Mutante (producto): web/metrics.py:2007, quotaText del panel devuelve [] (no pinta la cuota)
+sha antes 25e4fae76cb3fcec / mutado 4836724d50cf15c8
+>       assert "faltan 1 puntos" in text
+E       AssertionError: assert 'faltan 1 puntos' in ''
+>       assert "probable uso en otras superficies" in text
+E       AssertionError: assert 'probable uso en otras superficies' in ''
+>       assert (
+E       AssertionError: assert 'descartes: variación pequeña 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5' in ''
+>       assert "no hay datos de calibración en esta máquina" in text
+E       AssertionError: assert 'no hay datos de calibración en esta máquina' in ''
+FAILED tests/test_dashboard_cost.py::test_an_old_point_expires_without_regenerating
+FAILED tests/test_dashboard_cost.py::test_warning_against_a_rejection - Asser...
+restaurado 25e4fae76cb3fcec (== antes: si)
+14 passed, 1 warning in 3.52s

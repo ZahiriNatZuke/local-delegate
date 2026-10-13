@@ -1,0 +1,21 @@
+refactor(rename): nombres en inglés en test_metrics, test_observabilidad_respaldo y test_panel_coste (ola A9b, lote 5)
+
+Renombra a inglés los nombres de test_metrics.py,
+test_observabilidad_respaldo.py y test_panel_coste.py: 293 filas del
+mapping aprobado. test_panel_coste.py pasa a test_dashboard_cost.py y
+test_observabilidad_respaldo.py a test_fallback_observability.py; los 80
+test_* del lote pasan a inglés, junto con sus ayudantes (_Mezcla → _Mix,
+_extraer_funcion_js → _extract_js_function, _punto → _point,
+_agregados → _aggregates…), las fixtures entorno → env y status_sin_red
+→ status_offline, sus variables locales y el JS propio de los tests
+(las claves coste/cuota/imagenes del objeto que devuelve, con sus
+lecturas en Python).
+
+En test_dashboard_cost.py, el `except OSError: pass` comentado pasa a
+`contextlib.suppress(OSError)`, con el mismo comentario.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
+
+Por consecuencia cambia la cita del fichero de test en un comentario JS
+de src/local_delegate/web/metrics.py.

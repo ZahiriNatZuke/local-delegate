@@ -1870,7 +1870,7 @@ function renderClients(s){
 // --- Coste equivalente, cuota e imágenes: /api/stats (coste-api-y-cuota) ---
 //
 // El coste solo lo calcula Python; estas funciones son puras (las prueba node en
-// `test_panel_coste.py`) y devuelven LÍNEAS de texto, la primera es el titular. Ninguna frase lo
+// `test_dashboard_cost.py`) y devuelven LÍNEAS de texto, la primera es el titular. Ninguna frase lo
 // presenta como dinero en el bolsillo ni como un trozo de cuota medido (REQ-045), y sin calibrar no
 // hay % (REQ-059).
 const THREAD_TXT = {main:'hilo principal', subagent:'subagente'};
