@@ -320,3 +320,22 @@ def test_el_resumen_dice_el_estado_de_la_cuota_en_palabras():
     assert "Cuota five_hour: calibrada;" in texto
     assert "Cuota seven_day: sin calibrar;" in texto
     assert "uncalibrated" not in texto
+
+
+def test_el_resumen_dice_los_cruces_con_los_rotulos_de_siempre():
+    """`matches` usa claves de máquina en inglés; la terminal conserva los rótulos de la 0.34.0."""
+    resumen = {
+        "cleanup_days": 30,
+        "transcripts": 0,
+        "corrupt_lines": 0,
+        "backfilled_lines": 4,
+        "matches": {"ambiguous": 1, "exact": 2, "no_match": 0, "window": 1},
+        "n_cases": 0,
+        "check": None,
+        "points": {},
+        "discards": {},
+        "quota": {"five_hour": "calibrated", "seven_day": "calibrated"},
+    }
+    texto = recompute.summary_text(resumen)
+    assert "(ambiguo: 1, exacto: 2, sin_cruce: 0, ventana: 1)" in texto
+    assert "no_match" not in texto

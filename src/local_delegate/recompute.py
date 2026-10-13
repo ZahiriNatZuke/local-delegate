@@ -353,6 +353,13 @@ def run(
 _STATUS_LABEL = {"calibrated": "calibrada", "uncalibrated": "sin calibrar"}
 #: Veredicto del cotejo.
 _VERDICT_LABEL = {"pass": "pasa", "fail": "falla"}
+#: Cruces de las líneas del log rellenadas (los rótulos de la 0.34.0).
+_MATCH_LABEL = {
+    "exact": "exacto",
+    "window": "ventana",
+    "ambiguous": "ambiguo",
+    "no_match": "sin_cruce",
+}
 #: Motivos de descarte de los puntos de cuota.
 _DISCARD_LABEL = {
     "corrupt_line": "línea corrupta",
@@ -373,7 +380,7 @@ def summary_text(r: dict) -> str:
         f"Transcripts leídos: {r['transcripts']} (líneas ilegibles: {r['corrupt_lines']}).",
         f"Líneas del log rellenadas: {r['backfilled_lines']} "
         + (
-            "(" + ", ".join(f"{k}: {v}" for k, v in r["matches"].items()) + ")"
+            "(" + ", ".join(f"{_MATCH_LABEL.get(k, k)}: {v}" for k, v in r["matches"].items()) + ")"
             if r["matches"]
             else "(ninguna)"
         )
