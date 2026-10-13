@@ -19,8 +19,8 @@ import pytest
 
 from local_delegate import benchmark
 
-RAIZ = Path(__file__).parents[1]
-CORPUS = RAIZ / "benchmarks" / "catalogo-2026-09" / "cases.json"
+ROOT = Path(__file__).parents[1]
+CORPUS = ROOT / "benchmarks" / "catalogo-2026-09" / "cases.json"
 
 
 def _corpus():
@@ -31,9 +31,9 @@ def _case(case_id):
     return next(c for c in _corpus().cases if c.id == case_id)
 
 
-def _raw(**cambios):
+def _raw(**changes):
     base = {"expected_terms": [], "forbidden_terms": [], "expected_json_fields": []}
-    base.update(cambios)
+    base.update(changes)
     return base
 
 
@@ -51,16 +51,16 @@ unrelated_metric 999
     }
 
 
-def test_el_corpus_de_julio_ya_no_carga():
+def test_the_july_corpus_no_longer_loads():
     # Ningun REQ-F2 pide repetir la prueba de julio; su fichero se conserva como archivo.
     with pytest.raises(ValueError, match="schema_version=2"):
-        benchmark.load_corpus(RAIZ / "benchmarks" / "moe" / "cases.json")
+        benchmark.load_corpus(ROOT / "benchmarks" / "moe" / "cases.json")
 
 
 # --- Puntuador ------------------------------------------------------------------------------------
 
 
-def test_acentos_correctos_ya_no_pierden_cobertura():
+def test_correct_accents_no_longer_lose_coverage():
     # El defecto de julio, reproducido en rojo antes de arreglarlo: el puntuador literal le daba
     # 0,5 a esta misma respuesta (verification.md, tarea 16).
     raw = _raw(expected_terms=["computo", "delegaciones"])
@@ -70,89 +70,91 @@ def test_acentos_correctos_ya_no_pierden_cobertura():
     assert (score["coverage"], score["quality"]) == (1.0, 1.0)
 
 
-def test_la_forma_descompuesta_tambien_casa():
+def test_the_decomposed_form_also_matches():
     raw = _raw(expected_terms=["cómputo"])
     assert benchmark.score_output(raw, "el cómputo", "stop")["coverage"] == 1.0
 
 
-def test_termino_prohibido_pone_la_calidad_a_cero_aunque_la_cobertura_sea_uno():
+def test_forbidden_term_sets_quality_to_zero_even_with_coverage_one():
     raw = _raw(expected_terms=["0.27.0"], forbidden_terms=["0.24.0"])
-    malo = benchmark.score_output(raw, "Versión 0.27.0, antes 0.24.0", "stop")
-    assert malo["coverage"] == 1.0
-    assert (malo["quality"], malo["zero_by"]) == (0.0, "forbidden_terms")
+    bad = benchmark.score_output(raw, "Versión 0.27.0, antes 0.24.0", "stop")
+    assert bad["coverage"] == 1.0
+    assert (bad["quality"], bad["zero_by"]) == (0.0, "forbidden_terms")
     # Control positivo: sin el termino prohibido, la misma respuesta puntua entera.
-    bueno = benchmark.score_output(raw, "Versión 0.27.0, la publicada", "stop")
-    assert (bueno["quality"], bueno["zero_by"]) == (1.0, None)
+    good = benchmark.score_output(raw, "Versión 0.27.0, la publicada", "stop")
+    assert (good["quality"], good["zero_by"]) == (1.0, None)
 
 
-def test_corrida_truncada_no_cuenta_como_mala_calidad():
+def test_truncated_run_does_not_count_as_bad_quality():
     # `truncado` se ejercita inyectando finish_reason: es la senal que CP-4 no cubre con texto.
     raw = _raw(expected_terms=["uno", "dos"])
-    truncada = benchmark.score_output(raw, "uno", "length")
-    assert truncada["truncated"] is True
-    assert (truncada["quality"], truncada["zero_by"]) == (None, None)
+    truncated = benchmark.score_output(raw, "uno", "length")
+    assert truncated["truncated"] is True
+    assert (truncated["quality"], truncated["zero_by"]) == (None, None)
     # La misma respuesta sin truncar si cuenta, y a medias.
     assert benchmark.score_output(raw, "uno", "stop")["quality"] == 0.5
 
 
-def test_json_invalido_hunde_por_json_valid_y_campos_que_faltan_por_proporcion():
+def test_invalid_json_sinks_by_json_valid_and_missing_fields_by_proportion():
     raw = _raw(expected_terms=["MIT"], expected_json_fields=["name", "license"])
-    invalido = benchmark.score_output(raw, "{'name': 'x', 'license': 'MIT'}", "stop")
-    assert (invalido["quality"], invalido["zero_by"]) == (0.0, "json_valid")
-    a_medias = benchmark.score_output(raw, '{"name": "x", "licencia": "MIT"}', "stop")
-    assert (a_medias["json_fields_ratio"], a_medias["quality"], a_medias["zero_by"]) == (
+    invalid = benchmark.score_output(raw, "{'name': 'x', 'license': 'MIT'}", "stop")
+    assert (invalid["quality"], invalid["zero_by"]) == (0.0, "json_valid")
+    partial = benchmark.score_output(raw, '{"name": "x", "licencia": "MIT"}', "stop")
+    assert (partial["json_fields_ratio"], partial["quality"], partial["zero_by"]) == (
         0.5,
         0.5,
         None,
     )
 
 
-def test_conteo_inventado_hunde_la_calidad_aunque_nombre_todas_las_reglas():
+def test_made_up_count_sinks_quality_even_if_it_names_every_rule():
     raw = _raw(
         expected_terms=["T201", "COM812"], expected_counts={"T201": [1, 2, 3], "COM812": [1]}
     )
-    bien = benchmark.score_output(raw, "- a.py: T201 (2), COM812 (1)\n- b.py: T201 (1)", "stop")
-    assert (bien["counts_ratio"], bien["counts_wrong"], bien["quality"]) == (1.0, [], 1.0)
+    good = benchmark.score_output(raw, "- a.py: T201 (2), COM812 (1)\n- b.py: T201 (1)", "stop")
+    assert (good["counts_ratio"], good["counts_wrong"], good["quality"]) == (1.0, [], 1.0)
     # La salida del 2B: nombra las dos reglas (cobertura 1,0) con numeros que la fuente no tiene.
-    inventado = benchmark.score_output(
+    made_up = benchmark.score_output(
         raw, "**T201 (Print):** 10 archivos (3 por archivo)\n**COM812:** 1 archivo", "stop"
     )
-    assert (inventado["coverage"], inventado["counts_wrong"], inventado["quality"]) == (
+    assert (made_up["coverage"], made_up["counts_wrong"], made_up["quality"]) == (
         1.0,
         ["T201"],
         0.5,
     )
-    sin_numeros = benchmark.score_output(raw, "Sobre todo T201 y COM812.", "stop")
-    assert (sin_numeros["quality"], sin_numeros["zero_by"]) == (0.0, "counts")
+    without_numbers = benchmark.score_output(raw, "Sobre todo T201 y COM812.", "stop")
+    assert (without_numbers["quality"], without_numbers["zero_by"]) == (0.0, "counts")
     # Cada numero es de la regla que tiene delante (no de toda la linea), y el punto de final de
     # frase no lo anula. Con la regla por lineas, TRY003 se llevaria tambien el 7 y fallaria.
-    una_linea = _raw(
-        expected_terms=["TRY003", "D102"], expected_counts={"TRY003": [8], "D102": [7]}
-    )
-    score = benchmark.score_output(una_linea, "TRY003: 8. D102: 7.", "stop")
+    one_line = _raw(expected_terms=["TRY003", "D102"], expected_counts={"TRY003": [8], "D102": [7]})
+    score = benchmark.score_output(one_line, "TRY003: 8. D102: 7.", "stop")
     assert (score["counts_wrong"], score["quality"]) == ([], 1.0)
 
 
-def test_formato_de_la_tool_se_guarda_y_no_toca_la_calidad():
+def test_tool_format_is_stored_and_does_not_touch_quality():
     # P-15: el usuario descarto respuestas por lista o por pasarse de palabras.
     raw = _raw(expected_terms=["hooks"], expected_format={"max_words": 5, "prose": True})
-    prosa = benchmark.score_output(raw, "Los hooks sugieren delegar.", "stop")
-    assert (prosa["format_ok"], prosa["format_words"], prosa["format_list_lines"]) == (True, 4, 0)
-    lista = benchmark.score_output(raw, "Los hooks:\n- uno\n2. dos", "stop")
-    assert (lista["format_ok"], lista["format_list_lines"], lista["quality"]) == (False, 2, 1.0)
-    larga = benchmark.score_output(raw, "Los hooks sugieren delegar casi siempre.", "stop")
-    assert (larga["format_ok"], larga["quality"]) == (False, 1.0)
+    prose = benchmark.score_output(raw, "Los hooks sugieren delegar.", "stop")
+    assert (prose["format_ok"], prose["format_words"], prose["format_list_lines"]) == (True, 4, 0)
+    listing = benchmark.score_output(raw, "Los hooks:\n- uno\n2. dos", "stop")
+    assert (listing["format_ok"], listing["format_list_lines"], listing["quality"]) == (
+        False,
+        2,
+        1.0,
+    )
+    long_text = benchmark.score_output(raw, "Los hooks sugieren delegar casi siempre.", "stop")
+    assert (long_text["format_ok"], long_text["quality"]) == (False, 1.0)
     assert benchmark.score_output(_raw(expected_terms=["x"]), "x", "stop")["format_ok"] is None
 
 
-def test_cobertura_cero_se_atribuye_a_coverage():
+def test_zero_coverage_is_attributed_to_coverage():
     score = benchmark.score_output(_raw(expected_terms=["bug"]), "feature", "stop")
     assert (score["quality"], score["zero_by"]) == (0.0, "coverage")
 
 
 # --- CP-4: el puntuador separa cada pareja, y por la senal correcta -------------------------------
 
-_COMPONENTES_POR_SENAL = {
+_COMPONENTS_BY_SIGNAL = {
     "cobertura": {"coverage", "matched_terms"},
     "prohibido": {"forbidden_hits"},
     "json_valido": {"json_valid", "json_fields_ratio"},
@@ -163,33 +165,33 @@ _COMPONENTES_POR_SENAL = {
 }
 
 
-def test_cp4_el_puntuador_separa_cada_pareja_por_su_senal():
-    parejas = [c for c in _corpus().cases if "reference_signal" in c.raw]
-    assert len(parejas) == 7
-    for caso in parejas:
-        raw = caso.raw
+def test_cp4_the_scorer_separates_each_pair_by_its_signal():
+    pairs = [c for c in _corpus().cases if "reference_signal" in c.raw]
+    assert len(pairs) == 7
+    for case in pairs:
+        raw = case.raw
         ok = benchmark.score_output(raw, raw["reference_ok"], "stop")
-        malo = benchmark.score_output(raw, raw["reference_bad"], "stop")
-        assert ok["quality"] > malo["quality"], caso.id
-        distintos = {
-            nombre
-            for nombre in ok
+        bad = benchmark.score_output(raw, raw["reference_bad"], "stop")
+        assert ok["quality"] > bad["quality"], case.id
+        distinct = {
+            name
+            for name in ok
             # El formato (P-15) se guarda pero no es una senal de calidad: dos respuestas de distinto
             # largo difieren en palabras sin que eso separe nada.
-            if nombre not in {"quality", "zero_by", "truncated"}
-            and not nombre.startswith("format_")
-            and ok[nombre] != malo[nombre]
+            if name not in {"quality", "zero_by", "truncated"}
+            and not name.startswith("format_")
+            and ok[name] != bad[name]
         }
-        assert distintos == _COMPONENTES_POR_SENAL[raw["reference_signal"]], caso.id
+        assert distinct == _COMPONENTS_BY_SIGNAL[raw["reference_signal"]], case.id
 
 
-def test_cp4_un_puntuador_literal_no_separaria_la_pareja_de_unicode():
+def test_cp4_a_literal_scorer_would_not_separate_the_unicode_pair():
     # Si el puntuador dejara de normalizar, esta pareja puntuaria igual: es la que lo delata.
-    (caso,) = [c for c in _corpus().cases if c.raw.get("reference_signal") == "unicode"]
-    raw = caso.raw
+    (case,) = [c for c in _corpus().cases if c.raw.get("reference_signal") == "unicode"]
+    raw = case.raw
 
-    def literal(texto):
-        return sum(t.casefold() in texto.casefold() for t in raw["expected_terms"])
+    def literal(text):
+        return sum(t.casefold() in text.casefold() for t in raw["expected_terms"])
 
     assert literal(raw["reference_ok"]) == literal(raw["reference_bad"])
 
@@ -201,29 +203,29 @@ def _boilerplate():
     return _case("boilerplate-156").raw
 
 
-def test_codigo_correcto_entre_vallas_se_ejecuta_como_lo_escribiria_produccion():
+def test_correct_fenced_code_runs_as_production_would_write_it():
     raw = _boilerplate()
     score = benchmark.score_output(raw, f"```python\n{raw['reference_ok']}```", "stop")
     assert score["execution_passed"] == [True] * 5
     assert (score["execution_ratio"], score["quality"], score["zero_by"]) == (1.0, 1.0, None)
 
 
-def test_codigo_que_no_carga_puntua_cero_por_ejecucion_aunque_nombre_los_terminos():
+def test_code_that_does_not_load_scores_zero_on_execution_even_if_it_names_the_terms():
     # La salida del 2B en CP-3: usa `re` sin importarlo y 1,0 por terminos.
-    codigo = (
+    code = (
         "def parse_duration(texto):\n"
         '    """Lanza ValueError si no vale."""\n'
         "    m = re.match(r'^(\\d+)h$', texto)\n"
         "    return int(m.group(1)) * 3600\n"
     )
-    score = benchmark.score_output(_boilerplate(), codigo, "stop")
+    score = benchmark.score_output(_boilerplate(), code, "stop")
     assert score["coverage"] == 1.0
     assert (score["execution_ratio"], score["quality"], score["zero_by"]) == (0.0, 0.0, "execution")
 
 
-def test_codigo_a_medias_puntua_la_proporcion_de_comprobaciones():
+def test_half_done_code_scores_the_proportion_of_checks():
     # La salida del 14B en CP-3: parte por espacios y no parsea '1h30m'; lo demas lo hace bien.
-    codigo = (
+    code = (
         "def parse_duration(texto):\n"
         "    total = 0\n"
         "    for parte in texto.split():\n"
@@ -237,20 +239,20 @@ def test_codigo_a_medias_puntua_la_proporcion_de_comprobaciones():
         "            raise ValueError('formato')\n"
         "    return total\n"
     )
-    score = benchmark.score_output(_boilerplate(), codigo, "stop")
+    score = benchmark.score_output(_boilerplate(), code, "stop")
     assert score["execution_passed"] == [False, True, True, True, True]
     assert score["quality"] == 0.8
 
 
-def test_un_bucle_infinito_no_cuelga_el_runner(monkeypatch):
+def test_an_infinite_loop_does_not_hang_the_runner(monkeypatch):
     monkeypatch.setattr(benchmark, "EXEC_TIMEOUT_S", 2.0)
     score = benchmark.score_output(_boilerplate(), "while True:\n    pass\n", "stop")
     assert score["execution_passed"] == [False] * 5
 
 
-def test_el_codigo_generado_no_ve_el_entorno_ni_el_directorio_del_operador(monkeypatch):
+def test_generated_code_sees_neither_the_environment_nor_the_operator_directory(monkeypatch):
     monkeypatch.setenv("LD_SECRETO_DE_PRUEBA", "no-deberia-verse")
-    monkeypatch.chdir(RAIZ)
+    monkeypatch.chdir(ROOT)
     raw = _raw(
         execution_checks=[
             {"expr": "__import__('os').environ.get('LD_SECRETO_DE_PRUEBA')", "expected": None},
@@ -260,28 +262,28 @@ def test_el_codigo_generado_no_ve_el_entorno_ni_el_directorio_del_operador(monke
         ]
     )
     assert benchmark.run_execution_checks("x = 1\n", raw["execution_checks"]) == [True] * 3
-    assert (RAIZ / "pyproject.toml").exists()
+    assert (ROOT / "pyproject.toml").exists()
 
 
-def test_el_valor_correcto_con_otro_tipo_no_pasa():
+def test_the_correct_value_with_another_type_does_not_pass():
     # La especificacion pide segundos en int: 45.0 es igual a 45 para `==`, y no vale.
     checks = [{"expr": "f()", "expected": 45}]
     assert benchmark.run_execution_checks("def f():\n    return 45.0\n", checks) == [False]
     assert benchmark.run_execution_checks("def f():\n    return 45\n", checks) == [True]
 
 
-def test_un_print_del_codigo_generado_no_finge_el_resultado():
+def test_a_print_from_generated_code_does_not_fake_the_result():
     checks = [{"expr": "1", "expected": 2}]
-    codigo = "print('[true]')\n"
-    assert benchmark.run_execution_checks(codigo, checks) == [False]
+    code = "print('[true]')\n"
+    assert benchmark.run_execution_checks(code, checks) == [False]
 
 
-def test_truncada_otra_vez_tras_doblar_puntua_cero():
+def test_truncated_again_after_doubling_scores_zero():
     raw = _raw(expected_terms=["uno"])
-    primera = benchmark.score_output(raw, "uno", "length")
-    repetida = benchmark.score_output(raw, "uno", "length", repeated=True)
-    assert (primera["quality"], primera["zero_by"]) == (None, None)
-    assert (repetida["quality"], repetida["zero_by"], repetida["truncated"]) == (
+    first = benchmark.score_output(raw, "uno", "length")
+    repeated = benchmark.score_output(raw, "uno", "length", repeated=True)
+    assert (first["quality"], first["zero_by"]) == (None, None)
+    assert (repeated["quality"], repeated["zero_by"], repeated["truncated"]) == (
         0.0,
         "truncado_repetido",
         True,
@@ -291,57 +293,57 @@ def test_truncada_otra_vez_tras_doblar_puntua_cero():
 # --- Payload --------------------------------------------------------------------------------------
 
 
-def test_caso_de_imagen_lleva_image_url_y_uno_de_texto_no():
-    imagen = _case("describir-dashboard")
-    bloques = benchmark.build_payload(imagen, "m", 42, None)["messages"][1]["content"]
-    assert [b["type"] for b in bloques] == ["text", "image_url"]
-    url = bloques[1]["image_url"]["url"]
+def test_image_case_carries_image_url_and_text_case_does_not():
+    image = _case("describir-dashboard")
+    blocks = benchmark.build_payload(image, "m", 42, None)["messages"][1]["content"]
+    assert [b["type"] for b in blocks] == ["text", "image_url"]
+    url = blocks[1]["image_url"]["url"]
     assert url.startswith("data:image/png;base64,")
-    assert base64.b64decode(url.split(",", 1)[1]) == imagen.source
+    assert base64.b64decode(url.split(",", 1)[1]) == image.source
 
-    texto = benchmark.build_payload(_case("clasificar-53"), "m", 42, None)
-    assert isinstance(texto["messages"][1]["content"], str)
-    assert "image_url" not in json.dumps(texto)
+    text = benchmark.build_payload(_case("clasificar-53"), "m", 42, None)
+    assert isinstance(text["messages"][1]["content"], str)
+    assert "image_url" not in json.dumps(text)
     # La temperatura de produccion que capturo el constructor, no 0 (P-12).
-    assert (texto["temperature"], texto["seed"]) == (0.0, 42)
-    resumen = benchmark.build_payload(_case("resumen-md-2k"), "m", 7, None)
-    assert (resumen["temperature"], resumen["seed"]) == (0.2, 7)
+    assert (text["temperature"], text["seed"]) == (0.0, 42)
+    summary = benchmark.build_payload(_case("resumen-md-2k"), "m", 7, None)
+    assert (summary["temperature"], summary["seed"]) == (0.2, 7)
 
 
-def test_cada_caso_de_texto_lleva_su_contenido_entero_y_sin_marcador():
-    for caso in _corpus().cases:
-        if caso.media_type != "texto":
+def test_each_text_case_carries_its_whole_content_without_marker():
+    for case in _corpus().cases:
+        if case.media_type != "texto":
             continue
-        payload = benchmark.build_payload(caso, "m", 1, None)
+        payload = benchmark.build_payload(case, "m", 1, None)
         user = payload["messages"][1]["content"]
-        contenido = caso.source.decode("utf-8").replace("\r\n", "\n")
-        assert contenido in user, caso.id
-        assert benchmark.CONTENT_MARKER not in user, caso.id
-        assert payload["messages"][0]["content"], caso.id
+        content = case.source.decode("utf-8").replace("\r\n", "\n")
+        assert content in user, case.id
+        assert benchmark.CONTENT_MARKER not in user, case.id
+        assert payload["messages"][0]["content"], case.id
 
 
-def test_la_imagen_de_control_sustituye_a_la_del_caso():
+def test_the_control_image_replaces_the_case_image():
     control = _corpus().controls[0]
-    datos = (CORPUS.parent / "fuentes" / control["source_file"]).read_bytes()
-    payload = benchmark.build_payload(_case("leer-cifras-dashboard"), "m", 1, None, source=datos)
+    data = (CORPUS.parent / "fuentes" / control["source_file"]).read_bytes()
+    payload = benchmark.build_payload(_case("leer-cifras-dashboard"), "m", 1, None, source=data)
     assert (
-        base64.b64encode(datos).decode() in payload["messages"][1]["content"][1]["image_url"]["url"]
+        base64.b64encode(data).decode() in payload["messages"][1]["content"][1]["image_url"]["url"]
     )
 
 
-def test_apagado_llega_al_payload_y_el_caso_manda_sobre_el_modelo():
-    caso = _case("clasificar-53")
-    assert benchmark.build_payload(caso, "m", 1, "off")["chat_template_kwargs"] == {
+def test_off_reaches_the_payload_and_the_case_wins_over_the_model():
+    case = _case("clasificar-53")
+    assert benchmark.build_payload(case, "m", 1, "off")["chat_template_kwargs"] == {
         "enable_thinking": False
     }
-    assert benchmark.build_payload(caso, "m", 1, "low")["chat_template_kwargs"] == {
+    assert benchmark.build_payload(case, "m", 1, "low")["chat_template_kwargs"] == {
         "reasoning_effort": "low"
     }
-    assert "chat_template_kwargs" not in benchmark.build_payload(caso, "m", 1, None)
-    con_valor_propio = dataclasses.replace(caso, raw={**caso.raw, "reasoning_effort": "off"})
-    assert benchmark.effective_reasoning(con_valor_propio, "high") == ("off", "case")
-    assert benchmark.effective_reasoning(caso, "high") == ("high", "model")
-    assert benchmark.effective_reasoning(caso, None) == (None, None)
+    assert "chat_template_kwargs" not in benchmark.build_payload(case, "m", 1, None)
+    with_own_value = dataclasses.replace(case, raw={**case.raw, "reasoning_effort": "off"})
+    assert benchmark.effective_reasoning(with_own_value, "high") == ("off", "case")
+    assert benchmark.effective_reasoning(case, "high") == ("high", "model")
+    assert benchmark.effective_reasoning(case, None) == (None, None)
 
 
 # --- El runner de punta a punta, con backend falso ------------------------------------------------
@@ -361,12 +363,12 @@ class _NullMetrics:
         return {}
 
 
-# El Client real, capturado al importar: dentro de `_correr` ya podria ser el lambda de una llamada
+# El Client real, capturado al importar: dentro de `_run` ya podria ser el lambda de una llamada
 # anterior del mismo test, y envolverlo otra vez pasaria `transport` dos veces.
 _CLIENT_REAL = httpx2.Client
 
 
-def _correr(tmp_path, monkeypatch, handler, *extra):
+def _run(tmp_path, monkeypatch, handler, *extra):
     monkeypatch.setattr(
         benchmark.httpx2,
         "Client",
@@ -375,7 +377,7 @@ def _correr(tmp_path, monkeypatch, handler, *extra):
     monkeypatch.setattr(benchmark, "MetricsSampler", _NullMetrics)
     parser = argparse.ArgumentParser()
     benchmark.add_parser(parser.add_subparsers())
-    salida = tmp_path / "out.jsonl"
+    output = tmp_path / "out.jsonl"
     args = parser.parse_args(
         [
             "benchmark",
@@ -390,25 +392,25 @@ def _correr(tmp_path, monkeypatch, handler, *extra):
             "--endpoint",
             "http://backend.test/v1",
             "--output",
-            str(salida),
+            str(output),
             *extra,
         ]
     )
     rc = benchmark.run_benchmark(args)
-    registros = []
-    if salida.exists():
-        registros = [json.loads(l) for l in salida.read_text(encoding="utf-8").splitlines()]
-    return rc, registros
+    records = []
+    if output.exists():
+        records = [json.loads(l) for l in output.read_text(encoding="utf-8").splitlines()]
+    return rc, records
 
 
-def _respuesta(content="bug", finish="stop", **mensaje):
+def _response(content="bug", finish="stop", **message):
     return httpx2.Response(
         200,
-        json={"choices": [{"message": {"content": content, **mensaje}, "finish_reason": finish}]},
+        json={"choices": [{"message": {"content": content, **message}, "finish_reason": finish}]},
     )
 
 
-def test_por_defecto_son_cinco_corridas_por_caso():
+def test_default_is_five_runs_per_case():
     # Tercer piloto de CP-3: con temperatura de produccion, una corrida mala movia la mediana de 3.
     parser = argparse.ArgumentParser()
     benchmark.add_parser(parser.add_subparsers())
@@ -418,50 +420,50 @@ def test_por_defecto_son_cinco_corridas_por_caso():
     assert args.runs == 5
 
 
-def test_cada_corrida_lleva_su_semilla_y_la_temperatura_del_caso(tmp_path, monkeypatch):
-    enviados = []
+def test_each_run_carries_its_seed_and_the_case_temperature(tmp_path, monkeypatch):
+    sent = []
 
     def handler(request):
-        enviados.append(json.loads(request.content))
-        return _respuesta("# Titulo\n\nresumen")
+        sent.append(json.loads(request.content))
+        return _response("# Titulo\n\nresumen")
 
-    rc, registros = _correr(
+    rc, records = _run(
         tmp_path, monkeypatch, handler, "--case", "resumen-md-2k", "--runs", "3", "--seed", "10"
     )
     assert rc == 0
-    assert [p["seed"] for p in enviados] == [10, 11, 12]
-    assert {p["temperature"] for p in enviados} == {0.2}
-    assert [(r["run"], r["seed"], r["temperature"]) for r in registros] == [
+    assert [p["seed"] for p in sent] == [10, 11, 12]
+    assert {p["temperature"] for p in sent} == {0.2}
+    assert [(r["run"], r["seed"], r["temperature"]) for r in records] == [
         (1, 10, 0.2),
         (2, 11, 0.2),
         (3, 12, 0.2),
     ]
 
 
-def test_runner_puntua_con_el_corpus_real_y_sin_sonda_no_inventa_estado_termico(
+def test_runner_scores_with_the_real_corpus_and_without_probe_does_not_make_up_thermal_state(
     tmp_path, monkeypatch
 ):
-    rc, (registro,) = _correr(
-        tmp_path, monkeypatch, lambda _r: _respuesta("bug"), "--case", "clasificar-53"
+    rc, (record,) = _run(
+        tmp_path, monkeypatch, lambda _r: _response("bug"), "--case", "clasificar-53"
     )
     assert rc == 0
-    assert (registro["schema_version"], registro["outcome"], registro["role"]) == (
+    assert (record["schema_version"], record["outcome"], record["role"]) == (
         2,
         "ok",
         "mechanical",
     )
-    assert registro["score"]["quality"] == 1.0
-    assert registro["thermal_state"] is None
-    assert registro["descartada"] is False
+    assert record["score"]["quality"] == 1.0
+    assert record["thermal_state"] is None
+    assert record["descartada"] is False
     # Sin declararlo, el analisis no puede comprobar §6 y declara el rol no concluyente.
-    assert registro["variant"]["load_mode"] is None
+    assert record["variant"]["load_mode"] is None
 
 
-def test_el_registro_guarda_contexto_y_load_mode_que_compara_el_analisis(tmp_path, monkeypatch):
-    rc, (registro,) = _correr(
+def test_the_record_stores_context_and_load_mode_that_the_analysis_compares(tmp_path, monkeypatch):
+    rc, (record,) = _run(
         tmp_path,
         monkeypatch,
-        lambda _r: _respuesta("bug"),
+        lambda _r: _response("bug"),
         "--case",
         "clasificar-53",
         "--context-size",
@@ -470,14 +472,14 @@ def test_el_registro_guarda_contexto_y_load_mode_que_compara_el_analisis(tmp_pat
         "none",
     )
     assert rc == 0
-    assert (registro["variant"]["context_size"], registro["variant"]["load_mode"]) == (
+    assert (record["variant"]["context_size"], record["variant"]["load_mode"]) == (
         16384,
         "none",
     )
 
 
-def test_rechazo_por_contexto_no_es_mala_calidad_ni_descartada(tmp_path, monkeypatch):
-    def desborde(_request):
+def test_context_rejection_is_neither_bad_quality_nor_discarded(tmp_path, monkeypatch):
+    def overflow(_request):
         return httpx2.Response(
             400,
             json={
@@ -489,52 +491,52 @@ def test_rechazo_por_contexto_no_es_mala_calidad_ni_descartada(tmp_path, monkeyp
             },
         )
 
-    rc, (registro,) = _correr(tmp_path, monkeypatch, desborde, "--case", "techo-resumen-103k")
-    assert registro["outcome"] == "rechazo_por_contexto"
-    assert registro["score"] is None and registro["descartada"] is False
-    assert "exceed_context_size_error" in registro["error_body"]
+    rc, (record,) = _run(tmp_path, monkeypatch, overflow, "--case", "techo-resumen-103k")
+    assert record["outcome"] == "rechazo_por_contexto"
+    assert record["score"] is None and record["descartada"] is False
+    assert "exceed_context_size_error" in record["error_body"]
     assert rc == 0
 
     # Control positivo: otro 400 cualquiera es un error, no un rechazo por contexto.
-    def otro(_request):
+    def other(_request):
         return httpx2.Response(400, json={"error": {"type": "invalid_request_error"}})
 
-    rc, (registro,) = _correr(tmp_path / "b", monkeypatch, otro, "--case", "techo-resumen-103k")
-    assert (registro["outcome"], rc) == ("error", 1)
+    rc, (record,) = _run(tmp_path / "b", monkeypatch, other, "--case", "techo-resumen-103k")
+    assert (record["outcome"], rc) == ("error", 1)
 
 
-def test_truncada_se_repite_una_vez_con_el_doble_de_max_tokens(tmp_path, monkeypatch):
-    vistos = []
-
-    def handler(request):
-        vistos.append(json.loads(request.content)["max_tokens"])
-        return _respuesta("bug", "length" if len(vistos) == 1 else "stop")
-
-    _, registros = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert [r["outcome"] for r in registros] == ["truncado", "ok"]
-    assert vistos == [16, 32]
-    assert registros[0]["score"]["quality"] is None
-    assert registros[1]["score"]["quality"] == 1.0
-    assert [r["retry_reason"] for r in registros] == [None, "truncado"]
-
-
-def test_truncada_dos_veces_no_se_repite_mas_y_puntua_cero(tmp_path, monkeypatch):
-    vistos = []
+def test_truncated_is_repeated_once_with_double_max_tokens(tmp_path, monkeypatch):
+    seen = []
 
     def handler(request):
-        vistos.append(json.loads(request.content)["max_tokens"])
-        return _respuesta("bug", "length")
+        seen.append(json.loads(request.content)["max_tokens"])
+        return _response("bug", "length" if len(seen) == 1 else "stop")
 
-    _, registros = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert vistos == [16, 32]
-    assert registros[1]["score"]["quality"] == 0.0
-    assert registros[1]["score"]["zero_by"] == "truncado_repetido"
+    _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert [r["outcome"] for r in records] == ["truncado", "ok"]
+    assert seen == [16, 32]
+    assert records[0]["score"]["quality"] is None
+    assert records[1]["score"]["quality"] == 1.0
+    assert [r["retry_reason"] for r in records] == [None, "truncado"]
 
 
-class _SondaQueAnula:
+def test_truncated_twice_is_not_repeated_again_and_scores_zero(tmp_path, monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append(json.loads(request.content)["max_tokens"])
+        return _response("bug", "length")
+
+    _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert seen == [16, 32]
+    assert records[1]["score"]["quality"] == 0.0
+    assert records[1]["score"]["zero_by"] == "truncado_repetido"
+
+
+class _VoidingProbe:
     """Sustituye al muestreador: cada peticion consume el siguiente motivo de anulacion."""
 
-    motivos: ClassVar[list[str | None]] = []
+    reasons: ClassVar[list[str | None]] = []
 
     def __init__(self, *_args):
         pass
@@ -546,50 +548,48 @@ class _SondaQueAnula:
         return None
 
     def summary(self):
-        motivo = type(self).motivos.pop(0) if type(self).motivos else None
-        return {"enabled": False, "pids": [], "annul": motivo}
+        reason = type(self).reasons.pop(0) if type(self).reasons else None
+        return {"enabled": False, "pids": [], "annul": reason}
 
 
-def test_corrida_anulada_se_repite_con_los_mismos_tokens(tmp_path, monkeypatch):
-    vistos = []
-
-    def handler(request):
-        vistos.append(json.loads(request.content)["max_tokens"])
-        return _respuesta("bug")
-
-    monkeypatch.setattr(_SondaQueAnula, "motivos", ["process_changed", None])
-    monkeypatch.setattr(benchmark, "ResourceSampler", _SondaQueAnula)
-    _, registros = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert vistos == [16, 16]
-    assert [(r["run"], r["attempt"]) for r in registros] == [(1, 1), (1, 2)]
-    assert [r["descartada"] for r in registros] == [True, False]
-    assert [r["retry_reason"] for r in registros] == [None, "anulada"]
-
-
-def test_la_anulada_se_repite_como_mucho_dos_veces(tmp_path, monkeypatch):
-    monkeypatch.setattr(_SondaQueAnula, "motivos", ["process_changed"] * 10)
-    monkeypatch.setattr(benchmark, "ResourceSampler", _SondaQueAnula)
-    _, registros = _correr(
-        tmp_path, monkeypatch, lambda _r: _respuesta("bug"), "--case", "clasificar-53"
-    )
-    assert len(registros) == 1 + benchmark.MAX_ANNUL_RETRIES
-    assert all(r["descartada"] for r in registros)
-
-
-def test_contenido_vacio_por_razonar_es_configuracion_y_no_se_repite(tmp_path, monkeypatch):
-    vistos = []
+def test_voided_run_is_repeated_with_the_same_tokens(tmp_path, monkeypatch):
+    seen = []
 
     def handler(request):
-        vistos.append(1)
-        return _respuesta("", "length", reasoning_content="pensando largo y tendido")
+        seen.append(json.loads(request.content)["max_tokens"])
+        return _response("bug")
 
-    _, (registro,) = _correr(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert registro["outcome"] == "configuration"
-    assert registro["reasoning_chars"] > 0 and registro["score"] is None
-    assert len(vistos) == 1
+    monkeypatch.setattr(_VoidingProbe, "reasons", ["process_changed", None])
+    monkeypatch.setattr(benchmark, "ResourceSampler", _VoidingProbe)
+    _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert seen == [16, 16]
+    assert [(r["run"], r["attempt"]) for r in records] == [(1, 1), (1, 2)]
+    assert [r["descartada"] for r in records] == [True, False]
+    assert [r["retry_reason"] for r in records] == [None, "anulada"]
 
 
-def test_estado_termico_frio_solo_tras_un_cambio_de_pid(tmp_path, monkeypatch):
+def test_the_voided_run_is_repeated_at_most_twice(tmp_path, monkeypatch):
+    monkeypatch.setattr(_VoidingProbe, "reasons", ["process_changed"] * 10)
+    monkeypatch.setattr(benchmark, "ResourceSampler", _VoidingProbe)
+    _, records = _run(tmp_path, monkeypatch, lambda _r: _response("bug"), "--case", "clasificar-53")
+    assert len(records) == 1 + benchmark.MAX_ANNUL_RETRIES
+    assert all(r["descartada"] for r in records)
+
+
+def test_empty_content_from_reasoning_is_configuration_and_is_not_repeated(tmp_path, monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append(1)
+        return _response("", "length", reasoning_content="pensando largo y tendido")
+
+    _, (record,) = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
+    assert record["outcome"] == "configuration"
+    assert record["reasoning_chars"] > 0 and record["score"] is None
+    assert len(seen) == 1
+
+
+def test_cold_thermal_state_only_after_a_pid_change(tmp_path, monkeypatch):
     # Cuatro peticiones con lectura antes y despues (intervalo largo = exactamente dos muestras):
     # la 1.ª carga el modelo, la 2.ª con el mismo PID, la 3.ª tras un swap, la 4.ª ya caliente.
     pids = iter([None, 1, 1, 1, 2, 2, 2, 2])
@@ -611,10 +611,10 @@ def test_estado_termico_frio_solo_tras_un_cambio_de_pid(tmp_path, monkeypatch):
 
     monkeypatch.setattr(benchmark, "probe_supported", lambda: True)
     monkeypatch.setattr(benchmark, "ProcessProbe", Probe)
-    _, registros = _correr(
+    _, records = _run(
         tmp_path,
         monkeypatch,
-        lambda _r: _respuesta("bug"),
+        lambda _r: _response("bug"),
         "--case",
         "clasificar-53",
         "--runs",
@@ -626,18 +626,18 @@ def test_estado_termico_frio_solo_tras_un_cambio_de_pid(tmp_path, monkeypatch):
         "--gpu-luid",
         "0x0_0x1",
     )
-    assert [r["thermal_state"] for r in registros] == ["cold", "hot", "cold", "hot"]
+    assert [r["thermal_state"] for r in records] == ["cold", "hot", "cold", "hot"]
 
 
-def test_rol_y_control_seleccionan_los_casos_que_tocan(tmp_path, monkeypatch):
-    _, registros = _correr(tmp_path, monkeypatch, lambda _r: _respuesta("x"), "--role", "vision")
-    assert sorted(r["case"] for r in registros) == ["describir-dashboard", "leer-cifras-dashboard"]
-    assert all(r["input_variant"] is None for r in registros)
+def test_role_and_control_select_the_matching_cases(tmp_path, monkeypatch):
+    _, records = _run(tmp_path, monkeypatch, lambda _r: _response("x"), "--role", "vision")
+    assert sorted(r["case"] for r in records) == ["describir-dashboard", "leer-cifras-dashboard"]
+    assert all(r["input_variant"] is None for r in records)
 
     control = _corpus().controls[0]
-    _, registros = _correr(
-        tmp_path / "c", monkeypatch, lambda _r: _respuesta("x"), "--input-control", control["id"]
+    _, records = _run(
+        tmp_path / "c", monkeypatch, lambda _r: _response("x"), "--input-control", control["id"]
     )
-    assert sorted(r["case"] for r in registros) == sorted(control["para"])
-    assert {r["input_variant"] for r in registros} == {control["id"]}
-    assert {r["input_sha256"] for r in registros} == {control["source_sha256"]}
+    assert sorted(r["case"] for r in records) == sorted(control["para"])
+    assert {r["input_variant"] for r in records} == {control["id"]}
+    assert {r["input_sha256"] for r in records} == {control["source_sha256"]}

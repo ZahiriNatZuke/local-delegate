@@ -1,0 +1,14 @@
+mutante M1: src/local_delegate/benchmark.py:1340 annul_retries < MAX_ANNUL_RETRIES -> annul_retries < 0 (sha256 4b1593fcf3a5 -> 3ca7cad98f5c)
+>       assert seen == [16, 16]
+E       assert [16] == [16, 16]
+E         
+E         Right contains one more item: 16
+E         Use -v to get more diff
+tests\test_benchmark.py:565: AssertionError
+>       assert len(records) == 1 + benchmark.MAX_ANNUL_RETRIES
+E       AssertionError: assert 1 == (1 + 2)
+E        +  where 1 = len([{'schema_version': 2, 'ts': '2026-10-13T18:36:14.560945+00:00', 'label': 'l', 'model': 'm', ...}])
+E        +  and   2 = benchmark.MAX_ANNUL_RETRIES
+tests\test_benchmark.py:575: AssertionError
+2 failed in 0.25s
+restaurado desde copia: sha256 4b1593fcf3a5 (igual al original: sí)

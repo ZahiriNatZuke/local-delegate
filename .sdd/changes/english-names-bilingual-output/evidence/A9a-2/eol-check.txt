@@ -1,0 +1,12 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+M | lf | lf | .gitattributes
+M | lf | lf | docs/assets/dashboard.json
+M | lf | lf | docs/wiki/Publishing.md
+M | lf | lf | scripts/dev/capture_dashboard.py
+M | lf | lf | tests/test_benchmark.py
+R055 | lf | lf | tests/test_boilerplate_salida.py -> tests/test_boilerplate_output.py
+M | lf | lf | tests/test_bump_version.py
+R062 | lf | lf | tests/test_captura.py -> tests/test_capture.py
+R075 | lf | lf | tests/test_cadenas.py -> tests/test_chains.py
+M | lf | lf | tests/test_respaldo.py
+diferencias de EOL: 0

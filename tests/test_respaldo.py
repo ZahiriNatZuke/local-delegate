@@ -289,7 +289,7 @@ def test_en_map_reduce_de_largo_el_respaldo_esta_muerto_por_construccion(reload_
 @backend_mock.mock
 def test_capacity_only_hops_to_loaded_without_second_hop(reload_config, tmp_path):
     """Con un miembro en `loaded` (el proveedor lo pone T15; aquí, a mano), capacidad salta a él y
-    a nada más. Sin miembros no salta: `test_cadenas.py::test_capacity_failure_with_nothing_loaded`.
+    a nada más. Sin miembros no salta: `test_chains.py::test_capacity_failure_with_nothing_loaded`.
     """
     reload_config()
     previous_provider = chains._loaded_provider

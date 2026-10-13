@@ -90,7 +90,7 @@ def _apply(changes: dict) -> None:
         bump_version._write(path, text, newline)
 
 
-def test_lee_las_cuatro_versiones(repo: Path):
+def test_reads_the_four_versions(repo: Path):
     versions = bump_version.read_versions(repo)
     assert set(versions.values()) == {"0.11.0"}
     # uv.lock es el sitio que ningún otro test cubría y el que se desfasó en la 0.8.1.
@@ -98,7 +98,7 @@ def test_lee_las_cuatro_versiones(repo: Path):
     assert versions["server.json (packages[0].version)"] == "0.11.0"
 
 
-def test_bump_actualiza_pyproject_y_las_dos_versiones_de_server_json(repo: Path):
+def test_bump_updates_pyproject_and_both_server_json_versions(repo: Path):
     _apply(bump_version.plan("0.12.0", repo))
 
     server = json.loads((repo / "server.json").read_text(encoding="utf-8"))
@@ -107,7 +107,7 @@ def test_bump_actualiza_pyproject_y_las_dos_versiones_de_server_json(repo: Path)
     assert 'version = "0.12.0"' in (repo / "pyproject.toml").read_text(encoding="utf-8")
 
 
-def test_bump_no_reformatea_el_resto_del_archivo(repo: Path):
+def test_bump_does_not_reformat_the_rest_of_the_file(repo: Path):
     _apply(bump_version.plan("0.12.0", repo))
 
     text = (repo / "server.json").read_text(encoding="utf-8")
@@ -119,7 +119,7 @@ def test_bump_no_reformatea_el_resto_del_archivo(repo: Path):
     assert "line-length = 100" in pyproject
 
 
-def test_bump_preserva_el_terminador_de_linea_original(repo: Path):
+def test_bump_preserves_the_original_line_terminator(repo: Path):
     crlf = repo / "pyproject.toml"
     crlf.write_bytes(PYPROJECT.replace("\n", "\r\n").encode("utf-8"))
 
@@ -131,13 +131,13 @@ def test_bump_preserva_el_terminador_de_linea_original(repo: Path):
     assert b"\n" not in raw.replace(b"\r\n", b"")  # ningún salto quedó suelto en LF
 
 
-def test_rechaza_versiones_que_el_registro_normalizaria_distinto(repo: Path):
+def test_rejects_versions_the_registry_would_normalize_differently(repo: Path):
     for invalid in ["1.0", "v1.0.0", "1.0.0-rc1", "no-soy-una-version"]:
         with pytest.raises(bump_version.BumpError):
             bump_version.plan(invalid, repo)
 
 
-def test_check_detecta_un_sitio_desfasado(repo: Path):
+def test_check_detects_an_out_of_date_site(repo: Path):
     # El error histórico exacto: todo bumpeado menos el lock.
     (repo / "uv.lock").write_text(
         UV_LOCK.replace('version = "0.11.0"', 'version = "0.10.0"'), encoding="utf-8"
@@ -147,10 +147,10 @@ def test_check_detecta_un_sitio_desfasado(repo: Path):
         bump_version.check(repo)
 
 
-def test_check_pasa_cuando_todo_coincide(repo: Path):
+def test_check_passes_when_everything_matches(repo: Path):
     assert bump_version.check(repo) == "0.11.0"
 
 
-def test_check_pasa_sobre_el_repo_real():
+def test_check_passes_on_the_real_repo():
     """Cubre uv.lock, que `test_release_metadata.py` no mira."""
     assert bump_version.check(ROOT)

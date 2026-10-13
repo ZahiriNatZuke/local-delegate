@@ -1,0 +1,20 @@
+refactor(rename): nombres en inglés en test_benchmark a test_captura (ola A9a, lote 2)
+
+Renombra a inglés los nombres de test_benchmark.py, test_boilerplate_salida.py,
+test_bump_version.py, test_cadenas.py y test_captura.py: 236 filas del
+mapping aprobado. Entre ellas, los 78 test_* de esos módulos, las
+constantes de modelos de test_cadenas (MECANICO/LARGO/CODIGO/RETIRADO →
+MECHANICAL/LONG/CODE/RETIRED), el doble _SondaQueAnula → _VoidingProbe
+con su atributo motivos → reasons, y las constantes del manifiesto de la
+captura (RAIZ/CAPTURA/MANIFIESTO → ROOT/SCREENSHOT/MANIFEST).
+
+Ficheros (git mv): test_boilerplate_salida.py → test_boilerplate_output.py,
+test_cadenas.py → test_chains.py y test_captura.py → test_capture.py.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2567.
+
+Con el rename cambian, por consecuencia, las citas de los ficheros de
+test en test_respaldo.py, .gitattributes, docs/wiki/Publishing.md,
+docs/assets/dashboard.json y scripts/dev/capture_dashboard.py (solo las
+rutas de test).
