@@ -3,13 +3,13 @@
 La subola se parte en 7 lotes (D13: 1788 filas, máximo 300 por lote y sin partir un módulo, salvo
 la excepción aprobada del JS de `test_dashboard_ui.py`, que va al lote 7). Cada lote es un commit
 que hace la sesión principal, en una rama apilada sobre el anterior. Los **lotes 1 y 2** están en `main`
-(`2860497`, PR #272; `b10b468`, PR #273) y el **lote 3** en el commit `a6069f8` (PR #274). El
-**lote 4** está aplicado y registrado en la sección «A9a-4», al final. Las tablas de controles
-positivos, `local_*` y PyCharm son las de los lotes ya aplicados, porque `check_wave_records.py` lee
-la primera tabla de cada sección: 37 + 21 + 21 + 18 = 97 filas `rename_refactoring` = 97 filas
-`pycharm` de los mappings A9a-1 a A9a-4.
+(`2860497`, PR #272; `b10b468`, PR #273); el **lote 3** en `a6069f8` (PR #274), con el arreglo de
+CodeQL `2809dd1`; el **lote 4** en `d525e3f`. El **lote 5** está aplicado y registrado en la sección
+«A9a-5», al final. Las tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya
+aplicados, porque `check_wave_records.py` lee la primera tabla de cada sección: 37 + 21 + 21 + 18 +
+32 = 129 filas `rename_refactoring` = 129 filas `pycharm` de los mappings A9a-1 a A9a-5.
 
-- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, commit `584845c` (PR #273), rebasado sobre `main` con el lote 1 (`2860497`); lote 3 en `sdd/english-names-a9a-3`, commit `a6069f8` (PR #274), rebasado sobre `main`; lote 4 en `sdd/english-names-a9a-4`, apilada sobre `a6069f8` · Commit del lote 4: pendiente, con el borrador en `waves/A9a-4-commit-msg.txt` (firmado y sin coautoría)
+- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, commit `584845c` (PR #273), rebasado sobre `main` con el lote 1 (`2860497`); lote 3 en `sdd/english-names-a9a-3`, commit `a6069f8` (PR #274), rebasado sobre `main`; lote 4 en `sdd/english-names-a9a-4`, commit `d525e3f`, sobre `2809dd1` (arreglo de CodeQL de la sesión principal); lote 5 en `sdd/english-names-a9a-5`, apilada sobre `d525e3f` · Commit del lote 5: pendiente, con el borrador en `waves/A9a-5-commit-msg.txt` (firmado y sin coautoría)
 - Quién: un agente hizo los 7 mappings (fase 1). Tras la aprobación de la sesión principal (decisiones 1-8, con `esp`→`expected` y `clase`→`css_class`/`cls`/`content_class` según lo que nombre), el mismo agente aplicó el lote 1 (fase 2)
 - REQ cubiertos por el lote 1: REQ-015 (nombres de `tests/conftest.py`, `tests/backend_mock.py`, `test_agents.py`, `test_aislamiento_entorno.py`→`test_environment_isolation.py` y `test_atribucion.py`→`test_attribution.py`, más los directorios de fixtures `residencia`→`residency` y `topologia`→`topology`) y REQ-017 (ningún assert cambia de sentido)
 - Ficheros poseídos por el lote 1: `tests/conftest.py`, `tests/backend_mock.py`, `tests/test_agents.py`, `tests/test_aislamiento_entorno.py`, `tests/test_atribucion.py` y `tests/fixtures/{residencia,topologia}/`. Lo de fuera, en «Desviaciones»
@@ -30,6 +30,7 @@ la primera tabla de cada sección: 37 + 21 + 21 + 18 = 97 filas `rename_refactor
 | `tests/test_checks.py::test_an_http_entry_without_header_is_reported_as_blind_not_as_a_missing_variable` (test NUEVO del lote 3) | `checks.py:1124`: `_entry_auth` devuelve `"sin_credencial"` y no `"no_credential"` (el mutante M1 del hallazgo de A8a-1; sha256 `6766bd49328a` → `e4f821dfab58`) | `test_checks.py:1275` `assert "sin cabecera de autorización" in result.detail` → el detalle es el de la rama «variable que no está»; también falla el otro test nuevo (:1286). El test viejo `…against_a_daemon_with_token_warns` sigue pasando: no distingue, como decía el hallazgo (M2a) | sí, desde copia: `6766bd49328a` |
 | `tests/test_checks.py::test_an_http_entry_without_credential_is_tagged_no_credential` (test NUEVO del lote 3) | `checks.py`: los 4 `"no_credential"` → `"sin_credencial"`, con lo que el probe queda coherente (sha256 `6766bd49328a` → `a7d3cedbcf2b`) | `test_checks.py:1286` `assert checks._entry_auth(client, "http", None) == (client, "no_credential")` → `'sin_credencial' != 'no_credential'`; los otros dos pasan (M2b) | sí, desde copia: `6766bd49328a` |
 | `tests/test_ci_gate.py::test_waits_for_the_missing_ones_and_then_passes` (lote 4; usa los renombrados `_Clock.sleep`, `_run(read, clock)` y `_all`) | `scripts/ci_gate.py:277`: `dormir(INTERVALO_S)` → `dormir(2 * INTERVALO_S)` (sha256 `877a25dae814` → `895b50d8bdae`) | `test_ci_gate.py:242` `assert clock.t == ci_gate.INTERVALO_S` → `assert 20.0 == 10`; el otro test del bucle pasa (`evidence/A9a-4/mutant.txt`) | sí, desde copia: `877a25dae814` |
+| `tests/test_density.py::test_the_tool_wins_over_the_extension` (lote 5; usa la variable renombrada `content_class` y el módulo `test_densidad`→`test_density`) | `src/local_delegate/cost.py:101`: `if by_tool:` → `if by_tool and not event.get("path"):`, con lo que la extensión gana a la tool (sha256 `412e2b7e8c16` → `86576b81627a`) | `test_density.py:117` `assert content_class == "log"` → `'code' == 'log'` (`evidence/A9a-5/mutant.txt`) | sí, desde copia: `412e2b7e8c16` |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -39,6 +40,7 @@ la primera tabla de cada sección: 37 + 21 + 21 + 18 = 97 filas `rename_refactor
 | agente A9a-2 | `local_lint_summary(path=evidence/A9a-2/pytest-full.log)` | resumen de la suite del lote 2 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 | agente A9a-3 | `local_lint_summary(path=evidence/A9a-3/pytest-full.log)` | resumen de la suite del lote 3 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 | agente A9a-4 | `local_lint_summary(path=evidence/A9a-4/pytest-full.log)` | resumen de la suite del lote 4 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
+| agente A9a-5 | `local_lint_summary(path=evidence/A9a-5/pytest-full.log)` | resumen de la suite del lote 5 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 
 Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto de cada nombre, reglas del brief) y las listas largas fueron a ficheros del scratchpad, leídos por franjas.
 
@@ -147,6 +149,39 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 | agente A9a-4 | `rename_refactoring` | `notas (fixture)` → `notes` | 0 usos (autouse o parámetros ya editados) |
 | agente A9a-4 | `rename_refactoring` | `test_correlacion._eventos` → `_events` | 2 usos |
 | agente A9a-4 | `get_file_problems` | `tests/test_ci_gate.py`, `tests/test_clients.py`, `tests/test_f1_conformance.py` (solo errores) | 0 errores nuevos: los 2 de `test_f1_conformance.py:60-61` (`Unresolved reference 'backend_available'` en `monkeypatch.setattr(read_hook, …)`, módulos cargados con `importlib`) ya estaban en HEAD |
+| agente A9a-5 | `rename_refactoring` | `_cotejo` → `_crosscheck` | 5 usos |
+| agente A9a-5 | `rename_refactoring` | `_sin_web_ni_arranques` → `_without_web_or_starts` | 0 usos (fixture: autouse o parámetros ya editados por `apply`) |
+| agente A9a-5 | `rename_refactoring` | `_interrumpir` → `_interrupt` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `solo_windows` → `windows_only` | 3 usos |
+| agente A9a-5 | `rename_refactoring` | `_entorno_aislado` → `_isolated_env` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `_lanzar` → `_launch` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `_romper_y_esperar` → `_break_and_wait` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `fila` → `row` | 21 usos |
+| agente A9a-5 | `rename_refactoring` | `test_cuota._lineas` → `_lines` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `puntos_de` → `points_of` | 7 usos |
+| agente A9a-5 | `rename_refactoring` | `_punto` → `_point` | 7 usos |
+| agente A9a-5 | `rename_refactoring` | `_RespuestaFalsa` → `_FakeResponse` | 1 uso |
+| agente A9a-5 | `rename_refactoring` | `_doblar_get_crudo` → `_stub_get_raw` | 10 usos |
+| agente A9a-5 | `rename_refactoring` | `_doblar_get` → `_stub_get` | 6 usos |
+| agente A9a-5 | `rename_refactoring` | `_RespuestaHTTP` → `_HTTPResponse` | 8 usos |
+| agente A9a-5 | `rename_refactoring` | `_plazo_conexion` → `_connect_timeout` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `cliente_nuevo` → `new_client` | 0 usos (fixture: autouse o parámetros ya editados por `apply`) |
+| agente A9a-5 | `rename_refactoring` | `registradores` → `recorders` | 0 usos (fixture: autouse o parámetros ya editados por `apply`) |
+| agente A9a-5 | `rename_refactoring` | `_ultima_linea_del_log` → `_last_log_line` | 3 usos |
+| agente A9a-5 | `rename_refactoring` | `_png_minimo` → `_minimal_png` | 1 uso |
+| agente A9a-5 | `rename_refactoring` | `_troceada_map_reduce` → `_chunked_map_reduce` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `_troceada_por_trozos` → `_chunked_by_chunks` | 1 uso |
+| agente A9a-5 | `rename_refactoring` | `_imagen` → `_image` | 1 uso |
+| agente A9a-5 | `rename_refactoring` | `_entrada_inflight` → `_inflight_entry` | 5 usos |
+| agente A9a-5 | `rename_refactoring` | `_esperar` → `_wait` | 2 usos |
+| agente A9a-5 | `rename_refactoring` | `_respaldo_declarado` → `_declared_fallback` | 0 usos (fixture: autouse o parámetros ya editados por `apply`) |
+| agente A9a-5 | `rename_refactoring` | `_fila` → `_row` | 17 usos |
+| agente A9a-5 | `rename_refactoring` | `_extraer_funcion_js` → `_extract_js_function` | 5 usos |
+| agente A9a-5 | `rename_refactoring` | `DE_LA_LINEA` → `MODEL_FROM_LINE` | 4 usos |
+| agente A9a-5 | `rename_refactoring` | `DEL_RELLENO` → `MODEL_FROM_BACKFILL` | 6 usos |
+| agente A9a-5 | `rename_refactoring` | `_bloque_de_tokens_aprox` → `_approx_tokens_block` | 1 uso |
+| agente A9a-5 | `rename_refactoring` | `_acct_en_js` → `_acct_in_js` | 4 usos |
+| agente A9a-5 | `get_file_problems` | `tests/test_quota.py`, `tests/test_daemon.py`, `tests/test_density.py` (solo errores) | 0 errores nuevos: los 3 de `test_daemon.py` (`Unresolved reference 'Server'` en `monkeypatch.setattr(daemon.uvicorn, "Server", …)`) ya estaban en HEAD |
 
 ## Revisión del diff tras rename_refactoring
 
@@ -310,3 +345,48 @@ Los pidió el hallazgo de A8a-1: el valor interno `"no_credential"` no lo proteg
    - `llamadas`, `texto` ×2 y `_datos` de `test_clients`;
    - `modelo` y los 11 parámetros `entorno` de `test_conformidad_f1`.
 2. Las filas de las tools de prueba (`eco`, `quien_soy` y `quien_llama`) y la del parámetro `contenido` anotan en su motivo las cadenas que cambiaron con ellas.
+
+---
+
+## A9a-5 — `test_coste_doctor`, `test_ctrl_c`, `test_cuota`, `test_daemon`, `test_delegacion_conexion` y `test_densidad` (aplicado)
+
+- Rama: `sdd/english-names-a9a-5`, apilada sobre el lote 4 (`d525e3f`)
+- REQ cubiertos: REQ-015 y REQ-017. Entran los nombres de `test_ctrl_c.py` (CRLF), `test_daemon.py`, `test_coste_doctor.py`→`test_cost_doctor.py`, `test_cuota.py`→`test_quota.py`, `test_delegacion_conexion.py`→`test_delegation_connection.py` y `test_densidad.py`→`test_density.py`
+- Ficheros poseídos: esos 6 ficheros de test. Fuera: `tests/test_transcripts.py:5`, que cita `test_cuota.py`
+- EOL: `evidence/A9a-5/eol-check.txt`: 0 diferencias. `test_ctrl_c.py` sigue CRLF y el resto LF
+- Mapping: `waves/A9a-5-mapping.csv` aprobado (`# approved-by-main: 2026-10-13`), 299 filas. Filas `pycharm` 32 = filas `rename_refactoring` 32. Filas `search_edit` 267, cada una con su motivo:
+  - 251 con `make_mapping.py apply` (569 reemplazos: `test_coste_doctor` 63, `test_ctrl_c` 51, `test_cuota` 130, `test_daemon` 57, `test_delegacion_conexion` 140 y `test_densidad` 128), más el `def`/`class` de 14 anidadas con `a9a/nested_defs.py`;
+  - 12 parámetros homónimos pasados de `pycharm` a `search_edit` en la fase 2;
+  - 4 módulos con `git mv`
+- Tests recogidos: 2569 → 2569 (`evidence/A9a-5/collect.txt`), +0 −0. Por fichero, iguales: 6, 7, 10, 29, 14 y 16
+- Suite: `evidence/A9a-5/pytest-full.log` (`pytest -q -n auto --dist loadgroup`, con `pesado.sh`), verde a la primera: 2567 pasan, 2 saltados y el aviso conocido de `BlockingPortal`, en 57 s
+- `ruff check` y `ruff format --check`: limpios (`evidence/A9a-5/ruff-check.txt`, 187 ficheros). Antes, `ruff format` reajustó `test_delegation_connection.py`, `test_density.py` y `test_quota.py`; esos 3 se volvieron a pasar después (40 pasan)
+- Tamaño: 7 ficheros, +565 −565 (`git diff HEAD -M30% --numstat --ignore-cr-at-eol`)
+
+### A9a-5 · Qué se hizo
+
+1. `make_mapping.py apply`: 569 reemplazos. `nested_defs.py`: el `def`/`class` de 14 anidadas, entre ellas `_ServidorQueRecibeCtrlC`, `_Servidor` y `_en_otro_hilo` de `test_ctrl_c`, los `_ClienteFalso` ×2 y `_solo_contesta_en_9393` de `test_daemon`, y `_preguntar`, `bloque` y `_espia` ×2 de `test_delegacion_conexion`. Ninguna es una tool MCP de prueba.
+2. Cadenas de `parametrize` en `test_delegacion_conexion.py`: `"autoarranque"`→`"autostart"` y `"camino"`→`"path"`. Los `ids=` (`sin-autoarranque`, `troceada-map-reduce`…) se quedan: son el nombre visible del caso, y el número de tests no cambia.
+3. `a9a/lineedit.py`: los 12 parámetros homónimos con sus llamadas por keyword (`_cotejo(sin_precio=, fuera=)`, `fila(siete=)`, `_doblar_get(registro=)`, `_doblar_get_crudo(registro=)` y `_backend(texto=)`).
+4. PyCharm: 32 `rename_refactoring`. Volvió a reescribir 5 documentos de `.sdd/` (`A8b.md` y research/verification de otros SDD): devueltos a HEAD con `git checkout`. Los mappings 6-7 siguen iguales byte a byte.
+5. `git mv` de los 4 módulos. Cita por ruta: `test_transcripts.py:5`. La cita `` `cotejo: null` `` de `test_cost_doctor.py:144` pasa a `` `check: null` ``, el nombre actual de esa clave del fichero de agregados (`legacy_names` lee `cotejo` como `check`).
+6. En este lote no hay `except … as` con nombre en español.
+
+### A9a-5 · Patrones de CodeQL en los ficheros renombrados (lección del lote 3)
+
+`evidence/A9a-5/codeql-like.txt`. Un fichero de test renombrado hace que CodeQL vea sus avisos como alertas nuevas. Antes de entregar se buscaron, en `test_cost_doctor.py`, `test_quota.py`, `test_delegation_connection.py` y `test_density.py`, los patrones de `py/catch-base-exception`, `py/mixed-returns`, `py/empty-except`, `py/unused-local-variable`, `py/uninitialized-local-variable` y `py/side-effect-in-assert`.
+
+- Herramienta: un barrido AST (`a9a/codeql_like.py`), más `ruff --select F841,BLE001,S110,E722,RET503…` y una revisión a mano de los `try/except`.
+- Resultado: **0 hallazgos**, así que no hubo nada que corregir. Los dos `except Exception as e` de `test_quota.py` (:144, :158) guardan la excepción y la afirman después: no son `BaseException`, no están vacíos y sus variables se asignan en las dos ramas.
+- Control positivo: el mismo barrido sobre `test_connection_cause.py` tal como estaba en `a6069f8`, antes del arreglo `2809dd1`, da las dos alertas que vio CodeQL: `except BaseException` sin relanzar en :41 y `pytest.fail` sin `raise` en `_real_failure`, :230.
+
+### A9a-5 · Barrido final
+
+- AST (`a9a/sweep_after.py`): ninguna definición con un `old` del lote y ninguna en español. Los únicos usos de código con un `old` son `peticion(…)` y el kwarg `sesion=` de `principal(…)` en `test_quota.py`, importados de `test_transcripts.py` (A9c).
+- `git grep -w` en los ficheros del lote, por token: 141 en textos (62 docstrings, 48 comentarios y 31 cadenas), todo prosa y datos. Se queda `const casos` en el JS que `_acct_in_js` escribe a un `.mjs`: es una variable local de ese programa JS, sin relación con el parámetro Python.
+- Resto del repo: 0 citas de los 4 módulos viejos. Los homónimos que salen son de otros lotes y olas.
+
+### A9a-5 · Desviaciones
+
+1. **12 filas `pycharm` → `search_edit`**: `fuera`, `sin_precio`, `coste`, `sesion`, `siete`, `fuente` ×2, `registro` ×2, `respuesta`, `casos` y `texto`. Lo anota una línea `# Fase 2` del CSV.
+2. Las filas de `autoarranque` y `camino` anotan en su motivo la cadena de `parametrize` que cambió con ellas.

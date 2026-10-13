@@ -1,0 +1,13 @@
+mutante M1: src/local_delegate/cost.py «    if by_tool:
+        return by_tool
+    return CLASS_BY_EXTENSION» → «    if by_tool and not event.get("path"):
+        return by_tool
+    return CLASS_BY_EXTENSION» (1 sitio/s; sha256 412e2b7e8c16 -> 86576b81627a)
+>       assert content_class == "log"
+E       AssertionError: assert 'code' == 'log'
+E         - log
+E         + code
+tests\test_density.py:117: AssertionError
+1 failed in 0.35s
+restaurado desde copia: sha256 412e2b7e8c16 (igual al original: sí)
+
