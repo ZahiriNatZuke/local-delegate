@@ -344,7 +344,7 @@ def block_state() -> str:
 #
 # Bloquear hacia un modelo que el servidor no va a llamar deja al agente peor que antes. El estado lo
 # escribe el servidor en `LOG_DIR/cooldown.json`; el hook es stdlib y no puede importar `config`,
-# asi que lleva su copia de los defectos, y `tests/test_conformidad_f1.py` la ata a `config.py`. Con
+# asi que lleva su copia de los defectos, y `tests/test_f1_conformance.py` la ata a `config.py`. Con
 # un `LOCAL_DELEGATE_MODEL_*` distinto en el lanzador del daemon y no en el cliente, el hook mira el
 # defecto: ante la duda no se entera del enfriamiento y sigue bloqueando, como antes de esta guarda.
 

@@ -1,0 +1,9 @@
+mutante M1: scripts/ci_gate.py «        dormir(INTERVALO_S)» → «        dormir(2 * INTERVALO_S)» (1 sitio/s; sha256 877a25dae814 -> 895b50d8bdae)
+>       assert clock.t == ci_gate.INTERVALO_S
+E       assert 20.0 == 10
+E        +  where 20.0 = <test_ci_gate._Clock object at 0x000001A460901950>.t
+E        +  and   10 = ci_gate.INTERVALO_S
+tests\test_ci_gate.py:242: AssertionError
+1 failed, 1 passed in 0.68s
+restaurado desde copia: sha256 877a25dae814 (igual al original: sí)
+

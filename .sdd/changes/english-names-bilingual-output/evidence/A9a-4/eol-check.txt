@@ -1,0 +1,9 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+M | lf | lf | docs/wiki/Repo-hardening.md
+M | lf | lf | src/local_delegate/resources/hooks/hook_common.py
+M | lf | lf | tests/test_ci_gate.py
+M | crlf | crlf | tests/test_clients.py
+M | lf | lf | tests/test_core.py
+R052 | lf | lf | tests/test_correlacion.py -> tests/test_correlation.py
+R046 | lf | lf | tests/test_conformidad_f1.py -> tests/test_f1_conformance.py
+diferencias de EOL: 0
