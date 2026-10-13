@@ -134,6 +134,68 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             },
         },
     },
+    # Agregados del coste (`cost-aggregates.json`; antes `coste-agregados.json`): las claves de
+    # primer nivel. Lo anidado (cotejo, puntos, descartes y marcas) tiene sus propias tablas, y el
+    # fichero entero se traduce con `normalize_cost_aggregates`.
+    "cost_aggregates": {
+        "keys": {
+            "generado": "generated",
+            "plazo_dias": "cleanup_days",
+            "cotejo": "check",
+            "n_por_mes": "n_by_month",
+            "puntos": "points",
+            "descartes": "discards",
+            "reinicios": "resets",
+            "fuentes": "sources",
+        },
+    },
+    # El cotejo real de precios (`check`).
+    "cost_aggregates_check": {
+        "keys": {
+            "fecha": "date",
+            "version_tabla": "table_version",
+            "juzgadas": "judged",
+            "fuera": "outside",
+            "sin_precio": "unpriced",
+            "veredicto": "verdict",
+        },
+        "values": {"verdict": {"pasa": "pass", "falla": "fail"}},
+    },
+    # Cada punto de calibración de la cuota (`points[]`). Su identidad es
+    # `(source, type, start, end)`, y `source` se traduce ANTES de juntar puntos viejos y nuevos.
+    "cost_aggregates_point": {
+        "keys": {
+            "fuente": "source",
+            "tipo": "type",
+            "inicio": "start",
+            "fin": "end",
+            "marcas": "marks",
+            "peticiones_sin_precio": "unpriced_requests",
+        },
+        "values": {"source": {"rechazo": "rejection"}},
+    },
+}
+
+#: Motivos de descarte de la cuota: las claves de `discards[<tipo>]` (y los dos que añade
+#: `quota.status` al leer, `expired` y `reset`). El panel los recibe ya traducidos.
+COST_DISCARD_REASONS: dict[str, str] = {
+    "linea_corrupta": "corrupt_line",
+    "fuera_de_rango": "out_of_range",
+    "delta_pequeno": "small_delta",
+    "sin_uso_local": "no_local_use",
+    "contaminado": "contaminated",
+    "solapado": "overlapping",
+    "caducado": "expired",
+    "reinicio": "reset",
+}
+
+#: Marcas de un punto de cuota (REQ-033): eran prosa usada como valor de máquina. Una marca que no
+#: esté aquí se copia tal cual.
+COST_MARK_VALUES: dict[str, str] = {
+    "cota baja": "low_bound",
+    "solo comprobación": "check_only",
+    "cota baja si hubo uso en otras superficies": "low_bound_if_other_surfaces",
+    "reinicio": "reset",
 }
 
 #: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
@@ -161,6 +223,14 @@ COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
 #: `FILE_NAMES`, que tiene copia en `hook_common`. Se escribe el nuevo; el viejo siembra el nuevo una
 #: sola vez y no se reescribe nunca (REQ-006).
 ATTRIBUTION_FILE_PREFIXES: tuple[str, str] = ("atribucion-", "attribution-")
+
+#: Los agregados del coste (en `LOG_DIR`), como `(viejo, nuevo)`. Solo los escribe `recompute`, y
+#: solo el nuevo; el viejo siembra el nuevo una sola vez y no se reescribe nunca (REQ-006).
+COST_AGGREGATES_FILE_NAMES: tuple[str, str] = ("coste-agregados.json", "cost-aggregates.json")
+
+#: El registro del statusline (en `~/.claude`), como `(viejo, nuevo)`. Lo escribe el statusline del
+#: usuario, que es código ajeno al paquete: se leen los dos si existen los dos (REQ-008).
+QUOTA_STATUSLINE_FILE_NAMES: tuple[str, str] = ("cuota-statusline.jsonl", "quota-statusline.jsonl")
 
 #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
 #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
@@ -224,4 +294,45 @@ def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
         value = out.get(key)
         if isinstance(value, str) and value in mapping:
             out[key] = mapping[value]
+    return out
+
+
+def normalize_cost_point(point: Any) -> Any:
+    """Un punto de cuota en el formato nuevo, con `source` y las marcas ya traducidas.
+
+    Lo que no es un dict se devuelve tal cual: `quota.split_malformed` lo cuenta como roto.
+    """
+    if not isinstance(point, Mapping):
+        return point
+    out = normalize("cost_aggregates_point", point)
+    marks = out.get("marks")
+    if isinstance(marks, list):
+        out["marks"] = [new_value(COST_MARK_VALUES, m) for m in marks]
+    return out
+
+
+def normalize_cost_aggregates(data: Mapping[str, Any]) -> dict[str, Any]:
+    """`coste-agregados.json` entero en el formato de `cost-aggregates.json`.
+
+    Traduce las claves de primer nivel, las del cotejo y su veredicto, las de cada punto (con
+    `source` y las marcas, para que un punto viejo y su gemelo nuevo tengan la misma identidad) y
+    los motivos de descarte. Un fichero ya nuevo sale igual.
+    """
+    out = normalize("cost_aggregates", data)
+    check = out.get("check")
+    if isinstance(check, Mapping):
+        out["check"] = normalize("cost_aggregates_check", check)
+    points = out.get("points")
+    if isinstance(points, list):
+        out["points"] = [normalize_cost_point(p) for p in points]
+    discards = out.get("discards")
+    if isinstance(discards, Mapping):
+        out["discards"] = {
+            kind: (
+                {COST_DISCARD_REASONS.get(r, r): n for r, n in by_reason.items()}
+                if isinstance(by_reason, Mapping)
+                else by_reason
+            )
+            for kind, by_reason in discards.items()
+        }
     return out

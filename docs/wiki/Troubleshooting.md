@@ -270,10 +270,11 @@ o en la que el comando no se ha lanzado. El check nunca da `missing`.
 Es lo esperado. Para decir qué parte de una ventana de 5 h o de la semanal supone lo delegado,
 hacen falta al menos **tres medidas del statusline de ventanas distintas** con una dispersión
 menor del 25 %, y hasta entonces el panel no enseña ningún porcentaje. Esas medidas salen del
-registro del statusline (`~/.claude/cuota-statusline.jsonl`), que solo existe si tu statusline lo
+registro del statusline (`~/.claude/quota-statusline.jsonl` o `~/.claude/cuota-statusline.jsonl`,
+que valen los dos), que solo existe si tu statusline lo
 escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recompute-cost`
 para incorporar las medidas nuevas. El bloque enseña además cuántas se descartaron y por qué
-(`contaminado`, `delta_pequeno`, `solapado`…): una medida tomada mientras otra sesión que no está
+(contaminado, variación pequeña, solapado…): una medida tomada mientras otra sesión que no está
 en el registro gastaba cuota no sirve para calibrar. Si cambian los límites de uso (el vigilante
 abre un PR con el texto nuevo), descarta la calibración vieja con
 `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`).

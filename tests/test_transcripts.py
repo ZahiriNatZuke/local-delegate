@@ -11,7 +11,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from local_delegate import attribution, recalcular, transcripts
+from local_delegate import attribution, recompute, transcripts
 
 BASE = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
 SESION = "sesion-sintetica-0001"
@@ -266,7 +266,7 @@ def test_el_relleno_usa_el_plazo_leido(tmp_path):
         ],
     )
     escribir_log(log, [linea_log(1, tool_use_id="toolu_p")])
-    recalcular.ejecutar(claude, log, ahora=BASE + timedelta(days=45))
+    recompute.run(claude, log, now=BASE + timedelta(days=45))
     entradas = attribution.read_backfill(log, "202610")
     clave = "toolu_p"
     assert clave in entradas

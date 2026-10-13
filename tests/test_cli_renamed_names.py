@@ -20,7 +20,7 @@ from test_install import _install
 from test_recalcular import _delegacion_con_n
 from test_transcripts import subagente
 
-from local_delegate import cli, config, deprecations, recalcular, server
+from local_delegate import cli, config, deprecations, recompute, server
 
 RENAMED_ENV = (
     ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR"),
@@ -46,7 +46,7 @@ def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int, 
     monkeypatch.setattr(config, "LOG_DIR", log)
     code = _run([command, "--claude-dir", str(claude)])
     stderr = capsys.readouterr().err
-    written = log / recalcular.NOMBRE
+    written = log / recompute.FILE_NAME
     data = json.loads(written.read_text(encoding="utf-8")) if written.is_file() else {}
     return code, data, stderr
 
@@ -94,12 +94,12 @@ def test_reset_calibration_and_its_alias_reach_the_same_argument(
 ):
     seen: list[str | None] = []
 
-    def fake_run(claude_dir, log_dir, *, reiniciar=None, **_kw):
-        seen.append(reiniciar)
+    def fake_run(claude_dir, log_dir, *, reset=None, **_kw):
+        seen.append(reset)
         return {}
 
-    monkeypatch.setattr(recalcular, "ejecutar", fake_run)
-    monkeypatch.setattr(recalcular, "texto_del_resumen", lambda _r: "")
+    monkeypatch.setattr(recompute, "run", fake_run)
+    monkeypatch.setattr(recompute, "summary_text", lambda _r: "")
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 0
     assert seen == [expected]
@@ -109,7 +109,7 @@ def test_reset_calibration_and_its_alias_reach_the_same_argument(
 
 def test_reset_calibration_with_two_different_values_is_an_error(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(
-        recalcular, "ejecutar", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
+        recompute, "run", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
     )
     argv = ["--reset-calibration", "five_hour", "--reiniciar-calibracion", "seven_day"]
     assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 2

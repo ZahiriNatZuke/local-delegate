@@ -2,10 +2,12 @@
 
 Port de `insumos/scripts/calibracion.py` y `criterio.py`. Lo usan el comando
 `recompute-cost` (que saca los puntos de los transcripts y del registro del statusline) y el
-panel (que solo aplica `status` sobre `coste-agregados.json`, sin leer `~/.claude`).
+panel (que solo aplica `status` sobre `cost-aggregates.json`, sin leer `~/.claude`).
 
-Un punto es un dict `{"fuente": "statusline"|"rechazo", "tipo", "inicio", "fin", "delta_pct",
-"delta_usd", "C", "marcas", "peticiones_sin_precio"}` con fechas ISO en UTC. Sin ids de sesión.
+Un punto es un dict `{"source": "statusline"|"rejection", "type", "start", "end", "delta_pct",
+"delta_usd", "C", "marks", "unpriced_requests"}` con fechas ISO en UTC. Sin ids de sesión. Las
+marcas y los motivos de descarte son valores de máquina en inglés (REQ-033); el panel y el resumen
+de `recompute-cost` los pintan en palabras.
 """
 
 from __future__ import annotations
@@ -18,6 +20,8 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
+from . import legacy_names
+
 TYPES = ("five_hour", "seven_day")
 DURATION = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
 RESET_FIELD = {"five_hour": "five_reset", "seven_day": "seven_reset"}
@@ -27,10 +31,10 @@ MIN_DELTA = 10
 THRESHOLD = 0.25
 MIN_POINTS = 3
 
-MARK_LOW_BOUND = "cota baja"
-MARK_CHECK_ONLY = "solo comprobación"
-MARK_OTHER_SURFACES = "cota baja si hubo uso en otras superficies"
-MARK_RESET = "reinicio"
+MARK_LOW_BOUND = "low_bound"
+MARK_CHECK_ONLY = "check_only"
+MARK_OTHER_SURFACES = "low_bound_if_other_surfaces"
+MARK_RESET = "reset"
 
 REJECTION_WARNING = (
     "la calibración da menos capacidad que un rechazo observado: probable uso en otras superficies"
@@ -66,8 +70,8 @@ def rejection_points(
 ) -> list[dict]:
     """Un punto por `(rateLimitType, resetsAt)`, de `resetsAt − duración` al PRIMER rechazo.
 
-    Δ% = 100; Δ$ = coste a precio de lista de las peticiones de ese intervalo; marcas «cota baja» y
-    «solo comprobación»; cuenta las peticiones sin precio.
+    Δ% = 100; Δ$ = coste a precio de lista de las peticiones de ese intervalo; marcas `low_bound` y
+    `check_only`; cuenta las peticiones sin precio.
     """
     requests = list(requests)
     points = []
@@ -82,15 +86,15 @@ def rejection_points(
         dollars = sum(c for c in inside if c is not None)
         points.append(
             {
-                "fuente": "rechazo",
-                "tipo": kind,
-                "inicio": _iso(start),
-                "fin": _iso(first),
+                "source": "rejection",
+                "type": kind,
+                "start": _iso(start),
+                "end": _iso(first),
                 "delta_pct": 100,
                 "delta_usd": round(dollars, 2),
                 "C": round(dollars, 2),
-                "marcas": [MARK_LOW_BOUND, MARK_CHECK_ONLY],
-                "peticiones_sin_precio": sum(1 for c in inside if c is None),
+                "marks": [MARK_LOW_BOUND, MARK_CHECK_ONLY],
+                "unpriced_requests": sum(1 for c in inside if c is None),
             }
         )
     return points
@@ -106,8 +110,8 @@ def _valid_pct(v: object) -> bool:
 def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Counter]]:
     """Las filas útiles del registro por tipo, las sesiones que aparecen y los descartes.
 
-    Una línea ilegible (o sin `ts`) es `linea_corrupta` en los dos tipos; un % fuera de
-    [0, 100] o no numérico es `fuera_de_rango` en su tipo (REQ-054, REQ-061). Cada fila va como
+    Una línea ilegible (o sin `ts`) es `corrupt_line` en los dos tipos; un % fuera de
+    [0, 100] o no numérico es `out_of_range` en su tipo (REQ-054, REQ-061). Cada fila va como
     `(t, sesión, %, reset, cost_usd)`, ordenada por `t`.
     """
     discards = empty_discards()
@@ -122,7 +126,7 @@ def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Coun
         t = _instant(r.get("ts")) if isinstance(r, dict) else None
         if t is None:
             for kind in TYPES:
-                discards[kind]["linea_corrupta"] += 1
+                discards[kind]["corrupt_line"] += 1
             continue
         rows.append((t, r))
     rows.sort(key=lambda x: x[0])
@@ -132,7 +136,7 @@ def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Coun
         for kind in TYPES:
             v = r.get(kind)
             if not _valid_pct(v):
-                discards[kind]["fuera_de_rango"] += 1
+                discards[kind]["out_of_range"] += 1
                 continue
             by_type[kind].append(
                 (t, r.get("session_id"), v, r.get(RESET_FIELD[kind]), r.get("cost_usd"))
@@ -167,7 +171,7 @@ def statusline_points(
                     best = (d, xs)
             delta, xs = best
             if delta < MIN_DELTA:
-                discards[kind]["delta_pequeno"] += 1
+                discards[kind]["small_delta"] += 1
                 continue
             ta, tb = xs[0][0], xs[-1][0]
             dollars, resets = 0.0, 0
@@ -181,48 +185,48 @@ def statusline_points(
                         dollars += c1  # `/clear`: el incremento es el valor nuevo
                         resets += 1
             if dollars <= 0:
-                discards[kind]["sin_uso_local"] += 1
+                discards[kind]["no_local_use"] += 1
                 continue
             if any(ta < t <= tb and s not in log_sessions for (t, s, _c) in requests):
-                discards[kind]["contaminado"] += 1
+                discards[kind]["contaminated"] += 1
                 continue
             points.append(
                 {
-                    "fuente": "statusline",
-                    "tipo": kind,
-                    "inicio": _iso(ta),
-                    "fin": _iso(tb),
+                    "source": "statusline",
+                    "type": kind,
+                    "start": _iso(ta),
+                    "end": _iso(tb),
                     "delta_pct": delta,
                     "delta_usd": round(dollars, 2),
                     "C": round(dollars * 100 / delta, 2),
-                    "marcas": [MARK_OTHER_SURFACES] + ([MARK_RESET] if resets else []),
-                    "peticiones_sin_precio": None,
+                    "marks": [MARK_OTHER_SURFACES] + ([MARK_RESET] if resets else []),
+                    "unpriced_requests": None,
                 }
             )
     return points, discards
 
 
-# --- REQ-061: un punto mal formado en `coste-agregados.json` se salta -------------------------
+# --- REQ-061: un punto mal formado en `cost-aggregates.json` se salta -------------------------
 
-SOURCES = ("statusline", "rechazo")
+SOURCES = ("statusline", "rejection")
 
 
 def well_formed(p: object) -> bool:
     """Si el punto tiene todo lo que leen `drop_overlapping` y `status`. El JSON lo escribe solo
     el comando, pero alguien puede editarlo a mano: un punto roto no debe tumbar el panel."""
-    if not isinstance(p, dict) or p.get("fuente") not in SOURCES or p.get("tipo") not in TYPES:
+    if not isinstance(p, dict) or p.get("source") not in SOURCES or p.get("type") not in TYPES:
         return False
-    if _instant(p.get("inicio")) is None or _instant(p.get("fin")) is None:
+    if _instant(p.get("start")) is None or _instant(p.get("end")) is None:
         return False
     delta, c = p.get("delta_pct"), p.get("C")
     if not (_is_number(delta) and math.isfinite(delta)) or not (_is_number(c) and math.isfinite(c)):
         return False
     # La capacidad del statusline divide en la dispersión: tiene que ser positiva.
-    return c > 0 if p["fuente"] == "statusline" else c >= 0
+    return c > 0 if p["source"] == "statusline" else c >= 0
 
 
 def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Counter]]:
-    """Los puntos bien formados y los descartes: cada punto roto es `linea_corrupta` en su tipo, o
+    """Los puntos bien formados y los descartes: cada punto roto es `corrupt_line` en su tipo, o
     en los dos si el tipo tampoco se lee (la misma convención que `sanitize`)."""
     good: list[dict] = []
     discards = empty_discards()
@@ -230,9 +234,9 @@ def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Cou
         if well_formed(p):
             good.append(p)
             continue
-        kind = p.get("tipo") if isinstance(p, dict) else None
+        kind = p.get("type") if isinstance(p, dict) else None
         for t in [kind] if kind in TYPES else TYPES:
-            discards[t]["linea_corrupta"] += 1
+            discards[t]["corrupt_line"] += 1
     return good, discards
 
 
@@ -241,26 +245,26 @@ def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Cou
 
 def drop_overlapping(points: list[dict]) -> tuple[list[dict], dict[str, Counter]]:
     """Entre puntos de la misma fuente y tipo cuyos intervalos se solapan, se queda el de mayor
-    Δ% (con empate, el más reciente); los otros son `solapado`."""
+    Δ% (con empate, el más reciente); los otros son `overlapping`."""
     discards = empty_discards()
     accepted: list[dict] = []
     # Mayor Δ% primero y, dentro del mismo Δ%, el más reciente.
-    ordered = sorted(points, key=lambda p: (-p["delta_pct"], -_instant(p["fin"]).timestamp()))
+    ordered = sorted(points, key=lambda p: (-p["delta_pct"], -_instant(p["end"]).timestamp()))
     for p in ordered:
-        start, end = _instant(p["inicio"]), _instant(p["fin"])
+        start, end = _instant(p["start"]), _instant(p["end"])
         clashes = any(
-            q["fuente"] == p["fuente"]
-            and q["tipo"] == p["tipo"]
-            and start < _instant(q["fin"])
-            and _instant(q["inicio"]) < end
+            q["source"] == p["source"]
+            and q["type"] == p["type"]
+            and start < _instant(q["end"])
+            and _instant(q["start"]) < end
             for q in accepted
         )
         if clashes:
-            if p["tipo"] in discards:
-                discards[p["tipo"]]["solapado"] += 1
+            if p["type"] in discards:
+                discards[p["type"]]["overlapping"] += 1
             continue
         accepted.append(p)
-    accepted.sort(key=lambda p: (p["fuente"], p["tipo"], p["fin"], p["inicio"]))
+    accepted.sort(key=lambda p: (p["source"], p["type"], p["end"], p["start"]))
     return accepted, discards
 
 
@@ -268,11 +272,11 @@ def drop_overlapping(points: list[dict]) -> tuple[list[dict], dict[str, Counter]
 
 
 def current_points(points: Iterable[dict], now: datetime, reset: str | None = None) -> list[dict]:
-    """Los puntos con `fin` de hace 60 días o menos y no anterior al reinicio a mano."""
+    """Los puntos con `end` de hace 60 días o menos y no anterior al reinicio a mano."""
     since = _instant(reset) if reset else None
     out = []
     for p in points:
-        end = _instant(p.get("fin"))
+        end = _instant(p.get("end"))
         if end is None or now - end > VALIDITY:
             continue
         if since is not None and end < since:
@@ -359,31 +363,36 @@ def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
             }
             for kind in TYPES
         }
-    raw = aggregates.get("puntos")
+    # Quien llama suele traerlos ya traducidos (`recompute.read_aggregates`); si no, se traducen
+    # aquí, para que un lector no dependa de por dónde le llegó el fichero (REQ-006).
+    aggregates = legacy_names.normalize_cost_aggregates(aggregates)
+    raw = aggregates.get("points")
     points, broken = split_malformed(raw if isinstance(raw, list) else [])
-    resets = aggregates.get("reinicios") or {}
-    sources = aggregates.get("fuentes") or {}
-    all_discards = aggregates.get("descartes")
+    resets = aggregates.get("resets") or {}
+    sources = aggregates.get("sources") or {}
+    all_discards = aggregates.get("discards")
     if not isinstance(all_discards, dict):
         all_discards = {}
     out: dict[str, dict] = {}
     for kind in TYPES:
         reset = resets.get(kind) if isinstance(resets, dict) else None
-        of_type = [p for p in points if p.get("tipo") == kind]
-        sl = [p for p in of_type if p.get("fuente") == "statusline"]
-        valid = sorted(current_points(sl, now, reset), key=lambda p: p["fin"])
-        rejections_valid = current_points([p for p in of_type if p.get("fuente") == "rechazo"], now)
+        of_type = [p for p in points if p.get("type") == kind]
+        sl = [p for p in of_type if p.get("source") == "statusline"]
+        valid = sorted(current_points(sl, now, reset), key=lambda p: p["end"])
+        rejections_valid = current_points(
+            [p for p in of_type if p.get("source") == "rejection"], now
+        )
         previous = all_discards.get(kind)
         discards = dict(previous) if isinstance(previous, dict) else {}
-        if broken[kind]["linea_corrupta"]:
-            discards["linea_corrupta"] = (
-                discards.get("linea_corrupta", 0) + broken[kind]["linea_corrupta"]
+        if broken[kind]["corrupt_line"]:
+            discards["corrupt_line"] = (
+                discards.get("corrupt_line", 0) + broken[kind]["corrupt_line"]
             )
         without_reset = len(current_points(sl, now))
         if len(sl) > without_reset:
-            discards["caducado"] = discards.get("caducado", 0) + len(sl) - without_reset
+            discards["expired"] = discards.get("expired", 0) + len(sl) - without_reset
         if without_reset > len(valid):
-            discards["reinicio"] = discards.get("reinicio", 0) + without_reset - len(valid)
+            discards["reset"] = discards.get("reset", 0) + without_reset - len(valid)
         r = criterion([float(p["C"]) for p in valid])
         r.update(
             rejection_points=len(rejections_valid),

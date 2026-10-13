@@ -211,7 +211,7 @@ variable:
 El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
 local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
 borra los transcripts (30 días si no está puesto). `local-delegate recompute-cost` lo lee y lo
-guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
+guarda en `cost-aggregates.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
 abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
 valor declarado de su hilo, en ese orden.
 

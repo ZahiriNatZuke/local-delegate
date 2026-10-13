@@ -1,0 +1,28 @@
+## local-delegate recompute-cost --help
+rc=0
+## corrida mínima: coste-agregados.json viejo + cuota-statusline.jsonl (nombre viejo), sin transcripts
+Plazo de borrado de los transcripts: 30 d�as.
+Transcripts le�dos: 0 (l�neas ilegibles: 0).
+L�neas del log rellenadas: 0 (ninguna).
+Casos de N en los agregados: 0.
+Cotejo de precios (2026-08-30): pasa; 3 filas juzgadas, 0 fuera, sin precio: ninguno.
+Cuota five_hour: sin calibrar; puntos: 1 del statusline, 0 de rechazo; descartes: variaci�n peque�a 1.
+Cuota seven_day: sin calibrar; puntos: 0 del statusline, 0 de rechazo; descartes: variaci�n peque�a 1.
+rc=0
+## ficheros en LOG_DIR
+cost-aggregates.json
+coste-agregados.json
+usage-202610.jsonl
+## viejo intacto: sí
+## nuevo: claves de primer nivel y del punto sembrado
+['check', 'cleanup_days', 'discards', 'generated', 'n_by_month', 'points', 'resets', 'sources', 'version']
+[('statusline', 'five_hour', ['low_bound_if_other_surfaces'])]
+pass {'statusline': True, 'transcripts': False}
+## segunda corrida con el statusline también con el nombre nuevo
+Cuota five_hour: sin calibrar; puntos: 1 del statusline, 0 de rechazo; descartes: variaci�n peque�a 1.
+Cuota seven_day: sin calibrar; puntos: 0 del statusline, 0 de rechazo; descartes: variaci�n peque�a 1.
+rc=0
+## alias viejo del subcomando
+rc=0 aviso=1
+## scripts/dev/capture_dashboard.py
+py_compile ok (no se ejecuta: abre un navegador headless)

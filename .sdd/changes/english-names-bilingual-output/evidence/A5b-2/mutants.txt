@@ -1,0 +1,78 @@
+[pesado] plaza plaza-1 tomada tras 0s: uv run python <scratchpad>/mutants.py
+## quota.status no traduce
+- fichero: src/local_delegate/quota.py
+- test: tests/test_recalcular_legacy.py::test_old_and_new_aggregates_give_the_same_quota
+- rc: 1
+- disparó: ["E   AssertionError: assert {'five_hour':...usline', ...}} == {'five_hour':...usline', ...}}", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:195: AssertionError: assert {'five_hour':...usline', ...}} == {'five_hour':...usline', ...}}"]
+- restaurado (sha256 igual): True
+
+## gemelo sin juntar
+- fichero: src/local_delegate/recompute.py
+- test: tests/test_recalcular_legacy.py::test_the_old_file_seeds_the_new_one_once
+- rc: 1
+- disparó: ["E   AssertionError: assert 'overlapping' not in {'overlapping': 1}", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:133: AssertionError: assert 'overlapping' not in {'overlapping': 1}"]
+- restaurado (sha256 igual): True
+
+## siembra en cada corrida
+- fichero: src/local_delegate/recompute.py
+- test: tests/test_recalcular_legacy.py::test_the_old_file_seeds_the_new_one_once
+- rc: 1
+- disparó: ["E   AssertionError: assert ('rejection', 'seven_day') in [('rejection', 'five_hour'), ('statusline', 'five_hour')]", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:150: AssertionError: assert ('rejection', 'seven_day') in [('rejection', 'five_hour'), ('statusline', 'five_hour')]"]
+- restaurado (sha256 igual): True
+
+## lector que solo entiende el formato nuevo
+- fichero: src/local_delegate/recompute.py
+- test: tests/test_recalcular_legacy.py::test_old_and_new_aggregates_give_the_same_quota
+- rc: 1
+- disparó: ["E   AssertionError: assert {'version': 1...': None}, ...} == {'version': 1...': None}, ...}", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:189: AssertionError: assert {'version': 1...': None}, ...} == {'version': 1...': None}, ...}"]
+- restaurado (sha256 igual): True
+
+## source sin traducir antes de juntar
+- fichero: src/local_delegate/legacy_names.py
+- test: tests/test_recalcular_legacy.py::test_the_old_file_seeds_the_new_one_once
+- rc: 1
+- disparó: ["E   AssertionError: assert 'corrupt_line' not in {'corrupt_line': 1}", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:134: AssertionError: assert 'corrupt_line' not in {'corrupt_line': 1}"]
+- restaurado (sha256 igual): True
+
+## marcas sin traducir
+- fichero: src/local_delegate/legacy_names.py
+- test: tests/test_recalcular_legacy.py::test_marks_are_machine_values_and_unknown_ones_are_copied
+- rc: 1
+- disparó: ["E   AssertionError: assert {'source': 'r... 'otra cosa']} == {'source': 'r... 'otra cosa']}", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:222: AssertionError: assert {'source': 'r... 'otra cosa']} == {'source': 'r... 'otra cosa']}"]
+- restaurado (sha256 igual): True
+
+## statusline: solo el nuevo si existe
+- fichero: src/local_delegate/recompute.py
+- test: tests/test_recalcular_legacy.py::test_the_statusline_log_is_read_under_both_names
+- rc: 1
+- disparó: ['E   AssertionError: assert 3 == 5', 'D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:265: AssertionError: assert 3 == 5']
+- restaurado (sha256 igual): True
+
+## resumen pinta la clave
+- fichero: src/local_delegate/recompute.py
+- test: tests/test_recalcular_legacy.py::test_the_summary_says_verdict_and_discards_in_words
+- rc: 1
+- disparó: ["E   AssertionError: assert 'variación pequeña 2, caducado 1' in 'Plazo de borrado de los transcripts: 30 días.\\nTranscripts leídos: 1 (líneas ilegibles: 0).\\nLíneas del log rellenada... small_delta 2, expired 1.\\nCuota seven_day: sin calibrar; puntos: 0 del statusline, 0 de rechazo; descartes: ninguno.'", "D:\\Projects\\local-delegate\\tests\\test_recalcular_legacy.py:301: AssertionError: assert 'variación pequeña 2, caducado 1' in 'Plazo de borrado de los transcripts: 30 días.\\nTranscripts leídos: 1 (líneas ilegibles: 0).\\nLíneas del log rellenada... small_delta 2, expired 1.\\nCuota seven_day: sin calibrar; puntos: 0 del statusline, 0 de rechazo; descartes: ninguno.'"]
+- restaurado (sha256 igual): True
+
+## DESCARTE con la clave vieja
+- fichero: src/local_delegate/web/metrics.py
+- test: tests/test_panel_coste.py::test_discard_reasons_are_said_in_words
+- rc: 1
+- disparó: ["E   AssertionError: assert 'descartes: variación pequeña 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5' in 'Ventana de 5 h: sin calibrar (faltan 3 puntos).\\nVentana de 5 h: 0 puntos del statusline vigentes, 0 puntos de rechazo (solo comprobación); descartes: small delta 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5.'", "D:\\Projects\\local-delegate\\tests\\test_panel_coste.py:352: AssertionError: assert 'descartes: variación pequeña 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5' in 'Ventana de 5 h: sin calibrar (faltan 3 puntos).\\nVentana de 5 h: 0 puntos del statusline vigentes, 0 puntos de rechazo (solo comprobación); descartes: small delta 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5.'"]
+- restaurado (sha256 igual): True
+
+## paridad: campo de /api/stats renombrado solo en el JS
+- fichero: src/local_delegate/web/metrics.py
+- test: tests/test_panel_coste.py::test_texto_del_coste_con_la_barra_y_el_respaldo
+- rc: 1
+- disparó: ["E   AssertionError: assert '2 de 2 con modelo supuesto: Opus 5.5 en subagente' in 'Equivalente estimado a precio de API: entre $15,00 y ~$39,00\\nNo es dinero que hayas ahorrado: tu suscripción es de t...cuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).\\nPrecios de la tabla del paquete del 2026-10-06.'", "D:\\Projects\\local-delegate\\tests\\test_panel_coste.py:569: AssertionError: assert '2 de 2 con modelo supuesto: Opus 5.5 en subagente' in 'Equivalente estimado a precio de API: entre $15,00 y ~$39,00\\nNo es dinero que hayas ahorrado: tu suscripción es de t...cuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).\\nPrecios de la tabla del paquete del 2026-10-06.'"]
+- restaurado (sha256 igual): True
+
+## paridad: campo de /api/stats renombrado solo en Python
+- fichero: src/local_delegate/valuation.py
+- test: tests/test_panel_coste.py::test_texto_del_coste_con_la_barra_y_el_respaldo
+- rc: 1
+- disparó: ["E   AssertionError: assert 'cota baja con estos supuestos' in 'Equivalente estimado a precio de API: sin cifra (null)\\nNo es dinero que hayas ahorrado: tu suscripción es de tarifa ...cuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).\\nPrecios de la tabla del paquete del 2026-10-06.'", "D:\\Projects\\local-delegate\\tests\\test_panel_coste.py:570: AssertionError: assert 'cota baja con estos supuestos' in 'Equivalente estimado a precio de API: sin cifra (null)\\nNo es dinero que hayas ahorrado: tu suscripción es de tarifa ...cuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).\\nPrecios de la tabla del paquete del 2026-10-06.'"]
+- restaurado (sha256 igual): True
+

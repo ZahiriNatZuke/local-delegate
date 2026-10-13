@@ -1,0 +1,3924 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 1a75c85..a75295d 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -88,6 +88,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+   de cobertura de `/api/stats` son `excluded`, `at_call`, `backfilled`, `pending` y `assumed`
+   (antes `excluido`, `al_momento`, `por_relleno`, `pendiente` y `supuesto`). Son datos que el
+   servidor calcula al vuelo: no hay nada guardado que convertir.
++- **Los agregados del coste pasan a `cost-aggregates.json`** (antes `coste-agregados.json`), con
++  claves y valores en inglés: `generated`, `cleanup_days`, `check`, `n_by_month`, `points`,
++  `discards`, `resets` y `sources` (antes `generado`, `plazo_dias`, `cotejo`, `n_por_mes`,
++  `puntos`, `descartes`, `reinicios` y `fuentes`). En el cotejo, `date`, `table_version`, `judged`,
++  `outside`, `unpriced` y `verdict`, con `pass` o `fail` (antes `pasa` o `falla`). En cada punto
++  de cuota, `source` (`statusline` o `rejection`, antes `rechazo`), `type`, `start`, `end`, `marks`
++  y `unpriced_requests`. Las marcas pasan a valores de máquina: `low_bound`, `check_only`,
++  `low_bound_if_other_surfaces` y `reset` (antes «cota baja», «solo comprobación», «cota baja si
++  hubo uso en otras superficies» y «reinicio»); y los motivos de descarte, `corrupt_line`,
++  `out_of_range`, `small_delta`, `no_local_use`, `contaminated`, `overlapping`, `expired` y
++  `reset`. Mientras solo exista el fichero viejo, el panel, `doctor` y `recompute-cost` lo leen
++  traducido; la primera corrida de `recompute-cost` siembra el nuevo desde él, una sola vez y con
++  los puntos ya traducidos antes de juntarlos, así que un punto viejo y el mismo punto sacado otra
++  vez de los transcripts cuentan como uno. Desde ahí solo se lee el nuevo, y el viejo queda
++  intacto. El panel y el resumen de `recompute-cost` siguen diciendo los motivos y el veredicto en
++  palabras.
++- **El registro del statusline se busca también como `~/.claude/quota-statusline.jsonl`.** El
++  nombre de siempre, `cuota-statusline.jsonl`, sigue valiendo sin plazo: lo escribe tu statusline,
++  no local-delegate. Si existen los dos, `recompute-cost` lee los dos.
++- **`/api/stats` devuelve el coste como `cost`, las imágenes como `images` y la tabla de densidad
++  como `density_table`** (antes `coste`, `imagenes` y `densidad_tabla`), con sus campos en inglés:
++  `figure` (`low_bound` y `estimate`), `reason`, `events`, `bar` (con `valued`,
++  `with_assumed_model`, `excluded_by_reason` y `cleanup_days`), `fallback` (`model`, `name`,
++  `thread`, `invalid`), `n_origin` (`backfill`, `aggregate` y `declared`), `n_declared`, `density`
++  (`origin`, `families`, `assumed_family` y `family_density`), `unpriced`, `outside_base`
++  (`images` y `output_to_file`), `breakdown` (`model`, `name`, `thread`, `effort`, `cases`,
++  `low_bound` y `estimate`; el esfuerzo sin dato es `no_data`), `table` (`consulted` y `source`) y
++  `command`; en las imágenes, `chars_returned`. No cambia nada de lo que se ve en el panel.
+ 
+ ## [0.34.0] - 2026-10-08
+ 
+diff --git a/docs/wiki/Configuration.md b/docs/wiki/Configuration.md
+index b9ff6a7..afc0b33 100644
+--- a/docs/wiki/Configuration.md
++++ b/docs/wiki/Configuration.md
+@@ -211,7 +211,7 @@ variable:
+ El **plazo** con que se rellenan las delegaciones a posteriori no es una variable de
+ local-delegate: es `cleanupPeriodDays` de `~/.claude/settings.json`, el plazo al que Claude Code
+ borra los transcripts (30 días si no está puesto). `local-delegate recompute-cost` lo lee y lo
+-guarda en `coste-agregados.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
++guarda en `cost-aggregates.json`, y el panel y `doctor` usan ese valor guardado: el daemon nunca
+ abre `~/.claude`. Tampoco hay variable para `N`: sale del relleno, de la mediana de su grupo o del
+ valor declarado de su hilo, en ese orden.
+ 
+diff --git a/docs/wiki/Integration-install.md b/docs/wiki/Integration-install.md
+index d6b2aef..95ddea4 100644
+--- a/docs/wiki/Integration-install.md
++++ b/docs/wiki/Integration-install.md
+@@ -298,7 +298,7 @@ local-delegate doctor --home /tmp/x  # diagnostica contra un HOME simulado (solo
+ | Entorno | clientes MCP observados | con qué clientes se ha **hablado** de verdad: versión, revisión de protocolo negociada y si declaran `elicitation` (o sea, si las tools pueden preguntarles en vez de fallar). Sale de `clients.jsonl`, en `LOG_DIR`, y es **informativo**: nunca sube el exit code |
+ | Entorno | nombres obsoletos | nombres viejos que siguen en uso: las variables renombradas (`LD_HOOK_READ_BLOQUEAR`, `LD_HOOK_READ_INTERRUPTOR`, `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO`, `LOCAL_DELEGATE_COSTE_RESPALDO`) en la shell o en el `env` de `~/.claude/settings.json`, con su nombre nuevo y la versión en que se retira el alias; y `LOCAL_DELEGATE_MODEL_FAST`, `LOCAL_DELEGATE_MAX_CHARS_FAST` o `LOCAL_DELEGATE_FALLBACK_FAST`, del rol `fast` retirado en la 0.30.0, que ya no tienen efecto: sin este aviso, quien las tuviera puestas seguiría creyendo que configuran algo. Es un aviso, no un fallo. Lo que solo ve el daemon lo dice `local_status` |
+ | Entorno | cadenas de respaldo | que cada `LOCAL_DELEGATE_FALLBACK_<ROL>` nombre solo roles (`mechanical`, `long`, `code`), el paso `loaded` o modelos del catálogo de texto —lo que no, se ignora al delegar y un rol se queda sin el respaldo que creías—; `warn` también si una variable usa `residente` o `resident`, que siguen valiendo como sinónimos obsoletos de `loaded`. Con todo bien, dice «sin residente» o «residente: X» según la config de llama-swap tenga algún modelo con TTL efectivo 0 |
+-| Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `coste-agregados.json`, el log de uso y los `attribution-AAAAMM.json` de `LOG_DIR` (o los `atribucion-AAAAMM.json` de una versión anterior, si de ese mes aún no hay nuevo), y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recompute-cost` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
++| Entorno | coste y relleno | si la cifra de coste es de fiar y si se está perdiendo histórico. Lee `cost-aggregates.json` (o `coste-agregados.json` de una versión anterior, si aún no hay nuevo), el log de uso y los `attribution-AAAAMM.json` de `LOG_DIR` (o los `atribucion-AAAAMM.json` de una versión anterior, si de ese mes aún no hay nuevo), y `cleanupPeriodDays` de `~/.claude/settings.json`; **nunca** los transcripts. `warn` si hay delegaciones pendientes de relleno con más de `cleanupPeriodDays` − 10 días (30 si no está puesto: avisa a los 20), aunque `local-delegate recompute-cost` no se haya lanzado nunca, porque Claude Code borra los transcripts a ese plazo y con ellos el relleno; `warn` también si el último cotejo de la tabla de precios contra lo que cobra Claude Code falló, nombrando los modelos sin precio; `ok` si cuadró; `unknown` sin cotejo (máquina sin transcripts o comando nunca lanzado). Nunca `missing` |
+ | Entorno | ventanas de prueba | si `LOG_DIR/test-windows.json` (las ventanas que marca `local-delegate test-window`) se puede leer y si alguna ventana se quedó abierta. `warn` si el fichero es ilegible (con el motivo: entonces no se aparta ninguna prueba por ventana), si hay entradas ignoradas (cuántas) o si una ventana lleva abierta más de 12 h, con la orden `local-delegate test-window stop <id>` para cerrarla; `ok` sin ventanas o con todas cerradas. Nunca `missing`: una ventana mal puesta no rompe el MCP, solo aparta filas del panel |
+ | Andamiaje | hooks copiados | los scripts en `~/.claude/hooks/local-delegate/`, y que sean **los del paquete instalado**, byte a byte. Actualizar el paquete no toca esa carpeta: con scripts de otra versión da `warn` y `update` los repone. Antes solo miraba los nombres, y unos hooks viejos pasaban por buenos |
+ | Andamiaje | hooks huérfanos | scripts nuestros sueltos en `~/.claude/hooks/` que dejó una instalación anterior; `install` los retira |
+diff --git a/docs/wiki/Savings-and-metrics.md b/docs/wiki/Savings-and-metrics.md
+index e58f6aa..c5cb62a 100644
+--- a/docs/wiki/Savings-and-metrics.md
++++ b/docs/wiki/Savings-and-metrics.md
+@@ -352,16 +352,18 @@ delegué?». Para eso hace falta saber cuántos dólares a precio de lista caben
+ es **«sin calibrar»**.
+ 
+ - **Puntos del statusline.** De un registro que escribe tu statusline de Claude Code,
+-  `~/.claude/cuota-statusline.jsonl` (una fila por refresco con `ts`, `session_id`, `model`,
++  `~/.claude/quota-statusline.jsonl` o, con el nombre de siempre, `~/.claude/cuota-statusline.jsonl`
++  (si existen los dos, se leen los dos; una fila por refresco con `ts`, `session_id`, `model`,
+   `five_hour`, `five_reset`, `seven_day`, `seven_reset`, `cost_usd` y, opcional, `effort`):
+   local-delegate **no lo instala**, solo lo lee si existe. De cada ventana sale como mucho un punto:
+   cuánto subió el % (Δ%), con las dos filas de una misma sesión porque las sesiones en paralelo
+   ven el % desfasado, y cuánto costó a precio de lista lo que hicieron todas las sesiones del
+   registro en ese intervalo (Δ$, de los incrementos de `cost_usd`).
+   Su capacidad es `C = Δ$ × 100 / Δ%`. Se descartan, y se cuentan por motivo, los puntos con
+-  Δ% < 10 (`delta_pequeno`), sin uso local (`sin_uso_local`), con sesiones que gastaban cuota sin
+-  estar en el registro, como `claude -p` (`contaminado`), los que se solapan con otro
+-  (`solapado`), las filas con un % imposible (`fuera_de_rango`) y los de más de 60 días.
++  Δ% < 10 (`small_delta`), sin uso local (`no_local_use`), con sesiones que gastaban cuota sin
++  estar en el registro, como `claude -p` (`contaminated`), los que se solapan con otro
++  (`overlapping`), las filas con un % imposible (`out_of_range`) y los de más de 60 días
++  (`expired`). El panel los dice en palabras.
+ - **Puntos de rechazo.** Cada rechazo de cuota que aparece en los transcripts da un punto con
+   Δ% = 100. Solo sirven de **comprobación**: recogen una parte del coste en sesiones grandes, un
+   sesgo del orden del propio umbral, así que no entran en el cálculo.
+@@ -382,10 +384,11 @@ es **«sin calibrar»**.
+   `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`) deja fuera
+   los puntos anteriores de ese tipo.
+ 
+-Todo punto lleva la marca «cota baja si hubo uso en otras superficies»: claude.ai, otra máquina o
++Todo punto del statusline lleva la marca `low_bound_if_other_surfaces` (cota baja si hubo uso en
++otras superficies): claude.ai, otra máquina o
+ Claude Desktop gastan la misma cuota y desde aquí no se ven. En la máquina de referencia, el
+ 2026-10-06, los dos tipos siguen **sin calibrar** (faltan 3 puntos del statusline: los que había
+-salieron `contaminado` o fuera de rango).
++salieron contaminados o fuera de rango).
+ 
+ ## Imágenes
+ 
+@@ -416,8 +419,10 @@ directorio de logs (`LOG_DIR`):
+   Una entrada solo se sustituye por otra de cruce mejor. Si de un mes solo existe el fichero viejo,
+   se lee traducido y la primera escritura siembra el nuevo desde él, una sola vez; el viejo no se
+   toca nunca;
+-- `coste-agregados.json`: el cotejo de la tabla de precios, los agregados de `N` por grupo, los
+-  puntos de calibración con sus descartes y los reinicios.
++- `cost-aggregates.json` (antes `coste-agregados.json`): el cotejo de la tabla de precios
++  (`check`), los agregados de `N` por grupo (`n_by_month`), los puntos de calibración (`points`)
++  con sus descartes (`discards`) y los reinicios (`resets`). Si solo existe el viejo, se lee
++  traducido y la primera corrida siembra el nuevo desde él, una sola vez; el viejo no se toca.
+ 
+ **Ni texto de conversaciones, ni rutas, ni ids de sesión, ni prompts**: solo números, fechas, ids
+ de modelo, niveles de esfuerzo y nombres de motivo (y, como clave del relleno, el `tool_use_id` o
+@@ -649,7 +654,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
+ | `GET /` | Dashboard HTML |
+ | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
+ | `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
+-| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
++| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`) y `density_table`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+ | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
+ | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
+ | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |
+diff --git a/docs/wiki/Troubleshooting.md b/docs/wiki/Troubleshooting.md
+index c7aa27d..0676347 100644
+--- a/docs/wiki/Troubleshooting.md
++++ b/docs/wiki/Troubleshooting.md
+@@ -270,10 +270,11 @@ o en la que el comando no se ha lanzado. El check nunca da `missing`.
+ Es lo esperado. Para decir qué parte de una ventana de 5 h o de la semanal supone lo delegado,
+ hacen falta al menos **tres medidas del statusline de ventanas distintas** con una dispersión
+ menor del 25 %, y hasta entonces el panel no enseña ningún porcentaje. Esas medidas salen del
+-registro del statusline (`~/.claude/cuota-statusline.jsonl`), que solo existe si tu statusline lo
++registro del statusline (`~/.claude/quota-statusline.jsonl` o `~/.claude/cuota-statusline.jsonl`,
++que valen los dos), que solo existe si tu statusline lo
+ escribe; sin él, el bloque lo dice y no puede calibrar. Lanza `local-delegate recompute-cost`
+ para incorporar las medidas nuevas. El bloque enseña además cuántas se descartaron y por qué
+-(`contaminado`, `delta_pequeno`, `solapado`…): una medida tomada mientras otra sesión que no está
++(contaminado, variación pequeña, solapado…): una medida tomada mientras otra sesión que no está
+ en el registro gastaba cuota no sirve para calibrar. Si cambian los límites de uso (el vigilante
+ abre un PR con el texto nuevo), descarta la calibración vieja con
+ `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`).
+diff --git a/scripts/dev/capture_dashboard.py b/scripts/dev/capture_dashboard.py
+index c290c7b..99b0586 100755
+--- a/scripts/dev/capture_dashboard.py
++++ b/scripts/dev/capture_dashboard.py
+@@ -227,43 +227,43 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
+       errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
+ 
+-  // Coste equivalente y cuota de ejemplo. Salen de correr `valoracion.bloque_coste` y
+-  // `quota.status` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
++  // Coste equivalente y cuota de ejemplo. Salen de correr `valuation.cost_block` y
++  // `quota.status` de verdad sobre un log y un `cost-aggregates.json` sintéticos (sin datos de
+   // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
+   // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
+   // que verá casi todo el mundo: nunca se enseña un % sin calibración.
+-  const COSTE = {cifra: {cota_baja: 6.87, estimacion: 27.4}, motivo: null, eventos: 98,
++  const COSTE = {figure: {low_bound: 6.87, estimate: 27.4}, reason: null, events: 98,
+     T: 1241362,
+-    barra: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
+-      valoradas: 98, con_modelo_supuesto: 4,
+-      excluidas_por_motivo: {'no es Claude': 15, pruebas: 7}, plazo_dias: 30},
+-    respaldo: {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent',
+-      invalido: false, variable: 'LOCAL_DELEGATE_COSTE_RESPALDO'},
+-    n_origen: {relleno: 0, agregado: 0, declarado: 98}, n_declarado: {main: 127, subagent: 40},
+-    densidad: {origen: {measured: 74, unnumbered: 24, conservative: 0}, familias: {nueva: 98},
+-      familia_supuesta: 0, densidad_de_la_familia: 0},
+-    sin_precio: {n: 0, ids: []},
+-    fuera_de_la_base: {imagenes: stats.img_n, salida_a_fichero: 0},
+-    desglose: [
+-      {modelo: 'claude-opus-5', nombre: 'Opus 5', hilo: 'main', esfuerzo: 'high', casos: 17,
+-       T: 191044, cota_baja: 1.91, estimacion: 14.04},
+-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'high',
+-       casos: 69, T: 880897, cota_baja: 4.4, estimacion: 11.45},
+-      {modelo: 'claude-sonnet-5-5', nombre: 'Sonnet 5.5', hilo: 'subagent', esfuerzo: 'medium',
+-       casos: 8, T: 117678, cota_baja: 0.29, estimacion: 1.24},
+-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'sin dato',
+-       casos: 4, T: 51743, cota_baja: 0.26, estimacion: 0.67},
++    bar: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
++      valued: 98, with_assumed_model: 4,
++      excluded_by_reason: {'no es Claude': 15, pruebas: 7}, cleanup_days: 30},
++    fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
++      invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
++    n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},
++    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {nueva: 98},
++      assumed_family: 0, family_density: 0},
++    unpriced: {n: 0, ids: []},
++    outside_base: {images: stats.img_n, output_to_file: 0},
++    breakdown: [
++      {model: 'claude-opus-5', name: 'Opus 5', thread: 'main', effort: 'high', cases: 17,
++       T: 191044, low_bound: 1.91, estimate: 14.04},
++      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'high',
++       cases: 69, T: 880897, low_bound: 4.4, estimate: 11.45},
++      {model: 'claude-sonnet-5-5', name: 'Sonnet 5.5', thread: 'subagent', effort: 'medium',
++       cases: 8, T: 117678, low_bound: 0.29, estimate: 1.24},
++      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'no_data',
++       cases: 4, T: 51743, low_bound: 0.26, estimate: 0.67},
+     ],
+-    tabla: {consultado: PRECIOS_CONSULTADO,
+-      fuente: 'https://platform.claude.com/docs/en/about-claude/pricing'},
+-    comando: 'local-delegate recalcular-coste'};
++    table: {consulted: PRECIOS_CONSULTADO,
++      source: 'https://platform.claude.com/docs/en/about-claude/pricing'},
++    command: 'local-delegate recompute-cost'};
+   const CUOTA = {
+     five_hour: {drift: false, points: 1, status: 'uncalibrated',
+       reason: 'faltan 2 puntos del statusline', rejection_points: 1,
+-      discards: {contaminado: 1, delta_pequeno: 2}, reset: null},
++      discards: {contaminated: 1, small_delta: 2}, reset: null},
+     seven_day: {drift: false, points: 0, status: 'uncalibrated',
+       reason: 'faltan 3 puntos del statusline', rejection_points: 0,
+-      discards: {delta_pequeno: 3}, reset: null},
++      discards: {small_delta: 3}, reset: null},
+     has_aggregates: true, command: 'local-delegate recompute-cost'};
+ 
+   const MOCKS = {
+@@ -330,9 +330,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+       ],
+       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
+       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
+-      coste: COSTE, quota: CUOTA,
+-      imagenes: {n: stats.img_n, bytes: stats.img_bytes, chars_devueltos: stats.img_devueltos},
+-      densidad_tabla: DENSIDAD},
++      cost: COSTE, quota: CUOTA,
++      images: {n: stats.img_n, bytes: stats.img_bytes, chars_returned: stats.img_devueltos},
++      density_table: DENSIDAD},
+     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
+     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
+     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
+diff --git a/src/local_delegate/checks.py b/src/local_delegate/checks.py
+index a18c478..c1a1a9b 100644
+--- a/src/local_delegate/checks.py
++++ b/src/local_delegate/checks.py
+@@ -44,7 +44,7 @@ from . import (
+     failures,
+     install,
+     legacy_names,
+-    recalcular,
++    recompute,
+     sondas,
+     test_windows,
+ )
+@@ -379,7 +379,7 @@ class Context:
+     daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
+         default_factory=lambda f=_default_daemon_accepts_token: f
+     )
+-    # Dónde están el log de uso, los `attribution-*.json` y `coste-agregados.json`. Un campo simple
++    # Dónde están el log de uso, los `attribution-*.json` y `cost-aggregates.json`. Un campo simple
+     # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
+     # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
+     log_dir: Path | None = None
+@@ -1767,10 +1767,10 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) ->
+     primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
+     umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
+     cuantas, mas_vieja = 0, timedelta(0)
+-    for path, mes in recalcular._ficheros_del_log(log_dir):
++    for path, mes in recompute._log_files(log_dir):
+         if mes < primer_mes:
+             continue
+-        for fila in cost.merge(recalcular._leer_log(path), log_dir=log_dir):
++        for fila in cost.merge(recompute._read_log(path), log_dir=log_dir):
+             if cost.segment(fila, now=ahora, cleanup_days=plazo_dias) != "pending":
+                 continue
+             edad = ahora - cost._instant(fila.get("ts"))
+@@ -1783,9 +1783,9 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) ->
+ def _probe_coste(ctx: Context) -> Result:
+     """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
+ 
+-    Lee **solo** `coste-agregados.json`, el log de uso y los `attribution-*.json` (más
+-    `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son cosa del comando que
+-    lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
++    Lee **solo** `cost-aggregates.json` (o el viejo `coste-agregados.json`), el log de uso y los
++    `attribution-*.json` (más `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son
++    cosa del comando que lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
+     cotejo fallido, cotejo bueno, sin cotejo. Si se cumplen las dos primeras, dice las dos.
+ 
+     El aviso del relleno mira la pendiente más antigua, no la fecha del último relleno: así salta
+@@ -1806,18 +1806,19 @@ def _probe_coste(ctx: Context) -> Result:
+                 f"`{RECALCULAR_HINT}` antes de que Claude Code borre sus transcripts"
+             )
+ 
+-    agregados = recalcular.leer_agregados(log_dir) or {}
+-    cotejo = agregados.get("cotejo")
++    agregados = recompute.read_aggregates(log_dir) or {}
++    # `read_aggregates` entrega el formato nuevo aunque en disco solo esté el viejo (REQ-006).
++    cotejo = agregados.get("check")
+     if not isinstance(cotejo, dict):
+         cotejo = None
+-    fecha = str((cotejo or {}).get("fecha") or "?")
+-    if cotejo is not None and cotejo.get("veredicto") == "falla":
+-        sin_precio = [str(m) for m in cotejo.get("sin_precio") or []]
++    fecha = str((cotejo or {}).get("date") or "?")
++    if cotejo is not None and cotejo.get("verdict") == "fail":
++        sin_precio = [str(m) for m in cotejo.get("unpriced") or []]
+         partes = []
+         if sin_precio:
+             partes.append("modelos sin precio en la tabla: " + ", ".join(sin_precio))
+-        if cotejo.get("fuera"):
+-            partes.append(f"{cotejo['fuera']} fila(s) fuera de la banda")
++        if cotejo.get("outside"):
++            partes.append(f"{cotejo['outside']} fila(s) fuera de la banda")
+         avisos.append(
+             f"el último cotejo ({fecha}) no cuadra con lo que cobra Claude Code: "
+             + ("; ".join(partes) or "sin detalle")
+@@ -1825,11 +1826,11 @@ def _probe_coste(ctx: Context) -> Result:
+ 
+     if avisos:
+         return Result(WARN, "; y ".join(avisos), RECALCULAR_HINT)
+-    if cotejo is not None and cotejo.get("veredicto") == "pasa":
++    if cotejo is not None and cotejo.get("verdict") == "pass":
+         return Result(
+             OK,
+-            f"el último cotejo ({fecha}) cuadra: {cotejo.get('juzgadas', '?')} fila(s) juzgadas "
+-            f"con la tabla de precios del {cotejo.get('version_tabla') or '?'}",
++            f"el último cotejo ({fecha}) cuadra: {cotejo.get('judged', '?')} fila(s) juzgadas "
++            f"con la tabla de precios del {cotejo.get('table_version') or '?'}",
+         )
+     return Result(
+         UNKNOWN,
+diff --git a/src/local_delegate/cli.py b/src/local_delegate/cli.py
+index 13ea428..65abc50 100644
+--- a/src/local_delegate/cli.py
++++ b/src/local_delegate/cli.py
+@@ -335,7 +335,7 @@ def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
+ 
+ def cmd_recompute_cost(args: argparse.Namespace) -> int:
+     """`recompute-cost` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
+-    from . import config, recalcular
++    from . import config, recompute
+ 
+     try:
+         reset = _resolve_reset_calibration(args)
+@@ -344,11 +344,11 @@ def cmd_recompute_cost(args: argparse.Namespace) -> int:
+         return 2
+     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
+     try:
+-        resumen = recalcular.ejecutar(claude_dir, config.LOG_DIR, reiniciar=reset)
++        resumen = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
+     except OSError as e:
+         print(f"recompute-cost: no se pudo escribir en el directorio de logs ({e.strerror}).")
+         return 1
+-    print(recalcular.texto_del_resumen(resumen))
++    print(recompute.summary_text(resumen))
+     return 0
+ 
+ 
+diff --git a/src/local_delegate/legacy_names.py b/src/local_delegate/legacy_names.py
+index c1a4482..9318bc9 100644
+--- a/src/local_delegate/legacy_names.py
++++ b/src/local_delegate/legacy_names.py
+@@ -134,6 +134,68 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
+             },
+         },
+     },
++    # Agregados del coste (`cost-aggregates.json`; antes `coste-agregados.json`): las claves de
++    # primer nivel. Lo anidado (cotejo, puntos, descartes y marcas) tiene sus propias tablas, y el
++    # fichero entero se traduce con `normalize_cost_aggregates`.
++    "cost_aggregates": {
++        "keys": {
++            "generado": "generated",
++            "plazo_dias": "cleanup_days",
++            "cotejo": "check",
++            "n_por_mes": "n_by_month",
++            "puntos": "points",
++            "descartes": "discards",
++            "reinicios": "resets",
++            "fuentes": "sources",
++        },
++    },
++    # El cotejo real de precios (`check`).
++    "cost_aggregates_check": {
++        "keys": {
++            "fecha": "date",
++            "version_tabla": "table_version",
++            "juzgadas": "judged",
++            "fuera": "outside",
++            "sin_precio": "unpriced",
++            "veredicto": "verdict",
++        },
++        "values": {"verdict": {"pasa": "pass", "falla": "fail"}},
++    },
++    # Cada punto de calibración de la cuota (`points[]`). Su identidad es
++    # `(source, type, start, end)`, y `source` se traduce ANTES de juntar puntos viejos y nuevos.
++    "cost_aggregates_point": {
++        "keys": {
++            "fuente": "source",
++            "tipo": "type",
++            "inicio": "start",
++            "fin": "end",
++            "marcas": "marks",
++            "peticiones_sin_precio": "unpriced_requests",
++        },
++        "values": {"source": {"rechazo": "rejection"}},
++    },
++}
++
++#: Motivos de descarte de la cuota: las claves de `discards[<tipo>]` (y los dos que añade
++#: `quota.status` al leer, `expired` y `reset`). El panel los recibe ya traducidos.
++COST_DISCARD_REASONS: dict[str, str] = {
++    "linea_corrupta": "corrupt_line",
++    "fuera_de_rango": "out_of_range",
++    "delta_pequeno": "small_delta",
++    "sin_uso_local": "no_local_use",
++    "contaminado": "contaminated",
++    "solapado": "overlapping",
++    "caducado": "expired",
++    "reinicio": "reset",
++}
++
++#: Marcas de un punto de cuota (REQ-033): eran prosa usada como valor de máquina. Una marca que no
++#: esté aquí se copia tal cual.
++COST_MARK_VALUES: dict[str, str] = {
++    "cota baja": "low_bound",
++    "solo comprobación": "check_only",
++    "cota baja si hubo uso en otras superficies": "low_bound_if_other_surfaces",
++    "reinicio": "reset",
+ }
+ 
+ #: Ficheros en disco que comparten los hooks y el daemon, como `(viejo, nuevo)` (REQ-012). Se
+@@ -162,6 +224,14 @@ COOLDOWN_EVENTS_FILE_NAMES: tuple[str, str] = (
+ #: sola vez y no se reescribe nunca (REQ-006).
+ ATTRIBUTION_FILE_PREFIXES: tuple[str, str] = ("atribucion-", "attribution-")
+ 
++#: Los agregados del coste (en `LOG_DIR`), como `(viejo, nuevo)`. Solo los escribe `recompute`, y
++#: solo el nuevo; el viejo siembra el nuevo una sola vez y no se reescribe nunca (REQ-006).
++COST_AGGREGATES_FILE_NAMES: tuple[str, str] = ("coste-agregados.json", "cost-aggregates.json")
++
++#: El registro del statusline (en `~/.claude`), como `(viejo, nuevo)`. Lo escribe el statusline del
++#: usuario, que es código ajeno al paquete: se leen los dos si existen los dos (REQ-008).
++QUOTA_STATUSLINE_FILE_NAMES: tuple[str, str] = ("cuota-statusline.jsonl", "quota-statusline.jsonl")
++
+ #: Valores que el panel recibe de `/api/hooks` y que su diccionario de etiquetas tiene que entender
+ #: también en el formato viejo (REQ-009). El servidor lo inyecta en el HTML: el JS no copia la tabla.
+ #: Además de los motivos persistidos, van los cubos que fabricaba el propio servidor en español.
+@@ -225,3 +295,44 @@ def normalize(fmt: str, row: Mapping[str, Any]) -> dict[str, Any]:
+         if isinstance(value, str) and value in mapping:
+             out[key] = mapping[value]
+     return out
++
++
++def normalize_cost_point(point: Any) -> Any:
++    """Un punto de cuota en el formato nuevo, con `source` y las marcas ya traducidas.
++
++    Lo que no es un dict se devuelve tal cual: `quota.split_malformed` lo cuenta como roto.
++    """
++    if not isinstance(point, Mapping):
++        return point
++    out = normalize("cost_aggregates_point", point)
++    marks = out.get("marks")
++    if isinstance(marks, list):
++        out["marks"] = [new_value(COST_MARK_VALUES, m) for m in marks]
++    return out
++
++
++def normalize_cost_aggregates(data: Mapping[str, Any]) -> dict[str, Any]:
++    """`coste-agregados.json` entero en el formato de `cost-aggregates.json`.
++
++    Traduce las claves de primer nivel, las del cotejo y su veredicto, las de cada punto (con
++    `source` y las marcas, para que un punto viejo y su gemelo nuevo tengan la misma identidad) y
++    los motivos de descarte. Un fichero ya nuevo sale igual.
++    """
++    out = normalize("cost_aggregates", data)
++    check = out.get("check")
++    if isinstance(check, Mapping):
++        out["check"] = normalize("cost_aggregates_check", check)
++    points = out.get("points")
++    if isinstance(points, list):
++        out["points"] = [normalize_cost_point(p) for p in points]
++    discards = out.get("discards")
++    if isinstance(discards, Mapping):
++        out["discards"] = {
++            kind: (
++                {COST_DISCARD_REASONS.get(r, r): n for r, n in by_reason.items()}
++                if isinstance(by_reason, Mapping)
++                else by_reason
++            )
++            for kind, by_reason in discards.items()
++        }
++    return out
+diff --git a/src/local_delegate/quota.py b/src/local_delegate/quota.py
+index 9f75054..bd40880 100644
+--- a/src/local_delegate/quota.py
++++ b/src/local_delegate/quota.py
+@@ -2,10 +2,12 @@
+ 
+ Port de `insumos/scripts/calibracion.py` y `criterio.py`. Lo usan el comando
+ `recompute-cost` (que saca los puntos de los transcripts y del registro del statusline) y el
+-panel (que solo aplica `status` sobre `coste-agregados.json`, sin leer `~/.claude`).
++panel (que solo aplica `status` sobre `cost-aggregates.json`, sin leer `~/.claude`).
+ 
+-Un punto es un dict `{"fuente": "statusline"|"rechazo", "tipo", "inicio", "fin", "delta_pct",
+-"delta_usd", "C", "marcas", "peticiones_sin_precio"}` con fechas ISO en UTC. Sin ids de sesión.
++Un punto es un dict `{"source": "statusline"|"rejection", "type", "start", "end", "delta_pct",
++"delta_usd", "C", "marks", "unpriced_requests"}` con fechas ISO en UTC. Sin ids de sesión. Las
++marcas y los motivos de descarte son valores de máquina en inglés (REQ-033); el panel y el resumen
++de `recompute-cost` los pintan en palabras.
+ """
+ 
+ from __future__ import annotations
+@@ -18,6 +20,8 @@ from collections import Counter
+ from collections.abc import Iterable
+ from datetime import UTC, datetime, timedelta
+ 
++from . import legacy_names
++
+ TYPES = ("five_hour", "seven_day")
+ DURATION = {"five_hour": timedelta(hours=5), "seven_day": timedelta(days=7)}
+ RESET_FIELD = {"five_hour": "five_reset", "seven_day": "seven_reset"}
+@@ -27,10 +31,10 @@ MIN_DELTA = 10
+ THRESHOLD = 0.25
+ MIN_POINTS = 3
+ 
+-MARK_LOW_BOUND = "cota baja"
+-MARK_CHECK_ONLY = "solo comprobación"
+-MARK_OTHER_SURFACES = "cota baja si hubo uso en otras superficies"
+-MARK_RESET = "reinicio"
++MARK_LOW_BOUND = "low_bound"
++MARK_CHECK_ONLY = "check_only"
++MARK_OTHER_SURFACES = "low_bound_if_other_surfaces"
++MARK_RESET = "reset"
+ 
+ REJECTION_WARNING = (
+     "la calibración da menos capacidad que un rechazo observado: probable uso en otras superficies"
+@@ -66,8 +70,8 @@ def rejection_points(
+ ) -> list[dict]:
+     """Un punto por `(rateLimitType, resetsAt)`, de `resetsAt − duración` al PRIMER rechazo.
+ 
+-    Δ% = 100; Δ$ = coste a precio de lista de las peticiones de ese intervalo; marcas «cota baja» y
+-    «solo comprobación»; cuenta las peticiones sin precio.
++    Δ% = 100; Δ$ = coste a precio de lista de las peticiones de ese intervalo; marcas `low_bound` y
++    `check_only`; cuenta las peticiones sin precio.
+     """
+     requests = list(requests)
+     points = []
+@@ -82,15 +86,15 @@ def rejection_points(
+         dollars = sum(c for c in inside if c is not None)
+         points.append(
+             {
+-                "fuente": "rechazo",
+-                "tipo": kind,
+-                "inicio": _iso(start),
+-                "fin": _iso(first),
++                "source": "rejection",
++                "type": kind,
++                "start": _iso(start),
++                "end": _iso(first),
+                 "delta_pct": 100,
+                 "delta_usd": round(dollars, 2),
+                 "C": round(dollars, 2),
+-                "marcas": [MARK_LOW_BOUND, MARK_CHECK_ONLY],
+-                "peticiones_sin_precio": sum(1 for c in inside if c is None),
++                "marks": [MARK_LOW_BOUND, MARK_CHECK_ONLY],
++                "unpriced_requests": sum(1 for c in inside if c is None),
+             }
+         )
+     return points
+@@ -106,8 +110,8 @@ def _valid_pct(v: object) -> bool:
+ def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Counter]]:
+     """Las filas útiles del registro por tipo, las sesiones que aparecen y los descartes.
+ 
+-    Una línea ilegible (o sin `ts`) es `linea_corrupta` en los dos tipos; un % fuera de
+-    [0, 100] o no numérico es `fuera_de_rango` en su tipo (REQ-054, REQ-061). Cada fila va como
++    Una línea ilegible (o sin `ts`) es `corrupt_line` en los dos tipos; un % fuera de
++    [0, 100] o no numérico es `out_of_range` en su tipo (REQ-054, REQ-061). Cada fila va como
+     `(t, sesión, %, reset, cost_usd)`, ordenada por `t`.
+     """
+     discards = empty_discards()
+@@ -122,7 +126,7 @@ def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Coun
+         t = _instant(r.get("ts")) if isinstance(r, dict) else None
+         if t is None:
+             for kind in TYPES:
+-                discards[kind]["linea_corrupta"] += 1
++                discards[kind]["corrupt_line"] += 1
+             continue
+         rows.append((t, r))
+     rows.sort(key=lambda x: x[0])
+@@ -132,7 +136,7 @@ def sanitize(lines: Iterable[str]) -> tuple[dict[str, list], set, dict[str, Coun
+         for kind in TYPES:
+             v = r.get(kind)
+             if not _valid_pct(v):
+-                discards[kind]["fuera_de_rango"] += 1
++                discards[kind]["out_of_range"] += 1
+                 continue
+             by_type[kind].append(
+                 (t, r.get("session_id"), v, r.get(RESET_FIELD[kind]), r.get("cost_usd"))
+@@ -167,7 +171,7 @@ def statusline_points(
+                     best = (d, xs)
+             delta, xs = best
+             if delta < MIN_DELTA:
+-                discards[kind]["delta_pequeno"] += 1
++                discards[kind]["small_delta"] += 1
+                 continue
+             ta, tb = xs[0][0], xs[-1][0]
+             dollars, resets = 0.0, 0
+@@ -181,48 +185,48 @@ def statusline_points(
+                         dollars += c1  # `/clear`: el incremento es el valor nuevo
+                         resets += 1
+             if dollars <= 0:
+-                discards[kind]["sin_uso_local"] += 1
++                discards[kind]["no_local_use"] += 1
+                 continue
+             if any(ta < t <= tb and s not in log_sessions for (t, s, _c) in requests):
+-                discards[kind]["contaminado"] += 1
++                discards[kind]["contaminated"] += 1
+                 continue
+             points.append(
+                 {
+-                    "fuente": "statusline",
+-                    "tipo": kind,
+-                    "inicio": _iso(ta),
+-                    "fin": _iso(tb),
++                    "source": "statusline",
++                    "type": kind,
++                    "start": _iso(ta),
++                    "end": _iso(tb),
+                     "delta_pct": delta,
+                     "delta_usd": round(dollars, 2),
+                     "C": round(dollars * 100 / delta, 2),
+-                    "marcas": [MARK_OTHER_SURFACES] + ([MARK_RESET] if resets else []),
+-                    "peticiones_sin_precio": None,
++                    "marks": [MARK_OTHER_SURFACES] + ([MARK_RESET] if resets else []),
++                    "unpriced_requests": None,
+                 }
+             )
+     return points, discards
+ 
+ 
+-# --- REQ-061: un punto mal formado en `coste-agregados.json` se salta -------------------------
++# --- REQ-061: un punto mal formado en `cost-aggregates.json` se salta -------------------------
+ 
+-SOURCES = ("statusline", "rechazo")
++SOURCES = ("statusline", "rejection")
+ 
+ 
+ def well_formed(p: object) -> bool:
+     """Si el punto tiene todo lo que leen `drop_overlapping` y `status`. El JSON lo escribe solo
+     el comando, pero alguien puede editarlo a mano: un punto roto no debe tumbar el panel."""
+-    if not isinstance(p, dict) or p.get("fuente") not in SOURCES or p.get("tipo") not in TYPES:
++    if not isinstance(p, dict) or p.get("source") not in SOURCES or p.get("type") not in TYPES:
+         return False
+-    if _instant(p.get("inicio")) is None or _instant(p.get("fin")) is None:
++    if _instant(p.get("start")) is None or _instant(p.get("end")) is None:
+         return False
+     delta, c = p.get("delta_pct"), p.get("C")
+     if not (_is_number(delta) and math.isfinite(delta)) or not (_is_number(c) and math.isfinite(c)):
+         return False
+     # La capacidad del statusline divide en la dispersión: tiene que ser positiva.
+-    return c > 0 if p["fuente"] == "statusline" else c >= 0
++    return c > 0 if p["source"] == "statusline" else c >= 0
+ 
+ 
+ def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Counter]]:
+-    """Los puntos bien formados y los descartes: cada punto roto es `linea_corrupta` en su tipo, o
++    """Los puntos bien formados y los descartes: cada punto roto es `corrupt_line` en su tipo, o
+     en los dos si el tipo tampoco se lee (la misma convención que `sanitize`)."""
+     good: list[dict] = []
+     discards = empty_discards()
+@@ -230,9 +234,9 @@ def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Cou
+         if well_formed(p):
+             good.append(p)
+             continue
+-        kind = p.get("tipo") if isinstance(p, dict) else None
++        kind = p.get("type") if isinstance(p, dict) else None
+         for t in [kind] if kind in TYPES else TYPES:
+-            discards[t]["linea_corrupta"] += 1
++            discards[t]["corrupt_line"] += 1
+     return good, discards
+ 
+ 
+@@ -241,26 +245,26 @@ def split_malformed(points: Iterable[object]) -> tuple[list[dict], dict[str, Cou
+ 
+ def drop_overlapping(points: list[dict]) -> tuple[list[dict], dict[str, Counter]]:
+     """Entre puntos de la misma fuente y tipo cuyos intervalos se solapan, se queda el de mayor
+-    Δ% (con empate, el más reciente); los otros son `solapado`."""
++    Δ% (con empate, el más reciente); los otros son `overlapping`."""
+     discards = empty_discards()
+     accepted: list[dict] = []
+     # Mayor Δ% primero y, dentro del mismo Δ%, el más reciente.
+-    ordered = sorted(points, key=lambda p: (-p["delta_pct"], -_instant(p["fin"]).timestamp()))
++    ordered = sorted(points, key=lambda p: (-p["delta_pct"], -_instant(p["end"]).timestamp()))
+     for p in ordered:
+-        start, end = _instant(p["inicio"]), _instant(p["fin"])
++        start, end = _instant(p["start"]), _instant(p["end"])
+         clashes = any(
+-            q["fuente"] == p["fuente"]
+-            and q["tipo"] == p["tipo"]
+-            and start < _instant(q["fin"])
+-            and _instant(q["inicio"]) < end
++            q["source"] == p["source"]
++            and q["type"] == p["type"]
++            and start < _instant(q["end"])
++            and _instant(q["start"]) < end
+             for q in accepted
+         )
+         if clashes:
+-            if p["tipo"] in discards:
+-                discards[p["tipo"]]["solapado"] += 1
++            if p["type"] in discards:
++                discards[p["type"]]["overlapping"] += 1
+             continue
+         accepted.append(p)
+-    accepted.sort(key=lambda p: (p["fuente"], p["tipo"], p["fin"], p["inicio"]))
++    accepted.sort(key=lambda p: (p["source"], p["type"], p["end"], p["start"]))
+     return accepted, discards
+ 
+ 
+@@ -268,11 +272,11 @@ def drop_overlapping(points: list[dict]) -> tuple[list[dict], dict[str, Counter]
+ 
+ 
+ def current_points(points: Iterable[dict], now: datetime, reset: str | None = None) -> list[dict]:
+-    """Los puntos con `fin` de hace 60 días o menos y no anterior al reinicio a mano."""
++    """Los puntos con `end` de hace 60 días o menos y no anterior al reinicio a mano."""
+     since = _instant(reset) if reset else None
+     out = []
+     for p in points:
+-        end = _instant(p.get("fin"))
++        end = _instant(p.get("end"))
+         if end is None or now - end > VALIDITY:
+             continue
+         if since is not None and end < since:
+@@ -359,31 +363,36 @@ def status(aggregates: dict | None, now: datetime) -> dict[str, dict]:
+             }
+             for kind in TYPES
+         }
+-    raw = aggregates.get("puntos")
++    # Quien llama suele traerlos ya traducidos (`recompute.read_aggregates`); si no, se traducen
++    # aquí, para que un lector no dependa de por dónde le llegó el fichero (REQ-006).
++    aggregates = legacy_names.normalize_cost_aggregates(aggregates)
++    raw = aggregates.get("points")
+     points, broken = split_malformed(raw if isinstance(raw, list) else [])
+-    resets = aggregates.get("reinicios") or {}
+-    sources = aggregates.get("fuentes") or {}
+-    all_discards = aggregates.get("descartes")
++    resets = aggregates.get("resets") or {}
++    sources = aggregates.get("sources") or {}
++    all_discards = aggregates.get("discards")
+     if not isinstance(all_discards, dict):
+         all_discards = {}
+     out: dict[str, dict] = {}
+     for kind in TYPES:
+         reset = resets.get(kind) if isinstance(resets, dict) else None
+-        of_type = [p for p in points if p.get("tipo") == kind]
+-        sl = [p for p in of_type if p.get("fuente") == "statusline"]
+-        valid = sorted(current_points(sl, now, reset), key=lambda p: p["fin"])
+-        rejections_valid = current_points([p for p in of_type if p.get("fuente") == "rechazo"], now)
++        of_type = [p for p in points if p.get("type") == kind]
++        sl = [p for p in of_type if p.get("source") == "statusline"]
++        valid = sorted(current_points(sl, now, reset), key=lambda p: p["end"])
++        rejections_valid = current_points(
++            [p for p in of_type if p.get("source") == "rejection"], now
++        )
+         previous = all_discards.get(kind)
+         discards = dict(previous) if isinstance(previous, dict) else {}
+-        if broken[kind]["linea_corrupta"]:
+-            discards["linea_corrupta"] = (
+-                discards.get("linea_corrupta", 0) + broken[kind]["linea_corrupta"]
++        if broken[kind]["corrupt_line"]:
++            discards["corrupt_line"] = (
++                discards.get("corrupt_line", 0) + broken[kind]["corrupt_line"]
+             )
+         without_reset = len(current_points(sl, now))
+         if len(sl) > without_reset:
+-            discards["caducado"] = discards.get("caducado", 0) + len(sl) - without_reset
++            discards["expired"] = discards.get("expired", 0) + len(sl) - without_reset
+         if without_reset > len(valid):
+-            discards["reinicio"] = discards.get("reinicio", 0) + without_reset - len(valid)
++            discards["reset"] = discards.get("reset", 0) + without_reset - len(valid)
+         r = criterion([float(p["C"]) for p in valid])
+         r.update(
+             rejection_points=len(rejections_valid),
+diff --git a/src/local_delegate/recalcular.py b/src/local_delegate/recalcular.py
+deleted file mode 100644
+index a27be57..0000000
+--- a/src/local_delegate/recalcular.py
++++ /dev/null
+@@ -1,356 +0,0 @@
+-"""`local-delegate recalcular-coste`: relleno, agregados de `N`, cotejo real y puntos de cuota.
+-
+-Lo lanza el usuario (REQ-070). Lee los transcripts de `claude_dir/projects`, el registro del
+-statusline (`claude_dir/cuota-statusline.jsonl`) y el log de uso, y escribe SOLO en el
+-directorio de logs (REQ-074):
+-
+-- `attribution-AAAAMM.json` por mes, con `attribution.write_backfill` (REQ-004, REQ-005);
+-- `coste-agregados.json`, cuyo formato lee y escribe solo este módulo (ver el plan):
+-  `{"version", "generado", "plazo_dias", "cotejo", "n_por_mes", "puntos", "descartes",
+-  "reinicios", "fuentes"}`.
+-
+-Nada de lo que escribe lleva rutas, ids de sesión ni texto (REQ-072). Lanzado dos veces con los
+-mismos datos, deja los mismos ficheros salvo `generado` (REQ-074).
+-"""
+-
+-from __future__ import annotations
+-
+-import json
+-import os
+-import re
+-import tempfile
+-from collections import Counter
+-from datetime import UTC, datetime, timedelta
+-from pathlib import Path
+-
+-from . import attribution, cost, precios, quota, transcripts
+-
+-NOMBRE = "coste-agregados.json"
+-VERSION = 1
+-
+-#: Los agregados de `N` de un mes que terminó hace más de esto no se recalculan (REQ-071).
+-MES_CERRADO = timedelta(days=30)
+-
+-_FICHERO_DE_MES = re.compile(r"^usage-(\d{6})\.jsonl$")
+-
+-
+-# --- coste-agregados.json -----------------------------------------------------------------------
+-
+-
+-def ruta(log_dir: Path) -> Path:
+-    return Path(log_dir) / NOMBRE
+-
+-
+-def leer_agregados(log_dir: Path) -> dict | None:
+-    """El último `coste-agregados.json`, o `None` si no existe, no se lee o no tiene la forma."""
+-    try:
+-        datos = json.loads(ruta(log_dir).read_text(encoding="utf-8"))
+-    except (OSError, ValueError):
+-        return None
+-    return datos if isinstance(datos, dict) else None
+-
+-
+-def escribir_agregados(log_dir: Path, agregados: dict) -> None:
+-    """Escribe el JSON de forma atómica (temporal en el mismo directorio y `os.replace`)."""
+-    destino = ruta(log_dir)
+-    destino.parent.mkdir(parents=True, exist_ok=True)
+-    descriptor, temporal = tempfile.mkstemp(dir=destino.parent, prefix=".", suffix=".tmp")
+-    try:
+-        with os.fdopen(descriptor, "w", encoding="utf-8") as flujo:
+-            json.dump(agregados, flujo, ensure_ascii=False, sort_keys=True, indent=1)
+-        os.replace(temporal, destino)
+-    except BaseException:
+-        try:
+-            os.unlink(temporal)
+-        except OSError:
+-            # Limpieza de mejor esfuerzo: si el temporal ya no está o no se puede borrar, se
+-            # ignora para que el `raise` de abajo propague el error original y no este.
+-            pass
+-        raise
+-
+-
+-# --- El log de uso --------------------------------------------------------------------------
+-
+-
+-def _ficheros_del_log(log_dir: Path) -> list[tuple[Path, str]]:
+-    salida = []
+-    if Path(log_dir).is_dir():
+-        for p in sorted(Path(log_dir).glob("usage-*.jsonl")):
+-            m = _FICHERO_DE_MES.match(p.name)
+-            if m:
+-                salida.append((p, m.group(1)))
+-    return salida
+-
+-
+-def _leer_log(path: Path) -> list[dict]:
+-    """Las filas del fichero como las lee el panel: las líneas rotas se saltan (no cambian el
+-    ordinal de las demás, que solo cuenta líneas con `ts` y `tool`)."""
+-    filas: list[dict] = []
+-    try:
+-        with path.open(encoding="utf-8") as flujo:
+-            for linea in flujo:
+-                linea = linea.strip()
+-                if not linea:
+-                    continue
+-                try:
+-                    fila = json.loads(linea)
+-                except ValueError:
+-                    continue
+-                if isinstance(fila, dict):
+-                    filas.append(fila)
+-    except OSError:
+-        return []
+-    return filas
+-
+-
+-def _mes(ts: object) -> str | None:
+-    t = transcripts.parse_instant(ts)
+-    return f"{t:%Y%m}" if t else None
+-
+-
+-def _fin_de_mes(mes: str) -> datetime:
+-    anio, m = int(mes[:4]), int(mes[4:6])
+-    return datetime(anio + (m == 12), (m % 12) + 1, 1, tzinfo=UTC)
+-
+-
+-# --- Agregados de N (REQ-042 (2), REQ-071) --------------------------------------------------
+-
+-
+-def _n_del_fichero(fundidas: list[dict]) -> dict[str, dict[str, list[int]]]:
+-    """`{mes: {"modelo|hilo": [N, ...]}}` de las delegaciones atribuibles con `N` del relleno que
+-    no están excluidas (ni clientes de pruebas ni bancos)."""
+-    por_mes: dict[str, dict[str, list[int]]] = {}
+-    for f in fundidas:
+-        if f.get("ok") is False or f.get("caller_origin") == "fallback":
+-            continue
+-        n = f.get("n")
+-        if isinstance(n, bool) or not isinstance(n, int):
+-            continue
+-        if attribution.exclusion_reason(f, {"bench": f.get("bench")}):
+-            continue
+-        mes = _mes(f.get("ts"))
+-        modelo, hilo = f.get("caller_model"), f.get("caller_kind")
+-        if not mes or not modelo or hilo not in cost.THREADS:
+-            continue
+-        por_mes.setdefault(mes, {}).setdefault(f"{modelo}|{hilo}", []).append(n)
+-    return por_mes
+-
+-
+-def _fundir_n_por_mes(nuevos: dict, previos: dict, *, ahora: datetime) -> dict:
+-    """Un mes cerrado hace más de 30 días conserva lo guardado; los demás se recalculan."""
+-    salida: dict = {}
+-    for mes in sorted(set(nuevos) | set(previos)):
+-        cerrado = ahora - _fin_de_mes(mes) > MES_CERRADO
+-        if mes in previos and (cerrado or mes not in nuevos):
+-            salida[mes] = previos[mes]
+-        else:
+-            salida[mes] = {g: sorted(v) for g, v in sorted(nuevos[mes].items())}
+-    return salida
+-
+-
+-# --- Cotejo (REQ-014) -----------------------------------------------------------------------
+-
+-
+-def _cotejo(indice: transcripts.Index, *, ahora: datetime) -> dict | None:
+-    filas = transcripts.cost_state(indice)
+-    if not filas:
+-        return None
+-    tabla = precios.cargar_precios()
+-    resultados = precios.cotejar(filas, tabla)
+-    sin_precio = sorted(
+-        {precios.normalizar_id(f["modelo"]) for f, r in zip(filas, resultados) if r == "sin_precio"}
+-    )
+-    return {
+-        "fecha": ahora.isoformat(timespec="seconds"),
+-        "version_tabla": tabla.get("consultado"),
+-        "juzgadas": sum(1 for r in resultados if r is not None),
+-        "fuera": sum(1 for r in resultados if r == "fuera"),
+-        "sin_precio": sin_precio,
+-        "veredicto": precios.veredicto(resultados),
+-    }
+-
+-
+-# --- Puntos de cuota (REQ-051 a REQ-054, REQ-071) -------------------------------------------
+-
+-
+-def _clave_de_punto(p: dict) -> tuple:
+-    return (p.get("fuente"), p.get("tipo"), p.get("inicio"), p.get("fin"))
+-
+-
+-def _sumar(destino: dict[str, Counter], origen: dict[str, Counter]) -> None:
+-    for tipo, conteo in origen.items():
+-        destino.setdefault(tipo, Counter()).update(conteo)
+-
+-
+-def _puntos(
+-    claude_dir: Path, indice: transcripts.Index, previos: list, *, ahora: datetime
+-) -> tuple[list[dict], dict[str, dict[str, int]], bool]:
+-    descartes = quota.empty_discards()
+-    if indice.corrupt_lines or indice.unreadable_files:
+-        for tipo in quota.TYPES:
+-            descartes[tipo]["linea_corrupta"] += indice.corrupt_lines + indice.unreadable_files
+-    peticiones = list(indice.requests.values())
+-    nuevos = quota.rejection_points(indice.rejections, peticiones)
+-
+-    registro = Path(claude_dir) / "cuota-statusline.jsonl"
+-    hay_registro = registro.is_file()
+-    if hay_registro:
+-        try:
+-            with registro.open(encoding="utf-8", errors="replace") as flujo:
+-                por_tipo, sesiones, d = quota.sanitize(flujo)
+-        except OSError:
+-            por_tipo, sesiones, d = {}, set(), quota.empty_discards()
+-            for tipo in quota.TYPES:
+-                d[tipo]["linea_corrupta"] += 1
+-        _sumar(descartes, d)
+-        del_statusline, d = quota.statusline_points(por_tipo, sesiones, peticiones)
+-        _sumar(descartes, d)
+-        nuevos += del_statusline
+-
+-    # Fundir con los del JSON anterior por (fuente, tipo, inicio, fin): un punto cuyo transcript
+-    # ya se borró sigue ahí hasta que caduca (REQ-071).
+-    previos, d = quota.split_malformed(previos)
+-    _sumar(descartes, d)
+-    por_clave = {_clave_de_punto(p): p for p in previos}
+-    for p in nuevos:
+-        por_clave[_clave_de_punto(p)] = p
+-    vivos = [p for p in por_clave.values() if quota.current_points([p], ahora)]
+-    puntos, d = quota.drop_overlapping(vivos)
+-    _sumar(descartes, d)
+-    limpios = {tipo: dict(sorted(c.items())) for tipo, c in descartes.items()}
+-    return puntos, limpios, hay_registro
+-
+-
+-# --- El comando -----------------------------------------------------------------------------
+-
+-
+-def ejecutar(
+-    claude_dir: Path,
+-    log_dir: Path,
+-    *,
+-    ahora: datetime | None = None,
+-    reiniciar: str | None = None,
+-) -> dict:
+-    """Recalcula todo y devuelve un resumen con conteos (sin rutas)."""
+-    ahora = ahora or datetime.now(UTC)
+-    claude_dir, log_dir = Path(claude_dir), Path(log_dir)
+-    plazo = attribution.cleanup_period_days(claude_dir)
+-    proyectos = claude_dir / "projects"
+-    hay_transcripts = proyectos.is_dir()
+-    indice = transcripts.read(proyectos)
+-    previo = leer_agregados(log_dir) or {}
+-
+-    # 1. Relleno, por fichero y con las claves del fichero ENTERO (REQ-004, REQ-005).
+-    desde = ahora - timedelta(days=plazo)
+-    cruces: Counter = Counter()
+-    lineas_en_plazo = 0
+-    ficheros = _ficheros_del_log(log_dir)
+-    filas_por_fichero = []
+-    for path, _ym in ficheros:
+-        filas = _leer_log(path)
+-        filas_por_fichero.append(filas)
+-        if not hay_transcripts:
+-            continue  # sin transcripts no hay nada con qué casar: no se marca nada `no_match`
+-        claves = attribution.file_keys(filas)
+-        entradas = transcripts.match_lines(zip(claves, filas, strict=True), indice, since=desde)
+-        por_mes: dict[str, dict[str, dict]] = {}
+-        for clave, fila in zip(claves, filas, strict=True):
+-            if clave in entradas:
+-                mes = _mes(fila.get("ts"))
+-                if mes:
+-                    por_mes.setdefault(mes, {})[clave] = entradas[clave]
+-        for mes, del_mes in sorted(por_mes.items()):
+-            attribution.write_backfill(log_dir, mes, del_mes)
+-        lineas_en_plazo += len(entradas)
+-        cruces.update(e["match"] for e in entradas.values())
+-
+-    # 2. Agregados de N, sobre las filas fundidas con el relleno ya escrito.
+-    nuevos_n: dict[str, dict[str, list[int]]] = {}
+-    for filas in filas_por_fichero:
+-        for mes, grupos in _n_del_fichero(cost.merge(filas, log_dir=log_dir)).items():
+-            destino = nuevos_n.setdefault(mes, {})
+-            for grupo, valores in grupos.items():
+-                destino.setdefault(grupo, []).extend(valores)
+-    previos_n = previo.get("n_por_mes") if isinstance(previo.get("n_por_mes"), dict) else {}
+-    n_por_mes = _fundir_n_por_mes(nuevos_n, previos_n, ahora=ahora)
+-
+-    # 3. Cotejo real; sin filas `cost-state`, se conserva el último.
+-    cotejo = _cotejo(indice, ahora=ahora)
+-    if cotejo is None and isinstance(previo.get("cotejo"), dict):
+-        cotejo = previo["cotejo"]
+-
+-    # 4. Puntos de cuota y reinicios.
+-    previos_puntos = previo.get("puntos") if isinstance(previo.get("puntos"), list) else []
+-    puntos, descartes, hay_registro = _puntos(claude_dir, indice, previos_puntos, ahora=ahora)
+-    reinicios = {tipo: None for tipo in quota.TYPES}
+-    if isinstance(previo.get("reinicios"), dict):
+-        reinicios.update({t: previo["reinicios"].get(t) for t in quota.TYPES})
+-    if reiniciar:
+-        reinicios[reiniciar] = ahora.isoformat(timespec="seconds")
+-
+-    agregados = {
+-        "version": VERSION,
+-        "generado": ahora.isoformat(timespec="seconds"),
+-        "plazo_dias": plazo,
+-        "cotejo": cotejo,
+-        "n_por_mes": n_por_mes,
+-        "puntos": puntos,
+-        "descartes": descartes,
+-        "reinicios": reinicios,
+-        "fuentes": {"transcripts": hay_transcripts, "statusline": hay_registro},
+-    }
+-    escribir_agregados(log_dir, agregados)
+-
+-    estado = quota.status(agregados, ahora)
+-    return {
+-        "plazo_dias": plazo,
+-        "transcripts": indice.files,
+-        "lineas_corruptas": indice.corrupt_lines + indice.unreadable_files,
+-        "lineas_rellenadas": lineas_en_plazo,
+-        "cruces": dict(sorted(cruces.items())),
+-        "cotejo": cotejo,
+-        "n_casos": sum(len(v) for g in n_por_mes.values() for v in g.values()),
+-        "puntos": dict(Counter(f"{p['fuente']}:{p['tipo']}" for p in puntos)),
+-        "descartes": descartes,
+-        "cuota": {t: e["status"] for t, e in estado.items()},
+-        "reinicios": reinicios,
+-    }
+-
+-
+-#: Rótulo del estado de la cuota en el resumen (`quota.status` da el valor de máquina).
+-_STATUS_LABEL = {"calibrated": "calibrada", "uncalibrated": "sin calibrar"}
+-
+-
+-def texto_del_resumen(r: dict) -> str:
+-    """El resumen para la terminal: conteos, nunca rutas."""
+-    lineas = [
+-        f"Plazo de borrado de los transcripts: {r['plazo_dias']} días.",
+-        f"Transcripts leídos: {r['transcripts']} (líneas ilegibles: {r['lineas_corruptas']}).",
+-        f"Líneas del log rellenadas: {r['lineas_rellenadas']} "
+-        + (
+-            "(" + ", ".join(f"{k}: {v}" for k, v in r["cruces"].items()) + ")"
+-            if r["cruces"]
+-            else "(ninguna)"
+-        )
+-        + ".",
+-        f"Casos de N en los agregados: {r['n_casos']}.",
+-    ]
+-    c = r.get("cotejo")
+-    if c:
+-        lineas.append(
+-            f"Cotejo de precios ({c.get('version_tabla')}): {c.get('veredicto')}; "
+-            f"{c.get('juzgadas')} filas juzgadas, {c.get('fuera')} fuera, "
+-            f"sin precio: {', '.join(c.get('sin_precio') or []) or 'ninguno'}."
+-        )
+-    else:
+-        lineas.append("Cotejo de precios: sin datos de coste en los transcripts.")
+-    for tipo in quota.TYPES:
+-        d = r["descartes"].get(tipo) or {}
+-        lineas.append(
+-            f"Cuota {tipo}: {_STATUS_LABEL.get(r['cuota'][tipo], r['cuota'][tipo])}; puntos: "
+-            f"{r['puntos'].get('statusline:' + tipo, 0)} del statusline, "
+-            f"{r['puntos'].get('rechazo:' + tipo, 0)} de rechazo; descartes: "
+-            + (", ".join(f"{k} {v}" for k, v in d.items()) or "ninguno")
+-            + "."
+-        )
+-    return "\n".join(lineas)
+diff --git a/src/local_delegate/recompute.py b/src/local_delegate/recompute.py
+new file mode 100644
+index 0000000..eb26c4a
+--- /dev/null
++++ b/src/local_delegate/recompute.py
+@@ -0,0 +1,406 @@
++"""`local-delegate recompute-cost`: relleno, agregados de `N`, cotejo real y puntos de cuota.
++
++Lo lanza el usuario (REQ-070). Lee los transcripts de `claude_dir/projects`, el registro del
++statusline (`claude_dir/quota-statusline.jsonl` y, si existe, el nombre viejo
++`claude_dir/cuota-statusline.jsonl`: los dos si están los dos) y el log de uso, y escribe SOLO en
++el directorio de logs (REQ-074):
++
++- `attribution-AAAAMM.json` por mes, con `attribution.write_backfill` (REQ-004, REQ-005);
++- `cost-aggregates.json`, cuyo formato lee y escribe solo este módulo (ver el plan):
++  `{"version", "generated", "cleanup_days", "check", "n_by_month", "points", "discards",
++  "resets", "sources"}`.
++
++El fichero viejo, `coste-agregados.json`, no se reescribe nunca: si el nuevo aún no existe, se lee
++traducido (`legacy_names.normalize_cost_aggregates`) y la primera corrida siembra el nuevo con él;
++desde entonces solo se lee el nuevo (REQ-006).
++
++Nada de lo que escribe lleva rutas, ids de sesión ni texto (REQ-072). Lanzado dos veces con los
++mismos datos, deja los mismos ficheros salvo `generated` (REQ-074).
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import re
++import tempfile
++from collections import Counter
++from collections.abc import Iterator
++from datetime import UTC, datetime, timedelta
++from pathlib import Path
++
++from . import attribution, cost, legacy_names, precios, quota, transcripts
++
++OLD_FILE_NAME, FILE_NAME = legacy_names.COST_AGGREGATES_FILE_NAMES
++VERSION = 1
++
++#: Los agregados de `N` de un mes que terminó hace más de esto no se recalculan (REQ-071).
++CLOSED_MONTH = timedelta(days=30)
++
++_MONTH_FILE = re.compile(r"^usage-(\d{6})\.jsonl$")
++
++
++# --- cost-aggregates.json -----------------------------------------------------------------------
++
++
++def aggregates_path(log_dir: Path) -> Path:
++    return Path(log_dir) / FILE_NAME
++
++
++def _load(path: Path) -> dict | None:
++    try:
++        data = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        return None
++    return data if isinstance(data, dict) else None
++
++
++def read_aggregates(log_dir: Path) -> dict | None:
++    """Los últimos agregados en el formato nuevo, o `None` si no hay o no tienen la forma.
++
++    Se lee `cost-aggregates.json`. Solo si aún no existe, se lee `coste-agregados.json` traducido
++    entero al formato nuevo, con los puntos ya con su identidad nueva (`source`, `type`, `start`,
++    `end`): `run` parte de esta lectura, así que la siembra ocurre una sola vez. Un fichero nuevo
++    dañado cuenta como vacío y no vuelve a sembrar (REQ-006).
++    """
++    path = aggregates_path(log_dir)
++    data = _load(path) if path.exists() else _load(Path(log_dir) / OLD_FILE_NAME)
++    return legacy_names.normalize_cost_aggregates(data) if data is not None else None
++
++
++def write_aggregates(log_dir: Path, aggregates: dict) -> None:
++    """Escribe el JSON de forma atómica (temporal en el mismo directorio y `os.replace`)."""
++    target = aggregates_path(log_dir)
++    target.parent.mkdir(parents=True, exist_ok=True)
++    descriptor, tmp_path = tempfile.mkstemp(dir=target.parent, prefix=".", suffix=".tmp")
++    try:
++        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
++            json.dump(aggregates, stream, ensure_ascii=False, sort_keys=True, indent=1)
++        os.replace(tmp_path, target)
++    except BaseException:
++        try:
++            os.unlink(tmp_path)
++        except OSError:
++            # Limpieza de mejor esfuerzo: si el temporal ya no está o no se puede borrar, se
++            # ignora para que el `raise` de abajo propague el error original y no este.
++            pass
++        raise
++
++
++# --- El log de uso --------------------------------------------------------------------------
++
++
++def _log_files(log_dir: Path) -> list[tuple[Path, str]]:
++    out = []
++    if Path(log_dir).is_dir():
++        for p in sorted(Path(log_dir).glob("usage-*.jsonl")):
++            m = _MONTH_FILE.match(p.name)
++            if m:
++                out.append((p, m.group(1)))
++    return out
++
++
++def _read_log(path: Path) -> list[dict]:
++    """Las filas del fichero como las lee el panel: las líneas rotas se saltan (no cambian el
++    ordinal de las demás, que solo cuenta líneas con `ts` y `tool`)."""
++    rows: list[dict] = []
++    try:
++        with path.open(encoding="utf-8") as stream:
++            for line in stream:
++                line = line.strip()
++                if not line:
++                    continue
++                try:
++                    row = json.loads(line)
++                except ValueError:
++                    continue
++                if isinstance(row, dict):
++                    rows.append(row)
++    except OSError:
++        return []
++    return rows
++
++
++def _month(ts: object) -> str | None:
++    t = transcripts.parse_instant(ts)
++    return f"{t:%Y%m}" if t else None
++
++
++def _month_end(month: str) -> datetime:
++    year, m = int(month[:4]), int(month[4:6])
++    return datetime(year + (m == 12), (m % 12) + 1, 1, tzinfo=UTC)
++
++
++# --- Agregados de N (REQ-042 (2), REQ-071) --------------------------------------------------
++
++
++def _n_of_file(merged: list[dict]) -> dict[str, dict[str, list[int]]]:
++    """`{mes: {"modelo|hilo": [N, ...]}}` de las delegaciones atribuibles con `N` del relleno que
++    no están excluidas (ni clientes de pruebas ni bancos)."""
++    by_month: dict[str, dict[str, list[int]]] = {}
++    for f in merged:
++        if f.get("ok") is False or f.get("caller_origin") == "fallback":
++            continue
++        n = f.get("n")
++        if isinstance(n, bool) or not isinstance(n, int):
++            continue
++        if attribution.exclusion_reason(f, {"bench": f.get("bench")}):
++            continue
++        month = _month(f.get("ts"))
++        model, thread = f.get("caller_model"), f.get("caller_kind")
++        if not month or not model or thread not in cost.THREADS:
++            continue
++        by_month.setdefault(month, {}).setdefault(f"{model}|{thread}", []).append(n)
++    return by_month
++
++
++def _merge_n_by_month(fresh: dict, previous: dict, *, now: datetime) -> dict:
++    """Un mes cerrado hace más de 30 días conserva lo guardado; los demás se recalculan."""
++    out: dict = {}
++    for month in sorted(set(fresh) | set(previous)):
++        closed = now - _month_end(month) > CLOSED_MONTH
++        if month in previous and (closed or month not in fresh):
++            out[month] = previous[month]
++        else:
++            out[month] = {g: sorted(v) for g, v in sorted(fresh[month].items())}
++    return out
++
++
++# --- Cotejo (REQ-014) -----------------------------------------------------------------------
++
++_VERDICT_VALUES = legacy_names.FORMATS["cost_aggregates_check"]["values"]["verdict"]
++
++
++def _check(index: transcripts.Index, *, now: datetime) -> dict | None:
++    rows = transcripts.cost_state(index)
++    if not rows:
++        return None
++    table = precios.cargar_precios()
++    results = precios.cotejar(rows, table)
++    unpriced = sorted(
++        {precios.normalizar_id(f["modelo"]) for f, r in zip(rows, results) if r == "sin_precio"}
++    )
++    return {
++        "date": now.isoformat(timespec="seconds"),
++        "table_version": table.get("consultado"),
++        "judged": sum(1 for r in results if r is not None),
++        "outside": sum(1 for r in results if r == "fuera"),
++        "unpriced": unpriced,
++        # `precios.veredicto` aún responde `pasa|falla`: se guarda el valor nuevo.
++        "verdict": legacy_names.new_value(_VERDICT_VALUES, precios.veredicto(results)),
++    }
++
++
++# --- Puntos de cuota (REQ-051 a REQ-054, REQ-071) -------------------------------------------
++
++
++def _point_key(p: dict) -> tuple:
++    """La identidad del punto. Los puntos viejos llegan ya traducidos (`read_aggregates`)."""
++    return (p.get("source"), p.get("type"), p.get("start"), p.get("end"))
++
++
++def _statusline_logs(claude_dir: Path) -> list[Path]:
++    """Los registros del statusline que hay, el nuevo primero. Los escribe el statusline del
++    usuario, que puede seguir con el nombre viejo: si están los dos, se leen los dos (REQ-008)."""
++    old, new = legacy_names.QUOTA_STATUSLINE_FILE_NAMES
++    return [p for p in (Path(claude_dir) / new, Path(claude_dir) / old) if p.is_file()]
++
++
++def _lines_of(paths: list[Path]) -> Iterator[str]:
++    for path in paths:
++        with path.open(encoding="utf-8", errors="replace") as stream:
++            yield from stream
++
++
++def _add_discards(target: dict[str, Counter], origin: dict[str, Counter]) -> None:
++    for kind, counts in origin.items():
++        target.setdefault(kind, Counter()).update(counts)
++
++
++def _points(
++    claude_dir: Path, index: transcripts.Index, previous: list, *, now: datetime
++) -> tuple[list[dict], dict[str, dict[str, int]], bool]:
++    discards = quota.empty_discards()
++    if index.corrupt_lines or index.unreadable_files:
++        for kind in quota.TYPES:
++            discards[kind]["corrupt_line"] += index.corrupt_lines + index.unreadable_files
++    requests = list(index.requests.values())
++    fresh = quota.rejection_points(index.rejections, requests)
++
++    statusline_logs = _statusline_logs(claude_dir)
++    has_statusline = bool(statusline_logs)
++    if has_statusline:
++        try:
++            by_type, sessions, d = quota.sanitize(_lines_of(statusline_logs))
++        except OSError:
++            by_type, sessions, d = {}, set(), quota.empty_discards()
++            for kind in quota.TYPES:
++                d[kind]["corrupt_line"] += 1
++        _add_discards(discards, d)
++        from_statusline, d = quota.statusline_points(by_type, sessions, requests)
++        _add_discards(discards, d)
++        fresh += from_statusline
++
++    # Fundir con los del JSON anterior por (source, type, start, end): un punto cuyo transcript
++    # ya se borró sigue ahí hasta que caduca (REQ-071).
++    previous, d = quota.split_malformed(previous)
++    _add_discards(discards, d)
++    by_key = {_point_key(p): p for p in previous}
++    for p in fresh:
++        by_key[_point_key(p)] = p
++    alive = [p for p in by_key.values() if quota.current_points([p], now)]
++    points, d = quota.drop_overlapping(alive)
++    _add_discards(discards, d)
++    clean = {kind: dict(sorted(c.items())) for kind, c in discards.items()}
++    return points, clean, has_statusline
++
++
++# --- El comando -----------------------------------------------------------------------------
++
++
++def run(
++    claude_dir: Path,
++    log_dir: Path,
++    *,
++    now: datetime | None = None,
++    reset: str | None = None,
++) -> dict:
++    """Recalcula todo y devuelve un resumen con conteos (sin rutas)."""
++    now = now or datetime.now(UTC)
++    claude_dir, log_dir = Path(claude_dir), Path(log_dir)
++    cleanup_days = attribution.cleanup_period_days(claude_dir)
++    projects = claude_dir / "projects"
++    has_transcripts = projects.is_dir()
++    index = transcripts.read(projects)
++    previous = read_aggregates(log_dir) or {}
++
++    # 1. Relleno, por fichero y con las claves del fichero ENTERO (REQ-004, REQ-005).
++    since = now - timedelta(days=cleanup_days)
++    matches: Counter = Counter()
++    lines_in_window = 0
++    files = _log_files(log_dir)
++    rows_by_file = []
++    for path, _ym in files:
++        rows = _read_log(path)
++        rows_by_file.append(rows)
++        if not has_transcripts:
++            continue  # sin transcripts no hay nada con qué casar: no se marca nada `no_match`
++        keys = attribution.file_keys(rows)
++        entries = transcripts.match_lines(zip(keys, rows, strict=True), index, since=since)
++        by_month: dict[str, dict[str, dict]] = {}
++        for key, row in zip(keys, rows, strict=True):
++            if key in entries:
++                month = _month(row.get("ts"))
++                if month:
++                    by_month.setdefault(month, {})[key] = entries[key]
++        for month, month_entries in sorted(by_month.items()):
++            attribution.write_backfill(log_dir, month, month_entries)
++        lines_in_window += len(entries)
++        matches.update(e["match"] for e in entries.values())
++
++    # 2. Agregados de N, sobre las filas fundidas con el relleno ya escrito.
++    fresh_n: dict[str, dict[str, list[int]]] = {}
++    for rows in rows_by_file:
++        for month, groups in _n_of_file(cost.merge(rows, log_dir=log_dir)).items():
++            target = fresh_n.setdefault(month, {})
++            for group, values in groups.items():
++                target.setdefault(group, []).extend(values)
++    previous_n = previous.get("n_by_month") if isinstance(previous.get("n_by_month"), dict) else {}
++    n_by_month = _merge_n_by_month(fresh_n, previous_n, now=now)
++
++    # 3. Cotejo real; sin filas `cost-state`, se conserva el último.
++    check = _check(index, now=now)
++    if check is None and isinstance(previous.get("check"), dict):
++        check = previous["check"]
++
++    # 4. Puntos de cuota y reinicios.
++    previous_points = previous.get("points") if isinstance(previous.get("points"), list) else []
++    points, discards, has_statusline = _points(claude_dir, index, previous_points, now=now)
++    resets = {kind: None for kind in quota.TYPES}
++    if isinstance(previous.get("resets"), dict):
++        resets.update({t: previous["resets"].get(t) for t in quota.TYPES})
++    if reset:
++        resets[reset] = now.isoformat(timespec="seconds")
++
++    aggregates = {
++        "version": VERSION,
++        "generated": now.isoformat(timespec="seconds"),
++        "cleanup_days": cleanup_days,
++        "check": check,
++        "n_by_month": n_by_month,
++        "points": points,
++        "discards": discards,
++        "resets": resets,
++        "sources": {"transcripts": has_transcripts, "statusline": has_statusline},
++    }
++    write_aggregates(log_dir, aggregates)
++
++    status = quota.status(aggregates, now)
++    return {
++        "cleanup_days": cleanup_days,
++        "transcripts": index.files,
++        "corrupt_lines": index.corrupt_lines + index.unreadable_files,
++        "backfilled_lines": lines_in_window,
++        "matches": dict(sorted(matches.items())),
++        "check": check,
++        "n_cases": sum(len(v) for g in n_by_month.values() for v in g.values()),
++        "points": dict(Counter(f"{p['source']}:{p['type']}" for p in points)),
++        "discards": discards,
++        "quota": {t: e["status"] for t, e in status.items()},
++        "resets": resets,
++    }
++
++
++# Rótulos para la terminal: el resumen lleva valores de máquina y la prosa los dice en palabras.
++#: Estado de la cuota (`quota.status`).
++_STATUS_LABEL = {"calibrated": "calibrada", "uncalibrated": "sin calibrar"}
++#: Veredicto del cotejo.
++_VERDICT_LABEL = {"pass": "pasa", "fail": "falla"}
++#: Motivos de descarte de los puntos de cuota.
++_DISCARD_LABEL = {
++    "corrupt_line": "línea corrupta",
++    "out_of_range": "fuera de rango",
++    "small_delta": "variación pequeña",
++    "no_local_use": "sin uso local",
++    "contaminated": "contaminado",
++    "overlapping": "solapado",
++    "expired": "caducado",
++    "reset": "reinicio",
++}
++
++
++def summary_text(r: dict) -> str:
++    """El resumen para la terminal: conteos, nunca rutas."""
++    lines = [
++        f"Plazo de borrado de los transcripts: {r['cleanup_days']} días.",
++        f"Transcripts leídos: {r['transcripts']} (líneas ilegibles: {r['corrupt_lines']}).",
++        f"Líneas del log rellenadas: {r['backfilled_lines']} "
++        + (
++            "(" + ", ".join(f"{k}: {v}" for k, v in r["matches"].items()) + ")"
++            if r["matches"]
++            else "(ninguna)"
++        )
++        + ".",
++        f"Casos de N en los agregados: {r['n_cases']}.",
++    ]
++    c = r.get("check")
++    if c:
++        verdict = c.get("verdict")
++        lines.append(
++            f"Cotejo de precios ({c.get('table_version')}): "
++            f"{_VERDICT_LABEL.get(verdict, verdict)}; "
++            f"{c.get('judged')} filas juzgadas, {c.get('outside')} fuera, "
++            f"sin precio: {', '.join(c.get('unpriced') or []) or 'ninguno'}."
++        )
++    else:
++        lines.append("Cotejo de precios: sin datos de coste en los transcripts.")
++    for kind in quota.TYPES:
++        d = r["discards"].get(kind) or {}
++        lines.append(
++            f"Cuota {kind}: {_STATUS_LABEL.get(r['quota'][kind], r['quota'][kind])}; puntos: "
++            f"{r['points'].get('statusline:' + kind, 0)} del statusline, "
++            f"{r['points'].get('rejection:' + kind, 0)} de rechazo; descartes: "
++            + (", ".join(f"{_DISCARD_LABEL.get(k, k)} {v}" for k, v in d.items()) or "ninguno")
++            + "."
++        )
++    return "\n".join(lines)
+diff --git a/src/local_delegate/valoracion.py b/src/local_delegate/valoracion.py
+deleted file mode 100644
+index cb90d5d..0000000
+--- a/src/local_delegate/valoracion.py
++++ /dev/null
+@@ -1,299 +0,0 @@
+-"""Coste equivalente a precio de API y bloque de imágenes (coste-api-y-cuota, REQ-038 y REQ-040 a
+-REQ-048).
+-
+-Una pregunta: cuánto habría costado, a precio de lista de la API, que Claude leyera lo que leyó el
+-MCP server-side. **No es dinero ahorrado** (la suscripción es de tarifa plana) y el panel lo dice.
+-
+-- `precio(m, hilo)`: escritura de caché del hilo (5 min en un subagente, 1 h en el principal) y
+-  lectura de caché, o `None` si el modelo no está en la tabla (REQ-016: nunca 0).
+-- `n_de(fila, agregados)`: `N` y caducidades en el orden único de REQ-042 (relleno, mediana del
+-  grupo con al menos 10 casos, declarado del hilo).
+-- `coste_evento(fila, agregados)`: `T`, cota baja y estimación de un evento (REQ-041).
+-- `bloque_coste(filas, agregados)`: la cifra del periodo con todo lo que la acompaña (REQ-007,
+-  REQ-008, REQ-016, REQ-044, REQ-046, REQ-047); `bloque_imagenes(filas)`: REQ-038.
+-
+-Las filas llegan **fundidas** (`cost.merge`, REQ-006). Solo stdlib; no abre sockets ni lee
+-`~/.claude`: los agregados los trae quien llama (`recalcular.leer_agregados`).
+-"""
+-
+-from __future__ import annotations
+-
+-import statistics
+-from collections import Counter
+-from collections.abc import Iterable
+-from datetime import UTC, datetime
+-
+-from . import attribution, cost, precios, server
+-
+-#: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
+-#: subagente 40 (135 casos).
+-N_DECLARADO = {"main": 127, "subagent": 40}
+-#: Casos mínimos de un grupo para usar su mediana (REQ-042 (2)).
+-MIN_CASOS_GRUPO = 10
+-#: Plazo de borrado de los transcripts sin `coste-agregados.json` (Definiciones, `H`).
+-PLAZO_POR_DEFECTO = attribution.DEFAULT_CLEANUP_DAYS
+-
+-ORIGENES_N = ("relleno", "agregado", "declarado")
+-ORIGENES_DENSIDAD = ("measured", "unnumbered", "conservative")
+-
+-SIN_DELEGACIONES = "sin delegaciones en el periodo"
+-SIN_TABLA = "no se pudo cargar la tabla de precios del paquete"
+-TODAS_SIN_PRECIO = "todas las delegaciones del periodo son de modelos sin precio"
+-COMMAND = "local-delegate recompute-cost"
+-FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
+-
+-
+-def nombre_del_modelo(mid: str) -> str:
+-    """`claude-opus-5-5` → `Opus 5.5`; `claude-haiku-4-5` → `Haiku 4.5`. Solo para rótulos."""
+-    partes = precios.normalizar_id(str(mid)).removeprefix("claude-").split("-")
+-    if not partes or not partes[0]:
+-        return str(mid)
+-    return " ".join([partes[0].capitalize(), ".".join(partes[1:])]).strip()
+-
+-
+-def _hilo(fila: dict) -> str:
+-    hilo = fila.get("caller_kind")
+-    return hilo if hilo in cost.THREADS else cost.fallback()["thread"]
+-
+-
+-def precio(m: str, hilo: str, tabla: dict | None = None) -> dict | None:
+-    """`{"w": P_w(m, hilo), "r": P_r(m)}` en USD/MTok, o `None` si `m` no tiene precio."""
+-    entrada = precios.entrada(str(m or ""), tabla)
+-    if entrada is None:
+-        return None
+-    return {"w": entrada["w5m"] if hilo == "subagent" else entrada["w1h"], "r": entrada["lectura"]}
+-
+-
+-def _entero(v: object) -> int | None:
+-    return v if isinstance(v, int) and not isinstance(v, bool) else None
+-
+-
+-def _n_del_grupo(agregados: dict | None, grupo: str) -> list[int]:
+-    n_por_mes = agregados.get("n_por_mes") if isinstance(agregados, dict) else None
+-    if not isinstance(n_por_mes, dict):
+-        return []
+-    valores: list[int] = []
+-    for grupos in n_por_mes.values():
+-        if isinstance(grupos, dict) and isinstance(grupos.get(grupo), list):
+-            valores.extend(v for v in grupos[grupo] if _entero(v) is not None)
+-    return valores
+-
+-
+-def n_de(fila: dict, agregados: dict | None) -> tuple[float, int, str]:
+-    """`(N, caducidades, origen)` de un evento, en el orden único de REQ-042:
+-
+-    (1) `n` y `expiries` del relleno; (2) la mediana de `N` del grupo (`modelo|hilo`) en los
+-    agregados guardados, si tiene al menos 10 casos, con 0 caducidades; (3) el declarado del hilo.
+-    """
+-    n = _entero(fila.get("n"))
+-    if n is not None:
+-        return n, _entero(fila.get("expiries")) or 0, "relleno"
+-    valores = _n_del_grupo(agregados, f"{fila.get('caller_model')}|{_hilo(fila)}")
+-    if len(valores) >= MIN_CASOS_GRUPO:
+-        return statistics.median(valores), 0, "agregado"
+-    return N_DECLARADO[_hilo(fila)], 0, "declarado"
+-
+-
+-def tokens_netos(fila: dict) -> int:
+-    """`T`: tokens de Claude del texto leído server-side menos los devueltos (Definiciones). 0 en
+-    una imagen (REQ-038). Pasa SOLO por `server.tokens_claude`."""
+-    if cost.is_image(fila):
+-        return 0
+-    acc = server._accounting(fila)
+-    return server.tokens_claude(
+-        acc["chars_saved_text"], tipo="text", evento=fila
+-    ) - server.tokens_claude(acc["chars_returned"], tipo="returned", evento=fila)
+-
+-
+-def coste_evento(fila: dict, agregados: dict | None = None, tabla: dict | None = None) -> dict:
+-    """`T`, cota baja y estimación de UN evento (REQ-041), con `N` y su origen.
+-
+-    cota baja = T × P_w(m, hilo); estimación = T × (P_w × (1 + cad) + (N − cad) × P_r). Un `T`
+-    negativo resta. Sin precio: `cota_baja` y `estimacion` son `None` (nunca 0).
+-    """
+-    hilo = _hilo(fila)
+-    modelo = str(fila.get("caller_model") or "")
+-    t = tokens_netos(fila)
+-    n, cad, origen = n_de(fila, agregados)
+-    p = precio(modelo, hilo, tabla)
+-    salida = {
+-        "modelo": modelo,
+-        "hilo": hilo,
+-        "esfuerzo": fila.get("caller_effort") or "sin dato",
+-        "T": t,
+-        "N": n,
+-        "caducidades": cad,
+-        "origen_n": origen,
+-        "cota_baja": None,
+-        "estimacion": None,
+-    }
+-    if p is not None:
+-        salida["cota_baja"] = t * p["w"] / 1e6
+-        salida["estimacion"] = t * (p["w"] * (1 + cad) + (n - cad) * p["r"]) / 1e6
+-    return salida
+-
+-
+-def _en_la_base(fila: dict, acc: dict) -> bool:
+-    """REQ-040: atribuible (sin fallo), de texto, con algo leído o devuelto."""
+-    if acc["failed"] or cost.is_image(fila):
+-        return False
+-    return acc["chars_saved_text"] > 0 or acc["chars_returned"] > 0
+-
+-
+-def _dinero(x: float) -> float:
+-    """A céntimos. Sumar 0.0 convierte el `-0.0` de un negativo diminuto en `0.0`: la API no
+-    devuelve un cero con signo (la fórmula no cambia; un negativo de verdad sigue negativo)."""
+-    return round(x, 2) + 0.0
+-
+-
+-def bloque_coste(
+-    filas: Iterable[dict], agregados: dict | None, *, ahora: datetime | None = None
+-) -> dict:
+-    """La cifra del periodo con sus supuestos a la vista. Sin cifra, el motivo (REQ-046)."""
+-    ahora = ahora or datetime.now(UTC)
+-    plazo = PLAZO_POR_DEFECTO
+-    if isinstance(agregados, dict):
+-        plazo = _entero(agregados.get("plazo_dias")) or PLAZO_POR_DEFECTO
+-    try:
+-        tabla = precios.cargar_precios()
+-        r = cost.fallback()
+-    except Exception:
+-        # Sin tabla no hay cifra (REQ-046), pero la barra y el motivo se enseñan igual.
+-        tabla, r = None, dict(cost.DECLARED_FALLBACK, fallback_invalid=False)
+-
+-    barra: Counter = Counter({t: 0 for t in cost.SEGMENTS})
+-    excluidas_por_motivo: Counter = Counter()
+-    n_origen: Counter = Counter({o: 0 for o in ORIGENES_N})
+-    densidad_origen: Counter = Counter({o: 0 for o in ORIGENES_DENSIDAD})
+-    familias: Counter = Counter()
+-    marcas: Counter = Counter()
+-    fuera = {"imagenes": 0, "salida_a_fichero": 0}
+-    sin_precio: Counter = Counter()
+-    desglose: dict[tuple, dict] = {}
+-    respaldo_invalido = bool(r.get("fallback_invalid"))
+-    cota = estimacion = 0.0
+-    t_total = valoradas = en_base = 0
+-
+-    for fila in filas:
+-        acc = server._accounting(fila)
+-        if acc["failed"]:
+-            continue
+-        if cost.is_image(fila):
+-            fuera["imagenes"] += 1
+-            continue
+-        if acc["chars_saved_output"] > 0:
+-            fuera["salida_a_fichero"] += 1
+-        if not _en_la_base(fila, acc):
+-            continue
+-        tramo = cost.segment(fila, now=ahora, cleanup_days=plazo)
+-        barra[tramo] += 1
+-        if tramo == "excluded":
+-            excluidas_por_motivo[
+-                attribution.exclusion_reason(fila, {"bench": fila.get("bench")})
+-            ] += 1
+-            continue
+-        en_base += 1
+-        if fila.get("fallback_invalid"):
+-            respaldo_invalido = True
+-        texto = (fila.get("density") or {}).get("text")
+-        if texto:
+-            densidad_origen[texto[1]] += 1
+-        familias[str(fila.get("family"))] += 1
+-        marcas.update(fila.get("marks") or [])
+-        if tabla is None:
+-            continue
+-        c = coste_evento(fila, agregados, tabla)
+-        n_origen[c["origen_n"]] += 1
+-        if c["cota_baja"] is None:
+-            sin_precio[precios.normalizar_id(c["modelo"])] += 1
+-            continue
+-        valoradas += 1
+-        t_total += c["T"]
+-        cota += c["cota_baja"]
+-        estimacion += c["estimacion"]
+-        clave = (c["modelo"], c["hilo"], c["esfuerzo"])
+-        g = desglose.setdefault(
+-            clave,
+-            {
+-                "modelo": c["modelo"],
+-                "nombre": nombre_del_modelo(c["modelo"]),
+-                "hilo": c["hilo"],
+-                "esfuerzo": c["esfuerzo"],
+-                "casos": 0,
+-                "T": 0,
+-                "cota_baja": 0.0,
+-                "estimacion": 0.0,
+-            },
+-        )
+-        g["casos"] += 1
+-        g["T"] += c["T"]
+-        g["cota_baja"] += c["cota_baja"]
+-        g["estimacion"] += c["estimacion"]
+-
+-    if tabla is None:
+-        motivo = SIN_TABLA
+-    elif en_base == 0:
+-        motivo = SIN_DELEGACIONES
+-    elif valoradas == 0:
+-        motivo = TODAS_SIN_PRECIO
+-    else:
+-        motivo = None
+-
+-    con_supuesto = barra["pending"] + barra["assumed"]
+-    return {
+-        "cifra": None
+-        if motivo
+-        else {"cota_baja": _dinero(cota), "estimacion": _dinero(estimacion)},
+-        "motivo": motivo,
+-        "eventos": valoradas,
+-        "T": t_total,
+-        "barra": {
+-            **{t: barra[t] for t in cost.SEGMENTS},
+-            "valoradas": en_base,
+-            "con_modelo_supuesto": con_supuesto,
+-            "excluidas_por_motivo": dict(sorted(excluidas_por_motivo.items())),
+-            "plazo_dias": plazo,
+-        },
+-        "respaldo": {
+-            "modelo": r["model"],
+-            "nombre": nombre_del_modelo(r["model"]),
+-            "hilo": r["thread"],
+-            "invalido": respaldo_invalido,
+-            "variable": FALLBACK_VARIABLE,
+-        },
+-        "n_origen": {o: n_origen[o] for o in ORIGENES_N},
+-        "n_declarado": dict(N_DECLARADO),
+-        "densidad": {
+-            "origen": {o: densidad_origen[o] for o in ORIGENES_DENSIDAD},
+-            "familias": dict(sorted(familias.items())),
+-            "familia_supuesta": marcas[cost.MARK_ASSUMED_FAMILY],
+-            "densidad_de_la_familia": marcas[cost.MARK_FAMILY_DENSITY],
+-        },
+-        "sin_precio": {"n": sum(sin_precio.values()), "ids": sorted(sin_precio)},
+-        "fuera_de_la_base": fuera,
+-        "desglose": [
+-            {**g, "cota_baja": _dinero(g["cota_baja"]), "estimacion": _dinero(g["estimacion"])}
+-            for g in sorted(desglose.values(), key=lambda g: -g["estimacion"])
+-        ],
+-        "tabla": {
+-            "consultado": (tabla or {}).get("consultado"),
+-            "fuente": (tabla or {}).get("fuente"),
+-        },
+-        "comando": COMMAND,
+-    }
+-
+-
+-def bloque_imagenes(filas: Iterable[dict]) -> dict:
+-    """REQ-038: número de imágenes, bytes leídos server-side y caracteres devueltos a Claude, sin
+-    ninguna cifra de tokens de Claude. Los fallos no cuentan."""
+-    n = bytes_ = devueltos = 0
+-    for fila in filas:
+-        if not cost.is_image(fila):
+-            continue
+-        acc = server._accounting(fila)
+-        if acc["failed"]:
+-            continue
+-        n += 1
+-        bytes_ += acc["bytes_saved_image"]
+-        devueltos += acc["chars_returned"]
+-    return {"n": n, "bytes": bytes_, "chars_devueltos": devueltos}
+diff --git a/src/local_delegate/valuation.py b/src/local_delegate/valuation.py
+new file mode 100644
+index 0000000..3917227
+--- /dev/null
++++ b/src/local_delegate/valuation.py
+@@ -0,0 +1,306 @@
++"""Coste equivalente a precio de API y bloque de imágenes (coste-api-y-cuota, REQ-038 y REQ-040 a
++REQ-048).
++
++Una pregunta: cuánto habría costado, a precio de lista de la API, que Claude leyera lo que leyó el
++MCP server-side. **No es dinero ahorrado** (la suscripción es de tarifa plana) y el panel lo dice.
++
++- `price(m, hilo)`: escritura de caché del hilo (5 min en un subagente, 1 h en el principal) y
++  lectura de caché, o `None` si el modelo no está en la tabla (REQ-016: nunca 0).
++- `n_of(fila, agregados)`: `N` y caducidades en el orden único de REQ-042 (relleno, mediana del
++  grupo con al menos 10 casos, declarado del hilo).
++- `event_cost(fila, agregados)`: `T`, cota baja y estimación de un evento (REQ-041).
++- `cost_block(filas, agregados)`: la cifra del periodo con todo lo que la acompaña (REQ-007,
++  REQ-008, REQ-016, REQ-044, REQ-046, REQ-047); `images_block(filas)`: REQ-038.
++
++Las filas llegan **fundidas** (`cost.merge`, REQ-006). Solo stdlib; no abre sockets ni lee
++`~/.claude`: los agregados los trae quien llama (`recompute.read_aggregates`), ya en el formato
++nuevo. Las claves de salida son las de `/api/stats` `cost` e `images` (REQ-009).
++"""
++
++from __future__ import annotations
++
++import statistics
++from collections import Counter
++from collections.abc import Iterable
++from datetime import UTC, datetime
++
++from . import attribution, cost, legacy_names, precios, server
++
++#: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
++#: subagente 40 (135 casos).
++DECLARED_N = {"main": 127, "subagent": 40}
++#: Casos mínimos de un grupo para usar su mediana (REQ-042 (2)).
++MIN_GROUP_CASES = 10
++#: Plazo de borrado de los transcripts sin `cost-aggregates.json` (Definiciones, `H`).
++DEFAULT_CLEANUP_DAYS = attribution.DEFAULT_CLEANUP_DAYS
++
++N_ORIGINS = ("backfill", "aggregate", "declared")
++DENSITY_ORIGINS = ("measured", "unnumbered", "conservative")
++
++NO_DELEGATIONS = "sin delegaciones en el periodo"
++NO_TABLE = "no se pudo cargar la tabla de precios del paquete"
++ALL_UNPRICED = "todas las delegaciones del periodo son de modelos sin precio"
++COMMAND = "local-delegate recompute-cost"
++FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
++
++
++def model_name(mid: str) -> str:
++    """`claude-opus-5-5` → `Opus 5.5`; `claude-haiku-4-5` → `Haiku 4.5`. Solo para rótulos."""
++    parts = precios.normalizar_id(str(mid)).removeprefix("claude-").split("-")
++    if not parts or not parts[0]:
++        return str(mid)
++    return " ".join([parts[0].capitalize(), ".".join(parts[1:])]).strip()
++
++
++def _thread(row: dict) -> str:
++    thread = row.get("caller_kind")
++    return thread if thread in cost.THREADS else cost.fallback()["thread"]
++
++
++def price(m: str, thread: str, table: dict | None = None) -> dict | None:
++    """`{"w": P_w(m, hilo), "r": P_r(m)}` en USD/MTok, o `None` si `m` no tiene precio."""
++    entry = precios.entrada(str(m or ""), table)
++    if entry is None:
++        return None
++    return {"w": entry["w5m"] if thread == "subagent" else entry["w1h"], "r": entry["lectura"]}
++
++
++def _int_or_none(v: object) -> int | None:
++    return v if isinstance(v, int) and not isinstance(v, bool) else None
++
++
++def _group_n(aggregates: dict | None, group: str) -> list[int]:
++    n_by_month = (
++        legacy_names.read_key(aggregates, "n_by_month", "n_por_mes")
++        if isinstance(aggregates, dict)
++        else None
++    )
++    if not isinstance(n_by_month, dict):
++        return []
++    values: list[int] = []
++    for groups in n_by_month.values():
++        if isinstance(groups, dict) and isinstance(groups.get(group), list):
++            values.extend(v for v in groups[group] if _int_or_none(v) is not None)
++    return values
++
++
++def n_of(row: dict, aggregates: dict | None) -> tuple[float, int, str]:
++    """`(N, caducidades, origen)` de un evento, en el orden único de REQ-042:
++
++    (1) `n` y `expiries` del relleno; (2) la mediana de `N` del grupo (`modelo|hilo`) en los
++    agregados guardados, si tiene al menos 10 casos, con 0 caducidades; (3) el declarado del hilo.
++    """
++    n = _int_or_none(row.get("n"))
++    if n is not None:
++        return n, _int_or_none(row.get("expiries")) or 0, "backfill"
++    values = _group_n(aggregates, f"{row.get('caller_model')}|{_thread(row)}")
++    if len(values) >= MIN_GROUP_CASES:
++        return statistics.median(values), 0, "aggregate"
++    return DECLARED_N[_thread(row)], 0, "declared"
++
++
++def net_tokens(row: dict) -> int:
++    """`T`: tokens de Claude del texto leído server-side menos los devueltos (Definiciones). 0 en
++    una imagen (REQ-038). Pasa SOLO por `server.tokens_claude`."""
++    if cost.is_image(row):
++        return 0
++    acc = server._accounting(row)
++    return server.tokens_claude(
++        acc["chars_saved_text"], tipo="text", evento=row
++    ) - server.tokens_claude(acc["chars_returned"], tipo="returned", evento=row)
++
++
++def event_cost(row: dict, aggregates: dict | None = None, table: dict | None = None) -> dict:
++    """`T`, cota baja y estimación de UN evento (REQ-041), con `N` y su origen.
++
++    cota baja = T × P_w(m, hilo); estimación = T × (P_w × (1 + cad) + (N − cad) × P_r). Un `T`
++    negativo resta. Sin precio: `low_bound` y `estimate` son `None` (nunca 0).
++    """
++    thread = _thread(row)
++    model = str(row.get("caller_model") or "")
++    t = net_tokens(row)
++    n, expiries, origin = n_of(row, aggregates)
++    p = price(model, thread, table)
++    out = {
++        "model": model,
++        "thread": thread,
++        "effort": row.get("caller_effort") or "no_data",
++        "T": t,
++        "N": n,
++        "expiries": expiries,
++        "n_origin": origin,
++        "low_bound": None,
++        "estimate": None,
++    }
++    if p is not None:
++        out["low_bound"] = t * p["w"] / 1e6
++        out["estimate"] = t * (p["w"] * (1 + expiries) + (n - expiries) * p["r"]) / 1e6
++    return out
++
++
++def _in_base(row: dict, acc: dict) -> bool:
++    """REQ-040: atribuible (sin fallo), de texto, con algo leído o devuelto."""
++    if acc["failed"] or cost.is_image(row):
++        return False
++    return acc["chars_saved_text"] > 0 or acc["chars_returned"] > 0
++
++
++def _money(x: float) -> float:
++    """A céntimos. Sumar 0.0 convierte el `-0.0` de un negativo diminuto en `0.0`: la API no
++    devuelve un cero con signo (la fórmula no cambia; un negativo de verdad sigue negativo)."""
++    return round(x, 2) + 0.0
++
++
++def cost_block(
++    rows: Iterable[dict], aggregates: dict | None, *, now: datetime | None = None
++) -> dict:
++    """La cifra del periodo con sus supuestos a la vista. Sin cifra, el motivo (REQ-046)."""
++    now = now or datetime.now(UTC)
++    cleanup_days = DEFAULT_CLEANUP_DAYS
++    if isinstance(aggregates, dict):
++        cleanup_days = (
++            _int_or_none(legacy_names.read_key(aggregates, "cleanup_days", "plazo_dias"))
++            or DEFAULT_CLEANUP_DAYS
++        )
++    try:
++        table = precios.cargar_precios()
++        r = cost.fallback()
++    except Exception:
++        # Sin tabla no hay cifra (REQ-046), pero la barra y el motivo se enseñan igual.
++        table, r = None, dict(cost.DECLARED_FALLBACK, fallback_invalid=False)
++
++    bar: Counter = Counter({t: 0 for t in cost.SEGMENTS})
++    excluded_by_reason: Counter = Counter()
++    n_origin: Counter = Counter({o: 0 for o in N_ORIGINS})
++    density_origin: Counter = Counter({o: 0 for o in DENSITY_ORIGINS})
++    families: Counter = Counter()
++    marks: Counter = Counter()
++    outside = {"images": 0, "output_to_file": 0}
++    unpriced: Counter = Counter()
++    breakdown: dict[tuple, dict] = {}
++    fallback_invalid = bool(r.get("fallback_invalid"))
++    low_bound = estimate = 0.0
++    t_total = valued = in_base = 0
++
++    for row in rows:
++        acc = server._accounting(row)
++        if acc["failed"]:
++            continue
++        if cost.is_image(row):
++            outside["images"] += 1
++            continue
++        if acc["chars_saved_output"] > 0:
++            outside["output_to_file"] += 1
++        if not _in_base(row, acc):
++            continue
++        segment = cost.segment(row, now=now, cleanup_days=cleanup_days)
++        bar[segment] += 1
++        if segment == "excluded":
++            excluded_by_reason[attribution.exclusion_reason(row, {"bench": row.get("bench")})] += 1
++            continue
++        in_base += 1
++        if row.get("fallback_invalid"):
++            fallback_invalid = True
++        text = (row.get("density") or {}).get("text")
++        if text:
++            density_origin[text[1]] += 1
++        families[str(row.get("family"))] += 1
++        marks.update(row.get("marks") or [])
++        if table is None:
++            continue
++        c = event_cost(row, aggregates, table)
++        n_origin[c["n_origin"]] += 1
++        if c["low_bound"] is None:
++            unpriced[precios.normalizar_id(c["model"])] += 1
++            continue
++        valued += 1
++        t_total += c["T"]
++        low_bound += c["low_bound"]
++        estimate += c["estimate"]
++        key = (c["model"], c["thread"], c["effort"])
++        g = breakdown.setdefault(
++            key,
++            {
++                "model": c["model"],
++                "name": model_name(c["model"]),
++                "thread": c["thread"],
++                "effort": c["effort"],
++                "cases": 0,
++                "T": 0,
++                "low_bound": 0.0,
++                "estimate": 0.0,
++            },
++        )
++        g["cases"] += 1
++        g["T"] += c["T"]
++        g["low_bound"] += c["low_bound"]
++        g["estimate"] += c["estimate"]
++
++    if table is None:
++        reason = NO_TABLE
++    elif in_base == 0:
++        reason = NO_DELEGATIONS
++    elif valued == 0:
++        reason = ALL_UNPRICED
++    else:
++        reason = None
++
++    with_assumed_model = bar["pending"] + bar["assumed"]
++    return {
++        "figure": None
++        if reason
++        else {"low_bound": _money(low_bound), "estimate": _money(estimate)},
++        "reason": reason,
++        "events": valued,
++        "T": t_total,
++        "bar": {
++            **{t: bar[t] for t in cost.SEGMENTS},
++            "valued": in_base,
++            "with_assumed_model": with_assumed_model,
++            "excluded_by_reason": dict(sorted(excluded_by_reason.items())),
++            "cleanup_days": cleanup_days,
++        },
++        "fallback": {
++            "model": r["model"],
++            "name": model_name(r["model"]),
++            "thread": r["thread"],
++            "invalid": fallback_invalid,
++            "variable": FALLBACK_VARIABLE,
++        },
++        "n_origin": {o: n_origin[o] for o in N_ORIGINS},
++        "n_declared": dict(DECLARED_N),
++        "density": {
++            "origin": {o: density_origin[o] for o in DENSITY_ORIGINS},
++            "families": dict(sorted(families.items())),
++            "assumed_family": marks[cost.MARK_ASSUMED_FAMILY],
++            "family_density": marks[cost.MARK_FAMILY_DENSITY],
++        },
++        "unpriced": {"n": sum(unpriced.values()), "ids": sorted(unpriced)},
++        "outside_base": outside,
++        "breakdown": [
++            {**g, "low_bound": _money(g["low_bound"]), "estimate": _money(g["estimate"])}
++            for g in sorted(breakdown.values(), key=lambda g: -g["estimate"])
++        ],
++        "table": {
++            # Las claves de `precios.json` (`consultado`, `fuente`) cambian con su lector (A5c).
++            "consulted": (table or {}).get("consultado"),
++            "source": (table or {}).get("fuente"),
++        },
++        "command": COMMAND,
++    }
++
++
++def images_block(rows: Iterable[dict]) -> dict:
++    """REQ-038: número de imágenes, bytes leídos server-side y caracteres devueltos a Claude, sin
++    ninguna cifra de tokens de Claude. Los fallos no cuentan."""
++    n = bytes_ = returned = 0
++    for row in rows:
++        if not cost.is_image(row):
++            continue
++        acc = server._accounting(row)
++        if acc["failed"]:
++            continue
++        n += 1
++        bytes_ += acc["bytes_saved_image"]
++        returned += acc["chars_returned"]
++    return {"n": n, "bytes": bytes_, "chars_returned": returned}
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index 0070773..ce65d71 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -63,11 +63,11 @@ from .. import (
+     llamaswap_api,
+     precios,
+     quota,
+-    recalcular,
++    recompute,
+     server,
+     test_windows,
+     topology,
+-    valoracion,
++    valuation,
+ )
+ from . import auth, sysinfo
+ 
+@@ -538,17 +538,18 @@ def stats(
+         for w in test_windows.load(config.LOG_DIR).open_windows()
+     ]
+     # Coste equivalente, imágenes y cuota (coste-api-y-cuota). Solo se lee lo que dejó el comando
+-    # `recalcular-coste` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
++    # `recompute-cost` en el directorio de logs: el panel nunca abre `~/.claude` (REQ-073).
+     # El coste ve SIEMPRE todas las filas del rango y aparta las pruebas él mismo con `exclusion_reason`:
+     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
+-    ahora = _now()
+-    agregados = recalcular.leer_agregados(config.LOG_DIR)
+-    datos["coste"] = valoracion.bloque_coste(rows, agregados, ahora=ahora)
+-    datos["imagenes"] = valoracion.bloque_imagenes(usage)
+-    datos["densidad_tabla"] = {
++    now = _now()
++    aggregates = recompute.read_aggregates(config.LOG_DIR)
++    datos["cost"] = valuation.cost_block(rows, aggregates, now=now)
++    datos["images"] = valuation.images_block(usage)
++    # El contenido es `densidad.json` tal cual: sus claves cambian con su lector (A5c).
++    datos["density_table"] = {
+         k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
+     }
+-    datos["quota"] = _quota_block(agregados, ahora)
++    datos["quota"] = _quota_block(aggregates, now)
+     return JSONResponse(datos)
+ 
+ 
+@@ -557,28 +558,28 @@ def _now() -> datetime:
+     return datetime.now(UTC)
+ 
+ 
+-def _quota_block(agregados: dict | None, ahora: datetime) -> dict:
++def _quota_block(aggregates: dict | None, now: datetime) -> dict:
+     """Estado de cada tipo de ventana con la vigencia aplicada AL LEER (REQ-054, `quota.status`).
+ 
+     Un tipo `calibrado` lleva el % sobre SU ventana móvil, que termina ahora y no depende del
+     rango que elija el panel (REQ-060): A = cota baja de lo delegado en las últimas 5 h (o 7 días)
+     ÷ mediana(C) × 100, y B = la estimación de esos mismos eventos ÷ mediana(C) × 100.
+     """
+-    status = quota.status(agregados, ahora)
++    status = quota.status(aggregates, now)
+     for kind, e in status.items():
+         if e.get("status") != "calibrated":
+             continue
+-        rows, _ = _load(ahora - quota.DURATION[kind], ahora)
+-        block = valoracion.bloque_coste(rows, agregados, ahora=ahora)
++        rows, _ = _load(now - quota.DURATION[kind], now)
++        block = valuation.cost_block(rows, aggregates, now=now)
+         capacity = e.get("median_C")
+-        figure = block["cifra"]
++        figure = block["figure"]
+         if figure and capacity:
+-            e["a_pct"] = round(figure["cota_baja"] / capacity * 100, 1)
+-            e["b_pct"] = round(figure["estimacion"] / capacity * 100, 1)
++            e["a_pct"] = round(figure["low_bound"] / capacity * 100, 1)
++            e["b_pct"] = round(figure["estimate"] / capacity * 100, 1)
+         else:
+             e["a_pct"] = e["b_pct"] = None
+-            e["pct_reason"] = block["motivo"]
+-    return {**status, "has_aggregates": agregados is not None, "command": valoracion.COMMAND}
++            e["pct_reason"] = block["reason"]
++    return {**status, "has_aggregates": aggregates is not None, "command": valuation.COMMAND}
+ 
+ 
+ def _aggregate_hooks(rows: list[dict]) -> dict:
+@@ -1894,7 +1895,8 @@ const LABELS = {
+   client: {'claude-code':'Claude Code', 'claude-desktop':'Claude Desktop', 'claude-ai':'Claude Desktop',
+     codex:'Codex', 'codex-mcp-client':'Codex',
+     desconocido:'Desconocido'},
+-  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', 'sin dato':'Sin dato'},
++  effort: {low:'Bajo', medium:'Medio', high:'Alto', xhigh:'Muy alto', max:'Máximo', no_data:'Sin dato',
++    'sin dato':'Sin dato'},
+   thread: {main:'Hilo principal', subagent:'Subagente'},
+   origin: {local:'Local', remote:'Remoto', unknown:'Sin dato'},
+   // Estado del modelo que informa el backend (llama-swap) en la insignia de cada fila.
+@@ -1925,8 +1927,8 @@ function dolares(x){ return '$' + fmtNum(x, 2); }
+ // que leyó: la fila no tiene ahorro y no se pinta una cifra (sería «$0,00» o un negativo sin signo).
+ function celdasCoste(g){
+   if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">sin ahorro</td>';
+-  return '<td class="num">' + dolares(g.cota_baja) + '</td>'
+-    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimacion) + '</td>';
++  return '<td class="num">' + dolares(g.low_bound) + '</td>'
++    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimate) + '</td>';
+ }
+ 
+ // --- Pruebas: el texto de su ⓘ y el punto del botón (test-windows-out-of-metrics) ---
+@@ -1959,43 +1961,43 @@ function renderPruebas(s){
+ }
+ 
+ function textoCoste(j){
+-  const c = j && j.coste;
++  const c = j && j.cost;
+   if(!c) return [];
+   const L = [];
+-  L.push(c.cifra
+-    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.cifra.cota_baja)
+-      + ' y ~' + dolares(c.cifra.estimacion)
+-    : 'Equivalente estimado a precio de API: sin cifra (' + c.motivo + ')');
++  L.push(c.figure
++    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.figure.low_bound)
++      + ' y ~' + dolares(c.figure.estimate)
++    : 'Equivalente estimado a precio de API: sin cifra (' + c.reason + ')');
+   L.push('No es dinero que hayas ahorrado: tu suscripción es de tarifa plana.');
+-  if(c.cifra) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
++  if(c.figure) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
+     + 'el segundo suma las relecturas de caché posteriores y las caducidades.');
+-  const b = c.barra || {}, r = c.respaldo || {};
++  const b = c.bar || {}, r = c.fallback || {};
+   L.push('Cobertura: ' + plural(b.at_call||0, 'atribuida al momento', 'atribuidas al momento')
+     + ' · ' + F.format(b.backfilled||0) + ' por relleno · ' + F.format(b.pending||0)
+     + ' pendientes · ' + F.format(b.assumed||0) + ' supuestas · ' + F.format(b.excluded||0)
+     + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
+-  L.push(F.format(b.con_modelo_supuesto||0) + ' de ' + F.format(b.valoradas||0)
+-    + ' con modelo supuesto: ' + (r.nombre||'') + ' en ' + (HILO_TXT[r.hilo]||r.hilo||'')
+-    + (r.invalido ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
+-  const n = c.n_origen || {}, nd = c.n_declarado || {};
+-  L.push('Relecturas (N): ' + F.format(n.relleno||0) + ' del relleno, ' + F.format(n.agregado||0)
+-    + ' de la mediana de su grupo, ' + F.format(n.declarado||0) + ' con el valor declarado (principal '
++  L.push(F.format(b.with_assumed_model||0) + ' de ' + F.format(b.valued||0)
++    + ' con modelo supuesto: ' + (r.name||'') + ' en ' + (HILO_TXT[r.thread]||r.thread||'')
++    + (r.invalid ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
++  const n = c.n_origin || {}, nd = c.n_declared || {};
++  L.push('Relecturas (N): ' + F.format(n.backfill||0) + ' del relleno, ' + F.format(n.aggregate||0)
++    + ' de la mediana de su grupo, ' + F.format(n.declared||0) + ' con el valor declarado (principal '
+     + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
+-  const d = c.densidad || {}, o = d.origen || {};
+-  const fams = Object.entries(d.familias||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
++  const d = c.density || {}, o = d.origin || {};
++  const fams = Object.entries(d.families||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
+   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
+     + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
+-    + F.format(o.conservative||0) + '; ' + F.format(d.densidad_de_la_familia||0)
+-    + ' con densidad de la familia y ' + F.format(d.familia_supuesta||0) + ' con familia supuesta.');
+-  const sp = c.sin_precio || {};
++    + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)
++    + ' con densidad de la familia y ' + F.format(d.assumed_family||0) + ' con familia supuesta.');
++  const sp = c.unpriced || {};
+   if(sp.n) L.push(plural(sp.n, 'delegación de un modelo sin precio', 'delegaciones de modelos sin precio')
+     + ', fuera de la suma: ' + (sp.ids||[]).join(', ') + '.');
+-  const fb = c.fuera_de_la_base || {};
+-  L.push('Fuera de la cifra: ' + plural(fb.imagenes||0, 'imagen', 'imágenes') + ' y '
+-    + plural(fb.salida_a_fichero||0, 'salida a fichero', 'salidas a fichero') + '.');
++  const fb = c.outside_base || {};
++  L.push('Fuera de la cifra: ' + plural(fb.images||0, 'imagen', 'imágenes') + ' y '
++    + plural(fb.output_to_file||0, 'salida a fichero', 'salidas a fichero') + '.');
+   L.push('Neto de la respuesta de la tool. Contrafactual: si Claude hubiera leído el fichero entero '
+     + 'una vez con Read. No descuenta las relecturas del mismo fichero (medidas entre ~3 % y ~30 %).');
+-  L.push('Precios de la tabla del paquete del ' + ((c.tabla||{}).consultado || 'sin fecha') + '.');
++  L.push('Precios de la tabla del paquete del ' + ((c.table||{}).consulted || 'sin fecha') + '.');
+   return L;
+ }
+ 
+@@ -2024,9 +2026,10 @@ function textoCuota(j){
+     let t = nombre + ': sin calibrar (' + (e.reason||'') + ')';
+     if(!q.has_aggregates) t += '; los genera ' + q.command;
+     L.push(t + '.');
+-    // Los motivos de descarte son claves de `cuota.py`; aquí, en palabras.
+-    const DESCARTE = {linea_corrupta:'línea corrupta', fuera_de_rango:'fuera de rango',
+-      delta_pequeno:'variación pequeña', sin_uso_local:'sin uso local', contaminado:'contaminado'};
++    // Los motivos de descarte son claves de `quota.py`; aquí, en palabras.
++    const DESCARTE = {corrupt_line:'línea corrupta', out_of_range:'fuera de rango',
++      small_delta:'variación pequeña', no_local_use:'sin uso local', contaminated:'contaminado',
++      overlapping:'solapado', expired:'caducado', reset:'reinicio'};
+     const desc = Object.entries(e.discards||{}).filter(([,k])=>k)
+       .map(([m,k]) => (DESCARTE[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
+     L.push(nombre + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
+@@ -2038,10 +2041,10 @@ function textoCuota(j){
+ }
+ 
+ function textoImagenes(j){
+-  const i = j && j.imagenes;
++  const i = j && j.images;
+   if(!i) return [];
+   return [plural(i.n||0, 'imagen', 'imágenes') + ' · ' + F.format(i.bytes||0) + ' bytes leídos server-side · '
+-      + F.format(i.chars_devueltos||0) + ' caracteres devueltos a Claude',
++      + F.format(i.chars_returned||0) + ' caracteres devueltos a Claude',
+     'Sin cifra de tokens de Claude: el log guarda bytes, no dimensiones. No entran en el contexto '
+       + 'conservado ni en el equivalente a precio de API.'];
+ }
+@@ -2089,22 +2092,22 @@ function medidorCuota(e, nombre){
+ function renderCoste(s){
+   const cc = document.getElementById('costeCard'), qc = document.getElementById('cuotaCard');
+   const ic = document.getElementById('imagenesCard'), row = document.getElementById('cuotaImgRow');
+-  const c = s && s.coste;
++  const c = s && s.cost;
+   cc.style.display = c ? '' : 'none';
+   if(c){
+-    document.getElementById('costeHead').textContent = c.cifra ? plural(c.eventos||0, 'delegación', 'delegaciones') : '';
+-    const filas = (c.desglose||[]).map(g => '<tr><td class="mono">' + escHooks(g.nombre) + '</td>'
+-      + '<td class="mono">' + escHooks(labelFor('thread', g.hilo)) + '</td>'
+-      + '<td class="mono">' + escHooks(labelFor('effort', g.esfuerzo)) + '</td>'
+-      + '<td class="num">' + F.format(g.casos) + '</td>'
++    document.getElementById('costeHead').textContent = c.figure ? plural(c.events||0, 'delegación', 'delegaciones') : '';
++    const filas = (c.breakdown||[]).map(g => '<tr><td class="mono">' + escHooks(g.name) + '</td>'
++      + '<td class="mono">' + escHooks(labelFor('thread', g.thread)) + '</td>'
++      + '<td class="mono">' + escHooks(labelFor('effort', g.effort)) + '</td>'
++      + '<td class="num">' + F.format(g.cases) + '</td>'
+       + '<td class="num">' + F.format(g.T) + '</td>'
+       + celdasCoste(g) + '</tr>').join('');
+-    const cifras = c.cifra
+-      ? kstat('Cota baja', dolares(c.cifra.cota_baja), 'no es un ahorro: tarifa plana')
+-        + kstat('Estimación', '~' + dolares(c.cifra.estimacion), 'con relecturas de caché', 'var(--amber)')
++    const cifras = c.figure
++      ? kstat('Cota baja', dolares(c.figure.low_bound), 'no es un ahorro: tarifa plana')
++        + kstat('Estimación', '~' + dolares(c.figure.estimate), 'con relecturas de caché', 'var(--amber)')
+         + (c.T !== undefined ? kstat('Tokens valorados', F.format(c.T) + '<span class="unit">tok</span>',
+             'netos de Claude, con precio') : '')
+-      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.motivo||'')));
++      : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.reason||'')));
+     document.getElementById('costeBody').innerHTML = '<div class="kstats">' + cifras + '</div>'
+       + (filas ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
+         + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
+@@ -2118,13 +2121,13 @@ function renderCoste(s){
+       + VENTANAS.map(([t, nombre]) => '<div>' + medidorCuota(q[t], nombre) + '</div>').join('') + '</div>';
+   }
+   // Sin imágenes en el rango la tarjeta no se pinta, como «Quién delegó» sin clientes.
+-  const im = s && s.imagenes, hayImg = !!(im && im.n);
++  const im = s && s.images, hayImg = !!(im && im.n);
+   ic.style.display = hayImg ? '' : 'none';
+   if(hayImg){
+     document.getElementById('imagenesBody').innerHTML = '<div class="kstats">'
+       + kstat('Imágenes', F.format(im.n), 'delegaciones sin fallo')
+       + kstat('Bytes leídos', F.format(im.bytes||0) + '<span class="unit">B</span>', 'leídos server-side')
+-      + kstat('Devuelto a Claude', F.format(im.chars_devueltos||0) + '<span class="unit">car.</span>', 'texto de la descripción')
++      + kstat('Devuelto a Claude', F.format(im.chars_returned||0) + '<span class="unit">car.</span>', 'texto de la descripción')
+       + '</div>';
+   }
+   // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
+diff --git a/tests/test_checks.py b/tests/test_checks.py
+index 5378f2f..3d0b21a 100644
+--- a/tests/test_checks.py
++++ b/tests/test_checks.py
+@@ -16,7 +16,7 @@ import httpx2
+ import pytest
+ from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+ 
+-from local_delegate import checks, install, llamaswap_api, recalcular, sondas
++from local_delegate import checks, install, llamaswap_api, recompute, sondas
+ from local_delegate.failures import BackendView
+ 
+ 
+@@ -410,7 +410,7 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
+     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
+     # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
+     logs = tmp_path / "logs"
+-    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
++    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
+     # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
+     # se les da la de hoy, sin residente y con turno.
+     ctx = make_ctx(
+diff --git a/tests/test_cli_renamed_names.py b/tests/test_cli_renamed_names.py
+index 0ecdaf6..8512911 100644
+--- a/tests/test_cli_renamed_names.py
++++ b/tests/test_cli_renamed_names.py
+@@ -20,7 +20,7 @@ from test_install import _install
+ from test_recalcular import _delegacion_con_n
+ from test_transcripts import subagente
+ 
+-from local_delegate import cli, config, deprecations, recalcular, server
++from local_delegate import cli, config, deprecations, recompute, server
+ 
+ RENAMED_ENV = (
+     ("LD_HOOK_READ_BLOCK", "LD_HOOK_READ_BLOQUEAR"),
+@@ -46,7 +46,7 @@ def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int,
+     monkeypatch.setattr(config, "LOG_DIR", log)
+     code = _run([command, "--claude-dir", str(claude)])
+     stderr = capsys.readouterr().err
+-    written = log / recalcular.NOMBRE
++    written = log / recompute.FILE_NAME
+     data = json.loads(written.read_text(encoding="utf-8")) if written.is_file() else {}
+     return code, data, stderr
+ 
+@@ -94,12 +94,12 @@ def test_reset_calibration_and_its_alias_reach_the_same_argument(
+ ):
+     seen: list[str | None] = []
+ 
+-    def fake_run(claude_dir, log_dir, *, reiniciar=None, **_kw):
+-        seen.append(reiniciar)
++    def fake_run(claude_dir, log_dir, *, reset=None, **_kw):
++        seen.append(reset)
+         return {}
+ 
+-    monkeypatch.setattr(recalcular, "ejecutar", fake_run)
+-    monkeypatch.setattr(recalcular, "texto_del_resumen", lambda _r: "")
++    monkeypatch.setattr(recompute, "run", fake_run)
++    monkeypatch.setattr(recompute, "summary_text", lambda _r: "")
+     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
+     assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 0
+     assert seen == [expected]
+@@ -109,7 +109,7 @@ def test_reset_calibration_and_its_alias_reach_the_same_argument(
+ 
+ def test_reset_calibration_with_two_different_values_is_an_error(tmp_path, monkeypatch, capsys):
+     monkeypatch.setattr(
+-        recalcular, "ejecutar", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
++        recompute, "run", lambda *a, **k: pytest.fail("no debía llegar a recalcular")
+     )
+     argv = ["--reset-calibration", "five_hour", "--reiniciar-calibracion", "seven_day"]
+     assert _run(["recompute-cost", "--claude-dir", str(tmp_path), *argv]) == 2
+diff --git a/tests/test_coste_doctor.py b/tests/test_coste_doctor.py
+index 569168c..ed8a25e 100644
+--- a/tests/test_coste_doctor.py
++++ b/tests/test_coste_doctor.py
+@@ -12,7 +12,7 @@ import json
+ from datetime import UTC, datetime, timedelta
+ from pathlib import Path
+ 
+-from local_delegate import attribution, checks, recalcular
++from local_delegate import attribution, checks, recompute
+ 
+ TOOL = "local_summarize"
+ 
+@@ -66,14 +66,14 @@ def _cotejo(log_dir: Path, veredicto: str | None, *, sin_precio=(), fuera: int =
+     cotejo = None
+     if veredicto is not None:
+         cotejo = {
+-            "fecha": "2026-10-06T12:00:00+00:00",
+-            "version_tabla": "2026-10-06",
+-            "juzgadas": 142,
+-            "fuera": fuera,
+-            "sin_precio": list(sin_precio),
+-            "veredicto": veredicto,
++            "date": "2026-10-06T12:00:00+00:00",
++            "table_version": "2026-10-06",
++            "judged": 142,
++            "outside": fuera,
++            "unpriced": list(sin_precio),
++            "verdict": veredicto,
+         }
+-    recalcular.escribir_agregados(log_dir, {"version": 1, "plazo_dias": 30, "cotejo": cotejo})
++    recompute.write_aggregates(log_dir, {"version": 1, "cleanup_days": 30, "check": cotejo})
+ 
+ 
+ def _probe(home: Path, log_dir: Path) -> checks.Result:
+@@ -81,11 +81,11 @@ def _probe(home: Path, log_dir: Path) -> checks.Result:
+ 
+ 
+ def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
+-    """El escenario de la spec: sin `coste-agregados.json` y con `H` = 30, avisa a los 20 días."""
++    """El escenario de la spec: sin `cost-aggregates.json` y con `H` = 30, avisa a los 20 días."""
+     log_dir = tmp_path / "log"
+     _log(log_dir, 21)
+     r = _probe(_home(tmp_path), log_dir)
+-    assert not recalcular.ruta(log_dir).exists()
++    assert not recompute.aggregates_path(log_dir).exists()
+     assert r.status == checks.WARN
+     assert "recompute-cost" in r.detail
+     assert "hace 21 días" in r.detail
+@@ -116,7 +116,7 @@ def test_las_dos_cosas_a_la_vez(tmp_path):
+     """Relleno pendiente y cotejo fallido: gana el `warn` y el mensaje dice las dos cosas."""
+     log_dir = tmp_path / "log"
+     _log(log_dir, 21, 22)
+-    _cotejo(log_dir, "falla", sin_precio=["claude-opus-5"], fuera=3)
++    _cotejo(log_dir, "fail", sin_precio=["claude-opus-5"], fuera=3)
+     r = _probe(_home(tmp_path), log_dir)
+     assert r.status == checks.WARN
+     assert "2 delegación(es) pendiente(s)" in r.detail
+@@ -129,13 +129,13 @@ def test_cotejo_bueno_ok_y_sin_cotejo_unknown(tmp_path):
+     home = _home(tmp_path)
+ 
+     bueno = tmp_path / "bueno"
+-    _cotejo(bueno, "pasa")
++    _cotejo(bueno, "pass")
+     r = _probe(home, bueno)
+     assert r.status == checks.OK
+     assert "142" in r.detail
+ 
+     malo = tmp_path / "malo"
+-    _cotejo(malo, "falla", sin_precio=["claude-opus-5"])
++    _cotejo(malo, "fail", sin_precio=["claude-opus-5"])
+     r = _probe(home, malo)
+     assert r.status == checks.WARN
+     assert "claude-opus-5" in r.detail
+@@ -182,7 +182,7 @@ def test_doctor_no_lee_transcripts(tmp_path, monkeypatch):
+     home = _home(tmp_path)
+     log_dir = tmp_path / "log"
+     _log(log_dir, 21)
+-    _cotejo(log_dir, "pasa")
++    _cotejo(log_dir, "pass")
+ 
+     abiertos: list[Path] = []
+     original = builtins.open
+diff --git a/tests/test_cuota.py b/tests/test_cuota.py
+index 433de05..95a60ed 100644
+--- a/tests/test_cuota.py
++++ b/tests/test_cuota.py
+@@ -19,7 +19,7 @@ from test_transcripts import (
+     ts,
+ )
+ 
+-from local_delegate import quota, recalcular, transcripts
++from local_delegate import quota, recompute, transcripts
+ 
+ R1 = "2026-10-01T17:00:00+00:00"  # resets de 5 h (valor opaco: solo agrupa)
+ R7 = "2026-10-05T00:00:00+00:00"
+@@ -51,15 +51,15 @@ def puntos_de(filas: list, peticiones: list | None = None):
+ def _punto(fin_dias: float, c: float, ahora, *, tipo="five_hour", fuente="statusline") -> dict:
+     fin = ahora - timedelta(days=fin_dias)
+     return {
+-        "fuente": fuente,
+-        "tipo": tipo,
+-        "inicio": (fin - timedelta(hours=4)).isoformat(),
+-        "fin": fin.isoformat(),
++        "source": fuente,
++        "type": tipo,
++        "start": (fin - timedelta(hours=4)).isoformat(),
++        "end": fin.isoformat(),
+         "delta_pct": 40,
+         "delta_usd": c * 0.4,
+         "C": c,
+-        "marcas": [],
+-        "peticiones_sin_precio": None,
++        "marks": [],
++        "unpriced_requests": None,
+     }
+ 
+ 
+@@ -69,14 +69,14 @@ def _punto(fin_dias: float, c: float, ahora, *, tipo="five_hour", fuente="status
+ def test_cinco_filas_son_un_punto():
+     filas = [fila(100 * i, "A", 10 * (i + 1), float(i + 1)) for i in range(5)]
+     puntos, _, _ = puntos_de(filas)
+-    puntos = [p for p in puntos if p["tipo"] == "five_hour"]
++    puntos = [p for p in puntos if p["type"] == "five_hour"]
+     assert len(puntos) == 1
+     p = puntos[0]
+     assert p["delta_pct"] == 40
+     assert p["delta_usd"] == 4.0
+     assert p["C"] == 10.0
+-    assert p["inicio"] == (BASE).isoformat()
+-    assert quota.MARK_OTHER_SURFACES in p["marcas"]
++    assert p["start"] == (BASE).isoformat()
++    assert quota.MARK_OTHER_SURFACES in p["marks"]
+ 
+ 
+ def test_sesiones_en_paralelo():
+@@ -88,7 +88,7 @@ def test_sesiones_en_paralelo():
+         fila(100, "B", 45, 5.0),
+     ]
+     puntos, _, _ = puntos_de(filas)
+-    (p,) = [p for p in puntos if p["tipo"] == "five_hour"]
++    (p,) = [p for p in puntos if p["type"] == "five_hour"]
+     SUMA = 4.0 + 2.0
+     assert p["delta_usd"] == SUMA
+     assert p["delta_pct"] == 40
+@@ -96,26 +96,26 @@ def test_sesiones_en_paralelo():
+ 
+ def test_descartes(tmp_path):
+     _, _, d = puntos_de([fila(0, "A", 10, 1.0), fila(100, "A", 15, 2.0)])
+-    assert d["five_hour"].get("delta_pequeno") == 1
++    assert d["five_hour"].get("small_delta") == 1
+ 
+     _, _, d = puntos_de([fila(0, "A", 10, 3.0), fila(100, "A", 40, 3.0)])
+-    assert d["five_hour"].get("sin_uso_local") == 1
++    assert d["five_hour"].get("no_local_use") == 1
+ 
+     # Una sesión que no está en el registro (`claude -p`) pidió dentro del intervalo.
+     claude = tmp_path / "claude"
+     escribir(principal(claude, sesion="ajena"), [peticion(50, "x1", sesion="ajena")])
+     peticiones = list(transcripts.read(claude / "projects").requests.values())
+     puntos, _, d = puntos_de([fila(0, "A", 10, 1.0), fila(100, "A", 40, 2.0)], peticiones)
+-    assert d["five_hour"].get("contaminado") == 1
+-    assert [p for p in puntos if p["tipo"] == "five_hour"] == []
++    assert d["five_hour"].get("contaminated") == 1
++    assert [p for p in puntos if p["type"] == "five_hour"] == []
+ 
+     # `/clear`: el coste baja; el incremento es el valor nuevo y el punto lleva la marca.
+     puntos, _, _ = puntos_de(
+         [fila(0, "A", 10, 5.0), fila(50, "A", 20, 6.0), fila(100, "A", 40, 1.0)]
+     )
+-    (p,) = [p for p in puntos if p["tipo"] == "five_hour"]
++    (p,) = [p for p in puntos if p["type"] == "five_hour"]
+     assert p["delta_usd"] == 2.0
+-    assert quota.MARK_RESET in p["marcas"]
++    assert quota.MARK_RESET in p["marks"]
+ 
+     # Dos ventanas que se solapan: se queda la de mayor Δ%.
+     puntos, _, _ = puntos_de(
+@@ -126,8 +126,8 @@ def test_descartes(tmp_path):
+             fila(300, "B", 30, 2.0, reset="r6"),
+         ]
+     )
+-    puntos, d = quota.drop_overlapping([p for p in puntos if p["tipo"] == "five_hour"])
+-    assert d["five_hour"].get("solapado") == 1
++    puntos, d = quota.drop_overlapping([p for p in puntos if p["type"] == "five_hour"])
++    assert d["five_hour"].get("overlapping") == 1
+     assert [p["delta_pct"] for p in puntos] == [30]
+ 
+ 
+@@ -144,21 +144,21 @@ def test_sanear_y_lineas_corruptas(tmp_path):
+     except Exception as e:  # una línea rota nunca rompe el comando (REQ-061)
+         escapo, d = e, {"five_hour": {}, "seven_day": {}}
+     assert not escapo
+-    assert d["five_hour"].get("fuera_de_rango") == 1
+-    assert d["seven_day"].get("fuera_de_rango") == 1
+-    assert d["five_hour"].get("linea_corrupta") == 1
++    assert d["five_hour"].get("out_of_range") == 1
++    assert d["seven_day"].get("out_of_range") == 1
++    assert d["five_hour"].get("corrupt_line") == 1
+ 
+     # Una línea rota en un transcript: se salta y cuenta, y el comando sigue.
+     claude, log = tmp_path / "claude", tmp_path / "log"
+     escribir(principal(claude), [peticion(0, "m0"), '{"type": "assistant", roto'])
+     escapo = None
+     try:
+-        recalcular.ejecutar(claude, log, ahora=BASE + timedelta(days=1))
+-        agregados = recalcular.leer_agregados(log) or {}
++        recompute.run(claude, log, now=BASE + timedelta(days=1))
++        agregados = recompute.read_aggregates(log) or {}
+     except Exception as e:
+         escapo, agregados = e, {}
+     assert not escapo
+-    assert (agregados.get("descartes") or {}).get("five_hour", {}).get("linea_corrupta") == 1
++    assert (agregados.get("discards") or {}).get("five_hour", {}).get("corrupt_line") == 1
+ 
+ 
+ def test_un_punto_previo_mal_formado_no_rompe_el_comando(tmp_path):
+@@ -167,18 +167,18 @@ def test_un_punto_previo_mal_formado_no_rompe_el_comando(tmp_path):
+     claude, log = tmp_path / "claude", tmp_path / "log"
+     escribir(principal(claude), [peticion(0, "m0")])
+     roto = {
+-        "fuente": "statusline",
+-        "tipo": "five_hour",
+-        "inicio": (BASE - timedelta(hours=4)).isoformat(),
+-        "fin": BASE.isoformat(),
++        "source": "statusline",
++        "type": "five_hour",
++        "start": (BASE - timedelta(hours=4)).isoformat(),
++        "end": BASE.isoformat(),
+         "C": 150.0,
+     }
+-    recalcular.escribir_agregados(log, {"puntos": [roto]})
+-    recalcular.ejecutar(claude, log, ahora=BASE + timedelta(days=1))
+-    agregados = recalcular.leer_agregados(log) or {}
+-    assert agregados["puntos"] == []
+-    assert agregados["descartes"]["five_hour"]["linea_corrupta"] == 1
+-    assert agregados["descartes"]["seven_day"].get("linea_corrupta", 0) == 0
++    recompute.write_aggregates(log, {"points": [roto]})
++    recompute.run(claude, log, now=BASE + timedelta(days=1))
++    agregados = recompute.read_aggregates(log) or {}
++    assert agregados["points"] == []
++    assert agregados["discards"]["five_hour"]["corrupt_line"] == 1
++    assert agregados["discards"]["seven_day"].get("corrupt_line", 0) == 0
+ 
+ 
+ # --- REQ-051: rechazos --------------------------------------------------------------------
+@@ -217,10 +217,10 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
+     assert len(rechazos_) == 1
+     p = rechazos_[0]
+     assert p["delta_usd"] == 12.0
+-    assert p["fin"] == (BASE + timedelta(seconds=1000)).isoformat()
+-    assert p["marcas"] == [quota.MARK_LOW_BOUND, quota.MARK_CHECK_ONLY]
+-    assert p["peticiones_sin_precio"] == 0
+-    e = quota.status({"puntos": rechazos_}, BASE + timedelta(days=1))
++    assert p["end"] == (BASE + timedelta(seconds=1000)).isoformat()
++    assert p["marks"] == [quota.MARK_LOW_BOUND, quota.MARK_CHECK_ONLY]
++    assert p["unpriced_requests"] == 0
++    e = quota.status({"points": rechazos_}, BASE + timedelta(days=1))
+     assert e["five_hour"]["status"] == "uncalibrated"
+     assert e["five_hour"]["rejection_points"] == 1
+ 
+@@ -253,14 +253,14 @@ def test_un_punto_de_61_dias_no_cuenta():
+     ahora = BASE
+     fuentes = {"transcripts": True, "statusline": True}
+     frescos = [_punto(20, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
+-    guarda = quota.status({"puntos": frescos, "fuentes": fuentes}, ahora)["five_hour"]
++    guarda = quota.status({"points": frescos, "sources": fuentes}, ahora)["five_hour"]
+     assert guarda["status"] == "calibrated"  # sin el punto viejo, calibra
+ 
+     con_viejo = [_punto(61, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
+-    r = quota.status({"puntos": con_viejo, "fuentes": fuentes}, ahora)["five_hour"]
++    r = quota.status({"points": con_viejo, "sources": fuentes}, ahora)["five_hour"]
+     assert r["status"] == "uncalibrated"
+     assert r["reason"] == "faltan 1 puntos del statusline"
+-    assert r["discards"].get("caducado") == 1
++    assert r["discards"].get("expired") == 1
+ 
+ 
+ def test_reinicio_a_mano(tmp_path):
+@@ -272,17 +272,17 @@ def test_reinicio_a_mano(tmp_path):
+ 
+     # El comando guarda la fecha del reinicio y conserva la del otro tipo.
+     log = tmp_path / "log"
+-    recalcular.ejecutar(tmp_path / "claude", log, ahora=ahora, reiniciar="five_hour")
+-    recalcular.ejecutar(tmp_path / "claude", log, ahora=ahora + timedelta(hours=1))
+-    reinicios = (recalcular.leer_agregados(log) or {}).get("reinicios")
++    recompute.run(tmp_path / "claude", log, now=ahora, reset="five_hour")
++    recompute.run(tmp_path / "claude", log, now=ahora + timedelta(hours=1))
++    reinicios = (recompute.read_aggregates(log) or {}).get("resets")
+     assert reinicios == {"five_hour": ahora.isoformat(timespec="seconds"), "seven_day": None}
+ 
+ 
+ def test_sin_fuentes_lo_dice():
+     """REQ-061: sin registro ni transcripts, «no hay datos de calibración en esta máquina»."""
+     ahora = BASE
+-    sin_nada = {"puntos": [], "fuentes": {"transcripts": False, "statusline": False}}
++    sin_nada = {"points": [], "sources": {"transcripts": False, "statusline": False}}
+     assert quota.status(sin_nada, ahora)["five_hour"]["reason"] == quota.NO_DATA
+     assert quota.status(None, ahora)["seven_day"]["reason"] == quota.NO_DATA
+-    solo_transcripts = {"puntos": [], "fuentes": {"transcripts": True, "statusline": False}}
++    solo_transcripts = {"points": [], "sources": {"transcripts": True, "statusline": False}}
+     assert quota.status(solo_transcripts, ahora)["five_hour"]["reason"] == quota.NO_STATUSLINE
+diff --git a/tests/test_dashboard_ui.py b/tests/test_dashboard_ui.py
+index 5c41e7d..79a781f 100644
+--- a/tests/test_dashboard_ui.py
++++ b/tests/test_dashboard_ui.py
+@@ -667,7 +667,7 @@ _MEDIR_TARJETAS = """() => {
+ def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_path, monkeypatch):
+     """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
+     su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
+-    `coste-agregados.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
++    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+     _log_coste_e_imagen(tmp_path, monkeypatch)
+     with _Servidor(9495) as servidor, sync_playwright() as pw:
+         navegador = _navegador(pw)
+diff --git a/tests/test_doctor.py b/tests/test_doctor.py
+index 4ba4ce8..4343b64 100644
+--- a/tests/test_doctor.py
++++ b/tests/test_doctor.py
+@@ -10,7 +10,7 @@ from pathlib import Path
+ 
+ from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+ 
+-from local_delegate import checks, daemon, doctor, install, recalcular, sondas, update
++from local_delegate import checks, daemon, doctor, install, recompute, sondas, update
+ from local_delegate.failures import BackendView
+ 
+ 
+@@ -248,7 +248,7 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
+         encoding="utf-8",
+     )
+     # Igual con el cotejo de `config.coste`: vive en `LOG_DIR`, y sin él el check es `unknown`.
+-    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
++    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
+     _stub_environment(monkeypatch, log_dir=logs)
+     home = make_home(tmp_path)
+     # Claude Desktop no lo escribe `install`, así que el HOME completo no lo trae: se le pone aquí.
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index f0eef45..59fcdff 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -1827,13 +1827,13 @@ def test_una_prueba_marcada_no_cuenta_en_el_panel(tmp_path, monkeypatch):
+     assert s["total"]["calls"] == 10
+     assert e["meta"]["count"] == 10
+     assert s["excluded_tests"] == e["meta"]["excluded_tests"] == 3
+-    assert s["imagenes"]["n"] == 0
++    assert s["images"]["n"] == 0
+     assert hashlib.sha256(m.log.read_bytes()).hexdigest() == antes
+ 
+ 
+ def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
+-    """Control: mutantes «`bloque_coste` con las filas filtradas» y «`_bloque_cuota` filtra» →
+-    fallan las igualdades de `coste` y de `cuota`."""
++    """Control: mutantes «`cost_block` con las filas filtradas» y «`_quota_block` filtra» →
++    fallan las igualdades de `cost` y de `quota`."""
+     m = _Mezcla(tmp_path, monkeypatch)
+     sin, con = m.get("/api/stats"), m.get("/api/stats", include=True)
+     e = m.get("/api/events", include=True)
+@@ -1842,11 +1842,11 @@ def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
+     assert con["excluded_tests"] == e["meta"]["excluded_tests"] == 0
+     assert con["tests_in_range"] == 3
+     assert con["quota"]["five_hour"]["status"] == "calibrated", "guarda: la cuota llega a _load"
+-    assert con["coste"] == sin["coste"]
++    assert con["cost"] == sin["cost"]
+     assert con["quota"] == sin["quota"]
+     # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
+-    assert con["coste"]["barra"]["excluidas_por_motivo"] == {"pruebas": 2}
+-    assert (sin["imagenes"]["n"], con["imagenes"]["n"]) == (0, 1)
++    assert con["cost"]["bar"]["excluded_by_reason"] == {"pruebas": 2}
++    assert (sin["images"]["n"], con["images"]["n"]) == (0, 1)
+ 
+ 
+ def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
+@@ -1855,7 +1855,7 @@ def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
+     assert s["total"]["calls"] == 12
+     por_cliente = {c["client"]: c["calls"] for c in s["by_client"]}
+     assert por_cliente.get("codex-mcp-client") == 2
+-    assert s["coste"]["barra"]["excluidas_por_motivo"]["no es Claude"] == 2
++    assert s["cost"]["bar"]["excluded_by_reason"]["no es Claude"] == 2
+ 
+ 
+ @pytest.mark.parametrize("include", [False, True])
+diff --git a/tests/test_panel_coste.py b/tests/test_panel_coste.py
+index f7e4ab8..848039b 100644
+--- a/tests/test_panel_coste.py
++++ b/tests/test_panel_coste.py
+@@ -23,7 +23,7 @@ from pathlib import Path
+ import pytest
+ from fastapi.testclient import TestClient
+ 
+-from local_delegate import attribution, cost, quota, recalcular, server
++from local_delegate import attribution, cost, quota, recompute, server
+ from local_delegate import config as cfg
+ from local_delegate.web import metrics
+ 
+@@ -108,31 +108,31 @@ def _stats(desde: datetime | None = None, hasta: datetime | None = None, **kw) -
+ 
+ def _punto(fin: datetime, c: float, fuente: str = "statusline", horas: int = 4) -> dict:
+     return {
+-        "fuente": fuente,
+-        "tipo": "five_hour",
+-        "inicio": (fin - timedelta(hours=horas)).isoformat(),
+-        "fin": fin.isoformat(),
++        "source": fuente,
++        "type": "five_hour",
++        "start": (fin - timedelta(hours=horas)).isoformat(),
++        "end": fin.isoformat(),
+         "delta_pct": 40 if fuente == "statusline" else 100,
+         "delta_usd": round(c * 0.4, 2),
+         "C": c,
+-        "marcas": [quota.MARK_OTHER_SURFACES],
+-        "peticiones_sin_precio": None,
++        "marks": [quota.MARK_OTHER_SURFACES],
++        "unpriced_requests": None,
+     }
+ 
+ 
+ def _agregados(logs: Path, puntos: list[dict]) -> None:
+-    recalcular.escribir_agregados(
++    recompute.write_aggregates(
+         logs,
+         {
+             "version": 1,
+-            "generado": _ahora().isoformat(),
+-            "plazo_dias": 30,
+-            "cotejo": None,
+-            "n_por_mes": {},
+-            "puntos": puntos,
+-            "descartes": {"five_hour": {}, "seven_day": {}},
+-            "reinicios": {"five_hour": None, "seven_day": None},
+-            "fuentes": {"transcripts": True, "statusline": True},
++            "generated": _ahora().isoformat(),
++            "cleanup_days": 30,
++            "check": None,
++            "n_by_month": {},
++            "points": puntos,
++            "discards": {"five_hour": {}, "seven_day": {}},
++            "resets": {"five_hour": None, "seven_day": None},
++            "sources": {"transcripts": True, "statusline": True},
+         },
+     )
+ 
+@@ -204,7 +204,7 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
+     ts = _ahora() - timedelta(hours=1)
+     _escribir_log(logs, [_linea(ts, caller_src="hook", caller_kind="subagent")])
+ 
+-    barra = _stats()["coste"]["barra"]
++    barra = _stats()["cost"]["bar"]
+     assert barra["pending"] == 1
+     assert barra["backfilled"] == 0
+ 
+@@ -222,12 +222,12 @@ def test_la_carrera_la_cierra_el_relleno(entorno, tmp_path):
+             }
+         },
+     )
+-    c = _stats()["coste"]
+-    assert c["barra"]["backfilled"] == 1
+-    assert c["barra"]["pending"] == 0
+-    assert c["n_origen"]["relleno"] == 1
++    c = _stats()["cost"]
++    assert c["bar"]["backfilled"] == 1
++    assert c["bar"]["pending"] == 0
++    assert c["n_origin"]["backfill"] == 1
+     # 3 000 000 × 100 // 200 = 1 500 000 tokens: $7,50 y $19,50 con N = 40.
+-    assert c["cifra"] == {"cota_baja": 7.5, "estimacion": 19.5}
++    assert c["figure"] == {"low_bound": 7.5, "estimate": 19.5}
+ 
+ 
+ def test_api_stats_trae_coste_cuota_e_imagenes(entorno):
+@@ -236,10 +236,10 @@ def test_api_stats_trae_coste_cuota_e_imagenes(entorno):
+     imagen = {**IMAGEN, "ts": (ahora - timedelta(minutes=5)).isoformat(timespec="seconds")}
+     _escribir_log(logs, [_linea(ahora - timedelta(minutes=10)), imagen])
+     j = _stats()
+-    assert j.get("coste") is not None
+-    assert j.get("imagenes") == {"n": 1, "bytes": 250000, "chars_devueltos": 800}
++    assert j.get("cost") is not None
++    assert j.get("images") == {"n": 1, "bytes": 250000, "chars_returned": 800}
+     assert j.get("quota", {}).get("five_hour", {}).get("status") == "uncalibrated"
+-    assert set(j.get("densidad_tabla", {}).get("familias", {})) == {"nueva", "anterior"}
++    assert set(j.get("density_table", {}).get("familias", {})) == {"nueva", "anterior"}
+     # Las claves de siempre siguen ahí: las nuevas son aditivas.
+     assert j["total"]["calls"] == 2
+ 
+@@ -259,7 +259,7 @@ def test_la_cuota_no_depende_del_rango(entorno):
+     _escribir_log(logs, [_linea(ahora - timedelta(hours=3))])
+ 
+     j = _stats(ahora - timedelta(days=60), ahora - timedelta(days=35))
+-    assert j["coste"]["motivo"] == "sin delegaciones en el periodo"  # el rango está vacío
++    assert j["cost"]["reason"] == "sin delegaciones en el periodo"  # el rango está vacío
+     c = j["quota"]
+     assert c["five_hour"]["status"] == "calibrated"
+     assert (c["five_hour"].get("a_pct") or 0) > 0, c["five_hour"].get("pct_reason")
+@@ -294,7 +294,7 @@ def test_aviso_contra_un_rechazo(entorno, tmp_path):
+     puntos = [
+         _punto(ahora - timedelta(days=d), c) for d, c in ((20, 150.0), (10, 160.0), (2, 170.0))
+     ]
+-    puntos.append(_punto(ahora - timedelta(days=5), 300.0, fuente="rechazo"))
++    puntos.append(_punto(ahora - timedelta(days=5), 300.0, fuente="rejection"))
+     _agregados(logs, puntos)
+     _escribir_log(logs, [_linea(ahora - timedelta(hours=1))])
+     j = _stats()
+@@ -305,7 +305,7 @@ def test_aviso_contra_un_rechazo(entorno, tmp_path):
+ 
+ 
+ def test_un_punto_mal_formado_se_descarta_sin_tumbar_la_respuesta(entorno):
+-    """REQ-061 sobre `coste-agregados.json` editado a mano: los puntos rotos se saltan y cuentan
++    """REQ-061 sobre `cost-aggregates.json` editado a mano: los puntos rotos se saltan y cuentan
+     como `linea_corrupta` (en su tipo, o en los dos si el tipo no se lee), y los buenos calibran."""
+     logs, _home = entorno
+     ahora = _ahora()
+@@ -315,7 +315,7 @@ def test_un_punto_mal_formado_se_descarta_sin_tumbar_la_respuesta(entorno):
+     sin_c = _punto(ahora - timedelta(days=3), 155.0)
+     del sin_c["C"]
+     c_texto = {**_punto(ahora - timedelta(days=4), 155.0), "C": "abc"}
+-    tipo_raro = {**_punto(ahora - timedelta(days=5), 155.0), "tipo": "un_mes"}
++    tipo_raro = {**_punto(ahora - timedelta(days=5), 155.0), "type": "un_mes"}
+     _agregados(logs, [*buenos, sin_c, c_texto, tipo_raro, "no soy un punto"])
+ 
+     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
+@@ -323,23 +323,51 @@ def test_un_punto_mal_formado_se_descarta_sin_tumbar_la_respuesta(entorno):
+     q = r.json()["quota"]
+     assert q["five_hour"]["status"] == "calibrated"
+     assert q["five_hour"]["points"] == 3
+-    assert q["five_hour"]["discards"]["linea_corrupta"] == 4
+-    assert q["seven_day"]["discards"]["linea_corrupta"] == 2
++    assert q["five_hour"]["discards"]["corrupt_line"] == 4
++    assert q["seven_day"]["discards"]["corrupt_line"] == 2
++
++
++def test_discard_reasons_are_said_in_words(tmp_path):
++    """Los motivos de descarte llegan como valores de máquina en inglés y el panel los dice en
++    palabras, también los tres que antes no tenían rótulo (`overlapping`, `expired`, `reset`).
++
++    Control: mutante «`DESCARTE` con la clave vieja `delta_pequeno`» → sale «small delta 1»."""
++    discards = {"small_delta": 1, "overlapping": 2, "expired": 3, "reset": 4, "corrupt_line": 5}
++    stats = {
++        "quota": {
++            "five_hour": {
++                "status": "uncalibrated",
++                "reason": "faltan 3 puntos",
++                "points": 0,
++                "rejection_points": 0,
++                "discards": discards,
++                "drift": False,
++                "reset": None,
++            },
++            "has_aggregates": True,
++            "command": "local-delegate recompute-cost",
++        }
++    }
++    texto = _textos(tmp_path, stats)["cuota"]
++    assert (
++        "descartes: variación pequeña 1, solapado 2, caducado 3, reinicio 4, línea corrupta 5"
++        in texto
++    )
+ 
+ 
+ def test_home_vacio(entorno, tmp_path):
+-    """Escenario «otra máquina sin datos»: ni `~/.claude` ni `coste-agregados.json`. El coste usa el
++    """Escenario «otra máquina sin datos»: ni `~/.claude` ni `cost-aggregates.json`. El coste usa el
+     respaldo y el `N` declarado; la cuota dice que no hay datos y qué comando los genera. Y un
+-    `coste-agregados.json` corrupto no tumba `/api/stats`."""
++    `cost-aggregates.json` corrupto no tumba `/api/stats`."""
+     logs, home = entorno
+     assert not (home / ".claude").exists()
+     _escribir_log(logs, [_linea(_ahora() - timedelta(hours=1))])
+ 
+     j = _stats()
+-    b = j["coste"]["barra"]
+-    assert b["pending"] + b["assumed"] == b["valoradas"] == 1
+-    assert j["coste"]["n_origen"]["declarado"] == 1
+-    assert j["coste"]["cifra"] is not None
++    b = j["cost"]["bar"]
++    assert b["pending"] + b["assumed"] == b["valued"] == 1
++    assert j["cost"]["n_origin"]["declared"] == 1
++    assert j["cost"]["figure"] is not None
+     q = j["quota"]
+     assert q["five_hour"]["reason"] == "no hay datos de calibración en esta máquina"
+     assert q["has_aggregates"] is False
+@@ -347,7 +375,7 @@ def test_home_vacio(entorno, tmp_path):
+     assert "no hay datos de calibración en esta máquina" in texto
+     assert "local-delegate recompute-cost" in texto
+ 
+-    (logs / recalcular.NOMBRE).write_text("{ esto no es JSON", encoding="utf-8")
++    (logs / recompute.FILE_NAME).write_text("{ esto no es JSON", encoding="utf-8")
+     r = TestClient(metrics.app, raise_server_exceptions=False).get("/api/stats")
+     assert r.status_code == 200
+     assert r.json()["quota"]["five_hour"]["reason"] == "no hay datos de calibración en esta máquina"
+@@ -464,7 +492,7 @@ def test_api_stats_no_abre_sockets(entorno, monkeypatch):
+ 
+     r = TestClient(metrics.app).get("/api/stats")
+     assert r.status_code == 200
+-    assert r.json()["coste"]["cifra"] is not None  # guarda: la tabla se cargó y se usó
++    assert r.json()["cost"]["figure"] is not None  # guarda: la tabla se cargó y se usó
+     assert intentos == []
+ 
+ 
+@@ -536,7 +564,7 @@ def test_texto_del_coste_con_la_barra_y_el_respaldo(entorno, tmp_path):
+     viejo = ahora - timedelta(days=45)  # sin relleno y fuera del plazo: `supuesto`
+     _escribir_log(logs, [_linea(viejo, 0), _linea(ahora - timedelta(hours=1), 1)])
+     j = _stats(ahora - timedelta(days=60), ahora)
+-    assert j["coste"]["barra"]["assumed"] == 1  # guarda: la fila vieja cayó donde debía
++    assert j["cost"]["bar"]["assumed"] == 1  # guarda: la fila vieja cayó donde debía
+     texto = _textos(tmp_path, j)["coste"]
+     assert "2 de 2 con modelo supuesto: Opus 5.5 en subagente" in texto
+     assert "cota baja con estos supuestos" in texto
+@@ -568,10 +596,10 @@ def test_una_fila_sin_ahorro_no_pinta_dolares(entorno, tmp_path):
+         caller_effort="medium",
+     )
+     _escribir_log(logs, [_linea(ahora - timedelta(hours=1), 0), negativa])
+-    desglose = _stats(ahora - timedelta(days=1), ahora)["coste"]["desglose"]
++    desglose = _stats(ahora - timedelta(days=1), ahora)["cost"]["breakdown"]
+     por_t = sorted(desglose, key=lambda g: g["T"])
+     assert len(por_t) == 2 and por_t[0]["T"] < 0 < por_t[1]["T"]  # guarda: una de cada
+-    assert por_t[0]["estimacion"] == 0.0  # sin signo: redondea a cero
++    assert por_t[0]["estimate"] == 0.0  # sin signo: redondea a cero
+ 
+     programa = tmp_path / "celdas.mjs"
+     programa.write_text(
+diff --git a/tests/test_recalcular.py b/tests/test_recalcular.py
+index 05d4eee..23567f7 100644
+--- a/tests/test_recalcular.py
++++ b/tests/test_recalcular.py
+@@ -1,4 +1,4 @@
+-"""`local-delegate recalcular-coste`: privacidad, solo lectura, fusión y agregados (T5).
++"""`local-delegate recompute-cost`: privacidad, solo lectura, fusión y agregados (T5).
+ 
+ HOME de Claude Code, registro del statusline y log de uso SINTÉTICOS en `tmp_path`.
+ """
+@@ -24,7 +24,7 @@ from test_transcripts import (
+     ts,
+ )
+ 
+-from local_delegate import cli, config, recalcular
++from local_delegate import cli, config, recompute
+ 
+ AHORA = BASE + timedelta(days=1)
+ MES = "202610"
+@@ -94,18 +94,18 @@ def test_la_privacidad(tmp_path):
+         log,
+         [linea_log(1, path=ruta, tool_use_id=TOOL_USE_ID), linea_log(1, path=ruta)],
+     )
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
++    recompute.run(claude, log, now=AHORA)
+ 
+     textos = _textos(log)
+-    assert recalcular.NOMBRE in textos
++    assert recompute.FILE_NAME in textos
+     assert f"attribution-{MES}.json" in textos  # guarda: el relleno se escribió
+     texto_de_todos_los_json = "\n".join(textos.values())
+     assert MARCADORA not in texto_de_todos_los_json
+     assert SESION not in texto_de_todos_los_json
+-    texto_de_coste_agregados = textos[recalcular.NOMBRE]
++    texto_de_coste_agregados = textos[recompute.FILE_NAME]
+     assert TOOL_USE_ID not in texto_de_coste_agregados
+     agregados = json.loads(texto_de_coste_agregados)
+-    assert agregados["puntos"]  # guarda: había algo que escribir
++    assert agregados["points"]  # guarda: había algo que escribir
+ 
+ 
+ # --- REQ-074: idempotente y de solo lectura -------------------------------------------------
+@@ -126,9 +126,9 @@ def _foto(raiz: Path) -> list[tuple]:
+ 
+ def _sin_fechas(agregados: dict) -> dict:
+     copia = json.loads(json.dumps(agregados))
+-    copia.pop("generado", None)
+-    if isinstance(copia.get("cotejo"), dict):
+-        copia["cotejo"].pop("fecha", None)
++    copia.pop("generated", None)
++    if isinstance(copia.get("check"), dict):
++        copia["check"].pop("date", None)
+     return copia
+ 
+ 
+@@ -147,17 +147,17 @@ def test_idempotente_y_solo_lectura(tmp_path):
+     escribir_log(log, [linea_log(1, tool_use_id="toolu_i1"), linea_log(1)])
+     antes = _foto(claude)
+ 
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
++    recompute.run(claude, log, now=AHORA)
+     primera = _textos(log)
+-    recalcular.ejecutar(claude, log, ahora=AHORA + timedelta(minutes=1))
++    recompute.run(claude, log, now=AHORA + timedelta(minutes=1))
+     segunda = _textos(log)
+ 
+     despues = _foto(claude)
+     assert despues == antes
+-    assert set(primera) == set(segunda) == {recalcular.NOMBRE, f"attribution-{MES}.json"}
++    assert set(primera) == set(segunda) == {recompute.FILE_NAME, f"attribution-{MES}.json"}
+     assert primera[f"attribution-{MES}.json"] == segunda[f"attribution-{MES}.json"]
+-    a1, a2 = json.loads(primera[recalcular.NOMBRE]), json.loads(segunda[recalcular.NOMBRE])
+-    assert a1["generado"] != a2["generado"]
++    a1, a2 = json.loads(primera[recompute.FILE_NAME]), json.loads(segunda[recompute.FILE_NAME])
++    assert a1["generated"] != a2["generated"]
+     assert _sin_fechas(a1) == _sin_fechas(a2)
+ 
+ 
+@@ -181,9 +181,9 @@ def test_los_agregados_de_n_no_cuentan_excluidas(tmp_path):
+             linea_log(1, tool_use_id="toolu_bk"),
+         ],
+     )
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
+-    agregados = recalcular.leer_agregados(log)
+-    assert agregados["n_por_mes"][MES]["claude-opus-5-5|subagent"] == [40]
++    recompute.run(claude, log, now=AHORA)
++    agregados = recompute.read_aggregates(log)
++    assert agregados["n_by_month"][MES]["claude-opus-5-5|subagent"] == [40]
+ 
+ 
+ # --- REQ-071: fundir, no sobrescribir ---------------------------------------------------------
+@@ -203,18 +203,18 @@ def test_un_punto_sobrevive_al_transcript_borrado(tmp_path):
+             ),
+         ],
+     )
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
+-    (punto,) = recalcular.leer_agregados(log)["puntos"]
+-    assert punto["fuente"] == "rechazo"
++    recompute.run(claude, log, now=AHORA)
++    (punto,) = recompute.read_aggregates(log)["points"]
++    assert punto["source"] == "rejection"
+ 
+     transcript.unlink()  # Claude Code lo borra a los `H` días
+-    recalcular.ejecutar(claude, log, ahora=AHORA + timedelta(days=1))
+-    agregados = recalcular.leer_agregados(log)
+-    assert punto in agregados["puntos"]
++    recompute.run(claude, log, now=AHORA + timedelta(days=1))
++    agregados = recompute.read_aggregates(log)
++    assert punto in agregados["points"]
+ 
+     # …hasta que caduca (60 días).
+-    recalcular.ejecutar(claude, log, ahora=AHORA + timedelta(days=62))
+-    assert recalcular.leer_agregados(log)["puntos"] == []
++    recompute.run(claude, log, now=AHORA + timedelta(days=62))
++    assert recompute.read_aggregates(log)["points"] == []
+ 
+ 
+ def test_un_mes_viejo_no_se_recalcula(tmp_path):
+@@ -226,25 +226,25 @@ def test_un_mes_viejo_no_se_recalcula(tmp_path):
+     escribir_log(log, [linea_log(-41 * 86400 + 1, tool_use_id="toolu_ago")], mes="202608")
+     PREVIO = {"claude-opus-5|main": [127]}
+     log.mkdir(exist_ok=True)
+-    recalcular.escribir_agregados(log, {"version": 1, "n_por_mes": {"202608": PREVIO}})
++    recompute.write_aggregates(log, {"version": 1, "n_by_month": {"202608": PREVIO}})
+ 
+-    recalcular.ejecutar(claude, log, ahora=AHORA + timedelta(days=5))  # 2026-10-07
+-    agregados = recalcular.leer_agregados(log)
+-    assert agregados["n_por_mes"]["202608"] == PREVIO
++    recompute.run(claude, log, now=AHORA + timedelta(days=5))  # 2026-10-07
++    agregados = recompute.read_aggregates(log)
++    assert agregados["n_by_month"]["202608"] == PREVIO
+ 
+     # Guarda: sin lo previo, ese mes sí sale del relleno (el caso podía dar otra cosa).
+-    (log / recalcular.NOMBRE).unlink()
+-    recalcular.ejecutar(claude, log, ahora=AHORA + timedelta(days=5))
+-    assert recalcular.leer_agregados(log)["n_por_mes"]["202608"] == {f"{OPUS}|subagent": [7]}
++    (log / recompute.FILE_NAME).unlink()
++    recompute.run(claude, log, now=AHORA + timedelta(days=5))
++    assert recompute.read_aggregates(log)["n_by_month"]["202608"] == {f"{OPUS}|subagent": [7]}
+ 
+ 
+ def test_guarda_el_plazo(tmp_path):
+     claude, log = tmp_path / "claude", tmp_path / "log"
+     claude.mkdir()
+     (claude / "settings.json").write_text('{"cleanupPeriodDays": 90}', encoding="utf-8")
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
+-    agregados = recalcular.leer_agregados(log)
+-    assert agregados.get("plazo_dias") == 90
++    recompute.run(claude, log, now=AHORA)
++    agregados = recompute.read_aggregates(log)
++    assert agregados.get("cleanup_days") == 90
+ 
+ 
+ def test_sin_transcripts_no_rellena(tmp_path):
+@@ -252,12 +252,12 @@ def test_sin_transcripts_no_rellena(tmp_path):
+     dicen que no hay datos."""
+     claude, log = tmp_path / "claude", tmp_path / "log"
+     escribir_log(log, [linea_log(1)])
+-    resumen = recalcular.ejecutar(claude, log, ahora=AHORA)
++    resumen = recompute.run(claude, log, now=AHORA)
+     assert list(log.glob("attribution-*.json")) == []
+-    agregados = recalcular.leer_agregados(log)
+-    assert agregados["fuentes"] == {"transcripts": False, "statusline": False}
+-    assert agregados["cotejo"] is None
+-    assert resumen["cuota"] == {"five_hour": "uncalibrated", "seven_day": "uncalibrated"}
++    agregados = recompute.read_aggregates(log)
++    assert agregados["sources"] == {"transcripts": False, "statusline": False}
++    assert agregados["check"] is None
++    assert resumen["quota"] == {"five_hour": "uncalibrated", "seven_day": "uncalibrated"}
+ 
+ 
+ # --- REQ-070: el subcomando -------------------------------------------------------------------
+@@ -273,7 +273,7 @@ def test_el_cli_lo_lanza(tmp_path, monkeypatch, capsys):
+         codigo = e.code
+     salida = capsys.readouterr().out
+     assert codigo == 0
+-    assert (log / recalcular.NOMBRE).is_file()
++    assert (log / recompute.FILE_NAME).is_file()
+     assert "Plazo de borrado" in salida
+     assert str(tmp_path) not in salida  # el resumen da conteos, no rutas
+ 
+@@ -291,13 +291,13 @@ def test_los_agregados_de_n_no_cuentan_las_filas_en_ventana(tmp_path):
+         log,
+         [linea_log(1, tool_use_id="toolu_cc"), linea_log(501, tool_use_id="toolu_win")],
+     )
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
+-    sin_ventana = recalcular.leer_agregados(log)["n_por_mes"][MES]["claude-opus-5-5|subagent"]
++    recompute.run(claude, log, now=AHORA)
++    sin_ventana = recompute.read_aggregates(log)["n_by_month"][MES]["claude-opus-5-5|subagent"]
+     assert sorted(sin_ventana) == [40, 50]
+     inicio = BASE + timedelta(seconds=500)
+     test_windows.add(log, inicio, inicio + timedelta(seconds=10), "prueba")
+-    recalcular.ejecutar(claude, log, ahora=AHORA)
+-    con_ventana = recalcular.leer_agregados(log)["n_por_mes"][MES]["claude-opus-5-5|subagent"]
++    recompute.run(claude, log, now=AHORA)
++    con_ventana = recompute.read_aggregates(log)["n_by_month"][MES]["claude-opus-5-5|subagent"]
+     assert con_ventana == [40]
+ 
+ 
+@@ -305,18 +305,18 @@ def test_el_resumen_dice_el_estado_de_la_cuota_en_palabras():
+     """`quota.status` da `calibrated|uncalibrated` (valor de máquina); la terminal lo dice en
+     español, sin colar el valor en inglés en la prosa."""
+     resumen = {
+-        "plazo_dias": 30,
++        "cleanup_days": 30,
+         "transcripts": 0,
+-        "lineas_corruptas": 0,
+-        "lineas_rellenadas": 0,
+-        "cruces": {},
+-        "n_casos": 0,
+-        "cotejo": None,
+-        "puntos": {},
+-        "descartes": {},
+-        "cuota": {"five_hour": "calibrated", "seven_day": "uncalibrated"},
++        "corrupt_lines": 0,
++        "backfilled_lines": 0,
++        "matches": {},
++        "n_cases": 0,
++        "check": None,
++        "points": {},
++        "discards": {},
++        "quota": {"five_hour": "calibrated", "seven_day": "uncalibrated"},
+     }
+-    texto = recalcular.texto_del_resumen(resumen)
++    texto = recompute.summary_text(resumen)
+     assert "Cuota five_hour: calibrada;" in texto
+     assert "Cuota seven_day: sin calibrar;" in texto
+     assert "uncalibrated" not in texto
+diff --git a/tests/test_recalcular_legacy.py b/tests/test_recalcular_legacy.py
+new file mode 100644
+index 0000000..693688d
+--- /dev/null
++++ b/tests/test_recalcular_legacy.py
+@@ -0,0 +1,304 @@
++"""`cost-aggregates.json` y el registro del statusline con los nombres viejos (REQ-005, 006, 008, 033).
++
++Datos SINTÉTICOS en `tmp_path`. El fichero viejo, `coste-agregados.json`, siembra el nuevo una sola
++vez, traducido entero ANTES de juntar (la identidad del punto es `(source, type, start, end)`), y no
++se toca nunca. El statusline del usuario puede seguir escribiendo `cuota-statusline.jsonl`: se leen
++los dos nombres, y los dos ficheros si están los dos.
++"""
++
++from __future__ import annotations
++
++import json
++from datetime import timedelta
++from pathlib import Path
++
++from test_transcripts import BASE, escribir, peticion, principal, sintetica
++
++from local_delegate import legacy_names, quota, recompute
++
++AHORA = BASE + timedelta(days=1)
++
++#: Claves del formato nuevo → las viejas, para fabricar un `coste-agregados.json` de antes.
++_OLD_TOP = {new: old for old, new in legacy_names.FORMATS["cost_aggregates"]["keys"].items()}
++_OLD_POINT = {
++    new: old for old, new in legacy_names.FORMATS["cost_aggregates_point"]["keys"].items()
++}
++_OLD_CHECK = {
++    new: old for old, new in legacy_names.FORMATS["cost_aggregates_check"]["keys"].items()
++}
++_OLD_MARK = {new: old for old, new in legacy_names.COST_MARK_VALUES.items()}
++_OLD_DISCARD = {new: old for old, new in legacy_names.COST_DISCARD_REASONS.items()}
++
++
++def _old_point(p: dict) -> dict:
++    out = {_OLD_POINT.get(k, k): v for k, v in p.items()}
++    out["fuente"] = {"rejection": "rechazo"}.get(out["fuente"], out["fuente"])
++    out["marcas"] = [_OLD_MARK.get(m, m) for m in out["marcas"]]
++    return out
++
++
++def _rejection(s: float, kind: str, hours_to_reset: float) -> dict:
++    reset = int((BASE + timedelta(hours=hours_to_reset)).timestamp())
++    return sintetica(
++        s, f"s-{kind}", quota={"status": "rejected", "rateLimitType": kind, "resetsAt": reset}
++    )
++
++
++def _statusline_point(end_days_ago: float, marks: list[str]) -> dict:
++    end = AHORA - timedelta(days=end_days_ago)
++    return {
++        "source": "statusline",
++        "type": "five_hour",
++        "start": (end - timedelta(hours=2)).isoformat(),
++        "end": end.isoformat(),
++        "delta_pct": 20,
++        "delta_usd": 10.0,
++        "C": 50.0,
++        "marks": marks,
++        "unpriced_requests": None,
++    }
++
++
++def _seed_case(tmp_path: Path) -> tuple[Path, Path, Path, dict]:
++    """Un `coste-agregados.json` viejo con: el gemelo del rechazo de `five_hour` que vuelve a salir
++    del transcript, un punto del statusline vigente, otro caducado, el cotejo y un mes cerrado.
++    El transcript da además un rechazo de `seven_day` que el viejo no tiene."""
++    claude, log = tmp_path / "claude", tmp_path / "log"
++    transcript = escribir(
++        principal(claude),
++        [
++            peticion(0, "m0", usage={"input_tokens": 1_000_000}),
++            _rejection(5, "five_hour", 3),
++            _rejection(6, "seven_day", 100),
++        ],
++    )
++    # El gemelo, sacado de una corrida aparte: mismos valores, formato viejo.
++    scratch = tmp_path / "scratch-log"
++    recompute.run(claude, scratch, now=AHORA)
++    fresh = json.loads((scratch / recompute.FILE_NAME).read_text(encoding="utf-8"))["points"]
++    (twin,) = [p for p in fresh if p["type"] == "five_hour"]
++    alive = _statusline_point(2, ["low_bound_if_other_surfaces", "reset"])
++    expired = _statusline_point(70, ["low_bound_if_other_surfaces"])
++    old = {
++        "version": 1,
++        "generado": "2026-09-01T00:00:00+00:00",
++        "plazo_dias": 30,
++        "cotejo": {
++            "fecha": "2026-09-01T00:00:00+00:00",
++            "version_tabla": "2026-08-30",
++            "juzgadas": 4,
++            "fuera": 0,
++            "sin_precio": [],
++            "veredicto": "pasa",
++        },
++        "n_por_mes": {"202608": {"claude-opus-5|main": [127]}},
++        "puntos": [_old_point(twin), _old_point(alive), _old_point(expired)],
++        "descartes": {"five_hour": {"delta_pequeno": 3}, "seven_day": {}},
++        "reinicios": {"five_hour": None, "seven_day": None},
++        "fuentes": {"transcripts": True, "statusline": True},
++    }
++    log.mkdir(parents=True)
++    old_path = log / recompute.OLD_FILE_NAME
++    old_path.write_text(json.dumps(old, ensure_ascii=False, indent=1), encoding="utf-8")
++    return claude, log, transcript, {"twin": twin, "alive": alive, "expired": expired}
++
++
++def _raw(log: Path) -> dict:
++    return json.loads((log / recompute.FILE_NAME).read_text(encoding="utf-8"))
++
++
++def test_the_old_file_seeds_the_new_one_once(tmp_path):
++    """Los cuatro controles de la siembra, más el fichero viejo intacto byte a byte.
++
++    Controles: mutante «`_point_key` no junta el gemelo» → los descartes de la primera corrida
++    traen un `overlapping` que la segunda ya no tiene; mutante «se siembra en cada corrida» (lee
++    el viejo aunque exista el nuevo) → el rechazo de `seven_day`, que solo estaba en el nuevo, se
++    pierde al borrar el transcript."""
++    claude, log, transcript, p = _seed_case(tmp_path)
++    old_path = log / recompute.OLD_FILE_NAME
++    old_bytes = old_path.read_bytes()
++
++    recompute.run(claude, log, now=AHORA)
++    first = _raw(log)
++    # Formato nuevo entero: ni una clave ni un valor viejo.
++    text = (log / recompute.FILE_NAME).read_text(encoding="utf-8")
++    for old_word in ('"puntos"', '"fuente"', '"rechazo"', '"cotejo"', "cota baja", '"pasa"'):
++        assert old_word not in text, old_word
++    # El gemelo es UN punto; el caducado no entra; el vigente llega con sus marcas traducidas.
++    by_type = [(q["source"], q["type"]) for q in first["points"]]
++    assert by_type.count(("rejection", "five_hour")) == 1
++    assert p["expired"]["end"] not in [q["end"] for q in first["points"]]
++    (alive,) = [q for q in first["points"] if q["source"] == "statusline"]
++    assert alive["marks"] == ["low_bound_if_other_surfaces", "reset"]
++    assert "overlapping" not in first["discards"]["five_hour"]
++    assert "corrupt_line" not in first["discards"]["five_hour"]
++    # El cotejo y el mes cerrado se arrastran, con el veredicto ya en inglés.
++    assert first["check"]["verdict"] == "pass"
++    assert first["n_by_month"]["202608"] == {"claude-opus-5|main": [127]}
++
++    recompute.run(claude, log, now=AHORA)
++    second = _raw(log)
++    assert second["discards"] == first["discards"]
++    assert len(second["points"]) == len(first["points"])
++    assert p["expired"]["end"] not in [q["end"] for q in second["points"]]
++
++    # Desde la siembra manda el nuevo: un punto que solo está en él sobrevive al transcript borrado.
++    assert ("rejection", "seven_day") in by_type  # guarda: el caso podía distinguir
++    transcript.unlink()
++    recompute.run(claude, log, now=AHORA + timedelta(hours=1))
++    third = [(q["source"], q["type"]) for q in _raw(log)["points"]]
++    assert ("rejection", "seven_day") in third
++
++    assert old_path.read_bytes() == old_bytes
++
++
++def test_a_damaged_new_file_does_not_seed_again(tmp_path):
++    """Un `cost-aggregates.json` roto cuenta como vacío: no se vuelve a leer el viejo."""
++    log = tmp_path / "log"
++    log.mkdir()
++    (log / recompute.OLD_FILE_NAME).write_text(
++        json.dumps({"version": 1, "puntos": [], "plazo_dias": 30}), encoding="utf-8"
++    )
++    assert recompute.read_aggregates(log)["cleanup_days"] == 30  # guarda: el viejo se lee
++    (log / recompute.FILE_NAME).write_text("{ esto no es JSON", encoding="utf-8")
++    assert recompute.read_aggregates(log) is None
++
++
++def test_old_and_new_aggregates_give_the_same_quota(tmp_path):
++    """Un dato viejo da el mismo estado de cuota que su equivalente nuevo (REQ-006).
++
++    Controles: mutante «`read_aggregates` no traduce» → no entrega el formato nuevo; mutante
++    «`quota.status` no traduce» → el viejo sin traducir sale sin puntos."""
++    points = [_statusline_point(d, ["low_bound_if_other_surfaces"]) for d in (1, 3, 5)]
++    new = {
++        "version": 1,
++        "points": points,
++        "discards": {"five_hour": {"small_delta": 1}, "seven_day": {}},
++        "resets": {"five_hour": None, "seven_day": None},
++        "sources": {"transcripts": True, "statusline": True},
++    }
++    old = {_OLD_TOP.get(k, k): v for k, v in new.items()}
++    old["puntos"] = [_old_point(q) for q in points]
++    old["descartes"] = {
++        k: {_OLD_DISCARD.get(r, r): n for r, n in v.items()} for k, v in new["discards"].items()
++    }
++    log = tmp_path / "log"
++    log.mkdir()
++    (log / recompute.OLD_FILE_NAME).write_text(json.dumps(old), encoding="utf-8")
++    # `read_aggregates` entrega el formato nuevo…
++    assert recompute.read_aggregates(log) == new
++    from_old = quota.status(recompute.read_aggregates(log), AHORA)
++    assert from_old == quota.status(new, AHORA)
++    assert from_old["five_hour"]["status"] == "calibrated"  # guarda: hay algo que comparar
++    assert from_old["five_hour"]["discards"] == {"small_delta": 1}
++    # …y `quota.status`, que también es lector, entiende el viejo aunque le llegue sin traducir.
++    assert quota.status(old, AHORA) == from_old
++
++
++def test_the_old_check_is_read_with_its_verdict_translated(tmp_path):
++    """El cotejo de un fichero viejo llega con las claves y el veredicto nuevos (lo lee `doctor`)."""
++    log = tmp_path / "log"
++    log.mkdir()
++    old_check = {_OLD_CHECK[k]: v for k, v in {"date": "x", "verdict": "falla"}.items()}
++    (log / recompute.OLD_FILE_NAME).write_text(
++        json.dumps({"version": 1, "cotejo": old_check}), encoding="utf-8"
++    )
++    assert recompute.read_aggregates(log)["check"] == {"date": "x", "verdict": "fail"}
++
++
++def test_marks_are_machine_values_and_unknown_ones_are_copied():
++    """REQ-033: las cuatro marcas viejas pasan a su valor de máquina; una desconocida, tal cual."""
++    old = {
++        "fuente": "rechazo",
++        "marcas": [
++            "cota baja",
++            "solo comprobación",
++            "cota baja si hubo uso en otras superficies",
++            "reinicio",
++            "otra cosa",
++        ],
++    }
++    new = legacy_names.normalize_cost_point(old)
++    assert new == {
++        "source": "rejection",
++        "marks": ["low_bound", "check_only", "low_bound_if_other_surfaces", "reset", "otra cosa"],
++    }
++    assert legacy_names.normalize_cost_point(new) == new  # un punto nuevo sale igual
++
++
++def test_the_writer_marks_are_the_quota_constants():
++    assert {
++        quota.MARK_LOW_BOUND,
++        quota.MARK_CHECK_ONLY,
++        quota.MARK_OTHER_SURFACES,
++        quota.MARK_RESET,
++    } == set(legacy_names.COST_MARK_VALUES.values())
++
++
++# --- REQ-008: el registro del statusline con los dos nombres --------------------------------
++
++
++def _statusline_rows(path: Path, session: str, n: int) -> None:
++    rows = [
++        {"ts": (BASE + timedelta(minutes=i)).isoformat(), "session_id": session, "five_hour": i}
++        for i in range(n)
++    ]
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
++
++
++def _rows_read(claude: Path) -> int:
++    by_type, _sessions, _d = quota.sanitize(recompute._lines_of(recompute._statusline_logs(claude)))
++    return len(by_type["five_hour"])
++
++
++def test_the_statusline_log_is_read_under_both_names(tmp_path):
++    """Control: mutante «solo el nuevo si existe» → con los dos se leen 3 filas y no 5."""
++    old, new = legacy_names.QUOTA_STATUSLINE_FILE_NAMES
++    only_old, only_new, both = tmp_path / "a", tmp_path / "b", tmp_path / "c"
++    _statusline_rows(only_old / old, "s-vieja", 2)
++    _statusline_rows(only_new / new, "s-nueva", 3)
++    _statusline_rows(both / old, "s-vieja", 2)
++    _statusline_rows(both / new, "s-nueva", 3)
++    assert _rows_read(only_old) == 2
++    assert _rows_read(only_new) == 3
++    assert _rows_read(both) == 5
++    assert _rows_read(tmp_path / "ninguno") == 0
++
++
++def test_the_new_statusline_name_counts_as_a_source(tmp_path):
++    claude, log = tmp_path / "claude", tmp_path / "log"
++    _statusline_rows(claude / legacy_names.QUOTA_STATUSLINE_FILE_NAMES[1], "s", 2)
++    recompute.run(claude, log, now=AHORA)
++    assert _raw(log)["sources"]["statusline"] is True
++
++
++# --- El resumen de la terminal dice los valores de máquina en palabras -----------------------
++
++
++def test_the_summary_says_verdict_and_discards_in_words():
++    """Control: mutante «el resumen pinta la clave» → sale `small_delta` en la prosa."""
++    summary = {
++        "cleanup_days": 30,
++        "transcripts": 1,
++        "corrupt_lines": 0,
++        "backfilled_lines": 0,
++        "matches": {},
++        "n_cases": 0,
++        "check": {
++            "table_version": "2026-08-30",
++            "verdict": "pass",
++            "judged": 4,
++            "outside": 0,
++            "unpriced": [],
++        },
++        "points": {"rejection:five_hour": 1},
++        "discards": {"five_hour": {"small_delta": 2, "expired": 1}, "seven_day": {}},
++        "quota": {"five_hour": "uncalibrated", "seven_day": "uncalibrated"},
++    }
++    text = recompute.summary_text(summary)
++    assert "Cotejo de precios (2026-08-30): pasa;" in text
++    assert "variación pequeña 2, caducado 1" in text
++    assert "1 de rechazo" in text
++    for machine in ("small_delta", "expired", '"pass"', " pass;"):
++        assert machine not in text, machine
+diff --git a/tests/test_transcripts.py b/tests/test_transcripts.py
+index c64f662..65dba17 100644
+--- a/tests/test_transcripts.py
++++ b/tests/test_transcripts.py
+@@ -11,7 +11,7 @@ import json
+ from datetime import UTC, datetime, timedelta
+ from pathlib import Path
+ 
+-from local_delegate import attribution, recalcular, transcripts
++from local_delegate import attribution, recompute, transcripts
+ 
+ BASE = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+ SESION = "sesion-sintetica-0001"
+@@ -266,7 +266,7 @@ def test_el_relleno_usa_el_plazo_leido(tmp_path):
+         ],
+     )
+     escribir_log(log, [linea_log(1, tool_use_id="toolu_p")])
+-    recalcular.ejecutar(claude, log, ahora=BASE + timedelta(days=45))
++    recompute.run(claude, log, now=BASE + timedelta(days=45))
+     entradas = attribution.read_backfill(log, "202610")
+     clave = "toolu_p"
+     assert clave in entradas
+diff --git a/tests/test_valoracion.py b/tests/test_valoracion.py
+index 5fd4ae6..448a943 100644
+--- a/tests/test_valoracion.py
++++ b/tests/test_valoracion.py
+@@ -2,7 +2,7 @@
+ 
+ Las filas pasan **antes** por la fusión de Python (`cost.merge`), como en producción: el coste
+ nunca se calcula sobre una fila cruda. Los agregados de `N` se escriben con
+-`recalcular.escribir_agregados` (T5), que es también el cruce de formato entre el escritor y el
++`recompute.write_aggregates` (T5), que es también el cruce de formato entre el escritor y el
+ lector.
+ """
+ 
+@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
+ 
+ import pytest
+ 
+-from local_delegate import attribution, config, cost, precios, recalcular, valoracion
++from local_delegate import attribution, config, cost, precios, recompute, valuation
+ 
+ AHORA = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
+ MES = f"{AHORA:%Y%m}"
+@@ -71,39 +71,39 @@ def test_un_millon_de_caracteres(tmp_path):
+     500 000 × ($5 + 40 × $0,20)/MTok = $6,50."""
+     filas = _fundidas(tmp_path, [_linea()], {"toolu_0000": _relleno()})
+     assert filas[0]["density"]["text"] == [200, "measured"]  # guarda: la celda del escenario
+-    c = valoracion.coste_evento(filas[0])
+-    assert c["cota_baja"] == 2.50
+-    assert c["estimacion"] == 6.50
++    c = valuation.event_cost(filas[0])
++    assert c["low_bound"] == 2.50
++    assert c["estimate"] == 6.50
+     assert c["T"] == 500_000
+-    assert (c["N"], c["caducidades"], c["origen_n"]) == (40, 0, "relleno")
++    assert (c["N"], c["expiries"], c["n_origin"]) == (40, 0, "backfill")
+ 
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
++    b = valuation.cost_block(filas, None, now=AHORA)
++    assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
+     # La respuesta trae la cobertura, la densidad con su origen, N con su origen y la tabla.
+-    assert b["barra"]["backfilled"] == 1
+-    assert b["densidad"]["origen"]["measured"] == 1
+-    assert b["n_origen"] == {"relleno": 1, "agregado": 0, "declarado": 0}
+-    assert b["tabla"]["consultado"] == precios.cargar_precios()["consultado"]
++    assert b["bar"]["backfilled"] == 1
++    assert b["density"]["origin"]["measured"] == 1
++    assert b["n_origin"] == {"backfill": 1, "aggregate": 0, "declared": 0}
++    assert b["table"]["consulted"] == precios.cargar_precios()["consultado"]
+ 
+ 
+ def test_cada_caducidad_es_una_reescritura(tmp_path):
+     """`cad` = 2: estimación = T × (P_w × 3 + (40 − 2) × P_r) = 500 000 × (15 + 7,6)/MTok."""
+     filas = _fundidas(tmp_path, [_linea()], {"toolu_0000": _relleno(cad=2)})
+     esperada = 500_000 * (5 * (1 + 2) + (40 - 2) * 0.20) / 1e6
+-    c = valoracion.coste_evento(filas[0])
+-    assert c["estimacion"] == pytest.approx(esperada, abs=1e-9)
+-    assert c["estimacion"] == pytest.approx(11.30, abs=1e-9)
+-    assert c["cota_baja"] == 2.50  # la cota baja no depende de las caducidades
++    c = valuation.event_cost(filas[0])
++    assert c["estimate"] == pytest.approx(esperada, abs=1e-9)
++    assert c["estimate"] == pytest.approx(11.30, abs=1e-9)
++    assert c["low_bound"] == 2.50  # la cota baja no depende de las caducidades
+ 
+ 
+ def test_un_T_negativo_resta(tmp_path):
+     """Lo devuelto también entró en caché: devolver más de lo leído da un coste negativo."""
+     linea = _linea(chars_in=100, chars_out=10_000)
+     filas = _fundidas(tmp_path, [linea], {"toolu_0000": _relleno()})
+-    c = valoracion.coste_evento(filas[0])
++    c = valuation.event_cost(filas[0])
+     assert c["T"] == 100 * 100 // 200 - 10_000 * 100 // 223
+-    assert c["cota_baja"] < 0
+-    assert c["estimacion"] < 0
++    assert c["low_bound"] < 0
++    assert c["estimate"] < 0
+ 
+ 
+ def test_un_negativo_diminuto_no_es_un_cero_con_signo(tmp_path):
+@@ -111,12 +111,12 @@ def test_un_negativo_diminuto_no_es_un_cero_con_signo(tmp_path):
+     cual («$0,00» en el panel). La fila y la cifra van con `0.0`, sin signo."""
+     linea = _linea(chars_in=100, chars_out=500)
+     filas = _fundidas(tmp_path, [linea], {"toolu_0000": _relleno()})
+-    c = valoracion.coste_evento(filas[0])
++    c = valuation.event_cost(filas[0])
+     assert c["T"] == -174  # guarda: el caso es un negativo que redondea a cero
+-    assert -0.005 < c["estimacion"] < 0
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    fila = b["desglose"][0]
+-    salida = json.dumps({"desglose": [fila["cota_baja"], fila["estimacion"]], "cifra": b["cifra"]})
++    assert -0.005 < c["estimate"] < 0
++    b = valuation.cost_block(filas, None, now=AHORA)
++    fila = b["breakdown"][0]
++    salida = json.dumps({"breakdown": [fila["low_bound"], fila["estimate"]], "figure": b["figure"]})
+     assert "-0.0" not in salida
+ 
+ 
+@@ -125,11 +125,11 @@ def test_un_negativo_diminuto_no_es_un_cero_con_signo(tmp_path):
+ 
+ def test_origen_de_N(tmp_path):
+     """(1) relleno; (2) mediana del grupo con al menos 10 casos; (3) declarado del hilo."""
+-    recalcular.escribir_agregados(
++    recompute.write_aggregates(
+         tmp_path,
+         {
+             "version": 1,
+-            "n_por_mes": {
++            "n_by_month": {
+                 "202609": {"claude-opus-5-5|subagent": [10, 20, 30, 40, 50]},
+                 MES: {
+                     "claude-opus-5-5|subagent": [60, 70, 80, 90, 100],  # 10 casos en total
+@@ -138,7 +138,7 @@ def test_origen_de_N(tmp_path):
+             },
+         },
+     )
+-    agregados = recalcular.leer_agregados(tmp_path)
++    agregados = recompute.read_aggregates(tmp_path)
+     assert agregados is not None  # guarda: el lector entiende lo que escribió el escritor
+ 
+     lineas = [_linea(0), _linea(1), _linea(2)]
+@@ -150,12 +150,12 @@ def test_origen_de_N(tmp_path):
+     }
+     filas = _fundidas(tmp_path, lineas, relleno)
+ 
+-    assert valoracion.n_de(filas[0], agregados) == (7, 1, "relleno")
+-    n, cad, origen = valoracion.n_de(filas[1], agregados)
+-    assert origen == "agregado"
++    assert valuation.n_of(filas[0], agregados) == (7, 1, "backfill")
++    n, cad, origen = valuation.n_of(filas[1], agregados)
++    assert origen == "aggregate"
+     assert (n, cad) == (55, 0)  # mediana de 10, 20, …, 100 (par: media de los dos centrales)
+-    n, cad, origen = valoracion.n_de(filas[2], agregados)
+-    assert origen == "declarado"
++    n, cad, origen = valuation.n_of(filas[2], agregados)
++    assert origen == "declared"
+     assert (n, cad) == (127, 0)  # principal
+ 
+ 
+@@ -168,10 +168,10 @@ def test_un_modelo_sin_precio_no_da_cero(tmp_path):
+     lineas = [_linea(0), _linea(1)]
+     relleno = {"toolu_0000": _relleno(), "toolu_0001": _relleno(modelo="claude-nadie-9")}
+     filas = _fundidas(tmp_path, lineas, relleno)
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    assert b["sin_precio"]["n"] == 1
+-    assert b["sin_precio"]["ids"] == ["claude-nadie-9"]
+-    assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
++    b = valuation.cost_block(filas, None, now=AHORA)
++    assert b["unpriced"]["n"] == 1
++    assert b["unpriced"]["ids"] == ["claude-nadie-9"]
++    assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
+ 
+     # Los dos con un modelo sin precio en la propia línea (`at_call`).
+     solas = cost.merge(
+@@ -179,16 +179,16 @@ def test_un_modelo_sin_precio_no_da_cero(tmp_path):
+         log_dir=tmp_path,
+     )
+     assert all(f["caller_origin"] == "line" for f in solas)  # guarda: no tomó el respaldo
+-    b = valoracion.bloque_coste(solas, None, ahora=AHORA)
+-    assert b["cifra"] is None
+-    assert b["motivo"] == valoracion.TODAS_SIN_PRECIO
+-    assert b["sin_precio"]["n"] == 2
++    b = valuation.cost_block(solas, None, now=AHORA)
++    assert b["figure"] is None
++    assert b["reason"] == valuation.ALL_UNPRICED
++    assert b["unpriced"]["n"] == 2
+ 
+ 
+ def test_sin_tabla_y_sin_delegaciones(tmp_path, monkeypatch):
+-    b = valoracion.bloque_coste([], None, ahora=AHORA)
+-    assert b["motivo"] == "sin delegaciones en el periodo"
+-    assert b["cifra"] is None
++    b = valuation.cost_block([], None, now=AHORA)
++    assert b["reason"] == "sin delegaciones en el periodo"
++    assert b["figure"] is None
+ 
+     filas = _fundidas(tmp_path, [_linea()], {"toolu_0000": _relleno()})
+ 
+@@ -196,9 +196,9 @@ def test_sin_tabla_y_sin_delegaciones(tmp_path, monkeypatch):
+         raise ValueError("tabla rota")
+ 
+     monkeypatch.setattr(precios, "cargar_precios", _rota)
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    assert b["motivo"] == valoracion.SIN_TABLA
+-    assert b["cifra"] is None
++    b = valuation.cost_block(filas, None, now=AHORA)
++    assert b["reason"] == valuation.NO_TABLE
++    assert b["figure"] is None
+ 
+ 
+ # --- Desglose y base (REQ-040, REQ-047) ----------------------------------------------------------
+@@ -211,12 +211,12 @@ def test_desglose_por_esfuerzo(tmp_path):
+         "toolu_0001": _relleno(caller_effort="high"),
+         "toolu_0002": _relleno(caller_effort="high"),
+     }
+-    b = valoracion.bloque_coste(_fundidas(tmp_path, lineas, relleno), None, ahora=AHORA)
+-    assert len(b["desglose"]) == 2
+-    por_esfuerzo = {g["esfuerzo"]: g for g in b["desglose"]}
+-    assert por_esfuerzo["high"]["casos"] == 2
+-    assert por_esfuerzo["low"]["casos"] == 1
+-    assert por_esfuerzo["high"]["nombre"] == "Opus 5.5"
++    b = valuation.cost_block(_fundidas(tmp_path, lineas, relleno), None, now=AHORA)
++    assert len(b["breakdown"]) == 2
++    por_esfuerzo = {g["effort"]: g for g in b["breakdown"]}
++    assert por_esfuerzo["high"]["cases"] == 2
++    assert por_esfuerzo["low"]["cases"] == 1
++    assert por_esfuerzo["high"]["name"] == "Opus 5.5"
+ 
+ 
+ def test_imagenes_y_salida_a_fichero_fuera_de_la_base(tmp_path):
+@@ -246,32 +246,32 @@ def test_imagenes_y_salida_a_fichero_fuera_de_la_base(tmp_path):
+         "client": "claude-code",
+     }
+     filas = _fundidas(tmp_path, [_linea(), imagen, a_fichero], {"toolu_0000": _relleno()})
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    assert b["fuera_de_la_base"]["salida_a_fichero"] == 1
+-    assert b["fuera_de_la_base"]["imagenes"] == 1
+-    assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
++    b = valuation.cost_block(filas, None, now=AHORA)
++    assert b["outside_base"]["output_to_file"] == 1
++    assert b["outside_base"]["images"] == 1
++    assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
+     assert b["T"] == 500_000
+ 
+-    assert valoracion.bloque_imagenes(filas) == {"n": 1, "bytes": 250000, "chars_devueltos": 800}
++    assert valuation.images_block(filas) == {"n": 1, "bytes": 250000, "chars_returned": 800}
+ 
+ 
+ def test_los_excluidos_van_a_la_barra_y_no_suman(tmp_path):
+     lineas = [_linea(0), _linea(1, client="mcp"), _linea(2, client="codex-mcp-client")]
+     relleno = {k: _relleno() for k in ("toolu_0000", "toolu_0001", "toolu_0002")}
+-    b = valoracion.bloque_coste(_fundidas(tmp_path, lineas, relleno), None, ahora=AHORA)
+-    assert b["barra"]["excluded"] == 2
+-    assert b["barra"]["excluidas_por_motivo"] == {"no es Claude": 1, "pruebas": 1}
+-    assert b["cifra"] == {"cota_baja": 2.50, "estimacion": 6.50}
++    b = valuation.cost_block(_fundidas(tmp_path, lineas, relleno), None, now=AHORA)
++    assert b["bar"]["excluded"] == 2
++    assert b["bar"]["excluded_by_reason"] == {"no es Claude": 1, "pruebas": 1}
++    assert b["figure"] == {"low_bound": 2.50, "estimate": 6.50}
+ 
+ 
+ def test_el_respaldo_se_nombra_en_la_barra(tmp_path):
+     """Sin relleno ni línea con modelo, viejo y sin transcript: `supuesto`, con el respaldo."""
+     vieja = _linea(ts=(AHORA - timedelta(days=45)).isoformat(timespec="seconds"))
+-    b = valoracion.bloque_coste(cost.merge([vieja], log_dir=tmp_path), None, ahora=AHORA)
+-    assert b["barra"]["assumed"] == 1
+-    assert b["barra"]["con_modelo_supuesto"] == 1
+-    assert (b["respaldo"]["nombre"], b["respaldo"]["hilo"]) == ("Opus 5.5", "subagent")
+-    assert b["n_origen"]["declarado"] == 1
++    b = valuation.cost_block(cost.merge([vieja], log_dir=tmp_path), None, now=AHORA)
++    assert b["bar"]["assumed"] == 1
++    assert b["bar"]["with_assumed_model"] == 1
++    assert (b["fallback"]["name"], b["fallback"]["thread"]) == ("Opus 5.5", "subagent")
++    assert b["n_origin"]["declared"] == 1
+     assert json.dumps(b)  # serializable tal cual para `/api/stats`
+ 
+ 
+@@ -308,5 +308,5 @@ def test_una_fila_en_ventana_va_al_tramo_excluido_como_prueba(tmp_path):
+     filas = _fundidas(tmp_path, lineas, relleno)
+     assert cost.segment(filas[1], now=AHORA, cleanup_days=30) == "excluded"
+     assert cost.segment(filas[0], now=AHORA, cleanup_days=30) != "excluded", "guarda"
+-    b = valoracion.bloque_coste(filas, None, ahora=AHORA)
+-    assert b["barra"]["excluidas_por_motivo"] == {"pruebas": 1}
++    b = valuation.cost_block(filas, None, now=AHORA)
++    assert b["bar"]["excluded_by_reason"] == {"pruebas": 1}

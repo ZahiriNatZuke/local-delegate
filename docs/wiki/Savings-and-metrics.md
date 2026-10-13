@@ -352,16 +352,18 @@ delegué?». Para eso hace falta saber cuántos dólares a precio de lista caben
 es **«sin calibrar»**.
 
 - **Puntos del statusline.** De un registro que escribe tu statusline de Claude Code,
-  `~/.claude/cuota-statusline.jsonl` (una fila por refresco con `ts`, `session_id`, `model`,
+  `~/.claude/quota-statusline.jsonl` o, con el nombre de siempre, `~/.claude/cuota-statusline.jsonl`
+  (si existen los dos, se leen los dos; una fila por refresco con `ts`, `session_id`, `model`,
   `five_hour`, `five_reset`, `seven_day`, `seven_reset`, `cost_usd` y, opcional, `effort`):
   local-delegate **no lo instala**, solo lo lee si existe. De cada ventana sale como mucho un punto:
   cuánto subió el % (Δ%), con las dos filas de una misma sesión porque las sesiones en paralelo
   ven el % desfasado, y cuánto costó a precio de lista lo que hicieron todas las sesiones del
   registro en ese intervalo (Δ$, de los incrementos de `cost_usd`).
   Su capacidad es `C = Δ$ × 100 / Δ%`. Se descartan, y se cuentan por motivo, los puntos con
-  Δ% < 10 (`delta_pequeno`), sin uso local (`sin_uso_local`), con sesiones que gastaban cuota sin
-  estar en el registro, como `claude -p` (`contaminado`), los que se solapan con otro
-  (`solapado`), las filas con un % imposible (`fuera_de_rango`) y los de más de 60 días.
+  Δ% < 10 (`small_delta`), sin uso local (`no_local_use`), con sesiones que gastaban cuota sin
+  estar en el registro, como `claude -p` (`contaminated`), los que se solapan con otro
+  (`overlapping`), las filas con un % imposible (`out_of_range`) y los de más de 60 días
+  (`expired`). El panel los dice en palabras.
 - **Puntos de rechazo.** Cada rechazo de cuota que aparece en los transcripts da un punto con
   Δ% = 100. Solo sirven de **comprobación**: recogen una parte del coste en sesiones grandes, un
   sesgo del orden del propio umbral, así que no entran en el cálculo.
@@ -382,10 +384,11 @@ es **«sin calibrar»**.
   `local-delegate recompute-cost --reset-calibration five_hour` (o `seven_day`) deja fuera
   los puntos anteriores de ese tipo.
 
-Todo punto lleva la marca «cota baja si hubo uso en otras superficies»: claude.ai, otra máquina o
+Todo punto del statusline lleva la marca `low_bound_if_other_surfaces` (cota baja si hubo uso en
+otras superficies): claude.ai, otra máquina o
 Claude Desktop gastan la misma cuota y desde aquí no se ven. En la máquina de referencia, el
 2026-10-06, los dos tipos siguen **sin calibrar** (faltan 3 puntos del statusline: los que había
-salieron `contaminado` o fuera de rango).
+salieron contaminados o fuera de rango).
 
 ## Imágenes
 
@@ -416,8 +419,10 @@ directorio de logs (`LOG_DIR`):
   Una entrada solo se sustituye por otra de cruce mejor. Si de un mes solo existe el fichero viejo,
   se lee traducido y la primera escritura siembra el nuevo desde él, una sola vez; el viejo no se
   toca nunca;
-- `coste-agregados.json`: el cotejo de la tabla de precios, los agregados de `N` por grupo, los
-  puntos de calibración con sus descartes y los reinicios.
+- `cost-aggregates.json` (antes `coste-agregados.json`): el cotejo de la tabla de precios
+  (`check`), los agregados de `N` por grupo (`n_by_month`), los puntos de calibración (`points`)
+  con sus descartes (`discards`) y los reinicios (`resets`). Si solo existe el viejo, se lee
+  traducido y la primera corrida siembra el nuevo desde él, una sola vez; el viejo no se toca.
 
 **Ni texto de conversaciones, ni rutas, ni ids de sesión, ni prompts**: solo números, fechas, ids
 de modelo, niveles de esfuerzo y nombres de motivo (y, como clave del relleno, el `tool_use_id` o
@@ -649,7 +654,7 @@ que todavía convivan clientes HTTP y procesos `stdio`.
 | `GET /` | Dashboard HTML |
 | `GET /api/daemon` | Estado, PID y URLs del daemon HTTP |
 | `GET /api/events?from=&to=&include_tests=` | Eventos en el rango (más recientes primero, tope 5000) + `meta` (incluye `files_read`, `excluded_tests` y `tests_in_range`). Sin `include_tests=1`, sin las pruebas. Sin parámetros: últimos 30 días. `from`/`to` son ISO 8601. Cada fila llega **fundida** con el relleno de `recompute-cost` (o el respaldo) y con su `density`, `family` y `marks` resueltas (y `caller_origin`: `line`, `backfill` o `fallback`): el JS no funde ni resuelve nada |
-| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `coste` (la cifra o el motivo de que no la haya, la barra de cobertura, el respaldo, el origen de `N`, la densidad usada, los modelos sin precio, lo que queda fuera de la base, el desglose y la fecha de la tabla), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `imagenes` (`n`, `bytes`, `chars_devueltos`) y `densidad_tabla`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
+| `GET /api/stats?from=&to=&include_tests=` | Agregados del mismo conjunto que `/api/events` (`excluded_tests`, `tests_in_range` y `open_test_windows` dicen qué se apartó y qué ventanas siguen abiertas) (por tool, por modelo, por origen del cómputo, por cliente, totales): `tokens_context_saved` (el **bruto**, ya sin fallos), `tokens_returned`, `tokens_context_net` (el **neto** del KPI), el desglose `chars_saved_text`, `bytes_saved_image`, `chars_saved_output` y `chars_returned`, `tokens_local_input`, `tokens_generated_local`, `backend_calls` y `estimated_events`. `by_tool`, `by_backend` y `by_client` llevan `tokens_net` junto a `tokens_saved`. Además: `cost` (la cifra o el motivo de que no la haya —`figure` y `reason`—, la barra de cobertura `bar`, el respaldo `fallback`, el origen de `N` `n_origin`, la densidad usada `density`, los modelos sin precio `unpriced`, lo que queda fuera de la base `outside_base`, el desglose `breakdown` y la fecha de la tabla `table`), `quota` (estado por tipo de ventana, `five_hour` y `seven_day`, con `status` `calibrated` o `uncalibrated`, `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning`, `a_pct`, `b_pct` y `pct_reason`; y `has_aggregates` y `command`), `images` (`n`, `bytes`, `chars_returned`) y `density_table`. Los tokens son de Claude, por densidad. **No** aplica el tope de 5000 de `/api/events`: alimenta los KPIs del panel |
 | `GET /api/inflight` | Delegaciones en curso de todas las sesiones (`elapsed_s`, `backend`, `chunk/chunks` y, si la llamada espera dentro de local-delegate, `local_wait` con el motivo: `slot` o `turn`; con `turn`, también `turn_in_use` y `turn_position`) + `last_event_ts` y `now` para el indicador de actividad |
 | `GET /api/backend` | Sondeo del backend: `available`, `models` (con `status`; si no responde, la última lista buena de esa URL con `models_stale: true`), `running` y `running_ok` (si `/running` respondió; solo se pide cuando `/models` respondió), `causa`, `etiqueta` y `detalle` (los tres `null` si está conectado), y `origin`/`host` del endpoint |
 | `GET /api/status` | Versión, catálogo de modelos y tools, y un bloque `backend` con `available`, `models`, `models_stale`, `causa`, `etiqueta`, `detalle`, `origin` y `host` |

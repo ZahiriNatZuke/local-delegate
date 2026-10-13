@@ -667,7 +667,7 @@ _MEDIR_TARJETAS = """() => {
 def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_path, monkeypatch):
     """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
     su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
-    `coste-agregados.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         navegador = _navegador(pw)

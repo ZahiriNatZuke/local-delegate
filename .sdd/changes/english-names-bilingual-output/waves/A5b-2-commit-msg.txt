@@ -1,0 +1,25 @@
+feat(rename): recálculo y valoración en inglés, con cost-aggregates.json sembrado una sola vez y el coste de /api/stats en inglés (ola A5b-2)
+
+- Los módulos `recalcular` y `valoracion` pasan a `recompute` y `valuation` (git mv), con sus
+  constantes, funciones y parámetros en inglés (`read_aggregates`, `write_aggregates`, `run`,
+  `summary_text`, `_point_key`, `cost_block`, `images_block`, `event_cost`…).
+- Los agregados del coste pasan a `cost-aggregates.json`, con claves y valores en inglés (`points`,
+  `source`, `rejection`, `check`, `verdict` `pass|fail`, marcas `low_bound`, `check_only`,
+  `low_bound_if_other_surfaces` y `reset`, motivos de descarte en inglés). Mientras solo exista
+  `coste-agregados.json`, se lee traducido con las tablas de `legacy_names`; la primera corrida de
+  `recompute-cost` siembra el nuevo una sola vez, con la identidad del punto traducida antes de
+  juntar, y el fichero viejo queda intacto.
+- El registro del statusline se lee como `cuota-statusline.jsonl` y como
+  `quota-statusline.jsonl`; si existen los dos, se leen los dos.
+- /api/stats devuelve `cost`, `images` y `density_table` con sus campos en inglés; el JS del panel
+  (incluido el diccionario de motivos de descarte) lee los nombres nuevos y la paridad con node
+  sigue en verde.
+- El resumen de `recompute-cost` dice el veredicto y los motivos de descarte en palabras, en
+  español.
+- Consecuencias mecánicas aprobadas fuera de la lista de la ola: `checks.py` lee `check` y
+  `pass|fail`, `cli.py` llama a `recompute`, y `scripts/dev/capture_dashboard.py` usa los datos
+  nuevos.
+- Tests nuevos en `tests/test_recalcular_legacy.py` (siembra única, gemelo, caducados, marcas,
+  los dos nombres del statusline y resumen), con sus controles positivos.
+- CHANGELOG `[Unreleased]` y wiki (Configuration, Integration-install, Savings-and-metrics y
+  Troubleshooting) al día.

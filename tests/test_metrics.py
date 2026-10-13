@@ -1827,13 +1827,13 @@ def test_una_prueba_marcada_no_cuenta_en_el_panel(tmp_path, monkeypatch):
     assert s["total"]["calls"] == 10
     assert e["meta"]["count"] == 10
     assert s["excluded_tests"] == e["meta"]["excluded_tests"] == 3
-    assert s["imagenes"]["n"] == 0
+    assert s["images"]["n"] == 0
     assert hashlib.sha256(m.log.read_bytes()).hexdigest() == antes
 
 
 def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
-    """Control: mutantes «`bloque_coste` con las filas filtradas» y «`_bloque_cuota` filtra» →
-    fallan las igualdades de `coste` y de `cuota`."""
+    """Control: mutantes «`cost_block` con las filas filtradas» y «`_quota_block` filtra» →
+    fallan las igualdades de `cost` y de `quota`."""
     m = _Mezcla(tmp_path, monkeypatch)
     sin, con = m.get("/api/stats"), m.get("/api/stats", include=True)
     e = m.get("/api/events", include=True)
@@ -1842,11 +1842,11 @@ def test_el_interruptor_las_ensena_y_el_coste_no_cambia(tmp_path, monkeypatch):
     assert con["excluded_tests"] == e["meta"]["excluded_tests"] == 0
     assert con["tests_in_range"] == 3
     assert con["quota"]["five_hour"]["status"] == "calibrated", "guarda: la cuota llega a _load"
-    assert con["coste"] == sin["coste"]
+    assert con["cost"] == sin["cost"]
     assert con["quota"] == sin["quota"]
     # La de ventana es una imagen, que va fuera de la base del coste: quedan la `mcp` y la de banco.
-    assert con["coste"]["barra"]["excluidas_por_motivo"] == {"pruebas": 2}
-    assert (sin["imagenes"]["n"], con["imagenes"]["n"]) == (0, 1)
+    assert con["cost"]["bar"]["excluded_by_reason"] == {"pruebas": 2}
+    assert (sin["images"]["n"], con["images"]["n"]) == (0, 1)
 
 
 def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
@@ -1855,7 +1855,7 @@ def test_codex_sigue_contando_en_el_uso(tmp_path, monkeypatch):
     assert s["total"]["calls"] == 12
     por_cliente = {c["client"]: c["calls"] for c in s["by_client"]}
     assert por_cliente.get("codex-mcp-client") == 2
-    assert s["coste"]["barra"]["excluidas_por_motivo"]["no es Claude"] == 2
+    assert s["cost"]["bar"]["excluded_by_reason"]["no es Claude"] == 2
 
 
 @pytest.mark.parametrize("include", [False, True])

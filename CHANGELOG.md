@@ -88,6 +88,34 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   de cobertura de `/api/stats` son `excluded`, `at_call`, `backfilled`, `pending` y `assumed`
   (antes `excluido`, `al_momento`, `por_relleno`, `pendiente` y `supuesto`). Son datos que el
   servidor calcula al vuelo: no hay nada guardado que convertir.
+- **Los agregados del coste pasan a `cost-aggregates.json`** (antes `coste-agregados.json`), con
+  claves y valores en inglés: `generated`, `cleanup_days`, `check`, `n_by_month`, `points`,
+  `discards`, `resets` y `sources` (antes `generado`, `plazo_dias`, `cotejo`, `n_por_mes`,
+  `puntos`, `descartes`, `reinicios` y `fuentes`). En el cotejo, `date`, `table_version`, `judged`,
+  `outside`, `unpriced` y `verdict`, con `pass` o `fail` (antes `pasa` o `falla`). En cada punto
+  de cuota, `source` (`statusline` o `rejection`, antes `rechazo`), `type`, `start`, `end`, `marks`
+  y `unpriced_requests`. Las marcas pasan a valores de máquina: `low_bound`, `check_only`,
+  `low_bound_if_other_surfaces` y `reset` (antes «cota baja», «solo comprobación», «cota baja si
+  hubo uso en otras superficies» y «reinicio»); y los motivos de descarte, `corrupt_line`,
+  `out_of_range`, `small_delta`, `no_local_use`, `contaminated`, `overlapping`, `expired` y
+  `reset`. Mientras solo exista el fichero viejo, el panel, `doctor` y `recompute-cost` lo leen
+  traducido; la primera corrida de `recompute-cost` siembra el nuevo desde él, una sola vez y con
+  los puntos ya traducidos antes de juntarlos, así que un punto viejo y el mismo punto sacado otra
+  vez de los transcripts cuentan como uno. Desde ahí solo se lee el nuevo, y el viejo queda
+  intacto. El panel y el resumen de `recompute-cost` siguen diciendo los motivos y el veredicto en
+  palabras.
+- **El registro del statusline se busca también como `~/.claude/quota-statusline.jsonl`.** El
+  nombre de siempre, `cuota-statusline.jsonl`, sigue valiendo sin plazo: lo escribe tu statusline,
+  no local-delegate. Si existen los dos, `recompute-cost` lee los dos.
+- **`/api/stats` devuelve el coste como `cost`, las imágenes como `images` y la tabla de densidad
+  como `density_table`** (antes `coste`, `imagenes` y `densidad_tabla`), con sus campos en inglés:
+  `figure` (`low_bound` y `estimate`), `reason`, `events`, `bar` (con `valued`,
+  `with_assumed_model`, `excluded_by_reason` y `cleanup_days`), `fallback` (`model`, `name`,
+  `thread`, `invalid`), `n_origin` (`backfill`, `aggregate` y `declared`), `n_declared`, `density`
+  (`origin`, `families`, `assumed_family` y `family_density`), `unpriced`, `outside_base`
+  (`images` y `output_to_file`), `breakdown` (`model`, `name`, `thread`, `effort`, `cases`,
+  `low_bound` y `estimate`; el esfuerzo sin dato es `no_data`), `table` (`consulted` y `source`) y
+  `command`; en las imágenes, `chars_returned`. No cambia nada de lo que se ve en el panel.
 
 ## [0.34.0] - 2026-10-08
 

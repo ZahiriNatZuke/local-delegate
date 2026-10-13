@@ -227,43 +227,43 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   }, {calls: 0, backend_calls: 0, tokens_in: 0, tokens_out: 0, saved: 0, returned: 0,
       errors: 0, img_n: 0, img_bytes: 0, img_devueltos: 0});
 
-  // Coste equivalente y cuota de ejemplo. Salen de correr `valoracion.bloque_coste` y
-  // `quota.status` de verdad sobre un log y un `coste-agregados.json` sintéticos (sin datos de
+  // Coste equivalente y cuota de ejemplo. Salen de correr `valuation.cost_block` y
+  // `quota.status` de verdad sobre un log y un `cost-aggregates.json` sintéticos (sin datos de
   // nadie): así la forma es la que sirve `/api/stats` y las cifras cuadran entre sí (la cifra es
   // la suma del desglose, la barra suma las valoradas). La cuota sale «sin calibrar», que es lo
   // que verá casi todo el mundo: nunca se enseña un % sin calibración.
-  const COSTE = {cifra: {cota_baja: 6.87, estimacion: 27.4}, motivo: null, eventos: 98,
+  const COSTE = {figure: {low_bound: 6.87, estimate: 27.4}, reason: null, events: 98,
     T: 1241362,
-    barra: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
-      valoradas: 98, con_modelo_supuesto: 4,
-      excluidas_por_motivo: {'no es Claude': 15, pruebas: 7}, plazo_dias: 30},
-    respaldo: {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent',
-      invalido: false, variable: 'LOCAL_DELEGATE_COSTE_RESPALDO'},
-    n_origen: {relleno: 0, agregado: 0, declarado: 98}, n_declarado: {main: 127, subagent: 40},
-    densidad: {origen: {measured: 74, unnumbered: 24, conservative: 0}, familias: {nueva: 98},
-      familia_supuesta: 0, densidad_de_la_familia: 0},
-    sin_precio: {n: 0, ids: []},
-    fuera_de_la_base: {imagenes: stats.img_n, salida_a_fichero: 0},
-    desglose: [
-      {modelo: 'claude-opus-5', nombre: 'Opus 5', hilo: 'main', esfuerzo: 'high', casos: 17,
-       T: 191044, cota_baja: 1.91, estimacion: 14.04},
-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'high',
-       casos: 69, T: 880897, cota_baja: 4.4, estimacion: 11.45},
-      {modelo: 'claude-sonnet-5-5', nombre: 'Sonnet 5.5', hilo: 'subagent', esfuerzo: 'medium',
-       casos: 8, T: 117678, cota_baja: 0.29, estimacion: 1.24},
-      {modelo: 'claude-opus-5-5', nombre: 'Opus 5.5', hilo: 'subagent', esfuerzo: 'sin dato',
-       casos: 4, T: 51743, cota_baja: 0.26, estimacion: 0.67},
+    bar: {excluded: 22, at_call: 94, backfilled: 0, pending: 4, assumed: 0,
+      valued: 98, with_assumed_model: 4,
+      excluded_by_reason: {'no es Claude': 15, pruebas: 7}, cleanup_days: 30},
+    fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
+      invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
+    n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},
+    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {nueva: 98},
+      assumed_family: 0, family_density: 0},
+    unpriced: {n: 0, ids: []},
+    outside_base: {images: stats.img_n, output_to_file: 0},
+    breakdown: [
+      {model: 'claude-opus-5', name: 'Opus 5', thread: 'main', effort: 'high', cases: 17,
+       T: 191044, low_bound: 1.91, estimate: 14.04},
+      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'high',
+       cases: 69, T: 880897, low_bound: 4.4, estimate: 11.45},
+      {model: 'claude-sonnet-5-5', name: 'Sonnet 5.5', thread: 'subagent', effort: 'medium',
+       cases: 8, T: 117678, low_bound: 0.29, estimate: 1.24},
+      {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent', effort: 'no_data',
+       cases: 4, T: 51743, low_bound: 0.26, estimate: 0.67},
     ],
-    tabla: {consultado: PRECIOS_CONSULTADO,
-      fuente: 'https://platform.claude.com/docs/en/about-claude/pricing'},
-    comando: 'local-delegate recalcular-coste'};
+    table: {consulted: PRECIOS_CONSULTADO,
+      source: 'https://platform.claude.com/docs/en/about-claude/pricing'},
+    command: 'local-delegate recompute-cost'};
   const CUOTA = {
     five_hour: {drift: false, points: 1, status: 'uncalibrated',
       reason: 'faltan 2 puntos del statusline', rejection_points: 1,
-      discards: {contaminado: 1, delta_pequeno: 2}, reset: null},
+      discards: {contaminated: 1, small_delta: 2}, reset: null},
     seven_day: {drift: false, points: 0, status: 'uncalibrated',
       reason: 'faltan 3 puntos del statusline', rejection_points: 0,
-      discards: {delta_pequeno: 3}, reset: null},
+      discards: {small_delta: 3}, reset: null},
     has_aggregates: true, command: 'local-delegate recompute-cost'};
 
   const MOCKS = {
@@ -330,9 +330,9 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       ],
       // Las tres tarjetas de coste-api-y-cuota se esconden si falta su clave: sin ellas la
       // captura saldría como antes. «Imágenes» se deriva de los mismos eventos de ejemplo.
-      coste: COSTE, quota: CUOTA,
-      imagenes: {n: stats.img_n, bytes: stats.img_bytes, chars_devueltos: stats.img_devueltos},
-      densidad_tabla: DENSIDAD},
+      cost: COSTE, quota: CUOTA,
+      images: {n: stats.img_n, bytes: stats.img_bytes, chars_returned: stats.img_devueltos},
+      density_table: DENSIDAD},
     // La tarjeta de hooks lee de aquí, y este mock **no es cosmético**: `/api/hooks` se quedó
     // fuera de la lista y el endpoint llegaba al servidor real, así que la captura publicaba la
     // telemetría de quien la regeneraba —conteos por categoría de su propia sesión— justo lo que
