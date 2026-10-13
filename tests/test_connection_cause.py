@@ -33,12 +33,13 @@ _REQUEST = httpx2.Request("GET", "http://pc.tailnet.ts.net:9292/v1/models")
 
 def _wrapped(cls: type[BaseException], root: BaseException) -> BaseException:
     """`cls` lanzada con `raise … from root`, como hace `httpcore2` al traducir el `OSError`."""
-    with pytest.raises(cls) as info:
+    try:
         try:
             raise root
         except BaseException as original:
             raise cls("fallo de prueba") from original
-    return info.value
+    except cls as wrapper:
+        return wrapper
 
 
 def _http_status(code: int) -> httpx2.HTTPStatusError:
