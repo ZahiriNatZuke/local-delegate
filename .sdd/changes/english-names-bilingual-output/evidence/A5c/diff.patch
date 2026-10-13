@@ -1,0 +1,2246 @@
+diff --git a/.github/workflows/vigilante-precios.yml b/.github/workflows/vigilante-precios.yml
+index ff88dc1..815c090 100644
+--- a/.github/workflows/vigilante-precios.yml
++++ b/.github/workflows/vigilante-precios.yml
+@@ -3,7 +3,7 @@ name: Vigilante de precios
+ # Mira cada semana dos páginas oficiales y abre un PR cuando cambian (REQ-020 a REQ-025 de
+ # `coste-api-y-cuota`):
+ #
+-#   - `precios`: la tabla «Model pricing», contra `src/local_delegate/resources/datos/precios.json`;
++#   - `precios`: la tabla «Model pricing», contra `src/local_delegate/resources/data/prices.json`;
+ #   - `limites`: el artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt`.
+ #
+ # Es el ÚNICO workflow con permisos de escritura, y por eso va aparte (patrón de vendor-audit.yml):
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a75295d..69a7916 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -116,6 +116,27 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
+   (`images` y `output_to_file`), `breakdown` (`model`, `name`, `thread`, `effort`, `cases`,
+   `low_bound` y `estimate`; el esfuerzo sin dato es `no_data`), `table` (`consulted` y `source`) y
+   `command`; en las imágenes, `chars_returned`. No cambia nada de lo que se ve en el panel.
++- **Las tablas de precios y de densidad del paquete pasan a `resources/data/prices.json` y
++  `resources/data/density.json`** (antes `resources/datos/precios.json` y `densidad.json`), con
++  claves en inglés. En la de precios, `source`, `consulted`, `web_search_per_1000` y `models`, y en
++  cada modelo `input`, `cache_read`, `output`, `family` y `supports_effort` (antes `fuente`,
++  `consultado`, `busqueda_web_por_1000`, `modelos`, `entrada`, `lectura`, `salida`, `familia` y
++  `admite_esfuerzo`); `w5m` y `w1h` no cambian. En la de densidad, `measured_on`, `families` y
++  `measured_with` (antes `medido`, `familias` y `medido_con`), las columnas `unnumbered` y
++  `read_format` (antes `sin_numerar` y `formato_read`) y las clases de contenido `prose`, `code`,
++  `log`, `structured`, `diff` y, fuera de la tabla, `other` (antes `prosa`, `codigo`,
++  `estructurado` y `otro`). Las familias de tokenizador son `new` y `previous` (antes `nueva` y
++  `anterior`). Viajan con el código que las lee, así que no hay nada guardado que convertir.
++- **Por eso cambian también `/api/stats` y `/api/events`:** `density_table` trae las claves nuevas
++  de `density.json`, `cost.density.families` cuenta por `new` y `previous`, y el campo `family` de
++  cada fila de `/api/events` vale `new` o `previous`. El panel sigue diciendo «nueva» y
++  «anterior».
++- **El módulo `precios` pasa a `pricing`** (`load_prices`, `load_density`, `normalize_id`,
++  `entry`, `family`, `check_rows` y `verdict`), y el cotejo responde `inside`, `outside` o
++  `unpriced` por fila y `pass` o `fail` de veredicto. `cost-aggregates.json` ya guardaba el
++  veredicto como `pass` o `fail`: su formato no cambia.
++- **`vendor.json` documenta el vendorizado con `_about` y `_provenance`** (antes `_acerca_de` y
++  `_procedencia`). `scripts/check_vendor.py` no las lee: la auditoría no cambia.
+ 
+ ## [0.34.0] - 2026-10-08
+ 
+diff --git a/docs/wiki/Repo-hardening.md b/docs/wiki/Repo-hardening.md
+index 6dc339e..6d50801 100644
+--- a/docs/wiki/Repo-hardening.md
++++ b/docs/wiki/Repo-hardening.md
+@@ -368,7 +368,7 @@ al actualizar la versión, que es lo que documenta el procedimiento de arriba.
+ 
+ El equivalente a precio de API del panel (ver
+ [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) sale de una tabla
+-de precios que viaja **en el paquete** (`src/local_delegate/resources/datos/precios.json`): el
++de precios que viaja **en el paquete** (`src/local_delegate/resources/data/prices.json`): el
+ panel no usa la red para calcular. Una tabla así se queda vieja en silencio, y por eso hay un
+ vigilante. Sigue el patrón de `vendor-audit.yml`: workflow propio con cron y un script de **solo
+ stdlib** (`scripts/vigilante_precios.py`), sin instalar nada. Es el **único** sitio del proyecto
+@@ -376,7 +376,7 @@ que usa la red para esto.
+ 
+ | Job | Qué mira | Qué hace si cambia |
+ |---|---|---|
+-| `precios` | la tabla «Model pricing» de la página oficial, contra `precios.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consultado` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
++| `precios` | la tabla «Model pricing» de la página oficial, contra `prices.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consulted` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
+ | `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
+ 
+ **Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
+@@ -414,7 +414,7 @@ de seguridad que añaden.
+ 
+ Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo en la rama
+ `vigilante/ensayo`: una marca `_ensayo` con el id del run, que la carga de la tabla ignora (no se
+-toca `consultado`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
++toca `consulted`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
+ sirve para probar el circuito entero en GitHub, y se cierra sin mezclar.
+ 
+ ## Qué se publica y qué no
+diff --git a/docs/wiki/Savings-and-metrics.md b/docs/wiki/Savings-and-metrics.md
+index c5cb62a..bc0735d 100644
+--- a/docs/wiki/Savings-and-metrics.md
++++ b/docs/wiki/Savings-and-metrics.md
+@@ -179,7 +179,7 @@ tokens de bruto con `÷ 4`, un −32 %); contar en tokens de Claude de verdad lo
+ ### De caracteres a tokens de Claude
+ 
+ Cuántos caracteres caben en un token depende del **tokenizador** y del **tipo de contenido**. El
+-paquete trae una tabla de densidad (`resources/datos/densidad.json`), en caracteres por token,
++paquete trae una tabla de densidad (`resources/data/density.json`), en caracteres por token,
+ medida el 2026-10-06 con llamadas reales a Claude Code (`claude -p`) sobre textos públicos de este
+ repo: la entrada que reporta `usage`, menos la de una llamada de control vacía, entre los
+ caracteres del texto:
+@@ -201,12 +201,12 @@ Para cada delegación, la regla es una sola y vive en Python (`cost.resolve_dens
+ 
+ - **familia**: la del modelo que pidió la delegación (`caller_model`); sin modelo, la del
+   [respaldo](#cobertura-y-respaldo); un modelo que no está en la tabla de precios se trata como
+-  `nueva` y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
++  familia nueva (`new`) y lleva la marca `assumed_family` (familia supuesta). Un modelo con familia conocida pero
+   que no está entre los medidos lleva la marca `family_density` (densidad de la familia);
+ - **clase de contenido**, sin leer el texto: primero por la tool (`local_lint_summary` → log,
+   `local_commit_msg` → diff, `local_explain_code` → código) y si no por la extensión del `path`
+   (`.md .txt .rst .html` → prosa; `.py .js .ts .ps1 .sh …` → código; `.json .jsonl .yaml .toml
+-  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `otro`);
++  .lock .csv .xml .ini` → estructurado; `.log` → log; `.diff .patch` → diff; lo demás, `other`);
+ - **columna**: formato `Read` si la entrada fue por `path`, sin numerar si no. Lo devuelto a
+   Claude va siempre sin numerar (estructurado en `local_extract`, código en `local_boilerplate`,
+   prosa en el resto);
+@@ -331,9 +331,9 @@ céntimo sobre la misma ventana.
+ 
+ ### La tabla de precios
+ 
+-Viaja en el paquete (`resources/datos/precios.json`): precio de entrada, salida, escritura de caché
+-a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `fuente` (la
+-página oficial) y `consultado` (la fecha del último cambio). Se busca por id exacto, quitando antes
++Viaja en el paquete (`resources/data/prices.json`): precio de entrada, salida, escritura de caché
++a 5 min y a 1 h, lectura de caché y familia de tokenizador de cada modelo, con la `source` (la
++página oficial) y `consulted` (la fecha del último cambio). Se busca por id exacto, quitando antes
+ la fecha y el sufijo `[1m]`. **Ni la carga de la tabla ni `/api/stats` usan la red**: la tabla la
+ mantiene al día el [vigilante semanal](Repo-hardening.md#vigilante-de-precios-y-límites), que
+ abre un PR cuando cambia la página.
+diff --git a/scripts/check_vendor.py b/scripts/check_vendor.py
+index 0fa6f1b..6442228 100644
+--- a/scripts/check_vendor.py
++++ b/scripts/check_vendor.py
+@@ -44,20 +44,20 @@ import urllib.error
+ import urllib.request
+ from pathlib import Path
+ 
+-RAIZ = Path(__file__).resolve().parents[1]
+-MANIFIESTO_POR_DEFECTO = RAIZ / "src" / "local_delegate" / "resources" / "vendor" / "vendor.json"
++ROOT = Path(__file__).resolve().parents[1]
++DEFAULT_MANIFEST = ROOT / "src" / "local_delegate" / "resources" / "vendor" / "vendor.json"
+ 
+ OSV_URL = "https://api.osv.dev/v1/query"
+ NPM_URL = "https://registry.npmjs.org/{name}/latest"
+ TIMEOUT_S = 15
+ 
+ OK = 0
+-FALLO_INTEGRIDAD = 1
+-FALLO_VULNERABILIDAD = 2
+-FALLO_MANIFIESTO = 3
++INTEGRITY_FAILURE = 1
++VULNERABILITY_FAILURE = 2
++MANIFEST_FAILURE = 3
+ 
+ 
+-class ServicioNoDisponible(Exception):
++class ServiceUnavailable(Exception):
+     """La red falló, o el servicio devolvió algo que no se puede interpretar.
+ 
+     Se trata igual una caída que una respuesta malformada: en ambos casos no sabemos nada, y no
+@@ -68,136 +68,136 @@ class ServicioNoDisponible(Exception):
+ # --- red ---------------------------------------------------------------------------------------
+ # Toda la salida a internet pasa por aquí. Los tests sustituyen esta función y por eso nunca tocan
+ # la red de verdad.
+-def _pedir_json(url: str, payload: dict | None = None) -> dict:
+-    datos = json.dumps(payload).encode("utf-8") if payload is not None else None
++def _fetch_json(url: str, payload: dict | None = None) -> dict:
++    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+     # Las URLs son constantes https de este módulo, nunca entrada de usuario.
+-    peticion = urllib.request.Request(
++    request = urllib.request.Request(
+         url,
+-        data=datos,
++        data=data,
+         headers={"Content-Type": "application/json", "User-Agent": "local-delegate-vendor-audit"},
+     )
+     try:
+-        with urllib.request.urlopen(peticion, timeout=TIMEOUT_S) as respuesta:
+-            cuerpo = respuesta.read().decode("utf-8")
++        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
++            body = response.read().decode("utf-8")
+     except (urllib.error.URLError, OSError, TimeoutError) as exc:
+-        raise ServicioNoDisponible(str(exc)) from exc
++        raise ServiceUnavailable(str(exc)) from exc
+     try:
+-        cuerpo = json.loads(cuerpo)
++        body = json.loads(body)
+     except json.JSONDecodeError as exc:
+-        raise ServicioNoDisponible(f"respuesta que no es JSON: {exc}") from exc
+-    if not isinstance(cuerpo, dict):
+-        raise ServicioNoDisponible("respuesta JSON que no es un objeto")
+-    return cuerpo
++        raise ServiceUnavailable(f"respuesta que no es JSON: {exc}") from exc
++    if not isinstance(body, dict):
++        raise ServiceUnavailable("respuesta JSON que no es un objeto")
++    return body
+ 
+ 
+-def consultar_osv(nombre: str, version: str, ecosistema: str) -> list[dict]:
+-    """Vulnerabilidades conocidas de esa versión. Lanza `ServicioNoDisponible` si no se sabe."""
+-    respuesta = _pedir_json(
+-        OSV_URL, {"package": {"name": nombre, "ecosystem": ecosistema}, "version": version}
++def query_osv(name: str, version: str, ecosystem: str) -> list[dict]:
++    """Vulnerabilidades conocidas de esa versión. Lanza `ServiceUnavailable` si no se sabe."""
++    response = _fetch_json(
++        OSV_URL, {"package": {"name": name, "ecosystem": ecosystem}, "version": version}
+     )
+-    vulns = respuesta.get("vulns", [])
++    vulns = response.get("vulns", [])
+     if not isinstance(vulns, list):
+-        raise ServicioNoDisponible("OSV devolvió un campo `vulns` que no es una lista")
++        raise ServiceUnavailable("OSV devolvió un campo `vulns` que no es una lista")
+     return vulns
+ 
+ 
+-def consultar_npm(nombre: str) -> str:
+-    """Última versión publicada. Lanza `ServicioNoDisponible` si no se sabe."""
+-    respuesta = _pedir_json(NPM_URL.format(name=nombre))
+-    version = respuesta.get("version")
++def query_npm(name: str) -> str:
++    """Última versión publicada. Lanza `ServiceUnavailable` si no se sabe."""
++    response = _fetch_json(NPM_URL.format(name=name))
++    version = response.get("version")
+     if not isinstance(version, str) or not version:
+-        raise ServicioNoDisponible("npm no devolvió un campo `version` utilizable")
++        raise ServiceUnavailable("npm no devolvió un campo `version` utilizable")
+     return version
+ 
+ 
+-def _clave_version(version: str) -> tuple[int, ...] | None:
++def _version_key(version: str) -> tuple[int, ...] | None:
+     """`4.4.1` -> `(4, 4, 1)`. `None` si no es comparable (prerelease, formato raro)."""
+-    partes = version.split("-")[0].split(".")
+-    if not partes:
++    parts = version.split("-")[0].split(".")
++    if not parts:
+         return None
+     try:
+-        return tuple(int(p) for p in partes)
++        return tuple(int(p) for p in parts)
+     except ValueError:
+         return None
+ 
+ 
+ # --- integridad (offline) ----------------------------------------------------------------------
+-def cargar_manifiesto(ruta: Path) -> dict:
+-    contenido = json.loads(ruta.read_text(encoding="utf-8"))
+-    if not isinstance(contenido, dict) or not isinstance(contenido.get("files"), list):
++def load_manifest(path: Path) -> dict:
++    content = json.loads(path.read_text(encoding="utf-8"))
++    if not isinstance(content, dict) or not isinstance(content.get("files"), list):
+         # ValueError y no TypeError (TRY004): quien llama recibe un fichero, no un objeto de un
+         # tipo equivocado — el problema es que su *contenido* no sirve, y `main` lo trata igual
+         # que un JSON roto o un fichero ilegible.
+         raise ValueError("el manifiesto no tiene una lista `files`")  # noqa: TRY004
+-    return contenido
++    return content
+ 
+ 
+-def comprobar_integridad(manifiesto: dict, directorio: Path) -> list[str]:
++def check_integrity(manifest: dict, directory: Path) -> list[str]:
+     """Errores de integridad. Lista vacía = todo cuadra. No toca la red."""
+-    errores: list[str] = []
+-    declarados: set[str] = set()
++    errors: list[str] = []
++    declared: set[str] = set()
+ 
+-    for entrada in manifiesto["files"]:
+-        nombre_fichero = entrada.get("file")
+-        if not nombre_fichero:
+-            errores.append("hay una entrada del manifiesto sin campo `file`")
++    for entry in manifest["files"]:
++        file_name = entry.get("file")
++        if not file_name:
++            errors.append("hay una entrada del manifiesto sin campo `file`")
+             continue
+-        declarados.add(nombre_fichero)
++        declared.add(file_name)
+         # La licencia se declara para que el chequeo de sincronía no la vea como intrusa, pero su
+         # contenido no se hashea: no es código que se sirva.
+-        if entrada.get("licenseFile"):
+-            declarados.add(entrada["licenseFile"])
++        if entry.get("licenseFile"):
++            declared.add(entry["licenseFile"])
+ 
+-        ruta = directorio / nombre_fichero
+-        if not ruta.is_file():
+-            errores.append(f"{nombre_fichero}: declarado en el manifiesto pero NO existe en disco")
++        path = directory / file_name
++        if not path.is_file():
++            errors.append(f"{file_name}: declarado en el manifiesto pero NO existe en disco")
+             continue
+ 
+-        datos = ruta.read_bytes()
+-        real = hashlib.sha256(datos).hexdigest()
+-        esperado = entrada.get("sha256")
+-        if real != esperado:
+-            mensaje = (
+-                f"{nombre_fichero}: el sha256 no coincide.\n"
+-                f"    esperado: {esperado}\n"
++        data = path.read_bytes()
++        real = hashlib.sha256(data).hexdigest()
++        expected = entry.get("sha256")
++        if real != expected:
++            message = (
++                f"{file_name}: el sha256 no coincide.\n"
++                f"    esperado: {expected}\n"
+                 f"    real:     {real}\n"
+-                f"    ({len(datos)} bytes en disco, {entrada.get('bytes')} declarados)"
++                f"    ({len(data)} bytes en disco, {entry.get('bytes')} declarados)"
+             )
+             # La causa más probable en Windows no es un fichero adulterado: es git convirtiendo
+             # los LF en CRLF al hacer checkout (`core.autocrlf=true`, el valor por defecto de Git
+             # for Windows). Decirlo aquí ahorra buscar un ataque donde solo hay un fin de línea.
+-            if b"\r\n" in datos and len(datos) > (entrada.get("bytes") or 0):
+-                mensaje += (
++            if b"\r\n" in data and len(data) > (entry.get("bytes") or 0):
++                message += (
+                     "\n    PISTA: el fichero tiene CRLF y pesa de más. Casi seguro que git te lo"
+                     "\n    normalizó al clonar. Comprueba que `.gitattributes` marca este"
+                     "\n    directorio con `-text` y vuelve a hacer checkout del fichero."
+                 )
+-            errores.append(mensaje)
+-        elif entrada.get("bytes") is not None and len(datos) != entrada["bytes"]:
++            errors.append(message)
++        elif entry.get("bytes") is not None and len(data) != entry["bytes"]:
+             # Con el hash bueno el tamaño no puede diferir; si difiere, el manifiesto miente.
+-            errores.append(
+-                f"{nombre_fichero}: el hash cuadra pero el tamaño declarado no "
+-                f"({entrada['bytes']} frente a {len(datos)} reales)"
++            errors.append(
++                f"{file_name}: el hash cuadra pero el tamaño declarado no "
++                f"({entry['bytes']} frente a {len(data)} reales)"
+             )
+ 
+     # Un fichero vendorizado sin declarar es exactamente el punto ciego que esto viene a cerrar.
+-    presentes = {p.name for p in directorio.iterdir() if p.is_file()}
+-    intrusos = sorted(presentes - declarados - {"vendor.json"})
+-    for intruso in intrusos:
+-        errores.append(f"{intruso}: está en `vendor/` pero NO figura en el manifiesto")
++    present = {p.name for p in directory.iterdir() if p.is_file()}
++    intruders = sorted(present - declared - {"vendor.json"})
++    for intruder in intruders:
++        errors.append(f"{intruder}: está en `vendor/` pero NO figura en el manifiesto")
+ 
+-    return errores
++    return errors
+ 
+ 
+ # --- informe -----------------------------------------------------------------------------------
+-def _escribir_summary(lineas: list[str]) -> None:
++def _write_summary(lines: list[str]) -> None:
+     """Vuelca el informe al summary del job, si estamos en Actions."""
+-    destino = os.environ.get("GITHUB_STEP_SUMMARY")
+-    if not destino:
++    target = os.environ.get("GITHUB_STEP_SUMMARY")
++    if not target:
+         return
+     try:
+-        with open(destino, "a", encoding="utf-8") as fh:
+-            fh.write("\n".join(lineas) + "\n")
++        with open(target, "a", encoding="utf-8") as fh:
++            fh.write("\n".join(lines) + "\n")
+     except OSError:
+         pass  # el summary es un extra; no vale la pena tumbar el job por no poder escribirlo
+ 
+@@ -212,93 +212,93 @@ def main(argv: list[str] | None = None) -> int:
+     parser.add_argument(
+         "--manifest",
+         type=Path,
+-        default=MANIFIESTO_POR_DEFECTO,
++        default=DEFAULT_MANIFEST,
+         help="ruta del manifiesto (por defecto, el del paquete)",
+     )
+     args = parser.parse_args(argv)
+ 
+-    manifiesto_ruta: Path = args.manifest
++    manifest_path: Path = args.manifest
+     try:
+-        manifiesto = cargar_manifiesto(manifiesto_ruta)
++        manifest = load_manifest(manifest_path)
+     except (OSError, ValueError, json.JSONDecodeError) as exc:
+-        print(f"FALLO: no se pudo leer el manifiesto {manifiesto_ruta}: {exc}")
+-        return FALLO_MANIFIESTO
+-
+-    directorio = manifiesto_ruta.parent
+-    lineas: list[str] = ["## Auditoría del vendorizado"]
+-    salida = OK
+-
+-    errores = comprobar_integridad(manifiesto, directorio)
+-    if errores:
+-        salida = FALLO_INTEGRIDAD
+-        lineas.append("")
+-        lineas.append("**INTEGRIDAD ROTA.** El contenido vendorizado no es el declarado:")
+-        lineas.extend(f"- {e}" for e in errores)
+-        lineas.append("")
+-        lineas.append(
++        print(f"FALLO: no se pudo leer el manifiesto {manifest_path}: {exc}")
++        return MANIFEST_FAILURE
++
++    directory = manifest_path.parent
++    lines: list[str] = ["## Auditoría del vendorizado"]
++    out = OK
++
++    errors = check_integrity(manifest, directory)
++    if errors:
++        out = INTEGRITY_FAILURE
++        lines.append("")
++        lines.append("**INTEGRIDAD ROTA.** El contenido vendorizado no es el declarado:")
++        lines.extend(f"- {e}" for e in errors)
++        lines.append("")
++        lines.append(
+             "Si el cambio es intencionado, actualiza `vendor.json` siguiendo "
+             "`docs/wiki/Repo-hardening.md`. Si no lo es, **investígalo antes de tocar nada**."
+         )
+     else:
+-        lineas.append("")
+-        lineas.append("- Integridad: OK, cada fichero coincide con su sha256 declarado.")
++        lines.append("")
++        lines.append("- Integridad: OK, cada fichero coincide con su sha256 declarado.")
+ 
+     if args.offline:
+-        lineas.append("- Red: omitida (`--offline`).")
+-        for linea in lineas:
+-            print(linea)
+-        _escribir_summary(lineas)
+-        return salida
+-
+-    for entrada in manifiesto["files"]:
+-        nombre = entrada.get("name")
+-        version = entrada.get("version")
+-        ecosistema = entrada.get("ecosystem", "npm")
+-        if not nombre or not version:
++        lines.append("- Red: omitida (`--offline`).")
++        for line in lines:
++            print(line)
++        _write_summary(lines)
++        return out
++
++    for entry in manifest["files"]:
++        name = entry.get("name")
++        version = entry.get("version")
++        ecosystem = entry.get("ecosystem", "npm")
++        if not name or not version:
+             continue
+ 
+         try:
+-            vulns = consultar_osv(nombre, version, ecosistema)
+-        except ServicioNoDisponible as exc:
+-            lineas.append(f"- AVISO: no se pudo consultar OSV para `{nombre}` {version}: {exc}")
++            vulns = query_osv(name, version, ecosystem)
++        except ServiceUnavailable as exc:
++            lines.append(f"- AVISO: no se pudo consultar OSV para `{name}` {version}: {exc}")
+         else:
+             if vulns:
+                 # La integridad rota manda: es el diagnóstico más grave y el más fiable.
+-                if salida == OK:
+-                    salida = FALLO_VULNERABILIDAD
++                if out == OK:
++                    out = VULNERABILITY_FAILURE
+                 ids = ", ".join(str(v.get("id", "?")) for v in vulns)
+-                lineas.append("")
+-                lineas.append(
+-                    f"**VULNERABILIDAD.** OSV reporta {len(vulns)} para `{nombre}` {version}: {ids}"
++                lines.append("")
++                lines.append(
++                    f"**VULNERABILIDAD.** OSV reporta {len(vulns)} para `{name}` {version}: {ids}"
+                 )
+-                lineas.append("")
++                lines.append("")
+             else:
+-                lineas.append(f"- CVEs: OSV no conoce ninguna para `{nombre}` {version}.")
++                lines.append(f"- CVEs: OSV no conoce ninguna para `{name}` {version}.")
+ 
+         try:
+-            ultima = consultar_npm(nombre)
+-        except ServicioNoDisponible as exc:
+-            lineas.append(f"- AVISO: no se pudo consultar npm para `{nombre}`: {exc}")
++            latest = query_npm(name)
++        except ServiceUnavailable as exc:
++            lines.append(f"- AVISO: no se pudo consultar npm para `{name}`: {exc}")
+             continue
+ 
+-        actual_k, ultima_k = _clave_version(version), _clave_version(ultima)
+-        if actual_k is None or ultima_k is None:
+-            lineas.append(
+-                f"- AVISO: no se pudieron comparar las versiones de `{nombre}` "
+-                f"(vendorizada {version}, publicada {ultima})."
++        current_k, latest_k = _version_key(version), _version_key(latest)
++        if current_k is None or latest_k is None:
++            lines.append(
++                f"- AVISO: no se pudieron comparar las versiones de `{name}` "
++                f"(vendorizada {version}, publicada {latest})."
+             )
+-        elif ultima_k > actual_k:
+-            lineas.append(
+-                f"- AVISO: `{nombre}` vendorizado en **{version}**, publicado **{ultima}**. "
++        elif latest_k > current_k:
++            lines.append(
++                f"- AVISO: `{name}` vendorizado en **{version}**, publicado **{latest}**. "
+                 "No rompe el CI; actualizarlo es un cambio aparte."
+             )
+         else:
+-            lineas.append(f"- Versión: `{nombre}` {version} está al día.")
++            lines.append(f"- Versión: `{name}` {version} está al día.")
+ 
+-    for linea in lineas:
+-        print(linea)
+-    _escribir_summary(lineas)
+-    return salida
++    for line in lines:
++        print(line)
++    _write_summary(lines)
++    return out
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/scripts/dev/capture_dashboard.py b/scripts/dev/capture_dashboard.py
+index 99b0586..a101210 100755
+--- a/scripts/dev/capture_dashboard.py
++++ b/scripts/dev/capture_dashboard.py
+@@ -130,23 +130,23 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+   // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolve_density`
+   // en Python); el JS del panel solo divide. Sin `density`, `tokensClaude` da 0 y las series por
+   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
+-  // `nueva`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
+-  const DENS = DENSIDAD.familias.nueva;
++  // `new`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
++  const DENS = DENSIDAD.families.new;
+   const CLASE_TOOL = {local_lint_summary: 'log', local_commit_msg: 'diff',
+-    local_explain_code: 'codigo'};
++    local_explain_code: 'code'};
+   const celda = (columna, clase) => {
+     if (DENS[columna][clase]) return [DENS[columna][clase], 'measured'];
+-    return [DENS.sin_numerar[clase], 'unnumbered'];
++    return [DENS.unnumbered[clase], 'unnumbered'];
+   };
+   const densidadDe = (tool, porPath) => {
+     if (tool === 'local_describe_image') return {text: null, returned: null, output: null};
+-    const clase = CLASE_TOOL[tool] || 'prosa';
+-    const devuelta = tool === 'local_extract' ? 'estructurado'
+-      : (tool === 'local_boilerplate' ? 'codigo' : 'prosa');
++    const clase = CLASE_TOOL[tool] || 'prose';
++    const devuelta = tool === 'local_extract' ? 'structured'
++      : (tool === 'local_boilerplate' ? 'code' : 'prose');
+     return {
+-      text: porPath ? celda('formato_read', clase) : [DENS.sin_numerar[clase], 'measured'],
+-      returned: [DENS.sin_numerar[devuelta], 'measured'],
+-      output: [DENS.sin_numerar[tool === 'local_boilerplate' ? 'codigo' : 'prosa'], 'measured'],
++      text: porPath ? celda('read_format', clase) : [DENS.unnumbered[clase], 'measured'],
++      returned: [DENS.unnumbered[devuelta], 'measured'],
++      output: [DENS.unnumbered[tool === 'local_boilerplate' ? 'code' : 'prose'], 'measured'],
+     };
+   };
+   const aTokens = (cantidad, c) => (c ? Math.floor(cantidad * 100 / c[0]) : 0);
+@@ -174,7 +174,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+         tokens_in: Math.floor(chars / 4), tokens_out: 120 + Math.floor(rnd() * 400),
+         raw_len: chars, ...(chunks > 1 ? {chunks} : {}),
+         ...(path ? {path: 'D:\\\\docs\\\\informe-' + (i % 7) + '.md'} : {}),
+-        family: 'nueva', density: densidadDe(tool, path),
++        family: 'new', density: densidadDe(tool, path),
+       });
+     }
+   }
+@@ -240,7 +240,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
+     fallback: {model: 'claude-opus-5-5', name: 'Opus 5.5', thread: 'subagent',
+       invalid: false, variable: 'LOCAL_DELEGATE_COST_FALLBACK'},
+     n_origin: {backfill: 0, aggregate: 0, declared: 98}, n_declared: {main: 127, subagent: 40},
+-    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {nueva: 98},
++    density: {origin: {measured: 74, unnumbered: 24, conservative: 0}, families: {new: 98},
+       assumed_family: 0, family_density: 0},
+     unpriced: {n: 0, ids: []},
+     outside_base: {images: stats.img_n, output_to_file: 0},
+@@ -426,12 +426,12 @@ def _tablas_del_paquete() -> dict:
+     Se leen del fichero en vez de copiarlas al mock para que la captura no se quede con unos
+     valores que el vigilante de precios o una medida nueva ya cambiaron.
+     """
+-    datos = ROOT / "src" / "local_delegate" / "resources" / "datos"
+-    densidad = json.loads((datos / "densidad.json").read_text(encoding="utf-8"))
+-    precios = json.loads((datos / "precios.json").read_text(encoding="utf-8"))
++    datos = ROOT / "src" / "local_delegate" / "resources" / "data"
++    densidad = json.loads((datos / "density.json").read_text(encoding="utf-8"))
++    precios = json.loads((datos / "prices.json").read_text(encoding="utf-8"))
+     return {
+         "DENSIDAD": {k: v for k, v in densidad.items() if not k.startswith("_")},
+-        "PRECIOS_CONSULTADO": precios.get("consultado"),
++        "PRECIOS_CONSULTADO": precios.get("consulted"),
+     }
+ 
+ 
+diff --git a/scripts/vigilante_precios.py b/scripts/vigilante_precios.py
+index fc6a7a7..447739a 100644
+--- a/scripts/vigilante_precios.py
++++ b/scripts/vigilante_precios.py
+@@ -3,7 +3,7 @@
+ Dos trabajos, uno por página (REQ-020 a REQ-025 de `coste-api-y-cuota`):
+ 
+ - `precios`: descarga la página oficial de precios, extrae la tabla «Model pricing» y la compara
+-  con `src/local_delegate/resources/datos/precios.json`. Si cambia un precio, aparece un modelo o
++  con `src/local_delegate/resources/data/prices.json`. Si cambia un precio, aparece un modelo o
+   cambia la búsqueda web, abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la
+   tabla nueva y `consultado` = hoy. Un modelo que desaparece **no** se borra: los transcripts
+   viejos lo siguen necesitando, y el aviso sale en el log.
+@@ -49,14 +49,14 @@ RAIZ = Path(__file__).resolve().parents[1]
+ URL_PRECIOS = "https://platform.claude.com/docs/en/about-claude/pricing"
+ URL_LIMITES = "https://support.claude.com/en/articles/11647753-how-do-usage-and-length-limits-work"
+ 
+-RUTA_PRECIOS = "src/local_delegate/resources/datos/precios.json"
++RUTA_PRECIOS = "src/local_delegate/resources/data/prices.json"
+ RUTA_LIMITES = ".github/vigilante/limites-de-uso.txt"
+ 
+ RAMA_BASE = "main"
+ RAMA_PRECIOS = "vigilante/precios"
+ RAMA_LIMITES = "vigilante/limites"
+ RAMA_ENSAYO = "vigilante/ensayo"
+-# Clave que añade el ensayo a `precios.json`; con `_` delante, como `_nota`, no es un dato.
++# Clave que añade el ensayo a `prices.json`; con `_` delante, como `_note`, no es un dato.
+ CLAVE_ENSAYO = "_ensayo"
+ 
+ # Los dos workflows que contienen los checks que exige el ruleset `protect-main` (REQ-025).
+@@ -73,20 +73,20 @@ MIN_FILAS = 5
+ # Filas que no son modelos con precio público en vigor. La página marca «Retired» e «Invite only»
+ # en el `aria-label` del botón que acompaña al nombre; «limited availability» lo nombra la spec.
+ MARCAS_IGNORADAS = ("retired", "limited availability", "invite only")
+-# Cabecera de columna de la página → campo de `precios.json`.
++# Cabecera de columna de la página → campo de `prices.json`.
+ COLUMNAS = {
+-    "input": "entrada",
+-    "output": "salida",
++    "input": "input",
++    "output": "output",
+     "5m writes": "w5m",
+     "1h writes": "w1h",
+-    "hits and refreshes": "lectura",
++    "hits and refreshes": "cache_read",
+ }
+-CAMPOS = ("entrada", "w5m", "w1h", "lectura", "salida")
++CAMPOS = ("input", "w5m", "w1h", "cache_read", "output")
+ _BUSQUEDA_WEB = re.compile(
+     r"Web search is available on the Claude API for \$(\d+(?:\.\d+)?) per 1,000 searches"
+ )
+ # Lo que se pone a un modelo nuevo hasta que una persona lo revise; el cuerpo del PR lo pide.
+-PROVISIONAL_NUEVO = {"familia": "nueva", "admite_esfuerzo": True}
++PROVISIONAL_NUEVO = {"family": "new", "supports_effort": True}
+ 
+ TITULO_LIMITES = "How do usage and length limits work?"
+ MIN_CHARS_LIMITES = 500
+@@ -241,7 +241,7 @@ def _ignorada(celda_nombre: dict) -> bool:
+ 
+ 
+ def extraer_tabla_precios(html: str) -> dict:
+-    """La tabla «Model pricing» de la página: `{"busqueda_web_por_1000", "modelos": {id: {...}}}`.
++    """La tabla «Model pricing» de la página: `{"web_search_per_1000", "models": {id: {...}}}`.
+ 
+     Falla en voz alta (REQ-022) sin la cabecera, sin la tabla, con menos de 5 filas válidas o con
+     una celda que no es un número. Ignora las filas «retired», «limited availability» e «invite
+@@ -288,7 +288,7 @@ def extraer_tabla_precios(html: str) -> dict:
+         raise ErrorDelVigilante("no aparece el precio de la búsqueda web")
+     valor = m.group(1)
+     busqueda = float(valor) if "." in valor else int(valor)
+-    return {"busqueda_web_por_1000": busqueda, "modelos": modelos}
++    return {"web_search_per_1000": busqueda, "models": modelos}
+ 
+ 
+ @dataclass
+@@ -312,16 +312,16 @@ class Cambios:
+ def comparar(nueva: dict, paquete: dict) -> Cambios:
+     """Compara la tabla extraída con la del paquete, campo a campo y por valor numérico."""
+     cambios = Cambios()
+-    viejos = paquete["modelos"]
+-    for mid, precios in nueva["modelos"].items():
++    viejos = paquete["models"]
++    for mid, precios in nueva["models"].items():
+         if mid not in viejos:
+             cambios.nuevos.append(mid)
+             continue
+         for campo in CAMPOS:
+             if float(precios[campo]) != float(viejos[mid][campo]):
+                 cambios.precios.append((mid, campo, viejos[mid][campo], precios[campo]))
+-    cambios.desaparecidos = [mid for mid in viejos if mid not in nueva["modelos"]]
+-    antes, ahora = paquete["busqueda_web_por_1000"], nueva["busqueda_web_por_1000"]
++    cambios.desaparecidos = [mid for mid in viejos if mid not in nueva["models"]]
++    antes, ahora = paquete["web_search_per_1000"], nueva["web_search_per_1000"]
+     if float(antes) != float(ahora):
+         cambios.busqueda_web = (antes, ahora)
+     return cambios
+@@ -331,12 +331,12 @@ def tabla_actualizada(paquete: dict, nueva: dict, cambios: Cambios, hoy: dt.date
+     """La tabla del paquete con los cambios aplicados y `consultado` = hoy. No borra modelos."""
+     tabla = copy.deepcopy(paquete)
+     for mid, campo, _viejo, valor in cambios.precios:
+-        tabla["modelos"][mid][campo] = valor
++        tabla["models"][mid][campo] = valor
+     for mid in cambios.nuevos:
+-        tabla["modelos"][mid] = {**nueva["modelos"][mid], **PROVISIONAL_NUEVO}
++        tabla["models"][mid] = {**nueva["models"][mid], **PROVISIONAL_NUEVO}
+     if cambios.busqueda_web is not None:
+-        tabla["busqueda_web_por_1000"] = cambios.busqueda_web[1]
+-    tabla["consultado"] = hoy.isoformat()
++        tabla["web_search_per_1000"] = cambios.busqueda_web[1]
++    tabla["consulted"] = hoy.isoformat()
+     return tabla
+ 
+ 
+@@ -344,13 +344,13 @@ _LINEA_MODELO = re.compile(r'^\s*"([^"]+)": (\{.*\}),?\s*$')
+ 
+ 
+ def serializar_precios(tabla: dict, original: str) -> str:
+-    """`precios.json` con el formato del repo: una línea por modelo.
++    """`prices.json` con el formato del repo: una línea por modelo.
+ 
+     Las líneas de los modelos que no cambian se copian **tal cual** del original (con su `0.20`),
+     para que el diff del PR enseñe solo lo que cambió.
+     """
+     lineas_originales: dict[str, str] = {}
+-    datos_originales = json.loads(original).get("modelos", {})
++    datos_originales = json.loads(original).get("models", {})
+     for linea in original.splitlines():
+         m = _LINEA_MODELO.match(linea)
+         if m and m.group(1) in datos_originales:
+@@ -363,13 +363,13 @@ def serializar_precios(tabla: dict, original: str) -> str:
+     claves = list(tabla)
+     for k in claves:
+         coma = "," if k != claves[-1] else ""
+-        if k != "modelos":
++        if k != "models":
+             salida.append(f"  {_valor(k)}: {_valor(tabla[k])}{coma}")
+             continue
+-        salida.append('  "modelos": {')
+-        ids = list(tabla["modelos"])
++        salida.append('  "models": {')
++        ids = list(tabla["models"])
+         for mid in ids:
+-            entrada = tabla["modelos"][mid]
++            entrada = tabla["models"][mid]
+             if mid in lineas_originales and datos_originales.get(mid) == entrada:
+                 cuerpo = lineas_originales[mid]
+             else:
+@@ -413,9 +413,9 @@ def cuerpo_pr_precios(cambios: Cambios, *, ensayo: bool = False) -> str:
+             "",
+             (
+                 "El id se deduce del nombre comercial (la página no trae ids): compáralo con "
+-                "«Models overview» y «Model IDs and versioning». `familia` y `admite_esfuerzo` "
+-                f"van provisionales ({PROVISIONAL_NUEVO['familia']} / "
+-                f"{str(PROVISIONAL_NUEVO['admite_esfuerzo']).lower()}): corrígelos antes de "
++                "«Models overview» y «Model IDs and versioning». `family` y `supports_effort` "
++                f"van provisionales ({PROVISIONAL_NUEVO['family']} / "
++                f"{str(PROVISIONAL_NUEVO['supports_effort']).lower()}): corrígelos antes de "
+                 "mezclar."
+             ),
+             "",
+diff --git a/src/local_delegate/attribution.py b/src/local_delegate/attribution.py
+index 6bd30f0..49669f0 100644
+--- a/src/local_delegate/attribution.py
++++ b/src/local_delegate/attribution.py
+@@ -27,7 +27,7 @@ from collections.abc import Callable, Iterable
+ from pathlib import Path
+ from typing import Any
+ 
+-from . import clients, legacy_names, precios
++from . import clients, legacy_names, pricing
+ from .resources.hooks import hook_common
+ 
+ #: Una nota de más de diez minutos ya no cuenta (REQ-003).
+@@ -184,10 +184,10 @@ def _find_model(
+ 
+ def _supports_effort(model: str) -> bool:
+     try:
+-        entry = precios.entrada(model)
++        entry = pricing.entry(model)
+     except Exception:
+         return True
+-    return True if entry is None else bool(entry.get("admite_esfuerzo", True))
++    return True if entry is None else bool(entry.get("supports_effort", True))
+ 
+ 
+ def resolve_call(
+@@ -229,7 +229,7 @@ def resolve_call(
+     path = _transcript_de(note, projects or _projects_root())
+     model = _find_model(path, tool_use_id, clock=clock, opener=opener) if path is not None else None
+     if model:
+-        r["caller_model"] = precios.normalizar_id(model)
++        r["caller_model"] = pricing.normalize_id(model)
+         r["caller_src"] = "hook+transcript"
+         if "caller_effort" not in r and not _supports_effort(r["caller_model"]):
+             r["caller_effort"] = "n/a"  # Haiku 4.5: no admite esfuerzo y no es un dato que falte
+diff --git a/src/local_delegate/cost.py b/src/local_delegate/cost.py
+index 8c64a14..ce2e80b 100644
+--- a/src/local_delegate/cost.py
++++ b/src/local_delegate/cost.py
+@@ -4,7 +4,7 @@ Tres preguntas, un solo sitio de verdad para cada una:
+ 
+ - **¿Cuántos caracteres hacen un token de Claude en esta fila?** `resolve_density(event)`
+   (REQ-031 a REQ-033): familia de tokenizador del modelo de quien llamó (o del respaldo), clase de
+-  contenido (REQ-032), columna (`formato_read` si se leyó por `path`, que es lo que habría devuelto
++  contenido (REQ-032), columna (`read_format` si se leyó por `path`, que es lo que habría devuelto
+   `Read`) y respaldo de celda en su único orden. Devuelve `c` en **centésimas** con su origen. Ni
+   `server.tokens_claude` ni el JS del panel resuelven nada: solo dividen por lo que trae la fila.
+ - **¿Qué se sabe de quien llamó?** `merge(rows, log_dir=...)` (REQ-006): por campo, la línea del
+@@ -23,7 +23,7 @@ from collections.abc import Iterable
+ from datetime import UTC, datetime, timedelta
+ from pathlib import Path
+ 
+-from . import attribution, config, precios, test_windows
++from . import attribution, config, pricing, test_windows
+ 
+ # El respaldo declarado (REQ-008): el grupo más frecuente medido (135 de 149 atribuidas).
+ DECLARED_FALLBACK = {"model": "claude-opus-5-5", "thread": "subagent"}
+@@ -37,24 +37,24 @@ MARK_FAMILY_DENSITY = "family_density"
+ CLASS_BY_TOOL = {
+     "local_lint_summary": "log",
+     "local_commit_msg": "diff",
+-    "local_explain_code": "codigo",
++    "local_explain_code": "code",
+ }
+ _EXTENSIONS = {
+-    "prosa": ".md .markdown .txt .rst .html .htm",
+-    "codigo": (
++    "prose": ".md .markdown .txt .rst .html .htm",
++    "code": (
+         ".py .js .mjs .cjs .ts .tsx .jsx .ps1 .psm1 .sh .bash .java .go .rs .c .h .cpp .cs .rb"
+         " .php .css .scss .sql .kt .swift"
+     ),
+-    "estructurado": ".json .jsonl .yaml .yml .toml .lock .csv .xml .ini",
++    "structured": ".json .jsonl .yaml .yml .toml .lock .csv .xml .ini",
+     "log": ".log",
+     "diff": ".diff .patch",
+ }
+ CLASS_BY_EXTENSION = {ext: kind for kind, exts in _EXTENSIONS.items() for ext in exts.split()}
+ 
+ # Lo que la tool devuelve a Claude (`returned`) y lo que escribe a fichero (`output`) no va
+-# numerado: columna `sin_numerar`, y la clase depende solo de la tool (REQ-031).
+-_RETURNED_CLASS = {"local_extract": "estructurado", "local_boilerplate": "codigo"}
+-_OUTPUT_CLASS = {"local_boilerplate": "codigo"}
++# numerado: columna `unnumbered`, y la clase depende solo de la tool (REQ-031).
++_RETURNED_CLASS = {"local_extract": "structured", "local_boilerplate": "code"}
++_OUTPUT_CLASS = {"local_boilerplate": "code"}
+ 
+ # Campos que el relleno aporta a la fila (REQ-005), en el orden en que se funden.
+ BACKFILL_FIELDS = (
+@@ -96,11 +96,11 @@ def _extension(path: object) -> str:
+ 
+ 
+ def content_class(event: dict) -> str:
+-    """`prosa`, `codigo`, `log`, `estructurado`, `diff` u `otro`, sin leer el texto (REQ-032)."""
++    """`prose`, `code`, `log`, `structured`, `diff` u `other`, sin leer el texto (REQ-032)."""
+     by_tool = CLASS_BY_TOOL.get(str(event.get("tool") or ""))
+     if by_tool:
+         return by_tool
+-    return CLASS_BY_EXTENSION.get(_extension(event.get("path")), "otro")
++    return CLASS_BY_EXTENSION.get(_extension(event.get("path")), "other")
+ 
+ 
+ def fallback() -> dict:
+@@ -114,37 +114,37 @@ def fallback() -> dict:
+     value = str(config.COST_FALLBACK or "").strip()
+     if value:
+         model, sep, thread = value.partition(":")
+-        model = precios.normalizar_id(model.strip())
++        model = pricing.normalize_id(model.strip())
+         thread = thread.strip() if sep else "subagent"
+-        if model and thread in THREADS and precios.entrada(model) is not None:
++        if model and thread in THREADS and pricing.entry(model) is not None:
+             declared = {"model": model, "thread": thread, "fallback_invalid": False}
+         else:
+             declared["fallback_invalid"] = True
+-    declared["family"] = precios.familia(declared["model"])
++    declared["family"] = pricing.family(declared["model"])
+     return declared
+ 
+ 
+ def family_and_marks(model: str) -> tuple[str, list[str]]:
+     """La familia de tokenizador del modelo y las marcas de supuesto que lleva (REQ-030/031)."""
+-    entry = precios.entrada(model) if model else None
++    entry = pricing.entry(model) if model else None
+     if entry is None:
+-        return "nueva", [MARK_ASSUMED_FAMILY]
+-    family = entry["familia"]
+-    measured = precios.cargar_densidad()["familias"][family].get("medido_con", [])
+-    if precios.normalizar_id(model) in measured:
++        return "new", [MARK_ASSUMED_FAMILY]
++    family = entry["family"]
++    measured = pricing.load_density()["families"][family].get("measured_with", [])
++    if pricing.normalize_id(model) in measured:
+         return family, []
+     return family, [MARK_FAMILY_DENSITY]
+ 
+ 
+ def _cell(family: str, kind: str, column: str) -> list:
+     """`[c100, origen]` con el respaldo de celda en su único orden (REQ-031): (1) la celda exacta,
+-    `measured`; (2) la misma clase en la columna `sin_numerar`, `unnumbered`; (3) la mayor `c` de la
+-    columna `sin_numerar` de la familia, `conservative`. (2) y (3) dan menos tokens, nunca más."""
+-    table = precios.cargar_densidad()["familias"][family]
++    `measured`; (2) la misma clase en la columna `unnumbered`, `unnumbered`; (3) la mayor `c` de la
++    columna `unnumbered` de la familia, `conservative`. (2) y (3) dan menos tokens, nunca más."""
++    table = pricing.load_density()["families"][family]
+     exact = table.get(column, {})
+     if kind in exact:
+         return [int(exact[kind]), "measured"]
+-    unnumbered = table["sin_numerar"]
++    unnumbered = table["unnumbered"]
+     if kind in unnumbered:
+         return [int(unnumbered[kind]), "unnumbered"]
+     return [int(max(unnumbered.values())), "conservative"]
+@@ -160,11 +160,11 @@ def resolve(event: dict) -> dict:
+         density: dict = {"text": None, "returned": None, "output": None}
+     else:
+         tool = str(event.get("tool") or "")
+-        column = "formato_read" if event.get("source") == "path" else "sin_numerar"
++        column = "read_format" if event.get("source") == "path" else "unnumbered"
+         density = {
+             "text": _cell(family, content_class(event), column),
+-            "returned": _cell(family, _RETURNED_CLASS.get(tool, "prosa"), "sin_numerar"),
+-            "output": _cell(family, _OUTPUT_CLASS.get(tool, "prosa"), "sin_numerar"),
++            "returned": _cell(family, _RETURNED_CLASS.get(tool, "prose"), "unnumbered"),
++            "output": _cell(family, _OUTPUT_CLASS.get(tool, "prose"), "unnumbered"),
+         }
+     return {"density": density, "family": family, "marks": marks}
+ 
+diff --git a/src/local_delegate/precios.py b/src/local_delegate/precios.py
+deleted file mode 100644
+index 93ce102..0000000
+--- a/src/local_delegate/precios.py
++++ /dev/null
+@@ -1,113 +0,0 @@
+-"""Tablas de precios y de densidad del paquete, y el cotejo puro contra lo que cobra Claude Code.
+-
+-Una sola pregunta: cuánto cuesta un token de cada modelo de Claude y si esa tabla cuadra con lo
+-que calcula Claude Code. Las dos tablas viajan dentro del paquete (`resources/datos/`) y se leen
+-con `importlib.resources`: **nada de red** al cargarlas (REQ-012). Las mantiene al día el
+-vigilante semanal del CI, no este módulo.
+-
+-- `normalizar_id` quita `[1m]` y el sufijo de fecha `-AAAAMMDD` (REQ-011).
+-- `entrada` busca por id **exacto** tras normalizar: `claude-opus-5` nunca toma el precio de
+-  `claude-opus-5-5`. Un id sin entrada es «sin precio» (`None`), nunca 0 ni el de un parecido.
+-- `cotejar` y `veredicto` implementan REQ-013 tal cual (port de
+-  `insumos/scripts/cotejo.py:juzga`, con la búsqueda web incluida).
+-
+-Las tablas devueltas están en caché y se comparten: quien quiera variarlas (un test, un mutante)
+-trabaja sobre una copia.
+-"""
+-
+-from __future__ import annotations
+-
+-import functools
+-import json
+-import re
+-from importlib.resources import files
+-
+-# Los seis campos de una fila «modelo × sesión» de `cost-state`, con sus nombres de Claude Code.
+-CAMPOS_COTEJO = (
+-    "inputTokens",
+-    "cacheCreationInputTokens",
+-    "cacheReadInputTokens",
+-    "outputTokens",
+-    "webSearchRequests",
+-    "costUSD",
+-)
+-
+-# Por debajo de este coste una fila no se juzga: el redondeo de Claude Code pesa más que la tabla.
+-COSTE_MINIMO_JUZGABLE = 0.05
+-
+-_SUFIJO_FECHA = re.compile(r"-\d{8}$")
+-
+-
+-def _leer_tabla(nombre: str) -> dict:
+-    recurso = files("local_delegate").joinpath("resources", "datos", nombre)
+-    return json.loads(recurso.read_text(encoding="utf-8"))
+-
+-
+-@functools.cache
+-def cargar_precios() -> dict:
+-    """La tabla de precios del paquete (`resources/datos/precios.json`). No abre sockets."""
+-    return _leer_tabla("precios.json")
+-
+-
+-@functools.cache
+-def cargar_densidad() -> dict:
+-    """La tabla de densidad del paquete (`resources/datos/densidad.json`). No abre sockets."""
+-    return _leer_tabla("densidad.json")
+-
+-
+-def normalizar_id(mid: str) -> str:
+-    """El id sin `[1m]` y sin sufijo de fecha: `claude-haiku-4-5-20251001` → `claude-haiku-4-5`."""
+-    return _SUFIJO_FECHA.sub("", mid.replace("[1m]", ""))
+-
+-
+-def entrada(mid: str, tabla: dict | None = None) -> dict | None:
+-    """La entrada de precios del modelo, buscada por id exacto tras normalizar; `None` si no hay.
+-
+-    Con `tabla=None` usa la del paquete.
+-    """
+-    modelos = (tabla if tabla is not None else cargar_precios())["modelos"]
+-    return modelos.get(normalizar_id(mid))
+-
+-
+-def familia(mid: str, tabla: dict | None = None) -> str | None:
+-    """La familia de tokenizador del modelo (`nueva` | `anterior`), o `None` si no está en la tabla."""
+-    e = entrada(mid, tabla)
+-    return e["familia"] if e is not None else None
+-
+-
+-def _juzgar(fila: dict, tabla: dict) -> str | None:
+-    coste = fila.get("costUSD") or 0.0
+-    if coste < COSTE_MINIMO_JUZGABLE:
+-        return None
+-    p = entrada(fila["modelo"], tabla)
+-    if p is None:
+-        return "sin_precio"
+-    base = (
+-        (fila.get("inputTokens") or 0) * p["entrada"]
+-        + (fila.get("cacheReadInputTokens") or 0) * p["lectura"]
+-        + (fila.get("outputTokens") or 0) * p["salida"]
+-    ) / 1e6
+-    base += (fila.get("webSearchRequests") or 0) * tabla["busqueda_web_por_1000"] / 1000
+-    escritura = fila.get("cacheCreationInputTokens") or 0
+-    # Claude Code no dice qué parte de la escritura fue a 5 min y cuál a 1 h: la banda va de
+-    # toda a 5 min a toda a 1 h.
+-    bajo = base + escritura * p["w5m"] / 1e6
+-    alto = base + escritura * p["w1h"] / 1e6
+-    tolerancia = max(0.005, 0.005 * coste)
+-    return "dentro" if bajo - tolerancia <= coste <= alto + tolerancia else "fuera"
+-
+-
+-def cotejar(filas: list[dict], tabla: dict) -> list[str | None]:
+-    """Juzga cada fila «modelo × sesión» contra la tabla (REQ-013). Función pura.
+-
+-    Cada fila es un dict con `modelo` (el id tal como lo escribe Claude Code) y los seis campos de
+-    `CAMPOS_COTEJO`. Devuelve, en el mismo orden, `dentro`, `fuera`, `sin_precio`, o `None` para
+-    las filas de menos de `COSTE_MINIMO_JUZGABLE`, que no se juzgan.
+-    """
+-    return [_juzgar(fila, tabla) for fila in filas]
+-
+-
+-def veredicto(resultados: list[str | None]) -> str:
+-    """`falla` si al menos una fila salió `fuera` o `sin_precio`; si no, `pasa`."""
+-    malas = {"fuera", "sin_precio"}
+-    return "falla" if any(r in malas for r in resultados) else "pasa"
+diff --git a/src/local_delegate/pricing.py b/src/local_delegate/pricing.py
+new file mode 100644
+index 0000000..b58f570
+--- /dev/null
++++ b/src/local_delegate/pricing.py
+@@ -0,0 +1,113 @@
++"""Tablas de precios y de densidad del paquete, y el cotejo puro contra lo que cobra Claude Code.
++
++Una sola pregunta: cuánto cuesta un token de cada modelo de Claude y si esa tabla cuadra con lo
++que calcula Claude Code. Las dos tablas viajan dentro del paquete (`resources/data/`) y se leen
++con `importlib.resources`: **nada de red** al cargarlas (REQ-012). Las mantiene al día el
++vigilante semanal del CI, no este módulo.
++
++- `normalize_id` quita `[1m]` y el sufijo de fecha `-AAAAMMDD` (REQ-011).
++- `entry` busca por id **exacto** tras normalizar: `claude-opus-5` nunca toma el precio de
++  `claude-opus-5-5`. Un id sin entrada es «sin precio» (`None`), nunca 0 ni el de un parecido.
++- `check_rows` y `verdict` implementan REQ-013 tal cual (port de
++  `insumos/scripts/cotejo.py:juzga`, con la búsqueda web incluida).
++
++Las tablas devueltas están en caché y se comparten: quien quiera variarlas (un test, un mutante)
++trabaja sobre una copia.
++"""
++
++from __future__ import annotations
++
++import functools
++import json
++import re
++from importlib.resources import files
++
++# Los seis campos de una fila «modelo × sesión» de `cost-state`, con sus nombres de Claude Code.
++CHECK_FIELDS = (
++    "inputTokens",
++    "cacheCreationInputTokens",
++    "cacheReadInputTokens",
++    "outputTokens",
++    "webSearchRequests",
++    "costUSD",
++)
++
++# Por debajo de este coste una fila no se juzga: el redondeo de Claude Code pesa más que la tabla.
++MIN_JUDGED_COST = 0.05
++
++_DATE_SUFFIX = re.compile(r"-\d{8}$")
++
++
++def _read_table(name: str) -> dict:
++    resource = files("local_delegate").joinpath("resources", "data", name)
++    return json.loads(resource.read_text(encoding="utf-8"))
++
++
++@functools.cache
++def load_prices() -> dict:
++    """La tabla de precios del paquete (`resources/data/prices.json`). No abre sockets."""
++    return _read_table("prices.json")
++
++
++@functools.cache
++def load_density() -> dict:
++    """La tabla de densidad del paquete (`resources/data/density.json`). No abre sockets."""
++    return _read_table("density.json")
++
++
++def normalize_id(mid: str) -> str:
++    """El id sin `[1m]` y sin sufijo de fecha: `claude-haiku-4-5-20251001` → `claude-haiku-4-5`."""
++    return _DATE_SUFFIX.sub("", mid.replace("[1m]", ""))
++
++
++def entry(mid: str, table: dict | None = None) -> dict | None:
++    """La entrada de precios del modelo, buscada por id exacto tras normalizar; `None` si no hay.
++
++    Con `table=None` usa la del paquete.
++    """
++    models = (table if table is not None else load_prices())["models"]
++    return models.get(normalize_id(mid))
++
++
++def family(mid: str, table: dict | None = None) -> str | None:
++    """La familia de tokenizador del modelo (`new` | `previous`), o `None` si no está en la tabla."""
++    e = entry(mid, table)
++    return e["family"] if e is not None else None
++
++
++def _judge(row: dict, table: dict) -> str | None:
++    cost = row.get("costUSD") or 0.0
++    if cost < MIN_JUDGED_COST:
++        return None
++    p = entry(row["model"], table)
++    if p is None:
++        return "unpriced"
++    base = (
++        (row.get("inputTokens") or 0) * p["input"]
++        + (row.get("cacheReadInputTokens") or 0) * p["cache_read"]
++        + (row.get("outputTokens") or 0) * p["output"]
++    ) / 1e6
++    base += (row.get("webSearchRequests") or 0) * table["web_search_per_1000"] / 1000
++    cache_write = row.get("cacheCreationInputTokens") or 0
++    # Claude Code no dice qué parte de la escritura fue a 5 min y cuál a 1 h: la banda va de
++    # toda a 5 min a toda a 1 h.
++    low = base + cache_write * p["w5m"] / 1e6
++    high = base + cache_write * p["w1h"] / 1e6
++    tolerance = max(0.005, 0.005 * cost)
++    return "inside" if low - tolerance <= cost <= high + tolerance else "outside"
++
++
++def check_rows(rows: list[dict], table: dict) -> list[str | None]:
++    """Juzga cada fila «modelo × sesión» contra la tabla (REQ-013). Función pura.
++
++    Cada fila es un dict con `model` (el id tal como lo escribe Claude Code) y los seis campos de
++    `CHECK_FIELDS`. Devuelve, en el mismo orden, `inside`, `outside`, `unpriced`, o `None` para
++    las filas de menos de `MIN_JUDGED_COST`, que no se juzgan.
++    """
++    return [_judge(row, table) for row in rows]
++
++
++def verdict(results: list[str | None]) -> str:
++    """`fail` si al menos una fila salió `outside` o `unpriced`; si no, `pass`."""
++    bad = {"outside", "unpriced"}
++    return "fail" if any(r in bad for r in results) else "pass"
+diff --git a/src/local_delegate/recompute.py b/src/local_delegate/recompute.py
+index eb26c4a..65511f6 100644
+--- a/src/local_delegate/recompute.py
++++ b/src/local_delegate/recompute.py
+@@ -29,7 +29,7 @@ from collections.abc import Iterator
+ from datetime import UTC, datetime, timedelta
+ from pathlib import Path
+ 
+-from . import attribution, cost, legacy_names, precios, quota, transcripts
++from . import attribution, cost, legacy_names, pricing, quota, transcripts
+ 
+ OLD_FILE_NAME, FILE_NAME = legacy_names.COST_AGGREGATES_FILE_NAMES
+ VERSION = 1
+@@ -168,26 +168,23 @@ def _merge_n_by_month(fresh: dict, previous: dict, *, now: datetime) -> dict:
+ 
+ # --- Cotejo (REQ-014) -----------------------------------------------------------------------
+ 
+-_VERDICT_VALUES = legacy_names.FORMATS["cost_aggregates_check"]["values"]["verdict"]
+-
+ 
+ def _check(index: transcripts.Index, *, now: datetime) -> dict | None:
+     rows = transcripts.cost_state(index)
+     if not rows:
+         return None
+-    table = precios.cargar_precios()
+-    results = precios.cotejar(rows, table)
++    table = pricing.load_prices()
++    results = pricing.check_rows(rows, table)
+     unpriced = sorted(
+-        {precios.normalizar_id(f["modelo"]) for f, r in zip(rows, results) if r == "sin_precio"}
++        {pricing.normalize_id(f["model"]) for f, r in zip(rows, results) if r == "unpriced"}
+     )
+     return {
+         "date": now.isoformat(timespec="seconds"),
+-        "table_version": table.get("consultado"),
++        "table_version": table.get("consulted"),
+         "judged": sum(1 for r in results if r is not None),
+-        "outside": sum(1 for r in results if r == "fuera"),
++        "outside": sum(1 for r in results if r == "outside"),
+         "unpriced": unpriced,
+-        # `precios.veredicto` aún responde `pasa|falla`: se guarda el valor nuevo.
+-        "verdict": legacy_names.new_value(_VERDICT_VALUES, precios.veredicto(results)),
++        "verdict": pricing.verdict(results),
+     }
+ 
+ 
+diff --git a/src/local_delegate/resources/data/density.json b/src/local_delegate/resources/data/density.json
+new file mode 100644
+index 0000000..d7dc6f9
+--- /dev/null
++++ b/src/local_delegate/resources/data/density.json
+@@ -0,0 +1,16 @@
++{
++  "_note": "Tabla de densidad del paquete (REQ-030). Caracteres del fichero por token de Claude, en CENTÉSIMAS (223 = 2,23) para que Python y JS hagan la misma división entera. Por familia de tokenizador (la de la tabla de precios), columna (unnumbered | read_format, lo que devuelve Read con las líneas numeradas) y clase de contenido. Celdas ausentes = sin medir. measured_with = modelos con los que se midió cada familia: un evento de un modelo de la familia que no está ahí lleva la marca «densidad de la familia». Fuente: .sdd/changes/coste-api-y-cuota/insumos/densidad-por-modelo.md, recalculable con insumos/scripts/densidad.py.",
++  "measured_on": "2026-10-06",
++  "families": {
++    "new": {
++      "measured_with": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-1"],
++      "unnumbered": {"prose": 223, "code": 241, "log": 192, "structured": 188, "diff": 222},
++      "read_format": {"prose": 200, "code": 203}
++    },
++    "previous": {
++      "measured_with": ["claude-haiku-4-5"],
++      "unnumbered": {"prose": 301, "code": 312, "log": 241, "structured": 222, "diff": 290},
++      "read_format": {}
++    }
++  }
++}
+diff --git a/src/local_delegate/resources/data/prices.json b/src/local_delegate/resources/data/prices.json
+new file mode 100644
+index 0000000..50e1556
+--- /dev/null
++++ b/src/local_delegate/resources/data/prices.json
+@@ -0,0 +1,21 @@
++{
++  "_note": "Tabla de precios del paquete (REQ-010). USD por millón de tokens; web_search_per_1000 en USD por cada 1000 búsquedas. Claves = id normalizado (sin [1m] ni sufijo de fecha -AAAAMMDD), búsqueda exacta (REQ-011). family = tokenizador: 'new' = Claude Opus 4.7 y posteriores; 'previous' = Opus 4.6, Sonnet 4.6 y anteriores, Haiku 4.5. Ids de las páginas «Models overview» y «Model IDs and versioning». supports_effort comprobado el 2026-10-06 en la página de cada modelo (fila «Default effort»: «Not supported» en Haiku 4.5 y Sonnet 4.5) y en la lista supportedModels de build-with-claude/effort. consulted = fecha del último cambio de la tabla.",
++  "source": "https://platform.claude.com/docs/en/about-claude/pricing",
++  "consulted": "2026-10-06",
++  "web_search_per_1000": 10,
++  "models": {
++    "claude-fable-5-1": {"input": 10, "w5m": 12.5, "w1h": 20, "cache_read": 0.25, "output": 50, "family": "new", "supports_effort": true},
++    "claude-fable-5": {"input": 10, "w5m": 12.5, "w1h": 20, "cache_read": 1.0, "output": 50, "family": "new", "supports_effort": true},
++    "claude-opus-5-5": {"input": 4, "w5m": 5, "w1h": 8, "cache_read": 0.20, "output": 20, "family": "new", "supports_effort": true},
++    "claude-opus-5": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
++    "claude-opus-4-8": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
++    "claude-opus-4-7": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "new", "supports_effort": true},
++    "claude-opus-4-6": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
++    "claude-opus-4-5": {"input": 5, "w5m": 6.25, "w1h": 10, "cache_read": 0.50, "output": 25, "family": "previous", "supports_effort": true},
++    "claude-sonnet-5-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
++    "claude-sonnet-5": {"input": 2, "w5m": 2.5, "w1h": 4, "cache_read": 0.20, "output": 10, "family": "new", "supports_effort": true},
++    "claude-sonnet-4-6": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": true},
++    "claude-sonnet-4-5": {"input": 3, "w5m": 3.75, "w1h": 6, "cache_read": 0.30, "output": 15, "family": "previous", "supports_effort": false},
++    "claude-haiku-4-5": {"input": 1, "w5m": 1.25, "w1h": 2, "cache_read": 0.10, "output": 5, "family": "previous", "supports_effort": false}
++  }
++}
+diff --git a/src/local_delegate/resources/datos/densidad.json b/src/local_delegate/resources/datos/densidad.json
+deleted file mode 100644
+index a290288..0000000
+--- a/src/local_delegate/resources/datos/densidad.json
++++ /dev/null
+@@ -1,16 +0,0 @@
+-{
+-  "_nota": "Tabla de densidad del paquete (REQ-030). Caracteres del fichero por token de Claude, en CENTÉSIMAS (223 = 2,23) para que Python y JS hagan la misma división entera. Por familia de tokenizador (la de la tabla de precios), columna (sin_numerar | formato_read, lo que devuelve Read con las líneas numeradas) y clase de contenido. Celdas ausentes = sin medir. medido_con = modelos con los que se midió cada familia: un evento de un modelo de la familia que no está ahí lleva la marca «densidad de la familia». Fuente: .sdd/changes/coste-api-y-cuota/insumos/densidad-por-modelo.md, recalculable con insumos/scripts/densidad.py.",
+-  "medido": "2026-10-06",
+-  "familias": {
+-    "nueva": {
+-      "medido_con": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-1"],
+-      "sin_numerar": {"prosa": 223, "codigo": 241, "log": 192, "estructurado": 188, "diff": 222},
+-      "formato_read": {"prosa": 200, "codigo": 203}
+-    },
+-    "anterior": {
+-      "medido_con": ["claude-haiku-4-5"],
+-      "sin_numerar": {"prosa": 301, "codigo": 312, "log": 241, "estructurado": 222, "diff": 290},
+-      "formato_read": {}
+-    }
+-  }
+-}
+diff --git a/src/local_delegate/resources/datos/precios.json b/src/local_delegate/resources/datos/precios.json
+deleted file mode 100644
+index d1658d8..0000000
+--- a/src/local_delegate/resources/datos/precios.json
++++ /dev/null
+@@ -1,21 +0,0 @@
+-{
+-  "_nota": "Tabla de precios del paquete (REQ-010). USD por millón de tokens; busqueda_web_por_1000 en USD por cada 1000 búsquedas. Claves = id normalizado (sin [1m] ni sufijo de fecha -AAAAMMDD), búsqueda exacta (REQ-011). familia = tokenizador: 'nueva' = Claude Opus 4.7 y posteriores; 'anterior' = Opus 4.6, Sonnet 4.6 y anteriores, Haiku 4.5. Ids de las páginas «Models overview» y «Model IDs and versioning». admite_esfuerzo comprobado el 2026-10-06 en la página de cada modelo (fila «Default effort»: «Not supported» en Haiku 4.5 y Sonnet 4.5) y en la lista supportedModels de build-with-claude/effort. consultado = fecha del último cambio de la tabla.",
+-  "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+-  "consultado": "2026-10-06",
+-  "busqueda_web_por_1000": 10,
+-  "modelos": {
+-    "claude-fable-5-1": {"entrada": 10, "w5m": 12.5, "w1h": 20, "lectura": 0.25, "salida": 50, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-fable-5": {"entrada": 10, "w5m": 12.5, "w1h": 20, "lectura": 1.0, "salida": 50, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-opus-5-5": {"entrada": 4, "w5m": 5, "w1h": 8, "lectura": 0.20, "salida": 20, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-opus-5": {"entrada": 5, "w5m": 6.25, "w1h": 10, "lectura": 0.50, "salida": 25, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-opus-4-8": {"entrada": 5, "w5m": 6.25, "w1h": 10, "lectura": 0.50, "salida": 25, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-opus-4-7": {"entrada": 5, "w5m": 6.25, "w1h": 10, "lectura": 0.50, "salida": 25, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-opus-4-6": {"entrada": 5, "w5m": 6.25, "w1h": 10, "lectura": 0.50, "salida": 25, "familia": "anterior", "admite_esfuerzo": true},
+-    "claude-opus-4-5": {"entrada": 5, "w5m": 6.25, "w1h": 10, "lectura": 0.50, "salida": 25, "familia": "anterior", "admite_esfuerzo": true},
+-    "claude-sonnet-5-5": {"entrada": 2, "w5m": 2.5, "w1h": 4, "lectura": 0.20, "salida": 10, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-sonnet-5": {"entrada": 2, "w5m": 2.5, "w1h": 4, "lectura": 0.20, "salida": 10, "familia": "nueva", "admite_esfuerzo": true},
+-    "claude-sonnet-4-6": {"entrada": 3, "w5m": 3.75, "w1h": 6, "lectura": 0.30, "salida": 15, "familia": "anterior", "admite_esfuerzo": true},
+-    "claude-sonnet-4-5": {"entrada": 3, "w5m": 3.75, "w1h": 6, "lectura": 0.30, "salida": 15, "familia": "anterior", "admite_esfuerzo": false},
+-    "claude-haiku-4-5": {"entrada": 1, "w5m": 1.25, "w1h": 2, "lectura": 0.10, "salida": 5, "familia": "anterior", "admite_esfuerzo": false}
+-  }
+-}
+diff --git a/src/local_delegate/resources/vendor/vendor.json b/src/local_delegate/resources/vendor/vendor.json
+index 6dc99e9..2ea70b7 100644
+--- a/src/local_delegate/resources/vendor/vendor.json
++++ b/src/local_delegate/resources/vendor/vendor.json
+@@ -1,6 +1,6 @@
+ {
+   "schemaVersion": 1,
+-  "_acerca_de": [
++  "_about": [
+     "Manifiesto de lo que hay vendorizado en este directorio. Es la FUENTE DE VERDAD de la",
+     "versión: no la repitas en comentarios del código, remite aquí.",
+     "Lo comprueba `scripts/check_vendor.py` (integridad offline, CVEs en OSV.dev y versión",
+@@ -17,7 +17,7 @@
+       "licenseFile": "chart.js-LICENSE.md",
+       "sha256": "48444a82d4edcb5bec0f1965faacdde18d9c17db3063d042abada2f705c9f54a",
+       "bytes": 208522,
+-      "_procedencia": [
++      "_provenance": [
+         "Verificado el 2026-07-29 contra el TARBALL OFICIAL de npm, que es la fuente canónica:",
+         "package/dist/chart.umd.min.js del .tgz de chart.js 4.5.1. jsDelivr sirve exactamente el",
+         "mismo contenido, byte a byte, así que la procedencia está establecida por dos caminos.",
+diff --git a/src/local_delegate/transcripts.py b/src/local_delegate/transcripts.py
+index a4a8952..e3827c4 100644
+--- a/src/local_delegate/transcripts.py
++++ b/src/local_delegate/transcripts.py
+@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
+ from datetime import UTC, datetime, timedelta
+ from pathlib import Path
+ 
+-from . import precios
++from . import pricing
+ 
+ TOOL_PREFIX = "mcp__local-delegate__"
+ 
+@@ -37,9 +37,6 @@ MARGIN_BEFORE = timedelta(seconds=1)
+ MARGIN_AFTER = timedelta(seconds=2)
+ NO_RESULT_WINDOW = timedelta(minutes=15)
+ 
+-#: Las seis columnas de `modelUsage` que entran en el cotejo.
+-CHECK_FIELDS = precios.CAMPOS_COTEJO
+-
+ 
+ def parse_instant(value: object) -> datetime | None:
+     """`datetime` con zona (UTC si no trae) o `None`."""
+@@ -98,7 +95,7 @@ class Index:
+ def request_cost(message: dict) -> float | None:
+     """Coste a precio de lista de una petición (USD), con la escritura a 5 min y a 1 h separadas
+     según `usage.cache_creation`; `None` si el modelo no tiene precio (REQ-051)."""
+-    p = precios.entrada(str(message.get("model") or ""))
++    p = pricing.entry(str(message.get("model") or ""))
+     if p is None:
+         return None
+     u = message.get("usage") if isinstance(message.get("usage"), dict) else {}
+@@ -108,11 +105,11 @@ def request_cost(message: dict) -> float | None:
+     if w5 is None and w1 is None:
+         w5, w1 = u.get("cache_creation_input_tokens") or 0, 0
+     return (
+-        (u.get("input_tokens") or 0) * p["entrada"]
++        (u.get("input_tokens") or 0) * p["input"]
+         + (w5 or 0) * p["w5m"]
+         + (w1 or 0) * p["w1h"]
+-        + (u.get("cache_read_input_tokens") or 0) * p["lectura"]
+-        + (u.get("output_tokens") or 0) * p["salida"]
++        + (u.get("cache_read_input_tokens") or 0) * p["cache_read"]
++        + (u.get("output_tokens") or 0) * p["output"]
+     ) / 1e6
+ 
+ 
+@@ -271,14 +268,14 @@ def _same_path(a: str | None, b: str | None) -> bool:
+ 
+ 
+ def _supports_effort(model: str) -> bool:
+-    e = precios.entrada(model)
+-    return True if e is None else bool(e.get("admite_esfuerzo", True))
++    e = pricing.entry(model)
++    return True if e is None else bool(e.get("supports_effort", True))
+ 
+ 
+ def entry_for(index: Index, d: Delegation, match_kind: str) -> dict:
+     """La entrada del relleno de una línea casada (REQ-005): sin rutas, ids de sesión ni texto."""
+     n, cad = n_and_expiries(index, d)
+-    model = precios.normalizar_id(d.model) if d.model else None
++    model = pricing.normalize_id(d.model) if d.model else None
+     effort = d.effort
+     if effort is None and model and not _supports_effort(model):
+         effort = "n/a"  # Haiku 4.5: no admite esfuerzo, no es un dato que falte (REQ-003)
+@@ -353,14 +350,14 @@ def match_lines(
+ 
+ def cost_state(index: Index) -> list[dict]:
+     """Filas «modelo × sesión» de la ÚLTIMA línea `cost-state` por posición de cada
+-    `(sessionId, startTime)`: `{"modelo", <los seis campos>}`. Sin ids de sesión."""
++    `(sessionId, startTime)`: `{"model", <los seis campos>}`. Sin ids de sesión."""
+     rows: list[dict] = []
+     for _position, usage in sorted(index.costs.values(), key=lambda x: x[0]):
+         for model, values in usage.items():
+             if not isinstance(values, dict):
+                 continue
+-            row = {"modelo": str(model)}
+-            for field_name in CHECK_FIELDS:
++            row = {"model": str(model)}
++            for field_name in pricing.CHECK_FIELDS:
+                 row[field_name] = values.get(field_name) or 0
+             rows.append(row)
+     return rows
+diff --git a/src/local_delegate/valuation.py b/src/local_delegate/valuation.py
+index 3917227..c36cb57 100644
+--- a/src/local_delegate/valuation.py
++++ b/src/local_delegate/valuation.py
+@@ -24,7 +24,7 @@ from collections import Counter
+ from collections.abc import Iterable
+ from datetime import UTC, datetime
+ 
+-from . import attribution, cost, legacy_names, precios, server
++from . import attribution, cost, legacy_names, pricing, server
+ 
+ #: `N` declarado por hilo (REQ-042 (3)), medido con `atribucion_n.py`: principal 127 (14 casos),
+ #: subagente 40 (135 casos).
+@@ -46,7 +46,7 @@ FALLBACK_VARIABLE = "LOCAL_DELEGATE_COST_FALLBACK"
+ 
+ def model_name(mid: str) -> str:
+     """`claude-opus-5-5` → `Opus 5.5`; `claude-haiku-4-5` → `Haiku 4.5`. Solo para rótulos."""
+-    parts = precios.normalizar_id(str(mid)).removeprefix("claude-").split("-")
++    parts = pricing.normalize_id(str(mid)).removeprefix("claude-").split("-")
+     if not parts or not parts[0]:
+         return str(mid)
+     return " ".join([parts[0].capitalize(), ".".join(parts[1:])]).strip()
+@@ -59,10 +59,10 @@ def _thread(row: dict) -> str:
+ 
+ def price(m: str, thread: str, table: dict | None = None) -> dict | None:
+     """`{"w": P_w(m, hilo), "r": P_r(m)}` en USD/MTok, o `None` si `m` no tiene precio."""
+-    entry = precios.entrada(str(m or ""), table)
++    entry = pricing.entry(str(m or ""), table)
+     if entry is None:
+         return None
+-    return {"w": entry["w5m"] if thread == "subagent" else entry["w1h"], "r": entry["lectura"]}
++    return {"w": entry["w5m"] if thread == "subagent" else entry["w1h"], "r": entry["cache_read"]}
+ 
+ 
+ def _int_or_none(v: object) -> int | None:
+@@ -163,7 +163,7 @@ def cost_block(
+             or DEFAULT_CLEANUP_DAYS
+         )
+     try:
+-        table = precios.cargar_precios()
++        table = pricing.load_prices()
+         r = cost.fallback()
+     except Exception:
+         # Sin tabla no hay cifra (REQ-046), pero la barra y el motivo se enseñan igual.
+@@ -211,7 +211,7 @@ def cost_block(
+         c = event_cost(row, aggregates, table)
+         n_origin[c["n_origin"]] += 1
+         if c["low_bound"] is None:
+-            unpriced[precios.normalizar_id(c["model"])] += 1
++            unpriced[pricing.normalize_id(c["model"])] += 1
+             continue
+         valued += 1
+         t_total += c["T"]
+@@ -282,9 +282,8 @@ def cost_block(
+             for g in sorted(breakdown.values(), key=lambda g: -g["estimate"])
+         ],
+         "table": {
+-            # Las claves de `precios.json` (`consultado`, `fuente`) cambian con su lector (A5c).
+-            "consulted": (table or {}).get("consultado"),
+-            "source": (table or {}).get("fuente"),
++            "consulted": (table or {}).get("consulted"),
++            "source": (table or {}).get("source"),
+         },
+         "command": COMMAND,
+     }
+diff --git a/src/local_delegate/web/metrics.py b/src/local_delegate/web/metrics.py
+index ce65d71..3a566c8 100644
+--- a/src/local_delegate/web/metrics.py
++++ b/src/local_delegate/web/metrics.py
+@@ -61,7 +61,7 @@ from .. import (
+     failures,
+     legacy_names,
+     llamaswap_api,
+-    precios,
++    pricing,
+     quota,
+     recompute,
+     server,
+@@ -545,9 +545,9 @@ def stats(
+     aggregates = recompute.read_aggregates(config.LOG_DIR)
+     datos["cost"] = valuation.cost_block(rows, aggregates, now=now)
+     datos["images"] = valuation.images_block(usage)
+-    # El contenido es `densidad.json` tal cual: sus claves cambian con su lector (A5c).
++    # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
+     datos["density_table"] = {
+-        k: v for k, v in precios.cargar_densidad().items() if not k.startswith("_")
++        k: v for k, v in pricing.load_density().items() if not k.startswith("_")
+     }
+     datos["quota"] = _quota_block(aggregates, now)
+     return JSONResponse(datos)
+@@ -1984,7 +1984,10 @@ function textoCoste(j){
+     + ' de la mediana de su grupo, ' + F.format(n.declared||0) + ' con el valor declarado (principal '
+     + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
+   const d = c.density || {}, o = d.origin || {};
+-  const fams = Object.entries(d.families||{}).map(([k,v]) => k + ' ' + F.format(v)).join(', ');
++  // Las familias llegan como término de máquina (`new`, `previous`): aquí se dicen en palabras.
++  const FAMILIA = {new:'nueva', previous:'anterior'};
++  const fams = Object.entries(d.families||{})
++    .map(([k,v]) => (FAMILIA[k] || k) + ' ' + F.format(v)).join(', ');
+   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
+     + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
+     + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)
+diff --git a/tests/test_densidad.py b/tests/test_densidad.py
+index e9ae760..d77edd1 100644
+--- a/tests/test_densidad.py
++++ b/tests/test_densidad.py
+@@ -97,8 +97,8 @@ def test_sin_densidad_las_dos_dan_cero(tmp_path):
+ 
+ def test_el_mismo_py_con_haiku_da_menos_tokens():
+     """Escenario de la spec: un `.py` por `path`. Opus 5.5 usa `c` = 2,03 (familia nueva, formato
+-    `Read`, `medida`); Haiku, `c` = 3,12 (familia anterior, `formato_read` sin medir → respaldo (2),
+-    `sin_numerar`). El valor de Haiku coincide con el del respaldo (3) porque `codigo` es la mayor
++    `Read`, `medida`); Haiku, `c` = 3,12 (familia anterior, `read_format` sin medir → respaldo (2),
++    `unnumbered`). El valor de Haiku coincide con el del respaldo (3) porque `code` es la mayor
+     `c` de su familia: lo que discrimina es el ORIGEN."""
+     base = _fila(path="C:/src/app.py")
+     d_opus = cost.resolve_density(dict(base, caller_model="claude-opus-5-5"))
+@@ -116,9 +116,9 @@ def test_la_tool_manda_sobre_la_extension():
+     clase = cost.content_class({"tool": "local_lint_summary", "path": "C:/src/app.py"})
+     assert clase == "log"
+     assert cost.content_class({"tool": "local_commit_msg", "path": "x.md"}) == "diff"
+-    assert cost.content_class({"tool": "local_summarize", "path": "C:/src/app.py"}) == "codigo"
+-    assert cost.content_class({"tool": "local_summarize", "path": "/a/b.LOCK"}) == "estructurado"
+-    assert cost.content_class({"tool": "local_summarize", "path": "C:\\a.b\\volcado"}) == "otro"
++    assert cost.content_class({"tool": "local_summarize", "path": "C:/src/app.py"}) == "code"
++    assert cost.content_class({"tool": "local_summarize", "path": "/a/b.LOCK"}) == "structured"
++    assert cost.content_class({"tool": "local_summarize", "path": "C:\\a.b\\volcado"}) == "other"
+ 
+ 
+ def test_las_columnas_de_devuelto_y_salida():
+@@ -128,7 +128,7 @@ def test_las_columnas_de_devuelto_y_salida():
+     assert d["returned"] == [188, "measured"]  # estructurado, sin numerar
+     assert d["output"] == [223, "measured"]  # prosa, sin numerar
+     b = cost.resolve_density(_fila(tool="local_boilerplate", source="inline"))
+-    assert b["text"] == [241, "conservative"]  # inline sin path: clase `otro`, sin numerar → (3)
++    assert b["text"] == [241, "conservative"]  # inline sin path: clase `other`, sin numerar → (3)
+     assert (b["returned"], b["output"]) == ([241, "measured"], [241, "measured"])  # codigo
+ 
+ 
+@@ -137,7 +137,7 @@ def test_respaldo_por_variable(monkeypatch):
+     un valor inválido usa el declarado y lo dice."""
+     monkeypatch.setattr(config, "COST_FALLBACK", "claude-haiku-4-5")
+     r = cost.fallback()
+-    assert r["family"] == "anterior"
++    assert r["family"] == "previous"
+     assert (r["model"], r["thread"], r.get("fallback_invalid")) == (
+         "claude-haiku-4-5",
+         "subagent",
+@@ -146,7 +146,7 @@ def test_respaldo_por_variable(monkeypatch):
+ 
+     monkeypatch.setattr(config, "COST_FALLBACK", "claude-opus-5:main")
+     r = cost.fallback()
+-    assert (r["model"], r["thread"], r["family"]) == ("claude-opus-5", "main", "nueva")
++    assert (r["model"], r["thread"], r["family"]) == ("claude-opus-5", "main", "new")
+ 
+     monkeypatch.setattr(config, "COST_FALLBACK", "xyz")
+     r = cost.fallback()
+@@ -167,10 +167,10 @@ def test_la_variable_de_respaldo_se_lee_por_la_puerta_registrada():
+ def test_marcas_de_familia():
+     """REQ-030/031: un modelo de la familia que no está entre los medidos lleva
+     `family_density`; uno fuera de la tabla, `assumed_family` y la familia nueva."""
+-    assert cost.family_and_marks("claude-opus-5-5") == ("nueva", [])
+-    assert cost.family_and_marks("claude-sonnet-4-6") == ("anterior", ["family_density"])
+-    assert cost.family_and_marks("claude-opus-4-8") == ("nueva", ["family_density"])
+-    assert cost.family_and_marks("claude-xyz-1") == ("nueva", ["assumed_family"])
++    assert cost.family_and_marks("claude-opus-5-5") == ("new", [])
++    assert cost.family_and_marks("claude-sonnet-4-6") == ("previous", ["family_density"])
++    assert cost.family_and_marks("claude-opus-4-8") == ("new", ["family_density"])
++    assert cost.family_and_marks("claude-xyz-1") == ("new", ["assumed_family"])
+ 
+ 
+ # --- Imágenes fuera del neto (REQ-038) ----------------------------------------------------------
+@@ -237,7 +237,7 @@ def test_la_fusion_respeta_el_orden(tmp_path):
+     assert (b["caller_model"], b.get("caller_origin")) == (DEL_RELLENO, "backfill")
+     assert b["caller_kind"] == "main", "por campo: el hilo de la línea manda sobre el del relleno"
+     assert (b.get("n"), b.get("expiries"), b.get("caller_effort")) == (12, 1, "n/a")
+-    assert b.get("family") == "anterior"
++    assert b.get("family") == "previous"
+ 
+     assert (c["caller_model"], c["caller_kind"], c.get("caller_origin")) == (
+         "claude-opus-5-5",
+@@ -356,7 +356,7 @@ def test_la_coletilla_usa_tokens_de_claude(monkeypatch, tmp_path):
+ 
+ @backend_mock.mock
+ def test_el_recibo_de_salida_usa_tokens_de_claude(monkeypatch, tmp_path):
+-    """Salida a fichero de `local_boilerplate`: clase `codigo`, sin numerar → c = 2,41."""
++    """Salida a fichero de `local_boilerplate`: clase `code`, sin numerar → c = 2,41."""
+     codigo = "x = 1\n" * 100  # 600 caracteres
+     _backend(monkeypatch, tmp_path, prompt_tokens=10, texto=codigo.strip())
+     destino = tmp_path / "salida.py"
+@@ -382,7 +382,7 @@ def test_tokens_aprox_de_extract_es_de_claude(monkeypatch, tmp_path):
+ @backend_mock.mock
+ def test_la_coletilla_usa_el_modelo_de_la_nota_si_ya_esta(monkeypatch, tmp_path):
+     """REQ-035: con la atribución de la llamada en curso (nota del hook y transcript), la coletilla
+-    usa ese modelo y no el respaldo. Haiku, `.md` por `path`: su `formato_read` está sin medir →
++    usa ese modelo y no el respaldo. Haiku, `.md` por `path`: su `read_format` está sin medir →
+     respaldo (2), prosa sin numerar, c = 3,01 → 4000 × 100 // 301 = 1328 (con Opus 5.5, 2000)."""
+     _backend(monkeypatch, tmp_path, prompt_tokens=9999)
+     monkeypatch.setattr(
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index 59fcdff..2c02bff 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -725,7 +725,7 @@ def _ev(**kw) -> dict:
+ def _resuelta(fila: dict) -> dict:
+     """La fila como la entrega `_load` en producción: fundida y con su densidad resuelta
+     (coste-api-y-cuota, REQ-006). Sin relleno ni `caller_model`, toma el respaldo declarado (Opus
+-    5.5, familia nueva). `_ev` no trae `path`: clase `otro`, que en `formato_read` cae en el
++    5.5, familia nueva). `_ev` no trae `path`: clase `other`, que en `read_format` cae en el
+     respaldo (3), la mayor `c` sin numerar de la familia, 2,41; lo devuelto es prosa sin numerar,
+     2,23; la salida, prosa sin numerar, 2,23."""
+     return cost.merge_row(fila)
+@@ -1196,9 +1196,9 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+             chunks=3,
+         ),
+         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
+-        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `measured`.
++        # Prosa por `path` de Opus 5.5: familia nueva, columna `read_format`, origen `measured`.
+         _ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", tokens_in=1100, tokens_out=90),
+-        # La misma prosa inline, escrita a fichero: columna `sin_numerar` (la de lo que la tool
++        # La misma prosa inline, escrita a fichero: columna `unnumbered` (la de lo que la tool
+         # escribe). Inline no reclama ahorro de entrada, así que es la salida la que cambia.
+         _ev(
+             source="inline",
+@@ -1208,11 +1208,11 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+             tokens_out=950,
+             output_to_file=True,
+         ),
+-        # `.md` por `path` de Haiku 4.5: familia anterior, su `formato_read` sin medir → respaldo (2).
++        # `.md` por `path` de Haiku 4.5: familia anterior, su `read_format` sin medir → respaldo (2).
+         _ev(
+             path="C:/docs/notas.md", caller_model="claude-haiku-4-5", tokens_in=1100, tokens_out=90
+         ),
+-        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservative`.
++        # `.bin` por `path`: clase `other`, sin celda → respaldo (3), `conservative`.
+         _ev(path="C:/datos/volcado.bin", caller_model="claude-opus-5-5", tokens_in=900),
+         # Imagen con `chars_returned > 0`: todo 0 (REQ-038).
+         _ev(
+@@ -1258,7 +1258,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
+     # devuelto que da 0 en las dos copias.
+     origenes = {c["density"]["text"][1] for c in casos if c["density"]["text"]}
+     assert origenes >= {"measured", "unnumbered", "conservative"}
+-    assert {c["family"] for c in casos} >= {"nueva", "anterior"}
++    assert {c["family"] for c in casos} >= {"new", "previous"}
+     assert any(
+         c["density"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
+         for c, py in zip(casos, desde_py, strict=True)
+diff --git a/tests/test_panel_coste.py b/tests/test_panel_coste.py
+index 848039b..5837627 100644
+--- a/tests/test_panel_coste.py
++++ b/tests/test_panel_coste.py
+@@ -239,7 +239,7 @@ def test_api_stats_trae_coste_cuota_e_imagenes(entorno):
+     assert j.get("cost") is not None
+     assert j.get("images") == {"n": 1, "bytes": 250000, "chars_returned": 800}
+     assert j.get("quota", {}).get("five_hour", {}).get("status") == "uncalibrated"
+-    assert set(j.get("density_table", {}).get("familias", {})) == {"nueva", "anterior"}
++    assert set(j.get("density_table", {}).get("families", {})) == {"new", "previous"}
+     # Las claves de siempre siguen ahí: las nuevas son aditivas.
+     assert j["total"]["calls"] == 2
+ 
+@@ -578,6 +578,19 @@ def test_texto_del_coste_con_la_barra_y_el_respaldo(entorno, tmp_path):
+     )
+ 
+ 
++def test_families_are_said_in_words(entorno, tmp_path):
++    """Las familias de tokenizador llegan como `new` y `previous` y el panel las dice en palabras.
++
++    Control: mutante «`FAMILIA` con la clave vieja `nueva`» → sale «new 2»."""
++    logs, _home = entorno
++    _escribir_log(logs, [_linea(_ahora() - timedelta(hours=1))])
++    j = _stats()
++    assert j["cost"]["density"]["families"] == {"new": 1}  # guarda: la fila trae la familia
++    j["cost"]["density"]["families"] = {"new": 2, "previous": 1}
++    texto = _textos(tmp_path, j)["coste"]
++    assert "familia de tokenizador (nueva 2, anterior 1)" in texto
++
++
+ def test_una_fila_sin_ahorro_no_pinta_dolares(entorno, tmp_path):
+     """Arreglo tras T10: una fila del desglose con T ≤ 0 (la tool devolvió más de lo que leyó) dice
+     «sin ahorro» en vez de «$0,00 $0,00». node, sobre las filas de `/api/stats`."""
+diff --git a/tests/test_precios.py b/tests/test_precios.py
+index 45c8eae..ccf2822 100644
+--- a/tests/test_precios.py
++++ b/tests/test_precios.py
+@@ -12,8 +12,8 @@ from __future__ import annotations
+ import copy
+ import socket
+ 
+-from local_delegate import precios
+-from local_delegate.precios import cargar_precios, cotejar, entrada, normalizar_id, veredicto
++from local_delegate import pricing
++from local_delegate.pricing import check_rows, entry, load_prices, normalize_id, verdict
+ 
+ IDS_DE_LA_SPEC = [
+     "claude-fable-5-1",
+@@ -33,7 +33,7 @@ IDS_DE_LA_SPEC = [
+ 
+ # Filas literales de `cost-state` (solo números e id de modelo).
+ FILA_OPUS_5 = {
+-    "modelo": "claude-opus-5",
++    "model": "claude-opus-5",
+     "inputTokens": 2,
+     "cacheCreationInputTokens": 40445,
+     "cacheReadInputTokens": 0,
+@@ -43,7 +43,7 @@ FILA_OPUS_5 = {
+ }
+ # Opus 5.5 con mucha lectura de caché (y con `[1m]`, que tiene que normalizarse).
+ FILA_OPUS_55_LECTURA = {
+-    "modelo": "claude-opus-5-5[1m]",
++    "model": "claude-opus-5-5[1m]",
+     "inputTokens": 8,
+     "cacheCreationInputTokens": 28669,
+     "cacheReadInputTokens": 144347,
+@@ -53,7 +53,7 @@ FILA_OPUS_55_LECTURA = {
+ }
+ # Opus 5.5 con mucha salida.
+ FILA_OPUS_55_SALIDA = {
+-    "modelo": "claude-opus-5-5",
++    "model": "claude-opus-5-5",
+     "inputTokens": 248,
+     "cacheCreationInputTokens": 95543,
+     "cacheReadInputTokens": 2302120,
+@@ -63,7 +63,7 @@ FILA_OPUS_55_SALIDA = {
+ }
+ # Haiku con búsquedas web: solo cae dentro si se suman ($0,051 sin ellas, $0,091 con ellas).
+ FILA_HAIKU_WEB = {
+-    "modelo": "claude-haiku-4-5-20251001",
++    "model": "claude-haiku-4-5-20251001",
+     "inputTokens": 42371,
+     "cacheCreationInputTokens": 0,
+     "cacheReadInputTokens": 0,
+@@ -73,7 +73,7 @@ FILA_HAIKU_WEB = {
+ }
+ # Menos de $0,05: no se juzga.
+ FILA_PEQUENA = {
+-    "modelo": "claude-haiku-4-5-20251001",
++    "model": "claude-haiku-4-5-20251001",
+     "inputTokens": 36,
+     "cacheCreationInputTokens": 8443,
+     "cacheReadInputTokens": 21430,
+@@ -85,97 +85,97 @@ FILAS = [FILA_OPUS_5, FILA_OPUS_55_LECTURA, FILA_OPUS_55_SALIDA, FILA_HAIKU_WEB,
+ 
+ 
+ def _sin_precio(filas, resultados):
+-    return {normalizar_id(f["modelo"]) for f, r in zip(filas, resultados) if r == "sin_precio"}
++    return {normalize_id(f["model"]) for f, r in zip(filas, resultados) if r == "unpriced"}
+ 
+ 
+ def test_normaliza_fecha_y_1m():
+-    assert entrada("claude-haiku-4-5-20251001") is not None
+-    assert entrada("claude-opus-5-5[1m]") is not None
+-    assert normalizar_id("claude-haiku-4-5-20251001") == "claude-haiku-4-5"
+-    assert normalizar_id("claude-opus-5-5[1m]") == "claude-opus-5-5"
++    assert entry("claude-haiku-4-5-20251001") is not None
++    assert entry("claude-opus-5-5[1m]") is not None
++    assert normalize_id("claude-haiku-4-5-20251001") == "claude-haiku-4-5"
++    assert normalize_id("claude-opus-5-5[1m]") == "claude-opus-5-5"
+ 
+ 
+ def test_busqueda_exacta_en_los_pares():
+-    assert entrada("claude-opus-5")["lectura"] == 0.50
+-    assert entrada("claude-opus-5-5")["lectura"] == 0.20
+-    assert entrada("claude-fable-5")["lectura"] == 1.0
+-    assert entrada("claude-fable-5-1")["lectura"] == 0.25
++    assert entry("claude-opus-5")["cache_read"] == 0.50
++    assert entry("claude-opus-5-5")["cache_read"] == 0.20
++    assert entry("claude-fable-5")["cache_read"] == 1.0
++    assert entry("claude-fable-5-1")["cache_read"] == 0.25
+ 
+ 
+ def test_un_id_sin_entrada_no_tiene_precio():
+-    assert entrada("claude-opus-9") is None
+-    assert precios.familia("claude-opus-9") is None
++    assert entry("claude-opus-9") is None
++    assert pricing.family("claude-opus-9") is None
+ 
+ 
+ def test_la_tabla_cubre_los_13_ids():
+-    tabla = cargar_precios()
+-    assert sorted(tabla["modelos"]) == sorted(IDS_DE_LA_SPEC)
+-    for campo in ("fuente", "consultado", "busqueda_web_por_1000"):
++    tabla = load_prices()
++    assert sorted(tabla["models"]) == sorted(IDS_DE_LA_SPEC)
++    for campo in ("source", "consulted", "web_search_per_1000"):
+         assert campo in tabla
+-    for mid, e in tabla["modelos"].items():
++    for mid, e in tabla["models"].items():
+         assert set(e) == {
+-            "entrada",
++            "input",
+             "w5m",
+             "w1h",
+-            "lectura",
+-            "salida",
+-            "familia",
+-            "admite_esfuerzo",
++            "cache_read",
++            "output",
++            "family",
++            "supports_effort",
+         }, mid
+-        assert e["familia"] in ("nueva", "anterior"), mid
++        assert e["family"] in ("new", "previous"), mid
+ 
+ 
+ def test_la_tabla_de_densidad_dice_con_que_modelos_se_midio():
+-    densidad = precios.cargar_densidad()
+-    familias = densidad["familias"]
+-    assert densidad.get("medido")
+-    assert familias["nueva"].get("medido_con") == [
++    densidad = pricing.load_density()
++    familias = densidad["families"]
++    assert densidad.get("measured_on")
++    assert familias["new"].get("measured_with") == [
+         "claude-opus-5-5",
+         "claude-sonnet-5-5",
+         "claude-opus-5",
+         "claude-fable-5-1",
+     ]
+-    assert familias["anterior"].get("medido_con") == ["claude-haiku-4-5"]
+-    assert familias["nueva"]["sin_numerar"]["prosa"] == 223
+-    assert familias["anterior"]["sin_numerar"]["prosa"] == 301
+-    # Cada modelo de `medido_con` es de esa familia en la tabla de precios.
++    assert familias["previous"].get("measured_with") == ["claude-haiku-4-5"]
++    assert familias["new"]["unnumbered"]["prose"] == 223
++    assert familias["previous"]["unnumbered"]["prose"] == 301
++    # Cada modelo de `measured_with` es de esa familia en la tabla de precios.
+     for nombre, f in familias.items():
+-        for mid in f.get("medido_con", []):
+-            assert precios.familia(mid) == nombre, mid
++        for mid in f.get("measured_with", []):
++            assert pricing.family(mid) == nombre, mid
+ 
+ 
+ def test_cotejo_con_filas_literales():
+-    tabla = cargar_precios()
++    tabla = load_prices()
+ 
+     # Guarda: con la tabla sin mutar todas caen dentro salvo la de menos de $0,05.
+-    r = cotejar(FILAS, tabla)
+-    assert r == ["dentro", "dentro", "dentro", "dentro", None]
+-    assert veredicto(r) == "pasa"
++    r = check_rows(FILAS, tabla)
++    assert r == ["inside", "inside", "inside", "inside", None]
++    assert verdict(r) == "pass"
+ 
+     # Mutante de datos 1: falta `claude-opus-5`.
+     sin_opus5 = copy.deepcopy(tabla)
+-    del sin_opus5["modelos"]["claude-opus-5"]
+-    r = cotejar(FILAS, sin_opus5)
+-    assert veredicto(r) == "falla"
++    del sin_opus5["models"]["claude-opus-5"]
++    r = check_rows(FILAS, sin_opus5)
++    assert verdict(r) == "fail"
+     assert "claude-opus-5" in _sin_precio(FILAS, r)
+ 
+     # Mutante de datos 2: lectura de Opus 5.5 ×0,8.
+     lectura = copy.deepcopy(tabla)
+-    lectura["modelos"]["claude-opus-5-5"]["lectura"] *= 0.8
+-    r = cotejar(FILAS, lectura)
+-    assert veredicto(r) == "falla"
++    lectura["models"]["claude-opus-5-5"]["cache_read"] *= 0.8
++    r = check_rows(FILAS, lectura)
++    assert verdict(r) == "fail"
+ 
+     # Mutante de datos 3: salida de Opus 5.5 ×0,8.
+     salida = copy.deepcopy(tabla)
+-    salida["modelos"]["claude-opus-5-5"]["salida"] *= 0.8
+-    r = cotejar(FILAS, salida)
+-    assert veredicto(r) == "falla"
++    salida["models"]["claude-opus-5-5"]["output"] *= 0.8
++    r = check_rows(FILAS, salida)
++    assert verdict(r) == "fail"
+ 
+ 
+ def test_el_cotejo_cuenta_la_busqueda_web():
+-    r = cotejar([FILA_HAIKU_WEB], cargar_precios())
+-    assert veredicto(r) == "pasa"
+-    assert r == ["dentro"]
++    r = check_rows([FILA_HAIKU_WEB], load_prices())
++    assert verdict(r) == "pass"
++    assert r == ["inside"]
+ 
+ 
+ def test_cargar_las_tablas_no_abre_sockets(monkeypatch):
+@@ -192,48 +192,48 @@ def test_cargar_las_tablas_no_abre_sockets(monkeypatch):
+     monkeypatch.setattr(socket, "create_connection", registrar("create_connection"))
+     monkeypatch.setattr(socket.socket, "connect", registrar("connect"))
+     # Sin caché, para que la carga se ejecute de verdad dentro del test.
+-    precios.cargar_precios.cache_clear()
+-    precios.cargar_densidad.cache_clear()
++    pricing.load_prices.cache_clear()
++    pricing.load_density.cache_clear()
+     try:
+         try:
+-            precios.cargar_precios()
+-            precios.cargar_densidad()
++            pricing.load_prices()
++            pricing.load_density()
+         except OSError:
+             # Se ignora a propósito: este test solo comprueba que la carga no intente salir a
+             # la red; si la lectura falla por otra causa, lo que importa es el assert de abajo.
+             pass
+         assert intentos == []
+     finally:
+-        precios.cargar_precios.cache_clear()
+-        precios.cargar_densidad.cache_clear()
++        pricing.load_prices.cache_clear()
++        pricing.load_density.cache_clear()
+ 
+ 
+ def test_una_marca_de_ensayo_en_la_tabla_no_cambia_nada(monkeypatch):
+-    """La tabla de un PR de ensayo del vigilante trae `_ensayo` (y siempre `_nota`): no son datos.
++    """La tabla de un PR de ensayo del vigilante trae `_ensayo` (y siempre `_note`): no son datos.
+ 
+-    Se carga por el camino real (`cargar_precios`) una copia con marcas `_` añadidas y todo lo que
++    Se carga por el camino real (`load_prices`) una copia con marcas `_` añadidas y todo lo que
+     lee la tabla tiene que dar lo mismo que con la limpia.
+     """
+-    limpia = copy.deepcopy(cargar_precios())
+-    leer = precios._leer_tabla
++    limpia = copy.deepcopy(load_prices())
++    leer = pricing._read_table
+ 
+     def con_marcas(nombre):
+         tabla = leer(nombre)
+-        if nombre != "precios.json":
++        if nombre != "prices.json":
+             return tabla
+         return {"_ensayo": "PR de prueba del vigilante (run 1): no mezclar", **tabla, "_otra": 0}
+ 
+-    monkeypatch.setattr(precios, "_leer_tabla", con_marcas)
+-    precios.cargar_precios.cache_clear()
++    monkeypatch.setattr(pricing, "_read_table", con_marcas)
++    pricing.load_prices.cache_clear()
+     try:
+-        marcada = cargar_precios()
++        marcada = load_prices()
+         assert "_ensayo" in marcada, "guarda: la carga pasó por la tabla con marcas"
+         assert {k: x for k, x in marcada.items() if not k.startswith("_")} == {
+             k: x for k, x in limpia.items() if not k.startswith("_")
+         }
+         for mid in IDS_DE_LA_SPEC:
+-            assert entrada(mid) == limpia["modelos"][mid], mid
+-            assert precios.familia(mid) == limpia["modelos"][mid]["familia"], mid
+-        assert cotejar(FILAS, marcada) == cotejar(FILAS, limpia)
++            assert entry(mid) == limpia["models"][mid], mid
++            assert pricing.family(mid) == limpia["models"][mid]["family"], mid
++        assert check_rows(FILAS, marcada) == check_rows(FILAS, limpia)
+     finally:
+-        precios.cargar_precios.cache_clear()
++        pricing.load_prices.cache_clear()
+diff --git a/tests/test_transcripts.py b/tests/test_transcripts.py
+index 65dba17..6a82007 100644
+--- a/tests/test_transcripts.py
++++ b/tests/test_transcripts.py
+@@ -321,6 +321,6 @@ def test_cost_state_toma_la_ultima_por_posicion(tmp_path):
+     filas = transcripts.cost_state(transcripts.read(claude / "projects"))
+     assert len(filas) == 1
+     fila = filas[0]
+-    assert fila["modelo"] == OPUS
++    assert fila["model"] == OPUS
+     assert fila["costUSD"] == ULTIMO
+     assert SESION not in json.dumps(filas)
+diff --git a/tests/test_valoracion.py b/tests/test_valoracion.py
+index 448a943..0d385c9 100644
+--- a/tests/test_valoracion.py
++++ b/tests/test_valoracion.py
+@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
+ 
+ import pytest
+ 
+-from local_delegate import attribution, config, cost, precios, recompute, valuation
++from local_delegate import attribution, config, cost, pricing, recompute, valuation
+ 
+ AHORA = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
+ MES = f"{AHORA:%Y%m}"
+@@ -83,7 +83,7 @@ def test_un_millon_de_caracteres(tmp_path):
+     assert b["bar"]["backfilled"] == 1
+     assert b["density"]["origin"]["measured"] == 1
+     assert b["n_origin"] == {"backfill": 1, "aggregate": 0, "declared": 0}
+-    assert b["table"]["consulted"] == precios.cargar_precios()["consultado"]
++    assert b["table"]["consulted"] == pricing.load_prices()["consulted"]
+ 
+ 
+ def test_cada_caducidad_es_una_reescritura(tmp_path):
+@@ -195,7 +195,7 @@ def test_sin_tabla_y_sin_delegaciones(tmp_path, monkeypatch):
+     def _rota():
+         raise ValueError("tabla rota")
+ 
+-    monkeypatch.setattr(precios, "cargar_precios", _rota)
++    monkeypatch.setattr(pricing, "load_prices", _rota)
+     b = valuation.cost_block(filas, None, now=AHORA)
+     assert b["reason"] == valuation.NO_TABLE
+     assert b["figure"] is None
+diff --git a/tests/test_vendor.py b/tests/test_vendor.py
+index 7c2e1e4..79cb15c 100644
+--- a/tests/test_vendor.py
++++ b/tests/test_vendor.py
+@@ -83,7 +83,7 @@ def _sin_red(monkeypatch, osv=None, npm=None):
+             raise AssertionError("el test no esperaba una consulta a npm")
+         return npm()
+ 
+-    monkeypatch.setattr(check_vendor, "_pedir_json", falso)
++    monkeypatch.setattr(check_vendor, "_fetch_json", falso)
+ 
+ 
+ # --- integridad: lo que TIENE que romper el CI ---------------------------------------------------
+@@ -94,7 +94,7 @@ def test_blob_alterado_falla(vendor_copia):
+     blob.write_bytes(datos[:-1] + b"X")  # un solo byte distinto
+ 
+     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+-        check_vendor.FALLO_INTEGRIDAD
++        check_vendor.INTEGRITY_FAILURE
+     )
+ 
+ 
+@@ -102,7 +102,7 @@ def test_blob_ausente_falla(vendor_copia):
+     (vendor_copia.parent / "chart.umd.min.js").unlink()
+ 
+     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+-        check_vendor.FALLO_INTEGRIDAD
++        check_vendor.INTEGRITY_FAILURE
+     )
+ 
+ 
+@@ -111,7 +111,7 @@ def test_fichero_sin_declarar_falla(vendor_copia):
+     (vendor_copia.parent / "intruso.min.js").write_text("window.x = 1", encoding="utf-8")
+ 
+     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
+-        check_vendor.FALLO_INTEGRIDAD
++        check_vendor.INTEGRITY_FAILURE
+     )
+ 
+ 
+@@ -120,14 +120,14 @@ def test_manifiesto_ilegible_falla(tmp_path):
+     roto.write_text("{esto no es json", encoding="utf-8")
+ 
+     assert check_vendor.main(["--offline", "--manifest", str(roto)]) == (
+-        check_vendor.FALLO_MANIFIESTO
++        check_vendor.MANIFEST_FAILURE
+     )
+ 
+ 
+ def test_manifiesto_real_cuadra_con_el_blob():
+     """Solo lectura sobre el árbol real: el hash declarado es el del fichero que se publica."""
+     manifiesto = json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))
+-    errores = check_vendor.comprobar_integridad(manifiesto, VENDOR_REAL)
++    errores = check_vendor.check_integrity(manifiesto, VENDOR_REAL)
+ 
+     assert errores == []
+ 
+@@ -159,7 +159,7 @@ def test_la_pista_de_crlf_sale_cuando_toca(vendor_copia):
+     blob.write_bytes(blob.read_bytes().replace(b"\n", b"\r\n"))
+     manifiesto = json.loads(vendor_copia.read_text(encoding="utf-8"))
+ 
+-    errores = check_vendor.comprobar_integridad(manifiesto, vendor_copia.parent)
++    errores = check_vendor.check_integrity(manifiesto, vendor_copia.parent)
+ 
+     assert len(errores) == 1
+     assert "PISTA" in errores[0]
+@@ -175,13 +175,13 @@ def test_vulnerabilidad_confirmada_falla(vendor_copia, monkeypatch):
+     )
+ 
+     assert check_vendor.main(["--manifest", str(vendor_copia)]) == (
+-        check_vendor.FALLO_VULNERABILIDAD
++        check_vendor.VULNERABILITY_FAILURE
+     )
+ 
+ 
+ # --- red: lo que solo puede AVISAR ---------------------------------------------------------------
+ def _caido():
+-    raise check_vendor.ServicioNoDisponible("simulado")
++    raise check_vendor.ServiceUnavailable("simulado")
+ 
+ 
+ def test_osv_caido_no_falla(vendor_copia, monkeypatch, capsys):
+@@ -233,7 +233,7 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
+         npm=lambda: {"version": VERSION_VENDORIZADA},
+     )
+ 
+-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.FALLO_INTEGRIDAD)
++    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.INTEGRITY_FAILURE)
+ 
+ 
+ # --- comparación de versiones --------------------------------------------------------------------
+@@ -248,7 +248,7 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
+     ],
+ )
+ def test_clave_version(version, esperado):
+-    assert check_vendor._clave_version(version) == esperado
++    assert check_vendor._version_key(version) == esperado
+ 
+ 
+ def test_version_incomparable_avisa_sin_fallar(vendor_copia, monkeypatch, capsys):
+diff --git a/tests/test_vigilante.py b/tests/test_vigilante.py
+index 6cdb33a..6ced51f 100644
+--- a/tests/test_vigilante.py
++++ b/tests/test_vigilante.py
+@@ -50,10 +50,10 @@ def _v():
+ 
+ # La tabla que da `precios.html` tal como se guardó el 2026-10-06. Trece modelos: fuera los cuatro
+ # «Retired» (Opus 4.1, Opus 4, Sonnet 4, Haiku 3.5) y los dos «Invite only» (Mythos 5.1 y 5).
+-_P = ("entrada", "salida", "w5m", "w1h", "lectura")
++_P = ("input", "output", "w5m", "w1h", "cache_read")
+ ESPERADA = {
+-    "busqueda_web_por_1000": 10,
+-    "modelos": {
++    "web_search_per_1000": 10,
++    "models": {
+         mid: dict(zip(_P, valores, strict=True))
+         for mid, valores in {
+             "claude-fable-5-1": (10, 50, 12.5, 20, 0.25),
+@@ -73,14 +73,14 @@ ESPERADA = {
+     },
+ }
+ 
+-# Una tabla «del paquete» congelada, con la forma de `precios.json`, igual a la página guardada.
++# Una tabla «del paquete» congelada, con la forma de `prices.json`, igual a la página guardada.
+ PAQUETE = {
+-    "fuente": "https://platform.claude.com/docs/en/about-claude/pricing",
+-    "consultado": "2026-10-06",
+-    "busqueda_web_por_1000": 10,
+-    "modelos": {
+-        mid: {**precios, "familia": "nueva", "admite_esfuerzo": True}
+-        for mid, precios in ESPERADA["modelos"].items()
++    "source": "https://platform.claude.com/docs/en/about-claude/pricing",
++    "consulted": "2026-10-06",
++    "web_search_per_1000": 10,
++    "models": {
++        mid: {**precios, "family": "new", "supports_effort": True}
++        for mid, precios in ESPERADA["models"].items()
+     },
+ }
+ 
+@@ -88,11 +88,11 @@ HOY = dt.date(2026, 10, 12)
+ 
+ 
+ def _tabla_real_limpia() -> tuple[str, dict]:
+-    """El `precios.json` del checkout, con su formato, sin marcas de ensayo (`_ensayo...`).
++    """El `prices.json` del checkout, con su formato, sin marcas de ensayo (`_ensayo...`).
+ 
+     En la rama de un PR de ensayo el fichero ya trae `_ensayo`, y un test que lo lea tal cual da
+     otro resultado que en `main` (run 37526624930). Se quita aquí, sobre una copia, para que los
+-    tests den lo mismo en las dos ramas. `_nota` no es de ensayo y se queda.
++    tests den lo mismo en las dos ramas. `_note` no es de ensayo y se queda.
+     """
+     v = _v()
+     real = (RAIZ / v.RUTA_PRECIOS).read_text(encoding="utf-8")
+@@ -155,7 +155,7 @@ def test_una_nota_al_pie_en_el_nombre_no_cambia_el_id():
+         "Claude Opus 5.5</a>",
+         "Claude Opus 5.5<sup>1</sup></a>",
+     )
+-    assert "claude-opus-5-5" in _v().extraer_tabla_precios(html)["modelos"]
++    assert "claude-opus-5-5" in _v().extraer_tabla_precios(html)["models"]
+ 
+ 
+ @pytest.mark.parametrize(
+@@ -179,7 +179,7 @@ def test_un_precio_cambiado_da_ese_diff():
+     v = _v()
+     html = _cambiar_en_fila(_pagina_precios(), "Claude Opus 5.5", "$0.20", f"${NUEVO:.2f}")
+     cambios = v.comparar(v.extraer_tabla_precios(html), PAQUETE)
+-    assert cambios.precios == [("claude-opus-5-5", "lectura", 0.20, NUEVO)]
++    assert cambios.precios == [("claude-opus-5-5", "cache_read", 0.20, NUEVO)]
+     assert cambios.nuevos == [] and cambios.desaparecidos == []
+     assert cambios.hay_cambios
+ 
+@@ -206,8 +206,8 @@ def test_un_modelo_nuevo_sale_listado_en_el_pr():
+     tabla = v.tabla_actualizada(
+         PAQUETE, v.extraer_tabla_precios(_con_modelo_nuevo(_pagina_precios())), cambios, HOY
+     )
+-    assert tabla["modelos"]["claude-nuevo-9"]["entrada"] == 4
+-    assert tabla["consultado"] == HOY.isoformat()
++    assert tabla["models"]["claude-nuevo-9"]["input"] == 4
++    assert tabla["consulted"] == HOY.isoformat()
+ 
+ 
+ def test_un_modelo_que_desaparece_no_se_borra():
+@@ -217,12 +217,12 @@ def test_un_modelo_que_desaparece_no_se_borra():
+     html = html[:desde] + html[hasta:]
+     html = _cambiar_en_fila(html, "Claude Opus 5.5", "$0.20", f"${NUEVO:.2f}")
+     nueva = v.extraer_tabla_precios(html)
+-    assert "claude-opus-4-5" not in nueva["modelos"]  # guarda: de verdad desapareció
++    assert "claude-opus-4-5" not in nueva["models"]  # guarda: de verdad desapareció
+     cambios = v.comparar(nueva, PAQUETE)
+     assert cambios.desaparecidos == ["claude-opus-4-5"]
+     resultado = v.tabla_actualizada(PAQUETE, nueva, cambios, HOY)
+-    assert "claude-opus-4-5" in resultado["modelos"]
+-    assert resultado["modelos"]["claude-opus-5-5"]["lectura"] == NUEVO
++    assert "claude-opus-4-5" in resultado["models"]
++    assert resultado["models"]["claude-opus-5-5"]["cache_read"] == NUEVO
+     assert "claude-opus-4-5" in v.cuerpo_pr_precios(cambios)
+ 
+ 
+@@ -259,9 +259,9 @@ def test_serializar_conserva_el_formato_del_paquete():
+     v = _v()
+     original, tabla = _tabla_real_limpia()
+     assert v.serializar_precios(tabla, original) == original
+-    primero = next(iter(tabla["modelos"]))
+-    tabla["modelos"][primero]["salida"] = 999
+-    tabla["consultado"] = HOY.isoformat()
++    primero = next(iter(tabla["models"]))
++    tabla["models"][primero]["output"] = 999
++    tabla["consulted"] = HOY.isoformat()
+     distintas = [
+         (a, b)
+         for a, b in zip(
+@@ -325,7 +325,7 @@ def test_el_pr_de_limites_dice_como_reiniciar():
+ # --- El flujo de GitHub, con un cliente falso ---------------------------------------------------
+ 
+ REPO = "o/r"
+-RUTA_CONTENIDOS_PRECIOS = f"/repos/{REPO}/contents/src/local_delegate/resources/datos/precios.json"
++RUTA_CONTENIDOS_PRECIOS = f"/repos/{REPO}/contents/src/local_delegate/resources/data/prices.json"
+ 
+ 
+ class FalsoGitHub:
+@@ -460,8 +460,8 @@ def test_el_pr_se_hace_por_la_api_y_lanza_los_dos_checks(raiz):
+     cuerpo = falso.cuerpos[falso.llamadas.index(("PUT", RUTA_CONTENIDOS_PRECIOS))]
+     escrita = json.loads(base64.b64decode(cuerpo["content"]))
+     assert cuerpo["branch"] == "vigilante/precios"
+-    assert escrita["modelos"]["claude-opus-5-5"]["lectura"] == NUEVO
+-    assert escrita["consultado"] == HOY.isoformat()
++    assert escrita["models"]["claude-opus-5-5"]["cache_read"] == NUEVO
++    assert escrita["consulted"] == HOY.isoformat()
+     # Con el PR en `clean`, no hay comentario.
+     assert not any(r.endswith("/comments") for _m, r in falso.llamadas)
+ 
+@@ -551,7 +551,7 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
+     real, tabla = _tabla_real_limpia()
+     assert v.serializar_precios(tabla, real) == real, "guarda: sin cambios no hay diff"
+     (raiz / v.RUTA_PRECIOS).write_text(real, encoding="utf-8")
+-    hoy = dt.date.fromisoformat(tabla["consultado"])
++    hoy = dt.date.fromisoformat(tabla["consulted"])
+     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "37524585928"})
+     assert codigo == 0
+     escrita = _tabla_escrita(falso)
+@@ -561,7 +561,7 @@ def test_el_ensayo_tiene_diff_aunque_consultado_ya_sea_hoy(raiz):
+ 
+ 
+ def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
+-    """Run 37526624930: en la rama de ensayo `precios.json` ya trae `_ensayo` de un run anterior.
++    """Run 37526624930: en la rama de ensayo `prices.json` ya trae `_ensayo` de un run anterior.
+ 
+     Mutante «la marca del paquete pisa a la nueva» (`{CLAVE_ENSAYO: marca, **paquete}`, el código
+     de #233) → `codigo == 1`: la tabla propuesta es idéntica y no hay diff.
+@@ -572,7 +572,7 @@ def test_el_ensayo_pisa_la_marca_que_ya_trae_la_tabla(raiz):
+     sembrada = v.serializar_precios(vieja, real)
+     assert '"_ensayo"' in sembrada and "111" in sembrada, "guarda: la marca vieja está sembrada"
+     (raiz / v.RUTA_PRECIOS).write_text(sembrada, encoding="utf-8")
+-    hoy = dt.date.fromisoformat(tabla["consultado"])
++    hoy = dt.date.fromisoformat(tabla["consulted"])
+     codigo, falso = _correr_ensayo(raiz, hoy, {"GITHUB_RUN_ID": "222"})
+     assert codigo == 0, "con la marca vieja en la tabla el ensayo no tuvo diff"
+     escrita = _tabla_escrita(falso)

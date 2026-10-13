@@ -4,7 +4,7 @@ Tres preguntas, un solo sitio de verdad para cada una:
 
 - **¿Cuántos caracteres hacen un token de Claude en esta fila?** `resolve_density(event)`
   (REQ-031 a REQ-033): familia de tokenizador del modelo de quien llamó (o del respaldo), clase de
-  contenido (REQ-032), columna (`formato_read` si se leyó por `path`, que es lo que habría devuelto
+  contenido (REQ-032), columna (`read_format` si se leyó por `path`, que es lo que habría devuelto
   `Read`) y respaldo de celda en su único orden. Devuelve `c` en **centésimas** con su origen. Ni
   `server.tokens_claude` ni el JS del panel resuelven nada: solo dividen por lo que trae la fila.
 - **¿Qué se sabe de quien llamó?** `merge(rows, log_dir=...)` (REQ-006): por campo, la línea del
@@ -23,7 +23,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from . import attribution, config, precios, test_windows
+from . import attribution, config, pricing, test_windows
 
 # El respaldo declarado (REQ-008): el grupo más frecuente medido (135 de 149 atribuidas).
 DECLARED_FALLBACK = {"model": "claude-opus-5-5", "thread": "subagent"}
@@ -37,24 +37,24 @@ MARK_FAMILY_DENSITY = "family_density"
 CLASS_BY_TOOL = {
     "local_lint_summary": "log",
     "local_commit_msg": "diff",
-    "local_explain_code": "codigo",
+    "local_explain_code": "code",
 }
 _EXTENSIONS = {
-    "prosa": ".md .markdown .txt .rst .html .htm",
-    "codigo": (
+    "prose": ".md .markdown .txt .rst .html .htm",
+    "code": (
         ".py .js .mjs .cjs .ts .tsx .jsx .ps1 .psm1 .sh .bash .java .go .rs .c .h .cpp .cs .rb"
         " .php .css .scss .sql .kt .swift"
     ),
-    "estructurado": ".json .jsonl .yaml .yml .toml .lock .csv .xml .ini",
+    "structured": ".json .jsonl .yaml .yml .toml .lock .csv .xml .ini",
     "log": ".log",
     "diff": ".diff .patch",
 }
 CLASS_BY_EXTENSION = {ext: kind for kind, exts in _EXTENSIONS.items() for ext in exts.split()}
 
 # Lo que la tool devuelve a Claude (`returned`) y lo que escribe a fichero (`output`) no va
-# numerado: columna `sin_numerar`, y la clase depende solo de la tool (REQ-031).
-_RETURNED_CLASS = {"local_extract": "estructurado", "local_boilerplate": "codigo"}
-_OUTPUT_CLASS = {"local_boilerplate": "codigo"}
+# numerado: columna `unnumbered`, y la clase depende solo de la tool (REQ-031).
+_RETURNED_CLASS = {"local_extract": "structured", "local_boilerplate": "code"}
+_OUTPUT_CLASS = {"local_boilerplate": "code"}
 
 # Campos que el relleno aporta a la fila (REQ-005), en el orden en que se funden.
 BACKFILL_FIELDS = (
@@ -96,11 +96,11 @@ def _extension(path: object) -> str:
 
 
 def content_class(event: dict) -> str:
-    """`prosa`, `codigo`, `log`, `estructurado`, `diff` u `otro`, sin leer el texto (REQ-032)."""
+    """`prose`, `code`, `log`, `structured`, `diff` u `other`, sin leer el texto (REQ-032)."""
     by_tool = CLASS_BY_TOOL.get(str(event.get("tool") or ""))
     if by_tool:
         return by_tool
-    return CLASS_BY_EXTENSION.get(_extension(event.get("path")), "otro")
+    return CLASS_BY_EXTENSION.get(_extension(event.get("path")), "other")
 
 
 def fallback() -> dict:
@@ -114,37 +114,37 @@ def fallback() -> dict:
     value = str(config.COST_FALLBACK or "").strip()
     if value:
         model, sep, thread = value.partition(":")
-        model = precios.normalizar_id(model.strip())
+        model = pricing.normalize_id(model.strip())
         thread = thread.strip() if sep else "subagent"
-        if model and thread in THREADS and precios.entrada(model) is not None:
+        if model and thread in THREADS and pricing.entry(model) is not None:
             declared = {"model": model, "thread": thread, "fallback_invalid": False}
         else:
             declared["fallback_invalid"] = True
-    declared["family"] = precios.familia(declared["model"])
+    declared["family"] = pricing.family(declared["model"])
     return declared
 
 
 def family_and_marks(model: str) -> tuple[str, list[str]]:
     """La familia de tokenizador del modelo y las marcas de supuesto que lleva (REQ-030/031)."""
-    entry = precios.entrada(model) if model else None
+    entry = pricing.entry(model) if model else None
     if entry is None:
-        return "nueva", [MARK_ASSUMED_FAMILY]
-    family = entry["familia"]
-    measured = precios.cargar_densidad()["familias"][family].get("medido_con", [])
-    if precios.normalizar_id(model) in measured:
+        return "new", [MARK_ASSUMED_FAMILY]
+    family = entry["family"]
+    measured = pricing.load_density()["families"][family].get("measured_with", [])
+    if pricing.normalize_id(model) in measured:
         return family, []
     return family, [MARK_FAMILY_DENSITY]
 
 
 def _cell(family: str, kind: str, column: str) -> list:
     """`[c100, origen]` con el respaldo de celda en su único orden (REQ-031): (1) la celda exacta,
-    `measured`; (2) la misma clase en la columna `sin_numerar`, `unnumbered`; (3) la mayor `c` de la
-    columna `sin_numerar` de la familia, `conservative`. (2) y (3) dan menos tokens, nunca más."""
-    table = precios.cargar_densidad()["familias"][family]
+    `measured`; (2) la misma clase en la columna `unnumbered`, `unnumbered`; (3) la mayor `c` de la
+    columna `unnumbered` de la familia, `conservative`. (2) y (3) dan menos tokens, nunca más."""
+    table = pricing.load_density()["families"][family]
     exact = table.get(column, {})
     if kind in exact:
         return [int(exact[kind]), "measured"]
-    unnumbered = table["sin_numerar"]
+    unnumbered = table["unnumbered"]
     if kind in unnumbered:
         return [int(unnumbered[kind]), "unnumbered"]
     return [int(max(unnumbered.values())), "conservative"]
@@ -160,11 +160,11 @@ def resolve(event: dict) -> dict:
         density: dict = {"text": None, "returned": None, "output": None}
     else:
         tool = str(event.get("tool") or "")
-        column = "formato_read" if event.get("source") == "path" else "sin_numerar"
+        column = "read_format" if event.get("source") == "path" else "unnumbered"
         density = {
             "text": _cell(family, content_class(event), column),
-            "returned": _cell(family, _RETURNED_CLASS.get(tool, "prosa"), "sin_numerar"),
-            "output": _cell(family, _OUTPUT_CLASS.get(tool, "prosa"), "sin_numerar"),
+            "returned": _cell(family, _RETURNED_CLASS.get(tool, "prose"), "unnumbered"),
+            "output": _cell(family, _OUTPUT_CLASS.get(tool, "prose"), "unnumbered"),
         }
     return {"density": density, "family": family, "marks": marks}
 

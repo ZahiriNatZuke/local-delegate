@@ -27,7 +27,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-from . import clients, legacy_names, precios
+from . import clients, legacy_names, pricing
 from .resources.hooks import hook_common
 
 #: Una nota de más de diez minutos ya no cuenta (REQ-003).
@@ -184,10 +184,10 @@ def _find_model(
 
 def _supports_effort(model: str) -> bool:
     try:
-        entry = precios.entrada(model)
+        entry = pricing.entry(model)
     except Exception:
         return True
-    return True if entry is None else bool(entry.get("admite_esfuerzo", True))
+    return True if entry is None else bool(entry.get("supports_effort", True))
 
 
 def resolve_call(
@@ -229,7 +229,7 @@ def resolve_call(
     path = _transcript_de(note, projects or _projects_root())
     model = _find_model(path, tool_use_id, clock=clock, opener=opener) if path is not None else None
     if model:
-        r["caller_model"] = precios.normalizar_id(model)
+        r["caller_model"] = pricing.normalize_id(model)
         r["caller_src"] = "hook+transcript"
         if "caller_effort" not in r and not _supports_effort(r["caller_model"]):
             r["caller_effort"] = "n/a"  # Haiku 4.5: no admite esfuerzo y no es un dato que falte

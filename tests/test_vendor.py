@@ -83,7 +83,7 @@ def _sin_red(monkeypatch, osv=None, npm=None):
             raise AssertionError("el test no esperaba una consulta a npm")
         return npm()
 
-    monkeypatch.setattr(check_vendor, "_pedir_json", falso)
+    monkeypatch.setattr(check_vendor, "_fetch_json", falso)
 
 
 # --- integridad: lo que TIENE que romper el CI ---------------------------------------------------
@@ -94,7 +94,7 @@ def test_blob_alterado_falla(vendor_copia):
     blob.write_bytes(datos[:-1] + b"X")  # un solo byte distinto
 
     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
-        check_vendor.FALLO_INTEGRIDAD
+        check_vendor.INTEGRITY_FAILURE
     )
 
 
@@ -102,7 +102,7 @@ def test_blob_ausente_falla(vendor_copia):
     (vendor_copia.parent / "chart.umd.min.js").unlink()
 
     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
-        check_vendor.FALLO_INTEGRIDAD
+        check_vendor.INTEGRITY_FAILURE
     )
 
 
@@ -111,7 +111,7 @@ def test_fichero_sin_declarar_falla(vendor_copia):
     (vendor_copia.parent / "intruso.min.js").write_text("window.x = 1", encoding="utf-8")
 
     assert check_vendor.main(["--offline", "--manifest", str(vendor_copia)]) == (
-        check_vendor.FALLO_INTEGRIDAD
+        check_vendor.INTEGRITY_FAILURE
     )
 
 
@@ -120,14 +120,14 @@ def test_manifiesto_ilegible_falla(tmp_path):
     roto.write_text("{esto no es json", encoding="utf-8")
 
     assert check_vendor.main(["--offline", "--manifest", str(roto)]) == (
-        check_vendor.FALLO_MANIFIESTO
+        check_vendor.MANIFEST_FAILURE
     )
 
 
 def test_manifiesto_real_cuadra_con_el_blob():
     """Solo lectura sobre el árbol real: el hash declarado es el del fichero que se publica."""
     manifiesto = json.loads((VENDOR_REAL / "vendor.json").read_text(encoding="utf-8"))
-    errores = check_vendor.comprobar_integridad(manifiesto, VENDOR_REAL)
+    errores = check_vendor.check_integrity(manifiesto, VENDOR_REAL)
 
     assert errores == []
 
@@ -159,7 +159,7 @@ def test_la_pista_de_crlf_sale_cuando_toca(vendor_copia):
     blob.write_bytes(blob.read_bytes().replace(b"\n", b"\r\n"))
     manifiesto = json.loads(vendor_copia.read_text(encoding="utf-8"))
 
-    errores = check_vendor.comprobar_integridad(manifiesto, vendor_copia.parent)
+    errores = check_vendor.check_integrity(manifiesto, vendor_copia.parent)
 
     assert len(errores) == 1
     assert "PISTA" in errores[0]
@@ -175,13 +175,13 @@ def test_vulnerabilidad_confirmada_falla(vendor_copia, monkeypatch):
     )
 
     assert check_vendor.main(["--manifest", str(vendor_copia)]) == (
-        check_vendor.FALLO_VULNERABILIDAD
+        check_vendor.VULNERABILITY_FAILURE
     )
 
 
 # --- red: lo que solo puede AVISAR ---------------------------------------------------------------
 def _caido():
-    raise check_vendor.ServicioNoDisponible("simulado")
+    raise check_vendor.ServiceUnavailable("simulado")
 
 
 def test_osv_caido_no_falla(vendor_copia, monkeypatch, capsys):
@@ -233,7 +233,7 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
         npm=lambda: {"version": VERSION_VENDORIZADA},
     )
 
-    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.FALLO_INTEGRIDAD)
+    assert check_vendor.main(["--manifest", str(vendor_copia)]) == (check_vendor.INTEGRITY_FAILURE)
 
 
 # --- comparación de versiones --------------------------------------------------------------------
@@ -248,7 +248,7 @@ def test_integridad_manda_sobre_la_vulnerabilidad(vendor_copia, monkeypatch):
     ],
 )
 def test_clave_version(version, esperado):
-    assert check_vendor._clave_version(version) == esperado
+    assert check_vendor._version_key(version) == esperado
 
 
 def test_version_incomparable_avisa_sin_fallar(vendor_copia, monkeypatch, capsys):

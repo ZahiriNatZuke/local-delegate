@@ -321,6 +321,6 @@ def test_cost_state_toma_la_ultima_por_posicion(tmp_path):
     filas = transcripts.cost_state(transcripts.read(claude / "projects"))
     assert len(filas) == 1
     fila = filas[0]
-    assert fila["modelo"] == OPUS
+    assert fila["model"] == OPUS
     assert fila["costUSD"] == ULTIMO
     assert SESION not in json.dumps(filas)

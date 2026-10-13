@@ -3,7 +3,7 @@ name: Vigilante de precios
 # Mira cada semana dos páginas oficiales y abre un PR cuando cambian (REQ-020 a REQ-025 de
 # `coste-api-y-cuota`):
 #
-#   - `precios`: la tabla «Model pricing», contra `src/local_delegate/resources/datos/precios.json`;
+#   - `precios`: la tabla «Model pricing», contra `src/local_delegate/resources/data/prices.json`;
 #   - `limites`: el artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt`.
 #
 # Es el ÚNICO workflow con permisos de escritura, y por eso va aparte (patrón de vendor-audit.yml):

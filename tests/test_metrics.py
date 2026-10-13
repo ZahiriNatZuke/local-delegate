@@ -725,7 +725,7 @@ def _ev(**kw) -> dict:
 def _resuelta(fila: dict) -> dict:
     """La fila como la entrega `_load` en producción: fundida y con su densidad resuelta
     (coste-api-y-cuota, REQ-006). Sin relleno ni `caller_model`, toma el respaldo declarado (Opus
-    5.5, familia nueva). `_ev` no trae `path`: clase `otro`, que en `formato_read` cae en el
+    5.5, familia nueva). `_ev` no trae `path`: clase `other`, que en `read_format` cae en el
     respaldo (3), la mayor `c` sin numerar de la familia, 2,41; lo devuelto es prosa sin numerar,
     2,23; la salida, prosa sin numerar, 2,23."""
     return cost.merge_row(fila)
@@ -1196,9 +1196,9 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             chunks=3,
         ),
         # --- coste-api-y-cuota, REQ-037: casos que cambian entre `÷ 4` y la densidad, en orden --
-        # Prosa por `path` de Opus 5.5: familia nueva, columna `formato_read`, origen `measured`.
+        # Prosa por `path` de Opus 5.5: familia nueva, columna `read_format`, origen `measured`.
         _ev(path="C:/docs/guia.md", caller_model="claude-opus-5-5", tokens_in=1100, tokens_out=90),
-        # La misma prosa inline, escrita a fichero: columna `sin_numerar` (la de lo que la tool
+        # La misma prosa inline, escrita a fichero: columna `unnumbered` (la de lo que la tool
         # escribe). Inline no reclama ahorro de entrada, así que es la salida la que cambia.
         _ev(
             source="inline",
@@ -1208,11 +1208,11 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
             tokens_out=950,
             output_to_file=True,
         ),
-        # `.md` por `path` de Haiku 4.5: familia anterior, su `formato_read` sin medir → respaldo (2).
+        # `.md` por `path` de Haiku 4.5: familia anterior, su `read_format` sin medir → respaldo (2).
         _ev(
             path="C:/docs/notas.md", caller_model="claude-haiku-4-5", tokens_in=1100, tokens_out=90
         ),
-        # `.bin` por `path`: clase `otro`, sin celda → respaldo (3), `conservative`.
+        # `.bin` por `path`: clase `other`, sin celda → respaldo (3), `conservative`.
         _ev(path="C:/datos/volcado.bin", caller_model="claude-opus-5-5", tokens_in=900),
         # Imagen con `chars_returned > 0`: todo 0 (REQ-038).
         _ev(
@@ -1258,7 +1258,7 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
     # devuelto que da 0 en las dos copias.
     origenes = {c["density"]["text"][1] for c in casos if c["density"]["text"]}
     assert origenes >= {"measured", "unnumbered", "conservative"}
-    assert {c["family"] for c in casos} >= {"nueva", "anterior"}
+    assert {c["family"] for c in casos} >= {"new", "previous"}
     assert any(
         c["density"]["text"] is None and py["chars_returned"] > 0 and py["returned"] == 0
         for c, py in zip(casos, desde_py, strict=True)

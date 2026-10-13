@@ -368,7 +368,7 @@ al actualizar la versión, que es lo que documenta el procedimiento de arriba.
 
 El equivalente a precio de API del panel (ver
 [Savings & metrics](Savings-and-metrics.md#coste-equivalente-a-precio-de-api)) sale de una tabla
-de precios que viaja **en el paquete** (`src/local_delegate/resources/datos/precios.json`): el
+de precios que viaja **en el paquete** (`src/local_delegate/resources/data/prices.json`): el
 panel no usa la red para calcular. Una tabla así se queda vieja en silencio, y por eso hay un
 vigilante. Sigue el patrón de `vendor-audit.yml`: workflow propio con cron y un script de **solo
 stdlib** (`scripts/vigilante_precios.py`), sin instalar nada. Es el **único** sitio del proyecto
@@ -376,7 +376,7 @@ que usa la red para esto.
 
 | Job | Qué mira | Qué hace si cambia |
 |---|---|---|
-| `precios` | la tabla «Model pricing» de la página oficial, contra `precios.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consultado` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
+| `precios` | la tabla «Model pricing» de la página oficial, contra `prices.json` | abre (o actualiza) **un** PR en la rama fija `vigilante/precios` con la tabla nueva y `consulted` = fecha del día. Lista los ids nuevos para revisarlos a mano (los deduce del nombre comercial, porque la página no trae ids); un modelo que desaparece de la página **no** se borra de la tabla, porque los transcripts viejos lo siguen necesitando: el PR lo dice |
 | `limites` | el texto del artículo de límites de uso, contra `.github/vigilante/limites-de-uso.txt` | abre un PR en `vigilante/limites` que actualiza ese texto: **el diff es el aviso**, y el cuerpo explica cómo reiniciar la calibración de la cuota (`local-delegate recompute-cost --reset-calibration …`) |
 
 **Falla en voz alta**, nunca como «sin cambios», si la página no responde, si no encuentra la
@@ -414,7 +414,7 @@ de seguridad que añaden.
 
 Con `workflow_dispatch` y la entrada `ensayo` se fuerza un diff inocuo en la rama
 `vigilante/ensayo`: una marca `_ensayo` con el id del run, que la carga de la tabla ignora (no se
-toca `consultado`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
+toca `consulted`, que es la fecha del último cambio real). El PR lleva «[ensayo]» en el título:
 sirve para probar el circuito entero en GitHub, y se cierra sin mezclar.
 
 ## Qué se publica y qué no

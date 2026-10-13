@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from local_delegate import attribution, config, cost, precios, recompute, valuation
+from local_delegate import attribution, config, cost, pricing, recompute, valuation
 
 AHORA = datetime(2026, 10, 6, 12, 0, tzinfo=UTC)
 MES = f"{AHORA:%Y%m}"
@@ -83,7 +83,7 @@ def test_un_millon_de_caracteres(tmp_path):
     assert b["bar"]["backfilled"] == 1
     assert b["density"]["origin"]["measured"] == 1
     assert b["n_origin"] == {"backfill": 1, "aggregate": 0, "declared": 0}
-    assert b["table"]["consulted"] == precios.cargar_precios()["consultado"]
+    assert b["table"]["consulted"] == pricing.load_prices()["consulted"]
 
 
 def test_cada_caducidad_es_una_reescritura(tmp_path):
@@ -195,7 +195,7 @@ def test_sin_tabla_y_sin_delegaciones(tmp_path, monkeypatch):
     def _rota():
         raise ValueError("tabla rota")
 
-    monkeypatch.setattr(precios, "cargar_precios", _rota)
+    monkeypatch.setattr(pricing, "load_prices", _rota)
     b = valuation.cost_block(filas, None, now=AHORA)
     assert b["reason"] == valuation.NO_TABLE
     assert b["figure"] is None
