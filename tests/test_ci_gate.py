@@ -299,8 +299,11 @@ def test_el_gate_esta_declarado_en_ci_yml():
 # 2026-07-31 se midió que sí dispara y que la firma del cuelgue son 13 minutos (8 del límite + 5
 # de gracia de GitHub). Si alguien cambia el límite, el texto que explica el 13 se queda viejo, y
 # eso es lo que se impide aquí.
+#
+# El 2026-10-13 el límite subió a 15 (la suite tardaba ~5 min en Windows y el paso de 5 cortaba
+# corridas sin ningún test fallido): la firma pasa a 20:00.
 
-TIMEOUT_JOB_TEST = 8
+TIMEOUT_JOB_TEST = 15
 GRACIA_GITHUB = 5
 
 
@@ -308,8 +311,8 @@ def _job_test() -> dict:
     return yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]["test"]
 
 
-def test_el_limite_del_job_de_tests_es_el_que_explica_la_firma_de_13_minutos():
-    """El `13:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
+def test_el_limite_del_job_de_tests_es_el_que_explica_la_firma_del_cuelgue():
+    """El `20:00` que se lee en un `cancelled` no es magia: es este número más la gracia.
 
     Se ata porque la conclusión operativa depende de él — «un cancelled de 13:00 en main es el
     cuelgue conocido y no una avería»— y esa frase deja de ser cierta si el límite cambia.

@@ -108,13 +108,21 @@ jobs:
   # De ahí que la conclusión sea `cancelled` y no `timed_out`: un job que expira y cuyo runner no
   # responde lo cierra GitHub como cancelado.
   #
-  # Consecuencia práctica: un `cancelled` en `main` que haya durado 13:00 **no es una avería del
+  # Consecuencia práctica: un `cancelled` en `main` que haya durado 20:00 (13:00 hasta el 2026-10-13,
+  # ver la revisión de abajo) **no es una avería del
   # repo** — es este cuelgue de GitHub y el límite haciendo su trabajo. No bloquea nada, porque en
   # un push a `main` no hay merge esperando; en un PR sí lo bloquea, y ahí `ci-gate` da el
   # veredicto por los pasos.
   #
   # 8 y no más: son ~5,5x el peor caso observado (1 m 23 s en Windows), y el reloj corre sobre la
   # ejecución del job, no sobre la espera en cola.
+  #
+  # REVISIÓN del 2026-10-13: la suite creció (~2 500 tests) y el pytest de Windows ya tarda entre
+  # 4 m 13 s y 4 m 58 s; ese día el límite de 5 del paso cortó tres corridas con CERO tests
+  # fallidos (una en `main`, run 38407879259). Se sube a 10 el paso (~2x el peor caso nuevo) y a
+  # 15 el job (paso + checkout, sync y el instalador e2e). Un cuelgue fantasma pasa a durar
+  # 15 + 5 de gracia = 20:00 en vez de 13:00. Los tres `cancelled` de arriba son de cuando el
+  # límite era 8.
   test:
     strategy:
       # Sin fail-fast: si un sistema falla interesa ver también qué hicieron los otros dos,
@@ -123,7 +131,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -137,13 +145,13 @@ jobs:
 
       # Límite propio del paso, además del que gobierna el job entero. Cubre el caso en que quien
       # se cuelga es **pytest** y no el runner: en dos de los tres `cancelled` medidos el paso
-      # seguía `in_progress` al morir el job. Con esto, ese cuelgue se corta a los 5 minutos y deja
-      # un fallo con log, en vez de trece minutos que además acaban sin log (`BlobNotFound`).
+      # seguía `in_progress` al morir el job. Con esto, ese cuelgue se corta a los 10 minutos y deja
+      # un fallo con log, en vez de veinte minutos que además acaban sin log (`BlobNotFound`).
       #
-      # 5 son ~2,6x el peor caso real en CI (1,9 min). Si el que se cuelga es el runner, esto no
+      # 10 son ~2x el peor caso real en CI (4 m 58 s en Windows, 2026-10-13; antes 5 = 2,6x de 1,9 min). Si el que se cuelga es el runner, esto no
       # rescata —no hay proceso que matar— y manda el límite del job.
       - name: Tests (pytest)
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: uv run pytest -q
 
       # El instalador ejercido de verdad, y no solo sus funciones. Va en los tres sistemas porque
