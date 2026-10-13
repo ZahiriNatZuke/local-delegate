@@ -33,13 +33,12 @@ _REQUEST = httpx2.Request("GET", "http://pc.tailnet.ts.net:9292/v1/models")
 
 def _wrapped(cls: type[BaseException], root: BaseException) -> BaseException:
     """`cls` lanzada con `raise … from root`, como hace `httpcore2` al traducir el `OSError`."""
-    try:
+    with pytest.raises(cls) as info:
         try:
             raise root
         except BaseException as original:
             raise cls("fallo de prueba") from original
-    except BaseException as wrapper:
-        return wrapper
+    return info.value
 
 
 def _http_status(code: int) -> httpx2.HTTPStatusError:
@@ -235,7 +234,9 @@ def _real_failure(url: str, *, connection: float) -> BaseException:
             response = client.get(url)
         except Exception as exc:
             return exc
-    pytest.fail(f"{url} respondió {response.status_code}: se esperaba un fallo de conexión")
+    raise AssertionError(
+        f"{url} respondió {response.status_code}: se esperaba un fallo de conexión"
+    )
 
 
 def _just_freed_port() -> int:
