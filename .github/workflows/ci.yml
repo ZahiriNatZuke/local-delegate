@@ -150,9 +150,15 @@ jobs:
       #
       # 10 son ~2x el peor caso real en CI (4 m 58 s en Windows, 2026-10-13; antes 5 = 2,6x de 1,9 min). Si el que se cuelga es el runner, esto no
       # rescata —no hay proceso que matar— y manda el límite del job.
+      #
+      # En paralelo con `pytest-xdist`: casi todo el tiempo de la suite es espera (daemons como
+      # subproceso, relojes reales, Playwright), no CPU. Medido en Windows local con 12 núcleos:
+      # 4 min 23 s en serie, ~55 s con `-n auto` y 73 s con `-n 4`; 2565 tests en los tres casos.
+      # `--dist loadgroup` respeta los `xdist_group` de los módulos que no aguantan el reparto
+      # (los del panel con puertos fijos). Va aquí y no en `addopts` para no imponerlo en local.
       - name: Tests (pytest)
         timeout-minutes: 10
-        run: uv run pytest -q
+        run: uv run pytest -q -n auto --dist loadgroup
 
       # El instalador ejercido de verdad, y no solo sus funciones. Va en los tres sistemas porque
       # el punto del paso es justo ese: `install` escribe rutas, monta comandos de shell y decide
