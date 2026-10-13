@@ -118,8 +118,9 @@ se sigue como si no hubiera enfriamiento: nunca bloquea ni hace fallar una deleg
 han vuelto a entrar sin un éxito de por medio.
 
 Hasta la 0.34.0 el fichero se llamaba `enfriamiento.json`. El daemon arranca desde él si aún no
-hay `cooldown.json` (si están los dos, manda el nuevo) y, durante tres versiones menores, lo sigue
-escribiendo con sus claves viejas para los hooks de una versión anterior.
+hay `cooldown.json` (si están los dos, manda el nuevo) y, de la 0.35.0 a la 0.37.x, lo sigue
+escribiendo con sus claves viejas para los hooks de una versión anterior. Esa doble escritura se
+retira en la 0.38.0.
 
 Cada vez que un modelo **entra** en enfriamiento, **vuelve a entrar** o **se recupera**, se añade
 una línea a `cooldown-events.jsonl` (antes `enfriamiento-eventos.jsonl`, que se sigue leyendo),
@@ -312,8 +313,8 @@ nada, ni antes ni ahora.
 
 ## Nombres viejos de variables (alias con aviso)
 
-Cuatro variables cambiaron de nombre al pasar a inglés. El nombre viejo **sigue funcionando** igual
-durante la versión que publica el cambio y las dos menores siguientes, y se retira en la tercera.
+Cuatro variables cambiaron de nombre al pasar a inglés en la 0.35.0. El nombre viejo **sigue
+funcionando** igual durante la 0.35.x, la 0.36.x y la 0.37.x, y se retira en la **0.38.0**.
 Si están las dos, gana la nueva. `doctor` avisa del nombre viejo (check «nombres obsoletos») si lo
 ve en la shell o en el bloque `env` de `~/.claude/settings.json`, y `local_status` dice los que
 haya leído el daemon o el servidor por stdio.

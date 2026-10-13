@@ -169,6 +169,10 @@ dónde guardarla.
 `LOCAL_DELEGATE_WEB_SESSION_DAYS` cambia la duración; `0` desactiva la sesión y deja la puerta
 pidiendo credenciales en cada petición.
 
+Desde la 0.35.0 la cookie se llama `ld_session` (antes `ld_sesion`) y se firma con el prefijo
+`ld-session|v1`. Las sesiones abiertas con una versión anterior dejan de valer al actualizar: el
+navegador vuelve a pedir el token **una vez**, sin ningún error, y desde ahí sigue como siempre.
+
 ### Que los clientes sigan funcionando
 
 El token **nunca se escribe en un fichero de configuración**. Se referencia la variable:
