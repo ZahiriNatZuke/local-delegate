@@ -137,6 +137,33 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   veredicto como `pass` o `fail`: su formato no cambia.
 - **`vendor.json` documenta el vendorizado con `_about` y `_provenance`** (antes `_acerca_de` y
   `_procedencia`). `scripts/check_vendor.py` no las lee: la auditoría no cambia.
+- **La skill pasa a llamarse `local-delegation`** (antes `delegacion-local`), en
+  `~/.claude/skills/` y en `~/.config/opencode/skill/`. `install` y `update` instalan la nueva y
+  borran la vieja de cada destino; `uninstall` borra las dos. Una skill tuya con otro nombre no se
+  toca. El bloque gestionado de `CLAUDE.md`/`AGENTS.md` y el catálogo de los subagentes nombran ya
+  la skill nueva.
+- **`doctor` avisa si el bloque gestionado de `CLAUDE.md`/`AGENTS.md` está desfasado, y `update`
+  lo repone.** Antes solo miraba que estuvieran los marcadores, y la 0.35.0 habría dejado el bloque
+  nombrando una skill ya borrada. Ahora el bloque se compara con el del paquete (sin fijarse en
+  los saltos de línea ni en los espacios al final): si no coincide, `scaffold.memory` da `[WARN]`
+  y `update` reescribe solo lo que hay entre los marcadores, dejando un `.bak`. **Ojo:** lo que
+  hayas editado a mano **dentro** de los marcadores también da aviso y `update` lo sobrescribe;
+  fuera de ellos no se toca nada.
+- **`update` regenera el catálogo de los subagentes que ya lo tienen.** En
+  `~/.claude/agents/*.md`, si un subagente trae los marcadores `local-delegate:catalog` y su bloque
+  no es el del paquete, se reescribe lo de entre los marcadores, sin necesidad de `--agents` y sin
+  tocar la línea `tools:`. Un subagente sin marcadores queda igual.
+- **La cookie de sesión del panel pasa a `ld_session`** (antes `ld_sesion`), con el prefijo firmado
+  `ld-session|v1`. Las sesiones abiertas con la versión anterior dejan de valer: el navegador vuelve
+  a pedir el token una vez, sin ningún error.
+- **Ids y grupos de los checks en inglés.** El check `config.coste` pasa a `config.cost`, y los
+  grupos `entorno`, `andamiaje` y `servicio` a `environment`, `scaffold` y `service` (`backend` no
+  cambia). `doctor` no imprime ni ids ni grupos: se nota solo en `checks.CHECKS` y en la wiki.
+  Siguen siendo 25 checks.
+- **El módulo `secciones` pasa a `sections`** (`detect`, `complete`, `match_headings`,
+  `sections_for_summary`, `chunks_by_sections`, `allocate_words`, `split_chunk`,
+  `sanitize_focus`, y las clases `Heading`, `Structure`, `Section` y `Chunk`). El resumen
+  estructurado de `local_summarize` no cambia.
 
 ## [0.34.0] - 2026-10-08
 

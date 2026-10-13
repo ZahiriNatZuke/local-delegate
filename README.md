@@ -271,7 +271,7 @@ a propósito:
 |---|---|---|
 | Entrada MCP | config de Claude Code / `~/.codex/config.toml` / `~/.config/opencode/opencode.json[c]` | registra el servidor (stdio con `uvx` o HTTP contra el daemon) |
 | Hooks | `~/.claude/hooks/local-delegate/` + `settings.json` | sugieren delegar; los de lectura además pueden **rechazar** una lectura completa de documentación, si se enciende; uno anota qué agente pidió cada delegación |
-| Skill | `~/.claude/skills/delegacion-local/` y `~/.config/opencode/skill/delegacion-local/` | regla de oro y catálogo de tools |
+| Skill | `~/.claude/skills/local-delegation/` y `~/.config/opencode/skill/local-delegation/` | regla de oro y catálogo de tools |
 | Memoria | bloque gestionado en `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` y `~/.config/opencode/AGENTS.md` | la regla en una nota corta siempre cargada |
 
 Por defecto se configuran **solo los clientes que tengas instalados**; se elige a mano con

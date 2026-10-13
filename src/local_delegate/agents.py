@@ -17,7 +17,9 @@ test que compara sus nombres con los que registra el servidor MCP.
 Tres reglas gobiernan la escritura, y las tres existen porque estos ficheros **son del usuario**:
 
 1. **Solo se tocan los agentes que ya declaran nuestras tools** (el ancla :data:`ANCHOR`). Un
-   subagente ajeno no se lee para escribir.
+   subagente ajeno no se lee para escribir. La excepción es :func:`refresh_catalog_block`, que
+   usa `update`: solo actúa sobre agentes que **ya** traen nuestros marcadores de catálogo, y
+   solo dentro de ellos.
 2. **Si no se reconoce dónde va el bloque, no se inserta.** No se adivina.
 3. **Fuera de los marcadores no se toca nada**, y cada fichero modificado deja su `.bak`.
 """
@@ -46,7 +48,7 @@ _CATALOG_ROW_RE = re.compile(r"^\|\s*`(local_\w+)`\s*\|\s*([^|]+?)\s*\|")
 _RULE = (
     "Regla de oro: si el paso cabe en una frase con formato de salida explícito, delégalo; si "
     "necesita criterio, arquitectura o razonamiento, hazlo tú. Detalle en la skill "
-    "`delegacion-local`."
+    "`local-delegation`."
 )
 
 
@@ -80,12 +82,41 @@ def catalog_block(catalog: list[tuple[str, str]]) -> str:
     """El bloque que se inserta en los agentes, ya delimitado."""
     # Solo la inicial en minúscula: un `.lower()` entero convertiría «lint/tests/CI» en
     # «lint/tests/ci» y se comería los acrónimos de la tabla. Se vio en la primera ejecución real.
-    listado = ", ".join(f"`{name}` ({what[:1].lower()}{what[1:]})" for name, what in catalog)
+    listing = ", ".join(f"`{name}` ({what[:1].lower()}{what[1:]})" for name, what in catalog)
     body = (
         f"**Catálogo de tools `local_*` (MCP `local-delegate`, {len(catalog)} tools):** "
-        f"{listado}.\n\n{_RULE}"
+        f"{listing}.\n\n{_RULE}"
     )
     return f"{CATALOG_BEGIN}\n{body}\n{CATALOG_END}\n"
+
+
+def normalize_block(text: str) -> str:
+    """Forma comparable de un bloque: saltos de línea en LF y sin espacio al final de las líneas.
+
+    Un fichero guardado en CRLF, o un editor que deja espacios al final, no cambian lo que el
+    bloque dice; compararlos literalmente daría un aviso perpetuo y una reescritura en cada
+    `update` (D12). Vive aquí, y no en `install`, porque este módulo no depende de ningún otro
+    del paquete y `install` lo importa para el bloque de memoria.
+    """
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").strip().split("\n")
+    return "\n".join(line.rstrip() for line in lines)
+
+
+def refresh_catalog_block(text: str, block: str, packaged: tuple[str, ...]) -> str | None:
+    """Texto con el bloque de catálogo regenerado, o ``None`` si no hay nada que regenerar.
+
+    Lo usa `update` (D12): un subagente que ya trae los marcadores de catálogo los escribió el
+    instalador, así que regenerar lo que hay **entre** ellos no necesita `--agents` ni exige que
+    el agente declare nuestras tools. Se deja como está si no tiene los dos marcadores, o si su
+    bloque coincide, con los saltos de línea normalizados, con el empaquetado de algún idioma
+    (``packaged``): un bloque al día no se reescribe nunca. La línea `tools:` no se toca.
+    """
+    found = _CATALOG_BLOCK_RE.search(text)
+    if found is None:
+        return None
+    if normalize_block(found.group(0)) in {normalize_block(b) for b in packaged}:
+        return None
+    return text[: found.start()] + block.rstrip("\n") + text[found.end() :]
 
 
 def is_delegator(text: str) -> bool:

@@ -245,7 +245,7 @@ justo esto.
 
 ## `doctor` da `[WARN] coste y relleno`
 
-El check `config.coste` mira si la cifra de coste equivalente es de fiar y si se está perdiendo
+El check `config.cost` mira si la cifra de coste equivalente es de fiar y si se está perdiendo
 histórico. No lee transcripts: lee lo que dejó `local-delegate recompute-cost` en `LOG_DIR`. Da
 `warn` por dos motivos, y si se cumplen los dos los dice juntos:
 

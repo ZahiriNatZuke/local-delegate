@@ -340,7 +340,7 @@ abre un PR cuando cambia la página.
 
 Lo que delata una tabla desfasada **en tu máquina** es el **cotejo**: `recompute-cost` recalcula
 con la tabla el coste de las sesiones de tus transcripts y lo compara con el que calcula Claude
-Code. Si no cuadra, `doctor` lo dice (check `config.coste`, ver
+Code. Si no cuadra, `doctor` lo dice (check `config.cost`, ver
 [Troubleshooting](Troubleshooting.md#doctor-da-warn-coste-y-relleno)). En la máquina de referencia
 cuadran las 144 filas juzgadas.
 

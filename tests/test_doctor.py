@@ -247,7 +247,7 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
         ' "protocol": "2025-11-25", "caps": ["elicitation", "roots"]}\n',
         encoding="utf-8",
     )
-    # Igual con el cotejo de `config.coste`: vive en `LOG_DIR`, y sin él el check es `unknown`.
+    # Igual con el cotejo de `config.cost`: vive en `LOG_DIR`, y sin él el check es `unknown`.
     recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     _stub_environment(monkeypatch, log_dir=logs)
     home = make_home(tmp_path)
@@ -259,8 +259,18 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     args = argparse.Namespace(config=str(hoy), online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
     # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.
-    lines = [line for line in capsys.readouterr().out.splitlines() if line.startswith("  [")]
+    out = capsys.readouterr().out
+    lines = [line for line in out.splitlines() if line.startswith("  [")]
     assert lines and all(line.startswith("  [ OK ]") for line in lines)
+    # A6 (REQ-011): no hay `doctor --json`, así que el contrato de los ids y grupos nuevos se mira
+    # en la salida de texto: los 25 checks, una línea cada uno, bajo el encabezado de su grupo.
+    assert len(lines) == len(checks.CHECKS) == 25
+    headings = [*doctor._GROUP_HEADINGS.values(), doctor._versions_heading(False)]
+    assert [h for h in headings if h in out] == headings
+    for check in checks.CHECKS:
+        heading = doctor._GROUP_HEADINGS.get(check.group, doctor._versions_heading(False))
+        section = out.split(heading, 1)[1].split("\n\n", 1)[0]
+        assert f"] {check.title}:" in section, (check.id, check.group)
 
 
 def test_run_doctor_exit_1_when_outdated(tmp_path, monkeypatch):

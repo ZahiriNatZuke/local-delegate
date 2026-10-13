@@ -233,7 +233,7 @@ def test_auto_explicito_no_pelea_con_un_cliente_nombrado(monkeypatch, tmp_path):
 def test_install_no_consulta_pypi_al_reportar_el_andamiaje(monkeypatch, tmp_path, capsys):
     """Instalar unos hooks no es motivo para salir a internet.
 
-    El reporte final de `install` corre el grupo `entorno`, donde vive la comprobación de la
+    El reporte final de `install` corre el grupo `environment`, donde vive la comprobación de la
     versión publicada. Se dobla `update.latest_version` —el destino real del colaborador por
     defecto, no un kwarg— para que el test ejercite el camino de `cli.py` y no el doble.
     """

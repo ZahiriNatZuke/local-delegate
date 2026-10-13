@@ -113,7 +113,7 @@ def main() -> int:
         "falta hook_common.py, que los hooks importan por sys.path[0]",
     )
     _exigir(
-        (claude / "skills" / "delegacion-local" / "SKILL.md").is_file(), "no se instaló la skill"
+        (claude / "skills" / "local-delegation" / "SKILL.md").is_file(), "no se instaló la skill"
     )
     _exigir(
         "local-delegate:begin" in (claude / "CLAUDE.md").read_text(encoding="utf-8"),
@@ -128,7 +128,7 @@ def main() -> int:
         "no se escribió el bloque de memoria de opencode",
     )
     _exigir(
-        (opencode / "skill" / "delegacion-local" / "SKILL.md").is_file(),
+        (opencode / "skill" / "local-delegation" / "SKILL.md").is_file(),
         "no se instaló la skill en el directorio de opencode",
     )
     _exigir(
@@ -147,9 +147,9 @@ def main() -> int:
         not (claude / "hooks" / "local-delegate").exists(),
         "`uninstall` dejó los scripts de hooks: el módulo promete ser reversible",
     )
-    _exigir(not (claude / "skills" / "delegacion-local").exists(), "`uninstall` dejó la skill")
+    _exigir(not (claude / "skills" / "local-delegation").exists(), "`uninstall` dejó la skill")
     _exigir(
-        not (opencode / "skill" / "delegacion-local").exists(),
+        not (opencode / "skill" / "local-delegation").exists(),
         "`uninstall` dejó la skill de opencode",
     )
     _exigir(

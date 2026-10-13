@@ -137,7 +137,7 @@ tres formas, porque hay tres clases de cliente:
 | --- | --- |
 | `Authorization: Bearer <token>` | clientes MCP, `curl`, el propio CLI |
 | `Authorization: Basic <base64(usuario:token)>` | el navegador, la **primera** vez |
-| `Cookie: ld_sesion=…` | el navegador, a partir de la segunda |
+| `Cookie: ld_session=…` | el navegador, a partir de la segunda |
 
 En el navegador, el usuario da igual —solo se compara la contraseña— y basta con pegar el token
 donde pide la clave: el 401 lleva `WWW-Authenticate`, así que el diálogo sale sin más.

@@ -22,9 +22,9 @@ from . import checks, config, sondas
 # Encabezado de cada grupo del registro. El de `backend` se arma aparte porque su texto
 # depende de --online, y es el que el usuario ya leía antes de que el doctor viera el resto.
 _GROUP_HEADINGS: dict[str, str] = {
-    "entorno": "Entorno (el CLI y los clientes):",
-    "andamiaje": "Andamiaje (hooks, skill, memoria y entradas MCP):",
-    "servicio": "Servicios:",
+    "environment": "Entorno (el CLI y los clientes):",
+    "scaffold": "Andamiaje (hooks, skill, memoria y entradas MCP):",
+    "service": "Servicios:",
 }
 
 

@@ -13,7 +13,7 @@ import sys
 import tomllib
 from pathlib import Path, PureWindowsPath
 
-from conftest import snapshot
+from conftest import downgrade_to_0_34, live_memory_files, make_home, snapshot
 
 from local_delegate import install as inst
 
@@ -43,7 +43,7 @@ def test_packaged_resources_exist():
     res = inst.resources_dir()
     assert (res / "hooks" / "hook_common.py").is_file()
     assert (res / "hooks" / "suggest_delegate_prompt.py").is_file()
-    assert (res / "skills" / "delegacion-local" / "SKILL.md").is_file()
+    assert (res / "skills" / "local-delegation" / "SKILL.md").is_file()
     assert (res / "memory" / "local-delegate.md").is_file()
 
 
@@ -53,7 +53,7 @@ def test_install_writes_hooks_skill_memory_and_mcp(tmp_path):
     hooks_dir = tmp_path / ".claude" / "hooks" / "local-delegate"
     assert (hooks_dir / "suggest_delegate_prompt.py").is_file()
     assert (hooks_dir / "hook_common.py").is_file()  # los hooks lo importan por sys.path[0]
-    assert (tmp_path / ".claude" / "skills" / "delegacion-local" / "SKILL.md").is_file()
+    assert (tmp_path / ".claude" / "skills" / "local-delegation" / "SKILL.md").is_file()
     assert inst.MD_BEGIN in (tmp_path / ".claude" / "CLAUDE.md").read_text(encoding="utf-8")
     assert inst.MD_BEGIN in (tmp_path / ".codex" / "AGENTS.md").read_text(encoding="utf-8")
     servers = json.loads((tmp_path / ".claude.json").read_text(encoding="utf-8"))["mcpServers"]
@@ -314,7 +314,7 @@ def test_uninstall_reverts_only_our_changes(tmp_path):
     assert _uninstall(tmp_path) == 0
 
     assert not (tmp_path / ".claude" / "hooks" / "local-delegate").exists()
-    assert not (tmp_path / ".claude" / "skills" / "delegacion-local").exists()
+    assert not (tmp_path / ".claude" / "skills" / "local-delegation").exists()
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
     assert settings["hooks"] == {"Stop": [{"hooks": [{"type": "command", "command": "~/mio.sh"}]}]}
     assert memory.read_text(encoding="utf-8") == "# Mis reglas\n"
@@ -808,3 +808,39 @@ def test_no_retired_skills_means_no_skill_removal_planned(tmp_path, monkeypatch)
     (tmp_path / ".claude" / "skills" / "ajena").mkdir(parents=True)
     actions = inst.plan_install(_opts(tmp_path))
     assert [a for a in actions if a.kind == "prune" and "skills" in str(a.target)] == []
+
+
+def test_install_over_0_34_replaces_the_skill_and_the_blocks_name_the_new_one(tmp_path):
+    """A6 (REQ-012/013): sobre una 0.34.0, la skill nueva queda y la vieja se va de cada destino."""
+    home = make_home(tmp_path, complete=True)
+    downgrade_to_0_34(home)
+    skills = home / ".claude" / "skills"
+    assert (skills / "delegacion-local").is_dir()
+
+    assert _install(home, targets={"claude", "codex", "opencode"}) == 0
+
+    for target_dir in (skills, inst.opencode_dir(home) / inst.OPENCODE_SKILL_SUBDIR):
+        assert not (target_dir / "delegacion-local").exists(), target_dir
+        assert (target_dir / "local-delegation" / "SKILL.md").is_file(), target_dir
+    for md in live_memory_files(home):
+        text = md.read_text(encoding="utf-8")
+        assert "`local-delegation`" in text and "delegacion-local" not in text, md
+
+
+def test_uninstall_also_removes_the_retired_skill(tmp_path):
+    """Una máquina que pasó de la 0.34 sin `install` conserva la skill vieja: también es nuestra."""
+    targets = [
+        tmp_path / ".claude" / "skills",
+        inst.opencode_dir(tmp_path) / inst.OPENCODE_SKILL_SUBDIR,
+    ]
+    for target_dir in targets:
+        (target_dir / "delegacion-local").mkdir(parents=True)
+        (target_dir / "delegacion-local" / "SKILL.md").write_text("vieja\n", encoding="utf-8")
+        (target_dir / "ajena").mkdir()
+        (target_dir / "ajena" / "SKILL.md").write_text("del usuario\n", encoding="utf-8")
+
+    assert _uninstall(tmp_path, targets={"claude", "opencode"}) == 0
+
+    for target_dir in targets:
+        assert not (target_dir / "delegacion-local").exists(), target_dir
+        assert (target_dir / "ajena" / "SKILL.md").is_file(), target_dir

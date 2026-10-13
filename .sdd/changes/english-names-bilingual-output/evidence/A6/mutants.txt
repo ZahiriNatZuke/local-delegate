@@ -1,0 +1,92 @@
+## M1 _RETIRED_SKILLS sin la vieja
+- test: tests/test_install.py::test_install_over_0_34_replaces_the_skill_and_the_blocks_name_the_new_one
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >           assert not (target_dir / "delegacion-local").exists(), target_dir
+    E           AssertionError: WindowsPath('<TEMP>/pytest-of-<usuario>/pytest-1271/test_install_over_0_34_replace0/home/.claude/skills')
+    E           assert not True
+    E            +  where True = exists()
+    E            +    where exists = (WindowsPath('<TEMP>/pytest-of-<usuario>/pytest-1271/test_install_over_0_34_replace0/home/.claude/skills') / 'delegacion-local').exists
+- dónde: tests\test_install.py:823: AssertionError
+- restaurado: sí (sha256 a1ff553d99a9)
+
+## M2 scaffold.memory compara solo que exista el bloque
+- test: tests/test_checks.py::test_memory_block_from_0_34_is_outdated_and_the_packaged_one_is_ok
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >       assert result.status == checks.WARN
+    E       AssertionError: assert 'ok' == 'warn'
+    E         
+    E         - warn
+    E         + ok
+- dónde: tests\test_checks.py:129: AssertionError
+- restaurado: sí (sha256 4713b6f54c34)
+
+## M2b el mismo mutante, visto desde update
+- test: tests/test_update.py::test_update_over_0_34_leaves_no_trace_of_the_retired_skill
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >       assert "delegacion-local" not in claude_md
+    E       AssertionError: assert 'delegacion-local' not in '<!-- local-...te:end -->\n'
+    E         
+    E         'delegacion-local' is contained here:
+    E           la skill `delegacion-local`; diagn�stico del
+    E         ?           ++++++++++++++++
+    E           backend con `local_status`; panel de ahorro en `http://127.0.0.1:9393`.
+    E           <!-- local-delegate:end -->
+- dónde: tests\test_update.py:876: AssertionError
+- restaurado: sí (sha256 4713b6f54c34)
+
+## M3 update sin regenerar los subagentes
+- test: tests/test_update.py::test_update_over_0_34_leaves_no_trace_of_the_retired_skill
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >       assert "delegacion-local" not in marked.read_text(encoding="utf-8")
+    E       AssertionError: assert 'delegacion-local' not in '---\nname: ...n\n## Otra\n'
+    E         
+    E         'delegacion-local' is contained here:
+    E           la skill `delegacion-local`.
+    E           <!-- local-delegate:catalog:end -->
+    E           
+    E           ## Otra
+- dónde: tests\test_update.py:877: AssertionError
+- restaurado: sí (sha256 b6bf38c0ea6b)
+
+## M4 (primer intento, descartado: el mutante no mutaba) comparación sin el replace de CRLF
+- exit: 0. `line.rstrip()` ya quita el `` de cada línea, así que quitar el replace no cambia el resultado: no es un mutante. Se sustituyó por el de abajo.
+
+## M4 comparación sin normalizar (texto tal cual)
+- test: tests/test_update.py::test_a_crlf_memory_file_that_is_up_to_date_is_not_rewritten
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >       assert by_id["scaffold.memory"].status == checks.OK, by_id["scaffold.memory"].detail
+    E       AssertionError: Claude Code: bloque desfasado en <TEMP>\pytest-of-<usuario>\pytest-1278\test_a_crlf_memory_file_that_i0\home\.claude\CLAUDE.md � Codex: bloque desfasado en <TEMP>\pytest-of-<usuario>\pytest-1278\test_a_crlf_memory_file_that_i0\home\.codex\AGENTS.md � opencode: bloque desfasado en <TEMP>\pytest-of-<usuario>\pytest-1278\test_a_crlf_memory_file_that_i0\home\.config\opencode\AGENTS.md
+    E       assert 'warn' == 'ok'
+    E         
+    E         - ok
+    E         + warn
+- dónde: tests\test_update.py:894: AssertionError
+- restaurado: sí (sha256 ccc1e21f07b8)
+
+## M5 la regeneración ignora el criterio (reescribe siempre)
+- test: tests/test_update.py::test_second_update_pass_changes_nothing
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >       assert segunda == []
+    E       AssertionError: assert [Action(kind=..., literal='')] == []
+    E         
+    E         Left contains one more item: Action(kind='agents', target=WindowsPath('<TEMP>/pytest-of-<usuario>/pytest-1276/test_second_update_pass_change0/home/.claude/agents'), detail='regenera el cat�logo desfasado (con-catalogo.md)', literal='')
+    E         Use -v to get more diff
+- dónde: tests\test_update.py:912: AssertionError
+- restaurado: sí (sha256 ccc1e21f07b8)
+
+## M6 se acepta la cookie vieja
+- test: tests/test_web_auth.py::test_a_0_34_session_cookie_asks_to_authenticate_without_error
+- exit: 1 (1 = falló, como debe)
+- assert:
+    >           assert respuesta.status_code == 401, nombre
+    E           AssertionError: ld_sesion
+    E           assert 200 == 401
+    E            +  where 200 = <Response [200 OK]>.status_code
+- dónde: tests\test_web_auth.py:375: AssertionError
+- restaurado: sí (sha256 88641a6853e8)

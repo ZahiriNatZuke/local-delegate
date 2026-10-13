@@ -14,7 +14,13 @@ from pathlib import Path
 
 import httpx2
 import pytest
-from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
+from conftest import (
+    desktop_mcp_remote_entry,
+    downgrade_to_0_34,
+    make_home,
+    snapshot,
+    write_claude_desktop,
+)
 
 from local_delegate import checks, install, llamaswap_api, recompute, sondas
 from local_delegate.failures import BackendView
@@ -75,17 +81,59 @@ def result_for(check_id, ctx):
 def test_registry_ids_are_unique_and_groups_are_known():
     assert len({check.id for check in checks.CHECKS}) == len(checks.CHECKS)
     assert {check.group for check in checks.CHECKS} == {
-        "entorno",
-        "andamiaje",
-        "servicio",
+        "environment",
+        "scaffold",
+        "service",
         "backend",
     }
+
+
+def test_registry_ids_are_the_published_ones():
+    """A6 (REQ-011): los 25 ids exactos, en inglés. Un id es contrato con quien lea `checks`."""
+    assert len(checks.CHECKS) == 25
+    assert {check.id for check in checks.CHECKS} == {
+        "cli.path",
+        "cli.published",
+        "client.presence",
+        "client.observed",
+        "config.fallback",
+        "config.deprecated_names",
+        "config.cost",
+        "metrics.test_windows",
+        "scaffold.hook_files",
+        "scaffold.hook_orphans",
+        "scaffold.hook_settings",
+        "scaffold.skill",
+        "scaffold.memory",
+        "scaffold.mcp_claude",
+        "scaffold.mcp_codex",
+        "scaffold.mcp_opencode",
+        "service.daemon",
+        "service.backend",
+        "service.credential",
+        "service.daemon_auth",
+        "service.desktop_auth",
+        "backend.llamaswap",
+        "backend.llamaserver",
+        "backend.residency",
+        "backend.topology",
+    }
+
+
+def test_memory_block_from_0_34_is_outdated_and_the_packaged_one_is_ok(tmp_path):
+    """D12: el bloque de la 0.34.0 nombra la skill retirada y da `warn`; el empaquetado, `ok`."""
+    home = make_home(tmp_path, claude=True, codex=False, opencode=False)
+    assert result_for("scaffold.memory", make_ctx(home)).status == checks.OK
+    downgrade_to_0_34(home)
+    result = result_for("scaffold.memory", make_ctx(home))
+    assert result.status == checks.WARN
+    assert "desfasado" in result.detail
 
 
 def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     """`install` reporta el andamiaje que acaba de escribir, y solo eso.
 
-    Correr también `servicio` y `backend` saldría a la red y lanzaría los binarios de llama-swap
+    Correr también `service` y `backend` saldría a la red y lanzaría los binarios de llama-swap
     por haber instalado unos hooks.
 
     Los colaboradores **anotan** que se les llamó en vez de lanzar: `run_all` captura las
@@ -93,7 +141,7 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
     `raise` a secas se tragaría en silencio y el test pasaría con la red ya tocada.
 
     `latest_release` **no** entra aquí, y el motivo importa: `cli.published` vive en el grupo
-    `entorno`, así que el filtro no lo excluye ni debe hacerlo. A ese lo frena `SKIP_PYPI`, que
+    `environment`, así que el filtro no lo excluye ni debe hacerlo. A ese lo frena `SKIP_PYPI`, que
     es otro mecanismo y se prueba en su propio sitio —
     `test_install_clients.py::test_install_no_consulta_pypi_al_reportar_el_andamiaje`.
     """
@@ -114,10 +162,10 @@ def test_filtrar_por_grupo_no_toca_la_red_ni_el_backend(tmp_path):
         version_of=_anota("version_of"),
     )
 
-    results = checks.run_all(ctx, groups=("entorno", "andamiaje"))
+    results = checks.run_all(ctx, groups=("environment", "scaffold"))
 
     assert llamados == [], f"el reporte del andamiaje salió a la red: {llamados}"
-    esperados = [c.id for c in checks.CHECKS if c.group in ("entorno", "andamiaje")]
+    esperados = [c.id for c in checks.CHECKS if c.group in ("environment", "scaffold")]
     assert [check.id for check, _r in results] == esperados
     assert len(results) < len(checks.CHECKS)
 
@@ -408,7 +456,7 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     # Claude Desktop tampoco lo escribe `install`: se le pone su entrada para exigirle `ok` también.
     home = make_home(tmp_path)
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
-    # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
+    # `config.cost` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
     logs = tmp_path / "logs"
     recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
@@ -435,7 +483,7 @@ def test_empty_home_reports_missing_with_fix_hint(tmp_path):
     scaffold = [
         (check, result)
         for check, result in checks.run_all(ctx)
-        if check.group == "andamiaje" and check.id not in aparte
+        if check.group == "scaffold" and check.id not in aparte
     ]
     assert scaffold
     for check, result in scaffold:
@@ -456,7 +504,7 @@ def test_memory_missing_in_both_clients(tmp_path):
 def test_absent_client_is_unknown_not_missing(tmp_path):
     ctx = make_ctx(make_home(tmp_path, claude=False, codex=False, opencode=False))
     for check, result in checks.run_all(ctx):
-        if check.group == "andamiaje":
+        if check.group == "scaffold":
             assert result.status == checks.UNKNOWN, f"{check.id}: {result.detail}"
     assert result_for("client.presence", ctx).status == checks.UNKNOWN
 

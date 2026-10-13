@@ -15,7 +15,7 @@ sacrificar:
   no manda una cabecera Bearer por escribir una URL, y sin esto el dashboard quedaría inalcanzable
   para su único usuario real. Con Basic, el navegador pide las credenciales él solo al recibir el
   401 y no hacen falta pantalla de login ni CSRF. El usuario da igual: solo se compara la clave.
-- ``Cookie: ld_sesion=<expiración>.<firma>`` — el navegador, **a partir de la segunda**. Basic solo
+- ``Cookie: ld_session=<expiración>.<firma>`` — el navegador, **a partir de la segunda**. Basic solo
   lo recuerda el navegador mientras la ventana vive y por origen exacto, así que en la práctica el
   panel volvía a pedir el token al reabrir el navegador y otra vez al entrar por `localhost` en vez
   de por `127.0.0.1`. Un dashboard que pide un secreto largo varias veces al día es un dashboard
@@ -42,12 +42,12 @@ import time
 _REALM = 'Basic realm="local-delegate", charset="UTF-8"'
 
 #: Nombre de la cookie de sesión.
-COOKIE = "ld_sesion"
+COOKIE = "ld_session"
 
 #: Prefijo firmado junto a la expiración. Va dentro del mensaje del HMAC, no al lado: si un día
 #: cambia el formato de la cookie, subir la versión invalida de golpe las emitidas con el viejo en
 #: vez de dejar dos interpretaciones posibles del mismo texto.
-_VERSION = "ld-sesion|v1"
+_VERSION = "ld-session|v1"
 
 #: Un año. La sesión se renueva sola en cada visita, así que quien use el panel con alguna
 #: regularidad no vuelve a ver la petición de credenciales.
