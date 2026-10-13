@@ -258,8 +258,8 @@ def test_installed_hook_reads_switch_file_variable_and_alias(tmp_path, variables
 def offline_status(monkeypatch):
     monkeypatch.setattr(
         server,
-        "sondear_backend",
-        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
+        "probe_backend",
+        lambda: server.BackendState(False, [], True, "rechazada", "sin red en los tests", None),
     )
     for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
         monkeypatch.setattr(server, name, lambda: None)

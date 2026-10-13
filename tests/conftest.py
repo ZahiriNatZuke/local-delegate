@@ -56,7 +56,7 @@ def sin_lista_de_modelos_guardada():
     """
 
     def vaciar() -> None:
-        listas = getattr(sys.modules.get("local_delegate.server"), "_LISTAS_BUENAS", None)
+        listas = getattr(sys.modules.get("local_delegate.server"), "_LAST_GOOD_LISTS", None)
         if listas is not None:
             listas.clear()
 

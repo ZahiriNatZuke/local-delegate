@@ -381,7 +381,7 @@ def test_la_deteccion_de_desborde_cubre_las_formas_del_catalogo():
         "CONTEXT SIZE HAS BEEN EXCEEDED",  # insensible a mayúsculas
     ]
     for mensaje in desbordes:
-        assert server._es_desborde_de_contexto(server.ChatResult(text=mensaje, ok=False)), mensaje
+        assert server._is_context_overflow(server.ChatResult(text=mensaje, ok=False)), mensaje
 
     no_desbordes = [
         "[local-delegate error] no se pudo conectar al endpoint (http://x/v1).",
@@ -390,10 +390,8 @@ def test_la_deteccion_de_desborde_cubre_las_formas_del_catalogo():
         "",
     ]
     for mensaje in no_desbordes:
-        assert not server._es_desborde_de_contexto(server.ChatResult(text=mensaje, ok=False)), (
-            mensaje
-        )
-    assert not server._es_desborde_de_contexto(None)
+        assert not server._is_context_overflow(server.ChatResult(text=mensaje, ok=False)), mensaje
+    assert not server._is_context_overflow(None)
 
 
 def test_un_desborde_agotado_se_explica_en_vez_de_soltar_el_error_crudo(monkeypatch, tmp_path):

@@ -1,0 +1,24 @@
+# Controles positivos de A7b. Cada mutante se aplicó con una copia de seguridad (scratchpad a7b/mut.py),
+# se corrió el test con `pesado.sh uv run pytest -q …` y se restauró comprobando el sha256 (12 primeros).
+
+1. tools/make_mapping.py sin el arreglo de `_find_function` (`elif not isinstance(node, (…FunctionDef…, ClassDef)):` → `elif False:`)
+   Test: tools/tests/test_make_mapping.py::test_a_nested_function_inside_compound_statements_is_found
+   Dispara: no es un assert; `ValueError: no se encontró la función local_commit_msg._build_map (src/x.py:6@local_commit_msg._build_map)`
+   en `_local_edits` (make_mapping.py:477), el mismo error que dio el ensayo de la fase 1 sobre server.py. El test se escribió antes del arreglo y falló igual.
+   Resultado: 1 failed. Restaurado: sha256 f42a0930ec83 = f42a0930ec83.
+
+2. tests/test_turn_daemon.py: el `role="long"` que va a `_chat_chunked` a través de `_Thread(...)` (:597) devuelto a `rol="long"`
+   Test: tests/test_turn_daemon.py::test_forced_event_carries_turn_forced
+   Dispara: `:603: assert x_stuck.wait(2), "X no llegó a atascarse con el turno"` (el hilo X muere con TypeError por el kwarg viejo
+   antes de pedir el turno), y después `RuntimeError: cannot join thread before it is started`. Demuestra que la edición a mano
+   de :597 (que ren.py no ve) era necesaria.
+   Resultado: 1 failed, 14 passed. Restaurado: sha256 3a589cbed4c2 = 3a589cbed4c2.
+
+3. src/local_delegate/server.py: el campo del dataclass `BackendState.cause` devuelto a `causa` (solo la definición, :4251)
+   Test: tests/test_sondeo_backend.py
+   Dispara: `AttributeError: 'BackendState' object has no attribute 'cause'` en los accesos `.cause` (p. ej. el assert de :131,
+   `bueno.cause is None`, y `_backend_state_text`), en varios tests del fichero. Demuestra que campo, accesos de server.py,
+   web/metrics.py y tests cambiaron juntos (ren.py op `attr`).
+   Restaurado: sha256 08f6a3106429 = 08f6a3106429.
+
+Tras restaurar: tests/test_sondeo_backend.py, tests/test_turn_daemon.py y tools/tests → 43 passed.

@@ -299,7 +299,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
                 lambda piece: piece,
                 tool="op_c",
                 source="inline",
-                rol="long",
+                role="long",
                 chunk_chars=800,
             )
         finally:
@@ -594,7 +594,7 @@ def test_forced_event_carries_turn_forced(with_topology, monkeypatch, tmp_path):
         build_user,
         tool="op_x",
         source="inline",
-        rol="long",
+        role="long",
         chunk_chars=500,
     )
     y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")

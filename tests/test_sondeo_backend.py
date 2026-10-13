@@ -95,7 +95,7 @@ def test_local_status_no_pide_running_si_models_falla(remoto, status_sin_extras)
     assert ruta_running.call_count == 0
 
 
-# --- sondear_backend (REQ-012, REQ-021) ----------------------------------------------------------
+# --- probe_backend (REQ-012, REQ-021) ------------------------------------------------------------
 
 
 @backend_mock.mock
@@ -125,12 +125,12 @@ def test_el_sondeo_fallido_marca_la_lista_como_vieja(remoto):
         side_effect=[httpx2.Response(200, json={"data": [{"id": "a"}]}), httpx2.ConnectError("x")]
     )
 
-    bueno = server.sondear_backend()
-    malo = server.sondear_backend()
+    bueno = server.probe_backend()
+    malo = server.probe_backend()
 
-    assert bueno.models_stale is False and bueno.causa is None and bueno.detalle is None
+    assert bueno.models_stale is False and bueno.cause is None and bueno.detail is None
     assert malo.models_stale is True
-    assert malo.causa == "transport"
+    assert malo.cause == "transport"
     assert malo.status_http is None
 
 
@@ -141,10 +141,10 @@ def test_la_lista_guardada_es_de_su_url(monkeypatch):
         return_value=httpx2.Response(200, json={"data": [{"id": "de-a"}]})
     )
     backend_mock.get("http://b/v1/models").mock(side_effect=httpx2.ConnectError("down"))
-    assert server.sondear_backend().available is True
+    assert server.probe_backend().available is True
 
     monkeypatch.setattr(config, "BASE_URL", "http://b/v1")
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
     modelos = estado.models
 
     assert estado.available is False
@@ -159,11 +159,11 @@ def test_un_cuerpo_con_otra_forma_es_respuesta_invalida(remoto, cuerpo):
     """REQ-012: un 2xx sin un objeto con una lista `data` no es «disponible sin modelos»."""
     backend_mock.get(MODELS).mock(return_value=httpx2.Response(200, json=cuerpo))
 
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
 
     assert estado.available is False
-    assert estado.causa == "invalid_response"
-    assert "/models" in estado.detalle
+    assert estado.cause == "invalid_response"
+    assert "/models" in estado.detail
 
 
 @backend_mock.mock
@@ -174,7 +174,7 @@ def test_las_entradas_sueltas_se_toleran_como_hoy(remoto):
         )
     )
 
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
 
     assert estado.available is True
     assert estado.models == [{"id": "?", "status": "loaded"}]
@@ -184,12 +184,12 @@ def test_las_entradas_sueltas_se_toleran_como_hoy(remoto):
 def test_un_401_es_credencial_y_no_disponible(remoto):
     backend_mock.get(MODELS).mock(return_value=httpx2.Response(401, text="no"))
 
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
 
     assert estado.available is False
-    assert estado.causa == "credential"
+    assert estado.cause == "credential"
     assert estado.status_http == 401
-    assert estado.detalle == "test-backend responde 401: está arriba pero rechaza la credencial"
+    assert estado.detail == "test-backend responde 401: está arriba pero rechaza la credencial"
 
 
 @backend_mock.mock
@@ -198,12 +198,12 @@ def test_el_sondeo_nunca_lanza(remoto):
     backend_mock.get(MODELS).mock(side_effect=RuntimeError("inesperado"))
 
     try:
-        estado = server.sondear_backend()
+        estado = server.probe_backend()
     except Exception as exc:  # que el fallo se lea como fallo del test, no como un error suelto
         pytest.fail(f"el sondeo lanzó {exc!r}")
 
     assert estado.available is False
-    assert estado.causa == "unknown"
+    assert estado.cause == "unknown"
 
 
 @backend_mock.mock
@@ -214,9 +214,9 @@ def test_un_connect_timeout_en_loopback_es_rechazada(monkeypatch):
         side_effect=httpx2.ConnectTimeout("timed out")
     )
 
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
 
-    assert estado.causa == "refused"
+    assert estado.cause == "refused"
 
 
 def _ip_de_salida() -> str:
@@ -240,6 +240,6 @@ def test_un_puerto_cerrado_remoto_no_parece_una_vpn(monkeypatch):
         puerto = s.getsockname()[1]
     monkeypatch.setattr(config, "BASE_URL", f"http://{ip}:{puerto}/v1")
 
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
 
-    assert estado.causa == "refused"
+    assert estado.cause == "refused"

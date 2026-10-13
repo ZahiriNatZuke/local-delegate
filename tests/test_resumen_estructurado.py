@@ -586,23 +586,23 @@ def test_el_presupuesto_por_seccion_va_en_la_lista_y_segun_el_tamano():
     """v1: «1 a 3 frases» y el CHANGELOG se cortaba; v2: a partes iguales y las secciones grandes
     (con subsecciones) se quedaban cortas y Claude las releía."""
     lista = _lista_del_prompt(
-        "Secciones, en orden:\n" + server._lista_de_secciones(_secciones_de(100, 300, 600), 500)
+        "Secciones, en orden:\n" + server._section_list(_secciones_de(100, 300, 600), 500)
     )
     palabras = [p for _t, p, _s in lista]
     assert palabras[0] < palabras[1] < palabras[2]
     assert sum(palabras) <= 500
-    muchas = server._lista_de_secciones(_secciones_de(*([100] * 46)), 150)
+    muchas = server._section_list(_secciones_de(*([100] * 46)), 150)
     assert all(p >= 1 for _t, p, _s in _lista_del_prompt("Secciones, en orden:\n" + muchas))
-    assert "1 a 3 frases" not in server._system_estructurado(500, "")
+    assert "1 a 3 frases" not in server._structured_system(500, "")
 
 
 def test_las_subsecciones_van_anidadas_en_la_lista():
-    lista = server._lista_de_secciones(_secciones_de(100, 900, subs={1: ("A", "B")}), 300)
+    lista = server._section_list(_secciones_de(100, 900, subs={1: ("A", "B")}), 300)
     assert "\n  - A\n  - B" in lista
     assert _lista_del_prompt("Secciones, en orden:\n" + lista)[1][2] == ["A", "B"]
     plan = _secciones_de(100, 900, subs={1: ("Una subsección larga", "Otra")})
-    base = server._max_tokens_estructurado(300, _secciones_de(100, 900))
-    assert server._max_tokens_estructurado(300, plan) > base  # sitio para los subtítulos
+    base = server._structured_max_tokens(300, _secciones_de(100, 900))
+    assert server._structured_max_tokens(300, plan) > base  # sitio para los subtítulos
 
 
 # --- v3: subsecciones e introducción ---------------------------------------------------------

@@ -1,0 +1,10 @@
+# diff de `git ls-files --eol` antes (HEAD 6910d20, árbol limpio) y después de A7b, sobre todo el repo: 0 líneas de diferencia
+i/lf    w/lf    attr/                 	.sdd/changes/english-names-bilingual-output/tools/make_mapping.py
+i/lf    w/lf    attr/                 	src/local_delegate/daemon.py
+i/crlf  w/crlf  attr/                 	src/local_delegate/entrypoint.py
+i/lf    w/lf    attr/                 	src/local_delegate/resources/hooks/hook_common.py
+i/crlf  w/crlf  attr/                 	src/local_delegate/server.py
+i/crlf  w/crlf  attr/                 	src/local_delegate/web/metrics.py
+i/lf    w/lf    attr/                 	tests/conftest.py
+i/lf    w/lf    attr/                 	tests/test_sondeo_backend.py
+i/lf    w/lf    attr/                 	tests/test_turn_daemon.py
