@@ -1,0 +1,8 @@
+# Controles positivos de A8b (paridad acct Python/JS con node). Restaurado tras cada uno: sha256 tests/test_metrics.py = 3a09cee4cc50
+M1: tests/test_metrics.py::_acct_en_js extrae "function account(e){" en vez de "function acct(e){" (acct renombrada solo en el test)
+    -> tests/test_metrics.py::test_paridad_acct_entre_python_y_el_js_del_panel FALLA en :1082 (_extraer_funcion_js: fuente.index(cabecera))
+       ValueError: substring not found — no es un assert: la cabecera no existe en el panel.
+M2: renombrado parcial simulado dentro de acct: acct_js.replace("tOutRep ? tOut :", "tOutRep ? tIn :")
+    -> mismo test FALLA en el assert de paridad: assert js.get(campo_js) == py[campo_py]
+       AssertionError: ('tokens_out', {...}) — assert 1100 == 90 (tokensOut del JS = tokens_in).
+Sin mutante: el test pasa (suite completa verde, evidence/A8b/pytest-full.log).

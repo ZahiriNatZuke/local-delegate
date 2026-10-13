@@ -66,7 +66,7 @@ def _acct_en_js(tmp_path, casos: list[dict]) -> list[dict]:
         "const tok = c => Math.floor(c/CPT);\n"
         f"const LEGACY_VALUES = {json.dumps(legacy_names.PANEL_VALUE_ALIASES)};\n"
         f"{_extraer_funcion_js(metrics.HTML, 'function legacyValue(')}\n"
-        f"{_extraer_funcion_js(metrics.HTML, 'function tokensClaude(')}\n"
+        f"{_extraer_funcion_js(metrics.HTML, 'function claudeTokens(')}\n"
         f"{_extraer_funcion_js(metrics.HTML, 'function acct(e){')}\n"
         f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
         "console.log(JSON.stringify(casos.map(acct)));\n",

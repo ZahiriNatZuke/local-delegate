@@ -13,6 +13,9 @@ Los únicos motivos válidos (REQ-016):
 - dato de un tercero que no controla el paquete;
 - dato de prueba del propio detector: nombres en español que sus tests y su léxico necesitan como
   entrada (enmienda del 2026-10-12 tras la ola A0);
+- palabra inglesa que el léxico del detector clasifica como española (enmienda del 2026-10-13,
+  ola A8b, aprobada por la sesión principal): `meter` es «medidor» en inglés y el verbo «meter» en
+  español; el nombre está en inglés y no se renombra;
 - **pendiente**: lo que el frente A renombra pero se publica en el B (las subclaves y marcadores
   de REQ-010, que salen en B2).
 
@@ -53,6 +56,13 @@ sección de su motivo.
 | --- | --- | --- |
 | * | tests/test_detect_spanish_names.py | casos de control positivo del detector (REQ-044) |
 | * | scripts/data/* | léxico congelado y palabras reservadas del detector (REQ-044) |
+
+## Palabra inglesa que el léxico toma por española
+
+| Nombre | Fichero | Motivo |
+| --- | --- | --- |
+| meterHTML | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): pinta las barras `.meter` de la tarjeta Sistema; el léxico lo lee como el verbo español (ola A8b, decisión 7) |
+| quotaMeter | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): nombre nuevo de `medidorCuota` en A8b, mismo falso positivo que `meterHTML` |
 
 ## Pendiente
 

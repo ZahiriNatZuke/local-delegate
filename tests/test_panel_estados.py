@@ -1,7 +1,7 @@
 """Estados del panel, **ejecutados** con node (T4 de `panel-cuentas-y-estados-honestos`).
 
-Las decisiones del panel sobre el backend son funciones JS puras (`estadoVisible`, `badgeBackend`,
-`estadoModelo`, `ordenModelos`, `chipEstado`, `textoStats`, `systemRows`) para poder correrlas
+Las decisiones del panel sobre el backend son funciones JS puras (`visibleState`, `badgeBackend`,
+`modelState`, `sortModels`, `statusChip`, `statsText`, `systemRows`) para poder correrlas
 aquí sin navegador, con `_extraer`/`_correr` de `test_dashboard_js.py`. Los sondeos (`pollInflight`,
 `pollBackend`) se corren con un `fetch`, un `document` y un `setTimeout` de mentira: lo que se mira
 es cuántas peticiones salen y qué se programa, que es lo que REQ-026 promete.
@@ -43,10 +43,10 @@ const salida = x => console.log(JSON.stringify(x).replace(/[\u007f-\uffff]/g,
 def _globales() -> str:
     """Lo que las funciones de estado usan del panel: formateadores, `escHooks` y las tablas."""
     partes = [_SALIDA, _formateadores(), _extraer("function escHooks(")]
-    for funcion in ("vistaInicial", "turnWords"):
+    for funcion in ("initialView", "turnWords"):
         if f"function {funcion}(" in metrics.HTML:
             partes.append(_extraer(f"function {funcion}("))
-    for nombre in ("CAUSES_ANSWERING", "PALABRAS_RUNNING", "PALABRAS_ESPERA"):
+    for nombre in ("CAUSES_ANSWERING", "RUNNING_WORDS", "WAIT_WORDS"):
         if f"const {nombre} = {{" in metrics.HTML:
             partes.append(_const(nombre))
     return "\n".join(partes)
@@ -100,41 +100,41 @@ def _fallido(causa: str, etiqueta: str, detalle: str) -> dict:
     return {**FALLIDO, "cause": causa, "label": etiqueta, "detail": detalle}
 
 
-# --- estadoVisible: dos sondeos fallidos antes de «caído» (REQ-028) ----------------------------
+# --- visibleState: dos sondeos fallidos antes de «caído» (REQ-028) ----------------------------
 
 
 def test_dos_fallos_antes_de_caido(tmp_path):
     """Escenario «dos fallos antes de caído». Control (b): umbral 1 → `vistos[1]` sería caído."""
     r = _js(
         tmp_path,
-        [_f("estadoVisible")],
+        [_f("visibleState")],
         f"""
         const B = {json.dumps(BUENO)}, X = {json.dumps(FALLIDO)};
         let v = null; const vistos = [];
-        for (const bj of [B, X, X, B]) {{ v = estadoVisible(v, bj); vistos.push(v.estado); }}
+        for (const bj of [B, X, X, B]) {{ v = visibleState(v, bj); vistos.push(v.status); }}
         const desdeCero = [];
         let w = null;
-        for (const bj of [X, X]) {{ w = estadoVisible(w, bj); desdeCero.push(w.estado); }}
+        for (const bj of [X, X]) {{ w = visibleState(w, bj); desdeCero.push(w.status); }}
         salida(({{vistos, desdeCero}}));
         """,
     )
     vistos, vistos_desde_cero = r["vistos"], r["desdeCero"]
-    assert vistos[1] == "conectado"
-    assert vistos == ["conectado", "conectado", "caido", "conectado"]
-    assert vistos_desde_cero[0] == "comprobando"
-    assert vistos_desde_cero[1] == "caido"
+    assert vistos[1] == "connected"
+    assert vistos == ["connected", "connected", "down", "connected"]
+    assert vistos_desde_cero[0] == "checking"
+    assert vistos_desde_cero[1] == "down"
 
 
 def _filas_tras(tmp_path, secuencia: list[dict]) -> list[dict]:
     """La fila de `gemma4-26b-a4b` tras cada sondeo de la secuencia, sin nada en vuelo."""
     return _js(
         tmp_path,
-        [_f("estadoVisible"), _f("estadoModelo")],
+        [_f("visibleState"), _f("modelState")],
         f"""
         let v = null; const filas = [];
         for (const bj of {json.dumps(secuencia)}) {{
-          v = estadoVisible(v, bj);
-          filas.push(estadoModelo({{modelo: 'gemma4-26b-a4b', vista: v, inflight: []}}));
+          v = visibleState(v, bj);
+          filas.push(modelState({{model: 'gemma4-26b-a4b', view: v, inflight: []}}));
         }}
         salida((filas));
         """,
@@ -149,13 +149,13 @@ def test_las_filas_aguantan_el_primer_fallo(tmp_path):
     por `models_stale` → la fila saldría atenuada tras el primer fallo.
     """
     filas = _filas_tras(tmp_path, [BUENO, FALLIDO, FALLIDO])
-    assert filas[0]["texto"] == "montado"
+    assert filas[0]["text"] == "montado"
     fila = filas[1]
-    assert fila["texto"] == "montado"
-    assert fila["atenuada"] is False
+    assert fila["text"] == "montado"
+    assert fila["dimmed"] is False
     fila = filas[2]
-    assert fila["texto"] == "desconocido"
-    assert fila["atenuada"] is True
+    assert fila["text"] == "desconocido"
+    assert fila["dimmed"] is True
     assert fila["title"] == "sin conexión con el backend: no resuelve"
 
 
@@ -165,10 +165,10 @@ def test_las_filas_aguantan_el_primer_fallo(tmp_path):
 def _badge(tmp_path, secuencia: list[dict]) -> dict:
     return _js(
         tmp_path,
-        [_f("estadoVisible"), _f("badgeBackend")],
+        [_f("visibleState"), _f("badgeBackend")],
         f"""
         let v = null;
-        for (const bj of {json.dumps(secuencia)}) v = estadoVisible(v, bj);
+        for (const bj of {json.dumps(secuencia)}) v = visibleState(v, bj);
         salida((badgeBackend(v, 'http://pc.lan:9292/v1')));
         """,
     )
@@ -180,23 +180,23 @@ def test_el_badge_dice_la_causa(tmp_path):
     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
     cred = _fallido("credential", "sin acceso", det_401)
     b = _badge(tmp_path, [cred, cred])
-    clase, texto, title = b["clase"], b["texto"], b["title"]
+    clase, texto, title = b["cls"], b["text"], b["title"]
     assert clase == "warn"
     assert texto == "sin acceso"
     assert title == det_401
 
     http = _fallido("http_error", "responde con error", "pc.lan:9292 responde HTTP 500")
     b = _badge(tmp_path, [http, http])
-    assert b["clase"] == "warn"
-    assert "caído" not in b["texto"]
+    assert b["cls"] == "warn"
+    assert "caído" not in b["text"]
 
     b = _badge(tmp_path, [FALLIDO, FALLIDO])
-    assert b["texto"] == "caído · no resuelve"
-    assert b["clase"] == "down"
+    assert b["text"] == "caído · no resuelve"
+    assert b["cls"] == "down"
     assert b["title"] == FALLIDO["detail"]
 
     b = _badge(tmp_path, [BUENO])
-    assert (b["texto"], b["clase"], b["title"]) == ("conectado", "up", "http://pc.lan:9292/v1")
+    assert (b["text"], b["cls"], b["title"]) == ("conectado", "up", "http://pc.lan:9292/v1")
 
 
 def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
@@ -205,7 +205,7 @@ def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
     det_401 = "pc.lan:9292 responde 401: está arriba pero rechaza la credencial"
     viejo = _fallido("credencial", "sin acceso", det_401)
     b = _badge(tmp_path, [viejo, viejo])
-    assert (b["clase"], b["texto"]) == ("warn", "sin acceso")
+    assert (b["cls"], b["text"]) == ("warn", "sin acceso")
     assert "credencial" not in re.sub(
         r"//[^\n]*", "", metrics.HTML.split("CAUSES_ANSWERING", 1)[1][:200]
     )
@@ -214,28 +214,28 @@ def test_el_badge_entiende_el_valor_viejo_de_la_causa(tmp_path):
 def test_el_badge_avisa_del_ultimo_sondeo_sin_dejar_de_decir_conectado(tmp_path):
     """REQ-028: un fallo tras uno bueno conserva «conectado» y lo cuenta en el `title`."""
     b = _badge(tmp_path, [BUENO, FALLIDO])
-    assert b["texto"] == "conectado"
+    assert b["text"] == "conectado"
     assert "último sondeo: " + FALLIDO["detail"] in b["title"]
 
     b = _badge(tmp_path, [FALLIDO])
-    assert b["texto"] == "comprobando…"
-    assert b["clase"] == "neutral"
+    assert b["text"] == "comprobando…"
+    assert b["cls"] == "neutral"
 
 
-# --- estadoModelo: la tabla de REQ-022, una fila por regla ------------------------------------
+# --- modelState: la tabla de REQ-022, una fila por regla ------------------------------------
 
 
 def _fila(tmp_path, casos: list[dict]) -> list[dict]:
     """`casos`: [{secuencia, inflight}] → la fila de `qwen36-35b-a3b` tras la secuencia."""
     return _js(
         tmp_path,
-        [_f("estadoVisible"), _f("estadoModelo")],
+        [_f("visibleState"), _f("modelState")],
         f"""
         const out = [];
         for (const c of {json.dumps(casos)}) {{
           let v = null;
-          for (const bj of c.secuencia) v = estadoVisible(v, bj);
-          out.push(estadoModelo({{modelo: c.modelo || 'qwen36-35b-a3b', vista: v,
+          for (const bj of c.secuencia) v = visibleState(v, bj);
+          out.push(modelState({{model: c.modelo || 'qwen36-35b-a3b', view: v,
                                   inflight: c.inflight}}));
         }}
         salida((out));
@@ -285,7 +285,7 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
         {"secuencia": [FALLIDO, FALLIDO], "inflight": VUELO},
     ]
     filas = _fila(tmp_path, casos)
-    txt = [f["texto"] for f in filas]
+    txt = [f["text"] for f in filas]
     assert txt[0] == "esperando al backend"
     assert txt[1] == "desconocido"
     assert txt[2] == "en cola local"
@@ -302,8 +302,8 @@ def test_estado_modelo_una_fila_por_regla(tmp_path):
     assert filas[2]["title"] == (
         "esperando dentro de local-delegate: esperando plaza (máximo de llamadas a la vez)"
     )
-    assert [f["atenuada"] for f in filas[:2]] == [True, True]
-    assert not any(f["atenuada"] for f in filas[2:12])
+    assert [f["dimmed"] for f in filas[:2]] == [True, True]
+    assert not any(f["dimmed"] for f in filas[2:12])
 
 
 def test_la_espera_local_es_un_punto_de_extension(tmp_path):
@@ -320,7 +320,7 @@ def test_la_espera_local_es_un_punto_de_extension(tmp_path):
             }
         ],
     )[0]
-    txt, title = fila["texto"], fila["title"]
+    txt, title = fila["text"], fila["title"]
     assert txt == "en cola local"
     assert "turno_grupo" in title
 
@@ -329,7 +329,7 @@ def test_la_espera_local_exige_todas_las_llamadas(tmp_path):
     """«En espera local» = TODAS las llamadas a ese modelo esperan dentro de local-delegate."""
     vuelo = [{**VUELO[0], "local_wait": "slot"}, VUELO[0]]
     fila = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": vuelo}])[0]
-    assert fila["texto"] == "procesando"
+    assert fila["text"] == "procesando"
 
 
 def test_esperando_turno_no_afirma_la_causa(tmp_path):
@@ -345,7 +345,7 @@ def test_esperando_turno_no_afirma_la_causa(tmp_path):
             {"secuencia": [_con([])], "inflight": VUELO},
         ],
     )
-    assert filas[0]["texto"] == "esperando turno"
+    assert filas[0]["text"] == "esperando turno"
     title = filas[0]["title"]
     assert "qwen35-2b cargando" in title
     assert (
@@ -371,23 +371,23 @@ def test_escenario_cargando_turno_y_cola_propia(tmp_path):
             },
         ],
     )
-    assert filas[0]["texto"] == "esperando turno"
+    assert filas[0]["text"] == "esperando turno"
     assert "qwen36-35b-a3b cargando" in filas[0]["title"]
     assert "gemma4-26b-a4b listo" in filas[0]["title"]
 
 
-# --- ordenModelos (REQ-021) y chipEstado (REQ-023) ------------------------------------------
+# --- sortModels (REQ-021) y statusChip (REQ-023) ------------------------------------------
 
 
 def test_orden_de_modelos_con_y_sin_conexion(tmp_path):
     """Control (b). Mutante: orden alfabético puro → `gemma4-12b` primero."""
     r = _js(
         tmp_path,
-        [_f("ordenModelos")],
+        [_f("sortModels")],
         f"""
         const cat = {json.dumps(CATALOGO)};
-        const con = ordenModelos(['gemma4-12b','gemma4-26b-a4b','qwen35-2b','qwen36-35b-a3b'], cat);
-        const sinLista = ordenModelos([], cat);
+        const con = sortModels(['gemma4-12b','gemma4-26b-a4b','qwen35-2b','qwen36-35b-a3b'], cat);
+        const sinLista = sortModels([], cat);
         salida(({{con, sinLista}}));
         """,
     )
@@ -400,8 +400,8 @@ def test_chip_de_estado_acepta_cualquier_valor(tmp_path):
     """Control (b). Mutante: todo lo que no es `loaded` con el estilo de `unloaded`."""
     r = _js(
         tmp_path,
-        [_f("chipEstado")],
-        "salida((['loaded','unloaded','starting',null,undefined].map(chipEstado)));",
+        [_f("statusChip")],
+        "salida((['loaded','unloaded','starting',null,undefined].map(statusChip)));",
     )
     assert r[0] == "loaded"
     assert r[1] == "unloaded"
@@ -409,7 +409,7 @@ def test_chip_de_estado_acepta_cualquier_valor(tmp_path):
     assert r[3] is None and r[4] is None
 
 
-# --- renderBackendStats y textoStats (REQ-020) ---------------------------------------------
+# --- renderBackendStats y statsText (REQ-020) ---------------------------------------------
 
 _DOM = """
 const _els = {};
@@ -424,8 +424,8 @@ const document = {
 def test_la_version_de_llama_swap_solo_se_culpa_con_un_404(tmp_path):
     """Control (a) con `dns`; (b) para la rama positiva: mutante «nunca menciona v236»."""
     funciones = [_f("renderBackendStats")]
-    if "function textoStats(" in metrics.HTML:
-        funciones.insert(0, _f("textoStats"))
+    if "function statsText(" in metrics.HTML:
+        funciones.insert(0, _f("statsText"))
     r = _js(
         tmp_path,
         funciones,
@@ -494,7 +494,7 @@ def test_filas_del_panel_sistema(tmp_path):
 _SONDEO = (
     _DOM
     + """
-const state = {inflight: [], activity: null, lastEvent: null, status: null, vista: null,
+const state = {inflight: [], activity: null, lastEvent: null, status: null, view: null,
                backendOrigin: null, backendHost: null};
 const llamadas = {};
 let fetchPendiente = {};          // url -> true: esa ruta no resuelve nunca
@@ -519,8 +519,8 @@ const tick = () => new Promise(r => setImmediate(r));
 
 
 def _sondeo_globales() -> str:
-    """El estado de los sondeos (`const SONDEO = {…}`) si ya existe."""
-    return _const("SONDEO") if "const SONDEO = {" in metrics.HTML else ""
+    """El estado de los sondeos (`const POLL = {…}`) si ya existe."""
+    return _const("POLL") if "const POLL = {" in metrics.HTML else ""
 
 
 def test_pollInflight_no_se_apila(tmp_path):
@@ -561,9 +561,9 @@ def test_pollInflight_se_encadena_tras_terminar(tmp_path):
 def test_un_backend_lento_no_congela_en_curso(tmp_path):
     """Control (a): hoy `Promise.all` espera a `/api/backend` y no pinta «En curso»."""
     funciones = [_f("pollInflight")]
-    sondear = "sondearAhora()" if "function sondearAhora(" in metrics.HTML else "pollInflight()"
-    if "function sondearAhora(" in metrics.HTML:
-        funciones += [_f("pollBackend"), _f("aplicarBackend"), _f("sondearAhora")]
+    sondear = "pollNow()" if "function pollNow(" in metrics.HTML else "pollInflight()"
+    if "function pollNow(" in metrics.HTML:
+        funciones += [_f("pollBackend"), _f("applyBackend"), _f("pollNow")]
     r = _js(
         tmp_path,
         funciones,
@@ -587,19 +587,19 @@ def test_al_reconectar_se_refresca_todo(tmp_path):
     x, b = json.dumps(FALLIDO), json.dumps(BUENO)
     r = _js(
         tmp_path,
-        [_f("estadoVisible"), _f("pollBackend"), _f("aplicarBackend"), _f("fetchStatus")],
+        [_f("visibleState"), _f("pollBackend"), _f("applyBackend"), _f("fetchStatus")],
         f"""
         respuestas['/api/backend'] = [{x}, {x}, {b}];
         const estados = [];
         for (let i = 0; i < 3; i++) {{
-          await pollBackend(); await tick(); estados.push(state.vista.estado);
+          await pollBackend(); await tick(); estados.push(state.view.status);
         }}
         await tick(); await tick();
         salida(({{estados, llamadas, retrasos}}));
         """,
         _SONDEO + _sondeo_globales(),
     )
-    assert r["estados"] == ["comprobando", "caido", "conectado"]
+    assert r["estados"] == ["checking", "down", "connected"]
     llamadas_status = r["llamadas"].get("/api/status", 0)
     assert llamadas_status == 1
     assert r["llamadas"].get("/api/backend/stats", 0) == 1
@@ -613,7 +613,7 @@ def test_ultima_delegacion_cuando_nada_corre(tmp_path):
     """Control (a): hoy el título sigue «En curso» con la última terminada."""
     r = _js(
         tmp_path,
-        [_f("renderInflight"), _f("fmtHace")],
+        [_f("renderInflight"), _f("fmtAgo")],
         """
         const state = {inflight: [], activity: {skewMs: 0},
                        lastEvent: {ts: new Date(Date.now() - 8000).toISOString(),
@@ -648,7 +648,7 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
     """Escenario «la espera de turno se ve en el panel como espera local», de punta a punta.
 
     Una operación del 26B tiene el turno (atascada en el backend) y una de Qwen3.6 lo espera; se lee
-    `/api/inflight` con `TestClient` y su entrada pasa a `estadoModelo` con node, con Qwen3.6
+    `/api/inflight` con `TestClient` y su entrada pasa a `modelState` con node, con Qwen3.6
     `ready` en `/running`. Control (b). Mutante 1: una clave propia (`esperando_turno: true`) en
     vez de `local_wait` → la fila sale «procesando». Mutante 2: `inflight_snapshot` sin copiar
     `turn_in_use` → el `title` dice «en uso: nada».
@@ -702,7 +702,7 @@ def test_turn_wait_shown_in_panel_as_local_wait(tmp_path, monkeypatch):
             thread.join(5)
 
     row = _fila(tmp_path, [{"secuencia": [_con(QWEN_READY)], "inflight": [entry]}])[0]
-    assert row["texto"] == "en cola local"
+    assert row["text"] == "en cola local"
     assert "esperando turno del daemon" in row["title"]
     assert "en uso: gemma4-26b-a4b" in row["title"]
     assert row["title"].count("esperando") == 1, row["title"]  # sin «esperando … esperando»

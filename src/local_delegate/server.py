@@ -882,7 +882,7 @@ _CLAUDE_TOKEN_KINDS = ("text", "returned", "output", "image")
 def claude_tokens(amount: int, *, kind: str, event: dict) -> int:
     """Convierte lo ahorrado o lo devuelto a tokens de **Claude**. Única conversión del paquete.
 
-    `_accounting` (y su espejo JS `tokensClaude`) pasan por aquí para `saved`, `returned` y `net`.
+    `_accounting` (y su espejo JS `claudeTokens`) pasan por aquí para `saved`, `returned` y `net`.
     `event` es la fila **fundida** del log (`cost.merge`, coste-api-y-cuota REQ-006): trae en
     `density[kind]` el `[c100, origen]` ya resuelto por `cost.resolve_density`. Esta función
     no resuelve nada, solo divide (REQ-033):

@@ -1,7 +1,7 @@
 """Coste, cuota e imágenes en `/api/stats` y en el JS del panel (coste-api-y-cuota, T6).
 
-Lo que sirve el backend se prueba con `TestClient`; las funciones puras del panel (`textoCoste`,
-`textoCuota`, `textoImagenes`) se **ejecutan con node** sobre esa misma respuesta, como las demás
+Lo que sirve el backend se prueba con `TestClient`; las funciones puras del panel (`costText`,
+`quotaText`, `imagesText`) se **ejecutan con node** sobre esa misma respuesta, como las demás
 del panel. El HOME es sintético en todos los tests: el panel no puede leer `~/.claude` (REQ-073) y
 un test que lo comprueba necesita un `~/.claude` que pueda leer si estuviera mal.
 """
@@ -158,26 +158,26 @@ def _extraer(cabecera: str) -> str:
 _FUNCIONES = (
     "function fmtNum(",
     "function plural(",
-    "function dolares(",
-    "function textoCoste(",
-    "function textoCuota(",
-    "function textoImagenes(",
+    "function dollars(",
+    "function costText(",
+    "function quotaText(",
+    "function imagesText(",
 )
 
 
 def _textos(tmp_path, stats: dict) -> dict[str, str]:
-    """`textoCoste`, `textoCuota` y `textoImagenes` del panel sobre esa respuesta, en node."""
+    """`costText`, `quotaText` y `imagesText` del panel sobre esa respuesta, en node."""
     node = shutil.which("node")
     if node is None:
         pytest.skip("node no está en el PATH")
     preludio = (
         "const F = {format: n => fmtNum(n, 0)};\n"
-        "const F1 = {format: n => fmtNum(n, 1)};\n" + _extraer("const HILO_TXT = {") + ";\n"
+        "const F1 = {format: n => fmtNum(n, 1)};\n" + _extraer("const THREAD_TXT = {") + ";\n"
     )
     cuerpo = (
         f"const j = {json.dumps(stats)};\n"
-        "console.log(JSON.stringify({coste: textoCoste(j).join('\\n'), "
-        "cuota: textoCuota(j).join('\\n'), imagenes: textoImagenes(j).join('\\n')}));\n"
+        "console.log(JSON.stringify({coste: costText(j).join('\\n'), "
+        "cuota: quotaText(j).join('\\n'), imagenes: imagesText(j).join('\\n')}));\n"
     )
     programa = tmp_path / "textos.mjs"
     programa.write_text(
@@ -331,7 +331,7 @@ def test_discard_reasons_are_said_in_words(tmp_path):
     """Los motivos de descarte llegan como valores de máquina en inglés y el panel los dice en
     palabras, también los tres que antes no tenían rótulo (`overlapping`, `expired`, `reset`).
 
-    Control: mutante «`DESCARTE` con la clave vieja `delta_pequeno`» → sale «small delta 1»."""
+    Control: mutante «`DISCARD` con la clave vieja `delta_pequeno`» → sale «small delta 1»."""
     discards = {"small_delta": 1, "overlapping": 2, "expired": 3, "reset": 4, "corrupt_line": 5}
     stats = {
         "quota": {
@@ -537,9 +537,9 @@ def test_frases_prohibidas(entorno, tmp_path, monkeypatch):
         "html": html,
         "metrics.HTML": metrics.HTML,
         "/api/stats": json.dumps(stats, ensure_ascii=False),
-        "textoCoste": textos["coste"],
-        "textoCuota": textos["cuota"],
-        "textoImagenes": textos["imagenes"],
+        "costText": textos["coste"],
+        "quotaText": textos["cuota"],
+        "imagesText": textos["imagenes"],
         "coletilla": coletilla,
         "coletilla de imagen": coletilla_imagen,
         "recibo": recibo,
@@ -581,7 +581,7 @@ def test_texto_del_coste_con_la_barra_y_el_respaldo(entorno, tmp_path):
 def test_families_are_said_in_words(entorno, tmp_path):
     """Las familias de tokenizador llegan como `new` y `previous` y el panel las dice en palabras.
 
-    Control: mutante «`FAMILIA` con la clave vieja `nueva`» → sale «new 2»."""
+    Control: mutante «`FAMILY` con la clave vieja `nueva`» → sale «new 2»."""
     logs, _home = entorno
     _escribir_log(logs, [_linea(_ahora() - timedelta(hours=1))])
     j = _stats()
@@ -618,10 +618,10 @@ def test_una_fila_sin_ahorro_no_pinta_dolares(entorno, tmp_path):
     programa.write_text(
         "\n".join(
             [
-                *(_extraer(f) for f in ("function fmtNum(", "function dolares(")),
-                _extraer("function celdasCoste("),
+                *(_extraer(f) for f in ("function fmtNum(", "function dollars(")),
+                _extraer("function costCells("),
                 f"const filas = {json.dumps(por_t)};",
-                "console.log(JSON.stringify(filas.map(celdasCoste)));",
+                "console.log(JSON.stringify(filas.map(costCells)));",
             ]
         ),
         encoding="utf-8",

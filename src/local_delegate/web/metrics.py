@@ -223,8 +223,8 @@ def _last_event() -> dict | None:
 
 def _last_event_ts() -> str | None:
     """`ts` del evento más reciente, o `None` si el log está vacío."""
-    evento = _last_event()
-    return evento.get("ts") if evento else None
+    event = _last_event()
+    return event.get("ts") if event else None
 
 
 # La contabilidad por evento vive en `server.py`, junto a `_log_event` que define el formato
@@ -361,8 +361,8 @@ def _aggregate(rows: list[dict]) -> dict:
         if isinstance(host, str) and host:
             b["hosts"].add(host)
 
-        quien = r.get("client")
-        c = by_client[quien if isinstance(quien, str) and quien else "desconocido"]
+        client = r.get("client")
+        c = by_client[client if isinstance(client, str) and client else "desconocido"]
         c["calls"] += 1
         c["backend_calls"] += acc["backend_calls"]
         c["saved"] += acc["saved"]
@@ -377,7 +377,7 @@ def _aggregate(rows: list[dict]) -> dict:
         total["tokens_in"] += acc["tokens_in"]
         total["tokens_out"] += acc["tokens_out"]
         total["saved"] += acc["saved"]
-        for campo in (
+        for field in (
             "returned",
             "net",
             "chars_saved_text",
@@ -385,7 +385,7 @@ def _aggregate(rows: list[dict]) -> dict:
             "chars_saved_output",
             "chars_returned",
         ):
-            total[campo] += acc[campo]
+            total[field] += acc[field]
         if acc["estimated"]:
             total["estimated_events"] += 1
         if acc["fallback"]:
@@ -431,7 +431,7 @@ def _aggregate(rows: list[dict]) -> dict:
         }
         for name, v in sorted(by_backend.items(), key=lambda kv: -kv[1]["calls"])
     ]
-    clientes = [
+    clients = [
         {
             "client": name,
             "calls": v["calls"],
@@ -467,7 +467,7 @@ def _aggregate(rows: list[dict]) -> dict:
         "by_tool": tools,
         "by_model": models,
         "by_backend": backends,
-        "by_client": clientes,
+        "by_client": clients,
     }
 
 
@@ -504,7 +504,7 @@ def events(
 ):
     range_from, range_to = _resolve_range(from_, to)
     rows, files_read = _load(range_from, range_to)
-    rows, cuenta = _usage_rows(rows, _include_tests(include_tests))
+    rows, counts = _usage_rows(rows, _include_tests(include_tests))
     rows.reverse()  # más recientes primero
     return JSONResponse(
         {
@@ -512,7 +512,7 @@ def events(
                 "chars_per_token": CHARS_PER_TOKEN,
                 "log_dir": str(config.LOG_DIR),
                 "count": len(rows),
-                **cuenta,
+                **counts,
                 "files_read": files_read,
                 "range_from": range_from.isoformat(),
                 "range_to": range_to.isoformat(),
@@ -530,10 +530,10 @@ def stats(
 ):
     range_from, range_to = _resolve_range(from_, to)
     rows, _files_read = _load(range_from, range_to)
-    usage, cuenta = _usage_rows(list(rows), _include_tests(include_tests))
-    datos = _aggregate(usage)
-    datos.update(cuenta)
-    datos["open_test_windows"] = [
+    usage, counts = _usage_rows(list(rows), _include_tests(include_tests))
+    data = _aggregate(usage)
+    data.update(counts)
+    data["open_test_windows"] = [
         {"id": w.id, "start": test_windows.format_instant(w.start)}
         for w in test_windows.load(config.LOG_DIR).open_windows()
     ]
@@ -543,14 +543,14 @@ def stats(
     # no depende del interruptor (REQ-014). Las imágenes son uso: siguen al interruptor.
     now = _now()
     aggregates = recompute.read_aggregates(config.LOG_DIR)
-    datos["cost"] = valuation.cost_block(rows, aggregates, now=now)
-    datos["images"] = valuation.images_block(usage)
+    data["cost"] = valuation.cost_block(rows, aggregates, now=now)
+    data["images"] = valuation.images_block(usage)
     # El contenido es `density.json` tal cual (sin las claves `_`): sus claves cambian con su lector.
-    datos["density_table"] = {
+    data["density_table"] = {
         k: v for k, v in pricing.load_density().items() if not k.startswith("_")
     }
-    datos["quota"] = _quota_block(aggregates, now)
-    return JSONResponse(datos)
+    data["quota"] = _quota_block(aggregates, now)
+    return JSONResponse(data)
 
 
 def _now() -> datetime:
@@ -592,10 +592,10 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     identificador— y presentarla como un dato.
     """
     total = len(rows)
-    sugeridas = 0
-    por_evento: dict[str, dict[str, int]] = {}
-    por_categoria: dict[str, dict[str, int]] = {}
-    por_dia: dict[str, dict[str, int]] = {}
+    suggested_total = 0
+    by_event: dict[str, dict[str, int]] = {}
+    by_category: dict[str, dict[str, int]] = {}
+    by_day: dict[str, dict[str, int]] = {}
     # Puntería del hook de lectura: de todo lo que vio, en qué avisó y por qué descartó el resto.
     # Esto NO es conversión —nada enlaza una sugerencia con la delegación que vino después— sino
     # selectividad, que vive entera dentro de este mismo fichero y no hay que cruzarla con nada.
@@ -604,71 +604,71 @@ def _aggregate_hooks(rows: list[dict]) -> dict:
     # que meter los de `lint` o `summarize` daría un denominador que no es y la tarjeta diría
     # que el hook descarta sin motivo la mitad de las veces.
     by_reason: dict[str, int] = {}
-    por_ext: dict[str, int] = {}
+    by_ext: dict[str, int] = {}
 
     for raw in rows:
         # Filas viejas (`motivo`, `bloqueo`… en español) y nuevas dan lo mismo (REQ-006).
         row = legacy_names.normalize("hook_telemetry", raw)
         # `suggested` puede faltar en eventos viejos; su ausencia se cuenta como «no sugirió», que
         # es lo que significaba antes de que el campo existiera.
-        sugerida = bool(row.get("suggested"))
-        sugeridas += sugerida
+        suggested = bool(row.get("suggested"))
+        suggested_total += suggested
 
-        for clave, destino in (
-            (row.get("event") or "?", por_evento),
-            (row.get("category") or "no_category", por_categoria),
+        for key, target in (
+            (row.get("event") or "?", by_event),
+            (row.get("category") or "no_category", by_category),
         ):
-            casilla = destino.setdefault(str(clave), {"total": 0, "suggested": 0})
-            casilla["total"] += 1
-            casilla["suggested"] += sugerida
+            bucket = target.setdefault(str(key), {"total": 0, "suggested": 0})
+            bucket["total"] += 1
+            bucket["suggested"] += suggested
 
         if row.get("category") == "read":
             # Un evento sin `reason` es o bien un aviso, o bien uno de antes del PR #146, que no
             # lo escribía. Se separan porque decir «descartado sin motivo» de una telemetría
             # vieja sería inventarle una razón que nunca tuvo.
-            if sugerida:
-                clave = "suggested"
+            if suggested:
+                key = "suggested"
             else:
-                clave = str(row.get("reason") or "unrecorded")
-            by_reason[clave] = by_reason.get(clave, 0) + 1
+                key = str(row.get("reason") or "unrecorded")
+            by_reason[key] = by_reason.get(key, 0) + 1
 
             ext = row.get("ext")
-            por_ext[str(ext) if ext else "no_extension"] = (
-                por_ext.get(str(ext) if ext else "no_extension", 0) + 1
+            by_ext[str(ext) if ext else "no_extension"] = (
+                by_ext.get(str(ext) if ext else "no_extension", 0) + 1
             )
 
         ts = _parse_ts(row.get("ts"))
         if ts is not None:
-            casilla = por_dia.setdefault(ts.date().isoformat(), {"total": 0, "suggested": 0})
-            casilla["total"] += 1
-            casilla["suggested"] += sugerida
+            bucket = by_day.setdefault(ts.date().isoformat(), {"total": 0, "suggested": 0})
+            bucket["total"] += 1
+            bucket["suggested"] += suggested
 
-    def _lista(datos: dict[str, dict[str, int]], clave: str) -> list[dict]:
+    def _as_list(data: dict[str, dict[str, int]], key: str) -> list[dict]:
         return [
-            {clave: nombre, **valores}
-            for nombre, valores in sorted(datos.items(), key=lambda kv: (-kv[1]["total"], kv[0]))
+            {key: name, **values}
+            for name, values in sorted(data.items(), key=lambda kv: (-kv[1]["total"], kv[0]))
         ]
 
     return {
         "total": total,
-        "suggested": sugeridas,
+        "suggested": suggested_total,
         # Ratio y no porcentaje: el formato es cosa de quien pinta, no del dato.
-        "rate": (sugeridas / total) if total else 0.0,
-        "by_event": _lista(por_evento, "event"),
-        "by_category": _lista(por_categoria, "category"),
+        "rate": (suggested_total / total) if total else 0.0,
+        "by_event": _as_list(by_event, "event"),
+        "by_category": _as_list(by_category, "category"),
         "by_day": sorted(
-            ({"day": dia, **valores} for dia, valores in por_dia.items()),
+            ({"day": day, **values} for day, values in by_day.items()),
             key=lambda d: d["day"],
         ),
         # Sólo de los eventos de lectura; su total NO es el `total` de arriba.
         "read_total": sum(by_reason.values()),
         "by_reason": [
-            {"reason": nombre, "total": n}
-            for nombre, n in sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))
+            {"reason": name, "total": n}
+            for name, n in sorted(by_reason.items(), key=lambda kv: (-kv[1], kv[0]))
         ],
         "by_ext": [
-            {"ext": nombre, "total": n}
-            for nombre, n in sorted(por_ext.items(), key=lambda kv: (-kv[1], kv[0]))
+            {"ext": name, "total": n}
+            for name, n in sorted(by_ext.items(), key=lambda kv: (-kv[1], kv[0]))
         ],
     }
 
@@ -685,8 +685,8 @@ def hooks(
     activó y todavía no hay eventos. Sin esa distinción, un panel vacío se lee como «los hooks no
     sugieren nada», que es una conclusión falsa sacada de un fichero que no existe.
     """
-    ruta = config.HOOK_TELEMETRY_LOG
-    if ruta is None:
+    path = config.HOOK_TELEMETRY_LOG
+    if path is None:
         return JSONResponse(
             {
                 "enabled": False,
@@ -697,27 +697,27 @@ def hooks(
         )
 
     range_from, range_to = _resolve_range(from_, to)
-    filas = [
-        fila
-        for fila in _read_file_cached(ruta)
-        if (ts := _parse_ts(fila.get("ts"))) is not None and range_from <= ts <= range_to
+    rows = [
+        row
+        for row in _read_file_cached(path)
+        if (ts := _parse_ts(row.get("ts"))) is not None and range_from <= ts <= range_to
     ]
     # La telemetría no lleva `client`: de la regla de pruebas solo le aplican las ventanas (REQ-013).
-    excluidas = 0
+    excluded = 0
     if not _include_tests(include_tests):
-        ventanas = test_windows.load(config.LOG_DIR)
-        if ventanas.windows:
-            ahora = datetime.now(UTC)
-            antes = len(filas)
-            filas = [f for f in filas if ventanas.find(f.get("ts"), now=ahora) is None]
-            excluidas = antes - len(filas)
+        windows = test_windows.load(config.LOG_DIR)
+        if windows.windows:
+            now = datetime.now(UTC)
+            before = len(rows)
+            rows = [f for f in rows if windows.find(f.get("ts"), now=now) is None]
+            excluded = before - len(rows)
     return JSONResponse(
         {
             "enabled": True,
-            "log": str(ruta),
-            "exists": ruta.is_file(),
-            "excluded_tests": excluidas,
-            **_aggregate_hooks(filas),
+            "log": str(path),
+            "exists": path.is_file(),
+            "excluded_tests": excluded,
+            **_aggregate_hooks(rows),
         }
     )
 
@@ -731,19 +731,19 @@ def inflight():
     rango seleccionado ni de la hora (posiblemente desajustada) del navegador.
     """
     snapshot = server.inflight_snapshot()
-    ultimo = _last_event()
+    last = _last_event()
     return JSONResponse(
         {
             "inflight": snapshot,
             "count": len(snapshot),
-            "last_event_ts": (ultimo or {}).get("ts"),
+            "last_event_ts": (last or {}).get("ts"),
             # Resumen de la última delegación TERMINADA, para que el panel diga algo cuando no
             # hay nada corriendo. Solo los campos que se pintan: el log entero no hace falta.
             "last_event": {
-                k: ultimo.get(k)
+                k: last.get(k)
                 for k in ("ts", "tool", "model", "backend", "chars_in", "latency_ms", "ok")
             }
-            if ultimo
+            if last
             else None,
             "now": datetime.now(UTC).isoformat(),
         }
@@ -764,16 +764,16 @@ def backend():
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
-    estado = server.probe_backend()
-    running, running_ok = _running() if estado.available else ([], False)
+    probe = server.probe_backend()
+    running, running_ok = _running() if probe.available else ([], False)
     return JSONResponse(
         {
-            "available": estado.available,
+            "available": probe.available,
             "running": running,
             "running_ok": running_ok,
-            "models": estado.models,
-            "models_stale": estado.models_stale,
-            **_cause_json(estado.cause, estado.detail),
+            "models": probe.models,
+            "models_stale": probe.models_stale,
+            **_cause_json(probe.cause, probe.detail),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
@@ -801,12 +801,12 @@ def _running() -> tuple[list, bool]:
         data = r.json()
     except (httpx2.HTTPError, ValueError):
         return [], False
-    lista = data.get("running") if isinstance(data, dict) else None
-    if lista is None:
-        lista = []  # «ningún modelo montado»: llama-swap manda `null` o nada
-    if not isinstance(data, dict) or not isinstance(lista, list):
+    entries = data.get("running") if isinstance(data, dict) else None
+    if entries is None:
+        entries = []  # «ningún modelo montado»: llama-swap manda `null` o nada
+    if not isinstance(data, dict) or not isinstance(entries, list):
         return [], False
-    return lista, True
+    return entries, True
 
 
 @app.get("/api/backend/stats")
@@ -852,7 +852,7 @@ def status():
     """
     # Modelos reales del backend con su estado loaded/unloaded (#901): el mismo sondeo que
     # /api/backend, con su causa (REQ-012) y la lista guardada cuando falla (REQ-021).
-    estado = server.probe_backend()
+    probe = server.probe_backend()
     catalog = [
         {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
         {"role": "long", "label": "largo", "model": config.MODEL_LONG},
@@ -872,10 +872,10 @@ def status():
             "version": server._get_version(),
             "base_url": config.BASE_URL,
             "backend": {
-                "available": estado.available,
-                "models": estado.models,
-                "models_stale": estado.models_stale,
-                **_cause_json(estado.cause, estado.detail),
+                "available": probe.available,
+                "models": probe.models,
+                "models_stale": probe.models_stale,
+                **_cause_json(probe.cause, probe.detail),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),
@@ -1304,7 +1304,7 @@ td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .pill.down{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 32%,transparent)}
 .pill.warn{color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);border:1px solid color-mix(in srgb,var(--amber) 32%,transparent)}
 .pill.neutral{color:var(--mut);background:color-mix(in srgb,var(--mut) 10%,transparent);border:1px solid color-mix(in srgb,var(--mut) 28%,transparent)}
-.mrow.atenuada{opacity:.5}
+.mrow.dimmed{opacity:.5}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed color-mix(in srgb,var(--bd) 75%,transparent);border-radius:8px;transition:background .2s}
 .mrow:last-child{border-bottom:0}
 .mrow.busy{background:color-mix(in srgb,var(--amber) 9%,transparent);padding-left:6px;padding-right:6px}
@@ -1402,7 +1402,7 @@ dialog.help.wide{max-width:680px;max-height:calc(100vh - 48px);overflow:auto}
 .kstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px}
 .kstat .k-val{margin-top:10px}
 .kstat .k-hint{margin-top:7px}
-#costeCard .kstats{padding-bottom:14px;margin-bottom:4px;border-bottom:1px solid var(--bd)}
+#costCard .kstats{padding-bottom:14px;margin-bottom:4px;border-bottom:1px solid var(--bd)}
 .qrange{position:relative;height:8px;border-radius:6px;margin-top:12px;overflow:hidden;
   background:color-mix(in srgb,var(--bd) 75%,transparent)}
 .qrange i{position:absolute;top:0;bottom:0;border-radius:6px}
@@ -1498,7 +1498,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
     </div>
     <div class="card" style="--hc:var(--amber)">
       <div class="panel-h"><h2>Sistema</h2>
-        <span class="ph-r"><button class="ibtn" id="systemInfo" data-group="sistema" aria-haspopup="dialog"
+        <span class="ph-r"><button class="ibtn" id="systemInfo" data-group="system" aria-haspopup="dialog"
           title="Qué mide esta tarjeta" aria-label="Información sobre la tarjeta Sistema"></button></span></div>
       <div id="metersBody"><div class="empty" style="padding:16px">Leyendo métricas…</div></div>
       <div id="procSection">
@@ -1513,28 +1513,28 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
   <!-- Coste equivalente a precio de API, cuota e imágenes (coste-api-y-cuota). Todo lo calcula
        Python en /api/stats; aquí solo se pinta. Las tarjetas llevan cifras; los supuestos sin los
        que no hay cifra (REQ-044) van en el diálogo `infoDlg`, a un clic del botón ⓘ de cada una. -->
-  <div class="card tablecard" id="costeCard" style="--hc:var(--amber);display:none">
+  <div class="card tablecard" id="costCard" style="--hc:var(--amber);display:none">
     <div class="panel-h"><h2>Equivalente a precio de API</h2>
-      <span class="ph-r"><span class="mut" id="costeHead"></span>
-        <button class="ibtn" id="costeInfo" data-group="coste" data-section="dlgCoste" aria-haspopup="dialog"
+      <span class="ph-r"><span class="mut" id="costHead"></span>
+        <button class="ibtn" id="costInfo" data-group="cost" data-section="dlgCost" aria-haspopup="dialog"
           title="Cómo leer esta cifra, la cuota y las imágenes" aria-label="Información sobre el equivalente a precio de API"></button></span></div>
-    <div id="costeBody"></div>
+    <div id="costBody"></div>
   </div>
 
-  <div class="grid cols2" id="cuotaImgRow" style="display:none">
-    <div class="card" id="cuotaCard" style="--hc:var(--violet);display:none">
+  <div class="grid cols2" id="quotaImgRow" style="display:none">
+    <div class="card" id="quotaCard" style="--hc:var(--violet);display:none">
       <div class="panel-h"><h2>Cuota de la suscripción</h2>
-        <span class="ph-r"><span class="mut" id="cuotaHead"></span>
-          <button class="ibtn" data-group="coste" data-section="dlgCuota" aria-haspopup="dialog"
+        <span class="ph-r"><span class="mut" id="quotaHead"></span>
+          <button class="ibtn" data-group="cost" data-section="dlgQuota" aria-haspopup="dialog"
             title="Cómo se calibra la cuota" aria-label="Información sobre la cuota"></button></span></div>
-      <div id="cuotaBody"></div>
+      <div id="quotaBody"></div>
     </div>
-    <div class="card" id="imagenesCard" style="--hc:var(--cyan);display:none">
+    <div class="card" id="imagesCard" style="--hc:var(--cyan);display:none">
       <div class="panel-h"><h2>Imágenes</h2>
         <span class="ph-r"><span class="mut">fuera del neto</span>
-          <button class="ibtn" data-group="coste" data-section="dlgImagenes" aria-haspopup="dialog"
+          <button class="ibtn" data-group="cost" data-section="dlgImages" aria-haspopup="dialog"
             title="Por qué las imágenes van aparte" aria-label="Información sobre las imágenes"></button></span></div>
-      <div id="imagenesBody"></div>
+      <div id="imagesBody"></div>
     </div>
   </div>
 
@@ -1626,7 +1626,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
 
 <!-- Diálogo de información: la prosa que no cabe en un dashboard. Cada botón ⓘ lo abre con su
      grupo de secciones (`data-group`). El texto del coste, la cuota y las imágenes sale de
-     textoCoste/textoCuota/textoImagenes (las funciones puras que prueba node), así que lo que se lee
+     costText/quotaText/imagesText (las funciones puras que prueba node), así que lo que se lee
      aquí es lo que se prueba. La sección de la cuota está aunque su tarjeta no se pinte: sin
      calibrar, este es su único sitio. -->
 <dialog class="help wide" id="infoDlg" aria-labelledby="infoDlgTitle">
@@ -1637,10 +1637,10 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <button class="help-x" id="infoDlgClose" aria-label="Cerrar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <section id="dlgCoste" data-group="coste" style="--hc:var(--amber)"><h4>Equivalente a precio de API</h4><div id="dlgCosteBody"></div></section>
-    <section id="dlgCuota" data-group="coste" style="--hc:var(--violet)"><h4>Cuota de la suscripción</h4><div id="dlgCuotaBody"></div></section>
-    <section id="dlgImagenes" data-group="coste" style="--hc:var(--cyan)"><h4>Imágenes</h4><div id="dlgImagenesBody"></div></section>
-    <section id="dlgPruebas" data-group="tests" style="--hc:var(--amber)"><h4>Qué cuenta como prueba</h4><div id="dlgPruebasBody"></div></section>
+    <section id="dlgCost" data-group="cost" style="--hc:var(--amber)"><h4>Equivalente a precio de API</h4><div id="dlgCostBody"></div></section>
+    <section id="dlgQuota" data-group="cost" style="--hc:var(--violet)"><h4>Cuota de la suscripción</h4><div id="dlgQuotaBody"></div></section>
+    <section id="dlgImages" data-group="cost" style="--hc:var(--cyan)"><h4>Imágenes</h4><div id="dlgImagesBody"></div></section>
+    <section id="dlgTests" data-group="tests" style="--hc:var(--amber)"><h4>Qué cuenta como prueba</h4><div id="dlgTestsBody"></div></section>
     <section id="dlgHooks" data-group="hooks" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
       <p>Los hooks <b>sugieren</b>; delegar lo decides tú. Esto no mide cuántas sugerencias se
       siguieron —nada enlaza una sugerencia con la delegación que vino después—, sino en qué avisó
@@ -1650,7 +1650,7 @@ footer{color:var(--faint);font-size:11.5px;margin-top:26px;padding-top:18px;bord
       <b>Lecturas vistas</b> reparte las lecturas que vio el hook de lectura por lo que hizo con
       ellas: avisó, o se calló porque la lectura era acotada, de código, pequeña, iba por otro
       MCP o el backend no estaba.</p></section>
-    <section id="dlgSistema" data-group="sistema" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
+    <section id="dlgSystem" data-group="system" style="--hc:var(--amber)"><h4>Qué mide esta tarjeta</h4>
       <p>La <b>RAM</b>, la <b>carga de la GPU</b> y la <b>VRAM</b> de la máquina donde corre este
       panel, y los procesos del backend que encuentra en ella. La lista de procesos solo se lee en
       Windows y Linux; en macOS todavía no se miden ni la RAM ni la VRAM, y la fila sale con «—».</p>
@@ -1668,9 +1668,9 @@ const F1 = {format: n => fmtNum(n, 1)};
 // `Intl.NumberFormat('es')`: el español no agrupa los números de cuatro cifras (8003), y la opción
 // que lo arregla (`useGrouping:'always'`) un navegador sin Intl v3 la convierte en `true` y vuelve
 // a pintar 8003 sin avisar. Sin `toFixed` para no mezclar dos maneras de redondear.
-function fmtNum(n, decimales){
+function fmtNum(n, decimals){
   if(n===null || n===undefined || !isFinite(n)) return '–';
-  const d = decimales || 0, p = Math.pow(10, d);
+  const d = decimals || 0, p = Math.pow(10, d);
   const r = Math.round(Math.abs(n) * p);
   const ent = Math.floor(r / p), frac = r - ent * p;
   let s = String(ent).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -1679,13 +1679,13 @@ function fmtNum(n, decimales){
 }
 // Latencias y duraciones en segundos con un decimal. Por debajo de 50 ms redondearía a «0,0 s»,
 // que se lee como «no tardó nada»: se dice «< 0,1 s».
-function fmtSeg(ms){
+function fmtSec(ms){
   if(ms===null || ms===undefined || !isFinite(ms)) return '–';
   if(ms < 50) return '< 0,1 s';
   return F1.format(ms / 1000) + ' s';
 }
 // «1 estimado / 4 estimados»: la cifra con su formato y la palabra concordada, sin «(s)».
-function plural(n, uno, varios){ return fmtNum(n, 0) + ' ' + (n === 1 ? uno : varios); }
+function plural(n, one, many){ return fmtNum(n, 0) + ' ' + (n === 1 ? one : many); }
 const state = {events:[], stats:null, range:'today', auto:true, tests:false, charts:{},
   page:0, status:null, running:{}, backendUp:undefined, inflight:[],
   activity:null, lastEvent:null, backendOrigin:null, backendHost:null};
@@ -1817,8 +1817,8 @@ async function fetchData(){
     state.events = j.events||[]; state.meta = j.meta||{};
     try{ state.stats = await rs.json(); }catch(e){ state.stats = null; }
     renderClients(state.stats);
-    renderCoste(state.stats);
-    renderPruebas(state.stats);
+    renderCost(state.stats);
+    renderTestsInfo(state.stats);
     try{ renderHooks(await rh.json()); }catch(e){ renderHooks(null); }
     render(); updateLive();
     const cnt = plural(state.meta.count||0, 'evento', 'eventos');
@@ -1842,15 +1842,15 @@ async function fetchData(){
 // repartirlas entre los demás sería inventar de quién eran.
 function renderClients(s){
   const card = document.getElementById('clientsCard');
-  const filas = (s && s.by_client) || [];
-  if(!filas.length){ card.style.display='none'; return; }
+  const rows = (s && s.by_client) || [];
+  if(!rows.length){ card.style.display='none'; return; }
   card.style.display='';
 
-  const totalCalls = filas.reduce((a,c)=>a+c.calls,0);
+  const totalCalls = rows.reduce((a,c)=>a+c.calls,0);
   document.getElementById('clientsHead').textContent =
-    filas.length + (filas.length===1 ? ' cliente' : ' clientes');
+    rows.length + (rows.length===1 ? ' cliente' : ' clientes');
 
-  const cuerpo = filas.map(c=>{
+  const body = rows.map(c=>{
     const p = totalCalls ? (c.calls/totalCalls*100) : 0;
     return '<tr><td class="mono" title="' + escHooks(c.client) + '">' + escHooks(labelFor('client', c.client)) + '</td>'
       + '<td class="num">' + F.format(c.calls) + '</td>'
@@ -1864,7 +1864,7 @@ function renderClients(s){
     + '<thead><tr><th>Cliente</th><th>Delegaciones</th>'
     + '<th>Llamadas al backend</th><th>Tokens netos</th>'
     + '<th>Reparto</th></tr></thead>'
-    + '<tbody>' + cuerpo + '</tbody></table></div>';
+    + '<tbody>' + body + '</tbody></table></div>';
 }
 
 // --- Coste equivalente, cuota e imágenes: /api/stats (coste-api-y-cuota) ---
@@ -1873,7 +1873,7 @@ function renderClients(s){
 // `test_panel_coste.py`) y devuelven LÍNEAS de texto, la primera es el titular. Ninguna frase lo
 // presenta como dinero en el bolsillo ni como un trozo de cuota medido (REQ-045), y sin calibrar no
 // hay % (REQ-059).
-const HILO_TXT = {main:'hilo principal', subagent:'subagente'};
+const THREAD_TXT = {main:'hilo principal', subagent:'subagente'};
 
 // Etiquetas de presentación: clave interna (la del log y la de la API, que NO cambian) → texto que
 // se lee en el panel. Los nombres propios de tools y modelos (`local_summarize`, `gemma4-26b-a4b`)
@@ -1921,25 +1921,25 @@ function labelFor(kind, key){
   if(Object.prototype.hasOwnProperty.call(alias, key)) key = alias[key];
   return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : humanLabel(key);
 }
-function dolares(x){ return '$' + fmtNum(x, 2); }
+function dollars(x){ return '$' + fmtNum(x, 2); }
 
 // Las dos celdas en dólares de una fila del desglose. Con T ≤ 0 la tool devolvió tanto o más de lo
 // que leyó: la fila no tiene ahorro y no se pinta una cifra (sería «$0,00» o un negativo sin signo).
-function celdasCoste(g){
+function costCells(g){
   if(!(g.T > 0)) return '<td class="num" colspan="2" style="color:var(--mut)">sin ahorro</td>';
-  return '<td class="num">' + dolares(g.low_bound) + '</td>'
-    + '<td class="num" style="color:var(--amber)">' + dolares(g.estimate) + '</td>';
+  return '<td class="num">' + dollars(g.low_bound) + '</td>'
+    + '<td class="num" style="color:var(--amber)">' + dollars(g.estimate) + '</td>';
 }
 
 // --- Pruebas: el texto de su ⓘ y el punto del botón (test-windows-out-of-metrics) ---
-function textoPruebas(j){
+function testsText(j){
   if(!j) return [];
   const L = [];
-  const fuera = j.excluded_tests||0, enRango = j.tests_in_range||0;
-  if(fuera) L.push('Fuera de las cifras: ' + plural(fuera, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
-  else if(enRango) L.push('Pruebas incluidas: ' + plural(enRango, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
+  const excluded = j.excluded_tests||0, inRange = j.tests_in_range||0;
+  if(excluded) L.push('Fuera de las cifras: ' + plural(excluded, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
+  else if(inRange) L.push('Pruebas incluidas: ' + plural(inRange, 'fila de prueba', 'filas de prueba') + ' en el rango elegido.');
   else L.push('En el rango elegido no hay pruebas.');
-  // Los comandos y los ids van entre comillas invertidas: `renderPruebas` los pinta como código.
+  // Los comandos y los ids van entre comillas invertidas: `renderTestsInfo` los pinta como código.
   for(const w of (j.open_test_windows||[])){
     L.push('Ventana de prueba abierta: `' + w.id + '` desde ' + fmtLocalTs(w.start)
       + '. Ciérrala con `local-delegate test-window stop ' + w.id + '`.');
@@ -1953,20 +1953,20 @@ function textoPruebas(j){
   return L;
 }
 
-function renderPruebas(s){
+function renderTestsInfo(s){
   // Se escapa primero y después cada `…` pasa a <code> (mono, como los demás valores de máquina).
-  document.getElementById('dlgPruebasBody').innerHTML = parrafosHtml(textoPruebas(s), true)
+  document.getElementById('dlgTestsBody').innerHTML = paragraphsHtml(testsText(s), true)
     .replace(/`([^`]+)`/g, '<code>$1</code>');
   document.getElementById('testsDot').hidden = !((s && s.open_test_windows)||[]).length;
 }
 
-function textoCoste(j){
+function costText(j){
   const c = j && j.cost;
   if(!c) return [];
   const L = [];
   L.push(c.figure
-    ? 'Equivalente estimado a precio de API: entre ' + dolares(c.figure.low_bound)
-      + ' y ~' + dolares(c.figure.estimate)
+    ? 'Equivalente estimado a precio de API: entre ' + dollars(c.figure.low_bound)
+      + ' y ~' + dollars(c.figure.estimate)
     : 'Equivalente estimado a precio de API: sin cifra (' + c.reason + ')');
   L.push('No es dinero que hayas ahorrado: tu suscripción es de tarifa plana.');
   if(c.figure) L.push('El primer número es la cota baja con estos supuestos (una sola escritura de caché); '
@@ -1977,7 +1977,7 @@ function textoCoste(j){
     + ' pendientes · ' + F.format(b.assumed||0) + ' supuestas · ' + F.format(b.excluded||0)
     + ' excluidas (pruebas: scripts, bancos y ventanas de prueba; y clientes que no son Claude).');
   L.push(F.format(b.with_assumed_model||0) + ' de ' + F.format(b.valued||0)
-    + ' con modelo supuesto: ' + (r.name||'') + ' en ' + (HILO_TXT[r.thread]||r.thread||'')
+    + ' con modelo supuesto: ' + (r.name||'') + ' en ' + (THREAD_TXT[r.thread]||r.thread||'')
     + (r.invalid ? ' (el valor de ' + r.variable + ' no es válido: se usa el declarado)' : '') + '.');
   const n = c.n_origin || {}, nd = c.n_declared || {};
   L.push('Relecturas (N): ' + F.format(n.backfill||0) + ' del relleno, ' + F.format(n.aggregate||0)
@@ -1985,9 +1985,9 @@ function textoCoste(j){
     + F.format(nd.main) + ', subagente ' + F.format(nd.subagent) + ').');
   const d = c.density || {}, o = d.origin || {};
   // Las familias llegan como término de máquina (`new`, `previous`): aquí se dicen en palabras.
-  const FAMILIA = {new:'nueva', previous:'anterior'};
+  const FAMILY = {new:'nueva', previous:'anterior'};
   const fams = Object.entries(d.families||{})
-    .map(([k,v]) => (FAMILIA[k] || k) + ' ' + F.format(v)).join(', ');
+    .map(([k,v]) => (FAMILY[k] || k) + ' ' + F.format(v)).join(', ');
   L.push('Densidad de Claude por familia de tokenizador (' + (fams || 'ninguna') + '): celda medida '
     + F.format(o.measured||0) + ', sin numerar ' + F.format(o.unnumbered||0) + ', conservadora '
     + F.format(o.conservative||0) + '; ' + F.format(d.family_density||0)
@@ -2004,38 +2004,38 @@ function textoCoste(j){
   return L;
 }
 
-function textoCuota(j){
+function quotaText(j){
   const q = j && j.quota;
   if(!q) return [];
   const L = [];
-  [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([tipo, nombre])=>{
-    const e = q[tipo];
+  [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']].forEach(([kind, name])=>{
+    const e = q[kind];
     if(!e) return;
     const disp = (e.dispersion!==undefined && e.dispersion!==null)
       ? ', dispersión ' + F1.format(e.dispersion*100) + ' %' : '';
     if(e.status==='calibrated'){
-      const v = tipo==='five_hour'
+      const v = kind==='five_hour'
         ? 'de una ventana de 5 h (lo delegado en las últimas 5 h'
         : 'de una ventana semanal (lo delegado en los últimos 7 días';
       L.push(e.a_pct!==null && e.a_pct!==undefined
-        ? nombre + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
+        ? name + ': ≈ entre ' + F1.format(e.a_pct) + ' % y ' + F1.format(e.b_pct) + ' % ' + v
           + '; la estimación incluye relecturas que pueden caer después de la ventana); estimación '
           + 'calibrada con ' + plural(e.points||0, 'punto', 'puntos') + disp
           + '; supone que la cuota sigue al precio de lista.'
-        : nombre + ': calibrada, sin cifra (' + (e.pct_reason||'') + ').');
-      if(e.warning) L.push(nombre + ': ' + e.warning + '.');
+        : name + ': calibrada, sin cifra (' + (e.pct_reason||'') + ').');
+      if(e.warning) L.push(name + ': ' + e.warning + '.');
       return;
     }
-    let t = nombre + ': sin calibrar (' + (e.reason||'') + ')';
+    let t = name + ': sin calibrar (' + (e.reason||'') + ')';
     if(!q.has_aggregates) t += '; los genera ' + q.command;
     L.push(t + '.');
     // Los motivos de descarte son claves de `quota.py`; aquí, en palabras.
-    const DESCARTE = {corrupt_line:'línea corrupta', out_of_range:'fuera de rango',
+    const DISCARD = {corrupt_line:'línea corrupta', out_of_range:'fuera de rango',
       small_delta:'variación pequeña', no_local_use:'sin uso local', contaminated:'contaminado',
       overlapping:'solapado', expired:'caducado', reset:'reinicio'};
     const desc = Object.entries(e.discards||{}).filter(([,k])=>k)
-      .map(([m,k]) => (DESCARTE[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
-    L.push(nombre + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
+      .map(([m,k]) => (DISCARD[m] || String(m).replace(/_/g, ' ')) + ' ' + F.format(k));
+    L.push(name + ': ' + plural(e.points||0, 'punto del statusline vigente', 'puntos del statusline vigentes')
       + ', ' + plural(e.rejection_points||0, 'punto de rechazo', 'puntos de rechazo') + ' (solo comprobación)'
       + disp + '; descartes: ' + (desc.length ? desc.join(', ') : 'ninguno')
       + (e.drift ? '; hubo deriva' : '') + (e.reset ? '; reiniciada a mano el ' + e.reset : '') + '.');
@@ -2043,7 +2043,7 @@ function textoCuota(j){
   return L;
 }
 
-function textoImagenes(j){
+function imagesText(j){
   const i = j && j.images;
   if(!i) return [];
   return [plural(i.n||0, 'imagen', 'imágenes') + ' · ' + F.format(i.bytes||0) + ' bytes leídos server-side · '
@@ -2054,7 +2054,7 @@ function textoImagenes(j){
 
 // Las líneas de texto van al diálogo de información, como párrafos; la primera del coste es el
 // titular. En las tarjetas solo quedan cifras (un dashboard no lleva párrafos).
-function parrafosHtml(L, lead){
+function paragraphsHtml(L, lead){
   return L.map((x, i) => '<p' + (lead && i===0 ? ' class="lead"' : '') + '>' + escHooks(x) + '</p>').join('');
 }
 
@@ -2066,12 +2066,12 @@ function kstat(lbl, val, hint, color){
     + (hint ? '<div class="k-hint">' + hint + '</div>' : '') + '</div>';
 }
 
-const VENTANAS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']];
+const WINDOWS = [['five_hour','Ventana de 5 h'], ['seven_day','Ventana semanal']];
 
 // Ventanas calibradas: sin ninguna, la tarjeta de cuota no se pinta (su explicación vive en el
 // diálogo). Calibrada sin cifra cuenta como calibrada: se pinta con «–».
-function ventanasCalibradas(q){
-  return q ? VENTANAS.filter(([t]) => q[t] && q[t].status==='calibrated').length : 0;
+function calibratedWindows(q){
+  return q ? WINDOWS.filter(([t]) => q[t] && q[t].status==='calibrated').length : 0;
 }
 
 // Medidor de una ventana: de 0 a la cota baja (A) en sólido y de A a la estimación (B) en claro,
@@ -2079,12 +2079,12 @@ function ventanasCalibradas(q){
 // Ancho CSS con dos decimales, sin arrastrar el error de coma flotante de una resta.
 function pct2(x){ return Math.round(x*100)/100; }
 
-function medidorCuota(e, nombre){
+function quotaMeter(e, name){
   if(!e || e.status!=='calibrated' || e.a_pct===null || e.a_pct===undefined){
-    return kstat(nombre, '–', e && e.status==='calibrated' ? 'calibrada, sin cifra' : 'sin calibrar');
+    return kstat(name, '–', e && e.status==='calibrated' ? 'calibrada, sin cifra' : 'sin calibrar');
   }
   const a = Math.max(0, Math.min(100, e.a_pct)), b = Math.max(a, Math.min(100, e.b_pct));
-  return kstat(nombre, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
+  return kstat(name, F1.format(e.a_pct) + ' – ' + F1.format(e.b_pct) + '<span class="unit">%</span>',
       'calibrada con ' + plural(e.points||0, 'punto', 'puntos'))
     + '<div class="qrange" role="img" aria-label="Entre ' + F1.format(e.a_pct) + ' % y '
     + F1.format(e.b_pct) + ' % de la ventana"><i class="qa" style="width:' + pct2(a) + '%"></i>'
@@ -2092,55 +2092,55 @@ function medidorCuota(e, nombre){
     + '<div class="qscale"><span>0 %</span><span>100 %</span></div>';
 }
 
-function renderCoste(s){
-  const cc = document.getElementById('costeCard'), qc = document.getElementById('cuotaCard');
-  const ic = document.getElementById('imagenesCard'), row = document.getElementById('cuotaImgRow');
+function renderCost(s){
+  const cc = document.getElementById('costCard'), qc = document.getElementById('quotaCard');
+  const ic = document.getElementById('imagesCard'), row = document.getElementById('quotaImgRow');
   const c = s && s.cost;
   cc.style.display = c ? '' : 'none';
   if(c){
-    document.getElementById('costeHead').textContent = c.figure ? plural(c.events||0, 'delegación', 'delegaciones') : '';
-    const filas = (c.breakdown||[]).map(g => '<tr><td class="mono">' + escHooks(g.name) + '</td>'
+    document.getElementById('costHead').textContent = c.figure ? plural(c.events||0, 'delegación', 'delegaciones') : '';
+    const rows = (c.breakdown||[]).map(g => '<tr><td class="mono">' + escHooks(g.name) + '</td>'
       + '<td class="mono">' + escHooks(labelFor('thread', g.thread)) + '</td>'
       + '<td class="mono">' + escHooks(labelFor('effort', g.effort)) + '</td>'
       + '<td class="num">' + F.format(g.cases) + '</td>'
       + '<td class="num">' + F.format(g.T) + '</td>'
-      + celdasCoste(g) + '</tr>').join('');
-    const cifras = c.figure
-      ? kstat('Cota baja', dolares(c.figure.low_bound), 'no es un ahorro: tarifa plana')
-        + kstat('Estimación', '~' + dolares(c.figure.estimate), 'con relecturas de caché', 'var(--amber)')
+      + costCells(g) + '</tr>').join('');
+    const figures = c.figure
+      ? kstat('Cota baja', dollars(c.figure.low_bound), 'no es un ahorro: tarifa plana')
+        + kstat('Estimación', '~' + dollars(c.figure.estimate), 'con relecturas de caché', 'var(--amber)')
         + (c.T !== undefined ? kstat('Tokens valorados', F.format(c.T) + '<span class="unit">tok</span>',
             'netos de Claude, con precio') : '')
       : kstat('Equivalente a precio de API', '–', escHooks('sin cifra: ' + (c.reason||'')));
-    document.getElementById('costeBody').innerHTML = '<div class="kstats">' + cifras + '</div>'
-      + (filas ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
+    document.getElementById('costBody').innerHTML = '<div class="kstats">' + figures + '</div>'
+      + (rows ? '<div style="overflow-x:auto"><table><thead><tr><th>Modelo</th><th>Hilo</th>'
         + '<th>Esfuerzo</th><th>Casos</th><th>T (tokens)</th><th>Cota baja</th><th>Estimación</th>'
-        + '</tr></thead><tbody>' + filas + '</tbody></table></div>' : '');
+        + '</tr></thead><tbody>' + rows + '</tbody></table></div>' : '');
   }
-  const q = s && s.quota, cal = ventanasCalibradas(q);
+  const q = s && s.quota, cal = calibratedWindows(q);
   qc.style.display = cal ? '' : 'none';
   if(cal){
-    document.getElementById('cuotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
-    document.getElementById('cuotaBody').innerHTML = '<div class="kstats">'
-      + VENTANAS.map(([t, nombre]) => '<div>' + medidorCuota(q[t], nombre) + '</div>').join('') + '</div>';
+    document.getElementById('quotaHead').textContent = plural(cal, 'ventana calibrada', 'ventanas calibradas');
+    document.getElementById('quotaBody').innerHTML = '<div class="kstats">'
+      + WINDOWS.map(([t, name]) => '<div>' + quotaMeter(q[t], name) + '</div>').join('') + '</div>';
   }
   // Sin imágenes en el rango la tarjeta no se pinta, como «Quién delegó» sin clientes.
-  const im = s && s.images, hayImg = !!(im && im.n);
-  ic.style.display = hayImg ? '' : 'none';
-  if(hayImg){
-    document.getElementById('imagenesBody').innerHTML = '<div class="kstats">'
+  const im = s && s.images, hasImg = !!(im && im.n);
+  ic.style.display = hasImg ? '' : 'none';
+  if(hasImg){
+    document.getElementById('imagesBody').innerHTML = '<div class="kstats">'
       + kstat('Imágenes', F.format(im.n), 'delegaciones sin fallo')
       + kstat('Bytes leídos', F.format(im.bytes||0) + '<span class="unit">B</span>', 'leídos server-side')
       + kstat('Devuelto a Claude', F.format(im.chars_returned||0) + '<span class="unit">car.</span>', 'texto de la descripción')
       + '</div>';
   }
   // Una sola tarjeta visible ocupa la fila entera en vez de dejar medio hueco al lado.
-  row.style.display = (cal || hayImg) ? '' : 'none';
-  qc.style.gridColumn = hayImg ? '' : '1 / -1';
+  row.style.display = (cal || hasImg) ? '' : 'none';
+  qc.style.gridColumn = hasImg ? '' : '1 / -1';
   ic.style.gridColumn = cal ? '' : '1 / -1';
   // El diálogo de información: el mismo texto que antes llenaba las tarjetas.
-  document.getElementById('dlgCosteBody').innerHTML = c ? parrafosHtml(textoCoste(s), true) : '';
-  document.getElementById('dlgCuotaBody').innerHTML = q ? parrafosHtml(textoCuota(s)) : '<p>Sin datos de cuota.</p>';
-  document.getElementById('dlgImagenesBody').innerHTML = im ? parrafosHtml(textoImagenes(s)) : '<p>Sin imágenes en el rango.</p>';
+  document.getElementById('dlgCostBody').innerHTML = c ? paragraphsHtml(costText(s), true) : '';
+  document.getElementById('dlgQuotaBody').innerHTML = q ? paragraphsHtml(quotaText(s)) : '<p>Sin datos de cuota.</p>';
+  document.getElementById('dlgImagesBody').innerHTML = im ? paragraphsHtml(imagesText(s)) : '<p>Sin imágenes en el rango.</p>';
 }
 
 // --- Sugerencias de los hooks: /api/hooks ---
@@ -2164,7 +2164,7 @@ function renderHooks(h){
   document.getElementById('hooksHead').textContent =
     F.format(h.suggested) + ' de ' + F.format(h.total) + ' (' + pct + ' %)';
 
-  const filas = (h.by_category||[]).map(c=>{
+  const rows = (h.by_category||[]).map(c=>{
     const p = c.total ? (c.suggested/c.total*100) : 0;
     return `<tr><td class="mono" title="${escHooks(c.category)}">${escHooks(labelFor('hookCategory', c.category))}</td>`
       + `<td class="num">${F.format(c.suggested)}</td>`
@@ -2175,13 +2175,13 @@ function renderHooks(h){
   // Puntería del hook de lectura: de lo que vio, en qué avisó y por qué descartó el resto.
   // "sin registrar" son los eventos anteriores a que el hook escribiera el motivo; se muestran
   // aparte en vez de repartirlos, porque de esos no se sabe la razón.
-  const motivos = (h.by_reason||[]);
+  const reasons = (h.by_reason||[]);
   const totalRead = h.read_total || 0;
-  const punteria = !motivos.length ? '' :
+  const aim = !reasons.length ? '' :
     '<div style="overflow-x:auto;margin-top:4px"><table>'
     + '<thead><tr><th>Lecturas vistas</th><th>Eventos</th>'
     + '<th>Reparto</th></tr></thead><tbody>'
-    + motivos.map(m=>{
+    + reasons.map(m=>{
         const p = totalRead ? (m.total/totalRead*100) : 0;
         return '<tr><td class="mono" title="' + escHooks(m.reason) + '">' + escHooks(labelFor('hookReason', m.reason)) + '</td>'
           + '<td class="num">' + F.format(m.total) + '</td>'
@@ -2193,8 +2193,8 @@ function renderHooks(h){
     '<div style="overflow-x:auto"><table>'
     + '<thead><tr><th>Categoría</th><th>Sugeridas</th>'
     + '<th>Vistas</th><th>Tasa</th></tr></thead>'
-    + '<tbody>' + filas + '</tbody></table></div>'
-    + punteria;
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + aim;
 }
 
 // --- Backend local: /api/status (identidad, 1x/min) + /api/backend (estado y modelos, 2s) ---
@@ -2220,8 +2220,8 @@ function roleLabels(model){
 // Las etiquetas y los detalles no se escriben aquí: llegan del daemon, redactados por failures.py.
 const CAUSES_ANSWERING = {credential:1, http_error:1, invalid_response:1, no_response:1};
 // Estados de /running y motivos de espera local, en palabras (REQ-022).
-const PALABRAS_RUNNING = {ready:'listo', starting:'cargando', stopping:'descargando'};
-const PALABRAS_ESPERA = {slot:'esperando plaza (máximo de llamadas a la vez)'};
+const RUNNING_WORDS = {ready:'listo', starting:'cargando', stopping:'descargando'};
+const WAIT_WORDS = {slot:'esperando plaza (máximo de llamadas a la vez)'};
 
 // La espera de turno del daemon en palabras (REQ-008): una sola fuente para el title de la fila
 // del modelo y para «En curso».
@@ -2229,106 +2229,106 @@ function turnWords(it){
   return 'esperando turno del daemon (en uso: '+((it.turn_in_use||[]).join(', ')||'nada')+')';
 }
 
-function vistaInicial(){
-  return {estado:'comprobando', disponible:false, ref:null, bueno:null, fallos:0, ultimo:null};
+function initialView(){
+  return {status:'checking', available:false, ref:null, lastGood:null, failures:0, last:null};
 }
 
 // Estado VISIBLE del backend (REQ-028), lo que pintan el badge y las filas. Un sondeo bueno lo
 // deja disponible al instante; un fallo tras uno bueno conserva lo que se pintaba (y el sondeo
 // bueno como referencia de las filas); el SEGUNDO fallo seguido lo pasa a caído. Sin ningún
 // sondeo bueno todavía, el primer fallo es «comprobando».
-function estadoVisible(prev, bj){
-  const UMBRAL = 2;   // fallos seguidos antes de «caído»
-  const p = prev || vistaInicial();
-  if(bj && bj.available) return {estado:'conectado', disponible:true, ref:bj, bueno:bj, fallos:0, ultimo:bj};
-  const fallos = (p.fallos||0) + 1;
-  if(fallos < UMBRAL && p.bueno)
-    return {estado:'conectado', disponible:true, ref:p.bueno, bueno:p.bueno, fallos, ultimo:bj};
-  if(fallos < UMBRAL)
-    return {estado:'comprobando', disponible:false, ref:bj, bueno:null, fallos, ultimo:bj};
-  return {estado:'caido', disponible:false, ref:bj, bueno:p.bueno, fallos, ultimo:bj};
+function visibleState(prev, bj){
+  const THRESHOLD = 2;   // fallos seguidos antes de «caído»
+  const p = prev || initialView();
+  if(bj && bj.available) return {status:'connected', available:true, ref:bj, lastGood:bj, failures:0, last:bj};
+  const failures = (p.failures||0) + 1;
+  if(failures < THRESHOLD && p.lastGood)
+    return {status:'connected', available:true, ref:p.lastGood, lastGood:p.lastGood, failures, last:bj};
+  if(failures < THRESHOLD)
+    return {status:'checking', available:false, ref:bj, lastGood:null, failures, last:bj};
+  return {status:'down', available:false, ref:bj, lastGood:p.lastGood, failures, last:bj};
 }
 
 // Badge del backend (REQ-014) a partir del estado visible: {texto, clase, title}.
-function badgeBackend(vista, baseUrl){
-  const v = vista || vistaInicial(), u = v.ultimo || {};
-  if(v.estado==='conectado'){
-    const aviso = v.fallos>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
-    return {texto:'conectado', clase:'up', title:(baseUrl||'')+aviso};
+function badgeBackend(view, baseUrl){
+  const v = view || initialView(), u = v.last || {};
+  if(v.status==='connected'){
+    const notice = v.failures>0 ? ' · último sondeo: '+(u.detail||u.label||'sin respuesta') : '';
+    return {text:'conectado', cls:'up', title:(baseUrl||'')+notice};
   }
-  if(v.estado==='comprobando') return {texto:'comprobando…', clase:'neutral', title:u.detail||''};
-  const et = u.label || u.cause || 'sin respuesta';
-  if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {texto:et, clase:'warn', title:u.detail||''};
-  return {texto:'caído · '+et, clase:'down', title:u.detail||''};
+  if(v.status==='checking') return {text:'comprobando…', cls:'neutral', title:u.detail||''};
+  const shortLabel = u.label || u.cause || 'sin respuesta';
+  if(CAUSES_ANSWERING[legacyValue('connectionCause', u.cause)]) return {text:shortLabel, cls:'warn', title:u.detail||''};
+  return {text:'caído · '+shortLabel, cls:'down', title:u.detail||''};
 }
 
 // Clase de la chip de /v1/models (REQ-023): cualquier valor tiene chip; null o ausente, ninguna.
-function chipEstado(status){
+function statusChip(status){
   if(status===null || status===undefined || status==='') return null;
   return (status==='loaded' || status==='unloaded') ? status : 'neutral';
 }
 
 // Filas de modelos (REQ-021): lo que expone el backend más el catálogo, ordenado por el primer rol
 // que lo usa (mecánico, largo, código, visión) y después por id. Con y sin conexión, lo mismo.
-function ordenModelos(ids, catalog){
-  const cat = catalog || [], todos = [];
-  (ids||[]).forEach(id=>{ if(id && !todos.includes(id)) todos.push(id); });
-  cat.forEach(c=>{ if(c && c.model && !todos.includes(c.model)) todos.push(c.model); });
+function sortModels(ids, catalog){
+  const cat = catalog || [], merged = [];
+  (ids||[]).forEach(id=>{ if(id && !merged.includes(id)) merged.push(id); });
+  cat.forEach(c=>{ if(c && c.model && !merged.includes(c.model)) merged.push(c.model); });
   const pos = id => { const k = cat.findIndex(c=>c && c.model===id); return k<0 ? cat.length : k; };
-  return todos.sort((a,b)=> (pos(a)-pos(b)) || (a<b ? -1 : a>b ? 1 : 0));
+  return merged.sort((a,b)=> (pos(a)-pos(b)) || (a<b ? -1 : a>b ? 1 : 0));
 }
 
 // Texto de la fila de un modelo (tabla de REQ-022, en orden: gana la primera). «En vuelo» sale del
 // último /api/inflight; running, status y running_ok, del sondeo de REFERENCIA del estado visible.
-function estadoModelo(o){
-  const vista = o.vista || vistaInicial(), ref = vista.ref || {}, disponible = !!vista.disponible;
-  const llamadas = (o.inflight||[]).filter(it=>it && it.model===o.modelo);
-  const enVuelo = llamadas.length>0;
-  const esperaLocal = enVuelo && llamadas.every(it=>it.local_wait!==undefined && it.local_wait!==null);
-  const run = (ref.running||[]).find(r=>r && r.model===o.modelo);
+function modelState(o){
+  const view = o.view || initialView(), ref = view.ref || {}, available = !!view.available;
+  const calls = (o.inflight||[]).filter(it=>it && it.model===o.model);
+  const inFlight = calls.length>0;
+  const localWait = inFlight && calls.every(it=>it.local_wait!==undefined && it.local_wait!==null);
+  const run = (ref.running||[]).find(r=>r && r.model===o.model);
   const running = run ? (run.state||'ready') : null;
-  const mod = (ref.models||[]).find(m=>m && m.id===o.modelo);
+  const mod = (ref.models||[]).find(m=>m && m.id===o.model);
   const status = mod ? mod.status : null;
-  const fila = (texto, title) => ({texto, title:title||'', atenuada:!disponible});
-  if(!disponible && enVuelo) return fila('esperando al backend');
-  if(!disponible) return fila('desconocido', 'sin conexión con el backend: '
-    +(((vista.ultimo||{}).label) || 'comprobando…'));
-  if(enVuelo && esperaLocal){
+  const row = (text, title) => ({text, title:title||'', dimmed:!available});
+  if(!available && inFlight) return row('esperando al backend');
+  if(!available) return row('desconocido', 'sin conexión con el backend: '
+    +(((view.last||{}).label) || 'comprobando…'));
+  if(inFlight && localWait){
     // El motivo «turno» (daemon-reparte-el-backend, REQ-008) dice con qué modelos está ocupado el
     // turno, con sus propias palabras (sin el prefijo de las demás, que repetiría «esperando»).
     // Solo cambia el title: la fila sigue siendo la 3, como cualquier espera local.
-    const motivos = [], turnParts = [];
-    llamadas.forEach(it=>{
-      const bucket = it.local_wait==='turn' ? turnParts : motivos;
+    const reasons = [], turnParts = [];
+    calls.forEach(it=>{
+      const bucket = it.local_wait==='turn' ? turnParts : reasons;
       const m = it.local_wait==='turn' ? turnWords(it)
-        : (PALABRAS_ESPERA[it.local_wait] || String(it.local_wait));
+        : (WAIT_WORDS[it.local_wait] || String(it.local_wait));
       if(!bucket.includes(m)) bucket.push(m); });
-    const parts = motivos.length ? ['esperando dentro de local-delegate: '+motivos.join(', ')] : [];
-    return fila('en cola local', parts.concat(turnParts).join('; '));
+    const parts = reasons.length ? ['esperando dentro de local-delegate: '+reasons.join(', ')] : [];
+    return row('en cola local', parts.concat(turnParts).join('; '));
   }
-  if(!ref.running_ok && enVuelo) return fila('en curso');
-  if(!ref.running_ok) return fila(status==='loaded' ? 'montado' : 'frío');
-  if(running==='starting') return fila('cargando');
-  if(running==='ready' && enVuelo) return fila('procesando');
-  if(running==='ready') return fila('montado');
-  if(enVuelo){
-    const lista = (ref.running||[]).filter(r=>r && r.model)
-      .map(r=>r.model+' '+(PALABRAS_RUNNING[r.state||'ready'] || r.state));
-    return fila('esperando turno', lista.length
-      ? 'llama-swap aún no lo atiende; en /running: '+lista.join(', ')
+  if(!ref.running_ok && inFlight) return row('en curso');
+  if(!ref.running_ok) return row(status==='loaded' ? 'montado' : 'frío');
+  if(running==='starting') return row('cargando');
+  if(running==='ready' && inFlight) return row('procesando');
+  if(running==='ready') return row('montado');
+  if(inFlight){
+    const runningList = (ref.running||[]).filter(r=>r && r.model)
+      .map(r=>r.model+' '+(RUNNING_WORDS[r.state||'ready'] || r.state));
+    return row('esperando turno', runningList.length
+      ? 'llama-swap aún no lo atiende; en /running: '+runningList.join(', ')
       : 'llama-swap aún no lo atiende; /running está vacío');
   }
-  if(running==='stopping') return fila('descargando');
-  return fila('frío');
+  if(running==='stopping') return row('descargando');
+  return row('frío');
 }
 
 function renderBackend(){
   const st = state.status || {};
-  const vista = state.vista || vistaInicial();
-  const b = badgeBackend(vista, st.base_url);
+  const view = state.view || initialView();
+  const b = badgeBackend(view, st.base_url);
   const pill = document.getElementById('backendPill');
-  pill.className = 'pill '+b.clase;
-  pill.textContent = b.texto;
+  pill.className = 'pill '+b.cls;
+  pill.textContent = b.text;
   pill.title = b.title;
   // Dónde corre la INFERENCIA: loopback = esta máquina; cualquier otro host = GPU remota
   // (p. ej. esta Mac contra el llama-swap de la PC). El MCP y la lectura de 'path' son
@@ -2347,35 +2347,35 @@ function renderBackend(){
   }
   // Las filas salen del sondeo de REFERENCIA (el último bueno mientras se conserva «disponible»),
   // no del último: un fallo suelto no las toca (REQ-028).
-  const ref = vista.ref || {};
-  const ids = ordenModelos((ref.models||[]).map(m=>(typeof m==='string') ? m : (m&&m.id)), st.catalog);
+  const ref = view.ref || {};
+  const ids = sortModels((ref.models||[]).map(m=>(typeof m==='string') ? m : (m&&m.id)), st.catalog);
   const statusById = {};
   (ref.models||[]).forEach(m=>{ if(m && m.id) statusById[m.id] = m.status; });
   const body = document.getElementById('modelsBody');
   if(!ids.length){
-    body.innerHTML = '<div class="empty" style="padding:16px">'+(vista.disponible
+    body.innerHTML = '<div class="empty" style="padding:16px">'+(view.available
       ? 'El backend no expone modelos ('+escHooks(st.base_url||'?')+').' : 'Consultando el backend…')+'</div>';
     return;
   }
-  const PUNTO = {'montado':'ready', 'cargando':'starting', 'descargando':'starting',
+  const DOT = {'montado':'ready', 'cargando':'starting', 'descargando':'starting',
     'esperando turno':'starting', 'en cola local':'starting', 'esperando al backend':'starting',
     'procesando':'busy', 'en curso':'busy'};
   body.innerHTML = ids.map(m=>{
-    const e = estadoModelo({modelo:m, vista, inflight:state.inflight});
-    const busy = !e.atenuada && (e.texto==='procesando' || e.texto==='en curso');
-    const cls = (PUNTO[e.texto]||'') + (busy && PUNTO[e.texto]!=='busy' ? ' busy' : '');
+    const e = modelState({model:m, view, inflight:state.inflight});
+    const busy = !e.dimmed && (e.text==='procesando' || e.text==='en curso');
+    const cls = (DOT[e.text]||'') + (busy && DOT[e.text]!=='busy' ? ' busy' : '');
     const roles = roleLabels(m).map(l=>`<span class="mrole">${l}</span>`).join('');
-    const chip = chipEstado(statusById[m]);
+    const chip = statusChip(statusById[m]);
     const badge = chip ? `<span class="mstatus ${chip}" title="${escHooks(statusById[m])}">${escHooks(labelFor('modelStatus', statusById[m]))}</span>` : '';
-    const filaCls = (busy?' busy':'') + (e.atenuada?' atenuada':'');
-    return `<div class="mrow${filaCls}"><span class="mdot ${cls}"></span><span class="mname">${escHooks(m)}</span>${roles}`
-      + `<span class="mstate" title="${escHooks(e.title)}">${escHooks(humanLabel(e.texto))}</span>${badge}</div>`;
+    const rowCls = (busy?' busy':'') + (e.dimmed?' dimmed':'');
+    return `<div class="mrow${rowCls}"><span class="mdot ${cls}"></span><span class="mname">${escHooks(m)}</span>${roles}`
+      + `<span class="mstate" title="${escHooks(e.title)}">${escHooks(humanLabel(e.text))}</span>${badge}</div>`;
   }).join('');
 }
 
 // Lo que dice la tarjeta de métricas de llama-swap sin datos (REQ-020): la versión solo se culpa
 // con un 404; con cualquier otra causa, su etiqueta corta.
-function textoStats(j){
+function statsText(j){
   if(j && j.status_http===404) return 'sin datos (este backend no expone /api/metrics/stats: requiere llama-swap ≥ v236)';
   if(j && j.label) return 'sin datos: '+j.label;
   return 'sin datos';
@@ -2387,7 +2387,7 @@ function renderBackendStats(j){
   const head = document.getElementById('bstatsHead');
   if(!j || !j.available || !j.stats){
     el.innerHTML = '<div class="empty" style="padding:12px" title="'+escHooks((j&&j.detail)||'')+'">'
-      + escHooks(textoStats(j))+'</div>';
+      + escHooks(statsText(j))+'</div>';
     if(head) head.textContent=''; return;
   }
   const s = j.stats, gen = s.gen_histogram||{}, pr = s.prompt_histogram||{};
@@ -2413,11 +2413,11 @@ function renderTools(){
 // (como mucho una petición de cada uno en vuelo) y su siguiente vuelta programada 2 s después de
 // que TERMINE la anterior. Así un /api/backend lento no congela «En curso», y una llamada manual
 // (pestaña visible, «Refrescar») con otra en vuelo no lanza una segunda.
-const SONDEO = {inflight:false, backend:false, tInflight:null, tBackend:null};
+const POLL = {inflight:false, backend:false, tInflight:null, tBackend:null};
 
 async function pollInflight(){
-  if(document.visibilityState!=='visible' || SONDEO.inflight) return;
-  SONDEO.inflight = true;
+  if(document.visibilityState!=='visible' || POLL.inflight) return;
+  POLL.inflight = true;
   try{
     const ij = await (await fetch('/api/inflight')).json();
     state.inflight = ij.inflight||[];
@@ -2433,35 +2433,35 @@ async function pollInflight(){
     renderBackend(); renderTools(); updateLive(); renderInflight();
   }catch(e){ /* el panel de inflight es opcional: si falla, la web sigue funcionando */ }
   finally{
-    SONDEO.inflight = false;
-    clearTimeout(SONDEO.tInflight); SONDEO.tInflight = setTimeout(pollInflight, 2000);
+    POLL.inflight = false;
+    clearTimeout(POLL.tInflight); POLL.tInflight = setTimeout(pollInflight, 2000);
   }
 }
 
 async function pollBackend(){
-  if(document.visibilityState!=='visible' || SONDEO.backend) return;
-  SONDEO.backend = true;
+  if(document.visibilityState!=='visible' || POLL.backend) return;
+  POLL.backend = true;
   try{
-    aplicarBackend(await (await fetch('/api/backend')).json());
+    applyBackend(await (await fetch('/api/backend')).json());
   }catch(e){ /* si el daemon no contesta, no es un sondeo del backend: no cambia el estado */ }
   finally{
-    SONDEO.backend = false;
-    clearTimeout(SONDEO.tBackend); SONDEO.tBackend = setTimeout(pollBackend, 2000);
+    POLL.backend = false;
+    clearTimeout(POLL.tBackend); POLL.tBackend = setTimeout(pollBackend, 2000);
   }
 }
 
 // Un sondeo de /api/backend: deriva el estado visible y, si acaba de volver (de no disponible a
 // disponible), refresca ya /api/status y /api/backend/stats sin esperar al ciclo de 60 s (REQ-027).
-function aplicarBackend(bj){
-  const prev = state.vista;
-  state.vista = estadoVisible(prev, bj);
+function applyBackend(bj){
+  const prev = state.view;
+  state.view = visibleState(prev, bj);
   if(bj && bj.origin) state.backendOrigin = bj.origin;
   if(bj && bj.host) state.backendHost = bj.host;
-  if(prev && !prev.disponible && state.vista.disponible) fetchStatus();
+  if(prev && !prev.available && state.view.available) fetchStatus();
   renderBackend();
 }
 
-function sondearAhora(){ pollInflight(); pollBackend(); }
+function pollNow(){ pollInflight(); pollBackend(); }
 
 // Pinta el panel "En curso". Se llama desde pollInflight (datos frescos, 2s) y desde updateLive
 // (1s), para que el "hace Ns" de la última terminada suba suave sin pedir nada al servidor.
@@ -2479,7 +2479,7 @@ function renderInflight(){
       const turnChip = turnText ? `<span class="chunkchip" title="${escHooks(turnText)}">${escHooks(turnText)}</span>` : '';
       return `<div class="ifrow"><span class="spin"></span><span class="badge">${it.tool}</span>
         <span class="badge model">${it.model}</span>${chunk}${turnChip}${org}
-        <span class="num" style="color:var(--mut)">${escHooks(fmtSeg((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} car.</span></div>`;
+        <span class="num" style="color:var(--mut)">${escHooks(fmtSec((it.elapsed_s||0)*1000))} · ${F.format(it.chars_in||0)} car.</span></div>`;
     }).join('');
     head.innerHTML = 'En curso <span class="num" style="color:var(--amber)">('+state.inflight.length+')</span>';
     return;
@@ -2491,14 +2491,14 @@ function renderInflight(){
   const ev = state.lastEvent;
   if(ev && ev.ts){
     const skew = (state.activity && state.activity.skewMs) || 0;
-    const hace = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
+    const ago = Math.max(0, Math.round((Date.now() - skew - Date.parse(ev.ts))/1000));
     const org = ev.backend ? `<span class="org ${ev.backend}">${ev.backend==='remote'?'remoto':'local'}</span>` : '';
-    const dur = ev.latency_ms!=null ? escHooks(fmtSeg(ev.latency_ms))+' · ' : '';
-    const marca = ev.ok===false
+    const dur = ev.latency_ms!=null ? escHooks(fmtSec(ev.latency_ms))+' · ' : '';
+    const mark = ev.ok===false
       ? '<span class="num" style="color:var(--red)">✕</span>'
       : '<span class="num" style="color:var(--ok)">✓</span>';
-    body.innerHTML = `<div class="ifrow" style="opacity:.75">${marca}
-      <span class="num" style="color:var(--faint)">hace ${fmtHace(hace)}</span>
+    body.innerHTML = `<div class="ifrow" style="opacity:.75">${mark}
+      <span class="num" style="color:var(--faint)">hace ${fmtAgo(ago)}</span>
       <span class="badge">${ev.tool||'?'}</span>
       <span class="badge model">${ev.model||'?'}</span>${org}
       <span class="num" style="color:var(--mut)">${dur}${F.format(ev.chars_in||0)} car.</span></div>`;
@@ -2509,7 +2509,7 @@ function renderInflight(){
   head.innerHTML = (ev && ev.ts) ? 'Última delegación' : 'En curso';
 }
 
-function fmtHace(s){
+function fmtAgo(s){
   if(s < 60) return s+'s';
   if(s < 3600) return Math.floor(s/60)+' min';
   if(s < 86400) return Math.floor(s/3600)+' h';
@@ -2618,12 +2618,12 @@ function kpiCard(o){
 // Aquí no se resuelve nada (coste-api-y-cuota, REQ-033): /api/events entrega cada fila ya
 // fundida por Python, con `density[tipo] = [c100, origen]`. Imagen o sin densidad: 0; si no,
 // cantidad×100/c100 redondeado hacia abajo, como la división entera de Python.
-function tokensClaude(cantidad,tipo,e){
-  if(tipo!=='text'&&tipo!=='returned'&&tipo!=='output'&&tipo!=='image') throw new Error('tipo de conversión desconocido: '+tipo);
-  if(tipo==='image') return 0;
-  const celda = e && e.density ? e.density[tipo] : null;
-  if(!celda) return 0;
-  return Math.floor(cantidad*100/celda[0]);
+function claudeTokens(amount,kind,e){
+  if(kind!=='text'&&kind!=='returned'&&kind!=='output'&&kind!=='image') throw new Error('tipo de conversión desconocido: '+kind);
+  if(kind==='image') return 0;
+  const cell = e && e.density ? e.density[kind] : null;
+  if(!cell) return 0;
+  return Math.floor(amount*100/cell[0]);
 }
 
 // Contabilidad de UN evento. Espejo exacto de `_accounting` en server.py: las series por día se
@@ -2632,45 +2632,45 @@ function tokensClaude(cantidad,tipo,e){
 // Python: si divergen, el gráfico contradiría a la tarjeta que tiene encima.
 // Regla de contabilidad de la spec `panel-cuentas-y-estados-honestos`, letra a letra: un fallo
 // (`ok` exactamente false) no ahorra, no devuelve, no se estima y no genera; el neto es bruto menos
-// devuelto y puede ser negativo; lo ahorrado y lo devuelto pasan SOLO por `tokensClaude`.
+// devuelto y puede ser negativo; lo ahorrado y lo devuelto pasan SOLO por `claudeTokens`.
 function acct(e){
   const failed = e.ok===false;
   const ci = e.chars_in||0, co = e.chars_out||0;
   const calls = e.chunks || 1;            // `chunks` son LLAMADAS al backend; se omite cuando es 1
-  const ti = e.tokens_in, to = e.tokens_out;
-  const tiRep = ti!==undefined&&ti!==null, toRep = to!==undefined&&to!==null;
+  const tIn = e.tokens_in, tOut = e.tokens_out;
+  const tInRep = tIn!==undefined&&tIn!==null, tOutRep = tOut!==undefined&&tOut!==null;
   // chars_in no siempre son caracteres: en local_describe_image son BYTES de la imagen
   const unit = e.input_unit || (e.tool==='local_describe_image' ? 'bytes' : 'chars');
   const estimable = unit==='chars';
-  // Coste del modelo LOCAL (no pasa por tokensClaude). En un fallo, solo lo que reportó el backend.
-  const tokensIn  = tiRep ? ti : (failed ? 0 : (estimable ? tok(ci) : 0));
-  const tokensOut = toRep ? to : (failed ? 0 : tok(co));
-  const estimated = failed ? false : (!tiRep || !toRep);
-  const porPath = e.source==='path', aFichero = !!e.output_to_file;
+  // Coste del modelo LOCAL (no pasa por claudeTokens). En un fallo, solo lo que reportó el backend.
+  const tokensIn  = tInRep ? tIn : (failed ? 0 : (estimable ? tok(ci) : 0));
+  const tokensOut = tOutRep ? tOut : (failed ? 0 : tok(co));
+  const estimated = failed ? false : (!tInRep || !tOutRep);
+  const viaPath = e.source==='path', toFile = !!e.output_to_file;
   let charsSavedText = 0, bytesSavedImage = 0, charsSavedOutput = 0, charsReturned = 0;
   let saved = 0, returned = 0;
   if(!failed){
-    if(porPath && estimable) charsSavedText = ci;
-    if(porPath && !estimable) bytesSavedImage = ci;   // la imagen, en BYTES
+    if(viaPath && estimable) charsSavedText = ci;
+    if(viaPath && !estimable) bytesSavedImage = ci;   // la imagen, en BYTES
     // La salida escrita a archivo no entró al contexto; el recibo no se registra (devuelto 0).
-    if(aFichero) charsSavedOutput = co;
-    const reclama = porPath && !aFichero && ((estimable && ci>0) || (!estimable && (ti||0)>0));
-    if(reclama) charsReturned = co;
-    if(porPath && estimable) saved += tokensClaude(charsSavedText,'text',e);
-    if(porPath && !estimable) saved += tokensClaude(bytesSavedImage,'image',e);
-    if(aFichero) saved += tokensClaude(charsSavedOutput,'output',e);
-    returned = tokensClaude(charsReturned,'returned',e);
+    if(toFile) charsSavedOutput = co;
+    const claimsReturned = viaPath && !toFile && ((estimable && ci>0) || (!estimable && (tIn||0)>0));
+    if(claimsReturned) charsReturned = co;
+    if(viaPath && estimable) saved += claudeTokens(charsSavedText,'text',e);
+    if(viaPath && !estimable) saved += claudeTokens(bytesSavedImage,'image',e);
+    if(toFile) saved += claudeTokens(charsSavedOutput,'output',e);
+    returned = claudeTokens(charsReturned,'returned',e);
   }
   // F3: si respondio un respaldo y la causa. Un evento viejo, sin esos campos, da false y null.
   // T15 (REQ-016): la afinidad tambien lleva model_requested, pero no es un respaldo.
   const fallback = !!e.model_requested && e.routing !== 'affinity';
   const cause = legacyValue('failureClass', e.error_class || e.fallback_class || null);
-  const copia = v => (v===undefined ? null : v);
+  const orNull = v => (v===undefined ? null : v);
   return {calls:calls, tokensIn:tokensIn, tokensOut:tokensOut, saved:saved, returned:returned,
     net:saved-returned, estimated:estimated, fallback:fallback, cause:cause,
     charsSavedText:charsSavedText, bytesSavedImage:bytesSavedImage,
     charsSavedOutput:charsSavedOutput, charsReturned:charsReturned, failed:failed,
-    tool:copia(e.tool), model:copia(e.model), source:copia(e.source), unit:unit};
+    tool:orNull(e.tool), model:orNull(e.model), source:orNull(e.source), unit:unit};
 }
 
 function render(){
@@ -2684,8 +2684,8 @@ function render(){
   const errPct = F1.format(nEv? 100*errs/nEv : 0);
   // REQ-004: el KPI es el NETO (bruto − devuelto), que puede ser negativo; la pista dice los dos.
   const saved = s.tokens_context_saved||0;
-  const devuelto = s.tokens_returned||0;
-  const neto = s.tokens_context_net||0;
+  const returned = s.tokens_returned||0;
+  const net = s.tokens_context_net||0;
   const gen = s.tokens_generated_local||0;
   const costIn = s.tokens_local_input||0;
   const bCalls = s.backend_calls||nEv;
@@ -2698,9 +2698,9 @@ function render(){
   const fbTxt = fbN ? (extra ? ', ' : ' Desglose: ')+F.format(fbN)+' con salto' : '';
 
   document.getElementById('kpis').innerHTML =
-    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(neto),unit:'tok',
+    kpiCard({hero:true,icon:ICON.save,kc:'var(--acc)',val:F.format(net),unit:'tok',
        lbl:'Contexto conservado',
-       hint:'bruto <span class="num">'+F.format(saved)+'</span> − devuelto <span class="num">'+F.format(devuelto)+'</span>',
+       hint:'bruto <span class="num">'+F.format(saved)+'</span> − devuelto <span class="num">'+F.format(returned)+'</span>',
        tip:'Neto: lo que el MCP leyó server-side (source=path) o escribió a un fichero y no viajó al contexto de Claude, menos lo que la tool devolvió a tu contexto. Se cuenta UNA vez por delegación aunque se trocee, y los fallos no suman. No descuenta relecturas: si luego lees tú el mismo fichero, eso no se resta.'})
     + kpiCard({icon:ICON.calls,kc:'var(--blue)',val:F.format(nEv),lbl:'Delegaciones',
        hint:'<span class="num">'+F.format(bCalls)+'</span> '+(bCalls===1?'llamada':'llamadas')+' al backend',
@@ -2710,8 +2710,8 @@ function render(){
     + kpiCard({icon:ICON.cost,kc:'var(--amber)',val:F.format(costIn),unit:'tok',lbl:'Coste local',
        hint:'entrada leída por la GPU',
        tip:'Tokens de entrada que consumió de verdad el backend (usage.prompt_tokens), sumando TODAS las llamadas. Incluye el prompt de sistema repetido en cada trozo: por eso crece con el troceo y el contexto conservado no. Son tokens del modelo local, no de Claude.'})
-    // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSeg` decide la forma entera.
-    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSeg(lat)),lbl:'Latencia',
+    // La unidad va dentro del valor («116,9 s», «< 0,1 s»): `fmtSec` decide la forma entera.
+    + kpiCard({icon:ICON.lat,kc:'var(--mut)',val:escHooks(fmtSec(lat)),lbl:'Latencia',
        hint:'con la carga del modelo',tip:'Promedio de latency_ms. La 1ª llamada a cada modelo paga la carga en VRAM vía llama-swap.'})
     + kpiCard({icon:ICON.err,kc:errs?'var(--danger)':'var(--acc)',val:errPct,unit:'%',lbl:'Errores',
        hint:'<span class="num">'+F.format(errs)+'</span> '+(errs===1?'fallo':'fallos'),tip:'Porcentaje de llamadas con ok=false.'});
@@ -2778,12 +2778,12 @@ function drawTs(ev){
           ticks:{color:hexA(blue,.85),font:{family:MONO,size:10}}}}}});
 }
 
-// `opts.conNegativos`: conserva las categorías con total negativo (solo descarta las de 0). Sin la
+// `opts.withNegatives`: conserva las categorías con total negativo (solo descarta las de 0). Sin la
 // opción, como siempre: fuera las de 0 o menos (un donut no pinta porciones negativas).
 function agg(ev,key,valfn,opts){
-  const conNegativos = !!(opts && opts.conNegativos);
+  const withNegatives = !!(opts && opts.withNegatives);
   const m=new Map(); ev.forEach(e=>m.set(e[key],(m.get(e[key])||0)+valfn(e)));
-  return [...m.entries()].filter(x=>conNegativos ? x[1]!==0 : x[1]>0).sort((a,b)=>b[1]-a[1]);
+  return [...m.entries()].filter(x=>withNegatives ? x[1]!==0 : x[1]>0).sort((a,b)=>b[1]-a[1]);
 }
 
 // barras horizontales (mejor que un donut para comparar magnitudes)
@@ -2808,7 +2808,7 @@ function barH(id,pairs,unit,color){
 
 // Neto por herramienta, de TODAS las fuentes (la salida a fichero también ahorra) y con signo:
 // una herramienta que devuelve más de lo que ahorra sale a la izquierda del 0 (REQ-004).
-function drawToolDonut(ev){ barH('toolDonut',agg(ev,'tool',e=>acct(e).net,{conNegativos:true}),'tok',cssv('--acc')); }
+function drawToolDonut(ev){ barH('toolDonut',agg(ev,'tool',e=>acct(e).net,{withNegatives:true}),'tok',cssv('--acc')); }
 function drawModelBar(ev){ barH('modelBar',agg(ev,'model',()=>1),'llamadas',cssv('--violet')); }
 
 // Local vs remoto: dónde corrió la INFERENCIA de cada delegación. Los eventos anteriores a
@@ -2841,7 +2841,7 @@ function slowMark(e){
 // `inference_ms` (backend sin `timings`), nada: no se inventa un reparto.
 function waitInferenceText(e){
   if(!e || e.inference_ms===null || e.inference_ms===undefined) return '';
-  return 'espera ' + fmtSeg(e.wait_ms) + ' · inferencia ' + fmtSeg(e.inference_ms);
+  return 'espera ' + fmtSec(e.wait_ms) + ' · inferencia ' + fmtSec(e.inference_ms);
 }
 
 function drawActivity(ev){
@@ -2862,7 +2862,7 @@ function drawActivity(ev){
     const chunks=e.chunks?`<span class="chunkchip" title="Gastó ${e.chunks} llamadas al backend (troceado)">${e.chunks}×</span>`:'';
     // Hubo salto: respondió un respaldo. Se marca para que nadie lea esta fila como del modelo pedido.
     const fb=(e.model_requested && e.routing!=='affinity')?`<span class="chunkchip fbchip" title="Respondió ${e.model} en lugar de ${e.model_requested} (${e.fallback_reason||e.fallback_class||'sin causa'})">↪ ${e.model_requested}</span>`:'';
-    const causa=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
+    const cause=(e.ok===false&&e.error_class)?` title="causa: ${e.error_class}"`:'';
     const split=waitInferenceText(e), slow=slowMark(e);
     const timings=split?`<div class="mut" style="font-size:10px">${escHooks(split)}</div>`:'';
     const slowChip=slow?`<span class="chunkchip slowchip" title="Generó a ${escHooks(fmtNum(e.tok_s,1))} tok/s, por debajo de la velocidad normal de ${e.model}">${escHooks(slow)}</span>`:'';
@@ -2871,8 +2871,8 @@ function drawActivity(ev){
       <td><span class="src ${e.source}">${e.source}</span></td>
       <td><span class="org ${org}" title="${e.backend_host||'sin dato'}">${orgTxt}</span></td>
       <td class="mono">${F.format(e.chars_in||0)} <span class="flow">→</span> ${F.format(e.chars_out||0)}</td>
-      <td class="mono">${escHooks(fmtSeg(e.latency_ms))}${slowChip}${timings}</td>
-      <td><span class="dot ${e.ok===false?'err':'ok'}"${causa}></span></td></tr>`; });
+      <td class="mono">${escHooks(fmtSec(e.latency_ms))}${slowChip}${timings}</td>
+      <td><span class="dot ${e.ok===false?'err':'ok'}"${cause}></span></td></tr>`; });
   document.getElementById('activity').innerHTML=h+'</tbody>';
   pager.style.display = pages>1?'':'none';
   document.getElementById('pgInfo').innerHTML='<b>'+(state.page+1)+'</b> / '+pages;
@@ -2900,7 +2900,7 @@ document.getElementById('range').onchange=e=>{
 };
 document.getElementById('rangeFrom').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
 document.getElementById('rangeTo').onchange=()=>{ if(state.range==='custom'){ state.page=0; fetchData(); } };
-document.getElementById('reload').onclick=()=>{ fetchData(); sondearAhora(); pollSystem(); fetchStatus(); };
+document.getElementById('reload').onclick=()=>{ fetchData(); pollNow(); pollSystem(); fetchStatus(); };
 document.getElementById('theme').onclick=()=>{
   const cur=document.documentElement.getAttribute('data-theme');
   const nx=cur==='dark'?'light':'dark'; document.documentElement.setAttribute('data-theme',nx);
@@ -2908,14 +2908,14 @@ document.getElementById('theme').onclick=()=>{
 };
 document.getElementById('auto').onclick=e=>{ state.auto=!state.auto; e.currentTarget.classList.toggle('on',state.auto); };
 // Interruptor «Pruebas»: apagado por defecto (D2); se recuerda por navegador, como el tema.
-function pintarTests(){
+function paintTestsToggle(){
   const b = document.getElementById('tests');
   b.classList.toggle('on', state.tests); b.setAttribute('aria-pressed', String(state.tests));
 }
 try{ state.tests = localStorage.getItem('ld-tests') === '1'; }catch(e){ state.tests = false; }
-pintarTests();
+paintTestsToggle();
 document.getElementById('tests').onclick=()=>{
-  state.tests = !state.tests; pintarTests();
+  state.tests = !state.tests; paintTestsToggle();
   try{ localStorage.setItem('ld-tests', state.tests ? '1' : '0'); }catch(e){}
   fetchData();
 };
@@ -2928,21 +2928,21 @@ helpDlg.addEventListener('click',e=>{ if(e.target===helpDlg) helpDlg.close(); })
 // Diálogo de información de coste, cuota e imágenes. Cada ⓘ abre el mismo diálogo en su sección;
 // Esc lo cierra (es un <dialog> modal) y el foco vuelve al botón que lo abrió.
 const infoDlg=document.getElementById('infoDlg');
-const INFO_GRUPOS = {
-  coste:{titulo:'Coste, cuota e imágenes', icono:ICON.cost, color:'var(--amber)'},
-  hooks:{titulo:'Sugerencias de los hooks', icono:ICON.info, color:'var(--amber)'},
-  sistema:{titulo:'Sistema', icono:ICON.gen, color:'var(--amber)'},
-  tests:{titulo:'Pruebas', icono:ICON.info, color:'var(--amber)'},
+const INFO_GROUPS = {
+  cost:{title:'Coste, cuota e imágenes', icon:ICON.cost, color:'var(--amber)'},
+  hooks:{title:'Sugerencias de los hooks', icon:ICON.info, color:'var(--amber)'},
+  system:{title:'Sistema', icon:ICON.gen, color:'var(--amber)'},
+  tests:{title:'Pruebas', icon:ICON.info, color:'var(--amber)'},
 };
-function openInfo(grupo, seccion){
-  const g = INFO_GRUPOS[grupo] || INFO_GRUPOS.coste;
-  document.getElementById('infoDlgTitle').textContent = g.titulo;
-  const ico = document.getElementById('infoDlgIco'); ico.innerHTML = g.icono; ico.style.setProperty('--kc', g.color);
-  infoDlg.querySelectorAll('section[data-group]').forEach(s => { s.hidden = s.dataset.group !== grupo; });
+function openInfo(group, section){
+  const g = INFO_GROUPS[group] || INFO_GROUPS.cost;
+  document.getElementById('infoDlgTitle').textContent = g.title;
+  const ico = document.getElementById('infoDlgIco'); ico.innerHTML = g.icon; ico.style.setProperty('--kc', g.color);
+  infoDlg.querySelectorAll('section[data-group]').forEach(s => { s.hidden = s.dataset.group !== group; });
   infoDlg.showModal();
-  const sec = seccion && document.getElementById(seccion);
-  const primera = infoDlg.querySelector('section[data-group="' + grupo + '"]');
-  if(sec && sec !== primera) sec.scrollIntoView({block:'start'}); else infoDlg.scrollTop = 0;
+  const sec = section && document.getElementById(section);
+  const first = infoDlg.querySelector('section[data-group="' + group + '"]');
+  if(sec && sec !== first) sec.scrollIntoView({block:'start'}); else infoDlg.scrollTop = 0;
 }
 document.querySelectorAll('.ibtn[data-group]').forEach(b=>{
   b.innerHTML=ICON.info;
@@ -2962,12 +2962,12 @@ setInterval(()=>{ updateLive(); renderInflight(); },1000);
 // Los sondeos se pausan con la pestaña oculta; al volver, refresca ya en vez de esperar al
 // siguiente tick (antes se veía el estado congelado de hace horas).
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'){ sondearAhora(); pollSystem(); if(state.auto) fetchData(); }
+  if(document.visibilityState==='visible'){ pollNow(); pollSystem(); if(state.auto) fetchData(); }
 });
 fetchData();
 fetchStatus();
 // Los sondeos de 2 s se encadenan solos (REQ-026): aquí solo se lanza la primera vuelta.
-sondearAhora();
+pollNow();
 pollSystem();
 </script>
 </body>

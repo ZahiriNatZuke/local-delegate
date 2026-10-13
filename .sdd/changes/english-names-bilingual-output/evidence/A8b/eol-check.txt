@@ -1,0 +1,14 @@
+# git ls-files --eol: filas cuyo EOL del índice (HEAD d8fe747) difiere del árbol de trabajo
+# ficheros tocados:
+i/lf    w/lf    attr/                 	.sdd/changes/english-names-bilingual-output/rename-exceptions.md
+i/lf    w/lf    attr/                 	docs/wiki/Savings-and-metrics.md
+i/lf    w/lf    attr/                 	scripts/dev/capture_dashboard.py
+i/crlf  w/crlf  attr/                 	src/local_delegate/server.py
+i/crlf  w/crlf  attr/                 	src/local_delegate/web/metrics.py
+i/lf    w/lf    attr/                 	tests/test_dashboard_js.py
+i/crlf  w/crlf  attr/                 	tests/test_dashboard_ui.py
+i/lf    w/lf    attr/                 	tests/test_densidad.py
+i/lf    w/lf    attr/                 	tests/test_detect_spanish_names.py
+i/lf    w/lf    attr/                 	tests/test_metrics.py
+i/lf    w/lf    attr/                 	tests/test_panel_coste.py
+i/lf    w/lf    attr/                 	tests/test_panel_estados.py
