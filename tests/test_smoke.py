@@ -28,7 +28,7 @@ def test_eleven_tools_registered():
     assert len(tools) == 11
 
 
-def test_la_tabla_de_la_skill_no_puede_mentir_sobre_las_tools():
+def test_the_skill_table_cannot_lie_about_the_tools():
     """La skill es la fuente del catálogo que `install --agents` propaga a los subagentes.
 
     Sin este test, esa fuente puede desincronizarse **igual que se desincronizó la receta que
@@ -111,18 +111,18 @@ def _run_main(monkeypatch, argv: list[str]) -> int:
     return 0
 
 
-def test_help_imprime_la_ayuda_y_no_arranca_el_servidor(monkeypatch, capsys):
+def test_help_prints_the_help_and_does_not_start_the_server(monkeypatch, capsys):
     from local_delegate import server as srv
 
-    def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
+    def _do_not_start():  # pragma: no cover - si se llama, el test ya falló
         raise AssertionError("--help no debe arrancar el servidor MCP")
 
-    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    monkeypatch.setattr(srv.mcp, "run", _do_not_start)
     assert _run_main(monkeypatch, ["--help"]) == 0
     assert "usage" in capsys.readouterr().out.lower()
 
 
-def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
+def test_version_prints_the_version_and_does_not_start_the_server(monkeypatch, capsys):
     """`local-delegate --version` salía con código 2 y un `usage`.
 
     El parser raíz exigía subcomando y no exponía la bandera, así que el binario no sabía decir
@@ -136,43 +136,43 @@ def test_version_dice_la_version_y_no_arranca_el_servidor(monkeypatch, capsys):
     from local_delegate import __version__
     from local_delegate import server as srv
 
-    def _no_arrancar():  # pragma: no cover - si se llama, el test ya falló
+    def _do_not_start():  # pragma: no cover - si se llama, el test ya falló
         raise AssertionError("--version no debe arrancar el servidor MCP")
 
-    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    monkeypatch.setattr(srv.mcp, "run", _do_not_start)
     assert _run_main(monkeypatch, ["--version"]) == 0
     assert __version__ in capsys.readouterr().out
 
 
-def test_subcomando_desconocido_falla_en_vez_de_colgarse(monkeypatch, capsys):
+def test_unknown_subcommand_fails_instead_of_hanging(monkeypatch, capsys):
     from local_delegate import server as srv
 
-    def _no_arrancar():  # pragma: no cover
+    def _do_not_start():  # pragma: no cover
         raise AssertionError("un nombre inválido no debe arrancar el servidor MCP")
 
-    monkeypatch.setattr(srv.mcp, "run", _no_arrancar)
+    monkeypatch.setattr(srv.mcp, "run", _do_not_start)
     assert _run_main(monkeypatch, ["doctro"]) == 2
     assert "invalid choice" in capsys.readouterr().err
 
 
-def test_sin_argumentos_sigue_arrancando_el_servidor_mcp(monkeypatch):
+def test_without_arguments_it_still_starts_the_mcp_server(monkeypatch):
     """El contrato con los hosts MCP: romperlo deja a Claude Code y Codex sin servidor."""
     import sys
 
     from local_delegate import cli
     from local_delegate import server as srv
 
-    arrancado = []
-    monkeypatch.setattr(srv.mcp, "run", lambda: arrancado.append(True))
+    started = []
+    monkeypatch.setattr(srv.mcp, "run", lambda: started.append(True))
     monkeypatch.setattr(srv.config, "AUTOSTART", False)
     monkeypatch.setattr(srv.config, "WEB_ENABLED", False)
     monkeypatch.setattr(cli, "run", lambda argv: 0)  # no debe llamarse
     monkeypatch.setattr(sys, "argv", ["local-delegate"])
     entrypoint.main()
-    assert arrancado == [True]
+    assert started == [True]
 
 
-def test_el_aviso_de_terminal_solo_sale_con_tty_y_por_stderr(monkeypatch, capsys):
+def test_the_terminal_warning_only_shows_with_tty_and_on_stderr(monkeypatch, capsys):
     import sys
 
     class _Stdin:
@@ -188,27 +188,27 @@ def test_el_aviso_de_terminal_solo_sale_con_tty_y_por_stderr(monkeypatch, capsys
 
     monkeypatch.setattr(sys, "stdin", _Stdin(True))
     entrypoint._interactive_terminal_warning()
-    salida = capsys.readouterr()
-    assert "local-delegate --help" in salida.err
-    assert salida.out == ""  # stdout es el canal del protocolo MCP: jamás se escribe ahí
+    output = capsys.readouterr()
+    assert "local-delegate --help" in output.err
+    assert output.out == ""  # stdout es el canal del protocolo MCP: jamás se escribe ahí
 
 
-def test_el_aviso_no_revienta_con_un_stdin_raro(monkeypatch, capsys):
+def test_the_warning_does_not_blow_up_with_an_odd_stdin(monkeypatch, capsys):
     """Bajo un host MCP stdin puede estar cerrado o no ser un fichero de verdad."""
     import sys
 
-    class _Cerrado:
+    class _Closed:
         def isatty(self) -> bool:
             raise ValueError("I/O operation on closed file")
 
     monkeypatch.setattr(sys, "stdin", None)
     entrypoint._interactive_terminal_warning()
-    monkeypatch.setattr(sys, "stdin", _Cerrado())
+    monkeypatch.setattr(sys, "stdin", _Closed())
     entrypoint._interactive_terminal_warning()
     assert capsys.readouterr().err == ""
 
 
-def test_los_subcomandos_estan_definidos_una_sola_vez(monkeypatch):
+def test_the_subcommands_are_defined_only_once(monkeypatch):
     """REQ-006/007: el parser es la única fuente; añadir uno no exige tocar nada más.
 
     Si vuelve a aparecer una lista literal de nombres, este test la detecta: cualquier
@@ -222,17 +222,17 @@ def test_los_subcomandos_estan_definidos_una_sola_vez(monkeypatch):
     assert not hasattr(cli, "KNOWN_COMMANDS")
 
     sub = cli.build_parser()._subparsers._group_actions[0]  # type: ignore[union-attr]
-    registrados = set(sub.choices)
-    assert {"doctor", "install", "serve"} <= registrados
+    registered = set(sub.choices)
+    assert {"doctor", "install", "serve"} <= registered
 
-    recibidos: list[list[str]] = []
-    monkeypatch.setattr(cli, "run", lambda argv: recibidos.append(argv) or 0)
-    for nombre in sorted(registrados):
-        assert _run_main(monkeypatch, [nombre]) == 0
-    assert recibidos == [[nombre] for nombre in sorted(registrados)]
+    received: list[list[str]] = []
+    monkeypatch.setattr(cli, "run", lambda argv: received.append(argv) or 0)
+    for name in sorted(registered):
+        assert _run_main(monkeypatch, [name]) == 0
+    assert received == [[name] for name in sorted(registered)]
 
 
-def test_el_modulo_de_la_version_no_importa_nada_del_paquete():
+def test_the_version_module_imports_nothing_from_the_package():
     """La propiedad que quita el ciclo, fijada para que no se pierda al añadir un import.
 
     `version.py` existe porque cuatro sitios que no se conocen entre sí necesitan el mismo número:
@@ -246,16 +246,18 @@ def test_el_modulo_de_la_version_no_importa_nada_del_paquete():
     import ast
     from pathlib import Path
 
-    fuente = Path(server.__file__).parent / "version.py"
-    arbol = ast.parse(fuente.read_text(encoding="utf-8"))
-    relativos = [n for n in ast.walk(arbol) if isinstance(n, ast.ImportFrom) and (n.level or 0) > 0]
-    assert relativos == [], (
+    source = Path(server.__file__).parent / "version.py"
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    relative_ones = [
+        n for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and (n.level or 0) > 0
+    ]
+    assert relative_ones == [], (
         "version.py tiene que ser un módulo hoja: importar algo del paquete reabre el ciclo "
-        f"cli ↔ server (líneas {[n.lineno for n in relativos]})"
+        f"cli ↔ server (líneas {[n.lineno for n in relative_ones]})"
     )
 
 
-def test_los_tres_canales_de_la_version_dan_lo_mismo():
+def test_the_three_version_channels_agree():
     """Un solo dato, tres puertas. Si alguien vuelve a derivarlo por su cuenta, esto lo caza."""
     from local_delegate import __version__, version
 
@@ -263,7 +265,7 @@ def test_los_tres_canales_de_la_version_dan_lo_mismo():
     assert server.mcp.version == version.get_version()
 
 
-def test_el_servidor_no_conoce_al_CLI():
+def test_the_server_does_not_know_the_CLI():
     """La dirección de la dependencia, fijada. Es lo que quita el ciclo de verdad.
 
     `server` importaba `cli` para despachar los subcomandos, y `cli` volvía a `server` y a
@@ -277,16 +279,16 @@ def test_el_servidor_no_conoce_al_CLI():
     import ast
     from pathlib import Path
 
-    fuente = Path(server.__file__)
-    arbol = ast.parse(fuente.read_text(encoding="utf-8"))
-    culpables = [
+    source = Path(server.__file__)
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    culprits = [
         n.lineno
-        for n in ast.walk(arbol)
+        for n in ast.walk(tree)
         if isinstance(n, ast.ImportFrom)
         and (n.level or 0) > 0
         and any(a.name == "cli" for a in n.names)
     ]
-    assert culpables == [], (
-        f"server.py volvió a importar cli (líneas {culpables}): eso reabre el ciclo "
+    assert culprits == [], (
+        f"server.py volvió a importar cli (líneas {culprits}): eso reabre el ciclo "
         "cli -> daemon -> server -> cli. El despacho vive en entrypoint.py"
     )

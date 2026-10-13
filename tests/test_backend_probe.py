@@ -20,86 +20,86 @@ RUNNING = "http://test-backend/running"
 
 
 @pytest.fixture
-def remoto(monkeypatch):
+def remote(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
 
 
 @pytest.fixture
-def status_sin_extras(monkeypatch):
+def status_without_extras(monkeypatch):
     """`local_status` también mira GPU, RAM, grupos y el puerto web: aquí solo cuenta el backend."""
-    for nombre in ("_vram_info", "_ram_info", "_llamaswap_groups"):
-        monkeypatch.setattr(server, nombre, lambda: None)
+    for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
+        monkeypatch.setattr(server, name, lambda: None)
     monkeypatch.setattr(server, "_port_listening", lambda *_: False)
 
 
-def _linea_backend(texto: str) -> str:
-    lineas = [linea for linea in texto.splitlines() if linea.startswith("Backend:")]
-    assert len(lineas) == 1, texto
-    return lineas[0]
+def _backend_line(text: str) -> str:
+    lines = [line for line in text.splitlines() if line.startswith("Backend:")]
+    assert len(lines) == 1, text
+    return lines[0]
 
 
-def _estado_de(linea: str) -> str:
+def _state_of(line: str) -> str:
     """Lo que va detrás de la URL: `arriba`, `CAÍDO: …`, `SIN ACCESO: …`…"""
-    return linea.split(" — ", 1)[1]
+    return line.split(" — ", 1)[1]
 
 
 # --- local_status (REQ-015, REQ-013) -------------------------------------------------------------
 
 
 @backend_mock.mock
-def test_local_status_dice_sin_acceso_con_un_401(remoto, status_sin_extras):
+def test_local_status_says_no_access_with_a_401(remote, status_without_extras):
     """Un 401 es un backend VIVO: decir «CAÍDO» manda a arrancar lo que ya corre."""
     backend_mock.get(MODELS).mock(return_value=httpx2.Response(401, text="no"))
     # Registrada a propósito: una ruta sin registrar hace fallar el test, y lo que se mira aquí es
     # la línea `Backend:`, no si se pidió `/running`.
     backend_mock.get(RUNNING).mock(return_value=httpx2.Response(200, json={"running": []}))
 
-    texto = server.local_status()
+    text = server.local_status()
 
-    assert "SIN ACCESO" in texto
-    assert _estado_de(_linea_backend(texto)).startswith("SIN ACCESO: test-backend responde 401")
+    assert "SIN ACCESO" in text
+    assert _state_of(_backend_line(text)).startswith("SIN ACCESO: test-backend responde 401")
 
 
 @backend_mock.mock
-def test_local_status_no_llama_caido_a_quien_contesta(remoto, status_sin_extras):
+def test_local_status_does_not_call_down_whoever_answers(remote, status_without_extras):
     backend_mock.get(MODELS).mock(return_value=httpx2.Response(500, text="boom"))
     backend_mock.get(RUNNING).mock(return_value=httpx2.Response(200, json={"running": []}))
 
-    linea_backend = _linea_backend(server.local_status())
+    backend_line = _backend_line(server.local_status())
 
-    assert "CAÍDO" not in linea_backend
-    assert _estado_de(linea_backend).startswith("RESPONDE CON ERROR:")
-    assert "HTTP 500" in linea_backend
+    assert "CAÍDO" not in backend_line
+    assert _state_of(backend_line).startswith("RESPONDE CON ERROR:")
+    assert "HTTP 500" in backend_line
 
 
-def test_local_status_dice_que_no_se_resuelve(monkeypatch, status_sin_extras):
+def test_local_status_says_it_does_not_resolve(monkeypatch, status_without_extras):
     """Red real: un nombre `.invalid` no resuelve nunca (RFC 6761)."""
     monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
 
-    texto = server.local_status()
+    text = server.local_status()
 
-    assert "no se resuelve el nombre no-existe.invalid:9292" in texto
-    assert _estado_de(_linea_backend(texto)).startswith("CAÍDO: ")
+    assert "no se resuelve el nombre no-existe.invalid:9292" in text
+    assert _state_of(_backend_line(text)).startswith("CAÍDO: ")
 
 
 @backend_mock.mock
-def test_local_status_no_pide_running_si_models_falla(remoto, status_sin_extras):
+def test_local_status_does_not_request_running_if_models_fails(remote, status_without_extras):
     """REQ-013: con el backend inalcanzable, un plazo de conexión y no dos."""
     backend_mock.get(MODELS).mock(side_effect=httpx2.ConnectError("down"))
-    ruta_running = backend_mock.get(RUNNING).mock(
+    running_route = backend_mock.get(RUNNING).mock(
         return_value=httpx2.Response(200, json={"running": []})
     )
 
     server.local_status()
 
-    assert ruta_running.call_count == 0
+    assert running_route.call_count == 0
 
 
 # --- probe_backend (REQ-012, REQ-021) ------------------------------------------------------------
 
 
 @backend_mock.mock
-def test_sondeo_conserva_la_ultima_lista_buena(remoto):
+def test_poll_keeps_the_last_good_list(remote):
     backend_mock.get(MODELS).mock(
         side_effect=[
             httpx2.Response(
@@ -109,33 +109,33 @@ def test_sondeo_conserva_la_ultima_lista_buena(remoto):
         ]
     )
 
-    primero_up, _ = server._models_with_status()
-    up, modelos = server._models_with_status()
+    first_up, _ = server._models_with_status()
+    up, models = server._models_with_status()
 
-    assert primero_up is True
+    assert first_up is True
     assert up is False
-    assert [m["id"] for m in modelos] == ["a", "b"]
+    assert [m["id"] for m in models] == ["a", "b"]
     # La lista guardada no afirma un estado que ya no se puede saber.
-    assert all(m["status"] is None for m in modelos)
+    assert all(m["status"] is None for m in models)
 
 
 @backend_mock.mock
-def test_el_sondeo_fallido_marca_la_lista_como_vieja(remoto):
+def test_the_failed_poll_marks_the_list_as_stale(remote):
     backend_mock.get(MODELS).mock(
         side_effect=[httpx2.Response(200, json={"data": [{"id": "a"}]}), httpx2.ConnectError("x")]
     )
 
-    bueno = server.probe_backend()
-    malo = server.probe_backend()
+    good = server.probe_backend()
+    bad = server.probe_backend()
 
-    assert bueno.models_stale is False and bueno.cause is None and bueno.detail is None
-    assert malo.models_stale is True
-    assert malo.cause == "transport"
-    assert malo.status_http is None
+    assert good.models_stale is False and good.cause is None and good.detail is None
+    assert bad.models_stale is True
+    assert bad.cause == "transport"
+    assert bad.status_http is None
 
 
 @backend_mock.mock
-def test_la_lista_guardada_es_de_su_url(monkeypatch):
+def test_the_saved_list_belongs_to_its_url(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://a/v1")
     backend_mock.get("http://a/v1/models").mock(
         return_value=httpx2.Response(200, json={"data": [{"id": "de-a"}]})
@@ -144,102 +144,102 @@ def test_la_lista_guardada_es_de_su_url(monkeypatch):
     assert server.probe_backend().available is True
 
     monkeypatch.setattr(config, "BASE_URL", "http://b/v1")
-    estado = server.probe_backend()
-    modelos = estado.models
+    state = server.probe_backend()
+    models = state.models
 
-    assert estado.available is False
-    assert modelos == []
+    assert state.available is False
+    assert models == []
 
 
 @pytest.mark.parametrize(
-    "cuerpo", [[], {}, {"data": "no es una lista"}], ids=["lista", "sin-data", "data-texto"]
+    "body", [[], {}, {"data": "no es una lista"}], ids=["lista", "sin-data", "data-texto"]
 )
 @backend_mock.mock
-def test_un_cuerpo_con_otra_forma_es_respuesta_invalida(remoto, cuerpo):
+def test_a_body_with_another_shape_is_an_invalid_response(remote, body):
     """REQ-012: un 2xx sin un objeto con una lista `data` no es «disponible sin modelos»."""
-    backend_mock.get(MODELS).mock(return_value=httpx2.Response(200, json=cuerpo))
+    backend_mock.get(MODELS).mock(return_value=httpx2.Response(200, json=body))
 
-    estado = server.probe_backend()
+    state = server.probe_backend()
 
-    assert estado.available is False
-    assert estado.cause == "invalid_response"
-    assert "/models" in estado.detail
+    assert state.available is False
+    assert state.cause == "invalid_response"
+    assert "/models" in state.detail
 
 
 @backend_mock.mock
-def test_las_entradas_sueltas_se_toleran_como_hoy(remoto):
+def test_loose_entries_are_tolerated_as_today(remote):
     backend_mock.get(MODELS).mock(
         return_value=httpx2.Response(
             200, json={"data": ["texto suelto", {"status": {"value": "loaded"}}]}
         )
     )
 
-    estado = server.probe_backend()
+    state = server.probe_backend()
 
-    assert estado.available is True
-    assert estado.models == [{"id": "?", "status": "loaded"}]
+    assert state.available is True
+    assert state.models == [{"id": "?", "status": "loaded"}]
 
 
 @backend_mock.mock
-def test_un_401_es_credencial_y_no_disponible(remoto):
+def test_a_401_is_credential_and_not_unavailable(remote):
     backend_mock.get(MODELS).mock(return_value=httpx2.Response(401, text="no"))
 
-    estado = server.probe_backend()
+    state = server.probe_backend()
 
-    assert estado.available is False
-    assert estado.cause == "credential"
-    assert estado.status_http == 401
-    assert estado.detail == "test-backend responde 401: está arriba pero rechaza la credencial"
+    assert state.available is False
+    assert state.cause == "credential"
+    assert state.status_http == 401
+    assert state.detail == "test-backend responde 401: está arriba pero rechaza la credencial"
 
 
 @backend_mock.mock
-def test_el_sondeo_nunca_lanza(remoto):
+def test_the_poll_never_raises(remote):
     """Regla 12: lo que se escape del clasificable también tiene causa, y no revienta a nadie."""
     backend_mock.get(MODELS).mock(side_effect=RuntimeError("inesperado"))
 
     try:
-        estado = server.probe_backend()
+        state = server.probe_backend()
     except Exception as exc:  # que el fallo se lea como fallo del test, no como un error suelto
-        pytest.fail(f"el sondeo lanzó {exc!r}")
+        raise AssertionError(f"el sondeo lanzó {exc!r}") from exc
 
-    assert estado.available is False
-    assert estado.cause == "unknown"
+    assert state.available is False
+    assert state.cause == "unknown"
 
 
 @backend_mock.mock
-def test_un_connect_timeout_en_loopback_es_rechazada(monkeypatch):
+def test_a_connect_timeout_on_loopback_is_refused(monkeypatch):
     """Regla 7 con el host SIN puerto: con `backend_host()` («127.0.0.1:9292») no se aplicaría."""
     monkeypatch.setattr(config, "BASE_URL", "http://127.0.0.1:9292/v1")
     backend_mock.get("http://127.0.0.1:9292/v1/models").mock(
         side_effect=httpx2.ConnectTimeout("timed out")
     )
 
-    estado = server.probe_backend()
+    state = server.probe_backend()
 
-    assert estado.cause == "refused"
+    assert state.cause == "refused"
 
 
-def _ip_de_salida() -> str:
+def _outbound_ip() -> str:
     """La IP de la interfaz por la que sale el tráfico. Un UDP «conectado» no envía nada."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.connect(("192.0.2.1", 9))
         return s.getsockname()[0]
 
 
-def test_un_puerto_cerrado_remoto_no_parece_una_vpn(monkeypatch):
+def test_a_closed_remote_port_does_not_look_like_a_vpn(monkeypatch):
     """Red real, sin `skip`: un puerto cerrado en una IP que no es de loopback es `rechazada`.
 
     En Windows el rechazo tarda ~2,1 s (medido en el paso 0 de T3): con un plazo de conexión de 1 s
     llegaría como `ConnectTimeout` y, al no ser loopback, como `timeout_conexion`, que manda a
     mirar la VPN. En Linux y macOS el rechazo es inmediato.
     """
-    ip = _ip_de_salida()
+    ip = _outbound_ip()
     assert not ip.startswith("127."), ip
     with socket.socket() as s:
         s.bind((ip, 0))
-        puerto = s.getsockname()[1]
-    monkeypatch.setattr(config, "BASE_URL", f"http://{ip}:{puerto}/v1")
+        port = s.getsockname()[1]
+    monkeypatch.setattr(config, "BASE_URL", f"http://{ip}:{port}/v1")
 
-    estado = server.probe_backend()
+    state = server.probe_backend()
 
-    assert estado.cause == "refused"
+    assert state.cause == "refused"

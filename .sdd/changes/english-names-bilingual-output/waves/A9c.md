@@ -4,13 +4,14 @@ La subola se parte en 5 lotes (D13: 1269 filas, como mucho 300 por lote y sin pa
 aprobados por la sesión principal el 2026-10-13 con las 9 decisiones de la fase 1 tal como se
 recomendaron. Cada lote es un commit que hace la sesión principal, en una rama apilada sobre el
 anterior. Las tablas de controles positivos, `local_*` y PyCharm son las de todos los lotes, porque
-`check_wave_records.py` lee la primera tabla de cada sección. Por ahora cubren los **lotes 1 y 2**: 31 + 17 = 48
-filas `rename_refactoring` = 48 filas `pycharm` de `waves/A9c-1-mapping.csv` y
-`waves/A9c-2-mapping.csv` (tras su línea `# Fase 2`).
+`check_wave_records.py` lee la primera tabla de cada sección. Por ahora cubren los **lotes 1 a 3**: 31 + 17 + 17 =
+65 filas `rename_refactoring` = 65 filas `pycharm` de `waves/A9c-1-mapping.csv`,
+`waves/A9c-2-mapping.csv` y `waves/A9c-3-mapping.csv` (tras su línea `# Fase 2`).
 
 - Rama: lote 1 en `sdd/english-names-a9c-1`, sacada de `main` (`2888d90`, con A9a y A9b mezcladas).
-  Commit del lote 1: `d1d002b` (PR #285). Lote 2 en `sdd/english-names-a9c-2`, encima de `d1d002b`;
-  commit pendiente, con el borrador en `waves/A9c-2-commit-msg.txt` (firmado y sin coautoría).
+  Commit del lote 1: `d1d002b` (PR #285). Lote 2: `34eb1fa` (PR #286), rebasado sobre `main` (`1d6290f`).
+  Lote 3 en `sdd/english-names-a9c-3`, encima de `34eb1fa`; commit pendiente, con el borrador en
+  `waves/A9c-3-commit-msg.txt` (firmado y sin coautoría).
 - Quién: un agente hizo los 5 mappings (fase 1) y aplica los lotes tras la aprobación (fase 2).
 - Conteo base: `evidence/A9c/collect-before.txt`, 2572 tests.
 
@@ -20,6 +21,8 @@ filas `rename_refactoring` = 48 filas `pycharm` de `waves/A9c-1-mapping.csv` y
 | --- | --- | --- | --- |
 | `tests/test_transcripts.py::test_known_n_and_expiries` y `::test_the_ttl_depends_on_the_thread` (lote 1; usan `subagent`, `main_transcript`, `request_entry`, `result_entry`, `write_jsonl`, `KNOWN_N` y la variable renombrada `expiries`) | `src/local_delegate/transcripts.py:242`: `return len(later), caducidades` → `caducidades + 1` (sha256 `fb2e49f6…` → `afe60b28…`) | `assert expiries == 1` → `assert 2 == 1`, y `assert expiries == 0` → `assert 1 == 0` | sí, desde copia; sha256 igual al de antes (`evidence/A9c-1/mutant.txt`) |
 | `tests/test_structured_summary.py::test_detects_the_sections_of_the_bench_documents` (lote 2; usa `SOURCES` y los argnames renombrados `name`/`count`, 5 casos) | `src/local_delegate/sections.py:130`: `detect` devuelve los títulos sin el primero (`at_level` → `at_level[1:]`; sha256 `cda2bd16…` → `5aed003d…`) | `assert len(structure.headings) == count` → `assert 10 == 11` (y `8 == 9`…) | sí, desde copia; sha256 igual al de antes (`evidence/A9c-2/mutant.txt`) |
+| `tests/test_backend_probe.py::test_the_poll_never_raises` (lote 3; el arreglo de CodeQL: `raise AssertionError(…) from exc` en vez de `pytest.fail`) | `src/local_delegate/server.py:4293`: `probe_backend` relanza lo inesperado (`raise` como primera línea del `except Exception`; sha256 `2bfc147a…` → `e76ac534…`) | `raise AssertionError(f"el sondeo lanzó {exc!r}") from exc` → `AssertionError: el sondeo lanzó RuntimeError('inesperado')` (1 failed) | sí, desde copia; sha256 igual al de antes (`evidence/A9c-3/mutant.txt`) |
+| `tests/test_load_probe.py::test_the_sample_translates_to_model_loaded` (lote 3; argnames renombrados `state`/`expected` y el parámetro de la lambda `_model`) | `src/local_delegate/server.py:1232`: `_LoadProbe` toma `"starting"` por cargado en vez de `"ready"` (sha256 → `52eaccc2…`) | `assert probe.model_loaded(wait_s=1.0) is expected` → `assert None is True` y `assert True is False` | sí, desde copia; sha256 igual |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -28,6 +31,7 @@ filas `rename_refactoring` = 48 filas `pycharm` de `waves/A9c-1-mapping.csv` y
 | Agente A9c (fase 1) | (ninguna) | los mappings necesitaban nombres y líneas literales; las secciones de `A9a.md`/`A9b.md` se leyeron acotadas |
 | Agente A9c-1 | `local_lint_summary(path=evidence/A9c-1/pytest-full.log)` | resumen de la corrida de la suite: verde, solo los 12 `DeprecationWarning` de siempre de `starlette.testclient` |
 | Agente A9c-2 | `local_lint_summary(path=evidence/A9c-2/pytest-full.log)` | resumen de la suite: verde, solo los 12 `DeprecationWarning` de `starlette.testclient` |
+| Agente A9c-3 | `local_lint_summary(path=evidence/A9c-3/pytest-full.log)` | resumen de la suite: verde (2570 passed, 2 skipped), solo los 12 `DeprecationWarning` de `starlette.testclient` |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -85,6 +89,24 @@ filas `rename_refactoring` = 48 filas `pycharm` de `waves/A9c-1-mapping.csv` y
 | A9c-2 | `rename_refactoring` | `_no_responde`→`_no_answer` | 1 usos |
 | A9c-2 | `rename_refactoring` | `_delegar`→`_delegate` | 2 usos |
 | A9c-2 | `get_file_problems` | `test_structured_summary.py`, `test_fast_role_retired.py` | 0 errores |
+| A9c-3 | `rename_refactoring` | `RAIZ`→`ROOT` (`test_site.py`) | 16 usos |
+| A9c-3 | `rename_refactoring` | `FAVICON_SITIO`→`SITE_FAVICON` | 3 usos |
+| A9c-3 | `rename_refactoring` | `FAVICON_PAQUETE`→`PACKAGE_FAVICON` | 5 usos |
+| A9c-3 | `rename_refactoring` | `_cargar_build_site`→`_load_build_site` | 1 usos |
+| A9c-3 | `rename_refactoring` | `_cabecera_png`→`_png_header` | 2 usos |
+| A9c-3 | `rename_refactoring` | `_manifiesto_iconos`→`_icon_manifest` | 3 usos |
+| A9c-3 | `rename_refactoring` | `RAIZ`→`ROOT` (`test_sonda.py`) | 3 usos |
+| A9c-3 | `rename_refactoring` | `solo_windows`→`windows_only` | 5 usos; reescribió `waves/A9a.md` (devuelto a HEAD) |
+| A9c-3 | `rename_refactoring` | `backend_falso`→`fake_backend` | 4 usos (fixture: arrastra los parámetros que la piden) |
+| A9c-3 | `rename_refactoring` | `_cargar_script`→`_load_probe_script` | 2 usos |
+| A9c-3 | `rename_refactoring` | `_HIJO`→`_CHILD` | 2 usos |
+| A9c-3 | `rename_refactoring` | `_timeout_tras`→`_timeout_after` (`test_sonda_carga.py`) | 1 usos |
+| A9c-3 | `rename_refactoring` | `remoto`→`remote` (`test_sondeo_backend.py`) | 9 usos (fixture: arrastra los parámetros que la piden) |
+| A9c-3 | `rename_refactoring` | `_linea_backend`→`_backend_line` | 3 usos |
+| A9c-3 | `rename_refactoring` | `_estado_de`→`_state_of` | 3 usos |
+| A9c-3 | `rename_refactoring` | `_ip_de_salida`→`_outbound_ip` | 1 usos |
+| A9c-3 | `rename_refactoring` | `status_sin_extras`→`status_without_extras` | 4 usos (fixture) |
+| A9c-3 | `get_file_problems` | `test_site.py`, `test_resource_probe.py`, `test_load_probe.py`, `test_backend_probe.py` | 0 errores propios: solo `Unresolved reference 'Client'` en la cadena de `monkeypatch.setattr(benchmark.httpx2, "Client", …)`, que ya estaba |
 
 ## A9c-1 — `fake_llamaswap`, `test_fake_llamaswap`, `test_recalcular`, `test_recalcular_legacy`, `test_release_metadata`, `test_residency`, `test_respaldo` y `test_transcripts` (aplicado)
 
@@ -185,6 +207,58 @@ filas `rename_refactoring` = 48 filas `pycharm` de `waves/A9c-1-mapping.csv` y
 
 1. **4 filas `pycharm` → `search_edit`**, anotado en la línea `# Fase 2` del CSV: los parámetros
    homónimos.
+
+
+## A9c-3 — `test_site`, `test_smoke`, `test_sonda`, `test_sonda_carga` y `test_sondeo_backend` (aplicado)
+
+### A9c-3 · Qué se hizo
+
+- 17 `rename_refactoring` (tabla de arriba), antes de cualquier edición desde fuera.
+- Los 7 parámetros homónimos (`modelo`/`estado` de `_running`; `estado`, `clase` y `cuerpo` de tests
+  parametrizados; `modelo` de la anidada `consultar`) por `a9c/param_ren.py` o a mano por línea (hay
+  dos anidadas `consultar` en el fichero).
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 250 + 46 + 119 + 59 +
+  77 = 551 reemplazos.
+- A mano (`apply` no lo hace): los `def` de 8 anidadas (`_no_arrancar` ×3 → `_do_not_start`,
+  `_Cerrado` → `_Closed`, `rota` → `broken`, `consultar` ×2 → `query`, `efecto` → `effect`), los
+  argnames de 4 `parametrize` (`("estado", "esperado")` → `("state", "expected")`,
+  `("estado", "clase")` → `("state", "error_class")`, `"efecto"` → `"effect"`, `"cuerpo"` → `"body"`)
+  y el parámetro de la lambda `_modelo` → `_model`.
+- **Arreglo de CodeQL aprobado**: en `test_backend_probe.py`, el `pytest.fail(...)` del `except` de
+  `test_the_poll_never_raises` pasa a `raise AssertionError(f"el sondeo lanzó {exc!r}") from exc`.
+  `a9c/codeql_more.py` daba `uninitialized-local? ['estado']` sobre la copia de antes y ya no da nada;
+  el mutante 1 de arriba prueba que el test sigue fallando si el sondeo lanza.
+- `git mv` de 3 módulos (`test_resource_probe.py`, `test_load_probe.py`, `test_backend_probe.py`).
+- `ruff format` reflowó 2 ficheros.
+- EOL: `test_smoke.py` es CRLF y sigue CRLF; el resto, LF y siguen LF (`git ls-files --eol`).
+
+### A9c-3 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- Ninguno: nadie importa ni cita por ruta estos módulos fuera de `.sdd/` histórico.
+
+### A9c-3 · Barrido final
+
+- AST de los 5 ficheros: ningún nombre de código, kwarg, argname de `parametrize`, `except … as` ni
+  alias de import con un `old` del lote; todos los argnames son parámetros de su test.
+- Tokens con un `old`: 0 en código; 44 + 7 + 27 + 5 + 11 en cadenas y 26 en comentarios. Las cadenas
+  (fuera de docstrings) son mensajes de assert en español, nombres de fichero de prueba
+  (`medida.json`, `mapeado.bin`), los ids de `parametrize` (`data-texto`) y el programa hijo `_CHILD`
+  con sus claves `quieto`/`anonimo`/`mapeado` (decisión 4: se quedan).
+- `git grep -w test_sonda|test_sonda_carga|test_sondeo_backend` fuera de `.sdd/`, `benchmarks/` y
+  `CHANGELOG.md`: 0.
+- `--collect-only`: 2572 (`evidence/A9c-3/collect.txt`), los mismos tests por módulo que en el lote 2.
+- Suite (`-n auto --dist loadgroup`): 2570 passed, 2 skipped (`evidence/A9c-3/pytest-full.log`), sin
+  intermitentes. `ruff check` y `ruff format --check` en verde (`evidence/A9c-3/ruff-check.txt`).
+- CodeQL (aproximación AST sobre los 3 ficheros renombrados): 0 patrones; ningún `except X: pass`.
+
+### A9c-3 · Desviaciones
+
+1. **7 filas `pycharm` → `search_edit`**, anotado en la línea `# Fase 2` del CSV: los parámetros
+   homónimos.
+2. El primer intento del mutante 1 no mutó nada (`server.py` es CRLF y la búsqueda era con `
+`); la
+   guarda del sha256 lo detectó (`antes` = `con mutante`) y se repitió con el fin de línea del fichero;
+   `mutant.txt` guarda solo la corrida buena.
 
 ## Pendientes
 
