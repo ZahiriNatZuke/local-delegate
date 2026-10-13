@@ -1,0 +1,144 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -n auto --dist loadgroup -q -p no:cacheprovider
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+..................................s..................................... [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+.............................................................F.......... [ 42%]
+............................................F..........F................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+...............................................s.                        [100%]
+================================== FAILURES ===================================
+_________________ test_the_timeout_during_loading_is_capacity _________________
+[gw6] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+    def test_the_timeout_during_loading_is_capacity():
+        """`/running` dec�a `starting` al vencer: no se le cuenta el fallo a un modelo lento de montar."""
+        doc = _capture("timeout-during-load")
+        assert _model_loaded_at_end(doc) is False
+>       assert _classify_capture(doc) is FailureClass.CAPACITY
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_failure_captures.py:80: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+doc = {'case': 'timeout-during-load', 'captured_utc': '2026-09-15T15:22:51Z', 'versions': {'llama-swap': 'v255 (7761aa1)', 'llama-server': 'b10909 (a2878d30d)'}, 'via': 'llama-swap', ...}
+
+    def _classify_capture(doc: dict) -> FailureClass | None:
+        if "excepcion" in doc:
+            assert doc["exception"]["type"] == "ReadTimeout", (
+                "solo se captur� ReadTimeout como excepci�n"
+            )
+            return classify(
+                httpx2.ReadTimeout(doc["exception"]["message"]),
+                model_loaded=_model_loaded_at_end(doc),
+            )
+>       response = doc["response"]
+                   ^^^^^^^^^^^^^^^
+E       KeyError: 'response'
+
+tests\test_failure_captures.py:47: KeyError
+_____________________ test_a_ttl_counts_from_request_end ______________________
+[gw4] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('<HOME>/AppData/Local/Temp/pytest-of-<USER>/pytest-1365/popen-gw4/test_a_ttl_counts_from_request0')
+
+    def test_a_ttl_counts_from_request_end(tmp_path: Path) -> None:
+        r = _measure_ttl(tmp_path, ttl=2)
+        print(f"\n(a) durante={r['durante']} t_descarga={r['t_descarga']}")
+        assert r["durante"] == {1.0: True, 2.0: True, 3.0: True}  # no se descarga mientras dura
+        loaded_at_4s = r["cargado_a_los_4s"]
+        assert not loaded_at_4s
+        t_unload = r["t_descarga"]
+        assert isinstance(t_unload, float)
+>       assert 2.0 <= t_unload <= 4.0
+E       assert 4.234568357467651 <= 4.0
+
+tests\test_fake_llamaswap.py:78: AssertionError
+---------------------------- Captured stdout call -----------------------------
+
+(a) durante={1.0: True, 2.0: True, 3.0: True} t_descarga=4.234568357467651
+___________ test_d_8_s_request_in_progress_on_reload[cambio_ajeno] ____________
+[gw1] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('<HOME>/AppData/Local/Temp/pytest-of-<USER>/pytest-1365/popen-gw1/test_d_8_s_request_in_progress0')
+case = 'cambio_ajeno'
+
+    @pytest.mark.parametrize("case", ["cambia_el_modelo", "cambio_ajeno"])
+    def test_d_8_s_request_in_progress_on_reload(tmp_path: Path, case: str) -> None:
+        """Anota si la recarga corta una petici�n en curso. Fija lo observado con v255."""
+        models = [FakeModel("m", ttl=60)]
+        new_items = (
+            [FakeModel("m", ttl=61)]
+            if case == "cambia_el_modelo"
+            else [FakeModel("m", ttl=60), FakeModel("otro", ttl=60)]
+        )
+        with fake_llamaswap(tmp_path, models) as ls:
+            result: dict[str, object] = {}
+    
+            def request() -> None:
+                start_ts = time.time()
+                try:
+                    response = ls.chat("m", delay_s=8, timeout=40)
+                    result["estado"] = response.status_code
+                except httpx2.HTTPError as exc:
+                    result["estado"] = type(exc).__name__
+                result["duracion"] = time.time() - start_ts
+    
+            thread = threading.Thread(target=request)
+            thread.start()
+            time.sleep(1.5)
+            output = ls.wait_reload_output(lambda: ls.write_config(ls.config_text(new_items)))
+            thread.join()
+        print(f"\n(d) {case}: salida={output} peticion={result}")
+        assert output == SURCHARGE
+        # Con v255 la recarga CORTA la petici�n en curso (502 a los ~2 s, no los 8 s), cambie o no el
+        # modelo: llama-swap apaga todos los procesos al reiniciar. Por eso REQ-034 mantiene la negativa.
+>       assert result["estado"] == 502
+E       assert 500 == 502
+
+tests\test_fake_llamaswap.py:180: AssertionError
+---------------------------- Captured stdout call -----------------------------
+
+(d) cambio_ajeno: salida=recarg� peticion={'estado': 500, 'duracion': 6.9856555461883545}
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53: 12 warnings
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_failure_captures.py::test_the_timeout_during_loading_is_capacity
+FAILED tests/test_fake_llamaswap.py::test_a_ttl_counts_from_request_end - ass...
+FAILED tests/test_fake_llamaswap.py::test_d_8_s_request_in_progress_on_reload[cambio_ajeno]
+3 failed, 2564 passed, 2 skipped, 12 warnings in 142.72s (0:02:22)

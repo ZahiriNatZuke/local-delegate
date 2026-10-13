@@ -1,0 +1,22 @@
+refactor(rename): nombres en inglés en test_enfriamiento, test_fallos, test_fallos_capturas y sus capturas (ola A9b, lote 1)
+
+Renombra a inglés los nombres de los tests del enfriamiento y de la
+clasificación de fallos: 275 filas del mapping aprobado. Los módulos
+pasan a test_cooldown.py, test_failures.py y test_failure_captures.py,
+con sus 75 test_*; las fixtures reloj/ruta → clock/path, los ayudantes
+(_estado → _state, _fallar → _fail, _captura → _capture,
+_clasificar_captura → _classify_capture…) y sus variables locales.
+
+Las seis capturas de tests/fixtures/backend cambian de nombre
+(error-carga → load-error, oom-con-perfil → oom-with-profile…) y las
+claves de su envoltorio pasan a inglés (peticion → request,
+respuesta → response, clase_esperada → expected_class…). Solo las lee
+test_failure_captures.py. Los ids de modelo cap-* no cambian: son los de
+la captura real.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
+
+Por consecuencia cambian dos citas por ruta: el comentario de
+src/local_delegate/failures.py y el docstring de
+tests/test_fallos_integracion.py.

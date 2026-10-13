@@ -70,7 +70,7 @@ class FailureClass(str, Enum):
 #: Salen de respuestas **reales**, nunca adivinadas (REQ-020): un patrón inventado que leyera un OOM
 #: como fallo del modelo haría saltar el respaldo a otro modelo grande y encadenaría swaps y OOM.
 #: Cada uno lleva la versión de la que salió; si el backend cambia, se recapturan
-#: (`tests/fixtures/backend/`, `tests/test_fallos_capturas.py`).
+#: (`tests/fixtures/backend/`, `tests/test_failure_captures.py`).
 CAPACITY_PATTERNS: tuple[str, ...] = (
     # llama-swap v255 + llama-server b10909, capturado el 2026-09-15. Es el 500 que da llama-swap
     # cuando el `llama-server` que arranca muere antes de estar listo, y es el MISMO cuerpo, byte a

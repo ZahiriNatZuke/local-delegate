@@ -1,0 +1,28 @@
+Mutante: en _classify_capture, la guarda vuelve a la clave vieja ("excepcion" in doc), como la dejó el reemplazo incompleto
+sha antes 3f93c35448c3f0db / mutado 877f704f0b0e150c
+E       KeyError: 'response'
+FAILED tests/test_failure_captures.py::test_the_timeout_during_loading_is_capacity
+1 failed, 9 passed in 0.24s
+restaurado 3f93c35448c3f0db (== antes: si)
+10 passed in 0.11s
+
+Mutante 2: _fail registra un fallo menos (range(times - 1))
+sha antes c9aea7c04c55e616 / mutado 4230733e41a6a0d5
+E         comparison failed
+FAILED tests/test_cooldown.py::test_three_consecutive_failures_cool_the_model_for_120_s
+FAILED tests/test_cooldown.py::test_failures_from_two_processes_add_up - Asse...
+FAILED tests/test_cooldown.py::test_the_timeout_with_the_model_loaded_also_counts
+FAILED tests/test_cooldown.py::test_neutral_classes_neither_add_nor_reset[endpoint]
+FAILED tests/test_cooldown.py::test_neutral_classes_neither_add_nor_reset[request]
+FAILED tests/test_cooldown.py::test_neutral_classes_neither_add_nor_reset[unclassified]
+FAILED tests/test_cooldown.py::test_neutral_classes_neither_add_nor_reset[capacity_or_load]
+E       assert None is not None
+restaurado c9aea7c04c55e616 (== antes: si)
+40 passed in 0.51s
+
+Mutante 3 (producto): src/local_delegate/cooldown.py:167 `>= self._failures` -> `> self._failures` (enfría al fallo N+1)
+sha antes f49b3abeb5d02321 / mutado 63f6a9561df86ca5
+>       assert cooled is not None
+E       assert None is not None
+1 failed in 0.25s
+restaurado f49b3abeb5d02321 (== antes: si); git diff de cooldown.py: 0 líneas
