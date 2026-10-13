@@ -1,21 +1,21 @@
 {
-  "caso": "error-carga",
-  "capturado_utc": "2026-09-15T15:22:48Z",
-  "versiones": {
+  "case": "load-error",
+  "captured_utc": "2026-09-15T15:22:48Z",
+  "versions": {
     "llama-swap": "v255 (7761aa1)",
     "llama-server": "b10909 (a2878d30d)"
   },
   "via": "llama-swap",
-  "clase_esperada": "capacidad_o_carga",
-  "vram_reposo_mib": "673",
-  "peticion": {
+  "expected_class": "capacidad_o_carga",
+  "idle_vram_mib": "673",
+  "request": {
     "model": "cap-error-carga",
     "max_tokens": 16,
     "timeout_s": 120
   },
-  "respuesta": {
+  "response": {
     "status": 500,
-    "texto": "{\"src\":\"llama-swap\",\"error\":{\"message\":\"unspecific error: upstream command exited prematurely\",\"type\":\"server_error\",\"param\":null,\"code\":\"internal_error\"}}",
+    "text": "{\"src\":\"llama-swap\",\"error\":{\"message\":\"unspecific error: upstream command exited prematurely\",\"type\":\"server_error\",\"param\":null,\"code\":\"internal_error\"}}",
     "json": {
       "src": "llama-swap",
       "error": {
@@ -27,10 +27,10 @@
     }
   },
   "elapsed_s": 0.25,
-  "running_al_terminar": {
+  "running_at_end": {
     "running": []
   },
-  "muestras_running": [
+  "running_samples": [
     {
       "t_s": 0.0,
       "running": {

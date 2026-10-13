@@ -2,7 +2,7 @@
 
 Los tres se reprodujeron primero con dobles de `httpx2` y se vieron **rojos** antes de tocar
 `server.py` (`.sdd/changes/delegacion-precisa-y-fiable/research.md`, sección 3). Lo que se prueba
-aquí no es la clasificación —eso es `test_fallos.py`, sin red— sino que la llamada real la usa:
+aquí no es la clasificación —eso es `test_failures.py`, sin red— sino que la llamada real la usa:
 probar la pieza no es probar el uso.
 """
 
