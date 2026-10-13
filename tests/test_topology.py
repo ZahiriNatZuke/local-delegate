@@ -1,7 +1,7 @@
 """Lector de topologia (T7): la regla de choques de llama-swap v255, TTL efectivo y relectura.
 
 Los YAML sinteticos van escritos aqui mismo, al lado de lo que prueban. Los de
-`tests/fixtures/topologia/` son copias saneadas de configs reales (claves y rutas sustituidas):
+`tests/fixtures/topology/` son copias saneadas de configs reales (claves y rutas sustituidas):
 guardan que la regla dice sobre ficheros de verdad lo mismo que la tabla de casos.
 """
 
@@ -16,7 +16,7 @@ import pytest
 from local_delegate import topology
 from local_delegate.topology import NoTopology, Snapshot
 
-FIXTURES = Path(__file__).parent / "fixtures" / "topologia"
+FIXTURES = Path(__file__).parent / "fixtures" / "topology"
 
 
 def _snapshot(tmp_path: Path, yaml_text: str) -> Snapshot | NoTopology:
@@ -541,7 +541,7 @@ def test_reread_by_mtime_only_with_same_size(monkeypatch, tmp_path):
 
 
 def test_todays_config_single_swap_group():
-    f = topology.read(FIXTURES / "hoy.yaml")
+    f = topology.read(FIXTURES / "today.yaml")
     assert isinstance(f, Snapshot)
     real = {g: c for g, c in f.groups.items() if c.members}
     assert list(real) == ["swap"]
@@ -554,7 +554,7 @@ def test_todays_config_single_swap_group():
 
 
 def test_pre_no_resident_config_persistent_4b_does_not_clash_with_26b():
-    f = topology.read(FIXTURES / "pre-sin-residente-20261006.yaml")
+    f = topology.read(FIXTURES / "pre-no-resident-20261006.yaml")
     assert isinstance(f, Snapshot)
     assert f.group("gemma3-4b") == "resident"
     assert f.groups["resident"].persistent is True

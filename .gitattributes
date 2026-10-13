@@ -24,4 +24,4 @@ benchmarks/catalogo-2026-09/fuentes/** -text
 benchmarks/resumen-estructurado/fuentes/** -text
 
 # Copias de las configs de llama-swap para T11: el fin de línea (LF, CRLF o mezclado) es lo que se prueba.
-tests/fixtures/residencia/** -text
+tests/fixtures/residency/** -text

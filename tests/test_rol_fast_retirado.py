@@ -38,22 +38,22 @@ VARIABLES_RETIRADAS = (
 
 
 # --- El rol ya no existe en ningún catálogo -----------------------------------
-def test_el_rol_rapido_no_esta_en_el_catalogo_de_roles(recargar_config):
-    recargar_config()
+def test_el_rol_rapido_no_esta_en_el_catalogo_de_roles(reload_config):
+    reload_config()
     assert "fast" not in config.models_by_role()
     assert set(config.models_by_role()) == {"mechanical", "long", "code"}
 
 
-def test_el_rol_rapido_no_tiene_tope_propio(recargar_config):
+def test_el_rol_rapido_no_tiene_tope_propio(reload_config):
     """Si se quedara el tope sin el rol, `max_chars_for_role('fast')` mentiría con 12 000."""
-    recargar_config()
+    reload_config()
     assert "fast" not in config.MAX_CHARS_BY_ROLE
     # Un rol que no existe cae en el default, como cualquier otro nombre desconocido.
     assert config.max_chars_for_role("fast") == config.max_chars_for_role("no-existe-este-rol")
 
 
-def test_el_modelo_del_rol_retirado_sale_del_catalogo(recargar_config):
-    recargar_config()
+def test_el_modelo_del_rol_retirado_sale_del_catalogo(reload_config):
+    reload_config()
     assert MODELO_RETIRADO not in config.ALLOWED_MODELS
     assert config.ALLOWED_MODELS == {config.MODEL_MECHANICAL, config.MODEL_LONG, config.MODEL_CODE}
 
@@ -71,18 +71,16 @@ def test_el_panel_no_ensena_la_fila_del_rol_rapido(monkeypatch):
     assert roles == {"mechanical", "long", "code", "vision"}
 
 
-def test_las_cadenas_de_respaldo_no_declaran_el_rol_rapido(recargar_config):
+def test_las_cadenas_de_respaldo_no_declaran_el_rol_rapido(reload_config):
     """La fila «rápido -> residente -> largo» de REQ-004 era inalcanzable: se va con el rol."""
-    recargar_config()
+    reload_config()
     assert "fast" not in chains.TEXT_ROLES
     assert "fast" not in chains.DEFAULT_CHAINS
 
 
-def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(
-    recargar_config, tmp_path
-):
+def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(reload_config, tmp_path):
     """Nombrar `fast` en una cadena pasa a ser un error de tecleo como cualquier otro."""
-    recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="fast")
+    reload_config(LOCAL_DELEGATE_FALLBACK_CODE="fast")
     assert chains.resolve("code").ignored == ("fast",)
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.WARN
 
@@ -138,30 +136,30 @@ def test_el_modelo_retirado_tampoco_vale_como_respuesta_a_la_pregunta(monkeypatc
 
 
 # --- Las variables huérfanas: `doctor` avisa ----------------------------------
-def test_sin_variables_del_rol_retirado_el_check_esta_en_ok(recargar_config, tmp_path):
+def test_sin_variables_del_rol_retirado_el_check_esta_en_ok(reload_config, tmp_path):
     """Control: el caso normal —nadie las tiene puestas— no puede dar aviso."""
-    recargar_config()
+    reload_config()
     resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
     assert resultado.status == checks.OK
 
 
-def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(recargar_config, tmp_path):
+def test_cada_variable_del_rol_retirado_se_avisa_por_su_nombre(reload_config, tmp_path):
     """Una por una, y no «alguna»: el aviso tiene que decir cuál quitar."""
     for variable in VARIABLES_RETIRADAS:
-        recargar_config(**{variable: "lo-que-sea"})
+        reload_config(**{variable: "lo-que-sea"})
         resultado = checks._probe_deprecated_names(checks.Context(home=tmp_path))
         assert resultado.status == checks.WARN, f"{variable} puesta no dio aviso"
         assert variable in resultado.detail
         assert "0.30.0" in resultado.detail or "0.30.0" in resultado.fix_hint
 
 
-def test_el_aviso_las_nombra_todas_cuando_estan_las_tres(recargar_config, tmp_path):
-    recargar_config(**dict.fromkeys(VARIABLES_RETIRADAS, "lo-que-sea"))
+def test_el_aviso_las_nombra_todas_cuando_estan_las_tres(reload_config, tmp_path):
+    reload_config(**dict.fromkeys(VARIABLES_RETIRADAS, "lo-que-sea"))
     detalle = checks._probe_deprecated_names(checks.Context(home=tmp_path)).detail
     assert all(v in detalle for v in VARIABLES_RETIRADAS)
 
 
-def test_el_check_esta_en_el_registro(recargar_config):
+def test_el_check_esta_en_el_registro(reload_config):
     """Un probe fuera del registro no lo ejecuta nadie: `doctor` no lo llamaría jamás.
 
     Desde la ola A0 del renombrado es el check general de nombres obsoletos (REQ-003), que
@@ -175,9 +173,9 @@ def test_el_check_esta_en_el_registro(recargar_config):
     assert check.group == "environment"
 
 
-def test_retired_variable_in_settings_json_env_is_also_warned(recargar_config, tmp_path):
+def test_retired_variable_in_settings_json_env_is_also_warned(reload_config, tmp_path):
     """Los hooks heredan de `env` de `settings.json`, que `doctor` no ve en su propia shell."""
-    recargar_config()
+    reload_config()
     claude = tmp_path / ".claude"
     claude.mkdir()
     (claude / "settings.json").write_text(
@@ -191,11 +189,11 @@ def test_retired_variable_in_settings_json_env_is_also_warned(recargar_config, t
     assert "OTRA" not in result.detail
 
 
-def test_retired_variables_come_from_the_single_registry(recargar_config):
+def test_retired_variables_come_from_the_single_registry(reload_config):
     """Una sola fuente: `config` no escribe la lista a mano, la toma de `deprecations`."""
     from local_delegate import deprecations
 
-    recargar_config()
+    reload_config()
     retired = {e.old for e in deprecations.DEPRECATED_NAMES if e.is_retired}
     assert retired == set(VARIABLES_RETIRADAS)
     assert set(config.RETIRED_FAST_ROLE_VARIABLES) == retired

@@ -226,7 +226,7 @@ _hook_log_env = _env("LD_HOOK_TELEMETRY_LOG", "").strip()
 HOOK_TELEMETRY_LOG: Path | None = Path(_hook_log_env) if _hook_log_env else None
 
 # Las otras cuatro que ya leían los hooks y no constaban aquí. Las destapó el guardián nuevo de
-# `tests/test_aislamiento_entorno.py`, que escanea los scripts en vez de fiarse de una lista a
+# `tests/test_environment_isolation.py`, que escanea los scripts en vez de fiarse de una lista a
 # mano: el mismo agujero que describe REQ-022 llevaba abierto desde que existe el hook de lectura.
 # El valor no se usa desde el paquete; lo que importa es que el nombre entre en el inventario.
 HOOK_ENABLED: bool = _env_flag("LD_HOOK_ENABLED", True)

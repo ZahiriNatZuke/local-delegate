@@ -1,7 +1,7 @@
 """T11: editor y CLI de residencia sobre copias (REQ-029 a REQ-033, REQ-035, REQ-038 de ficheros).
 
 Todo se escribe sobre copias en `tmp_path`: la config real de llama-swap no se toca nunca. Las
-copias de las configs reales (`tests/fixtures/residencia/`) llevan las claves sustituidas por
+copias de las configs reales (`tests/fixtures/residency/`) llevan las claves sustituidas por
 `clave-falsa-N`, y un test lo comprueba. La consulta del CLI al daemon la corta la fixture autouse
 `conftest.real_daemon_down`.
 """
@@ -36,9 +36,9 @@ from local_delegate.residency import (
     SetTTL,
 )
 
-FIXTURES = Path(__file__).parent / "fixtures" / "residencia"
-TODAY = FIXTURES / "hoy.yaml"
-PRE_NO_RESIDENT = FIXTURES / "pre-sin-residente-20261006.yaml"
+FIXTURES = Path(__file__).parent / "fixtures" / "residency"
+TODAY = FIXTURES / "today.yaml"
+PRE_NO_RESIDENT = FIXTURES / "pre-no-resident-20261006.yaml"
 PRE_B10909 = FIXTURES / "pre-b10909-20260915.yaml"
 
 # Cifras medidas en F2 (insumos/llamaswap-grupos.md §2), en GiB; el 2B no se midió (extremo alto).
@@ -170,7 +170,7 @@ def test_guard_detects_key_planted_in_real_fixture(planted):
 
 
 def test_guard_does_not_fire_on_valid_content():
-    text = (FIXTURES / "hoy.yaml").read_text(encoding="utf-8")
+    text = (FIXTURES / "today.yaml").read_text(encoding="utf-8")
     assert _key_shaped(text) == []
     assert _key_shaped('apiKeys:\n  - "clave-falsa-7"\n') == []
 
@@ -935,8 +935,8 @@ def test_residency_help_explains_zero_effective_ttl(capsys):
 # --- Corrección tras la revisión de la ola 5 ---------------------------------------------------
 
 _LINE_ENDINGS = {
-    "hoy.yaml": (0, 66),
-    "pre-sin-residente-20261006.yaml": (0, 71),
+    "today.yaml": (0, 66),
+    "pre-no-resident-20261006.yaml": (0, 71),
     "pre-b10909-20260915.yaml": (47, 11),
 }
 

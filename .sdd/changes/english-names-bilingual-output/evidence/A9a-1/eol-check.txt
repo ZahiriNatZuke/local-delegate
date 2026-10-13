@@ -1,0 +1,30 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+M | lf | lf | .gitattributes
+M | lf | lf | src/local_delegate/attribution.py
+M | lf | lf | src/local_delegate/config.py
+M | lf | lf | tests/backend_mock.py
+M | lf | lf | tests/conftest.py
+R100 | mixed | mixed | tests/fixtures/residencia/pre-b10909-20260915.yaml -> tests/fixtures/residency/pre-b10909-20260915.yaml
+R100 | lf | lf | tests/fixtures/residencia/pre-sin-residente-20261006.yaml -> tests/fixtures/residency/pre-no-resident-20261006.yaml
+R100 | lf | lf | tests/fixtures/residencia/hoy.yaml -> tests/fixtures/residency/today.yaml
+R100 | lf | lf | tests/fixtures/topologia/pre-sin-residente-20261006.yaml -> tests/fixtures/topology/pre-no-resident-20261006.yaml
+R100 | lf | lf | tests/fixtures/topologia/hoy.yaml -> tests/fixtures/topology/today.yaml
+M | lf | lf | tests/test_agents.py
+R046 | lf | lf | tests/test_atribucion.py -> tests/test_attribution.py
+M | lf | lf | tests/test_cadenas.py
+M | lf | lf | tests/test_checks.py
+M | lf | lf | tests/test_cli_renamed_names.py
+M | lf | lf | tests/test_commit_language.py
+M | lf | lf | tests/test_doctor.py
+R055 | lf | lf | tests/test_aislamiento_entorno.py -> tests/test_environment_isolation.py
+M | lf | lf | tests/test_observabilidad_respaldo.py
+M | lf | lf | tests/test_panel_estados.py
+M | lf | lf | tests/test_residency.py
+M | lf | lf | tests/test_residency_cli.py
+M | lf | lf | tests/test_respaldo.py
+M | lf | lf | tests/test_rol_fast_retirado.py
+M | lf | lf | tests/test_slowness.py
+M | lf | lf | tests/test_topes_por_rol.py
+M | lf | lf | tests/test_topology.py
+M | lf | lf | tests/test_turn_daemon.py
+diferencias de EOL: 0

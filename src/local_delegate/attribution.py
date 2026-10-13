@@ -14,7 +14,7 @@ Tres preguntas, y las reglas que varios consumidores necesitan, en un solo sitio
   `exclusion_reason` y `cleanup_period_days`.
 
 Solo stdlib. La nota la escribe un hook que no puede importar este módulo, así que su formato vive
-en dos sitios y lo ata un test de ida y vuelta (`tests/test_atribucion.py`).
+en dos sitios y lo ata un test de ida y vuelta (`tests/test_attribution.py`).
 """
 
 from __future__ import annotations

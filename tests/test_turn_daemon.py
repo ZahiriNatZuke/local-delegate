@@ -1,7 +1,7 @@
 """T10 de `daemon-reparte-el-backend`: el turno por conjunto de modelos compatibles, en el daemon.
 
 Los escenarios de la spec (REQ-002 a REQ-009) sobre el daemon de verdad (`server`), con la topología
-de hoy (`tests/fixtures/topologia/hoy.yaml`, todo en un grupo `swap`) copiada a `tmp_path`. Cada test
+de hoy (`tests/fixtures/topology/today.yaml`, todo en un grupo `swap`) copiada a `tmp_path`. Cada test
 de concurrencia lleva una guarda que demuestra que el guion discrimina —que sin turno el resultado
 sería otro— antes del assert principal: un test que no puede ver la diferencia no es un control.
 
@@ -30,7 +30,7 @@ URL = f"{BASE}/chat/completions"
 MECHANICAL = "gemma3-4b"
 LONG = "gemma4-26b-a4b"
 CODE = "qwen36-35b-a3b"
-TODAY = Path(__file__).parent / "fixtures" / "topologia" / "hoy.yaml"
+TODAY = Path(__file__).parent / "fixtures" / "topology" / "today.yaml"
 
 #: Una config en la que el 26B y Qwen3.6 NO chocan: cada uno en su grupo, ninguno exclusivo.
 SEPARATE = """\

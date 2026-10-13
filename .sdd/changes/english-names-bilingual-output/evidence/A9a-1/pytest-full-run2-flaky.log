@@ -1,0 +1,126 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -q -n auto --dist loadgroup
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+............s........................................................... [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+..............................................................F......... [ 86%]
+........................................................................ [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+.............................................s.                          [100%]
+================================== FAILURES ===================================
+________________ test_la_unidad_de_los_kpis_no_se_corta[ancha] ________________
+[gw0] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('<TEMP>/pytest-of-<user>/pytest-1333/popen-gw0/test_la_unidad_de_los_kpis_no_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000294F89F7F90>
+fuentes = 'ancha'
+
+    @pytest.mark.parametrize("fuentes", FUENTES)
+    def test_la_unidad_de_los_kpis_no_se_corta(tmp_path, monkeypatch, fuentes):
+        """�3.161.168 tok� en el hero sal�a como �3.161.168 to� entre 1320 y 1440 px. Con cifras de
+        siete d�gitos en los KPIs, a 1280, 1366 y 1440 px y en los dos temas, nada se sale."""
+        _log_coste_e_imagen(tmp_path, monkeypatch)
+    
+        def _cifras_grandes(ruta):
+            respuesta = ruta.fetch()
+            datos = respuesta.json()
+            datos.update(
+                tokens_context_net=3_161_168,
+                tokens_context_saved=3_250_647,
+                tokens_returned=89_479,
+                tokens_generated_local=123_478,
+                tokens_local_input=1_898_456,
+            )
+            ruta.fulfill(response=respuesta, body=json.dumps(datos))
+    
+        desbordes = {}
+        with _Servidor(9495) as servidor, sync_playwright() as pw:
+            navegador = _navegador(pw)
+            for ancho in (1280, 1366, 1440):
+                for tema in ("dark", "light"):
+                    pagina = navegador.new_page(viewport={"width": ancho, "height": 900})
+                    pagina.add_init_script(
+                        f"try{{localStorage.setItem('ld-theme','{tema}')}}catch(e){{}}"
+                    )
+                    _antes_de_cargar(pagina, fuentes)
+                    pagina.route(re.compile(r"/api/stats(\?|$)"), _cifras_grandes)
+>                   pagina.goto(servidor.url)
+
+tests\test_dashboard_ui.py:869: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\playwright\sync_api\_generated.py:9903: in goto
+    self._sync(
+.venv\Lib\site-packages\playwright\_impl\_page.py:562: in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\playwright\_impl\_frame.py:157: in goto
+    await self._channel.send(
+.venv\Lib\site-packages\playwright\_impl\_connection.py:76: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <playwright._impl._connection.Connection object at 0x00000294F898D310>
+cb = <function Channel.send.<locals>.<lambda> at 0x00000294F8AF6DE0>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        parsed_st = _attach_api_call_information(
+            getattr(task, "__pw_stack__", None) or _capture_stack_trace(),
+            is_internal,
+            title,
+        )
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.Error: Page.goto: net::ERR_NO_BUFFER_SPACE at http://127.0.0.1:9495/
+E           Call log:
+E             - navigating to "http://127.0.0.1:9495/", waiting until "load"
+
+.venv\Lib\site-packages\playwright\_impl\_connection.py:632: Error
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53: 12 warnings
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_dashboard_ui.py::test_la_unidad_de_los_kpis_no_se_corta[ancha]@dashboard_ui
+1 failed, 2564 passed, 2 skipped, 12 warnings in 54.33s

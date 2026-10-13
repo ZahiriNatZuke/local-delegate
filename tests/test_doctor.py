@@ -255,7 +255,7 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     # `backend.residency` y `backend.topology` (T13) leen la config de llama-swap de `--config`: la
     # de hoy (copia con claves falsas), sin residente y con turno. Sin ella serían `unknown`.
-    hoy = Path(__file__).parent / "fixtures" / "residencia" / "hoy.yaml"
+    hoy = Path(__file__).parent / "fixtures" / "residency" / "today.yaml"
     args = argparse.Namespace(config=str(hoy), online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
     # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.
