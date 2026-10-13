@@ -1,0 +1,8 @@
+mutante M1: src/local_delegate/probes.py «httpx2.Timeout(config.PROBE_READ_TIMEOUT, connect=config.PROBE_CONNECT_TIMEOUT)» → «httpx2.Timeout(config.PROBE_READ_TIMEOUT, connect=config.PROBE_READ_TIMEOUT)» (1 sitio/s; sha256 69ca3701f83a -> a1c77e14a87b)
+>       assert connect_timeout == config.PROBE_CONNECT_TIMEOUT
+E       AssertionError: assert 2.0 == 3.0
+E        +  where 3.0 = <module 'local_delegate.config' from 'D:\\Projects\\local-delegate\\src\\local_delegate\\config.py'>.PROBE_CONNECT_TIMEOUT
+tests\test_doctor.py:406: AssertionError
+1 failed in 3.65s
+restaurado desde copia: sha256 69ca3701f83a (igual al original: sí)
+

@@ -1,0 +1,18 @@
+refactor(rename): nombres en inglés en la parte Python de test_dashboard_ui y en test_doctor (ola A9a, lote 6)
+
+Renombra a inglés los nombres Python de test_dashboard_ui.py (CRLF) y
+test_doctor.py: 256 filas del mapping aprobado. Entre ellas, los 36
+test_* de esos módulos, la fixture medidas → measurements, el servidor y
+el navegador de prueba (_Servidor → _Server, _navegador → _browser), las
+constantes de las cifras del panel (_BRUTO/_DEVUELTO/_NETO →
+_GROSS/_RETURNED/_NET) y las sondas JS de tipografía y medidas
+(_MEDIR → _MEASURE, _TIPOGRAFIA_TABLAS → _TABLE_TYPOGRAPHY…), con las
+cadenas de parametrize que los ligan. El JS de los tests dentro de
+cadenas va en el lote siguiente.
+
+El assert de test_dashboard_ui.py que sacaba el elemento con
+familias.pop() (alerta py/side-effect-in-assert de CodeQL) pasa a
+next(iter(families)): afirma lo mismo sin modificar el conjunto.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.

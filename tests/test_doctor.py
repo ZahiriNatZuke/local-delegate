@@ -255,8 +255,8 @@ def test_run_doctor_exit_0_when_everything_is_in_place(tmp_path, monkeypatch, ca
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     # `backend.residency` y `backend.topology` (T13) leen la config de llama-swap de `--config`: la
     # de hoy (copia con claves falsas), sin residente y con turno. Sin ella serían `unknown`.
-    hoy = Path(__file__).parent / "fixtures" / "residency" / "today.yaml"
-    args = argparse.Namespace(config=str(hoy), online=False, home=str(home))
+    today = Path(__file__).parent / "fixtures" / "residency" / "today.yaml"
+    args = argparse.Namespace(config=str(today), online=False, home=str(home))
     assert doctor.run_doctor(args) == 0
     # Solo las líneas de los checks: la leyenda de la cabecera nombra todos los estados.
     out = capsys.readouterr().out
@@ -312,7 +312,7 @@ def test_run_doctor_keeps_the_previous_output(tmp_path, monkeypatch, capsys):
     assert f"llama-server: {probes.RECOMMENDED_VERSIONS['llama-server']} (= probada)" in out
 
 
-def test_el_daemon_responde_por_el_backend_y_se_acabo_el_401(tmp_path, monkeypatch, capsys):
+def test_the_daemon_answers_for_the_backend_and_the_401_is_gone(tmp_path, monkeypatch, capsys):
     """El caso que motivó el cambio, encontrado en uso real.
 
     La clave del backend se lee del entorno del proceso: el daemon la recibe de su lanzador, pero
@@ -328,14 +328,14 @@ def test_el_daemon_responde_por_el_backend_y_se_acabo_el_401(tmp_path, monkeypat
     assert "CAÍDO" not in out
 
 
-def test_si_el_daemon_dice_que_el_backend_esta_caido_eso_no_es_una_duda(tmp_path, monkeypatch):
+def test_if_the_daemon_says_the_backend_is_down_that_is_not_a_doubt(tmp_path, monkeypatch):
     """El daemon SÍ tiene credencial, así que su «no disponible» es diagnóstico, no incertidumbre."""
     _stub_environment(monkeypatch, backend=True, backend_via_daemon={"available": False})
     args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
     assert doctor.run_doctor(args) == 1  # cuenta como aviso, no como `[ -- ]`
 
 
-def test_sin_daemon_el_backend_se_prueba_directo_como_siempre(tmp_path, monkeypatch, capsys):
+def test_without_daemon_the_backend_is_tested_directly_as_always(tmp_path, monkeypatch, capsys):
     """Cuando nadie puede mirar por nosotros, el camino viejo sigue siendo el correcto."""
     _stub_environment(monkeypatch, backend=False, daemon_alive=False, backend_via_daemon=None)
     args = argparse.Namespace(config=None, online=False, home=str(make_home(tmp_path)))
@@ -376,16 +376,16 @@ def test_run_doctor_writes_nothing_in_an_empty_home(tmp_path, monkeypatch):
 # --- backend_probe: plazo de sondeo y causa (REQ-013, REQ-016) -----------------------------------
 
 
-def test_backend_probe_usa_el_plazo_de_sondeo(monkeypatch):
+def test_backend_probe_uses_the_probe_timeout(monkeypatch):
     import httpx2
 
     from local_delegate import config
 
-    plazos = []
+    timeouts = []
 
-    class _Registrador:
+    class _Recorder:
         def __init__(self, *args, timeout=None, **kwargs):
-            plazos.append(timeout)
+            timeouts.append(timeout)
 
         def __enter__(self):
             return self
@@ -396,26 +396,26 @@ def test_backend_probe_usa_el_plazo_de_sondeo(monkeypatch):
         def get(self, url, **kwargs):
             raise httpx2.ConnectError("x", request=httpx2.Request("GET", url))
 
-    monkeypatch.setattr(httpx2, "Client", _Registrador)
+    monkeypatch.setattr(httpx2, "Client", _Recorder)
 
     probes.backend_probe()
 
-    (t,) = plazos
-    plazo_conexion = t.connect if isinstance(t, httpx2.Timeout) else t
-    plazo_lectura = t.read if isinstance(t, httpx2.Timeout) else t
-    assert plazo_conexion == config.PROBE_CONNECT_TIMEOUT
-    assert plazo_lectura == config.PROBE_READ_TIMEOUT
+    (t,) = timeouts
+    connect_timeout = t.connect if isinstance(t, httpx2.Timeout) else t
+    read_timeout = t.read if isinstance(t, httpx2.Timeout) else t
+    assert connect_timeout == config.PROBE_CONNECT_TIMEOUT
+    assert read_timeout == config.PROBE_READ_TIMEOUT
 
 
-def test_backend_probe_sin_daemon_dice_dns(monkeypatch):
+def test_backend_probe_without_daemon_says_dns(monkeypatch):
     """Red real: un nombre `.invalid` no resuelve nunca (RFC 6761)."""
     from local_delegate import config
 
     monkeypatch.setattr(config, "BASE_URL", "http://no-existe.invalid:9292/v1")
 
-    vista = probes.backend_probe()
+    view = probes.backend_probe()
 
-    assert "no se resuelve" in vista[1]
-    assert vista.cause == "dns"
-    assert vista.source == "direct"
-    assert vista.healthy is False
+    assert "no se resuelve" in view[1]
+    assert view.cause == "dns"
+    assert view.source == "direct"
+    assert view.healthy is False

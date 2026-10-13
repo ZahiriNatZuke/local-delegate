@@ -4,12 +4,12 @@ La subola se parte en 7 lotes (D13: 1788 filas, máximo 300 por lote y sin parti
 la excepción aprobada del JS de `test_dashboard_ui.py`, que va al lote 7). Cada lote es un commit
 que hace la sesión principal, en una rama apilada sobre el anterior. Los **lotes 1 y 2** están en `main`
 (`2860497`, PR #272; `b10b468`, PR #273); el **lote 3** en `a6069f8` (PR #274), con el arreglo de
-CodeQL `2809dd1`; el **lote 4** en `d525e3f`. El **lote 5** está aplicado y registrado en la sección
-«A9a-5», al final. Las tablas de controles positivos, `local_*` y PyCharm son las de los lotes ya
-aplicados, porque `check_wave_records.py` lee la primera tabla de cada sección: 37 + 21 + 21 + 18 +
-32 = 129 filas `rename_refactoring` = 129 filas `pycharm` de los mappings A9a-1 a A9a-5.
+CodeQL `2809dd1`; el **lote 4** en `d525e3f`; el **lote 5** en `fcc6dba`. El **lote 6** está aplicado y registrado en
+la sección «A9a-6», al final. Las tablas de controles positivos, `local_*` y PyCharm son las de los
+lotes ya aplicados, porque `check_wave_records.py` lee la primera tabla de cada sección: 37 + 21 + 21
++ 18 + 32 + 34 = 163 filas `rename_refactoring` = 163 filas `pycharm` de los mappings A9a-1 a A9a-6.
 
-- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, commit `584845c` (PR #273), rebasado sobre `main` con el lote 1 (`2860497`); lote 3 en `sdd/english-names-a9a-3`, commit `a6069f8` (PR #274), rebasado sobre `main`; lote 4 en `sdd/english-names-a9a-4`, commit `d525e3f`, sobre `2809dd1` (arreglo de CodeQL de la sesión principal); lote 5 en `sdd/english-names-a9a-5`, apilada sobre `d525e3f` · Commit del lote 5: pendiente, con el borrador en `waves/A9a-5-commit-msg.txt` (firmado y sin coautoría)
+- Rama: lote 1 en `sdd/english-names-a9a`, desde `main` en `f4a869f` (A8b mezclada), commit `799562a` (PR #272); lote 2 en `sdd/english-names-a9a-2`, commit `584845c` (PR #273), rebasado sobre `main` con el lote 1 (`2860497`); lote 3 en `sdd/english-names-a9a-3`, commit `a6069f8` (PR #274), rebasado sobre `main`; lote 4 en `sdd/english-names-a9a-4`, commit `d525e3f`, sobre `2809dd1` (arreglo de CodeQL de la sesión principal); lote 5 en `sdd/english-names-a9a-5`, commit `fcc6dba`; lote 6 en `sdd/english-names-a9a-6`, apilada sobre `fcc6dba` · Commit del lote 6: pendiente, con el borrador en `waves/A9a-6-commit-msg.txt` (firmado y sin coautoría)
 - Quién: un agente hizo los 7 mappings (fase 1). Tras la aprobación de la sesión principal (decisiones 1-8, con `esp`→`expected` y `clase`→`css_class`/`cls`/`content_class` según lo que nombre), el mismo agente aplicó el lote 1 (fase 2)
 - REQ cubiertos por el lote 1: REQ-015 (nombres de `tests/conftest.py`, `tests/backend_mock.py`, `test_agents.py`, `test_aislamiento_entorno.py`→`test_environment_isolation.py` y `test_atribucion.py`→`test_attribution.py`, más los directorios de fixtures `residencia`→`residency` y `topologia`→`topology`) y REQ-017 (ningún assert cambia de sentido)
 - Ficheros poseídos por el lote 1: `tests/conftest.py`, `tests/backend_mock.py`, `tests/test_agents.py`, `tests/test_aislamiento_entorno.py`, `tests/test_atribucion.py` y `tests/fixtures/{residencia,topologia}/`. Lo de fuera, en «Desviaciones»
@@ -31,6 +31,7 @@ aplicados, porque `check_wave_records.py` lee la primera tabla de cada sección:
 | `tests/test_checks.py::test_an_http_entry_without_credential_is_tagged_no_credential` (test NUEVO del lote 3) | `checks.py`: los 4 `"no_credential"` → `"sin_credencial"`, con lo que el probe queda coherente (sha256 `6766bd49328a` → `a7d3cedbcf2b`) | `test_checks.py:1286` `assert checks._entry_auth(client, "http", None) == (client, "no_credential")` → `'sin_credencial' != 'no_credential'`; los otros dos pasan (M2b) | sí, desde copia: `6766bd49328a` |
 | `tests/test_ci_gate.py::test_waits_for_the_missing_ones_and_then_passes` (lote 4; usa los renombrados `_Clock.sleep`, `_run(read, clock)` y `_all`) | `scripts/ci_gate.py:277`: `dormir(INTERVALO_S)` → `dormir(2 * INTERVALO_S)` (sha256 `877a25dae814` → `895b50d8bdae`) | `test_ci_gate.py:242` `assert clock.t == ci_gate.INTERVALO_S` → `assert 20.0 == 10`; el otro test del bucle pasa (`evidence/A9a-4/mutant.txt`) | sí, desde copia: `877a25dae814` |
 | `tests/test_density.py::test_the_tool_wins_over_the_extension` (lote 5; usa la variable renombrada `content_class` y el módulo `test_densidad`→`test_density`) | `src/local_delegate/cost.py:101`: `if by_tool:` → `if by_tool and not event.get("path"):`, con lo que la extensión gana a la tool (sha256 `412e2b7e8c16` → `86576b81627a`) | `test_density.py:117` `assert content_class == "log"` → `'code' == 'log'` (`evidence/A9a-5/mutant.txt`) | sí, desde copia: `412e2b7e8c16` |
+| `tests/test_doctor.py::test_backend_probe_uses_the_probe_timeout` (lote 6; usa la anidada renombrada `_Recorder`) | `src/local_delegate/probes.py:279`: `connect=config.PROBE_CONNECT_TIMEOUT` → `connect=config.PROBE_READ_TIMEOUT` (sha256 `69ca3701f83a` → `a1c77e14a87b`) | `test_doctor.py:406` `assert connect_timeout == config.PROBE_CONNECT_TIMEOUT` → `assert 2.0 == 3.0` (`evidence/A9a-6/mutant.txt`) | sí, desde copia: `69ca3701f83a` |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -41,6 +42,8 @@ aplicados, porque `check_wave_records.py` lee la primera tabla de cada sección:
 | agente A9a-3 | `local_lint_summary(path=evidence/A9a-3/pytest-full.log)` | resumen de la suite del lote 3 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 | agente A9a-4 | `local_lint_summary(path=evidence/A9a-4/pytest-full.log)` | resumen de la suite del lote 4 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
 | agente A9a-5 | `local_lint_summary(path=evidence/A9a-5/pytest-full.log)` | resumen de la suite del lote 5 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
+| agente A9a-6 | `local_lint_summary(path=evidence/A9a-6/pytest-full.log)` | resumen de la suite del lote 6 | útil: solo los 12 avisos de `BlockingPortal`, ningún fallo |
+| agente A9a-6 | `local_lint_summary(path=evidence/A9a-6/playwright.log)` | resumen de Playwright entero (`test_dashboard_ui`, `test_panel_estados`, `test_panel_coste`) | útil: 0 errores en los tres, solo el aviso de Starlette |
 
 Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto de cada nombre, reglas del brief) y las listas largas fueron a ficheros del scratchpad, leídos por franjas.
 
@@ -182,6 +185,41 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 | agente A9a-5 | `rename_refactoring` | `_bloque_de_tokens_aprox` → `_approx_tokens_block` | 1 uso |
 | agente A9a-5 | `rename_refactoring` | `_acct_en_js` → `_acct_in_js` | 4 usos |
 | agente A9a-5 | `get_file_problems` | `tests/test_quota.py`, `tests/test_daemon.py`, `tests/test_density.py` (solo errores) | 0 errores nuevos: los 3 de `test_daemon.py` (`Unresolved reference 'Server'` en `monkeypatch.setattr(daemon.uvicorn, "Server", …)`) ya estaban en HEAD |
+| agente A9a-6 | `rename_refactoring` | `_tam_pagina` → `_page_size` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_eventos` → `_events` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_Servidor` → `_Server` | 16 usos |
+| agente A9a-6 | `rename_refactoring` | `_navegador` → `_browser` | 16 usos |
+| agente A9a-6 | `rename_refactoring` | `_filas_visibles` → `_visible_rows` | 3 usos |
+| agente A9a-6 | `rename_refactoring` | `_CHARS_DEVUELTOS` → `_CHARS_RETURNED` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_CHARS_LEIDOS` → `_CHARS_READ` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_BRUTO` → `_GROSS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_DEVUELTO` → `_RETURNED` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_NETO` → `_NET` | 3 usos |
+| agente A9a-6 | `rename_refactoring` | `_PROCESO` → `_PROCESS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_MEDIR_TARJETAS` → `_MEASURE_CARDS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_MEDIR` → `_MEASURE` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_log_presentacion` → `_showcase_log` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `medidas` → `measurements` | 0 usos (fixture: los parámetros ya los había renombrado `apply`) |
+| agente A9a-6 | `rename_refactoring` | `_SISTEMA_ESTADOS` → `_SYSTEM_STATES` | 5 usos |
+| agente A9a-6 | `rename_refactoring` | `_TIPOGRAFIA_TARJETAS` → `_CARD_TYPOGRAPHY` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_log_coste_e_imagen` → `_cost_and_image_log` | 11 usos |
+| agente A9a-6 | `rename_refactoring` | `FUENTES` → `FONT_STATES` | 4 usos |
+| agente A9a-6 | `rename_refactoring` | `_FUENTE_ANCHA` → `_WIDE_FONT` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_INTER_CARGADA` → `_INTER_LOADED` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_antes_de_cargar` → `_before_loading` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_tras_cargar` → `_after_loading` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_DESBORDES_KPI` → `_KPI_OVERFLOWS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_HOOKS_CRUDOS` → `_RAW_HOOKS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_SISTEMA` → `_SYSTEM` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_clientes_crudos` → `_raw_clients` | 1 uso |
+| agente A9a-6 | `rename_refactoring` | `_pagina_completa` → `_full_page` | 6 usos |
+| agente A9a-6 | `rename_refactoring` | `_PRIMERAS_COLUMNAS` → `_FIRST_COLUMNS` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_TIPOGRAFIA_TABLAS` → `_TABLE_TYPOGRAPHY` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_SIMETRIA_KPIS` → `_KPI_SYMMETRY` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_DECIMAL_CON_PUNTO` → `_DECIMAL_WITH_DOT` | 3 usos |
+| agente A9a-6 | `rename_refactoring` | `_SPARK_Y_PISTA` → `_SPARK_AND_HINT` | 2 usos |
+| agente A9a-6 | `rename_refactoring` | `_miles` → `_thousands` | 4 usos |
+| agente A9a-6 | `get_file_problems` | `tests/test_dashboard_ui.py`, `tests/test_doctor.py` (solo errores) | 0 errores nuevos: el de `test_doctor.py:399` (`Unresolved reference 'Client'` en `monkeypatch.setattr(httpx2, "Client", …)`) ya estaba en HEAD |
 
 ## Revisión del diff tras rename_refactoring
 
@@ -217,6 +255,7 @@ Fase 1 (mappings): 0 llamadas, porque hacían falta líneas literales (contexto 
 
 - **Tests nuevos sin renombrado** (respuesta de la sesión principal): el test de `no_credential` («Hallazgos» de A8a-1) está hecho en el lote 3 (2 tests nuevos en `test_checks.py`). El test que fija los esquemas de `elicitation` es de `test_preguntas.py`: va en A9b.
 - **A9b:** `tests/fixtures/backend/*.json` (nombres en español, los usa `test_fallos_capturas.py`); `test_preguntas.py`; lo de `test_panel_estados.py` heredado de A8b.
+- **A9b, carrera en `test_panel_estados.py::test_turn_wait_shown_in_panel_as_local_wait`** (la vio la sesión principal): falló una vez en el CI de Ubuntu con `'procesando' == 'en cola local'`. El bucle de espera da por buena la entrada de `inflight` en cuanto trae `turn_in_use`, sin esperar a `local_wait`, así que a veces el panel pinta antes de que llegue la espera. No se arregla en A9a, porque el fichero es de A9b: allí, que el bucle espere también a `local_wait` (y un control positivo que lo distinga).
 - **Lotes 2-7:** aplicar sus mappings con las lecciones de arriba.
 
 ---
@@ -390,3 +429,48 @@ Los pidió el hallazgo de A8a-1: el valor interno `"no_credential"` no lo proteg
 
 1. **12 filas `pycharm` → `search_edit`**: `fuera`, `sin_precio`, `coste`, `sesion`, `siete`, `fuente` ×2, `registro` ×2, `respuesta`, `casos` y `texto`. Lo anota una línea `# Fase 2` del CSV.
 2. Las filas de `autoarranque` y `camino` anotan en su motivo la cadena de `parametrize` que cambió con ellas.
+
+---
+
+## A9a-6 — parte Python de `test_dashboard_ui` y `test_doctor` (aplicado)
+
+- Rama: `sdd/english-names-a9a-6`, apilada sobre el lote 5 (`fcc6dba`)
+- REQ cubiertos: REQ-015 (nombres Python de `test_dashboard_ui.py`, que es CRLF, y de `test_doctor.py`) y REQ-017. El JS de `test_dashboard_ui.py` metido en cadenas va en el lote 7
+- Ficheros poseídos: esos 2 ficheros de test. Fuera: ninguno
+- EOL: `evidence/A9a-6/eol-check.txt`: 0 diferencias. `test_dashboard_ui.py` sigue CRLF sin ningún LF suelto, comprobado también después de `ruff format`
+- Mapping: `waves/A9a-6-mapping.csv` aprobado (`# approved-by-main: 2026-10-13`), 256 filas. Filas `pycharm` 34 = filas `rename_refactoring` 34. Filas `search_edit` 222, cada una con su motivo:
+  - 218 con `make_mapping.py apply` (698 reemplazos: `test_dashboard_ui` 678 y `test_doctor` 20), más el `def`/`class` de 3 anidadas (`_inyectar`, `_cifras_grandes` y `_Registrador`);
+  - 4 pasadas de `pycharm` a `search_edit` en la fase 2
+- Tests recogidos: 2569 → 2569 (`evidence/A9a-6/collect.txt`), +0 −0. Por fichero, iguales: `test_dashboard_ui.py` 39 y `test_doctor.py` 26. Los ids de `parametrize` son los mismos
+- Suite: `evidence/A9a-6/pytest-full.log` (`pytest -q -n auto --dist loadgroup`, con `pesado.sh`), verde a la primera: 2567 pasan, 2 saltados y el aviso conocido de `BlockingPortal`, en 59 s
+- Playwright entero, con el cerrojo: `evidence/A9a-6/playwright.log` (`test_dashboard_ui.py`, `test_panel_estados.py` y `test_panel_coste.py`). Pasan 78 y se salta 1 (`test_dashboard_ui.py`, el que solo aplica al CI). Se corrió antes y después de `ruff format`, con el mismo resultado
+- `ruff check` y `ruff format --check`: limpios (`evidence/A9a-6/ruff-check.txt`, 187 ficheros). Antes, `ruff format` reajustó `test_dashboard_ui.py`
+- Tamaño: 2 ficheros, +550 −554 (`git diff HEAD -M30% --numstat --ignore-cr-at-eol`)
+
+### A9a-6 · Qué se hizo
+
+1. `make_mapping.py apply`: 698 reemplazos. `nested_defs.py`: 3 anidadas.
+2. **Cadenas de `parametrize`**: `"estado"` → `"state"` (:553) y `"fuentes"` → `"fonts"` (:840, :1073 y :1166).
+3. `a9a/lineedit.py`:
+   - el parámetro `estado` con sus 3 usos;
+   - los parámetros `cuerpo` de los dos `_json` (:368 y :922);
+   - el atributo `self._hilo` (:104, :108 y :117);
+   - las lambdas `lambda ruta: ruta.fulfill(…)` → `lambda route: route.fulfill(…)`. Los parámetros de las lambdas no son filas del mapping: `make_mapping` no los define. Se eligió `route` y no `path` porque son objetos `Route` de Playwright.
+4. **CodeQL, `test_dashboard_ui.py:417`** (alerta abierta en `main`, `py/side-effect-in-assert`):
+   - El lote tocaba esa línea al renombrar `familias`→`families`. Si se dejaba `assert "Inter" in families.pop()`, el texto de la línea cambiaba y CodeQL podía verla como alerta nueva.
+   - Pasa a `assert "Inter" in next(iter(families))`. Afirma lo mismo (el único elemento del conjunto, porque el assert anterior exige `len(families) == 1`) y sin efecto lateral, así que **la alerta abierta debería cerrarse** con este lote en vez de reaparecer.
+   - La aproximación AST (`evidence/A9a-6/codeql-like.txt`) da 0 hallazgos en los dos ficheros del lote y la alerta en el `test_dashboard_ui.py` de `fcc6dba` (control positivo).
+5. PyCharm: 34 `rename_refactoring`. Reescribió 2 documentos de `.sdd/`, este registro (`A9a.md`, todavía sin editar en este lote) y un `verification.md` de otro SDD: devueltos a HEAD con `git checkout`. El mapping 7 sigue igual byte a byte.
+6. Citas entre comillas invertidas repuestas: `` `cuantos` `` (:61) y `` `_navegador` `` (:1330).
+
+### A9a-6 · Barrido final
+
+- AST (`a9a/sweep_after.py`): ninguna definición con un `old` del lote y ningún uso en código. El detector marca `test_the_calibrated_quota_appears_as_a_meter` por «calibrated» (falso positivo, como el «-sion» del lote 3).
+- `git grep -w` en los ficheros del lote, por token: 153 en textos (74 docstrings, 36 comentarios y 43 cadenas). Quedan los textos visibles del panel que afirman los tests y **el JS en cadenas** (`const fila`, `texto:`, `pista`…), que es del lote 7.
+- Resto del repo: los homónimos que salen son de otros módulos.
+
+### A9a-6 · Desviaciones
+
+1. **4 filas `pycharm` → `search_edit`**: `cuerpo` ×2, `estado` y el atributo `_hilo`. Lo anota una línea `# Fase 2` del CSV.
+2. **El arreglo de `py/side-effect-in-assert` en :417**: cambia la forma del assert, no lo que afirma. Va anotado en la fila `familias`.
+3. Las lambdas `ruta`→`route`: fuera del mapping, anotado en las filas `cuerpo`.
