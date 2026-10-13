@@ -32,29 +32,29 @@ def _load(name: str):
 shell_hook = _load("suggest_delegate_shell")
 
 
-def _correr(monkeypatch, capsys, comando, *, backend=True, bloquear=True, log=None):
+def _run(monkeypatch, capsys, command, *, backend=True, block=True, log=None):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
-    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if bloquear else "0")
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if block else "0")
     if log is not None:
         monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setattr(shell_hook, "backend_available", lambda **k: backend)
-    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"tool_input": {"command": comando}})))
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"tool_input": {"command": command}})))
     shell_hook.main()
     return capsys.readouterr().out
 
 
 @pytest.fixture
-def documento(tmp_path):
-    fichero = tmp_path / "informe.md"
-    fichero.write_text("x" * 40 * 1024, encoding="utf-8")
-    return fichero
+def document(tmp_path):
+    file = tmp_path / "informe.md"
+    file.write_text("x" * 40 * 1024, encoding="utf-8")
+    return file
 
 
 # --- Lo que SÍ se bloquea ---------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "plantilla",
+    "template",
     [
         "cat {p}",
         "type {p}",
@@ -67,11 +67,9 @@ def documento(tmp_path):
         "CAT {p}",
     ],
 )
-def test_las_formas_simples_de_volcar_un_documento_se_bloquean(
-    monkeypatch, capsys, documento, plantilla
-):
-    salida = _correr(monkeypatch, capsys, plantilla.format(p=documento))
-    decision = json.loads(salida)["hookSpecificOutput"]
+def test_the_simple_ways_to_dump_a_document_are_blocked(monkeypatch, capsys, document, template):
+    output = _run(monkeypatch, capsys, template.format(p=document))
+    decision = json.loads(output)["hookSpecificOutput"]
 
     assert decision["permissionDecision"] == "deny"
     assert "local_summarize" in decision["permissionDecisionReason"]
@@ -82,7 +80,7 @@ def test_las_formas_simples_de_volcar_un_documento_se_bloquean(
 
 
 @pytest.mark.parametrize(
-    "comando",
+    "command",
     [
         "cat {p} | head -20",
         "cat {p} > copia.md",
@@ -116,68 +114,68 @@ def test_las_formas_simples_de_volcar_un_documento_se_bloquean(
         "verbo que empieza igual",
     ],
 )
-def test_lo_que_no_es_un_volcado_limpio_pasa(monkeypatch, capsys, documento, comando):
+def test_what_is_not_a_clean_dump_passes(monkeypatch, capsys, document, command):
     """Ante la duda, no se bloquea. Un falso positivo aquí se lleva por delante el experimento."""
-    assert _correr(monkeypatch, capsys, comando.format(p=documento)) == ""
+    assert _run(monkeypatch, capsys, command.format(p=document)) == ""
 
 
-def test_un_json_grande_no_se_bloquea(monkeypatch, capsys, tmp_path):
+def test_a_large_json_is_not_blocked(monkeypatch, capsys, tmp_path):
     """Mismo trato que en el hook de lectura: los datos se leen para sacar un valor exacto."""
-    datos = tmp_path / "state.json"
-    datos.write_text("x" * 40 * 1024, encoding="utf-8")
+    data = tmp_path / "state.json"
+    data.write_text("x" * 40 * 1024, encoding="utf-8")
 
-    assert _correr(monkeypatch, capsys, f"cat {datos}") == ""
-
-
-def test_un_documento_pequeno_no_se_bloquea(monkeypatch, capsys, tmp_path):
-    corto = tmp_path / "notas.md"
-    corto.write_text("x" * 2 * 1024, encoding="utf-8")
-
-    assert _correr(monkeypatch, capsys, f"cat {corto}") == ""
+    assert _run(monkeypatch, capsys, f"cat {data}") == ""
 
 
-def test_sin_backend_no_se_bloquea(monkeypatch, capsys, documento):
-    assert _correr(monkeypatch, capsys, f"cat {documento}", backend=False) == ""
+def test_a_small_document_is_not_blocked(monkeypatch, capsys, tmp_path):
+    short = tmp_path / "notas.md"
+    short.write_text("x" * 2 * 1024, encoding="utf-8")
+
+    assert _run(monkeypatch, capsys, f"cat {short}") == ""
 
 
-def test_con_el_bloqueo_apagado_no_se_bloquea(monkeypatch, capsys, documento):
-    assert _correr(monkeypatch, capsys, f"cat {documento}", bloquear=False) == ""
+def test_without_backend_it_is_not_blocked(monkeypatch, capsys, document):
+    assert _run(monkeypatch, capsys, f"cat {document}", backend=False) == ""
 
 
-def test_un_fichero_que_no_existe_no_rompe_nada(monkeypatch, capsys, tmp_path):
-    assert _correr(monkeypatch, capsys, f"cat {tmp_path / 'fantasma.md'}") == ""
+def test_with_the_block_off_it_is_not_blocked(monkeypatch, capsys, document):
+    assert _run(monkeypatch, capsys, f"cat {document}", block=False) == ""
+
+
+def test_a_missing_file_breaks_nothing(monkeypatch, capsys, tmp_path):
+    assert _run(monkeypatch, capsys, f"cat {tmp_path / 'fantasma.md'}") == ""
 
 
 # --- El denominador ---------------------------------------------------------------------------
 
 
-def test_todo_comando_deja_rastro_para_poder_medir(monkeypatch, capsys, documento, tmp_path):
+def test_every_command_leaves_a_trace_to_measure(monkeypatch, capsys, document, tmp_path):
     """Sin denominador no se sabe cuánta lectura se va por aquí, que es lo que nadie pudo medir."""
     log = tmp_path / "telemetria.jsonl"
 
-    _correr(monkeypatch, capsys, f"cat {documento} | head -5", log=log)
-    _correr(monkeypatch, capsys, "rtk git status", log=log)
-    _correr(monkeypatch, capsys, f"cat {documento}", log=log)
+    _run(monkeypatch, capsys, f"cat {document} | head -5", log=log)
+    _run(monkeypatch, capsys, "rtk git status", log=log)
+    _run(monkeypatch, capsys, f"cat {document}", log=log)
 
-    eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    assert [e["reason"] for e in eventos] == ["not_a_dump", "not_a_dump", "large_prose"]
-    assert all(e["route"] == "shell" for e in eventos)
-    assert eventos[-1]["blocked"] is True
+    events = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert [e["reason"] for e in events] == ["not_a_dump", "not_a_dump", "large_prose"]
+    assert all(e["route"] == "shell" for e in events)
+    assert events[-1]["blocked"] is True
     # Ni el comando ni la ruta entran nunca en la telemetría.
-    assert str(documento) not in log.read_text(encoding="utf-8")
+    assert str(document) not in log.read_text(encoding="utf-8")
 
 
-def _motivos(log) -> list[str]:
+def _reasons(log) -> list[str]:
     return [json.loads(x)["reason"] for x in log.read_text(encoding="utf-8").splitlines()]
 
 
 @pytest.mark.parametrize(
-    "comando",
+    "command",
     ["cat {p}>copia.md", "cat {p}|head", "cat {p}&&echo ya", "cat {p};ls"],
     ids=["redireccion pegada", "tuberia pegada", "encadenado pegado", "punto y coma pegado"],
 )
-def test_los_metacaracteres_sin_espacios_tambien_frenan(
-    monkeypatch, capsys, documento, comando, tmp_path
+def test_metacharacters_without_spaces_also_stop_it(
+    monkeypatch, capsys, document, command, tmp_path
 ):
     """Estos son los que de verdad necesitan la guarda de metacaracteres.
 
@@ -188,15 +186,15 @@ def test_los_metacaracteres_sin_espacios_tambien_frenan(
     """
     log = tmp_path / "telemetria.jsonl"
 
-    assert _correr(monkeypatch, capsys, comando.format(p=documento), log=log) == ""
+    assert _run(monkeypatch, capsys, command.format(p=document), log=log) == ""
 
     # Y se registra por lo que es. Sin la guarda de metacaracteres el comando tampoco se
     # bloquearia —el fichero «informe.md>copia.md» no existe— pero quedaria contado como
     # «no_file», y el denominador de F1 se lee por motivo.
-    assert _motivos(log) == ["not_a_dump"]
+    assert _reasons(log) == ["not_a_dump"]
 
 
-def test_un_flag_suelto_no_se_confunde_con_una_ruta(monkeypatch, capsys, tmp_path):
+def test_a_loose_flag_is_not_mistaken_for_a_path(monkeypatch, capsys, tmp_path):
     """`cat -v` no lee ningún fichero, y tiene que notarse en el motivo, no en un error de disco.
 
     Sin la guarda de flags, el hook intentaría medir el tamaño de un fichero llamado «-v» y
@@ -205,6 +203,6 @@ def test_un_flag_suelto_no_se_confunde_con_una_ruta(monkeypatch, capsys, tmp_pat
     """
     log = tmp_path / "telemetria.jsonl"
 
-    assert _correr(monkeypatch, capsys, "cat -v", log=log) == ""
+    assert _run(monkeypatch, capsys, "cat -v", log=log) == ""
 
-    assert _motivos(log) == ["not_a_dump"]
+    assert _reasons(log) == ["not_a_dump"]

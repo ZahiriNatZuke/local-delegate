@@ -5,13 +5,13 @@ La subola se parte en 6 lotes (D13: 1507 filas, como mucho 300 por lote y sin pa
 2026-10-13 con las 8 decisiones de la fase 1 tal como se recomendaron. Cada lote es un commit que
 hace la sesión principal, en una rama apilada sobre el anterior. Las tablas de controles positivos,
 `local_*` y PyCharm son las de todos los lotes, porque `check_wave_records.py` lee la primera tabla
-de cada sección; por ahora solo está el **lote 1**: 17 filas `rename_refactoring` = 17 filas
-`pycharm` de `waves/A9b-1-mapping.csv`.
+de cada sección; por ahora están los **lotes 1 y 2**: 17 + 25 = 42 filas `rename_refactoring` = 42
+filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
 
 - Rama: lote 1 en `sdd/english-names-a9b-1`, apilada sobre `sdd/english-names-a9a-7` (`76fe954`, A9a
-  completa) · Commit del lote 1: pendiente, con el borrador en `waves/A9b-1-commit-msg.txt` (firmado
-  y sin coautoría)
-- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó el lote 1 (fase 2).
+  completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, sobre `5fae972` · Commit del
+  lote 2: pendiente, con el borrador en `waves/A9b-2-commit-msg.txt` (firmado y sin coautoría)
+- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 y 2 (fase 2).
 - Conteo base: `evidence/A9b/collect-before.txt`, 2569 tests.
 
 ## Controles positivos
@@ -21,6 +21,8 @@ de cada sección; por ahora solo está el **lote 1**: 17 filas `rename_refactori
 | `tests/test_cooldown.py::test_three_consecutive_failures_cool_the_model_for_120_s` (lote 1; usa la fixture renombrada `clock`/`path`, `_state` y `_fail`) | `src/local_delegate/cooldown.py:167`: `>= self._failures` → `> self._failures` (enfría al fallo N+1) | `assert cooled is not None` → `assert None is not None` | sí, desde copia; sha256 igual al de antes (`evidence/A9b-1/mutant.txt`) |
 | `tests/test_failure_captures.py::test_the_timeout_during_loading_is_capacity` (lote 1; usa `_capture`, `_classify_capture` y las claves nuevas del envoltorio) | en `_classify_capture`, la guarda vuelve a la clave vieja (`"excepcion" in doc`), que es el error que dejó el primer reemplazo | `KeyError: 'response'` en `doc["response"]` | sí, desde copia; sha256 igual |
 | `tests/test_cooldown.py` (40 tests) | `_fail` registra un fallo menos (`range(times - 1)`) | 7 fallan; el primero, `assert cooled is not None` | sí, desde copia; sha256 igual |
+| `tests/test_hook_common.py::test_a_401_means_the_backend_IS_there` (lote 2; usa la anidada renombrada `_raises_401` y `_mark`/`age_s`) | `src/local_delegate/resources/hooks/hook_common.py:241`: un `HTTPError` (401) cuenta como «no hay backend» (`return True` → `return False`) | `assert common.backend_available(marker=…) is True` → `assert False is True` | sí, desde copia; sha256 igual (`evidence/A9b-2/mutant.txt`) |
+| `tests/test_failure_captures.py::test_the_oom_without_profile_did_not_reach_timeout_and_stays_uncaptured` (assert negativo del lote 1 con la clave renombrada `exception`) | la captura `oom-without-profile.json` gana una clave `"exception"` | `assert "exception" not in doc` | sí, desde copia; sha256 igual |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -28,6 +30,7 @@ de cada sección; por ahora solo está el **lote 1**: 17 filas `rename_refactori
 | --- | --- | --- |
 | Agente A9b (fase 1) | `local_summarize(path=waves/A9a.md)` | lecciones y desviaciones de los 7 lotes de A9a, sin meter las 592 líneas al contexto |
 | Agente A9b-1 | `local_lint_summary(path=evidence/A9b-1/pytest-full-run1.log)` | resumen de la primera corrida de la suite (3 fallos: 1 real del lote y 2 de tiempos de `test_fake_llamaswap`) |
+| Agente A9b-2 | (ninguna) | la suite salió verde a la primera (47 líneas de log) y los ficheros se leyeron por franjas concretas: no hubo nada largo que resumir |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -51,6 +54,32 @@ de cada sección; por ahora solo está el **lote 1**: 17 filas `rename_refactori
 | A9b-1 | `rename_refactoring` | `_modelo_cargado_al_terminar`→`_model_loaded_at_end` | 3 usos |
 | A9b-1 | `rename_refactoring` | `_clasificar_captura`→`_classify_capture` | 5 usos |
 | A9b-1 | `get_file_problems` | `test_cooldown.py`, `test_failures.py`, `test_failure_captures.py` | 0 errores salvo `Unresolved reference 'FileLock'` en la cadena de `monkeypatch.setattr(cooldown, "FileLock", …)`: falso positivo que ya existía (el atributo se resuelve en tiempo de ejecución) |
+| A9b-2 | `rename_refactoring` | `sin_preguntar→without_asking` (fixture, `test_fallos_integracion.py`) | 8 usos |
+| A9b-2 | `rename_refactoring` | `_salida→_output` (`test_hook_common.py`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `antiguedad_s→age_s` (parámetro de `_marca`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `_marca→_mark` | 3 usos |
+| A9b-2 | `rename_refactoring` | `casa→home_env` (fixture, `test_hook_legacy_names.py`) | 5 usos |
+| A9b-2 | `rename_refactoring` | `temporal→temp_dir` (fixture) | 10 usos |
+| A9b-2 | `rename_refactoring` | `_correr_hook_instalado→_run_installed_hook` | 4 usos |
+| A9b-2 | `rename_refactoring` | `_ultimo_evento→_last_event` | 3 usos |
+| A9b-2 | `rename_refactoring` | `_evento→_event` | 6 usos |
+| A9b-2 | `rename_refactoring` | `relleno→padding` (parámetro de `_escribir_telemetria`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `_escribir_telemetria→_write_telemetry` | 2 usos |
+| A9b-2 | `rename_refactoring` | `_EVENTOS_SISTEMA→_SYSTEM_EVENTS` (`test_hook_recipes.py`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `_correr_hook→_run_hook` | 12 usos |
+| A9b-2 | `rename_refactoring` | `_correr_con_bloqueo→_run_with_block` | 5 usos |
+| A9b-2 | `rename_refactoring` | `_evento_de_prompt→_prompt_event` | 1 usos |
+| A9b-2 | `rename_refactoring` | `_default_del_hook→_hook_default` | 3 usos |
+| A9b-2 | `rename_refactoring` | `bloquear→block` (parámetro de `_correr`, `test_hook_shell.py`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `_correr→_run` | 12 usos |
+| A9b-2 | `rename_refactoring` | `documento→document` (fixture) | 14 usos |
+| A9b-2 | `rename_refactoring` | `_motivos→_reasons` | 2 usos |
+| A9b-2 | `rename_refactoring` | `TEXTO_READ→READ_TEXT` (`test_hook_shell_ruta_absoluta.py`) | 2 usos |
+| A9b-2 | `rename_refactoring` | `TEXTO_SHELL→SHELL_TEXT` | 2 usos |
+| A9b-2 | `rename_refactoring` | `_entorno→_env` (fixture autouse: nadie la pide por nombre) | 0 usos |
+| A9b-2 | `rename_refactoring` | `_razon→_reason` | 3 usos |
+| A9b-2 | `rename_refactoring` | `documento→document` (fixture) | 7 usos |
+| A9b-2 | `get_file_problems` | `test_hook_recipes.py`, `test_hook_shell_absolute_path.py`, `test_failures_integration.py` | 0 errores propios: solo `Unresolved reference` en cadenas de `monkeypatch.setattr` sobre hooks cargados con `importlib` (`record`, `backend_available`, `cooled_model`), que ya estaban |
 
 ## A9b-1 — capturas de `tests/fixtures/backend`, `test_enfriamiento`, `test_fallos` y `test_fallos_capturas` (aplicado)
 
@@ -111,9 +140,61 @@ de cada sección; por ahora solo está el **lote 1**: 17 filas `rename_refactori
    (`t_unload` 4,23 > 4,0 y un 500 en vez de 502 bajo carga). Pasaron sueltos y en la segunda
    corrida completa; no son de este lote (`evidence/A9b-1/pytest-full-run1.log`).
 
+## A9b-2 — `test_fallos_integracion`, `test_hook_common`, `test_hook_legacy_names`, `test_hook_recipes`, `test_hook_shell` y `test_hook_shell_ruta_absoluta` (aplicado)
+
+### A9b-2 · Qué se hizo
+
+- 25 `rename_refactoring` (tabla de arriba), antes de cualquier edición desde fuera. PyCharm no tocó
+  `.sdd/` esta vez.
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados (`a9b/requal.py`):
+  54 + 75 + 99 + 128 + 33 + 24 = 413 reemplazos.
+- A mano: el `def` de las anidadas `espia`→`spy` y `_lanza_401`→`_raises_401`, la clase anidada
+  `_Respuesta`→`_Response` y los argnames de 4 `parametrize` (`preparar`, `plantilla`, `comando` ×2).
+- Fuera del CSV, por el barrido de parámetros de lambdas: `lambda modelo: False` → `lambda model:
+  False` en `test_hook_shell_absolute_path.py:67` (doble de `cooled_model(model)`, que se llama
+  posicional).
+- `git mv` de 2 módulos: `test_failures_integration.py` y `test_hook_shell_absolute_path.py`. Nadie
+  los cita por ruta fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`.
+- `ruff format` juntó en una línea 4 llamadas y firmas que ya caben (`test_hook_legacy_names.py`,
+  `test_hook_recipes.py`, `test_hook_shell.py`). EOL: todos LF y siguen LF.
+- Claves leídas de datos: este lote no renombra ninguna (ni `["x"]`, `.get("x")`, `"x" in`, `pop`
+  ni `{**…}`): sus filas son solo nombres de Python.
+
+### A9b-2 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- Ninguno.
+
+### A9b-2 · Barrido final
+
+- AST de los 6 ficheros: ningún nombre de código, kwarg ni argname con un `old` del lote.
+- `git grep -w` de cada `old` en los ficheros del lote, clasificado por token: 0 en código; 94 en
+  textos (51 docstrings, 20 comentarios y 23 cadenas): prosa en español y datos de prueba («este
+  archivo pesa mucho», `"uno.md"`, `"cat {p} otro.md"`, los textos del aviso que afirman los tests…).
+- En todo el repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`), los nombres propios del lote
+  (`sin_preguntar`, `_correr_hook_instalado`, `_escribir_telemetria`, `TEXTO_READ`, `_lanza_401`…):
+  0. Quedan `_ultimo_evento` en `test_respaldo.py` y `test_observabilidad_respaldo.py`: es otra
+  función, de A9c y del lote 5.
+- `--collect-only`: 2569 (`evidence/A9b-2/collect.txt`). Suite: 2567 passed, 2 skipped
+  (`evidence/A9b-2/pytest-full.log`). `ruff check` y `ruff format --check` en verde.
+- CodeQL (aproximación AST) sobre los 2 ficheros renombrados: 0 patrones.
+
+### A9b-2 · Desviaciones
+
+1. Ninguna fila `pycharm` pasó a `search_edit`: los 3 parámetros (`antiguedad_s`, `relleno`,
+   `bloquear`) no tienen homónimos en el repo. Anotado en la línea `# Fase 2` del CSV.
+2. El parámetro `modelo` de una lambda no estaba en el mapping (ni el detector ni el barrido AST de la
+   fase 1 miran los argumentos de lambdas); se cambió y se anota en la misma línea `# Fase 2`.
+
 ## Pendientes
 
-1. Lotes A9b-2 a A9b-6, cada uno con su sección.
+1. Lotes A9b-3 a A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
+   de lambdas (desviación 2 del lote 2).
 2. En el lote 6: el test nuevo de los esquemas de `elicitation` y el arreglo de la carrera de
    `test_turn_wait_shown_in_panel_as_local_wait` (cabecera de `A9b-6-mapping.csv`).
 3. Para los lotes que tocan claves en cadenas: buscar también `"clave" in doc` (desviación 2).
+4. **Intermitentes vistos** (no son de A9b; se anotan para quien los toque):
+   `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` (`t_unload` 4,23 > 4,0) y
+   `::test_d_8_s_request_in_progress_on_reload[cambio_ajeno]` (500 en vez de 502), los dos bajo la
+   carga de `-n auto` en la primera corrida del lote 1;
+   `test_residency_cli.py::test_restoring_a_copy_end_to_end` (visto en A9a); y la carrera de
+   `test_panel_estados.py::test_turn_wait_shown_in_panel_as_local_wait`, que se arregla en el lote 6.
