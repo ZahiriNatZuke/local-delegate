@@ -91,8 +91,8 @@ def main() -> None:
     # camino stdio se quedó fuera. Dos caminos hasta el mismo `Ctrl+C` y solo uno preparado.
     #
     # Y con Ctrl+Break pasaba lo mismo un nivel más abajo: son dos eventos de consola distintos y
-    # el `except` de aquí solo veía uno. `preparar_ctrl_break` los iguala antes de servir.
-    server.preparar_ctrl_break()
+    # el `except` de aquí solo veía uno. `prepare_ctrl_break` los iguala antes de servir.
+    server.prepare_ctrl_break()
     try:
         server.mcp.run()
     except KeyboardInterrupt:

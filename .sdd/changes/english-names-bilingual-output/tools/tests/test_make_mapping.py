@@ -231,3 +231,50 @@ def test_an_outer_row_and_a_nested_row_with_the_same_name_do_not_edit_twice(tmp_
     assert "cadena" not in text
     assert "    def llamar(chain=()):\n        return list(chain)\n" in text
     assert counts == {"src/x.py": 4}  # 2, 4, 5 y 7: cada posición una vez
+
+
+COMPOUND_FILE = (
+    "def local_commit_msg(content):\n"
+    "    if len(content) > 3:\n"
+    "        en_curso = {'file': None}\n"
+    "\n"
+    "        def _build_map(piece):\n"
+    "            del_trozo = [ruta for ruta in piece.split()]\n"
+    "            en_curso['file'] = del_trozo[-1]\n"
+    "            return ' '.join(del_trozo)\n"
+    "\n"
+    "        try:\n"
+    "            with open(content) as fh:\n"
+    "\n"
+    "                def _build_reduce(joined):\n"
+    "                    cabeza = joined + fh.name\n"
+    "                    return cabeza\n"
+    "\n"
+    "        except OSError:\n"
+    "            return None\n"
+    "        return _build_map(content) + _build_reduce(content)\n"
+    "    return content\n"
+)
+
+
+def test_a_nested_function_inside_compound_statements_is_found(tmp_path):
+    """`build` califica una anidada por sus funciones de fuera aunque viva dentro de un `if`, un
+    `try` o un `with` (`local_commit_msg._build_map` de server.py, A7b); `apply` tiene que
+    encontrarla igual. Antes solo bajaba por los cuerpos directos y daba `ValueError`."""
+    root = _tree(tmp_path, {"src/x.py": COMPOUND_FILE})
+    mapping = _mapping(
+        tmp_path,
+        [
+            _row("del_trozo", "piece_paths", "src/x.py:6@local_commit_msg._build_map"),
+            _row("ruta", "file_path", "src/x.py:6@local_commit_msg._build_map"),
+            _row("cabeza", "head", "src/x.py:14@local_commit_msg._build_reduce"),
+        ],
+    )
+    counts = mm.apply_mapping(mapping, root)
+    text = (root / "src" / "x.py").read_text(encoding="utf-8")
+    assert "del_trozo" not in text and "ruta" not in text and "cabeza" not in text
+    assert "            piece_paths = [file_path for file_path in piece.split()]\n" in text
+    assert "                    head = joined + fh.name\n                    return head\n" in text
+    # `en_curso` no tiene fila: sigue igual.
+    assert text.count("en_curso") == 2
+    assert counts == {"src/x.py": 7}  # del_trozo 3, ruta 2 y cabeza 2

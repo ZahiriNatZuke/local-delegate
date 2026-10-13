@@ -369,7 +369,7 @@ def log_dir() -> Path:
 
 
 def summary_model(size: int) -> str:
-    """El modelo al que iria `local_summarize` con un fichero de `size` bytes (`_rol_por_tamano`)."""
+    """El modelo al que iria `local_summarize` con un fichero de `size` bytes (`_role_for_size`)."""
     try:
         threshold = int(
             os.environ.get("LOCAL_DELEGATE_LONG_INPUT_CHARS", "").strip() or LONG_THRESHOLD_CHARS

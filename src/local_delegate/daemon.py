@@ -309,8 +309,8 @@ def serve(host: str | None = None, port: int | None = None, log_level: str = "wa
         # Ctrl+Break entra por `SIGBREAK`, que uvicorn también captura y también vuelve a lanzar
         # sobre el handler original — solo que ahí el original era `SIG_DFL` y mataba el proceso
         # con código 3 a mitad del apagado. Igualarlo a Ctrl+C hace que caiga en el `except` de
-        # abajo, que es el camino ya probado. El porqué completo, en `server.preparar_ctrl_break`.
-        server.preparar_ctrl_break()
+        # abajo, que es el camino ya probado. El porqué completo, en `server.prepare_ctrl_break`.
+        server.prepare_ctrl_break()
         try:
             uvicorn_server.run()
         except KeyboardInterrupt:

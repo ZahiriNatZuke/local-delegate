@@ -764,7 +764,7 @@ def backend():
     `models` es la última lista buena de esta URL con `models_stale: true` (REQ-021). `/running`
     solo se pide si `/models` respondió (REQ-013), y `running_ok` dice si respondió (REQ-022).
     """
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
     running, running_ok = _running() if estado.available else ([], False)
     return JSONResponse(
         {
@@ -773,7 +773,7 @@ def backend():
             "running_ok": running_ok,
             "models": estado.models,
             "models_stale": estado.models_stale,
-            **_cause_json(estado.causa, estado.detalle),
+            **_cause_json(estado.cause, estado.detail),
             "origin": config.backend_origin(),
             "host": config.backend_host(),
         }
@@ -794,7 +794,7 @@ def _running() -> tuple[list, bool]:
     """`GET {base sin /v1}/running` de llama-swap: (entradas, ¿respondió?). Con el plazo de sondeo."""
     base = config.BASE_URL.removesuffix("/v1")
     try:
-        with httpx2.Client(timeout=server._plazo_sonda()) as c:
+        with httpx2.Client(timeout=server._probe_timeout()) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())
         if not r.is_success:
             return [], False
@@ -825,7 +825,7 @@ def backend_stats():
     endpoint = f"{base}/api/metrics/stats"
     loopback = server._backend_on_loopback()
     try:
-        with httpx2.Client(timeout=server._plazo_sonda()) as c:
+        with httpx2.Client(timeout=server._probe_timeout()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
             cause = failures.connection_cause(r.status_code, loopback=loopback)
@@ -852,7 +852,7 @@ def status():
     """
     # Modelos reales del backend con su estado loaded/unloaded (#901): el mismo sondeo que
     # /api/backend, con su causa (REQ-012) y la lista guardada cuando falla (REQ-021).
-    estado = server.sondear_backend()
+    estado = server.probe_backend()
     catalog = [
         {"role": "mechanical", "label": "mecánico", "model": config.MODEL_MECHANICAL},
         {"role": "long", "label": "largo", "model": config.MODEL_LONG},
@@ -875,7 +875,7 @@ def status():
                 "available": estado.available,
                 "models": estado.models,
                 "models_stale": estado.models_stale,
-                **_cause_json(estado.causa, estado.detalle),
+                **_cause_json(estado.cause, estado.detail),
                 # dónde corre la inferencia de ESTE proceso MCP: loopback = local, si no remoto
                 "origin": config.backend_origin(),
                 "host": config.backend_host(),

@@ -469,8 +469,8 @@ def test_local_status_shows_reference_and_samples(tmp_path, monkeypatch):
     """Control (a): hoy `local_status` no dice nada del ritmo de referencia."""
     monkeypatch.setattr(
         server,
-        "sondear_backend",
-        lambda: server.EstadoBackend(False, [], True, "rechazada", "sin red en los tests", None),
+        "probe_backend",
+        lambda: server.BackendState(False, [], True, "rechazada", "sin red en los tests", None),
     )
     for name in ("_vram_info", "_ram_info", "_llamaswap_groups"):
         monkeypatch.setattr(server, name, lambda: None)

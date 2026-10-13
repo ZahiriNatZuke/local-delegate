@@ -1,0 +1,15 @@
+# Literales con marcadores en src/ y tests/ (git grep -c -F, líneas), HEAD 6910d20 frente al árbol de A7b
+local-delegate aviso: antes 10, después 10
+local-delegate respaldo: antes 1, después 1
+"respaldo": antes 2, después 2
+"aviso": antes 10, después 10
+"truncado": antes 15, después 15
+_local_delegate: antes 22, después 22
+
+# Subcadena dentro de literales (tokenize, apariciones; script count_strings.py de A7a)
+aviso: antes 105, después 105
+respaldo: antes 72, después 72
+truncado: antes 30, después 30
+_local_delegate: antes 17, después 17
+
+# Iguales en las dos cuentas. La clave interna "archivo"→"file" de local_commit_msg (respuesta 2) no es ninguno de estos marcadores.

@@ -1,0 +1,24 @@
+refactor(rename): nombres en inglés en el resto de server.py (ola A7b)
+
+Renombra a inglés los identificadores de src/local_delegate/server.py desde
+el troceado hasta el final (map-reduce, inventario del diff, resumen
+estructurado, variables de las tools y local_status): 141 filas del mapping,
+como sondear_backend → probe_backend, EstadoBackend → BackendState (con sus
+campos causa/detalle → cause/detail), _plazo_sonda → _probe_timeout,
+_es_desborde_de_contexto → _is_context_overflow, _rol_por_tamano →
+_role_for_size, _resumen_estructurado → _structured_summary,
+preparar_ctrl_break → prepare_ctrl_break y los parámetros rol/explicito/
+postproceso/num_secciones de _chat_chunked y _chat_map_reduce.
+
+No cambia ninguna salida: ni los marcadores [local-delegate aviso|respaldo:],
+ni las claves de _local_delegate de local_extract, que salen en B2. Las
+firmas de las tools MCP (nombres y parámetros) son idénticas antes y después.
+La clave interna "archivo" del dict de local_commit_msg pasa a "file": no
+sale de la función.
+
+Con el rename cambian, por consecuencia: las llamadas de web/metrics.py,
+daemon.py y entrypoint.py, la cita de hook_common.py y diez ficheros de test
+(accesos, argumentos por nombre, cadenas de monkeypatch y conftest.py).
+
+tools/make_mapping.py: apply encuentra las funciones anidadas dentro de un
+if, try o with (local_commit_msg._build_map). Con su test.

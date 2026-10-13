@@ -129,7 +129,7 @@ def test_preparar_ctrl_break_no_pisa_un_handler_ajeno(monkeypatch):
     ajeno = signal.getsignal(signal.SIGINT)  # cualquier callable válido que no sea SIG_DFL
     previo = signal.signal(sigbreak, ajeno)
     try:
-        server.preparar_ctrl_break()
+        server.prepare_ctrl_break()
         assert signal.getsignal(sigbreak) is ajeno
     finally:
         signal.signal(sigbreak, previo)
@@ -143,7 +143,7 @@ def test_preparar_ctrl_break_no_revienta_fuera_del_hilo_principal():
 
     def _en_otro_hilo() -> None:
         try:
-            server.preparar_ctrl_break()
+            server.prepare_ctrl_break()
         except Exception as exc:
             # Amplio a propósito: lo que se afirma no es «lanza tal error», es que **no lanza
             # ninguno**. Nombrar aquí `ValueError` dejaría pasar cualquier otro, que es justo el

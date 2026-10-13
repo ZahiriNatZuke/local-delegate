@@ -426,6 +426,18 @@ def read_mapping(path: Path) -> tuple[list[str], list[dict[str, str]]]:
 
 
 # --- Aplicador acotado --------------------------------------------------------
+def _child_statements(node: ast.AST) -> list[ast.stmt]:
+    """Las sentencias de los bloques de una sentencia compuesta (`if`, `try`, `with`, `match`…)."""
+    out: list[ast.stmt] = []
+    for block in ("body", "orelse", "finalbody", "handlers", "cases"):
+        for child in getattr(node, block, None) or []:
+            if isinstance(child, (ast.ExceptHandler, ast.match_case)):
+                out.extend(child.body)
+            elif isinstance(child, ast.stmt):
+                out.append(child)
+    return out
+
+
 def _find_function(tree: ast.AST, qualname: str) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
     parts = qualname.split(".")
 
@@ -438,6 +450,13 @@ def _find_function(tree: ast.AST, qualname: str) -> ast.FunctionDef | ast.AsyncF
                 if depth == len(parts) - 1:
                     return node if not isinstance(node, ast.ClassDef) else None
                 found = walk(node.body, depth + 1)
+                if found is not None:
+                    return found
+            elif not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                # Una anidada puede vivir dentro de un `if`, `for`, `while`, `try` o `with` de su
+                # función (`local_commit_msg._build_map`, A7b): se baja por esos bloques sin
+                # sumar un nivel al nombre cualificado.
+                found = walk(_child_statements(node), depth)
                 if found is not None:
                     return found
         return None

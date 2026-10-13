@@ -2530,14 +2530,14 @@ def _split_by_diff_files(text: str) -> list[str]:
     en un diff `--git` cada archivo trae también su `--- a/x`, y cortar por las dos cabeceras
     partiría cada archivo en dos, dejando piezas que empiezan en `---` sin decir de qué archivo.
     """
-    inicio = text.lstrip()
-    if not (inicio.startswith("diff --git ") or re.match(r"--- \S", inicio)):
+    stripped = text.lstrip()
+    if not (stripped.startswith("diff --git ") or re.match(r"--- \S", stripped)):
         return [text]
     if re.search(r"(?m)^diff --git ", text):
-        patron = r"(?m)(?=^diff --git )"
+        pattern = r"(?m)(?=^diff --git )"
     else:
-        patron = r"(?m)(?=^--- \S.*\n\+\+\+ )"
-    return [p for p in re.split(patron, text) if p]
+        pattern = r"(?m)(?=^--- \S.*\n\+\+\+ )"
+    return [p for p in re.split(pattern, text) if p]
 
 
 def _split_by_headers(text: str) -> list[str]:
@@ -2571,70 +2571,71 @@ def _diff_inventory(diff: str) -> list[tuple[str, int, int]]:
     —solo son cabecera antes del primer `@@` del archivo— y no por su texto. Mirando el texto,
     borrar una línea que empiece por `--` se registraría como cabecera y no se contaría.
     """
-    archivos: list[tuple[str, int, int]] = []
-    ruta: str | None = None
-    mas = menos = 0
-    en_hunk = False
+    files: list[tuple[str, int, int]] = []
+    path: str | None = None
+    added = removed = 0
+    in_hunk = False
 
-    def _cerrar() -> None:
-        if ruta is not None:
-            archivos.append((ruta, mas, menos))
+    def _close() -> None:
+        if path is not None:
+            files.append((path, added, removed))
 
-    for linea in diff.splitlines():
-        if linea.startswith("diff --git "):
-            _cerrar()
-            resto = linea[len("diff --git ") :]
-            pareja = re.match(r"a/(.+) b/\1$", resto)
-            ruta = pareja.group(1) if pareja else resto.split(" b/", 1)[-1].lstrip("b/")
-            mas = menos = 0
-            en_hunk = False
-        elif ruta is None:
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            _close()
+            rest = line[len("diff --git ") :]
+            pair = re.match(r"a/(.+) b/\1$", rest)
+            path = pair.group(1) if pair else rest.split(" b/", 1)[-1].lstrip("b/")
+            added = removed = 0
+            in_hunk = False
+        elif path is None:
             continue
-        elif linea.startswith("@@"):
-            en_hunk = True
-        elif not en_hunk:
+        elif line.startswith("@@"):
+            in_hunk = True
+        elif not in_hunk:
             # Zona de cabecera: `+++ b/x` manda sobre el nombre adivinado de `diff --git`, salvo
             # en un borrado (`+++ /dev/null`), donde el nombre bueno es el de `--- a/x`.
-            if linea.startswith("+++ ") and linea[4:] != "/dev/null":
-                ruta = linea[4:].removeprefix("b/")
-            elif linea.startswith("--- ") and linea[4:] != "/dev/null":
-                ruta = linea[4:].removeprefix("a/")
-            elif linea.startswith("rename to "):
-                ruta = linea[len("rename to ") :]
-        elif linea.startswith("+"):
-            mas += 1
-        elif linea.startswith("-"):
-            menos += 1
-    _cerrar()
-    return archivos
+            if line.startswith("+++ ") and line[4:] != "/dev/null":
+                path = line[4:].removeprefix("b/")
+            elif line.startswith("--- ") and line[4:] != "/dev/null":
+                path = line[4:].removeprefix("a/")
+            elif line.startswith("rename to "):
+                path = line[len("rename to ") :]
+        elif line.startswith("+"):
+            added += 1
+        elif line.startswith("-"):
+            removed += 1
+    _close()
+    return files
 
 
-def _format_inventory(archivos: list[tuple[str, int, int]], max_chars: int) -> str:
+def _format_inventory(files: list[tuple[str, int, int]], max_chars: int) -> str:
     """Rinde el inventario como texto, colapsado por directorio si no cabe en `max_chars`.
 
     Sin el colapso, un diff de cientos de archivos desplazaría del prompt final justo el material
     que el modelo tiene que resumir.
     """
-    if not archivos:
+    if not files:
         return ""
-    mas_total = sum(m for _, m, _ in archivos)
-    menos_total = sum(n for _, _, n in archivos)
-    cabecera = f"Archivos del cambio ({len(archivos)} en total, +{mas_total} -{menos_total}):"
-    detalle = "\n".join(f"  {ruta} | +{mas} -{menos}" for ruta, mas, menos in archivos)
-    if len(cabecera) + 1 + len(detalle) <= max_chars:
-        return f"{cabecera}\n{detalle}"
+    added_total = sum(m for _, m, _ in files)
+    removed_total = sum(n for _, _, n in files)
+    header = f"Archivos del cambio ({len(files)} en total, +{added_total} -{removed_total}):"
+    detail = "\n".join(f"  {path} | +{added} -{removed}" for path, added, removed in files)
+    if len(header) + 1 + len(detail) <= max_chars:
+        return f"{header}\n{detail}"
 
-    agrupado: dict[str, list[int]] = {}
-    for ruta, mas, menos in archivos:
-        raiz = ruta.split("/", 1)[0] if "/" in ruta else "(raíz)"
-        acumulado = agrupado.setdefault(raiz, [0, 0, 0])
-        acumulado[0] += 1
-        acumulado[1] += mas
-        acumulado[2] += menos
-    detalle = "\n".join(
-        f"  {raiz}/ | {n} archivos, +{mas} -{menos}" for raiz, (n, mas, menos) in agrupado.items()
+    by_root: dict[str, list[int]] = {}
+    for path, added, removed in files:
+        root = path.split("/", 1)[0] if "/" in path else "(raíz)"
+        totals = by_root.setdefault(root, [0, 0, 0])
+        totals[0] += 1
+        totals[1] += added
+        totals[2] += removed
+    detail = "\n".join(
+        f"  {root}/ | {n} archivos, +{added} -{removed}"
+        for root, (n, added, removed) in by_root.items()
     )
-    return f"{cabecera} agrupados por directorio porque la lista completa no cabía\n{detalle}"
+    return f"{header} agrupados por directorio porque la lista completa no cabía\n{detail}"
 
 
 def _pack(pieces: list[str], max_chars: int) -> list[str]:
@@ -2695,8 +2696,8 @@ def _chat_chunked(
     raw_len: int | None = None,
     path: str | None = None,
     chunk_chars: int | None = None,
-    rol: str | None = None,
-    explicito: bool = False,
+    role: str | None = None,
+    explicit: bool = False,
 ) -> str:
     """Procesa `content` por trozos y concatena las salidas EN ORDEN.
 
@@ -2720,8 +2721,8 @@ def _chat_chunked(
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
     # Turno por operación (REQ-003): todos los trozos bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=rol, explicit=explicito)
-    vigente = _CurrentModel(model, rol, explicito, entry_id, op)
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    current = _CurrentModel(model, role, explicit, entry_id, op)
 
     def _accumulate(result: ChatResult, ms: int, attempts: list[Attempt]) -> None:
         nonlocal calls, latency_ms, tokens_in, tokens_out
@@ -2737,10 +2738,10 @@ def _chat_chunked(
         """Devuelve el texto del trozo, o None si el backend falló (aborta la operación)."""
         nonlocal failed, truncated_out
         max_tokens = min(len(piece) // 2 + 128, config.CHUNK_MAX_TOKENS)
-        result, ms, intentos = vigente.call(
+        result, ms, attempts = current.call(
             system, build_user(piece.strip()), max_tokens, temperature, size=len(piece)
         )
-        _accumulate(result, ms, intentos)
+        _accumulate(result, ms, attempts)
         if not result.ok:
             failed = result
             return None
@@ -2763,7 +2764,7 @@ def _chat_chunked(
     try:
         for index, piece in enumerate(chunks, start=1):
             _inflight_progress(entry_id, index)
-            vigente.chunk = index
+            current.chunk = index
             output = _process(piece)
             if output is None:
                 break
@@ -2784,11 +2785,11 @@ def _chat_chunked(
         finish_reason = "length" if truncated_out else "stop"
         if truncated_out:
             text += "\n\n[local-delegate aviso: salida truncada por max_tokens]"
-        text += vigente.notice(len(chunks) > 1)
+        text += current.notice(len(chunks) > 1)
 
     _log_event(
         tool=tool,
-        model=vigente.served if ok or vigente.affinity else model,
+        model=current.served if ok or current.affinity else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -2804,18 +2805,18 @@ def _chat_chunked(
         path=path if source == "path" else None,
         chunks=calls,
         attempts=all_attempts,
-        **vigente.log_fields(failed),
+        **current.log_fields(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = cost.in_flight_row(tool=tool, source=source, path=path)
-        text += _savings_feedback(len(content), "chars", event=evento)
+        event = cost.in_flight_row(tool=tool, source=source, path=path)
+        text += _savings_feedback(len(content), "chars", event=event)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(procesado en {calls} trozos por local-delegate)"
     return text
 
 
 # Marcas inequívocas: códigos de error y frases que solo aparecen en un desborde.
-_DESBORDE_MARCAS = (
+_OVERFLOW_MARKERS = (
     "exceed_context_size",  # tipo de error de llama.cpp
     "context_length_exceeded",  # código de OpenAI/vLLM
     "context window",
@@ -2824,8 +2825,8 @@ _DESBORDE_MARCAS = (
 # Fuera de esas, se exige una palabra de «contexto» Y una de «exceso». Ninguna de las dos por
 # separado dice nada —`context shift` y `maximum tokens` son opciones normales del backend—,
 # juntas sí.
-_DESBORDE_CONTEXTO = ("context", "contexto")
-_DESBORDE_EXCESO = (
+_OVERFLOW_CONTEXT_WORDS = ("context", "contexto")
+_OVERFLOW_EXCESS_WORDS = (
     "exceed",  # cubre exceeds / exceeded / exceeding
     "too long",
     "too large",
@@ -2835,7 +2836,7 @@ _DESBORDE_EXCESO = (
 )
 
 
-def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
+def _is_context_overflow(result: ChatResult | None) -> bool:
     """True si el backend rechazó la llamada por no caber en el contexto del modelo.
 
     Los presupuestos de troceado están en CARACTERES y el límite del modelo en TOKENS, y la
@@ -2855,25 +2856,25 @@ def _es_desborde_de_contexto(result: ChatResult | None) -> bool:
     """
     if result is None:
         return False
-    texto = result.text.lower()
-    if any(marca in texto for marca in _DESBORDE_MARCAS):
+    text = result.text.lower()
+    if any(marker in text for marker in _OVERFLOW_MARKERS):
         return True
-    habla_de_contexto = any(c in texto for c in _DESBORDE_CONTEXTO)
-    habla_de_exceso = any(e in texto for e in _DESBORDE_EXCESO)
-    return habla_de_contexto and habla_de_exceso
+    mentions_context = any(c in text for c in _OVERFLOW_CONTEXT_WORDS)
+    mentions_excess = any(e in text for e in _OVERFLOW_EXCESS_WORDS)
+    return mentions_context and mentions_excess
 
 
-def _rol_por_tamano(probe_len: int) -> tuple[str, str]:
+def _role_for_size(probe_len: int) -> tuple[str, str]:
     """(rol, modelo) de las tools que enrutan por tamaño: largo por encima del umbral, si no mecánico.
 
     Devuelve el ROL además del modelo porque el tope de entrada es del rol: con dos roles sobre el
     mismo modelo, preguntar el tope por el nombre del modelo daría el de otro rol.
     """
-    rol = "long" if probe_len > config.LONG_INPUT_CHARS else "mechanical"
-    return rol, config.modelos_por_rol()[rol]
+    role = "long" if probe_len > config.LONG_INPUT_CHARS else "mechanical"
+    return role, config.modelos_por_rol()[role]
 
 
-def _presupuesto_map(max_chars: int) -> int:
+def _map_budget(max_chars: int) -> int:
     """Caracteres por trozo del map: el 80 % del tope, para dejar sitio al prompt y a la salida."""
     return max(config.CHUNK_MIN_CHARS, int(max_chars * 0.8))
 
@@ -2894,8 +2895,8 @@ def _chat_map_reduce(
     reduce_system: str | None = None,
     build_reduce=None,
     partial_max_words: int | None = None,
-    rol: str | None = None,
-    explicito: bool = False,
+    role: str | None = None,
+    explicit: bool = False,
     pieces: list | None = None,
     system_for: Callable[[Any], str] | None = None,
     user_for: Callable[[Any], str] | None = None,
@@ -2904,8 +2905,8 @@ def _chat_map_reduce(
     split_for: Callable[[Any], list] | None = None,
     reduce: str = "model",
     reduce_extra: str = "",
-    postproceso: Callable[[str, bool], str] | None = None,
-    num_secciones: int | None = None,
+    postprocess: Callable[[str, bool], str] | None = None,
+    num_sections: int | None = None,
     focus: bool = False,
 ) -> str:
     """Resume un documento que no cabe en el modelo: resume por trozos y luego los resúmenes.
@@ -2929,7 +2930,7 @@ def _chat_map_reduce(
     reduce por el modelo: los parciales ya están en su formato final y se unen en orden. Sin esos
     parámetros, el comportamiento es el de siempre, byte a byte.
     """
-    budget = _presupuesto_map(max_chars)
+    budget = _map_budget(max_chars)
     if pieces is None:
         pieces = _chunk_text(content, budget)
     entry_id = _inflight_start(
@@ -2940,20 +2941,20 @@ def _chat_map_reduce(
     tokens_in: int | None = None
     tokens_out: int | None = None
     failed: ChatResult | None = None
-    cortadas = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
+    truncated_calls = 0  # llamadas que acabaron por `length`: un parcial cortado ya perdió material
     # Las llamadas reales de toda la operación, saltos incluidos (REQ-024).
     all_attempts: list[Attempt] = []
     # Turno por operación (REQ-003): map, reagrupados y reduce bajo el mismo turno.
-    op = _OperationTurn(entry_id, model, tool, role_name=rol, explicit=explicito)
-    vigente = _CurrentModel(model, rol, explicito, entry_id, op)
+    op = _OperationTurn(entry_id, model, tool, role_name=role, explicit=explicit)
+    current = _CurrentModel(model, role, explicit, entry_id, op)
 
     def _one(sys_prompt: str, user: str, max_tokens: int) -> str | None:
-        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, cortadas
-        result, ms, intentos = vigente.call(
+        nonlocal calls, latency_ms, tokens_in, tokens_out, failed, truncated_calls
+        result, ms, attempts = current.call(
             sys_prompt, user, max_tokens, temperature, size=len(user)
         )
-        all_attempts.extend(intentos)
-        calls += len(intentos)
+        all_attempts.extend(attempts)
+        calls += len(attempts)
         latency_ms += ms
         if result.tokens_in is not None:
             tokens_in = (tokens_in or 0) + result.tokens_in
@@ -2963,7 +2964,7 @@ def _chat_map_reduce(
             failed = result
             return None
         if result.finish_reason == "length":
-            cortadas += 1
+            truncated_calls += 1
         return _strip_think(result.text)
 
     def _tokens(words: int) -> int:
@@ -2977,7 +2978,7 @@ def _chat_map_reduce(
     # trozo no cabe en 90 y saldría cortado por `finish_reason=length`. Perder material en el map
     # es el mismo defecto que el truncado de la entrada, un nivel más adentro.
     partial_words = partial_max_words if partial_max_words is not None else max(80, max_words)
-    reduce_propio = reduce_system
+    custom_reduce = reduce_system
     if reduce_system is None:
         # `reduce_extra` (el enfoque de local_summarize) va sobre el reduce POR DEFECTO sin
         # convertirlo en uno propio: así la rama «un solo parcial» y el reagrupado no cambian.
@@ -3000,7 +3001,7 @@ def _chat_map_reduce(
     # material para el reduce —no el resultado final—. Con un reduce propio hay que reagrupar
     # con el system del MAP: hacerlo con el del reduce emitiría mensajes de commit intermedios
     # que luego se resumirían entre sí. Sin reduce propio se mantiene el comportamiento de hoy.
-    regroup_system = system if reduce_propio is not None else reduce_system
+    regroup_system = system if custom_reduce is not None else reduce_system
 
     def _map_system(piece) -> str:
         return system_for(piece) if system_for is not None else system
@@ -3030,31 +3031,31 @@ def _chat_map_reduce(
         out = _one(_map_system(piece), _map_user(piece), _map_tokens(piece))
         if out is not None:
             return [out]
-        if depth >= 2 or not _es_desborde_de_contexto(failed):
+        if depth >= 2 or not _is_context_overflow(failed):
             return None
-        partes = _split(piece)
-        if len(partes) < 2:
+        parts = _split(piece)
+        if len(parts) < 2:
             return None  # indivisible: el error se queda como está
         failed = None  # el desborde deja de ser terminal en cuanto hay con qué reintentar
-        salidas: list[str] = []
-        for parte in partes:
-            sub = _map_piece(parte, depth + 1)
+        outputs: list[str] = []
+        for part in parts:
+            sub = _map_piece(part, depth + 1)
             if sub is None:
                 return None
-            salidas.extend(sub)
-        return salidas
+            outputs.extend(sub)
+        return outputs
 
     try:
         summaries: list[str] = []
         for index, piece in enumerate(pieces, start=1):
             _inflight_progress(entry_id, index)
-            vigente.chunk = index
+            current.chunk = index
             outs = _map_piece(piece)
             if outs is None:
                 break
             summaries.extend(outs)
 
-        vigente.chunk = None
+        current.chunk = None
         text = ""
         if failed is None:
             # Con un solo parcial y sin reduce propio, ese parcial YA es el resultado. Con un
@@ -3065,7 +3066,7 @@ def _chat_map_reduce(
                 # Los parciales ya están en el formato final (una sección tras otra): unirlos en
                 # orden ES el resultado. Un reduce por el modelo los volvería a aplanar en prosa.
                 text = "\n\n".join(s.strip() for s in summaries)
-            elif len(summaries) == 1 and reduce_propio is None:
+            elif len(summaries) == 1 and custom_reduce is None:
                 text = summaries[0]
             else:
                 for _level in range(3):
@@ -3099,35 +3100,35 @@ def _chat_map_reduce(
     ok = failed is None
     if not ok:
         text, error, finish_reason = failed.text, failed.error, failed.finish_reason
-        if _es_desborde_de_contexto(failed):
+        if _is_context_overflow(failed):
             # Aquí el reintento adaptativo ya partió el trozo y siguió sin caber. El error crudo
             # del backend no dice ni que el problema es el tamaño ni qué se puede tocar, así que
             # se antepone lo accionable y se conserva detrás la respuesta original.
-            detalle = failed.text.removeprefix("[local-delegate error] ")
+            detail = failed.text.removeprefix("[local-delegate error] ")
             text = (
                 f"[local-delegate error] el contenido no cabe en el contexto de {model}, ni "
                 f"partido en trozos de {config.CHUNK_MIN_CHARS} caracteres. Sube el contexto "
                 f"del backend para ese modelo, usa uno con contexto mayor, o pasa menos "
-                f"contenido de una vez. Respuesta del backend: {detalle}"
+                f"contenido de una vez. Respuesta del backend: {detail}"
             )
             error = "context_overflow"
     else:
         error, finish_reason = None, "stop"
-        if postproceso is not None:
-            text = postproceso(text, cortadas > 0)
+        if postprocess is not None:
+            text = postprocess(text, truncated_calls > 0)
         # Antes un parcial cortado por `length` se aceptaba en silencio y el evento decía `stop`:
         # el resumen perdía parte de un trozo sin que nadie lo supiera (revisión del plan, B6).
-        if cortadas:
+        if truncated_calls:
             finish_reason = "length"
             text += (
-                f"\n\n[local-delegate aviso: salida truncada por max_tokens en {cortadas} de "
+                f"\n\n[local-delegate aviso: salida truncada por max_tokens en {truncated_calls} de "
                 f"{calls} llamadas; puede faltar parte del contenido]"
             )
-        text += vigente.notice(len(pieces) > 1)
+        text += current.notice(len(pieces) > 1)
 
     _log_event(
         tool=tool,
-        model=vigente.served if ok or vigente.affinity else model,
+        model=current.served if ok or current.affinity else model,
         source=source,
         chars_in=len(content),
         chars_out=len(text),
@@ -3138,18 +3139,18 @@ def _chat_map_reduce(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         truncated_in=False,  # el sentido de todo esto es que ya no se trunca
-        truncated_out=ok and cortadas > 0,
+        truncated_out=ok and truncated_calls > 0,
         raw_len=raw_len,
         path=path if source == "path" else None,
         chunks=calls,
-        num_sections=num_secciones,
+        num_sections=num_sections,
         focus=focus,
         attempts=all_attempts,
-        **vigente.log_fields(failed),
+        **current.log_fields(failed),
     )
     if source == "path" and ok and config.FEEDBACK_ENABLED:
-        evento = cost.in_flight_row(tool=tool, source=source, path=path)
-        text += _savings_feedback(len(content), "chars", event=evento)
+        event = cost.in_flight_row(tool=tool, source=source, path=path)
+        text += _savings_feedback(len(content), "chars", event=event)
     if ok and calls > 1 and config.FEEDBACK_ENABLED:
         text += f"\n\n(resumido de {len(pieces)} partes en {calls} pasadas por local-delegate)"
     return text
@@ -3219,11 +3220,11 @@ def _commit_language_instruction() -> str:
     return f"Escribe el mensaje de commit entero (primera línea y cuerpo) en {name}."
 
 
-def _guard(formato: str, max_words: int | None = None) -> str:
-    limite = f" Máximo {max_words} palabras." if max_words else ""
+def _guard(output_format: str, max_words: int | None = None) -> str:
+    limit = f" Máximo {max_words} palabras." if max_words else ""
     return (
         "Responde directo desde el input. NO uses herramientas, NO busques en internet. "
-        f"Output EXACTO: {formato}.{limite} Nada fuera del formato."
+        f"Output EXACTO: {output_format}.{limit} Nada fuera del formato."
     )
 
 
@@ -3286,21 +3287,21 @@ def _validate_image_path(path: str) -> str:
 # (v3). La primera versión pedía «1 a 3 frases» y con el CHANGELOG (46 secciones, 500 palabras) el
 # modelo escribió el doble y se cortó (etapa 1); la v2 repartía a partes iguales y las secciones
 # con subsecciones se quedaban cortas: Claude las releía (etapa 2, 3/9).
-_PALABRAS_MINIMAS_POR_SECCION = 8
-_HOLGURA_TOKENS_POR_SECCION = 24
-_FORMATO_ESTRUCTURADO = (
+_MIN_WORDS_PER_SECTION = 8
+_TOKEN_SLACK_PER_SECTION = 24
+_STRUCTURED_FORMAT = (
     "un resumen que sigue la estructura del documento: por cada sección de la lista, en ese "
     "orden, una línea '## ' con el título tal cual y debajo lo que dice, en las palabras que "
     "indica la lista; si la sección trae subsecciones, nombra cada una en negrita al empezar la "
     "frase que la resume"
 )
-_NOTA_ESTRUCTURADO = (
+_STRUCTURED_NOTE = (
     " Los títulos no cuentan en el límite de palabras; si no alcanzan para todas, deja solo el "
     "título en las últimas."
 )
 
 
-def _texto_focus(focus: str | None) -> str:
+def _focus_clause(focus: str | None) -> str:
     """El enfoque, ya saneado, delimitado como dato dentro del prompt de sistema."""
     if not focus:
         return ""
@@ -3310,58 +3311,58 @@ def _texto_focus(focus: str | None) -> str:
     )
 
 
-def _system_estructurado(max_words: int, extra: str) -> str:
-    return _guard(_FORMATO_ESTRUCTURADO, max_words) + _NOTA_ESTRUCTURADO + extra
+def _structured_system(max_words: int, extra: str) -> str:
+    return _guard(_STRUCTURED_FORMAT, max_words) + _STRUCTURED_NOTE + extra
 
 
-def _lista_de_secciones(secciones_, max_words: int) -> str:
+def _section_list(sections_, max_words: int) -> str:
     """Una línea por sección con sus palabras, y sus subsecciones anidadas debajo."""
-    reparto = sections.allocate_by_size(
-        [s.size for s in secciones_], max_words, minimum=_PALABRAS_MINIMAS_POR_SECCION
+    allocation = sections.allocate_by_size(
+        [s.size for s in sections_], max_words, minimum=_MIN_WORDS_PER_SECTION
     )
-    lineas = []
-    for seccion, palabras in zip(secciones_, reparto, strict=True):
-        aclaracion = " (el texto antes de la primera sección)" if seccion.synthetic else ""
-        lineas.append(f"- {seccion.heading}{aclaracion} (unas {palabras} palabras)")
-        lineas.extend(f"  - {sub}" for sub in seccion.subheadings)
-    return "\n".join(lineas)
+    lines = []
+    for section, words in zip(sections_, allocation, strict=True):
+        note = " (el texto antes de la primera sección)" if section.synthetic else ""
+        lines.append(f"- {section.heading}{note} (unas {words} palabras)")
+        lines.extend(f"  - {sub}" for sub in section.subheadings)
+    return "\n".join(lines)
 
 
-def _user_estructurado(
-    secciones_, max_words: int, contenido: str, continua_de: str | None = None
+def _structured_user(
+    sections_, max_words: int, content: str, continues_from: str | None = None
 ) -> str:
-    partes = []
-    if continua_de:
-        partes.append(
-            f"El fragmento empieza a mitad de la sección «{continua_de}»: resume primero ese "
+    parts = []
+    if continues_from:
+        parts.append(
+            f"El fragmento empieza a mitad de la sección «{continues_from}»: resume primero ese "
             "principio en 1 o 2 frases, sin línea de título; después, las secciones de la lista."
         )
-    partes.append(f"Secciones, en orden:\n{_lista_de_secciones(secciones_, max_words)}")
-    partes.append(f"Resume el siguiente contenido:\n\n{contenido}")
-    return "\n\n".join(partes)
+    parts.append(f"Secciones, en orden:\n{_section_list(sections_, max_words)}")
+    parts.append(f"Resume el siguiente contenido:\n\n{content}")
+    return "\n\n".join(parts)
 
 
-def _max_tokens_estructurado(words: int, secciones_) -> int:
+def _structured_max_tokens(words: int, sections_) -> int:
     """Sitio para los títulos y subtítulos, que no cuentan en `max_words` (REQ-202), y margen.
 
     3 tokens por palabra pedida y no 2: con muchas secciones el modelo se pasa del presupuesto, y
     un corte por `max_tokens` a mitad de un trozo deja secciones enteras sin resumir, que es peor
     que un resumen algo más largo (etapa 1: 3 de 5 trozos del CHANGELOG cortados con 2).
     """
-    titulos = [s.heading for s in secciones_] + [t for s in secciones_ for t in s.subheadings]
+    headings = [s.heading for s in sections_] + [t for s in sections_ for t in s.subheadings]
     # Y un colchón por sección: con el reparto por tamaño a una sección pequeña le tocan 8
     # palabras y el modelo escribe al menos una frase entera; sin colchón, el CHANGELOG (47
     # secciones) volvía a cortarse por `max_tokens` (etapa 1 de la v3).
-    colchon = _HOLGURA_TOKENS_POR_SECCION * len(secciones_)
-    return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in titulos) + colchon
+    slack = _TOKEN_SLACK_PER_SECTION * len(sections_)
+    return int(words * 3) + 64 + sum(len(t) // 2 + 8 for t in headings) + slack
 
 
-def _resumen_estructurado(
+def _structured_summary(
     *,
     model: str,
-    rol: str,
+    role: str,
     content: str,
-    estructura,
+    structure,
     max_words: int,
     extra: str,
     focus: bool,
@@ -3370,27 +3371,27 @@ def _resumen_estructurado(
     raw_len: int | None,
     path: str | None,
 ) -> str:
-    plan = sections.sections_for_summary(content, estructura)
-    titulos = [s.heading for s in plan]
+    plan = sections.sections_for_summary(content, structure)
+    headings = [s.heading for s in plan]
 
-    def _completar(texto: str, cortada: bool) -> str:
-        return sections.complete(texto, titulos, truncated=cortada).text
+    def _complete(text: str, truncated: bool) -> str:
+        return sections.complete(text, headings, truncated=truncated).text
 
-    max_chars = config.max_chars_for_role(rol)
+    max_chars = config.max_chars_for_role(role)
     if len(content) <= max_chars:
         return _chat(
             model,
-            _system_estructurado(max_words, extra),
-            _user_estructurado(plan, max_words, content),
-            max_tokens=_max_tokens_estructurado(max_words, plan),
+            _structured_system(max_words, extra),
+            _structured_user(plan, max_words, content),
+            max_tokens=_structured_max_tokens(max_words, plan),
             tool="local_summarize",
-            role=rol,
+            role=role,
             chars_in=len(content),
             source=source,
             truncated_in=truncated_in,
             raw_len=raw_len,
             path=path,
-            postprocess=_completar,
+            postprocess=_complete,
             num_sections=len(plan),
             focus=focus,
         )
@@ -3398,48 +3399,48 @@ def _resumen_estructurado(
     # Documento largo: se trocea SOLO al principio de las secciones (nunca en un `#` de una valla
     # de código), cada trozo se resume con sus secciones y su parte de `max_words`, y los
     # parciales se concatenan en orden: ya están en el formato final.
-    trozos = sections.allocate_words(
-        sections.chunks_by_sections(content, plan, _presupuesto_map(max_chars), _chunk_text),
+    chunks = sections.allocate_words(
+        sections.chunks_by_sections(content, plan, _map_budget(max_chars), _chunk_text),
         max_words,
     )
 
-    def _system_trozo(trozo) -> str:
-        if trozo.sections:
-            return _system_estructurado(trozo.words, extra)
-        return _guard("un resumen en prosa clara", trozo.words) + extra
+    def _chunk_system(chunk) -> str:
+        if chunk.sections:
+            return _structured_system(chunk.words, extra)
+        return _guard("un resumen en prosa clara", chunk.words) + extra
 
-    def _user_trozo(trozo) -> str:
-        texto = trozo.text.strip()
-        if trozo.sections:
-            return _user_estructurado(trozo.sections, trozo.words, texto, trozo.continues_from)
-        if trozo.continues_from:
+    def _chunk_user(chunk) -> str:
+        text = chunk.text.strip()
+        if chunk.sections:
+            return _structured_user(chunk.sections, chunk.words, text, chunk.continues_from)
+        if chunk.continues_from:
             return (
-                f"Este fragmento continúa la sección «{trozo.continues_from}». Resume solo este "
-                f"fragmento en 1 a 3 frases, sin línea de título:\n\n{texto}"
+                f"Este fragmento continúa la sección «{chunk.continues_from}». Resume solo este "
+                f"fragmento en 1 a 3 frases, sin línea de título:\n\n{text}"
             )
-        return f"Resume el siguiente contenido:\n\n{texto}"
+        return f"Resume el siguiente contenido:\n\n{text}"
 
     return _chat_map_reduce(
         model,
-        _system_estructurado(max_words, extra),
+        _structured_system(max_words, extra),
         content,
         lambda piece: f"Resume el siguiente contenido:\n\n{piece}",
         max_chars=max_chars,
         tool="local_summarize",
-        rol=rol,
+        role=role,
         source=source,
         max_words=max_words,
         raw_len=raw_len,
         path=path,
-        pieces=trozos,
-        system_for=_system_trozo,
-        user_for=_user_trozo,
-        words_for=lambda trozo: trozo.words,
-        tokens_for=lambda trozo, words: _max_tokens_estructurado(words, trozo.sections),
-        split_for=lambda trozo: sections.split_chunk(trozo, content, plan, _chunk_text),
+        pieces=chunks,
+        system_for=_chunk_system,
+        user_for=_chunk_user,
+        words_for=lambda chunk: chunk.words,
+        tokens_for=lambda chunk, words: _structured_max_tokens(words, chunk.sections),
+        split_for=lambda chunk: sections.split_chunk(chunk, content, plan, _chunk_text),
         reduce="concat",
-        postproceso=_completar,
-        num_secciones=len(plan),
+        postprocess=_complete,
+        num_sections=len(plan),
         focus=focus,
     )
 
@@ -3471,23 +3472,23 @@ def local_summarize(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    rol, model = _rol_por_tamano(probe_len)
+    role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
-    enfoque = sections.sanitize_focus(focus)
-    extra = _texto_focus(enfoque)
+    clean_focus = sections.sanitize_focus(focus)
+    extra = _focus_clause(clean_focus)
     # Solo con el modelo largo: el mecánico (4B, entradas cortas) se saltó la «Introducción» en la
     # etapa 1 de la v3 (0,86), y el criterio escrito antes de medir era limitarlo al rol `long`.
-    estructurado = config.STRUCTURED_SUMMARY and rol == "long"
-    estructura = sections.detect(content) if estructurado else None
-    if estructura is not None:
-        return _truncation_prefix(content, truncated_in, raw_len) + _resumen_estructurado(
+    structured = config.STRUCTURED_SUMMARY and role == "long"
+    structure = sections.detect(content) if structured else None
+    if structure is not None:
+        return _truncation_prefix(content, truncated_in, raw_len) + _structured_summary(
             model=model,
-            rol=rol,
+            role=role,
             content=content,
-            estructura=estructura,
+            structure=structure,
             max_words=max_words,
             extra=extra,
-            focus=enfoque is not None,
+            focus=clean_focus is not None,
             source="path" if path else "inline",
             truncated_in=truncated_in,
             raw_len=raw_len,
@@ -3501,7 +3502,7 @@ def local_summarize(
     def _build(piece: str) -> str:
         return f"Resume el siguiente contenido:\n\n{piece}"
 
-    if len(content) > config.max_chars_for_role(rol):
+    if len(content) > config.max_chars_for_role(role):
         # No cabe: se resume por partes y luego se resumen los resúmenes. Antes esto se
         # truncaba, o sea que se resumía el principio y el resto se ignoraba.
         return _chat_map_reduce(
@@ -3509,15 +3510,15 @@ def local_summarize(
             system,
             content,
             _build,
-            max_chars=config.max_chars_for_role(rol),
+            max_chars=config.max_chars_for_role(role),
             tool="local_summarize",
-            rol=rol,
+            role=role,
             source="path" if path else "inline",
             max_words=max_words,
             raw_len=raw_len,
             path=path,
             reduce_extra=extra,
-            focus=enfoque is not None,
+            focus=clean_focus is not None,
         )
 
     user = _build(content)
@@ -3527,13 +3528,13 @@ def local_summarize(
         user,
         max_tokens=int(max_words * 2) + 64,
         tool="local_summarize",
-        role=rol,
+        role=role,
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
         raw_len=raw_len,
         path=path,
-        focus=enfoque is not None,
+        focus=clean_focus is not None,
     )
     return _truncation_prefix(content, truncated_in, raw_len) + result
 
@@ -3548,8 +3549,8 @@ def local_classify(text: str, labels: list[str]) -> str:
         text: Texto a clasificar.
         labels: Lista de etiquetas candidatas.
     """
-    etiquetas = ", ".join(labels)
-    system = _guard(f"exactamente una de estas etiquetas: [{etiquetas}]", max_words=5)
+    label_list = ", ".join(labels)
+    system = _guard(f"exactamente una de estas etiquetas: [{label_list}]", max_words=5)
     user = f"Clasifica este texto:\n\n{text}"
     return _chat(
         config.MODEL_MECHANICAL,
@@ -3592,13 +3593,13 @@ def local_extract(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    rol, model = _rol_por_tamano(probe_len)
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(rol))
-    claves = ", ".join(f'"{f}"' for f in fields)
-    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{claves}}}")
+    role, model = _role_for_size(probe_len)
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(role))
+    key_list = ", ".join(f'"{f}"' for f in fields)
+    system = _guard(f"un objeto JSON válido con exactamente estas claves: {{{key_list}}}")
     user = f"Extrae los campos del siguiente contenido:\n\n{content}"
     use_schema = config.JSON_SCHEMA_MODE != "off"
-    info_respaldo: dict = {}
+    fallback_info: dict = {}
     result = _strip_fences(
         _chat(
             model,
@@ -3607,8 +3608,8 @@ def local_extract(
             max_tokens=512,
             temperature=0.0,
             tool="local_extract",
-            role=rol,
-            fallback=info_respaldo,
+            role=role,
+            fallback=fallback_info,
             chars_in=len(content),
             source="path" if path else "inline",
             truncated_in=truncated_in,
@@ -3624,13 +3625,13 @@ def local_extract(
     )
 
     try:
-        datos = json.loads(result)
+        data = json.loads(result)
     except json.JSONDecodeError:
         # El modelo devolvió algo que no es JSON, o el backend falló y `result` trae el aviso de
         # error. Degradar con la carga cruda es mejor que lanzar: quien llama ve qué pasó en vez
         # de recibir una excepción de protocolo.
         return {"_local_delegate": {"error": "respuesta no parseable como JSON", "crudo": result}}
-    if not isinstance(datos, dict):
+    if not isinstance(data, dict):
         return {"_local_delegate": {"error": "la respuesta no es un objeto JSON", "crudo": result}}
 
     meta: dict = {}
@@ -3639,17 +3640,17 @@ def local_extract(
         meta["aviso"] = f"entrada truncada — procesados {len(content)} de {raw_len} chars"
     if path and config.FEEDBACK_ENABLED:
         # Tokens de Claude de la fila en curso (REQ-035), no del modelo local.
-        evento = cost.in_flight_row(tool="local_extract", source="path", path=path)
+        event = cost.in_flight_row(tool="local_extract", source="path", path=path)
         meta["leido_server_side"] = {
             "chars": len(content),
-            "tokens_aprox": claude_tokens(len(content), kind="text", event=evento),
+            "tokens_aprox": claude_tokens(len(content), kind="text", event=event),
         }
-    if info_respaldo:
+    if fallback_info:
         # Con el resto de metadatos, nunca dentro de los campos que el agente usa tal cual.
-        meta["respaldo"] = info_respaldo
+        meta["respaldo"] = fallback_info
     if meta:
-        datos["_local_delegate"] = meta
-    return datos
+        data["_local_delegate"] = meta
+    return data
 
 
 @mcp.tool(annotations=_annotations("Generar código boilerplate", writes=True))
@@ -3666,7 +3667,7 @@ def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = F
         target: Ruta ABSOLUTA del archivo a escribir. Los directorios que falten se crean.
         overwrite: Pisar `target` si ya existe. Por defecto falla, y falla ANTES de generar nada.
     """
-    destino = _validate_target(target, overwrite)
+    target_path = _validate_target(target, overwrite)
     system = _guard(f"solo código {language} válido, sin explicaciones ni ```")
     user = f"Genera {language} para: {spec}"
     return _chat(
@@ -3680,7 +3681,7 @@ def local_boilerplate(spec: str, language: str, target: str, overwrite: bool = F
         chars_in=len(spec),
         source="inline",
         strip_fences=True,
-        write_to=destino,
+        write_to=target_path,
     )
 
 
@@ -3713,33 +3714,33 @@ def local_delegate(
     chosen = model or config.MODEL_MECHANICAL
     # Un modelo pedido por quien llama —o elegido por una persona en la pregunta de abajo— no
     # usa respaldo (REQ-005): lo eligió alguien, y cambiarlo en silencio sería desobedecer.
-    explicito = model is not None
+    explicit = model is not None
     if chosen not in config.ALLOWED_MODELS:
         # La lista de válidos ya iba en el error, así que el servidor siempre supo la respuesta.
         # Se ofrece en vez de solo enunciarla. Ojo con la consecuencia, que es real: con respuesta,
         # una llamada que hoy falla al instante y sin gastar backend pasa a ejecutar inferencia.
         # Sin respuesta —mecanismo apagado, cliente sin soporte, plazo agotado, negativa— se
         # devuelve el error de hoy tal cual y no se toca el backend.
-        validos = sorted(config.ALLOWED_MODELS)
-        elegido = preguntas.preguntar(
-            f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(validos)}",
+        valid = sorted(config.ALLOWED_MODELS)
+        model_answer = preguntas.preguntar(
+            f"El modelo '{chosen}' no está en el catálogo. ¿Cuál uso? Válidos: {', '.join(valid)}",
             preguntas.ElegirModelo,
         )
-        if elegido is None or elegido.modelo not in config.ALLOWED_MODELS:
-            return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {validos}"
-        chosen = elegido.modelo
+        if model_answer is None or model_answer.modelo not in config.ALLOWED_MODELS:
+            return f"[local-delegate error] modelo inválido '{chosen}'. Válidos: {valid}"
+        chosen = model_answer.modelo
     if chunk not in {"auto", "on", "off"}:
         return f"[local-delegate error] chunk inválido: '{chunk}'. Válidos: 'auto', 'on', 'off'."
     if not output_format.strip():
         # El parámetro es obligatorio, así que nunca falta — pero nadie comprobaba que trajera algo,
         # y con la cadena vacía el guardrail se queda sin formato y el modelo improvisa. Si no hay
         # quien responda, se sigue como hasta ahora.
-        formato = preguntas.preguntar(
+        format_answer = preguntas.preguntar(
             "La delegación no dice en qué formato quieres la salida. ¿Cuál uso?",
             preguntas.ElegirFormato,
         )
-        if formato is not None and formato.formato.strip():
-            output_format = formato.formato.strip()
+        if format_answer is not None and format_answer.formato.strip():
+            output_format = format_answer.formato.strip()
     system = _guard(output_format)
     if chunk == "on" or (chunk == "auto" and len(input) > config.CHUNK_CHARS):
         return _chat_chunked(
@@ -3748,8 +3749,8 @@ def local_delegate(
             input,
             lambda piece: f"{task}\n\nInput:\n{piece}",
             tool="local_delegate",
-            rol="mechanical",
-            explicito=explicito,
+            role="mechanical",
+            explicit=explicit,
             source="inline",
         )
     return _chat(
@@ -3759,7 +3760,7 @@ def local_delegate(
         max_tokens=config.CHUNK_MAX_TOKENS,
         tool="local_delegate",
         role="mechanical",
-        explicit=explicito,
+        explicit=explicit,
         chars_in=len(input),
         source="inline",
     )
@@ -3790,14 +3791,14 @@ def local_lint_summary(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    rol, model = _rol_por_tamano(probe_len)
+    role, model = _role_for_size(probe_len)
     content, truncated_in, raw_len = _read_input(text, path, _NO_TRUNCATE)
     system = _lint_system(max_words)
 
     def _build(piece: str) -> str:
         return f"Resume la siguiente salida de linter/tests:\n\n{piece}"
 
-    if len(content) > config.max_chars_for_role(rol):
+    if len(content) > config.max_chars_for_role(role):
         # Un log de CI es justo el caso donde truncar duele: los errores interesantes suelen
         # estar al final, y era exactamente lo que se descartaba.
         return _chat_map_reduce(
@@ -3805,9 +3806,9 @@ def local_lint_summary(
             system,
             content,
             _build,
-            max_chars=config.max_chars_for_role(rol),
+            max_chars=config.max_chars_for_role(role),
             tool="local_lint_summary",
-            rol=rol,
+            role=role,
             source="path" if path else "inline",
             max_words=max_words,
             raw_len=raw_len,
@@ -3821,7 +3822,7 @@ def local_lint_summary(
         user,
         max_tokens=int(max_words * 2) + 96,
         tool="local_lint_summary",
-        role=rol,
+        role=role,
         chars_in=len(content),
         source="path" if path else "inline",
         truncated_in=truncated_in,
@@ -3881,9 +3882,9 @@ def local_commit_msg(
         # devolvía `chore: update GitHub Actions pages artifact version`, o sea el primer
         # archivo por orden alfabético de rutas. Ahora entra entero: parte por archivo, un
         # parte por trozo, y el mensaje se redacta sobre esos partes MÁS el inventario completo.
-        archivos = _diff_inventory(content)
+        files = _diff_inventory(content)
         budget = max(config.CHUNK_MIN_CHARS, int(config.max_chars_for_role("code") * 0.8))
-        inventario = _format_inventory(archivos, int(budget * 0.25))
+        inventory = _format_inventory(files, int(budget * 0.25))
         # El formato del map NO se describe con una plantilla del tipo `- ruta: qué cambió`:
         # medido, el modelo la devuelve copiada tal cual —`- ruta: qué cambió y para qué`— y ese
         # trozo se pierde entero. Se ancla con los nombres reales de los archivos, que ya se
@@ -3897,29 +3898,29 @@ def local_commit_msg(
         # cabecera `diff --git`: sin decirles a qué archivo pertenecen, el modelo se inventa la
         # ruta (medido: `archivo.py`). Las piezas llegan en orden, así que basta con arrastrar
         # la última vista.
-        en_curso: dict[str, str | None] = {"archivo": None}
+        current_file: dict[str, str | None] = {"file": None}
 
         def _build_map(piece: str) -> str:
-            del_trozo = [ruta for ruta, _, _ in _diff_inventory(piece)]
-            if del_trozo:
-                en_curso["archivo"] = del_trozo[-1]
-                encabezado = (
-                    f"Archivos de este fragmento: {', '.join(del_trozo)}.\n"
+            piece_paths = [file_path for file_path, _, _ in _diff_inventory(piece)]
+            if piece_paths:
+                current_file["file"] = piece_paths[-1]
+                header = (
+                    f"Archivos de este fragmento: {', '.join(piece_paths)}.\n"
                     f"Usa esas rutas literales, una viñeta por archivo."
                 )
-            elif en_curso["archivo"]:
-                encabezado = (
-                    f"Este fragmento CONTINÚA el archivo {en_curso['archivo']} y no repite su "
-                    f"cabecera. Escribe una sola viñeta, para {en_curso['archivo']}."
+            elif current_file["file"]:
+                header = (
+                    f"Este fragmento CONTINÚA el archivo {current_file['file']} y no repite su "
+                    f"cabecera. Escribe una sola viñeta, para {current_file['file']}."
                 )
             else:
-                encabezado = "Escribe una viñeta por archivo, con su ruta literal."
-            return f"{encabezado}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
+                header = "Escribe una viñeta por archivo, con su ruta literal."
+            return f"{header}\n\nDi qué cambia en este fragmento de diff:\n\n{piece}"
 
         def _build_reduce(joined: str) -> str:
-            cabeza = f"{inventario}\n\n" if inventario else ""
+            head = f"{inventory}\n\n" if inventory else ""
             return (
-                f"{cabeza}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
+                f"{head}Estas son notas EN ORDEN sobre los archivos de un mismo cambio. La "
                 "lista de arriba es el inventario COMPLETO del diff; las notas pueden no "
                 "cubrirlo entero ni estar todas bien. El resumen describe el comportamiento que "
                 "cambia y para qué, no el número de archivos ni los tests que lo acompañan, y "
@@ -3928,14 +3929,14 @@ def local_commit_msg(
                 f"{joined}"
             )
 
-        resultado = _chat_map_reduce(
+        commit_message = _chat_map_reduce(
             config.MODEL_CODE,
             map_system,
             content,
             _build_map,
             max_chars=config.max_chars_for_role("code"),
             tool="local_commit_msg",
-            rol="code",
+            role="code",
             source="path" if path else "inline",
             max_words=90,
             # Los partes son material intermedio y hay varios archivos por trozo: con el tope
@@ -3946,11 +3947,11 @@ def local_commit_msg(
             raw_len=raw_len,
             path=path,
         )
-        if not resultado.startswith("[local-delegate error]"):
-            resultado += (
-                f"\n\n(alcance: {len(archivos)} archivos, {len(content):,} chars leídos enteros)"
+        if not commit_message.startswith("[local-delegate error]"):
+            commit_message += (
+                f"\n\n(alcance: {len(files)} archivos, {len(content):,} chars leídos enteros)"
             )
-        return resultado
+        return commit_message
 
     result = _chat(
         config.MODEL_CODE,
@@ -3995,8 +3996,8 @@ def local_translate(
     """
     probe = path and Path(path).is_file()
     probe_len = Path(path).stat().st_size if probe else len(text or "")
-    rol, model = _rol_por_tamano(probe_len)
-    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(rol))
+    role, model = _role_for_size(probe_len)
+    content, truncated_in, raw_len = _read_input(text, path, config.max_chars_for_role(role))
     system = _translate_system(target_lang)
     result = _chat_chunked(
         model,
@@ -4004,7 +4005,7 @@ def local_translate(
         content,
         lambda piece: f"Traduce al {target_lang} el siguiente texto:\n\n{piece}",
         tool="local_translate",
-        rol=rol,
+        role=role,
         source="path" if path else "inline",
         truncated_in=truncated_in,
         raw_len=raw_len,
@@ -4226,7 +4227,7 @@ def _model_status_value(m: dict) -> str | None:
     return st if isinstance(st, str) else None
 
 
-def _plazo_sonda() -> httpx2.Timeout:
+def _probe_timeout() -> httpx2.Timeout:
     """El plazo de TODO sondeo de estado (REQ-013): 3 s para conectar y 2 s para leer.
 
     Para conectar no vale menos: en Windows un puerto cerrado tarda ~2,1 s en rechazarse, y con 1 s
@@ -4236,10 +4237,10 @@ def _plazo_sonda() -> httpx2.Timeout:
 
 
 @dataclass(frozen=True)
-class EstadoBackend:
+class BackendState:
     """Lo que dice un sondeo de `/v1/models` (REQ-012).
 
-    `causa` es un valor de `failures.ConnectionCause` como texto, y `detalle` su texto; los dos `None`
+    `cause` es un valor de `failures.ConnectionCause` como texto, y `detail` su texto; los dos `None`
     cuando el backend está disponible. Con un fallo, `models` es la última lista buena de ESTA
     `BASE_URL` (o vacía), con `status: None` en cada modelo y `models_stale=True`.
     """
@@ -4247,17 +4248,17 @@ class EstadoBackend:
     available: bool
     models: list[dict]
     models_stale: bool
-    causa: str | None
-    detalle: str | None
+    cause: str | None
+    detail: str | None
     status_http: int | None
 
 
 #: La última lista buena de `/v1/models`, por `BASE_URL` (REQ-021). Por URL y no en una sola ranura:
 #: si cambia el backend, la lista del anterior no es de este. En memoria: no sobrevive al proceso.
-_LISTAS_BUENAS: dict[str, list[dict]] = {}
+_LAST_GOOD_LISTS: dict[str, list[dict]] = {}
 
 
-def sondear_backend() -> EstadoBackend:
+def probe_backend() -> BackendState:
     """Sondea `GET /v1/models` y dice si el backend está disponible y, si no, por qué. Nunca lanza.
 
     `available` exige un 2xx cuyo cuerpo sea un objeto con una lista `data`; cualquier otra forma
@@ -4270,13 +4271,13 @@ def sondear_backend() -> EstadoBackend:
     # Todo dentro del `try`, también armar la lista: un `id` que no se puede ordenar, o cualquier
     # otra sorpresa del cuerpo, sale como causa y no como excepción hacia el panel o `local_status`.
     try:
-        with httpx2.Client(timeout=_plazo_sonda()) as c:
+        with httpx2.Client(timeout=_probe_timeout()) as c:
             r = c.get(endpoint, headers=config.auth_headers())
         if not r.is_success:
-            causa = failures.connection_cause(r.status_code, loopback=_backend_on_loopback())
-            return _sondeo_fallido(url, causa, status=r.status_code, status_http=r.status_code)
-        cuerpo = r.json()
-        data = cuerpo.get("data") if isinstance(cuerpo, dict) else None
+            cause = failures.connection_cause(r.status_code, loopback=_backend_on_loopback())
+            return _failed_probe(url, cause, status=r.status_code, status_http=r.status_code)
+        body = r.json()
+        data = body.get("data") if isinstance(body, dict) else None
         if not isinstance(data, list):
             # `ValueError` y no `TypeError` a propósito: es la regla 10 del clasificador
             # (`invalid_response`), la misma que un cuerpo que no es JSON (REQ-012).
@@ -4290,47 +4291,47 @@ def sondear_backend() -> EstadoBackend:
         ]
         models.sort(key=lambda x: x["id"])
     except Exception as exc:  # el sondeo nunca lanza: lo que no se espera también tiene causa
-        causa = failures.connection_cause(exc, loopback=_backend_on_loopback())
-        return _sondeo_fallido(url, causa, endpoint=endpoint, excepcion=exc)
-    _LISTAS_BUENAS[url] = models
-    return EstadoBackend(True, models, False, None, None, r.status_code)
+        cause = failures.connection_cause(exc, loopback=_backend_on_loopback())
+        return _failed_probe(url, cause, endpoint=endpoint, exception=exc)
+    _LAST_GOOD_LISTS[url] = models
+    return BackendState(True, models, False, None, None, r.status_code)
 
 
-def _sondeo_fallido(
+def _failed_probe(
     url: str,
-    causa: failures.ConnectionCause,
+    cause: failures.ConnectionCause,
     *,
     status: int | None = None,
     status_http: int | None = None,
     endpoint: str | None = None,
-    excepcion: BaseException | None = None,
-) -> EstadoBackend:
-    guardada = [{**m, "status": None} for m in _LISTAS_BUENAS.get(url, [])]
-    texto = failures.detail(
-        causa,
+    exception: BaseException | None = None,
+) -> BackendState:
+    saved = [{**m, "status": None} for m in _LAST_GOOD_LISTS.get(url, [])]
+    text = failures.detail(
+        cause,
         host=config.backend_host(url),
         status=status,
         endpoint=endpoint,
-        exception=excepcion,
+        exception=exception,
     )
-    return EstadoBackend(False, guardada, True, causa.value, texto, status_http)
+    return BackendState(False, saved, True, cause.value, text, status_http)
 
 
 def _models_with_status() -> tuple[bool, list[dict]]:
     """(backend_up, [{"id","status"}]) desde GET /v1/models; status None si el backend no lo da.
 
-    Envoltorio de :func:`sondear_backend` para quien solo necesita esas dos cosas. Con el backend
+    Envoltorio de :func:`probe_backend` para quien solo necesita esas dos cosas. Con el backend
     caído, la lista es la última buena de esta URL, sin estado (REQ-021).
     """
-    estado = sondear_backend()
-    return estado.available, estado.models
+    state = probe_backend()
+    return state.available, state.models
 
 
 def _llamaswap_running() -> str | None:
     """Modelos montados vía GET {base sin /v1}/running de llama-swap (best-effort)."""
     base = config.BASE_URL.removesuffix("/v1")
     try:
-        with httpx2.Client(timeout=_plazo_sonda()) as c:
+        with httpx2.Client(timeout=_probe_timeout()) as c:
             r = c.get(f"{base}/running", headers=config.auth_headers())
             if not r.is_success:
                 return None
@@ -4346,25 +4347,27 @@ def _llamaswap_running() -> str | None:
     return ", ".join(parts) if parts else "ningún modelo montado"
 
 
-def _describir_enfriamiento() -> list[str]:
+def _describe_cooldown() -> list[str]:
     """REQ-013: los modelos enfriados, lo que les queda y cuántas veces seguidas han entrado."""
     if not config.COOLDOWN:
         return ["Enfriamiento: apagado (LOCAL_DELEGATE_COOLDOWN=0)"]
-    lineas = [
+    lines = [
         (
             f"Enfriamiento: encendido ({config.COOLDOWN_FAILURES} fallos seguidos, "
             f"{config.COOLDOWN_S:.0f} s, tope {config.COOLDOWN_MAX_S:.0f} s)"
         )
     ]
-    activos = cooldown.from_config().active()
-    if not activos:
-        lineas.append("  ningún modelo enfriado")
-    for modelo, enfriado in sorted(activos.items()):
-        veces = (
-            "1 vez seguida" if enfriado.reentries == 1 else f"{enfriado.reentries} veces seguidas"
+    active = cooldown.from_config().active()
+    if not active:
+        lines.append("  ningún modelo enfriado")
+    for model, cooldown_entry in sorted(active.items()):
+        times = (
+            "1 vez seguida"
+            if cooldown_entry.reentries == 1
+            else f"{cooldown_entry.reentries} veces seguidas"
         )
-        lineas.append(f"  {modelo}: quedan {enfriado.remaining_s:.0f} s, ha entrado {veces}")
-    return lineas
+        lines.append(f"  {model}: quedan {cooldown_entry.remaining_s:.0f} s, ha entrado {times}")
+    return lines
 
 
 def _clashes_by_groups(snapshot: topology.Snapshot) -> str:
@@ -4401,7 +4404,7 @@ def _describe_turn() -> str:
 
 
 #: Las causas en las que ALGUIEN contesta: no es «caído» (el ámbar del badge, REQ-014/REQ-015).
-_CAUSAS_CON_RESPUESTA = frozenset(
+_CAUSES_WITH_RESPONSE = frozenset(
     {
         failures.ConnectionCause.HTTP_ERROR.value,
         failures.ConnectionCause.INVALID_RESPONSE.value,
@@ -4410,15 +4413,15 @@ _CAUSAS_CON_RESPUESTA = frozenset(
 )
 
 
-def _estado_backend_en_texto(estado: EstadoBackend) -> str:
+def _backend_state_text(state: BackendState) -> str:
     """El estado de la línea `Backend:` de `local_status`, con el criterio del badge (REQ-015)."""
-    if estado.available:
+    if state.available:
         return "arriba"
-    if estado.causa == failures.ConnectionCause.CREDENTIAL.value:
-        return f"SIN ACCESO: {estado.detalle}"
-    if estado.causa in _CAUSAS_CON_RESPUESTA:
-        return f"RESPONDE CON ERROR: {estado.detalle}"
-    return f"CAÍDO: {estado.detalle}"
+    if state.cause == failures.ConnectionCause.CREDENTIAL.value:
+        return f"SIN ACCESO: {state.detail}"
+    if state.cause in _CAUSES_WITH_RESPONSE:
+        return f"RESPONDE CON ERROR: {state.detail}"
+    return f"CAÍDO: {state.detail}"
 
 
 @mcp.tool(annotations=_annotations("Diagnóstico del backend local"))
@@ -4430,10 +4433,10 @@ def local_status() -> str:
     """
     lines: list[str] = [f"local-delegate v{_get_version()}", ""]
 
-    estado = sondear_backend()
-    backend_up, models = estado.available, estado.models
+    state = probe_backend()
+    backend_up, models = state.available, state.models
     origin = "local (esta máquina)" if config.backend_origin() == "local" else "REMOTO"
-    lines.append(f"Backend: {config.BASE_URL} — {_estado_backend_en_texto(estado)}")
+    lines.append(f"Backend: {config.BASE_URL} — {_backend_state_text(state)}")
     lines.append(f"  cómputo: {origin} — {config.backend_host()}")
     if backend_up:
         if models:
@@ -4456,7 +4459,7 @@ def local_status() -> str:
     lines.extend(cadenas.describir())
     lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
     lines.append(_describe_turn())
-    lines.extend(_describir_enfriamiento())
+    lines.extend(_describe_cooldown())
 
     current_log = _current_log_path()
     n_events = 0
@@ -4465,23 +4468,23 @@ def local_status() -> str:
     saved_tokens = 0
     net_tokens = 0
     if current_log.is_file():
-        registros: list[dict] = []
+        records: list[dict] = []
         with current_log.open(encoding="utf-8") as f:
             for raw_line in f:
                 raw_line = raw_line.strip()
                 if not raw_line:
                     continue
                 try:
-                    registros.append(json.loads(raw_line))
+                    records.append(json.loads(raw_line))
                 except json.JSONDecodeError:
                     continue
         # Misma fusión y misma contabilidad que el dashboard (coste-api-y-cuota, REQ-006): sin
         # fundir, la fila no trae su densidad y esta tool daría 0 donde el panel da la cifra.
         # Filas viejas y nuevas al mismo formato antes de contar (REQ-006).
-        registros = [
-            legacy_names.normalize("usage", r) if isinstance(r, dict) else r for r in registros
+        records = [
+            legacy_names.normalize("usage", r) if isinstance(r, dict) else r for r in records
         ]
-        for rec in cost.merge(registros, log_dir=config.LOG_DIR):
+        for rec in cost.merge(records, log_dir=config.LOG_DIR):
             # Las pruebas no cuentan, con la misma regla que el panel (test-windows-out-of-metrics,
             # REQ-018): cliente `mcp`, banco o ventana de prueba.
             if attribution.test_reason(rec):
@@ -4501,10 +4504,10 @@ def local_status() -> str:
         f"contexto conservado: ~{net_tokens} tokens netos (bruto ~{saved_tokens})"
         + (f" ({n_tests} de pruebas fuera)" if n_tests else "")
     )
-    for ventana in test_windows.load(config.LOG_DIR).open_windows():
+    for window in test_windows.load(config.LOG_DIR).open_windows():
         lines.append(
-            f"  Ventana de prueba abierta: {ventana.id} desde "
-            f"{test_windows.format_instant(ventana.start)}"
+            f"  Ventana de prueba abierta: {window.id} desde "
+            f"{test_windows.format_instant(window.start)}"
         )
     # REQ-027: la velocidad normal de cada modelo. Observar no rompe la tool (REQ-028).
     try:
@@ -4561,7 +4564,7 @@ def _describe_deprecated_names() -> list[str]:
     ]
 
 
-def preparar_ctrl_break() -> None:
+def prepare_ctrl_break() -> None:
     """Hace que Ctrl+Break se pare como Ctrl+C. Solo hace algo en Windows.
 
     Windows tiene **dos** eventos de consola y Python solo convierte uno en `KeyboardInterrupt`:
