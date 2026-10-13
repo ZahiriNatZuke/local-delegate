@@ -667,7 +667,7 @@ _MEDIR_TARJETAS = """() => {
 def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_path, monkeypatch):
     """El panel pinta lo que trae `/api/stats` como cifras con la forma de los KPIs: el coste con
     su cota baja, su estimación y el desglose; la imagen con sus bytes. La cuota «sin calibrar» (sin
-    `coste-agregados.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
+    `cost-aggregates.json` en esta carpeta) **no se pinta**. Ningún párrafo en el cuerpo."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         navegador = _navegador(pw)
@@ -733,16 +733,16 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
     calibrarla de verdad pide tres puntos del statusline."""
     _log_coste_e_imagen(tmp_path, monkeypatch)
     cuota_calibrada = {
-        "five_hour": {"estado": "calibrado", "puntos": 4, "a_pct": 3.4, "b_pct": 11.9},
-        "seven_day": {"estado": "sin calibrar", "puntos": 1, "motivo": "faltan 2 puntos"},
-        "hay_agregados": True,
-        "comando": "local-delegate recompute-cost",
+        "five_hour": {"status": "calibrated", "points": 4, "a_pct": 3.4, "b_pct": 11.9},
+        "seven_day": {"status": "uncalibrated", "points": 1, "reason": "faltan 2 puntos"},
+        "has_aggregates": True,
+        "command": "local-delegate recompute-cost",
     }
 
     def _inyectar(ruta):
         respuesta = ruta.fetch()
         datos = respuesta.json()
-        datos["cuota"] = cuota_calibrada
+        datos["quota"] = cuota_calibrada
         ruta.fulfill(response=respuesta, body=json.dumps(datos))
 
     with _Servidor(9495) as servidor, sync_playwright() as pw:

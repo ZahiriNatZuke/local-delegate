@@ -1,0 +1,21 @@
+# git no empareja los git mv (más de la mitad reescrita): coste.py→cost.py y cuota.py→quota.py se siguen a mano
+M	CHANGELOG.md -> CHANGELOG.md	antes w/lf	después w/lf	ok
+M	docs/wiki/Savings-and-metrics.md -> docs/wiki/Savings-and-metrics.md	antes w/lf	después w/lf	ok
+M	scripts/dev/capture_dashboard.py -> scripts/dev/capture_dashboard.py	antes w/lf	después w/lf	ok
+M	scripts/medir_adopcion.py -> scripts/medir_adopcion.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/checks.py -> src/local_delegate/checks.py	antes w/lf	después w/lf	ok
+R(git mv)	src/local_delegate/coste.py -> src/local_delegate/cost.py	antes w/lf	después w/lf	ok
+R(git mv)	src/local_delegate/cuota.py -> src/local_delegate/quota.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/recalcular.py -> src/local_delegate/recalcular.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/server.py -> src/local_delegate/server.py	antes w/crlf	después w/crlf	ok
+M	src/local_delegate/valoracion.py -> src/local_delegate/valoracion.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/web/metrics.py -> src/local_delegate/web/metrics.py	antes w/crlf	después w/crlf	ok
+M	tests/test_boilerplate_salida.py -> tests/test_boilerplate_salida.py	antes w/lf	después w/lf	ok
+M	tests/test_cuota.py -> tests/test_cuota.py	antes w/lf	después w/lf	ok
+M	tests/test_dashboard_ui.py -> tests/test_dashboard_ui.py	antes w/crlf	después w/crlf	ok
+M	tests/test_densidad.py -> tests/test_densidad.py	antes w/lf	después w/lf	ok
+M	tests/test_metrics.py -> tests/test_metrics.py	antes w/lf	después w/lf	ok
+M	tests/test_panel_coste.py -> tests/test_panel_coste.py	antes w/lf	después w/lf	ok
+M	tests/test_recalcular.py -> tests/test_recalcular.py	antes w/lf	después w/lf	ok
+M	tests/test_valoracion.py -> tests/test_valoracion.py	antes w/lf	después w/lf	ok
+diferencias: 0

@@ -16,7 +16,7 @@ import httpx2
 import pytest
 from conftest import desktop_mcp_remote_entry, make_home, snapshot, write_claude_desktop
 
-from local_delegate import checks, install, llamaswap_api, recalcular, sondas
+from local_delegate import checks, install, llamaswap_api, recompute, sondas
 from local_delegate.failures import BackendView
 
 
@@ -410,7 +410,7 @@ def test_complete_home_is_all_ok(tmp_path, monkeypatch):
     write_claude_desktop(home, {install.SERVER_NAME: desktop_mcp_remote_entry()})
     # `config.coste` tampoco: su cotejo vive en `LOG_DIR`. Se le da uno que pasa.
     logs = tmp_path / "logs"
-    recalcular.escribir_agregados(logs, {"version": 1, "cotejo": {"veredicto": "pasa"}})
+    recompute.write_aggregates(logs, {"version": 1, "check": {"verdict": "pass"}})
     # `backend.residency` y `backend.topology` leen la config de llama-swap (`doctor --config`):
     # se les da la de hoy, sin residente y con turno.
     ctx = make_ctx(

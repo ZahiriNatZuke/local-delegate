@@ -335,7 +335,7 @@ def _resolve_reset_calibration(args: argparse.Namespace) -> str | None:
 
 def cmd_recompute_cost(args: argparse.Namespace) -> int:
     """`recompute-cost` (coste-api-y-cuota, REQ-070): escribe solo en el directorio de logs."""
-    from . import config, recalcular
+    from . import config, recompute
 
     try:
         reset = _resolve_reset_calibration(args)
@@ -344,11 +344,11 @@ def cmd_recompute_cost(args: argparse.Namespace) -> int:
         return 2
     claude_dir = Path(args.claude_dir) if args.claude_dir else Path.home() / ".claude"
     try:
-        resumen = recalcular.ejecutar(claude_dir, config.LOG_DIR, reiniciar=reset)
+        resumen = recompute.run(claude_dir, config.LOG_DIR, reset=reset)
     except OSError as e:
         print(f"recompute-cost: no se pudo escribir en el directorio de logs ({e.strerror}).")
         return 1
-    print(recalcular.texto_del_resumen(resumen))
+    print(recompute.summary_text(resumen))
     return 0
 
 

@@ -1,0 +1,27 @@
+# A5b-2: EOL antes (HEAD 609443e) y después, sobre todo el diff; los git mv seguidos por su R de git
+M	CHANGELOG.md -> CHANGELOG.md	antes w/lf	después w/lf	ok
+M	docs/wiki/Configuration.md -> docs/wiki/Configuration.md	antes w/lf	después w/lf	ok
+M	docs/wiki/Integration-install.md -> docs/wiki/Integration-install.md	antes w/crlf	después w/crlf	ok
+M	docs/wiki/Savings-and-metrics.md -> docs/wiki/Savings-and-metrics.md	antes w/lf	después w/lf	ok
+M	docs/wiki/Troubleshooting.md -> docs/wiki/Troubleshooting.md	antes w/lf	después w/lf	ok
+M	scripts/dev/capture_dashboard.py -> scripts/dev/capture_dashboard.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/checks.py -> src/local_delegate/checks.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/cli.py -> src/local_delegate/cli.py	antes w/crlf	después w/crlf	ok
+M	src/local_delegate/legacy_names.py -> src/local_delegate/legacy_names.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/quota.py -> src/local_delegate/quota.py	antes w/lf	después w/lf	ok
+A	src/local_delegate/recalcular.py -> src/local_delegate/recompute.py	antes w/lf	después w/lf	ok
+A	src/local_delegate/valoracion.py -> src/local_delegate/valuation.py	antes w/lf	después w/lf	ok
+M	src/local_delegate/web/metrics.py -> src/local_delegate/web/metrics.py	antes w/crlf	después w/crlf	ok
+M	tests/test_checks.py -> tests/test_checks.py	antes w/lf	después w/lf	ok
+M	tests/test_cli_renamed_names.py -> tests/test_cli_renamed_names.py	antes w/lf	después w/lf	ok
+M	tests/test_coste_doctor.py -> tests/test_coste_doctor.py	antes w/lf	después w/lf	ok
+M	tests/test_cuota.py -> tests/test_cuota.py	antes w/lf	después w/lf	ok
+M	tests/test_dashboard_ui.py -> tests/test_dashboard_ui.py	antes w/crlf	después w/crlf	ok
+M	tests/test_doctor.py -> tests/test_doctor.py	antes w/lf	después w/lf	ok
+M	tests/test_metrics.py -> tests/test_metrics.py	antes w/lf	después w/lf	ok
+M	tests/test_panel_coste.py -> tests/test_panel_coste.py	antes w/lf	después w/lf	ok
+M	tests/test_recalcular.py -> tests/test_recalcular.py	antes w/lf	después w/lf	ok
+A	tests/test_recalcular_legacy.py -> tests/test_recalcular_legacy.py	antes (nuevo)	después w/lf	ok
+M	tests/test_transcripts.py -> tests/test_transcripts.py	antes w/lf	después w/lf	ok
+M	tests/test_valoracion.py -> tests/test_valoracion.py	antes w/lf	después w/lf	ok
+# diferencias: 0

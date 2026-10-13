@@ -12,7 +12,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from local_delegate import attribution, checks, recalcular
+from local_delegate import attribution, checks, recompute
 
 TOOL = "local_summarize"
 
@@ -66,14 +66,14 @@ def _cotejo(log_dir: Path, veredicto: str | None, *, sin_precio=(), fuera: int =
     cotejo = None
     if veredicto is not None:
         cotejo = {
-            "fecha": "2026-10-06T12:00:00+00:00",
-            "version_tabla": "2026-10-06",
-            "juzgadas": 142,
-            "fuera": fuera,
-            "sin_precio": list(sin_precio),
-            "veredicto": veredicto,
+            "date": "2026-10-06T12:00:00+00:00",
+            "table_version": "2026-10-06",
+            "judged": 142,
+            "outside": fuera,
+            "unpriced": list(sin_precio),
+            "verdict": veredicto,
         }
-    recalcular.escribir_agregados(log_dir, {"version": 1, "plazo_dias": 30, "cotejo": cotejo})
+    recompute.write_aggregates(log_dir, {"version": 1, "cleanup_days": 30, "check": cotejo})
 
 
 def _probe(home: Path, log_dir: Path) -> checks.Result:
@@ -81,11 +81,11 @@ def _probe(home: Path, log_dir: Path) -> checks.Result:
 
 
 def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
-    """El escenario de la spec: sin `coste-agregados.json` y con `H` = 30, avisa a los 20 días."""
+    """El escenario de la spec: sin `cost-aggregates.json` y con `H` = 30, avisa a los 20 días."""
     log_dir = tmp_path / "log"
     _log(log_dir, 21)
     r = _probe(_home(tmp_path), log_dir)
-    assert not recalcular.ruta(log_dir).exists()
+    assert not recompute.aggregates_path(log_dir).exists()
     assert r.status == checks.WARN
     assert "recompute-cost" in r.detail
     assert "hace 21 días" in r.detail
@@ -116,7 +116,7 @@ def test_las_dos_cosas_a_la_vez(tmp_path):
     """Relleno pendiente y cotejo fallido: gana el `warn` y el mensaje dice las dos cosas."""
     log_dir = tmp_path / "log"
     _log(log_dir, 21, 22)
-    _cotejo(log_dir, "falla", sin_precio=["claude-opus-5"], fuera=3)
+    _cotejo(log_dir, "fail", sin_precio=["claude-opus-5"], fuera=3)
     r = _probe(_home(tmp_path), log_dir)
     assert r.status == checks.WARN
     assert "2 delegación(es) pendiente(s)" in r.detail
@@ -129,13 +129,13 @@ def test_cotejo_bueno_ok_y_sin_cotejo_unknown(tmp_path):
     home = _home(tmp_path)
 
     bueno = tmp_path / "bueno"
-    _cotejo(bueno, "pasa")
+    _cotejo(bueno, "pass")
     r = _probe(home, bueno)
     assert r.status == checks.OK
     assert "142" in r.detail
 
     malo = tmp_path / "malo"
-    _cotejo(malo, "falla", sin_precio=["claude-opus-5"])
+    _cotejo(malo, "fail", sin_precio=["claude-opus-5"])
     r = _probe(home, malo)
     assert r.status == checks.WARN
     assert "claude-opus-5" in r.detail
@@ -182,7 +182,7 @@ def test_doctor_no_lee_transcripts(tmp_path, monkeypatch):
     home = _home(tmp_path)
     log_dir = tmp_path / "log"
     _log(log_dir, 21)
-    _cotejo(log_dir, "pasa")
+    _cotejo(log_dir, "pass")
 
     abiertos: list[Path] = []
     original = builtins.open

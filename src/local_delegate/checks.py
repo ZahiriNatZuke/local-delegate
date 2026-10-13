@@ -40,11 +40,11 @@ from . import (
     attribution,
     clients,
     config,
-    coste,
+    cost,
     failures,
     install,
     legacy_names,
-    recalcular,
+    recompute,
     sondas,
     test_windows,
 )
@@ -379,7 +379,7 @@ class Context:
     daemon_accepts_token: Callable[[str, int, str], bool | None] = field(
         default_factory=lambda f=_default_daemon_accepts_token: f
     )
-    # Dónde están el log de uso, los `attribution-*.json` y `coste-agregados.json`. Un campo simple
+    # Dónde están el log de uso, los `attribution-*.json` y `cost-aggregates.json`. Un campo simple
     # y no un colaborador: `None` quiere decir `config.LOG_DIR`, leído al llamar al probe (así lo
     # ve el aislamiento de la suite, que lo cambia por un `tmp_path`).
     log_dir: Path | None = None
@@ -1762,18 +1762,18 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
     """(cuántas delegaciones `pendiente` pasan de `H` − 10 días, días de la más vieja).
 
     Solo los ficheros del log que pueden tener filas dentro del plazo, y cada uno ENTERO: la clave
-    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`coste.fundir`).
+    de una línea sin `tool_use_id` lleva su ordinal en el fichero (`cost.merge`).
     """
     primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
     umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
     cuantas, mas_vieja = 0, timedelta(0)
-    for path, mes in recalcular._ficheros_del_log(log_dir):
+    for path, mes in recompute._log_files(log_dir):
         if mes < primer_mes:
             continue
-        for fila in coste.fundir(recalcular._leer_log(path), log_dir=log_dir):
-            if coste.tramo(fila, ahora=ahora, plazo_dias=plazo_dias) != "pendiente":
+        for fila in cost.merge(recompute._read_log(path), log_dir=log_dir):
+            if cost.segment(fila, now=ahora, cleanup_days=plazo_dias) != "pending":
                 continue
-            edad = ahora - coste._instante(fila.get("ts"))
+            edad = ahora - cost._instant(fila.get("ts"))
             if edad > umbral:
                 cuantas += 1
                 mas_vieja = max(mas_vieja, edad)
@@ -1783,9 +1783,9 @@ def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> 
 def _probe_coste(ctx: Context) -> Result:
     """¿Se puede fiar uno de la cifra de coste, y se está perdiendo el histórico?
 
-    Lee **solo** `coste-agregados.json`, el log de uso y los `attribution-*.json` (más
-    `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son cosa del comando que
-    lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
+    Lee **solo** `cost-aggregates.json` (o el viejo `coste-agregados.json`), el log de uso y los
+    `attribution-*.json` (más `cleanupPeriodDays` de `settings.json`): nunca los transcripts, que son
+    cosa del comando que lanza el usuario (REQ-073). Gana la primera regla que se cumple (REQ-015): relleno pendiente,
     cotejo fallido, cotejo bueno, sin cotejo. Si se cumplen las dos primeras, dice las dos.
 
     El aviso del relleno mira la pendiente más antigua, no la fecha del último relleno: así salta
@@ -1806,18 +1806,19 @@ def _probe_coste(ctx: Context) -> Result:
                 f"`{RECALCULAR_HINT}` antes de que Claude Code borre sus transcripts"
             )
 
-    agregados = recalcular.leer_agregados(log_dir) or {}
-    cotejo = agregados.get("cotejo")
+    agregados = recompute.read_aggregates(log_dir) or {}
+    # `read_aggregates` entrega el formato nuevo aunque en disco solo esté el viejo (REQ-006).
+    cotejo = agregados.get("check")
     if not isinstance(cotejo, dict):
         cotejo = None
-    fecha = str((cotejo or {}).get("fecha") or "?")
-    if cotejo is not None and cotejo.get("veredicto") == "falla":
-        sin_precio = [str(m) for m in cotejo.get("sin_precio") or []]
+    fecha = str((cotejo or {}).get("date") or "?")
+    if cotejo is not None and cotejo.get("verdict") == "fail":
+        sin_precio = [str(m) for m in cotejo.get("unpriced") or []]
         partes = []
         if sin_precio:
             partes.append("modelos sin precio en la tabla: " + ", ".join(sin_precio))
-        if cotejo.get("fuera"):
-            partes.append(f"{cotejo['fuera']} fila(s) fuera de la banda")
+        if cotejo.get("outside"):
+            partes.append(f"{cotejo['outside']} fila(s) fuera de la banda")
         avisos.append(
             f"el último cotejo ({fecha}) no cuadra con lo que cobra Claude Code: "
             + ("; ".join(partes) or "sin detalle")
@@ -1825,11 +1826,11 @@ def _probe_coste(ctx: Context) -> Result:
 
     if avisos:
         return Result(WARN, "; y ".join(avisos), RECALCULAR_HINT)
-    if cotejo is not None and cotejo.get("veredicto") == "pasa":
+    if cotejo is not None and cotejo.get("verdict") == "pass":
         return Result(
             OK,
-            f"el último cotejo ({fecha}) cuadra: {cotejo.get('juzgadas', '?')} fila(s) juzgadas "
-            f"con la tabla de precios del {cotejo.get('version_tabla') or '?'}",
+            f"el último cotejo ({fecha}) cuadra: {cotejo.get('judged', '?')} fila(s) juzgadas "
+            f"con la tabla de precios del {cotejo.get('table_version') or '?'}",
         )
     return Result(
         UNKNOWN,

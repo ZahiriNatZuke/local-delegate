@@ -1,0 +1,225 @@
+# approved-by-main: 2026-10-12 (con las respuestas 1-7 de la sesion principal)
+# wave=A5b-1 (coste y cuota) generated=2026-10-12 en dos partes. (1) Filas de `tools/make_mapping.py build --wave A5b --paths src/local_delegate/coste.py src/local_delegate/cuota.py src/local_delegate/recalcular.py src/local_delegate/valoracion.py` (346 filas en total: cross_module=66, function_local=229, module_local=51), partidas por fichero: aquí las de coste.py y cuota.py; nombres `new` propuestos por el agente. (2) Filas a mano: nombres que el detector no vio, el reloj y el bloque de cuota de /api/stats, campos y valores no persistidos que escribe `cost` (fila fundida de /api/events: density, family, marks, caller_origin, fallback_invalid, tramos, orígenes de densidad) y los campos de `quota.status` en /api/stats y su JS. Las claves y valores PERSISTIDOS de cost-aggregates.json, las marcas de los puntos y el fichero del statusline van en A5b-2. Pendiente de aprobación (la sesión principal añade «# approved-by-main: <fecha>»)
+# NOT-OWNED (consecuencia mecánica, pide aprobación): server.py:900 (`densidad`→`density` en tokens_claude); checks.py:1774 (`pendiente`→`pending`); y en los dos lotes las líneas de import y los prefijos de módulo en cli.py, server.py, checks.py, web/metrics.py, scripts/medir_adopcion.py y tests.
+# Verificación: 1 discrepancia (SIN_STATUSLINE, fila a mano anotada module_local; la lee test_cuota.py), corregida a cross_module antes de aprobar.
+# Columna scope en las filas a mano: owned = de la lista «posee» de A5b; NOT-OWNED = fuera, necesita aprobación; keep = se deja a propósito (con la ola que lo toca). function_local: comprobado por AST que el nombre nuevo no existe ya en la función (sin colisiones).
+# Verificación: cross_module con search_regex de PyCharm `\b(coste|cuota|recalcular|valoracion)\.<attr>` (203 apariciones; cuadra fichero a fichero con la cuenta local en server.py 11, web/metrics.py 9, tests/test_cuota.py 34 y tests/test_metrics.py 5) más las cadenas de `monkeypatch.setattr`; parámetros cross_module con las llamadas por palabra clave resueltas por AST; muestra de module_local: 20 con semilla 20261012.
+old,new,kind,definition,scope,method,reason,verified
+coste,cost,module,src/local_delegate/coste.py:1@<module>,cross_module,search_edit,PyCharm no renombra módulos (A3/A4/A5a): git mv + script por tokens en imports y `coste.<attr>` fuera de cadenas y comentarios,"ok (imports por AST, contrastados con search_regex de PyCharm: checks.py, medir_adopcion.py, metrics.py, recalcular.py, server.py, test_boilerplate_salida.py, test_densidad.py, test_metrics.py, test_panel_coste.py, test_valoracion.py, valoracion.py)"
+RESPALDO_DECLARADO,DECLARED_FALLBACK,constant,src/local_delegate/coste.py:29@<module>,cross_module,pycharm,,ok (search_regex `coste\.RESPALDO_DECLARADO`: valoracion.py)
+HILOS,THREADS,constant,src/local_delegate/coste.py:30@<module>,cross_module,pycharm,,"ok (search_regex `coste\.HILOS`: recalcular.py, valoracion.py)"
+MARCA_FAMILIA_SUPUESTA,MARK_ASSUMED_FAMILY,constant,src/local_delegate/coste.py:32@<module>,cross_module,pycharm,,ok (search_regex `coste\.MARCA_FAMILIA_SUPUESTA`: valoracion.py)
+MARCA_DENSIDAD_DE_LA_FAMILIA,MARK_FAMILY_DENSITY,constant,src/local_delegate/coste.py:33@<module>,cross_module,pycharm,,ok (search_regex `coste\.MARCA_DENSIDAD_DE_LA_FAMILIA`: valoracion.py)
+CLASE_POR_TOOL,CLASS_BY_TOOL,constant,src/local_delegate/coste.py:37@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+_EXTENSIONES,_EXTENSIONS,constant,src/local_delegate/coste.py:42@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+CLASE_POR_EXTENSION,CLASS_BY_EXTENSION,constant,src/local_delegate/coste.py:52@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+clase,kind,variable,src/local_delegate/coste.py:52@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+_CLASE_DEVUELTA,_RETURNED_CLASS,constant,src/local_delegate/coste.py:56@<module>,module_local,pycharm,,
+_CLASE_DE_SALIDA,_OUTPUT_CLASS,constant,src/local_delegate/coste.py:57@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+CAMPOS_DEL_RELLENO,BACKFILL_FIELDS,constant,src/local_delegate/coste.py:60@<module>,module_local,pycharm,,
+TRAMOS,SEGMENTS,constant,src/local_delegate/coste.py:70@<module>,cross_module,pycharm,,ok (search_regex `coste\.TRAMOS`: valoracion.py)
+_CRUCES_SIN_REMEDIO,_UNRECOVERABLE_MATCHES,constant,src/local_delegate/coste.py:71@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+_MES,_MONTH,constant,src/local_delegate/coste.py:73@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+_vacio,_empty,function,src/local_delegate/coste.py:76@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+valor,value,param,src/local_delegate/coste.py:76@_vacio,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+es_imagen,is_image,function,src/local_delegate/coste.py:80@<module>,cross_module,pycharm,,"ok (search_regex `coste\.es_imagen`: server.py, valoracion.py)"
+evento,event,param,src/local_delegate/coste.py:80@es_imagen,cross_module,pycharm,,ok (llamadas a `es_imagen` con `evento=` por AST: ninguno)
+unidad,unit,variable,src/local_delegate/coste.py:83@es_imagen,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nombre,name,variable,src/local_delegate/coste.py:93@_extension,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+punto,dot,variable,src/local_delegate/coste.py:94@_extension,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clase_de_contenido,content_class,function,src/local_delegate/coste.py:98@<module>,cross_module,pycharm,,ok (search_regex `coste\.clase_de_contenido`: test_densidad.py)
+evento,event,param,src/local_delegate/coste.py:98@clase_de_contenido,cross_module,pycharm,,ok (llamadas a `clase_de_contenido` con `evento=` por AST: ninguno)
+respaldo,fallback,function,src/local_delegate/coste.py:106@<module>,cross_module,pycharm,,"ok (search_regex `coste\.respaldo`: test_densidad.py, valoracion.py)"
+declarado,declared,variable,src/local_delegate/coste.py:113@respaldo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+valor,value,variable,src/local_delegate/coste.py:114@respaldo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+hilo,thread,variable,src/local_delegate/coste.py:116@respaldo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+modelo,model,variable,src/local_delegate/coste.py:116@respaldo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+familia_y_marcas,family_and_marks,function,src/local_delegate/coste.py:127@<module>,cross_module,pycharm,,ok (search_regex `coste\.familia_y_marcas`: test_densidad.py)
+modelo,model,param,src/local_delegate/coste.py:127@familia_y_marcas,cross_module,pycharm,,ok (llamadas a `familia_y_marcas` con `modelo=` por AST: ninguno)
+entrada,entry,variable,src/local_delegate/coste.py:129@familia_y_marcas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+familia,family,variable,src/local_delegate/coste.py:132@familia_y_marcas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+medidos,measured,variable,src/local_delegate/coste.py:133@familia_y_marcas,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_celda,_cell,function,src/local_delegate/coste.py:139@<module>,module_local,pycharm,,
+clase,kind,param,src/local_delegate/coste.py:139@_celda,cross_module,pycharm,,ok (llamadas a `_celda` con `clase=` por AST: ninguno)
+columna,column,param,src/local_delegate/coste.py:139@_celda,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+familia,family,param,src/local_delegate/coste.py:139@_celda,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tabla,table,variable,src/local_delegate/coste.py:143@_celda,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+exacta,exact,variable,src/local_delegate/coste.py:144@_celda,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+sin_numerar,unnumbered,variable,src/local_delegate/coste.py:147@_celda,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+evento,event,param,src/local_delegate/coste.py:153@resolver,cross_module,pycharm,,ok (llamadas a `resolver` con `evento=` por AST: ninguno)
+resolver,resolve,function,src/local_delegate/coste.py:153@<module>,module_local,pycharm,,
+modelo,model,variable,src/local_delegate/coste.py:156@resolver,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+familia,family,variable,src/local_delegate/coste.py:157@resolver,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+marcas,marks,variable,src/local_delegate/coste.py:157@resolver,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+densidad,density,variable,src/local_delegate/coste.py:160@resolver,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+columna,column,variable,src/local_delegate/coste.py:163@resolver,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+evento,event,param,src/local_delegate/coste.py:172@resolver_densidad,cross_module,pycharm,,ok (llamadas a `resolver_densidad` con `evento=` por AST: ninguno)
+resolver_densidad,resolve_density,function,src/local_delegate/coste.py:172@<module>,cross_module,pycharm,,"ok (search_regex `coste\.resolver_densidad`: server.py, test_densidad.py)"
+entrada,entry,param,src/local_delegate/coste.py:178@fundir_fila,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,param,src/local_delegate/coste.py:178@fundir_fila,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fundir_fila,merge_row,function,src/local_delegate/coste.py:178@<module>,cross_module,pycharm,,"ok (search_regex `coste\.fundir_fila`: test_boilerplate_salida.py, test_densidad.py, test_metrics.py)"
+respaldo_,fallback_,param,src/local_delegate/coste.py:178@fundir_fila,module_local,pycharm,,ok (llamadas a `fundir_fila` con `respaldo_=` por AST: coste.py)
+nueva,out,variable,src/local_delegate/coste.py:185@fundir_fila,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+campo,field,variable,src/local_delegate/coste.py:187@fundir_fila,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+origen,origin,variable,src/local_delegate/coste.py:191@fundir_fila,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_mes,_month,function,src/local_delegate/coste.py:207@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+filas,rows,param,src/local_delegate/coste.py:212@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fundir,merge,function,src/local_delegate/coste.py:212@<module>,cross_module,pycharm,,"ok (search_regex `coste\.fundir`: checks.py, medir_adopcion.py, metrics.py, recalcular.py, server.py, test_densidad.py, test_metrics.py, test_valoracion.py, valoracion.py)"
+claves,keys,variable,src/local_delegate/coste.py:220@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+por_mes,by_month,variable,src/local_delegate/coste.py:221@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ventanas,windows,variable,src/local_delegate/coste.py:225@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ahora,now,variable,src/local_delegate/coste.py:226@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fundidas,merged,variable,src/local_delegate/coste.py:227@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+clave,key,variable,src/local_delegate/coste.py:228@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila,row,variable,src/local_delegate/coste.py:228@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mes,month,variable,src/local_delegate/coste.py:229@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+nueva,out,variable,src/local_delegate/coste.py:232@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ventana,window,variable,src/local_delegate/coste.py:234@fundir,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fila_en_vuelo,in_flight_row,function,src/local_delegate/coste.py:241@<module>,cross_module,pycharm,,"ok (search_regex `coste\.fila_en_vuelo`: server.py, test_panel_coste.py)"
+fila,row,variable,src/local_delegate/coste.py:246@fila_en_vuelo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_instante,_instant,function,src/local_delegate/coste.py:258@<module>,cross_module,pycharm,,ok (search_regex `coste\._instante`: checks.py)
+ahora,now,param,src/local_delegate/coste.py:268@tramo,cross_module,pycharm,,"ok (llamadas a `tramo` con `ahora=` por AST: checks.py, test_valoracion.py, valoracion.py)"
+fila,row,param,src/local_delegate/coste.py:268@tramo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+plazo_dias,cleanup_days,param,src/local_delegate/coste.py:268@tramo,cross_module,pycharm,,"ok (llamadas a `tramo` con `plazo_dias=` por AST: checks.py, test_valoracion.py, valoracion.py)"
+tramo,segment,function,src/local_delegate/coste.py:268@<module>,cross_module,pycharm,,"ok (search_regex `coste\.tramo`: checks.py, test_densidad.py, test_valoracion.py, valoracion.py)"
+origen,origin,variable,src/local_delegate/coste.py:273@tramo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+cuota,quota,module,src/local_delegate/cuota.py:1@<module>,cross_module,search_edit,PyCharm no renombra módulos (A3/A4/A5a): git mv + script por tokens en imports y `cuota.<attr>` fuera de cadenas y comentarios,"ok (imports por AST, contrastados con search_regex de PyCharm: metrics.py, recalcular.py, test_cuota.py, test_panel_coste.py)"
+TIPOS,TYPES,constant,src/local_delegate/cuota.py:21@<module>,cross_module,pycharm,,ok (search_regex `cuota\.TIPOS`: recalcular.py)
+DURACION,DURATION,constant,src/local_delegate/cuota.py:22@<module>,cross_module,pycharm,,ok (search_regex `cuota\.DURACION`: metrics.py)
+CAMPO_RESET,RESET_FIELD,constant,src/local_delegate/cuota.py:23@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+VIGENCIA,VALIDITY,constant,src/local_delegate/cuota.py:25@<module>,module_local,pycharm,,
+DELTA_MINIMO,MIN_DELTA,constant,src/local_delegate/cuota.py:26@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+UMBRAL,THRESHOLD,constant,src/local_delegate/cuota.py:27@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+MIN_PUNTOS,MIN_POINTS,constant,src/local_delegate/cuota.py:28@<module>,module_local,pycharm,,
+MARCA_COTA_BAJA,MARK_LOW_BOUND,constant,src/local_delegate/cuota.py:30@<module>,cross_module,pycharm,,ok (search_regex `cuota\.MARCA_COTA_BAJA`: test_cuota.py)
+MARCA_SOLO_COMPROBACION,MARK_CHECK_ONLY,constant,src/local_delegate/cuota.py:31@<module>,cross_module,pycharm,,ok (search_regex `cuota\.MARCA_SOLO_COMPROBACION`: test_cuota.py)
+MARCA_OTRAS_SUPERFICIES,MARK_OTHER_SURFACES,constant,src/local_delegate/cuota.py:32@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.MARCA_OTRAS_SUPERFICIES`: test_cuota.py, test_panel_coste.py)"
+MARCA_REINICIO,MARK_RESET,constant,src/local_delegate/cuota.py:33@<module>,cross_module,pycharm,,ok (search_regex `cuota\.MARCA_REINICIO`: test_cuota.py)
+AVISO_RECHAZO,REJECTION_WARNING,constant,src/local_delegate/cuota.py:35@<module>,module_local,pycharm,,
+SIN_DATOS,NO_DATA,constant,src/local_delegate/cuota.py:38@<module>,cross_module,pycharm,,ok (search_regex `cuota\.SIN_DATOS`: test_cuota.py)
+_instante,_instant,function,src/local_delegate/cuota.py:46@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+valor,value,param,src/local_delegate/cuota.py:46@_instante,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+descartes_vacios,empty_discards,function,src/local_delegate/cuota.py:56@<module>,cross_module,pycharm,,ok (search_regex `cuota\.descartes_vacios`: recalcular.py)
+tipo,kind,variable,src/local_delegate/cuota.py:57@descartes_vacios,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+puntos_de_rechazo,rejection_points,function,src/local_delegate/cuota.py:63@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.puntos_de_rechazo`: recalcular.py, test_cuota.py)"
+rechazos,rejections,param,src/local_delegate/cuota.py:64@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+peticiones,requests,param,src/local_delegate/cuota.py:65@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+puntos,points,variable,src/local_delegate/cuota.py:73@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+primero,first,variable,src/local_delegate/cuota.py:74@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,kind,variable,src/local_delegate/cuota.py:74@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+inicio,start,variable,src/local_delegate/cuota.py:78@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+dentro,inside,variable,src/local_delegate/cuota.py:81@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+dolar,dollars,variable,src/local_delegate/cuota.py:82@puntos_de_rechazo,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_pct_valido,_valid_pct,function,src/local_delegate/cuota.py:102@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+lineas,lines,param,src/local_delegate/cuota.py:106@sanear,cross_module,pycharm,,ok (llamadas a `sanear` con `lineas=` por AST: ninguno)
+sanear,sanitize,function,src/local_delegate/cuota.py:106@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.sanear`: recalcular.py, test_cuota.py)"
+descartes,discards,variable,src/local_delegate/cuota.py:113@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+filas,rows,variable,src/local_delegate/cuota.py:114@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+linea,line,variable,src/local_delegate/cuota.py:115@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,kind,variable,src/local_delegate/cuota.py:124@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+sesiones,sessions,variable,src/local_delegate/cuota.py:129@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+por_tipo,by_type,variable,src/local_delegate/cuota.py:130@sanear,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+_numero,_is_number,function,src/local_delegate/cuota.py:143@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+puntos_del_statusline,statusline_points,function,src/local_delegate/cuota.py:147@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.puntos_del_statusline`: recalcular.py, test_cuota.py)"
+por_tipo,by_type,param,src/local_delegate/cuota.py:148@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+sesiones_registro,log_sessions,param,src/local_delegate/cuota.py:149@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+peticiones,requests,param,src/local_delegate/cuota.py:150@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+puntos,points,variable,src/local_delegate/cuota.py:154@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+descartes,discards,variable,src/local_delegate/cuota.py:155@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,kind,variable,src/local_delegate/cuota.py:156@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+grupos,groups,variable,src/local_delegate/cuota.py:157@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+coste,cost,variable,src/local_delegate/cuota.py:158@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+sesion,session,variable,src/local_delegate/cuota.py:158@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+por_sesion,by_session,variable,src/local_delegate/cuota.py:160@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+mejor,best,variable,src/local_delegate/cuota.py:163@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+dolar,dollars,variable,src/local_delegate/cuota.py:173@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+reinicios,resets,variable,src/local_delegate/cuota.py:173@puntos_del_statusline,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+FUENTES,SOURCES,constant,src/local_delegate/cuota.py:207@<module>,module_local,pycharm,,
+bien_formado,well_formed,function,src/local_delegate/cuota.py:210@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+puntos,points,param,src/local_delegate/cuota.py:224@separar_mal_formados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+separar_mal_formados,split_malformed,function,src/local_delegate/cuota.py:224@<module>,cross_module,pycharm,,ok (search_regex `cuota\.separar_mal_formados`: recalcular.py)
+buenos,good,variable,src/local_delegate/cuota.py:227@separar_mal_formados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+descartes,discards,variable,src/local_delegate/cuota.py:228@separar_mal_formados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,kind,variable,src/local_delegate/cuota.py:233@separar_mal_formados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+puntos,points,param,src/local_delegate/cuota.py:242@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+quitar_solapados,drop_overlapping,function,src/local_delegate/cuota.py:242@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.quitar_solapados`: recalcular.py, test_cuota.py)"
+descartes,discards,variable,src/local_delegate/cuota.py:245@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+aceptados,accepted,variable,src/local_delegate/cuota.py:246@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+orden,ordered,variable,src/local_delegate/cuota.py:248@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fin,end,variable,src/local_delegate/cuota.py:250@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+choca,clashes,variable,src/local_delegate/cuota.py:251@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ahora,now,param,src/local_delegate/cuota.py:270@vigentes,cross_module,pycharm,,ok (llamadas a `vigentes` con `ahora=` por AST: ninguno)
+puntos,points,param,src/local_delegate/cuota.py:270@vigentes,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+reinicio,reset,param,src/local_delegate/cuota.py:270@vigentes,module_local,pycharm,,ok (llamadas a `vigentes` con `reinicio=` por AST: ninguno)
+vigentes,current_points,function,src/local_delegate/cuota.py:270@<module>,cross_module,pycharm,,"ok (search_regex `cuota\.vigentes`: recalcular.py, test_cuota.py)"
+desde,since,variable,src/local_delegate/cuota.py:272@vigentes,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+salida,out,variable,src/local_delegate/cuota.py:273@vigentes,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fin,end,variable,src/local_delegate/cuota.py:275@vigentes,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+errores,errors,variable,src/local_delegate/cuota.py:289@dispersion,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+deriva,drift,function,src/local_delegate/cuota.py:296@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+hubo,drifted,variable,src/local_delegate/cuota.py:302@deriva,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+criterio,criterion,function,src/local_delegate/cuota.py:317@<module>,cross_module,pycharm,,ok (search_regex `cuota\.criterio`: test_cuota.py)
+agregados,aggregates,param,src/local_delegate/cuota.py:343@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+ahora,now,param,src/local_delegate/cuota.py:343@estado,cross_module,pycharm,,ok (llamadas a `estado` con `ahora=` por AST: ninguno)
+estado,status,function,src/local_delegate/cuota.py:343@<module>,cross_module,search_edit,"PyCharm no pudo: dos rename_refactoring de `estado` en cuota.py eligieron el kwarg homónimo `estado=` de `r.update` (resuelto al campo `estado` de scripts/ci_gate.py) y no la función; se renombró `def estado` y `cuota.estado(` por búsqueda y edición","ok (search_regex `cuota\.estado`: capture_dashboard.py, metrics.py, recalcular.py, test_cuota.py)"
+tipo,kind,variable,src/local_delegate/cuota.py:360@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+crudos,raw,variable,src/local_delegate/cuota.py:362@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+puntos,points,variable,src/local_delegate/cuota.py:363@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+rotos,broken,variable,src/local_delegate/cuota.py:363@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+reinicios,resets,variable,src/local_delegate/cuota.py:364@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+fuentes,sources,variable,src/local_delegate/cuota.py:365@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+todos_descartes,all_discards,variable,src/local_delegate/cuota.py:366@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+salida,out,variable,src/local_delegate/cuota.py:369@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+reinicio,reset,variable,src/local_delegate/cuota.py:371@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+del_tipo,of_type,variable,src/local_delegate/cuota.py:372@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+rech,rejections_valid,variable,src/local_delegate/cuota.py:375@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+previos,previous,variable,src/local_delegate/cuota.py:376@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+descartes,discards,variable,src/local_delegate/cuota.py:377@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+sin_reinicio,without_reset,variable,src/local_delegate/cuota.py:382@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+SIN_STATUSLINE,NO_STATUSLINE,constant,src/local_delegate/cuota.py:39@<module>,cross_module,pycharm,el detector no lo vio (nombre de una palabra ambigua o abreviatura); se añade a mano; primero se anotó module_local y la verificación lo corrigió (lo lee test_cuota.py),ok (search_regex `cuota\.SIN_STATUSLINE`: test_cuota.py)
+por_tool,by_tool,variable,src/local_delegate/coste.py:100@clase_de_contenido,function_local,search_edit,variable local: reemplazo acotado a su función (apply); el detector no lo vio (nombre de una palabra ambigua o abreviatura); se añade a mano,
+vig,valid,variable,src/local_delegate/cuota.py:374@estado,function_local,search_edit,variable local: reemplazo acotado a su función (apply); el detector no lo vio (nombre de una palabra ambigua o abreviatura); se añade a mano,
+ini,start,variable,src/local_delegate/cuota.py:250@quitar_solapados,function_local,search_edit,variable local: reemplazo acotado a su función (apply); el detector no lo vio (nombre de una palabra ambigua o abreviatura); se añade a mano,
+_ahora,_now,function,src/local_delegate/web/metrics.py:555@<module>,cross_module,pycharm,,"ok (search_regex `metrics\._ahora`: test_metrics.py) + cadena de monkeypatch, que PyCharm no cambia: se edita a mano"
+_bloque_cuota,_quota_block,function,src/local_delegate/web/metrics.py:560@<module>,module_local,pycharm,,ok (muestra semilla 20261012; search_regex fuera de su fichero: sin referencias de código)
+estado,status,variable,src/local_delegate/web/metrics.py:567@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+tipo,kind,variable,src/local_delegate/web/metrics.py:568@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+filas,rows,variable,src/local_delegate/web/metrics.py:571@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+bloque,block,variable,src/local_delegate/web/metrics.py:572@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+capacidad,capacity,variable,src/local_delegate/web/metrics.py:573@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+cifra,figure,variable,src/local_delegate/web/metrics.py:574@_bloque_cuota,function_local,search_edit,variable local: reemplazo acotado a su función (apply),
+"""densidad""","""density""",api_field,src/local_delegate/coste.py:169@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; lectores: server.py:900 (NOT-OWNED, consecuencia), JS tokensClaude metrics.py:2618, valoracion.py:198",
+"""familia""","""family""",api_field,src/local_delegate/coste.py:169@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; también la clave de `fallback()` (coste.py:123); lector valoracion.py:201",
+"""marcas""","""marks""",api_field,src/local_delegate/coste.py:169@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; lector valoracion.py:202",
+"""caller_origen""","""caller_origin""",api_field,src/local_delegate/coste.py:202@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; lectores coste.tramo y recalcular.py:124",
+"""respaldo_invalido""","""fallback_invalid""",api_field,src/local_delegate/coste.py:113@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; también en la salida de `fallback()`; lectores valoracion.py:162,173,196",
+"""modelo"" (respaldo)","""model""",api_field,src/local_delegate/coste.py:29@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; claves de DECLARED_FALLBACK y de `fallback()`; lectores coste.py:156,197 y valoracion.py:258",
+"""hilo"" (respaldo)","""thread""",api_field,src/local_delegate/coste.py:29@<module>,owned,search_edit,"campo de la fila fundida que entrega /api/events (REQ-009), no persistido: lo escribe `cost` y lo leen `valuation`, el JS y `server.tokens_claude`; claves de DECLARED_FALLBACK y de `fallback()`; lectores coste.py:199 y valoracion.py:56,260",
+"""linea""","""line""",json_value,src/local_delegate/coste.py:191@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); valor de `caller_origin`; también coste.py:275-276 y recalcular.py:124 no lo usa",
+"""relleno""","""backfill""",json_value,src/local_delegate/coste.py:193@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); valor de `caller_origin`; coste.py:278",
+"""respaldo""","""fallback""",json_value,src/local_delegate/coste.py:195@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); valor de `caller_origin`; coste.py:275 y recalcular.py:124",
+"""familia supuesta""","""assumed_family""",json_value,src/local_delegate/coste.py:32@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); marca de la fila (REQ-033): valor de máquina; valoracion la cuenta por la constante",
+"""densidad de la familia""","""family_density""",json_value,src/local_delegate/coste.py:33@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); marca de la fila (REQ-033)",
+"""medida""","""measured""",json_value,src/local_delegate/coste.py:146@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); origen de la celda de densidad; también valoracion.ORIGENES_DENSIDAD y JS `o.medida` (consecuencia)",
+"""sin_numerar"" (origen)","""unnumbered""",json_value,src/local_delegate/coste.py:147@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); SOLO el origen de la celda; la columna `sin_numerar` de densidad.json es de A5c y no cambia",
+"""conservadora""","""conservative""",json_value,src/local_delegate/coste.py:150@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); origen de la celda; valoracion y JS (consecuencia)",
+"""excluido""","""excluded""",json_value,src/local_delegate/coste.py:70@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); tramo de la barra; claves de `bar` en /api/stats; checks.py no; valoracion.py:190",
+"""al_momento""","""at_call""",json_value,src/local_delegate/coste.py:70@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); tramo; JS `b.al_momento`",
+"""por_relleno""","""backfilled""",json_value,src/local_delegate/coste.py:70@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); tramo; JS `b.por_relleno`",
+"""pendiente""","""pending""",json_value,src/local_delegate/coste.py:70@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); tramo; checks.py:1774 (NOT-OWNED, consecuencia), valoracion.py:242, JS",
+"""supuesto""","""assumed""",json_value,src/local_delegate/coste.py:70@<module>,owned,search_edit,"valor de máquina no persistido (D4 ampliado, REQ-009); tramo; valoracion.py:242, JS",
+"""estado""","""status""",api_field,src/local_delegate/cuota.py:328@<module>,owned,search_edit,"campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; lectores metrics.py:569, recalcular.py:315, JS textoCuota/medidorCuota/ventanasCalibradas",
+"""sin calibrar""","""uncalibrated""",api_field,src/local_delegate/cuota.py:328@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; valor de máquina; el JS lo pinta con su propio texto,
+"""calibrado""","""calibrated""",api_field,src/local_delegate/cuota.py:336@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; valor de máquina; metrics.py:569 y JS `==='calibrado'`,
+"""motivo""","""reason""",api_field,src/local_delegate/cuota.py:329@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; prosa (frente B); solo cambia la clave,
+"""puntos"" (estado)","""points""",api_field,src/local_delegate/cuota.py:323@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; clave de salida; la clave persistida `puntos` va en A5b-2,
+"""puntos_rechazo""","""rejection_points""",api_field,src/local_delegate/cuota.py:355@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; JS `e.puntos_rechazo`,
+"""descartes"" (estado)","""discards""",api_field,src/local_delegate/cuota.py:356@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; clave de salida; las claves de motivo de descarte van en A5b-2 con el formato persistido,
+"""deriva""","""drift""",api_field,src/local_delegate/cuota.py:357@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; JS `e.deriva`,
+"""reinicio"" (estado)","""reset""",api_field,src/local_delegate/cuota.py:358@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; clave de salida (fecha del reinicio a mano); JS `e.reinicio`,
+"""mediana_C""","""median_C""",api_field,src/local_delegate/cuota.py:336@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; metrics.py:573 y :393 de cuota,
+"""aviso""","""warning""",api_field,src/local_delegate/cuota.py:394@<module>,owned,search_edit,campo de `quota.status`/`criterion` en /api/stats `quota` (REQ-009); no persistido; JS `e.aviso`,
+"""cuota""","""quota""",api_field,src/local_delegate/web/metrics.py:551@<module>,owned,search_edit,campo de /api/stats (REQ-009); clave de primer nivel de /api/stats; JS `s.cuota`/`j.cuota`,
+"""motivo_pct""","""pct_reason""",api_field,src/local_delegate/web/metrics.py:580@<module>,owned,search_edit,campo de /api/stats (REQ-009); JS `e.motivo_pct`,
+"""hay_agregados""","""has_aggregates""",api_field,src/local_delegate/web/metrics.py:581@<module>,owned,search_edit,campo de /api/stats (REQ-009); JS `q.hay_agregados`,
+"""comando"" (cuota)","""command""",api_field,src/local_delegate/web/metrics.py:581@<module>,owned,search_edit,campo de /api/stats (REQ-009); JS `q.comando`,
