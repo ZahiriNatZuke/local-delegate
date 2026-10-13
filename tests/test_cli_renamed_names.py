@@ -53,7 +53,7 @@ def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int, 
 
 def _without_times(data: dict) -> dict:
     """Lo escrito por dos corridas seguidas, sin lo que depende del reloj."""
-    return {k: v for k, v in data.items() if "generado" not in k and "ts" not in k}
+    return {k: v for k, v in data.items() if "generated" not in k and "ts" not in k}
 
 
 def test_legacy_command_writes_the_same_file_and_warns(tmp_path, monkeypatch, capsys):
