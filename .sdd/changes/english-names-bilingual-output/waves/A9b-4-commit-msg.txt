@@ -1,0 +1,15 @@
+refactor(rename): nombres en inglés en test_install_opencode, test_install_plazos, test_llamaswap_config y test_map_reduce (ola A9b, lote 4)
+
+Renombra a inglés los nombres de test_install_opencode.py,
+test_install_plazos.py, test_llamaswap_config.py y test_map_reduce.py:
+194 filas del mapping aprobado. test_install_plazos.py pasa a
+test_install_timeouts.py y los 59 test_* del lote pasan a inglés, junto
+con sus constantes (PLAZOS → TIMEOUTS, CLIENTES → CLIENTS, MODOS →
+MODES…), sus ayudantes (_plazos_de → _timeouts_of, _home_con →
+_home_with, _diff_grande → _large_diff…), la fixture espia_opencode →
+opencode_spy y sus variables locales.
+
+Solo cambian los nombres del test: las claves y los textos que el
+producto escribe en los ficheros de los clientes, ningún assert cambia
+de sentido y los textos en español que afirman los tests no se tocan.
+Los tests recogidos siguen siendo 2569.

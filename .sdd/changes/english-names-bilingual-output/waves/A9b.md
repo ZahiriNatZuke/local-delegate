@@ -5,14 +5,16 @@ La subola se parte en 6 lotes (D13: 1507 filas, como mucho 300 por lote y sin pa
 2026-10-13 con las 8 decisiones de la fase 1 tal como se recomendaron. Cada lote es un commit que
 hace la sesión principal, en una rama apilada sobre el anterior. Las tablas de controles positivos,
 `local_*` y PyCharm son las de todos los lotes, porque `check_wave_records.py` lee la primera tabla
-de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas `rename_refactoring` =
-65 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv` y `waves/A9b-3-mapping.csv`.
+de cada sección; por ahora están los **lotes 1 a 4**: 17 + 25 + 23 + 19 = 84 filas
+`rename_refactoring` = 84 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv`,
+`waves/A9b-3-mapping.csv` y `waves/A9b-4-mapping.csv`.
 
 - Rama: lote 1 en `sdd/english-names-a9b-1`, apilada sobre `sdd/english-names-a9a-7` (`76fe954`, A9a
   completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, commit `c3ed701`; lote 3 en
-  `sdd/english-names-a9b-3`, sobre `c3ed701` · Commit del lote 3: pendiente, con el borrador en
-  `waves/A9b-3-commit-msg.txt` (firmado y sin coautoría)
-- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 3 (fase 2).
+  `sdd/english-names-a9b-3`, commit `3f66253`; lote 4 en `sdd/english-names-a9b-4`, sobre `3f66253` ·
+  Commit del lote 4: pendiente, con el borrador en `waves/A9b-4-commit-msg.txt` (firmado y sin
+  coautoría)
+- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 4 (fase 2).
 - Conteo base: `evidence/A9b/collect-before.txt`, 2569 tests.
 
 ## Controles positivos
@@ -25,6 +27,7 @@ de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas 
 | `tests/test_hook_common.py::test_a_401_means_the_backend_IS_there` (lote 2; usa la anidada renombrada `_raises_401` y `_mark`/`age_s`) | `src/local_delegate/resources/hooks/hook_common.py:241`: un `HTTPError` (401) cuenta como «no hay backend» (`return True` → `return False`) | `assert common.backend_available(marker=…) is True` → `assert False is True` | sí, desde copia; sha256 igual (`evidence/A9b-2/mutant.txt`) |
 | `tests/test_failure_captures.py::test_the_oom_without_profile_did_not_reach_timeout_and_stays_uncaptured` (assert negativo del lote 1 con la clave renombrada `exception`) | la captura `oom-without-profile.json` gana una clave `"exception"` | `assert "exception" not in doc` | sí, desde copia; sha256 igual |
 | `tests/test_hooks_telemetry_api.py::test_counts_suggested_over_the_total` (lote 3; usa `_event(…, suggested=…)` con los kwargs renombrados) | `src/local_delegate/web/metrics.py:615`: `_aggregate_hooks` deja de sumar las sugeridas (`suggested_total += suggested` → `+= 0`) | `assert aggregate["suggested"] == 2` → `assert 0 == 2` | sí, desde copia; sha256 igual (`evidence/A9b-3/mutant.txt`) |
+| `tests/test_install_timeouts.py::test_install_keeps_the_hand_set_timeout` (lote 4; usa `_home_with`, `_timeouts_of`, `CLIENTS`, `TIMEOUTS` y los argnames `client`/`mode`) | `src/local_delegate/install.py:665`: la lectura de los plazos de Claude y opencode devuelve `{}` | `assert _timeouts_of(entry, client) == TIMEOUTS[client]` → `assert {} == {'timeout': 900000}` | sí, desde copia; sha256 igual (`evidence/A9b-4/mutant.txt`) |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -33,6 +36,7 @@ de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas 
 | Agente A9b (fase 1) | `local_summarize(path=waves/A9a.md)` | lecciones y desviaciones de los 7 lotes de A9a, sin meter las 592 líneas al contexto |
 | Agente A9b-1 | `local_lint_summary(path=evidence/A9b-1/pytest-full-run1.log)` | resumen de la primera corrida de la suite (3 fallos: 1 real del lote y 2 de tiempos de `test_fake_llamaswap`) |
 | Agente A9b-2 | (ninguna) | la suite salió verde a la primera (47 líneas de log) y los ficheros se leyeron por franjas concretas: no hubo nada largo que resumir |
+| Agente A9b-4 | (ninguna) | suite verde a la primera y comprobaciones por script AST: nada largo que resumir |
 | Agente A9b-3 | (ninguna) | suite verde a la primera; los ficheros se leyeron por franjas y las comprobaciones de cadenas las hizo un script AST: nada largo que resumir |
 
 ## Llamadas `mcp__pycharm__*`
@@ -107,6 +111,26 @@ de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas 
 | A9b-3 | `rename_refactoring` | `_codex_a_mano→_codex_by_hand` | 2 usos |
 | A9b-3 | `rename_refactoring` | `_prepara_codex_a_mano→_prepare_codex_by_hand` | 6 usos |
 | A9b-3 | `get_file_problems` | `test_install_header.py`, `test_install_clients.py`, `test_hooks_telemetry_api.py` | 0 errores |
+| A9b-4 | `rename_refactoring` | `espia_opencode→opencode_spy` (fixture, `test_install_opencode.py`) | 4 usos |
+| A9b-4 | `rename_refactoring` | `_borra_la_skill_de_opencode→_delete_the_opencode_skill` | 2 usos |
+| A9b-4 | `rename_refactoring` | `URL_VIEJA→OLD_URL` (`test_install_plazos.py`) | 3 usos |
+| A9b-4 | `rename_refactoring` | `VIEJA→OLD_VERSION` | 5 usos |
+| A9b-4 | `rename_refactoring` | `NUEVA→NEW_VERSION` | 4 usos |
+| A9b-4 | `rename_refactoring` | `PLAZOS→TIMEOUTS` | 18 usos |
+| A9b-4 | `rename_refactoring` | `MODOS→MODES` | 3 usos |
+| A9b-4 | `rename_refactoring` | `_vieja→_old_entry` | 3 usos |
+| A9b-4 | `rename_refactoring` | `_claude_escribe→_claude_write` (homónimo del lote 3) | 3 usos |
+| A9b-4 | `rename_refactoring` | `_claude_lee→_claude_read` | 4 usos |
+| A9b-4 | `rename_refactoring` | `_codex_escribe→_codex_write` | 1 usos |
+| A9b-4 | `rename_refactoring` | `_codex_lee→_codex_read` | 2 usos |
+| A9b-4 | `rename_refactoring` | `_opencode_escribe→_opencode_write` | 1 usos |
+| A9b-4 | `rename_refactoring` | `_opencode_lee→_opencode_read` | 2 usos |
+| A9b-4 | `rename_refactoring` | `CLIENTES→CLIENTS` (homónimo del lote 3) | 11 usos |
+| A9b-4 | `rename_refactoring` | `_plazos_de→_timeouts_of` | 7 usos |
+| A9b-4 | `rename_refactoring` | `_home_con→_home_with` (homónimo del lote 3) | 9 usos |
+| A9b-4 | `rename_refactoring` | `_diff_grande→_large_diff` (`test_map_reduce.py`) | 7 usos |
+| A9b-4 | `rename_refactoring` | `_backend_con_techo→_backend_with_ceiling` | 2 usos |
+| A9b-4 | `get_file_problems` | `test_install_timeouts.py`, `test_install_opencode.py`, `test_map_reduce.py` | 0 errores |
 
 ## A9b-1 — capturas de `tests/fixtures/backend`, `test_enfriamiento`, `test_fallos` y `test_fallos_capturas` (aplicado)
 
@@ -264,9 +288,49 @@ de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas 
 2. El JS del test se cambió por línea y no con `js_apply.py` (literales concatenados con f-strings);
    se comprobó con la comparación de cadenas por AST que no cambió nada más.
 
+## A9b-4 — `test_install_opencode`, `test_install_plazos`, `test_llamaswap_config` y `test_map_reduce` (aplicado)
+
+### A9b-4 · Qué se hizo
+
+- 19 `rename_refactoring` (tabla de arriba), incluidos los homónimos que dejó el lote 3 en
+  `test_install_plazos.py` (`CLIENTES`, `_home_con`, `_claude_escribe`). PyCharm reescribió
+  `waves/A9b.md` (las citas de esos homónimos en la sección del lote 3), devuelto a HEAD con `git show`.
+- A mano, antes de `apply`: el parámetro homónimo `techo`→`ceiling` de `_backend_con_techo` (def, uso
+  y cita en su docstring; no tiene kwargs).
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 95 + 120 + 7 + 145 =
+  367 reemplazos.
+- A mano, después: el `def` de la anidada `_falla`→`_fails`, los argnames de 7 `parametrize`
+  (`("texto", "esperado")`, `modo` ×2, `cliente` ×4) y la cita `` `mensaje` `` del docstring de
+  `_backend_with_ceiling`.
+- `git mv` de `test_install_plazos.py` → `test_install_timeouts.py`; nadie lo cita por ruta.
+- `ruff format` reflowó 2 ficheros. EOL: todos LF y siguen LF.
+- Datos de los clientes: comparadas por AST las cadenas de los 4 ficheros antes y después, solo
+  cambian los argnames de `parametrize` y la cita del docstring; ninguna clave ni texto que escribe
+  el producto. Lambdas: ningún parámetro en español.
+
+### A9b-4 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- Ninguno.
+
+### A9b-4 · Barrido final
+
+- AST de los 4 ficheros: ningún nombre de código, kwarg, argname ni cita con un `old` del lote.
+- `git grep -w` de cada `old` en los ficheros del lote, clasificado por token: 0 en código; 78 en
+  textos (37 docstrings, 31 comentarios y 10 cadenas): prosa y datos en español.
+- En todo el repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`), los nombres propios del lote y
+  los homónimos del lote 3: 0.
+- `--collect-only`: 2569 (`evidence/A9b-4/collect.txt`). Suite: 2567 passed, 2 skipped
+  (`evidence/A9b-4/pytest-full.log`). `ruff check` y `ruff format --check` en verde.
+- CodeQL (aproximación AST) sobre `test_install_timeouts.py`: 0 patrones.
+
+### A9b-4 · Desviaciones
+
+1. **1 fila `pycharm` → `search_edit`** (el parámetro homónimo `techo`), anotado en la línea
+   `# Fase 2` del CSV.
+
 ## Pendientes
 
-1. Lotes A9b-4 a A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
+1. Lotes A9b-5 y A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
    de lambdas (desviación 2 del lote 2).
 2. En el lote 6: el test nuevo de los esquemas de `elicitation` y el arreglo de la carrera de
    `test_turn_wait_shown_in_panel_as_local_wait` (cabecera de `A9b-6-mapping.csv`).

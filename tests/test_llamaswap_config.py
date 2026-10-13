@@ -321,7 +321,7 @@ def _write_config_with_models(monkeypatch, tmp_path, model_sizes_gib: dict, grou
     return config_path
 
 
-def test_check_llamaswap_cabe(monkeypatch, tmp_path, capsys):
+def test_check_llamaswap_fits(monkeypatch, tmp_path, capsys):
     groups = {
         "resident": {"swap": False, "persistent": True, "members": ["r"]},
         "swap": {"swap": True, "members": ["a", "b"]},
@@ -333,7 +333,7 @@ def test_check_llamaswap_cabe(monkeypatch, tmp_path, capsys):
     assert "OK: cabe" in capsys.readouterr().out
 
 
-def test_check_llamaswap_no_cabe(monkeypatch, tmp_path, capsys):
+def test_check_llamaswap_does_not_fit(monkeypatch, tmp_path, capsys):
     groups = {"swap": {"swap": True, "members": ["a", "b"]}}
     # max(6, 14)*1.2 = 16.8 GiB > 16 - 1.5 = 14.5 -> no cabe.
     config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 6, "b": 14}, groups)
@@ -343,7 +343,7 @@ def test_check_llamaswap_no_cabe(monkeypatch, tmp_path, capsys):
     assert "NO CABE" in out
 
 
-def test_check_llamaswap_justo_en_el_margen(monkeypatch, tmp_path):
+def test_check_llamaswap_right_at_the_margin(monkeypatch, tmp_path):
     # 1 modelo de 10 GiB reales -> estimado 12.0 GiB (x1.2). budget = 13.5 - 1.5 = 12.0 exacto.
     groups = {"swap": {"swap": True, "members": ["a"]}}
     config_path = _write_config_with_models(monkeypatch, tmp_path, {"a": 10}, groups)
@@ -508,10 +508,10 @@ def test_init_llamaswap_force_creates_backup(monkeypatch, tmp_path):
     )
     assert rc == 0
     # REQ-035: la copia lleva fecha (`<config>.<AAAAMMDD-HHMMSS>.bak`), como la de `residency`.
-    copias = list(tmp_path.glob("config.yaml.*.bak"))
-    assert len(copias) == 1
-    assert re.fullmatch(r"config\.yaml\.\d{8}-\d{6}\.bak", copias[0].name)
-    assert copias[0].read_text(encoding="utf-8") == original
+    copies = list(tmp_path.glob("config.yaml.*.bak"))
+    assert len(copies) == 1
+    assert re.fullmatch(r"config\.yaml\.\d{8}-\d{6}\.bak", copies[0].name)
+    assert copies[0].read_text(encoding="utf-8") == original
 
 
 def test_init_llamaswap_idempotent(monkeypatch, tmp_path):
