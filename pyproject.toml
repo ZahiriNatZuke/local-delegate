@@ -100,6 +100,8 @@ exclude = [
 [dependency-groups]
 dev = [
     "pytest>=8",
+    # Paraleliza la suite en el CI (`-n auto --dist loadgroup`); version exacta, revisada con Socket.
+    "pytest-xdist==3.8.0",
     "ruff>=0.6",
     "pre-commit>=3.7",
     # `respx` sale de la suite: declara `httpx>=0.25.0` y no soporta `httpx2`, así que dejarlo

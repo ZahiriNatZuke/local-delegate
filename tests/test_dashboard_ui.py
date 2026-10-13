@@ -41,6 +41,11 @@ pytest.importorskip("playwright.sync_api", reason="Playwright no está instalado
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
+# Todo el módulo en un mismo worker de `pytest-xdist` (`--dist loadgroup`): sus servidores
+# escuchan en puertos fijos (9495 lo comparten una docena de tests), así que dos workers
+# chocarían al levantarlos. En serie dentro del grupo, el resto de la suite sigue en paralelo.
+pytestmark = pytest.mark.xdist_group("dashboard_ui")
+
 
 # `PAGE` del JS del panel. Se lee del propio HTML en vez de clavarlo aquí: si alguien cambia el
 # tamaño de página, este módulo debe seguir generando dos páginas y no fallar por un número viejo.
