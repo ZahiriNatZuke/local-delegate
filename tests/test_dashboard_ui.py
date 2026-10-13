@@ -284,13 +284,13 @@ _PROCESS = {"name": "python.exe", "pid": 4321, "ram_mb": 2048, "vram_mb": None, 
 
 _MEASURE = """() => {
   const fam = el => el ? getComputedStyle(el).fontFamily : null;
-  const sonda = cls => {
+  const probe = cls => {
     const e = document.createElement('span'); e.className = cls; e.textContent = 'x';
     document.getElementById('modelsBody').appendChild(e);
     const f = fam(e); e.remove(); return f;
   };
   // La nota de los hooks vive en el diálogo de información (su ⓘ), no en la tarjeta.
-  const nota = Array.from(document.querySelectorAll('#dlgHooks p'))
+  const note = Array.from(document.querySelectorAll('#dlgHooks p'))
     .find(d => d.textContent.includes('decides tú'));
   const hero = document.querySelector('.card.hero');
   const lat = Array.from(document.querySelectorAll('.card'))
@@ -299,21 +299,21 @@ _MEASURE = """() => {
   return {
     th: Array.from(document.querySelectorAll('thead th')).map(fam),
     selfchip: fam(document.querySelector('.selfchip')),
-    mrole: sonda('mrole'),
-    empty: sonda('empty'),
-    nota: fam(nota),
-    hooksPrimera: fam(document.querySelector('#hooksBody tbody td:first-child')),
-    clientesPrimera: fam(document.querySelector('#clientsBody tbody td:first-child')),
-    refrescar: fam(document.getElementById('reload')),
-    cerrarAyuda: fam(document.getElementById('helpClose')),
+    mrole: probe('mrole'),
+    empty: probe('empty'),
+    note: fam(note),
+    hooksFirst: fam(document.querySelector('#hooksBody tbody td:first-child')),
+    clientsFirst: fam(document.querySelector('#clientsBody tbody td:first-child')),
+    refresh: fam(document.getElementById('reload')),
+    closeHelp: fam(document.getElementById('helpClose')),
     body: fam(document.body),
-    fuentes: fonts ? fonts.href : '',
+    fonts: fonts ? fonts.href : '',
     kpi: hero.querySelector('.k-num').firstChild.textContent.trim(),
-    pista: hero.querySelector('.k-hint').innerText,
+    hint: hero.querySelector('.k-hint').innerText,
     tooltip: hero.querySelector('.info')?.getAttribute('data-tip') || '',
-    columnaNeto: document.querySelector('#clientsBody tbody td:nth-child(4)').innerText.trim(),
-    latencia: lat.querySelector('.k-val').innerText.trim(),
-    latenciaFilas: Array.from(document.querySelectorAll('#activity tbody td:nth-child(7)'))
+    netColumn: document.querySelector('#clientsBody tbody td:nth-child(4)').innerText.trim(),
+    latency: lat.querySelector('.k-val').innerText.trim(),
+    latencyRows: Array.from(document.querySelectorAll('#activity tbody td:nth-child(7)'))
       .map(td => td.innerText.trim()),
   };
 }"""
@@ -429,46 +429,46 @@ def test_the_empty_processes_row_looks_like_the_other_empties(measurements):
 
 def test_the_hooks_note_is_prose_in_Inter(measurements):
     """REQ-034 (d): la nota dejó de reutilizar `.empty`, que es mono. Ahora va en el diálogo."""
-    assert measurements["nota"] is not None, "control positivo: la nota tiene que estar pintada"
-    assert measurements["nota"].startswith("Inter")
+    assert measurements["note"] is not None, "control positivo: la nota tiene que estar pintada"
+    assert measurements["note"].startswith("Inter")
 
 
 def test_the_first_column_of_hooks_and_clients_is_mono(measurements):
     """REQ-034 (e): categoría y cliente son identificadores de la telemetría."""
-    assert "JetBrains Mono" in measurements["hooksPrimera"]
-    assert "JetBrains Mono" in measurements["clientesPrimera"]
+    assert "JetBrains Mono" in measurements["hooksFirst"]
+    assert "JetBrains Mono" in measurements["clientsFirst"]
 
 
 def test_buttons_inherit_the_body_family(measurements):
     """REQ-034 (g). «Refrescar» ya la tenía por `.btn`; el que no la tenía es el cierre de la
     ayuda (`.help-x`), que se quedaba con la del agente de usuario."""
-    assert measurements["refrescar"] == measurements["body"]
-    assert measurements["cerrarAyuda"] == measurements["body"]
+    assert measurements["refresh"] == measurements["body"]
+    assert measurements["closeHelp"] == measurements["body"]
 
 
 def test_the_font_stylesheet_requests_JetBrains_Mono_400(measurements):
     """REQ-034 (f). `getComputedStyle` no ve la cara que falta: se mira la URL."""
-    assert "JetBrains+Mono:wght@400" in measurements["fuentes"]
+    assert "JetBrains+Mono:wght@400" in measurements["fonts"]
 
 
 def test_the_hero_KPI_shows_the_net_and_the_hint_the_gross_and_returned(measurements):
     """REQ-004 en el navegador, con el formato de REQ-030."""
     assert measurements["kpi"] == _thousands(_NET)
-    assert _thousands(_GROSS) in measurements["pista"]
-    assert _thousands(_RETURNED) in measurements["pista"]
+    assert _thousands(_GROSS) in measurements["hint"]
+    assert _thousands(_RETURNED) in measurements["hint"]
     assert "relecturas" in measurements["tooltip"]
 
 
 def test_who_delegated_shows_the_client_net(measurements):
     """REQ-004: la columna de ahorro de «Quién delegó» es `tokens_net`."""
-    assert measurements["columnaNeto"] == _thousands(_NET)
+    assert measurements["netColumn"] == _thousands(_NET)
 
 
 def test_latency_is_in_seconds(measurements):
     """REQ-032: KPI y columna de actividad en segundos, con coma."""
-    assert measurements["latencia"].endswith(" s"), measurements["latencia"]
-    assert measurements["latencia"] == "3,0 s"
-    assert sorted(measurements["latenciaFilas"]) == ["2,0 s", "4,0 s"]
+    assert measurements["latency"].endswith(" s"), measurements["latency"]
+    assert measurements["latency"] == "3,0 s"
+    assert sorted(measurements["latencyRows"]) == ["2,0 s", "4,0 s"]
 
 
 # --- Tarjeta Sistema y tipografía de todas las tarjetas (guardián) -----------------------------
@@ -515,36 +515,36 @@ _SYSTEM_STATES = {
 
 _CARD_TYPOGRAPHY = """() => {
   const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).filter(Boolean).join(',');
-  const raiz = getComputedStyle(document.documentElement);
-  const permitidas = ['--sans', '--mono'].map(v => norm(raiz.getPropertyValue(v)));
-  const fuera = [];
-  let vistos = 0;
+  const root = getComputedStyle(document.documentElement);
+  const allowed = ['--sans', '--mono'].map(v => norm(root.getPropertyValue(v)));
+  const outside = [];
+  let seen = 0;
   // La barra de controles entra también: el interruptor «Pruebas» vive ahí (test-windows).
   for (const card of document.querySelectorAll('.card, .topbar .controls')) {
     if (!card.checkVisibility()) continue;
     const w = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
-      const texto = n.textContent.trim();
+      const text = n.textContent.trim();
       const el = n.parentElement;
-      if (!texto || !el || !el.checkVisibility()) continue;
-      vistos++;
-      const familia = norm(getComputedStyle(el).fontFamily);
-      if (!permitidas.includes(familia)) fuera.push(texto.slice(0, 50) + ' -> ' + familia);
+      if (!text || !el || !el.checkVisibility()) continue;
+      seen++;
+      const family = norm(getComputedStyle(el).fontFamily);
+      if (!allowed.includes(family)) outside.push(text.slice(0, 50) + ' -> ' + family);
     }
   }
-  const sistema = document.getElementById('metersBody').closest('.card');
-  const textos = [];
-  const w = document.createTreeWalker(sistema, NodeFilter.SHOW_TEXT);
+  const system = document.getElementById('metersBody').closest('.card');
+  const texts = [];
+  const w = document.createTreeWalker(system, NodeFilter.SHOW_TEXT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const t = n.textContent.trim();
-    if (t && n.parentElement && n.parentElement.checkVisibility()) textos.push(t);
+    if (t && n.parentElement && n.parentElement.checkVisibility()) texts.push(t);
   }
-  const a = sistema.querySelector('a[href]');
-  const textos_barra = [...document.querySelectorAll('.topbar .controls button')]
+  const a = system.querySelector('a[href]');
+  const barTexts = [...document.querySelectorAll('.topbar .controls button')]
     .map(b => b.innerText.trim()).filter(Boolean);
   return {
-    permitidas, vistos, fuera, textos, textos_barra,
-    enlace: a ? {href: a.getAttribute('href'), target: a.target, rel: a.rel, texto: a.innerText.trim()}
+    allowed, seen, outside, texts, barTexts,
+    link: a ? {href: a.getAttribute('href'), target: a.target, rel: a.rel, text: a.innerText.trim()}
               : null,
   };
 }"""
@@ -577,29 +577,29 @@ def test_cards_only_use_the_panel_fonts(tmp_path, monkeypatch, state):
     metrics._FILE_CACHE.clear()
 
     # Control positivo de la propia medida: las dos pilas se leyeron y hubo textos que mirar.
-    assert all(m["permitidas"]) and len(set(m["permitidas"])) == 2, m["permitidas"]
-    assert m["vistos"] >= 40, m["vistos"]
-    assert not m["fuera"], "texto en una fuente ajena al panel: " + "; ".join(m["fuera"])
+    assert all(m["allowed"]) and len(set(m["allowed"])) == 2, m["allowed"]
+    assert m["seen"] >= 40, m["seen"]
+    assert not m["outside"], "texto en una fuente ajena al panel: " + "; ".join(m["outside"])
     # El botón «Pruebas» entra en lo que mide el guardián (y por tanto en `fuera` si se sale).
-    assert "Pruebas" in m["textos_barra"], m["textos_barra"]
+    assert "Pruebas" in m["barTexts"], m["barTexts"]
 
     # Sin prosa en la tarjeta Sistema: etiquetas y cifras, nada de frases (van en su ⓘ).
-    sentences = [t for t in m["textos"] if len(t.split()) >= 6]
+    sentences = [t for t in m["texts"] if len(t.split()) >= 6]
     assert not sentences, sentences
 
     if _SYSTEM_STATES[state]["origin"] == "remote":
-        link = m["enlace"]
+        link = m["link"]
         assert link is not None, "el host del backend tiene que ser un enlace"
         assert link["href"] == _PANEL_URL
-        assert link["texto"] == "pc.ejemplo.ts.net"
+        assert link["text"] == "pc.ejemplo.ts.net"
         assert link["target"] == "_blank"
         assert "noopener" in link["rel"].split()
-        assert "Procesos del backend".upper() not in [t.upper() for t in m["textos"]]
+        assert "Procesos del backend".upper() not in [t.upper() for t in m["texts"]]
     else:
-        assert m["enlace"] is None
-        assert "llama-server.exe" in m["textos"]
+        assert m["link"] is None
+        assert "llama-server.exe" in m["texts"]
     if _SYSTEM_STATES[state]["ram"] is None:
-        assert "RAM / VRAM" in m["textos"] and "—" in m["textos"]
+        assert "RAM / VRAM" in m["texts"] and "—" in m["texts"]
 
 
 # --- Coste equivalente, cuota e imágenes (coste-api-y-cuota, T6) -------------------------------
@@ -646,25 +646,25 @@ def _cost_and_image_log(tmp_path, monkeypatch) -> None:
 # Lo que se mide de las tres tarjetas: ningún párrafo, la misma tipografía que los KPIs de arriba,
 # el hueco con la fila de debajo y el diálogo de información con todo el texto que salió de ellas.
 _MEASURE_CARDS = """() => {
-  const cuerpos = ['costBody', 'quotaBody', 'imagesBody'].map(i => document.getElementById(i));
-  const textos = cuerpos.flatMap(c => [...c.querySelectorAll('*')]
+  const bodies = ['costBody', 'quotaBody', 'imagesBody'].map(i => document.getElementById(i));
+  const texts = bodies.flatMap(c => [...c.querySelectorAll('*')]
     .filter(e => !e.children.length).map(e => e.textContent.trim()));
-  const estilo = sel => { const e = document.querySelector(sel);
+  const style = sel => { const e = document.querySelector(sel);
     if (!e) return null; const s = getComputedStyle(e);
     return [s.fontFamily, s.fontSize, s.fontWeight].join('|'); };
   const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
-  const coste = document.getElementById('costCard').getBoundingClientRect();
-  const fila = document.getElementById('quotaImgRow').getBoundingClientRect();
+  const cost = document.getElementById('costCard').getBoundingClientRect();
+  const row = document.getElementById('quotaImgRow').getBoundingClientRect();
   return {
-    coste: document.getElementById('costBody').innerText,
-    imagenes: document.getElementById('imagesBody').innerText,
-    parrafos: cuerpos.reduce((n, c) => n + c.querySelectorAll('p, .nota').length, 0),
-    masLargo: Math.max(...textos.map(t => t.length)),
-    desglose: document.querySelectorAll('#costBody tbody tr').length,
-    cuotaVisible: vis('quotaCard'), imagenesVisible: vis('imagesCard'),
-    valCoste: estilo('#costBody .k-val'), valKpi: estilo('#kpis .card:not(.hero) .k-val'),
-    lblCoste: estilo('#costBody .k-lbl'), lblKpi: estilo('#kpis .k-lbl'),
-    hueco: Math.round(fila.top - coste.bottom),
+    cost: document.getElementById('costBody').innerText,
+    images: document.getElementById('imagesBody').innerText,
+    paragraphs: bodies.reduce((n, c) => n + c.querySelectorAll('p, .nota').length, 0),
+    longest: Math.max(...texts.map(t => t.length)),
+    breakdown: document.querySelectorAll('#costBody tbody tr').length,
+    quotaVisible: vis('quotaCard'), imagesVisible: vis('imagesCard'),
+    valCost: style('#costBody .k-val'), valKpi: style('#kpis .card:not(.hero) .k-val'),
+    lblCost: style('#costBody .k-lbl'), lblKpi: style('#kpis .k-lbl'),
+    gap: Math.round(row.top - cost.bottom),
   };
 }"""
 
@@ -685,18 +685,18 @@ def test_cost_quota_and_image_cards_carry_figures_not_paragraphs(tmp_path, monke
         browser.close()
     metrics._FILE_CACHE.clear()
     # Sin relleno: Opus 5.5 en subagente con N = 40 → $2,50 y ~$6,50 (escenario de la spec).
-    assert "$2,50" in m["coste"]
-    assert "~$6,50" in m["coste"]
-    assert "no es un ahorro: tarifa plana" in m["coste"]
-    assert m["desglose"] == 1
-    assert not m["cuotaVisible"]  # sin calibrar no hay tarjeta
-    assert m["imagenesVisible"]
-    assert "250.000" in m["imagenes"]
-    assert m["parrafos"] == 0
-    assert m["masLargo"] <= 40, m["masLargo"]
-    assert m["valCoste"] == m["valKpi"], (m["valCoste"], m["valKpi"])
-    assert m["lblCoste"] == m["lblKpi"], (m["lblCoste"], m["lblKpi"])
-    assert m["hueco"] == 16, m["hueco"]  # el mismo `gap` que entre el resto de tarjetas
+    assert "$2,50" in m["cost"]
+    assert "~$6,50" in m["cost"]
+    assert "no es un ahorro: tarifa plana" in m["cost"]
+    assert m["breakdown"] == 1
+    assert not m["quotaVisible"]  # sin calibrar no hay tarjeta
+    assert m["imagesVisible"]
+    assert "250.000" in m["images"]
+    assert m["paragraphs"] == 0
+    assert m["longest"] <= 40, m["longest"]
+    assert m["valCost"] == m["valKpi"], (m["valCost"], m["valKpi"])
+    assert m["lblCost"] == m["lblKpi"], (m["lblCost"], m["lblKpi"])
+    assert m["gap"] == 16, m["gap"]  # el mismo `gap` que entre el resto de tarjetas
 
 
 def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypatch):
@@ -715,8 +715,8 @@ def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypa
         text = page.inner_text("#infoDlg")
         page.keyboard.press("Escape")
         m = page.evaluate(
-            """() => ({abierto: document.getElementById('infoDlg').open,
-                       foco: document.activeElement && document.activeElement.id})"""
+            """() => ({open: document.getElementById('infoDlg').open,
+                       focus: document.activeElement && document.activeElement.id})"""
         )
         browser.close()
     metrics._FILE_CACHE.clear()
@@ -728,8 +728,8 @@ def test_the_info_dialog_carries_the_text_and_closes_with_esc(tmp_path, monkeypa
     assert "sin calibrar" in text
     assert "1 imagen" in text
     assert "250.000 bytes" in text
-    assert not m["abierto"]
-    assert m["foco"] == "costInfo"
+    assert not m["open"]
+    assert m["focus"] == "costInfo"
 
 
 def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch):
@@ -759,19 +759,19 @@ def test_the_calibrated_quota_appears_as_a_meter(tmp_path, monkeypatch):
         page.wait_for_selector("#quotaBody .qrange")
         m = page.evaluate(
             """() => ({
-              texto: document.getElementById('quotaBody').innerText,
-              cabecera: document.getElementById('quotaHead').innerText,
-              medidores: document.querySelectorAll('#quotaBody .qrange').length,
-              ancho: document.querySelector('#quotaBody .qrange .qb').style.width,
+              text: document.getElementById('quotaBody').innerText,
+              header: document.getElementById('quotaHead').innerText,
+              meters: document.querySelectorAll('#quotaBody .qrange').length,
+              width: document.querySelector('#quotaBody .qrange .qb').style.width,
             })"""
         )
         browser.close()
     metrics._FILE_CACHE.clear()
-    assert "3,4 – 11,9" in m["texto"]
-    assert "sin calibrar" in m["texto"]
-    assert m["cabecera"] == "1 ventana calibrada"
-    assert m["medidores"] == 1
-    assert m["ancho"] == "8.5%"
+    assert "3,4 – 11,9" in m["text"]
+    assert "sin calibrar" in m["text"]
+    assert m["header"] == "1 ventana calibrada"
+    assert m["meters"] == 1
+    assert m["width"] == "8.5%"
 
 
 def test_native_controls_follow_the_theme(panel):
@@ -828,12 +828,12 @@ def _after_loading(page, fonts):
 # unidad pasa del borde interior de la tarjeta (el hero tiene `overflow:hidden` y la cortaba).
 _KPI_OVERFLOWS = """() => [...document.querySelectorAll('#kpis .k-val')].flatMap(v => {
   const card = v.closest('.card'), c = card.getBoundingClientRect();
-  const borde = c.right - parseFloat(getComputedStyle(card).paddingRight) + 0.5;
-  const fuera = [];
-  if (v.scrollWidth > v.clientWidth) fuera.push(v.textContent + ': la cifra desborda su caja');
+  const edge = c.right - parseFloat(getComputedStyle(card).paddingRight) + 0.5;
+  const outside = [];
+  if (v.scrollWidth > v.clientWidth) outside.push(v.textContent + ': la cifra desborda su caja');
   const u = v.querySelector('.unit');
-  if (u && u.getBoundingClientRect().right > borde) fuera.push(v.textContent + ': unidad cortada');
-  return fuera;
+  if (u && u.getBoundingClientRect().right > edge) outside.push(v.textContent + ': unidad cortada');
+  return outside;
 })"""
 
 
@@ -1003,12 +1003,12 @@ def test_no_table_shows_internal_keys(tmp_path, monkeypatch):
 
 
 _TABLE_TYPOGRAPHY = """() => {
-  const estilo = el => { const s = getComputedStyle(el); return s.fontFamily + '|' + s.fontSize; };
-  const tablas = [...document.querySelectorAll('table')].filter(t => t.querySelector('tbody td'));
-  return tablas.map(t => ({
+  const style = el => { const s = getComputedStyle(el); return s.fontFamily + '|' + s.fontSize; };
+  const tables = [...document.querySelectorAll('table')].filter(t => t.querySelector('tbody td'));
+  return tables.map(t => ({
     id: t.id || t.closest('.card').querySelector('h2').textContent,
-    primera: estilo(t.querySelector('tbody td:first-child')),
-    cabecera: t.querySelector('thead th') ? estilo(t.querySelector('thead th')) : null,
+    first: style(t.querySelector('tbody td:first-child')),
+    header: t.querySelector('thead th') ? style(t.querySelector('thead th')) : null,
   }));
 }"""
 
@@ -1024,8 +1024,8 @@ def test_all_tables_share_typography_per_column(tmp_path, monkeypatch):
         browser.close()
     metrics._FILE_CACHE.clear()
     assert len(tables) >= 6, tables  # procesos, coste, actividad, clientes y las dos de hooks
-    assert len({t["primera"] for t in tables}) == 1, tables
-    assert len({t["cabecera"] for t in tables if t["cabecera"]}) == 1, tables
+    assert len({t["first"] for t in tables}) == 1, tables
+    assert len({t["header"] for t in tables if t["header"]}) == 1, tables
 
 
 def test_the_hooks_note_is_in_the_dialog(tmp_path, monkeypatch):
@@ -1056,10 +1056,10 @@ _KPI_SYMMETRY = """() => [...document.querySelectorAll('#kpis > .card')].map(car
   const c = card.getBoundingClientRect();
   return {
     lbl: card.querySelector('.k-lbl').textContent.trim(),
-    cifra: Math.round(card.querySelector('.k-val').getBoundingClientRect().top - c.top),
-    titulo: Math.round(card.querySelector('.k-top').getBoundingClientRect().height),
-    pista: Math.round(card.querySelector('.k-hint').getBoundingClientRect().height),
-    texto: card.querySelector('.k-val').innerText + ' ' + card.querySelector('.k-hint').innerText,
+    figure: Math.round(card.querySelector('.k-val').getBoundingClientRect().top - c.top),
+    title: Math.round(card.querySelector('.k-top').getBoundingClientRect().height),
+    hint: Math.round(card.querySelector('.k-hint').getBoundingClientRect().height),
+    text: card.querySelector('.k-val').innerText + ' ' + card.querySelector('.k-hint').innerText,
   };
 })"""
 
@@ -1084,17 +1084,17 @@ def test_the_kpi_row_is_symmetric_and_uses_decimal_comma(tmp_path, monkeypatch, 
     metrics._FILE_CACHE.clear()
     for key, cards in results.items():
         assert len(cards) == 6, (key, cards)
-        figures = [t["cifra"] for t in cards]
+        figures = [t["figure"] for t in cards]
         assert max(figures) - min(figures) <= 2, (key, cards)
-        assert len({t["titulo"] for t in cards}) == 1, (key, cards)
-        hints = [t["pista"] for t in cards]
+        assert len({t["title"] for t in cards}) == 1, (key, cards)
+        hints = [t["hint"] for t in cards]
         assert max(hints) - min(hints) <= 1, (key, cards)
         for t in cards:
-            assert not _DECIMAL_WITH_DOT.search(t["texto"]), (key, t)
+            assert not _DECIMAL_WITH_DOT.search(t["text"]), (key, t)
     # La pista de «Delegaciones» es una frase corta; el desglose va al tooltip.
     delegations = next(t for t in results[(1366, "dark")] if "Delegaciones" in t["lbl"])
-    assert "trocear" not in delegations["texto"]
-    assert "llamada" in delegations["texto"]
+    assert "trocear" not in delegations["text"]
+    assert "llamada" in delegations["text"]
 
 
 def test_system_shows_the_gpu_load_as_a_bar(tmp_path, monkeypatch):
@@ -1146,18 +1146,18 @@ def test_the_range_selector_arrow_does_not_move_on_hover(panel):
 _SPARK_AND_HINT = """() => {
   const hero = document.querySelector('#kpis .hero');
   const canvas = hero.querySelector('.spark canvas').getBoundingClientRect();
-  const rango = document.createRange();
-  rango.selectNodeContents(hero.querySelector('.k-hint'));
-  const texto = rango.getBoundingClientRect();
-  const lineas = [...document.querySelectorAll('#kpis .k-lbl')].map(l => {
+  const range = document.createRange();
+  range.selectNodeContents(hero.querySelector('.k-hint'));
+  const text = range.getBoundingClientRect();
+  const lines = [...document.querySelectorAll('#kpis .k-lbl')].map(l => {
     const t = l.querySelector('.k-lbl-t'), card = l.closest('.card').getBoundingClientRect();
     const info = l.querySelector('.info');
     return {lbl: t.textContent.trim(), title: l.getAttribute('title'),
-      alto: Math.round(l.getBoundingClientRect().height),
-      recortado: t.scrollWidth > t.clientWidth,
-      infoDentro: !info || info.getBoundingClientRect().right <= card.right};
+      height: Math.round(l.getBoundingClientRect().height),
+      clipped: t.scrollWidth > t.clientWidth,
+      infoInside: !info || info.getBoundingClientRect().right <= card.right};
   });
-  return {canvasTop: canvas.top, canvasAlto: canvas.height, textoBottom: texto.bottom, lineas};
+  return {canvasTop: canvas.top, canvasHeight: canvas.height, textBottom: text.bottom, lines};
 }"""
 
 
@@ -1180,16 +1180,16 @@ def test_the_hero_line_does_not_overlap_its_hint(tmp_path, monkeypatch, fonts):
                 browser.close()
     metrics._FILE_CACHE.clear()
     for key, m in measurements.items():
-        assert m["canvasAlto"] > 0, (key, m)  # guarda: el gráfico se pintó
-        assert m["canvasTop"] >= m["textoBottom"], (key, m)
-        for line in m["lineas"]:
-            assert line["alto"] <= 24, (key, line)  # una línea (~19 px); dos son ~35
+        assert m["canvasHeight"] > 0, (key, m)  # guarda: el gráfico se pintó
+        assert m["canvasTop"] >= m["textBottom"], (key, m)
+        for line in m["lines"]:
+            assert line["height"] <= 24, (key, line)  # una línea (~19 px); dos son ~35
             assert line["title"] == line["lbl"], (key, line)
-            assert line["infoDentro"], (key, line)
+            assert line["infoInside"], (key, line)
         if fonts == "bloqueadas" or fonts == "ancha":
             assert not m["inter"], (key, "la fuente tenía que estar bloqueada")
         if m["inter"] and key[0] >= 1366:
-            assert not any(x["recortado"] for x in m["lineas"]), (key, m["lineas"])
+            assert not any(x["clipped"] for x in m["lines"]), (key, m["lines"])
 
 
 def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
@@ -1252,21 +1252,21 @@ def test_backend_and_in_flight_speak_spanish(tmp_path, monkeypatch):
         page.wait_for_function("() => document.getElementById('bstatsHead').textContent")
         m = page.evaluate(
             """() => ({
-              estados: [...document.querySelectorAll('#modelsBody .mstate')].map(e => e.textContent),
-              curso: document.getElementById('inflightBody').textContent,
-              cabecera: document.getElementById('bstatsHead').textContent,
-              rendimiento: document.getElementById('backendStats').textContent,
+              states: [...document.querySelectorAll('#modelsBody .mstate')].map(e => e.textContent),
+              inFlight: document.getElementById('inflightBody').textContent,
+              header: document.getElementById('bstatsHead').textContent,
+              performance: document.getElementById('backendStats').textContent,
             })"""
         )
         browser.close()
     metrics._FILE_CACHE.clear()
-    assert m["estados"], m  # guarda: hay filas de modelos
-    assert all(e[:1].isupper() for e in m["estados"]), m["estados"]
-    assert "Trozo 9/14" in m["curso"], m["curso"]
-    assert "· 39.110 car." in m["curso"], m["curso"]
-    assert "chars" not in m["curso"]
-    assert "1.284 peticiones" in m["cabecera"], m["cabecera"]
-    assert "caché" in m["rendimiento"] and "cache " not in m["rendimiento"], m["rendimiento"]
+    assert m["states"], m  # guarda: hay filas de modelos
+    assert all(e[:1].isupper() for e in m["states"]), m["states"]
+    assert "Trozo 9/14" in m["inFlight"], m["inFlight"]
+    assert "· 39.110 car." in m["inFlight"], m["inFlight"]
+    assert "chars" not in m["inFlight"]
+    assert "1.284 peticiones" in m["header"], m["header"]
+    assert "caché" in m["performance"] and "cache " not in m["performance"], m["performance"]
 
 
 def test_the_input_origin_legend_is_in_spanish(panel):
@@ -1280,12 +1280,12 @@ def test_the_input_origin_legend_is_in_spanish(panel):
         page.goto(url)
         page.wait_for_function("() => state.charts && state.charts.srcDonut")
         m = page.evaluate(
-            """() => ({etiquetas: state.charts.srcDonut.data.labels,
-                       centro: state.charts.srcDonut.options.plugins.centerText.sub})"""
+            """() => ({labels: state.charts.srcDonut.data.labels,
+                       center: state.charts.srcDonut.options.plugins.centerText.sub})"""
         )
         browser.close()
-    assert m["etiquetas"] == ["Por ruta (path)"], m  # el log de `panel` es todo por path
-    assert m["centro"] == "por ruta"
+    assert m["labels"] == ["Por ruta (path)"], m  # el log de `panel` es todo por path
+    assert m["center"] == "por ruta"
 
 
 def test_there_is_no_longer_a_card_for_where_the_compute_ran(panel):
@@ -1301,17 +1301,17 @@ def test_there_is_no_longer_a_card_for_where_the_compute_ran(panel):
         m = page.evaluate(
             """() => ({
               donut: !!document.getElementById('originDonut'),
-              titulos: [...document.querySelectorAll('h2')].map(h => h.textContent),
-              origen: document.querySelector('#activity tbody tr .org').textContent,
-              fila: getComputedStyle(document.getElementById('modelBar').closest('.grid'))
+              titles: [...document.querySelectorAll('h2')].map(h => h.textContent),
+              origin: document.querySelector('#activity tbody tr .org').textContent,
+              row: getComputedStyle(document.getElementById('modelBar').closest('.grid'))
                 .gridTemplateColumns.split(' ').length,
             })"""
         )
         browser.close()
     assert not m["donut"]
-    assert "Dónde corrió el cómputo" not in m["titulos"]
-    assert m["origen"] == "Local"
-    assert m["fila"] == 2  # la fila de donuts queda en dos columnas, sin hueco
+    assert "Dónde corrió el cómputo" not in m["titles"]
+    assert m["origin"] == "Local"
+    assert m["row"] == 2  # la fila de donuts queda en dos columnas, sin hueco
 
 
 @pytest.mark.skipif(
@@ -1369,7 +1369,7 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
         initial = page.evaluate(
             """() => ({on: document.getElementById('tests').classList.contains('on'),
                        pressed: document.getElementById('tests').getAttribute('aria-pressed'),
-                       punto: document.getElementById('testsDot').checkVisibility()})"""
+                       dot: document.getElementById('testsDot').checkVisibility()})"""
         )
         page.click("#testsInfo")
         text_off = page.inner_text("#dlgTests")
@@ -1378,7 +1378,7 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
               const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono');
               const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).join(',');
               return [...document.querySelectorAll('#dlgTests code')].map(c => ({
-                texto: c.innerText.trim(),
+                text: c.innerText.trim(),
                 mono: norm(getComputedStyle(c).fontFamily) === norm(mono)}));
             }"""
         )
@@ -1396,11 +1396,11 @@ def test_the_tests_switch_requests_all_three_with_the_parameter(tmp_path, monkey
         browser.close()
     metrics._FILE_CACHE.clear()
 
-    assert initial == {"on": False, "pressed": "false", "punto": True}
+    assert initial == {"on": False, "pressed": "false", "dot": True}
     assert "Fuera de las cifras: 1 fila de prueba" in text_off
     assert f"local-delegate test-window stop {opened.id}" in text_off
     # Los comandos y el id van como código, en la mono del panel; la fecha, legible.
-    code_texts = [c["texto"] for c in code]
+    code_texts = [c["text"] for c in code]
     assert f"local-delegate test-window stop {opened.id}" in code_texts, code
     assert opened.id in code_texts
     assert code and all(c["mono"] for c in code), code

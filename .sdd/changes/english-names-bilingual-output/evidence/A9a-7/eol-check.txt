@@ -1,0 +1,5 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+M | lf | lf | tests/test_dashboard_js.py
+M | crlf | crlf | tests/test_dashboard_ui.py
+M | lf | lf | tests/test_panel_estados.py
+diferencias de EOL: 0

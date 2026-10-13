@@ -1,0 +1,33 @@
+== Barrido de cierre de A9a: los 7 mappings contra sus ficheros (nombres actuales)
+-- A9a-1-mapping.csv
+definiciones con old: []
+definiciones aún en español: []
+usos con old: [('tests/test_agents.py', 164, 'roto', 'keyword')]
+-- A9a-2-mapping.csv
+definiciones con old: []
+definiciones aún en español: []
+usos con old: []
+-- A9a-3-mapping.csv
+definiciones con old: []
+definiciones aún en español: [('test_header_present_but_variable_absent_warns_as_suspicion', 'tests/test_checks.py:1342@<module>'), ('test_desktop_with_missing_variable_warns_as_suspicion', 'tests/test_checks.py:1544@<module>')]
+usos con old: []
+-- A9a-4-mapping.csv
+definiciones con old: []
+definiciones aún en español: []
+usos con old: [('tests/test_ci_gate.py', 75, 'motivo', 'Attribute'), ('tests/test_ci_gate.py', 119, 'motivo', 'Attribute'), ('tests/test_ci_gate.py', 175, 'leer', 'keyword'), ('tests/test_ci_gate.py', 176, 'reloj', 'keyword'), ('tests/test_ci_gate.py', 177, 'dormir', 'keyword')]
+-- A9a-5-mapping.csv
+definiciones con old: []
+definiciones aún en español: []
+usos con old: [('tests/test_quota.py', 106, 'sesion', 'keyword'), ('tests/test_quota.py', 106, 'peticion', 'Name'), ('tests/test_quota.py', 106, 'sesion', 'keyword'), ('tests/test_quota.py', 151, 'peticion', 'Name'), ('tests/test_quota.py', 166, 'peticion', 'Name'), ('tests/test_quota.py', 204, 'peticion', 'Name'), ('tests/test_quota.py', 205, 'peticion', 'Name'), ('tests/test_quota.py', 206, 'peticion', 'Name'), ('tests/test_quota.py', 207, 'peticion', 'Name')]
+-- A9a-6-mapping.csv
+definiciones con old: []
+definiciones aún en español: [('test_the_calibrated_quota_appears_as_a_meter', 'tests/test_dashboard_ui.py:735@<module>')]
+usos con old: []
+-- A9a-7-mapping.csv
+definiciones con old: []
+definiciones aún en español: [('test_the_calibrated_quota_appears_as_a_meter', 'tests/test_dashboard_ui.py:735@<module>')]
+usos con old: []
+-- JS en cadenas (tokens name con un old de las filas js_test_string, o nombres JS declarados/claves en espaÃ±ol)
+(fin JS)
+-- mÃ³dulos y fixtures viejos en disco
+14

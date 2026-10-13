@@ -1,0 +1,21 @@
+refactor(rename): nombres en inglés en test_dashboard_js y en el JS de los tests del panel (ola A9a, lote 7)
+
+Renombra a inglés los nombres de test_dashboard_js.py y el JS propio de
+los tests del panel que vive dentro de cadenas Python: 151 filas del
+mapping aprobado. Entre ellas, los 24 test_* de test_dashboard_js
+(fmtHace → fmtAgo, tokensClaude → claudeTokens en sus nombres), sus
+ayudantes (_correr → _run, _extraer → _extract, _formateadores →
+_formatters), las claves y variables del JS de las fechas (desde/hasta →
+start/end, diaDesde → startDay…) y las de las sondas de medida de
+test_dashboard_ui (pista → hint, columnaNeto → netColumn, estilo →
+style…), junto con las lecturas en Python de lo que devuelven.
+
+El JS se cambia por tokens del tokenizador del detector: solo nombres,
+propiedades y claves, nunca el texto visible que afirman los tests.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
+
+Con el rename cambia, por consecuencia, el import de test_dashboard_js
+en tests/test_panel_estados.py y dos citas en ese fichero. Cierra la
+subola A9a.

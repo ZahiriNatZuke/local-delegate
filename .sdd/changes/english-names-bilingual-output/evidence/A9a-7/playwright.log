@@ -1,0 +1,10 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -q tests/test_dashboard_ui.py tests/test_panel_estados.py tests/test_panel_coste.py
+.....................................s.................................. [ 91%]
+.......                                                                  [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+78 passed, 1 skipped, 1 warning in 103.25s (0:01:43)

@@ -1,0 +1,118 @@
+[pesado] plaza plaza-1 tomada tras 0s: .venv/Scripts/python.exe -m pytest -q -n auto --dist loadgroup
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+.................................s...................................... [ 14%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 28%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 45%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 79%]
+........................................................................ [ 82%]
+........................................................................ [ 84%]
+........................................................................ [ 87%]
+........................................................................ [ 90%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+.........F..........s.                                                   [100%]
+=================================== ERRORS ====================================
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+_________________ ERROR collecting tests/test_dashboard_js.py _________________
+In tests/test_dashboard_js.py::test_build_query_carries_the_range_and_the_switch: function uses no argument 'incluir'
+================================== FAILURES ===================================
+______________________ test_restoring_a_copy_end_to_end _______________________
+[gw9] win32 -- Python 3.11.15 D:\Projects\local-delegate\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('<TEMP>/pytest-of-<user>/pytest-1359/popen-gw9/test_restoring_a_copy_end_to_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001467860FD50>
+capsys = <_pytest.capture.CaptureFixture object at 0x00000146786066D0>
+
+    @pytest.mark.llamaswap_real
+    @needs_llamaswap
+    def test_restoring_a_copy_end_to_end(tmp_path, monkeypatch, capsys):
+        """REQ-038: byte a byte, copia del actual, y la recarga informada (en T11 no hab�a vig�a)."""
+        with fake_llamaswap(tmp_path, [FakeModel("m", ttl=60)]) as ls:
+            _direct_to(ls, monkeypatch)
+            original = ls.config.read_bytes()
+            # Con --now las dos �rdenes: lo que se mira aqu� es la restauraci�n y lo que se informa
+            # despu�s; las negativas tienen sus propios tests.
+            assert _residency("--config", str(ls.config), "--ttl", "m=61", "--now") == 0
+            (copy_path,) = tmp_path.glob("config.yaml.*.bak")
+            changed = ls.config.read_bytes()
+            capsys.readouterr()
+    
+            rc = _residency("--config", str(ls.config), "--restore", str(copy_path), "--now")
+            output = _output(capsys)
+        assert rc == 0
+        assert ls.config.read_bytes() == copy_path.read_bytes() == original
+        others = [p for p in tmp_path.glob("config.yaml.*.bak") if p != copy_path]
+        assert len(others) == 1 and others[0].read_bytes() == changed
+>       assert "recarg�" in output
+E       AssertionError: assert 'recarg�' in 'aviso: llama-swap recargar� la config en unos 2 s, descargar� todos los modelos y cortar� las peticiones en curso\nco...o: recarga sin resolver: se perdi� parte del historial de llama-swap mientras recargaba; revisa el log de llama-swap\n'
+
+tests\test_residency_cli.py:250: AssertionError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\testclient.py:53: 12 warnings
+  D:\Projects\local-delegate\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_residency_cli.py::test_restoring_a_copy_end_to_end - Assert...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+ERROR tests/test_dashboard_js.py - Failed: In tests/test_dashboard_js.py::tes...
+1 failed, 2539 passed, 2 skipped, 12 warnings, 12 errors in 102.74s (0:01:42)
