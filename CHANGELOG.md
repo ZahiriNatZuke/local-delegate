@@ -6,6 +6,60 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-13
+
+Esta versión pasa a inglés los nombres de cara afuera: comandos, opciones, variables, el fichero
+interruptor, un hook, la skill, los ids y grupos de los checks de `doctor`, la cookie del panel y
+los ficheros de datos. Lo que lee el usuario sigue en español.
+
+### Qué cambia de nombre
+
+| Qué | Antes | Ahora | Plazo del nombre viejo |
+| --- | --- | --- | --- |
+| Subcomando | `recalcular-coste` | `recompute-cost` | alias con aviso hasta la 0.37.x |
+| Opción | `--reiniciar-calibracion` | `--reset-calibration` | alias con aviso hasta la 0.37.x |
+| Variable | `LD_HOOK_READ_BLOQUEAR` | `LD_HOOK_READ_BLOCK` | alias con aviso hasta la 0.37.x |
+| Variable | `LD_HOOK_READ_INTERRUPTOR` | `LD_HOOK_READ_SWITCH_FILE` | alias con aviso hasta la 0.37.x |
+| Variable | `LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO` | `LOCAL_DELEGATE_STRUCTURED_SUMMARY` | alias con aviso hasta la 0.37.x |
+| Variable | `LOCAL_DELEGATE_COSTE_RESPALDO` | `LOCAL_DELEGATE_COST_FALLBACK` | alias con aviso hasta la 0.37.x |
+| Interruptor | `~/.claude/local-delegate-bloqueo-apagado` | `~/.claude/local-delegate-block-off` | sigue apagando con aviso hasta la 0.37.x |
+| Hook | `anotar_llamada.py` | `record_call.py` | `install`/`update` borran el viejo |
+| Skill | `delegacion-local` | `local-delegation` | `install`/`update` borran la vieja |
+| Checks de `doctor` | `config.coste`; grupos `entorno`, `andamiaje`, `servicio` | `config.cost`; `environment`, `scaffold`, `service` | sin alias |
+| Cookie del panel | `ld_sesion` | `ld_session` | sin alias: se pide el token una vez |
+| Enfriamiento | `enfriamiento.json`, `enfriamiento-eventos.jsonl` | `cooldown.json`, `cooldown-events.jsonl` | `enfriamiento.json` se sigue escribiendo hasta la 0.37.x |
+| Relleno | `atribucion-AAAAMM.json` | `attribution-AAAAMM.json` | se lee el viejo mientras no haya nuevo |
+| Agregados del coste | `coste-agregados.json` | `cost-aggregates.json` | se lee el viejo mientras no haya nuevo |
+| Registro del statusline | `cuota-statusline.jsonl` | también `quota-statusline.jsonl` | el viejo vale sin plazo |
+| Temporal de hooks | `local-delegate-bloqueos.jsonl`, `local-delegate-llamadas/`, `local-delegate-salud-<huella>.json` | `local-delegate-blocks.jsonl`, `local-delegate-calls/`, `local-delegate-health-<huella>.json` | el daemon lee los dos |
+| Datos del paquete | `resources/datos/precios.json`, `densidad.json` | `resources/data/prices.json`, `density.json` | viajan con el código |
+
+### Plazos
+
+- Los alias (subcomando, opción, variables e interruptor) funcionan con aviso en la 0.35.x, la
+  0.36.x y la 0.37.x, y **se retiran en la 0.38.0**. El aviso del CLI y el check «nombres
+  obsoletos» de `doctor` dicen esa versión. Si están el nombre viejo y el nuevo, gana el nuevo.
+- La doble escritura de `enfriamiento.json` (para los hooks de una versión anterior) **también se
+  retira en la 0.38.0**.
+
+### Lo que rompe y cómo actualizar
+
+- **Volver a una versión anterior no está soportado.** Los ficheros de datos nuevos
+  (`cooldown.json`, `attribution-AAAAMM.json`, `cost-aggregates.json`) no los lee la 0.34.0.
+- **Los ids de los checks de `doctor` cambian** (`config.coste` → `config.cost`) y también sus
+  grupos. `doctor` no los imprime: afecta a quien lea `checks.CHECKS` o la wiki.
+- **El panel pide el token una vez** tras actualizar, porque la cookie de sesión cambia de nombre.
+- **Hooks nuevos con daemon viejo**: entre `install`/`update` y el reinicio del daemon, los hooks
+  ya son los nuevos y el daemon sigue siendo el de antes. Durante esa ventana el daemon viejo no
+  ve los temporales con nombre nuevo y algunas llamadas quedan sin atribuir; no hay errores.
+  `update` reinicia el daemon y la cierra. Al revés (hooks viejos con daemon nuevo) no se pierde
+  nada: el daemon lee los dos nombres y sigue escribiendo `enfriamiento.json`.
+- **En Windows, para el daemon antes de `uv tool install --force`.** Con el daemon corriendo, la
+  reinstalación puede fallar a mitad y dejar roto el entorno de la herramienta; `schtasks /End` no
+  basta porque el lanzador está desacoplado, hay que parar su proceso `pythonw`.
+- Tras instalar, `local-delegate update` repone la skill, los hooks y el bloque gestionado de
+  `CLAUDE.md`/`AGENTS.md` si quedaron desfasados.
+
 ### Changed
 - **El subcomando, su opción y cuatro variables de entorno pasan a inglés.** Los nombres viejos
   siguen funcionando igual, con un aviso, durante esta versión y las dos menores siguientes, y se
@@ -71,8 +125,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   Mientras de un mes solo exista el fichero viejo, el panel, `doctor`, `recompute-cost` y los
   scripts de medición lo leen traducido. La primera escritura de ese mes siembra el nuevo desde el
   viejo, una sola vez y con la regla de siempre (un cruce solo lo sustituye otro mejor); desde ahí
-  solo se lee el nuevo, y el viejo queda intacto. El resumen «cruces» de `recompute-cost` muestra
-  ya los valores nuevos.
+  solo se lee el nuevo, y el viejo queda intacto. El resumen «cruces» que imprime
+  `recompute-cost` en la terminal sigue diciendo los rótulos de la 0.34.0 (`exacto`, `ventana`,
+  `ambiguo`, `sin_cruce`): la candidata los imprimía en inglés y se corrigió antes de publicar
+  (#263).
 - **`/api/stats` devuelve la cuota como `quota`** (antes `cuota`), con sus campos en inglés:
   `status` (`calibrated` o `uncalibrated`; antes `estado` con `calibrado` o `sin calibrar`),
   `reason`, `points`, `rejection_points`, `discards`, `drift`, `reset`, `median_C`, `warning` y
@@ -2664,7 +2720,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Empaquetado para PyPI (`local-delegate-mcp`) ejecutable con `uvx`; `server.json` para el
   registro oficial de MCP.
 
-[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...HEAD
+[Unreleased]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/ZahiriNatZuke/local-delegate/compare/v0.31.4...v0.32.0

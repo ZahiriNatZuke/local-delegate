@@ -8,8 +8,9 @@ con datos de ejemplo **deterministas**, así que:
 
 - la imagen es reproducible: la misma semilla da la misma captura;
 - **no se publica tu actividad real** (rutas de archivos, nombres de proyectos, horarios);
-- `/api/status` se deja pasar sin tocar, para que la versión, el catálogo de modelos y el
-  número de tools que aparecen sean los de verdad.
+- `/api/status` se pide de verdad, para que la versión, el catálogo de roles y el número de
+  tools que aparecen sean los reales; solo se sustituyen su estado del backend (el mismo que
+  `/api/backend`, así la captura no necesita la clave) y `log_dir`.
 
 Que la segunda promesa se cumpla **no depende de acordarse**: `tests/test_captura.py` compara los
 `/api/*` que la página pide con las claves de `MOCKS`, y un endpoint nuevo sin interceptar rompe el
@@ -29,7 +30,7 @@ Requiere Playwright, que **no** es dependencia del proyecto:
     uv pip install playwright && uv run python -m playwright install chromium
 
 **Captura contra el repo, no contra el daemon instalado.** El daemon sirve la versión que tenga
-instalada, que tras un bump ya no es la del árbol, y `/api/status` se deja pasar sin mockear. Ojo:
+instalada, que tras un bump ya no es la del árbol, y la versión sale del `/api/status` real. Ojo:
 `local-delegate serve --port 9494` **no** vale para esto —es singleton y el lock lo tiene el
 daemon del 9393—, hay que montar solo la app de métricas:
 
@@ -272,11 +273,11 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       range_from: events[0].ts, range_to: events[events.length - 1].ts}, events},
     // Un modelo procesando (sale en inflight), otro montado en reposo, el resto frío. Sin
     // `running_ok: true` las filas caerían en «montado»/«frío» (backend que no es llama-swap) y la
-    // captura no enseñaría «procesando»; `causa`, `etiqueta` y `detalle` van a null cuando está
+    // captura no enseñaría «procesando»; `cause`, `label` y `detail` van a null cuando está
     // conectado, como los devuelve el daemon.
     '/api/backend': {available: true, running: [{model: 'gemma4-26b-a4b', state: 'ready'},
       {model: 'qwen36-35b-a3b', state: 'ready'}], running_ok: true, models_stale: false,
-      causa: null, etiqueta: null, detalle: null,
+      cause: null, label: null, detail: null,
       origin: 'local', host: '127.0.0.1:9292',
       models: [{id:'gemma3-4b',status:'unloaded'},{id:'gemma4-26b-a4b',status:'loaded'},
         {id:'qwen36-35b-a3b',status:'loaded'},{id:'qwen35-2b',status:'unloaded'},
@@ -383,7 +384,21 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
       return Promise.resolve(new Response(JSON.stringify(MOCKS[path]),
         {status: 200, headers: {'Content-Type': 'application/json'}}));
     }
-    return real(input, init);  // /api/status pasa: versión, catálogo y tools son los reales
+    if (path === '/api/status') {
+      // Versión, catálogo y tools son los reales; el estado del backend se simula igual que
+      // `/api/backend`, porque la app de la captura no tiene la clave del backend y sin ella la
+      // tarjeta se queda en «comprobando». `log_dir` tampoco sale: es una ruta de quien captura.
+      return real(input, init).then((r) => r.json()).then((s) => {
+        const b = MOCKS['/api/backend'];
+        s.backend = Object.assign({}, s.backend, {available: true, models: b.models,
+          models_stale: false, cause: null, label: null, detail: null,
+          origin: b.origin, host: b.host});
+        s.log_dir = MOCKS['/api/events'].meta.log_dir;
+        return new Response(JSON.stringify(s),
+          {status: 200, headers: {'Content-Type': 'application/json'}});
+      });
+    }
+    return real(input, init);
   };
 
   // Sin animaciones. El screenshot por CDP espera a que la página quede quieta, y un gráfico
@@ -406,6 +421,9 @@ REFRESH = """async () => {
   // fetchStatus va con await: pinta el panel de backend y, en un segundo fetch, el de
   // rendimiento. Sin esperarla el screenshot puede salir con ese panel todavía vacío.
   await fetchStatus();
+  // El badge y las filas del backend salen del sondeo de /api/backend (REQ-028), no de
+  // /api/status: sin esperarlo la tarjeta se queda en «comprobando…» y los modelos «desconocido».
+  await pollBackend();
   pollSystem();
   await fetchData();
   await pollInflight();

@@ -55,39 +55,39 @@ DEPRECATED_NAMES: tuple[DeprecatedName, ...] = (
     DeprecatedName("retired", "LOCAL_DELEGATE_MAX_CHARS_FAST", None, "0.30.0", "0.37.0"),
     DeprecatedName("retired", "LOCAL_DELEGATE_FALLBACK_FAST", None, "0.30.0", "0.37.0"),
     # Ola A1: CLI y variables de entorno (REQ-001, REQ-002).
-    DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "UNRELEASED"),
-    DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "UNRELEASED"),
+    DeprecatedName("cli_command", "recalcular-coste", "recompute-cost", "0.35.0"),
+    DeprecatedName("cli_option", "--reiniciar-calibracion", "--reset-calibration", "0.35.0"),
     DeprecatedName(
-        "env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "UNRELEASED", used_by_hooks=True
+        "env_var", "LD_HOOK_READ_BLOQUEAR", "LD_HOOK_READ_BLOCK", "0.35.0", used_by_hooks=True
     ),
     DeprecatedName(
         "env_var",
         "LD_HOOK_READ_INTERRUPTOR",
         "LD_HOOK_READ_SWITCH_FILE",
-        "UNRELEASED",
+        "0.35.0",
         used_by_hooks=True,
     ),
     DeprecatedName(
         "env_var",
         "LOCAL_DELEGATE_RESUMEN_ESTRUCTURADO",
         "LOCAL_DELEGATE_STRUCTURED_SUMMARY",
-        "UNRELEASED",
+        "0.35.0",
     ),
     DeprecatedName(
-        "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "UNRELEASED"
+        "env_var", "LOCAL_DELEGATE_COSTE_RESPALDO", "LOCAL_DELEGATE_COST_FALLBACK", "0.35.0"
     ),
     # Ola A2: el fichero que apaga el bloqueo (REQ-012). Vive en `~/.claude/`; lo lee el hook.
     DeprecatedName(
         "switch_file",
         "local-delegate-bloqueo-apagado",
         "local-delegate-block-off",
-        "UNRELEASED",
+        "0.35.0",
         used_by_hooks=True,
     ),
     # Ola A4: excepción de REQ-005. El daemon escribe también `enfriamiento.json` (claves viejas)
     # para que los hooks de versiones anteriores sigan viendo los modelos enfriados. Mientras esta
     # entrada exista, `cooldown.legacy_write_enabled()` es True; al retirarla, se deja de escribir.
-    DeprecatedName("legacy_write", "enfriamiento.json", "cooldown.json", "UNRELEASED"),
+    DeprecatedName("legacy_write", "enfriamiento.json", "cooldown.json", "0.35.0"),
 )
 
 

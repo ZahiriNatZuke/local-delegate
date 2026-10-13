@@ -101,6 +101,16 @@ ni a Claude: cualquier cliente local comparte el mismo daemon. El dashboard iden
 proceso con la insignia `DAEMON MCP`; las sesiones conectadas son clientes HTTP, no procesos MCP
 adicionales.
 
+**Al actualizar en Windows, para el daemon antes de `uv tool install --force`.** Con el daemon
+corriendo, la reinstalación puede fallar a mitad (tiene abiertos ficheros del entorno) y dejarlo
+roto; `schtasks /End` no basta porque el lanzador está desacoplado, así que para el proceso
+`pythonw` del daemon, instala y vuelve a lanzarlo. Después, `local-delegate update` repone hooks,
+skill y el bloque de `CLAUDE.md`/`AGENTS.md` si quedaron desfasados.
+
+> **La 0.35.0 renombra comandos, variables, la skill y ficheros de datos a inglés.** Los nombres
+> viejos siguen funcionando con aviso hasta la 0.37.x y se retiran en la 0.38.0; volver a una
+> versión anterior no está soportado. La tabla completa está en el [CHANGELOG](./CHANGELOG.md).
+
 ## Requisitos
 
 **Python 3.11+** — con `uvx` no tienes que instalarlo tú, lo resuelve él; solo importa si instalas
