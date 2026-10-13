@@ -246,7 +246,7 @@ def test_chunked_operation_sums_every_real_call_including_a_hop(recargar_config,
 def test_a_useless_200_counts_its_inference(recargar_config, tmp_path):
     """Un 200 con `content: null` también ocupó la GPU: su inferencia entra en la suma.
 
-    Mutante (b): `_fallo_de_cuerpo` sin los `timings` → falla `assert line["inference_ms"] == 150`.
+    Mutante (b): `_body_failure` sin los `timings` → falla `assert line["inference_ms"] == 150`.
     """
     recargar_config()
     useless = httpx2.Response(

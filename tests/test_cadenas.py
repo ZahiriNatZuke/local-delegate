@@ -253,7 +253,7 @@ def test_doctor_no_avisa_con_las_cadenas_por_defecto(recargar_config, tmp_path):
 # El paso `loaded` sustituye a `residente`: el conjunto de alternativos con celda aprobada que ya
 # están cargados, resuelto en el momento del salto. Sin bloque B (sin proveedor registrado) no tiene
 # miembros: se salta sin gastar salto y sin tocar la red. Los escenarios van sobre `backend_mock`,
-# que responde según el modelo pedido, y miran los `Intento` reales que devuelve `_con_respaldo`.
+# que responde según el modelo pedido, y miran los `Attempt` reales que devuelve `_with_fallback`.
 
 URL = "http://test-backend/v1/chat/completions"
 CAPACIDAD = '{"error":{"message":"unspecific error: upstream command exited prematurely"}}'
@@ -292,16 +292,16 @@ def _backend(responses: dict) -> list[str]:
 
 @pytest.fixture
 def attempts(monkeypatch) -> list:
-    """Los `Intento` de cada `_con_respaldo`, en orden: las llamadas reales al backend."""
+    """Los `Attempt` de cada `_with_fallback`, en orden: las llamadas reales al backend."""
     seen_set: list = []
-    original = server._con_respaldo
+    original = server._with_fallback
 
     def spy(*args, **kwargs):
         result = original(*args, **kwargs)
         seen_set.extend(result[2])
         return result
 
-    monkeypatch.setattr(server, "_con_respaldo", spy)
+    monkeypatch.setattr(server, "_with_fallback", spy)
     return seen_set
 
 
@@ -318,9 +318,9 @@ def test_code_never_falls_to_mechanical(recargar_config, attempts):
 
     server.local_commit_msg(diff=DIFF)
 
-    assert attempts[0].modelo == CODIGO
-    assert attempts[1].modelo == "gemma4-26b-a4b"
-    assert MECANICO not in [i.modelo for i in attempts]
+    assert attempts[0].model == CODIGO
+    assert attempts[1].model == "gemma4-26b-a4b"
+    assert MECANICO not in [i.model for i in attempts]
 
 
 @backend_mock.mock
@@ -328,13 +328,13 @@ def test_long_hops_to_code_and_mechanical_to_long(recargar_config, attempts):
     recargar_config()
     _backend({LARGO: _fallo(500), CODIGO: _ok("resumen"), MECANICO: _ok("del 4B")})
     server.local_summarize(text=_texto(10_000))
-    assert "gemma3-4b" not in [i.modelo for i in attempts]
-    assert [i.modelo for i in attempts] == [LARGO, CODIGO]
+    assert "gemma3-4b" not in [i.model for i in attempts]
+    assert [i.model for i in attempts] == [LARGO, CODIGO]
 
     attempts.clear()
     _backend({MECANICO: _fallo(500), LARGO: _ok("a")})
     server.local_classify(text="hola", labels=["a", "b"])
-    assert [i.modelo for i in attempts] == [MECANICO, LARGO]
+    assert [i.model for i in attempts] == [MECANICO, LARGO]
 
 
 @backend_mock.mock
@@ -345,7 +345,7 @@ def test_capacity_failure_with_nothing_loaded(recargar_config, attempts):
 
     output = server.local_explain_code(code="x = 1")
 
-    assert [i.modelo for i in attempts] == ["qwen36-35b-a3b"]
+    assert [i.model for i in attempts] == ["qwen36-35b-a3b"]
     assert output.startswith("[local-delegate error]")
 
 
@@ -359,8 +359,8 @@ def test_empty_loaded_spends_no_hop(recargar_config, attempts):
 
     server.local_commit_msg(diff=DIFF)
 
-    assert attempts[-1].modelo == "gemma4-26b-a4b"
-    assert [i.modelo for i in attempts] == [CODIGO, LARGO]
+    assert attempts[-1].model == "gemma4-26b-a4b"
+    assert [i.model for i in attempts] == [CODIGO, LARGO]
 
 
 def test_loaded_members_without_provider_does_not_query_network(recargar_config, monkeypatch):
@@ -402,7 +402,7 @@ def test_with_provider_hop_goes_to_loaded_member(recargar_config, attempts):
         cadenas.register_loaded_provider(previous_provider)
 
     assert seen_set == [("local_commit_msg", CODIGO)]
-    assert [i.modelo for i in attempts] == [CODIGO, MECANICO]
+    assert [i.model for i in attempts] == [CODIGO, MECANICO]
 
 
 @pytest.fixture

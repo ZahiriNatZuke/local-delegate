@@ -6,7 +6,7 @@ Tres preguntas, un solo sitio de verdad para cada una:
   (REQ-031 a REQ-033): familia de tokenizador del modelo de quien llamó (o del respaldo), clase de
   contenido (REQ-032), columna (`read_format` si se leyó por `path`, que es lo que habría devuelto
   `Read`) y respaldo de celda en su único orden. Devuelve `c` en **centésimas** con su origen. Ni
-  `server.tokens_claude` ni el JS del panel resuelven nada: solo dividen por lo que trae la fila.
+  `server.claude_tokens` ni el JS del panel resuelven nada: solo dividen por lo que trae la fila.
 - **¿Qué se sabe de quien llamó?** `merge(rows, log_dir=...)` (REQ-006): por campo, la línea del
   log manda, luego el relleno (`attribution-AAAAMM.json`) y por último el respaldo declarado
   (REQ-008). En el mismo paso añade la densidad resuelta. Copia cada fila: nunca muta las de la

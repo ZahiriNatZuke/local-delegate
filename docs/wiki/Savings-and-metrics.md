@@ -154,7 +154,7 @@ del panel (`acct`), atadas por un test de paridad:
 lo devuelto **en su unidad de origen**: `chars_saved_text` (texto leído por `path`),
 `bytes_saved_image` (la imagen, en bytes), `chars_saved_output` (lo escrito a fichero) y
 `chars_returned` (lo devuelto al contexto). Esas cifras son exactas; la conversión a tokens de
-Claude es la parte estimada, y pasa por **una sola** función, `tokens_claude` (en JS,
+Claude es la parte estimada, y pasa por **una sola** función, `claude_tokens` (en JS,
 `tokensClaude`), que se explica en la sección siguiente.
 
 **Un ejemplo con cifras reales** (septiembre de 2026 en la máquina de referencia: 143
@@ -247,8 +247,8 @@ contrafactual y fecha de precios); sin ese bloque no hay cifra.
 
 Por cada delegación atribuible:
 
-- **`T`**: sus tokens de Claude netos de texto, `tokens_claude(chars_saved_text, "text") −
-  tokens_claude(chars_returned, "returned")`. Puede ser negativo: lo devuelto también entró en
+- **`T`**: sus tokens de Claude netos de texto, `claude_tokens(chars_saved_text, "text") −
+  claude_tokens(chars_returned, "returned")`. Puede ser negativo: lo devuelto también entró en
   caché, y resta.
 - **Cota baja** = `T × P_w(m, hilo)`: una sola escritura en caché, al precio del modelo `m` que la
   pidió. `P_w` es la escritura a 5 min en un subagente y a 1 h en el hilo principal, que es como

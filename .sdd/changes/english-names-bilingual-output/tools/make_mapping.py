@@ -506,7 +506,9 @@ def apply_mapping(mapping: Path, root: Path, dry_run: bool = False) -> dict[str,
                 else (_test_def_edit(lines, r))
             )
         # De atrás adelante para que las columnas de una línea no se desplacen.
-        for ln, col, old, new in sorted(edits, reverse=True):
+        # Sin repetidas: la fila de una función recorre también sus anidadas (A7a, `cadena`).
+        edits = sorted(set(edits), reverse=True)
+        for ln, col, old, new in edits:
             text = lines[ln - 1]
             if text[col : col + len(old)] != old:
                 raise ValueError(f"{rel}:{ln}:{col} no contiene `{old}`")

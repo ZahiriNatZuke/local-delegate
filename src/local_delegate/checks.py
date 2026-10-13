@@ -1594,7 +1594,7 @@ def _probe_topology(ctx: Context) -> Result:
         text = f"sin turno según el daemon: {status.turn_reason}{detail}"
         return Result(UNKNOWN if _no_turn_is_fine(status.turn_reason) else WARN, text)
     source = f"según la config de este shell; el daemon: {why or 'no lo dice'}"
-    if not server._backend_en_loopback():
+    if not server._backend_on_loopback():
         return Result(
             UNKNOWN,
             f"sin turno: {server.NO_TURN_REMOTE_BACKEND} ({config.backend_host()}; {source})",

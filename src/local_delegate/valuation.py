@@ -101,13 +101,13 @@ def n_of(row: dict, aggregates: dict | None) -> tuple[float, int, str]:
 
 def net_tokens(row: dict) -> int:
     """`T`: tokens de Claude del texto leído server-side menos los devueltos (Definiciones). 0 en
-    una imagen (REQ-038). Pasa SOLO por `server.tokens_claude`."""
+    una imagen (REQ-038). Pasa SOLO por `server.claude_tokens`."""
     if cost.is_image(row):
         return 0
     acc = server._accounting(row)
-    return server.tokens_claude(
-        acc["chars_saved_text"], tipo="text", evento=row
-    ) - server.tokens_claude(acc["chars_returned"], tipo="returned", evento=row)
+    return server.claude_tokens(
+        acc["chars_saved_text"], kind="text", event=row
+    ) - server.claude_tokens(acc["chars_returned"], kind="returned", event=row)
 
 
 def event_cost(row: dict, aggregates: dict | None = None, table: dict | None = None) -> dict:

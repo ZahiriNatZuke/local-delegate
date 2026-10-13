@@ -945,8 +945,8 @@ def test_accounting_desglosa_en_caracteres():
 
 
 def test_tokens_claude_es_la_unica_conversion(monkeypatch):
-    """REQ-008: lo ahorrado y lo devuelto pasan SOLO por `tokens_claude`; el coste local, no."""
-    monkeypatch.setattr(server, "tokens_claude", lambda cantidad, *, tipo, evento: 7)
+    """REQ-008: lo ahorrado y lo devuelto pasan SOLO por `claude_tokens`; el coste local, no."""
+    monkeypatch.setattr(server, "claude_tokens", lambda amount, *, kind, event: 7)
     a = metrics._accounting(dict(_NETO_RESTA))
     assert a["saved"] == 7
     assert a.get("returned") == 7

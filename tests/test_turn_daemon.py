@@ -74,7 +74,7 @@ def _ok(text: str = "ok") -> server.ChatResult:
 
 
 def _model_failure() -> server.ChatResult:
-    return server.ChatResult(text="x", ok=False, error="http_500", clase=FailureClass.MODEL)
+    return server.ChatResult(text="x", ok=False, error="http_500", error_class=FailureClass.MODEL)
 
 
 def _events(tmp_path: Path) -> list[dict]:
@@ -273,7 +273,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
         return _ok(f"ok de {model}")
 
     progress = server._inflight_progress
-    local_wait = server._inflight_espera_local
+    local_wait = server._inflight_local_wait
 
     def inflight_progress(entry_id, chunk):
         # C no pide plaza para su segundo trozo hasta que A y B tienen las dos.
@@ -288,7 +288,7 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
     monkeypatch.setattr(server, "_inflight_progress", inflight_progress)
-    monkeypatch.setattr(server, "_inflight_espera_local", inflight_local_wait)
+    monkeypatch.setattr(server, "_inflight_local_wait", inflight_local_wait)
 
     def operation_c() -> str:
         try:
@@ -306,8 +306,8 @@ def test_two_simultaneous_hops_do_not_block(with_topology, monkeypatch):
             c_done.set()
 
     c = _Thread("C", operation_c)
-    a = _Thread("A", server._chat, LONG, "s", "u", 8, tool="op_a", rol="long")
-    b = _Thread("B", server._chat, LONG, "s", "u", 8, tool="op_b", rol="long")
+    a = _Thread("A", server._chat, LONG, "s", "u", 8, tool="op_a", role="long")
+    b = _Thread("B", server._chat, LONG, "s", "u", 8, tool="op_b", role="long")
     c.start()
     assert c1_inside.wait(2), "C no llegó a su primer trozo"
     a.start()
@@ -367,7 +367,7 @@ def test_hop_releases_slot_before_requesting_turn(with_topology, monkeypatch):
     )
 
     try:
-        server._chat(LONG, "s", "u", 8, tool="op", rol="long")
+        server._chat(LONG, "s", "u", 8, tool="op", role="long")
         error = None
     except Exception as e:  # un mutante puede lanzar en el aserto de REQ-004: se mira el orden
         error = e
@@ -389,7 +389,7 @@ def test_turn_and_slot_released_on_unexpected_exception(with_topology, monkeypat
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
     with pytest.raises(RuntimeError, match="inesperada del backend"):
-        server._chat(LONG, "s", "u", 8, tool="op", rol="long")
+        server._chat(LONG, "s", "u", 8, tool="op", role="long")
 
     assert in_use_during == [(LONG,)]  # guarda: la llamada tenía el turno
     assert server._turn.snapshot().actives == ()
@@ -413,8 +413,8 @@ def test_after_grant_entry_moves_from_turn_to_slot(with_topology, monkeypatch):
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
-    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", rol="long")
-    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", rol="code")
+    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", role="long")
+    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     taken_ones = 0
     try:
         x.start()
@@ -471,7 +471,7 @@ def _two_that_clash(monkeypatch, tmp_path) -> list[dict]:
 
     def operation(model: str, role: str) -> str:
         startup.wait(2)
-        return server._chat(model, "s", "u", 8, tool=f"op_{role}", rol=role)
+        return server._chat(model, "s", "u", 8, tool=f"op_{role}", role=role)
 
     threads = [_Thread("L", operation, LONG, "long"), _Thread("C", operation, CODE, "code")]
     for thread in threads:
@@ -496,7 +496,7 @@ def test_without_topology_or_remote_backend_like_today(case, with_topology, monk
         monkeypatch.setattr(config, "BASE_URL", "http://pc-remota.example:9292/v1")
     # El caso es el que dice ser, mirado sin pasar por `_topology()` (que es lo que se prueba).
     if case == "backend remoto":
-        assert not server._backend_en_loopback()
+        assert not server._backend_on_loopback()
         assert isinstance(topology.snapshot(), topology.Snapshot)
     else:
         assert getattr(topology.snapshot(), "reason", None) == case
@@ -550,8 +550,8 @@ def test_new_topology_on_next_grant(with_topology, monkeypatch):
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
-    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", rol="long")
-    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", rol="code")
+    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", role="long")
+    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
         assert x_inside.wait(2), "X no llegó al backend"
@@ -597,7 +597,7 @@ def test_forced_event_carries_turn_forced(with_topology, monkeypatch, tmp_path):
         rol="long",
         chunk_chars=500,
     )
-    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", rol="code")
+    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
         assert x_stuck.wait(2), "X no llegó a atascarse con el turno"
@@ -632,8 +632,8 @@ def test_queued_wait_sees_new_topology(with_topology, monkeypatch):
         return _ok()
 
     monkeypatch.setattr(server, "_post_chat", post_chat)
-    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", rol="long")
-    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", rol="code")
+    x = _Thread("X", server._chat, LONG, "s", "u", 8, tool="op_x", role="long")
+    y = _Thread("Y", server._chat, CODE, "s", "u", 8, tool="op_y", role="code")
     try:
         x.start()
         assert x_inside.wait(2), "X no llegó al backend"

@@ -86,13 +86,13 @@ def test_sin_densidad_las_dos_dan_cero(tmp_path):
     inventado (REQ-033). Una fusión olvidada se ve."""
     fila = _fila(path="C:/docs/guia.md")
     assert "density" not in fila  # guarda: de verdad está sin fundir
-    assert server.tokens_claude(4000, tipo="text", evento=fila) == 0
-    assert server.tokens_claude(400, tipo="returned", evento=fila) == 0
+    assert server.claude_tokens(4000, kind="text", event=fila) == 0
+    assert server.claude_tokens(400, kind="returned", event=fila) == 0
     (js,) = _acct_en_js(tmp_path, [fila])
     assert (js.get("saved"), js.get("returned")) == (0, 0)
     # Control de que la misma fila, fundida, sí da tokens en las dos copias.
     (fundida,) = cost.merge([fila], log_dir=tmp_path)
-    assert server.tokens_claude(4000, tipo="text", evento=fundida) == 2000  # 4000 × 100 // 200
+    assert server.claude_tokens(4000, kind="text", event=fundida) == 2000  # 4000 × 100 // 200
 
 
 def test_el_mismo_py_con_haiku_da_menos_tokens():
@@ -105,8 +105,8 @@ def test_el_mismo_py_con_haiku_da_menos_tokens():
     d_haiku = cost.resolve_density(dict(base, caller_model="claude-haiku-4-5"))
     assert d_opus["text"] == [203, "measured"]
     assert d_haiku["text"] == [312, "unnumbered"]
-    t_opus = server.tokens_claude(4000, tipo="text", evento={"density": d_opus})
-    t_haiku = server.tokens_claude(4000, tipo="text", evento={"density": d_haiku})
+    t_opus = server.claude_tokens(4000, kind="text", event={"density": d_opus})
+    t_haiku = server.claude_tokens(4000, kind="text", event={"density": d_haiku})
     assert (t_opus, t_haiku) == (1970, 1282)  # 4000 × 100 // 203 y 4000 × 100 // 312
     assert t_haiku < t_opus
 
@@ -311,9 +311,9 @@ def _bloque_de_tokens_aprox() -> str:
 
 def test_ningun_chars_per_token_en_la_conversion():
     fuentes = {
-        "tokens_claude": inspect.getsource(server.tokens_claude),
+        "claude_tokens": inspect.getsource(server.claude_tokens),
         "_savings_feedback": inspect.getsource(server._savings_feedback),
-        "_escribir_destino": inspect.getsource(server._escribir_destino),
+        "_write_target": inspect.getsource(server._write_target),
         "tokens_aprox": _bloque_de_tokens_aprox(),
     }
     assert "tokens_aprox" in fuentes["tokens_aprox"]  # guarda: el recorte encontró el bloque
