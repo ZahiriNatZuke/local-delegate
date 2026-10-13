@@ -1,0 +1,5 @@
+Aproximación AST (a9a/codeql_like.py) a las seis consultas de CodeQL. Después del lote:
+(fin)
+
+Control: la misma comprobación sobre tests/test_dashboard_ui.py de HEAD (fcc6dba) da la alerta abierta en main:
+tests/test_dashboard_ui.py@fcc6dba:417 side-effect-in-assert? familias.pop()
