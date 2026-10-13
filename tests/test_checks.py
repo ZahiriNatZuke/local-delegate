@@ -1643,7 +1643,7 @@ def test_fallback_with_resident_works_like_loaded_and_warns(
     recargar_config, tmp_path, obsolete_value
 ):
     """`residente,long` sigue valiendo como `loaded,long`, y `doctor` pide renombrarlo."""
-    from local_delegate import cadenas
+    from local_delegate import chains
 
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"{obsolete_value},long")
     r = checks._probe_fallback(checks.Context(home=tmp_path))
@@ -1651,18 +1651,18 @@ def test_fallback_with_resident_works_like_loaded_and_warns(
     assert "renombra" in (r.fix_hint or "")
     assert r.status == checks.WARN
     assert "LOCAL_DELEGATE_FALLBACK_CODE" in r.detail
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, "gemma4-26b-a4b")
+    assert chains.resolve("code").steps == (chains.LOADED, "gemma4-26b-a4b")
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="loaded,long")
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, "gemma4-26b-a4b")
+    assert chains.resolve("code").steps == (chains.LOADED, "gemma4-26b-a4b")
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.OK
 
 
 def test_fallback_cargado_is_not_valid_name(recargar_config, tmp_path):
     """El paso se llama `loaded` (nombres que se teclean, en inglés); `cargado` no se acepta."""
-    from local_delegate import cadenas
+    from local_delegate import chains
 
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="cargado,long")
-    assert cadenas.resolver("code").ignorados == ("cargado",)
+    assert chains.resolve("code").ignored == ("cargado",)
     r = checks._probe_fallback(checks.Context(home=tmp_path))
     assert r.status == checks.WARN
     assert r.fix_hint == "usa roles (mechanical, long, code, loaded) o ids del catálogo de texto"

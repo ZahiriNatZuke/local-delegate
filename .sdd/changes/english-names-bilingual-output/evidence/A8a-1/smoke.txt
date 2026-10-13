@@ -1,0 +1,12 @@
+$ uv run local-delegate --help | head -5
+usage: local-delegate [-h] [--version]
+                      {benchmark,check-llamaswap,init-llamaswap,llamaswap,doctor,serve,recompute-cost,test-window,install,update,uninstall}
+                      ...
+
+Instala, diagnostica y sirve local-delegate. Sin subcomando, este binario
+
+$ uv run python -c 'from local_delegate import chains, checks; print(chains.TEXT_ROLES, [c.role for c in map(chains.resolve, chains.TEXT_ROLES)], checks._probe_fallback.__name__)'
+('mechanical', 'long', 'code') ['mechanical', 'long', 'code'] _probe_fallback
+
+$ uv run python -c 'import local_delegate.cadenas'
+ModuleNotFoundError: No module named 'local_delegate.cadenas'

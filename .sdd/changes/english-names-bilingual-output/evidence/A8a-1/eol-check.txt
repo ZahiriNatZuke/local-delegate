@@ -1,0 +1,6 @@
+# git ls-files --eol, HEAD 42b420d frente al árbol de A8a-1 (líneas que difieren; el rename cadenas.py→chains.py sale como baja y alta con el mismo EOL)
+968c968
+< i/lf    w/lf    attr/                 	src/local_delegate/cadenas.py
+---
+> i/lf    w/lf    attr/                 	src/local_delegate/chains.py
+diferencias: 2

@@ -1,0 +1,13 @@
+# Cadenas protegidas, HEAD 42b420d frente al árbol de A8a-1
+## git grep -c -F en src/ y tests/ (líneas): antes | después
+local-delegate aviso: 10|local-delegate aviso: 10
+local-delegate respaldo: 1|local-delegate respaldo: 1
+"aviso": 10|"aviso": 10
+"respaldo": 2|"respaldo": 2
+"truncado": 15|"truncado": 15
+_local_delegate: 22|_local_delegate: 22
+## subcadena dentro de literales (tokenize, docstrings incluidos): antes | después
+aviso: 105|aviso: 105
+respaldo: 72|respaldo: 72
+truncado: 30|truncado: 30
+_local_delegate: 17|_local_delegate: 17

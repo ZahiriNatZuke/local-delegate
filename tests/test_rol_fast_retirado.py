@@ -26,7 +26,7 @@ import backend_mock
 import httpx2
 from fastapi.testclient import TestClient
 
-from local_delegate import cadenas, checks, config, server
+from local_delegate import chains, checks, config, server
 from local_delegate.web import metrics
 
 MODELO_RETIRADO = "qwen35-2b"
@@ -74,8 +74,8 @@ def test_el_panel_no_ensena_la_fila_del_rol_rapido(monkeypatch):
 def test_las_cadenas_de_respaldo_no_declaran_el_rol_rapido(recargar_config):
     """La fila «rápido -> residente -> largo» de REQ-004 era inalcanzable: se va con el rol."""
     recargar_config()
-    assert "fast" not in cadenas.ROLES_DE_TEXTO
-    assert "fast" not in cadenas.CADENAS_POR_DEFECTO
+    assert "fast" not in chains.TEXT_ROLES
+    assert "fast" not in chains.DEFAULT_CHAINS
 
 
 def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(
@@ -83,7 +83,7 @@ def test_una_cadena_que_nombre_el_rol_retirado_se_ignora_y_doctor_lo_dice(
 ):
     """Nombrar `fast` en una cadena pasa a ser un error de tecleo como cualquier otro."""
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="fast")
-    assert cadenas.resolver("code").ignorados == ("fast",)
+    assert chains.resolve("code").ignored == ("fast",)
     assert checks._probe_fallback(checks.Context(home=tmp_path)).status == checks.WARN
 
 

@@ -1,0 +1,23 @@
+# Controles positivos de A8a-1 (mutante aplicado con a8a/mut.py, que guarda copia y sha256; restaurado y comprobado)
+
+## M1 — valor interno "no_credential" (checks.py:1124) devuelto a "sin_credencial" en el return de `_entry_auth`
+pytest tests/test_checks.py tests/test_doctor.py -> 163 passed, 1 skipped (NO dispara)
+Motivo: con el mutante la entrada HTTP sin cabecera cae en la rama de «variable sospechosa» (`state` = "sin_credencial",
+que no está en el entorno), que también da WARN con «Claude Code», «401» y el mismo DAEMON_TOKEN_HINT. El test
+`test_una_entrada_http_sin_cabecera_contra_un_daemon_con_token_avisa` no distingue las dos ramas. Hallazgo, no regresión.
+sha256 original 31594fc35d1e -> restaurado 31594fc35d1e
+
+## M2 — campo `Chain.steps` devuelto a `pasos`, solo en la definición (chains.py:64)
+pytest -x tests/test_cadenas.py -> 1 failed
+FAILED tests/test_cadenas.py::test_las_cadenas_por_defecto_son_las_de_la_spec
+tests\test_cadenas.py:70: AttributeError: 'Chain' object has no attribute 'steps'
+  (el assert `assert chains.resolve("code").steps == (chains.LOADED, LARGO)`)
+sha256 original a523f6a35a07 -> restaurado a523f6a35a07
+
+## M3 — palabra clave de la llamada a `_oldest_pending` devuelta a `plazo_dias=` (checks.py:1810)
+pytest -x tests/test_checks.py tests/test_coste_doctor.py -> 1 failed, 137 passed, 1 skipped
+FAILED tests/test_coste_doctor.py::test_comando_nunca_lanzado_y_pendientes_de_21_dias
+tests\test_coste_doctor.py:87 (r = _probe(...)) -> :80 en _probe: TypeError: _oldest_pending() got an unexpected keyword argument 'plazo_dias'
+sha256 original 31594fc35d1e -> restaurado 31594fc35d1e
+
+Tras restaurar: suite completa verde (pytest-full.log: 2565 passed, 2 skipped).

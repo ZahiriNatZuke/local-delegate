@@ -23,7 +23,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import cadenas, checks, config, server, topology
+from local_delegate import chains, checks, config, server, topology
 
 MECANICO = "gemma3-4b"
 LARGO = "gemma4-26b-a4b"
@@ -67,19 +67,19 @@ groups:
 def test_las_cadenas_por_defecto_son_las_de_la_spec(recargar_config):
     """REQ-020: `loaded` primero y ninguna lleva al mecánico desde código o largo."""
     recargar_config()
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, LARGO)
-    assert cadenas.resolver("long").pasos == (cadenas.LOADED, CODIGO)
-    assert cadenas.resolver("mechanical").pasos == (cadenas.LOADED, LARGO)
+    assert chains.resolve("code").steps == (chains.LOADED, LARGO)
+    assert chains.resolve("long").steps == (chains.LOADED, CODIGO)
+    assert chains.resolve("mechanical").steps == (chains.LOADED, LARGO)
     # Sin bloque B, las efectivas (REQ-020): `code -> long`, `long -> code`, `mechanical -> long`.
-    assert cadenas.resolver("code").modelos == (LARGO,)
-    assert cadenas.resolver("long").modelos == (CODIGO,)
-    assert cadenas.resolver("mechanical").modelos == (LARGO,)
+    assert chains.resolve("code").models == (LARGO,)
+    assert chains.resolve("long").models == (CODIGO,)
+    assert chains.resolve("mechanical").models == (LARGO,)
 
 
 def test_vision_no_tiene_cadena(recargar_config):
     """Visión queda fuera de `ALLOWED_MODELS` a propósito: su cadena se resuelve vacía ANTES."""
     recargar_config()
-    assert cadenas.resolver("vision").modelos == ()
+    assert chains.resolve("vision").models == ()
 
 
 # --- El residente (REQ-023): solo si la config tiene un modelo con TTL efectivo 0 -----------------
@@ -89,8 +89,8 @@ def test_without_llamaswap_config_no_resident_nor_mechanical_fallback(recargar_c
     """Sustituye a «sin config, el residente es el mecánico»: el residente fantasma desaparece."""
     recargar_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
-    assert cadenas.residents() is None
-    lines = "\n".join(cadenas.describir())
+    assert chains.residents() is None
+    lines = "\n".join(chains.describe())
     assert "sin residente" in lines
     assert MECANICO not in lines.split("code:")[0], "ni el mecánico como residente"
 
@@ -102,10 +102,10 @@ def test_persistent_group_with_ttl_not_resident(recargar_config, monkeypatch, tm
     path = tmp_path / "config.yaml"
     path.write_bytes((TOPOLOGY_FIXTURES / "pre-sin-residente-20261006.yaml").read_bytes())
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(path))
-    assert cadenas.residents() == ()
-    assert cadenas.residents_text() == "sin residente"
+    assert chains.residents() == ()
+    assert chains.residents_text() == "sin residente"
     # Y la cadena no cambia por haber un grupo persistent: `loaded` no es «el del grupo».
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, LARGO)
+    assert chains.resolve("code").steps == (chains.LOADED, LARGO)
 
 
 def test_with_several_residents_all_named(recargar_config, monkeypatch, tmp_path):
@@ -113,8 +113,8 @@ def test_with_several_residents_all_named(recargar_config, monkeypatch, tmp_path
     también los que no están en el catálogo (el del rol retirado): es lo que llama-swap retiene."""
     recargar_config()
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
-    assert cadenas.residents() == (MECANICO, RETIRADO)
-    assert cadenas.residents_text() == f"residente: {MECANICO}, {RETIRADO}"
+    assert chains.residents() == (MECANICO, RETIRADO)
+    assert chains.residents_text() == f"residente: {MECANICO}, {RETIRADO}"
 
 
 def test_without_pyyaml_unknown_and_no_mechanical_fallback(recargar_config, monkeypatch, tmp_path):
@@ -122,15 +122,15 @@ def test_without_pyyaml_unknown_and_no_mechanical_fallback(recargar_config, monk
     recargar_config()
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(_config_llamaswap(tmp_path, TWO_RESIDENTS)))
     monkeypatch.setattr(topology, "yaml", None)
-    assert cadenas.residents() is None
-    assert cadenas.residents_text().startswith("sin residente")
+    assert chains.residents() is None
+    assert chains.residents_text().startswith("sin residente")
 
 
 def test_local_status_shows_chains_with_loaded(recargar_config, monkeypatch):
     """Sustituye a «local_status dice el residente y su origen»: dice las cadenas con su paso."""
     recargar_config()
     monkeypatch.delenv("LLAMASWAP_CONFIG", raising=False)
-    lines = cadenas.describir()
+    lines = chains.describe()
     assert f"  code: loaded -> {LARGO}" in lines
     assert f"  long: loaded -> {CODIGO}" in lines
     assert f"  mechanical: loaded -> {LARGO}" in lines
@@ -142,13 +142,13 @@ def test_local_status_shows_chains_with_loaded(recargar_config, monkeypatch):
 
 def test_una_cadena_se_sobrescribe_con_roles_y_modelos(recargar_config):
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE=f"long, {MECANICO}")
-    assert cadenas.resolver("code").modelos == (LARGO, MECANICO)
+    assert chains.resolve("code").models == (LARGO, MECANICO)
 
 
 def test_una_cadena_vacia_desactiva_el_respaldo_de_ese_rol(recargar_config):
     recargar_config(LOCAL_DELEGATE_FALLBACK_LONG="")
-    assert cadenas.resolver("long").pasos == ()
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, LARGO), "los demás no cambian"
+    assert chains.resolve("long").steps == ()
+    assert chains.resolve("code").steps == (chains.LOADED, LARGO), "los demás no cambian"
 
 
 def test_none_tambien_desactiva_porque_windows_no_guarda_variables_vacias(recargar_config):
@@ -158,28 +158,28 @@ def test_none_tambien_desactiva_porque_windows_no_guarda_variables_vacias(recarg
     igual y no lo habría destapado. `none` es la forma que funciona en las tres plataformas.
     """
     recargar_config(LOCAL_DELEGATE_FALLBACK_LONG="none")
-    assert cadenas.resolver("long").modelos == ()
-    assert cadenas.resolver("long").ignorados == ()
+    assert chains.resolve("long").models == ()
+    assert chains.resolve("long").ignored == ()
 
 
 def test_un_modelo_desconocido_se_ignora_y_se_informa(recargar_config):
     recargar_config(LOCAL_DELEGATE_FALLBACK_CODE="long,modelo-que-no-existe")
-    cadena = cadenas.resolver("code")
-    assert cadena.modelos == (LARGO,)
-    assert cadena.ignorados == ("modelo-que-no-existe",)
+    cadena = chains.resolve("code")
+    assert cadena.models == (LARGO,)
+    assert cadena.ignored == ("modelo-que-no-existe",)
 
 
 def test_los_repetidos_y_el_propio_modelo_se_quitan(recargar_config):
     """Largo y código consolidados en uno: ese modelo no se reintenta contra sí mismo."""
     recargar_config(LOCAL_DELEGATE_MODEL_CODE=LARGO)
-    assert cadenas.resolver("long").pasos == (cadenas.LOADED,)
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED,)
+    assert chains.resolve("long").steps == (chains.LOADED,)
+    assert chains.resolve("code").steps == (chains.LOADED,)
     # Y los repetidos dentro de una misma cadena se quitan: «long,code,long» con los dos roles
     # consolidados en un modelo es tres veces el mismo candidato.
     recargar_config(
         LOCAL_DELEGATE_MODEL_CODE=LARGO, LOCAL_DELEGATE_FALLBACK_MECHANICAL="long,code,long"
     )
-    assert cadenas.resolver("mechanical").modelos == (LARGO,)
+    assert chains.resolve("mechanical").models == (LARGO,)
 
 
 # --- Variables (REQ-014) ----------------------------------------------------------------------
@@ -354,7 +354,7 @@ def test_empty_loaded_spends_no_hop(recargar_config, attempts):
     """Con un solo salto, `code → loaded → long` llega a `long`: el paso vacío no lo gasta."""
     recargar_config(LOCAL_DELEGATE_FALLBACK_MAX_HOPS="1")
     assert config.FALLBACK_MAX_HOPS == 1
-    assert cadenas.resolver("code").pasos == (cadenas.LOADED, LARGO)
+    assert chains.resolve("code").steps == (chains.LOADED, LARGO)
     _backend({CODIGO: _fallo(500), LARGO: _ok("mensaje")})
 
     server.local_commit_msg(diff=DIFF)
@@ -375,7 +375,7 @@ def test_loaded_members_without_provider_does_not_query_network(recargar_config,
 
     monkeypatch.setattr(backend_mock, "_handler", spy)
     with backend_mock.mock:
-        members = cadenas.loaded_members(
+        members = chains.loaded_members(
             "local_commit_msg", CODIGO, own_items=frozenset(), nobody_else=True
         )
 
@@ -393,13 +393,13 @@ def test_with_provider_hop_goes_to_loaded_member(recargar_config, attempts):
         seen_set.append((tool, has_failed))
         return (MECANICO,)
 
-    previous_provider = cadenas._loaded_provider
-    cadenas.register_loaded_provider(provider)
+    previous_provider = chains._loaded_provider
+    chains.register_loaded_provider(provider)
     try:
         _backend({CODIGO: _fallo(500), MECANICO: _ok("del 4B"), LARGO: _ok()})
         server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.register_loaded_provider(previous_provider)
+        chains.register_loaded_provider(previous_provider)
 
     assert seen_set == [("local_commit_msg", CODIGO)]
     assert [i.model for i in attempts] == [CODIGO, MECANICO]
@@ -454,7 +454,7 @@ def test_with_ttl_0_in_persistent_group_describe_names_resident(
     )
     monkeypatch.setenv("LLAMASWAP_CONFIG", str(path))
 
-    lines = "\n".join(cadenas.describir())
+    lines = "\n".join(chains.describe())
 
     assert "residente: gemma3-4b" in lines
     assert "sin residente" not in lines
@@ -467,13 +467,13 @@ def test_with_ttl_0_in_persistent_group_describe_names_resident(
 def test_loaded_member_repeating_later_step_not_called_twice(recargar_config):
     """`code -> loaded -> long` con `loaded` = el 26B: si el 26B falla, el paso `long` no lo repite."""
     recargar_config()
-    previous_provider = cadenas._loaded_provider
-    cadenas.register_loaded_provider(lambda *_: (LARGO,))
+    previous_provider = chains._loaded_provider
+    chains.register_loaded_provider(lambda *_: (LARGO,))
     try:
         requested = _backend({CODIGO: _fallo(500, "original"), LARGO: _fallo(500, "otro")})
         output = server.local_commit_msg(diff=DIFF)
     finally:
-        cadenas.register_loaded_provider(previous_provider)
+        chains.register_loaded_provider(previous_provider)
 
     assert requested == [CODIGO, LARGO]
     # REQ-008: la línea de «también fallaron» no repite modelo.
@@ -492,7 +492,7 @@ def test_without_topology_resident_states_reason(recargar_config, monkeypatch, t
     snapshot = topology.snapshot()
     assert isinstance(snapshot, topology.NoTopology) and snapshot.reason == topology.MATRIX
 
-    assert cadenas.residents_text() == "sin residente (no se sabe: matrix)"
-    assert "  sin residente (no se sabe: matrix)" in cadenas.describir()
+    assert chains.residents_text() == "sin residente (no se sabe: matrix)"
+    assert "  sin residente (no se sabe: matrix)" in chains.describe()
     monkeypatch.delenv("LLAMASWAP_CONFIG")
-    assert cadenas.residents_text() == "sin residente (no se sabe: sin LLAMASWAP_CONFIG)"
+    assert chains.residents_text() == "sin residente (no se sabe: sin LLAMASWAP_CONFIG)"
