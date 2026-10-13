@@ -120,68 +120,68 @@ def test_read_hook_is_opt_in(tmp_path):
     }
 
 
-def test_el_hook_de_atribucion_se_registra(tmp_path):
+def test_the_attribution_hook_is_registered(tmp_path):
     """coste-api-y-cuota, REQ-002: el hook que anota quién pide cada delegación va siempre.
 
     Control (a): contra el código de antes no hay ningún `PreToolUse` registrado por defecto.
     """
     _install(tmp_path)
     settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
-    registrados = {
-        (evento, grupo.get("matcher"))
-        for evento, grupos in settings["hooks"].items()
-        for grupo in grupos
+    registered = {
+        (event, group.get("matcher"))
+        for event, groups in settings["hooks"].items()
+        for group in groups
     }
-    assert ("PreToolUse", "mcp__local-delegate__.*") in registrados
-    comandos = [
+    assert ("PreToolUse", "mcp__local-delegate__.*") in registered
+    commands = [
         h["command"]
         for g in settings["hooks"]["PreToolUse"]
         if g.get("matcher") == "mcp__local-delegate__.*"
         for h in g["hooks"]
     ]
-    assert len(comandos) == 1 and "record_call.py" in comandos[0]
+    assert len(commands) == 1 and "record_call.py" in commands[0]
     hooks_dir = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
     assert (hooks_dir / "record_call.py").is_file(), "el script registrado tiene que estar copiado"
 
 
-def _simular_instalacion_034(home: Path) -> Path:
+def _simulate_install_034(home: Path) -> Path:
     """Lo que dejaba `install` en la 0.34.0: el hook de atribución con su nombre viejo, copiado y
     registrado. Se parte de una instalación de hoy y se le devuelve el nombre de entonces."""
     assert _install(home) == 0
     hooks_dir = home / ".claude" / "hooks" / inst.HOOKS_SUBDIR
     (hooks_dir / "record_call.py").rename(hooks_dir / "anotar_llamada.py")
     settings_path = home / ".claude" / "settings.json"
-    texto = settings_path.read_text(encoding="utf-8")
-    assert "record_call.py" in texto
-    settings_path.write_text(texto.replace("record_call.py", "anotar_llamada.py"), encoding="utf-8")
+    text = settings_path.read_text(encoding="utf-8")
+    assert "record_call.py" in text
+    settings_path.write_text(text.replace("record_call.py", "anotar_llamada.py"), encoding="utf-8")
     return hooks_dir
 
 
-def test_install_sobre_una_034_retira_anotar_llamada_y_registra_record_call(tmp_path):
+def test_install_over_a_034_retires_anotar_llamada_and_registers_record_call(tmp_path):
     """REQ-012: tras `install` sobre una 0.34.0, el hook viejo no queda ni en el disco ni en
     `settings.json`, y el nuevo está una sola vez. Sin esto la copia vieja seguiría anotando cada
     llamada por su cuenta."""
-    hooks_dir = _simular_instalacion_034(tmp_path)
+    hooks_dir = _simulate_install_034(tmp_path)
     assert (hooks_dir / "anotar_llamada.py").is_file(), "guarda: la 0.34.0 simulada lo tiene"
 
     assert _install(tmp_path) == 0
 
     assert not (hooks_dir / "anotar_llamada.py").exists(), "la copia vieja sigue en el disco"
     assert (hooks_dir / "record_call.py").is_file()
-    texto = (tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8")
-    assert "anotar_llamada.py" not in texto, "el registro viejo sigue en settings.json"
-    assert texto.count("record_call.py") == 1
+    text = (tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8")
+    assert "anotar_llamada.py" not in text, "el registro viejo sigue en settings.json"
+    assert text.count("record_call.py") == 1
 
 
-def test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira(tmp_path):
+def test_a_hand_made_copy_of_anotar_llamada_is_also_retired(tmp_path):
     """La otra mitad de REQ-012, y la que depende de `_RETIRED_SCRIPTS`: la copia de
     `hooks/local-delegate/` la repone `install` entera, pero una puesta a mano siguiendo la recipe
     (en la raíz de `~/.claude/hooks/`, registrada con su ruta) solo se reconoce como nuestra por el
     nombre. Sin la entrada, se quedaría anotando cada llamada para siempre."""
     claude = tmp_path / ".claude"
     (claude / "hooks").mkdir(parents=True)
-    a_mano = claude / "hooks" / "anotar_llamada.py"
-    a_mano.write_text("# copiado a mano desde la recipe de la 0.34.0\n", encoding="utf-8")
+    by_hand = claude / "hooks" / "anotar_llamada.py"
+    by_hand.write_text("# copiado a mano desde la recipe de la 0.34.0\n", encoding="utf-8")
     (claude / "settings.json").write_text(
         json.dumps(
             {
@@ -190,7 +190,7 @@ def test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira(tmp_path):
                         {
                             "matcher": "mcp__local-delegate__.*",
                             "hooks": [
-                                {"type": "command", "command": f"python {a_mano.as_posix()}"}
+                                {"type": "command", "command": f"python {by_hand.as_posix()}"}
                             ],
                         }
                     ]
@@ -202,22 +202,22 @@ def test_una_copia_a_mano_de_anotar_llamada_tambien_se_retira(tmp_path):
 
     assert _install(tmp_path) == 0
 
-    assert not a_mano.exists(), "la copia a mano del hook viejo sigue en el disco"
-    texto = (claude / "settings.json").read_text(encoding="utf-8")
-    assert "anotar_llamada.py" not in texto, "su registro sigue en settings.json"
-    assert texto.count("record_call.py") == 1
+    assert not by_hand.exists(), "la copia a mano del hook viejo sigue en el disco"
+    text = (claude / "settings.json").read_text(encoding="utf-8")
+    assert "anotar_llamada.py" not in text, "su registro sigue en settings.json"
+    assert text.count("record_call.py") == 1
 
 
-def _comando_del_hook_de_read(home: Path) -> str | None:
+def _read_hook_command(home: Path) -> str | None:
     """El comando de Read tal y como quedó escrito en settings.json, o None si no hay."""
     settings = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
-    for grupo in settings.get("hooks", {}).get("PreToolUse", []):
-        if grupo.get("matcher") == "Read":
-            return grupo["hooks"][0]["command"]
+    for group in settings.get("hooks", {}).get("PreToolUse", []):
+        if group.get("matcher") == "Read":
+            return group["hooks"][0]["command"]
     return None
 
 
-def test_enable_read_hook_deja_el_hook_REALMENTE_encendido(tmp_path, monkeypatch):
+def test_enable_read_hook_leaves_the_hook_REALLY_on(tmp_path, monkeypatch):
     """El test que faltaba: el que **cruza el instalador con el script**.
 
     Había uno que probaba que el instalador registra (`test_read_hook_is_opt_in`) y otro que
@@ -232,29 +232,29 @@ def test_enable_read_hook_deja_el_hook_REALMENTE_encendido(tmp_path, monkeypatch
     monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
     _install(tmp_path, enable_read_hook=True)
 
-    comando = _comando_del_hook_de_read(tmp_path)
-    assert comando is not None, "el hook de Read no quedó registrado"
+    command = _read_hook_command(tmp_path)
+    assert command is not None, "el hook de Read no quedó registrado"
 
-    grande = tmp_path / "grande.txt"
-    grande.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima del umbral de aviso
-    entrada = json.dumps({"tool_input": {"file_path": str(grande)}})
+    large = tmp_path / "grande.txt"
+    large.write_text("x" * 40_000, encoding="utf-8")  # 39 KB: por encima del umbral de aviso
+    hook_input = json.dumps({"tool_input": {"file_path": str(large)}})
 
     # Se respeta el comando escrito, cambiando SOLO el intérprete: el registrado es un nombre
     # resuelto por PATH ("python"/"python3") que en el runner puede no ser el de la suite.
-    argv = shlex.split(comando)
+    argv = shlex.split(command)
     argv[0] = sys.executable
-    entorno = {**os.environ, "PYTHONPATH": str(tmp_path / ".claude" / "hooks" / "local-delegate")}
-    entorno.pop("LD_HOOK_READ_ENABLED", None)
+    env = {**os.environ, "PYTHONPATH": str(tmp_path / ".claude" / "hooks" / "local-delegate")}
+    env.pop("LD_HOOK_READ_ENABLED", None)
 
-    salida = subprocess.run(argv, input=entrada, capture_output=True, text=True, env=entorno).stdout
+    output = subprocess.run(argv, input=hook_input, capture_output=True, text=True, env=env).stdout
 
-    assert "additionalContext" in salida, (
+    assert "additionalContext" in output, (
         f"instalado con --enable-read-hook y sin la variable, el hook no sugirió nada.\n"
-        f"comando registrado: {comando!r}\nsalida: {salida!r}"
+        f"comando registrado: {command!r}\nsalida: {output!r}"
     )
 
 
-def test_sin_la_bandera_el_hook_de_read_no_se_registra_ni_sugiere(tmp_path, monkeypatch):
+def test_without_the_flag_the_read_hook_is_neither_registered_nor_suggested(tmp_path, monkeypatch):
     """Control negativo del test de arriba.
 
     Sin él, el anterior pasaría igual con un hook que sugiriera **siempre**, que es el fallo
@@ -262,7 +262,7 @@ def test_sin_la_bandera_el_hook_de_read_no_se_registra_ni_sugiere(tmp_path, monk
     """
     monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
     _install(tmp_path)
-    assert _comando_del_hook_de_read(tmp_path) is None
+    assert _read_hook_command(tmp_path) is None
 
 
 def test_install_is_idempotent_and_keeps_foreign_config(tmp_path):
@@ -323,7 +323,7 @@ def test_uninstall_reverts_only_our_changes(tmp_path):
     assert json.loads((tmp_path / ".claude.json").read_text(encoding="utf-8"))["mcpServers"] == {}
 
 
-def test_install_preserva_el_terminador_de_linea_del_usuario(tmp_path):
+def test_install_preserves_the_user_line_terminator(tmp_path):
     """Añadir un bloque no debe reescribir el archivo entero.
 
     `write_text` usa el terminador de la plataforma: en Windows convertía a CRLF un
@@ -336,15 +336,15 @@ def test_install_preserva_el_terminador_de_linea_del_usuario(tmp_path):
     memory.write_bytes(original)
 
     _install(tmp_path)
-    tocado = memory.read_bytes()
-    assert b"\r\n" not in tocado, "se convirtió a CRLF un archivo que estaba en LF"
-    assert tocado.startswith(original.rstrip(b"\n"))
+    touched = memory.read_bytes()
+    assert b"\r\n" not in touched, "se convirtió a CRLF un archivo que estaba en LF"
+    assert touched.startswith(original.rstrip(b"\n"))
 
     _uninstall(tmp_path)
     assert memory.read_bytes() == original
 
 
-def test_install_respeta_crlf_si_el_archivo_ya_lo_usaba(tmp_path):
+def test_install_respects_crlf_if_the_file_already_used_it(tmp_path):
     """Y al revés: a quien lo tenga en CRLF no se le convierte a LF."""
     original = b"# Mis reglas\r\n\r\nNo borrar.\r\n"
     memory = tmp_path / ".claude" / "CLAUDE.md"
@@ -352,9 +352,9 @@ def test_install_respeta_crlf_si_el_archivo_ya_lo_usaba(tmp_path):
     memory.write_bytes(original)
 
     _install(tmp_path)
-    tocado = memory.read_bytes()
-    assert b"\r\n" in tocado
-    assert b"\n" not in tocado.replace(b"\r\n", b""), "quedaron saltos sueltos en LF"
+    touched = memory.read_bytes()
+    assert b"\r\n" in touched
+    assert b"\n" not in touched.replace(b"\r\n", b""), "quedaron saltos sueltos en LF"
 
     _uninstall(tmp_path)
     assert memory.read_bytes() == original
@@ -371,7 +371,7 @@ def test_dry_run_writes_nothing(tmp_path):
     assert not (tmp_path / ".codex").exists()
 
 
-def test_dry_run_enseña_el_comando_literal_de_cada_hook(tmp_path):
+def test_dry_run_shows_the_literal_command_of_each_hook(tmp_path):
     """No basta con «registra 2 hook(s)»: el defecto puede vivir en el string generado.
 
     Es exactamente lo que pasó el 2026-07-30 en Windows — un comando de shell sin comillas dejó
@@ -380,11 +380,11 @@ def test_dry_run_enseña_el_comando_literal_de_cada_hook(tmp_path):
     """
     lines: list[str] = []
     inst.apply(inst.plan_install(_opts(tmp_path)), dry_run=True, out=lines.append)
-    salida = "\n".join(lines)
+    output = "\n".join(lines)
     for script, _event, _matcher in inst._HOOK_EVENTS:
-        assert script in salida, f"el plan no enseña el comando de {script}"
+        assert script in output, f"el plan no enseña el comando de {script}"
     # Y la entrada MCP, por el mismo motivo: es lo otro que se escribe generado y no copiado.
-    assert '"command": "uvx"' in salida or 'command = "uvx"' in salida
+    assert '"command": "uvx"' in output or 'command = "uvx"' in output
 
 
 # --- Entrada MCP --------------------------------------------------------------
@@ -423,14 +423,14 @@ def test_http_mode_points_to_the_shared_daemon(tmp_path):
     assert entry["url"].endswith("/mcp")
 
 
-def test_sin_pedirlo_la_entrada_http_no_lleva_cabecera():
+def test_unless_asked_the_http_entry_carries_no_header():
     """El default no cambia: quien no usa token sigue con la entrada de siempre."""
     entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
     assert "headers" not in entry
     assert "bearer_token_env_var" not in inst.codex_mcp_block(entry)
 
 
-def test_el_token_del_puerto_se_referencia_y_nunca_se_escribe():
+def test_the_port_token_is_referenced_and_never_written():
     """Ni el JSON de Claude Code ni el TOML de Codex ven el secreto, solo el nombre de la variable.
 
     Los dos clientes resuelven lo mismo por caminos distintos y ninguno vale para el otro:
@@ -443,15 +443,15 @@ def test_el_token_del_puerto_se_referencia_y_nunca_se_escribe():
 
     block = inst.codex_mcp_block(entry)
     data = tomllib.loads(block)
-    servidor = data["mcp_servers"]["local-delegate"]
-    assert servidor["bearer_token_env_var"] == "LOCAL_DELEGATE_WEB_TOKEN"
-    assert servidor["url"].endswith("/mcp")
+    server = data["mcp_servers"]["local-delegate"]
+    assert server["bearer_token_env_var"] == "LOCAL_DELEGATE_WEB_TOKEN"
+    assert server["url"].endswith("/mcp")
     # Lo que NO puede aparecer: la sintaxis que TOML no expande, y cualquier clave de secreto.
     assert "${" not in block
     assert "bearer_token =" not in block
 
 
-def test_el_token_del_puerto_no_se_cuela_en_una_entrada_stdio():
+def test_the_port_token_does_not_slip_into_a_stdio_entry():
     """El token protege el puerto del daemon; una entrada `stdio` no habla con ese puerto.
 
     Escribirlo ahí sería una cabecera muerta que invita a pensar que la entrada está autenticada.
@@ -537,62 +537,62 @@ def test_install_migrates_the_legacy_hook_entries(tmp_path):
 # se comprueba no es tanto qué se borró como **qué sobrevivió**.
 
 
-def _con_huerfanos(home: Path) -> Path:
+def _with_orphans(home: Path) -> Path:
     """Reproduce el caso real: los huérfanos conviviendo con cosas que NO son nuestras."""
-    raiz = home / ".claude" / "hooks"
-    raiz.mkdir(parents=True, exist_ok=True)
-    for nombre in inst.packaged_hook_names():
-        (raiz / nombre).write_text("# instalacion anterior\n", encoding="utf-8")
-    (raiz / "telemetry.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
-    (raiz / "hook_de_terceros.py").write_text("# ajeno\n", encoding="utf-8")
-    (raiz / "__pycache__").mkdir(exist_ok=True)
-    (raiz / "__pycache__" / "algo.pyc").write_bytes(b"\x00")
-    return raiz
+    root = home / ".claude" / "hooks"
+    root.mkdir(parents=True, exist_ok=True)
+    for name in inst.packaged_hook_names():
+        (root / name).write_text("# instalacion anterior\n", encoding="utf-8")
+    (root / "telemetry.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
+    (root / "hook_de_terceros.py").write_text("# ajeno\n", encoding="utf-8")
+    (root / "__pycache__").mkdir(exist_ok=True)
+    (root / "__pycache__" / "algo.pyc").write_bytes(b"\x00")
+    return root
 
 
-def test_los_nombres_de_hooks_salen_del_paquete_y_no_de_una_constante(tmp_path):
+def test_hook_names_come_from_the_package_not_from_a_constant(tmp_path):
     """`_SCRIPT_NAMES` no sirve: tiene tres y no incluye `hook_common.py`, que es huérfano real."""
-    nombres = inst.packaged_hook_names()
-    assert "hook_common.py" in nombres
-    assert set(inst._SCRIPT_NAMES) <= nombres
-    assert all(n.endswith(".py") for n in nombres), "__pycache__ no debe colarse"
+    names = inst.packaged_hook_names()
+    assert "hook_common.py" in names
+    assert set(inst._SCRIPT_NAMES) <= names
+    assert all(n.endswith(".py") for n in names), "__pycache__ no debe colarse"
 
 
-def test_install_retira_los_huerfanos_y_no_toca_nada_mas(tmp_path):
-    raiz = _con_huerfanos(tmp_path)
-    ajenos_antes = {
+def test_install_retires_the_orphans_and_touches_nothing_else(tmp_path):
+    root = _with_orphans(tmp_path)
+    foreign_before = {
         p.name: snapshot(p) if p.is_dir() else p.read_bytes()
-        for p in raiz.iterdir()
+        for p in root.iterdir()
         if p.name not in inst.packaged_hook_names()
     }
 
     assert _install(tmp_path) == 0
 
-    for nombre in inst.packaged_hook_names():
-        assert not (raiz / nombre).exists(), f"{nombre} debía retirarse de la raíz"
-    for nombre, contenido in ajenos_antes.items():
-        destino = raiz / nombre
-        assert destino.exists(), f"{nombre} NO era nuestro y se borró"
-        actual = snapshot(destino) if destino.is_dir() else destino.read_bytes()
-        assert actual == contenido, f"{nombre} se modificó"
+    for name in inst.packaged_hook_names():
+        assert not (root / name).exists(), f"{name} debía retirarse de la raíz"
+    for name, content in foreign_before.items():
+        dest = root / name
+        assert dest.exists(), f"{name} NO era nuestro y se borró"
+        current = snapshot(dest) if dest.is_dir() else dest.read_bytes()
+        assert current == content, f"{name} se modificó"
 
 
-def test_la_instalacion_buena_sobrevive_al_retirado(tmp_path):
+def test_the_good_install_survives_the_retirement(tmp_path):
     """El fallo peor posible: borrar `hooks/local-delegate/`, que es lo recién instalado."""
-    _con_huerfanos(tmp_path)
+    _with_orphans(tmp_path)
     assert _install(tmp_path) == 0
-    buenos = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
-    empaquetados = inst.packaged_hook_names() - set(inst._RETIRED_SCRIPTS)
-    assert empaquetados, "sin scripts empaquetados este test no comprobaría nada"
-    for nombre in empaquetados:
-        assert (buenos / nombre).is_file(), f"{nombre} debía seguir en {buenos}"
+    good_ones = tmp_path / ".claude" / "hooks" / inst.HOOKS_SUBDIR
+    packaged = inst.packaged_hook_names() - set(inst._RETIRED_SCRIPTS)
+    assert packaged, "sin scripts empaquetados este test no comprobaría nada"
+    for name in packaged:
+        assert (good_ones / name).is_file(), f"{name} debía seguir en {good_ones}"
     # Y la otra mitad: un retirado se reconoce como nuestro para poder limpiarlo, pero NO se
     # instala. Sin esto, meterlo en `packaged_hook_names()` podría hacer que volviera a copiarse.
-    for nombre in inst._RETIRED_SCRIPTS:
-        assert not (buenos / nombre).exists(), f"{nombre} está retirado y no debe instalarse"
+    for name in inst._RETIRED_SCRIPTS:
+        assert not (good_ones / name).exists(), f"{name} está retirado y no debe instalarse"
 
 
-def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
+def test_a_retired_script_is_unregistered_and_cleaned(tmp_path):
     """Un script que deja de empaquetarse **no puede volverse inmortal**.
 
     Es el defecto que la revisión adversarial del plan encontró: la limpieza de huérfanos sale de
@@ -603,11 +603,11 @@ def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
     Se simula una instalación anterior: el script en la raíz de `hooks/` (como lo dejaba la
     recipe vieja) y su entrada registrada en `settings.json`.
     """
-    retirado = inst._RETIRED_SCRIPTS[0]
+    retired = inst._RETIRED_SCRIPTS[0]
     claude = tmp_path / ".claude"
     (claude / "hooks").mkdir(parents=True)
-    viejo = claude / "hooks" / retirado
-    viejo.write_text("# instalado por una version anterior\n", encoding="utf-8")
+    old = claude / "hooks" / retired
+    old.write_text("# instalado por una version anterior\n", encoding="utf-8")
     settings_path = claude / "settings.json"
     settings_path.write_text(
         json.dumps(
@@ -616,7 +616,7 @@ def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
                     "PreToolUse": [
                         {
                             "matcher": "Bash",
-                            "hooks": [{"type": "command", "command": f"python ~/{retirado}"}],
+                            "hooks": [{"type": "command", "command": f"python ~/{retired}"}],
                         }
                     ]
                 }
@@ -628,26 +628,26 @@ def test_un_script_retirado_se_desregistra_y_se_limpia(tmp_path):
     assert _install(tmp_path) == 0
 
     settings = json.loads(settings_path.read_text(encoding="utf-8"))
-    registrados = json.dumps(settings.get("hooks", {}))
-    assert retirado not in registrados, "la entrada del script retirado sigue en settings.json"
-    assert not viejo.exists(), "la copia vieja del script retirado sigue en el disco"
+    registered = json.dumps(settings.get("hooks", {}))
+    assert retired not in registered, "la entrada del script retirado sigue en settings.json"
+    assert not old.exists(), "la copia vieja del script retirado sigue en el disco"
 
 
-def test_dry_run_no_retira_ningun_huerfano(tmp_path):
-    _con_huerfanos(tmp_path)
-    antes = snapshot(tmp_path)
+def test_dry_run_retires_no_orphan(tmp_path):
+    _with_orphans(tmp_path)
+    before = snapshot(tmp_path)
     inst.apply(inst.plan_install(_opts(tmp_path)), dry_run=True, out=lambda *_a: None)
-    assert snapshot(tmp_path) == antes
+    assert snapshot(tmp_path) == before
 
 
-def test_sin_huerfanos_no_se_planifica_el_retirado(tmp_path):
+def test_without_orphans_no_retirement_is_planned(tmp_path):
     """Idempotencia: la segunda pasada no tiene nada que hacer."""
-    _con_huerfanos(tmp_path)
+    _with_orphans(tmp_path)
     _install(tmp_path)
     assert [a for a in inst.plan_install(_opts(tmp_path)) if a.kind == "prune"] == []
 
 
-def test_un_directorio_con_nombre_de_script_ni_se_cuenta_ni_se_toca(tmp_path):
+def test_a_directory_named_like_a_script_is_neither_counted_nor_touched(tmp_path):
     """Se borran ficheros, no lo que casualmente se llame igual.
 
     La primera versión de este test solo comprobaba que el directorio sobreviviera, y **pasaba
@@ -656,25 +656,25 @@ def test_un_directorio_con_nombre_de_script_ni_se_cuenta_ni_se_toca(tmp_path):
     abajo — sin `is_file()`, el directorio entra en la lista y el `doctor` avisaría de un
     huérfano que no existe.
     """
-    raiz = tmp_path / ".claude" / "hooks"
-    raiz.mkdir(parents=True)
-    (raiz / "hook_common.py").mkdir()
+    root = tmp_path / ".claude" / "hooks"
+    root.mkdir(parents=True)
+    (root / "hook_common.py").mkdir()
 
     assert inst.orphan_hook_scripts(tmp_path / ".claude") == [], "un directorio no es un script"
 
     _install(tmp_path)
-    assert (raiz / "hook_common.py").is_dir(), "un directorio homónimo no es nuestro script"
+    assert (root / "hook_common.py").is_dir(), "un directorio homónimo no es nuestro script"
 
 
-def _comando_del_hook_de_shell(home: Path) -> str | None:
+def _shell_hook_command(home: Path) -> str | None:
     settings = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
-    for grupo in settings.get("hooks", {}).get("PreToolUse", []):
-        if grupo.get("matcher") == "Bash|PowerShell":
-            return grupo["hooks"][0]["command"]
+    for group in settings.get("hooks", {}).get("PreToolUse", []):
+        if group.get("matcher") == "Bash|PowerShell":
+            return group["hooks"][0]["command"]
     return None
 
 
-def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monkeypatch):
+def test_enable_read_hook_ALSO_leaves_the_shell_hook_on(tmp_path, monkeypatch):
     """El mismo cruce instalador-script, para la otra mitad de la superficie de lectura.
 
     El hook de shell importa de `suggest_delegate_read`, así que aquí se comprueba de paso algo
@@ -684,38 +684,38 @@ def test_enable_read_hook_deja_TAMBIEN_el_hook_de_shell_encendido(tmp_path, monk
     monkeypatch.delenv("LD_HOOK_READ_ENABLED", raising=False)
     _install(tmp_path, enable_read_hook=True)
 
-    comando = _comando_del_hook_de_shell(tmp_path)
-    assert comando is not None, "el hook de shell no quedó registrado"
+    command = _shell_hook_command(tmp_path)
+    assert command is not None, "el hook de shell no quedó registrado"
 
-    grande = tmp_path / "informe.md"
-    grande.write_text("x" * 40_000, encoding="utf-8")
-    entrada = json.dumps({"tool_input": {"command": f"cat {grande}"}})
+    large = tmp_path / "informe.md"
+    large.write_text("x" * 40_000, encoding="utf-8")
+    hook_input = json.dumps({"tool_input": {"command": f"cat {large}"}})
 
-    argv = shlex.split(comando)
+    argv = shlex.split(command)
     argv[0] = sys.executable
     hooks_dir = tmp_path / ".claude" / "hooks" / "local-delegate"
-    entorno = {**os.environ, "PYTHONPATH": str(hooks_dir)}
-    entorno.pop("LD_HOOK_READ_ENABLED", None)
+    env = {**os.environ, "PYTHONPATH": str(hooks_dir)}
+    env.pop("LD_HOOK_READ_ENABLED", None)
     # El bloqueo nace apagado; aquí se enciende a mano para ver que el camino entero funciona.
-    entorno["LD_HOOK_READ_BLOCK"] = "1"
+    env["LD_HOOK_READ_BLOCK"] = "1"
     # Sin backend no se bloquea, que es lo correcto, así que se apunta a uno que sí responde...
     # salvo que no hay ninguno en CI. Se comprueba entonces el caso que no depende de él.
-    entorno["LOCAL_DELEGATE_BASE_URL"] = "http://127.0.0.1:9/v1"
+    env["LOCAL_DELEGATE_BASE_URL"] = "http://127.0.0.1:9/v1"
 
-    proceso = subprocess.run(argv, input=entrada, capture_output=True, text=True, env=entorno)
+    process = subprocess.run(argv, input=hook_input, capture_output=True, text=True, env=env)
 
-    assert proceso.returncode == 0, f"el hook de shell falló: {proceso.stderr!r}"
+    assert process.returncode == 0, f"el hook de shell falló: {process.stderr!r}"
     # Sin backend vivo no bloquea (REQ-F1-10). Lo que este test demuestra es que el script
     # instalado ARRANCA, importa a su vecino y decide, que es donde estaba el agujero.
-    assert proceso.stdout.strip() == "", proceso.stdout
-    assert "Traceback" not in proceso.stderr
+    assert process.stdout.strip() == "", process.stdout
+    assert "Traceback" not in process.stderr
 
 
 # Tal como dejó `~/.codex/config.toml` el plugin de JetBrains el 2026-09-22: todo indentado dos
 # espacios, sin comentarios salvo nuestro marcador de apertura, y SIN el de cierre. Con una
 # entrada ajena justo después y más tablas detrás, que es lo que un emparejamiento de marcadores
 # mal hecho se llevaría por delante.
-_CODEX_REESCRITO_POR_OTRO = """model = "x"
+_CODEX_REWRITTEN_BY_OTHER = """model = "x"
 
   [mcp_servers.git]
     command = "uvx"
@@ -734,15 +734,15 @@ _CODEX_REESCRITO_POR_OTRO = """model = "x"
 """
 
 
-def test_codex_reescrito_por_otro_programa_se_reemplaza_sin_duplicar(tmp_path):
+def test_codex_rewritten_by_another_program_is_replaced_without_duplicating(tmp_path):
     """La entrada indentada se reconoce, se reemplaza y no se duplica.
 
     Antes, la búsqueda exigía la cabecera al principio de la línea y no la veía: `install` añadía una segunda `[mcp_servers.local-delegate]`, el TOML
     quedaba inválido y Codex se quedaba sin ningún MCP.
     """
-    assert tomllib.loads(_CODEX_REESCRITO_POR_OTRO)  # el de partida es TOML válido
+    assert tomllib.loads(_CODEX_REWRITTEN_BY_OTHER)  # el de partida es TOML válido
     entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
-    result = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, inst.codex_mcp_block(entry))
+    result = inst.upsert_codex_mcp(_CODEX_REWRITTEN_BY_OTHER, inst.codex_mcp_block(entry))
 
     data = tomllib.loads(result)
     assert result.count("mcp_servers.local-delegate]") == 1
@@ -753,7 +753,7 @@ def test_codex_reescrito_por_otro_programa_se_reemplaza_sin_duplicar(tmp_path):
     assert result.count(inst.TOML_END) == 1
 
 
-def test_un_marcador_huerfano_no_se_lleva_lo_que_hay_detras(tmp_path):
+def test_an_orphan_marker_does_not_take_what_follows(tmp_path):
     """Dos reinstalaciones seguidas sobre el fichero sin marcador de cierre.
 
     Emparejando marcadores, la segunda casaría el `begin` huérfano con el `end` escrito por la
@@ -762,17 +762,17 @@ def test_un_marcador_huerfano_no_se_lleva_lo_que_hay_detras(tmp_path):
     """
     entry = inst.mcp_entry("http", None, api_key_env=False, version=None)
     block = inst.codex_mcp_block(entry)
-    primera = inst.upsert_codex_mcp(_CODEX_REESCRITO_POR_OTRO, block)
-    segunda = inst.upsert_codex_mcp(primera, block)
+    first = inst.upsert_codex_mcp(_CODEX_REWRITTEN_BY_OTHER, block)
+    second = inst.upsert_codex_mcp(first, block)
 
-    assert segunda == primera
-    data = tomllib.loads(segunda)
+    assert second == first
+    data = tomllib.loads(second)
     assert "pycharm" in data["mcp_servers"]
     assert "proyecto" in data["projects"]
 
 
-def test_quitar_la_entrada_de_un_codex_reescrito_deja_lo_demas(tmp_path):
-    result = inst.remove_codex_mcp(_CODEX_REESCRITO_POR_OTRO)
+def test_removing_the_entry_of_a_rewritten_codex_leaves_the_rest(tmp_path):
+    result = inst.remove_codex_mcp(_CODEX_REWRITTEN_BY_OTHER)
     data = tomllib.loads(result)
     assert "local-delegate" not in data["mcp_servers"]
     assert set(data["mcp_servers"]) == {"git", "pycharm"}

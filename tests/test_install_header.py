@@ -38,7 +38,7 @@ def _home_real(monkeypatch, path: Path) -> None:
 
 # --- Cómo guarda la cabecera cada cliente -------------------------------------
 # `var` es el NOMBRE de la variable; `None` significa entrada HTTP sin cabecera.
-def _claude_escribe(home: Path, var: str | None) -> None:
+def _claude_write(home: Path, var: str | None) -> None:
     entry: dict = {"type": "http", "url": URL}
     if var:
         entry["headers"] = {"Authorization": f"Bearer ${{{var}}}"}
@@ -47,27 +47,27 @@ def _claude_escribe(home: Path, var: str | None) -> None:
     )
 
 
-def _claude_lee(home: Path) -> str | None:
+def _claude_read(home: Path) -> str | None:
     data = json.loads((home / ".claude.json").read_text(encoding="utf-8"))
     return (data["mcpServers"][inst.SERVER_NAME].get("headers") or {}).get("Authorization")
 
 
-def _codex_escribe(home: Path, var: str | None) -> None:
-    lineas = [f"[mcp_servers.{inst.SERVER_NAME}]", f"url = {json.dumps(URL)}"]
+def _codex_write(home: Path, var: str | None) -> None:
+    lines = [f"[mcp_servers.{inst.SERVER_NAME}]", f"url = {json.dumps(URL)}"]
     if var:
-        lineas.append(f"bearer_token_env_var = {json.dumps(var)}")
+        lines.append(f"bearer_token_env_var = {json.dumps(var)}")
     # Con marcadores: una entrada gestionada, que `install` reemplaza sin preguntar.
-    texto = inst.upsert_codex_mcp("", "\n".join(lineas))
-    (home / ".codex" / "config.toml").write_text(texto, encoding="utf-8")
+    text = inst.upsert_codex_mcp("", "\n".join(lines))
+    (home / ".codex" / "config.toml").write_text(text, encoding="utf-8")
 
 
-def _codex_lee(home: Path) -> str | None:
+def _codex_read(home: Path) -> str | None:
     data = tomllib.loads((home / ".codex" / "config.toml").read_text(encoding="utf-8"))
     var = data["mcp_servers"][inst.SERVER_NAME].get("bearer_token_env_var")
     return f"Bearer ${{{var}}}" if var else None
 
 
-def _opencode_escribe(home: Path, var: str | None) -> None:
+def _opencode_write(home: Path, var: str | None) -> None:
     entry: dict = {"type": "remote", "url": URL}
     if var:
         entry["headers"] = {"Authorization": f"Bearer {{env:{var}}}"}
@@ -77,36 +77,36 @@ def _opencode_escribe(home: Path, var: str | None) -> None:
     )
 
 
-def _opencode_lee(home: Path) -> str | None:
+def _opencode_read(home: Path) -> str | None:
     entry = inst.opencode_mcp_installed(home)
     assert entry is not None, "la entrada de opencode desapareció"
-    valor = (entry.get("headers") or {}).get("Authorization")
+    value = (entry.get("headers") or {}).get("Authorization")
     # Se normaliza a la sintaxis de Claude Code para comparar los tres con la misma expectativa.
-    return valor.replace("{env:", "${") if valor else None
+    return value.replace("{env:", "${") if value else None
 
 
-CLIENTES = {
-    "claude": (_claude_escribe, _claude_lee),
-    "codex": (_codex_escribe, _codex_lee),
-    "opencode": (_opencode_escribe, _opencode_lee),
+CLIENTS = {
+    "claude": (_claude_write, _claude_read),
+    "codex": (_codex_write, _codex_read),
+    "opencode": (_opencode_write, _opencode_read),
 }
 
 
-def _home_con(monkeypatch, tmp_path: Path, cliente: str, var: str | None) -> Path:
+def _home_with(monkeypatch, tmp_path: Path, client: str, var: str | None) -> Path:
     _home_real(monkeypatch, tmp_path / "real")
     home = make_home(
         tmp_path,
-        claude=cliente == "claude",
-        codex=cliente == "codex",
-        opencode=cliente == "opencode",
+        claude=client == "claude",
+        codex=client == "codex",
+        opencode=client == "opencode",
         complete=False,
     )
-    CLIENTES[cliente][0](home, var)
+    CLIENTS[client][0](home, var)
     return home
 
 
-def _install(home: Path, cliente: str, *extra: str) -> int:
-    argv = ["install", "--home", str(home), "--clients", cliente]
+def _install(home: Path, client: str, *extra: str) -> int:
+    argv = ["install", "--home", str(home), "--clients", client]
     argv += ["--no-hooks", "--no-skill", "--no-memory", *extra]
     try:
         return cli.run(argv)
@@ -115,68 +115,70 @@ def _install(home: Path, cliente: str, *extra: str) -> int:
 
 
 # --- Los tres estados del flag ------------------------------------------------
-@pytest.mark.parametrize("cliente", sorted(CLIENTES))
-def test_sin_flag_se_conserva_la_cabecera_que_ya_estaba(monkeypatch, tmp_path, cliente):
+@pytest.mark.parametrize("client", sorted(CLIENTS))
+def test_without_flag_the_existing_header_is_kept(monkeypatch, tmp_path, client):
     """El caso de la avería: reinstalar sin el flag no deja al cliente en 401."""
-    home = _home_con(monkeypatch, tmp_path, cliente, inst.WEB_TOKEN_VAR)
+    home = _home_with(monkeypatch, tmp_path, client, inst.WEB_TOKEN_VAR)
 
-    assert _install(home, cliente, "--mcp-mode", "http") == 0
+    assert _install(home, client, "--mcp-mode", "http") == 0
 
-    assert CLIENTES[cliente][1](home) == f"Bearer ${{{inst.WEB_TOKEN_VAR}}}"
+    assert CLIENTS[client][1](home) == f"Bearer ${{{inst.WEB_TOKEN_VAR}}}"
 
 
-@pytest.mark.parametrize("cliente", sorted(CLIENTES))
-def test_sin_flag_se_conserva_tambien_otro_nombre_de_variable(monkeypatch, tmp_path, cliente):
+@pytest.mark.parametrize("client", sorted(CLIENTS))
+def test_without_flag_another_variable_name_is_also_kept(monkeypatch, tmp_path, client):
     """Conservar es no cambiar lo que funcionaba, no sustituirlo por nuestra variable."""
-    home = _home_con(monkeypatch, tmp_path, cliente, "OTRA_VARIABLE")
+    home = _home_with(monkeypatch, tmp_path, client, "OTRA_VARIABLE")
 
-    assert _install(home, cliente, "--mcp-mode", "http") == 0
+    assert _install(home, client, "--mcp-mode", "http") == 0
 
-    assert CLIENTES[cliente][1](home) == "Bearer ${OTRA_VARIABLE}"
-
-
-@pytest.mark.parametrize("cliente", sorted(CLIENTES))
-def test_no_web_token_env_quita_la_cabecera_a_proposito(monkeypatch, tmp_path, cliente):
-    home = _home_con(monkeypatch, tmp_path, cliente, inst.WEB_TOKEN_VAR)
-
-    assert _install(home, cliente, "--mcp-mode", "http", "--no-web-token-env") == 0
-
-    assert CLIENTES[cliente][1](home) is None
+    assert CLIENTS[client][1](home) == "Bearer ${OTRA_VARIABLE}"
 
 
-@pytest.mark.parametrize("cliente", sorted(CLIENTES))
-def test_sin_flag_y_sin_cabecera_previa_no_aparece_ninguna(monkeypatch, tmp_path, cliente):
+@pytest.mark.parametrize("client", sorted(CLIENTS))
+def test_no_web_token_env_removes_the_header_on_purpose(monkeypatch, tmp_path, client):
+    home = _home_with(monkeypatch, tmp_path, client, inst.WEB_TOKEN_VAR)
+
+    assert _install(home, client, "--mcp-mode", "http", "--no-web-token-env") == 0
+
+    assert CLIENTS[client][1](home) is None
+
+
+@pytest.mark.parametrize("client", sorted(CLIENTS))
+def test_without_flag_or_previous_header_none_appears(monkeypatch, tmp_path, client):
     """Control: conservar no es inventar. Quien no usaba token sigue sin él."""
-    home = _home_con(monkeypatch, tmp_path, cliente, None)
+    home = _home_with(monkeypatch, tmp_path, client, None)
 
-    assert _install(home, cliente, "--mcp-mode", "http") == 0
+    assert _install(home, client, "--mcp-mode", "http") == 0
 
-    assert CLIENTES[cliente][1](home) is None
+    assert CLIENTS[client][1](home) is None
 
 
-@pytest.mark.parametrize("cliente", sorted(CLIENTES))
-def test_web_token_env_la_escribe_aunque_no_hubiera(monkeypatch, tmp_path, cliente):
+@pytest.mark.parametrize("client", sorted(CLIENTS))
+def test_web_token_env_writes_it_even_if_there_was_none(monkeypatch, tmp_path, client):
     """Control del otro lado: el flag explícito sigue mandando sobre lo que hubiera."""
-    home = _home_con(monkeypatch, tmp_path, cliente, None)
+    home = _home_with(monkeypatch, tmp_path, client, None)
 
-    assert _install(home, cliente, "--mcp-mode", "http", "--web-token-env") == 0
+    assert _install(home, client, "--mcp-mode", "http", "--web-token-env") == 0
 
-    assert CLIENTES[cliente][1](home) == f"Bearer ${{{inst.WEB_TOKEN_VAR}}}"
-
-
-def test_los_dos_flags_a_la_vez_se_rechazan(monkeypatch, tmp_path):
-    home = _home_con(monkeypatch, tmp_path, "claude", inst.WEB_TOKEN_VAR)
-    antes = (home / ".claude.json").read_bytes()
-
-    codigo = _install(home, "claude", "--mcp-mode", "http", "--web-token-env", "--no-web-token-env")
-
-    assert codigo == 2
-    assert (home / ".claude.json").read_bytes() == antes
+    assert CLIENTS[client][1](home) == f"Bearer ${{{inst.WEB_TOKEN_VAR}}}"
 
 
-def test_en_stdio_no_se_conserva_una_cabecera_que_no_pinta_nada(monkeypatch, tmp_path):
+def test_both_flags_at_once_are_rejected(monkeypatch, tmp_path):
+    home = _home_with(monkeypatch, tmp_path, "claude", inst.WEB_TOKEN_VAR)
+    before = (home / ".claude.json").read_bytes()
+
+    exit_code = _install(
+        home, "claude", "--mcp-mode", "http", "--web-token-env", "--no-web-token-env"
+    )
+
+    assert exit_code == 2
+    assert (home / ".claude.json").read_bytes() == before
+
+
+def test_in_stdio_a_header_that_does_nothing_is_not_kept(monkeypatch, tmp_path):
     """El token protege el puerto del daemon; una entrada stdio no habla con ese puerto."""
-    home = _home_con(monkeypatch, tmp_path, "claude", inst.WEB_TOKEN_VAR)
+    home = _home_with(monkeypatch, tmp_path, "claude", inst.WEB_TOKEN_VAR)
 
     assert _install(home, "claude", "--mcp-mode", "stdio") == 0
 
@@ -185,23 +187,23 @@ def test_en_stdio_no_se_conserva_una_cabecera_que_no_pinta_nada(monkeypatch, tmp
 
 
 # --- Lo que dice el plan --------------------------------------------------------
-def test_el_dry_run_dice_que_conserva_y_no_imprime_un_token_literal(monkeypatch, tmp_path, capsys):
+def test_the_dry_run_says_it_keeps_it_and_prints_no_literal_token(monkeypatch, tmp_path, capsys):
     """Un token escrito a pelo se conserva en disco, pero la pantalla no lo enseña.
 
     La primera aserción es la guarda: sin ella, la de «no aparece el secreto» pasaría también con
     el defecto, porque una cabecera borrada tampoco se imprime.
     """
-    home = _home_con(monkeypatch, tmp_path, "claude", None)
-    secreto = "s3cr3t-escrito-a-pelo"
+    home = _home_with(monkeypatch, tmp_path, "claude", None)
+    secret = "s3cr3t-escrito-a-pelo"
     data = json.loads((home / ".claude.json").read_text(encoding="utf-8"))
-    data["mcpServers"][inst.SERVER_NAME]["headers"] = {"Authorization": f"Bearer {secreto}"}
+    data["mcpServers"][inst.SERVER_NAME]["headers"] = {"Authorization": f"Bearer {secret}"}
     (home / ".claude.json").write_text(json.dumps(data), encoding="utf-8")
 
     assert _install(home, "claude", "--mcp-mode", "http", "--dry-run") == 0
-    salida = capsys.readouterr().out
+    output = capsys.readouterr().out
 
-    assert "conserva la cabecera" in salida
-    assert secreto not in salida
+    assert "conserva la cabecera" in output
+    assert secret not in output
 
     assert _install(home, "claude", "--mcp-mode", "http") == 0
-    assert _claude_lee(home) == f"Bearer {secreto}"
+    assert _claude_read(home) == f"Bearer {secret}"

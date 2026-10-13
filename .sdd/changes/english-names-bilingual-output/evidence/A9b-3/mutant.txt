@@ -1,0 +1,7 @@
+Mutante (producto): web/metrics.py:615, _aggregate_hooks deja de sumar las sugeridas (suggested_total += suggested -> += 0)
+sha antes 1840a42ecfe13f24 / mutado dc47ccb428a718c0
+>       assert aggregate["suggested"] == 2
+E       assert 0 == 2
+1 failed, 1 warning in 0.35s
+restaurado 1840a42ecfe13f24 (== antes: si)
+20 passed, 1 warning in 0.77s
