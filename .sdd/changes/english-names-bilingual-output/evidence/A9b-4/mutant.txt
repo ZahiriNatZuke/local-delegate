@@ -1,0 +1,12 @@
+Mutante (producto): install.py:665, la lectura de los plazos de Claude y opencode devuelve {} (no ve el plazo puesto a mano)
+sha antes f81862f2c9cb556b / mutado 619872a20421148a
+>       assert _timeouts_of(entry, client) == TIMEOUTS[client]
+E       AssertionError: assert {} == {'timeout': 900000}
+E         
+E         Right contains 1 more item:
+E         {'timeout': 900000}
+E         Use -v to get more diff
+>       assert _timeouts_of(entry, client) == TIMEOUTS[client]
+E       AssertionError: assert {} == {'timeout': 900000}
+restaurado f81862f2c9cb556b (== antes: si)
+24 passed in 0.71s
