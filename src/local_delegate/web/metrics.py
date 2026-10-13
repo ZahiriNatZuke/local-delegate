@@ -2519,7 +2519,7 @@ function fmtAgo(s){
 // --- Sistema: /api/system (RAM/VRAM + procesos, 5s) ---
 // Lo que la tarjeta no puede medir aquí, como filas etiqueta/valor (REQ-025): con el backend en
 // otra máquina, una fila «Backend» que enlaza a su panel; sin RAM ni VRAM, una fila con «—». La
-// explicación va en el diálogo ⓘ de la tarjeta. Pura: la prueba node en test_panel_estados.py.
+// explicación va en el diálogo ⓘ de la tarjeta. Pura: la prueba node en test_dashboard_states.py.
 function systemRows(j){
   const plat = (j && j.platform) || '', remote = !!(j && j.origin==='remote');
   const procs = (j && j.processes) || [];

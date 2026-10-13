@@ -5,16 +5,18 @@ La subola se parte en 6 lotes (D13: 1507 filas, como mucho 300 por lote y sin pa
 2026-10-13 con las 8 decisiones de la fase 1 tal como se recomendaron. Cada lote es un commit que
 hace la sesión principal, en una rama apilada sobre el anterior. Las tablas de controles positivos,
 `local_*` y PyCharm son las de todos los lotes, porque `check_wave_records.py` lee la primera tabla
-de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 = 111 filas
-`rename_refactoring` = 111 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv`,
-`waves/A9b-3-mapping.csv`, `waves/A9b-4-mapping.csv` y `waves/A9b-5-mapping.csv`.
+de cada sección: los **6 lotes**, 17 + 25 + 23 + 19 + 27 + 40 = 151 filas `rename_refactoring` = 151
+filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv`, `waves/A9b-3-mapping.csv`,
+`waves/A9b-4-mapping.csv`, `waves/A9b-5-mapping.csv` y `waves/A9b-6-mapping.csv`. El cierre de la
+subola está en «Cierre de A9b», al final.
 
 - Rama: lote 1 en `sdd/english-names-a9b-1`, apilada sobre `sdd/english-names-a9a-7` (`76fe954`, A9a
   completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, commit `c3ed701`; lote 3 en
   `sdd/english-names-a9b-3`, commit `3f66253`; lote 4 en `sdd/english-names-a9b-4`, commit `7f85d24`;
-  lote 5 en `sdd/english-names-a9b-5`, sobre `7f85d24` · Commit del lote 5: pendiente, con el
-  borrador en `waves/A9b-5-commit-msg.txt` (firmado y sin coautoría)
-- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 5 (fase 2).
+  lote 5 en `sdd/english-names-a9b-5`, commit `1173df6`; lote 6 en `sdd/english-names-a9b-6`, sobre
+  `1173df6` · Commit del lote 6: pendiente, con el borrador en `waves/A9b-6-commit-msg.txt` (firmado
+  y sin coautoría)
+- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los 6 lotes (fase 2).
 - Conteo base: `evidence/A9b/collect-before.txt`, 2569 tests.
 
 ## Controles positivos
@@ -29,6 +31,8 @@ de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 =
 | `tests/test_hooks_telemetry_api.py::test_counts_suggested_over_the_total` (lote 3; usa `_event(…, suggested=…)` con los kwargs renombrados) | `src/local_delegate/web/metrics.py:615`: `_aggregate_hooks` deja de sumar las sugeridas (`suggested_total += suggested` → `+= 0`) | `assert aggregate["suggested"] == 2` → `assert 0 == 2` | sí, desde copia; sha256 igual (`evidence/A9b-3/mutant.txt`) |
 | `tests/test_install_timeouts.py::test_install_keeps_the_hand_set_timeout` (lote 4; usa `_home_with`, `_timeouts_of`, `CLIENTS`, `TIMEOUTS` y los argnames `client`/`mode`) | `src/local_delegate/install.py:665`: la lectura de los plazos de Claude y opencode devuelve `{}` | `assert _timeouts_of(entry, client) == TIMEOUTS[client]` → `assert {} == {'timeout': 900000}` | sí, desde copia; sha256 igual (`evidence/A9b-4/mutant.txt`) |
 | `tests/test_dashboard_cost.py::test_an_old_point_expires_without_regenerating` y `::test_warning_against_a_rejection` (lote 5; leen `_texts(…)["quota"]`, la clave JS renombrada, con `env`, `_aggregates`, `_point`, `_write_log` y `_line`) | `src/local_delegate/web/metrics.py:2007`: `quotaText` del panel devuelve `[]` | `assert "faltan 1 puntos" in text` → `assert 'faltan 1 puntos' in ''` (4 asserts, 2 tests) | sí, desde copia; sha256 igual (`evidence/A9b-5/mutant.txt`) |
+| `tests/test_questions.py::test_the_elicitation_schemas_keep_their_fields_and_visible_titles[ChooseModel]` (test NUEVO del lote 6) | `src/local_delegate/questions.py`: `ChooseModel` sin `Field(title="Modelo")` (el mutante M3 del hallazgo de A8a-2) | `assert form.model_json_schema() == expected` → `{'title': 'Model'} != {'title': 'Modelo'}` (1 de 3; los otros dos siguen verdes) | sí, desde copia; sha256 igual (`evidence/A9b-6/mutant.txt`) |
+| `tests/test_dashboard_states.py::test_turn_wait_shown_in_panel_as_local_wait` (arreglo de la carrera, lote 6) | `src/local_delegate/server.py`, `on_wait`: `time.sleep(0.5)` entre `_inflight_turn` y `_inflight_local_wait`, que amplía la ventana de la carrera | con la condición vieja: `assert row["text"] == "en cola local"` → `'procesando' == 'en cola local'` (el fallo que se vio en el CI de Ubuntu); con el arreglo, pasa con el mismo mutante | sí, desde copia; sha256 igual. Y 30 corridas seguidas del test arreglado, bajo el cerrojo: 30 pasan (`evidence/A9b-6/race-repeat.txt`) |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -39,6 +43,7 @@ de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 =
 | Agente A9b-2 | (ninguna) | la suite salió verde a la primera (47 líneas de log) y los ficheros se leyeron por franjas concretas: no hubo nada largo que resumir |
 | Agente A9b-4 | (ninguna) | suite verde a la primera y comprobaciones por script AST: nada largo que resumir |
 | Agente A9b-5 | (ninguna) | suite verde a la primera (Playwright incluido, bajo el cerrojo) y comprobaciones por script AST: nada largo que resumir |
+| Agente A9b-6 | (ninguna) | suite verde a la primera; el detector se leyó por su JSON con un script que filtra los ficheros de A9b, y el diff de cadenas lo hizo un script AST |
 | Agente A9b-3 | (ninguna) | suite verde a la primera; los ficheros se leyeron por franjas y las comprobaciones de cadenas las hizo un script AST: nada largo que resumir |
 
 ## Llamadas `mcp__pycharm__*`
@@ -161,6 +166,47 @@ de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 =
 | A9b-5 | `rename_refactoring` | `_FUNCIONES→_FUNCTIONS` | 2 usos |
 | A9b-5 | `rename_refactoring` | `_textos→_texts` | 7 usos |
 | A9b-5 | `get_file_problems` | `test_dashboard_cost.py`, `test_fallback_observability.py`, `test_metrics.py` | 0 errores propios: solo `Unresolved reference` en cadenas de `monkeypatch.setattr` (`open`, `connect`, `Client`), falsos positivos que ya estaban |
+| A9b-6 | `rename_refactoring` | `_SALIDA→_EMIT` (`test_panel_estados.py`) | 2 usos |
+| A9b-6 | `rename_refactoring` | `_globales→_globals` | 1 usos |
+| A9b-6 | `rename_refactoring` | `BUENO→GOOD` | 9 usos |
+| A9b-6 | `rename_refactoring` | `FALLIDO→FAILED` | 18 usos |
+| A9b-6 | `rename_refactoring` | `CATALOGO→CATALOG` | 2 usos |
+| A9b-6 | `rename_refactoring` | `_fallido→_failed` | 3 usos |
+| A9b-6 | `rename_refactoring` | `_filas_tras→_rows_after` | 1 usos |
+| A9b-6 | `rename_refactoring` | `_fila→_row` | 6 usos |
+| A9b-6 | `rename_refactoring` | `VUELO→IN_FLIGHT` | 13 usos |
+| A9b-6 | `rename_refactoring` | `_SONDEO→_POLLING` (lo que dejó A8b) | 5 usos |
+| A9b-6 | `rename_refactoring` | `_sondeo_globales→_polling_globals` | 4 usos |
+| A9b-6 | `rename_refactoring` | `_con→_with_running` | 16 usos |
+| A9b-6 | `rename_refactoring` | `BUENA→GOOD` (`test_post_chat_caminos.py`) | 2 usos |
+| A9b-6 | `rename_refactoring` | `_RespuestaDelUsuario→_UserAnswer` | 1 usos |
+| A9b-6 | `rename_refactoring` | `CAMINOS→PATHS` | 6 usos |
+| A9b-6 | `rename_refactoring` | `_preparar_camino→_prepare_path` | 3 usos |
+| A9b-6 | `rename_refactoring` | `IDS_DE_LA_SPEC→SPEC_IDS` (`test_precios.py`) | 3 usos |
+| A9b-6 | `rename_refactoring` | `FILA_OPUS_5→ROW_OPUS_5` | 2 usos |
+| A9b-6 | `rename_refactoring` | `FILA_OPUS_55_LECTURA→ROW_OPUS_55_READ` | 2 usos |
+| A9b-6 | `rename_refactoring` | `FILA_OPUS_55_SALIDA→ROW_OPUS_55_OUTPUT` | 2 usos |
+| A9b-6 | `rename_refactoring` | `FILA_HAIKU_WEB→ROW_HAIKU_WEB` | 3 usos |
+| A9b-6 | `rename_refactoring` | `FILA_PEQUENA→ROW_SMALL` | 2 usos |
+| A9b-6 | `rename_refactoring` | `FILAS→ROWS` | 8 usos |
+| A9b-6 | `rename_refactoring` | `_sin_precio→_without_price` | 1 usos |
+| A9b-6 | `rename_refactoring` | `Respuesta→Answer` (`test_preguntas.py`) | 4 usos |
+| A9b-6 | `rename_refactoring` | `contexto_limpio→clean_context` (fixture autouse) | 0 usos |
+| A9b-6 | `rename_refactoring` | `_DECLARADA→_DECLARED` | 2 usos |
+| A9b-6 | `rename_refactoring` | `_Sesion→_Session` | 2 usos |
+| A9b-6 | `rename_refactoring` | `_montar→_mount` | 8 usos |
+| A9b-6 | `rename_refactoring` | `_correr→_run` | 8 usos |
+| A9b-6 | `rename_refactoring` | `probar→try_it` (tool MCP del test) | 6 usos |
+| A9b-6 | `rename_refactoring` | `acepta→accepts` | 1 usos |
+| A9b-6 | `rename_refactoring` | `declina→declines` | 2 usos |
+| A9b-6 | `rename_refactoring` | `cancela→cancels` | 2 usos |
+| A9b-6 | `rename_refactoring` | `muda→silent` | 2 usos |
+| A9b-6 | `rename_refactoring` | `_responde→_reply` | 3 usos |
+| A9b-6 | `rename_refactoring` | `_no_responde→_no_answer` | 1 usos |
+| A9b-6 | `rename_refactoring` | `_delegar→_delegate` | 6 usos |
+| A9b-6 | `rename_refactoring` | `RespuestaOpcional→OptionalAnswer` | 1 usos |
+| A9b-6 | `rename_refactoring` | `responder_opcional→answer_optional` (tool MCP del test) | 2 usos |
+| A9b-6 | `get_file_problems` | `test_dashboard_states.py`, `test_questions.py`, `test_pricing.py`, `test_post_chat_paths.py` | 0 errores propios: solo `Unresolved reference 'connect'` en la cadena de `monkeypatch.setattr`, que ya estaba |
 
 ## A9b-1 — capturas de `tests/fixtures/backend`, `test_enfriamiento`, `test_fallos` y `test_fallos_capturas` (aplicado)
 
@@ -419,20 +465,142 @@ de cada sección; por ahora están los **lotes 1 a 5**: 17 + 25 + 23 + 19 + 27 =
 2. **`contextlib.suppress` en vez de `except OSError: pass`** en `test_dashboard_cost.py` (pedido
    de la sesión principal): mismo comportamiento y mismo comentario.
 
+## A9b-6 — `test_panel_estados`, `test_post_chat_caminos`, `test_precios` y `test_preguntas` (aplicado)
+
+### A9b-6 · Qué se hizo
+
+- 40 `rename_refactoring` (tabla de arriba). PyCharm reescribió `waves/A3.md`, `waves/A9a.md` y
+  `panel-cuentas-y-estados-honestos/verification.md`, devueltos a HEAD con `git show`.
+- A mano, antes de `apply`: los parámetros homónimos `cuerpo` (`_js`), `casos` (`_fila`, con su cita
+  y el `json.dumps` de la f-string), `canal` (`_Sesion`, con el kwarg `_Ctx(canal=False)`), `modelo`
+  ×4 (los dobles de `ask`) y los campos `valor` de `Respuesta`/`RespuestaOpcional`, con sus lecturas
+  `r.valor` y la clave `{"valor": "elegido"}` del `content` que el test valida contra el modelo.
+- **Nombres de tool MCP** (lección de A9a): `@server.tool()` toma el nombre de la función, así que
+  las cadenas de `call_tool` cambian con ella: `nombre="probar"` → `"try_it"` y
+  `n = "responder_opcional"` → `"answer_optional"`. Anotado en la línea `# Fase 2` del CSV.
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 119 + 74 + 72 + 83 =
+  348 reemplazos.
+- A mano, después: el `def` de las anidadas `_preguntar`→`_ask`, `registrar`→`record`,
+  `falso`→`fake`, `con_marcas`→`with_marks`, `_espia`→`_spy` (×2), `input_and`→`op_y_entry` (decisión
+  2 de la fase 1) y la clase `_Roto`→`_Broken`; los argnames de `parametrize`
+  (`route_kwargs,autostart_on,start_ok,answers,remote`); 4 citas de docstring (`seen[1]`,
+  `css_class == "warn"`, `[{sequence, inflight}]`, `_prepare_path`, `value`).
+- **JS propio de `test_panel_estados`** (lo que dejó A8b), con `a9b/js6.py`: 71 tokens en las líneas
+  de las cadenas JS, fuera de los literales JS con comilla simple (`'responde con error'` no se
+  toca): `salida`→`emit`, `casos`→`testCases`, `cola`→`queue`, `con`/`sinLista` →
+  `withList`/`withoutList`, `desdeCero`→`fromZero`, `estados`→`stateLog`, `fetchPendiente`→`fetchPending`,
+  `filas`→`rowsOut`, `llamadas`→`callCount`, `respuestas`→`responses`, `retrasos`→`delays`,
+  `ultima`/`vacio`/`vivo` → `lastHtml`/`emptyHtml`/`liveHtml`, `vistos`→`seenStates`, y las
+  propiedades `c.secuencia`/`c.modelo` → `c.sequence`/`c.model`. Lecturas en Python: 14 `r["…"]` (no
+  hay `.get`, `in`, `not in`, `pop` ni `{**…}` con esas claves) y 20 claves de los dicts de casos
+  (`"secuencia"` ×19, `"modelo"` ×1).
+- `except OSError: pass` de `test_precios.py:201` → `with contextlib.suppress(OSError):` con el mismo
+  comentario (el fichero cambia de nombre), más `import contextlib`.
+- `git mv` de 4 módulos: `test_dashboard_states.py`, `test_post_chat_paths.py`, `test_pricing.py` y
+  `test_questions.py` (CRLF conservado: 368 `\r\n` = 368 `\n`).
+- Comparadas por AST todas las cadenas antes y después: solo cambian el JS, los argnames, las citas,
+  los nombres de tool MCP y las claves del test. Se quedan los datos: `"modelo"` como nombre de modelo
+  en `server._post_chat("modelo", …)`, los ids de `parametrize` y los textos que afirman los tests.
+
+### A9b-6 · Test nuevo de los esquemas de `elicitation`
+
+`tests/test_questions.py::test_the_elicitation_schemas_keep_their_fields_and_visible_titles`,
+parametrizado por formulario (3 tests): fija el `model_json_schema()` completo de `StartBackend`,
+`ChooseModel` y `ChooseFormat`: los campos `start`/`model`/`format`, sus `title` visibles
+(«Arrancar», «Modelo», «Formato»), los `title` de los formularios que conservó A8a-2 con `ConfigDict`
+(«ArrancarBackend», «ElegirModelo», «ElegirFormato»), `description`, `required` y `type`. Mutante:
+quitar `Field(title="Modelo")` hace fallar `[ChooseModel]` (tabla de controles).
+
+### A9b-6 · Arreglo de la carrera
+
+`test_turn_wait_shown_in_panel_as_local_wait` aceptaba la entrada de `/api/inflight` en cuanto traía
+`turn_in_use`, pero `on_wait` (`server.py`) publica `turn_in_use` antes que `local_wait`: en esa
+ventana la fila sale «procesando» y falla `row["text"] == "en cola local"` (el fallo que se vio una
+vez en el CI de Ubuntu). La condición del bucle pasa a `queued and e and e.get("local_wait") and
+e.get("turn_in_use")`, con un comentario que dice por qué. Lo que afirma el test no cambia. Control:
+con un `time.sleep(0.5)` en esa ventana, el test viejo falla con `'procesando' == 'en cola local'` y
+el arreglado pasa; 30 corridas seguidas del arreglado, bajo el cerrojo: 30 pasan.
+
+### A9b-6 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- `src/local_delegate/server.py:1372` cita `tests/test_post_chat_paths.py` y
+  `src/local_delegate/web/metrics.py:2522` cita `test_dashboard_states.py` (los dos CRLF, conservado).
+
+### A9b-6 · Barrido final
+
+- AST de los 4 ficheros: ningún nombre de código, kwarg, argname ni cita con un `old` del lote.
+- `git grep -w` de cada `old` en los ficheros del lote, clasificado por token: 0 en código; 166 en
+  textos (75 docstrings, 46 comentarios y 45 cadenas): prosa y datos en español.
+- En todo el repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`), los nombres propios del lote: 0.
+- `--collect-only`: **2572** = 2569 + 3 del test nuevo (`evidence/A9b-6/collect.txt`). Suite (con
+  Playwright, bajo el cerrojo): 2570 passed, 2 skipped (`evidence/A9b-6/pytest-full.log`). `ruff
+  check` y `ruff format --check` en verde.
+- CodeQL (aproximación AST) sobre los 4 ficheros renombrados: 0 patrones.
+
+### A9b-6 · Desviaciones
+
+1. **9 filas `pycharm` → `search_edit`**, anotado en la línea `# Fase 2` del CSV: 7 parámetros
+   homónimos y los 2 campos `valor`.
+2. **Las cadenas de nombre de tool MCP** (`"probar"`, `"responder_opcional"`) no estaban en el CSV:
+   cambian con la función por consecuencia (lección de A9a) y se anotan en la misma línea.
+3. **`contextlib.suppress`** en vez de `except OSError: pass` en `test_pricing.py`, como en el lote 5.
+
+## Cierre de A9b
+
+- **Barrido de los 6 mappings** sobre los ficheros con su nombre final (AST de nombres, kwargs,
+  argnames y cadenas iguales a un `old`): 0 en código en los 24 ficheros. Las cadenas iguales a un
+  `old` que quedan son datos: `"viejo"`/`"nuevo"` (formato de `_read_rows`), `"bloqueo"`/`"codigo"`
+  (telemetría vieja), `"secreto"` y `"antes"` (datos de prueba) en el lote 3; `"modelo"` (valor viejo
+  de `fallback_class` y nombre de modelo de prueba), `"fallos"`/`"hasta"` (fichero viejo de
+  enfriamiento), `"coletilla"`/`"recibo"` (etiquetas de mensaje) y `"tokens_aprox"` (clave del
+  producto) en los lotes 5 y 6.
+- **Detector** (`scripts/detect_spanish_names.py --json`, filtrado a los ficheros de A9b y
+  `tests/fixtures/backend`): 159 hallazgos, ninguno es un nombre de Python del test salvo los dos
+  `test_*` que nombran el script retirado `anotar_llamada` (dato: es el nombre del fichero viejo que
+  el test comprueba que se retira) y `bloqueo_id`/`secciones`/`fallo_conexion` (kwargs con claves
+  viejas que el test mete a propósito para comprobar la lectura de logs antiguos). El resto son
+  cadenas: 107 valores (nombres de fichero de prueba como `informe.md` o `casos.json`, valores
+  viejos persistidos, ids de `parametrize`) y 47 claves, de cuatro clases:
+  - del producto o de scripts (A10 / sin ola): `modelo`/`tamano_bytes`/`ruta` de la huella de
+    `footprint` (`test_footprint.py`), las del informe de `scripts/measure_slowness.py`
+    (`test_measure_slowness.py`: `cumple`, `faltan`, `eventos_pc`…), `desconocido`, `pruebas`;
+  - viejas a propósito: `fallos`, `espera_s`, `hasta`, `LD_HOOK_READ_BLOQUEAR`, `mcp_ajeno`;
+  - etiquetas de mensaje del test: `coletilla`, `recibo`, `_ensayo`/`_otra`, `viva`, `otro`/`cosa`/`otra`/`proyecto`/`ajeno`;
+  - **claves propias de los tests de llama-swap que el mapping no cubría**: `recargando`/`recargada`/
+    `rechazo` (`fake_llamaswap._count`) y `durante`/`t_descarga`/`cargado_a_los_4s`/`estado`/`duracion`
+    (`test_fake_llamaswap.py`). Ver pendiente 3.
+- **Conteo final**: 2572 tests recogidos = 2569 + 3 (el test nuevo de esquemas, parametrizado).
+- **Mappings**: 1507 filas en 6 lotes; 151 `rename_refactoring`; 0 discrepancias en
+  `check_wave_records.py`.
+
 ## Pendientes
 
-1. Lote A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
-   de lambdas (desviación 2 del lote 2).
-2. En el lote 6: el test nuevo de los esquemas de `elicitation` y el arreglo de la carrera de
-   `test_turn_wait_shown_in_panel_as_local_wait` (cabecera de `A9b-6-mapping.csv`).
-3. Para los lotes que tocan claves en cadenas: buscar también `"clave" in doc` (desviación 2).
-4. **Intermitentes vistos** (no son de A9b; se anotan para quien los toque):
-   `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` (`t_unload` 4,23 > 4,0) y
+Lo que A9b deja a otras olas, por destino:
+
+**A9c (`q*`–`z*`)**
+1. `test_fallback_observability.py` importa de `test_respaldo.py` `_enfriar`, `_ultimo_evento`,
+   `CODIGO`, `LARGO` y `MECANICO`; no se tocaron aquí. Cuando A9c los renombre, cambia ese import como
+   consecuencia mecánica. `_textos` de `test_recalcular.py` es un homónimo sin relación.
+2. Lecciones para A9c: buscar las claves en todas sus formas (`["x"]`, `.get("x")`, `"x" in`,
+   `"x" not in`, `pop`, `{**…}`) y comprobar con un mutante los asserts negativos de claves
+   renombradas (lote 1); barrer los parámetros de lambdas (lote 2); los nombres de tool MCP cambian con
+   la función (lote 6).
+
+**Sin ola (decide la sesión principal)**
+3. Las claves propias de los tests de llama-swap que el mapping no cubrió (`fake_llamaswap._count`:
+   `recargando`/`recargada`/`rechazo`; `test_fake_llamaswap.py`: `durante`, `t_descarga`,
+   `cargado_a_los_4s`, `estado`, `duracion`). Son del test, no persistidas: propuesta, un lote corto o
+   A9c, con su barrido de lecturas.
+
+**A10 (scripts) y producto**
+4. Las claves del informe de `scripts/measure_slowness.py` que lee `test_measure_slowness.py`, y las
+   de `footprint` (`modelo`, `tamano_bytes`, `ruta`) que lee `test_footprint.py`: cambian con el
+   script o con su decisión de lectura dual, no en los tests.
+
+**Intermitentes abiertos** (no son de A9b)
+5. `test_fake_llamaswap.py::test_a_ttl_counts_from_request_end` (`t_unload` 4,23 > 4,0) y
    `::test_d_8_s_request_in_progress_on_reload[cambio_ajeno]` (500 en vez de 502), los dos bajo la
-   carga de `-n auto` en la primera corrida del lote 1;
-   `test_residency_cli.py::test_restoring_a_copy_end_to_end` (visto en A9a); y la carrera de
-   `test_panel_estados.py::test_turn_wait_shown_in_panel_as_local_wait`, que se arregla en el lote 6.
-5. **Para A9c:** `test_fallback_observability.py` (antes `test_observabilidad_respaldo.py`) importa de
-   `test_respaldo.py` `_enfriar`, `_ultimo_evento`, `CODIGO`, `LARGO` y `MECANICO`; no se tocaron aquí.
-   Cuando A9c los renombre, cambia ese import como consecuencia mecánica. Igual con `_textos` de
-   `test_recalcular.py` (homónimo, sin relación).
+   carga de `-n auto` en la primera corrida del lote 1.
+6. `test_residency_cli.py::test_restoring_a_copy_end_to_end` (visto en A9a).
+
+La carrera de `test_turn_wait_shown_in_panel_as_local_wait` queda **cerrada** en el lote 6.

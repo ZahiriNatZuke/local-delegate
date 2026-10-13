@@ -1369,7 +1369,7 @@ def _post_chat(model: str, payload: dict) -> ChatResult:
     # dedujo leyendo, se midió: se enumeraron las 16 formas de terminar el `try` y ninguna
     # llegó hasta aquí, y con la guarda del intento quitada el mismo experimento sí la
     # alcanzaba —control positivo—. Lo que antes prometía esa línea lo garantiza ahora
-    # `tests/test_post_chat_caminos.py`, que sí se ejecuta.
+    # `tests/test_post_chat_paths.py`, que sí se ejecuta.
 
 
 _THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>", re.IGNORECASE | re.DOTALL)

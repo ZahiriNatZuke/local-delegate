@@ -1,0 +1,26 @@
+Mutante 1 (producto, hallazgo de A8a-2): questions.py, ChooseModel sin Field(title="Modelo")
+sha antes e6d23c91a8bd3ad1 / mutado acd09c39f179a682
+E       AssertionError: assert {'description...rModelo', ...} == {'description...rModelo', ...}
+E         
+E         Omitting 4 identical items, use -vv to show
+E         Differing items:
+E         {'properties': {'model': {'title': 'Model', 'type': 'string'}}} != {'properties': {'model': {'title': 'Modelo', 'type': 'string'}}}
+E         Use -v to get more diff
+FAILED tests/test_questions.py::test_the_elicitation_schemas_keep_their_fields_and_visible_titles[ChooseModel]
+1 failed, 22 passed in 4.51s
+restaurado e6d23c91a8bd3ad1 (== antes: si)
+23 passed in 4.28s
+
+Control de la carrera (test_turn_wait_shown_in_panel_as_local_wait)
+slow ok
+server.py con time.sleep(0.5) entre _inflight_turn y _inflight_local_wait: sha 2bfc147aaafdb200 -> 0f7eec1d0ecb166f
+-- condición vieja (sin arreglo):
+>       assert row["text"] == "en cola local"
+E       AssertionError: assert 'procesando' == 'en cola local'
+E         
+E         - en cola local
+fix ok
+-- condición nueva (con arreglo):
+1 passed, 1 warning in 0.85s
+unslow ok
+server.py restaurado: 2bfc147aaafdb200 (== antes: si)
