@@ -248,10 +248,10 @@ def test_json_schema_auto_falls_back_on_400(monkeypatch):
         ),
     ]
     route = backend_mock.post("http://test-backend/v1/chat/completions").mock(side_effect=responses)
-    datos = server.local_extract(fields=["a"], text="hola")
+    data = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 2
     # Objeto ya parseado, no una cadena con JSON dentro.
-    assert datos == {"a": 1}
+    assert data == {"a": 1}
 
 
 @backend_mock.mock
@@ -261,16 +261,16 @@ def test_json_schema_on_propagates_400(monkeypatch):
     route = backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(400, text="unsupported response_format")
     )
-    datos = server.local_extract(fields=["a"], text="hola")
+    data = server.local_extract(fields=["a"], text="hola")
     assert route.call_count == 1
     # El fallo del backend no puede quedar mudo por devolver un objeto: viaja bajo la clave
     # reservada, que es donde quien llama puede encontrarlo sin adivinar.
-    assert "[local-delegate error]" in datos["_local_delegate"]["crudo"]
+    assert "[local-delegate error]" in data["_local_delegate"]["crudo"]
 
 
 # --- salida estructurada de local_extract (REQ-008) -----------------------------------
 @backend_mock.mock
-def test_local_extract_devuelve_objeto_con_las_claves_pedidas(monkeypatch):
+def test_local_extract_returns_an_object_with_the_requested_keys(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
@@ -285,14 +285,14 @@ def test_local_extract_devuelve_objeto_con_las_claves_pedidas(monkeypatch):
             },
         )
     )
-    datos = server.local_extract(fields=["host", "puerto"], text="algo")
-    assert datos == {"host": "127.0.0.1", "puerto": "9393"}
+    data = server.local_extract(fields=["host", "puerto"], text="algo")
+    assert data == {"host": "127.0.0.1", "puerto": "9393"}
     # Sin truncamiento, exactamente las claves pedidas y ninguna más.
-    assert "_local_delegate" not in datos
+    assert "_local_delegate" not in data
 
 
 @backend_mock.mock
-def test_local_extract_avisa_del_truncamiento_sin_romper_las_claves(monkeypatch):
+def test_local_extract_warns_about_truncation_without_breaking_the_keys(monkeypatch):
     """El aviso iba delante del JSON como texto; ahora va aparte y no estorba al parseo."""
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     # El tope que usa el modelo principal es el del ROL (F3, tarea 25), no el del modelo.
@@ -303,14 +303,16 @@ def test_local_extract_avisa_del_truncamiento_sin_romper_las_claves(monkeypatch)
             json={"choices": [{"message": {"content": '{"a": 1}'}, "finish_reason": "stop"}]},
         )
     )
-    datos = server.local_extract(fields=["a"], text="x" * 500)
-    assert datos["a"] == 1
-    assert datos["_local_delegate"]["truncado"] is True
-    assert "500" in datos["_local_delegate"]["aviso"]
+    data = server.local_extract(fields=["a"], text="x" * 500)
+    assert data["a"] == 1
+    assert data["_local_delegate"]["truncado"] is True
+    assert "500" in data["_local_delegate"]["aviso"]
 
 
 @backend_mock.mock
-def test_local_extract_con_path_no_rompe_el_json_con_la_linea_de_ahorro(monkeypatch, tmp_path):
+def test_local_extract_with_path_does_not_break_the_json_with_the_savings_line(
+    monkeypatch, tmp_path
+):
     """La regresión que se coló en la 0.13.0, encontrada usando el propio MCP.
 
     `_chat` anexa la línea «(leído server-side: N chars…)» al texto cuando la entrada vino de un
@@ -322,8 +324,8 @@ def test_local_extract_con_path_no_rompe_el_json_con_la_linea_de_ahorro(monkeypa
     """
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     monkeypatch.setattr(config, "FEEDBACK_ENABLED", True)
-    fuente = tmp_path / "fuente.md"
-    fuente.write_text("host 127.0.0.1 puerto 9393\n" * 40, encoding="utf-8")
+    source = tmp_path / "fuente.md"
+    source.write_text("host 127.0.0.1 puerto 9393\n" * 40, encoding="utf-8")
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
             200,
@@ -338,17 +340,17 @@ def test_local_extract_con_path_no_rompe_el_json_con_la_linea_de_ahorro(monkeypa
         )
     )
 
-    datos = server.local_extract(fields=["host", "puerto"], path=str(fuente))
+    data = server.local_extract(fields=["host", "puerto"], path=str(source))
 
-    assert datos["host"] == "127.0.0.1"
-    assert datos["puerto"] == "9393"
-    assert "error" not in datos.get("_local_delegate", {})
+    assert data["host"] == "127.0.0.1"
+    assert data["puerto"] == "9393"
+    assert "error" not in data.get("_local_delegate", {})
     # El dato de ahorro no se pierde: se recoloca donde no estorba al parseo.
-    assert datos["_local_delegate"]["leido_server_side"]["chars"] > 0
+    assert data["_local_delegate"]["leido_server_side"]["chars"] > 0
 
 
 @backend_mock.mock
-def test_local_extract_degrada_si_la_respuesta_no_es_json(monkeypatch):
+def test_local_extract_degrades_if_the_response_is_not_json(monkeypatch):
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.post("http://test-backend/v1/chat/completions").mock(
         return_value=httpx2.Response(
@@ -356,8 +358,8 @@ def test_local_extract_degrada_si_la_respuesta_no_es_json(monkeypatch):
             json={"choices": [{"message": {"content": "no soy JSON"}, "finish_reason": "stop"}]},
         )
     )
-    datos = server.local_extract(fields=["a"], text="algo")
-    assert datos["_local_delegate"]["crudo"] == "no soy JSON"
+    data = server.local_extract(fields=["a"], text="algo")
+    assert data["_local_delegate"]["crudo"] == "no soy JSON"
 
 
 # --- F2: local_status ----------------------------------------------------------------
@@ -628,12 +630,12 @@ def test_chat_applies_process_wide_concurrency_limit(tmp_path, monkeypatch):
     # le escapara un camino de error, cada delegación fallida se comería un slot y a la tercera el
     # MCP se colgaría para siempre sin decir por qué.
     with state_lock:
-        estado_final = (peak, active)
+        final_state = (peak, active)
     slots = [server._chat_slots.acquire(blocking=False) for _ in range(2)]
-    for adquirido in slots:
-        if adquirido:
+    for acquired in slots:
+        if acquired:
             server._chat_slots.release()
-    assert (estado_final, slots) == ((2, 0), [True, True])
+    assert (final_state, slots) == ((2, 0), [True, True])
 
 
 # --- F5: LOCAL_DELEGATE_ALLOWED_DIRS ----------------------------------------------------
@@ -704,7 +706,7 @@ def test_log_event_writes_even_when_lock_times_out(monkeypatch, tmp_path):
 
 
 # --- Invariante de arranque: el stack web propio no entra al importar el paquete ---------
-def test_importar_el_paquete_no_arrastra_el_stack_web_propio():
+def test_importing_the_package_does_not_pull_in_its_own_web_stack():
     """Importar `local_delegate` no debe cargar `fastapi` ni los módulos del daemon/dashboard.
 
     De esto depende una decisión escrita en `pyproject.toml`: `fastapi` es dependencia de runtime
@@ -722,17 +724,17 @@ def test_importar_el_paquete_no_arrastra_el_stack_web_propio():
     Corre en un subproceso limpio a propósito: dentro de la suite otros tests ya han importado el
     stack web, así que el `sys.modules` de este proceso no serviría de nada.
     """
-    vigilados = ("fastapi", "local_delegate.web.metrics", "local_delegate.daemon")
+    watched = ("fastapi", "local_delegate.web.metrics", "local_delegate.daemon")
     code = (
         "import sys; import local_delegate; "
-        f"print(','.join(m for m in {vigilados!r} if m in sys.modules))"
+        f"print(','.join(m for m in {watched!r} if m in sys.modules))"
     )
     r = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=60, check=True
     )
-    cargados = r.stdout.strip()
-    assert cargados == "", (
-        f"importar local_delegate arrastró {cargados}: la premisa del techo de dependencias en "
+    loaded = r.stdout.strip()
+    assert loaded == "", (
+        f"importar local_delegate arrastró {loaded}: la premisa del techo de dependencias en "
         "pyproject.toml ya no se cumple. O se restaura el import perezoso, o hay que revisar la "
         "política (ver docs/wiki/Repo-hardening.md)."
     )
@@ -742,7 +744,7 @@ def test_importar_el_paquete_no_arrastra_el_stack_web_propio():
 # El inventario es lo que hace que el mensaje vea el cambio COMPLETO aunque el diff se procese
 # por partes: medido, el `--stat` de un diff de 164 585 chars son 2 987, o sea cabe donde el
 # diff no cabe. Se calcula aquí y no se le pide al modelo porque es un conteo, no un juicio.
-def test_el_inventario_cuenta_lineas_por_archivo():
+def test_the_inventory_counts_lines_per_file():
     diff = (
         "diff --git a/uno.py b/uno.py\n--- a/uno.py\n+++ b/uno.py\n"
         "@@ -1,2 +1,3 @@\n contexto\n-fuera\n+dentro\n+extra\n"
@@ -752,7 +754,7 @@ def test_el_inventario_cuenta_lineas_por_archivo():
     assert server._diff_inventory(diff) == [("uno.py", 2, 1), ("dos.py", 1, 1)]
 
 
-def test_el_inventario_no_confunde_contenido_con_cabecera():
+def test_the_inventory_does_not_mistake_content_for_header():
     """Borrar una línea `---` da `----`, que empieza por `---` pero NO es cabecera.
 
     Distinguirlas por el texto haría que esa línea no se contara. Se distinguen por posición:
@@ -765,50 +767,50 @@ def test_el_inventario_no_confunde_contenido_con_cabecera():
     assert server._diff_inventory(diff) == [("nota.md", 0, 2)]
 
 
-def test_el_inventario_sigue_el_renombrado_y_registra_el_binario():
-    renombrado = (
+def test_the_inventory_follows_the_rename_and_records_the_binary():
+    renamed = (
         "diff --git a/viejo.py b/nuevo.py\nsimilarity index 90%\n"
         "rename from viejo.py\nrename to nuevo.py\n"
         "--- a/viejo.py\n+++ b/nuevo.py\n@@ -1,2 +1,2 @@\n igual\n-quitada\n+puesta\n"
     )
-    binario = (
+    binary = (
         "diff --git a/img.png b/img.png\nindex 111..222 100644\n"
         "Binary files a/img.png and b/img.png differ\n"
     )
-    assert server._diff_inventory(renombrado) == [("nuevo.py", 1, 1)]
+    assert server._diff_inventory(renamed) == [("nuevo.py", 1, 1)]
     # El binario no aporta líneas pero sí forma parte del cambio: tiene que salir en el alcance.
-    assert server._diff_inventory(binario) == [("img.png", 0, 0)]
+    assert server._diff_inventory(binary) == [("img.png", 0, 0)]
 
 
-def test_un_texto_que_no_es_un_diff_no_rompe_el_inventario():
+def test_a_text_that_is_not_a_diff_does_not_break_the_inventory():
     assert server._diff_inventory("texto normal\n- una lista\n+ otra cosa") == []
     assert server._diff_inventory("") == []
 
 
-def test_el_inventario_se_colapsa_por_directorio_cuando_no_cabe():
+def test_the_inventory_collapses_by_directory_when_it_does_not_fit():
     """Sin tope, un diff de cientos de archivos desplazaría del prompt lo que hay que resumir."""
-    archivos = [(f"src/mod{i}.py", 3, 1) for i in range(300)]
-    completo = server._format_inventory(archivos, 40_000)
-    colapsado = server._format_inventory(archivos, 4_000)
+    files = [(f"src/mod{i}.py", 3, 1) for i in range(300)]
+    complete = server._format_inventory(files, 40_000)
+    collapsed = server._format_inventory(files, 4_000)
 
-    assert "src/mod299.py" in completo
-    assert len(colapsado) <= 4_000
-    assert "300 archivos, +900 -300" in colapsado
-    assert "300 en total" in colapsado  # el conteo real sobrevive al colapso
+    assert "src/mod299.py" in complete
+    assert len(collapsed) <= 4_000
+    assert "300 archivos, +900 -300" in collapsed
+    assert "300 en total" in collapsed  # el conteo real sobrevive al colapso
 
 
 # --- test-windows-out-of-metrics (REQ-018): local_status sin pruebas -----------------------------
 @backend_mock.mock
-def test_local_status_deja_fuera_las_pruebas_y_nombra_la_ventana_abierta(monkeypatch, tmp_path):
+def test_local_status_leaves_out_tests_and_names_the_open_window(monkeypatch, tmp_path):
     from datetime import UTC, datetime, timedelta
 
     from local_delegate import test_windows
 
-    ahora = datetime.now(UTC).replace(microsecond=0)
-    log = tmp_path / f"usage-{ahora:%Y%m}.jsonl"
-    filas = [
+    now = datetime.now(UTC).replace(microsecond=0)
+    log = tmp_path / f"usage-{now:%Y%m}.jsonl"
+    rows = [
         {
-            "ts": (ahora - timedelta(minutes=10 + i)).isoformat(),
+            "ts": (now - timedelta(minutes=10 + i)).isoformat(),
             "tool": "local_summarize",
             "source": "path",
             "chars_in": 400,
@@ -817,10 +819,10 @@ def test_local_status_deja_fuera_las_pruebas_y_nombra_la_ventana_abierta(monkeyp
         }
         for i in range(4)
     ]
-    en_ventana = ahora - timedelta(minutes=3)
-    filas += [
+    in_window = now - timedelta(minutes=3)
+    rows += [
         {
-            "ts": en_ventana.isoformat(),
+            "ts": in_window.isoformat(),
             "tool": "local_summarize",
             "source": "path",
             "chars_in": 400,
@@ -828,7 +830,7 @@ def test_local_status_deja_fuera_las_pruebas_y_nombra_la_ventana_abierta(monkeyp
             "client": "claude-code",
         },
         {
-            "ts": en_ventana.isoformat(),
+            "ts": in_window.isoformat(),
             "tool": "local_extract",
             "source": "path",
             "chars_in": 400,
@@ -836,16 +838,16 @@ def test_local_status_deja_fuera_las_pruebas_y_nombra_la_ventana_abierta(monkeyp
             "client": "claude-code",
         },
     ]
-    log.write_text("".join(json.dumps(f) + "\n" for f in filas), encoding="utf-8")
+    log.write_text("".join(json.dumps(f) + "\n" for f in rows), encoding="utf-8")
     monkeypatch.setattr(config, "LOG_DIR", tmp_path)
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
     monkeypatch.setattr(config, "BASE_URL", "http://test-backend/v1")
     backend_mock.get("http://test-backend/v1/models").mock(side_effect=httpx2.ConnectError("down"))
     backend_mock.get("http://test-backend/running").mock(side_effect=httpx2.ConnectError("down"))
-    test_windows.add(tmp_path, en_ventana - timedelta(seconds=5), en_ventana)
-    abierta = test_windows.start(tmp_path, "en vivo")
+    test_windows.add(tmp_path, in_window - timedelta(seconds=5), in_window)
+    opened = test_windows.start(tmp_path, "en vivo")
 
     text = server.local_status()
     assert "eventos: 4 " in text
     assert "(2 de pruebas fuera)" in text
-    assert f"Ventana de prueba abierta: {abierta.id} desde" in text
+    assert f"Ventana de prueba abierta: {opened.id} desde" in text

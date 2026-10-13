@@ -19,116 +19,116 @@ from local_delegate.resources.hooks import hook_common
 
 
 @pytest.fixture
-def notas(tmp_path, monkeypatch):
-    archivo = tmp_path / "bloqueos.jsonl"
-    monkeypatch.setattr(hook_common, "block_notes_path", lambda: archivo)
+def notes(tmp_path, monkeypatch):
+    file = tmp_path / "bloqueos.jsonl"
+    monkeypatch.setattr(hook_common, "block_notes_path", lambda: file)
     # El nombre viejo también se lee (REQ-012): que no lea el temporal real del usuario.
     monkeypatch.setattr(hook_common, "legacy_block_notes_path", lambda: tmp_path / "viejo.jsonl")
-    return archivo
+    return file
 
 
-def test_el_identificador_del_bloqueo_llega_al_servidor(notas, tmp_path):
+def test_the_block_id_reaches_the_server(notes, tmp_path):
     """Ida y vuelta: lo escribe el hook, lo encuentra el servidor, y nadie pasa nada por el agente."""
-    documento = tmp_path / "informe.md"
-    documento.write_text("hola", encoding="utf-8")
+    document = tmp_path / "informe.md"
+    document.write_text("hola", encoding="utf-8")
 
-    hook_common.record_block("abc123def456", str(documento))
+    hook_common.record_block("abc123def456", str(document))
 
-    assert server._recent_block_id(str(documento)) == "abc123def456"
+    assert server._recent_block_id(str(document)) == "abc123def456"
 
 
-def test_otra_ruta_no_se_lleva_el_bloqueo_ajeno(notas, tmp_path):
+def test_another_path_does_not_take_someone_elses_block(notes, tmp_path):
     """Control positivo: si cualquier lectura heredara el id, la adopcion medida seria falsa."""
     hook_common.record_block("abc123def456", str(tmp_path / "informe.md"))
 
     assert server._recent_block_id(str(tmp_path / "otro.md")) is None
 
 
-def test_la_misma_ruta_escrita_de_otra_forma_sigue_cruzando(notas, tmp_path):
+def test_the_same_path_written_differently_still_matches(notes, tmp_path):
     """El hook recibe la ruta del cliente y el servidor la recibe del agente: no coinciden letra a
     letra. En Windows ademas cambian las mayusculas y las barras."""
-    documento = tmp_path / "sub" / "informe.md"
-    documento.parent.mkdir()
-    documento.write_text("hola", encoding="utf-8")
+    document = tmp_path / "sub" / "informe.md"
+    document.parent.mkdir()
+    document.write_text("hola", encoding="utf-8")
 
-    hook_common.record_block("id-largo-1234", str(documento))
-    otra_forma = str(tmp_path / "sub" / ".." / "sub" / "informe.md")
+    hook_common.record_block("id-largo-1234", str(document))
+    other_form = str(tmp_path / "sub" / ".." / "sub" / "informe.md")
 
-    assert server._recent_block_id(otra_forma) == "id-largo-1234"
+    assert server._recent_block_id(other_form) == "id-largo-1234"
 
 
-def test_un_bloqueo_viejo_ya_no_cuenta(notas, tmp_path, monkeypatch):
+def test_an_old_block_no_longer_counts(notes, tmp_path, monkeypatch):
     """Pasada la ventana, el agente hizo otra cosa por el camino: atribuirselo infla la adopcion."""
-    documento = tmp_path / "informe.md"
-    hook_common.record_block("caducado1234", str(documento))
+    document = tmp_path / "informe.md"
+    hook_common.record_block("caducado1234", str(document))
 
-    viejo = json.loads(notas.read_text(encoding="utf-8").strip())
-    viejo["ts"] = time.time() - server.BLOCK_WINDOW_S - 1
-    notas.write_text(json.dumps(viejo) + "\n", encoding="utf-8")
+    old = json.loads(notes.read_text(encoding="utf-8").strip())
+    old["ts"] = time.time() - server.BLOCK_WINDOW_S - 1
+    notes.write_text(json.dumps(old) + "\n", encoding="utf-8")
 
-    assert server._recent_block_id(str(documento)) is None
-
-
-def test_gana_el_bloqueo_mas_reciente_de_esa_ruta(notas, tmp_path):
-    documento = tmp_path / "informe.md"
-    hook_common.record_block("primero12345", str(documento))
-    hook_common.record_block("segundo12345", str(documento))
-
-    assert server._recent_block_id(str(documento)) == "segundo12345"
+    assert server._recent_block_id(str(document)) is None
 
 
-def test_las_notas_no_crecen_sin_freno(notas, tmp_path):
+def test_the_most_recent_block_for_that_path_wins(notes, tmp_path):
+    document = tmp_path / "informe.md"
+    hook_common.record_block("primero12345", str(document))
+    hook_common.record_block("segundo12345", str(document))
+
+    assert server._recent_block_id(str(document)) == "segundo12345"
+
+
+def test_notes_do_not_grow_unbounded(notes, tmp_path):
     for i in range(hook_common.MAX_NOTES + 50):
         hook_common.record_block(f"id{i:010d}", str(tmp_path / f"{i}.md"))
 
-    assert len(notas.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTES
+    assert len(notes.read_text(encoding="utf-8").splitlines()) <= hook_common.MAX_NOTES
 
 
-def test_la_nota_no_guarda_la_ruta(notas, tmp_path):
+def test_the_note_does_not_store_the_path(notes, tmp_path):
     """Hereda la regla de la telemetria de hooks: ni rutas ni contenido, solo una huella."""
-    documento = tmp_path / "secreto-del-cliente.md"
-    hook_common.record_block("abc123def456", str(documento))
+    document = tmp_path / "secreto-del-cliente.md"
+    hook_common.record_block("abc123def456", str(document))
 
-    crudo = notas.read_text(encoding="utf-8")
-    assert "secreto-del-cliente" not in crudo
-    assert str(tmp_path) not in crudo
+    raw = notes.read_text(encoding="utf-8")
+    assert "secreto-del-cliente" not in raw
+    assert str(tmp_path) not in raw
 
 
 @pytest.mark.parametrize(
-    "contenido",
+    "content",
     ["", "no es json\n", '{"sin": "campos"}\n', '{"id": 1, "sha": null, "ts": "ayer"}\n'],
     ids=["vacio", "basura", "sin campos", "tipos raros"],
 )
-def test_un_fichero_de_notas_roto_no_rompe_la_tool(notas, tmp_path, contenido):
-    notas.write_text(contenido, encoding="utf-8")
+def test_a_broken_notes_file_does_not_break_the_tool(notes, tmp_path, content):
+    notes.write_text(content, encoding="utf-8")
 
     assert server._recent_block_id(str(tmp_path / "informe.md")) is None
 
 
-def test_sin_fichero_de_notas_tampoco_pasa_nada(notas, tmp_path):
-    assert not notas.exists()
+def test_without_notes_file_nothing_happens_either(notes, tmp_path):
+    assert not notes.exists()
     assert server._recent_block_id(str(tmp_path / "informe.md")) is None
 
 
 # --- Y lo que de verdad importa: que acabe en el evento del log -------------------------------
 
 
-def _eventos(directorio):
-    ficheros = sorted(directorio.glob("usage-*.jsonl"))
-    assert ficheros, f"ningún log escrito en {directorio}"
-    return [json.loads(x) for x in ficheros[-1].read_text(encoding="utf-8").splitlines()]
+def _events(directory):
+    files = sorted(directory.glob("usage-*.jsonl"))
+    assert files, f"ningún log escrito en {directory}"
+    return [json.loads(x) for x in files[-1].read_text(encoding="utf-8").splitlines()]
 
 
-def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypatch):
+def test_the_tool_event_keeps_the_block(notes, tmp_path, monkeypatch):
     """Probar la función no es probar el uso: el dato tiene que llegar al log, que es lo que lee
     el panel."""
     from local_delegate import config
 
     monkeypatch.setattr(config, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(config, "LOG_ROTATION_ENABLED", True)
-    documento = tmp_path / "informe.md"
-    documento.write_text("hola", encoding="utf-8")
-    hook_common.record_block("abc123def456", str(documento))
+    document = tmp_path / "informe.md"
+    document.write_text("hola", encoding="utf-8")
+    hook_common.record_block("abc123def456", str(document))
 
     server._log_event(
         tool="local_summarize",
@@ -138,13 +138,13 @@ def test_el_evento_de_la_tool_se_queda_con_el_bloqueo(notas, tmp_path, monkeypat
         chars_out=5,
         latency_ms=1,
         ok=True,
-        path=str(documento),
+        path=str(document),
     )
 
-    assert _eventos(tmp_path / "logs")[-1]["block_id"] == "abc123def456"
+    assert _events(tmp_path / "logs")[-1]["block_id"] == "abc123def456"
 
 
-def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch):
+def test_a_spontaneous_delegation_carries_no_block(notes, tmp_path, monkeypatch):
     """Control positivo: si todo evento llevara id, «aceptado» contaría también lo que nadie
     provocó, y la adopción medida saldría inflada."""
     from local_delegate import config
@@ -163,4 +163,4 @@ def test_una_delegacion_espontanea_no_lleva_bloqueo(notas, tmp_path, monkeypatch
         path=str(tmp_path / "nadie-me-bloqueo.md"),
     )
 
-    assert "block_id" not in _eventos(tmp_path / "logs")[-1]
+    assert "block_id" not in _events(tmp_path / "logs")[-1]

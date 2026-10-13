@@ -1,0 +1,24 @@
+refactor(rename): nombres en inglés en test_ci_gate a test_correlacion (ola A9a, lote 4)
+
+Renombra a inglés los nombres de test_ci_gate.py, test_cli_renamed_names.py,
+test_clients.py, test_conformidad_f1.py, test_core.py y test_correlacion.py:
+288 filas del mapping aprobado. Entre ellas, los 82 test_* de esos
+módulos, las fixtures entorno → hook_env, notas → notes y
+registro_limpio → clean_registry, el reloj falso del gate
+(_Reloj.dormir → _Clock.sleep) y las tools MCP de prueba de test_clients
+(eco/quien_soy/quien_llama → echo/whoami/caller, con sus cadenas de
+call_tool).
+
+Ficheros (git mv): test_conformidad_f1.py → test_f1_conformance.py y
+test_correlacion.py → test_correlation.py.
+
+Los kwargs de ci_gate.esperar_veredicto (leer=, reloj=, dormir=,
+escribir=) no cambian: son de scripts/ci_gate.py, que se renombra en su
+propia ola.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
+
+Con el rename cambian, por consecuencia, la cita del fichero de test en el
+comentario de resources/hooks/hook_common.py y la de un test de
+test_core.py en docs/wiki/Repo-hardening.md.

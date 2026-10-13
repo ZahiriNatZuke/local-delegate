@@ -265,7 +265,7 @@ detrás, y `uv.lock` para desarrollo y CI (que **no** protege a quien instala de
 Que `fastapi` no lleve techo depende de que `web/metrics.py` y `daemon.py` sigan entrando por import
 **perezoso**. Un refactor que los suba al nivel de módulo invalidaría la política sin que nadie se
 diera cuenta, así que hay un test que lo fija
-(`tests/test_core.py::test_importar_el_paquete_no_arrastra_el_stack_web_propio`): corre en un
+(`tests/test_core.py::test_importing_the_package_does_not_pull_in_its_own_web_stack`): corre en un
 subproceso limpio y falla apuntando a esta página.
 
 ## Vigilancia del JavaScript vendorizado
