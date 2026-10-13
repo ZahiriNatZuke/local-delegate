@@ -5,13 +5,14 @@ La subola se parte en 6 lotes (D13: 1507 filas, como mucho 300 por lote y sin pa
 2026-10-13 con las 8 decisiones de la fase 1 tal como se recomendaron. Cada lote es un commit que
 hace la sesión principal, en una rama apilada sobre el anterior. Las tablas de controles positivos,
 `local_*` y PyCharm son las de todos los lotes, porque `check_wave_records.py` lee la primera tabla
-de cada sección; por ahora están los **lotes 1 y 2**: 17 + 25 = 42 filas `rename_refactoring` = 42
-filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
+de cada sección; por ahora están los **lotes 1 a 3**: 17 + 25 + 23 = 65 filas `rename_refactoring` =
+65 filas `pycharm` de `waves/A9b-1-mapping.csv`, `waves/A9b-2-mapping.csv` y `waves/A9b-3-mapping.csv`.
 
 - Rama: lote 1 en `sdd/english-names-a9b-1`, apilada sobre `sdd/english-names-a9a-7` (`76fe954`, A9a
-  completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, sobre `5fae972` · Commit del
-  lote 2: pendiente, con el borrador en `waves/A9b-2-commit-msg.txt` (firmado y sin coautoría)
-- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 y 2 (fase 2).
+  completa), commit `5fae972`; lote 2 en `sdd/english-names-a9b-2`, commit `c3ed701`; lote 3 en
+  `sdd/english-names-a9b-3`, sobre `c3ed701` · Commit del lote 3: pendiente, con el borrador en
+  `waves/A9b-3-commit-msg.txt` (firmado y sin coautoría)
+- Quién: un agente hizo los 6 mappings (fase 1) y, tras la aprobación, aplicó los lotes 1 a 3 (fase 2).
 - Conteo base: `evidence/A9b/collect-before.txt`, 2569 tests.
 
 ## Controles positivos
@@ -23,6 +24,7 @@ filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
 | `tests/test_cooldown.py` (40 tests) | `_fail` registra un fallo menos (`range(times - 1)`) | 7 fallan; el primero, `assert cooled is not None` | sí, desde copia; sha256 igual |
 | `tests/test_hook_common.py::test_a_401_means_the_backend_IS_there` (lote 2; usa la anidada renombrada `_raises_401` y `_mark`/`age_s`) | `src/local_delegate/resources/hooks/hook_common.py:241`: un `HTTPError` (401) cuenta como «no hay backend» (`return True` → `return False`) | `assert common.backend_available(marker=…) is True` → `assert False is True` | sí, desde copia; sha256 igual (`evidence/A9b-2/mutant.txt`) |
 | `tests/test_failure_captures.py::test_the_oom_without_profile_did_not_reach_timeout_and_stays_uncaptured` (assert negativo del lote 1 con la clave renombrada `exception`) | la captura `oom-without-profile.json` gana una clave `"exception"` | `assert "exception" not in doc` | sí, desde copia; sha256 igual |
+| `tests/test_hooks_telemetry_api.py::test_counts_suggested_over_the_total` (lote 3; usa `_event(…, suggested=…)` con los kwargs renombrados) | `src/local_delegate/web/metrics.py:615`: `_aggregate_hooks` deja de sumar las sugeridas (`suggested_total += suggested` → `+= 0`) | `assert aggregate["suggested"] == 2` → `assert 0 == 2` | sí, desde copia; sha256 igual (`evidence/A9b-3/mutant.txt`) |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -31,6 +33,7 @@ filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
 | Agente A9b (fase 1) | `local_summarize(path=waves/A9a.md)` | lecciones y desviaciones de los 7 lotes de A9a, sin meter las 592 líneas al contexto |
 | Agente A9b-1 | `local_lint_summary(path=evidence/A9b-1/pytest-full-run1.log)` | resumen de la primera corrida de la suite (3 fallos: 1 real del lote y 2 de tiempos de `test_fake_llamaswap`) |
 | Agente A9b-2 | (ninguna) | la suite salió verde a la primera (47 líneas de log) y los ficheros se leyeron por franjas concretas: no hubo nada largo que resumir |
+| Agente A9b-3 | (ninguna) | suite verde a la primera; los ficheros se leyeron por franjas y las comprobaciones de cadenas las hizo un script AST: nada largo que resumir |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -80,6 +83,30 @@ filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
 | A9b-2 | `rename_refactoring` | `_razon→_reason` | 3 usos |
 | A9b-2 | `rename_refactoring` | `documento→document` (fixture) | 7 usos |
 | A9b-2 | `get_file_problems` | `test_hook_recipes.py`, `test_hook_shell_absolute_path.py`, `test_failures_integration.py` | 0 errores propios: solo `Unresolved reference` en cadenas de `monkeypatch.setattr` sobre hooks cargados con `importlib` (`record`, `backend_available`, `cooled_model`), que ya estaban |
+| A9b-3 | `rename_refactoring` | `_evento→_event` (`test_hooks_telemetry_api.py`) | 16 usos |
+| A9b-3 | `rename_refactoring` | `_escribir→_write` | 3 usos |
+| A9b-3 | `rename_refactoring` | `_etiquetas_js→_labels_js` | 2 usos |
+| A9b-3 | `rename_refactoring` | `_extraer_funcion_js→_extract_js_function` | 8 usos |
+| A9b-3 | `rename_refactoring` | `_evento_de_lectura→_read_event` | 11 usos |
+| A9b-3 | `rename_refactoring` | `_filas_de_lectura→_read_rows` | 3 usos |
+| A9b-3 | `rename_refactoring` | `_sin_cache→_without_cache` (fixture autouse) | 0 usos |
+| A9b-3 | `rename_refactoring` | `_simular_instalacion_034→_simulate_install_034` (`test_install.py`) | 1 usos |
+| A9b-3 | `rename_refactoring` | `_comando_del_hook_de_read→_read_hook_command` | 2 usos |
+| A9b-3 | `rename_refactoring` | `_con_huerfanos→_with_orphans` | 7 usos |
+| A9b-3 | `rename_refactoring` | `_comando_del_hook_de_shell→_shell_hook_command` | 1 usos |
+| A9b-3 | `rename_refactoring` | `_CODEX_REESCRITO_POR_OTRO→_CODEX_REWRITTEN_BY_OTHER` | 5 usos |
+| A9b-3 | `rename_refactoring` | `_claude_escribe→_claude_write` (`test_install_cabecera.py`) | 1 usos |
+| A9b-3 | `rename_refactoring` | `_claude_lee→_claude_read` | 2 usos |
+| A9b-3 | `rename_refactoring` | `_codex_escribe→_codex_write` | 1 usos |
+| A9b-3 | `rename_refactoring` | `_codex_lee→_codex_read` | 1 usos |
+| A9b-3 | `rename_refactoring` | `_opencode_escribe→_opencode_write` | 1 usos |
+| A9b-3 | `rename_refactoring` | `_opencode_lee→_opencode_read` | 1 usos |
+| A9b-3 | `rename_refactoring` | `CLIENTES→CLIENTS` | 12 usos |
+| A9b-3 | `rename_refactoring` | `_home_con→_home_with` | 8 usos |
+| A9b-3 | `rename_refactoring` | `espia_claude→claude_spy` (fixture, `test_install_clients.py`) | 6 usos |
+| A9b-3 | `rename_refactoring` | `_codex_a_mano→_codex_by_hand` | 2 usos |
+| A9b-3 | `rename_refactoring` | `_prepara_codex_a_mano→_prepare_codex_by_hand` | 6 usos |
+| A9b-3 | `get_file_problems` | `test_install_header.py`, `test_install_clients.py`, `test_hooks_telemetry_api.py` | 0 errores |
 
 ## A9b-1 — capturas de `tests/fixtures/backend`, `test_enfriamiento`, `test_fallos` y `test_fallos_capturas` (aplicado)
 
@@ -185,9 +212,61 @@ filas `pycharm` de `waves/A9b-1-mapping.csv` y `waves/A9b-2-mapping.csv`.
 2. El parámetro `modelo` de una lambda no estaba en el mapping (ni el detector ni el barrido AST de la
    fase 1 miran los argumentos de lambdas); se cambió y se anota en la misma línea `# Fase 2`.
 
+## A9b-3 — `test_hooks_telemetry_api`, `test_install`, `test_install_cabecera` y `test_install_clients` (aplicado)
+
+### A9b-3 · Qué se hizo
+
+- 23 `rename_refactoring` (tabla de arriba). PyCharm reescribió 3 documentos de `.sdd/`
+  (`english-names-bilingual-output/waves/A9a.md`, `js-dashboard-comportamiento/research.md` y
+  `telemetria-hooks-dashboard/research.md`: citas históricas de `_con_huerfanos` y
+  `_extraer_funcion_js`), devueltos a HEAD con `git show`. Los homónimos de otros ficheros
+  (`CLIENTES`, `_home_con` y `_claude_escribe` de `test_install_plazos.py`, `_extraer_funcion_js` de
+  `test_metrics.py`) no se tocaron.
+- A mano, antes de `apply`: los parámetros `evento`/`categoria`/`sugerida` de `_evento` con sus 24
+  kwargs (`a9b/kwfix.py`, por posición AST) y `fuente` de `_extraer_funcion_js`.
+- `make_mapping.py apply` con la copia del CSV con los ámbitos ya renombrados: 233 + 169 + 54 + 83 =
+  539 reemplazos.
+- A mano, después: el `def` de las anidadas `_explota`→`_explodes`, `_espia`→`_spy`,
+  `_no_preguntes`→`_do_not_ask` (×3) y `_revienta`→`_blows_up`; los argnames de 6 `parametrize`
+  (`cliente` ×5, `esperado`); y el JS propio de `test_hooks_telemetry_api.py` (`casos`→`testCases`,
+  `nodos`→`nodes`, `salida`→`results`, `caso`→`testCase`, `pares`→`aliasPairs`: 18 tokens, por
+  línea, porque esos literales son concatenaciones con f-strings que `js_apply.py` no admite).
+- `git mv` de `test_install_cabecera.py` → `test_install_header.py`; nadie lo cita por ruta.
+- `ruff format` reflowó 3 ficheros. EOL: todos LF y siguen LF.
+- **Datos que el producto escribe o lee** (bloques gestionados, settings JSON, TOML de Codex, JSON de
+  opencode): comparadas las cadenas de los 4 ficheros antes y después por AST, solo cambian los
+  literales JS y dos argnames de `parametrize`; ninguna clave ni texto de datos. Los valores
+  `"viejo"`/`"nuevo"` de `_read_rows(fmt)` y las claves `motivo`/`bloqueo` de la telemetría vieja se
+  quedan: son datos del test y claves persistidas.
+- Lambdas: el barrido de sus parámetros en los 4 ficheros no encontró ninguno en español.
+
+### A9b-3 · Fuera del lote (consecuencia mecánica, aprobada)
+
+- Ninguno.
+
+### A9b-3 · Barrido final
+
+- AST de los 4 ficheros: ningún nombre de código, kwarg ni argname con un `old` del lote.
+- `git grep -w` de cada `old` en los ficheros del lote, clasificado por token: 0 en código; 146 en
+  textos (82 docstrings, 24 comentarios y 40 cadenas): prosa y datos en español; ninguna cita entre
+  comillas invertidas.
+- En el resto del repo (fuera de `.sdd/`, `benchmarks/` y `CHANGELOG.md`): solo quedan los
+  homónimos de otros lotes (`CLIENTES`, `_home_con`, `_claude_escribe` en `test_install_plazos.py`,
+  lote 4; `_extraer_funcion_js` en `test_metrics.py`, lote 5).
+- `--collect-only`: 2569 (`evidence/A9b-3/collect.txt`). Suite: 2567 passed, 2 skipped
+  (`evidence/A9b-3/pytest-full.log`). `ruff check` y `ruff format --check` en verde.
+- CodeQL (aproximación AST) sobre `test_install_header.py`: 0 patrones.
+
+### A9b-3 · Desviaciones
+
+1. **4 filas `pycharm` → `search_edit`** (parámetros homónimos `evento`, `categoria`, `sugerida` y
+   `fuente`), anotado en la línea `# Fase 2` del CSV.
+2. El JS del test se cambió por línea y no con `js_apply.py` (literales concatenados con f-strings);
+   se comprobó con la comparación de cadenas por AST que no cambió nada más.
+
 ## Pendientes
 
-1. Lotes A9b-3 a A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
+1. Lotes A9b-4 a A9b-6, cada uno con su sección. Al aplicar cada uno, barrer también los argumentos
    de lambdas (desviación 2 del lote 2).
 2. En el lote 6: el test nuevo de los esquemas de `elicitation` y el arreglo de la carrera de
    `test_turn_wait_shown_in_panel_as_local_wait` (cabecera de `A9b-6-mapping.csv`).

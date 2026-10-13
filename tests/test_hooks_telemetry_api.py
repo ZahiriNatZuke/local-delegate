@@ -21,62 +21,62 @@ from local_delegate.web import metrics
 
 
 @pytest.fixture(autouse=True)
-def _sin_cache():
+def _without_cache():
     """El lector cachea por (mtime, size), y en tests dos ficheros pueden coincidir en ambos."""
     metrics._FILE_CACHE.clear()
     yield
     metrics._FILE_CACHE.clear()
 
 
-def _evento(cuando: datetime, *, evento="PreToolUse", categoria="bash", sugerida=False) -> dict:
+def _event(when: datetime, *, event="PreToolUse", category="bash", suggested=False) -> dict:
     return {
-        "ts": cuando.isoformat(),
-        "event": evento,
-        "suggested": sugerida,
-        "category": categoria,
+        "ts": when.isoformat(),
+        "event": event,
+        "suggested": suggested,
+        "category": category,
         "command_chars": 100,
     }
 
 
-def _escribir(path, eventos: list[dict]) -> None:
-    path.write_text("\n".join(json.dumps(e) for e in eventos) + "\n", encoding="utf-8")
+def _write(path, events: list[dict]) -> None:
+    path.write_text("\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8")
 
 
 # --- El agregado, que es donde vive todo el criterio ---------------------------
 
 
-def test_cuenta_sugeridas_sobre_el_total():
-    ahora = datetime.now(UTC)
-    filas = [
-        _evento(ahora, sugerida=True),
-        _evento(ahora, sugerida=False),
-        _evento(ahora, sugerida=False),
-        _evento(ahora, sugerida=True),
+def test_counts_suggested_over_the_total():
+    now = datetime.now(UTC)
+    rows = [
+        _event(now, suggested=True),
+        _event(now, suggested=False),
+        _event(now, suggested=False),
+        _event(now, suggested=True),
     ]
-    agregado = metrics._aggregate_hooks(filas)
+    aggregate = metrics._aggregate_hooks(rows)
 
-    assert agregado["total"] == 4
-    assert agregado["suggested"] == 2
-    assert agregado["rate"] == 0.5
+    assert aggregate["total"] == 4
+    assert aggregate["suggested"] == 2
+    assert aggregate["rate"] == 0.5
 
 
-def test_un_evento_viejo_sin_el_campo_suggested_cuenta_como_no_sugirio():
+def test_an_old_event_without_the_suggested_field_counts_as_not_suggested():
     """El campo se añadió después; su ausencia significaba exactamente «no sugirió».
 
     Tratarla como `True` inflaría la tasa con eventos que nunca sugirieron nada, y el número
     saldría más bonito — que es justo por lo que hay que fijarlo con un test.
     """
-    fila = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse"}
-    agregado = metrics._aggregate_hooks([fila])
+    row = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse"}
+    aggregate = metrics._aggregate_hooks([row])
 
-    assert agregado["total"] == 1
-    assert agregado["suggested"] == 0
+    assert aggregate["total"] == 1
+    assert aggregate["suggested"] == 0
 
 
-def test_sin_eventos_la_tasa_es_cero_y_no_revienta():
+def test_without_events_the_rate_is_zero_and_nothing_blows_up():
     """Dividir entre cero aquí tumbaría el endpoint entero por no tener datos."""
-    agregado = metrics._aggregate_hooks([])
-    assert agregado == {
+    aggregate = metrics._aggregate_hooks([])
+    assert aggregate == {
         "total": 0,
         "suggested": 0,
         "rate": 0.0,
@@ -89,165 +89,167 @@ def test_sin_eventos_la_tasa_es_cero_y_no_revienta():
     }
 
 
-def test_agrupa_por_evento_categoria_y_dia():
-    hoy = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
-    ayer = hoy - timedelta(days=1)
-    filas = [
-        _evento(hoy, evento="PreToolUse", categoria="bash", sugerida=True),
-        _evento(hoy, evento="PreToolUse", categoria="bash", sugerida=False),
-        _evento(hoy, evento="UserPromptSubmit", categoria="read", sugerida=True),
-        _evento(ayer, evento="PreToolUse", categoria="bash", sugerida=False),
+def test_groups_by_event_category_and_day():
+    today = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
+    rows = [
+        _event(today, event="PreToolUse", category="bash", suggested=True),
+        _event(today, event="PreToolUse", category="bash", suggested=False),
+        _event(today, event="UserPromptSubmit", category="read", suggested=True),
+        _event(yesterday, event="PreToolUse", category="bash", suggested=False),
     ]
-    agregado = metrics._aggregate_hooks(filas)
+    aggregate = metrics._aggregate_hooks(rows)
 
-    por_evento = {d["event"]: d for d in agregado["by_event"]}
-    assert por_evento["PreToolUse"] == {"event": "PreToolUse", "total": 3, "suggested": 1}
-    assert por_evento["UserPromptSubmit"]["suggested"] == 1
+    by_event = {d["event"]: d for d in aggregate["by_event"]}
+    assert by_event["PreToolUse"] == {"event": "PreToolUse", "total": 3, "suggested": 1}
+    assert by_event["UserPromptSubmit"]["suggested"] == 1
 
-    por_categoria = {d["category"]: d for d in agregado["by_category"]}
-    assert por_categoria["bash"]["total"] == 3
+    by_category = {d["category"]: d for d in aggregate["by_category"]}
+    assert by_category["bash"]["total"] == 3
 
-    assert [d["day"] for d in agregado["by_day"]] == [
-        ayer.date().isoformat(),
-        hoy.date().isoformat(),
+    assert [d["day"] for d in aggregate["by_day"]] == [
+        yesterday.date().isoformat(),
+        today.date().isoformat(),
     ], "los días tienen que salir en orden cronológico, no por volumen"
 
 
-def test_una_categoria_ausente_no_se_pierde_en_el_recuento():
+def test_a_missing_category_is_not_lost_in_the_count():
     """Sin la casilla `no_category` («Sin categoría»), los totales por categoría no sumarían el total."""
-    fila = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "suggested": True}
-    agregado = metrics._aggregate_hooks([fila])
+    row = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "suggested": True}
+    aggregate = metrics._aggregate_hooks([row])
 
-    assert sum(d["total"] for d in agregado["by_category"]) == agregado["total"]
-    assert agregado["by_category"][0]["category"] == "no_category"
+    assert sum(d["total"] for d in aggregate["by_category"]) == aggregate["total"]
+    assert aggregate["by_category"][0]["category"] == "no_category"
 
 
-def test_las_listas_salen_ordenadas_por_volumen():
-    ahora = datetime.now(UTC)
-    filas = [_evento(ahora, categoria="bash")] * 3 + [_evento(ahora, categoria="read")]
-    agregado = metrics._aggregate_hooks(filas)
-    assert [d["category"] for d in agregado["by_category"]] == ["bash", "read"]
+def test_the_lists_come_out_sorted_by_volume():
+    now = datetime.now(UTC)
+    rows = [_event(now, category="bash")] * 3 + [_event(now, category="read")]
+    aggregate = metrics._aggregate_hooks(rows)
+    assert [d["category"] for d in aggregate["by_category"]] == ["bash", "read"]
 
 
 # --- El endpoint --------------------------------------------------------------
 
 
-def test_sin_la_variable_el_endpoint_lo_dice_en_vez_de_fingir_que_no_hay_nada(monkeypatch):
+def test_without_the_variable_the_endpoint_says_so_instead_of_pretending_there_is_nothing(
+    monkeypatch,
+):
     """«No activaste la telemetría» y «está activada y no hay eventos» son cosas distintas.
 
     Sin `enabled`, un panel a cero se lee como «los hooks no sugieren nada» — una conclusión falsa
     sacada de un fichero que ni siquiera existe.
     """
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", None)
-    datos = TestClient(metrics.app).get("/api/hooks").json()
+    data = TestClient(metrics.app).get("/api/hooks").json()
 
-    assert datos["enabled"] is False
-    assert "LD_HOOK_TELEMETRY_LOG" in datos["reason"]
-    assert datos["total"] == 0
+    assert data["enabled"] is False
+    assert "LD_HOOK_TELEMETRY_LOG" in data["reason"]
+    assert data["total"] == 0
 
 
-def test_con_la_variable_pero_sin_fichero_dice_que_esta_activada(monkeypatch, tmp_path):
+def test_with_the_variable_but_no_file_it_says_it_is_enabled(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", tmp_path / "no-existe.jsonl")
-    datos = TestClient(metrics.app).get("/api/hooks").json()
+    data = TestClient(metrics.app).get("/api/hooks").json()
 
-    assert datos["enabled"] is True
-    assert datos["exists"] is False
-    assert datos["total"] == 0
+    assert data["enabled"] is True
+    assert data["exists"] is False
+    assert data["total"] == 0
 
 
-def test_lee_el_log_de_verdad(monkeypatch, tmp_path):
+def test_reads_the_real_log(monkeypatch, tmp_path):
     log = tmp_path / "telemetry.jsonl"
-    ahora = datetime.now(UTC)
-    _escribir(log, [_evento(ahora, sugerida=True), _evento(ahora, sugerida=False)])
+    now = datetime.now(UTC)
+    _write(log, [_event(now, suggested=True), _event(now, suggested=False)])
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
 
-    datos = TestClient(metrics.app).get("/api/hooks").json()
+    data = TestClient(metrics.app).get("/api/hooks").json()
 
-    assert datos["enabled"] is True
-    assert datos["exists"] is True
-    assert (datos["total"], datos["suggested"]) == (2, 1)
+    assert data["enabled"] is True
+    assert data["exists"] is True
+    assert (data["total"], data["suggested"]) == (2, 1)
 
 
-def test_el_rango_filtra_igual_que_en_el_resto_del_panel(monkeypatch, tmp_path):
+def test_the_range_filters_as_in_the_rest_of_the_dashboard(monkeypatch, tmp_path):
     """Si no filtrara, la tarjeta contradiría al resto de la página con el mismo rango puesto."""
     log = tmp_path / "telemetry.jsonl"
-    ahora = datetime.now(UTC)
-    _escribir(
+    now = datetime.now(UTC)
+    _write(
         log,
         [
-            _evento(ahora - timedelta(days=40), sugerida=True),
-            _evento(ahora, sugerida=True),
+            _event(now - timedelta(days=40), suggested=True),
+            _event(now, suggested=True),
         ],
     )
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
 
-    desde = (ahora - timedelta(days=2)).date().isoformat()
-    datos = TestClient(metrics.app).get(f"/api/hooks?from={desde}").json()
+    since = (now - timedelta(days=2)).date().isoformat()
+    data = TestClient(metrics.app).get(f"/api/hooks?from={since}").json()
 
-    assert datos["total"] == 1, "el evento de hace 40 días no debería entrar en el rango"
+    assert data["total"] == 1, "el evento de hace 40 días no debería entrar en el rango"
 
 
-def test_una_linea_corrupta_no_tumba_el_endpoint(monkeypatch, tmp_path):
+def test_a_corrupt_line_does_not_bring_the_endpoint_down(monkeypatch, tmp_path):
     """El log lo escriben procesos que pueden morir a media línea."""
     log = tmp_path / "telemetry.jsonl"
-    bueno = json.dumps(_evento(datetime.now(UTC), sugerida=True))
-    log.write_text(f"{bueno}\n{{esto no es json\n{bueno}\n", encoding="utf-8")
+    good = json.dumps(_event(datetime.now(UTC), suggested=True))
+    log.write_text(f"{good}\n{{esto no es json\n{good}\n", encoding="utf-8")
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
 
-    datos = TestClient(metrics.app).get("/api/hooks").json()
-    assert datos["total"] == 2
+    data = TestClient(metrics.app).get("/api/hooks").json()
+    assert data["total"] == 2
 
 
-def test_el_endpoint_no_devuelve_ni_comandos_ni_prompts(monkeypatch, tmp_path):
+def test_the_endpoint_returns_neither_commands_nor_prompts(monkeypatch, tmp_path):
     """La telemetría promete no registrar contenido, y el dashboard no puede romper esa promesa.
 
     Aunque el hook solo escribe tamaños, exponer el evento crudo dejaría la puerta abierta a que
     un campo nuevo del hook acabe publicado sin que nadie lo decida.
     """
     log = tmp_path / "telemetry.jsonl"
-    fila = _evento(datetime.now(UTC), sugerida=True)
-    fila["command"] = "rm -rf /algo/secreto"
-    _escribir(log, [fila])
+    row = _event(datetime.now(UTC), suggested=True)
+    row["command"] = "rm -rf /algo/secreto"
+    _write(log, [row])
     monkeypatch.setattr(config, "HOOK_TELEMETRY_LOG", log)
 
-    crudo = TestClient(metrics.app).get("/api/hooks").text
-    assert "secreto" not in crudo
-    assert "rm -rf" not in crudo
+    raw = TestClient(metrics.app).get("/api/hooks").text
+    assert "secreto" not in raw
+    assert "rm -rf" not in raw
 
 
 # --- El JS de la tarjeta, ejecutado de verdad ---------------------------------
 
 
-def _etiquetas_js(pagina: str) -> str:
+def _labels_js(page: str) -> str:
     """Las etiquetas legibles (clave interna → texto del panel) y la tabla de valores viejos que
     inyecta el servidor, tal como salen en la página servida."""
-    partes = [
-        _extraer_funcion_js(pagina, cabecera)
-        for cabecera in (
+    parts = [
+        _extract_js_function(page, header)
+        for header in (
             "const LABELS = {",
             "const LEGACY_VALUES = {",
             "function humanLabel(",
             "function labelFor(",
         )
     ]
-    return ";\n".join(partes) + ";"
+    return ";\n".join(parts) + ";"
 
 
-def _extraer_funcion_js(fuente: str, cabecera: str) -> str:
+def _extract_js_function(source: str, header: str) -> str:
     """Recorta una función del `<script>` balanceando llaves. Igual que en `test_metrics.py`."""
-    i = fuente.index(cabecera)
+    i = source.index(header)
     depth, j = 0, i
     while True:
-        if fuente[j] == "{":
+        if source[j] == "{":
             depth += 1
-        elif fuente[j] == "}":
+        elif source[j] == "}":
             depth -= 1
             if depth == 0:
-                return fuente[i : j + 1]
+                return source[i : j + 1]
         j += 1
 
 
-def test_la_categoria_del_log_se_escapa_antes_de_pintarla(tmp_path):
+def test_the_log_category_is_escaped_before_rendering(tmp_path):
     """Se **ejecuta** con node, no se busca por grep: lo que importa es qué produce, no qué dice.
 
     La categoría es el único texto de esta página que no controla el daemon — sale de un fichero
@@ -258,36 +260,36 @@ def test_la_categoria_del_log_se_escapa_antes_de_pintarla(tmp_path):
     if node is None:
         pytest.skip("node no está en el PATH")
 
-    esc_js = _extraer_funcion_js(metrics.HTML, "function escHooks(s){")
-    casos = ["bash", "<img src=x onerror=alert(1)>", None, "a&b", '"comillas"', "it's"]
-    entrada = tmp_path / "casos.json"
-    entrada.write_text(json.dumps(casos), encoding="utf-8")
+    esc_js = _extract_js_function(metrics.HTML, "function escHooks(s){")
+    cases = ["bash", "<img src=x onerror=alert(1)>", None, "a&b", '"comillas"', "it's"]
+    input_file = tmp_path / "casos.json"
+    input_file.write_text(json.dumps(cases), encoding="utf-8")
 
-    programa = tmp_path / "esc.mjs"
-    programa.write_text(
+    program = tmp_path / "esc.mjs"
+    program.write_text(
         "import {readFileSync} from 'node:fs';\n"
         f"{esc_js}\n"
-        f"const casos = JSON.parse(readFileSync({json.dumps(str(entrada))}, 'utf-8'));\n"
-        "console.log(JSON.stringify(casos.map(escHooks)));\n",
+        f"const testCases = JSON.parse(readFileSync({json.dumps(str(input_file))}, 'utf-8'));\n"
+        "console.log(JSON.stringify(testCases.map(escHooks)));\n",
         encoding="utf-8",
     )
-    salida = subprocess.run(
-        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
+    output = subprocess.run(
+        [node, str(program)], capture_output=True, text=True, timeout=30, check=True
     )
-    resultado = json.loads(salida.stdout)
+    result = json.loads(output.stdout)
 
-    assert resultado[0] == "bash", "el caso normal no se toca"
-    assert resultado[1] == "&lt;img src=x onerror=alert(1)&gt;"
-    assert resultado[2] == "", "null se pinta vacío, no como la cadena 'null'"
-    assert resultado[3] == "a&amp;b"
-    assert resultado[4] == "&quot;comillas&quot;"
-    assert resultado[5] == "it&#39;s"
+    assert result[0] == "bash", "el caso normal no se toca"
+    assert result[1] == "&lt;img src=x onerror=alert(1)&gt;"
+    assert result[2] == "", "null se pinta vacío, no como la cadena 'null'"
+    assert result[3] == "a&amp;b"
+    assert result[4] == "&quot;comillas&quot;"
+    assert result[5] == "it&#39;s"
 
-    for pintado in resultado:
-        assert "<" not in pintado and ">" not in pintado
+    for rendered in result:
+        assert "<" not in rendered and ">" not in rendered
 
 
-def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
+def test_the_card_hides_when_there_is_no_telemetry(tmp_path):
     """Enseñar ceros diría «los hooks no sugieren nada» leyendo un fichero que no existe.
 
     Se ejercita la función real con node y tres entradas: sin telemetría, activada pero vacía, y
@@ -297,66 +299,66 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
     if node is None:
         pytest.skip("node no está en el PATH")
 
-    pagina = metrics.render_index()
-    render_js = _extraer_funcion_js(pagina, "function renderHooks(h){")
-    esc_js = _extraer_funcion_js(pagina, "function escHooks(s){")
+    page = metrics.render_index()
+    render_js = _extract_js_function(page, "function renderHooks(h){")
+    esc_js = _extract_js_function(page, "function escHooks(s){")
     # Los formateadores del panel (REQ-030/031): `F` y `F1` son objetos sobre `fmtNum`.
-    fmt_js = _extraer_funcion_js(pagina, "function fmtNum(")
-    etiquetas_js = _etiquetas_js(pagina)
+    fmt_js = _extract_js_function(page, "function fmtNum(")
+    labels_js = _labels_js(page)
 
-    programa = tmp_path / "render.mjs"
-    programa.write_text(
+    program = tmp_path / "render.mjs"
+    program.write_text(
         # DOM mínimo: cada `getElementById` devuelve un objeto que apunta lo que le escriben.
-        "const nodos = {};\n"
+        "const nodes = {};\n"
         "const elem = () => ({style:{display:'?'}, textContent:'', innerHTML:''});\n"
-        "globalThis.document = {getElementById: id => (nodos[id] ??= elem())};\n"
+        "globalThis.document = {getElementById: id => (nodes[id] ??= elem())};\n"
         f"{fmt_js}\n"
         "globalThis.F = {format: n => fmtNum(n, 0)};\n"
         "globalThis.F1 = {format: n => fmtNum(n, 1)};\n"
         f"{esc_js}\n"
-        f"{etiquetas_js}\n"
+        f"{labels_js}\n"
         f"{render_js}\n"
-        "const salida = [];\n"
-        "for (const caso of [null, {enabled:false}, {enabled:true, total:0},\n"
+        "const results = [];\n"
+        "for (const testCase of [null, {enabled:false}, {enabled:true, total:0},\n"
         "  {enabled:true, total:10, suggested:3, rate:0.3,\n"
         "   by_category:[{category:'bash', total:8, suggested:2},\n"
         "                {category:'<img src=x onerror=alert(1)>', total:2, suggested:1}]}]) {\n"
-        "  for (const k in nodos) delete nodos[k];\n"
-        "  renderHooks(caso);\n"
-        "  salida.push({display: nodos.hooksCard.style.display,\n"
-        "               head: nodos.hooksHead ? nodos.hooksHead.textContent : '',\n"
-        "               body: nodos.hooksBody ? nodos.hooksBody.innerHTML : ''});\n"
+        "  for (const k in nodes) delete nodes[k];\n"
+        "  renderHooks(testCase);\n"
+        "  results.push({display: nodes.hooksCard.style.display,\n"
+        "               head: nodes.hooksHead ? nodes.hooksHead.textContent : '',\n"
+        "               body: nodes.hooksBody ? nodes.hooksBody.innerHTML : ''});\n"
         "}\n"
-        "console.log(JSON.stringify(salida));\n",
+        "console.log(JSON.stringify(results));\n",
         encoding="utf-8",
     )
-    salida = subprocess.run(
-        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
+    output = subprocess.run(
+        [node, str(program)], capture_output=True, text=True, timeout=30, check=True
     )
-    sin_datos, apagada, vacia, con_datos = json.loads(salida.stdout)
+    without_data, disabled, empty, with_data = json.loads(output.stdout)
 
-    assert sin_datos["display"] == "none", "sin respuesta del endpoint, la tarjeta no se enseña"
-    assert apagada["display"] == "none", "telemetría desactivada: no se enseñan ceros"
-    assert vacia["display"] == "none", "activada pero sin eventos: tampoco se enseñan ceros"
+    assert without_data["display"] == "none", "sin respuesta del endpoint, la tarjeta no se enseña"
+    assert disabled["display"] == "none", "telemetría desactivada: no se enseñan ceros"
+    assert empty["display"] == "none", "activada pero sin eventos: tampoco se enseñan ceros"
 
-    assert con_datos["display"] == "", "con datos, la tarjeta se enseña"
-    assert "3 de 10" in con_datos["head"]
-    assert "30,0 %" in con_datos["head"], "el porcentaje va con coma decimal, como el resto"
-    assert "Shell" in con_datos["body"]  # `bash`, con su etiqueta legible
-    assert "25,0 %" in con_datos["body"], "la tasa por categoría es 2 de 8"
+    assert with_data["display"] == "", "con datos, la tarjeta se enseña"
+    assert "3 de 10" in with_data["head"]
+    assert "30,0 %" in with_data["head"], "el porcentaje va con coma decimal, como el resto"
+    assert "Shell" in with_data["body"]  # `bash`, con su etiqueta legible
+    assert "25,0 %" in with_data["body"], "la tasa por categoría es 2 de 8"
     # Lo que la tarjeta NO puede dejar de decir: que esto cuenta sugerencias, no delegaciones. Lo
     # dice el diálogo de información que abre el ⓘ de su cabecera, no un párrafo en el cuerpo.
-    assert "sugieren" not in con_datos["body"]
-    dialogo = metrics.HTML[metrics.HTML.index('<section id="dlgHooks"') :]
-    dialogo = dialogo[: dialogo.index("</section>")]
-    assert "Los hooks <b>sugieren</b>; delegar lo decides tú." in dialogo
+    assert "sugieren" not in with_data["body"]
+    dialog = metrics.HTML[metrics.HTML.index('<section id="dlgHooks"') :]
+    dialog = dialog[: dialog.index("</section>")]
+    assert "Los hooks <b>sugieren</b>; delegar lo decides tú." in dialog
     assert 'id="hooksInfo" data-group="hooks"' in metrics.HTML
 
     # Y que el escapado se USE, no solo que exista. Probar `escHooks` por su cuenta deja pasar
     # el mutante que quita la llamada — ya ocurrió, y por eso el caso malicioso entra aquí, en
     # el HTML que produce la función de verdad.
-    assert "<img src=x" not in con_datos["body"], "la categoría se pintó sin escapar"
-    assert "&lt;img src=x onerror=alert(1)&gt;" in con_datos["body"]
+    assert "<img src=x" not in with_data["body"], "la categoría se pintó sin escapar"
+    assert "&lt;img src=x onerror=alert(1)&gt;" in with_data["body"]
 
 
 # --- Puntería del hook de lectura --------------------------------------------------------------
@@ -366,66 +368,66 @@ def test_la_tarjeta_se_esconde_cuando_no_hay_telemetria(tmp_path):
 # pueda enseñar esa selectividad — y que no la invente donde no la hay.
 
 
-def _evento_de_lectura(**extra) -> dict:
+def _read_event(**extra) -> dict:
     base = {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "category": "read"}
     base.update(extra)
     return base
 
 
-def test_agrupa_las_lecturas_por_motivo_de_descarte():
-    agregado = metrics._aggregate_hooks(
+def test_groups_the_reads_by_discard_reason():
+    aggregate = metrics._aggregate_hooks(
         [
-            _evento_de_lectura(suggested=True, ext=".md", band="strong"),
-            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
-            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
-            _evento_de_lectura(suggested=False, ext=".md", reason="bounded"),
+            _read_event(suggested=True, ext=".md", band="strong"),
+            _read_event(suggested=False, ext=".ts", reason="code"),
+            _read_event(suggested=False, ext=".ts", reason="code"),
+            _read_event(suggested=False, ext=".md", reason="bounded"),
         ]
     )
 
-    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {
+    assert {m["reason"]: m["total"] for m in aggregate["by_reason"]} == {
         "code": 2,
         "suggested": 1,
         "bounded": 1,
     }
-    assert agregado["read_total"] == 4
+    assert aggregate["read_total"] == 4
 
 
-def test_agrupa_las_lecturas_por_extension():
-    agregado = metrics._aggregate_hooks(
+def test_groups_the_reads_by_extension():
+    aggregate = metrics._aggregate_hooks(
         [
-            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
-            _evento_de_lectura(suggested=False, ext=".ts", reason="code"),
-            _evento_de_lectura(suggested=True, ext=".md"),
+            _read_event(suggested=False, ext=".ts", reason="code"),
+            _read_event(suggested=False, ext=".ts", reason="code"),
+            _read_event(suggested=True, ext=".md"),
         ]
     )
 
-    assert agregado["by_ext"] == [{"ext": ".ts", "total": 2}, {"ext": ".md", "total": 1}]
+    assert aggregate["by_ext"] == [{"ext": ".ts", "total": 2}, {"ext": ".md", "total": 1}]
 
 
-def test_la_telemetria_vieja_no_recibe_un_motivo_inventado():
+def test_old_telemetry_does_not_get_a_made_up_reason():
     """Los eventos anteriores al PR #146 no traen `motivo` (hoy `reason`) ni `ext`.
 
     Meterlos en un motivo concreto diría que el hook descartaba por una razón que nunca registró,
     y en este log eso son miles de líneas: la tarjeta contaría una historia falsa sobre el pasado.
     """
-    agregado = metrics._aggregate_hooks(
-        [_evento_de_lectura(suggested=False), _evento_de_lectura(suggested=False)]
+    aggregate = metrics._aggregate_hooks(
+        [_read_event(suggested=False), _read_event(suggested=False)]
     )
 
-    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"unrecorded": 2}
-    assert agregado["by_ext"] == [{"ext": "no_extension", "total": 2}]
+    assert {m["reason"]: m["total"] for m in aggregate["by_reason"]} == {"unrecorded": 2}
+    assert aggregate["by_ext"] == [{"ext": "no_extension", "total": 2}]
 
 
-def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
+def test_the_other_hooks_do_not_count_in_the_read_aim():
     """Control de los tres de arriba, y el fallo más fácil de cometer aquí.
 
     `reason` sólo lo escribe el hook de lectura. Si el agregado recorriera todos los eventos, los
     de `lint` y `summarize` caerían en «sin registrar» y la tarjeta diría que el hook descarta sin
     motivo la mitad de las veces — un número que se lee bien y significa otra cosa.
     """
-    agregado = metrics._aggregate_hooks(
+    aggregate = metrics._aggregate_hooks(
         [
-            _evento_de_lectura(suggested=True, ext=".md"),
+            _read_event(suggested=True, ext=".md"),
             {"ts": datetime.now(UTC).isoformat(), "event": "PreToolUse", "category": "lint"},
             {
                 "ts": datetime.now(UTC).isoformat(),
@@ -436,50 +438,47 @@ def test_los_otros_hooks_no_entran_en_la_punteria_de_lectura():
         ]
     )
 
-    assert agregado["total"] == 3
-    assert agregado["read_total"] == 1
-    assert {m["reason"]: m["total"] for m in agregado["by_reason"]} == {"suggested": 1}
+    assert aggregate["total"] == 3
+    assert aggregate["read_total"] == 1
+    assert {m["reason"]: m["total"] for m in aggregate["by_reason"]} == {"suggested": 1}
 
 
 # --- Telemetría vieja y nueva mezcladas (REQ-005/006/009, ola A2) -------------------------------
 
 
-def _filas_de_lectura(formato: str) -> list[dict]:
+def _read_rows(fmt: str) -> list[dict]:
     """El mismo reparto de motivos, escrito con las claves y valores viejos o con los nuevos."""
-    viejo = formato == "viejo"
-    clave, bloqueo = ("motivo", "bloqueo") if viejo else ("reason", "block")
-    valores = (
+    old = fmt == "viejo"
+    key, block_key = ("motivo", "bloqueo") if old else ("reason", "block")
+    values = (
         ["codigo", "codigo", "acotada", "mcp_ajeno", "prosa_grande"]
-        if viejo
+        if old
         else ["code", "code", "bounded", "foreign_mcp", "large_prose"]
     )
-    estado = "encendido" if viejo else "on"
-    return [_evento_de_lectura(suggested=False, **{clave: v, bloqueo: estado}) for v in valores]
+    state = "encendido" if old else "on"
+    return [_read_event(suggested=False, **{key: v, block_key: state}) for v in values]
 
 
-def test_la_telemetria_mezclada_da_el_mismo_reparto_que_la_nueva():
+def test_mixed_telemetry_gives_the_same_split_as_the_new_one():
     """Un fichero con filas viejas y nuevas da el mismo `by_reason` que con todas nuevas: la
     historia en español (31 691 líneas en la máquina de referencia) se sigue leyendo entera."""
-    nuevas = _filas_de_lectura("nuevo")
-    mezcladas = _filas_de_lectura("viejo")[:3] + nuevas[3:]
+    new_ones = _read_rows("nuevo")
+    mixed = _read_rows("viejo")[:3] + new_ones[3:]
 
-    solo_nuevas = metrics._aggregate_hooks(nuevas)
-    mezcla = metrics._aggregate_hooks(mezcladas)
+    only_new = metrics._aggregate_hooks(new_ones)
+    mix = metrics._aggregate_hooks(mixed)
 
-    assert solo_nuevas["by_reason"] == [
+    assert only_new["by_reason"] == [
         {"reason": "code", "total": 2},
         {"reason": "bounded", "total": 1},
         {"reason": "foreign_mcp", "total": 1},
         {"reason": "large_prose", "total": 1},
     ]
-    assert mezcla["by_reason"] == solo_nuevas["by_reason"]
-    assert (
-        metrics._aggregate_hooks(_filas_de_lectura("viejo"))["by_reason"]
-        == (solo_nuevas["by_reason"])
-    )
+    assert mix["by_reason"] == only_new["by_reason"]
+    assert metrics._aggregate_hooks(_read_rows("viejo"))["by_reason"] == (only_new["by_reason"])
 
 
-def test_el_diccionario_de_motivos_da_la_misma_etiqueta_al_valor_viejo_y_al_nuevo(tmp_path):
+def test_the_reason_dictionary_gives_the_same_label_to_the_old_and_new_value(tmp_path):
     """Se ejecuta con node el `labelFor` de la página servida: `mcp_ajeno` y `foreign_mcp` (y el
     resto de pares viejo/nuevo) tienen que pintarse igual, sin una segunda copia de la tabla."""
     node = shutil.which("node")
@@ -487,26 +486,26 @@ def test_el_diccionario_de_motivos_da_la_misma_etiqueta_al_valor_viejo_y_al_nuev
         pytest.skip("node no está en el PATH")
     from local_delegate import legacy_names
 
-    pares = sorted(legacy_names.PANEL_VALUE_ALIASES["hookReason"].items())
-    programa = tmp_path / "etiquetas.mjs"
-    programa.write_text(
-        f"{_etiquetas_js(metrics.render_index())}\n"
-        f"const pares = {json.dumps(pares)};\n"
-        "console.log(JSON.stringify(pares.map(([v, n]) => [labelFor('hookReason', v),"
+    pairs = sorted(legacy_names.PANEL_VALUE_ALIASES["hookReason"].items())
+    program = tmp_path / "etiquetas.mjs"
+    program.write_text(
+        f"{_labels_js(metrics.render_index())}\n"
+        f"const aliasPairs = {json.dumps(pairs)};\n"
+        "console.log(JSON.stringify(aliasPairs.map(([v, n]) => [labelFor('hookReason', v),"
         " labelFor('hookReason', n)])));\n",
         encoding="utf-8",
     )
-    salida = subprocess.run(
-        [node, str(programa)], capture_output=True, text=True, timeout=30, check=True
+    output = subprocess.run(
+        [node, str(program)], capture_output=True, text=True, timeout=30, check=True
     )
-    etiquetas = json.loads(salida.stdout)
+    labels = json.loads(output.stdout)
 
-    assert len(etiquetas) == len(pares) >= 14
-    assert dict(zip([v for v, _n in pares], etiquetas, strict=True))["mcp_ajeno"] == [
+    assert len(labels) == len(pairs) >= 14
+    assert dict(zip([v for v, _n in pairs], labels, strict=True))["mcp_ajeno"] == [
         "Por otro MCP",
         "Por otro MCP",
     ]
-    for (viejo, nuevo), (de_viejo, de_nuevo) in zip(pares, etiquetas, strict=True):
-        assert de_viejo == de_nuevo, f"{viejo} y {nuevo} se pintan distinto"
+    for (old, new), (from_old, from_new) in zip(pairs, labels, strict=True):
+        assert from_old == from_new, f"{old} y {new} se pintan distinto"
         # Y con una etiqueta escrita, no la que inventa `humanLabel` a partir de la clave.
-        assert de_nuevo != nuevo, f"{nuevo} no tiene etiqueta en LABELS.hookReason"
+        assert from_new != new, f"{new} no tiene etiqueta en LABELS.hookReason"

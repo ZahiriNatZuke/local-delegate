@@ -1,0 +1,15 @@
+refactor(rename): nombres en inglés en test_hooks_telemetry_api y los tests de install (ola A9b, lote 3)
+
+Renombra a inglés los nombres de test_hooks_telemetry_api.py,
+test_install.py, test_install_cabecera.py y test_install_clients.py:
+266 filas del mapping aprobado. test_install_cabecera.py pasa a
+test_install_header.py y los 77 test_* del lote pasan a inglés, junto
+con sus ayudantes (_evento → _event, _filas_de_lectura → _read_rows,
+_claude_escribe → _claude_write, _con_huerfanos → _with_orphans…), la
+fixture espia_claude → claude_spy, sus variables locales y el JS propio
+del test de la tarjeta de hooks (casos → testCases, nodos → nodes…).
+
+Solo cambian los nombres del test: las claves y los textos que el
+producto escribe en los ficheros de los clientes, ningún assert cambia
+de sentido y los textos en español que afirman los tests no se tocan.
+Los tests recogidos siguen siendo 2569.
