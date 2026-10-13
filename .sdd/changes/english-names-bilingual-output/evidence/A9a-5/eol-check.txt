@@ -1,0 +1,9 @@
+estado | EOL en HEAD | EOL en trabajo | fichero (con los renombres seguidos, -M30%)
+R063 | lf | lf | tests/test_coste_doctor.py -> tests/test_cost_doctor.py
+M | crlf | crlf | tests/test_ctrl_c.py
+M | lf | lf | tests/test_daemon.py
+R050 | lf | lf | tests/test_delegacion_conexion.py -> tests/test_delegation_connection.py
+R058 | lf | lf | tests/test_densidad.py -> tests/test_density.py
+R051 | lf | lf | tests/test_cuota.py -> tests/test_quota.py
+M | lf | lf | tests/test_transcripts.py
+diferencias de EOL: 0

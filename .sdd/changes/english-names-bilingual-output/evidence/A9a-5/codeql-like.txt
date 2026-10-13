@@ -1,0 +1,7 @@
+Aproximación AST (scratchpad a9a/codeql_like.py) a py/mixed-returns, py/catch-base-exception, py/empty-except, py/unused-local-variable y py/side-effect-in-assert sobre los 4 ficheros renombrados del lote:
+(0 hallazgos)
+
+Control positivo: la misma comprobación sobre tests/test_connection_cause.py de a6069f8 (antes del arreglo 2809dd1) da las dos alertas que vio CodeQL:
+tests/test_connection_cause.py@a6069f8:230 mixed-returns? _real_failure (fail-sin-raise)
+tests/test_connection_cause.py@a6069f8:41 catch-base-exception (BaseException)
+py/uninitialized-local-variable (a mano): los únicos try/except de los 4 ficheros (test_quota.py:142-145 y :155-159, test_delegation_connection.py:240-243) asignan sus variables en las dos ramas o devuelven: 0 hallazgos.

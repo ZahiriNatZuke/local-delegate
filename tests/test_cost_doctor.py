@@ -23,9 +23,9 @@ def _home(tmp_path: Path, *, projects: bool = True, cleanup: int | None = None) 
     claude = home / ".claude"
     claude.mkdir(parents=True)
     if projects:
-        proyecto = claude / "projects" / "D--algo"
-        proyecto.mkdir(parents=True)
-        (proyecto / "sesion.jsonl").write_text(
+        project = claude / "projects" / "D--algo"
+        project.mkdir(parents=True)
+        (project / "sesion.jsonl").write_text(
             json.dumps({"type": "assistant", "message": {"model": "claude-opus-5"}}) + "\n",
             encoding="utf-8",
         )
@@ -36,17 +36,17 @@ def _home(tmp_path: Path, *, projects: bool = True, cleanup: int | None = None) 
     return home
 
 
-def _ts(dias: float) -> str:
-    return (datetime.now(UTC) - timedelta(days=dias)).isoformat(timespec="seconds")
+def _ts(days: float) -> str:
+    return (datetime.now(UTC) - timedelta(days=days)).isoformat(timespec="seconds")
 
 
-def _log(log_dir: Path, *dias: float, client: str = "claude-code") -> list[dict]:
+def _log(log_dir: Path, *days: float, client: str = "claude-code") -> list[dict]:
     """Una delegación por edad, cada una en el `usage-AAAAMM.jsonl` del mes de su `ts`."""
     log_dir.mkdir(parents=True, exist_ok=True)
-    filas = []
-    for d in dias:
+    rows = []
+    for d in days:
         ts = _ts(d)
-        fila = {
+        row = {
             "ts": ts,
             "tool": TOOL,
             "source": "path",
@@ -55,32 +55,32 @@ def _log(log_dir: Path, *dias: float, client: str = "claude-code") -> list[dict]
             "ok": True,
             "chars_in": 4000,
         }
-        mes = ts[:4] + ts[5:7]
-        with (log_dir / f"usage-{mes}.jsonl").open("a", encoding="utf-8") as flujo:
-            flujo.write(json.dumps(fila) + "\n")
-        filas.append(fila)
-    return filas
+        month = ts[:4] + ts[5:7]
+        with (log_dir / f"usage-{month}.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(row) + "\n")
+        rows.append(row)
+    return rows
 
 
-def _cotejo(log_dir: Path, veredicto: str | None, *, sin_precio=(), fuera: int = 0) -> None:
-    cotejo = None
-    if veredicto is not None:
-        cotejo = {
+def _crosscheck(log_dir: Path, verdict: str | None, *, unpriced=(), outside: int = 0) -> None:
+    crosscheck = None
+    if verdict is not None:
+        crosscheck = {
             "date": "2026-10-06T12:00:00+00:00",
             "table_version": "2026-10-06",
             "judged": 142,
-            "outside": fuera,
-            "unpriced": list(sin_precio),
-            "verdict": veredicto,
+            "outside": outside,
+            "unpriced": list(unpriced),
+            "verdict": verdict,
         }
-    recompute.write_aggregates(log_dir, {"version": 1, "cleanup_days": 30, "check": cotejo})
+    recompute.write_aggregates(log_dir, {"version": 1, "cleanup_days": 30, "check": crosscheck})
 
 
 def _probe(home: Path, log_dir: Path) -> checks.Result:
     return checks._probe_cost(checks.Context(home=home, log_dir=log_dir))
 
 
-def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
+def test_command_never_run_and_21_days_pending(tmp_path):
     """El escenario de la spec: sin `cost-aggregates.json` y con `H` = 30, avisa a los 20 días."""
     log_dir = tmp_path / "log"
     _log(log_dir, 21)
@@ -92,12 +92,12 @@ def test_comando_nunca_lanzado_y_pendientes_de_21_dias(tmp_path):
     assert r.fix_hint == "local-delegate recompute-cost"
 
     # Con 10 días todavía hay margen: sin cotejo, `unknown`.
-    log_corto = tmp_path / "log-corto"
-    _log(log_corto, 10)
-    assert _probe(tmp_path / "home", log_corto).status == checks.UNKNOWN
+    short_log = tmp_path / "log-corto"
+    _log(short_log, 10)
+    assert _probe(tmp_path / "home", short_log).status == checks.UNKNOWN
 
 
-def test_el_aviso_sigue_al_plazo(tmp_path):
+def test_the_warning_follows_the_deadline(tmp_path):
     """`H` sale de `cleanupPeriodDays`: con 90, 21 días no avisan y 81 sí."""
     home = _home(tmp_path, cleanup=90)
     log_21 = tmp_path / "log21"
@@ -112,11 +112,11 @@ def test_el_aviso_sigue_al_plazo(tmp_path):
     assert "a los 90" in r.detail
 
 
-def test_las_dos_cosas_a_la_vez(tmp_path):
+def test_both_things_at_once(tmp_path):
     """Relleno pendiente y cotejo fallido: gana el `warn` y el mensaje dice las dos cosas."""
     log_dir = tmp_path / "log"
     _log(log_dir, 21, 22)
-    _cotejo(log_dir, "fail", sin_precio=["claude-opus-5"], fuera=3)
+    _crosscheck(log_dir, "fail", unpriced=["claude-opus-5"], outside=3)
     r = _probe(_home(tmp_path), log_dir)
     assert r.status == checks.WARN
     assert "2 delegación(es) pendiente(s)" in r.detail
@@ -125,50 +125,50 @@ def test_las_dos_cosas_a_la_vez(tmp_path):
     assert "3 fila(s) fuera" in r.detail
 
 
-def test_cotejo_bueno_ok_y_sin_cotejo_unknown(tmp_path):
+def test_good_crosscheck_ok_and_no_crosscheck_unknown(tmp_path):
     home = _home(tmp_path)
 
-    bueno = tmp_path / "bueno"
-    _cotejo(bueno, "pass")
-    r = _probe(home, bueno)
+    good = tmp_path / "bueno"
+    _crosscheck(good, "pass")
+    r = _probe(home, good)
     assert r.status == checks.OK
     assert "142" in r.detail
 
-    malo = tmp_path / "malo"
-    _cotejo(malo, "fail", sin_precio=["claude-opus-5"])
-    r = _probe(home, malo)
+    bad = tmp_path / "malo"
+    _crosscheck(bad, "fail", unpriced=["claude-opus-5"])
+    r = _probe(home, bad)
     assert r.status == checks.WARN
     assert "claude-opus-5" in r.detail
     assert "pendiente" not in r.detail
 
-    # Sin fichero, y con el fichero pero `cotejo: null` (el comando no encontró `cost-state`).
+    # Sin fichero, y con el fichero pero `check: null` (el comando no encontró `cost-state`).
     assert _probe(home, tmp_path / "vacio").status == checks.UNKNOWN
-    nulo = tmp_path / "nulo"
-    _cotejo(nulo, None)
-    r = _probe(home, nulo)
+    null = tmp_path / "nulo"
+    _crosscheck(null, None)
+    r = _probe(home, null)
     assert r.status == checks.UNKNOWN
     assert r.status != checks.MISSING
 
     # Un HOME sin `~/.claude/projects` no tiene transcripts que rellenar: el aviso no aplica.
-    sin_projects = _home(tmp_path / "otra", projects=False)
+    without_projects = _home(tmp_path / "otra", projects=False)
     log_dir = tmp_path / "pendientes"
     _log(log_dir, 21)
-    assert _probe(sin_projects, log_dir).status == checks.UNKNOWN
+    assert _probe(without_projects, log_dir).status == checks.UNKNOWN
     # Guarda: el mismo log con `projects/` sí avisa, así que lo de arriba lo decide `projects/`.
     assert _probe(home, log_dir).status == checks.WARN
 
 
-def test_lo_rellenado_y_lo_excluido_no_avisan(tmp_path):
+def test_backfilled_and_excluded_do_not_warn(tmp_path):
     """Lee los `attribution-*.json`: una línea ya rellenada no está pendiente; Codex no cuenta."""
     home = _home(tmp_path)
     log_dir = tmp_path / "log"
-    (fila,) = _log(log_dir, 21)
-    mes = fila["ts"][:4] + fila["ts"][5:7]
-    (clave,) = attribution.file_keys([fila])
+    (row,) = _log(log_dir, 21)
+    month = row["ts"][:4] + row["ts"][5:7]
+    (key,) = attribution.file_keys([row])
     attribution.write_backfill(
         log_dir,
-        mes,
-        {clave: {"caller_model": "claude-opus-5", "caller_kind": "main", "match": "window"}},
+        month,
+        {key: {"caller_model": "claude-opus-5", "caller_kind": "main", "match": "window"}},
     )
     assert _probe(home, log_dir).status == checks.UNKNOWN
 
@@ -177,28 +177,28 @@ def test_lo_rellenado_y_lo_excluido_no_avisan(tmp_path):
     assert _probe(home, codex).status == checks.UNKNOWN
 
 
-def test_doctor_no_lee_transcripts(tmp_path, monkeypatch):
+def test_doctor_does_not_read_transcripts(tmp_path, monkeypatch):
     """REQ-073: con transcripts presentes, el probe no abre nada bajo `projects/`."""
     home = _home(tmp_path)
     log_dir = tmp_path / "log"
     _log(log_dir, 21)
-    _cotejo(log_dir, "pass")
+    _crosscheck(log_dir, "pass")
 
-    abiertos: list[Path] = []
+    opened: list[Path] = []
     original = builtins.open
 
-    def espia(fichero, *args, **kwargs):
-        if isinstance(fichero, str | Path):
-            abiertos.append(Path(fichero))
-        return original(fichero, *args, **kwargs)
+    def spy(file, *args, **kwargs):
+        if isinstance(file, str | Path):
+            opened.append(Path(file))
+        return original(file, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, "open", espia)
-    monkeypatch.setattr(io, "open", espia)
+    monkeypatch.setattr(builtins, "open", spy)
+    monkeypatch.setattr(io, "open", spy)
     r = _probe(home, log_dir)
 
     projects = home / ".claude" / "projects"
-    lecturas_en_projects = [p for p in abiertos if p.is_relative_to(projects)]
+    reads_in_projects = [p for p in opened if p.is_relative_to(projects)]
     # Guarda: el espía ve las lecturas del probe (el log de uso), o el assert de abajo no prueba nada.
-    assert any(p.name.startswith("usage-") for p in abiertos)
+    assert any(p.name.startswith("usage-") for p in opened)
     assert r.status == checks.WARN
-    assert lecturas_en_projects == []
+    assert reads_in_projects == []

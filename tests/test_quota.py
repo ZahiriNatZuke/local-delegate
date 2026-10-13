@@ -25,36 +25,36 @@ R1 = "2026-10-01T17:00:00+00:00"  # resets de 5 h (valor opaco: solo agrupa)
 R7 = "2026-10-05T00:00:00+00:00"
 
 
-def fila(s, sesion, cinco, coste, *, reset=R1, siete=1, reset7=R7) -> dict:
+def row(s, session, five, cost, *, reset=R1, seven=1, reset7=R7) -> dict:
     return {
         "ts": ts(s),
-        "session_id": sesion,
+        "session_id": session,
         "model": "claude-opus-5-5",
-        "five_hour": cinco,
+        "five_hour": five,
         "five_reset": reset,
-        "seven_day": siete,
+        "seven_day": seven,
         "seven_reset": reset7,
-        "cost_usd": coste,
+        "cost_usd": cost,
     }
 
 
-def _lineas(filas: list) -> list[str]:
-    return [x if isinstance(x, str) else json.dumps(x) for x in filas]
+def _lines(rows: list) -> list[str]:
+    return [x if isinstance(x, str) else json.dumps(x) for x in rows]
 
 
-def puntos_de(filas: list, peticiones: list | None = None):
-    por_tipo, sesiones, d0 = quota.sanitize(_lineas(filas))
-    puntos, d1 = quota.statusline_points(por_tipo, sesiones, peticiones or [])
-    return puntos, d0, d1
+def points_of(rows: list, requests: list | None = None):
+    by_type, sessions, d0 = quota.sanitize(_lines(rows))
+    points, d1 = quota.statusline_points(by_type, sessions, requests or [])
+    return points, d0, d1
 
 
-def _punto(fin_dias: float, c: float, ahora, *, tipo="five_hour", fuente="statusline") -> dict:
-    fin = ahora - timedelta(days=fin_dias)
+def _point(end_days: float, c: float, now, *, kind="five_hour", source="statusline") -> dict:
+    end = now - timedelta(days=end_days)
     return {
-        "source": fuente,
-        "type": tipo,
-        "start": (fin - timedelta(hours=4)).isoformat(),
-        "end": fin.isoformat(),
+        "source": source,
+        "type": kind,
+        "start": (end - timedelta(hours=4)).isoformat(),
+        "end": end.isoformat(),
         "delta_pct": 40,
         "delta_usd": c * 0.4,
         "C": c,
@@ -66,12 +66,12 @@ def _punto(fin_dias: float, c: float, ahora, *, tipo="five_hour", fuente="status
 # --- REQ-052: el registro del statusline --------------------------------------------------
 
 
-def test_cinco_filas_son_un_punto():
-    filas = [fila(100 * i, "A", 10 * (i + 1), float(i + 1)) for i in range(5)]
-    puntos, _, _ = puntos_de(filas)
-    puntos = [p for p in puntos if p["type"] == "five_hour"]
-    assert len(puntos) == 1
-    p = puntos[0]
+def test_five_rows_are_one_point():
+    rows = [row(100 * i, "A", 10 * (i + 1), float(i + 1)) for i in range(5)]
+    points, _, _ = points_of(rows)
+    points = [p for p in points if p["type"] == "five_hour"]
+    assert len(points) == 1
+    p = points[0]
     assert p["delta_pct"] == 40
     assert p["delta_usd"] == 4.0
     assert p["C"] == 10.0
@@ -79,71 +79,69 @@ def test_cinco_filas_son_un_punto():
     assert quota.MARK_OTHER_SURFACES in p["marks"]
 
 
-def test_sesiones_en_paralelo():
+def test_parallel_sessions():
     """B (5 → 45 %) gana a A (10 → 30 %); el Δ$ suma los incrementos de las DOS sesiones."""
-    filas = [
-        fila(0, "B", 5, 1.0),
-        fila(10, "A", 10, 2.0),
-        fila(50, "A", 30, 4.0),
-        fila(100, "B", 45, 5.0),
+    rows = [
+        row(0, "B", 5, 1.0),
+        row(10, "A", 10, 2.0),
+        row(50, "A", 30, 4.0),
+        row(100, "B", 45, 5.0),
     ]
-    puntos, _, _ = puntos_de(filas)
-    (p,) = [p for p in puntos if p["type"] == "five_hour"]
-    SUMA = 4.0 + 2.0
-    assert p["delta_usd"] == SUMA
+    points, _, _ = points_of(rows)
+    (p,) = [p for p in points if p["type"] == "five_hour"]
+    TOTAL = 4.0 + 2.0
+    assert p["delta_usd"] == TOTAL
     assert p["delta_pct"] == 40
 
 
-def test_descartes(tmp_path):
-    _, _, d = puntos_de([fila(0, "A", 10, 1.0), fila(100, "A", 15, 2.0)])
+def test_discards(tmp_path):
+    _, _, d = points_of([row(0, "A", 10, 1.0), row(100, "A", 15, 2.0)])
     assert d["five_hour"].get("small_delta") == 1
 
-    _, _, d = puntos_de([fila(0, "A", 10, 3.0), fila(100, "A", 40, 3.0)])
+    _, _, d = points_of([row(0, "A", 10, 3.0), row(100, "A", 40, 3.0)])
     assert d["five_hour"].get("no_local_use") == 1
 
     # Una sesión que no está en el registro (`claude -p`) pidió dentro del intervalo.
     claude = tmp_path / "claude"
     escribir(principal(claude, sesion="ajena"), [peticion(50, "x1", sesion="ajena")])
-    peticiones = list(transcripts.read(claude / "projects").requests.values())
-    puntos, _, d = puntos_de([fila(0, "A", 10, 1.0), fila(100, "A", 40, 2.0)], peticiones)
+    requests = list(transcripts.read(claude / "projects").requests.values())
+    points, _, d = points_of([row(0, "A", 10, 1.0), row(100, "A", 40, 2.0)], requests)
     assert d["five_hour"].get("contaminated") == 1
-    assert [p for p in puntos if p["type"] == "five_hour"] == []
+    assert [p for p in points if p["type"] == "five_hour"] == []
 
     # `/clear`: el coste baja; el incremento es el valor nuevo y el punto lleva la marca.
-    puntos, _, _ = puntos_de(
-        [fila(0, "A", 10, 5.0), fila(50, "A", 20, 6.0), fila(100, "A", 40, 1.0)]
-    )
-    (p,) = [p for p in puntos if p["type"] == "five_hour"]
+    points, _, _ = points_of([row(0, "A", 10, 5.0), row(50, "A", 20, 6.0), row(100, "A", 40, 1.0)])
+    (p,) = [p for p in points if p["type"] == "five_hour"]
     assert p["delta_usd"] == 2.0
     assert quota.MARK_RESET in p["marks"]
 
     # Dos ventanas que se solapan: se queda la de mayor Δ%.
-    puntos, _, _ = puntos_de(
+    points, _, _ = points_of(
         [
-            fila(0, "A", 10, 1.0, reset="r5"),
-            fila(200, "A", 40, 2.0, reset="r5"),
-            fila(100, "B", 10, 1.0, reset="r6"),
-            fila(300, "B", 30, 2.0, reset="r6"),
+            row(0, "A", 10, 1.0, reset="r5"),
+            row(200, "A", 40, 2.0, reset="r5"),
+            row(100, "B", 10, 1.0, reset="r6"),
+            row(300, "B", 30, 2.0, reset="r6"),
         ]
     )
-    puntos, d = quota.drop_overlapping([p for p in puntos if p["type"] == "five_hour"])
+    points, d = quota.drop_overlapping([p for p in points if p["type"] == "five_hour"])
     assert d["five_hour"].get("overlapping") == 1
-    assert [p["delta_pct"] for p in puntos] == [30]
+    assert [p["delta_pct"] for p in points] == [30]
 
 
-def test_sanear_y_lineas_corruptas(tmp_path):
-    filas = [
-        fila(0, "A", 120, 1.0),
-        fila(50, "A", 10, 1.0, siete="abc"),
+def test_sanitize_and_corrupt_lines(tmp_path):
+    rows = [
+        row(0, "A", 120, 1.0),
+        row(50, "A", 10, 1.0, seven="abc"),
         "{esto no es json",
-        fila(100, "A", 40, 2.0),
+        row(100, "A", 40, 2.0),
     ]
-    escapo = None
+    escaped = None
     try:
-        _, _, d = quota.sanitize(_lineas(filas))
+        _, _, d = quota.sanitize(_lines(rows))
     except Exception as e:  # una línea rota nunca rompe el comando (REQ-061)
-        escapo, d = e, {"five_hour": {}, "seven_day": {}}
-    assert not escapo
+        escaped, d = e, {"five_hour": {}, "seven_day": {}}
+    assert not escaped
     assert d["five_hour"].get("out_of_range") == 1
     assert d["seven_day"].get("out_of_range") == 1
     assert d["five_hour"].get("corrupt_line") == 1
@@ -151,40 +149,40 @@ def test_sanear_y_lineas_corruptas(tmp_path):
     # Una línea rota en un transcript: se salta y cuenta, y el comando sigue.
     claude, log = tmp_path / "claude", tmp_path / "log"
     escribir(principal(claude), [peticion(0, "m0"), '{"type": "assistant", roto'])
-    escapo = None
+    escaped = None
     try:
         recompute.run(claude, log, now=BASE + timedelta(days=1))
-        agregados = recompute.read_aggregates(log) or {}
+        aggregates = recompute.read_aggregates(log) or {}
     except Exception as e:
-        escapo, agregados = e, {}
-    assert not escapo
-    assert (agregados.get("discards") or {}).get("five_hour", {}).get("corrupt_line") == 1
+        escaped, aggregates = e, {}
+    assert not escaped
+    assert (aggregates.get("discards") or {}).get("five_hour", {}).get("corrupt_line") == 1
 
 
-def test_un_punto_previo_mal_formado_no_rompe_el_comando(tmp_path):
+def test_a_malformed_previous_point_does_not_break_the_command(tmp_path):
     """REQ-061 en `recalcular-coste`: un punto del JSON anterior sin `delta_pct` (editado a mano)
     se salta y cuenta como `linea_corrupta`, en vez de tumbar `quitar_solapados`."""
     claude, log = tmp_path / "claude", tmp_path / "log"
     escribir(principal(claude), [peticion(0, "m0")])
-    roto = {
+    broken = {
         "source": "statusline",
         "type": "five_hour",
         "start": (BASE - timedelta(hours=4)).isoformat(),
         "end": BASE.isoformat(),
         "C": 150.0,
     }
-    recompute.write_aggregates(log, {"points": [roto]})
+    recompute.write_aggregates(log, {"points": [broken]})
     recompute.run(claude, log, now=BASE + timedelta(days=1))
-    agregados = recompute.read_aggregates(log) or {}
-    assert agregados["points"] == []
-    assert agregados["discards"]["five_hour"]["corrupt_line"] == 1
-    assert agregados["discards"]["seven_day"].get("corrupt_line", 0) == 0
+    aggregates = recompute.read_aggregates(log) or {}
+    assert aggregates["points"] == []
+    assert aggregates["discards"]["five_hour"]["corrupt_line"] == 1
+    assert aggregates["discards"]["seven_day"].get("corrupt_line", 0) == 0
 
 
 # --- REQ-051: rechazos --------------------------------------------------------------------
 
 
-def test_rechazos_duplicados_son_un_punto(tmp_path):
+def test_duplicate_rejections_are_one_point(tmp_path):
     """11 registros del mismo rechazo de 5 h, en el principal y en dos subagentes: un punto.
 
     Δ$ = las peticiones de [resetsAt − 5 h, primer rechazo]: 1 M de entrada de Opus 5.5 ($4) y
@@ -192,11 +190,11 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
     """
     claude = tmp_path / "claude"
     reset = int((BASE + timedelta(hours=3)).timestamp())
-    rechazo = {"status": "rejected", "rateLimitType": "five_hour", "resetsAt": reset}
+    rejection = {"status": "rejected", "rateLimitType": "five_hour", "resetsAt": reset}
 
-    def rechazos(s0: int, k: int, prefijo: str) -> list:
+    def rejections(s0: int, k: int, prefix: str) -> list:
         return [
-            sintetica(s0 + i, f"{prefijo}{i}", quota=[rechazo] if i % 2 else rechazo)
+            sintetica(s0 + i, f"{prefix}{i}", quota=[rejection] if i % 2 else rejection)
             for i in range(k)
         ]
 
@@ -208,19 +206,19 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
             peticion(10, "p2", usage={"cache_creation": {"ephemeral_1h_input_tokens": 1_000_000}}),
             peticion(2000, "despues", usage={"input_tokens": 1_000_000}),
         ]
-        + rechazos(1000, 5, "r"),
+        + rejections(1000, 5, "r"),
     )
-    escribir(subagente(claude, "s1"), rechazos(1100, 3, "u"))
-    escribir(subagente(claude, "s2"), rechazos(1200, 3, "v"))
-    indice = transcripts.read(claude / "projects")
-    rechazos_ = quota.rejection_points(indice.rejections, indice.requests.values())
-    assert len(rechazos_) == 1
-    p = rechazos_[0]
+    escribir(subagente(claude, "s1"), rejections(1100, 3, "u"))
+    escribir(subagente(claude, "s2"), rejections(1200, 3, "v"))
+    index = transcripts.read(claude / "projects")
+    rejections_ = quota.rejection_points(index.rejections, index.requests.values())
+    assert len(rejections_) == 1
+    p = rejections_[0]
     assert p["delta_usd"] == 12.0
     assert p["end"] == (BASE + timedelta(seconds=1000)).isoformat()
     assert p["marks"] == [quota.MARK_LOW_BOUND, quota.MARK_CHECK_ONLY]
     assert p["unpriced_requests"] == 0
-    e = quota.status({"points": rechazos_}, BASE + timedelta(days=1))
+    e = quota.status({"points": rejections_}, BASE + timedelta(days=1))
     assert e["five_hour"]["status"] == "uncalibrated"
     assert e["five_hour"]["rejection_points"] == 1
 
@@ -228,7 +226,7 @@ def test_rechazos_duplicados_son_un_punto(tmp_path):
 # --- REQ-055 y REQ-056: criterio ----------------------------------------------------------
 
 
-def test_criterio_de_la_spec():
+def test_spec_criterion():
     r = quota.criterion([150, 160, 170, 175])
     assert (r["status"], r["dispersion"]) == ("calibrated", 0.078)
     r = quota.criterion([150, 160, 170, 175, 300])
@@ -249,40 +247,40 @@ def test_criterio_de_la_spec():
 # --- REQ-054 y REQ-057: vigencia y reinicio ------------------------------------------------
 
 
-def test_un_punto_de_61_dias_no_cuenta():
-    ahora = BASE
-    fuentes = {"transcripts": True, "statusline": True}
-    frescos = [_punto(20, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
-    guarda = quota.status({"points": frescos, "sources": fuentes}, ahora)["five_hour"]
-    assert guarda["status"] == "calibrated"  # sin el punto viejo, calibra
+def test_a_61_day_old_point_does_not_count():
+    now = BASE
+    sources = {"transcripts": True, "statusline": True}
+    fresh = [_point(20, 150, now), _point(10, 160, now), _point(5, 170, now)]
+    guard = quota.status({"points": fresh, "sources": sources}, now)["five_hour"]
+    assert guard["status"] == "calibrated"  # sin el punto viejo, calibra
 
-    con_viejo = [_punto(61, 150, ahora), _punto(10, 160, ahora), _punto(5, 170, ahora)]
-    r = quota.status({"points": con_viejo, "sources": fuentes}, ahora)["five_hour"]
+    with_old = [_point(61, 150, now), _point(10, 160, now), _point(5, 170, now)]
+    r = quota.status({"points": with_old, "sources": sources}, now)["five_hour"]
     assert r["status"] == "uncalibrated"
     assert r["reason"] == "faltan 1 puntos del statusline"
     assert r["discards"].get("expired") == 1
 
 
-def test_reinicio_a_mano(tmp_path):
-    ahora = BASE
-    puntos = [_punto(5, 150, ahora)]
-    assert quota.current_points(puntos, ahora) == puntos  # guarda
-    vigentes = quota.current_points(puntos, ahora, (ahora - timedelta(days=1)).isoformat())
-    assert vigentes == []
+def test_manual_reset(tmp_path):
+    now = BASE
+    points = [_point(5, 150, now)]
+    assert quota.current_points(points, now) == points  # guarda
+    current = quota.current_points(points, now, (now - timedelta(days=1)).isoformat())
+    assert current == []
 
     # El comando guarda la fecha del reinicio y conserva la del otro tipo.
     log = tmp_path / "log"
-    recompute.run(tmp_path / "claude", log, now=ahora, reset="five_hour")
-    recompute.run(tmp_path / "claude", log, now=ahora + timedelta(hours=1))
-    reinicios = (recompute.read_aggregates(log) or {}).get("resets")
-    assert reinicios == {"five_hour": ahora.isoformat(timespec="seconds"), "seven_day": None}
+    recompute.run(tmp_path / "claude", log, now=now, reset="five_hour")
+    recompute.run(tmp_path / "claude", log, now=now + timedelta(hours=1))
+    restarts = (recompute.read_aggregates(log) or {}).get("resets")
+    assert restarts == {"five_hour": now.isoformat(timespec="seconds"), "seven_day": None}
 
 
-def test_sin_fuentes_lo_dice():
+def test_without_sources_it_says_so():
     """REQ-061: sin registro ni transcripts, «no hay datos de calibración en esta máquina»."""
-    ahora = BASE
-    sin_nada = {"points": [], "sources": {"transcripts": False, "statusline": False}}
-    assert quota.status(sin_nada, ahora)["five_hour"]["reason"] == quota.NO_DATA
-    assert quota.status(None, ahora)["seven_day"]["reason"] == quota.NO_DATA
-    solo_transcripts = {"points": [], "sources": {"transcripts": True, "statusline": False}}
-    assert quota.status(solo_transcripts, ahora)["five_hour"]["reason"] == quota.NO_STATUSLINE
+    now = BASE
+    with_nothing = {"points": [], "sources": {"transcripts": False, "statusline": False}}
+    assert quota.status(with_nothing, now)["five_hour"]["reason"] == quota.NO_DATA
+    assert quota.status(None, now)["seven_day"]["reason"] == quota.NO_DATA
+    transcripts_only = {"points": [], "sources": {"transcripts": True, "statusline": False}}
+    assert quota.status(transcripts_only, now)["five_hour"]["reason"] == quota.NO_STATUSLINE

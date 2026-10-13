@@ -2,7 +2,7 @@
 
 Todo es SINTÉTICO y vive en `tmp_path`: ningún id de sesión, ruta ni texto real. Los
 constructores de este fichero (`peticion`, `resultado`, `escribir`…) los reutilizan
-`test_cuota.py` y `test_recalcular.py`.
+`test_quota.py` y `test_recalcular.py`.
 """
 
 from __future__ import annotations

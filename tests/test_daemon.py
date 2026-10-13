@@ -10,7 +10,7 @@ from filelock import FileLock
 from local_delegate import cli, config, daemon, server
 
 
-class _RespuestaFalsa:
+class _FakeResponse:
     def __init__(self, payload):
         self._payload = payload
 
@@ -21,14 +21,14 @@ class _RespuestaFalsa:
         return self._payload
 
 
-def _doblar_get(monkeypatch, payload, registro=None):
+def _stub_get(monkeypatch, payload, record=None):
     """Dobla el GET de httpx2 para que `query_backend` reciba `payload`.
 
-    `registro` recoge las cabeceras de cada llamada. Se pasa como lista y no se lee del doble
+    `record` recoge las cabeceras de cada llamada. Se pasa como lista y no se lee del doble
     porque lo que interesa comprobar es **lo que sale hacia el daemon**, no cómo se construyó.
     """
 
-    class _ClienteFalso:
+    class _FakeClient:
         def __init__(self, *_a, **_kw):
             pass
 
@@ -39,37 +39,37 @@ def _doblar_get(monkeypatch, payload, registro=None):
             return False
 
         def get(self, _url, headers=None):
-            if registro is not None:
-                registro.append(headers or {})
-            return _RespuestaFalsa(payload)
+            if record is not None:
+                record.append(headers or {})
+            return _FakeResponse(payload)
 
-    monkeypatch.setattr(daemon.httpx2, "Client", _ClienteFalso)
+    monkeypatch.setattr(daemon.httpx2, "Client", _FakeClient)
 
 
-def test_query_backend_devuelve_lo_que_ve_el_daemon(monkeypatch):
-    _doblar_get(monkeypatch, {"available": True, "models": []})
+def test_query_backend_returns_what_the_daemon_sees(monkeypatch):
+    _stub_get(monkeypatch, {"available": True, "models": []})
     assert daemon.query_backend("127.0.0.1", 9393) == {"available": True, "models": []}
 
 
-def test_query_backend_sin_el_campo_available_es_none(monkeypatch):
+def test_query_backend_without_the_available_field_is_none(monkeypatch):
     """Sin el campo que responde la pregunta, «no se pudo preguntar» es más honesto que inventar.
 
     Si se devolviera el dict igualmente, `available` saldría ausente y quien llama lo leería como
     un backend caído — un diagnóstico falso a partir de una respuesta que no dice nada.
     """
-    _doblar_get(monkeypatch, {"models": []})
+    _stub_get(monkeypatch, {"models": []})
     assert daemon.query_backend("127.0.0.1", 9393) is None
 
 
-def test_query_backend_con_respuesta_que_no_es_un_objeto_es_none(monkeypatch):
-    _doblar_get(monkeypatch, [1, 2, 3])
+def test_query_backend_with_a_non_object_response_is_none(monkeypatch):
+    _stub_get(monkeypatch, [1, 2, 3])
     assert daemon.query_backend("127.0.0.1", 9393) is None
 
 
 # --- El token del puerto: el CLI tiene que poder hablar con su propio daemon ---
 
 
-def test_el_cli_se_autentica_contra_su_propio_daemon(monkeypatch):
+def test_the_cli_authenticates_against_its_own_daemon(monkeypatch):
     """Con token puesto, quien pregunta por el daemon manda la cabecera.
 
     Es el fallo que no se ve hasta desplegar: poner el token protege el puerto y, de paso, deja
@@ -77,52 +77,52 @@ def test_el_cli_se_autentica_contra_su_propio_daemon(monkeypatch):
     daemon sobre un puerto ocupado, los dos por un 401 que nadie relaciona con el token.
     """
     monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
-    enviadas: list[dict] = []
-    _doblar_get(monkeypatch, {"available": True, "models": []}, registro=enviadas)
+    sent: list[dict] = []
+    _stub_get(monkeypatch, {"available": True, "models": []}, record=sent)
 
     daemon.query_backend("127.0.0.1", 9393)
 
-    assert enviadas == [{"Authorization": "Bearer el-token-del-puerto"}]
+    assert sent == [{"Authorization": "Bearer el-token-del-puerto"}]
 
 
-def test_el_estado_del_daemon_tambien_va_autenticado(monkeypatch):
+def test_the_daemon_status_is_also_authenticated(monkeypatch):
     """`query_daemon` y `query_backend` son dos caminos al mismo puerto: los dos necesitan token.
 
     Doblados por separado a propósito. Con un solo test, una de las dos funciones podría quedarse
     sin cabecera y aprobar por la del otro camino — el error que ya costó un día en este repo.
     """
     monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
-    enviadas: list[dict] = []
-    _doblar_get(
+    sent: list[dict] = []
+    _stub_get(
         monkeypatch,
         {"service": "local-delegate", "mode": "daemon", "pid": 1},
-        registro=enviadas,
+        record=sent,
     )
 
     daemon.query_daemon("127.0.0.1", 9393)
 
-    assert enviadas == [{"Authorization": "Bearer el-token-del-puerto"}]
+    assert sent == [{"Authorization": "Bearer el-token-del-puerto"}]
 
 
-def test_sin_token_no_se_manda_cabecera(monkeypatch):
+def test_without_token_no_header_is_sent(monkeypatch):
     """Quien no configura token no empieza a mandar cabeceras vacías por ahí."""
     monkeypatch.setattr(config, "WEB_TOKEN", "")
-    enviadas: list[dict] = []
-    _doblar_get(monkeypatch, {"available": True, "models": []}, registro=enviadas)
+    sent: list[dict] = []
+    _stub_get(monkeypatch, {"available": True, "models": []}, record=sent)
 
     daemon.query_backend("127.0.0.1", 9393)
 
-    assert enviadas == [{}]
+    assert sent == [{}]
 
 
-class _RespuestaHTTP:
+class _HTTPResponse:
     def __init__(self, status_code, headers=None):
         self.status_code = status_code
         self.headers = headers or {}
 
 
-def _doblar_get_crudo(monkeypatch, respuesta, registro=None):
-    class _ClienteFalso:
+def _stub_get_raw(monkeypatch, response, record=None):
+    class _FakeClient:
         def __init__(self, *_a, **_kw):
             pass
 
@@ -133,16 +133,16 @@ def _doblar_get_crudo(monkeypatch, respuesta, registro=None):
             return False
 
         def get(self, _url, headers=None):
-            if registro is not None:
-                registro.append(headers)
-            if isinstance(respuesta, Exception):
-                raise respuesta
-            return respuesta
+            if record is not None:
+                record.append(headers)
+            if isinstance(response, Exception):
+                raise response
+            return response
 
-    monkeypatch.setattr(daemon.httpx2, "Client", _ClienteFalso)
+    monkeypatch.setattr(daemon.httpx2, "Client", _FakeClient)
 
 
-def test_la_pregunta_por_el_token_va_SIN_credencial(monkeypatch):
+def test_the_token_question_goes_WITHOUT_credential(monkeypatch):
     """Lo mira por el camino del que NO lleva llave, aunque este entorno sí la tenga.
 
     Es la lección más cara de este repo, aplicada aquí: un diagnóstico solo vale para el camino
@@ -155,79 +155,79 @@ def test_la_pregunta_por_el_token_va_SIN_credencial(monkeypatch):
     mutantes.
     """
     monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-puerto")
-    enviadas: list = []
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(200, {}), registro=enviadas)
+    sent: list = []
+    _stub_get_raw(monkeypatch, _HTTPResponse(200, {}), record=sent)
 
     daemon.daemon_requires_token("127.0.0.1", 9393)
 
-    assert enviadas, "no se llegó a preguntar"
-    assert not enviadas[0], f"la pregunta llevaba credencial: {enviadas[0]}"
+    assert sent, "no se llegó a preguntar"
+    assert not sent[0], f"la pregunta llevaba credencial: {sent[0]}"
 
 
-def test_un_401_nuestro_se_reconoce_por_el_realm(monkeypatch):
-    _doblar_get_crudo(
+def test_our_own_401_is_recognized_by_the_realm(monkeypatch):
+    _stub_get_raw(
         monkeypatch,
-        _RespuestaHTTP(401, {"www-authenticate": 'Basic realm="local-delegate", charset="UTF-8"'}),
+        _HTTPResponse(401, {"www-authenticate": 'Basic realm="local-delegate", charset="UTF-8"'}),
     )
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is True
 
 
-def test_un_401_ajeno_no_se_atribuye_a_nuestro_daemon(monkeypatch):
+def test_a_foreign_401_is_not_attributed_to_our_daemon(monkeypatch):
     """Otro servicio en ese puerto también puede pedir credencial, y no es nuestro.
 
     Sin mirar el `realm`, cualquier cosa que respondiera 401 haría que el diagnóstico dijera «es
     tu daemon, te falta el token» sobre un proceso ajeno — cambiar un diagnóstico falso por otro
     distinto no arregla nada.
     """
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(401, {"www-authenticate": 'Basic realm="nginx"'}))
+    _stub_get_raw(monkeypatch, _HTTPResponse(401, {"www-authenticate": 'Basic realm="nginx"'}))
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is False
 
 
-def test_un_401_sin_cabecera_de_reto_tampoco_se_atribuye(monkeypatch):
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(401, {}))
+def test_a_401_without_challenge_header_is_not_attributed_either(monkeypatch):
+    _stub_get_raw(monkeypatch, _HTTPResponse(401, {}))
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is False
 
 
-def test_si_no_se_pudo_preguntar_no_hay_veredicto(monkeypatch):
+def test_if_it_could_not_ask_there_is_no_verdict(monkeypatch):
     """`None` y `False` son distintos: «no lo sé» no es «no lo exige»."""
-    _doblar_get_crudo(monkeypatch, daemon.httpx2.ConnectError("nadie escucha"))
+    _stub_get_raw(monkeypatch, daemon.httpx2.ConnectError("nadie escucha"))
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is None
 
 
-def test_un_puerto_que_responde_sin_pedir_nada_no_exige_token(monkeypatch):
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(200, {}))
+def test_a_port_that_answers_without_asking_anything_does_not_require_a_token(monkeypatch):
+    _stub_get_raw(monkeypatch, _HTTPResponse(200, {}))
     assert daemon.daemon_requires_token("127.0.0.1", 9393) is False
 
 
 # --- ¿Entra ESTE token? (para Claude Desktop, que lo lleva literal) -----------
 
 
-def test_probar_un_token_lo_manda_a_el_y_no_el_del_entorno(monkeypatch):
+def test_testing_a_token_sends_that_token_and_not_the_environment_one(monkeypatch):
     """El token que se prueba es el del cliente. Mandar el de `config` diría «entra» siempre aquí."""
     monkeypatch.setattr(config, "WEB_TOKEN", "el-token-del-entorno")
-    enviadas: list = []
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(200, {}), registro=enviadas)
+    sent: list = []
+    _stub_get_raw(monkeypatch, _HTTPResponse(200, {}), record=sent)
 
     assert daemon.daemon_accepts_token("127.0.0.1", 9393, "el-del-cliente") is True
-    assert enviadas == [{"Authorization": "Bearer el-del-cliente"}]
+    assert sent == [{"Authorization": "Bearer el-del-cliente"}]
 
 
-def test_un_401_con_el_token_es_que_no_entra(monkeypatch):
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(401, {}))
+def test_a_401_with_the_token_means_it_does_not_get_in(monkeypatch):
+    _stub_get_raw(monkeypatch, _HTTPResponse(401, {}))
     assert daemon.daemon_accepts_token("127.0.0.1", 9393, "viejo") is False
 
 
-def test_probar_un_token_sin_poder_preguntar_no_da_veredicto(monkeypatch):
-    _doblar_get_crudo(monkeypatch, daemon.httpx2.ConnectError("nadie escucha"))
+def test_testing_a_token_without_being_able_to_ask_gives_no_verdict(monkeypatch):
+    _stub_get_raw(monkeypatch, daemon.httpx2.ConnectError("nadie escucha"))
     assert daemon.daemon_accepts_token("127.0.0.1", 9393, "x") is None
 
 
-def test_una_respuesta_rara_no_se_lee_como_que_entra(monkeypatch):
-    _doblar_get_crudo(monkeypatch, _RespuestaHTTP(500, {}))
+def test_an_odd_response_is_not_read_as_getting_in(monkeypatch):
+    _stub_get_raw(monkeypatch, _HTTPResponse(500, {}))
     assert daemon.daemon_accepts_token("127.0.0.1", 9393, "x") is None
 
 
-def test_con_token_el_puerto_entero_pide_credencial(monkeypatch):
+def test_with_token_the_whole_port_asks_for_credential(monkeypatch):
     """Las tres superficies del puerto tras una sola puerta, montada sobre la app real.
 
     `test_web_auth.py` prueba el middleware sobre una app de juguete; esto prueba que está
@@ -238,14 +238,14 @@ def test_con_token_el_puerto_entero_pide_credencial(monkeypatch):
     app = daemon.build_app("127.0.0.1", 19393)
 
     with TestClient(app) as client:
-        for ruta in (daemon.DAEMON_STATUS_PATH, "/", "/api/status"):
-            assert client.get(ruta).status_code == 401, f"{ruta} quedó sin proteger"
+        for path in (daemon.DAEMON_STATUS_PATH, "/", "/api/status"):
+            assert client.get(path).status_code == 401, f"{path} quedó sin proteger"
 
-        cabecera = {"Authorization": "Bearer el-token-del-puerto"}
-        assert client.get(daemon.DAEMON_STATUS_PATH, headers=cabecera).status_code == 200
+        header = {"Authorization": "Bearer el-token-del-puerto"}
+        assert client.get(daemon.DAEMON_STATUS_PATH, headers=header).status_code == 200
 
 
-def test_sin_token_el_puerto_sigue_abierto_como_siempre(monkeypatch):
+def test_without_token_the_port_stays_open_as_always(monkeypatch):
     """El default no cambia para nadie: sin variable, el daemon se comporta como hasta hoy."""
     monkeypatch.setattr(config, "WEB_TOKEN", "")
     app = daemon.build_app("127.0.0.1", 19393)
@@ -294,7 +294,7 @@ def _handshake(client: TestClient, host: str):
     )
 
 
-def test_mcp_en_loopback_acepta_localhost_y_rechaza_hosts_ajenos():
+def test_mcp_on_loopback_accepts_localhost_and_rejects_foreign_hosts():
     """Con host de loopback el SDK activa solo la protección contra DNS rebinding."""
     app = daemon.build_app("127.0.0.1", 19393)
 
@@ -306,7 +306,7 @@ def test_mcp_en_loopback_acepta_localhost_y_rechaza_hosts_ajenos():
         assert _handshake(client, "atacante.example:19393").status_code == 421
 
 
-def test_mcp_publicado_en_la_lan_no_rechaza_por_host():
+def test_mcp_published_on_the_lan_does_not_reject_by_host():
     """`LOCAL_DELEGATE_WEB_HOST=0.0.0.0` publica en la red local, y el proyecto lo permite.
 
     La protección del SDK solo se auto-activa con loopback; si se activara aquí, el daemon
@@ -318,17 +318,17 @@ def test_mcp_publicado_en_la_lan_no_rechaza_por_host():
         assert _handshake(client, "192.168.1.50:19393").status_code == 200
 
 
-def test_handshake_declara_la_version_del_paquete():
+def test_handshake_declares_the_package_version():
     """`serverInfo.version` reportaba la del SDK, que no dice qué local-delegate corre."""
     app = daemon.build_app("127.0.0.1", 19393)
 
     with TestClient(app) as client:
-        respuesta = _handshake(client, "127.0.0.1:19393")
+        response = _handshake(client, "127.0.0.1:19393")
 
-    carga = next(
-        json.loads(linea[6:]) for linea in respuesta.text.splitlines() if linea.startswith("data: ")
+    load = next(
+        json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ")
     )
-    info = carga["result"]["serverInfo"]
+    info = load["result"]["serverInfo"]
     assert info["name"] == "local-delegate"
     assert info["version"] == server._get_version()
 
@@ -377,7 +377,7 @@ def test_serve_is_idempotent_when_daemon_lock_is_held(tmp_path, monkeypatch, cap
     assert "pid=4321" in output
 
 
-def test_lock_ocupado_dice_en_que_puerto_esta_el_daemon_vivo(tmp_path, monkeypatch, capsys):
+def test_busy_lock_says_which_port_the_live_daemon_is_on(tmp_path, monkeypatch, capsys):
     """El lock es uno **por usuario**, así que el daemon vivo puede estar en otro puerto.
 
     Antes el mensaje decía «no responde un daemon en 127.0.0.1:<el que pediste>»: cierto y
@@ -389,7 +389,7 @@ def test_lock_ocupado_dice_en_que_puerto_esta_el_daemon_vivo(tmp_path, monkeypat
         json.dumps({"host": "127.0.0.1", "port": 9393, "pid": 4321}), encoding="utf-8"
     )
 
-    vivo = {
+    alive = {
         "service": "local-delegate",
         "mode": "daemon",
         "pid": 4321,
@@ -398,10 +398,10 @@ def test_lock_ocupado_dice_en_que_puerto_esta_el_daemon_vivo(tmp_path, monkeypat
         "mcp_url": "http://127.0.0.1:9393/mcp",
     }
 
-    def _solo_contesta_en_9393(_host, port, timeout=1.0):
-        return vivo if port == 9393 else None
+    def _only_answers_on_9393(_host, port, timeout=1.0):
+        return alive if port == 9393 else None
 
-    monkeypatch.setattr(daemon, "query_daemon", _solo_contesta_en_9393)
+    monkeypatch.setattr(daemon, "query_daemon", _only_answers_on_9393)
 
     lock = FileLock(str(tmp_path / "daemon.lock"))
     with lock.acquire(timeout=0):
@@ -414,7 +414,7 @@ def test_lock_ocupado_dice_en_que_puerto_esta_el_daemon_vivo(tmp_path, monkeypat
     assert "9899" in output, f"y también el que se pidió, para que se entienda: {output!r}"
 
 
-def test_lock_ocupado_sin_daemon_vivo_no_inventa_uno(tmp_path, monkeypatch, capsys):
+def test_busy_lock_without_live_daemon_does_not_make_one_up(tmp_path, monkeypatch, capsys):
     """Un `daemon.json` huérfano no debe convertirse en «tu daemon está en …».
 
     Es el control negativo del test de arriba: si el fichero está pero nadie contesta donde dice,

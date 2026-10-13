@@ -1,0 +1,21 @@
+refactor(rename): nombres en inglés en test_coste_doctor a test_densidad (ola A9a, lote 5)
+
+Renombra a inglés los nombres de test_coste_doctor.py, test_ctrl_c.py,
+test_cuota.py, test_daemon.py, test_delegacion_conexion.py y
+test_densidad.py: 299 filas del mapping aprobado. Entre ellas, los 72
+test_* de esos módulos, las fixtures cliente_nuevo → new_client,
+registradores → recorders, _sin_web_ni_arranques → _without_web_or_starts
+y _respaldo_declarado → _declared_fallback, los dobles del daemon
+(_doblar_get → _stub_get, _RespuestaHTTP → _HTTPResponse) y los
+ayudantes de la cuota (fila → row, puntos_de → points_of), con las
+cadenas de parametrize que los ligan.
+
+Ficheros (git mv): test_coste_doctor.py → test_cost_doctor.py,
+test_cuota.py → test_quota.py, test_delegacion_conexion.py →
+test_delegation_connection.py y test_densidad.py → test_density.py.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
+
+Con el rename cambia, por consecuencia, la cita de test_cuota.py en el
+docstring de tests/test_transcripts.py.
