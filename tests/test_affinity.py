@@ -24,7 +24,7 @@ import backend_mock
 import httpx2
 import pytest
 
-from local_delegate import cadenas, checks, config, footprint, matrix, server, turn
+from local_delegate import chains, checks, config, footprint, matrix, server, turn
 from local_delegate.turn import PendingRequest
 
 BASE = "http://127.0.0.1:9292/v1"
@@ -119,7 +119,7 @@ def affinity(tmp_path, monkeypatch) -> Path:
             _cell(tmp_path, "local_delegate", LONG, MECH),
         ),
     )
-    monkeypatch.setattr(cadenas, "_loaded_provider", server._affinity_loaded_provider)
+    monkeypatch.setattr(chains, "_loaded_provider", server._affinity_loaded_provider)
     return path
 
 
@@ -945,7 +945,7 @@ def test_observed_uses_the_real_id_for_every_lookup():
 def test_real_loaded_provider_stays_registered():
     """Hallazgo 12: los tests que ponen otro proveedor devuelven el anterior, no `None`. Sin
     fixture: si un test de antes lo dejó quitado, aquí se ve."""
-    assert cadenas._loaded_provider is server._affinity_loaded_provider
+    assert chains._loaded_provider is server._affinity_loaded_provider
 
 
 # --- Decisión del usuario (2026-10-07): capacidad del alternativo de la afinidad -------------

@@ -1,0 +1,24 @@
+refactor(rename): nombres en inglés en checks.py y cadenas → chains (ola A8a-1)
+
+Renombra a inglés los identificadores de src/local_delegate/checks.py y del
+módulo de cadenas de respaldo, que pasa de cadenas.py a chains.py (git mv):
+151 filas del mapping. Entre ellas, Cadena → Chain (con sus campos
+rol/pasos/ignorados → role/steps/ignored y la propiedad modelos → models),
+resolver → resolve, describir → describe, ROLES_DE_TEXTO → TEXT_ROLES,
+CADENAS_POR_DEFECTO → DEFAULT_CHAINS, _pendiente_mas_vieja →
+_oldest_pending (con sus parámetros ahora/plazo_dias → now/period_days),
+_autenticacion_de_la_entrada → _entry_auth y las variables locales de los
+probes.
+
+No cambia ninguna salida de doctor ni de local_status: las partes literales
+de las cadenas de checks.py y chains.py son las mismas antes y después. La
+única excepción es el valor interno "sin_credencial" → "no_credential" de
+_entry_auth, que no sale de checks.py.
+
+El nombre del módulo no se persiste en ningún sitio: sin alias. El sinónimo
+obsoleto "residente" del paso loaded se sigue aceptando y entra en
+rename-exceptions.md (lectura de formato viejo).
+
+Con el rename cambian, por consecuencia: los imports y usos de server.py,
+la tabla de módulos de docs/wiki/Architecture.md y cinco ficheros de test
+(imports, prefijos de módulo y accesos a los campos de Chain).

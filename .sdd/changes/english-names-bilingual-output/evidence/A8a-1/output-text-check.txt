@@ -1,0 +1,12 @@
+# Partes literales de las cadenas (sin docstrings), HEAD 42b420d frente a A8a-1: textos de salida de doctor (checks.py) y local_status (chains.py)
+## checks.py (597 literales antes, 597 después)
+474a475,477
+> 'no_credential'
+> 'no_credential'
+> 'no_credential'
+554,556d556
+< 'sin_credencial'
+< 'sin_credencial'
+< 'sin_credencial'
+## cadenas.py -> chains.py (30 antes, 30 después)
+(fin)

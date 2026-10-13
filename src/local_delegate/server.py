@@ -37,7 +37,7 @@ from mcp.types import ToolAnnotations
 from . import (
     attribution,
     autostart,
-    cadenas,
+    chains,
     clients,
     config,
     cooldown,
@@ -1637,7 +1637,7 @@ def _affinity_loaded_provider(
     )
 
 
-cadenas.register_loaded_provider(_affinity_loaded_provider)
+chains.register_loaded_provider(_affinity_loaded_provider)
 
 
 class _OperationTurn:
@@ -1992,7 +1992,7 @@ def _next_hop(
         return None
     for i in range(since, len(steps)):
         step = steps[i]
-        if step == cadenas.LOADED:
+        if step == chains.LOADED:
             candidates: Sequence[str] = loaded_members()
         elif capacity:
             continue
@@ -2018,7 +2018,7 @@ def _loaded_members(op: _OperationTurn | None, has_failed: str) -> tuple[str, ..
     """Los miembros del paso `loaded` para este salto (REQ-019), con lo que el daemon sabe de sí.
 
     `own_items` son los modelos elegidos por las demás operaciones de este daemon en `actives`, y
-    `nobody_else` si no hay ninguna otra. Sin proveedor registrado `cadenas` devuelve `()` sin
+    `nobody_else` si no hay ninguna otra. Sin proveedor registrado `chains` devuelve `()` sin
     consultar nada. Con turno, el salto pide turno con el conjunto (`direct` vacío) y elige al
     conceder (`_OperationTurn.ensure_loaded` y `pick`); sin turno va al primero que vale (T12).
     """
@@ -2027,7 +2027,7 @@ def _loaded_members(op: _OperationTurn | None, has_failed: str) -> tuple[str, ..
     own_items = frozenset(a.chosen for a in others if a.chosen is not None)
     tool = op.tool if op is not None else None
     role_name = op.role_name if op is not None else None
-    return cadenas.loaded_members(tool, has_failed, own_items, not others, role_name)
+    return chains.loaded_members(tool, has_failed, own_items, not others, role_name)
 
 
 def _first(result: ChatResult | None) -> ChatResult:
@@ -2132,9 +2132,9 @@ def _with_fallback(
         error_class = original.error_class
         served = attempts[-1].model if attempts else model
 
-    steps = cadenas.resolver(role).pasos if role and config.FALLBACK else ()
+    steps = chains.resolve(role).steps if role and config.FALLBACK else ()
     # El orden de la cadena para una concesión forzada (REQ-007): solo modelos concretos.
-    chain = tuple(step for step in steps if step != cadenas.LOADED)
+    chain = tuple(step for step in steps if step != chains.LOADED)
     if served != model:
         # Falló el alternativo que eligió la afinidad: el primer candidato es el modelo del rol, y
         # después su cadena, con el tope de saltos de siempre (REQ-015).
@@ -2164,7 +2164,7 @@ def _with_fallback(
             break
         index, targets = next_step
         start = index + 1
-        if steps[index] == cadenas.LOADED:
+        if steps[index] == chains.LOADED:
             result = call(targets[0], chain, hop=True, members=targets)
         else:
             result = call(targets[0], chain, hop=True)
@@ -4456,7 +4456,7 @@ def local_status() -> str:
     ):
         lines.append(f"  {role}: {model} (max_chars={config.max_chars_for_role(role)})")
     lines.append(f"  vision: {config.MODEL_VISION} (max_image_mb={config.MAX_IMAGE_MB})")
-    lines.extend(cadenas.describir())
+    lines.extend(chains.describe())
     lines.append(f"  concurrencia máxima del proceso: {config.MAX_CONCURRENT_REQUESTS}")
     lines.append(_describe_turn())
     lines.extend(_describe_cooldown())

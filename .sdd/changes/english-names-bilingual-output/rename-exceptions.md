@@ -35,6 +35,7 @@ sección de su motivo.
 
 | Nombre | Fichero | Motivo |
 | --- | --- | --- |
+| residente | src/local_delegate/chains.py | lectura de formato viejo (REQ-022): `_OBSOLETE_SYNONYMS` acepta `residente` (y `resident`) como sinónimo obsoleto del paso `loaded` en `LOCAL_DELEGATE_FALLBACK_<ROL>`, con aviso de `doctor`; hoy el detector no lo marca, la fila deja escrito por qué sigue (ola A8a-1, respuesta 4) |
 
 ## Envoltorio de REQ-046
 

@@ -75,7 +75,7 @@ DAEMON_TOKEN_HINT = "local-delegate install --mcp-mode http --web-token-env"
 # `${VAR}` en Claude Code y `{env:VAR}` en opencode. Codex no usa ninguna —da el nombre pelado en
 # `bearer_token_env_var`— y por eso el probe lo envuelve antes de llegar aquí, en vez de añadir un
 # tercer caso a esta expresión: el vocabulario de cada cliente se traduce una sola vez.
-_VARIABLE_REFERENCIADA = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}|\{env:([A-Z_][A-Z0-9_]*)\}")
+_REFERENCED_VARIABLE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}|\{env:([A-Z_][A-Z0-9_]*)\}")
 # Una sola definición: `install` la usa para conservar la cabecera al reinstalar.
 _CODEX_BEARER_RE = install._CODEX_BEARER_RE
 # El nombre de la variable, no su valor: el diagnóstico jamás imprime un secreto.
@@ -190,21 +190,21 @@ def _default_backend_models() -> failures.BackendView:
     # 1 s para conectar con el daemon, que está en esta máquina; para leer, MÁS que el techo de un
     # sondeo fallido del daemon (REQ-016). Con 1 s de lectura, un fallo lento del backend (VPN,
     # puerto cerrado en Windows) agotaba la consulta y la causa que el daemon ya sabía no llegaba.
-    plazo = httpx2.Timeout(
+    timeout = httpx2.Timeout(
         config.TIMEOUT_SONDA_CONEXION + config.TIMEOUT_SONDA_LECTURA + 1, connect=1.0
     )
-    visto = daemon.query_backend(host, port, timeout=plazo)
-    if visto is not None:
-        if visto.get("available"):
+    seen = daemon.query_backend(host, port, timeout=timeout)
+    if seen is not None:
+        if seen.get("available"):
             return failures.BackendView(True, "", None, "daemon")
         # Un daemon de una versión anterior manda `causa`/`detalle` y el valor viejo de la causa
         # (REQ-006): se leen las dos claves y el valor se pasa al formato nuevo.
-        causa = legacy_names.new_value(
-            legacy_names.CONNECTION_CAUSE_VALUES, legacy_names.read_key(visto, "cause", "causa")
+        cause = legacy_names.new_value(
+            legacy_names.CONNECTION_CAUSE_VALUES, legacy_names.read_key(seen, "cause", "causa")
         )
-        detalle = legacy_names.read_key(visto, "detail", "detalle")
-        if isinstance(causa, str) and isinstance(detalle, str) and detalle:
-            return failures.BackendView(False, detalle, causa, "daemon")
+        detail = legacy_names.read_key(seen, "detail", "detalle")
+        if isinstance(cause, str) and isinstance(detail, str) and detail:
+            return failures.BackendView(False, detail, cause, "daemon")
         # Daemon antiguo, sin causa: el texto de siempre. El daemon SÍ tiene credencial, así
         # que su «no disponible» es un diagnóstico de verdad y no una duda: no cabe el `unknown`.
         return failures.BackendView(
@@ -276,34 +276,34 @@ def _default_clients_seen() -> tuple[list[dict], str | None]:
     # perfectamente observado por el mero hecho de que el fichero rotó — o sea, cambiar un
     # crecimiento sin límite por un diagnóstico que miente. La lista vacía es lo normal cuando
     # nadie ha hablado todavía, y eso no es un error.
-    observados: list[dict] = []
-    for ruta in clients.rutas_para_leer():
-        texto, motivo = read_text(ruta)
-        if motivo is not None:
-            return [], motivo
-        if texto is not None:
-            observados.extend(_parse_jsonl(texto))
-    return observados, None
+    observed: list[dict] = []
+    for path in clients.rutas_para_leer():
+        text, reason = read_text(path)
+        if reason is not None:
+            return [], reason
+        if text is not None:
+            observed.extend(_parse_jsonl(text))
+    return observed, None
 
 
-def _parse_jsonl(texto: str) -> list[dict]:
+def _parse_jsonl(text: str) -> list[dict]:
     """Los objetos JSON de un JSONL, saltándose lo que no lo sea.
 
     Una línea a medio escribir —el proceso murió durante el ``write``— no puede tumbar el
     diagnóstico ni hacer perder las líneas buenas que hay alrededor.
     """
-    objetos: list[dict] = []
-    for linea in texto.splitlines():
-        linea = linea.strip()
-        if not linea:
+    objects: list[dict] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
             continue
         try:
-            dato = json.loads(linea)
+            item = json.loads(line)
         except ValueError:
             continue
-        if isinstance(dato, dict):
-            objetos.append(dato)
-    return objetos
+        if isinstance(item, dict):
+            objects.append(item)
+    return objects
 
 
 def NO_CLIENTS() -> tuple[list[dict], str | None]:
@@ -480,12 +480,12 @@ def _packaged_hooks() -> dict[str, Path]:
         return {}
 
 
-def _differs(instalado: Path, empaquetado: Path | None) -> bool:
+def _differs(installed: Path, packaged: Path | None) -> bool:
     """True si el script instalado no es byte a byte el del paquete. Sin referencia, no se afirma."""
-    if empaquetado is None:
+    if packaged is None:
         return False
     try:
-        return instalado.read_bytes() != empaquetado.read_bytes()
+        return installed.read_bytes() != packaged.read_bytes()
     except OSError:
         return False
 
@@ -508,7 +508,7 @@ def _worst(statuses: list[str]) -> str:
 # Los tres clientes y dónde vive cada uno. Una sola tupla para los dos probes que recorren
 # clientes (`client.presence` y `scaffold.memory`): tenerla dos veces es como se cuela un cliente
 # que se detecta pero al que nadie le comprueba la memoria.
-def _clientes(ctx: Context) -> tuple[tuple[str, Path], ...]:
+def _client_dirs(ctx: Context) -> tuple[tuple[str, Path], ...]:
     return (
         ("Claude Code", ctx.claude_dir),
         ("Codex", ctx.codex_dir),
@@ -517,59 +517,59 @@ def _clientes(ctx: Context) -> tuple[tuple[str, Path], ...]:
 
 
 def _probe_clients(ctx: Context) -> Result:
-    present = [name for name, path in _clientes(ctx) if path.is_dir()]
+    present = [name for name, path in _client_dirs(ctx) if path.is_dir()]
     if not present:
         return Result(UNKNOWN, f"no hay ~/.claude, ~/.codex ni ~/.config/opencode bajo {ctx.home}")
     return Result(OK, "detectados: " + ", ".join(present))
 
 
-_SIN_NOMBRE = "(sin identificar)"
+_UNNAMED = "(sin identificar)"
 
 # Lo más antiguo que puede haber: una observación cuyo `ts` falte o no se pueda parsear pierde la
 # carrera de «la más reciente» en vez de tumbar el check por una línea mala.
-_TS_MINIMO = datetime.min.replace(tzinfo=UTC)
+_MIN_TS = datetime.min.replace(tzinfo=UTC)
 
 
-def _momento(obs: dict) -> datetime:
+def _instant(obs: dict) -> datetime:
     """Cuándo se anotó la observación, tolerando que el sello no sirva."""
     ts = obs.get("ts")
     if not isinstance(ts, str):
-        return _TS_MINIMO
+        return _MIN_TS
     try:
-        momento = datetime.fromisoformat(ts)
+        instant = datetime.fromisoformat(ts)
     except ValueError:
-        return _TS_MINIMO
+        return _MIN_TS
     # Un sello sin zona compararía como *naive* y lanzaría `TypeError` contra los que sí la traen.
-    return momento if momento.tzinfo is not None else momento.replace(tzinfo=UTC)
+    return instant if instant.tzinfo is not None else instant.replace(tzinfo=UTC)
 
 
-def _cp1252(texto: str) -> str:
+def _cp1252(text: str) -> str:
     """Texto seguro para la consola de Windows.
 
     El nombre y la versión del cliente son **texto ajeno**: los pone quien se conecta. Un emoji ahí
     mataría el diagnóstico igual que lo mató una flecha «→», pero por un dato que este repo no
     controla, así que se sanea en vez de confiar.
     """
-    return texto.encode("cp1252", errors="replace").decode("cp1252")
+    return text.encode("cp1252", errors="replace").decode("cp1252")
 
 
-def _describir(nombre: str, obs: dict) -> str:
+def _describe(name: str, obs: dict) -> str:
     """Una observación en una línea: quién, qué versión, qué protocolo y si sabe preguntar."""
     version = obs.get("version")
-    protocolo = obs.get("protocol")
+    protocol = obs.get("protocol")
     caps = obs.get("caps")
     # `caps` tiene que ser una LISTA antes de preguntar por pertenencia. Si llegara como la cadena
     # "no-elicitation", un `in` daría True por subcadena y el check afirmaría justo lo contrario de
     # la verdad — un falso positivo silencioso.
-    sabe_preguntar = isinstance(caps, list) and "elicitation" in caps
+    can_ask = isinstance(caps, list) and "elicitation" in caps
 
-    partes = [nombre]
+    parts = [name]
     if isinstance(version, str) and version:
-        partes.append(version)
-    util = isinstance(protocolo, str) and protocolo
-    partes.append(f"[{protocolo if util else '?'}]")
-    partes.append("elicitation" if sabe_preguntar else "sin elicitation")
-    return _cp1252(" ".join(partes))
+        parts.append(version)
+    util = isinstance(protocol, str) and protocol
+    parts.append(f"[{protocol if util else '?'}]")
+    parts.append("elicitation" if can_ask else "sin elicitation")
+    return _cp1252(" ".join(parts))
 
 
 def _probe_clients_observed(ctx: Context) -> Result:
@@ -585,24 +585,24 @@ def _probe_clients_observed(ctx: Context) -> Result:
     se enseña la observación más reciente de cada uno. Sin eso, el mismo cliente saldría repetido
     tantas veces como se haya lanzado.
     """
-    observaciones, motivo = ctx.clients_seen()
-    if motivo is not None:
-        return Result(UNKNOWN, motivo)
-    if not observaciones:
+    observations, reason = ctx.clients_seen()
+    if reason is not None:
+        return Result(UNKNOWN, reason)
+    if not observations:
         return Result(UNKNOWN, "todavía no ha hablado ningún cliente MCP con este local-delegate")
 
-    ultimas: dict[str, dict] = {}
-    for obs in observaciones:
-        nombre = obs.get("client")
+    latest: dict[str, dict] = {}
+    for obs in observations:
+        name = obs.get("client")
         # El `client_info` es opcional desde la revisión 2026-07-28: puede haber capabilities sin
         # identidad. Esas observaciones se agrupan aparte, pero no se pierden.
-        if not isinstance(nombre, str) or not nombre:
-            nombre = _SIN_NOMBRE
-        previa = ultimas.get(nombre)
-        if previa is None or _momento(obs) >= _momento(previa):
-            ultimas[nombre] = obs
+        if not isinstance(name, str) or not name:
+            name = _UNNAMED
+        previous = latest.get(name)
+        if previous is None or _instant(obs) >= _instant(previous):
+            latest[name] = obs
 
-    return Result(OK, "; ".join(_describir(nombre, ultimas[nombre]) for nombre in sorted(ultimas)))
+    return Result(OK, "; ".join(_describe(name, latest[name]) for name in sorted(latest)))
 
 
 def _installed_version() -> str | None:
@@ -709,20 +709,22 @@ def _probe_hook_files(ctx: Context) -> Result:
         return Result(UNKNOWN, reason)
     if entries is None:
         return Result(MISSING, f"no existe {ctx.hooks_dir}", INSTALL_HINT)
-    empaquetados = _packaged_hooks()
-    expected = sorted(empaquetados) or [script for script, _event, _matcher in install._HOOK_EVENTS]
-    faltan = [name for name in expected if name not in entries]
-    if faltan:
-        return Result(WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(faltan)}", INSTALL_HINT)
+    packaged = _packaged_hooks()
+    expected = sorted(packaged) or [script for script, _event, _matcher in install._HOOK_EVENTS]
+    missing = [name for name in expected if name not in entries]
+    if missing:
+        return Result(
+            WARN, f"faltan scripts en {ctx.hooks_dir}: {', '.join(missing)}", INSTALL_HINT
+        )
     # Que estén no basta: hay que mirar que sean LOS DE ESTA VERSIÓN. Actualizar el paquete no
     # toca `~/.claude/hooks/`, y mirando solo los nombres unos hooks de la 0.27 pasaban por buenos
     # con la 0.31.1 instalada —así estuvo la Mac del 2026-09-15 al 2026-09-22, sin el bloqueo ni
     # la telemetría de F1, y `update` respondiendo que no había nada que reparar—.
-    viejos = [name for name in expected if _differs(ctx.hooks_dir / name, empaquetados.get(name))]
-    if viejos:
+    stale = [name for name in expected if _differs(ctx.hooks_dir / name, packaged.get(name))]
+    if stale:
         return Result(
             WARN,
-            f"scripts de otra versión en {ctx.hooks_dir}: {', '.join(viejos)}",
+            f"scripts de otra versión en {ctx.hooks_dir}: {', '.join(stale)}",
             UPDATE_HOOKS_HINT,
         )
     # Se cuentan los `.py`, no las entradas del directorio: en cuanto los hooks se ejecutan una vez,
@@ -833,7 +835,7 @@ def _probe_skill(ctx: Context) -> Result:
     }
     statuses: list[str] = []
     details: list[str] = []
-    for label, client_dir in _clientes(ctx):
+    for label, client_dir in _client_dirs(ctx):
         if label not in subruta:
             continue
         if not client_dir.is_dir():
@@ -870,14 +872,12 @@ def _probe_memory(ctx: Context) -> Result:
     marcadores también da aviso, y `update` lo sobrescribe dejando el `.bak`; fuera de ellos no se
     toca nada.
     """
-    ficheros = {
+    files = {
         "Claude Code": "CLAUDE.md",
         "Codex": "AGENTS.md",
         "opencode": "AGENTS.md",
     }
-    targets = tuple(
-        (nombre, carpeta, carpeta / ficheros[nombre]) for nombre, carpeta in _clientes(ctx)
-    )
+    targets = tuple((name, folder, folder / files[name]) for name, folder in _client_dirs(ctx))
     statuses: list[str] = []
     details: list[str] = []
     for label, client_dir, path in targets:
@@ -944,13 +944,13 @@ def _entry_timeouts(entry: dict, target: str) -> dict:
     return {k: entry[k] for k in install.TIMEOUT_KEYS[target] if entry.get(k) is not None}
 
 
-def _timeouts_text(plazos: dict) -> str:
+def _timeouts_text(timeouts: dict) -> str:
     """``, plazo tool_timeout_sec = 900`` para el detalle, o nada si no hay plazo puesto.
 
     Se enseña porque `install` y `update` lo conservan: así se ve, sin abrir el fichero, que el
     plazo que subiste sigue ahí.
     """
-    return f", plazo {install._describe_timeouts(plazos)}" if plazos else ""
+    return f", plazo {install._describe_timeouts(timeouts)}" if timeouts else ""
 
 
 def _probe_mcp_claude(ctx: Context) -> Result:
@@ -968,8 +968,8 @@ def _probe_mcp_claude(ctx: Context) -> Result:
         return Result(MISSING, f"'{install.SERVER_NAME}' no está en {path}", INSTALL_HINT)
     kind = _entry_mode(entry)
     where = entry.get("url") or entry.get("command") or ""
-    plazos = _timeouts_text(_entry_timeouts(entry, "claude"))
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{plazos})")
+    timeouts = _timeouts_text(_entry_timeouts(entry, "claude"))
+    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{timeouts})")
 
 
 def _probe_mcp_codex(ctx: Context) -> Result:
@@ -1007,37 +1007,37 @@ def _opencode_mcp_entry(ctx: Context) -> tuple[dict | None, Path | None, str | N
     por ausente una entrada puesta en el otro. Un fichero ilegible o mal formado es motivo de
     ``unknown`` aunque el otro no tenga la entrada — lo no comprobable nunca es ``missing``.
     """
-    motivo: str | None = None
+    reason: str | None = None
     for path in install.opencode_config_paths(ctx.home):
-        data, razon = install.read_opencode_config(path)
-        if razon and motivo is None:
-            motivo = razon
+        data, read_error = install.read_opencode_config(path)
+        if read_error and reason is None:
+            reason = read_error
         if not isinstance(data, dict):
             continue
         servers = data.get("mcp")
         entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
         if isinstance(entry, dict):
             return entry, path, None
-    return None, None, motivo
+    return None, None, reason
 
 
 def _probe_mcp_opencode(ctx: Context) -> Result:
     if not ctx.opencode_dir.is_dir():
         return Result(UNKNOWN, f"opencode no está instalado ({ctx.opencode_dir} no existe)")
-    entry, path, motivo = _opencode_mcp_entry(ctx)
+    entry, path, reason = _opencode_mcp_entry(ctx)
     if entry is None:
-        if motivo:
-            return Result(UNKNOWN, motivo)
-        nombres = " ni ".join(install.OPENCODE_CONFIG_NAMES)
+        if reason:
+            return Result(UNKNOWN, reason)
+        names = " ni ".join(install.OPENCODE_CONFIG_NAMES)
         return Result(
             MISSING,
-            f"'{install.SERVER_NAME}' no está en {nombres} de {ctx.opencode_dir}",
+            f"'{install.SERVER_NAME}' no está en {names} de {ctx.opencode_dir}",
             INSTALL_HINT,
         )
     kind = str(entry.get("type") or "?")
     where = entry.get("url") or entry.get("command") or ""
-    plazos = _timeouts_text(_entry_timeouts(entry, "opencode"))
-    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{plazos})")
+    timeouts = _timeouts_text(_entry_timeouts(entry, "opencode"))
+    return Result(OK, f"registrado en {path} ({kind}{' ' + str(where) if where else ''}{timeouts})")
 
 
 def _probe_mcp_credential(ctx: Context) -> Result:
@@ -1058,40 +1058,40 @@ def _probe_mcp_credential(ctx: Context) -> Result:
     variable cargada— y por eso el aviso nombra el síntoma comprobable (401 en las tools) en vez
     de afirmar que la máquina está rota.
     """
-    exige, motivo = ctx.backend_needs_key()
-    if exige is None:
-        return Result(UNKNOWN, motivo)
-    if not exige:
+    requires, reason = ctx.backend_needs_key()
+    if requires is None:
+        return Result(UNKNOWN, reason)
+    if not requires:
         return Result(OK, "el backend no exige credencial: cualquier entrada MCP puede usarlo")
     if config.API_KEY:
         return Result(OK, "el backend exige credencial y LOCAL_DELEGATE_API_KEY está en el entorno")
 
-    entradas: list[tuple[str, str]] = []
+    entries: list[tuple[str, str]] = []
     entry = _claude_mcp_entry(ctx)
     if entry is not None:
-        entradas.append(("Claude Code", _entry_mode(entry)))
+        entries.append(("Claude Code", _entry_mode(entry)))
     section = _codex_mcp_section(ctx)
     if section is not None:
-        entradas.append(("Codex", _codex_mode(section)))
-    oc_entry, _path, _motivo = _opencode_mcp_entry(ctx)
+        entries.append(("Codex", _codex_mode(section)))
+    oc_entry, _path, _reason = _opencode_mcp_entry(ctx)
     if oc_entry is not None:
         # `remote` es el `http` de opencode y `local` su `stdio`: se normaliza aquí para que la
         # comparación de abajo —«¿habla por el daemon?»— siga siendo una sola, en vez de tener que
         # conocer el vocabulario de cada cliente.
-        entradas.append(("opencode", "http" if oc_entry.get("type") == "remote" else "stdio"))
-    if not entradas:
+        entries.append(("opencode", "http" if oc_entry.get("type") == "remote" else "stdio"))
+    if not entries:
         return Result(UNKNOWN, "el backend exige credencial, pero no hay entrada MCP que mirar")
 
     # `--api-key-env` no salva a una entrada stdio aquí: reenvía `${LOCAL_DELEGATE_API_KEY}`, que
     # sale del mismo entorno que acabamos de ver vacío. Por eso el único arreglo que se ofrece es
     # el daemon, que tiene el secreto por otra vía.
-    ciegas = [cliente for cliente, modo in entradas if modo != "http"]
-    if not ciegas:
+    blind = [client for client, mode in entries if mode != "http"]
+    if not blind:
         return Result(OK, "el backend exige credencial y las entradas MCP van por el daemon (http)")
-    verbo = "habla" if len(ciegas) == 1 else "hablan"
+    verb = "habla" if len(blind) == 1 else "hablan"
     return Result(
         WARN,
-        f"el backend exige credencial y {' y '.join(ciegas)} {verbo} por stdio sin ella: "
+        f"el backend exige credencial y {' y '.join(blind)} {verb} por stdio sin ella: "
         "sus tools local_* responderán 401",
         CREDENTIAL_HINT,
     )
@@ -1109,26 +1109,26 @@ def daemon_host_port() -> tuple[str, int]:
     return ("127.0.0.1" if host in ("0.0.0.0", "::", "") else host), config.WEB_PORT
 
 
-def _autenticacion_de_la_entrada(cliente: str, modo: str, credencial: str | None) -> tuple:
+def _entry_auth(client: str, mode: str, credential: str | None) -> tuple:
     """Normaliza «¿esta entrada puede entrar al puerto del daemon?» para los tres clientes.
 
-    Devuelve `(cliente, estado)` donde estado es `"ok"`, `"sin_credencial"` o el nombre de la
+    Devuelve `(client, state)` donde estado es `"ok"`, `"no_credential"` o el nombre de la
     variable de entorno que referencia. Se normaliza aquí y no en cada rama porque los tres
     clientes escriben la autenticación distinta —`headers.Authorization` en Claude Code y
     opencode, `bearer_token_env_var` en Codex— y comparar tres vocabularios en el sitio de la
     decisión es cómo se cuela un cliente sin contar.
     """
-    if modo != "http":
-        return (cliente, "stdio")
-    if not credencial:
-        return (cliente, "sin_credencial")
-    referencia = _VARIABLE_REFERENCIADA.search(credencial)
-    if referencia is None:
+    if mode != "http":
+        return (client, "stdio")
+    if not credential:
+        return (client, "no_credential")
+    reference = _REFERENCED_VARIABLE.search(credential)
+    if reference is None:
         # Un token escrito a pelo en la config: se puede autenticar, aunque sea mala idea. El
         # check dice si PUEDE entrar, no si el secreto está bien guardado.
-        return (cliente, "ok")
+        return (client, "ok")
     # La expresión tiene dos alternativas y por tanto dos grupos: el que no casa viene en None.
-    return (cliente, referencia.group(1) or referencia.group(2))
+    return (client, reference.group(1) or reference.group(2))
 
 
 def _probe_mcp_daemon_auth(ctx: Context) -> Result:
@@ -1150,39 +1150,39 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
     puerto, y `scaffold` no sale a la red por contrato.
     """
     host, port = daemon_host_port()
-    exige = ctx.daemon_needs_token(host, port)
-    if exige is None:
+    requires = ctx.daemon_needs_token(host, port)
+    if requires is None:
         return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
-    if not exige:
+    if not requires:
         return Result(OK, "el puerto del daemon no exige token: cualquier entrada MCP puede entrar")
 
-    entradas: list[tuple] = []
+    entries: list[tuple] = []
     entry = _claude_mcp_entry(ctx)
     if entry is not None:
-        cabecera = (entry.get("headers") or {}).get("Authorization")
-        entradas.append(_autenticacion_de_la_entrada("Claude Code", _entry_mode(entry), cabecera))
+        header = (entry.get("headers") or {}).get("Authorization")
+        entries.append(_entry_auth("Claude Code", _entry_mode(entry), header))
     section = _codex_mcp_section(ctx)
     if section is not None:
-        hallado = _CODEX_BEARER_RE.search(section)
+        found = _CODEX_BEARER_RE.search(section)
         # Codex referencia la variable por nombre, sin `${...}`: se envuelve para que la
         # comprobación de «¿está en el entorno?» sea una sola para los tres clientes.
-        token = "${" + hallado.group(1) + "}" if hallado else None
-        entradas.append(_autenticacion_de_la_entrada("Codex", _codex_mode(section), token))
-    oc_entry, _path, _motivo = _opencode_mcp_entry(ctx)
+        token = "${" + found.group(1) + "}" if found else None
+        entries.append(_entry_auth("Codex", _codex_mode(section), token))
+    oc_entry, _path, _reason = _opencode_mcp_entry(ctx)
     if oc_entry is not None:
-        cabecera = (oc_entry.get("headers") or {}).get("Authorization")
-        modo = "http" if oc_entry.get("type") == "remote" else "stdio"
-        entradas.append(_autenticacion_de_la_entrada("opencode", modo, cabecera))
+        header = (oc_entry.get("headers") or {}).get("Authorization")
+        mode = "http" if oc_entry.get("type") == "remote" else "stdio"
+        entries.append(_entry_auth("opencode", mode, header))
 
-    if not entradas:
+    if not entries:
         return Result(UNKNOWN, "el puerto exige token, pero no hay entrada MCP que mirar")
 
-    ciegas = [cliente for cliente, estado in entradas if estado == "sin_credencial"]
-    if ciegas:
-        verbo = "entra" if len(ciegas) == 1 else "entran"
+    blind = [client for client, state in entries if state == "no_credential"]
+    if blind:
+        verb = "entra" if len(blind) == 1 else "entran"
         return Result(
             WARN,
-            f"el puerto del daemon exige token y {' y '.join(ciegas)} {verbo} por HTTP sin "
+            f"el puerto del daemon exige token y {' y '.join(blind)} {verb} por HTTP sin "
             "cabecera de autorización: sus tools local_* responderán 401",
             DAEMON_TOKEN_HINT,
         )
@@ -1191,16 +1191,16 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
     # que apunta puede expandir a vacío. El entorno de este proceso es un TESTIGO del que verá el
     # cliente —los dos salen del entorno de usuario— y no una prueba: alguien puede haber lanzado
     # el cliente desde otra consola. Por eso se nombra el síntoma y no se dicta el veredicto.
-    sospechosas = [
-        (cliente, estado)
-        for cliente, estado in entradas
-        if estado not in {"ok", "stdio", "sin_credencial"} and not os.environ.get(estado)
+    suspicious = [
+        (client, state)
+        for client, state in entries
+        if state not in {"ok", "stdio", "no_credential"} and not os.environ.get(state)
     ]
-    if sospechosas:
-        detalle = ", ".join(f"{cliente} usa {var}" for cliente, var in sospechosas)
+    if suspicious:
+        detail = ", ".join(f"{client} usa {var}" for client, var in suspicious)
         return Result(
             WARN,
-            f"el puerto del daemon exige token y {detalle}, que no está en el entorno de este "
+            f"el puerto del daemon exige token y {detail}, que no está en el entorno de este "
             "proceso: si el cliente tampoco la ve, sus tools local_* responderán 401",
             DAEMON_TOKEN_HINT,
         )
@@ -1208,11 +1208,11 @@ def _probe_mcp_daemon_auth(ctx: Context) -> Result:
 
 
 # `${VAR}` es la única sintaxis que expande `mcp-remote` en sus cabeceras (medido en su fuente).
-_VARIABLE_DE_MCP_REMOTE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-_HOSTS_LOCALES = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
+_MCP_REMOTE_VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+_LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
 
 
-def _desktop_conexion(entry: dict) -> tuple[str | None, str | None]:
+def _desktop_connection(entry: dict) -> tuple[str | None, str | None]:
     """(URL, valor de `Authorization`) de la entrada, en cualquiera de sus dos formas.
 
     La de hoy va por `mcp-remote` como proceso stdio y lleva URL y cabecera dentro de `args`; la
@@ -1222,12 +1222,12 @@ def _desktop_conexion(entry: dict) -> tuple[str | None, str | None]:
         return entry["url"], (entry.get("headers") or {}).get("Authorization")
     args = [a for a in entry.get("args") or [] if isinstance(a, str)]
     url = next((a for a in args if a.startswith(("http://", "https://"))), None)
-    cabecera = None
-    for anterior, valor in pairwise(args):
-        nombre, sep, resto = valor.partition(":")
-        if anterior == "--header" and sep and nombre.strip().lower() == "authorization":
-            cabecera = resto.strip()
-    return url, cabecera
+    header = None
+    for previous, value in pairwise(args):
+        name, sep, rest = value.partition(":")
+        if previous == "--header" and sep and name.strip().lower() == "authorization":
+            header = rest.strip()
+    return url, header
 
 
 def _probe_desktop_auth(ctx: Context) -> Result:
@@ -1243,82 +1243,82 @@ def _probe_desktop_auth(ctx: Context) -> Result:
     misma forma que uno bueno. Lo prueba contra el puerto, y el secreto no sale nunca en el texto.
     """
     path = ctx.claude_desktop_config
-    data, motivo = read_json(path)
+    data, reason = read_json(path)
     if data is None:
-        return Result(UNKNOWN, motivo or "Claude Desktop no está configurado en esta máquina")
+        return Result(UNKNOWN, reason or "Claude Desktop no está configurado en esta máquina")
     servers = data.get("mcpServers")
     entry = servers.get(install.SERVER_NAME) if isinstance(servers, dict) else None
     if not isinstance(entry, dict):
         return Result(UNKNOWN, f"Claude Desktop no tiene entrada {install.SERVER_NAME}")
 
-    url, cabecera = _desktop_conexion(entry)
+    url, header = _desktop_connection(entry)
     if url is None:
         return Result(UNKNOWN, "Claude Desktop habla por stdio: no pasa por el puerto del daemon")
     host, port = daemon_host_port()
     try:
-        destino = urlsplit(url)
-        destino_puerto = destino.port
+        target = urlsplit(url)
+        target_port = target.port
     except ValueError:
         return Result(UNKNOWN, "la URL de la entrada de Claude Desktop no se puede leer")
-    if destino.hostname not in _HOSTS_LOCALES | {host} or destino_puerto != port:
+    if target.hostname not in _LOCAL_HOSTS | {host} or target_port != port:
         # Probar su token contra NUESTRO puerto diría algo de un servidor al que no habla.
         return Result(
             UNKNOWN,
-            f"Claude Desktop apunta a {destino.hostname}:{destino_puerto}, no al daemon de "
+            f"Claude Desktop apunta a {target.hostname}:{target_port}, no al daemon de "
             f"{host}:{port}",
         )
 
-    exige = ctx.daemon_needs_token(host, port)
-    if exige is None:
+    requires = ctx.daemon_needs_token(host, port)
+    if requires is None:
         return Result(UNKNOWN, f"no se pudo saber si {host}:{port} exige token")
-    if not exige:
+    if not requires:
         return Result(OK, "el puerto del daemon no exige token: Claude Desktop puede entrar")
 
-    arreglo = (
+    fix = (
         f"pon en el --header de su entrada en {path} el valor de {TOKEN_VAR} con el que arranca "
         "el daemon, y reinicia Claude Desktop"
     )
-    if not cabecera:
+    if not header:
         return Result(
             WARN,
             "el puerto del daemon exige token y Claude Desktop entra sin cabecera de autorización: "
             "sus tools local_* responderán 401",
-            arreglo,
+            fix,
         )
-    token = cabecera.removeprefix("Bearer ").strip()
-    referencia = _VARIABLE_DE_MCP_REMOTE.search(token)
-    literal = referencia is None
-    if referencia is not None:
-        variable = referencia.group(1)
+    token = header.removeprefix("Bearer ").strip()
+    reference = _MCP_REMOTE_VARIABLE.search(token)
+    literal = reference is None
+    if reference is not None:
+        variable = reference.group(1)
         # `mcp-remote` la toma de su propio entorno: el `env` de la entrada o el que herede. El de
         # este proceso es un testigo del segundo, no una prueba — como en `service.daemon_auth`.
-        valor = (entry.get("env") or {}).get(variable) or os.environ.get(variable)
-        if not valor:
+        value = (entry.get("env") or {}).get(variable) or os.environ.get(variable)
+        if not value:
             return Result(
                 WARN,
                 f"el puerto del daemon exige token y Claude Desktop usa {variable}, que no está en "
                 "el entorno de este proceso: si Claude Desktop tampoco la ve, responderá 401",
-                arreglo,
+                fix,
             )
-        token = _VARIABLE_DE_MCP_REMOTE.sub(valor, token)
+        token = _MCP_REMOTE_VARIABLE.sub(value, token)
         # Y otra vez aquí, después de expandir: la forma que recomienda `mcp-remote` —y la de la
         # Mac— es `Authorization:${AUTH_HEADER}` con el `Bearer` DENTRO de la variable. Quitarlo
         # solo antes de expandir dejaba `Bearer xxx` como token, la prueba mandaba
         # `Bearer Bearer xxx`, el daemon respondía 401 y el check culpaba a un token que era bueno.
         token = token.removeprefix("Bearer ").strip()
 
-    acepta = ctx.daemon_accepts_token(host, port, token)
-    if acepta is None:
+    accepts = ctx.daemon_accepts_token(host, port, token)
+    if accepts is None:
         return Result(UNKNOWN, f"no se pudo probar el token de Claude Desktop contra {host}:{port}")
-    if not acepta:
+    if not accepts:
         return Result(
             WARN,
             "el daemon rechaza el token que lleva Claude Desktop (401): se rotó el token del puerto "
             "y su entrada, que install no toca, se quedó con el viejo",
-            arreglo,
+            fix,
         )
-    forma = "escrito literal en su configuración" if literal else "referenciado por variable"
-    return Result(OK, f"el daemon acepta el token de Claude Desktop ({forma})")
+    form = "escrito literal en su configuración" if literal else "referenciado por variable"
+    return Result(OK, f"el daemon acepta el token de Claude Desktop ({form})")
 
 
 def _probe_daemon(ctx: Context) -> Result:
@@ -1376,23 +1376,23 @@ def _probe_daemon(ctx: Context) -> Result:
 
 
 def _probe_backend_models(ctx: Context) -> Result:
-    vista = ctx.backend_models()
-    if vista.healthy:
+    view = ctx.backend_models()
+    if view.healthy:
         return Result(OK, f"{config.BASE_URL}/models responde")
     # REQ-016: la severidad sale de la causa y de quién la vio, no de un prefijo del texto.
-    pista = failures.hint(
-        vista.cause,
+    hint = failures.hint(
+        view.cause,
         origin=config.backend_origin(),
-        source=vista.source,
+        source=view.source,
         host=config.backend_host(),
     )
-    detalle = f"{config.BASE_URL}/models: {vista.detail or 'no responde'}"
-    if vista.cause == failures.ConnectionCause.CREDENTIAL.value and vista.source == "direct":
+    detail = f"{config.BASE_URL}/models: {view.detail or 'no responde'}"
+    if view.cause == failures.ConnectionCause.CREDENTIAL.value and view.source == "direct":
         # El backend está vivo; lo que falta es la credencial en **esta** consola. Decir «caído»
         # mandaría a arrancar un servicio que ya corre. Si el 401 lo vio el daemon, que sí tiene
         # su clave, es un problema de verdad: WARN, con la pista que manda a su lanzador.
-        return Result(UNKNOWN, detalle, pista)
-    return Result(WARN, detalle, pista)
+        return Result(UNKNOWN, detail, hint)
+    return Result(WARN, detail, hint)
 
 
 def _version_result(ctx: Context, component: str) -> Result:
@@ -1613,42 +1613,42 @@ def _probe_fallback(ctx: Context) -> Result:
     """Las cadenas de respaldo solo pueden nombrar roles o modelos del catálogo de texto.
 
     Lo que no, se ignora al delegar (REQ-014), y un error de tecleo en la variable dejaría a un rol
-    sin el respaldo que su dueño cree haber configurado. Import diferido: `cadenas` importa `config`
+    sin el respaldo que su dueño cree haber configurado. Import diferido: `chains` importa `config`
     y `topology`, y no hace falta cargarlos para el resto del diagnóstico.
     """
-    from . import cadenas
-    from . import config as configuracion
+    from . import chains
+    from . import config as config_module
 
-    resolved = [cadenas.resolver(rol) for rol in cadenas.ROLES_DE_TEXTO]
+    resolved = [chains.resolve(role) for role in chains.TEXT_ROLES]
     # Los dos avisos van en el mismo resultado: `residente,foo` tiene un nombre que se ignora y otro
     # obsoleto (REQ-022), y arreglar uno no debe esconder el otro.
-    detalles: list[str] = []
+    details: list[str] = []
     fixes: list[str] = []
-    avisos = [
-        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} nombra {', '.join(cadena.ignorados)}"
-        for cadena in resolved
-        if cadena.ignorados
+    warnings = [
+        f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()} nombra {', '.join(chain.ignored)}"
+        for chain in resolved
+        if chain.ignored
     ]
-    if avisos:
-        detalles.append("; ".join(avisos) + ": no son roles ni modelos del catálogo, y se ignoran")
+    if warnings:
+        details.append("; ".join(warnings) + ": no son roles ni modelos del catálogo, y se ignoran")
         fixes.append(
-            f"usa roles (mechanical, long, code, {cadenas.LOADED}) o ids del catálogo de texto"
+            f"usa roles (mechanical, long, code, {chains.LOADED}) o ids del catálogo de texto"
         )
     obsolete = [
-        f"LOCAL_DELEGATE_FALLBACK_{cadena.rol.upper()} usa {', '.join(cadena.obsolete)}"
-        for cadena in resolved
-        if cadena.obsolete
+        f"LOCAL_DELEGATE_FALLBACK_{chain.role.upper()} usa {', '.join(chain.obsolete)}"
+        for chain in resolved
+        if chain.obsolete
     ]
     if obsolete:
-        detalles.append(
-            "; ".join(obsolete) + f": nombre obsoleto del paso {cadenas.LOADED}, que sigue valiendo"
+        details.append(
+            "; ".join(obsolete) + f": nombre obsoleto del paso {chains.LOADED}, que sigue valiendo"
         )
-        fixes.append(f"renombra residente/resident a {cadenas.LOADED} en esas variables")
-    if detalles:
-        return Result(WARN, " | ".join(detalles), "; ".join(fixes))
-    if not configuracion.FALLBACK:
+        fixes.append(f"renombra residente/resident a {chains.LOADED} en esas variables")
+    if details:
+        return Result(WARN, " | ".join(details), "; ".join(fixes))
+    if not config_module.FALLBACK:
         return Result(OK, "respaldo apagado (LOCAL_DELEGATE_FALLBACK)")
-    return Result(OK, f"cadenas válidas; {cadenas.residents_text()}")
+    return Result(OK, f"cadenas válidas; {chains.residents_text()}")
 
 
 #: Cuántos días de la cola de la telemetría de hooks mira `doctor` buscando nombres obsoletos.
@@ -1735,11 +1735,11 @@ def _probe_deprecated_names(ctx: Context) -> Result:
         if item not in seen:
             seen.append(item)
 
-    for nombre, valor in config_module.DEPRECATED_ENV_VALUES.items():
-        if valor is not None and (entry := deprecations.find(nombre)) is not None:
+    for env_name, env_value in config_module.DEPRECATED_ENV_VALUES.items():
+        if env_value is not None and (entry := deprecations.find(env_name)) is not None:
             _note("en la shell", entry)
 
-    settings, _motivo = read_json(ctx.claude_dir / "settings.json")
+    settings, _reason = read_json(ctx.claude_dir / "settings.json")
     env = settings.get("env") if settings else None
     if isinstance(env, dict):
         for entry in deprecations.env_vars():
@@ -1764,29 +1764,29 @@ def _probe_deprecated_names(ctx: Context) -> Result:
 
 RECOMPUTE_HINT = "local-delegate recompute-cost"
 # Margen del aviso de relleno: salta con la pendiente más antigua a `H` − 10 días (REQ-075).
-_MARGEN_DEL_RELLENO = timedelta(days=10)
+_BACKFILL_MARGIN = timedelta(days=10)
 
 
-def _pendiente_mas_vieja(log_dir: Path, *, ahora: datetime, plazo_dias: int) -> tuple[int, int]:
+def _oldest_pending(log_dir: Path, *, now: datetime, period_days: int) -> tuple[int, int]:
     """(cuántas delegaciones `pendiente` pasan de `H` − 10 días, días de la más vieja).
 
     Solo los ficheros del log que pueden tener filas dentro del plazo, y cada uno ENTERO: la clave
     de una línea sin `tool_use_id` lleva su ordinal en el fichero (`cost.merge`).
     """
-    primer_mes = (ahora - timedelta(days=plazo_dias)).strftime("%Y%m")
-    umbral = timedelta(days=plazo_dias) - _MARGEN_DEL_RELLENO
-    cuantas, mas_vieja = 0, timedelta(0)
-    for path, mes in recompute._log_files(log_dir):
-        if mes < primer_mes:
+    first_month = (now - timedelta(days=period_days)).strftime("%Y%m")
+    threshold = timedelta(days=period_days) - _BACKFILL_MARGIN
+    count, oldest = 0, timedelta(0)
+    for path, month in recompute._log_files(log_dir):
+        if month < first_month:
             continue
-        for fila in cost.merge(recompute._read_log(path), log_dir=log_dir):
-            if cost.segment(fila, now=ahora, cleanup_days=plazo_dias) != "pending":
+        for row in cost.merge(recompute._read_log(path), log_dir=log_dir):
+            if cost.segment(row, now=now, cleanup_days=period_days) != "pending":
                 continue
-            edad = ahora - cost._instant(fila.get("ts"))
-            if edad > umbral:
-                cuantas += 1
-                mas_vieja = max(mas_vieja, edad)
-    return cuantas, mas_vieja.days
+            age = now - cost._instant(row.get("ts"))
+            if age > threshold:
+                count += 1
+                oldest = max(oldest, age)
+    return count, oldest.days
 
 
 def _probe_cost(ctx: Context) -> Result:
@@ -1802,44 +1802,44 @@ def _probe_cost(ctx: Context) -> Result:
     Sin `~/.claude/projects` no hay transcripts que rellenar y no aplica.
     """
     log_dir = ctx.log_dir if ctx.log_dir is not None else config.LOG_DIR
-    ahora = datetime.now(UTC)
-    avisos: list[str] = []
+    now = datetime.now(UTC)
+    warnings: list[str] = []
 
     if (ctx.claude_dir / "projects").is_dir():
-        plazo = attribution.cleanup_period_days(ctx.claude_dir)
-        cuantas, dias = _pendiente_mas_vieja(log_dir, ahora=ahora, plazo_dias=plazo)
-        if cuantas:
-            avisos.append(
-                f"{cuantas} delegación(es) pendiente(s) de relleno, la más antigua de hace {dias} "
-                f"días (Claude Code borra los transcripts a los {plazo}): lanza "
+        period = attribution.cleanup_period_days(ctx.claude_dir)
+        count, days = _oldest_pending(log_dir, now=now, period_days=period)
+        if count:
+            warnings.append(
+                f"{count} delegación(es) pendiente(s) de relleno, la más antigua de hace {days} "
+                f"días (Claude Code borra los transcripts a los {period}): lanza "
                 f"`{RECOMPUTE_HINT}` antes de que Claude Code borre sus transcripts"
             )
 
-    agregados = recompute.read_aggregates(log_dir) or {}
+    aggregates = recompute.read_aggregates(log_dir) or {}
     # `read_aggregates` entrega el formato nuevo aunque en disco solo esté el viejo (REQ-006).
-    cotejo = agregados.get("check")
-    if not isinstance(cotejo, dict):
-        cotejo = None
-    fecha = str((cotejo or {}).get("date") or "?")
-    if cotejo is not None and cotejo.get("verdict") == "fail":
-        sin_precio = [str(m) for m in cotejo.get("unpriced") or []]
-        partes = []
-        if sin_precio:
-            partes.append("modelos sin precio en la tabla: " + ", ".join(sin_precio))
-        if cotejo.get("outside"):
-            partes.append(f"{cotejo['outside']} fila(s) fuera de la banda")
-        avisos.append(
-            f"el último cotejo ({fecha}) no cuadra con lo que cobra Claude Code: "
-            + ("; ".join(partes) or "sin detalle")
+    check = aggregates.get("check")
+    if not isinstance(check, dict):
+        check = None
+    date = str((check or {}).get("date") or "?")
+    if check is not None and check.get("verdict") == "fail":
+        unpriced = [str(m) for m in check.get("unpriced") or []]
+        parts = []
+        if unpriced:
+            parts.append("modelos sin precio en la tabla: " + ", ".join(unpriced))
+        if check.get("outside"):
+            parts.append(f"{check['outside']} fila(s) fuera de la banda")
+        warnings.append(
+            f"el último cotejo ({date}) no cuadra con lo que cobra Claude Code: "
+            + ("; ".join(parts) or "sin detalle")
         )
 
-    if avisos:
-        return Result(WARN, "; y ".join(avisos), RECOMPUTE_HINT)
-    if cotejo is not None and cotejo.get("verdict") == "pass":
+    if warnings:
+        return Result(WARN, "; y ".join(warnings), RECOMPUTE_HINT)
+    if check is not None and check.get("verdict") == "pass":
         return Result(
             OK,
-            f"el último cotejo ({fecha}) cuadra: {cotejo.get('judged', '?')} fila(s) juzgadas "
-            f"con la tabla de precios del {cotejo.get('table_version') or '?'}",
+            f"el último cotejo ({date}) cuadra: {check.get('judged', '?')} fila(s) juzgadas "
+            f"con la tabla de precios del {check.get('table_version') or '?'}",
         )
     return Result(
         UNKNOWN,
@@ -1857,34 +1857,34 @@ def _probe_test_windows(ctx: Context) -> Result:
     `OPEN_WARN_HOURS` horas (casi seguro, una que se olvidó cerrar).
     """
     log_dir = ctx.log_dir if ctx.log_dir is not None else config.LOG_DIR
-    ventanas = test_windows.load(log_dir)
-    ruta = test_windows.path_for(log_dir)
-    if ventanas.error:
+    windows = test_windows.load(log_dir)
+    path = test_windows.path_for(log_dir)
+    if windows.error:
         return Result(
             WARN,
-            f"{ruta} es ilegible ({ventanas.error}): no se aparta ninguna prueba por ventana",
+            f"{path} es ilegible ({windows.error}): no se aparta ninguna prueba por ventana",
             "arréglalo a mano o bórralo; `local-delegate test-window list` dice qué ve",
         )
-    avisos: list[str] = []
-    if ventanas.ignored:
-        avisos.append(f"{ventanas.ignored} entrada(s) ignorada(s) por ilegibles en {ruta}")
-    viejas = ventanas.stale()
-    for w in viejas:
-        avisos.append(
+    warnings: list[str] = []
+    if windows.ignored:
+        warnings.append(f"{windows.ignored} entrada(s) ignorada(s) por ilegibles en {path}")
+    stale = windows.stale()
+    for w in stale:
+        warnings.append(
             f"la ventana {w.id} lleva abierta desde {test_windows.format_instant(w.start)} "
             f"(más de {test_windows.OPEN_WARN_HOURS} h)"
         )
-    if avisos:
+    if warnings:
         hint = (
-            " · ".join(f"local-delegate test-window stop {w.id}" for w in viejas)
+            " · ".join(f"local-delegate test-window stop {w.id}" for w in stale)
             or "corrige o borra las entradas en el fichero"
         )
-        return Result(WARN, "; ".join(avisos), hint)
-    if not ventanas.windows:
+        return Result(WARN, "; ".join(warnings), hint)
+    if not windows.windows:
         return Result(OK, "sin ventanas")
-    abiertas = len(ventanas.open_windows())
-    estado = "ninguna abierta" if not abiertas else f"{abiertas} abierta(s)"
-    return Result(OK, f"{len(ventanas.windows)} ventanas, {estado}")
+    open_count = len(windows.open_windows())
+    state = "ninguna abierta" if not open_count else f"{open_count} abierta(s)"
+    return Result(OK, f"{len(windows.windows)} ventanas, {state}")
 
 
 # --- El registro --------------------------------------------------------------
