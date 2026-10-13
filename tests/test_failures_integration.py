@@ -36,41 +36,41 @@ def backend(monkeypatch):
 
 
 @pytest.fixture
-def sin_preguntar(monkeypatch):
+def without_asking(monkeypatch):
     """Espía de la pregunta por elicitation: registra si se ofreció arrancar el backend."""
-    ofertas: list[str] = []
+    offers: list[str] = []
 
-    def espia(mensaje, _esquema):
-        ofertas.append(mensaje)
+    def spy(message, _schema):
+        offers.append(message)
 
-    monkeypatch.setattr(server.questions, "ask", espia)
-    return ofertas
+    monkeypatch.setattr(server.questions, "ask", spy)
+    return offers
 
 
 # --- REQ-F0-1: el `content` nulo deja de escaparse ------------------------------------------
 
 
 @backend_mock.mock
-def test_content_nulo_devuelve_un_error_legible(backend):
+def test_null_content_returns_a_readable_error(backend):
     """Hoy revienta con `AttributeError` fuera de `_post_chat` y se lleva la tool por delante."""
     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": None}}]}))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.ok is False
-    assert resultado.error_class == failures.FailureClass.MODEL
-    assert "[local-delegate error]" in resultado.text
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.ok is False
+    assert result.error_class == failures.FailureClass.MODEL
+    assert "[local-delegate error]" in result.text
 
 
 @backend_mock.mock
-def test_content_vacio_sigue_sin_ser_un_fallo(backend):
+def test_empty_content_is_still_not_a_failure(backend):
     """Control positivo del anterior: la cadena vacía se trata como hoy."""
     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": ""}}]}))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.ok is True
-    assert resultado.text == ""
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.ok is True
+    assert result.text == ""
 
 
 @backend_mock.mock
-def test_razonamiento_que_se_come_max_tokens_se_dice_en_claro(backend):
+def test_reasoning_that_eats_max_tokens_is_said_plainly(backend):
     """El canary de julio: no es una avería, es configuración, y el mensaje lo tiene que decir."""
     backend(
         return_value=httpx2.Response(
@@ -85,14 +85,14 @@ def test_razonamiento_que_se_come_max_tokens_se_dice_en_claro(backend):
             },
         )
     )
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.ok is False
-    assert resultado.error_class == failures.FailureClass.CONFIGURATION
-    assert "max_tokens" in resultado.text
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.ok is False
+    assert result.error_class == failures.FailureClass.CONFIGURATION
+    assert "max_tokens" in result.text
 
 
 @backend_mock.mock
-def test_razonamiento_con_contenido_vacio_tambien_se_dice_en_claro(backend):
+def test_reasoning_with_empty_content_is_also_said_plainly(backend):
     """La forma real de b10909: `content: ""` en vez de nulo. Antes salía como éxito vacío."""
     backend(
         return_value=httpx2.Response(
@@ -107,76 +107,76 @@ def test_razonamiento_con_contenido_vacio_tambien_se_dice_en_claro(backend):
             },
         )
     )
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.ok is False
-    assert resultado.error_class == failures.FailureClass.CONFIGURATION
-    assert resultado.error == "config_max_tokens"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.ok is False
+    assert result.error_class == failures.FailureClass.CONFIGURATION
+    assert result.error == "config_max_tokens"
 
 
 # --- REQ-F0-2 y REQ-F0-6: los timeouts dejan de ser todos `http_error` ----------------------
 
 
 @backend_mock.mock
-def test_connect_timeout_ofrece_arrancar_el_backend(backend, sin_preguntar):
+def test_connect_timeout_offers_to_start_the_backend(backend, without_asking):
     """El defecto: hoy cae en `http_error` y nadie ofrece arrancar nada."""
     backend(side_effect=httpx2.ConnectTimeout("timed out"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert sin_preguntar, "no se ofreció arrancar el backend"
-    assert resultado.ok is False
-    assert resultado.error_class == failures.FailureClass.ENDPOINT
-    assert resultado.error == "connect_error"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert without_asking, "no se ofreció arrancar el backend"
+    assert result.ok is False
+    assert result.error_class == failures.FailureClass.ENDPOINT
+    assert result.error == "connect_error"
 
 
 @backend_mock.mock
-def test_connect_error_se_comporta_igual_que_siempre(backend, sin_preguntar):
+def test_connect_error_behaves_as_always(backend, without_asking):
     """Control positivo: la rama hermana no cambia."""
     backend(side_effect=httpx2.ConnectError("no route"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert sin_preguntar, "no se ofreció arrancar el backend"
-    assert resultado.error == "connect_error"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert without_asking, "no se ofreció arrancar el backend"
+    assert result.error == "connect_error"
 
 
 @backend_mock.mock
-def test_read_timeout_no_ofrece_arrancar_nada(backend, sin_preguntar):
+def test_read_timeout_offers_to_start_nothing(backend, without_asking):
     """El backend SÍ aceptó la conexión: arrancar otro no arregla que el modelo esté cargando."""
     backend(side_effect=httpx2.ReadTimeout("timed out"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert not sin_preguntar, "se ofreció arrancar un backend que ya estaba corriendo"
-    assert resultado.ok is False
-    assert resultado.error_class == failures.FailureClass.CAPACITY
-    assert resultado.error != "http_error"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert not without_asking, "se ofreció arrancar un backend que ya estaba corriendo"
+    assert result.ok is False
+    assert result.error_class == failures.FailureClass.CAPACITY
+    assert result.error != "http_error"
 
 
 @backend_mock.mock
-def test_un_error_de_transporte_cualquiera_sigue_siendo_del_endpoint(backend, sin_preguntar):
+def test_any_transport_error_is_still_the_endpoints(backend, without_asking):
     """Control positivo: ni se clasifica como carga ni se ofrece arrancar nada."""
     backend(side_effect=httpx2.RemoteProtocolError("server disconnected"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert not sin_preguntar
-    assert resultado.error_class == failures.FailureClass.ENDPOINT
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert not without_asking
+    assert result.error_class == failures.FailureClass.ENDPOINT
 
 
 @backend_mock.mock
-def test_un_500_es_del_modelo(backend):
+def test_a_500_is_the_models(backend):
     backend(return_value=httpx2.Response(500, text="boom"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.error_class == failures.FailureClass.MODEL
-    assert resultado.error == "http_500", "el codigo de error de siempre no cambia"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.error_class == failures.FailureClass.MODEL
+    assert result.error == "http_500", "el codigo de error de siempre no cambia"
 
 
 @backend_mock.mock
-def test_un_400_es_de_la_peticion(backend):
+def test_a_400_is_the_requests(backend):
     """En test aparte: dos rutas para la misma URL no se pisan, gana la primera registrada."""
     backend(return_value=httpx2.Response(400, text="context too long"))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.error_class == failures.FailureClass.REQUEST
-    assert resultado.error == "http_400"
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.error_class == failures.FailureClass.REQUEST
+    assert result.error == "http_400"
 
 
 @backend_mock.mock
-def test_una_respuesta_buena_no_trae_clase(backend):
+def test_a_good_response_carries_no_class(backend):
     """Lo que no es un fallo no se clasifica: `clase` solo existe cuando algo salió mal."""
     backend(return_value=httpx2.Response(200, json={"choices": [{"message": {"content": "hola"}}]}))
-    resultado = server._post_chat("modelo", {"model": "modelo"})
-    assert resultado.ok is True
-    assert resultado.error_class is None
+    result = server._post_chat("modelo", {"model": "modelo"})
+    assert result.ok is True
+    assert result.error_class is None

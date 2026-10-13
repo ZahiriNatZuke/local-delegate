@@ -37,7 +37,7 @@ def test_prompt_hook_keeps_architecture_and_research_in_host():
 
 # Prompts reales capturados el 2026-09-22 (Claude Code 2.1.280). Los tres contienen «summary» o
 # «resumen», que el clasificador toma por intención de resumir: sin el filtro, los tres avisaban.
-_EVENTOS_SISTEMA = (
+_SYSTEM_EVENTS = (
     (
         '<agent-message from="a77f5562467da25a7">\n[Subagent hand-back] The text below is the '
         "final report... Summary: resumen ok"
@@ -53,15 +53,15 @@ _EVENTOS_SISTEMA = (
 def test_prompt_hook_ignores_system_events(tmp_path, monkeypatch, capsys):
     log = tmp_path / "hooks.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    for texto in _EVENTOS_SISTEMA:
+    for text in _SYSTEM_EVENTS:
         # Control positivo: sin el prefijo de sistema, el mismo texto SÍ se clasifica. Si no,
         # el test pasaría aunque el filtro no existiera.
-        cuerpo = texto.split(">", 1)[1]
-        assert prompt.classify(cuerpo) == "summarize"
+        body = text.split(">", 1)[1]
+        assert prompt.classify(body) == "summarize"
 
-        assert prompt.is_system_event(texto)
-        assert prompt.classify(texto) is None
-        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": texto})))
+        assert prompt.is_system_event(text)
+        assert prompt.classify(text) is None
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": text})))
         prompt.main()
 
     assert capsys.readouterr().out == ""
@@ -69,12 +69,12 @@ def test_prompt_hook_ignores_system_events(tmp_path, monkeypatch, capsys):
 
 
 def test_prompt_hook_matches_every_system_prefix():
-    for texto in (
+    for text in (
         '<cross-session-message from="x">\nresume esto',
         "<system-reminder>\nresume esto",
         "  \n<task-notification>\nresume esto",  # espacios y saltos delante
     ):
-        assert prompt.is_system_event(texto), texto
+        assert prompt.is_system_event(text), text
 
 
 def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch, capsys):
@@ -87,11 +87,11 @@ def test_prompt_hook_still_warns_on_real_prompt_end_to_end(tmp_path, monkeypatch
 
     prompt.main()
 
-    salida = json.loads(capsys.readouterr().out)
-    assert "local_*" in salida["hookSpecificOutput"]["additionalContext"]
-    evento = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
-    assert evento["suggested"] is True
-    assert evento["category"] == "summarize"
+    output = json.loads(capsys.readouterr().out)
+    assert "local_*" in output["hookSpecificOutput"]["additionalContext"]
+    event = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+    assert event["suggested"] is True
+    assert event["category"] == "summarize"
 
 
 def test_prompt_hook_still_classifies_user_prompts_mentioning_tags():
@@ -163,14 +163,14 @@ def test_read_hook_can_be_enabled_explicitly(tmp_path, monkeypatch, capsys):
 # es el control que impide que pasen en vacio.
 
 
-def _correr_hook(monkeypatch, capsys, tool_input):
+def _run_hook(monkeypatch, capsys, tool_input):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"tool_input": tool_input})))
     read_hook.main()
     return capsys.readouterr().out
 
 
-def test_read_hook_calla_ante_codigo(tmp_path, monkeypatch, capsys):
+def test_read_hook_stays_quiet_on_code(tmp_path, monkeypatch, capsys):
     """Un `.ts` de 150 KB se lee para editarlo, y eso no se delega.
 
     Era el caso mas frecuente del ruido: 562 de las 1 579 lecturas medidas.
@@ -178,22 +178,20 @@ def test_read_hook_calla_ante_codigo(tmp_path, monkeypatch, capsys):
     target = tmp_path / "servicio.ts"
     target.write_text("x" * 150 * 1024, encoding="utf-8")
 
-    assert _correr_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
+    assert _run_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
 
 
-def test_read_hook_respeta_una_franja_pedida_a_proposito(tmp_path, monkeypatch, capsys):
+def test_read_hook_respects_a_range_asked_on_purpose(tmp_path, monkeypatch, capsys):
     """Con offset/limit el modelo ya sabe que parte quiere; sugerirle un resumen sobra."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
-    salida = _correr_hook(
-        monkeypatch, capsys, {"file_path": str(target), "offset": 500, "limit": 100}
-    )
+    output = _run_hook(monkeypatch, capsys, {"file_path": str(target), "offset": 500, "limit": 100})
 
-    assert salida == ""
+    assert output == ""
 
 
-def test_read_hook_calla_ante_un_archivo_pequeno(tmp_path, monkeypatch, capsys):
+def test_read_hook_stays_quiet_on_a_small_file(tmp_path, monkeypatch, capsys):
     """5 KB está por debajo del umbral, que desde el 2026-09-08 es de 8 KB y no de 32.
 
     Este test se llamaba «mediano» y usaba 20 KB. Falló al bajar el umbral, que es exactamente su
@@ -204,20 +202,20 @@ def test_read_hook_calla_ante_un_archivo_pequeno(tmp_path, monkeypatch, capsys):
     target = tmp_path / "notas.md"
     target.write_text("x" * 5 * 1024, encoding="utf-8")
 
-    assert _correr_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
+    assert _run_hook(monkeypatch, capsys, {"file_path": str(target)}) == ""
 
 
-def test_read_hook_avisa_en_la_franja_que_antes_quedaba_muda(tmp_path, monkeypatch, capsys):
+def test_read_hook_warns_in_the_band_that_used_to_stay_silent(tmp_path, monkeypatch, capsys):
     """20 KB: callaba con el umbral de 32 y ahora avisa. Es el cambio, medido por su efecto."""
     target = tmp_path / "notas.md"
     target.write_text("x" * 20 * 1024, encoding="utf-8")
 
-    salida = _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
-    assert "Sugerencia" in salida, salida
-    assert "Recomendacion fuerte" not in salida, "20 KB no es la banda fuerte"
+    output = _run_hook(monkeypatch, capsys, {"file_path": str(target)})
+    assert "Sugerencia" in output, output
+    assert "Recomendacion fuerte" not in output, "20 KB no es la banda fuerte"
 
 
-def test_read_hook_sigue_avisando_del_caso_que_vale_la_pena(tmp_path, monkeypatch, capsys):
+def test_read_hook_still_warns_about_the_case_worth_it(tmp_path, monkeypatch, capsys):
     """Control de los tres de arriba.
 
     Sin el, un hook roto que no sugiriera nunca dejaria los tres en verde. Este es el unico que
@@ -227,13 +225,13 @@ def test_read_hook_sigue_avisando_del_caso_que_vale_la_pena(tmp_path, monkeypatc
     target = tmp_path / "changelog.md"
     target.write_text("x" * 120 * 1024, encoding="utf-8")
 
-    salida = _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+    output = _run_hook(monkeypatch, capsys, {"file_path": str(target)})
 
-    payload = json.loads(salida)
+    payload = json.loads(output)
     assert "Recomendacion fuerte" in payload["hookSpecificOutput"]["additionalContext"]
 
 
-def test_read_hook_registra_los_descartes_para_poder_medir_punteria(tmp_path, monkeypatch):
+def test_read_hook_records_the_discards_to_measure_aim(tmp_path, monkeypatch):
     """Un descarte silencioso no tiene denominador, y sin denominador no hay punteria.
 
     Es lo que dejo a este hook tres semanas apuntando a codigo sin que se notara.
@@ -252,22 +250,22 @@ def test_read_hook_registra_los_descartes_para_poder_medir_punteria(tmp_path, mo
 
     read_hook.main()
 
-    evento = json.loads(log.read_text(encoding="utf-8").strip())
-    assert evento["suggested"] is False
-    assert evento["ext"] == ".tsx"
-    assert evento["reason"] == "code"
+    event = json.loads(log.read_text(encoding="utf-8").strip())
+    assert event["suggested"] is False
+    assert event["ext"] == ".tsx"
+    assert event["reason"] == "code"
 
 
-def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, monkeypatch):
+def test_read_hook_does_not_leak_the_file_name_through_the_extension(tmp_path, monkeypatch):
     """`ext` entra al log; el nombre y la ruta no. Y una extension rara tampoco."""
     common = _load("hook_common")
     log = tmp_path / "hooks.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
     monkeypatch.setattr(read_hook, "record", common.record)
 
-    carpeta = tmp_path / "cliente-confidencial"
-    carpeta.mkdir()
-    target = carpeta / "informe-secreto.md"
+    folder = tmp_path / "cliente-confidencial"
+    folder.mkdir()
+    target = folder / "informe-secreto.md"
     target.write_text("x" * 10 * 1024, encoding="utf-8")
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setattr(
@@ -276,26 +274,26 @@ def test_read_hook_no_filtra_el_nombre_del_archivo_por_la_extension(tmp_path, mo
 
     read_hook.main()
 
-    texto = log.read_text(encoding="utf-8")
-    assert '"ext": ".md"' in texto
-    assert "confidencial" not in texto
-    assert "secreto" not in texto
+    text = log.read_text(encoding="utf-8")
+    assert '"ext": ".md"' in text
+    assert "confidencial" not in text
+    assert "secreto" not in text
     assert read_hook.extension_of("/x/y.contrato-acme-2026") == ""
 
 
-def _default_del_hook(variable: str) -> float:
+def _hook_default(variable: str) -> float:
     """El default que el hook lleva escrito, leído del fuente y no de un import.
 
     El hook es stdlib pura y lee `os.environ` con su propio literal, así que el valor no está
     expuesto como constante: se saca del código, que es la única fuente que el hook usa de verdad.
     """
-    fuente = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
-    hallado = re.search(rf'os\.environ\.get\("{variable}", "([\d.]+)"\)', fuente)
-    assert hallado, f"no se encontró el default de {variable} en el hook"
-    return float(hallado.group(1))
+    source = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
+    found = re.search(rf'os\.environ\.get\("{variable}", "([\d.]+)"\)', source)
+    assert found, f"no se encontró el default de {variable} en el hook"
+    return float(found.group(1))
 
 
-def test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores():
+def test_the_read_hook_threshold_does_not_have_two_values():
     """El mismo número vive en tres sitios; que se separen es el defecto recurrente de este repo.
 
     El hook **no puede importar `config`** —es stdlib pura porque se copia al HOME del usuario—,
@@ -310,29 +308,29 @@ def test_el_umbral_del_hook_de_lectura_no_tiene_dos_valores():
         encoding="utf-8"
     )
 
-    for variable, en_config in (
+    for variable, in_config in (
         ("LD_HOOK_READ_SUGGEST_KB", config.HOOK_READ_SUGGEST_KB),
         ("LD_HOOK_READ_STRONG_KB", config.HOOK_READ_STRONG_KB),
     ):
-        en_hook = _default_del_hook(variable)
-        assert en_hook == en_config, f"{variable}: el hook dice {en_hook} y config.py {en_config}"
-        fila = re.search(rf"\| `{variable}` \| `([\d.]+)` \|", recipe)
-        assert fila, f"{variable} no está en la tabla de docs/recipes/claude-code-hooks.md"
-        assert float(fila.group(1)) == en_hook, (
-            f"{variable}: la recipe dice {fila.group(1)} y el hook {en_hook}"
+        in_hook = _hook_default(variable)
+        assert in_hook == in_config, f"{variable}: el hook dice {in_hook} y config.py {in_config}"
+        row = re.search(rf"\| `{variable}` \| `([\d.]+)` \|", recipe)
+        assert row, f"{variable} no está en la tabla de docs/recipes/claude-code-hooks.md"
+        assert float(row.group(1)) == in_hook, (
+            f"{variable}: la recipe dice {row.group(1)} y el hook {in_hook}"
         )
 
 
-def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
+def test_the_hook_docstring_states_the_real_thresholds():
     """La cabecera del hook es lo primero que lee quien lo abre; envejece sola."""
-    fuente = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
-    bajo = _default_del_hook("LD_HOOK_READ_SUGGEST_KB")
-    alto = _default_del_hook("LD_HOOK_READ_STRONG_KB")
-    esperado = (
-        f"LD_HOOK_READ_SUGGEST_KB (default {bajo:g} KB) y "
-        f"LD_HOOK_READ_STRONG_KB (default {alto:g} KB)"
+    source = (HOOKS / "suggest_delegate_read.py").read_text(encoding="utf-8")
+    low = _hook_default("LD_HOOK_READ_SUGGEST_KB")
+    high = _hook_default("LD_HOOK_READ_STRONG_KB")
+    expected = (
+        f"LD_HOOK_READ_SUGGEST_KB (default {low:g} KB) y "
+        f"LD_HOOK_READ_STRONG_KB (default {high:g} KB)"
     )
-    assert esperado in fuente, f"el docstring del hook no dice «{esperado}»"
+    assert expected in source, f"el docstring del hook no dice «{expected}»"
 
 
 # --- El bloqueo de F1 -------------------------------------------------------------------------
@@ -342,70 +340,68 @@ def test_el_docstring_del_hook_dice_los_umbrales_de_verdad():
 # los tres tratos (bloquear, avisar, callar) y las tres formas de apagar el bloqueo.
 
 
-def _correr_con_bloqueo(monkeypatch, capsys, tool_input, *, backend=True, encendido=True):
-    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if encendido else "0")
+def _run_with_block(monkeypatch, capsys, tool_input, *, backend=True, enabled=True):
+    monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1" if enabled else "0")
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: backend)
-    return _correr_hook(monkeypatch, capsys, tool_input)
+    return _run_hook(monkeypatch, capsys, tool_input)
 
 
-def _decision(salida: str) -> dict:
-    return json.loads(salida)["hookSpecificOutput"]
+def _decision(output: str) -> dict:
+    return json.loads(output)["hookSpecificOutput"]
 
 
-def test_la_prosa_grande_se_bloquea_y_el_mensaje_dice_por_donde_salir(
-    tmp_path, monkeypatch, capsys
-):
+def test_large_prose_is_blocked_and_the_message_says_the_way_out(tmp_path, monkeypatch, capsys):
     """El caso acotado: un `.md` de 40 KB leido entero, con el backend vivo."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
 
-    decision = _decision(_correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}))
+    decision = _decision(_run_with_block(monkeypatch, capsys, {"file_path": str(target)}))
 
     assert decision["permissionDecision"] == "deny"
-    motivo = decision["permissionDecisionReason"]
-    assert "local_summarize" in motivo, "el bloqueo tiene que nombrar la tool que sirve"
-    assert str(target) in motivo, "y el path, para que llamarla sea copiar y pegar"
-    assert "offset" in motivo, "y la salida de emergencia: leer por franjas"
+    reason = decision["permissionDecisionReason"]
+    assert "local_summarize" in reason, "el bloqueo tiene que nombrar la tool que sirve"
+    assert str(target) in reason, "y el path, para que llamarla sea copiar y pegar"
+    assert "offset" in reason, "y la salida de emergencia: leer por franjas"
 
 
-def test_un_json_grande_se_avisa_pero_no_se_bloquea(tmp_path, monkeypatch, capsys):
+def test_a_large_json_is_warned_about_but_not_blocked(tmp_path, monkeypatch, capsys):
     """Control positivo del anterior. Un `state.json` se lee para sacar un valor exacto."""
     target = tmp_path / "state.json"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
 
-    decision = _decision(_correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}))
+    decision = _decision(_run_with_block(monkeypatch, capsys, {"file_path": str(target)}))
 
     assert "permissionDecision" not in decision
     assert "local_extract" in decision["additionalContext"]
 
 
-def test_el_codigo_sigue_sin_decir_nada(tmp_path, monkeypatch, capsys):
+def test_code_still_says_nothing(tmp_path, monkeypatch, capsys):
     """Ni bloqueo ni aviso: el mercado medido es documentacion, no codigo."""
     target = tmp_path / "servicio.py"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
-    assert _correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}) == ""
+    assert _run_with_block(monkeypatch, capsys, {"file_path": str(target)}) == ""
 
 
-def test_una_franja_pedida_a_proposito_no_se_bloquea(tmp_path, monkeypatch, capsys):
+def test_a_range_asked_on_purpose_is_not_blocked(tmp_path, monkeypatch, capsys):
     """Es la salida de emergencia que el propio mensaje del bloqueo ofrece: tiene que funcionar."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 200 * 1024, encoding="utf-8")
 
-    salida = _correr_con_bloqueo(
+    output = _run_with_block(
         monkeypatch, capsys, {"file_path": str(target), "offset": 100, "limit": 50}
     )
 
-    assert salida == ""
+    assert output == ""
 
 
-def test_sin_backend_no_se_bloquea_aunque_toque(tmp_path, monkeypatch, capsys):
+def test_without_backend_it_is_not_blocked_even_when_due(tmp_path, monkeypatch, capsys):
     """Bloquear sin sitio a donde delegar deja al agente sin forma de leer el fichero."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
 
     decision = _decision(
-        _correr_con_bloqueo(monkeypatch, capsys, {"file_path": str(target)}, backend=False)
+        _run_with_block(monkeypatch, capsys, {"file_path": str(target)}, backend=False)
     )
 
     assert "permissionDecision" not in decision, "sin backend, la lectura pasa"
@@ -415,32 +411,32 @@ def test_sin_backend_no_se_bloquea_aunque_toque(tmp_path, monkeypatch, capsys):
     )
 
 
-def test_el_bloqueo_nace_apagado(tmp_path, monkeypatch, capsys):
+def test_the_block_starts_off(tmp_path, monkeypatch, capsys):
     """Se enciende cuando este escrito el criterio de la quinta medicion, no antes."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.delenv("LD_HOOK_READ_BLOCK", raising=False)
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
 
-    decision = _decision(_correr_hook(monkeypatch, capsys, {"file_path": str(target)}))
+    decision = _decision(_run_hook(monkeypatch, capsys, {"file_path": str(target)}))
 
     assert "permissionDecision" not in decision
 
 
-def test_el_apagado_no_necesita_reiniciar_la_sesion(tmp_path, monkeypatch, capsys):
+def test_turning_off_does_not_need_a_session_restart(tmp_path, monkeypatch, capsys):
     """La variable se consulta en CADA invocacion: un freno que exige reiniciar no es un freno."""
     target = tmp_path / "informe.md"
     target.write_text("x" * 40 * 1024, encoding="utf-8")
     monkeypatch.setattr(read_hook, "backend_available", lambda **k: True)
 
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
-    assert "deny" in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+    assert "deny" in _run_hook(monkeypatch, capsys, {"file_path": str(target)})
 
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "0")
-    assert "deny" not in _correr_hook(monkeypatch, capsys, {"file_path": str(target)})
+    assert "deny" not in _run_hook(monkeypatch, capsys, {"file_path": str(target)})
 
 
-def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatch):
+def test_each_event_says_which_script_ran_and_in_which_session(tmp_path, monkeypatch):
     """Sin esto una medicion no se puede leer: una sesion abierta hereda el entorno del lanzador."""
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
@@ -457,16 +453,16 @@ def test_cada_evento_dice_que_script_corrio_y_en_que_sesion(tmp_path, monkeypatc
 
     read_hook.main()
 
-    evento = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
-    assert evento["session_id"] == "s-42"
-    assert len(evento["version"]) == 8, "la huella del script que corrio"
-    assert evento["blocked"] is True
-    assert len(evento["id"]) == 12, "el identificador que permite cruzarlo con la delegacion"
+    event = json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
+    assert event["session_id"] == "s-42"
+    assert len(event["version"]) == 8, "la huella del script que corrio"
+    assert event["blocked"] is True
+    assert len(event["id"]) == 12, "el identificador que permite cruzarlo con la delegacion"
     # La telemetria sigue sin llevar rutas ni contenido.
-    assert str(target) not in json.dumps(evento)
+    assert str(target) not in json.dumps(event)
 
 
-def test_la_huella_agrupa_por_fichero_sin_decir_cual_es(tmp_path, monkeypatch, capsys):
+def test_the_fingerprint_groups_by_file_without_saying_which(tmp_path, monkeypatch, capsys):
     """Sin esto, «de las lecturas acotadas, cuantas eran de un fichero que acabo leyendose
     entero» no se puede responder: la telemetria no guarda rutas, a proposito.
 
@@ -475,61 +471,61 @@ def test_la_huella_agrupa_por_fichero_sin_decir_cual_es(tmp_path, monkeypatch, c
     """
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    documento = tmp_path / "el-informe-del-cliente.md"
-    documento.write_text("x" * 40 * 1024, encoding="utf-8")
+    document = tmp_path / "el-informe-del-cliente.md"
+    document.write_text("x" * 40 * 1024, encoding="utf-8")
 
     # Primero una franja, despues el fichero entero: dos eventos del MISMO fichero.
-    _correr_hook(monkeypatch, capsys, {"file_path": str(documento), "limit": 20})
-    _correr_hook(monkeypatch, capsys, {"file_path": str(documento)})
+    _run_hook(monkeypatch, capsys, {"file_path": str(document), "limit": 20})
+    _run_hook(monkeypatch, capsys, {"file_path": str(document)})
 
-    eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    assert [e["reason"] for e in eventos[:1]] == ["bounded"]
-    assert eventos[0]["path_sha"] == eventos[1]["path_sha"], "el mismo fichero, la misma huella"
+    events = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert [e["reason"] for e in events[:1]] == ["bounded"]
+    assert events[0]["path_sha"] == events[1]["path_sha"], "el mismo fichero, la misma huella"
 
-    crudo = log.read_text(encoding="utf-8")
-    assert "el-informe-del-cliente" not in crudo
-    assert str(tmp_path) not in crudo
+    raw = log.read_text(encoding="utf-8")
+    assert "el-informe-del-cliente" not in raw
+    assert str(tmp_path) not in raw
 
 
-def test_dos_ficheros_distintos_no_se_confunden(tmp_path, monkeypatch, capsys):
+def test_two_distinct_files_are_not_confused(tmp_path, monkeypatch, capsys):
     """Control positivo: una huella constante agruparia todo y la medicion diria cualquier cosa."""
     log = tmp_path / "telemetria.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    for nombre in ("uno.md", "dos.md"):
-        fichero = tmp_path / nombre
-        fichero.write_text("x" * 40 * 1024, encoding="utf-8")
-        _correr_hook(monkeypatch, capsys, {"file_path": str(fichero)})
+    for name in ("uno.md", "dos.md"):
+        file = tmp_path / name
+        file.write_text("x" * 40 * 1024, encoding="utf-8")
+        _run_hook(monkeypatch, capsys, {"file_path": str(file)})
 
-    eventos = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
-    assert eventos[0]["path_sha"] != eventos[1]["path_sha"]
+    events = [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+    assert events[0]["path_sha"] != events[1]["path_sha"]
 
 
 # --- Sesión, versión y bloqueo en la telemetría del prompt (SDD subagente-lector-local) ----------
 
 
-def _evento_de_prompt(tmp_path, monkeypatch, texto: str, **env: str) -> dict:
+def _prompt_event(tmp_path, monkeypatch, text: str, **env: str) -> dict:
     log = tmp_path / "hooks.jsonl"
     monkeypatch.setenv("LD_HOOK_TELEMETRY_LOG", str(log))
-    for clave, valor in env.items():
-        monkeypatch.setenv(clave, valor)
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
     monkeypatch.setattr(
-        sys, "stdin", io.StringIO(json.dumps({"prompt": texto, "session_id": "s-123"}))
+        sys, "stdin", io.StringIO(json.dumps({"prompt": text, "session_id": "s-123"}))
     )
     prompt.main()
     return json.loads(log.read_text(encoding="utf-8").splitlines()[-1])
 
 
-def test_todo_evento_del_prompt_lleva_sesion_version_y_bloqueo(tmp_path, monkeypatch):
+def test_every_prompt_event_carries_session_version_and_block(tmp_path, monkeypatch):
     # Los dos caminos: el que sugiere y el que no. El banco de `scripts/` valida CADA corrida por
     # este evento, así que tiene que existir aunque el hook calle.
-    for texto in ("Resume este archivo en cinco viñetas", "Hola, ¿qué tal?"):
-        evento = _evento_de_prompt(
+    for text in ("Resume este archivo en cinco viñetas", "Hola, ¿qué tal?"):
+        event = _prompt_event(
             tmp_path,
             monkeypatch,
-            texto,
+            text,
             LD_HOOK_READ_BLOCK="1",
             LD_HOOK_READ_SWITCH_FILE=str(tmp_path / "no-existe"),
         )
-        assert evento["session_id"] == "s-123", texto
-        assert evento["version"]  # huella del script que corrió
-        assert evento["block"] == "on"
+        assert event["session_id"] == "s-123", text
+        assert event["version"]  # huella del script que corrió
+        assert event["block"] == "on"

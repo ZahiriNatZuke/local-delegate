@@ -36,7 +36,7 @@ shell_hook = _load("suggest_delegate_shell")
 read_hook = _load("suggest_delegate_read")
 
 # Copiado LITERAL de `main` (e46fe70). Si el texto del bloqueo de lectura se toca, esto falla.
-TEXTO_READ = (
+READ_TEXT = (
     "Este archivo pesa 40 KB y es prosa. Pasalo por una tool local con "
     '`path="{p}"`: `local_summarize` para el contenido, `local_extract` '
     "para campos concretos, `local_translate` o `local_explain_code`. Asi no entra al "
@@ -44,7 +44,7 @@ TEXTO_READ = (
     "Si de verdad necesitas el texto literal —lineas exactas para citar o editar—, "
     "leelo por franjas con `offset` y `limit`, que no se bloquean."
 )
-TEXTO_SHELL = (
+SHELL_TEXT = (
     "Este comando vuelca 40 KB de prosa al contexto. Pasalo por una tool local "
     'con `path="{p}"`: `local_summarize` para el contenido, `local_extract` para campos '
     "concretos.\n\n"
@@ -54,7 +54,7 @@ TEXTO_SHELL = (
 
 
 @pytest.fixture(autouse=True)
-def _entorno(tmp_path, monkeypatch):
+def _env(tmp_path, monkeypatch):
     monkeypatch.setenv("LD_HOOK_READ_ENABLED", "1")
     monkeypatch.setenv("LD_HOOK_READ_BLOCK", "1")
     monkeypatch.setenv("LD_HOOK_READ_SWITCH_FILE", str(tmp_path / "no-existe"))
@@ -64,49 +64,49 @@ def _entorno(tmp_path, monkeypatch):
     monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
     for hook in (shell_hook, read_hook):
         monkeypatch.setattr(hook, "backend_available", lambda **k: True)
-        monkeypatch.setattr(hook, "cooled_model", lambda modelo: False)
+        monkeypatch.setattr(hook, "cooled_model", lambda model: False)
 
 
-def _razon(salida: str) -> str:
-    return json.loads(salida)["hookSpecificOutput"]["permissionDecisionReason"]
+def _reason(output: str) -> str:
+    return json.loads(output)["hookSpecificOutput"]["permissionDecisionReason"]
 
 
-def _shell(monkeypatch, capsys, comando: str, cwd: Path) -> str:
-    entrada = {"tool_input": {"command": comando}, "cwd": str(cwd), "session_id": "s"}
-    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(entrada)))
+def _shell(monkeypatch, capsys, command: str, cwd: Path) -> str:
+    hook_input = {"tool_input": {"command": command}, "cwd": str(cwd), "session_id": "s"}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(hook_input)))
     shell_hook.main()
     return capsys.readouterr().out
 
 
-def _read(monkeypatch, capsys, fichero: Path) -> str:
-    entrada = {"tool_input": {"file_path": str(fichero)}, "session_id": "s"}
-    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(entrada)))
+def _read(monkeypatch, capsys, file: Path) -> str:
+    hook_input = {"tool_input": {"file_path": str(file)}, "session_id": "s"}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(hook_input)))
     read_hook.main()
     return capsys.readouterr().out
 
 
 @pytest.fixture
-def documento(tmp_path) -> Path:
-    fichero = tmp_path / "docs" / "informe.md"
-    fichero.parent.mkdir()
-    fichero.write_text("x" * 40 * 1024, encoding="utf-8")
-    return fichero
+def document(tmp_path) -> Path:
+    file = tmp_path / "docs" / "informe.md"
+    file.parent.mkdir()
+    file.write_text("x" * 40 * 1024, encoding="utf-8")
+    return file
 
 
-def test_el_texto_del_bloqueo_de_lectura_no_cambia_ni_un_byte(monkeypatch, capsys, documento):
-    assert _razon(_read(monkeypatch, capsys, documento)) == TEXTO_READ.format(p=documento)
+def test_the_read_block_text_does_not_change_a_single_byte(monkeypatch, capsys, document):
+    assert _reason(_read(monkeypatch, capsys, document)) == READ_TEXT.format(p=document)
 
 
-def test_un_cat_relativo_ofrece_la_ruta_absoluta(monkeypatch, capsys, documento, tmp_path):
-    razon = _razon(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
-    assert razon == TEXTO_SHELL.format(p=documento)
+def test_a_relative_cat_offers_the_absolute_path(monkeypatch, capsys, document, tmp_path):
+    reason = _reason(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
+    assert reason == SHELL_TEXT.format(p=document)
 
 
-def test_un_cat_relativo_se_cruza_con_la_delegacion(monkeypatch, capsys, documento, tmp_path):
+def test_a_relative_cat_is_matched_with_the_delegation(monkeypatch, capsys, document, tmp_path):
     from local_delegate import server
 
-    razon = _razon(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
-    ofrecida = re.search(r'path="([^"]+)"', razon).group(1)
+    reason = _reason(_shell(monkeypatch, capsys, "cat docs/informe.md", tmp_path))
+    offered = re.search(r'path="([^"]+)"', reason).group(1)
     # El modelo delega con la ruta que se le ofreció, y la nota tiene que estar a ese nombre.
-    assert Path(ofrecida) == documento
-    assert server._recent_block_id(ofrecida) is not None
+    assert Path(offered) == document
+    assert server._recent_block_id(offered) is not None

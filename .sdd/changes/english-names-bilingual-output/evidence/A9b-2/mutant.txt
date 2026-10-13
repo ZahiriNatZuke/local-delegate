@@ -1,0 +1,19 @@
+Mutante 1 (producto): hook_common.py:241, un HTTPError (401) cuenta como «no hay backend» (return True -> return False)
+sha antes b9ce06ae614bafa6 / mutado 0972213993454672
+>       assert common.backend_available(marker=tmp_path / "salud.json") is True
+E       AssertionError: assert False is True
+E        +  where False = <function backend_available at 0x000001CED5BCD260>(marker=(WindowsPath('<HOME>/AppData/Local/Temp/pytest-of-<USER>/pytest-1379/test_a_401_means_the_backend_I0') / 'salud.json'))
+E        +    where <function backend_available at 0x000001CED5BCD260> = common.backend_available
+FAILED tests/test_hook_common.py::test_a_401_means_the_backend_IS_there - Ass...
+1 failed, 19 passed in 0.56s
+restaurado b9ce06ae614bafa6 (== antes: si)
+20 passed in 3.02s
+
+Mutante 2 (dato, assert negativo del lote 1): la captura oom-without-profile.json gana una clave "exception"
+sha antes d499814f253b964f / mutado 2f55783f567894e7
+>       assert "exception" not in doc
+E       AssertionError: assert 'exception' not in {'exception': {'type': 'ReadTimeout', 'message': 'x'}, 'case': 'oom-without-profile', 'captured_utc': '2026-09-15T15:22:35Z', 'versions': {'llama-swap': 'v255 (7761aa1)', 'llama-server': 'b10909 (a2878d30d)'}, ...}
+FAILED tests/test_failure_captures.py::test_the_oom_without_profile_did_not_reach_timeout_and_stays_uncaptured
+1 failed, 9 passed in 0.23s
+restaurado d499814f253b964f (== antes: si)
+10 passed in 0.10s

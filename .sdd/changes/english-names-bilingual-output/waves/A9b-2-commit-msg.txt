@@ -1,0 +1,13 @@
+refactor(rename): nombres en inglés en test_fallos_integracion y los tests de hooks (ola A9b, lote 2)
+
+Renombra a inglés los nombres de test_fallos_integracion.py y de los
+tests de los hooks: 241 filas del mapping aprobado. Dos módulos cambian
+de nombre (test_failures_integration.py y
+test_hook_shell_absolute_path.py) y los 77 test_* del lote pasan a
+inglés, junto con sus fixtures (casa → home_env, temporal → temp_dir,
+documento → document, sin_preguntar → without_asking), sus ayudantes
+(_correr_hook → _run_hook, _escribir_telemetria → _write_telemetry,
+_marca → _mark…) y sus variables locales.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan. Los tests recogidos siguen siendo 2569.
