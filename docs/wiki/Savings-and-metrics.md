@@ -155,7 +155,7 @@ lo devuelto **en su unidad de origen**: `chars_saved_text` (texto leído por `pa
 `bytes_saved_image` (la imagen, en bytes), `chars_saved_output` (lo escrito a fichero) y
 `chars_returned` (lo devuelto al contexto). Esas cifras son exactas; la conversión a tokens de
 Claude es la parte estimada, y pasa por **una sola** función, `claude_tokens` (en JS,
-`tokensClaude`), que se explica en la sección siguiente.
+`claudeTokens`), que se explica en la sección siguiente.
 
 **Un ejemplo con cifras reales** (septiembre de 2026 en la máquina de referencia: 143
 delegaciones, 7 de ellas fallidas). La columna `÷ 4` es la conversión de antes; la de la derecha,

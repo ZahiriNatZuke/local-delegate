@@ -1,0 +1,30 @@
+refactor(rename): nombres en inglés en el JS del panel y en web/metrics.py (ola A8b)
+
+Renombra a inglés los identificadores que quedaban en web/metrics.py:
+148 filas del mapping. Son las 35 variables locales de la parte Python
+(evento → event, datos → data, por_evento → by_event, ruta → path,
+estado → probe…) y 88 nombres del JS del panel, cambiados por tokens
+dentro del <script>: estadoVisible → visibleState, estadoModelo →
+modelState, vistaInicial → initialView, ordenModelos → sortModels,
+chipEstado → statusChip, textoCoste/textoCuota/textoImagenes →
+costText/quotaText/imagesText, SONDEO → POLL, sondearAhora → pollNow,
+aplicarBackend → applyBackend, fmtHace → fmtAgo, fmtSeg → fmtSec,
+tokensClaude → claudeTokens e INFO_GRUPOS → INFO_GROUPS, con las claves
+propias de sus objetos (vista → view, estado → status, texto → text,
+clase → cls, atenuada → dimmed).
+
+También cambian los 19 ids del DOM (costeCard → costCard, cuotaBody →
+quotaBody, dlgPruebas → dlgTests…), los data-group coste/sistema →
+cost/system, la clase CSS .mrow.atenuada → .mrow.dimmed y los estados
+internos del indicador del backend (conectado/comprobando/caido →
+connected/checking/down), que nunca se pintan. Ningún texto visible del
+panel cambia. La clave de cliente «desconocido», que emite el servidor,
+se queda como está.
+
+Con el rename cambian, por consecuencia: test_panel_estados.py,
+test_panel_coste.py, test_dashboard_js.py, test_dashboard_ui.py, las
+cabeceras que extraen test_metrics.py y test_densidad.py, los nombres de
+control de test_detect_spanish_names.py y las citas de tokensClaude en
+server.py, la wiki (Savings-and-metrics) y scripts/dev/capture_dashboard.py.
+meterHTML y quotaMeter van a rename-exceptions.md: «meter» es aquí el
+medidor inglés.

@@ -129,7 +129,7 @@ SEED_AND_MOCK = """({DENSIDAD, PRECIOS_CONSULTADO}) => {
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 
   // `/api/events` entrega las filas ya fundidas y con la densidad resuelta (`resolve_density`
-  // en Python); el JS del panel solo divide. Sin `density`, `tokensClaude` da 0 y las series por
+  // en Python); el JS del panel solo divide. Sin `density`, `claudeTokens` da 0 y las series por
   // día saldrían planas. Esta es una resolución de juguete para los datos de ejemplo —familia
   // `new`, clase por la tool o por la extensión `.md`— con los valores de la tabla del paquete.
   const DENS = DENSIDAD.families.new;

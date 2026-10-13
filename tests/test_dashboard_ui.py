@@ -4,7 +4,7 @@ Es la última capa que le faltaba al dashboard, y las tres se complementan sin s
 
 - `test_metrics.py` prueba lo que sirve el backend (`/api/events`, `/api/stats`, …).
 - `test_dashboard_js.py` **ejecuta con node** las funciones que deciden qué se pide y cómo se
-  agrupa (`computeRange`, `localDayKey`, `byDay`, `agg`, `fmtHace`).
+  agrupa (`computeRange`, `localDayKey`, `byDay`, `agg`, `fmtAgo`).
 - aquí se carga la página entera y se **pulsan los controles**, que es lo único que puede ver un
   fallo de cableado: un `onclick` que no se registró, un id renombrado a medias, un botón que no
   se deshabilita en la última página.
@@ -646,24 +646,24 @@ def _log_coste_e_imagen(tmp_path, monkeypatch) -> None:
 # Lo que se mide de las tres tarjetas: ningún párrafo, la misma tipografía que los KPIs de arriba,
 # el hueco con la fila de debajo y el diálogo de información con todo el texto que salió de ellas.
 _MEDIR_TARJETAS = """() => {
-  const cuerpos = ['costeBody', 'cuotaBody', 'imagenesBody'].map(i => document.getElementById(i));
+  const cuerpos = ['costBody', 'quotaBody', 'imagesBody'].map(i => document.getElementById(i));
   const textos = cuerpos.flatMap(c => [...c.querySelectorAll('*')]
     .filter(e => !e.children.length).map(e => e.textContent.trim()));
   const estilo = sel => { const e = document.querySelector(sel);
     if (!e) return null; const s = getComputedStyle(e);
     return [s.fontFamily, s.fontSize, s.fontWeight].join('|'); };
   const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
-  const coste = document.getElementById('costeCard').getBoundingClientRect();
-  const fila = document.getElementById('cuotaImgRow').getBoundingClientRect();
+  const coste = document.getElementById('costCard').getBoundingClientRect();
+  const fila = document.getElementById('quotaImgRow').getBoundingClientRect();
   return {
-    coste: document.getElementById('costeBody').innerText,
-    imagenes: document.getElementById('imagenesBody').innerText,
+    coste: document.getElementById('costBody').innerText,
+    imagenes: document.getElementById('imagesBody').innerText,
     parrafos: cuerpos.reduce((n, c) => n + c.querySelectorAll('p, .nota').length, 0),
     masLargo: Math.max(...textos.map(t => t.length)),
-    desglose: document.querySelectorAll('#costeBody tbody tr').length,
-    cuotaVisible: vis('cuotaCard'), imagenesVisible: vis('imagenesCard'),
-    valCoste: estilo('#costeBody .k-val'), valKpi: estilo('#kpis .card:not(.hero) .k-val'),
-    lblCoste: estilo('#costeBody .k-lbl'), lblKpi: estilo('#kpis .k-lbl'),
+    desglose: document.querySelectorAll('#costBody tbody tr').length,
+    cuotaVisible: vis('quotaCard'), imagenesVisible: vis('imagesCard'),
+    valCoste: estilo('#costBody .k-val'), valKpi: estilo('#kpis .card:not(.hero) .k-val'),
+    lblCoste: estilo('#costBody .k-lbl'), lblKpi: estilo('#kpis .k-lbl'),
     hueco: Math.round(fila.top - coste.bottom),
   };
 }"""
@@ -679,8 +679,8 @@ def test_las_tarjetas_de_coste_cuota_e_imagenes_llevan_cifras_y_no_parrafos(tmp_
         pagina = navegador.new_page()
         pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         pagina.goto(servidor.url)
-        pagina.wait_for_selector("#costeBody .kstat")
-        pagina.wait_for_selector("#imagenesBody .kstat")
+        pagina.wait_for_selector("#costBody .kstat")
+        pagina.wait_for_selector("#imagesBody .kstat")
         m = pagina.evaluate(_MEDIR_TARJETAS)
         navegador.close()
     metrics._FILE_CACHE.clear()
@@ -708,8 +708,8 @@ def test_el_dialogo_de_informacion_lleva_el_texto_y_se_cierra_con_esc(tmp_path, 
         pagina = navegador.new_page()
         pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         pagina.goto(servidor.url)
-        pagina.wait_for_selector("#costeBody .kstat")
-        pagina.focus("#costeInfo")
+        pagina.wait_for_selector("#costBody .kstat")
+        pagina.focus("#costInfo")
         pagina.keyboard.press("Enter")
         abierto = pagina.evaluate("() => document.getElementById('infoDlg').open")
         texto = pagina.inner_text("#infoDlg")
@@ -729,7 +729,7 @@ def test_el_dialogo_de_informacion_lleva_el_texto_y_se_cierra_con_esc(tmp_path, 
     assert "1 imagen" in texto
     assert "250.000 bytes" in texto
     assert not m["abierto"]
-    assert m["foco"] == "costeInfo"
+    assert m["foco"] == "costInfo"
 
 
 def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
@@ -756,13 +756,13 @@ def test_la_cuota_calibrada_sale_como_medidor(tmp_path, monkeypatch):
         pagina.route(re.compile(r"^https://fonts\.(googleapis|gstatic)\.com/"), lambda r: r.abort())
         pagina.route(re.compile(r"/api/stats(\?|$)"), _inyectar)
         pagina.goto(servidor.url)
-        pagina.wait_for_selector("#cuotaBody .qrange")
+        pagina.wait_for_selector("#quotaBody .qrange")
         m = pagina.evaluate(
             """() => ({
-              texto: document.getElementById('cuotaBody').innerText,
-              cabecera: document.getElementById('cuotaHead').innerText,
-              medidores: document.querySelectorAll('#cuotaBody .qrange').length,
-              ancho: document.querySelector('#cuotaBody .qrange .qb').style.width,
+              texto: document.getElementById('quotaBody').innerText,
+              cabecera: document.getElementById('quotaHead').innerText,
+              medidores: document.querySelectorAll('#quotaBody .qrange').length,
+              ancho: document.querySelector('#quotaBody .qrange .qb').style.width,
             })"""
         )
         navegador.close()
@@ -950,7 +950,7 @@ def _pagina_completa(pw, url, ancho=1366, tema="dark", fuentes="bloqueadas"):
     pagina.goto(url)
     pagina.wait_for_selector("#hooksBody tbody tr")
     pagina.wait_for_selector("#clientsBody tbody tr")
-    pagina.wait_for_selector("#costeBody tbody tr")
+    pagina.wait_for_selector("#costBody tbody tr")
     pagina.wait_for_function(
         "() => document.getElementById('metersBody').innerText.includes('GiB')"
     )
@@ -959,7 +959,7 @@ def _pagina_completa(pw, url, ancho=1366, tema="dark", fuentes="bloqueadas"):
 
 
 _PRIMERAS_COLUMNAS = """() => {
-  const ids = ['hooksBody', 'clientsBody', 'costeBody'];
+  const ids = ['hooksBody', 'clientsBody', 'costBody'];
   return ids.flatMap(id => [...document.querySelectorAll('#' + id + ' tbody tr td:first-child')]
     .map(td => td.innerText.trim()));
 }"""
@@ -974,8 +974,8 @@ def test_ninguna_tabla_ensena_claves_internas(tmp_path, monkeypatch):
     with _Servidor(9495) as servidor, sync_playwright() as pw:
         navegador, pagina = _pagina_completa(pw, servidor.url)
         celdas = pagina.evaluate(_PRIMERAS_COLUMNAS)
-        esfuerzo = pagina.inner_text("#costeBody tbody tr td:nth-child(3)")
-        hilo = pagina.inner_text("#costeBody tbody tr td:nth-child(2)")
+        esfuerzo = pagina.inner_text("#costBody tbody tr td:nth-child(3)")
+        hilo = pagina.inner_text("#costBody tbody tr td:nth-child(2)")
         navegador.close()
     metrics._FILE_CACHE.clear()
     assert len(celdas) == 5 + 6 + 4 + 1, celdas  # guarda: llegaron todas las filas
@@ -1042,7 +1042,7 @@ def test_la_nota_de_los_hooks_esta_en_el_dialogo(tmp_path, monkeypatch):
         pagina.click("#hooksInfo")
         titulo = pagina.inner_text("#infoDlgTitle")
         visible = pagina.inner_text("#dlgHooks")
-        oculto = pagina.evaluate("() => document.getElementById('dlgCoste').hidden")
+        oculto = pagina.evaluate("() => document.getElementById('dlgCost').hidden")
         navegador.close()
     metrics._FILE_CACHE.clear()
     assert "sugieren" not in cuerpo
@@ -1374,12 +1374,12 @@ def test_el_interruptor_de_pruebas_pide_las_tres_con_el_parametro(tmp_path, monk
                        punto: document.getElementById('testsDot').checkVisibility()})"""
         )
         pagina.click("#testsInfo")
-        texto_apagado = pagina.inner_text("#dlgPruebas")
+        texto_apagado = pagina.inner_text("#dlgTests")
         codigo = pagina.evaluate(
             """() => {
               const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono');
               const norm = f => f.replace(/["']/g, '').split(',').map(x => x.trim()).join(',');
-              return [...document.querySelectorAll('#dlgPruebas code')].map(c => ({
+              return [...document.querySelectorAll('#dlgTests code')].map(c => ({
                 texto: c.innerText.trim(),
                 mono: norm(getComputedStyle(c).fontFamily) === norm(mono)}));
             }"""
@@ -1390,7 +1390,7 @@ def test_el_interruptor_de_pruebas_pide_las_tres_con_el_parametro(tmp_path, monk
         with pagina.expect_response(lambda r: "/api/stats" in r.url and "include_tests=1" in r.url):
             pagina.click("#tests")
         pagina.wait_for_function(
-            "() => document.getElementById('dlgPruebasBody').innerText.includes('incluidas')"
+            "() => document.getElementById('dlgTestsBody').innerText.includes('incluidas')"
         )
         despues = [u for u in pedidas if re.search(r"/api/(events|stats|hooks)\?", u)]
         recordado = pagina.evaluate("() => localStorage.getItem('ld-tests')")

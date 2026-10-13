@@ -22,4 +22,9 @@ OK    A7a.md
       · A7a-mapping.csv: 124 filas, 0 discrepancia(s)
 OK    A7b.md
       · A7b-mapping.csv: 141 filas, 0 discrepancia(s)
-12/12 registro(s) cumplen los mínimos de §2.1
+OK    A8a.md
+      · A8a-1-mapping.csv: 151 filas, 0 discrepancia(s)
+      · A8a-2-mapping.csv: 241 filas, 0 discrepancia(s)
+OK    A8b.md
+      · A8b-mapping.csv: 148 filas, 0 discrepancia(s)
+14/14 registro(s) cumplen los mínimos de §2.1

@@ -12,7 +12,7 @@ Este módulo cubre las funciones donde un fallo **cambia lo que el usuario ve**:
   donde se cruza la frontera de zona horaria — y el comentario del propio código avisa: «no uses
   toISOString(): eso vuelve a UTC».
 - `agg`: alimenta los donuts.
-- `fmtHace`: el «hace X» del indicador de actividad.
+- `fmtAgo`: el «hace X» del indicador de actividad.
 
 **Los tests fijan `TZ` a una zona con offset negativo** y no confían en la del que ejecuta: con
 `TZ=UTC` un `localDayKey` mal escrito pasaría igual, que es exactamente cómo estos fallos
@@ -231,7 +231,7 @@ def test_byDay_agrupa_por_dia_local_y_sale_en_orden(tmp_path):
         tmp_path,
         [
             "function localDayKey(d){",
-            "function tokensClaude(",
+            "function claudeTokens(",
             "function acct(e){",
             "function byDay(ev){",
         ],
@@ -254,7 +254,7 @@ def test_byDay_ignora_un_ts_ilegible_en_vez_de_reventar(tmp_path):
         tmp_path,
         [
             "function localDayKey(d){",
-            "function tokensClaude(",
+            "function claudeTokens(",
             "function acct(e){",
             "function byDay(ev){",
         ],
@@ -312,7 +312,7 @@ def test_agg_con_negativos_conserva_las_herramientas_por_debajo_de_cero(tmp_path
         # Sin `){`: la cabecera tiene que casar con la firma de antes y con la de cuatro argumentos.
         ["function agg(ev,key,valfn"],
         f"console.log(JSON.stringify(agg({json.dumps(eventos)}, 'tool', e => e.n, "
-        "{conNegativos:true})));",
+        "{withNegatives:true})));",
     )
     assert ["b", -100] in resultado
     assert resultado == [["a", 500], ["b", -100]], "la herramienta con neto 0 no sale"
@@ -328,7 +328,7 @@ def test_la_chispa_admite_negativos():
 
 
 def test_acct_convierte_solo_con_tokensClaude(tmp_path):
-    """REQ-008 en el JS: con `tokensClaude` sustituida por un 7 fijo, ahorro y devuelto son 7."""
+    """REQ-008 en el JS: con `claudeTokens` sustituida por un 7 fijo, ahorro y devuelto son 7."""
     evento = {
         "source": "path",
         "chars_in": 4000,
@@ -341,9 +341,9 @@ def test_acct_convierte_solo_con_tokensClaude(tmp_path):
         tmp_path,
         ["function acct(e){"],
         f"console.log(JSON.stringify(acct({json.dumps(evento)})));",
-        # No se extrae la `tokensClaude` real: la sustituye este doble.
+        # No se extrae la `claudeTokens` real: la sustituye este doble.
         preludio="const CPT = 4;\nconst tok = c => Math.floor(c/CPT);\n"
-        "function tokensClaude(){ return 7; }\n",
+        "function claudeTokens(){ return 7; }\n",
     )
     assert r["saved"] == 7
     assert r.get("returned") == 7
@@ -351,7 +351,7 @@ def test_acct_convierte_solo_con_tokensClaude(tmp_path):
     assert r["tokensIn"] == 1100, "el coste del modelo local no pasa por la conversión"
 
 
-# --- fmtHace: el «hace X» del indicador ---------------------------------------
+# --- fmtAgo: el «hace X» del indicador ---------------------------------------
 
 
 def test_fmtHace_cambia_de_unidad_en_las_fronteras(tmp_path):
@@ -359,8 +359,8 @@ def test_fmtHace_cambia_de_unidad_en_las_fronteras(tmp_path):
     casos = [0, 59, 60, 119, 3599, 3600, 7199, 86399, 86400, 172800]
     resultado = _correr(
         tmp_path,
-        ["function fmtHace(s){"],
-        f"console.log(JSON.stringify({json.dumps(casos)}.map(fmtHace)));",
+        ["function fmtAgo(s){"],
+        f"console.log(JSON.stringify({json.dumps(casos)}.map(fmtAgo)));",
     )
     assert resultado == [
         "0s",
@@ -380,7 +380,7 @@ def test_fmtHace_cambia_de_unidad_en_las_fronteras(tmp_path):
 #
 # `F` no es una función: es la expresión de la sentencia `const CPT = 4, F = …, PAGE = 10;`. Se
 # recorta con una regex no codiciosa hasta `, PAGE` y se evalúa tal cual, así que el test mira la
-# definición que usa el panel y no una copia. `fmtNum`, `F1`, `fmtSeg` y `plural` se añaden solo si
+# definición que usa el panel y no una copia. `fmtNum`, `F1`, `fmtSec` y `plural` se añaden solo si
 # existen: con el código de antes, `_extraer` lanzaría `ValueError` y el test fallaría por la
 # extracción en vez de por el assert que importa.
 
@@ -408,7 +408,7 @@ def _formateadores() -> str:
     m1 = re.search(r"const F1 = (.*?);", html)
     if m1:
         partes.append(f"const F1 = {m1.group(1)};")
-    for cabecera in ("function fmtSeg(", "function plural("):
+    for cabecera in ("function fmtSec(", "function plural("):
         if cabecera in html:
             partes.append(_extraer(cabecera))
     return "\n".join(partes)
@@ -436,7 +436,7 @@ def test_decimales_con_coma_y_latencia_en_segundos(tmp_path):
     r = _correr(
         tmp_path,
         [],
-        "console.log(JSON.stringify({seg: [fmtSeg(116948), fmtSeg(120), fmtSeg(30)],"
+        "console.log(JSON.stringify({seg: [fmtSec(116948), fmtSec(120), fmtSec(30)],"
         " f1: F1.format(1718.25), neg: F.format(-1234567)}));",
         _SIN_INTL_V3 + _formateadores(),
     )
@@ -463,7 +463,7 @@ def test_plural_sin_parentesis(tmp_path):
 
 def test_no_quedan_plurales_con_parentesis_ni_toFixed():
     """REQ-031 y REQ-033 en todo el panel. No se busca `(s)` suelto: choca con `renderClients(s)`,
-    `escHooks(s)` y `fmtHace(s)`."""
+    `escHooks(s)` y `fmtAgo(s)`."""
     html = metrics.HTML
     assert "estimado(s)" not in html
     assert "archivo(s)" not in html
@@ -478,7 +478,7 @@ _TEXTO_PRUEBAS = [
     "function fmtNum(",
     "function plural(",
     "function fmtLocalTs(",
-    "function textoPruebas(",
+    "function testsText(",
 ]
 _PRELUDIO_F = (
     "const F = {format: n => fmtNum(n, 0)};\n"
@@ -488,7 +488,7 @@ _PRELUDIO_F = (
 
 
 def _texto_pruebas(tmp_path, stats) -> str:
-    cuerpo = f"console.log(JSON.stringify(textoPruebas({json.dumps(stats)}).join('\\n')));"
+    cuerpo = f"console.log(JSON.stringify(testsText({json.dumps(stats)}).join('\\n')));"
     return _correr(tmp_path, _TEXTO_PRUEBAS, cuerpo, _PRELUDIO_F)
 
 
@@ -535,7 +535,7 @@ const urls = [];
 globalThis.fetch = async u => { urls.push(u); return {json: async () => ({})}; };
 const state = {range: 'today', tests: TESTS, events: [], meta: {}};
 function computeRange(){ return {from: '2026-10-08T04:00:00.000Z', to: '2026-10-08T16:00:00.000Z'}; }
-function renderClients(){} function renderCoste(){} function renderPruebas(){}
+function renderClients(){} function renderCost(){} function renderTestsInfo(){}
 function renderHooks(){} function render(){} function updateLive(){}
 function plural(){ return ''; }
 const CPT = 4, TZ = 'x', TZ_OFFSET_TXT = 'y';

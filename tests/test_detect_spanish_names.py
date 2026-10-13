@@ -58,7 +58,7 @@ KNOWN_ENGLISH = (
     "general", "total", "real", "local", "error", "control", "base", "plan", "prompt", "hooks",
     "shell", "read", "suggest_delegate", "fallback", "cooldown",
 )  # fmt: skip
-JS_CONTROL_NAMES = ("tokensClaude", "aplicarBackend", "acct", "fmtNum", "decimales")
+JS_CONTROL_NAMES = ("claudeTokens", "applyBackend", "acct", "fmtNum", "decimals")
 
 
 # --- Regresión ----------------------------------------------------------------

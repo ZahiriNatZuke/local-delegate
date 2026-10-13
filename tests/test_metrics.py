@@ -1267,8 +1267,8 @@ def test_paridad_acct_entre_python_y_el_js_del_panel(tmp_path):
 
 
 def _acct_en_js(node: str, tmp_path: Path, casos: list[dict]) -> list[dict]:
-    """`acct` del panel, con su `tokensClaude` de verdad, corrido con node sobre `casos`."""
-    tokens_claude_js = _extraer_funcion_js(metrics.HTML, "function tokensClaude(")
+    """`acct` del panel, con su `claudeTokens` de verdad, corrido con node sobre `casos`."""
+    tokens_claude_js = _extraer_funcion_js(metrics.HTML, "function claudeTokens(")
     acct_js = _extraer_funcion_js(metrics.HTML, "function acct(e){")
     entrada = tmp_path / "casos.json"
     entrada.write_text(json.dumps(casos), encoding="utf-8")
