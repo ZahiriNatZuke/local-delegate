@@ -1,0 +1,21 @@
+== Mutante 1 (arreglo de CodeQL): probe_backend relanza lo inesperado (raise tras el except de :4293)
+sha256 antes 2bfc147aaafdb200 / con mutante e76ac5346094eef6
+>           state = server.probe_backend()
+>               raise effect
+E               RuntimeError: inesperado
+>           raise AssertionError(f"el sondeo lanzó {exc!r}") from exc
+E           AssertionError: el sondeo lanzó RuntimeError('inesperado')
+1 failed, 14 deselected in 0.29s
+sha256 restaurado 2bfc147aaafdb200
+
+== Mutante 2 (test renombrado con argnames nuevos state/expected): _LoadProbe toma 'starting' por cargado (server.py:1232)
+sha256 antes 2bfc147aaafdb200 / con mutante 52eaccc223dde7e9
+>       assert probe.model_loaded(wait_s=1.0) is expected
+E       assert None is True
+E        +  where None = model_loaded(wait_s=1.0)
+E        +    where model_loaded = <local_delegate.server._LoadProbe object at 0x00000207680DB2D0>.model_loaded
+>       assert probe.model_loaded(wait_s=1.0) is expected
+E       assert True is False
+E        +  where True = model_loaded(wait_s=1.0)
+E        +    where model_loaded = <local_delegate.server._LoadProbe object at 0x000002076817F750>.model_loaded
+sha256 restaurado 2bfc147aaafdb200

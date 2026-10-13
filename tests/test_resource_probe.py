@@ -19,12 +19,12 @@ import pytest
 
 from local_delegate import benchmark
 
-RAIZ = Path(__file__).parents[1]
+ROOT = Path(__file__).parents[1]
 MIB = 1024 * 1024
 NVIDIA = "0x00000000_0x0000F722"
 IGPU = "0x00000000_0x00014FF6"
 
-solo_windows = pytest.mark.skipif(
+windows_only = pytest.mark.skipif(
     sys.platform != "win32", reason="Toolhelp32 y psapi solo existen en Windows"
 )
 
@@ -46,27 +46,27 @@ ROW = (
 )
 
 
-def test_parseo_saca_los_dos_contadores_de_la_instancia_correcta_habiendo_varias():
+def test_parsing_takes_both_counters_from_the_right_instance_among_several():
     columns = benchmark.parse_typeperf_header(HEADER, 1556, NVIDIA)
     assert columns == {1: "dedicated", 3: "shared"}
     reading = benchmark.parse_typeperf_sample(ROW, columns)
     assert reading == benchmark.VramReading(9433419776, 14647296)
 
 
-def test_parseo_respeta_el_pid_y_el_luid_pedidos():
-    otro_pid = benchmark.parse_typeperf_header(HEADER, 40160, NVIDIA)
-    assert benchmark.parse_typeperf_sample(ROW, otro_pid) == benchmark.VramReading(11403264, None)
+def test_parsing_respects_the_requested_pid_and_luid():
+    other_pid = benchmark.parse_typeperf_header(HEADER, 40160, NVIDIA)
+    assert benchmark.parse_typeperf_sample(ROW, other_pid) == benchmark.VramReading(11403264, None)
     igpu = benchmark.parse_typeperf_header(HEADER, 1556, IGPU)
     assert benchmark.parse_typeperf_sample(ROW, igpu) == benchmark.VramReading(202113024, 757760)
 
 
-def test_luid_equivocado_da_cabecera_vacia_y_cero_muestras_no_la_vram_de_otro():
+def test_wrong_luid_gives_empty_header_and_zero_samples_not_another_ones_vram():
     columns = benchmark.parse_typeperf_header(HEADER, 1556, "0x00000000_0x0000DEAD")
     assert columns == {}
     assert benchmark.parse_typeperf_sample(ROW, columns) is None
 
 
-def test_menos_uno_es_proceso_muerto_y_los_mensajes_de_consola_se_ignoran():
+def test_minus_one_is_a_dead_process_and_console_messages_are_ignored():
     columns = benchmark.parse_typeperf_header(HEADER, 1556, NVIDIA)
     gone = '"09/13/2026 21:40:13.735","-1","-1","-1","-1","-1","-1"'
     assert benchmark.parse_typeperf_sample(gone, columns) == benchmark.VramReading(
@@ -87,13 +87,13 @@ ADAPTERS = (
 )
 
 
-def test_luid_de_la_nvidia_se_empareja_con_nvidia_smi():
+def test_nvidia_luid_is_paired_with_nvidia_smi():
     values = benchmark.parse_adapter_dedicated(ADAPTERS)
     assert values[NVIDIA] == 997896192
     assert benchmark.choose_gpu_luid(values, 942.0) == NVIDIA
 
 
-def test_luid_no_se_adivina_si_no_hay_exactamente_un_candidato():
+def test_luid_is_not_guessed_unless_there_is_exactly_one_candidate():
     values = benchmark.parse_adapter_dedicated(ADAPTERS)
     assert benchmark.choose_gpu_luid(values, 5000.0) is None
     assert benchmark.choose_gpu_luid({"a": 900 * MIB, "b": 950 * MIB}, 925.0) is None
@@ -127,7 +127,7 @@ def _stream(lines, pid=1556):
     return stream, created
 
 
-def test_flujo_guarda_la_ultima_muestra_de_la_instancia_pedida():
+def test_stream_keeps_the_last_sample_of_the_requested_instance():
     stream, created = _stream(["Nota previa", HEADER, ROW])
     assert r"\GPU Process Memory(pid_1556_*)\Dedicated Usage" in created["command"]
     assert stream.latest(max_age=2.5) == benchmark.VramReading(9433419776, 14647296)
@@ -136,7 +136,7 @@ def test_flujo_guarda_la_ultima_muestra_de_la_instancia_pedida():
     assert created["process"].terminated
 
 
-def test_pid_que_desaparece_da_sin_muestra_y_no_una_excepcion():
+def test_vanishing_pid_gives_no_sample_and_not_an_exception():
     gone = '"09/13/2026 21:40:13.735","-1","-1","-1","-1","-1","-1"'
     stream, _ = _stream([HEADER, ROW, gone, gone, "Error:", "Los datos no son v�lidos."])
     assert stream.process_gone is True
@@ -176,14 +176,14 @@ def _probe(find_results, memory=(300 * MIB, 900 * MIB), streams=None):
     return probe, streams
 
 
-def test_sonda_lee_ram_privada_working_set_y_vram_del_pid_resuelto():
+def test_probe_reads_private_ram_working_set_and_vram_of_the_resolved_pid():
     probe, streams = _probe([[40160]])
     sample = probe.sample()
     assert sample == benchmark.ResourceSample(40160, 300 * MIB, 900 * MIB, 4 * MIB, 1 * MIB)
     assert [s.pid for s in streams] == [40160]
 
 
-def test_proceso_que_desaparece_cierra_el_flujo_y_da_sin_muestra():
+def test_vanishing_process_closes_the_stream_and_gives_no_sample():
     probe, streams = _probe([[40160], []])
     probe.sample()
     sample = probe.sample()
@@ -192,7 +192,7 @@ def test_proceso_que_desaparece_cierra_el_flujo_y_da_sin_muestra():
     assert streams[0].closed
 
 
-def test_cambio_de_pid_relanza_el_flujo_con_el_pid_nuevo():
+def test_pid_change_relaunches_the_stream_with_the_new_pid():
     probe, streams = _probe([[40160], [40160], [31776]])
     probe.sample()
     probe.sample()
@@ -201,27 +201,27 @@ def test_cambio_de_pid_relanza_el_flujo_con_el_pid_nuevo():
     assert streams[0].closed and not streams[1].closed
 
 
-def test_cabecera_sin_la_instancia_del_pid_marca_el_flujo():
-    sin_instancia, _ = _stream([HEADER, ROW], pid=9999)
-    assert sin_instancia.missing_instance is True
-    assert sin_instancia.latest(max_age=2.5) is None
-    con_instancia, _ = _stream([HEADER, ROW])
-    assert con_instancia.missing_instance is False
+def test_header_without_the_pid_instance_marks_the_stream():
+    without_instance, _ = _stream([HEADER, ROW], pid=9999)
+    assert without_instance.missing_instance is True
+    assert without_instance.latest(max_age=2.5) is None
+    with_instance, _ = _stream([HEADER, ROW])
+    assert with_instance.missing_instance is False
 
 
-def test_flujo_sin_la_instancia_se_relanza_con_el_mismo_pid_pero_no_en_bucle():
+def test_stream_without_the_instance_relaunches_with_the_same_pid_but_not_in_a_loop():
     # Tercer piloto de CP-3: typeperf arranco antes de que llama-server creara su contexto CUDA, la
     # cabecera salio sin su instancia y, como el PID no cambio, el 2B anulo 120 intentos.
-    reloj = [0.0]
-    flujos = []
+    clock = [0.0]
+    streams = []
 
     def factory(pid, luid):
-        flujo = _FakeStream(pid, luid)
-        flujo.missing_instance = not flujos  # solo el primero nace sin la instancia
-        if flujo.missing_instance:
-            flujo.reading = None
-        flujos.append(flujo)
-        return flujo
+        stream = _FakeStream(pid, luid)
+        stream.missing_instance = not streams  # solo el primero nace sin la instancia
+        if stream.missing_instance:
+            stream.reading = None
+        streams.append(stream)
+        return stream
 
     probe = benchmark.ProcessProbe(
         "llama-server.exe",
@@ -229,27 +229,27 @@ def test_flujo_sin_la_instancia_se_relanza_con_el_mismo_pid_pero_no_en_bucle():
         find=lambda _name: [40160],
         read_memory=lambda _pid: (1, 2),
         stream_factory=factory,
-        clock=lambda: reloj[0],
+        clock=lambda: clock[0],
     )
     assert probe.sample().vram_dedicated_bytes is None
-    reloj[0] = 1.0
+    clock[0] = 1.0
     probe.sample()
-    assert len(flujos) == 1  # antes de 3 s no: typeperf aun no habria dado la cabecera
-    reloj[0] = 5.0
+    assert len(streams) == 1  # antes de 3 s no: typeperf aun no habria dado la cabecera
+    clock[0] = 5.0
     sample = probe.sample()
-    assert [f.pid for f in flujos] == [40160, 40160]
-    assert flujos[0].closed and not flujos[1].closed
+    assert [f.pid for f in streams] == [40160, 40160]
+    assert streams[0].closed and not streams[1].closed
     assert sample.vram_dedicated_bytes == 4 * MIB
 
 
-def test_sin_acceso_al_proceso_da_sin_muestra_de_ram():
+def test_without_process_access_gives_no_ram_sample():
     probe, _ = _probe([[1556]], memory=None)
     sample = probe.sample()
     assert sample.reason == "no_access"
     assert sample.private_bytes is None and sample.working_set_bytes is None
 
 
-def test_dos_llama_server_vivos_no_miden_ninguno_y_anulan_la_corrida():
+def test_two_live_llama_servers_measure_neither_and_annul_the_run():
     # Protocolo §1.4: con dos vivos no hay forma fiable de saber cual es el del modelo bajo prueba.
     probe, streams = _probe([[40160, 31776], [40160, 31776]])
     with benchmark.ResourceSampler(probe, interval=60) as sampler:
@@ -259,8 +259,8 @@ def test_dos_llama_server_vivos_no_miden_ninguno_y_anulan_la_corrida():
     assert sampler.summary()["annul"] == "multiple_processes"
 
 
-def test_sin_typeperf_no_revienta_la_tanda():
-    def rota(_pid, _luid):
+def test_without_typeperf_the_batch_does_not_blow_up():
+    def broken(_pid, _luid):
         raise FileNotFoundError("typeperf")
 
     probe = benchmark.ProcessProbe(
@@ -268,14 +268,14 @@ def test_sin_typeperf_no_revienta_la_tanda():
         NVIDIA,
         find=lambda _name: [40160],
         read_memory=lambda _pid: (1, 2),
-        stream_factory=rota,
+        stream_factory=broken,
     )
     sample = probe.sample()
     assert sample.private_bytes == 1 and sample.vram_dedicated_bytes is None
     assert probe.stream_error and "FileNotFoundError" in probe.stream_error
 
 
-def test_corrida_instantanea_tiene_lectura_antes_y_despues():
+def test_instant_run_has_a_reading_before_and_after():
     probe, _ = _probe([[40160], [40160]])
     with benchmark.ResourceSampler(probe, interval=60) as sampler:
         pass
@@ -285,7 +285,7 @@ def test_corrida_instantanea_tiene_lectura_antes_y_despues():
     assert summary["private_bytes_before"] == summary["private_bytes_after"] == 300 * MIB
 
 
-def test_corrida_con_cero_muestras_se_marca_para_anular_y_no_se_publica_vacia():
+def test_run_with_zero_samples_is_marked_to_annul_and_not_published_empty():
     probe, _ = _probe([[], []])
     with benchmark.ResourceSampler(probe, interval=60) as sampler:
         pass
@@ -294,10 +294,10 @@ def test_corrida_con_cero_muestras_se_marca_para_anular_y_no_se_publica_vacia():
     assert summary["annul"] == "zero_ram_samples"
 
 
-def test_resumen_anula_por_cada_motivo():
+def test_summary_annuls_for_each_reason():
     ok = benchmark.ResourceSample(1, 10, 20, 30, 5)
-    sin_vram = benchmark.ResourceSample(1, 10, 20)
-    varios = benchmark.ResourceSample(None, reason="multiple_processes")
+    without_vram = benchmark.ResourceSample(1, 10, 20)
+    multiple = benchmark.ResourceSample(None, reason="multiple_processes")
 
     def annul(samples, vram_expected=True):
         return benchmark.summarize_resources(samples, enabled=True, vram_expected=vram_expected)[
@@ -305,13 +305,13 @@ def test_resumen_anula_por_cada_motivo():
         ]
 
     assert annul([ok, ok]) is None
-    assert annul([ok, varios]) == "multiple_processes"
+    assert annul([ok, multiple]) == "multiple_processes"
     assert annul([ok, benchmark.ResourceSample(2, 10, 20, 30, 5)]) == "process_changed"
-    assert annul([sin_vram]) == "zero_vram_samples"
-    assert annul([sin_vram], vram_expected=False) is None
+    assert annul([without_vram]) == "zero_vram_samples"
+    assert annul([without_vram], vram_expected=False) is None
 
 
-def test_resumen_separa_shared_inicial_del_pico():
+def test_summary_separates_initial_shared_from_the_peak():
     samples = [
         benchmark.ResourceSample(1, 10 * MIB, 50 * MIB, 100 * MIB, 5 * MIB),
         benchmark.ResourceSample(1, 40 * MIB, 20 * MIB, 90 * MIB, 9 * MIB),
@@ -326,7 +326,7 @@ def test_resumen_separa_shared_inicial_del_pico():
     )
 
 
-def test_resumen_ram_del_host_es_el_pico_de_la_resta_por_muestra():
+def test_summary_host_ram_is_the_peak_of_the_per_sample_difference():
     # Forma de CP-2b: al descargar expertos la privada casi no se mueve y la VRAM baja. El pico de la
     # resta (7 GiB) no es la resta de los picos (13 - 11 = 2), y la muestra sin VRAM no cuenta como
     # VRAM cero (daria 9 GiB).
@@ -338,8 +338,8 @@ def test_resumen_ram_del_host_es_el_pico_de_la_resta_por_muestra():
     ]
     summary = benchmark.summarize_resources(samples, enabled=True, vram_expected=True)
     assert summary["host_private_bytes_peak"] == 7 * gib
-    solo_ram = benchmark.summarize_resources(samples[2:], enabled=True, vram_expected=False)
-    assert solo_ram["host_private_bytes_peak"] is None
+    ram_only = benchmark.summarize_resources(samples[2:], enabled=True, vram_expected=False)
+    assert ram_only["host_private_bytes_peak"] is None
 
 
 # --- El uso: el runner escribe lo que la sonda midio ----------------------------------------------
@@ -360,7 +360,7 @@ class _NullMetrics:
 
 
 def _args(tmp_path, *extra):
-    cases = RAIZ / "benchmarks" / "catalogo-2026-09" / "cases.json"
+    cases = ROOT / "benchmarks" / "catalogo-2026-09" / "cases.json"
     parser = argparse.ArgumentParser()
     benchmark.add_parser(parser.add_subparsers())
     return parser.parse_args(
@@ -386,7 +386,7 @@ def _args(tmp_path, *extra):
 
 
 @pytest.fixture
-def backend_falso(monkeypatch):
+def fake_backend(monkeypatch):
     def handler(_request):
         return httpx2.Response(
             200, json={"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
@@ -401,7 +401,7 @@ def backend_falso(monkeypatch):
     monkeypatch.setattr(benchmark, "MetricsSampler", _NullMetrics)
 
 
-def test_runner_sin_sonda_escribe_el_bloque_de_recursos_vacio(tmp_path, backend_falso):
+def test_runner_without_probe_writes_an_empty_resources_block(tmp_path, fake_backend):
     args = _args(tmp_path)
     assert benchmark.run_benchmark(args) == 0
     record = json.loads((tmp_path / "out.jsonl").read_text(encoding="utf-8"))
@@ -410,15 +410,17 @@ def test_runner_sin_sonda_escribe_el_bloque_de_recursos_vacio(tmp_path, backend_
     assert record["resources"]["private_bytes_peak"] is None
 
 
-def test_runner_con_sonda_escribe_la_medida_y_cierra_la_sonda(tmp_path, backend_falso, monkeypatch):
-    creadas = []
+def test_runner_with_probe_writes_the_measurement_and_closes_the_probe(
+    tmp_path, fake_backend, monkeypatch
+):
+    created = []
 
     class Probe:
         def __init__(self, process_name, gpu_luid):
             self.process_name = process_name
             self.gpu_luid = gpu_luid
             self.closed = False
-            creadas.append(self)
+            created.append(self)
 
         def sample(self):
             return benchmark.ResourceSample(40160, 700 * MIB, 3000 * MIB, 9000 * MIB, 8 * MIB)
@@ -437,11 +439,11 @@ def test_runner_con_sonda_escribe_la_medida_y_cierra_la_sonda(tmp_path, backend_
     assert record["resources"]["vram_dedicated_bytes_peak"] == 9000 * MIB
     assert record["resources"]["pids"] == [40160]
     assert record["resources"]["annul"] is None
-    assert creadas[0].process_name == "llama-server.exe" and creadas[0].closed
+    assert created[0].process_name == "llama-server.exe" and created[0].closed
 
 
-def test_runner_rechaza_la_sonda_fuera_de_windows_sin_escribir_nada(
-    tmp_path, backend_falso, monkeypatch
+def test_runner_rejects_the_probe_outside_windows_without_writing_anything(
+    tmp_path, fake_backend, monkeypatch
 ):
     monkeypatch.setattr(benchmark, "probe_supported", lambda: False)
     args = _args(tmp_path, "--probe-process", "llama-server.exe")
@@ -449,7 +451,7 @@ def test_runner_rechaza_la_sonda_fuera_de_windows_sin_escribir_nada(
     assert not (tmp_path / "out.jsonl").exists()
 
 
-def test_runner_pide_el_luid_si_no_lo_puede_resolver(tmp_path, backend_falso, monkeypatch):
+def test_runner_asks_for_the_luid_if_it_cannot_resolve_it(tmp_path, fake_backend, monkeypatch):
     monkeypatch.setattr(benchmark, "probe_supported", lambda: True)
     monkeypatch.setattr(benchmark, "resolve_gpu_luid", lambda: None)
     args = _args(tmp_path, "--probe-process", "llama-server.exe")
@@ -459,33 +461,33 @@ def test_runner_pide_el_luid_si_no_lo_puede_resolver(tmp_path, backend_falso, mo
 # --- El envoltorio de llama-bench -----------------------------------------------------------------
 
 
-def _cargar_script():
+def _load_probe_script():
     spec = importlib.util.spec_from_file_location(
-        "sonda_recursos", RAIZ / "scripts" / "sonda_recursos.py"
+        "sonda_recursos", ROOT / "scripts" / "sonda_recursos.py"
     )
     assert spec and spec.loader
-    modulo = importlib.util.module_from_spec(spec)
-    sys.modules["sonda_recursos"] = modulo
-    spec.loader.exec_module(modulo)
-    return modulo
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["sonda_recursos"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-def test_envoltorio_escribe_la_medida_del_comando(tmp_path):
-    script = _cargar_script()
+def test_wrapper_writes_the_command_measurement(tmp_path):
+    script = _load_probe_script()
     probe, _ = _probe([[40160]] * 1000)
-    salida = tmp_path / "medida.json"
+    output = tmp_path / "medida.json"
     rc = script.main(
-        ["--process", "llama-bench.exe", "--output", str(salida), "--", sys.executable, "-c", ""],
+        ["--process", "llama-bench.exe", "--output", str(output), "--", sys.executable, "-c", ""],
         probe_factory=lambda _name, _luid: probe,
     )
     assert rc == 0
-    medida = json.loads(salida.read_text(encoding="utf-8"))
-    assert medida["exit_code"] == 0
-    assert medida["resources"]["private_bytes_peak"] == 300 * MIB
+    measurement = json.loads(output.read_text(encoding="utf-8"))
+    assert measurement["exit_code"] == 0
+    assert measurement["resources"]["private_bytes_peak"] == 300 * MIB
 
 
-def test_envoltorio_devuelve_3_si_la_medida_queda_anulada(tmp_path):
-    script = _cargar_script()
+def test_wrapper_returns_3_if_the_measurement_is_annulled(tmp_path):
+    script = _load_probe_script()
     probe, _ = _probe([[]] * 1000)
     rc = script.main(
         [
@@ -505,7 +507,7 @@ def test_envoltorio_devuelve_3_si_la_medida_queda_anulada(tmp_path):
 
 # --- Windows de verdad ----------------------------------------------------------------------------
 
-_HIJO = (
+_CHILD = (
     "import mmap, os, sys\n"
     "modo, n, ruta = sys.argv[1], int(sys.argv[2]), sys.argv[3]\n"
     "vivo = None\n"
@@ -522,58 +524,62 @@ _HIJO = (
 )
 
 
-@solo_windows
-def test_toolhelp_ve_este_proceso_por_su_nombre():
+@windows_only
+def test_toolhelp_sees_this_process_by_its_name():
     import os
 
-    propio = benchmark.list_processes()[os.getpid()]
-    assert os.getpid() in benchmark.find_pids(propio.upper())
+    own = benchmark.list_processes()[os.getpid()]
+    assert os.getpid() in benchmark.find_pids(own.upper())
 
 
-@solo_windows
-def test_control_positivo_ram_privada_y_working_set_se_distinguen(tmp_path):
+@windows_only
+def test_positive_control_private_ram_and_working_set_are_told_apart(tmp_path):
     """Tres hijos: quieto, 128 MiB anonimos y 128 MiB mapeados desde fichero y leidos.
 
     Lo anonimo sube los dos contadores; lo mapeado sube el working set y NO la privada. Sin el
     hijo mapeado el test no distinguiria un contador del otro —un mutante que devolvia el working
     set como privada lo paso—, y esa diferencia es justo la que decide CP-2b.
     """
-    tam = 128 * MIB
-    fichero = tmp_path / "mapeado.bin"
-    with fichero.open("wb") as destino:
-        bloque = bytes(range(256)) * (MIB // 256)
-        for _ in range(tam // MIB):
-            destino.write(bloque)
-    hijos = []
+    size = 128 * MIB
+    file = tmp_path / "mapeado.bin"
+    with file.open("wb") as dest:
+        block = bytes(range(256)) * (MIB // 256)
+        for _ in range(size // MIB):
+            dest.write(block)
+    children = []
     try:
-        medidas = {}
-        for modo in ("quieto", "anonimo", "mapeado"):
-            hijo = subprocess.Popen(
-                [sys.executable, "-c", _HIJO, modo, str(tam), str(fichero)],
+        measurements = {}
+        for mode in ("quieto", "anonimo", "mapeado"):
+            child = subprocess.Popen(
+                [sys.executable, "-c", _CHILD, mode, str(size), str(file)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 text=True,
             )
-            hijos.append(hijo)
-            assert hijo.stdout is not None
+            children.append(child)
+            assert child.stdout is not None
             # El PID lo dice el hijo: con el python.exe de un venv, Popen.pid es el del lanzador,
             # que no tiene la memoria (la primera pasada de la tarea 12 midio justo ese).
-            pid = int(hijo.stdout.readline())
-            medidas[modo] = benchmark.read_process_memory(pid)
-        quieto, anonimo, mapeado = medidas["quieto"], medidas["anonimo"], medidas["mapeado"]
-        assert quieto and anonimo and mapeado
-        assert anonimo[0] - quieto[0] > 100 * MIB, "lo anonimo tiene que subir la privada"
-        assert mapeado[1] - quieto[1] > 100 * MIB, "lo mapeado tiene que subir el working set"
-        assert mapeado[0] - quieto[0] < 32 * MIB, "lo mapeado NO puede subir la privada"
+            pid = int(child.stdout.readline())
+            measurements[mode] = benchmark.read_process_memory(pid)
+        idle, anonymous, mapped = (
+            measurements["quieto"],
+            measurements["anonimo"],
+            measurements["mapeado"],
+        )
+        assert idle and anonymous and mapped
+        assert anonymous[0] - idle[0] > 100 * MIB, "lo anonimo tiene que subir la privada"
+        assert mapped[1] - idle[1] > 100 * MIB, "lo mapeado tiene que subir el working set"
+        assert mapped[0] - idle[0] < 32 * MIB, "lo mapeado NO puede subir la privada"
     finally:
-        for hijo in hijos:
-            hijo.stdin.close()
+        for child in children:
+            child.stdin.close()
             try:
-                hijo.wait(timeout=10)
+                child.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                hijo.kill()
+                child.kill()
 
 
-@solo_windows
-def test_proceso_inexistente_da_none_y_no_una_excepcion():
+@windows_only
+def test_nonexistent_process_gives_none_and_not_an_exception():
     assert benchmark.read_process_memory(0x7FFFFFF0) is None

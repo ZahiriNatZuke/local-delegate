@@ -1,0 +1,19 @@
+refactor(rename): nombres en inglés en test_site, test_smoke, test_sonda, test_sonda_carga y test_sondeo_backend (ola A9c, lote 3)
+
+Renombra a inglés los nombres de los tests del sitio, del arranque, de la
+sonda de recursos, de la sonda de carga y del sondeo del backend: 291
+filas del mapping aprobado. Los módulos pasan a test_resource_probe.py,
+test_load_probe.py y test_backend_probe.py, con sus test_*; las fixtures
+(remoto → remote, backend_falso → fake_backend, status_sin_extras →
+status_without_extras), los ayudantes (_cabecera_png → _png_header,
+_manifiesto_iconos → _icon_manifest, _timeout_tras → _timeout_after…),
+los argnames de parametrize y sus variables locales.
+
+Arregla de paso la alerta py/uninitialized-local-variable que CodeQL ya
+tenía en main y que reaparecería con el nombre nuevo del fichero: en
+test_the_poll_never_raises, el pytest.fail del except pasa a
+raise AssertionError(...) from exc, con el mismo mensaje.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en español
+que afirman los tests no se tocan, ni las claves que produce el programa
+hijo de la sonda. Los tests recogidos siguen siendo 2572.
