@@ -12,11 +12,11 @@ import json
 from datetime import timedelta
 from pathlib import Path
 
-from test_transcripts import BASE, escribir, peticion, principal, sintetica
+from test_transcripts import BASE, main_transcript, request_entry, synthetic, write_jsonl
 
 from local_delegate import legacy_names, quota, recompute
 
-AHORA = BASE + timedelta(days=1)
+NOW = BASE + timedelta(days=1)
 
 #: Claves del formato nuevo → las viejas, para fabricar un `coste-agregados.json` de antes.
 _OLD_TOP = {new: old for old, new in legacy_names.FORMATS["cost_aggregates"]["keys"].items()}
@@ -39,13 +39,13 @@ def _old_point(p: dict) -> dict:
 
 def _rejection(s: float, kind: str, hours_to_reset: float) -> dict:
     reset = int((BASE + timedelta(hours=hours_to_reset)).timestamp())
-    return sintetica(
+    return synthetic(
         s, f"s-{kind}", quota={"status": "rejected", "rateLimitType": kind, "resetsAt": reset}
     )
 
 
 def _statusline_point(end_days_ago: float, marks: list[str]) -> dict:
-    end = AHORA - timedelta(days=end_days_ago)
+    end = NOW - timedelta(days=end_days_ago)
     return {
         "source": "statusline",
         "type": "five_hour",
@@ -64,17 +64,17 @@ def _seed_case(tmp_path: Path) -> tuple[Path, Path, Path, dict]:
     del transcript, un punto del statusline vigente, otro caducado, el cotejo y un mes cerrado.
     El transcript da además un rechazo de `seven_day` que el viejo no tiene."""
     claude, log = tmp_path / "claude", tmp_path / "log"
-    transcript = escribir(
-        principal(claude),
+    transcript = write_jsonl(
+        main_transcript(claude),
         [
-            peticion(0, "m0", usage={"input_tokens": 1_000_000}),
+            request_entry(0, "m0", usage={"input_tokens": 1_000_000}),
             _rejection(5, "five_hour", 3),
             _rejection(6, "seven_day", 100),
         ],
     )
     # El gemelo, sacado de una corrida aparte: mismos valores, formato viejo.
     scratch = tmp_path / "scratch-log"
-    recompute.run(claude, scratch, now=AHORA)
+    recompute.run(claude, scratch, now=NOW)
     fresh = json.loads((scratch / recompute.FILE_NAME).read_text(encoding="utf-8"))["points"]
     (twin,) = [p for p in fresh if p["type"] == "five_hour"]
     alive = _statusline_point(2, ["low_bound_if_other_surfaces", "reset"])
@@ -118,7 +118,7 @@ def test_the_old_file_seeds_the_new_one_once(tmp_path):
     old_path = log / recompute.OLD_FILE_NAME
     old_bytes = old_path.read_bytes()
 
-    recompute.run(claude, log, now=AHORA)
+    recompute.run(claude, log, now=NOW)
     first = _raw(log)
     # Formato nuevo entero: ni una clave ni un valor viejo.
     text = (log / recompute.FILE_NAME).read_text(encoding="utf-8")
@@ -136,7 +136,7 @@ def test_the_old_file_seeds_the_new_one_once(tmp_path):
     assert first["check"]["verdict"] == "pass"
     assert first["n_by_month"]["202608"] == {"claude-opus-5|main": [127]}
 
-    recompute.run(claude, log, now=AHORA)
+    recompute.run(claude, log, now=NOW)
     second = _raw(log)
     assert second["discards"] == first["discards"]
     assert len(second["points"]) == len(first["points"])
@@ -145,7 +145,7 @@ def test_the_old_file_seeds_the_new_one_once(tmp_path):
     # Desde la siembra manda el nuevo: un punto que solo está en él sobrevive al transcript borrado.
     assert ("rejection", "seven_day") in by_type  # guarda: el caso podía distinguir
     transcript.unlink()
-    recompute.run(claude, log, now=AHORA + timedelta(hours=1))
+    recompute.run(claude, log, now=NOW + timedelta(hours=1))
     third = [(q["source"], q["type"]) for q in _raw(log)["points"]]
     assert ("rejection", "seven_day") in third
 
@@ -187,12 +187,12 @@ def test_old_and_new_aggregates_give_the_same_quota(tmp_path):
     (log / recompute.OLD_FILE_NAME).write_text(json.dumps(old), encoding="utf-8")
     # `read_aggregates` entrega el formato nuevo…
     assert recompute.read_aggregates(log) == new
-    from_old = quota.status(recompute.read_aggregates(log), AHORA)
-    assert from_old == quota.status(new, AHORA)
+    from_old = quota.status(recompute.read_aggregates(log), NOW)
+    assert from_old == quota.status(new, NOW)
     assert from_old["five_hour"]["status"] == "calibrated"  # guarda: hay algo que comparar
     assert from_old["five_hour"]["discards"] == {"small_delta": 1}
     # …y `quota.status`, que también es lector, entiende el viejo aunque le llegue sin traducir.
-    assert quota.status(old, AHORA) == from_old
+    assert quota.status(old, NOW) == from_old
 
 
 def test_the_old_check_is_read_with_its_verdict_translated(tmp_path):
@@ -269,7 +269,7 @@ def test_the_statusline_log_is_read_under_both_names(tmp_path):
 def test_the_new_statusline_name_counts_as_a_source(tmp_path):
     claude, log = tmp_path / "claude", tmp_path / "log"
     _statusline_rows(claude / legacy_names.QUOTA_STATUSLINE_FILE_NAMES[1], "s", 2)
-    recompute.run(claude, log, now=AHORA)
+    recompute.run(claude, log, now=NOW)
     assert _raw(log)["sources"]["statusline"] is True
 
 

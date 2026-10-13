@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 from test_install import _install
-from test_recalcular import _delegacion_con_n
-from test_transcripts import subagente
+from test_recompute import _delegation_with_n
+from test_transcripts import subagent
 
 from local_delegate import cli, config, deprecations, recompute, server
 
@@ -42,7 +42,7 @@ def _run(argv: list[str]) -> int:
 
 def _recompute(tmp_path: Path, monkeypatch, capsys, command: str) -> tuple[int, dict, str]:
     claude, log = tmp_path / command / "claude", tmp_path / command / "log"
-    _delegacion_con_n(subagente(claude, "a1"), "toolu_cli", 3)
+    _delegation_with_n(subagent(claude, "a1"), "toolu_cli", 3)
     monkeypatch.setattr(config, "LOG_DIR", log)
     code = _run([command, "--claude-dir", str(claude)])
     stderr = capsys.readouterr().err

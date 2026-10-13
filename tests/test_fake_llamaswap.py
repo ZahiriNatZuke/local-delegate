@@ -61,19 +61,19 @@ def _measure_ttl(directory: Path, ttl: int) -> dict[str, object]:
     unloads = [t for t, loaded in samples if not loaded]
     at_4s = [loaded for t, loaded in samples if t >= 4.0]
     return {
-        "durante": during,
-        "t_descarga": unloads[0] if unloads else None,
-        "cargado_a_los_4s": bool(at_4s and at_4s[0]),
+        "during": during,
+        "t_unload": unloads[0] if unloads else None,
+        "loaded_at_4s": bool(at_4s and at_4s[0]),
     }
 
 
 def test_a_ttl_counts_from_request_end(tmp_path: Path) -> None:
     r = _measure_ttl(tmp_path, ttl=2)
-    print(f"\n(a) durante={r['durante']} t_descarga={r['t_descarga']}")
-    assert r["durante"] == {1.0: True, 2.0: True, 3.0: True}  # no se descarga mientras dura
-    loaded_at_4s = r["cargado_a_los_4s"]
+    print(f"\n(a) durante={r['during']} t_descarga={r['t_unload']}")
+    assert r["during"] == {1.0: True, 2.0: True, 3.0: True}  # no se descarga mientras dura
+    loaded_at_4s = r["loaded_at_4s"]
     assert not loaded_at_4s
-    t_unload = r["t_descarga"]
+    t_unload = r["t_unload"]
     assert isinstance(t_unload, float)
     assert 2.0 <= t_unload <= 4.0
 
@@ -163,10 +163,10 @@ def test_d_8_s_request_in_progress_on_reload(tmp_path: Path, case: str) -> None:
             start_ts = time.time()
             try:
                 response = ls.chat("m", delay_s=8, timeout=40)
-                result["estado"] = response.status_code
+                result["status"] = response.status_code
             except httpx2.HTTPError as exc:
-                result["estado"] = type(exc).__name__
-            result["duracion"] = time.time() - start_ts
+                result["status"] = type(exc).__name__
+            result["duration"] = time.time() - start_ts
 
         thread = threading.Thread(target=request)
         thread.start()
@@ -177,8 +177,8 @@ def test_d_8_s_request_in_progress_on_reload(tmp_path: Path, case: str) -> None:
     assert output == SURCHARGE
     # Con v255 la recarga CORTA la petición en curso (502 a los ~2 s, no los 8 s), cambie o no el
     # modelo: llama-swap apaga todos los procesos al reiniciar. Por eso REQ-034 mantiene la negativa.
-    assert result["estado"] == 502
-    assert float(str(result["duracion"])) < 7.0
+    assert result["status"] == 502
+    assert float(str(result["duration"])) < 7.0
 
 
 # --- (e) foto `inflight` de la carga inicial -----------------------------------------------------

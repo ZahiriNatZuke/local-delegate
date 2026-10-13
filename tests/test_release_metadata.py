@@ -45,7 +45,7 @@ def test_registry_description_fits_the_registry_limit():
     assert len(_server_json()["description"]) <= 100
 
 
-def test_el_paquete_no_declara_su_version_a_mano():
+def test_the_package_does_not_declare_its_version_by_hand():
     """`__version__` estuvo clavado en "0.10.0" hasta la 0.19.0 — nueve releases mintiendo.
 
     `scripts/bump_version.py` sube la versión en los cuatro sitios que conoce (pyproject.toml, las
@@ -56,21 +56,21 @@ def test_el_paquete_no_declara_su_version_a_mano():
     """
     import local_delegate
 
-    esperada = _pyproject()["project"]["version"]
-    instalada = metadata.version(_pyproject()["project"]["name"])
+    expected = _pyproject()["project"]["version"]
+    installed = metadata.version(_pyproject()["project"]["name"])
 
     # Se distinguen los dos fallos posibles: si la metadata instalada tampoco coincide con
     # pyproject.toml, el desfase es del entorno (bump sin reinstalar) y `__init__.py` no tiene
     # culpa. Mandar a mirar el fichero equivocado es justo el error que este repo persigue.
-    if instalada != esperada:
+    if installed != expected:
         pytest.skip(
-            f"el paquete instalado declara {instalada} y pyproject.toml {esperada}: "
+            f"el paquete instalado declara {installed} y pyproject.toml {expected}: "
             "el entorno está desincronizado, reinstala con `uv sync` antes de creerte este test"
         )
 
-    assert local_delegate.__version__ == esperada, (
+    assert local_delegate.__version__ == expected, (
         f"local_delegate.__version__ dice {local_delegate.__version__!r} y pyproject.toml "
-        f"{esperada!r}. Mira src/local_delegate/__init__.py: el atributo tiene que derivarse "
+        f"{expected!r}. Mira src/local_delegate/__init__.py: el atributo tiene que derivarse "
         "de la metadata del paquete, no escribirse a mano — bump_version.py no lo bumpea."
     )
 
