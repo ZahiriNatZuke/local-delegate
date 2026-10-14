@@ -48,7 +48,10 @@ CONFIG_LLAMASWAP = Path(r"D:\Projects\llms\llama-swap\config.yaml")
 # Los cuatro modelos de la tanda (REQ-041), en el orden en que se corren.
 MODELS = ("gemma3-4b", "qwen35-2b", "gemma4-26b-a4b", "qwen36-35b-a3b")
 COMMIT_MODELS = ("gemma4-26b-a4b", "qwen36-35b-a3b")
-CEILING = "techo"
+CEILING = "ceiling"
+MODEL_STAGE = "model"
+#: Cómo nombran los mensajes cada etapa: el texto de salida sigue en español hasta el frente B.
+_STAGE_LABELS = {MODEL_STAGE: "modelo", CEILING: "techo"}
 CEILING_MODEL = "gemma4-26b-a4b"
 CEILING_CASE = "techo-commit-156k"
 CEILING_RUNS = 3
@@ -162,14 +165,14 @@ class Stage:
     """Un modelo (o el techo) con lo que le falta."""
 
     model: str
-    kind: str  # "modelo" o "techo"
+    kind: str  # MODEL_STAGE o CEILING
     total: int
     pending_items: list[dict[str, Any]] = field(default_factory=list)
     pending_runs: list[int] = field(default_factory=list)
 
     @property
     def n_pending(self) -> int:
-        return len(self.pending_items) if self.kind == "modelo" else len(self.pending_runs)
+        return len(self.pending_items) if self.kind == MODEL_STAGE else len(self.pending_runs)
 
 
 def build_plan(
@@ -183,7 +186,7 @@ def build_plan(
             continue
         theirs = model_cases(cases, model)
         missing = [c for c in theirs if (model, c["id"], 1) not in done]
-        stages.append(Stage(model, "modelo", len(theirs), pending_items=missing))
+        stages.append(Stage(model, MODEL_STAGE, len(theirs), pending_items=missing))
     if CEILING in wants:
         ceiling_case(cases)
         missing_runs = [
@@ -192,7 +195,7 @@ def build_plan(
         stages.append(
             Stage(
                 CEILING_MODEL,
-                "techo",
+                CEILING,
                 CEILING_RUNS,
                 pending_runs=missing_runs,
             )
@@ -205,7 +208,7 @@ def print_plan(stages: Sequence[Stage]) -> None:
     for stage in stages:
         done = stage.total - stage.n_pending
         name = (
-            f"techo ({stage.model}, camino de produccion)" if stage.kind == "techo" else stage.model
+            f"techo ({stage.model}, camino de produccion)" if stage.kind == CEILING else stage.model
         )
         warms = 1 if stage.n_pending else 0
         print_out(
@@ -603,10 +606,10 @@ def execute(args: argparse.Namespace, env: Environment) -> int:
         args.results.mkdir(parents=True, exist_ok=True)
         for stage in stages:
             if not stage.n_pending:
-                print_out(f"[{stage.model}] nada pendiente en {stage.kind}")
+                print_out(f"[{stage.model}] nada pendiente en {_STAGE_LABELS[stage.kind]}")
                 continue
             variant = _variant(stage.model, args, env)
-            if stage.kind == "modelo":
+            if stage.kind == MODEL_STAGE:
                 code = max(code, _model_stage(stage, args, env, variant))
             else:
                 code = max(code, _ceiling_stage(stage, cases, args, env, variant))
@@ -684,7 +687,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--only",
         action="append",
         choices=[*MODELS, CEILING],
-        help="solo este modelo, o `techo` (repetible)",
+        help="solo este modelo, o `ceiling` (repetible)",
     )
     parser.add_argument("--dry", action="store_true", help="imprime el plan y no llama a nada")
     parser.add_argument("--seed", type=int, default=42)

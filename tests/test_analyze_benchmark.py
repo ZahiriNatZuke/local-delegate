@@ -308,9 +308,9 @@ def test_truncated_twice_enters_with_zero_quality_and_stays_in_the_aggregate():
     assert single.cases["lint-9k"].qualities == []
 
 
-def _cp3_at_ceiling(role, reason_of_one="techo"):
+def _cp3_at_ceiling(role, reason_of_one="ceiling"):
     ids = analyze._role_cases(CORPUS, role, "quality")
-    cases = {cid: {"reason": "techo"} for cid in ids}
+    cases = {cid: {"reason": "ceiling"} for cid in ids}
     cases[ids[0]] = {"reason": reason_of_one}
     return {"admitted_cases": [], "cases": cases}
 
@@ -481,10 +481,10 @@ def test_vision_presents_no_aggregate():
 def test_without_admitted_cases_the_role_is_undecidable():
     d = _decide(
         _batch("incumbent", "long", THIRD) + _batch("candidate", "long", (1.0, 1.0, 1.0)),
-        cp3={"admitted_cases": [], "cases": {"resumen-changelog-7k": {"reason": "techo"}}},
+        cp3={"admitted_cases": [], "cases": {"resumen-changelog-7k": {"reason": "ceiling"}}},
     )
     assert d["verdict"] == "undecidable"
-    assert d["discarded_cases"]["resumen-changelog-7k"] == "techo"
+    assert d["discarded_cases"]["resumen-changelog-7k"] == "ceiling"
 
 
 def test_with_a_single_admitted_case_it_is_weakly_decidable():
@@ -594,7 +594,7 @@ def test_cp3_separates_marks_ceiling_and_aggregates_only_the_admitted():
         analyze.Selector.parse("qwen35-2b"),
         analyze.Selector.parse("qwen25-coder-14b"),
     )["roles"]["long"]
-    assert r["cases"]["resumen-md-10k"]["reason"] == "techo"
+    assert r["cases"]["resumen-md-10k"]["reason"] == "ceiling"
     assert "resumen-md-10k" not in r["admitted_cases"]
     # CORPUS es la copia con todo puntuable: long tiene 4 casos y resumen-md-10k esta en techo.
     assert len(r["admitted_cases"]) == 3
@@ -652,7 +652,7 @@ def _long_at_ceiling(label, latencies=(1000, 1000, 1100)):
     return _batch(label, "long", (1.0, 1.0, 1.0), latencies=latencies)
 
 
-_CP3_LONG_REAL = {"admitted_cases": [], "cases": {"extraer-uvlock-48k": {"reason": "techo"}}}
+_CP3_LONG_REAL = {"admitted_cases": [], "cases": {"extraer-uvlock-48k": {"reason": "ceiling"}}}
 
 
 def _pairs(candidate, incumbent, ties=0):
@@ -1753,3 +1753,31 @@ def test_an_old_kind_affinity_case_still_enters_the_cell():
     old = {cid: {**c, "kind": "calidad"} for cid, c in corpus.items()}
     assert _cell(_verdict(old, runs)) == _cell(_verdict(corpus, runs))
     assert _cell(_verdict(old, runs))["state"] == "approved"
+
+
+# --- El motivo «techo» de CP-3 en inglés y su lectura dual (ola A10b-6) -----------------------------
+
+
+def test_an_old_cp3_json_still_gives_the_tie_at_ceiling(tmp_path, capsys):
+    """Un `cp3.json` de antes dice `techo` (escrito a mano: no hay ninguno versionado). `decide`
+    lo relee como `ceiling` y el rol sigue siendo un empate en techo que decide la velocidad."""
+    old = _cp3_at_ceiling("mechanical")
+    old["cases"] = {cid: {"reason": "techo"} for cid in old["cases"]}
+    path = tmp_path / "cp3.json"
+    path.write_text(json.dumps({"roles": {"mechanical": old}}), encoding="utf-8")
+    read = analyze.read_cp3([path])["mechanical"]
+    assert {c["reason"] for c in read["cases"].values()} == {"ceiling"}
+    slow, fast = (2000, 2000, 2100), (1000, 1000, 1100)
+    records = _batch("incumbent", "mechanical", (1.0, 1.0, 1.0), latencies=slow) + _batch(
+        "candidate", "mechanical", (1.0, 1.0, 1.0), latencies=fast
+    )
+    d = _decide(records, role="mechanical", cp3=read)
+    assert d["all_at_ceiling"] is True
+    assert (d["verdict"], d["criterion"]) == ("replace", "velocidad")
+    # Por la línea de órdenes, el mismo fichero viejo, y el informe sigue diciendo «techo».
+    jsonl = tmp_path / "batch.jsonl"
+    jsonl.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    argv = ["decide", "--cases", str(CASES), "--cp3", str(path)]
+    rc = analyze.main([*argv, "--pair", "mechanical", "incumbent", "candidate", str(jsonl)])
+    assert rc == 0
+    assert "(techo)" in capsys.readouterr().out

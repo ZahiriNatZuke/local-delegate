@@ -1,0 +1,36 @@
+## Mutante 1: legacy_names.py sin la traducción del motivo techo de CP-3
+1ebf530b1e0ca1d3f532bedd980cdf854f8f763990f45e25d2ad0128bf926bd6 *src/local_delegate/legacy_names.py
+732bc4b06c318fc92e539c614ce7db4c431b9acc429ce9b3c21cf8211ae4e4f6 *src/local_delegate/legacy_names.py
+E       AssertionError: assert {'techo'} == {'ceiling'}
+E         
+E         Extra items in the left set:
+E         'techo'
+E         Extra items in the right set:
+E         'ceiling'
+E         Use -v to get more diff
+FAILED tests/test_analyze_benchmark.py::test_an_old_cp3_json_still_gives_the_tie_at_ceiling
+1 failed in 0.69s
+restaurado:
+1ebf530b1e0ca1d3f532bedd980cdf854f8f763990f45e25d2ad0128bf926bd6 *src/local_delegate/legacy_names.py
+1 passed in 0.74s
+## Mutante 2: legacy_names.py sin eventos_local en log_counts (test renombrado de test_corpus)
+1ebf530b1e0ca1d3f532bedd980cdf854f8f763990f45e25d2ad0128bf926bd6 *src/local_delegate/legacy_names.py
+ebd255f88f63df08b13c29d0dd32549a7b45dd6e9e05365100a69189fe62ea87 *src/local_delegate/legacy_names.py
+E       KeyError: 'local_events'
+E       KeyError: 'local_events'
+FAILED tests/test_corpus.py::test_versioned_counts_add_up - KeyError: 'local_...
+FAILED tests/test_corpus.py::test_frozen_log_counts_are_read_with_the_new_keys
+2 failed in 3.12s
+restaurado:
+1ebf530b1e0ca1d3f532bedd980cdf854f8f763990f45e25d2ad0128bf926bd6 *src/local_delegate/legacy_names.py
+2 passed in 0.09s
+## Mutante 3: affinity_batch.py con la etapa del CLI otra vez en techo
+37f4626ffecc8f018bffd41352ea37371befec613222b65022dcbe95d4ba20f3 *scripts/dev/affinity_batch.py
+683e86e93df688627dd548e4828126458fdd5b3f05afee2f6f81d434390aff75 *scripts/dev/affinity_batch.py
+E           argparse.ArgumentError: argument --only: invalid choice: 'ceiling' (choose from 'gemma3-4b', 'qwen35-2b', 'gemma4-26b-a4b', 'qwen36-35b-a3b', 'techo')
+E       SystemExit: 2
+FAILED tests/test_affinity_batch.py::test_ceiling_writes_rows_in_t4_format - ...
+1 failed in 0.30s
+restaurado:
+37f4626ffecc8f018bffd41352ea37371befec613222b65022dcbe95d4ba20f3 *scripts/dev/affinity_batch.py
+1 passed in 0.08s

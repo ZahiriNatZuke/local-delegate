@@ -1,0 +1,35 @@
+refactor(rename): test_corpus y test_pair_sheet en inglés, el motivo de CP-3 en inglés y cierre de A10 (ola A10b, lote 6)
+
+Renombra a inglés tests/test_corpus.py y tests/test_hoja_pares.py: las
+284 filas del mapping aprobado (waves/A10b-6-mapping.csv), salvo 4 que se
+explican abajo. No se reaplican las filas adelantadas a A10b-4.
+
+- test_hoja_pares pasa a tests/test_pair_sheet.py (git mv).
+- Funciones, constantes, parámetros, variables y nombres de test en
+  inglés; los homónimos, por AST en su función y en sus kwargs.
+- Los fixtures sintéticos (corpus, reglas, trampas, respuestas) pasan al
+  formato nuevo. El corpus y las trampas de afinidad congelados se leen
+  ya normalizados; los tests de formato viejo de A10b-4 siguen leyendo lo
+  congelado en crudo.
+
+Por decisión de la sesión principal:
+- el motivo `techo` de CP-3 pasa a `ceiling`: lo escribe `analyze_cp3`
+  en cp3.json y lo relee `decide --cp3`, que lee con `read_cp3` y la
+  tabla dual `cp3_case` de legacy_names. Los informes siguen diciendo
+  «techo»;
+- la etapa `techo` de `affinity_batch --only` pasa a `ceiling`, sin
+  alias.
+1 test nuevo lee un cp3.json con el valor viejo.
+
+rename-exceptions.md: las filas del test pasan al nombre nuevo, más las
+de formato viejo, datos congelados y entrada de interfaz del lote.
+
+waves/A10b.md cierra A10b y la ola A10: barrido de los 6 mappings,
+detector a 0 en scripts/ (2 hallazgos de `ruta` en los tests, sin ola),
+2601 tests, las tablas duales de A10b con su test y lo que queda para el
+cierre del frente A, el frente B y las notas del vault.
+
+Sin aplicar (discrepancias del mapping):
+- `empate` e `Inventa`, entrada de interfaz de la hoja (frente B);
+- `clave-1.json`, el nombre que sigue escribiendo `write_sheet`;
+- `estado.json`, contenido de un diff real del corpus.

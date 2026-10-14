@@ -431,6 +431,9 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "caso": "case",
         },
     },
+    # El motivo por el que CP-3 deja fuera un caso (`reason` de cada caso de `cp3.json`, que
+    # escribe `analyze_benchmark cp3 --json` y relee `decide --cp3`; ola A10b-6).
+    "cp3_case": {"values": {"reason": {"techo": "ceiling"}}},
     # Cada fila de `pair_sheet.py unblind --json`, que suma `analyze_benchmark decide --pairs`.
     "unblinded_pairs": {
         "keys": {"humano": "human"},
