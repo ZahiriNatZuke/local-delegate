@@ -70,7 +70,7 @@ def _record(label, case, run, quality=1.0, **kw):
         "discarded": kw.get("discarded", False),
         "discarded_reason": "process_changed" if kw.get("discarded") else None,
         "score": {"quality": quality if outcome == "ok" else None}
-        if meta["kind"] == "quality" and outcome in ("ok", "truncado")
+        if meta["kind"] == "quality" and outcome in ("ok", "truncated")
         else None,
     }
     if "response" in kw:
@@ -297,8 +297,8 @@ def test_voided_in_all_its_attempts_stays_discarded():
 
 
 def test_truncated_twice_enters_with_zero_quality_and_stays_in_the_aggregate():
-    first = _record("incumbent", "lint-9k", 1, outcome="truncado")
-    repeated = _record("incumbent", "lint-9k", 1, outcome="truncado", attempt=2)
+    first = _record("incumbent", "lint-9k", 1, outcome="truncated")
+    repeated = _record("incumbent", "lint-9k", 1, outcome="truncated", attempt=2)
     repeated["score"] = {"quality": 0.0, "zero_by": "truncated_repeated", "truncated": True}
     records = [first, repeated]
     case = analyze.load_config(records, analyze.Selector.parse("incumbent")).cases["lint-9k"]
@@ -306,6 +306,23 @@ def test_truncated_twice_enters_with_zero_quality_and_stays_in_the_aggregate():
     # Control: la primera truncada, sola, sigue sin puntuar.
     single = analyze.load_config(records[:1], analyze.Selector.parse("incumbent"))
     assert single.cases["lint-9k"].qualities == []
+
+
+def test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english(tmp_path):
+    """Una fila de antes dice `truncado` (escrita a mano: ningún resultado versionado trunca).
+    `read_jsonl` la da como `truncated` y la doble truncada sigue entrando con calidad 0."""
+    first = _record("incumbent", "lint-9k", 1, outcome="truncated")
+    repeated = _record("incumbent", "lint-9k", 1, outcome="truncated", attempt=2)
+    repeated["score"] = {"quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+    for record in (first, repeated):
+        record["outcome"] = "truncado"
+    path = tmp_path / "old.jsonl"
+    path.write_text("".join(json.dumps(r) + "\n" for r in (first, repeated)), encoding="utf-8")
+    assert path.read_text(encoding="utf-8").count('"outcome": "truncado"') == 2  # sí es viejo
+    records = analyze.read_jsonl([path])
+    assert [r["outcome"] for r in records] == ["truncated", "truncated"]
+    case = analyze.load_config(records, analyze.Selector.parse("incumbent")).cases["lint-9k"]
+    assert case.qualities == [0.0]
 
 
 def _cp3_at_ceiling(role, reason_of_one="ceiling"):
@@ -357,7 +374,7 @@ def test_if_a_case_does_not_separate_for_another_reason_the_role_stays_undecidab
 
 def test_truncated_and_repeated_is_a_single_run_with_the_second_attempt_quality():
     records = [
-        _record("incumbent", "lint-9k", 1, outcome="truncado"),
+        _record("incumbent", "lint-9k", 1, outcome="truncated"),
         _record("incumbent", "lint-9k", 1, 0.6667, attempt=2),
         _record("incumbent", "lint-9k", 2, 1.0),
     ]
@@ -883,7 +900,7 @@ def test_latency_is_compared_only_in_the_cases_both_finish():
     records = _batch("incumbent", "long", THIRD)
     for r in records:
         if r["case"] == "lint-9k":
-            r["outcome"] = "truncado"
+            r["outcome"] = "truncated"
             r["score"] = {"quality": 0.0, "zero_by": "truncated_repeated"}
     d = _decide(records + _batch("candidate", "long", (1.0, 1.0, 1.0)))
     assert d["latency_ms"]["outside"] == ["lint-9k"]
@@ -1122,7 +1139,7 @@ def test_mechanical_nobody_fails_corpus_does_not_discriminate():
         ("quality", {"alt": ("a", "a", "b", "a")}),
         ("format", {"alt": ("a", "a", "a", "bug")}),  # el rol da formato correcto en c3 («b»)
         ("verbosity", {"alt": ("a" * 3,) * 4, "role": ("a", "a", "a", "b")}),
-        ("reliability", {"extra": {ALT: {"outcome": "truncado", "finish": "length"}}}),
+        ("reliability", {"extra": {ALT: {"outcome": "truncated", "finish": "length"}}}),
         ("latency", {"extra": {ALT: {"lat": 9000}}}),
     ],
 )
@@ -1275,14 +1292,14 @@ def _commit_corpus():
             "kind": "quality",
             "discriminating": True,
             "sheet_role": "real",
-            "scorer": {"kind": "hoja"},
+            "scorer": {"kind": "sheet"},
         }
     for i in range(3):
         cases[f"t{i}"] = {
             **cases["k0"],
             "id": f"t{i}",
             "discriminating": False,
-            "sheet_role": "trampa",
+            "sheet_role": "trap",
         }
     cases[analyze.CEILING_CASE_ID] = {
         "id": analyze.CEILING_CASE_ID,
@@ -1291,7 +1308,7 @@ def _commit_corpus():
         "kind": "ceiling",
         "discriminating": False,
         "sheet_role": None,
-        "scorer": {"kind": "techo"},
+        "scorer": {"kind": "ceiling"},
     }
     return cases
 
@@ -1307,7 +1324,7 @@ def _commit_runs(*, ceiling_fails_on=None, alt_fails_on=(), qwen_fails_on=(), al
                     tag,
                     f"k{i}",
                     text,
-                    outcome="truncado" if bad else "ok",
+                    outcome="truncated" if bad else "ok",
                     finish="length" if bad else "stop",
                 )
             )
@@ -1349,9 +1366,9 @@ def _verdict_cell(
         # El modelo de la trampa es el 26B: si se contaran sus «inventa», el criterio 1 saldria mal.
         worse = j < worse_traps
         pair_items[f"{N_REAL + j + 1:02d}"] = {
-            "kind": "trampa",
+            "kind": "trap",
             "case": f"t{j}",
-            "sides": {"A": "trampa", "B": ALT},
+            "sides": {"A": "trap", "B": ALT},
             "made_up": {"A": "n", "B": "s" if j < invents_on_traps else "n"},
             "principal": {"A": None, "B": None},
             "specific": {"A": None, "B": None},
@@ -1532,7 +1549,7 @@ def test_old_outcome_and_zero_by_values_are_translated(tmp_path):
         {"schema_version": 2, "outcome": "rechazo_por_contexto", "score": None},
         {
             "schema_version": 2,
-            "outcome": "truncado",
+            "outcome": "truncated",
             "score": {"quality": 0.0, "zero_by": "truncado_repetido"},
         },
     ]

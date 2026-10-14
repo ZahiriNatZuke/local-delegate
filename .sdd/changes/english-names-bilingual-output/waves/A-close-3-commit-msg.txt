@@ -1,0 +1,39 @@
+refactor(rename): valores del corpus, del banco y de la hoja de commits en inglés con lectura dual (cierre del frente A, lote 3)
+
+Aplica el mapping aprobado (waves/A-close-3-mapping.csv): 31 de sus 37
+filas, en scripts/analyze_benchmark.py, scripts/build_corpus.py,
+scripts/pair_sheet.py, src/local_delegate/benchmark.py y sus tests. Los
+valores que se guardan en benchmarks/ y se releen pasan al inglés
+(regla 1), con su tabla de valores en legacy_names y un test que lee el
+valor viejo; los datos congelados no se reescriben.
+
+- provenance: congelado/generado/reconstruido/inventado ->
+  frozen/generated/reconstructed/made_up; media_type: texto/imagen ->
+  text/image; sheet_role y kind del par (y el lado de la trampa en
+  sides): trampa -> trap; scorer.kind: techo/hoja -> ceiling/sheet;
+  outcome y retry_reason del banco: truncado -> truncated.
+- retry_reason anulada -> voided, sin lectura dual: nadie lo relee.
+- legacy_names: CORPUS_PROVENANCE_VALUES, CORPUS_MEDIA_VALUES,
+  SHEET_TRAP_VALUES, SCORER_KIND_VALUES, truncado en
+  benchmark_results.outcome y _normalize_pair_sides para la clave y el
+  juicio de la hoja. check_versioned_affinity sigue cuadrando porque
+  compara los dos lados normalizados.
+- Hoja de commits: escribe sheet-<n>.html/.md y key-<n>.json, descarga
+  answers-<n>.json y answers-partial-<n>.json, guarda el progreso en
+  commit-sheet-<id> de localStorage y usa por defecto sheet/ y key/. La
+  hoja 1 congelada (hoja/, clave/) no se toca.
+- Se mantiene en español lo que es texto de salida (los rótulos «techo»
+  de analyze_benchmark y affinity_batch, el criterio de decide y el
+  mensaje «anulada» de NoData) y la ruta de la hoja 1 congelada: 6 filas
+  sin aplicar, con su motivo.
+- 3 tests nuevos de lectura dual (los dos corpus congelados y una fila
+  vieja con truncado) y 2 ampliados (clave-1.json congelada y la
+  procedencia de load_corpus); 11 filas de lectura de formato viejo en
+  rename-exceptions.md. Cinco mutantes de legacy_names hacen fallar
+  esos tests por el assert esperado.
+
+waves/A-close.md: registro del lote 3.
+
+2606 tests; suite 2604 passed, 2 skipped; ruff limpio. Detector fuera
+de la lista: 462 -> 467 (las claves de las tablas nuevas de
+legacy_names, para el lote 4); 0 en los ficheros del lote.

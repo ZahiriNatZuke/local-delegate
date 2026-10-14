@@ -55,7 +55,7 @@ def _synthetic_corpus(folder: Path) -> Path:
         _case("m1", "local_classify", "mechanical"),
         _case("m2", "local_extract", "mechanical"),
         _case("c1", "local_commit_msg", "code", role_in_sheet="real"),
-        _case("t1", "local_commit_msg", "code", role_in_sheet="trampa"),
+        _case("t1", "local_commit_msg", "code", role_in_sheet="trap"),
         _case(
             batch.CEILING_CASE,
             "local_commit_msg",

@@ -68,7 +68,7 @@ TOLERANCE = 1e-3
 # Comparacion por pares (P-15): prueba de signos de una cola sobre los pares con eleccion.
 PAIRS_ALPHA = 0.05
 # Aceptadas: el backend recibio la entrada entera, aunque luego no puntue.
-_ACCEPTED = frozenset({"ok", "truncado", "configuracion", "configuration"})
+_ACCEPTED = frozenset({"ok", "truncated", "configuracion", "configuration"})
 
 
 def _load_legacy_names() -> Any:
@@ -166,7 +166,7 @@ class Run:
         score = self.final.get("score") or {}
         # Truncada otra vez tras doblar los tokens: puntua 0 (§4.7 punto 3), no «sin puntuacion».
         if self.outcome == "ok" or (
-            self.outcome == "truncado" and score.get("zero_by") == "truncated_repeated"
+            self.outcome == "truncated" and score.get("zero_by") == "truncated_repeated"
         ):
             return score.get("quality")
         return None
@@ -1495,14 +1495,14 @@ def evaluate_commit_cell(
     if judgement.get("partial"):
         raise NoData("el juicio es parcial: el veredicto necesita la hoja entera")
     pair_items = judgement["pairs"]
-    traps = [p for p in pair_items.values() if p["kind"] == "trampa"]
+    traps = [p for p in pair_items.values() if p["kind"] == "trap"]
     real = [p for p in pair_items.values() if p["kind"] == "real"]
     if len(traps) != TRAPS_PER_SHEET:
         raise NoData(f"la hoja tiene {len(traps)} pares trampa y se esperaban {TRAPS_PER_SHEET}")
     worst = 0
     for p in traps:
         winner = _preferred(p)
-        worst += winner not in ("empate", "trampa")
+        worst += winner not in ("empate", "trap")
     sheet = {
         "ok": worst >= MIN_TRAPS,
         "traps_flagged_as_worse": worst,
@@ -1641,7 +1641,7 @@ def compute_verdict(
     models = production_config["models"]
     mechanical_role, long, code = models["mechanical"], models["long"], models["code"]
     cases = [
-        c for c in corpus.values() if c.get("kind") == "quality" and c.get("sheet_role") != "trampa"
+        c for c in corpus.values() if c.get("kind") == "quality" and c.get("sheet_role") != "trap"
     ]
     cells: list[dict[str, Any]] = []
     for tool in TOOLS_WITH_CELL:

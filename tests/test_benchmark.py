@@ -312,7 +312,7 @@ def test_image_case_carries_image_url_and_text_case_does_not():
 
 def test_each_text_case_carries_its_whole_content_without_marker():
     for case in _corpus().cases:
-        if case.media_type != "texto":
+        if case.media_type != "text":
             continue
         payload = benchmark.build_payload(case, "m", 1, None)
         user = payload["messages"][1]["content"]
@@ -513,11 +513,11 @@ def test_truncated_is_repeated_once_with_double_max_tokens(tmp_path, monkeypatch
         return _response("bug", "length" if len(seen) == 1 else "stop")
 
     _, records = _run(tmp_path, monkeypatch, handler, "--case", "clasificar-53")
-    assert [r["outcome"] for r in records] == ["truncado", "ok"]
+    assert [r["outcome"] for r in records] == ["truncated", "ok"]
     assert seen == [16, 32]
     assert records[0]["score"]["quality"] is None
     assert records[1]["score"]["quality"] == 1.0
-    assert [r["retry_reason"] for r in records] == [None, "truncado"]
+    assert [r["retry_reason"] for r in records] == [None, "truncated"]
 
 
 def test_truncated_twice_is_not_repeated_again_and_scores_zero(tmp_path, monkeypatch):
@@ -565,7 +565,7 @@ def test_voided_run_is_repeated_with_the_same_tokens(tmp_path, monkeypatch):
     assert seen == [16, 16]
     assert [(r["run"], r["attempt"]) for r in records] == [(1, 1), (1, 2)]
     assert [r["discarded"] for r in records] == [True, False]
-    assert [r["retry_reason"] for r in records] == [None, "anulada"]
+    assert [r["retry_reason"] for r in records] == [None, "voided"]
 
 
 def test_the_voided_run_is_repeated_at_most_twice(tmp_path, monkeypatch):
@@ -652,4 +652,11 @@ def test_frozen_corpus_old_provenance_key_is_read_as_the_new_one():
     assert frozen and all("procedencia" in c and "provenance" not in c for c in frozen)
     cases = _corpus().cases
     assert all("provenance" in c.raw and "procedencia" not in c.raw for c in cases)
-    assert [c.provenance for c in cases] == [c["procedencia"] for c in frozen]
+    # Y su valor, en inglés (cierre del frente A, lote 3); la tabla va escrita a mano.
+    old_values = {
+        "congelado": "frozen",
+        "generado": "generated",
+        "reconstruido": "reconstructed",
+        "inventado": "made_up",
+    }
+    assert [c.provenance for c in cases] == [old_values[c["procedencia"]] for c in frozen]

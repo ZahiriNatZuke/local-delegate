@@ -425,6 +425,25 @@ El orden es obligatorio: el frente A antes que el B (brief, «Desired outcome»;
   idioma vigente. El juez es un detector de idioma versionado (no el ojo), y la muestra se guarda en
   la verificación con el id de la ventana. El detector concreto y el conjunto de documentos los fija
   el plan antes de la ola B2.
+
+  **Enmienda del 2026-10-14 (issue #260): idioma de respuesta del modelo en texto libre.** Una
+  variable aparte, `LOCAL_DELEGATE_OUTPUT_LANGUAGE` (propuesto), fija **solo** el idioma en que
+  esas cuatro tools piden responder al modelo, para idiomas fuera de `es`/`en` (`fr`, `pt`,
+  `de`, `it` o texto libre, los mismos valores que `LOCAL_DELEGATE_COMMIT_LANGUAGE`). Reglas:
+  - Prioridad: `LOCAL_DELEGATE_OUTPUT_LANGUAGE` si está puesta y es válida; si no, el idioma vigente
+    de REQ-018/REQ-019. Vacía (el valor por defecto) = el comportamiento de arriba.
+  - No cambia los textos de interfaz (recibos, errores, `local_status`, hooks, panel): esos siguen
+    a `LOCAL_DELEGATE_LANG`. Tampoco cambia `local_commit_msg` (manda `COMMIT_LANGUAGE` o el idioma
+    del diff), `local_translate` (`target_lang`) ni las tools excluidas arriba.
+  - Valor válido: texto de 1 a 40 caracteres tras recortar espacios, sin saltos de línea ni
+    caracteres de control. Un valor no válido se ignora (se sigue al idioma vigente) y se avisa.
+  - En el troceado (map-reduce), la instrucción va en cada paso, no solo en el de reducción.
+  - `doctor` y `local_status` muestran el idioma de respuesta efectivo y su origen («variable de
+    salida» o el origen de REQ-019).
+  - Se comprueba con tests del prompt por tool (la variable puesta aparece en el prompt; vacía o no
+    válida, el prompt es el del idioma vigente; `local_commit_msg` no cambia con ella) y una muestra
+    en vivo con `fr`: al menos 5 documentos por tool, en inglés o español, y al menos el 90 % de las
+    respuestas en francés según el mismo detector.
 - **REQ-029 — Skill, bloque gestionado y catálogo de los subagentes en el idioma vigente.** `install`
   genera en el idioma vigente de la sesión en que corre:
   - la skill (con el nombre de REQ-012) y el bloque gestionado de `CLAUDE.md`/`AGENTS.md`;
@@ -798,7 +817,7 @@ skill y bloques). Cada ola deja su registro `waves/<ola>.md` (REQ-036/037).
 | REQ-025 | B4 | test Playwright con el control de catálogo sobre el DOM en inglés y su control positivo |
 | REQ-026 | B1, B2, B4 | tests de formato por superficie e idioma |
 | REQ-027 | B2 (descripciones, misma versión que REQ-010); B4 (resumen del panel) | test de que las descripciones no cambian con el idioma; resumen del panel desde el catálogo |
-| REQ-028 | B2 | tests del prompt por tool; test de que `local_commit_msg` no cambia; muestra en vivo (≥5 documentos por tool e idioma, ≥90 % en el idioma vigente, juzgada por detector) guardada con el id de la ventana |
+| REQ-028 | B2 | tests del prompt por tool; test de que `local_commit_msg` no cambia; muestra en vivo (≥5 documentos por tool e idioma, ≥90 % en el idioma vigente, juzgada por detector) guardada con el id de la ventana; enmienda del 2026-10-14: tests de `LOCAL_DELEGATE_OUTPUT_LANGUAGE` (puesta, vacía, no válida, `commit_msg` intacto) y muestra en vivo con `fr` |
 | REQ-029 | B5 | tests de bloque gestionado (0.34.0 → inglés, un solo bloque), de subagentes (encabezado es, en y bloque 0.34.0) y guardián de skills es/en con las mismas tools |
 | REQ-030 | B0 | revisión del plan + guardián de REQ-031 cubriendo hooks |
 | REQ-031 | B0 | test de paridad con control positivo |

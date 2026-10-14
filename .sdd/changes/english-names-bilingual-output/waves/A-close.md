@@ -378,12 +378,114 @@ dejaron a propósito (abajo). Lo que faltaba: verificación, mutante, mapping, r
 | --- | --- | --- | --- |
 | `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` (`.replace(/_/g, '_')`) | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
 
+## A-close-3 — valores congelados del corpus y del banco, y la hoja de commits
+
+Mapping `waves/A-close-3-mapping.csv` (37 filas `kind=value`: 31 aplicadas y 6 no aplicadas, con su
+motivo en `verified`), con su línea `# Fase 2`. Rama `sdd/english-names-a-close-3`, encima de
+`35f59eb` (lote 2, mezclado en `main`). Sin commit: borrador en `waves/A-close-3-commit-msg.txt`.
+Evidencia en `evidence/A-close-3/`.
+
+### Qué se hizo
+
+- **Valores nuevos** (regla 1, decisión 6), en el escritor y en cada comparación:
+  - `provenance` del corpus: `congelado`/`generado`/`reconstruido`/`inventado` →
+    `frozen`/`generated`/`reconstructed`/`made_up` (`benchmark._CORPUS_PROVENANCES`, los `Case` y
+    el control de `build_corpus`, el valor por defecto de `MechanicalCase` y el caso de lint de las
+    mecánicas);
+  - `media_type`: `texto`/`imagen` → `text`/`image` (`benchmark._CORPUS_MEDIA`,
+    `build_payload` y las cinco comparaciones de `build_corpus`);
+  - `sheet_role` del corpus de afinidad y `kind` del par de la hoja (y el lado de la trampa en
+    `sides`): `trampa` → `trap` (`pair_sheet.TRAP`, `build_corpus` y `analyze_benchmark`);
+  - `scorer.kind` de los casos que no se puntúan solos: `techo`/`hoja` → `ceiling`/`sheet`;
+  - `outcome` del banco y `retry_reason`: `truncado` → `truncated` (`benchmark.py`,
+    `analyze_benchmark._ACCEPTED` y `Run.quality`); `retry_reason` `anulada` → `voided`, sin
+    lectura dual (nadie lo relee).
+- **Lectura dual** en `src/local_delegate/legacy_names.py`: `CORPUS_PROVENANCE_VALUES` y
+  `CORPUS_MEDIA_VALUES` en `FORMATS["benchmark_corpus"]` (los usan `load_corpus`,
+  `analyze.read_corpus`, `check_versioned` y `normalize_affinity_corpus`), `SHEET_TRAP_VALUES` en
+  `affinity_case.sheet_role`, `commit_key.kind` y `commit_judgement.kind`, y la función nueva
+  `_normalize_pair_sides` (el lado `trampa` de `sides` en la clave y en el juicio),
+  `SCORER_KIND_VALUES` en `affinity_scorer.kind` y `truncado` en `benchmark_results.outcome`.
+  `check_versioned_affinity` compara lo construido y lo congelado ya normalizados, así que el
+  corpus versionado sigue cuadrando con el constructor sin reescribirse.
+- **Hoja de commits** (§3 y pregunta 4): `write_sheet` escribe `sheet-<n>.html`, `sheet-<n>.md` y
+  `key-<n>.json`; la página descarga `answers-<n>.json` y `answers-partial-<n>.json` y guarda el
+  progreso en `commit-sheet-<id>` de `localStorage` (pierde el de una hoja a medias de la versión
+  vieja; hoy no hay ninguna); carpetas por defecto `sheet/` y `key/`. Los lectores reciben rutas
+  explícitas: sin lectura dual. La hoja 1 congelada (`hoja/`, `clave/`) no se toca y su test la lee
+  por ruta.
+- **Tests nuevos** (3 recogidos), con tablas escritas a mano y guarda de que lo leído sigue viejo:
+  `tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[catalogo-2026-09]` y
+  `[afinidad-2026-10]` (procedencia, `media_type`, `sheet_role` y `scorer.kind` de los dos corpus
+  congelados, por `normalize_affinity_corpus` y `load_corpus`) y
+  `tests/test_analyze_benchmark.py::test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english`
+  (fila escrita a mano: ningún resultado versionado trunca). Ampliados:
+  `test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format` (el par y el
+  lado `trampa` de `clave-1.json` salen `trap`) y
+  `test_frozen_corpus_old_provenance_key_is_read_as_the_new_one` (el valor, además de la clave).
+- `rename-exceptions.md`, «Lectura de formato viejo»: 11 filas por los valores y claves viejos que
+  los tests nuevos leen a propósito (`test_corpus`, `test_benchmark`, `test_pair_sheet`).
+- `ruff format` en 1 fichero (`legacy_names.py`).
+- **No aplicadas (6 filas)**, por texto de salida que traduce el frente B: `techo` en
+  `analyze_benchmark.py:266` (`_KIND_LABELS`) y `:909` (`_CP3_REASON_LABELS`), en
+  `scripts/dev/affinity_batch.py:54` (`_STAGE_LABELS`) y en el assert de salida de
+  `tests/test_affinity_batch.py:182`; `anulada` en el `match=` de `tests/test_analyze_benchmark.py`
+  (mensaje de `NoData`); y `hoja` en `tests/test_pair_sheet.py:1094`, la ruta de la hoja 1
+  congelada. `analyze_benchmark.py:694` (`criterion` `techo` de `decide`, del grupo
+  `calidad`/`techo sin medir`/`velocidad`/`empate` que sale en la tabla) tampoco es el `kind` del
+  puntuador y se queda con sus asserts (`:200`, `:208`).
+- Quedan sin tocar, a propósito: `"generado"` de `benchmark.py:182` (`__name__` del arnés de
+  ejecución), los ids del corpus congelado (`commit-trampa-<sha>`, `techo-commit-156k`) y la prosa.
+
+Cómo: un script de reemplazos con recuento exacto por fichero y todo o nada (scratchpad
+`a-close-3/edit3.py`, bytes UTF-8, sin tocar el EOL), revisado literal a literal contra el `grep`
+de cada valor; sin `make_mapping.py apply` y sin PyCharm (caído).
+
+### Verificación
+
+- EOL: los 10 ficheros del lote, `legacy_names.py` y `rename-exceptions.md` siguen en LF
+  (`git ls-files --eol`); modo sin cambios.
+- `--collect-only`: **2606** = 2603 + 3 tests nuevos (`evidence/A-close-3/collect.txt`).
+- Suite `-n 2 --dist loadgroup` con el cerrojo (Playwright incluido): **2604 passed, 2 skipped**,
+  sin intermitentes (`evidence/A-close-3/pytest-full.log`). La primera corrida del lote dio 1 fallo
+  esperado en `test_frozen_corpus_old_provenance_key_is_read_as_the_new_one`, que comparaba el
+  valor viejo literal: se amplió para comparar el traducido.
+- `ruff check` y `ruff format --check`: limpios (`evidence/A-close-3/ruff.txt`).
+- Detector con la lista: fuera de la lista **462 → 467**; 0 hallazgos fuera de la lista en los 10
+  ficheros del lote; los 5 nuevos son las claves de las tablas nuevas de `legacy_names.py`
+  (`inventado`, `texto`, `imagen`, `trampa`, `truncado`), que como el resto de esas tablas esperan
+  su excepción del lote 4 (§5) (`evidence/A-close-3/detector.json`). Palabras sin clasificar
+  783 → 785 (para el lote 4).
+
+### Desviaciones
+
+1. Los nombres de fichero y las carpetas de la hoja de commits no tenían filas en el mapping (solo
+   `hoja` de `--sheet-dir`), pero el lote 3 los lleva según §3 y la pregunta 4 aprobada.
+2. 6 filas no aplicadas (texto de salida que traduce el frente B y la ruta congelada), con motivo en
+   `verified`.
+3. 11 filas nuevas en `rename-exceptions.md` (lectura de formato viejo de los tests nuevos).
+4. El test nuevo de `test_analyze_benchmark.py` se llamaba `…_truncado_row_…` en la primera corrida
+   del mutante; se renombró al inglés y los mutantes se repitieron con el nombre final.
+5. `plan.md` y `spec.md` del SDD aparecen modificados en el árbol de trabajo, pero no son de este
+   lote: ya lo estaban y no se tocaron.
+
+| Control positivo del lote 3 | Mutante | Assert que disparó | Restaurado |
+| --- | --- | --- | --- |
+| `test_frozen_corpus_values_are_read_in_english` (los 2) y `test_frozen_corpus_old_provenance_key_is_read_as_the_new_one` | `CORPUS_PROVENANCE_VALUES` sin `"congelado"` | `test_corpus.py:1019` `assert [c["provenance"] …] == expected_provenance` (AssertionError) y `test_benchmark.py:653` con el `ValueError` de `load_corpus` (`provenance='congelado'` no es válido); 3 failed | desde copia; sha256 `0cdf12a06e93` antes y después |
+| `test_frozen_corpus_values_are_read_in_english` (los 2) y `test_each_text_case_carries_its_whole_content_without_marker` | `CORPUS_MEDIA_VALUES` sin `"texto"` | `test_corpus.py:1020` `assert [c["media_type"] …] == expected_media`; 3 failed | ídem |
+| `test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format`, `test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]` y `test_affinity_corpus_has_spec_size` | `SHEET_TRAP_VALUES = {}` | `test_pair_sheet.py:1105` `{'real', 'trampa'} == {'real', 'trap'}`, `test_corpus.py:1029` y `test_corpus.py:821` `0 == 9`; 3 failed, 1 passed (el `[catalogo]`, sin trampas) | ídem |
+| `test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]` | `SCORER_KIND_VALUES` sin `"techo"` | `test_corpus.py:1032` `assert [c["scorer"]["kind"] …]`; 1 failed, 1 passed (el `[catalogo]`) | ídem |
+| `test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english` | `benchmark_results.outcome` sin `"truncado"` | `test_analyze_benchmark.py:323` `['truncado', 'truncado'] == ['truncated', 'truncated']`; 1 failed | ídem |
+
+Todos en `evidence/A-close-3/mutants.log` (scratchpad `a-close-3/mutants.sh`).
+
 ## Controles positivos
 
 | Test | Mutante aplicado | Assert que disparó | Restaurado |
 | --- | --- | --- | --- |
 | `tests/test_affinity.py::test_matrix_cells_are_the_approved_cells_of_the_verdict`, `test_frozen_verdict_footprints_with_old_keys_are_read_with_the_new_ones` y `tests/test_analyze_benchmark.py::test_frozen_footprints_with_old_keys_reach_the_verdict_with_the_new_ones` (lote 1; lectura dual de la huella) | `src/local_delegate/legacy_names.py` con `FORMATS["footprint"]` sin `"ruta": "path"` | `test_affinity.py:518` `assert dict(cell.footprint) == footprints[...]` (AssertionError); `test_affinity.py:541` y `test_analyze_benchmark.py:1565` `KeyError: 'path'`; 3 failed, 156 passed (`evidence/A-close-1/mutant-footprint-dual.txt`) | desde copia; sha256 `ae60e98d…` antes y después |
 | `tests/test_dashboard_ui.py::test_no_table_shows_internal_keys` (lote 2; datos renombrados `odd_new_key`, `reason_that_does_not_exist`, `new_client`) | `src/local_delegate/web/metrics.py:1908`, el respaldo de rótulos sin quitar los `_` | `test_dashboard_ui.py:981` `assert not bad` con `['Odd_new_key', 'Reason_that_does_not_exist', 'New_client']` (`evidence/A-close-2/mutante.log`) | desde copia; sha256 `778ba0eb00f6` antes y después |
+| `tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english`, `tests/test_analyze_benchmark.py::test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english` y `tests/test_pair_sheet.py::test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format` (lote 3; lectura dual de los valores del corpus, del banco y de la hoja) | `src/local_delegate/legacy_names.py`, cinco mutantes: sin `"congelado"`, sin `"texto"`, `SHEET_TRAP_VALUES = {}`, sin `"techo"` en `SCORER_KIND_VALUES` y sin `"truncado"` en `benchmark_results.outcome` | `test_corpus.py:1019`, `:1020`, `:1029`, `:1032`, `:821`; `test_pair_sheet.py:1105`; `test_analyze_benchmark.py:323` (AssertionError) y `test_benchmark.py:653` (`ValueError` de `load_corpus`) (`evidence/A-close-3/mutants.log`) | desde copia; sha256 `0cdf12a06e93` antes y después |
 
 ## Llamadas `local_*` (sesión principal y cada agente)
 
@@ -393,6 +495,9 @@ dejaron a propósito (abajo). Lo que faltaba: verificación, mutante, mapping, r
 | Agente A-close (fase 1) | `local_summarize(path=waves/A10a.md, A10b.md)` | agotaron los 300 s (7 en paralelo); sustituidas por `grep` de «Pendientes» y lectura de ese tramo |
 | Agente A-close-1 | `local_lint_summary(path=evidence/A-close-1/pytest-full.log)` | resumen de la suite: solo los 12 `DeprecationWarning` de starlette; sirvió |
 | Agente A-close-2 | `local_lint_summary(path=evidence/A-close-2/pytest-full-1-intermitente.log)` | resumen de la primera corrida: 1 fallo de `test_fake_llamaswap.py` (el intermitente de tiempo) y los avisos de starlette; sirvió |
+| Agente A-close-3 | `local_summarize(path=waves/A-close.md)` | ponerse al día del cierre (formato de los lotes, comando del detector); sirvió |
+| Agente A-close-3 | `local_lint_summary(path=evidence/A-close-3/pytest-full.log)` (2) | resumen de las dos corridas de la suite: 2604 passed, 2 skipped y solo los 2 `DeprecationWarning` de starlette/anyio; sirvió |
+| Agente A-close-3 | `local_commit_msg(path=scratchpad a-close-3/lote3.diff)` | borrador del mensaje: devolvió solo un asunto en inglés; el mensaje se escribió a mano en español |
 
 ## Llamadas `mcp__pycharm__*`
 
@@ -403,3 +508,4 @@ dejaron a propósito (abajo). Lo que faltaba: verificación, mutante, mapping, r
 | A-close-1 | `get_file_problems` | `scripts/analyze_benchmark.py` (solo errores) | 0 errores |
 | A-close-1 | `get_file_problems` | `src/local_delegate/footprint.py` (solo errores) | 0 errores |
 | A-close-2 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) tras el reinicio | motivo: las 3 filas `pycharm` se hicieron a mano y la comprobación de problemas la cubren `py_compile`, ruff y la suite |
+| A-close-3 | (ninguna) | MCP de PyCharm caído (ECONNREFUSED) | motivo: 0 filas `pycharm`; la comprobación de problemas la cubren ruff y la suite |

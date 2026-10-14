@@ -302,7 +302,7 @@ class Case:
     origin: str
     source: Source
     extension: str = "txt"
-    media_type: str = "texto"
+    media_type: str = "text"
     arguments: dict[str, Any] = field(default_factory=dict)
     expected_terms: Terms = ()
     forbidden_terms: tuple[str, ...] = ()
@@ -345,7 +345,7 @@ CASES: tuple[Case, ...] = (
         "local_summarize",
         "mechanical",
         "quality",
-        "congelado",
+        "frozen",
         "CONTRIBUTING.md",
         file_source("CONTRIBUTING.md"),
         extension="md",
@@ -367,7 +367,7 @@ CASES: tuple[Case, ...] = (
         "local_extract",
         "mechanical",
         "quality",
-        "congelado",
+        "frozen",
         "pyproject.toml, recortado en linea entera a 2 100 chars (entero pesa mas de 6 000 y "
         "produccion lo mandaria a long)",
         cut_by_lines("pyproject.toml", 2100),
@@ -391,7 +391,7 @@ CASES: tuple[Case, ...] = (
         "local_classify",
         "mechanical",
         "quality",
-        "reconstruido",
+        "reconstructed",
         "evento inline real de 53 chars; texto recreado con esa forma",
         literal_text("El dashboard dejó de cargar tras actualizar a 0.27.0."),
         arguments={"labels": ["bug", "feature", "docs", "pregunta"]},
@@ -404,7 +404,7 @@ CASES: tuple[Case, ...] = (
         "local_translate",
         "mechanical",
         "quality",
-        "reconstruido",
+        "reconstructed",
         "evento inline real de 42 chars; texto recreado con esa forma",
         literal_text("Reinicia el daemon después de actualizarlo"),
         arguments={"target_lang": "inglés"},
@@ -417,7 +417,7 @@ CASES: tuple[Case, ...] = (
         "local_delegate",
         "mechanical",
         "quality",
-        "reconstruido",
+        "reconstructed",
         "evento inline real de 56 chars; texto recreado con esa forma",
         literal_text("tokens, latencia, modelo, errores, reintentos y el coste"),
         arguments={
@@ -432,7 +432,7 @@ CASES: tuple[Case, ...] = (
         "local_summarize",
         "long",
         "quality",
-        "congelado",
+        "frozen",
         "docs/recipes/claude-code-hooks.md",
         file_source("docs/recipes/claude-code-hooks.md"),
         extension="md",
@@ -449,7 +449,7 @@ CASES: tuple[Case, ...] = (
         "local_summarize",
         "long",
         "quality",
-        "congelado",
+        "frozen",
         "CHANGELOG.md, secciones 0.27.0 y 0.26.0",
         version_sections("CHANGELOG.md", "0.27.0", "0.25.0"),
         extension="md",
@@ -461,7 +461,7 @@ CASES: tuple[Case, ...] = (
         "local_extract",
         "long",
         "quality",
-        "congelado",
+        "frozen",
         "uv.lock, recortado a los 48 000 chars que `_read_input` deja ver al rol long",
         exact_cut("uv.lock", 48000),
         extension="lock",
@@ -485,7 +485,7 @@ CASES: tuple[Case, ...] = (
         "local_lint_summary",
         "long",
         "quality",
-        "generado",
+        "generated",
         "ruff check --select ALL --output-format concise --no-cache src/local_delegate, "
         "archivos enteros hasta 9 000 chars",
         ruff_output_by_file(9000),
@@ -509,7 +509,7 @@ CASES: tuple[Case, ...] = (
         "local_commit_msg",
         "code",
         "quality",
-        "congelado",
+        "frozen",
         "git show 4d644ae (fix(web): inflight multi-proceso)",
         commit_diff("4d644ae"),
         extension="diff",
@@ -524,7 +524,7 @@ CASES: tuple[Case, ...] = (
         "local_explain_code",
         "code",
         "quality",
-        "congelado",
+        "frozen",
         "src/local_delegate/web/metrics.py, recortado antes de un bloque de nivel superior",
         cut_by_lines("src/local_delegate/web/metrics.py", 17000, _TOP_LEVEL_PY),
         extension="py.txt",
@@ -536,7 +536,7 @@ CASES: tuple[Case, ...] = (
         "local_explain_code",
         "code",
         "quality",
-        "congelado",
+        "frozen",
         "src/local_delegate/install.py, recortado a los 20 000 chars que ve el rol code",
         exact_cut("src/local_delegate/install.py", 20000),
         extension="py.txt",
@@ -548,7 +548,7 @@ CASES: tuple[Case, ...] = (
         "local_boilerplate",
         "code",
         "quality",
-        "reconstruido",
+        "reconstructed",
         "evento inline real de 156 chars; especificacion recreada con esa forma",
         literal_text(
             "Función parse_duration(texto) que convierta '1h30m', '45s' o '2m' en segundos "
@@ -578,11 +578,11 @@ CASES: tuple[Case, ...] = (
         "local_describe_image",
         "vision",
         "quality",
-        "congelado",
+        "frozen",
         "docs/assets/dashboard.png",
         file_source("docs/assets/dashboard.png"),
         extension="png",
-        media_type="imagen",
+        media_type="image",
         # `computo` va SIN acento a proposito, y el panel dice «cómputo»: es el termino que solo
         # casa si el puntuador normaliza. Sin el, la pareja de Unicode de CP-4 no tendria donde caer.
         expected_terms=("delegaciones", "backend", "ahorro", "computo"),
@@ -598,11 +598,11 @@ CASES: tuple[Case, ...] = (
         "local_describe_image",
         "vision",
         "quality",
-        "inventado",
+        "made_up",
         "docs/assets/dashboard.png con una pregunta que no corresponde a ningun evento real",
         file_source("docs/assets/dashboard.png"),
         extension="png",
-        media_type="imagen",
+        media_type="image",
         arguments={
             # Las seis cifras grandes del panel son IDENTICAS en esta imagen y en la de control
             # (datos de demostracion fijos): preguntar por ellas no podria bajar con la imagen
@@ -627,7 +627,7 @@ CASES: tuple[Case, ...] = (
         "local_summarize",
         "long",
         "ceiling",
-        "congelado",
+        "frozen",
         "src/local_delegate/server.py entero",
         file_source("src/local_delegate/server.py"),
         extension="py.txt",
@@ -637,7 +637,7 @@ CASES: tuple[Case, ...] = (
         "local_commit_msg",
         "code",
         "ceiling",
-        "reconstruido",
+        "reconstructed",
         "git show d7c3dcc: el diff de 164 585 chars del log ya no existe; este es el mayor del "
         "historial de ese orden",
         commit_diff("d7c3dcc"),
@@ -649,7 +649,7 @@ CONTROLS = (
     {
         "id": "dashboard-bcbe39f",
         "para": ["describir-dashboard", "leer-cifras-dashboard"],
-        "provenance": "congelado",
+        "provenance": "frozen",
         "origin": "git show bcbe39f:docs/assets/dashboard.png (0.24.0)",
         "source": blob("bcbe39f", "docs/assets/dashboard.png"),
         "extension": "png",
@@ -767,7 +767,7 @@ def capture_case(case: Case, path: Path, data: bytes, *, no_chunking: bool = Fal
     """Con `no_chunking`, la tool sigue la ruta de UNA llamada aunque la entrada no quepa: es el
     prompt que necesita un sondeo de techo, que mide justo la mayor llamada unica que acepta el
     modelo. Produccion no lo manda nunca asi; por eso se captura aparte."""
-    text = normalized(data) if case.media_type == "texto" else ""
+    text = normalized(data) if case.media_type == "text" else ""
     with intercepted_production() as calls, tempfile.TemporaryDirectory() as tmp:
         # Los dos topes: el del rol (modelo principal de cada tool) y el del modelo (respaldos).
         unlimited = mock.patch.multiple(
@@ -782,7 +782,7 @@ def capture_case(case: Case, path: Path, data: bytes, *, no_chunking: bool = Fal
     template = None
     if len(calls) == 1:
         user = calls[0].user
-        if case.media_type == "imagen" and isinstance(user, list):
+        if case.media_type == "image" and isinstance(user, list):
             image = base64.b64encode(data).decode("ascii")
             whole_input = any(image in json.dumps(block) for block in user)
             template = next(b["text"] for b in user if b.get("type") == "text")
@@ -993,7 +993,7 @@ def check(case: Case, captured: Capture, data: bytes, single: Capture | None = N
             errors.append(
                 f"{case.id}: el sondeo no tiene un prompt de una llamada con la entrada entera"
             )
-    if case.media_type == "texto":
+    if case.media_type == "text":
         text = normalized(data)
         expected = terms(case, text)
         if case.kind == "quality" and not expected:
@@ -1004,7 +1004,7 @@ def check(case: Case, captured: Capture, data: bytes, single: Capture | None = N
                     errors.append(f"{case.id}: el termino {term!r} no esta en la fuente")
         errors.extend(_check_id_size(case.id, len(text)))
     if case.reference is not None:
-        source = normalized(data) if case.media_type == "texto" else ""
+        source = normalized(data) if case.media_type == "text" else ""
         counts = case.counts(source) if case.counts else None
         errors.extend(check_reference(case, terms(case, source), counts))
     return errors
@@ -1033,7 +1033,7 @@ def corpus_entry(
     # de una llamada. `production` sigue contando las llamadas que produccion hizo de verdad.
     prompt = single if single is not None else captured
     call = prompt.calls[0]
-    text = normalized(data) if case.media_type == "texto" else ""
+    text = normalized(data) if case.media_type == "text" else ""
     quality = case.kind == "quality"
     with_prompt = quality or single is not None
     return {
@@ -1545,7 +1545,7 @@ class MechanicalCase:
     reference_bad: str
     arguments: dict[str, Any] = field(default_factory=dict)
     fields: tuple[str, ...] = ()  # `local_extract`: las claves que se piden
-    provenance: str = "inventado"
+    provenance: str = "made_up"
 
 
 def _classifies(id_: str, text: str, tags: list[str], acceptable_ones: list[str], bad_one: str):
@@ -1629,7 +1629,7 @@ def _resume_linter(id_: str, warnings, good_one: str, bad_one: str):
         {"kind": "lint", "counts": _linter_counts(warnings), "max_words": 200},
         good_one,
         bad_one,
-        provenance="generado",
+        provenance="generated",
     )
 
 
@@ -2491,7 +2491,7 @@ def build_affinity(
             None,
             discriminating=role == "real",
             sheet_role=role,
-            scorer={"kind": "hoja"},
+            scorer={"kind": "sheet"},
             reference_ok=subject,
             reference_bad="chore: actualiza archivos del proyecto",
             **extra,
@@ -2514,7 +2514,7 @@ def build_affinity(
             commit=F2_COMMIT,
         )
     )
-    for role, commits in (("real", selection.real), ("trampa", selection.traps)):
+    for role, commits in (("real", selection.real), ("trap", selection.traps)):
         for c in commits:
             id_ = f"commit-{c.short}" if role == "real" else f"commit-trampa-{c.short}"
             case = Case(
@@ -2522,7 +2522,7 @@ def build_affinity(
                 "local_commit_msg",
                 "code",
                 "quality",
-                "congelado",
+                "frozen",
                 f"git show {c.short} (main, {c.date})",
                 commit_diff(c.hash),
                 extension="diff",
@@ -2537,7 +2537,7 @@ def build_affinity(
         data = _frozen_source(f2_sources, name, case.source, root, False)
         capture, single = capture_and_check(case, data, name, ceiling=case.kind == "ceiling")
         errors.extend(check(case, capture, data, single))
-        kind = "techo" if case.kind == "ceiling" else "f2"
+        kind = "ceiling" if case.kind == "ceiling" else "f2"
         entries.append(
             _affinity_entry(
                 case,
@@ -2555,11 +2555,11 @@ def build_affinity(
     if len(ids) != len(set(ids)):
         errors.append("hay ids repetidos en el corpus")
     real = {e["commit"] for e in entries if e.get("sheet_role") == "real"}
-    traps_c = {e["commit"] for e in entries if e.get("sheet_role") == "trampa"}
+    traps_c = {e["commit"] for e in entries if e.get("sheet_role") == "trap"}
     if real & traps_c:
         errors.append("un commit es a la vez caso real y caso trampa")
     real_diffs = {e["source_sha256"] for e in entries if e.get("sheet_role") == "real"}
-    if any(e["source_sha256"] in real_diffs for e in entries if e.get("sheet_role") == "trampa"):
+    if any(e["source_sha256"] in real_diffs for e in entries if e.get("sheet_role") == "trap"):
         errors.append("un caso trampa tiene el mismo diff que un caso real")
 
     # El dato privado de un diff se ve antes de armar las trampas: en el modo `fallar` es el motivo.

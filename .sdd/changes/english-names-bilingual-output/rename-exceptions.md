@@ -129,6 +129,17 @@ sección de su motivo.
 | ruta | tests/test_analyze_benchmark.py | lectura de formato viejo (cierre del frente A, lote 1): clave de la huella del `huellas.json` congelado que el test lee a propósito para comprobar que sale como `path` |
 | tamano_bytes | tests/test_analyze_benchmark.py | lectura de formato viejo (cierre del frente A, lote 1): mismo test; sale como `size_bytes` |
 | huellas.json | tests/test_analyze_benchmark.py | lectura de formato viejo (decisión 6 de A10): `huellas.json` congelado, que `footprints_file` sigue leyendo si falta `footprints.json` (ola A10b-2; fila añadida en A10b-5) |
+| generado | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` de los corpus congelados, escrito a mano en `_OLD_PROVENANCES` para comprobar que se lee como `generated` |
+| inventado | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `made_up` |
+| texto | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `media_type` de los corpus congelados (`_OLD_MEDIA`); se lee como `text` |
+| imagen | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `image` |
+| trampa | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `sheet_role` del corpus de afinidad congelado (`_OLD_SHEET_ROLES`); se lee como `trap` |
+| rol_en_hoja | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; clave vieja de `sheet_role` que el test lee en crudo del congelado |
+| techo | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `scorer.kind` del corpus de afinidad congelado (`_OLD_SCORER_KINDS`); se lee como `ceiling` |
+| hoja | tests/test_corpus.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; se lee como `sheet` |
+| generado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): valor viejo de `provenance` del corpus congelado, escrito a mano para comprobar que `load_corpus` lo da como `generated` |
+| inventado | tests/test_benchmark.py | lectura de formato viejo (cierre del frente A, lote 3): mismo test; sale como `made_up` |
+| tipo | tests/test_pair_sheet.py | lectura de formato viejo (cierre del frente A, lote 3): clave vieja del par de `clave-1.json` congelado, que el test lee en crudo para comprobar que el par `trampa` sale como `trap` |
 
 ## Envoltorio de REQ-046
 

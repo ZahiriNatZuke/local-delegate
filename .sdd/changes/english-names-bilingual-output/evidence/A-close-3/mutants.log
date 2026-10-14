@@ -1,0 +1,361 @@
+=== provenance
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_______ test_frozen_corpus_values_are_read_in_english[catalogo-2026-09] _______
+
+corpus = 'catalogo-2026-09'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+>       assert [c["provenance"] for c in normalized] == expected_provenance
+E       AssertionError: assert ['congelado',...ngelado', ...] == ['frozen', 'f...'frozen', ...]
+E         
+E         At index 0 diff: 'congelado' != 'frozen'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1019: AssertionError
+_______ test_frozen_corpus_values_are_read_in_english[afinidad-2026-10] _______
+
+corpus = 'afinidad-2026-10'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+>       assert [c["provenance"] for c in normalized] == expected_provenance
+E       AssertionError: assert ['made_up', '...made_up', ...] == ['made_up', '...made_up', ...]
+E         
+E         At index 28 diff: 'congelado' != 'frozen'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1019: AssertionError
+________ test_frozen_corpus_old_provenance_key_is_read_as_the_new_one _________
+
+    def test_frozen_corpus_old_provenance_key_is_read_as_the_new_one():
+        """El corpus versionado dice `procedencia`; `load_corpus` lo da como `provenance`."""
+        frozen = json.loads(CORPUS.read_text(encoding="utf-8"))["cases"]
+        assert frozen and all("procedencia" in c and "provenance" not in c for c in frozen)
+>       cases = _corpus().cases
+                ^^^^^^^^^
+
+tests\test_benchmark.py:653: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_benchmark.py:27: in _corpus
+    return benchmark.load_corpus(CORPUS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('D:/Projects/local-delegate/benchmarks/catalogo-2026-09/cases.json')
+
+    def load_corpus(path: Path) -> Corpus:
+        """Carga el corpus v2 y verifica el hash de cada fuente y de cada control antes de nada."""
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
+            raise ValueError("corpus invalido: se esperaba schema_version=2 y cases[]")
+        cases: list[CorpusCase] = []
+        seen: set[str] = set()
+        for raw in data["cases"]:
+            raw = legacy_names.normalize("benchmark_corpus", raw)
+            case_id = str(raw.get("id", "")).strip()
+            if not case_id or case_id in seen:
+                raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
+            seen.add(case_id)
+            for field_name, allowed in (
+                ("kind", _CORPUS_KINDS),
+                ("role", _CORPUS_ROLES),
+                ("provenance", _CORPUS_PROVENANCES),
+                ("media_type", _CORPUS_MEDIA),
+            ):
+                if raw.get(field_name) not in allowed:
+>                   raise ValueError(f"{case_id}: {field_name}={raw.get(field_name)!r} no es valido")
+E                   ValueError: resumen-md-2k: provenance='congelado' no es valido
+
+src\local_delegate\benchmark.py:113: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[catalogo-2026-09]
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]
+FAILED tests/test_benchmark.py::test_frozen_corpus_old_provenance_key_is_read_as_the_new_one
+3 failed in 0.40s
+=== media
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_______ test_frozen_corpus_values_are_read_in_english[catalogo-2026-09] _______
+
+corpus = 'catalogo-2026-09'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+        assert [c["provenance"] for c in normalized] == expected_provenance
+>       assert [c["media_type"] for c in normalized] == expected_media
+E       AssertionError: assert ['texto', 'te... 'texto', ...] == ['text', 'tex..., 'text', ...]
+E         
+E         At index 0 diff: 'texto' != 'text'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1020: AssertionError
+_______ test_frozen_corpus_values_are_read_in_english[afinidad-2026-10] _______
+
+corpus = 'afinidad-2026-10'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+        assert [c["provenance"] for c in normalized] == expected_provenance
+>       assert [c["media_type"] for c in normalized] == expected_media
+E       AssertionError: assert ['texto', 'te... 'texto', ...] == ['text', 'tex..., 'text', ...]
+E         
+E         At index 0 diff: 'texto' != 'text'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1020: AssertionError
+________ test_each_text_case_carries_its_whole_content_without_marker _________
+
+    def test_each_text_case_carries_its_whole_content_without_marker():
+>       for case in _corpus().cases:
+                    ^^^^^^^^^
+
+tests\test_benchmark.py:314: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_benchmark.py:27: in _corpus
+    return benchmark.load_corpus(CORPUS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('D:/Projects/local-delegate/benchmarks/catalogo-2026-09/cases.json')
+
+    def load_corpus(path: Path) -> Corpus:
+        """Carga el corpus v2 y verifica el hash de cada fuente y de cada control antes de nada."""
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("schema_version") != 2 or not isinstance(data.get("cases"), list):
+            raise ValueError("corpus invalido: se esperaba schema_version=2 y cases[]")
+        cases: list[CorpusCase] = []
+        seen: set[str] = set()
+        for raw in data["cases"]:
+            raw = legacy_names.normalize("benchmark_corpus", raw)
+            case_id = str(raw.get("id", "")).strip()
+            if not case_id or case_id in seen:
+                raise ValueError(f"id de caso vacio o duplicado: {case_id!r}")
+            seen.add(case_id)
+            for field_name, allowed in (
+                ("kind", _CORPUS_KINDS),
+                ("role", _CORPUS_ROLES),
+                ("provenance", _CORPUS_PROVENANCES),
+                ("media_type", _CORPUS_MEDIA),
+            ):
+                if raw.get(field_name) not in allowed:
+>                   raise ValueError(f"{case_id}: {field_name}={raw.get(field_name)!r} no es valido")
+E                   ValueError: resumen-md-2k: media_type='texto' no es valido
+
+src\local_delegate\benchmark.py:113: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[catalogo-2026-09]
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]
+FAILED tests/test_benchmark.py::test_each_text_case_carries_its_whole_content_without_marker
+3 failed in 0.28s
+=== trap
+F.FF                                                                     [100%]
+================================== FAILURES ===================================
+_ test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format _
+
+    def test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format():
+        key = json.loads((FROZEN_AFFINITY / "clave" / "clave-1.json").read_text(encoding="utf-8"))
+        answers = json.loads(
+            (FROZEN_AFFINITY / "hoja" / "respuestas-1.json").read_text(encoding="utf-8")
+        )
+        # Control: lo congelado sigue con los nombres de antes; si no, el test no probaria nada.
+        assert "pares" in key and "respuestas" in answers
+        rules = pair_sheet.read_rules(FROZEN_AFFINITY / "reglas.json")
+        assert rules["optional_questions"] == ["principal", "specific"]
+        judgement, missing = pair_sheet.read_commit(answers, key, rules)
+        assert missing == []
+        assert len(judgement["pairs"]) == len(key["pares"]) == 33
+        # El par trampa y su lado (lote 3): lo congelado dice `trampa` en `tipo` y en `lados`.
+        assert {p["tipo"] for p in key["pares"].values()} == {"real", "trampa"}
+>       assert {p["kind"] for p in judgement["pairs"].values()} == {"real", "trap"}
+E       AssertionError: assert {'real', 'trampa'} == {'real', 'trap'}
+E         
+E         Extra items in the left set:
+E         'trampa'
+E         Extra items in the right set:
+E         'trap'
+E         Use -v to get more diff
+
+tests\test_pair_sheet.py:1105: AssertionError
+_______ test_frozen_corpus_values_are_read_in_english[afinidad-2026-10] _______
+
+corpus = 'afinidad-2026-10'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+        assert [c["provenance"] for c in normalized] == expected_provenance
+        assert [c["media_type"] for c in normalized] == expected_media
+        if corpus == "catalogo-2026-09":
+            assert "imagen" in {c["media_type"] for c in cases}
+            loaded = benchmark.load_corpus(ROOT / "benchmarks" / corpus / "cases.json").cases
+            assert [c.provenance for c in loaded] == expected_provenance
+            assert [c.media_type for c in loaded] == expected_media
+            return
+        assert "trampa" in {c.get("rol_en_hoja") for c in cases}
+        assert {"techo", "hoja"} <= {c["puntuador"]["tipo"] for c in cases}
+>       assert [c["sheet_role"] for c in normalized] == [
+            _OLD_SHEET_ROLES[c.get("rol_en_hoja")] for c in cases
+        ]
+E       AssertionError: assert [None, None, ...ne, None, ...] == [None, None, ...ne, None, ...]
+E         
+E         At index 58 diff: 'trampa' != 'trap'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1029: AssertionError
+_____________________ test_affinity_corpus_has_spec_size ______________________
+
+affinity = (WindowsPath('D:/Projects/local-delegate/benchmarks/afinidad-2026-10'), {'schema_version': 2, 'production_config': {'l...35b-a3b', 'vision': 'gemma4-12b'}, 'max_chars': {'mechanical': 20000, 'long': 48000, 'code': 20000, 'vision': 20000}}))
+
+    def test_affinity_corpus_has_spec_size(affinity):
+        _, data, corpus = affinity
+        cases = data["cases"]
+    
+        def tally(tool, **filter_fn):
+            return sum(
+                1
+                for c in cases
+                if c["tool"] == tool and all(c.get(k) == v for k, v in filter_fn.items())
+            )
+    
+        new_items = {"discriminating": True, "sheet_role": None}
+        assert tally("local_classify", **new_items) == 8
+        assert tally("local_extract", **new_items) == 8
+        assert tally("local_translate", **new_items) == 4
+        assert tally("local_lint_summary", **new_items) == 4
+        assert tally("local_delegate", **new_items) == 4
+        assert tally("local_commit_msg", sheet_role="real") == 30
+>       assert tally("local_commit_msg", sheet_role="trap") == 9
+E       AssertionError: assert 0 == 9
+E        +  where 0 = <function test_affinity_corpus_has_spec_size.<locals>.tally at 0x0000019943615DA0>('local_commit_msg', sheet_role='trap')
+
+tests\test_corpus.py:821: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_pair_sheet.py::test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_format
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]
+FAILED tests/test_corpus.py::test_affinity_corpus_has_spec_size - AssertionEr...
+3 failed, 1 passed in 3.09s
+=== scorer
+.F                                                                       [100%]
+================================== FAILURES ===================================
+_______ test_frozen_corpus_values_are_read_in_english[afinidad-2026-10] _______
+
+corpus = 'afinidad-2026-10'
+
+    @pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+    def test_frozen_corpus_values_are_read_in_english(corpus):
+        """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+        `normalize_affinity_corpus` los dan en inglés."""
+        raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+        cases = raw["cases"]
+        # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+        assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+        assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+        expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+        expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+        normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+        assert [c["provenance"] for c in normalized] == expected_provenance
+        assert [c["media_type"] for c in normalized] == expected_media
+        if corpus == "catalogo-2026-09":
+            assert "imagen" in {c["media_type"] for c in cases}
+            loaded = benchmark.load_corpus(ROOT / "benchmarks" / corpus / "cases.json").cases
+            assert [c.provenance for c in loaded] == expected_provenance
+            assert [c.media_type for c in loaded] == expected_media
+            return
+        assert "trampa" in {c.get("rol_en_hoja") for c in cases}
+        assert {"techo", "hoja"} <= {c["puntuador"]["tipo"] for c in cases}
+        assert [c["sheet_role"] for c in normalized] == [
+            _OLD_SHEET_ROLES[c.get("rol_en_hoja")] for c in cases
+        ]
+>       assert [c["scorer"]["kind"] for c in normalized] == [
+            _OLD_SCORER_KINDS.get(c["puntuador"]["tipo"], c["puntuador"]["tipo"]) for c in cases
+        ]
+E       AssertionError: assert ['classify', ...lassify', ...] == ['classify', ...lassify', ...]
+E         
+E         At index 67 diff: 'techo' != 'ceiling'
+E         Use -v to get more diff
+
+tests\test_corpus.py:1032: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_corpus.py::test_frozen_corpus_values_are_read_in_english[afinidad-2026-10]
+1 failed, 1 passed in 0.25s
+=== truncated
+F                                                                        [100%]
+================================== FAILURES ===================================
+____ test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english ____
+
+tmp_path = WindowsPath('C:/Users/Yohan/AppData/Local/Temp/pytest-of-Yohan/pytest-1577/test_an_old_row_with_the_spani0')
+
+    def test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english(tmp_path):
+        """Una fila de antes dice `truncado` (escrita a mano: ningún resultado versionado trunca).
+        `read_jsonl` la da como `truncated` y la doble truncada sigue entrando con calidad 0."""
+        first = _record("incumbent", "lint-9k", 1, outcome="truncated")
+        repeated = _record("incumbent", "lint-9k", 1, outcome="truncated", attempt=2)
+        repeated["score"] = {"quality": 0.0, "zero_by": "truncado_repetido", "truncated": True}
+        for record in (first, repeated):
+            record["outcome"] = "truncado"
+        path = tmp_path / "old.jsonl"
+        path.write_text("".join(json.dumps(r) + "\n" for r in (first, repeated)), encoding="utf-8")
+        assert path.read_text(encoding="utf-8").count('"outcome": "truncado"') == 2  # sí es viejo
+        records = analyze.read_jsonl([path])
+>       assert [r["outcome"] for r in records] == ["truncated", "truncated"]
+E       AssertionError: assert ['truncado', 'truncado'] == ['truncated', 'truncated']
+E         
+E         At index 0 diff: 'truncado' != 'truncated'
+E         Use -v to get more diff
+
+tests\test_analyze_benchmark.py:323: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_analyze_benchmark.py::test_an_old_row_with_the_spanish_truncated_outcome_is_read_in_english
+1 failed in 0.32s
+sha256 antes 0cdf12a06e93 despues 0cdf12a06e93

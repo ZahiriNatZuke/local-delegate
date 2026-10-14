@@ -940,8 +940,29 @@ nuevos o la documentación en ficheros que el agente que renombra no toca, siemp
 **Orden de mezcla (explícito):**
 
 ```
-A10b (cierre del frente A) → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
+A10b → cierre del frente A (A-close-1…4) → higiene de CodeQL → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥ B4 } → B5 → [release 0.36.0]
 ```
+
+- **Higiene de CodeQL (añadida el 2026-10-14), entre el cierre del frente A y B0.** Un lote corto,
+  con su PR, que deja en 0 las alertas abiertas de code scanning en `main` (16 al 2026-10-14).
+  Va **antes** de B0 porque 6 de ellas están en `server.py`, que desde B2 tiene un solo dueño.
+  Las alertas se **arreglan**, no se descartan (también las que parezcan falso positivo: se
+  reescribe el código para que la regla no salte).
+  - **Seguridad (1):** `py/stack-trace-exposure` en `web/metrics.py:964` (`/api/llamaswap/watch`
+    devuelve `str(e)` al navegador). Pasa a un mensaje genérico con código 502 y el detalle va al
+    log. Test: la respuesta no contiene el texto de la excepción; control positivo con el mutante
+    que vuelve a `str(e)`.
+  - **Notas (15):** 7 `py/empty-except` (`server.py:864`, `:873`, `:4515`, `residency.py:1063`,
+    `hook_common.py:261`, `tests/fake_llama_server.py:134`): cada `except` lleva un motivo
+    explícito (log de depuración, o `contextlib.suppress` con comentario); 4
+    `py/unused-global-variable` (`topology.py:509-510`, `server.py:596`, `:1443`); 3
+    `py/catch-base-exception` en tests (`test_turn.py:261`, `test_turn_daemon.py:119`,
+    `test_affinity.py:210`); 1 `py/import-and-import-from` (`test_slowness.py:18`); 1
+    `py/mixed-returns` (`server.py:1249`). Las líneas son las del 2026-10-14: tras A-close-3 y 4 se
+    recalculan con `gh api repos/…/code-scanning/alerts?state=open`.
+  - **Sin cambio de comportamiento** salvo el mensaje del 502. Suite completa y `ruff` en verde.
+  - **Hecho cuando:** el PR mezclado y `gh api …/code-scanning/alerts?state=open` devuelve 0 en
+    `main`, y `gh pr checks` en verde con 0 alertas nuevas.
 
 - **Ninguna ola B se mezcla antes de A10b.** REQ-035 solo exige que estén las olas A de `src/`,
   pero todas las olas B tocan tests, y A9 y A10 renombran justo esos tests (`test_checks`,
@@ -992,7 +1013,7 @@ A10b (cierre del frente A) → B0 → B1 → B2 (lotes B2a → B2b) → { B3 ∥
     esperados, con el nombre que le haya dado A10 a `JOBS_ESPERADOS`). Ese trabajo solo ejecuta
     tests que ya existen cuando se mezcla B0;
   - existentes: `resources/hooks/hook_common.py` (`resolve_language` y `HOOK_TEXTS` vacío),
-    `config.py` (`LOCAL_DELEGATE_LANG` en `VARIABLES_DE_ENTORNO`), `tests/conftest.py` (fixtures
+    `config.py` (`LOCAL_DELEGATE_LANG` y, por la enmienda de REQ-028 del 2026-10-14, `LOCAL_DELEGATE_OUTPUT_LANGUAGE` con su validación, en `VARIABLES_DE_ENTORNO`), `tests/conftest.py` (fixtures
     automáticos `LOCAL_DELEGATE_LANG=es` y `LOCAL_DELEGATE_LOG_DIR=<tmp>`, y el fixture común de
     `locale` de Playwright con `es-ES` por defecto, que B4 usa) y el guardián de aislamiento
     (`tests/test_aislamiento_entorno.py`, con el nombre que le dé A9a; se amplía según D7).
@@ -1064,7 +1085,7 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
   `chains.py` (`describe`), `sections.py` (aviso), `resources/i18n/{es,en}/{mcp,tools}.json`,
   `tests/data/uncatalogued_pending/mcp.json`, los tests nuevos `tests/test_mcp_english.py` y
   `tests/test_tool_contract.py`, `scripts/data/measurement_boundaries.json` (nace),
-  `docs/wiki/Configuration.md` (solo `:221-234`, el contrato), `tests/fixtures/lang_sample/` (D10)
+  `docs/wiki/Configuration.md` (solo `:221-234`, el contrato, y la entrada de `LOCAL_DELEGATE_OUTPUT_LANGUAGE`), `tests/fixtures/lang_sample/` (D10)
   y `rename-exceptions.md` (se vacía la sección «pendiente»).
 - **B2a, salidas y `local_status`.**
   - **REQ:** 023, 026 (MCP: enteros sin separador y decimales con punto), 019 (`local_status`
@@ -1087,6 +1108,19 @@ B2b), cada uno con su commit y su PR. Los dos salen en la **misma versión**.
   - *descripciones:* no cambian con `LOCAL_DELEGATE_LANG`. Mutante: pasarlas por `t()`.
   - *prompts:* las 4 tools piden el idioma vigente; el prompt de `local_commit_msg` es idéntico con
     `es` y con `en`. Mutante: añadir el idioma a `commit_msg`.
+  - *idioma de respuesta en texto libre (enmienda de REQ-028 del 2026-10-14, issue #260):*
+    `LOCAL_DELEGATE_OUTPUT_LANGUAGE` en `config.py` (lectura con validación: 1–40 caracteres, sin
+    saltos ni control) y una sola función en `server.py` que resuelve el idioma de respuesta
+    (variable de salida → idioma vigente) y que usan las 4 tools, también en cada paso del
+    troceado. `local_status` (y `doctor`, vía la misma función) muestran el valor efectivo y su
+    origen. `config.py` es de B0: B0 deja la lectura de la variable y B2b la usa. Tests: puesta
+    (`fr`, `português`) → aparece en el prompt de las 4 tools y en cada paso del map-reduce;
+    vacía o no válida (`"a\nb"`, 41 caracteres) → prompt del idioma vigente y aviso;
+    `local_commit_msg` idéntico con y sin ella. Mutantes: ignorar la variable (fallan los de
+    «puesta»); aplicarla también a `commit_msg` (falla el de `commit_msg`); ponerla solo en el
+    paso de reducción (falla el del map-reduce). Muestra en vivo con `fr` en la misma ventana de
+    D10 (≥5 documentos por tool en `en`/`es`, ≥90 % en francés), en
+    `evidence/B2/lang-sample.json`. La wiki (`Configuration.md`) documenta la variable.
   - *recibos en inglés:* sin cadenas `es` del catálogo.
   - *números:* `20027`, no `20,027`.
   - *muestra en vivo de D10:* se guarda en `evidence/B2/lang-sample.json` con el id de la ventana.

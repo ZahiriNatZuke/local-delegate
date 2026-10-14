@@ -51,6 +51,25 @@ CONNECTION_CAUSE_VALUES: dict[str, str] = {
 #: resultados congelados dicen `calidad` y `techo`.
 CORPUS_KIND_VALUES: dict[str, str] = {"calidad": "quality", "techo": "ceiling"}
 
+#: La procedencia (`provenance`) y el tipo de entrada (`media_type`) de cada caso del corpus, tal
+#: como los escribe `build_corpus` en `benchmarks/*/cases.json` (cierre del frente A, lote 3): los
+#: corpus congelados dicen `congelado`, `generado`, `reconstruido`, `inventado`, `texto` e `imagen`.
+CORPUS_PROVENANCE_VALUES: dict[str, str] = {
+    "congelado": "frozen",
+    "generado": "generated",
+    "reconstruido": "reconstructed",
+    "inventado": "made_up",
+}
+CORPUS_MEDIA_VALUES: dict[str, str] = {"texto": "text", "imagen": "image"}
+
+#: El papel de un caso en la hoja de commits (`sheet_role` del corpus de afinidad) y el tipo de un par
+#: de la hoja (`kind` de la clave y del juicio), y el lado de la trampa en `sides` (lote 3): lo
+#: congelado dice `trampa`.
+SHEET_TRAP_VALUES: dict[str, str] = {"trampa": "trap"}
+
+#: El tipo del puntuador (`scorer.kind`) de los casos de afinidad que no se puntúan solos (lote 3).
+SCORER_KIND_VALUES: dict[str, str] = {"techo": "ceiling", "hoja": "sheet"}
+
 FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     # Log de uso (`usage-*.jsonl`).
     "usage": {
@@ -237,7 +256,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
     "benchmark_results": {
         "keys": {"descartada": "discarded", "descartada_motivo": "discarded_reason"},
         "values": {
-            "outcome": {"rechazo_por_contexto": "context_rejection"},
+            "outcome": {"rechazo_por_contexto": "context_rejection", "truncado": "truncated"},
             "kind": CORPUS_KIND_VALUES,
         },
     },
@@ -251,6 +270,8 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
         "keys": {"procedencia": "provenance", "origen": "origin"},
         "values": {
             "kind": CORPUS_KIND_VALUES,
+            "provenance": CORPUS_PROVENANCE_VALUES,
+            "media_type": CORPUS_MEDIA_VALUES,
             "reference_signal": {
                 "cobertura": "coverage",
                 "prohibido": "forbidden",
@@ -292,8 +313,8 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "puntuador": "scorer",
         },
         # El tipo del caso (ola A10b-5): `analyze_benchmark` lo compara al elegir los casos de cada
-        # celda.
-        "values": {"kind": CORPUS_KIND_VALUES},
+        # celda; y su papel en la hoja (lote 3), con el que deja fuera las trampas.
+        "values": {"kind": CORPUS_KIND_VALUES, "sheet_role": SHEET_TRAP_VALUES},
     },
     # El primer nivel del corpus de afinidad y su `selection` (ola A10b-4), tal como los lee
     # `build_corpus.check_versioned_affinity` (`normalize_affinity_corpus`).
@@ -353,7 +374,8 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
                 "misma-zona": "same-zone",
                 "secundario": "secondary",
                 "generico": "generic",
-            }
+            },
+            "kind": SHEET_TRAP_VALUES,
         },
     },
     # Las respuestas de la hoja de commits (`respuestas-<n>.json`, las de la hoja 1 congeladas,
@@ -401,6 +423,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "conteos": "counts",
             "formato": "format",
         },
+        "values": {"kind": SCORER_KIND_VALUES},
     },
     # `reglas.json` de la evaluación de afinidad (congelado, escrito a mano; ahora `rules.json`).
     # La misma tabla vale para el primer nivel, `formato` y `sin_adornos`
@@ -436,6 +459,7 @@ FORMATS: dict[str, dict[str, dict[str, Any]]] = {
             "especifico": "specific",
             "caso": "case",
         },
+        "values": {"kind": SHEET_TRAP_VALUES},
     },
     # El motivo por el que CP-3 deja fuera un caso (`reason` de cada caso de `cp3.json`, que
     # escribe `analyze_benchmark cp3 --json` y relee `decide --cp3`; ola A10b-6).
@@ -707,10 +731,21 @@ def normalize_commit_judgement(data: Mapping[str, Any]) -> dict[str, Any]:
     out = normalize("commit_judgement", data)
     if isinstance(out.get("pairs"), Mapping):
         out["pairs"] = {
-            k: normalize("commit_judgement", p) if isinstance(p, Mapping) else p
+            k: _normalize_pair_sides(normalize("commit_judgement", p))
+            if isinstance(p, Mapping)
+            else p
             for k, p in out["pairs"].items()
         }
     return out
+
+
+def _normalize_pair_sides(pair: dict[str, Any]) -> dict[str, Any]:
+    """El lado de la trampa de un par (`sides`, `{"A": "trampa", "B": <modelo>}` en lo congelado)
+    con el valor nuevo. Los lados de un modelo se copian tal cual."""
+    sides = pair.get("sides")
+    if isinstance(sides, Mapping):
+        pair["sides"] = {side: new_value(SHEET_TRAP_VALUES, who) for side, who in sides.items()}
+    return pair
 
 
 def normalize_affinity_corpus(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -766,7 +801,7 @@ def normalize_commit_key(data: Mapping[str, Any]) -> dict[str, Any]:
     out = normalize("commit_key", data)
     if isinstance(out.get("pairs"), Mapping):
         out["pairs"] = {
-            k: normalize("commit_key", p) if isinstance(p, Mapping) else p
+            k: _normalize_pair_sides(normalize("commit_key", p)) if isinstance(p, Mapping) else p
             for k, p in out["pairs"].items()
         }
     return out

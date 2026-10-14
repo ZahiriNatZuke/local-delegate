@@ -1,0 +1,9 @@
+nombres en español (únicos por categoría y fichero): 708
+  file_name: 1
+  identifier: 10
+  js_identifier: 2
+  js_string: 9
+  string_key: 362
+  string_value: 324
+fuera de la lista de excepciones: 467
+palabras sin clasificar: 785
