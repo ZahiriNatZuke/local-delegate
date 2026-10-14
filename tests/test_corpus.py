@@ -130,7 +130,7 @@ def _case(**changes):
         "tool": "local_summarize",
         "role": "mechanical",
         "kind": "quality",
-        "provenance": "inventado",
+        "provenance": "made_up",
         "origin": "test",
         "source": build.literal_text(""),
         "expected_terms": ("prueba",),
@@ -818,7 +818,7 @@ def test_affinity_corpus_has_spec_size(affinity):
     assert tally("local_lint_summary", **new_items) == 4
     assert tally("local_delegate", **new_items) == 4
     assert tally("local_commit_msg", sheet_role="real") == 30
-    assert tally("local_commit_msg", sheet_role="trampa") == 9
+    assert tally("local_commit_msg", sheet_role="trap") == 9
     regression = [
         c["id"]
         for c in cases
@@ -877,7 +877,7 @@ def test_corpus_declares_what_spec_requires(affinity):
 def test_traps_match_no_real_case_and_do_not_repeat(affinity):
     folder, data, _ = affinity
     real = [c for c in data["cases"] if c.get("sheet_role") == "real"]
-    traps = [c for c in data["cases"] if c.get("sheet_role") == "trampa"]
+    traps = [c for c in data["cases"] if c.get("sheet_role") == "trap"]
     assert not {c["commit"] for c in real} & {c["commit"] for c in traps}
     assert not {c["source_sha256"] for c in real} & {c["source_sha256"] for c in traps}
     assert len({c["source_sha256"] for c in real + traps}) == 39
@@ -987,3 +987,54 @@ def test_frozen_affinity_corpus_is_read_with_the_new_keys():
         assert {"provenance", "origin"} <= set(case) and "procedencia" not in case, case["id"]
         assert "kind" in case["scorer"] and "tipo" not in case["scorer"], case["id"]
     assert legacy_names.normalize_affinity_corpus(corpus) == corpus
+
+
+# --- Valores del corpus en inglés y su lectura dual (cierre del frente A, lote 3) -------------------
+
+# Escritas a mano: si salieran de `legacy_names`, una tabla vacía daría un formato «viejo» igual al
+# nuevo y el test no distinguiría nada.
+_OLD_PROVENANCES = {
+    "congelado": "frozen",
+    "generado": "generated",
+    "reconstruido": "reconstructed",
+    "inventado": "made_up",
+}
+_OLD_MEDIA = {"texto": "text", "imagen": "image"}
+_OLD_SHEET_ROLES = {"trampa": "trap", "real": "real", None: None}
+_OLD_SCORER_KINDS = {"techo": "ceiling", "hoja": "sheet"}
+
+
+@pytest.mark.parametrize("corpus", ["catalogo-2026-09", "afinidad-2026-10"])
+def test_frozen_corpus_values_are_read_in_english(corpus):
+    """Los corpus congelados dicen `congelado`, `texto`, `trampa`, `techo`…; `load_corpus` y
+    `normalize_affinity_corpus` los dan en inglés."""
+    raw = json.loads((ROOT / "benchmarks" / corpus / "cases.json").read_text(encoding="utf-8"))
+    cases = raw["cases"]
+    # Control: lo congelado sigue con los valores de antes; si no, el test no probaría nada.
+    assert {c["procedencia"] for c in cases} == set(_OLD_PROVENANCES)
+    assert {c["media_type"] for c in cases} <= set(_OLD_MEDIA)
+    expected_provenance = [_OLD_PROVENANCES[c["procedencia"]] for c in cases]
+    expected_media = [_OLD_MEDIA[c["media_type"]] for c in cases]
+    normalized = legacy_names.normalize_affinity_corpus(raw)["cases"]
+    assert [c["provenance"] for c in normalized] == expected_provenance
+    assert [c["media_type"] for c in normalized] == expected_media
+    if corpus == "catalogo-2026-09":
+        assert "imagen" in {c["media_type"] for c in cases}
+        loaded = benchmark.load_corpus(ROOT / "benchmarks" / corpus / "cases.json").cases
+        assert [c.provenance for c in loaded] == expected_provenance
+        assert [c.media_type for c in loaded] == expected_media
+        return
+    assert "trampa" in {c.get("rol_en_hoja") for c in cases}
+    assert {"techo", "hoja"} <= {c["puntuador"]["tipo"] for c in cases}
+    assert [c["sheet_role"] for c in normalized] == [
+        _OLD_SHEET_ROLES[c.get("rol_en_hoja")] for c in cases
+    ]
+    assert [c["scorer"]["kind"] for c in normalized] == [
+        _OLD_SCORER_KINDS.get(c["puntuador"]["tipo"], c["puntuador"]["tipo"]) for c in cases
+    ]
+    # Un caso ya nuevo sale igual.
+    new = {"provenance": "frozen", "media_type": "text", "sheet_role": "trap"}
+    assert (
+        legacy_names.normalize("affinity_case", legacy_names.normalize("benchmark_corpus", new))
+        == new
+    )

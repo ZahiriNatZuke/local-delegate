@@ -50,8 +50,8 @@ _TRACKED_METRICS = {
 
 _CORPUS_KINDS = {"quality", "ceiling"}
 _CORPUS_ROLES = {"mechanical", "long", "code", "vision"}
-_CORPUS_PROVENANCES = {"congelado", "generado", "reconstruido", "inventado"}
-_CORPUS_MEDIA = {"texto", "imagen"}
+_CORPUS_PROVENANCES = {"frozen", "generated", "reconstructed", "made_up"}
+_CORPUS_MEDIA = {"text", "image"}
 
 
 @dataclass(frozen=True)
@@ -1045,7 +1045,7 @@ def build_payload(
     raw = case.raw
     data = case.source if source is None else source
     user: Any
-    if case.media_type == "imagen":
+    if case.media_type == "image":
         mime = _IMAGE_MIME[Path(case.source_file).suffix.lower()]
         encoded = base64.b64encode(data).decode("ascii")
         user = [
@@ -1129,7 +1129,7 @@ def post_attempt(client: httpx2.Client, url: str, payload: dict[str, Any]) -> At
         # la misma clase que ya da `failures.py`. Repetirlo con mas tokens taparia el problema.
         outcome = failures.FailureClass.CONFIGURATION.value
     elif finish == "length":
-        outcome = "truncado"
+        outcome = "truncated"
     elif not isinstance(content, str):
         outcome, error = "error", "content nulo"
     else:
@@ -1264,7 +1264,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
                             result = post_attempt(client, f"{base_url}/chat/completions", payload)
                         elapsed_ms = round((time.perf_counter() - started) * 1000)
                         resource_summary = resources.summary()
-                        scored = case.kind == "quality" and result.outcome in ("ok", "truncado")
+                        scored = case.kind == "quality" and result.outcome in ("ok", "truncated")
                         record: dict[str, Any] = {
                             "schema_version": 2,
                             "ts": datetime.now(UTC).isoformat(),
@@ -1346,15 +1346,15 @@ def run_benchmark(args: argparse.Namespace) -> int:
                         if annul is not None and annul_retries < MAX_ANNUL_RETRIES:
                             annul_retries += 1
                             attempt += 1
-                            retry_reason = "anulada"
+                            retry_reason = "voided"
                             continue
                         # Truncado se repite UNA vez con el doble de max_tokens (§4.7 punto 3); si
                         # vuelve a truncar, ya puntuo 0 arriba.
-                        if result.outcome == "truncado" and case.kind == "quality" and not doubled:
+                        if result.outcome == "truncated" and case.kind == "quality" and not doubled:
                             doubled = True
                             attempt += 1
                             max_tokens *= 2
-                            retry_reason = "truncado"
+                            retry_reason = "truncated"
                             continue
                         break
     finally:

@@ -286,7 +286,7 @@ def _scenario(
             records.append(_record(model, f"k{i}", text))
     entries = []
     for j in range(3):
-        cases[f"t{j}"] = {"id": f"t{j}", "source_file": f"t{j}.diff", "sheet_role": "trampa"}
+        cases[f"t{j}"] = {"id": f"t{j}", "source_file": f"t{j}.diff", "sheet_role": "trap"}
         (tmp_path / "fuentes" / f"t{j}.diff").write_text(_diff(f"t{j}"), encoding="utf-8")
         # El 26B cierra con punto y Qwen3.6 sin el, como en la tanda real.
         records.append(
@@ -358,9 +358,9 @@ def _responses(key, *, c=0, v=0, ties=0, invents=0, traps="peor", complete=False
             "preference": l26 if who == "c" else lq if who == "v" else "=",
         }
     for num, p in sorted(key["pairs"].items()):
-        if p["kind"] != "trampa" or traps is None:
+        if p["kind"] != "trap" or traps is None:
             continue
-        model = next(m for m in p["sides"].values() if m != "trampa")
+        model = next(m for m in p["sides"].values() if m != "trap")
         model_side = _side(key, num, model)
         trap_side = "A" if model_side == "B" else "B"
         responses[num] = {
@@ -399,11 +399,11 @@ def test_sheet_gives_nobody_away(tmp_path):
     assert not repeated, repeated[:1]
     assert len(set(texts)) == len(texts)
     # Las trampas copian la forma del mensaje con el que se emparejan.
-    traps = [(n, p) for n, p in key["pairs"].items() if p["kind"] == "trampa"]
+    traps = [(n, p) for n, p in key["pairs"].items() if p["kind"] == "trap"]
     assert len(traps) == 3
     by_num = {pair_["num"]: pair_ for pair_ in sheet["pairs"]}
     for num, p in traps:
-        trap_side = "A" if p["sides"]["A"] == "trampa" else "B"
+        trap_side = "A" if p["sides"]["A"] == "trap" else "B"
         other_side = "B" if trap_side == "A" else "A"
         trap, pair = by_num[num][trap_side], by_num[num][other_side]
         assert pair_sheet.shape(trap) == pair_sheet.shape(pair)
@@ -418,7 +418,7 @@ def test_sheet_gives_nobody_away(tmp_path):
 def test_key_not_next_to_sheet(tmp_path):
     _sheet_, _key, _rules, paths = _generate_to_disk(tmp_path)
     sheet_dir_path = tmp_path / "sheet"
-    assert not (sheet_dir_path / "clave-1.json").exists()
+    assert not (sheet_dir_path / "key-1.json").exists()
     assert not list(sheet_dir_path.glob("clave*"))
     assert paths["key"].is_file() and paths["key"].parent == tmp_path / "key"
     with pytest.raises(SystemExit, match="otra carpeta|carpeta de la hoja"):
@@ -441,7 +441,7 @@ def test_same_seed_same_sheet_and_traps_not_always_same_positions(tmp_path):
     all_ones = set()
     for seed in range(1, 9):
         _, key, _, _ = _sheet(tmp_path, seed=seed)
-        positions = sorted(int(n) for n, p in key["pairs"].items() if p["kind"] == "trampa")
+        positions = sorted(int(n) for n, p in key["pairs"].items() if p["kind"] == "trap")
         assert positions != list(range(total - 2, total + 1)), f"semilla {seed}: trampas al final"
         all_ones.add(tuple(positions))
     assert len(all_ones) > 1
@@ -521,11 +521,11 @@ def test_trap_and_pair_also_split_without_bias(tmp_path):
     seen_set = set()
     for seed in SEEDS:
         _, key, _rules, _ = _sheet(tmp_path, seed=seed)
-        traps = [p for p in key["pairs"].values() if p["kind"] == "trampa"]
+        traps = [p for p in key["pairs"].values() if p["kind"] == "trap"]
         assert len(traps) == 3
-        in_a = sum(p["sides"]["A"] == "trampa" for p in traps)
+        in_a = sum(p["sides"]["A"] == "trap" for p in traps)
         assert in_a in (1, 2), f"semilla {seed}: la trampa esta en A {in_a} veces de 3"
-        pairs = [next(m for m in p["sides"].values() if m != "trampa") for p in traps]
+        pairs = [next(m for m in p["sides"].values() if m != "trap") for p in traps]
         assert pairs.count(L26) in (1, 2), f"semilla {seed}: parejas {pairs}"
         seen_set.add(in_a)
     assert seen_set == {
@@ -1063,7 +1063,7 @@ def test_does_not_import_package(tmp_path):
         ]
     )
     assert proc.returncode == 0, proc.stderr
-    key = json.loads((tmp_path / "key" / "clave-1.json").read_text(encoding="utf-8"))
+    key = json.loads((tmp_path / "key" / "key-1.json").read_text(encoding="utf-8"))
     (tmp_path / "partial.json").write_text(
         json.dumps(_responses(key, c=5, invents=3)), encoding="utf-8"
     )
@@ -1072,7 +1072,7 @@ def test_does_not_import_package(tmp_path):
             "read-commit",
             "--partial",
             "--key",
-            str(tmp_path / "key" / "clave-1.json"),
+            str(tmp_path / "key" / "key-1.json"),
             "--rules",
             str(tmp_path / "rules.json"),
             "--answers",
@@ -1100,7 +1100,12 @@ def test_the_frozen_key_answers_and_rules_give_a_complete_judgement_in_the_new_f
     judgement, missing = pair_sheet.read_commit(answers, key, rules)
     assert missing == []
     assert len(judgement["pairs"]) == len(key["pares"]) == 33
-    assert {p["kind"] for p in judgement["pairs"].values()} == {"real", "trampa"}
+    # El par trampa y su lado (lote 3): lo congelado dice `trampa` en `tipo` y en `lados`.
+    assert {p["tipo"] for p in key["pares"].values()} == {"real", "trampa"}
+    assert {p["kind"] for p in judgement["pairs"].values()} == {"real", "trap"}
+    traps = [p for p in judgement["pairs"].values() if p["kind"] == "trap"]
+    assert len(traps) == 3 and all("trap" in p["sides"].values() for p in traps), traps
+    assert not any("trampa" in p["sides"].values() for p in judgement["pairs"].values())
     for pair in judgement["pairs"].values():
         assert {"case", "sides", "made_up", "principal", "specific", "preference"} <= set(pair)
         assert pair["preference"] in {"A", "B", "="}

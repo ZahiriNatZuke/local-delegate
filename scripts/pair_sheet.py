@@ -226,7 +226,7 @@ def unblind(sheet: str, key: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
 AFFINITY_BASE = Path(__file__).resolve().parents[1] / "benchmarks" / "afinidad-2026-10"
 MODEL_26B = "gemma4-26b-a4b"
 QWEN_MODEL = "qwen36-35b-a3b"
-TRAP = "trampa"
+TRAP = "trap"
 
 
 def _affinity_file(names: tuple[str, str]) -> Path:
@@ -795,7 +795,7 @@ function exportar(state, data, partial) {
 <script id="interfaz">
 (function () {
   const data = JSON.parse(document.getElementById("datos").textContent);
-  const key = "hoja-commit-" + data.id.slice(0, 16);
+  const key = "commit-sheet-" + data.id.slice(0, 16);
   let state = {};
   try { state = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { state = {}; }
   const NAMES = { s: "sí", n: "no", p: "parcial" };
@@ -868,11 +868,11 @@ function exportar(state, data, partial) {
   }
   document.getElementById("descargar").addEventListener("click", () => {
     const n = missing(state, data).length;
-    download("respuestas-" + data.n + ".json", exportar(state, data, n > 0));
+    download("answers-" + data.n + ".json", exportar(state, data, n > 0));
     document.getElementById("aviso").textContent = n > 0 ? "Descargadas con " + n + " respuestas sin contestar." : "Descargadas.";
   });
   document.getElementById("parar").addEventListener("click", () => {
-    download("respuestas-parcial-" + data.n + ".json", exportar(state, data, true));
+    download("answers-partial-" + data.n + ".json", exportar(state, data, true));
     document.getElementById("aviso").textContent = "Descargado: pásalo para saber si puedes parar.";
   });
   refresh();
@@ -903,14 +903,14 @@ def write_sheet(
     sheet_dir: Path,
     key_dir: Path,
 ) -> dict[str, Path]:
-    """Escribe `hoja-<n>.html`, `hoja-<n>.md` y `clave-<n>.json`; la clave en OTRA carpeta."""
+    """Escribe `sheet-<n>.html`, `sheet-<n>.md` y `key-<n>.json`; la clave en OTRA carpeta."""
     if sheet_dir.resolve() == key_dir.resolve():
         raise SystemExit("la clave no puede ir en la carpeta de la hoja")
     n = sheet["n"]
     paths = {
-        "html": sheet_dir / f"hoja-{n}.html",
-        "md": sheet_dir / f"hoja-{n}.md",
-        "key": key_dir / f"clave-{n}.json",
+        "html": sheet_dir / f"sheet-{n}.html",
+        "md": sheet_dir / f"sheet-{n}.md",
+        "key": key_dir / f"key-{n}.json",
     }
     existing = [str(r) for r in paths.values() if r.exists()]
     if existing:
@@ -1162,8 +1162,8 @@ def main(argv: list[str] | None = None) -> int:
     gc.add_argument("--seed", type=int, default=None, help="solo para pruebas")
     gc.add_argument("--label-26b", default=MODEL_26B)
     gc.add_argument("--label-qwen", default=QWEN_MODEL)
-    gc.add_argument("--sheet-dir", type=Path, default=AFFINITY_BASE / "hoja")
-    gc.add_argument("--key-dir", type=Path, default=AFFINITY_BASE / "clave")
+    gc.add_argument("--sheet-dir", type=Path, default=AFFINITY_BASE / "sheet")
+    gc.add_argument("--key-dir", type=Path, default=AFFINITY_BASE / "key")
     gc.add_argument(
         "jsonl", nargs="+", type=Path, help="resultados de la tanda con --save-responses"
     )
@@ -1171,7 +1171,7 @@ def main(argv: list[str] | None = None) -> int:
     lc.add_argument("--key", type=Path, required=True)
     lc.add_argument("--rules", type=Path, default=_affinity_file(LEGACY_NAMES.RULES_FILE_NAMES))
     origin = lc.add_mutually_exclusive_group(required=True)
-    origin.add_argument("--answers", type=Path, help="respuestas-<n>.json de la pagina")
+    origin.add_argument("--answers", type=Path, help="answers-<n>.json de la pagina")
     origin.add_argument("--md", type=Path, help="la hoja .md contestada a mano")
     lc.add_argument("--partial", action="store_true", help="solo contesta «puedes parar» o «sigue»")
     lc.add_argument(
