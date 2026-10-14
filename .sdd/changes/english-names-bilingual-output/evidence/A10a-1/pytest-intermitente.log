@@ -1,0 +1,3 @@
+[pesado] plaza plaza-1 tomada tras 0s: D:\Projects\local-delegate\.venv\Scripts\python.exe -m pytest tests/test_fake_llamaswap.py::test_a_ttl_counts_from_request_end -q -p no:cacheprovider
+.                                                                        [100%]
+1 passed in 8.96s

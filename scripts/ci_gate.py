@@ -77,7 +77,7 @@ API = "https://api.github.com"
 
 # El propio gate, que obviamente no se espera a sí mismo. La constante la comparte el test que ata
 # esta lista a `ci.yml`, para que renombrar el job no obligue a tocar dos sitios.
-NOMBRE_DEL_GATE = "ci-gate"
+GATE_NAME = "ci-gate"
 
 # Los jobs de `ci.yml`, EXPLÍCITOS y no «los que haya en el run». Preguntar por los que aparezcan
 # invita al peor fallo posible aquí: consultar antes de que se creen y pasar en verde sin haber
@@ -87,7 +87,7 @@ NOMBRE_DEL_GATE = "ci-gate"
 # `install-smoke` está DELIBERADAMENTE en la lista, y eso lo convierte en bloqueante de hecho, que
 # antes no lo era. Fue una decisión tomada al diseñar el gate, no un descuido, y tiene su pero: ese
 # job depende de PyPI en vivo, así que un índice degradado bloqueará PRs sin que nada esté roto.
-JOBS_ESPERADOS = (
+EXPECTED_JOBS = (
     "lint",
     "test (ubuntu-latest)",
     "test (windows-latest)",
@@ -100,44 +100,44 @@ JOBS_ESPERADOS = (
 # corre solo sobre la ejecución. Un `install-smoke` que espere runner 5 min y ejecute 10 suma 15, y
 # declararlo fallo sería cambiar un bloqueo ocasional por falsos rojos. En repo público los minutos
 # no se facturan y el caso normal se resuelve en segundos.
-ESPERA_MAX_S = 25 * 60
-INTERVALO_S = 10
+MAX_WAIT_S = 25 * 60
+INTERVAL_S = 10
 
-INTENTOS_API = 5
+API_ATTEMPTS = 5
 TIMEOUT_HTTP_S = 20
 
 STEP_FINAL = "Complete job"
-CONCLUSIONES_BUENAS = frozenset({"success", "skipped"})
+GOOD_CONCLUSIONS = frozenset({"success", "skipped"})
 
 OK = 0
-FALLO_JOB = 1
-FALLO_PLAZO = 2
-FALLO_API = 3
+JOB_FAILURE = 1
+TIMEOUT_FAILURE = 2
+API_FAILURE = 3
 
-ESPERAR = "esperar"
-BIEN = "bien"
-MAL = "mal"
+WAIT = "esperar"
+GOOD = "bien"
+BAD = "mal"
 
 
-class ApiNoDisponible(Exception):
+class ApiUnavailable(Exception):
     """La API no contestó nada utilizable tras agotar los intentos."""
 
 
-class Veredicto(NamedTuple):
-    estado: str  # BIEN | MAL | ESPERAR
-    motivo: str
-    fantasma: bool = False
+class Verdict(NamedTuple):
+    state: str  # GOOD | BAD | WAIT
+    reason: str
+    phantom: bool = False
 
 
-def veredicto_de_job(job: dict) -> Veredicto:
+def job_verdict(job: dict) -> Verdict:
     """Decide sobre un job. Función pura: todo el criterio del gate se prueba con esto."""
     conclusion = job.get("conclusion")
 
-    if conclusion in CONCLUSIONES_BUENAS:
-        return Veredicto(BIEN, f"conclusion={conclusion}")
+    if conclusion in GOOD_CONCLUSIONS:
+        return Verdict(GOOD, f"conclusion={conclusion}")
     if conclusion is not None:
         # failure, cancelled, timed_out, action_required... nada de esto habilita un merge.
-        return Veredicto(MAL, f"conclusion={conclusion}")
+        return Verdict(BAD, f"conclusion={conclusion}")
 
     steps = job.get("steps") or []
 
@@ -145,30 +145,30 @@ def veredicto_de_job(job: dict) -> Veredicto:
     # su `Complete job` en success igualmente. Al revés, esto sería un falso verde de manual.
     for step in steps:
         c = step.get("conclusion")
-        if c is not None and c not in CONCLUSIONES_BUENAS:
-            return Veredicto(MAL, f"el paso '{step.get('name')}' terminó en {c}")
+        if c is not None and c not in GOOD_CONCLUSIONS:
+            return Verdict(BAD, f"el paso '{step.get('name')}' terminó en {c}")
 
     if steps and steps[-1].get("name") == STEP_FINAL and steps[-1].get("conclusion") == "success":
-        return Veredicto(
-            BIEN,
+        return Verdict(
+            GOOD,
             f"el job sigue abierto ({job.get('status')}) pero el runner llegó a "
             f"'{STEP_FINAL}': {len(steps)} pasos terminados",
-            fantasma=True,
+            phantom=True,
         )
 
-    hechos = sum(1 for s in steps if s.get("conclusion") is not None)
-    return Veredicto(ESPERAR, f"{job.get('status')}, {hechos}/{len(steps)} pasos concluidos")
+    done = sum(1 for s in steps if s.get("conclusion") is not None)
+    return Verdict(WAIT, f"{job.get('status')}, {done}/{len(steps)} pasos concluidos")
 
 
-def leer_jobs(repo: str, run_id: str, token: str) -> list[dict]:
-    """Devuelve los jobs del run. Lanza `ApiNoDisponible` si no hay forma de leerlos.
+def read_jobs(repo: str, run_id: str, token: str) -> list[dict]:
+    """Devuelve los jobs del run. Lanza `ApiUnavailable` si no hay forma de leerlos.
 
     `filter=latest` es explícito a propósito: con `all` volverían los jobs de intentos anteriores y,
     tras un `rerun`, el gate vería el intento fallido y fallaría para siempre en ese run.
     `per_page=100` evita que un job quede fuera de la primera página y no aparezca nunca.
     """
     url = f"{API}/repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100"
-    peticion = urllib.request.Request(
+    request = urllib.request.Request(
         url,
         headers={
             "Accept": "application/vnd.github+json",
@@ -178,103 +178,101 @@ def leer_jobs(repo: str, run_id: str, token: str) -> list[dict]:
         },
     )
 
-    ultimo = ""
-    for intento in range(1, INTENTOS_API + 1):
+    last = ""
+    for attempt in range(1, API_ATTEMPTS + 1):
         try:
-            with urllib.request.urlopen(peticion, timeout=TIMEOUT_HTTP_S) as r:
-                datos = json.loads(r.read().decode("utf-8"))
-            jobs = datos.get("jobs")
+            with urllib.request.urlopen(request, timeout=TIMEOUT_HTTP_S) as r:
+                data = json.loads(r.read().decode("utf-8"))
+            jobs = data.get("jobs")
             if not isinstance(jobs, list):
                 raise TypeError("la respuesta no trae una lista 'jobs'")
             return jobs
         except (urllib.error.URLError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            ultimo = f"{type(exc).__name__}: {exc}"
-            if intento < INTENTOS_API:
-                time.sleep(2 * intento)
+            last = f"{type(exc).__name__}: {exc}"
+            if attempt < API_ATTEMPTS:
+                time.sleep(2 * attempt)
 
-    raise ApiNoDisponible(f"tras {INTENTOS_API} intentos: {ultimo}")
+    raise ApiUnavailable(f"tras {API_ATTEMPTS} intentos: {last}")
 
 
-def evaluar(jobs: list[dict]) -> dict[str, Veredicto]:
+def evaluate(jobs: list[dict]) -> dict[str, Verdict]:
     """Da un veredicto a cada job esperado. Uno que aún no existe en el run se espera, no se
     inventa."""
-    por_nombre = {j.get("name"): j for j in jobs}
-    resultados: dict[str, Veredicto] = {}
-    for nombre in JOBS_ESPERADOS:
-        job = por_nombre.get(nombre)
+    by_name = {j.get("name"): j for j in jobs}
+    results: dict[str, Verdict] = {}
+    for name in EXPECTED_JOBS:
+        job = by_name.get(name)
         if job is None:
-            resultados[nombre] = Veredicto(ESPERAR, "todavía no aparece en el run")
+            results[name] = Verdict(WAIT, "todavía no aparece en el run")
         else:
-            resultados[nombre] = veredicto_de_job(job)
-    return resultados
+            results[name] = job_verdict(job)
+    return results
 
 
-def _informe(
-    titulo: str, resultados: dict[str, Veredicto], escribir: Callable[[str], None]
-) -> None:
-    marca = {BIEN: "OK  ", MAL: "FALLO", ESPERAR: "..."}
-    escribir(titulo)
-    for nombre, v in resultados.items():
-        escribir(f"  [{marca[v.estado]:<5}] {nombre}: {v.motivo}")
+def _report(title: str, results: dict[str, Verdict], write: Callable[[str], None]) -> None:
+    mark = {GOOD: "OK  ", BAD: "FALLO", WAIT: "..."}
+    write(title)
+    for name, v in results.items():
+        write(f"  [{mark[v.state]:<5}] {name}: {v.reason}")
 
-    fantasmas = [n for n, v in resultados.items() if v.fantasma]
-    if fantasmas:
-        escribir("")
-        escribir(
+    phantoms = [n for n, v in results.items() if v.phantom]
+    if phantoms:
+        write("")
+        write(
             "Jobs dados por buenos por sus pasos, con GitHub sin cerrarlos (el «job fantasma»): "
-            + ", ".join(fantasmas)
+            + ", ".join(phantoms)
         )
 
-    resumen = os.environ.get("GITHUB_STEP_SUMMARY")
-    if resumen:
-        with open(resumen, "a", encoding="utf-8") as fh:
-            fh.write(f"### {titulo}\n\n")
-            for nombre, v in resultados.items():
-                fh.write(f"- `{nombre}`: **{v.estado}** — {v.motivo}\n")
-            if fantasmas:
-                fh.write(f"\n> Job fantasma detectado: {', '.join(f'`{n}`' for n in fantasmas)}\n")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as fh:
+            fh.write(f"### {title}\n\n")
+            for name, v in results.items():
+                fh.write(f"- `{name}`: **{v.state}** — {v.reason}\n")
+            if phantoms:
+                fh.write(f"\n> Job fantasma detectado: {', '.join(f'`{n}`' for n in phantoms)}\n")
             fh.write("\n")
 
 
-def esperar_veredicto(
+def wait_for_verdict(
     repo: str,
     run_id: str,
     token: str,
     *,
-    leer: Callable[[str, str, str], list[dict]] = leer_jobs,
-    reloj: Callable[[], float] = time.monotonic,
-    dormir: Callable[[float], None] = time.sleep,
-    escribir: Callable[[str], None] = print,
+    read: Callable[[str, str, str], list[dict]] = read_jobs,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+    write: Callable[[str], None] = print,
 ) -> int:
     """Espera hasta que todos los jobs esperados tengan veredicto, y devuelve el código de salida."""
-    inicio = reloj()
+    start = clock()
     while True:
         try:
-            jobs = leer(repo, run_id, token)
-        except ApiNoDisponible as exc:
-            escribir(f"No se pudo consultar la API de Actions: {exc}")
-            escribir("El gate falla: sin poder leer el run, no hay nada que dar por bueno.")
-            return FALLO_API
+            jobs = read(repo, run_id, token)
+        except ApiUnavailable as exc:
+            write(f"No se pudo consultar la API de Actions: {exc}")
+            write("El gate falla: sin poder leer el run, no hay nada que dar por bueno.")
+            return API_FAILURE
 
-        resultados = evaluar(jobs)
+        results = evaluate(jobs)
 
-        if any(v.estado == MAL for v in resultados.values()):
-            _informe("Un job de este run no está en verde:", resultados, escribir)
-            return FALLO_JOB
+        if any(v.state == BAD for v in results.values()):
+            _report("Un job de este run no está en verde:", results, write)
+            return JOB_FAILURE
 
-        if all(v.estado == BIEN for v in resultados.values()):
-            _informe("Todos los jobs esperados terminaron sus pasos:", resultados, escribir)
+        if all(v.state == GOOD for v in results.values()):
+            _report("Todos los jobs esperados terminaron sus pasos:", results, write)
             return OK
 
-        if reloj() - inicio >= ESPERA_MAX_S:
-            _informe(
-                f"Se agotó el plazo de {ESPERA_MAX_S // 60} min con jobs sin veredicto:",
-                resultados,
-                escribir,
+        if clock() - start >= MAX_WAIT_S:
+            _report(
+                f"Se agotó el plazo de {MAX_WAIT_S // 60} min con jobs sin veredicto:",
+                results,
+                write,
             )
-            return FALLO_PLAZO
+            return TIMEOUT_FAILURE
 
-        dormir(INTERVALO_S)
+        sleep(INTERVAL_S)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -282,7 +280,7 @@ def main(argv: list[str] | None = None) -> int:
     run_id = os.environ.get("GITHUB_RUN_ID", "")
     token = os.environ.get("GITHUB_TOKEN", "")
 
-    faltan = [
+    missing = [
         n
         for n, v in (
             ("GITHUB_REPOSITORY", repo),
@@ -291,12 +289,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         if not v
     ]
-    if faltan:
-        print(f"Entorno incompleto, faltan: {', '.join(faltan)}", file=sys.stderr)
-        return FALLO_API
+    if missing:
+        print(f"Entorno incompleto, faltan: {', '.join(missing)}", file=sys.stderr)
+        return API_FAILURE
 
-    print(f"Vigilando el run {run_id} de {repo}; jobs esperados: {', '.join(JOBS_ESPERADOS)}")
-    return esperar_veredicto(repo, run_id, token)
+    print(f"Vigilando el run {run_id} de {repo}; jobs esperados: {', '.join(EXPECTED_JOBS)}")
+    return wait_for_verdict(repo, run_id, token)
 
 
 if __name__ == "__main__":

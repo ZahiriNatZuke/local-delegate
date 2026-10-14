@@ -1,0 +1,32 @@
+refactor(rename): nombres en inglés en el vigilante de precios y en ci_gate (ola A10a, lotes 1 y 2)
+
+Renombra a inglés el vigilante semanal de precios, su limpiador de
+copias y el gate del CI, con sus tests: 250 + 286 filas de los mappings
+aprobados (waves/A10a-1-mapping.csv y A10a-2-mapping.csv).
+
+- scripts/vigilante_precios.py pasa a scripts/price_watcher.py,
+  scripts/limpiar_fixtures_vigilante.py a scripts/clean_watcher_fixtures.py
+  y tests/test_vigilante.py a tests/test_price_watcher.py.
+- El CLI del vigilante pasa de `trabajo {precios,limites}` a
+  `job {prices,limits}`, sin alias (no se publica).
+- El workflow vigilante-precios.yml pasa a price-watcher.yml: jobs
+  `prices`/`limits`, entrada `dry_run` y variable WATCHER_DRY_RUN. No es
+  un check obligatorio; los jobs de ci.yml no cambian.
+- La marca del PR de prueba en prices.json pasa de `_ensayo` a
+  `_dry_run`, y las claves de la celda de la tabla a `text`/`link`/`labels`.
+- Las copias guardadas de tests/fixtures/vigilante/ pasan a prices.html,
+  limits.html y limits-expected.txt.
+- ci_gate.py: constantes (JOBS_ESPERADOS → EXPECTED_JOBS, BIEN/MAL/ESPERAR
+  → GOOD/BAD/WAIT…), el NamedTuple Verdict (state, reason, phantom), las
+  funciones (wait_for_verdict, job_verdict, evaluate, read_jobs) y los
+  kwargs read/clock/sleep/write, con test_ci_gate.py.
+
+Fuera de los ficheros del lote, por consecuencia: test_pricing.py (la
+marca `_dry_run`), docs/wiki/Repo-hardening.md (rutas, trabajos y
+entrada) y rename-exceptions.md, que gana el motivo «dato congelado de
+corpus o caso» con `nonce-neutro`, el valor neutro ya escrito en las
+copias.
+
+Solo se renombra: ningún assert cambia de sentido y los textos en
+español que afirman los tests no se tocan. Los tests recogidos siguen
+siendo 2572.

@@ -16,6 +16,9 @@ Los únicos motivos válidos (REQ-016):
 - palabra inglesa que el léxico del detector clasifica como española (enmienda del 2026-10-13,
   ola A8b, aprobada por la sesión principal): `meter` es «medidor» en inglés y el verbo «meter» en
   español; el nombre está en inglés y no se renombra;
+- dato congelado de corpus o caso (enmienda del 2026-10-13, ola A10, aprobada por la sesión
+  principal como desviación de REQ-016): ids, contenido y valores ya escritos en corpus o copias
+  congeladas (`benchmarks/`, `tests/fixtures/`) que no se reescriben;
 - **pendiente**: lo que el frente A renombra pero se publica en el B (las subclaves y marcadores
   de REQ-010, que salen en B2).
 
@@ -63,6 +66,12 @@ sección de su motivo.
 | --- | --- | --- |
 | meterHTML | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): pinta las barras `.meter` de la tarjeta Sistema; el léxico lo lee como el verbo español (ola A8b, decisión 7) |
 | quotaMeter | src/local_delegate/web/metrics.py | «meter» = medidor (inglés): nombre nuevo de `medidorCuota` en A8b, mismo falso positivo que `meterHTML` |
+
+## Dato congelado de corpus o caso
+
+| Nombre | Fichero | Motivo |
+| --- | --- | --- |
+| nonce-neutro | scripts/clean_watcher_fixtures.py | dato congelado de corpus o caso: valor neutro (`NEUTRAL_NONCE`) que el limpiador ya escribió en las copias de `tests/fixtures/vigilante/*.html`; cambiarlo obligaría a reescribir esas copias (ola A10a-1) |
 
 ## Pendiente
 
